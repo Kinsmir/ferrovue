@@ -1,0 +1,147 @@
+name: Release
+
+# Pushing a tag `v1.2.3` (or `v1.2.3-rc.1`) releases that version of both packages:
+#
+#   verify ─┬─ npm: staged on npm, public once a maintainer runs `npm stage approve` with 2FA
+#   ci     ─┴─ crates.io: published once a maintainer approves the `release` environment
+#                └─ GitHub release, with the changelog notes and both packages attached
+#
+# No long-lived token is stored: both registries trust this workflow through GitHub's OIDC token.
+# One-time setup is described in RELEASING.md.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  verify:
+    name: The tag matches the repository
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - name: Tag, manifests and changelog agree
+        run: node scripts/release.ts check "$GITHUB_REF_NAME"
+      - id: version
+        name: The version, and whether it is a pre-release
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [[ "$version" == *-* ]]; then echo "prerelease=true"; else echo "prerelease=false"; fi >> "$GITHUB_OUTPUT"
+
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+
+  npm:
+    name: Stage on npm
+    needs: [verify, ci]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # npm trusted publishing, and provenance
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      # Staged publishing arrived in npm 12.
+      - run: npm install -g npm@^12
+      - run: pnpm install --frozen-lockfile
+      - name: Stage the package, unless this version is already on npm
+        working-directory: packages/ferrovue
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+          TAG: ${{ needs.verify.outputs.prerelease == 'true' && 'next' || 'latest' }}
+        run: |
+          if npm view "ferrovue@$VERSION" version >/dev/null 2>&1; then
+            echo "ferrovue@$VERSION is already on npm"
+            exit 0
+          fi
+          # `prepack` builds dist/ and copies the README and licences in.
+          npm stage publish --provenance --access public --tag "$TAG"
+          {
+            echo "### npm: ferrovue@$VERSION is staged"
+            echo
+            echo "Run \`npm stage list ferrovue\`, then \`npm stage approve <id>\` with 2FA to publish it under \`$TAG\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  crates:
+    name: Publish on crates.io
+    needs: [verify, ci]
+    runs-on: ubuntu-latest
+    # Waits here for a maintainer's approval: crates.io has no staging of its own.
+    environment: release
+    permissions:
+      contents: read
+      id-token: write # crates.io trusted publishing
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
+      - id: published
+        name: Whether this version is already on crates.io
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          status=$(curl -s -o /dev/null -w '%{http_code}' -A "ferrovue release workflow (github.com/Kinsmir/ferrovue)" "https://crates.io/api/v1/crates/ferrovue/$VERSION")
+          echo "exists=$([[ "$status" == 200 ]] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+      - uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18 # v1.0.5
+        if: steps.published.outputs.exists == 'false'
+        id: auth
+      - name: Publish the crate
+        if: steps.published.outputs.exists == 'false'
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+        run: cargo publish -p ferrovue --locked
+
+  github:
+    name: GitHub release
+    needs: [verify, npm, crates]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build both packages to attach
+        run: |
+          cargo package -p ferrovue --locked --no-verify
+          (cd packages/ferrovue && pnpm pack --pack-destination "$RUNNER_TEMP")
+          node scripts/release.ts notes "$GITHUB_REF_NAME" > "$RUNNER_TEMP/notes.md"
+      - name: Create the release, unless it exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.verify.outputs.version }}
+          PRERELEASE: ${{ needs.verify.outputs.prerelease }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "the release $GITHUB_REF_NAME exists"
+            exit 0
+          fi
+          gh release create "$GITHUB_REF_NAME" --verify-tag --title "ferrovue $VERSION" \
+            --notes-file "$RUNNER_TEMP/notes.md" $([[ "$PRERELEASE" == true ]] && echo --prerelease) \
+            "target/package/ferrovue-$VERSION.crate" "$RUNNER_TEMP/ferrovue-$VERSION.tgz"
