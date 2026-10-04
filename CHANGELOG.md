@@ -43,6 +43,8 @@ released together and share version numbers.
 - Narrowing as TypeScript narrows: `x !== undefined` as well as `x`, and `!x` or `x === undefined`
   for the `v-else`; in `?:`, `&&` and `||` as well as `v-if`. A value that is always present
   compares unequal to `undefined`; `??` and `?:` between an integer and a `Float` give a `Float`.
+- `deny.toml` and a `cargo deny` CI job: every crate the workspace builds is under a licence
+  compatible with MIT OR Apache-2.0 and comes from crates.io; RustSec advisories fail a release.
 
 ### Changed
 

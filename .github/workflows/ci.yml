@@ -58,6 +58,24 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
 
+  deny:
+    name: Dependencies (cargo-deny ${{ matrix.checks }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Advisories apart: a new one in the RustSec database fails a run whatever its change, so it
+        # does not block a pull request — but it does block a release (a tag).
+        checks: [advisories, bans licenses sources]
+    continue-on-error: ${{ matrix.checks == 'advisories' && !startsWith(github.ref, 'refs/tags/') }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
+        with:
+          command: check ${{ matrix.checks }}
+          # The workspace is edition 2024 with resolver 3, which only a recent cargo reads.
+          rust-version: stable
+
   rust:
     name: Rust (${{ matrix.toolchain }})
     runs-on: ubuntu-latest
