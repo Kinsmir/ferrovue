@@ -143,11 +143,69 @@ export function pathOf(n: N): string | null {
   return null;
 }
 
+/** A test that an optional value is present, as TypeScript narrows on it: `x`, `x !== undefined`,
+ * and, `negated`, `!x` and `x === undefined`, after which the value is present in the other branch. */
+export interface Presence {
+  path: string;
+  /** The value bound where it is present, and its type there. */
+  pattern: (name: string) => string;
+  of: Ty;
+  negated: boolean;
+  /** Tested by truthiness, so the test itself is a boolean only when it is negated. */
+  truthy: boolean;
+}
+
+export function presence(s: Scope, n: N): Presence | null {
+  let target: N = n;
+  let negated = false;
+  let byTruth = true;
+  if (n.type === "UnaryExpression" && n.operator === "!") {
+    target = n.argument;
+    negated = true;
+  } else if (n.type === "BinaryExpression" && (n.operator === "===" || n.operator === "!==")) {
+    const isUndef = (m: N) => m.type === "Identifier" && m.name === "undefined";
+    if (isUndef(n.right)) target = n.left;
+    else if (isUndef(n.left)) target = n.right;
+    else return null;
+    negated = n.operator === "===";
+    byTruth = false;
+  }
+  const path = pathOf(target);
+  if (path === null) return null;
+  const v = expr(s, target);
+  if (v.ty.k !== "opt") return null;
+  const of: Ty = v.ty.of;
+  // A truthiness test keeps JavaScript's: an empty string, a 0 and `false` are not taken — while an
+  // object and a list, empty or not, always are.
+  const scalar = of.k === "str" || of.k === "int" || of.k === "float" || of.k === "bool";
+  const test = byTruth && scalar ? `(${v.code}).filter(|v| ${truthy({ code: "*v", ty: of })})` : v.code;
+  return { path, of, negated, truthy: byTruth, pattern: (name) => `let Some(${name}) = ${test}` };
+}
+
+/** The scope with `p`'s value present, bound as `name`. */
+export function narrowTo(s: Scope, p: Presence, name: string): Scope {
+  return { ...s, narrowed: new Map(s.narrowed).set(p.path, { code: name, ty: p.of }) };
+}
+
+/** `if let Some(name) = … { then } else { otherwise }`, each branch translated in its own scope —
+ * the value present in one of them — with `_` for a binding the branch never reads. */
+function narrowing(s: Scope, p: Presence, present: (s: Scope) => string, absent: (s: Scope) => string): string {
+  const name = `n${++ctx.narrowCount}`;
+  const then = present(narrowTo(s, p, name));
+  const otherwise = absent(s);
+  const bound = new RegExp(`\\b${name}\\b`).test(then) ? name : "_";
+  return `if ${p.pattern(bound)} { ${then} } else { ${otherwise} }`;
+}
+
 /* A test, as a Rust boolean. Only its truthiness is used, so `||`, `&&` and `!` combine the truthiness
  * of their operands whatever their types — where as a VALUE `a || b` is `a` or `b`, and stays held to
- * the stricter rules `expr` applies. */
+ * the stricter rules `expr` applies. `x && …` and `!x || …` read `x` present on the right. */
 export function cond(s: Scope, n: N): string {
   if (n.type === "LogicalExpression" && (n.operator === "||" || n.operator === "&&")) {
+    const p = presence(s, n.left);
+    if (p && p.negated === (n.operator === "||")) {
+      return `(${narrowing(s, p, (inner) => cond(inner, n.right), () => String(n.operator === "||"))})`;
+    }
     return `(${cond(s, n.left)} ${n.operator} ${cond(s, n.right)})`;
   }
   // Parenthesised: `truthy` of a number is `(x) != 0`, and a bare `!` would bind to `(x)` — which
@@ -419,6 +477,17 @@ export function expr(s: Scope, n: N): Val {
     case "CallExpression":
       return call(s, n);
     case "LogicalExpression": {
+      // `x !== undefined && …` and `!x || …` / `x === undefined || …`: booleans, with `x` present on
+      // the right.
+      if (n.operator === "&&" || n.operator === "||") {
+        const p = presence(s, n.left);
+        if (p && p.negated === (n.operator === "||") && (p.negated || !p.truthy)) {
+          let right: Val | undefined;
+          const code = narrowing(s, p, (inner) => (right = expr(inner, n.right)).code, () => String(n.operator === "||"));
+          if (right?.ty.k === "bool") return { code: `(${code})`, ty: BOOL };
+          return fail(comp, `\`${n.operator}\` is supported between booleans only`, n);
+        }
+      }
       const a = expr(s, n.left);
       const b = expr(s, n.right);
       if (n.operator === "??") {
@@ -432,6 +501,9 @@ export function expr(s: Scope, n: N): Val {
         if (b.ty.k === "undef") return a;
         if (sameTy(a.ty.of, b.ty)) return { code: `(${a.code}).unwrap_or(${b.code})`, ty: b.ty };
         if (sameTy(a.ty, b.ty)) return { code: `(${a.code}).or(${b.code})`, ty: a.ty };
+        // An integer and a fraction: both numbers in JavaScript, so a fraction here.
+        if (a.ty.of.k === "float" && b.ty.k === "int") return { code: `(${a.code}).unwrap_or(${asF64(b)})`, ty: FLOAT };
+        if (a.ty.of.k === "int" && b.ty.k === "float") return { code: `(${a.code}).map(|v| v as f64).unwrap_or(${b.code})`, ty: FLOAT };
         return fail(comp, "`??` between different types", n);
       }
       if (n.operator === "||") {
@@ -482,6 +554,12 @@ export function expr(s: Scope, n: N): Val {
       else if (b.ty.k === "query" && a.ty.k === "undef") eq = `(${b.code}).is_undefined()`;
       else if (b.ty.k === "undef" && a.ty.k === "opt") eq = `(${a.code}).is_none()`;
       else if (a.ty.k === "undef" && b.ty.k === "opt") eq = `(${b.code}).is_none()`;
+      else if (a.ty.k === "undef" || b.ty.k === "undef") {
+        // A value that is always present — or narrowed to present — is never \`undefined\`.
+        const same = a.ty.k === b.ty.k;
+        const konst = n.operator === "===" ? same : !same;
+        return { code: String(konst), ty: BOOL, konst };
+      }
       else if (isNumber(a.ty) && isNumber(b.ty)) eq = `(${asF64(a)} == ${asF64(b)})`;
       else if (sameTy(a.ty, b.ty) && (scalar(a.ty) || (a.ty.k === "opt" && scalar(a.ty.of)))) {
         eq = `(${a.code}) == (${b.code})`;
@@ -493,18 +571,32 @@ export function expr(s: Scope, n: N): Val {
     case "ConditionalExpression": {
       const t = expr(s, n.test);
       if (t.konst !== undefined) return expr(s, t.konst ? n.consequent : n.alternate);
-      const a = expr(s, n.consequent);
-      const b = expr(s, n.alternate);
+      // A test for presence narrows the branch where the value is present, as TypeScript does.
+      const p = presence(s, n.test);
+      const name = p ? `n${++ctx.narrowCount}` : "";
+      const a = expr(p && !p.negated ? narrowTo(s, p, name) : s, n.consequent);
+      const b = expr(p && p.negated ? narrowTo(s, p, name) : s, n.alternate);
+      const choose = (yes: string, no: string): string => {
+        if (!p) return `if ${truthy(t)} { ${yes} } else { ${no} }`;
+        const [present, absent] = p.negated ? [no, yes] : [yes, no];
+        const bound = new RegExp(`\\b${name}\\b`).test(present) ? name : "_";
+        return `if ${p.pattern(bound)} { ${present} } else { ${absent} }`;
+      };
       if (sameTy(a.ty, b.ty) && a.ty.k === "str" && (isTemporary(a) || isTemporary(b))) {
-        return { code: `&*(if ${truthy(t)} { ${asCow(a)} } else { ${asCow(b)} })`, ty: STR };
+        return { code: `&*(${choose(asCow(a), asCow(b))})`, ty: STR };
       }
-      if (sameTy(a.ty, b.ty)) return { code: `if ${truthy(t)} { ${a.code} } else { ${b.code} }`, ty: a.ty };
+      if (sameTy(a.ty, b.ty)) return { code: choose(a.code, b.code), ty: a.ty };
+      // An integer and a fraction: both numbers in JavaScript, so a fraction here.
+      if (isNumber(a.ty) && isNumber(b.ty)) return { code: choose(asF64(a), asF64(b)), ty: FLOAT };
       if (a.ty.k === "undef" || b.ty.k === "undef" || (a.ty.k === "opt" && sameTy(a.ty.of, b.ty)) || (b.ty.k === "opt" && sameTy(b.ty.of, a.ty))) {
         const ty = opt(a.ty.k === "undef" || b.ty.k === "opt" ? b.ty : a.ty);
-        return {
-          code: `if ${truthy(t)} { ${coerce(comp, a, ty, n)} } else { ${coerce(comp, b, ty, n)} }`,
-          ty,
-        };
+        if (ty.k === "opt" && ty.of.k === "str" && (isTemporary(a) || isTemporary(b))) {
+          // A string built in a branch, held by an `Option<Cow>` the statement keeps.
+          const held = (v: Val): string =>
+            v.ty.k === "undef" ? "None" : v.ty.k === "opt" ? `(${v.code}).map(std::borrow::Cow::<str>::Borrowed)` : `Some(${asCow(v)})`;
+          return { code: `(${choose(held(a), held(b))}).as_deref()`, ty };
+        }
+        return { code: choose(coerce(comp, a, ty, n), coerce(comp, b, ty, n)), ty };
       }
       return fail(comp, "the two branches of `?:` differ in type", n);
     }

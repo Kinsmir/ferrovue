@@ -615,7 +615,7 @@ class Gen {
     const r = this.r;
     const optVars = this.scope.vars.filter((v) => v.opt);
     if (optVars.length && r.chance(0.1)) {
-      // Presence, which ferrovue tests in a `v-if` only.
+      // Presence, tested without reading the value.
       const v = r.pick(optVars);
       const op = r.pick(["===", "!=="]);
       return node("bool", [this.varRef(v)], ([a]) => `${a} ${op} undefined`);
@@ -790,9 +790,8 @@ class Gen {
       if (narrowable.length && r.chance(0.3)) {
         // A test that narrows: inside the branch the value is no longer optional.
         const v = r.pick(narrowable);
-        // README: narrowed "as TypeScript narrows them"; ferrovue narrows a truthiness test (and
-        // `a && b`), and today refuses reading a value narrowed by `!== undefined`: kept rare.
-        const cond: Expr = { ...(r.chance(0.95) ? this.varRef(v) : node("bool", [this.varRef(v)], ([a]) => `${a} !== undefined`)), fixed: true };
+        // Narrowed as TypeScript narrows it: by truthiness, or by `!== undefined`.
+        const cond: Expr = { ...(r.chance(0.6) ? this.varRef(v) : node("bool", [this.varRef(v)], ([a]) => `${a} !== undefined`)), fixed: true };
         const el = this.withScope(() => {
           this.scope.vars = this.scope.vars.map((x) => (x === v ? { ...x, opt: false } : x));
           return this.carrier(depth, ctx);

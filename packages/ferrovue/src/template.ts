@@ -3,7 +3,7 @@
 import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, BOOL, fail, GenError, INT, sameTy, snake } from "./model.ts";
 import { ctx } from "./context.ts";
 import { markHome } from "./typescript.ts";
-import { cond, expr, fieldVal, pathOf, truthy } from "./expr.ts";
+import { cond, expr, fieldVal, narrowTo, presence, truthy } from "./expr.ts";
 import { Emitter } from "./emitter.ts";
 import { IGNORED_PROPS, interpolate, renderAttr, renderAttrs, renderClass, renderDynamicAttr, renderStyle } from "./attrs.ts";
 import { routerLink } from "./router.ts";
@@ -563,15 +563,12 @@ export function statements(s: Scope, e: Emitter, body: N[]): void {
         const narrowed = new Map(s.narrowed);
         const parts: string[] = [];
         for (const op of operands) {
-          const path = pathOf(op);
           const inner = { ...s, narrowed };
-          const v = path !== null ? expr(inner, op) : null;
-          if (path !== null && v && v.ty.k === "opt") {
+          const p = presence(inner, op);
+          if (p && !p.negated) {
             const name = `n${++ctx.narrowCount}`;
-            const of: Ty = v.ty.of;
-            const keep = of.k === "str" || of.k === "int" || of.k === "float" || of.k === "bool";
-            parts.push(`let Some(${name}) = ${keep ? `(${v.code}).filter(|v| ${truthy({ code: "*v", ty: of })})` : v.code}`);
-            narrowed.set(path, { code: name, ty: of });
+            parts.push(p.pattern(name));
+            narrowed.set(p.path, { code: name, ty: p.of });
           } else {
             parts.push(cond(inner, op));
           }
@@ -605,20 +602,22 @@ export function statements(s: Scope, e: Emitter, body: N[]): void {
         continue;
       }
       /* An optional value tested for presence is narrowed inside the branch, as TypeScript narrows
-       * it: bound by `if let`, so `user.name` under `v-if="user"` reads the bound value. The
-       * test keeps JavaScript's truthiness — an empty string, a 0 and `false` are not taken — while
-       * an object and a list, empty or not, always are. */
-      const path = pathOf(st.test);
-      if (path !== null && t.ty.k === "opt") {
+       * it: bound by `if let`, so `user.name` under `v-if="user"` reads the bound value. A negated
+       * test — `!user`, `user === undefined` — narrows the `v-else` instead, written first. */
+      const p = presence(s, st.test);
+      if (p && (!p.negated || st.alternate)) {
         const name = `n${++ctx.narrowCount}`;
-        const inner: Ty = t.ty.of;
-        const keep = inner.k === "str" || inner.k === "int" || inner.k === "float" || inner.k === "bool";
-        const test = keep ? `(${t.code}).filter(|v| ${truthy({ code: "*v", ty: inner })})` : t.code;
-        e.open(`if let Some(${name}) = ${test}`);
+        e.open(`if ${p.pattern(name)}`);
         const at = e.lines.length - 1;
-        const narrowed = new Map(s.narrowed).set(path, { code: name, ty: inner });
-        statements({ ...s, narrowed }, e, branch(st.consequent));
+        const [present, absent] = p.negated ? [st.alternate, st.consequent] : [st.consequent, st.alternate];
+        statements(narrowTo(s, p, name), e, branch(present));
         if (!e.reads(name, at + 1)) e.replace(at, `Some(${name})`, "Some(_)");
+        if (absent) {
+          e.close(" else {");
+          statements(s, e, branch(absent));
+        }
+        e.close();
+        continue;
       } else {
         e.open(`if ${cond(s, st.test)}`);
         statements(s, e, branch(st.consequent));

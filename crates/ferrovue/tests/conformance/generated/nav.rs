@@ -60,7 +60,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
         out.push_str(" href=\"");
         fv::escape_into(out, &fv_link.href);
         out.push_str("\" class=\"");
-        fv::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }, "tab", if (props.note.as_deref()).is_some_and(|v| !(v).is_empty()) { "noted" } else { "" }]);
+        fv::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }, "tab", if let Some(_) = (props.note.as_deref()).filter(|v| !(*v).is_empty()) { "noted" } else { "" }]);
         out.push_str("\"");
         if (&*props.label).is_empty() {
             out.push_str(" title");
@@ -71,9 +71,9 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
         }
         out.push_str(">");
         fv::escape_into(out, &*props.label);
-        if let Some(n1) = (props.note.as_deref()).filter(|v| !(*v).is_empty()) {
+        if let Some(n2) = (props.note.as_deref()).filter(|v| !(*v).is_empty()) {
             out.push_str("<i>");
-            fv::escape_into(out, n1);
+            fv::escape_into(out, n2);
             out.push_str("</i>");
         } else {
             out.push_str("<!--v-if-->");

@@ -40,6 +40,9 @@ released together and share version numbers.
   teleports as Vue renders them; `ferrovue::Teleports` collects them for the page to place.
 - Pinia setup stores: the returned refs are the state (typed by `ref<T>()` or their initial literal),
   the returned computeds getters that may read each other, the functions actions.
+- Narrowing as TypeScript narrows: `x !== undefined` as well as `x`, and `!x` or `x === undefined`
+  for the `v-else`; in `?:`, `&&` and `||` as well as `v-if`. A value that is always present
+  compares unequal to `undefined`; `??` and `?:` between an integer and a `Float` give a `Float`.
 
 ### Changed
 

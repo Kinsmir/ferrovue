@@ -161,7 +161,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     } else {
         out.push_str("<!---->");
     }
-    if (!((props.pick.as_deref()).is_none())) {
+    if let Some(_) = props.pick.as_deref() {
         out.push_str("<i>picked</i>");
     } else {
         out.push_str("<!---->");
@@ -189,15 +189,15 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         out.push_str("</li>");
     }
     out.push_str("<!--]--><!--[-->");
-    for (i, fv_item1_ref) in (props.rows).iter().enumerate() {
-        let fv_item1 = fv_item1_ref;
+    for (i, fv_item2_ref) in (props.rows).iter().enumerate() {
+        let fv_item2 = fv_item2_ref;
         let i = i as i64;
         out.push_str("<li data-id=\"");
-        fv::push_int(out, fv_item1.id);
+        fv::push_int(out, fv_item2.id);
         out.push_str("\">");
         fv::push_int(out, i);
         out.push_str(":");
-        fv::escape_into(out, &*fv_item1.label);
+        fv::escape_into(out, &*fv_item2.label);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul>");

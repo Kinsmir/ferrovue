@@ -115,33 +115,31 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     } else {
         out.push_str("<!---->");
     }
-    if ((props.note.as_deref()).is_none()) {
+    if let Some(_) = props.note.as_deref() {
+        out.push_str("<!---->");
+    } else {
         out.push_str("<i>no note</i>");
-    } else {
-        out.push_str("<!---->");
     }
-    if (!((props.score).is_none())) {
+    if let Some(n2) = props.score {
         out.push_str("<i>scored ");
-        if let Some(v) = props.score {
-            fv::push_int(out, v);
-        }
+        fv::push_int(out, n2);
         out.push_str("</i>");
     } else {
         out.push_str("<!---->");
     }
-    if let Some(n1) = (props.score).filter(|v| (*v) != 0) {
+    if let Some(n3) = (props.score).filter(|v| (*v) != 0) {
         out.push_str("<i>truthy score ");
-        fv::push_int(out, n1);
+        fv::push_int(out, n3);
         out.push_str("</i>");
     } else {
         out.push_str("<!---->");
     }
-    if let Some(n2) = props.author.as_ref() {
+    if let Some(n4) = props.author.as_ref() {
         out.push_str("<span>by ");
-        fv::escape_into(out, &*n2.name);
-        if let Some(n3) = (n2.url.as_deref()).filter(|v| !(*v).is_empty()) {
+        fv::escape_into(out, &*n4.name);
+        if let Some(n5) = (n4.url.as_deref()).filter(|v| !(*v).is_empty()) {
             out.push_str("<a href=\"");
-            fv::escape_into(out, n3);
+            fv::escape_into(out, n5);
             out.push_str("\">link</a>");
         } else {
             out.push_str("<!---->");
@@ -150,9 +148,9 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     } else {
         out.push_str("<span>anonymous</span>");
     }
-    if let Some(n4) = props.author.as_ref() && let Some(n5) = (n4.url.as_deref()).filter(|v| !(*v).is_empty()) {
+    if let Some(n6) = props.author.as_ref() && let Some(n7) = (n6.url.as_deref()).filter(|v| !(*v).is_empty()) {
         out.push_str("<em>");
-        fv::escape_into(out, n5);
+        fv::escape_into(out, n7);
         out.push_str("</em>");
     } else {
         out.push_str("<!---->");

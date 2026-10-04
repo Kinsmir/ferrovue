@@ -32,6 +32,7 @@ pub mod meter;
 pub mod modal;
 pub mod model;
 pub mod model_parent;
+pub mod narrowing;
 pub mod nav;
 pub mod numbers;
 pub mod page;
@@ -243,6 +244,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "ModelParent" => {
             let props: model_parent::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             model_parent::render(&mut out, &props);
+        }
+        "Narrowing" => {
+            let props: narrowing::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            narrowing::render(&mut out, &props);
         }
         "Nav" => {
             let props: nav::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
