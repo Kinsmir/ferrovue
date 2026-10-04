@@ -295,6 +295,61 @@ fn a_scoped_slot_of_comments_alone_or_none_gives_way_to_the_fallback() {
 }
 
 #[test]
+fn slot_content_is_given_the_slot_scope_id_after_a_space() {
+    let content = |out: &mut String, id: &str| {
+        out.push_str("<p");
+        out.push_str(id);
+        out.push_str(">x</p>");
+        true
+    };
+    let mut out = String::new();
+    assert!(slot_into_slotted(
+        &mut out,
+        Some(Slot::slotted(&content)),
+        "data-v-a-s",
+        None
+    ));
+    assert_eq!(out, "<!--[--><p data-v-a-s>x</p><!--]-->");
+    // No id, and content that takes none, which ignores it.
+    out.clear();
+    slot_into_slotted(&mut out, Some(Slot::slotted(&content)), "", None);
+    let plain = |out: &mut String| out.push_str("<i>y</i>");
+    slot_into_slotted(&mut out, Some(Slot::new(&plain)), "data-v-a-s", None);
+    assert_eq!(out, "<!--[--><p>x</p><!--]--><!--[--><i>y</i><!--]-->");
+
+    let row = |out: &mut String, p: &RowProps<'_>, id: &str| {
+        out.push_str(p.label);
+        out.push_str(id);
+        true
+    };
+    let slot: &dyn for<'v> Fn(&mut String, &RowProps<'v>, &str) -> bool = &row;
+    out.clear();
+    scoped_slot_into_slotted(
+        &mut out,
+        Some(slot),
+        &RowProps { label: "r" },
+        "data-v-b-s  data-v-c-s",
+        None,
+    );
+    assert_eq!(out, "<!--[-->r data-v-b-s  data-v-c-s<!--]-->");
+}
+
+#[test]
+fn scope_attrs_are_keys_of_an_object_in_the_order_first_given() {
+    assert_eq!(scope_attrs("", "", ""), "");
+    assert_eq!(scope_attrs(" data-v-a", "data-v-a", ""), " data-v-a");
+    assert_eq!(
+        scope_attrs(" data-v-a data-v-b", "data-v-c", " data-v-b data-v-d-s"),
+        " data-v-a data-v-b data-v-c data-v-d-s"
+    );
+    // Two spaces in a slot scope id make an empty key, which Vue does not write.
+    assert_eq!(
+        scope_attrs("", "data-v-a", "  data-v-b-s  data-v-c-s"),
+        " data-v-a data-v-b-s data-v-c-s"
+    );
+}
+
+#[test]
 fn teleported_content_goes_to_its_target_in_the_order_vue_collects_it() {
     let teleports = Teleports::new();
     let mut out = String::from("<main>");
