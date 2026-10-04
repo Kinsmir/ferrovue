@@ -1,6 +1,7 @@
 <script setup lang="ts">
 /* A book's reviews: the slow part of the detail page, which the server streams after the rest, as
- * an island. The first two show at once; the client makes the button reveal the others. */
+ * an island. The first two show at once; the client makes the button reveal the others. Its styles
+ * are scoped: the server writes the same `data-v-` id the client build gives it. */
 import { ref } from "vue";
 import type { Review } from "./types";
 
@@ -20,3 +21,13 @@ const all = ref(false);
     <button v-if="!all && reviews.length > 2" type="button" class="more" @click="all = true">Show all {{ reviews.length }} reviews</button>
   </div>
 </template>
+
+<style scoped>
+.stars {
+  font-variant-numeric: tabular-nums;
+  margin-right: 0.5rem;
+}
+li + li {
+  margin-top: 0.25rem;
+}
+</style>
