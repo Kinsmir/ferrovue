@@ -1,0 +1,53 @@
+{
+  "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+  // Files nothing imports but that are still used: the ferrovue CLI compiles every component,
+  // store and helper module under a `ferrovue.config.json` directory, and `scripts/inspect.ts`
+  // is run by hand (see CONTRIBUTING.md).
+  "entry": [
+    "crates/ferrovue/tests/conformance/components/**",
+    "crates/ferrovue/tests/conformance/stores/**",
+    "crates/ferrovue/tests/conformance/types/**",
+    "examples/greeting/components/**",
+    "scripts/inspect.ts"
+  ],
+  "ignorePatterns": [
+    // Shrunk cases the fuzzer saves, to become conformance fixtures: data, not code.
+    "fuzz/**",
+    "**/dist/**",
+    "target/**",
+    "**/generated/**",
+    // Still being built; add them back once they analyse clean.
+    "examples/fullstack/**",
+    "packages/ferrovue/bench/**",
+    "packages/ferrovue/fuzz/**"
+  ],
+  // The CLI and the Vue conformance suite consume these modules' exports by name, not by import.
+  "ignoreExports": [
+    { "file": "crates/ferrovue/tests/conformance/**", "exports": ["*"] }
+  ],
+  // An `export` the module also uses itself is shared API between compiler passes, not dead code.
+  "ignoreExportsUsedInFile": true,
+  "ignoreDependencies": [
+    // Imported as `vue/server-renderer`, but pinned to an exact version at the root on purpose:
+    // the generated Rust must match this exact renderer byte for byte (README, "Vue versions").
+    "@vue/server-renderer",
+    // Used only by packages/ferrovue/bench, which is still excluded above.
+    "tinybench"
+  ],
+  "overrides": [
+    {
+      // Members the conformance components read in their templates (`counter.owner`), which the
+      // Pinia store tracking does not follow into `.vue` template expressions.
+      "files": ["crates/ferrovue/tests/conformance/**"],
+      "rules": { "unused-store-members": "off" }
+    }
+  ],
+  "rules": {
+    // The root package is a private workspace that is never installed with `--prod`; its scripts
+    // (`scripts/inspect.ts`) are development tools importing devDependencies on purpose.
+    "dev-dependency-in-production": "off",
+    // The compiler's passes are mutually recursive by design (an expression contains a template
+    // slot, a template contains expressions); the cycles are function-level, never at module init.
+    "circular-dependencies": "off"
+  }
+}

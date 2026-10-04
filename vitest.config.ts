@@ -18,7 +18,7 @@ export default defineConfig({
         },
       },
     },
-    include: ["packages/*/test/**/*.test.ts"],
+    include: ["packages/*/test/**/*.test.ts", "scripts/**/*.test.ts"],
     globals: false,
   },
 });

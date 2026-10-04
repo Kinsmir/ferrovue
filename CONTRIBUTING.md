@@ -12,8 +12,11 @@ You need Node 22.18 or newer with pnpm, and the latest stable Rust.
 pnpm install
 pnpm test                    # compiler, CLI, vectors, router, the Vue half of conformance
 pnpm typecheck
+pnpm lint                    # oxlint (type-aware, on TypeScript 7), and fallow for unused files, exports and dependencies
 cargo test --workspace --all-features
 ```
+
+`pnpm lint:fix` applies the fixes both tools can make on their own; review the diff before committing.
 
 [TESTING.md](TESTING.md) explains how the suite fits together.
 
@@ -42,8 +45,8 @@ compiler did, and that diff is what a reviewer needs to see.
 - Keep a pull request to one change; the template's checklist covers what CI cannot.
 - Commit messages are short and say what changed (`compiler: support v-show on the root`), with
   detail in the body when the why is not obvious.
-- CI must be green: tests on Node 22 and 24 and on stable Rust and the declared minimum, clippy and
-  rustfmt, docs, the example, and both packages packing cleanly.
+- CI must be green: tests on Node 22 and 24 and on stable Rust and the declared minimum, `pnpm lint`,
+  clippy and rustfmt, docs, the example, and both packages packing cleanly.
 
 ## Licence
 

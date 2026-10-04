@@ -4,44 +4,184 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+  # The release workflow runs these same checks on the tag before anything is published.
+  workflow_call:
+
+# A newer push to the same branch or pull request makes an older run moot.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
 
 jobs:
   typescript:
+    name: TypeScript (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The oldest Node the npm package supports (`engines`), and the current LTS.
+        node: [22, 24]
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 24
+          node-version: ${{ matrix.node }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
-      - run: pnpm conformance:check
-      - name: The example's generated code is current
+      - name: The conformance suite's generated Rust is current
+        run: pnpm conformance:check
+      - name: The example's generated Rust is current
         working-directory: examples/greeting
         run: node ../../packages/ferrovue/src/cli.ts --check
 
+  lint:
+    name: Lint (oxlint, fallow)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+
   rust:
+    name: Rust (${{ matrix.toolchain }})
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
+        # The latest stable, and the `rust-version` the crate declares.
         toolchain: [stable, "1.99"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master
         with:
           toolchain: ${{ matrix.toolchain }}
           components: clippy, rustfmt
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo test --workspace --all-features
-      - run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - run: cargo test --workspace --all-features --locked
+      - run: cargo test -p ferrovue --no-default-features --locked
+      - run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
         if: matrix.toolchain == 'stable'
       - run: cargo fmt --all --check
         if: matrix.toolchain == 'stable'
-      - run: cargo doc --no-deps --all-features
+      - run: cargo doc --no-deps --all-features --locked
         if: matrix.toolchain == 'stable'
         env:
           RUSTDOCFLAGS: -D warnings
+
+  examples:
+    name: Example renders
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - name: The example builds outside a test build, and renders its page
+        run: cargo run -p ferrovue-example-greeting --locked | grep -q 'data-island="Greeting"'
+
+  fullstack:
+    name: Full-stack example hydrates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build ferrovue, which the example imports as a package (ferrovue/vite, ferrovue/client)
+        run: pnpm --filter ferrovue build
+      - name: The example's generated Rust is current
+        run: pnpm --filter ferrovue-example-fullstack check
+      - run: pnpm --filter ferrovue-example-fullstack typecheck
+      - name: Build the client, which regenerates the Rust renderers
+        run: pnpm --filter ferrovue-example-fullstack build
+      - name: The build left the generated Rust as committed
+        run: git diff --exit-code -- examples/fullstack/src/generated
+      - run: cargo build -p ferrovue-example-fullstack --locked
+      - run: cargo test -p ferrovue-example-fullstack --locked
+      - name: The server's pages hydrate in the client with no mismatch
+        run: pnpm --filter ferrovue-example-fullstack test
+      - name: The server streams a page and serves the client's assets
+        run: |
+          PORT=3917 target/debug/ferrovue-example-fullstack &
+          trap 'kill $!' EXIT
+          for _ in $(seq 50); do curl -sf -o /dev/null http://127.0.0.1:3917/ && break; sleep 0.2; done
+          curl -sf http://127.0.0.1:3917/books/dune > "$RUNNER_TEMP/dune.html"
+          grep -q 'data-island="Reviews"' "$RUNNER_TEMP/dune.html"
+          script=$(grep -o '/assets/main-[^"]*\.js' "$RUNNER_TEMP/dune.html")
+          curl -sf -o /dev/null "http://127.0.0.1:3917$script"
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3917/books/missing)" = 404
+
+  package:
+    name: Packages publish cleanly
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: The crate packages and builds from its own tarball
+        run: cargo package -p ferrovue --locked
+      - name: The npm package packs, with its build, README and licences
+        working-directory: packages/ferrovue
+        run: |
+          pnpm pack --pack-destination "$RUNNER_TEMP"
+          tar -tzf "$RUNNER_TEMP"/ferrovue-*.tgz | tee "$RUNNER_TEMP/files.txt"
+          for f in package/dist/cli.js package/dist/compiler.js package/dist/compiler.d.ts package/README.md package/LICENSE-MIT package/LICENSE-APACHE; do
+            grep -qx "$f" "$RUNNER_TEMP/files.txt" || { echo "missing from the npm package: $f"; exit 1; }
+          done
+      - name: The packed command runs from node_modules
+        run: |
+          mkdir -p "$RUNNER_TEMP/consumer/components" && cd "$RUNNER_TEMP/consumer"
+          echo '{"name":"consumer","private":true,"type":"module"}' > package.json
+          echo '{"components":"components","out":"gen"}' > ferrovue.config.json
+          cp "$GITHUB_WORKSPACE/examples/greeting/components/Greeting.vue" components/
+          npm install --no-audit --no-fund "$RUNNER_TEMP"/ferrovue-*.tgz vue@3.5.43
+          npx ferrovue
+          test -f gen/greeting.rs
+
+  bench:
+    # Proves the benchmarks still build, run, and render the same HTML on both sides. Timings on a
+    # shared runner mean nothing, so nothing here compares them or fails on them.
+    name: Benchmarks run (quick)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: ferrovue's generated renderers (criterion)
+        run: cargo bench -p ferrovue --bench render --locked -- --warm-up-time 1 --measurement-time 2
+      - name: Vue's renderToString (tinybench)
+        run: pnpm bench:js
+        env:
+          FERROVUE_BENCH_QUICK: "1"

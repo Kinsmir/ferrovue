@@ -8,10 +8,18 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
+    "lint": "oxlint --type-aware --deny-warnings && fallow dead-code",
+    "lint:fix": "oxlint --type-aware --fix && fallow fix --yes --no-create-config",
+    "fallow": "fallow",
+    "bench": "pnpm bench:rust && pnpm bench:js",
+    "bench:rust": "cargo bench -p ferrovue --bench render",
+    "bench:js": "NODE_ENV=production vitest run --config packages/ferrovue/bench/vitest.config.ts",
+    "bench:record": "FERROVUE_BENCH_WRITE=1 pnpm bench:js",
     "conformance:generate": "cd crates/ferrovue/tests/conformance && node ../../../../packages/ferrovue/src/cli.ts",
     "conformance:check": "cd crates/ferrovue/tests/conformance && node ../../../../packages/ferrovue/src/cli.ts --check",
     "conformance:record": "FERROVUE_FIXTURES_WRITE=1 vitest run packages/ferrovue/test/conformance.test.ts",
-    "vectors:record": "FERROVUE_VECTORS_WRITE=1 vitest run packages/ferrovue/test/router.test.ts"
+    "vectors:record": "FERROVUE_VECTORS_WRITE=1 vitest run packages/ferrovue/test/router.test.ts packages/ferrovue/test/vectors.test.ts",
+    "fuzz": "node packages/ferrovue/fuzz/run.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.2",
@@ -19,13 +27,18 @@
     "@vue/compiler-sfc": "3.5.43",
     "@vue/server-renderer": "3.5.43",
     "@vue/shared": "3.5.43",
+    "fallow": "^3.31.0",
     "ferrovue": "workspace:*",
     "happy-dom": "^20.14.5",
+    "oxlint": "1.86.0",
+    "oxlint-tsgolint": "7.0.2003",
     "pinia": "^4.0.3",
+    "tinybench": "^6.2.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.0",
     "vitest": "^5.0.1",
     "vue": "3.5.43",
+    "vue-i18n": "11.4.13",
     "vue-router": "^5.3.1"
   }
 }

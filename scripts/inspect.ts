@@ -8,7 +8,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import { compileScript, compileTemplate, parse } from "@vue/compiler-sfc";
-import { createSSRApp, h } from "vue";
+import { type Component, createSSRApp, h } from "vue";
 import { renderToString } from "vue/server-renderer";
 import { generate } from "../packages/ferrovue/src/compiler.ts";
 import { attachSsrRender } from "../packages/ferrovue/src/testing.ts";
@@ -35,7 +35,7 @@ console.log("── Vue SSR compilation ──\n" + code);
 const runnable = join(import.meta.dirname, `.inspect-${process.pid}.ts`);
 try {
   writeFileSync(runnable, script.content);
-  const component = (await import(runnable)).default;
+  const component = ((await import(runnable)) as { default: Component }).default;
   attachSsrRender(file, name, component);
   console.log("── Vue render ──\n" + (await renderToString(createSSRApp({ render: () => h(component, props) }))));
 } catch (e) {
