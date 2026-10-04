@@ -72,7 +72,7 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(58 + 7 * props.tags.as_deref().unwrap_or(&[]).len() + props.label.as_deref().map_or(0, str::len) + props.note.as_deref().map_or(0, str::len));
+    out.reserve(70 + 7 * props.tags.as_deref().unwrap_or(&[]).len() + props.label.as_deref().map_or(0, str::len) + props.note.as_deref().map_or(0, str::len));
     let s_summary = &*format!("{}:{}", props.label.as_deref().unwrap_or("untitled"), fv::Js(props.size.unwrap_or(-1i64)));
     out.push_str("<p class=\"d");
     fv::class_into(out, true, &[if props.on.unwrap_or(true) { "on" } else { "off" }]);

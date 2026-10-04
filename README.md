@@ -222,10 +222,10 @@ and both write the same bytes: each side checks its output against
 
 | Scenario | What renders | Output | Vue `renderToString` | ferrovue | Speed-up |
 |---|---|---|---|---|---|
-| `small` | `Nav`: two `<RouterLink>`s resolved against the current route | 206 B | 37.99 µs | 0.948 µs | 40.1× |
-| `list` | `Lists`: 1,000 words, 1,000 numbers, 100 groups of 10 members | 102 KiB | 357.5 µs | 103.9 µs | 3.4× |
-| `tree` | `Tree`: a recursive component, binary tree 8 levels deep (255 nodes) | 9.5 KiB | 478.4 µs | 4.68 µs | 102.3× |
-| `page` | `Dashboard`: 22 `Panel`s with named slots, a `Text`, 20 `Frame`s holding loops | 8.0 KiB | 194.8 µs | 5.63 µs | 34.6× |
+| `small` | `Nav`: two `<RouterLink>`s resolved against the current route | 206 B | 34.57 µs | 0.950 µs | 36.4× |
+| `list` | `Lists`: 1,000 words, 1,000 numbers, 100 groups of 10 members | 102 KiB | 368.1 µs | 45.95 µs | 8.0× |
+| `tree` | `Tree`: a recursive component, binary tree 8 levels deep (255 nodes) | 9.5 KiB | 484.6 µs | 3.72 µs | 130.2× |
+| `page` | `Dashboard`: 22 `Panel`s with named slots, a `Text`, 20 `Frame`s holding loops | 8.0 KiB | 181.6 µs | 4.45 µs | 40.9× |
 
 These are mean times per render. The Vue column is tinybench's mean, with 5 s per scenario after
 a 1 s warm-up. The ferrovue column is criterion's mean point estimate, using its defaults of a 3 s
@@ -241,7 +241,13 @@ What each side measures:
 
 Measured on an AMD Ryzen 5 3600XT (6 cores / 12 threads, up to 3.8 GHz) with 62 GiB of RAM, running
 Linux 7.2.8-2-cachyos (CachyOS, x86_64). Software: Node 26.10.0, Vue 3.5.43, rustc 1.99.0. The
-machine was not otherwise idle, so treat the numbers as indicative.
+machine was lightly loaded (a load average of about 1) but not idle, so treat the numbers as
+indicative.
+
+The speed-up says as much about Vue as about ferrovue. Most of Vue's time goes on component
+instances and their virtual nodes, of which `tree` has 255 and `list` one: per byte written, Vue
+renders `list` some fourteen times faster than `tree`, while ferrovue writes the two at a similar
+rate.
 
 To reproduce:
 

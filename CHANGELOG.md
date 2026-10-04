@@ -59,6 +59,15 @@ released together and share version numbers.
   where Rust needs it, folds what is known at build time (literal arithmetic, constant conditions,
   string literals), borrows and dereferences only where coercion does not, and pushes a single
   character as a `char`. Output is unchanged.
+- Faster rendering of numbers and short strings, which made the `list` benchmark 2.5× faster
+  (115 µs to 46 µs; `tree` 5.2 to 3.7 µs, `page` 5.0 to 4.4 µs). `push_int` and `Js` write integers
+  digit pairs at a time instead of through `fmt` and a `String`; `push_number` writes a whole
+  number that way, and looks for a tie between two shortest spellings only in a number short enough
+  to have one, from its exact digits in a `u128`, instead of formatting 1,100 digits of every number
+  (about 20× faster); `escape_into` checks for characters to escape eight bytes at a time. Generated
+  `render`s reserve room for the numbers they write and for loops nested in a loop over the props,
+  so a long page no longer outgrows its buffer and is copied. Held to the old `push_number` and a
+  bytewise escape by property tests, and to 18 new JavaScript vectors.
 
 ### Fixed
 

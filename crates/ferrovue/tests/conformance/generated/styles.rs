@@ -52,7 +52,7 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(400 + props.color.len() + props.raw.len() + props.accent.as_deref().map_or(0, str::len));
+    out.reserve(418 + props.color.len() + props.raw.len() + props.accent.as_deref().map_or(0, str::len));
     out.push_str("<div style=\"");
     if !props.shown {
         out.push_str("display:none;");

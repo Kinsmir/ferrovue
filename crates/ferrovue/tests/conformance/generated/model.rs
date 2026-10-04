@@ -42,7 +42,7 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(103 + props.model_value.len());
+    out.reserve(109 + props.model_value.len());
     out.push_str("<div><input value=\"");
     fv::escape_into(out, &props.model_value);
     out.push_str("\"><input type=\"checkbox\"");

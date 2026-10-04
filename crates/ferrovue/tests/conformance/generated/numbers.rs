@@ -36,7 +36,7 @@ impl Props {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props) {
-    out.reserve(132);
+    out.reserve(228);
     let s_total = props.price * props.qty as f64;
     out.push_str("<div data-ratio=\"");
     fv::push_number(out, props.ratio);

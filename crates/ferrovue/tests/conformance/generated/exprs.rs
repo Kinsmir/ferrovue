@@ -95,7 +95,7 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(233 + 21 * props.rows.len() + props.name.len() + props.tags.iter().map(|v| v.len()).sum::<usize>() + props.author.as_ref().map_or(0, |v| v.name.len() + v.site.as_deref().map_or(0, str::len)) + props.rows.iter().map(|v| v.label.len()).sum::<usize>() + props.pick.as_deref().map_or(0, str::len));
+    out.reserve(275 + 33 * props.rows.len() + props.name.len() + props.tags.iter().map(|v| v.len()).sum::<usize>() + props.author.as_ref().map_or(0, |v| v.name.len() + v.site.as_deref().map_or(0, str::len)) + props.rows.iter().map(|v| v.label.len()).sum::<usize>() + props.pick.as_deref().map_or(0, str::len));
     out.push_str("<div><p>");
     fv::push_int(out, (props.n as f64 - props.m as f64) as i64);
     out.push('|');

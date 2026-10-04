@@ -48,7 +48,7 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(28 + props.title.len() + props.note.as_deref().map_or(0, str::len) + props.padded.len());
+    out.reserve(58 + props.title.len() + props.note.as_deref().map_or(0, str::len) + props.padded.len());
     out.push_str("<p><b>");
     fv::escape_into(out, &props.title);
     out.push_str("</b>|");

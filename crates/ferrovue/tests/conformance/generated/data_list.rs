@@ -108,7 +108,7 @@ pub struct Slots<'s> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
-    out.reserve(96 + 11 * props.rows.len() + props.rows.iter().map(|v| v.label.len() + v.tags.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>() + props.title.len() + props.note.as_deref().map_or(0, str::len));
+    out.reserve(96 + 17 * props.rows.len() + props.rows.iter().map(|v| v.label.len() + v.tags.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>() + props.title.len() + props.note.as_deref().map_or(0, str::len));
     out.push_str("<section><header>");
     fv::scoped_slot_into(out, fv_slots.header, &HeaderSlotProps { title: &props.title, note: props.note.as_deref() }, Some(&mut |out: &mut String| {
         fv::escape_into(out, &props.title);

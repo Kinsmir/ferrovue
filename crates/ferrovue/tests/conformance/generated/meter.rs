@@ -27,7 +27,7 @@ impl Props {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props) {
-    out.reserve(32);
+    out.reserve(44);
     out.push_str("<meter value=\"");
     fv::push_number(out, props.value);
     out.push_str("\" max=\"");

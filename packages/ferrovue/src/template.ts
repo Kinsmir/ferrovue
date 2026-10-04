@@ -711,7 +711,8 @@ export function list(s: Scope, e: Emitter, c: N): void {
   } else fail(s.comp, "a `v-for` item is a name or an object pattern", item);
   if (index) inner.set(index.name, { code: idx!, ty: INT });
   const before = e.literalBytes;
-  statements({ ...s, locals: inner }, e, fn.body.body);
+  const fromProps = src.ty.k === "list" && /^\(?props\./.test(src.code);
+  statements({ ...s, locals: inner, loop: fromProps ? { item: itemName, over: src.code } : undefined }, e, fn.body.body);
   // An item or index the body never reads is not bound, and an index never counted: the loop only
   // counts.
   const unusedItem = !e.reads(itemName, bodyFrom);
@@ -725,7 +726,12 @@ export function list(s: Scope, e: Emitter, c: N): void {
   // The body's markup is written once per item, not once.
   const body = e.literalBytes - before;
   e.literalBytes = before;
-  // Counted up front only when the list is reachable from there: one a `v-if` narrowed, or a loop
-  // variable, exists only inside its block, and the reservation is an estimate either way.
-  if (body > 0 && src.ty.k === "list" && /^\(?props\./.test(src.code)) e.perItem.push(`${body} * ${atom(src.code)}.len()`);
+  // Counted up front only when the list is reachable from there: a list of the props, or a list in
+  // each item of one, counted over all of them. One a `v-if` narrowed, or a loop deeper down, exists
+  // only inside its block, and the reservation is an estimate either way.
+  if (body > 0 && fromProps) e.perItem.push(`${body} * ${atom(src.code)}.len()`);
+  else if (body > 0 && src.ty.k === "list" && s.loop && src.code.startsWith(`${s.loop.item}.`)) {
+    const outer = s.loop;
+    e.perItem.push(`${body} * ${atom(outer.over)}.iter().map(|${outer.item}| ${src.code}.len()).sum::<usize>()`);
+  }
 }

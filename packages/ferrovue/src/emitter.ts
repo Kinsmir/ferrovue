@@ -6,7 +6,8 @@ import { occurrences } from "./parens.ts";
 /** Statements, with adjacent literal pushes merged into one `push_str`. */
 export class Emitter {
   lines: string[] = [];
-  /** Bytes of literal markup written once per render, part of what `render` reserves up front. */
+  /** Bytes of markup written once per render, part of what `render` reserves up front: the literal
+   * markup, and what the numbers written at run time are expected to take. */
   literalBytes = 0;
   /** Rust expressions for the rest of the reservation: a loop's markup once per item. */
   perItem: string[] = [];
@@ -16,6 +17,11 @@ export class Emitter {
   lit(s: string): void {
     this.pending += s;
     this.literalBytes += Buffer.byteLength(s);
+  }
+
+  /** `bytes` more expected of a value written at run time. */
+  expect(bytes: number): void {
+    this.literalBytes += bytes;
   }
 
   stmt(code: string): void {

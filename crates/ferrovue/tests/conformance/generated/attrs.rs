@@ -52,7 +52,7 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(324 + props.label.len() + props.tip.as_deref().map_or(0, str::len) + props.extra.len() + props.state.len() + props.id.as_deref().map_or(0, str::len));
+    out.reserve(330 + props.label.len() + props.tip.as_deref().map_or(0, str::len) + props.extra.len() + props.state.len() + props.id.as_deref().map_or(0, str::len));
     out.push_str("<form><button type=\"button\"");
     if props.disabled {
         out.push_str(" disabled");

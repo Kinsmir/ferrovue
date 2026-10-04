@@ -57,7 +57,7 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(107 + 9 * props.words.len() + 52 * props.numbers.len() + 67 * props.groups.len() + props.words.iter().map(|v| v.len()).sum::<usize>() + props.groups.iter().map(|v| v.name.len() + v.members.iter().map(|v| v.len()).sum::<usize>() + v.lead.as_deref().map_or(0, str::len)).sum::<usize>());
+    out.reserve(107 + 9 * props.words.len() + 64 * props.numbers.len() + 37 * props.groups.iter().map(|g| g.members.len()).sum::<usize>() + 73 * props.groups.len() + props.words.iter().map(|v| v.len()).sum::<usize>() + props.groups.iter().map(|v| v.name.len() + v.members.iter().map(|v| v.len()).sum::<usize>() + v.lead.as_deref().map_or(0, str::len)).sum::<usize>());
     out.push_str("<section><ul><!--[-->");
     for w_ref in props.words.iter() {
         let w: &str = w_ref;

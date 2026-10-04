@@ -27,7 +27,7 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::Stores<'_>) {
-    out.reserve(61 + props.title.len());
+    out.reserve(91 + props.title.len());
     out.push_str("<div data-count=\"");
     fv::push_int(out, fv_stores.counter.count);
     out.push_str("\"><h4>");

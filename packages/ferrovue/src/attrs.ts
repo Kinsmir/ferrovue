@@ -7,15 +7,21 @@ import { cond, expr, known, truthy, unquote } from "./expr.ts";
 import { atom, bare, condition, logical, not, receiver, strArg } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
 
+/** What a number written at run time is expected to take: most a page shows are shorter, and the
+ * reservation is an estimate. */
+const NUMBER_BYTES = 6;
+
 /** A string, a number or a boolean written escaped: now when it is known, by JavaScript itself. */
 function display(e: Emitter, v: Val): boolean {
   if (v.ty.k === "str" && known(v) !== undefined) e.lit(escapeHtml(unquote(v.code)));
   else if ((v.ty.k === "int" || v.ty.k === "float") && v.num !== undefined) e.lit(String(v.num));
   else if (v.ty.k === "bool" && v.konst !== undefined) e.lit(String(v.konst));
   else if (v.ty.k === "str") e.stmt(`fv::escape_into(out, ${strArg(v.code)});`);
-  else if (v.ty.k === "int") e.stmt(`fv::push_int(out, ${bare(v.code)});`);
-  else if (v.ty.k === "float") e.stmt(`fv::push_number(out, ${bare(v.code)});`);
-  else if (v.ty.k === "bool") e.stmt(`out.push_str(if ${condition(v.code)} { "true" } else { "false" });`);
+  else if (v.ty.k === "int" || v.ty.k === "float") {
+    e.stmt(`fv::${v.ty.k === "int" ? "push_int" : "push_number"}(out, ${bare(v.code)});`);
+    // Counted in the reservation, or a page of numbers outgrows it and is copied to a larger one.
+    e.expect(NUMBER_BYTES);
+  } else if (v.ty.k === "bool") e.stmt(`out.push_str(if ${condition(v.code)} { "true" } else { "false" });`);
   else return false;
   return true;
 }

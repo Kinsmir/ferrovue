@@ -27,7 +27,7 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::Stores<'_>) {
-    out.reserve(87 + props.heading.len());
+    out.reserve(93 + props.heading.len());
     let s_summary = &*format!("{} line(s), {} doubled", fv::Js(fv_stores.cart.lines.len() as i64), fv::Js((fv_stores.prefs.count as f64 * 2.0) as i64));
     out.push_str("<aside class=\"");
     fv::class_into(out, false, &[if &*fv_stores.prefs.density == "compact" { "compact" } else { "" }, if fv_stores.cart.lines.len() as i64 as f64 == 0.0 { "empty" } else { "" }]);

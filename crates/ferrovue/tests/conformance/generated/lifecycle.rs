@@ -48,7 +48,7 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(83 + 10 * props.items.len() + props.items.iter().map(|v| v.name.len()).sum::<usize>() + props.query.len());
+    out.reserve(95 + 16 * props.items.len() + props.items.iter().map(|v| v.name.len()).sum::<usize>() + props.query.len());
     let s_m_a_x = 3i64;
     let s_prefix = "#";
     let s_shown = fv::js_trim(&props.query);

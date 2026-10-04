@@ -78,7 +78,7 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(328 + props.kind.len() + props.author.as_ref().map_or(0, |v| v.name.len() + v.url.as_deref().map_or(0, str::len)) + props.note.as_deref().map_or(0, str::len));
+    out.reserve(340 + props.kind.len() + props.author.as_ref().map_or(0, |v| v.name.len() + v.url.as_deref().map_or(0, str::len)) + props.note.as_deref().map_or(0, str::len));
     out.push_str("<div>");
     if &*props.kind == "a" {
         out.push_str("<p>a</p>");

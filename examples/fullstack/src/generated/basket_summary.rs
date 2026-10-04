@@ -27,7 +27,7 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::Stores<'_>) {
-    out.reserve(36 + props.label.len());
+    out.reserve(42 + props.label.len());
     out.push_str("<p class=\"basket");
     fv::class_into(out, true, &[if fv_stores.basket.ids.len() as i64 as f64 == 0.0 { "empty" } else { "" }]);
     out.push_str("\">");

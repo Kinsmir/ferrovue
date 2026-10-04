@@ -25,7 +25,7 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(146 + 86 * props.reviews.len() + props.reviews.iter().map(|v| v.reader.len() + v.text.len()).sum::<usize>());
+    out.reserve(152 + 92 * props.reviews.len() + props.reviews.iter().map(|v| v.reader.len() + v.text.len()).sum::<usize>());
     out.push_str("<div class=\"review-list\">");
     if props.reviews.len() as i64 != 0 {
         out.push_str("<ol><!--[-->");

@@ -31,7 +31,7 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(57 + props.rows.iter().map(|v| v.label.len() + v.tags.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>() + props.heading.len());
+    out.reserve(69 + props.rows.iter().map(|v| v.label.len() + v.tags.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>() + props.heading.len());
     super::data_list::render(out, &super::data_list::Props { rows: props.rows.to_owned(), title: std::borrow::Cow::Borrowed(&*props.heading), note: None }, super::data_list::Slots {
         header: Some(&|out: &mut String, fv_sp1: &super::data_list::HeaderSlotProps<'_>| -> bool {
             out.push_str("<h2");

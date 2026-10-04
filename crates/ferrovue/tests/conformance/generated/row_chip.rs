@@ -27,7 +27,7 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(30 + props.row.label.len() + props.row.tags.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(36 + props.row.label.len() + props.row.tags.iter().map(|v| v.len()).sum::<usize>());
     out.push_str("<span class=\"chip");
     fv::class_into(out, true, &[if props.first { "first" } else { "" }]);
     out.push_str("\">");

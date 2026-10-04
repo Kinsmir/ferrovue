@@ -34,7 +34,7 @@ pub struct Slots<'s> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::Route<'_>) {
-    out.reserve(205 + props.book.id.len() + props.book.title.len() + props.book.author.len());
+    out.reserve(211 + props.book.id.len() + props.book.title.len() + props.book.author.len());
     let s_permalink = &*format!("/books/{}", fv_route.param("id").unwrap_or(""));
     out.push_str("<article class=\"book\"");
     if let Some(v) = fv_route.param("id") {

@@ -52,7 +52,7 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(481 + props.s1.len() + props.os1.as_deref().map_or(0, str::len) + props.l2.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(499 + props.s1.len() + props.os1.as_deref().map_or(0, str::len) + props.l2.iter().map(|v| v.len()).sum::<usize>());
     out.push_str("<div><p>1e+21|100000000000000000000|9007199254740992</p><i alt=\"100000000000000000000\" id=\"1e+21\"></i><b placeholder=\"");
     fv::escape_into(out, &(if props.s1.starts_with("Σ") { std::borrow::Cow::<str>::Borrowed(&*props.s1) } else { std::borrow::Cow::<str>::Owned(fv::js_to_fixed(1.0f64, 0)) }));
     out.push_str("\"></b><p>");

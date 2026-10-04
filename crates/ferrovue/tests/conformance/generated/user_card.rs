@@ -50,7 +50,7 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(122 + 16 * props.user.roles.len() + 22 * props.badges.as_deref().unwrap_or(&[]).len() + props.user.name.len() + props.user.avatar.as_deref().map_or(0, str::len) + props.user.roles.iter().map(|v| v.name.len()).sum::<usize>() + props.user.size.as_deref().map_or(0, str::len) + props.size.as_deref().map_or(0, str::len) + props.note.as_deref().map_or(0, str::len));
+    out.reserve(128 + 16 * props.user.roles.len() + 22 * props.badges.as_deref().unwrap_or(&[]).len() + props.user.name.len() + props.user.avatar.as_deref().map_or(0, str::len) + props.user.roles.iter().map(|v| v.name.len()).sum::<usize>() + props.user.size.as_deref().map_or(0, str::len) + props.size.as_deref().map_or(0, str::len) + props.note.as_deref().map_or(0, str::len));
     out.push_str("<div class=\"card");
     fv::class_into(out, true, &[&*format!("card-{}", props.size.as_deref().unwrap_or("md"))]);
     out.push_str("\">");

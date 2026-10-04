@@ -206,6 +206,8 @@ export interface Scope {
   /** Inside a `<RouterLink>`'s slot, which Vue renders from virtual nodes rather than pushes: an
    * untaken `v-if` is `<!--v-if-->` there, not `<!---->`. */
   vnode: boolean;
+  /** Inside a `v-for` over a list of the props: the Rust name of its item, and the list. */
+  loop?: { item: string; over: string };
 }
 
 /** Where a node came from, which decides how its position is read: `source` for an AST parsed

@@ -41,7 +41,7 @@ pub struct Slots<'s> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::Route<'_>) {
-    out.reserve(105 + 83 * props.books.len() + props.books.iter().map(|v| v.id.len() + v.title.len() + v.author.len()).sum::<usize>());
+    out.reserve(105 + 89 * props.books.len() + props.books.iter().map(|v| v.id.len() + v.title.len() + v.author.len()).sum::<usize>());
     out.push_str("<section class=\"books\"><h1>All books</h1>");
     if props.books.len() as i64 != 0 {
         out.push_str("<ul><!--[-->");

@@ -27,7 +27,7 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::Stores<'_>) {
-    out.reserve(71 + props.title.len());
+    out.reserve(77 + props.title.len());
     out.push_str("<span class=\"badge");
     fv::class_into(out, true, &[&*fv_stores.prefs.density]);
     out.push_str("\" data-wide=\"");

@@ -64,7 +64,7 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(207 + props.label.as_deref().map_or(0, str::len) + props.user.as_ref().map_or(0, |v| v.name.len() + v.avatar.as_deref().map_or(0, str::len) + v.roles.iter().map(|v| v.name.len()).sum::<usize>() + v.size.as_deref().map_or(0, str::len)));
+    out.reserve(267 + props.label.as_deref().map_or(0, str::len) + props.user.as_ref().map_or(0, |v| v.name.len() + v.avatar.as_deref().map_or(0, str::len) + v.roles.iter().map(|v| v.name.len()).sum::<usize>() + v.size.as_deref().map_or(0, str::len)));
     out.push_str("<section>");
     if let Some(n1) = props.label.as_deref() {
         out.push_str("<p>");

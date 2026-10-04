@@ -45,7 +45,7 @@ pub struct Slots<'s> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
-    out.reserve(123 + props.title.len());
+    out.reserve(129 + props.title.len());
     out.push_str("<section class=\"panel\"><header>");
     fv::slot_into(out, fv_slots.title, Some(&mut |out: &mut String| {
         fv::escape_into(out, &props.title);
