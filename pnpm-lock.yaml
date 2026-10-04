@@ -245,6 +245,9 @@ importers:
       happy-dom:
         specifier: ^20.14.5
         version: 20.14.5
+      playwright:
+        specifier: 1.63.0
+        version: 1.63.0
       typescript:
         specifier: ^7.0.2
         version: 7.0.2
