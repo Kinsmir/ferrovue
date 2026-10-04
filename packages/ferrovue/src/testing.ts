@@ -11,7 +11,7 @@
 import { readFileSync } from "node:fs";
 import { compileScript, compileTemplate, parse as parseSfc } from "@vue/compiler-sfc";
 import * as vue from "vue";
-import { createSSRApp, createStaticVNode, defineComponent, h, type App, type Component } from "vue";
+import { createApp, createSSRApp, createStaticVNode, defineComponent, h, type App, type Component } from "vue";
 import * as serverRenderer from "vue/server-renderer";
 import { createPinia } from "pinia";
 import { createMemoryHistory, createRouter, type RouteRecordRaw } from "vue-router";
@@ -45,10 +45,18 @@ export function readFixture(json: Record<string, unknown>): Fixture {
 export function attachSsrRender(file: string, name: string, component: Component): void {
   const { descriptor } = parseSfc(readFileSync(file, "utf8"), { filename: file });
   const script = compileScript(descriptor, { id: name });
+  // A `<style scoped>` component's id is the one `@vitejs/plugin-vue` gave it, which its client
+  // build carries and which ferrovue computes the same way.
+  const scopeId = (component as { __scopeId?: string }).__scopeId;
+  if (!scopeId && descriptor.styles.some((st) => st.scoped)) {
+    throw new Error(`${file}: a \`<style scoped>\` component without \`__scopeId\`: load it through \`@vitejs/plugin-vue\``);
+  }
   const { code } = compileTemplate({
     source: descriptor.template!.content,
     filename: file,
-    id: name,
+    id: scopeId ?? name,
+    scoped: !!scopeId,
+    slotted: descriptor.slotted,
     ssr: true,
     ssrCssVars: [],
     compilerOptions: { bindingMetadata: script.bindings },
@@ -84,6 +92,9 @@ export interface RouterOptions {
   /** vue-i18n, when the project translates: every locale's messages, the default locale, and the
    * fallbacks. */
   i18n?: { messages: Record<string, unknown>; locale: string; fallbackLocale?: string | string[] };
+  /** Render on the client with `createApp`, rather than hydrate what the server rendered: the scope
+   * ids a fresh client render writes, which the server's must equal for scoped styles to apply. */
+  client?: boolean;
 }
 
 /** Route records for vue-router, every route — nested ones too — given the fixture's view. */
@@ -107,7 +118,7 @@ export async function fixtureApp(
       .filter(([name]) => name !== "routerView")
       .map(([name, html]) => [name, () => [staticNode(html)]]),
   );
-  const app = createSSRApp({ render: () => h(component, fixture.props, slots) });
+  const app = (options.client ? createApp : createSSRApp)({ render: () => h(component, fixture.props, slots) });
   // As the client hydrates: the state the server rendered with, set before any store is first used.
   const pinia = createPinia();
   pinia.state.value = structuredClone(fixture.stores) as typeof pinia.state.value;

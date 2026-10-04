@@ -105,7 +105,7 @@ export function resolveLink(s: Scope, e: Emitter, to: N): void {
 /** \`<RouterLink to="...">\` as vue-router renders it: \`aria-current\` and the active classes when it
  * points where the reader is, then \`href\`, then the link's own class and attributes. */
 export function routerLink(s: Scope, e: Emitter, n: N): void {
-  const [, rawProps, slots] = n.arguments;
+  const [, rawProps, slots, , slotScopeId] = n.arguments;
   let props = rawProps;
   if (props?.type === "CallExpression" && props.callee.type === "Identifier" && props.callee.name === "_mergeProps") {
     props = mergeProps(s, props);
@@ -125,6 +125,11 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
   }
   const to = fields.get("to");
   if (!to) fail(s.comp, "`<RouterLink>` needs `to`", n);
+  // vue-router renders the link from virtual nodes, which take scope ids by rules of their own.
+  const passed = (rawProps?.type === "Identifier" && rawProps.name === "_attrs") || rawProps?.arguments?.some((a: N) => a.type === "Identifier" && a.name === "_attrs");
+  if (s.comp.scopeId !== null || (slotScopeId && s.sid !== null) || (passed && s.attrs !== null)) {
+    fail(s.comp, "`<RouterLink>` takes scope ids by the rules of virtual nodes, which are not translated: keep it out of components with `<style scoped>`, and out of what they pass ids to", to);
+  }
   if (!ctx.routes) fail(s.comp, `\`<RouterLink>\` needs \`routes\` in ${CONFIG_FILE}: the paths it resolves against`, n);
   /** A literal-string prop, which the class names and `aria-current` must be. */
   const literal = (key: string, fallback: string): string => {

@@ -214,8 +214,13 @@ export function renderClass(s: Scope, e: Emitter, n: N, after = false): void {
 
 export const IGNORED_PROPS = new Set(["", "key", "ref", "innerHTML", "textContent", "ref_key", "ref_for"]);
 
-/** `ssrRenderAttrs(obj)`, key by key in the object's order. `_attrs` is always empty: an island
- * passes a child only the props it declares, so nothing falls through. */
+/** `ssrRenderAttrs(_attrs)` on the root: the scope ids a parent handed it, already written as Vue
+ * writes them. They are all `_attrs` holds, since a parent passes a child only the props it
+ * declares and nothing else falls through. */
+function inheritedAttrs(s: Scope, e: Emitter): void {
+  if (s.attrs !== null) e.stmt(`out.push_str(${s.attrs});`);
+}
+
 /** `ssrGetDirectiveProps(_ctx, dir)`: a custom directive's server props, which are none for a
  * directive the configuration declares client-only. `false` when `n` is not such a call. */
 export function directiveProps(s: Scope, n: N): boolean {
@@ -233,11 +238,29 @@ export function directiveProps(s: Scope, n: N): boolean {
   return true;
 }
 
+/** `ssrRenderAttrs(obj)`, key by key in the object's order, and the inherited scope ids where the
+ * root's `_attrs` is merged in. */
 export function renderAttrs(s: Scope, e: Emitter, n: N): void {
-  if (n.type === "Identifier" && n.name === "_attrs") return;
+  const isAttrs = (a: N): boolean => a.type === "Identifier" && a.name === "_attrs";
+  if (isAttrs(n)) {
+    inheritedAttrs(s, e);
+    return;
+  }
   if (directiveProps(s, n)) return;
   if (n.type === "CallExpression" && n.callee.type === "Identifier" && n.callee.name === "_mergeProps") {
-    renderAttrs(s, e, mergeProps(s, n));
+    const merged = mergeProps(s, n);
+    const at = n.arguments.findIndex(isAttrs);
+    if (at < 0) {
+      renderAttrs(s, e, merged);
+      return;
+    }
+    // The inherited ids take their place among the keys: after those given before `_attrs`, before
+    // those first given after it, such as `v-show`'s `style` when there is no other.
+    const before = new Set(mergeProps(s, { ...n, arguments: n.arguments.slice(0, at) }).properties.map((p: N) => p.key.name ?? p.key.value));
+    const part = (early: boolean): N => ({ ...merged, properties: merged.properties.filter((p: N) => before.has(p.key.name ?? p.key.value) === early) });
+    renderAttrs(s, e, part(true));
+    inheritedAttrs(s, e);
+    renderAttrs(s, e, part(false));
     return;
   }
   if (n.type !== "ObjectExpression") fail(s.comp, "attributes must be an object literal", n);
@@ -263,9 +286,9 @@ export function renderAttrs(s: Scope, e: Emitter, n: N): void {
   }
 }
 
-/** `mergeProps(a, _attrs, b, …)` as one object literal. `_attrs` is empty, an island passing a child
- * only the props it declares; of the rest, `class` and `style` values are merged as an array, and
- * any other key keeps the place it first had with the last value given. */
+/** `mergeProps(a, _attrs, b, …)` as one object literal, without `_attrs`: it holds only scope ids,
+ * which the caller writes after the rest. Of the rest, `class` and `style` values are merged as an
+ * array, and any other key keeps the place it first had with the last value given. */
 export function mergeProps(s: Scope, n: N): N {
   const merged = new Map<string, N>();
   for (const a of n.arguments) {

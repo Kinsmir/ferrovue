@@ -46,7 +46,16 @@ export interface Config {
   /** vue-i18n: the directory of locale files (\`en.json\`, \`nl.json\`), the locale a page renders in
    * when it names none, and the locales a missing message falls back to. */
   i18n?: { messages: string; locale?: string; fallbackLocale?: string | string[] };
+  /** How a `<style scoped>` component's `data-v-` id is computed, which must be how
+   * `@vitejs/plugin-vue` computes it for the client: from the file's path (`"filepath"`, the
+   * plugin's choice in development, and with `features.componentIdGenerator: "filepath"`), or its
+   * path and source (`"filepath-source"`, the plugin's choice for a production build). */
+  scopeId?: ScopeIdMode;
+  /** Vite's root, from which a scope id hashes a component's path: the project root by default. */
+  viteRoot?: string;
 }
+
+export type ScopeIdMode = "filepath" | "filepath-source";
 
 export const CONFIG_FILE = "ferrovue.config.json";
 
@@ -55,6 +64,9 @@ export function loadConfig(root: string): Config {
   const raw = JSON.parse(readFileSync(join(root, CONFIG_FILE), "utf8")) as Partial<Config>;
   if (typeof raw.components !== "string" || typeof raw.out !== "string") {
     throw new GenError(`${CONFIG_FILE} needs \`components\` and \`out\` directories`);
+  }
+  if (raw.scopeId !== undefined && raw.scopeId !== "filepath" && raw.scopeId !== "filepath-source") {
+    throw new GenError(`\`scopeId\` in ${CONFIG_FILE} is "filepath" or "filepath-source", as \`@vitejs/plugin-vue\` computes it`);
   }
   return raw as Config;
 }
@@ -163,4 +175,7 @@ export const ctx = {
   componentsDir: "",
   /** The configured locales and their messages, when there are any. */
   i18n: null as I18nSetup | null,
+  /** How scope ids are computed, and the directory a component's path is hashed from. */
+  scopeId: "filepath-source" as ScopeIdMode,
+  viteRoot: "",
 };

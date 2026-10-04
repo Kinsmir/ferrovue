@@ -3,11 +3,12 @@
  * Each case here is a component Vue renders one way and a careless translation would render
  * another, without failing: the conformance suite only catches it if some fixture happens to
  * exercise the construct. So each must be an error naming it instead. */
+import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { generate } from "../src/compiler.ts";
+import { generate, loadConfig } from "../src/compiler.ts";
 
 /** Every project a case made, removed after it. */
 const roots: string[] = [];
@@ -398,6 +399,61 @@ defineProps<{ on: boolean }>();
     });
   });
 
+  describe("scoped styles", () => {
+    const leaf = `<script setup lang="ts">
+defineProps<{ label: string }>();
+</script>
+<template><b>{{ label }}</b></template>
+<style scoped>b { color: red }</style>`;
+    const hash = (text: string) => createHash("sha256").update(text).digest("hex").slice(0, 8);
+
+    it("hashes the path and source from Vite's root, as `@vitejs/plugin-vue` does", () => {
+      const root = island(leaf);
+      expect(compile(root).get("x.rs")).toContain(`<b data-v-${hash(`components/X.vue${leaf}`)}>`);
+      expect(generate(root, { ...CONFIG, scopeId: "filepath" }).get("x.rs")).toContain(`<b data-v-${hash("components/X.vue")}>`);
+      const nested = join(root, "app");
+      mkdirSync(nested);
+      expect(generate(root, { ...CONFIG, scopeId: "filepath", viteRoot: ".." }).get("x.rs")).toContain(`<b data-v-${hash(`${basename(root)}/components/X.vue`)}>`);
+      writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify({ ...CONFIG, scopeId: "dev" }));
+      expect(() => loadConfig(root)).toThrow(/`scopeId` in ferrovue\.config\.json is "filepath" or "filepath-source"/);
+    });
+
+    it("hands a child's root the parent's id, and what a parent passes on to its root", () => {
+      const middle = `<script setup lang="ts">
+import Leaf from "./Leaf.vue";
+</script>
+<template><Leaf label="x" /></template>
+<style scoped>b { color: blue }</style>`;
+      const top = `<script setup lang="ts">
+import Middle from "./Middle.vue";
+</script>
+<template><section><Middle /></section></template>
+<style scoped>section { color: green }</style>`;
+      const out = generate(island(top, { Middle: middle, Leaf: leaf }), { ...CONFIG, scopeId: "filepath" });
+      expect(out.get("leaf.rs")).toContain("pub fn render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str)");
+      expect(out.get("leaf.rs")).toContain('render_scoped(out, props, "");');
+      expect(out.get("leaf.rs")).toContain("out.push_str(fv_attrs);");
+      expect(out.get("x.rs")).toContain(`super::middle::render_scoped(out, &super::middle::Props {  }, " data-v-${hash("components/X.vue")}");`);
+      // The middle one's root is the leaf, handed what the middle one inherits and its own id.
+      expect(out.get("middle.rs")).toContain(`super::leaf::render_scoped(out, &super::leaf::Props { label: std::borrow::Cow::Borrowed("x") }, &fv::scope_attrs(fv_attrs, "data-v-${hash("components/Middle.vue")}", ""));`);
+    });
+
+    it("gives slot content the slot scope id of a component with `:slotted()` styles", () => {
+      const card = `<script setup lang="ts">
+defineSlots<{ default(): unknown }>();
+</script>
+<template><div><slot /></div></template>
+<style scoped>:slotted(p) { margin: 0 }</style>`;
+      const parent = `<script setup lang="ts">
+import Card from "./Card.vue";
+</script>
+<template><Card><p>x</p></Card></template>`;
+      const out = generate(island(parent, { Card: card }), { ...CONFIG, scopeId: "filepath" });
+      expect(out.get("card.rs")).toContain(`fv::slot_into_slotted(out, fv_slots.default, "data-v-${hash("components/Card.vue")}-s", None);`);
+      expect(out.get("x.rs")).toContain("default: Some(fv::Slot::slotted(&|out: &mut String, fv_sid1: &str| -> bool {");
+    });
+  });
+
   describe("the router", () => {
     const withRoutes = (root: string) => {
       writeFileSync(join(root, "routes.json"), JSON.stringify(["/", "/users/:id"]));
@@ -424,6 +480,27 @@ defineProps<{ href: string }>();
 
     it("refuses a RouterLink when the configuration names no routes", () => {
       expect(() => compile(island(nav))).toThrow(/`routes` in ferrovue\.config\.json/);
+    });
+
+    it("refuses a RouterLink or a RouterView where scope ids would reach it", () => {
+      const scoped = (template: string) => `<script setup lang="ts">
+defineProps<{ href: string }>();
+</script>
+<template>${template}</template>
+<style scoped>a { color: red }</style>`;
+      expect(() => withRoutes(island(scoped(`<nav><RouterLink :to="href">go</RouterLink></nav>`)))).toThrow(/`<RouterLink>` takes scope ids/);
+      expect(() => withRoutes(island(scoped(`<main><RouterView /></main>`)))).toThrow(/`<RouterView>` in a component with `<style scoped>`/);
+      // Unscoped itself, but the root of a scoped component's child, which hands it that id.
+      const parent = `<script setup lang="ts">
+import Nav from "./Nav.vue";
+</script>
+<template><header><Nav href="/" /></header></template>
+<style scoped>header { color: red }</style>`;
+      const rooted = `<script setup lang="ts">
+defineProps<{ href: string }>();
+</script>
+<template><RouterLink :to="href">go</RouterLink></template>`;
+      expect(() => withRoutes(island(parent, { Nav: rooted }))).toThrow(/Nav\.vue:4:28: `<RouterLink>` takes scope ids/);
     });
 
     it("refuses a custom RouterLink, which renders a scoped slot", () => {
@@ -922,13 +999,14 @@ const props = defineProps<{ when: Date }>();
       /needs `<script setup lang="ts">`/,
     ],
     [
-      "a scoped `<style>`, whose attribute the bundler names",
+      "an `inheritAttrs` that is not a literal",
       `<script setup lang="ts">
+const quiet = false;
+defineOptions({ inheritAttrs: quiet });
 defineProps<{ a: string }>();
 </script>
-<template><i>{{ a }}</i></template>
-<style scoped>i { color: red }</style>`,
-      /`<style scoped>`/,
+<template><i>{{ a }}</i></template>`,
+      /`inheritAttrs` is `true` or `false`/,
     ],
     [
       "a CSS module, whose class names the bundler chooses",

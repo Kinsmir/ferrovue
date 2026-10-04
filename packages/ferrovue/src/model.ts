@@ -154,6 +154,18 @@ export interface Component {
   /** Its scoped slots, by name: the props each one's outlets pass, known once its render is
    * generated, which is why a child is generated before its parents. */
   slotShapes: Map<string, Struct>;
+  /** `data-v-…`, the id its `<style scoped>` gives its elements, or `null` without one. */
+  scopeId: string | null;
+  /** Whether its scoped styles use `:slotted()`, so that its outlets pass a slot scope id. */
+  slotted: boolean;
+  /** `inheritAttrs` from `defineOptions`: `false` drops what a parent passes on to its root. */
+  inheritAttrs: boolean;
+  /** Whether a parent may hand its root scope ids — its own, those passed on to it, or a slot's —
+   * which it then takes as `fv_attrs`. Known once every component is read (`scopeFlow`). */
+  inherits: boolean;
+  /** Whether its outlets may pass slot content a slot scope id, which the content then takes as
+   * `fv_sid`. Known once every component is read, as `inherits` is. */
+  passesSlotIds: boolean;
 }
 
 export interface Scope {
@@ -194,6 +206,12 @@ export interface Scope {
   /** Inside a `<RouterLink>`'s slot, which Vue renders from virtual nodes rather than pushes: an
    * untaken `v-if` is `<!--v-if-->` there, not `<!---->`. */
   vnode: boolean;
+  /** The Rust value of `_attrs`, the scope ids this render's root inherits, as `ssrRenderAttrs`
+   * writes them; `null` when the component inherits none. */
+  attrs: string | null;
+  /** The Rust value of `_scopeId` inside slot content: the slot scope id the content is given, or
+   * `null` where it is always empty. */
+  sid: string | null;
 }
 
 /** Where a node came from, which decides how its position is read: `source` for an AST parsed
