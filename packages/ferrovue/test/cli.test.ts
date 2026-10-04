@@ -1,6 +1,6 @@
 /* The `ferrovue` command, run as a project runs it: from the project's root, as a process. */
-import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { spawn, spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, expect, it } from "vitest";
@@ -28,8 +28,17 @@ afterEach(() => rmSync(root, { recursive: true, force: true }));
 it("writes one module per component, and the module tying them together", () => {
   const r = run();
   expect(r.status, r.stderr).toBe(0);
-  expect(r.stdout).toContain("wrote 2 files to src/generated");
-  expect(readdirSync(join(root, "src/generated")).sort()).toEqual(["hello.rs", "mod.rs"]);
+  expect(r.stdout).toContain("src/generated: 2 files, 2 changed, 0 removed");
+  expect(readdirSync(join(root, "src/generated")).toSorted()).toEqual(["hello.rs", "mod.rs"]);
+});
+
+it("rewrites nothing that did not change, so a Rust build does not rebuild it", async () => {
+  run();
+  const before = statSync(join(root, "src/generated/hello.rs")).mtimeMs;
+  await new Promise((r) => setTimeout(r, 20));
+  const r = run();
+  expect(r.stdout).toContain("nothing changed");
+  expect(statSync(join(root, "src/generated/hello.rs")).mtimeMs).toBe(before);
 });
 
 it("replaces what the output directory held", () => {
@@ -60,7 +69,7 @@ it("--check fails when nothing was ever generated, and writes nothing", () => {
   const r = run("--check");
   expect(r.status).toBe(1);
   expect(r.stderr).toContain("stale: src/generated/mod.rs");
-  expect(() => readdirSync(join(root, "src/generated"))).toThrow();
+  expect(() => readdirSync(join(root, "src/generated"))).toThrow(/ENOENT/);
 });
 
 it("fails, naming the file and the construct, on a component it cannot translate", () => {
@@ -69,11 +78,41 @@ it("fails, naming the file and the construct, on a component it cannot translate
     `<script setup lang="ts">
 defineProps<{ n: number }>();
 </script>
-<template><p>{{ n / 2 }}</p></template>`,
+<template><p>{{ n.toPrecision(2) }}</p></template>`,
   );
   const r = run();
-  expect(r.status).not.toBe(0);
-  expect(r.stderr).toContain("components/Bad.vue");
+  expect(r.status).toBe(1);
+  // The line in the `.vue` file, quoted with a caret, and no stack trace.
+  expect(r.stderr).toContain("error: components/Bad.vue:4:17: `.toPrecision()` is not supported");
+  expect(r.stderr).toContain(" 4 | <template><p>{{ n.toPrecision(2) }}</p></template>");
+  expect(r.stderr).toContain("   |                 ^");
+  expect(r.stderr).not.toContain("    at ");
+});
+
+it("--watch regenerates on a change, and reports an error without stopping", async () => {
+  const child = spawn(process.execPath, [CLI, "--watch"], { cwd: root });
+  let out = "";
+  child.stdout.on("data", (d) => (out += d));
+  child.stderr.on("data", (d) => (out += d));
+  const waitFor = async (text: string): Promise<void> => {
+    for (let i = 0; i < 100 && !out.includes(text); i++) await new Promise((r) => setTimeout(r, 50));
+    expect(out).toContain(text);
+  };
+  try {
+    await waitFor("watching for changes");
+    writeFileSync(join(root, "components", "Hello.vue"), `<script setup lang="ts">
+defineProps<{ name: string }>();
+</script>
+<template><p>{{ name / 2 }}</p></template>`);
+    await waitFor("error: components/Hello.vue");
+    writeFileSync(join(root, "components", "Hello.vue"), `<script setup lang="ts">
+defineProps<{ name: string }>();
+</script>
+<template><p>Bye, {{ name }}</p></template>`);
+    await waitFor("1 changed");
+  } finally {
+    child.kill();
+  }
 });
 
 it("fails on a configuration without its two directories", () => {

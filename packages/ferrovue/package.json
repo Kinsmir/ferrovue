@@ -43,6 +43,10 @@
     "./client": {
       "types": "./dist/client.d.ts",
       "default": "./dist/client.js"
+    },
+    "./vite": {
+      "types": "./dist/vite.d.ts",
+      "default": "./dist/vite.js"
     }
   },
   "bin": {
@@ -54,25 +58,37 @@
   },
   "dependencies": {
     "@babel/parser": "^7.29.9",
+    "@intlify/message-compiler": "11.4.13",
     "@vue/compiler-sfc": "3.5.43",
-    "@vue/shared": "3.5.43"
+    "@vue/shared": "3.5.43",
+    "source-map-js": "^1.2.2"
   },
   "devDependencies": {
     "@vue/server-renderer": "3.5.43",
     "pinia": "^4.0.3",
+    "vite": "^8.3.0",
     "vue": "3.5.43",
+    "vue-i18n": "11.4.13",
     "vue-router": "^5.3.1"
   },
   "peerDependencies": {
+    "pinia": "^4.0.3",
+    "vite": ">=6",
     "vue": "3.5.43",
-    "vue-router": "^5.3.1",
-    "pinia": "^4.0.3"
+    "vue-i18n": "^11.0.0",
+    "vue-router": "^5.3.1"
   },
   "peerDependenciesMeta": {
     "vue-router": {
       "optional": true
     },
     "pinia": {
+      "optional": true
+    },
+    "vite": {
+      "optional": true
+    },
+    "vue-i18n": {
       "optional": true
     }
   }

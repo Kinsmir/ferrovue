@@ -63,6 +63,19 @@ defineProps<Props>();
 </script>
 <template><b>{{ label }}</b></template>`;
 
+    it("renders a child given no props", () => {
+      const bare = `<script setup lang="ts">
+defineProps<{ note?: string }>();
+</script>
+<template><i>{{ note }}</i></template>`;
+      const parent = `<script setup lang="ts">
+import Bare from "./Bare.vue";
+defineProps<{ a: string }>();
+</script>
+<template><div><Bare /><span>{{ a }}</span></div></template>`;
+      expect(compile(island(parent, { Bare: bare })).get("x.rs")).toContain("super::bare::render(out, &super::bare::Props { note: None });");
+    });
+
     it("writes an exported `interface Props` once, as the props struct", () => {
       const out = compile(island(child)).get("x.rs")!;
       expect(out.match(/pub struct Props/g)).toHaveLength(1);
@@ -142,6 +155,16 @@ defineProps<{ user: User }>();
       expect(() => compile(island(parent, { Card: card }))).toThrow(/share a type only when both import it from one `.ts` file/);
     });
 
+    it("sends a Teleport's content to the page's Teleports, and hands them down", () => {
+      const modal = `<script setup lang="ts">
+defineProps<{ a: string }>();
+</script>
+<template><div><Teleport to="#modals"><p>{{ a }}</p></Teleport></div></template>`;
+      const out = compile(island(modal)).get("x.rs")!;
+      expect(out).toContain('fv::teleport_into(out, fv_teleports, "#modals", false, &|out: &mut String| {');
+      expect(out).toContain("fv_teleports: &fv::Teleports");
+    });
+
     it("renders Suspense's default content in place", () => {
       const out = compile(
         island(`<script setup lang="ts">
@@ -203,7 +226,8 @@ const props = defineProps<{ n: number; m: number }>();
 </script>
 <template><b :title="n + m"></b></template>`),
     ).get("x.rs")!;
-    expect(sum).toContain("(props.n + props.m)");
+    // On doubles, as JavaScript adds: exact within 2⁵³, rounded beyond it.
+    expect(sum).toContain("((((props.n) as f64) + ((props.m) as f64)) as i64)");
     expect(() =>
       compile(
         island(`<script setup lang="ts">
@@ -422,9 +446,24 @@ defineProps<{ id: string }>();
     it("resolves a named route with its parameters, and writes the base and class names configured", () => {
       const out = named(island(linkTo("{ name: 'user', params: { id } }")), { base: "/app/", linkActiveClass: "on", linkExactActiveClass: "here" });
       expect(out.get("x.rs")).toContain('fv_route.link_named("user", &[("id", &*props.id)], "", "")');
-      expect(out.get("x.rs")).toContain('if fv_link.active { "on" } else { "" }, if fv_link.active { "here" } else { "" }');
+      expect(out.get("x.rs")).toContain('if fv_link.active { "on" } else { "" }, if fv_link.exact { "here" } else { "" }');
       expect(out.get("route_table.rs")).toContain('pub const BASE: &str = "/app/";');
-      expect(out.get("route_table.rs")).toContain('("/users/:id", Some("user")),');
+      expect(out.get("route_table.rs")).toContain('ferrovue::RouteDef { path: "/users/:id", name: Some("user"), children: &[] },');
+    });
+
+    it("writes nested routes as a tree, and asks a nested route for its parent's parameters too", () => {
+      const root = island(linkTo("{ name: 'post', params: { id, post: id } }"));
+      writeFileSync(
+        join(root, "routes.json"),
+        JSON.stringify([{ path: "/users/:id", name: "user", children: [{ path: "", name: "user-home" }, { path: "posts/:post", name: "post" }] }]),
+      );
+      const out = generate(root, { ...CONFIG, routes: "routes.json" });
+      expect(out.get("route_table.rs")).toContain('ferrovue::RouteDef { path: "posts/:post", name: Some("post"), children: &[] },');
+      expect(out.get("route_table.rs")).toContain('"/users/:id/posts/:post",');
+      expect(out.get("x.rs")).toContain('fv_route.link_named("post", &[("id", &*props.id), ("post", &*props.id)], "", "")');
+      const missing = island(linkTo("{ name: 'post', params: { post: id } }"));
+      writeFileSync(join(missing, "routes.json"), JSON.stringify([{ path: "/users/:id", children: [{ path: "posts/:post", name: "post" }] }]));
+      expect(() => generate(missing, { ...CONFIG, routes: "routes.json" })).toThrow(/route `post` needs `id`/);
     });
 
     it("refuses a route name no route has", () => {
@@ -444,7 +483,9 @@ const route = useRoute();
 </script>
 <template><p>{{ route.${field} }}</p></template>`;
       expect(named(island(reader("params.id"))).get("x.rs")).toContain('fv_route.param("id")');
-      expect(() => named(island(reader("query.q")))).toThrow(/`route.query` is not available on the server/);
+      expect(named(island(reader("query.q"))).get("x.rs")).toContain('(fv_route.query("q")).write_display(out);');
+      expect(named(island(reader("fullPath"))).get("x.rs")).toContain("fv_route.full_path()");
+      expect(() => named(island(reader("meta.title")))).toThrow(/`route.meta` is not available on the server/);
     });
 
     it("writes RouterView as the page the server supplies, and refuses it below the top", () => {
@@ -499,11 +540,24 @@ defineProps<{ title: string }>();
       expect(() => withStore(island(reader), untyped)).toThrow(/declares its return type/);
     });
 
-    it("refuses a setup store, whose state it cannot see", () => {
+    it("reads a setup store's returned refs as its state, and refuses one it cannot see", () => {
       const setup = `import { defineStore } from "pinia";
+import { ref } from "vue";
+export const usePrefs = defineStore("prefs", () => {
+  const density = ref("classic");
+  const wide = ref(false);
+  return { density, wide };
+});
+`;
+      const out = withStore(island(reader), setup);
+      expect(out.get("stores.rs")).toContain("pub struct PrefsState<'a> {");
+      expect(out.get("x.rs")).toContain("&*fv_stores.prefs.density");
+      const expression = `import { defineStore } from "pinia";
 export const usePrefs = defineStore("prefs", () => ({}));
 `;
-      expect(() => withStore(island(reader), setup)).toThrow(/option store/);
+      expect(() => withStore(island(reader), expression)).toThrow(/returns its state from a block/);
+      const untyped = setup.replace('ref("classic")', "ref([])");
+      expect(() => withStore(island(reader), untyped)).toThrow(/declares its type: `ref<string\[\]>\(\[\]\)`/);
     });
 
     it("refuses storeToRefs of anything but a store bound in setup", () => {
@@ -527,6 +581,68 @@ export const usePrefs = defineStore("prefs", () => ({}));
       expect(() => withStore(island(reader.replace("prefs.density", "prefs.label")), viaThis)).toThrow(/reads `this`/);
       const fn = store.replace("});\n", `, getters: { label: (s) => (x: string) => x } });\n`);
       expect(() => withStore(island(reader.replace("prefs.density", "prefs.label")), fn)).toThrow(/returns a function/);
+    });
+  });
+
+  describe("error locations", () => {
+    /** The \`file:line:column\` an error starts with. */
+    const where = (source: string, others: Record<string, string> = {}): string => {
+      try {
+        compile(island(source, others));
+      } catch (e) {
+        return (e as Error).message.split(": ")[0]!;
+      }
+      throw new Error("compiled without an error");
+    };
+
+    it("points at a template expression in the .vue file", () => {
+      expect(where(`<script setup lang="ts">
+defineProps<{ n: number }>();
+</script>
+
+<template>
+  <div>
+    <p>{{ n.toPrecision(2) }}</p>
+  </div>
+</template>`)).toBe("components/X.vue:7:11");
+    });
+
+    it("points at an attribute binding", () => {
+      expect(where(`<script setup lang="ts">
+defineProps<{ a: string }>();
+</script>
+<template><i :title="a.split(',')"></i></template>`)).toBe("components/X.vue:4:22");
+    });
+
+    it("points at a template expression on the <template> line itself", () => {
+      expect(where(`<script setup lang="ts">
+defineProps<{ n: number }>();
+</script>
+<template><b>{{ n.toPrecision(2) }}</b></template>`)).toBe("components/X.vue:4:17");
+    });
+
+    it("points at a setup statement and a prop type", () => {
+      expect(where(`<script setup lang="ts">
+import { watchEffect } from "vue";
+defineProps<{ a: string }>();
+watchEffect(() => {});
+</script>
+<template><i></i></template>`)).toBe("components/X.vue:4:1");
+      expect(where(`<script setup lang="ts">
+defineProps<{
+  when: Date;
+}>();
+</script>
+<template><i></i></template>`)).toBe("components/X.vue:3:9");
+    });
+
+    it("quotes the line with a caret under the construct", () => {
+      expect(() =>
+        compile(island(`<script setup lang="ts">
+defineProps<{ n: number }>();
+</script>
+<template><b>{{ n.toPrecision(2) }}</b></template>`)),
+      ).toThrow(" 4 | <template><b>{{ n.toPrecision(2) }}</b></template>\n   |                 ^");
     });
   });
 
@@ -575,6 +691,57 @@ defineProps<{ a: string }>();
 <style>i { color: red }</style>`),
       ).get("x.rs")!;
       expect(out).toContain("pub fn render");
+    });
+  });
+
+  describe("numbers", () => {
+    const numbers = `<script setup lang="ts">
+import type { Float } from "ferrovue/types";
+defineProps<{ price: Float; qty: number; rate?: Float }>();
+</script>
+<template><p :data-total="price * qty">{{ (price * qty).toFixed(2) }}|{{ qty / 4 }}|{{ Math.round(price) }}|{{ rate ?? 0.5 }}|{{ qty % 3 }}</p></template>`;
+
+    it("makes a Float prop an f64, written as JavaScript writes numbers", () => {
+      const out = compile(island(numbers)).get("x.rs")!;
+      expect(out).toContain("pub price: f64,");
+      expect(out).toContain("pub rate: Option<f64>,");
+      expect(out).toContain("fv::js_to_fixed((((props.price) * ((props.qty) as f64))), 2)");
+      expect(out).toContain("fv::push_number(out, (((props.qty) as f64) / ((4i64) as f64)));");
+      expect(out).toContain("fv::js_round((props.price))");
+      expect(out).toContain("(props.rate).unwrap_or(0.5f64)");
+      // An integer remainder by a literal stays an integer.
+      expect(out).toContain("fv::push_int(out, ((((props.qty) as f64) % ((3i64) as f64)) as i64));");
+    });
+
+    it("refuses toFixed with digits that are not a literal", () => {
+      const source = numbers.replace("toFixed(2)", "toFixed(qty)");
+      expect(() => compile(island(source))).toThrow(/`\.toFixed\(\)` takes a literal number of digits/);
+    });
+  });
+
+  describe("vue-i18n", () => {
+    const withLocales = (root: string, messages: Record<string, unknown>) => {
+      mkdirSync(join(root, "locales"), { recursive: true });
+      writeFileSync(join(root, "locales", "en.json"), JSON.stringify(messages));
+      return generate(root, { ...CONFIG, i18n: { messages: "locales", locale: "en" } });
+    };
+    const translating = (call: string) => `<script setup lang="ts">
+defineProps<{ n: number }>();
+</script>
+<template><p>{{ ${call} }}</p></template>`;
+
+    it("compiles the messages to a table, and a $t call to a lookup in the request's locale", () => {
+      const out = withLocales(island(translating("$t('apples', n)")), { apples: "one | {n} apples", a: { b: "@.upper:a.c" }, "a.c": "x" });
+      expect(out.get("x.rs")).toContain('fv_i18n.t("apples", &fv::i18n::Args { named: &[], list: &[], plural: Some(props.n) })');
+      expect(out.get("x.rs")).toContain("fv_i18n: &fv::I18n");
+      expect(out.get("i18n.rs")).toContain('("apples", Message { cases: &[&[Part::Text("one")], &[Part::Named("n"), Part::Text(" apples")]] })');
+      expect(out.get("i18n.rs")).toContain('Part::Linked { key: "a.c", modifier: Some("upper") }');
+    });
+
+    it("refuses $t without locale files, a default message, and a modifier vue-i18n does not define", () => {
+      expect(() => compile(island(translating("$t('a')")))).toThrow(/`t\(\)` needs `i18n` in ferrovue\.config\.json/);
+      expect(() => withLocales(island(translating("$t('a', 'fallback')")), { a: "x" })).toThrow(/a default message given to `t\(\)` is not supported/);
+      expect(() => withLocales(island(translating("$t('a')")), { a: "@.shout:b", b: "x" })).toThrow(/the modifier `shout`, which vue-i18n does not define/);
     });
   });
 
@@ -731,31 +898,7 @@ const props = defineProps<{ note?: string }>();
 const props = defineProps<{ a: string; b: string }>();
 </script>
 <template><i v-if="a < b">x</i></template>`,
-      /`<` is supported between two numbers/,
-    ],
-    [
-      "division, which gives a fraction",
-      `<script setup lang="ts">
-const props = defineProps<{ n: number }>();
-</script>
-<template><i>{{ n / 2 }}</i></template>`,
-      /`\/` gives a fraction/,
-    ],
-    [
-      "a remainder by a divisor that may be zero",
-      `<script setup lang="ts">
-const props = defineProps<{ n: number; m: number }>();
-</script>
-<template><i>{{ n % m }}</i></template>`,
-      /`%` takes a literal divisor/,
-    ],
-    [
-      "a fractional number",
-      `<script setup lang="ts">
-const props = defineProps<{ n: number }>();
-</script>
-<template><i :title="n + 0.5"></i></template>`,
-      /only integer literals/,
+      /`<` is supported between two numbers that are present: JavaScript orders strings by UTF-16 code unit/,
     ],
     [
       "a ternary whose branches differ in type",
@@ -828,14 +971,6 @@ const props = defineProps<{ a: string }>();
 </script>
 <template><i>{{ a.split(",") }}</i></template>`,
       /`\.split\(\)` is not supported/,
-    ],
-    [
-      "a Teleport, whose content the page must place",
-      `<script setup lang="ts">
-defineProps<{ a: string }>();
-</script>
-<template><div><Teleport to="body"><p>{{ a }}</p></Teleport></div></template>`,
-      /`<Teleport>` renders its content into a separate buffer/,
     ],
     [
       "a dynamic component",
