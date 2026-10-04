@@ -1,20 +1,62 @@
-//! Vue templates as Rust render functions.
-//!
-//! The ferrovue compiler reads a `.vue` component, takes what Vue's own SSR compiler makes of its
-//! template, and writes a Rust function that produces the same bytes. A server can then render the
-//! component with no JavaScript at run time, and the browser hydrates the markup it was sent. This
-//! crate is what those generated functions call: the Rust twins of the `@vue/server-renderer` and
-//! `@vue/shared` routines a compiled template uses, which reproduce Vue's output byte for byte —
-//! a single differing byte is a hydration mismatch in the browser.
-//!
-//! [`Html`] is the one type here that writes raw bytes. Generated code is what builds it, and it
-//! writes by calling a generated renderer, whose every interpolation goes through [`escape_into`].
+#![doc = include_str!("../docs/crate.md")]
+#![cfg_attr(docsrs, feature(doc_cfg))]
+#![warn(missing_docs, rustdoc::missing_crate_level_docs)]
 
 use serde::Serialize;
 
-/// A generated renderer applied to its props, written straight into the caller's buffer: no buffer
-/// of its own, and no copy. `F` is the renderer: a plain function for a component that needs only
-/// its props, a closure holding the slots and the route for one that takes those as well.
+/// A component applied to its props, ready to be written: what a generated `html()` or `island()`
+/// returns.
+///
+/// Nothing renders until it is written, and then it is written straight into the caller's buffer:
+/// no buffer of its own, and no copy. `P` is the component's `Props`. `F` is the renderer: a plain
+/// function for a component that needs only its props, a closure holding the slots, the route, the
+/// stores, the translations or the teleports for one that takes those as well.
+///
+/// `Html` is the one type in this crate that writes raw bytes. Generated code is what builds it,
+/// and it writes by calling a generated renderer, whose every interpolation goes through
+/// [`escape_into`]. With the `maud` feature it implements `maud::Render`, so it can be spliced into
+/// a `maud::html!` template.
+///
+/// [`guide::generated_code`](crate::guide::generated_code#html-and-island) explains which
+/// components have an `island()`.
+///
+/// # Example
+///
+/// ```
+/// # mod hello {
+/// # use std::borrow::Cow;
+/// # use ferrovue as fv;
+/// # pub const NAME: &str = "Hello";
+/// # #[derive(Debug, Clone, serde::Serialize)]
+/// # pub struct Props<'a> {
+/// #     #[serde(rename = "name")]
+/// #     pub name: Cow<'a, str>,
+/// # }
+/// # impl<'a> Props<'a> {
+/// #     pub fn new(name: impl Into<Cow<'a, str>>) -> Self {
+/// #         Props { name: name.into() }
+/// #     }
+/// # }
+/// # pub fn render(out: &mut String, props: &Props<'_>) {
+/// #     out.push_str("<p>Hello, ");
+/// #     fv::escape_into(out, &*props.name);
+/// #     out.push_str("!</p>");
+/// # }
+/// # pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
+/// #     fv::Html::markup(props, render)
+/// # }
+/// # pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
+/// #     fv::Html::island(NAME, props, render)
+/// # }
+/// # }
+/// // `hello::html` and `hello::island` are what the compiler writes for `Hello.vue`.
+/// let props = hello::Props::new("Ada");
+/// assert_eq!(hello::html(&props).into_string(), "<p>Hello, Ada!</p>");
+/// assert_eq!(
+///     hello::island(&props).into_string(),
+///     r#"<div data-island="Hello" data-props="{&quot;name&quot;:&quot;Ada&quot;}"><p>Hello, Ada!</p></div>"#
+/// );
+/// ```
 pub struct Html<'p, P, F = fn(&mut String, &P)> {
     props: &'p P,
     render: F,
@@ -25,7 +67,8 @@ pub struct Html<'p, P, F = fn(&mut String, &P)> {
 impl<'p, P: Serialize, F: Fn(&mut String, &P)> Html<'p, P, F> {
     /// The component's markup, which the client never hydrates.
     ///
-    /// For generated code. Anything else that builds one can write any bytes it likes.
+    /// Called by generated code alone: `render` is trusted to escape what it writes, which only a
+    /// generated renderer does. Anything else that builds one can write any bytes it likes.
     #[doc(hidden)]
     pub fn markup(props: &'p P, render: F) -> Self {
         Html {
@@ -45,7 +88,29 @@ impl<'p, P: Serialize, F: Fn(&mut String, &P)> Html<'p, P, F> {
         }
     }
 
-    /// Write the markup onto the end of `buf`.
+    /// Write the markup onto the end of `buf`, leaving what `buf` already holds as it is: how a
+    /// component goes into a page being written in one buffer, or into a slot.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # mod hello {
+    /// #     #[derive(serde::Serialize)]
+    /// #     pub struct Props<'a> { pub name: &'a str }
+    /// #     pub fn render(out: &mut String, props: &Props<'_>) {
+    /// #         out.push_str("<p>Hello, ");
+    /// #         ferrovue::escape_into(out, props.name);
+    /// #         out.push_str("!</p>");
+    /// #     }
+    /// #     pub fn html<'p, 'a>(props: &'p Props<'a>) -> ferrovue::Html<'p, Props<'a>> {
+    /// #         ferrovue::Html::markup(props, render)
+    /// #     }
+    /// # }
+    /// let mut page = String::from("<main>");
+    /// hello::html(&hello::Props { name: "Ada" }).render_to(&mut page);
+    /// page.push_str("</main>");
+    /// assert_eq!(page, "<main><p>Hello, Ada!</p></main>");
+    /// ```
     pub fn render_to(&self, buf: &mut String) {
         match self.island {
             None => (self.render)(buf, self.props),
@@ -54,6 +119,25 @@ impl<'p, P: Serialize, F: Fn(&mut String, &P)> Html<'p, P, F> {
     }
 
     /// The markup as a string of its own.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # mod hello {
+    /// #     #[derive(serde::Serialize)]
+    /// #     pub struct Props<'a> { pub name: &'a str }
+    /// #     pub fn render(out: &mut String, props: &Props<'_>) {
+    /// #         out.push_str("<p>Hello, ");
+    /// #         ferrovue::escape_into(out, props.name);
+    /// #         out.push_str("!</p>");
+    /// #     }
+    /// #     pub fn html<'p, 'a>(props: &'p Props<'a>) -> ferrovue::Html<'p, Props<'a>> {
+    /// #         ferrovue::Html::markup(props, render)
+    /// #     }
+    /// # }
+    /// let html: String = hello::html(&hello::Props { name: "<Ada>" }).into_string();
+    /// assert_eq!(html, "<p>Hello, &lt;Ada&gt;!</p>");
+    /// ```
     pub fn into_string(self) -> String {
         let mut out = String::new();
         self.render_to(&mut out);
@@ -61,7 +145,36 @@ impl<'p, P: Serialize, F: Fn(&mut String, &P)> Html<'p, P, F> {
     }
 }
 
+/// A component spliced into a `maud::html!` template, written straight into maud's buffer.
+///
+/// # Example
+///
+/// ```
+/// # mod hello {
+/// #     #[derive(serde::Serialize)]
+/// #     pub struct Props<'a> { pub name: &'a str }
+/// #     pub fn render(out: &mut String, props: &Props<'_>) {
+/// #         out.push_str("<p>Hello, ");
+/// #         ferrovue::escape_into(out, props.name);
+/// #         out.push_str("!</p>");
+/// #     }
+/// #     pub fn html<'p, 'a>(props: &'p Props<'a>) -> ferrovue::Html<'p, Props<'a>> {
+/// #         ferrovue::Html::markup(props, render)
+/// #     }
+/// # }
+/// # #[cfg(feature = "maud")]
+/// # fn main() {
+/// let props = hello::Props { name: "Ada" };
+/// let page = maud::html! {
+///     main { (hello::html(&props)) }
+/// };
+/// assert_eq!(page.into_string(), "<main><p>Hello, Ada!</p></main>");
+/// # }
+/// # #[cfg(not(feature = "maud"))]
+/// # fn main() {}
+/// ```
 #[cfg(feature = "maud")]
+#[cfg_attr(docsrs, doc(cfg(feature = "maud")))]
 impl<P: Serialize, F: Fn(&mut String, &P)> maud::Render for Html<'_, P, F> {
     fn render_to(&self, buf: &mut String) {
         Html::render_to(self, buf);
@@ -69,6 +182,28 @@ impl<P: Serialize, F: Fn(&mut String, &P)> maud::Render for Html<'_, P, F> {
 }
 
 /// What a parent puts in one of a component's slots.
+///
+/// A generated component that renders `<slot>` has a `Slots` struct with a field per slot:
+/// `Option<Slot>`, where `None` shows the slot's fallback, or a plain `Slot` for the page
+/// `<RouterView>` shows. From Rust, make one with [`Slot::new`] from a closure that writes the
+/// content, or with [`hole`] for content written later. It borrows the closure, and is `Copy`.
+///
+/// A scoped slot is not a `Slot` but a closure given the outlet's props; see [`scoped_slot_into`]
+/// and [`guide::slots`].
+///
+/// # Example
+///
+/// ```
+/// use ferrovue::{slot_into, Slot};
+///
+/// let body = |out: &mut String| out.push_str("<p>three new messages</p>");
+/// let slot = Slot::new(&body);
+///
+/// // What a component's `<slot>` outlet does with it: the content between fragment markers.
+/// let mut out = String::new();
+/// slot_into(&mut out, Some(slot), Some(&mut |out: &mut String| out.push_str("nothing here")));
+/// assert_eq!(out, "<!--[--><p>three new messages</p><!--]-->");
+/// ```
 #[derive(Clone, Copy)]
 pub struct Slot<'s> {
     body: Body<'s>,
@@ -84,7 +219,33 @@ enum Body<'s> {
 
 impl<'s> Slot<'s> {
     /// Content for a slot: another component's render, or markup the caller already holds. The
-    /// slot's fallback never replaces it.
+    /// slot's fallback never replaces it, even when the closure writes nothing, as a component in
+    /// a slot is always content to Vue; to show the fallback, give the slot `None`.
+    ///
+    /// The closure's output is written as it is, unescaped: escape any text it writes with
+    /// [`escape_into`].
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ferrovue::{slot_into, Slot};
+    ///
+    /// let name = "<Ada>";
+    /// let content = |out: &mut String| {
+    ///     out.push_str("<b>");
+    ///     ferrovue::escape_into(out, name);
+    ///     out.push_str("</b>");
+    /// };
+    /// let mut out = String::new();
+    /// slot_into(&mut out, Some(Slot::new(&content)), None);
+    /// assert_eq!(out, "<!--[--><b>&lt;Ada&gt;</b><!--]-->");
+    ///
+    /// // Empty content is still content: the fallback does not show.
+    /// let nothing = |_: &mut String| {};
+    /// out.clear();
+    /// slot_into(&mut out, Some(Slot::new(&nothing)), Some(&mut |out: &mut String| out.push_str("fallback")));
+    /// assert_eq!(out, "<!--[--><!--]-->");
+    /// ```
     pub fn new(render: &'s dyn Fn(&mut String)) -> Self {
         Slot {
             body: Body::Content(render),
@@ -92,6 +253,9 @@ impl<'s> Slot<'s> {
     }
 
     /// A generated parent's slot content, returning whether it pushed anything but a comment.
+    ///
+    /// Called by generated code: content from a template that turns out to be only comments gives
+    /// way to the fallback, as in Vue.
     #[doc(hidden)]
     pub fn markup(render: &'s dyn Fn(&mut String) -> bool) -> Self {
         Slot {
@@ -99,7 +263,18 @@ impl<'s> Slot<'s> {
         }
     }
 
-    /// Write the content alone, as `<RouterView>` does with the page it shows.
+    /// Write the content alone, without fragment markers, as `<RouterView>` does with the page it
+    /// shows. Generated code calls it for a component's `router_view` slot.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let page = |out: &mut String| out.push_str("<h1>Home</h1>");
+    /// let mut out = String::from("<main>");
+    /// ferrovue::Slot::new(&page).render_to(&mut out);
+    /// out.push_str("</main>");
+    /// assert_eq!(out, "<main><h1>Home</h1></main>");
+    /// ```
     pub fn render_to(&self, out: &mut String) {
         match self.body {
             Body::Content(f) => f(out),
@@ -121,7 +296,7 @@ fn write_hole(out: &mut String) {
 /// A slot whose content the caller writes itself, later: render with holes, [`split_holes`] the
 /// output, and write the pieces with each hole's content between them — which is how a page streams
 /// its parts in the order they are ready. A hole is content to the slot, so its fallback never
-/// shows.
+/// shows. [`guide::streaming`] shows a whole streamed page.
 ///
 /// # Example
 ///
@@ -141,7 +316,25 @@ pub fn hole() -> Slot<'static> {
     Slot::new(&write_hole)
 }
 
-/// The pieces of a render between its holes, in order: one more than there were holes.
+/// The pieces of a render between its holes, in order: one more than there were holes. The pieces
+/// borrow from `rendered`.
+///
+/// # Example
+///
+/// ```
+/// use ferrovue::{hole, slot_into, split_holes};
+///
+/// let mut page = String::from("<h1>Dune</h1>");
+/// slot_into(&mut page, Some(hole()), None); // the reviews, written later
+/// page.push_str("<aside>");
+/// slot_into(&mut page, Some(hole()), None); // related books, written later
+/// page.push_str("</aside>");
+///
+/// let pieces = split_holes(&page);
+/// assert_eq!(pieces, ["<h1>Dune</h1><!--[-->", "<!--]--><aside><!--[-->", "<!--]--></aside>"]);
+/// // Without holes, the render is one piece.
+/// assert_eq!(split_holes("<p>all at once</p>"), ["<p>all at once</p>"]);
+/// ```
 pub fn split_holes(rendered: &str) -> Vec<&str> {
     rendered.split(HOLE).collect()
 }
@@ -151,6 +344,9 @@ pub fn split_holes(rendered: &str) -> Vec<&str> {
 ///
 /// Returns whether the slot's own content wrote anything but comments, which is what decides
 /// whether slot content that forwards this slot is itself empty. The fallback reports for itself.
+///
+/// Called by generated code at each `<slot>` outlet, with the component's `Slots` field and the
+/// slot's fallback, if it has one.
 ///
 /// # Example
 ///
@@ -204,8 +400,12 @@ pub fn slot_into(
 /// fragment markers — or the fallback when there is no content, or the content wrote only comments.
 ///
 /// `slot` is a component's `Slots` field for a scoped slot, a closure taking the slot's props and
-/// returning whether it wrote anything but comments; one written by hand returns `true`. Returns
-/// whether the content was filled, as [`slot_into`] does.
+/// returning whether it wrote anything but comments; one written by hand returns `true`, or
+/// `false` to discard what it wrote and show the fallback. Returns whether the content was filled,
+/// as [`slot_into`] does.
+///
+/// Called by generated code at each scoped `<slot>` outlet; [`guide::slots`]
+/// shows the generated types a parent's closure takes.
 ///
 /// # Example
 ///
@@ -254,6 +454,10 @@ pub fn scoped_slot_into<P: ?Sized, F: Fn(&mut String, &P) -> bool + ?Sized>(
 /// of a sanitiser, never a string that merely looks fine — because that is the whole of what stands
 /// between the value and the page.
 ///
+/// A generated props struct holding the type derives `Debug`, `Clone` and `serde::Serialize`, and
+/// `serde::Deserialize` under `cfg(test)`, so the type needs those too;
+/// [`guide::escaping`](crate::guide::escaping#v-html-and-trustedhtml) shows a complete one.
+///
 /// # Example
 ///
 /// ```
@@ -285,11 +489,18 @@ pub trait TrustedHtml {
 }
 
 /// `v-html`: the value, unescaped. Only a [`TrustedHtml`] can reach it.
+///
+/// Called by generated code for `v-html`; the example on [`TrustedHtml`] shows it.
 pub fn trusted_into(out: &mut String, html: &impl TrustedHtml) {
     out.push_str(html.trusted_html());
 }
 
 /// `escapeHtml`: `"`, `&`, `'`, `<` and `>`, and nothing else.
+///
+/// Appends `s` to `out` with those five characters written as entities, which makes it safe as
+/// text and as a quoted attribute value. Generated code writes every interpolated value through
+/// it; use it for any text your own code writes into a page or a slot.
+/// [`guide::escaping`] covers what escaping does and does not protect.
 ///
 /// # Example
 ///
@@ -335,6 +546,9 @@ const MAX_SAFE_INTEGER: u64 = (1 << 53) - 1;
 /// browser rounds the value it reads from the island's props — so it is written as JavaScript
 /// writes the rounded number, or the page would not hydrate.
 ///
+/// Called by generated code for every interpolated `number` (an `i64`);
+/// [`guide::numbers`] explains how numbers are computed and written.
+///
 /// # Example
 ///
 /// ```
@@ -356,6 +570,9 @@ pub fn push_int(out: &mut String, n: i64) {
 
 /// `Number.prototype.toString()`: JavaScript's shortest round-trip digits, laid out as ECMAScript
 /// lays them out — `0.30000000000000004`, `1e+21`, `1.5e-7`, `NaN`, `-Infinity`.
+///
+/// Called by generated code for every interpolated `Float` (an `f64`) and every fractional
+/// result, such as an integer divided by another.
 ///
 /// # Example
 ///
@@ -446,12 +663,35 @@ pub fn push_number(out: &mut String, x: f64) {
 
 /// `Math.round`: the nearest integer, a half rounding up toward +∞ — `-2.5` to `-2`, where Rust's
 /// `f64::round` gives `-3`.
+///
+/// # Example
+///
+/// ```
+/// use ferrovue::js_round;
+///
+/// assert_eq!(js_round(2.5), 3.0);
+/// assert_eq!(js_round(-2.5), -2.0); // `f64::round` gives -3
+/// assert_eq!(js_round(-2.6), -3.0);
+/// assert!(js_round(f64::NAN).is_nan());
+/// ```
 pub fn js_round(x: f64) -> f64 {
     let f = x.floor();
     if x - f >= 0.5 { f + 1.0 } else { f }
 }
 
 /// `Math.max` of two numbers: `NaN` if either is, where Rust's `f64::max` ignores a `NaN`.
+///
+/// `+0` is larger than `-0`, as in JavaScript.
+///
+/// # Example
+///
+/// ```
+/// use ferrovue::js_max;
+///
+/// assert_eq!(js_max(2.0, 3.5), 3.5);
+/// assert!(js_max(1.0, f64::NAN).is_nan()); // `f64::max` gives 1
+/// assert!(js_max(-0.0, 0.0).is_sign_positive());
+/// ```
 pub fn js_max(a: f64, b: f64) -> f64 {
     if a.is_nan() || b.is_nan() {
         f64::NAN
@@ -462,7 +702,19 @@ pub fn js_max(a: f64, b: f64) -> f64 {
     }
 }
 
-/// `Math.min` of two numbers: `NaN` if either is.
+/// `Math.min` of two numbers: `NaN` if either is, where Rust's `f64::min` ignores a `NaN`.
+///
+/// `-0` is smaller than `+0`, as in JavaScript.
+///
+/// # Example
+///
+/// ```
+/// use ferrovue::js_min;
+///
+/// assert_eq!(js_min(2.0, 3.5), 2.0);
+/// assert!(js_min(1.0, f64::NAN).is_nan()); // `f64::min` gives 1
+/// assert!(js_min(0.0, -0.0).is_sign_negative());
+/// ```
 pub fn js_min(a: f64, b: f64) -> f64 {
     if a.is_nan() || b.is_nan() {
         f64::NAN
@@ -476,6 +728,17 @@ pub fn js_min(a: f64, b: f64) -> f64 {
 /// `Number.prototype.toFixed(digits)`: the number rounded to `digits` places, from its exact binary
 /// value. An exact tie rounds away from zero, where Rust's formatting rounds it to even; at 10²¹ and
 /// beyond, JavaScript writes the number as `String(x)` does.
+///
+/// # Example
+///
+/// ```
+/// use ferrovue::js_to_fixed;
+///
+/// assert_eq!(js_to_fixed(2.5, 0), "3"); // an exact tie, away from zero; Rust's `{:.0}` gives "2"
+/// assert_eq!(js_to_fixed(1.005, 2), "1.00"); // 1.005 is a little less as a double
+/// assert_eq!(js_to_fixed(-0.04, 1), "-0.0");
+/// assert_eq!(js_to_fixed(1e21, 2), "1e+21");
+/// ```
 pub fn js_to_fixed(x: f64, digits: u32) -> String {
     use std::fmt::Write;
     if x.is_nan() {
@@ -546,6 +809,9 @@ fn increment_digits(digits: &str) -> String {
 /// A number written as JavaScript writes it, for `format!` in generated code: `${n}` in a template
 /// literal, `"#" + n`, `n.toString()`.
 ///
+/// `Display` is implemented for `Js<i64>`, written as [`push_int`] writes it, and `Js<f64>`,
+/// written as [`push_number`] writes it.
+///
 /// # Example
 ///
 /// ```
@@ -604,11 +870,23 @@ pub fn js_trim(s: &str) -> &str {
 }
 
 /// `String.prototype.trimStart`: [`js_trim`] at the start alone.
+///
+/// # Example
+///
+/// ```
+/// assert_eq!(ferrovue::js_trim_start("\u{a0} a "), "a ");
+/// ```
 pub fn js_trim_start(s: &str) -> &str {
     s.trim_start_matches(is_js_space)
 }
 
 /// `String.prototype.trimEnd`: [`js_trim`] at the end alone.
+///
+/// # Example
+///
+/// ```
+/// assert_eq!(ferrovue::js_trim_end(" a \u{feff}"), " a");
+/// ```
 pub fn js_trim_end(s: &str) -> &str {
     s.trim_end_matches(is_js_space)
 }
@@ -630,6 +908,9 @@ fn is_js_space(c: char) -> bool {
 /// `escapeHtml(normalizeClass([...]))` for a list of strings: each one trimmed, the empty ones
 /// dropped, the rest joined with one space. `after` says a class has already been written, so the
 /// first item written here needs a separator too.
+///
+/// Called by generated code for a bound `:class`, inside the attribute's quotes, and for the
+/// classes of a `<RouterLink>`.
 ///
 /// # Example
 ///
@@ -696,6 +977,10 @@ pub fn class_object(entries: &[(bool, &str)]) -> String {
 /// which a `script-src 'self'` policy does not run, so the page needs no nonce for it. `<`, `>`, `&`
 /// and the two line separators are written as JSON escapes, so no value can end the element or be
 /// read as markup inside it.
+///
+/// `id` is the element's `id`, which the client looks the state up by: `"__pinia"` is what
+/// `hydrateState` from `ferrovue/client` reads by default. `state` is usually the generated
+/// `stores::Stores`; see [`guide::pinia`].
 ///
 /// # Example
 ///
@@ -773,6 +1058,8 @@ fn island_into<P: Serialize>(
     out.push_str("</div>");
 }
 
+#[cfg(any(doc, doctest))]
+pub mod guide;
 pub mod i18n;
 mod router;
 mod teleport;
