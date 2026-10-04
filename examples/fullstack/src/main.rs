@@ -37,7 +37,12 @@ const USAGE: &str = "usage: ferrovue-example-fullstack [--render <path>]";
 
 #[tokio::main]
 async fn main() {
-    let dist = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("dist");
+    // The client's build: `dist/` beside this crate, unless `DIST_DIR` names another (the browser
+    // test builds one of its own).
+    let dist = std::env::var_os("DIST_DIR").map_or_else(
+        || PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("dist"),
+        PathBuf::from,
+    );
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.as_slice() {
         [] => serve(dist).await,

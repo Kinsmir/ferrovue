@@ -46,7 +46,8 @@ compiler did, and that diff is what a reviewer needs to see.
 - Commit messages are short and say what changed (`compiler: support v-show on the root`), with
   detail in the body when the why is not obvious.
 - CI must be green: tests on Node 22 and 24 and on stable Rust and the declared minimum, `pnpm lint`,
-  clippy and rustfmt, docs, the example, and both packages packing cleanly.
+  clippy and rustfmt, docs, the example, hydration in real browsers (`pnpm test:browser`), and both
+  packages packing cleanly.
 
 ## Licence
 

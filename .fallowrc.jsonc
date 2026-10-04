@@ -1,13 +1,16 @@
 {
   "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
   // Files nothing imports but that are still used: the ferrovue CLI compiles every component,
-  // store and helper module under a `ferrovue.config.json` directory, and `scripts/inspect.ts`
-  // is run by hand (see CONTRIBUTING.md).
+  // store and helper module under a `ferrovue.config.json` directory, `scripts/inspect.ts`
+  // is run by hand (see CONTRIBUTING.md), and the browser tests run under their own vitest config
+  // and bundle `entry.ts` for the page.
   "entry": [
     "crates/ferrovue/tests/conformance/components/**",
     "crates/ferrovue/tests/conformance/stores/**",
     "crates/ferrovue/tests/conformance/types/**",
     "examples/greeting/components/**",
+    "packages/ferrovue/browser/*.test.ts",
+    "packages/ferrovue/browser/entry.ts",
     "scripts/inspect.ts"
   ],
   "ignorePatterns": [

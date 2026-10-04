@@ -283,6 +283,7 @@ packages/ferrovue/           the compiler (npm package)
   src/testing.ts             utilities for a project's own conformance suite
   src/types.ts               `ferrovue/types`: `TrustedHtml`, `Float`
   test/                      compiler, CLI, router, vector, island, Vite and conformance tests
+  browser/                   conformance fixtures hydrated in real browsers (`pnpm test:browser`)
   bench/                     Vue renderToString benchmarks, the other half of Performance
   fuzz/                      the randomised differential tester (`pnpm fuzz`)
 examples/greeting/           the smallest setup: one component rendered from Rust
