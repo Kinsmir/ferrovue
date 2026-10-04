@@ -159,3 +159,42 @@ fn a_scoped_slot_is_filled_by_a_closure_given_its_props() {
         "the fallback: {html}"
     );
 }
+
+/// Props built in Rust with the generated constructors and setters render as the same props
+/// deserialised from a fixture do: no `Cow`, no `None`, strings and lists of them taken as they come.
+#[test]
+fn props_are_built_with_constructors_and_setters() {
+    use generated::{types, user_card};
+    let built = user_card::Props::new(
+        types::User::new(
+            1,
+            "Ann",
+            vec![
+                types::Role::new("owner", true),
+                types::Role::new("dev", false),
+            ],
+        )
+        .avatar("/a.png")
+        .size(String::from("sm")),
+    )
+    .badges(vec![
+        types::Badge::new("new").tone("green"),
+        types::Badge::new("x"),
+    ])
+    .note("n");
+    let mut from_rust = String::new();
+    user_card::render(&mut from_rust, &built);
+    let fixture = generated::render_json(
+        "UserCard",
+        &std::fs::read_to_string(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/conformance/fixtures/UserCard/full.json"
+        ))
+        .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(from_rust, fixture);
+
+    let lists = generated::lists::Props::new(["a", "b"], vec![1, 2], vec![]);
+    assert_eq!(lists.words.len(), 2);
+}

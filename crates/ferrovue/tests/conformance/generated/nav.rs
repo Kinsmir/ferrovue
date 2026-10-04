@@ -20,6 +20,20 @@ pub struct Props<'a> {
     pub note: Option<Cow<'a, str>>,
 }
 
+impl<'a> Props<'a> {
+    /// Props with its required fields, every optional one absent.
+    pub fn new(href: impl Into<Cow<'a, str>>, label: impl Into<Cow<'a, str>>) -> Self {
+        Props { href: href.into(), label: label.into(), note: None }
+    }
+
+    /// Set `note`, which is absent otherwise.
+    pub fn note(mut self, note: impl Into<Cow<'a, str>>) -> Self {
+        self.note = Some(note.into());
+        self
+    }
+}
+
+
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
     out.reserve(138 + props.href.len() + props.label.len() + props.note.as_deref().map_or(0, str::len));
@@ -27,26 +41,26 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
     {
         let fv_link = fv_route.link("/blog/intro");
         out.push_str("<a");
-        if fv_link.active {
+        if fv_link.exact {
             out.push_str(" aria-current=\"page\"");
         }
         out.push_str(" href=\"");
         fv::escape_into(out, &fv_link.href);
         out.push_str("\" class=\"");
-        fv::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.active { "router-link-exact-active" } else { "" }, "tab"]);
+        fv::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }, "tab"]);
         out.push_str("\">intro</a>");
     }
     out.push_str(" ");
     {
         let fv_link = fv_route.link(&*props.href);
         out.push_str("<a");
-        if fv_link.active {
+        if fv_link.exact {
             out.push_str(" aria-current=\"page\"");
         }
         out.push_str(" href=\"");
         fv::escape_into(out, &fv_link.href);
         out.push_str("\" class=\"");
-        fv::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.active { "router-link-exact-active" } else { "" }, "tab", if (props.note.as_deref()).is_some_and(|v| !(v).is_empty()) { "noted" } else { "" }]);
+        fv::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }, "tab", if (props.note.as_deref()).is_some_and(|v| !(v).is_empty()) { "noted" } else { "" }]);
         out.push_str("\"");
         if (&*props.label).is_empty() {
             out.push_str(" title");

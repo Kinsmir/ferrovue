@@ -18,6 +18,15 @@ pub struct Props<'a> {
     pub color: Cow<'a, str>,
 }
 
+impl<'a> Props<'a> {
+    /// Props with its required fields.
+    pub fn new(on: bool, color: impl Into<Cow<'a, str>>) -> Self {
+        Props { on: on, color: color.into() }
+    }
+
+}
+
+
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(65 + props.color.len());

@@ -20,6 +20,15 @@ pub struct Props<'a> {
     pub compact: bool,
 }
 
+impl<'a> Props<'a> {
+    /// Props with its required fields.
+    pub fn new(rows: Vec<super::data_list::Row<'a>>, heading: impl Into<Cow<'a, str>>, compact: bool) -> Self {
+        Props { rows: rows, heading: heading.into(), compact: compact }
+    }
+
+}
+
+
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(57 + props.rows.iter().map(|v| v.label.len() + v.tags.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>() + props.heading.len());

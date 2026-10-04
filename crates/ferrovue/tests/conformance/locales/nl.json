@@ -1,0 +1,9 @@
+{
+  "greeting": "Hallo {name}!",
+  "apples": "geen appels | één appel | {count} appels",
+  "items": "één item | {n} items",
+  "list": "{0} en {1}",
+  "common": { "hi": "hoi daar" },
+  "linked": "@:common.app zegt @.lower:common.hi",
+  "html": "<i>{name}</i>"
+}

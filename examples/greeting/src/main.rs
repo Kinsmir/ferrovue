@@ -11,18 +11,14 @@ fn main() {
     let router = route_table::router();
     let route = router.at("/users/ada");
 
-    let greeting = greeting::Props {
-        name: "Ada".into(),
-        unread: 3,
-        note: None,
-    };
+    let greeting = greeting::Props::new("Ada", 3);
     // The page the route shows: an island, which the client hydrates from its `data-props`.
     let page = |out: &mut String| greeting::island(&greeting).render_to(out);
 
     let mut html = String::from("<!doctype html><html><body>");
     layout::render(
         &mut html,
-        &layout::Props { user: "ada".into() },
+        &layout::Props::new("ada"),
         layout::Slots {
             router_view: ferrovue::Slot::new(&page),
         },

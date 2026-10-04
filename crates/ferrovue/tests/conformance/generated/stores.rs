@@ -16,6 +16,15 @@ pub struct Line<'a> {
     pub qty: i64,
 }
 
+impl<'a> Line<'a> {
+    /// Line with its required fields.
+    pub fn new(sku: impl Into<Cow<'a, str>>, qty: i64) -> Self {
+        Line { sku: sku.into(), qty: qty }
+    }
+
+}
+
+
 /// `CartState` in `stores/cart.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(Default, serde::Deserialize))]
@@ -29,6 +38,51 @@ pub struct CartState<'a> {
     pub owner: Cow<'a, str>,
 }
 
+impl<'a> CartState<'a> {
+    /// CartState with its required fields, every optional one absent.
+    pub fn new(lines: Vec<Line<'a>>, owner: impl Into<Cow<'a, str>>) -> Self {
+        CartState { lines: lines, coupon: None, owner: owner.into() }
+    }
+
+    /// Set `coupon`, which is absent otherwise.
+    pub fn coupon(mut self, coupon: impl Into<Cow<'a, str>>) -> Self {
+        self.coupon = Some(coupon.into());
+        self
+    }
+}
+
+
+/// `CounterState` in `stores/counter.ts`.
+#[derive(Debug, Clone, serde::Serialize)]
+#[cfg_attr(test, derive(Default, serde::Deserialize))]
+#[cfg_attr(test, serde(default))]
+pub struct CounterState<'a> {
+    #[serde(rename = "count")]
+    pub count: i64,
+    #[serde(rename = "step")]
+    pub step: f64,
+    #[serde(rename = "label")]
+    pub label: Cow<'a, str>,
+    #[serde(rename = "history")]
+    pub history: Vec<i64>,
+    #[serde(rename = "owner", default, skip_serializing_if = "Option::is_none")]
+    pub owner: Option<Cow<'a, str>>,
+}
+
+impl<'a> CounterState<'a> {
+    /// CounterState with its required fields, every optional one absent.
+    pub fn new(count: i64, step: f64, label: impl Into<Cow<'a, str>>, history: Vec<i64>) -> Self {
+        CounterState { count: count, step: step, label: label.into(), history: history, owner: None }
+    }
+
+    /// Set `owner`, which is absent otherwise.
+    pub fn owner(mut self, owner: impl Into<Cow<'a, str>>) -> Self {
+        self.owner = Some(owner.into());
+        self
+    }
+}
+
+
 /// `Tag` in `stores/prefs.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(Default, serde::Deserialize))]
@@ -39,6 +93,20 @@ pub struct Tag<'a> {
     #[serde(rename = "color", default, skip_serializing_if = "Option::is_none")]
     pub color: Option<Cow<'a, str>>,
 }
+
+impl<'a> Tag<'a> {
+    /// Tag with its required fields, every optional one absent.
+    pub fn new(name: impl Into<Cow<'a, str>>) -> Self {
+        Tag { name: name.into(), color: None }
+    }
+
+    /// Set `color`, which is absent otherwise.
+    pub fn color(mut self, color: impl Into<Cow<'a, str>>) -> Self {
+        self.color = Some(color.into());
+        self
+    }
+}
+
 
 /// `PrefsState` in `stores/prefs.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -57,6 +125,20 @@ pub struct PrefsState<'a> {
     pub tags: Vec<Tag<'a>>,
 }
 
+impl<'a> PrefsState<'a> {
+    /// PrefsState with its required fields, every optional one absent.
+    pub fn new(density: impl Into<Cow<'a, str>>, wide: bool, count: i64, tags: Vec<Tag<'a>>) -> Self {
+        PrefsState { density: density.into(), wide: wide, count: count, label: None, tags: tags }
+    }
+
+    /// Set `label`, which is absent otherwise.
+    pub fn label(mut self, label: impl Into<Cow<'a, str>>) -> Self {
+        self.label = Some(label.into());
+        self
+    }
+}
+
+
 /// Every store's state, keyed by id as `pinia.state.value` is: what the page sends the client.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(Default, serde::Deserialize))]
@@ -64,6 +146,17 @@ pub struct PrefsState<'a> {
 pub struct Stores<'a> {
     #[serde(rename = "cart")]
     pub cart: CartState<'a>,
+    #[serde(rename = "counter")]
+    pub counter: CounterState<'a>,
     #[serde(rename = "prefs")]
     pub prefs: PrefsState<'a>,
 }
+
+impl<'a> Stores<'a> {
+    /// Stores with its required fields.
+    pub fn new(cart: CartState<'a>, counter: CounterState<'a>, prefs: PrefsState<'a>) -> Self {
+        Stores { cart: cart, counter: counter, prefs: prefs }
+    }
+
+}
+

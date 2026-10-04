@@ -26,10 +26,54 @@ pub struct Props<'a> {
     pub note: Option<Cow<'a, str>>,
 }
 
+impl<'a> Props<'a> {
+    /// Props with nothing set, every optional one absent.
+    pub fn new() -> Self {
+        Props { label: None, size: None, on: None, tags: None, plain: None, note: None }
+    }
+
+    /// Set `label`, which is absent otherwise.
+    pub fn label(mut self, label: impl Into<Cow<'a, str>>) -> Self {
+        self.label = Some(label.into());
+        self
+    }
+
+    /// Set `size`, which is absent otherwise.
+    pub fn size(mut self, size: i64) -> Self {
+        self.size = Some(size);
+        self
+    }
+
+    /// Set `on`, which is absent otherwise.
+    pub fn on(mut self, on: bool) -> Self {
+        self.on = Some(on);
+        self
+    }
+
+    /// Set `tags`, which is absent otherwise.
+    pub fn tags(mut self, tags: impl IntoIterator<Item = impl Into<Cow<'a, str>>>) -> Self {
+        self.tags = Some(tags.into_iter().map(Into::into).collect());
+        self
+    }
+
+    /// Set `plain`, which is absent otherwise.
+    pub fn plain(mut self, plain: bool) -> Self {
+        self.plain = Some(plain);
+        self
+    }
+
+    /// Set `note`, which is absent otherwise.
+    pub fn note(mut self, note: impl Into<Cow<'a, str>>) -> Self {
+        self.note = Some(note.into());
+        self
+    }
+}
+
+
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(58 + 7 * (props.tags.as_deref().unwrap_or(&[])).len() + props.label.as_deref().map_or(0, str::len) + props.note.as_deref().map_or(0, str::len));
-    let s_summary = &*format!("{}{}", &*format!("{}{}", props.label.as_deref().unwrap_or("untitled"), ":"), props.size.unwrap_or(-1i64));
+    let s_summary = &*format!("{}{}", &*format!("{}{}", props.label.as_deref().unwrap_or("untitled"), ":"), fv::Js(props.size.unwrap_or(-1i64)));
     out.push_str("<p class=\"d");
     fv::class_into(out, true, &[if (props.on.unwrap_or(true)) { "on" } else { "off" }]);
     out.push_str("\" data-size=\"");

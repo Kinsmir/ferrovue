@@ -20,6 +20,26 @@ pub struct Props<'a> {
     pub level: Option<i64>,
 }
 
+impl<'a> Props<'a> {
+    /// Props with its required fields, every optional one absent.
+    pub fn new(model_value: impl Into<Cow<'a, str>>) -> Self {
+        Props { model_value: model_value.into(), open: None, level: None }
+    }
+
+    /// Set `open`, which is absent otherwise.
+    pub fn open(mut self, open: bool) -> Self {
+        self.open = Some(open);
+        self
+    }
+
+    /// Set `level`, which is absent otherwise.
+    pub fn level(mut self, level: i64) -> Self {
+        self.level = Some(level);
+        self
+    }
+}
+
+
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(103 + props.model_value.len());

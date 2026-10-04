@@ -42,5 +42,10 @@
   },
   "clientDirectives": [
     "focus"
-  ]
+  ],
+  "i18n": {
+    "messages": "locales",
+    "locale": "en",
+    "fallbackLocale": "en"
+  }
 }

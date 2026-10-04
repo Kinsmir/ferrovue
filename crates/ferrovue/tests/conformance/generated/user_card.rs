@@ -22,6 +22,32 @@ pub struct Props<'a> {
     pub note: Option<Cow<'a, str>>,
 }
 
+impl<'a> Props<'a> {
+    /// Props with its required fields, every optional one absent.
+    pub fn new(user: super::types::User<'a>) -> Self {
+        Props { user: user, size: None, badges: None, note: None }
+    }
+
+    /// Set `size`, which is absent otherwise.
+    pub fn size(mut self, size: impl Into<Cow<'a, str>>) -> Self {
+        self.size = Some(size.into());
+        self
+    }
+
+    /// Set `badges`, which is absent otherwise.
+    pub fn badges(mut self, badges: Vec<super::types::Badge<'a>>) -> Self {
+        self.badges = Some(badges);
+        self
+    }
+
+    /// Set `note`, which is absent otherwise.
+    pub fn note(mut self, note: impl Into<Cow<'a, str>>) -> Self {
+        self.note = Some(note.into());
+        self
+    }
+}
+
+
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(122 + 16 * (props.user.roles).len() + 22 * (props.badges.as_deref().unwrap_or(&[])).len() + props.user.name.len() + props.user.avatar.as_deref().map_or(0, str::len) + props.user.roles.iter().map(|v| v.name.len()).sum::<usize>() + props.user.size.as_deref().map_or(0, str::len) + props.size.as_deref().map_or(0, str::len) + props.note.as_deref().map_or(0, str::len));

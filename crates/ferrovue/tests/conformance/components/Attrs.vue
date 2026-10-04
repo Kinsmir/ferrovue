@@ -22,5 +22,6 @@ defineProps<{
     <span :class="[' padded ', '']"></span>
     <span :class="state" class="after"></span>
     <span :title="tip ?? ''" :data-empty="''"></span>
+    <span :class="{ first: disabled, [extra]: true, [state]: hidden, last: true }"></span>
   </form>
 </template>

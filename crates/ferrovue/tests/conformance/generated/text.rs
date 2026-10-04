@@ -26,6 +26,26 @@ pub struct Props<'a> {
     pub padded: Cow<'a, str>,
 }
 
+impl<'a> Props<'a> {
+    /// Props with its required fields, every optional one absent.
+    pub fn new(title: impl Into<Cow<'a, str>>, count: i64, on: bool, padded: impl Into<Cow<'a, str>>) -> Self {
+        Props { title: title.into(), count: count, on: on, note: None, score: None, padded: padded.into() }
+    }
+
+    /// Set `note`, which is absent otherwise.
+    pub fn note(mut self, note: impl Into<Cow<'a, str>>) -> Self {
+        self.note = Some(note.into());
+        self
+    }
+
+    /// Set `score`, which is absent otherwise.
+    pub fn score(mut self, score: i64) -> Self {
+        self.score = Some(score);
+        self
+    }
+}
+
+
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(28 + props.title.len() + props.note.as_deref().map_or(0, str::len) + props.padded.len());
@@ -48,9 +68,9 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push_str("|");
     fv::push_int(out, fv::js_length(&*props.padded));
     out.push_str("|");
-    fv::escape_into(out, &*format!("{}{}", "#", props.count));
+    fv::escape_into(out, &*format!("{}{}", "#", fv::Js(props.count)));
     out.push_str("|");
-    fv::push_int(out, (props.count + 1i64));
+    fv::push_int(out, ((((props.count) as f64) + ((1i64) as f64)) as i64));
     out.push_str("|");
     fv::escape_into(out, &*format!("{}{}", &*props.title, "!"));
     out.push_str("|");

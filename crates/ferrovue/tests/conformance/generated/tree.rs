@@ -18,6 +18,15 @@ pub struct Props<'a> {
     pub children: Vec<Props<'a>>,
 }
 
+impl<'a> Props<'a> {
+    /// Props with its required fields.
+    pub fn new(label: impl Into<Cow<'a, str>>, children: Vec<Props<'a>>) -> Self {
+        Props { label: label.into(), children: children }
+    }
+
+}
+
+
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(41 + props.label.len());

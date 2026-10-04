@@ -16,6 +16,15 @@ pub struct Role<'a> {
     pub admin: bool,
 }
 
+impl<'a> Role<'a> {
+    /// Role with its required fields.
+    pub fn new(name: impl Into<Cow<'a, str>>, admin: bool) -> Self {
+        Role { name: name.into(), admin: admin }
+    }
+
+}
+
+
 /// `User` in `types/models.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -32,6 +41,26 @@ pub struct User<'a> {
     pub size: Option<Cow<'a, str>>,
 }
 
+impl<'a> User<'a> {
+    /// User with its required fields, every optional one absent.
+    pub fn new(id: i64, name: impl Into<Cow<'a, str>>, roles: Vec<Role<'a>>) -> Self {
+        User { id: id, name: name.into(), avatar: None, roles: roles, size: None }
+    }
+
+    /// Set `avatar`, which is absent otherwise.
+    pub fn avatar(mut self, avatar: impl Into<Cow<'a, str>>) -> Self {
+        self.avatar = Some(avatar.into());
+        self
+    }
+
+    /// Set `size`, which is absent otherwise.
+    pub fn size(mut self, size: impl Into<Cow<'a, str>>) -> Self {
+        self.size = Some(size.into());
+        self
+    }
+}
+
+
 /// `Badge` in `types/models.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -41,3 +70,17 @@ pub struct Badge<'a> {
     #[serde(rename = "tone", default, skip_serializing_if = "Option::is_none")]
     pub tone: Option<Cow<'a, str>>,
 }
+
+impl<'a> Badge<'a> {
+    /// Badge with its required fields, every optional one absent.
+    pub fn new(label: impl Into<Cow<'a, str>>) -> Self {
+        Badge { label: label.into(), tone: None }
+    }
+
+    /// Set `tone`, which is absent otherwise.
+    pub fn tone(mut self, tone: impl Into<Cow<'a, str>>) -> Self {
+        self.tone = Some(tone.into());
+        self
+    }
+}
+

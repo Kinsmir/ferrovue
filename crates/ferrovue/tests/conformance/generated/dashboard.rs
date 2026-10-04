@@ -24,6 +24,20 @@ pub struct Props<'a> {
     pub total: i64,
 }
 
+impl<'a> Props<'a> {
+    /// Props with its required fields, every optional one absent.
+    pub fn new(heading: impl Into<Cow<'a, str>>, panels: Vec<super::panel::Props<'a>>, words: impl IntoIterator<Item = impl Into<Cow<'a, str>>>, total: i64) -> Self {
+        Props { heading: heading.into(), panels: panels, words: words.into_iter().map(Into::into).collect(), footer: None, total: total }
+    }
+
+    /// Set `footer`, which is absent otherwise.
+    pub fn footer(mut self, footer: impl Into<Cow<'a, str>>) -> Self {
+        self.footer = Some(footer.into());
+        self
+    }
+}
+
+
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(81 + 7 * (props.words).len() + 16 * (props.panels).len() + 7 * (props.words).len() + props.heading.len() + props.words.iter().map(|v| v.len()).sum::<usize>() + props.footer.as_deref().map_or(0, str::len));
@@ -35,7 +49,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
             out.push_str("</h1>");
         })),
         default: Some(fv::Slot::new(&|out: &mut String| {
-            super::text::render(out, &super::text::Props { title: std::borrow::Cow::Borrowed(&*props.heading), count: props.total, on: !((props.total) == (0i64)), note: None, score: None, padded: std::borrow::Cow::Borrowed(" x ") });
+            super::text::render(out, &super::text::Props { title: std::borrow::Cow::Borrowed(&*props.heading), count: props.total, on: !((((props.total) as f64) == ((0i64) as f64))), note: None, score: None, padded: std::borrow::Cow::Borrowed(" x ") });
         })),
         footer: Some(fv::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;

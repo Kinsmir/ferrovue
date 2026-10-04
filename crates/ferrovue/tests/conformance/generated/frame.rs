@@ -16,6 +16,15 @@ pub struct Props<'a> {
     pub title: Cow<'a, str>,
 }
 
+impl<'a> Props<'a> {
+    /// Props with its required fields.
+    pub fn new(title: impl Into<Cow<'a, str>>) -> Self {
+        Props { title: title.into() }
+    }
+
+}
+
+
 /// What a parent puts in the slots `Frame.vue` renders.
 #[derive(Clone, Copy, Default)]
 pub struct Slots<'s> {

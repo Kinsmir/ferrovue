@@ -16,6 +16,15 @@ pub struct Props<'a> {
     pub first: bool,
 }
 
+impl<'a> Props<'a> {
+    /// Props with its required fields.
+    pub fn new(row: super::data_list::Row<'a>, first: bool) -> Self {
+        Props { row: row, first: first }
+    }
+
+}
+
+
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(30 + props.row.label.len() + props.row.tags.iter().map(|v| v.len()).sum::<usize>());

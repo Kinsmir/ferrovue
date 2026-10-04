@@ -18,6 +18,15 @@ pub struct Item<'a> {
     pub name: Cow<'a, str>,
 }
 
+impl<'a> Item<'a> {
+    /// Item with its required fields.
+    pub fn new(id: i64, name: impl Into<Cow<'a, str>>) -> Self {
+        Item { id: id, name: name.into() }
+    }
+
+}
+
+
 /// The props `Lifecycle.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -27,6 +36,15 @@ pub struct Props<'a> {
     #[serde(rename = "query")]
     pub query: Cow<'a, str>,
 }
+
+impl<'a> Props<'a> {
+    /// Props with its required fields.
+    pub fn new(items: Vec<Item<'a>>, query: impl Into<Cow<'a, str>>) -> Self {
+        Props { items: items, query: query.into() }
+    }
+
+}
+
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {

@@ -20,6 +20,20 @@ pub struct Props<'a> {
     pub note: Option<Cow<'a, str>>,
 }
 
+impl<'a> Props<'a> {
+    /// Props with its required fields, every optional one absent.
+    pub fn new(name: impl Into<Cow<'a, str>>, unread: i64) -> Self {
+        Props { name: name.into(), unread: unread, note: None }
+    }
+
+    /// Set `note`, which is absent otherwise.
+    pub fn note(mut self, note: impl Into<Cow<'a, str>>) -> Self {
+        self.note = Some(note.into());
+        self
+    }
+}
+
+
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(64 + props.name.len() + props.note.as_deref().map_or(0, str::len));

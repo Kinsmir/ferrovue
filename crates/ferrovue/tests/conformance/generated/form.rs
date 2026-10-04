@@ -22,6 +22,15 @@ pub struct Props<'a> {
     pub body: Cow<'a, str>,
 }
 
+impl<'a> Props<'a> {
+    /// Props with its required fields.
+    pub fn new(query: impl Into<Cow<'a, str>>, agreed: bool, size: impl Into<Cow<'a, str>>, body: impl Into<Cow<'a, str>>) -> Self {
+        Props { query: query.into(), agreed: agreed, size: size.into(), body: body.into() }
+    }
+
+}
+
+
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(339 + props.query.len() + props.size.len() + props.body.len());

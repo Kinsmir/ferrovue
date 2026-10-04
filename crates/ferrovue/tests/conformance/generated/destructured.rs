@@ -22,10 +22,42 @@ pub struct Props<'a> {
     pub extra: Option<Cow<'a, str>>,
 }
 
+impl<'a> Props<'a> {
+    /// Props with nothing set, every optional one absent.
+    pub fn new() -> Self {
+        Props { title: None, count: None, wide: None, extra: None }
+    }
+
+    /// Set `title`, which is absent otherwise.
+    pub fn title(mut self, title: impl Into<Cow<'a, str>>) -> Self {
+        self.title = Some(title.into());
+        self
+    }
+
+    /// Set `count`, which is absent otherwise.
+    pub fn count(mut self, count: i64) -> Self {
+        self.count = Some(count);
+        self
+    }
+
+    /// Set `wide`, which is absent otherwise.
+    pub fn wide(mut self, wide: bool) -> Self {
+        self.wide = Some(wide);
+        self
+    }
+
+    /// Set `extra`, which is absent otherwise.
+    pub fn extra(mut self, extra: impl Into<Cow<'a, str>>) -> Self {
+        self.extra = Some(extra.into());
+        self
+    }
+}
+
+
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(40 + props.title.as_deref().map_or(0, str::len) + props.extra.as_deref().map_or(0, str::len));
-    let s_heading = &*format!("{} ({})", props.title.as_deref().unwrap_or("Hi"), props.count.unwrap_or(0i64));
+    let s_heading = &*format!("{} ({})", props.title.as_deref().unwrap_or("Hi"), fv::Js(props.count.unwrap_or(0i64)));
     out.push_str("<h2 class=\"");
     fv::class_into(out, false, &[if (props.wide.unwrap_or(false)) { "wide" } else { "" }]);
     out.push_str("\">");

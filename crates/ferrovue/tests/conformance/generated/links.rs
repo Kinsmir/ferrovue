@@ -18,37 +18,47 @@ pub struct Props<'a> {
     pub tab: Option<Cow<'a, str>>,
 }
 
+impl<'a> Props<'a> {
+    /// Props with its required fields, every optional one absent.
+    pub fn new(user: impl Into<Cow<'a, str>>) -> Self {
+        Props { user: user.into(), tab: None }
+    }
+
+    /// Set `tab`, which is absent otherwise.
+    pub fn tab(mut self, tab: impl Into<Cow<'a, str>>) -> Self {
+        self.tab = Some(tab.into());
+        self
+    }
+}
+
+
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
-    out.reserve(334 + props.user.len() + props.tab.as_deref().map_or(0, str::len));
+    out.reserve(205 + props.user.len() + props.tab.as_deref().map_or(0, str::len));
     out.push_str("<nav>");
     {
         let fv_link = fv_route.link("/");
         out.push_str("<a");
-        if fv_link.active {
+        if fv_link.exact {
             out.push_str(" aria-current=\"page\"");
         }
         out.push_str(" href=\"");
         fv::escape_into(out, &fv_link.href);
         out.push_str("\" class=\"");
-        if fv_link.active {
-            out.push_str("router-link-active router-link-exact-active");
-        }
+        fv::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
         out.push_str("\">home</a>");
     }
     out.push_str(" ");
     {
         let fv_link = fv_route.link(&*format!("{}{}", "/users/", &*props.user));
         out.push_str("<a");
-        if fv_link.active {
+        if fv_link.exact {
             out.push_str(" aria-current=\"page\"");
         }
         out.push_str(" href=\"");
         fv::escape_into(out, &fv_link.href);
         out.push_str("\" class=\"");
-        if fv_link.active {
-            out.push_str("router-link-active router-link-exact-active");
-        }
+        fv::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
         out.push_str("\"");
         if (&*props.user).is_empty() {
             out.push_str(" data-user");
@@ -73,15 +83,13 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
         {
             let fv_link = fv_route.link(&*format!("{}{}", &*format!("{}{}", &*format!("{}{}", "/blog/", &*props.user), "/"), n1));
             out.push_str("<a");
-            if fv_link.active {
+            if fv_link.exact {
                 out.push_str(" aria-current=\"page\"");
             }
             out.push_str(" href=\"");
             fv::escape_into(out, &fv_link.href);
             out.push_str("\" class=\"");
-            if fv_link.active {
-                out.push_str("router-link-active router-link-exact-active");
-            }
+            fv::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
             out.push_str("\"");
             if (n1).is_empty() {
                 out.push_str(" title");

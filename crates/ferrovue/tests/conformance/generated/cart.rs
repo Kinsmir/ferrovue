@@ -16,18 +16,27 @@ pub struct Props<'a> {
     pub heading: Cow<'a, str>,
 }
 
+impl<'a> Props<'a> {
+    /// Props with its required fields.
+    pub fn new(heading: impl Into<Cow<'a, str>>) -> Self {
+        Props { heading: heading.into() }
+    }
+
+}
+
+
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::Stores<'_>) {
     out.reserve(87 + props.heading.len());
-    let s_summary = &*format!("{} line(s), {} doubled", ((fv_stores.cart.lines).len() as i64), (fv_stores.prefs.count * 2i64));
+    let s_summary = &*format!("{} line(s), {} doubled", fv::Js(((fv_stores.cart.lines).len() as i64)), fv::Js(((((fv_stores.prefs.count) as f64) * ((2i64) as f64)) as i64)));
     out.push_str("<aside class=\"");
-    fv::class_into(out, false, &[if ((&*fv_stores.prefs.density) == ("compact")) { "compact" } else { "" }, if ((((fv_stores.cart.lines).len() as i64)) == (0i64)) { "empty" } else { "" }]);
+    fv::class_into(out, false, &[if ((&*fv_stores.prefs.density) == ("compact")) { "compact" } else { "" }, if ((((((fv_stores.cart.lines).len() as i64)) as f64) == ((0i64) as f64))) { "empty" } else { "" }]);
     out.push_str("\"><h3>");
     fv::escape_into(out, &*props.heading);
     out.push_str(": ");
     fv::escape_into(out, &*format!("{}'s cart", &*fv_stores.cart.owner));
     out.push_str("</h3>");
-    if ((((fv_stores.cart.lines).len() as i64)) == (0i64)) {
+    if ((((((fv_stores.cart.lines).len() as i64)) as f64) == ((0i64) as f64))) {
         out.push_str("<p>nothing yet</p>");
     } else {
         out.push_str("<ul><!--[-->");

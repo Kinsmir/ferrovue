@@ -18,6 +18,20 @@ pub struct Props<'a> {
     pub items: Vec<super::lifecycle::Item<'a>>,
 }
 
+impl<'a> Props<'a> {
+    /// Props with its required fields, every optional one absent.
+    pub fn new(users: Vec<super::types::User<'a>>, items: Vec<super::lifecycle::Item<'a>>) -> Self {
+        Props { users: users, featured: None, items: items }
+    }
+
+    /// Set `featured`, which is absent otherwise.
+    pub fn featured(mut self, featured: super::types::User<'a>) -> Self {
+        self.featured = Some(featured);
+        self
+    }
+}
+
+
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(42 + props.users.iter().map(|v| v.name.len() + v.avatar.as_deref().map_or(0, str::len) + v.roles.iter().map(|v| v.name.len()).sum::<usize>() + v.size.as_deref().map_or(0, str::len)).sum::<usize>() + props.featured.as_ref().map_or(0, |v| v.name.len() + v.avatar.as_deref().map_or(0, str::len) + v.roles.iter().map(|v| v.name.len()).sum::<usize>() + v.size.as_deref().map_or(0, str::len)) + props.items.iter().map(|v| v.name.len()).sum::<usize>());

@@ -3,8 +3,9 @@
 
 //! The component renderers, one module per `.vue` file.
 
-#![allow(dead_code, unused_parens, unused_variables, clippy::all)]
+#![allow(dead_code, unused_parens, clippy::all)]
 
+pub mod account_nav;
 pub mod app;
 pub mod attrs;
 pub mod badge;
@@ -12,6 +13,7 @@ pub mod branches;
 pub mod builtins;
 pub mod card;
 pub mod cart;
+pub mod counter;
 pub mod dashboard;
 pub mod data_list;
 pub mod data_table;
@@ -26,24 +28,30 @@ pub mod links;
 pub mod lists;
 pub mod markup;
 pub mod menu;
+pub mod meter;
+pub mod modal;
 pub mod model;
 pub mod model_parent;
 pub mod nav;
+pub mod numbers;
 pub mod page;
 pub mod panel;
 pub mod prose;
+pub mod regressions;
 pub mod route_info;
 pub mod row_chip;
 pub mod setup;
 pub mod shown;
 pub mod styles;
 pub mod text;
+pub mod translated;
 pub mod tree;
 pub mod user_card;
 pub mod user_list;
 pub mod route_table;
 pub mod stores;
 pub mod types;
+pub mod i18n;
 
 /// What a fixture holds besides the props: each slot's content, and the location it renders at.
 #[cfg(test)]
@@ -55,6 +63,8 @@ struct Fixture {
     route: String,
     #[serde(rename = "$stores", default = "Fixture::no_stores")]
     stores: serde_json::Value,
+    #[serde(rename = "$locale", default)]
+    locale: Option<String>,
 }
 
 #[cfg(test)]
@@ -72,11 +82,34 @@ impl Fixture {
     }
 }
 
+/// What was teleported, after a marker, as the conformance suite writes Vue's: `{"target":"…"}`.
+#[cfg(test)]
+fn teleports_into(out: &mut String, teleports: ferrovue::Teleports) {
+    let targets = teleports.into_targets();
+    if targets.is_empty() {
+        return;
+    }
+    let pairs: Vec<String> = targets
+        .iter()
+        .map(|(t, html)| format!("{}:{}", serde_json::to_string(t).unwrap(), serde_json::to_string(html).unwrap()))
+        .collect();
+    out.push_str("<!--fv-teleports-->{");
+    out.push_str(&pairs.join(","));
+    out.push('}');
+}
+
 /// Render one component from its props as JSON, for the conformance suite.
 #[cfg(test)]
 pub fn render_json(component: &str, json: &str) -> Result<String, String> {
     let mut out = String::new();
     match component {
+        "AccountNav" => {
+            let props: account_nav::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let router = route_table::router();
+            let route = router.at(&fixture.route);
+            account_nav::render(&mut out, &props, &route);
+        }
         "App" => {
             let props: app::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -114,6 +147,12 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let state: stores::Stores = serde_json::from_value(fixture.stores.clone()).map_err(|e| e.to_string())?;
             cart::render(&mut out, &props, &state);
+        }
+        "Counter" => {
+            let props: counter::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let state: stores::Stores = serde_json::from_value(fixture.stores.clone()).map_err(|e| e.to_string())?;
+            counter::render(&mut out, &props, &state);
         }
         "Dashboard" => {
             let props: dashboard::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -187,6 +226,16 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let route = router.at(&fixture.route);
             menu::render(&mut out, &props, &route);
         }
+        "Meter" => {
+            let props: meter::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            meter::render(&mut out, &props);
+        }
+        "Modal" => {
+            let props: modal::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let teleports = ferrovue::Teleports::new();
+            modal::render(&mut out, &props, &teleports);
+            teleports_into(&mut out, teleports);
+        }
         "Model" => {
             let props: model::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             model::render(&mut out, &props);
@@ -201,6 +250,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let router = route_table::router();
             let route = router.at(&fixture.route);
             nav::render(&mut out, &props, &route);
+        }
+        "Numbers" => {
+            let props: numbers::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            numbers::render(&mut out, &props);
         }
         "Page" => {
             let props: page::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -217,6 +270,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Prose" => {
             let props: prose::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             prose::render(&mut out, &props);
+        }
+        "Regressions" => {
+            let props: regressions::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            regressions::render(&mut out, &props);
         }
         "RouteInfo" => {
             let props: route_info::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -244,6 +301,12 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Text" => {
             let props: text::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             text::render(&mut out, &props);
+        }
+        "Translated" => {
+            let props: translated::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let i18n = i18n::i18n(fixture.locale.as_deref().unwrap_or(i18n::LOCALE));
+            translated::render(&mut out, &props, &i18n);
         }
         "Tree" => {
             let props: tree::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

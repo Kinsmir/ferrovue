@@ -18,6 +18,20 @@ pub struct Props<'a> {
     pub count: Option<i64>,
 }
 
+impl<'a> Props<'a> {
+    /// Props with its required fields, every optional one absent.
+    pub fn new(title: impl Into<Cow<'a, str>>) -> Self {
+        Props { title: title.into(), count: None }
+    }
+
+    /// Set `count`, which is absent otherwise.
+    pub fn count(mut self, count: i64) -> Self {
+        self.count = Some(count);
+        self
+    }
+}
+
+
 /// What a parent puts in the slots `Panel.vue` renders.
 #[derive(Clone, Copy, Default)]
 pub struct Slots<'s> {

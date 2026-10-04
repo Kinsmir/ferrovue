@@ -18,6 +18,15 @@ pub struct Props<'a> {
     pub open: bool,
 }
 
+impl<'a> Props<'a> {
+    /// Props with its required fields.
+    pub fn new(initial: impl Into<Cow<'a, str>>, open: bool) -> Self {
+        Props { initial: initial.into(), open: open }
+    }
+
+}
+
+
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(19 + props.initial.len());

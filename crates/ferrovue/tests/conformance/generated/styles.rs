@@ -30,6 +30,26 @@ pub struct Props<'a> {
     pub big: bool,
 }
 
+impl<'a> Props<'a> {
+    /// Props with its required fields, every optional one absent.
+    pub fn new(color: impl Into<Cow<'a, str>>, size: i64, shown: bool, hidden: bool, raw: impl Into<Cow<'a, str>>, big: bool) -> Self {
+        Props { color: color.into(), size: size, shown: shown, hidden: hidden, raw: raw.into(), accent: None, width: None, big: big }
+    }
+
+    /// Set `accent`, which is absent otherwise.
+    pub fn accent(mut self, accent: impl Into<Cow<'a, str>>) -> Self {
+        self.accent = Some(accent.into());
+        self
+    }
+
+    /// Set `width`, which is absent otherwise.
+    pub fn width(mut self, width: i64) -> Self {
+        self.width = Some(width);
+        self
+    }
+}
+
+
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(400 + props.color.len() + props.raw.len() + props.accent.as_deref().map_or(0, str::len));
@@ -40,7 +60,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push_str("\"><p style=\"color:");
     fv::escape_into(out, &*props.color);
     out.push_str(";font-size:");
-    fv::escape_into(out, &*format!("{}{}", props.size, "px"));
+    fv::escape_into(out, &*format!("{}{}", fv::Js(props.size), "px"));
     out.push_str(";line-height:1.5;--gap:");
     fv::push_int(out, props.size);
     out.push_str(";opacity:0.5;\">a</p><p style=\"margin:0;");

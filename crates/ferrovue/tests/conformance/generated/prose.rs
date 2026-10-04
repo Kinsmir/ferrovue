@@ -20,6 +20,20 @@ pub struct Props<'a> {
     pub caption: Cow<'a, str>,
 }
 
+impl<'a> Props<'a> {
+    /// Props with its required fields, every optional one absent.
+    pub fn new(body: crate::Sanitised, caption: impl Into<Cow<'a, str>>) -> Self {
+        Props { body: body, aside: None, caption: caption.into() }
+    }
+
+    /// Set `aside`, which is absent otherwise.
+    pub fn aside(mut self, aside: crate::Sanitised) -> Self {
+        self.aside = Some(aside);
+        self
+    }
+}
+
+
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(65 + fv::TrustedHtml::trusted_html(&props.body).len() + props.aside.as_ref().map_or(0, |v| fv::TrustedHtml::trusted_html(v).len()) + props.caption.len());

@@ -20,6 +20,20 @@ pub struct Group<'a> {
     pub lead: Option<Cow<'a, str>>,
 }
 
+impl<'a> Group<'a> {
+    /// Group with its required fields, every optional one absent.
+    pub fn new(name: impl Into<Cow<'a, str>>, members: impl IntoIterator<Item = impl Into<Cow<'a, str>>>) -> Self {
+        Group { name: name.into(), members: members.into_iter().map(Into::into).collect(), lead: None }
+    }
+
+    /// Set `lead`, which is absent otherwise.
+    pub fn lead(mut self, lead: impl Into<Cow<'a, str>>) -> Self {
+        self.lead = Some(lead.into());
+        self
+    }
+}
+
+
 /// The props `Lists.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -31,6 +45,15 @@ pub struct Props<'a> {
     #[serde(rename = "groups")]
     pub groups: Vec<Group<'a>>,
 }
+
+impl<'a> Props<'a> {
+    /// Props with its required fields.
+    pub fn new(words: impl IntoIterator<Item = impl Into<Cow<'a, str>>>, numbers: Vec<i64>, groups: Vec<Group<'a>>) -> Self {
+        Props { words: words.into_iter().map(Into::into).collect(), numbers: numbers, groups: groups }
+    }
+
+}
+
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
@@ -50,7 +73,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         fv::push_int(out, i);
         out.push_str("\">");
         fv::push_int(out, n);
-        if ((i) == (0i64)) {
+        if ((((i) as f64) == ((0i64) as f64))) {
             out.push_str("<!--[--> first<!--]-->");
         } else {
             out.push_str("<!---->");

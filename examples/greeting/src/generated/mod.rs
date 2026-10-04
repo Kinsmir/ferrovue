@@ -3,7 +3,7 @@
 
 //! The component renderers, one module per `.vue` file.
 
-#![allow(dead_code, unused_parens, unused_variables, clippy::all)]
+#![allow(dead_code, unused_parens, clippy::all)]
 
 pub mod greeting;
 pub mod layout;
@@ -19,6 +19,8 @@ struct Fixture {
     route: String,
     #[serde(rename = "$stores", default = "Fixture::no_stores")]
     stores: serde_json::Value,
+    #[serde(rename = "$locale", default)]
+    locale: Option<String>,
 }
 
 #[cfg(test)]

@@ -1,7 +1,39 @@
 [
-  { "path": "/", "name": "home" },
-  { "path": "/blog/:slug", "name": "post" },
-  { "path": "/blog/:slug/:tab", "name": "post-tab" },
+  {
+    "path": "/",
+    "name": "home"
+  },
+  {
+    "path": "/blog/:slug",
+    "name": "post"
+  },
+  {
+    "path": "/blog/:slug/:tab",
+    "name": "post-tab"
+  },
   "/users/:name",
-  { "path": "/search", "name": "search" }
+  {
+    "path": "/search",
+    "name": "search"
+  },
+  {
+    "path": "/account",
+    "name": "account",
+    "children": [
+      {
+        "path": "",
+        "name": "account-home"
+      },
+      {
+        "path": "orders",
+        "name": "orders",
+        "children": [
+          {
+            "path": ":order",
+            "name": "order"
+          }
+        ]
+      }
+    ]
+  }
 ]

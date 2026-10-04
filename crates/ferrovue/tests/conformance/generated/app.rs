@@ -14,6 +14,15 @@ pub struct Props<'a> {
     pub nav: super::nav::Props<'a>,
 }
 
+impl<'a> Props<'a> {
+    /// Props with its required fields.
+    pub fn new(nav: super::nav::Props<'a>) -> Self {
+        Props { nav: nav }
+    }
+
+}
+
+
 /// What a parent puts in the slots `App.vue` renders.
 #[derive(Clone, Copy)]
 pub struct Slots<'s> {

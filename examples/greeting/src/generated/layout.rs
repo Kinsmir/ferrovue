@@ -16,6 +16,15 @@ pub struct Props<'a> {
     pub user: Cow<'a, str>,
 }
 
+impl<'a> Props<'a> {
+    /// Props with its required fields.
+    pub fn new(user: impl Into<Cow<'a, str>>) -> Self {
+        Props { user: user.into() }
+    }
+
+}
+
+
 /// What a parent puts in the slots `Layout.vue` renders.
 #[derive(Clone, Copy)]
 pub struct Slots<'s> {
@@ -25,7 +34,7 @@ pub struct Slots<'s> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::Route<'_>) {
-    out.reserve(223 + props.user.len());
+    out.reserve(137 + props.user.len());
     out.push_str("<div");
     if ("app").is_empty() {
         out.push_str(" id");
@@ -38,30 +47,26 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route
     {
         let fv_link = fv_route.link("/");
         out.push_str("<a");
-        if fv_link.active {
+        if fv_link.exact {
             out.push_str(" aria-current=\"page\"");
         }
         out.push_str(" href=\"");
         fv::escape_into(out, &fv_link.href);
         out.push_str("\" class=\"");
-        if fv_link.active {
-            out.push_str("router-link-active router-link-exact-active");
-        }
+        fv::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
         out.push_str("\">home</a>");
     }
     out.push_str(" ");
     {
         let fv_link = fv_route.link(&*format!("{}{}", "/users/", &*props.user));
         out.push_str("<a");
-        if fv_link.active {
+        if fv_link.exact {
             out.push_str(" aria-current=\"page\"");
         }
         out.push_str(" href=\"");
         fv::escape_into(out, &fv_link.href);
         out.push_str("\" class=\"");
-        if fv_link.active {
-            out.push_str("router-link-active router-link-exact-active");
-        }
+        fv::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
         out.push_str("\">");
         fv::escape_into(out, &*props.user);
         out.push_str("</a>");

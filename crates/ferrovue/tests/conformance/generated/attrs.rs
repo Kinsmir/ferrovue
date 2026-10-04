@@ -30,9 +30,29 @@ pub struct Props<'a> {
     pub id: Option<Cow<'a, str>>,
 }
 
+impl<'a> Props<'a> {
+    /// Props with its required fields, every optional one absent.
+    pub fn new(label: impl Into<Cow<'a, str>>, disabled: bool, hidden: bool, tabindex: i64, extra: impl Into<Cow<'a, str>>, state: impl Into<Cow<'a, str>>) -> Self {
+        Props { label: label.into(), disabled: disabled, hidden: hidden, tabindex: tabindex, tip: None, extra: extra.into(), state: state.into(), id: None }
+    }
+
+    /// Set `tip`, which is absent otherwise.
+    pub fn tip(mut self, tip: impl Into<Cow<'a, str>>) -> Self {
+        self.tip = Some(tip.into());
+        self
+    }
+
+    /// Set `id`, which is absent otherwise.
+    pub fn id(mut self, id: impl Into<Cow<'a, str>>) -> Self {
+        self.id = Some(id.into());
+        self
+    }
+}
+
+
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(302 + props.label.len() + props.tip.as_deref().map_or(0, str::len) + props.extra.len() + props.state.len() + props.id.as_deref().map_or(0, str::len));
+    out.reserve(324 + props.label.len() + props.tip.as_deref().map_or(0, str::len) + props.extra.len() + props.state.len() + props.id.as_deref().map_or(0, str::len));
     out.push_str("<form><button type=\"button\"");
     if ((props.disabled)) {
         out.push_str(" disabled");
@@ -79,6 +99,8 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     fv::escape_into(out, (props.tip.as_deref()).unwrap_or(""));
     out.push_str("\" data-empty=\"");
     fv::escape_into(out, "");
+    out.push_str("\"></span><span class=\"");
+    fv::class_into(out, false, &[&*fv::class_object(&[((props.disabled), "first"), (true, &*props.extra), ((props.hidden), &*props.state), (true, "last")])]);
     out.push_str("\"></span></form>");
 }
 

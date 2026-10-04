@@ -20,6 +20,15 @@ pub struct Row<'a> {
     pub tags: Vec<Cow<'a, str>>,
 }
 
+impl<'a> Row<'a> {
+    /// Row with its required fields.
+    pub fn new(id: i64, label: impl Into<Cow<'a, str>>, tags: impl IntoIterator<Item = impl Into<Cow<'a, str>>>) -> Self {
+        Row { id: id, label: label.into(), tags: tags.into_iter().map(Into::into).collect() }
+    }
+
+}
+
+
 /// The props `DataList.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -31,6 +40,20 @@ pub struct Props<'a> {
     #[serde(rename = "note", default, skip_serializing_if = "Option::is_none")]
     pub note: Option<Cow<'a, str>>,
 }
+
+impl<'a> Props<'a> {
+    /// Props with its required fields, every optional one absent.
+    pub fn new(rows: Vec<Row<'a>>, title: impl Into<Cow<'a, str>>) -> Self {
+        Props { rows: rows, title: title.into(), note: None }
+    }
+
+    /// Set `note`, which is absent otherwise.
+    pub fn note(mut self, note: impl Into<Cow<'a, str>>) -> Self {
+        self.note = Some(note.into());
+        self
+    }
+}
+
 
 /// The props `<slot name="header">` passes the content a parent gives it, borrowed for the render.
 pub struct HeaderSlotProps<'v> {
@@ -97,7 +120,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
             let r = r_ref;
             let i = i as i64;
             out.push_str("<li>");
-            fv::scoped_slot_into(out, fv_slots.row, &RowSlotProps { row: &(r), index: i, label: &*r.label, tags: &(r.tags), first: (i) == (0i64) }, Some(&mut |out: &mut String| {
+            fv::scoped_slot_into(out, fv_slots.row, &RowSlotProps { row: &(r), index: i, label: &*r.label, tags: &(r.tags), first: (((i) as f64) == ((0i64) as f64)) }, Some(&mut |out: &mut String| {
                 fv::push_int(out, i);
                 out.push_str(". ");
                 fv::escape_into(out, &*r.label);

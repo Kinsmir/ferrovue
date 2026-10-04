@@ -20,6 +20,15 @@ pub struct Props<'a> {
     pub items: Vec<Cow<'a, str>>,
 }
 
+impl<'a> Props<'a> {
+    /// Props with its required fields.
+    pub fn new(on: bool, text: impl Into<Cow<'a, str>>, items: impl IntoIterator<Item = impl Into<Cow<'a, str>>>) -> Self {
+        Props { on: on, text: text.into(), items: items.into_iter().map(Into::into).collect() }
+    }
+
+}
+
+
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(182 + 9 * (props.items).len() + 7 * (props.items).len() + props.text.len() + props.items.iter().map(|v| v.len()).sum::<usize>());

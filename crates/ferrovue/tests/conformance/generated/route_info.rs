@@ -16,9 +16,18 @@ pub struct Props<'a> {
     pub label: Cow<'a, str>,
 }
 
+impl<'a> Props<'a> {
+    /// Props with its required fields.
+    pub fn new(label: impl Into<Cow<'a, str>>) -> Self {
+        Props { label: label.into() }
+    }
+
+}
+
+
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
-    out.reserve(102 + props.label.len());
+    out.reserve(222 + props.label.len());
     let s_slug = (fv_route.param("slug")).unwrap_or("none");
     let s_on_post = (fv_route.name()) == Some("post");
     out.push_str("<dl");
@@ -59,6 +68,44 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
     }
     if ((fv_route.param("tab")) == Some("edit")) {
         out.push_str("<dd>editing</dd>");
+    } else {
+        out.push_str("<!---->");
+    }
+    out.push_str("<dd");
+    if let Some(v) = (fv_route.query("q")).attr_value() {
+        out.push_str(" data-q=\"");
+        fv::escape_into(out, v);
+        out.push_str("\"");
+    }
+    if let Some(v) = ((fv_route.query("x")).or("none")).attr_value() {
+        out.push_str(" title=\"");
+        fv::escape_into(out, v);
+        out.push_str("\"");
+    }
+    out.push_str(">");
+    (fv_route.query("q")).write_display(out);
+    out.push_str("|");
+    ((fv_route.query("x")).or("none")).write_display(out);
+    out.push_str("|");
+    fv::escape_into(out, fv_route.full_path());
+    out.push_str("</dd>");
+    if ((fv_route.query("q")).is_array()) {
+        out.push_str("<dd>several</dd>");
+    } else {
+        out.push_str("<!---->");
+    }
+    if ((fv_route.query("q")).is("rust")) {
+        out.push_str("<dd>rust</dd>");
+    } else {
+        out.push_str("<!---->");
+    }
+    if ((fv_route.query("flag")).is_undefined()) {
+        out.push_str("<dd>no flag</dd>");
+    } else {
+        out.push_str("<!---->");
+    }
+    if (fv_route.query("flag")).truthy() {
+        out.push_str("<dd>flag set</dd>");
     } else {
         out.push_str("<!---->");
     }

@@ -17,5 +17,10 @@ const onPost = computed(() => route.name === "post");
     <dd>{{ route.path }}|{{ route.hash }}|{{ $route.name }}|{{ slug }}|{{ $route.params.tab }}|{{ route.params['slug'] }}</dd>
     <dd v-if="onPost">a post</dd>
     <dd v-if="route.params.tab === 'edit'">editing</dd>
+    <dd :data-q="route.query.q" :title="$route.query.x ?? 'none'">{{ route.query.q }}|{{ $route.query.x ?? "none" }}|{{ route.fullPath }}</dd>
+    <dd v-if="Array.isArray(route.query.q)">several</dd>
+    <dd v-if="route.query.q === 'rust'">rust</dd>
+    <dd v-if="route.query.flag === undefined">no flag</dd>
+    <dd v-if="route.query.flag">flag set</dd>
   </dl>
 </template>

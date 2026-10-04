@@ -22,6 +22,20 @@ pub struct Props<'a> {
     pub note: Option<Cow<'a, str>>,
 }
 
+impl<'a> Props<'a> {
+    /// Props with its required fields, every optional one absent.
+    pub fn new(title: impl Into<Cow<'a, str>>, items: impl IntoIterator<Item = impl Into<Cow<'a, str>>>, show_head: bool) -> Self {
+        Props { title: title.into(), items: items.into_iter().map(Into::into).collect(), show_head: show_head, note: None }
+    }
+
+    /// Set `note`, which is absent otherwise.
+    pub fn note(mut self, note: impl Into<Cow<'a, str>>) -> Self {
+        self.note = Some(note.into());
+        self
+    }
+}
+
+
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(46 + 7 * (props.items).len() + props.title.len() + props.items.iter().map(|v| v.len()).sum::<usize>() + props.note.as_deref().map_or(0, str::len));

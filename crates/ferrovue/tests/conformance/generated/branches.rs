@@ -18,6 +18,20 @@ pub struct Author<'a> {
     pub url: Option<Cow<'a, str>>,
 }
 
+impl<'a> Author<'a> {
+    /// Author with its required fields, every optional one absent.
+    pub fn new(name: impl Into<Cow<'a, str>>) -> Self {
+        Author { name: name.into(), url: None }
+    }
+
+    /// Set `url`, which is absent otherwise.
+    pub fn url(mut self, url: impl Into<Cow<'a, str>>) -> Self {
+        self.url = Some(url.into());
+        self
+    }
+}
+
+
 /// The props `Branches.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -35,6 +49,32 @@ pub struct Props<'a> {
     #[serde(rename = "score", default, skip_serializing_if = "Option::is_none")]
     pub score: Option<i64>,
 }
+
+impl<'a> Props<'a> {
+    /// Props with its required fields, every optional one absent.
+    pub fn new(kind: impl Into<Cow<'a, str>>, count: i64, on: bool) -> Self {
+        Props { kind: kind.into(), count: count, on: on, author: None, note: None, score: None }
+    }
+
+    /// Set `author`, which is absent otherwise.
+    pub fn author(mut self, author: Author<'a>) -> Self {
+        self.author = Some(author);
+        self
+    }
+
+    /// Set `note`, which is absent otherwise.
+    pub fn note(mut self, note: impl Into<Cow<'a, str>>) -> Self {
+        self.note = Some(note.into());
+        self
+    }
+
+    /// Set `score`, which is absent otherwise.
+    pub fn score(mut self, score: i64) -> Self {
+        self.score = Some(score);
+        self
+    }
+}
+
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
@@ -70,7 +110,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     } else {
         out.push_str("<!---->");
     }
-    if ((props.count) == (3i64)) {
+    if ((((props.count) as f64) == ((3i64) as f64))) {
         out.push_str("<i>three</i>");
     } else {
         out.push_str("<!---->");

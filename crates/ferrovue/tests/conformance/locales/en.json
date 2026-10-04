@@ -1,0 +1,14 @@
+{
+  "greeting": "Hello {name}!",
+  "apples": "no apples | one apple | {count} apples",
+  "items": "one item | {n} items",
+  "list": "{0} and {1}",
+  "literal": "Use {'{'}braces{'}'}",
+  "common": { "app": "ferrovue", "hi": "hi there" },
+  "linked": "@:common.app says @.upper:common.hi, @.capitalize:common.hi",
+  "missingLink": "see @:does.not.exist",
+  "onlyEnglish": "only in English",
+  "flat.key": "a flat key",
+  "nested": { "deep": { "key": "deep value" } },
+  "html": "<b>{name}</b> & co"
+}
