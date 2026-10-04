@@ -3,7 +3,7 @@ members = ["crates/ferrovue", "examples/*"]
 resolver = "3"
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 # The latest stable Rust; generated renderers also need edition 2024 (let-chains).
 rust-version = "1.99"

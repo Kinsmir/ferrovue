@@ -5,6 +5,8 @@ released together and share version numbers.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-04
+
 ### Added
 
 - `<style scoped>`: the `data-v-` id on every element, on a child component's root (the creating
