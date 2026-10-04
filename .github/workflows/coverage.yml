@@ -43,6 +43,8 @@ jobs:
       - name: Rust
         run: |
           cargo llvm-cov --workspace --all-features --locked --no-report
+          # `report --lcov` writes into the directory but does not create it.
+          mkdir -p target/coverage
           cargo llvm-cov report --lcov --output-path target/coverage/rust.lcov
           cargo llvm-cov report --html --output-dir target/coverage/rust
           cargo llvm-cov report --summary-only > target/coverage/rust.txt
