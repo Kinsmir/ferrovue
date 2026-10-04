@@ -65,6 +65,35 @@ it("regenerates on the dev server's changes, and shows a refusal in the error ov
   expect(logged.at(-1)).toContain("2 changed");
 });
 
+it("fails a build whose `<style scoped>` ids plugin-vue computes otherwise, and warns the dev server", () => {
+  writeFileSync(join(root, "components", "Hello.vue"), `${good}\n<style scoped>p { color: red }</style>`);
+  /** The plugin, configured as Vite resolves it beside plugin-vue with these options. */
+  const configured = (command: "build" | "serve", features: Record<string, unknown> = {}) => {
+    const plugin = ferrovue({ root });
+    const vue = { name: "vite:vue", api: { options: { features } } };
+    (plugin.configResolved as (c: unknown) => void)({ plugins: [vue], root, isProduction: command === "build", command });
+    return plugin;
+  };
+  const warned: string[] = [];
+  const start = (plugin: ReturnType<typeof ferrovue>): void => {
+    const hook = plugin.buildStart as (this: { error(m: string): never; warn(m: string): void }) => void;
+    hook.call({
+      error(m: string): never {
+        throw new Error(m);
+      },
+      warn: (m: string) => void warned.push(m),
+    });
+  };
+  // plugin-vue's defaults: the source too in a build, which is ferrovue's default.
+  start(configured("build"));
+  expect(() => start(configured("build", { componentIdGenerator: "filepath" }))).toThrow(/plugin-vue hashes "filepath" from .*, ferrovue\.config\.json "filepath-source"/);
+  start(configured("serve"));
+  expect(warned).toHaveLength(1);
+  writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify({ components: "components", out: "gen", scopeId: "filepath" }));
+  start(configured("build", { componentIdGenerator: "filepath" }));
+  expect(warned).toHaveLength(1);
+});
+
 it("ignores the output, dependencies, and files of other kinds", () => {
   expect(affects(root, join(root, "components", "Hello.vue"))).toBe(true);
   expect(affects(root, join(root, "stores", "prefs.ts"))).toBe(true);
