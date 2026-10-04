@@ -1,0 +1,30 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      cargo:
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directories: ["/", "/packages/ferrovue"]
+    schedule:
+      interval: weekly
+    groups:
+      # Vue's own packages decide the bytes ferrovue reproduces: an upgrade means re-recording the
+      # fixtures (see TESTING.md), so they come in a pull request of their own.
+      vue:
+        patterns: ["vue", "@vue/*", "vue-router", "pinia"]
+      tooling:
+        patterns: ["*"]
+        exclude-patterns: ["vue", "@vue/*", "vue-router", "pinia"]

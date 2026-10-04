@@ -1,0 +1,60 @@
+name: Bug report
+description: The generated Rust renders different HTML than Vue, a hydration mismatch, a crash, or a wrong error.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! ferrovue's promise is byte-identical output to Vue's server renderer, so the most useful report is the smallest component that shows the difference.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What went wrong
+      options:
+        - The Rust render differs from Vue's
+        - Hydration mismatch in the browser
+        - The compiler crashed or generated Rust that does not compile
+        - The compiler refused something it should accept, or with a confusing error
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: component
+    attributes:
+      label: The component
+      description: The smallest `.vue` file that shows the problem, with any store or type file it imports.
+      render: vue
+    validations:
+      required: true
+  - type: textarea
+    id: props
+    attributes:
+      label: Props, slots and route
+      description: The values it was rendered with, as a conformance fixture would hold them (`$slots`, `$route` and `$stores` included).
+      render: json
+  - type: textarea
+    id: expected
+    attributes:
+      label: What Vue renders
+      description: The HTML from `@vue/server-renderer` (`node scripts/inspect.ts X.vue '<props>'` prints it).
+      render: html
+  - type: textarea
+    id: actual
+    attributes:
+      label: What ferrovue renders, or the error
+      render: html
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: ferrovue.config.json
+      render: json
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: ferrovue (npm and crate), vue, vue-router, pinia, rustc, node
+      placeholder: ferrovue 0.1.0 / 0.1.0, vue 3.5.43, rustc 1.99.0, node 24
+    validations:
+      required: true

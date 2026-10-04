@@ -1,0 +1,33 @@
+name: Vue feature support
+description: A Vue, Vue Router or Pinia construct ferrovue refuses that you would like it to translate.
+labels: [vue-support]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ferrovue refuses whatever it cannot reproduce byte for byte, by design. Check the "What a component may use" section of the README first; the refusal list there says why some things are out of reach.
+  - type: input
+    id: construct
+    attributes:
+      label: The construct
+      placeholder: "e.g. route.query, <Teleport>, a setup store"
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: An example component
+      description: How you would use it, as small as possible.
+      render: vue
+    validations:
+      required: true
+  - type: textarea
+    id: error
+    attributes:
+      label: The error ferrovue gives today
+      render: text
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it matters
+      description: What it would let you render on the server, and any workaround you use now.
