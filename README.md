@@ -277,6 +277,7 @@ packages/ferrovue/           the compiler (npm package)
   src/client.ts              browser-side helpers
   src/testing.ts             utilities for a project's own conformance suite
   test/                      compiler, CLI, router, vector and conformance tests
+  browser/                   conformance fixtures hydrated in real browsers (`pnpm test:browser`)
   bench/                     Vue renderToString benchmarks, the other half of Performance
 ```
 

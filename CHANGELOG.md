@@ -43,6 +43,13 @@ released together and share version numbers.
 - Narrowing as TypeScript narrows: `x !== undefined` as well as `x`, and `!x` or `x === undefined`
   for the `v-else`; in `?:`, `&&` and `||` as well as `v-if`. A value that is always present
   compares unequal to `undefined`; `??` and `?:` between an integer and a `Float` give a `Float`.
+- Testing: every conformance fixture is hydrated in real browsers — Chromium, Firefox and WebKit,
+  through Playwright — as well as in happy-dom, failing on a mismatch Vue reports and on any change
+  hydrating makes to the document as the browser parsed it; the full-stack example's server is run
+  and its pages hydrated and clicked through in each browser too (`pnpm test:browser`, and a CI
+  job). The fixture app `ferrovue/testing` builds now comes from a module with no Node imports
+  (`fixture.ts`), so a browser bundle can use it. The example's server reads its client build from
+  `DIST_DIR` when set.
 
 ### Changed
 

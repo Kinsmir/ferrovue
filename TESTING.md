@@ -10,6 +10,7 @@ pnpm test                  # TypeScript: compiler, CLI, vectors, router, Vue hal
 cargo test --all-features  # Rust: runtime units, properties, Rust half of conformance
 pnpm typecheck
 pnpm conformance:check     # the committed generated Rust is what the compiler writes now
+pnpm test:browser          # the same fixtures, and the full-stack example, hydrated in real browsers
 ```
 
 ## The layers
@@ -17,6 +18,7 @@ pnpm conformance:check     # the committed generated Rust is what the compiler w
 | Layer | Where | What it proves | Source of truth |
 |---|---|---|---|
 | **Conformance** | `crates/ferrovue/tests/conformance/` | Each component × fixture renders identically in Vue and in the generated Rust, and Vue hydrates the HTML with no mismatch | `@vue/server-renderer`, Vue's hydration |
+| **Browser hydration** | `packages/ferrovue/browser/`, `examples/fullstack/browser/` | Every fixture's recorded HTML, parsed by Chromium, Firefox and WebKit, hydrates with no mismatch and is left as parsed; the full-stack example's pages do too, and their islands work | Vue's hydration, the browsers' HTML parsers |
 | **Shared vectors** | `crates/ferrovue/tests/vectors/` | The runtime's reimplementations of `trim`, `.length`, `escapeHtml`, and vue-router's link resolution (string and object `to`, named routes, query and hash encoding, history base) and `useRoute()` fields agree with the originals | JavaScript, `@vue/shared`, vue-router |
 | **Compiler** | `packages/ferrovue/test/compiler.test.ts` | Constructs that a careless translation would get subtly wrong are refused with a named error; key translations have the expected shape | Hand-written |
 | **CLI** | `packages/ferrovue/test/cli.test.ts` | `ferrovue` writes, replaces, and `--check` detects stale and stray files | Hand-written |
@@ -75,6 +77,46 @@ A fixture is a JSON object of props plus three optional keys:
 
 Every component has at least one **hostile** fixture: markup-breaking characters in every prop that
 reaches the page.
+
+## Hydrating in real browsers
+
+The conformance suite hydrates each fixture in happy-dom, whose HTML parser is not a browser's. A
+browser rebuilds some markup as it parses — a block element closes an open `<p>`, a table gains a
+`<tbody>` and pushes stray content out of it, `<select>` and `<template>` have rules of their own —
+and Vue hydrates against what the browser built. A mismatch only a browser shows is a real one for
+readers, so `pnpm test:browser` hydrates in Chromium, Firefox and WebKit through
+[Playwright](https://playwright.dev):
+
+```sh
+pnpm --filter ferrovue exec playwright install chromium firefox webkit   # once (Linux: --with-deps)
+pnpm test:browser
+FERROVUE_BROWSERS=chromium pnpm test:browser                             # one browser
+```
+
+- **Conformance** (`packages/ferrovue/browser/conformance.test.ts`): `entry.ts`, which imports every
+  component, is bundled once by Vite with `@vitejs/plugin-vue` and Vue's development build. Each
+  fixture becomes a page: its recorded HTML as the body, teleported content in its targets
+  (`hydrationBody`, as the happy-dom suite places it), and the fixture in the head. Playwright serves
+  the page and the bundle from memory, no server listening. The page builds the app with the same
+  `fixtureApp` as the happy-dom suite (`src/fixture.ts`: props, slots, route, Pinia state, locale)
+  and hydrates. The test fails on a hydration warning or any error the page logs, if Vue replaced
+  the server's first node, or if hydrating changed the document as the browser parsed it.
+  Vue rewrites some attributes on purpose as it hydrates (it sets every dynamic prop again);
+  those are listed, by fixture, in `PATCHED`, and the test fails if one stops happening.
+- **Full-stack example** (`examples/fullstack/browser/hydration.test.ts`): builds the client with
+  `vite build` into a temporary directory (production Vue, with
+  `__VUE_PROD_HYDRATION_MISMATCH_DETAILS__` so attribute mismatches are checked), builds the server
+  with Cargo and starts it on a free port (`PORT=0`, `DIST_DIR`), stopping it when done. It opens the
+  home page and a streamed book page, fails on any warning or error, checks the document is as the
+  browser parsed it, then adds a book to the basket and shows every review.
+
+A browser that will not launch is skipped with a warning, except in CI (`CI` set), where it fails
+the run: WebKit needs system libraries some Linux distributions do not ship. CI's `Hydrates in real
+browsers` job caches the browsers by Playwright version and installs their libraries each run.
+
+A fixture that mismatches only in a browser is a finding: the recorded HTML is Vue's own render, so
+the cause is the template (markup a browser rebuilds as it parses), not the generated Rust. Report
+it, and consider whether the compiler should refuse the template, rather than changing the fixture.
 
 ## Randomised differential testing
 
