@@ -1,0 +1,57 @@
+name: Fuzz
+
+# Randomised differential testing (TESTING.md): random components and props rendered by Vue and by
+# the Rust ferrovue generates, compared byte for byte. Nightly, with a seed taken from the date, so
+# a failing night is reproduced with `FERROVUE_FUZZ_SEED=<yyyymmdd> pnpm fuzz`.
+on:
+  schedule:
+    - cron: "23 3 * * *"
+  workflow_dispatch:
+    inputs:
+      seed:
+        description: Seed (default the date, yyyymmdd)
+        required: false
+      count:
+        description: Components to generate
+        required: false
+        default: "1000"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  fuzz:
+    name: Vue and the generated Rust agree
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - run: pnpm install --frozen-lockfile
+      - name: Fuzz
+        env:
+          SEED: ${{ inputs.seed }}
+          COUNT: ${{ inputs.count }}
+        run: |
+          seed="${SEED:-$(date -u +%Y%m%d)}"
+          echo "Reproduce with: FERROVUE_FUZZ_SEED=$seed FERROVUE_FUZZ_COUNT=${COUNT:-1000} pnpm fuzz" >> "$GITHUB_STEP_SUMMARY"
+          FERROVUE_FUZZ_SEED="$seed" FERROVUE_FUZZ_COUNT="${COUNT:-1000}" pnpm fuzz
+      - name: Upload the shrunk failures
+        if: failure() && hashFiles('fuzz/failures/**') != ''
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: fuzz-failures-${{ github.run_id }}
+          path: fuzz/failures/
+          if-no-files-found: ignore
