@@ -8,12 +8,18 @@ hydration mismatch in the browser. Errors point into the `.vue` file, with the l
 caret under the construct. For example:
 
 ```text
-components/Card.vue:12:18: `<` is supported between two numbers that are present: JavaScript orders strings by UTF-16 code unit, which is not supported
+error: components/Card.vue:7:14: `<` is supported between two numbers, or two strings, that are present: the other is a string
+ 7 |     <p v-if="label < limit">{{ label }}</p>
+   |              ^
 ```
 
 What is refused today, each with an error that names it:
 
-- `<style scoped>`, `<style module>`, and `v-bind()` in CSS (a global `<style>` block is fine);
+- `<style module>`, and `v-bind()` in CSS (`<style scoped>` and a global `<style>` block are fine:
+  see [`scoped_styles`](crate::guide::scoped_styles));
+- `<RouterView>` in a component with `<style scoped>`, which would give the page that component's
+  id; and, since vue-router renders a link from virtual nodes, a `<slot>` inside a `<RouterLink>`
+  that takes scope ids, or an element inside one in slot content given a `:slotted()` id;
 - `<component :is>`;
 - `<RouterLink custom>`, slot props that are array literals, defaults in destructured slot props,
   and outlets of one slot that pass different props;
@@ -22,7 +28,20 @@ What is refused today, each with an error that names it:
   setup that change state;
 - `route.meta` and `route.matched`;
 - Pinia getters that read `this` or return a function;
-- ordering comparisons of strings;
+- ordering comparisons between a string and a number, which JavaScript makes numeric;
+- regular expressions (`.replace(/x/g, …)`, `.split(/,/)`), replacement functions, a search's
+  starting position or a split's limit (`.includes(x, 3)`, `.split(",", 2)`),
+  `.toLocaleUpperCase()` and `.toLocaleLowerCase()` (the server's locale is not the browser's),
+  `parseInt` with a radix other than 10 or 16, or of a number, and `.repeat()` by a negative
+  literal. See [`strings`](crate::guide::strings);
+- two strings that may each hold half of a surrogate pair compared, searched or joined. See
+  [`strings`](crate::guide::strings#halves-of-surrogate-pairs);
+- array methods given anything but an arrow function whose body is an expression
+  (`.filter(Boolean)`, `x => { return … }`), `.map()` to optional values, and a computed list as a
+  slot prop;
+- a dictionary's field read by name (`r.key`, `r[key]`), which may be absent although TypeScript
+  says it is not; `Object.entries()` anywhere but as a `v-for`'s source; dictionaries of optional
+  values. See [`props`](crate::guide::props#dictionaries);
 - `null`;
 - `v-html` of anything but a `TrustedHtml` prop;
 - any method call without a Rust twin.
@@ -91,8 +110,15 @@ panics are programming errors, found the first time the code runs:
   [`Router::new`](crate::Router::new) panic on a route path outside the supported syntax, or two
   routes with the same name. The generated `router()` uses routes the compiler has checked.
 - [`Route::link_named`](crate::Route::link_named) panics on a route name no route has (the compiler
-  checks the names a template uses), and in a debug build on a missing required parameter, which
-  makes vue-router throw. A release build writes the link without it.
+  checks the names a template uses), and in a debug build on a required parameter that is missing
+  or empty, which makes vue-router throw. A release build writes the link without it.
+- [`I18n::t`](crate::I18n::t) panics in a debug build when a fractional plural number chooses none
+  of a message's cases (`1.5` with three cases), where vue-i18n throws. A release build writes
+  nothing for the message.
+- [`js_repeat`](crate::js_repeat), [`js_pad_start`](crate::js_pad_start) and
+  [`js_pad_end`](crate::js_pad_end) panic where JavaScript throws a `RangeError`: a negative or
+  infinite `.repeat()` count, or a result longer than V8's longest string. See
+  [`strings`](crate::guide::strings#panics).
 
 Serialising an island's props or the stores' state cannot fail for the types the compiler
 generates. If a hand-written [`TrustedHtml`](crate::TrustedHtml) type's `Serialize` fails, the
@@ -101,6 +127,11 @@ island gets empty props and the client leaves the server's markup as it is.
 # Limits worth knowing
 
 - **Integers** are exact within ±2⁵³, as in JavaScript. See [`numbers`](crate::guide::numbers).
+- **Strings** count UTF-16 code units, as in JavaScript, and half of a surrogate pair is written as
+  U+FFFD, as a server sends it. See [`strings`](crate::guide::strings).
+- **Scope ids** are computed as `@vitejs/plugin-vue` computes them only when `scopeId` and
+  `viteRoot` match its configuration; a wrong id hydrates cleanly and leaves the styles unapplied.
+  See [`scoped_styles`](crate::guide::scoped_styles).
 - **String-literal unions** are not checked in Rust: a value outside the union renders as given.
 - **Optional values must be narrowed** before use, as TypeScript requires: `v-if="user"`,
   `user !== undefined`, `??`.

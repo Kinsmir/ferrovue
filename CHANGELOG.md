@@ -105,6 +105,13 @@ released together and share version numbers.
   by rustdoc.
 - The public items have runnable examples, and those that generated code calls say so.
 - docs.rs builds with `--cfg docsrs`, which marks `maud`-only items; the manifest links the docs.
+- The guide covers the rest of this release: a page on `<style scoped>` (the ids, matching
+  `@vitejs/plugin-vue` with `scopeId` and `viteRoot`, `render_scoped`, `:slotted()` and slot scope
+  ids), a page on strings (UTF-16 indices, halves of surrogate pairs, ordering, `Number`,
+  `parseInt`, `parseFloat`, `JSON.stringify`, slicing lists), dictionaries and `Record` in the
+  props page, vue-i18n's plural choice from a fraction, and `Math.round`'s `-0`. Its copies of
+  generated code are what the compiler writes now, and the new runtime functions have runnable
+  examples.
 
 ### Changed
 
