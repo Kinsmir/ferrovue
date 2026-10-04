@@ -36,7 +36,9 @@ it("renders every fixture", async () => {
     for (const c of cases) {
       try {
         const app = await fixtureApp(await load(c), readFixture(JSON.parse(c.json) as Record<string, unknown>), null);
-        results[c.key] = { ok: await renderToString(app) };
+        // As a server sends it: a half of a surrogate pair (`"🦀".slice(1)`) as U+FFFD, which is
+        // what writing the string as UTF-8 makes of it, and what ferrovue writes.
+        results[c.key] = { ok: (await renderToString(app)).toWellFormed() };
       } catch (e) {
         results[c.key] = { err: String((e as Error).stack ?? e).split("\n").slice(0, 4).join("\n") };
       }
