@@ -135,7 +135,7 @@ ferrovue compiles `<script setup lang="ts">` components. Props are declared by t
 | Attributes | static and bound attributes, boolean attributes, `:hidden`, `data-*` and `aria-*`, `v-bind` objects |
 | `class` | strings, arrays, objects (`{ active: on }`, computed keys), `cond && "x"`, `cond ? "x" : null`, merged with a static `class` |
 | `style` | objects (camelCase or kebab-case keys, `--custom` properties), arrays of objects, strings, merged with a static `style`, and `v-show`; later values override earlier ones as in Vue. A global `<style>` block is allowed |
-| Scoped styles | `<style scoped>`: the id on every element, on child components' roots (a root that is itself a component, fragments, recursion and `inheritAttrs: false` as Vue renders them) and, from a component with `:slotted()` rules, on the slot content it is given, forwarded slots included; inside `<Transition>`, `<KeepAlive>`, `<Teleport>` and `v-if` |
+| Scoped styles | `<style scoped>`: the id on every element, on child components' roots (a root that is itself a component, fragments, recursion and `inheritAttrs: false` as Vue renders them) and, from a component with `:slotted()` rules, on the slot content it is given, forwarded slots included; inside `<Transition>`, `<KeepAlive>`, `<Teleport>` and `v-if`; on `<RouterLink>` and what it holds, as vue-router renders them |
 | Components | imported child components, `v-bind` of a child's own `Props`, `v-model` on a child's `defineModel`, recursion |
 | Slots | default and named slots, fallbacks, `$slots.name` tests, scoped slots (`<slot :item="x">` and `#item="{ item }"` or `v-slot="props"`), whose props a parent can hand to its own children |
 | Forms | `v-model` on text inputs, checkboxes, radios, `<select>` and `<textarea>` (renders the initial state) |
@@ -148,9 +148,9 @@ ferrovue compiles `<script setup lang="ts">` components. Props are declared by t
 Refused at compile time, each with an error that names the construct:
 
 - `<style module>`, and `v-bind()` in CSS
-- `<RouterLink>` in a component with `<style scoped>`, or where one would hand it ids (its root, or
-  `:slotted()` slot content), and `<RouterView>` in a scoped component: vue-router renders them as
-  virtual nodes, which take ids by rules of their own
+- `<RouterView>` in a component with `<style scoped>`, which would give the page that component's
+  id; and, since vue-router renders a link from virtual nodes, a `<slot>` inside a `<RouterLink>`
+  that takes scope ids, or an element inside one in slot content given a `:slotted()` id
 - `<component :is>`
 - `<RouterLink custom>`, slot props that are array literals, defaults in destructured slot props, and outlets of one slot that pass different props
 - custom directives not listed in `clientDirectives`
@@ -178,7 +178,9 @@ two must be configured alike:
 | `vite build` with the default options | `"scopeId": "filepath-source"` (the default) |
 | `features: { componentIdGenerator: "filepath" }` (any mode), or the dev server | `"scopeId": "filepath"` |
 
-Set `viteRoot` when Vite's root is not the directory holding `ferrovue.config.json`.
+Set `viteRoot` when Vite's root is not the directory holding `ferrovue.config.json`. The Vite
+plugin (`ferrovue/vite`) compares the two when a component has scoped styles: a build in which they
+differ fails, and the dev server warns.
 
 The default is the plugin's production behaviour because the production build is the one readers
 get: with every option left alone, its styles apply. But plugin-vue hashes the path alone in its dev

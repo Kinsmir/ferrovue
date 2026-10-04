@@ -78,6 +78,7 @@ A fixture is a JSON object of props plus three optional keys:
 | `Badge`, `Cart` | Pinia state through the store and `storeToRefs`, getters, two stores, store reads in `computed` |
 | `ScopedPage` and its children | `<style scoped>`: the id on every element and what reaches each kind of child — `ScopedLeaf` (a root chosen by `v-if`), `ScopedRoot` (a root that is a component), `ScopedPair` (a fragment), `PlainBox` (no scoped styles), `ScopedCard` (`:slotted()`, a scoped slot, fallbacks), `PlainForward`, `ScopedShelf` and `ScopedRack` (slots forwarded into `:slotted()` ones, slot scope ids with two spaces), `ScopedFade` (a `<Transition>` root) — and `<KeepAlive>`, `<Teleport>` |
 | `ScopedTree` | A scoped component rendering itself, whose children's roots carry its id twice |
+| `ScopedNav`, `ScopedLink` | `<RouterLink>` in scoped components: the `<a>` and what it holds, a link that is a scoped component's root, a link in `:slotted()` slot content |
 | `ScopedQuirks`, `QuietLeaf` | Where Vue's server and client renders give different ids: a `:slotted()` component's fallback, `inheritAttrs: false` |
 
 Every component has at least one **hostile** fixture: markup-breaking characters in every prop that
