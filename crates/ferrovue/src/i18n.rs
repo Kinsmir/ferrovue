@@ -7,11 +7,36 @@
 //! locales — and, when nothing has the key, the key itself.
 //!
 //! The locale is chosen per request: build an [`I18n`] for it and pass it to the components that
-//! translate, as the route is passed.
+//! translate, as the route is passed. The tables are written by the compiler, into the generated
+//! `i18n` module, whose `i18n(locale)` builds the [`I18n`]; [`Part`], [`Message`] and [`Locale`]
+//! are public so that generated code can spell them as constants, and [`Args`] and [`Value`] so
+//! that it can call [`I18n::t`]. [`guide::i18n`](crate::guide::i18n) shows the whole path.
+//!
+//! # Example
+//!
+//! ```
+//! use ferrovue::i18n::{Args, Locale, Message, Part, Value};
+//! use ferrovue::I18n;
+//!
+//! // What the compiler writes for `en.json`: `{ "greeting": "Hello {name}!" }`.
+//! static LOCALES: &[Locale] = &[Locale {
+//!     name: "en",
+//!     messages: &[(
+//!         "greeting",
+//!         Message { cases: &[&[Part::Text("Hello "), Part::Named("name"), Part::Text("!")]] },
+//!     )],
+//! }];
+//!
+//! let i18n = I18n::new(LOCALES, "en", &[]);
+//! let args = Args { named: &[("name", Value::Str("Ada"))], ..Args::default() };
+//! assert_eq!(i18n.t("greeting", &args), "Hello Ada!");
+//! ```
 
 use std::fmt::Write;
 
 /// One piece of a compiled message.
+///
+/// Written by the compiler into the generated `i18n` module, never by hand.
 #[derive(Debug)]
 pub enum Part {
     /// Text written as it is.
@@ -32,6 +57,8 @@ pub enum Part {
 }
 
 /// A compiled message: one case, or the cases of a plural message (`one | many`).
+///
+/// Written by the compiler into the generated `i18n` module.
 #[derive(Debug)]
 pub struct Message {
     /// The cases; a message without `|` has one.
@@ -39,6 +66,9 @@ pub struct Message {
 }
 
 /// A locale's messages, by key — nested keys joined with dots — sorted for lookup.
+///
+/// Written by the compiler into the generated `i18n` module's `LOCALES`. The messages must be
+/// sorted by key, byte by byte, because they are looked up by binary search.
 #[derive(Debug)]
 pub struct Locale {
     /// The locale's name: its file's name, `en` for `en.json`.
@@ -57,6 +87,10 @@ impl Locale {
 }
 
 /// A value interpolated into a message, written as `toDisplayString` writes it.
+///
+/// Numbers are written as JavaScript writes them, with [`push_int`](crate::push_int) and
+/// [`push_number`](crate::push_number). `count` and `n` take the plural number when they are not
+/// given, or are given a falsy value.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Value<'a> {
     /// A string, as it is.
@@ -92,6 +126,19 @@ impl Value<'_> {
 
 /// What a `t()` call is given besides its key: `t(key, { named })`, `t(key, [list])`,
 /// `t(key, plural)`, or a named object and a plural together.
+///
+/// Generated code writes one per call, with every field spelled out; `Args::default()` is a call
+/// with no arguments.
+///
+/// # Example
+///
+/// ```
+/// use ferrovue::i18n::{Args, Value};
+///
+/// // t("greeting", { name: "Ada" }, 3)
+/// let args = Args { named: &[("name", Value::Str("Ada"))], list: &[], plural: Some(3) };
+/// assert_eq!(args.plural, Some(3));
+/// ```
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Args<'a> {
     /// `{ name: value }`.
@@ -103,6 +150,11 @@ pub struct Args<'a> {
 }
 
 /// The messages and the locale one request renders in.
+///
+/// Build one per request with the generated `i18n::i18n(locale)`, which calls [`I18n::new`] with
+/// every locale's messages and the configured fallbacks, and pass it to each component that calls
+/// `$t` or `useI18n()`: it comes after the props, slots, route and stores in `render`'s parameters.
+/// Building one is cheap: the messages are static, and only the chain of locales is worked out.
 #[derive(Clone, Debug)]
 pub struct I18n {
     locales: &'static [Locale],
@@ -116,7 +168,25 @@ const MAX_LINK_DEPTH: usize = 32;
 
 impl I18n {
     /// Translate in `locale`, falling back to `fallback` in order. A locale with no messages of its
-    /// own is still the current one: every key then falls back.
+    /// own is still the current one: every key then falls back. Names that match no locale in
+    /// `locales` are skipped.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ferrovue::i18n::{Args, Locale, Message, Part};
+    /// use ferrovue::I18n;
+    ///
+    /// static LOCALES: &[Locale] = &[
+    ///     Locale { name: "en", messages: &[("hi", Message { cases: &[&[Part::Text("hi")]] })] },
+    ///     Locale { name: "nl", messages: &[] },
+    /// ];
+    ///
+    /// // A Belgian reader: no `nl-BE` messages, so Dutch, then English.
+    /// let i18n = I18n::new(LOCALES, "nl-BE", &["nl", "en"]);
+    /// assert_eq!(i18n.locale(), "nl-BE");
+    /// assert_eq!(i18n.t("hi", &Args::default()), "hi");
+    /// ```
     pub fn new(locales: &'static [Locale], locale: &str, fallback: &[&str]) -> I18n {
         let index = |name: &str| locales.iter().position(|l| l.name == name);
         let mut chain: Vec<usize> = Vec::new();
@@ -141,6 +211,47 @@ impl I18n {
 
     /// `t(key, …)`: the message in the first locale of the chain that has it, evaluated with these
     /// arguments — or the key itself when none does, as vue-i18n returns it.
+    ///
+    /// The result is the message's text, not yet escaped: generated code escapes it like any other
+    /// interpolation.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ferrovue::i18n::{Args, Locale, Message, Part, Value};
+    /// use ferrovue::I18n;
+    ///
+    /// // `{ "apples": "no apples | one apple | {count} apples", "app": "ferrovue",
+    /// //    "about": "@.upper:app and {0}" }`
+    /// static LOCALES: &[Locale] = &[Locale {
+    ///     name: "en",
+    ///     messages: &[
+    ///         ("about", Message { cases: &[&[
+    ///             Part::Linked { key: "app", modifier: Some("upper") },
+    ///             Part::Text(" and "),
+    ///             Part::List(0),
+    ///         ]] }),
+    ///         ("app", Message { cases: &[&[Part::Text("ferrovue")]] }),
+    ///         ("apples", Message { cases: &[
+    ///             &[Part::Text("no apples")],
+    ///             &[Part::Text("one apple")],
+    ///             &[Part::Named("count"), Part::Text(" apples")],
+    ///         ] }),
+    ///     ],
+    /// }];
+    /// let i18n = I18n::new(LOCALES, "en", &[]);
+    ///
+    /// // t("apples", 0), t("apples", 1), t("apples", 5)
+    /// let plural = |n| i18n.t("apples", &Args { plural: Some(n), ..Args::default() });
+    /// assert_eq!([plural(0), plural(1), plural(5)], ["no apples", "one apple", "5 apples"]);
+    ///
+    /// // t("about", ["Rust"])
+    /// let args = Args { list: &[Value::Str("Rust")], ..Args::default() };
+    /// assert_eq!(i18n.t("about", &args), "FERROVUE and Rust");
+    ///
+    /// // A key no locale has is written as itself.
+    /// assert_eq!(i18n.t("no.such.key", &Args::default()), "no.such.key");
+    /// ```
     pub fn t(&self, key: &str, args: &Args<'_>) -> String {
         match self.find(key) {
             Some((_, message)) => {

@@ -4,13 +4,32 @@
 //! and the `router-link-active router-link-exact-active` classes. Deciding that means resolving the
 //! link the way the client's router will, so this is vue-router's own algorithm — `parseURL`,
 //! `resolveRelativePath`, the path parser's scores and its regular expression, `decode` — for the
-//! path syntax ferrovue accepts: static segments, `:name`, and a final `:name(.*)`. The routes are
-//! flat (no nesting), which is what makes "active" and "exactly active" the same test: the same
-//! route, with the same parameters.
+//! path syntax ferrovue accepts: static segments, `:name`, and a final `:name(.*)`. Routes may be
+//! nested, as `useLink` sees them: a link is active when it points at the reader's route or one it
+//! is nested in, and exactly active only on the route itself, with the same parameters.
 //!
 //! `tests/vectors/router.json` holds the cases both this and the real vue-router are run against.
 
 /// The routes, in the order vue-router tries them.
+///
+/// Build it once, at start-up, usually with the generated `route_table::router()`, and keep it in
+/// the application's state: it is immutable, `Send` and `Sync`. For each request, [`Router::at`]
+/// gives the [`Route`] that components which link or read the route take.
+/// [`guide::routing`](crate::guide::routing) covers the whole picture.
+///
+/// # Example
+///
+/// ```
+/// use ferrovue::Router;
+///
+/// let router = Router::new(&["/", "/blog/:slug", "/docs/:path(.*)"]);
+/// let route = router.at("/docs/guide/routing");
+/// assert_eq!(route.param("path"), Some("guide/routing"));
+///
+/// // One router serves every request, from any thread.
+/// fn shared<T: Send + Sync>(_: &T) {}
+/// shared(&router);
+/// ```
 pub struct Router {
     routes: Vec<Pattern>,
     /// What every `href` starts with: the history's base, normalised as vue-router normalises it.
@@ -46,8 +65,18 @@ impl Router {
     ///
     /// # Panics
     ///
-    /// On a path outside the syntax described at the top of this module. The paths are part of the
-    /// program, so this is a programming error, found the first time the router is built.
+    /// On a path that does not start with `/`, a parameter that is not `:name` or `:name(.*)`, a
+    /// `(.*)` anywhere but the last segment, or a static segment that is not plain ASCII text. The
+    /// paths are part of the program, so this is a programming error, found the first time the
+    /// router is built.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let router = ferrovue::Router::new(&["/", "/users/:id"]);
+    /// assert_eq!(router.at("/users/7").param("id"), Some("7"));
+    /// assert_eq!(router.at("/nowhere").param("id"), None);
+    /// ```
     pub fn new(paths: &[&str]) -> Router {
         Router::named(&paths.iter().map(|p| (*p, None)).collect::<Vec<_>>())
     }
@@ -87,6 +116,9 @@ impl Router {
 
     /// A router over nested routes: each child's path is joined to its parent's, unless it starts
     /// with `/`, and an empty one is its parent's own, its default child.
+    ///
+    /// This is what the generated `route_table::router()` calls, with the routes file as a
+    /// constant tree of [`RouteDef`]s.
     ///
     /// # Panics
     ///
@@ -212,6 +244,20 @@ impl Router {
 
     /// The same routes under a base path, as `createWebHistory(base)` serves them: every `href`
     /// starts with it. `/app/` and `app` both mean `/app`.
+    ///
+    /// The base is added to links only: [`Router::at`] still takes the location without it, as
+    /// vue-router's history reports it.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let router = ferrovue::Router::new(&["/", "/blog/:slug"]).with_base("/app/");
+    /// // A request for /app/blog/intro, with the base taken off.
+    /// let route = router.at("/blog/intro");
+    /// let link = route.link("/blog/intro");
+    /// assert_eq!(link.href, "/app/blog/intro");
+    /// assert!(link.exact);
+    /// ```
     pub fn with_base(mut self, base: &str) -> Router {
         let mut b = if base.is_empty() || base.starts_with('/') || base.starts_with('#') {
             base.to_owned()
@@ -231,7 +277,22 @@ impl Router {
         self
     }
 
-    /// The reader's location: a path, with any query and hash.
+    /// The reader's location: a path, with any query and hash, and without the history's base.
+    ///
+    /// Pass the request's path and query as they arrived, percent-encoding included; parameters,
+    /// query values and the hash are decoded as vue-router decodes them. A location that matches no
+    /// route still gives a [`Route`], whose [`Route::name`] and [`Route::param`] are `None` and
+    /// whose links are never active: the page to render is then a "not found" page.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let router = ferrovue::Router::new(&["/", "/search"]);
+    /// let route = router.at("/search?q=caf%C3%A9&page=2#results");
+    /// assert_eq!(route.path(), "/search");
+    /// assert_eq!(route.query("q").attr_value(), Some("café"));
+    /// assert_eq!(route.hash(), "#results");
+    /// ```
     pub fn at(&self, location: &str) -> Route<'_> {
         let (path, full_path) = parse_url(location, "/");
         let hash_pos = location.find('#');
@@ -264,6 +325,9 @@ impl Router {
 
 /// A route as the routes file lists it: a path, its name if it has one, and the routes nested in
 /// it, rendered by the `<RouterView>` in its component.
+///
+/// The generated `route_table::ROUTES` is a constant tree of these, which [`Router::tree`] reads;
+/// the example there builds one by hand.
 #[derive(Clone, Copy, Debug)]
 pub struct RouteDef<'a> {
     /// The path, relative to the parent's unless it starts with `/`; empty for a default child.
@@ -275,6 +339,29 @@ pub struct RouteDef<'a> {
 }
 
 /// Where the reader is, which is what every link on the page is compared with.
+///
+/// Made by [`Router::at`], once per request, and borrowing the router. Generated components that
+/// render `<RouterLink>` or read `useRoute()` and `$route` take a `&Route` after their props and
+/// slots; the server can read it too, to choose the page.
+///
+/// # Example
+///
+/// ```
+/// let router = ferrovue::Router::named(&[("/", Some("home")), ("/blog/:slug", Some("post"))]);
+/// let route = router.at("/blog/intro?sort=new#comments");
+///
+/// assert_eq!(route.name(), Some("post"));
+/// assert_eq!(route.param("slug"), Some("intro"));
+/// assert_eq!(route.path(), "/blog/intro");
+/// assert_eq!(route.full_path(), "/blog/intro?sort=new#comments");
+/// assert!(route.query("sort").is("new"));
+/// assert_eq!(route.hash(), "#comments");
+///
+/// // What `<RouterLink to="/">` writes from here.
+/// let home = route.link("/");
+/// assert_eq!(home.href, "/");
+/// assert!(!home.active);
+/// ```
 pub struct Route<'r> {
     router: &'r Router,
     path: String,
@@ -289,6 +376,23 @@ pub struct Route<'r> {
 
 /// One value of `route.query`, as vue-router parses it: a key may be absent, given without a value
 /// (`?flag`, which is `null`), given once, or given more than once, which makes an array.
+///
+/// Returned by [`Route::query`]. Its methods are what generated code calls for each way a template
+/// may use `route.query.q`.
+///
+/// # Example
+///
+/// ```
+/// use ferrovue::{Query, Router};
+///
+/// let router = Router::new(&["/search"]);
+/// let route = router.at("/search?q=rust&tag=a&tag=b&flag");
+///
+/// assert_eq!(route.query("q"), Query::One("rust"));
+/// assert_eq!(route.query("flag"), Query::Null);
+/// assert_eq!(route.query("nothing"), Query::Absent);
+/// assert!(route.query("tag").is_array());
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Query<'r> {
     /// No such key: `undefined`.
@@ -304,6 +408,21 @@ pub enum Query<'r> {
 impl<'r> Query<'r> {
     /// `{{ route.query.q }}`, escaped: nothing for `undefined` and `null`, the text for a string,
     /// and an array as `toDisplayString` writes one — `JSON.stringify(value, null, 2)`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let router = ferrovue::Router::new(&["/search"]);
+    /// let route = router.at("/search?q=a%3Cb&tag=x&tag=y");
+    ///
+    /// let mut out = String::new();
+    /// route.query("q").write_display(&mut out);
+    /// assert_eq!(out, "a&lt;b");
+    ///
+    /// out.clear();
+    /// route.query("tag").write_display(&mut out);
+    /// assert_eq!(out, "[\n  &quot;x&quot;,\n  &quot;y&quot;\n]");
+    /// ```
     pub fn write_display(&self, out: &mut String) {
         match self {
             Query::Absent | Query::Null => {}
@@ -328,6 +447,16 @@ impl<'r> Query<'r> {
     }
 
     /// JavaScript's truthiness: a non-empty string or an array.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ferrovue::Query;
+    ///
+    /// assert!(Query::One("x").truthy());
+    /// assert!(!Query::One("").truthy());
+    /// assert!(!Query::Null.truthy() && !Query::Absent.truthy());
+    /// ```
     pub fn truthy(&self) -> bool {
         match self {
             Query::One(s) => !s.is_empty(),
@@ -352,6 +481,15 @@ impl<'r> Query<'r> {
     }
 
     /// `route.query.q ?? fallback`: the fallback for `undefined` and `null`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ferrovue::Query;
+    ///
+    /// assert_eq!(Query::Absent.or("none"), Query::One("none"));
+    /// assert_eq!(Query::One("").or("none"), Query::One("")); // `??`, not `||`
+    /// ```
     pub fn or<'a>(self, fallback: &'a str) -> Query<'a>
     where
         'r: 'a,
@@ -364,6 +502,15 @@ impl<'r> Query<'r> {
 
     /// The value as an attribute writes it: only a string is written; `null`, `undefined` and an
     /// array leave the attribute out.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ferrovue::Query;
+    ///
+    /// assert_eq!(Query::One("rust").attr_value(), Some("rust"));
+    /// assert_eq!(Query::Null.attr_value(), None);
+    /// ```
     pub fn attr_value(&self) -> Option<&'r str> {
         match self {
             Query::One(s) => Some(s),
@@ -393,7 +540,20 @@ fn parse_query(search: &str) -> Vec<(String, Vec<Option<String>>)> {
     query
 }
 
-/// A `<RouterLink>`'s `to`, resolved.
+/// A `<RouterLink>`'s `to`, resolved: what [`Route::link`], [`Route::link_named`] and
+/// [`Route::link_path`] return.
+///
+/// Generated code writes `href` (escaped), `aria-current="page"` when `exact`, and the active
+/// classes the router was configured with. The `href` is not escaped here.
+///
+/// # Example
+///
+/// ```
+/// let router = ferrovue::Router::new(&["/", "/blog/:slug"]);
+/// let link = router.at("/blog/intro").link("/blog/intro#top");
+/// assert_eq!(link.href, "/blog/intro#top");
+/// assert!(link.active && link.exact);
+/// ```
 pub struct Link {
     /// What the anchor's `href` is.
     pub href: String,
@@ -454,7 +614,8 @@ impl Route<'_> {
         values.get(at).map(String::as_str)
     }
 
-    /// Resolve a link from here.
+    /// Resolve a link from here: a string `to`, absolute or relative to the current path, with any
+    /// query and hash, which are kept as written.
     ///
     /// # Example
     ///
@@ -517,6 +678,25 @@ impl Route<'_> {
     /// # Panics
     ///
     /// On a name no route has. The compiler checks the names a template uses against the routes.
+    /// A debug build also panics on a required parameter that is missing or empty, as vue-router
+    /// throws on one; a release build writes the link without it.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let router = ferrovue::Router::named(&[("/", Some("home")), ("/books/:id", Some("book"))]);
+    /// let route = router.at("/books/dune");
+    ///
+    /// // <RouterLink :to="{ name: 'book', params: { id: 'dune' }, query: { tab: 'reviews' }, hash: '#top' }">
+    /// let mut search = String::new();
+    /// ferrovue::query_into(&mut search, "tab", "reviews");
+    /// let link = route.link_named("book", &[("id", "dune")], &search, "#top");
+    /// assert_eq!(link.href, "/books/dune?tab=reviews#top");
+    /// assert!(link.active && link.exact);
+    ///
+    /// // Parameters are encoded as vue-router encodes them.
+    /// assert_eq!(route.link_named("book", &[("id", "a/b c")], "", "").href, "/books/a%2Fb%20c");
+    /// ```
     pub fn link_named(
         &self,
         name: &str,
@@ -568,6 +748,20 @@ impl Route<'_> {
 
     /// Resolve `{ path, query, hash }`: the path resolved from here, as a string `to` would be,
     /// then `search` and `hash`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let router = ferrovue::Router::new(&["/", "/search"]);
+    /// let route = router.at("/");
+    ///
+    /// // <RouterLink :to="{ path: '/search', query: { q: 'a b' } }">
+    /// let mut search = String::new();
+    /// ferrovue::query_into(&mut search, "q", "a b");
+    /// let link = route.link_path("/search", &search, "");
+    /// assert_eq!(link.href, "/search?q=a+b");
+    /// assert!(!link.active);
+    /// ```
     pub fn link_path(&self, path: &str, search: &str, hash: &str) -> Link {
         let (path, _) = parse_url(path, &self.path);
         let (active, exact) = self.state(self.router.matched(&path));
@@ -592,6 +786,9 @@ impl Route<'_> {
 
 /// `stringifyQuery`, one key and value at a time: `key=value`, each encoded as vue-router encodes
 /// them, after a `&` when `search` already holds a pair.
+///
+/// Called by generated code to build the `search` that [`Route::link_named`] and
+/// [`Route::link_path`] take from a `to` object's `query`.
 ///
 /// # Example
 ///
