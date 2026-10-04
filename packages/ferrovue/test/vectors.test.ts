@@ -31,18 +31,21 @@ describe("vectors shared with the Rust crate", () => {
   });
 
   // `[op, x, arg, expected]`, the expected text recorded from JavaScript with `FERROVUE_VECTORS_WRITE=1`.
+  // A number is written as `String` writes it, but `-0` as "-0": `String` hides the sign, which
+  // `1 / x` shows.
   it("math.json is Math.round, Math.max, Math.min and toFixed", () => {
     const vectors = (read("math.json") as [string, string, string, string][]);
+    const text = (n: number): string => (Object.is(n, -0) ? "-0" : String(n));
     const run = (op: string, x: string, arg: string): string => {
       switch (op) {
         case "round":
-          return String(Math.round(Number(x)));
+          return text(Math.round(Number(x)));
         case "toFixed":
           return Number(x).toFixed(Number(arg));
         case "max":
-          return String(Math.max(Number(x), Number(arg)));
+          return text(Math.max(Number(x), Number(arg)));
         case "min":
-          return String(Math.min(Number(x), Number(arg)));
+          return text(Math.min(Number(x), Number(arg)));
         default:
           throw new Error(op);
       }

@@ -83,6 +83,9 @@ released together and share version numbers.
   plural, not singular), and one that is not a finite number (`NaN`, `Infinity`) is passed over
   for the plural number; a fraction that chooses no case fails a debug build's render, as vue-i18n
   throws. Found by mutation testing; the conformance component `Plurals` holds it to vue-i18n.
+- `Math.round` of a number from `-0.5` up to zero is `-0`, as in JavaScript, which `1 / Math.round(x)`
+  shows (`-Infinity`). The math vectors now record the sign of a zero result, and hold
+  `Math.max` and `Math.min` to it as well.
 
 ## [0.1.0] - 2026-10-04
 

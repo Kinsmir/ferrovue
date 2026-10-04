@@ -63,7 +63,8 @@ fn numbers_are_written_as_javascript_writes_them() {
     }
 }
 
-/// `tests/vectors/math.json`, recorded from JavaScript's `Math` and `toFixed`.
+/// `tests/vectors/math.json`, recorded from JavaScript's `Math` and `toFixed`, with `-0` written
+/// as "-0" where `String` would hide its sign.
 #[test]
 fn math_is_javascripts_math() {
     let vectors: Vec<(String, String, String, String)> =
@@ -71,6 +72,9 @@ fn math_is_javascripts_math() {
     assert!(vectors.len() >= 600, "the vectors were not all read");
     let num = |s: &str| -> f64 { s.parse().unwrap_or_else(|_| panic!("{s:?} parses")) };
     let text = |x: f64| {
+        if x == 0.0 && x.is_sign_negative() {
+            return "-0".to_owned();
+        }
         let mut out = String::new();
         push_number(&mut out, x);
         out
