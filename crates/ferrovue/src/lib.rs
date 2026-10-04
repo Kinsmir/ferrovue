@@ -122,6 +122,21 @@ fn write_hole(out: &mut String) {
 /// output, and write the pieces with each hole's content between them — which is how a page streams
 /// its parts in the order they are ready. A hole is content to the slot, so its fallback never
 /// shows.
+///
+/// # Example
+///
+/// ```
+/// use ferrovue::{hole, slot_into, split_holes};
+///
+/// // A layout rendered with a hole where the page goes, then sent in two pieces.
+/// let mut layout = String::from("<main>");
+/// slot_into(&mut layout, Some(hole()), None);
+/// layout.push_str("</main>");
+///
+/// let pieces = split_holes(&layout);
+/// assert_eq!(pieces, ["<main><!--[-->", "<!--]--></main>"]);
+/// // Write pieces[0], then the page when it is ready, then pieces[1].
+/// ```
 pub fn hole() -> Slot<'static> {
     Slot::new(&write_hole)
 }
@@ -136,6 +151,21 @@ pub fn split_holes(rendered: &str) -> Vec<&str> {
 ///
 /// Returns whether the slot's own content wrote anything but comments, which is what decides
 /// whether slot content that forwards this slot is itself empty. The fallback reports for itself.
+///
+/// # Example
+///
+/// ```
+/// use ferrovue::{slot_into, Slot};
+///
+/// let content = |out: &mut String| out.push_str("<p>given</p>");
+/// let mut out = String::new();
+/// slot_into(&mut out, Some(Slot::new(&content)), None);
+/// assert_eq!(out, "<!--[--><p>given</p><!--]-->");
+///
+/// out.clear();
+/// slot_into(&mut out, None, Some(&mut |out: &mut String| out.push_str("fallback")));
+/// assert_eq!(out, "<!--[-->fallback<!--]-->");
+/// ```
 pub fn slot_into(
     out: &mut String,
     slot: Option<Slot<'_>>,
@@ -176,6 +206,26 @@ pub fn slot_into(
 /// `slot` is a component's `Slots` field for a scoped slot, a closure taking the slot's props and
 /// returning whether it wrote anything but comments; one written by hand returns `true`. Returns
 /// whether the content was filled, as [`slot_into`] does.
+///
+/// # Example
+///
+/// ```
+/// use ferrovue::scoped_slot_into;
+///
+/// /// What a component's outlet passes; generated code writes one such struct per scoped slot.
+/// struct RowProps<'v> {
+///     label: &'v str,
+/// }
+///
+/// let row = |out: &mut String, p: &RowProps<'_>| {
+///     ferrovue::escape_into(out, p.label);
+///     true
+/// };
+/// let slot: &dyn for<'v> Fn(&mut String, &RowProps<'v>) -> bool = &row;
+/// let mut out = String::new();
+/// scoped_slot_into(&mut out, Some(slot), &RowProps { label: "a<b" }, None);
+/// assert_eq!(out, "<!--[-->a&lt;b<!--]-->");
+/// ```
 pub fn scoped_slot_into<P: ?Sized, F: Fn(&mut String, &P) -> bool + ?Sized>(
     out: &mut String,
     slot: Option<&F>,
@@ -203,6 +253,32 @@ pub fn scoped_slot_into<P: ?Sized, F: Fn(&mut String, &P) -> bool + ?Sized>(
 /// trait. Implement it only for a type whose every value has already been made safe — the output
 /// of a sanitiser, never a string that merely looks fine — because that is the whole of what stands
 /// between the value and the page.
+///
+/// # Example
+///
+/// ```
+/// use ferrovue::{trusted_into, TrustedHtml};
+///
+/// /// HTML a sanitiser produced: the only way to make one is through it.
+/// struct Sanitised(String);
+///
+/// impl Sanitised {
+///     fn new(untrusted: &str) -> Self {
+///         // A real project calls its sanitiser (ammonia, for example) here.
+///         Sanitised(untrusted.replace('<', "&lt;"))
+///     }
+/// }
+///
+/// impl TrustedHtml for Sanitised {
+///     fn trusted_html(&self) -> &str {
+///         &self.0
+///     }
+/// }
+///
+/// let mut out = String::new();
+/// trusted_into(&mut out, &Sanitised::new("<script>"));
+/// assert_eq!(out, "&lt;script>");
+/// ```
 pub trait TrustedHtml {
     /// The HTML, which is written into the page exactly as it is.
     fn trusted_html(&self) -> &str;
@@ -214,6 +290,14 @@ pub fn trusted_into(out: &mut String, html: &impl TrustedHtml) {
 }
 
 /// `escapeHtml`: `"`, `&`, `'`, `<` and `>`, and nothing else.
+///
+/// # Example
+///
+/// ```
+/// let mut out = String::from("<p>");
+/// ferrovue::escape_into(&mut out, r#"<a href="x">Tom & 'Jerry'</a>"#);
+/// assert_eq!(out, "<p>&lt;a href=&quot;x&quot;&gt;Tom &amp; &#39;Jerry&#39;&lt;/a&gt;");
+/// ```
 pub fn escape_into(out: &mut String, s: &str) {
     // Most strings need nothing escaped. A `fold` rather than `any` because it does not stop early,
     // which is what lets the compiler check the bytes in vector-width blocks; the string is then
@@ -242,14 +326,261 @@ pub fn escape_into(out: &mut String, s: &str) {
     out.push_str(&s[last..]);
 }
 
+/// The largest integer a JavaScript number holds exactly: 2⁵³ − 1.
+const MAX_SAFE_INTEGER: u64 = (1 << 53) - 1;
+
 /// `String(n)` for an integer, which is what `toDisplayString` and `escapeHtml` make of a number.
+///
+/// Exact within ±(2⁵³ − 1). Beyond that a JavaScript number has already lost precision — the
+/// browser rounds the value it reads from the island's props — so it is written as JavaScript
+/// writes the rounded number, or the page would not hydrate.
+///
+/// # Example
+///
+/// ```
+/// let mut out = String::new();
+/// ferrovue::push_int(&mut out, 42);
+/// out.push(' ');
+/// // Beyond 2⁵³ the browser has the rounded number, so that is what is written.
+/// ferrovue::push_int(&mut out, 9_007_199_254_740_993);
+/// assert_eq!(out, "42 9007199254740992");
+/// ```
 pub fn push_int(out: &mut String, n: i64) {
     use std::fmt::Write;
-    let _ = write!(out, "{n}");
+    if n.unsigned_abs() <= MAX_SAFE_INTEGER {
+        let _ = write!(out, "{n}");
+    } else {
+        push_number(out, n as f64);
+    }
+}
+
+/// `Number.prototype.toString()`: JavaScript's shortest round-trip digits, laid out as ECMAScript
+/// lays them out — `0.30000000000000004`, `1e+21`, `1.5e-7`, `NaN`, `-Infinity`.
+///
+/// # Example
+///
+/// ```
+/// let written = |x: f64| {
+///     let mut out = String::new();
+///     ferrovue::push_number(&mut out, x);
+///     out
+/// };
+/// assert_eq!(written(0.1 + 0.2), "0.30000000000000004");
+/// assert_eq!(written(1e21), "1e+21");
+/// assert_eq!(written(-0.0), "0");
+/// assert_eq!(written(f64::NAN), "NaN");
+/// ```
+pub fn push_number(out: &mut String, x: f64) {
+    use std::fmt::Write;
+    if x.is_nan() {
+        out.push_str("NaN");
+        return;
+    }
+    if x == 0.0 {
+        // Negative zero too: `String(-0)` is `"0"`.
+        out.push('0');
+        return;
+    }
+    if x.is_infinite() {
+        out.push_str(if x < 0.0 { "-Infinity" } else { "Infinity" });
+        return;
+    }
+    if x < 0.0 {
+        out.push('-');
+    }
+    // `{:e}` writes the shortest digits that round-trip, as JavaScript chooses them: `d.ddde±N`.
+    let mut sci = String::new();
+    let _ = write!(sci, "{:e}", x.abs());
+    let (mantissa, exp) = sci.split_once('e').expect("`{:e}` writes an exponent");
+    let mut digits: String = mantissa.chars().filter(|c| *c != '.').collect();
+    // ECMAScript breaks a tie between two shortest spellings — the number exactly halfway between
+    // them — toward the even digit, where Rust's shortest formatting may round the other way.
+    let mut exact = String::new();
+    let _ = write!(exact, "{:.1100e}", x.abs());
+    if let Some((exact_mantissa, exact_exp)) = exact.split_once('e')
+        && exact_exp == exp
+    {
+        let exact_digits: String = exact_mantissa.chars().filter(|c| *c != '.').collect();
+        let exact_digits = exact_digits.trim_end_matches('0');
+        let k = digits.len();
+        if exact_digits.len() == k + 1 && exact_digits.ends_with('5') {
+            let lower = &exact_digits[..k];
+            let upper = increment_digits(lower);
+            let even = |d: &str| {
+                d.bytes()
+                    .last()
+                    .is_some_and(|b| (b - b'0').is_multiple_of(2))
+            };
+            if upper.len() == k && (digits == lower || digits == upper) {
+                digits = if even(lower) { lower.to_owned() } else { upper };
+            }
+        }
+    }
+    let k = digits.len() as i32;
+    // The position of the decimal point relative to the digits, as the specification's `n`.
+    let n = exp
+        .parse::<i32>()
+        .expect("`{:e}` writes an integer exponent")
+        + 1;
+    if k <= n && n <= 21 {
+        out.push_str(&digits);
+        out.extend(std::iter::repeat_n('0', (n - k) as usize));
+    } else if 0 < n && n <= 21 {
+        out.push_str(&digits[..n as usize]);
+        out.push('.');
+        out.push_str(&digits[n as usize..]);
+    } else if -6 < n && n <= 0 {
+        out.push_str("0.");
+        out.extend(std::iter::repeat_n('0', (-n) as usize));
+        out.push_str(&digits);
+    } else {
+        out.push_str(&digits[..1]);
+        if k > 1 {
+            out.push('.');
+            out.push_str(&digits[1..]);
+        }
+        let e = n - 1;
+        let _ = write!(out, "e{}{}", if e < 0 { '-' } else { '+' }, e.abs());
+    }
+}
+
+/// `Math.round`: the nearest integer, a half rounding up toward +∞ — `-2.5` to `-2`, where Rust's
+/// `f64::round` gives `-3`.
+pub fn js_round(x: f64) -> f64 {
+    let f = x.floor();
+    if x - f >= 0.5 { f + 1.0 } else { f }
+}
+
+/// `Math.max` of two numbers: `NaN` if either is, where Rust's `f64::max` ignores a `NaN`.
+pub fn js_max(a: f64, b: f64) -> f64 {
+    if a.is_nan() || b.is_nan() {
+        f64::NAN
+    } else if a > b || (a == b && b.is_sign_negative()) {
+        a
+    } else {
+        b
+    }
+}
+
+/// `Math.min` of two numbers: `NaN` if either is.
+pub fn js_min(a: f64, b: f64) -> f64 {
+    if a.is_nan() || b.is_nan() {
+        f64::NAN
+    } else if a < b || (a == b && a.is_sign_negative()) {
+        a
+    } else {
+        b
+    }
+}
+
+/// `Number.prototype.toFixed(digits)`: the number rounded to `digits` places, from its exact binary
+/// value. An exact tie rounds away from zero, where Rust's formatting rounds it to even; at 10²¹ and
+/// beyond, JavaScript writes the number as `String(x)` does.
+pub fn js_to_fixed(x: f64, digits: u32) -> String {
+    use std::fmt::Write;
+    if x.is_nan() {
+        return "NaN".to_owned();
+    }
+    if x.abs() >= 1e21 || x.is_infinite() {
+        let mut s = String::new();
+        push_number(&mut s, x);
+        return s;
+    }
+    let d = digits as usize;
+    let mut out = String::new();
+    let _ = write!(out, "{:.*}", d, x.abs());
+    // Rust rounds from the exact value too, and differs only on an exact tie: a value whose exact
+    // decimal expansion ends with a 5 one place past the last digit kept.
+    let mut exact = String::new();
+    let _ = write!(exact, "{:.1100}", x.abs());
+    let exact = exact.trim_end_matches('0');
+    let fraction = exact.split_once('.').map_or("", |(_, f)| f);
+    if fraction.len() == d + 1 && fraction.ends_with('5') {
+        out = round_up_magnitude(&exact[..exact.len() - 1]);
+    }
+    // `-0.toFixed(1)` is "0.0", and a negative that rounds to zero keeps its sign: "-0.0".
+    if x < 0.0 {
+        out.insert(0, '-');
+    }
+    out
+}
+
+/// A decimal string's last digit plus one, carrying: `"2."` to `"3"`, `"1.99"` to `"2.00"`.
+fn round_up_magnitude(digits: &str) -> String {
+    let digits = digits.trim_end_matches('.');
+    let mut bytes: Vec<u8> = digits.bytes().collect();
+    let mut i = bytes.len();
+    loop {
+        if i == 0 {
+            bytes.insert(0, b'1');
+            break;
+        }
+        i -= 1;
+        match bytes[i] {
+            b'.' => continue,
+            b'9' => bytes[i] = b'0',
+            d => {
+                bytes[i] = d + 1;
+                break;
+            }
+        }
+    }
+    String::from_utf8(bytes).expect("ASCII digits")
+}
+
+/// A string of decimal digits plus one in its last place, carrying: `"129"` to `"130"`.
+fn increment_digits(digits: &str) -> String {
+    let mut bytes: Vec<u8> = digits.bytes().collect();
+    for b in bytes.iter_mut().rev() {
+        if *b == b'9' {
+            *b = b'0';
+        } else {
+            *b += 1;
+            return String::from_utf8(bytes).expect("ASCII digits");
+        }
+    }
+    bytes.insert(0, b'1');
+    String::from_utf8(bytes).expect("ASCII digits")
+}
+
+/// A number written as JavaScript writes it, for `format!` in generated code: `${n}` in a template
+/// literal, `"#" + n`, `n.toString()`.
+///
+/// # Example
+///
+/// ```
+/// use ferrovue::Js;
+///
+/// assert_eq!(format!("{} items", Js(3_i64)), "3 items");
+/// assert_eq!(format!("{}", Js(1.5e-7_f64)), "1.5e-7");
+/// ```
+pub struct Js<T>(pub T);
+
+impl std::fmt::Display for Js<i64> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut s = String::new();
+        push_int(&mut s, self.0);
+        f.write_str(&s)
+    }
+}
+
+impl std::fmt::Display for Js<f64> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut s = String::new();
+        push_number(&mut s, self.0);
+        f.write_str(&s)
+    }
 }
 
 /// `String.prototype.length`: UTF-16 code units, which is what a template's `.length` counts — not
 /// the UTF-8 bytes of `str::len`, nor the scalar values of `chars().count()`.
+///
+/// # Example
+///
+/// ```
+/// assert_eq!(ferrovue::js_length("café"), 4);
+/// assert_eq!(ferrovue::js_length("🦀"), 2); // two UTF-16 code units, as JavaScript counts
+/// ```
 pub fn js_length(s: &str) -> i64 {
     // Each scalar value is one code unit, or two when it is outside the Basic Multilingual Plane —
     // exactly the four-byte UTF-8 sequences. Most strings are ASCII, where it is the length.
@@ -261,6 +592,13 @@ pub fn js_length(s: &str) -> i64 {
 
 /// `String.prototype.trim`: ECMAScript's WhiteSpace and LineTerminator sets, which are not Rust's
 /// `char::is_whitespace` — JavaScript trims U+FEFF and keeps U+0085.
+///
+/// # Example
+///
+/// ```
+/// assert_eq!(ferrovue::js_trim("\u{feff} a \u{3000}"), "a");
+/// assert_eq!(ferrovue::js_trim("\u{85}a"), "\u{85}a"); // JavaScript keeps U+0085
+/// ```
 pub fn js_trim(s: &str) -> &str {
     s.trim_matches(is_js_space)
 }
@@ -292,6 +630,14 @@ fn is_js_space(c: char) -> bool {
 /// `escapeHtml(normalizeClass([...]))` for a list of strings: each one trimmed, the empty ones
 /// dropped, the rest joined with one space. `after` says a class has already been written, so the
 /// first item written here needs a separator too.
+///
+/// # Example
+///
+/// ```
+/// let mut out = String::from("card");
+/// ferrovue::class_into(&mut out, true, &[" big ", "", "x<y"]);
+/// assert_eq!(out, "card big x&lt;y");
+/// ```
 pub fn class_into(out: &mut String, after: bool, items: &[&str]) {
     let mut sep = after;
     for item in items {
@@ -307,10 +653,61 @@ pub fn class_into(out: &mut String, after: bool, items: &[&str]) {
     }
 }
 
+/// `normalizeClass` of an object: the names whose condition holds, each followed by a space, the
+/// whole trimmed once — so a name's own surrounding spaces survive between its neighbours, as in
+/// Vue. Generated code uses it for an object with computed names, which may hold any text.
+///
+/// # Example
+///
+/// ```
+/// // `{ active: true, [" wide "]: true, hidden: false }`
+/// assert_eq!(ferrovue::class_object(&[(true, "active"), (true, " wide "), (false, "hidden")]), "active  wide");
+/// ```
+pub fn class_object(entries: &[(bool, &str)]) -> String {
+    // A JavaScript object: a name given twice is one name, where it first appeared, with the last
+    // condition given; and names that are array indices — `"0"`, `"12"` — come first, in numeric
+    // order, before the others in the order they were added.
+    let mut names: Vec<(&str, bool)> = Vec::new();
+    for (on, name) in entries {
+        match names.iter_mut().find(|(n, _)| n == name) {
+            Some(entry) => entry.1 = *on,
+            None => names.push((name, *on)),
+        }
+    }
+    let index = |name: &str| -> Option<u32> {
+        let n: u32 = name.parse().ok()?;
+        (n < u32::MAX && n.to_string() == name).then_some(n)
+    };
+    let mut ordered: Vec<(Option<u32>, &str, bool)> =
+        names.into_iter().map(|(n, on)| (index(n), n, on)).collect();
+    // Stable: the indices sorted among themselves, the other names kept as they came.
+    ordered.sort_by_key(|(i, _, _)| i.map_or((1, 0), |i| (0, i)));
+    let mut s = String::new();
+    for (_, name, on) in ordered {
+        if on {
+            s.push_str(name);
+            s.push(' ');
+        }
+    }
+    js_trim(&s).to_owned()
+}
+
 /// The stores' state as the client reads it back before it hydrates: a `<script type="application/json">`,
 /// which a `script-src 'self'` policy does not run, so the page needs no nonce for it. `<`, `>`, `&`
 /// and the two line separators are written as JSON escapes, so no value can end the element or be
 /// read as markup inside it.
+///
+/// # Example
+///
+/// ```
+/// let state = serde_json::json!({ "prefs": { "theme": "</script>" } });
+/// let mut page = String::new();
+/// ferrovue::state_script_into(&mut page, "__pinia", &state);
+/// assert_eq!(
+///     page,
+///     r#"<script type="application/json" id="__pinia">{"prefs":{"theme":"\u003c/script\u003e"}}</script>"#
+/// );
+/// ```
 pub fn state_script_into(out: &mut String, id: &str, state: &impl Serialize) {
     out.push_str("<script type=\"application/json\" id=\"");
     escape_into(out, id);
@@ -376,8 +773,12 @@ fn island_into<P: Serialize>(
     out.push_str("</div>");
 }
 
+pub mod i18n;
 mod router;
-pub use router::{Link, Route, Router, query_into};
+mod teleport;
+pub use i18n::I18n;
+pub use router::{Link, Query, Route, RouteDef, Router, query_into};
+pub use teleport::{Teleports, teleport_into};
 
 #[cfg(test)]
 mod tests;

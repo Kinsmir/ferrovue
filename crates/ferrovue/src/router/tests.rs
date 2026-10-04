@@ -33,11 +33,112 @@ struct Object {
 
 /// What `useRoute()` reads.
 #[derive(serde::Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
 struct Location {
     path: String,
     hash: String,
     name: Option<String>,
     params: BTreeMap<String, String>,
+    full_path: String,
+    /// `[key, value]`, the value a string, `null`, or an array of those.
+    query: Vec<(String, serde_json::Value)>,
+}
+
+/// Nested routes, with what vue-router answered for each link and location.
+#[derive(serde::Deserialize)]
+struct Nested {
+    routes: Vec<NestedRoute>,
+    links: Vec<(String, String)>,
+    named: Vec<(String, Object)>,
+    locations: Vec<String>,
+}
+
+#[derive(serde::Deserialize)]
+struct NestedRoute {
+    path: String,
+    name: Option<String>,
+    #[serde(default)]
+    children: Vec<NestedRoute>,
+}
+
+#[derive(serde::Deserialize)]
+struct NestedExpected {
+    links: Vec<(String, bool, bool)>,
+    named: Vec<(String, bool, bool)>,
+    locations: Vec<NestedLocation>,
+}
+
+#[derive(serde::Deserialize)]
+struct NestedLocation {
+    path: String,
+    name: Option<String>,
+    params: BTreeMap<String, String>,
+}
+
+/// The vectors' routes as `RouteDef`s, which borrow for as long as the test runs.
+fn route_defs(routes: &[NestedRoute]) -> &'static [RouteDef<'static>] {
+    let defs: Vec<RouteDef<'static>> = routes
+        .iter()
+        .map(|r| RouteDef {
+            path: Box::leak(r.path.clone().into_boxed_str()),
+            name: r.name.clone().map(|n| &*Box::leak(n.into_boxed_str())),
+            children: route_defs(&r.children),
+        })
+        .collect();
+    Box::leak(defs.into_boxed_slice())
+}
+
+#[test]
+fn nested_routes_resolve_and_activate_as_vue_router_does() {
+    #[derive(serde::Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct File {
+        nested: Nested,
+        expected_nested: NestedExpected,
+    }
+    let file: File = serde_json::from_str(include_str!("../../tests/vectors/router.expected.json"))
+        .expect("router vectors");
+    let (v, want) = (file.nested, file.expected_nested);
+    let router = Router::tree(route_defs(&v.routes));
+    for ((at, to), (href, active, exact)) in v.links.iter().zip(&want.links) {
+        let link = router.at(at).link(to);
+        assert_eq!(
+            (&link.href, link.active, link.exact),
+            (href, *active, *exact),
+            "at {at:?}, a link to {to:?}"
+        );
+    }
+    for ((at, to), (href, active, exact)) in v.named.iter().zip(&want.named) {
+        let params: Vec<(&str, &str)> = to
+            .params
+            .iter()
+            .map(|(k, v)| (k.as_str(), v.as_str()))
+            .collect();
+        let link = router
+            .at(at)
+            .link_named(to.name.as_deref().unwrap(), &params, "", "");
+        assert_eq!(
+            (&link.href, link.active, link.exact),
+            (href, *active, *exact),
+            "at {at:?}, a link to {:?}",
+            to.name
+        );
+    }
+    for (at, want) in v.locations.iter().zip(&want.locations) {
+        let route = router.at(at);
+        assert_eq!(
+            (route.path(), route.name()),
+            (want.path.as_str(), want.name.as_deref()),
+            "at {at:?}"
+        );
+        for (name, value) in &want.params {
+            assert_eq!(
+                route.param(name),
+                Some(value.as_str()),
+                "at {at:?}, param {name:?}"
+            );
+        }
+    }
 }
 
 fn vectors() -> Vectors {
@@ -116,6 +217,17 @@ fn use_route_reads_what_vue_router_reads() {
             );
         }
         assert_eq!(route.param("nonexistent"), None);
+        assert_eq!(route.full_path(), want.full_path, "fullPath at {at:?}");
+        for (key, value) in &want.query {
+            let got = match route.query(key) {
+                Query::Absent => panic!("at {at:?}, query {key:?} is absent"),
+                Query::Null => serde_json::Value::Null,
+                Query::One(s) => serde_json::Value::from(s),
+                Query::Many(values) => serde_json::Value::from(values.to_vec()),
+            };
+            assert_eq!(&got, value, "at {at:?}, query {key:?}");
+        }
+        assert_eq!(route.query("absent-key"), Query::Absent);
         assert_eq!(
             (route.path(), route.hash(), route.name()),
             (want.path.as_str(), want.hash.as_str(), want.name.as_deref()),
@@ -223,4 +335,13 @@ fn a_non_ascii_static_segment_is_refused() {
 #[should_panic(expected = "a static segment is plain ASCII text")]
 fn an_empty_segment_is_refused() {
     Router::new(&["/a//b"]);
+}
+
+/// vue-router throws on an empty parameter; a debug build fails the render the same way.
+#[test]
+#[cfg(debug_assertions)]
+#[should_panic(expected = "missing required param")]
+fn an_empty_parameter_fails_a_debug_render() {
+    let router = Router::named(&[("/users/:id", Some("user"))]);
+    router.at("/").link_named("user", &[("id", "")], "", "");
 }

@@ -457,7 +457,16 @@
     "/users/7#",
     "/nomatch",
     "/blog/latest",
-    "/search?q=1"
+    "/search?q=1",
+    "/search?q=a+b&q=c%20d&flag&x=",
+    "/search?",
+    "/search?=v&&k",
+    "/search?a=%zz&b=%41",
+    "/blog/intro?sort=new#top",
+    "/search?q=1#h?x",
+    "/search?q=%22quoted%22&q=back%5Cslash&q",
+    "/search#only-hash",
+    "/search?q=caf%C3%A9&n=1&n=2&n=3"
   ],
   "bases": [
     [
@@ -476,6 +485,210 @@
       "/"
     ]
   ],
+  "nested": {
+    "routes": [
+      {
+        "path": "/",
+        "name": "home"
+      },
+      {
+        "path": "/users/:id",
+        "name": "user",
+        "children": [
+          {
+            "path": "",
+            "name": "user-home"
+          },
+          {
+            "path": "posts",
+            "name": "user-posts",
+            "children": [
+              {
+                "path": ":post",
+                "name": "user-post"
+              }
+            ]
+          },
+          {
+            "path": "/settings/:id",
+            "name": "user-settings"
+          }
+        ]
+      },
+      {
+        "path": "/docs",
+        "children": [
+          {
+            "path": "guide",
+            "name": "guide"
+          },
+          {
+            "path": "api/:item",
+            "name": "api"
+          }
+        ]
+      },
+      {
+        "path": "/shop",
+        "name": "shop",
+        "children": [
+          {
+            "path": "cart",
+            "name": "cart"
+          }
+        ]
+      }
+    ],
+    "links": [
+      [
+        "/users/7",
+        "/users/7"
+      ],
+      [
+        "/users/7",
+        "/users/7/posts"
+      ],
+      [
+        "/users/7/posts",
+        "/users/7"
+      ],
+      [
+        "/users/7/posts",
+        "/users/7/posts"
+      ],
+      [
+        "/users/7/posts/3",
+        "/users/7/posts"
+      ],
+      [
+        "/users/7/posts/3",
+        "/users/7"
+      ],
+      [
+        "/users/7/posts/3",
+        "/users/8"
+      ],
+      [
+        "/users/7/posts/3",
+        "/users/7/posts/4"
+      ],
+      [
+        "/settings/7",
+        "/users/7"
+      ],
+      [
+        "/settings/7",
+        "/settings/7"
+      ],
+      [
+        "/docs/guide",
+        "/docs"
+      ],
+      [
+        "/docs/guide",
+        "/docs/guide"
+      ],
+      [
+        "/docs/api/x",
+        "/docs/guide"
+      ],
+      [
+        "/shop",
+        "/shop"
+      ],
+      [
+        "/shop/cart",
+        "/shop"
+      ],
+      [
+        "/shop",
+        "/shop/cart"
+      ],
+      [
+        "/users/7",
+        "/users/7/"
+      ],
+      [
+        "/",
+        "/users/7"
+      ],
+      [
+        "/nowhere",
+        "/users/7"
+      ],
+      [
+        "/users/7/posts",
+        "posts/3"
+      ],
+      [
+        "/users/7/posts/3",
+        "../.."
+      ]
+    ],
+    "named": [
+      [
+        "/users/7/posts/3",
+        {
+          "name": "user",
+          "params": {
+            "id": "7"
+          }
+        }
+      ],
+      [
+        "/users/7/posts/3",
+        {
+          "name": "user-home",
+          "params": {
+            "id": "7"
+          }
+        }
+      ],
+      [
+        "/users/7/posts/3",
+        {
+          "name": "user-posts",
+          "params": {
+            "id": "7"
+          }
+        }
+      ],
+      [
+        "/users/7",
+        {
+          "name": "user-home",
+          "params": {
+            "id": "7"
+          }
+        }
+      ],
+      [
+        "/users/7/posts/3",
+        {
+          "name": "user-post",
+          "params": {
+            "id": "7",
+            "post": "3"
+          }
+        }
+      ],
+      [
+        "/shop/cart",
+        {
+          "name": "shop"
+        }
+      ]
+    ],
+    "locations": [
+      "/users/7",
+      "/users/7/posts",
+      "/users/7/posts/3",
+      "/settings/9",
+      "/docs/api/x",
+      "/docs",
+      "/shop"
+    ]
+  },
   "expected": [
     [
       "/blog/intro",
@@ -777,7 +990,9 @@
       "path": "/",
       "hash": "",
       "name": "home",
-      "params": {}
+      "params": {},
+      "fullPath": "/",
+      "query": []
     },
     {
       "path": "/blog/intro",
@@ -785,7 +1000,9 @@
       "name": "post",
       "params": {
         "slug": "intro"
-      }
+      },
+      "fullPath": "/blog/intro",
+      "query": []
     },
     {
       "path": "/blog/a%20b",
@@ -793,7 +1010,9 @@
       "name": "post",
       "params": {
         "slug": "a b"
-      }
+      },
+      "fullPath": "/blog/a%20b#x%20y",
+      "query": []
     },
     {
       "path": "/blog/intro/edit",
@@ -802,7 +1021,14 @@
       "params": {
         "slug": "intro",
         "tab": "edit"
-      }
+      },
+      "fullPath": "/blog/intro/edit?x=1#h",
+      "query": [
+        [
+          "x",
+          "1"
+        ]
+      ]
     },
     {
       "path": "/docs/guide/a/b%2Fc",
@@ -811,7 +1037,9 @@
       "params": {
         "section": "guide",
         "page": "a/b/c"
-      }
+      },
+      "fullPath": "/docs/guide/a/b%2Fc",
+      "query": []
     },
     {
       "path": "/users/7",
@@ -819,25 +1047,181 @@
       "name": "user",
       "params": {
         "id": "7"
-      }
+      },
+      "fullPath": "/users/7#",
+      "query": []
     },
     {
       "path": "/nomatch",
       "hash": "",
       "name": null,
-      "params": {}
+      "params": {},
+      "fullPath": "/nomatch",
+      "query": []
     },
     {
       "path": "/blog/latest",
       "hash": "",
       "name": null,
-      "params": {}
+      "params": {},
+      "fullPath": "/blog/latest",
+      "query": []
     },
     {
       "path": "/search",
       "hash": "",
       "name": "search",
-      "params": {}
+      "params": {},
+      "fullPath": "/search?q=1",
+      "query": [
+        [
+          "q",
+          "1"
+        ]
+      ]
+    },
+    {
+      "path": "/search",
+      "hash": "",
+      "name": "search",
+      "params": {},
+      "fullPath": "/search?q=a+b&q=c%20d&flag&x=",
+      "query": [
+        [
+          "q",
+          [
+            "a b",
+            "c d"
+          ]
+        ],
+        [
+          "flag",
+          null
+        ],
+        [
+          "x",
+          ""
+        ]
+      ]
+    },
+    {
+      "path": "/search",
+      "hash": "",
+      "name": "search",
+      "params": {},
+      "fullPath": "/search?",
+      "query": []
+    },
+    {
+      "path": "/search",
+      "hash": "",
+      "name": "search",
+      "params": {},
+      "fullPath": "/search?=v&&k",
+      "query": [
+        [
+          "",
+          [
+            "v",
+            null
+          ]
+        ],
+        [
+          "k",
+          null
+        ]
+      ]
+    },
+    {
+      "path": "/search",
+      "hash": "",
+      "name": "search",
+      "params": {},
+      "fullPath": "/search?a=%zz&b=%41",
+      "query": [
+        [
+          "a",
+          "%zz"
+        ],
+        [
+          "b",
+          "A"
+        ]
+      ]
+    },
+    {
+      "path": "/blog/intro",
+      "hash": "#top",
+      "name": "post",
+      "params": {
+        "slug": "intro"
+      },
+      "fullPath": "/blog/intro?sort=new#top",
+      "query": [
+        [
+          "sort",
+          "new"
+        ]
+      ]
+    },
+    {
+      "path": "/search",
+      "hash": "#h?x",
+      "name": "search",
+      "params": {},
+      "fullPath": "/search?q=1#h?x",
+      "query": [
+        [
+          "q",
+          "1"
+        ]
+      ]
+    },
+    {
+      "path": "/search",
+      "hash": "",
+      "name": "search",
+      "params": {},
+      "fullPath": "/search?q=%22quoted%22&q=back%5Cslash&q",
+      "query": [
+        [
+          "q",
+          [
+            "\"quoted\"",
+            "back\\slash",
+            null
+          ]
+        ]
+      ]
+    },
+    {
+      "path": "/search",
+      "hash": "#only-hash",
+      "name": "search",
+      "params": {},
+      "fullPath": "/search#only-hash",
+      "query": []
+    },
+    {
+      "path": "/search",
+      "hash": "",
+      "name": "search",
+      "params": {},
+      "fullPath": "/search?q=caf%C3%A9&n=1&n=2&n=3",
+      "query": [
+        [
+          "q",
+          "café"
+        ],
+        [
+          "n",
+          [
+            "1",
+            "2",
+            "3"
+          ]
+        ]
+      ]
     }
   ],
   "expectedBases": [
@@ -853,5 +1237,194 @@
       "/app/",
       true
     ]
-  ]
+  ],
+  "expectedNested": {
+    "links": [
+      [
+        "/users/7",
+        true,
+        true
+      ],
+      [
+        "/users/7/posts",
+        false,
+        false
+      ],
+      [
+        "/users/7",
+        true,
+        false
+      ],
+      [
+        "/users/7/posts",
+        true,
+        true
+      ],
+      [
+        "/users/7/posts",
+        true,
+        false
+      ],
+      [
+        "/users/7",
+        true,
+        false
+      ],
+      [
+        "/users/8",
+        false,
+        false
+      ],
+      [
+        "/users/7/posts/4",
+        false,
+        false
+      ],
+      [
+        "/users/7",
+        true,
+        false
+      ],
+      [
+        "/settings/7",
+        true,
+        true
+      ],
+      [
+        "/docs",
+        true,
+        false
+      ],
+      [
+        "/docs/guide",
+        true,
+        true
+      ],
+      [
+        "/docs/guide",
+        false,
+        false
+      ],
+      [
+        "/shop",
+        true,
+        true
+      ],
+      [
+        "/shop",
+        true,
+        false
+      ],
+      [
+        "/shop/cart",
+        false,
+        false
+      ],
+      [
+        "/users/7/",
+        true,
+        true
+      ],
+      [
+        "/users/7",
+        false,
+        false
+      ],
+      [
+        "/users/7",
+        false,
+        false
+      ],
+      [
+        "/users/7/posts/3",
+        false,
+        false
+      ],
+      [
+        "/users/",
+        false,
+        false
+      ]
+    ],
+    "named": [
+      [
+        "/users/7",
+        true,
+        false
+      ],
+      [
+        "/users/7",
+        true,
+        false
+      ],
+      [
+        "/users/7/posts",
+        true,
+        false
+      ],
+      [
+        "/users/7",
+        true,
+        true
+      ],
+      [
+        "/users/7/posts/3",
+        true,
+        true
+      ],
+      [
+        "/shop",
+        true,
+        false
+      ]
+    ],
+    "locations": [
+      {
+        "path": "/users/7",
+        "name": "user-home",
+        "params": {
+          "id": "7"
+        }
+      },
+      {
+        "path": "/users/7/posts",
+        "name": "user-posts",
+        "params": {
+          "id": "7"
+        }
+      },
+      {
+        "path": "/users/7/posts/3",
+        "name": "user-post",
+        "params": {
+          "id": "7",
+          "post": "3"
+        }
+      },
+      {
+        "path": "/settings/9",
+        "name": "user-settings",
+        "params": {
+          "id": "9"
+        }
+      },
+      {
+        "path": "/docs/api/x",
+        "name": "api",
+        "params": {
+          "item": "x"
+        }
+      },
+      {
+        "path": "/docs",
+        "name": null,
+        "params": {}
+      },
+      {
+        "path": "/shop",
+        "name": "shop",
+        "params": {}
+      }
+    ]
+  }
 }

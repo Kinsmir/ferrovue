@@ -18,6 +18,10 @@ pub struct Router {
 }
 
 struct Pattern {
+    /// The full path, its ancestors' included, as vue-router normalises a nested record's.
+    path: String,
+    /// The route it is nested in, as an index into `Router::routes`.
+    parent: Option<usize>,
     tokens: Vec<Token>,
     /// One score per segment, as vue-router computes it for a non-strict, case-insensitive path.
     score: Vec<i32>,
@@ -53,26 +57,157 @@ impl Router {
     /// # Panics
     ///
     /// As [`Router::new`] does, and on two routes with the same name.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ferrovue::Router;
+    ///
+    /// let router = Router::named(&[("/", Some("home")), ("/users/:id", Some("user"))]).with_base("/app/");
+    /// let route = router.at("/users/7?tab=posts#bio");
+    /// assert_eq!(route.param("id"), Some("7"));
+    /// assert_eq!(route.name(), Some("user"));
+    /// assert_eq!(route.hash(), "#bio");
+    ///
+    /// let link = route.link_named("user", &[("id", "7")], "", "");
+    /// assert_eq!(link.href, "/app/users/7");
+    /// assert!(link.active);
+    /// ```
     pub fn named(routes: &[(&str, Option<&str>)]) -> Router {
-        let mut patterns: Vec<Pattern> = routes
+        let defs: Vec<RouteDef<'_>> = routes
             .iter()
-            .map(|(path, name)| Pattern::new(path, name.map(str::to_owned)))
+            .map(|(path, name)| RouteDef {
+                path,
+                name: *name,
+                children: &[],
+            })
             .collect();
-        for (i, a) in patterns.iter().enumerate() {
+        Router::tree(&defs)
+    }
+
+    /// A router over nested routes: each child's path is joined to its parent's, unless it starts
+    /// with `/`, and an empty one is its parent's own, its default child.
+    ///
+    /// # Panics
+    ///
+    /// As [`Router::named`] does.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ferrovue::{RouteDef, Router};
+    ///
+    /// let router = Router::tree(&[RouteDef {
+    ///     path: "/users/:id",
+    ///     name: Some("user"),
+    ///     children: &[RouteDef { path: "posts", name: Some("user-posts"), children: &[] }],
+    /// }]);
+    /// let here = router.at("/users/7/posts");
+    /// let parent = here.link("/users/7");
+    /// // The parent is active on its child's page, but not exactly.
+    /// assert!(parent.active && !parent.exact);
+    /// ```
+    pub fn tree(defs: &[RouteDef<'_>]) -> Router {
+        // Every record, parents before their children, as vue-router adds them.
+        fn add(defs: &[RouteDef<'_>], parent: Option<usize>, records: &mut Vec<Pattern>) {
+            for d in defs {
+                let path = match parent {
+                    Some(p) if !d.path.starts_with('/') => {
+                        let parent_path = &records[p].path;
+                        let slash = if parent_path.ends_with('/') || d.path.is_empty() {
+                            ""
+                        } else {
+                            "/"
+                        };
+                        format!("{parent_path}{slash}{}", d.path)
+                    }
+                    _ => d.path.to_owned(),
+                };
+                let mut pattern = Pattern::new(&path, d.name.map(str::to_owned));
+                pattern.parent = parent;
+                records.push(pattern);
+                let me = records.len() - 1;
+                add(d.children, Some(me), records);
+            }
+        }
+        let mut records: Vec<Pattern> = Vec::new();
+        add(defs, None, &mut records);
+        for (i, a) in records.iter().enumerate() {
             if let Some(name) = &a.name {
-                let again = patterns[i + 1..]
+                let again = records[i + 1..]
                     .iter()
                     .any(|b| b.name.as_ref() == Some(name));
                 assert!(!again, "two routes are called {name:?}");
             }
         }
-        // Stable, so routes that score the same keep the order they were given in, as vue-router's
-        // insertion does.
-        patterns.sort_by(|a, b| compare(&a.score, &b.score));
+        // `findInsertionIndex`: after every record that scores as well, but before an ancestor that
+        // scores the same — so a default child is tried before its parent.
+        let mut order: Vec<usize> = Vec::new();
+        for i in 0..records.len() {
+            let (mut lower, mut upper) = (0, order.len());
+            while lower != upper {
+                let mid = (lower + upper) / 2;
+                if compare(&records[i].score, &records[order[mid]].score)
+                    == std::cmp::Ordering::Less
+                {
+                    upper = mid;
+                } else {
+                    lower = mid + 1;
+                }
+            }
+            let mut ancestor = records[i].parent;
+            while let Some(a) = ancestor {
+                if compare(&records[i].score, &records[a].score) == std::cmp::Ordering::Equal {
+                    if let Some(at) = order[..upper].iter().rposition(|&x| x == a) {
+                        upper = at;
+                    }
+                    break;
+                }
+                ancestor = records[a].parent;
+            }
+            order.insert(upper, i);
+        }
+        let mut position = vec![0; records.len()];
+        for (at, &i) in order.iter().enumerate() {
+            position[i] = at;
+        }
+        let mut slots: Vec<Option<Pattern>> = records.into_iter().map(Some).collect();
+        let routes = order
+            .iter()
+            .map(|&i| {
+                let mut p = slots[i].take().expect("each record once");
+                p.parent = p.parent.map(|parent| position[parent]);
+                p
+            })
+            .collect();
         Router {
-            routes: patterns,
+            routes,
             base: String::new(),
         }
+    }
+
+    /// A route and the routes it is nested in, outermost first: what `route.matched` holds.
+    fn chain(&self, mut i: usize) -> Vec<usize> {
+        let mut chain = vec![i];
+        while let Some(p) = self.routes[i].parent {
+            chain.push(p);
+            i = p;
+        }
+        chain.reverse();
+        chain
+    }
+
+    /// A matched route's parameters by name.
+    fn params<'a>(&'a self, i: usize, values: &'a [String]) -> Vec<(&'a str, &'a str)> {
+        self.routes[i]
+            .tokens
+            .iter()
+            .filter_map(|t| match t {
+                Token::Param { name, .. } => Some(name.as_str()),
+                Token::Static(_) => None,
+            })
+            .zip(values.iter().map(String::as_str))
+            .collect()
     }
 
     /// The same routes under a base path, as `createWebHistory(base)` serves them: every `href`
@@ -98,15 +233,23 @@ impl Router {
 
     /// The reader's location: a path, with any query and hash.
     pub fn at(&self, location: &str) -> Route<'_> {
-        let (path, _) = parse_url(location, "/");
-        let hash = location
-            .find('#')
-            .map_or_else(String::new, |h| decode(&location[h..]));
+        let (path, full_path) = parse_url(location, "/");
+        let hash_pos = location.find('#');
+        let hash = hash_pos.map_or_else(String::new, |h| decode(&location[h..]));
+        // `parseURL`'s search: from the `?` to the hash, when the `?` comes first.
+        let search = location
+            .find('?')
+            .filter(|&s| hash_pos.is_none_or(|h| s < h))
+            .map_or("", |s| {
+                &location[s + 1..hash_pos.filter(|&h| h > 0).unwrap_or(location.len())]
+            });
         Route {
             router: self,
             matched: self.matched(&path),
             path,
             hash,
+            query: parse_query(search),
+            full_path,
         }
     }
 
@@ -119,6 +262,18 @@ impl Router {
     }
 }
 
+/// A route as the routes file lists it: a path, its name if it has one, and the routes nested in
+/// it, rendered by the `<RouterView>` in its component.
+#[derive(Clone, Copy, Debug)]
+pub struct RouteDef<'a> {
+    /// The path, relative to the parent's unless it starts with `/`; empty for a default child.
+    pub path: &'a str,
+    /// The route's name.
+    pub name: Option<&'a str>,
+    /// The routes nested in it.
+    pub children: &'a [RouteDef<'a>],
+}
+
 /// Where the reader is, which is what every link on the page is compared with.
 pub struct Route<'r> {
     router: &'r Router,
@@ -126,14 +281,128 @@ pub struct Route<'r> {
     /// `route.hash`: the location's hash, `#` included, decoded.
     hash: String,
     matched: Option<(usize, Vec<String>)>,
+    /// `route.query`: each key with its values, in the order the keys first appear.
+    query: Vec<(String, Vec<Option<String>>)>,
+    /// `route.fullPath`: the path, then the query and hash as they were written.
+    full_path: String,
+}
+
+/// One value of `route.query`, as vue-router parses it: a key may be absent, given without a value
+/// (`?flag`, which is `null`), given once, or given more than once, which makes an array.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Query<'r> {
+    /// No such key: `undefined`.
+    Absent,
+    /// `?flag`: `null`.
+    Null,
+    /// `?q=text`, decoded.
+    One(&'r str),
+    /// `?q=a&q=b`: an array, in which a value written without `=` is `null`.
+    Many(&'r [Option<String>]),
+}
+
+impl<'r> Query<'r> {
+    /// `{{ route.query.q }}`, escaped: nothing for `undefined` and `null`, the text for a string,
+    /// and an array as `toDisplayString` writes one — `JSON.stringify(value, null, 2)`.
+    pub fn write_display(&self, out: &mut String) {
+        match self {
+            Query::Absent | Query::Null => {}
+            Query::One(s) => crate::escape_into(out, s),
+            Query::Many(values) => {
+                let mut json = String::from("[\n");
+                for (i, v) in values.iter().enumerate() {
+                    if i > 0 {
+                        json.push_str(",\n");
+                    }
+                    json.push_str("  ");
+                    match v {
+                        // A string cannot fail to serialise.
+                        Some(s) => json.push_str(&serde_json::to_string(s).unwrap_or_default()),
+                        None => json.push_str("null"),
+                    }
+                }
+                json.push_str("\n]");
+                crate::escape_into(out, &json);
+            }
+        }
+    }
+
+    /// JavaScript's truthiness: a non-empty string or an array.
+    pub fn truthy(&self) -> bool {
+        match self {
+            Query::One(s) => !s.is_empty(),
+            Query::Many(_) => true,
+            Query::Absent | Query::Null => false,
+        }
+    }
+
+    /// `route.query.q === text`: only a single value can equal a string.
+    pub fn is(&self, text: &str) -> bool {
+        matches!(self, Query::One(s) if *s == text)
+    }
+
+    /// `route.query.q === undefined`.
+    pub fn is_undefined(&self) -> bool {
+        matches!(self, Query::Absent)
+    }
+
+    /// `Array.isArray(route.query.q)`.
+    pub fn is_array(&self) -> bool {
+        matches!(self, Query::Many(_))
+    }
+
+    /// `route.query.q ?? fallback`: the fallback for `undefined` and `null`.
+    pub fn or<'a>(self, fallback: &'a str) -> Query<'a>
+    where
+        'r: 'a,
+    {
+        match self {
+            Query::Absent | Query::Null => Query::One(fallback),
+            other => other,
+        }
+    }
+
+    /// The value as an attribute writes it: only a string is written; `null`, `undefined` and an
+    /// array leave the attribute out.
+    pub fn attr_value(&self) -> Option<&'r str> {
+        match self {
+            Query::One(s) => Some(s),
+            _ => None,
+        }
+    }
+}
+
+/// `parseQuery`: `&`-separated pairs, `+` read as a space, keys and values decoded, a pair without
+/// `=` a `null`, a repeated key an array.
+fn parse_query(search: &str) -> Vec<(String, Vec<Option<String>>)> {
+    let mut query: Vec<(String, Vec<Option<String>>)> = Vec::new();
+    if search.is_empty() {
+        return query;
+    }
+    for pair in search.split('&') {
+        let pair = pair.replace('+', " ");
+        let (key, value) = match pair.find('=') {
+            Some(i) => (decode(&pair[..i]), Some(decode(&pair[i + 1..]))),
+            None => (decode(&pair), None),
+        };
+        match query.iter_mut().find(|(k, _)| *k == key) {
+            Some((_, values)) => values.push(value),
+            None => query.push((key, vec![value])),
+        }
+    }
+    query
 }
 
 /// A `<RouterLink>`'s `to`, resolved.
 pub struct Link {
     /// What the anchor's `href` is.
     pub href: String,
-    /// Whether it points at the route the reader is on.
+    /// `isActive`: it points at the route the reader is on, or one the reader's route is nested in,
+    /// with parameters the reader's location has too. The `router-link-active` class.
     pub active: bool,
+    /// `isExactActive`: it points at exactly the reader's route, with the same parameters. The
+    /// `router-link-exact-active` class, and `aria-current`.
+    pub exact: bool,
 }
 
 impl Route<'_> {
@@ -145,6 +414,23 @@ impl Route<'_> {
     /// `route.hash`: the location's hash, with its `#`, decoded; empty when there is none.
     pub fn hash(&self) -> &str {
         &self.hash
+    }
+
+    /// `route.query.<key>`.
+    pub fn query(&self, key: &str) -> Query<'_> {
+        match self.query.iter().find(|(k, _)| k == key) {
+            None => Query::Absent,
+            Some((_, values)) => match values.as_slice() {
+                [None] => Query::Null,
+                [Some(v)] => Query::One(v),
+                many => Query::Many(many),
+            },
+        }
+    }
+
+    /// `route.fullPath`: the path, then the query and hash as they were written.
+    pub fn full_path(&self) -> &str {
+        &self.full_path
     }
 
     /// `route.name`: the name of the route the location matched, if it has one.
@@ -169,13 +455,60 @@ impl Route<'_> {
     }
 
     /// Resolve a link from here.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let router = ferrovue::Router::new(&["/", "/blog/:slug"]);
+    /// let here = router.at("/blog/intro");
+    /// let link = here.link("/blog/intro?sort=new");
+    /// assert_eq!(link.href, "/blog/intro?sort=new");
+    /// assert!(link.active, "the query does not change which route it is");
+    /// assert!(!here.link("/").active);
+    /// ```
     pub fn link(&self, to: &str) -> Link {
         let (path, full) = parse_url(to, &self.path);
-        let matched = self.router.matched(&path);
+        let (active, exact) = self.state(self.router.matched(&path));
         Link {
             href: format!("{}{full}", self.router.base),
-            active: matched.is_some() && matched == self.matched,
+            active,
+            exact,
         }
+    }
+
+    /// `useLink`'s `isActive` and `isExactActive` for a link that resolved to `target`.
+    fn state(&self, target: Option<(usize, Vec<String>)>) -> (bool, bool) {
+        let (Some((t, link_values)), Some((c, here_values))) = (target, self.matched.as_ref())
+        else {
+            return (false, false);
+        };
+        let router = self.router;
+        let link_chain = router.chain(t);
+        let here_chain = router.chain(*c);
+        let routed = *link_chain.last().expect("a chain holds its route");
+        // `activeRecordIndex`: where the link's route sits among the reader's — or, for a link to a
+        // parent through its default child, where that parent sits, unless the reader is on it.
+        let mut index = here_chain.iter().position(|&r| r == routed);
+        if index.is_none() && link_chain.len() > 1 {
+            let parent = link_chain[link_chain.len() - 2];
+            let parent_path = &router.routes[parent].path;
+            let here_last = *here_chain.last().expect("a chain holds its route");
+            if router.routes[routed].path == *parent_path
+                && router.routes[here_last].path != *parent_path
+            {
+                index = here_chain.iter().position(|&r| r == parent);
+            }
+        }
+        let Some(index) = index else {
+            return (false, false);
+        };
+        let link_params = router.params(t, &link_values);
+        let here_params = router.params(*c, here_values);
+        let includes = link_params
+            .iter()
+            .all(|(k, v)| here_params.iter().any(|(hk, hv)| hk == k && hv == v));
+        let same = includes && link_params.len() == here_params.len();
+        (includes, index == here_chain.len() - 1 && same)
     }
 
     /// Resolve `{ name, params, query, hash }`: the named route's path with each parameter
@@ -205,11 +538,17 @@ impl Route<'_> {
             match token {
                 Token::Static(text) => path.push_str(text),
                 Token::Param { name, .. } => {
-                    // An absent parameter is an error in vue-router; it writes nothing here.
                     let value = params
                         .iter()
                         .find(|(k, _)| k == name)
                         .map_or("", |(_, v)| v);
+                    // vue-router throws on an empty parameter, failing the render: a debug build
+                    // fails the same way, and a release build writes the link without it.
+                    debug_assert!(
+                        !value.is_empty(),
+                        "missing required param {name:?} for the route called {:?}",
+                        route.name
+                    );
                     let encoded = encode_param(value);
                     values.push(decode(&encoded));
                     path.push_str(&encoded);
@@ -219,10 +558,11 @@ impl Route<'_> {
         if path.is_empty() {
             path.push('/');
         }
-        let matched = Some((i, values));
+        let (active, exact) = self.state(Some((i, values)));
         Link {
             href: self.href(&path, search, hash),
-            active: matched == self.matched,
+            active,
+            exact,
         }
     }
 
@@ -230,10 +570,11 @@ impl Route<'_> {
     /// then `search` and `hash`.
     pub fn link_path(&self, path: &str, search: &str, hash: &str) -> Link {
         let (path, _) = parse_url(path, &self.path);
-        let matched = self.router.matched(&path);
+        let (active, exact) = self.state(self.router.matched(&path));
         Link {
             href: self.href(&path, search, hash),
-            active: matched.is_some() && matched == self.matched,
+            active,
+            exact,
         }
     }
 
@@ -251,6 +592,15 @@ impl Route<'_> {
 
 /// `stringifyQuery`, one key and value at a time: `key=value`, each encoded as vue-router encodes
 /// them, after a `&` when `search` already holds a pair.
+///
+/// # Example
+///
+/// ```
+/// let mut search = String::new();
+/// ferrovue::query_into(&mut search, "q", "a b&c");
+/// ferrovue::query_into(&mut search, "page", "2");
+/// assert_eq!(search, "q=a+b%26c&page=2");
+/// ```
 pub fn query_into(search: &mut String, key: &str, value: &str) {
     if !search.is_empty() {
         search.push('&');
@@ -315,6 +665,8 @@ impl Pattern {
         };
         if rest.is_empty() {
             return Pattern {
+                path: path.to_owned(),
+                parent: None,
                 tokens: Vec::new(),
                 score: vec![ROOT],
                 name,
@@ -351,6 +703,8 @@ impl Pattern {
             }
         }
         Pattern {
+            path: path.to_owned(),
+            parent: None,
             tokens,
             score,
             name,

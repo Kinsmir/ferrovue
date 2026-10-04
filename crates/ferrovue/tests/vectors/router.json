@@ -457,7 +457,16 @@
     "/users/7#",
     "/nomatch",
     "/blog/latest",
-    "/search?q=1"
+    "/search?q=1",
+    "/search?q=a+b&q=c%20d&flag&x=",
+    "/search?",
+    "/search?=v&&k",
+    "/search?a=%zz&b=%41",
+    "/blog/intro?sort=new#top",
+    "/search?q=1#h?x",
+    "/search?q=%22quoted%22&q=back%5Cslash&q",
+    "/search#only-hash",
+    "/search?q=caf%C3%A9&n=1&n=2&n=3"
   ],
   "bases": [
     [
@@ -475,5 +484,209 @@
       "/",
       "/"
     ]
-  ]
+  ],
+  "nested": {
+    "routes": [
+      {
+        "path": "/",
+        "name": "home"
+      },
+      {
+        "path": "/users/:id",
+        "name": "user",
+        "children": [
+          {
+            "path": "",
+            "name": "user-home"
+          },
+          {
+            "path": "posts",
+            "name": "user-posts",
+            "children": [
+              {
+                "path": ":post",
+                "name": "user-post"
+              }
+            ]
+          },
+          {
+            "path": "/settings/:id",
+            "name": "user-settings"
+          }
+        ]
+      },
+      {
+        "path": "/docs",
+        "children": [
+          {
+            "path": "guide",
+            "name": "guide"
+          },
+          {
+            "path": "api/:item",
+            "name": "api"
+          }
+        ]
+      },
+      {
+        "path": "/shop",
+        "name": "shop",
+        "children": [
+          {
+            "path": "cart",
+            "name": "cart"
+          }
+        ]
+      }
+    ],
+    "links": [
+      [
+        "/users/7",
+        "/users/7"
+      ],
+      [
+        "/users/7",
+        "/users/7/posts"
+      ],
+      [
+        "/users/7/posts",
+        "/users/7"
+      ],
+      [
+        "/users/7/posts",
+        "/users/7/posts"
+      ],
+      [
+        "/users/7/posts/3",
+        "/users/7/posts"
+      ],
+      [
+        "/users/7/posts/3",
+        "/users/7"
+      ],
+      [
+        "/users/7/posts/3",
+        "/users/8"
+      ],
+      [
+        "/users/7/posts/3",
+        "/users/7/posts/4"
+      ],
+      [
+        "/settings/7",
+        "/users/7"
+      ],
+      [
+        "/settings/7",
+        "/settings/7"
+      ],
+      [
+        "/docs/guide",
+        "/docs"
+      ],
+      [
+        "/docs/guide",
+        "/docs/guide"
+      ],
+      [
+        "/docs/api/x",
+        "/docs/guide"
+      ],
+      [
+        "/shop",
+        "/shop"
+      ],
+      [
+        "/shop/cart",
+        "/shop"
+      ],
+      [
+        "/shop",
+        "/shop/cart"
+      ],
+      [
+        "/users/7",
+        "/users/7/"
+      ],
+      [
+        "/",
+        "/users/7"
+      ],
+      [
+        "/nowhere",
+        "/users/7"
+      ],
+      [
+        "/users/7/posts",
+        "posts/3"
+      ],
+      [
+        "/users/7/posts/3",
+        "../.."
+      ]
+    ],
+    "named": [
+      [
+        "/users/7/posts/3",
+        {
+          "name": "user",
+          "params": {
+            "id": "7"
+          }
+        }
+      ],
+      [
+        "/users/7/posts/3",
+        {
+          "name": "user-home",
+          "params": {
+            "id": "7"
+          }
+        }
+      ],
+      [
+        "/users/7/posts/3",
+        {
+          "name": "user-posts",
+          "params": {
+            "id": "7"
+          }
+        }
+      ],
+      [
+        "/users/7",
+        {
+          "name": "user-home",
+          "params": {
+            "id": "7"
+          }
+        }
+      ],
+      [
+        "/users/7/posts/3",
+        {
+          "name": "user-post",
+          "params": {
+            "id": "7",
+            "post": "3"
+          }
+        }
+      ],
+      [
+        "/shop/cart",
+        {
+          "name": "shop"
+        }
+      ]
+    ],
+    "locations": [
+      "/users/7",
+      "/users/7/posts",
+      "/users/7/posts/3",
+      "/settings/9",
+      "/docs/api/x",
+      "/docs",
+      "/shop"
+    ]
+  }
 }

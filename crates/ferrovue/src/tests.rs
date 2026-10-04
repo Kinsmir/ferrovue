@@ -48,18 +48,82 @@ fn js_length_counts_utf16_code_units() {
     }
 }
 
+/// `tests/vectors/numbers.json`, recorded from JavaScript's `String(Number(input))`.
+#[test]
+fn numbers_are_written_as_javascript_writes_them() {
+    let vectors: Vec<(String, String)> =
+        serde_json::from_str(include_str!("../tests/vectors/numbers.json"))
+            .expect("number vectors");
+    assert!(vectors.len() >= 300, "the vectors were not all read");
+    for (input, want) in &vectors {
+        let x: f64 = input.parse().unwrap_or_else(|_| panic!("{input:?} parses"));
+        let mut out = String::new();
+        push_number(&mut out, x);
+        assert_eq!(&out, want, "String({input})");
+    }
+}
+
+/// `tests/vectors/math.json`, recorded from JavaScript's `Math` and `toFixed`.
+#[test]
+fn math_is_javascripts_math() {
+    let vectors: Vec<(String, String, String, String)> =
+        serde_json::from_str(include_str!("../tests/vectors/math.json")).expect("math vectors");
+    assert!(vectors.len() >= 600, "the vectors were not all read");
+    let num = |s: &str| -> f64 { s.parse().unwrap_or_else(|_| panic!("{s:?} parses")) };
+    let text = |x: f64| {
+        let mut out = String::new();
+        push_number(&mut out, x);
+        out
+    };
+    for (op, x, arg, want) in &vectors {
+        let got = match op.as_str() {
+            "round" => text(js_round(num(x))),
+            "toFixed" => js_to_fixed(num(x), arg.parse().unwrap()),
+            "max" => text(js_max(num(x), num(arg))),
+            "min" => text(js_min(num(x), num(arg))),
+            other => panic!("unknown op {other}"),
+        };
+        assert_eq!(&got, want, "{op}({x}, {arg})");
+    }
+}
+
+#[test]
+fn integers_beyond_two_to_the_53_are_written_rounded_as_javascript_does() {
+    for (n, want) in [
+        (9_007_199_254_740_991, "9007199254740991"),
+        (9_007_199_254_740_993, "9007199254740992"),
+        (-9_007_199_254_740_993, "-9007199254740992"),
+        (i64::MIN, "-9223372036854776000"),
+    ] {
+        let mut out = String::new();
+        push_int(&mut out, n);
+        assert_eq!(out, want, "{n}");
+        assert_eq!(Js(n).to_string(), want);
+    }
+}
+
 #[test]
 fn integers_are_written_as_javascript_writes_them() {
     for (n, want) in [
         (0, "0"),
         (-1, "-1"),
         (42, "42"),
-        (i64::MAX, "9223372036854775807"),
+        (i64::MAX, "9223372036854776000"),
     ] {
         let mut out = String::new();
         push_int(&mut out, n);
         assert_eq!(out, want);
     }
+}
+
+#[test]
+fn a_class_object_keeps_the_spaces_inside_its_names_as_vue_does() {
+    assert_eq!(
+        class_object(&[(true, "a"), (true, "  b  "), (false, "c"), (true, "d")]),
+        "a   b   d"
+    );
+    assert_eq!(class_object(&[(true, " x "), (false, "y")]), "x");
+    assert_eq!(class_object(&[(false, "x")]), "");
 }
 
 #[test]
@@ -228,6 +292,43 @@ fn a_scoped_slot_of_comments_alone_or_none_gives_way_to_the_fallback() {
         assert!(!filled);
         assert_eq!(out, "<!--[-->fallback<!--]-->");
     }
+}
+
+#[test]
+fn teleported_content_goes_to_its_target_in_the_order_vue_collects_it() {
+    let teleports = Teleports::new();
+    let mut out = String::from("<main>");
+    teleport_into(
+        &mut out,
+        &teleports,
+        "#modals",
+        false,
+        &|out: &mut String| {
+            out.push_str("<div>outer");
+            // Nested: it comes after the outer teleport, which took its place first.
+            teleport_into(out, &teleports, "#modals", false, &|out: &mut String| {
+                out.push_str("<p>inner</p>")
+            });
+            out.push_str("</div>");
+        },
+    );
+    teleport_into(&mut out, &teleports, "body", true, &|out: &mut String| {
+        out.push_str("<i>here</i>")
+    });
+    out.push_str("</main>");
+    assert_eq!(
+        out,
+        "<main><!--teleport start--><!--teleport end--><!--teleport start--><i>here</i><!--teleport end--></main>"
+    );
+    assert_eq!(
+        teleports.get("#modals").unwrap(),
+        "<!--teleport start anchor--><div>outer<!--teleport start--><!--teleport end--></div><!--teleport anchor--><!--teleport start anchor--><p>inner</p><!--teleport anchor-->"
+    );
+    assert_eq!(
+        teleports.get("body").unwrap(),
+        "<!--teleport start anchor--><!--teleport anchor-->"
+    );
+    assert_eq!(teleports.into_targets().len(), 2);
 }
 
 #[test]
