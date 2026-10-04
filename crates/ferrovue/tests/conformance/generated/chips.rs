@@ -42,10 +42,10 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(80 + 7 * (props.chips).len() + props.chips.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(80 + 7 * props.chips.len() + props.chips.iter().map(|v| v.len()).sum::<usize>());
     out.push_str("<span class=\"chips\"><!--[-->");
-    for c_ref in (props.chips).iter() {
-        let c: &str = &**c_ref;
+    for c_ref in props.chips.iter() {
+        let c: &str = c_ref;
         out.push_str("<b>");
         fv::escape_into(out, c);
         out.push_str("</b>");
@@ -53,14 +53,14 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push_str("<!--]-->");
     if let Some(n1) = props.counts.as_ref() {
         out.push_str("<i>");
-        fv::escape_into(out, &*(n1).iter().map(|v| fv::Js(*v).to_string()).collect::<Vec<_>>().join("+"));
+        fv::escape_into(out, &n1.iter().map(|v| fv::Js(*v).to_string()).collect::<Vec<_>>().join("+"));
         out.push_str("</i>");
     } else {
         out.push_str("<!---->");
     }
     if let Some(n2) = props.marks.as_ref() {
         out.push_str("<!--[-->");
-        for (k, m_ref) in (n2).iter() {
+        for (k, m_ref) in n2.iter() {
             let m = *m_ref;
             out.push_str("<u title=\"");
             fv::escape_into(out, k);

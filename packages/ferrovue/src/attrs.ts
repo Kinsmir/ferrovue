@@ -1,31 +1,40 @@
 /* Attributes as Vue's server renderer writes them: `class`, `style`, booleans, merged objects. */
 
 import { escapeHtml, hyphenate, isBooleanAttr, isSSRSafeAttrName, parseStringStyle, propsToAttrMap } from "@vue/shared";
-import { type N, type Scope, type Val, fail, GenError, rustStr, STR } from "./model.ts";
+import { type N, type Scope, type Ty, type Val, fail, GenError, rustStr, STR } from "./model.ts";
 import { CONFIG_FILE, ctx } from "./context.ts";
-import { cond, expr, meet, truthy } from "./expr.ts";
+import { cond, expr, known, meet, truthy, unquote } from "./expr.ts";
+import { atom, bare, condition, logical, not, receiver, strArg } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
+
+/** What a number written at run time is expected to take: most a page shows are shorter, and the
+ * reservation is an estimate. */
+const NUMBER_BYTES = 6;
+
+/** A string, a number or a boolean written escaped: now when it is known, by JavaScript itself. */
+function display(e: Emitter, v: Val): boolean {
+  if (v.ty.k === "str" && known(v) !== undefined) e.lit(escapeHtml(unquote(v.code)));
+  else if ((v.ty.k === "int" || v.ty.k === "float") && v.num !== undefined) e.lit(String(v.num));
+  else if (v.ty.k === "bool" && v.konst !== undefined) e.lit(String(v.konst));
+  else if (v.ty.k === "str") e.stmt(`fv::escape_into(out, ${strArg(v.code)});`);
+  else if (v.ty.k === "int" || v.ty.k === "float") {
+    e.stmt(`fv::${v.ty.k === "int" ? "push_int" : "push_number"}(out, ${bare(v.code)});`);
+    // Counted in the reservation, or a page of numbers outgrows it and is copied to a larger one.
+    e.expect(NUMBER_BYTES);
+  } else if (v.ty.k === "bool") e.stmt(`out.push_str(if ${condition(v.code)} { "true" } else { "false" });`);
+  else return false;
+  return true;
+}
 
 /** `toDisplayString`, escaped. */
 export function interpolate(e: Emitter, v: Val): void {
+  if (display(e, v)) return;
   switch (v.ty.k) {
-    case "str":
-      e.stmt(`fv::escape_into(out, ${v.code});`);
-      return;
-    case "int":
-      e.stmt(`fv::push_int(out, ${v.code});`);
-      return;
-    case "float":
-      e.stmt(`fv::push_number(out, ${v.code});`);
-      return;
-    case "bool":
-      e.stmt(`out.push_str(if ${v.code} { "true" } else { "false" });`);
-      return;
     case "undef":
       return;
     // `toDisplayString` of a query value: a string, nothing for `null`, an array as JSON.
     case "query":
-      e.stmt(`(${v.code}).write_display(out);`);
+      e.stmt(`${atom(v.code)}.write_display(out);`);
       return;
     case "opt":
       e.open(`if let Some(v) = ${v.code}`);
@@ -39,29 +48,14 @@ export function interpolate(e: Emitter, v: Val): void {
 
 /** The value half of `key="value"`, escaped. */
 export function attrValue(e: Emitter, v: Val): void {
-  switch (v.ty.k) {
-    case "str":
-      e.stmt(`fv::escape_into(out, ${v.code});`);
-      return;
-    case "int":
-      e.stmt(`fv::push_int(out, ${v.code});`);
-      return;
-    case "float":
-      e.stmt(`fv::push_number(out, ${v.code});`);
-      return;
-    case "bool":
-      e.stmt(`out.push_str(if ${v.code} { "true" } else { "false" });`);
-      return;
-    default:
-      throw new GenError("an attribute value must be a string, a number or a boolean");
-  }
+  if (!display(e, v)) throw new GenError("an attribute value must be a string, a number or a boolean");
 }
 
 /** `ssrRenderAttr(key, value)`: absent for null/undefined, `key="value"` for anything else. */
 export function renderAttr(e: Emitter, key: string, v: Val): void {
   if (v.ty.k === "undef") return;
   // Only a single query value is an attribute's value; `null` and an array leave it out.
-  if (v.ty.k === "query") v = { code: `(${v.code}).attr_value()`, ty: { k: "opt", of: STR } };
+  if (v.ty.k === "query") v = { code: `${atom(v.code)}.attr_value()`, ty: { k: "opt", of: STR } };
   if (v.ty.k === "opt") {
     e.open(`if let Some(v) = ${v.code}`);
     renderAttr(e, key, { code: "v", ty: v.ty.of });
@@ -79,24 +73,37 @@ export function renderDynamicAttr(s: Scope, e: Emitter, key: string, v: Val, n: 
   const name = propsToAttrMap[key] ?? key.toLowerCase();
   if (!isSSRSafeAttrName(name)) fail(s.comp, `unsafe attribute name \`${name}\``, n);
   if (v.ty.k === "undef") return;
-  if (v.ty.k === "query") v = { code: `(${v.code}).attr_value()`, ty: { k: "opt", of: STR } };
+  if (v.ty.k === "query") v = { code: `${atom(v.code)}.attr_value()`, ty: { k: "opt", of: STR } };
+  const boolean = (t: Ty) => isBooleanAttr(name) || (name === "hidden" && (t.k === "bool" || t.k === "int" || t.k === "float"));
+  if (v.ty.k === "opt" && boolean(v.ty.of)) {
+    // Present, or truthy when it is not a string: one test, with nothing to bind.
+    e.open(`if ${v.ty.of.k === "str" ? `${atom(v.code)}.is_some()` : truthy(v)}`);
+    e.lit(` ${name}`);
+    e.close();
+    return;
+  }
   if (v.ty.k === "opt") {
     e.open(`if let Some(v) = ${v.code}`);
     renderDynamicAttr(s, e, key, { code: "v", ty: v.ty.of }, n);
     e.close();
     return;
   }
-  if (isBooleanAttr(name) || (name === "hidden" && (v.ty.k === "bool" || v.ty.k === "int" || v.ty.k === "float"))) {
-    if (v.ty.k === "str") e.lit(` ${name}`);
-    else {
-      e.open(`if ${truthy(v)}`);
+  if (boolean(v.ty)) {
+    const k = v.ty.k === "str" ? true : known(v);
+    if (k === true) e.lit(` ${name}`);
+    else if (k === undefined) {
+      e.open(`if ${condition(truthy(v))}`);
       e.lit(` ${name}`);
       e.close();
     }
     return;
   }
-  if (v.ty.k === "str") {
-    e.open(`if (${v.code}).is_empty()`);
+  if (v.ty.k === "str" && known(v) === false) {
+    e.lit(` ${name}`);
+    return;
+  }
+  if (v.ty.k === "str" && known(v) === undefined) {
+    e.open(`if ${receiver(v.code)}.is_empty()`);
     e.lit(` ${name}`);
     e.close(" else {");
     e.lit(` ${name}="`);
@@ -150,7 +157,7 @@ export function classItems(s: Scope, n: N): ClassItem[] {
           // Names are told apart, which two halves of surrogate pairs would not be.
           for (const other of keys) meet(s.comp, other, key, "a class object's names", p.key, "equal");
           keys.push(key);
-          return `(${cond(s, p.value)}, ${key.code})`;
+          return `(${bare(cond(s, p.value))}, ${bare(key.code)})`;
         });
         return [{ code: `&*fv::class_object(&[${entries.join(", ")}])` }];
       }
@@ -165,36 +172,38 @@ export function classItems(s: Scope, n: N): ClassItem[] {
         } else {
           const k = expr(s, p.key);
           if (k.ty.k !== "str") fail(s.comp, "a computed class name is a string", p.key);
-          name = { code: `fv::js_trim(${k.code})` };
+          name = { code: `fv::js_trim(${strArg(k.code)})` };
         }
         const v = expr(s, p.value);
-        if (v.konst === false) return [];
-        if (v.konst === true) return [name];
+        const on = known(v);
+        if (on !== undefined) return on ? [name] : [];
         const text = "lit" in name ? rustStr(name.lit) : name.code;
-        return [{ code: `if ${truthy(v)} { ${text} } else { "" }` }];
+        return [{ code: `if ${condition(truthy(v))} { ${bare(text)} } else { "" }` }];
       });
     case "LogicalExpression":
       if (n.operator === "&&") {
-        const right = classItems(s, n.right);
-        const test = cond(s, n.left);
-        return right.map((it) => ({ code: `if ${test} { ${"lit" in it ? rustStr(it.lit) : it.code} } else { "" }` }));
+        return conditional(cond(s, n.left), classItems(s, n.right));
       }
       break;
     case "ConditionalExpression":
       if (n.consequent.type === "NullLiteral" || n.alternate.type === "NullLiteral") {
         const branch = n.consequent.type === "NullLiteral" ? n.alternate : n.consequent;
         const test = cond(s, n.test);
-        const items = classItems(s, branch);
-        const when = n.consequent.type === "NullLiteral" ? `!(${test})` : test;
-        return items.map((it) => ({ code: `if ${when} { ${"lit" in it ? rustStr(it.lit) : it.code} } else { "" }` }));
+        return conditional(n.consequent.type === "NullLiteral" ? not(test) : test, classItems(s, branch));
       }
       break;
   }
   const v = expr(s, n);
   if (v.ty.k === "str") return [{ code: v.code }];
-  if (v.ty.k === "opt" && v.ty.of.k === "str") return [{ code: `(${v.code}).unwrap_or("")` }];
+  if (v.ty.k === "opt" && v.ty.of.k === "str") return [{ code: `${atom(v.code)}.unwrap_or("")` }];
   if (v.ty.k === "undef") return [];
   return fail(s.comp, "a class is a string, an array, or an object of conditions", n);
+}
+
+/** Class items that apply only when \`test\` holds: each one, or nothing, decided now if it can be. */
+function conditional(test: string, items: ClassItem[]): ClassItem[] {
+  if (test === "true" || test === "false") return test === "true" ? items : [];
+  return items.map((it) => ({ code: `if ${condition(test)} { ${"lit" in it ? rustStr(it.lit) : bare(it.code)} } else { "" }` }));
 }
 
 /** `ssrRenderClass(value)`: normalised, then escaped. `after` says a class was already written. */
@@ -323,7 +332,11 @@ export interface StyleItem {
 /** The objects a style binding merges, in order: an object literal, a static `style` the compiler
  * parsed, `v-show`'s `cond ? null : { display: "none" }`, and arrays of those. */
 export function styleItems(s: Scope, n: N, when: string | null): StyleItem[] {
-  const both = (a: string | null, b: string) => (a === null ? b : `(${a} && ${b})`);
+  // A condition known now: an object that never applies is left out, one that always does is not
+  // conditional.
+  if (when === "false") return [];
+  if (when === "true") when = null;
+  const both = (a: string | null, b: string) => (a === null ? b : logical(a, "&&", b));
   switch (n.type) {
     case "NullLiteral":
       return [];
@@ -333,11 +346,11 @@ export function styleItems(s: Scope, n: N, when: string | null): StyleItem[] {
       // Parsed as `normalizeStyle` parses a string inside an array, by Vue's own function.
       return [{ cond: when, entries: Object.entries(parseStringStyle(n.value)).map(([key, v]) => ({ key, css: key, value: { type: "StringLiteral", value: v } })) }];
     case "ConditionalExpression": {
-      const t = `(${cond(s, n.test)})`;
-      return [...styleItems(s, n.consequent, both(when, t)), ...styleItems(s, n.alternate, both(when, `!${t}`))];
+      const t = cond(s, n.test);
+      return [...styleItems(s, n.consequent, both(when, t)), ...styleItems(s, n.alternate, both(when, not(t)))];
     }
     case "LogicalExpression":
-      if (n.operator === "&&") return styleItems(s, n.right, both(when, `(${cond(s, n.left)})`));
+      if (n.operator === "&&") return styleItems(s, n.right, both(when, cond(s, n.left)));
       break;
     case "ObjectExpression":
       return [{
@@ -364,7 +377,7 @@ export function renderStyle(s: Scope, e: Emitter, n: N): void {
   }
   if (n.type !== "ObjectExpression" && n.type !== "ArrayExpression" && n.type !== "ConditionalExpression" && n.type !== "LogicalExpression" && n.type !== "NullLiteral") {
     const v = expr(s, n);
-    if (v.ty.k === "str") e.stmt(`fv::escape_into(out, ${v.code});`);
+    if (v.ty.k === "str") e.stmt(`fv::escape_into(out, ${strArg(v.code)});`);
     else if (v.ty.k === "opt" && v.ty.of.k === "str") {
       e.open(`if let Some(v) = ${v.code}`);
       e.stmt("fv::escape_into(out, v);");
@@ -395,7 +408,7 @@ export function renderStyle(s: Scope, e: Emitter, n: N): void {
     const one = (w: Val): void => {
       if (w.ty.k === "str" || w.ty.k === "int" || w.ty.k === "float") {
         e.lit(`${escapeHtml(css)}:`);
-        e.stmt(w.ty.k === "str" ? `fv::escape_into(out, ${w.code});` : w.ty.k === "int" ? `fv::push_int(out, ${w.code});` : `fv::push_number(out, ${w.code});`);
+        display(e, w);
         e.lit(";");
       } else if (w.ty.k === "opt") {
         e.open(`if let Some(v) = ${w.code}`);
@@ -433,9 +446,9 @@ export function renderStyle(s: Scope, e: Emitter, n: N): void {
       if (set.cond === null) {
         e.close(" else {");
       } else if (i === 0) {
-        e.open(`if ${set.cond}`);
+        e.open(`if ${condition(set.cond)}`);
       } else {
-        e.close(` else if ${set.cond} {`);
+        e.close(` else if ${condition(set.cond)} {`);
       }
       write(set.css, set.value);
     });

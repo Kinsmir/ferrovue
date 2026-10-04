@@ -36,8 +36,8 @@ pub fn render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) {
     out.reserve(29 + props.note.len());
     out.push_str("<small class=\"quiet\"");
     out.push_str(fv_attrs);
-    out.push_str(">");
-    fv::escape_into(out, &*props.note);
+    out.push('>');
+    fv::escape_into(out, &props.note);
     out.push_str("</small>");
 }
 

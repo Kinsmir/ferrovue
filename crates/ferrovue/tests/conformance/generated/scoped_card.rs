@@ -59,8 +59,8 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
 pub fn render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_attrs: &str) {
     out.reserve(204 + props.tone.as_deref().map_or(0, str::len));
     out.push_str("<article class=\"card");
-    fv::class_into(out, true, &[(props.tone.as_deref()).unwrap_or("")]);
-    out.push_str("\"");
+    fv::class_into(out, true, &[props.tone.as_deref().unwrap_or("")]);
+    out.push('"');
     out.push_str(fv_attrs);
     out.push_str(" data-v-57c45abf><header data-v-57c45abf>");
     fv::slot_into_slotted(out, fv_slots.title, "data-v-57c45abf-s", Some(&mut |out: &mut String| {

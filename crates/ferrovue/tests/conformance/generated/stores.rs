@@ -19,7 +19,7 @@ pub struct Line<'a> {
 impl<'a> Line<'a> {
     /// Line with its required fields.
     pub fn new(sku: impl Into<Cow<'a, str>>, qty: i64) -> Self {
-        Line { sku: sku.into(), qty: qty }
+        Line { sku: sku.into(), qty }
     }
 
 }
@@ -41,7 +41,7 @@ pub struct CartState<'a> {
 impl<'a> CartState<'a> {
     /// CartState with its required fields, every optional one absent.
     pub fn new(lines: Vec<Line<'a>>, owner: impl Into<Cow<'a, str>>) -> Self {
-        CartState { lines: lines, coupon: None, owner: owner.into() }
+        CartState { lines, coupon: None, owner: owner.into() }
     }
 
     /// Set `coupon`, which is absent otherwise.
@@ -72,7 +72,7 @@ pub struct CounterState<'a> {
 impl<'a> CounterState<'a> {
     /// CounterState with its required fields, every optional one absent.
     pub fn new(count: i64, step: f64, label: impl Into<Cow<'a, str>>, history: Vec<i64>) -> Self {
-        CounterState { count: count, step: step, label: label.into(), history: history, owner: None }
+        CounterState { count, step, label: label.into(), history, owner: None }
     }
 
     /// Set `owner`, which is absent otherwise.
@@ -128,7 +128,7 @@ pub struct PrefsState<'a> {
 impl<'a> PrefsState<'a> {
     /// PrefsState with its required fields, every optional one absent.
     pub fn new(density: impl Into<Cow<'a, str>>, wide: bool, count: i64, tags: Vec<Tag<'a>>) -> Self {
-        PrefsState { density: density.into(), wide: wide, count: count, label: None, tags: tags }
+        PrefsState { density: density.into(), wide, count, label: None, tags }
     }
 
     /// Set `label`, which is absent otherwise.
@@ -155,7 +155,7 @@ pub struct Stores<'a> {
 impl<'a> Stores<'a> {
     /// Stores with its required fields.
     pub fn new(cart: CartState<'a>, counter: CounterState<'a>, prefs: PrefsState<'a>) -> Self {
-        Stores { cart: cart, counter: counter, prefs: prefs }
+        Stores { cart, counter, prefs }
     }
 
 }

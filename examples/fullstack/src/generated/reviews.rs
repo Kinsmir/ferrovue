@@ -17,7 +17,7 @@ pub struct Props<'a> {
 impl<'a> Props<'a> {
     /// Props with its required fields.
     pub fn new(reviews: Vec<super::types::Review<'a>>) -> Self {
-        Props { reviews: reviews }
+        Props { reviews }
     }
 
 }
@@ -25,34 +25,34 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(210 + 134 * (props.reviews).len() + props.reviews.iter().map(|v| v.reader.len() + v.text.len()).sum::<usize>());
+    out.reserve(216 + 140 * props.reviews.len() + props.reviews.iter().map(|v| v.reader.len() + v.text.len()).sum::<usize>());
     out.push_str("<div class=\"review-list\" data-v-458b887c>");
-    if (((props.reviews).len() as i64)) != 0 {
+    if props.reviews.len() as i64 != 0 {
         out.push_str("<ol data-v-458b887c><!--[-->");
-        for (i, r_ref) in (props.reviews).iter().enumerate() {
+        for (i, r_ref) in props.reviews.iter().enumerate() {
             let r = r_ref;
             let i = i as i64;
             out.push_str("<li style=\"");
-            if !((false || ((((i) as f64) < ((2i64) as f64))))) {
+            if (i as f64) >= 2.0 || (i as f64).is_nan() {
                 out.push_str("display:none;");
             }
             out.push_str("\" data-v-458b887c><span class=\"stars\" aria-label=\"");
-            fv::escape_into(out, &*format!("{} out of 5", fv::Js(r.stars)));
+            fv::escape_into(out, &format!("{} out of 5", fv::Js(r.stars)));
             out.push_str("\" data-v-458b887c>");
             fv::push_int(out, r.stars);
             out.push_str("/5</span><q data-v-458b887c>");
-            fv::escape_into(out, &*r.text);
+            fv::escape_into(out, &r.text);
             out.push_str("</q> — ");
-            fv::escape_into(out, &*r.reader);
+            fv::escape_into(out, &r.reader);
             out.push_str("</li>");
         }
         out.push_str("<!--]--></ol>");
     } else {
         out.push_str("<p data-v-458b887c>No reviews yet.</p>");
     }
-    if (!(false) && ((((((props.reviews).len() as i64)) as f64) > ((2i64) as f64)))) {
+    if props.reviews.len() as i64 as f64 > 2.0 {
         out.push_str("<button type=\"button\" class=\"more\" data-v-458b887c>Show all ");
-        fv::push_int(out, ((props.reviews).len() as i64));
+        fv::push_int(out, props.reviews.len() as i64);
         out.push_str(" reviews</button>");
     } else {
         out.push_str("<!---->");

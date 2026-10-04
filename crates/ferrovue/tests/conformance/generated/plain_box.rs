@@ -44,7 +44,7 @@ pub fn render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, f
     out.push_str("<div class=\"plain\"");
     out.push_str(fv_attrs);
     out.push_str("><p>");
-    fv::escape_into(out, &*props.text);
+    fv::escape_into(out, &props.text);
     out.push_str("</p>");
     fv::slot_into(out, fv_slots.default, None);
     out.push_str("</div>");

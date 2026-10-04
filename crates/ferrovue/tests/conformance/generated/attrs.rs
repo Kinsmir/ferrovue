@@ -33,7 +33,7 @@ pub struct Props<'a> {
 impl<'a> Props<'a> {
     /// Props with its required fields, every optional one absent.
     pub fn new(label: impl Into<Cow<'a, str>>, disabled: bool, hidden: bool, tabindex: i64, extra: impl Into<Cow<'a, str>>, state: impl Into<Cow<'a, str>>) -> Self {
-        Props { label: label.into(), disabled: disabled, hidden: hidden, tabindex: tabindex, tip: None, extra: extra.into(), state: state.into(), id: None }
+        Props { label: label.into(), disabled, hidden, tabindex, tip: None, extra: extra.into(), state: state.into(), id: None }
     }
 
     /// Set `tip`, which is absent otherwise.
@@ -52,41 +52,41 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(324 + props.label.len() + props.tip.as_deref().map_or(0, str::len) + props.extra.len() + props.state.len() + props.id.as_deref().map_or(0, str::len));
+    out.reserve(330 + props.label.len() + props.tip.as_deref().map_or(0, str::len) + props.extra.len() + props.state.len() + props.id.as_deref().map_or(0, str::len));
     out.push_str("<form><button type=\"button\"");
-    if ((props.disabled)) {
+    if props.disabled {
         out.push_str(" disabled");
     }
     out.push_str(" title=\"");
-    fv::escape_into(out, &*props.label);
+    fv::escape_into(out, &props.label);
     out.push_str("\" aria-label=\"");
-    fv::escape_into(out, &*props.label);
+    fv::escape_into(out, &props.label);
     out.push_str("\" data-state=\"");
-    fv::escape_into(out, &*props.state);
+    fv::escape_into(out, &props.state);
     out.push_str("\" tabindex=\"");
     fv::push_int(out, props.tabindex);
     out.push_str("\">");
-    fv::escape_into(out, &*props.label);
+    fv::escape_into(out, &props.label);
     out.push_str("</button><label");
     if let Some(v) = props.id.as_deref() {
         out.push_str(" for=\"");
         fv::escape_into(out, v);
-        out.push_str("\"");
+        out.push('"');
     }
-    if (props.hidden) {
+    if props.hidden {
         out.push_str(" hidden");
     }
-    out.push_str(">");
-    fv::escape_into(out, &*props.label);
+    out.push('>');
+    fv::escape_into(out, &props.label);
     out.push_str("</label><input value=\"");
-    fv::escape_into(out, &*props.label);
-    out.push_str("\"");
+    fv::escape_into(out, &props.label);
+    out.push('"');
     if let Some(v) = props.tip.as_deref() {
         out.push_str(" placeholder=\"");
         fv::escape_into(out, v);
-        out.push_str("\"");
+        out.push('"');
     }
-    if ((props.disabled)) {
+    if props.disabled {
         out.push_str(" readonly");
     }
     out.push_str("><span class=\"");
@@ -96,11 +96,9 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push_str("\"></span><span class=\"padded\"></span><span class=\"");
     fv::class_into(out, false, &[&*props.state, "after"]);
     out.push_str("\"></span><span title=\"");
-    fv::escape_into(out, (props.tip.as_deref()).unwrap_or(""));
-    out.push_str("\" data-empty=\"");
-    fv::escape_into(out, "");
-    out.push_str("\"></span><span class=\"");
-    fv::class_into(out, false, &[&*fv::class_object(&[((props.disabled), "first"), (true, &*props.extra), ((props.hidden), &*props.state), (true, "last")])]);
+    fv::escape_into(out, props.tip.as_deref().unwrap_or(""));
+    out.push_str("\" data-empty=\"\"></span><span class=\"");
+    fv::class_into(out, false, &[&*fv::class_object(&[(props.disabled, "first"), (true, &*props.extra), (props.hidden, &*props.state), (true, "last")])]);
     out.push_str("\"></span></form>");
 }
 

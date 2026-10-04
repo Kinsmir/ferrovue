@@ -23,7 +23,7 @@ pub struct Book<'a> {
 impl<'a> Book<'a> {
     /// Book with its required fields.
     pub fn new(id: impl Into<Cow<'a, str>>, title: impl Into<Cow<'a, str>>, author: impl Into<Cow<'a, str>>, year: i64) -> Self {
-        Book { id: id.into(), title: title.into(), author: author.into(), year: year }
+        Book { id: id.into(), title: title.into(), author: author.into(), year }
     }
 
 }
@@ -44,7 +44,7 @@ pub struct Review<'a> {
 impl<'a> Review<'a> {
     /// Review with its required fields.
     pub fn new(reader: impl Into<Cow<'a, str>>, stars: i64, text: impl Into<Cow<'a, str>>) -> Self {
-        Review { reader: reader.into(), stars: stars, text: text.into() }
+        Review { reader: reader.into(), stars, text: text.into() }
     }
 
 }

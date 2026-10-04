@@ -39,14 +39,14 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 #[doc(hidden)]
 pub fn render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) {
     out.reserve(89 + props.label.as_deref().map_or(0, str::len));
-    if let Some(n1) = (props.label.as_deref()).filter(|v| !(*v).is_empty()) {
+    if let Some(n1) = props.label.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<span class=\"leaf\"");
-        if (n1).is_empty() {
+        if n1.is_empty() {
             out.push_str(" title");
         } else {
             out.push_str(" title=\"");
             fv::escape_into(out, n1);
-            out.push_str("\"");
+            out.push('"');
         }
         out.push_str(fv_attrs);
         out.push_str(" data-v-f1fc277f>");

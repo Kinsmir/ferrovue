@@ -52,7 +52,7 @@ const props = defineProps<{ label: string; items: string[] }>();
 <template><ul :title="label"><li v-for="i in items">{{ i }}</li></ul></template>`),
     ).get("x.rs")!;
     const reserve = out.split("\n").find((l) => l.includes("out.reserve("))!;
-    expect(reserve).toMatch(/\d+ \* \(props\.items\)\.len\(\)/);
+    expect(reserve).toMatch(/\d+ \* props\.items\.len\(\)/);
     expect(reserve).toContain("props.label.len()");
     expect(reserve).toContain("props.items.iter().map(|v| v.len()).sum::<usize>()");
   });
@@ -65,9 +65,9 @@ defineProps<{ a: string; b: string }>();
 </script>
 <template><i :title="a.slice(1, -1)">{{ a.padStart(4, "0") }}{{ a < b }}</i></template>`),
       ).get("x.rs")!;
-      expect(out).toContain("fv::js_slice(&*props.a, ((1i64) as f64), Some((-((1i64) as f64))))");
-      expect(out).toContain("fv::js_pad_start(&*props.a, ((4i64) as f64), \"0\")");
-      expect(out).toContain("fv::js_cmp(&*props.a, &*props.b).is_lt()");
+      expect(out).toContain("fv::js_slice(&props.a, 1.0f64, Some(-1.0f64))");
+      expect(out).toContain("fv::js_pad_start(&props.a, 4.0f64, \"0\")");
+      expect(out).toContain("fv::js_cmp(&props.a, &props.b).is_lt()");
     });
 
     it("keeps a dictionary as a `ferrovue::Record` and walks it in place", () => {
@@ -79,8 +79,8 @@ defineProps<{ counts: Record<string, number>; labels: { [key: string]: string } 
       ).get("x.rs")!;
       expect(out).toContain("pub counts: ferrovue::Record<'a, i64>,");
       expect(out).toContain("pub labels: ferrovue::Record<'a, Cow<'a, str>>,");
-      expect(out).toContain("for (k, n_ref) in (props.counts).iter() {");
-      expect(out).toContain("for (_, t_ref) in (props.labels).iter() {");
+      expect(out).toContain("for (k, n_ref) in props.counts.iter() {");
+      expect(out).toContain("for (_, t_ref) in props.labels.iter() {");
     });
 
     it("chains array methods as iterators, binding only the parameters the body reads", () => {
@@ -177,7 +177,7 @@ defineProps<{ a: string }>();
 <template><div><Lister :items="[]" /><Lister :items="['a', a]" /></div></template>`;
       const out = compile(island(parent, { Lister: lister })).get("x.rs")!;
       expect(out).toContain("items: Vec::new()");
-      expect(out).toContain('items: (["a", &*props.a]).iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect()');
+      expect(out).toContain('items: ["a", &*props.a].iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect()');
     });
 
     it("refuses an object of the parent's own type where the child declares its own", () => {
@@ -235,7 +235,7 @@ const props = defineProps<{ embed?: Embed }>();
 </script>
 <template><p v-if="embed">{{ embed.provider }}</p></template>`),
       ).get("x.rs")!;
-      expect(out).toMatch(/if let Some\((n\d+)\) = props\.embed\.as_ref\(\) \{[\s\S]*fv::escape_into\(out, &\*\1\.provider\)/);
+      expect(out).toMatch(/if let Some\((n\d+)\) = props\.embed\.as_ref\(\) \{[\s\S]*fv::escape_into\(out, &\1\.provider\)/);
     });
 
     it("keeps JavaScript's truthiness for an optional string: empty is not taken", () => {
@@ -245,7 +245,7 @@ const props = defineProps<{ note?: string }>();
 </script>
 <template><p v-if="note">{{ note }}</p></template>`),
       ).get("x.rs")!;
-      expect(out).toContain(".filter(|v| !(*v).is_empty())");
+      expect(out).toContain(".filter(|v| !v.is_empty())");
     });
 
     it("counts a list with .length and joins strings with +", () => {
@@ -255,8 +255,9 @@ const props = defineProps<{ items: string[]; name: string }>();
 </script>
 <template><ul v-if="items.length" :title="'list of ' + name"><li v-for="i in items">{{ i }}</li></ul></template>`),
       ).get("x.rs")!;
-      expect(out).toContain("((props.items).len() as i64)");
-      expect(out).toContain('format!("{}{}", "list of ", &*props.name)');
+      expect(out).toContain("props.items.len() as i64");
+      // A literal joins the format string.
+      expect(out).toContain('format!("list of {}", props.name)');
     });
 
     it("adds two numbers, and refuses + between a number and anything but a string", () => {
@@ -267,7 +268,7 @@ const props = defineProps<{ n: number; m: number }>();
 <template><b :title="n + m"></b></template>`),
     ).get("x.rs")!;
     // On doubles, as JavaScript adds: exact within 2⁵³, rounded beyond it.
-    expect(sum).toContain("((((props.n) as f64) + ((props.m) as f64)) as i64)");
+    expect(sum).toContain("(props.n as f64 + props.m as f64) as i64");
     expect(() =>
       compile(
         island(`<script setup lang="ts">
@@ -287,8 +288,9 @@ const props = defineProps<{ items: string[]; note?: string }>();
 </script>
 <template><p v-if="!items.length">none</p><p v-if="!items.length || note">either</p></template>`),
       ).get("x.rs")!;
-      expect(out).toContain("if !((((props.items).len() as i64)) != 0) {");
-      expect(out).not.toMatch(/if !\(\(\(props\.items\)\.len\(\) as i64\)\) != 0/);
+      expect(out).toContain("if props.items.len() as i64 == 0 {");
+      expect(out).toContain("if props.items.len() as i64 == 0 || props.note.as_deref().is_some_and(|v| !v.is_empty()) {");
+      expect(out).not.toMatch(/!props\.items/);
     });
   });
 
@@ -363,7 +365,7 @@ const props = defineProps<{ on: boolean }>();
 defineProps<{ title: string }>();
 </script>
 <template><div><aside v-if="$slots.side"><slot name="side" /></aside></div></template>`;
-      expect(compile(island(source)).get("x.rs")).toContain("if (fv_slots.side.is_some()) {");
+      expect(compile(island(source)).get("x.rs")).toContain("if fv_slots.side.is_some() {");
       const unknown = source.replace("$slots.side", "$slots.other");
       expect(() => compile(island(unknown))).toThrow(/`\$slots\.other` names a slot this template does not render/);
     });
@@ -511,7 +513,7 @@ defineProps<{ href: string }>();
 </script>
 <template><header><Nav :href="href" /></header></template>`;
       const out = withRoutes(island(parent, { Nav: nav }));
-      expect(out.get("nav.rs")).toContain("let fv_link = fv_route.link(&*props.href);");
+      expect(out.get("nav.rs")).toContain("let fv_link = fv_route.link(&props.href);");
       expect(out.get("x.rs")).toContain("pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>)");
       expect(out.get("x.rs")).toContain(", fv_route);");
       expect(out.get("route_table.rs")).toContain('"/users/:id",');
@@ -602,7 +604,7 @@ const route = useRoute();
 </script>
 <template><p>{{ route.${field} }}</p></template>`;
       expect(named(island(reader("params.id"))).get("x.rs")).toContain('fv_route.param("id")');
-      expect(named(island(reader("query.q"))).get("x.rs")).toContain('(fv_route.query("q")).write_display(out);');
+      expect(named(island(reader("query.q"))).get("x.rs")).toContain('fv_route.query("q").write_display(out);');
       expect(named(island(reader("fullPath"))).get("x.rs")).toContain("fv_route.full_path()");
       expect(() => named(island(reader("meta.title")))).toThrow(/`route.meta` is not available on the server/);
     });
@@ -692,7 +694,7 @@ export const usePrefs = defineStore("prefs", () => ({}));
     it("translates a getter of the state where a component reads it", () => {
       const withGetter = store.replace("});\n", `, getters: { label: (s) => s.density + "!" } });\n`);
       const out = withStore(island(reader.replace("prefs.density", "prefs.label")), withGetter);
-      expect(out.get("x.rs")).toContain('format!("{}{}", &*fv_stores.prefs.density, "!")');
+      expect(out.get("x.rs")).toContain('format!("{}!", fv_stores.prefs.density)');
     });
 
     it("refuses a getter that reads `this`, or returns a function", () => {
@@ -773,7 +775,7 @@ const props = defineProps<{ on: boolean }>();
 </script>
 <template><p :hidden="on">x</p></template>`),
       ).get("x.rs")!;
-      expect(out).toMatch(/if \(props\.on\) \{\s*out\.push_str\(" hidden"\);/);
+      expect(out).toMatch(/if props\.on \{\s*out\.push_str\(" hidden"\);/);
     });
 
     it("counts a string's length in UTF-16 code units, as JavaScript does", () => {
@@ -783,8 +785,8 @@ const props = defineProps<{ name: string }>();
 </script>
 <template><p>{{ name.length }}</p></template>`),
       ).get("x.rs")!;
-      expect(out).toContain("fv::js_length(&*props.name)");
-      expect(out).not.toContain("(&*props.name).len()");
+      expect(out).toContain("fv::js_length(&props.name)");
+      expect(out).not.toContain("props.name.len() as i64");
     });
   });
 
@@ -797,8 +799,8 @@ defineProps<{ on: boolean; c: string }>();
 <template><p style="display: block; color: red" :style="{ color: c }" v-show="on">x</p></template>`),
       ).get("x.rs")!;
       // `display` stays first, where the static style put it, with v-show's value when it hides.
-      expect(out).toMatch(/if !\(\(props\.on\)\) \{\s*out\.push_str\("display:none;"\);\s*\} else \{\s*out\.push_str\("display:block;"\);/);
-      expect(out).toContain("fv::escape_into(out, &*props.c);");
+      expect(out).toMatch(/if !props\.on \{\s*out\.push_str\("display:none;"\);\s*\} else \{\s*out\.push_str\("display:block;"\);/);
+      expect(out).toContain("fv::escape_into(out, &props.c);");
     });
 
     it("allows a global <style> block, which changes no markup", () => {
@@ -824,12 +826,12 @@ defineProps<{ price: Float; qty: number; rate?: Float }>();
       const out = compile(island(numbers)).get("x.rs")!;
       expect(out).toContain("pub price: f64,");
       expect(out).toContain("pub rate: Option<f64>,");
-      expect(out).toContain("fv::js_to_fixed((((props.price) * ((props.qty) as f64))), 2)");
-      expect(out).toContain("fv::push_number(out, (((props.qty) as f64) / ((4i64) as f64)));");
-      expect(out).toContain("fv::js_round((props.price))");
-      expect(out).toContain("(props.rate).unwrap_or(0.5f64)");
+      expect(out).toContain("fv::js_to_fixed(props.price * props.qty as f64, 2)");
+      expect(out).toContain("fv::push_number(out, props.qty as f64 / 4.0);");
+      expect(out).toContain("fv::js_round(props.price)");
+      expect(out).toContain("props.rate.unwrap_or(0.5f64)");
       // An integer remainder by a literal stays an integer.
-      expect(out).toContain("fv::push_int(out, ((((props.qty) as f64) % ((3i64) as f64)) as i64));");
+      expect(out).toContain("fv::push_int(out, (props.qty as f64 % 3.0) as i64);");
     });
 
     it("refuses toFixed with digits that are not a literal", () => {

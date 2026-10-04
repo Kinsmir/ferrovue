@@ -115,6 +115,21 @@ released together and share version numbers.
 - The CLI prints a refused construct as an error message, without a stack trace.
 - Generated code no longer computes setup values nothing reads, nor binds loop items, narrowed values
   or slot props nothing reads; it compiles without `allow(unused_variables)`.
+- Generated code passes rustc's default warnings and `cargo clippy -- -D warnings` with one allow
+  left, `dead_code`, as each component gets an API an app uses only part of (and a constructor of
+  more than seven required props allows `clippy::too_many_arguments`). It is parenthesised only
+  where Rust needs it, folds what is known at build time (literal arithmetic, constant conditions,
+  string literals), borrows and dereferences only where coercion does not, and pushes a single
+  character as a `char`. Output is unchanged.
+- Faster rendering of numbers and short strings, which made the `list` benchmark 2.5× faster
+  (115 µs to 46 µs; `tree` 5.2 to 3.7 µs, `page` 5.0 to 4.4 µs). `push_int` and `Js` write integers
+  digit pairs at a time instead of through `fmt` and a `String`; `push_number` writes a whole
+  number that way, and looks for a tie between two shortest spellings only in a number short enough
+  to have one, from its exact digits in a `u128`, instead of formatting 1,100 digits of every number
+  (about 20× faster); `escape_into` checks for characters to escape eight bytes at a time. Generated
+  `render`s reserve room for the numbers they write and for loops nested in a loop over the props,
+  so a long page no longer outgrows its buffer and is copied. Held to the old `push_number` and a
+  bytewise escape by property tests, and to 18 new JavaScript vectors.
 
 ### Fixed
 
@@ -130,7 +145,9 @@ released together and share version numbers.
     JavaScript object lists them: one entry per name, array indices first in numeric order;
   - integer arithmetic keeps JavaScript's `-0`, so dividing by it is `-Infinity`;
   - a number exactly halfway between two shortest spellings is written with the even digit, as
-    ECMAScript specifies (`-1801439850948198.2`).
+    ECMAScript specifies (`-1801439850948198.2`);
+  - `||` after an optional string whose `??` fallback is built (`` (s ?? "a") || (s ?? `${n}x`) ``)
+    compiles.
 
 - Integers beyond ±2⁵³ are written, added and compared as JavaScript does with the rounded value the
   browser reads, so such a prop no longer causes a hydration mismatch.

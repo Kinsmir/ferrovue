@@ -25,7 +25,7 @@ pub struct Props<'a> {
 impl<'a> Props<'a> {
     /// Props with its required fields, every optional one absent.
     pub fn new(items: impl IntoIterator<Item = impl Into<Cow<'a, str>>>, show: bool) -> Self {
-        Props { title: None, items: items.into_iter().map(Into::into).collect(), tone: None, show: show }
+        Props { title: None, items: items.into_iter().map(Into::into).collect(), tone: None, show }
     }
 
     /// Set `title`, which is absent otherwise.
@@ -51,29 +51,29 @@ pub struct Slots<'s> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_teleports: &fv::Teleports) {
-    out.reserve(575 + 25 * (props.items).len() + props.title.as_deref().map_or(0, str::len) + props.items.iter().map(|v| v.len()).sum::<usize>() + props.tone.as_deref().map_or(0, str::len));
+    out.reserve(581 + 25 * props.items.len() + props.title.as_deref().map_or(0, str::len) + props.items.iter().map(|v| v.len()).sum::<usize>() + props.tone.as_deref().map_or(0, str::len));
     out.push_str("<main class=\"page\"");
     if let Some(v) = props.tone.as_deref() {
-        if (v).is_empty() {
+        if v.is_empty() {
             out.push_str(" data-tone");
         } else {
             out.push_str(" data-tone=\"");
             fv::escape_into(out, v);
-            out.push_str("\"");
+            out.push('"');
         }
     }
     out.push_str(" data-v-56da6d99>");
-    if let Some(n1) = (props.title.as_deref()).filter(|v| !(*v).is_empty()) {
+    if let Some(n1) = props.title.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<h1 data-v-56da6d99>");
         fv::escape_into(out, n1);
         out.push_str("</h1>");
     } else {
         out.push_str("<!---->");
     }
-    if (((props.items).len() as i64)) != 0 {
+    if props.items.len() as i64 != 0 {
         out.push_str("<ul data-v-56da6d99><!--[-->");
-        for i_ref in (props.items).iter() {
-            let i: &str = &**i_ref;
+        for i_ref in props.items.iter() {
+            let i: &str = i_ref;
             out.push_str("<li data-v-56da6d99>");
             fv::escape_into(out, i);
             out.push_str("</li>");
@@ -82,22 +82,22 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_telep
     } else {
         out.push_str("<!---->");
     }
-    super::scoped_leaf::render_scoped(out, &super::scoped_leaf::Props { label: (props.title.as_deref()).map(std::borrow::Cow::Borrowed) }, " data-v-56da6d99");
-    super::scoped_root::render_scoped(out, &super::scoped_root::Props { label: Some(std::borrow::Cow::Borrowed((props.title.as_deref()).unwrap_or("untitled"))) }, " data-v-56da6d99");
+    super::scoped_leaf::render_scoped(out, &super::scoped_leaf::Props { label: props.title.as_deref().map(std::borrow::Cow::Borrowed) }, " data-v-56da6d99");
+    super::scoped_root::render_scoped(out, &super::scoped_root::Props { label: Some(std::borrow::Cow::Borrowed(props.title.as_deref().unwrap_or("untitled"))) }, " data-v-56da6d99");
     out.push_str("<dl data-v-56da6d99>");
-    super::scoped_pair::render_scoped(out, &super::scoped_pair::Props { term: std::borrow::Cow::Borrowed("tone"), text: std::borrow::Cow::Borrowed((props.tone.as_deref()).unwrap_or("plain")) }, " data-v-56da6d99");
+    super::scoped_pair::render_scoped(out, &super::scoped_pair::Props { term: std::borrow::Cow::Borrowed("tone"), text: std::borrow::Cow::Borrowed(props.tone.as_deref().unwrap_or("plain")) }, " data-v-56da6d99");
     out.push_str("</dl>");
-    super::plain_box::render_scoped(out, &super::plain_box::Props { text: std::borrow::Cow::Borrowed((props.title.as_deref()).unwrap_or("untitled")) }, super::plain_box::Slots {
+    super::plain_box::render_scoped(out, &super::plain_box::Props { text: std::borrow::Cow::Borrowed(props.title.as_deref().unwrap_or("untitled")) }, super::plain_box::Slots {
         default: Some(fv::Slot::new(&|out: &mut String| {
             out.push_str("<i data-v-56da6d99>in a plain box</i>");
             super::scoped_leaf::render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed("nested")) }, " data-v-56da6d99");
         })),
     }, " data-v-56da6d99");
-    super::scoped_card::render_scoped(out, &super::scoped_card::Props { tone: (props.tone.as_deref()).map(std::borrow::Cow::Borrowed) }, super::scoped_card::Slots {
+    super::scoped_card::render_scoped(out, &super::scoped_card::Props { tone: props.tone.as_deref().map(std::borrow::Cow::Borrowed) }, super::scoped_card::Slots {
         title: Some(fv::Slot::slotted(&|out: &mut String, fv_sid2: &str| -> bool {
             out.push_str("<b data-v-56da6d99");
             out.push_str(fv_sid2);
-            out.push_str(">");
+            out.push('>');
             if let Some(v) = props.title.as_deref() {
                 fv::escape_into(out, v);
             }
@@ -119,7 +119,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_telep
         footer: Some(&|out: &mut String, fv_sp5: &super::scoped_card::FooterSlotProps, fv_sid4: &str| -> bool {
             out.push_str("<span data-v-56da6d99");
             out.push_str(fv_sid4);
-            out.push_str(">");
+            out.push('>');
             fv::push_int(out, fv_sp5.count);
             out.push_str(" items</span>");
             super::scoped_leaf::render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed(&*fv::Js(fv_sp5.count).to_string())) }, &fv::scope_attrs("", "data-v-56da6d99", fv_sid4));
@@ -163,7 +163,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_telep
         })),
     }, " data-v-56da6d99");
     super::scoped_fade::render_scoped(out, &super::scoped_fade::Props { open: props.show }, " data-v-56da6d99");
-    if (props.show) {
+    if props.show {
         out.push_str("<p class=\"note\" data-v-56da6d99>fading</p>");
     } else {
         out.push_str("<!---->");

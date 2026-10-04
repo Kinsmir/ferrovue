@@ -37,7 +37,7 @@ pub struct Stores<'a> {
 impl<'a> Stores<'a> {
     /// Stores with its required fields.
     pub fn new(basket: BasketState<'a>) -> Self {
-        Stores { basket: basket }
+        Stores { basket }
     }
 
 }

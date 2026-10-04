@@ -21,7 +21,7 @@ pub struct Props<'a> {
 impl<'a> Props<'a> {
     /// Props with its required fields.
     pub fn new(initial: impl Into<Cow<'a, str>>, open: bool) -> Self {
-        Props { initial: initial.into(), open: open }
+        Props { initial: initial.into(), open }
     }
 
 }

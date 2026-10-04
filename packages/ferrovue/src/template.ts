@@ -1,9 +1,10 @@
 /* The compiled template's statements: pushes, conditions, lists, child components and slots. */
 
-import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, BOOL, fail, GenError, INT, rustStr, sameTy, snake, STR } from "./model.ts";
+import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, fail, GenError, INT, rustStr, sameTy, snake, STR } from "./model.ts";
 import { ctx } from "./context.ts";
 import { markHome } from "./typescript.ts";
-import { cond, expr, fieldVal, isObjectCall, narrowTo, presence, truthy } from "./expr.ts";
+import { asF64, boolOf, cond, expr, fieldVal, isObjectCall, known, narrowTo, type Presence, presence, truthy } from "./expr.ts";
+import { atom, bare, CMP, condition, occurrences, operand, OR, strArg, UNARY } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
 import { IGNORED_PROPS, interpolate, renderAttr, renderAttrs, renderClass, renderDynamicAttr, renderStyle } from "./attrs.ts";
 import { routerLink } from "./router.ts";
@@ -62,11 +63,12 @@ export function slot(s: Scope, e: Emitter, n: N): void {
   }
   if (n.type === "ConditionalExpression" && n.consequent.type === "StringLiteral" && n.alternate.type === "StringLiteral") {
     const t = expr(s, n.test);
-    if (t.konst !== undefined) {
-      e.lit(t.konst ? n.consequent.value : n.alternate.value);
+    const k = known(t);
+    if (k !== undefined) {
+      e.lit(k ? n.consequent.value : n.alternate.value);
       return;
     }
-    e.open(`if ${truthy(t)}`);
+    e.open(`if ${condition(truthy(t))}`);
     e.lit(n.consequent.value);
     if (n.alternate.value) {
       e.close(" else {");
@@ -226,9 +228,20 @@ export function renderChild(s: Scope, e: Emitter, n: N): void {
     // Each side's own types named by the component that declares them, so that a type the parent
     // imports from the child's `.vue` file is the child's type.
     const v = expr(s, node);
-    return `${f.rust}: ${ownInto(s.comp, { ...v, ty: markHome(v.ty, s.comp.name) }, markHome(f.ty, child.name), node)}`;
+    return fieldInit(f.rust, ownInto(s.comp, { ...v, ty: markHome(v.ty, s.comp.name) }, markHome(f.ty, child.name), node));
   });
   callChild(s, e, child, `&super::${child.module}::Props { ${inits.join(", ")} }`, slots, childAttrs(s, child, passesAttrs, !!slotScopeId, n));
+}
+
+/** `name: value` in a struct literal, or the name alone when the value is a variable of that name. */
+export function fieldInit(name: string, value: string): string {
+  return value === name ? name : `${name}: ${bare(value)}`;
+}
+
+/** A borrow of an object or a list a template reads. A variable already holds a borrow: a loop's
+ * item, a narrowed value, a setup binding, a scoped slot's prop. */
+function borrowed(code: string): string {
+  return code.startsWith("&") || /^\w+$/.test(code) || /^fv_sp\d+\.\w+$/.test(code) ? code : `&${operand(code, UNARY)}`;
 }
 
 /** Whether a component takes a `Slots` argument. */
@@ -421,22 +434,23 @@ export function slotFieldTy(ty: Ty, comp: Component): string {
 export function slotFieldValue(s: Scope, v: Val, n: N): string {
   switch (v.ty.k) {
     case "str":
+      return strArg(v.code);
     case "int":
     case "float":
     case "bool":
-      return v.code;
+      return bare(v.code);
     case "list":
       // An array literal is a Rust array of `&str`, and a computed list holds its items in a form
       // of its own: neither is the list a slot prop borrows.
       if (v.code.startsWith("[")) fail(s.comp, "a slot prop is not an array literal: pass a list the component holds", n);
       if (v.iter !== undefined) fail(s.comp, "a slot prop is not a computed list: pass a list the component holds", n);
-      return `&(${v.code})`;
+      return borrowed(v.code);
     case "struct":
     case "child":
     case "html":
-      return `&(${v.code})`;
+      return borrowed(v.code);
     case "opt":
-      if (v.ty.of.k === "list") return `(${v.code}).map(|v| &v[..])`;
+      if (v.ty.of.k === "list") return `${atom(v.code)}.map(|v| &v[..])`;
       if (v.ty.of.k === "opt" || v.ty.of.k === "undef") break;
       return v.code;
   }
@@ -462,7 +476,7 @@ export function slotOutlet(s: Scope, e: Emitter, c: N): void {
       if (!/^[A-Za-z_$][\w$]*$/.test(key)) fail(s.comp, `slot prop \`${key}\` is not a plain name; write it in camelCase`, p);
       const v = expr(s, p.value);
       fields.push({ js: key, rust: snake(key), ty: v.ty });
-      values.push(`${snake(key)}: ${slotFieldValue(s, v, p.value)}`);
+      values.push(fieldInit(snake(key), slotFieldValue(s, v, p.value)));
     }
     const name = slotTypeName(slotName, "SlotProps");
     const shape: Struct = { name, fields, slot: true };
@@ -511,18 +525,18 @@ export function slotOutlet(s: Scope, e: Emitter, c: N): void {
 export function ownInto(comp: Component, v: Val, want: Ty, node: N): string {
   if (want.k === "str") {
     if (v.ty.k !== "str") fail(comp, "a string prop needs a string", node);
-    return `std::borrow::Cow::Borrowed(${v.code})`;
+    return `std::borrow::Cow::Borrowed(${bare(v.code)})`;
   }
   if (want.k === "opt" && want.of.k === "str") {
     if (v.ty.k === "undef") return "None";
-    if (v.ty.k === "str") return `Some(std::borrow::Cow::Borrowed(${v.code}))`;
-    if (v.ty.k === "opt" && v.ty.of.k === "str") return `(${v.code}).map(std::borrow::Cow::Borrowed)`;
+    if (v.ty.k === "str") return `Some(std::borrow::Cow::Borrowed(${bare(v.code)}))`;
+    if (v.ty.k === "opt" && v.ty.of.k === "str") return `${atom(v.code)}.map(std::borrow::Cow::Borrowed)`;
   }
   if (sameTy(v.ty, want) && (want.k === "int" || want.k === "float" || want.k === "bool")) return v.code;
-  if (want.k === "opt" && sameTy(v.ty, want.of) && (v.ty.k === "int" || v.ty.k === "float" || v.ty.k === "bool")) return `Some(${v.code})`;
+  if (want.k === "opt" && sameTy(v.ty, want.of) && (v.ty.k === "int" || v.ty.k === "float" || v.ty.k === "bool")) return `Some(${bare(v.code)})`;
   // An integer handed to a prop that takes a fraction.
-  if (want.k === "float" && v.ty.k === "int") return `((${v.code}) as f64)`;
-  if (want.k === "opt" && want.of.k === "float" && v.ty.k === "int") return `Some((${v.code}) as f64)`;
+  if (want.k === "float" && v.ty.k === "int") return asF64(v);
+  if (want.k === "opt" && want.of.k === "float" && v.ty.k === "int") return `Some(${asF64(v)})`;
   // A computed list: its items collected into the child's own list, objects cloned.
   if (v.iter !== undefined && v.ty.k === "list" && want.k === "list" && sameTy(v.ty.of, want.of)) {
     return want.of.k === "struct" || want.of.k === "child" ? `${v.iter}.cloned().collect()` : `${v.iter}.collect()`;
@@ -530,8 +544,8 @@ export function ownInto(comp: Component, v: Val, want: Ty, node: N): string {
   // An object, a list of objects, a record, or an optional one, of the type the child declares:
   // cloned, which copies its strings only where they are owned.
   const objecty = (t: Ty): boolean => t.k === "struct" || t.k === "child" || t.k === "record" || ((t.k === "list" || t.k === "opt") && objecty(t.of));
-  if (objecty(want) && sameTy(v.ty, want)) return v.ty.k === "opt" ? `(${v.code}).cloned()` : `(${v.code}).to_owned()`;
-  if (want.k === "opt" && objecty(want.of) && sameTy(v.ty, want.of)) return `Some((${v.code}).to_owned())`;
+  if (objecty(want) && sameTy(v.ty, want)) return `${atom(v.code)}.${v.ty.k === "opt" ? "cloned" : "to_owned"}()`;
+  if (want.k === "opt" && objecty(want.of) && sameTy(v.ty, want.of)) return `Some(${atom(v.code)}.to_owned())`;
   if (objecty(want) && v.ty.k === want.k && JSON.stringify(v.ty).includes('"struct"')) {
     fail(comp, `a ${JSON.stringify(v.ty)} where the child takes a ${JSON.stringify(want)}: two components share a type only when both import it from one \`.ts\` file`, node);
   }
@@ -539,8 +553,8 @@ export function ownInto(comp: Component, v: Val, want: Ty, node: N): string {
   if (want.k === "list" && v.ty.k === "list" && v.ty.of.k === "undef") return "Vec::new()";
   if (want.k === "opt" && want.of.k === "list" && v.ty.k === "list") return `Some(${ownInto(comp, v, want.of, node)})`;
   if (want.k === "list" && v.ty.k === "list" && sameTy(v.ty.of, want.of)) {
-    if (want.of.k === "str") return `(${v.code}).iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect()`;
-    if (want.of.k === "int" || want.of.k === "float" || want.of.k === "bool") return `(${v.code}).to_vec()`;
+    if (want.of.k === "str") return `${atom(v.code)}.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect()`;
+    if (want.of.k === "int" || want.of.k === "float" || want.of.k === "bool") return `${atom(v.code)}.to_vec()`;
   }
   return fail(comp, `a ${JSON.stringify(v.ty)} into a ${JSON.stringify(want)} prop`, node);
 }
@@ -576,9 +590,9 @@ export function statements(s: Scope, e: Emitter, body: N[]): void {
         if (s.fill) fail(s.comp, "a `<Teleport>` in slot content whose emptiness is decided at run time", st);
         const to = expr(s, target);
         if (to.ty.k !== "str") fail(s.comp, "a `<Teleport>`'s `to` is a string", target);
-        const off = disabled ? cond(s, disabled) : "false";
+        const off = disabled ? bare(cond(s, disabled)) : "false";
         if (content?.type !== "ArrowFunctionExpression" || content.body.type !== "BlockStatement") fail(s.comp, "unexpected `<Teleport>` content", st);
-        e.open(`fv::teleport_into(out, fv_teleports, ${to.code}, ${off}, &|out: &mut String|`);
+        e.open(`fv::teleport_into(out, fv_teleports, ${strArg(to.code)}, ${off}, &|out: &mut String|`);
         statements(s, e, content.body.body);
         e.close(");");
         continue;
@@ -629,6 +643,7 @@ export function statements(s: Scope, e: Emitter, body: N[]): void {
         };
         flatten(st.test);
         const narrowed = new Map(s.narrowed);
+        const bound = new Map<string, Presence>();
         const parts: string[] = [];
         for (const op of operands) {
           const inner = { ...s, narrowed };
@@ -637,20 +652,26 @@ export function statements(s: Scope, e: Emitter, body: N[]): void {
             const name = `n${++ctx.narrowCount}`;
             parts.push(p.pattern(name));
             narrowed.set(p.path, { code: name, ty: p.of });
+            bound.set(name, p);
           } else {
-            parts.push(cond(inner, op));
+            parts.push(operand(cond(inner, op), CMP));
           }
         }
+        // A condition known now: a `false` decides the branch, a `true` adds nothing.
+        if (parts.includes("false")) {
+          if (st.alternate) statements(s, e, branch(st.alternate));
+          continue;
+        }
+        if (parts.includes("true")) parts.splice(0, parts.length, ...parts.filter((p) => p !== "true"));
         if (narrowed.size > s.narrowed.size) {
           e.open(`if ${parts.join(" && ")}`);
           const at = e.lines.length - 1;
           statements({ ...s, narrowed }, e, branch(st.consequent));
           // A value the branch never reads is only tested for presence.
-          for (const v of narrowed.values()) {
-            if (!/^n\d+$/.test(v.code) || [...s.narrowed.values()].some((w) => w.code === v.code)) continue;
+          for (const [name, p] of bound) {
             // Read by the branch, or by a later condition of the same chain, which binds it once.
-            const inHead = (e.lines[at]!.match(new RegExp(`\\b${v.code}\\b`, "g")) ?? []).length > 1;
-            if (!inHead && !e.reads(v.code, at + 1)) e.replace(at, `Some(${v.code})`, "Some(_)");
+            const inHead = occurrences(e.lines[at]!, name) > 1;
+            if (!inHead && !e.reads(name, at + 1)) e.replace(at, p.pattern(name), operand(p.present, CMP));
           }
           if (st.alternate) {
             e.close(" else {");
@@ -663,9 +684,10 @@ export function statements(s: Scope, e: Emitter, body: N[]): void {
       const compound =
         (st.test.type === "LogicalExpression" && st.test.operator !== "??") ||
         (st.test.type === "UnaryExpression" && st.test.operator === "!");
-      const t: Val = compound ? { code: cond(s, st.test), ty: BOOL } : expr(s, st.test);
-      if (t.konst !== undefined) {
-        const taken = t.konst ? st.consequent : st.alternate;
+      const t: Val = compound ? boolOf(cond(s, st.test)) : expr(s, st.test);
+      const k = known(t);
+      if (k !== undefined) {
+        const taken = k ? st.consequent : st.alternate;
         if (taken) statements(s, e, branch(taken));
         continue;
       }
@@ -679,7 +701,7 @@ export function statements(s: Scope, e: Emitter, body: N[]): void {
         const at = e.lines.length - 1;
         const [present, absent] = p.negated ? [st.alternate, st.consequent] : [st.consequent, st.alternate];
         statements(narrowTo(s, p, name), e, branch(present));
-        if (!e.reads(name, at + 1)) e.replace(at, `Some(${name})`, "Some(_)");
+        if (!e.reads(name, at + 1)) e.replace(at, p.pattern(name), condition(p.present));
         if (absent) {
           e.close(" else {");
           statements(s, e, branch(absent));
@@ -687,7 +709,7 @@ export function statements(s: Scope, e: Emitter, body: N[]): void {
         e.close();
         continue;
       } else {
-        e.open(`if ${cond(s, st.test)}`);
+        e.open(`if ${condition(cond(s, st.test))}`);
         statements(s, e, branch(st.consequent));
       }
       if (st.alternate) {
@@ -729,35 +751,34 @@ export function list(s: Scope, e: Emitter, c: N): void {
   const itemName = item.type === "Identifier" ? snake(item.name) : `fv_item${++ctx.narrowCount}`;
   const inner = new Map(s.locals);
   let of: Ty;
-  let head: number;
+  // What the loop walks, and what its head binds each item to.
+  let walk: string;
+  let bound: string;
   let itemLet = -1;
-  // The name the loop binds before the item's own `let`, which an unused item replaces with `_`.
-  let bound = `${itemName}_ref`;
+  const loop = (it: string, i: string | null) => (i ? `for (${i}, ${it}) in ${atom(walk)}.enumerate()` : `for ${it} in ${walk}`);
   if (src.ty.k === "list" && src.iter !== undefined) {
     // A computed list: its items come as they are — a string as a `Cow`, read as a `&str`.
     of = src.ty.of;
+    walk = src.iter;
     bound = of.k === "str" ? `${itemName}_cow` : itemName;
-    e.open(idx ? `for (${idx}, ${bound}) in ${src.iter}.enumerate()` : `for ${bound} in ${src.iter}`);
-    head = e.lines.length - 1;
+    e.open(loop(bound, idx));
     if (of.k === "str") {
-      e.stmt(`let ${itemName}: &str = &*${bound};`);
+      e.stmt(`let ${itemName}: &str = &${bound};`);
       itemLet = e.lines.length - 1;
     }
   } else if (src.ty.k === "int") {
     // `v-for="n in 5"`: 1 to 5, as `renderList` counts a number.
     of = INT;
-    e.open(idx ? `for (${idx}, ${itemName}) in (1..=${src.code}).enumerate()` : `for ${itemName} in 1..=${src.code}`);
-    head = e.lines.length - 1;
+    walk = `1..=${operand(src.code, OR)}`;
+    bound = itemName;
+    e.open(loop(bound, idx));
   } else if (src.ty.k === "list") {
     of = src.ty.of;
     if (of.k === "undef") fail(s.comp, "`v-for` over an empty array literal", c);
-    const itemCode = of.k === "str" ? `&**${itemName}_ref` : `${itemName}_ref`;
-    e.open(
-      idx
-        ? `for (${idx}, ${itemName}_ref) in (${src.code}).iter().enumerate()`
-        : `for ${itemName}_ref in (${src.code}).iter()`,
-    );
-    head = e.lines.length - 1;
+    const itemCode = `${itemName}_ref`;
+    walk = `${atom(src.code)}.iter()`;
+    bound = itemCode;
+    e.open(loop(bound, idx));
     if (of.k === "str") e.stmt(`let ${itemName}: &str = ${itemCode};`);
     // An object — a struct, or another component's props — is borrowed; only a scalar is copied.
     else if (of.k === "struct" || of.k === "child") e.stmt(`let ${itemName} = ${itemCode};`);
@@ -784,28 +805,29 @@ export function list(s: Scope, e: Emitter, c: N): void {
   } else fail(s.comp, "a `v-for` item is a name or an object pattern", item);
   if (index) inner.set(index.name, { code: idx!, ty: INT });
   const before = e.literalBytes;
-  statements({ ...s, locals: inner }, e, fn.body.body);
-  // An item or index the body never reads is not bound: the loop only counts.
+  const fromProps = src.ty.k === "list" && src.iter === undefined && /^\(?props\./.test(src.code);
+  statements({ ...s, locals: inner, loop: fromProps ? { item: itemName, over: src.code } : undefined }, e, fn.body.body);
+  // An item or index the body never reads is not bound, and an index never counted: the loop only
+  // counts.
   const unusedItem = !e.reads(itemName, bodyFrom);
   const unusedIdx = idx !== null && !e.reads(idx, bodyFrom);
+  const head = bodyFrom - 1 - (idx ? 1 : 0) - (itemLet >= 0 ? 1 : 0);
+  e.replace(head, loop(bound, idx), loop(unusedItem ? "_" : bound, unusedIdx ? null : idx));
   // Removed from the last line up, so the earlier indices stay right.
-  if (unusedIdx) {
-    e.lines.splice(idxLet, 1);
-    e.replace(head, `(${idx}, `, "(_, ");
-  }
-  if (unusedItem) {
-    if (itemLet >= 0) {
-      e.lines.splice(itemLet, 1);
-      e.replace(head, bound, "_");
-    } else e.replace(head, idx ? `, ${itemName})` : `for ${itemName} in`, idx ? ", _)" : "for _ in");
-  }
+  if (unusedIdx) e.lines.splice(idxLet, 1);
+  if (unusedItem && itemLet >= 0) e.lines.splice(itemLet, 1);
   e.close();
   // The body's markup is written once per item, not once.
   const body = e.literalBytes - before;
   e.literalBytes = before;
-  // Counted up front only when the list is reachable from there: one a `v-if` narrowed, or a loop
-  // variable, exists only inside its block, and the reservation is an estimate either way.
-  if (body > 0 && src.ty.k === "list" && src.iter === undefined && /^\(?props\./.test(src.code)) e.perItem.push(`${body} * (${src.code}).len()`);
+  // Counted up front only when the list is reachable from there: a list of the props, or a list in
+  // each item of one, counted over all of them. One a `v-if` narrowed, or a loop deeper down, exists
+  // only inside its block, and the reservation is an estimate either way.
+  if (body > 0 && fromProps) e.perItem.push(`${body} * ${atom(src.code)}.len()`);
+  else if (body > 0 && src.ty.k === "list" && s.loop && src.code.startsWith(`${s.loop.item}.`)) {
+    const outer = s.loop;
+    e.perItem.push(`${body} * ${atom(outer.over)}.iter().map(|${outer.item}| ${src.code}.len()).sum::<usize>()`);
+  }
 }
 
 /** `v-for="(value, key, index) in r"` over a record: its entries in JavaScript's order of keys,
@@ -818,12 +840,12 @@ function recordLoop(s: Scope, e: Emitter, r: Val, fn: N, value: N | undefined, k
   const v = value?.type === "Identifier" ? snake(value.name) : `fv_value${n}`;
   const k = key ? snake(key.name) : `fv_key${n}`;
   const i = index ? snake(index.name) : `fv_index${n}`;
-  e.open(`for (${i}, (${k}, ${v}_ref)) in (${r.code}).iter().enumerate()`);
+  e.open(`for (${i}, (${k}, ${v}_ref)) in ${atom(r.code)}.iter().enumerate()`);
   const head = e.lines.length - 1;
   const indent = /^ */.exec(e.lines[head]!)![0];
   const inner = new Map(s.locals);
   // A value is read as a list item is: a string as a `&str`, a number copied, an object borrowed.
-  e.stmt(of.k === "str" ? `let ${v}: &str = &**${v}_ref;` : of.k === "int" || of.k === "float" || of.k === "bool" ? `let ${v} = *${v}_ref;` : `let ${v} = ${v}_ref;`);
+  e.stmt(of.k === "str" ? `let ${v}: &str = ${v}_ref;` : of.k === "int" || of.k === "float" || of.k === "bool" ? `let ${v} = *${v}_ref;` : `let ${v} = ${v}_ref;`);
   e.stmt(`let ${i} = ${i} as i64;`);
   const bodyFrom = e.lines.length;
   if (value?.type === "Identifier") inner.set(value.name, { code: v, ty: of });
@@ -845,9 +867,9 @@ function recordLoop(s: Scope, e: Emitter, r: Val, fn: N, value: N | undefined, k
   if (!readsI) e.lines.splice(head + 2, 1);
   if (!readsV) e.lines.splice(head + 1, 1);
   const pair = `(${readsK ? k : "_"}, ${readsV ? `${v}_ref` : "_"})`;
-  e.lines[head] = `${indent}for ${readsI ? `(${i}, ${pair}) in (${r.code}).iter().enumerate()` : `${pair} in (${r.code}).iter()`} {`;
+  e.lines[head] = `${indent}for ${readsI ? `(${i}, ${pair}) in ${atom(r.code)}.iter().enumerate()` : `${pair} in ${atom(r.code)}.iter()`} {`;
   e.close();
   const body = e.literalBytes - before;
   e.literalBytes = before;
-  if (body > 0 && /^\(?props\./.test(r.code)) e.perItem.push(`${body} * (${r.code}).len()`);
+  if (body > 0 && /^\(?props\./.test(r.code)) e.perItem.push(`${body} * ${atom(r.code)}.len()`);
 }

@@ -21,7 +21,7 @@ pub struct Props<'a> {
 impl<'a> Props<'a> {
     /// Props with its required fields.
     pub fn new(label: impl Into<Cow<'a, str>>, children: Vec<Props<'a>>) -> Self {
-        Props { label: label.into(), children: children }
+        Props { label: label.into(), children }
     }
 
 }
@@ -31,10 +31,10 @@ impl<'a> Props<'a> {
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(41 + props.label.len());
     out.push_str("<li>");
-    fv::escape_into(out, &*props.label);
-    if (((props.children).len() as i64)) != 0 {
+    fv::escape_into(out, &props.label);
+    if props.children.len() as i64 != 0 {
         out.push_str("<ul><!--[-->");
-        for c_ref in (props.children).iter() {
+        for c_ref in props.children.iter() {
             let c = c_ref;
             super::tree::render(out, c);
         }

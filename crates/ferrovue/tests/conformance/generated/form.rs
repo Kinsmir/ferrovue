@@ -25,7 +25,7 @@ pub struct Props<'a> {
 impl<'a> Props<'a> {
     /// Props with its required fields.
     pub fn new(query: impl Into<Cow<'a, str>>, agreed: bool, size: impl Into<Cow<'a, str>>, body: impl Into<Cow<'a, str>>) -> Self {
-        Props { query: query.into(), agreed: agreed, size: size.into(), body: body.into() }
+        Props { query: query.into(), agreed, size: size.into(), body: body.into() }
     }
 
 }
@@ -41,27 +41,27 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push_str("<form><input value=\"");
     fv::escape_into(out, s_q);
     out.push_str("\" name=\"q\"><input type=\"checkbox\"");
-    if ((s_ok)) {
+    if s_ok {
         out.push_str(" checked");
     }
     out.push_str("><select><option value=\"s\"");
-    if (((s_picked) == ("s"))) {
+    if s_picked == "s" {
         out.push_str(" selected");
     }
     out.push_str(">small</option><option value=\"m\"");
-    if (((s_picked) == ("m"))) {
+    if s_picked == "m" {
         out.push_str(" selected");
     }
     out.push_str(">medium</option><option value=\"l\"");
-    if (((s_picked) == ("l"))) {
+    if s_picked == "l" {
         out.push_str(" selected");
     }
     out.push_str(">large</option></select><label><input type=\"radio\" value=\"s\"");
-    if (((s_picked) == ("s"))) {
+    if s_picked == "s" {
         out.push_str(" checked");
     }
     out.push_str(">s</label><label><input type=\"radio\" value=\"m\"");
-    if (((s_picked) == ("m"))) {
+    if s_picked == "m" {
         out.push_str(" checked");
     }
     out.push_str(">m</label><textarea>");

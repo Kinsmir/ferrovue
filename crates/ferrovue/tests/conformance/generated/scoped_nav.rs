@@ -44,7 +44,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
         out.push_str("\" data-v-f60bf031>intro</a>");
     }
     {
-        let fv_link = fv_route.link(&*props.href);
+        let fv_link = fv_route.link(&props.href);
         out.push_str("<a");
         if fv_link.exact {
             out.push_str(" aria-current=\"page\"");
@@ -53,18 +53,18 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
         fv::escape_into(out, &fv_link.href);
         out.push_str("\" class=\"");
         fv::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
-        out.push_str("\"");
-        if (&*props.label).is_empty() {
+        out.push('"');
+        if props.label.is_empty() {
             out.push_str(" title");
         } else {
             out.push_str(" title=\"");
-            fv::escape_into(out, &*props.label);
-            out.push_str("\"");
+            fv::escape_into(out, &props.label);
+            out.push('"');
         }
         out.push_str(" data-v-f60bf031>");
-        fv::escape_into(out, &*props.label);
+        fv::escape_into(out, &props.label);
         out.push_str(" <i data-v-f60bf031>");
-        fv::escape_into(out, &*props.href);
+        fv::escape_into(out, &props.href);
         out.push_str("</i>");
         super::scoped_leaf::render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed(&*props.label)) }, " data-v-f60bf031");
         out.push_str("</a>");
@@ -83,10 +83,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
                 fv::escape_into(out, &fv_link.href);
                 out.push_str("\" class=\"");
                 fv::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
-                out.push_str("\"");
+                out.push('"');
                 out.push_str(&fv::scope_attrs("", "data-v-f60bf031", fv_sid1));
                 out.push_str(">home ");
-                fv::escape_into(out, &*props.label);
+                fv::escape_into(out, &props.label);
                 out.push_str("</a>");
             }
             super::scoped_leaf::render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed("carded")) }, &fv::scope_attrs("", "data-v-f60bf031", fv_sid1));

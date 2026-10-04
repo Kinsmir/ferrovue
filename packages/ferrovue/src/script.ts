@@ -7,6 +7,7 @@ import { definePropsType } from "./typescript.ts";
 import { expr, fieldVal, storeGetter, theRoute } from "./expr.ts";
 import { collected, heldList } from "./lists.ts";
 import { storeImport } from "./stores.ts";
+import { bare, operand, UNARY } from "./parens.ts";
 
 /** Lifecycle hooks, which never run on the server: setup may register them freely. */
 export const CLIENT_HOOKS = new Set([
@@ -280,7 +281,7 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
       }
       // A list, a record or an object is a place in the props: borrowed, never moved out of them.
       const place = v.ty.k === "list" || v.ty.k === "record" || v.ty.k === "struct" || v.ty.k === "child";
-      lets.push(`let ${name} = ${place ? `&(${v.code})` : v.code};`);
+      lets.push(`let ${name} = ${place ? `&${operand(v.code, UNARY)}` : bare(v.code)};`);
       scope.setup.set(local, { code: name, ty: v.ty, ...lone, ...(v.konst !== undefined ? { konst: v.konst } : {}) });
     }
   }

@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { type N, type Scope, type Val, fail, GenError, rustStr } from "./model.ts";
 import { allRoutes, type RouteDef, CONFIG_FILE, ctx } from "./context.ts";
 import { expr, lonely } from "./expr.ts";
+import { bare, condition, strArg } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
 import { classItems, IGNORED_PROPS, mergeProps, renderDynamicAttr, renderStyle } from "./attrs.ts";
 import { slotBody, statements } from "./template.ts";
@@ -30,8 +31,8 @@ function noHalves(s: Scope, v: Val, n: N): void {
 export function urlText(s: Scope, v: Val, n: N): string {
   noHalves(s, v, n);
   if (v.ty.k === "str") return v.code;
-  if (v.ty.k === "int" || v.ty.k === "float") return `&*fv::Js(${v.code}).to_string()`;
-  if (v.ty.k === "bool") return `if ${v.code} { "true" } else { "false" }`;
+  if (v.ty.k === "int" || v.ty.k === "float") return `&*fv::Js(${bare(v.code)}).to_string()`;
+  if (v.ty.k === "bool") return `if ${condition(v.code)} { "true" } else { "false" }`;
   return fail(s.comp, "a route parameter is a string or a number that is present", n);
 }
 
@@ -41,7 +42,7 @@ export function resolveLink(s: Scope, e: Emitter, to: N): void {
     const target = expr(s, to);
     if (target.ty.k !== "str") fail(s.comp, "`<RouterLink>`'s `to` is a string or an object literal", to);
     noHalves(s, target, to);
-    e.stmt(`let fv_link = fv_route.link(${target.code});`);
+    e.stmt(`let fv_link = fv_route.link(${strArg(target.code)});`);
     return;
   }
   const parts = new Map<string, N>();
@@ -67,9 +68,9 @@ export function resolveLink(s: Scope, e: Emitter, to: N): void {
       if (v.ty.k === "undef") continue;
       if (v.ty.k === "opt") {
         e.open(`if let Some(v) = ${v.code}`);
-        e.stmt(`fv::query_into(&mut fv_search, ${rustStr(key)}, ${urlText(s, { code: "v", ty: v.ty.of }, p.value)});`);
+        e.stmt(`fv::query_into(&mut fv_search, ${rustStr(key)}, ${strArg(urlText(s, { code: "v", ty: v.ty.of }, p.value))});`);
         e.close();
-      } else e.stmt(`fv::query_into(&mut fv_search, ${rustStr(key)}, ${urlText(s, v, p.value)});`);
+      } else e.stmt(`fv::query_into(&mut fv_search, ${rustStr(key)}, ${strArg(urlText(s, v, p.value))});`);
     }
   }
   let hash = '""';
@@ -78,7 +79,7 @@ export function resolveLink(s: Scope, e: Emitter, to: N): void {
     const v = expr(s, h);
     if (v.ty.k !== "str") fail(s.comp, "a `to`'s `hash` is a string", h);
     noHalves(s, v, h);
-    hash = v.code;
+    hash = strArg(v.code);
   }
   const name = parts.get("name");
   const path = parts.get("path");
@@ -107,7 +108,7 @@ export function resolveLink(s: Scope, e: Emitter, to: N): void {
     const v = expr(s, path);
     if (v.ty.k !== "str") fail(s.comp, "a `to`'s `path` is a string", path);
     noHalves(s, v, path);
-    e.stmt(`fv_route.link_path(${v.code}, ${search}, ${hash})`);
+    e.stmt(`fv_route.link_path(${strArg(v.code)}, ${search}, ${hash})`);
   } else fail(s.comp, "a `to` object has a `name` or a `path`", to);
   e.close(";");
 }

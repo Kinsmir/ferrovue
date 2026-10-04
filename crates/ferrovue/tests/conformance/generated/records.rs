@@ -21,7 +21,7 @@ pub struct Score<'a> {
 impl<'a> Score<'a> {
     /// Score with its required fields.
     pub fn new(points: i64, by: impl Into<Cow<'a, str>>) -> Self {
-        Score { points: points, by: by.into() }
+        Score { points, by: by.into() }
     }
 
 }
@@ -46,7 +46,7 @@ pub struct Props<'a> {
 impl<'a> Props<'a> {
     /// Props with its required fields, every optional one absent.
     pub fn new(counts: ferrovue::Record<'a, i64>, labels: ferrovue::Record<'a, Cow<'a, str>>, scores: ferrovue::Record<'a, Score<'a>>, groups: ferrovue::Record<'a, Vec<Cow<'a, str>>>) -> Self {
-        Props { counts: counts, labels: labels, scores: scores, groups: groups, extra: None }
+        Props { counts, labels, scores, groups, extra: None }
     }
 
     /// Set `extra`, which is absent otherwise.
@@ -59,9 +59,9 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(168 + 26 * (props.counts).len() + 34 * (props.labels).len() + 17 * (props.scores).len() + 12 * (props.groups).len() + 11 * (props.counts).len() + props.counts.iter().map(|(k, _)| k.len()).sum::<usize>() + props.labels.iter().map(|(k, v)| k.len() + v.len()).sum::<usize>() + props.scores.iter().map(|(k, v)| k.len() + v.by.len()).sum::<usize>() + props.groups.iter().map(|(k, v)| k.len() + v.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>());
+    out.reserve(186 + 38 * props.counts.len() + 34 * props.labels.len() + 23 * props.scores.len() + 18 * props.groups.len() + 23 * props.counts.len() + props.counts.iter().map(|(k, _)| k.len()).sum::<usize>() + props.labels.iter().map(|(k, v)| k.len() + v.len()).sum::<usize>() + props.scores.iter().map(|(k, v)| k.len() + v.by.len()).sum::<usize>() + props.groups.iter().map(|(k, v)| k.len() + v.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>());
     out.push_str("<section><ul><!--[-->");
-    for (i, (name, count_ref)) in (props.counts).iter().enumerate() {
+    for (i, (name, count_ref)) in props.counts.iter().enumerate() {
         let count = *count_ref;
         let i = i as i64;
         out.push_str("<li data-name=\"");
@@ -75,8 +75,8 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul><dl><!--[-->");
-    for (key, text_ref) in (props.labels).iter() {
-        let text: &str = &**text_ref;
+    for (key, text_ref) in props.labels.iter() {
+        let text: &str = text_ref;
         out.push_str("<!--[--><dt>");
         fv::escape_into(out, key);
         out.push_str("</dt><dd>");
@@ -84,57 +84,57 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         out.push_str("</dd><!--]-->");
     }
     out.push_str("<!--]--></dl><!--[-->");
-    for (id, fv_value3_ref) in (props.scores).iter() {
+    for (id, fv_value3_ref) in props.scores.iter() {
         let fv_value3 = fv_value3_ref;
         out.push_str("<p id=\"");
-        fv::escape_into(out, &*format!("s-{}", id));
+        fv::escape_into(out, &format!("s-{}", id));
         out.push_str("\">");
         fv::push_int(out, fv_value3.points);
         out.push_str(" by ");
-        fv::escape_into(out, &*fv_value3.by);
+        fv::escape_into(out, &fv_value3.by);
         out.push_str("</p>");
     }
     out.push_str("<!--]--><!--[-->");
-    for (group, members_ref) in (props.groups).iter() {
+    for (group, members_ref) in props.groups.iter() {
         let members = members_ref;
         out.push_str("<p>");
         fv::escape_into(out, group);
         out.push_str(": ");
-        fv::escape_into(out, &*(members).iter().map(|v| &**v).collect::<Vec<_>>().join(", "));
+        fv::escape_into(out, &members.iter().map(|v| &**v).collect::<Vec<_>>().join(", "));
         out.push_str(" (");
-        fv::push_int(out, ((members).len() as i64));
+        fv::push_int(out, members.len() as i64);
         out.push_str(")</p>");
     }
     out.push_str("<!--]--><p>");
-    fv::escape_into(out, &*((props.counts).keys().map(std::borrow::Cow::<str>::Borrowed).collect::<Vec<_>>().join(",")));
-    out.push_str("|");
-    fv::push_int(out, ((props.counts).values().copied().filter(|fv_a5| (((((*fv_a5)) as f64) > ((1i64) as f64)))).count() as i64));
-    out.push_str("|");
-    fv::escape_into(out, &*((props.labels).values().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(" ")));
-    out.push_str("|");
-    fv::push_int(out, ((props.scores).keys().map(std::borrow::Cow::<str>::Borrowed).count() as i64));
+    fv::escape_into(out, &props.counts.keys().map(std::borrow::Cow::<str>::Borrowed).collect::<Vec<_>>().join(","));
+    out.push('|');
+    fv::push_int(out, props.counts.values().copied().filter(|fv_a5| *fv_a5 as f64 > 1.0).count() as i64);
+    out.push('|');
+    fv::escape_into(out, &props.labels.values().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(" "));
+    out.push('|');
+    fv::push_int(out, props.scores.keys().count() as i64);
     out.push_str("</p><ol><!--[-->");
-    for (i, (key, value_ref)) in (props.counts).iter().enumerate() {
+    for (i, (key, value_ref)) in props.counts.iter().enumerate() {
         let value = *value_ref;
         let i = i as i64;
         out.push_str("<li>");
         fv::push_int(out, i);
-        out.push_str("=");
+        out.push('=');
         fv::escape_into(out, key);
-        out.push_str(":");
+        out.push(':');
         fv::push_int(out, value);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ol><p>");
-    fv::push_int(out, ((props.labels).len() as i64));
-    out.push_str("|");
-    fv::escape_into(out, &*((props.scores).values().map(|fv_a7| std::borrow::Cow::<str>::Borrowed(&*fv_a7.by)).collect::<Vec<_>>().join("/")));
-    out.push_str("|");
-    out.push_str(if (props.labels).keys().map(std::borrow::Cow::<str>::Borrowed).any(|v| &*v == "a") { "true" } else { "false" });
+    fv::push_int(out, props.labels.len() as i64);
+    out.push('|');
+    fv::escape_into(out, &props.scores.values().map(|fv_a7| std::borrow::Cow::<str>::Borrowed(&fv_a7.by)).collect::<Vec<_>>().join("/"));
+    out.push('|');
+    out.push_str(if props.labels.keys().map(std::borrow::Cow::<str>::Borrowed).any(|v| *v == *"a") { "true" } else { "false" });
     out.push_str("</p>");
     if let Some(n8) = props.extra.as_ref() {
         out.push_str("<!--[-->");
-        for (flag, on_ref) in (n8).iter() {
+        for (flag, on_ref) in n8.iter() {
             let on = *on_ref;
             out.push_str("<i data-on=\"");
             out.push_str(if on { "true" } else { "false" });
@@ -146,7 +146,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     } else {
         out.push_str("<!---->");
     }
-    super::chips::render(out, &super::chips::Props { chips: (props.labels).keys().map(std::borrow::Cow::<str>::Borrowed).collect(), counts: None, marks: Some((props.counts).to_owned()) });
+    super::chips::render(out, &super::chips::Props { chips: props.labels.keys().map(std::borrow::Cow::<str>::Borrowed).collect(), counts: None, marks: Some(props.counts.to_owned()) });
     out.push_str("</section>");
 }
 

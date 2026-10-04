@@ -6,9 +6,10 @@
  * boolean copied, an object borrowed. That is what lets one method's result feed the next, a
  * `v-for`, `.join` or `.length`, without knowing where it came from. */
 
-import { type N, type Scope, type Ty, type Val, BOOL, fail, INT, opt, sameTy, STR } from "./model.ts";
+import { type N, type Scope, type Ty, type Val, BOOL, fail, FLOAT, INT, opt, sameTy, STR } from "./model.ts";
 import { ctx } from "./context.ts";
-import { asF64, cond, expr, fieldVal, isNumber, isTemporary, lonely, meet } from "./expr.ts";
+import { asCow, yieldsCow, asF64, cond, expr, fieldVal, isNumber, isTemporary, lonely, meet } from "./expr.ts";
+import { atom, operand, strArg, UNARY } from "./parens.ts";
 
 const COW = "std::borrow::Cow::<str>";
 
@@ -27,9 +28,9 @@ export function items(v: Val): string {
   if (v.iter !== undefined) return v.iter;
   const of = v.ty.k === "list" || v.ty.k === "record" ? v.ty.of : v.ty;
   // A list of strings holds `Cow`s, an array literal `&str`s: either way `&**v` is the `&str`.
-  if (of.k === "str") return `(${v.code}).iter().map(|v| ${COW}::Borrowed(&**v))`;
-  if (of.k === "struct" || of.k === "child") return `(${v.code}).iter()`;
-  return `(${v.code}).iter().copied()`;
+  if (of.k === "str") return `${atom(v.code)}.iter().map(|v| ${COW}::Borrowed(&**v))`;
+  if (of.k === "struct" || of.k === "child") return `${atom(v.code)}.iter()`;
+  return `${atom(v.code)}.iter().copied()`;
 }
 
 /** A computed list: its iterator, and its items collected as `code` for anything that needs a
@@ -55,7 +56,9 @@ export function heldList(name: string, of: Ty, lone?: boolean): Val {
 /** An item as the closure that a method hands it to sees it: `byRef` for `filter` and `find`, which
  * pass `&item`. */
 function itemVal(of: Ty, param: string, byRef: boolean, lone?: boolean): Val {
-  const code = of.k === "str" ? (byRef ? `(&**${param})` : `(&*${param})`) : byRef ? `(*${param})` : param;
+  // An object's fields are read through the reference; a number or a boolean is copied out of it.
+  const scalar = of.k === "int" || of.k === "float" || of.k === "bool";
+  const code = of.k === "str" ? (byRef ? `&**${param}` : `&*${param}`) : byRef && scalar ? `*${param}` : param;
   return { code, ty: of, ...(lone ? { lone } : {}) };
 }
 
@@ -114,14 +117,20 @@ function arrow(s: Scope, fn: N, list: Val, of: Ty, byRef: boolean, method: strin
 function mapped(s: Scope, v: Val, n: N): string {
   switch (v.ty.k) {
     case "str":
-      return isTemporary(v) || /\bfv_s\d+\b/.test(v.code) ? `${COW}::Owned((${v.code}).to_owned())` : `${COW}::Borrowed(${v.code})`;
+      // A routine's `Cow` may borrow the item, which the closure owns: owned.
+      if (v.code.startsWith("&*fv::") && yieldsCow(v.code.slice(2))) return `${COW}::Owned(${v.code.slice(2)}.into_owned())`;
+      // An item itself, of this list or one outside it, which the closure only borrows: copied.
+      const item = /^&\**(fv_s\d+)$/.exec(v.code)?.[1];
+      if (item !== undefined) return `${COW}::Owned(${item}.to_string())`;
+      if (isTemporary(v)) return asCow(v);
+      return /\bfv_s\d+\b/.test(v.code) ? `${COW}::Owned(${atom(v.code)}.to_owned())` : `${COW}::Borrowed(${strArg(v.code)})`;
     case "int":
     case "float":
     case "bool":
       return v.code;
     case "struct":
     case "child":
-      return `&(${v.code})`;
+      return `&${operand(v.code, UNARY)}`;
     default:
       return fail(s.comp, `\`.map()\` makes a list of strings, numbers, booleans or objects, not ${v.ty.k === "opt" ? "optional values" : "these"}`, n);
   }
@@ -160,6 +169,9 @@ export function listMethod(s: Scope, target: Val, method: string, args: N[], n: 
       let out: Val | undefined;
       const { closure, enumerate } = arrow(s, fn, target, of, false, method, (inner) => {
         out = expr(inner, fn.body);
+        // An integer negated, multiplied or taken modulo may be JavaScript's -0, which a list of
+        // `i64` loses: a list of fractions then. (Generated code spaces a binary `-`, never a unary one.)
+        if (out.ty.k === "int" && out.f64 !== undefined && /-[\w(]|\s[*%]\s/.test(out.f64)) out = { ...out, code: out.f64, ty: FLOAT };
         return mapped(inner, out, fn.body);
       });
       return computed(`${it}${enumerate ? ".enumerate()" : ""}.map(${closure})`, out!.ty, out!.lone);
@@ -175,7 +187,7 @@ export function listMethod(s: Scope, target: Val, method: string, args: N[], n: 
       const lone = target.lone ? { lone: true } : {};
       // A string found is a `Cow` the statement holds, read as the `&str` an optional string is; one
       // kept beyond the statement owns its text, which may live in a temporary.
-      if (of.k === "str") return { code: `(${found}).as_deref()`, ty: opt(STR), held: `${found}.map(|v| ${COW}::Owned(v.into_owned()))`, ...lone };
+      if (of.k === "str") return { code: `${atom(found)}.as_deref()`, ty: opt(STR), held: `${found}.map(|v| ${COW}::Owned(v.into_owned()))`, ...lone };
       return { code: found, ty: opt(of), ...lone };
     }
     default: {
@@ -191,11 +203,11 @@ export function objectCall(s: Scope, method: string, args: N[], n: N): Val {
   const r = args.length === 1 ? expr(s, args[0]) : null;
   if (r?.ty.k !== "record") return fail(comp, `\`Object.${method}()\` takes a \`Record<string, T>\``, n);
   const of = r.ty.of;
-  if (method === "keys") return computed(`(${r.code}).keys().map(${COW}::Borrowed)`, STR);
+  if (method === "keys") return computed(`${atom(r.code)}.keys().map(${COW}::Borrowed)`, STR);
   if (method === "values") {
     if (of.k === "list") fail(comp, "`Object.values()` of a record of lists, which these methods cannot walk", n);
     const values = of.k === "str" ? `.values().map(|v| ${COW}::Borrowed(&**v))` : of.k === "struct" || of.k === "child" ? ".values()" : ".values().copied()";
-    return computed(`(${r.code})${values}`, of);
+    return computed(`${atom(r.code)}${values}`, of);
   }
   if (method === "entries") return fail(comp, "`Object.entries()` is supported as the source of a `v-for`: `([key, value], i) in Object.entries(r)`", n);
   return fail(comp, `\`Object.${method}()\` is not supported: \`keys\`, \`values\` and \`entries\` of a record are`, n);
@@ -211,7 +223,7 @@ export function computedListMethod(s: Scope, target: Val, method: string, args: 
     if (!sameTy(x.ty, of) || !["str", "int", "float", "bool"].includes(of.k)) fail(s.comp, "`.includes()` looks for a value of the list's own type", args[0]);
     if (of.k === "str") meet(s.comp, target, x, "`.includes()`", n, "equal");
     // `includes` finds `NaN`, which `==` never equals.
-    const test = of.k === "str" ? `&*v == ${x.code}` : of.k === "float" ? `v == ${x.code} || (v.is_nan() && (${x.code}).is_nan())` : `v == ${x.code}`;
+    const test = of.k === "str" ? `*v == ${x.code.startsWith("&*") ? `*${x.code.slice(2)}` : `*${operand(x.code, UNARY)}`}` : of.k === "float" ? `v == ${x.code} || (v.is_nan() && ${atom(x.code)}.is_nan())` : `v == ${x.code}`;
     return { code: `${items(target)}.any(|v| ${test})`, ty: BOOL };
   }
   if (method === "join" && args.length <= 1) {
@@ -222,7 +234,7 @@ export function computedListMethod(s: Scope, target: Val, method: string, args: 
     const parted = /^"[^"]/.test(sep.code);
     if (of.k === "str" && target.lone && (!parted || sep.lone)) fail(s.comp, lonely("`.join()` with no literal separator"), n);
     const each = of.k === "str" ? "" : of.k === "bool" ? `.map(|v| if v { "true" } else { "false" })` : ".map(|v| fv::Js(v).to_string())";
-    return { code: `&*(${items(target)}${each}.collect::<Vec<_>>().join(${sep.code}))`, ty: STR, ...(target.lone || sep.lone ? { lone: true } : {}) };
+    return { code: `&*${items(target)}${each}.collect::<Vec<_>>().join(${strArg(sep.code)})`, ty: STR, ...(target.lone || sep.lone ? { lone: true } : {}) };
   }
   return null;
 }

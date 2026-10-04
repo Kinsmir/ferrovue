@@ -5,7 +5,10 @@
  * a JavaScript object lists first; JavaScript's -0; and a number exactly halfway between two
  * shortest spellings; a branch that trims a string it has just built; and strings and lists built
  * in place — `?? (1).toFixed(1)`, `.at()` of a built string in a branch, `.split()` then `.slice()` —
- * whose borrows outlived them. */
+ * whose borrows outlived them; and `||` after an optional string whose fallback is built; `$&`,
+ * `$`` and `$'` in a loop's source, which the generator once read as replacement patterns; and a
+ * routine's borrowing result inside a branch or a `map`; a `map` to `-j`, JavaScript's -0; a `map` to an outer item; and `charAt` of a built string in a
+ * branch. */
 defineProps<{ s1: string; b0: boolean; os1?: string; ob2?: boolean; f2: number; l2: string[]; l4: number[]; n3: number }>();
 </script>
 
@@ -31,8 +34,11 @@ defineProps<{ s1: string; b0: boolean; os1?: string; ob2?: boolean; f2: number; 
     <i :class="{ 2: true, 1: true, b: true, a: f2 }"></i>
     <p>{{ 'a' ? 'a' : (1).toFixed(2).trim() }}|{{ ' pad ' ? 'a' : '-'.toUpperCase().trimEnd() }}|{{ (true && true) ? 'a' : (1).toFixed(10).trimStart() }}|{{ b0 ? 'a' : (f2).toFixed(2).trim() }}|{{ s1.trim() || (s1 + 'x').trim() }}</p>
     <p v-if="os1">{{ os1 ? os1.toUpperCase().trimEnd() : 'a' }}</p>
+    <p>{{ (os1 ?? 'px') || (os1 ?? `${n3}x`) }}</p>
     <p :data-n="7 / (-l2.length)">{{ 0.5 / ((-5) * 0) }}|{{ n3 / s1.length }}|{{ -0 }}|{{ 1 / -f2 }}</p>
     <p>{{ (os1 ?? (1).toFixed(1)) || 'a' }}|{{ b0 ? (String(f2).at(-1) ?? ', ') : 'x' }}|{{ `🦀${s1}`.split(',').slice(1, 1.005).includes('x y') }}</p>
     <i v-for="w in (f2).toFixed(3).split('.').slice(0, -1)">{{ w }}</i>
+    <i v-for="x in s1.replace(' ', '$&').split('a')"></i><b v-for="x in s1.replaceAll('b', '$\'').split('')"></b><u v-for="x in s1.replace('<', '$`').split('🦀')"></u>
+    <p>{{ s1.split(',').map((w) => w.substring(1)).join(', ') }}|{{ b0 ? (0.5).toFixed(1).replace('.', ',') : '-' }}|{{ b0 ? '-' : `px${f2}n=`.padStart(9, '·') }}|{{ l2.map((w, j) => -j).map((z) => 42 / z).join(',') }}|{{ l2.filter((w) => s1.split(' ').map(() => w).some(() => b0)).join(',') }}|{{ b0 ? 'a' : 'é'.toUpperCase().charAt(0) }}</p>
   </div>
 </template>

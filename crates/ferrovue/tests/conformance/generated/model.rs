@@ -42,19 +42,19 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(103 + props.model_value.len());
+    out.reserve(109 + props.model_value.len());
     out.push_str("<div><input value=\"");
-    fv::escape_into(out, &*props.model_value);
+    fv::escape_into(out, &props.model_value);
     out.push_str("\"><input type=\"checkbox\"");
-    if ((props.open.unwrap_or(false))) {
+    if props.open.unwrap_or(false) {
         out.push_str(" checked");
     }
     out.push_str("><span data-level=\"");
     fv::push_int(out, props.level.unwrap_or(3i64));
     out.push_str("\">");
-    fv::escape_into(out, &*props.model_value);
+    fv::escape_into(out, &props.model_value);
     out.push_str("</span>");
-    if (props.open.unwrap_or(false)) {
+    if props.open.unwrap_or(false) {
         out.push_str("<b>open</b>");
     } else {
         out.push_str("<!---->");

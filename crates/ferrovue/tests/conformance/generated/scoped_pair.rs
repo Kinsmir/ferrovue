@@ -37,11 +37,11 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn render_scoped(out: &mut String, props: &Props<'_>, _fv_attrs: &str) {
     out.reserve(79 + props.term.len() + props.text.len());
     out.push_str("<!--[--><dt data-v-32dc74d5>");
-    fv::escape_into(out, &*props.term);
+    fv::escape_into(out, &props.term);
     out.push_str("</dt><dd data-term=\"");
-    fv::escape_into(out, &*props.term);
+    fv::escape_into(out, &props.term);
     out.push_str("\" data-v-32dc74d5>");
-    fv::escape_into(out, &*props.text);
+    fv::escape_into(out, &props.text);
     out.push_str("</dd><!--]-->");
 }
 

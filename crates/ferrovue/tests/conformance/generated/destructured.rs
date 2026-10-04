@@ -59,10 +59,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(40 + props.title.as_deref().map_or(0, str::len) + props.extra.as_deref().map_or(0, str::len));
     let s_heading = &*format!("{} ({})", props.title.as_deref().unwrap_or("Hi"), fv::Js(props.count.unwrap_or(0i64)));
     out.push_str("<h2 class=\"");
-    fv::class_into(out, false, &[if (props.wide.unwrap_or(false)) { "wide" } else { "" }]);
+    fv::class_into(out, false, &[if props.wide.unwrap_or(false) { "wide" } else { "" }]);
     out.push_str("\">");
     fv::escape_into(out, s_heading);
-    if let Some(n1) = (props.extra.as_deref()).filter(|v| !(*v).is_empty()) {
+    if let Some(n1) = props.extra.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<small>");
         fv::escape_into(out, n1);
         out.push_str("</small>");

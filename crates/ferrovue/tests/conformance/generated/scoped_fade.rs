@@ -17,7 +17,7 @@ pub struct Props {
 impl Props {
     /// Props with its required fields.
     pub fn new(open: bool) -> Self {
-        Props { open: open }
+        Props { open }
     }
 
 }
@@ -32,7 +32,7 @@ pub fn render(out: &mut String, props: &Props) {
 #[doc(hidden)]
 pub fn render_scoped(out: &mut String, props: &Props, fv_attrs: &str) {
     out.reserve(52);
-    if (props.open) {
+    if props.open {
         out.push_str("<div class=\"fade\"");
         out.push_str(fv_attrs);
         out.push_str(" data-v-597ba97c>shown</div>");

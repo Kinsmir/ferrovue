@@ -34,7 +34,7 @@ impl<'a> Props<'a> {
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(42 + props.note.as_deref().map_or(0, str::len));
     out.push_str("<div class=\"quirks\" data-v-a3eec79a>");
-    super::scoped_root::render_scoped(out, &super::scoped_root::Props { label: (props.note.as_deref()).map(std::borrow::Cow::Borrowed) }, " data-v-a3eec79a");
+    super::scoped_root::render_scoped(out, &super::scoped_root::Props { label: props.note.as_deref().map(std::borrow::Cow::Borrowed) }, " data-v-a3eec79a");
     super::scoped_card::render_scoped(out, &super::scoped_card::Props { tone: None }, super::scoped_card::Slots {
         title: None,
         default: None,

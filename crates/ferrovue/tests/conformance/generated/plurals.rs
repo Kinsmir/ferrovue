@@ -25,7 +25,7 @@ pub struct Props<'a> {
 impl<'a> Props<'a> {
     /// Props with its required fields.
     pub fn new(count: i64, amount: f64, label: impl Into<Cow<'a, str>>, on: bool) -> Self {
-        Props { count: count, amount: amount, label: label.into(), on: on }
+        Props { count, amount, label: label.into(), on }
     }
 
 }
@@ -35,27 +35,27 @@ impl<'a> Props<'a> {
 pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::I18n) {
     out.reserve(45 + props.label.len());
     out.push_str("<!--[--><p>");
-    fv::escape_into(out, &*fv_i18n.t("items", &fv::i18n::Args { named: &[("n", fv::i18n::Value::Float(props.amount))], list: &[], plural: None }));
-    out.push_str("|");
-    fv::escape_into(out, &*fv_i18n.t("apples", &fv::i18n::Args { named: &[("count", fv::i18n::Value::Float(((props.amount) + ((1i64) as f64))))], list: &[], plural: None }));
-    out.push_str("|");
-    fv::escape_into(out, &*fv_i18n.t("apples", &fv::i18n::Args { named: &[("count", fv::i18n::Value::Float(((props.amount) / (((props.count) as f64) - ((props.count) as f64)))))], list: &[], plural: None }));
-    out.push_str("|");
-    fv::escape_into(out, &*fv_i18n.t("apples", &fv::i18n::Args { named: &[("count", fv::i18n::Value::Float(((props.amount) / (((props.count) as f64) - ((props.count) as f64)))))], list: &[], plural: Some(5i64) }));
+    fv::escape_into(out, &fv_i18n.t("items", &fv::i18n::Args { named: &[("n", fv::i18n::Value::Float(props.amount))], list: &[], plural: None }));
+    out.push('|');
+    fv::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args { named: &[("count", fv::i18n::Value::Float(props.amount + 1.0))], list: &[], plural: None }));
+    out.push('|');
+    fv::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args { named: &[("count", fv::i18n::Value::Float(props.amount / 0.0))], list: &[], plural: None }));
+    out.push('|');
+    fv::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args { named: &[("count", fv::i18n::Value::Float(props.amount / 0.0))], list: &[], plural: Some(5i64) }));
     out.push_str("</p><p>");
-    fv::escape_into(out, &*fv_i18n.t("apples", &fv::i18n::Args { named: &[("count", fv::i18n::Value::Str(&*props.label))], list: &[], plural: Some(props.count) }));
-    out.push_str("|");
-    fv::escape_into(out, &*fv_i18n.t("apples", &fv::i18n::Args { named: &[("count", fv::i18n::Value::Bool(props.on))], list: &[], plural: Some(props.count) }));
-    out.push_str("|");
-    fv::escape_into(out, &*fv_i18n.t("apples", &fv::i18n::Args { named: &[("count", fv::i18n::Value::Float(((props.amount) * ((2i64) as f64))))], list: &[], plural: Some(props.count) }));
-    out.push_str("|");
-    fv::escape_into(out, &*fv_i18n.t("apples", &fv::i18n::Args { named: &[("count", fv::i18n::Value::Int(0i64))], list: &[], plural: Some(props.count) }));
-    out.push_str("|");
-    fv::escape_into(out, &*fv_i18n.t("apples", &fv::i18n::Args { named: &[("count", fv::i18n::Value::Int(7i64))], list: &[], plural: Some(props.count) }));
-    out.push_str("|");
-    fv::escape_into(out, &*fv_i18n.t("apples", &fv::i18n::Args { named: &[("count", fv::i18n::Value::Int(0i64)), ("other", fv::i18n::Value::Int(5i64))], list: &[], plural: None }));
+    fv::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args { named: &[("count", fv::i18n::Value::Str(&props.label))], list: &[], plural: Some(props.count) }));
+    out.push('|');
+    fv::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args { named: &[("count", fv::i18n::Value::Bool(props.on))], list: &[], plural: Some(props.count) }));
+    out.push('|');
+    fv::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args { named: &[("count", fv::i18n::Value::Float(props.amount * 2.0))], list: &[], plural: Some(props.count) }));
+    out.push('|');
+    fv::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args { named: &[("count", fv::i18n::Value::Int(0i64))], list: &[], plural: Some(props.count) }));
+    out.push('|');
+    fv::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args { named: &[("count", fv::i18n::Value::Int(7i64))], list: &[], plural: Some(props.count) }));
+    out.push('|');
+    fv::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args { named: &[("count", fv::i18n::Value::Int(0i64)), ("other", fv::i18n::Value::Int(5i64))], list: &[], plural: None }));
     out.push_str("</p><p>");
-    fv::escape_into(out, &*fv_i18n.t("shout", &fv::i18n::Args { named: &[], list: &[], plural: None }));
+    fv::escape_into(out, &fv_i18n.t("shout", &fv::i18n::Args { named: &[], list: &[], plural: None }));
     out.push_str("</p><!--]-->");
 }
 

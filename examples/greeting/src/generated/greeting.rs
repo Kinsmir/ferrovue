@@ -23,7 +23,7 @@ pub struct Props<'a> {
 impl<'a> Props<'a> {
     /// Props with its required fields, every optional one absent.
     pub fn new(name: impl Into<Cow<'a, str>>, unread: i64) -> Self {
-        Props { name: name.into(), unread: unread, note: None }
+        Props { name: name.into(), unread, note: None }
     }
 
     /// Set `note`, which is absent otherwise.
@@ -36,18 +36,18 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(64 + props.name.len() + props.note.as_deref().map_or(0, str::len));
+    out.reserve(70 + props.name.len() + props.note.as_deref().map_or(0, str::len));
     out.push_str("<p class=\"greeting\">Hello, ");
-    fv::escape_into(out, &*props.name);
-    out.push_str("!");
-    if (props.unread) != 0 {
+    fv::escape_into(out, &props.name);
+    out.push('!');
+    if props.unread != 0 {
         out.push_str("<b>");
         fv::push_int(out, props.unread);
         out.push_str(" new</b>");
     } else {
         out.push_str("<!---->");
     }
-    if let Some(n1) = (props.note.as_deref()).filter(|v| !(*v).is_empty()) {
+    if let Some(n1) = props.note.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<i>");
         fv::escape_into(out, n1);
         out.push_str("</i>");

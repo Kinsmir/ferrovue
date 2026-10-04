@@ -17,7 +17,7 @@ pub struct Props<'a> {
 impl<'a> Props<'a> {
     /// Props with its required fields.
     pub fn new(nav: super::nav::Props<'a>) -> Self {
-        Props { nav: nav }
+        Props { nav }
     }
 
 }
@@ -33,15 +33,7 @@ pub struct Slots<'s> {
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::Route<'_>) {
     out.reserve(33);
-    out.push_str("<div");
-    if ("app").is_empty() {
-        out.push_str(" id");
-    } else {
-        out.push_str(" id=\"");
-        fv::escape_into(out, "app");
-        out.push_str("\"");
-    }
-    out.push_str(">");
+    out.push_str("<div id=\"app\">");
     super::nav::render(out, &props.nav, fv_route);
     out.push_str("<main>");
     fv_slots.router_view.render_to(out);

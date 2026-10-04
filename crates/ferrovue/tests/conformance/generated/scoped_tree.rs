@@ -21,7 +21,7 @@ pub struct Props<'a> {
 impl<'a> Props<'a> {
     /// Props with its required fields.
     pub fn new(label: impl Into<Cow<'a, str>>, children: Vec<Props<'a>>) -> Self {
-        Props { label: label.into(), children: children }
+        Props { label: label.into(), children }
     }
 
 }
@@ -39,10 +39,10 @@ pub fn render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) {
     out.push_str("<li class=\"node\"");
     out.push_str(fv_attrs);
     out.push_str(" data-v-c34199e4>");
-    fv::escape_into(out, &*props.label);
-    if (((props.children).len() as i64)) != 0 {
+    fv::escape_into(out, &props.label);
+    if props.children.len() as i64 != 0 {
         out.push_str("<ul data-v-c34199e4><!--[-->");
-        for c_ref in (props.children).iter() {
+        for c_ref in props.children.iter() {
             let c = c_ref;
             super::scoped_tree::render_scoped(out, c, " data-v-c34199e4");
         }

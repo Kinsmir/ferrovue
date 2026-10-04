@@ -49,7 +49,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route
         out.push_str("\" class=\"");
         fv::class_into(out, false, &[if fv_link.exact { "active" } else { "" }, "brand"]);
         out.push_str("\">");
-        fv::escape_into(out, &*props.shop);
+        fv::escape_into(out, &props.shop);
         out.push_str("</a>");
     }
     out.push_str("<nav>");
@@ -67,7 +67,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route
         fv::class_into(out, false, &[if fv_link.exact { "active" } else { "" }]);
         out.push_str("\">All books</a>");
     }
-    out.push_str(" ");
+    out.push(' ');
     {
         let fv_link = {
             fv_route.link_named("book", &[("id", "dune")], "", "")

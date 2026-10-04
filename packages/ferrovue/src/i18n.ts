@@ -6,6 +6,7 @@ import { createParser } from "@intlify/message-compiler";
 import { type N, type Scope, type Val, fail, GenError, rustStr, STR } from "./model.ts";
 import { ctx } from "./context.ts";
 import { expr } from "./expr.ts";
+import { bare, strArg } from "./parens.ts";
 import { header } from "./rust.ts";
 
 /** A locale's messages, each parsed by vue-i18n's own message compiler, by dotted key. */
@@ -144,13 +145,13 @@ function i18nValue(s: Scope, n: N): string {
   const v = expr(s, n);
   switch (v.ty.k) {
     case "str":
-      return `fv::i18n::Value::Str(${v.code})`;
+      return `fv::i18n::Value::Str(${strArg(v.code)})`;
     case "int":
-      return `fv::i18n::Value::Int(${v.code})`;
+      return `fv::i18n::Value::Int(${bare(v.code)})`;
     case "float":
-      return `fv::i18n::Value::Float(${v.code})`;
+      return `fv::i18n::Value::Float(${bare(v.code)})`;
     case "bool":
-      return `fv::i18n::Value::Bool(${v.code})`;
+      return `fv::i18n::Value::Bool(${bare(v.code)})`;
     default:
       return fail(s.comp, "a value given to `t()` is a string, a number or a boolean that is present: narrow an optional one with `v-if` first", n);
   }
@@ -179,8 +180,8 @@ export function translate(s: Scope, args: N[], n: N): Val {
       const v = expr(s, a);
       if (v.ty.k === "str") fail(s.comp, "a default message given to `t()` is not supported: add the message to the locale files", a);
       if (v.ty.k !== "int") fail(s.comp, "the plural number given to `t()` is an integer", a);
-      plural = `Some(${v.code})`;
+      plural = `Some(${bare(v.code)})`;
     }
   }
-  return { code: `&*fv_i18n.t(${key.code}, &fv::i18n::Args { named: ${named}, list: ${list}, plural: ${plural} })`, ty: STR };
+  return { code: `&*fv_i18n.t(${strArg(key.code)}, &fv::i18n::Args { named: ${named}, list: ${list}, plural: ${plural} })`, ty: STR };
 }

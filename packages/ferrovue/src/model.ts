@@ -69,6 +69,11 @@ export interface Val {
   /** For an optional string a temporary owns: that `Option<Cow<str>>`, whose `.as_deref()` is
    * `code`. A setup `let` keeps this. */
   held?: string;
+  /** A number known at generation time: a literal, or literals JavaScript computed. */
+  num?: number;
+  /** For a string built by `format!`: its format string and arguments, which a string built from it
+   * joins rather than formatting it again. */
+  format?: { text: string; args: string[] };
 }
 
 export const STR: Ty = { k: "str" };
@@ -109,6 +114,13 @@ export function rustStr(s: string): string {
     else out += ch;
   }
   return out + '"';
+}
+
+/** One character as a Rust `char` literal. */
+export function rustChar(ch: string): string {
+  if (ch === "'") return "'\\''";
+  if (ch === '"') return `'"'`;
+  return `'${rustStr(ch).slice(1, -1)}'`;
 }
 
 export class GenError extends Error {}
@@ -225,6 +237,8 @@ export interface Scope {
   /** The Rust value of `_scopeId` inside slot content: the slot scope id the content is given, or
    * `null` where it is always empty. */
   sid: string | null;
+  /** Inside a `v-for` over a list of the props: the Rust name of its item, and the list. */
+  loop?: { item: string; over: string };
 }
 
 /** Where a node came from, which decides how its position is read: `source` for an AST parsed
