@@ -1,6 +1,6 @@
 /* The compiled template's statements: pushes, conditions, lists, child components and slots. */
 
-import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, BOOL, fail, GenError, INT, sameTy, snake } from "./model.ts";
+import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, BOOL, fail, GenError, INT, rustStr, sameTy, snake } from "./model.ts";
 import { ctx } from "./context.ts";
 import { markHome } from "./typescript.ts";
 import { cond, expr, fieldVal, narrowTo, presence, truthy } from "./expr.ts";
@@ -11,8 +11,12 @@ import { rustTy } from "./rust.ts";
 
 /** One `${...}` inside a pushed template literal. */
 export function slot(s: Scope, e: Emitter, n: N): void {
-  // A slot's scope id, for scoped styles, which an island never has.
-  if (n.type === "Identifier" && n.name === "_scopeId") return;
+  // The slot scope id slot content is given, written onto its elements: nothing unless the
+  // component it is given to passes one.
+  if (n.type === "Identifier" && n.name === "_scopeId") {
+    if (s.sid !== null) e.stmt(`out.push_str(${s.sid});`);
+    return;
+  }
   if (n.type === "CallExpression" && n.callee.type === "Identifier") {
     const a: N[] = n.arguments;
     switch (n.callee.name) {
@@ -121,15 +125,39 @@ export function push(s: Scope, e: Emitter, n: N): void {
           ? s.router.get(target.computed ? target.property.value : target.property.name)
           : undefined;
     if (routed === "RouterLink") routerLink(s, e, n);
-    else if (routed === "RouterView") e.stmt("fv_slots.router_view.render_to(out);");
+    else if (routed === "RouterView") {
+      // vue-router renders the page as its own root, which takes this component's id.
+      if (s.comp.scopeId !== null) fail(s.comp, "`<RouterView>` in a component with `<style scoped>` gives the page this component's id, which the server's page does not carry", n);
+      e.stmt("fv_slots.router_view.render_to(out);");
+    }
     else renderChild(s, e, n);
     return;
   }
   fail(s.comp, "this cannot be pushed", n);
 }
 
+/** The scope ids a child's root is handed, as a Rust `&str` (`null` for none), as
+ * `renderComponentSubTree` gathers them into its `attrs`: what this component passes on when the
+ * child is its root, unless the child sets `inheritAttrs: false`; this component's own id, the id of
+ * the instance that created the child's virtual node — slot content's included, which renders as
+ * the component that wrote it; and the slot scope id of the slot content the child is rendered in. */
+function childAttrs(s: Scope, child: Component, passesAttrs: boolean, inSlot: boolean, n: N): string | null {
+  const base = passesAttrs && child.inheritAttrs ? s.attrs : null;
+  const own = s.comp.scopeId;
+  const slotted = inSlot ? s.sid : null;
+  let code: string | null;
+  if (base === null && slotted === null) code = own === null ? null : rustStr(` ${own}`);
+  else if (own === null && slotted === null) code = base;
+  else code = `&fv::scope_attrs(${base ?? '""'}, ${own === null ? '""' : rustStr(own)}, ${slotted ?? '""'})`;
+  if (code !== null && !child.inherits) fail(s.comp, `${child.name} is handed scope ids its render does not take`, n);
+  return code;
+}
+
 export function renderChild(s: Scope, e: Emitter, n: N): void {
-  const [target, rawProps, slots] = n.arguments;
+  const [target, rawProps, slots, , slotScopeId] = n.arguments;
+  // The parent's `_attrs`, which it passes on to a child that is its root.
+  const isAttrs = (a: N): boolean => a?.type === "Identifier" && a.name === "_attrs";
+  const passesAttrs = isAttrs(rawProps) || (rawProps?.type === "CallExpression" && rawProps.arguments.some(isAttrs));
   let local: string | null = null;
   if (target.type === "MemberExpression" && target.object.name === "$setup") {
     local = target.computed ? target.property.value : target.property.name;
@@ -168,7 +196,7 @@ export function renderChild(s: Scope, e: Emitter, n: N): void {
     // The component itself, however the template reached it: its own `Props` struct is the type.
     const own = child.name === s.comp.name && v.ty.k === "struct" && v.ty.name === "Props";
     if (own || (v.ty.k === "child" && v.ty.name === child.name)) {
-      callChild(s, e, child, v.code, slots, n);
+      callChild(s, e, child, v.code, slots, childAttrs(s, child, passesAttrs, !!slotScopeId, n));
       return;
     }
     fail(s.comp, `child props must be an object literal, or \`v-bind\` of ${child.name}'s own \`Props\``, n);
@@ -200,7 +228,7 @@ export function renderChild(s: Scope, e: Emitter, n: N): void {
     const v = expr(s, node);
     return `${f.rust}: ${ownInto(s.comp, { ...v, ty: markHome(v.ty, s.comp.name) }, markHome(f.ty, child.name), node)}`;
   });
-  callChild(s, e, child, `&super::${child.module}::Props { ${inits.join(", ")} }`, slots, n);
+  callChild(s, e, child, `&super::${child.module}::Props { ${inits.join(", ")} }`, slots, childAttrs(s, child, passesAttrs, !!slotScopeId, n));
 }
 
 /** Whether a component takes a `Slots` argument. */
@@ -220,8 +248,9 @@ export function extraParams(c: Component): string {
 }
 
 /** `render(out, props[, slots][, route])` for a child, with the slot content this template gives
- * it as closures. */
-export function callChild(s: Scope, e: Emitter, child: Component, propsCode: string, slots: N, _n: N): void {
+ * it as closures; `render_scoped`, with the scope ids its root is handed last, for a child that may
+ * be handed some. */
+export function callChild(s: Scope, e: Emitter, child: Component, propsCode: string, slots: N, attrs: string | null): void {
   const given = new Map<string, N>();
   if (slots && slots.type !== "NullLiteral") {
     if (slots.type !== "ObjectExpression") fail(s.comp, "slots must be an object literal", slots);
@@ -235,12 +264,14 @@ export function callChild(s: Scope, e: Emitter, child: Component, propsCode: str
   }
   const m = `super::${child.module}`;
   const route =
-    (child.usesRoute ? ", fv_route" : "") + (child.usesStores ? ", fv_stores" : "") + (child.usesI18n ? ", fv_i18n" : "") + (child.usesTeleports ? ", fv_teleports" : "");
+    (child.usesRoute ? ", fv_route" : "") + (child.usesStores ? ", fv_stores" : "") + (child.usesI18n ? ", fv_i18n" : "") + (child.usesTeleports ? ", fv_teleports" : "") +
+    (child.inherits ? `, ${attrs ?? '""'}` : "");
+  const render = child.inherits ? "render_scoped" : "render";
   if (!takesSlots(child)) {
-    e.stmt(`${m}::render(out, ${propsCode}${route});`);
+    e.stmt(`${m}::${render}(out, ${propsCode}${route});`);
     return;
   }
-  e.open(`${m}::render(out, ${propsCode}, ${m}::Slots`);
+  e.open(`${m}::${render}(out, ${propsCode}, ${m}::Slots`);
   for (const name of child.slotNames) {
     const field = snake(name);
     const value = given.get(name);
@@ -251,6 +282,24 @@ export function callChild(s: Scope, e: Emitter, child: Component, propsCode: str
     const { body, param } = slotContent(s, value);
     const shape = child.slotShapes.get(name);
     const takesNone = param?.type === "Identifier" && param.name === "_";
+    // The slot scope id the child's outlets give the content, when they may give one.
+    const sid = child.passesSlotIds ? `fv_sid${++ctx.narrowCount}` : null;
+    const sidParam = sid === null ? "" : `, ${sid}: &str`;
+    /** The content's statements, then whether it pushed anything but comments. */
+    const content = (inner: Scope): void => {
+      if (staticallyFilled(inner, body)) {
+        statements({ ...inner, fill: false }, e, body);
+        e.stmt("true");
+      } else {
+        e.stmt("let mut filled = false;");
+        statements({ ...inner, fill: true }, e, body);
+        e.stmt("filled");
+      }
+    };
+    /** A parameter the content never reads, named so that Rust does not warn of it. */
+    const unread = (opened: number, binding: string | null): void => {
+      if (binding !== null && !e.reads(binding, opened + 1)) e.replace(opened, `${binding}:`, `_${binding}:`);
+    };
     if (shape) {
       // A scoped slot: content given the outlet's props, bound as the parent destructured them.
       const sp = `fv_sp${++ctx.narrowCount}`;
@@ -267,30 +316,30 @@ export function callChild(s: Scope, e: Emitter, child: Component, propsCode: str
         locals.set(param.name, { code: sp, ty });
       } else if (!takesNone) fail(s.comp, "slot props are a name or an object pattern", param);
       const life = shape.fields.some((f) => slotFieldBorrows(f.ty)) ? "<'_>" : "";
-      e.open(`${field}: Some(&|out: &mut String, ${sp}: &${m}::${shape.name}${life}| -> bool`);
+      e.open(`${field}: Some(&|out: &mut String, ${sp}: &${m}::${shape.name}${life}${sidParam}| -> bool`);
       const opened = e.lines.length - 1;
-      const inner = { ...s, locals };
-      if (staticallyFilled(inner, body)) {
-        statements({ ...inner, fill: false }, e, body);
-        e.stmt("true");
-      } else {
-        e.stmt("let mut filled = false;");
-        statements({ ...inner, fill: true }, e, body);
-        e.stmt("filled");
-      }
-      if (!e.reads(sp, opened + 1)) e.replace(opened, `${sp}:`, `_${sp}:`);
+      content({ ...s, locals, sid });
+      unread(opened, sp);
+      unread(opened, sid);
       e.close("),");
       continue;
     }
     if (!takesNone) fail(s.comp, `\`<slot${name === "default" ? "" : ` name="${name}"`}>\` in ${child.name} passes no props`, param);
-    if (staticallyFilled(s, body)) {
+    const inner: Scope = { ...s, sid };
+    if (sid !== null) {
+      e.open(`${field}: Some(fv::Slot::slotted(&|out: &mut String${sidParam}| -> bool`);
+      const opened = e.lines.length - 1;
+      content(inner);
+      unread(opened, sid);
+      e.close(")),");
+    } else if (staticallyFilled(inner, body)) {
       e.open(`${field}: Some(fv::Slot::new(&|out: &mut String|`);
-      statements({ ...s, fill: false }, e, body);
+      statements({ ...inner, fill: false }, e, body);
       e.close(")),");
     } else {
       e.open(`${field}: Some(fv::Slot::markup(&|out: &mut String| -> bool`);
       e.stmt("let mut filled = false;");
-      statements({ ...s, fill: true }, e, body);
+      statements({ ...inner, fill: true }, e, body);
       e.stmt("filled");
       e.close(")),");
     }
@@ -429,6 +478,19 @@ export function slotOutlet(s: Scope, e: Emitter, c: N): void {
   } else if (s.comp.slotShapes.has(slotName)) {
     fail(s.comp, `every ${outlet} passes the same props, of the same types`, c);
   }
+  // The slot scope id: `"data-v-…-s"` from a component with `:slotted()` styles, followed inside
+  // slot content by the id that content was given, or that id alone.
+  const id = c.arguments[6];
+  let slotted: string | null = null;
+  if (id?.type === "StringLiteral") slotted = rustStr(id.value);
+  else if (id?.type === "BinaryExpression" && id.operator === "+" && id.left.type === "StringLiteral" && id.right.type === "Identifier" && id.right.name === "_scopeId") {
+    slotted = s.sid === null ? rustStr(id.left.value) : `&[${rustStr(id.left.value)}, ${s.sid}].concat()`;
+  } else if (id?.type === "Identifier" && id.name === "_scopeId") slotted = s.sid;
+  else if (id && id.type !== "NullLiteral") fail(s.comp, "unexpected slot scope id", id);
+  if (s.comp.passesSlotIds) {
+    fn = fn === "fv::slot_into" ? "fv::slot_into_slotted" : "fv::scoped_slot_into_slotted";
+    args += `, ${slotted ?? '""'}`;
+  } else if (slotted !== null) fail(s.comp, "a slot scope id passed to content that does not take one", c);
   const call = (rest: string) => (s.fill ? `if ${fn}(out, ${args}, ${rest}) { filled = true; }` : `${fn}(out, ${args}, ${rest});`);
   if (fallback?.type === "NullLiteral" || !fallback) {
     e.stmt(call("None"));

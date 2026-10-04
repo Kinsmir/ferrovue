@@ -4,6 +4,7 @@
  *   node scripts/inspect.ts path/to/X.vue ['{"prop":"value"}']
  *
  * The component is compiled alone, in a temporary project, so it may import nothing but `vue`. */
+import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
@@ -20,10 +21,17 @@ const source = readFileSync(file, "utf8");
 
 const { descriptor } = parse(source, { filename: file });
 const script = compileScript(descriptor, { id: name });
+// A `<style scoped>` id as ferrovue computes it for the copy below, `c/Name.vue` in production mode,
+// so that both halves write the same one.
+const scopeId = descriptor.styles.some((st) => st.scoped)
+  ? `data-v-${createHash("sha256").update(`c/${name}.vue${source}`).digest("hex").slice(0, 8)}`
+  : undefined;
 const { code } = compileTemplate({
   source: descriptor.template!.content,
   filename: file,
-  id: name,
+  id: scopeId ?? name,
+  scoped: !!scopeId,
+  slotted: descriptor.slotted,
   ssr: true,
   ssrCssVars: [],
   compilerOptions: { bindingMetadata: script.bindings },
@@ -36,6 +44,7 @@ const runnable = join(import.meta.dirname, `.inspect-${process.pid}.ts`);
 try {
   writeFileSync(runnable, script.content);
   const component = ((await import(runnable)) as { default: Component }).default;
+  if (scopeId) (component as { __scopeId?: string }).__scopeId = scopeId;
   attachSsrRender(file, name, component);
   console.log("── Vue render ──\n" + (await renderToString(createSSRApp({ render: () => h(component, props) }))));
 } catch (e) {

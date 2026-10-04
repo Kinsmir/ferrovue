@@ -1,6 +1,7 @@
 {
   "components": "client/components",
   "out": "src/generated",
+  "scopeId": "filepath",
   "stores": "client/stores",
   "router": {
     "routes": "client/routes.json",

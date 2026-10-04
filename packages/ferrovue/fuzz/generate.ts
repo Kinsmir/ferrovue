@@ -124,13 +124,32 @@ export type Node =
    * `v-else`. */
   | { k: "if"; branches: { cond: Expr | null; node: Node & { k: "el" } }[] }
   /** `v-for="(item, index) in source"` on the element. */
-  | { k: "for"; head: string; node: Node & { k: "el" } };
+  | { k: "for"; head: string; node: Node & { k: "el" } }
+  /** A component of the fuzzer's own (`HELPERS`), its default slot given `kids`. */
+  | { k: "child"; name: HelperName; kids: Node[] };
+
+/** Small components written beside every generated one, which it may render: what scope ids reach
+ * depends on how they are built — a single root, a slot, a root that is a component forwarding its
+ * slot, a fragment, a root that is another component. */
+export type HelperName = "FzLeaf" | "FzBox" | "FzFwd" | "FzPair" | "FzRoot";
+
+const HELPERS: Record<HelperName, { template: string; imports: HelperName[]; slot: boolean }> = {
+  FzLeaf: { template: `<b class="leaf">leaf</b>`, imports: [], slot: false },
+  FzBox: { template: `<div class="box"><slot>box <i>fallback</i></slot></div>`, imports: [], slot: true },
+  FzFwd: { template: `<FzBox><slot /></FzBox>`, imports: ["FzBox"], slot: true },
+  FzPair: { template: `<i>one</i><i>two</i>`, imports: [], slot: false },
+  FzRoot: { template: `<FzLeaf />`, imports: ["FzLeaf"], slot: false },
+};
 
 export interface Component {
   name: string;
   ifaces: Iface[];
   props: { name: string; spec: Spec }[];
   template: Node[];
+  /** Whether it has `<style scoped>`. */
+  scoped: boolean;
+  /** Whether each helper has `<style scoped>`, and whether those use `:slotted()`. */
+  helpers: Record<HelperName, { scoped: boolean; slotted: boolean }>;
 }
 
 export interface Case {
@@ -202,6 +221,8 @@ function printNode(n: Node, indent: string, extra: string[] = []): string {
         .join(`\n${indent}`);
     case "for":
       return printNode(n.node, indent, [`v-for="${n.head}"`]);
+    case "child":
+      return n.kids.length ? `<${n.name}>${n.kids.map((k) => printNode(k, indent + "  ")).join("")}</${n.name}>` : `<${n.name} />`;
     case "el": {
       const attrs = [...extra, ...n.attrs.map(printAttr)];
       const open = `<${n.tag}${attrs.map((a) => " " + a).join("")}`;
@@ -212,10 +233,53 @@ function printNode(n: Node, indent: string, extra: string[] = []): string {
   }
 }
 
+/** `<style scoped>`, with a `:slotted()` rule or without. */
+const scopedStyle = (slotted: boolean): string[] => ["", "<style scoped>", slotted ? ":slotted(i) { color: red; }" : "b { color: red; }", "</style>"];
+
+/** The helpers a template renders itself, in order of name. */
+function rendered(template: Node[]): HelperName[] {
+  const used = new Set<HelperName>();
+  const walk = (ns: Node[]): void => {
+    for (const n of ns) {
+      if (n.k === "child") {
+        used.add(n.name);
+        walk(n.kids);
+      } else if (n.k === "el") walk(n.kids);
+      else if (n.k === "if") walk(n.branches.map((b) => b.node));
+      else if (n.k === "for") walk([n.node]);
+    }
+  };
+  walk(template);
+  return [...used].toSorted();
+}
+
+/** The helpers a template renders, and those they render in turn. */
+function helpersUsed(template: Node[]): HelperName[] {
+  const used = new Set<HelperName>();
+  const add = (name: HelperName): void => {
+    used.add(name);
+    HELPERS[name].imports.forEach(add);
+  };
+  rendered(template).forEach(add);
+  return [...used].toSorted();
+}
+
+/** The `.vue` file of each helper the component renders. */
+export function helperFiles(c: Component): [string, string][] {
+  return helpersUsed(c.template).map((name) => {
+    const h = HELPERS[name];
+    const flags = c.helpers[name];
+    const lines = ['<script setup lang="ts">', ...h.imports.map((i) => `import ${i} from "./${i}.vue";`), "defineProps<{}>();", "</script>", "", `<template>${h.template}</template>`];
+    if (flags.scoped) lines.push(...scopedStyle(flags.slotted && h.slot));
+    return [`${name}.vue`, lines.join("\n") + "\n"];
+  });
+}
+
 /** The `.vue` file. */
 export function printComponent(c: Component): string {
   const float = c.props.some((p) => usesFloat(p.spec)) || c.ifaces.some((i) => i.fields.some((f) => usesFloat(f.spec)));
   const lines = ['<script setup lang="ts">'];
+  for (const name of rendered(c.template)) lines.push(`import ${name} from "./${name}.vue";`);
   if (float) lines.push('import type { Float } from "ferrovue/types";', "");
   for (const i of c.ifaces) {
     lines.push(`interface ${i.name} {`);
@@ -226,7 +290,9 @@ export function printComponent(c: Component): string {
   lines.push(props.length ? `defineProps<{ ${props.join("; ")} }>();` : "defineProps<{}>();");
   lines.push("</script>", "", "<template>");
   for (const n of c.template) lines.push("  " + printNode(n, "  "));
-  lines.push("</template>", "");
+  lines.push("</template>");
+  if (c.scoped) lines.push(...scopedStyle(false));
+  lines.push("");
   return lines.join("\n");
 }
 
@@ -778,7 +844,16 @@ class Gen {
       [depth < 5 ? 4 : 0, () => this.element(depth, ctx)],
       [depth < 5 ? 2 : 0, () => this.ifNode(depth, ctx)],
       [depth < 5 ? 2 : 0, () => this.forNode(depth, ctx)],
+      [depth < 4 && ctx === "block" ? 2 : 0, () => this.child(depth)],
     ])();
+  }
+
+  /** One of the helpers, with content for its slot when it has one. */
+  child(depth: number): Node {
+    const r = this.r;
+    this.nodes++;
+    const name = r.pick<HelperName>(["FzLeaf", "FzBox", "FzFwd", "FzPair", "FzRoot"]);
+    return { k: "child", name, kids: HELPERS[name].slot && r.chance(0.7) ? this.kids(depth + 1, "block") : [] };
   }
 
   ifNode(depth: number, ctx: "block" | "inline" | "list"): Node {
@@ -918,7 +993,12 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
   const template: Node[] = [];
   for (let n = r.weighted([[6, 1], [1, 2], [1, 3]]); n > 0; n--) template.push(g.node(0, "block"));
 
-  const component = prune({ name, ifaces, props, template });
+  // Scoped styles, on the component and on each helper, `:slotted()` ones on those with a slot.
+  const scoped = r.chance(0.35);
+  const helpers = Object.fromEntries(
+    (Object.keys(HELPERS) as HelperName[]).map((h) => [h, { scoped: r.chance(0.5), slotted: r.chance(0.5) }]),
+  ) as Component["helpers"];
+  const component = prune({ name, ifaces, props, template, scoped, helpers });
   const fx: Record<string, unknown>[] = [];
   for (let i = 0; i < fixtures; i++) fx.push(randomFixture(r, component, i === 0));
   return { component, fixtures: fx };
@@ -964,6 +1044,7 @@ function* exprSlots(nodes: Node[]): Generator<{ get: () => Expr; set: (e: Expr) 
         yield* exprSlots([b.node]);
       }
     } else if (n.k === "for") yield* exprSlots([n.node]);
+    else if (n.k === "child") yield* exprSlots(n.kids);
     else if (n.k === "el") {
       for (const a of n.attrs) {
         if (a.k === "bind") yield { get: () => a.e, set: (e) => (a.e = e) };
@@ -1010,7 +1091,7 @@ export function componentShrinks(c: Component): Component[] {
     const acc: Node[][] = [comp.template];
     const walk = (ns: Node[]): void => {
       for (const n of ns) {
-        if (n.k === "el") {
+        if (n.k === "el" || n.k === "child") {
           acc.push(n.kids);
           walk(n.kids);
         } else if (n.k === "if") n.branches.forEach((b) => walk([b.node]));
@@ -1035,7 +1116,7 @@ export function componentShrinks(c: Component): Component[] {
   // Put a plain element's children (or a directive's element) in its place.
   ls.forEach((l, li) =>
     l.forEach((n, ni) => {
-      if (n.k === "el" && !n.void) edit((x) => (lists(x)[li]!.splice(ni, 1, ...(lists(x)[li]![ni] as Node & { k: "el" }).kids), true));
+      if ((n.k === "el" && !n.void) || n.k === "child") edit((x) => (lists(x)[li]!.splice(ni, 1, ...(lists(x)[li]![ni] as Node & { kids: Node[] }).kids), true));
       if (n.k === "for") edit((x) => (lists(x)[li]!.splice(ni, 1, (lists(x)[li]![ni] as Node & { k: "for" }).node), true));
       if (n.k === "if") {
         // One branch's element in place of the whole chain, its test dropped.
@@ -1064,6 +1145,7 @@ export function componentShrinks(c: Component): Component[] {
           walk(n.kids);
         } else if (n.k === "if") walk(n.branches.map((b) => b.node));
         else if (n.k === "for") walk([n.node]);
+        else if (n.k === "child") walk(n.kids);
       }
     };
     walk(comp.template);
@@ -1084,6 +1166,12 @@ export function componentShrinks(c: Component): Component[] {
       }
     });
   });
+  // Drop a scoped style, or a `:slotted()` rule.
+  if (c.scoped) edit((x) => ((x.scoped = false), true));
+  for (const h of helpersUsed(c.template)) {
+    if (c.helpers[h].scoped) edit((x) => ((x.helpers[h].scoped = false), true));
+    if (c.helpers[h].scoped && c.helpers[h].slotted && HELPERS[h].slot) edit((x) => ((x.helpers[h].slotted = false), true));
+  }
   // Make one expression smaller.
   const slots = [...exprSlots(c.template)];
   slots.forEach((s, si) => {
@@ -1162,5 +1250,5 @@ export function fixtureShrinks(c: Component, fixture: Record<string, unknown>): 
 }
 
 export function caseSize(c: Component, fixture: Record<string, unknown>): number {
-  return printComponent(c).length + fixtureJson(fixture).length;
+  return printComponent(c).length + helperFiles(c).reduce((n, [, text]) => n + text.length, 0) + fixtureJson(fixture).length;
 }

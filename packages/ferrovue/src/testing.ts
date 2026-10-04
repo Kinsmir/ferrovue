@@ -15,10 +15,18 @@ export { fixtureApp, readFixture, routeRecords, type Fixture, type RouteEntry, t
 export function attachSsrRender(file: string, name: string, component: Component): void {
   const { descriptor } = parseSfc(readFileSync(file, "utf8"), { filename: file });
   const script = compileScript(descriptor, { id: name });
+  // A `<style scoped>` component's id is the one `@vitejs/plugin-vue` gave it, which its client
+  // build carries and which ferrovue computes the same way.
+  const scopeId = (component as { __scopeId?: string }).__scopeId;
+  if (!scopeId && descriptor.styles.some((st) => st.scoped)) {
+    throw new Error(`${file}: a \`<style scoped>\` component without \`__scopeId\`: load it through \`@vitejs/plugin-vue\``);
+  }
   const { code } = compileTemplate({
     source: descriptor.template!.content,
     filename: file,
-    id: name,
+    id: scopeId ?? name,
+    scoped: !!scopeId,
+    slotted: descriptor.slotted,
     ssr: true,
     ssrCssVars: [],
     compilerOptions: { bindingMetadata: script.bindings },

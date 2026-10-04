@@ -11,7 +11,7 @@
  *
  * Nothing here reads a file or compiles anything, so a browser bundle can import it too: the
  * browser hydration tests (`packages/ferrovue/browser/`) build the same app there. */
-import { createSSRApp, createStaticVNode, defineComponent, h, type App, type Component } from "vue";
+import { createApp, createSSRApp, createStaticVNode, defineComponent, h, type App, type Component } from "vue";
 import { createPinia } from "pinia";
 import { createMemoryHistory, createRouter, type RouteRecordRaw } from "vue-router";
 import { createI18n } from "vue-i18n";
@@ -57,6 +57,9 @@ export interface RouterOptions {
   /** vue-i18n, when the project translates: every locale's messages, the default locale, and the
    * fallbacks. */
   i18n?: { messages: Record<string, unknown>; locale: string; fallbackLocale?: string | string[] };
+  /** Render on the client with `createApp`, rather than hydrate what the server rendered: the scope
+   * ids a fresh client render writes, which the server's must equal for scoped styles to apply. */
+  client?: boolean;
 }
 
 /** Route records for vue-router, every route — nested ones too — given the fixture's view. */
@@ -80,7 +83,7 @@ export async function fixtureApp(
       .filter(([name]) => name !== "routerView")
       .map(([name, html]) => [name, () => [staticNode(html)]]),
   );
-  const app = createSSRApp({ render: () => h(component, fixture.props, slots) });
+  const app = (options.client ? createApp : createSSRApp)({ render: () => h(component, fixture.props, slots) });
   // As the client hydrates: the state the server rendered with, set before any store is first used.
   const pinia = createPinia();
   pinia.state.value = structuredClone(fixture.stores) as typeof pinia.state.value;

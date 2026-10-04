@@ -199,5 +199,10 @@ export function storeHome(file: string): Component {
     aliases: new Map(),
     importedTypes: new Map(),
     slotShapes: new Map(),
+    scopeId: null,
+    slotted: false,
+    inheritAttrs: true,
+    inherits: false,
+    passesSlotIds: false,
   };
 }

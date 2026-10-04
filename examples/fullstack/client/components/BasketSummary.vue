@@ -1,5 +1,5 @@
 <script setup lang="ts">
-/* Reads the Pinia store on the server: its state and its getters. */
+/* Reads the Pinia store on the server: its state and its getters. Its styles are scoped. */
 import { storeToRefs } from "pinia";
 import { useBasket } from "../stores/basket";
 
@@ -11,3 +11,12 @@ const { count, empty } = storeToRefs(basket);
 <template>
   <p class="basket" :class="{ empty }">{{ label }} of {{ basket.owner }}: <b>{{ count }}</b> {{ count === 1 ? "book" : "books" }}</p>
 </template>
+
+<style scoped>
+.basket {
+  margin: 0;
+}
+.empty b {
+  color: var(--muted);
+}
+</style>

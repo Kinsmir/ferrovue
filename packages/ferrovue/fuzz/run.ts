@@ -25,6 +25,7 @@ import {
   fixtureJson,
   fixtureShrinks,
   generateCase,
+  helperFiles,
   printComponent,
 } from "./generate.ts";
 
@@ -152,11 +153,14 @@ function evaluate(batch: string, items: Item[]): Map<string, Evaluated> {
     mkdirSync(join(dir, "components"), { recursive: true });
     mkdirSync(join(dir, "generated"), { recursive: true });
     writeFileSync(join(dir, "components", `${item.component.name}.vue`), printComponent(item.component));
+    for (const [file, text] of helperFiles(item.component)) writeFileSync(join(dir, "components", file), text);
     item.fixtures.forEach((f, i) => writeFileSync(join(dir, `fixture${i}.json`), fixtureJson(f)));
     const ev: Evaluated = { refused: null, compileError: null, outcomes: [] };
     results.set(item.id, ev);
     try {
-      for (const [file, text] of generate(dir, { components: "components", out: "generated" })) {
+      // Scope ids as `@vitejs/plugin-vue` gives them in the Vue half: development mode, from its root
+      // (`vitest.config.ts`).
+      for (const [file, text] of generate(dir, { components: "components", out: "generated", scopeId: "filepath", viteRoot: import.meta.dirname })) {
         writeFileSync(join(dir, "generated", file), plant && file !== "mod.rs" ? plantBug(text) : text);
       }
       live.push(item);
@@ -305,6 +309,7 @@ function save(f: Failure): string {
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, `${f.component.name}.vue`), printComponent(f.component));
+  for (const [file, text] of helperFiles(f.component)) writeFileSync(join(dir, file), text);
   writeFileSync(join(dir, "fixture.json"), fixtureJson(f.fixture));
   const o = f.outcome;
   if (o && "vue" in o) writeFileSync(join(dir, "vue.html"), o.vue);

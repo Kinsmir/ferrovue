@@ -147,8 +147,12 @@ mod tests {
             html.contains(r#"<a aria-current="page" href="/" class="active brand">"#),
             "{html}"
         );
-        // The store's state is rendered, through its getter, and sent for the client to start from.
-        assert!(html.contains("Basket of guest: <b>1</b> book"), "{html}");
+        // The store's state is rendered, through its getter, and sent for the client to start from;
+        // `data-v-0a3b973f` is the id of the summary's scoped styles, a hash of its path.
+        assert!(
+            html.contains("Basket of guest: <b data-v-0a3b973f>1</b> book"),
+            "{html}"
+        );
         assert!(
             html.contains(r#"<script type="application/json" id="__pinia">{"basket":{"owner":"guest","ids":["solaris"]}}</script>"#),
             "{html}"

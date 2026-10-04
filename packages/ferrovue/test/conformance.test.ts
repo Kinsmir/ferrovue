@@ -33,6 +33,16 @@ it("has generated Rust that is what the generator writes now", () => {
   expect(readdirSync(dir).toSorted()).toEqual([...generate(ROOT).keys()].toSorted());
 });
 
+it("gives each `<style scoped>` component the id `@vitejs/plugin-vue` gave its client build", () => {
+  const scoped = [...components].filter(([, c]) => (c as { __scopeId?: string }).__scopeId);
+  expect(scoped.length).toBeGreaterThanOrEqual(5);
+  const files = generate(ROOT);
+  for (const [name, c] of scoped) {
+    const module = name.replace(/[A-Z]/g, (ch) => "_" + ch.toLowerCase()).replace(/^_/, "");
+    expect(files.get(`${module}.rs`), name).toContain(` ${(c as { __scopeId: string }).__scopeId}`);
+  }
+});
+
 describe("Vue renders each fixture to its recorded HTML", () => {
   for (const c of cases) {
     it(`${c.component}/${c.name}`, async () => {
@@ -71,6 +81,34 @@ describe.skipIf(WRITE)("the recorded HTML hydrates without a mismatch", () => {
       app.mount("#root");
       expect(warnings.filter((w) => /hydrat|mismatch/i.test(w))).toEqual([]);
       expect(document.getElementById("root")!.firstChild).toBe(before);
+      app.unmount();
+    });
+  }
+});
+
+/* Hydration keeps the server's attributes without comparing scope ids, so a wrong one would hydrate
+ * cleanly and leave the scoped styles unapplied. Each element of the recorded HTML must carry the
+ * ids a fresh client render gives it — except where Vue's own server render differs from its client
+ * render, as `ScopedQuirks` shows: a `:slotted()` component's slot fallback, and a root with
+ * `inheritAttrs: false` under a scoped component's root. */
+const CLIENT_DIFFERS = new Set(["ScopedQuirks", "ScopedCard/empty.json", "ScopedShelf/empty.json", "ScopedRack/empty.json", "PlainForward/empty.json"]);
+describe.skipIf(WRITE)("the recorded HTML carries the scope ids the client renders", () => {
+  const ids = (root: ParentNode): string[] =>
+    [...root.querySelectorAll("*")].map((el) => `${el.tagName} ${el.getAttributeNames().filter((a) => a.startsWith("data-v-")).toSorted().join(" ")}`);
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+  const checked = cases.filter((c) => c.html.includes(" data-v-") && !CLIENT_DIFFERS.has(c.component) && !CLIENT_DIFFERS.has(`${c.component}/${c.name}`));
+  for (const c of checked) {
+    it(`${c.component}/${c.name}`, async () => {
+      const [main, teleported] = c.html.split(TELEPORTS);
+      const targets = Object.keys(JSON.parse(teleported ?? "{}") as Record<string, string>);
+      document.body.innerHTML = `<div id="root"></div>${targets.map((t) => `<div id="${t.replace(/^#/, "")}"></div>`).join("")}`;
+      const app = await fixtureApp(components.get(c.component)!, readFixture(c.json), ROUTES, { ...OPTIONS, client: true });
+      app.mount("#root");
+      const recorded = document.createElement("template");
+      recorded.innerHTML = main!;
+      expect(ids(recorded.content)).toEqual(ids(document.getElementById("root")!));
       app.unmount();
     });
   }

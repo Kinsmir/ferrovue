@@ -27,14 +27,14 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::Stores<'_>) {
-    out.reserve(36 + props.label.len());
+    out.reserve(68 + props.label.len());
     out.push_str("<p class=\"basket");
     fv::class_into(out, true, &[if ((((((fv_stores.basket.ids).len() as i64)) as f64) == ((0i64) as f64))) { "empty" } else { "" }]);
-    out.push_str("\">");
+    out.push_str("\" data-v-0a3b973f>");
     fv::escape_into(out, &*props.label);
     out.push_str(" of ");
     fv::escape_into(out, &*fv_stores.basket.owner);
-    out.push_str(": <b>");
+    out.push_str(": <b data-v-0a3b973f>");
     fv::push_int(out, ((fv_stores.basket.ids).len() as i64));
     out.push_str("</b> ");
     fv::escape_into(out, if ((((((fv_stores.basket.ids).len() as i64)) as f64) == ((1i64) as f64))) { "book" } else { "books" });

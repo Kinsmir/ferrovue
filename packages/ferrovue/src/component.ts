@@ -1,9 +1,10 @@
 /* One `.vue` file read: its props, models, imported types, and Vue's SSR compilation of its template. */
 
 import { compileScript, compileTemplate, parse as parseSfc } from "@vue/compiler-sfc";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { SourceMapConsumer } from "source-map-js";
-import { basename, relative } from "node:path";
+import { basename, relative, resolve, sep } from "node:path";
 import { type Component, type N, fail, opt, snake, tagAst } from "./model.ts";
 import { ctx } from "./context.ts";
 import { typesImports, declareTypes, defaultValue, definePropsType, readTypeFile, resolveImport, runtimeDefaults, structOf, tyOfTs } from "./typescript.ts";
@@ -16,6 +17,38 @@ function vueErrorNode(err: unknown, within?: { line: number; column: number }): 
   const { line, column } = loc.start;
   const at = !within ? { line, column: column - 1 } : line === 1 ? { line: within.line, column: within.column - 1 + column - 1 } : { line: within.line + line - 1, column: column - 1 };
   return { type: "VueError", loc: { start: at }, __fv: "source" };
+}
+
+/** `getHash` in `@vitejs/plugin-vue`: the first 8 hex digits of the SHA-256 of the file's path from
+ * Vite's root, with `/` between its parts, followed in `"filepath-source"` mode by its source. */
+function scopeHash(file: string, source: string): string {
+  const path = relative(ctx.viteRoot, resolve(file)).split(sep).join("/");
+  return createHash("sha256")
+    .update(ctx.scopeId === "filepath" ? path : path + source)
+    .digest("hex")
+    .slice(0, 8);
+}
+
+/** `inheritAttrs` as `defineOptions({ inheritAttrs })` or a plain `<script>`'s `export default`
+ * sets it: a literal, since it decides what reaches the root. */
+function inheritAttrs(comp: Component, statements: N[]): boolean {
+  let found = true;
+  for (const st of statements) {
+    const call = st.type === "ExpressionStatement" ? st.expression : null;
+    const options =
+      call?.type === "CallExpression" && call.callee.type === "Identifier" && call.callee.name === "defineOptions"
+        ? call.arguments[0]
+        : st.type === "ExportDefaultDeclaration"
+          ? st.declaration
+          : null;
+    if (options?.type !== "ObjectExpression") continue;
+    for (const p of options.properties) {
+      if (p.type !== "ObjectProperty" || p.computed || (p.key.name ?? p.key.value) !== "inheritAttrs") continue;
+      if (p.value.type !== "BooleanLiteral") fail(comp, "`inheritAttrs` is `true` or `false`", p.value);
+      found = p.value.value;
+    }
+  }
+  return found;
 }
 
 export function readComponent(file: string, root: string): { comp: Component; ast: N[]; ssr: string } {
@@ -48,20 +81,26 @@ export function readComponent(file: string, root: string): { comp: Component; as
     aliases: new Map(),
     importedTypes: new Map(),
     slotShapes: new Map(),
+    scopeId: null,
+    slotted: false,
+    inheritAttrs: true,
+    inherits: false,
+    passesSlotIds: false,
   };
   comp.source = source;
   if (errors.length) fail(comp, String(errors[0]), vueErrorNode(errors[0]));
   if (!descriptor.scriptSetup || !descriptor.template) {
     fail(comp, "an island needs `<script setup lang=\"ts\">` and a `<template>`");
   }
-  // A global `<style>` block changes no markup. A scoped one adds `data-v-…` attributes whose hash
-  // the bundler chooses, a CSS module renames classes, and `v-bind()` in CSS writes variables onto
-  // the root: none of which the server can know.
+  // A global `<style>` block changes no markup. A scoped one adds `data-v-…` attributes, whose id is
+  // computed here as the bundler computes it. A CSS module renames classes, and `v-bind()` in CSS
+  // writes variables onto the root, neither of which the server reproduces.
   for (const st of descriptor.styles) {
-    if (st.scoped) fail(comp, "`<style scoped>` adds `data-v-` attributes whose id the bundler chooses; use a global `<style>` or a stylesheet");
-    if (st.module) fail(comp, "`<style module>` renames classes in the bundler; use a global `<style>` or a stylesheet");
+    if (st.module) fail(comp, "`<style module>` renames classes in the bundler; use a global or scoped `<style>`, or a stylesheet");
   }
   if (descriptor.cssVars.length) fail(comp, "`v-bind()` in `<style>` sets variables the server does not render; bind `:style` instead");
+  if (descriptor.styles.some((st) => st.scoped)) comp.scopeId = `data-v-${scopeHash(file, source)}`;
+  comp.slotted = descriptor.slotted;
 
   const script = compileScript(descriptor, { id: name });
   const ast: N[] = script.scriptSetupAst ?? [];
@@ -81,6 +120,7 @@ export function readComponent(file: string, root: string): { comp: Component; as
     }
   }
   typesImports(comp, [...plainAst, ...ast]);
+  comp.inheritAttrs = inheritAttrs(comp, [...plainAst, ...ast]);
 
   // Types imported from elsewhere: a store's file, a shared `.ts` file, or another component.
   for (const st of [...plainAst, ...ast]) {
@@ -165,7 +205,11 @@ export function readComponent(file: string, root: string): { comp: Component; as
   const compiled = compileTemplate({
     source: descriptor.template.content,
     filename: file,
-    id: name,
+    // As `@vitejs/plugin-vue` compiles it: the scope id written onto every element, and passed to
+    // slot content only with `:slotted()` styles.
+    id: comp.scopeId ?? name,
+    scoped: comp.scopeId !== null,
+    slotted: comp.slotted,
     ssr: true,
     ssrCssVars: [],
     compilerOptions: { bindingMetadata: script.bindings, sourceMap: true },

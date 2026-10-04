@@ -63,6 +63,8 @@ crate that includes it needs **edition 2024**.
 | `helpers` | no | `{ module, functions }`: functions a template may call, each mapped to a Rust twin |
 | `i18n` | no | vue-i18n: `{ messages, locale?, fallbackLocale? }`, the directory of locale files (`en.json`, `nl.json`), the default locale and the fallbacks |
 | `clientDirectives` | no | Custom directives with no server output (no `getSSRProps`), by name without `v-`: `["focus"]` |
+| `scopeId` | no | How a `<style scoped>` id is hashed, as `@vitejs/plugin-vue` hashes it: `"filepath-source"` (the default, the plugin's in a production build) or `"filepath"`. See [Scoped styles](#scoped-styles) |
+| `viteRoot` | no | Vite's root, relative to this file's directory, from which a component's path is hashed (default `.`) |
 
 ### 3. Write a component
 
@@ -133,6 +135,7 @@ ferrovue compiles `<script setup lang="ts">` components. Props are declared by t
 | Attributes | static and bound attributes, boolean attributes, `:hidden`, `data-*` and `aria-*`, `v-bind` objects |
 | `class` | strings, arrays, objects (`{ active: on }`, computed keys), `cond && "x"`, `cond ? "x" : null`, merged with a static `class` |
 | `style` | objects (camelCase or kebab-case keys, `--custom` properties), arrays of objects, strings, merged with a static `style`, and `v-show`; later values override earlier ones as in Vue. A global `<style>` block is allowed |
+| Scoped styles | `<style scoped>`: the id on every element, on child components' roots (a root that is itself a component, fragments, recursion and `inheritAttrs: false` as Vue renders them) and, from a component with `:slotted()` rules, on the slot content it is given, forwarded slots included; inside `<Transition>`, `<KeepAlive>`, `<Teleport>` and `v-if`; on `<RouterLink>` and what it holds, as vue-router renders them |
 | Components | imported child components, `v-bind` of a child's own `Props`, `v-model` on a child's `defineModel`, recursion |
 | Slots | default and named slots, fallbacks, `$slots.name` tests, scoped slots (`<slot :item="x">` and `#item="{ item }"` or `v-slot="props"`), whose props a parent can hand to its own children |
 | Forms | `v-model` on text inputs, checkboxes, radios, `<select>` and `<textarea>` (renders the initial state) |
@@ -144,7 +147,10 @@ ferrovue compiles `<script setup lang="ts">` components. Props are declared by t
 
 Refused at compile time, each with an error that names the construct:
 
-- `<style scoped>`, `<style module>`, and `v-bind()` in CSS
+- `<style module>`, and `v-bind()` in CSS
+- `<RouterView>` in a component with `<style scoped>`, which would give the page that component's
+  id; and, since vue-router renders a link from virtual nodes, a `<slot>` inside a `<RouterLink>`
+  that takes scope ids, or an element inside one in slot content given a `:slotted()` id
 - `<component :is>`
 - `<RouterLink custom>`, slot props that are array literals, defaults in destructured slot props, and outlets of one slot that pass different props
 - custom directives not listed in `clientDirectives`
@@ -157,6 +163,42 @@ Refused at compile time, each with an error that names the construct:
 
 An object prop handed to a child component is cloned. Its strings are `Cow`s, so borrowed ones
 cost nothing to copy.
+
+### Scoped styles
+
+A `<style scoped>` component's elements carry `data-v-<id>`, and its CSS is rewritten by the client
+build to select them. The server has to write the id the client build chose, which is not something
+the browser checks when it hydrates: a wrong id hydrates cleanly and leaves the styles unapplied. So
+ferrovue computes it as `@vitejs/plugin-vue` does — the first 8 hex digits of a SHA-256 of the
+`.vue` file's path from Vite's root, followed by its source unless only the path is hashed — and the
+two must be configured alike:
+
+| `@vitejs/plugin-vue` | `ferrovue.config.json` |
+|---|---|
+| `vite build` with the default options | `"scopeId": "filepath-source"` (the default) |
+| `features: { componentIdGenerator: "filepath" }` (any mode), or the dev server | `"scopeId": "filepath"` |
+
+Set `viteRoot` when Vite's root is not the directory holding `ferrovue.config.json`. The Vite
+plugin (`ferrovue/vite`) compares the two when a component has scoped styles: a build in which they
+differ fails, and the dev server warns.
+
+The default is the plugin's production behaviour because the production build is the one readers
+get: with every option left alone, its styles apply. But plugin-vue hashes the path alone in its dev
+server, so with the default a page rendered during development carries other ids than the dev
+client and shows unstyled. The recommended setup is `componentIdGenerator: "filepath"` with
+`"scopeId": "filepath"`, as [`examples/fullstack`](examples/fullstack) does: the ids are then the
+same in development and production, and do not change, nor change the generated Rust, whenever a
+component's source does.
+
+A component a parent may hand ids to has a `render_scoped(…, attrs)` beside `render`, which
+generated parents call. A component whose outlets pass a slot scope id (`:slotted()`) takes slot
+content that is given it: `Slot::slotted` for a slot, a third `&str` parameter for a scoped slot's
+closure. `render`, and content from Rust, need none of it: markup written from Rust carries no ids.
+
+Where Vue's own server render gives other ids than its client render, ferrovue writes the server's:
+a `:slotted()` component's slot fallback, which only the client gives the slot scope id, and a
+component with `inheritAttrs: false` that is another component's root, whose root only the client
+gives the ids that other component inherits.
 
 ### Translating
 

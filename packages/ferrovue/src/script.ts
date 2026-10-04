@@ -92,6 +92,8 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
     i18nT: new Set(),
     fill: false,
     vnode: false,
+    attrs: comp.inherits ? "fv_attrs" : null,
+    sid: null,
   };
   const lets: string[] = [];
   const storeHooks = new Map<string, Store>();

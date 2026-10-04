@@ -215,6 +215,9 @@ enum Body<'s> {
     Content(&'s dyn Fn(&mut String)),
     /// A generated parent's markup, which reports whether it wrote anything but comments.
     Markup(&'s dyn Fn(&mut String) -> bool),
+    /// As `Markup`, for a component whose outlets pass a slot scope id (`:slotted` styles): the
+    /// content is given the id, ` data-v-…-s`, to write onto its elements.
+    Slotted(&'s dyn Fn(&mut String, &str) -> bool),
 }
 
 impl<'s> Slot<'s> {
@@ -263,6 +266,15 @@ impl<'s> Slot<'s> {
         }
     }
 
+    /// A generated parent's slot content for a component whose outlets pass a slot scope id: given
+    /// the id, returning whether it pushed anything but a comment.
+    #[doc(hidden)]
+    pub fn slotted(render: &'s dyn Fn(&mut String, &str) -> bool) -> Self {
+        Slot {
+            body: Body::Slotted(render),
+        }
+    }
+
     /// Write the content alone, without fragment markers, as `<RouterView>` does with the page it
     /// shows. Generated code calls it for a component's `router_view` slot.
     ///
@@ -280,6 +292,9 @@ impl<'s> Slot<'s> {
             Body::Content(f) => f(out),
             Body::Markup(f) => {
                 f(out);
+            }
+            Body::Slotted(f) => {
+                f(out, "");
             }
         }
     }
@@ -367,33 +382,49 @@ pub fn slot_into(
     slot: Option<Slot<'_>>,
     fallback: Option<&mut dyn FnMut(&mut String)>,
 ) -> bool {
+    slot_into_slotted(out, slot, "", fallback)
+}
+
+/// [`slot_into`] for an outlet that passes a slot scope id, as Vue's `ssrRenderSlot` takes it:
+/// `data-v-…-s` from a component with `:slotted` styles, followed by the id its own slot content
+/// was given when the outlet forwards a slot; `""` for none. Generated content is given the id after
+/// a space; other content ignores it, as static markup does in Vue.
+pub fn slot_into_slotted(
+    out: &mut String,
+    slot: Option<Slot<'_>>,
+    slot_scope_id: &str,
+    fallback: Option<&mut dyn FnMut(&mut String)>,
+) -> bool {
     out.push_str("<!--[-->");
+    let start = out.len();
     let filled = match slot.map(|s| s.body) {
         Some(Body::Content(f)) => {
             f(out);
             true
         }
-        Some(Body::Markup(f)) => {
-            let start = out.len();
-            let filled = f(out);
-            // Vue drops content of comments alone whether or not there is a fallback to show instead.
-            if !filled {
-                out.truncate(start);
-                if let Some(fallback) = fallback {
-                    fallback(out);
-                }
-            }
-            filled
-        }
-        None => {
-            if let Some(fallback) = fallback {
-                fallback(out);
-            }
-            false
-        }
+        Some(Body::Markup(f)) => f(out),
+        Some(Body::Slotted(f)) => f(out, &content_scope_id(slot_scope_id)),
+        None => false,
     };
+    // Vue drops content of comments alone whether or not there is a fallback to show instead.
+    if !filled {
+        out.truncate(start);
+        if let Some(fallback) = fallback {
+            fallback(out);
+        }
+    }
     out.push_str("<!--]-->");
     filled
+}
+
+/// What `ssrRenderSlotInner` hands slot content for an outlet's slot scope id: the id after a
+/// space, or nothing.
+fn content_scope_id(slot_scope_id: &str) -> std::borrow::Cow<'_, str> {
+    if slot_scope_id.is_empty() {
+        std::borrow::Cow::Borrowed("")
+    } else {
+        std::borrow::Cow::Owned(format!(" {slot_scope_id}"))
+    }
 }
 
 /// `ssrRenderSlot` for a scoped slot: the content, given the props the outlet passes it, between
@@ -444,6 +475,49 @@ pub fn scoped_slot_into<P: ?Sized, F: Fn(&mut String, &P) -> bool + ?Sized>(
     }
     out.push_str("<!--]-->");
     filled
+}
+
+/// [`scoped_slot_into`] for an outlet that passes a slot scope id, as [`slot_into_slotted`] does:
+/// the content is given the props and the id.
+pub fn scoped_slot_into_slotted<P: ?Sized, F: Fn(&mut String, &P, &str) -> bool + ?Sized>(
+    out: &mut String,
+    slot: Option<&F>,
+    props: &P,
+    slot_scope_id: &str,
+    fallback: Option<&mut dyn FnMut(&mut String)>,
+) -> bool {
+    let id = content_scope_id(slot_scope_id);
+    let content = slot.map(|f| move |out: &mut String, p: &P| f(out, p, &id));
+    scoped_slot_into(out, content.as_ref(), props, fallback)
+}
+
+/// The scope ids a component's root carries, written as `ssrRenderAttrs` writes them: ` data-v-…`
+/// each. Vue builds them as the keys of the component's `attrs` object, so an id already there keeps
+/// its place: first those the parent passes on when this component is its root, then the parent's
+/// own id (`own`, `""` when it has no scoped styles), then the slot scope ids it is rendered inside
+/// (`slotted`, as the slot content was given them).
+///
+/// # Example
+///
+/// ```
+/// assert_eq!(ferrovue::scope_attrs(" data-v-a", "data-v-b", ""), " data-v-a data-v-b");
+/// assert_eq!(ferrovue::scope_attrs("", "data-v-a", " data-v-a data-v-c-s"), " data-v-a data-v-c-s");
+/// ```
+pub fn scope_attrs(inherited: &str, own: &str, slotted: &str) -> String {
+    // `inherited` is itself written this way: each key after one space.
+    let mut keys: Vec<&str> = inherited.split(' ').filter(|k| !k.is_empty()).collect();
+    // Two spaces in a row in a slot scope id make an empty key, which `ssrRenderAttrs` skips.
+    for key in std::iter::once(own).chain(js_trim(slotted).split(' ')) {
+        if !key.is_empty() && !keys.contains(&key) {
+            keys.push(key);
+        }
+    }
+    let mut out = String::with_capacity(keys.iter().map(|k| k.len() + 1).sum());
+    for key in keys {
+        out.push(' ');
+        out.push_str(key);
+    }
+    out
 }
 
 /// HTML that is safe to write into a page as it is: what `v-html` may render.

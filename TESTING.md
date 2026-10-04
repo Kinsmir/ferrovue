@@ -27,7 +27,7 @@ pnpm test:browser          # the same fixtures, and the full-stack example, hydr
 | **Differential fuzzing** | `packages/ferrovue/fuzz/` | Random components and props, within the grammar ferrovue accepts, render identically in Vue and in the generated Rust; each difference is shrunk to a small case (`pnpm fuzz`, nightly in CI, not part of `pnpm test`) | `@vue/server-renderer` |
 | **Mutation testing** | `.cargo/mutants.toml` | The tests above notice a small change to the runtime's source; every change they miss is listed, with the reason, as one that cannot alter the output (`cargo mutants`, weekly in CI) | cargo-mutants |
 | **Example** | `examples/greeting/` | Generated code compiles in an ordinary (non-test) consumer crate | `cargo build` |
-| **Full-stack example** | `examples/fullstack/` | An axum server's pages, streamed through holes, hydrate in the client built from the same components with no mismatch, and their islands share the store | Vue's hydration (`pnpm --filter ferrovue-example-fullstack test`) |
+| **Full-stack example** | `examples/fullstack/` | An axum server's pages, streamed through holes, hydrate in the client built from the same components with no mismatch, their islands share the store, and their elements carry the scope ids the client build's stylesheet selects | Vue's hydration (`pnpm --filter ferrovue-example-fullstack test`) |
 
 ### Conformance in detail
 
@@ -40,8 +40,12 @@ fixtures/X/case.json            Vue hydrates it: no mismatch warnings, same DOM 
 1. `conformance.test.ts` renders each `fixtures/<Component>/<case>.json` with real Vue and compares
    the result with `<case>.html`.
 2. It mounts the recorded HTML and hydrates it, failing on any hydration warning.
-3. It checks that `generated/` is exactly what the compiler writes now.
-4. `tests/conformance.rs` renders every fixture through the generated Rust and compares the result
+3. For a fixture with scope ids, which hydration does not compare, it renders the fixture afresh on
+   the client and holds every element's `data-v-` ids to the recorded ones (except in
+   `CLIENT_DIFFERS`, where Vue's own server and client disagree), and it checks that each scoped
+   component's id is the one `@vitejs/plugin-vue` gave it.
+4. It checks that `generated/` is exactly what the compiler writes now.
+5. `tests/conformance.rs` renders every fixture through the generated Rust and compares the result
    with the same `.html`.
 
 A fixture is a JSON object of props plus three optional keys:
@@ -76,6 +80,10 @@ A fixture is a JSON object of props plus three optional keys:
 | `RouteInfo` | `useRoute()` and `$route`: path, hash, name, params |
 | `Translated`, `Plurals` | vue-i18n's `$t` and `useI18n()`: named and list values, literals, linked messages and their modifiers, fallback locales; the plural case chosen by an integer, a fraction or a value that is not a finite number, and `count` and `n` given or taking the plural number |
 | `Badge`, `Cart` | Pinia state through the store and `storeToRefs`, getters, two stores, store reads in `computed` |
+| `ScopedPage` and its children | `<style scoped>`: the id on every element and what reaches each kind of child — `ScopedLeaf` (a root chosen by `v-if`), `ScopedRoot` (a root that is a component), `ScopedPair` (a fragment), `PlainBox` (no scoped styles), `ScopedCard` (`:slotted()`, a scoped slot, fallbacks), `PlainForward`, `ScopedShelf` and `ScopedRack` (slots forwarded into `:slotted()` ones, slot scope ids with two spaces), `ScopedFade` (a `<Transition>` root) — and `<KeepAlive>`, `<Teleport>` |
+| `ScopedTree` | A scoped component rendering itself, whose children's roots carry its id twice |
+| `ScopedNav`, `ScopedLink` | `<RouterLink>` in scoped components: the `<a>` and what it holds, a link that is a scoped component's root, a link in `:slotted()` slot content |
+| `ScopedQuirks`, `QuietLeaf` | Where Vue's server and client renders give different ids: a `:slotted()` component's fallback, `inheritAttrs: false` |
 
 Every component has at least one **hostile** fixture: markup-breaking characters in every prop that
 reaches the page.
@@ -137,6 +145,10 @@ What it generates, with random nesting:
   and number ranges, with an index;
 - static and bound attributes, boolean attributes, `:class` strings, arrays and objects (computed
   names too), `:style` objects merged with a static `style`;
+- child components written beside each one — a single root, a slot with a fallback, a root that is
+  a component forwarding its slot, a fragment, a root that is another component — given slot
+  content, at the root or nested; `<style scoped>` on the component and on each child, with
+  `:slotted()` on those with a slot;
 - string `+`, template literals, `?:`, `??`, `||`, `.length`, `.trim()` and the rest of the string
   methods, `String()`, `.toString()`, `.toFixed()`, `Math`, and integer and fractional arithmetic;
 - prop values meant to break things: markup and quotes, `</script>`, combining marks, emoji, RTL
