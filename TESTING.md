@@ -93,6 +93,10 @@ What it generates, with random nesting:
   and number ranges, with an index;
 - static and bound attributes, boolean attributes, `:class` strings, arrays and objects (computed
   names too), `:style` objects merged with a static `style`;
+- child components written beside each one — a single root, a slot with a fallback, a root that is
+  a component forwarding its slot, a fragment, a root that is another component — given slot
+  content, at the root or nested; `<style scoped>` on the component and on each child, with
+  `:slotted()` on those with a slot;
 - string `+`, template literals, `?:`, `??`, `||`, `.length`, `.trim()` and the rest of the string
   methods, `String()`, `.toString()`, `.toFixed()`, `Math`, and integer and fractional arithmetic;
 - prop values meant to break things: markup and quotes, `</script>`, combining marks, emoji, RTL
