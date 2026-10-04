@@ -1,0 +1,76 @@
+name: Mutants
+
+# Mutation testing of the runtime crate (TESTING.md, "Mutation testing"): cargo-mutants makes small
+# changes to `crates/ferrovue/src` — an operator flipped, a body replaced by a default — and runs
+# the crate's tests on each. A change no test notices is a mutant that survived. Each survivor is
+# either a gap in the tests or listed, with the reason it changes nothing, in
+# `.cargo/mutants-equivalent.txt`; the run fails on any other. Weekly, and by hand: it takes too
+# long for every pull request.
+on:
+  schedule:
+    - cron: "41 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  mutants:
+    name: Mutants (shard ${{ matrix.shard }}/2)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: taiki-e/install-action@e407f7bafb71fd004bc5c2da3032e5470cbb6ef0 # v2.87.24
+        with:
+          tool: cargo-mutants
+      - name: Run cargo-mutants on this shard
+        # Exits 2 when a mutant survives, which the next step judges, and 3 when one timed out — a
+        # mutant that loops forever, which counts as caught. Anything else, such as the tests
+        # failing before any mutation (4), fails here.
+        run: |
+          cargo mutants -p ferrovue --in-place --shard ${{ matrix.shard }}/2 || status=$?
+          if [[ "${status:-0}" != 0 && "${status:-0}" != 2 && "${status:-0}" != 3 ]]; then exit "$status"; fi
+      - name: Every surviving mutant is a known equivalent
+        run: |
+          # Without line and column, which move with every edit above them.
+          sed -E 's/^([^:]+):[0-9]+:[0-9]+: /\1: /' mutants.out/missed.txt | sort > "$RUNNER_TEMP/missed.txt"
+          grep -v -e '^#' -e '^$' .cargo/mutants-equivalent.txt | sort > "$RUNNER_TEMP/known.txt"
+          comm -23 "$RUNNER_TEMP/missed.txt" "$RUNNER_TEMP/known.txt" > "$RUNNER_TEMP/unexplained.txt"
+          {
+            echo "### Mutants, shard ${{ matrix.shard }}/2"
+            echo
+            echo "| Caught | Timed out | Missed (known equivalent) | Missed (unexplained) | Unviable |"
+            echo "|---:|---:|---:|---:|---:|"
+            echo "| $(wc -l < mutants.out/caught.txt) | $(wc -l < mutants.out/timeout.txt) | $(( $(wc -l < mutants.out/missed.txt) - $(wc -l < "$RUNNER_TEMP/unexplained.txt") )) | $(wc -l < "$RUNNER_TEMP/unexplained.txt") | $(wc -l < mutants.out/unviable.txt) |"
+            if [[ -s "$RUNNER_TEMP/unexplained.txt" ]]; then
+              echo
+              echo "Survivors with no test and no explanation:"
+              echo
+              echo '```text'
+              cat "$RUNNER_TEMP/unexplained.txt"
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [[ -s "$RUNNER_TEMP/unexplained.txt" ]]; then
+            cat "$RUNNER_TEMP/unexplained.txt"
+            exit 1
+          fi
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: mutants-${{ matrix.shard }}
+          path: mutants.out/
+          if-no-files-found: warn

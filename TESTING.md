@@ -17,12 +17,13 @@ pnpm conformance:check     # the committed generated Rust is what the compiler w
 | Layer | Where | What it proves | Source of truth |
 |---|---|---|---|
 | **Conformance** | `crates/ferrovue/tests/conformance/` | Each component × fixture renders identically in Vue and in the generated Rust, and Vue hydrates the HTML with no mismatch | `@vue/server-renderer`, Vue's hydration |
-| **Shared vectors** | `crates/ferrovue/tests/vectors/` | The runtime's reimplementations of `trim`, `.length`, `escapeHtml`, and vue-router's link resolution (string and object `to`, named routes, query and hash encoding, history base) and `useRoute()` fields agree with the originals | JavaScript, `@vue/shared`, vue-router |
+| **Shared vectors** | `crates/ferrovue/tests/vectors/` | The runtime's reimplementations of `trim`, `.length`, `escapeHtml`, `String(number)`, `Math`, `toFixed`, `normalizeClass` of an object, and vue-router's link resolution (string and object `to`, named routes, query and hash encoding, history base) and `useRoute()` fields agree with the originals | JavaScript, `@vue/shared`, vue-router |
 | **Compiler** | `packages/ferrovue/test/compiler.test.ts` | Constructs that a careless translation would get subtly wrong are refused with a named error; key translations have the expected shape | Hand-written |
 | **CLI** | `packages/ferrovue/test/cli.test.ts` | `ferrovue` writes, replaces, and `--check` detects stale and stray files | Hand-written |
 | **Runtime units** | `crates/ferrovue/src/tests.rs`, `src/router/tests.rs` | Escaping, slots, fallbacks, holes, islands, the state script, router edge cases | Hand-written |
 | **Properties** | `crates/ferrovue/tests/properties.rs` | Invariants over generated inputs: escaped text has no markup and reads back whole; the state script can't be closed; router never panics | `proptest` |
 | **Differential fuzzing** | `packages/ferrovue/fuzz/` | Random components and props, within the grammar ferrovue accepts, render identically in Vue and in the generated Rust; each difference is shrunk to a small case (`pnpm fuzz`, nightly in CI, not part of `pnpm test`) | `@vue/server-renderer` |
+| **Mutation testing** | `.cargo/mutants.toml` | The tests above notice a small change to the runtime's source; every change they miss is listed, with the reason, as one that cannot alter the output (`cargo mutants`, weekly in CI) | cargo-mutants |
 | **Example** | `examples/greeting/` | Generated code compiles in an ordinary (non-test) consumer crate | `cargo build` |
 | **Full-stack example** | `examples/fullstack/` | An axum server's pages, streamed through holes, hydrate in the client built from the same components with no mismatch, and their islands share the store | Vue's hydration (`pnpm --filter ferrovue-example-fullstack test`) |
 
@@ -169,7 +170,32 @@ pnpm coverage:rust   # cargo llvm-cov over the workspace: target/coverage/rust/h
 (`.github/workflows/coverage.yml`) runs both on every push to `main` and every pull request, writes
 the totals in the run's summary, and uploads the reports (HTML and lcov) as the `coverage`
 artifact. Nothing is sent to a coverage service, and no number fails the run: a covered line is
-not a tested one.
+not a tested one, which is what the mutation testing below is for.
+
+## Mutation testing
+
+Coverage says a line ran; mutation testing says a test would notice if it were wrong.
+[cargo-mutants](https://mutants.rs) makes hundreds of small changes to the runtime crate's source
+(`crates/ferrovue/src`, configured in `.cargo/mutants.toml`) — `<` made `<=`, `&&` made `||`, a
+function's body replaced by a default value — and runs the crate's tests (units, vectors,
+properties and conformance) on each. A change that no test notices is a **surviving** mutant.
+
+```sh
+cargo install cargo-mutants --locked
+cargo mutants -p ferrovue -j 4          # a few minutes; the results go to mutants.out/
+cargo mutants -p ferrovue -F js_round   # only the mutants whose name matches
+```
+
+A survivor is either a gap, closed by a test, or an **equivalent** mutant: a change that cannot
+alter what the function returns, such as `<` made `<=` where the two sides can never be equal.
+Each equivalent is listed in `.cargo/mutants-equivalent.txt`, without its line and column, under
+a comment saying why it changes nothing. Where the right answer is defined by JavaScript, Vue,
+vue-router or vue-i18n, the test that closes a gap takes it from them: a vector recorded with
+`pnpm vectors:record`, or a conformance fixture recorded with `pnpm conformance:record`.
+
+The **Mutants** workflow (`.github/workflows/mutants.yml`) runs every Monday and by hand, in two
+shards, and fails on any survivor that is not in the list. It is too slow for every pull request;
+run it locally on the functions a change touches (`-F`, or `--in-diff` with a diff file).
 
 ## Investigating a construct
 

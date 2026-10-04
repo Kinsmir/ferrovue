@@ -49,6 +49,9 @@ released together and share version numbers.
   (`cargo-semver-checks`): before 1.0, breaking changes need a new minor version (`RELEASING.md`).
 - `pnpm coverage` (vitest's V8 coverage of the compiler, `cargo llvm-cov` of the workspace) and a
   Coverage workflow that summarises both on the run's page and uploads the reports.
+- Mutation testing of the runtime crate with cargo-mutants (`.cargo/mutants.toml`, TESTING.md):
+  every mutant the tests miss is either closed by a test or listed with the reason it cannot change
+  the output (`.cargo/mutants-equivalent.txt`). A weekly Mutants workflow fails on any other.
 
 ### Changed
 
