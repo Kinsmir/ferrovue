@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { type N, type Scope, type Val, fail, GenError, rustStr } from "./model.ts";
 import { allRoutes, type RouteDef, CONFIG_FILE, ctx } from "./context.ts";
-import { expr } from "./expr.ts";
+import { expr, lonely } from "./expr.ts";
 import { Emitter } from "./emitter.ts";
 import { classItems, IGNORED_PROPS, mergeProps, renderDynamicAttr, renderStyle } from "./attrs.ts";
 import { slotBody, statements } from "./template.ts";
@@ -20,8 +20,15 @@ export function routeParams(path: string): string[] {
   return [...path.matchAll(/:(\w+)/g)].map((m) => m[1]!);
 }
 
+/** A string written into a link, which vue-router percent-encodes: half of a surrogate pair makes
+ * `encodeURI` throw, so Vue renders no page at all. */
+function noHalves(s: Scope, v: Val, n: N): void {
+  if (v.lone) fail(s.comp, lonely("a `<RouterLink>` location"), n);
+}
+
 /** A value written into a URL — a parameter or a query value — as the `&str` vue-router stringifies. */
 export function urlText(s: Scope, v: Val, n: N): string {
+  noHalves(s, v, n);
   if (v.ty.k === "str") return v.code;
   if (v.ty.k === "int" || v.ty.k === "float") return `&*fv::Js(${v.code}).to_string()`;
   if (v.ty.k === "bool") return `if ${v.code} { "true" } else { "false" }`;
@@ -33,6 +40,7 @@ export function resolveLink(s: Scope, e: Emitter, to: N): void {
   if (to.type !== "ObjectExpression") {
     const target = expr(s, to);
     if (target.ty.k !== "str") fail(s.comp, "`<RouterLink>`'s `to` is a string or an object literal", to);
+    noHalves(s, target, to);
     e.stmt(`let fv_link = fv_route.link(${target.code});`);
     return;
   }
@@ -69,6 +77,7 @@ export function resolveLink(s: Scope, e: Emitter, to: N): void {
   if (h) {
     const v = expr(s, h);
     if (v.ty.k !== "str") fail(s.comp, "a `to`'s `hash` is a string", h);
+    noHalves(s, v, h);
     hash = v.code;
   }
   const name = parts.get("name");
@@ -97,6 +106,7 @@ export function resolveLink(s: Scope, e: Emitter, to: N): void {
     if (parts.has("params")) fail(s.comp, "a `to` with a `path` takes no `params`, which vue-router ignores", path);
     const v = expr(s, path);
     if (v.ty.k !== "str") fail(s.comp, "a `to`'s `path` is a string", path);
+    noHalves(s, v, path);
     e.stmt(`fv_route.link_path(${v.code}, ${search}, ${hash})`);
   } else fail(s.comp, "a `to` object has a `name` or a `path`", to);
   e.close(";");

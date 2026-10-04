@@ -4,6 +4,42 @@ import { type Component, type N, type Scope, type Ty, type Val, BOOL, fail, FLOA
 import { CONFIG_FILE, ctx } from "./context.ts";
 import { lookupStruct, markHome } from "./typescript.ts";
 import { translate } from "./i18n.ts";
+import { collected, computed, computedListMethod, items, listMethod, objectCall } from "./lists.ts";
+
+/** The refusal for a string that may hold half of a surrogate pair, used where that half matters. */
+export function lonely(what: string): string {
+  return `${what} with a string that may hold half of a surrogate pair (cut by \`slice\`, \`substring\`, \`at\`, \`charAt\`, \`split("")\` and the like): JavaScript keeps the half, which can match, order or join with another where ferrovue holds U+FFFD`;
+}
+
+/** Two strings meeting, where a half of a surrogate pair — which ferrovue holds as U+FFFD — would
+ * change the result:
+ * - `equal`: two halves may differ, and a half never equals a literal U+FFFD;
+ * - `order`: a half orders as a surrogate, below U+E000, where U+FFFD orders above — the same only
+ *   against a literal of characters below U+D800, which both order after;
+ * - `search`: a half searched for (`b`) matches half of a whole pair in `a`;
+ * - `join`: two halves side by side join into one character.
+ * A string holding U+FFFD in the data still equals, or is found in, a half: README, "Strings". */
+export function meet(comp: Component, a: Val, b: Val, what: string, n: N, how: "equal" | "order" | "search" | "join"): void {
+  const literal = (v: Val) => v.code.startsWith('"');
+  const fffd = (v: Val) => literal(v) && v.code.includes("\u{FFFD}");
+  const low = (v: Val) => literal(v) && !/[\u{D800}-\u{10FFFF}]/u.test(v.code);
+  const refused =
+    how === "order" ? (a.lone && !low(b)) || (b.lone && !low(a))
+    : how === "join" ? a.lone && b.lone
+    : how === "search" ? b.lone || (a.lone && fffd(b))
+    : (a.lone && b.lone) || (a.lone && fffd(b)) || (b.lone && fffd(a));
+  if (refused) fail(comp, lonely(what), n);
+}
+
+/** `lone` for a value built from these: whether any of them may hold half of a surrogate pair. */
+function loneOf(...vs: (Val | undefined)[]): { lone?: true } {
+  return vs.some((v) => v?.lone) ? { lone: true } : {};
+}
+
+/** Whether a string is a non-empty literal: a separator that always parts what it joins. */
+function nonEmptyLiteral(v: Val): boolean {
+  return /^"[^"]/.test(v.code);
+}
 
 /** Whether a string expression borrows from a temporary it builds — \`&*format!(…)\`, a call that
  * returns a \`String\` — rather than from the props or the state. Such a borrow ends with the block
@@ -51,6 +87,8 @@ export function describeTy(ty: Ty): string {
       return "a boolean";
     case "list":
       return "a list";
+    case "record":
+      return "a record";
     case "struct":
     case "child":
       return "an object";
@@ -317,7 +355,13 @@ export function expr(s: Scope, n: N): Val {
     if (narrowed) return narrowed;
   }
   if (n.type === "MemberExpression" && !n.computed && n.property.type === "Identifier" && n.property.name === "length") {
+    // `Object.entries(r).length`: as many as the record has keys.
+    if (isObjectCall(n.object, "entries") && n.object.arguments.length === 1) {
+      const r = expr(s, n.object.arguments[0]);
+      if (r.ty.k === "record") return { code: `((${r.code}).len() as i64)`, ty: INT };
+    }
     const base = expr(s, n.object);
+    if (base.ty.k === "list" && base.iter !== undefined) return { code: `(${base.iter}.count() as i64)`, ty: INT };
     if (base.ty.k === "list") return { code: `((${base.code}).len() as i64)`, ty: INT };
     // A JavaScript string's length counts UTF-16 code units, not the bytes Rust's `len` counts.
     if (base.ty.k === "str") return { code: `fv::js_length(${base.code})`, ty: INT };
@@ -329,9 +373,10 @@ export function expr(s: Scope, n: N): Val {
     // which is what `{}` does with an `i64`. Two numbers would be arithmetic, which is not here.
     const joinable = (t: Ty) => t.k === "str" || isNumber(t);
     if ((a.ty.k === "str" || b.ty.k === "str") && joinable(a.ty) && joinable(b.ty)) {
+      meet(comp, a, b, "`+`", n, "join");
       // A number is written as JavaScript writes it, rounded beyond 2⁵³.
       const text = (v: Val) => (isNumber(v.ty) ? `fv::Js(${v.code})` : v.code);
-      return { code: `&*format!("{}{}", ${text(a)}, ${text(b)})`, ty: STR };
+      return { code: `&*format!("{}{}", ${text(a)}, ${text(b)})`, ty: STR, ...loneOf(a, b) };
     }
     // Two numbers: arithmetic, as `n + 1` in a template means.
     if (a.ty.k === "int" && b.ty.k === "int") return intFromF64(`(${asF64(a)} + ${asF64(b)})`);
@@ -341,15 +386,20 @@ export function expr(s: Scope, n: N): Val {
   if (n.type === "BinaryExpression" && ["-", "*", "%", "/", "<", ">", "<=", ">="].includes(n.operator)) {
     const a = expr(s, n.left);
     const b = expr(s, n.right);
+    const comparison = ["<", ">", "<=", ">="].includes(n.operator);
+    // Two strings, ordered as JavaScript orders them: by UTF-16 code unit.
+    if (comparison && a.ty.k === "str" && b.ty.k === "str") {
+      meet(comp, a, b, `\`${n.operator}\``, n, "order");
+      const is = { "<": "lt", ">": "gt", "<=": "le", ">=": "ge" }[n.operator as "<"];
+      return { code: `fv::js_cmp(${a.code}, ${b.code}).is_${is}()`, ty: BOOL };
+    }
     if (!isNumber(a.ty) || !isNumber(b.ty)) {
-      const comparison = ["<", ">", "<=", ">="].includes(n.operator);
       const why =
         a.ty.k === "opt" || b.ty.k === "opt"
           ? "narrow an optional one with `v-if` first"
-          : comparison && (a.ty.k === "str" || b.ty.k === "str")
-            ? "JavaScript orders strings by UTF-16 code unit, which is not supported"
-            : `the other is ${describeTy(isNumber(a.ty) ? b.ty : a.ty)}`;
-      return fail(comp, `\`${n.operator}\` is supported between two numbers that are present: ${why}`, n);
+          : `the other is ${describeTy(isNumber(a.ty) ? b.ty : a.ty)}`;
+      const between = comparison ? "two numbers, or two strings," : "two numbers";
+      return fail(comp, `\`${n.operator}\` is supported between ${between} that are present: ${why}`, n);
     }
     if (["<", ">", "<=", ">="].includes(n.operator)) return { code: `(${asF64(a)} ${n.operator} ${asF64(b)})`, ty: BOOL };
     // Two integers stay integers — but for `/`, which gives a fraction in JavaScript, and a `%` whose
@@ -366,30 +416,37 @@ export function expr(s: Scope, n: N): Val {
       // `${a}-${b}`: each part written as JavaScript writes it into a string.
       let fmt = "";
       const args: string[] = [];
+      // The part before, when nothing lies between it and the next: two halves of a pair would join.
+      let before: Val | undefined;
+      let lone = false;
       n.quasis.forEach((q: N, i: number) => {
         fmt += (q.value.cooked as string).replace(/[{}]/g, (c) => c + c);
+        if (q.value.cooked !== "") before = undefined;
         if (i >= n.expressions.length) return;
         const v = expr(s, n.expressions[i]);
+        if (before) meet(comp, before, v, "a template literal", n.expressions[i], "join");
+        before = v;
+        lone ||= !!v.lone;
         if (v.ty.k === "str") args.push(v.code);
         else if (isNumber(v.ty)) args.push(`fv::Js(${v.code})`);
         else if (v.ty.k === "bool") args.push(`if ${v.code} { "true" } else { "false" }`);
         else fail(comp, "a template literal interpolates strings, numbers and booleans that are present", n.expressions[i]);
         fmt += "{}";
       });
-      return { code: args.length ? `&*format!(${rustStr(fmt)}, ${args.join(", ")})` : rustStr(fmt.replace(/\{\{|\}\}/g, (c) => c[0]!)), ty: STR };
+      return { code: args.length ? `&*format!(${rustStr(fmt)}, ${args.join(", ")})` : rustStr(fmt.replace(/\{\{|\}\}/g, (c) => c[0]!)), ty: STR, ...(lone ? { lone } : {}) };
     }
     case "ArrayExpression": {
       // A list of literals or values of one scalar type, as a Rust array.
       if (n.elements.length === 0) return { code: "[]", ty: { k: "list", of: UNDEF } };
-      const items = n.elements.map((el: N) => {
+      const values = n.elements.map((el: N) => {
         if (!el || el.type === "SpreadElement") fail(comp, "an array literal holds plain values", n);
         return expr(s, el);
       });
-      const of = items[0]!.ty;
-      if (!(of.k === "str" || of.k === "int" || of.k === "float" || of.k === "bool") || items.some((v: Val) => !sameTy(v.ty, of))) {
+      const of = values[0]!.ty;
+      if (!(of.k === "str" || of.k === "int" || of.k === "float" || of.k === "bool") || values.some((v: Val) => !sameTy(v.ty, of))) {
         fail(comp, "an array literal holds strings, numbers or booleans, all of one type", n);
       }
-      return { code: `[${items.map((v: Val) => v.code).join(", ")}]`, ty: { k: "list", of } };
+      return { code: `[${values.map((v: Val) => v.code).join(", ")}]`, ty: { k: "list", of }, ...loneOf(...values) };
     }
     case "OptionalMemberExpression": {
       // `a?.b`: the field of an optional object when it is present.
@@ -499,8 +556,14 @@ export function expr(s: Scope, n: N): Val {
         }
         if (a.ty.k !== "opt") return a;
         if (b.ty.k === "undef") return a;
-        if (sameTy(a.ty.of, b.ty)) return { code: `(${a.code}).unwrap_or(${b.code})`, ty: b.ty };
-        if (sameTy(a.ty, b.ty)) return { code: `(${a.code}).or(${b.code})`, ty: a.ty };
+        if (b.iter !== undefined) fail(comp, "`??` falling back to a computed list", n);
+        // A string a temporary owns: the result is one too, borrowed from the `Cow` either side gives.
+        if (a.held !== undefined && b.ty.k === "str") return { code: `&*(${a.held}).unwrap_or(${asCow(b)})`, ty: STR, ...loneOf(a, b) };
+        if (a.ty.of.k === "str" && b.ty.k === "str" && isTemporary(b)) {
+          return { code: `&*(${a.code}).map(std::borrow::Cow::<str>::Borrowed).unwrap_or(${asCow(b)})`, ty: STR, ...loneOf(a, b) };
+        }
+        if (sameTy(a.ty.of, b.ty)) return { code: `(${a.code}).unwrap_or(${b.code})`, ty: b.ty, ...loneOf(a, b) };
+        if (sameTy(a.ty, b.ty)) return { code: `(${a.code}).or(${b.code})`, ty: a.ty, ...loneOf(a, b) };
         // An integer and a fraction: both numbers in JavaScript, so a fraction here.
         if (a.ty.of.k === "float" && b.ty.k === "int") return { code: `(${a.code}).unwrap_or(${asF64(b)})`, ty: FLOAT };
         if (a.ty.of.k === "int" && b.ty.k === "float") return { code: `(${a.code}).map(|v| v as f64).unwrap_or(${b.code})`, ty: FLOAT };
@@ -516,10 +579,10 @@ export function expr(s: Scope, n: N): Val {
           return { code: `(${src}).filter(|v| ${test.replace(/\bv\b/g, "*v")})`, ty: opt(inner) };
         }
         if (a.ty.k === "str" && b.ty.k === "str" && (isTemporary(a) || isTemporary(b))) {
-          return { code: `&*{ let a = ${asCow(a)}; if !a.is_empty() { a } else { ${asCow(b)} } }`, ty: STR };
+          return { code: `&*{ let a = ${asCow(a)}; if !a.is_empty() { a } else { ${asCow(b)} } }`, ty: STR, ...loneOf(a, b) };
         }
         if (sameTy(a.ty, b.ty) && (a.ty.k === "str" || isNumber(a.ty))) {
-          return { code: `{ let a = ${a.code}; if ${truthy({ code: "a", ty: a.ty })} { a } else { ${b.code} } }`, ty: a.ty };
+          return { code: `{ let a = ${a.code}; if ${truthy({ code: "a", ty: a.ty })} { a } else { ${b.code} } }`, ty: a.ty, ...loneOf(a, b) };
         }
         return fail(comp, "`||` between these types", n);
       }
@@ -547,6 +610,8 @@ export function expr(s: Scope, n: N): Val {
       const b = expr(s, n.right);
       let eq: string;
       const scalar = (t: Ty) => t.k === "str" || t.k === "int" || t.k === "bool";
+      const strish = (t: Ty) => t.k === "str" || (t.k === "opt" && t.of.k === "str");
+      if (strish(a.ty) && strish(b.ty)) meet(comp, a, b, `\`${n.operator}\``, n, "equal");
       // A query value equals a string only when it is that single value.
       if (a.ty.k === "query" && b.ty.k === "str") eq = `(${a.code}).is(${b.code})`;
       else if (b.ty.k === "query" && a.ty.k === "str") eq = `(${b.code}).is(${a.code})`;
@@ -582,21 +647,30 @@ export function expr(s: Scope, n: N): Val {
         const bound = new RegExp(`\\b${name}\\b`).test(present) ? name : "_";
         return `if ${p.pattern(bound)} { ${present} } else { ${absent} }`;
       };
+      const lone = loneOf(a, b);
       if (sameTy(a.ty, b.ty) && a.ty.k === "str" && (isTemporary(a) || isTemporary(b))) {
-        return { code: `&*(${choose(asCow(a), asCow(b))})`, ty: STR };
+        return { code: `&*(${choose(asCow(a), asCow(b))})`, ty: STR, ...lone };
       }
-      if (sameTy(a.ty, b.ty)) return { code: choose(a.code, b.code), ty: a.ty };
+      // Two lists, one of them computed: both branches collect their items, to have one type.
+      if (sameTy(a.ty, b.ty) && a.ty.k === "list" && (a.iter !== undefined || b.iter !== undefined)) {
+        const both = `(${choose(collected(a), collected(b))})`;
+        return { code: both, ty: a.ty, iter: `${both}.into_iter()`, ...lone };
+      }
+      const optStr = (v: Val) => v.ty.k === "undef" || (v.ty.k === "opt" && v.ty.of.k === "str") || v.ty.k === "str";
+      if (sameTy(a.ty, b.ty) && a.ty.k !== "opt") return { code: choose(a.code, b.code), ty: a.ty, ...lone };
       // An integer and a fraction: both numbers in JavaScript, so a fraction here.
       if (isNumber(a.ty) && isNumber(b.ty)) return { code: choose(asF64(a), asF64(b)), ty: FLOAT };
-      if (a.ty.k === "undef" || b.ty.k === "undef" || (a.ty.k === "opt" && sameTy(a.ty.of, b.ty)) || (b.ty.k === "opt" && sameTy(b.ty.of, a.ty))) {
+      if (sameTy(a.ty, b.ty) || a.ty.k === "undef" || b.ty.k === "undef" || (a.ty.k === "opt" && sameTy(a.ty.of, b.ty)) || (b.ty.k === "opt" && sameTy(b.ty.of, a.ty))) {
         const ty = opt(a.ty.k === "undef" || b.ty.k === "opt" ? b.ty : a.ty);
-        if (ty.k === "opt" && ty.of.k === "str" && (isTemporary(a) || isTemporary(b))) {
+        if (optStr(a) && optStr(b) && (isTemporary(a) || isTemporary(b) || a.held !== undefined || b.held !== undefined)) {
           // A string built in a branch, held by an `Option<Cow>` the statement keeps.
           const held = (v: Val): string =>
-            v.ty.k === "undef" ? "None" : v.ty.k === "opt" ? `(${v.code}).map(std::borrow::Cow::<str>::Borrowed)` : `Some(${asCow(v)})`;
-          return { code: `(${choose(held(a), held(b))}).as_deref()`, ty };
+            v.held ?? (v.ty.k === "undef" ? "None" : v.ty.k === "opt" ? `(${v.code}).map(std::borrow::Cow::<str>::Borrowed)` : `Some(${asCow(v)})`);
+          const both = `(${choose(held(a), held(b))})`;
+          return { code: `${both}.as_deref()`, ty, held: both, ...lone };
         }
-        return { code: choose(coerce(comp, a, ty, n), coerce(comp, b, ty, n)), ty };
+        if (sameTy(a.ty, b.ty)) return { code: choose(a.code, b.code), ty: a.ty, ...lone };
+        return { code: choose(coerce(comp, a, ty, n), coerce(comp, b, ty, n)), ty, ...lone };
       }
       return fail(comp, "the two branches of `?:` differ in type", n);
     }
@@ -614,7 +688,10 @@ export function call(s: Scope, n: N): Val {
       case "_ssrLooseEqual": {
         const a = expr(s, args[0]);
         const b = expr(s, args[1]);
-        if (a.ty.k === "str" && b.ty.k === "str") return { code: `(${a.code}) == (${b.code})`, ty: BOOL };
+        if (a.ty.k === "str" && b.ty.k === "str") {
+          meet(comp, a, b, "`v-model`", n, "equal");
+          return { code: `(${a.code}) == (${b.code})`, ty: BOOL };
+        }
         return fail(comp, "`v-model` comparison between these types", n);
       }
       case "_ssrIncludeBooleanAttr": {
@@ -637,6 +714,25 @@ export function call(s: Scope, n: N): Val {
       if (isNumber(a.ty)) return { code: `&*fv::Js(${a.code}).to_string()`, ty: STR };
       if (a.ty.k === "bool") return { code: `if ${a.code} { "true" } else { "false" }`, ty: STR };
     }
+    // Strings read as numbers, as JavaScript reads them: a fraction, `NaN` when there is no number.
+    if (callee.name === "Number" && args.length === 1) {
+      const a = expr(s, args[0]);
+      if (a.ty.k === "str") return { code: `fv::js_number(${a.code})`, ty: FLOAT };
+      if (isNumber(a.ty)) return a;
+      if (a.ty.k === "bool") return { code: `i64::from(${a.code})`, ty: INT };
+      return fail(comp, "`Number()` takes a string, a number or a boolean that is present", n);
+    }
+    if ((callee.name === "parseInt" && (args.length === 1 || args.length === 2)) || (callee.name === "parseFloat" && args.length === 1)) {
+      const a = expr(s, args[0]);
+      // Not a number: `parseInt` reads it as a string, so `parseInt(0.0000005)` is 5.
+      if (a.ty.k !== "str") fail(comp, `\`${callee.name}()\` takes a string`, args[0]);
+      if (callee.name === "parseFloat") return { code: `fv::js_parse_float(${a.code})`, ty: FLOAT };
+      const radix = args[1];
+      if (radix && !(radix.type === "NumericLiteral" && (radix.value === 10 || radix.value === 16))) {
+        fail(comp, "`parseInt()` takes a radix of 10 or 16, written as a literal", radix);
+      }
+      return { code: `fv::js_parse_int(${a.code}, ${radix ? radix.value : 0})`, ty: FLOAT };
+    }
     return fail(comp, `\`${callee.name}()\` is not available when rendering on the server`, n);
   }
   if (callee.type === "MemberExpression" && !callee.computed) {
@@ -646,6 +742,10 @@ export function call(s: Scope, n: N): Val {
       if (a.ty.k === "query") return { code: `(${a.code}).is_array()`, ty: BOOL };
       const is = a.ty.k === "list";
       return { code: String(is), ty: BOOL, konst: is };
+    }
+    if (callee.object.type === "Identifier" && callee.object.name === "Object") return objectCall(s, method, args, n);
+    if (callee.object.type === "Identifier" && callee.object.name === "JSON" && method === "stringify" && args.length === 1) {
+      return { code: `&*${json(s, expr(s, args[0]), args[0])}`, ty: STR };
     }
     // `$t(…)` in the template, and \`t(…)\` from \`useI18n()\`.
     if (callee.object.type === "Identifier" && callee.object.name === "_ctx" && method === "$t") return translate(s, args, n);
@@ -673,30 +773,25 @@ export function call(s: Scope, n: N): Val {
       return fail(comp, `\`Math.${method}()\` is supported on numbers as \`max\`, \`min\`, \`abs\`, \`round\`, \`floor\`, \`ceil\` and \`trunc\``, n);
     }
     const target = expr(s, callee.object);
-    const strArg = (i: number): string => {
-      const v = expr(s, args[i]);
-      if (v.ty.k !== "str") fail(comp, `\`.${method}()\` takes a string`, args[i]);
-      return v.code;
-    };
     if (target.ty.k === "str") {
+      const lone = loneOf(target);
       switch (args.length === 0 ? method : "") {
         case "trim":
-          return { code: `fv::js_trim(${target.code})`, ty: STR };
+          return { code: `fv::js_trim(${target.code})`, ty: STR, ...lone };
         case "trimStart":
-          return { code: `fv::js_trim_start(${target.code})`, ty: STR };
+          return { code: `fv::js_trim_start(${target.code})`, ty: STR, ...lone };
         case "trimEnd":
-          return { code: `fv::js_trim_end(${target.code})`, ty: STR };
+          return { code: `fv::js_trim_end(${target.code})`, ty: STR, ...lone };
         // Unicode's default case mappings, which JavaScript and Rust both apply, final sigma included.
         case "toUpperCase":
-          return { code: `&*(${target.code}).to_uppercase()`, ty: STR };
+          return { code: `&*(${target.code}).to_uppercase()`, ty: STR, ...lone };
         case "toLowerCase":
-          return { code: `&*(${target.code}).to_lowercase()`, ty: STR };
+          return { code: `&*(${target.code}).to_lowercase()`, ty: STR, ...lone };
         case "toString":
           return target;
       }
-      if (args.length === 1 && method === "includes") return { code: `(${target.code}).contains(${strArg(0)})`, ty: BOOL };
-      if (args.length === 1 && method === "startsWith") return { code: `(${target.code}).starts_with(${strArg(0)})`, ty: BOOL };
-      if (args.length === 1 && method === "endsWith") return { code: `(${target.code}).ends_with(${strArg(0)})`, ty: BOOL };
+      const m = stringMethod(s, target, method, args, n);
+      if (m) return m;
     }
     if (isNumber(target.ty) && method === "toFixed" && args.length <= 1) {
       // The digits are a literal, as they almost always are: 0 to 100.
@@ -709,6 +804,12 @@ export function call(s: Scope, n: N): Val {
     if (isNumber(target.ty) && method === "toString" && args.length === 0) {
       return { code: `&*fv::Js(${target.code}).to_string()`, ty: STR };
     }
+    if (target.ty.k === "list") {
+      // A list the props hold, of strings or integers, is searched and joined in place below.
+      const inPlace = target.iter === undefined && !target.lone && (target.ty.of.k === "str" || target.ty.of.k === "int");
+      const listed = listMethod(s, target, method, args, n) ?? (inPlace ? null : computedListMethod(s, target, method, args, n));
+      if (listed) return listed;
+    }
     if (target.ty.k === "list" && (target.ty.of.k === "str" || target.ty.of.k === "int")) {
       const of = target.ty.of;
       if (method === "includes" && args.length === 1) {
@@ -719,14 +820,156 @@ export function call(s: Scope, n: N): Val {
       }
       if (method === "join" && args.length <= 1) {
         // JavaScript joins with a comma when given no separator.
-        const sep = args.length ? strArg(0) : '","';
-        const items = of.k === "str" ? `(${target.code}).iter().map(|v| &**v)` : `(${target.code}).iter().map(|v| fv::Js(*v).to_string())`;
-        return { code: `&*${items}.collect::<Vec<_>>().join(${sep})`, ty: STR };
+        const sep: Val = args.length ? expr(s, args[0]) : { code: '","', ty: STR };
+        if (sep.ty.k !== "str") fail(comp, "`.join()` takes a string", args[0]);
+        const each = of.k === "str" ? `(${target.code}).iter().map(|v| &**v)` : `(${target.code}).iter().map(|v| fv::Js(*v).to_string())`;
+        return { code: `&*${each}.collect::<Vec<_>>().join(${sep.code})`, ty: STR, ...loneOf(sep) };
       }
     }
     return fail(comp, `\`.${method}()\` is not supported`, n);
   }
   return fail(comp, "this call is not supported", n);
+}
+
+/** Whether `n` is `Object.<method>(…)`. */
+export function isObjectCall(n: N, method: string): boolean {
+  return (
+    n?.type === "CallExpression" && n.callee.type === "MemberExpression" && !n.callee.computed &&
+    n.callee.object.type === "Identifier" && n.callee.object.name === "Object" && n.callee.property.name === method
+  );
+}
+
+/** A string method beyond trimming and case mapping, or `null` when `method` is none of them.
+ * Indices and lengths count UTF-16 code units, as JavaScript's do; a result that may hold half of a
+ * surrogate pair is marked `lone`. */
+function stringMethod(s: Scope, target: Val, method: string, args: N[], n: N): Val | null {
+  const comp = s.comp;
+  const t = target.code;
+  const arity = (least: number, most: number): void => {
+    if (args.length < least || args.length > most) {
+      fail(comp, `\`.${method}()\` takes ${least === most ? least : `${least} to ${most}`} argument${most === 1 ? "" : "s"} here`, n);
+    }
+  };
+  const str = (i: number): Val => {
+    if (args[i]?.type === "RegExpLiteral") fail(comp, `\`.${method}()\` with a regular expression, which the server does not run: give it a string`, args[i]);
+    const v = expr(s, args[i]);
+    if (v.ty.k !== "str") fail(comp, `\`.${method}()\` takes a string that is present`, args[i]);
+    return v;
+  };
+  /** A number argument as an `f64`; `fallback` when it is left out or `undefined`. */
+  const num = (i: number, fallback: string): string => {
+    if (args[i] === undefined) return fallback;
+    const v = expr(s, args[i]);
+    if (v.ty.k === "undef") return fallback;
+    if (!isNumber(v.ty)) fail(comp, `\`.${method}()\` takes a number that is present`, args[i]);
+    return asF64(v);
+  };
+  const cut = { lone: true };
+  switch (method) {
+    case "includes":
+    case "startsWith":
+    case "endsWith": {
+      // Without a position: `includes(x, 3)` would start the search part way.
+      arity(1, 1);
+      const x = str(0);
+      meet(comp, target, x, `\`.${method}()\``, n, "search");
+      const rust = { includes: "contains", startsWith: "starts_with", endsWith: "ends_with" }[method];
+      return { code: `(${t}).${rust}(${x.code})`, ty: BOOL };
+    }
+    case "indexOf":
+    case "lastIndexOf": {
+      arity(1, 1);
+      const x = str(0);
+      meet(comp, target, x, `\`.${method}()\``, n, "search");
+      return { code: `fv::js_${method === "indexOf" ? "index_of" : "last_index_of"}(${t}, ${x.code})`, ty: INT };
+    }
+    case "slice":
+    case "substring": {
+      arity(0, 2);
+      const end = num(1, "");
+      return { code: `&*fv::js_${method}(${t}, ${num(0, "0.0")}, ${end ? `Some(${end})` : "None"})`, ty: STR, ...cut };
+    }
+    case "at": {
+      arity(1, 1);
+      const at = `fv::js_at(${t}, ${num(0, "0.0")})`;
+      if (!isTemporary(target)) return { code: at, ty: opt(STR), ...cut };
+      // Of a string built here, the character is copied out, to outlive it.
+      const held = `${at}.map(|v| std::borrow::Cow::<str>::Owned(v.to_owned()))`;
+      return { code: `(${held}).as_deref()`, ty: opt(STR), held, ...cut };
+    }
+    case "charAt":
+      arity(0, 1);
+      // It borrows from the string, so it is a temporary when the string is.
+      return { code: `${isTemporary(target) ? "&*" : ""}fv::js_char_at(${t}, ${num(0, "0.0")})`, ty: STR, ...cut };
+    case "split": {
+      // Without a limit, and with a string separator: `split()` alone gives the whole string.
+      arity(1, 1);
+      const sep = str(0);
+      meet(comp, target, sep, "`.split()`", n, "search");
+      // An empty separator cuts between code units, so a pair in two.
+      return computed(`fv::js_split(${t}, ${sep.code}).into_iter()`, STR, target.lone || !nonEmptyLiteral(sep));
+    }
+    case "replace":
+    case "replaceAll": {
+      arity(2, 2);
+      if (args[1].type === "ArrowFunctionExpression" || args[1].type === "FunctionExpression") {
+        fail(comp, `\`.${method}()\` with a function, which the server does not run: give it a string`, args[1]);
+      }
+      const [pattern, replacement] = [str(0), str(1)];
+      meet(comp, target, pattern, `\`.${method}()\``, n, "search");
+      meet(comp, target, replacement, `\`.${method}()\``, n, "join");
+      // `replaceAll("", …)` matches between code units, which cuts every pair in two.
+      const lone = target.lone || replacement.lone || (method === "replaceAll" && !nonEmptyLiteral(pattern));
+      return { code: `&*fv::js_${method === "replace" ? "replace" : "replace_all"}(${t}, ${pattern.code}, ${replacement.code})`, ty: STR, ...(lone ? cut : {}) };
+    }
+    case "padStart":
+    case "padEnd": {
+      arity(1, 2);
+      const fill: Val = args.length > 1 ? str(1) : { code: '" "', ty: STR };
+      // The fill repeats itself, and is cut short where a pair may be: before a string starting
+      // with a half, the two would join.
+      const whole = fill.code.startsWith('"') && !/[\u{10000}-\u{10FFFF}]/u.test(fill.code);
+      if (fill.lone || (method === "padStart" && target.lone && !whole)) fail(comp, lonely(`\`.${method}()\``), n);
+      return { code: `&*fv::js_${method === "padStart" ? "pad_start" : "pad_end"}(${t}, ${num(0, "0.0")}, ${fill.code})`, ty: STR, ...(target.lone || !whole ? cut : {}) };
+    }
+    case "repeat": {
+      arity(1, 1);
+      // JavaScript throws a `RangeError` for a negative or infinite count.
+      const c = args[0];
+      if ((c.type === "UnaryExpression" && c.operator === "-" && c.argument.type === "NumericLiteral" && c.argument.value > 0) || (c.type === "Identifier" && c.name === "Infinity")) {
+        fail(comp, "`.repeat()` with a negative or infinite count, which throws a `RangeError`", c);
+      }
+      // Repeated, a string ending with one half and starting with the other joins them.
+      if (target.lone) fail(comp, lonely("`.repeat()`"), n);
+      return { code: `&*fv::js_repeat(${t}, ${num(0, "0.0")})`, ty: STR };
+    }
+    case "toLocaleUpperCase":
+    case "toLocaleLowerCase":
+      return fail(comp, `\`.${method}()\` maps case by the locale the server runs in, which the browser need not share: use \`.${method.replace("Locale", "")}()\``, n);
+  }
+  return null;
+}
+
+/** `JSON.stringify(v)` as a Rust `String`: of a string, a number, a boolean, or a list of those. */
+function json(s: Scope, v: Val, n: N): string {
+  // A half of a pair is written as an escape, `"\ud83e"`, which ferrovue cannot know to write.
+  if (v.lone) fail(s.comp, lonely("`JSON.stringify()`"), n);
+  const one = (code: string, ty: Ty): string => {
+    switch (ty.k) {
+      case "str":
+        return `fv::js_json_string(&${code})`;
+      case "int":
+        return `fv::Js(${code}).to_string()`;
+      case "float":
+        return `fv::js_json_number(${code})`;
+      case "bool":
+        return `(if ${code} { "true" } else { "false" }).to_owned()`;
+      default:
+        return fail(s.comp, "`JSON.stringify()` of a string, a number, a boolean or a list of those, present", n);
+    }
+  };
+  if (v.ty.k === "list") return `format!("[{}]", ${items(v)}.map(|v| ${one("v", v.ty.of)}).collect::<Vec<_>>().join(","))`;
+  return one(`(${v.code})`, v.ty);
 }
 
 export function helperCall(s: Scope, name: string, args: N[], n: N): Val {

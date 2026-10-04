@@ -56,6 +56,45 @@ const props = defineProps<{ label: string; items: string[] }>();
     expect(reserve).toContain("props.items.iter().map(|v| v.len()).sum::<usize>()");
   });
 
+  describe("strings, computed lists and dictionaries", () => {
+    it("counts a string's code units, and orders strings by them, through the runtime", () => {
+      const out = compile(
+        island(`<script setup lang="ts">
+defineProps<{ a: string; b: string }>();
+</script>
+<template><i :title="a.slice(1, -1)">{{ a.padStart(4, "0") }}{{ a < b }}</i></template>`),
+      ).get("x.rs")!;
+      expect(out).toContain("fv::js_slice(&*props.a, ((1i64) as f64), Some((-((1i64) as f64))))");
+      expect(out).toContain("fv::js_pad_start(&*props.a, ((4i64) as f64), \"0\")");
+      expect(out).toContain("fv::js_cmp(&*props.a, &*props.b).is_lt()");
+    });
+
+    it("keeps a dictionary as a `ferrovue::Record` and walks it in place", () => {
+      const out = compile(
+        island(`<script setup lang="ts">
+defineProps<{ counts: Record<string, number>; labels: { [key: string]: string } }>();
+</script>
+<template><ul><li v-for="(n, k) in counts" :title="k">{{ n }}</li><li v-for="t in labels">{{ t }}</li></ul></template>`),
+      ).get("x.rs")!;
+      expect(out).toContain("pub counts: ferrovue::Record<'a, i64>,");
+      expect(out).toContain("pub labels: ferrovue::Record<'a, Cow<'a, str>>,");
+      expect(out).toContain("for (k, n_ref) in (props.counts).iter() {");
+      expect(out).toContain("for (_, t_ref) in (props.labels).iter() {");
+    });
+
+    it("chains array methods as iterators, binding only the parameters the body reads", () => {
+      const out = compile(
+        island(`<script setup lang="ts">
+defineProps<{ tags: string[]; nums: number[] }>();
+</script>
+<template><i>{{ tags.filter((t, i) => i > 0).map((t) => t.trim()).join(", ") }}{{ nums.some((n) => true) }}</i></template>`),
+      ).get("x.rs")!;
+      expect(out).toMatch(/\.enumerate\(\)\.filter\(\|fv_e\d+\| \{ let fv_i\d+ = fv_e\d+\.0 as i64; /);
+      expect(out).toContain(".any(|_| true)");
+      expect(out).not.toContain("collect::<Vec<_>>().len()");
+    });
+  });
+
   describe("child components", () => {
     const child = `<script setup lang="ts">
 export interface Props { label: string; count?: number }
@@ -611,7 +650,7 @@ defineProps<{ n: number }>();
       expect(where(`<script setup lang="ts">
 defineProps<{ a: string }>();
 </script>
-<template><i :title="a.split(',')"></i></template>`)).toBe("components/X.vue:4:22");
+<template><i :title="a.normalize()"></i></template>`)).toBe("components/X.vue:4:22");
     });
 
     it("points at a template expression on the <template> line itself", () => {
@@ -870,7 +909,7 @@ shown.value = props.label;
       "a setup binding it cannot evaluate, named like a prop",
       `<script setup lang="ts">
 const props = defineProps<{ label: string }>();
-const label = props.label.split(",");
+const label = props.label.normalize();
 </script>
 <template><i>{{ label }}</i></template>`,
       /`label` is set up in a way the server cannot evaluate/,
@@ -893,12 +932,206 @@ const props = defineProps<{ note?: string }>();
       /`null`/,
     ],
     [
-      "an ordering comparison of strings, which JavaScript orders by UTF-16 code unit",
+      "an ordering comparison of a string and a number, which JavaScript makes numeric",
+      `<script setup lang="ts">
+const props = defineProps<{ a: string; n: number }>();
+</script>
+<template><i v-if="a < n">x</i></template>`,
+      /`<` is supported between two numbers, or two strings, that are present: the other is a string/,
+    ],
+    [
+      "two halves of surrogate pairs compared, which JavaScript tells apart",
       `<script setup lang="ts">
 const props = defineProps<{ a: string; b: string }>();
 </script>
-<template><i v-if="a < b">x</i></template>`,
-      /`<` is supported between two numbers that are present: JavaScript orders strings by UTF-16 code unit/,
+<template><i v-if="a.charAt(0) === b.charAt(0)">same initial</i></template>`,
+      /`===` with a string that may hold half of a surrogate pair/,
+    ],
+    [
+      "a half of a surrogate pair searched for, which JavaScript finds in a whole pair",
+      `<script setup lang="ts">
+const props = defineProps<{ a: string; b: string }>();
+</script>
+<template><i>{{ a.includes(b.slice(0, 1)) }}</i></template>`,
+      /`\.includes\(\)` with a string that may hold half of a surrogate pair/,
+    ],
+    [
+      "two halves of surrogate pairs joined, which JavaScript makes one character",
+      `<script setup lang="ts">
+const props = defineProps<{ a: string }>();
+</script>
+<template><i>{{ a.slice(0, 1) + a.slice(1) }}</i></template>`,
+      /`\+` with a string that may hold half of a surrogate pair/,
+    ],
+    [
+      "halves of surrogate pairs adjacent in a template literal",
+      `<script setup lang="ts">
+const props = defineProps<{ a: string }>();
+</script>
+<template><i>{{ \`\${a.charAt(0)}\${a.slice(1)}\` }}</i></template>`,
+      /a template literal with a string that may hold half of a surrogate pair/,
+    ],
+    [
+      "a half of a surrogate pair ordered against a string beyond U+D7FF",
+      `<script setup lang="ts">
+const props = defineProps<{ a: string; b: string }>();
+</script>
+<template><i v-if="a.charAt(0) < b">x</i></template>`,
+      /`<` with a string that may hold half of a surrogate pair/,
+    ],
+    [
+      "halves of surrogate pairs joined with no separator",
+      `<script setup lang="ts">
+const props = defineProps<{ words: string[] }>();
+</script>
+<template><i>{{ words.map((w) => w.charAt(0)).join("") }}</i></template>`,
+      /`\.join\(\)` with no literal separator with a string that may hold half of a surrogate pair/,
+    ],
+    [
+      "a string that may hold half of a surrogate pair repeated",
+      `<script setup lang="ts">
+const props = defineProps<{ a: string }>();
+</script>
+<template><i>{{ a.slice(1, 3).repeat(2) }}</i></template>`,
+      /`\.repeat\(\)` with a string that may hold half of a surrogate pair/,
+    ],
+    [
+      "JSON.stringify of a string that may hold half of a surrogate pair, which JavaScript escapes",
+      `<script setup lang="ts">
+const props = defineProps<{ a: string }>();
+</script>
+<template><i>{{ JSON.stringify(a.slice(0, 3)) }}</i></template>`,
+      /`JSON\.stringify\(\)` with a string that may hold half of a surrogate pair/,
+    ],
+    [
+      "a negative literal count for repeat, which throws",
+      `<script setup lang="ts">
+const props = defineProps<{ a: string }>();
+</script>
+<template><i>{{ a.repeat(-1) }}</i></template>`,
+      /`\.repeat\(\)` with a negative or infinite count, which throws a `RangeError`/,
+    ],
+    [
+      "toLocaleUpperCase, which depends on the server's locale",
+      `<script setup lang="ts">
+const props = defineProps<{ a: string }>();
+</script>
+<template><i>{{ a.toLocaleUpperCase() }}</i></template>`,
+      /`\.toLocaleUpperCase\(\)` maps case by the locale the server runs in/,
+    ],
+    [
+      "replace with a regular expression",
+      `<script setup lang="ts">
+const props = defineProps<{ a: string }>();
+</script>
+<template><i>{{ a.replace(/x/g, "y") }}</i></template>`,
+      /`\.replace\(\)` with a regular expression/,
+    ],
+    [
+      "replace with a function",
+      `<script setup lang="ts">
+const props = defineProps<{ a: string }>();
+</script>
+<template><i>{{ a.replace("x", (m) => m) }}</i></template>`,
+      /`\.replace\(\)` with a function/,
+    ],
+    [
+      "includes with a starting position",
+      `<script setup lang="ts">
+const props = defineProps<{ a: string }>();
+</script>
+<template><i>{{ a.includes("x", 2) }}</i></template>`,
+      /`\.includes\(\)` takes 1 argument here/,
+    ],
+    [
+      "parseInt with a radix other than 10 or 16",
+      `<script setup lang="ts">
+const props = defineProps<{ a: string }>();
+</script>
+<template><i>{{ parseInt(a, 36) }}</i></template>`,
+      /`parseInt\(\)` takes a radix of 10 or 16, written as a literal/,
+    ],
+    [
+      "parseInt of a number, which JavaScript reads as a string",
+      `<script setup lang="ts">
+const props = defineProps<{ n: number }>();
+</script>
+<template><i>{{ parseInt(n) }}</i></template>`,
+      /`parseInt\(\)` takes a string/,
+    ],
+    [
+      "an arrow function with a block body",
+      `<script setup lang="ts">
+const props = defineProps<{ tags: string[] }>();
+</script>
+<template><i>{{ tags.filter((t) => { return t.length > 1; }).length }}</i></template>`,
+      /`\.filter\(\)` takes an arrow function whose body is an expression/,
+    ],
+    [
+      "a function passed to filter by name",
+      `<script setup lang="ts">
+const props = defineProps<{ tags: string[] }>();
+</script>
+<template><i>{{ tags.filter(Boolean).length }}</i></template>`,
+      /`\.filter\(\)` takes an arrow function of the item/,
+    ],
+    [
+      "map to optional values",
+      `<script setup lang="ts">
+interface Row { note?: string }
+const props = defineProps<{ rows: Row[] }>();
+</script>
+<template><i>{{ rows.map((r) => r.note).length }}</i></template>`,
+      /`\.map\(\)` makes a list of strings, numbers, booleans or objects, not optional values/,
+    ],
+    [
+      "a computed list as a slot prop",
+      `<script setup lang="ts">
+const props = defineProps<{ tags: string[] }>();
+</script>
+<template><div><slot name="row" :tags="tags.filter((t) => t)" /></div></template>`,
+      /a slot prop is not a computed list/,
+    ],
+    [
+      "a record keyed by numbers",
+      `<script setup lang="ts">
+defineProps<{ m: Record<number, string> }>();
+</script>
+<template><i></i></template>`,
+      /a `Record` is keyed by `string`/,
+    ],
+    [
+      "a record of optional values, which JSON cannot hold",
+      `<script setup lang="ts">
+defineProps<{ m: Record<string, string | undefined> }>();
+</script>
+<template><i></i></template>`,
+      /a `Record`'s values are strings, numbers, booleans, objects or lists of those/,
+    ],
+    [
+      "Object.entries outside a v-for",
+      `<script setup lang="ts">
+defineProps<{ m: Record<string, string> }>();
+</script>
+<template><i>{{ Object.entries(m).map((e) => e).length }}</i></template>`,
+      /`Object\.entries\(\)` is supported as the source of a `v-for`/,
+    ],
+    [
+      "Object.keys of an object that is not a record",
+      `<script setup lang="ts">
+interface Row { a: string }
+defineProps<{ row: Row }>();
+</script>
+<template><i>{{ Object.keys(row).length }}</i></template>`,
+      /`Object\.keys\(\)` takes a `Record<string, T>`/,
+    ],
+    [
+      "a field read from a record, which may be absent",
+      `<script setup lang="ts">
+defineProps<{ m: Record<string, string> }>();
+</script>
+<template><i>{{ m.title }}</i></template>`,
+      /`\.title` on a value that is not an object/,
     ],
     [
       "a ternary whose branches differ in type",
@@ -969,8 +1202,8 @@ defineProps<{ a: string }>();
       `<script setup lang="ts">
 const props = defineProps<{ a: string }>();
 </script>
-<template><i>{{ a.split(",") }}</i></template>`,
-      /`\.split\(\)` is not supported/,
+<template><i>{{ a.normalize() }}</i></template>`,
+      /`\.normalize\(\)` is not supported/,
     ],
     [
       "a dynamic component",

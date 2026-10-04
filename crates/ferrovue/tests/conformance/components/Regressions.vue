@@ -3,7 +3,9 @@
  * literals beyond what a double holds exactly, and `?:` / `||` choosing between a string the
  * component holds and one it builds; class objects whose names repeat or are array indices, which
  * a JavaScript object lists first; JavaScript's -0; and a number exactly halfway between two
- * shortest spellings; and a branch that trims a string it has just built. */
+ * shortest spellings; a branch that trims a string it has just built; and strings and lists built
+ * in place — `?? (1).toFixed(1)`, `.at()` of a built string in a branch, `.split()` then `.slice()` —
+ * whose borrows outlived them. */
 defineProps<{ s1: string; b0: boolean; os1?: string; ob2?: boolean; f2: number; l2: string[]; l4: number[]; n3: number }>();
 </script>
 
@@ -30,5 +32,7 @@ defineProps<{ s1: string; b0: boolean; os1?: string; ob2?: boolean; f2: number; 
     <p>{{ 'a' ? 'a' : (1).toFixed(2).trim() }}|{{ ' pad ' ? 'a' : '-'.toUpperCase().trimEnd() }}|{{ (true && true) ? 'a' : (1).toFixed(10).trimStart() }}|{{ b0 ? 'a' : (f2).toFixed(2).trim() }}|{{ s1.trim() || (s1 + 'x').trim() }}</p>
     <p v-if="os1">{{ os1 ? os1.toUpperCase().trimEnd() : 'a' }}</p>
     <p :data-n="7 / (-l2.length)">{{ 0.5 / ((-5) * 0) }}|{{ n3 / s1.length }}|{{ -0 }}|{{ 1 / -f2 }}</p>
+    <p>{{ (os1 ?? (1).toFixed(1)) || 'a' }}|{{ b0 ? (String(f2).at(-1) ?? ', ') : 'x' }}|{{ `🦀${s1}`.split(',').slice(1, 1.005).includes('x y') }}</p>
+    <i v-for="w in (f2).toFixed(3).split('.').slice(0, -1)">{{ w }}</i>
   </div>
 </template>

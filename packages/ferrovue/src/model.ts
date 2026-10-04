@@ -15,6 +15,9 @@ export type Ty =
   | { k: "undef" }
   | { k: "opt"; of: Ty }
   | { k: "list"; of: Ty }
+  /** `Record<string, T>`: an object used as a dictionary, `ferrovue::Record` in Rust, its keys in
+   * JavaScript's order. */
+  | { k: "record"; of: Ty }
   /** `store` marks a Pinia store's state, or a type inside it, declared in a store's own file;
    * `home` a type declared elsewhere: `"types"` for a shared `.ts` file, or the component whose
    * `.vue` file declares it. */
@@ -56,6 +59,16 @@ export interface Val {
   /** For an integer computed from others: the same computation on doubles, before it is rounded
    * back to an \`i64\` — which keeps JavaScript's \`-0\`, so a division by it is \`-Infinity\`. */
   f64?: string;
+  /** For a list a template computes — `filter`, `map`, `split`, `Object.keys` — an iterator of its
+   * items, each a `Cow<str>`, a copied number or boolean, or a borrowed object. `code` is then those
+   * items collected into a `Vec`. */
+  iter?: string;
+  /** For a string, or a list of strings: it may hold half of a surrogate pair, which JavaScript
+   * keeps and ferrovue writes as U+FFFD — so two such values are never compared or joined. */
+  lone?: boolean;
+  /** For an optional string a temporary owns: that `Option<Cow<str>>`, whose `.as_deref()` is
+   * `code`. A setup `let` keeps this. */
+  held?: string;
 }
 
 export const STR: Ty = { k: "str" };
