@@ -45,6 +45,8 @@ released together and share version numbers.
   compares unequal to `undefined`; `??` and `?:` between an integer and a `Float` give a `Float`.
 - `deny.toml` and a `cargo deny` CI job: every crate the workspace builds is under a licence
   compatible with MIT OR Apache-2.0 and comes from crates.io; RustSec advisories fail a release.
+- The release workflow checks the crate's public API against the last version on crates.io
+  (`cargo-semver-checks`): before 1.0, breaking changes need a new minor version (`RELEASING.md`).
 
 ### Changed
 

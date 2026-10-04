@@ -37,6 +37,13 @@ jobs:
           node-version: 24
       - name: Tag, manifests and changelog agree
         run: node scripts/release.ts check "$GITHUB_REF_NAME"
+      # The crate's public API against the newest version on crates.io not newer than this one, with
+      # the kind of release read from the two versions as Cargo reads them: 0.1.x to 0.2.0 may break
+      # the API, 0.2.0 to 0.2.1 may only add to it, and 1.x to 2.0 may break it.
+      - name: The crate's API changes are allowed by its version (cargo-semver-checks)
+        uses: obi1kenobi/cargo-semver-checks-action@6b69fcf40e9b5fb17adeb57e4b6ecd020649a239 # v2.9
+        with:
+          package: ferrovue
       - id: version
         name: The version, and whether it is a pre-release
         run: |
