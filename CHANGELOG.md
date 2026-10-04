@@ -79,6 +79,10 @@ released together and share version numbers.
 - A class object with computed names keeps the spaces inside a name, as Vue does.
 - An empty route parameter fails a debug build's render, as vue-router fails it; a release build
   still writes the link.
+- vue-i18n: a fractional `count` or `n` chooses the plural case as vue-i18n does (`1.5` is
+  plural, not singular), and one that is not a finite number (`NaN`, `Infinity`) is passed over
+  for the plural number; a fraction that chooses no case fails a debug build's render, as vue-i18n
+  throws. Found by mutation testing; the conformance component `Plurals` holds it to vue-i18n.
 
 ## [0.1.0] - 2026-10-04
 

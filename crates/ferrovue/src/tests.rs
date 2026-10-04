@@ -395,3 +395,59 @@ fn holes_cut_a_render_where_the_caller_writes_later() {
         ["<a><!--[-->", "<!--]--><b><!--[-->", "<!--]--></b></a>"]
     );
 }
+
+/// Messages that vue-i18n cannot evaluate at all: it overflows its stack on a cycle, and throws on
+/// a plural number that chooses no case. The rest of `t()` is held to vue-i18n by the conformance
+/// components `Translated` and `Plurals`.
+static UNEVALUABLE: &[i18n::Locale] = &[i18n::Locale {
+    name: "en",
+    messages: &[
+        (
+            "apples",
+            i18n::Message {
+                cases: &[
+                    &[i18n::Part::Text("none")],
+                    &[i18n::Part::Text("one")],
+                    &[i18n::Part::Text("many")],
+                ],
+            },
+        ),
+        (
+            "loop",
+            i18n::Message {
+                cases: &[&[
+                    i18n::Part::Text("x"),
+                    i18n::Part::Linked {
+                        key: "loop",
+                        modifier: None,
+                    },
+                ]],
+            },
+        ),
+    ],
+}];
+
+#[test]
+fn a_cycle_of_linked_messages_ends_with_the_key_once_nested_too_deep() {
+    let i18n = I18n::new(UNEVALUABLE, "en", &[]);
+    let out = i18n.t("loop", &i18n::Args::default());
+    assert_eq!(
+        out,
+        format!("{}loop", "x".repeat(33)),
+        "the message and 32 links"
+    );
+}
+
+/// vue-i18n throws on `t("apples", { count: 1.5 })` with three cases; a debug build fails the
+/// render the same way.
+#[test]
+#[cfg(debug_assertions)]
+#[should_panic(expected = "chooses none of the cases")]
+fn a_fraction_that_chooses_no_case_fails_a_debug_render() {
+    let named = [("count", i18n::Value::Float(1.5))];
+    let args = i18n::Args {
+        named: &named,
+        ..i18n::Args::default()
+    };
+    I18n::new(UNEVALUABLE, "en", &[]).t("apples", &args);
+}

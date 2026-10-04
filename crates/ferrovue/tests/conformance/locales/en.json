@@ -10,5 +10,7 @@
   "onlyEnglish": "only in English",
   "flat.key": "a flat key",
   "nested": { "deep": { "key": "deep value" } },
-  "html": "<b>{name}</b> & co"
+  "html": "<b>{name}</b> & co",
+  "loud": "LOUD Noise",
+  "shout": "@.lower:loud"
 }
