@@ -19,5 +19,5 @@
     "noEmit": true,
     "types": ["node", "vite/client"]
   },
-  "include": ["packages/*/src/**/*.ts", "packages/*/test/**/*.ts", "packages/*/bench/**/*.ts", "packages/*/fuzz/**/*.ts", "scripts/**/*.ts", "vitest.config.ts"]
+  "include": ["packages/*/src/**/*.ts", "packages/*/test/**/*.ts", "packages/*/bench/**/*.ts", "packages/*/fuzz/**/*.ts", "packages/*/browser/**/*.ts", "scripts/**/*.ts", "vitest.config.ts"]
 }

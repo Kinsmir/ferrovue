@@ -8,6 +8,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:browser": "vitest run --config packages/ferrovue/browser/vitest.config.ts",
     "lint": "oxlint --type-aware --deny-warnings && fallow dead-code",
     "lint:fix": "oxlint --type-aware --fix && fallow fix --yes --no-create-config",
     "fallow": "fallow",
