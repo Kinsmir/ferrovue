@@ -483,6 +483,21 @@
       "app",
       "/",
       "/"
+    ],
+    [
+      "/app/#/",
+      "/blog/intro",
+      "/users/7"
+    ],
+    [
+      "/app#",
+      "/",
+      "/users/7?x#y"
+    ],
+    [
+      "#",
+      "/",
+      "/blog/intro"
     ]
   ],
   "nested": {
@@ -535,6 +550,24 @@
           {
             "path": "cart",
             "name": "cart"
+          }
+        ]
+      },
+      {
+        "path": "/p/:other",
+        "name": "p-other"
+      },
+      {
+        "path": "/p/:id",
+        "name": "p",
+        "children": [
+          {
+            "path": "/q/:x",
+            "name": "q"
+          },
+          {
+            "path": "",
+            "name": "p-home"
           }
         ]
       }
@@ -623,6 +656,14 @@
       [
         "/users/7/posts/3",
         "../.."
+      ],
+      [
+        "/p/7",
+        "/p/7"
+      ],
+      [
+        "/q/1",
+        "/p/7"
       ]
     ],
     "named": [
@@ -686,7 +727,9 @@
       "/settings/9",
       "/docs/api/x",
       "/docs",
-      "/shop"
+      "/shop",
+      "/p/7",
+      "/q/1"
     ]
   }
 }

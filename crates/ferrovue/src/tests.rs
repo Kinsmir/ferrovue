@@ -120,6 +120,18 @@ fn integers_are_written_as_javascript_writes_them() {
     }
 }
 
+/// `tests/vectors/class.json`, recorded from Vue's `normalizeClass` of the object the entries make.
+#[test]
+fn a_class_object_is_normalized_as_vue_normalizes_it() {
+    let vectors: Vec<(Vec<(String, bool)>, String)> =
+        serde_json::from_str(include_str!("../tests/vectors/class.json")).expect("class vectors");
+    assert!(vectors.len() >= 10, "the vectors were not all read");
+    for (entries, want) in &vectors {
+        let entries: Vec<(bool, &str)> = entries.iter().map(|(n, on)| (*on, n.as_str())).collect();
+        assert_eq!(&class_object(&entries), want, "{entries:?}");
+    }
+}
+
 #[test]
 fn a_class_object_keeps_the_spaces_inside_its_names_as_vue_does() {
     assert_eq!(
@@ -349,6 +361,19 @@ fn the_state_script_cannot_be_closed_by_a_value_and_reads_back_whole() {
     assert_eq!(
         serde_json::from_str::<serde_json::Value>(body).unwrap(),
         state
+    );
+}
+
+/// Both line separators are escaped, and nothing else that starts with the same byte: U+2069 is
+/// E2 81 A9, U+2027 is E2 80 A7.
+#[test]
+fn the_state_script_escapes_exactly_the_two_line_separators() {
+    let state = serde_json::json!(["a\u{2029}b\u{2028}c\u{2069}\u{2027}\u{2029}"]);
+    let mut out = String::new();
+    state_script_into(&mut out, "s", &state);
+    assert_eq!(
+        out,
+        "<script type=\"application/json\" id=\"s\">[\"a\\u2029b\\u2028c\u{2069}\u{2027}\\u2029\"]</script>"
     );
 }
 

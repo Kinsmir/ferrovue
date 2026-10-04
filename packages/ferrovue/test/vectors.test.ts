@@ -3,7 +3,7 @@
  * the same answers. */
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { escapeHtml } from "@vue/shared";
+import { escapeHtml, normalizeClass } from "@vue/shared";
 import { describe, expect, it } from "vitest";
 
 const DIR = join(import.meta.dirname, "../../../crates/ferrovue/tests/vectors");
@@ -53,6 +53,23 @@ describe("vectors shared with the Rust crate", () => {
     const recorded = vectors.map(([op, x, arg]) => [op, x, arg, run(op, x, arg)]);
     if (process.env.FERROVUE_VECTORS_WRITE === "1") {
       writeFileSync(join(DIR, "math.json"), JSON.stringify(recorded, null, 1) + "\n");
+      return;
+    }
+    expect(vectors).toEqual(recorded);
+  });
+
+  // `[entries, expected]`: a class object as `[name, condition]` pairs in source order, which
+  // JavaScript makes an object of (a repeated name keeps its first place and its last condition,
+  // array indices first), and Vue's `normalizeClass` of it, recorded with `FERROVUE_VECTORS_WRITE=1`.
+  it("class.json is normalizeClass of an object", () => {
+    const vectors = (read("class.json") as [[string, boolean][], string][]);
+    const recorded = vectors.map(([entries]) => {
+      const object: Record<string, boolean> = {};
+      for (const [name, on] of entries) object[name] = on;
+      return [entries, normalizeClass(object)];
+    });
+    if (process.env.FERROVUE_VECTORS_WRITE === "1") {
+      writeFileSync(join(DIR, "class.json"), JSON.stringify(recorded, null, 1) + "\n");
       return;
     }
     expect(vectors).toEqual(recorded);
