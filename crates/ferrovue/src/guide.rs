@@ -1,0 +1,71 @@
+//! A guide to ferrovue: from a `.vue` file to a page a browser hydrates.
+//!
+//! These modules hold documentation alone. They have no items, and they are compiled only when
+//! rustdoc builds the documentation or collects its examples, so they cost nothing in a build.
+//!
+//! Read them in order the first time:
+//!
+//! 1. [`quick_start`]: install both halves, configure, generate, render.
+//! 2. [`generated_code`]: what the compiler writes, module by module, and the shape of a
+//!    component's API: `Props`, `render`, `html`, `island`.
+//! 3. [`props`]: how each TypeScript prop type becomes a Rust type, and how to build props;
+//!    dictionaries, with [`Record`](crate::Record).
+//! 4. [`slots`]: slot content from Rust, named and scoped slots, fallbacks.
+//! 5. [`scoped_styles`]: `<style scoped>` ids, matching `@vitejs/plugin-vue`, and `:slotted()`.
+//! 6. [`routing`]: `<RouterLink>`, `<RouterView>` and `useRoute()`, with [`Router`](crate::Router)
+//!    and [`Route`](crate::Route).
+//! 7. [`i18n`]: vue-i18n's `$t`, with [`I18n`](crate::I18n).
+//! 8. [`teleports`]: `<Teleport>`, with [`Teleports`](crate::Teleports).
+//! 9. [`pinia`]: Pinia state on the server, and handing it to the client.
+//! 10. [`islands_and_hydration`]: what the browser does with the page.
+//! 11. [`streaming`]: holes, for sending a page in the order its parts are ready.
+//! 12. [`numbers`]: JavaScript's number semantics in Rust.
+//! 13. [`strings`]: JavaScript's strings in Rust: UTF-16 indices, halves of pairs, ordering,
+//!     conversions to and from numbers.
+//! 14. [`escaping`]: what is escaped, where, and the one way to write raw HTML.
+//! 15. [`errors_and_limits`]: what the compiler refuses, and what can still go wrong at run time.
+
+#[doc = include_str!("../docs/guide/quick_start.md")]
+pub mod quick_start {}
+
+#[doc = include_str!("../docs/guide/generated_code.md")]
+pub mod generated_code {}
+
+#[doc = include_str!("../docs/guide/props.md")]
+pub mod props {}
+
+#[doc = include_str!("../docs/guide/slots.md")]
+pub mod slots {}
+
+#[doc = include_str!("../docs/guide/scoped_styles.md")]
+pub mod scoped_styles {}
+
+#[doc = include_str!("../docs/guide/routing.md")]
+pub mod routing {}
+
+#[doc = include_str!("../docs/guide/i18n.md")]
+pub mod i18n {}
+
+#[doc = include_str!("../docs/guide/teleports.md")]
+pub mod teleports {}
+
+#[doc = include_str!("../docs/guide/pinia.md")]
+pub mod pinia {}
+
+#[doc = include_str!("../docs/guide/islands_and_hydration.md")]
+pub mod islands_and_hydration {}
+
+#[doc = include_str!("../docs/guide/streaming.md")]
+pub mod streaming {}
+
+#[doc = include_str!("../docs/guide/numbers.md")]
+pub mod numbers {}
+
+#[doc = include_str!("../docs/guide/strings.md")]
+pub mod strings {}
+
+#[doc = include_str!("../docs/guide/escaping.md")]
+pub mod escaping {}
+
+#[doc = include_str!("../docs/guide/errors_and_limits.md")]
+pub mod errors_and_limits {}

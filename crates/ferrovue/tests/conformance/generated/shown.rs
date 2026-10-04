@@ -21,7 +21,7 @@ pub struct Props<'a> {
 impl<'a> Props<'a> {
     /// Props with its required fields.
     pub fn new(on: bool, color: impl Into<Cow<'a, str>>) -> Self {
-        Props { on: on, color: color.into() }
+        Props { on, color: color.into() }
     }
 
 }
@@ -31,15 +31,15 @@ impl<'a> Props<'a> {
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(65 + props.color.len());
     out.push_str("<p class=\"shown");
-    fv::class_into(out, true, &[if (props.on) { "on" } else { "" }]);
+    fv::class_into(out, true, &[if props.on { "on" } else { "" }]);
     out.push_str("\" style=\"");
-    if !((props.on)) {
+    if !props.on {
         out.push_str("display:none;");
     } else {
         out.push_str("display:block;");
     }
     out.push_str("color:");
-    fv::escape_into(out, &*props.color);
+    fv::escape_into(out, &props.color);
     out.push_str(";\">x</p>");
 }
 

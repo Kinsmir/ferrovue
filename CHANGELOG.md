@@ -7,6 +7,19 @@ released together and share version numbers.
 
 ### Added
 
+- `<style scoped>`: the `data-v-` id on every element, on a child component's root (the creating
+  component's id, what a parent passes on to a component that is its root, and the slot scope ids it
+  renders inside) and on slot content given a `:slotted()` component's `-s` id, as Vue's server
+  renderer writes them, fragments, recursion, `inheritAttrs: false`, `<Transition>`, `<KeepAlive>`,
+  `<Teleport>` and `<RouterLink>` included. The id is computed as `@vitejs/plugin-vue` computes it: `scopeId`
+  (`"filepath-source"`, the plugin's production default, or `"filepath"`) and `viteRoot` in
+  `ferrovue.config.json`. A component that may inherit ids gets a `render_scoped` beside `render`;
+  `ferrovue::scope_attrs`, `Slot::slotted`, `slot_into_slotted` and `scoped_slot_into_slotted` in
+  the crate. `<RouterView>` in a scoped component is refused, as are a `<slot>` in a `<RouterLink>`
+  that takes ids and an element in one inside `:slotted()` slot content. The Vite
+  plugin fails a build in which plugin-vue computes the ids otherwise, and warns the dev server.
+- `attachSsrRender` compiles a `<style scoped>` component with the `__scopeId` plugin-vue gave it,
+  and `fixtureApp` takes `client: true` to render on the client instead of hydrating.
 - A release workflow: a tag stages the npm package and, after approval, publishes the crate, through
   both registries' trusted publishing; `scripts/release.ts` bumps versions and checks tags
   (`RELEASING.md`).
@@ -43,6 +56,62 @@ released together and share version numbers.
 - Narrowing as TypeScript narrows: `x !== undefined` as well as `x`, and `!x` or `x === undefined`
   for the `v-else`; in `?:`, `&&` and `||` as well as `v-if`. A value that is always present
   compares unequal to `undefined`; `??` and `?:` between an integer and a `Float` give a `Float`.
+- Testing: every conformance fixture is hydrated in real browsers — Chromium, Firefox and WebKit,
+  through Playwright — as well as in happy-dom, failing on a mismatch Vue reports and on any change
+  hydrating makes to the document as the browser parsed it; the full-stack example's server is run
+  and its pages hydrated and clicked through in each browser too (`pnpm test:browser`, and a CI
+  job). The fixture app `ferrovue/testing` builds now comes from a module with no Node imports
+  (`fixture.ts`), so a browser bundle can use it. The example's server reads its client build from
+  `DIST_DIR` when set.
+- `deny.toml` and a `cargo deny` CI job: every crate the workspace builds is under a licence
+  compatible with MIT OR Apache-2.0 and comes from crates.io; RustSec advisories fail a release.
+- The release workflow checks the crate's public API against the last version on crates.io
+  (`cargo-semver-checks`): before 1.0, breaking changes need a new minor version (`RELEASING.md`).
+- `pnpm coverage` (vitest's V8 coverage of the compiler, `cargo llvm-cov` of the workspace) and a
+  Coverage workflow that summarises both on the run's page and uploads the reports.
+- Mutation testing of the runtime crate with cargo-mutants (`.cargo/mutants.toml`, TESTING.md):
+  every mutant the tests miss is either closed by a test or listed with the reason it cannot change
+  the output (`.cargo/mutants-equivalent.txt`). A weekly Mutants workflow fails on any other.
+- String methods counted in UTF-16 code units, as JavaScript counts them: `.slice()`, `.substring()`,
+  `.at()`, `.charAt()`, `.indexOf()`, `.lastIndexOf()`, `.split()`, `.replace()` and `.replaceAll()`
+  with string patterns (and JavaScript's `$` replacement patterns), `.padStart()`, `.padEnd()`,
+  `.repeat()`. Half of a surrogate pair is written as U+FFFD, the character a server sends for it;
+  two strings that may each hold one are never compared, searched or joined (README, "Strings").
+  `js_slice`, `js_substring`, `js_at`, `js_char_at`, `js_index_of`, `js_last_index_of`, `js_split`,
+  `js_replace`, `js_replace_all`, `js_pad_start`, `js_pad_end`, `js_repeat`, `js_slice_range` and
+  `js_slice_items` in the crate, held to 4,600 vectors recorded from JavaScript.
+- `<`, `>`, `<=` and `>=` between strings, by UTF-16 code unit: `ferrovue::js_cmp`, held to 400
+  vectors.
+- Array methods with arrow functions: `.filter()`, `.map()`, `.some()`, `.every()`, `.find()`,
+  `.findIndex()`, and `.slice()`, chained and nested, with an index or a destructured item; the lists
+  they make work in `v-for`, `.join()`, `.length`, `.includes()`, `computed` and a child's props.
+- `Record<string, T>` and `{ [key: string]: T }` props as `ferrovue::Record`, which keeps
+  JavaScript's order of keys (array indices first, in numeric order; a key given twice keeps its
+  first place and its last value); `v-for="(value, key, index) in r"`, `Object.keys`,
+  `Object.values`, and `Object.entries` in `v-for`.
+- `Number()`, `parseInt()` (no radix, 10 or 16), `parseFloat()` and `JSON.stringify()` of strings,
+  numbers, booleans and lists of those: `js_number`, `js_parse_int`, `js_parse_float`,
+  `js_json_string` and `js_json_number` in the crate, held to vectors.
+- The differential fuzzer generates all of the above, dictionaries with keys out of JavaScript's
+  order, and compares Vue's HTML as a server sends it.
+
+### Documentation
+
+- The crate's documentation stands on its own on docs.rs: a crate-level overview with the guarantee,
+  an end-to-end quick start, feature flags and version requirements (`docs/crate.md`), and a guide,
+  `ferrovue::guide`, with a page each on the generated code, props, slots, routing, i18n, teleports,
+  Pinia, islands and hydration, streaming, JavaScript numbers, escaping, and what is refused. Its
+  examples mirror the code the compiler generates and run as doctests; the guide is compiled only
+  by rustdoc.
+- The public items have runnable examples, and those that generated code calls say so.
+- docs.rs builds with `--cfg docsrs`, which marks `maud`-only items; the manifest links the docs.
+- The guide covers the rest of this release: a page on `<style scoped>` (the ids, matching
+  `@vitejs/plugin-vue` with `scopeId` and `viteRoot`, `render_scoped`, `:slotted()` and slot scope
+  ids), a page on strings (UTF-16 indices, halves of surrogate pairs, ordering, `Number`,
+  `parseInt`, `parseFloat`, `JSON.stringify`, slicing lists), dictionaries and `Record` in the
+  props page, vue-i18n's plural choice from a fraction, and `Math.round`'s `-0`. Its copies of
+  generated code are what the compiler writes now, and the new runtime functions have runnable
+  examples.
 
 ### Changed
 
@@ -53,6 +122,21 @@ released together and share version numbers.
 - The CLI prints a refused construct as an error message, without a stack trace.
 - Generated code no longer computes setup values nothing reads, nor binds loop items, narrowed values
   or slot props nothing reads; it compiles without `allow(unused_variables)`.
+- Generated code passes rustc's default warnings and `cargo clippy -- -D warnings` with one allow
+  left, `dead_code`, as each component gets an API an app uses only part of (and a constructor of
+  more than seven required props allows `clippy::too_many_arguments`). It is parenthesised only
+  where Rust needs it, folds what is known at build time (literal arithmetic, constant conditions,
+  string literals), borrows and dereferences only where coercion does not, and pushes a single
+  character as a `char`. Output is unchanged.
+- Faster rendering of numbers and short strings, which made the `list` benchmark 2.5× faster
+  (115 µs to 46 µs; `tree` 5.2 to 3.7 µs, `page` 5.0 to 4.4 µs). `push_int` and `Js` write integers
+  digit pairs at a time instead of through `fmt` and a `String`; `push_number` writes a whole
+  number that way, and looks for a tie between two shortest spellings only in a number short enough
+  to have one, from its exact digits in a `u128`, instead of formatting 1,100 digits of every number
+  (about 20× faster); `escape_into` checks for characters to escape eight bytes at a time. Generated
+  `render`s reserve room for the numbers they write and for loops nested in a loop over the props,
+  so a long page no longer outgrows its buffer and is copied. Held to the old `push_number` and a
+  bytewise escape by property tests, and to 18 new JavaScript vectors.
 
 ### Fixed
 
@@ -62,17 +146,28 @@ released together and share version numbers.
   - an integer literal beyond 2⁵³ (`1e21`) is a double, where it generated Rust that did not compile;
   - `?:` and `||` choosing between a string the component holds and one it builds, or a trim of
     one it builds (`(1).toFixed(2).trim()`), compile;
+  - `label ?? (1).toFixed(1)`, an optional string falling back to one built in place, compiles
+    inside `||` and `?:`;
   - a class object whose names repeat, or are array indices (`"0"`, `"12"`), renders as a
     JavaScript object lists them: one entry per name, array indices first in numeric order;
   - integer arithmetic keeps JavaScript's `-0`, so dividing by it is `-Infinity`;
   - a number exactly halfway between two shortest spellings is written with the even digit, as
-    ECMAScript specifies (`-1801439850948198.2`).
+    ECMAScript specifies (`-1801439850948198.2`);
+  - `||` after an optional string whose `??` fallback is built (`` (s ?? "a") || (s ?? `${n}x`) ``)
+    compiles.
 
 - Integers beyond ±2⁵³ are written, added and compared as JavaScript does with the rounded value the
   browser reads, so such a prop no longer causes a hydration mismatch.
 - A class object with computed names keeps the spaces inside a name, as Vue does.
 - An empty route parameter fails a debug build's render, as vue-router fails it; a release build
   still writes the link.
+- vue-i18n: a fractional `count` or `n` chooses the plural case as vue-i18n does (`1.5` is
+  plural, not singular), and one that is not a finite number (`NaN`, `Infinity`) is passed over
+  for the plural number; a fraction that chooses no case fails a debug build's render, as vue-i18n
+  throws. Found by mutation testing; the conformance component `Plurals` holds it to vue-i18n.
+- `Math.round` of a number from `-0.5` up to zero is `-0`, as in JavaScript, which `1 / Math.round(x)`
+  shows (`-Infinity`). The math vectors now record the sign of a zero result, and hold
+  `Math.max` and `Math.min` to it as well.
 
 ## [0.1.0] - 2026-10-04
 

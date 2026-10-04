@@ -45,7 +45,7 @@ pub struct Row<'a> {
 impl<'a> Row<'a> {
     /// Row with its required fields.
     pub fn new(id: i64, label: impl Into<Cow<'a, str>>) -> Self {
-        Row { id: id, label: label.into() }
+        Row { id, label: label.into() }
     }
 
 }
@@ -76,7 +76,7 @@ pub struct Props<'a> {
 impl<'a> Props<'a> {
     /// Props with its required fields, every optional one absent.
     pub fn new(n: i64, m: i64, name: impl Into<Cow<'a, str>>, tags: impl IntoIterator<Item = impl Into<Cow<'a, str>>>, nums: Vec<i64>, rows: Vec<Row<'a>>) -> Self {
-        Props { n: n, m: m, name: name.into(), tags: tags.into_iter().map(Into::into).collect(), nums: nums, author: None, rows: rows, pick: None }
+        Props { n, m, name: name.into(), tags: tags.into_iter().map(Into::into).collect(), nums, author: None, rows, pick: None }
     }
 
     /// Set `author`, which is absent otherwise.
@@ -95,73 +95,73 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(233 + 21 * (props.rows).len() + props.name.len() + props.tags.iter().map(|v| v.len()).sum::<usize>() + props.author.as_ref().map_or(0, |v| v.name.len() + v.site.as_deref().map_or(0, str::len)) + props.rows.iter().map(|v| v.label.len()).sum::<usize>() + props.pick.as_deref().map_or(0, str::len));
+    out.reserve(275 + 33 * props.rows.len() + props.name.len() + props.tags.iter().map(|v| v.len()).sum::<usize>() + props.author.as_ref().map_or(0, |v| v.name.len() + v.site.as_deref().map_or(0, str::len)) + props.rows.iter().map(|v| v.label.len()).sum::<usize>() + props.pick.as_deref().map_or(0, str::len));
     out.push_str("<div><p>");
-    fv::push_int(out, ((((props.n) as f64) - ((props.m) as f64)) as i64));
-    out.push_str("|");
-    fv::push_int(out, ((((props.n) as f64) * ((props.m) as f64)) as i64));
-    out.push_str("|");
-    fv::push_int(out, ((((props.n) as f64) % ((2i64) as f64)) as i64));
-    out.push_str("|");
-    fv::push_int(out, ((-((props.n) as f64)) as i64));
-    out.push_str("|");
-    out.push_str(if (((props.n) as f64) > ((props.m) as f64)) { "true" } else { "false" });
-    out.push_str("|");
-    out.push_str(if (((props.n) as f64) <= ((props.m) as f64)) { "true" } else { "false" });
-    out.push_str("|");
-    fv::push_int(out, ((props.n).max(props.m)).max(0i64));
-    out.push_str("|");
-    fv::push_int(out, (props.n).min(props.m));
-    out.push_str("|");
-    fv::push_int(out, (((props.m) as f64).abs() as i64));
+    fv::push_int(out, (props.n as f64 - props.m as f64) as i64);
+    out.push('|');
+    fv::push_int(out, (props.n as f64 * props.m as f64) as i64);
+    out.push('|');
+    fv::push_int(out, (props.n as f64 % 2.0) as i64);
+    out.push('|');
+    fv::push_int(out, -(props.n as f64) as i64);
+    out.push('|');
+    out.push_str(if props.n as f64 > props.m as f64 { "true" } else { "false" });
+    out.push('|');
+    out.push_str(if props.n as f64 <= props.m as f64 { "true" } else { "false" });
+    out.push('|');
+    fv::push_int(out, props.n.max(props.m).max(0i64));
+    out.push('|');
+    fv::push_int(out, props.n.min(props.m));
+    out.push('|');
+    fv::push_int(out, (props.m as f64).abs() as i64);
     out.push_str("</p><p title=\"");
-    fv::escape_into(out, &*format!("{} has {} item{}", &*props.name, fv::Js(props.n), if ((((props.n) as f64) == ((1i64) as f64))) { "" } else { "s" }));
+    fv::escape_into(out, &format!("{} has {} item{}", props.name, fv::Js(props.n), (if props.n as f64 == 1.0 { "" } else { "s" })));
     out.push_str("\">");
-    fv::escape_into(out, &*format!("[{}]", &*props.name));
-    out.push_str("|");
-    fv::escape_into(out, &*fv::Js(props.n).to_string());
-    out.push_str("|");
-    fv::escape_into(out, &*fv::Js(props.n).to_string());
+    fv::escape_into(out, &format!("[{}]", props.name));
+    out.push('|');
+    fv::escape_into(out, &fv::Js(props.n).to_string());
+    out.push('|');
+    fv::escape_into(out, &fv::Js(props.n).to_string());
     out.push_str("</p><p>");
-    fv::escape_into(out, &*(&*props.name).to_uppercase());
-    out.push_str("|");
-    fv::escape_into(out, &*(&*props.name).to_lowercase());
-    out.push_str("|");
-    fv::escape_into(out, fv::js_trim_start(&*props.name));
-    out.push_str("|");
-    fv::escape_into(out, fv::js_trim_end(&*props.name));
-    out.push_str("|");
-    out.push_str(if (&*props.name).contains("a") { "true" } else { "false" });
-    out.push_str("|");
-    out.push_str(if (&*props.name).starts_with("A") { "true" } else { "false" });
-    out.push_str("|");
-    out.push_str(if (&*props.name).ends_with("!") { "true" } else { "false" });
+    fv::escape_into(out, &props.name.to_uppercase());
+    out.push('|');
+    fv::escape_into(out, &props.name.to_lowercase());
+    out.push('|');
+    fv::escape_into(out, fv::js_trim_start(&props.name));
+    out.push('|');
+    fv::escape_into(out, fv::js_trim_end(&props.name));
+    out.push('|');
+    out.push_str(if props.name.contains("a") { "true" } else { "false" });
+    out.push('|');
+    out.push_str(if props.name.starts_with("A") { "true" } else { "false" });
+    out.push('|');
+    out.push_str(if props.name.ends_with("!") { "true" } else { "false" });
     out.push_str("</p><p>");
-    fv::escape_into(out, &*(props.tags).iter().map(|v| &**v).collect::<Vec<_>>().join(", "));
-    out.push_str("|");
-    fv::escape_into(out, &*(props.tags).iter().map(|v| &**v).collect::<Vec<_>>().join(","));
-    out.push_str("|");
-    fv::escape_into(out, &*(props.nums).iter().map(|v| fv::Js(*v).to_string()).collect::<Vec<_>>().join("-"));
-    out.push_str("|");
-    out.push_str(if (props.tags).iter().any(|v| &**v == "x") { "true" } else { "false" });
-    out.push_str("|");
-    out.push_str(if (props.nums).iter().any(|v| *v == 2i64) { "true" } else { "false" });
+    fv::escape_into(out, &props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(", "));
+    out.push('|');
+    fv::escape_into(out, &props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(","));
+    out.push('|');
+    fv::escape_into(out, &props.nums.iter().map(|v| fv::Js(*v).to_string()).collect::<Vec<_>>().join("-"));
+    out.push('|');
+    out.push_str(if props.tags.iter().any(|v| &**v == "x") { "true" } else { "false" });
+    out.push('|');
+    out.push_str(if props.nums.contains(&2i64) { "true" } else { "false" });
     out.push_str("</p><p>");
-    if let Some(v) = (props.author.as_ref()).map(|v| &*v.name) {
+    if let Some(v) = props.author.as_ref().map(|v| &*v.name) {
         fv::escape_into(out, v);
     }
-    out.push_str("|");
-    if let Some(v) = (props.author.as_ref()).and_then(|v| v.site.as_deref()) {
+    out.push('|');
+    if let Some(v) = props.author.as_ref().and_then(|v| v.site.as_deref()) {
         fv::escape_into(out, v);
     }
-    out.push_str("|");
-    fv::escape_into(out, ((props.author.as_ref()).and_then(|v| v.site.as_deref())).unwrap_or("no site"));
-    if ((props.pick.as_deref()) == Some("a")) {
+    out.push('|');
+    fv::escape_into(out, props.author.as_ref().and_then(|v| v.site.as_deref()).unwrap_or("no site"));
+    if props.pick.as_deref() == Some("a") {
         out.push_str("<i>picked a</i>");
     } else {
         out.push_str("<!---->");
     }
-    if let Some(_) = props.pick.as_deref() {
+    if props.pick.as_deref().is_some() {
         out.push_str("<i>picked</i>");
     } else {
         out.push_str("<!---->");
@@ -182,26 +182,26 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ol><ul><!--[-->");
-    for w_ref in (["one", &*props.name, "three"]).iter() {
-        let w: &str = &**w_ref;
+    for w_ref in ["one", &*props.name, "three"].iter() {
+        let w: &str = w_ref;
         out.push_str("<li>");
         fv::escape_into(out, w);
         out.push_str("</li>");
     }
     out.push_str("<!--]--><!--[-->");
-    for (i, fv_item2_ref) in (props.rows).iter().enumerate() {
+    for (i, fv_item2_ref) in props.rows.iter().enumerate() {
         let fv_item2 = fv_item2_ref;
         let i = i as i64;
         out.push_str("<li data-id=\"");
         fv::push_int(out, fv_item2.id);
         out.push_str("\">");
         fv::push_int(out, i);
-        out.push_str(":");
-        fv::escape_into(out, &*fv_item2.label);
+        out.push(':');
+        fv::escape_into(out, &fv_item2.label);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul>");
-    if ((((((props.n) as f64) % ((2i64) as f64)) == ((0i64) as f64))) && ((((props.n) as f64) >= ((2i64) as f64)))) {
+    if props.n as f64 % 2.0 == 0.0 && props.n as f64 >= 2.0 {
         out.push_str("<b>even, at least two</b>");
     } else {
         out.push_str("<!---->");

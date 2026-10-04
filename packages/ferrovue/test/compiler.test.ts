@@ -3,11 +3,12 @@
  * Each case here is a component Vue renders one way and a careless translation would render
  * another, without failing: the conformance suite only catches it if some fixture happens to
  * exercise the construct. So each must be an error naming it instead. */
+import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { generate } from "../src/compiler.ts";
+import { generate, loadConfig } from "../src/compiler.ts";
 
 /** Every project a case made, removed after it. */
 const roots: string[] = [];
@@ -51,9 +52,48 @@ const props = defineProps<{ label: string; items: string[] }>();
 <template><ul :title="label"><li v-for="i in items">{{ i }}</li></ul></template>`),
     ).get("x.rs")!;
     const reserve = out.split("\n").find((l) => l.includes("out.reserve("))!;
-    expect(reserve).toMatch(/\d+ \* \(props\.items\)\.len\(\)/);
+    expect(reserve).toMatch(/\d+ \* props\.items\.len\(\)/);
     expect(reserve).toContain("props.label.len()");
     expect(reserve).toContain("props.items.iter().map(|v| v.len()).sum::<usize>()");
+  });
+
+  describe("strings, computed lists and dictionaries", () => {
+    it("counts a string's code units, and orders strings by them, through the runtime", () => {
+      const out = compile(
+        island(`<script setup lang="ts">
+defineProps<{ a: string; b: string }>();
+</script>
+<template><i :title="a.slice(1, -1)">{{ a.padStart(4, "0") }}{{ a < b }}</i></template>`),
+      ).get("x.rs")!;
+      expect(out).toContain("fv::js_slice(&props.a, 1.0f64, Some(-1.0f64))");
+      expect(out).toContain("fv::js_pad_start(&props.a, 4.0f64, \"0\")");
+      expect(out).toContain("fv::js_cmp(&props.a, &props.b).is_lt()");
+    });
+
+    it("keeps a dictionary as a `ferrovue::Record` and walks it in place", () => {
+      const out = compile(
+        island(`<script setup lang="ts">
+defineProps<{ counts: Record<string, number>; labels: { [key: string]: string } }>();
+</script>
+<template><ul><li v-for="(n, k) in counts" :title="k">{{ n }}</li><li v-for="t in labels">{{ t }}</li></ul></template>`),
+      ).get("x.rs")!;
+      expect(out).toContain("pub counts: ferrovue::Record<'a, i64>,");
+      expect(out).toContain("pub labels: ferrovue::Record<'a, Cow<'a, str>>,");
+      expect(out).toContain("for (k, n_ref) in props.counts.iter() {");
+      expect(out).toContain("for (_, t_ref) in props.labels.iter() {");
+    });
+
+    it("chains array methods as iterators, binding only the parameters the body reads", () => {
+      const out = compile(
+        island(`<script setup lang="ts">
+defineProps<{ tags: string[]; nums: number[] }>();
+</script>
+<template><i>{{ tags.filter((t, i) => i > 0).map((t) => t.trim()).join(", ") }}{{ nums.some((n) => true) }}</i></template>`),
+      ).get("x.rs")!;
+      expect(out).toMatch(/\.enumerate\(\)\.filter\(\|fv_e\d+\| \{ let fv_i\d+ = fv_e\d+\.0 as i64; /);
+      expect(out).toContain(".any(|_| true)");
+      expect(out).not.toContain("collect::<Vec<_>>().len()");
+    });
   });
 
   describe("child components", () => {
@@ -137,7 +177,7 @@ defineProps<{ a: string }>();
 <template><div><Lister :items="[]" /><Lister :items="['a', a]" /></div></template>`;
       const out = compile(island(parent, { Lister: lister })).get("x.rs")!;
       expect(out).toContain("items: Vec::new()");
-      expect(out).toContain('items: (["a", &*props.a]).iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect()');
+      expect(out).toContain('items: ["a", &*props.a].iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect()');
     });
 
     it("refuses an object of the parent's own type where the child declares its own", () => {
@@ -195,7 +235,7 @@ const props = defineProps<{ embed?: Embed }>();
 </script>
 <template><p v-if="embed">{{ embed.provider }}</p></template>`),
       ).get("x.rs")!;
-      expect(out).toMatch(/if let Some\((n\d+)\) = props\.embed\.as_ref\(\) \{[\s\S]*fv::escape_into\(out, &\*\1\.provider\)/);
+      expect(out).toMatch(/if let Some\((n\d+)\) = props\.embed\.as_ref\(\) \{[\s\S]*fv::escape_into\(out, &\1\.provider\)/);
     });
 
     it("keeps JavaScript's truthiness for an optional string: empty is not taken", () => {
@@ -205,7 +245,7 @@ const props = defineProps<{ note?: string }>();
 </script>
 <template><p v-if="note">{{ note }}</p></template>`),
       ).get("x.rs")!;
-      expect(out).toContain(".filter(|v| !(*v).is_empty())");
+      expect(out).toContain(".filter(|v| !v.is_empty())");
     });
 
     it("counts a list with .length and joins strings with +", () => {
@@ -215,8 +255,9 @@ const props = defineProps<{ items: string[]; name: string }>();
 </script>
 <template><ul v-if="items.length" :title="'list of ' + name"><li v-for="i in items">{{ i }}</li></ul></template>`),
       ).get("x.rs")!;
-      expect(out).toContain("((props.items).len() as i64)");
-      expect(out).toContain('format!("{}{}", "list of ", &*props.name)');
+      expect(out).toContain("props.items.len() as i64");
+      // A literal joins the format string.
+      expect(out).toContain('format!("list of {}", props.name)');
     });
 
     it("adds two numbers, and refuses + between a number and anything but a string", () => {
@@ -227,7 +268,7 @@ const props = defineProps<{ n: number; m: number }>();
 <template><b :title="n + m"></b></template>`),
     ).get("x.rs")!;
     // On doubles, as JavaScript adds: exact within 2⁵³, rounded beyond it.
-    expect(sum).toContain("((((props.n) as f64) + ((props.m) as f64)) as i64)");
+    expect(sum).toContain("(props.n as f64 + props.m as f64) as i64");
     expect(() =>
       compile(
         island(`<script setup lang="ts">
@@ -247,8 +288,9 @@ const props = defineProps<{ items: string[]; note?: string }>();
 </script>
 <template><p v-if="!items.length">none</p><p v-if="!items.length || note">either</p></template>`),
       ).get("x.rs")!;
-      expect(out).toContain("if !((((props.items).len() as i64)) != 0) {");
-      expect(out).not.toMatch(/if !\(\(\(props\.items\)\.len\(\) as i64\)\) != 0/);
+      expect(out).toContain("if props.items.len() as i64 == 0 {");
+      expect(out).toContain("if props.items.len() as i64 == 0 || props.note.as_deref().is_some_and(|v| !v.is_empty()) {");
+      expect(out).not.toMatch(/!props\.items/);
     });
   });
 
@@ -323,7 +365,7 @@ const props = defineProps<{ on: boolean }>();
 defineProps<{ title: string }>();
 </script>
 <template><div><aside v-if="$slots.side"><slot name="side" /></aside></div></template>`;
-      expect(compile(island(source)).get("x.rs")).toContain("if (fv_slots.side.is_some()) {");
+      expect(compile(island(source)).get("x.rs")).toContain("if fv_slots.side.is_some() {");
       const unknown = source.replace("$slots.side", "$slots.other");
       expect(() => compile(island(unknown))).toThrow(/`\$slots\.other` names a slot this template does not render/);
     });
@@ -398,6 +440,61 @@ defineProps<{ on: boolean }>();
     });
   });
 
+  describe("scoped styles", () => {
+    const leaf = `<script setup lang="ts">
+defineProps<{ label: string }>();
+</script>
+<template><b>{{ label }}</b></template>
+<style scoped>b { color: red }</style>`;
+    const hash = (text: string) => createHash("sha256").update(text).digest("hex").slice(0, 8);
+
+    it("hashes the path and source from Vite's root, as `@vitejs/plugin-vue` does", () => {
+      const root = island(leaf);
+      expect(compile(root).get("x.rs")).toContain(`<b data-v-${hash(`components/X.vue${leaf}`)}>`);
+      expect(generate(root, { ...CONFIG, scopeId: "filepath" }).get("x.rs")).toContain(`<b data-v-${hash("components/X.vue")}>`);
+      const nested = join(root, "app");
+      mkdirSync(nested);
+      expect(generate(root, { ...CONFIG, scopeId: "filepath", viteRoot: ".." }).get("x.rs")).toContain(`<b data-v-${hash(`${basename(root)}/components/X.vue`)}>`);
+      writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify({ ...CONFIG, scopeId: "dev" }));
+      expect(() => loadConfig(root)).toThrow(/`scopeId` in ferrovue\.config\.json is "filepath" or "filepath-source"/);
+    });
+
+    it("hands a child's root the parent's id, and what a parent passes on to its root", () => {
+      const middle = `<script setup lang="ts">
+import Leaf from "./Leaf.vue";
+</script>
+<template><Leaf label="x" /></template>
+<style scoped>b { color: blue }</style>`;
+      const top = `<script setup lang="ts">
+import Middle from "./Middle.vue";
+</script>
+<template><section><Middle /></section></template>
+<style scoped>section { color: green }</style>`;
+      const out = generate(island(top, { Middle: middle, Leaf: leaf }), { ...CONFIG, scopeId: "filepath" });
+      expect(out.get("leaf.rs")).toContain("pub fn render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str)");
+      expect(out.get("leaf.rs")).toContain('render_scoped(out, props, "");');
+      expect(out.get("leaf.rs")).toContain("out.push_str(fv_attrs);");
+      expect(out.get("x.rs")).toContain(`super::middle::render_scoped(out, &super::middle::Props {  }, " data-v-${hash("components/X.vue")}");`);
+      // The middle one's root is the leaf, handed what the middle one inherits and its own id.
+      expect(out.get("middle.rs")).toContain(`super::leaf::render_scoped(out, &super::leaf::Props { label: std::borrow::Cow::Borrowed("x") }, &fv::scope_attrs(fv_attrs, "data-v-${hash("components/Middle.vue")}", ""));`);
+    });
+
+    it("gives slot content the slot scope id of a component with `:slotted()` styles", () => {
+      const card = `<script setup lang="ts">
+defineSlots<{ default(): unknown }>();
+</script>
+<template><div><slot /></div></template>
+<style scoped>:slotted(p) { margin: 0 }</style>`;
+      const parent = `<script setup lang="ts">
+import Card from "./Card.vue";
+</script>
+<template><Card><p>x</p></Card></template>`;
+      const out = generate(island(parent, { Card: card }), { ...CONFIG, scopeId: "filepath" });
+      expect(out.get("card.rs")).toContain(`fv::slot_into_slotted(out, fv_slots.default, "data-v-${hash("components/Card.vue")}-s", None);`);
+      expect(out.get("x.rs")).toContain("default: Some(fv::Slot::slotted(&|out: &mut String, fv_sid1: &str| -> bool {");
+    });
+  });
+
   describe("the router", () => {
     const withRoutes = (root: string) => {
       writeFileSync(join(root, "routes.json"), JSON.stringify(["/", "/users/:id"]));
@@ -416,7 +513,7 @@ defineProps<{ href: string }>();
 </script>
 <template><header><Nav :href="href" /></header></template>`;
       const out = withRoutes(island(parent, { Nav: nav }));
-      expect(out.get("nav.rs")).toContain("let fv_link = fv_route.link(&*props.href);");
+      expect(out.get("nav.rs")).toContain("let fv_link = fv_route.link(&props.href);");
       expect(out.get("x.rs")).toContain("pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>)");
       expect(out.get("x.rs")).toContain(", fv_route);");
       expect(out.get("route_table.rs")).toContain('"/users/:id",');
@@ -424,6 +521,30 @@ defineProps<{ href: string }>();
 
     it("refuses a RouterLink when the configuration names no routes", () => {
       expect(() => compile(island(nav))).toThrow(/`routes` in ferrovue\.config\.json/);
+    });
+
+    it("gives a RouterLink scope ids as vue-router's virtual nodes take them, and refuses what they take otherwise", () => {
+      const scoped = (template: string) => `<script setup lang="ts">
+defineProps<{ href: string }>();
+</script>
+<template>${template}</template>
+<style scoped>a { color: red }</style>`;
+      const out = withRoutes(island(scoped(`<nav><RouterLink :to="href">go</RouterLink></nav>`))).get("x.rs")!;
+      expect(out).toMatch(/out\.push_str\("\\" class=\\""\);\n.*\n\s+out\.push_str\("\\" data-v-[0-9a-f]{8}>go<\/a>"\);/);
+      expect(() => withRoutes(island(scoped(`<main><RouterView /></main>`)))).toThrow(/`<RouterView>` in a component with `<style scoped>`/);
+      expect(() => withRoutes(island(scoped(`<nav><RouterLink :to="href"><slot /></RouterLink></nav>`)))).toThrow(/X\.vue:4:33: a `<slot>` inside a `<RouterLink>` that takes scope ids/);
+      // Inside slot content given a `:slotted()` component's id, the elements in a link would take it
+      // otherwise than the compiled template writes it.
+      const card = `<script setup lang="ts">
+defineSlots<{ default(): unknown }>();
+</script>
+<template><div><slot /></div></template>
+<style scoped>:slotted(a) { margin: 0 }</style>`;
+      const parent = `<script setup lang="ts">
+import Card from "./Card.vue";
+</script>
+<template><Card><RouterLink to="/"><b>go</b></RouterLink></Card></template>`;
+      expect(() => withRoutes(island(parent, { Card: card }))).toThrow(/an element inside a `<RouterLink>` in slot content given a slot scope id/);
     });
 
     it("refuses a custom RouterLink, which renders a scoped slot", () => {
@@ -483,7 +604,7 @@ const route = useRoute();
 </script>
 <template><p>{{ route.${field} }}</p></template>`;
       expect(named(island(reader("params.id"))).get("x.rs")).toContain('fv_route.param("id")');
-      expect(named(island(reader("query.q"))).get("x.rs")).toContain('(fv_route.query("q")).write_display(out);');
+      expect(named(island(reader("query.q"))).get("x.rs")).toContain('fv_route.query("q").write_display(out);');
       expect(named(island(reader("fullPath"))).get("x.rs")).toContain("fv_route.full_path()");
       expect(() => named(island(reader("meta.title")))).toThrow(/`route.meta` is not available on the server/);
     });
@@ -573,7 +694,7 @@ export const usePrefs = defineStore("prefs", () => ({}));
     it("translates a getter of the state where a component reads it", () => {
       const withGetter = store.replace("});\n", `, getters: { label: (s) => s.density + "!" } });\n`);
       const out = withStore(island(reader.replace("prefs.density", "prefs.label")), withGetter);
-      expect(out.get("x.rs")).toContain('format!("{}{}", &*fv_stores.prefs.density, "!")');
+      expect(out.get("x.rs")).toContain('format!("{}!", fv_stores.prefs.density)');
     });
 
     it("refuses a getter that reads `this`, or returns a function", () => {
@@ -611,7 +732,7 @@ defineProps<{ n: number }>();
       expect(where(`<script setup lang="ts">
 defineProps<{ a: string }>();
 </script>
-<template><i :title="a.split(',')"></i></template>`)).toBe("components/X.vue:4:22");
+<template><i :title="a.normalize()"></i></template>`)).toBe("components/X.vue:4:22");
     });
 
     it("points at a template expression on the <template> line itself", () => {
@@ -654,7 +775,7 @@ const props = defineProps<{ on: boolean }>();
 </script>
 <template><p :hidden="on">x</p></template>`),
       ).get("x.rs")!;
-      expect(out).toMatch(/if \(props\.on\) \{\s*out\.push_str\(" hidden"\);/);
+      expect(out).toMatch(/if props\.on \{\s*out\.push_str\(" hidden"\);/);
     });
 
     it("counts a string's length in UTF-16 code units, as JavaScript does", () => {
@@ -664,8 +785,8 @@ const props = defineProps<{ name: string }>();
 </script>
 <template><p>{{ name.length }}</p></template>`),
       ).get("x.rs")!;
-      expect(out).toContain("fv::js_length(&*props.name)");
-      expect(out).not.toContain("(&*props.name).len()");
+      expect(out).toContain("fv::js_length(&props.name)");
+      expect(out).not.toContain("props.name.len() as i64");
     });
   });
 
@@ -678,8 +799,8 @@ defineProps<{ on: boolean; c: string }>();
 <template><p style="display: block; color: red" :style="{ color: c }" v-show="on">x</p></template>`),
       ).get("x.rs")!;
       // `display` stays first, where the static style put it, with v-show's value when it hides.
-      expect(out).toMatch(/if !\(\(props\.on\)\) \{\s*out\.push_str\("display:none;"\);\s*\} else \{\s*out\.push_str\("display:block;"\);/);
-      expect(out).toContain("fv::escape_into(out, &*props.c);");
+      expect(out).toMatch(/if !props\.on \{\s*out\.push_str\("display:none;"\);\s*\} else \{\s*out\.push_str\("display:block;"\);/);
+      expect(out).toContain("fv::escape_into(out, &props.c);");
     });
 
     it("allows a global <style> block, which changes no markup", () => {
@@ -705,12 +826,12 @@ defineProps<{ price: Float; qty: number; rate?: Float }>();
       const out = compile(island(numbers)).get("x.rs")!;
       expect(out).toContain("pub price: f64,");
       expect(out).toContain("pub rate: Option<f64>,");
-      expect(out).toContain("fv::js_to_fixed((((props.price) * ((props.qty) as f64))), 2)");
-      expect(out).toContain("fv::push_number(out, (((props.qty) as f64) / ((4i64) as f64)));");
-      expect(out).toContain("fv::js_round((props.price))");
-      expect(out).toContain("(props.rate).unwrap_or(0.5f64)");
+      expect(out).toContain("fv::js_to_fixed(props.price * props.qty as f64, 2)");
+      expect(out).toContain("fv::push_number(out, props.qty as f64 / 4.0);");
+      expect(out).toContain("fv::js_round(props.price)");
+      expect(out).toContain("props.rate.unwrap_or(0.5f64)");
       // An integer remainder by a literal stays an integer.
-      expect(out).toContain("fv::push_int(out, ((((props.qty) as f64) % ((3i64) as f64)) as i64));");
+      expect(out).toContain("fv::push_int(out, (props.qty as f64 % 3.0) as i64);");
     });
 
     it("refuses toFixed with digits that are not a literal", () => {
@@ -870,7 +991,7 @@ shown.value = props.label;
       "a setup binding it cannot evaluate, named like a prop",
       `<script setup lang="ts">
 const props = defineProps<{ label: string }>();
-const label = props.label.split(",");
+const label = props.label.normalize();
 </script>
 <template><i>{{ label }}</i></template>`,
       /`label` is set up in a way the server cannot evaluate/,
@@ -893,12 +1014,206 @@ const props = defineProps<{ note?: string }>();
       /`null`/,
     ],
     [
-      "an ordering comparison of strings, which JavaScript orders by UTF-16 code unit",
+      "an ordering comparison of a string and a number, which JavaScript makes numeric",
+      `<script setup lang="ts">
+const props = defineProps<{ a: string; n: number }>();
+</script>
+<template><i v-if="a < n">x</i></template>`,
+      /`<` is supported between two numbers, or two strings, that are present: the other is a string/,
+    ],
+    [
+      "two halves of surrogate pairs compared, which JavaScript tells apart",
       `<script setup lang="ts">
 const props = defineProps<{ a: string; b: string }>();
 </script>
-<template><i v-if="a < b">x</i></template>`,
-      /`<` is supported between two numbers that are present: JavaScript orders strings by UTF-16 code unit/,
+<template><i v-if="a.charAt(0) === b.charAt(0)">same initial</i></template>`,
+      /`===` with a string that may hold half of a surrogate pair/,
+    ],
+    [
+      "a half of a surrogate pair searched for, which JavaScript finds in a whole pair",
+      `<script setup lang="ts">
+const props = defineProps<{ a: string; b: string }>();
+</script>
+<template><i>{{ a.includes(b.slice(0, 1)) }}</i></template>`,
+      /`\.includes\(\)` with a string that may hold half of a surrogate pair/,
+    ],
+    [
+      "two halves of surrogate pairs joined, which JavaScript makes one character",
+      `<script setup lang="ts">
+const props = defineProps<{ a: string }>();
+</script>
+<template><i>{{ a.slice(0, 1) + a.slice(1) }}</i></template>`,
+      /`\+` with a string that may hold half of a surrogate pair/,
+    ],
+    [
+      "halves of surrogate pairs adjacent in a template literal",
+      `<script setup lang="ts">
+const props = defineProps<{ a: string }>();
+</script>
+<template><i>{{ \`\${a.charAt(0)}\${a.slice(1)}\` }}</i></template>`,
+      /a template literal with a string that may hold half of a surrogate pair/,
+    ],
+    [
+      "a half of a surrogate pair ordered against a string beyond U+D7FF",
+      `<script setup lang="ts">
+const props = defineProps<{ a: string; b: string }>();
+</script>
+<template><i v-if="a.charAt(0) < b">x</i></template>`,
+      /`<` with a string that may hold half of a surrogate pair/,
+    ],
+    [
+      "halves of surrogate pairs joined with no separator",
+      `<script setup lang="ts">
+const props = defineProps<{ words: string[] }>();
+</script>
+<template><i>{{ words.map((w) => w.charAt(0)).join("") }}</i></template>`,
+      /`\.join\(\)` with no literal separator with a string that may hold half of a surrogate pair/,
+    ],
+    [
+      "a string that may hold half of a surrogate pair repeated",
+      `<script setup lang="ts">
+const props = defineProps<{ a: string }>();
+</script>
+<template><i>{{ a.slice(1, 3).repeat(2) }}</i></template>`,
+      /`\.repeat\(\)` with a string that may hold half of a surrogate pair/,
+    ],
+    [
+      "JSON.stringify of a string that may hold half of a surrogate pair, which JavaScript escapes",
+      `<script setup lang="ts">
+const props = defineProps<{ a: string }>();
+</script>
+<template><i>{{ JSON.stringify(a.slice(0, 3)) }}</i></template>`,
+      /`JSON\.stringify\(\)` with a string that may hold half of a surrogate pair/,
+    ],
+    [
+      "a negative literal count for repeat, which throws",
+      `<script setup lang="ts">
+const props = defineProps<{ a: string }>();
+</script>
+<template><i>{{ a.repeat(-1) }}</i></template>`,
+      /`\.repeat\(\)` with a negative or infinite count, which throws a `RangeError`/,
+    ],
+    [
+      "toLocaleUpperCase, which depends on the server's locale",
+      `<script setup lang="ts">
+const props = defineProps<{ a: string }>();
+</script>
+<template><i>{{ a.toLocaleUpperCase() }}</i></template>`,
+      /`\.toLocaleUpperCase\(\)` maps case by the locale the server runs in/,
+    ],
+    [
+      "replace with a regular expression",
+      `<script setup lang="ts">
+const props = defineProps<{ a: string }>();
+</script>
+<template><i>{{ a.replace(/x/g, "y") }}</i></template>`,
+      /`\.replace\(\)` with a regular expression/,
+    ],
+    [
+      "replace with a function",
+      `<script setup lang="ts">
+const props = defineProps<{ a: string }>();
+</script>
+<template><i>{{ a.replace("x", (m) => m) }}</i></template>`,
+      /`\.replace\(\)` with a function/,
+    ],
+    [
+      "includes with a starting position",
+      `<script setup lang="ts">
+const props = defineProps<{ a: string }>();
+</script>
+<template><i>{{ a.includes("x", 2) }}</i></template>`,
+      /`\.includes\(\)` takes 1 argument here/,
+    ],
+    [
+      "parseInt with a radix other than 10 or 16",
+      `<script setup lang="ts">
+const props = defineProps<{ a: string }>();
+</script>
+<template><i>{{ parseInt(a, 36) }}</i></template>`,
+      /`parseInt\(\)` takes a radix of 10 or 16, written as a literal/,
+    ],
+    [
+      "parseInt of a number, which JavaScript reads as a string",
+      `<script setup lang="ts">
+const props = defineProps<{ n: number }>();
+</script>
+<template><i>{{ parseInt(n) }}</i></template>`,
+      /`parseInt\(\)` takes a string/,
+    ],
+    [
+      "an arrow function with a block body",
+      `<script setup lang="ts">
+const props = defineProps<{ tags: string[] }>();
+</script>
+<template><i>{{ tags.filter((t) => { return t.length > 1; }).length }}</i></template>`,
+      /`\.filter\(\)` takes an arrow function whose body is an expression/,
+    ],
+    [
+      "a function passed to filter by name",
+      `<script setup lang="ts">
+const props = defineProps<{ tags: string[] }>();
+</script>
+<template><i>{{ tags.filter(Boolean).length }}</i></template>`,
+      /`\.filter\(\)` takes an arrow function of the item/,
+    ],
+    [
+      "map to optional values",
+      `<script setup lang="ts">
+interface Row { note?: string }
+const props = defineProps<{ rows: Row[] }>();
+</script>
+<template><i>{{ rows.map((r) => r.note).length }}</i></template>`,
+      /`\.map\(\)` makes a list of strings, numbers, booleans or objects, not optional values/,
+    ],
+    [
+      "a computed list as a slot prop",
+      `<script setup lang="ts">
+const props = defineProps<{ tags: string[] }>();
+</script>
+<template><div><slot name="row" :tags="tags.filter((t) => t)" /></div></template>`,
+      /a slot prop is not a computed list/,
+    ],
+    [
+      "a record keyed by numbers",
+      `<script setup lang="ts">
+defineProps<{ m: Record<number, string> }>();
+</script>
+<template><i></i></template>`,
+      /a `Record` is keyed by `string`/,
+    ],
+    [
+      "a record of optional values, which JSON cannot hold",
+      `<script setup lang="ts">
+defineProps<{ m: Record<string, string | undefined> }>();
+</script>
+<template><i></i></template>`,
+      /a `Record`'s values are strings, numbers, booleans, objects or lists of those/,
+    ],
+    [
+      "Object.entries outside a v-for",
+      `<script setup lang="ts">
+defineProps<{ m: Record<string, string> }>();
+</script>
+<template><i>{{ Object.entries(m).map((e) => e).length }}</i></template>`,
+      /`Object\.entries\(\)` is supported as the source of a `v-for`/,
+    ],
+    [
+      "Object.keys of an object that is not a record",
+      `<script setup lang="ts">
+interface Row { a: string }
+defineProps<{ row: Row }>();
+</script>
+<template><i>{{ Object.keys(row).length }}</i></template>`,
+      /`Object\.keys\(\)` takes a `Record<string, T>`/,
+    ],
+    [
+      "a field read from a record, which may be absent",
+      `<script setup lang="ts">
+defineProps<{ m: Record<string, string> }>();
+</script>
+<template><i>{{ m.title }}</i></template>`,
+      /`\.title` on a value that is not an object/,
     ],
     [
       "a ternary whose branches differ in type",
@@ -922,13 +1237,14 @@ const props = defineProps<{ when: Date }>();
       /needs `<script setup lang="ts">`/,
     ],
     [
-      "a scoped `<style>`, whose attribute the bundler names",
+      "an `inheritAttrs` that is not a literal",
       `<script setup lang="ts">
+const quiet = false;
+defineOptions({ inheritAttrs: quiet });
 defineProps<{ a: string }>();
 </script>
-<template><i>{{ a }}</i></template>
-<style scoped>i { color: red }</style>`,
-      /`<style scoped>`/,
+<template><i>{{ a }}</i></template>`,
+      /`inheritAttrs` is `true` or `false`/,
     ],
     [
       "a CSS module, whose class names the bundler chooses",
@@ -969,8 +1285,8 @@ defineProps<{ a: string }>();
       `<script setup lang="ts">
 const props = defineProps<{ a: string }>();
 </script>
-<template><i>{{ a.split(",") }}</i></template>`,
-      /`\.split\(\)` is not supported/,
+<template><i>{{ a.normalize() }}</i></template>`,
+      /`\.normalize\(\)` is not supported/,
     ],
     [
       "a dynamic component",
@@ -988,6 +1304,63 @@ defineProps<{ a: string }>();
 </script>
 <template><input v-focus /></template>`,
       /custom directive `v-focus` may add attributes.*`clientDirectives`/,
+    ],
+    [
+      "a literal class name with spaces around it, which Vue keeps between its neighbours",
+      `<script setup lang="ts">
+defineProps<{ on: boolean }>();
+</script>
+<template><i :class="{ ' wide ': on, tall: on }"></i></template>`,
+      /class name ` wide ` has spaces around it/,
+    ],
+    [
+      "loose equality, which converts between types as `===` does not",
+      `<script setup lang="ts">
+defineProps<{ a: string; b: string }>();
+</script>
+<template><i v-if="a == b">x</i></template>`,
+      /`==`/,
+    ],
+    [
+      "a field the object's type does not declare",
+      `<script setup lang="ts">
+interface User { name: string }
+defineProps<{ user: User }>();
+</script>
+<template><i>{{ user.age }}</i></template>`,
+      /`User` has no field `age`/,
+    ],
+    [
+      "computed member access",
+      `<script setup lang="ts">
+defineProps<{ names: string[]; i: number }>();
+</script>
+<template><i>{{ names[i] }}</i></template>`,
+      /computed member access/,
+    ],
+    [
+      "`.includes()` of a value of another type than the list's",
+      `<script setup lang="ts">
+defineProps<{ names: string[]; n: number }>();
+</script>
+<template><i v-if="names.includes(n)">x</i></template>`,
+      /`\.includes\(\)` looks for a value of the list's own type/,
+    ],
+    [
+      "`$slots.x` for a slot the template does not render",
+      `<script setup lang="ts">
+defineProps<{ a: string }>();
+</script>
+<template><div><i v-if="$slots.footer">x</i><slot /></div></template>`,
+      /`\$slots\.footer` names a slot this template does not render/,
+    ],
+    [
+      "an empty literal class name",
+      `<script setup lang="ts">
+defineProps<{ on: boolean }>();
+</script>
+<template><i :class="{ '': on }"></i></template>`,
+      /class name `` has spaces around it/,
     ],
     [
       "null in a prop's type",

@@ -5,7 +5,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { type N, type Scope, type Val, fail, GenError, rustStr } from "./model.ts";
 import { allRoutes, type RouteDef, CONFIG_FILE, ctx } from "./context.ts";
-import { expr } from "./expr.ts";
+import { expr, lonely } from "./expr.ts";
+import { bare, condition, strArg } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
 import { classItems, IGNORED_PROPS, mergeProps, renderDynamicAttr, renderStyle } from "./attrs.ts";
 import { slotBody, statements } from "./template.ts";
@@ -20,11 +21,18 @@ export function routeParams(path: string): string[] {
   return [...path.matchAll(/:(\w+)/g)].map((m) => m[1]!);
 }
 
+/** A string written into a link, which vue-router percent-encodes: half of a surrogate pair makes
+ * `encodeURI` throw, so Vue renders no page at all. */
+function noHalves(s: Scope, v: Val, n: N): void {
+  if (v.lone) fail(s.comp, lonely("a `<RouterLink>` location"), n);
+}
+
 /** A value written into a URL — a parameter or a query value — as the `&str` vue-router stringifies. */
 export function urlText(s: Scope, v: Val, n: N): string {
+  noHalves(s, v, n);
   if (v.ty.k === "str") return v.code;
-  if (v.ty.k === "int" || v.ty.k === "float") return `&*fv::Js(${v.code}).to_string()`;
-  if (v.ty.k === "bool") return `if ${v.code} { "true" } else { "false" }`;
+  if (v.ty.k === "int" || v.ty.k === "float") return `&*fv::Js(${bare(v.code)}).to_string()`;
+  if (v.ty.k === "bool") return `if ${condition(v.code)} { "true" } else { "false" }`;
   return fail(s.comp, "a route parameter is a string or a number that is present", n);
 }
 
@@ -33,7 +41,8 @@ export function resolveLink(s: Scope, e: Emitter, to: N): void {
   if (to.type !== "ObjectExpression") {
     const target = expr(s, to);
     if (target.ty.k !== "str") fail(s.comp, "`<RouterLink>`'s `to` is a string or an object literal", to);
-    e.stmt(`let fv_link = fv_route.link(${target.code});`);
+    noHalves(s, target, to);
+    e.stmt(`let fv_link = fv_route.link(${strArg(target.code)});`);
     return;
   }
   const parts = new Map<string, N>();
@@ -59,9 +68,9 @@ export function resolveLink(s: Scope, e: Emitter, to: N): void {
       if (v.ty.k === "undef") continue;
       if (v.ty.k === "opt") {
         e.open(`if let Some(v) = ${v.code}`);
-        e.stmt(`fv::query_into(&mut fv_search, ${rustStr(key)}, ${urlText(s, { code: "v", ty: v.ty.of }, p.value)});`);
+        e.stmt(`fv::query_into(&mut fv_search, ${rustStr(key)}, ${strArg(urlText(s, { code: "v", ty: v.ty.of }, p.value))});`);
         e.close();
-      } else e.stmt(`fv::query_into(&mut fv_search, ${rustStr(key)}, ${urlText(s, v, p.value)});`);
+      } else e.stmt(`fv::query_into(&mut fv_search, ${rustStr(key)}, ${strArg(urlText(s, v, p.value))});`);
     }
   }
   let hash = '""';
@@ -69,7 +78,8 @@ export function resolveLink(s: Scope, e: Emitter, to: N): void {
   if (h) {
     const v = expr(s, h);
     if (v.ty.k !== "str") fail(s.comp, "a `to`'s `hash` is a string", h);
-    hash = v.code;
+    noHalves(s, v, h);
+    hash = strArg(v.code);
   }
   const name = parts.get("name");
   const path = parts.get("path");
@@ -97,7 +107,8 @@ export function resolveLink(s: Scope, e: Emitter, to: N): void {
     if (parts.has("params")) fail(s.comp, "a `to` with a `path` takes no `params`, which vue-router ignores", path);
     const v = expr(s, path);
     if (v.ty.k !== "str") fail(s.comp, "a `to`'s `path` is a string", path);
-    e.stmt(`fv_route.link_path(${v.code}, ${search}, ${hash})`);
+    noHalves(s, v, path);
+    e.stmt(`fv_route.link_path(${strArg(v.code)}, ${search}, ${hash})`);
   } else fail(s.comp, "a `to` object has a `name` or a `path`", to);
   e.close(";");
 }
@@ -105,7 +116,7 @@ export function resolveLink(s: Scope, e: Emitter, to: N): void {
 /** \`<RouterLink to="...">\` as vue-router renders it: \`aria-current\` and the active classes when it
  * points where the reader is, then \`href\`, then the link's own class and attributes. */
 export function routerLink(s: Scope, e: Emitter, n: N): void {
-  const [, rawProps, slots] = n.arguments;
+  const [, rawProps, slots, , slotScopeId] = n.arguments;
   let props = rawProps;
   if (props?.type === "CallExpression" && props.callee.type === "Identifier" && props.callee.name === "_mergeProps") {
     props = mergeProps(s, props);
@@ -125,6 +136,30 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
   }
   const to = fields.get("to");
   if (!to) fail(s.comp, "`<RouterLink>` needs `to`", n);
+  /* vue-router renders the link from virtual nodes (`renderElementVNode`). The `<a>` takes the ids
+   * of a component's root after its attributes: what the parent passes on when the link is its
+   * root, the id of the component that wrote it, and the slot scope ids around it — as
+   * `scope_attrs` gathers them. Its content takes that component's id, which the compiled template
+   * spells out, and the slot scope ids again, each once: unlike the raw `_scopeId` the compiled
+   * elements would write, so an element there is refused when there are some. */
+  const passed = (rawProps?.type === "Identifier" && rawProps.name === "_attrs") || rawProps?.arguments?.some((a: N) => a.type === "Identifier" && a.name === "_attrs");
+  const base = passed ? s.attrs : null;
+  const slotted = slotScopeId ? s.sid : null;
+  const scopeId = s.comp.scopeId;
+  const content = slots?.type === "ObjectExpression" ? slots.properties.filter((p: N) => (p.key?.name ?? p.key?.value) !== "_").map((p: N) => p.value) : [];
+  /** Whether the link's content holds a node that `is` picks out. */
+  const holds = (is: (x: N) => boolean): boolean => {
+    const within = (x: N): boolean => !!x && typeof x === "object" && (is(x) || Object.values(x).some(within));
+    return content.some((c: N) => slotBody(s, c).some(within));
+  };
+  const writesScopeId = (x: N): boolean => x.type === "TemplateLiteral" && x.expressions.some((y: N) => y.type === "Identifier" && y.name === "_scopeId");
+  if (slotted !== null && holds(writesScopeId)) {
+    fail(s.comp, "an element inside a `<RouterLink>` in slot content given a slot scope id: vue-router writes those ids by rules of its own", to);
+  }
+  // A `<slot>` there is rendered as a virtual node too, which passes its own slot scope ids.
+  if ((scopeId !== null || slotted !== null || base !== null) && holds((x) => x.type === "CallExpression" && x.callee.name === "_ssrRenderSlot")) {
+    fail(s.comp, "a `<slot>` inside a `<RouterLink>` that takes scope ids: vue-router renders it by rules of its own", to);
+  }
   if (!ctx.routes) fail(s.comp, `\`<RouterLink>\` needs \`routes\` in ${CONFIG_FILE}: the paths it resolves against`, n);
   /** A literal-string prop, which the class names and `aria-current` must be. */
   const literal = (key: string, fallback: string): string => {
@@ -165,6 +200,9 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
     }
     renderDynamicAttr(s, e, key, expr(s, p.value), p);
   }
+  if (base === null && slotted === null) {
+    if (scopeId !== null) e.lit(` ${scopeId}`);
+  } else e.stmt(`out.push_str(&fv::scope_attrs(${base ?? '""'}, ${scopeId === null ? '""' : rustStr(scopeId)}, ${slotted ?? '""'}));`);
   e.lit(">");
   if (slots && slots.type !== "NullLiteral") {
     if (slots.type !== "ObjectExpression") fail(s.comp, "slots must be an object literal", slots);

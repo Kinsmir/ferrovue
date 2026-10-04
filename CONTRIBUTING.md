@@ -14,6 +14,7 @@ pnpm test                    # compiler, CLI, vectors, router, the Vue half of c
 pnpm typecheck
 pnpm lint                    # oxlint (type-aware, on TypeScript 7), and fallow for unused files, exports and dependencies
 cargo test --workspace --all-features
+cargo deny check             # licences, advisories, duplicate crates and sources (deny.toml)
 ```
 
 `pnpm lint:fix` applies the fixes both tools can make on their own; review the diff before committing.
@@ -35,7 +36,9 @@ cargo test --workspace --all-features
 4. **Refuse the edges.** Whatever part of the construct you do not translate exactly must be an
    error. Add a case to `refused` in `packages/ferrovue/test/compiler.test.ts`.
 5. **Document it** in the README's "What a component may use" table and in `CHANGELOG.md` under
-   `[Unreleased]`.
+   `[Unreleased]`. If it changes what generated code looks like or adds to the runtime, update the
+   crate's guide too (`crates/ferrovue/docs/`, published on docs.rs as `ferrovue::guide`): its
+   examples copy generated code, and `cargo test --doc -p ferrovue` runs them.
 
 Never re-record a fixture to make a failing test pass. A changed `.html` means Vue changed or the
 compiler did, and that diff is what a reviewer needs to see.
@@ -46,7 +49,11 @@ compiler did, and that diff is what a reviewer needs to see.
 - Commit messages are short and say what changed (`compiler: support v-show on the root`), with
   detail in the body when the why is not obvious.
 - CI must be green: tests on Node 22 and 24 and on stable Rust and the declared minimum, `pnpm lint`,
-  clippy and rustfmt, docs, the example, and both packages packing cleanly.
+  clippy and rustfmt, docs, the example, hydration in real browsers (`pnpm test:browser`), both
+  packages packing cleanly, and `cargo deny` on the dependencies' licences, bans and sources. A new
+  RustSec advisory shows in the run without failing a pull request; it does fail a release.
+- A new dependency must be under a licence `deny.toml` allows (permissive ones compatible with
+  MIT OR Apache-2.0) and come from crates.io.
 
 ## Licence
 

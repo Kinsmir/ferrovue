@@ -82,7 +82,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
         out.push_str("\" class=\"");
         fv::class_into(out, false, &[if fv_link.exact { "same" } else { "" }]);
         out.push_str("\">order ");
-        fv::escape_into(out, &*props.order);
+        fv::escape_into(out, &props.order);
         out.push_str("</a>");
     }
     out.push_str("</nav>");

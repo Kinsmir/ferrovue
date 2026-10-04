@@ -63,6 +63,8 @@ crate that includes it needs **edition 2024**.
 | `helpers` | no | `{ module, functions }`: functions a template may call, each mapped to a Rust twin |
 | `i18n` | no | vue-i18n: `{ messages, locale?, fallbackLocale? }`, the directory of locale files (`en.json`, `nl.json`), the default locale and the fallbacks |
 | `clientDirectives` | no | Custom directives with no server output (no `getSSRProps`), by name without `v-`: `["focus"]` |
+| `scopeId` | no | How a `<style scoped>` id is hashed, as `@vitejs/plugin-vue` hashes it: `"filepath-source"` (the default, the plugin's in a production build) or `"filepath"`. See [Scoped styles](#scoped-styles) |
+| `viteRoot` | no | Vite's root, relative to this file's directory, from which a component's path is hashed (default `.`) |
 
 ### 3. Write a component
 
@@ -123,16 +125,19 @@ ferrovue compiles `<script setup lang="ts">` components. Props are declared by t
 
 | Area | Supported |
 |---|---|
-| Prop types | `string`, `number` (integers, `i64`, written and computed as JavaScript does — exact within ±2⁵³), `Float` from `ferrovue/types` (fractions, `f64`), `boolean`, string-literal unions (`"sm" \| "md"`), `T \| undefined`, arrays (`T[]`, `Array<T>`, `readonly T[]`), interfaces and object type aliases (recursive ones too), another component's exported `Props`, `TrustedHtml` |
+| Prop types | `string`, `number` (integers, `i64`, written and computed as JavaScript does — exact within ±2⁵³), `Float` from `ferrovue/types` (fractions, `f64`), `boolean`, string-literal unions (`"sm" \| "md"`), `T \| undefined`, arrays (`T[]`, `Array<T>`, `readonly T[]`), interfaces and object type aliases (recursive ones too), dictionaries (`Record<string, T>`, `{ [key: string]: T }`, `ferrovue::Record` in Rust, which keeps JavaScript's order of keys), another component's exported `Props`, `TrustedHtml` |
 | Shared types | Interfaces and type aliases imported from `.ts` files (generated once, into `types.rs`), from a store's file, or from another component's `.vue` file; objects of a shared type can be passed between components |
 | Props | `withDefaults`, destructured props with defaults (`const { size = "md" } = defineProps<…>()`), optional booleans (Vue casts an absent one to `false`), `defineModel` (named, required, with defaults), components with no props |
 | Setup | `ref`/`shallowRef`, `computed` (an expression or a single `return`), plain `const`/`let`, `.value` in script code, helpers with Rust twins, a plain `<script>` block beside setup. Lifecycle hooks, `watch` (not `immediate`), `defineEmits`, `defineSlots`, `defineOptions`, `defineExpose`, `provide`, template refs (`ref(null)`, `useTemplateRef`) and functions are client-only. The template may name them only from event handlers, which the server drops |
-| Text | `{{ }}` of strings, integers and booleans; `+`, `-`, `*`, `/`, `%`, with integers and fractions as JavaScript computes them; `<`, `>`, `<=`, `>=`, `===`, `!==`; unary `-`, `!`; `??`, `\|\|`, `&&`, `?:`; template literals; optional chaining `a?.b`; `.length`; string `.trim()`, `.trimStart()`, `.trimEnd()`, `.toUpperCase()`, `.toLowerCase()`, `.includes()`, `.startsWith()`, `.endsWith()`; list `.includes()`, `.join()`; `String()`, `.toString()`, `.toFixed()`, `Math.max`/`min`/`abs`/`round`/`floor`/`ceil`/`trunc`; array literals |
+| Text | `{{ }}` of strings, integers and booleans; `+`, `-`, `*`, `/`, `%`, with integers and fractions as JavaScript computes them; `<`, `>`, `<=`, `>=` (between numbers, or between strings by UTF-16 code unit), `===`, `!==`; unary `-`, `!`; `??`, `\|\|`, `&&`, `?:`; template literals; optional chaining `a?.b`; `.length`; `String()`, `.toString()`, `.toFixed()`, `Math.max`/`min`/`abs`/`round`/`floor`/`ceil`/`trunc`; `Number()`, `parseInt()` (no radix, 10 or 16), `parseFloat()`; `JSON.stringify()` of strings, numbers, booleans and lists of those; array literals |
+| Strings | `.trim()`, `.trimStart()`, `.trimEnd()`, `.toUpperCase()`, `.toLowerCase()`, `.includes()`, `.startsWith()`, `.endsWith()`, `.indexOf()`, `.lastIndexOf()`, `.slice()`, `.substring()`, `.at()`, `.charAt()`, `.split()`, `.replace()` and `.replaceAll()` with string patterns (`$&`, `` $` ``, `$'`, `$$` read as JavaScript reads them), `.padStart()`, `.padEnd()`, `.repeat()`; indices and lengths count UTF-16 code units, as JavaScript's do (see [Strings](#strings)) |
 | Conditions | `v-if` / `v-else-if` / `v-else`, `?:`, `&&` and `||`, with optional values narrowed as TypeScript narrows them: `v-if="user"`, `user !== undefined`, and `!user` or `user === undefined` for the `v-else` |
-| Lists | `v-for` over arrays (of strings, numbers, objects or child props), array literals and number ranges (`n in 5`); with an index; with destructured items (`{ id, name } in rows`); nested; on `<template>` |
+| Lists | `v-for` over arrays (of strings, numbers, objects or child props), array literals and number ranges (`n in 5`); with an index; with destructured items (`{ id, name } in rows`); nested; on `<template>`. `.includes()`, `.join()`, and `.filter()`, `.map()`, `.some()`, `.every()`, `.find()`, `.findIndex()` with an arrow function of the item (a name, or destructured) and its index, whose body is an expression, narrowing inside as outside; `.slice()`; chained and nested; a computed list read by `v-for`, `.join()`, `.length`, `.includes()`, kept by `computed`, or handed to a child |
+| Dictionaries | `v-for="(value, key, index) in r"` over a `Record<string, T>`, and `([key, value], index) in Object.entries(r)`, in JavaScript's order: keys that are array indices first, in numeric order, then the others as the props give them; `Object.keys(r)`, `Object.values(r)`, `Object.entries(r).length`; handed to a child |
 | Attributes | static and bound attributes, boolean attributes, `:hidden`, `data-*` and `aria-*`, `v-bind` objects |
 | `class` | strings, arrays, objects (`{ active: on }`, computed keys), `cond && "x"`, `cond ? "x" : null`, merged with a static `class` |
 | `style` | objects (camelCase or kebab-case keys, `--custom` properties), arrays of objects, strings, merged with a static `style`, and `v-show`; later values override earlier ones as in Vue. A global `<style>` block is allowed |
+| Scoped styles | `<style scoped>`: the id on every element, on child components' roots (a root that is itself a component, fragments, recursion and `inheritAttrs: false` as Vue renders them) and, from a component with `:slotted()` rules, on the slot content it is given, forwarded slots included; inside `<Transition>`, `<KeepAlive>`, `<Teleport>` and `v-if`; on `<RouterLink>` and what it holds, as vue-router renders them |
 | Components | imported child components, `v-bind` of a child's own `Props`, `v-model` on a child's `defineModel`, recursion |
 | Slots | default and named slots, fallbacks, `$slots.name` tests, scoped slots (`<slot :item="x">` and `#item="{ item }"` or `v-slot="props"`), whose props a parent can hand to its own children |
 | Forms | `v-model` on text inputs, checkboxes, radios, `<select>` and `<textarea>` (renders the initial state) |
@@ -144,19 +149,104 @@ ferrovue compiles `<script setup lang="ts">` components. Props are declared by t
 
 Refused at compile time, each with an error that names the construct:
 
-- `<style scoped>`, `<style module>`, and `v-bind()` in CSS
+- `<style module>`, and `v-bind()` in CSS
+- `<RouterView>` in a component with `<style scoped>`, which would give the page that component's
+  id; and, since vue-router renders a link from virtual nodes, a `<slot>` inside a `<RouterLink>`
+  that takes scope ids, or an element inside one in slot content given a `:slotted()` id
 - `<component :is>`
 - `<RouterLink custom>`, slot props that are array literals, defaults in destructured slot props, and outlets of one slot that pass different props
 - custom directives not listed in `clientDirectives`
 - `watchEffect`, `watch` with `immediate`, `onServerPrefetch`, top-level `await`, and statements in setup that change state
 - `route.meta` and `route.matched`
 - Pinia getters that read `this` or return a function
-- ordering comparisons of strings
+- ordering comparisons between a string and a number, which JavaScript makes numeric
+- regular expressions (`.replace(/x/g, …)`, `.split(/,/)`), replacement functions, a search's
+  starting position or a split's limit (`.includes(x, 3)`, `.split(",", 2)`), `.toLocaleUpperCase()`
+  and `.toLocaleLowerCase()` (the server's locale is not the browser's), `parseInt` with another radix
+  or of a number, `.repeat()` by a negative literal
+- array methods given anything but an arrow function whose body is an expression (`.filter(Boolean)`,
+  `x => { return … }`), `.map()` to optional values, a computed list as a slot prop
+- a dictionary's field read by name (`r.key`, `r[key]`), which may be absent although TypeScript says
+  it is not; `Object.entries()` anywhere but as a `v-for`'s source; dictionaries of optional values
+- two strings that may each hold half of a surrogate pair compared, searched or joined (see
+  [Strings](#strings))
 - `null`
 - any method call without a Rust twin
 
 An object prop handed to a child component is cloned. Its strings are `Cow`s, so borrowed ones
 cost nothing to copy.
+
+### Scoped styles
+
+A `<style scoped>` component's elements carry `data-v-<id>`, and its CSS is rewritten by the client
+build to select them. The server has to write the id the client build chose, which is not something
+the browser checks when it hydrates: a wrong id hydrates cleanly and leaves the styles unapplied. So
+ferrovue computes it as `@vitejs/plugin-vue` does — the first 8 hex digits of a SHA-256 of the
+`.vue` file's path from Vite's root, followed by its source unless only the path is hashed — and the
+two must be configured alike:
+
+| `@vitejs/plugin-vue` | `ferrovue.config.json` |
+|---|---|
+| `vite build` with the default options | `"scopeId": "filepath-source"` (the default) |
+| `features: { componentIdGenerator: "filepath" }` (any mode), or the dev server | `"scopeId": "filepath"` |
+
+Set `viteRoot` when Vite's root is not the directory holding `ferrovue.config.json`. The Vite
+plugin (`ferrovue/vite`) compares the two when a component has scoped styles: a build in which they
+differ fails, and the dev server warns.
+
+The default is the plugin's production behaviour because the production build is the one readers
+get: with every option left alone, its styles apply. But plugin-vue hashes the path alone in its dev
+server, so with the default a page rendered during development carries other ids than the dev
+client and shows unstyled. The recommended setup is `componentIdGenerator: "filepath"` with
+`"scopeId": "filepath"`, as [`examples/fullstack`](examples/fullstack) does: the ids are then the
+same in development and production, and do not change, nor change the generated Rust, whenever a
+component's source does.
+
+A component a parent may hand ids to has a `render_scoped(…, attrs)` beside `render`, which
+generated parents call. A component whose outlets pass a slot scope id (`:slotted()`) takes slot
+content that is given it: `Slot::slotted` for a slot, a third `&str` parameter for a scoped slot's
+closure. `render`, and content from Rust, need none of it: markup written from Rust carries no ids.
+
+Where Vue's own server render gives other ids than its client render, ferrovue writes the server's:
+a `:slotted()` component's slot fallback, which only the client gives the slot scope id, and a
+component with `inheritAttrs: false` that is another component's root, whose root only the client
+gives the ids that other component inherits.
+
+### Strings
+
+String methods count as JavaScript counts: in UTF-16 code units, so `"🦀".length` is 2 and
+`"🦀 crab".slice(3)` is `"crab"`. Strings are ordered by code unit too, which puts every character
+from U+E000 to U+FFFF after one beyond U+FFFF. Each runtime routine is held to vectors recorded from
+JavaScript (`crates/ferrovue/tests/vectors/`).
+
+A JavaScript string can hold half of a surrogate pair — `"🦀".slice(0, 1)`, `.charAt(1)`,
+`.split("")` — and a Rust string cannot. ferrovue writes U+FFFD in its place, which is exactly what
+the page carries anyway: a server sends Vue's string as UTF-8, and UTF-8 writes each half as U+FFFD
+(`res.end`, `Buffer.from` and `TextEncoder` all do). Its length is the same. Where the half itself
+would decide the result, ferrovue refuses at compile time: two strings that may each hold a half
+compared or ordered, side by side (`a.slice(0, 1) + b.slice(1)`, a `.join("")`, a class object's
+names), one searched for in another (`.includes(a.charAt(0))`), repeated or padded where halves
+would join, ordered against anything but a literal below U+D800, or written by `JSON.stringify`
+(which escapes it) or into a `<RouterLink>` (whose encoding throws). Three corners remain, by design:
+
+- a string holding U+FFFD in the props compares equal to a half, or finds one, where JavaScript
+  would tell them apart;
+- a half handed to a child component or a helper is U+FFFD there, which matters only if that
+  component then compares or joins it as above;
+- Vue itself cannot hydrate such text cleanly: the browser reads U+FFFD where its own render holds
+  the half, and reports a mismatch.
+
+Where JavaScript throws, the generated code panics, as Vue's render rejects: a negative or infinite
+`.repeat()` count, and a `.repeat()`, `.padStart()` or `.padEnd()` past the longest string V8 makes
+(2²⁹ − 24 code units).
+
+### Dictionaries
+
+A `Record<string, T>` prop is a `ferrovue::Record`, built from pairs —
+`[("b", 1), ("10", 2)].into_iter().collect()` — or read from JSON. It holds its keys in the order a
+JavaScript object does, array indices (`"0"` to `"4294967294"`) first in numeric order, so `v-for`
+walks them as Vue does, and it is written back as JSON in that order, which the browser reads back
+the same.
 
 ### Translating
 
@@ -222,10 +312,10 @@ and both write the same bytes: each side checks its output against
 
 | Scenario | What renders | Output | Vue `renderToString` | ferrovue | Speed-up |
 |---|---|---|---|---|---|
-| `small` | `Nav`: two `<RouterLink>`s resolved against the current route | 206 B | 37.99 µs | 0.948 µs | 40.1× |
-| `list` | `Lists`: 1,000 words, 1,000 numbers, 100 groups of 10 members | 102 KiB | 357.5 µs | 103.9 µs | 3.4× |
-| `tree` | `Tree`: a recursive component, binary tree 8 levels deep (255 nodes) | 9.5 KiB | 478.4 µs | 4.68 µs | 102.3× |
-| `page` | `Dashboard`: 22 `Panel`s with named slots, a `Text`, 20 `Frame`s holding loops | 8.0 KiB | 194.8 µs | 5.63 µs | 34.6× |
+| `small` | `Nav`: two `<RouterLink>`s resolved against the current route | 206 B | 34.57 µs | 0.950 µs | 36.4× |
+| `list` | `Lists`: 1,000 words, 1,000 numbers, 100 groups of 10 members | 102 KiB | 368.1 µs | 45.95 µs | 8.0× |
+| `tree` | `Tree`: a recursive component, binary tree 8 levels deep (255 nodes) | 9.5 KiB | 484.6 µs | 3.72 µs | 130.2× |
+| `page` | `Dashboard`: 22 `Panel`s with named slots, a `Text`, 20 `Frame`s holding loops | 8.0 KiB | 181.6 µs | 4.45 µs | 40.9× |
 
 These are mean times per render. The Vue column is tinybench's mean, with 5 s per scenario after
 a 1 s warm-up. The ferrovue column is criterion's mean point estimate, using its defaults of a 3 s
@@ -241,7 +331,13 @@ What each side measures:
 
 Measured on an AMD Ryzen 5 3600XT (6 cores / 12 threads, up to 3.8 GHz) with 62 GiB of RAM, running
 Linux 7.2.8-2-cachyos (CachyOS, x86_64). Software: Node 26.10.0, Vue 3.5.43, rustc 1.99.0. The
-machine was not otherwise idle, so treat the numbers as indicative.
+machine was lightly loaded (a load average of about 1) but not idle, so treat the numbers as
+indicative.
+
+The speed-up says as much about Vue as about ferrovue. Most of Vue's time goes on component
+instances and their virtual nodes, of which `tree` has 255 and `list` one: per byte written, Vue
+renders `list` some fourteen times faster than `tree`, while ferrovue writes the two at a similar
+rate.
 
 To reproduce:
 
@@ -266,18 +362,29 @@ ferrovue version.
 
 ```text
 crates/ferrovue/             the Rust runtime crate
-  src/                       runtime + unit tests
+  src/                       runtime (escaping, JS numbers, router, i18n, teleports) + unit tests
   tests/conformance/         components, fixtures, recorded HTML, generated Rust
-  tests/vectors/             string and router vectors shared with the TypeScript tests
+  tests/vectors/             vectors recorded from JavaScript, vue-router and vue-i18n
   tests/properties.rs        property-based tests of the runtime
   benches/                   criterion benchmarks of generated renderers (see Performance)
 packages/ferrovue/           the compiler (npm package)
-  src/compiler.ts            .vue → Rust
-  src/cli.ts                 the `ferrovue` command
-  src/client.ts              browser-side helpers
+  src/compiler.ts            the API: `generate`, `write`
+  src/script.ts, template.ts, expr.ts, attrs.ts
+                             <script setup>, the compiled template, expressions, class/style
+  src/router.ts, stores.ts, i18n.ts
+                             vue-router, Pinia and vue-i18n
+  src/rust.ts, emitter.ts    the Rust source written out
+  src/cli.ts, vite.ts        the `ferrovue` command and the Vite plugin
+  src/client.ts              browser-side helpers: `mountIslands`, `hydrateState`
   src/testing.ts             utilities for a project's own conformance suite
-  test/                      compiler, CLI, router, vector and conformance tests
+  src/types.ts               `ferrovue/types`: `TrustedHtml`, `Float`
+  test/                      compiler, CLI, router, vector, island, Vite and conformance tests
+  browser/                   conformance fixtures hydrated in real browsers (`pnpm test:browser`)
   bench/                     Vue renderToString benchmarks, the other half of Performance
+  fuzz/                      the randomised differential tester (`pnpm fuzz`)
+examples/greeting/           the smallest setup: one component rendered from Rust
+examples/fullstack/          axum + Vite: islands, Pinia state, routes and streaming
+scripts/release.ts           the release version bump (see RELEASING.md)
 ```
 
 ## Development

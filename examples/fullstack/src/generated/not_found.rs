@@ -29,7 +29,7 @@ impl<'a> Props<'a> {
 pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
     out.reserve(154 + props.path.len());
     out.push_str("<section class=\"not-found\"><h1>Not found</h1><p>Nothing lives at <code>");
-    fv::escape_into(out, &*props.path);
+    fv::escape_into(out, &props.path);
     out.push_str("</code>.</p>");
     {
         let fv_link = {

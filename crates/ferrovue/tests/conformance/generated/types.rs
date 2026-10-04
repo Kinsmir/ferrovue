@@ -19,7 +19,7 @@ pub struct Role<'a> {
 impl<'a> Role<'a> {
     /// Role with its required fields.
     pub fn new(name: impl Into<Cow<'a, str>>, admin: bool) -> Self {
-        Role { name: name.into(), admin: admin }
+        Role { name: name.into(), admin }
     }
 
 }
@@ -44,7 +44,7 @@ pub struct User<'a> {
 impl<'a> User<'a> {
     /// User with its required fields, every optional one absent.
     pub fn new(id: i64, name: impl Into<Cow<'a, str>>, roles: Vec<Role<'a>>) -> Self {
-        User { id: id, name: name.into(), avatar: None, roles: roles, size: None }
+        User { id, name: name.into(), avatar: None, roles, size: None }
     }
 
     /// Set `avatar`, which is absent otherwise.

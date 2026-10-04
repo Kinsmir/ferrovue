@@ -25,7 +25,7 @@ pub struct Props<'a> {
 impl<'a> Props<'a> {
     /// Props with its required fields, every optional one absent.
     pub fn new(title: impl Into<Cow<'a, str>>, items: impl IntoIterator<Item = impl Into<Cow<'a, str>>>, show_head: bool) -> Self {
-        Props { title: title.into(), items: items.into_iter().map(Into::into).collect(), show_head: show_head, note: None }
+        Props { title: title.into(), items: items.into_iter().map(Into::into).collect(), show_head, note: None }
     }
 
     /// Set `note`, which is absent otherwise.
@@ -38,14 +38,14 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(46 + 7 * (props.items).len() + props.title.len() + props.items.iter().map(|v| v.len()).sum::<usize>() + props.note.as_deref().map_or(0, str::len));
+    out.reserve(46 + 7 * props.items.len() + props.title.len() + props.items.iter().map(|v| v.len()).sum::<usize>() + props.note.as_deref().map_or(0, str::len));
     super::frame::render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed(&*props.title) }, super::frame::Slots {
         head: Some(fv::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
-            if (props.show_head) {
+            if props.show_head {
                 filled = true;
                 out.push_str("<b>");
-                fv::escape_into(out, &*props.title);
+                fv::escape_into(out, &props.title);
                 out.push_str("</b>");
             } else {
                 out.push_str("<!---->");
@@ -55,15 +55,15 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         default: Some(fv::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
             out.push_str("<!--[-->");
-            for i_ref in (props.items).iter() {
-                let i: &str = &**i_ref;
+            for i_ref in props.items.iter() {
+                let i: &str = i_ref;
                 filled = true;
                 out.push_str("<p>");
                 fv::escape_into(out, i);
                 out.push_str("</p>");
             }
             out.push_str("<!--]-->");
-            if let Some(n1) = (props.note.as_deref()).filter(|v| !(*v).is_empty()) {
+            if let Some(n1) = props.note.as_deref().filter(|v| !v.is_empty()) {
                 filled = true;
                 out.push_str("<em>");
                 fv::escape_into(out, n1);

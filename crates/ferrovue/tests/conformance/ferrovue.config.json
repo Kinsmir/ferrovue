@@ -1,6 +1,8 @@
 {
   "components": "components",
   "out": "generated",
+  "scopeId": "filepath",
+  "viteRoot": "../../../..",
   "routes": "routes.json",
   "stores": "stores",
   "trustedHtml": "crate::Sanitised",

@@ -25,7 +25,7 @@ pub struct Props<'a> {
 impl<'a> Props<'a> {
     /// Props with its required fields, every optional one absent.
     pub fn new(user: super::types::User<'a>) -> Self {
-        Props { user: user, size: None, badges: None, note: None }
+        Props { user, size: None, badges: None, note: None }
     }
 
     /// Set `size`, which is absent otherwise.
@@ -50,43 +50,43 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(122 + 16 * (props.user.roles).len() + 22 * (props.badges.as_deref().unwrap_or(&[])).len() + props.user.name.len() + props.user.avatar.as_deref().map_or(0, str::len) + props.user.roles.iter().map(|v| v.name.len()).sum::<usize>() + props.user.size.as_deref().map_or(0, str::len) + props.size.as_deref().map_or(0, str::len) + props.note.as_deref().map_or(0, str::len));
+    out.reserve(128 + 16 * props.user.roles.len() + 22 * props.badges.as_deref().unwrap_or(&[]).len() + props.user.name.len() + props.user.avatar.as_deref().map_or(0, str::len) + props.user.roles.iter().map(|v| v.name.len()).sum::<usize>() + props.user.size.as_deref().map_or(0, str::len) + props.size.as_deref().map_or(0, str::len) + props.note.as_deref().map_or(0, str::len));
     out.push_str("<div class=\"card");
     fv::class_into(out, true, &[&*format!("card-{}", props.size.as_deref().unwrap_or("md"))]);
     out.push_str("\">");
-    if let Some(n1) = (props.user.avatar.as_deref()).filter(|v| !(*v).is_empty()) {
+    if let Some(n1) = props.user.avatar.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<img src=\"");
         fv::escape_into(out, n1);
         out.push_str("\" alt=\"");
-        fv::escape_into(out, &*props.user.name);
+        fv::escape_into(out, &props.user.name);
         out.push_str("\">");
     } else {
         out.push_str("<!---->");
     }
     out.push_str("<b>");
-    fv::escape_into(out, &*props.user.name);
+    fv::escape_into(out, &props.user.name);
     out.push_str("</b> <small>#");
     fv::push_int(out, props.user.id);
     out.push_str("</small><!--[-->");
-    for r_ref in (props.user.roles).iter() {
+    for r_ref in props.user.roles.iter() {
         let r = r_ref;
         out.push_str("<i class=\"");
-        fv::class_into(out, false, &[if (r.admin) { "admin" } else { "" }]);
+        fv::class_into(out, false, &[if r.admin { "admin" } else { "" }]);
         out.push_str("\">");
-        fv::escape_into(out, &*r.name);
+        fv::escape_into(out, &r.name);
         out.push_str("</i>");
     }
     out.push_str("<!--]--><!--[-->");
-    for b_ref in (props.badges.as_deref().unwrap_or(&[])).iter() {
+    for b_ref in props.badges.as_deref().unwrap_or(&[]).iter() {
         let b = b_ref;
         out.push_str("<span class=\"");
-        fv::class_into(out, false, &[(b.tone.as_deref()).unwrap_or("")]);
+        fv::class_into(out, false, &[b.tone.as_deref().unwrap_or("")]);
         out.push_str("\">");
-        fv::escape_into(out, &*b.label);
+        fv::escape_into(out, &b.label);
         out.push_str("</span>");
     }
     out.push_str("<!--]-->");
-    if let Some(n2) = (props.note.as_deref()).filter(|v| !(*v).is_empty()) {
+    if let Some(n2) = props.note.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<em>");
         fv::escape_into(out, n2);
         out.push_str("</em>");

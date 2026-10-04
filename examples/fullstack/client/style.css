@@ -1,4 +1,5 @@
-/* Global styles: ferrovue refuses `<style scoped>`, so a page's styles live here. */
+/* Global styles: the page's own. A component's live in its `<style scoped>` block, as
+ * `BasketSummary` and `Reviews` show. */
 :root {
   color-scheme: light dark;
   --ink: #1d1b16;
@@ -46,12 +47,6 @@ a.active {
 .brand {
   font-size: 1.3rem;
 }
-.basket {
-  margin: 0;
-}
-.basket.empty b {
-  color: var(--muted);
-}
 .books li {
   margin: 0.5rem 0;
 }
@@ -72,10 +67,6 @@ button {
 button:disabled {
   opacity: 0.6;
   cursor: default;
-}
-.stars {
-  font-variant-numeric: tabular-nums;
-  margin-right: 0.5rem;
 }
 footer {
   margin-top: 2rem;

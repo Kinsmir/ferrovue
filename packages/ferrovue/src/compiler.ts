@@ -18,13 +18,14 @@
  * This module is the public API; the translation lives in the modules beside it. */
 
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { type Config, ctx, loadConfig, tyOfName } from "./context.ts";
 import { readComponent } from "./component.ts";
 import { readRoutes } from "./router.ts";
 import { readStores } from "./stores.ts";
 import { i18nSource, readLocales } from "./i18n.ts";
 import { scopeFor } from "./script.ts";
+import { scopeFlow } from "./scoped.ts";
 import { componentSource, modSource, routesSource, storesSource, typesSource } from "./rust.ts";
 
 /** Every generated file, keyed by its name in the output directory. */
@@ -40,6 +41,8 @@ export function generate(root: string, config: Config = loadConfig(root)): Map<s
   ctx.linkActive = router?.linkActiveClass ?? "router-link-active";
   ctx.linkExactActive = router?.linkExactActiveClass ?? "router-link-exact-active";
   ctx.rootDir = root;
+  ctx.scopeId = config.scopeId ?? "filepath-source";
+  ctx.viteRoot = resolve(root, config.viteRoot ?? ".");
   ctx.typeStructs = new Map();
   ctx.typeAliases = new Map();
   ctx.typeFiles = new Map();
@@ -66,7 +69,9 @@ export function generate(root: string, config: Config = loadConfig(root)): Map<s
   // Whether a component reads a store or the route is known once its setup is read; both reach
   // every component on the way down to one that does, and the route every one on the way down to
   // a `<RouterLink>`.
-  for (const r of read) scopeFor(r.comp, r.ast, components);
+  const children = read.map((r) => scopeFor(r.comp, r.ast, components).scope.children);
+  // Which roots may be handed scope ids, and which slot content given a slot scope id.
+  scopeFlow(read.map((r, i) => ({ comp: r.comp, ssr: r.ssr, children: children[i]! })));
   for (const c of components.values()) c.usesRoute = c.routerLink || c.readsRoute;
   for (let changed = true; changed; ) {
     changed = false;

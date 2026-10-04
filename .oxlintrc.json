@@ -42,7 +42,8 @@
       "error",
       {
         "allow": [
-          "__fv"
+          "__fv",
+          "__scopeId"
         ]
       }
     ]

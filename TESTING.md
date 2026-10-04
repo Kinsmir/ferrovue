@@ -10,6 +10,7 @@ pnpm test                  # TypeScript: compiler, CLI, vectors, router, Vue hal
 cargo test --all-features  # Rust: runtime units, properties, Rust half of conformance
 pnpm typecheck
 pnpm conformance:check     # the committed generated Rust is what the compiler writes now
+pnpm test:browser          # the same fixtures, and the full-stack example, hydrated in real browsers
 ```
 
 ## The layers
@@ -17,14 +18,16 @@ pnpm conformance:check     # the committed generated Rust is what the compiler w
 | Layer | Where | What it proves | Source of truth |
 |---|---|---|---|
 | **Conformance** | `crates/ferrovue/tests/conformance/` | Each component × fixture renders identically in Vue and in the generated Rust, and Vue hydrates the HTML with no mismatch | `@vue/server-renderer`, Vue's hydration |
-| **Shared vectors** | `crates/ferrovue/tests/vectors/` | The runtime's reimplementations of `trim`, `.length`, `escapeHtml`, and vue-router's link resolution (string and object `to`, named routes, query and hash encoding, history base) and `useRoute()` fields agree with the originals | JavaScript, `@vue/shared`, vue-router |
+| **Browser hydration** | `packages/ferrovue/browser/`, `examples/fullstack/browser/` | Every fixture's recorded HTML, parsed by Chromium, Firefox and WebKit, hydrates with no mismatch and is left as parsed; the full-stack example's pages do too, and their islands work | Vue's hydration, the browsers' HTML parsers |
+| **Shared vectors** | `crates/ferrovue/tests/vectors/` | The runtime's reimplementations of `trim`, `.length`, `escapeHtml`, `String(number)`, `Math`, `toFixed`, `normalizeClass` of an object, the string methods (`slice`, `at`, `split`, `replace`, `padStart`, … on astral characters, halves of pairs, negative and `NaN` indices), string ordering, `Number` / `parseInt` / `parseFloat`, `JSON.stringify` of strings, an object's order of keys, and vue-router's link resolution (string and object `to`, named routes, query and hash encoding, history base) and `useRoute()` fields agree with the originals | JavaScript, `@vue/shared`, vue-router |
 | **Compiler** | `packages/ferrovue/test/compiler.test.ts` | Constructs that a careless translation would get subtly wrong are refused with a named error; key translations have the expected shape | Hand-written |
 | **CLI** | `packages/ferrovue/test/cli.test.ts` | `ferrovue` writes, replaces, and `--check` detects stale and stray files | Hand-written |
 | **Runtime units** | `crates/ferrovue/src/tests.rs`, `src/router/tests.rs` | Escaping, slots, fallbacks, holes, islands, the state script, router edge cases | Hand-written |
 | **Properties** | `crates/ferrovue/tests/properties.rs` | Invariants over generated inputs: escaped text has no markup and reads back whole; the state script can't be closed; router never panics | `proptest` |
 | **Differential fuzzing** | `packages/ferrovue/fuzz/` | Random components and props, within the grammar ferrovue accepts, render identically in Vue and in the generated Rust; each difference is shrunk to a small case (`pnpm fuzz`, nightly in CI, not part of `pnpm test`) | `@vue/server-renderer` |
+| **Mutation testing** | `.cargo/mutants.toml` | The tests above notice a small change to the runtime's source; every change they miss is listed, with the reason, as one that cannot alter the output (`cargo mutants`, weekly in CI) | cargo-mutants |
 | **Example** | `examples/greeting/` | Generated code compiles in an ordinary (non-test) consumer crate | `cargo build` |
-| **Full-stack example** | `examples/fullstack/` | An axum server's pages, streamed through holes, hydrate in the client built from the same components with no mismatch, and their islands share the store | Vue's hydration (`pnpm --filter ferrovue-example-fullstack test`) |
+| **Full-stack example** | `examples/fullstack/` | An axum server's pages, streamed through holes, hydrate in the client built from the same components with no mismatch, their islands share the store, and their elements carry the scope ids the client build's stylesheet selects | Vue's hydration (`pnpm --filter ferrovue-example-fullstack test`) |
 
 ### Conformance in detail
 
@@ -37,8 +40,12 @@ fixtures/X/case.json            Vue hydrates it: no mismatch warnings, same DOM 
 1. `conformance.test.ts` renders each `fixtures/<Component>/<case>.json` with real Vue and compares
    the result with `<case>.html`.
 2. It mounts the recorded HTML and hydrates it, failing on any hydration warning.
-3. It checks that `generated/` is exactly what the compiler writes now.
-4. `tests/conformance.rs` renders every fixture through the generated Rust and compares the result
+3. For a fixture with scope ids, which hydration does not compare, it renders the fixture afresh on
+   the client and holds every element's `data-v-` ids to the recorded ones (except in
+   `CLIENT_DIFFERS`, where Vue's own server and client disagree), and it checks that each scoped
+   component's id is the one `@vitejs/plugin-vue` gave it.
+4. It checks that `generated/` is exactly what the compiler writes now.
+5. `tests/conformance.rs` renders every fixture through the generated Rust and compares the result
    with the same `.html`.
 
 A fixture is a JSON object of props plus three optional keys:
@@ -71,10 +78,59 @@ A fixture is a JSON object of props plus three optional keys:
 | `Panel`, `Dashboard` | Named slots, `$slots.x`, interpolating fallbacks, child props as literals, variables, lists and whole `Props` |
 | `Nav`, `Links`, `Menu`, `App` | `<RouterLink>` active matching, relative links, named routes, `query`/`hash`, link class props, imported `RouterLink`, `<RouterView>` |
 | `RouteInfo` | `useRoute()` and `$route`: path, hash, name, params |
+| `Translated`, `Plurals` | vue-i18n's `$t` and `useI18n()`: named and list values, literals, linked messages and their modifiers, fallback locales; the plural case chosen by an integer, a fraction or a value that is not a finite number, and `count` and `n` given or taking the plural number |
 | `Badge`, `Cart` | Pinia state through the store and `storeToRefs`, getters, two stores, store reads in `computed` |
+| `ScopedPage` and its children | `<style scoped>`: the id on every element and what reaches each kind of child — `ScopedLeaf` (a root chosen by `v-if`), `ScopedRoot` (a root that is a component), `ScopedPair` (a fragment), `PlainBox` (no scoped styles), `ScopedCard` (`:slotted()`, a scoped slot, fallbacks), `PlainForward`, `ScopedShelf` and `ScopedRack` (slots forwarded into `:slotted()` ones, slot scope ids with two spaces), `ScopedFade` (a `<Transition>` root) — and `<KeepAlive>`, `<Teleport>` |
+| `ScopedTree` | A scoped component rendering itself, whose children's roots carry its id twice |
+| `ScopedNav`, `ScopedLink` | `<RouterLink>` in scoped components: the `<a>` and what it holds, a link that is a scoped component's root, a link in `:slotted()` slot content |
+| `ScopedQuirks`, `QuietLeaf` | Where Vue's server and client renders give different ids: a `:slotted()` component's fallback, `inheritAttrs: false` |
+| `Strings` | String methods in UTF-16 code units (astral characters, `$` replacement patterns, padding, `split("")`), ordering by code unit, kept by `computed` |
+| `Arrays`, `Chips` | `filter`, `map`, `some`, `every`, `find`, `findIndex`, `slice` with arrow functions, chained and nested, with an index and destructuring, in `v-for`, `computed`, `?:` and a child's props; `JSON.stringify` |
+| `Records` | `Record<string, T>` and `{ [key: string]: T }` in JavaScript's order of keys (array indices first, a key given twice), `Object.keys` / `values` / `entries`, a record handed to a child |
+| `Parsing` | `Number`, `parseInt` (no radix, 10, 16) and `parseFloat` of strings, `JSON.stringify` of numbers, `NaN` and `Infinity` |
 
 Every component has at least one **hostile** fixture: markup-breaking characters in every prop that
 reaches the page.
+
+## Hydrating in real browsers
+
+The conformance suite hydrates each fixture in happy-dom, whose HTML parser is not a browser's. A
+browser rebuilds some markup as it parses — a block element closes an open `<p>`, a table gains a
+`<tbody>` and pushes stray content out of it, `<select>` and `<template>` have rules of their own —
+and Vue hydrates against what the browser built. A mismatch only a browser shows is a real one for
+readers, so `pnpm test:browser` hydrates in Chromium, Firefox and WebKit through
+[Playwright](https://playwright.dev):
+
+```sh
+pnpm --filter ferrovue exec playwright install chromium firefox webkit   # once (Linux: --with-deps)
+pnpm test:browser
+FERROVUE_BROWSERS=chromium pnpm test:browser                             # one browser
+```
+
+- **Conformance** (`packages/ferrovue/browser/conformance.test.ts`): `entry.ts`, which imports every
+  component, is bundled once by Vite with `@vitejs/plugin-vue` and Vue's development build. Each
+  fixture becomes a page: its recorded HTML as the body, teleported content in its targets
+  (`hydrationBody`, as the happy-dom suite places it), and the fixture in the head. Playwright serves
+  the page and the bundle from memory, no server listening. The page builds the app with the same
+  `fixtureApp` as the happy-dom suite (`src/fixture.ts`: props, slots, route, Pinia state, locale)
+  and hydrates. The test fails on a hydration warning or any error the page logs, if Vue replaced
+  the server's first node, or if hydrating changed the document as the browser parsed it.
+  Vue rewrites some attributes on purpose as it hydrates (it sets every dynamic prop again);
+  those are listed, by fixture, in `PATCHED`, and the test fails if one stops happening.
+- **Full-stack example** (`examples/fullstack/browser/hydration.test.ts`): builds the client with
+  `vite build` into a temporary directory (production Vue, with
+  `__VUE_PROD_HYDRATION_MISMATCH_DETAILS__` so attribute mismatches are checked), builds the server
+  with Cargo and starts it on a free port (`PORT=0`, `DIST_DIR`), stopping it when done. It opens the
+  home page and a streamed book page, fails on any warning or error, checks the document is as the
+  browser parsed it, then adds a book to the basket and shows every review.
+
+A browser that will not launch is skipped with a warning, except in CI (`CI` set), where it fails
+the run: WebKit needs system libraries some Linux distributions do not ship. CI's `Hydrates in real
+browsers` job caches the browsers by Playwright version and installs their libraries each run.
+
+A fixture that mismatches only in a browser is a finding: the recorded HTML is Vue's own render, so
+the cause is the template (markup a browser rebuilds as it parses), not the generated Rust. Report
+it, and consider whether the compiler should refuse the template, rather than changing the fixture.
 
 ## Randomised differential testing
 
@@ -87,23 +143,38 @@ What it generates, with random nesting:
 
 - elements (block, inline, lists, void), static text with entities and whitespace, `<template>`;
 - props of type `string`, `number` (integers, some anywhere within ±2⁵³), `Float`, `boolean`, their
-  optional versions, lists of strings and of integers, and lists of objects of local interfaces;
+  optional versions, lists of strings and of integers, lists of objects of local interfaces, and
+  dictionaries (`Record<string, T>`, `{ [key: string]: T }`) whose JSON gives array-index keys out
+  of order and a key twice;
 - `{{ }}` of all of them; `v-if` / `v-else-if` / `v-else` (with `!`, `&&`, `||`, `===`, `!==`, `<`,
-  `>`, presence tests and narrowing); `v-for` over lists, objects (destructured too), array literals
-  and number ranges, with an index;
+  `>`, presence tests and narrowing); `v-for` over lists, objects (destructured too), array literals,
+  number ranges, computed lists and dictionaries (`(value, key, i) in r`, `Object.entries`), with an
+  index;
 - static and bound attributes, boolean attributes, `:class` strings, arrays and objects (computed
   names too), `:style` objects merged with a static `style`;
+- child components written beside each one — a single root, a slot with a fallback, a root that is
+  a component forwarding its slot, a fragment, a root that is another component — given slot
+  content, at the root or nested; `<style scoped>` on the component and on each child, with
+  `:slotted()` on those with a slot;
 - string `+`, template literals, `?:`, `??`, `||`, `.length`, `.trim()` and the rest of the string
-  methods, `String()`, `.toString()`, `.toFixed()`, `Math`, and integer and fractional arithmetic;
+  methods — `slice`, `substring`, `at`, `charAt`, `indexOf`, `split`, `replace` and `replaceAll`
+  with `$` patterns, `padStart`, `padEnd`, `repeat` — strings ordered with `<`, `String()`,
+  `.toString()`, `.toFixed()`, `Number()`, `parseInt()`, `parseFloat()`, `JSON.stringify()`, `Math`,
+  and integer and fractional arithmetic;
+- lists computed from lists, `Object.keys` / `Object.values` and `split`, by `filter`, `map` and
+  `slice` with arrow functions (an index too), chained, read by `.join()`, `.length`, `.includes()`,
+  `some`, `every`, `find`, `findIndex` and `JSON.stringify`;
 - prop values meant to break things: markup and quotes, `</script>`, combining marks, emoji, RTL
   and bidi controls, JavaScript-only whitespace, case mappings that change length, empty strings,
-  integers at ±(2⁵³ − 1), fractions such as `0.1`, `1e-7`, `1e21`, `5e-324` and `-0`, absent
-  optionals.
+  numbers written as strings, integers at ±(2⁵³ − 1), fractions such as `0.1`, `1e-7`, `1e21`,
+  `5e-324` and `-0`, absent optionals.
 
 Only what ferrovue promises to accept is generated: expressions are typed as TypeScript and
-ferrovue type them, optional values are read only where they may be, and integer arithmetic never
-leaves ±2⁵³. So a component the compiler refuses is reported as a **refusal**, a finding of its own
-when the README says the construct is supported.
+ferrovue type them, optional values are read only where they may be, integer arithmetic never
+leaves ±2⁵³, and two strings that may each hold half of a surrogate pair never meet. So a component
+the compiler refuses is reported as a **refusal**, a finding of its own when the README says the
+construct is supported. Vue's HTML is compared as a server sends it, a half of a pair as U+FFFD
+(README, "Strings").
 
 ```sh
 pnpm fuzz                                              # a random seed (printed), 200 components
@@ -155,6 +226,46 @@ report mismatches and shrink one to a lone `{{ s }}` with a value such as `">"`.
 3. `cargo test` fails until the compiler or runtime is fixed; then it is a regression test. Delete
    the directory from `fuzz/failures/`.
 
+## Coverage
+
+```sh
+pnpm coverage        # both, below
+pnpm coverage:ts     # vitest's V8 coverage of packages/ferrovue/src: target/coverage/ts/index.html
+pnpm coverage:rust   # cargo llvm-cov over the workspace: target/coverage/rust/html/index.html
+```
+
+`coverage:rust` needs `cargo install cargo-llvm-cov --locked` and
+`rustup component add llvm-tools-preview`. The **Coverage** workflow
+(`.github/workflows/coverage.yml`) runs both on every push to `main` and every pull request, writes
+the totals in the run's summary, and uploads the reports (HTML and lcov) as the `coverage`
+artifact. Nothing is sent to a coverage service, and no number fails the run: a covered line is
+not a tested one, which is what the mutation testing below is for.
+
+## Mutation testing
+
+Coverage says a line ran; mutation testing says a test would notice if it were wrong.
+[cargo-mutants](https://mutants.rs) makes hundreds of small changes to the runtime crate's source
+(`crates/ferrovue/src`, configured in `.cargo/mutants.toml`) — `<` made `<=`, `&&` made `||`, a
+function's body replaced by a default value — and runs the crate's tests (units, vectors,
+properties and conformance) on each. A change that no test notices is a **surviving** mutant.
+
+```sh
+cargo install cargo-mutants --locked
+cargo mutants -p ferrovue -j 4          # a few minutes; the results go to mutants.out/
+cargo mutants -p ferrovue -F js_round   # only the mutants whose name matches
+```
+
+A survivor is either a gap, closed by a test, or an **equivalent** mutant: a change that cannot
+alter what the function returns, such as `<` made `<=` where the two sides can never be equal.
+Each equivalent is listed in `.cargo/mutants-equivalent.txt`, without its line and column, under
+a comment saying why it changes nothing. Where the right answer is defined by JavaScript, Vue,
+vue-router or vue-i18n, the test that closes a gap takes it from them: a vector recorded with
+`pnpm vectors:record`, or a conformance fixture recorded with `pnpm conformance:record`.
+
+The **Mutants** workflow (`.github/workflows/mutants.yml`) runs every Monday and by hand, in two
+shards, and fails on any survivor that is not in the list. It is too slow for every pull request;
+run it locally on the functions a change touches (`-F`, or `--in-diff` with a diff file).
+
 ## Investigating a construct
 
 `node scripts/inspect.ts path/to/X.vue '{"prop":"value"}'` prints the three things to compare when
@@ -169,6 +280,9 @@ and what ferrovue generates (or the error it refuses with).
 - **A new component:** add it to `components/`, run `pnpm conformance:generate`, add at least one
   fixture (plus a hostile one), and record as above. The suite fails if a component has no fixtures.
 - **A new router case:** add it to `tests/vectors/router.json` and run `pnpm vectors:record`.
+- **A new string or number case:** add its inputs to `tests/vectors/strings.json`, `parse.json`,
+  `compare.json`, `keys.json` or `json.json` (any expected value) and run `pnpm vectors:record`,
+  which writes what JavaScript answers.
 - **A new refusal:** add a `[what, source, /message/]` row to `refused` in `compiler.test.ts`.
 
 Never re-record to make a failure go away. A changed `.html` means either Vue changed (after an

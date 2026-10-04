@@ -8,6 +8,27 @@
 use std::cell::RefCell;
 
 /// The teleported content of one render, by target, in the order Vue collects it.
+///
+/// A component that renders `<Teleport>`, or renders a child that does, takes a `&Teleports` as its
+/// last parameter. Make one per page render, render the page, then write each target's content
+/// inside its element. It collects through a shared reference, so it is not `Sync`: give each
+/// render its own. [`guide::teleports`](crate::guide::teleports) has a complete page.
+///
+/// # Example
+///
+/// ```
+/// use ferrovue::{teleport_into, Teleports};
+///
+/// let teleports = Teleports::new();
+/// let mut body = String::new();
+/// // What a generated component writes for `<Teleport to="#modals"><p>hi</p></Teleport>`.
+/// teleport_into(&mut body, &teleports, "#modals", false, &|out: &mut String| out.push_str("<p>hi</p>"));
+///
+/// assert_eq!(body, "<!--teleport start--><!--teleport end-->");
+/// let modals = teleports.get("#modals").unwrap_or_default();
+/// assert_eq!(modals, "<!--teleport start anchor--><p>hi</p><!--teleport anchor-->");
+/// // The page then writes `<div id="modals">{modals}</div>`.
+/// ```
 #[derive(Debug, Default)]
 pub struct Teleports {
     targets: RefCell<Vec<(String, Vec<String>)>>,
@@ -15,11 +36,36 @@ pub struct Teleports {
 
 impl Teleports {
     /// An empty collector: one per page render.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let teleports = ferrovue::Teleports::new();
+    /// assert_eq!(teleports.get("#modals"), None);
+    /// ```
     pub fn new() -> Teleports {
         Teleports::default()
     }
 
-    /// What was teleported to `target` (`"body"`, `"#modals"`), to write inside that element.
+    /// What was teleported to `target` (`"body"`, `"#modals"`), to write inside that element;
+    /// `None` when nothing was. `target` is the `to` exactly as the template wrote it.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ferrovue::{teleport_into, Teleports};
+    ///
+    /// let teleports = Teleports::new();
+    /// let mut body = String::new();
+    /// teleport_into(&mut body, &teleports, "#modals", false, &|out: &mut String| out.push_str("a"));
+    /// teleport_into(&mut body, &teleports, "#modals", false, &|out: &mut String| out.push_str("b"));
+    /// // Both, in the order they rendered.
+    /// assert_eq!(
+    ///     teleports.get("#modals").unwrap(),
+    ///     "<!--teleport start anchor-->a<!--teleport anchor--><!--teleport start anchor-->b<!--teleport anchor-->"
+    /// );
+    /// assert_eq!(teleports.get("#other"), None);
+    /// ```
     pub fn get(&self, target: &str) -> Option<String> {
         self.targets
             .borrow()
@@ -29,6 +75,20 @@ impl Teleports {
     }
 
     /// Every target and what was teleported to it, in the order the targets were first used.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ferrovue::{teleport_into, Teleports};
+    ///
+    /// let teleports = Teleports::new();
+    /// let mut body = String::new();
+    /// teleport_into(&mut body, &teleports, "#overlay", false, &|out: &mut String| out.push_str("o"));
+    /// teleport_into(&mut body, &teleports, "#modals", false, &|out: &mut String| out.push_str("m"));
+    ///
+    /// let targets: Vec<String> = teleports.into_targets().into_iter().map(|(target, _)| target).collect();
+    /// assert_eq!(targets, ["#overlay", "#modals"]);
+    /// ```
     pub fn into_targets(self) -> Vec<(String, String)> {
         self.targets
             .into_inner()
@@ -62,6 +122,25 @@ impl Teleports {
 
 /// `ssrRenderTeleport`: the markers in place and the content in the target's buffer — or, when
 /// disabled, the content in place and empty anchors in the target.
+///
+/// Called by generated code for each `<Teleport>`, with its `to` and `disabled`; `content` writes
+/// what the teleport holds.
+///
+/// # Example
+///
+/// ```
+/// use ferrovue::{teleport_into, Teleports};
+///
+/// let teleports = Teleports::new();
+/// let mut out = String::new();
+/// // `<Teleport to="#modals" disabled>`: the content stays where it is.
+/// teleport_into(&mut out, &teleports, "#modals", true, &|out: &mut String| out.push_str("<p>here</p>"));
+/// assert_eq!(out, "<!--teleport start--><p>here</p><!--teleport end-->");
+/// assert_eq!(
+///     teleports.get("#modals").unwrap(),
+///     "<!--teleport start anchor--><!--teleport anchor-->"
+/// );
+/// ```
 pub fn teleport_into(
     out: &mut String,
     teleports: &Teleports,

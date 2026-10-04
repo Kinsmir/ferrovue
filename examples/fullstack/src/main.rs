@@ -37,7 +37,12 @@ const USAGE: &str = "usage: ferrovue-example-fullstack [--render <path>]";
 
 #[tokio::main]
 async fn main() {
-    let dist = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("dist");
+    // The client's build: `dist/` beside this crate, unless `DIST_DIR` names another (the browser
+    // test builds one of its own).
+    let dist = std::env::var_os("DIST_DIR").map_or_else(
+        || PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("dist"),
+        PathBuf::from,
+    );
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.as_slice() {
         [] => serve(dist).await,
@@ -142,8 +147,12 @@ mod tests {
             html.contains(r#"<a aria-current="page" href="/" class="active brand">"#),
             "{html}"
         );
-        // The store's state is rendered, through its getter, and sent for the client to start from.
-        assert!(html.contains("Basket of guest: <b>1</b> book"), "{html}");
+        // The store's state is rendered, through its getter, and sent for the client to start from;
+        // `data-v-0a3b973f` is the id of the summary's scoped styles, a hash of its path.
+        assert!(
+            html.contains("Basket of guest: <b data-v-0a3b973f>1</b> book"),
+            "{html}"
+        );
         assert!(
             html.contains(r#"<script type="application/json" id="__pinia">{"basket":{"owner":"guest","ids":["solaris"]}}</script>"#),
             "{html}"

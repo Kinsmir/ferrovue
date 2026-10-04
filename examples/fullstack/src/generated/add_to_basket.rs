@@ -29,30 +29,16 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(76 + props.id.len() + props.title.len());
-    let s_added = false;
-    out.push_str("<button");
-    if ("button").is_empty() {
-        out.push_str(" type");
-    } else {
-        out.push_str(" type=\"");
-        fv::escape_into(out, "button");
-        out.push_str("\"");
-    }
-    out.push_str(" class=\"add\"");
-    if (&*format!("Add {} to the basket", &*props.title)).is_empty() {
+    out.reserve(81 + props.id.len() + props.title.len());
+    out.push_str("<button type=\"button\" class=\"add\"");
+    if format!("Add {} to the basket", props.title).is_empty() {
         out.push_str(" aria-label");
     } else {
         out.push_str(" aria-label=\"");
-        fv::escape_into(out, &*format!("Add {} to the basket", &*props.title));
-        out.push_str("\"");
+        fv::escape_into(out, &format!("Add {} to the basket", props.title));
+        out.push('"');
     }
-    if (s_added) {
-        out.push_str(" disabled");
-    }
-    out.push_str(">");
-    fv::escape_into(out, "Add to basket");
-    out.push_str("</button>");
+    out.push_str(">Add to basket</button>");
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.

@@ -29,7 +29,7 @@ impl<'a> Props<'a> {
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(249 + props.name.len());
     out.push_str("<div><p>a b &amp; c &lt;d&gt; © “");
-    fv::escape_into(out, &*props.name);
+    fv::escape_into(out, &props.name);
     out.push_str("”</p><br><img src=\"https://example.com/x.png\" alt=\"\"><svg viewBox=\"0 0 10 10\" aria-hidden=\"true\"><path d=\"M0 0L10 10\" stroke-linecap=\"round\"></path></svg><pre>  keep\n    this  </pre><p> collapse this </p></div>");
 }
 

@@ -7,13 +7,15 @@ import { allRoutes, type RouteDef, ctx } from "./context.ts";
 import { lookupStruct } from "./typescript.ts";
 import { childOf } from "./expr.ts";
 import { Emitter } from "./emitter.ts";
-import { extraParams, slotFieldBorrows, slotFieldTy, slotTypeName, statements, takesSlots } from "./template.ts";
+import { extraParams, fieldInit, slotFieldBorrows, slotFieldTy, slotTypeName, statements, takesSlots } from "./template.ts";
 import { storeHome } from "./stores.ts";
 import { scopeFor } from "./script.ts";
 
 export function needsLifetime(ty: Ty, comp: Component, seen: Set<string> = new Set()): boolean {
   switch (ty.k) {
+    // A record's keys are strings.
     case "str":
+    case "record":
       return true;
     case "opt":
     case "list":
@@ -55,6 +57,8 @@ export function rustTy(ty: Ty, comp: Component): string {
       return `Option<${rustTy(ty.of, comp)}>`;
     case "list":
       return `Vec<${rustTy(ty.of, comp)}>`;
+    case "record":
+      return `ferrovue::Record<'a, ${rustTy(ty.of, comp)}>`;
     case "struct": {
       const { st, owner, path } = lookupStruct(comp, ty);
       if (!st) throw new GenError(`no type \`${ty.name}\``);
@@ -89,7 +93,7 @@ function builderSource(st: Struct, comp: Component, life: string): string {
   const arg = (f: Field) => f.rust.replace(/^r#/, "");
   const params = required.map((f) => `${arg(f)}: ${param(f.ty, comp, arg(f)).ty}`).join(", ");
   const inits = st.fields
-    .map((f) => (f.ty.k === "opt" ? `${f.rust}: None` : `${f.rust}: ${param(f.ty, comp, arg(f)).value}`))
+    .map((f) => (f.ty.k === "opt" ? `${f.rust}: None` : fieldInit(f.rust, param(f.ty, comp, arg(f)).value)))
     .join(", ");
   const setters = optional
     .filter((f) => f.rust !== "new")
@@ -108,7 +112,7 @@ function builderSource(st: Struct, comp: Component, life: string): string {
   const impl = life ? "impl<'a>" : usesA ? "impl<'a>" : "impl";
   return `${impl} ${st.name}${life} {
     /// ${st.name} with ${required.length ? "its required fields" : "nothing set"}${optional.length ? ", every optional one absent" : ""}.
-    pub fn new(${params}) -> Self {
+${required.length > 7 ? "    // One argument per required field, however many the type declares.\n    #[allow(clippy::too_many_arguments)]\n" : ""}    pub fn new(${params}) -> Self {
         ${st.name} { ${inits} }
     }
 ${setters}
@@ -171,9 +175,33 @@ export function textLen(comp: Component, place: string, ty: Ty, seen: Set<string
       const inner = textLen(comp, "v", ty.of, seen);
       return inner.length ? [`${place}.iter().map(|v| ${inner.join(" + ")}).sum::<usize>()`] : [];
     }
+    case "record": {
+      const inner = textLen(comp, "v", ty.of, seen);
+      return [`${place}.iter().map(|(k, ${inner.length ? "v" : "_"})| ${["k.len()", ...inner].join(" + ")}).sum::<usize>()`];
+    }
     default:
       return [];
   }
+}
+
+/** `render`, and for a component a parent may hand scope ids to, `render_scoped`, which takes them
+ * last, as `ssrRenderAttrs` writes them onto its root; `render` hands it none. */
+function renderSource(comp: Component, life: string, args: string, e: Emitter): string {
+  const doc = "/// Write the component's server render into `out`.\n";
+  // Props or ids the render never reads, as when a component only passes its slot on.
+  const props = e.reads("props", 0) ? "props" : "_props";
+  if (!comp.inherits) return `${doc}pub fn render(out: &mut String, ${props}: &Props${life}${extraParams(comp)}) {\n${e.lines.join("\n")}\n}`;
+  // A root that is a fragment, or a `<Teleport>`, takes no ids.
+  const attrs = e.reads("fv_attrs", 0) ? "fv_attrs" : "_fv_attrs";
+  return `${doc}pub fn render(out: &mut String, props: &Props${life}${extraParams(comp)}) {
+    render_scoped(out, props${args}, "");
+}
+
+/// [\`render\`], with the scope ids a parent hands the root: \` data-v-…\` each.
+#[doc(hidden)]
+pub fn render_scoped(out: &mut String, ${props}: &Props${life}${extraParams(comp)}, ${attrs}: &str) {
+${e.lines.join("\n")}
+}`;
 }
 
 export function componentSource(comp: Component, ast: N[], ssr: string, components: Map<string, Component>): string {
@@ -201,7 +229,8 @@ export function componentSource(comp: Component, ast: N[], ssr: string, componen
    * reserving the literals alone leaves it to grow again at the first long label. */
   const text = textLen(comp, "props", { k: "struct", name: "Props" });
   const fixed = e.literalBytes + scope.helperBytes.n;
-  e.lines.unshift(`    out.reserve(${[String(fixed), ...e.perItem, ...text].join(" + ")});`);
+  const reserve = [...(fixed || !(e.perItem.length + text.length) ? [String(fixed)] : []), ...e.perItem, ...text];
+  e.lines.unshift(`    out.reserve(${reserve.join(" + ")});`);
 
   const life = structLifetime(comp.props, comp) ? "<'_>" : "";
   const gen = life ? "<'p, 'a>" : "<'p>";
@@ -234,8 +263,8 @@ pub struct ${props} {
 ${fields}
 }
 
-/// A parent's content for ${outlet}, given its props: returns whether it wrote anything but comments.
-pub type ${slotTypeName(n, "Slot")}<'s> = dyn ${borrows ? "for<'v> " : ""}Fn(&mut String, &${props}) -> bool + 's;
+/// A parent's content for ${outlet}, given its props${comp.passesSlotIds ? " and the slot scope id to write onto its elements" : ""}: returns whether it wrote anything but comments.
+pub type ${slotTypeName(n, "Slot")}<'s> = dyn ${borrows ? "for<'v> " : ""}Fn(&mut String, &${props}${comp.passesSlotIds ? ", &str" : ""}) -> bool + 's;
 
 `;
     })
@@ -280,10 +309,7 @@ ${usesCow ? "use std::borrow::Cow;\n\n" : ""}use ferrovue as fv;
 pub const NAME: &str = ${rustStr(comp.name)};
 
 ${structs ? structs + "\n" : ""}${structSource(comp.props, comp, `/// The props \`${basename(comp.file)}\` declares.\n`)}
-${slotsStruct}/// Write the component's server render into \`out\`.
-pub fn render(out: &mut String, props: &Props${life}${extraParams(comp)}) {
-${e.lines.join("\n")}
-}
+${slotsStruct}${renderSource(comp, life, args, e)}
 
 ${wrappers}`;
 }
@@ -302,7 +328,7 @@ export function modSource(comps: Component[]): string {
           if (shape) {
             // A fixture's content for a scoped slot is static: it is given the props and ignores them.
             const life = shape.fields.some((f) => slotFieldBorrows(f.ty)) ? "<'_>" : "";
-            lines.push(`let ${local} = |out: &mut String, _: &${c.module}::${shape.name}${life}| -> bool { out.push_str(fixture.slot(${rustStr(n)}).unwrap_or_default()); true };`);
+            lines.push(`let ${local} = |out: &mut String, _: &${c.module}::${shape.name}${life}${c.passesSlotIds ? ", _: &str" : ""}| -> bool { out.push_str(fixture.slot(${rustStr(n)}).unwrap_or_default()); true };`);
           } else lines.push(`let ${local} = |out: &mut String| out.push_str(fixture.slot(${rustStr(n)}).unwrap_or_default());`);
         }
         const fields = c.slotNames.map((n) => {
@@ -370,7 +396,10 @@ impl Fixture {
   return `${header(ctx.componentsDir)}
 //! The component renderers, one module per \`.vue\` file.
 
-#![allow(dead_code, unused_parens, clippy::all)]
+// The modules pass rustc's default warnings and clippy's default lints, with one exception:
+// \`dead_code\`. Every component gets the whole of its API (\`render\`, \`html\`, \`island\`, \`NAME\`, a
+// constructor and a setter per optional prop) and an app calls only what it needs.
+#![allow(dead_code)]
 
 ${comps.map((c) => `pub mod ${c.module};`).join("\n")}${ctx.routes ? "\npub mod route_table;" : ""}${ctx.stores.size ? "\npub mod stores;" : ""}${ctx.typeStructs.size ? "\npub mod types;" : ""}${ctx.i18n ? "\npub mod i18n;" : ""}
 ${fixture}

@@ -7,8 +7,9 @@
  * `.vue` file. The dev server regenerates them whenever a component, store, type file, the routes
  * or the configuration changes, and shows a refusal in its error overlay. Only files whose text
  * changed are rewritten, so `cargo watch` rebuilds no more than it must. */
-import { relative, resolve, sep } from "node:path";
-import type { Plugin, ViteDevServer } from "vite";
+import { readdirSync, readFileSync } from "node:fs";
+import { join, relative, resolve, sep } from "node:path";
+import type { Plugin, ResolvedConfig, ViteDevServer } from "vite";
 import { CONFIG_FILE, GenError, loadConfig, write, type Written } from "./compiler.ts";
 
 export interface FerrovueOptions {
@@ -32,14 +33,54 @@ export function affects(root: string, file: string): boolean {
   return out === "" || !(rel === out || rel.startsWith(out + sep));
 }
 
+/** How `@vitejs/plugin-vue`, as this build configures it, computes a `<style scoped>` id: from the
+ * path alone or the path and source, hashed from Vite's root. `null` without the plugin, or with an
+ * id generator of its own. */
+export function vueScopeIds(config: ResolvedConfig): { mode: "filepath" | "filepath-source"; root: string } | null {
+  const vue = config.plugins.find((p) => p.name === "vite:vue");
+  const generator = (vue?.api as { options?: { features?: { componentIdGenerator?: unknown } } } | undefined)?.options?.features?.componentIdGenerator;
+  if (!vue || (generator !== undefined && generator !== "filepath" && generator !== "filepath-source")) return null;
+  return { mode: generator ?? (config.isProduction ? "filepath-source" : "filepath"), root: resolve(config.root) };
+}
+
+/** Why the server's scope ids would differ from the client's, when a component has `<style scoped>`
+ * and `ferrovue.config.json` computes them otherwise than plugin-vue: a page would hydrate cleanly
+ * and show unstyled. */
+export function scopeIdMismatch(root: string, vue: { mode: string; root: string } | null): string | null {
+  if (!vue) return null;
+  const config = loadConfig(root);
+  const mode = config.scopeId ?? "filepath-source";
+  const viteRoot = resolve(root, config.viteRoot ?? ".");
+  if (mode === vue.mode && viteRoot === vue.root) return null;
+  let files: string[] = [];
+  try {
+    files = readdirSync(join(root, config.components)).filter((f) => f.endsWith(".vue"));
+  } catch {
+    // No components: generating reports it.
+  }
+  if (!files.some((f) => /<style\b[^>]*\bscoped\b/.test(readFileSync(join(root, config.components, f), "utf8")))) return null;
+  return `\`<style scoped>\` ids: @vitejs/plugin-vue hashes "${vue.mode}" from ${vue.root}, ${CONFIG_FILE} "${mode}" from ${viteRoot}; set \`scopeId\` and \`viteRoot\` to match, or plugin-vue's \`features.componentIdGenerator\``;
+}
+
 export default function ferrovue(options: FerrovueOptions = {}): Plugin {
   const root = resolve(options.root ?? process.cwd());
   const regenerate = (): Written => write(root, loadConfig(root));
+  let vue: ReturnType<typeof vueScopeIds> = null;
+  let building = true;
   return {
     name: "ferrovue",
+    configResolved(config) {
+      vue = vueScopeIds(config);
+      building = config.command === "build";
+    },
     buildStart() {
       try {
         regenerate();
+        // A build whose styles would not apply to the server's pages fails, as a refusal does; the
+        // dev server warns.
+        const mismatch = scopeIdMismatch(root, vue);
+        if (mismatch && building) this.error(`ferrovue: ${mismatch}`);
+        if (mismatch) this.warn(`ferrovue: ${mismatch}`);
       } catch (e) {
         if (e instanceof GenError || e instanceof SyntaxError) this.error(e.message);
         throw e;

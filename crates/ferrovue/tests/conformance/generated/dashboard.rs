@@ -27,7 +27,7 @@ pub struct Props<'a> {
 impl<'a> Props<'a> {
     /// Props with its required fields, every optional one absent.
     pub fn new(heading: impl Into<Cow<'a, str>>, panels: Vec<super::panel::Props<'a>>, words: impl IntoIterator<Item = impl Into<Cow<'a, str>>>, total: i64) -> Self {
-        Props { heading: heading.into(), panels: panels, words: words.into_iter().map(Into::into).collect(), footer: None, total: total }
+        Props { heading: heading.into(), panels, words: words.into_iter().map(Into::into).collect(), footer: None, total }
     }
 
     /// Set `footer`, which is absent otherwise.
@@ -40,20 +40,20 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(81 + 7 * (props.words).len() + 16 * (props.panels).len() + 7 * (props.words).len() + props.heading.len() + props.words.iter().map(|v| v.len()).sum::<usize>() + props.footer.as_deref().map_or(0, str::len));
+    out.reserve(81 + 7 * props.words.len() + 16 * props.panels.len() + 7 * props.words.len() + props.heading.len() + props.words.iter().map(|v| v.len()).sum::<usize>() + props.footer.as_deref().map_or(0, str::len));
     out.push_str("<main>");
     super::panel::render(out, &super::panel::Props { title: std::borrow::Cow::Borrowed(&*props.heading), count: Some(props.total) }, super::panel::Slots {
         title: Some(fv::Slot::new(&|out: &mut String| {
             out.push_str("<h1>");
-            fv::escape_into(out, &*props.heading);
+            fv::escape_into(out, &props.heading);
             out.push_str("</h1>");
         })),
         default: Some(fv::Slot::new(&|out: &mut String| {
-            super::text::render(out, &super::text::Props { title: std::borrow::Cow::Borrowed(&*props.heading), count: props.total, on: !((((props.total) as f64) == ((0i64) as f64))), note: None, score: None, padded: std::borrow::Cow::Borrowed(" x ") });
+            super::text::render(out, &super::text::Props { title: std::borrow::Cow::Borrowed(&*props.heading), count: props.total, on: props.total as f64 != 0.0, note: None, score: None, padded: std::borrow::Cow::Borrowed(" x ") });
         })),
         footer: Some(fv::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
-            if let Some(n1) = (props.footer.as_deref()).filter(|v| !(*v).is_empty()) {
+            if let Some(n1) = props.footer.as_deref().filter(|v| !v.is_empty()) {
                 filled = true;
                 out.push_str("<span>");
                 fv::escape_into(out, n1);
@@ -65,7 +65,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         })),
     });
     out.push_str("<!--[-->");
-    for p_ref in (props.panels).iter() {
+    for p_ref in props.panels.iter() {
         let p = p_ref;
         super::panel::render(out, p, super::panel::Slots {
             title: None,
@@ -75,8 +75,8 @@ pub fn render(out: &mut String, props: &Props<'_>) {
                     default: Some(fv::Slot::markup(&|out: &mut String| -> bool {
                         let mut filled = false;
                         out.push_str("<!--[-->");
-                        for w_ref in (props.words).iter() {
-                            let w: &str = &**w_ref;
+                        for w_ref in props.words.iter() {
+                            let w: &str = w_ref;
                             filled = true;
                             out.push_str("<i>");
                             fv::escape_into(out, w);
@@ -95,10 +95,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         title: None,
         default: Some(fv::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
-            if (((props.words).len() as i64)) != 0 {
+            if props.words.len() as i64 != 0 {
                 out.push_str("<!--[-->");
-                for w_ref in (props.words).iter() {
-                    let w: &str = &**w_ref;
+                for w_ref in props.words.iter() {
+                    let w: &str = w_ref;
                     filled = true;
                     out.push_str("<b>");
                     fv::escape_into(out, w);

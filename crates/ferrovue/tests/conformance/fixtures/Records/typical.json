@@ -1,0 +1,7 @@
+{
+  "counts": { "b": 1, "10": 2, "a": 3, "2": 4, "01": 5 },
+  "labels": { "z": "last", "a": "first", "0": "zero" },
+  "scores": { "ann": { "points": 3, "by": "judge" }, "7": { "points": 1, "by": "ref" } },
+  "groups": { "team": ["ann", "bob"], "solo": [] },
+  "extra": { "on": true, "4294967295": false, "4294967294": true }
+}

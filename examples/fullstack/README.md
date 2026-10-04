@@ -19,7 +19,7 @@ From the repository root:
 pnpm install
 pnpm --filter ferrovue build                     # the ferrovue package itself (only inside this repo)
 pnpm --filter ferrovue-example-fullstack build   # the client into dist/, and src/generated/
-cargo run -p ferrovue-example-fullstack          # http://localhost:3000 (PORT to change it)
+cargo run -p ferrovue-example-fullstack          # http://localhost:3000 (PORT to change it, DIST_DIR for another client build)
 ```
 
 While you work on the components, run Vite's dev server and point the Rust server at it. The
@@ -44,20 +44,22 @@ cargo run -p ferrovue-example-fullstack -- --render /books/dune
 
 | File | Demonstrates |
 |---|---|
-| `ferrovue.config.json` | A `router` block (routes file, `linkActiveClass`), a `stores` directory, output in `src/generated/` |
+| `ferrovue.config.json` | A `router` block (routes file, `linkActiveClass`), a `stores` directory, output in `src/generated/`, `"scopeId": "filepath"` |
+| `vite.config.ts` | `@vitejs/plugin-vue` with `componentIdGenerator: "filepath"`, so the build and the dev server give scoped styles the ids the server writes |
 | `client/routes.json` | Named routes, read by ferrovue for the server and by `client/app.ts` for the client: one list for both |
 | `client/stores/basket.ts` | A Pinia option store with getters (`count`, `empty`) |
 | `client/components/Layout.vue` | `<RouterView>`, `<RouterLink>`s by route name with params, the active-link class |
-| `client/components/BasketSummary.vue` | Reading the store (state and getters, `storeToRefs`) on the server |
+| `client/components/BasketSummary.vue` | Reading the store (state and getters, `storeToRefs`) on the server; `<style scoped>` |
 | `client/components/BookList.vue` | The home page: a list, named links with params, a scoped slot the server fills with an island per book |
 | `client/components/BookPage.vue` | The detail page: `useRoute()` params in the template and in a `computed`, a named slot, a slot left as a hole for streaming |
 | `client/components/AddToBasket.vue` | An island: rendered with `add_to_basket::island()`, so it carries `data-island` and `data-props`; its click handler uses the shared store |
-| `client/components/Reviews.vue` | The slow part of the book page, streamed into the hole as an island, with `v-show` the client toggles |
+| `client/components/Reviews.vue` | The slow part of the book page, streamed into the hole as an island, with `v-show` the client toggles; `<style scoped>` |
 | `client/app.ts` | `hydrateState` then `mountIslands`, with one Pinia and one router for every island |
 | `src/pages.rs` | Rendering pages from the generated `route_table::router()`, `Props::new(…)`, `Slots`, `ferrovue::state_script_into`, `ferrovue::hole()` and `split_holes` |
 | `src/main.rs` | The axum server: a streamed body per page, `dist/assets` served beside it, and `--render` |
 | `src/assets.rs` | Finding the entry's hashed script and stylesheet in Vite's manifest, or loading from the dev server |
-| `test/hydration.test.ts` | The proof: the server's own HTML hydrates with no mismatch |
+| `test/hydration.test.ts` | The proof: the server's own HTML hydrates with no mismatch, and carries the scope ids the client build's stylesheet selects |
+| `browser/hydration.test.ts` | The same in Chromium, Firefox and WebKit: the server started on a free port, its pages opened, the islands clicked (`pnpm test:browser`) |
 
 ### Islands, and what isn't one
 
@@ -93,6 +95,21 @@ home page and a book page, puts each page's body into happy-dom, and runs the cl
 It then checks that Vue kept the server's nodes, that the islands work after hydration, and that a
 click in one island reaches the store the summary shows. CI runs it, and also starts the real server
 to check that a page streams and its assets are served.
+
+happy-dom parses HTML its own way, though, and Vue hydrates against what the browser parsed, so
+`browser/hydration.test.ts` does the same in real browsers:
+
+```sh
+pnpm --filter ferrovue-example-fullstack exec playwright install chromium firefox webkit   # once
+pnpm --filter ferrovue-example-fullstack test:browser
+```
+
+It builds the client into a temporary directory, with Vue's mismatch details kept (production
+builds leave out the attribute checks otherwise), builds the server and starts it on a free port
+with `DIST_DIR` pointing at that build, and opens the pages in Chromium, Firefox and WebKit through
+Playwright. It fails on any warning or error the page logs and on any change hydrating makes to the
+document as the browser parsed it, then clicks "Add to basket" and "Show all reviews". The server
+is stopped when the test ends.
 
 In your own app the store state, the routes and the props all come from your data, so give each
 page you serve a case in a test like this one.

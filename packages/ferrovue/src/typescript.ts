@@ -34,6 +34,15 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
       return { k: "list", of: tyOfTs(comp, t.elementType, structs, seen) };
     case "TSParenthesizedType":
       return tyOfTs(comp, t.typeAnnotation, structs, seen);
+    case "TSTypeLiteral": {
+      // `{ [key: string]: T }`, which is `Record<string, T>`. Any other object type is an interface.
+      const [sig] = t.members;
+      const key = sig?.parameters?.[0]?.typeAnnotation?.typeAnnotation;
+      if (t.members.length === 1 && sig.type === "TSIndexSignature" && key?.type === "TSStringKeyword" && sig.typeAnnotation) {
+        return recordOf(comp, sig.typeAnnotation.typeAnnotation, structs, seen);
+      }
+      return fail(comp, "an object type in place: declare it as an interface, or as `{ [key: string]: T }` for a dictionary", t);
+    }
     case "TSTypeOperator":
       // `readonly string[]`: the same list, which the server never writes to anyway.
       if (t.operator === "readonly") return tyOfTs(comp, t.typeAnnotation, structs, seen);
@@ -62,6 +71,12 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
       if ((name === "Array" || name === "ReadonlyArray") && t.typeParameters?.params?.length === 1) {
         return { k: "list", of: tyOfTs(comp, t.typeParameters.params[0], structs, seen) };
       }
+      // `Record<string, T>`, an object used as a dictionary.
+      if (name === "Record" && t.typeParameters?.params?.length === 2) {
+        const [key, value] = t.typeParameters.params;
+        if (key.type !== "TSStringKeyword") fail(comp, "a `Record` is keyed by `string`", key);
+        return recordOf(comp, value, structs, seen);
+      }
       if (structs.has(name)) return { k: "struct", name };
       if (comp.childProps.has(name)) return { k: "child", name: comp.childProps.get(name)! };
       if (comp.floatName !== null && name === comp.floatName) return FLOAT;
@@ -84,6 +99,15 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
   return fail(comp, `unsupported prop type \`${t.type}\``, t);
 }
 
+/** A dictionary's type: its values strings, numbers, booleans, objects or lists of those. A value
+ * may not be optional: JSON has no `undefined` to hold. */
+function recordOf(comp: Component, value: N, structs: Map<string, Struct>, seen: Set<string>): Ty {
+  const of = tyOfTs(comp, value, structs, seen);
+  const plain = (t: Ty): boolean => ["str", "int", "float", "bool", "struct", "child"].includes(t.k) || (t.k === "list" && plain(t.of));
+  if (!plain(of)) fail(comp, "a `Record`'s values are strings, numbers, booleans, objects or lists of those", value);
+  return { k: "record", of };
+}
+
 /** Every local name an interface or object type alias declares a struct for, and every other
  * alias: what a type in that block may name. */
 export function declareTypes(comp: Component, body: N[], structs: Map<string, Struct>, aliases: Map<string, N>): N[] {
@@ -92,7 +116,9 @@ export function declareTypes(comp: Component, body: N[], structs: Map<string, St
     const d = st.type === "ExportNamedDeclaration" ? st.declaration : st;
     if (d?.type === "TSInterfaceDeclaration") decls.push({ name: d.id.name, members: d.body.body, node: d });
     else if (d?.type === "TSTypeAliasDeclaration") {
-      if (d.typeAnnotation.type === "TSTypeLiteral") decls.push({ name: d.id.name, members: d.typeAnnotation.members, node: d });
+      // An object type is a struct — but for a dictionary, `{ [key: string]: T }`, an alias of its own.
+      const dictionary = d.typeAnnotation.members?.some((m: N) => m.type === "TSIndexSignature");
+      if (d.typeAnnotation.type === "TSTypeLiteral" && !dictionary) decls.push({ name: d.id.name, members: d.typeAnnotation.members, node: d });
       else aliases.set(d.id.name, d.typeAnnotation);
     }
   }
@@ -150,7 +176,7 @@ export function readTypeFile(file: string): void {
 /** A type read in the file that declares it, marked with where it lives for readers elsewhere. */
 export function markHome(ty: Ty, home: string): Ty {
   if (ty.k === "struct" && !ty.store && !ty.home && ty.name !== "Props") return { ...ty, home };
-  if (ty.k === "opt" || ty.k === "list") return { ...ty, of: markHome(ty.of, home) };
+  if (ty.k === "opt" || ty.k === "list" || ty.k === "record") return { ...ty, of: markHome(ty.of, home) };
   return ty;
 }
 
@@ -255,6 +281,6 @@ export function defaultValue(comp: Component, f: Field, node: N): string {
 
 export function markStore(ty: Ty): Ty {
   if (ty.k === "struct") return { ...ty, store: true };
-  if (ty.k === "opt" || ty.k === "list") return { ...ty, of: markStore(ty.of) };
+  if (ty.k === "opt" || ty.k === "list" || ty.k === "record") return { ...ty, of: markStore(ty.of) };
   return ty;
 }

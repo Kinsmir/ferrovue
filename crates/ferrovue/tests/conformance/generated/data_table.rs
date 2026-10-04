@@ -23,7 +23,7 @@ pub struct Props<'a> {
 impl<'a> Props<'a> {
     /// Props with its required fields.
     pub fn new(rows: Vec<super::data_list::Row<'a>>, heading: impl Into<Cow<'a, str>>, compact: bool) -> Self {
-        Props { rows: rows, heading: heading.into(), compact: compact }
+        Props { rows, heading: heading.into(), compact }
     }
 
 }
@@ -31,32 +31,32 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(57 + props.rows.iter().map(|v| v.label.len() + v.tags.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>() + props.heading.len());
-    super::data_list::render(out, &super::data_list::Props { rows: (props.rows).to_owned(), title: std::borrow::Cow::Borrowed(&*props.heading), note: None }, super::data_list::Slots {
+    out.reserve(69 + props.rows.iter().map(|v| v.label.len() + v.tags.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>() + props.heading.len());
+    super::data_list::render(out, &super::data_list::Props { rows: props.rows.to_owned(), title: std::borrow::Cow::Borrowed(&*props.heading), note: None }, super::data_list::Slots {
         header: Some(&|out: &mut String, fv_sp1: &super::data_list::HeaderSlotProps<'_>| -> bool {
             out.push_str("<h2");
             if let Some(v) = fv_sp1.note {
                 out.push_str(" title=\"");
                 fv::escape_into(out, v);
-                out.push_str("\"");
+                out.push('"');
             }
-            out.push_str(">");
-            fv::escape_into(out, &*(fv_sp1.title).to_uppercase());
+            out.push('>');
+            fv::escape_into(out, &fv_sp1.title.to_uppercase());
             out.push_str("</h2>");
             true
         }),
         row: Some(&|out: &mut String, fv_sp2: &super::data_list::RowSlotProps<'_>| -> bool {
             let mut filled = false;
-            if !((props.compact)) {
+            if !props.compact {
                 filled = true;
-                super::row_chip::render(out, &super::row_chip::Props { row: (fv_sp2.row).to_owned(), first: fv_sp2.first });
+                super::row_chip::render(out, &super::row_chip::Props { row: fv_sp2.row.to_owned(), first: fv_sp2.first });
             } else {
-                if (((fv_sp2.tags).len() as i64)) != 0 {
+                if fv_sp2.tags.len() as i64 != 0 {
                     filled = true;
                     out.push_str("<b data-index=\"");
                     fv::push_int(out, fv_sp2.index);
                     out.push_str("\">");
-                    fv::escape_into(out, &*fv_sp2.row.label);
+                    fv::escape_into(out, &fv_sp2.row.label);
                     out.push_str("</b>");
                 } else {
                     out.push_str("<!---->");

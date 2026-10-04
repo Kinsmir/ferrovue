@@ -26,9 +26,11 @@ pub static LOCALES: &[Locale] = &[
             ("linked", Message { cases: &[&[Part::Linked { key: "common.app", modifier: None }, Part::Text(" says "), Part::Linked { key: "common.hi,", modifier: Some("upper") }, Part::Text(" "), Part::Linked { key: "common.hi", modifier: Some("capitalize") }]] }),
             ("list", Message { cases: &[&[Part::List(0), Part::Text(" and "), Part::List(1)]] }),
             ("literal", Message { cases: &[&[Part::Text("Use "), Part::Literal("{"), Part::Text("braces"), Part::Literal("}")]] }),
+            ("loud", Message { cases: &[&[Part::Text("LOUD Noise")]] }),
             ("missingLink", Message { cases: &[&[Part::Text("see "), Part::Linked { key: "does.not.exist", modifier: None }]] }),
             ("nested.deep.key", Message { cases: &[&[Part::Text("deep value")]] }),
             ("onlyEnglish", Message { cases: &[&[Part::Text("only in English")]] }),
+            ("shout", Message { cases: &[&[Part::Linked { key: "loud", modifier: Some("lower") }]] }),
         ],
     },
     Locale {

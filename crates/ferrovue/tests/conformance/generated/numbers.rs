@@ -23,7 +23,7 @@ pub struct Props {
 impl Props {
     /// Props with its required fields, every optional one absent.
     pub fn new(price: f64, qty: i64, ratio: f64) -> Self {
-        Props { price: price, qty: qty, rate: None, ratio: ratio }
+        Props { price, qty, rate: None, ratio }
     }
 
     /// Set `rate`, which is absent otherwise.
@@ -36,72 +36,70 @@ impl Props {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props) {
-    out.reserve(129);
-    let s_total = ((props.price) * ((props.qty) as f64));
+    out.reserve(228);
+    let s_total = props.price * props.qty as f64;
     out.push_str("<div data-ratio=\"");
     fv::push_number(out, props.ratio);
     out.push_str("\" style=\"opacity:");
     fv::push_number(out, props.ratio);
     out.push_str(";width:");
-    fv::escape_into(out, &*format!("{}{}", fv::Js(props.price), "px"));
+    fv::escape_into(out, &format!("{}px", fv::Js(props.price)));
     out.push_str(";\"><p>");
     fv::push_number(out, s_total);
-    out.push_str("|");
-    fv::escape_into(out, &*fv::js_to_fixed((s_total), 2));
-    out.push_str("|");
-    fv::escape_into(out, &*fv::js_to_fixed((props.price), 0));
-    out.push_str("|");
-    fv::escape_into(out, &*fv::js_to_fixed((props.price), 1));
-    out.push_str("|");
-    fv::push_number(out, (((props.qty) as f64) / ((4i64) as f64)));
-    out.push_str("|");
-    fv::push_number(out, (((props.qty) as f64) / ((0i64) as f64)));
-    out.push_str("|");
-    fv::push_number(out, ((-((props.qty) as f64)) / ((0i64) as f64)));
-    out.push_str("|");
-    fv::push_number(out, (((0i64) as f64) / ((0i64) as f64)));
-    out.push_str("|");
-    fv::push_number(out, ((props.price) % ((1i64) as f64)));
+    out.push('|');
+    fv::escape_into(out, &fv::js_to_fixed(s_total, 2));
+    out.push('|');
+    fv::escape_into(out, &fv::js_to_fixed(props.price, 0));
+    out.push('|');
+    fv::escape_into(out, &fv::js_to_fixed(props.price, 1));
+    out.push('|');
+    fv::push_number(out, props.qty as f64 / 4.0);
+    out.push('|');
+    fv::push_number(out, props.qty as f64 / 0.0);
+    out.push('|');
+    fv::push_number(out, -(props.qty as f64) / 0.0);
+    out.push_str("|NaN|");
+    fv::push_number(out, props.price % 1.0);
     out.push_str("</p><p>");
-    fv::push_number(out, fv::js_round((props.price)));
-    out.push_str("|");
-    fv::push_number(out, (props.price).floor());
-    out.push_str("|");
-    fv::push_number(out, (props.price).ceil());
-    out.push_str("|");
-    fv::push_number(out, ((-(props.price))).trunc());
-    out.push_str("|");
-    fv::push_number(out, fv::js_max((props.price), ((props.qty) as f64)));
-    out.push_str("|");
-    fv::push_number(out, fv::js_min((props.ratio), (0.25f64)));
-    out.push_str("|");
-    fv::push_number(out, ((-(props.price))).abs());
+    fv::push_number(out, fv::js_round(props.price));
+    out.push('|');
+    fv::push_number(out, props.price.floor());
+    out.push('|');
+    fv::push_number(out, props.price.ceil());
+    out.push('|');
+    fv::push_number(out, (-props.price).trunc());
+    out.push('|');
+    fv::push_number(out, fv::js_max(props.price, props.qty as f64));
+    out.push('|');
+    fv::push_number(out, fv::js_min(props.ratio, 0.25f64));
+    out.push('|');
+    fv::push_number(out, (-props.price).abs());
     out.push_str("</p><p>");
-    fv::push_number(out, (props.rate).unwrap_or(0.5f64));
-    out.push_str("|");
+    fv::push_number(out, props.rate.unwrap_or(0.5f64));
+    out.push('|');
     if let Some(v) = props.rate {
         fv::push_number(out, v);
     }
-    out.push_str("|");
-    fv::escape_into(out, &*format!("{}/{}", fv::Js(props.price), fv::Js(props.qty)));
-    out.push_str("|");
-    fv::escape_into(out, &*fv::Js(props.ratio).to_string());
-    out.push_str("|");
-    out.push_str(if ((props.price) > ((props.qty) as f64)) { "true" } else { "false" });
-    out.push_str("|");
-    out.push_str(if ((props.price) == (2.5f64)) { "true" } else { "false" });
-    if ((props.ratio) != 0.0 && !(props.ratio).is_nan()) {
+    out.push('|');
+    fv::escape_into(out, &format!("{}/{}", fv::Js(props.price), fv::Js(props.qty)));
+    out.push('|');
+    fv::escape_into(out, &fv::Js(props.ratio).to_string());
+    out.push('|');
+    out.push_str(if props.price > props.qty as f64 { "true" } else { "false" });
+    out.push('|');
+    out.push_str(if props.price == 2.5 { "true" } else { "false" });
+    if props.ratio != 0.0 && !props.ratio.is_nan() {
         out.push_str("<b>truthy</b>");
     } else {
         out.push_str("<!---->");
     }
-    if !(((props.ratio) != 0.0 && !(props.ratio).is_nan())) {
+    if !(props.ratio != 0.0 && !props.ratio.is_nan()) {
         out.push_str("<i>falsy</i>");
     } else {
         out.push_str("<!---->");
     }
     out.push_str("</p>");
-    super::meter::render(out, &super::meter::Props { value: props.ratio, max: ((props.qty) as f64) });
+    super::meter::render(out, &super::meter::Props { value: props.ratio, max: props.qty as f64 });
     out.push_str("</div>");
 }
 

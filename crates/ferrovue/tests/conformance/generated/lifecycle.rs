@@ -21,7 +21,7 @@ pub struct Item<'a> {
 impl<'a> Item<'a> {
     /// Item with its required fields.
     pub fn new(id: i64, name: impl Into<Cow<'a, str>>) -> Self {
-        Item { id: id, name: name.into() }
+        Item { id, name: name.into() }
     }
 
 }
@@ -40,7 +40,7 @@ pub struct Props<'a> {
 impl<'a> Props<'a> {
     /// Props with its required fields.
     pub fn new(items: Vec<Item<'a>>, query: impl Into<Cow<'a, str>>) -> Self {
-        Props { items: items, query: query.into() }
+        Props { items, query: query.into() }
     }
 
 }
@@ -48,28 +48,25 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(78 + 10 * (props.items).len() + props.items.iter().map(|v| v.name.len()).sum::<usize>() + props.query.len());
+    out.reserve(95 + 16 * props.items.len() + props.items.iter().map(|v| v.name.len()).sum::<usize>() + props.query.len());
     let s_m_a_x = 3i64;
     let s_prefix = "#";
-    let s_mounted = false;
-    let s_shown = fv::js_trim(&*props.query);
-    let s_total = ((props.items).len() as i64);
-    out.push_str("<section data-mounted=\"");
-    out.push_str(if s_mounted { "true" } else { "false" });
-    out.push_str("\"><p>");
+    let s_shown = fv::js_trim(&props.query);
+    let s_total = props.items.len() as i64;
+    out.push_str("<section data-mounted=\"false\"><p>");
     fv::escape_into(out, s_shown);
     out.push_str(" (");
     fv::push_int(out, s_total);
     out.push_str(" of max ");
     fv::push_int(out, s_m_a_x);
     out.push_str(")</p><ul><!--[-->");
-    for item_ref in (props.items).iter() {
+    for item_ref in props.items.iter() {
         let item = item_ref;
         out.push_str("<li>");
         fv::escape_into(out, s_prefix);
         fv::push_int(out, item.id);
-        out.push_str(" ");
-        fv::escape_into(out, &*item.name);
+        out.push(' ');
+        fv::escape_into(out, &item.name);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul></section>");

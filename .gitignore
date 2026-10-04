@@ -7,3 +7,4 @@ dist/
 *.tgz
 .fallow/
 /fuzz/failures/
+/mutants.out*/

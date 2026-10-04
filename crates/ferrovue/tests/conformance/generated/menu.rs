@@ -25,7 +25,7 @@ pub struct Props<'a> {
 impl<'a> Props<'a> {
     /// Props with its required fields, every optional one absent.
     pub fn new(slug: impl Into<Cow<'a, str>>, page: i64) -> Self {
-        Props { slug: slug.into(), q: None, page: page, tab: None }
+        Props { slug: slug.into(), q: None, page, tab: None }
     }
 
     /// Set `q`, which is absent otherwise.
@@ -73,12 +73,12 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
         out.push_str("\" class=\"");
         fv::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }, "post"]);
         out.push_str("\">");
-        fv::escape_into(out, &*props.slug);
+        fv::escape_into(out, &props.slug);
         out.push_str("</a>");
     }
     {
         let fv_link = {
-            fv_route.link_named("post-tab", &[("slug", &*props.slug), ("tab", (props.tab.as_deref()).unwrap_or("view"))], "", "#top")
+            fv_route.link_named("post-tab", &[("slug", &*props.slug), ("tab", props.tab.as_deref().unwrap_or("view"))], "", "#top")
         };
         out.push_str("<a");
         if fv_link.exact {
@@ -96,7 +96,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
             if let Some(v) = props.q.as_deref() {
                 fv::query_into(&mut fv_search, "q", v);
             }
-            fv::query_into(&mut fv_search, "page", &*fv::Js(props.page).to_string());
+            fv::query_into(&mut fv_search, "page", &fv::Js(props.page).to_string());
             fv::query_into(&mut fv_search, "empty", "");
             fv_route.link_named("search", &[], &fv_search, "")
         };
@@ -114,7 +114,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
         let fv_link = {
             let mut fv_search = String::new();
             fv::query_into(&mut fv_search, "from", "menu");
-            fv_route.link_path(&*format!("{}{}", "/users/", &*props.slug), &fv_search, "")
+            fv_route.link_path(&format!("/users/{}", props.slug), &fv_search, "")
         };
         out.push_str("<a");
         if fv_link.exact {

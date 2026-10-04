@@ -15,6 +15,9 @@ export type Ty =
   | { k: "undef" }
   | { k: "opt"; of: Ty }
   | { k: "list"; of: Ty }
+  /** `Record<string, T>`: an object used as a dictionary, `ferrovue::Record` in Rust, its keys in
+   * JavaScript's order. */
+  | { k: "record"; of: Ty }
   /** `store` marks a Pinia store's state, or a type inside it, declared in a store's own file;
    * `home` a type declared elsewhere: `"types"` for a shared `.ts` file, or the component whose
    * `.vue` file declares it. */
@@ -56,6 +59,21 @@ export interface Val {
   /** For an integer computed from others: the same computation on doubles, before it is rounded
    * back to an \`i64\` — which keeps JavaScript's \`-0\`, so a division by it is \`-Infinity\`. */
   f64?: string;
+  /** For a list a template computes — `filter`, `map`, `split`, `Object.keys` — an iterator of its
+   * items, each a `Cow<str>`, a copied number or boolean, or a borrowed object. `code` is then those
+   * items collected into a `Vec`. */
+  iter?: string;
+  /** For a string, or a list of strings: it may hold half of a surrogate pair, which JavaScript
+   * keeps and ferrovue writes as U+FFFD — so two such values are never compared or joined. */
+  lone?: boolean;
+  /** For an optional string a temporary owns: that `Option<Cow<str>>`, whose `.as_deref()` is
+   * `code`. A setup `let` keeps this. */
+  held?: string;
+  /** A number known at generation time: a literal, or literals JavaScript computed. */
+  num?: number;
+  /** For a string built by `format!`: its format string and arguments, which a string built from it
+   * joins rather than formatting it again. */
+  format?: { text: string; args: string[] };
 }
 
 export const STR: Ty = { k: "str" };
@@ -96,6 +114,13 @@ export function rustStr(s: string): string {
     else out += ch;
   }
   return out + '"';
+}
+
+/** One character as a Rust `char` literal. */
+export function rustChar(ch: string): string {
+  if (ch === "'") return "'\\''";
+  if (ch === '"') return `'"'`;
+  return `'${rustStr(ch).slice(1, -1)}'`;
 }
 
 export class GenError extends Error {}
@@ -154,6 +179,18 @@ export interface Component {
   /** Its scoped slots, by name: the props each one's outlets pass, known once its render is
    * generated, which is why a child is generated before its parents. */
   slotShapes: Map<string, Struct>;
+  /** `data-v-…`, the id its `<style scoped>` gives its elements, or `null` without one. */
+  scopeId: string | null;
+  /** Whether its scoped styles use `:slotted()`, so that its outlets pass a slot scope id. */
+  slotted: boolean;
+  /** `inheritAttrs` from `defineOptions`: `false` drops what a parent passes on to its root. */
+  inheritAttrs: boolean;
+  /** Whether a parent may hand its root scope ids — its own, those passed on to it, or a slot's —
+   * which it then takes as `fv_attrs`. Known once every component is read (`scopeFlow`). */
+  inherits: boolean;
+  /** Whether its outlets may pass slot content a slot scope id, which the content then takes as
+   * `fv_sid`. Known once every component is read, as `inherits` is. */
+  passesSlotIds: boolean;
 }
 
 export interface Scope {
@@ -194,6 +231,14 @@ export interface Scope {
   /** Inside a `<RouterLink>`'s slot, which Vue renders from virtual nodes rather than pushes: an
    * untaken `v-if` is `<!--v-if-->` there, not `<!---->`. */
   vnode: boolean;
+  /** The Rust value of `_attrs`, the scope ids this render's root inherits, as `ssrRenderAttrs`
+   * writes them; `null` when the component inherits none. */
+  attrs: string | null;
+  /** The Rust value of `_scopeId` inside slot content: the slot scope id the content is given, or
+   * `null` where it is always empty. */
+  sid: string | null;
+  /** Inside a `v-for` over a list of the props: the Rust name of its item, and the list. */
+  loop?: { item: string; over: string };
 }
 
 /** Where a node came from, which decides how its position is read: `source` for an AST parsed

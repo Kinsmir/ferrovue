@@ -3,16 +3,21 @@
 
 //! The component renderers, one module per `.vue` file.
 
-#![allow(dead_code, unused_parens, clippy::all)]
+// The modules pass rustc's default warnings and clippy's default lints, with one exception:
+// `dead_code`. Every component gets the whole of its API (`render`, `html`, `island`, `NAME`, a
+// constructor and a setter per optional prop) and an app calls only what it needs.
+#![allow(dead_code)]
 
 pub mod account_nav;
 pub mod app;
+pub mod arrays;
 pub mod attrs;
 pub mod badge;
 pub mod branches;
 pub mod builtins;
 pub mod card;
 pub mod cart;
+pub mod chips;
 pub mod counter;
 pub mod dashboard;
 pub mod data_list;
@@ -37,12 +42,31 @@ pub mod nav;
 pub mod numbers;
 pub mod page;
 pub mod panel;
+pub mod parsing;
+pub mod plain_box;
+pub mod plain_forward;
+pub mod plurals;
 pub mod prose;
+pub mod quiet_leaf;
+pub mod records;
 pub mod regressions;
 pub mod route_info;
 pub mod row_chip;
+pub mod scoped_card;
+pub mod scoped_fade;
+pub mod scoped_leaf;
+pub mod scoped_link;
+pub mod scoped_nav;
+pub mod scoped_page;
+pub mod scoped_pair;
+pub mod scoped_quirks;
+pub mod scoped_rack;
+pub mod scoped_root;
+pub mod scoped_shelf;
+pub mod scoped_tree;
 pub mod setup;
 pub mod shown;
+pub mod strings;
 pub mod styles;
 pub mod text;
 pub mod translated;
@@ -119,6 +143,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let route = router.at(&fixture.route);
             app::render(&mut out, &props, app::Slots { router_view: ferrovue::Slot::new(&s_router_view) }, &route);
         }
+        "Arrays" => {
+            let props: arrays::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            arrays::render(&mut out, &props);
+        }
         "Attrs" => {
             let props: attrs::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             attrs::render(&mut out, &props);
@@ -148,6 +176,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let state: stores::Stores = serde_json::from_value(fixture.stores.clone()).map_err(|e| e.to_string())?;
             cart::render(&mut out, &props, &state);
+        }
+        "Chips" => {
+            let props: chips::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            chips::render(&mut out, &props);
         }
         "Counter" => {
             let props: counter::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -272,9 +304,39 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let s_footer = |out: &mut String| out.push_str(fixture.slot("footer").unwrap_or_default());
             panel::render(&mut out, &props, panel::Slots { title: fixture.slot("title").map(|_| ferrovue::Slot::new(&s_title)), default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)), footer: fixture.slot("footer").map(|_| ferrovue::Slot::new(&s_footer)) });
         }
+        "Parsing" => {
+            let props: parsing::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            parsing::render(&mut out, &props);
+        }
+        "PlainBox" => {
+            let props: plain_box::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
+            plain_box::render(&mut out, &props, plain_box::Slots { default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)) });
+        }
+        "PlainForward" => {
+            let props: plain_forward::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
+            plain_forward::render(&mut out, &props, plain_forward::Slots { default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)) });
+        }
+        "Plurals" => {
+            let props: plurals::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let i18n = i18n::i18n(fixture.locale.as_deref().unwrap_or(i18n::LOCALE));
+            plurals::render(&mut out, &props, &i18n);
+        }
         "Prose" => {
             let props: prose::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             prose::render(&mut out, &props);
+        }
+        "QuietLeaf" => {
+            let props: quiet_leaf::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            quiet_leaf::render(&mut out, &props);
+        }
+        "Records" => {
+            let props: records::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            records::render(&mut out, &props);
         }
         "Regressions" => {
             let props: regressions::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -291,6 +353,72 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: row_chip::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             row_chip::render(&mut out, &props);
         }
+        "ScopedCard" => {
+            let props: scoped_card::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let s_title = |out: &mut String| out.push_str(fixture.slot("title").unwrap_or_default());
+            let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
+            let s_footer = |out: &mut String, _: &scoped_card::FooterSlotProps, _: &str| -> bool { out.push_str(fixture.slot("footer").unwrap_or_default()); true };
+            scoped_card::render(&mut out, &props, scoped_card::Slots { title: fixture.slot("title").map(|_| ferrovue::Slot::new(&s_title)), default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)), footer: fixture.slot("footer").map(|_| &s_footer as &scoped_card::FooterSlot) });
+        }
+        "ScopedFade" => {
+            let props: scoped_fade::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            scoped_fade::render(&mut out, &props);
+        }
+        "ScopedLeaf" => {
+            let props: scoped_leaf::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            scoped_leaf::render(&mut out, &props);
+        }
+        "ScopedLink" => {
+            let props: scoped_link::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let router = route_table::router();
+            let route = router.at(&fixture.route);
+            scoped_link::render(&mut out, &props, &route);
+        }
+        "ScopedNav" => {
+            let props: scoped_nav::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let router = route_table::router();
+            let route = router.at(&fixture.route);
+            scoped_nav::render(&mut out, &props, &route);
+        }
+        "ScopedPage" => {
+            let props: scoped_page::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let s_extra = |out: &mut String| out.push_str(fixture.slot("extra").unwrap_or_default());
+            let teleports = ferrovue::Teleports::new();
+            scoped_page::render(&mut out, &props, scoped_page::Slots { extra: fixture.slot("extra").map(|_| ferrovue::Slot::new(&s_extra)) }, &teleports);
+            teleports_into(&mut out, teleports);
+        }
+        "ScopedPair" => {
+            let props: scoped_pair::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            scoped_pair::render(&mut out, &props);
+        }
+        "ScopedQuirks" => {
+            let props: scoped_quirks::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            scoped_quirks::render(&mut out, &props);
+        }
+        "ScopedRack" => {
+            let props: scoped_rack::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
+            scoped_rack::render(&mut out, &props, scoped_rack::Slots { default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)) });
+        }
+        "ScopedRoot" => {
+            let props: scoped_root::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            scoped_root::render(&mut out, &props);
+        }
+        "ScopedShelf" => {
+            let props: scoped_shelf::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
+            scoped_shelf::render(&mut out, &props, scoped_shelf::Slots { default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)) });
+        }
+        "ScopedTree" => {
+            let props: scoped_tree::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            scoped_tree::render(&mut out, &props);
+        }
         "Setup" => {
             let props: setup::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             setup::render(&mut out, &props);
@@ -298,6 +426,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Shown" => {
             let props: shown::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             shown::render(&mut out, &props);
+        }
+        "Strings" => {
+            let props: strings::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            strings::render(&mut out, &props);
         }
         "Styles" => {
             let props: styles::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
