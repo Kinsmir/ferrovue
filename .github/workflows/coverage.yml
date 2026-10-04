@@ -1,0 +1,78 @@
+name: Coverage
+
+# How much of the runtime crate and the compiler the test suites run (TESTING.md, "Coverage"):
+# `cargo llvm-cov` for the Rust, vitest's V8 coverage for the TypeScript. The reports are uploaded
+# as an artifact and summarised on the run's page; nothing is sent to a coverage service, and
+# nothing here fails on a number, so it is not a required check.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  coverage:
+    name: Coverage (Rust, TypeScript)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
+        with:
+          components: llvm-tools-preview
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: taiki-e/install-action@e407f7bafb71fd004bc5c2da3032e5470cbb6ef0 # v2.87.24
+        with:
+          tool: cargo-llvm-cov
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Rust
+        run: |
+          cargo llvm-cov --workspace --all-features --locked --no-report
+          cargo llvm-cov report --lcov --output-path target/coverage/rust.lcov
+          cargo llvm-cov report --html --output-dir target/coverage/rust
+          cargo llvm-cov report --summary-only > target/coverage/rust.txt
+      - name: TypeScript
+        run: pnpm coverage:ts
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Rust (\`cargo llvm-cov\`)"
+            echo
+            echo '```text'
+            cat target/coverage/rust.txt 2>/dev/null || echo "no report"
+            echo '```'
+            echo
+            echo "### TypeScript (vitest, V8), packages/ferrovue/src"
+            echo
+            node -e '
+              const fs = require("node:fs");
+              const file = "target/coverage/ts/coverage-summary.json";
+              if (!fs.existsSync(file)) { console.log("no report"); process.exit(0); }
+              const { total } = JSON.parse(fs.readFileSync(file, "utf8"));
+              console.log("| | Covered | Total | % |\n|---|---:|---:|---:|");
+              for (const k of ["lines", "statements", "functions", "branches"])
+                console.log(`| ${k} | ${total[k].covered} | ${total[k].total} | ${total[k].pct}% |`);
+            '
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: coverage
+          path: target/coverage/
+          if-no-files-found: warn

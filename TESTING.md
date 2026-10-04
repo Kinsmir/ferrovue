@@ -155,6 +155,21 @@ report mismatches and shrink one to a lone `{{ s }}` with a value such as `">"`.
 3. `cargo test` fails until the compiler or runtime is fixed; then it is a regression test. Delete
    the directory from `fuzz/failures/`.
 
+## Coverage
+
+```sh
+pnpm coverage        # both, below
+pnpm coverage:ts     # vitest's V8 coverage of packages/ferrovue/src: target/coverage/ts/index.html
+pnpm coverage:rust   # cargo llvm-cov over the workspace: target/coverage/rust/html/index.html
+```
+
+`coverage:rust` needs `cargo install cargo-llvm-cov --locked` and
+`rustup component add llvm-tools-preview`. The **Coverage** workflow
+(`.github/workflows/coverage.yml`) runs both on every push to `main` and every pull request, writes
+the totals in the run's summary, and uploads the reports (HTML and lcov) as the `coverage`
+artifact. Nothing is sent to a coverage service, and no number fails the run: a covered line is
+not a tested one.
+
 ## Investigating a construct
 
 `node scripts/inspect.ts path/to/X.vue '{"prop":"value"}'` prints the three things to compare when

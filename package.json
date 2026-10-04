@@ -8,6 +8,9 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
+    "coverage": "pnpm coverage:ts && pnpm coverage:rust",
+    "coverage:ts": "vitest run --coverage",
+    "coverage:rust": "cargo llvm-cov --workspace --all-features --html --output-dir target/coverage/rust",
     "lint": "oxlint --type-aware --deny-warnings && fallow dead-code",
     "lint:fix": "oxlint --type-aware --fix && fallow fix --yes --no-create-config",
     "fallow": "fallow",
@@ -24,6 +27,7 @@
   "devDependencies": {
     "@types/node": "^26.6.2",
     "@vitejs/plugin-vue": "^6.0.9",
+    "@vitest/coverage-v8": "^5.0.3",
     "@vue/compiler-sfc": "3.5.43",
     "@vue/server-renderer": "3.5.43",
     "@vue/shared": "3.5.43",

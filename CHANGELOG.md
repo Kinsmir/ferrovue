@@ -47,6 +47,8 @@ released together and share version numbers.
   compatible with MIT OR Apache-2.0 and comes from crates.io; RustSec advisories fail a release.
 - The release workflow checks the crate's public API against the last version on crates.io
   (`cargo-semver-checks`): before 1.0, breaking changes need a new minor version (`RELEASING.md`).
+- `pnpm coverage` (vitest's V8 coverage of the compiler, `cargo llvm-cov` of the workspace) and a
+  Coverage workflow that summarises both on the run's page and uploads the reports.
 
 ### Changed
 
