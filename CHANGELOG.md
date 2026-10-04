@@ -44,6 +44,17 @@ released together and share version numbers.
   for the `v-else`; in `?:`, `&&` and `||` as well as `v-if`. A value that is always present
   compares unequal to `undefined`; `??` and `?:` between an integer and a `Float` give a `Float`.
 
+### Documentation
+
+- The crate's documentation stands on its own on docs.rs: a crate-level overview with the guarantee,
+  an end-to-end quick start, feature flags and version requirements (`docs/crate.md`), and a guide,
+  `ferrovue::guide`, with a page each on the generated code, props, slots, routing, i18n, teleports,
+  Pinia, islands and hydration, streaming, JavaScript numbers, escaping, and what is refused. Its
+  examples mirror the code the compiler generates and run as doctests; the guide is compiled only
+  by rustdoc.
+- The public items have runnable examples, and those that generated code calls say so.
+- docs.rs builds with `--cfg docsrs`, which marks `maud`-only items; the manifest links the docs.
+
 ### Changed
 
 - The compiler is split into modules, its state gathered into one context; generated output is
