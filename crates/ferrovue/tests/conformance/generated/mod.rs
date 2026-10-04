@@ -47,6 +47,8 @@ pub mod row_chip;
 pub mod scoped_card;
 pub mod scoped_fade;
 pub mod scoped_leaf;
+pub mod scoped_link;
+pub mod scoped_nav;
 pub mod scoped_page;
 pub mod scoped_pair;
 pub mod scoped_quirks;
@@ -335,6 +337,20 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "ScopedLeaf" => {
             let props: scoped_leaf::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             scoped_leaf::render(&mut out, &props);
+        }
+        "ScopedLink" => {
+            let props: scoped_link::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let router = route_table::router();
+            let route = router.at(&fixture.route);
+            scoped_link::render(&mut out, &props, &route);
+        }
+        "ScopedNav" => {
+            let props: scoped_nav::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let router = route_table::router();
+            let route = router.at(&fixture.route);
+            scoped_nav::render(&mut out, &props, &route);
         }
         "ScopedPage" => {
             let props: scoped_page::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

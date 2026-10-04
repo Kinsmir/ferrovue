@@ -482,25 +482,28 @@ defineProps<{ href: string }>();
       expect(() => compile(island(nav))).toThrow(/`routes` in ferrovue\.config\.json/);
     });
 
-    it("refuses a RouterLink or a RouterView where scope ids would reach it", () => {
+    it("gives a RouterLink scope ids as vue-router's virtual nodes take them, and refuses what they take otherwise", () => {
       const scoped = (template: string) => `<script setup lang="ts">
 defineProps<{ href: string }>();
 </script>
 <template>${template}</template>
 <style scoped>a { color: red }</style>`;
-      expect(() => withRoutes(island(scoped(`<nav><RouterLink :to="href">go</RouterLink></nav>`)))).toThrow(/`<RouterLink>` takes scope ids/);
+      const out = withRoutes(island(scoped(`<nav><RouterLink :to="href">go</RouterLink></nav>`))).get("x.rs")!;
+      expect(out).toMatch(/out\.push_str\("\\" class=\\""\);\n.*\n\s+out\.push_str\("\\" data-v-[0-9a-f]{8}>go<\/a>"\);/);
       expect(() => withRoutes(island(scoped(`<main><RouterView /></main>`)))).toThrow(/`<RouterView>` in a component with `<style scoped>`/);
-      // Unscoped itself, but the root of a scoped component's child, which hands it that id.
+      expect(() => withRoutes(island(scoped(`<nav><RouterLink :to="href"><slot /></RouterLink></nav>`)))).toThrow(/X\.vue:4:33: a `<slot>` inside a `<RouterLink>` that takes scope ids/);
+      // Inside slot content given a `:slotted()` component's id, the elements in a link would take it
+      // otherwise than the compiled template writes it.
+      const card = `<script setup lang="ts">
+defineSlots<{ default(): unknown }>();
+</script>
+<template><div><slot /></div></template>
+<style scoped>:slotted(a) { margin: 0 }</style>`;
       const parent = `<script setup lang="ts">
-import Nav from "./Nav.vue";
+import Card from "./Card.vue";
 </script>
-<template><header><Nav href="/" /></header></template>
-<style scoped>header { color: red }</style>`;
-      const rooted = `<script setup lang="ts">
-defineProps<{ href: string }>();
-</script>
-<template><RouterLink :to="href">go</RouterLink></template>`;
-      expect(() => withRoutes(island(parent, { Nav: rooted }))).toThrow(/Nav\.vue:4:28: `<RouterLink>` takes scope ids/);
+<template><Card><RouterLink to="/"><b>go</b></RouterLink></Card></template>`;
+      expect(() => withRoutes(island(parent, { Card: card }))).toThrow(/an element inside a `<RouterLink>` in slot content given a slot scope id/);
     });
 
     it("refuses a custom RouterLink, which renders a scoped slot", () => {
