@@ -299,13 +299,8 @@ pub fn trusted_into(out: &mut String, html: &impl TrustedHtml) {
 /// assert_eq!(out, "<p>&lt;a href=&quot;x&quot;&gt;Tom &amp; &#39;Jerry&#39;&lt;/a&gt;");
 /// ```
 pub fn escape_into(out: &mut String, s: &str) {
-    // Most strings need nothing escaped. A `fold` rather than `any` because it does not stop early,
-    // which is what lets the compiler check the bytes in vector-width blocks; the string is then
-    // written in one copy.
-    let special = s.bytes().fold(false, |found, b| {
-        found | matches!(b, b'"' | b'&' | b'\'' | b'<' | b'>')
-    });
-    if !special {
+    // Most strings need nothing escaped, and are then written in one copy.
+    if !needs_escape(s.as_bytes()) {
         out.push_str(s);
         return;
     }
@@ -326,8 +321,74 @@ pub fn escape_into(out: &mut String, s: &str) {
     out.push_str(&s[last..]);
 }
 
+/// Whether any byte of `s` is one `escapeHtml` replaces, read eight bytes at a time as a `u64`. A
+/// byte equal to `c` is the one that `x ^ cccccccc` makes zero, and subtracting 1 from every byte
+/// borrows through a zero byte into its top bit; `!t` keeps only the borrows that began there.
+fn needs_escape(s: &[u8]) -> bool {
+    const ONES: u64 = u64::from_ne_bytes([0x01; 8]);
+    const TOPS: u64 = u64::from_ne_bytes([0x80; 8]);
+    let special = |word: u64| {
+        let zero = |c: u8| {
+            let t = word ^ (ONES * u64::from(c));
+            t.wrapping_sub(ONES) & !t & TOPS
+        };
+        (zero(b'"') | zero(b'&') | zero(b'\'') | zero(b'<') | zero(b'>')) != 0
+    };
+    let Some(last) = s.last_chunk::<8>() else {
+        return s
+            .iter()
+            .any(|b| matches!(b, b'"' | b'&' | b'\'' | b'<' | b'>'));
+    };
+    // Whole words, then the last eight bytes, which overlap the words already read.
+    let (words, _) = s.as_chunks::<8>();
+    words.iter().any(|w| special(u64::from_ne_bytes(*w))) || special(u64::from_ne_bytes(*last))
+}
+
 /// The largest integer a JavaScript number holds exactly: 2⁵³ − 1.
 const MAX_SAFE_INTEGER: u64 = (1 << 53) - 1;
+
+/// Two decimal digits for each number below 100, which halves the divisions writing a number takes.
+const DIGIT_PAIRS: &[u8; 200] = b"\
+    0001020304050607080910111213141516171819\
+    2021222324252627282930313233343536373839\
+    4041424344454647484950515253545556575859\
+    6061626364656667686970717273747576777879\
+    8081828384858687888990919293949596979899";
+
+/// The decimal digits of `n`, at the end of `buf`: returns where they start.
+fn decimal(buf: &mut [u8; 20], mut n: u64) -> usize {
+    let mut i = buf.len();
+    while n >= 100 {
+        let pair = (n % 100) as usize * 2;
+        n /= 100;
+        i -= 2;
+        buf[i..i + 2].copy_from_slice(&DIGIT_PAIRS[pair..pair + 2]);
+    }
+    if n >= 10 {
+        let pair = n as usize * 2;
+        i -= 2;
+        buf[i..i + 2].copy_from_slice(&DIGIT_PAIRS[pair..pair + 2]);
+    } else {
+        i -= 1;
+        buf[i] = b'0' + n as u8;
+    }
+    i
+}
+
+/// `n` in decimal. Pushed a character at a time: for the few digits of a number that is quicker
+/// than checking them as UTF-8 to push them as a `str`.
+fn push_decimal(out: &mut String, n: u64) {
+    if n < 10 {
+        out.push(char::from(b'0' + n as u8));
+        return;
+    }
+    let mut buf = [0; 20];
+    let start = decimal(&mut buf, n);
+    out.reserve(buf.len() - start);
+    for &b in &buf[start..] {
+        out.push(char::from(b));
+    }
+}
 
 /// `String(n)` for an integer, which is what `toDisplayString` and `escapeHtml` make of a number.
 ///
@@ -346,11 +407,31 @@ const MAX_SAFE_INTEGER: u64 = (1 << 53) - 1;
 /// assert_eq!(out, "42 9007199254740992");
 /// ```
 pub fn push_int(out: &mut String, n: i64) {
-    use std::fmt::Write;
     if n.unsigned_abs() <= MAX_SAFE_INTEGER {
-        let _ = write!(out, "{n}");
+        if n < 0 {
+            out.push('-');
+        }
+        push_decimal(out, n.unsigned_abs());
     } else {
         push_number(out, n as f64);
+    }
+}
+
+/// Up to 32 bytes of formatted text, on the stack: what `{:e}` writes of a double.
+struct Short {
+    buf: [u8; 32],
+    len: usize,
+}
+
+impl std::fmt::Write for Short {
+    fn write_str(&mut self, s: &str) -> std::fmt::Result {
+        let end = self.len + s.len();
+        self.buf
+            .get_mut(self.len..end)
+            .ok_or(std::fmt::Error)?
+            .copy_from_slice(s.as_bytes());
+        self.len = end;
+        Ok(())
     }
 }
 
@@ -388,23 +469,30 @@ pub fn push_number(out: &mut String, x: f64) {
     if x < 0.0 {
         out.push('-');
     }
+    let x = x.abs();
+    // A whole number a double holds exactly is its own shortest spelling, written as an integer.
+    if x.fract() == 0.0 && x <= MAX_SAFE_INTEGER as f64 {
+        push_decimal(out, x as u64);
+        return;
+    }
     // `{:e}` writes the shortest digits that round-trip, as JavaScript chooses them: `d.ddde±N`.
-    let mut sci = String::new();
-    let _ = write!(sci, "{:e}", x.abs());
+    let mut sci = Short {
+        buf: [0; 32],
+        len: 0,
+    };
+    let _ = write!(sci, "{x:e}");
+    let sci = std::str::from_utf8(&sci.buf[..sci.len]).expect("`{:e}` writes ASCII");
     let (mantissa, exp) = sci.split_once('e').expect("`{:e}` writes an exponent");
+    let exp: i32 = exp.parse().expect("`{:e}` writes an integer exponent");
     let mut digits: String = mantissa.chars().filter(|c| *c != '.').collect();
     // ECMAScript breaks a tie between two shortest spellings — the number exactly halfway between
     // them — toward the even digit, where Rust's shortest formatting may round the other way.
-    let mut exact = String::new();
-    let _ = write!(exact, "{:.1100e}", x.abs());
-    if let Some((exact_mantissa, exact_exp)) = exact.split_once('e')
+    if let Some((exact, exact_exp)) = few_exact_digits(x)
         && exact_exp == exp
     {
-        let exact_digits: String = exact_mantissa.chars().filter(|c| *c != '.').collect();
-        let exact_digits = exact_digits.trim_end_matches('0');
         let k = digits.len();
-        if exact_digits.len() == k + 1 && exact_digits.ends_with('5') {
-            let lower = &exact_digits[..k];
+        if exact.len() == k + 1 && exact.ends_with('5') {
+            let lower = &exact[..k];
             let upper = increment_digits(lower);
             let even = |d: &str| {
                 d.bytes()
@@ -418,10 +506,7 @@ pub fn push_number(out: &mut String, x: f64) {
     }
     let k = digits.len() as i32;
     // The position of the decimal point relative to the digits, as the specification's `n`.
-    let n = exp
-        .parse::<i32>()
-        .expect("`{:e}` writes an integer exponent")
-        + 1;
+    let n = exp + 1;
     if k <= n && n <= 21 {
         out.push_str(&digits);
         out.extend(std::iter::repeat_n('0', (n - k) as usize));
@@ -442,6 +527,51 @@ pub fn push_number(out: &mut String, x: f64) {
         let e = n - 1;
         let _ = write!(out, "e{}{}", if e < 0 { '-' } else { '+' }, e.abs());
     }
+}
+
+/// The significant digits of a positive, finite `x`'s exact decimal value, and the exponent of the
+/// first, when there are few enough of them for `x` to be a tie between two shortest spellings:
+/// those have at most 17 digits, so the tie at most 18. `None` when there are more.
+///
+/// `x` is `m × 2^e` with `m` odd. With `e < 0` that is `m × 5^-e × 10^e`, whose digits are those
+/// of `m × 5^-e`, an odd number: more than 18 of them once `-e` reaches 26. With `e ≥ 0` it is the
+/// integer `m × 2^e`, whose digits are counted without the zeros it ends with; a tie of at most 18
+/// digits times `10^z` is divisible by `5^z`, so `m` is, which caps `z` at 22 and `e` at
+/// `log2(10^18) + 22 < 82`.
+fn few_exact_digits(x: f64) -> Option<(String, i32)> {
+    let bits = x.to_bits();
+    let biased = ((bits >> 52) & 0x7ff) as i32;
+    let fraction = bits & ((1 << 52) - 1);
+    let (m, e) = if biased == 0 {
+        (fraction, -1074)
+    } else {
+        (fraction | 1 << 52, biased - 1075)
+    };
+    let shift = m.trailing_zeros();
+    let (m, e) = (m >> shift, e + shift as i32);
+    let (value, scale) = if e < 0 {
+        if -e >= 26 {
+            return None;
+        }
+        (u128::from(m) * 5u128.pow(e.unsigned_abs()), e)
+    } else if e <= 74 {
+        (u128::from(m) << e, 0)
+    } else if e < 82 {
+        // Beyond `u128`, below 2¹³⁴: 41 digits write it exactly.
+        use std::fmt::Write;
+        let mut s = String::new();
+        let _ = write!(s, "{x:.40e}");
+        let (mantissa, exp) = s.split_once('e')?;
+        let digits: String = mantissa.chars().filter(|c| *c != '.').collect();
+        let digits = digits.trim_end_matches('0');
+        let exp = exp.parse().ok()?;
+        return (digits.len() <= 18).then(|| (digits.to_owned(), exp));
+    } else {
+        return None;
+    };
+    let all = value.to_string();
+    let digits = all.trim_end_matches('0');
+    (digits.len() <= 18).then(|| (digits.to_owned(), all.len() as i32 - 1 + scale))
 }
 
 /// `Math.round`: the nearest integer, a half rounding up toward +∞ — `-2.5` to `-2`, where Rust's
@@ -558,9 +688,15 @@ pub struct Js<T>(pub T);
 
 impl std::fmt::Display for Js<i64> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut s = String::new();
-        push_int(&mut s, self.0);
-        f.write_str(&s)
+        if self.0.unsigned_abs() > MAX_SAFE_INTEGER {
+            return Js(self.0 as f64).fmt(f);
+        }
+        let mut buf = [0; 20];
+        let start = decimal(&mut buf, self.0.unsigned_abs());
+        if self.0 < 0 {
+            f.write_str("-")?;
+        }
+        f.write_str(std::str::from_utf8(&buf[start..]).expect("ASCII digits"))
     }
 }
 
