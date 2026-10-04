@@ -7,6 +7,17 @@ released together and share version numbers.
 
 ### Added
 
+- `<style scoped>`: the `data-v-` id on every element, on a child component's root (the creating
+  component's id, what a parent passes on to a component that is its root, and the slot scope ids it
+  renders inside) and on slot content given a `:slotted()` component's `-s` id, as Vue's server
+  renderer writes them, fragments, recursion, `inheritAttrs: false`, `<Transition>`, `<KeepAlive>`
+  and `<Teleport>` included. The id is computed as `@vitejs/plugin-vue` computes it: `scopeId`
+  (`"filepath-source"`, the plugin's production default, or `"filepath"`) and `viteRoot` in
+  `ferrovue.config.json`. A component that may inherit ids gets a `render_scoped` beside `render`;
+  `ferrovue::scope_attrs`, `Slot::slotted`, `slot_into_slotted` and `scoped_slot_into_slotted` in
+  the crate. `<RouterLink>` and `<RouterView>` where scope ids would reach them are refused.
+- `attachSsrRender` compiles a `<style scoped>` component with the `__scopeId` plugin-vue gave it,
+  and `fixtureApp` takes `client: true` to render on the client instead of hydrating.
 - A release workflow: a tag stages the npm package and, after approval, publishes the crate, through
   both registries' trusted publishing; `scripts/release.ts` bumps versions and checks tags
   (`RELEASING.md`).
