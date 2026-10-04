@@ -1,0 +1,83 @@
+/* Global styles: ferrovue refuses `<style scoped>`, so a page's styles live here. */
+:root {
+  color-scheme: light dark;
+  --ink: #1d1b16;
+  --paper: #fbf8f1;
+  --accent: #a4462b;
+  --muted: #6b665c;
+  font-family: Georgia, "Iowan Old Style", serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #ece6d8;
+    --paper: #1b1a17;
+    --accent: #e08a6a;
+    --muted: #a59f92;
+  }
+}
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+}
+.layout {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 1rem;
+}
+header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: baseline;
+  border-bottom: 1px solid var(--muted);
+  padding-bottom: 0.5rem;
+}
+header nav {
+  flex: 1;
+}
+a {
+  color: var(--accent);
+}
+a.active {
+  font-weight: bold;
+  text-decoration: none;
+}
+.brand {
+  font-size: 1.3rem;
+}
+.basket {
+  margin: 0;
+}
+.basket.empty b {
+  color: var(--muted);
+}
+.books li {
+  margin: 0.5rem 0;
+}
+.by,
+footer,
+.permalink {
+  color: var(--muted);
+}
+button {
+  font: inherit;
+  margin-left: 0.5rem;
+  border: 1px solid var(--accent);
+  background: transparent;
+  color: var(--accent);
+  border-radius: 4px;
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.stars {
+  font-variant-numeric: tabular-nums;
+  margin-right: 0.5rem;
+}
+footer {
+  margin-top: 2rem;
+  font-size: 0.9rem;
+}

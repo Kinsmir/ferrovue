@@ -1,0 +1,10 @@
+{
+  "components": "client/components",
+  "out": "src/generated",
+  "stores": "client/stores",
+  "router": {
+    "routes": "client/routes.json",
+    "linkActiveClass": "active",
+    "linkExactActiveClass": "active"
+  }
+}
