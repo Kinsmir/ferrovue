@@ -14,6 +14,7 @@ pnpm test                    # compiler, CLI, vectors, router, the Vue half of c
 pnpm typecheck
 pnpm lint                    # oxlint (type-aware, on TypeScript 7), and fallow for unused files, exports and dependencies
 cargo test --workspace --all-features
+cargo deny check             # licences, advisories, duplicate crates and sources (deny.toml)
 ```
 
 `pnpm lint:fix` applies the fixes both tools can make on their own; review the diff before committing.
@@ -48,8 +49,11 @@ compiler did, and that diff is what a reviewer needs to see.
 - Commit messages are short and say what changed (`compiler: support v-show on the root`), with
   detail in the body when the why is not obvious.
 - CI must be green: tests on Node 22 and 24 and on stable Rust and the declared minimum, `pnpm lint`,
-  clippy and rustfmt, docs, the example, hydration in real browsers (`pnpm test:browser`), and both
-  packages packing cleanly.
+  clippy and rustfmt, docs, the example, hydration in real browsers (`pnpm test:browser`), both
+  packages packing cleanly, and `cargo deny` on the dependencies' licences, bans and sources. A new
+  RustSec advisory shows in the run without failing a pull request; it does fail a release.
+- A new dependency must be under a licence `deny.toml` allows (permissive ones compatible with
+  MIT OR Apache-2.0) and come from crates.io.
 
 ## Licence
 

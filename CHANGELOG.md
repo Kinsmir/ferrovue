@@ -50,6 +50,15 @@ released together and share version numbers.
   job). The fixture app `ferrovue/testing` builds now comes from a module with no Node imports
   (`fixture.ts`), so a browser bundle can use it. The example's server reads its client build from
   `DIST_DIR` when set.
+- `deny.toml` and a `cargo deny` CI job: every crate the workspace builds is under a licence
+  compatible with MIT OR Apache-2.0 and comes from crates.io; RustSec advisories fail a release.
+- The release workflow checks the crate's public API against the last version on crates.io
+  (`cargo-semver-checks`): before 1.0, breaking changes need a new minor version (`RELEASING.md`).
+- `pnpm coverage` (vitest's V8 coverage of the compiler, `cargo llvm-cov` of the workspace) and a
+  Coverage workflow that summarises both on the run's page and uploads the reports.
+- Mutation testing of the runtime crate with cargo-mutants (`.cargo/mutants.toml`, TESTING.md):
+  every mutant the tests miss is either closed by a test or listed with the reason it cannot change
+  the output (`.cargo/mutants-equivalent.txt`). A weekly Mutants workflow fails on any other.
 
 ### Documentation
 
@@ -91,6 +100,13 @@ released together and share version numbers.
 - A class object with computed names keeps the spaces inside a name, as Vue does.
 - An empty route parameter fails a debug build's render, as vue-router fails it; a release build
   still writes the link.
+- vue-i18n: a fractional `count` or `n` chooses the plural case as vue-i18n does (`1.5` is
+  plural, not singular), and one that is not a finite number (`NaN`, `Infinity`) is passed over
+  for the plural number; a fraction that chooses no case fails a debug build's render, as vue-i18n
+  throws. Found by mutation testing; the conformance component `Plurals` holds it to vue-i18n.
+- `Math.round` of a number from `-0.5` up to zero is `-0`, as in JavaScript, which `1 / Math.round(x)`
+  shows (`-Infinity`). The math vectors now record the sign of a zero result, and hold
+  `Math.max` and `Math.min` to it as well.
 
 ## [0.1.0] - 2026-10-04
 

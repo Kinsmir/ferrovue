@@ -37,6 +37,7 @@ pub mod nav;
 pub mod numbers;
 pub mod page;
 pub mod panel;
+pub mod plurals;
 pub mod prose;
 pub mod regressions;
 pub mod route_info;
@@ -271,6 +272,12 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
             let s_footer = |out: &mut String| out.push_str(fixture.slot("footer").unwrap_or_default());
             panel::render(&mut out, &props, panel::Slots { title: fixture.slot("title").map(|_| ferrovue::Slot::new(&s_title)), default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)), footer: fixture.slot("footer").map(|_| ferrovue::Slot::new(&s_footer)) });
+        }
+        "Plurals" => {
+            let props: plurals::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let i18n = i18n::i18n(fixture.locale.as_deref().unwrap_or(i18n::LOCALE));
+            plurals::render(&mut out, &props, &i18n);
         }
         "Prose" => {
             let props: prose::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

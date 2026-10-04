@@ -63,7 +63,8 @@ fn numbers_are_written_as_javascript_writes_them() {
     }
 }
 
-/// `tests/vectors/math.json`, recorded from JavaScript's `Math` and `toFixed`.
+/// `tests/vectors/math.json`, recorded from JavaScript's `Math` and `toFixed`, with `-0` written
+/// as "-0" where `String` would hide its sign.
 #[test]
 fn math_is_javascripts_math() {
     let vectors: Vec<(String, String, String, String)> =
@@ -71,6 +72,9 @@ fn math_is_javascripts_math() {
     assert!(vectors.len() >= 600, "the vectors were not all read");
     let num = |s: &str| -> f64 { s.parse().unwrap_or_else(|_| panic!("{s:?} parses")) };
     let text = |x: f64| {
+        if x == 0.0 && x.is_sign_negative() {
+            return "-0".to_owned();
+        }
         let mut out = String::new();
         push_number(&mut out, x);
         out
@@ -113,6 +117,18 @@ fn integers_are_written_as_javascript_writes_them() {
         let mut out = String::new();
         push_int(&mut out, n);
         assert_eq!(out, want);
+    }
+}
+
+/// `tests/vectors/class.json`, recorded from Vue's `normalizeClass` of the object the entries make.
+#[test]
+fn a_class_object_is_normalized_as_vue_normalizes_it() {
+    let vectors: Vec<(Vec<(String, bool)>, String)> =
+        serde_json::from_str(include_str!("../tests/vectors/class.json")).expect("class vectors");
+    assert!(vectors.len() >= 10, "the vectors were not all read");
+    for (entries, want) in &vectors {
+        let entries: Vec<(bool, &str)> = entries.iter().map(|(n, on)| (*on, n.as_str())).collect();
+        assert_eq!(&class_object(&entries), want, "{entries:?}");
     }
 }
 
@@ -348,6 +364,19 @@ fn the_state_script_cannot_be_closed_by_a_value_and_reads_back_whole() {
     );
 }
 
+/// Both line separators are escaped, and nothing else that starts with the same byte: U+2069 is
+/// E2 81 A9, U+2027 is E2 80 A7.
+#[test]
+fn the_state_script_escapes_exactly_the_two_line_separators() {
+    let state = serde_json::json!(["a\u{2029}b\u{2028}c\u{2069}\u{2027}\u{2029}"]);
+    let mut out = String::new();
+    state_script_into(&mut out, "s", &state);
+    assert_eq!(
+        out,
+        "<script type=\"application/json\" id=\"s\">[\"a\\u2029b\\u2028c\u{2069}\u{2027}\\u2029\"]</script>"
+    );
+}
+
 #[test]
 fn the_state_script_id_is_escaped() {
     let mut out = String::new();
@@ -394,4 +423,60 @@ fn holes_cut_a_render_where_the_caller_writes_later() {
         split_holes(&out),
         ["<a><!--[-->", "<!--]--><b><!--[-->", "<!--]--></b></a>"]
     );
+}
+
+/// Messages that vue-i18n cannot evaluate at all: it overflows its stack on a cycle, and throws on
+/// a plural number that chooses no case. The rest of `t()` is held to vue-i18n by the conformance
+/// components `Translated` and `Plurals`.
+static UNEVALUABLE: &[i18n::Locale] = &[i18n::Locale {
+    name: "en",
+    messages: &[
+        (
+            "apples",
+            i18n::Message {
+                cases: &[
+                    &[i18n::Part::Text("none")],
+                    &[i18n::Part::Text("one")],
+                    &[i18n::Part::Text("many")],
+                ],
+            },
+        ),
+        (
+            "loop",
+            i18n::Message {
+                cases: &[&[
+                    i18n::Part::Text("x"),
+                    i18n::Part::Linked {
+                        key: "loop",
+                        modifier: None,
+                    },
+                ]],
+            },
+        ),
+    ],
+}];
+
+#[test]
+fn a_cycle_of_linked_messages_ends_with_the_key_once_nested_too_deep() {
+    let i18n = I18n::new(UNEVALUABLE, "en", &[]);
+    let out = i18n.t("loop", &i18n::Args::default());
+    assert_eq!(
+        out,
+        format!("{}loop", "x".repeat(33)),
+        "the message and 32 links"
+    );
+}
+
+/// vue-i18n throws on `t("apples", { count: 1.5 })` with three cases; a debug build fails the
+/// render the same way.
+#[test]
+#[cfg(debug_assertions)]
+#[should_panic(expected = "chooses none of the cases")]
+fn a_fraction_that_chooses_no_case_fails_a_debug_render() {
+    let named = [("count", i18n::Value::Float(1.5))];
+    let args = i18n::Args {
+        named: &named,
+        ..i18n::Args::default()
+    };
+    I18n::new(UNEVALUABLE, "en", &[]).t("apples", &args);
 }

@@ -990,6 +990,63 @@ defineProps<{ a: string }>();
       /custom directive `v-focus` may add attributes.*`clientDirectives`/,
     ],
     [
+      "a literal class name with spaces around it, which Vue keeps between its neighbours",
+      `<script setup lang="ts">
+defineProps<{ on: boolean }>();
+</script>
+<template><i :class="{ ' wide ': on, tall: on }"></i></template>`,
+      /class name ` wide ` has spaces around it/,
+    ],
+    [
+      "loose equality, which converts between types as `===` does not",
+      `<script setup lang="ts">
+defineProps<{ a: string; b: string }>();
+</script>
+<template><i v-if="a == b">x</i></template>`,
+      /`==`/,
+    ],
+    [
+      "a field the object's type does not declare",
+      `<script setup lang="ts">
+interface User { name: string }
+defineProps<{ user: User }>();
+</script>
+<template><i>{{ user.age }}</i></template>`,
+      /`User` has no field `age`/,
+    ],
+    [
+      "computed member access",
+      `<script setup lang="ts">
+defineProps<{ names: string[]; i: number }>();
+</script>
+<template><i>{{ names[i] }}</i></template>`,
+      /computed member access/,
+    ],
+    [
+      "`.includes()` of a value of another type than the list's",
+      `<script setup lang="ts">
+defineProps<{ names: string[]; n: number }>();
+</script>
+<template><i v-if="names.includes(n)">x</i></template>`,
+      /`\.includes\(\)` looks for a value of the list's own type/,
+    ],
+    [
+      "`$slots.x` for a slot the template does not render",
+      `<script setup lang="ts">
+defineProps<{ a: string }>();
+</script>
+<template><div><i v-if="$slots.footer">x</i><slot /></div></template>`,
+      /`\$slots\.footer` names a slot this template does not render/,
+    ],
+    [
+      "an empty literal class name",
+      `<script setup lang="ts">
+defineProps<{ on: boolean }>();
+</script>
+<template><i :class="{ '': on }"></i></template>`,
+      /class name `` has spaces around it/,
+    ],
+    [
       "null in a prop's type",
       `<script setup lang="ts">
 defineProps<{ a: string | null }>();

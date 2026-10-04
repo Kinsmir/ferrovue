@@ -662,7 +662,7 @@ pub fn push_number(out: &mut String, x: f64) {
 }
 
 /// `Math.round`: the nearest integer, a half rounding up toward +∞ — `-2.5` to `-2`, where Rust's
-/// `f64::round` gives `-3`.
+/// `f64::round` gives `-3` — and `-0` from `-0.5` up to zero, which `1 / Math.round(x)` shows.
 ///
 /// # Example
 ///
@@ -672,11 +672,17 @@ pub fn push_number(out: &mut String, x: f64) {
 /// assert_eq!(js_round(2.5), 3.0);
 /// assert_eq!(js_round(-2.5), -2.0); // `f64::round` gives -3
 /// assert_eq!(js_round(-2.6), -3.0);
+/// assert!(js_round(-0.2).is_sign_negative()); // -0, as JavaScript gives
 /// assert!(js_round(f64::NAN).is_nan());
 /// ```
 pub fn js_round(x: f64) -> f64 {
     let f = x.floor();
-    if x - f >= 0.5 { f + 1.0 } else { f }
+    let r = if x - f >= 0.5 { f + 1.0 } else { f };
+    if r == 0.0 && x.is_sign_negative() {
+        -0.0
+    } else {
+        r
+    }
 }
 
 /// `Math.max` of two numbers: `NaN` if either is, where Rust's `f64::max` ignores a `NaN`.

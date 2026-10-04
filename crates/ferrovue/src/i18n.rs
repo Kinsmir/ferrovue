@@ -275,10 +275,20 @@ impl I18n {
         let case = match message.cases {
             [] => return,
             [only] => *only,
-            cases => match cases.get(plural_index(plural_choice(args), cases.len())) {
-                Some(case) => *case,
-                None => return,
-            },
+            cases => {
+                let index = plural_index(plural_choice(args), cases.len());
+                // As for an empty route parameter: a debug build fails the render as vue-i18n
+                // does, and a release build writes nothing for the message.
+                debug_assert!(
+                    index.is_some(),
+                    "a plural number of {} chooses none of the cases",
+                    plural_choice(args)
+                );
+                match index.and_then(|i| cases.get(i)) {
+                    Some(case) => *case,
+                    None => return,
+                }
+            }
         };
         for part in case {
             match part {
@@ -331,26 +341,29 @@ fn named<'a>(args: &Args<'a>, name: &str) -> Option<Value<'a>> {
     }
 }
 
-/// `getPluralIndex`: a numeric `count`, else a numeric `n`, else the plural number, else −1 — read
-/// from the values as given, before `count` and `n` take the plural number.
-fn plural_choice(args: &Args<'_>) -> i64 {
+/// `getPluralIndex`: a finite numeric `count`, else a finite numeric `n`, else the plural number,
+/// else −1 — read from the values as given, before `count` and `n` take the plural number. A
+/// fraction is kept: `1.5` is not `1`.
+fn plural_choice(args: &Args<'_>) -> f64 {
     for name in ["count", "n"] {
         match args.named.iter().find(|(k, _)| *k == name).map(|(_, v)| *v) {
-            Some(Value::Int(n)) => return n,
-            Some(Value::Float(x)) => return x as i64,
+            Some(Value::Int(n)) => return n as f64,
+            Some(Value::Float(x)) if x.is_finite() => return x,
             _ => {}
         }
     }
-    args.plural.unwrap_or(-1)
+    args.plural.map_or(-1.0, |n| n as f64)
 }
 
 /// `pluralDefault`: with two cases, singular for exactly one and plural otherwise; with more,
-/// zero, singular, then plural.
-fn plural_index(choice: i64, cases: usize) -> usize {
-    let choice = choice.unsigned_abs();
+/// zero, singular, then plural. With more than two, a fraction below 2 names no case — vue-i18n
+/// then throws, failing the render — and this is `None`.
+fn plural_index(choice: f64, cases: usize) -> Option<usize> {
+    let choice = choice.abs();
     if cases == 2 {
-        usize::from(choice != 1)
+        Some(usize::from(choice != 1.0))
     } else {
-        choice.min(2) as usize
+        let index = choice.min(2.0);
+        (index.fract() == 0.0).then_some(index as usize)
     }
 }
