@@ -23,8 +23,18 @@ Include the directory as one module. `#[rustfmt::skip]` keeps rustfmt from rewri
 mod generated;
 ```
 
-`mod.rs` allows the lints that generated code may trip, such as `dead_code` for a renderer the
-application never calls.
+The modules pass rustc's default warnings and `cargo clippy -- -D warnings`, so they can sit in a
+crate that denies warnings. `mod.rs` allows one lint for all of them, at its top:
+
+```rust,ignore
+// The modules pass rustc's default warnings and clippy's default lints, with one exception:
+// `dead_code`. Every component gets the whole of its API (`render`, `html`, `island`, `NAME`, a
+// constructor and a setter per optional prop) and an app calls only what it needs.
+#![allow(dead_code)]
+```
+
+The only other allow is on a props constructor that takes more than seven required props, which
+allows `clippy::too_many_arguments` because it takes one argument per required field.
 
 # A component's module
 
@@ -35,9 +45,10 @@ Every component module has, in this order:
 | `NAME` | The component's name, `"DataList"`: what `data-island` carries |
 | One struct per local `interface` or object `type` | `Row` for `export interface Row { … }`, with the same derives and builder as `Props` |
 | `Props<'a>` | The props, one field per prop. See [`props`](crate::guide::props) |
-| `…SlotProps<'v>` and `…Slot<'s>` | For each scoped slot: what its outlet passes, and the closure type a parent supplies. See [`slots`](crate::guide::slots) |
+| `…SlotProps<'v>` and `…Slot<'s>` | For each scoped slot: what its outlet passes (with `<'v>` only when it borrows), and the closure type a parent supplies. See [`slots`](crate::guide::slots) |
 | `Slots<'s>` | When the component renders a `<slot>` or `<RouterView>`: what a parent puts in each |
 | `render` | Write the component into a buffer |
+| `render_scoped` | Only for a component a parent may hand `<style scoped>` ids to: `render` with those ids last. Generated parents call it; it is `#[doc(hidden)]`. See [`scoped_styles`](crate::guide::scoped_styles) |
 | `html` | The same render as an [`Html`](crate::Html) value |
 | `island` | Only for a component that renders from its props alone: the render wrapped as a hydratable island |
 
@@ -79,10 +90,31 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::St
 pub fn render(out: &mut String, props: &Props<'_>, fv_teleports: &fv::Teleports)
 ```
 
+A component that a parent may hand scope ids to (see [`scoped_styles`](crate::guide::scoped_styles))
+also has a `render_scoped`, which takes the parameters of `render` and then `fv_attrs: &str`, the
+ids its root carries besides its own. Its `render` calls it with `""`:
+
+```rust,ignore
+pub fn render(out: &mut String, props: &Props<'_>) {
+    render_scoped(out, props, "");
+}
+
+/// [`render`], with the scope ids a parent hands the root: ` data-v-…` each.
+#[doc(hidden)]
+pub fn render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) {
+    // …
+}
+```
+
+A `render` or `render_scoped` that never reads its props, such as a component's that only passes
+its slot on, names the parameter `_props`, so that the module compiles without warnings; it is
+still the second parameter.
+
 `render` appends to `out` and never reads or rewrites what is already there, so a page can be
 assembled in one `String`: write the document's head, render the body's components into the same
-buffer, write the tail. It reserves an estimate of what it will write first, so the buffer grows
-once.
+buffer, write the tail. It first reserves an estimate of what it will write, from its literal
+markup, the strings its props hold and the numbers it writes, once per item for a loop, so that the
+buffer grows once.
 
 # `html` and `island`
 

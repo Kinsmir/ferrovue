@@ -154,6 +154,14 @@ pub fn js_slice(s: &str, start: f64, end: Option<f64>) -> Cow<'_, str> {
 
 /// `String.prototype.substring(start, end)`: negative indices are 0, and the two are swapped when
 /// `start` is the larger.
+///
+/// # Example
+///
+/// ```
+/// assert_eq!(ferrovue::js_substring("ferrovue", 5.0, Some(1.0)), "erro");
+/// assert_eq!(ferrovue::js_substring("ferrovue", -3.0, Some(4.0)), "ferr");
+/// assert_eq!(ferrovue::js_substring("🦀 crab", 3.0, None), "crab");
+/// ```
 pub fn js_substring(s: &str, start: f64, end: Option<f64>) -> Cow<'_, str> {
     let len = length(s);
     let clamp = |x: f64| to_integer(x).clamp(0.0, len as f64) as usize;
@@ -179,6 +187,15 @@ pub fn js_at(s: &str, index: f64) -> Option<&str> {
 
 /// `String.prototype.charAt(index)`: the code unit there, or `""` outside the string — a negative
 /// index too.
+///
+/// # Example
+///
+/// ```
+/// assert_eq!(ferrovue::js_char_at("abc", 1.0), "b");
+/// assert_eq!(ferrovue::js_char_at("abc", -1.0), "");
+/// // Half of 🦀, sent as U+FFFD.
+/// assert_eq!(ferrovue::js_char_at("🦀", 1.0), "\u{FFFD}");
+/// ```
 pub fn js_char_at(s: &str, index: f64) -> &str {
     let n = to_integer(index);
     if n < 0.0 || n >= length(s) as f64 {
@@ -202,6 +219,13 @@ pub fn js_index_of(s: &str, search: &str) -> i64 {
 }
 
 /// `String.prototype.lastIndexOf(search)`: the code unit where `search` last starts, or -1.
+///
+/// # Example
+///
+/// ```
+/// assert_eq!(ferrovue::js_last_index_of("🦀 a 🦀 a", "a"), 8);
+/// assert_eq!(ferrovue::js_last_index_of("abc", "z"), -1);
+/// ```
 pub fn js_last_index_of(s: &str, search: &str) -> i64 {
     s.rfind(search).map_or(-1, |byte| js_length(&s[..byte]))
 }
@@ -274,6 +298,14 @@ pub fn js_replace<'s>(s: &'s str, pattern: &str, replacement: &str) -> Cow<'s, s
 
 /// `String.prototype.replaceAll(pattern, replacement)` with a string pattern. An empty pattern
 /// matches between every code unit, which cuts a pair in two.
+///
+/// # Example
+///
+/// ```
+/// assert_eq!(ferrovue::js_replace_all("a-b-c", "-", "+"), "a+b+c");
+/// assert_eq!(ferrovue::js_replace_all("ab", "", "."), ".a.b.");
+/// assert_eq!(ferrovue::js_replace_all("abc", "z", "y"), "abc");
+/// ```
 pub fn js_replace_all<'s>(s: &'s str, pattern: &str, replacement: &str) -> Cow<'s, str> {
     if pattern.is_empty() {
         return Cow::Owned(replace_between_units(s, replacement));
@@ -379,6 +411,14 @@ pub fn js_pad_start<'s>(s: &'s str, max_length: f64, fill: &str) -> Cow<'s, str>
 /// # Panics
 ///
 /// As [`js_pad_start`] does.
+///
+/// # Example
+///
+/// ```
+/// assert_eq!(ferrovue::js_pad_end("7", 3.0, "."), "7..");
+/// // 🦀 is two code units: padding by one keeps its first half, sent as U+FFFD.
+/// assert_eq!(ferrovue::js_pad_end("a", 2.0, "🦀"), "a\u{FFFD}");
+/// ```
 pub fn js_pad_end<'s>(s: &'s str, max_length: f64, fill: &str) -> Cow<'s, str> {
     pad(s, max_length, fill, false)
 }
@@ -655,6 +695,14 @@ pub fn js_json_string(s: &str) -> String {
 
 /// `JSON.stringify(x)` of a number: as `String(x)` writes it, but `null` for `NaN` and the
 /// infinities.
+///
+/// # Example
+///
+/// ```
+/// assert_eq!(ferrovue::js_json_number(0.1 + 0.2), "0.30000000000000004");
+/// assert_eq!(ferrovue::js_json_number(-0.0), "0");
+/// assert_eq!(ferrovue::js_json_number(f64::INFINITY), "null");
+/// ```
 pub fn js_json_number(x: f64) -> String {
     if !x.is_finite() {
         return "null".to_owned();

@@ -389,6 +389,28 @@ pub fn slot_into(
 /// `data-v-…-s` from a component with `:slotted` styles, followed by the id its own slot content
 /// was given when the outlet forwards a slot; `""` for none. Generated content is given the id after
 /// a space; other content ignores it, as static markup does in Vue.
+///
+/// Called by generated code at each `<slot>` outlet of a component whose styles use `:slotted()`;
+/// [`guide::scoped_styles`] shows one.
+///
+/// # Example
+///
+/// ```
+/// use ferrovue::{slot_into_slotted, Slot};
+///
+/// // Content from Rust is not given the id, as static markup is not in Vue.
+/// let content = |out: &mut String| out.push_str("<p>given</p>");
+/// let mut out = String::new();
+/// slot_into_slotted(&mut out, Some(Slot::new(&content)), "data-v-421eaec8-s", None);
+/// assert_eq!(out, "<!--[--><p>given</p><!--]-->");
+///
+/// // A fallback is the component's own markup, with its own id.
+/// out.clear();
+/// slot_into_slotted(&mut out, None, "data-v-421eaec8-s", Some(&mut |out: &mut String| {
+///     out.push_str("<i data-v-421eaec8>none</i>");
+/// }));
+/// assert_eq!(out, "<!--[--><i data-v-421eaec8>none</i><!--]-->");
+/// ```
 pub fn slot_into_slotted(
     out: &mut String,
     slot: Option<Slot<'_>>,
@@ -478,7 +500,35 @@ pub fn scoped_slot_into<P: ?Sized, F: Fn(&mut String, &P) -> bool + ?Sized>(
 }
 
 /// [`scoped_slot_into`] for an outlet that passes a slot scope id, as [`slot_into_slotted`] does:
-/// the content is given the props and the id.
+/// the content is given the props and the id, after a space.
+///
+/// Called by generated code at each scoped `<slot>` outlet of a component whose styles use
+/// `:slotted()`; a parent's closure takes the id as its third parameter, and may write it onto its
+/// elements.
+///
+/// # Example
+///
+/// ```
+/// use ferrovue::scoped_slot_into_slotted;
+///
+/// /// What a component's outlet passes; generated code writes one such struct per scoped slot.
+/// struct FooterProps {
+///     count: i64,
+/// }
+///
+/// let footer = |out: &mut String, p: &FooterProps, slot_scope_id: &str| {
+///     out.push_str("<small");
+///     out.push_str(slot_scope_id);
+///     out.push('>');
+///     ferrovue::push_int(out, p.count);
+///     out.push_str("</small>");
+///     true
+/// };
+/// let slot: &dyn Fn(&mut String, &FooterProps, &str) -> bool = &footer;
+/// let mut out = String::new();
+/// scoped_slot_into_slotted(&mut out, Some(slot), &FooterProps { count: 2 }, "data-v-421eaec8-s", None);
+/// assert_eq!(out, "<!--[--><small data-v-421eaec8-s>2</small><!--]-->");
+/// ```
 pub fn scoped_slot_into_slotted<P: ?Sized, F: Fn(&mut String, &P, &str) -> bool + ?Sized>(
     out: &mut String,
     slot: Option<&F>,
@@ -496,6 +546,9 @@ pub fn scoped_slot_into_slotted<P: ?Sized, F: Fn(&mut String, &P, &str) -> bool 
 /// its place: first those the parent passes on when this component is its root, then the parent's
 /// own id (`own`, `""` when it has no scoped styles), then the slot scope ids it is rendered inside
 /// (`slotted`, as the slot content was given them).
+///
+/// Called by generated code for the root of a child component or of a `<RouterLink>`, when the ids
+/// it is handed are known only at run time.
 ///
 /// # Example
 ///

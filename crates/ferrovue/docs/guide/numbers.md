@@ -50,13 +50,22 @@ assert_eq!(format!("{} × {}", Js(3_i64), Js(2.5_f64)), "3 × 2.5");
 
 Every operation is done on doubles, as JavaScript does it. Arithmetic between two integers casts
 both to `f64`, operates, and casts the result back, so a result within ±2⁵³ is exact and matches
-JavaScript's. This is from the generated code of a component computing `prefs.count * 2`:
+JavaScript's. This is from the generated code of a component reading `counter.doubled`, a Pinia
+getter that is `count * 2`:
 
 ```rust
-# let prefs_count: i64 = 21;
-let doubled = (((prefs_count) as f64) * ((2i64) as f64)) as i64;
-# assert_eq!(doubled, 42);
+# use ferrovue as fv;
+# struct CounterState { count: i64 }
+# struct Stores { counter: CounterState }
+# let fv_stores = Stores { counter: CounterState { count: 21 } };
+# let mut buf = String::new();
+# let out = &mut buf;
+fv::push_int(out, (fv_stores.counter.count as f64 * 2.0) as i64);
+# assert_eq!(buf, "42");
 ```
+
+A literal is written as a double where it meets one (`2.0`), and arithmetic between literals alone
+is done by the compiler.
 
 Some operations always give a `Float`, because they do in JavaScript:
 
@@ -71,14 +80,16 @@ Comparisons are made between doubles too, and a number is falsy when it is `0` (
 
 | JavaScript | Rust | Why not the standard method |
 |---|---|---|
-| `Math.round(x)` | [`js_round`](crate::js_round) | A half rounds toward +∞: `-2.5` to `-2`, where `f64::round` gives `-3` |
+| `Math.round(x)` | [`js_round`](crate::js_round) | A half rounds toward +∞: `-2.5` to `-2`, where `f64::round` gives `-3`; and from `-0.5` up to zero the result is `-0`, which `1 / Math.round(x)` shows (`-Infinity`) |
 | `Math.max(a, b)`, `Math.min(a, b)` | [`js_max`](crate::js_max), [`js_min`](crate::js_min) | `NaN` if either is, where `f64::max` ignores a `NaN` |
 | `x.toFixed(d)` | [`js_to_fixed`](crate::js_to_fixed) | An exact tie rounds away from zero, where Rust's formatting rounds to even |
 | `Math.floor`, `Math.ceil`, `Math.trunc`, `Math.abs` | `f64::floor`, `ceil`, `trunc`, `abs` | They agree |
-| `s.length` | [`js_length`](crate::js_length) | UTF-16 code units, not UTF-8 bytes |
+| `s.length` | [`js_length`](crate::js_length) | UTF-16 code units, not UTF-8 bytes. See [`strings`](crate::guide::strings) |
+| `Number(s)`, `parseInt(s)`, `parseFloat(s)` | [`js_number`](crate::js_number), [`js_parse_int`](crate::js_parse_int), [`js_parse_float`](crate::js_parse_float) | JavaScript's grammar for numbers, not Rust's `parse`. See [`strings`](crate::guide::strings) |
 
 ```rust
 assert_eq!(ferrovue::js_round(-2.5), -2.0);
+assert_eq!(1.0 / ferrovue::js_round(-0.4), f64::NEG_INFINITY); // Math.round(-0.4) is -0
 assert!(ferrovue::js_max(1.0, f64::NAN).is_nan());
 assert_eq!(ferrovue::js_to_fixed(1.005, 2), "1.00"); // 1.005 is 1.00499999999999989… as a double
 assert_eq!(ferrovue::js_to_fixed(2.5, 0), "3");      // a true tie: away from zero
