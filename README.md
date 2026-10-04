@@ -266,18 +266,28 @@ ferrovue version.
 
 ```text
 crates/ferrovue/             the Rust runtime crate
-  src/                       runtime + unit tests
+  src/                       runtime (escaping, JS numbers, router, i18n, teleports) + unit tests
   tests/conformance/         components, fixtures, recorded HTML, generated Rust
-  tests/vectors/             string and router vectors shared with the TypeScript tests
+  tests/vectors/             vectors recorded from JavaScript, vue-router and vue-i18n
   tests/properties.rs        property-based tests of the runtime
   benches/                   criterion benchmarks of generated renderers (see Performance)
 packages/ferrovue/           the compiler (npm package)
-  src/compiler.ts            .vue → Rust
-  src/cli.ts                 the `ferrovue` command
-  src/client.ts              browser-side helpers
+  src/compiler.ts            the API: `generate`, `write`
+  src/script.ts, template.ts, expr.ts, attrs.ts
+                             <script setup>, the compiled template, expressions, class/style
+  src/router.ts, stores.ts, i18n.ts
+                             vue-router, Pinia and vue-i18n
+  src/rust.ts, emitter.ts    the Rust source written out
+  src/cli.ts, vite.ts        the `ferrovue` command and the Vite plugin
+  src/client.ts              browser-side helpers: `mountIslands`, `hydrateState`
   src/testing.ts             utilities for a project's own conformance suite
-  test/                      compiler, CLI, router, vector and conformance tests
+  src/types.ts               `ferrovue/types`: `TrustedHtml`, `Float`
+  test/                      compiler, CLI, router, vector, island, Vite and conformance tests
   bench/                     Vue renderToString benchmarks, the other half of Performance
+  fuzz/                      the randomised differential tester (`pnpm fuzz`)
+examples/greeting/           the smallest setup: one component rendered from Rust
+examples/fullstack/          axum + Vite: islands, Pinia state, routes and streaming
+scripts/release.ts           the release version bump (see RELEASING.md)
 ```
 
 ## Development
