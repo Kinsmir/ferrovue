@@ -13,7 +13,9 @@ import { scopeFor } from "./script.ts";
 
 export function needsLifetime(ty: Ty, comp: Component, seen: Set<string> = new Set()): boolean {
   switch (ty.k) {
+    // A record's keys are strings.
     case "str":
+    case "record":
       return true;
     case "opt":
     case "list":
@@ -55,6 +57,8 @@ export function rustTy(ty: Ty, comp: Component): string {
       return `Option<${rustTy(ty.of, comp)}>`;
     case "list":
       return `Vec<${rustTy(ty.of, comp)}>`;
+    case "record":
+      return `ferrovue::Record<'a, ${rustTy(ty.of, comp)}>`;
     case "struct": {
       const { st, owner, path } = lookupStruct(comp, ty);
       if (!st) throw new GenError(`no type \`${ty.name}\``);
@@ -170,6 +174,10 @@ export function textLen(comp: Component, place: string, ty: Ty, seen: Set<string
     case "list": {
       const inner = textLen(comp, "v", ty.of, seen);
       return inner.length ? [`${place}.iter().map(|v| ${inner.join(" + ")}).sum::<usize>()`] : [];
+    }
+    case "record": {
+      const inner = textLen(comp, "v", ty.of, seen);
+      return [`${place}.iter().map(|(k, ${inner.length ? "v" : "_"})| ${["k.len()", ...inner].join(" + ")}).sum::<usize>()`];
     }
     default:
       return [];

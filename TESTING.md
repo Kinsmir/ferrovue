@@ -19,7 +19,7 @@ pnpm test:browser          # the same fixtures, and the full-stack example, hydr
 |---|---|---|---|
 | **Conformance** | `crates/ferrovue/tests/conformance/` | Each component × fixture renders identically in Vue and in the generated Rust, and Vue hydrates the HTML with no mismatch | `@vue/server-renderer`, Vue's hydration |
 | **Browser hydration** | `packages/ferrovue/browser/`, `examples/fullstack/browser/` | Every fixture's recorded HTML, parsed by Chromium, Firefox and WebKit, hydrates with no mismatch and is left as parsed; the full-stack example's pages do too, and their islands work | Vue's hydration, the browsers' HTML parsers |
-| **Shared vectors** | `crates/ferrovue/tests/vectors/` | The runtime's reimplementations of `trim`, `.length`, `escapeHtml`, `String(number)`, `Math`, `toFixed`, `normalizeClass` of an object, and vue-router's link resolution (string and object `to`, named routes, query and hash encoding, history base) and `useRoute()` fields agree with the originals | JavaScript, `@vue/shared`, vue-router |
+| **Shared vectors** | `crates/ferrovue/tests/vectors/` | The runtime's reimplementations of `trim`, `.length`, `escapeHtml`, `String(number)`, `Math`, `toFixed`, `normalizeClass` of an object, the string methods (`slice`, `at`, `split`, `replace`, `padStart`, … on astral characters, halves of pairs, negative and `NaN` indices), string ordering, `Number` / `parseInt` / `parseFloat`, `JSON.stringify` of strings, an object's order of keys, and vue-router's link resolution (string and object `to`, named routes, query and hash encoding, history base) and `useRoute()` fields agree with the originals | JavaScript, `@vue/shared`, vue-router |
 | **Compiler** | `packages/ferrovue/test/compiler.test.ts` | Constructs that a careless translation would get subtly wrong are refused with a named error; key translations have the expected shape | Hand-written |
 | **CLI** | `packages/ferrovue/test/cli.test.ts` | `ferrovue` writes, replaces, and `--check` detects stale and stray files | Hand-written |
 | **Runtime units** | `crates/ferrovue/src/tests.rs`, `src/router/tests.rs` | Escaping, slots, fallbacks, holes, islands, the state script, router edge cases | Hand-written |
@@ -84,6 +84,10 @@ A fixture is a JSON object of props plus three optional keys:
 | `ScopedTree` | A scoped component rendering itself, whose children's roots carry its id twice |
 | `ScopedNav`, `ScopedLink` | `<RouterLink>` in scoped components: the `<a>` and what it holds, a link that is a scoped component's root, a link in `:slotted()` slot content |
 | `ScopedQuirks`, `QuietLeaf` | Where Vue's server and client renders give different ids: a `:slotted()` component's fallback, `inheritAttrs: false` |
+| `Strings` | String methods in UTF-16 code units (astral characters, `$` replacement patterns, padding, `split("")`), ordering by code unit, kept by `computed` |
+| `Arrays`, `Chips` | `filter`, `map`, `some`, `every`, `find`, `findIndex`, `slice` with arrow functions, chained and nested, with an index and destructuring, in `v-for`, `computed`, `?:` and a child's props; `JSON.stringify` |
+| `Records` | `Record<string, T>` and `{ [key: string]: T }` in JavaScript's order of keys (array indices first, a key given twice), `Object.keys` / `values` / `entries`, a record handed to a child |
+| `Parsing` | `Number`, `parseInt` (no radix, 10, 16) and `parseFloat` of strings, `JSON.stringify` of numbers, `NaN` and `Infinity` |
 
 Every component has at least one **hostile** fixture: markup-breaking characters in every prop that
 reaches the page.
@@ -139,10 +143,13 @@ What it generates, with random nesting:
 
 - elements (block, inline, lists, void), static text with entities and whitespace, `<template>`;
 - props of type `string`, `number` (integers, some anywhere within ±2⁵³), `Float`, `boolean`, their
-  optional versions, lists of strings and of integers, and lists of objects of local interfaces;
+  optional versions, lists of strings and of integers, lists of objects of local interfaces, and
+  dictionaries (`Record<string, T>`, `{ [key: string]: T }`) whose JSON gives array-index keys out
+  of order and a key twice;
 - `{{ }}` of all of them; `v-if` / `v-else-if` / `v-else` (with `!`, `&&`, `||`, `===`, `!==`, `<`,
-  `>`, presence tests and narrowing); `v-for` over lists, objects (destructured too), array literals
-  and number ranges, with an index;
+  `>`, presence tests and narrowing); `v-for` over lists, objects (destructured too), array literals,
+  number ranges, computed lists and dictionaries (`(value, key, i) in r`, `Object.entries`), with an
+  index;
 - static and bound attributes, boolean attributes, `:class` strings, arrays and objects (computed
   names too), `:style` objects merged with a static `style`;
 - child components written beside each one — a single root, a slot with a fallback, a root that is
@@ -150,16 +157,24 @@ What it generates, with random nesting:
   content, at the root or nested; `<style scoped>` on the component and on each child, with
   `:slotted()` on those with a slot;
 - string `+`, template literals, `?:`, `??`, `||`, `.length`, `.trim()` and the rest of the string
-  methods, `String()`, `.toString()`, `.toFixed()`, `Math`, and integer and fractional arithmetic;
+  methods — `slice`, `substring`, `at`, `charAt`, `indexOf`, `split`, `replace` and `replaceAll`
+  with `$` patterns, `padStart`, `padEnd`, `repeat` — strings ordered with `<`, `String()`,
+  `.toString()`, `.toFixed()`, `Number()`, `parseInt()`, `parseFloat()`, `JSON.stringify()`, `Math`,
+  and integer and fractional arithmetic;
+- lists computed from lists, `Object.keys` / `Object.values` and `split`, by `filter`, `map` and
+  `slice` with arrow functions (an index too), chained, read by `.join()`, `.length`, `.includes()`,
+  `some`, `every`, `find`, `findIndex` and `JSON.stringify`;
 - prop values meant to break things: markup and quotes, `</script>`, combining marks, emoji, RTL
   and bidi controls, JavaScript-only whitespace, case mappings that change length, empty strings,
-  integers at ±(2⁵³ − 1), fractions such as `0.1`, `1e-7`, `1e21`, `5e-324` and `-0`, absent
-  optionals.
+  numbers written as strings, integers at ±(2⁵³ − 1), fractions such as `0.1`, `1e-7`, `1e21`,
+  `5e-324` and `-0`, absent optionals.
 
 Only what ferrovue promises to accept is generated: expressions are typed as TypeScript and
-ferrovue type them, optional values are read only where they may be, and integer arithmetic never
-leaves ±2⁵³. So a component the compiler refuses is reported as a **refusal**, a finding of its own
-when the README says the construct is supported.
+ferrovue type them, optional values are read only where they may be, integer arithmetic never
+leaves ±2⁵³, and two strings that may each hold half of a surrogate pair never meet. So a component
+the compiler refuses is reported as a **refusal**, a finding of its own when the README says the
+construct is supported. Vue's HTML is compared as a server sends it, a half of a pair as U+FFFD
+(README, "Strings").
 
 ```sh
 pnpm fuzz                                              # a random seed (printed), 200 components
@@ -265,6 +280,9 @@ and what ferrovue generates (or the error it refuses with).
 - **A new component:** add it to `components/`, run `pnpm conformance:generate`, add at least one
   fixture (plus a hostile one), and record as above. The suite fails if a component has no fixtures.
 - **A new router case:** add it to `tests/vectors/router.json` and run `pnpm vectors:record`.
+- **A new string or number case:** add its inputs to `tests/vectors/strings.json`, `parse.json`,
+  `compare.json`, `keys.json` or `json.json` (any expected value) and run `pnpm vectors:record`,
+  which writes what JavaScript answers.
 - **A new refusal:** add a `[what, source, /message/]` row to `refused` in `compiler.test.ts`.
 
 Never re-record to make a failure go away. A changed `.html` means either Vue changed (after an

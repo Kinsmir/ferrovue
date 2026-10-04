@@ -1,0 +1,12 @@
+{
+  "items": [
+    { "id": 1, "label": "apple", "tags": ["fruit", "red", "ap"], "price": 2.5 },
+    { "id": 2, "label": "melon", "note": "seasonal", "tags": ["fruit"], "price": 12 },
+    { "id": 3, "label": "bread", "note": "fresh", "tags": [], "price": 3.75 },
+    { "id": 4, "label": "grape juice", "tags": ["drink", "grape", "pe"], "price": 0.1 }
+  ],
+  "words": ["  alpha ", "beta", "", "gamma", "be"],
+  "nums": [4, 7, -2, 10, 0, 3],
+  "min": 2,
+  "query": "be"
+}

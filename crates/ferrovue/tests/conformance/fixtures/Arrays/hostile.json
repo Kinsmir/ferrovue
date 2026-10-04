@@ -1,0 +1,11 @@
+{
+  "items": [
+    { "id": 9, "label": "<script>alert(1)</script>", "note": "\"quoted\" & 'single'", "tags": ["<b>", "&amp;", "</li>"], "price": 1e21 },
+    { "id": -1, "label": "", "note": "", "tags": [""], "price": -0.5 },
+    { "id": 5, "label": "a&b", "tags": ["&", "b"], "price": 9.999 }
+  ],
+  "words": ["<i>", "\"", "'", "&lt;", "\\back", "\t\n"],
+  "nums": [9007199254740991, -9007199254740991, 1],
+  "min": -5,
+  "query": "&"
+}

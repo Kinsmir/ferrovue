@@ -1035,12 +1035,10 @@ pub fn class_object(entries: &[(bool, &str)]) -> String {
             None => names.push((name, *on)),
         }
     }
-    let index = |name: &str| -> Option<u32> {
-        let n: u32 = name.parse().ok()?;
-        (n < u32::MAX && n.to_string() == name).then_some(n)
-    };
-    let mut ordered: Vec<(Option<u32>, &str, bool)> =
-        names.into_iter().map(|(n, on)| (index(n), n, on)).collect();
+    let mut ordered: Vec<(Option<u32>, &str, bool)> = names
+        .into_iter()
+        .map(|(n, on)| (record::array_index(n), n, on))
+        .collect();
     // Stable: the indices sorted among themselves, the other names kept as they came.
     ordered.sort_by_key(|(i, _, _)| i.map_or((1, 0), |i| (0, i)));
     let mut s = String::new();
@@ -1141,10 +1139,18 @@ fn island_into<P: Serialize>(
 #[cfg(any(doc, doctest))]
 pub mod guide;
 pub mod i18n;
+mod record;
 mod router;
+mod strings;
 mod teleport;
 pub use i18n::I18n;
+pub use record::Record;
 pub use router::{Link, Query, Route, RouteDef, Router, query_into};
+pub use strings::{
+    js_at, js_char_at, js_cmp, js_index_of, js_json_number, js_json_string, js_last_index_of,
+    js_number, js_pad_end, js_pad_start, js_parse_float, js_parse_int, js_repeat, js_replace,
+    js_replace_all, js_slice, js_slice_items, js_slice_range, js_split, js_substring,
+};
 pub use teleport::{Teleports, teleport_into};
 
 #[cfg(test)]

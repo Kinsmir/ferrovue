@@ -52,7 +52,7 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(390 + props.s1.len() + props.os1.as_deref().map_or(0, str::len) + props.l2.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(415 + props.s1.len() + props.os1.as_deref().map_or(0, str::len) + props.l2.iter().map(|v| v.len()).sum::<usize>());
     out.push_str("<div><p>");
     fv::push_number(out, 1e21f64);
     out.push_str("|");
@@ -133,7 +133,20 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     fv::push_int(out, ((-((0i64) as f64)) as i64));
     out.push_str("|");
     fv::push_number(out, (((1i64) as f64) / (-((props.f2) as f64))));
-    out.push_str("</p></div>");
+    out.push_str("</p><p>");
+    fv::escape_into(out, &*{ let a = std::borrow::Cow::<str>::Owned((&*(props.os1.as_deref()).map(std::borrow::Cow::<str>::Borrowed).unwrap_or(std::borrow::Cow::<str>::Owned((&*fv::js_to_fixed(((1i64) as f64), 1)).to_owned()))).to_owned()); if !a.is_empty() { a } else { std::borrow::Cow::<str>::Borrowed("a") } });
+    out.push_str("|");
+    fv::escape_into(out, &*(if (props.b0) { std::borrow::Cow::<str>::Owned((&*(fv::js_at(&*fv::Js(props.f2).to_string(), (-((1i64) as f64))).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned()))).unwrap_or(std::borrow::Cow::<str>::Borrowed(", "))).to_owned()) } else { std::borrow::Cow::<str>::Borrowed("x") }));
+    out.push_str("|");
+    out.push_str(if fv::js_slice_items(fv::js_split(&*format!("🦀{}", &*props.s1), ",").into_iter(), ((1i64) as f64), Some((1.005f64))).any(|v| &*v == "x y") { "true" } else { "false" });
+    out.push_str("</p><!--[-->");
+    for w_cow in fv::js_slice_items(fv::js_split(&*fv::js_to_fixed(((props.f2) as f64), 3), ".").into_iter(), ((0i64) as f64), Some((-((1i64) as f64)))) {
+        let w: &str = &*w_cow;
+        out.push_str("<i>");
+        fv::escape_into(out, w);
+        out.push_str("</i>");
+    }
+    out.push_str("<!--]--></div>");
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.

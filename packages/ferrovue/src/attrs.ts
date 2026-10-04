@@ -3,7 +3,7 @@
 import { escapeHtml, hyphenate, isBooleanAttr, isSSRSafeAttrName, parseStringStyle, propsToAttrMap } from "@vue/shared";
 import { type N, type Scope, type Val, fail, GenError, rustStr, STR } from "./model.ts";
 import { CONFIG_FILE, ctx } from "./context.ts";
-import { cond, expr, truthy } from "./expr.ts";
+import { cond, expr, meet, truthy } from "./expr.ts";
 import { Emitter } from "./emitter.ts";
 
 /** `toDisplayString`, escaped. */
@@ -142,10 +142,14 @@ export function classItems(s: Scope, n: N): ClassItem[] {
         literalNames.some(arrayIndex) ||
         new Set(literalNames).size !== literalNames.length
       ) {
+        const keys: Val[] = [];
         const entries = n.properties.map((p: N) => {
           if (p.type !== "ObjectProperty") fail(s.comp, "a class object holds `name: condition` pairs", p);
-          const key = p.computed ? expr(s, p.key) : { code: rustStr(p.key.type === "Identifier" ? p.key.name : String(p.key.value)), ty: STR };
+          const key: Val = p.computed ? expr(s, p.key) : { code: rustStr(p.key.type === "Identifier" ? p.key.name : String(p.key.value)), ty: STR };
           if (key.ty.k !== "str") fail(s.comp, "a computed class name is a string", p.key);
+          // Names are told apart, which two halves of surrogate pairs would not be.
+          for (const other of keys) meet(s.comp, other, key, "a class object's names", p.key, "equal");
+          keys.push(key);
           return `(${cond(s, p.value)}, ${key.code})`;
         });
         return [{ code: `&*fv::class_object(&[${entries.join(", ")}])` }];

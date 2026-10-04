@@ -1,9 +1,9 @@
 /* The compiled template's statements: pushes, conditions, lists, child components and slots. */
 
-import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, BOOL, fail, GenError, INT, rustStr, sameTy, snake } from "./model.ts";
+import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, BOOL, fail, GenError, INT, rustStr, sameTy, snake, STR } from "./model.ts";
 import { ctx } from "./context.ts";
 import { markHome } from "./typescript.ts";
-import { cond, expr, fieldVal, narrowTo, presence, truthy } from "./expr.ts";
+import { cond, expr, fieldVal, isObjectCall, narrowTo, presence, truthy } from "./expr.ts";
 import { Emitter } from "./emitter.ts";
 import { IGNORED_PROPS, interpolate, renderAttr, renderAttrs, renderClass, renderDynamicAttr, renderStyle } from "./attrs.ts";
 import { routerLink } from "./router.ts";
@@ -426,8 +426,10 @@ export function slotFieldValue(s: Scope, v: Val, n: N): string {
     case "bool":
       return v.code;
     case "list":
-      // An array literal is a Rust array of `&str`, not the list a slot prop borrows.
+      // An array literal is a Rust array of `&str`, and a computed list holds its items in a form
+      // of its own: neither is the list a slot prop borrows.
       if (v.code.startsWith("[")) fail(s.comp, "a slot prop is not an array literal: pass a list the component holds", n);
+      if (v.iter !== undefined) fail(s.comp, "a slot prop is not a computed list: pass a list the component holds", n);
       return `&(${v.code})`;
     case "struct":
     case "child":
@@ -521,9 +523,13 @@ export function ownInto(comp: Component, v: Val, want: Ty, node: N): string {
   // An integer handed to a prop that takes a fraction.
   if (want.k === "float" && v.ty.k === "int") return `((${v.code}) as f64)`;
   if (want.k === "opt" && want.of.k === "float" && v.ty.k === "int") return `Some((${v.code}) as f64)`;
-  // An object, a list of objects, or an optional one, of the type the child declares: cloned, which
-  // copies its strings only where they are owned.
-  const objecty = (t: Ty): boolean => t.k === "struct" || t.k === "child" || ((t.k === "list" || t.k === "opt") && objecty(t.of));
+  // A computed list: its items collected into the child's own list, objects cloned.
+  if (v.iter !== undefined && v.ty.k === "list" && want.k === "list" && sameTy(v.ty.of, want.of)) {
+    return want.of.k === "struct" || want.of.k === "child" ? `${v.iter}.cloned().collect()` : `${v.iter}.collect()`;
+  }
+  // An object, a list of objects, a record, or an optional one, of the type the child declares:
+  // cloned, which copies its strings only where they are owned.
+  const objecty = (t: Ty): boolean => t.k === "struct" || t.k === "child" || t.k === "record" || ((t.k === "list" || t.k === "opt") && objecty(t.of));
   if (objecty(want) && sameTy(v.ty, want)) return v.ty.k === "opt" ? `(${v.code}).cloned()` : `(${v.code}).to_owned()`;
   if (want.k === "opt" && objecty(want.of) && sameTy(v.ty, want.of)) return `Some((${v.code}).to_owned())`;
   if (objecty(want) && v.ty.k === want.k && JSON.stringify(v.ty).includes('"struct"')) {
@@ -696,10 +702,26 @@ export function statements(s: Scope, e: Emitter, body: N[]): void {
 }
 
 export function list(s: Scope, e: Emitter, c: N): void {
-  const src = expr(s, c.arguments[0]);
   const fn = c.arguments[1];
   if (fn.type !== "ArrowFunctionExpression" || fn.body.type !== "BlockStatement") {
     fail(s.comp, "unexpected `ssrRenderList` callback", c);
+  }
+  // `([key, value], i) in Object.entries(r)`, which walks the record as `(value, key, i) in r` does.
+  if (isObjectCall(c.arguments[0], "entries")) {
+    const [pair, index] = fn.params as N[];
+    const r = c.arguments[0].arguments.length === 1 ? expr(s, c.arguments[0].arguments[0]) : null;
+    if (r?.ty.k !== "record") return fail(s.comp, "`Object.entries()` takes a `Record<string, T>`", c.arguments[0]);
+    if (pair?.type !== "ArrayPattern" || pair.elements.length > 2 || pair.elements.some((x: N) => x?.type !== "Identifier")) {
+      return fail(s.comp, "a `v-for` over `Object.entries()` names its items `[key, value]`", pair ?? c);
+    }
+    recordLoop(s, e, r, fn, pair.elements[1], pair.elements[0], index);
+    return;
+  }
+  const src = expr(s, c.arguments[0]);
+  if (src.ty.k === "record") {
+    const [value, key, index] = fn.params as N[];
+    recordLoop(s, e, src, fn, value, key, index);
+    return;
   }
   const [item, index] = fn.params as N[];
   const idx = index ? snake(index.name) : null;
@@ -709,7 +731,19 @@ export function list(s: Scope, e: Emitter, c: N): void {
   let of: Ty;
   let head: number;
   let itemLet = -1;
-  if (src.ty.k === "int") {
+  // The name the loop binds before the item's own `let`, which an unused item replaces with `_`.
+  let bound = `${itemName}_ref`;
+  if (src.ty.k === "list" && src.iter !== undefined) {
+    // A computed list: its items come as they are — a string as a `Cow`, read as a `&str`.
+    of = src.ty.of;
+    bound = of.k === "str" ? `${itemName}_cow` : itemName;
+    e.open(idx ? `for (${idx}, ${bound}) in ${src.iter}.enumerate()` : `for ${bound} in ${src.iter}`);
+    head = e.lines.length - 1;
+    if (of.k === "str") {
+      e.stmt(`let ${itemName}: &str = &*${bound};`);
+      itemLet = e.lines.length - 1;
+    }
+  } else if (src.ty.k === "int") {
     // `v-for="n in 5"`: 1 to 5, as `renderList` counts a number.
     of = INT;
     e.open(idx ? `for (${idx}, ${itemName}) in (1..=${src.code}).enumerate()` : `for ${itemName} in 1..=${src.code}`);
@@ -738,7 +772,7 @@ export function list(s: Scope, e: Emitter, c: N): void {
     idxLet = e.lines.length - 1;
   }
   const bodyFrom = e.lines.length;
-  if (item.type === "Identifier") inner.set(item.name, { code: itemName, ty: of });
+  if (item.type === "Identifier") inner.set(item.name, { code: itemName, ty: of, ...(src.lone ? { lone: true } : {}) });
   else if (item.type === "ObjectPattern") {
     // `v-for="{ name, id: key } in items"`: each name is that field of the item.
     for (const p of item.properties) {
@@ -762,7 +796,7 @@ export function list(s: Scope, e: Emitter, c: N): void {
   if (unusedItem) {
     if (itemLet >= 0) {
       e.lines.splice(itemLet, 1);
-      e.replace(head, `${itemName}_ref`, "_");
+      e.replace(head, bound, "_");
     } else e.replace(head, idx ? `, ${itemName})` : `for ${itemName} in`, idx ? ", _)" : "for _ in");
   }
   e.close();
@@ -771,5 +805,49 @@ export function list(s: Scope, e: Emitter, c: N): void {
   e.literalBytes = before;
   // Counted up front only when the list is reachable from there: one a `v-if` narrowed, or a loop
   // variable, exists only inside its block, and the reservation is an estimate either way.
-  if (body > 0 && src.ty.k === "list" && /^\(?props\./.test(src.code)) e.perItem.push(`${body} * (${src.code}).len()`);
+  if (body > 0 && src.ty.k === "list" && src.iter === undefined && /^\(?props\./.test(src.code)) e.perItem.push(`${body} * (${src.code}).len()`);
+}
+
+/** `v-for="(value, key, index) in r"` over a record: its entries in JavaScript's order of keys,
+ * which is the order `renderList` walks `Object.keys`. */
+function recordLoop(s: Scope, e: Emitter, r: Val, fn: N, value: N | undefined, key: N | undefined, index: N | undefined): void {
+  if (r.ty.k !== "record") return;
+  const of = r.ty.of;
+  for (const p of [key, index]) if (p && p.type !== "Identifier") fail(s.comp, "a record's key and index in `v-for` are plain names", p);
+  const n = ++ctx.narrowCount;
+  const v = value?.type === "Identifier" ? snake(value.name) : `fv_value${n}`;
+  const k = key ? snake(key.name) : `fv_key${n}`;
+  const i = index ? snake(index.name) : `fv_index${n}`;
+  e.open(`for (${i}, (${k}, ${v}_ref)) in (${r.code}).iter().enumerate()`);
+  const head = e.lines.length - 1;
+  const indent = /^ */.exec(e.lines[head]!)![0];
+  const inner = new Map(s.locals);
+  // A value is read as a list item is: a string as a `&str`, a number copied, an object borrowed.
+  e.stmt(of.k === "str" ? `let ${v}: &str = &**${v}_ref;` : of.k === "int" || of.k === "float" || of.k === "bool" ? `let ${v} = *${v}_ref;` : `let ${v} = ${v}_ref;`);
+  e.stmt(`let ${i} = ${i} as i64;`);
+  const bodyFrom = e.lines.length;
+  if (value?.type === "Identifier") inner.set(value.name, { code: v, ty: of });
+  else if (value?.type === "ObjectPattern" && (of.k === "struct" || of.k === "child")) {
+    for (const p of value.properties) {
+      if (p.type !== "ObjectProperty" || p.computed || p.value.type !== "Identifier") {
+        fail(s.comp, "a destructured `v-for` item binds plain names, without defaults", p);
+      }
+      inner.set(p.value.name, fieldVal(s.comp, v, of, p.key.name ?? p.key.value, p));
+    }
+  } else if (value) fail(s.comp, "a `v-for` item is a name, or an object pattern of an object", value);
+  if (key) inner.set(key.name, { code: k, ty: STR });
+  if (index) inner.set(index.name, { code: i, ty: INT });
+  const before = e.literalBytes;
+  statements({ ...s, locals: inner }, e, fn.body.body);
+  // Whatever the body never reads is not bound, from the last line up.
+  const reads = (name: string) => e.reads(name, bodyFrom);
+  const [readsV, readsK, readsI] = [reads(v), reads(k), reads(i)];
+  if (!readsI) e.lines.splice(head + 2, 1);
+  if (!readsV) e.lines.splice(head + 1, 1);
+  const pair = `(${readsK ? k : "_"}, ${readsV ? `${v}_ref` : "_"})`;
+  e.lines[head] = `${indent}for ${readsI ? `(${i}, ${pair}) in (${r.code}).iter().enumerate()` : `${pair} in (${r.code}).iter()`} {`;
+  e.close();
+  const body = e.literalBytes - before;
+  e.literalBytes = before;
+  if (body > 0 && /^\(?props\./.test(r.code)) e.perItem.push(`${body} * (${r.code}).len()`);
 }

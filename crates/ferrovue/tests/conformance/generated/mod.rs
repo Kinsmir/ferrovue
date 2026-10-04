@@ -7,12 +7,14 @@
 
 pub mod account_nav;
 pub mod app;
+pub mod arrays;
 pub mod attrs;
 pub mod badge;
 pub mod branches;
 pub mod builtins;
 pub mod card;
 pub mod cart;
+pub mod chips;
 pub mod counter;
 pub mod dashboard;
 pub mod data_list;
@@ -37,11 +39,13 @@ pub mod nav;
 pub mod numbers;
 pub mod page;
 pub mod panel;
+pub mod parsing;
 pub mod plain_box;
 pub mod plain_forward;
 pub mod plurals;
 pub mod prose;
 pub mod quiet_leaf;
+pub mod records;
 pub mod regressions;
 pub mod route_info;
 pub mod row_chip;
@@ -59,6 +63,7 @@ pub mod scoped_shelf;
 pub mod scoped_tree;
 pub mod setup;
 pub mod shown;
+pub mod strings;
 pub mod styles;
 pub mod text;
 pub mod translated;
@@ -135,6 +140,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let route = router.at(&fixture.route);
             app::render(&mut out, &props, app::Slots { router_view: ferrovue::Slot::new(&s_router_view) }, &route);
         }
+        "Arrays" => {
+            let props: arrays::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            arrays::render(&mut out, &props);
+        }
         "Attrs" => {
             let props: attrs::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             attrs::render(&mut out, &props);
@@ -164,6 +173,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let state: stores::Stores = serde_json::from_value(fixture.stores.clone()).map_err(|e| e.to_string())?;
             cart::render(&mut out, &props, &state);
+        }
+        "Chips" => {
+            let props: chips::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            chips::render(&mut out, &props);
         }
         "Counter" => {
             let props: counter::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -288,6 +301,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let s_footer = |out: &mut String| out.push_str(fixture.slot("footer").unwrap_or_default());
             panel::render(&mut out, &props, panel::Slots { title: fixture.slot("title").map(|_| ferrovue::Slot::new(&s_title)), default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)), footer: fixture.slot("footer").map(|_| ferrovue::Slot::new(&s_footer)) });
         }
+        "Parsing" => {
+            let props: parsing::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            parsing::render(&mut out, &props);
+        }
         "PlainBox" => {
             let props: plain_box::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -313,6 +330,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "QuietLeaf" => {
             let props: quiet_leaf::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             quiet_leaf::render(&mut out, &props);
+        }
+        "Records" => {
+            let props: records::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            records::render(&mut out, &props);
         }
         "Regressions" => {
             let props: regressions::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -402,6 +423,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Shown" => {
             let props: shown::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             shown::render(&mut out, &props);
+        }
+        "Strings" => {
+            let props: strings::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            strings::render(&mut out, &props);
         }
         "Styles" => {
             let props: styles::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

@@ -5,6 +5,7 @@ import { type Component, type N, type Scope, type Val, fail, GenError, snake, ST
 import { type Store, CONFIG_FILE, ctx } from "./context.ts";
 import { definePropsType } from "./typescript.ts";
 import { expr, fieldVal, storeGetter, theRoute } from "./expr.ts";
+import { collected, heldList } from "./lists.ts";
 import { storeImport } from "./stores.ts";
 
 /** Lifecycle hooks, which never run on the server: setup may register them freely. */
@@ -264,10 +265,23 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
         continue;
       }
       const name = `s_${snake(local).replace(/^r#/, "")}`;
-      // A list or an object is a place in the props: borrowed, never moved out of them.
-      const place = v.ty.k === "list" || v.ty.k === "struct" || v.ty.k === "child";
+      const lone = v.lone ? { lone: true } : {};
+      // A computed list is kept as its items, and read again by item.
+      if (v.ty.k === "list" && v.iter !== undefined) {
+        lets.push(`let ${name} = ${collected(v)};`);
+        scope.setup.set(local, heldList(name, v.ty.of, v.lone));
+        continue;
+      }
+      // An optional string a temporary owns is kept as that `Option<Cow>`.
+      if (v.held !== undefined) {
+        lets.push(`let ${name} = ${v.held};`);
+        scope.setup.set(local, { code: `${name}.as_deref()`, ty: v.ty, ...lone });
+        continue;
+      }
+      // A list, a record or an object is a place in the props: borrowed, never moved out of them.
+      const place = v.ty.k === "list" || v.ty.k === "record" || v.ty.k === "struct" || v.ty.k === "child";
       lets.push(`let ${name} = ${place ? `&(${v.code})` : v.code};`);
-      scope.setup.set(local, { code: name, ty: v.ty, ...(v.konst !== undefined ? { konst: v.konst } : {}) });
+      scope.setup.set(local, { code: name, ty: v.ty, ...lone, ...(v.konst !== undefined ? { konst: v.konst } : {}) });
     }
   }
   return { scope, lets };
