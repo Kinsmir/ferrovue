@@ -49,7 +49,7 @@ pub struct Props<'a> {
 impl<'a> Props<'a> {
     /// Props with its required fields.
     pub fn new(words: impl IntoIterator<Item = impl Into<Cow<'a, str>>>, numbers: Vec<i64>, groups: Vec<Group<'a>>) -> Self {
-        Props { words: words.into_iter().map(Into::into).collect(), numbers: numbers, groups: groups }
+        Props { words: words.into_iter().map(Into::into).collect(), numbers, groups }
     }
 
 }
@@ -57,23 +57,23 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(107 + 9 * (props.words).len() + 52 * (props.numbers).len() + 67 * (props.groups).len() + props.words.iter().map(|v| v.len()).sum::<usize>() + props.groups.iter().map(|v| v.name.len() + v.members.iter().map(|v| v.len()).sum::<usize>() + v.lead.as_deref().map_or(0, str::len)).sum::<usize>());
+    out.reserve(107 + 9 * props.words.len() + 52 * props.numbers.len() + 67 * props.groups.len() + props.words.iter().map(|v| v.len()).sum::<usize>() + props.groups.iter().map(|v| v.name.len() + v.members.iter().map(|v| v.len()).sum::<usize>() + v.lead.as_deref().map_or(0, str::len)).sum::<usize>());
     out.push_str("<section><ul><!--[-->");
-    for w_ref in (props.words).iter() {
-        let w: &str = &**w_ref;
+    for w_ref in props.words.iter() {
+        let w: &str = w_ref;
         out.push_str("<li>");
         fv::escape_into(out, w);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul><ol><!--[-->");
-    for (i, n_ref) in (props.numbers).iter().enumerate() {
+    for (i, n_ref) in props.numbers.iter().enumerate() {
         let n = *n_ref;
         let i = i as i64;
         out.push_str("<li data-index=\"");
         fv::push_int(out, i);
         out.push_str("\">");
         fv::push_int(out, n);
-        if ((((i) as f64) == ((0i64) as f64))) {
+        if i as f64 == 0.0 {
             out.push_str("<!--[--> first<!--]-->");
         } else {
             out.push_str("<!---->");
@@ -81,14 +81,14 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ol><!--[-->");
-    for g_ref in (props.groups).iter() {
+    for g_ref in props.groups.iter() {
         let g = g_ref;
         out.push_str("<div class=\"group\"><h3>");
-        fv::escape_into(out, &*g.name);
+        fv::escape_into(out, &g.name);
         out.push_str(" (");
-        fv::push_int(out, ((g.members).len() as i64));
+        fv::push_int(out, g.members.len() as i64);
         out.push_str(")</h3>");
-        if let Some(n1) = (g.lead.as_deref()).filter(|v| !(*v).is_empty()) {
+        if let Some(n1) = g.lead.as_deref().filter(|v| !v.is_empty()) {
             out.push_str("<b>");
             fv::escape_into(out, n1);
             out.push_str("</b>");
@@ -96,19 +96,19 @@ pub fn render(out: &mut String, props: &Props<'_>) {
             out.push_str("<!---->");
         }
         out.push_str("<!--[-->");
-        for (j, m_ref) in (g.members).iter().enumerate() {
-            let m: &str = &**m_ref;
+        for (j, m_ref) in g.members.iter().enumerate() {
+            let m: &str = m_ref;
             let j = j as i64;
             out.push_str("<!--[--><span>");
             fv::push_int(out, j);
-            out.push_str(":");
+            out.push(':');
             fv::escape_into(out, m);
             out.push_str("</span>,<!--]-->");
         }
         out.push_str("<!--]--></div>");
     }
     out.push_str("<!--]-->");
-    if !((((props.words).len() as i64)) != 0) {
+    if props.words.len() as i64 == 0 {
         out.push_str("<p>no words</p>");
     } else {
         out.push_str("<!---->");

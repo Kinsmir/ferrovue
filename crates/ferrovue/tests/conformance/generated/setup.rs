@@ -23,7 +23,7 @@ pub struct Props<'a> {
 impl<'a> Props<'a> {
     /// Props with its required fields, every optional one absent.
     pub fn new(count: i64) -> Self {
-        Props { count: count, score: None, name: None }
+        Props { count, score: None, name: None }
     }
 
     /// Set `score`, which is absent otherwise.
@@ -44,8 +44,8 @@ impl<'a> Props<'a> {
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(101 + props.name.as_deref().map_or(0, str::len));
     let s_heading = "Results";
-    let s_none = (((props.count) as f64) == ((0i64) as f64));
-    let s_label = &*format!("{}{}", &*format!("{}{}", fv::Js(props.count), " item"), crate::helpers::plural(props.count));
+    let s_none = props.count as f64 == 0.0;
+    let s_label = &*format!("{} item{}", fv::Js(props.count), crate::helpers::plural(props.count));
     out.push_str("<div class=\"setup");
     fv::class_into(out, true, &[crate::helpers::tone(props.score)]);
     out.push_str("\"><h2>");
@@ -53,12 +53,12 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push_str("</h2><p>");
     fv::escape_into(out, s_label);
     out.push_str("</p>");
-    if (crate::helpers::is_even(props.count)) {
+    if crate::helpers::is_even(props.count) {
         out.push_str("<p>even</p>");
     } else {
         out.push_str("<!---->");
     }
-    if (s_none) {
+    if s_none {
         out.push_str("<p>nothing yet</p>");
     } else {
         out.push_str("<!---->");

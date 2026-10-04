@@ -72,33 +72,33 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(58 + 7 * (props.tags.as_deref().unwrap_or(&[])).len() + props.label.as_deref().map_or(0, str::len) + props.note.as_deref().map_or(0, str::len));
-    let s_summary = &*format!("{}{}", &*format!("{}{}", props.label.as_deref().unwrap_or("untitled"), ":"), fv::Js(props.size.unwrap_or(-1i64)));
+    out.reserve(58 + 7 * props.tags.as_deref().unwrap_or(&[]).len() + props.label.as_deref().map_or(0, str::len) + props.note.as_deref().map_or(0, str::len));
+    let s_summary = &*format!("{}:{}", props.label.as_deref().unwrap_or("untitled"), fv::Js(props.size.unwrap_or(-1i64)));
     out.push_str("<p class=\"d");
-    fv::class_into(out, true, &[if (props.on.unwrap_or(true)) { "on" } else { "off" }]);
+    fv::class_into(out, true, &[if props.on.unwrap_or(true) { "on" } else { "off" }]);
     out.push_str("\" data-size=\"");
     fv::push_int(out, props.size.unwrap_or(-1i64));
-    out.push_str("\"");
-    if (props.plain.unwrap_or(false)) {
+    out.push('"');
+    if props.plain.unwrap_or(false) {
         out.push_str(" hidden");
     }
-    out.push_str(">");
+    out.push('>');
     fv::escape_into(out, s_summary);
-    out.push_str("|");
+    out.push('|');
     fv::escape_into(out, props.label.as_deref().unwrap_or("untitled"));
-    out.push_str("|");
+    out.push('|');
     out.push_str(if props.on.unwrap_or(true) { "true" } else { "false" });
-    out.push_str("|");
+    out.push('|');
     out.push_str(if props.plain.unwrap_or(false) { "true" } else { "false" });
-    out.push_str("|");
+    out.push('|');
     if let Some(v) = props.note.as_deref() {
         fv::escape_into(out, v);
     }
-    out.push_str("|");
-    fv::push_int(out, ((props.tags.as_deref().unwrap_or(&[])).len() as i64));
+    out.push('|');
+    fv::push_int(out, props.tags.as_deref().unwrap_or(&[]).len() as i64);
     out.push_str("<!--[-->");
-    for t_ref in (props.tags.as_deref().unwrap_or(&[])).iter() {
-        let t: &str = &**t_ref;
+    for t_ref in props.tags.as_deref().unwrap_or(&[]).iter() {
+        let t: &str = t_ref;
         out.push_str("<b>");
         fv::escape_into(out, t);
         out.push_str("</b>");

@@ -3,7 +3,10 @@
 
 //! The component renderers, one module per `.vue` file.
 
-#![allow(dead_code, unused_parens, clippy::all)]
+// The modules pass rustc's default warnings and clippy's default lints, with one exception:
+// `dead_code`. Every component gets the whole of its API (`render`, `html`, `island`, `NAME`, a
+// constructor and a setter per optional prop) and an app calls only what it needs.
+#![allow(dead_code)]
 
 pub mod greeting;
 pub mod layout;

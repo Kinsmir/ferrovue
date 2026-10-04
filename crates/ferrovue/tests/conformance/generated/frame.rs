@@ -39,7 +39,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
     out.reserve(67 + props.title.len());
     out.push_str("<div class=\"frame\"><header>");
     fv::slot_into(out, fv_slots.head, Some(&mut |out: &mut String| {
-        fv::escape_into(out, &*props.title);
+        fv::escape_into(out, &props.title);
     }));
     out.push_str("</header><main>");
     fv::slot_into(out, fv_slots.default, Some(&mut |out: &mut String| {

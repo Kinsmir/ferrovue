@@ -28,22 +28,22 @@ impl<'a> Props<'a> {
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::Stores<'_>) {
     out.reserve(87 + props.heading.len());
-    let s_summary = &*format!("{} line(s), {} doubled", fv::Js(((fv_stores.cart.lines).len() as i64)), fv::Js(((((fv_stores.prefs.count) as f64) * ((2i64) as f64)) as i64)));
+    let s_summary = &*format!("{} line(s), {} doubled", fv::Js(fv_stores.cart.lines.len() as i64), fv::Js((fv_stores.prefs.count as f64 * 2.0) as i64));
     out.push_str("<aside class=\"");
-    fv::class_into(out, false, &[if ((&*fv_stores.prefs.density) == ("compact")) { "compact" } else { "" }, if ((((((fv_stores.cart.lines).len() as i64)) as f64) == ((0i64) as f64))) { "empty" } else { "" }]);
+    fv::class_into(out, false, &[if &*fv_stores.prefs.density == "compact" { "compact" } else { "" }, if fv_stores.cart.lines.len() as i64 as f64 == 0.0 { "empty" } else { "" }]);
     out.push_str("\"><h3>");
-    fv::escape_into(out, &*props.heading);
+    fv::escape_into(out, &props.heading);
     out.push_str(": ");
-    fv::escape_into(out, &*format!("{}'s cart", &*fv_stores.cart.owner));
+    fv::escape_into(out, &format!("{}'s cart", fv_stores.cart.owner));
     out.push_str("</h3>");
-    if ((((((fv_stores.cart.lines).len() as i64)) as f64) == ((0i64) as f64))) {
+    if fv_stores.cart.lines.len() as i64 as f64 == 0.0 {
         out.push_str("<p>nothing yet</p>");
     } else {
         out.push_str("<ul><!--[-->");
-        for l_ref in (fv_stores.cart.lines).iter() {
+        for l_ref in fv_stores.cart.lines.iter() {
             let l = l_ref;
             out.push_str("<li>");
-            fv::escape_into(out, &*l.sku);
+            fv::escape_into(out, &l.sku);
             out.push_str(" × ");
             fv::push_int(out, l.qty);
             out.push_str("</li>");
@@ -52,10 +52,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::St
     }
     out.push_str("<p>");
     fv::escape_into(out, s_summary);
-    out.push_str("|");
-    fv::push_int(out, ((fv_stores.prefs.tags).len() as i64));
-    out.push_str("|");
-    if let Some(v) = if (!((fv_stores.cart.coupon.as_deref()).is_none())) { fv_stores.cart.coupon.as_deref() } else { Some("no coupon") } {
+    out.push('|');
+    fv::push_int(out, fv_stores.prefs.tags.len() as i64);
+    out.push('|');
+    if let Some(v) = if fv_stores.cart.coupon.as_deref().is_some() { fv_stores.cart.coupon.as_deref() } else { Some("no coupon") } {
         fv::escape_into(out, v);
     }
     out.push_str("</p></aside>");

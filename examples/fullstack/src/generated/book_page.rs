@@ -17,7 +17,7 @@ pub struct Props<'a> {
 impl<'a> Props<'a> {
     /// Props with its required fields.
     pub fn new(book: super::types::Book<'a>) -> Self {
-        Props { book: book }
+        Props { book }
     }
 
 }
@@ -35,21 +35,21 @@ pub struct Slots<'s> {
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::Route<'_>) {
     out.reserve(205 + props.book.id.len() + props.book.title.len() + props.book.author.len());
-    let s_permalink = &*format!("/books/{}", (fv_route.param("id")).unwrap_or(""));
+    let s_permalink = &*format!("/books/{}", fv_route.param("id").unwrap_or(""));
     out.push_str("<article class=\"book\"");
     if let Some(v) = fv_route.param("id") {
-        if (v).is_empty() {
+        if v.is_empty() {
             out.push_str(" data-id");
         } else {
             out.push_str(" data-id=\"");
             fv::escape_into(out, v);
-            out.push_str("\"");
+            out.push('"');
         }
     }
     out.push_str("><h1>");
-    fv::escape_into(out, &*props.book.title);
+    fv::escape_into(out, &props.book.title);
     out.push_str("</h1><p class=\"by\">");
-    fv::escape_into(out, &*props.book.author);
+    fv::escape_into(out, &props.book.author);
     out.push_str(", ");
     fv::push_int(out, props.book.year);
     out.push_str("</p>");

@@ -23,7 +23,7 @@ pub struct Props<'a> {
 impl<'a> Props<'a> {
     /// Props with its required fields, every optional one absent.
     pub fn new(body: crate::Sanitised, caption: impl Into<Cow<'a, str>>) -> Self {
-        Props { body: body, aside: None, caption: caption.into() }
+        Props { body, aside: None, caption: caption.into() }
     }
 
     /// Set `aside`, which is absent otherwise.
@@ -44,7 +44,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         fv::trusted_into(out, html);
     }
     out.push_str("</aside><p>");
-    fv::escape_into(out, &*props.caption);
+    fv::escape_into(out, &props.caption);
     out.push_str("</p></article>");
 }
 

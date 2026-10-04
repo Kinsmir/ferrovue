@@ -48,7 +48,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
     out.reserve(123 + props.title.len());
     out.push_str("<section class=\"panel\"><header>");
     fv::slot_into(out, fv_slots.title, Some(&mut |out: &mut String| {
-        fv::escape_into(out, &*props.title);
+        fv::escape_into(out, &props.title);
         if let Some(n1) = props.count {
             out.push_str("<small> (");
             fv::push_int(out, n1);
@@ -60,7 +60,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
     out.push_str("</header><div class=\"body\">");
     fv::slot_into(out, fv_slots.default, None);
     out.push_str("</div>");
-    if (fv_slots.footer.is_some()) {
+    if fv_slots.footer.is_some() {
         out.push_str("<footer>");
         fv::slot_into(out, fv_slots.footer, None);
         out.push_str("</footer>");

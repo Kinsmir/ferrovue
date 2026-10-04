@@ -7,7 +7,7 @@ import { allRoutes, type RouteDef, ctx } from "./context.ts";
 import { lookupStruct } from "./typescript.ts";
 import { childOf } from "./expr.ts";
 import { Emitter } from "./emitter.ts";
-import { extraParams, slotFieldBorrows, slotFieldTy, slotTypeName, statements, takesSlots } from "./template.ts";
+import { extraParams, fieldInit, slotFieldBorrows, slotFieldTy, slotTypeName, statements, takesSlots } from "./template.ts";
 import { storeHome } from "./stores.ts";
 import { scopeFor } from "./script.ts";
 
@@ -89,7 +89,7 @@ function builderSource(st: Struct, comp: Component, life: string): string {
   const arg = (f: Field) => f.rust.replace(/^r#/, "");
   const params = required.map((f) => `${arg(f)}: ${param(f.ty, comp, arg(f)).ty}`).join(", ");
   const inits = st.fields
-    .map((f) => (f.ty.k === "opt" ? `${f.rust}: None` : `${f.rust}: ${param(f.ty, comp, arg(f)).value}`))
+    .map((f) => (f.ty.k === "opt" ? `${f.rust}: None` : fieldInit(f.rust, param(f.ty, comp, arg(f)).value)))
     .join(", ");
   const setters = optional
     .filter((f) => f.rust !== "new")
@@ -108,7 +108,7 @@ function builderSource(st: Struct, comp: Component, life: string): string {
   const impl = life ? "impl<'a>" : usesA ? "impl<'a>" : "impl";
   return `${impl} ${st.name}${life} {
     /// ${st.name} with ${required.length ? "its required fields" : "nothing set"}${optional.length ? ", every optional one absent" : ""}.
-    pub fn new(${params}) -> Self {
+${required.length > 7 ? "    // One argument per required field, however many the type declares.\n    #[allow(clippy::too_many_arguments)]\n" : ""}    pub fn new(${params}) -> Self {
         ${st.name} { ${inits} }
     }
 ${setters}
@@ -201,7 +201,10 @@ export function componentSource(comp: Component, ast: N[], ssr: string, componen
    * reserving the literals alone leaves it to grow again at the first long label. */
   const text = textLen(comp, "props", { k: "struct", name: "Props" });
   const fixed = e.literalBytes + scope.helperBytes.n;
-  e.lines.unshift(`    out.reserve(${[String(fixed), ...e.perItem, ...text].join(" + ")});`);
+  const reserve = [...(fixed || !(e.perItem.length + text.length) ? [String(fixed)] : []), ...e.perItem, ...text];
+  e.lines.unshift(`    out.reserve(${reserve.join(" + ")});`);
+  // A component that renders the same whatever its props takes them all the same.
+  const propsParam = e.reads("props", 0) ? "props" : "_props";
 
   const life = structLifetime(comp.props, comp) ? "<'_>" : "";
   const gen = life ? "<'p, 'a>" : "<'p>";
@@ -281,7 +284,7 @@ pub const NAME: &str = ${rustStr(comp.name)};
 
 ${structs ? structs + "\n" : ""}${structSource(comp.props, comp, `/// The props \`${basename(comp.file)}\` declares.\n`)}
 ${slotsStruct}/// Write the component's server render into \`out\`.
-pub fn render(out: &mut String, props: &Props${life}${extraParams(comp)}) {
+pub fn render(out: &mut String, ${propsParam}: &Props${life}${extraParams(comp)}) {
 ${e.lines.join("\n")}
 }
 
@@ -370,7 +373,10 @@ impl Fixture {
   return `${header(ctx.componentsDir)}
 //! The component renderers, one module per \`.vue\` file.
 
-#![allow(dead_code, unused_parens, clippy::all)]
+// The modules pass rustc's default warnings and clippy's default lints, with one exception:
+// \`dead_code\`. Every component gets the whole of its API (\`render\`, \`html\`, \`island\`, \`NAME\`, a
+// constructor and a setter per optional prop) and an app calls only what it needs.
+#![allow(dead_code)]
 
 ${comps.map((c) => `pub mod ${c.module};`).join("\n")}${ctx.routes ? "\npub mod route_table;" : ""}${ctx.stores.size ? "\npub mod stores;" : ""}${ctx.typeStructs.size ? "\npub mod types;" : ""}${ctx.i18n ? "\npub mod i18n;" : ""}
 ${fixture}

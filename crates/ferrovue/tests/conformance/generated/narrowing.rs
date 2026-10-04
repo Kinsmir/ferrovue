@@ -64,48 +64,48 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(219 + props.label.as_deref().map_or(0, str::len) + props.user.as_ref().map_or(0, |v| v.name.len() + v.avatar.as_deref().map_or(0, str::len) + v.roles.iter().map(|v| v.name.len()).sum::<usize>() + v.size.as_deref().map_or(0, str::len)));
+    out.reserve(207 + props.label.as_deref().map_or(0, str::len) + props.user.as_ref().map_or(0, |v| v.name.len() + v.avatar.as_deref().map_or(0, str::len) + v.roles.iter().map(|v| v.name.len()).sum::<usize>() + v.size.as_deref().map_or(0, str::len)));
     out.push_str("<section>");
     if let Some(n1) = props.label.as_deref() {
         out.push_str("<p>");
         fv::push_int(out, fv::js_length(n1));
-        out.push_str(":");
-        fv::escape_into(out, &*(n1).to_uppercase());
+        out.push(':');
+        fv::escape_into(out, &n1.to_uppercase());
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");
     }
     if let Some(n2) = props.count {
         out.push_str("<p>");
-        fv::push_int(out, ((((n2) as f64) * ((2i64) as f64)) as i64));
-        out.push_str("|");
-        fv::push_int(out, ((((n2) as f64) + ((1i64) as f64)) as i64));
-        out.push_str("|");
-        fv::push_int(out, ((((n2) as f64) % ((3i64) as f64)) as i64));
-        out.push_str("|");
-        fv::escape_into(out, &*format!("#{}", fv::Js(n2)));
+        fv::push_int(out, (n2 as f64 * 2.0) as i64);
+        out.push('|');
+        fv::push_int(out, (n2 as f64 + 1.0) as i64);
+        out.push('|');
+        fv::push_int(out, (n2 as f64 % 3.0) as i64);
+        out.push('|');
+        fv::escape_into(out, &format!("#{}", fv::Js(n2)));
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");
     }
     if let Some(n3) = props.label.as_deref() {
         out.push_str("<p>");
-        fv::escape_into(out, { let a = fv::js_trim(n3); if !(a).is_empty() { a } else { "blank" } });
+        fv::escape_into(out, { let a = fv::js_trim(n3); if !a.is_empty() { a } else { "blank" } });
         out.push_str("</p>");
     } else {
         out.push_str("<p>no label</p>");
     }
     if let Some(n4) = props.user.as_ref() {
         out.push_str("<p>");
-        fv::escape_into(out, &*n4.name);
-        fv::escape_into(out, &*(if let Some(n5) = n4.avatar.as_deref() { std::borrow::Cow::<str>::Owned((&*format!(" ({})", fv::Js(fv::js_length(n5)))).to_owned()) } else { std::borrow::Cow::<str>::Borrowed("") }));
+        fv::escape_into(out, &n4.name);
+        fv::escape_into(out, &(if let Some(n5) = n4.avatar.as_deref() { std::borrow::Cow::<str>::Owned(format!(" ({})", fv::Js(fv::js_length(n5)))) } else { std::borrow::Cow::<str>::Borrowed("") }));
         out.push_str("</p>");
     } else {
         out.push_str("<p>no user</p>");
     }
-    if let Some(n6) = props.ratio && (((n6) > (0.5f64))) {
+    if let Some(n6) = props.ratio && n6 > 0.5 {
         out.push_str("<p>");
-        fv::push_number(out, fv::js_round((((n6) * ((10i64) as f64)))));
+        fv::push_number(out, fv::js_round(n6 * 10.0));
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");
@@ -118,43 +118,38 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         out.push_str("<!---->");
     }
     out.push_str("<p>");
-    fv::push_number(out, if let Some(n9) = props.count { ((((n9) as f64) / ((4i64) as f64))) } else { (-((1i64) as f64)) });
-    out.push_str("|");
-    fv::escape_into(out, &*(if let Some(n10) = props.count { std::borrow::Cow::<str>::Owned((&*fv::Js(((((n10) as f64) - ((1i64) as f64)) as i64)).to_string()).to_owned()) } else { std::borrow::Cow::<str>::Borrowed("none") }));
+    fv::push_number(out, if let Some(n9) = props.count { n9 as f64 / 4.0 } else { -1.0f64 });
+    out.push('|');
+    fv::escape_into(out, &(if let Some(n10) = props.count { std::borrow::Cow::<str>::Owned(fv::Js((n10 as f64 - 1.0) as i64).to_string()) } else { std::borrow::Cow::<str>::Borrowed("none") }));
     out.push_str("</p><p>");
-    fv::push_int(out, if let Some(n11) = (props.label.as_deref()).filter(|v| !(*v).is_empty()) { fv::js_length(n11) } else { 0i64 });
-    out.push_str("|");
-    fv::escape_into(out, if let Some(n12) = (props.label.as_deref()).filter(|v| !(*v).is_empty()) { n12 } else { "empty" });
+    fv::push_int(out, if let Some(n11) = props.label.as_deref().filter(|v| !v.is_empty()) { fv::js_length(n11) } else { 0i64 });
+    out.push('|');
+    fv::escape_into(out, props.label.as_deref().filter(|v| !v.is_empty()).unwrap_or("empty"));
     out.push_str("</p><p>");
-    out.push_str(if (if let Some(n13) = props.label.as_deref() { (((fv::js_length(n13)) as f64) > ((2i64) as f64)) } else { false }) { "true" } else { "false" });
-    out.push_str("|");
-    out.push_str(if (if let Some(n14) = props.label.as_deref() { (((fv::js_length(n14)) as f64) == ((0i64) as f64)) } else { true }) { "true" } else { "false" });
-    out.push_str("|");
-    out.push_str(if (if let Some(n15) = (props.count).filter(|v| (*v) != 0) { (((n15) as f64) > ((3i64) as f64)) } else { true }) { "true" } else { "false" });
+    out.push_str(if if let Some(n13) = props.label.as_deref() { fv::js_length(n13) as f64 > 2.0 } else { false } { "true" } else { "false" });
+    out.push('|');
+    out.push_str(if if let Some(n14) = props.label.as_deref() { fv::js_length(n14) as f64 == 0.0 } else { true } { "true" } else { "false" });
+    out.push('|');
+    out.push_str(if if let Some(n15) = props.count.filter(|v| *v != 0) { n15 as f64 > 3.0 } else { true } { "true" } else { "false" });
     out.push_str("</p><p>");
-    fv::push_number(out, (props.ratio).unwrap_or(((0i64) as f64)));
-    out.push_str("|");
-    fv::push_number(out, (((props.count).map(|v| v as f64).unwrap_or(0.5f64)) * ((2i64) as f64)));
-    out.push_str("|");
+    fv::push_number(out, props.ratio.unwrap_or(0.0f64));
+    out.push('|');
+    fv::push_number(out, props.count.map(|v| v as f64).unwrap_or(0.5f64) * 2.0);
+    out.push('|');
     out.push_str(if props.on.unwrap_or(false) { "true" } else { "false" });
     out.push_str("</p><p");
-    if let Some(v) = (if let Some(n16) = props.label.as_deref() { Some(std::borrow::Cow::<str>::Owned((&*format!("{}{}", n16, "!")).to_owned())) } else { None }).as_deref() {
+    if let Some(v) = (if let Some(n16) = props.label.as_deref() { Some(std::borrow::Cow::<str>::Owned(format!("{}!", n16))) } else { None }).as_deref() {
         out.push_str(" title=\"");
         fv::escape_into(out, v);
-        out.push_str("\"");
+        out.push('"');
     }
-    if let Some(v) = if let Some(n17) = props.count { Some(n17) } else { None } {
+    if let Some(v) = props.count {
         out.push_str(" data-n=\"");
         fv::push_int(out, v);
-        out.push_str("\"");
+        out.push('"');
     }
-    out.push_str("></p>");
-    if let Some(_) = (props.label.as_deref()).filter(|v| !(*v).is_empty()) && false {
-        out.push_str("<p>never</p>");
-    } else {
-        out.push_str("<!---->");
-    }
-    if ((!((props.label.as_deref()).is_none())) || (!((props.count).is_none()))) {
+    out.push_str("></p><!---->");
+    if props.label.as_deref().is_some() || props.count.is_some() {
         out.push_str("<p>some</p>");
     } else {
         out.push_str("<!---->");

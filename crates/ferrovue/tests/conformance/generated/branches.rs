@@ -53,7 +53,7 @@ pub struct Props<'a> {
 impl<'a> Props<'a> {
     /// Props with its required fields, every optional one absent.
     pub fn new(kind: impl Into<Cow<'a, str>>, count: i64, on: bool) -> Self {
-        Props { kind: kind.into(), count: count, on: on, author: None, note: None, score: None }
+        Props { kind: kind.into(), count, on, author: None, note: None, score: None }
     }
 
     /// Set `author`, which is absent otherwise.
@@ -80,42 +80,42 @@ impl<'a> Props<'a> {
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(328 + props.kind.len() + props.author.as_ref().map_or(0, |v| v.name.len() + v.url.as_deref().map_or(0, str::len)) + props.note.as_deref().map_or(0, str::len));
     out.push_str("<div>");
-    if ((&*props.kind) == ("a")) {
+    if &*props.kind == "a" {
         out.push_str("<p>a</p>");
     } else {
-        if ((&*props.kind) == ("b")) {
+        if &*props.kind == "b" {
             out.push_str("<p>b</p>");
         } else {
-            if (!((&*props.kind) == (""))) {
+            if !props.kind.is_empty() {
                 out.push_str("<p>other ");
-                fv::escape_into(out, &*props.kind);
+                fv::escape_into(out, &props.kind);
                 out.push_str("</p>");
             } else {
                 out.push_str("<p>empty</p>");
             }
         }
     }
-    if !((props.on)) {
+    if !props.on {
         out.push_str("<i>off</i>");
     } else {
         out.push_str("<!---->");
     }
-    if ((props.on) && (props.count) != 0) {
+    if props.on && props.count != 0 {
         out.push_str("<i>on and counted</i>");
     } else {
         out.push_str("<!---->");
     }
-    if (!((props.count) != 0) || !((props.on))) {
+    if props.count == 0 || !props.on {
         out.push_str("<i>either</i>");
     } else {
         out.push_str("<!---->");
     }
-    if ((((props.count) as f64) == ((3i64) as f64))) {
+    if props.count as f64 == 3.0 {
         out.push_str("<i>three</i>");
     } else {
         out.push_str("<!---->");
     }
-    if let Some(_) = props.note.as_deref() {
+    if props.note.as_deref().is_some() {
         out.push_str("<!---->");
     } else {
         out.push_str("<i>no note</i>");
@@ -127,7 +127,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     } else {
         out.push_str("<!---->");
     }
-    if let Some(n3) = (props.score).filter(|v| (*v) != 0) {
+    if let Some(n3) = props.score.filter(|v| *v != 0) {
         out.push_str("<i>truthy score ");
         fv::push_int(out, n3);
         out.push_str("</i>");
@@ -136,8 +136,8 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     }
     if let Some(n4) = props.author.as_ref() {
         out.push_str("<span>by ");
-        fv::escape_into(out, &*n4.name);
-        if let Some(n5) = (n4.url.as_deref()).filter(|v| !(*v).is_empty()) {
+        fv::escape_into(out, &n4.name);
+        if let Some(n5) = n4.url.as_deref().filter(|v| !v.is_empty()) {
             out.push_str("<a href=\"");
             fv::escape_into(out, n5);
             out.push_str("\">link</a>");
@@ -148,14 +148,14 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     } else {
         out.push_str("<span>anonymous</span>");
     }
-    if let Some(n6) = props.author.as_ref() && let Some(n7) = (n6.url.as_deref()).filter(|v| !(*v).is_empty()) {
+    if let Some(n6) = props.author.as_ref() && let Some(n7) = n6.url.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<em>");
         fv::escape_into(out, n7);
         out.push_str("</em>");
     } else {
         out.push_str("<!---->");
     }
-    if (props.on) {
+    if props.on {
         out.push_str("<!--[--><u>one</u><u>two</u><!--]-->");
     } else {
         out.push_str("<!---->");

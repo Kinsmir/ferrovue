@@ -50,9 +50,9 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
         fv::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }, "tab"]);
         out.push_str("\">intro</a>");
     }
-    out.push_str(" ");
+    out.push(' ');
     {
-        let fv_link = fv_route.link(&*props.href);
+        let fv_link = fv_route.link(&props.href);
         out.push_str("<a");
         if fv_link.exact {
             out.push_str(" aria-current=\"page\"");
@@ -60,18 +60,18 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
         out.push_str(" href=\"");
         fv::escape_into(out, &fv_link.href);
         out.push_str("\" class=\"");
-        fv::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }, "tab", if let Some(_) = (props.note.as_deref()).filter(|v| !(*v).is_empty()) { "noted" } else { "" }]);
-        out.push_str("\"");
-        if (&*props.label).is_empty() {
+        fv::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }, "tab", if props.note.as_deref().is_some_and(|v| !v.is_empty()) { "noted" } else { "" }]);
+        out.push('"');
+        if props.label.is_empty() {
             out.push_str(" title");
         } else {
             out.push_str(" title=\"");
-            fv::escape_into(out, &*props.label);
-            out.push_str("\"");
+            fv::escape_into(out, &props.label);
+            out.push('"');
         }
-        out.push_str(">");
-        fv::escape_into(out, &*props.label);
-        if let Some(n2) = (props.note.as_deref()).filter(|v| !(*v).is_empty()) {
+        out.push('>');
+        fv::escape_into(out, &props.label);
+        if let Some(n2) = props.note.as_deref().filter(|v| !v.is_empty()) {
             out.push_str("<i>");
             fv::escape_into(out, n2);
             out.push_str("</i>");

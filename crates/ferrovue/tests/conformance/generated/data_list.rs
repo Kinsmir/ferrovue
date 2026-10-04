@@ -23,7 +23,7 @@ pub struct Row<'a> {
 impl<'a> Row<'a> {
     /// Row with its required fields.
     pub fn new(id: i64, label: impl Into<Cow<'a, str>>, tags: impl IntoIterator<Item = impl Into<Cow<'a, str>>>) -> Self {
-        Row { id: id, label: label.into(), tags: tags.into_iter().map(Into::into).collect() }
+        Row { id, label: label.into(), tags: tags.into_iter().map(Into::into).collect() }
     }
 
 }
@@ -44,7 +44,7 @@ pub struct Props<'a> {
 impl<'a> Props<'a> {
     /// Props with its required fields, every optional one absent.
     pub fn new(rows: Vec<Row<'a>>, title: impl Into<Cow<'a, str>>) -> Self {
-        Props { rows: rows, title: title.into(), note: None }
+        Props { rows, title: title.into(), note: None }
     }
 
     /// Set `note`, which is absent otherwise.
@@ -108,36 +108,36 @@ pub struct Slots<'s> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
-    out.reserve(96 + 11 * (props.rows).len() + props.rows.iter().map(|v| v.label.len() + v.tags.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>() + props.title.len() + props.note.as_deref().map_or(0, str::len));
+    out.reserve(96 + 11 * props.rows.len() + props.rows.iter().map(|v| v.label.len() + v.tags.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>() + props.title.len() + props.note.as_deref().map_or(0, str::len));
     out.push_str("<section><header>");
-    fv::scoped_slot_into(out, fv_slots.header, &HeaderSlotProps { title: &*props.title, note: props.note.as_deref() }, Some(&mut |out: &mut String| {
-        fv::escape_into(out, &*props.title);
+    fv::scoped_slot_into(out, fv_slots.header, &HeaderSlotProps { title: &props.title, note: props.note.as_deref() }, Some(&mut |out: &mut String| {
+        fv::escape_into(out, &props.title);
     }));
     out.push_str("</header>");
-    if (((props.rows).len() as i64)) != 0 {
+    if props.rows.len() as i64 != 0 {
         out.push_str("<ul><!--[-->");
-        for (i, r_ref) in (props.rows).iter().enumerate() {
+        for (i, r_ref) in props.rows.iter().enumerate() {
             let r = r_ref;
             let i = i as i64;
             out.push_str("<li>");
-            fv::scoped_slot_into(out, fv_slots.row, &RowSlotProps { row: &(r), index: i, label: &*r.label, tags: &(r.tags), first: (((i) as f64) == ((0i64) as f64)) }, Some(&mut |out: &mut String| {
+            fv::scoped_slot_into(out, fv_slots.row, &RowSlotProps { row: r, index: i, label: &r.label, tags: &r.tags, first: i as f64 == 0.0 }, Some(&mut |out: &mut String| {
                 fv::push_int(out, i);
                 out.push_str(". ");
-                fv::escape_into(out, &*r.label);
+                fv::escape_into(out, &r.label);
             }));
             out.push_str("</li>");
         }
         out.push_str("<!--]--></ul>");
     } else {
         out.push_str("<p>");
-        fv::scoped_slot_into(out, fv_slots.empty, &EmptySlotProps { title: &*props.title }, Some(&mut |out: &mut String| {
+        fv::scoped_slot_into(out, fv_slots.empty, &EmptySlotProps { title: &props.title }, Some(&mut |out: &mut String| {
             out.push_str("no rows in ");
-            fv::escape_into(out, &*props.title);
+            fv::escape_into(out, &props.title);
         }));
         out.push_str("</p>");
     }
     out.push_str("<footer>");
-    fv::scoped_slot_into(out, fv_slots.default, &DefaultSlotProps { count: ((props.rows).len() as i64), title: &*props.title }, None);
+    fv::scoped_slot_into(out, fv_slots.default, &DefaultSlotProps { count: props.rows.len() as i64, title: &props.title }, None);
     out.push_str("</footer></section>");
 }
 

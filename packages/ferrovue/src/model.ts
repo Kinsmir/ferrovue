@@ -56,6 +56,11 @@ export interface Val {
   /** For an integer computed from others: the same computation on doubles, before it is rounded
    * back to an \`i64\` — which keeps JavaScript's \`-0\`, so a division by it is \`-Infinity\`. */
   f64?: string;
+  /** A number known at generation time: a literal, or literals JavaScript computed. */
+  num?: number;
+  /** For a string built by `format!`: its format string and arguments, which a string built from it
+   * joins rather than formatting it again. */
+  format?: { text: string; args: string[] };
 }
 
 export const STR: Ty = { k: "str" };
@@ -96,6 +101,13 @@ export function rustStr(s: string): string {
     else out += ch;
   }
   return out + '"';
+}
+
+/** One character as a Rust `char` literal. */
+export function rustChar(ch: string): string {
+  if (ch === "'") return "'\\''";
+  if (ch === '"') return `'"'`;
+  return `'${rustStr(ch).slice(1, -1)}'`;
 }
 
 export class GenError extends Error {}

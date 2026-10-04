@@ -19,7 +19,7 @@ pub struct Props {
 impl Props {
     /// Props with its required fields.
     pub fn new(value: f64, max: f64) -> Self {
-        Props { value: value, max: max }
+        Props { value, max }
     }
 
 }
@@ -33,7 +33,7 @@ pub fn render(out: &mut String, props: &Props) {
     out.push_str("\" max=\"");
     fv::push_number(out, props.max);
     out.push_str("\">");
-    fv::escape_into(out, &*fv::js_to_fixed((((((props.value) / (props.max))) * ((100i64) as f64))), 1));
+    fv::escape_into(out, &fv::js_to_fixed(props.value / props.max * 100.0, 1));
     out.push_str("%</meter>");
 }
 

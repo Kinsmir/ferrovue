@@ -23,7 +23,7 @@ pub struct Props<'a> {
 impl<'a> Props<'a> {
     /// Props with its required fields.
     pub fn new(on: bool, text: impl Into<Cow<'a, str>>, items: impl IntoIterator<Item = impl Into<Cow<'a, str>>>) -> Self {
-        Props { on: on, text: text.into(), items: items.into_iter().map(Into::into).collect() }
+        Props { on, text: text.into(), items: items.into_iter().map(Into::into).collect() }
     }
 
 }
@@ -31,50 +31,42 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(182 + 9 * (props.items).len() + 7 * (props.items).len() + props.text.len() + props.items.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(181 + 9 * props.items.len() + 7 * props.items.len() + props.text.len() + props.items.iter().map(|v| v.len()).sum::<usize>());
     out.push_str("<div>");
-    if (props.on) {
+    if props.on {
         out.push_str("<p>shown</p>");
     } else {
         out.push_str("<!---->");
     }
-    out.push_str("<ul");
-    if ("list").is_empty() {
-        out.push_str(" name");
-    } else {
-        out.push_str(" name=\"");
-        fv::escape_into(out, "list");
-        out.push_str("\"");
-    }
-    out.push_str(">");
-    for i_ref in (props.items).iter() {
-        let i: &str = &**i_ref;
+    out.push_str("<ul name=\"list\">");
+    for i_ref in props.items.iter() {
+        let i: &str = i_ref;
         out.push_str("<li>");
         fv::escape_into(out, i);
         out.push_str("</li>");
     }
     out.push_str("</ul><!--[-->");
-    for i_ref in (props.items).iter() {
-        let i: &str = &**i_ref;
+    for i_ref in props.items.iter() {
+        let i: &str = i_ref;
         out.push_str("<b>");
         fv::escape_into(out, i);
         out.push_str("</b>");
     }
     out.push_str("<!--]--><span>kept</span><em>");
-    fv::escape_into(out, &*props.text);
+    fv::escape_into(out, &props.text);
     out.push_str("</em><p>");
-    fv::escape_into(out, &*props.text);
+    fv::escape_into(out, &props.text);
     out.push_str("</p><p>");
-    fv::escape_into(out, &*props.text);
+    fv::escape_into(out, &props.text);
     out.push_str("</p><p>{{ not interpolated }}</p><p>");
-    fv::escape_into(out, &*props.text);
+    fv::escape_into(out, &props.text);
     out.push_str("</p><input class=\"focused\"");
-    if (&*props.text).is_empty() {
+    if props.text.is_empty() {
         out.push_str(" value");
     } else {
         out.push_str(" value=\"");
-        fv::escape_into(out, &*props.text);
-        out.push_str("\"");
+        fv::escape_into(out, &props.text);
+        out.push('"');
     }
     out.push_str("></div>");
 }

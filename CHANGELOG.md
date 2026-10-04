@@ -53,6 +53,12 @@ released together and share version numbers.
 - The CLI prints a refused construct as an error message, without a stack trace.
 - Generated code no longer computes setup values nothing reads, nor binds loop items, narrowed values
   or slot props nothing reads; it compiles without `allow(unused_variables)`.
+- Generated code passes rustc's default warnings and `cargo clippy -- -D warnings` with one allow
+  left, `dead_code`, as each component gets an API an app uses only part of (and a constructor of
+  more than seven required props allows `clippy::too_many_arguments`). It is parenthesised only
+  where Rust needs it, folds what is known at build time (literal arithmetic, constant conditions,
+  string literals), borrows and dereferences only where coercion does not, and pushes a single
+  character as a `char`. Output is unchanged.
 
 ### Fixed
 
@@ -66,7 +72,9 @@ released together and share version numbers.
     JavaScript object lists them: one entry per name, array indices first in numeric order;
   - integer arithmetic keeps JavaScript's `-0`, so dividing by it is `-Infinity`;
   - a number exactly halfway between two shortest spellings is written with the even digit, as
-    ECMAScript specifies (`-1801439850948198.2`).
+    ECMAScript specifies (`-1801439850948198.2`);
+  - `||` after an optional string whose `??` fallback is built (`` (s ?? "a") || (s ?? `${n}x`) ``)
+    compiles.
 
 - Integers beyond ±2⁵³ are written, added and compared as JavaScript does with the rounded value the
   browser reads, so such a prop no longer causes a hydration mismatch.

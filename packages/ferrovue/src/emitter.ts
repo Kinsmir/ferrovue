@@ -1,6 +1,7 @@
 /* The Rust statements a render is written as. */
 
-import { rustStr } from "./model.ts";
+import { rustChar, rustStr } from "./model.ts";
+import { occurrences } from "./parens.ts";
 
 /** Statements, with adjacent literal pushes merged into one `push_str`. */
 export class Emitter {
@@ -35,12 +36,11 @@ export class Emitter {
     if (tail.endsWith("{")) this.depth++;
   }
 
-  /** Whether the lines from \`from\` on read \`name\`. String literals are skipped, so markup that
-   * happens to spell the name does not count. */
+  /** Whether the lines from \`from\` on read \`name\`. Literals are skipped, so markup that happens to
+   * spell the name does not count, and so are fields of that name. */
   reads(name: string, from: number): boolean {
     this.flush();
-    const code = this.lines.slice(from).join("\n").replace(/"(?:[^"\\]|\\.)*"/g, '""');
-    return new RegExp(`(?<![\\w$])${name.replace(/\$/g, "\\$")}(?![\\w$])`).test(code);
+    return occurrences(this.lines.slice(from).join("\n"), name) > 0;
   }
 
   /** Replace \`from\` with \`to\` in line \`index\`: an unused binding renamed to \`_\`. */
@@ -52,6 +52,8 @@ export class Emitter {
     if (!this.pending) return;
     const text = this.pending;
     this.pending = "";
-    this.lines.push("    ".repeat(this.depth) + `out.push_str(${rustStr(text)});`);
+    // One character is pushed as a `char`.
+    const push = /^.$/su.test(text) ? `out.push(${rustChar(text)});` : `out.push_str(${rustStr(text)});`;
+    this.lines.push("    ".repeat(this.depth) + push);
   }
 }

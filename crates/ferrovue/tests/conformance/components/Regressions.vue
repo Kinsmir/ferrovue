@@ -3,7 +3,8 @@
  * literals beyond what a double holds exactly, and `?:` / `||` choosing between a string the
  * component holds and one it builds; class objects whose names repeat or are array indices, which
  * a JavaScript object lists first; JavaScript's -0; and a number exactly halfway between two
- * shortest spellings; and a branch that trims a string it has just built. */
+ * shortest spellings; a branch that trims a string it has just built; and `||` after an optional
+ * string whose fallback is built. */
 defineProps<{ s1: string; b0: boolean; os1?: string; ob2?: boolean; f2: number; l2: string[]; l4: number[]; n3: number }>();
 </script>
 
@@ -29,6 +30,7 @@ defineProps<{ s1: string; b0: boolean; os1?: string; ob2?: boolean; f2: number; 
     <i :class="{ 2: true, 1: true, b: true, a: f2 }"></i>
     <p>{{ 'a' ? 'a' : (1).toFixed(2).trim() }}|{{ ' pad ' ? 'a' : '-'.toUpperCase().trimEnd() }}|{{ (true && true) ? 'a' : (1).toFixed(10).trimStart() }}|{{ b0 ? 'a' : (f2).toFixed(2).trim() }}|{{ s1.trim() || (s1 + 'x').trim() }}</p>
     <p v-if="os1">{{ os1 ? os1.toUpperCase().trimEnd() : 'a' }}</p>
+    <p>{{ (os1 ?? 'px') || (os1 ?? `${n3}x`) }}</p>
     <p :data-n="7 / (-l2.length)">{{ 0.5 / ((-5) * 0) }}|{{ n3 / s1.length }}|{{ -0 }}|{{ 1 / -f2 }}</p>
   </div>
 </template>

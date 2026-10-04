@@ -35,15 +35,7 @@ pub struct Slots<'s> {
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::Route<'_>) {
     out.reserve(137 + props.user.len());
-    out.push_str("<div");
-    if ("app").is_empty() {
-        out.push_str(" id");
-    } else {
-        out.push_str(" id=\"");
-        fv::escape_into(out, "app");
-        out.push_str("\"");
-    }
-    out.push_str("><nav>");
+    out.push_str("<div id=\"app\"><nav>");
     {
         let fv_link = fv_route.link("/");
         out.push_str("<a");
@@ -56,9 +48,9 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route
         fv::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
         out.push_str("\">home</a>");
     }
-    out.push_str(" ");
+    out.push(' ');
     {
-        let fv_link = fv_route.link(&*format!("{}{}", "/users/", &*props.user));
+        let fv_link = fv_route.link(&format!("/users/{}", props.user));
         out.push_str("<a");
         if fv_link.exact {
             out.push_str(" aria-current=\"page\"");
@@ -68,7 +60,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route
         out.push_str("\" class=\"");
         fv::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
         out.push_str("\">");
-        fv::escape_into(out, &*props.user);
+        fv::escape_into(out, &props.user);
         out.push_str("</a>");
     }
     out.push_str("</nav><main>");

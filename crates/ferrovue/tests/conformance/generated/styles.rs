@@ -33,7 +33,7 @@ pub struct Props<'a> {
 impl<'a> Props<'a> {
     /// Props with its required fields, every optional one absent.
     pub fn new(color: impl Into<Cow<'a, str>>, size: i64, shown: bool, hidden: bool, raw: impl Into<Cow<'a, str>>, big: bool) -> Self {
-        Props { color: color.into(), size: size, shown: shown, hidden: hidden, raw: raw.into(), accent: None, width: None, big: big }
+        Props { color: color.into(), size, shown, hidden, raw: raw.into(), accent: None, width: None, big }
     }
 
     /// Set `accent`, which is absent otherwise.
@@ -54,60 +54,60 @@ impl<'a> Props<'a> {
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(400 + props.color.len() + props.raw.len() + props.accent.as_deref().map_or(0, str::len));
     out.push_str("<div style=\"");
-    if !((props.shown)) {
+    if !props.shown {
         out.push_str("display:none;");
     }
     out.push_str("\"><p style=\"color:");
-    fv::escape_into(out, &*props.color);
+    fv::escape_into(out, &props.color);
     out.push_str(";font-size:");
-    fv::escape_into(out, &*format!("{}{}", fv::Js(props.size), "px"));
+    fv::escape_into(out, &format!("{}px", fv::Js(props.size)));
     out.push_str(";line-height:1.5;--gap:");
     fv::push_int(out, props.size);
     out.push_str(";opacity:0.5;\">a</p><p style=\"margin:0;");
     if let Some(v) = props.accent.as_deref() {
         out.push_str("color:");
         fv::escape_into(out, v);
-        out.push_str(";");
+        out.push(';');
     }
     if let Some(v) = props.width {
         out.push_str("border-width:");
         fv::push_int(out, v);
-        out.push_str(";");
+        out.push(';');
     }
     out.push_str("\">b</p><p style=\"");
-    if ((props.big)) {
+    if props.big {
         out.push_str("display:grid;");
     } else {
         out.push_str("display:flex;");
     }
-    if ((props.big)) {
+    if props.big {
         out.push_str("gap:1rem;");
     }
     out.push_str("webkit-line-clamp:");
     fv::push_int(out, props.size);
     out.push_str(";\">c</p><p style=\"");
-    fv::escape_into(out, &*props.raw);
+    fv::escape_into(out, &props.raw);
     out.push_str("\">d</p><p style=\"top: 0\">e</p><p style=\"");
-    if !(!((props.hidden))) {
+    if props.hidden {
         out.push_str("display:none;");
     } else {
         out.push_str("display:block;");
     }
     out.push_str("\">f</p><p style=\"color:");
-    fv::escape_into(out, &*props.color);
-    out.push_str(";");
-    if !((props.hidden)) {
+    fv::escape_into(out, &props.color);
+    out.push(';');
+    if !props.hidden {
         out.push_str("display:none;");
     }
     out.push_str("\">g</p><p style=\"");
-    if ((props.big)) {
+    if props.big {
         out.push_str("font-weight:bold;");
     }
     out.push_str("\">h</p><p style=\"");
     if let Some(v) = props.accent.as_deref() {
         out.push_str("width:");
         fv::escape_into(out, v);
-        out.push_str(";");
+        out.push(';');
     }
     out.push_str("\">i</p></div>");
 }

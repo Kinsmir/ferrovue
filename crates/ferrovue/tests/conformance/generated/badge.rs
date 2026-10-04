@@ -33,10 +33,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::St
     out.push_str("\" data-wide=\"");
     out.push_str(if fv_stores.prefs.wide { "true" } else { "false" });
     out.push_str("\">");
-    fv::escape_into(out, &*props.title);
-    out.push_str(" ");
+    fv::escape_into(out, &props.title);
+    out.push(' ');
     fv::push_int(out, fv_stores.prefs.count);
-    if let Some(n1) = (fv_stores.prefs.label.as_deref()).filter(|v| !(*v).is_empty()) {
+    if let Some(n1) = fv_stores.prefs.label.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<b>");
         fv::escape_into(out, n1);
         out.push_str("</b>");
@@ -44,16 +44,16 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::St
         out.push_str("<!---->");
     }
     out.push_str("<!--[-->");
-    for t_ref in (fv_stores.prefs.tags).iter() {
+    for t_ref in fv_stores.prefs.tags.iter() {
         let t = t_ref;
         out.push_str("<i");
         if let Some(v) = t.color.as_deref() {
             out.push_str(" title=\"");
             fv::escape_into(out, v);
-            out.push_str("\"");
+            out.push('"');
         }
-        out.push_str(">");
-        fv::escape_into(out, &*t.name);
+        out.push('>');
+        fv::escape_into(out, &t.name);
         out.push_str("</i>");
     }
     out.push_str("<!--]--></span>");

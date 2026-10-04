@@ -19,7 +19,7 @@ pub struct Props<'a> {
 impl<'a> Props<'a> {
     /// Props with its required fields.
     pub fn new(row: super::data_list::Row<'a>, first: bool) -> Self {
-        Props { row: row, first: first }
+        Props { row, first }
     }
 
 }
@@ -29,13 +29,13 @@ impl<'a> Props<'a> {
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(30 + props.row.label.len() + props.row.tags.iter().map(|v| v.len()).sum::<usize>());
     out.push_str("<span class=\"chip");
-    fv::class_into(out, true, &[if (props.first) { "first" } else { "" }]);
+    fv::class_into(out, true, &[if props.first { "first" } else { "" }]);
     out.push_str("\">");
     fv::push_int(out, props.row.id);
-    out.push_str(":");
-    fv::escape_into(out, &*props.row.label);
+    out.push(':');
+    fv::escape_into(out, &props.row.label);
     out.push_str(" (");
-    fv::escape_into(out, &*(props.row.tags).iter().map(|v| &**v).collect::<Vec<_>>().join("/"));
+    fv::escape_into(out, &props.row.tags.iter().map(|v| &**v).collect::<Vec<_>>().join("/"));
     out.push_str(")</span>");
 }
 

@@ -23,7 +23,7 @@ pub struct Props<'a> {
 impl<'a> Props<'a> {
     /// Props with its required fields.
     pub fn new(title: impl Into<Cow<'a, str>>, open: bool, inline: bool) -> Self {
-        Props { title: title.into(), open: open, inline: inline }
+        Props { title: title.into(), open, inline }
     }
 
 }
@@ -33,12 +33,12 @@ impl<'a> Props<'a> {
 pub fn render(out: &mut String, props: &Props<'_>, fv_teleports: &fv::Teleports) {
     out.reserve(129 + props.title.len());
     out.push_str("<div class=\"host\"><button>");
-    fv::escape_into(out, &*props.title);
+    fv::escape_into(out, &props.title);
     out.push_str("</button>");
     fv::teleport_into(out, fv_teleports, "#modals", false, &|out: &mut String| {
-        if (props.open) {
+        if props.open {
             out.push_str("<div class=\"modal\"><h2>");
-            fv::escape_into(out, &*props.title);
+            fv::escape_into(out, &props.title);
             out.push_str("</h2>");
             fv::teleport_into(out, fv_teleports, "#modals", false, &|out: &mut String| {
                 out.push_str("<p class=\"toast\">saved</p>");
@@ -48,9 +48,9 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_teleports: &fv::Teleports)
             out.push_str("<!---->");
         }
     });
-    fv::teleport_into(out, fv_teleports, "#overlay", (props.inline), &|out: &mut String| {
+    fv::teleport_into(out, fv_teleports, "#overlay", props.inline, &|out: &mut String| {
         out.push_str("<aside>");
-        fv::escape_into(out, &*props.title);
+        fv::escape_into(out, &props.title);
         out.push_str(" aside</aside>");
     });
     out.push_str("</div>");

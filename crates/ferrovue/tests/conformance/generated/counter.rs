@@ -31,20 +31,20 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::St
     out.push_str("<div data-count=\"");
     fv::push_int(out, fv_stores.counter.count);
     out.push_str("\"><h4>");
-    fv::escape_into(out, &*props.title);
+    fv::escape_into(out, &props.title);
     out.push_str(": ");
-    fv::escape_into(out, &*fv_stores.counter.label);
+    fv::escape_into(out, &fv_stores.counter.label);
     out.push_str("</h4><p>");
     fv::push_int(out, fv_stores.counter.count);
-    out.push_str("|");
-    fv::push_int(out, ((((fv_stores.counter.count) as f64) * ((2i64) as f64)) as i64));
-    out.push_str("|");
-    fv::escape_into(out, &*format!("{} {}", fv::Js(((((fv_stores.counter.count) as f64) * ((2i64) as f64)) as i64)), &*fv_stores.counter.label));
-    out.push_str("|");
+    out.push('|');
+    fv::push_int(out, (fv_stores.counter.count as f64 * 2.0) as i64);
+    out.push('|');
+    fv::escape_into(out, &format!("{} {}", fv::Js((fv_stores.counter.count as f64 * 2.0) as i64), fv_stores.counter.label));
+    out.push('|');
     fv::push_number(out, fv_stores.counter.step);
-    out.push_str("|");
-    fv::push_int(out, ((fv_stores.counter.history).len() as i64));
-    if let Some(n1) = (fv_stores.counter.owner.as_deref()).filter(|v| !(*v).is_empty()) {
+    out.push('|');
+    fv::push_int(out, fv_stores.counter.history.len() as i64);
+    if let Some(n1) = fv_stores.counter.owner.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<b>");
         fv::escape_into(out, n1);
         out.push_str("</b>");
