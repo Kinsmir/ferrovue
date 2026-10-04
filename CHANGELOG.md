@@ -43,6 +43,28 @@ released together and share version numbers.
 - Narrowing as TypeScript narrows: `x !== undefined` as well as `x`, and `!x` or `x === undefined`
   for the `v-else`; in `?:`, `&&` and `||` as well as `v-if`. A value that is always present
   compares unequal to `undefined`; `??` and `?:` between an integer and a `Float` give a `Float`.
+- String methods counted in UTF-16 code units, as JavaScript counts them: `.slice()`, `.substring()`,
+  `.at()`, `.charAt()`, `.indexOf()`, `.lastIndexOf()`, `.split()`, `.replace()` and `.replaceAll()`
+  with string patterns (and JavaScript's `$` replacement patterns), `.padStart()`, `.padEnd()`,
+  `.repeat()`. Half of a surrogate pair is written as U+FFFD, the character a server sends for it;
+  two strings that may each hold one are never compared, searched or joined (README, "Strings").
+  `js_slice`, `js_substring`, `js_at`, `js_char_at`, `js_index_of`, `js_last_index_of`, `js_split`,
+  `js_replace`, `js_replace_all`, `js_pad_start`, `js_pad_end`, `js_repeat`, `js_slice_range` and
+  `js_slice_items` in the crate, held to 4,600 vectors recorded from JavaScript.
+- `<`, `>`, `<=` and `>=` between strings, by UTF-16 code unit: `ferrovue::js_cmp`, held to 400
+  vectors.
+- Array methods with arrow functions: `.filter()`, `.map()`, `.some()`, `.every()`, `.find()`,
+  `.findIndex()`, and `.slice()`, chained and nested, with an index or a destructured item; the lists
+  they make work in `v-for`, `.join()`, `.length`, `.includes()`, `computed` and a child's props.
+- `Record<string, T>` and `{ [key: string]: T }` props as `ferrovue::Record`, which keeps
+  JavaScript's order of keys (array indices first, in numeric order; a key given twice keeps its
+  first place and its last value); `v-for="(value, key, index) in r"`, `Object.keys`,
+  `Object.values`, and `Object.entries` in `v-for`.
+- `Number()`, `parseInt()` (no radix, 10 or 16), `parseFloat()` and `JSON.stringify()` of strings,
+  numbers, booleans and lists of those: `js_number`, `js_parse_int`, `js_parse_float`,
+  `js_json_string` and `js_json_number` in the crate, held to vectors.
+- The differential fuzzer generates all of the above, dictionaries with keys out of JavaScript's
+  order, and compares Vue's HTML as a server sends it.
 
 ### Changed
 
@@ -62,6 +84,8 @@ released together and share version numbers.
   - an integer literal beyond 2⁵³ (`1e21`) is a double, where it generated Rust that did not compile;
   - `?:` and `||` choosing between a string the component holds and one it builds, or a trim of
     one it builds (`(1).toFixed(2).trim()`), compile;
+  - `label ?? (1).toFixed(1)`, an optional string falling back to one built in place, compiles
+    inside `||` and `?:`;
   - a class object whose names repeat, or are array indices (`"0"`, `"12"`), renders as a
     JavaScript object lists them: one entry per name, array indices first in numeric order;
   - integer arithmetic keeps JavaScript's `-0`, so dividing by it is `-Infinity`;

@@ -123,13 +123,15 @@ ferrovue compiles `<script setup lang="ts">` components. Props are declared by t
 
 | Area | Supported |
 |---|---|
-| Prop types | `string`, `number` (integers, `i64`, written and computed as JavaScript does — exact within ±2⁵³), `Float` from `ferrovue/types` (fractions, `f64`), `boolean`, string-literal unions (`"sm" \| "md"`), `T \| undefined`, arrays (`T[]`, `Array<T>`, `readonly T[]`), interfaces and object type aliases (recursive ones too), another component's exported `Props`, `TrustedHtml` |
+| Prop types | `string`, `number` (integers, `i64`, written and computed as JavaScript does — exact within ±2⁵³), `Float` from `ferrovue/types` (fractions, `f64`), `boolean`, string-literal unions (`"sm" \| "md"`), `T \| undefined`, arrays (`T[]`, `Array<T>`, `readonly T[]`), interfaces and object type aliases (recursive ones too), dictionaries (`Record<string, T>`, `{ [key: string]: T }`, `ferrovue::Record` in Rust, which keeps JavaScript's order of keys), another component's exported `Props`, `TrustedHtml` |
 | Shared types | Interfaces and type aliases imported from `.ts` files (generated once, into `types.rs`), from a store's file, or from another component's `.vue` file; objects of a shared type can be passed between components |
 | Props | `withDefaults`, destructured props with defaults (`const { size = "md" } = defineProps<…>()`), optional booleans (Vue casts an absent one to `false`), `defineModel` (named, required, with defaults), components with no props |
 | Setup | `ref`/`shallowRef`, `computed` (an expression or a single `return`), plain `const`/`let`, `.value` in script code, helpers with Rust twins, a plain `<script>` block beside setup. Lifecycle hooks, `watch` (not `immediate`), `defineEmits`, `defineSlots`, `defineOptions`, `defineExpose`, `provide`, template refs (`ref(null)`, `useTemplateRef`) and functions are client-only. The template may name them only from event handlers, which the server drops |
-| Text | `{{ }}` of strings, integers and booleans; `+`, `-`, `*`, `/`, `%`, with integers and fractions as JavaScript computes them; `<`, `>`, `<=`, `>=`, `===`, `!==`; unary `-`, `!`; `??`, `\|\|`, `&&`, `?:`; template literals; optional chaining `a?.b`; `.length`; string `.trim()`, `.trimStart()`, `.trimEnd()`, `.toUpperCase()`, `.toLowerCase()`, `.includes()`, `.startsWith()`, `.endsWith()`; list `.includes()`, `.join()`; `String()`, `.toString()`, `.toFixed()`, `Math.max`/`min`/`abs`/`round`/`floor`/`ceil`/`trunc`; array literals |
+| Text | `{{ }}` of strings, integers and booleans; `+`, `-`, `*`, `/`, `%`, with integers and fractions as JavaScript computes them; `<`, `>`, `<=`, `>=` (between numbers, or between strings by UTF-16 code unit), `===`, `!==`; unary `-`, `!`; `??`, `\|\|`, `&&`, `?:`; template literals; optional chaining `a?.b`; `.length`; `String()`, `.toString()`, `.toFixed()`, `Math.max`/`min`/`abs`/`round`/`floor`/`ceil`/`trunc`; `Number()`, `parseInt()` (no radix, 10 or 16), `parseFloat()`; `JSON.stringify()` of strings, numbers, booleans and lists of those; array literals |
+| Strings | `.trim()`, `.trimStart()`, `.trimEnd()`, `.toUpperCase()`, `.toLowerCase()`, `.includes()`, `.startsWith()`, `.endsWith()`, `.indexOf()`, `.lastIndexOf()`, `.slice()`, `.substring()`, `.at()`, `.charAt()`, `.split()`, `.replace()` and `.replaceAll()` with string patterns (`$&`, `` $` ``, `$'`, `$$` read as JavaScript reads them), `.padStart()`, `.padEnd()`, `.repeat()`; indices and lengths count UTF-16 code units, as JavaScript's do (see [Strings](#strings)) |
 | Conditions | `v-if` / `v-else-if` / `v-else`, `?:`, `&&` and `||`, with optional values narrowed as TypeScript narrows them: `v-if="user"`, `user !== undefined`, and `!user` or `user === undefined` for the `v-else` |
-| Lists | `v-for` over arrays (of strings, numbers, objects or child props), array literals and number ranges (`n in 5`); with an index; with destructured items (`{ id, name } in rows`); nested; on `<template>` |
+| Lists | `v-for` over arrays (of strings, numbers, objects or child props), array literals and number ranges (`n in 5`); with an index; with destructured items (`{ id, name } in rows`); nested; on `<template>`. `.includes()`, `.join()`, and `.filter()`, `.map()`, `.some()`, `.every()`, `.find()`, `.findIndex()` with an arrow function of the item (a name, or destructured) and its index, whose body is an expression, narrowing inside as outside; `.slice()`; chained and nested; a computed list read by `v-for`, `.join()`, `.length`, `.includes()`, kept by `computed`, or handed to a child |
+| Dictionaries | `v-for="(value, key, index) in r"` over a `Record<string, T>`, and `([key, value], index) in Object.entries(r)`, in JavaScript's order: keys that are array indices first, in numeric order, then the others as the props give them; `Object.keys(r)`, `Object.values(r)`, `Object.entries(r).length`; handed to a child |
 | Attributes | static and bound attributes, boolean attributes, `:hidden`, `data-*` and `aria-*`, `v-bind` objects |
 | `class` | strings, arrays, objects (`{ active: on }`, computed keys), `cond && "x"`, `cond ? "x" : null`, merged with a static `class` |
 | `style` | objects (camelCase or kebab-case keys, `--custom` properties), arrays of objects, strings, merged with a static `style`, and `v-show`; later values override earlier ones as in Vue. A global `<style>` block is allowed |
@@ -151,12 +153,58 @@ Refused at compile time, each with an error that names the construct:
 - `watchEffect`, `watch` with `immediate`, `onServerPrefetch`, top-level `await`, and statements in setup that change state
 - `route.meta` and `route.matched`
 - Pinia getters that read `this` or return a function
-- ordering comparisons of strings
+- ordering comparisons between a string and a number, which JavaScript makes numeric
+- regular expressions (`.replace(/x/g, …)`, `.split(/,/)`), replacement functions, a search's
+  starting position or a split's limit (`.includes(x, 3)`, `.split(",", 2)`), `.toLocaleUpperCase()`
+  and `.toLocaleLowerCase()` (the server's locale is not the browser's), `parseInt` with another radix
+  or of a number, `.repeat()` by a negative literal
+- array methods given anything but an arrow function whose body is an expression (`.filter(Boolean)`,
+  `x => { return … }`), `.map()` to optional values, a computed list as a slot prop
+- a dictionary's field read by name (`r.key`, `r[key]`), which may be absent although TypeScript says
+  it is not; `Object.entries()` anywhere but as a `v-for`'s source; dictionaries of optional values
+- two strings that may each hold half of a surrogate pair compared, searched or joined (see
+  [Strings](#strings))
 - `null`
 - any method call without a Rust twin
 
 An object prop handed to a child component is cloned. Its strings are `Cow`s, so borrowed ones
 cost nothing to copy.
+
+### Strings
+
+String methods count as JavaScript counts: in UTF-16 code units, so `"🦀".length` is 2 and
+`"🦀 crab".slice(3)` is `"crab"`. Strings are ordered by code unit too, which puts every character
+from U+E000 to U+FFFF after one beyond U+FFFF. Each runtime routine is held to vectors recorded from
+JavaScript (`crates/ferrovue/tests/vectors/`).
+
+A JavaScript string can hold half of a surrogate pair — `"🦀".slice(0, 1)`, `.charAt(1)`,
+`.split("")` — and a Rust string cannot. ferrovue writes U+FFFD in its place, which is exactly what
+the page carries anyway: a server sends Vue's string as UTF-8, and UTF-8 writes each half as U+FFFD
+(`res.end`, `Buffer.from` and `TextEncoder` all do). Its length is the same. Where the half itself
+would decide the result, ferrovue refuses at compile time: two strings that may each hold a half
+compared or ordered, side by side (`a.slice(0, 1) + b.slice(1)`, a `.join("")`, a class object's
+names), one searched for in another (`.includes(a.charAt(0))`), repeated or padded where halves
+would join, ordered against anything but a literal below U+D800, or written by `JSON.stringify`
+(which escapes it) or into a `<RouterLink>` (whose encoding throws). Three corners remain, by design:
+
+- a string holding U+FFFD in the props compares equal to a half, or finds one, where JavaScript
+  would tell them apart;
+- a half handed to a child component or a helper is U+FFFD there, which matters only if that
+  component then compares or joins it as above;
+- Vue itself cannot hydrate such text cleanly: the browser reads U+FFFD where its own render holds
+  the half, and reports a mismatch.
+
+Where JavaScript throws, the generated code panics, as Vue's render rejects: a negative or infinite
+`.repeat()` count, and a `.repeat()`, `.padStart()` or `.padEnd()` past the longest string V8 makes
+(2²⁹ − 24 code units).
+
+### Dictionaries
+
+A `Record<string, T>` prop is a `ferrovue::Record`, built from pairs —
+`[("b", 1), ("10", 2)].into_iter().collect()` — or read from JSON. It holds its keys in the order a
+JavaScript object does, array indices (`"0"` to `"4294967294"`) first in numeric order, so `v-for`
+walks them as Vue does, and it is written back as JSON in that order, which the browser reads back
+the same.
 
 ### Translating
 
