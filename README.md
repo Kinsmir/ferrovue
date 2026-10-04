@@ -1,5 +1,11 @@
 # ferrovue
 
+[![crates.io](https://img.shields.io/crates/v/ferrovue.svg)](https://crates.io/crates/ferrovue)
+[![docs.rs](https://img.shields.io/docsrs/ferrovue)](https://docs.rs/ferrovue)
+[![npm](https://img.shields.io/npm/v/ferrovue.svg)](https://www.npmjs.com/package/ferrovue)
+[![CI](https://github.com/Kinsmir/ferrovue/actions/workflows/ci.yml/badge.svg)](https://github.com/Kinsmir/ferrovue/actions/workflows/ci.yml)
+[![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#licence)
+
 Vue single-file components compiled to Rust render functions. With them, a Rust server renders a
 component's HTML with no JavaScript at run time, and the browser hydrates the result with the same
 `.vue` file.
@@ -19,8 +25,8 @@ The project has two halves:
 
 | | What it is | Published as |
 |---|---|---|
-| `packages/ferrovue` | The compiler and the `ferrovue` command (TypeScript, runs on Node) | npm: `ferrovue` |
-| `crates/ferrovue` | The runtime the generated Rust calls: escaping, slots, islands, `<RouterLink>` matching | crates.io: `ferrovue` |
+| `packages/ferrovue` | The compiler and the `ferrovue` command (TypeScript, runs on Node) | npm: [`ferrovue`](https://www.npmjs.com/package/ferrovue) |
+| `crates/ferrovue` | The runtime the generated Rust calls: escaping, slots, islands, `<RouterLink>` matching | crates.io: [`ferrovue`](https://crates.io/crates/ferrovue) ([API docs](https://docs.rs/ferrovue)) |
 
 ## Quick start
 
