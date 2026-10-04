@@ -1,0 +1,1 @@
+{"users":[{"id":1,"name":"Ann","avatar":"/a.png","roles":[{"name":"owner","admin":true},{"name":"dev","admin":false}],"size":"sm"},{"id":2,"name":"<Bo>","roles":[]}],"featured":{"id":2,"name":"<Bo>","roles":[]},"items":[{"id":5,"name":"five"}]}

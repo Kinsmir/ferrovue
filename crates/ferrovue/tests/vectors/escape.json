@@ -1,0 +1,12 @@
+[
+  ["", ""],
+  ["plain text", "plain text"],
+  ["a\"b&c'd<e>f", "a&quot;b&amp;c&#39;d&lt;e&gt;f"],
+  ["&amp;", "&amp;amp;"],
+  ["<script>alert(1)</script>", "&lt;script&gt;alert(1)&lt;/script&gt;"],
+  ["naïve café 日本 🦀", "naïve café 日本 🦀"],
+  ["`backtick` =equals= /slash/", "`backtick` =equals= /slash/"],
+  ["\u0000  ", "\u0000  "],
+  ["<<>>", "&lt;&lt;&gt;&gt;"],
+  ["🦀<🦀>🦀", "🦀&lt;🦀&gt;🦀"]
+]

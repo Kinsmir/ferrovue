@@ -1,0 +1,383 @@
+//! Vue templates as Rust render functions.
+//!
+//! The ferrovue compiler reads a `.vue` component, takes what Vue's own SSR compiler makes of its
+//! template, and writes a Rust function that produces the same bytes. A server can then render the
+//! component with no JavaScript at run time, and the browser hydrates the markup it was sent. This
+//! crate is what those generated functions call: the Rust twins of the `@vue/server-renderer` and
+//! `@vue/shared` routines a compiled template uses, which reproduce Vue's output byte for byte —
+//! a single differing byte is a hydration mismatch in the browser.
+//!
+//! [`Html`] is the one type here that writes raw bytes. Generated code is what builds it, and it
+//! writes by calling a generated renderer, whose every interpolation goes through [`escape_into`].
+
+use serde::Serialize;
+
+/// A generated renderer applied to its props, written straight into the caller's buffer: no buffer
+/// of its own, and no copy. `F` is the renderer: a plain function for a component that needs only
+/// its props, a closure holding the slots and the route for one that takes those as well.
+pub struct Html<'p, P, F = fn(&mut String, &P)> {
+    props: &'p P,
+    render: F,
+    /// `Some(name)` wraps the markup as a hydratable island; `None` is the markup alone.
+    island: Option<&'static str>,
+}
+
+impl<'p, P: Serialize, F: Fn(&mut String, &P)> Html<'p, P, F> {
+    /// The component's markup, which the client never hydrates.
+    ///
+    /// For generated code. Anything else that builds one can write any bytes it likes.
+    #[doc(hidden)]
+    pub fn markup(props: &'p P, render: F) -> Self {
+        Html {
+            props,
+            render,
+            island: None,
+        }
+    }
+
+    /// The component as an island the client hydrates. For generated code, as [`Html::markup`] is.
+    #[doc(hidden)]
+    pub fn island(name: &'static str, props: &'p P, render: F) -> Self {
+        Html {
+            props,
+            render,
+            island: Some(name),
+        }
+    }
+
+    /// Write the markup onto the end of `buf`.
+    pub fn render_to(&self, buf: &mut String) {
+        match self.island {
+            None => (self.render)(buf, self.props),
+            Some(name) => island_into(buf, name, self.props, &self.render),
+        }
+    }
+
+    /// The markup as a string of its own.
+    pub fn into_string(self) -> String {
+        let mut out = String::new();
+        self.render_to(&mut out);
+        out
+    }
+}
+
+#[cfg(feature = "maud")]
+impl<P: Serialize, F: Fn(&mut String, &P)> maud::Render for Html<'_, P, F> {
+    fn render_to(&self, buf: &mut String) {
+        Html::render_to(self, buf);
+    }
+}
+
+/// What a parent puts in one of a component's slots.
+#[derive(Clone, Copy)]
+pub struct Slot<'s> {
+    body: Body<'s>,
+}
+
+#[derive(Clone, Copy)]
+enum Body<'s> {
+    /// Always content, whatever it writes — as a component in a slot always is to Vue.
+    Content(&'s dyn Fn(&mut String)),
+    /// A generated parent's markup, which reports whether it wrote anything but comments.
+    Markup(&'s dyn Fn(&mut String) -> bool),
+}
+
+impl<'s> Slot<'s> {
+    /// Content for a slot: another component's render, or markup the caller already holds. The
+    /// slot's fallback never replaces it.
+    pub fn new(render: &'s dyn Fn(&mut String)) -> Self {
+        Slot {
+            body: Body::Content(render),
+        }
+    }
+
+    /// A generated parent's slot content, returning whether it pushed anything but a comment.
+    #[doc(hidden)]
+    pub fn markup(render: &'s dyn Fn(&mut String) -> bool) -> Self {
+        Slot {
+            body: Body::Markup(render),
+        }
+    }
+
+    /// Write the content alone, as `<RouterView>` does with the page it shows.
+    pub fn render_to(&self, out: &mut String) {
+        match self.body {
+            Body::Content(f) => f(out),
+            Body::Markup(f) => {
+                f(out);
+            }
+        }
+    }
+}
+
+/// What a [`hole`] writes. Every interpolated value has its `<` escaped, so only a template's own
+/// markup could spell this, and no template writes an element called `fv-hole`.
+const HOLE: &str = "<fv-hole>";
+
+fn write_hole(out: &mut String) {
+    out.push_str(HOLE);
+}
+
+/// A slot whose content the caller writes itself, later: render with holes, [`split_holes`] the
+/// output, and write the pieces with each hole's content between them — which is how a page streams
+/// its parts in the order they are ready. A hole is content to the slot, so its fallback never
+/// shows.
+pub fn hole() -> Slot<'static> {
+    Slot::new(&write_hole)
+}
+
+/// The pieces of a render between its holes, in order: one more than there were holes.
+pub fn split_holes(rendered: &str) -> Vec<&str> {
+    rendered.split(HOLE).collect()
+}
+
+/// `ssrRenderSlot`: the slot's content between fragment markers, or its fallback when it was given
+/// none — or only comments, which is what Vue reads as nothing.
+///
+/// Returns whether the slot's own content wrote anything but comments, which is what decides
+/// whether slot content that forwards this slot is itself empty. The fallback reports for itself.
+pub fn slot_into(
+    out: &mut String,
+    slot: Option<Slot<'_>>,
+    fallback: Option<&mut dyn FnMut(&mut String)>,
+) -> bool {
+    out.push_str("<!--[-->");
+    let filled = match slot.map(|s| s.body) {
+        Some(Body::Content(f)) => {
+            f(out);
+            true
+        }
+        Some(Body::Markup(f)) => {
+            let start = out.len();
+            let filled = f(out);
+            // Vue drops content of comments alone whether or not there is a fallback to show instead.
+            if !filled {
+                out.truncate(start);
+                if let Some(fallback) = fallback {
+                    fallback(out);
+                }
+            }
+            filled
+        }
+        None => {
+            if let Some(fallback) = fallback {
+                fallback(out);
+            }
+            false
+        }
+    };
+    out.push_str("<!--]-->");
+    filled
+}
+
+/// `ssrRenderSlot` for a scoped slot: the content, given the props the outlet passes it, between
+/// fragment markers — or the fallback when there is no content, or the content wrote only comments.
+///
+/// `slot` is a component's `Slots` field for a scoped slot, a closure taking the slot's props and
+/// returning whether it wrote anything but comments; one written by hand returns `true`. Returns
+/// whether the content was filled, as [`slot_into`] does.
+pub fn scoped_slot_into<P: ?Sized, F: Fn(&mut String, &P) -> bool + ?Sized>(
+    out: &mut String,
+    slot: Option<&F>,
+    props: &P,
+    fallback: Option<&mut dyn FnMut(&mut String)>,
+) -> bool {
+    out.push_str("<!--[-->");
+    let start = out.len();
+    let filled = slot.is_some_and(|f| f(out, props));
+    if !filled {
+        // Vue drops content of comments alone, and shows the fallback in its place.
+        out.truncate(start);
+        if let Some(fallback) = fallback {
+            fallback(out);
+        }
+    }
+    out.push_str("<!--]-->");
+    filled
+}
+
+/// HTML that is safe to write into a page as it is: what `v-html` may render.
+///
+/// The compiler accepts `v-html` only on a prop declared as `TrustedHtml` (from
+/// `ferrovue/types`), and the project's configuration maps that to one Rust type implementing this
+/// trait. Implement it only for a type whose every value has already been made safe — the output
+/// of a sanitiser, never a string that merely looks fine — because that is the whole of what stands
+/// between the value and the page.
+pub trait TrustedHtml {
+    /// The HTML, which is written into the page exactly as it is.
+    fn trusted_html(&self) -> &str;
+}
+
+/// `v-html`: the value, unescaped. Only a [`TrustedHtml`] can reach it.
+pub fn trusted_into(out: &mut String, html: &impl TrustedHtml) {
+    out.push_str(html.trusted_html());
+}
+
+/// `escapeHtml`: `"`, `&`, `'`, `<` and `>`, and nothing else.
+pub fn escape_into(out: &mut String, s: &str) {
+    // Most strings need nothing escaped. A `fold` rather than `any` because it does not stop early,
+    // which is what lets the compiler check the bytes in vector-width blocks; the string is then
+    // written in one copy.
+    let special = s.bytes().fold(false, |found, b| {
+        found | matches!(b, b'"' | b'&' | b'\'' | b'<' | b'>')
+    });
+    if !special {
+        out.push_str(s);
+        return;
+    }
+    let mut last = 0;
+    for (i, b) in s.bytes().enumerate() {
+        let rep = match b {
+            b'"' => "&quot;",
+            b'&' => "&amp;",
+            b'\'' => "&#39;",
+            b'<' => "&lt;",
+            b'>' => "&gt;",
+            _ => continue,
+        };
+        out.push_str(&s[last..i]);
+        out.push_str(rep);
+        last = i + 1;
+    }
+    out.push_str(&s[last..]);
+}
+
+/// `String(n)` for an integer, which is what `toDisplayString` and `escapeHtml` make of a number.
+pub fn push_int(out: &mut String, n: i64) {
+    use std::fmt::Write;
+    let _ = write!(out, "{n}");
+}
+
+/// `String.prototype.length`: UTF-16 code units, which is what a template's `.length` counts — not
+/// the UTF-8 bytes of `str::len`, nor the scalar values of `chars().count()`.
+pub fn js_length(s: &str) -> i64 {
+    // Each scalar value is one code unit, or two when it is outside the Basic Multilingual Plane —
+    // exactly the four-byte UTF-8 sequences. Most strings are ASCII, where it is the length.
+    if s.is_ascii() {
+        return s.len() as i64;
+    }
+    s.chars().map(char::len_utf16).sum::<usize>() as i64
+}
+
+/// `String.prototype.trim`: ECMAScript's WhiteSpace and LineTerminator sets, which are not Rust's
+/// `char::is_whitespace` — JavaScript trims U+FEFF and keeps U+0085.
+pub fn js_trim(s: &str) -> &str {
+    s.trim_matches(is_js_space)
+}
+
+/// `String.prototype.trimStart`: [`js_trim`] at the start alone.
+pub fn js_trim_start(s: &str) -> &str {
+    s.trim_start_matches(is_js_space)
+}
+
+/// `String.prototype.trimEnd`: [`js_trim`] at the end alone.
+pub fn js_trim_end(s: &str) -> &str {
+    s.trim_end_matches(is_js_space)
+}
+
+fn is_js_space(c: char) -> bool {
+    matches!(
+        c,
+        '\u{9}' | '\u{A}' | '\u{B}' | '\u{C}' | '\u{D}' | ' ' | '\u{A0}' | '\u{1680}' | '\u{2000}'
+            ..='\u{200A}'
+                | '\u{2028}'
+                | '\u{2029}'
+                | '\u{202F}'
+                | '\u{205F}'
+                | '\u{3000}'
+                | '\u{FEFF}'
+    )
+}
+
+/// `escapeHtml(normalizeClass([...]))` for a list of strings: each one trimmed, the empty ones
+/// dropped, the rest joined with one space. `after` says a class has already been written, so the
+/// first item written here needs a separator too.
+pub fn class_into(out: &mut String, after: bool, items: &[&str]) {
+    let mut sep = after;
+    for item in items {
+        let item = js_trim(item);
+        if item.is_empty() {
+            continue;
+        }
+        if sep {
+            out.push(' ');
+        }
+        escape_into(out, item);
+        sep = true;
+    }
+}
+
+/// The stores' state as the client reads it back before it hydrates: a `<script type="application/json">`,
+/// which a `script-src 'self'` policy does not run, so the page needs no nonce for it. `<`, `>`, `&`
+/// and the two line separators are written as JSON escapes, so no value can end the element or be
+/// read as markup inside it.
+pub fn state_script_into(out: &mut String, id: &str, state: &impl Serialize) {
+    out.push_str("<script type=\"application/json\" id=\"");
+    escape_into(out, id);
+    out.push_str("\">");
+    // As in `island_into`: a struct of strings, numbers and lists cannot fail to serialise, and if it
+    // somehow did the client would find no state and render from its own.
+    let json = serde_json::to_string(state).unwrap_or_default();
+    json_escaped_into(out, &json);
+    out.push_str("</script>");
+}
+
+/// JSON with `<`, `>`, `&`, U+2028 and U+2029 written as escapes. The runs between them are copied
+/// whole: every byte matched is the first of its character, so each cut is at a char boundary.
+fn json_escaped_into(out: &mut String, json: &str) {
+    out.reserve(json.len());
+    let bytes = json.as_bytes();
+    let (mut last, mut i) = (0, 0);
+    while i < bytes.len() {
+        let (rep, width) = match bytes[i] {
+            b'<' => ("\\u003c", 1),
+            b'>' => ("\\u003e", 1),
+            b'&' => ("\\u0026", 1),
+            // U+2028 and U+2029 are E2 80 A8 and E2 80 A9.
+            0xE2 if bytes.get(i + 1) == Some(&0x80) && bytes.get(i + 2) == Some(&0xA8) => {
+                ("\\u2028", 3)
+            }
+            0xE2 if bytes.get(i + 1) == Some(&0x80) && bytes.get(i + 2) == Some(&0xA9) => {
+                ("\\u2029", 3)
+            }
+            _ => {
+                i += 1;
+                continue;
+            }
+        };
+        out.push_str(&json[last..i]);
+        out.push_str(rep);
+        i += width;
+        last = i;
+    }
+    out.push_str(&json[last..]);
+}
+
+/// The island wrapper: the component's own markup inside the element the client mounts on, with
+/// the props it was rendered from as JSON in an attribute — never a `<script>`, so a page with a
+/// `script-src 'self'` policy needs no nonce for it.
+fn island_into<P: Serialize>(
+    out: &mut String,
+    name: &str,
+    props: &P,
+    render: &impl Fn(&mut String, &P),
+) {
+    out.push_str("<div data-island=\"");
+    escape_into(out, name);
+    out.push_str("\" data-props=\"");
+    // A struct of strings, integers and booleans cannot fail to serialise; if it somehow did, the
+    // client finds malformed props and leaves the server's markup as it is. Serialised whole and
+    // then escaped: `serde_json` writes in many small pieces, and escaping each one costs more
+    // than the one extra buffer.
+    let json = serde_json::to_string(props).unwrap_or_default();
+    escape_into(out, &json);
+    out.push_str("\">");
+    render(out, props);
+    out.push_str("</div>");
+}
+
+mod router;
+pub use router::{Link, Route, Router, query_into};
+
+#[cfg(test)]
+mod tests;

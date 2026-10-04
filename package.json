@@ -1,0 +1,31 @@
+{
+  "name": "ferrovue-workspace",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.5.1",
+  "scripts": {
+    "build": "pnpm -r run build",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "conformance:generate": "cd crates/ferrovue/tests/conformance && node ../../../../packages/ferrovue/src/cli.ts",
+    "conformance:check": "cd crates/ferrovue/tests/conformance && node ../../../../packages/ferrovue/src/cli.ts --check",
+    "conformance:record": "FERROVUE_FIXTURES_WRITE=1 vitest run packages/ferrovue/test/conformance.test.ts",
+    "vectors:record": "FERROVUE_VECTORS_WRITE=1 vitest run packages/ferrovue/test/router.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.2",
+    "@vitejs/plugin-vue": "^6.0.9",
+    "@vue/compiler-sfc": "3.5.43",
+    "@vue/server-renderer": "3.5.43",
+    "@vue/shared": "3.5.43",
+    "ferrovue": "workspace:*",
+    "happy-dom": "^20.14.5",
+    "pinia": "^4.0.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0",
+    "vitest": "^5.0.1",
+    "vue": "3.5.43",
+    "vue-router": "^5.3.1"
+  }
+}

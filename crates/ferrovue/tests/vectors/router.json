@@ -1,0 +1,479 @@
+{
+  "routes": [
+    "/",
+    "/blog/latest",
+    "/blog/:slug",
+    "/blog/:slug/:tab",
+    "/docs/:section",
+    "/docs/:section/:page(.*)",
+    "/users/:id/posts/:post/:title",
+    "/users/:id",
+    "/search"
+  ],
+  "links": [
+    [
+      "/blog/intro",
+      "/blog/intro"
+    ],
+    [
+      "/blog/intro",
+      "/blog/intro/"
+    ],
+    [
+      "/blog/intro/",
+      "/blog/intro"
+    ],
+    [
+      "/blog/intro",
+      "/blog/intro?sort=new#c"
+    ],
+    [
+      "/blog/intro?x=1",
+      "/blog/intro"
+    ],
+    [
+      "/blog/intro/edit?x=1",
+      "/blog/intro/edit"
+    ],
+    [
+      "/blog/intro/edit",
+      "/blog/intro"
+    ],
+    [
+      "/blog/intro",
+      "/blog/Intro"
+    ],
+    [
+      "/blog/intro",
+      "/BLOG/intro"
+    ],
+    [
+      "/blog/intro",
+      "/blog/a%20b"
+    ],
+    [
+      "/blog/a%20b",
+      "/blog/a b"
+    ],
+    [
+      "/blog/a%zz",
+      "/blog/a%zz"
+    ],
+    [
+      "/blog/a%ff",
+      "/blog/a%ff"
+    ],
+    [
+      "/blog/a%2Fb",
+      "/blog/a%2Fb"
+    ],
+    [
+      "/blog/latest",
+      "/blog/latest"
+    ],
+    [
+      "/blog/latest",
+      "/blog/intro"
+    ],
+    [
+      "/blog/Latest",
+      "/blog/latest"
+    ],
+    [
+      "/docs/guide",
+      "/docs/guide"
+    ],
+    [
+      "/docs/guide/a/b",
+      "/docs/guide/a/b"
+    ],
+    [
+      "/docs/guide/a/b",
+      "/docs/guide/a/b/"
+    ],
+    [
+      "/docs/guide/",
+      "/docs/guide"
+    ],
+    [
+      "/docs/guide/a%0Ab",
+      "/docs/guide/a%0Ab"
+    ],
+    [
+      "/users/7/posts/3/hello",
+      "../edit"
+    ],
+    [
+      "/users/7/posts/3/hello",
+      "z"
+    ],
+    [
+      "/users/7/posts/3/hello",
+      "./z"
+    ],
+    [
+      "/users/7/posts/3/hello",
+      "../../.."
+    ],
+    [
+      "/users/7/posts/3/hello",
+      "../../../../../../x"
+    ],
+    [
+      "/users/7/posts/3/hello",
+      "."
+    ],
+    [
+      "/users/7/posts/3/hello",
+      ".."
+    ],
+    [
+      "/blog/intro",
+      ""
+    ],
+    [
+      "/blog/intro",
+      "?sort=new"
+    ],
+    [
+      "/blog/intro",
+      "#top"
+    ],
+    [
+      "/blog/intro",
+      "?a#b"
+    ],
+    [
+      "/blog/intro",
+      "#b?a"
+    ],
+    [
+      "/blog/intro",
+      "/blog/x?"
+    ],
+    [
+      "/blog/intro",
+      "/blog/x#"
+    ],
+    [
+      "/",
+      "/"
+    ],
+    [
+      "/",
+      ""
+    ],
+    [
+      "/",
+      "/?"
+    ],
+    [
+      "/search?q=a",
+      "/search?q=b"
+    ],
+    [
+      "/search",
+      "/Search"
+    ],
+    [
+      "/nomatch",
+      "/nomatch"
+    ],
+    [
+      "/blog/intro",
+      "//evil.example/x"
+    ],
+    [
+      "/blog/intro",
+      "javascript:alert(1)"
+    ],
+    [
+      "/blog/intro",
+      "https://example.com/"
+    ],
+    [
+      "/blog/intro",
+      "/blog/a\"b<c>&d'e"
+    ],
+    [
+      "/blog/intro",
+      "/blog/é"
+    ],
+    [
+      "/blog/%C3%A9",
+      "/blog/é"
+    ],
+    [
+      "/users/x",
+      "/users/x/"
+    ],
+    [
+      "/users/x",
+      "/users/x//"
+    ],
+    [
+      "/blog//x",
+      "/blog//x"
+    ]
+  ],
+  "names": {
+    "/": "home",
+    "/blog/:slug": "post",
+    "/blog/:slug/:tab": "post-tab",
+    "/docs/:section/:page(.*)": "doc",
+    "/users/:id": "user",
+    "/search": "search"
+  },
+  "objects": [
+    [
+      "/",
+      {
+        "name": "post",
+        "params": {
+          "slug": "intro"
+        }
+      }
+    ],
+    [
+      "/blog/intro",
+      {
+        "name": "post",
+        "params": {
+          "slug": "intro"
+        }
+      }
+    ],
+    [
+      "/blog/intro",
+      {
+        "name": "post",
+        "params": {
+          "slug": "Intro"
+        }
+      }
+    ],
+    [
+      "/blog/a%20b",
+      {
+        "name": "post",
+        "params": {
+          "slug": "a b"
+        }
+      }
+    ],
+    [
+      "/",
+      {
+        "name": "post",
+        "params": {
+          "slug": "a/b?c#d&e=f"
+        }
+      }
+    ],
+    [
+      "/",
+      {
+        "name": "post",
+        "params": {
+          "slug": "é 🦀 %41 +|[]{}^`\"<>"
+        }
+      }
+    ],
+    [
+      "/blog/latest",
+      {
+        "name": "post",
+        "params": {
+          "slug": "latest"
+        }
+      }
+    ],
+    [
+      "/blog/x/edit",
+      {
+        "name": "post-tab",
+        "params": {
+          "slug": "x",
+          "tab": "edit"
+        }
+      }
+    ],
+    [
+      "/",
+      {
+        "name": "doc",
+        "params": {
+          "section": "guide",
+          "page": "a/b"
+        }
+      }
+    ],
+    [
+      "/",
+      {
+        "name": "home"
+      }
+    ],
+    [
+      "/",
+      {
+        "name": "search",
+        "query": [
+          [
+            "q",
+            "a b+c&d=e#f"
+          ]
+        ]
+      }
+    ],
+    [
+      "/search?q=x",
+      {
+        "name": "search",
+        "query": [
+          [
+            "q",
+            "x"
+          ],
+          [
+            "page",
+            "2"
+          ]
+        ]
+      }
+    ],
+    [
+      "/",
+      {
+        "name": "search",
+        "query": [
+          [
+            "weird key=&",
+            "v"
+          ],
+          [
+            "",
+            "empty key"
+          ],
+          [
+            "e",
+            ""
+          ]
+        ]
+      }
+    ],
+    [
+      "/",
+      {
+        "name": "search",
+        "query": [
+          [
+            "q",
+            "é`{}^|[]'\"<>"
+          ]
+        ]
+      }
+    ],
+    [
+      "/",
+      {
+        "name": "user",
+        "params": {
+          "id": "7"
+        },
+        "hash": "#top"
+      }
+    ],
+    [
+      "/",
+      {
+        "name": "user",
+        "params": {
+          "id": "7"
+        },
+        "hash": "#a b{}^é"
+      }
+    ],
+    [
+      "/users/7",
+      {
+        "name": "user",
+        "params": {
+          "id": "7"
+        },
+        "query": [
+          [
+            "tab",
+            "posts"
+          ]
+        ],
+        "hash": "#x"
+      }
+    ],
+    [
+      "/",
+      {
+        "path": "/blog/intro"
+      }
+    ],
+    [
+      "/blog/intro",
+      {
+        "path": "/blog/intro",
+        "query": [
+          [
+            "x",
+            "1"
+          ]
+        ]
+      }
+    ],
+    [
+      "/blog/intro/",
+      {
+        "path": "edit"
+      }
+    ],
+    [
+      "/blog/intro",
+      {
+        "path": "/blog/a b"
+      }
+    ],
+    [
+      "/",
+      {
+        "path": "/nowhere",
+        "hash": "#h"
+      }
+    ]
+  ],
+  "locations": [
+    "/",
+    "/blog/intro",
+    "/blog/a%20b#x%20y",
+    "/blog/intro/edit?x=1#h",
+    "/docs/guide/a/b%2Fc",
+    "/users/7#",
+    "/nomatch",
+    "/blog/latest",
+    "/search?q=1"
+  ],
+  "bases": [
+    [
+      "/app",
+      "/blog/intro",
+      "/blog/intro"
+    ],
+    [
+      "/app/",
+      "/blog/intro",
+      "/users/7?x#y"
+    ],
+    [
+      "app",
+      "/",
+      "/"
+    ]
+  ]
+}

@@ -1,0 +1,7 @@
+packages:
+  - packages/*
+
+# esbuild (a Vite dependency) unpacks its platform binary in a postinstall script, which pnpm blocks
+# by default; allowed here so CI needs no interactive answer.
+allowBuilds:
+  esbuild: true

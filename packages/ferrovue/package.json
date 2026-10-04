@@ -1,0 +1,79 @@
+{
+  "name": "ferrovue",
+  "version": "0.1.0",
+  "description": "Vue templates compiled to Rust render functions: server-side rendering with no JavaScript at run time",
+  "license": "MIT OR Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kinsmir/ferrovue.git",
+    "directory": "packages/ferrovue"
+  },
+  "homepage": "https://github.com/Kinsmir/ferrovue#readme",
+  "bugs": "https://github.com/Kinsmir/ferrovue/issues",
+  "keywords": [
+    "vue",
+    "ssr",
+    "rust",
+    "compiler",
+    "hydration"
+  ],
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE-MIT",
+    "LICENSE-APACHE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/compiler.d.ts",
+      "default": "./dist/compiler.js"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "default": "./dist/types.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "default": "./dist/client.js"
+    }
+  },
+  "bin": {
+    "ferrovue": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepack": "pnpm run build && cp ../../README.md ../../LICENSE-MIT ../../LICENSE-APACHE ."
+  },
+  "dependencies": {
+    "@babel/parser": "^7.29.9",
+    "@vue/compiler-sfc": "3.5.43",
+    "@vue/shared": "3.5.43"
+  },
+  "devDependencies": {
+    "@vue/server-renderer": "3.5.43",
+    "pinia": "^4.0.3",
+    "vue": "3.5.43",
+    "vue-router": "^5.3.1"
+  },
+  "peerDependencies": {
+    "vue": "3.5.43",
+    "vue-router": "^5.3.1",
+    "pinia": "^4.0.3"
+  },
+  "peerDependenciesMeta": {
+    "vue-router": {
+      "optional": true
+    },
+    "pinia": {
+      "optional": true
+    }
+  }
+}

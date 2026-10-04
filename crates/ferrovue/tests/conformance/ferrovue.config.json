@@ -1,0 +1,46 @@
+{
+  "components": "components",
+  "out": "generated",
+  "routes": "routes.json",
+  "stores": "stores",
+  "trustedHtml": "crate::Sanitised",
+  "helpers": {
+    "module": "./helpers",
+    "functions": {
+      "plural": {
+        "rust": "crate::helpers::plural",
+        "params": [
+          "int"
+        ],
+        "returns": "string",
+        "maxLen": 1
+      },
+      "tone": {
+        "rust": "crate::helpers::tone",
+        "params": [
+          "int?"
+        ],
+        "returns": "string",
+        "maxLen": 8
+      },
+      "isEven": {
+        "rust": "crate::helpers::is_even",
+        "params": [
+          "int"
+        ],
+        "returns": "bool"
+      },
+      "orDash": {
+        "rust": "crate::helpers::or_dash",
+        "params": [
+          "string?"
+        ],
+        "returns": "string",
+        "maxLen": 1
+      }
+    }
+  },
+  "clientDirectives": [
+    "focus"
+  ]
+}

@@ -1,0 +1,5 @@
+{
+  "components": "components",
+  "out": "src/generated",
+  "routes": "routes.json"
+}

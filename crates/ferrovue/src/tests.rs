@@ -1,0 +1,296 @@
+use super::*;
+
+#[test]
+fn escape_covers_the_five_characters_vue_escapes() {
+    let mut out = String::new();
+    escape_into(&mut out, r#"a"b&c'd<e>f"#);
+    assert_eq!(out, "a&quot;b&amp;c&#39;d&lt;e&gt;f");
+}
+
+#[test]
+fn escape_writes_a_clean_string_unchanged() {
+    let mut out = String::from("x");
+    escape_into(&mut out, "naïve café 日本");
+    assert_eq!(out, "xnaïve café 日本");
+}
+
+/// `tests/vectors/trim.json`, whose answers the TypeScript side (`packages/ferrovue/test/vectors.test.ts`)
+/// takes from JavaScript's own `String.prototype.trim`.
+#[test]
+fn js_trim_is_javascripts_trim() {
+    let vectors: Vec<(String, String)> =
+        serde_json::from_str(include_str!("../tests/vectors/trim.json")).expect("trim vectors");
+    assert!(vectors.len() >= 6, "the vectors were not all read");
+    for (input, want) in &vectors {
+        assert_eq!(js_trim(input), want, "trim({input:?})");
+    }
+}
+
+/// `tests/vectors/escape.json`, held to `@vue/shared`'s `escapeHtml` on the TypeScript side.
+#[test]
+fn escape_is_vues_escape_html() {
+    let vectors: Vec<(String, String)> =
+        serde_json::from_str(include_str!("../tests/vectors/escape.json")).expect("escape vectors");
+    for (input, want) in &vectors {
+        let mut out = String::new();
+        escape_into(&mut out, input);
+        assert_eq!(&out, want, "escape({input:?})");
+    }
+}
+
+/// `tests/vectors/length.json`, held to JavaScript's `.length` on the TypeScript side.
+#[test]
+fn js_length_counts_utf16_code_units() {
+    let vectors: Vec<(String, i64)> =
+        serde_json::from_str(include_str!("../tests/vectors/length.json")).expect("length vectors");
+    for (input, want) in &vectors {
+        assert_eq!(js_length(input), *want, "length({input:?})");
+    }
+}
+
+#[test]
+fn integers_are_written_as_javascript_writes_them() {
+    for (n, want) in [
+        (0, "0"),
+        (-1, "-1"),
+        (42, "42"),
+        (i64::MAX, "9223372036854775807"),
+    ] {
+        let mut out = String::new();
+        push_int(&mut out, n);
+        assert_eq!(out, want);
+    }
+}
+
+#[test]
+fn class_lists_drop_empty_items_and_trim_the_rest() {
+    let mut out = String::new();
+    class_into(&mut out, false, &[" a ", "", "  ", "b<"]);
+    assert_eq!(out, "a b&lt;");
+    out.clear();
+    class_into(&mut out, true, &["", "c"]);
+    assert_eq!(
+        out, " c",
+        "a class already written needs a separator before the next"
+    );
+}
+
+#[derive(serde::Serialize)]
+struct Label<'a> {
+    label: &'a str,
+}
+
+fn label(out: &mut String, p: &Label<'_>) {
+    out.push_str("<b>");
+    escape_into(out, p.label);
+    out.push_str("</b>");
+}
+
+/// The island wrapper is the one place props reach the page as data, and they may be
+/// reader-supplied strings inside an attribute.
+#[test]
+fn island_props_cannot_leave_their_attribute() {
+    let props = Label {
+        label: r#""><script>alert(1)</script>"#,
+    };
+    let html = Html::island("Label", &props, label).into_string();
+    assert!(!html.contains("<script>"), "{html}");
+    assert!(
+        html.starts_with(r#"<div data-island="Label" data-props="{&quot;label&quot;:"#),
+        "{html}"
+    );
+    assert!(html.ends_with("&lt;/script&gt;</b></div>"), "{html}");
+}
+
+#[test]
+fn the_island_name_is_escaped_too() {
+    let props = Label { label: "" };
+    let html = Html::island("A\"B", &props, label).into_string();
+    assert!(
+        html.starts_with(r#"<div data-island="A&quot;B" "#),
+        "{html}"
+    );
+}
+
+#[test]
+fn render_to_appends_to_what_the_buffer_holds() {
+    let props = Label { label: "x" };
+    let mut out = String::from("<p>");
+    Html::markup(&props, label).render_to(&mut out);
+    assert_eq!(out, "<p><b>x</b>");
+}
+
+#[cfg(feature = "maud")]
+#[test]
+fn a_render_splices_into_a_maud_page() {
+    let props = Label { label: "<x>" };
+    let page = maud::html! { main { (Html::markup(&props, label)) } };
+    assert_eq!(page.into_string(), "<main><b>&lt;x&gt;</b></main>");
+}
+
+#[test]
+fn markup_is_the_render_alone() {
+    let props = Label { label: "a&b" };
+    assert_eq!(Html::markup(&props, label).into_string(), "<b>a&amp;b</b>");
+}
+
+struct Sanitised(&'static str);
+
+impl TrustedHtml for Sanitised {
+    fn trusted_html(&self) -> &str {
+        self.0
+    }
+}
+
+#[test]
+fn trusted_html_is_written_as_it_is() {
+    let mut out = String::new();
+    trusted_into(&mut out, &Sanitised("<p>a &amp; <em>b</em></p>"));
+    assert_eq!(out, "<p>a &amp; <em>b</em></p>");
+}
+
+#[test]
+fn content_a_caller_supplies_is_never_replaced_by_the_fallback() {
+    let comment = |out: &mut String| out.push_str("<!---->");
+    let mut out = String::new();
+    slot_into(
+        &mut out,
+        Some(Slot::new(&comment)),
+        Some(&mut |out: &mut String| out.push_str("fallback")),
+    );
+    assert_eq!(out, "<!--[--><!----><!--]-->");
+}
+
+#[test]
+fn generated_content_of_comments_alone_gives_way_to_the_fallback() {
+    let nothing = |out: &mut String| {
+        out.push_str("<!---->");
+        false
+    };
+    let mut out = String::new();
+    slot_into(
+        &mut out,
+        Some(Slot::markup(&nothing)),
+        Some(&mut |out: &mut String| out.push_str("fallback")),
+    );
+    assert_eq!(out, "<!--[-->fallback<!--]-->");
+}
+
+#[test]
+fn generated_content_of_comments_alone_is_dropped_when_there_is_no_fallback() {
+    let nothing = |out: &mut String| {
+        out.push_str("<!---->");
+        false
+    };
+    let mut out = String::new();
+    let filled = slot_into(&mut out, Some(Slot::markup(&nothing)), None);
+    assert!(!filled);
+    assert_eq!(out, "<!--[--><!--]-->");
+}
+
+struct RowProps<'v> {
+    label: &'v str,
+}
+
+#[test]
+fn a_scoped_slot_is_given_the_outlets_props() {
+    let content = |out: &mut String, p: &RowProps<'_>| {
+        out.push_str(p.label);
+        true
+    };
+    let slot: &dyn for<'v> Fn(&mut String, &RowProps<'v>) -> bool = &content;
+    let mut out = String::new();
+    let label = String::from("row one");
+    assert!(scoped_slot_into(
+        &mut out,
+        Some(slot),
+        &RowProps { label: &label },
+        None
+    ));
+    assert_eq!(out, "<!--[-->row one<!--]-->");
+}
+
+#[test]
+fn a_scoped_slot_of_comments_alone_or_none_gives_way_to_the_fallback() {
+    let nothing = |out: &mut String, _: &RowProps<'_>| {
+        out.push_str("<!---->");
+        false
+    };
+    let slot: &dyn for<'v> Fn(&mut String, &RowProps<'v>) -> bool = &nothing;
+    for given in [Some(slot), None] {
+        let mut out = String::new();
+        let filled = scoped_slot_into(
+            &mut out,
+            given,
+            &RowProps { label: "x" },
+            Some(&mut |out: &mut String| out.push_str("fallback")),
+        );
+        assert!(!filled);
+        assert_eq!(out, "<!--[-->fallback<!--]-->");
+    }
+}
+
+#[test]
+fn the_state_script_cannot_be_closed_by_a_value_and_reads_back_whole() {
+    let state =
+        serde_json::json!({ "prefs": { "label": "</script><script>alert(1)</script>&\u{2028}" } });
+    let mut out = String::new();
+    state_script_into(&mut out, "__pinia", &state);
+    let body = out
+        .strip_prefix(r#"<script type="application/json" id="__pinia">"#)
+        .and_then(|b| b.strip_suffix("</script>"))
+        .expect("one script element");
+    assert!(!body.contains(['<', '>', '&', '\u{2028}']), "{body}");
+    assert_eq!(
+        serde_json::from_str::<serde_json::Value>(body).unwrap(),
+        state
+    );
+}
+
+#[test]
+fn the_state_script_id_is_escaped() {
+    let mut out = String::new();
+    state_script_into(&mut out, "a\"b", &serde_json::json!({}));
+    assert_eq!(
+        out,
+        r#"<script type="application/json" id="a&quot;b">{}</script>"#
+    );
+}
+
+#[test]
+fn an_absent_slot_writes_its_fallback_or_nothing() {
+    let mut out = String::new();
+    assert!(!slot_into(&mut out, None, None));
+    assert_eq!(out, "<!--[--><!--]-->");
+    out.clear();
+    assert!(!slot_into(
+        &mut out,
+        None,
+        Some(&mut |out: &mut String| out.push_str("fallback"))
+    ));
+    assert_eq!(out, "<!--[-->fallback<!--]-->");
+}
+
+#[test]
+fn a_render_without_holes_is_one_piece() {
+    assert_eq!(split_holes("<a></a>"), ["<a></a>"]);
+    assert_eq!(split_holes(""), [""]);
+}
+
+#[test]
+fn holes_cut_a_render_where_the_caller_writes_later() {
+    let mut out = String::new();
+    out.push_str("<a>");
+    slot_into(&mut out, Some(hole()), None);
+    out.push_str("<b>");
+    slot_into(
+        &mut out,
+        Some(hole()),
+        Some(&mut |out: &mut String| out.push_str("fallback")),
+    );
+    out.push_str("</b></a>");
+    assert_eq!(
+        split_holes(&out),
+        ["<a><!--[-->", "<!--]--><b><!--[-->", "<!--]--></b></a>"]
+    );
+}

@@ -1,0 +1,15 @@
+[package]
+name = "ferrovue-example-greeting"
+description = "A Rust program rendering Vue components compiled by ferrovue"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+ferrovue = { path = "../../crates/ferrovue" }
+serde = { version = "1.0.229", features = ["derive"] }
+
+[dev-dependencies]
+serde_json = "1.0.151"

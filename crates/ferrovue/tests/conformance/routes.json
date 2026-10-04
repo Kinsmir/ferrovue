@@ -1,0 +1,7 @@
+[
+  { "path": "/", "name": "home" },
+  { "path": "/blog/:slug", "name": "post" },
+  { "path": "/blog/:slug/:tab", "name": "post-tab" },
+  "/users/:name",
+  { "path": "/search", "name": "search" }
+]
