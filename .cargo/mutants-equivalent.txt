@@ -85,3 +85,30 @@ crates/ferrovue/src/strings.rs: replace << with >> in power_of_two_value
 # Rust's `f64` parse reads "Infinity", "+Infinity" and "-Infinity" as the infinities too.
 crates/ferrovue/src/strings.rs: delete match arm "Infinity" | "+Infinity" in decimal_value
 crates/ferrovue/src/strings.rs: delete match arm "-Infinity" in decimal_value
+
+# A tag's position from entry `i` instead of `i + 1`: every position moves down by 1024, which keeps their order and which entry each one came from.
+crates/ferrovue/src/head.rs: replace + with * in Head::resolve
+
+# `js_key_place` placing an array index: a key equal to one already there has been found and replaced before it is placed, so `other == index` never holds.
+crates/ferrovue/src/head.rs: replace < with <= in js_key_place
+
+# A link whose `rel` is falsy has `rel` absent, `true` (from "") or a number, and the `match` on it gives 100 for each of them too.
+crates/ferrovue/src/head.rs: replace match guard props.truthy("rel") with true in capo_weight
+
+# `hash_tag` with a comma before every property: the hashes still differ exactly where they did, each one starting with the same comma.
+crates/ferrovue/src/head.rs: replace > with >= in hash_tag
+
+# `same_key` of two numbers: `HeadValue`'s `==` compares the two `f64`s with `==` as well.
+crates/ferrovue/src/head.rs: delete match arm (HeadValue::Number(x), HeadValue::Number(y)) in same_key
+
+# `Key::of` decides a tag's identity only for a truthy `textContent` or `innerHTML`, which is never NaN or ±0: the key it gives a tag's `key` is never read, as a tag with a truthy `key` always has a dedupe key.
+crates/ferrovue/src/head.rs: replace match guard x.is_nan() with false in Key::of
+crates/ferrovue/src/head.rs: replace + with - in Key::of
+
+# `outranks`: no two tags share a position, and its weights are compared only when they differ.
+crates/ferrovue/src/head.rs: replace > with >= in outranks
+crates/ferrovue/src/head.rs: replace < with <= in outranks
+
+# A `Prop::Class` is only ever set under "class", and a `Prop::Style` only under "style".
+crates/ferrovue/src/head.rs: replace match guard key == "class" with true in props_into
+crates/ferrovue/src/head.rs: replace match guard key == "style" with true in props_into

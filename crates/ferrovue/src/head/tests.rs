@@ -118,3 +118,37 @@ fn writes_nothing_for_an_input_that_is_not_an_object() {
     head.push(HeadValue::Null);
     assert_eq!(head.render(), HeadHtml::default());
 }
+
+#[test]
+fn places_an_array_index_after_the_smaller_ones() {
+    let HeadValue::Object(entries) = HeadValue::object([
+        ("1", HeadValue::Null),
+        ("5", HeadValue::Null),
+        ("x", HeadValue::Null),
+        ("3", HeadValue::Null),
+        ("7", HeadValue::Null),
+    ]) else {
+        unreachable!()
+    };
+    let keys: Vec<&str> = entries.iter().map(|(k, _)| k.as_ref()).collect();
+    assert_eq!(keys, ["1", "3", "5", "7", "x"]);
+}
+
+#[test]
+fn converts_rust_values_to_the_javascript_values_they_are() {
+    assert_eq!(HeadValue::float(1.5), HeadValue::Number(1.5));
+    assert_eq!(HeadValue::from("a"), HeadValue::Str("a".to_owned()));
+    assert_eq!(
+        HeadValue::from(String::from("b")),
+        HeadValue::Str("b".to_owned())
+    );
+    assert_eq!(
+        HeadValue::from(Cow::Borrowed("c")),
+        HeadValue::Str("c".to_owned())
+    );
+    assert_eq!(HeadValue::from(false), HeadValue::Bool(false));
+    assert_eq!(HeadValue::from(-3_i64), HeadValue::Number(-3.0));
+    assert_eq!(HeadValue::from(0.25), HeadValue::Number(0.25));
+    assert_eq!(HeadValue::from(Some(true)), HeadValue::Bool(true));
+    assert_eq!(HeadValue::from(None::<bool>), HeadValue::Undefined);
+}
