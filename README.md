@@ -303,6 +303,37 @@ let row = |out: &mut String, p: &data_list::RowSlotProps<'_>| {
 data_list::render(&mut page, &props, data_list::Slots { row: Some(&row), ..Default::default() });
 ```
 
+### Hydrating islands
+
+`mountIslands` from `ferrovue/client` hydrates every `data-island` element on the page with the
+component of that name, from the props the server wrote. With the Vite plugin, `ferrovue/islands`
+gives it every island there is, so nothing has to be listed by hand:
+
+```ts
+import { hydrateState, mountIslands } from "ferrovue/client";
+import islands from "ferrovue/islands"; // written by `ferrovue()` from `ferrovue/vite`
+
+hydrateState(pinia);
+await mountIslands(islands, { pinia, router }); // one Pinia and one router for every island
+```
+
+The islands are exactly the components that have an `island()`: those that render from their props
+alone, as the compiler finds while it generates them. That is the only set the server can write
+`data-island` for, so it needs no folder convention or list to keep in step, and making a component
+an island is a matter of the server calling its `island()`. Each is keyed by its `NAME`, the file
+name without `.vue`, which is what `data-island` carries.
+
+Each entry is a lazy `import()`, so the bundler gives every island a chunk of its own and a page
+fetches the code of the islands it holds and no more. `mountIslands` takes such loaders and
+components alike, so a hand-written island can join them: `mountIslands({ ...islands, Chart })`.
+An island whose name is not among them is left as the server rendered it, with a warning naming it
+(`onError` to handle it otherwise), as is one whose component fails to load.
+
+An island's `<style>` goes into its chunk too, and Vite links it only once the island's script has
+loaded, after the server's markup is on screen. Link those stylesheets from the page up front: a
+server reading Vite's manifest takes the `css` of the entry's `dynamicImports` as well as its own
+(`examples/fullstack/src/assets.rs`).
+
 ### Hydrating Pinia state
 
 ```rust
@@ -398,6 +429,7 @@ packages/ferrovue/           the compiler (npm package)
   src/rust.ts, emitter.ts    the Rust source written out
   src/cli.ts, vite.ts        the `ferrovue` command and the Vite plugin
   src/client.ts              browser-side helpers: `mountIslands`, `hydrateState`
+  src/islands.ts             `ferrovue/islands`, which the Vite plugin writes: every island, loaded lazily
   src/testing.ts             utilities for a project's own conformance suite
   src/types.ts               `ferrovue/types`: `TrustedHtml`, `Float`
   test/                      compiler, CLI, router, vector, island, Vite and conformance tests

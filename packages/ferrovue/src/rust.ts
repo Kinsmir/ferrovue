@@ -204,6 +204,12 @@ ${e.lines.join("\n")}
 }`;
 }
 
+/** Whether the component gets an `island()`: it renders from its props alone, which `data-props` is
+ * all the client gets to mount it with. */
+export function isIsland(comp: Component): boolean {
+  return !takesSlots(comp) && !comp.usesRoute && !comp.usesStores && !comp.usesI18n && !comp.usesTeleports;
+}
+
 export function componentSource(comp: Component, ast: N[], ssr: string, components: Map<string, Component>): string {
   const { scope, lets } = scopeFor(comp, ast, components);
   const program = parseJs(ssr, { sourceType: "module" }).program;
@@ -246,7 +252,7 @@ export function componentSource(comp: Component, ast: N[], ssr: string, componen
   // `Cow` is imported only where a field is one: a lifetime that comes from another component's props
   // alone borrows through that type, not through a `Cow` written here.
   const usesCow = /Cow</.test(structs + structSource(comp.props, comp, ""));
-  const plain = !takesSlots(comp) && !comp.usesRoute && !comp.usesStores && !comp.usesI18n && !comp.usesTeleports;
+  const plain = isIsland(comp);
   const slotFields = [
     ...comp.slotNames.map((n) => {
       const outlet = `\`<slot${n === "default" ? "" : ` name="${n}"`}>\``;

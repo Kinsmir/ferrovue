@@ -6,7 +6,10 @@
  * A build regenerates them once and fails on a construct ferrovue refuses, naming the line in the
  * `.vue` file. The dev server regenerates them whenever a component, store, type file, the routes
  * or the configuration changes, and shows a refusal in its error overlay. Only files whose text
- * changed are rewritten, so `cargo watch` rebuilds no more than it must. */
+ * changed are rewritten, so `cargo watch` rebuilds no more than it must.
+ *
+ * It also writes `ferrovue/islands`: every component that has an `island()`, by name, each a lazy
+ * `import()` of its `.vue` file, for `mountIslands`. */
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative, resolve, sep } from "node:path";
 import type { Plugin, ResolvedConfig, ViteDevServer } from "vite";
@@ -62,13 +65,44 @@ export function scopeIdMismatch(root: string, vue: { mode: string; root: string 
   return `\`<style scoped>\` ids: @vitejs/plugin-vue hashes "${vue.mode}" from ${vue.root}, ${CONFIG_FILE} "${mode}" from ${viteRoot}; set \`scopeId\` and \`viteRoot\` to match, or plugin-vue's \`features.componentIdGenerator\``;
 }
 
+/** The import that names the islands, and the id the plugin gives the module it writes for it. */
+const ISLANDS = "ferrovue/islands";
+const ISLANDS_ID = `\0${ISLANDS}`;
+
+/** The text of `ferrovue/islands`: each island's name, mapped to an `import()` of its `.vue` file,
+ * which the bundler splits into a chunk of its own. */
+function islandsModule(root: string, islands: Record<string, string>): string {
+  const entries = Object.entries(islands).map(([name, file]) => `  ${JSON.stringify(name)}: () => import(${JSON.stringify(resolve(root, file).split(sep).join("/"))}),`);
+  return `export default {\n${entries.join("\n")}\n};\n`;
+}
+
 export default function ferrovue(options: FerrovueOptions = {}): Plugin {
   const root = resolve(options.root ?? process.cwd());
-  const regenerate = (): Written => write(root, loadConfig(root));
+  // The islands as the last generation found them, for `ferrovue/islands`.
+  let islands: Record<string, string> | null = null;
+  const regenerate = (): Written => {
+    const written = write(root, loadConfig(root));
+    islands = written.islands;
+    return written;
+  };
   let vue: ReturnType<typeof vueScopeIds> = null;
   let building = true;
   return {
     name: "ferrovue",
+    // Before Vite's own resolver, which would find `ferrovue/islands` in the package instead.
+    enforce: "pre",
+    resolveId(id) {
+      return id === ISLANDS ? ISLANDS_ID : null;
+    },
+    load(id) {
+      if (id !== ISLANDS_ID) return null;
+      try {
+        return islandsModule(root, islands ?? regenerate().islands);
+      } catch (e) {
+        if (e instanceof GenError || e instanceof SyntaxError) this.error(e.message);
+        throw e;
+      }
+    },
     configResolved(config) {
       vue = vueScopeIds(config);
       building = config.command === "build";
@@ -91,9 +125,17 @@ export default function ferrovue(options: FerrovueOptions = {}): Plugin {
       const onChange = (file: string): void => {
         if (!affects(root, file)) return;
         try {
+          const before = JSON.stringify(islands);
           const { changed, removed } = regenerate();
           if (changed.length || removed.length) {
             server.config.logger.info(`ferrovue: ${changed.length} changed, ${removed.length} removed`, { timestamp: true });
+          }
+          // A component that became an island, or stopped being one: the page loads the islands
+          // afresh, as the server now writes them.
+          const loaded = server.moduleGraph.getModuleById(ISLANDS_ID);
+          if (loaded && JSON.stringify(islands) !== before) {
+            server.moduleGraph.invalidateModule(loaded);
+            server.ws.send({ type: "full-reload" });
           }
         } catch (e) {
           if (!(e instanceof GenError || e instanceof SyntaxError)) throw e;

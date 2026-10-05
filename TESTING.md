@@ -27,7 +27,7 @@ pnpm test:browser          # the same fixtures, and the full-stack example, hydr
 | **Differential fuzzing** | `packages/ferrovue/fuzz/` | Random components and props, within the grammar ferrovue accepts, render identically in Vue and in the generated Rust; each difference is shrunk to a small case (`pnpm fuzz`, nightly in CI, not part of `pnpm test`) | `@vue/server-renderer` |
 | **Mutation testing** | `.cargo/mutants.toml` | The tests above notice a small change to the runtime's source; every change they miss is listed, with the reason, as one that cannot alter the output (`cargo mutants`, weekly in CI) | cargo-mutants |
 | **Example** | `examples/greeting/` | Generated code compiles in an ordinary (non-test) consumer crate | `cargo build` |
-| **Full-stack example** | `examples/fullstack/` | An axum server's pages, streamed through holes, hydrate in the client built from the same components with no mismatch, their islands share the store, and their elements carry the scope ids the client build's stylesheet selects | Vue's hydration (`pnpm --filter ferrovue-example-fullstack test`) |
+| **Full-stack example** | `examples/fullstack/` | An axum server's pages, streamed through holes, hydrate in the client built from the same components with no mismatch, their islands load from `ferrovue/islands` and share the store, and their elements carry the scope ids the client build's stylesheet selects | Vue's hydration (`pnpm --filter ferrovue-example-fullstack test`) |
 
 ### Conformance in detail
 
@@ -121,8 +121,9 @@ FERROVUE_BROWSERS=chromium pnpm test:browser                             # one b
   `vite build` into a temporary directory (production Vue, with
   `__VUE_PROD_HYDRATION_MISMATCH_DETAILS__` so attribute mismatches are checked), builds the server
   with Cargo and starts it on a free port (`PORT=0`, `DIST_DIR`), stopping it when done. It opens the
-  home page and a streamed book page, fails on any warning or error, checks the document is as the
-  browser parsed it, then adds a book to the basket and shows every review.
+  home page and a streamed book page, fails on any warning or error, checks that the home page fetches
+  the code of its own islands alone and that the document is as the browser parsed it, then adds a
+  book to the basket and shows every review.
 
 A browser that will not launch is skipped with a warning, except in CI (`CI` set), where it fails
 the run: WebKit needs system libraries some Linux distributions do not ship. CI's `Hydrates in real

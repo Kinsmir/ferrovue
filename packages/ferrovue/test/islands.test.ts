@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { escapeHtml } from "@vue/shared";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { createSSRApp, type Component } from "vue";
+import { createSSRApp, h, type Component } from "vue";
 import { renderToString } from "vue/server-renderer";
 import { createPinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
@@ -103,7 +103,7 @@ it("leaves an island it cannot hydrate as the server rendered it, and says why",
   const problems: string[] = [];
   const islands = await mountIslands(components, { onError: (_el, problem) => problems.push(problem) });
   expect(islands.apps).toHaveLength(1);
-  expect(problems).toEqual(['no component called "Missing" was given', "the props of Text are not JSON"]);
+  expect(problems).toEqual([expect.stringMatching(/^no component called "Missing" was given \(`ferrovue\/islands` holds/), "the props of Text are not JSON"]);
   expect(document.body.innerHTML).toContain("<p>kept</p>");
   islands.unmount();
 });
@@ -115,4 +115,50 @@ it("unmounts every island", async () => {
   expect(islands.apps).toHaveLength(2);
   islands.unmount();
   expect(islands.apps).toHaveLength(0);
+});
+
+it("loads only the components the page names, each once, and mounts their islands in document order", async () => {
+  const text = fixture("Text", "full");
+  const badge = fixture("Badge", "full");
+  document.body.innerHTML = `${stateScript(badge.stores)}${island("Text", text.props, text.html)}${island("Badge", badge.props, badge.html)}${island("Text", text.props, text.html)}`;
+  const calls: string[] = [];
+  /** A loader as `ferrovue/islands` has it: a module, resolved later. Text's comes after Badge's. */
+  const lazy = (name: string) => async () => {
+    calls.push(name);
+    await new Promise((resolve) => setTimeout(resolve, name === "Text" ? 10 : 0));
+    return { default: components[name]! };
+  };
+  const before = [...document.querySelectorAll("[data-island]")].map((el) => el.firstChild);
+  const pinia = createPinia();
+  hydrateState(pinia);
+  const islands = await mountIslands({ Text: lazy("Text"), Badge: lazy("Badge"), Nav: lazy("Nav") }, { pinia });
+  expect(calls).toEqual(["Text", "Badge"]);
+  expect(islands.apps.map((app) => Reflect.get(app, "_component"))).toEqual([components.Text, components.Badge, components.Text]);
+  expect(warnings.filter((w) => /hydrat|mismatch/i.test(w))).toEqual([]);
+  expect([...document.querySelectorAll("[data-island]")].map((el) => el.firstChild)).toEqual(before);
+  islands.unmount();
+});
+
+it("takes a loader that resolves to the component itself, and a functional component as a component", async () => {
+  const text = fixture("Text", "full");
+  document.body.innerHTML = `${island("Text", text.props, text.html)}${island("Plain", { label: "hi" }, "<b>hi</b>")}`;
+  const Plain = Object.assign((props: { label: string }) => h("b", props.label), { props: ["label"] });
+  const islands = await mountIslands({ Text: () => Promise.resolve(components.Text!), Plain });
+  expect(islands.apps.map((app) => Reflect.get(app, "_component"))).toEqual([components.Text, Plain]);
+  expect(warnings.filter((w) => /hydrat|mismatch/i.test(w))).toEqual([]);
+  islands.unmount();
+});
+
+it("leaves the islands of a component that did not load as the server rendered them", async () => {
+  const text = fixture("Text", "full");
+  document.body.innerHTML = `${island("Text", text.props, text.html)}${island("Broken", {}, "<p>kept</p>")}`;
+  const problems: string[] = [];
+  const islands = await mountIslands(
+    { Text: () => Promise.resolve({ default: components.Text! }), Broken: () => Promise.reject(new Error("offline")) },
+    { onError: (_el, problem) => problems.push(problem) },
+  );
+  expect(islands.apps).toHaveLength(1);
+  expect(problems).toEqual(["Broken did not load: offline"]);
+  expect(document.body.innerHTML).toContain("<p>kept</p>");
+  islands.unmount();
 });

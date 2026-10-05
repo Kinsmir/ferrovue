@@ -44,6 +44,10 @@
       "types": "./dist/client.d.ts",
       "default": "./dist/client.js"
     },
+    "./islands": {
+      "types": "./dist/islands.d.ts",
+      "default": "./dist/islands.js"
+    },
     "./vite": {
       "types": "./dist/vite.d.ts",
       "default": "./dist/vite.js"
