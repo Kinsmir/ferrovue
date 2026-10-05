@@ -36,11 +36,20 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(19 + props.tone.len() + props.tags.iter().map(|v| v.len()).sum::<usize>() + props.note.as_deref().map_or(0, str::len));
+    out.reserve(35 + props.tone.len() + props.tags.iter().map(|v| v.len()).sum::<usize>() + props.note.as_deref().map_or(0, str::len));
     out.push_str("<section>");
     super::divider::render_scoped(out, &super::divider::Props {  }, &fv::Attrs::new(&[("class", if fv::js_length(fv::js_trim(&props.tone)) as f64 == fv::js_length(&props.tone) as f64 { fv::Attr::str(&props.tone) } else { fv::Attr::from(fv::class_names(&[fv::js_trim(&props.tone), &*props.tone])) })], ""));
     super::glyph::render_scoped(out, &super::glyph::Props {  }, &fv::Attrs::new(&[("class", if fv::js_length(fv::js_trim(&format!(" {} ", props.tone))) as f64 == fv::js_length(&format!(" {} ", props.tone)) as f64 { fv::Attr::Str(std::borrow::Cow::<str>::Owned(format!(" {} ", props.tone))) } else { fv::Attr::from(fv::class_names(&[fv::js_trim(&format!(" {} ", props.tone)), &*format!(" {} ", props.tone)])) }), ("title", fv::Attr::str("g"))], ""));
     super::glyph::render_scoped(out, &super::glyph::Props {  }, &fv::Attrs::new(&[("class", fv::Attr::from(fv::class_names(&[&*props.tone, "x"])))], ""));
+    super::glyph::render_scoped(out, &super::glyph::Props {  }, &fv::Attrs::new(&[("class", fv::Attr::from(fv::class_names(&[if !props.tone.is_empty() { "on" } else { "" }, if props.tone.is_empty() { "off" } else { "" }])))], ""));
+    super::glyph::render_scoped(out, &super::glyph::Props {  }, &fv::Attrs::new(&[("class", if !props.tone.is_empty() { if fv::js_length(fv::js_trim(&props.tone)) as f64 == fv::js_length(&props.tone) as f64 { fv::Attr::str(&props.tone) } else { fv::Attr::from(fv::class_names(&[fv::js_trim(&props.tone), &*props.tone])) } } else { fv::Attr::str("none") })], ""));
+    if !props.tone.is_empty() {
+        super::glyph::render_scoped(out, &super::glyph::Props {  }, &fv::Attrs::new(&[("class", if fv::js_length(fv::js_trim(&props.tone)) as f64 == fv::js_length(&props.tone) as f64 { fv::Attr::str(&props.tone) } else { fv::Attr::from(fv::class_names(&[fv::js_trim(&props.tone), &*props.tone])) })], ""));
+    } else {
+        out.push_str("<b class=\"");
+        fv::class_into(out, false, &[&*props.tone]);
+        out.push_str("\"></b>");
+    }
     super::divider::render_scoped(out, &super::divider::Props {  }, &fv::Attrs::new(&[("class", if fv::js_length(fv::js_trim(&props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(" "))) as f64 == fv::js_length(&props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(" ")) as f64 { fv::Attr::Str(std::borrow::Cow::<str>::Owned(props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(" "))) } else { fv::Attr::from(fv::class_names(&[fv::js_trim(&props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(" ")), &*props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(" ")])) })], ""));
     super::divider::render_scoped(out, &super::divider::Props {  }, &fv::Attrs::new(&[("class", fv::Attr::str(&props.tone)), ("title", fv::Attr::Str(props.note.as_deref().map(std::borrow::Cow::<str>::Borrowed).unwrap_or(props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_s1| std::borrow::Cow::<str>::Owned(format!("{}-", fv_s1))).find(|fv_s2| fv::js_length(fv_s2) as f64 > 2.0).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).unwrap_or(std::borrow::Cow::<str>::Borrowed("-")))))], ""));
     out.push_str("</section>");

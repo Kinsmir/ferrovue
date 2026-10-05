@@ -13,6 +13,9 @@ defineProps<{ tone: string; tags: string[]; note?: string }>();
     <LazyDivider :class="tone" />
     <LazyGlyph :class="` ${tone} `" title="g" />
     <LazyGlyph :class="[tone, 'x']" />
+    <LazyGlyph :class="{ on: tone, off: !tone }" />
+    <LazyGlyph :class="tone ? tone : { none: true }" />
+    <component :is="tone ? LazyGlyph : 'b'" :class="tone" />
     <LazyDivider :class="tags.join(' ')" />
     <Divider :class="tone" :title="note ?? (tags.map((t) => t + '-').find((t) => t.length > 2) ?? '-')" />
   </section>

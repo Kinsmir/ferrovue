@@ -106,8 +106,18 @@ export function array(key: string): boolean {
  * class once as written and once trimmed, so a class with whitespace around it is written twice. */
 const lengthOf = (n: N): N => ({ type: "MemberExpression", object: n, property: { type: "Identifier", name: "length" }, computed: false });
 
+function holdsClassLiteral(n: N): boolean {
+  if (n.type === "ObjectExpression" || n.type === "ArrayExpression") return true;
+  if (n.type === "ConditionalExpression") return holdsClassLiteral(n.consequent) || holdsClassLiteral(n.alternate);
+  if (n.type === "LogicalExpression") return holdsClassLiteral(n.left) || holdsClassLiteral(n.right);
+  return false;
+}
+
 function loadedClass(s: Scope, value: N): N {
-  if (expr(s, value).ty.k !== "str") return value;
+  if (value.type === "ConditionalExpression" && (holdsClassLiteral(value.consequent) || holdsClassLiteral(value.alternate))) {
+    return { ...value, consequent: loadedClass(s, value.consequent), alternate: loadedClass(s, value.alternate) };
+  }
+  if (holdsClassLiteral(value) || expr(s, value).ty.k !== "str") return value;
   const trimmed = { type: "CallExpression", callee: { type: "MemberExpression", object: value, property: { type: "Identifier", name: "trim" }, computed: false }, arguments: [] };
   return {
     type: "ConditionalExpression",
