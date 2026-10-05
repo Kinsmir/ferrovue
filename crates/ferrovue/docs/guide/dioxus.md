@@ -34,7 +34,7 @@ fn Page(title: String, start: i64) -> Element {
 }
 ```
 
-The client's script hydrates the island with `mountIslands` from `ferrovue/client`, as on any other
+The client's script hydrates the island with `mountIslands` from `ferrovue`, as on any other
 page: see [`islands_and_hydration`](crate::guide::islands_and_hydration).
 
 # What Dioxus writes

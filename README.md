@@ -323,12 +323,12 @@ data_list::render(&mut page, &props, data_list::Slots { row: Some(&row), ..Defau
 
 ### Hydrating islands
 
-`mountIslands` from `ferrovue/client` hydrates every `data-island` element on the page with the
+`mountIslands` from `ferrovue` hydrates every `data-island` element on the page with the
 component of that name, from the props the server wrote. With the Vite plugin, `ferrovue/islands`
 gives it every island there is, so nothing has to be listed by hand:
 
 ```ts
-import { hydrateState, mountIslands } from "ferrovue/client";
+import { hydrateState, mountIslands } from "ferrovue";
 import islands from "ferrovue/islands"; // written by `ferrovue()` from `ferrovue/vite`
 
 hydrateState(pinia);
@@ -359,7 +359,7 @@ ferrovue::state_script_into(&mut page, "__pinia", &stores);   // a <script type=
 ```
 
 ```ts
-import { hydrateState } from "ferrovue/client";
+import { hydrateState } from "ferrovue";
 hydrateState(pinia); // before app.mount(): every store starts from what the server rendered
 ```
 
@@ -447,7 +447,8 @@ crates/ferrovue-router/      vue-router's matching and links (the `router` featu
   tests/vectors/             vectors recorded from vue-router
 crates/ferrovue-i18n/        vue-i18n's t() (the `i18n` feature)
 packages/ferrovue/           the compiler (npm package)
-  src/compiler.ts            the API: `generate`, `write`
+  src/index.ts               `ferrovue`: the browser API, `mountIslands`, `hydrateState` and the types
+  src/compiler.ts            `ferrovue/compiler`: `generate`, `write`
   src/component.ts, script.ts, typescript.ts
                              a `.vue` file read, <script setup>, TypeScript types
   src/template.ts, children.ts, slots.ts, loops.ts

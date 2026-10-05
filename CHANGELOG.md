@@ -7,6 +7,7 @@ released together and share version numbers.
 
 ### Changed
 
+- **Breaking:** `import … from "ferrovue"` is the browser API (`mountIslands`, `hydrateState`, `TrustedHtml`, `Float`); the compiler's API (`generate`, `write`, the configuration types) moved to `ferrovue/compiler`. `ferrovue/client`, `ferrovue/types`, `ferrovue/islands`, `ferrovue/vite`, `ferrovue/testing` and the CLI are unchanged. The package is marked `"sideEffects": false`, its root bundles to about 2.4 kB instead of 1.2 MB, and a build no longer leaves files from earlier builds in `dist/`.
 - A release starts only from a signed, annotated tag whose signature GitHub verifies; any other tag
   stops the release workflow before anything is staged or published (`RELEASING.md`, "Signed tags").
 - The crate's `lib.rs` is split into modules, one per part of the runtime: escaping, numbers,

@@ -103,7 +103,7 @@ An island's props travel as JSON, which has no words for some numbers JavaScript
   `Infinity` or `-Infinity`, wherever it is: a prop, an item of a list, a field of an object, a
   value of a `Record`. `serde_json` alone would write `null`, and the client would render something
   other than what the server did (an empty string for the server's `NaN`) with nothing to say so.
-  `mountIslands` from `ferrovue/client` reads the tokens back as the numbers they stand for, so a
+  `mountIslands` from `ferrovue` reads the tokens back as the numbers they stand for, so a
   `Float` prop that is `NaN` hydrates as `NaN`. The stores' state in
   [`state_script_into`](crate::state_script_into) is written the same way and read back by
   `hydrateState`. Everything else is exactly what `serde_json` writes;
@@ -134,7 +134,7 @@ assert_eq!(html, r#"<div data-island="Gauge" data-props="{&quot;level&quot;:NaN}
 ```
 
 The tokens are not JSON, so code that reads the props with plain `JSON.parse` refuses them; an
-older `ferrovue/client` leaves such an island as the server rendered it and reports that its props
+older `ferrovue` leaves such an island as the server rendered it and reports that its props
 are not JSON, rather than hydrating it with the wrong value. Upgrade the npm package with the crate.
 
 Integers beyond the range of `i64` itself cannot be represented at all; keep integer props and the

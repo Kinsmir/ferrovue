@@ -71,11 +71,11 @@ The props travel as JSON, serialised with `serde_json` and escaped for the attri
 `NaN` or infinite is written as the bare token JavaScript writes (`NaN`, `Infinity`, `-Infinity`)
 rather than the `null` `serde_json` alone writes, so the client gets the number the server rendered;
 see [`numbers`](crate::guide::numbers#keeping-islands-exact). On the client,
-`mountIslands` from `ferrovue/client` hydrates every island on the page:
+`mountIslands` from `ferrovue` hydrates every island on the page:
 
 ```ts
 import { createPinia } from "pinia";
-import { hydrateState, mountIslands } from "ferrovue/client";
+import { hydrateState, mountIslands } from "ferrovue";
 import islands from "ferrovue/islands";
 
 const pinia = createPinia();
@@ -119,8 +119,8 @@ differed. The usual causes:
 
 - **Different data.** The client rendered with different props, state, route or locale.
 - **Numbers that JSON cannot carry.** An `i64` beyond ±2⁵³ is rounded by the browser. An `f64`
-  that is `NaN` or infinite travels as a bare token that only `ferrovue/client` reads, so a client
-  that parses the props itself, or a `ferrovue/client` older than the crate, cannot read them. See
+  that is `NaN` or infinite travels as a bare token that only `ferrovue` reads, so a client
+  that parses the props itself, or a `ferrovue` older than the crate, cannot read them. See
   [`numbers`](crate::guide::numbers).
 - **Markup the browser rewrites.** HTML the parser moves or closes, such as a `<div>` inside a
   `<p>`, does not survive parsing in either renderer; Vue's own SSR has the same constraint.

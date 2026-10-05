@@ -176,7 +176,7 @@ assert_eq!(hostile, r#"<p class="greeting">Hello, &lt;script&gt;!<!----><!----><
 A component with `<style scoped>` writes the same `data-v-` ids as Vue's server renderer, computed
 as `@vitejs/plugin-vue` computes them; see [`guide::scoped_styles`](crate::guide::scoped_styles).
 
-On the client, the same component hydrates the page: `mountIslands` from `ferrovue/client` mounts
+On the client, the same component hydrates the page: `mountIslands` from `ferrovue` mounts
 every island, or the page's own Vue app hydrates the whole document. See
 [`guide::islands_and_hydration`](crate::guide::islands_and_hydration).
 
