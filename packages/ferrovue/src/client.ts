@@ -1,4 +1,4 @@
-import { createSSRApp, defineComponent, onMounted, ref, type App, type Component, type Plugin } from "vue";
+import { createSSRApp, createTextVNode, defineComponent, h, onMounted, ref, type App, type Component, type Plugin } from "vue";
 import type { Pinia } from "pinia";
 import type { Router } from "vue-router";
 
@@ -142,4 +142,73 @@ async function load(component: IslandComponent): Promise<Component | Error> {
   } catch (e) {
     return e instanceof Error ? e : new Error(String(e));
   }
+}
+
+/** One component the server rendered into a slot of a page's layout, as `ferrovue::Part` records
+ * it: its name (`c`) and the props it was rendered from (`p`). */
+export interface PagePart {
+  c: string;
+  p: Record<string, unknown>;
+}
+
+/** What `ferrovue::PageRecord` writes: the layout's props, and each slot's parts in order. */
+export interface PageRecord {
+  props: Record<string, unknown>;
+  slots: Record<string, PagePart[]>;
+}
+
+export interface PageOptions extends Pick<MountOptions, "pinia" | "router" | "plugins"> {
+  /** The element holding the layout's root, or a selector for it: `#app` by default. */
+  container?: Element | string;
+  /** The `id` of the record's script, as given to `PageRecord::script_into`: `__fv_page` by default. */
+  record?: string;
+  /** The document to read the page from. */
+  doc?: Document;
+}
+
+/** The app of a page: its root renders `layout` with the record's props, and each slot as the
+ * components the record names, in order, as a plain array, which hydrates the markup the server
+ * wrote with no fragment of its own. `components` must hold every component the record names. */
+export function createPageApp(layout: Component, record: PageRecord, components: Record<string, Component>, options: PageOptions = {}): App {
+  const slots = Object.fromEntries(
+    Object.entries(record.slots).map(([name, parts]) => [
+      name,
+      () => (parts.length ? parts.map((part) => h(components[part.c]!, part.p)) : [createTextVNode("")]),
+    ]),
+  );
+  const app = createSSRApp({ name: "FerrovuePage", render: () => h(layout, record.props, slots) });
+  if (options.pinia) app.use(options.pinia);
+  if (options.router) app.use(options.router);
+  for (const plugin of options.plugins ?? []) app.use(plugin);
+  return app;
+}
+
+/** Hydrate a page `ferrovue::Page` rendered: read its record, load the components it names (and
+ * no others), wait for the router, and mount the layout on the container. Rejects, leaving the page
+ * as the server rendered it, when the container or the record is missing or a component is not
+ * given or does not load. */
+export async function mountPage(layout: IslandComponent, components: Record<string, IslandComponent>, options: PageOptions = {}): Promise<App> {
+  const doc = options.doc ?? document;
+  const selector = options.container ?? "#app";
+  const container = typeof selector === "string" ? doc.querySelector(selector) : selector;
+  if (!container) throw new Error(`[ferrovue] the page has no ${selector as string} to mount on`);
+  const id = options.record ?? "__fv_page";
+  const text = doc.getElementById(id)?.textContent;
+  if (!text) throw new Error(`[ferrovue] the page has no record: no <script id="${id}">`);
+  const record = parseJson(text) as PageRecord;
+  const names = new Set(Object.values(record.slots).flatMap((parts) => parts.map((part) => part.c)));
+  const loading = [...names].map(async (name) => {
+    if (!Object.hasOwn(components, name)) throw new Error(`[ferrovue] no component called ${JSON.stringify(name)} was given to mountPage`);
+    return [name, await loadOrThrow(name, components[name]!)] as const;
+  });
+  const [root, parts] = await Promise.all([loadOrThrow("the layout", layout), Promise.all(loading), options.router?.isReady()]);
+  const app = createPageApp(root, record, Object.fromEntries(parts), options);
+  app.mount(container);
+  return app;
+}
+
+async function loadOrThrow(name: string, component: IslandComponent): Promise<Component> {
+  const result = await load(component);
+  if (result instanceof Error) throw new Error(`[ferrovue] ${name} did not load: ${result.message}`, { cause: result });
+  return result;
 }

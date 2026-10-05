@@ -141,6 +141,92 @@ fn a_component_with_slots_renders_through_html() {
     );
 }
 
+fn page_part(part: &serde_json::Value) -> ferrovue::Part<'static> {
+    use generated::{prose, text};
+    let props = part["p"].clone();
+    match part["c"].as_str().expect("a component name") {
+        "Text" => ferrovue::Part::new(
+            text::NAME,
+            text::into_html(serde_json::from_value(props).unwrap()),
+        ),
+        "Prose" => ferrovue::Part::new(
+            prose::NAME,
+            prose::into_html(serde_json::from_value(props).unwrap()),
+        ),
+        other => panic!("no page part called {other}"),
+    }
+}
+
+#[test]
+fn every_page_renders_as_vue_rendered_it_and_records_what_it_rendered() {
+    use generated::{frame, panel};
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/conformance/pages");
+    let mut checked = 0;
+    for file in fs::read_dir(&root).expect("pages") {
+        let json = file.expect("page fixture").path();
+        if json.extension().is_none_or(|e| e != "json") {
+            continue;
+        }
+        let fixture: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(&json).unwrap()).unwrap();
+        let record = &fixture["record"];
+        let mut page = ferrovue::Page::new();
+        let slots: std::collections::HashMap<&str, ferrovue::PageSlot<'static>> = record["slots"]
+            .as_object()
+            .expect("the slots")
+            .iter()
+            .map(|(name, parts)| {
+                let parts = parts
+                    .as_array()
+                    .expect("a slot's parts")
+                    .iter()
+                    .map(page_part);
+                (name.as_str(), page.slot(name, parts))
+            })
+            .collect();
+        let slot = |name: &str| slots.get(name).map(ferrovue::PageSlot::slot);
+        let props = record["props"].clone();
+        let mut out = String::new();
+        let written = match fixture["layout"].as_str().expect("a layout") {
+            "Panel" => {
+                let props: panel::Props = serde_json::from_value(props).unwrap();
+                let slots = panel::Slots {
+                    title: slot("title"),
+                    default: slot("default"),
+                    footer: slot("footer"),
+                };
+                page.render_to(&mut out, panel::html(&props, slots))
+            }
+            "Frame" => {
+                let props: frame::Props = serde_json::from_value(props).unwrap();
+                let slots = frame::Slots {
+                    head: slot("head"),
+                    default: slot("default"),
+                };
+                page.render_to(&mut out, frame::html(&props, slots))
+            }
+            other => panic!("no layout called {other}"),
+        };
+        let want = fs::read_to_string(json.with_extension("html")).expect("recorded HTML");
+        assert_eq!(out, want, "{}", json.display());
+
+        let mut script = String::new();
+        written.script_into(&mut script, "__fv_page");
+        let body = script
+            .strip_prefix(r#"<script type="application/json" id="__fv_page">"#)
+            .and_then(|b| b.strip_suffix("</script>"))
+            .expect("one script element");
+        assert!(
+            !body.contains(['<', '>', '&', '\u{2028}', '\u{2029}']),
+            "{body}"
+        );
+        let read: serde_json::Value = serde_json::from_str(body).unwrap();
+        assert_eq!(&read, record, "{}", json.display());
+        checked += 1;
+    }
+    assert!(checked >= 4, "only {checked} pages were found");
+}
+
 #[test]
 fn a_deep_tree_renders_whole() {
     let mut json = String::from(r#"{"label":"leaf","children":[]}"#);

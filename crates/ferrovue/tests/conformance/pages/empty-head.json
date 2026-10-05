@@ -1,0 +1,10 @@
+{
+  "layout": "Frame",
+  "record": {
+    "props": { "title": "Frame" },
+    "slots": {
+      "head": [],
+      "default": [{ "c": "Text", "p": { "title": "t", "count": 1, "on": false, "padded": "x" } }]
+    }
+  }
+}

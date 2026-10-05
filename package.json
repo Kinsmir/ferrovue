@@ -21,7 +21,7 @@
     "bench:record": "FERROVUE_BENCH_WRITE=1 pnpm bench:js",
     "conformance:generate": "cd crates/ferrovue/tests/conformance && node ../../../../packages/ferrovue/src/cli.ts",
     "conformance:check": "cd crates/ferrovue/tests/conformance && node ../../../../packages/ferrovue/src/cli.ts --check",
-    "conformance:record": "FERROVUE_FIXTURES_WRITE=1 vitest run packages/ferrovue/test/conformance.test.ts",
+    "conformance:record": "FERROVUE_FIXTURES_WRITE=1 vitest run packages/ferrovue/test/conformance.test.ts packages/ferrovue/test/page.test.ts",
     "vectors:record": "FERROVUE_VECTORS_WRITE=1 vitest run packages/ferrovue/test/router.test.ts packages/ferrovue/test/vectors.test.ts",
     "fuzz": "node packages/ferrovue/fuzz/run.ts"
   },
