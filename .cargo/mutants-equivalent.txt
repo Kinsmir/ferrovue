@@ -20,6 +20,31 @@ crates/ferrovue-core/src/numbers.rs: replace - with + in push_number
 crates/ferrovue-core/src/numbers.rs: replace && with || in push_number
 crates/ferrovue-core/src/numbers.rs: replace == with != in push_number
 
+# The capacity `push_decimal` reserves, with `start` ≥ 4 as `n` ≤ 2⁵³: the characters pushed are the same.
+crates/ferrovue-core/src/numbers.rs: replace - with + in push_decimal
+crates/ferrovue-core/src/numbers.rs: replace - with / in push_decimal
+
+# `Js<i64>` at ±(2⁵³ − 1) through `Js<f64>`: the double is exact, and `push_number` writes it as the same integer.
+crates/ferrovue-core/src/numbers.rs: replace > with >= in <impl std::fmt::Display for Js<i64>>::fmt
+
+# A double's fraction is below 2⁵², so `fraction ^ 1 << 52` and `fraction | 1 << 52` are equal.
+crates/ferrovue-core/src/numbers.rs: replace | with ^ in few_exact_digits
+
+# A subnormal has `e` ≤ −1023, and with 1074 for −1074 it has `e` ≥ 1074: both return None.
+crates/ferrovue-core/src/numbers.rs: delete - in few_exact_digits
+
+# At `e` = 0 both branches give `(m, 0)`.
+crates/ferrovue-core/src/numbers.rs: replace < with <= in few_exact_digits
+
+# At `e` = 82, `m × 2⁸² = d × 10^z` with 5^z dividing `m` (z ≤ 22) has 2⁶⁰ > 10¹⁸ dividing `d`, so the string branch returns None too.
+crates/ferrovue-core/src/numbers.rs: replace < with <= in few_exact_digits
+
+# A borrow only carries toward higher-order bytes, so the lowest flagged byte equals one character and only that character's word flags it: `^` leaves it set wherever `|` does.
+crates/ferrovue-core/src/escape.rs: replace | with ^ in needs_escape
+crates/ferrovue-core/src/escape.rs: replace | with ^ in needs_escape
+crates/ferrovue-core/src/escape.rs: replace | with ^ in needs_escape
+crates/ferrovue-core/src/escape.rs: replace | with ^ in needs_escape
+
 # The plural choice when nothing gives one: −1 or 1, which `pluralDefault` reads through `Math.abs`
 # alike.
 crates/ferrovue-i18n/src/lib.rs: delete - in plural_choice
