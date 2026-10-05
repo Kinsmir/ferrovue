@@ -36,6 +36,38 @@ pub struct Router {
     base: String,
 }
 
+/// The base, and each route's full path with its name, in the order vue-router tries them.
+///
+/// # Example
+///
+/// ```
+/// let router = ferrovue::Router::named(&[("/", Some("home")), ("/users/:id", None)]).with_base("/app/");
+/// assert_eq!(
+///     format!("{router:?}"),
+///     r#"Router { base: "/app", routes: {"/": Some("home"), "/users/:id": None} }"#
+/// );
+/// ```
+impl std::fmt::Debug for Router {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let routes = self.routes.iter().map(|r| (&r.path, &r.name));
+        f.debug_struct("Router")
+            .field("base", &self.base)
+            .field("routes", &DebugMap(routes))
+            .finish()
+    }
+}
+
+/// Entries shown as a map, in the order given.
+struct DebugMap<I>(I);
+
+impl<K: std::fmt::Debug, V: std::fmt::Debug, I: Iterator<Item = (K, V)> + Clone> std::fmt::Debug
+    for DebugMap<I>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_map().entries(self.0.clone()).finish()
+    }
+}
+
 struct Pattern {
     /// The full path, its ancestors' included, as vue-router normalises a nested record's.
     path: String,
@@ -554,6 +586,7 @@ fn parse_query(search: &str) -> Vec<(String, Vec<Option<String>>)> {
 /// assert_eq!(link.href, "/blog/intro#top");
 /// assert!(link.active && link.exact);
 /// ```
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Link {
     /// What the anchor's `href` is.
     pub href: String,
@@ -563,6 +596,36 @@ pub struct Link {
     /// `isExactActive`: it points at exactly the reader's route, with the same parameters. The
     /// `router-link-exact-active` class, and `aria-current`.
     pub exact: bool,
+}
+
+/// The location as written, and the route it matched with its parameters; the router it borrows
+/// is left out.
+///
+/// # Example
+///
+/// ```
+/// let router = ferrovue::Router::named(&[("/blog/:slug", Some("post"))]);
+/// assert_eq!(
+///     format!("{:?}", router.at("/blog/intro?sort=new#comments")),
+///     r#"Route { full_path: "/blog/intro?sort=new#comments", name: Some("post"), params: {"slug": "intro"}, .. }"#
+/// );
+/// assert_eq!(
+///     format!("{:?}", router.at("/nowhere")),
+///     r#"Route { full_path: "/nowhere", name: None, params: {}, .. }"#
+/// );
+/// ```
+impl std::fmt::Debug for Route<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let params = match &self.matched {
+            Some((i, values)) => self.router.params(*i, values),
+            None => Vec::new(),
+        };
+        f.debug_struct("Route")
+            .field("full_path", &self.full_path)
+            .field("name", &self.name())
+            .field("params", &DebugMap(params.into_iter()))
+            .finish_non_exhaustive()
+    }
 }
 
 impl Route<'_> {

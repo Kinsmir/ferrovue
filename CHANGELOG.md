@@ -28,6 +28,10 @@ released together and share version numbers.
   the page (`-> impl IntoResponse { greeting::into_html(Props::new(name)) }`) instead of ending
   with `.into_response()`. `examples/fullstack` serves a book's reviews alone this way, at
   `/books/{id}/reviews`.
+- `Debug` for every public type in the crate, which now warns on one without it:
+  `Router` (its base and each route's full path and name), `Route` (the full path, the route's name
+  and its parameters), `Html` (the island's name and the props), `Slot` (`Slot { .. }`) and `Js`.
+  `Link` derives `Debug`, `Clone`, `PartialEq` and `Eq`.
 
 ### Fixed
 
@@ -37,6 +41,12 @@ released together and share version numbers.
   attribute out and its client then sets it to the value's `String()` without reporting a mismatch,
   so ferrovue's matching render was rewritten on hydration (`:data-q="route.query.q"` on
   `?q=a&q=b`, found by the real-browser hydration test). `class` and `style` are unaffected.
+- A `Float` that is `NaN` or infinite reaches the client as itself: an island's `data-props` and the
+  state script write it as JavaScript does (`NaN`, `Infinity`, `-Infinity`) instead of the `null`
+  `serde_json` writes, and `mountIslands` and `hydrateState` read the tokens back, so the client
+  renders what the server did instead of hydrating with a mismatch nobody reported. Props and state
+  without them are written and read as before. A client older than the crate refuses the tokens and
+  leaves the island as the server rendered it, with a report.
 
 ## [0.2.0] - 2026-10-04
 

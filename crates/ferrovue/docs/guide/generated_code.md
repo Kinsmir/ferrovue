@@ -144,7 +144,8 @@ rebuilds the component from the props in `data-props` and nothing else. It wraps
 <div data-island="Greeting" data-props="{&quot;name&quot;:&quot;Ada&quot;,&quot;unread&quot;:3}">…</div>
 ```
 
-with the props serialised by `serde_json` and attribute-escaped. A component that takes slots, the
+with the props serialised by `serde_json` (a non-finite `f64` as JavaScript writes it, `NaN` or
+`Infinity`, where `serde_json` would write `null`) and attribute-escaped. A component that takes slots, the
 route, stores, translations or teleports has no `island`; the page's own Vue app hydrates it
 instead. See [`islands_and_hydration`](crate::guide::islands_and_hydration).
 

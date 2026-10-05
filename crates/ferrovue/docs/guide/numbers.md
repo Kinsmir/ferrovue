@@ -97,14 +97,49 @@ assert_eq!(ferrovue::js_to_fixed(2.5, 0), "3");      // a true tie: away from ze
 
 # Keeping islands exact
 
-An island's props travel as JSON, and the client reads them with `JSON.parse`. Two kinds of value
-do not survive the trip:
+An island's props travel as JSON, which has no words for some numbers JavaScript has:
 
+- an `f64` that is `NaN` or infinite is written as JavaScript writes it, the bare token `NaN`,
+  `Infinity` or `-Infinity`, wherever it is: a prop, an item of a list, a field of an object, a
+  value of a `Record`. `serde_json` alone would write `null`, and the client would render something
+  other than what the server did (an empty string for the server's `NaN`) with nothing to say so.
+  `mountIslands` from `ferrovue/client` reads the tokens back as the numbers they stand for, so a
+  `Float` prop that is `NaN` hydrates as `NaN`. The stores' state in
+  [`state_script_into`](crate::state_script_into) is written the same way and read back by
+  `hydrateState`. Everything else is exactly what `serde_json` writes;
 - an `i64` beyond ±2⁵³ is rounded by the browser. The server writes the rounded value too, so the
   page still hydrates, but the client holds the rounded number, as it would with any JavaScript
-  number;
-- an `f64` that is `NaN` or infinite is serialised by `serde_json` as `null`. The server renders
-  `NaN` and the client renders an empty string, which is a mismatch. Give islands finite numbers.
+  number.
+
+```rust
+# mod gauge {
+#     use ferrovue as fv;
+#     #[derive(Debug, Clone, serde::Serialize)]
+#     pub struct Props {
+#         #[serde(rename = "level")]
+#         pub level: f64,
+#     }
+#     pub fn render(out: &mut String, props: &Props) {
+#         out.push_str("<p>");
+#         fv::push_number(out, props.level);
+#         out.push_str("</p>");
+#     }
+#     pub fn island(props: &Props) -> fv::Html<'_, Props> {
+#         fv::Html::island("Gauge", props, render)
+#     }
+# }
+// Gauge.vue: defineProps<{ level: Float }>(), rendering <p>{{ level }}</p>.
+let html = gauge::island(&gauge::Props { level: f64::NAN }).into_string();
+assert_eq!(html, r#"<div data-island="Gauge" data-props="{&quot;level&quot;:NaN}"><p>NaN</p></div>"#);
+```
+
+The tokens are not JSON, so code that reads the props with plain `JSON.parse` refuses them; an
+older `ferrovue/client` leaves such an island as the server rendered it and reports that its props
+are not JSON, rather than hydrating it with the wrong value. Upgrade the npm package with the crate.
 
 Integers beyond the range of `i64` itself cannot be represented at all; keep integer props and the
 results of integer arithmetic within ±2⁵³, where both sides agree exactly.
+
+A number that reaches the client exactly can still be one the DOM refuses: a `<meter>` or
+`<progress>` whose `:value` is `NaN` does not hydrate, because the browser throws when Vue sets that
+property to a number that is not finite, as it would in an app Vue rendered alone.
