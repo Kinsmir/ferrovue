@@ -5,6 +5,8 @@ released together and share version numbers.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-05
+
 ### Added
 
 - `ferrovue init`: scaffold a starter `ferrovue.config.json` and `components/Hello.vue`.
@@ -64,6 +66,11 @@ released together and share version numbers.
 
 ### Changed
 
+- **Breaking:** an attribute bound to a value that may be an array or an object, including a
+  `route.query` value, is now refused at compile time (see Fixed); narrow a query value with
+  `typeof … === "string"` or join a list with `.join(",")`.
+- `ferrovue::Js` derives `Clone` and `Copy` (and `Debug`); `cargo-semver-checks` counts a new `Copy`
+  as a breaking change.
 - The release workflow prints the command that approves the staged npm package, with its id when
   npm reports one, as a notice at the top of the run and in the summaries of the npm and GitHub
   release jobs, so a finished run says plainly that one step is left.
