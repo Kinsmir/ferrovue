@@ -15,6 +15,19 @@ released together and share version numbers.
 - `VERSION` constant exported from `ferrovue`.
 - `typeof route.query.q === "string"` (or `!==`), which narrows a query value to a single string in
   `v-if`, `&&` and `? :`, as TypeScript does.
+- Web framework responses in the crate, each behind a feature: with `axum`, `Html` (what `html()`
+  and `island()` return) is an `IntoResponse`, and with `actix-web` a `Responder` and, by `From`, an
+  `HttpResponse`: `200 OK`, `text/html; charset=utf-8`. `ferrovue::HtmlStream` (the `stream`
+  feature, which both include) sends a page rendered with holes as a streamed body, each hole's
+  content from a future, the futures running at once and their output written in order; a page
+  without holes is sent whole. A guide page, `ferrovue::guide::web_frameworks`.
+  `examples/fullstack` responds with `HtmlStream` instead of building its stream by hand.
+- Pages that hold their props: beside `html(&props)` and `island(&props)`, a component that has an
+  `island()` gets `into_html(props)` and `into_island(props)`, taking the props by value. The
+  `Html` they return borrows only what the props borrow, so a handler that builds the props returns
+  the page (`-> impl IntoResponse { greeting::into_html(Props::new(name)) }`) instead of ending
+  with `.into_response()`. `examples/fullstack` serves a book's reviews alone this way, at
+  `/books/{id}/reviews`.
 
 ### Fixed
 

@@ -1,8 +1,8 @@
 //! Every page the shop serves, rendered by the components ferrovue generated.
 //!
 //! A page is rendered whole, in one pass, with a [`ferrovue::hole`] wherever a part is slow to
-//! come by. [`ferrovue::split_holes`] then cuts it into the pieces around those holes: the server
-//! sends the first piece at once and each hole's content as soon as it is ready.
+//! come by. The server sends it as a [`ferrovue::HtmlStream`]: the markup up to the first hole at
+//! once, and each hole's content as soon as it is ready.
 
 use std::time::Duration;
 
@@ -18,12 +18,12 @@ use crate::generated::{
 /// The shop's name, in the layout and every title.
 const SHOP: &str = "Ferrovue Books";
 
-/// A rendered page, ready to stream: `pieces` with each of `holes` filled between them.
+/// A rendered page, ready to stream: `html` with each of `holes` filled.
 pub struct Page {
     /// The HTTP status.
     pub status: u16,
-    /// The markup around the holes, in order: one more piece than there are holes.
-    pub pieces: Vec<String>,
+    /// The markup, with a [`ferrovue::hole`] where each of `holes` goes.
+    pub html: String,
     /// What goes in each hole, in order.
     pub holes: Vec<Hole>,
 }
@@ -70,24 +70,28 @@ impl Site {
     /// The content of one hole: the slow part of a page, as an island the client hydrates.
     pub async fn fill(&self, hole: &Hole) -> String {
         match hole {
-            Hole::Reviews(id) => {
-                let list = catalogue::reviews(id, self.review_delay).await;
-                reviews::island(&reviews::Props::new(list)).into_string()
-            }
+            Hole::Reviews(id) => self.reviews(id).await.into_string(),
         }
+    }
+
+    /// A book's reviews, as the island the client hydrates: what fills the book page's hole, and
+    /// a response of its own. It holds its props, so it outlives this call.
+    pub async fn reviews(&self, id: &str) -> ferrovue::Html<'static, reviews::Props<'static>> {
+        let list = catalogue::reviews(id, self.review_delay).await;
+        reviews::into_island(reviews::Props::new(list))
     }
 
     /// The whole page at once, every hole filled: what a client that can't stream would get.
     pub async fn render_to_string(&self, location: &str) -> (u16, String) {
         let Page {
             status,
-            pieces,
+            html,
             holes,
         } = self.page(location);
         let mut out = String::new();
         let mut holes = holes.iter();
-        for piece in pieces {
-            out.push_str(&piece);
+        for piece in ferrovue::split_holes(&html) {
+            out.push_str(piece);
             if let Some(hole) = holes.next() {
                 out.push_str(&self.fill(hole).await);
             }
@@ -142,7 +146,7 @@ impl Site {
     }
 
     /// The HTML document around a route's page: the layout, the stores' state the client hydrates
-    /// from, and the client's script — cut at the holes `view` left.
+    /// from, and the client's script, with the holes `view` left.
     fn document(
         &self,
         status: u16,
@@ -167,18 +171,14 @@ impl Site {
         ferrovue::state_script_into(&mut out, "__pinia", stores);
         self.assets.scripts_into(&mut out);
         out.push_str("</body></html>");
-        let pieces: Vec<String> = ferrovue::split_holes(&out)
-            .into_iter()
-            .map(str::to_owned)
-            .collect();
         assert_eq!(
-            pieces.len(),
+            ferrovue::split_holes(&out).len(),
             holes.len() + 1,
             "one hole filled per hole left"
         );
         Page {
             status,
-            pieces,
+            html: out,
             holes,
         }
     }

@@ -28,8 +28,9 @@ crate that denies warnings. `mod.rs` allows one lint for all of them, at its top
 
 ```rust,ignore
 // The modules pass rustc's default warnings and clippy's default lints, with one exception:
-// `dead_code`. Every component gets the whole of its API (`render`, `html`, `island`, `NAME`, a
-// constructor and a setter per optional prop) and an app calls only what it needs.
+// `dead_code`. Every component gets the whole of its API (`render`, `html`, `island`, their
+// `into_` forms, `NAME`, a constructor and a setter per optional prop) and an app calls only what
+// it needs.
 #![allow(dead_code)]
 ```
 
@@ -51,6 +52,7 @@ Every component module has, in this order:
 | `render_scoped` | Only for a component a parent may hand `<style scoped>` ids to: `render` with those ids last. Generated parents call it; it is `#[doc(hidden)]`. See [`scoped_styles`](crate::guide::scoped_styles) |
 | `html` | The same render as an [`Html`](crate::Html) value |
 | `island` | Only for a component that renders from its props alone: the render wrapped as a hydratable island |
+| `into_html` and `into_island` | Beside `island`: `html` and `island` taking the props by value, so the `Html` holds them |
 
 `Props` has no lifetime when none of its fields borrow (a component whose props are all numbers
 and booleans has `Props`, not `Props<'a>`), and a component with no props has an empty `Props`.
@@ -132,6 +134,9 @@ let page = maud::html! {
 };
 ```
 
+With the `axum` or `actix-web` feature, an `Html` is also a response of its own;
+[`web_frameworks`](crate::guide::web_frameworks) shows how.
+
 `island` exists only for a component whose render needs nothing but its props, because the client
 rebuilds the component from the props in `data-props` and nothing else. It wraps the markup as
 
@@ -142,6 +147,18 @@ rebuilds the component from the props in `data-props` and nothing else. It wraps
 with the props serialised by `serde_json` and attribute-escaped. A component that takes slots, the
 route, stores, translations or teleports has no `island`; the page's own Vue app hydrates it
 instead. See [`islands_and_hydration`](crate::guide::islands_and_hydration).
+
+`html` and `island` borrow the props, so the `Html` lives no longer than they do. Where `island`
+exists, `into_html` and `into_island` take the props by value instead, and the `Html` holds them:
+it borrows only what the props borrow (nothing, for props of `'static` strings or `Cow`s holding
+their own), so a function that builds the props can return the page, as a web handler does. Both
+render exactly as their borrowing forms.
+
+```rust,ignore
+fn greet(name: String) -> ferrovue::Html<'static, greeting::Props<'static>> {
+    greeting::into_html(greeting::Props::new(name, 0))
+}
+```
 
 # Names
 

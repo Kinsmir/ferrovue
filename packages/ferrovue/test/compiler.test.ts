@@ -44,6 +44,27 @@ const props = defineProps<{ label: string }>();
     expect(out.get("x.rs")).toContain("pub fn render");
   });
 
+  it("gives a component that needs only its props an html and island that hold them as well", () => {
+    const borrowing = compile(
+      island(`<script setup lang="ts">
+defineProps<{ label: string }>();
+</script>
+<template><b>{{ label }}</b></template>`),
+    ).get("x.rs")!;
+    expect(borrowing).toContain("pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {");
+    expect(borrowing).toContain("pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {\n    fv::Html::markup_owned(props, render)");
+    expect(borrowing).toContain("pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {\n    fv::Html::island_owned(NAME, props, render)");
+    // Props that borrow nothing make a page that borrows nothing.
+    const counting = compile(
+      island(`<script setup lang="ts">
+defineProps<{ count: number }>();
+</script>
+<template><b>{{ count }}</b></template>`),
+    ).get("x.rs")!;
+    expect(counting).toContain("pub fn into_html(props: Props) -> fv::Html<'static, Props> {");
+    expect(counting).toContain("pub fn into_island(props: Props) -> fv::Html<'static, Props> {");
+  });
+
   it("reserves a loop's markup per item and the text the props hold", () => {
     const out = compile(
       island(`<script setup lang="ts">
@@ -347,6 +368,7 @@ defineProps<{ title: string }>();
       expect(out).toContain("pub default: Option<fv::Slot<'s>>,");
       expect(out).toContain("pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>)");
       expect(out).not.toContain("pub fn island");
+      expect(out).not.toContain("pub fn into_");
     });
 
     it("decides at generation time when slot content always holds something", () => {

@@ -19,11 +19,13 @@
 //! 9. [`pinia`]: Pinia state on the server, and handing it to the client.
 //! 10. [`islands_and_hydration`]: what the browser does with the page.
 //! 11. [`streaming`]: holes, for sending a page in the order its parts are ready.
-//! 12. [`numbers`]: JavaScript's number semantics in Rust.
-//! 13. [`strings`]: JavaScript's strings in Rust: UTF-16 indices, halves of pairs, ordering,
+//! 12. [`web_frameworks`]: responding with a component or a streamed page from axum or
+//!     actix-web.
+//! 13. [`numbers`]: JavaScript's number semantics in Rust.
+//! 14. [`strings`]: JavaScript's strings in Rust: UTF-16 indices, halves of pairs, ordering,
 //!     conversions to and from numbers.
-//! 14. [`escaping`]: what is escaped, where, and the one way to write raw HTML.
-//! 15. [`errors_and_limits`]: what the compiler refuses, and what can still go wrong at run time.
+//! 15. [`escaping`]: what is escaped, where, and the one way to write raw HTML.
+//! 16. [`errors_and_limits`]: what the compiler refuses, and what can still go wrong at run time.
 
 #[doc = include_str!("../docs/guide/quick_start.md")]
 pub mod quick_start {}
@@ -57,6 +59,9 @@ pub mod islands_and_hydration {}
 
 #[doc = include_str!("../docs/guide/streaming.md")]
 pub mod streaming {}
+
+#[doc = include_str!("../docs/guide/web_frameworks.md")]
+pub mod web_frameworks {}
 
 #[doc = include_str!("../docs/guide/numbers.md")]
 pub mod numbers {}

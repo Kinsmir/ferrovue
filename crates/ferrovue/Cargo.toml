@@ -15,16 +15,31 @@ categories = ["template-engine", "web-programming"]
 [features]
 # `impl maud::Render for Html`, so a generated renderer can be spliced into a maud page.
 maud = ["dep:maud"]
+# `HtmlStream`: a page rendered with holes, sent as a stream of its pieces and each hole's content.
+stream = ["dep:bytes", "dep:futures-core"]
+# `impl IntoResponse` for `Html` and `HtmlStream`, through `axum-core` (what axum re-exports).
+axum = ["stream", "dep:axum-core", "dep:http"]
+# `impl actix_web::Responder` for `Html` and `HtmlStream`.
+actix-web = ["stream", "dep:actix-web"]
 
 [dependencies]
+actix-web = { version = "4.15.0", default-features = false, optional = true }
+axum-core = { version = "0.5.6", optional = true }
+bytes = { version = "1.12.1", optional = true }
+futures-core = { version = "0.3.34", default-features = false, optional = true }
+http = { version = "1.5.0", optional = true }
 maud = { version = "0.27.0", optional = true }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
 
 [dev-dependencies]
+# The web responders' examples and tests: a router to mount handlers on, and a runtime to read
+# the bodies they send.
+axum = { version = "0.8.9", default-features = false }
 # Benchmarks only (`benches/`): no plots, no rayon.
 criterion = { version = "0.8.2", default-features = false, features = ["cargo_bench_support"] }
 proptest = "1"
+tokio = { version = "1.53.2", features = ["macros", "rt", "test-util", "time"] }
 
 # Generated renderers against Vue's `renderToString`: `pnpm bench`, and the README's Performance.
 [[bench]]

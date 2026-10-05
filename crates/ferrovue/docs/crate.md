@@ -198,10 +198,13 @@ A prop declared `Record<string, T>` is a [`Record`], which keeps JavaScript's or
 
 and these, to assemble a page:
 
-- [`Html`]: a component applied to its props, written into a buffer with [`Html::render_to`] or
-  returned with [`Html::into_string`];
+- [`Html`]: a component applied to its props, borrowed (`html(&props)`) or held
+  (`into_html(props)`), written into a buffer with [`Html::render_to`] or returned with
+  [`Html::into_string`];
 - [`state_script_into`]: the stores' state for the client to hydrate from;
 - [`hole`] and [`split_holes`]: render a layout once and stream its parts;
+- `HtmlStream` (the `stream` feature): a page with holes as an HTTP body, each hole's content
+  sent as soon as it is ready;
 - [`escape_into`]: text written into your own markup as Vue would write it.
 
 The rest are Rust twins of JavaScript and Vue routines that generated code calls so that it writes
@@ -223,6 +226,9 @@ what Vue writes:
 | Feature | Default | What it adds |
 |---|---|---|
 | `maud` | off | `impl maud::Render for Html`, so `(greeting::html(&props))` can go straight into a `maud::html!` page |
+| `stream` | off | `HtmlStream`: a page rendered with holes as a stream of byte chunks, each hole filled by a future |
+| `axum` | off | `stream`, and `IntoResponse` for `Html` and `HtmlStream`, so a handler returns `greeting::into_html(props)` ([`guide::web_frameworks`](crate::guide::web_frameworks)) |
+| `actix-web` | off | `stream`, and `Responder` for `Html` and `HtmlStream` |
 
 # Rust version
 
