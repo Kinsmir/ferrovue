@@ -8,7 +8,7 @@ import { atom, bare } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
 import { attrOf, dollarAttrs, IGNORED_PROPS, isAttrs, mergedParts } from "./attrs.ts";
 import { passedKey } from "./fallthrough.ts";
-import { claim, paramsOf, slotFieldsOf } from "./plugin.ts";
+import { claim, paramsOf, slotContextOf, slotFieldsOf } from "./plugin.ts";
 import { statements } from "./template.ts";
 import { slotContent, slotFieldBorrows, staticallyFilled } from "./slots.ts";
 
@@ -129,8 +129,8 @@ export function takesSlots(c: Component): boolean {
   return c.slotNames.length > 0 || slotFieldsOf(c).length > 0;
 }
 
-export function extraParams(c: Component): string {
-  return (takesSlots(c) ? ", fv_slots: Slots<'_>" : "") + paramsOf(c).map((p) => `, ${p.name}: ${p.ty}`).join("");
+export function extraParams(c: Component, unread: (name: string) => boolean = () => false): string {
+  return (takesSlots(c) ? ", fv_slots: Slots<'_>" : "") + paramsOf(c).map((p) => `, ${unread(p.name) ? "_" : ""}${p.name}: ${p.ty}`).join("");
 }
 
 export function callChild(s: Scope, e: Emitter, child: Component, propsCode: string, slots: N, attrs: string | null): void {
@@ -158,6 +158,9 @@ export function callWith(s: Scope, e: Emitter, child: Component, m: string, head
     return;
   }
   e.open(`${head}, ${slotsTy}`);
+  const context = slotContextOf(child);
+  const contextParams = context.map((p) => `, ${p.name}: ${p.ty}`).join("");
+  const opaque = vnode ? child.name : s.opaque;
   for (const name of child.slotNames) {
     const field = snake(name);
     const value = given.get(name);
@@ -198,17 +201,25 @@ export function callWith(s: Scope, e: Emitter, child: Component, m: string, head
         locals.set(param.name, { code: sp, ty });
       } else if (!takesNone) fail(s.comp, "FV0905", "slot props are a name or an object pattern", param);
       const life = shape.fields.some((f) => slotFieldBorrows(f.ty)) ? "<'_>" : "";
-      e.open(`${field}: Some(&|out: &mut String, ${sp}: &${m}::${shape.name}${life}${sidParam}| -> bool`);
+      e.open(`${field}: Some(&|out: &mut String, ${sp}: &${m}::${shape.name}${life}${sidParam}${contextParams}| -> bool`);
       const opened = e.lines.length - 1;
-      content({ ...s, locals, sid, vnode });
+      content({ ...s, locals, sid, vnode, opaque });
       unread(opened, sp);
       unread(opened, sid);
+      for (const p of context) unread(opened, p.name);
       e.close("),");
       continue;
     }
     if (!takesNone) fail(s.comp, "FV0906", `\`<slot${name === "default" ? "" : ` name="${name}"`}>\` in ${child.name} passes no props`, param);
-    const inner: Scope = { ...s, sid, vnode };
-    if (sid !== null) {
+    const inner: Scope = { ...s, sid, vnode, opaque };
+    if (context.length) {
+      e.open(`${field}: Some(&|out: &mut String${sidParam}${contextParams}| -> bool`);
+      const opened = e.lines.length - 1;
+      content(inner);
+      unread(opened, sid);
+      for (const p of context) unread(opened, p.name);
+      e.close("),");
+    } else if (sid !== null) {
       e.open(`${field}: Some(fv::Slot::slotted(&|out: &mut String${sidParam}| -> bool`);
       const opened = e.lines.length - 1;
       content(inner);

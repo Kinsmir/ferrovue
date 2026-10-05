@@ -13,6 +13,7 @@ export interface RenderParam {
   fixtureField?: string;
   fixtureDefault?: string;
   testSupport?: string;
+  slotContext?: string;
 }
 
 export interface SlotField {
@@ -54,6 +55,8 @@ export interface Plugin<Run = unknown, Local = unknown> {
   scope?(s: Scope): Local;
   scriptImport?(s: Scope, st: N, from: string): boolean;
   scriptBinding?(s: Scope, d: N): boolean;
+  scriptStatement?(s: Scope, st: N): boolean;
+  prelude?(s: Scope): { before: string[]; after: string[] };
 
   global?(s: Scope, name: string, n: N): Val | null;
   call?(s: Scope, n: N): Val | null;
@@ -95,6 +98,10 @@ export function renderParams(): RenderParam[] {
 
 export function paramsOf(comp: Component): RenderParam[] {
   return renderParams().filter((p) => comp.takes.has(p.name));
+}
+
+export function slotContextOf(comp: Component): RenderParam[] {
+  return paramsOf(comp).filter((p) => p.slotContext !== undefined);
 }
 
 export function slotFieldsOf(comp: Component): SlotField[] {

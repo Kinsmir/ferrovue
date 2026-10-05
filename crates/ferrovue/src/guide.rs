@@ -14,20 +14,21 @@
 //! 7. [`i18n`]: vue-i18n's `$t`, with [`I18n`](crate::I18n).
 //! 8. [`teleports`]: `<Teleport>`, with [`Teleports`](crate::Teleports).
 //! 9. [`pinia`]: Pinia state on the server, and handing it to the client.
-//! 10. [`islands_and_hydration`]: what the browser does with the page.
-//! 11. [`streaming`]: holes, for sending a page in the order its parts are ready.
-//! 12. [`web_frameworks`]: responding with a component or a streamed page from axum or
+//! 10. [`provide_inject`]: `provide` and `inject`, resolved through the component tree.
+//! 11. [`islands_and_hydration`]: what the browser does with the page.
+//! 12. [`streaming`]: holes, for sending a page in the order its parts are ready.
+//! 13. [`web_frameworks`]: responding with a component or a streamed page from axum or
 //!     actix-web.
-//! 13. [`numbers`]: JavaScript's number semantics in Rust.
-//! 14. [`strings`]: JavaScript's strings in Rust: UTF-16 indices, halves of pairs, ordering,
+//! 14. [`numbers`]: JavaScript's number semantics in Rust.
+//! 15. [`strings`]: JavaScript's strings in Rust: UTF-16 indices, halves of pairs, ordering,
 //!     conversions to and from numbers.
-//! 15. [`escaping`]: what is escaped, where, and the one way to write raw HTML.
-//! 16. [`testing`]: holding your own components to Vue, with fixtures and two calls.
-//! 17. [`errors_and_limits`]: what the compiler refuses, and what can still go wrong at run time.
-//! 18. [`error_codes`]: every error code the compiler raises.
+//! 16. [`escaping`]: what is escaped, where, and the one way to write raw HTML.
+//! 17. [`testing`]: holding your own components to Vue, with fixtures and two calls.
+//! 18. [`errors_and_limits`]: what the compiler refuses, and what can still go wrong at run time.
+//! 19. [`error_codes`]: every error code the compiler raises.
 #![cfg_attr(
     feature = "dioxus",
-    doc = "19. [`dioxus`]: islands in a page that Dioxus renders, with the `dioxus` feature."
+    doc = "20. [`dioxus`]: islands in a page that Dioxus renders, with the `dioxus` feature."
 )]
 
 #[doc = include_str!("../docs/guide/quick_start.md")]
@@ -60,6 +61,9 @@ pub mod teleports {}
 
 #[doc = include_str!("../docs/guide/pinia.md")]
 pub mod pinia {}
+
+#[doc = include_str!("../docs/guide/provide_inject.md")]
+pub mod provide_inject {}
 
 #[doc = include_str!("../docs/guide/islands_and_hydration.md")]
 pub mod islands_and_hydration {}

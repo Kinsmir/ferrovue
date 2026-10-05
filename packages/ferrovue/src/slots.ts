@@ -5,6 +5,7 @@ import { Emitter } from "./emitter.ts";
 import { rustTy } from "./rust.ts";
 import { fieldInit } from "./children.ts";
 import { pushesContent, statements } from "./template.ts";
+import { slotContextOf } from "./plugin.ts";
 
 function borrowed(code: string): string {
   return code.startsWith("&") || /^\w+$/.test(code) || /^fv_sp\d+\.\w+$/.test(code) ? code : `&${operand(code, UNARY)}`;
@@ -105,6 +106,7 @@ export function slotOutlet(s: Scope, e: Emitter, c: N): void {
   const outlet = `\`<slot${slotName === "default" ? "" : ` name="${slotName}"`}>\``;
   let fn = "fv::slot_into";
   let args = field;
+  let passed = "&()";
   if (slotProps.properties.length) {
     const fields: Field[] = [];
     const values: string[] = [];
@@ -128,7 +130,8 @@ export function slotOutlet(s: Scope, e: Emitter, c: N): void {
       s.comp.structs.set(name, shape);
     }
     fn = "fv::scoped_slot_into";
-    args = `${field}, &${name} { ${values.join(", ")} }`;
+    passed = `&${name} { ${values.join(", ")} }`;
+    args = `${field}, ${passed}`;
   } else if (s.comp.slotShapes.has(slotName)) {
     fail(s.comp, "FV0916", `every ${outlet} passes the same props, of the same types`, c);
   }
@@ -139,6 +142,15 @@ export function slotOutlet(s: Scope, e: Emitter, c: N): void {
     slotted = s.sid === null ? rustStr(id.left.value) : `&[${rustStr(id.left.value)}, ${s.sid}].concat()`;
   } else if (id?.type === "Identifier" && id.name === "_scopeId") slotted = s.sid;
   else if (id && id.type !== "NullLiteral") fail(s.comp, "FV0006", "unexpected slot scope id", id);
+  const context = slotContextOf(s.comp);
+  if (context.length) {
+    const shape = s.comp.slotShapes.get(slotName);
+    const sp = shape ? `fv_sp: &${shape.name}${shape.fields.some((f) => slotFieldBorrows(f.ty)) ? "<'_>" : ""}` : "_: &()";
+    const sid = s.comp.passesSlotIds ? ", fv_sid: &str" : "";
+    const content = `${field}.map(|f| move |out: &mut String, ${sp}${sid}| f(out${shape ? ", fv_sp" : ""}${sid ? ", fv_sid" : ""}${context.map((p) => `, ${p.name}`).join("")})).as_ref()`;
+    fn = "fv::scoped_slot_into";
+    args = `${content}, ${passed}`;
+  }
   if (s.comp.passesSlotIds) {
     fn = fn === "fv::slot_into" ? "fv::slot_into_slotted" : "fv::scoped_slot_into_slotted";
     args += `, ${slotted ?? '""'}`;

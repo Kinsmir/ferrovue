@@ -7,5 +7,6 @@ import { teleport } from "./teleport.ts";
 import { scoped } from "./scoped.ts";
 import { clientOnly } from "./client-only.ts";
 import { twinsPlugin } from "./twins.ts";
+import { provideInject } from "./provide.ts";
 
-export const PLUGINS: readonly Plugin[] = [router, piniaStores, sharedTypes, i18n, teleport, scoped, clientOnly, twinsPlugin];
+export const PLUGINS: readonly Plugin[] = [router, piniaStores, sharedTypes, i18n, teleport, scoped, clientOnly, twinsPlugin, provideInject];

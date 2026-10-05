@@ -26,6 +26,7 @@ export const AREAS: Record<string, { name: string; guide?: string }> = {
   "13": { name: "Pinia stores", guide: "pinia" },
   "14": { name: "vue-i18n", guide: "i18n" },
   "15": { name: "Raw HTML, client-only content, teleports and Rust twins", guide: "errors_and_limits" },
+  "16": { name: "Provide and inject", guide: "provide_inject" },
 };
 
 /** Every code the compiler raises. A code is never reused: one the compiler stops raising is marked
@@ -349,6 +350,33 @@ export const ERRORS = {
   FV1508: { title: "`<Teleport>` target that is not a string" },
   FV1509: { title: "Twin prop of a type with no Rust type" },
   FV1510: { title: "Twin for a component ferrovue compiles" },
+
+  FV1601: { title: "Injection key that is not a string literal or a symbol exported from a `.ts` file" },
+  FV1602: { title: "Injection key symbol without an `InjectionKey<T>` type" },
+  FV1603: { title: "`provide` or `inject` with unsupported arguments" },
+  FV1604: { title: "`inject` that is not bound to a name at the top of `<script setup>`" },
+  FV1605: { title: "`inject(key)!`, asserting a provider" },
+  FV1606: { title: "`inject` of a string key with neither a default nor a type argument" },
+  FV1607: { title: "Function default without the factory flag" },
+  FV1608: { title: "Values of different types provided under one key" },
+  FV1609: { title: "Provided value that may be `null` or `undefined`" },
+  FV1610: { title: "Provided value of a form the context does not hold" },
+  FV1611: { title: "Object provided under a key without an interface type" },
+  FV1612: { title: "Provided object whose fields do not match its interface" },
+  FV1613: { title: "Ref and plain value under one key" },
+  FV1614: { title: "Key provided twice by one component" },
+  FV1615: { title: "Two keys that give the context one field name" },
+  FV1616: {
+    title: "`provide` in a component that holds `<RouterView>`",
+    detail: "The page `<RouterView>` shows is rendered from Rust and handed in as a slot, so it cannot see what the component provides. Provide the value above the router (in Rust, through the `Provides` the page is rendered with) or below it.",
+  },
+  FV1617: {
+    title: "String-keyed `inject` inside a Rust twin's slot",
+    detail: "Content in a twin's slot is a child of the library component the twin stands for, which may provide the same string key on the client. Use an `InjectionKey` symbol, which only the project provides.",
+  },
+  FV1618: { title: "Setup that assigns to an injected value" },
+  FV1619: { title: "Function and value provided under one key" },
+  FV1620: { title: "`provide` or `inject` called inside an expression" },
 } as const satisfies Record<`FV${number}`, ErrorDoc>;
 
 /** A stable error code, as `FV0604`. */

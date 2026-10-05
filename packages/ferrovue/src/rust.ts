@@ -5,10 +5,11 @@ import { ctx } from "./context.ts";
 import { lookupStruct } from "./typescript.ts";
 import { childOf } from "./expr.ts";
 import { Emitter } from "./emitter.ts";
+import { occurrences } from "./parens.ts";
 import { statements } from "./template.ts";
 import { slotFieldBorrows, slotFieldTy, slotTypeName } from "./slots.ts";
 import { extraParams, fieldInit, takesSlots } from "./children.ts";
-import { paramsOf, renderParams, slotFieldsOf } from "./plugin.ts";
+import { paramsOf, renderParams, slotContextOf, slotFieldsOf } from "./plugin.ts";
 import { scopeFor } from "./script.ts";
 
 export function needsLifetime(ty: Ty, comp: Component, seen: Set<string> = new Set()): boolean {
@@ -180,7 +181,12 @@ export function textLen(comp: Component, place: string, ty: Ty, seen: Set<string
 function renderSource(comp: Component, life: string, args: string, e: Emitter): string {
   const doc = "/// Write the component's server render into `out`.\n";
   const props = e.reads("props", 0) ? "props" : "_props";
-  if (!comp.inherits && !takesAttrs(comp)) return `${doc}pub fn render(out: &mut String, ${props}: &Props${life}${extraParams(comp)}) {\n${e.lines.join("\n")}\n}`;
+  const unread = (name: string): boolean => {
+    const shadow = e.lines.findIndex((l) => l.trimStart().startsWith(`let ${name} = `));
+    const before = shadow < 0 ? e.lines : [...e.lines.slice(0, shadow), e.lines[shadow]!.replace(`let ${name} = `, "")];
+    return occurrences(before.join("\n"), name) === 0;
+  };
+  if (!comp.inherits && !takesAttrs(comp)) return `${doc}pub fn render(out: &mut String, ${props}: &Props${life}${extraParams(comp, unread)}) {\n${e.lines.join("\n")}\n}`;
   const attrs = e.reads("fv_attrs", 0) ? "fv_attrs" : "_fv_attrs";
   const [none, ty, what] = takesAttrs(comp)
     ? ["&fv::Attrs::NONE", "&fv::Attrs<'_>", "the attributes a parent passes beyond the props, and the scope ids it hands the root"]
@@ -191,7 +197,7 @@ function renderSource(comp: Component, life: string, args: string, e: Emitter): 
 
 /// [\`render\`], with ${what}.
 #[doc(hidden)]
-pub fn render_scoped(out: &mut String, ${props}: &Props${life}${extraParams(comp)}, ${attrs}: ${ty}) {
+pub fn render_scoped(out: &mut String, ${props}: &Props${life}${extraParams(comp, unread)}, ${attrs}: ${ty}) {
 ${e.lines.join("\n")}
 }`;
 }
@@ -213,10 +219,12 @@ export function componentSource(comp: Component, ast: N[], ssr: string, componen
   if (!fn) fail(comp, "FV0006", "the compiled template has no `ssrRender`");
 
   const e = new Emitter();
-  for (const l of lets) e.stmt(l);
+  const preludes = ctx.plugins.flatMap((p) => (p.prelude ? [p.prelude(scope)] : []));
+  const opening = [...preludes.flatMap((p) => p.before), ...lets, ...preludes.flatMap((p) => p.after)];
+  for (const l of opening) e.stmt(l);
   statements(scope, e, fn.body.body);
-  for (let i = lets.length - 1; i >= 0; i--) {
-    const name = /^let (\w+)/.exec(lets[i]!)![1]!;
+  for (let i = opening.length - 1; i >= 0; i--) {
+    const name = /^let (\w+)/.exec(opening[i]!)![1]!;
     if (!e.reads(name, i + 1)) e.lines.splice(i, 1);
   }
   e.flush();
@@ -236,10 +244,12 @@ export function componentSource(comp: Component, ast: N[], ssr: string, componen
     .join("\n");
   const usesCow = /Cow</.test(structs + structSource(comp.props, comp, ""));
   const plain = isIsland(comp);
+  const context = slotContextOf(comp);
+  const contextTys = context.map((p) => `, ${p.ty}`).join("");
   const slotFields = [
     ...comp.slotNames.map((n) => {
       const outlet = `\`<slot${n === "default" ? "" : ` name="${n}"`}>\``;
-      const type = comp.slotShapes.has(n) ? `&'s ${slotTypeName(n, "Slot")}<'s>` : "fv::Slot<'s>";
+      const type = comp.slotShapes.has(n) || context.length ? `&'s ${slotTypeName(n, "Slot")}<'s>` : "fv::Slot<'s>";
       return `    /// ${outlet}\n    pub ${snake(n)}: Option<${type}>,`;
     }),
     ...slotFieldsOf(comp).map((f) => `    /// ${f.doc}\n    pub ${f.rust}: fv::Slot<'s>,`),
@@ -255,14 +265,26 @@ pub struct ${props} {
 ${fields}
 }
 
-/// A parent's content for ${outlet}, given its props${comp.passesSlotIds ? " and the slot scope id to write onto its elements" : ""}: returns whether it wrote anything but comments.
-pub type ${slotTypeName(n, "Slot")}<'s> = dyn ${borrows ? "for<'v> " : ""}Fn(&mut String, &${props}${comp.passesSlotIds ? ", &str" : ""}) -> bool + 's;
+/// A parent's content for ${outlet}, given its props${comp.passesSlotIds ? " and the slot scope id to write onto its elements" : ""}${context.length ? " and what its ancestors provide" : ""}: returns whether it wrote anything but comments.
+pub type ${slotTypeName(n, "Slot")}<'s> = dyn ${borrows ? "for<'v> " : ""}Fn(&mut String, &${props}${comp.passesSlotIds ? ", &str" : ""}${contextTys}) -> bool + 's;
 
 `;
     })
     .join("");
+  const contextSlots = context.length
+    ? comp.slotNames
+        .filter((n) => !comp.slotShapes.has(n))
+        .map((n) => {
+          const outlet = `\`<slot${n === "default" ? "" : ` name="${n}"`}>\``;
+          return `/// A parent's content for ${outlet}, given ${comp.passesSlotIds ? "the slot scope id to write onto its elements and " : ""}what its ancestors provide: returns whether it wrote anything but comments.
+pub type ${slotTypeName(n, "Slot")}<'s> = dyn Fn(&mut String${comp.passesSlotIds ? ", &str" : ""}${contextTys}) -> bool + 's;
+
+`;
+        })
+        .join("")
+    : "";
   const slotsStruct = takesSlots(comp)
-    ? `${slotTypes}/// What a parent puts in the slots \`${basename(comp.file)}\` renders.
+    ? `${slotTypes}${contextSlots}/// What a parent puts in the slots \`${basename(comp.file)}\` renders.
 #[derive(Clone, Copy${slotFieldsOf(comp).length ? "" : ", Default"})]
 pub struct Slots<'s> {
 ${slotFields.join("\n")}
@@ -322,17 +344,22 @@ export function modSource(comps: Component[], modules: string[]): string {
       if (readsFixture(c)) lines.push("let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;");
       if (takesSlots(c)) {
         const names = [...c.slotNames, ...slotFieldsOf(c).map((f) => f.js)];
+        const context = slotContextOf(c);
+        const contextArgs = context.map((p) => `, _: ${p.slotContext}`).join("");
         for (const n of names) {
           const local = `s_${snake(n).replace(/^r#/, "")}`;
           const shape = c.slotShapes.get(n);
-          if (shape) {
-            const life = shape.fields.some((f) => slotFieldBorrows(f.ty)) ? "<'_>" : "";
-            lines.push(`let ${local} = |out: &mut String, _: &${c.module}::${shape.name}${life}${c.passesSlotIds ? ", _: &str" : ""}| -> bool { out.push_str(fixture.slot(${rustStr(n)}).unwrap_or_default()); true };`);
+          const content = `out.push_str(fixture.slot(${rustStr(n)}).unwrap_or_default()); true`;
+          const shapeArg = shape ? `, _: &${c.module}::${shape.name}${shape.fields.some((f) => slotFieldBorrows(f.ty)) ? "<'_>" : ""}` : "";
+          if (context.length && c.slotNames.includes(n)) {
+            lines.push(`let ${local}: &${c.module}::${slotTypeName(n, "Slot")} = &|out: &mut String${shapeArg}${c.passesSlotIds ? ", _: &str" : ""}${contextArgs}| -> bool { ${content} };`);
+          } else if (shape) {
+            lines.push(`let ${local} = |out: &mut String${shapeArg}${c.passesSlotIds ? ", _: &str" : ""}| -> bool { ${content} };`);
           } else lines.push(`let ${local} = |out: &mut String| out.push_str(fixture.slot(${rustStr(n)}).unwrap_or_default());`);
         }
         const fields = c.slotNames.map((n) => {
           const local = `s_${snake(n).replace(/^r#/, "")}`;
-          const value = c.slotShapes.has(n) ? `&${local} as &${c.module}::${slotTypeName(n, "Slot")}` : `ferrovue::Slot::new(&${local})`;
+          const value = context.length ? local : c.slotShapes.has(n) ? `&${local} as &${c.module}::${slotTypeName(n, "Slot")}` : `ferrovue::Slot::new(&${local})`;
           return `${snake(n)}: fixture.slot(${rustStr(n)}).map(|_| ${value})`;
         });
         for (const f of slotFieldsOf(c)) fields.push(`${f.rust}: ferrovue::Slot::new(&s_${snake(f.js).replace(/^r#/, "")})`);
