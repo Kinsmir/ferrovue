@@ -129,7 +129,7 @@ route.
 
 The router and vue-i18n are features of the crate, `router` and `i18n`, both on by default. An
 application with neither routes nor translations can leave them out, and build neither
-`ferrovue-router` nor `ferrovue-i18n`: `ferrovue = { version = "0.5", default-features = false }`.
+`ferrovue-router` nor `ferrovue-i18n`: `ferrovue = { version = "0.6", default-features = false }`.
 
 With the `maud` feature, `ferrovue::Html` implements `maud::Render`, so `(greeting::html(&props))` can go
 straight into a `maud::html!` page.
@@ -638,10 +638,10 @@ and both write the same bytes: each side checks its output against
 
 | Scenario | What renders | Output | Vue `renderToString` | ferrovue | Speed-up |
 |---|---|---|---|---|---|
-| `small` | `Nav`: two `<RouterLink>`s resolved against the current route | 206 B | 41.39 µs | 0.962 µs | 43.0× |
-| `list` | `Lists`: 1,000 words, 1,000 numbers, 100 groups of 10 members | 102 KiB | 363.9 µs | 49.00 µs | 7.4× |
-| `tree` | `Tree`: a recursive component, binary tree 8 levels deep (255 nodes) | 9.5 KiB | 539.5 µs | 3.89 µs | 138.5× |
-| `page` | `Dashboard`: 22 `Panel`s with named slots, a `Text`, 20 `Frame`s holding loops | 8.0 KiB | 192.4 µs | 4.84 µs | 39.7× |
+| `small` | `Nav`: two `<RouterLink>`s resolved against the current route | 206 B | 36.41 µs | 0.989 µs | 36.8× |
+| `list` | `Lists`: 1,000 words, 1,000 numbers, 100 groups of 10 members | 102 KiB | 355.8 µs | 46.16 µs | 7.7× |
+| `tree` | `Tree`: a recursive component, binary tree 8 levels deep (255 nodes) | 9.5 KiB | 522.2 µs | 3.86 µs | 135.2× |
+| `page` | `Dashboard`: 22 `Panel`s with named slots, a `Text`, 20 `Frame`s holding loops | 8.0 KiB | 181.3 µs | 5.06 µs | 35.8× |
 
 These are mean times per render. The Vue column is tinybench's mean, with 5 s per scenario after
 a 1 s warm-up. The ferrovue column is criterion's mean point estimate, using its defaults of a 3 s
