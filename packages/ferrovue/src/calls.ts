@@ -139,6 +139,7 @@ export function call(s: Scope, n: N): Val {
       const of = target.ty.of;
       if (method === "includes" && args.length === 1) {
         const v = expr(s, args[0]);
+        if (of.k === "int" && v.ty.k === "float") return { code: `${atom(target.code)}.iter().any(|v| ${binary("*v as f64", "==", v.code)})`, ty: BOOL };
         if (!sameTy(v.ty, of)) fail(comp, "`.includes()` looks for a value of the list's own type", args[0]);
         if (of.k === "int") return { code: `${atom(target.code)}.contains(&${operand(v.code, UNARY)})`, ty: BOOL };
         const test = v.code === '""' ? "v.is_empty()" : binary("&**v", "==", v.code);

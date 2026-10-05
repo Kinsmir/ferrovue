@@ -18,6 +18,13 @@ released together and share version numbers.
   from: `vue-router` `~5.3.1` (was `^5.3.1`), `pinia` `~4.0.3` (was `^4.0.3`) and `vue-i18n`
   `~11.4.13` (was `^11.0.0`). The README's "Versions" lists them.
 
+### Fixed
+
+- `.includes()` of a list of numbers takes any number: a `Float` in a list of `number`s, a `number` in a
+  list of `Float`s, or in a list mapped to fractions (`nums.map((v) => -v).includes(0)`), which were
+  refused as a value of another type than the list's. It compares as JavaScript's `includes` does, `-0`
+  equal to `0`.
+
 ## [0.4.0] - 2026-10-05
 
 ### Changed
