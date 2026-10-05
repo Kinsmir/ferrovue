@@ -1,0 +1,5 @@
+{
+  "components": "components",
+  "out": "generated",
+  "builders": false
+}

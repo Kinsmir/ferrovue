@@ -13,6 +13,7 @@ export function generate(root: string, config: Config = loadConfig(root)): Map<s
   ctx.componentsDir = config.components.replace(/\/?$/, "/");
   ctx.helperModule = config.helpers?.module ?? null;
   ctx.trustedHtml = config.trustedHtml ?? null;
+  ctx.builders = config.builders ?? true;
   ctx.clientDirectives = new Set(config.clientDirectives ?? []);
   ctx.rootDir = root;
   ctx.typeStructs = new Map();

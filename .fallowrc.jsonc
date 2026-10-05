@@ -4,6 +4,7 @@
     "crates/ferrovue/tests/conformance/components/**",
     "crates/ferrovue/tests/conformance/stores/**",
     "crates/ferrovue/tests/conformance/types/**",
+    "crates/ferrovue/tests/literal_props/components/**",
     "examples/greeting/components/**",
     "examples/dioxus/components/**",
     "packages/ferrovue/browser/*.test.ts",

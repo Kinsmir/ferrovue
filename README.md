@@ -65,6 +65,7 @@ crate that includes it needs **edition 2024**.
 | `clientDirectives` | no | Custom directives with no server output (no `getSSRProps`), by name without `v-`: `["focus"]` |
 | `scopeId` | no | How a `<style scoped>` id is hashed, as `@vitejs/plugin-vue` hashes it: `"filepath-source"` (the default, the plugin's in a production build) or `"filepath"`. See [Scoped styles](#scoped-styles) |
 | `viteRoot` | no | Vite's root, relative to this file's directory, from which a component's path is hashed (default `.`) |
+| `builders` | no | `false` leaves out each props struct's and shared type's `new()` and setters, for an app that builds its props as struct literals (default `true`) |
 
 ### 3. Write a component
 
