@@ -96,7 +96,7 @@ pub struct PageSlot<'p> {
     render: Box<SlotContent<'p>>,
 }
 
-/// A slot of a [`Page`] whose parts are rendered later, as an [`HtmlStream`](crate::HtmlStream)
+/// A slot of a [`Page`] whose parts are rendered later, as an `HtmlStream` (the `stream` feature)
 /// hole is: give the layout its [`slot`](Self::slot), and [`fill`](Self::fill) it once its data is
 /// ready. A hole dropped without being filled is recorded as empty, as `HtmlStream` leaves a hole
 /// given no content empty.
@@ -114,7 +114,7 @@ pub struct PageRecord {
 }
 
 /// The record's `<script>` once every [`PageHole`] of the page is filled or dropped: the content
-/// of the last hole of an [`HtmlStream`](crate::HtmlStream). Made by [`PageRecord::script`].
+/// of the last hole of an `HtmlStream` (the `stream` feature). Made by [`PageRecord::script`].
 #[derive(Debug)]
 pub struct PageScript {
     record: Shared,
@@ -293,7 +293,7 @@ impl PageRecord {
 
     /// The record's `<script>`, ready once every hole of the page is filled or dropped. Leave a
     /// [`hole`](crate::hole) for it after the app's container and give it to the
-    /// [`HtmlStream`](crate::HtmlStream) after the futures of the page's holes.
+    /// `HtmlStream` (the `stream` feature) after the futures of the page's holes.
     pub fn script(self, id: impl Into<String>) -> PageScript {
         PageScript {
             record: self.record,
