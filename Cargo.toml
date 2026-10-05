@@ -19,9 +19,26 @@ repository = "https://github.com/Kinsmir/ferrovue"
 homepage = "https://github.com/Kinsmir/ferrovue"
 
 [workspace.dependencies]
+ferrovue = { path = "crates/ferrovue", version = "=0.4.0" }
 ferrovue-core = { path = "crates/ferrovue-core", version = "=0.4.0" }
 ferrovue-i18n = { path = "crates/ferrovue-i18n", version = "=0.4.0" }
 ferrovue-router = { path = "crates/ferrovue-router", version = "=0.4.0" }
+actix-web = { version = "4.15.0", default-features = false }
+axum = { version = "0.8.9", default-features = false }
+axum-core = "0.5.6"
+bytes = "1.12.1"
+criterion = { version = "0.8.2", default-features = false }
+dioxus = { version = "0.7.10", default-features = false }
+dioxus-core = { version = "0.7.10", default-features = false }
+dioxus-ssr = { version = "0.7.10", default-features = false }
+futures-core = { version = "0.3.34", default-features = false }
+http = "1.5.0"
+maud = "0.27.0"
+proptest = "1"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+tokio = "1.53.2"
+tower-http = "0.7.1"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

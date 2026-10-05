@@ -129,6 +129,37 @@ export function checkMembers(file: string, members: string[], dirs: string[]): s
   return problems;
 }
 
+const DEPENDENCY_TABLE = /^(?:target\..+\.)?(?:dev-|build-)?dependencies(?:\.([\w-]+))?$/;
+
+export function checkInheritedDependencies(file: string, manifest: string): string[] {
+  const problems: string[] = [];
+  const declaresItself = (name: string): string =>
+    `${file} declares ${name} itself: write it in [workspace.dependencies] and use \`workspace = true\``;
+  let table: RegExpExecArray | null = null;
+  let inherited = false;
+  const closeTable = (): void => {
+    if (table?.[1] && !inherited) problems.push(declaresItself(table[1]));
+  };
+  for (const line of manifest.split("\n")) {
+    const header = /^\[\[?([^\]]+)\]\]?\s*$/.exec(line);
+    if (header) {
+      closeTable();
+      table = DEPENDENCY_TABLE.exec(header[1]!.replace(/\s/g, ""));
+      inherited = false;
+      continue;
+    }
+    const entry = table && /^\s*([\w-]+)(\.workspace)?\s*=\s*(.*)$/.exec(line);
+    if (!table || !entry) continue;
+    if (table[1]) {
+      if (entry[1] === "workspace" && entry[3]!.trim() === "true") inherited = true;
+    } else if (entry[2] ? entry[3]!.trim() !== "true" : !/^\{.*\bworkspace\s*=\s*true\b/.test(entry[3]!)) {
+      problems.push(declaresItself(entry[1]!));
+    }
+  }
+  closeTable();
+  return problems;
+}
+
 function memberProblems(): string[] {
   const withManifest = (manifest: string): string[] =>
     ["crates", "examples", "packages"].flatMap((top) =>
@@ -136,8 +167,12 @@ function memberProblems(): string[] {
         .filter((d) => d.isDirectory() && existsSync(join(ROOT, top, d.name, manifest)))
         .map((d) => `${top}/${d.name}`),
     );
+  const cargoMembers = workspaceMembers(readFileSync(CARGO, "utf8"), "cargo");
   return [
-    ...checkMembers("Cargo.toml", workspaceMembers(readFileSync(CARGO, "utf8"), "cargo"), withManifest("Cargo.toml")),
+    ...checkMembers("Cargo.toml", cargoMembers, withManifest("Cargo.toml")),
+    ...cargoMembers
+      .filter((m) => existsSync(join(ROOT, m, "Cargo.toml")))
+      .flatMap((m) => checkInheritedDependencies(`${m}/Cargo.toml`, readFileSync(join(ROOT, m, "Cargo.toml"), "utf8"))),
     ...checkMembers("pnpm-workspace.yaml", workspaceMembers(readFileSync(join(ROOT, "pnpm-workspace.yaml"), "utf8"), "pnpm"), withManifest("package.json")),
   ];
 }
@@ -186,7 +221,7 @@ function main(argv: string[]): number {
     case "members": {
       const problems = memberProblems();
       for (const p of problems) console.error(p);
-      if (!problems.length) console.log("Cargo.toml and pnpm-workspace.yaml list every member by its path");
+      if (!problems.length) console.log("Cargo.toml and pnpm-workspace.yaml list every member by its path, and every crate takes its dependencies from the workspace");
       return problems.length ? 1 : 0;
     }
     case "check": {

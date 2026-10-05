@@ -8,13 +8,13 @@ license.workspace = true
 publish = false
 
 [dependencies]
-dioxus = { version = "0.7.10", default-features = false, features = ["macro", "html", "signals"] }
-dioxus-ssr = { version = "0.7.10", default-features = false }
-ferrovue = { path = "../../crates/ferrovue", features = ["dioxus"] }
-serde = { version = "1.0.229", features = ["derive"] }
+dioxus = { workspace = true, features = ["macro", "html", "signals"] }
+dioxus-ssr.workspace = true
+ferrovue = { workspace = true, features = ["dioxus"] }
+serde.workspace = true
 
 [dev-dependencies]
-serde_json = "1.0.151"
+serde_json.workspace = true
 
 [lints]
 workspace = true
