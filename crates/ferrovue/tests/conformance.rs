@@ -26,27 +26,11 @@ impl ferrovue::TrustedHtml for Sanitised {
 use std::fs;
 use std::path::Path;
 
-#[test]
-fn every_fixture_renders_as_vue_rendered_it() {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/conformance/fixtures");
-    let mut checked = 0;
-    for component in fs::read_dir(&root).expect("fixtures") {
-        let component = component.expect("fixture directory").path();
-        let name = component.file_name().unwrap().to_str().unwrap().to_owned();
-        for file in fs::read_dir(&component).expect("fixture files") {
-            let json = file.expect("fixture").path();
-            if json.extension().is_none_or(|e| e != "json") {
-                continue;
-            }
-            let want = fs::read_to_string(json.with_extension("html")).expect("recorded HTML");
-            let got = generated::render_json(&name, &fs::read_to_string(&json).unwrap())
-                .unwrap_or_else(|e| panic!("{}: {e}", json.display()));
-            assert_eq!(got, want, "{}", json.display());
-            checked += 1;
-        }
-    }
-    assert!(checked >= 50, "only {checked} fixtures were found");
-}
+ferrovue::conformance!(
+    "tests/conformance/fixtures",
+    generated::render_json,
+    at_least = 50
+);
 
 fn unescape(s: &str) -> String {
     s.replace("&quot;", "\"")

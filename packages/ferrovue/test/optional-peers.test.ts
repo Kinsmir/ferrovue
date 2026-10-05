@@ -15,7 +15,7 @@ import { registerHooks } from "node:module";
 const src = ${JSON.stringify(pathToFileURL(SRC).href)};
 registerHooks({
   resolve(specifier, context, next) {
-    if (/^(vite|vue-i18n|pinia|vue-router)(\\/|$)/.test(specifier)) {
+    if (/^(vite|vitest|vue-i18n|pinia|vue-router)(\\/|$)/.test(specifier)) {
       return next(specifier, { ...context, parentURL: ${JSON.stringify(nowhere)} });
     }
     return next(specifier, context.parentURL === import.meta.url ? { ...context, parentURL: src + "/testing.ts" } : context);
@@ -25,7 +25,7 @@ const out = { loaded: {} };
 for (const entry of ${JSON.stringify(ENTRIES)}) {
   out.loaded[entry] = await import(src + "/" + entry + ".ts").then(() => "loaded", (error) => error.message);
 }
-const { fixtureApp, readFixture } = await import(src + "/testing.ts");
+const { conformanceSuite, fixtureApp, readFixture } = await import(src + "/testing.ts");
 const { defineComponent, h } = await import("vue");
 const { renderToString } = await import("vue/server-renderer");
 const Hello = defineComponent({ props: { name: String }, render() { return h("p", "Hello, " + this.name); } });
@@ -41,6 +41,7 @@ const failure = async (json, routes, options) => {
 out.stores = await failure({ name: "Ada", $stores: { cart: { items: [] } } }, null);
 out.routes = await failure({ name: "Ada", $route: "/" }, ["/"]);
 out.i18n = await failure({ name: "Ada" }, null, { i18n: { messages: { en: {} }, locale: "en" } });
+out.vitest = await conformanceSuite({ config: "ferrovue.config.json", components: {} }).then(() => null, (error) => error.message);
 process.stdout.write(JSON.stringify(out));
 `;
 
@@ -55,7 +56,7 @@ beforeAll(() => {
 
 afterAll(() => rmSync(root, { recursive: true, force: true }));
 
-it("loads every entry of the package without the optional peers", () => {
+it("loads every entry of the package without the optional peers, vitest included", () => {
   expect(result.loaded).toEqual({
     index: "loaded",
     compiler: "loaded",
@@ -76,4 +77,5 @@ it("names the peer to install when a fixture needs one that is missing", () => {
   expect(result.stores).toMatch(/`\$stores`, which needs `pinia`: install it/);
   expect(result.routes).toMatch(/routes, which needs `vue-router`: install it/);
   expect(result.i18n).toMatch(/`i18n` options, which needs `vue-i18n`: install it/);
+  expect(result.vitest).toMatch(/`conformanceSuite` registers vitest tests, which needs `vitest`: install it/);
 });

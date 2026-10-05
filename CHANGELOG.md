@@ -40,6 +40,23 @@ released together and share version numbers.
 
 ### Added
 
+- A conformance suite for applications (#45), in two calls over a `fixtures/<Component>/<case>.json`
+  directory. `await conformanceSuite({ config, components })` from `ferrovue/testing` registers
+  vitest tests that fail on a component with no fixtures or a fixture naming no component, on
+  generated Rust that differs from what `ferrovue` writes now (with the diff), on a fixture Vue
+  renders differently from its recorded `.html` (saying where they first differ), and on a
+  recorded `.html` that hydrates with any warning or with its first node replaced, once
+  `<ClientOnly>` and async components have settled; `FERROVUE_FIXTURES_WRITE=1` records the `.html`
+  files instead. It takes the application's own `pinia`, `vueRouter` and `vueI18n` modules, as
+  `fixtureApp` now does in its options, so the fixtures install the instances the application's
+  stores and composables read. vitest is an optional peer, loaded only by `conformanceSuite`.
+  `ferrovue::conformance!("fixtures", generated::render_json, at_least = n)` writes the Rust test
+  that renders every fixture through the generated `render_json` and compares the bytes, listing
+  each fixture that differs, and fails when fewer than `n` fixtures are found;
+  `ferrovue::check_fixtures` is the same check as a function. The crate guide's new `testing` page
+  describes both, `examples/fullstack` replaces its hand-written fixture tests with them and has
+  fixtures for every component, loading ferrovue from its built package as an external, as an
+  application's vitest run does; ferrovue's own Rust conformance test uses the macro.
 - Stable error codes. Every error the compiler raises has a code, `FV` and four digits grouped by
   area (`FV00xx` components and parsing, `FV01xx` script setup, `FV02xx` constants, `FV03xx` props
   and types, `FV04xx` templates and attributes, `FV05xx` child components, `FV06xx` expressions,

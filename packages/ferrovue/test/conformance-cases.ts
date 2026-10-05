@@ -2,6 +2,8 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { RouteEntry, RouterOptions } from "../src/fixture.ts";
 
+export { hydrationBody, TELEPORTS } from "../src/conformance.ts";
+
 export const ROOT = join(import.meta.dirname, "../../../crates/ferrovue/tests/conformance");
 const FIXTURES = join(ROOT, "fixtures");
 export const ROUTES = JSON.parse(readFileSync(join(ROOT, "routes.json"), "utf8")) as RouteEntry[];
@@ -18,7 +20,6 @@ const I18N = CONFIG.i18n && {
   ...(CONFIG.i18n.fallbackLocale !== undefined ? { fallbackLocale: CONFIG.i18n.fallbackLocale } : {}),
 };
 export const OPTIONS: RouterOptions = I18N ? { i18n: I18N } : {};
-export const TELEPORTS = "<!--fv-teleports-->";
 
 export const VUE_DISAGREES = new Set(["Hollow/absent.json", "Hollow/absent-on.json", "Hollow/whitespace.json", "Hollow/js-whitespace.json"]);
 
@@ -48,14 +49,3 @@ export const cases: Case[] = readdirSync(FIXTURES, { withFileTypes: true })
         return { component: d.name, name: f, base, json: JSON.parse(readFileSync(`${base}.json`, "utf8")) as Record<string, unknown>, html };
       }),
   );
-
-export function hydrationBody(html: string): string {
-  const [main, teleported] = html.split(TELEPORTS);
-  const targets = Object.entries(JSON.parse(teleported ?? "{}") as Record<string, string>);
-  const intoBody = targets.filter(([t]) => t === "body").map(([, content]) => content).join("");
-  const elsewhere = targets
-    .filter(([t]) => t !== "body")
-    .map(([t, content]) => `<div id="${t.replace(/^#/, "")}">${content}</div>`)
-    .join("");
-  return `${intoBody}<div id="root">${main}</div>${elsewhere}`;
-}

@@ -9,8 +9,7 @@ mod catalogue;
 mod pages;
 mod ui;
 
-#[cfg(test)]
-mod fixtures;
+ferrovue::conformance!("fixtures", generated::render_json, at_least = 24);
 
 use std::path::PathBuf;
 use std::sync::Arc;

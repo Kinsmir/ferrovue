@@ -1,0 +1,1 @@
+{"book":{"id":"a b&c","title":"<script>alert(\"x\")</script> & co","author":"O'Brien \"Ed\" <ed>","year":-1},"$route":"/books/a%20b&c"}

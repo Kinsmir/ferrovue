@@ -46,7 +46,7 @@ function missingPeer(name: string, needs: string, cause: unknown): Error {
   return new Error(`ferrovue/testing: ${needs}, which needs \`${name}\`: install it in your project (\`npm install -D ${name}\`)`, { cause });
 }
 
-async function peer<T>(name: string, needs: string, load: () => Promise<T>): Promise<T> {
+export async function peer<T>(name: string, needs: string, load: () => Promise<T>): Promise<T> {
   try {
     return await load();
   } catch (error) {

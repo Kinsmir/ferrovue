@@ -1,0 +1,1 @@
+{"books":[{"id":"dune","title":"Dune","author":"Frank Herbert","year":1965},{"id":"solaris","title":"Solaris","author":"Stanisław Lem","year":1961}],"$slots":{"actions":"<button type=\"button\" class=\"add\">Add to basket</button>"}}

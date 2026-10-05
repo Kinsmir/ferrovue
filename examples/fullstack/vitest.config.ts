@@ -17,6 +17,8 @@ export default defineConfig({
       },
     },
     include: ["test/**/*.test.ts"],
+    server: { deps: { external: [/\/packages\/ferrovue\/dist\//] } },
+
     hookTimeout: 600_000,
   },
 });
