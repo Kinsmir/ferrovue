@@ -43,11 +43,11 @@ impl<'a> Props<'a> {
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(214 + props.tone.len() + props.size.as_deref().map_or(0, str::len));
-    let s_heading = &*format!("Catalogue <b> ({})", fv::Js(3i64));
+    let s_heading = format!("Catalogue <b> ({})", fv::Js(3i64));
     out.push_str("<section class=\"");
     fv::class_into(out, false, &["round", &*props.tone]);
     out.push_str("\"><h2>");
-    fv::escape_into(out, s_heading);
+    fv::escape_into(out, &s_heading);
     out.push_str("</h2>");
     if &*props.tone == "loud" {
         out.push_str("<p>LOUD</p>");

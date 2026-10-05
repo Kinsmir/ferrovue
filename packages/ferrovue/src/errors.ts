@@ -269,6 +269,10 @@ export const ERRORS = {
   FV1010: { title: "Style array mixing a string with objects" },
   FV1011: { title: "Style property whose place depends on a condition" },
   FV1012: { title: "Scope ids handed to a component whose render does not take them" },
+  FV1013: {
+    title: "`class` written apart from a later `:class` in content rendered from virtual nodes",
+    detail: "Inside an element `<component :is>` chooses, in the slot content such an element renders, and inside a `<RouterLink>`, Vue's server renders from virtual nodes, where a static `class` written before `:class` keeps its place and its names come first. ferrovue writes them so when nothing stands between the two; with attributes between them, write the two next to each other, or `:class` first.",
+  },
 
   FV1101: { title: "Helper called with the wrong number of arguments" },
   FV1102: { title: "Configuration file not found" },

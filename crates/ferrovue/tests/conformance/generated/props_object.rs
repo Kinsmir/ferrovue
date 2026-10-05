@@ -59,7 +59,7 @@ impl<'a> Props<'a> {
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(125 + 9 * props.tags.as_deref().unwrap_or(&[]).len() + props.label.len() + props.tone.as_deref().map_or(0, str::len) + props.note.as_deref().map_or(0, str::len));
-    let s_loud = &*props.label.to_uppercase();
+    let s_loud = props.label.to_uppercase();
     out.push_str("<article");
     if props.label.is_empty() {
         out.push_str(" title");
@@ -80,7 +80,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push_str(" (");
     fv::push_int(out, props.count.unwrap_or(1i64));
     out.push_str(") ");
-    fv::escape_into(out, s_loud);
+    fv::escape_into(out, &s_loud);
     out.push_str("</h3>");
     super::divider::render(out, &super::divider::Props {  });
     if props.tags.as_deref().unwrap_or(&[]).len() as i64 != 0 {

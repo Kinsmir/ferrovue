@@ -109,6 +109,7 @@ pub mod scoped_shelf;
 pub mod scoped_tree;
 pub mod session;
 pub mod setup;
+pub mod setup_values;
 pub mod shape_circle;
 pub mod shape_picker;
 pub mod shape_root;
@@ -136,6 +137,7 @@ pub mod translated;
 pub mod tree;
 pub mod user_card;
 pub mod user_list;
+pub mod vnode_class;
 pub mod route_table;
 pub mod stores;
 pub mod types;
@@ -720,6 +722,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: setup::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             setup::render(&mut out, &props);
         }
+        "SetupValues" => {
+            let props: setup_values::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            setup_values::render(&mut out, &props, provides::Provides::default());
+        }
         "ShapeCircle" => {
             let props: shape_circle::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -853,6 +859,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "UserList" => {
             let props: user_list::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             user_list::render(&mut out, &props);
+        }
+        "VnodeClass" => {
+            let props: vnode_class::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            vnode_class::render(&mut out, &props);
         }
         other => return Err(format!("no component called {other}")),
     }

@@ -38,7 +38,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides:
     let fv_default_look = super::types::Look { size: std::borrow::Cow::Borrowed(props.size.as_deref().unwrap_or("md")), tone: std::borrow::Cow::Borrowed("plain"), note: None, count: 0i64 };
     let fv_default_made = super::types::Look { size: std::borrow::Cow::Borrowed("lg"), tone: std::borrow::Cow::Borrowed(&*props.label), note: Some(std::borrow::Cow::Borrowed("made")), count: 1i64 };
     let fv_default_named = super::types::Look { size: std::borrow::Cow::Borrowed("sm"), tone: std::borrow::Cow::Borrowed(&*format!("{}!", props.label)), note: None, count: 2i64 };
-    let s_summary = &*format!("{}/{}", fv_provides.look_key.unwrap_or(&fv_default_look).size, fv_provides.look_key.unwrap_or(&fv_default_look).tone);
+    let s_summary = format!("{}/{}", fv_provides.look_key.unwrap_or(&fv_default_look).size, fv_provides.look_key.unwrap_or(&fv_default_look).tone);
     out.push_str("<span class=\"swatch");
     fv::class_into(out, true, &[&*format!("swatch-{}", fv_provides.look_key.unwrap_or(&fv_default_look).size)]);
     out.push('"');
@@ -61,7 +61,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides:
     out.push('>');
     fv::escape_into(out, &props.label);
     out.push(' ');
-    fv::escape_into(out, s_summary);
+    fv::escape_into(out, &s_summary);
     out.push(' ');
     fv::escape_into(out, &fv_provides.look_key.unwrap_or(&fv_default_made).tone);
     out.push(' ');

@@ -8,8 +8,7 @@ import { slotFieldBorrows, slotFieldTy, slotFieldValue } from "../slots.ts";
 import { fieldInit, ownInto } from "../children.ts";
 import { setupSource } from "../script.ts";
 import { header } from "../rust.ts";
-import { isTemporary } from "../strings.ts";
-import { bare } from "../parens.ts";
+import { heldStr, isTemporary } from "../strings.ts";
 import { type Plugin, runOf, scopeOf, slotFieldsOf } from "../plugin.ts";
 
 interface Key {
@@ -340,8 +339,8 @@ function provide(s: Scope, call: N): void {
   settle(key, markHome(v.ty, s.comp.name), s.comp, call.arguments[1]);
   if (isTemporary(v)) {
     const name = `fv_provided_${key.field.replace(/^r#/, "")}`;
-    own.lets.push(`let ${name} = ${bare(v.code)};`);
-    own.entries.push({ key, code: `Some(${name})` });
+    own.lets.push(`let ${name} = ${heldStr(v)};`);
+    own.entries.push({ key, code: `Some(&*${name})` });
     return;
   }
   own.entries.push({ key, code: `Some(${slotFieldValue(s, v, node)})` });

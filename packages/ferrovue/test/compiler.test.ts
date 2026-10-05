@@ -2220,6 +2220,14 @@ defineProps<{ tag: "b" | "i"; on: boolean }>();
       /X\.vue:4:\d+: `v-show` in content Vue renders from virtual nodes/,
     ],
     [
+      "a class apart from a later :class inside a dynamic element",
+      `<script setup lang="ts">
+defineProps<{ tag: "b" | "i"; on: boolean }>();
+</script>
+<template><component :is="tag"><u class="a" title="t" :class="{ on }">u</u></component></template>`,
+      /X\.vue:4:\d+: in content Vue renders from virtual nodes, a `class` written before `:class`/,
+    ],
+    [
       "v-model on a select inside a dynamic element",
       `<script setup lang="ts">
 import { ref } from "vue";
@@ -2556,6 +2564,7 @@ defineProps<{ c: string | null }>();
     "v-show inside a dynamic element": "FV0423",
     "v-model on a select inside a dynamic element": "FV0423",
     "a ClientOnly fallback inside a dynamic element": "FV1511",
+    "a class apart from a later :class inside a dynamic element": "FV1013",
     "a slot rendered inside a dynamic element and outside one": "FV0920",
     "a custom directive the configuration does not declare client-only": "FV0405",
     "a type that is both null and undefined": "FV0311",

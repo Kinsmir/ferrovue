@@ -50,7 +50,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     let s_rows = &Vec::<Row<'_>>::new();
     let s_users = &Vec::<super::types::User<'_>>::new();
     let s_names = &Vec::<std::borrow::Cow<str>>::new();
-    let s_shown = &*s_names.iter().map(|v| &**v).collect::<Vec<_>>().join(", ");
+    let s_shown = s_names.iter().map(|v| &**v).collect::<Vec<_>>().join(", ");
     out.push_str("<section><h2>");
     fv::escape_into(out, &props.title);
     out.push_str("</h2><ul><!--[-->");
@@ -70,7 +70,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push_str("<!--]--><p>nothing picked 0 ");
     fv::push_int(out, s_rows.len() as i64);
     out.push_str(" [");
-    fv::escape_into(out, s_shown);
+    fv::escape_into(out, &s_shown);
     out.push_str("]</p></section>");
 }
 
