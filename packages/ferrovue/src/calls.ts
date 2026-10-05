@@ -3,7 +3,7 @@ import { ctx } from "./context.ts";
 import { claim } from "./plugin.ts";
 import { atom, bare, binary, condition, operand, receiver, strArg, UNARY } from "./parens.ts";
 import { computedListMethod, items, listMethod, objectCall } from "./lists.ts";
-import { lonely, loneOf, meet, stringMethod } from "./strings.ts";
+import { lonely, loneOf, meet, stringMethod, stringsEqual } from "./strings.ts";
 import { asF64, intFromF64, isNumber } from "./numbers.ts";
 import { boolOf, truthy } from "./narrowing.ts";
 import { coerce, expr } from "./expr.ts";
@@ -19,7 +19,7 @@ export function call(s: Scope, n: N): Val {
         const b = expr(s, args[1]);
         if (a.ty.k === "str" && b.ty.k === "str") {
           meet(comp, a, b, "`v-model`", n, "equal");
-          return boolOf(binary(a.code, "==", b.code));
+          return boolOf(stringsEqual(a, b));
         }
         return fail(comp, "`v-model` comparison between these types", n);
       }

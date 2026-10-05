@@ -2,9 +2,9 @@ import { type Component, type N, type Scope, type Ty, type Val, BOOL, fail, FLOA
 import { ctx } from "./context.ts";
 import { lookupStruct, markHome } from "./typescript.ts";
 import { claim } from "./plugin.ts";
-import { atom, bare, binary, enclosed, logical, negate, not, occurrences, receiver, strArg } from "./parens.ts";
+import { atom, bare, binary, enclosed, logical, negate, not, occurrences, strArg } from "./parens.ts";
 import { collected } from "./lists.ts";
-import { asCow, formatted, isTemporary, loneOf, meet, unquote } from "./strings.ts";
+import { asCow, formatted, isTemporary, loneOf, meet, stringsEqual } from "./strings.ts";
 import { arithmetic, asF64, compare, intFromF64, isNumber, negatedOrder, numberVal } from "./numbers.ts";
 import { boolOf, choice, known, narrowing, narrowTo, pathOf, presence, truthy } from "./narrowing.ts";
 import { call, isObjectCall } from "./calls.ts";
@@ -319,10 +319,8 @@ export function expr(s: Scope, n: N): Val {
         return { code: String(konst), ty: BOOL, konst };
       }
       else if (isNumber(a.ty) && isNumber(b.ty)) eq = compare(a, "==", b).code;
-      else if (a.ty.k === "str" && b.ty.k === "str" && known(a) !== undefined && known(b) !== undefined) eq = String(unquote(a.code) === unquote(b.code));
-      else if (a.ty.k === "str" && b.ty.k === "str" && (a.code === '""' || b.code === '""')) {
-        eq = `${receiver(a.code === '""' ? b.code : a.code)}.is_empty()`;
-      } else if (a.ty.k === "bool" && b.ty.k === "bool" && (a.konst !== undefined || b.konst !== undefined)) {
+      else if (a.ty.k === "str" && b.ty.k === "str") eq = stringsEqual(a, b);
+      else if (a.ty.k === "bool" && b.ty.k === "bool" && (a.konst !== undefined || b.konst !== undefined)) {
         const [k, other] = a.konst !== undefined ? [a.konst, b.code] : [b.konst!, a.code];
         eq = k ? other : not(other);
       } else if (sameTy(a.ty, b.ty) && (scalar(a.ty) || (a.ty.k === "opt" && scalar(a.ty.of)))) {

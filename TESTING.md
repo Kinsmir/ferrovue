@@ -52,6 +52,9 @@ fixtures/X/case.json            Vue hydrates it: no mismatch warnings, same DOM 
 4. It checks that `generated/` is exactly what the compiler writes now.
 5. `tests/conformance.rs` renders every fixture through the generated Rust and compares the result
    with the same `.html`.
+6. `tests/conformance.rs` declares `generated/` as a public module, so `cargo clippy -- -D warnings`
+   holds the generated code to the lints a crate that exports it meets, such as
+   `new_without_default`, which clippy does not check on an item no other crate can reach.
 
 A fixture is a JSON object of props plus three optional keys:
 
@@ -71,6 +74,7 @@ A fixture is a JSON object of props plus three optional keys:
 | `Styles`, `Shown` | `:style` objects, arrays, strings and conditional objects merged with a static `style`; `v-show`, including on the root; a global `<style>` block |
 | `Markup` | Entities, void elements, SVG attributes, `<pre>` whitespace, whitespace condensing |
 | `Setup`, `Lifecycle` | `ref`, `computed`, plain constants, helpers; hooks, `watch`, emits, template refs, `defineOptions`/`defineSlots`/`defineExpose`, a plain `<script>` block |
+| `Constants` | Setup bindings that start as a string literal, and `computed`s of them, written into the page and tested as constants; strings compared with the empty one in `===`, `v-if` and `v-model` on `<select>` and radio inputs |
 | `Defaults`, `Destructured` | `withDefaults`, the boolean cast, destructured props with defaults and new names, class objects |
 | `Model`, `ModelParent` | `defineModel` (named, required, default) and `v-model` on a component |
 | `Form` | `v-model` on input, checkbox, select, radio and textarea |

@@ -20,6 +20,7 @@ pub mod builtins;
 pub mod card;
 pub mod cart;
 pub mod chips;
+pub mod constants;
 pub mod counter;
 pub mod dashboard;
 pub mod data_list;
@@ -200,6 +201,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Chips" => {
             let props: chips::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             chips::render(&mut out, &props);
+        }
+        "Constants" => {
+            let props: constants::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            constants::render(&mut out, &props);
         }
         "Counter" => {
             let props: counter::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
