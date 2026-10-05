@@ -1,12 +1,86 @@
-//! A component whose `TrustedHtml` prop is `ferrovue::Sanitised`, compiled with that `trustedHtml`.
+//! A component whose `TrustedHtml` prop is `ferrovue::Sanitised`, compiled with that `trustedHtml`,
+//! and `ferrovue::BasicHtml` read back by an HTML parser.
 
 #[rustfmt::skip]
 #[path = "sanitised/generated/mod.rs"]
 #[allow(missing_docs)]
 pub mod generated;
 
-use ferrovue::Sanitised;
+use ferrovue::{BasicHtml, Sanitised};
 use generated::review;
+use proptest::prelude::*;
+
+fn as_parsed(html: &str) -> String {
+    let mut policy = ferrovue::ammonia::Builder::empty();
+    policy.add_tags(BasicHtml::TAGS);
+    policy.clean(html).to_string()
+}
+
+fn decoded(html: &str) -> String {
+    html.replace("&lt;", "<")
+        .replace("&#60;", "<")
+        .replace("&#x3C;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+        .replace("&nbsp;", "\u{a0}")
+        .replace("&amp;", "&")
+}
+
+fn fragment() -> impl Strategy<Value = &'static str> {
+    prop::sample::select(vec![
+        "<b>",
+        "</b>",
+        "<i>",
+        "</i>",
+        "<em>",
+        "</em>",
+        "<strong>",
+        "</strong>",
+        "<code>",
+        "</code>",
+        "<br>",
+        "</br>",
+        "<p>",
+        "</p>",
+        "<ul>",
+        "</ul>",
+        "<ol>",
+        "</ol>",
+        "<li>",
+        "</li>",
+        "<B>",
+        "<b class=x>",
+        "<script>",
+        "<",
+        ">",
+        "&",
+        "&lt;",
+        "&#60;",
+        "&#x3C;",
+        "&amp",
+        "\"",
+        "'",
+        "\0",
+        "\r",
+        "\n",
+        " ",
+        "\u{a0}",
+        "a",
+        "é",
+        "😀",
+    ])
+}
+
+proptest! {
+    #[test]
+    fn a_browser_parses_basic_html_back_to_the_same_html(parts in prop::collection::vec(fragment(), 0..60)) {
+        let html = BasicHtml::new(&parts.concat());
+        prop_assert_eq!(decoded(&as_parsed(html.as_str())), decoded(html.as_str()));
+        let text = BasicHtml::from_text(&parts.concat());
+        prop_assert_eq!(decoded(&as_parsed(text.as_str())), decoded(text.as_str()));
+    }
+}
 
 const HOSTILE: &str = r#"<p>Loved it <img src="x" onerror="alert(1)"><a href="javascript:alert(2)">really</a></p><script>alert(3)</script>"#;
 const CLEAN: &str = r#"<p>Loved it <img src="x"><a rel="noopener noreferrer">really</a></p>"#;

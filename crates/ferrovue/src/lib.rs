@@ -3,6 +3,7 @@
 #![warn(missing_debug_implementations, rustdoc::missing_crate_level_docs)]
 
 mod attrs;
+mod basic_html;
 mod class;
 mod conformance;
 #[cfg(feature = "dioxus")]
@@ -30,6 +31,7 @@ pub use attrs::{
     Attr, Attrs, attrs_into, class_names, merge_props, passed_attrs_into, scope_attrs,
     style_text_into,
 };
+pub use basic_html::BasicHtml;
 pub use class::{class_into, class_object};
 pub use conformance::check_fixtures;
 pub use head::{Head, HeadHtml, HeadValue};

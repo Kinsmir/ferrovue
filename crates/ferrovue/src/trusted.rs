@@ -1,7 +1,8 @@
 /// HTML that is safe to write into a page as it is: what `v-html` may render.
 ///
 /// Implement it only for a type whose every value has already been made safe: the output of a
-/// sanitiser, never a string that merely looks fine.
+/// sanitiser, never a string that merely looks fine. [`BasicHtml`](crate::BasicHtml) and, with the
+/// `ammonia` feature, `Sanitised` implement it; the guide's `escaping` page says how to choose.
 ///
 /// # Example
 ///

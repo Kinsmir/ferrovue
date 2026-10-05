@@ -38,7 +38,7 @@ let-chains, and the latest stable Rust.
 | `routes` | no | JSON file listing the app's routes: each a vue-router path, or `{ "path", "name", "children" }`. Needed for `<RouterLink>`, `<RouterView>` and `useRoute()`. See [`routing`](crate::guide::routing) |
 | `router` | no | Instead of `routes`: `{ routes, base?, linkActiveClass?, linkExactActiveClass? }`, matching `createWebHistory(base)` and `createRouter`'s options |
 | `stores` | no | Directory of Pinia stores whose state components may read. See [`pinia`](crate::guide::pinia) |
-| `trustedHtml` | no | Rust path of the type a `TrustedHtml` prop is: `ferrovue::Sanitised` with the `ammonia` feature, or a type of your own such as `crate::html::Sanitised`. Needed for `v-html`. See [`escaping`](crate::guide::escaping) |
+| `trustedHtml` | no | Rust path of the type a `TrustedHtml` prop is: `ferrovue::BasicHtml`, `ferrovue::Sanitised` with the `ammonia` feature, or a type of your own such as `crate::html::CleanHtml`. Needed for `v-html`. See [`escaping`](crate::guide::escaping) |
 | `helpers` | no | `{ module, functions }`: functions a template may call, each mapped to a Rust twin. See [`errors_and_limits`](crate::guide::errors_and_limits#helpers) |
 | `i18n` | no | vue-i18n: `{ messages, locale?, fallbackLocale? }`: the directory of locale files (`en.json`, `nl.json`), the default locale and the fallbacks. See [`i18n`](crate::guide::i18n) |
 | `clientDirectives` | no | Custom directives with no server output, by name without `v-`: `["focus"]` |

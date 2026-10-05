@@ -193,7 +193,7 @@ the values a render needs besides its props.
 | A generated `stores::Stores` | reads Pinia state |
 | [`I18n`] (from the generated `i18n::i18n(locale)`) | calls `$t` or `useI18n()` |
 | [`Teleports`] | renders `<Teleport>` |
-| `Sanitised` (the `ammonia` feature), or your own type implementing [`TrustedHtml`] | renders `v-html` |
+| [`BasicHtml`], `Sanitised` (the `ammonia` feature), or your own type implementing [`TrustedHtml`] | renders `v-html` |
 
 A prop declared `Record<string, T>` is a [`Record`], which keeps JavaScript's order of keys.
 

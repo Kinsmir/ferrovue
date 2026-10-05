@@ -59,7 +59,7 @@ crate that includes it needs **edition 2024**.
 | `routes` | no | JSON file listing the app's routes: each a vue-router path, or `{ "path", "name", "children" }`. Needed for `<RouterLink>`, `<RouterView>` and `useRoute()` |
 | `router` | no | Instead of `routes`: `{ routes, base?, linkActiveClass?, linkExactActiveClass? }`, matching `createWebHistory(base)` and `createRouter`'s options |
 | `stores` | no | Directory of Pinia option stores whose state components may read |
-| `trustedHtml` | no | Rust type of a `TrustedHtml` prop (needed for `v-html`): `ferrovue::Sanitised` with the crate's `ammonia` feature, or a type of your own such as `crate::html::Sanitised` |
+| `trustedHtml` | no | Rust type of a `TrustedHtml` prop (needed for `v-html`): `ferrovue::BasicHtml` (text with a few formatting tags, built in), `ferrovue::Sanitised` (HTML cleaned by ammonia, the `ammonia` feature), or a type of your own such as `crate::html::CleanHtml` |
 | `helpers` | no | `{ module, functions }`: functions a template may call, each mapped to a Rust twin |
 | `twins` | no | Components ferrovue does not compile, each rendered by a Rust function of yours: `{ "VBtn": { "rust": "crate::ui::v_btn", "props": { "label": "string" }, "slots": ["default"] } }`. See [Escape hatches](#escape-hatches) |
 | `i18n` | no | vue-i18n: `{ messages, locale?, fallbackLocale? }`, the directory of locale files (`en.json`, `nl.json`), the default locale and the fallbacks |
@@ -134,6 +134,9 @@ application with neither routes nor translations can leave them out, and build n
 With the `maud` feature, `ferrovue::Html` implements `maud::Render`, so `(greeting::html(&props))` can go
 straight into a `maud::html!` page.
 
+For `v-html`, `ferrovue::BasicHtml` is built in: `BasicHtml::new(untrusted)` escapes everything but
+`<b>`, `<i>`, `<em>`, `<strong>`, `<code>`, `<br>`, `<p>`, `<ul>`, `<ol>` and `<li>` written with no
+attributes, and balances them; `BasicHtml::from_text(text)` turns plain text into paragraphs.
 With the `ammonia` feature, `ferrovue::Sanitised` is HTML cleaned by [ammonia](https://docs.rs/ammonia):
 name it as `trustedHtml` and build a `v-html` prop with `Sanitised::new(untrusted)`, or
 `Sanitised::with(&builder, untrusted)` for a policy of your own. The server renders the cleaned

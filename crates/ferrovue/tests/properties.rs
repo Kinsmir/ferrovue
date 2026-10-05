@@ -1,7 +1,7 @@
 //! Properties of the runtime that hold for every input.
 
 use ferrovue::{
-    Slot, class_into, escape_into, hole, js_length, js_trim, slot_into, split_holes,
+    BasicHtml, Slot, class_into, escape_into, hole, js_length, js_trim, slot_into, split_holes,
     state_script_into,
 };
 use proptest::prelude::*;
@@ -12,6 +12,137 @@ fn unescape(s: &str) -> String {
         .replace("&lt;", "<")
         .replace("&gt;", ">")
         .replace("&amp;", "&")
+}
+
+fn markup_fragment() -> impl Strategy<Value = String> {
+    prop_oneof![
+        Just("<b>"),
+        Just("</b>"),
+        Just("<i>"),
+        Just("</i>"),
+        Just("<em>"),
+        Just("</em>"),
+        Just("<strong>"),
+        Just("</strong>"),
+        Just("<code>"),
+        Just("</code>"),
+        Just("<br>"),
+        Just("</br>"),
+        Just("<p>"),
+        Just("</p>"),
+        Just("<ul>"),
+        Just("</ul>"),
+        Just("<ol>"),
+        Just("</ol>"),
+        Just("<li>"),
+        Just("</li>"),
+        Just("<B>"),
+        Just("<b onclick=x>"),
+        Just("<script>"),
+        Just("</script>"),
+        Just("<scr"),
+        Just("ipt>"),
+        Just("<"),
+        Just(">"),
+        Just("/"),
+        Just("&"),
+        Just("&lt;"),
+        Just("&#60;"),
+        Just("&#x3C;"),
+        Just("&amp"),
+        Just(";"),
+        Just("\""),
+        Just("'"),
+        Just("\0"),
+        Just("\r"),
+        Just("\n"),
+        Just(" "),
+        Just("a"),
+    ]
+    .prop_map(str::to_owned)
+}
+
+fn markup() -> impl Strategy<Value = String> {
+    prop_oneof![
+        proptest::collection::vec(markup_fragment(), 0..40).prop_map(|parts| parts.concat()),
+        any::<String>(),
+    ]
+}
+
+const BASIC_TAGS: [&str; 10] = [
+    "b", "i", "em", "strong", "code", "br", "p", "ul", "ol", "li",
+];
+
+fn reference_len(s: &str) -> Option<usize> {
+    let b = s.as_bytes();
+    let (start, max, ok): (usize, usize, fn(&u8) -> bool) =
+        if s.starts_with("&#x") || s.starts_with("&#X") {
+            (3, 6, u8::is_ascii_hexdigit)
+        } else if s.starts_with("&#") {
+            (2, 7, u8::is_ascii_digit)
+        } else if b.get(1).is_some_and(u8::is_ascii_alphabetic) {
+            (1, 32, u8::is_ascii_alphanumeric)
+        } else {
+            return None;
+        };
+    let n = b[start..].iter().take_while(|c| ok(c)).count();
+    ((1..=max).contains(&n) && b.get(start + n) == Some(&b';')).then_some(start + n + 1)
+}
+
+fn check_basic_html(html: &str) -> Result<(), String> {
+    if html.contains(['\0', '\r', '"', '\'']) {
+        return Err(format!("a character left unescaped: {html:?}"));
+    }
+    let formatting = ["b", "i", "em", "strong", "code"];
+    let mut open: Vec<&str> = Vec::new();
+    let mut rest = html;
+    while let Some(at) = rest.find(['<', '&', '>']) {
+        rest = &rest[at..];
+        if rest.starts_with('>') {
+            return Err(format!("a `>` outside a tag: {html:?}"));
+        }
+        if rest.starts_with('&') {
+            rest = &rest[reference_len(rest).ok_or_else(|| format!("a bare `&`: {html:?}"))?..];
+            continue;
+        }
+        let end = rest
+            .find('>')
+            .ok_or_else(|| format!("an unended tag: {html:?}"))?;
+        let (closing, name) = match rest[1..end].strip_prefix('/') {
+            Some(name) => (true, name),
+            None => (false, &rest[1..end]),
+        };
+        if !BASIC_TAGS.contains(&name) {
+            return Err(format!(
+                "`<` before something other than an allowed tag: {html:?}"
+            ));
+        }
+        if closing {
+            if open.pop() != Some(name) {
+                return Err(format!("`</{name}>` closes something else: {html:?}"));
+            }
+        } else if name != "br" {
+            let parent = open.last().copied();
+            let placed = match name {
+                "p" | "ul" | "ol" => parent.is_none_or(|p| !formatting.contains(&p) && p != "p"),
+                "li" => matches!(parent, Some("ul" | "ol")),
+                _ => true,
+            };
+            if !placed {
+                return Err(format!("`<{name}>` inside {parent:?}: {html:?}"));
+            }
+            open.push(name);
+            if open.len() > 32 {
+                return Err(format!("deeper than 32: {html:?}"));
+            }
+        }
+        rest = &rest[end + 1..];
+    }
+    if open.is_empty() {
+        Ok(())
+    } else {
+        Err(format!("left open: {open:?} in {html:?}"))
+    }
 }
 
 proptest! {
@@ -90,5 +221,22 @@ proptest! {
         let filled = slot_into(&mut out, Some(Slot::new(&content)), Some(&mut |out: &mut String| out.push_str("fallback")));
         prop_assert!(filled);
         prop_assert_eq!(out, format!("<!--[-->{s}<!--]-->"));
+    }
+
+    #[test]
+    fn basic_html_writes_only_its_tags_balanced_and_reads_back_as_itself(s in markup()) {
+        let html = BasicHtml::new(&s);
+        check_basic_html(html.as_str()).map_err(TestCaseError::fail)?;
+        prop_assert_eq!(BasicHtml::new(html.as_str()), html.clone());
+        let json = serde_json::to_string(&html).unwrap();
+        prop_assert_eq!(serde_json::from_str::<BasicHtml>(&json).unwrap(), html);
+    }
+
+    #[test]
+    fn basic_html_from_text_writes_paragraphs_and_reads_back_as_itself(s in markup()) {
+        let html = BasicHtml::from_text(&s);
+        check_basic_html(html.as_str()).map_err(TestCaseError::fail)?;
+        prop_assert!(!html.as_str().contains('\n'));
+        prop_assert_eq!(BasicHtml::new(html.as_str()), html);
     }
 }
