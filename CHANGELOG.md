@@ -31,6 +31,10 @@ released together and share version numbers.
 - A prop named after a Rust keyword compiles: `Props::new` and the setters take `r#loop`, `r#type` and
   the like, and `self`, `Self`, `super` and `crate`, which Rust cannot write as raw identifiers,
   become `self_`, `Self_`, `super_` and `crate_` in Rust while keeping their name in the props' JSON (#19).
+- `ferrovue/testing` loads in a project that installs only `vue`: `fixtureApp` imports the optional
+  peers when a fixture needs them, `vue-router` for routes, `pinia` for `$stores` and `vue-i18n` for
+  the `i18n` option, and a fixture needing one that is not installed fails with an error naming the
+  package to install. With the peers installed it renders as before (#22).
 
 ## [0.3.0] - 2026-10-05
 
