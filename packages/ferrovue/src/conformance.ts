@@ -1,0 +1,250 @@
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { basename, dirname, join, relative, resolve } from "node:path";
+import type { App, Component } from "vue";
+import { renderToString } from "vue/server-renderer";
+import { generate, loadConfig, type Config } from "./compiler.ts";
+import { unifiedDiff } from "./diff.ts";
+import { fixtureApp, peer, readFixture, type RouteEntry, type RouterOptions } from "./fixture.ts";
+import { settled } from "./settle.ts";
+import { attachSsrRender } from "./ssr.ts";
+
+/** What `conformanceSuite` checks: the project, its components and its fixtures. `pinia`,
+ * `vueRouter` and `vueI18n` are the application's own modules (`pinia: await import("pinia")`),
+ * which the fixtures install so that its stores and composables find them. */
+export interface ConformanceOptions extends Pick<RouterOptions, "pinia" | "vueRouter" | "vueI18n"> {
+  /** The project's `ferrovue.config.json`. */
+  config: string;
+  /** Every component in the configured `components` directory, by file name or by the path
+   * `import.meta.glob` gives it: `import.meta.glob("../components/*.vue", { eager: true })`. */
+  components: Record<string, Component | { default: Component }>;
+  /** The fixtures, one directory per component holding `<case>.json` and `<case>.html`:
+   * `fixtures` beside the configuration when not given. */
+  fixtures?: string;
+  /** Write each fixture's `.html` from Vue's render instead of comparing it: when
+   * `FERROVUE_FIXTURES_WRITE=1` is set, if not given. */
+  record?: boolean;
+}
+
+interface TestApi {
+  describe(name: string, body: () => void): void;
+  it(name: string, body: () => Promise<void> | void): void;
+}
+
+interface Case {
+  component: string;
+  name: string;
+  base: string;
+}
+
+export const TELEPORTS = "<!--fv-teleports-->";
+
+/** A recorded render as a page body to hydrate: the main HTML in `<div id="root">`, and what was
+ * teleported in each target. */
+export function hydrationBody(html: string): string {
+  const [main, teleported] = html.split(TELEPORTS);
+  const targets = Object.entries(JSON.parse(teleported ?? "{}") as Record<string, string>);
+  const intoBody = targets
+    .filter(([t]) => t === "body")
+    .map(([, content]) => content)
+    .join("");
+  const elsewhere = targets
+    .filter(([t]) => t !== "body")
+    .map(([t, content]) => `<div id="${t.replace(/^#/, "")}">${content}</div>`)
+    .join("");
+  return `${intoBody}<div id="root">${main}</div>${elsewhere}`;
+}
+
+/** Where two renders first differ, with the text around it in each. */
+export function firstDifference(recorded: string, rendered: string): string {
+  let at = 0;
+  while (at < recorded.length && at < rendered.length && recorded[at] === rendered[at]) at++;
+  const lines = recorded.slice(0, at).split("\n");
+  const around = (text: string): string => JSON.stringify(text.slice(Math.max(0, at - 40), at + 40));
+  return `first difference at character ${at} (line ${lines.length}, column ${lines.at(-1)!.length + 1}):\n  recorded: ${around(recorded)}\n  rendered: ${around(rendered)}`;
+}
+
+function componentsByName(given: ConformanceOptions["components"]): Map<string, Component> {
+  return new Map(
+    Object.entries(given).map(([key, value]) => [
+      basename(key, ".vue"),
+      (value as { default?: Component }).default ?? (value as Component),
+    ]),
+  );
+}
+
+function routerOptions(root: string, config: Config): { routes: RouteEntry[] | null; options: RouterOptions } {
+  const router = config.router ?? (config.routes ? { routes: config.routes } : null);
+  const routes = router ? (JSON.parse(readFileSync(join(root, router.routes), "utf8")) as RouteEntry[]) : null;
+  const options: RouterOptions = {};
+  if (router?.base !== undefined) options.base = router.base;
+  if (router?.linkActiveClass !== undefined) options.linkActiveClass = router.linkActiveClass;
+  if (router?.linkExactActiveClass !== undefined) options.linkExactActiveClass = router.linkExactActiveClass;
+  if (config.i18n) {
+    const dir = join(root, config.i18n.messages);
+    options.i18n = {
+      messages: Object.fromEntries(
+        readdirSync(dir)
+          .filter((f) => f.endsWith(".json"))
+          .map((f) => [basename(f, ".json"), JSON.parse(readFileSync(join(dir, f), "utf8")) as unknown]),
+      ),
+      locale: config.i18n.locale ?? "en",
+      ...(config.i18n.fallbackLocale !== undefined ? { fallbackLocale: config.i18n.fallbackLocale } : {}),
+    };
+  }
+  return { routes, options };
+}
+
+function casesIn(fixtures: string): Case[] {
+  if (!existsSync(fixtures)) return [];
+  return readdirSync(fixtures, { withFileTypes: true })
+    .filter((d) => d.isDirectory())
+    .toSorted((a, b) => a.name.localeCompare(b.name))
+    .flatMap((d) =>
+      readdirSync(join(fixtures, d.name))
+        .filter((f) => f.endsWith(".json"))
+        .toSorted()
+        .map((f) => ({ component: d.name, name: f, base: join(fixtures, d.name, basename(f, ".json")) })),
+    );
+}
+
+function recordedHtml(c: Case): string {
+  try {
+    return readFileSync(`${c.base}.html`, "utf8");
+  } catch {
+    throw new Error(`${c.component}/${c.name} has no recorded HTML: record it from Vue with FERROVUE_FIXTURES_WRITE=1`);
+  }
+}
+
+function coverageProblems(fixtures: string, cases: Case[], files: string[], given: Map<string, Component>): string[] {
+  const problems: string[] = [];
+  if (!existsSync(fixtures)) problems.push(`there is no fixtures directory at ${fixtures}`);
+  const withFixtures = new Set(cases.map((c) => c.component));
+  for (const name of files) {
+    if (!withFixtures.has(name)) problems.push(`${name} has no fixtures: add ${name}/<case>.json under ${fixtures}`);
+    if (!given.has(name)) problems.push(`${name} is not in \`components\``);
+  }
+  for (const name of withFixtures) if (!files.includes(name)) problems.push(`the fixtures in ${name}/ name no component`);
+  for (const name of given.keys()) if (!files.includes(name)) problems.push(`\`components\` has ${name}, which is not a .vue file the configuration compiles`);
+  return problems;
+}
+
+function driftProblems(root: string, config: Config): string[] {
+  const out = join(root, config.out);
+  const files = generate(root, config);
+  const problems: string[] = [];
+  for (const [file, text] of files) {
+    const path = join(out, file);
+    if (!existsSync(path)) problems.push(`${file} is missing`);
+    else {
+      const committed = readFileSync(path, "utf8");
+      if (committed !== text) problems.push(unifiedDiff(relative(root, path), committed, text).trimEnd());
+    }
+  }
+  const stale = existsSync(out) ? readdirSync(out).filter((f) => f.endsWith(".rs") && !files.has(f)) : [];
+  for (const file of stale.toSorted()) problems.push(`${file} is no longer generated`);
+  return problems;
+}
+
+async function hydrateFixture(app: App, html: string): Promise<string[]> {
+  if (typeof document === "undefined") throw new Error("hydrating a fixture needs a DOM: run the suite with `environment: \"happy-dom\"` (or jsdom)");
+  document.body.innerHTML = hydrationBody(html);
+  const root = document.getElementById("root")!;
+  const first = root.firstChild;
+  const problems: string[] = [];
+  const { warn, error } = console;
+  console.warn = (...args: unknown[]) => void problems.push(`console.warn: ${args.map(String).join(" ")}`);
+  console.error = (...args: unknown[]) => void problems.push(`console.error: ${args.map(String).join(" ")}`);
+  app.config.warnHandler = (message) => void problems.push(`warning: ${message}`);
+  try {
+    app.mount(root);
+    await settled(app);
+  } finally {
+    console.warn = warn;
+    console.error = error;
+  }
+  if (root.firstChild !== first) problems.push("Vue replaced the server's first node");
+  app.unmount();
+  document.body.innerHTML = "";
+  return problems;
+}
+
+/** Register the conformance suite with the given `describe` and `it`. */
+export function registerConformance(api: TestApi, options: ConformanceOptions): void {
+  const configFile = resolve(options.config);
+  const root = dirname(configFile);
+  const config = loadConfig(root, configFile);
+  const fixtures = resolve(root, options.fixtures ?? "fixtures");
+  const record = options.record ?? process.env.FERROVUE_FIXTURES_WRITE === "1";
+  const dir = join(root, config.components);
+  const files = existsSync(dir)
+    ? readdirSync(dir)
+        .filter((f) => f.endsWith(".vue"))
+        .map((f) => basename(f, ".vue"))
+        .toSorted()
+    : [];
+  const given = componentsByName(options.components);
+  for (const [name, component] of given) if (files.includes(name)) attachSsrRender(join(dir, `${name}.vue`), name, component);
+  const cases = casesIn(fixtures);
+  const { routes, options: configured } = routerOptions(root, config);
+  const appOptions: RouterOptions = { ...configured, pinia: options.pinia, vueRouter: options.vueRouter, vueI18n: options.vueI18n };
+  const app = async (c: Case): Promise<App> => {
+    const component = given.get(c.component);
+    if (!component) throw new Error(`the fixtures in ${c.component}/ name no component in \`components\``);
+    const json = JSON.parse(readFileSync(`${c.base}.json`, "utf8")) as Record<string, unknown>;
+    return fixtureApp(component, readFixture(json), routes, appOptions);
+  };
+
+  api.describe("conformance", () => {
+    api.it("has fixtures for every component, and a component for every fixture", () => {
+      const problems = coverageProblems(fixtures, cases, files, given);
+      if (problems.length) throw new Error(`the fixtures do not cover the components:\n${problems.join("\n")}`);
+    });
+
+    api.it("has generated Rust that is what the generator writes now", () => {
+      const problems = driftProblems(root, config);
+      if (problems.length) {
+        throw new Error(`the generated Rust in ${config.out} is not what ferrovue writes now: run \`ferrovue\` and commit the result\n${problems.join("\n")}`);
+      }
+    });
+
+    api.describe("Vue renders each fixture to its recorded HTML", () => {
+      for (const c of cases) {
+        api.it(`${c.component}/${c.name}`, async () => {
+          const ssr: { teleports?: Record<string, string> } = {};
+          const main = await renderToString(await app(c), ssr);
+          const teleported = Object.entries(ssr.teleports ?? {});
+          const html = teleported.length ? `${main}${TELEPORTS}${JSON.stringify(Object.fromEntries(teleported))}` : main;
+          if (record) {
+            writeFileSync(`${c.base}.html`, html);
+            return;
+          }
+          const want = recordedHtml(c);
+          if (html !== want) {
+            const message = `${c.component}/${c.name}: Vue renders this fixture differently from its recorded HTML, ${firstDifference(want, html)}`;
+            throw Object.assign(new Error(message), { actual: html, expected: want, showDiff: true });
+          }
+        });
+      }
+    });
+
+    if (record) return;
+    api.describe("the recorded HTML hydrates without a mismatch", () => {
+      for (const c of cases) {
+        api.it(`${c.component}/${c.name}`, async () => {
+          const problems = await hydrateFixture(await app(c), recordedHtml(c));
+          if (problems.length) throw new Error(`${c.component}/${c.name} did not hydrate exactly:\n${problems.join("\n")}`);
+        });
+      }
+    });
+  });
+}
+
+/** Register vitest tests holding a project's components to Vue, as ferrovue's own suite does:
+ * every component has fixtures and every fixture a component, the generated Rust is what the
+ * generator writes now, Vue renders each fixture to its recorded `.html` (or records it, with
+ * `FERROVUE_FIXTURES_WRITE=1`), and each recorded `.html` hydrates with no warning and the server's
+ * nodes kept. Await it at the top of a test file run in a DOM environment such as happy-dom. */
+export async function conformanceSuite(options: ConformanceOptions): Promise<void> {
+  const vitest = await peer("vitest", "`conformanceSuite` registers vitest tests", () => import("vitest"));
+  registerConformance(vitest, options);
+}

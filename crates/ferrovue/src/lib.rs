@@ -4,6 +4,7 @@
 
 mod attrs;
 mod class;
+mod conformance;
 #[cfg(feature = "dioxus")]
 #[cfg_attr(docsrs, doc(cfg(feature = "dioxus")))]
 pub mod dioxus;
@@ -26,6 +27,7 @@ pub use attrs::{
     style_text_into,
 };
 pub use class::{class_into, class_object};
+pub use conformance::check_fixtures;
 pub use html::Html;
 pub use page::{Page, PageHole, PageRecord, PageScript, PageSlot, Part};
 pub use record::Record;

@@ -1,0 +1,1 @@
+{"book":{"id":"dune","title":"Dune","author":"Frank Herbert","year":1965},"$route":"/books/dune","$slots":{"actions":"<button type=\"button\" class=\"add\">Add to basket</button>","reviews":"<ol><li>Spice.</li></ol>"}}

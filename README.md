@@ -397,13 +397,11 @@ have. Prop types are those of helpers (`string`, `int?`, …); an absent `bool` 
 bare `block` is `true`, as Vue casts them.
 
 **Exactness is your responsibility.** ferrovue cannot check that `v_btn` writes the bytes Vue's
-server renderer writes for `VBtn`: its guarantee rests on your code here, as it does for helpers. Prove it with fixtures: render the components that use the twin with Vue through
-`ferrovue/testing`'s `fixtureApp` and `attachSsrRender`, and with Rust through the generated
-`render_json`, and compare. Slot content reaches the twin as a component's render function sees it
+server renderer writes for `VBtn`: its guarantee rests on your code here, as it does for helpers. Prove it with fixtures of the components that use the twin, held to Vue by the
+conformance suite (see [Testing against Vue](#testing-against-vue)). Slot content reaches the twin as a component's render function sees it
 (`<!--v-if-->` for an absent `v-if`, as Vue writes virtual nodes). The twin decides where it goes and
 whether fragment markers surround it, as the component does. `examples/fullstack` has a
-twin (`src/ui.rs`), its fixtures (`fixtures/`), the Vue half (`test/fixtures.test.ts`) and the Rust
-half (`src/fixtures.rs`).
+twin (`src/ui.rs`) and its fixtures (`fixtures/`).
 
 ### Teleports
 
@@ -548,6 +546,43 @@ streamed response, from the render and a future for each hole's content:
 let body = ferrovue::HtmlStream::new(page).hole(async move { reviews_of(&id).await });
 ```
 
+### Testing against Vue
+
+An application holds its own components to Vue as ferrovue's suite does, with a fixtures directory
+and two calls. A fixture is a component's props as JSON (plus `$slots`, `$route`, `$stores` and
+`$locale` where it takes them) beside the HTML Vue rendered for them:
+
+```text
+fixtures/Reviews/three.json   {"reviews":[{"reader":"Ada","stars":5,"text":"The spice must flow."}]}
+fixtures/Reviews/three.html   recorded from Vue with FERROVUE_FIXTURES_WRITE=1
+```
+
+```ts
+// test/conformance.test.ts, run by vitest with environment: "happy-dom"
+import { join } from "node:path";
+import type { Component } from "vue";
+import { conformanceSuite } from "ferrovue/testing";
+
+await conformanceSuite({
+  config: join(import.meta.dirname, "../ferrovue.config.json"),
+  components: import.meta.glob<Component>("../client/components/*.vue", { eager: true, import: "default" }),
+  pinia: await import("pinia"),
+  vueRouter: await import("vue-router"),
+});
+```
+
+```rust
+ferrovue::conformance!("fixtures", generated::render_json, at_least = 24);
+```
+
+The Vue half fails on a component with no fixtures, a fixture naming no component, generated Rust
+that differs from what `ferrovue` writes now, a fixture Vue renders differently from its `.html`,
+and a recorded `.html` that hydrates with any warning; `FERROVUE_FIXTURES_WRITE=1` records the
+`.html` files instead. The Rust half renders every fixture through the generated `render_json`,
+compares the bytes, and fails when fewer than `at_least` fixtures are found. The crate's
+[`testing`](https://docs.rs/ferrovue/latest/ferrovue/guide/testing/index.html) guide has the
+details; `examples/fullstack` uses both.
+
 ## Performance
 
 Time to render one component to an HTML string. On the left is Vue's `renderToString` on Node, and
@@ -656,7 +691,9 @@ packages/ferrovue/           the compiler (npm package)
   src/islands.ts             `ferrovue/islands`, which the Vite plugin writes: every island, loaded lazily
   src/link-router.ts         `ferrovue/link-router`: `<RouterLink>` while the application navigates on its own
   src/routes.ts              a routes file as vue-router's route records
-  src/testing.ts             utilities for a project's own conformance suite
+  src/testing.ts             `ferrovue/testing`: utilities for a project's own conformance suite
+  src/conformance.ts         `conformanceSuite`, which `ferrovue/testing` exports
+  src/ssr.ts                 `attachSsrRender`, which `ferrovue/testing` exports
   src/hydration.ts           `hydrateRecordedPage`, which `ferrovue/testing` exports
   src/types.ts               `ferrovue/types`: `TrustedHtml`, `Float`
   test/                      compiler, CLI, router, vector, island, Vite and conformance tests
@@ -665,7 +702,7 @@ packages/ferrovue/           the compiler (npm package)
   fuzz/                      the randomised differential tester (`pnpm fuzz`)
 examples/greeting/           the smallest setup: one component rendered from Rust
 examples/fullstack/          axum + Vite: islands, a page hydrated whole, Pinia state, routes and
-                             streaming, <ClientOnly>, a Rust twin and its fixtures
+                             streaming, <ClientOnly>, a Rust twin, and a conformance suite
 examples/dioxus/             a Dioxus page, rendered with dioxus-ssr, with an island in it
 scripts/ferrovue-in.ts       the `ferrovue` command run in a project of this repository (`pnpm conformance:check`, CI)
 scripts/inspect.ts           Vue's SSR code and render of a component beside the Rust ferrovue generates for it

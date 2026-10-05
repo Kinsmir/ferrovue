@@ -224,6 +224,7 @@ fn greet(name: String) -> ferrovue::Html<'static, greeting::Props<'static>> {
 name from a fixture: a JSON object of props plus optional `$slots` (each slot's content as HTML),
 `$route` (the location), `$stores` (Pinia state by store id) and `$locale`. Paired with
 `ferrovue/testing` on the npm side, which renders the same fixtures with Vue, it lets a project hold
-its own components to Vue's output byte for byte, as ferrovue's own suite does. That function is why
+its own components to Vue's output byte for byte, as ferrovue's own suite does: the
+[`testing`](crate::guide::testing) page sets up both halves in two calls. That function is why
 the props structs derive `serde::Deserialize` under `cfg(test)`, and why the project needs
 `serde_json` as a dev-dependency.

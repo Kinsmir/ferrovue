@@ -1,0 +1,1 @@
+{"shop":"Bookshop","featured":"Dune","$route":"/picks","$slots":{"default":"<article class=\"pick\">Dune</article>","reviews":"<ol><li>Spice.</li></ol>"}}

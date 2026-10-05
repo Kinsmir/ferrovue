@@ -1,0 +1,1 @@
+{"shop":"Bookshop","$route":"/books/dune","$stores":{"basket":{"owner":"guest","ids":[]}},"$slots":{"routerView":"<article class=\"book\"><h1>Dune</h1></article>"}}
