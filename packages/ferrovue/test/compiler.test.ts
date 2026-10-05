@@ -1292,6 +1292,8 @@ defineProps<{ label: string }>();
       expect(() => generate(island(using("<VBtn />")), config)).toThrow(/VBtn requires `label`/);
       expect(() => generate(island(using(`<VBtn :label="label"><template #append>a</template></VBtn>`)), config)).toThrow(/VBtn has no slot `append`/);
       expect(() => generate(island(using(`<VBtn v-bind="$props" />`)), config)).toThrow(/the props of VBtn, a Rust twin, are attributes or an object literal/);
+      const nullable = using(`<VBtn :label="label" :size="count" />`).replace("defineProps<{ label: string }>", "defineProps<{ label: string; count: number | null }>");
+      expect(() => generate(island(nullable), config)).toThrow(/a value that may be `null` where <VBtn>'s prop `size` takes .*write `\?\? undefined` after it/);
     });
 
     it("refuses a twin named after a component ferrovue compiles, and a twin without a function", () => {

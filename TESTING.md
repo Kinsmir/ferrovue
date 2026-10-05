@@ -105,6 +105,7 @@ A fixture is a JSON object of props plus three optional keys:
 | `Nullable`, `NullChild`, `Session` | `T \| null` props, interface fields, list items, slot props and Pinia state: `null` written and narrowed (`!== null`, `=== null`, `!= null`, `== null`, truthiness), `??`, `?.` over a nullable object and field, interpolations and attributes of `null`, `null` as a `?:` branch and a child's prop, `ref<T \| null>(null)` in setup |
 | `ClientSide` | `<ClientOnly>` with a fallback, without one, and inside another component's slot, around a stand-in for a library component that reads `window` (`vendor/Gauge.ts`); in the browser, the content replaces the fallback once mounted |
 | `Deferred` | `defineAsyncComponent`, as an arrow and with `loader`, given props, slot content and a scoped parent's id |
+| `EscapedNull` | Nullable props through the escape hatches: into an async `NullChild`, a `<ClientOnly>` fallback, and a twin's optional prop by `?? undefined` |
 | `Rated` | A Rust twin (`vendor.rs`) of a render-function component (`vendor/StarRating.ts`): props, a boolean cast from a bare attribute, attributes beyond its props, a slot written from virtual nodes |
 | `Parsing` | `Number`, `parseInt` (no radix, 10, 16) and `parseFloat` of strings, `JSON.stringify` of numbers, `NaN` and `Infinity` |
 | `PropsObject`, `Glyph`, `Divider` | The props object read in the template (`props.label`, with `withDefaults`); a child with no script and one with an empty `<script setup>`, which take no props, one given a class to fall through |

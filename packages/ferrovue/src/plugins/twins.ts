@@ -1,6 +1,6 @@
 import { type Component, type Field, type N, type Scope, type Ty, blankComponent, camelize, fail, GenError, snake } from "../model.ts";
 import { CONFIG_FILE, type TwinSpec, tyOfName } from "../context.ts";
-import { coerce, expr } from "../expr.ts";
+import { coerce, expr, holdsNothing } from "../expr.ts";
 import { bare, strArg } from "../parens.ts";
 import { header } from "../rust.ts";
 import { callWith, fieldInit, renderChild, type TwinCall } from "../children.ts";
@@ -53,7 +53,9 @@ function init(s: Scope, f: Field, node: N | undefined, n: N, owner: string): str
     return fail(s.comp, `${owner} requires \`${f.js}\``, n);
   }
   if (f.ty.k === "bool" && node.type === "StringLiteral" && (node.value === "" || node.value === hyphenate(f.js))) return `${f.rust}: true`;
-  const code = bare(coerce(s.comp, expr(s, node), f.ty, node));
+  const v = expr(s, node);
+  holdsNothing(s.comp, v, f.ty, node, `<${owner}>'s prop \`${f.js}\``);
+  const code = bare(coerce(s.comp, v, f.ty, node));
   return fieldInit(f.rust, f.ty.k === "str" ? strArg(code) : code);
 }
 
