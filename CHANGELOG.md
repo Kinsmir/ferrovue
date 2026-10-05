@@ -5,6 +5,16 @@ released together and share version numbers.
 
 ## [Unreleased]
 
+### Changed
+
+- Repository hygiene. The full-stack example's README builds the client before its hydration test,
+  which reads the build's manifest, and lists `NotFound.vue` and `catalogue.rs`; the README's
+  repository layout lists every compiler module and `scripts/inspect.ts`. The greeting example
+  follows the workspace lints like the other examples. `cargo deny` skips the duplicate versions of
+  `convert_case`, `http` and `syn` that dioxus, actix-web and the move to syn 3 bring in, each with
+  its reason, so its output shows only new duplicates. The esbuild build approval, the root
+  `fallow` script and lint ignore patterns that `.gitignore` already covers are gone.
+
 ## [0.5.0] - 2026-10-05
 
 ### Added
