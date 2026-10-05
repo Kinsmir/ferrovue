@@ -8,8 +8,6 @@ import { basename, relative, resolve, sep } from "node:path";
 import { type Component, type N, blankComponent, fail, opt, snake, tagAst } from "./model.ts";
 import { ctx } from "./context.ts";
 import { typesImports, declareTypes, defaultValue, definePropsType, readTypeFile, resolveImport, runtimeDefaults, structOf, tyOfTs } from "./typescript.ts";
-import { runOf } from "./plugin.ts";
-import { piniaStores } from "./plugins/stores.ts";
 
 /** A Vue compiler error's position as a node \`fail\` can point at: its line and 1-based column,
  * offset by where the template starts when the error is in the template's content. */
@@ -108,12 +106,8 @@ export function readComponent(file: string, root: string): { comp: Component; as
       const isType = st.importKind === "type" || sp.importKind === "type";
       const typeFile = resolveImport(comp.file, from);
       if (!typeFile) continue;
-      const module = typeFile.replace(/\.ts$/, "");
-      const stores = runOf(piniaStores);
-      if ([...stores.stores.values()].some((x) => x.module === module)) {
-        if (stores.structs.has(typeName)) comp.importedTypes.set(sp.local.name, { k: "struct", name: typeName, store: true });
-        continue;
-      }
+      // A file a plugin owns, such as a store's, whose types it has read.
+      if (ctx.plugins.some((p) => p.importedType?.(comp, typeFile, typeName, sp.local.name))) continue;
       if (ctx.helperModule !== null && from === ctx.helperModule && !isType) continue;
       readTypeFile(typeFile);
       if (ctx.typeStructs.has(typeName)) comp.importedTypes.set(sp.local.name, { k: "struct", name: typeName, home: "types" });

@@ -6,8 +6,7 @@ import { basename, dirname, join, relative, resolve } from "node:path";
 import { type Component, type Field, type N, type Struct, type Ty, blankComponent, BOOL, fail, FLOAT, INT, opt, RUST_PRELUDE, rustStr, sameTy, snake, STR, tagAst } from "./model.ts";
 import { CONFIG_FILE, ctx, TYPES_MODULE } from "./context.ts";
 import { childOf } from "./expr.ts";
-import { runOf } from "./plugin.ts";
-import { piniaStores } from "./plugins/stores.ts";
+import { claim } from "./plugin.ts";
 
 /** The local names \`TrustedHtml\` and \`Float\` are imported under from \`ferrovue/types\`. */
 export function typesImports(comp: Component, body: N[]): void {
@@ -174,7 +173,8 @@ export function readTypeFile(file: string): void {
 
 /** A type read in the file that declares it, marked with where it lives for readers elsewhere. */
 export function markHome(ty: Ty, home: string): Ty {
-  if (ty.k === "struct" && !ty.store && !ty.home && ty.name !== "Props") return { ...ty, home };
+  // A plugin's type, such as a store's state, lives where the plugin writes it.
+  if (ty.k === "struct" && !claim((p) => p.struct?.(ty)) && !ty.home && ty.name !== "Props") return { ...ty, home };
   if (ty.k === "opt" || ty.k === "list" || ty.k === "record") return { ...ty, of: markHome(ty.of, home) };
   return ty;
 }
@@ -183,7 +183,8 @@ export function markHome(ty: Ty, home: string): Ty {
  * the path the generated code names it by. */
 export function lookupStruct(comp: Component, ty: Ty & { k: "struct" }): { st: Struct | undefined; owner: Component; path: string } {
   // Named from the module being written: plainly within its own, by path from any other.
-  if (ty.store) return { st: runOf(piniaStores).structs.get(ty.name), owner: comp, path: comp.module === "stores" ? "" : "super::stores::" };
+  const own = claim((p) => p.struct?.(ty));
+  if (own) return { st: own.st, owner: comp, path: comp.module === own.module ? "" : `super::${own.module}::` };
   if (ty.home === "types") return { st: ctx.typeStructs.get(ty.name), owner: comp, path: comp.module === "types" ? "" : "super::types::" };
   if (ty.home !== undefined && ty.home !== comp.name) {
     const owner = childOf(ty.home);
@@ -276,10 +277,4 @@ export function defaultValue(comp: Component, f: Field, node: N): string {
     return "&[]";
   }
   return fail(comp, `the default of \`${f.js}\` must be a literal of its type, or \`() => []\` for a list`, node);
-}
-
-export function markStore(ty: Ty): Ty {
-  if (ty.k === "struct") return { ...ty, store: true };
-  if (ty.k === "opt" || ty.k === "list" || ty.k === "record") return { ...ty, of: markStore(ty.of) };
-  return ty;
 }

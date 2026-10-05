@@ -15,7 +15,7 @@
  * part of the generated code as well: it is the order of a render's parameters, of the fixture's
  * fields, and of the modules written beside the components. */
 
-import { type Component, type N, type Scope, type Ty, type Val } from "./model.ts";
+import { type Component, type N, type Scope, type Struct, type StructTy, type Ty, type Val } from "./model.ts";
 import { type Config, ctx } from "./context.ts";
 import { type Emitter } from "./emitter.ts";
 import { type Presence } from "./expr.ts";
@@ -82,6 +82,12 @@ export interface Plugin<Run = unknown, Local = unknown> {
   prepare?(root: string): void;
 
   // Reading a component.
+  /** A type a component imports from a `.ts` file the plugin owns (a store's): recorded in
+   * `comp.importedTypes`, `true` when the file is the plugin's. */
+  importedType?(comp: Component, file: string, name: string, local: string): boolean;
+  /** Where a struct type of the plugin's is declared — its fields, and the generated module it is
+   * written to — or `null` for any other. */
+  struct?(ty: StructTy): { st: Struct | undefined; module: string } | null;
   /** Vue's SSR compilation of a component's template, and the statements of its script blocks:
    * what it renders or reads, found before any component is generated. */
   compiled?(comp: Component, code: string, script: N[]): void;

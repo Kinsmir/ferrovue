@@ -19,15 +19,21 @@ export type Ty =
   /** `Record<string, T>`: an object used as a dictionary, `ferrovue::Record` in Rust, its keys in
    * JavaScript's order. */
   | { k: "record"; of: Ty }
-  /** `store` marks a Pinia store's state, or a type inside it, declared in a store's own file;
-   * `home` a type declared elsewhere: `"types"` for a shared `.ts` file, or the component whose
-   * `.vue` file declares it. */
-  | { k: "struct"; name: string; store?: true; home?: string }
+  | StructTy
   /** `TrustedHtml` from `ferrovue/types`: the configured Rust type, which `v-html` writes raw. */
   | { k: "html" }
   /** Another component's `Props`, imported from its `.vue` file: what `v-bind` hands that child. */
   | { k: "child"; name: string }
   | PluginTys[keyof PluginTys];
+
+/** An interface's type. `home` marks a type declared elsewhere: `"types"` for a shared `.ts` file, or
+ * the component whose \`.vue\` file declares it. A plugin may mark its own (\`declare module\`): a
+ * store's state is \`store\`. */
+export interface StructTy {
+  k: "struct";
+  name: string;
+  home?: string;
+}
 
 /** The types of values plugins add, by kind: each plugin declares its own here (\`declare module\`),
  * and tells the core what to do with them through its \`ValueHooks\`. */
@@ -167,8 +173,6 @@ export interface Component {
   imports: Set<string>;
   /** The slots its template renders with `<slot>`, by name, in order of first appearance. */
   slotNames: string[];
-  /** Whether its setup reads a store. */
-  readsStores: boolean;
   /** Whether it translates: \`$t\`, or \`useI18n()\` in setup. */
   readsI18n: boolean;
   /** The render parameters it takes (\`RenderParam\`), by name: those it reads, and those a child
@@ -218,7 +222,6 @@ export function blankComponent(name: string, module: string, file: string, struc
     childProps: new Map(),
     imports: new Set(),
     slotNames: [],
-    readsStores: false,
     readsI18n: false,
     takes: new Set(),
     models: new Map(),

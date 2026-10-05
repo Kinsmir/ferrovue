@@ -4,8 +4,7 @@ import { type Component, type N, type Scope, type Ty, type Val, BOOL, fail, FLOA
 import { ctx } from "./context.ts";
 import { lookupStruct, markHome } from "./typescript.ts";
 import { translate } from "./plugins/i18n.ts";
-import { piniaStores } from "./plugins/stores.ts";
-import { claim, runOf } from "./plugin.ts";
+import { claim } from "./plugin.ts";
 import { AS, atom, bare, binary, condition, enclosed, FLIPPED, ifElse, logical, negate, not, occurrences, operand, receiver, strArg, UNARY } from "./parens.ts";
 import { collected, computed, computedListMethod, items, listMethod, objectCall } from "./lists.ts";
 
@@ -357,63 +356,6 @@ export function childOf(name: string): Component {
   return c;
 }
 
-/** The getters being translated, so that two reading each other is an error, not a loop. */
-const inProgress = new Set<string>();
-
-/** Whether an expression names \`name\` as an identifier. */
-function mentions(n: N, name: string): boolean {
-  if (!n || typeof n !== "object") return false;
-  if (n.type === "Identifier" && n.name === name) return true;
-  return Object.entries(n).some(([k, v]) => k !== "loc" && k !== "__fv" && (Array.isArray(v) ? v.some((x) => mentions(x, name)) : typeof v === "object" && mentions(v, name)));
-}
-
-/** A Pinia getter read from a store's state, `prefs.doubled`: its expression, translated with the
- * state it takes bound to that state. `null` when `name` is not a getter of that store. */
-export function storeGetter(s: Scope, base: Val, name: string, node: N): Val | null {
-  if (base.ty.k !== "struct" || !base.ty.store) return null;
-  const stateName = base.ty.name;
-  const store = [...runOf(piniaStores).stores.values()].find((st) => st.state === stateName);
-  const g = store?.getters.get(name);
-  if (!g) return null;
-  const where = `getter \`${name}\` in ${g.file}`;
-  if (!g.body) fail(s.comp, `${where} returns a single expression`, node);
-  const uses = (n: N, type: string): boolean =>
-    !!n && typeof n === "object" && (n.type === type || Object.entries(n).some(([k, v]) => k !== "loc" && (Array.isArray(v) ? v.some((x) => uses(x, type)) : typeof v === "object" && uses(v, type))));
-  if (uses(g.body, "ThisExpression")) fail(s.comp, `${where} reads \`this\`; read the state through the getter's parameter`, node);
-  if (g.body.type === "ArrowFunctionExpression" || g.body.type === "FunctionExpression") {
-    fail(s.comp, `${where} returns a function, which takes arguments only the client passes`, node);
-  }
-  const locals = new Map<string, Val>();
-  if (g.param) locals.set(g.param, { code: base.code, ty: base.ty });
-  // A setup store's computed reads the state's refs, and the other getters, by name and `.value`.
-  const setup = new Map<string, Val>();
-  const refs = new Set<string>();
-  if (g.setup) {
-    const fields = runOf(piniaStores).structs.get(stateName)?.fields ?? [];
-    for (const f of fields) {
-      setup.set(f.js, fieldVal(s.comp, base.code, base.ty, f.js, node));
-      refs.add(f.js);
-    }
-    for (const other of store!.getters.keys()) {
-      if (other === name || !mentions(g.body, other)) continue;
-      if (inProgress.has(`${stateName}.${other}`)) fail(s.comp, `${where} and \`${other}\` read each other`, node);
-      inProgress.add(`${stateName}.${name}`);
-      try {
-        setup.set(other, storeGetter(s, base, other, node)!);
-      } finally {
-        inProgress.delete(`${stateName}.${name}`);
-      }
-      refs.add(other);
-    }
-  }
-  try {
-    return expr({ ...s, locals, narrowed: new Map(), setup, refs, propsIdent: null }, g.body);
-  } catch (e) {
-    if (e instanceof GenError) throw new GenError(`${s.comp.file}: ${where}: ${e.message.replace(/^[^:]*: /, "")}`);
-    throw e;
-  }
-}
-
 /** `a op b` on two numbers, on doubles as JavaScript computes it — now, when both are known. `int`
  * keeps the result an integer. */
 function arithmetic(a: Val, op: string, b: Val, int: boolean): Val {
@@ -659,7 +601,7 @@ export function expr(s: Scope, n: N): Val {
         }
       }
       const base = expr(s, n.object);
-      return claim((p) => p.member?.(s, base, prop, n, false)) ?? storeGetter(s, base, prop, n) ?? fieldVal(comp, base.code, base.ty, prop, n);
+      return claim((p) => p.member?.(s, base, prop, n, false)) ?? fieldVal(comp, base.code, base.ty, prop, n);
     }
     case "CallExpression":
       return call(s, n);
