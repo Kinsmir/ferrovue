@@ -59,6 +59,8 @@ jobs:
     name: Stage on npm
     needs: [verify, ci]
     runs-on: ubuntu-latest
+    outputs:
+      approve: ${{ steps.stage.outputs.approve }}
     permissions:
       contents: read
       id-token: write # npm trusted publishing, and provenance
@@ -74,6 +76,7 @@ jobs:
       - run: npm install -g npm@^12
       - run: pnpm install --frozen-lockfile
       - name: Stage the package, unless this version is already on npm
+        id: stage
         working-directory: packages/ferrovue
         env:
           VERSION: ${{ needs.verify.outputs.version }}
@@ -84,12 +87,32 @@ jobs:
             exit 0
           fi
           # `prepack` builds dist/ and copies the README and licences in.
-          npm stage publish --provenance --access public --tag "$TAG"
+          npm stage publish --provenance --access public --tag "$TAG" --json | tee "$RUNNER_TEMP/stage.json"
+          # The stage's id, if npm's JSON names one; otherwise `npm stage list` shows it.
+          id=$(node -e '
+            const out = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+            const find = (v) => v && typeof v === "object" ? (v.stageId ?? v.stage_id ?? v.id ?? Object.values(v).map(find).find(Boolean)) : undefined;
+            console.log(find(out) ?? "");
+          ' "$RUNNER_TEMP/stage.json" 2>/dev/null || true)
+          if [[ -n "$id" ]]; then
+            approve="npm stage approve $id"
+          else
+            approve="npm stage list ferrovue   # then: npm stage approve <id>"
+          fi
+          # A notice shows at the top of the run's page, where a maintainer looks first.
+          echo "::notice title=npm: ferrovue@$VERSION is staged, not yet public::Approve it with 2FA: $approve"
           {
-            echo "### npm: ferrovue@$VERSION is staged"
+            echo "### npm: ferrovue@$VERSION is staged, not yet public"
             echo
-            echo "Run \`npm stage list ferrovue\`, then \`npm stage approve <id>\` with 2FA to publish it under \`$TAG\`."
+            echo "It goes public under \`$TAG\` once a maintainer approves it with 2FA:"
+            echo
+            echo '```sh'
+            echo "$approve"
+            echo '```'
+            echo
+            echo "\`npm stage reject\` with the same id discards it instead."
           } >> "$GITHUB_STEP_SUMMARY"
+          echo "approve=$approve" >> "$GITHUB_OUTPUT"
 
   crates:
     name: Publish on crates.io
@@ -152,3 +175,19 @@ jobs:
           gh release create "$GITHUB_REF_NAME" --verify-tag --title "ferrovue $VERSION" \
             --notes-file "$RUNNER_TEMP/notes.md" $([[ "$PRERELEASE" == true ]] && echo --prerelease) \
             "target/package/ferrovue-$VERSION.crate" "$RUNNER_TEMP/ferrovue-$VERSION.tgz"
+      - name: Remind of the npm approval
+        if: needs.npm.outputs.approve != ''
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+          APPROVE: ${{ needs.npm.outputs.approve }}
+        run: |
+          echo "::notice title=One step left: approve ferrovue@$VERSION on npm::$APPROVE"
+          {
+            echo "### One step left: approve ferrovue@$VERSION on npm"
+            echo
+            echo "The crate and the GitHub release are out; the npm package waits, staged, for 2FA:"
+            echo
+            echo '```sh'
+            echo "$APPROVE"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

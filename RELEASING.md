@@ -39,7 +39,9 @@ both packages; nothing becomes public until a maintainer approves it, once on ea
    - **waits** for approval of the `release` environment before publishing the crate;
    - creates the GitHub release with the changelog notes and both packages attached.
 6. **Approve both:**
-   - **npm:** `npm stage list ferrovue`, then `npm stage approve <id>`, which asks for your 2FA.
+   - **npm:** `npm stage approve <id>`, which asks for your 2FA. The run prints the command, with the
+     id when npm reports one, as a notice at the top of its page and in the npm and GitHub release
+     jobs' summaries; otherwise `npm stage list ferrovue` shows the id.
    - **crates.io:** open the workflow run on GitHub and approve the waiting `release` deployment.
 
 A tag with a pre-release suffix (`v0.2.0-rc.1`) stages to npm under the `next` tag instead of
