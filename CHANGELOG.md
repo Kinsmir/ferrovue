@@ -42,6 +42,13 @@ released together and share version numbers.
   builds its props as struct literals. The fields stay public and the derives, `Default` included,
   are unchanged. `true`, today's output, is the default; a value that is not a boolean is a config
   error (#35).
+- `linkRouter(routes, { navigate })` from `ferrovue/link-router`, for an application whose own
+  navigation layer leaves the page: a vue-router router over the routes file the compiler reads,
+  every route rendering nothing, on a memory history at the page's location. Its first navigation
+  resolves the page the server rendered; every later one, a `<RouterLink>` click included, is
+  handed to `navigate` with its `href` and aborted, so active links, `aria-current` and `useRoute()`
+  keep matching the page on screen. It takes the base and link classes of the config's `router`.
+  The routing guide explains why each part is there (#34).
 
 ### Changed
 

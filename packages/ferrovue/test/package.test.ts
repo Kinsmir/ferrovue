@@ -33,8 +33,14 @@ it("keeps the package root to the browser API, reaching only Vue", () => {
   expect([...files].map((f) => f.slice(ROOT.length + 1)).toSorted()).toEqual(["src/client.ts", "src/index.ts", "src/types.ts"]);
 });
 
+it("keeps ferrovue/link-router to vue-router and the routes it is given", () => {
+  const { files, packages } = graph("src/link-router.ts");
+  expect([...packages].toSorted()).toEqual(["vue-router"]);
+  expect([...files].map((f) => f.slice(ROOT.length + 1)).toSorted()).toEqual(["src/link-router.ts", "src/routes.ts"]);
+});
+
 it("keeps every browser entry free of the compiler", () => {
-  for (const entry of ["src/client.ts", "src/types.ts", "src/islands.ts"]) {
+  for (const entry of ["src/client.ts", "src/types.ts", "src/islands.ts", "src/link-router.ts"]) {
     const { files } = graph(entry);
     expect([...files].some((f) => f.endsWith("/compiler.ts")), entry).toBe(false);
   }

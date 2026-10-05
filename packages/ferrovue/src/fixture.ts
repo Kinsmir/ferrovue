@@ -1,5 +1,7 @@
 import { createApp, createSSRApp, createStaticVNode, defineComponent, h, type App, type Component } from "vue";
-import type { RouteRecordRaw } from "vue-router";
+import { routeRecords, type RouteEntry } from "./routes.ts";
+
+export { routeRecords, type RouteEntry } from "./routes.ts";
 
 /** A conformance fixture: the props, and `$slots`, `$route`, `$stores` and `$locale`. */
 export interface Fixture {
@@ -62,9 +64,6 @@ async function optionalPinia(stores: Record<string, unknown>): Promise<typeof im
   }
 }
 
-/** A route as a routes file lists it: a path, or a path and a name. */
-export type RouteEntry = string | { path: string; name?: string; children?: RouteEntry[] };
-
 /** The router options ferrovue reproduces, as the project's configuration gives them. */
 export interface RouterOptions {
   base?: string;
@@ -76,15 +75,6 @@ export interface RouterOptions {
   /** Render on the client from scratch with `createApp`: the scope
    * ids a fresh client render writes, which the server's must equal for scoped styles to apply. */
   client?: boolean;
-}
-
-/** Route records for vue-router, every route, nested ones too, given the fixture's view. */
-export function routeRecords(routes: RouteEntry[], View: Component): RouteRecordRaw[] {
-  return routes.map((r) =>
-    typeof r === "string"
-      ? { path: r, component: View }
-      : { path: r.path, component: View, ...(r.name ? { name: r.name } : {}), ...(r.children ? { children: routeRecords(r.children, View) } : {}) },
-  );
 }
 
 /** An app rendering one fixture of `component`: with a router over `routes` when there are any. */
