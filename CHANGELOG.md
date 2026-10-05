@@ -254,6 +254,12 @@ released together and share version numbers.
 - Strings holding bidirectional controls (U+202A to U+202E, U+2066 to U+2069) in a template,
   a constant or a setup value compile: they are escaped in the generated Rust, whose compiler
   rejects them written out. `SetupValues` records these three.
+- A string `:class` given to a component loaded with `defineAsyncComponent` is written twice when
+  it has whitespace around it (`:class="' a '"` is `class="… a a"`), as Vue's async wrapper hands
+  it on once trimmed and once as written; ferrovue wrote it once.
+- An attribute that falls through holding `??` whose fallback ends in another `??`
+  (`note ?? (tags.find(…) ?? "-")`) compiles: the generated Rust wrapped a `Cow` in another.
+  `AsyncClass` records both.
 
 ## [0.5.0] - 2026-10-05
 
