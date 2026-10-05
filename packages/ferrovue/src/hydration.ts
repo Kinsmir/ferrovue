@@ -1,5 +1,6 @@
 import type { App, Component, Plugin } from "vue";
 import { mountPage, type IslandComponent, type PageOptions, type PageRecord } from "./client.ts";
+import { settled } from "./settle.ts";
 
 /** A page as the server wrote it: `html` holds the container and, unless `record` is given, the
  * record's script. */
@@ -28,9 +29,12 @@ function shape(node: Node, scratch: HTMLElement): string {
   return `<${el.tagName}${attrs.join("")}>${[...el.childNodes].map((child) => shape(child, scratch)).join("")}</${el.tagName}>`;
 }
 
-/** Put a recorded page into the document's body and hydrate it with `mountPage`, throwing on
- * anything Vue warns or logs as an error while it mounts, on a node Vue replaced, and on any change
- * hydrating made to the markup (a `style` attribute is compared by the declarations it holds). Resolves to the app, mounted. */
+/** Put a recorded page into the document's body and hydrate it with `mountPage`, throwing on a
+ * node Vue replaced, on any change hydrating made to the markup (a `style` attribute is compared by
+ * the declarations it holds), and on anything Vue warns or logs as an error until the page has
+ * settled. The markup is compared as hydrating leaves it; what changes once the page is mounted,
+ * such as a `<ClientOnly>` showing its content or an async component loading, is the app's to
+ * change. Resolves to the app, mounted and settled. */
 export async function hydrateRecordedPage(
   page: RecordedPage,
   layout: Component,
@@ -48,9 +52,19 @@ export async function hydrateRecordedPage(
   const shapeBefore = [...container.childNodes].map((child) => shape(child, scratch)).join("");
   const first = container.firstChild;
   const problems: string[] = [];
+  const shapeOf = (): string => [...container.childNodes].map((child) => shape(child, scratch)).join("");
+  let hydrated = "";
+  let shapeHydrated = "";
   const watch: Plugin = {
     install(app) {
       app.config.warnHandler = (message) => void problems.push(`warning: ${message}`);
+      const mount = app.mount.bind(app);
+      app.mount = (...args: Parameters<App["mount"]>) => {
+        const root = mount(...args);
+        hydrated = container.innerHTML;
+        shapeHydrated = shapeOf();
+        return root;
+      };
     },
   };
   const { warn, error } = console;
@@ -59,12 +73,13 @@ export async function hydrateRecordedPage(
   let app: App;
   try {
     app = await mountPage(layout, components, { ...options, doc, container, plugins: [...(options.plugins ?? []), watch] });
+    await settled(app);
   } finally {
     console.warn = warn;
     console.error = error;
   }
   if (container.firstChild !== first) problems.push("Vue replaced the server's first node");
-  if ([...container.childNodes].map((child) => shape(child, scratch)).join("") !== shapeBefore) problems.push(`hydrating changed the markup:\n  server:   ${before}\n  hydrated: ${container.innerHTML}`);
+  if (shapeHydrated !== shapeBefore) problems.push(`hydrating changed the markup:\n  server:   ${before}\n  hydrated: ${hydrated}`);
   if (problems.length) {
     app.unmount();
     throw new Error(`the page did not hydrate exactly:\n${problems.join("\n")}`);

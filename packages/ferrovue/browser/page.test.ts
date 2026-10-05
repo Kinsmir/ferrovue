@@ -4,7 +4,7 @@ import vue from "@vitejs/plugin-vue";
 import { chromium, firefox, webkit, type Browser, type Page } from "playwright";
 import { build, type Rolldown } from "vite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { ROOT } from "../test/conformance-cases.ts";
+import { CLIENT_ONLY, ROOT } from "../test/conformance-cases.ts";
 import type { PageCase } from "./page-entry.ts";
 
 const ORIGIN = "http://pages.test";
@@ -34,6 +34,7 @@ beforeAll(async () => {
     root: import.meta.dirname,
     logLevel: "warn",
     plugins: [vue()],
+    resolve: { alias: [{ find: /^ferrovue\/client$/, replacement: join(import.meta.dirname, "../src/client.ts") }] },
     build: { write: false, minify: false, rolldownOptions: { input: "page-entry.ts", output: { codeSplitting: false } } },
   }).finally(() => {
     process.env.NODE_ENV = nodeEnv;
@@ -78,7 +79,10 @@ describe.each(BROWSERS)("%s", (name) => {
     it(`hydrates ${file} exactly`, async ({ skip }) => {
       if (!browser) skip();
       await page.goto(`${ORIGIN}/${file}`);
-      expect(await page.evaluate(() => window.pageHydration!)).toMatch(/^hydrated: /);
+      const result = await page.evaluate(() => window.pageHydration!);
+      expect(result).toMatch(/^hydrated: /);
+      const named = Object.values(cases.get(file)!.record.slots).flatMap((parts) => parts.map((part) => part.c));
+      for (const shown of named.map((c) => CLIENT_ONLY[c]).filter(Boolean)) expect(result, "`<ClientOnly>` showed its content once mounted").toContain(shown);
     });
   }
 

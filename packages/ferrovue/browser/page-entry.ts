@@ -2,7 +2,7 @@ import type { Component } from "vue";
 import type { PageRecord } from "../src/client.ts";
 import { hydrateRecordedPage } from "../src/hydration.ts";
 
-const modules = import.meta.glob<{ default: Component }>("../../../crates/ferrovue/tests/conformance/components/{Panel,Frame,Text,Prose}.vue", {
+const modules = import.meta.glob<{ default: Component }>("../../../crates/ferrovue/tests/conformance/components/{Panel,Frame,Text,Prose,ClientSide,PlainBox}.vue", {
   eager: true,
 });
 const components: Record<string, Component> = Object.fromEntries(
@@ -25,7 +25,7 @@ async function hydrate(): Promise<string> {
   const data = JSON.parse(document.getElementById("fv-page-case")!.textContent) as PageCase;
   try {
     const app = await hydrateRecordedPage({ html: data.html, record: data.record },components[data.layout]!, components);
-    const text = document.getElementById("app")!.textContent;
+    const text = document.getElementById("app")!.innerHTML;
     app.unmount();
     return `hydrated: ${text}`;
   } catch (e) {

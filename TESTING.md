@@ -43,7 +43,7 @@ fixtures/X/case.json            Vue hydrates it: no mismatch warnings, same DOM 
 1. `conformance.test.ts` renders each `fixtures/<Component>/<case>.json` with real Vue and compares
    the result with `<case>.html`.
 2. It mounts the recorded HTML, hydrates it and waits for async components to load and hydrate
-   (`test/settle.ts`). Any hydration warning fails the fixture, except in the fixtures in
+   (`src/settle.ts`). Any hydration warning fails the fixture, except in the fixtures in
    `VUE_DISAGREES` (`conformance-cases.ts`), where Vue's own server and client renders
    differ and which must still mismatch: slot content whose every pushed string is comments and
    whitespace (an interpolation that writes nothing beside a list's fragment markers) shows the

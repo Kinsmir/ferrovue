@@ -201,9 +201,11 @@ the app's container, where the page writes it once.
 
 `hydrateRecordedPage` from `ferrovue/testing` takes a page as the server wrote it (the container
 and the record's script, or the container and the record as an object), puts it in the document
-and hydrates it with `mountPage`. It throws on anything Vue warns or logs as an error while it
-mounts, on a node Vue replaced, and on any change hydrating made to the markup, and resolves to the
-app. `examples/fullstack` runs it on the staff picks page, in happy-dom; its browser test opens the
+and hydrates it with `mountPage`. It compares the markup as hydrating leaves it with the markup the
+server wrote, then waits for the page to settle: a `<ClientOnly>` shows its content and async
+components load, which are changes the app makes once mounted. It throws on any change hydrating
+made, on a node Vue replaced, and on anything Vue warns or logs as an error until the page has
+settled, and resolves to the app. `examples/fullstack` runs it on the staff picks page, in happy-dom; its browser test opens the
 page in Chromium, Firefox and WebKit.
 
 # Hydrating the whole app

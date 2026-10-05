@@ -6,12 +6,12 @@ import { renderToString } from "vue/server-renderer";
 import { createPageApp, mountPage, type PageRecord } from "../src/client.ts";
 import { hydrateRecordedPage } from "../src/hydration.ts";
 import { attachSsrRender } from "../src/testing.ts";
-import { ROOT } from "./conformance-cases.ts";
+import { CLIENT_ONLY, ROOT } from "./conformance-cases.ts";
 
 const WRITE = process.env.FERROVUE_FIXTURES_WRITE === "1";
 const PAGES = join(ROOT, "pages");
 
-const modules = import.meta.glob<{ default: Component }>("../../../crates/ferrovue/tests/conformance/components/{Panel,Frame,Text,Prose}.vue", {
+const modules = import.meta.glob<{ default: Component }>("../../../crates/ferrovue/tests/conformance/components/{Panel,Frame,Text,Prose,ClientSide,PlainBox}.vue", {
   eager: true,
 });
 const components: Record<string, Component> = Object.fromEntries(
@@ -64,7 +64,10 @@ describe.skipIf(WRITE)("each recorded page hydrates exactly", () => {
   for (const page of pages) {
     it(`pages/${page.name}`, async () => {
       const app = await hydrateRecordedPage({ html: `<div id="app">${page.html}</div>`, record: page.record }, components[page.layout]!, components);
-      expect(document.querySelector("#app > section, #app > div")).not.toBeNull();
+      const named = Object.values(page.record.slots).flatMap((parts) => parts.map((part) => part.c));
+      for (const shown of named.map((c) => CLIENT_ONLY[c]).filter(Boolean)) {
+        expect(document.getElementById("app")!.innerHTML, "`<ClientOnly>` showed its content once mounted").toContain(shown);
+      }
       app.unmount();
     });
   }

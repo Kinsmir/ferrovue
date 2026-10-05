@@ -142,9 +142,13 @@ fn a_component_with_slots_renders_through_html() {
 }
 
 fn page_part(part: &serde_json::Value) -> ferrovue::Part<'static> {
-    use generated::{prose, text};
+    use generated::{client_side, prose, text};
     let props = part["p"].clone();
     match part["c"].as_str().expect("a component name") {
+        "ClientSide" => ferrovue::Part::new(
+            client_side::NAME,
+            client_side::into_html(serde_json::from_value(props).unwrap()),
+        ),
         "Text" => ferrovue::Part::new(
             text::NAME,
             text::into_html(serde_json::from_value(props).unwrap()),

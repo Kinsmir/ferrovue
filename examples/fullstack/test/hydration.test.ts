@@ -150,5 +150,6 @@ it("hydrates the staff picks exactly with the testing helper, from the page the 
   const router = createAppRouter(history);
   await router.replace("/picks");
   const page = await hydrateRecordedPage({ html: bodyOf("/picks") }, Picks, islands, { pinia: createPinia(), router });
+  expect(document.querySelector(".review-list a.share")?.getAttribute("href")).toMatch(/^mailto:\?body=/);
   page.unmount();
 });

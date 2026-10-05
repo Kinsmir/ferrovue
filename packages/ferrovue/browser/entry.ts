@@ -1,6 +1,6 @@
 import { type Component } from "vue";
 import { fixtureApp, readFixture, type RouteEntry, type RouterOptions } from "../src/fixture.ts";
-import { settled } from "../test/settle.ts";
+import { settled } from "../src/settle.ts";
 
 const modules = import.meta.glob<{ default: Component }>("../../../crates/ferrovue/tests/conformance/components/*.vue", {
   eager: true,
