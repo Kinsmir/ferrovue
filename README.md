@@ -606,12 +606,14 @@ crates/ferrovue-i18n/        vue-i18n's t() (the `i18n` feature)
 packages/ferrovue/           the compiler (npm package)
   src/index.ts               `ferrovue`: the browser API, `mountIslands`, `mountPage`, `hydrateState` and the types
   src/compiler.ts            `ferrovue/compiler`: `generate`, `write`
+  src/context.ts, model.ts   `ferrovue.config.json`, and the types and values the compiler passes around
   src/component.ts, script.ts, typescript.ts, constants.ts
                              a `.vue` file read, <script setup>, TypeScript types, constants and enums
   src/template.ts, children.ts, slots.ts, loops.ts
                              the compiled template: statements, child components, slots, v-for
-  src/expr.ts, strings.ts, numbers.ts, narrowing.ts, calls.ts, lists.ts
-                             expressions: operators, strings, numbers, narrowing, calls, lists
+  src/expr.ts, strings.ts, numbers.ts, narrowing.ts, calls.ts, lists.ts, parens.ts
+                             expressions: operators, strings, numbers, narrowing, calls, lists,
+                             the parentheses Rust needs
   src/attrs.ts, classes.ts, styles.ts, fallthrough.ts
                              attributes, class and style, attributes a parent passes on
   src/plugin.ts              the plugin interface (see CONTRIBUTING.md)
@@ -619,6 +621,7 @@ packages/ferrovue/           the compiler (npm package)
                              <ClientOnly>, Rust twins
   src/rust.ts, emitter.ts    the Rust source written out
   src/cli.ts, vite.ts        the `ferrovue` command and the Vite plugin
+  src/diff.ts                the diff `ferrovue --check --diff` prints for a stale file
   src/errors.ts, diagnostics.ts
                              every error code with its title, and errors as the CLI, JSON and Vite show them
   src/client.ts              browser-side helpers: `mountIslands`, `mountPage`, `hydrateState`, `<ClientOnly>`
@@ -636,6 +639,7 @@ examples/greeting/           the smallest setup: one component rendered from Rus
 examples/fullstack/          axum + Vite: islands, a page hydrated whole, Pinia state, routes and
                              streaming, <ClientOnly>, a Rust twin and its fixtures
 examples/dioxus/             a Dioxus page, rendered with dioxus-ssr, with an island in it
+scripts/inspect.ts           Vue's SSR code and render of a component beside the Rust ferrovue generates for it
 scripts/release.ts           the release version bump (see RELEASING.md)
 ```
 
