@@ -1,6 +1,4 @@
 <script setup lang="ts">
-/* What the template itself spells: entities, void elements, SVG's case-sensitive attributes,
- * whitespace that is kept and whitespace that is not. */
 defineProps<{ name: string }>();
 </script>
 

@@ -1,6 +1,4 @@
 <script setup lang="ts">
-/* `<Teleport>`: content sent to a target the page places — to two elements, nested, and
- * disabled, which keeps it in place. */
 defineProps<{ title: string; open: boolean; inline: boolean }>();
 </script>
 

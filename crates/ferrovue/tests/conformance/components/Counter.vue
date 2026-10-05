@@ -1,6 +1,4 @@
 <script setup lang="ts">
-/* A setup store read through the store and `storeToRefs`: its refs and its computeds, one reading
- * another. */
 import { storeToRefs } from "pinia";
 import { useCounter } from "../stores/counter";
 

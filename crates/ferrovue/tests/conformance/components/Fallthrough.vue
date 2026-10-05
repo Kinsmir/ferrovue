@@ -1,10 +1,4 @@
 <script setup lang="ts">
-/* Attributes a child does not declare as props fall through: onto a root with a class, a style and
- * attributes of its own (merged, or replaced where they stand, `undefined` too), into `$attrs` with
- * `inheritAttrs: false`, nowhere for two roots, on through a root that is a component, through
- * `useAttrs()`, onto a `<RouterLink>`, onto a root chosen by `v-if`, through a `<Transition>` root,
- * and onto a root whose own class may be absent and whose style is text. A listener is dropped, as
- * Vue's server drops it. */
 import FallBare from "./FallBare.vue";
 import FallBinds from "./FallBinds.vue";
 import FallFade from "./FallFade.vue";

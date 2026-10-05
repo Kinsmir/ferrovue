@@ -1,6 +1,4 @@
 <script setup lang="ts">
-/* What a component reads from the route: through `useRoute()` in setup and `$route` in the
- * template — the path, the hash, the name and the parameters. */
 import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 

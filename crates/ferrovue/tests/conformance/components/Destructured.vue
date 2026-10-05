@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* Props destructured with defaults and new names, read in the template and in setup. */
 import { computed } from "vue";
 
 const { title = "Hi", count: n = 0, wide = false, extra } = defineProps<{ title?: string; count?: number; wide?: boolean; extra?: string }>();

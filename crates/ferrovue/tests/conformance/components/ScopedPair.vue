@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* Scoped, with two roots: a fragment, which inherits no ids from its parent. */
 defineProps<{ term: string; text: string }>();
 </script>
 

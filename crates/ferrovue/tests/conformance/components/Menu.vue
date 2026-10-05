@@ -1,6 +1,4 @@
 <script setup lang="ts">
-/* `<RouterLink>` imported rather than resolved by name, with object locations — named, with
- * parameters, a query and a hash, or a path — and its own class names and `aria-current`. */
 import { RouterLink } from "vue-router";
 
 defineProps<{ slug: string; q?: string; page: number; tab?: string }>();

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* The home page: every book, each with a slot the server fills with an island. */
 import type { Book } from "./types";
 
 defineProps<{ books: Book[] }>();

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* Scoped, its root a `<Transition>` around one element, which takes the inherited ids. */
 defineProps<{ open: boolean }>();
 </script>
 

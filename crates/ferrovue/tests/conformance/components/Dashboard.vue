@@ -1,6 +1,4 @@
 <script setup lang="ts">
-/* A parent of everything: props handed to children as literals, as variables, as lists and as a
- * whole `Props`; slot content holding components, loops and conditions. */
 import Panel from "./Panel.vue";
 import type { Props as PanelProps } from "./Panel.vue";
 import Text from "./Text.vue";

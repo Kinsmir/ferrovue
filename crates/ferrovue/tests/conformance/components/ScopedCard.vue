@@ -1,6 +1,4 @@
 <script setup lang="ts">
-/* `:slotted()` styles: every outlet passes the slot scope id `data-v-…-s`, which the content writes
- * onto its elements and hands its components' roots — a scoped slot and fallbacks included. */
 defineProps<{ tone?: string }>();
 </script>
 

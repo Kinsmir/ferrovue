@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* Reads no store itself: the state reaches `Badge` through here, inside `Frame`'s slot. */
 import Badge from "./Badge.vue";
 import Frame from "./Frame.vue";
 

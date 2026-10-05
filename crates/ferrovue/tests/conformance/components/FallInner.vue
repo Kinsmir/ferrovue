@@ -1,6 +1,4 @@
 <script setup lang="ts">
-/* `inheritAttrs: false`: nothing reaches the root, and `v-bind="$attrs"` puts the attributes on
- * inner elements instead — before the element's own, which then win, and after them, which lose. */
 defineOptions({ inheritAttrs: false });
 defineProps<{ label: string }>();
 </script>

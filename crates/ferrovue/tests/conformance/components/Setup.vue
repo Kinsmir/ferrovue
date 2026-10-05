@@ -1,6 +1,4 @@
 <script setup lang="ts">
-/* Setup state the server evaluates (`ref`, `computed`), helpers with Rust twins, and client-only code
- * the template reaches only from event handlers. */
 import { computed, ref } from "vue";
 import { isEven, orDash, plural, tone } from "./helpers";
 

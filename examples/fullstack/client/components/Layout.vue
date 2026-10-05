@@ -1,6 +1,4 @@
 <script setup lang="ts">
-/* The page around every route: navigation by route name, the basket, and the route's own page.
- * The client hydrates the basket on its own (`#basket`), not the whole layout. */
 import BasketSummary from "./BasketSummary.vue";
 
 defineProps<{ shop: string }>();

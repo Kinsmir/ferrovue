@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* A parent binding a child's models with `v-model`, which on the server hands the child its value. */
 import { ref } from "vue";
 import Model from "./Model.vue";
 

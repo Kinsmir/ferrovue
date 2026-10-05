@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* A child taking fractions, handed an integer for one of them. */
 import type { Float } from "ferrovue/types";
 
 defineProps<{ value: Float; max: Float }>();

@@ -1,6 +1,4 @@
 <script setup lang="ts">
-/* String methods counted in UTF-16 code units, as JavaScript counts them — slicing, searching,
- * splitting, replacing with `$` patterns, padding, repeating — and strings ordered by code unit. */
 import { computed } from "vue";
 
 const props = defineProps<{ text: string; other: string; sep: string; n: number; width: number; fill?: string }>();

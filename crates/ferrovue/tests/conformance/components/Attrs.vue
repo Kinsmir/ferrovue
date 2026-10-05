@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* Attributes: boolean, empty, numeric, absent, `data-` and `aria-`, and every shape of `class`. */
 defineProps<{
   label: string;
   disabled: boolean;

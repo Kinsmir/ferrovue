@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* A child handed the lists its parent computes (`Arrays`), and a record (`Records`). */
 defineProps<{ chips: string[]; counts?: number[]; marks?: Record<string, number> }>();
 </script>
 

@@ -1,6 +1,4 @@
 <script setup lang="ts">
-/* `:style` in every shape Vue merges — objects, arrays, a static `style`, strings — and `v-show`,
- * which Vue renders as a style. A global `<style>` block changes no markup. */
 defineProps<{ color: string; size: number; shown: boolean; hidden: boolean; raw: string; accent?: string; width?: number; big: boolean }>();
 </script>
 

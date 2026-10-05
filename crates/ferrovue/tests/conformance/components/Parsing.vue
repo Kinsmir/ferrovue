@@ -1,6 +1,4 @@
 <script setup lang="ts">
-/* Strings read as numbers as JavaScript reads them — `Number`, `parseInt` (with no radix, 10 and
- * 16) and `parseFloat` — and values written by `JSON.stringify`. */
 defineProps<{ input: string; inputs: string[]; flag: boolean; n: number }>();
 </script>
 

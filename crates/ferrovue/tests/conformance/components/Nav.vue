@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* Links that know where the reader is. */
 export interface Props {
   href: string;
   label: string;

@@ -1,5 +1,4 @@
 <script lang="ts">
-/* A plain `<script>` beside the setup one, declaring a type the setup uses. */
 export interface Item {
   id: number;
   name: string;
@@ -7,8 +6,6 @@ export interface Item {
 </script>
 
 <script setup lang="ts">
-/* Setup that is mostly client-side: hooks, watchers, emits, template refs, exposed state — none of
- * which may change the server's render — beside constants the server does evaluate. */
 import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from "vue";
 
 defineOptions({ name: "Lifecycle" });

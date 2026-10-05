@@ -1,6 +1,4 @@
 <script setup lang="ts">
-/* Optional values narrowed as TypeScript narrows them: by truthiness, by `!== undefined`, and by
- * their negations, which narrow the other branch — in `v-if`, `?:`, `&&` and `||`. */
 import type { Float } from "ferrovue/types";
 import type { User } from "../types/models";
 

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* The page around every route: a navigation bar that knows where the reader is. */
 defineProps<{ user: string }>();
 </script>
 

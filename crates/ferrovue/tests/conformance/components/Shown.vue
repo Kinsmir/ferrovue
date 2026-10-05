@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* `v-show` on the root, merged with a static style and a binding that set the same property. */
 defineProps<{ on: boolean; color: string }>();
 </script>
 

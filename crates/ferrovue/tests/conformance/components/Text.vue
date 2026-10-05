@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* Interpolation: every scalar type, absent values, and the expressions a template computes text with. */
 const props = defineProps<{ title: string; count: number; on: boolean; note?: string; score?: number; padded: string }>();
 </script>
 

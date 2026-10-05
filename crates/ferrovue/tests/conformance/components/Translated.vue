@@ -1,7 +1,4 @@
 <script setup lang="ts">
-/* vue-i18n: `$t` in the template and `t` from `useI18n()` in setup, with named and list values,
- * plurals chosen by vue-i18n's rule, literals, linked messages and their modifiers, nested and flat
- * keys, fallback to another locale, and a missing key — and the current locale itself. */
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 

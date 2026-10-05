@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* `withDefaults`: what an absent prop reads as, including the `false` Vue casts a boolean to. */
 import { computed } from "vue";
 
 const props = withDefaults(defineProps<{ label?: string; size?: number; on?: boolean; tags?: string[]; plain?: boolean; note?: string }>(), {
