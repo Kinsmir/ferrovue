@@ -227,7 +227,7 @@ one store; a real `Stores` has a field for every store.)
 On the client, before the app or the islands mount:
 
 ```ts
-import { hydrateState } from "ferrovue/client";
+import { hydrateState } from "ferrovue";
 hydrateState(pinia); // reads <script id="__pinia">: every store starts from what the server rendered
 ```
 

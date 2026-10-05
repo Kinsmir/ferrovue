@@ -29,6 +29,10 @@
   ],
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./compiler": {
       "types": "./dist/compiler.d.ts",
       "default": "./dist/compiler.js"
     },
@@ -53,11 +57,12 @@
       "default": "./dist/vite.js"
     }
   },
+  "sideEffects": false,
   "bin": {
     "ferrovue": "./dist/cli.js"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.build.json",
     "prepack": "pnpm run build && cp ../../README.md ../../LICENSE-MIT ../../LICENSE-APACHE ."
   },
   "dependencies": {
