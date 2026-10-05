@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* A store read two ways: through the store, and through `storeToRefs`. */
 import { storeToRefs } from "pinia";
 import { usePrefs } from "../stores/prefs";
 

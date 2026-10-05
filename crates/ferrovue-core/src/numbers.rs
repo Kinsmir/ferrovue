@@ -1,10 +1,5 @@
-//! JavaScript's numbers: `String(n)` for integers and doubles, `Math.round`, `Math.max`,
-//! `Math.min` and `toFixed`, each as JavaScript computes and writes them.
-
-/// The largest integer a JavaScript number holds exactly: 2⁵³ − 1.
 const MAX_SAFE_INTEGER: u64 = (1 << 53) - 1;
 
-/// Two decimal digits for each number below 100, which halves the divisions writing a number takes.
 const DIGIT_PAIRS: &[u8; 200] = b"\
     0001020304050607080910111213141516171819\
     2021222324252627282930313233343536373839\
@@ -12,7 +7,6 @@ const DIGIT_PAIRS: &[u8; 200] = b"\
     6061626364656667686970717273747576777879\
     8081828384858687888990919293949596979899";
 
-/// The decimal digits of `n`, at the end of `buf`: returns where they start.
 fn decimal(buf: &mut [u8; 20], mut n: u64) -> usize {
     let mut i = buf.len();
     while n >= 100 {
@@ -32,8 +26,6 @@ fn decimal(buf: &mut [u8; 20], mut n: u64) -> usize {
     i
 }
 
-/// `n` in decimal. Pushed a character at a time: for the few digits of a number that is quicker
-/// than checking them as UTF-8 to push them as a `str`.
 fn push_decimal(out: &mut String, n: u64) {
     if n < 10 {
         out.push(char::from(b'0' + n as u8));
@@ -49,14 +41,7 @@ fn push_decimal(out: &mut String, n: u64) {
 
 /// `String(n)` for an integer, which is what `toDisplayString` and `escapeHtml` make of a number.
 ///
-/// Exact within ±(2⁵³ − 1). Beyond that a JavaScript number has already lost precision — the
-/// browser rounds the value it reads from the island's props — so it is written as JavaScript
-/// writes the rounded number, or the page would not hydrate.
-///
-/// Called by generated code for every interpolated `number` (an `i64`);
-/// [`guide::numbers`] explains how numbers are computed and written.
-///
-/// [`guide::numbers`]: https://docs.rs/ferrovue/latest/ferrovue/guide/numbers/index.html
+/// Exact within ±(2⁵³ − 1); beyond that it is written as JavaScript writes the rounded number.
 ///
 /// # Example
 ///
@@ -80,7 +65,6 @@ pub fn push_int(out: &mut String, n: i64) {
     }
 }
 
-/// Up to 32 bytes of formatted text, on the stack: what `{:e}` writes of a double.
 struct Short {
     buf: [u8; 32],
     len: usize,
@@ -100,9 +84,6 @@ impl std::fmt::Write for Short {
 
 /// `Number.prototype.toString()`: JavaScript's shortest round-trip digits, laid out as ECMAScript
 /// lays them out — `0.30000000000000004`, `1e+21`, `1.5e-7`, `NaN`, `-Infinity`.
-///
-/// Called by generated code for every interpolated `Float` (an `f64`) and every fractional
-/// result, such as an integer divided by another.
 ///
 /// # Example
 ///
@@ -125,7 +106,6 @@ pub fn push_number(out: &mut String, x: f64) {
         return;
     }
     if x == 0.0 {
-        // Negative zero too: `String(-0)` is `"0"`.
         out.push('0');
         return;
     }
@@ -137,12 +117,10 @@ pub fn push_number(out: &mut String, x: f64) {
         out.push('-');
     }
     let x = x.abs();
-    // A whole number a double holds exactly is its own shortest spelling, written as an integer.
     if x.fract() == 0.0 && x <= MAX_SAFE_INTEGER as f64 {
         push_decimal(out, x as u64);
         return;
     }
-    // `{:e}` writes the shortest digits that round-trip, as JavaScript chooses them: `d.ddde±N`.
     let mut sci = Short {
         buf: [0; 32],
         len: 0,
@@ -152,8 +130,6 @@ pub fn push_number(out: &mut String, x: f64) {
     let (mantissa, exp) = sci.split_once('e').expect("`{:e}` writes an exponent");
     let exp: i32 = exp.parse().expect("`{:e}` writes an integer exponent");
     let mut digits: String = mantissa.chars().filter(|c| *c != '.').collect();
-    // ECMAScript breaks a tie between two shortest spellings — the number exactly halfway between
-    // them — toward the even digit, where Rust's shortest formatting may round the other way.
     if let Some((exact, exact_exp)) = few_exact_digits(x)
         && exact_exp == exp
     {
@@ -172,7 +148,6 @@ pub fn push_number(out: &mut String, x: f64) {
         }
     }
     let k = digits.len() as i32;
-    // The position of the decimal point relative to the digits, as the specification's `n`.
     let n = exp + 1;
     if k <= n && n <= 21 {
         out.push_str(&digits);
@@ -196,15 +171,6 @@ pub fn push_number(out: &mut String, x: f64) {
     }
 }
 
-/// The significant digits of a positive, finite `x`'s exact decimal value, and the exponent of the
-/// first, when there are few enough of them for `x` to be a tie between two shortest spellings:
-/// those have at most 17 digits, so the tie at most 18. `None` when there are more.
-///
-/// `x` is `m × 2^e` with `m` odd. With `e < 0` that is `m × 5^-e × 10^e`, whose digits are those
-/// of `m × 5^-e`, an odd number: more than 18 of them once `-e` reaches 26. With `e ≥ 0` it is the
-/// integer `m × 2^e`, whose digits are counted without the zeros it ends with; a tie of at most 18
-/// digits times `10^z` is divisible by `5^z`, so `m` is, which caps `z` at 22 and `e` at
-/// `log2(10^18) + 22 < 82`.
 fn few_exact_digits(x: f64) -> Option<(String, i32)> {
     let bits = x.to_bits();
     let biased = ((bits >> 52) & 0x7ff) as i32;
@@ -224,7 +190,6 @@ fn few_exact_digits(x: f64) -> Option<(String, i32)> {
     } else if e <= 74 {
         (u128::from(m) << e, 0)
     } else if e < 82 {
-        // Beyond `u128`, below 2¹³⁴: 41 digits write it exactly.
         use std::fmt::Write;
         let mut s = String::new();
         let _ = write!(s, "{x:.40e}");
@@ -342,8 +307,6 @@ pub fn js_to_fixed(x: f64, digits: u32) -> String {
     let d = digits as usize;
     let mut out = String::new();
     let _ = write!(out, "{:.*}", d, x.abs());
-    // Rust rounds from the exact value too, and differs only on an exact tie: a value whose exact
-    // decimal expansion ends with a 5 one place past the last digit kept.
     let mut exact = String::new();
     let _ = write!(exact, "{:.1100}", x.abs());
     let exact = exact.trim_end_matches('0');
@@ -351,14 +314,12 @@ pub fn js_to_fixed(x: f64, digits: u32) -> String {
     if fraction.len() == d + 1 && fraction.ends_with('5') {
         out = round_up_magnitude(&exact[..exact.len() - 1]);
     }
-    // `-0.toFixed(1)` is "0.0", and a negative that rounds to zero keeps its sign: "-0.0".
     if x < 0.0 {
         out.insert(0, '-');
     }
     out
 }
 
-/// A decimal string's last digit plus one, carrying: `"2."` to `"3"`, `"1.99"` to `"2.00"`.
 fn round_up_magnitude(digits: &str) -> String {
     let digits = digits.trim_end_matches('.');
     let mut bytes: Vec<u8> = digits.bytes().collect();
@@ -381,7 +342,6 @@ fn round_up_magnitude(digits: &str) -> String {
     String::from_utf8(bytes).expect("ASCII digits")
 }
 
-/// A string of decimal digits plus one in its last place, carrying: `"129"` to `"130"`.
 fn increment_digits(digits: &str) -> String {
     let mut bytes: Vec<u8> = digits.bytes().collect();
     for b in bytes.iter_mut().rev() {

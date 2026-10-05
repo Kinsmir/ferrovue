@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* `v-if` chains, negation, compound tests, comparisons, and narrowing of optional values. */
 interface Author {
   name: string;
   url?: string;

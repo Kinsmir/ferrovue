@@ -1,6 +1,4 @@
 <script setup lang="ts">
-/* Two stores, read through the store and `storeToRefs`, getters among them, in the template and in
- * a `computed`. */
 import { computed } from "vue";
 import { storeToRefs } from "pinia";
 import { useCart } from "../stores/cart";

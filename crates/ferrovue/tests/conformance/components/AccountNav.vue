@@ -1,6 +1,4 @@
 <script setup lang="ts">
-/* Links inside nested routes: a parent link is active on its children's pages but exact only on its
- * own, a default child stands for its parent, and `aria-current` follows exactness. */
 defineProps<{ order: string }>();
 </script>
 

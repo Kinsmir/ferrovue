@@ -1,6 +1,3 @@
-/* Slots: the content a parent gives a child's slot, and the `<slot>` outlets that render it, with
- * the props a scoped slot passes. */
-
 import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, fail, GenError, rustStr, snake } from "./model.ts";
 import { expr } from "./expr.ts";
 import { atom, bare, operand, strArg, UNARY } from "./parens.ts";
@@ -9,19 +6,14 @@ import { rustTy } from "./rust.ts";
 import { fieldInit } from "./children.ts";
 import { pushesContent, statements } from "./template.ts";
 
-/** A borrow of an object or a list a template reads. A variable already holds a borrow: a loop's
- * item, a narrowed value, a setup binding, a scoped slot's prop. */
 function borrowed(code: string): string {
   return code.startsWith("&") || /^\w+$/.test(code) || /^fv_sp\d+\.\w+$/.test(code) ? code : `&${operand(code, UNARY)}`;
 }
 
-/** The statements a parent's slot content pushes: the `if (_push)` half of its `_withCtx`. */
 export function slotBody(s: Scope, value: N): N[] {
   return slotContent(s, value).body;
 }
 
-/** A parent's slot content: what it pushes, and the parameter its scoped slot props are bound to
- * (`_` when it takes none). */
 export function slotContent(s: Scope, value: N): { body: N[]; param: N } {
   const fn =
     value.type === "CallExpression" && value.callee.type === "Identifier" && value.callee.name === "_withCtx"
@@ -38,8 +30,6 @@ export function slotContent(s: Scope, value: N): { body: N[]; param: N } {
   return { body, param: fn.params[0] };
 }
 
-/** Whether slot content always pushes something that is not a comment: a push of content outside
- * any `if` or loop. Then nothing has to be decided at run time. */
 export function staticallyFilled(body: N[]): boolean {
   return body.some(
     (st) =>
@@ -49,18 +39,15 @@ export function staticallyFilled(body: N[]): boolean {
   );
 }
 
-/** `RowSlotProps`, `RowSlot`: the names of a scoped slot's props struct and content type. */
 export function slotTypeName(slotName: string, suffix: string): string {
   return slotName.split(/[-_]/).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join("") + suffix;
 }
 
-/** Whether a scoped slot prop's Rust type borrows, and so needs the props' lifetime `'v`. */
 export function slotFieldBorrows(ty: Ty): boolean {
   const copied = (t: Ty) => t.k === "int" || t.k === "float" || t.k === "bool";
   return !(copied(ty) || (ty.k === "opt" && copied(ty.of)));
 }
 
-/** A scoped slot prop's Rust type: a scalar copied, anything else borrowed from the render for `'v`. */
 export function slotFieldTy(ty: Ty, comp: Component): string {
   const owned = (t: Ty) => rustTy(t, comp).replace(/'a\b/g, "'v");
   switch (ty.k) {
@@ -85,7 +72,6 @@ export function slotFieldTy(ty: Ty, comp: Component): string {
   }
 }
 
-/** A value an outlet passes, as the scoped slot prop field holds it. */
 export function slotFieldValue(s: Scope, v: Val, n: N): string {
   switch (v.ty.k) {
     case "str":
@@ -95,8 +81,6 @@ export function slotFieldValue(s: Scope, v: Val, n: N): string {
     case "bool":
       return bare(v.code);
     case "list":
-      // An array literal is a Rust array of `&str`, and a computed list holds its items in a form
-      // of its own: neither is the list a slot prop borrows.
       if (v.code.startsWith("[")) fail(s.comp, "a slot prop is not an array literal: pass a list the component holds", n);
       if (v.iter !== undefined) fail(s.comp, "a slot prop is not a computed list: pass a list the component holds", n);
       return borrowed(v.code);
@@ -112,7 +96,6 @@ export function slotFieldValue(s: Scope, v: Val, n: N): string {
   return fail(s.comp, "a slot prop is a string, a number, a boolean, an object or a list", n);
 }
 
-/** `<slot name="x" :prop="…">fallback</slot>`: `ssrRenderSlot`, with the props a scoped slot passes. */
 export function slotOutlet(s: Scope, e: Emitter, c: N): void {
   const [, nameNode, slotProps, fallback] = c.arguments;
   if (nameNode?.type !== "StringLiteral") fail(s.comp, "a slot's name is literal", c);
@@ -149,8 +132,6 @@ export function slotOutlet(s: Scope, e: Emitter, c: N): void {
   } else if (s.comp.slotShapes.has(slotName)) {
     fail(s.comp, `every ${outlet} passes the same props, of the same types`, c);
   }
-  // The slot scope id: `"data-v-…-s"` from a component with `:slotted()` styles, followed inside
-  // slot content by the id that content was given, or that id alone.
   const id = c.arguments[6];
   let slotted: string | null = null;
   if (id?.type === "StringLiteral") slotted = rustStr(id.value);
@@ -170,7 +151,6 @@ export function slotOutlet(s: Scope, e: Emitter, c: N): void {
   if (fallback.type !== "ArrowFunctionExpression" || fallback.body.type !== "BlockStatement") {
     fail(s.comp, "unexpected slot fallback", fallback);
   }
-  // The fallback writes to the same buffer as the outlet, so inside slot content it fills it too.
   e.open(`${s.fill ? "if " : ""}${fn}(out, ${args}, Some(&mut |out: &mut String|`);
   statements(s, e, fallback.body.body);
   e.close(s.fill ? ")) { filled = true; }" : "));");

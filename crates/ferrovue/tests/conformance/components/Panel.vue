@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* Named slots, a fallback that interpolates, and markup shown only when the parent filled a slot. */
 export interface Props {
   title: string;
   count?: number;

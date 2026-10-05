@@ -1,18 +1,8 @@
-//! `<Teleport>`: content rendered somewhere else on the page.
-//!
-//! As in Vue's server renderer, a teleport leaves `<!--teleport start-->` and `<!--teleport end-->`
-//! where it stands, and its content goes to its target's buffer between anchor comments. The page
-//! writes each target's buffer where the target is — a modal container, the end of `<body>` — and
-//! the browser hydrates the content there.
-
 use std::cell::RefCell;
 
 /// The teleported content of one render, by target, in the order Vue collects it.
 ///
-/// A component that renders `<Teleport>`, or renders a child that does, takes a `&Teleports` as its
-/// last parameter. Make one per page render, render the page, then write each target's content
-/// inside its element. It collects through a shared reference, so it is not `Sync`: give each
-/// render its own. [`guide::teleports`](crate::guide::teleports) has a complete page.
+/// It is not `Sync`: give each render its own.
 ///
 /// # Example
 ///
@@ -97,8 +87,6 @@ impl Teleports {
             .collect()
     }
 
-    /// A place in `target`'s buffer, taken before the content renders, so that teleports nested in it
-    /// come after it — as Vue splices it in at the index it had when it started.
     fn reserve(&self, target: &str) -> usize {
         let mut targets = self.targets.borrow_mut();
         let parts = match targets.iter().position(|(t, _)| t == target) {
@@ -122,9 +110,6 @@ impl Teleports {
 
 /// `ssrRenderTeleport`: the markers in place and the content in the target's buffer — or, when
 /// disabled, the content in place and empty anchors in the target.
-///
-/// Called by generated code for each `<Teleport>`, with its `to` and `disabled`; `content` writes
-/// what the teleport holds.
 ///
 /// # Example
 ///

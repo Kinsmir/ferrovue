@@ -1,6 +1,3 @@
-/* `class` as Vue's server renderer writes it: `normalizeClass` of strings, arrays and objects,
- * classes `mergeProps` merges, and a class as an `fv::Attr` for a merge at run time. */
-
 import { escapeHtml } from "@vue/shared";
 import { type N, type Scope, type Val, fail, rustStr, STR } from "./model.ts";
 import { expr } from "./expr.ts";
@@ -10,14 +7,8 @@ import { atom, bare, condition, logical, not, strArg } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
 import { valueAttr } from "./attrs.ts";
 
-/** One item of a class list once it is flattened: literal text, known now, or a Rust `&str`
- * expression evaluated at run time — empty when the item contributes nothing. */
 export type ClassItem = { lit: string } | { code: string };
 
-/** `normalizeClass`'s view of a class binding, flattened: a string, an array of items, an object
- * of `name: condition`, `cond && "name"`, `cond ? "a" : null`. Every item is trimmed and the empty
- * ones dropped before they are joined with one space, which is what `class_into` does too, so an
- * object's keys become items of their own. */
 export function classItems(s: Scope, n: N): ClassItem[] {
   switch (n.type) {
     case "StringLiteral": {
@@ -27,11 +18,6 @@ export function classItems(s: Scope, n: N): ClassItem[] {
     case "ArrayExpression":
       return n.elements.flatMap((el: N) => (el ? classItems(s, el) : []));
     case "ObjectExpression":
-      // A computed name may hold spaces, which Vue keeps between the names it joins: such an object
-      // is normalised whole, at run time, as Vue normalises it.
-      // Normalised whole, at run time, as a JavaScript object: when a name is computed (and may hold
-      // spaces, repeat another, or be an array index), or a literal name repeats or is an index —
-      // which a JavaScript object lists first, in numeric order.
       const literalNames = n.properties
         .filter((p: N) => p.type === "ObjectProperty" && !p.computed)
         .map((p: N) => (p.key.type === "Identifier" ? p.key.name : String(p.key.value)));
@@ -46,7 +32,6 @@ export function classItems(s: Scope, n: N): ClassItem[] {
           if (p.type !== "ObjectProperty") fail(s.comp, "a class object holds `name: condition` pairs", p);
           const key: Val = p.computed ? expr(s, p.key) : { code: rustStr(p.key.type === "Identifier" ? p.key.name : String(p.key.value)), ty: STR };
           if (key.ty.k !== "str") fail(s.comp, "a computed class name is a string", p.key);
-          // Names are told apart, which two halves of surrogate pairs would not be.
           for (const other of keys) meet(s.comp, other, key, "a class object's names", p.key, "equal");
           keys.push(key);
           return `(${bare(cond(s, p.value))}, ${bare(key.code)})`;
@@ -55,7 +40,6 @@ export function classItems(s: Scope, n: N): ClassItem[] {
       }
       return n.properties.flatMap((p: N): ClassItem[] => {
         if (p.type !== "ObjectProperty") fail(s.comp, "a class object holds `name: condition` pairs", p);
-        // A literal name is written as it is: an object's names are joined, not trimmed one by one.
         let name: ClassItem;
         if (!p.computed) {
           const key: string = p.key.type === "Identifier" ? p.key.name : String(p.key.value);
@@ -92,17 +76,13 @@ export function classItems(s: Scope, n: N): ClassItem[] {
   return fail(s.comp, "a class is a string, an array, or an object of conditions", n);
 }
 
-/** Class items that apply only when \`test\` holds: each one, or nothing, decided now if it can be. */
 function conditional(test: string, items: ClassItem[]): ClassItem[] {
   if (test === "true" || test === "false") return test === "true" ? items : [];
   return items.map((it) => ({ code: `if ${condition(test)} { ${"lit" in it ? rustStr(it.lit) : bare(it.code)} } else { "" }` }));
 }
 
-/** `ssrRenderClass(value)`: normalised, then escaped. `after` says a class was already written. */
 export function renderClass(s: Scope, e: Emitter, n: N, after = false): void {
   const items = classItems(s, n);
-  // Literal items before the first run-time one are written now; the rest go to `class_into`,
-  // which decides at run time whether each needs a separator.
   let wrote = after;
   let i = 0;
   for (; i < items.length; i++) {
@@ -117,8 +97,6 @@ export function renderClass(s: Scope, e: Emitter, n: N, after = false): void {
   }
 }
 
-/** When `mergeProps` gives an element a `class` at all: unless every value it merges is
- * `undefined`, which `ret.class !== undefined` leaves out. */
 export function classPresent(s: Scope, n: N): string {
   if (n.fvMerged) return n.elements.reduce((acc: string, el: N) => logical(acc, "||", classPresent(s, el)), "false");
   switch (n.type) {
@@ -141,7 +119,6 @@ export function classPresent(s: Scope, n: N): string {
   return "true";
 }
 
-/** Whether a class value could equal, as a string, the class merged before it: a string. */
 export function maybeEqual(s: Scope, n: N): boolean {
   if (n.type === "StringLiteral") return true;
   if (n.fvMerged || ["ArrayExpression", "ObjectExpression", "NullLiteral", "LogicalExpression", "ConditionalExpression"].includes(n.type)) return false;
@@ -149,7 +126,6 @@ export function maybeEqual(s: Scope, n: N): boolean {
   return v.ty.k === "str" || (v.ty.k === "opt" && v.ty.of.k === "str");
 }
 
-/** A class value's names, known now: a literal, or literals merged. */
 export function literalClass(n: N): string | null {
   if (n.type === "StringLiteral") return n.value.trim();
   if (!n.fvMerged) return null;
@@ -157,13 +133,10 @@ export function literalClass(n: N): string | null {
   return parts.includes(null) ? null : parts.filter(Boolean).join(" ");
 }
 
-/** A class as an `fv::Attr`: a string as it is, an array or an object by the names it normalises
- * to, `cond && x` and `cond ? x : y` decided at run time. */
 export function classAttr(s: Scope, n: N, side: "vnode" | "own"): string {
   switch (n.type) {
     case "StringLiteral":
       return `fv::Attr::str(${rustStr(n.value)})`;
-    // `null`, like `false`, joins as nothing and equals no class: an empty string does the same.
     case "NullLiteral":
       return 'fv::Attr::str("")';
     case "ArrayExpression":

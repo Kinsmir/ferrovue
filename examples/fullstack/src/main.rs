@@ -1,11 +1,5 @@
 //! A bookshop served by axum: pages rendered by Vue components compiled to Rust by ferrovue, and
 //! hydrated in the browser by a Vite build of the same components.
-//!
-//! ```sh
-//! pnpm --filter ferrovue-example-fullstack build   # the client, and src/generated/
-//! cargo run -p ferrovue-example-fullstack          # http://localhost:3000
-//! cargo run -p ferrovue-example-fullstack -- --render /books/dune   # one page, to stdout
-//! ```
 
 #[rustfmt::skip]
 mod generated;
@@ -29,15 +23,12 @@ use tower_http::services::ServeDir;
 use assets::Assets;
 use pages::{Page, Site};
 
-/// How long the reviews take to look up when serving: long enough to see the page stream.
 const REVIEW_DELAY: Duration = Duration::from_millis(800);
 
 const USAGE: &str = "usage: ferrovue-example-fullstack [--render <path>]";
 
 #[tokio::main]
 async fn main() {
-    // The client's build: `dist/` beside this crate, unless `DIST_DIR` names another (the browser
-    // test builds one of its own).
     let dist = std::env::var_os("DIST_DIR").map_or_else(
         || PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("dist"),
         PathBuf::from,
@@ -46,7 +37,6 @@ async fn main() {
     match args.as_slice() {
         [] => serve(dist).await,
         [flag, path] if flag == "--render" => {
-            // Every hole filled at once: the page as a browser receives it once the stream ends.
             let site = Site::new(
                 Assets::from_manifest(&dist).unwrap_or(Assets::None),
                 Duration::ZERO,
@@ -85,8 +75,6 @@ async fn serve(dist: PathBuf) {
         .expect("the server runs");
 }
 
-/// Every page: the markup up to the first hole goes out at once, each hole's content follows as
-/// soon as it is ready, and the markup after it straight behind.
 async fn page(State(site): State<Arc<Site>>, uri: Uri) -> Response {
     let Page {
         status,
@@ -101,7 +89,6 @@ async fn page(State(site): State<Arc<Site>>, uri: Uri) -> Response {
     (status, body).into_response()
 }
 
-/// A book's reviews alone, the island its page streams in: for a client that fetches them again.
 async fn reviews(State(site): State<Arc<Site>>, Path(id): Path<String>) -> impl IntoResponse {
     site.reviews(&id).await
 }
@@ -130,13 +117,10 @@ mod tests {
             "{html}"
         );
         assert!(html.contains(r#"<a href="/books/left-hand""#), "{html}");
-        // The named link to the home page is the active one.
         assert!(
             html.contains(r#"<a aria-current="page" href="/" class="active brand">"#),
             "{html}"
         );
-        // The store's state is rendered, through its getter, and sent for the client to start from;
-        // `data-v-0a3b973f` is the id of the summary's scoped styles, a hash of its path.
         assert!(
             html.contains("Basket of guest: <b data-v-0a3b973f>1</b> book"),
             "{html}"
@@ -165,7 +149,6 @@ mod tests {
         let [before, after] = ferrovue::split_holes(&page.html)[..] else {
             panic!("one hole, two pieces");
         };
-        // Everything before the reviews goes out first, and the reviews are not in it.
         assert!(before.contains("<h1>Dune</h1>"), "{before}");
         assert!(
             before.contains(r#"<article class="book" data-id="dune">"#),
@@ -179,12 +162,10 @@ mod tests {
             reviews.starts_with(r#"<div data-island="Reviews""#),
             "{reviews}"
         );
-        // Escaped, in the markup and in the island's props.
         assert!(
             reviews.contains("Too much sand &lt;for me&gt;."),
             "{reviews}"
         );
-        // The page whole is the pieces with the hole filled.
         let (_, whole) = site.render_to_string("/books/dune").await;
         assert_eq!(whole, format!("{before}{reviews}{after}"));
     }

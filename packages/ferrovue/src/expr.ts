@@ -1,7 +1,3 @@
-/* Expressions translated to Rust, each with the type it evaluates to: names, members, literals and
- * operators here, and beside it strings (`strings.ts`), numbers (`numbers.ts`), truthiness and
- * narrowing (`narrowing.ts`) and calls (`calls.ts`). */
-
 import { type Component, type N, type Scope, type Ty, type Val, BOOL, fail, FLOAT, GenError, INT, opt, rustStr, sameTy, snake, STR, UNDEF } from "./model.ts";
 import { ctx } from "./context.ts";
 import { lookupStruct, markHome } from "./typescript.ts";
@@ -13,7 +9,6 @@ import { arithmetic, asF64, compare, intFromF64, isNumber, negatedOrder, numberV
 import { boolOf, choice, known, narrowing, narrowTo, pathOf, presence, truthy } from "./narrowing.ts";
 import { call, isObjectCall } from "./calls.ts";
 
-/** A type as an error names it. */
 export function describeTy(ty: Ty): string {
   switch (ty.k) {
     case "str":
@@ -45,9 +40,7 @@ export function fieldVal(comp: Component, base: string, ty: Ty, js: string, node
   const { st, owner } = lookupStruct(comp, ty);
   const found = st?.fields.find((x) => x.js === js);
   if (!found) fail(comp, `\`${ty.name}\` has no field \`${js}\``, node);
-  // A field of a type another component declares names that component's types.
   const f = owner === comp ? found : { ...found, ty: markHome(found.ty, owner.name) };
-  // A scoped slot's props already hold borrows and copies: each field is read as it is.
   if (st!.slot) return { code: `${base}.${f.rust}`, ty: f.ty };
   const place = `${base}.${f.rust}`;
   if (f.dflt !== undefined && f.ty.k === "opt") {
@@ -66,19 +59,16 @@ export function fieldVal(comp: Component, base: string, ty: Ty, js: string, node
       if (f.ty.of.k === "html") return { code: `${place}.as_ref()`, ty: f.ty };
       if (f.ty.of.k === "str") return { code: `${place}.as_deref()`, ty: f.ty };
       if (f.ty.of.k === "int" || f.ty.of.k === "float" || f.ty.of.k === "bool") return { code: place, ty: f.ty };
-      // An object or a list, borrowed: `Option<&T>`, which a `v-if` narrows to the `&T`.
       return { code: `${place}.as_ref()`, ty: f.ty };
     default:
       return { code: place, ty: f.ty };
   }
 }
 
-/** A value passed where `want` is expected: a present value into an optional slot is wrapped. */
 export function coerce(comp: Component, v: Val, want: Ty, node: N): string {
   if (sameTy(v.ty, want)) return v.code;
   if (want.k === "opt" && v.ty.k === "undef") return "None";
   if (want.k === "opt" && sameTy(v.ty, want.of)) return `Some(${bare(v.code)})`;
-  // An integer is a number too, where a fraction is expected.
   if (want.k === "float" && v.ty.k === "int") return asF64(v);
   if (want.k === "opt" && want.of.k === "float" && v.ty.k === "int") return `Some(${asF64(v)})`;
   return fail(comp, `a ${JSON.stringify(v.ty)} where ${JSON.stringify(want)} is expected`, node);
@@ -98,41 +88,32 @@ export function expr(s: Scope, n: N): Val {
     if (narrowed) return narrowed;
   }
   if (n.type === "MemberExpression" && !n.computed && n.property.type === "Identifier" && n.property.name === "length") {
-    // `Object.entries(r).length`: as many as the record has keys.
     if (isObjectCall(n.object, "entries") && n.object.arguments.length === 1) {
       const r = expr(s, n.object.arguments[0]);
       if (r.ty.k === "record") return { code: `${atom(r.code)}.len() as i64`, ty: INT };
     }
     const base = expr(s, n.object);
     if (base.ty.k === "list" && base.iter !== undefined) {
-      // A list split out is a `Vec` already, whose length is known.
       const vec = /^(.*)\.into_iter\(\)$/s.exec(base.iter)?.[1];
-      // Nor does a `map` at the end change how many there are.
       if (vec === undefined) {
         const at = base.iter.lastIndexOf(".map(");
         const mapped = at > 0 && enclosed(base.iter.slice(at + 4)) ? base.iter.slice(0, at) : base.iter;
-        // What is left may walk a `Vec` that is held, whose length is known.
         const held = /^(.*)\.iter\(\)$/s.exec(mapped)?.[1];
         return { code: held !== undefined ? `${atom(held)}.len() as i64` : `${atom(mapped)}.count() as i64`, ty: INT };
       }
       return { code: vec !== undefined ? `${atom(vec)}.len() as i64` : `${atom(base.iter)}.count() as i64`, ty: INT };
     }
     if (base.ty.k === "list") return { code: `${atom(base.code)}.len() as i64`, ty: INT };
-    // A JavaScript string's length counts UTF-16 code units, not the bytes Rust's `len` counts.
     if (base.ty.k === "str") return { code: `fv::js_length(${strArg(base.code)})`, ty: INT };
   }
   if (n.type === "BinaryExpression" && n.operator === "+") {
     const a = expr(s, n.left);
     const b = expr(s, n.right);
-    // JavaScript's `+` concatenates as soon as one side is a string, writing a number in decimal —
-    // which is what `{}` does with an `i64`. Two numbers would be arithmetic, which is not here.
     const joinable = (t: Ty) => t.k === "str" || isNumber(t);
     if ((a.ty.k === "str" || b.ty.k === "str") && joinable(a.ty) && joinable(b.ty)) {
       meet(comp, a, b, "`+`", n, "join");
-      // A number is written as JavaScript writes it, rounded beyond 2⁵³.
       return formatted(comp, [a, b], n, "`+`");
     }
-    // Two numbers: arithmetic, as `n + 1` in a template means.
     if (isNumber(a.ty) && isNumber(b.ty)) return arithmetic(a, "+", b, a.ty.k === "int" && b.ty.k === "int");
     return fail(comp, "`+` joins a string to a string or a number, or adds two numbers", n);
   }
@@ -140,7 +121,6 @@ export function expr(s: Scope, n: N): Val {
     const a = expr(s, n.left);
     const b = expr(s, n.right);
     const comparison = ["<", ">", "<=", ">="].includes(n.operator);
-    // Two strings, ordered as JavaScript orders them: by UTF-16 code unit.
     if (comparison && a.ty.k === "str" && b.ty.k === "str") {
       meet(comp, a, b, `\`${n.operator}\``, n, "order");
       const is = { "<": "lt", ">": "gt", "<=": "le", ">=": "ge" }[n.operator as "<"];
@@ -155,16 +135,12 @@ export function expr(s: Scope, n: N): Val {
       return fail(comp, `\`${n.operator}\` is supported between ${between} that are present: ${why}`, n);
     }
     if (["<", ">", "<=", ">="].includes(n.operator)) return compare(a, n.operator, b);
-    // Two integers stay integers — but for `/`, which gives a fraction in JavaScript, and a `%` whose
-    // divisor may be zero, which gives NaN.
     const intDivisor = n.right.type === "NumericLiteral" && Number.isInteger(n.right.value) && n.right.value !== 0;
     const int = a.ty.k === "int" && b.ty.k === "int" && n.operator !== "/" && (n.operator !== "%" || intDivisor);
-    // Doubles, as JavaScript computes: Rust's `%` on `f64` is JavaScript's, and `/` by zero is ±∞.
     return arithmetic(a, n.operator, b, int);
   }
   switch (n.type) {
     case "TemplateLiteral": {
-      // `${a}-${b}`: each part written as JavaScript writes it into a string.
       const parts: (string | Val)[] = [];
       n.quasis.forEach((q: N, i: number) => {
         parts.push(q.value.cooked as string);
@@ -173,7 +149,6 @@ export function expr(s: Scope, n: N): Val {
       return formatted(comp, parts, n, "a template literal");
     }
     case "ArrayExpression": {
-      // A list of literals or values of one scalar type, as a Rust array.
       if (n.elements.length === 0) return { code: "[]", ty: { k: "list", of: UNDEF } };
       const values = n.elements.map((el: N) => {
         if (!el || el.type === "SpreadElement") fail(comp, "an array literal holds plain values", n);
@@ -186,7 +161,6 @@ export function expr(s: Scope, n: N): Val {
       return { code: `[${values.map((v: Val) => bare(v.code)).join(", ")}]`, ty: { k: "list", of }, ...loneOf(...values) };
     }
     case "OptionalMemberExpression": {
-      // `a?.b`: the field of an optional object when it is present.
       if (n.computed) return fail(comp, "computed member access", n);
       const base = expr(s, n.object);
       if (base.ty.k !== "opt") return fieldVal(comp, base.code, base.ty, n.property.name, n);
@@ -197,14 +171,10 @@ export function expr(s: Scope, n: N): Val {
     case "StringLiteral":
       return { code: rustStr(n.value), ty: STR };
     case "NumericLiteral":
-      // JavaScript's own spelling of the number is a valid Rust float literal: `0.5`, `1e-7`. An
-      // integer beyond what a double holds exactly is a double too, as it is in JavaScript.
       return numberVal(n.value, Number.isSafeInteger(n.value));
     case "BooleanLiteral":
       return { code: String(n.value), ty: BOOL, konst: n.value };
     case "NullLiteral":
-      // An absent prop is `undefined`, and `null` is a different value: `x === null` is false for
-      // it in Vue and would be `is_none()` here.
       return fail(comp, "`null`: compare with `undefined`, which is what an absent prop is", n);
     case "Identifier": {
       if (n.name === "undefined") return { code: "None", ty: UNDEF };
@@ -217,7 +187,6 @@ export function expr(s: Scope, n: N): Val {
       return fail(comp, `\`${n.name}\` is not available when rendering on the server`, n);
     }
     case "MemberExpression": {
-      // `count.value` in the script: the ref's value, which is what the binding already reads.
       if (!n.computed && n.property.name === "value" && n.object.type === "Identifier" && s.refs.has(n.object.name) && !s.locals.has(n.object.name)) {
         return expr(s, n.object);
       }
@@ -233,7 +202,6 @@ export function expr(s: Scope, n: N): Val {
         return fail(comp, "computed member access", n);
       }
       const prop = n.property.name as string;
-      // `$slots.side`: whether the parent gave that slot any content.
       const slotsObject =
         (n.object.type === "Identifier" && n.object.name === "$slots") ||
         (n.object.type === "MemberExpression" && !n.object.computed && n.object.object.type === "Identifier" &&
@@ -248,7 +216,6 @@ export function expr(s: Scope, n: N): Val {
             return fieldVal(comp, "props", { k: "struct", name: "Props" }, prop, n);
           case "$setup":
           case "_ctx": {
-            // A global a plugin provides: `$route`.
             const global = n.object.name === "_ctx" ? claim((p) => p.global?.(s, prop, n)) : undefined;
             if (global) return global;
             if (n.object.name === "_ctx" && prop === "$attrs") {
@@ -272,8 +239,6 @@ export function expr(s: Scope, n: N): Val {
     case "CallExpression":
       return call(s, n);
     case "LogicalExpression": {
-      // `x !== undefined && …` and `!x || …` / `x === undefined || …`: booleans, with `x` present on
-      // the right.
       if (n.operator === "&&" || n.operator === "||") {
         const p = presence(s, n.left);
         if (p && p.negated === (n.operator === "||") && (p.negated || !p.truthy)) {
@@ -291,14 +256,12 @@ export function expr(s: Scope, n: N): Val {
         if (a.ty.k !== "opt") return a;
         if (b.ty.k === "undef") return a;
         if (b.iter !== undefined) fail(comp, "`??` falling back to a computed list", n);
-        // A string a temporary owns: the result is one too, borrowed from the `Cow` either side gives.
         if (a.held !== undefined && b.ty.k === "str") return { code: `&*${atom(a.held)}.unwrap_or(${asCow(b)})`, ty: STR, ...loneOf(a, b) };
         if (a.ty.of.k === "str" && b.ty.k === "str" && isTemporary(b)) {
           return { code: `&*${atom(a.code)}.map(std::borrow::Cow::<str>::Borrowed).unwrap_or(${asCow(b)})`, ty: STR, ...loneOf(a, b) };
         }
         if (sameTy(a.ty.of, b.ty)) return { code: `${atom(a.code)}.unwrap_or(${bare(b.code)})`, ty: b.ty, ...loneOf(a, b) };
         if (sameTy(a.ty, b.ty)) return { code: `${atom(a.code)}.or(${bare(b.code)})`, ty: a.ty, ...loneOf(a, b) };
-        // An integer and a fraction: both numbers in JavaScript, so a fraction here.
         if (a.ty.of.k === "float" && b.ty.k === "int") return { code: `${atom(a.code)}.unwrap_or(${bare(asF64(b))})`, ty: FLOAT };
         if (a.ty.of.k === "int" && b.ty.k === "float") return { code: `${atom(a.code)}.map(|v| v as f64).unwrap_or(${bare(b.code)})`, ty: FLOAT };
         return fail(comp, "`??` between different types", n);
@@ -306,7 +269,6 @@ export function expr(s: Scope, n: N): Val {
       if (n.operator === "||") {
         if (a.ty.k === "bool" && b.ty.k === "bool") return boolOf(logical(a.code, "||", b.code));
         if (b.ty.k === "undef") {
-          // `x || undefined`: the value when it is truthy, nothing otherwise.
           const inner: Ty = a.ty.k === "opt" ? a.ty.of : a.ty;
           const src = a.ty.k === "opt" ? atom(a.code) : `Some(${bare(a.code)})`;
           return { code: `${src}.filter(|v| ${truthy({ code: "*v", ty: inner })})`, ty: opt(inner) };
@@ -339,7 +301,6 @@ export function expr(s: Scope, n: N): Val {
       return fail(comp, `unary \`${n.operator}\``, n);
     case "BinaryExpression": {
       if (n.operator !== "===" && n.operator !== "!==") fail(comp, `\`${n.operator}\``, n);
-      // A test a plugin translates whole: `typeof route.query.q === "string"`.
       const whole = claim((p) => p.equality?.(s, n));
       if (whole) return whole;
       const a = expr(s, n.left);
@@ -348,25 +309,20 @@ export function expr(s: Scope, n: N): Val {
       const scalar = (t: Ty) => t.k === "str" || t.k === "int" || t.k === "bool";
       const strish = (t: Ty) => t.k === "str" || (t.k === "opt" && t.of.k === "str");
       if (strish(a.ty) && strish(b.ty)) meet(comp, a, b, `\`${n.operator}\``, n, "equal");
-      // A value of a plugin's type, compared as the plugin compares it.
       const own = claim((p) => p.values?.equals?.(a, b));
       if (own !== undefined) eq = own;
       else if (b.ty.k === "undef" && a.ty.k === "opt") eq = `${atom(a.code)}.is_none()`;
       else if (a.ty.k === "undef" && b.ty.k === "opt") eq = `${atom(b.code)}.is_none()`;
       else if (a.ty.k === "undef" || b.ty.k === "undef") {
-        // A value that is always present — or narrowed to present — is never \`undefined\`.
         const same = a.ty.k === b.ty.k;
         const konst = n.operator === "===" ? same : !same;
         return { code: String(konst), ty: BOOL, konst };
       }
       else if (isNumber(a.ty) && isNumber(b.ty)) eq = compare(a, "==", b).code;
-      // Two string literals are compared now.
       else if (a.ty.k === "str" && b.ty.k === "str" && known(a) !== undefined && known(b) !== undefined) eq = String(unquote(a.code) === unquote(b.code));
       else if (a.ty.k === "str" && b.ty.k === "str" && (a.code === '""' || b.code === '""')) {
-        // A string compared with the empty one: whether it is empty.
         eq = `${receiver(a.code === '""' ? b.code : a.code)}.is_empty()`;
       } else if (a.ty.k === "bool" && b.ty.k === "bool" && (a.konst !== undefined || b.konst !== undefined)) {
-        // A boolean compared with `true` is itself, with `false` its negation.
         const [k, other] = a.konst !== undefined ? [a.konst, b.code] : [b.konst!, a.code];
         eq = k ? other : not(other);
       } else if (sameTy(a.ty, b.ty) && (scalar(a.ty) || (a.ty.k === "opt" && scalar(a.ty.of)))) {
@@ -380,21 +336,16 @@ export function expr(s: Scope, n: N): Val {
       const t = expr(s, n.test);
       const k = known(t);
       if (k !== undefined) return expr(s, k ? n.consequent : n.alternate);
-      // A test for presence narrows the branch where the value is present, as TypeScript does.
       const p = presence(s, n.test);
       const name = p ? `n${++ctx.narrowCount}` : "";
       const a = expr(p && !p.negated ? narrowTo(s, p, name) : s, n.consequent);
       const b = expr(p && p.negated ? narrowTo(s, p, name) : s, n.alternate);
-      // Two branches alike are one value, whatever the test.
       if (sameTy(a.ty, b.ty) && a.code === b.code && (!name || !occurrences(a.code, name))) return a;
-      // A string in the second branch is coerced to the `&str` of the first.
       const second = (code: string) => (a.ty.k === "str" ? strArg(code) : bare(code));
       const choose = (yes: string, no: string): string => {
         if (!p) return choice(truthy(t), bare(yes), second(no));
         const [present, absent] = p.negated ? [bare(no), second(yes)] : [bare(yes), second(no)];
-        // `x ? x : undefined` is the `Option` itself.
         if (present === `Some(${name})` && absent === "None") return p.option;
-        // `x ? x : y`: the value, or the fallback.
         if (present === name) return `${atom(p.option)}.unwrap_or(${absent})`;
         if (occurrences(present, name)) return `if ${p.pattern(name)} { ${present} } else { ${absent} }`;
         return choice(p.present, present, absent);
@@ -403,19 +354,16 @@ export function expr(s: Scope, n: N): Val {
       if (sameTy(a.ty, b.ty) && a.ty.k === "str" && (isTemporary(a) || isTemporary(b))) {
         return { code: `&*(${choose(asCow(a), asCow(b))})`, ty: STR, ...lone };
       }
-      // Two lists, one of them computed: both branches collect their items, to have one type.
       if (sameTy(a.ty, b.ty) && a.ty.k === "list" && (a.iter !== undefined || b.iter !== undefined)) {
         const both = `(${choose(collected(a), collected(b))})`;
         return { code: both, ty: a.ty, iter: `${both}.into_iter()`, ...lone };
       }
       const optStr = (v: Val) => v.ty.k === "undef" || (v.ty.k === "opt" && v.ty.of.k === "str") || v.ty.k === "str";
       if (sameTy(a.ty, b.ty) && a.ty.k !== "opt") return { code: choose(a.code, b.code), ty: a.ty, ...lone };
-      // An integer and a fraction: both numbers in JavaScript, so a fraction here.
       if (isNumber(a.ty) && isNumber(b.ty)) return { code: choose(asF64(a), asF64(b)), ty: FLOAT };
       if (sameTy(a.ty, b.ty) || a.ty.k === "undef" || b.ty.k === "undef" || (a.ty.k === "opt" && sameTy(a.ty.of, b.ty)) || (b.ty.k === "opt" && sameTy(b.ty.of, a.ty))) {
         const ty = opt(a.ty.k === "undef" || b.ty.k === "opt" ? b.ty : a.ty);
         if (optStr(a) && optStr(b) && (isTemporary(a) || isTemporary(b) || a.held !== undefined || b.held !== undefined)) {
-          // A string built in a branch, held by an `Option<Cow>` the statement keeps.
           const held = (v: Val): string =>
             v.held ?? (v.ty.k === "undef" ? "None" : v.ty.k === "opt" ? `${atom(v.code)}.map(std::borrow::Cow::<str>::Borrowed)` : `Some(${asCow(v)})`);
           const both = atom(choose(held(a), held(b)));

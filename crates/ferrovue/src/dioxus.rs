@@ -1,14 +1,6 @@
 //! Components and islands as [Dioxus](https://dioxuslabs.com) elements, for a page that Dioxus
 //! renders on the server (`dioxus-ssr`, or a fullstack app). Dioxus 0.7.
 //!
-//! [`Html::to_element`] makes a component a `dioxus_core::Element`, and `Html` is an
-//! `IntoDynNode`, so it goes straight into `rsx!` as `{greeting::island(&props)}`. An island is
-//! the `<div data-island data-props>` element itself, with the component's markup inside it as
-//! `dangerous_inner_html`: Dioxus writes that markup exactly as it is, and adds no hydration marker
-//! inside it. [`state_script`] is [`state_script_into`](crate::state_script_into) as an element.
-//!
-//! [`guide::dioxus`](crate::guide::dioxus) shows a whole page, and what Dioxus writes differently.
-//!
 //! # Example
 //!
 //! ```
@@ -41,7 +33,6 @@ use serde::Serialize;
 
 use crate::Html;
 
-/// `<div>`, its attributes all in the vnode's one group of dynamic attributes.
 static DIV: Template = Template {
     roots: &[TemplateNode::Element {
         tag: "div",
@@ -53,7 +44,6 @@ static DIV: Template = Template {
     attr_paths: &[&[0]],
 };
 
-/// `<script type="application/json">`, its `id` and content in the one group of dynamic attributes.
 static STATE_SCRIPT: Template = Template {
     roots: &[TemplateNode::Element {
         tag: "script",
@@ -72,7 +62,6 @@ static STATE_SCRIPT: Template = Template {
     attr_paths: &[&[0]],
 };
 
-/// The attribute that Dioxus writes as an element's content, unescaped: `innerHTML` in a browser.
 const INNER_HTML: &str = "dangerous_inner_html";
 
 fn element(template: Template, attrs: Vec<Attribute>) -> Element {
@@ -86,18 +75,6 @@ fn element(template: Template, attrs: Vec<Attribute>) -> Element {
 
 impl<P: Serialize, F: Fn(&mut String, &P)> Html<'_, P, F> {
     /// The component as a Dioxus element.
-    ///
-    /// An island is its own `<div data-island data-props>`, with the component's markup inside it as
-    /// `dangerous_inner_html`, so the markup the client hydrates is exactly what
-    /// [`Html::into_string`] writes inside the island, and Dioxus adds nothing inside it. Dioxus
-    /// writes the attributes itself: the same values, which the browser reads back as the same
-    /// props, with `"` spelled `&#34;` rather than `&quot;` (and `&`, `<`, `>` likewise as numeric
-    /// references), and a fullstack render adds its `data-node-hydration` attribute.
-    ///
-    /// Markup that is not an island has no element of its own, so it is put in a `<div>` with no
-    /// attributes. To put it straight into an element of the page's own, give that element
-    /// `dangerous_inner_html: greeting::html(&props).into_string()`, which is also how an island is
-    /// written byte for byte as [`Html::into_string`] writes it.
     ///
     /// # Example
     ///
@@ -134,8 +111,6 @@ impl<P: Serialize, F: Fn(&mut String, &P)> Html<'_, P, F> {
         let mut attrs = Vec::with_capacity(3);
         if let Some(name) = self.island {
             attrs.push(Attribute::new("data-island", name, None, false));
-            // As `island_into` serialises them, non-finite floats included, but unescaped: Dioxus
-            // escapes attribute values.
             let json = crate::json::to_string(self.props.get());
             attrs.push(Attribute::new("data-props", json, None, false));
         }
@@ -144,7 +119,6 @@ impl<P: Serialize, F: Fn(&mut String, &P)> Html<'_, P, F> {
     }
 }
 
-/// A component in `rsx!`, as `{greeting::island(&props)}`: [`Html::to_element`].
 impl<P: Serialize, F: Fn(&mut String, &P)> IntoDynNode for Html<'_, P, F> {
     fn into_dyn_node(self) -> DynamicNode {
         self.to_element().into_dyn_node()
@@ -153,10 +127,6 @@ impl<P: Serialize, F: Fn(&mut String, &P)> IntoDynNode for Html<'_, P, F> {
 
 /// [`state_script_into`](crate::state_script_into) as a Dioxus element: the stores' state in a
 /// `<script type="application/json">` with the given `id`, its content escaped the same way.
-///
-/// The content is the same bytes `state_script_into` writes. A fullstack render adds Dioxus's
-/// `data-node-hydration` attribute, and an `id` with characters to escape is spelled as Dioxus
-/// spells them; `hydrateState` from `ferrovue/client` finds the element by `id` all the same.
 ///
 /// # Example
 ///
@@ -173,7 +143,6 @@ impl<P: Serialize, F: Fn(&mut String, &P)> IntoDynNode for Html<'_, P, F> {
 /// );
 /// ```
 pub fn state_script(id: &str, state: &impl Serialize) -> Element {
-    // As in `state_script_into`.
     let json = crate::json::to_string(state);
     let mut content = String::with_capacity(json.len());
     crate::state::json_escaped_into(&mut content, &json);
@@ -202,7 +171,6 @@ mod tests {
         out.push_str("</b><!--[--><i>x</i><!--]-->");
     }
 
-    /// `<main><h1>Page</h1>{child}</main>`: a page with an element of its own around the child.
     static PAGE: Template = Template {
         roots: &[TemplateNode::Element {
             tag: "main",
@@ -231,7 +199,6 @@ mod tests {
         ))
     }
 
-    /// The page as `dioxus-ssr` writes it, and as a fullstack server does, with hydration ids.
     fn rendered(element: impl Fn() -> Element) -> [String; 2] {
         let mut pre_render = Renderer::new();
         pre_render.pre_render = true;

@@ -31,7 +31,6 @@ serde = { version = "0.1.0" }
 unsafe_code = "forbid"
 `;
 
-/** Each crate's manifest, inheriting the workspace's version. */
 const CRATE_MANIFESTS = Object.fromEntries(
   CRATES.map((name) => [name, `[package]\nname = "${name}"\nversion.workspace = true\n`]),
 );

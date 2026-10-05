@@ -1,5 +1,3 @@
-//! `Record<string, T>`: a JavaScript object used as a dictionary, its keys in JavaScript's order.
-
 use std::borrow::Cow;
 use std::fmt;
 use std::marker::PhantomData;
@@ -7,8 +5,6 @@ use std::marker::PhantomData;
 use serde::de::{Deserialize, Deserializer, MapAccess, Visitor};
 use serde::ser::{Serialize, SerializeMap, Serializer};
 
-/// Whether a property name is an array index — `"0"` to `"4294967294"`, written as `String(n)`
-/// writes it — and its value. JavaScript gives an object's array-index keys first, in numeric order.
 pub(crate) fn array_index(name: &str) -> Option<u32> {
     let n: u32 = name.parse().ok()?;
     (n < u32::MAX && n.to_string() == name).then_some(n)
@@ -90,7 +86,6 @@ impl<'a, K: Into<Cow<'a, str>>, V> FromIterator<(K, V)> for Record<'a, V> {
                 None => entries.push((k, v)),
             }
         }
-        // Stable: the indices sorted among themselves, the other keys kept as they came.
         entries.sort_by_key(|(k, _)| array_index(k).map_or((1, 0), |i| (0, i)));
         Record { entries }
     }
@@ -126,7 +121,6 @@ impl<'de, V: Deserialize<'de>> Deserialize<'de> for Record<'_, V> {
             }
         }
 
-        // In the order the document gives them, which `serde_json` keeps.
         Ok(deserializer
             .deserialize_map(Entries(PhantomData))?
             .into_iter()

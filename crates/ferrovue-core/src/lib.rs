@@ -1,12 +1,6 @@
 //! The primitives [ferrovue](https://docs.rs/ferrovue)'s runtime crates share: Vue's HTML escaping,
 //! and numbers written as JavaScript writes them.
 //!
-//! Use them through `ferrovue`, which re-exports every item here at its root
-//! (`ferrovue::escape_into`, `ferrovue::push_int`, …): that is the path generated code and the
-//! documentation use. They live in a crate of their own so that `ferrovue`, `ferrovue-router` and
-//! `ferrovue-i18n` share one copy of them, and so that an item escapes and writes numbers the same
-//! way whichever of those crates it comes from.
-//!
 //! # Example
 //!
 //! ```

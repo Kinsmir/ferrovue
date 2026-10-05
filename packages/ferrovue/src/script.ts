@@ -1,5 +1,3 @@
-/* `<script setup>` read: what the server evaluates, and what stays on the client. */
-
 import { basename } from "node:path";
 import { type Component, type N, type Scope, type Val, fail, GenError, snake, takesAttrs } from "./model.ts";
 import { CONFIG_FILE, ctx } from "./context.ts";
@@ -8,22 +6,18 @@ import { expr, fieldVal } from "./expr.ts";
 import { collected, heldList } from "./lists.ts";
 import { bare, operand, UNARY } from "./parens.ts";
 
-/** Lifecycle hooks, which never run on the server: setup may register them freely. */
 export const CLIENT_HOOKS = new Set([
   "onMounted", "onBeforeMount", "onUnmounted", "onBeforeUnmount", "onUpdated", "onBeforeUpdate",
   "onActivated", "onDeactivated", "onErrorCaptured", "onRenderTracked", "onRenderTriggered",
 ]);
 
-/** Compiler macros and calls with no effect on the server's render. */
 export const INERT_CALLS = new Set(["defineEmits", "defineSlots", "defineOptions", "defineExpose", "defineProps", "withDefaults", "provide"]);
 
-/** A statement in setup that is a call on its own: allowed only when it cannot change the render. */
 export function setupStatement(comp: Component, st: N): void {
   const c = st.expression;
   const name = c?.type === "CallExpression" && c.callee.type === "Identifier" ? (c.callee.name as string) : null;
   if (name !== null && (CLIENT_HOOKS.has(name) || INERT_CALLS.has(name))) return;
   if (name === "watch") {
-    // A watcher's callback runs on the server only with `immediate`, and could then change state.
     const options = c.arguments[2];
     const immediate = options?.type === "ObjectExpression" && options.properties.some(
       (p: N) => p.type === "ObjectProperty" && (p.key.name ?? p.key.value) === "immediate" && !(p.value.type === "BooleanLiteral" && !p.value.value),
@@ -38,8 +32,6 @@ export function setupStatement(comp: Component, st: N): void {
   fail(comp, `\`${st.expression?.type === "CallExpression" ? `${name ?? "a call"}()` : st.expression?.type}\` in setup could change what renders, and is not translated`, st);
 }
 
-/** What a setup binding's value is computed from: `ref(x)` and `shallowRef(x)` hold `x`,
- * `computed(() => x)` is `x`, and a plain `const y = x` is `x`. */
 export function setupSource(init: N): N | null {
   if (init.type === "CallExpression" && init.callee.type === "Identifier") {
     const name = init.callee.name;
@@ -56,7 +48,6 @@ export function setupSource(init: N): N | null {
   return init;
 }
 
-/** The names a destructuring pattern binds. */
 export function patternNames(p: N): string[] {
   switch (p?.type) {
     case "Identifier":
@@ -91,7 +82,6 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
     directives: new Map(),
     fill: false,
     vnode: false,
-    // A component a parent may pass attributes takes them with the scope ids, as one `fv::Attrs`.
     attrs: comp.inherits ? (takesAttrs(comp) ? "fv_attrs.ids()" : "fv_attrs") : null,
     fallthrough: takesAttrs(comp) ? "fv_attrs" : null,
     attrsBindings: new Set(),
@@ -109,7 +99,6 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
         if (def) scope.children.set(def.local.name, basename(from, ".vue"));
         continue;
       }
-      // A module a plugin owns, such as vue-router or a store's file, is the plugin's to read.
       if (ctx.plugins.some((p) => p.scriptImport?.(scope, st, from))) continue;
       if (from === "vue") {
         for (const sp of st.specifiers) {
@@ -133,13 +122,9 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
       setupStatement(comp, st);
       continue;
     }
-    // Setup runs on the server too, so a statement there can change what renders: `x.value = ...`
-    // after a `ref`, an `if`, a loop. None of it is translated, so none of it may exist.
     if (st.type !== "VariableDeclaration") fail(comp, `\`${st.type}\` in setup is not supported`, st);
     for (const d of st.declarations) {
       const init0 = d.init;
-      // `const { size = "md", label: l } = defineProps<...>()`: each name reads that prop, whose
-      // default `compileScript` already resolved.
       if (d.id.type === "ObjectPattern" && definePropsType(init0)) {
         for (const p of d.id.properties) {
           if (p.type !== "ObjectProperty" || p.computed) fail(comp, "destructured props are plain names: `...rest` has no Rust type", p);
@@ -150,21 +135,17 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
         }
         continue;
       }
-      // A binding to what a plugin provides: `useRoute()`, a store, `storeToRefs`, `useI18n()`.
       if (ctx.plugins.some((p) => p.scriptBinding?.(scope, d))) continue;
       if (d.id.type !== "Identifier") {
-        // Destructuring anything else: client-side state the template may not read.
         for (const name of patternNames(d.id)) scope.clientOnly.set(name, "it is destructured from a value the server does not have");
         continue;
       }
       const local: string = d.id.name;
-      // `const attrs = useAttrs()`: `$attrs`, which the template may bind whole.
       if (useAttrsName !== null && init0?.type === "CallExpression" && init0.callee.type === "Identifier" && init0.callee.name === useAttrsName) {
         scope.attrsBindings.add(local);
         scope.clientOnly.set(local, "`useAttrs()` is bound whole, with `v-bind`; a value read from it has no type");
         continue;
       }
-      // `const model = defineModel<string>()`: the model's prop.
       const model = comp.models.get(local);
       if (model !== undefined) {
         scope.setup.set(local, fieldVal(comp, "props", { k: "struct", name: "Props" }, model, d));
@@ -186,9 +167,6 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
         scope.clientOnly.set(local, "it is not a value the server computes: only `ref(…)`, `computed(() => …)` and plain expressions are");
         continue;
       }
-      // Evaluated once, as setup is on the server. A value the server cannot evaluate is client-side
-      // state — a template ref, an element, a `reactive` object — which the template may still name
-      // from an event handler; a reference the server needs fails in `expr` with this reason.
       let v: Val;
       try {
         v = expr(scope, source);
@@ -203,19 +181,16 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
       }
       const name = `s_${snake(local).replace(/^r#/, "")}`;
       const lone = v.lone ? { lone: true } : {};
-      // A computed list is kept as its items, and read again by item.
       if (v.ty.k === "list" && v.iter !== undefined) {
         lets.push(`let ${name} = ${collected(v)};`);
         scope.setup.set(local, heldList(name, v.ty.of, v.lone));
         continue;
       }
-      // An optional string a temporary owns is kept as that `Option<Cow>`.
       if (v.held !== undefined) {
         lets.push(`let ${name} = ${v.held};`);
         scope.setup.set(local, { code: `${name}.as_deref()`, ty: v.ty, ...lone });
         continue;
       }
-      // A list, a record or an object is a place in the props: borrowed, never moved out of them.
       const place = v.ty.k === "list" || v.ty.k === "record" || v.ty.k === "struct" || v.ty.k === "child";
       lets.push(`let ${name} = ${place ? `&${operand(v.code, UNARY)}` : bare(v.code)};`);
       scope.setup.set(local, { code: name, ty: v.ty, ...lone, ...(v.konst !== undefined ? { konst: v.konst } : {}) });

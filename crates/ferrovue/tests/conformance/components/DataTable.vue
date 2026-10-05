@@ -1,6 +1,4 @@
 <script setup lang="ts">
-/* A parent filling scoped slots: props destructured or taken whole, read in text, attributes and
- * conditions, handed to a child, and content that may be nothing — which gives way to the fallback. */
 import DataList from "./DataList.vue";
 import RowChip from "./RowChip.vue";
 import type { Row } from "./DataList.vue";

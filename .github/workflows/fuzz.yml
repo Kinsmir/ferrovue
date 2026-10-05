@@ -1,8 +1,5 @@
 name: Fuzz
 
-# Randomised differential testing (TESTING.md): random components and props rendered by Vue and by
-# the Rust ferrovue generates, compared byte for byte. Nightly, with a seed taken from the date, so
-# a failing night is reproduced with `FERROVUE_FUZZ_SEED=<yyyymmdd> pnpm fuzz`.
 on:
   schedule:
     - cron: "23 3 * * *"

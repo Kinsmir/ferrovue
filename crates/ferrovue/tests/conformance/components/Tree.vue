@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* A component that renders itself: each node's children are nodes. */
 export interface Props {
   label: string;
   children: Props[];

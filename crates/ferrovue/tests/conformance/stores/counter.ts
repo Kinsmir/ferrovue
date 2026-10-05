@@ -2,7 +2,6 @@ import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 import type { Float } from "ferrovue/types";
 
-/* A setup store: its returned refs are the state, its computeds the getters, its functions actions. */
 export const useCounter = defineStore("counter", () => {
   const count = ref(0);
   const step = ref<Float>(0.5);

@@ -1,9 +1,6 @@
 use super::*;
 use crate::scope_attrs;
 
-/// A value of `tests/vectors/attrs.json` as an [`Attr`]: `null` is `undefined`, an integer an
-/// `Int`, any other number a `Float`, `{ "style": [...] }` a style and `{ "names": "…" }` a class
-/// bound to an array.
 fn vector_attr(v: &serde_json::Value) -> Attr<'static> {
     use serde_json::Value;
     match v {
@@ -33,7 +30,6 @@ fn vector_attr(v: &serde_json::Value) -> Attr<'static> {
     }
 }
 
-/// `tests/vectors/attrs.json`, recorded from Vue's `ssrRenderAttrs(mergeProps(...))`.
 #[test]
 fn attributes_merge_and_render_as_vue_merges_and_renders_them() {
     type Source = Vec<(String, serde_json::Value)>;
@@ -54,7 +50,6 @@ fn attributes_merge_and_render_as_vue_merges_and_renders_them() {
         let mut out = String::new();
         attrs_into(&mut out, &slices, slices.len(), "");
         assert_eq!(&out, want, "{sources:?}");
-        // Merged first, then written as one list: the same.
         let merged = merge_props(&slices);
         out.clear();
         attrs_into(&mut out, &[&merged], 0, "");
@@ -91,7 +86,6 @@ fn attrs_hold_what_a_parent_passes_and_the_scope_ids() {
     assert_eq!(attrs.ids(), " data-v-1");
     assert_eq!(attrs.list(), &passed);
     assert!(Attrs::scoped(" data-v-2").is_empty());
-    // `mergeProps` of a component root's own attributes for its child with those it was passed.
     let own = [("class", Attr::str("a"))];
     let merged = Attrs::merged(&[&own, attrs.list()], attrs.ids());
     assert_eq!(
@@ -110,7 +104,6 @@ fn values_convert_into_attributes() {
     assert_eq!(Attr::from(0.5), Attr::Float(0.5));
     assert_eq!(Attr::from(None::<&str>), Attr::Undefined);
     assert_eq!(Attr::from(Some(4_i64)), Attr::Int(4));
-    // An integer and a fraction equal as numbers are one class value, which is not joined twice.
     let mut out = String::new();
     attrs_into(
         &mut out,
@@ -119,7 +112,6 @@ fn values_convert_into_attributes() {
         "",
     );
     assert_eq!(out, r#" class="""#);
-    // `NaN` equals nothing, not even itself.
     out.clear();
     attrs_into(
         &mut out,
@@ -142,7 +134,6 @@ fn values_convert_into_attributes() {
         "",
     );
     assert_eq!(out, r#" data-x="NaN""#);
-    // A fraction that is zero is falsy, as JavaScript's `0` is.
     out.clear();
     attrs_into(
         &mut out,
@@ -191,7 +182,6 @@ fn scope_attrs_are_keys_of_an_object_in_the_order_first_given() {
         scope_attrs(" data-v-a data-v-b", "data-v-c", " data-v-b data-v-d-s"),
         " data-v-a data-v-b data-v-c data-v-d-s"
     );
-    // Two spaces in a slot scope id make an empty key, which Vue does not write.
     assert_eq!(
         scope_attrs("", "data-v-a", "  data-v-b-s  data-v-c-s"),
         " data-v-a data-v-b-s data-v-c-s"

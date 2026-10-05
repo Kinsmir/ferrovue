@@ -1,10 +1,3 @@
-/* The pages the Rust server renders hydrate in the browser with no mismatch.
- *
- * Each page comes from the server binary itself (`--render <path>`: the page as a browser has it
- * once the stream ends), goes into happy-dom, and is hydrated by the client's own `hydrate()`. Vue
- * reports every hydration mismatch as a warning, so the test fails on any; it then checks that the
- * server's nodes are the ones Vue kept, that the hydrated islands work, and that the scoped styles
- * of the client build apply to the server's elements. */
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -18,7 +11,6 @@ import Reviews from "../client/components/Reviews.vue";
 
 const ROOT = join(import.meta.dirname, "../../..");
 
-/** The server's page at `path`, as `cargo run` prints it. */
 function render(path: string): string {
   return execFileSync("cargo", ["run", "--quiet", "--locked", "-p", "ferrovue-example-fullstack", "--", "--render", path], {
     cwd: ROOT,
@@ -47,8 +39,6 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-/** Put the body of the server's page at `path` into the document, as the browser parses it —
- * without the client's `<script>`, whose code is what this test runs. */
 function put(path: string): void {
   const body = /<body>([\s\S]*)<\/body>/.exec(pages.get(path)!)?.[1];
   expect(body, "the page has a body").toBeTruthy();
@@ -56,7 +46,6 @@ function put(path: string): void {
   document.body.innerHTML = body!.replace(/<script type="module"[^>]*><\/script>/g, "");
 }
 
-/** Hydrate the document as the browser would at `path`. */
 async function hydrateAt(path: string): Promise<Hydrated> {
   const history = createMemoryHistory();
   history.replace(path);
@@ -64,15 +53,12 @@ async function hydrateAt(path: string): Promise<Hydrated> {
   return app;
 }
 
-/** The `data-v-` id the client build gave a component with `<style scoped>`. Hydration keeps the
- * server's attributes without comparing it, so a different one would leave the styles unapplied. */
 function scopeId(component: Component): string {
   const id = (component as { __scopeId?: string }).__scopeId;
   expect(id, `${(component as { __name?: string }).__name} has scoped styles`).toMatch(/^data-v-[0-9a-f]{8}$/);
   return id!;
 }
 
-/** Whether every element from `root` down carries `id`. */
 const scoped = (root: Element, id: string): boolean => [root, ...root.querySelectorAll("*")].every((el) => el.hasAttribute(id));
 
 it("links the client build's stylesheets, scoped to the ids the server writes, the lazy islands' too", () => {
@@ -86,7 +72,6 @@ it("loads every island by the name the server writes, and only those", async () 
   expect((await islands.Reviews!()).default).toBe(Reviews);
 });
 
-/** The first node in each hydrated root: Vue keeps the server's node when it hydrates cleanly. */
 const roots = (): (ChildNode | null)[] => [...document.querySelectorAll("[data-island], #basket")].map((el) => el.firstChild);
 
 it("hydrates the home page, an island per book and the store's summary, changing nothing", async () => {
@@ -99,7 +84,6 @@ it("hydrates the home page, an island per book and the store's summary, changing
   expect(nodes).toHaveLength(5);
   expect(roots()).toEqual(nodes);
   expect(document.body.innerHTML).toBe(html);
-  // The summary's scoped styles reach the server's elements.
   expect(scoped(document.querySelector("#basket .basket")!, scopeId(BasketSummary))).toBe(true);
 });
 
@@ -108,11 +92,9 @@ it("hydrates a streamed book page, whose islands then share the store", async ()
   const nodes = roots();
   const { islands, pinia } = await hydrateAt("/books/dune");
   expect(warnings).toEqual([]);
-  // AddToBasket, and the Reviews streamed into the hole.
   expect(islands.apps).toHaveLength(2);
   expect(roots()).toEqual(nodes);
   expect(pinia.state.value.basket).toEqual({ owner: "guest", ids: ["solaris"] });
-  // The island's click reaches the shared store, and the separately hydrated summary shows it.
   const summary = document.querySelector("#basket .basket")!;
   expect(summary.textContent).toBe("Basket of guest: 1 book");
   const add = document.querySelector<HTMLButtonElement>("button.add")!;
@@ -122,7 +104,6 @@ it("hydrates a streamed book page, whose islands then share the store", async ()
   expect(add.disabled).toBe(true);
   expect(summary.textContent).toBe("Basket of guest: 2 books");
 
-  // The streamed reviews island: two of three shown, until the button shows the rest.
   expect(scoped(document.querySelector(".review-list")!, scopeId(Reviews))).toBe(true);
   const items = [...document.querySelectorAll<HTMLElement>(".review-list li")];
   expect(items.map((li) => li.style.display)).toEqual(["", "", "none"]);

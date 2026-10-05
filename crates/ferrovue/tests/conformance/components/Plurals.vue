@@ -1,7 +1,4 @@
 <script setup lang="ts">
-/* vue-i18n's plural choice and its `count` and `n`: a fractional number choosing the case, a value
- * that is not a finite number passed over for the plural number, `count` given falsy taking the
- * plural number and given truthy keeping its own, and the `lower` modifier. */
 import type { Float } from "ferrovue/types";
 
 defineProps<{ count: number; amount: Float; label: string; on: boolean }>();

@@ -1,7 +1,4 @@
 <script setup lang="ts">
-/* Fallthrough with scope ids: a scoped parent's id follows the attributes it passes, on a root of
- * the child's own, through a root that is a component (which holds the ids as attributes it passes
- * on), with `inheritAttrs: false`, and on a `<RouterLink>`. */
 import FallInner from "./FallInner.vue";
 import FallLeaf from "./FallLeaf.vue";
 import FallLink from "./FallLink.vue";

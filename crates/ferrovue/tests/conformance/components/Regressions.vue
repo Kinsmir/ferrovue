@@ -1,14 +1,4 @@
 <script setup lang="ts">
-/* Cases the randomised differential tester found (fuzz/failures/), kept so they stay fixed: integer
- * literals beyond what a double holds exactly, and `?:` / `||` choosing between a string the
- * component holds and one it builds; class objects whose names repeat or are array indices, which
- * a JavaScript object lists first; JavaScript's -0; and a number exactly halfway between two
- * shortest spellings; a branch that trims a string it has just built; and strings and lists built
- * in place — `?? (1).toFixed(1)`, `.at()` of a built string in a branch, `.split()` then `.slice()` —
- * whose borrows outlived them; and `||` after an optional string whose fallback is built; `$&`,
- * `$`` and `$'` in a loop's source, which the generator once read as replacement patterns; and a
- * routine's borrowing result inside a branch or a `map`; a `map` to `-j`, JavaScript's -0; a `map` to an outer item; and `charAt` of a built string in a
- * branch. */
 defineProps<{ s1: string; b0: boolean; os1?: string; ob2?: boolean; f2: number; l2: string[]; l4: number[]; n3: number }>();
 </script>
 

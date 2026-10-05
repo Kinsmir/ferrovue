@@ -1,6 +1,3 @@
-/* Renders each generated component's fixtures with Vue's `renderToString`, exactly as the
- * conformance suite does (`attachSsrRender`, `fixtureApp`), and writes the HTML (or the error) per
- * case to `$FERROVUE_FUZZ_VUE_OUT`. Run by `run.ts`; never part of `pnpm test`. */
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { it } from "vitest";
@@ -23,7 +20,6 @@ it("renders every fixture", async () => {
     let p = loaded.get(c.file);
     if (!p) {
       p = (async () => {
-        // The helpers beside it render through their own `ssrRender` too.
         const dir = dirname(c.file);
         for (const f of readdirSync(dir).filter((f) => f.endsWith(".vue") && join(dir, f) !== c.file)) {
           const helper = (await import(/* @vite-ignore */ join(dir, f))) as { default: Component };
@@ -43,8 +39,6 @@ it("renders every fixture", async () => {
     for (const c of cases) {
       try {
         const app = await fixtureApp(await load(c), readFixture(JSON.parse(c.json) as Record<string, unknown>), null);
-        // As a server sends it: a half of a surrogate pair (`"🦀".slice(1)`) as U+FFFD, which is
-        // what writing the string as UTF-8 makes of it, and what ferrovue writes.
         results[c.key] = { ok: (await renderToString(app)).toWellFormed() };
       } catch (e) {
         results[c.key] = { err: String((e as Error).stack ?? e).split("\n").slice(0, 4).join("\n") };

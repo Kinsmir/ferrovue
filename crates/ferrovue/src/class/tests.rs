@@ -1,6 +1,5 @@
 use super::*;
 
-/// `tests/vectors/class.json`, recorded from Vue's `normalizeClass` of the object the entries make.
 #[test]
 fn a_class_object_is_normalized_as_vue_normalizes_it() {
     let vectors: Vec<(Vec<(String, bool)>, String)> =

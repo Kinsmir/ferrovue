@@ -1,5 +1,3 @@
-/* TypeScript types read as Rust ones: props, interfaces, aliases, shared type files, defaults. */
-
 import { parse as parseJs } from "@babel/parser";
 import { readFileSync, statSync } from "node:fs";
 import { basename, dirname, join, relative, resolve } from "node:path";
@@ -8,7 +6,6 @@ import { CONFIG_FILE, ctx, TYPES_MODULE } from "./context.ts";
 import { childOf } from "./expr.ts";
 import { claim } from "./plugin.ts";
 
-/** The local names \`TrustedHtml\` and \`Float\` are imported under from \`ferrovue/types\`. */
 export function typesImports(comp: Component, body: N[]): void {
   for (const s of body) {
     if (s.type !== "ImportDeclaration" || s.source.value !== TYPES_MODULE) continue;
@@ -34,7 +31,6 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
     case "TSParenthesizedType":
       return tyOfTs(comp, t.typeAnnotation, structs, seen);
     case "TSTypeLiteral": {
-      // `{ [key: string]: T }`, which is `Record<string, T>`. Any other object type is an interface.
       const [sig] = t.members;
       const key = sig?.parameters?.[0]?.typeAnnotation?.typeAnnotation;
       if (t.members.length === 1 && sig.type === "TSIndexSignature" && key?.type === "TSStringKeyword" && sig.typeAnnotation) {
@@ -43,17 +39,14 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
       return fail(comp, "an object type in place: declare it as an interface, or as `{ [key: string]: T }` for a dictionary", t);
     }
     case "TSTypeOperator":
-      // `readonly string[]`: the same list, which the server never writes to anyway.
       if (t.operator === "readonly") return tyOfTs(comp, t.typeAnnotation, structs, seen);
       break;
     case "TSLiteralType":
-      // A literal type is a value of its kind: `"sm"` a string, `3` a number.
       if (t.literal.type === "StringLiteral" || t.literal.type === "TemplateLiteral") return STR;
       if (t.literal.type === "NumericLiteral") return Number.isInteger(t.literal.value) ? INT : FLOAT;
       if (t.literal.type === "BooleanLiteral") return BOOL;
       break;
     case "TSUnionType": {
-      // `"sm" | "md"` is a string; `T | undefined` is an optional `T`. `null` is a different value.
       const parts: N[] = t.types.filter((u: N) => u.type !== "TSUndefinedKeyword");
       if (t.types.some((u: N) => u.type === "TSNullKeyword" || (u.type === "TSLiteralType" && u.literal.type === "NullLiteral"))) {
         return fail(comp, "`null` in a type: use `undefined`, which is what an absent value is", t);
@@ -66,11 +59,9 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
     case "TSTypeReference": {
       const name: string | undefined = t.typeName.type === "Identifier" ? t.typeName.name : undefined;
       if (name === undefined) break;
-      // `Array<T>` and `ReadonlyArray<T>`, as `T[]`.
       if ((name === "Array" || name === "ReadonlyArray") && t.typeParameters?.params?.length === 1) {
         return { k: "list", of: tyOfTs(comp, t.typeParameters.params[0], structs, seen) };
       }
-      // `Record<string, T>`, an object used as a dictionary.
       if (name === "Record" && t.typeParameters?.params?.length === 2) {
         const [key, value] = t.typeParameters.params;
         if (key.type !== "TSStringKeyword") fail(comp, "a `Record` is keyed by `string`", key);
@@ -98,8 +89,6 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
   return fail(comp, `unsupported prop type \`${t.type}\``, t);
 }
 
-/** A dictionary's type: its values strings, numbers, booleans, objects or lists of those. A value
- * may not be optional: JSON has no `undefined` to hold. */
 function recordOf(comp: Component, value: N, structs: Map<string, Struct>, seen: Set<string>): Ty {
   const of = tyOfTs(comp, value, structs, seen);
   const plain = (t: Ty): boolean => ["str", "int", "float", "bool", "struct", "child"].includes(t.k) || (t.k === "list" && plain(t.of));
@@ -107,15 +96,12 @@ function recordOf(comp: Component, value: N, structs: Map<string, Struct>, seen:
   return { k: "record", of };
 }
 
-/** Every local name an interface or object type alias declares a struct for, and every other
- * alias: what a type in that block may name. */
 export function declareTypes(comp: Component, body: N[], structs: Map<string, Struct>, aliases: Map<string, N>): N[] {
   const decls: N[] = [];
   for (const st of body) {
     const d = st.type === "ExportNamedDeclaration" ? st.declaration : st;
     if (d?.type === "TSInterfaceDeclaration") decls.push({ name: d.id.name, members: d.body.body, node: d });
     else if (d?.type === "TSTypeAliasDeclaration") {
-      // An object type is a struct — but for a dictionary, `{ [key: string]: T }`, an alias of its own.
       const dictionary = d.typeAnnotation.members?.some((m: N) => m.type === "TSIndexSignature");
       if (d.typeAnnotation.type === "TSTypeLiteral" && !dictionary) decls.push({ name: d.id.name, members: d.typeAnnotation.members, node: d });
       else aliases.set(d.id.name, d.typeAnnotation);
@@ -130,7 +116,6 @@ export function declareTypes(comp: Component, body: N[], structs: Map<string, St
   return decls;
 }
 
-/** A relative import's file, resolved as a bundler resolves a TypeScript import. */
 export function resolveImport(fromFile: string, spec: string): string | null {
   if (!spec.startsWith(".")) return null;
   const base = resolve(ctx.rootDir, dirname(fromFile), spec);
@@ -138,14 +123,11 @@ export function resolveImport(fromFile: string, spec: string): string | null {
     try {
       if (statSync(candidate).isFile() && candidate.endsWith(".ts")) return candidate;
     } catch {
-      // not this one
     }
   }
   return null;
 }
 
-/** A shared `.ts` file of types, read once: its interfaces and object types become structs in
- * `types.rs`, its other aliases are resolved where they are used. */
 export function readTypeFile(file: string): void {
   if (ctx.typeRead.has(file)) return;
   ctx.typeRead.add(file);
@@ -171,18 +153,13 @@ export function readTypeFile(file: string): void {
   }
 }
 
-/** A type read in the file that declares it, marked with where it lives for readers elsewhere. */
 export function markHome(ty: Ty, home: string): Ty {
-  // A plugin's type, such as a store's state, lives where the plugin writes it.
   if (ty.k === "struct" && !claim((p) => p.struct?.(ty)) && !ty.home && ty.name !== "Props") return { ...ty, home };
   if (ty.k === "opt" || ty.k === "list" || ty.k === "record") return { ...ty, of: markHome(ty.of, home) };
   return ty;
 }
 
-/** Where a struct type is declared: its fields, the component whose types its fields name, and
- * the path the generated code names it by. */
 export function lookupStruct(comp: Component, ty: Ty & { k: "struct" }): { st: Struct | undefined; owner: Component; path: string } {
-  // Named from the module being written: plainly within its own, by path from any other.
   const own = claim((p) => p.struct?.(ty));
   if (own) return { st: own.st, owner: comp, path: comp.module === own.module ? "" : `super::${own.module}::` };
   if (ty.home === "types") return { st: ctx.typeStructs.get(ty.name), owner: comp, path: comp.module === "types" ? "" : "super::types::" };
@@ -209,7 +186,6 @@ export function structOf(comp: Component, name: string, members: N[], structs: M
   return { name, fields };
 }
 
-/** The type literal (or interface) `defineProps<...>()` was given, seen through `withDefaults`. */
 export function definePropsType(call: N): N | null {
   if (call?.type === "CallExpression" && call.callee.type === "Identifier" && call.callee.name === "withDefaults") {
     return definePropsType(call.arguments[0]);
@@ -224,7 +200,6 @@ export function definePropsType(call: N): N | null {
   return null;
 }
 
-/** The `default` of each prop in the runtime declaration `compileScript` wrote, by prop name. */
 export function runtimeDefaults(comp: Component, content: string): Map<string, N> {
   const out = new Map<string, N>();
   let program: N[];
@@ -233,7 +208,6 @@ export function runtimeDefaults(comp: Component, content: string): Map<string, N
   } catch {
     return out;
   }
-  /** An object literal's properties, with `...{ … }` spreads opened, as `defineModel` writes them. */
   const props = (o: N): N[] =>
     o?.type !== "ObjectExpression"
       ? []
@@ -241,7 +215,6 @@ export function runtimeDefaults(comp: Component, content: string): Map<string, N
   const visit = (n: N): void => {
     if (!n || typeof n !== "object") return;
     if (n.type === "ObjectProperty" && !n.computed && (n.key.name ?? n.key.value) === "props") {
-      // `props: { … }`, or `_mergeModels({ … }, { … })` when there is a `defineModel`.
       const objects = n.value.type === "CallExpression" ? n.value.arguments : [n.value];
       for (const o of objects) {
         for (const p of props(o)) {
@@ -264,7 +237,6 @@ export function runtimeDefaults(comp: Component, content: string): Map<string, N
   return out;
 }
 
-/** A prop's default as a Rust value of its type: a literal, or an empty list from `() => []`. */
 export function defaultValue(comp: Component, f: Field, node: N): string {
   const of = f.ty.k === "opt" ? f.ty.of : f.ty;
   if (of.k === "str" && node.type === "StringLiteral") return rustStr(node.value);

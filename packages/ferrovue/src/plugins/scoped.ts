@@ -1,19 +1,3 @@
-/* Scoped styles: each `<style scoped>` component's `data-v-` id, computed as the bundler computes
- * it, and where scope ids reach — which components' roots a parent may hand ids to, and which
- * components' slot content may be given a slot scope id. Both decide a generated signature —
- * `render` taking `fv_attrs`, slot content taking `fv_sid` — so they are worked out for every
- * component before any is generated.
- *
- * With `<style scoped>`, Vue's server renderer writes the component's id onto each of its elements
- * (the compiled template spells it out) and hands ids to a child component's root through the
- * child's `_attrs`: the id of the component that created it, what its parent passes on when the
- * child is that parent's root, and the slot scope ids of the slot content it is rendered in
- * (`renderComponentSubTree`). A component with `:slotted()` styles gives its slot content
- * `data-v-…-s` as well, which the content writes onto its elements as `_scopeId`.
- *
- * The same `_attrs` carries the attributes a parent passes a child beyond its props, ahead of the
- * ids (`fallthrough.ts`). */
-
 import { parse as parseJs } from "@babel/parser";
 import { createHash } from "node:crypto";
 import { relative, resolve as resolvePath, sep } from "node:path";
@@ -21,8 +5,6 @@ import { type Component, type N, type Scope, fail, rustStr } from "../model.ts";
 import { type ScopeIdMode } from "../context.ts";
 import { type Plugin, runOf } from "../plugin.ts";
 
-/** Scoped styles in one run: how ids are computed, from which directory a component's path is
- * hashed, and each `<style scoped>` component's id and whether its styles use `:slotted()`. */
 interface ScopedRun {
   mode: ScopeIdMode;
   viteRoot: string;
@@ -30,13 +12,10 @@ interface ScopedRun {
   slotted: Set<Component>;
 }
 
-/** `data-v-…`, the id a component's `<style scoped>` gives its elements, or `null` without one. */
 export function scopeIdOf(comp: Component): string | null {
   return runOf(scoped).ids.get(comp) ?? null;
 }
 
-/** `getHash` in `@vitejs/plugin-vue`: the first 8 hex digits of the SHA-256 of the file's path from
- * Vite's root, with `/` between its parts, followed in `"filepath-source"` mode by its source. */
 function scopeHash(file: string, source: string): string {
   const { mode, viteRoot } = runOf(scoped);
   const path = relative(viteRoot, resolvePath(file)).split(sep).join("/");
@@ -46,27 +25,20 @@ function scopeHash(file: string, source: string): string {
     .slice(0, 8);
 }
 
-/** A child component the compiled template renders. */
 interface Call {
   child: string;
-  /** Whether its props hold the parent's own `_attrs`: it is the parent's root. */
   passesAttrs: boolean;
-  /** Inside slot content, which hands it `_scopeId`: the component the content is given to. */
   within: string | null;
 }
 
-/** A `<slot>` outlet: the slot scope id it passes — always one (`"id"`), the one its own slot
- * content was given (`"forward"`), or none — and the component that content is given to. */
 interface Outlet {
   passes: "id" | "forward" | "none";
   within: string | null;
 }
 
-/** The child components and outlets in one component's compiled template. */
 function flowOf(comp: Component, ssr: string, children: Map<string, string>): { calls: Call[]; outlets: Outlet[] } {
   const calls: Call[] = [];
   const outlets: Outlet[] = [];
-  // `const _component_Tree = _resolveComponent("Tree", true)`: the component itself, by name.
   const self = new Set<string>();
   const resolve = (target: N): string | null => {
     if (target?.type === "MemberExpression" && target.object.name === "$setup") {
@@ -90,7 +62,6 @@ function flowOf(comp: Component, ssr: string, children: Map<string, string>): { 
       if (n.callee.name === "_ssrRenderComponent") {
         const child = resolve(a[0]);
         if (child) calls.push({ child, passesAttrs: mentions(a[1], "_attrs"), within: a[4] ? within : null });
-        // Slot content given to the child: its `_scopeId` is what the child's outlets pass.
         walk(a[2], child);
         return;
       }
@@ -106,10 +77,6 @@ function flowOf(comp: Component, ssr: string, children: Map<string, string>): { 
   return { calls, outlets };
 }
 
-/** Set every component's `inherits` and `passesSlotIds`, each a least fixed point: a component's
- * slot content may be given an id when one of its outlets passes one, or forwards what the slot
- * content it sits in was given; a root may be handed ids by a scoped parent, by a parent that
- * passes on what it inherits, or by slot content that may be given an id. */
 function scopeFlow(read: { comp: Component; ssr: string; children: Map<string, string> }[]): void {
   const flows = read.map((r) => ({ comp: r.comp, ...flowOf(r.comp, r.ssr, r.children) }));
   const byName = new Map(read.map((r) => [r.comp.name, r.comp]));
@@ -136,11 +103,6 @@ function scopeFlow(read: { comp: Component; ssr: string; children: Map<string, s
   }
 }
 
-/** The scope ids a child's root is handed, as a Rust `&str` (`null` for none), as
- * `renderComponentSubTree` gathers them into its `attrs`: what this component passes on when the
- * child is its root, unless the child sets `inheritAttrs: false`; this component's own id, the id of
- * the instance that created the child's virtual node — slot content's included, which renders as
- * the component that wrote it; and the slot scope id of the slot content the child is rendered in. */
 function childIds(s: Scope, child: Component, passesAttrs: boolean, inSlot: boolean, n: N): string | null {
   const base = passesAttrs && child.inheritAttrs ? s.attrs : null;
   const own = scopeIdOf(s.comp);
@@ -153,7 +115,6 @@ function childIds(s: Scope, child: Component, passesAttrs: boolean, inSlot: bool
   return code;
 }
 
-/** Scoped styles: `<style scoped>` and `:slotted()`, and the ids they hand on. */
 export const scoped: Plugin<ScopedRun> = {
   name: "scoped",
   configure: (config, root) => ({
@@ -163,14 +124,10 @@ export const scoped: Plugin<ScopedRun> = {
     slotted: new Set(),
   }),
   sfc(comp, descriptor, file, source) {
-    // A scoped `<style>` adds `data-v-…` attributes, whose id is computed here as the bundler
-    // computes it.
     const run = runOf(scoped);
     if (descriptor.styles.some((st) => st.scoped)) run.ids.set(comp, `data-v-${scopeHash(file, source)}`);
     if (descriptor.slotted) run.slotted.add(comp);
   },
-  // As `@vitejs/plugin-vue` compiles it: the scope id written onto every element, and passed to
-  // slot content only with `:slotted()` styles.
   templateOptions(comp) {
     const id = scopeIdOf(comp);
     return { id: id ?? comp.name, scoped: id !== null, slotted: runOf(scoped).slotted.has(comp) };

@@ -1,5 +1,3 @@
-/* One `.vue` file read: its props, models, imported types, and Vue's SSR compilation of its template. */
-
 import { compileScript, compileTemplate, parse as parseSfc } from "@vue/compiler-sfc";
 import { readFileSync } from "node:fs";
 import { SourceMapConsumer } from "source-map-js";
@@ -9,8 +7,6 @@ import { ctx } from "./context.ts";
 import { typesImports, declareTypes, defaultValue, definePropsType, readTypeFile, resolveImport, runtimeDefaults, structOf, tyOfTs } from "./typescript.ts";
 import { claim } from "./plugin.ts";
 
-/** A Vue compiler error's position as a node \`fail\` can point at: its line and 1-based column,
- * offset by where the template starts when the error is in the template's content. */
 function vueErrorNode(err: unknown, within?: { line: number; column: number }): N {
   const loc = (err as { loc?: { start: { line: number; column: number } } }).loc;
   if (!loc) return undefined;
@@ -19,8 +15,6 @@ function vueErrorNode(err: unknown, within?: { line: number; column: number }): 
   return { type: "VueError", loc: { start: at }, __fv: "source" };
 }
 
-/** `inheritAttrs` as `defineOptions({ inheritAttrs })` or a plain `<script>`'s `export default`
- * sets it: a literal, since it decides what reaches the root. */
 function inheritAttrs(comp: Component, statements: N[]): boolean {
   let found = true;
   for (const st of statements) {
@@ -52,9 +46,6 @@ export function readComponent(file: string, root: string): { comp: Component; as
   if (!descriptor.scriptSetup || !descriptor.template) {
     fail(comp, "an island needs `<script setup lang=\"ts\">` and a `<template>`");
   }
-  // A global `<style>` block changes no markup; a scoped one is a plugin's. A CSS module renames
-  // classes, and `v-bind()` in CSS writes variables onto the root, neither of which the server
-  // reproduces.
   for (const st of descriptor.styles) {
     if (st.module) fail(comp, "`<style module>` renames classes in the bundler; use a global or scoped `<style>`, or a stylesheet");
   }
@@ -64,7 +55,6 @@ export function readComponent(file: string, root: string): { comp: Component; as
   const script = compileScript(descriptor, { id: name });
   const ast: N[] = script.scriptSetupAst ?? [];
   tagAst(ast, "source");
-  // A plain `<script>` beside the setup one may declare the types the setup block uses.
   const plainAst: N[] = script.scriptAst ?? [];
   tagAst(plainAst, "source");
 
@@ -81,7 +71,6 @@ export function readComponent(file: string, root: string): { comp: Component; as
   typesImports(comp, [...plainAst, ...ast]);
   comp.inheritAttrs = inheritAttrs(comp, [...plainAst, ...ast]);
 
-  // Types imported from elsewhere: a store's file, a shared `.ts` file, or another component.
   for (const st of [...plainAst, ...ast]) {
     if (st.type !== "ImportDeclaration") continue;
     const from: string = st.source.value;
@@ -95,7 +84,6 @@ export function readComponent(file: string, root: string): { comp: Component; as
       const isType = st.importKind === "type" || sp.importKind === "type";
       const typeFile = resolveImport(comp.file, from);
       if (!typeFile) continue;
-      // A file a plugin owns, such as a store's, whose types it has read.
       if (ctx.plugins.some((p) => p.importedType?.(comp, typeFile, typeName, sp.local.name))) continue;
       if (ctx.helperModule !== null && from === ctx.helperModule && !isType) continue;
       readTypeFile(typeFile);
@@ -104,8 +92,6 @@ export function readComponent(file: string, root: string): { comp: Component; as
     }
   }
 
-  // Interfaces in two passes: every name first, so one may name another declared after it, or
-  // itself — a tree node's children are tree nodes.
   const decls = declareTypes(comp, [...plainAst, ...ast], comp.structs, comp.aliases);
   for (const d of decls) comp.structs.set(d.name, structOf(comp, d.name, d.members, comp.structs));
   let propsTy: N = null;
@@ -118,9 +104,7 @@ export function readComponent(file: string, root: string): { comp: Component; as
     const found = definePropsType(call);
     if (found) propsTy = found;
   }
-  // A component without `defineProps` takes no props.
   if (!propsTy) {
-    // nothing to read
   } else if (propsTy.type === "TSTypeLiteral") {
     comp.props = structOf(comp, "Props", propsTy.members, comp.structs);
   } else if (propsTy.type === "TSTypeReference" && comp.structs.has(propsTy.typeName.name)) {
@@ -129,7 +113,6 @@ export function readComponent(file: string, root: string): { comp: Component; as
     fail(comp, "`defineProps` takes a type literal or an interface declared in the same block", propsTy);
   }
 
-  // `defineModel`: a prop of its own (`modelValue` unless named), which the binding reads.
   for (const st of ast) {
     if (st.type !== "VariableDeclaration") continue;
     for (const d of st.declarations) {
@@ -148,8 +131,6 @@ export function readComponent(file: string, root: string): { comp: Component; as
     }
   }
 
-  // What Vue uses for an absent optional prop: the default `compileScript` resolved — from
-  // `withDefaults`, a destructured default, or `defineModel`'s options — or `false` for a boolean.
   const defaults = runtimeDefaults(comp, script.content);
   for (const f of comp.props.fields) {
     if (f.ty.k !== "opt") continue;
@@ -161,14 +142,11 @@ export function readComponent(file: string, root: string): { comp: Component; as
   const compiled = compileTemplate({
     source: descriptor.template.content,
     filename: file,
-    // As `@vitejs/plugin-vue` compiles it, which a plugin may change: scoped styles.
     ...(claim((p) => p.templateOptions?.(comp)) ?? { id: name, scoped: false, slotted: false }),
     ssr: true,
     ssrCssVars: [],
     compilerOptions: { bindingMetadata: script.bindings, sourceMap: true },
   });
-  // `ssrInjectFallthroughAttrs`: a root `<Transition>` or `<KeepAlive>` passes `_attrs` on only to
-  // a lone element or component without `v-if` or `v-for`.
   const kids = (n: N): N[] => n.children.filter((c: N) => c.type !== 3 && !(c.type === 2 && !c.content.trim()));
   const roots = descriptor.template.ast ? kids(descriptor.template.ast) : [];
   const wrapper = roots.length === 1 && roots[0].type === 1 && roots[0].tagType === 1 && ["Transition", "transition", "KeepAlive", "keep-alive"].includes(roots[0].tag) ? roots[0] : null;
@@ -180,7 +158,6 @@ export function readComponent(file: string, root: string): { comp: Component; as
   const start = descriptor.template.loc.start;
   comp.templateStart = { line: start.line, column: start.column };
   if (compiled.map) comp.templateMap = new SourceMapConsumer(compiled.map);
-  // A template error's position is within the template's content.
   if (compiled.errors.length) fail(comp, String(compiled.errors[0]), vueErrorNode(compiled.errors[0], comp.templateStart));
   for (const m of compiled.code.matchAll(/_ssrRenderSlot\(_ctx\.\$slots, "([^"]+)"/g)) {
     if (!comp.slotNames.includes(m[1]!)) comp.slotNames.push(m[1]!);

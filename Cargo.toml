@@ -1,6 +1,4 @@
 [workspace]
-# Listed one by one, never by wildcard: a new crate or example is added here on purpose, and
-# `node scripts/release.ts check` fails on one that is missing.
 members = [
     "crates/ferrovue-core",
     "crates/ferrovue-router",
@@ -15,14 +13,11 @@ resolver = "3"
 [workspace.package]
 version = "0.3.0"
 edition = "2024"
-# The latest stable Rust; generated renderers also need edition 2024 (let-chains).
 rust-version = "1.99"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/Kinsmir/ferrovue"
 homepage = "https://github.com/Kinsmir/ferrovue"
 
-# The runtime's crates depend on one another at exactly the version above, as they are released
-# together: `scripts/release.ts bump` sets these requirements with it.
 [workspace.dependencies]
 ferrovue-core = { path = "crates/ferrovue-core", version = "=0.3.0" }
 ferrovue-i18n = { path = "crates/ferrovue-i18n", version = "=0.3.0" }

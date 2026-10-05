@@ -1,6 +1,4 @@
 <script setup lang="ts">
-/* `v-for` over strings, numbers and objects; with an index; nested; over `<template>`; with a
- * `v-if` inside. */
 interface Group {
   name: string;
   members: string[];

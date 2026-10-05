@@ -1,17 +1,3 @@
-/* Vue's `renderToString`, timed on the scenarios `crates/ferrovue/benches/render.rs` times the
- * generated Rust on: `pnpm bench:js`.
- *
- * Each scenario's props are built here exactly as the Rust side builds them. Before anything is
- * timed, Vue's output is held to `crates/ferrovue/benches/expected/<scenario>.html`, which the Rust
- * side holds its own output to as well, so both halves time the same work writing the same bytes.
- * `FERROVUE_BENCH_WRITE=1` records those files from Vue instead of comparing.
- *
- * What is timed: one awaited `renderToString(app)`. The app, with its Pinia and (for `small`) its
- * router already at the reader's location, is created once outside the loop, as the Rust side
- * builds its router and route once. Vue is its production build (`NODE_ENV=production`), and each
- * component renders through the `ssrRender` its SSR build would have (`attachSsrRender`).
- *
- * `FERROVUE_BENCH_QUICK=1` shortens every run, for CI: it proves the benchmark works, not how fast. */
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { Bench } from "tinybench";
@@ -45,17 +31,14 @@ function treeNode(label: string, depth: number): TreeProps {
 
 const range = (n: number): number[] => Array.from({ length: n }, (_, i) => i);
 
-/** Each scenario: the component, its props, and the location it renders at if it reads one. */
 const SCENARIOS: { name: string; component: string; props: Record<string, unknown>; route?: string }[] = [
   {
-    // One `<Nav>`, two `<RouterLink>`s resolved against the reader's location.
     name: "small",
     component: "Nav",
     props: { href: "/users/me", label: "Me & you", note: "3 new" },
     route: "/users/me",
   },
   {
-    // 1,000 words, 1,000 numbers and 100 groups of 10 members.
     name: "list",
     component: "Lists",
     props: {
@@ -69,13 +52,11 @@ const SCENARIOS: { name: string; component: string; props: Record<string, unknow
     },
   },
   {
-    // A full binary tree 8 levels deep: 255 recursive `<Tree>`s.
     name: "tree",
     component: "Tree",
     props: { ...treeNode("n", 1) },
   },
   {
-    // 22 `<Panel>`s with named slots, a `<Text>`, and 20 `<Frame>`s each holding a loop.
     name: "page",
     component: "Dashboard",
     props: {
@@ -88,7 +69,6 @@ const SCENARIOS: { name: string; component: string; props: Record<string, unknow
   },
 ];
 
-/** Whether Vue is its development build, which checks and warns as it renders. */
 function vueIsDevelopmentBuild(): boolean {
   const app = createSSRApp({});
   const warn = console.warn;

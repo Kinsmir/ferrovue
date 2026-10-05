@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* Reads the Pinia store on the server: its state and its getters. Its styles are scoped. */
 import { storeToRefs } from "pinia";
 import { useBasket } from "../stores/basket";
 

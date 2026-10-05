@@ -1,9 +1,4 @@
 <script setup lang="ts">
-/* `<style scoped>` throughout: the id on every element, `v-if` comments, `<template>`, lists, and
- * what reaches each kind of child — a scoped one, one whose root is a component, a fragment, one
- * without scoped styles, `:slotted()` ones given content directly and through forwarding — and
- * `<Transition>`, `<KeepAlive>`, `<Teleport>` and its own slot. Where Vue's server and client renders
- * disagree on the ids, the cases are in `ScopedQuirks` instead. */
 import PlainBox from "./PlainBox.vue";
 import PlainForward from "./PlainForward.vue";
 import ScopedCard from "./ScopedCard.vue";

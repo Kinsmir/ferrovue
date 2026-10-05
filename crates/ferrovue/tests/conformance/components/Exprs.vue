@@ -1,6 +1,4 @@
 <script setup lang="ts">
-/* The expressions a template computes with: arithmetic and comparison of integers, template
- * literals, optional chaining, string and list methods, `Math`, array literals and ranges. */
 interface Author {
   name: string;
   site?: string;

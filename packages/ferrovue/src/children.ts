@@ -1,6 +1,3 @@
-/* Child components: the props a template hands a child, the attributes that fall through to it,
- * and the call of its render with the slot content it is given. */
-
 import { isSSRSafeAttrName, propsToAttrMap } from "@vue/shared";
 import { type Component, type N, type Scope, type Ty, type Val, camelize, declares, fail, GenError, rustStr, sameTy, snake, takesAttrs } from "./model.ts";
 import { ctx } from "./context.ts";
@@ -26,8 +23,6 @@ export function renderChild(s: Scope, e: Emitter, n: N): void {
   const child = childName ? s.components.get(childName) : undefined;
   if (!child) fail(s.comp, "a child component must be an imported island", n);
   for (const p of ctx.plugins) p.child?.(s, child, n);
-  // What the props merge: object literals — a `{ ref_for: true }` marker inside a `v-for` among
-  // them, which renders nothing — the parent's `_attrs` when the child is its root, and `$attrs`.
   const parts: N[] = !rawProps || rawProps.type === "NullLiteral" ? [] : mergedParts(rawProps);
   const merges = parts.length > 0 && parts[0] !== rawProps;
   const passesAttrs = parts.some(isAttrs);
@@ -35,7 +30,6 @@ export function renderChild(s: Scope, e: Emitter, n: N): void {
   const marker = (p: N): boolean =>
     p.type === "ObjectExpression" && p.properties.length > 0 && p.properties.every((q: N) => q.type === "ObjectProperty" && IGNORED_PROPS.has(q.key.name ?? q.key.value));
   const objects = parts.filter((p) => !isAttrs(p) && !dollarAttrs(s, p) && !marker(p));
-  // Attributes this component is passed reach the child's props too, where a prop would take them.
   if (parts.some(passed)) {
     for (const name of s.comp.attrNames) {
       if (declares(child, name)) {
@@ -43,12 +37,9 @@ export function renderChild(s: Scope, e: Emitter, n: N): void {
       }
     }
   }
-  // The scope ids its root is handed, which only a plugin gives (scoped styles).
   const ids = claim((p) => p.childIds?.(s, child, passesAttrs, !!slotScopeId, n)) ?? null;
-  // `v-bind="x"`, where `x` is exactly the child's own `Props`: handed over as it is.
   if (objects.length === 1 && objects[0].type !== "ObjectExpression") {
     const v = expr(s, objects[0]);
-    // The component itself, however the template reached it: its own `Props` struct is the type.
     const own = child.name === s.comp.name && v.ty.k === "struct" && v.ty.name === "Props";
     if (own || (v.ty.k === "child" && v.ty.name === child.name)) {
       callChild(s, e, child, v.code, slots, childAttrsArg(s, child, parts, merges, null, ids));
@@ -61,14 +52,11 @@ export function renderChild(s: Scope, e: Emitter, n: N): void {
   }
 
   const given = new Map<string, N>();
-  // Keys the child does not declare are attributes, which fall through to its root.
   const fallthrough = new Set<N>();
   for (const obj of objects) {
     for (const p of obj.properties) {
       if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "child props hold plain keys", p);
       const key: string = p.key.type === "Identifier" ? p.key.name : String(p.key.value);
-      // Listeners, `v-model`'s `onUpdate:…` among them, run on the client alone; a model's modifiers
-      // change only what an update writes.
       if (!passedKey(child, key)) continue;
       const field = child.props.fields.find((f) => camelize(f.js) === camelize(key));
       if (field) {
@@ -87,22 +75,16 @@ export function renderChild(s: Scope, e: Emitter, n: N): void {
       if (f.ty.k !== "opt") fail(s.comp, `${child.name} requires \`${f.js}\``, n);
       return `${f.rust}: None`;
     }
-    // Each side's own types named by the component that declares them, so that a type the parent
-    // imports from the child's `.vue` file is the child's type.
     const v = expr(s, node);
     return fieldInit(f.rust, ownInto(s.comp, { ...v, ty: markHome(v.ty, s.comp.name) }, markHome(f.ty, child.name), node));
   });
   callChild(s, e, child, `&super::${child.module}::Props { ${inits.join(", ")} }`, slots, childAttrsArg(s, child, parts, merges, fallthrough, ids));
 }
 
-/** Whether a name is an array index, which a JavaScript object lists before its other keys. */
 export function array(key: string): boolean {
   return /^(0|[1-9]\d*)$/.test(key) && Number(key) < 2 ** 32 - 1;
 }
 
-/** The last argument of a child's `render_scoped`: for a child a parent may pass attributes, the
- * `fv::Attrs` this call passes — the keys of its props objects it does not declare, and what this
- * component was passed, merged in their order — with the scope ids; for any other, the ids. */
 function childAttrsArg(s: Scope, child: Component, parts: N[], merges: boolean, fallthrough: Set<N> | null, ids: string | null): string | null {
   const sources: string[] = [];
   for (const p of parts) {
@@ -121,30 +103,22 @@ function childAttrsArg(s: Scope, child: Component, parts: N[], merges: boolean, 
     return ids;
   }
   if (!sources.length) return ids === null ? "&fv::Attrs::NONE" : `&fv::Attrs::scoped(${ids})`;
-  // One object literal, or `_attrs` or `$attrs` alone, is the child's as it is: only `_mergeProps`
-  // normalises what it merges, even one object.
   if (sources.length === 1 && !merges) return `&fv::Attrs::new(${sources[0]}, ${ids ?? '""'})`;
   return `&fv::Attrs::merged(&[${sources.join(", ")}], ${ids ?? '""'})`;
 }
 
-/** `name: value` in a struct literal, or the name alone when the value is a variable of that name. */
 export function fieldInit(name: string, value: string): string {
   return value === name ? name : `${name}: ${bare(value)}`;
 }
 
-/** Whether a component takes a `Slots` argument. */
 export function takesSlots(c: Component): boolean {
   return c.slotNames.length > 0 || slotFieldsOf(c).length > 0;
 }
 
-/** The arguments after `props` that a component's `render` takes. */
 export function extraParams(c: Component): string {
   return (takesSlots(c) ? ", fv_slots: Slots<'_>" : "") + paramsOf(c).map((p) => `, ${p.name}: ${p.ty}`).join("");
 }
 
-/** `render(out, props[, slots][, …])` for a child, with the slot content this template gives
- * it as closures; `render_scoped`, with the scope ids its root is handed last — and the attributes
- * it is passed, as `fv::Attrs` — for a child that may be handed some. */
 export function callChild(s: Scope, e: Emitter, child: Component, propsCode: string, slots: N, attrs: string | null): void {
   const given = new Map<string, N>();
   if (slots && slots.type !== "NullLiteral") {
@@ -176,10 +150,8 @@ export function callChild(s: Scope, e: Emitter, child: Component, propsCode: str
     const { body, param } = slotContent(s, value);
     const shape = child.slotShapes.get(name);
     const takesNone = param?.type === "Identifier" && param.name === "_";
-    // The slot scope id the child's outlets give the content, when they may give one.
     const sid = child.passesSlotIds ? `fv_sid${++ctx.narrowCount}` : null;
     const sidParam = sid === null ? "" : `, ${sid}: &str`;
-    /** The content's statements, then whether it pushed anything but comments. */
     const content = (inner: Scope): void => {
       if (staticallyFilled(body)) {
         statements({ ...inner, fill: false }, e, body);
@@ -190,12 +162,10 @@ export function callChild(s: Scope, e: Emitter, child: Component, propsCode: str
         e.stmt("filled");
       }
     };
-    /** A parameter the content never reads, named so that Rust does not warn of it. */
     const unread = (opened: number, binding: string | null): void => {
       if (binding !== null && !e.reads(binding, opened + 1)) e.replace(opened, `${binding}:`, `_${binding}:`);
     };
     if (shape) {
-      // A scoped slot: content given the outlet's props, bound as the parent destructured them.
       const sp = `fv_sp${++ctx.narrowCount}`;
       const ty: Ty = { k: "struct", name: shape.name, home: child.name };
       const locals = new Map(s.locals);
@@ -241,7 +211,6 @@ export function callChild(s: Scope, e: Emitter, child: Component, propsCode: str
   e.close(`${trailing});`);
 }
 
-/** A value into a child's props field, whose strings are `Cow`s. */
 export function ownInto(comp: Component, v: Val, want: Ty, node: N): string {
   if (want.k === "str") {
     if (v.ty.k !== "str") fail(comp, "a string prop needs a string", node);
@@ -254,22 +223,17 @@ export function ownInto(comp: Component, v: Val, want: Ty, node: N): string {
   }
   if (sameTy(v.ty, want) && (want.k === "int" || want.k === "float" || want.k === "bool")) return v.code;
   if (want.k === "opt" && sameTy(v.ty, want.of) && (v.ty.k === "int" || v.ty.k === "float" || v.ty.k === "bool")) return `Some(${bare(v.code)})`;
-  // An integer handed to a prop that takes a fraction.
   if (want.k === "float" && v.ty.k === "int") return asF64(v);
   if (want.k === "opt" && want.of.k === "float" && v.ty.k === "int") return `Some(${asF64(v)})`;
-  // A computed list: its items collected into the child's own list, objects cloned.
   if (v.iter !== undefined && v.ty.k === "list" && want.k === "list" && sameTy(v.ty.of, want.of)) {
     return want.of.k === "struct" || want.of.k === "child" ? `${v.iter}.cloned().collect()` : `${v.iter}.collect()`;
   }
-  // An object, a list of objects, a record, or an optional one, of the type the child declares:
-  // cloned, which copies its strings only where they are owned.
   const objecty = (t: Ty): boolean => t.k === "struct" || t.k === "child" || t.k === "record" || ((t.k === "list" || t.k === "opt") && objecty(t.of));
   if (objecty(want) && sameTy(v.ty, want)) return `${atom(v.code)}.${v.ty.k === "opt" ? "cloned" : "to_owned"}()`;
   if (want.k === "opt" && objecty(want.of) && sameTy(v.ty, want.of)) return `Some(${atom(v.code)}.to_owned())`;
   if (objecty(want) && v.ty.k === want.k && JSON.stringify(v.ty).includes('"struct"')) {
     fail(comp, `a ${JSON.stringify(v.ty)} where the child takes a ${JSON.stringify(want)}: two components share a type only when both import it from one \`.ts\` file`, node);
   }
-  // A list of strings or numbers: each item borrowed, or copied, into the child's own list.
   if (want.k === "list" && v.ty.k === "list" && v.ty.of.k === "undef") return "Vec::new()";
   if (want.k === "opt" && want.of.k === "list" && v.ty.k === "list") return `Some(${ownInto(comp, v, want.of, node)})`;
   if (want.k === "list" && v.ty.k === "list" && sameTy(v.ty.of, want.of)) {

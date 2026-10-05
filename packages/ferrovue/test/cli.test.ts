@@ -1,4 +1,3 @@
-/* The `ferrovue` command, run as a project runs it: from the project's root, as a process. */
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -82,7 +81,6 @@ defineProps<{ n: number }>();
   );
   const r = run();
   expect(r.status).toBe(1);
-  // The line in the `.vue` file, quoted with a caret, and no stack trace.
   expect(r.stderr).toContain("error: components/Bad.vue:4:17: `.toPrecision()` is not supported");
   expect(r.stderr).toContain(" 4 | <template><p>{{ n.toPrecision(2) }}</p></template>");
   expect(r.stderr).toContain("   |                 ^");
@@ -94,8 +92,6 @@ it("--watch regenerates on a change, and reports an error without stopping", asy
   let out = "";
   child.stdout.on("data", (d) => (out += d));
   child.stderr.on("data", (d) => (out += d));
-  // Up to 20 s for each step: a loaded machine starts Node and compiles slowly, and the test only
-  // waits as long as it has to.
   const waitFor = async (text: string): Promise<void> => {
     for (let i = 0; i < 400 && !out.includes(text); i++) await new Promise((r) => setTimeout(r, 50));
     expect(out).toContain(text);
@@ -178,7 +174,6 @@ it("init scaffolds a starter configuration and component in an empty directory",
     expect(existsSync(join(emptyDir, "ferrovue.config.json"))).toBe(true);
     expect(existsSync(join(emptyDir, "components/Hello.vue"))).toBe(true);
 
-    // Generating works immediately after init
     const gen = spawnSync(process.execPath, [CLI], { cwd: emptyDir, encoding: "utf8" });
     expect(gen.status, gen.stderr).toBe(0);
     expect(existsSync(join(emptyDir, "src/generated/hello.rs"))).toBe(true);

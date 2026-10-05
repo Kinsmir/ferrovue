@@ -27,8 +27,6 @@ fn the_state_script_cannot_be_closed_by_a_value_and_reads_back_whole() {
     );
 }
 
-/// Both line separators are escaped, and nothing else that starts with the same byte: U+2069 is
-/// E2 81 A9, U+2027 is E2 80 A7.
 #[test]
 fn the_state_script_escapes_exactly_the_two_line_separators() {
     let state = serde_json::json!(["a\u{2029}b\u{2028}c\u{2069}\u{2027}\u{2029}"]);

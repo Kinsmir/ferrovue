@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* `<RouterLink>` with no class of its own, with a computed `to`, and with plain attributes. */
 defineProps<{ user: string; tab?: string }>();
 </script>
 

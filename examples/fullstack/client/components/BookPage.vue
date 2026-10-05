@@ -1,6 +1,4 @@
 <script setup lang="ts">
-/* The detail page: the book, read from the route parameter, with its reviews in a slot the server
- * streams once they are ready. */
 import { computed } from "vue";
 import { useRoute } from "vue-router";
 import type { Book } from "./types";

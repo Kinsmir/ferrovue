@@ -1,7 +1,4 @@
 <script setup lang="ts">
-/* Lists computed with array methods and arrow functions — `filter`, `map`, `some`, `every`, `find`,
- * `findIndex`, `slice` — chained and nested, with an index, narrowing inside, read by `v-for`,
- * `.join`, `.length` and `.includes`, and handed to a child. */
 import { computed } from "vue";
 import type { Float } from "ferrovue/types";
 import Chips from "./Chips.vue";

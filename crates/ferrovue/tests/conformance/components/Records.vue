@@ -1,7 +1,4 @@
 <script setup lang="ts">
-/* `Record<string, T>` props walked in JavaScript's order of keys — array indices first, in numeric
- * order, then the rest as given — by `v-for`, `Object.keys`, `Object.values` and `Object.entries`,
- * and handed to a child. */
 import Chips from "./Chips.vue";
 
 interface Score {

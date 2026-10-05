@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* `v-model`, whose server render is the state the props start it in. */
 import { ref } from "vue";
 
 const props = defineProps<{ query: string; agreed: boolean; size: string; body: string }>();

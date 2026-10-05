@@ -1,7 +1,5 @@
 use super::*;
 
-/// `tests/vectors/trim.json`, whose answers the TypeScript side (`packages/ferrovue/test/vectors.test.ts`)
-/// takes from JavaScript's own `String.prototype.trim`.
 #[test]
 fn js_trim_is_javascripts_trim() {
     let vectors: Vec<(String, String)> =
@@ -12,7 +10,6 @@ fn js_trim_is_javascripts_trim() {
     }
 }
 
-/// `tests/vectors/length.json`, held to JavaScript's `.length` on the TypeScript side.
 #[test]
 fn js_length_counts_utf16_code_units() {
     let vectors: Vec<(String, i64)> =
@@ -23,13 +20,10 @@ fn js_length_counts_utf16_code_units() {
     }
 }
 
-/// A number as `strings.json` spells one: a decimal string, `NaN` or `Infinity`.
 fn vector_number(s: &str) -> f64 {
     s.parse().unwrap_or_else(|_| panic!("{s:?} parses"))
 }
 
-/// `tests/vectors/strings.json`, recorded from JavaScript's string methods, each string result as
-/// a server sends it: a lone surrogate as U+FFFD.
 #[test]
 fn string_methods_are_javascripts() {
     let vectors: Vec<(String, String, Vec<String>, serde_json::Value)> =
@@ -72,7 +66,6 @@ fn string_methods_are_javascripts() {
     }
 }
 
-/// `tests/vectors/compare.json`, recorded from JavaScript's `<` and `>` on strings.
 #[test]
 fn strings_are_ordered_as_javascript_orders_them() {
     let vectors: Vec<(String, String, i8)> =
@@ -84,8 +77,6 @@ fn strings_are_ordered_as_javascript_orders_them() {
     }
 }
 
-/// `tests/vectors/parse.json`, recorded from `Number`, `parseInt` and `parseFloat`; `-0` is told
-/// apart from `0`.
 #[test]
 fn strings_are_read_as_numbers_as_javascript_reads_them() {
     let vectors: Vec<(String, String, String)> =
@@ -110,7 +101,6 @@ fn strings_are_read_as_numbers_as_javascript_reads_them() {
     }
 }
 
-/// `tests/vectors/json.json`, recorded from `JSON.stringify` of strings.
 #[test]
 fn strings_are_written_as_json_stringify_writes_them() {
     let vectors: Vec<(String, String)> =

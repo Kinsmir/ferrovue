@@ -1,14 +1,3 @@
-/* `<RouterLink>` and `useRoute()` as the real vue-router renders them, for the cases in
- * `crates/ferrovue-router/tests/vectors/router.json`, recorded in `router.expected.json` beside it, which
- * the Rust router (`crates/ferrovue-router`) is held to:
- * - `links`: a string `to` from a location — the link's `href` and whether it is active;
- * - `objects`: a `{ name, params, query, hash }` or `{ path, … }` `to`, the same;
- * - `locations`: what `useRoute()` reads at a location — `path`, `hash`, `name`, `params`, `query`,
- *   `fullPath`;
- * - `bases`: links under `createWebHistory(base)`.
- *
- * `FERROVUE_VECTORS_WRITE=1` records instead of comparing — for a new case, or a vue-router
- * upgrade, and never to make a failure go away. */
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, it } from "vitest";
@@ -21,11 +10,9 @@ interface Vectors {
   routes: string[];
   names: Record<string, string>;
   links: Array<[string, string]>;
-  /** As vue-router takes them, but a query as `[key, value]` pairs, which keep their order in Rust. */
   objects: Array<[string, Record<string, unknown> & { query?: Array<[string, string]> }]>;
   locations: string[];
   bases: Array<[string, string, string]>;
-  /** Nested routes, every one with a component: links from locations, string and named. */
   nested: {
     routes: NestedRoute[];
     links: Array<[string, string]>;
@@ -60,7 +47,6 @@ function makeNestedRouter(): Router {
   return createRouter({ history: createMemoryHistory(), routes: records(vectors.nested.routes) });
 }
 
-/** A link's `href`, whether it is active (its class), and whether exactly (`aria-current`). */
 async function nestedLink(at: string, to: RouteLocationRaw): Promise<[string, boolean, boolean]> {
   const router = makeNestedRouter();
   const app = createSSRApp({ render: () => h(RouterLink, { to }, () => "x") });
@@ -102,14 +88,13 @@ async function location(at: string): Promise<{
     name: typeof r.name === "string" ? r.name : null,
     params: r.params as Record<string, string>,
     fullPath: r.fullPath,
-    // As `[key, value]` pairs, which keep their order in Rust.
     query: Object.entries(r.query),
   };
 }
 
 it("records what RouterLink and useRoute() give for each vector", async () => {
   const warn = console.warn;
-  console.warn = () => {}; // vue-router warns about the links that match no route, on purpose
+  console.warn = () => {};
   try {
     const expected: Array<[string, boolean]> = [];
     for (const [at, to] of vectors.links) expected.push(await link(at, to));

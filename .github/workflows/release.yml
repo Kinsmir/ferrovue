@@ -1,15 +1,5 @@
 name: Release
 
-# Pushing a tag `v1.2.3` (or `v1.2.3-rc.1`) releases that version of the npm package and of every
-# crate (`node scripts/release.ts crates` lists them, in the order they are published):
-#
-#   verify ─┬─ npm: staged on npm, public once a maintainer runs `npm stage approve` with 2FA
-#   ci     ─┴─ crates.io: published once a maintainer approves the `release` environment
-#                └─ GitHub release, with the changelog notes and every package attached
-#
-# No long-lived token is stored: both registries trust this workflow through GitHub's OIDC token.
-# One-time setup is described in RELEASING.md.
-
 on:
   push:
     tags: ["v*"]
@@ -38,9 +28,6 @@ jobs:
           node-version: 24
       - name: Tag, manifests and changelog agree
         run: node scripts/release.ts check "$GITHUB_REF_NAME"
-      # Only a signed, annotated tag starts a release: GitHub must have verified its signature against
-      # a key on the tagger's account. A lightweight tag, or an unsigned or unverified one, stops the
-      # release here, before anything is staged or published.
       - name: The tag is signed and GitHub verifies its signature
         env:
           GH_TOKEN: ${{ github.token }}
@@ -60,12 +47,6 @@ jobs:
       - uses: taiki-e/install-action@e407f7bafb71fd004bc5c2da3032e5470cbb6ef0 # v2.87.24
         with:
           tool: cargo-semver-checks
-      # Each crate's public API against its newest version on crates.io not newer than this one,
-      # with the kind of release read from the two versions as Cargo reads them: 0.1.x to 0.2.0 may
-      # break the API, 0.2.0 to 0.2.1 may only add to it, and 1.x to 2.0 may break it. A crate not
-      # yet on crates.io has nothing to be compared with. cargo-semver-checks does not follow a
-      # re-export from another crate, so what `ferrovue` re-exports is checked in the crate that
-      # defines it.
       - name: Each crate's API changes are allowed by its version (cargo-semver-checks)
         run: |
           for crate in $(node scripts/release.ts crates); do
@@ -95,7 +76,7 @@ jobs:
       approve: ${{ steps.stage.outputs.approve }}
     permissions:
       contents: read
-      id-token: write # npm trusted publishing, and provenance
+      id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
@@ -104,7 +85,6 @@ jobs:
           node-version: 24
           cache: pnpm
           registry-url: https://registry.npmjs.org
-      # Staged publishing arrived in npm 12.
       - run: npm install -g npm@^12
       - run: pnpm install --frozen-lockfile
       - name: Stage the package, unless this version is already on npm
@@ -118,9 +98,7 @@ jobs:
             echo "ferrovue@$VERSION is already on npm"
             exit 0
           fi
-          # `prepack` builds dist/ and copies the README and licences in.
           npm stage publish --provenance --access public --tag "$TAG" --json | tee "$RUNNER_TEMP/stage.json"
-          # The stage's id, if npm's JSON names one; otherwise `npm stage list` shows it.
           id=$(node -e '
             const out = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
             const find = (v) => v && typeof v === "object" ? (v.stageId ?? v.stage_id ?? v.id ?? Object.values(v).map(find).find(Boolean)) : undefined;
@@ -131,7 +109,6 @@ jobs:
           else
             approve="npm stage list ferrovue   # then: npm stage approve <id>"
           fi
-          # A notice shows at the top of the run's page, where a maintainer looks first.
           echo "::notice title=npm: ferrovue@$VERSION is staged, not yet public::Approve it with 2FA: $approve"
           {
             echo "### npm: ferrovue@$VERSION is staged, not yet public"
@@ -150,11 +127,10 @@ jobs:
     name: Publish on crates.io
     needs: [verify, ci]
     runs-on: ubuntu-latest
-    # Waits here for a maintainer's approval: crates.io has no staging of its own.
     environment: release
     permissions:
       contents: read
-      id-token: write # crates.io trusted publishing
+      id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
@@ -179,8 +155,6 @@ jobs:
       - uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18 # v1.0.5
         if: steps.unpublished.outputs.packages != ''
         id: auth
-      # One `cargo publish` for them all: it publishes each crate after those it depends on, and waits
-      # for crates.io to serve one before publishing the next.
       - name: Publish them
         if: steps.unpublished.outputs.packages != ''
         env:

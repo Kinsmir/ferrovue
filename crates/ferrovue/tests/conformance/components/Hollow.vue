@@ -1,9 +1,4 @@
 <script setup lang="ts">
-/* Slot content that may write nothing visible, which gives way to the fallback exactly when every
- * string it pushes is comments and whitespace (`isComment` in `ssrRenderSlot`): an interpolation
- * pushed with a list's fragment markers, a `<template v-if>` of interpolations, nested fragments,
- * whitespace text, a component that renders only a comment, a named slot, a scoped slot and a
- * slot forwarded through another component. */
 import Blank from "./Blank.vue";
 import DataList from "./DataList.vue";
 import Forward from "./Forward.vue";

@@ -1,7 +1,4 @@
 <script setup lang="ts">
-/* `<RouterLink>` in a scoped component, which vue-router renders from virtual nodes: the id on the
- * `<a>` after its attributes and on the elements and components inside it, a link that is a scoped
- * component's root, and one in slot content given a `:slotted()` component's id. */
 import ScopedCard from "./ScopedCard.vue";
 import ScopedLeaf from "./ScopedLeaf.vue";
 import ScopedLink from "./ScopedLink.vue";

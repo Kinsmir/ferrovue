@@ -14,21 +14,12 @@ categories = ["template-engine", "web-programming"]
 
 [features]
 default = ["router", "i18n"]
-# vue-router: `Router`, `Route`, `Link`, `Query`, `RouteDef` and `query_into`, from `ferrovue-router`.
-# Generated code needs it when the project configures `routes` or `router`.
 router = ["dep:ferrovue-router"]
-# vue-i18n: the `i18n` module and `I18n`, from `ferrovue-i18n`. Generated code needs it when the
-# project configures `i18n`.
 i18n = ["dep:ferrovue-i18n"]
-# `impl maud::Render for Html`, so a generated renderer can be spliced into a maud page.
 maud = ["dep:maud"]
-# `HtmlStream`: a page rendered with holes, sent as a stream of its pieces and each hole's content.
 stream = ["dep:bytes", "dep:futures-core"]
-# `impl IntoResponse` for `Html` and `HtmlStream`, through `axum-core` (what axum re-exports).
 axum = ["stream", "dep:axum-core", "dep:http"]
-# `impl actix_web::Responder` for `Html` and `HtmlStream`.
 actix-web = ["stream", "dep:actix-web"]
-# Components and islands as `dioxus_core::Element`s, for a page rendered with Dioxus SSR.
 dioxus = ["dep:dioxus-core"]
 
 [dependencies]
@@ -46,31 +37,23 @@ serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
 
 [dev-dependencies]
-# The web responders' examples and tests: a router to mount handlers on, and a runtime to read
-# the bodies they send.
 axum = { version = "0.8.9", default-features = false }
-# Benchmarks only (`benches/`): no plots, no rayon.
 criterion = { version = "0.8.2", default-features = false, features = ["cargo_bench_support"] }
-# The `dioxus` feature's tests and examples: pages rendered by Dioxus's own server renderer.
 dioxus-ssr = { version = "0.7.10", default-features = false }
 proptest = "1"
 tokio = { version = "1.53.2", features = ["macros", "rt", "test-util", "time"] }
 
-# Generated renderers against Vue's `renderToString`: `pnpm bench`, and the README's Performance.
 [[bench]]
 name = "render"
 harness = false
-# It renders the conformance suite's components, which link and translate.
 required-features = ["router", "i18n"]
 
-# The conformance components cover routes and translations too.
 [[test]]
 name = "conformance"
 required-features = ["router", "i18n"]
 
 [package.metadata.docs.rs]
 all-features = true
-# `doc(cfg)` badges on feature-gated items: `#![cfg_attr(docsrs, feature(doc_cfg))]` in lib.rs.
 rustdoc-args = ["--cfg", "docsrs"]
 
 [lints]

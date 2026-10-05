@@ -12,8 +12,6 @@ fn label(out: &mut String, p: &Label<'_>) {
     out.push_str("</b>");
 }
 
-/// The island wrapper is the one place props reach the page as data, and they may be
-/// reader-supplied strings inside an attribute.
 #[test]
 fn island_props_cannot_leave_their_attribute() {
     let props = Label {
@@ -49,7 +47,6 @@ fn gauge(out: &mut String, p: &Gauge) {
     push_number(out, p.level);
 }
 
-/// `serde_json` alone writes `null` for these, which the client would render as something else.
 #[test]
 fn an_islands_numbers_that_are_not_finite_are_written_as_javascript_writes_them() {
     let props = Gauge {

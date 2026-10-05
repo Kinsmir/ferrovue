@@ -1,6 +1,4 @@
 <script setup lang="ts">
-/* Scoped slots: each row's slot is given the row and facts about it, with a fallback; the default
- * slot a summary; a header slot an optional value. */
 export interface Row {
   id: number;
   label: string;

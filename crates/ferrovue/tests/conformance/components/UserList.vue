@@ -1,6 +1,4 @@
 <script setup lang="ts">
-/* Objects of a shared type handed to a child: one by one from a list, an optional one once it is
- * present, a whole list — and a type imported from another component's own file. */
 import UserCard from "./UserCard.vue";
 import Lifecycle from "./Lifecycle.vue";
 import type { User } from "../types/models";

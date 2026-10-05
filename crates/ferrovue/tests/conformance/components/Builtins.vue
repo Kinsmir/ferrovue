@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* Vue's built-in components and directives that render on the server as plain markup. */
 import { vFocus } from "./directives";
 
 defineProps<{ on: boolean; text: string; items: string[] }>();

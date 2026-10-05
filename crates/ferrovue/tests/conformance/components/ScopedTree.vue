@@ -1,6 +1,4 @@
 <script setup lang="ts">
-/* A scoped component that renders itself: a child's root inherits the id it already writes, and
- * so carries it twice. */
 export interface Props {
   label: string;
   children: Props[];

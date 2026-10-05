@@ -1,10 +1,7 @@
-//! The shop's stock: what a real server would read from its database.
-
 use std::time::Duration;
 
 use crate::generated::types::{Book, Review};
 
-/// `(id, title, author, year)` for every book in stock.
 const BOOKS: &[(&str, &str, &str, i64)] = &[
     ("dune", "Dune", "Frank Herbert", 1965),
     ("solaris", "Solaris", "Stanisław Lem", 1961),
@@ -17,7 +14,6 @@ const BOOKS: &[(&str, &str, &str, i64)] = &[
     ("ficciones", "Ficciones", "Jorge Luis Borges", 1944),
 ];
 
-/// `(book, reader, stars, text)` for every review.
 const REVIEWS: &[(&str, &str, i64, &str)] = &[
     ("dune", "Ada", 5, "The spice must flow."),
     ("dune", "Grace", 4, "Long, & worth every page."),

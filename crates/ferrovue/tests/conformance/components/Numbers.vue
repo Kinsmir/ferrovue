@@ -1,6 +1,4 @@
 <script setup lang="ts">
-/* Fractional numbers: arithmetic, `/` on integers, comparisons, `Math`, `toFixed` with its tie
- * rounding, and numbers in attributes, styles and text — each written as JavaScript writes it. */
 import { computed } from "vue";
 import type { Float } from "ferrovue/types";
 import Meter from "./Meter.vue";

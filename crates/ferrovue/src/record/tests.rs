@@ -1,6 +1,5 @@
 use super::*;
 
-/// `tests/vectors/keys.json`, recorded from `Object.keys(JSON.parse(json))`.
 #[test]
 fn a_record_keeps_javascripts_order_of_keys() {
     let vectors: Vec<(String, Vec<String>)> =
@@ -8,7 +7,6 @@ fn a_record_keeps_javascripts_order_of_keys() {
     for (json, want) in &vectors {
         let record: Record<'_, i64> = serde_json::from_str(json).expect("a record");
         assert_eq!(record.keys().collect::<Vec<_>>(), *want, "{json}");
-        // Written back in that order, as an island's props, which the browser reads back the same.
         let again: Record<'_, i64> =
             serde_json::from_str(&serde_json::to_string(&record).unwrap()).unwrap();
         assert_eq!(again, record);

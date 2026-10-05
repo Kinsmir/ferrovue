@@ -1,24 +1,6 @@
 //! Vue Router's location matching, for `<RouterLink>` and `useRoute()` on the server: part of
 //! [ferrovue](https://docs.rs/ferrovue)'s runtime.
 //!
-//! Use it through `ferrovue`, which re-exports every item here at its root ([`Router`] as
-//! `ferrovue::Router`, and so on) with its `router` feature, on by default: that is the path
-//! generated code and the documentation use. It is a crate of its own so that an application with no
-//! routes can turn the feature off and build none of it.
-//!
-//! A link renders differently when it points where the reader already is: `aria-current="page"`
-//! and the `router-link-active router-link-exact-active` classes. Deciding that means resolving the
-//! link the way the client's router will, so this is vue-router's own algorithm — `parseURL`,
-//! `resolveRelativePath`, the path parser's scores and its regular expression, `decode` — for the
-//! path syntax ferrovue accepts: static segments, `:name`, and a final `:name(.*)`. Routes may be
-//! nested, as `useLink` sees them: a link is active when it points at the reader's route or one it
-//! is nested in, and exactly active only on the route itself, with the same parameters.
-//!
-//! `tests/vectors/router.json` holds the cases both this and the real vue-router are run against.
-//! The guide's [`routing`] page covers the whole picture.
-//!
-//! [`routing`]: https://docs.rs/ferrovue/latest/ferrovue/guide/routing/index.html
-//!
 //! # Example
 //!
 //! ```
@@ -38,12 +20,6 @@
 
 /// The routes, in the order vue-router tries them.
 ///
-/// Build it once, at start-up, usually with the generated `route_table::router()`, and keep it in
-/// the application's state: it is immutable, `Send` and `Sync`. For each request, [`Router::at`]
-/// gives the [`Route`] that components which link or read the route take.
-/// The guide's [`routing`](https://docs.rs/ferrovue/latest/ferrovue/guide/routing/index.html)
-/// page covers the whole picture.
-///
 /// # Example
 ///
 /// ```
@@ -60,7 +36,6 @@
 /// ```
 pub struct Router {
     routes: Vec<Pattern>,
-    /// What every `href` starts with: the history's base, normalised as vue-router normalises it.
     base: String,
 }
 
@@ -86,7 +61,6 @@ impl std::fmt::Debug for Router {
     }
 }
 
-/// Entries shown as a map, in the order given.
 struct DebugMap<I>(I);
 
 impl<K: std::fmt::Debug, V: std::fmt::Debug, I: Iterator<Item = (K, V)> + Clone> std::fmt::Debug
@@ -98,14 +72,10 @@ impl<K: std::fmt::Debug, V: std::fmt::Debug, I: Iterator<Item = (K, V)> + Clone>
 }
 
 struct Pattern {
-    /// The full path, its ancestors' included, as vue-router normalises a nested record's.
     path: String,
-    /// The route it is nested in, as an index into `Router::routes`.
     parent: Option<usize>,
     tokens: Vec<Token>,
-    /// One score per segment, as vue-router computes it for a non-strict, case-insensitive path.
     score: Vec<i32>,
-    /// The route's `name`, which a `<RouterLink :to="{ name }">` resolves by.
     name: Option<String>,
 }
 
@@ -117,7 +87,6 @@ enum Token {
 const ROOT: i32 = 90;
 const STATIC: i32 = 80;
 const PARAM: i32 = 60;
-/// `:name(.*)`: a parameter (60) with a custom pattern (+10) that is the wildcard (−50).
 const WILDCARD: i32 = 20;
 
 impl Router {
@@ -180,9 +149,6 @@ impl Router {
     /// A router over nested routes: each child's path is joined to its parent's, unless it starts
     /// with `/`, and an empty one is its parent's own, its default child.
     ///
-    /// This is what the generated `route_table::router()` calls, with the routes file as a
-    /// constant tree of [`RouteDef`]s.
-    ///
     /// # Panics
     ///
     /// As [`Router::named`] does.
@@ -204,7 +170,6 @@ impl Router {
     /// assert!(parent.active && !parent.exact);
     /// ```
     pub fn tree(defs: &[RouteDef<'_>]) -> Router {
-        // Every record, parents before their children, as vue-router adds them.
         fn add(defs: &[RouteDef<'_>], parent: Option<usize>, records: &mut Vec<Pattern>) {
             for d in defs {
                 let path = match parent {
@@ -236,8 +201,6 @@ impl Router {
                 assert!(!again, "two routes are called {name:?}");
             }
         }
-        // `findInsertionIndex`: after every record that scores as well, but before an ancestor that
-        // scores the same — so a default child is tried before its parent.
         let mut order: Vec<usize> = Vec::new();
         for i in 0..records.len() {
             let (mut lower, mut upper) = (0, order.len());
@@ -282,7 +245,6 @@ impl Router {
         }
     }
 
-    /// A route and the routes it is nested in, outermost first: what `route.matched` holds.
     fn chain(&self, mut i: usize) -> Vec<usize> {
         let mut chain = vec![i];
         while let Some(p) = self.routes[i].parent {
@@ -293,7 +255,6 @@ impl Router {
         chain
     }
 
-    /// A matched route's parameters by name.
     fn params<'a>(&'a self, i: usize, values: &'a [String]) -> Vec<(&'a str, &'a str)> {
         self.routes[i]
             .tokens
@@ -308,9 +269,6 @@ impl Router {
 
     /// The same routes under a base path, as `createWebHistory(base)` serves them: every `href`
     /// starts with it. `/app/` and `app` both mean `/app`.
-    ///
-    /// The base is added to links only: [`Router::at`] still takes the location without it, as
-    /// vue-router's history reports it.
     ///
     /// # Example
     ///
@@ -332,7 +290,6 @@ impl Router {
         if b.ends_with('/') {
             b.pop();
         }
-        // `createHref`: in a hash history only what follows the `#` is kept.
         if let Some(i) = b.find('#')
             && i > 0
         {
@@ -344,10 +301,9 @@ impl Router {
 
     /// The reader's location: a path, with any query and hash, and without the history's base.
     ///
-    /// Pass the request's path and query as they arrived, percent-encoding included; parameters,
-    /// query values and the hash are decoded as vue-router decodes them. A location that matches no
-    /// route still gives a [`Route`], whose [`Route::name`] and [`Route::param`] are `None` and
-    /// whose links are never active: the page to render is then a "not found" page.
+    /// Pass the request's path and query as they arrived, percent-encoding included. A location
+    /// that matches no route still gives a [`Route`], whose [`Route::name`] and [`Route::param`]
+    /// are `None` and whose links are never active.
     ///
     /// # Example
     ///
@@ -363,7 +319,6 @@ impl Router {
         let (path, full_path) = parse_url(location, "/");
         let hash_pos = location.find('#');
         let hash = hash_pos.map_or_else(String::new, |h| decode(&location[h..]));
-        // `parseURL`'s search: from the `?` to the hash, when the `?` comes first.
         let search = location
             .find('?')
             .filter(|&s| hash_pos.is_none_or(|h| s < h))
@@ -380,7 +335,6 @@ impl Router {
         }
     }
 
-    /// The route a path resolves to, and its parameters, decoded.
     fn matched(&self, path: &str) -> Option<(usize, Vec<String>)> {
         self.routes
             .iter()
@@ -391,9 +345,6 @@ impl Router {
 
 /// A route as the routes file lists it: a path, its name if it has one, and the routes nested in
 /// it, rendered by the `<RouterView>` in its component.
-///
-/// The generated `route_table::ROUTES` is a constant tree of these, which [`Router::tree`] reads;
-/// the example there builds one by hand.
 #[derive(Clone, Copy, Debug)]
 pub struct RouteDef<'a> {
     /// The path, relative to the parent's unless it starts with `/`; empty for a default child.
@@ -405,10 +356,6 @@ pub struct RouteDef<'a> {
 }
 
 /// Where the reader is, which is what every link on the page is compared with.
-///
-/// Made by [`Router::at`], once per request, and borrowing the router. Generated components that
-/// render `<RouterLink>` or read `useRoute()` and `$route` take a `&Route` after their props and
-/// slots; the server can read it too, to choose the page.
 ///
 /// # Example
 ///
@@ -432,20 +379,14 @@ pub struct RouteDef<'a> {
 pub struct Route<'r> {
     router: &'r Router,
     path: String,
-    /// `route.hash`: the location's hash, `#` included, decoded.
     hash: String,
     matched: Option<(usize, Vec<String>)>,
-    /// `route.query`: each key with its values, in the order the keys first appear.
     query: Vec<(String, Vec<Option<String>>)>,
-    /// `route.fullPath`: the path, then the query and hash as they were written.
     full_path: String,
 }
 
 /// One value of `route.query`, as vue-router parses it: a key may be absent, given without a value
 /// (`?flag`, which is `null`), given once, or given more than once, which makes an array.
-///
-/// Returned by [`Route::query`]. Its methods are what generated code calls for each way a template
-/// may use `route.query.q`.
 ///
 /// # Example
 ///
@@ -504,7 +445,6 @@ impl<'r> Query<'r> {
                     }
                     json.push_str("  ");
                     match v {
-                        // A string cannot fail to serialise.
                         Some(s) => json.push_str(&serde_json::to_string(s).unwrap_or_default()),
                         None => json.push_str("null"),
                     }
@@ -591,8 +531,6 @@ impl<'r> Query<'r> {
     }
 }
 
-/// `parseQuery`: `&`-separated pairs, `+` read as a space, keys and values decoded, a pair without
-/// `=` a `null`, a repeated key an array.
 fn parse_query(search: &str) -> Vec<(String, Vec<Option<String>>)> {
     let mut query: Vec<(String, Vec<Option<String>>)> = Vec::new();
     if search.is_empty() {
@@ -615,8 +553,7 @@ fn parse_query(search: &str) -> Vec<(String, Vec<Option<String>>)> {
 /// A `<RouterLink>`'s `to`, resolved: what [`Route::link`], [`Route::link_named`] and
 /// [`Route::link_path`] return.
 ///
-/// Generated code writes `href` (escaped), `aria-current="page"` when `exact`, and the active
-/// classes the router was configured with. The `href` is not escaped here.
+/// The `href` is not escaped.
 ///
 /// # Example
 ///
@@ -743,7 +680,6 @@ impl Route<'_> {
         }
     }
 
-    /// `useLink`'s `isActive` and `isExactActive` for a link that resolved to `target`.
     fn state(&self, target: Option<(usize, Vec<String>)>) -> (bool, bool) {
         let (Some((t, link_values)), Some((c, here_values))) = (target, self.matched.as_ref())
         else {
@@ -753,8 +689,6 @@ impl Route<'_> {
         let link_chain = router.chain(t);
         let here_chain = router.chain(*c);
         let routed = *link_chain.last().expect("a chain holds its route");
-        // `activeRecordIndex`: where the link's route sits among the reader's — or, for a link to a
-        // parent through its default child, where that parent sits, unless the reader is on it.
         let mut index = here_chain.iter().position(|&r| r == routed);
         if index.is_none() && link_chain.len() > 1 {
             let parent = link_chain[link_chain.len() - 2];
@@ -829,8 +763,6 @@ impl Route<'_> {
                         .iter()
                         .find(|(k, _)| k == name)
                         .map_or("", |(_, v)| v);
-                    // vue-router throws on an empty parameter, failing the render: a debug build
-                    // fails the same way, and a release build writes the link without it.
                     debug_assert!(
                         !value.is_empty(),
                         "missing required param {name:?} for the route called {:?}",
@@ -880,7 +812,6 @@ impl Route<'_> {
         }
     }
 
-    /// `stringifyURL`, then `createHref`.
     fn href(&self, path: &str, search: &str, hash: &str) -> String {
         let mut href = format!("{}{path}", self.router.base);
         if !search.is_empty() {
@@ -894,9 +825,6 @@ impl Route<'_> {
 
 /// `stringifyQuery`, one key and value at a time: `key=value`, each encoded as vue-router encodes
 /// them, after a `&` when `search` already holds a pair.
-///
-/// Called by generated code to build the `search` that [`Route::link_named`] and
-/// [`Route::link_path`] take from a `to` object's `query`.
 ///
 /// # Example
 ///
@@ -916,16 +844,11 @@ pub fn query_into(search: &mut String, key: &str, value: &str) {
     search.push_str(&encode_url(value, Part::QueryValue));
 }
 
-/// The part of a URL a string is encoded for, each with vue-router's own rules.
 #[derive(Clone, Copy, PartialEq)]
 enum Part {
-    /// `encodeParam`: a path parameter, whose `/` is encoded too.
     Param,
-    /// `encodeQueryValue`: a space is `+`, and `+`, `#` and `&` are encoded.
     QueryValue,
-    /// `encodeQueryKey`: as a value, and `=` encoded.
     QueryKey,
-    /// `encodeHash`.
     Hash,
 }
 
@@ -933,12 +856,10 @@ fn encode_param(text: &str) -> String {
     encode_url(text, Part::Param)
 }
 
-/// `encodeURI`, then the characters vue-router puts back or encodes as well for `part`.
 fn encode_url(text: &str, part: Part) -> String {
     use std::fmt::Write;
     let mut out = String::with_capacity(text.len());
     for c in text.chars() {
-        // What `encodeURI` leaves alone, and what `commonEncode` puts back: `|`, `[` and `]`.
         let uri = c.is_ascii_alphanumeric() || ";,/?:@&=+$-_.!~*'()#|[]".contains(c);
         let keep = match (part, c) {
             (Part::Param, '#' | '?' | '/') => false,
@@ -1017,8 +938,6 @@ impl Pattern {
         }
     }
 
-    /// The pattern's regular expression, `^(/static|/([^/]+?)|/(.*))*/?$` with the `i` flag, run
-    /// by hand: each parameter's extent is forced by the `/` or end that must follow it.
     fn parse(&self, path: &str) -> Option<Vec<String>> {
         let mut rest = path;
         let mut params = Vec::new();
@@ -1043,7 +962,6 @@ impl Pattern {
                     rest = &rest[end..];
                 }
                 Token::Param { wildcard: true, .. } => {
-                    // `.` stops at a line terminator, and `$` is the end of the input alone.
                     if rest.contains(['\n', '\r', '\u{2028}', '\u{2029}']) {
                         return None;
                     }
@@ -1056,8 +974,6 @@ impl Pattern {
     }
 }
 
-/// `comparePathParserScore`, for patterns of one token per segment and no negative scores: the
-/// higher score first, segment by segment, then the longer pattern.
 fn compare(a: &[i32], b: &[i32]) -> std::cmp::Ordering {
     for (x, y) in a.iter().zip(b) {
         if x != y {
@@ -1067,8 +983,6 @@ fn compare(a: &[i32], b: &[i32]) -> std::cmp::Ordering {
     b.len().cmp(&a.len())
 }
 
-/// `parseURL`: the path, resolved against `current`, and the full location — path, query and hash
-/// exactly as written.
 fn parse_url(location: &str, current: &str) -> (String, String) {
     let hash_pos = location.find('#');
     let search_pos = location
@@ -1083,7 +997,6 @@ fn parse_url(location: &str, current: &str) -> (String, String) {
         search = &location[s..end];
     }
     if let Some(h) = hash_pos {
-        // `path || …`: an empty path is falsy too.
         path = Some(path.filter(|p| !p.is_empty()).unwrap_or(&location[..h]));
         hash = &location[h..];
     }
@@ -1092,7 +1005,6 @@ fn parse_url(location: &str, current: &str) -> (String, String) {
     (path, full)
 }
 
-/// `resolveRelativePath`, for an absolute `from`.
 fn resolve_relative_path(to: &str, from: &str) -> String {
     if to.starts_with('/') {
         return to.to_owned();
@@ -1126,8 +1038,6 @@ fn resolve_relative_path(to: &str, from: &str) -> String {
     )
 }
 
-/// `decode`: `decodeURIComponent`, or the text as it is when that throws — on a `%` not followed by
-/// two hex digits, or escapes that are not UTF-8.
 fn decode(text: &str) -> String {
     if !text.contains('%') {
         return text.to_owned();

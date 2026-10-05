@@ -6,10 +6,6 @@
     rustdoc::missing_crate_level_docs
 )]
 
-// Each module holds one part of what generated code calls; everything public is re-exported here,
-// at the crate's root, which is the one path generated code and the documentation use. Escaping and
-// numbers come from `ferrovue-core`, which the router and i18n crates share; the router and i18n
-// come from their own crates, behind features on by default.
 mod attrs;
 mod class;
 #[cfg(feature = "dioxus")]

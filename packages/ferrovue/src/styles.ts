@@ -1,6 +1,3 @@
-/* `style` as Vue's server renderer writes it: `normalizeStyle` of objects, arrays, text and
- * `v-show`, styles `mergeProps` merges, and a style as an `fv::Attr` for a merge at run time. */
-
 import { escapeHtml, hyphenate, parseStringStyle } from "@vue/shared";
 import { type N, type Scope, type Val, fail, rustStr } from "./model.ts";
 import { expr } from "./expr.ts";
@@ -9,8 +6,6 @@ import { condition, logical, not, strArg } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
 import { display, valueAttr } from "./attrs.ts";
 
-/** A style `mergeProps` merged: normalised, so that text is parsed into properties — by Vue's own
- * parser now when it is literal, by `fv::style_text_into` at run time when it is not. */
 export function mergedStyle(s: Scope, e: Emitter, n: N): void {
   if (n.type === "StringLiteral") {
     renderStyle(s, e, { type: "ArrayExpression", elements: [n] });
@@ -29,8 +24,6 @@ export function mergedStyle(s: Scope, e: Emitter, n: N): void {
   } else if (v.ty.k !== "undef") fail(s.comp, "a style binding is a string, an object or an array", n);
 }
 
-/** A style as an `fv::Attr`: text as it is, objects by their properties, arrays merged, `cond && x`
- * and `cond ? x : y` decided at run time. */
 export function styleAttr(s: Scope, n: N): string {
   switch (n.type) {
     case "StringLiteral":
@@ -59,17 +52,12 @@ export function styleAttr(s: Scope, n: N): string {
   return fail(s.comp, "a style binding is a string, an object or an array", n);
 }
 
-/** One object of a style binding, and the run-time condition under which it is part of it. */
 export interface StyleItem {
   cond: string | null;
   entries: { key: string; css: string; value: N }[];
 }
 
-/** The objects a style binding merges, in order: an object literal, a static `style` the compiler
- * parsed, `v-show`'s `cond ? null : { display: "none" }`, and arrays of those. */
 export function styleItems(s: Scope, n: N, when: string | null): StyleItem[] {
-  // A condition known now: an object that never applies is left out, one that always does is not
-  // conditional.
   if (when === "false") return [];
   if (when === "true") when = null;
   const both = (a: string | null, b: string) => (a === null ? b : logical(a, "&&", b));
@@ -79,7 +67,6 @@ export function styleItems(s: Scope, n: N, when: string | null): StyleItem[] {
     case "ArrayExpression":
       return n.elements.flatMap((el: N) => (el ? styleItems(s, el, when) : []));
     case "StringLiteral":
-      // Parsed as `normalizeStyle` parses a string inside an array, by Vue's own function.
       return [{ cond: when, entries: Object.entries(parseStringStyle(n.value)).map(([key, v]) => ({ key, css: key, value: { type: "StringLiteral", value: v } })) }];
     case "ConditionalExpression": {
       const t = cond(s, n.test);
@@ -94,7 +81,6 @@ export function styleItems(s: Scope, n: N, when: string | null): StyleItem[] {
         entries: n.properties.map((p: N) => {
           if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "a style object holds plain `property: value` pairs", p);
           const key: string = p.key.type === "Identifier" ? p.key.name : String(p.key.value);
-          // An integer-like key comes first in a JavaScript object whatever the order written.
           if (/^\d+$/.test(key) || key.startsWith(":")) fail(s.comp, `style property \`${key}\``, p);
           return { key, css: key.startsWith("--") ? key : hyphenate(key), value: p.value };
         }),
@@ -103,10 +89,7 @@ export function styleItems(s: Scope, n: N, when: string | null): StyleItem[] {
   return fail(s.comp, "a style binding is an object, an array of objects, or a string on its own", n);
 }
 
-/** `ssrRenderStyle(value)`: a string as it is, or the objects merged — each property where it first
- * appears, with the last value given — and written `name:value;`, all escaped. */
 export function renderStyle(s: Scope, e: Emitter, n: N): void {
-  // A string on its own is written as it is, with no normalising.
   if (n.type === "StringLiteral") {
     e.lit(escapeHtml(n.value));
     return;
@@ -122,7 +105,6 @@ export function renderStyle(s: Scope, e: Emitter, n: N): void {
     return;
   }
   const items = styleItems(s, n, null);
-  // Each property, where it first appears, with every place that sets it.
   const order: string[] = [];
   const sets = new Map<string, { cond: string | null; css: string; value: N }[]>();
   for (const it of items) {
@@ -135,7 +117,6 @@ export function renderStyle(s: Scope, e: Emitter, n: N): void {
     }
   }
   const write = (css: string, value: N): void => {
-    // A literal is stringified now, by JavaScript itself: `0.5`, `"1px"`.
     if (value.type === "StringLiteral" || value.type === "NumericLiteral") {
       e.lit(escapeHtml(`${css}:${String(value.value)};`));
       return;
@@ -151,13 +132,9 @@ export function renderStyle(s: Scope, e: Emitter, n: N): void {
         one({ code: "v", ty: w.ty.of });
         e.close();
       }
-      // A boolean or `undefined` writes nothing — and, set later, removes what was set before.
     };
     one(v);
   };
-  // A property's place is where an object that is present first sets it. When that object is
-  // conditional and the property is set again after another one first appears, the order would be
-  // decided at run time.
   const flat = items.flatMap((it, i) => it.entries.map((en) => ({ key: en.key, item: i, cond: it.cond })));
   for (const key of order) {
     const at = flat.filter((f) => f.key === key);
@@ -168,7 +145,6 @@ export function renderStyle(s: Scope, e: Emitter, n: N): void {
     if (between) fail(s.comp, `the place of style property \`${key}\` would depend on a condition; set it unconditionally first`, n);
   }
   for (const key of order) {
-    // The last place that sets it wins: walked back to the first that always applies.
     const chain: { cond: string | null; css: string; value: N }[] = [];
     for (const set of sets.get(key)!.toReversed()) {
       chain.push(set);

@@ -1,5 +1,3 @@
-/* vue-i18n: the locale files read and compiled to Rust tables, `$t` and `useI18n()`. */
-
 import { readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { createParser } from "@intlify/message-compiler";
@@ -9,40 +7,31 @@ import { bare, strArg } from "../parens.ts";
 import { header } from "../rust.ts";
 import { type Plugin, runOf, scopeOf } from "../plugin.ts";
 
-/** A locale's messages, each parsed by vue-i18n's own message compiler, by dotted key. */
 export interface LocaleMessages {
   name: string;
   file: string;
   messages: Map<string, N>;
 }
 
-/** The configured vue-i18n setup, read once per run. */
 export interface I18nSetup {
-  /** The locale files' directory, as the configuration names it. */
   dir: string;
   locales: LocaleMessages[];
-  /** The locale a fixture renders in when it names none, and the fallbacks in order. */
   locale: string;
   fallback: string[];
 }
 
-/** vue-i18n in one run: the configured setup, and the components that translate. */
 interface I18nRun {
   setup: I18nSetup | null;
   readers: Set<Component>;
 }
 
-/** What one setup scope named vue-i18n's own by: `useI18n`, and the bindings of its `t`. */
 interface I18nScope {
   useI18n: string | null;
   t: Set<string>;
 }
 
-/** The modifiers vue-i18n defines for linked messages; any other would throw in the browser. */
 const MODIFIERS = new Set(["upper", "lower", "capitalize"]);
 
-/** Every message of every `*.json` locale file in the directory: nested objects joined with dots,
- * as vue-i18n resolves a path — a nested key first, then a flat key of the same spelling. */
 function readLocales(root: string, config: { messages: string; locale?: string; fallbackLocale?: string | string[] }): I18nSetup {
   const dir = join(root, config.messages);
   const files = readdirSync(dir).filter((f) => f.endsWith(".json")).toSorted();
@@ -61,7 +50,6 @@ function readLocales(root: string, config: { messages: string; locale?: string; 
     const walk = (value: unknown, path: string[]): void => {
       if (typeof value === "string") {
         const key = path.join(".");
-        // A key spelled with dots is reached only when no nested path is.
         (path.length > 1 ? nested : flat).set(key, value);
       } else if (value && typeof value === "object" && !Array.isArray(value)) {
         for (const [k, v] of Object.entries(value)) walk(v, [...path, k]);
@@ -81,7 +69,6 @@ function readLocales(root: string, config: { messages: string; locale?: string; 
   return { dir: config.messages, locales, locale: config.locale ?? "en", fallback };
 }
 
-/** A message's AST as the Rust `Message` literal: its cases, each a list of `Part`s. */
 function messageSource(file: string, key: string, ast: N): string {
   const body = ast.body;
   const cases: N[] = body.type === 1 ? body.cases : [body];
@@ -111,7 +98,6 @@ function messageSource(file: string, key: string, ast: N): string {
   return `Message { cases: &[${cases.map((c) => `&[${items(c).map(part).join(", ")}]`).join(", ")}] }`;
 }
 
-/** Keys in the order Rust's `str` sorts them — byte order — for the table's binary search. */
 function byteOrder(a: string, b: string): number {
   return Buffer.compare(Buffer.from(a), Buffer.from(b));
 }
@@ -152,7 +138,6 @@ pub fn i18n(locale: &str) -> ferrovue::I18n {
 `;
 }
 
-/** A value interpolated into a message, as \`ferrovue::i18n::Value\`. */
 function i18nValue(s: Scope, n: N): string {
   const v = expr(s, n);
   switch (v.ty.k) {
@@ -169,8 +154,6 @@ function i18nValue(s: Scope, n: N): string {
   }
 }
 
-/** `t(key)`, `t(key, plural)`, `t(key, { named })`, `t(key, [list])`, `t(key, { named }, plural)`:
- * the message translated in the request's locale. */
 function translate(s: Scope, args: N[], n: N): Val {
   if (!runOf(i18n).setup) fail(s.comp, "`t()` needs `i18n` in ferrovue.config.json: where the locale files are", n);
   if (args.length < 1 || args.length > 3) fail(s.comp, "`t()` takes a key, then named values, a list or a plural number", n);
@@ -198,7 +181,6 @@ function translate(s: Scope, args: N[], n: N): Val {
   return { code: `&*fv_i18n.t(${strArg(key.code)}, &fv::i18n::Args { named: ${named}, list: ${list}, plural: ${plural} })`, ty: STR };
 }
 
-/** vue-i18n: `$t` and `useI18n()`, and the locale files. */
 export const i18n: Plugin<I18nRun, I18nScope> = {
   name: "i18n",
   configure: (config, root) => ({ setup: config.i18n ? readLocales(root, config.i18n) : null, readers: new Set() }),
@@ -216,7 +198,6 @@ export const i18n: Plugin<I18nRun, I18nScope> = {
     return true;
   },
   scriptBinding(s, d) {
-    // `const { t, locale } = useI18n()`: `t` translates, `locale` is the request's locale.
     const own = scopeOf(i18n, s);
     const init = d.init;
     if (own.useI18n === null || d.id.type !== "ObjectPattern" || init?.type !== "CallExpression" || init.callee.type !== "Identifier" || init.callee.name !== own.useI18n) {
@@ -237,7 +218,6 @@ export const i18n: Plugin<I18nRun, I18nScope> = {
     return true;
   },
   call(s, n) {
-    // `$t(…)` in the template, and \`t(…)\` from \`useI18n()\`.
     const callee = n.callee;
     const { t } = scopeOf(i18n, s);
     const translates =

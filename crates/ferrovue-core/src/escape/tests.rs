@@ -14,7 +14,6 @@ fn escape_writes_a_clean_string_unchanged() {
     assert_eq!(out, "xnaïve café 日本");
 }
 
-/// `tests/vectors/escape.json`, held to `@vue/shared`'s `escapeHtml` on the TypeScript side.
 #[test]
 fn escape_is_vues_escape_html() {
     let vectors: Vec<(String, String)> =
@@ -27,7 +26,6 @@ fn escape_is_vues_escape_html() {
     }
 }
 
-/// `escapeHtml` a byte at a time, the reference `escape_into`'s word-at-a-time scan is held to.
 fn escape_bytewise(s: &str) -> String {
     let mut out = String::new();
     for c in s.chars() {
@@ -46,8 +44,6 @@ fn escape_bytewise(s: &str) -> String {
 proptest::proptest! {
     #![proptest_config(proptest::prelude::ProptestConfig::with_cases(20_000))]
 
-    /// Text around and between the five characters, at every length the word-at-a-time scan reads
-    /// differently: shorter than a word, whole words, and a tail that overlaps them.
     #[test]
     fn escaping_is_the_bytewise_reference(s in "[a\"&'<>é🦀 ]{0,40}") {
         let mut out = String::new();

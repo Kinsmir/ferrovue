@@ -1,11 +1,7 @@
-//! The client's scripts and styles: from Vite's manifest after `vite build`, or from Vite's dev
-//! server while it runs.
-
 use std::path::Path;
 
 use serde::Deserialize;
 
-/// The entry `vite.config.ts` builds, as the manifest keys it.
 const ENTRY: &str = "client/main.ts";
 
 /// Where the page loads the client from.
@@ -26,7 +22,6 @@ pub enum Assets {
     None,
 }
 
-/// One chunk in `.vite/manifest.json`.
 #[derive(Deserialize)]
 struct Chunk {
     file: String,
@@ -62,8 +57,6 @@ impl Assets {
         let entry = manifest
             .get(ENTRY)
             .ok_or_else(|| format!("{} has no entry {ENTRY}", path.display()))?;
-        // Every chunk the entry may load, statically or as an island (`ferrovue/islands` imports each
-        // lazily), entry first: Vite would link an island's stylesheet only once its script loads.
         let mut seen = vec![ENTRY];
         let mut styles = Vec::new();
         let mut i = 0;
@@ -127,8 +120,6 @@ mod tests {
     fn links_the_stylesheets_of_the_islands_the_entry_loads_lazily() {
         let dist = std::env::temp_dir().join(format!("ferrovue-assets-{}", std::process::id()));
         std::fs::create_dir_all(dist.join(".vite")).unwrap();
-        // As `vite build` writes it for `ferrovue/islands`: an island's chunk with a stylesheet of
-        // its own, and a chunk two islands share with one.
         let manifest = r#"{
             "client/main.ts": { "file": "assets/main.js", "css": ["assets/main.css"], "dynamicImports": ["client/components/A.vue", "client/components/B.vue"] },
             "client/components/A.vue": { "file": "assets/A.js", "css": ["assets/A.css"], "imports": ["client/main.ts", "_shared.js"] },

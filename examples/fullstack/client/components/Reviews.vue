@@ -1,7 +1,4 @@
 <script setup lang="ts">
-/* A book's reviews: the slow part of the detail page, which the server streams after the rest, as
- * an island. The first two show at once; the client makes the button reveal the others. Its styles
- * are scoped: the server writes the same `data-v-` id the client build gives it. */
 import { ref } from "vue";
 import type { Review } from "./types";
 
