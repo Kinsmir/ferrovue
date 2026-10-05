@@ -82,11 +82,11 @@
     "vue-router": "^5.3.1"
   },
   "peerDependencies": {
-    "pinia": "^4.0.3",
+    "pinia": "~4.0.3",
     "vite": ">=6",
-    "vue": "3.5.43",
-    "vue-i18n": "^11.0.0",
-    "vue-router": "^5.3.1"
+    "vue": "~3.5.43",
+    "vue-i18n": "~11.4.13",
+    "vue-router": "~5.3.1"
   },
   "peerDependenciesMeta": {
     "vue-router": {
