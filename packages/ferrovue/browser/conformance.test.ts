@@ -105,8 +105,10 @@ describe.each(BROWSERS)("%s", (name) => {
         expected = expected.replace(p.server, p.hydrated);
       }
       expect(result.after, "hydrating left the document as the browser parsed it").toBe(expected);
-      if (!recordedHead(c.html) || UNHEAD_REWRITES.has(`${c.component}/${c.name}`)) return;
-      expect(result.head.after, "unhead's client took over the head as the browser parsed it").toBe(result.head.before);
+      if (!recordedHead(c.html)) return;
+      const rewrites = UNHEAD_REWRITES.has(`${c.component}/${c.name}`);
+      expect(rewrites ? "" : result.head.after, "unhead's client took over the head as the browser parsed it").toBe(rewrites ? "" : result.head.before);
+      expect(result.head.after !== result.head.before, "a head is rewritten exactly when its fixture is in UNHEAD_REWRITES").toBe(rewrites);
     });
   }
 });
