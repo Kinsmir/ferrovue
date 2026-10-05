@@ -50,6 +50,19 @@ A tag with a pre-release suffix (`v0.2.0-rc.1`) stages to npm under the `next` t
 Every publishing step skips a version its registry already has, so a run that failed halfway can
 simply be re-run.
 
+## Signed tags
+
+Only a signed, annotated tag starts a release: the workflow's first job asks GitHub whether the tag
+is annotated and its signature verified, and stops before anything is staged or published if not.
+Sign tags with a key that is on your GitHub account as a **signing key** (SSH or GPG), and make
+signing the default so a plain `git tag -a` signs too:
+
+```sh
+git config --global tag.gpgSign true
+git tag -s v0.4.0 -m "ferrovue 0.4.0"   # -s is then implied, but harmless
+git tag -v v0.4.0                        # check before pushing
+```
+
 ## One-time setup
 
 Neither registry holds a token for this repository: each trusts the workflow through GitHub's
