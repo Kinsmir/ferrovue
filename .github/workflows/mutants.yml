@@ -1,11 +1,5 @@
 name: Mutants
 
-# Mutation testing of the runtime's crates (TESTING.md, "Mutation testing"): cargo-mutants makes
-# small changes to `crates/*/src` — an operator flipped, a body replaced by a default — and runs the
-# crates' tests on each. A change no test notices is a mutant that survived. Each survivor is
-# either a gap in the tests or listed, with the reason it changes nothing, in
-# `.cargo/mutants-equivalent.txt`; the run fails on any other. Weekly, and by hand: it takes too
-# long for every pull request.
 on:
   schedule:
     - cron: "41 4 * * 1"
@@ -37,15 +31,11 @@ jobs:
         with:
           tool: cargo-mutants
       - name: Run cargo-mutants on this shard
-        # Exits 2 when a mutant survives, which the next step judges, and 3 when one timed out — a
-        # mutant that loops forever, which counts as caught. Anything else, such as the tests
-        # failing before any mutation (4), fails here.
         run: |
           cargo mutants -p ferrovue-core -p ferrovue-router -p ferrovue-i18n -p ferrovue --in-place --shard ${{ matrix.shard }}/2 || status=$?
           if [[ "${status:-0}" != 0 && "${status:-0}" != 2 && "${status:-0}" != 3 ]]; then exit "$status"; fi
       - name: Every surviving mutant is a known equivalent
         run: |
-          # Without line and column, which move with every edit above them.
           sed -E 's/^([^:]+):[0-9]+:[0-9]+: /\1: /' mutants.out/missed.txt | sort > "$RUNNER_TEMP/missed.txt"
           grep -v -e '^#' -e '^$' .cargo/mutants-equivalent.txt | sort > "$RUNNER_TEMP/known.txt"
           comm -23 "$RUNNER_TEMP/missed.txt" "$RUNNER_TEMP/known.txt" > "$RUNNER_TEMP/unexplained.txt"

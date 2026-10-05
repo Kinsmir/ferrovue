@@ -1,18 +1,12 @@
-# cargo-deny (`cargo deny check`, and the CI job of the same name): the licences, advisories,
-# duplicates and sources of every crate the workspace builds, examples and dev-dependencies included.
-
 [graph]
 all-features = true
 
 [advisories]
-# Every advisory in the RustSec database fails the check, unmaintained and unsound crates included,
-# unless it is ignored here with the reason.
 unmaintained = "all"
 yanked = "deny"
 ignore = []
 
 [licenses]
-# What may be linked into a crate published as MIT OR Apache-2.0: permissive licences only.
 allow = [
     "MIT",
     "Apache-2.0",
@@ -25,22 +19,17 @@ allow = [
     "Unlicense",
     "Zlib",
 ]
-# Allowed ahead of need: no warning while nothing uses one of them.
 unused-allowed-license = "allow"
 confidence-threshold = 0.9
-# The examples are not published, and take the workspace's licence.
 private = { ignore = true }
 
 [bans]
-# Two major versions of one crate build twice; worth knowing, not worth failing over.
 multiple-versions = "warn"
 wildcards = "deny"
-# `path` dependencies inside the workspace are not wildcards.
 allow-wildcard-paths = true
 highlight = "all"
 
 [sources]
-# crates.io only: no git dependencies, no other registries.
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]

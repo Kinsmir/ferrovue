@@ -8,7 +8,6 @@ license.workspace = true
 publish = false
 
 [dependencies]
-# `rsx!`, `#[component]` and the HTML elements (whose macros use signals): no launcher or renderer.
 dioxus = { version = "0.7.10", default-features = false, features = ["macro", "html", "signals"] }
 dioxus-ssr = { version = "0.7.10", default-features = false }
 ferrovue = { path = "../../crates/ferrovue", features = ["dioxus"] }

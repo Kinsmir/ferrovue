@@ -5,10 +5,8 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
-  # The release workflow runs these same checks on the tag before anything is published.
   workflow_call:
 
-# A newer push to the same branch or pull request makes an older run moot.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
@@ -26,7 +24,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # The oldest Node the npm package supports (`engines`), and the current LTS.
         node: [22, 24]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -69,8 +66,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Advisories apart: a new one in the RustSec database fails a run whatever its change, so it
-        # does not block a pull request — but it does block a release (a tag).
         checks: [advisories, bans licenses sources]
     continue-on-error: ${{ matrix.checks == 'advisories' && !startsWith(github.ref, 'refs/tags/') }}
     steps:
@@ -78,7 +73,6 @@ jobs:
       - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
         with:
           command: check ${{ matrix.checks }}
-          # The workspace is edition 2024 with resolver 3, which only a recent cargo reads.
           rust-version: stable
 
   rust:
@@ -87,7 +81,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # The latest stable, and the `rust-version` the crates declare.
         toolchain: [stable, "1.99"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -97,8 +90,6 @@ jobs:
           components: clippy, rustfmt
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       - run: cargo test --workspace --all-features --locked
-      # Each crate alone, so that a dependency or feature another crate happens to bring in cannot
-      # hide one that a crate is missing.
       - name: Each runtime crate's tests, on their own
         run: for crate in ferrovue-core ferrovue-router ferrovue-i18n; do cargo test -p "$crate" --locked; done
       - run: cargo test -p ferrovue --no-default-features --locked
@@ -165,8 +156,6 @@ jobs:
           test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3917/books/missing)" = 404
 
   browser:
-    # happy-dom's parser is not a browser's: Vue hydrates against the DOM the browser built, so a
-    # mismatch only a real browser shows is still a mismatch for readers.
     name: Hydrates in real browsers
     runs-on: ubuntu-latest
     steps:
@@ -210,7 +199,6 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Together: a crate whose new version is not on crates.io yet is read from the others' tarballs.
       - name: The crates package and build from their own tarballs
         run: cargo package -p ferrovue-core -p ferrovue-router -p ferrovue-i18n -p ferrovue --locked
       - name: The npm package packs, with its build, README and licences
@@ -232,8 +220,6 @@ jobs:
           test -f gen/greeting.rs
 
   bench:
-    # Proves the benchmarks still build, run, and render the same HTML on both sides. Timings on a
-    # shared runner mean nothing, so nothing here compares them or fails on them.
     name: Benchmarks run (quick)
     runs-on: ubuntu-latest
     steps:
