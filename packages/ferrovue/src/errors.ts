@@ -130,7 +130,18 @@ export const ERRORS = {
   FV0415: { title: "Value read from `$attrs`" },
   FV0416: { title: "Root `<Transition>` or `<KeepAlive>` around `v-if` that is given attributes" },
   FV0417: { title: "Attribute name chosen at run time" },
-  FV0418: { title: "`<component :is>`" },
+  FV0418: {
+    title: "`<component :is>` over a value that is not a closed set",
+    detail: "`<component :is>` compiles to a `match` over its choices, so each one must be known when compiling: an imported component, an HTML element's name, a `computed` or `?:` choosing among them, a prop typed as a union of string literals, or an object of imported components read by such a prop. A `string`, a `Component` or a value from elsewhere could be anything.",
+  },
+  FV0419: { title: "`<component :is>` naming something other than an HTML element" },
+  FV0420: { title: "`<component :is>` over a prop that may be absent" },
+  FV0421: { title: "`<component :is>` reading a key its object does not have" },
+  FV0422: { title: "`v-html` or `v-text` on `<component :is>`" },
+  FV0423: {
+    title: "`v-show`, or `v-model` on `<select>`, in content rendered from virtual nodes",
+    detail: "Inside an element `<component :is>` chooses, in the slot content such an element renders, and inside a `<RouterLink>`, Vue's server renders from virtual nodes, where `v-show` writes no `style` while it shows and `v-model` on a `<select>` marks no option `selected`. Bind `:style` or `:selected` yourself.",
+  },
 
   FV0501: { title: "Child component that is not among the compiled components" },
   FV0502: { title: "Fallthrough attribute that would reach a child's prop" },
@@ -235,6 +246,11 @@ export const ERRORS = {
   FV0916: { title: "Outlets of one slot that pass different props" },
   FV0917: { title: "Interface named as a slot's props type" },
   FV0918: { title: "Slot scope id given to content that takes none" },
+  FV0919: {
+    title: "`<slot>` with fallback content inside an element `<component :is>` chooses",
+    detail: "Inside an element that `<component :is>` chooses, Vue renders a slot's content as virtual nodes and decides whether to show the fallback by rules of their own. Give the fallback from the parent instead.",
+  },
+  FV0920: { title: "`<slot>` rendered both inside and outside an element `<component :is>` chooses" },
 
   FV1001: { title: "Computed or spread key in a class object" },
   FV1002: { title: "Computed class name that is not a string" },

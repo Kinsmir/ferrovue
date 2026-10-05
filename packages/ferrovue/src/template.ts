@@ -10,10 +10,22 @@ import { renderClass } from "./classes.ts";
 import { renderChild } from "./children.ts";
 import { slotOutlet } from "./slots.ts";
 import { list } from "./loops.ts";
+import { dynamicComponent } from "./dynamic.ts";
+
+const FROM_VNODES = "in content Vue renders from virtual nodes (in an element `<component :is>` chooses, a `<RouterLink>` or a twin's slot, or in slot content they render)";
+
+function hidesByVShow(n: N): boolean {
+  if (n?.type === "ArrayExpression") return n.elements.some(hidesByVShow);
+  return (
+    n?.type === "ConditionalExpression" && n.consequent.type === "NullLiteral" && n.alternate.type === "ObjectExpression" &&
+    n.alternate.properties.length === 1 && (n.alternate.properties[0].key?.name ?? n.alternate.properties[0].key?.value) === "display" &&
+    n.alternate.properties[0].value?.value === "none"
+  );
+}
 
 export function slot(s: Scope, e: Emitter, n: N): void {
   if (n.type === "Identifier" && n.name === "_scopeId") {
-    if (s.sid !== null) e.stmt(`out.push_str(${s.sid});`);
+    if (s.sid !== null) e.stmt(s.vnode ? `out.push_str(&fv::scope_attrs("", "", ${s.sid}));` : `out.push_str(${s.sid});`);
     return;
   }
   if (n.type === "CallExpression" && n.callee.type === "Identifier") {
@@ -24,7 +36,8 @@ export function slot(s: Scope, e: Emitter, n: N): void {
         return;
       case "_ssrRenderAttr":
         if (a[0].type !== "StringLiteral") fail(s.comp, "FV0417", "attribute names are literal", n);
-        renderAttr(s, e, a[0].value, expr(s, a[1]), a[1]);
+        if (s.vnode) renderDynamicAttr(s, e, a[0].value, expr(s, a[1]), a[1]);
+        else renderAttr(s, e, a[0].value, expr(s, a[1]), a[1]);
         return;
       case "_ssrRenderDynamicAttr":
         if (a[0].type !== "StringLiteral") fail(s.comp, "FV0417", "attribute names are literal", n);
@@ -38,6 +51,7 @@ export function slot(s: Scope, e: Emitter, n: N): void {
         renderClass(s, e, a[0]);
         return;
       case "_ssrRenderStyle":
+        if (s.vnode && hidesByVShow(a[0])) fail(s.comp, "FV0423", `\`v-show\` ${FROM_VNODES}, where Vue writes no \`style\` while it shows: bind \`:style\` or use \`v-if\``, n);
         renderStyle(s, e, a[0]);
         return;
     }
@@ -57,6 +71,7 @@ export function slot(s: Scope, e: Emitter, n: N): void {
     fail(s.comp, "FV1502", "`v-html` renders only a `TrustedHtml` prop (from `ferrovue/types`)", n);
   }
   if (n.type === "ConditionalExpression" && n.consequent.type === "StringLiteral" && n.alternate.type === "StringLiteral") {
+    if (s.vnode && n.consequent.value === " selected") fail(s.comp, "FV0423", `\`v-model\` on a \`<select>\` ${FROM_VNODES}, where Vue marks no option \`selected\`: bind \`:selected\` on the options`, n);
     const t = expr(s, n.test);
     const k = known(t);
     if (k !== undefined) {
@@ -97,8 +112,17 @@ export function pushesContent(n: N): boolean | "run" {
   return true;
 }
 
+function pushesVnodes(n: N): boolean {
+  const outside = (text: string): boolean => text.replace(/<!--[^]*?-->/g, "") !== "";
+  if (n.type === "StringLiteral") return outside(n.value);
+  if (n.type === "TemplateLiteral") {
+    return n.expressions.some((x: N) => !(x.type === "Identifier" && x.name === "_scopeId")) || outside(n.quasis.map((q: N) => q.value.cooked).join(""));
+  }
+  return true;
+}
+
 export function push(s: Scope, e: Emitter, n: N): void {
-  const content = s.fill ? pushesContent(n) : false;
+  const content = !s.fill ? false : s.vnode ? pushesVnodes(n) : pushesContent(n);
   if (content === true) e.stmt("filled = true;");
   if (content !== "run") {
     pushed(s, e, n);
@@ -109,19 +133,27 @@ export function push(s: Scope, e: Emitter, n: N): void {
   e.stmt("filled |= !fv::is_comment(&out[fv_chunk..]);");
 }
 
+function asVnodes(text: string): string {
+  return text
+    .split(/(<!--[^]*?-->)/)
+    .map((part, i) => (i % 2 ? part : part.replace(/ ([^\s"'<>/=]+)=""/g, (all, name: string) => (name === "class" || name === "style" ? all : ` ${name}`))))
+    .join("");
+}
+
 function pushed(s: Scope, e: Emitter, n: N): void {
   const text = n.type === "StringLiteral" ? n.value : n.type === "TemplateLiteral" && !n.expressions.length ? n.quasis[0].value.cooked : null;
   if (s.vnode && text === "<!---->") {
     e.lit("<!--v-if-->");
     return;
   }
+  const literal = (t: string): string => (s.vnode ? asVnodes(t) : t);
   if (n.type === "StringLiteral") {
-    e.lit(n.value);
+    e.lit(literal(n.value));
     return;
   }
   if (n.type === "TemplateLiteral") {
     n.quasis.forEach((q: N, i: number) => {
-      e.lit(q.value.cooked);
+      e.lit(literal(q.value.cooked));
       if (i < n.expressions.length) slot(s, e, n.expressions[i]);
     });
     return;
@@ -158,9 +190,8 @@ export function statements(s: Scope, e: Emitter, body: N[]): void {
         continue;
       }
       if (ctx.plugins.some((p) => p.statement?.(s, e, c, st))) continue;
-      if (callee === "_ssrRenderVNode") {
-        fail(s.comp, "FV0418", "`<component :is>` chooses its component at run time; write the choices out with `v-if`", st);
-      }
+      if (dynamicComponent(s, e, st)) continue;
+      if (callee === "_ssrRenderVNode") fail(s.comp, "FV0418", "`<component :is>` renders a closed set of choices", st);
     }
     if (st.type === "VariableDeclaration" && st.declarations.length === 1) {
       const d = st.declarations[0];

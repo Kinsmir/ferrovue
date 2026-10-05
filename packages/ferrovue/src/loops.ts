@@ -94,10 +94,10 @@ export function list(s: Scope, e: Emitter, c: N): void {
   e.close();
   const body = e.literalBytes - before;
   e.literalBytes = before;
-  if (body > 0 && fromProps) e.perItem.push(`${body} * ${atom(src.code)}.len()`);
+  if (body > 0 && fromProps) e.perItem.push(`${body === 1 ? "" : `${body} * `}${atom(src.code)}.len()`);
   else if (body > 0 && src.ty.k === "list" && s.loop && src.code.startsWith(`${s.loop.item}.`)) {
     const outer = s.loop;
-    e.perItem.push(`${body} * ${atom(outer.over)}.iter().map(|${outer.item}| ${src.code}.len()).sum::<usize>()`);
+    e.perItem.push(`${body === 1 ? "" : `${body} * `}${atom(outer.over)}.iter().map(|${outer.item}| ${src.code}.len()).sum::<usize>()`);
   }
 }
 
@@ -138,5 +138,5 @@ function recordLoop(s: Scope, e: Emitter, r: Val, fn: N, value: N | undefined, k
   e.close();
   const body = e.literalBytes - before;
   e.literalBytes = before;
-  if (body > 0 && /^\(?props\./.test(r.code)) e.perItem.push(`${body} * ${atom(r.code)}.len()`);
+  if (body > 0 && /^\(?props\./.test(r.code)) e.perItem.push(`${body === 1 ? "" : `${body} * `}${atom(r.code)}.len()`);
 }

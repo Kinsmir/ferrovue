@@ -59,18 +59,18 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides:
             true
         }),
     }, fv_provides);
-    super::theme_scope::render(out, &super::theme_scope::Props { theme: Some(std::borrow::Cow::Borrowed("dark")) }, super::theme_scope::Slots {
+    super::theme_scope::render_scoped(out, &super::theme_scope::Props { theme: Some(std::borrow::Cow::Borrowed("dark")) }, super::theme_scope::Slots {
         default: Some(&|out: &mut String, fv_provides: super::provides::Provides<'_>| -> bool {
             super::themed_button::render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed("shadowed") }, fv_provides, "");
             true
         }),
-    }, fv_provides);
-    super::theme_scope::render(out, &super::theme_scope::Props { theme: None }, super::theme_scope::Slots {
+    }, fv_provides, &fv::Attrs::NONE);
+    super::theme_scope::render_scoped(out, &super::theme_scope::Props { theme: None }, super::theme_scope::Slots {
         default: Some(&|out: &mut String, fv_provides: super::provides::Provides<'_>| -> bool {
             super::themed_button::render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed("derived") }, fv_provides, "");
             true
         }),
-    }, fv_provides);
+    }, fv_provides, &fv::Attrs::NONE);
     super::tab::render(out, &super::tab::Props { name: std::borrow::Cow::Borrowed("alone"), title: std::borrow::Cow::Borrowed("no tabs") }, fv_provides);
     out.push_str("</main>");
 }

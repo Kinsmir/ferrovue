@@ -97,6 +97,10 @@ pub mod scoped_shelf;
 pub mod scoped_tree;
 pub mod session;
 pub mod setup;
+pub mod shape_circle;
+pub mod shape_picker;
+pub mod shape_root;
+pub mod shape_square;
 pub mod shown;
 pub mod slot_probe;
 pub mod strings;
@@ -104,9 +108,13 @@ pub mod styles;
 pub mod tab;
 pub mod tabs;
 pub mod tabs_page;
+pub mod tag_content;
+pub mod tag_gallery;
+pub mod tag_heading;
 pub mod text;
 pub mod theme_scope;
 pub mod themed_button;
+pub mod themed_choice;
 pub mod themed_list;
 pub mod themed_shelf;
 pub mod translated;
@@ -602,6 +610,29 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: setup::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             setup::render(&mut out, &props);
         }
+        "ShapeCircle" => {
+            let props: shape_circle::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
+            shape_circle::render(&mut out, &props, shape_circle::Slots { default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)) });
+        }
+        "ShapePicker" => {
+            let props: shape_picker::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            shape_picker::render(&mut out, &props);
+        }
+        "ShapeRoot" => {
+            let props: shape_root::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
+            shape_root::render(&mut out, &props, shape_root::Slots { default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)) });
+        }
+        "ShapeSquare" => {
+            let props: shape_square::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
+            let s_corner = |out: &mut String| out.push_str(fixture.slot("corner").unwrap_or_default());
+            shape_square::render(&mut out, &props, shape_square::Slots { default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)), corner: fixture.slot("corner").map(|_| ferrovue::Slot::new(&s_corner)) });
+        }
         "Shown" => {
             let props: shown::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             shown::render(&mut out, &props);
@@ -636,6 +667,22 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: tabs_page::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             tabs_page::render(&mut out, &props, provides::Provides::default());
         }
+        "TagContent" => {
+            let props: tag_content::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            tag_content::render(&mut out, &props);
+        }
+        "TagGallery" => {
+            let props: tag_gallery::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
+            tag_gallery::render(&mut out, &props, tag_gallery::Slots { default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)) });
+        }
+        "TagHeading" => {
+            let props: tag_heading::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
+            tag_heading::render(&mut out, &props, tag_heading::Slots { default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)) });
+        }
         "Text" => {
             let props: text::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             text::render(&mut out, &props);
@@ -649,6 +696,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "ThemedButton" => {
             let props: themed_button::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             themed_button::render(&mut out, &props, provides::Provides::default());
+        }
+        "ThemedChoice" => {
+            let props: themed_choice::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            themed_choice::render(&mut out, &props, provides::Provides::default());
         }
         "ThemedList" => {
             let props: themed_list::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

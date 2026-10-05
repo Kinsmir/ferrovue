@@ -25,7 +25,11 @@ What is refused today, each with an error that names it:
 - `<RouterView>` in a component with `<style scoped>`, which would give the page that component's
   id; and, since vue-router renders a link from virtual nodes, a `<slot>` inside a `<RouterLink>`
   that takes scope ids, or an element inside one in slot content given a `:slotted()` id;
-- `<component :is>`;
+- `<component :is>` over an open set (a `string`, a `Component`, a key that is not a union of
+  string literals), over a prop that may be absent, or naming a key its object lacks or a tag that
+  is not an HTML element; `v-html` or `v-text` on it; and, inside an element it chooses, a `<slot>`
+  with fallback content, `v-show`, and `v-model` on a `<select>`. See
+  [`generated_code`](crate::guide::generated_code#component-is);
 - the Options API (a `<script>` without `setup`), and a type parameter of a generic component with
   no constraint (`generic="T"`): a generic component renders each type parameter as its
   constraint;

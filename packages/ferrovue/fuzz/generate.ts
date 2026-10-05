@@ -97,7 +97,9 @@ export type Node =
   | { k: "interp"; e: Expr }
   | { k: "if"; branches: { cond: Expr | null; node: Node & { k: "el" } }[] }
   | { k: "for"; head: string; node: Node & { k: "el" } }
-  | { k: "child"; name: HelperName; attrs: Attr[]; kids: Node[] };
+  | { k: "child"; name: HelperName; attrs: Attr[]; kids: Node[]; is?: { test: Expr; other: HelperName | InlineTag } };
+
+type InlineTag = "span" | "b" | "em";
 
 export type HelperName = "FzLeaf" | "FzBox" | "FzFwd" | "FzPair" | "FzRoot" | "FzOwn" | "FzBind" | "FzUse" | "FzPlain" | "FzBare";
 
@@ -199,8 +201,12 @@ function printNode(n: Node, indent: string, extra: string[] = []): string {
     case "for":
       return printNode(n.node, indent, [`v-for="${n.head}"`]);
     case "child": {
-      const open = `<${n.name}${n.attrs.map((a) => " " + printAttr(a)).join("")}`;
-      return n.kids.length ? `${open}>${n.kids.map((k) => printNode(k, indent + "  ")).join("")}</${n.name}>` : `${open} />`;
+      const other = n.is && (n.is.other in HELPERS ? n.is.other : `'${n.is.other}'`);
+      const tag = n.is ? "component" : n.name;
+      const test = n.is && (n.is.test.atom ? printExpr(n.is.test) : `(${printExpr(n.is.test)})`);
+      const is = n.is ? [`:is="${test} ? ${n.name} : ${other}"`] : [];
+      const open = `<${tag}${[...is, ...n.attrs.map(printAttr)].map((a) => " " + a).join("")}`;
+      return n.kids.length ? `${open}>${n.kids.map((k) => printNode(k, indent + "  ")).join("")}</${tag}>` : `${open} />`;
     }
     case "el": {
       const attrs = [...extra, ...n.attrs.map(printAttr)];
@@ -220,6 +226,7 @@ function rendered(template: Node[]): HelperName[] {
     for (const n of ns) {
       if (n.k === "child") {
         used.add(n.name);
+        if (n.is && n.is.other in HELPERS) used.add(n.is.other as HelperName);
         walk(n.kids);
       } else if (n.k === "el") walk(n.kids);
       else if (n.k === "if") walk(n.branches.map((b) => b.node));
@@ -1044,13 +1051,15 @@ class Gen {
   child(depth: number): Node {
     const r = this.r;
     this.nodes++;
-    const name = r.pick<HelperName>(["FzLeaf", "FzBox", "FzFwd", "FzPair", "FzRoot", "FzOwn", "FzBind", "FzUse", "FzPlain", "FzBare"]);
+    const names: HelperName[] = ["FzLeaf", "FzBox", "FzFwd", "FzPair", "FzRoot", "FzOwn", "FzBind", "FzUse", "FzPlain", "FzBare"];
+    const name = r.pick(names);
     const attrs = r.chance(0.6) ? this.attrs("div") : [];
-    if (!HELPERS[name].slot || !r.chance(0.8)) return { k: "child", name, attrs, kids: [] };
-    if (this.hollow || !r.chance(0.75)) return { k: "child", name, attrs, kids: this.kids(depth + 1, "block") };
+    const is = r.chance(0.2) ? { is: { test: this.cond(r.int(0, 2)), other: r.pick<HelperName | InlineTag>([...names, "span", "b", "em"]) } } : {};
+    if (!HELPERS[name].slot || !r.chance(0.8)) return { k: "child", name, attrs, kids: [], ...is };
+    if (this.hollow || !r.chance(0.75)) return { k: "child", name, attrs, kids: this.kids(depth + 1, "block"), ...is };
     this.hollow = true;
     try {
-      return { k: "child", name, attrs, kids: this.kids(depth + 1, "block") };
+      return { k: "child", name, attrs, kids: this.kids(depth + 1, "block"), ...is };
     } finally {
       this.hollow = false;
     }
@@ -1267,6 +1276,10 @@ function* exprSlots(nodes: Node[]): Generator<{ get: () => Expr; set: (e: Expr) 
       }
     } else if (n.k === "for") yield* exprSlots([n.node]);
     else if (n.k === "el" || n.k === "child") {
+      if (n.k === "child" && n.is) {
+        const is = n.is;
+        yield { get: () => is.test, set: (e) => (is.test = e) };
+      }
       for (const a of n.attrs) {
         if (a.k === "bind") yield { get: () => a.e, set: (e) => (a.e = e) };
         else if (a.k === "style") for (const en of a.entries) yield { get: () => en.e, set: (e) => (en.e = e) };
@@ -1362,6 +1375,10 @@ export function componentShrinks(c: Component): Component[] {
     return acc;
   };
   elements(c).forEach((el, ei) => {
+    if (el.k === "child" && el.is) {
+      edit((x) => (delete (elements(x)[ei] as Node & { k: "child" }).is, true));
+      if (el.is.other in HELPERS) edit((x) => (Object.assign(elements(x)[ei]!, { name: el.is!.other, is: undefined }), true));
+    }
     el.attrs.forEach((a, ai) => {
       edit((x) => (elements(x)[ei]!.attrs.splice(ai, 1), true));
       const entries = a.k === "style" ? a.entries.length : a.k === "class" ? (a.v.k === "arr" ? a.v.items.length : a.v.k === "obj" ? a.v.entries.length : 0) : 0;

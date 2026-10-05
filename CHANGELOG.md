@@ -38,6 +38,23 @@ released together and share version numbers.
   provider holding `<RouterView>`, a string key injected inside a Rust twin's slot. The guide's
   new `provide_inject` page explains it; the conformance suite has a `Tabs`/`Tab` pair and a
   themed button, with and without providers, recorded from Vue.
+- `<component :is>` over a closed set of choices, compiled to a `match`: an imported component, an
+  HTML element's name, a prop typed as a union of string literals (an `as` prop), an object of
+  imported components or element names declared in setup or exported as a constant from a `.ts`
+  file and read by such a prop (`ICONS[name]`), and a `computed` or `?:` choosing among them. Each
+  choice gets props, fallthrough attributes, slots and scope ids as a static child would, inside
+  `<KeepAlive>` and `<Transition>` too. An element it chooses renders its content, and the slot
+  content a parent gives a `<slot>` inside it, by the rules Vue's server applies to virtual nodes
+  (`<!--v-if-->`, bare empty attributes, slot scope ids written once each). Anything open (a
+  `string`, a `Component`, a key that is not a literal union) is still refused under FV0418, with
+  a message naming what is accepted; new codes refuse a prop that may be absent (FV0420), a key the
+  object lacks (FV0421), a tag that is not an HTML element (FV0419), `v-html` and `v-text` on
+  `<component :is>` (FV0422), `v-show` and `v-model` on a `<select>` in content rendered from
+  virtual nodes (FV0423), and a `<slot>` inside a chosen element that has fallback content
+  (FV0919) or is also rendered outside one (FV0920). The conformance suite covers every form with
+  a fixture per choice (`ShapePicker`, `ShapeRoot`, `TagHeading`, `TagGallery`, `TagContent`, and `ThemedChoice` with provide and inject), and
+  the fuzzer writes `<component :is>` choosing between a helper component and another one or an
+  element.
 
 ### Changed
 
