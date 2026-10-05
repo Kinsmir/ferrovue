@@ -21,14 +21,18 @@ pub mod card;
 pub mod cart;
 pub mod catalog;
 pub mod chips;
+pub mod client_side;
 pub mod constants;
 pub mod counter;
 pub mod dashboard;
 pub mod data_list;
 pub mod data_table;
 pub mod defaults;
+pub mod deferred;
 pub mod destructured;
 pub mod divider;
+pub mod escaped_idioms;
+pub mod escaped_null;
 pub mod exprs;
 pub mod fall_bare;
 pub mod fall_binds;
@@ -73,6 +77,7 @@ pub mod plurals;
 pub mod props_object;
 pub mod prose;
 pub mod quiet_leaf;
+pub mod rated;
 pub mod records;
 pub mod regressions;
 pub mod route_info;
@@ -105,6 +110,7 @@ pub mod route_table;
 pub mod stores;
 pub mod types;
 pub mod i18n;
+pub mod twins;
 
 /// What a fixture holds besides the props: each slot's content, and the location it renders at.
 #[cfg(test)]
@@ -217,6 +223,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: chips::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             chips::render(&mut out, &props);
         }
+        "ClientSide" => {
+            let props: client_side::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            client_side::render(&mut out, &props);
+        }
         "Constants" => {
             let props: constants::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             constants::render(&mut out, &props);
@@ -248,6 +258,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: defaults::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             defaults::render(&mut out, &props);
         }
+        "Deferred" => {
+            let props: deferred::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            deferred::render(&mut out, &props);
+        }
         "Destructured" => {
             let props: destructured::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             destructured::render(&mut out, &props);
@@ -255,6 +269,14 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Divider" => {
             let props: divider::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             divider::render(&mut out, &props);
+        }
+        "EscapedIdioms" => {
+            let props: escaped_idioms::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            escaped_idioms::render(&mut out, &props);
+        }
+        "EscapedNull" => {
+            let props: escaped_null::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            escaped_null::render(&mut out, &props);
         }
         "Exprs" => {
             let props: exprs::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -465,6 +487,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "QuietLeaf" => {
             let props: quiet_leaf::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             quiet_leaf::render(&mut out, &props);
+        }
+        "Rated" => {
+            let props: rated::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            rated::render(&mut out, &props);
         }
         "Records" => {
             let props: records::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

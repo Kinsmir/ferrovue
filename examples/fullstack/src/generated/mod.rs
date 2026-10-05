@@ -19,6 +19,7 @@ pub mod reviews;
 pub mod route_table;
 pub mod stores;
 pub mod types;
+pub mod twins;
 
 /// What a fixture holds besides the props: each slot's content, and the location it renders at.
 #[cfg(test)]

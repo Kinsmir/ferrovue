@@ -17,6 +17,17 @@ export interface HelperSpec {
   maxLen?: number;
 }
 
+/** A component ferrovue does not compile, rendered on the server by a Rust function of the
+ * project's: its twin. ferrovue cannot check that the function writes what Vue would. */
+export interface TwinSpec {
+  /** The Rust path the generated parent calls, e.g. `crate::ui::v_btn`. */
+  rust: string;
+  /** Each prop a template may pass it, by its name in Vue, with its type. */
+  props?: Record<string, TypeName>;
+  /** The slots a template may fill, by name: `["default", "prepend"]`. */
+  slots?: string[];
+}
+
 /** What `ferrovue.config.json` holds. Paths are relative to the project root. */
 export interface Config {
   /** The directory of `.vue` files to compile. */
@@ -25,6 +36,9 @@ export interface Config {
   out: string;
   /** The module components import their helpers from, and the Rust twin of each export. */
   helpers?: { module: string; functions: Record<string, HelperSpec> };
+  /** Components ferrovue does not compile, by the name a template gives them (`VBtn`, which
+   * `<v-btn>` finds too), each rendered by a Rust function of the project's. */
+  twins?: Record<string, TwinSpec>;
   /** The Rust type a `TrustedHtml` prop is, which must implement `ferrovue::TrustedHtml`, e.g.
    * `crate::sanitize::SafeHtml`. A type that borrows names the props' lifetime, `'a`:
    * `crate::render::Trusted<'a>`. Without it, a component cannot use `v-html` at all. */

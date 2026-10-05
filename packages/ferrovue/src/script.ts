@@ -83,6 +83,43 @@ export function patternNames(p: N): string[] {
   }
 }
 
+function asyncLoader(arg: N): N {
+  if (arg?.type === "ObjectExpression") {
+    const loader = arg.properties.find((p: N) => p.type === "ObjectProperty" && !p.computed && (p.key.name ?? p.key.value) === "loader");
+    return loader?.value;
+  }
+  return arg;
+}
+
+/** The components `<script setup>` declares with `defineAsyncComponent(() => import("./X.vue"))`,
+ * by local name, each the name of the `.vue` file it loads. */
+export function asyncChildren(comp: Component, ast: N[]): Map<string, string> {
+  const callees = new Set<string>();
+  for (const st of ast) {
+    if (st.type !== "ImportDeclaration" || st.source.value !== "vue") continue;
+    for (const sp of st.specifiers) {
+      if (sp.type === "ImportSpecifier" && (sp.imported.name ?? sp.imported.value) === "defineAsyncComponent") callees.add(sp.local.name);
+    }
+  }
+  const found = new Map<string, string>();
+  if (!callees.size) return found;
+  for (const st of ast) {
+    if (st.type !== "VariableDeclaration") continue;
+    for (const d of st.declarations) {
+      const init = d.init;
+      if (init?.type !== "CallExpression" || init.callee.type !== "Identifier" || !callees.has(init.callee.name)) continue;
+      const loader = asyncLoader(init.arguments[0]);
+      const imported = loader?.type === "ArrowFunctionExpression" && loader.params.length === 0 ? loader.body : null;
+      const spec = imported?.type === "ImportExpression" ? imported.source : imported?.type === "CallExpression" && imported.callee.type === "Import" ? imported.arguments[0] : null;
+      if (d.id.type !== "Identifier" || spec?.type !== "StringLiteral" || !spec.value.endsWith(".vue")) {
+        fail(comp, '`defineAsyncComponent` loads a component of this project, as `defineAsyncComponent(() => import("./Child.vue"))`', init);
+      }
+      found.set(d.id.name, basename(spec.value, ".vue"));
+    }
+  }
+  return found;
+}
+
 export function scopeFor(comp: Component, ast: N[], components: Map<string, Component>): { scope: Scope; lets: string[] } {
   const scope: Scope = {
     comp,
@@ -119,6 +156,7 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
   };
   const locals = declareConsts(comp, ast);
   const lets: string[] = [];
+  const asyncs = asyncChildren(comp, ast);
   let useAttrsName: string | null = null;
   let useSlotsName: string | null = null;
   for (const st of ast) {
@@ -177,6 +215,11 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
           if (local.type !== "Identifier") fail(comp, "destructured props are plain names", p);
           scope.setup.set(local.name, fieldVal(comp, "props", { k: "struct", name: "Props" }, key, p));
         }
+        continue;
+      }
+      const loaded = d.id.type === "Identifier" ? asyncs.get(d.id.name) : undefined;
+      if (loaded !== undefined) {
+        scope.children.set(d.id.name, loaded);
         continue;
       }
       if (ctx.plugins.some((p) => p.scriptBinding?.(scope, d))) continue;

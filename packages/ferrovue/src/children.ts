@@ -1,5 +1,5 @@
 import { isSSRSafeAttrName, propsToAttrMap } from "@vue/shared";
-import { type Component, type N, type Scope, type Ty, type Val, camelize, declares, fail, nothing, rustStr, sameTy, snake, takesAttrs } from "./model.ts";
+import { type Component, type Field, type N, type Scope, type Ty, type Val, camelize, declares, fail, nothing, rustStr, sameTy, snake, takesAttrs } from "./model.ts";
 import { ctx } from "./context.ts";
 import { markHome } from "./typescript.ts";
 import { expr, fieldVal, holdsNothing } from "./expr.ts";
@@ -12,7 +12,14 @@ import { claim, paramsOf, slotFieldsOf } from "./plugin.ts";
 import { statements } from "./template.ts";
 import { slotContent, slotFieldBorrows, staticallyFilled } from "./slots.ts";
 
-export function renderChild(s: Scope, e: Emitter, n: N): void {
+/** A component the project renders with a Rust function of its own, in place of a compiled one. */
+export interface TwinCall {
+  comp: Component;
+  init(s: Scope, f: Field, node: N | undefined, n: N): string;
+  call(s: Scope, e: Emitter, inits: string[], slots: N, attrs: string): void;
+}
+
+export function renderChild(s: Scope, e: Emitter, n: N, twin?: TwinCall): void {
   const [target, rawProps, slots, , slotScopeId] = n.arguments;
   let local: string | null = null;
   if (target.type === "MemberExpression" && target.object.name === "$setup") {
@@ -20,7 +27,7 @@ export function renderChild(s: Scope, e: Emitter, n: N): void {
   }
   const isSelf = target.type === "Identifier" && target.name === s.selfAlias.name;
   const childName = isSelf ? s.comp.name : local ? s.children.get(local) : undefined;
-  const child = childName ? s.components.get(childName) : undefined;
+  const child = twin?.comp ?? (childName ? s.components.get(childName) : undefined);
   if (!child) fail(s.comp, `a child component must be imported from a \`.vue\` file among the components compiled, in ${ctx.componentsDir.replace(/\/$/, "")}`, n);
   for (const p of ctx.plugins) p.child?.(s, child, n);
   const parts: N[] = !rawProps || rawProps.type === "NullLiteral" ? [] : mergedParts(rawProps);
@@ -39,6 +46,7 @@ export function renderChild(s: Scope, e: Emitter, n: N): void {
   }
   const ids = claim((p) => p.childIds?.(s, child, passesAttrs, !!slotScopeId, n)) ?? null;
   if (objects.length === 1 && objects[0].type !== "ObjectExpression") {
+    if (twin) fail(s.comp, `the props of ${child.name}, a Rust twin, are attributes or an object literal`, objects[0]);
     const v = expr(s, objects[0]);
     const own = child.name === s.comp.name && v.ty.k === "struct" && v.ty.name === "Props";
     if (own || (v.ty.k === "child" && v.ty.name === child.name)) {
@@ -68,6 +76,11 @@ export function renderChild(s: Scope, e: Emitter, n: N): void {
       if (key !== "class" && key !== "style" && !isSSRSafeAttrName(name)) fail(s.comp, `unsafe attribute name \`${name}\``, p);
       fallthrough.add(p);
     }
+  }
+  if (twin) {
+    const inits = child.props.fields.map((f) => twin.init(s, f, given.get(f.js), n));
+    twin.call(s, e, inits, slots, childAttrsArg(s, child, parts, merges, fallthrough, ids, n)!);
+    return;
   }
   const inits = child.props.fields.map((f) => {
     const node = given.get(f.js);
@@ -121,6 +134,14 @@ export function extraParams(c: Component): string {
 }
 
 export function callChild(s: Scope, e: Emitter, child: Component, propsCode: string, slots: N, attrs: string | null): void {
+  const m = `super::${child.module}`;
+  const scoped = child.inherits || takesAttrs(child);
+  const trailing = paramsOf(child).map((p) => `, ${p.name}`).join("") + (scoped ? `, ${attrs ?? (takesAttrs(child) ? "&fv::Attrs::NONE" : '""')}` : "");
+  const render = scoped ? "render_scoped" : "render";
+  callWith(s, e, child, m, `${m}::${render}(out, ${propsCode}`, `${m}::Slots`, trailing, slots);
+}
+
+export function callWith(s: Scope, e: Emitter, child: Component, m: string, head: string, slotsTy: string, trailing: string, slots: N, vnode = false): void {
   const given = new Map<string, N>();
   if (slots && slots.type !== "NullLiteral") {
     if (slots.type !== "ObjectExpression") fail(s.comp, "slots must be an object literal", slots);
@@ -132,15 +153,11 @@ export function callChild(s: Scope, e: Emitter, child: Component, propsCode: str
       given.set(key, p.value);
     }
   }
-  const m = `super::${child.module}`;
-  const scoped = child.inherits || takesAttrs(child);
-  const trailing = paramsOf(child).map((p) => `, ${p.name}`).join("") + (scoped ? `, ${attrs ?? (takesAttrs(child) ? "&fv::Attrs::NONE" : '""')}` : "");
-  const render = scoped ? "render_scoped" : "render";
   if (!takesSlots(child)) {
-    e.stmt(`${m}::${render}(out, ${propsCode}${trailing});`);
+    e.stmt(`${head}${trailing});`);
     return;
   }
-  e.open(`${m}::${render}(out, ${propsCode}, ${m}::Slots`);
+  e.open(`${head}, ${slotsTy}`);
   for (const name of child.slotNames) {
     const field = snake(name);
     const value = given.get(name);
@@ -183,14 +200,14 @@ export function callChild(s: Scope, e: Emitter, child: Component, propsCode: str
       const life = shape.fields.some((f) => slotFieldBorrows(f.ty)) ? "<'_>" : "";
       e.open(`${field}: Some(&|out: &mut String, ${sp}: &${m}::${shape.name}${life}${sidParam}| -> bool`);
       const opened = e.lines.length - 1;
-      content({ ...s, locals, sid });
+      content({ ...s, locals, sid, vnode });
       unread(opened, sp);
       unread(opened, sid);
       e.close("),");
       continue;
     }
     if (!takesNone) fail(s.comp, `\`<slot${name === "default" ? "" : ` name="${name}"`}>\` in ${child.name} passes no props`, param);
-    const inner: Scope = { ...s, sid };
+    const inner: Scope = { ...s, sid, vnode };
     if (sid !== null) {
       e.open(`${field}: Some(fv::Slot::slotted(&|out: &mut String${sidParam}| -> bool`);
       const opened = e.lines.length - 1;

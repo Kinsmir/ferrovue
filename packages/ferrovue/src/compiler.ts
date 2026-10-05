@@ -119,7 +119,7 @@ export function write(root: string, config: Config = loadConfig(root)): Written 
   return { files: [...files.keys()], changed, removed, islands };
 }
 
-export { CONFIG_FILE, loadConfig, TYPES_MODULE, type Config, type HelperSpec, type TypeName } from "./context.ts";
+export { CONFIG_FILE, loadConfig, TYPES_MODULE, type Config, type HelperSpec, type TwinSpec, type TypeName } from "./context.ts";
 export { GenError } from "./model.ts";
 
 export const VERSION: string = (() => {

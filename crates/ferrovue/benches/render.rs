@@ -13,6 +13,10 @@ mod generated;
 #[path = "../tests/conformance/helpers.rs"]
 mod helpers;
 
+#[allow(dead_code)]
+#[path = "../tests/conformance/vendor.rs"]
+mod vendor;
+
 /// What a `TrustedHtml` prop is here, as `tests/conformance.rs` defines it.
 #[allow(dead_code)]
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

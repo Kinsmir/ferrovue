@@ -1,5 +1,6 @@
-import { nextTick, type Component } from "vue";
+import { type Component } from "vue";
 import { fixtureApp, readFixture, type RouteEntry, type RouterOptions } from "../src/fixture.ts";
+import { settled } from "../test/settle.ts";
 
 const modules = import.meta.glob<{ default: Component }>("../../../crates/ferrovue/tests/conformance/components/*.vue", {
   eager: true,
@@ -19,6 +20,7 @@ export interface Hydration {
   before: string;
   after: string;
   kept: boolean;
+  settled: string;
 }
 
 declare global {
@@ -38,8 +40,8 @@ async function hydrate(): Promise<Hydration> {
   app.mount(root);
   const after = document.body.innerHTML;
   const kept = root.firstChild === first;
-  await nextTick();
-  return { before, after, kept };
+  await settled(app);
+  return { before, after, kept, settled: document.body.innerHTML };
 }
 
 window.hydration = hydrate();

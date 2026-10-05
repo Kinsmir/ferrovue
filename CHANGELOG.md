@@ -49,6 +49,18 @@ released together and share version numbers.
   handed to `navigate` with its `href` and aborted, so active links, `aria-current` and `useRoute()`
   keep matching the page on screen. It takes the base and link classes of the config's `router`.
   The routing guide explains why each part is there (#34).
+- `<ClientOnly>`, from `ferrovue/client` (and `ferrovue`): the server writes its `#fallback` slot,
+  or `<!---->` without one, and the browser hydrates that fallback and swaps in the default slot once
+  mounted. The compiler does not read the default slot, so a component library's components, or any
+  other import or expression the compiler refuses, may go there. It takes no attributes.
+- Rust twins: components the compiler does not compile, listed under `twins` in
+  `ferrovue.config.json` with their props and slots, are rendered by a Rust function of the project's,
+  which the generated parent calls with the props, the slots and the attributes and scope ids its
+  root takes. `twins.rs` holds each twin's props, slots and the signature its function must have.
+  ferrovue cannot check that a twin writes what Vue writes; the full-stack example holds one to Vue
+  with fixtures recorded through `ferrovue/testing`.
+- `defineAsyncComponent(() => import("./X.vue"))`, and its `{ loader }` form, renders as the
+  component it loads, as Vue's server renderer waits for it.
 
 ### Changed
 

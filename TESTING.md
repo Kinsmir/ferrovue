@@ -42,8 +42,9 @@ fixtures/X/case.json            Vue hydrates it: no mismatch warnings, same DOM 
 
 1. `conformance.test.ts` renders each `fixtures/<Component>/<case>.json` with real Vue and compares
    the result with `<case>.html`.
-2. It mounts the recorded HTML and hydrates it, failing on any hydration warning, except for the
-   fixtures in `VUE_DISAGREES` (`conformance-cases.ts`), where Vue's own server and client renders
+2. It mounts the recorded HTML, hydrates it and waits for async components to load and hydrate
+   (`test/settle.ts`). Any hydration warning fails the fixture, except in the fixtures in
+   `VUE_DISAGREES` (`conformance-cases.ts`), where Vue's own server and client renders
    differ and which must still mismatch: slot content whose every pushed string is comments and
    whitespace (an interpolation that writes nothing beside a list's fragment markers) shows the
    fallback on the server, while the client keeps the empty text.
@@ -92,7 +93,7 @@ A fixture is a JSON object of props plus three optional keys:
 | `RouteInfo` | `useRoute()` and `$route`: path, hash, name, params |
 | `Translated`, `Plurals` | vue-i18n's `$t` and `useI18n()`: named and list values, literals, linked messages and their modifiers, fallback locales; the plural case chosen by an integer, a fraction or a value that is not a finite number, and `count` and `n` given or taking the plural number |
 | `Badge`, `Cart` | Pinia state through the store and `storeToRefs`, getters, two stores, store reads in `computed` |
-| `ScopedPage` and its children | `<style scoped>`: the id on every element and what reaches each kind of child: `ScopedLeaf` (a root chosen by `v-if`), `ScopedRoot` (a root that is a component), `ScopedPair` (a fragment), `PlainBox` (no scoped styles), `ScopedCard` (`:slotted()`, a scoped slot, fallbacks), `PlainForward`, `ScopedShelf` and `ScopedRack` (slots forwarded into `:slotted()` ones, slot scope ids with two spaces), `ScopedFade` (a `<Transition>` root) — and `<KeepAlive>`, `<Teleport>` |
+| `ScopedPage` and its children | `<style scoped>`: the id on every element and what reaches each kind of child: `ScopedLeaf` (a root chosen by `v-if`), `ScopedRoot` (a root that is a component), `ScopedPair` (a fragment), `PlainBox` (no scoped styles), `ScopedCard` (`:slotted()`, a scoped slot, fallbacks), `PlainForward`, `ScopedShelf` and `ScopedRack` (slots forwarded into `:slotted()` ones, slot scope ids with two spaces), `ScopedFade` (a `<Transition>` root), and `<KeepAlive>`, `<Teleport>` |
 | `ScopedTree` | A scoped component rendering itself, whose children's roots carry its id twice |
 | `ScopedNav`, `ScopedLink` | `<RouterLink>` in scoped components: the `<a>` and what it holds, a link that is a scoped component's root, a link in `:slotted()` slot content |
 | `ScopedQuirks`, `QuietLeaf` | Where Vue's server and client renders give different ids: a `:slotted()` component's fallback, `inheritAttrs: false` |
@@ -102,6 +103,11 @@ A fixture is a JSON object of props plus three optional keys:
 | `NumberIncludes` | `.includes()` across `number` and `Float`: a fraction in a list of integers, an integer in a list of fractions and in a list mapped to fractions, `-0` found as `0`, integers beyond 2⁵³ |
 | `Records` | `Record<string, T>` and `{ [key: string]: T }` in JavaScript's order of keys (array indices first, a key given twice), `Object.keys` / `values` / `entries`, a record handed to a child |
 | `Nullable`, `NullChild`, `Session` | `T \| null` props, interface fields, list items, slot props and Pinia state: `null` written and narrowed (`!== null`, `=== null`, `!= null`, `== null`, truthiness), `??`, `?.` over a nullable object and field, interpolations and attributes of `null`, `null` as a `?:` branch and a child's prop, `ref<T \| null>(null)` in setup |
+| `ClientSide` | `<ClientOnly>` with a fallback, without one, and inside another component's slot, around a stand-in for a library component that reads `window` (`vendor/Gauge.ts`); in the browser, the content replaces the fallback once mounted |
+| `Deferred` | `defineAsyncComponent`, as an arrow and with `loader`, given props, slot content and a scoped parent's id |
+| `EscapedIdioms` | Set A's idioms through the escape hatches: a template-only component in a `<ClientOnly>` fallback, an async template-only component, `props.x` handed to a twin |
+| `EscapedNull` | Nullable props through the escape hatches: into an async `NullChild`, a `<ClientOnly>` fallback, and a twin's optional prop by `?? undefined` |
+| `Rated` | A Rust twin (`vendor.rs`) of a render-function component (`vendor/StarRating.ts`): props, a boolean cast from a bare attribute, attributes beyond its props, a slot written from virtual nodes |
 | `Parsing` | `Number`, `parseInt` (no radix, 10, 16) and `parseFloat` of strings, `JSON.stringify` of numbers, `NaN` and `Infinity` |
 | `PropsObject`, `Glyph`, `Divider` | The props object read in the template (`props.label`, with `withDefaults`); a child with no script and one with an empty `<script setup>`, which take no props, one given a class to fall through |
 | `Pending` | Refs that start empty, typed by their type argument: `ref<Row[]>([])`, `ref<User[]>([])`, `ref<string[]>([])`, `ref<Row \| undefined>()`, `ref<string>()`, `ref<number \| undefined>(undefined)` |

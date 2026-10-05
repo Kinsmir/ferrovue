@@ -111,5 +111,7 @@ it("hydrates a streamed book page, whose islands then share the store", async ()
   await nextTick();
   expect(items.map((li) => li.style.display)).toEqual(["", "", ""]);
   expect(document.querySelector("button.more")).toBeNull();
+  expect(document.querySelector("span.share")).toBeNull();
+  expect(document.querySelector<HTMLAnchorElement>(".review-list a.share")!.href).toMatch(/^mailto:\?body=http/);
   expect(warnings).toEqual([]);
 });

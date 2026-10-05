@@ -43,7 +43,10 @@
       {
         "allow": [
           "__fv",
-          "__scopeId"
+          "__scopeId",
+          "__asyncLoader",
+          "__asyncResolved",
+          "_instance"
         ]
       }
     ]

@@ -58,12 +58,12 @@ needs it to.
 | When | Hooks | Used by |
 |---|---|---|
 | A run starts | `configure` returns the plugin's state for the run, read from its keys of `Config`; `prepare` reads files with the core's own readers, once every plugin is configured | all; `prepare`: stores |
-| A component is read | `sfc` (its `<style>` blocks), `templateOptions` (how Vue compiles its template), `importedType` (a type from a file the plugin owns), `struct` (where a type of its own is declared), `compiled` (what its compiled template renders or reads) | scoped styles; stores; router, i18n, `<Teleport>` |
-| Every component at once | `analyse`, before any is generated | scoped styles |
-| `<script setup>` | `scope` (its state for one setup), `scriptImport`, `scriptBinding` | router, stores, i18n |
+| A component is read | `sfc` (its `<style>` blocks), `templateOptions` (how Vue compiles its template), `importedType` (a type from a file the plugin owns), `struct` (where a type of its own is declared), `compiled` (what its compiled template renders or reads) | scoped styles; stores; router, i18n, `<Teleport>`, `<ClientOnly>` |
+| Every component at once | `analyse`, before any is generated | scoped styles, twins |
+| `<script setup>` | `scope` (its state for one setup), `scriptImport`, `scriptBinding` | router, stores, i18n, twins |
 | Expressions | `global` (`$route`), `call` (`$t(…)`), `member` (a field of the route, a store's getter), `equality` and `presence` (`typeof q === "string"`), `values` (what `??`, `===`, a test, `{{ }}` and an attribute make of a type it adds) | router, stores, i18n |
-| The compiled template | `resolveComponent` and `component` (`<RouterLink>`, `<RouterView>`), `child` (a child it refuses), `childIds` (the scope ids a child's root is handed), `statement` (`_ssrRenderTeleport`) | router; scoped styles; `<Teleport>` |
-| The Rust written | `params` (a render parameter, its fixture field and how the conformance suite builds it), `slotFields` (`router_view`), `modules` (`route_table.rs`, `stores.rs`, `i18n.rs`) | router, stores, i18n, `<Teleport>`; router |
+| The compiled template | `resolveComponent` and `component` (`<RouterLink>`, `<RouterView>`, `<ClientOnly>`, a twin), `child` (a child it refuses), `childIds` (the scope ids a child's root is handed), `statement` (`_ssrRenderTeleport`) | router, `<ClientOnly>`, twins; scoped styles; `<Teleport>` |
+| The Rust written | `params` (a render parameter, its fixture field and how the conformance suite builds it), `slotFields` (`router_view`), `modules` (`route_table.rs`, `stores.rs`, `i18n.rs`, `twins.rs`) | router, stores, i18n, `<Teleport>`; router; router, stores, i18n, twins |
 
 - **State lives in the run.** A plugin's module holds nothing that changes: `configure` returns its
   state for the run, which `runOf(plugin)` reads back, and `scope` its state for one component's

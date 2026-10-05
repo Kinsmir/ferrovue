@@ -7,6 +7,7 @@ import { type Component, type N, absence, blankComponent, fail, opt, snake, sour
 import { ctx } from "./context.ts";
 import { typesImports, declareTypes, defaultValue, definePropsType, ONE_NOTHING, readTypeFile, resolveImport, runtimeDefaults, structOf, tyOfTs } from "./typescript.ts";
 import { claim } from "./plugin.ts";
+import { asyncChildren } from "./script.ts";
 
 function vueErrorNode(err: unknown, within?: { line: number; column: number }): N {
   const loc = (err as { loc?: { start: { line: number; column: number } } }).loc;
@@ -129,6 +130,7 @@ export function readComponent(file: string, root: string, isChild: boolean): { c
       }
     }
   }
+  for (const loaded of asyncChildren(comp, ast).values()) comp.imports.add(loaded);
   typesImports(comp, [...plainAst, ...ast]);
   comp.inheritAttrs = inheritAttrs(comp, [...plainAst, ...ast]);
 

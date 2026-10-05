@@ -8,6 +8,9 @@ pub mod generated;
 #[path = "conformance/helpers.rs"]
 mod helpers;
 
+#[path = "conformance/vendor.rs"]
+mod vendor;
+
 /// What a `TrustedHtml` prop is here. A real project's type would hold only a sanitiser's output;
 /// the fixtures' HTML is trusted because it is written by hand.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

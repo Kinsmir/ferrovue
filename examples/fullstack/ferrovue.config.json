@@ -7,5 +7,14 @@
     "routes": "client/routes.json",
     "linkActiveClass": "active",
     "linkExactActiveClass": "active"
+  },
+  "twins": {
+    "StarRating": {
+      "rust": "crate::ui::star_rating",
+      "props": {
+        "value": "int",
+        "max": "int?"
+      }
+    }
   }
 }

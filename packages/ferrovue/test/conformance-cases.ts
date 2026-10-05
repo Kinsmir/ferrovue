@@ -22,6 +22,8 @@ export const TELEPORTS = "<!--fv-teleports-->";
 
 export const VUE_DISAGREES = new Set(["Hollow/absent.json", "Hollow/absent-on.json", "Hollow/whitespace.json", "Hollow/js-whitespace.json"]);
 
+export const CLIENT_ONLY: Record<string, string> = { ClientSide: 'class="gauge measured" max="100"' };
+
 export interface Case {
   component: string;
   name: string;

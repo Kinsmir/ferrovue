@@ -5,7 +5,8 @@ import type { Component } from "vue";
 import { renderToString } from "vue/server-renderer";
 import { generate } from "../src/compiler.ts";
 import { attachSsrRender, fixtureApp, readFixture } from "../src/testing.ts";
-import { cases, hydrationBody, OPTIONS, ROOT, ROUTES, TELEPORTS, VUE_DISAGREES } from "./conformance-cases.ts";
+import { cases, CLIENT_ONLY, hydrationBody, OPTIONS, ROOT, ROUTES, TELEPORTS, VUE_DISAGREES } from "./conformance-cases.ts";
+import { settled, stillLoading } from "./settle.ts";
 
 const WRITE = process.env.FERROVUE_FIXTURES_WRITE === "1";
 
@@ -70,11 +71,13 @@ describe.skipIf(WRITE)("the recorded HTML hydrates without a mismatch", () => {
       const before = document.getElementById("root")!.firstChild;
       const app = await fixtureApp(components.get(c.component)!, readFixture(c.json), ROUTES, OPTIONS);
       app.mount("#root");
+      await settled(app);
       const mismatches = warnings.filter((w) => /hydrat|mismatch/i.test(w));
       const disagrees = VUE_DISAGREES.has(`${c.component}/${c.name}`);
       expect(disagrees ? [] : mismatches).toEqual([]);
       expect(mismatches.length > 0, "a fixture mismatches exactly when it is in VUE_DISAGREES").toBe(disagrees);
       expect(document.getElementById("root")!.firstChild).toBe(before);
+      expect(document.getElementById("root")!.innerHTML, "`<ClientOnly>` showed its content once mounted").toContain(CLIENT_ONLY[c.component] ?? "");
       app.unmount();
     });
   }
@@ -95,6 +98,7 @@ describe.skipIf(WRITE)("the recorded HTML carries the scope ids the client rende
       document.body.innerHTML = `<div id="root"></div>${targets.map((t) => `<div id="${t.replace(/^#/, "")}"></div>`).join("")}`;
       const app = await fixtureApp(components.get(c.component)!, readFixture(c.json), ROUTES, { ...OPTIONS, client: true });
       app.mount("#root");
+      if (stillLoading(app)) await settled(app);
       const recorded = document.createElement("template");
       recorded.innerHTML = main!;
       expect(ids(recorded.content)).toEqual(ids(document.getElementById("root")!));
