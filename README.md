@@ -462,6 +462,35 @@ and active classes with `linkRouter(routes, { navigate })` from `ferrovue/link-r
 over the routes file whose every navigation after the first goes to `navigate`. The routing guide
 (`ferrovue::guide::routing`) explains each part of it.
 
+### Hydrating a whole page
+
+A page built from a layout whose slots hold components, each rendered from its own props, can be
+hydrated as one app. `ferrovue::Page` takes each slot's parts as `Part`s, made from the same
+`html()` values that write the markup, renders the layout, and writes what it rendered as a
+`<script type="application/json">`; `mountPage` reads it back, loads the components it names and
+hydrates the layout with each slot's parts:
+
+```rust
+let mut page = ferrovue::Page::new();
+let content = page.slot("default", books.iter().map(|b| Part::new(pick::NAME, pick::html(b))));
+let reviews = page.hole("reviews"); // filled later, while the page streams
+let record = page.render_to(&mut out, picks::html(&props, picks::Slots {
+    default: Some(content.slot()),
+    reviews: Some(reviews.slot()),
+}, &route));
+```
+
+```ts
+import { mountPage } from "ferrovue";
+import islands from "ferrovue/islands";
+
+await mountPage(() => import("./Picks.vue"), islands, { pinia, router });
+```
+
+The record repeats the text of every prop, so a page hydrated this way is larger than one of
+islands; the guide's `islands_and_hydration` page compares the two, and `examples/fullstack` serves
+a page of each kind.
+
 ### Hydrating Pinia state
 
 ```rust
@@ -568,7 +597,7 @@ crates/ferrovue-router/      vue-router's matching and links (the `router` featu
   tests/vectors/             vectors recorded from vue-router
 crates/ferrovue-i18n/        vue-i18n's t() (the `i18n` feature)
 packages/ferrovue/           the compiler (npm package)
-  src/index.ts               `ferrovue`: the browser API, `mountIslands`, `hydrateState` and the types
+  src/index.ts               `ferrovue`: the browser API, `mountIslands`, `mountPage`, `hydrateState` and the types
   src/compiler.ts            `ferrovue/compiler`: `generate`, `write`
   src/component.ts, script.ts, typescript.ts, constants.ts
                              a `.vue` file read, <script setup>, TypeScript types, constants and enums
@@ -583,19 +612,20 @@ packages/ferrovue/           the compiler (npm package)
                              <ClientOnly>, Rust twins
   src/rust.ts, emitter.ts    the Rust source written out
   src/cli.ts, vite.ts        the `ferrovue` command and the Vite plugin
-  src/client.ts              browser-side helpers: `mountIslands`, `hydrateState`, `<ClientOnly>`
+  src/client.ts              browser-side helpers: `mountIslands`, `mountPage`, `hydrateState`, `<ClientOnly>`
   src/islands.ts             `ferrovue/islands`, which the Vite plugin writes: every island, loaded lazily
   src/link-router.ts         `ferrovue/link-router`: `<RouterLink>` while the application navigates on its own
   src/routes.ts              a routes file as vue-router's route records
   src/testing.ts             utilities for a project's own conformance suite
+  src/hydration.ts           `hydrateRecordedPage`, which `ferrovue/testing` exports
   src/types.ts               `ferrovue/types`: `TrustedHtml`, `Float`
   test/                      compiler, CLI, router, vector, island, Vite and conformance tests
-  browser/                   conformance fixtures hydrated in real browsers (`pnpm test:browser`)
+  browser/                   conformance fixtures and recorded pages hydrated in real browsers (`pnpm test:browser`)
   bench/                     Vue renderToString benchmarks, the other half of Performance
   fuzz/                      the randomised differential tester (`pnpm fuzz`)
 examples/greeting/           the smallest setup: one component rendered from Rust
-examples/fullstack/          axum + Vite: islands, Pinia state, routes and streaming, <ClientOnly>,
-                             a Rust twin and its fixtures
+examples/fullstack/          axum + Vite: islands, a page hydrated whole, Pinia state, routes and
+                             streaming, <ClientOnly>, a Rust twin and its fixtures
 examples/dioxus/             a Dioxus page, rendered with dioxus-ssr, with an island in it
 scripts/release.ts           the release version bump (see RELEASING.md)
 ```

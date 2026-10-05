@@ -109,7 +109,7 @@ describe.each(BROWSERS)("%s", (name) => {
     scripts = [];
     await page.goto(`${origin}${path}`);
     await page.waitForFunction(() =>
-      [...document.querySelectorAll("[data-island], #basket")].every((el) => (el as { _vnode?: unknown })._vnode),
+      [...document.querySelectorAll("[data-island], #basket, #app")].every((el) => (el as { _vnode?: unknown })._vnode),
     );
   }
 
@@ -148,6 +148,26 @@ describe.each(BROWSERS)("%s", (name) => {
     expect(await add.textContent()).toBe("In the basket");
     expect(await add.isDisabled()).toBe(true);
 
+    const reviews = page.locator(".review-list li");
+    expect(await reviews.evaluateAll((items) => items.map((li) => (li as HTMLElement).style.display))).toEqual(["", "", "none"]);
+    await page.locator("button.more").click();
+    await page.locator("button.more").waitFor({ state: "detached" });
+    expect(await reviews.evaluateAll((items) => items.map((li) => (li as HTMLElement).style.display))).toEqual(["", "", ""]);
+    expect(await Promise.all(messages)).toEqual([]);
+  });
+
+  it("hydrates the staff picks as one app, loading only the components its record names", async ({ skip }) => {
+    if (!browser) skip();
+    await open("/picks");
+    expect(await Promise.all(messages)).toEqual([]);
+    const [parsed, now] = await parsedAndNow();
+    expect(now).toBe(parsed);
+    const chunks = scripts.map((s) => /^\/assets\/(\w+)-/.exec(s)?.[1]).filter((c) => c && c !== "main");
+    expect(chunks).toEqual(expect.arrayContaining(["Picks", "Pick", "Reviews"]));
+
+    const add = page.locator('.pick[data-id="dune"] button.add');
+    await add.click();
+    await page.waitForFunction(() => document.querySelector('.pick[data-id="dune"] button.add')?.textContent === "In the basket");
     const reviews = page.locator(".review-list li");
     expect(await reviews.evaluateAll((items) => items.map((li) => (li as HTMLElement).style.display))).toEqual(["", "", "none"]);
     await page.locator("button.more").click();

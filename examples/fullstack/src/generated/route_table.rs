@@ -7,12 +7,14 @@
 pub const ROUTES: &[ferrovue::RouteDef<'static>] = &[
     ferrovue::RouteDef { path: "/", name: Some("home"), children: &[] },
     ferrovue::RouteDef { path: "/books/:id", name: Some("book"), children: &[] },
+    ferrovue::RouteDef { path: "/picks", name: Some("picks"), children: &[] },
 ];
 
 /// Every route's full path, nested ones included.
 pub const PATHS: &[&str] = &[
     "/",
     "/books/:id",
+    "/picks",
 ];
 
 /// The history's base, which every link's `href` starts with.

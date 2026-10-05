@@ -177,7 +177,8 @@ A component with `<style scoped>` writes the same `data-v-` ids as Vue's server 
 as `@vitejs/plugin-vue` computes them; see [`guide::scoped_styles`](crate::guide::scoped_styles).
 
 On the client, the same component hydrates the page: `mountIslands` from `ferrovue` mounts
-every island, or the page's own Vue app hydrates the whole document. See
+every island, `mountPage` hydrates a layout and the parts a [`Page`](crate::Page) recorded in its
+slots, or the page's own Vue app hydrates the whole document. See
 [`guide::islands_and_hydration`](crate::guide::islands_and_hydration).
 
 # What the generated code calls

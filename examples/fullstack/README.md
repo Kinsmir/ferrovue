@@ -53,12 +53,14 @@ cargo run -p ferrovue-example-fullstack -- --render /books/dune
 | `client/components/BookList.vue` | The home page: a list, named links with params, a scoped slot the server fills with an island per book |
 | `client/components/BookPage.vue` | The detail page: `useRoute()` params in the template and in a `computed`, a named slot, a slot left as a hole for streaming |
 | `client/components/AddToBasket.vue` | An island: rendered with `add_to_basket::island()`, so it carries `data-island` and `data-props`; its click handler uses the shared store |
+| `client/components/Picks.vue` | The layout of the staff picks page, hydrated whole: a default slot of picks and a `reviews` slot streamed into a hole |
+| `client/components/Pick.vue` | A part of that page, rendered from its props, with an `AddToBasket` inside it |
 | `client/components/Reviews.vue` | The slow part of the book page, streamed into the hole as an island, with `v-show` the client toggles; `<style scoped>`; a Rust twin's component, and `<ClientOnly>` around one that reads `window` |
 | `client/vendor/` | Stand-ins for a component library's components, which ferrovue does not compile: `StarRating`, rendered on the server by its Rust twin, and `ShareLink`, rendered only in the browser |
 | `src/ui.rs` | The Rust twin of `StarRating`, listed under `twins` in `ferrovue.config.json` |
 | `fixtures/`, `test/fixtures.test.ts`, `src/fixtures.rs` | What proves the twin: each fixture rendered by Vue through `ferrovue/testing` (`FERROVUE_FIXTURES_WRITE=1` records the `.html`) and by the generated Rust, byte for byte |
-| `client/app.ts` | `hydrateState`, then `mountIslands` of `ferrovue/islands`, which the Vite plugin writes: every island by name, each loaded only on a page that holds it, with one Pinia and one router for them all |
-| `src/pages.rs` | Rendering pages from the generated `route_table::router()`, `Props::new(…)`, `Slots`, `ferrovue::state_script_into`, `ferrovue::hole()`, and `reviews::into_island()`, a page holding its props that a handler returns |
+| `client/app.ts` | `hydrateState`, `mountPage` on a page that carries a record, then `mountIslands` of `ferrovue/islands`, which the Vite plugin writes: every island by name, each loaded only on a page that holds it, with one Pinia and one router for them all |
+| `src/pages.rs` | Rendering pages from the generated `route_table::router()`, `Props::new(…)`, `Slots`, `ferrovue::state_script_into`, `ferrovue::hole()`, and `reviews::into_island()`, a page holding its props that a handler returns; `ferrovue::Page` for the staff picks, whose record is the last hole |
 | `src/main.rs` | The axum server: a `ferrovue::HtmlStream` per page, a book's reviews alone at `/books/{id}/reviews`, `dist/assets` served beside it, and `--render` |
 | `src/assets.rs` | Finding the entry's hashed script and stylesheets in Vite's manifest, the lazily loaded islands' stylesheets included, or loading from the dev server |
 | `test/hydration.test.ts` | The proof: the server's own HTML hydrates with no mismatch, and carries the scope ids the client build's stylesheet selects |
@@ -104,6 +106,17 @@ hole goes out at once (header, book, basket, "Add to basket"), the reviews follo
 lookup returns, and the rest of the document after them. Watch it with
 `curl -N localhost:3000/books/dune`.
 
+### A page hydrated whole
+
+`/picks` is built differently: `Picks.vue` is a layout whose default slot holds a `Pick` per book
+and whose `reviews` slot is a hole. `src/pages.rs` gives the slots to a `ferrovue::Page` as
+`Part`s, made from the same `pick::html(&props)` values that write the markup, renders the layout
+inside `<div id="app">`, and leaves one more hole after it for the record. The response streams the
+picks at once, the reviews when they arrive, and then the record, which `PageRecord::script` writes
+once every hole of the page is filled. `client/app.ts` finds the record and calls `mountPage`,
+which loads `Picks`, `Pick` and `Reviews` and hydrates the whole layout as one app. Nothing on the
+page is an island; "Add to basket" and "Show all reviews" work because the app holds them.
+
 ## The hydration test
 
 ```sh
@@ -112,11 +125,13 @@ cargo test -p ferrovue-example-fullstack          # the server's pages, as strin
 ```
 
 `test/hydration.test.ts` runs `cargo run -p ferrovue-example-fullstack -- --render <path>` for the
-home page and a book page, puts each page's body into happy-dom, and runs the client's own
-`hydrate()` on it. It fails on any warning Vue logs, which is how Vue reports a hydration mismatch.
-It then checks that Vue kept the server's nodes, that the islands work after hydration, and that a
-click in one island reaches the store the summary shows. CI runs it, and also starts the real server
-to check that a page streams and its assets are served.
+home page, a book page and the staff picks, puts each page's body into happy-dom, and runs the
+client's own `hydrate()` on it. It fails on any warning Vue logs, which is how Vue reports a
+hydration mismatch. It then checks that Vue kept the server's nodes, that the islands work after
+hydration, and that a click in one island reaches the store the summary shows. The staff picks are
+hydrated a second time with `hydrateRecordedPage` from `ferrovue/testing`, which fails on any
+mismatch and on any change hydrating makes to the markup. CI runs it, and also starts the real
+server to check that a page streams and its assets are served.
 
 happy-dom parses HTML its own way, though, and Vue hydrates against what the browser parsed, so
 `browser/hydration.test.ts` does the same in real browsers:
