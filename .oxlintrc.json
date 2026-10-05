@@ -13,7 +13,6 @@
   },
   "ignorePatterns": [
     "crates/**",
-    "examples/**",
     "packages/ferrovue/bench/**",
     "packages/ferrovue/fuzz/**"
   ],
@@ -33,6 +32,14 @@
         "maxArgs": 2
       }
     ],
+    "import/no-unassigned-import": [
+      "error",
+      {
+        "allow": [
+          "**/*.css"
+        ]
+      }
+    ],
     "unicorn/consistent-function-scoping": "off",
     "typescript/no-unsafe-type-assertion": "off",
     "eslint/no-underscore-dangle": [
@@ -43,7 +50,9 @@
           "__scopeId",
           "__asyncLoader",
           "__asyncResolved",
-          "_instance"
+          "__name",
+          "_instance",
+          "_vnode"
         ]
       }
     ]

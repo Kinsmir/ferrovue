@@ -7,12 +7,15 @@
     "crates/ferrovue/tests/literal_props/components/**",
     "examples/greeting/components/**",
     "examples/dioxus/components/**",
+    "examples/fullstack/adopter/*.test.ts",
+    "examples/fullstack/browser/*.test.ts",
+    "examples/fullstack/client/components/**",
+    "examples/fullstack/client/main.ts",
     "packages/ferrovue/browser/*.test.ts",
     "packages/ferrovue/browser/entry.ts",
     "scripts/inspect.ts"
   ],
   "ignorePatterns": [
-    "examples/fullstack/**",
     "packages/ferrovue/bench/**",
     "packages/ferrovue/fuzz/**"
   ],

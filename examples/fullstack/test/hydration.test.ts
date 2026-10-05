@@ -5,7 +5,7 @@ import { afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
 import { nextTick, type Component } from "vue";
 import { createMemoryHistory } from "vue-router";
 import { createPinia } from "pinia";
-import islands from "ferrovue/islands";
+import islandLoaders from "ferrovue/islands";
 import { hydrateRecordedPage } from "ferrovue/testing";
 import { createAppRouter, hydrate, type Hydrated } from "../client/app.ts";
 import BasketSummary from "../client/components/BasketSummary.vue";
@@ -75,8 +75,8 @@ it("links the client build's stylesheets, scoped to the ids the server writes, t
 });
 
 it("loads every island by the name the server writes, and only those", async () => {
-  expect(Object.keys(islands)).toEqual(["AddToBasket", "Pick", "Reviews"]);
-  expect((await islands.Reviews!()).default).toBe(Reviews);
+  expect(Object.keys(islandLoaders)).toEqual(["AddToBasket", "Pick", "Reviews"]);
+  expect((await islandLoaders.Reviews!()).default).toBe(Reviews);
 });
 
 const roots = (): (ChildNode | null)[] => [...document.querySelectorAll("[data-island], #basket")].map((el) => el.firstChild);
@@ -149,7 +149,7 @@ it("hydrates the staff picks exactly with the testing helper, from the page the 
   history.replace("/picks");
   const router = createAppRouter(history);
   await router.replace("/picks");
-  const page = await hydrateRecordedPage({ html: bodyOf("/picks") }, Picks, islands, { pinia: createPinia(), router });
+  const page = await hydrateRecordedPage({ html: bodyOf("/picks") }, Picks, islandLoaders, { pinia: createPinia(), router });
   expect(document.querySelector(".review-list a.share")?.getAttribute("href")).toMatch(/^mailto:\?body=/);
   page.unmount();
 });
