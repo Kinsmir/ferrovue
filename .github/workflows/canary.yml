@@ -1,0 +1,108 @@
+name: Vue canary
+
+on:
+  schedule:
+    - cron: "17 5 * * 3"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  canary:
+    name: The newest Vue 3.5 and peers record what is committed
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - name: Resolve Vue and the peers to the newest patch their peer ranges allow
+        run: |
+          node --input-type=module -e '
+            import { execFileSync } from "node:child_process";
+            import { appendFileSync, readFileSync } from "node:fs";
+            const peers = JSON.parse(readFileSync("packages/ferrovue/package.json", "utf8")).peerDependencies;
+            const follows = {
+              vue: ["vue", "@vue/compiler-sfc", "@vue/server-renderer", "@vue/shared"],
+              "vue-router": ["vue-router"],
+              pinia: ["pinia"],
+              "vue-i18n": ["vue-i18n", "@intlify/message-compiler"],
+            };
+            const newest = (peer) => {
+              const found = JSON.parse(execFileSync("pnpm", ["view", `${peer}@${peers[peer]}`, "version", "--json"], { encoding: "utf8" }));
+              return [found].flat().toSorted((a, b) => a.split(".")[2] - b.split(".")[2]).at(-1);
+            };
+            const lines = Object.entries(follows).flatMap(([peer, names]) => {
+              const version = newest(peer);
+              return names.map((name) => `  "${name}": "${version}"`);
+            });
+            appendFileSync("pnpm-workspace.yaml", `\noverrides:\n${lines.join("\n")}\n`);
+          '
+          cat pnpm-workspace.yaml
+          pnpm install --no-frozen-lockfile
+      - name: The versions under test
+        run: |
+          {
+            echo "| Package | Version |"
+            echo "|---|---|"
+            for name in vue @vue/compiler-sfc @vue/server-renderer @vue/shared vue-router pinia vue-i18n @intlify/message-compiler; do
+              echo "| $name | $(node -p "require('$name/package.json').version") |"
+            done
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+        working-directory: packages/ferrovue
+      - name: Re-record the conformance fixtures and the vectors
+        run: |
+          pnpm conformance:record
+          pnpm vectors:record
+      - name: The recordings are what is committed
+        run: |
+          git diff --binary -- . ':!pnpm-lock.yaml' ':!pnpm-workspace.yaml' > "$RUNNER_TEMP/canary.diff"
+          if [[ -s "$RUNNER_TEMP/canary.diff" ]]; then
+            {
+              echo "### Recordings that changed"
+              echo
+              echo '```text'
+              git diff --stat -- . ':!pnpm-lock.yaml' ':!pnpm-workspace.yaml'
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+      - name: The compiler, the generated Rust and hydration agree with this Vue
+        if: success() || failure()
+        run: |
+          git checkout -- crates packages
+          pnpm test
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with:
+          name: canary-diff-${{ github.run_id }}
+          path: ${{ runner.temp }}/canary.diff
+          if-no-files-found: ignore
+
+  report:
+    name: Open or update the canary issue
+    needs: canary
+    if: failure() && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TITLE: Vue canary fails against the newest Vue 3.5 or peers
+      RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - run: |
+          body="The weekly canary failed: $RUN"
+          number=$(gh issue list --state open --search "in:title \"$TITLE\"" --json number,title --jq "map(select(.title == env.TITLE)) | .[0].number // empty")
+          if [[ -n "$number" ]]; then
+            gh issue comment "$number" --body "$body"
+          else
+            gh issue create --title "$TITLE" --body "$body"
+          fi

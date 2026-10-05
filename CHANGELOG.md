@@ -5,6 +5,19 @@ released together and share version numbers.
 
 ## [Unreleased]
 
+### Added
+
+- A weekly CI job (`.github/workflows/canary.yml`) installs the newest patch of Vue 3.5, vue-router,
+  Pinia and vue-i18n that ferrovue's peer ranges allow, re-records the conformance fixtures and
+  vectors from them, hydrates the committed HTML with them, and opens an issue when anything differs.
+
+### Changed
+
+- The `vue` peer dependency is `~3.5.43` instead of exactly `3.5.43`, so a later Vue 3.5 patch no
+  longer fails the install. The optional peers are held to the minor the fixtures were recorded
+  from: `vue-router` `~5.3.1` (was `^5.3.1`), `pinia` `~4.0.3` (was `^4.0.3`) and `vue-i18n`
+  `~11.4.13` (was `^11.0.0`). The README's "Versions" lists them.
+
 ## [0.4.0] - 2026-10-05
 
 ### Changed
