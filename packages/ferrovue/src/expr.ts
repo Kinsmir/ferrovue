@@ -1,4 +1,4 @@
-import { type Component, type N, type Scope, type Ty, type Val, BOOL, fail, FLOAT, GenError, INT, opt, rustStr, sameTy, snake, STR, UNDEF } from "./model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, absence, BOOL, fail, FLOAT, GenError, INT, joinAbsence, nothing, NULL, opt, rustStr, sameTy, snake, STR, UNDEF, withAbsence } from "./model.ts";
 import { ctx } from "./context.ts";
 import { lookupStruct, markHome } from "./typescript.ts";
 import { claim } from "./plugin.ts";
@@ -6,7 +6,7 @@ import { atom, bare, binary, enclosed, logical, negate, not, occurrences, strArg
 import { collected } from "./lists.ts";
 import { asCow, formatted, isTemporary, loneOf, meet, stringsEqual } from "./strings.ts";
 import { arithmetic, asF64, compare, intFromF64, isNumber, negatedOrder, numberVal } from "./numbers.ts";
-import { boolOf, choice, known, narrowing, narrowTo, pathOf, presence, truthy } from "./narrowing.ts";
+import { boolOf, checkNullTest, choice, known, narrowing, narrowTo, nullTest, pathOf, presence, truthy } from "./narrowing.ts";
 import { call, isObjectCall } from "./calls.ts";
 
 export function describeTy(ty: Ty): string {
@@ -27,9 +27,13 @@ export function describeTy(ty: Ty): string {
     case "child":
       return "an object";
     case "opt":
+      if (ty.none === "null") return `${describeTy(ty.of)} or \`null\``;
+      if (ty.none === "either") return `${describeTy(ty.of)}, \`null\` or \`undefined\``;
       return `an optional ${describeTy(ty.of).replace(/^an? /, "")}`;
     case "undef":
       return "`undefined`";
+    case "null":
+      return "`null`";
     default:
       return claim((p) => p.values?.describe?.(ty)) ?? "a value of another kind";
   }
@@ -65,9 +69,21 @@ export function fieldVal(comp: Component, base: string, ty: Ty, js: string, node
   }
 }
 
+export function holdsNothing(comp: Component, v: Val, want: Ty, node: N, where: string): void {
+  const has = absence(v.ty);
+  if (has === null) return;
+  const takes = absence(want);
+  if (takes === has || takes === "either") return;
+  const is = has === "either" ? "may be `null` or `undefined`" : has === "null" ? "may be `null`" : "may be `undefined`";
+  const fix = takes === null ? "narrow it with `v-if` first" : takes === "null" ? "write `?? null` after it" : "write `?? undefined` after it";
+  fail(comp, `a value that ${is} where ${where} takes ${describeTy(want)}, which Vue would hand it as it is: ${fix}`, node);
+}
+
 export function coerce(comp: Component, v: Val, want: Ty, node: N): string {
   if (sameTy(v.ty, want)) return v.code;
-  if (want.k === "opt" && v.ty.k === "undef") return "None";
+  holdsNothing(comp, v, want, node, "the function");
+  if (want.k === "opt" && nothing(v.ty)) return "None";
+  if (want.k === "opt" && v.ty.k === "opt" && sameTy(v.ty.of, want.of)) return v.code;
   if (want.k === "opt" && sameTy(v.ty, want.of)) return `Some(${bare(v.code)})`;
   if (want.k === "float" && v.ty.k === "int") return asF64(v);
   if (want.k === "opt" && want.of.k === "float" && v.ty.k === "int") return `Some(${asF64(v)})`;
@@ -163,9 +179,10 @@ export function expr(s: Scope, n: N): Val {
     case "OptionalMemberExpression": {
       if (n.computed) return fail(comp, "computed member access", n);
       const base = expr(s, n.object);
+      if (nothing(base.ty)) return { code: "None", ty: UNDEF };
       if (base.ty.k !== "opt") return fieldVal(comp, base.code, base.ty, n.property.name, n);
       const f = fieldVal(comp, "v", base.ty.of, n.property.name, n);
-      if (f.ty.k === "opt") return { code: `${atom(base.code)}.and_then(|v| ${f.code})`, ty: f.ty };
+      if (f.ty.k === "opt") return { code: `${atom(base.code)}.and_then(|v| ${f.code})`, ty: opt(f.ty) };
       return { code: `${atom(base.code)}.map(|v| ${f.code})`, ty: opt(f.ty) };
     }
     case "StringLiteral":
@@ -175,7 +192,7 @@ export function expr(s: Scope, n: N): Val {
     case "BooleanLiteral":
       return { code: String(n.value), ty: BOOL, konst: n.value };
     case "NullLiteral":
-      return fail(comp, "`null`: compare with `undefined`, which is what an absent prop is", n);
+      return { code: "None", ty: NULL };
     case "Identifier": {
       if (n.name === "undefined") return { code: "None", ty: UNDEF };
       const local = s.locals.get(n.name) ?? s.setup.get(n.name);
@@ -253,15 +270,16 @@ export function expr(s: Scope, n: N): Val {
       if (n.operator === "??") {
         const own = claim((p) => p.values?.nullish?.(s, a, b, n));
         if (own) return own;
+        if (nothing(a.ty)) return b;
         if (a.ty.k !== "opt") return a;
-        if (b.ty.k === "undef") return a;
+        if (nothing(b.ty)) return { ...a, ty: withAbsence(a.ty.of, absence(b.ty)) };
         if (b.iter !== undefined) fail(comp, "`??` falling back to a computed list", n);
         if (a.held !== undefined && b.ty.k === "str") return { code: `&*${atom(a.held)}.unwrap_or(${asCow(b)})`, ty: STR, ...loneOf(a, b) };
         if (a.ty.of.k === "str" && b.ty.k === "str" && isTemporary(b)) {
           return { code: `&*${atom(a.code)}.map(std::borrow::Cow::<str>::Borrowed).unwrap_or(${asCow(b)})`, ty: STR, ...loneOf(a, b) };
         }
         if (sameTy(a.ty.of, b.ty)) return { code: `${atom(a.code)}.unwrap_or(${bare(b.code)})`, ty: b.ty, ...loneOf(a, b) };
-        if (sameTy(a.ty, b.ty)) return { code: `${atom(a.code)}.or(${bare(b.code)})`, ty: a.ty, ...loneOf(a, b) };
+        if (b.ty.k === "opt" && sameTy(a.ty.of, b.ty.of)) return { code: `${atom(a.code)}.or(${bare(b.code)})`, ty: b.ty, ...loneOf(a, b) };
         if (a.ty.of.k === "float" && b.ty.k === "int") return { code: `${atom(a.code)}.unwrap_or(${bare(asF64(b))})`, ty: FLOAT };
         if (a.ty.of.k === "int" && b.ty.k === "float") return { code: `${atom(a.code)}.map(|v| v as f64).unwrap_or(${bare(b.code)})`, ty: FLOAT };
         return fail(comp, "`??` between different types", n);
@@ -300,9 +318,27 @@ export function expr(s: Scope, n: N): Val {
       }
       return fail(comp, `unary \`${n.operator}\``, n);
     case "BinaryExpression": {
-      if (n.operator !== "===" && n.operator !== "!==") fail(comp, `\`${n.operator}\``, n);
+      const test = nullTest(n);
+      if (n.operator !== "===" && n.operator !== "!==" && !test) fail(comp, `\`${n.operator}\`: \`==\` and \`!=\` compare with \`null\` or \`undefined\` only; use \`===\``, n);
       const whole = claim((p) => p.equality?.(s, n));
       if (whole) return whole;
+      if (test) {
+        const v = expr(s, test.target);
+        const none = absence(v.ty);
+        if (v.ty.k === "opt") {
+          checkNullTest(s, test, v);
+          const is = `${atom(v.code)}.is_none()`;
+          return boolOf(test.is ? is : not(is));
+        }
+        if (none !== null) {
+          const konst = (!test.strict || none === test.literal) === test.is;
+          return { code: String(konst), ty: BOOL, konst };
+        }
+        if (!test.strict && claim((p) => p.values?.describe?.(v.ty)) === undefined) {
+          return { code: String(!test.is), ty: BOOL, konst: !test.is };
+        }
+        if (!test.strict) fail(comp, `\`${n.operator}\` of ${describeTy(v.ty)}: compare with \`${test.is ? "===" : "!=="} undefined\``, n);
+      }
       const a = expr(s, n.left);
       const b = expr(s, n.right);
       let eq: string;
@@ -311,9 +347,14 @@ export function expr(s: Scope, n: N): Val {
       if (strish(a.ty) && strish(b.ty)) meet(comp, a, b, `\`${n.operator}\``, n, "equal");
       const own = claim((p) => p.values?.equals?.(a, b));
       if (own !== undefined) eq = own;
-      else if (b.ty.k === "undef" && a.ty.k === "opt") eq = `${atom(a.code)}.is_none()`;
-      else if (a.ty.k === "undef" && b.ty.k === "opt") eq = `${atom(b.code)}.is_none()`;
-      else if (a.ty.k === "undef" || b.ty.k === "undef") {
+      else if ((nothing(b.ty) && a.ty.k === "opt") || (nothing(a.ty) && b.ty.k === "opt")) {
+        const [v, literal] = a.ty.k === "opt" ? [a, b] : [b, a];
+        checkNullTest(s, { target: n, literal: literal.ty.k === "null" ? "null" : "undefined", strict: true, is: n.operator === "===" }, v);
+        eq = `${atom(v.code)}.is_none()`;
+      } else if (nothing(a.ty) || nothing(b.ty)) {
+        const other = nothing(a.ty) ? b.ty : a.ty;
+        const opaque = nothing(other) ? undefined : claim((p) => p.values?.describe?.(other));
+        if (opaque !== undefined) fail(comp, `\`${n.operator}\` between ${opaque} and ${describeTy(nothing(a.ty) ? a.ty : b.ty)}`, n);
         const same = a.ty.k === b.ty.k;
         const konst = n.operator === "===" ? same : !same;
         return { code: String(konst), ty: BOOL, konst };
@@ -345,6 +386,7 @@ export function expr(s: Scope, n: N): Val {
         const [present, absent] = p.negated ? [bare(no), second(yes)] : [bare(yes), second(no)];
         if (present === `Some(${name})` && absent === "None") return p.option;
         if (present === name) return `${atom(p.option)}.unwrap_or(${absent})`;
+        if (absent === "None" && present.startsWith("Some(") && enclosed(present.slice(4))) return `${atom(p.option)}.map(|${name}| ${bare(present.slice(5, -1))})`;
         if (occurrences(present, name)) return `if ${p.pattern(name)} { ${present} } else { ${absent} }`;
         return choice(p.present, present, absent);
       };
@@ -356,14 +398,17 @@ export function expr(s: Scope, n: N): Val {
         const both = `(${choose(collected(a), collected(b))})`;
         return { code: both, ty: a.ty, iter: `${both}.into_iter()`, ...lone };
       }
-      const optStr = (v: Val) => v.ty.k === "undef" || (v.ty.k === "opt" && v.ty.of.k === "str") || v.ty.k === "str";
+      const optStr = (v: Val) => nothing(v.ty) || (v.ty.k === "opt" && v.ty.of.k === "str") || v.ty.k === "str";
       if (sameTy(a.ty, b.ty) && a.ty.k !== "opt") return { code: choose(a.code, b.code), ty: a.ty, ...lone };
       if (isNumber(a.ty) && isNumber(b.ty)) return { code: choose(asF64(a), asF64(b)), ty: FLOAT };
-      if (sameTy(a.ty, b.ty) || a.ty.k === "undef" || b.ty.k === "undef" || (a.ty.k === "opt" && sameTy(a.ty.of, b.ty)) || (b.ty.k === "opt" && sameTy(b.ty.of, a.ty))) {
-        const ty = opt(a.ty.k === "undef" || b.ty.k === "opt" ? b.ty : a.ty);
+      const base = (ty: Ty): Ty | null => (ty.k === "opt" ? ty.of : nothing(ty) ? null : ty);
+      const [baseA, baseB] = [base(a.ty), base(b.ty)];
+      const of = baseA ?? baseB;
+      if (of !== null && (baseA === null || baseB === null || sameTy(baseA, baseB))) {
+        const ty = withAbsence(of, joinAbsence(absence(a.ty), absence(b.ty)));
         if (optStr(a) && optStr(b) && (isTemporary(a) || isTemporary(b) || a.held !== undefined || b.held !== undefined)) {
           const held = (v: Val): string =>
-            v.held ?? (v.ty.k === "undef" ? "None" : v.ty.k === "opt" ? `${atom(v.code)}.map(std::borrow::Cow::<str>::Borrowed)` : `Some(${asCow(v)})`);
+            v.held ?? (nothing(v.ty) ? "None" : v.ty.k === "opt" ? `${atom(v.code)}.map(std::borrow::Cow::<str>::Borrowed)` : `Some(${asCow(v)})`);
           const both = atom(choose(held(a), held(b)));
           return { code: `${both}.as_deref()`, ty, held: both, ...lone };
         }

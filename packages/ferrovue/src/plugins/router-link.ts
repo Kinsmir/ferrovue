@@ -60,6 +60,9 @@ export function resolveLink(s: Scope, e: Emitter, to: N): void {
       if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "a query holds plain keys", p);
       const key = String(p.key.name ?? p.key.value);
       const v = expr(s, p.value);
+      if (v.ty.k === "null" || (v.ty.k === "opt" && v.ty.none !== undefined)) {
+        fail(s.comp, "a query value that may be `null`, which vue-router writes as the key alone: give `undefined` to leave it out", p.value);
+      }
       if (v.ty.k === "undef") continue;
       if (v.ty.k === "opt") {
         e.open(`if let Some(v) = ${v.code}`);

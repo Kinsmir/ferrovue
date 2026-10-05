@@ -1,5 +1,5 @@
 import { escapeHtml, hyphenate, parseStringStyle } from "@vue/shared";
-import { type N, type Scope, type Val, fail, rustStr } from "./model.ts";
+import { type N, type Scope, type Val, fail, nothing, rustStr } from "./model.ts";
 import { expr } from "./expr.ts";
 import { cond } from "./narrowing.ts";
 import { condition, logical, not, strArg } from "./parens.ts";
@@ -21,7 +21,7 @@ export function mergedStyle(s: Scope, e: Emitter, n: N): void {
     e.open(`if let Some(v) = ${v.code}`);
     e.stmt("fv::style_text_into(out, v);");
     e.close();
-  } else if (v.ty.k !== "undef") fail(s.comp, "a style binding is a string, an object or an array", n);
+  } else if (!nothing(v.ty)) fail(s.comp, "a style binding is a string, an object or an array", n);
 }
 
 export function styleAttr(s: Scope, n: N): string {
@@ -48,7 +48,7 @@ export function styleAttr(s: Scope, n: N): string {
       return `if ${condition(cond(s, n.test))} { ${styleAttr(s, n.consequent)} } else { ${styleAttr(s, n.alternate)} }`;
   }
   const v = expr(s, n);
-  if (v.ty.k === "str" || v.ty.k === "undef" || (v.ty.k === "opt" && v.ty.of.k === "str")) return valueAttr(s, v, n);
+  if (v.ty.k === "str" || nothing(v.ty) || (v.ty.k === "opt" && v.ty.of.k === "str")) return valueAttr(s, v, n);
   return fail(s.comp, "a style binding is a string, an object or an array", n);
 }
 
@@ -101,7 +101,7 @@ export function renderStyle(s: Scope, e: Emitter, n: N): void {
       e.open(`if let Some(v) = ${v.code}`);
       e.stmt("fv::escape_into(out, v);");
       e.close();
-    } else if (v.ty.k !== "undef") fail(s.comp, "a style binding is a string, an object or an array", n);
+    } else if (!nothing(v.ty)) fail(s.comp, "a style binding is a string, an object or an array", n);
     return;
   }
   const items = styleItems(s, n, null);

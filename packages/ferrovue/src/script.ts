@@ -1,5 +1,5 @@
 import { basename } from "node:path";
-import { type Component, type N, type Scope, type Val, fail, GenError, snake, takesAttrs } from "./model.ts";
+import { type Component, type N, type Scope, type Val, fail, nothing, GenError, snake, takesAttrs } from "./model.ts";
 import { CONFIG_FILE, ctx } from "./context.ts";
 import { definePropsType } from "./typescript.ts";
 import { expr, fieldVal } from "./expr.ts";
@@ -176,7 +176,7 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
         scope.clientOnly.set(local, e.message.replace(/^[^:]*: /, ""));
         continue;
       }
-      if (v.ty.k === "undef" || (v.ty.k === "str" && known(v) !== undefined)) {
+      if (nothing(v.ty) || (v.ty.k === "str" && known(v) !== undefined)) {
         scope.setup.set(local, v);
         continue;
       }

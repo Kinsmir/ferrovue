@@ -42,7 +42,9 @@ What is refused today, each with an error that names it:
 - a dictionary's field read by name (`r.key`, `r[key]`), which may be absent although TypeScript
   says it is not; `Object.entries()` anywhere but as a `v-for`'s source; dictionaries of optional
   values. See [`props`](crate::guide::props#dictionaries);
-- `null`;
+- a type that is both `null` and `undefined` (`T | null | undefined`, `x?: T | null`), a default
+  for a nullable prop, and `=== null` or `=== undefined` of a value that may be either. See
+  [`props`](crate::guide::props#nullable-props);
 - an attribute (`class` and `style` aside) bound to a value that may be neither a string, a number
   nor a boolean: a list, an object, or a `route.query` value, which is an array when its key is
   repeated. Vue's server renderer leaves such an attribute out, and hydration then sets it to the

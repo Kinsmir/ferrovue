@@ -1,5 +1,5 @@
 import { escapeHtml, hyphenate, isBooleanAttr, isSSRSafeAttrName, propsToAttrMap } from "@vue/shared";
-import { type N, type Scope, type Ty, type Val, fail, GenError, rustStr } from "./model.ts";
+import { type N, type Scope, type Ty, type Val, fail, nothing, GenError, rustStr } from "./model.ts";
 import { CONFIG_FILE, ctx } from "./context.ts";
 import { describeTy, expr } from "./expr.ts";
 import { known, truthy } from "./narrowing.ts";
@@ -30,6 +30,7 @@ export function interpolate(e: Emitter, v: Val): void {
   if (display(e, v)) return;
   switch (v.ty.k) {
     case "undef":
+    case "null":
       return;
     case "opt":
       e.open(`if let Some(v) = ${v.code}`);
@@ -48,7 +49,7 @@ export function attrValue(e: Emitter, v: Val): void {
 
 function renderable(s: Scope, key: string, v: Val, n: N): void {
   const ty = v.ty.k === "opt" ? v.ty.of : v.ty;
-  if (ty.k === "str" || ty.k === "int" || ty.k === "float" || ty.k === "bool" || ty.k === "undef") return;
+  if (ty.k === "str" || ty.k === "int" || ty.k === "float" || ty.k === "bool" || nothing(ty)) return;
   const own = claim((p) => p.values?.unbindable?.(ty));
   const what = own?.what ?? describeTy(ty);
   const fix = own?.fix ?? (ty.k === "list" ? 'join it into one string, as `.join(",")`' : "bind a string, a number or a boolean");
@@ -57,7 +58,7 @@ function renderable(s: Scope, key: string, v: Val, n: N): void {
 
 export function renderAttr(s: Scope, e: Emitter, key: string, v: Val, n: N): void {
   renderable(s, key, v, n);
-  if (v.ty.k === "undef") return;
+  if (nothing(v.ty)) return;
   if (v.ty.k === "opt") {
     e.open(`if let Some(v) = ${v.code}`);
     renderAttr(s, e, key, { code: "v", ty: v.ty.of }, n);
@@ -73,7 +74,7 @@ export function renderDynamicAttr(s: Scope, e: Emitter, key: string, v: Val, n: 
   const name = propsToAttrMap[key] ?? key.toLowerCase();
   if (!isSSRSafeAttrName(name)) fail(s.comp, `unsafe attribute name \`${name}\``, n);
   renderable(s, key, v, n);
-  if (v.ty.k === "undef") return;
+  if (nothing(v.ty)) return;
   const boolean = (t: Ty) => isBooleanAttr(name) || (name === "hidden" && (t.k === "bool" || t.k === "int" || t.k === "float"));
   if (v.ty.k === "opt" && boolean(v.ty.of)) {
     e.open(`if ${v.ty.of.k === "str" ? `${atom(v.code)}.is_some()` : truthy(v)}`);
@@ -292,6 +293,7 @@ export function valueAttr(s: Scope, v: Val, n: N): string {
     case "bool":
       return `fv::Attr::Bool(${bare(v.code)})`;
     case "undef":
+    case "null":
       return "fv::Attr::Undefined";
     case "opt": {
       const of = v.ty.of.k;

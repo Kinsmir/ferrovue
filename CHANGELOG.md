@@ -10,6 +10,15 @@ released together and share version numbers.
 - A weekly CI job (`.github/workflows/canary.yml`) installs the newest patch of Vue 3.5, vue-router,
   Pinia and vue-i18n that ferrovue's peer ranges allow, re-records the conformance fixtures and
   vectors from them, hydrates the committed HTML with them, and opens an issue when anything differs.
+- `null` and nullable data: `T | null` in props, interfaces, shared types and Pinia state is an
+  `Option<T>` whose `None` the island's props and the state script write as `null` (an optional
+  value's `None` is still left out), so the client hydrates with the `null` the server rendered.
+  Templates test it with `x !== null`, `x === null`, `x != null`, `x == null` and truthiness, and
+  `??`, `?.`, `{{ }}` and bound attributes treat it as Vue does; `null` may be a `?:` branch, a
+  `??` fallback and a child's prop. A type that may be both `null` and `undefined`
+  (`T | null | undefined`, `x?: T | null`), a default for a nullable prop and a strict comparison
+  of a value that may be either are refused with an error saying why. The fuzzer generates nullable
+  props.
 
 ### Changed
 

@@ -1,5 +1,5 @@
 import { escapeHtml } from "@vue/shared";
-import { type N, type Scope, type Val, fail, rustStr, STR } from "./model.ts";
+import { type N, type Scope, type Val, fail, nothing, rustStr, STR } from "./model.ts";
 import { expr } from "./expr.ts";
 import { cond, known, truthy } from "./narrowing.ts";
 import { meet } from "./strings.ts";
@@ -72,7 +72,7 @@ export function classItems(s: Scope, n: N): ClassItem[] {
   const v = expr(s, n);
   if (v.ty.k === "str") return [{ code: v.code }];
   if (v.ty.k === "opt" && v.ty.of.k === "str") return [{ code: `${atom(v.code)}.unwrap_or("")` }];
-  if (v.ty.k === "undef") return [];
+  if (nothing(v.ty)) return [];
   return fail(s.comp, "a class is a string, an array, or an object of conditions", n);
 }
 
@@ -114,7 +114,7 @@ export function classPresent(s: Scope, n: N): string {
       break;
   }
   const v = expr(s, n);
-  if (v.ty.k === "undef") return "false";
+  if (nothing(v.ty)) return "false";
   if (v.ty.k === "opt") return `${atom(v.code)}.is_some()`;
   return "true";
 }
@@ -156,6 +156,6 @@ export function classAttr(s: Scope, n: N, side: "vnode" | "own"): string {
       return `if ${condition(cond(s, n.test))} { ${classAttr(s, n.consequent, side)} } else { ${classAttr(s, n.alternate, side)} }`;
   }
   const v = expr(s, n);
-  if (v.ty.k === "str" || v.ty.k === "undef" || (v.ty.k === "opt" && v.ty.of.k === "str")) return valueAttr(s, v, n);
+  if (v.ty.k === "str" || nothing(v.ty) || (v.ty.k === "opt" && v.ty.of.k === "str")) return valueAttr(s, v, n);
   return fail(s.comp, "a class is a string, an array, or an object of conditions", n);
 }

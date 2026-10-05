@@ -20,6 +20,7 @@ a public field per prop, and a struct for every interface or object type alias t
 | `Props` imported from another component | `super::child::Props<'a>` | the struct |
 | `TrustedHtml` (from `ferrovue/types`) | the type configured as `trustedHtml` | that type. See [`escaping`](crate::guide::escaping) |
 | `x?: T`, `x: T \| undefined` | `Option<T>` | a setter, `.x(value)` |
+| `x: T \| null` | `Option<T>`, written as `null` | a setter, `.x(value)` |
 
 A `number` is an integer on the server, which is what most props are: counts, ids, indexes. Declare
 a prop that may hold a fraction as `Float`. [`numbers`](crate::guide::numbers) explains how both are
@@ -42,6 +43,26 @@ An optional prop is an `Option`, `None` unless its setter is called. A default f
 or a destructured default (`const { size = "md" } = defineProps<…>()`) is applied while rendering, so
 the field stays `None` and the island's JSON leaves it out, as Vue's would. An optional `boolean`
 that is absent renders as `false`, which is the cast Vue applies.
+
+# Nullable props
+
+A prop declared `x: T | null` is an `Option` too, `None` unless its setter is called, and `None` is
+`null`: the island's JSON writes `"x":null`, where an optional prop's `None` is left out, so the
+client hydrates with the `null` the server rendered. Data from a JSON API or a database keeps its
+shape, `deletedAt: string | null` included, and so do the fields of interfaces and the state of
+Pinia stores (`ref<string | null>(null)`).
+
+The template tests it as TypeScript narrows it: `x !== null`, `x === null`, `x != null`,
+`x == null` and `x` alone. `??`, `?.`, `{{ x }}`, which writes nothing for `null`, and an attribute
+bound to it, which is left out, behave as for an optional value. `x === undefined` is refused, since
+a nullable prop is never `undefined`, and so is `x === null` of an optional one.
+
+An `Option` holds one kind of nothing, so a value that may be both is refused where the difference
+would show: `T | null | undefined` and `x?: T | null` as types, a default for a nullable prop (Vue
+gives it only when the prop is absent), and `=== null` or `=== undefined` of `a?.b` where `b` is
+nullable (use `== null`). A parent passes a nullable prop always, `null` for none, and never hands
+an optional value to it, or a nullable one to an optional prop, without `?? null` or
+`?? undefined`.
 
 # Building props
 

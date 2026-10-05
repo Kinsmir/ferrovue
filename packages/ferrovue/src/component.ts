@@ -2,9 +2,9 @@ import { compileScript, compileTemplate, parse as parseSfc } from "@vue/compiler
 import { readFileSync } from "node:fs";
 import { SourceMapConsumer } from "source-map-js";
 import { basename, relative } from "node:path";
-import { type Component, type N, blankComponent, fail, opt, snake, tagAst } from "./model.ts";
+import { type Component, type N, absence, blankComponent, fail, opt, snake, tagAst } from "./model.ts";
 import { ctx } from "./context.ts";
-import { typesImports, declareTypes, defaultValue, definePropsType, readTypeFile, resolveImport, runtimeDefaults, structOf, tyOfTs } from "./typescript.ts";
+import { typesImports, declareTypes, defaultValue, definePropsType, ONE_NOTHING, readTypeFile, resolveImport, runtimeDefaults, structOf, tyOfTs } from "./typescript.ts";
 import { claim } from "./plugin.ts";
 
 function vueErrorNode(err: unknown, within?: { line: number; column: number }): N {
@@ -33,6 +33,22 @@ function inheritAttrs(comp: Component, statements: N[]): boolean {
     }
   }
   return found;
+}
+
+function sourceDefault(ast: N[], key: string): N | null {
+  const named = (p: N) => (p.key?.name ?? p.key?.value) === key;
+  for (const st of ast) {
+    for (const d of st.type === "VariableDeclaration" ? st.declarations : []) {
+      if (d.id.type !== "ObjectPattern" || !definePropsType(d.init)) continue;
+      const p = d.id.properties.find((q: N) => q.type === "ObjectProperty" && named(q));
+      if (p?.value.type === "AssignmentPattern") return p.value.right;
+    }
+    const call = st.type === "ExpressionStatement" ? st.expression : st.type === "VariableDeclaration" ? st.declarations[0]?.init : null;
+    if (call?.type !== "CallExpression" || call.callee.name !== "withDefaults" || call.arguments[1]?.type !== "ObjectExpression") continue;
+    const p = call.arguments[1].properties.find((q: N) => q.type === "ObjectProperty" && named(q));
+    if (p) return p.value;
+  }
+  return null;
 }
 
 export function readComponent(file: string, root: string): { comp: Component; ast: N[]; ssr: string } {
@@ -126,6 +142,7 @@ export function readComponent(file: string, root: string): { comp: Component; as
         (p: N) => p.type === "ObjectProperty" && (p.key.name ?? p.key.value) === "required" && p.value.type === "BooleanLiteral" && p.value.value,
       );
       const base = tyOfTs(comp, t, comp.structs);
+      if (!required && absence(base) === "null") fail(comp, `a \`defineModel\` of \`T | null\` that is not \`required\` may be absent, which is \`undefined\`, or \`null\`: ${ONE_NOTHING}`, call);
       comp.props.fields.push({ js: named, rust: snake(named), ty: required ? base : opt(base) });
       comp.models.set(d.id.name, named);
     }
@@ -135,6 +152,10 @@ export function readComponent(file: string, root: string): { comp: Component; as
   for (const f of comp.props.fields) {
     if (f.ty.k !== "opt") continue;
     const node = defaults.get(f.js);
+    if (f.ty.none !== undefined) {
+      if (node) fail(comp, `a default for \`${f.js}\`, which is \`T | null\`: Vue gives it only when \`${f.js}\` is absent, which its Rust type, an \`Option\`, cannot be; fall back in the template with \`??\``, sourceDefault(ast, f.js) ?? node);
+      continue;
+    }
     if (node) f.dflt = defaultValue(comp, f, node);
     else if (f.ty.of.k === "bool") f.dflt = "false";
   }

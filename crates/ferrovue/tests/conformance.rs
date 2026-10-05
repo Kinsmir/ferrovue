@@ -101,6 +101,29 @@ fn an_island_carries_numbers_that_are_not_finite() {
 }
 
 #[test]
+fn an_island_carries_null_for_a_nullable_prop() {
+    use generated::{nullable, types};
+    let mut page = String::new();
+    nullable::island(&nullable::Props::new(vec![], vec![None])).render_to(&mut page);
+    let entry = types::Entry::new("e").score(0);
+    nullable::island(
+        &nullable::Props::new(vec![entry.clone()], vec![Some("t".into()), None])
+            .label("")
+            .on(false)
+            .entry(entry),
+    )
+    .render_to(&mut page);
+    page.push('\n');
+    assert_eq!(page, include_str!("conformance/null-islands.html"));
+    assert!(page.contains(
+        r#"data-props="{&quot;label&quot;:null,&quot;count&quot;:null,&quot;ratio&quot;:null,&quot;on&quot;:null,&quot;entry&quot;:null,&quot;entries&quot;:[],&quot;tags&quot;:[null]}""#
+    ));
+    assert!(page.contains(
+        r#"{&quot;title&quot;:&quot;e&quot;,&quot;deletedAt&quot;:null,&quot;score&quot;:0}"#
+    ));
+}
+
+#[test]
 fn a_component_with_slots_renders_through_html() {
     let props: generated::frame::Props = serde_json::from_str(r#"{"title":"t"}"#).unwrap();
     let body = |out: &mut String| out.push_str("<p>hi</p>");
@@ -369,6 +392,7 @@ mod dioxus {
             "Prose" => prose,
             "Parsing" => parsing,
             "Chips" => chips,
+            "Nullable" => nullable,
         };
         assert!(checked >= 50, "only {checked} fixtures were found");
     }

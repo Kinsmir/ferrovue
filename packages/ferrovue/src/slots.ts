@@ -1,4 +1,4 @@
-import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, fail, GenError, rustStr, snake } from "./model.ts";
+import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, fail, nothing, GenError, rustStr, snake } from "./model.ts";
 import { expr } from "./expr.ts";
 import { atom, bare, operand, strArg, UNARY } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
@@ -90,7 +90,7 @@ export function slotFieldValue(s: Scope, v: Val, n: N): string {
       return borrowed(v.code);
     case "opt":
       if (v.ty.of.k === "list") return `${atom(v.code)}.map(|v| &v[..])`;
-      if (v.ty.of.k === "opt" || v.ty.of.k === "undef") break;
+      if (v.ty.of.k === "opt" || nothing(v.ty.of)) break;
       return v.code;
   }
   return fail(s.comp, "a slot prop is a string, a number, a boolean, an object or a list", n);

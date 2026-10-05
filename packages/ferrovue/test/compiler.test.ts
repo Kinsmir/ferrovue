@@ -56,6 +56,21 @@ defineProps<{ count: number }>();
     expect(counting).toContain("pub fn into_island(props: Props) -> fv::Html<'static, Props> {");
   });
 
+  it("writes a nullable prop's None as null, and an optional one's not at all", () => {
+    const out = compile(
+      island(`<script setup lang="ts">
+defineProps<{ gone: string | null; note?: string }>();
+</script>
+<template><b v-if="gone !== null">{{ gone }}</b><i v-else-if="note != null">{{ note }}</i></template>`),
+    ).get("x.rs")!;
+    expect(out).toContain('    #[serde(rename = "gone")]\n    pub gone: Option<Cow<\'a, str>>,');
+    expect(out).toContain('    #[serde(rename = "note", default, skip_serializing_if = "Option::is_none")]');
+    expect(out).toContain("/// Set `gone`, which is `null` otherwise.");
+    expect(out).toContain("/// Props with nothing set, every optional one absent and every nullable one `null`.");
+    expect(out).toContain("if let Some(n1) = props.gone.as_deref() {");
+    expect(out).toContain("if let Some(n2) = props.note.as_deref() {");
+  });
+
   it("reserves a loop's markup per item and the text the props hold", () => {
     const out = compile(
       island(`<script setup lang="ts">
@@ -651,6 +666,23 @@ defineProps<Props>();
 </script>
 <template><nav><RouterLink :to="href" class="tab">go</RouterLink></nav></template>`;
 
+    it("refuses a query value that may be null, which vue-router writes as the key alone", () => {
+      const source = `<script setup lang="ts">
+defineProps<{ q: string | null }>();
+</script>
+<template><RouterLink :to="{ path: '/', query: { q } }">go</RouterLink></template>`;
+      expect(() => withRoutes(island(source))).toThrow(/X\.vue:4:\d+: a query value that may be `null`, which vue-router writes as the key alone/);
+    });
+
+    it("refuses comparing a query value with null, which vue-router gives a key with no value", () => {
+      const source = `<script setup lang="ts">
+import { useRoute } from "vue-router";
+const route = useRoute();
+</script>
+<template><p v-if="route.query.q === null">bare</p></template>`;
+      expect(() => withRoutes(island(source))).toThrow(/X\.vue:5:\d+: `===` between a query value and `null`/);
+    });
+
     it("resolves a RouterLink against the route, and hands the route down to it", () => {
       const parent = `<script setup lang="ts">
 import Nav from "./Nav.vue";
@@ -800,6 +832,24 @@ const prefs = usePrefs();
 const { wide } = storeToRefs(prefs);
 </script>
 <template><p :class="prefs.density" :data-wide="wide">{{ title }}</p></template>`;
+
+    it("writes a setup store's nullable state as null, and refuses one that starts undefined", () => {
+      const session = (init: string) => `import { defineStore } from "pinia";
+import { ref } from "vue";
+export const usePrefs = defineStore("prefs", () => {
+  const user = ref<string | null>(${init});
+  return { user };
+});
+`;
+      const user = `<script setup lang="ts">
+import { usePrefs } from "../stores/prefs";
+const prefs = usePrefs();
+</script>
+<template><p>{{ prefs.user ?? "guest" }}</p></template>`;
+      const out = withStore(island(user), session("null"));
+      expect(out.get("stores.rs")).toContain('    #[serde(rename = "user")]\n    pub user: Option<Cow<\'a, str>>,');
+      expect(() => withStore(island(user), session(""))).toThrow(/prefs\.ts:4:\d+: a `ref<T \| null>\(\)` with no value starts `undefined`/);
+    });
 
     it("reads a store's state from the Stores the server is given, and hands it down", () => {
       const parent = `<script setup lang="ts">
@@ -1199,12 +1249,63 @@ const props = defineProps<{ options: Option[] }>();
       /an interface called `Option` would hide Rust's own `Option`/,
     ],
     [
-      "a comparison with null",
+      "a comparison of an optional value with null",
       `<script setup lang="ts">
 const props = defineProps<{ note?: string }>();
 </script>
 <template><i v-if="note === null">x</i></template>`,
-      /`null`/,
+      /X\.vue:4:\d+: `=== null` of a value that is optional, .* never `null`: compare with `undefined`/,
+    ],
+    [
+      "a comparison of a nullable value with undefined",
+      `<script setup lang="ts">
+const props = defineProps<{ note: string | null }>();
+</script>
+<template><i :title="note !== undefined ? 'a' : 'b'">x</i></template>`,
+      /X\.vue:4:\d+: `!== undefined` of a value that is `T \| null`, never `undefined`: compare with `null`/,
+    ],
+    [
+      "a strict comparison of a value that may be null or undefined",
+      `<script setup lang="ts">
+interface Entry { at: string | null }
+const props = defineProps<{ entry?: Entry }>();
+</script>
+<template><i v-if="entry?.at === null">x</i></template>`,
+      /X\.vue:5:\d+: `=== null` of a value that may be `null` or `undefined`, .*test both with `== null`/,
+    ],
+    [
+      "loose equality between values",
+      `<script setup lang="ts">
+const props = defineProps<{ a: string; b: string }>();
+</script>
+<template><i v-if="a == b">x</i></template>`,
+      /`==` and `!=` compare with `null` or `undefined` only; use `===`/,
+    ],
+    [
+      "a nullable value passed where the child takes an optional one",
+      `<script setup lang="ts">
+import Y from "./Y.vue";
+const props = defineProps<{ a: string | null }>();
+</script>
+<template><Y :b="a" /></template>`,
+      /X\.vue:5:\d+: a value that may be `null` where the prop takes an optional string, .*`\?\? undefined`/,
+    ],
+    [
+      "an optional value passed where the child takes a nullable one",
+      `<script setup lang="ts">
+import Z from "./Z.vue";
+const props = defineProps<{ a?: string }>();
+</script>
+<template><Z :c="a" /></template>`,
+      /X\.vue:5:\d+: a value that may be `undefined` where the prop takes a string or `null`, .*`\?\? null`/,
+    ],
+    [
+      "a nullable prop the parent leaves out",
+      `<script setup lang="ts">
+import Z from "./Z.vue";
+</script>
+<template><Z /></template>`,
+      /Z requires `c`, which is `T \| null`: Vue would hand it `undefined`; pass `null` for none/,
     ],
     [
       "an ordering comparison of a string and a number, which JavaScript makes numeric",
@@ -1556,18 +1657,71 @@ defineProps<{ on: boolean }>();
       /class name `` has spaces around it/,
     ],
     [
-      "null in a prop's type",
+      "a type that is both null and undefined",
       `<script setup lang="ts">
-defineProps<{ a: string | null }>();
+defineProps<{ a: string | null | undefined }>();
 </script>
 <template><i>{{ a }}</i></template>`,
-      /`null` in a type/,
+      /X\.vue:2:\d+: a type that is both `null` and `undefined`: its Rust type is an `Option`/,
+    ],
+    [
+      "an optional field that may be null",
+      `<script setup lang="ts">
+defineProps<{ a?: string | null }>();
+</script>
+<template><i>{{ a }}</i></template>`,
+      /X\.vue:2:\d+: `a\?: T \| null` may be absent, which is `undefined`, or `null`: .*declare it `a: T \| null` or `a\?: T`/,
+    ],
+    [
+      "an optional field whose alias may be null",
+      `<script setup lang="ts">
+type Maybe = string | null;
+defineProps<{ a?: Maybe }>();
+</script>
+<template><i>{{ a }}</i></template>`,
+      /X\.vue:3:\d+: `a\?: T \| null` may be absent/,
+    ],
+    [
+      "an alias that may be null, made undefined too",
+      `<script setup lang="ts">
+type Maybe = string | null;
+defineProps<{ a: Maybe | undefined }>();
+</script>
+<template><i>{{ a }}</i></template>`,
+      /a type that is both `null` and `undefined`/,
+    ],
+    [
+      "a default for a nullable prop",
+      `<script setup lang="ts">
+withDefaults(defineProps<{ a: string | null }>(), { a: "x" });
+</script>
+<template><i>{{ a }}</i></template>`,
+      /X\.vue:2:\d+: a default for `a`, which is `T \| null`: Vue gives it only when `a` is absent/,
+    ],
+    [
+      "a model that may be null and is not required",
+      `<script setup lang="ts">
+const value = defineModel<string | null>();
+</script>
+<template><i>{{ value }}</i></template>`,
+      /X\.vue:2:\d+: a `defineModel` of `T \| null` that is not `required`/,
     ],
   ];
 
+  const children = {
+    Y: `<script setup lang="ts">
+defineProps<{ b?: string }>();
+</script>
+<template><b>{{ b }}</b></template>`,
+    Z: `<script setup lang="ts">
+defineProps<{ c: string | null }>();
+</script>
+<template><b>{{ c }}</b></template>`,
+  };
+
   for (const [what, source, message] of refused) {
     it(`refuses ${what}`, () => {
-      expect(() => compile(island(source))).toThrow(message);
+      expect(() => compile(island(source, children))).toThrow(message);
     });
   }
 });

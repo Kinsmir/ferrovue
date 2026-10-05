@@ -1,4 +1,4 @@
-import { type N, type Scope, type Ty, type Val, BOOL } from "./model.ts";
+import { type N, type Scope, type Ty, type Val, absence, BOOL, fail } from "./model.ts";
 import { ctx } from "./context.ts";
 import { claim } from "./plugin.ts";
 import { atom, bare, binary, condition, ifElse, logical, not, occurrences, receiver } from "./parens.ts";
@@ -27,6 +27,7 @@ export function truthy(v: Val): string {
     case "bool":
       return v.code;
     case "undef":
+    case "null":
       return "false";
     case "opt":
       return `${atom(v.code)}.is_some_and(|v| ${truthy({ code: "v", ty: v.ty.of })})`;
@@ -43,6 +44,40 @@ export function pathOf(n: N): string | null {
   if (!n.computed && n.property.type === "Identifier") return `${base}.${n.property.name}`;
   if (n.computed && n.property.type === "StringLiteral") return `${base}.${n.property.value}`;
   return null;
+}
+
+export interface NullTest {
+  target: N;
+  literal: "null" | "undefined";
+  strict: boolean;
+  is: boolean;
+}
+
+function nothingLiteral(n: N): "null" | "undefined" | null {
+  if (n.type === "NullLiteral") return "null";
+  if (n.type === "Identifier" && n.name === "undefined") return "undefined";
+  return null;
+}
+
+export function nullTest(n: N): NullTest | null {
+  if (n.type !== "BinaryExpression" || !["===", "!==", "==", "!="].includes(n.operator)) return null;
+  const right = nothingLiteral(n.right);
+  const left = nothingLiteral(n.left);
+  const literal = right ?? left;
+  if (literal === null) return null;
+  return { target: right !== null ? n.left : n.right, literal, strict: n.operator.length === 3, is: n.operator.startsWith("=") };
+}
+
+export function checkNullTest(s: Scope, t: NullTest, v: Val): void {
+  const none = absence(v.ty);
+  if (none === null || !t.strict || none === t.literal) return;
+  const op = t.is ? "==" : "!=";
+  if (none === "either") {
+    fail(s.comp, `\`${op}= ${t.literal}\` of a value that may be \`null\` or \`undefined\`, which its Rust \`Option\` cannot tell apart: test both with \`${op} null\``, t.target);
+  }
+  const other = t.literal === "null" ? "undefined" : "null";
+  const what = none === "null" ? "is `T | null`, never `undefined`" : "is optional, which is `undefined` when absent, never `null`";
+  fail(s.comp, `\`${op}= ${t.literal}\` of a value that ${what}: compare with \`${other}\``, t.target);
 }
 
 export interface Presence {
@@ -66,18 +101,18 @@ export function presence(s: Scope, n: N): Presence | null {
   if (n.type === "UnaryExpression" && n.operator === "!") {
     target = n.argument;
     negated = true;
-  } else if (n.type === "BinaryExpression" && (n.operator === "===" || n.operator === "!==")) {
-    const isUndef = (m: N) => m.type === "Identifier" && m.name === "undefined";
-    if (isUndef(n.right)) target = n.left;
-    else if (isUndef(n.left)) target = n.right;
-    else return null;
-    negated = n.operator === "===";
+  } else if (n.type === "BinaryExpression") {
+    const test = nullTest(n);
+    if (!test) return null;
+    target = test.target;
+    negated = test.is;
     byTruth = false;
   }
   const path = pathOf(target);
   if (path === null) return null;
   const v = expr(s, target);
   if (v.ty.k !== "opt") return null;
+  if (n.type === "BinaryExpression") checkNullTest(s, nullTest(n)!, v);
   const of: Ty = v.ty.of;
   const scalar = of.k === "str" || of.k === "int" || of.k === "float" || of.k === "bool";
   const filtered = byTruth && scalar;

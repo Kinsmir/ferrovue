@@ -86,6 +86,29 @@ it("hydrates a Float prop that is NaN or infinite as the number the server rende
   expect(warnings).not.toEqual([]);
 });
 
+it("hydrates a nullable prop from the null the server wrote, which an absent prop would not match", async () => {
+  const page = readFileSync(join(ROOT, "null-islands.html"), "utf8").trim();
+  attachSsrRender(join(ROOT, "components", "Nullable.vue"), "Nullable", components.Nullable!);
+  attachSsrRender(join(ROOT, "components", "NullChild.vue"), "NullChild", components.NullChild!);
+  const islands = [...page.matchAll(/<div data-island="Nullable" data-props="([^"]*)">(.*?)<\/div>(?=<div data-island|$)/g)];
+  expect(islands).toHaveLength(2);
+  for (const [, attr, html] of islands) {
+    const props = JSON.parse(attr!.replace(/&quot;/g, '"').replace(/&amp;/g, "&")) as Record<string, unknown>;
+    expect(Object.values(props)).toContain(null);
+    expect(await renderToString(createSSRApp(components.Nullable!, props))).toBe(html);
+  }
+
+  document.body.innerHTML = page;
+  const mounted = await mountIslands(components);
+  expect(mounted.apps).toHaveLength(2);
+  expect(warnings).toEqual([]);
+  mounted.unmount();
+
+  document.body.innerHTML = page.replace(/&quot;count&quot;:null,/, "");
+  (await mountIslands(components)).unmount();
+  expect(warnings.filter((w) => /hydrat|mismatch/i.test(w))).not.toEqual([]);
+});
+
 it("leaves an island it cannot hydrate as the server rendered it, and says why", async () => {
   const text = fixture("Text", "full");
   document.body.innerHTML = `${island("Missing", {}, "<p>kept</p>")}<div data-island="Text" data-props="{not json">${text.html}</div>${island("Text", text.props, text.html)}`;

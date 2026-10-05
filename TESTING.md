@@ -100,6 +100,7 @@ A fixture is a JSON object of props plus three optional keys:
 | `Arrays`, `Chips` | `filter`, `map`, `some`, `every`, `find`, `findIndex`, `slice` with arrow functions, chained and nested, with an index and destructuring, in `v-for`, `computed`, `?:` and a child's props; `JSON.stringify` |
 | `NumberIncludes` | `.includes()` across `number` and `Float`: a fraction in a list of integers, an integer in a list of fractions and in a list mapped to fractions, `-0` found as `0`, integers beyond 2⁵³ |
 | `Records` | `Record<string, T>` and `{ [key: string]: T }` in JavaScript's order of keys (array indices first, a key given twice), `Object.keys` / `values` / `entries`, a record handed to a child |
+| `Nullable`, `NullChild`, `Session` | `T \| null` props, interface fields, list items, slot props and Pinia state: `null` written and narrowed (`!== null`, `=== null`, `!= null`, `== null`, truthiness), `??`, `?.` over a nullable object and field, interpolations and attributes of `null`, `null` as a `?:` branch and a child's prop, `ref<T \| null>(null)` in setup |
 | `Parsing` | `Number`, `parseInt` (no radix, 10, 16) and `parseFloat` of strings, `JSON.stringify` of numbers, `NaN` and `Infinity` |
 
 Every component has at least one **hostile** fixture: markup-breaking characters in every prop that
