@@ -165,6 +165,13 @@ released together and share version numbers.
   application's vitest run describes both the options and `server.deps.inline: ["ferrovue"]`, and
   `examples/fullstack` tests both peers with ferrovue loaded from its built package, as an
   application loads it.
+- A fixture's slot content given as `""` hydrates. `fixtureApp` rendered it as a static node of
+  no nodes, which Vue's hydrator compares with the slot's closing `<!--]-->` and reports as a
+  mismatch; it is now an empty text node, which Vue hydrates against nothing, and the server
+  writes the same bytes as before. A `routerView` of `""` still mismatches, in Vue too: the server
+  writes no node for the page, and the client takes the page, a component, to begin at one. The
+  conformance suite records both (`Frame/empty-slots`, `App/empty-view`), and the testing guide
+  says so.
 
 ## [0.5.0] - 2026-10-05
 

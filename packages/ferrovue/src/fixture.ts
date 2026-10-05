@@ -1,4 +1,4 @@
-import { createApp, createSSRApp, createStaticVNode, defineComponent, h, type App, type Component, type Plugin } from "vue";
+import { createApp, createSSRApp, createStaticVNode, createTextVNode, defineComponent, h, type App, type Component, type Plugin } from "vue";
 import { routeRecords, type RouteEntry } from "./routes.ts";
 
 export { routeRecords, type RouteEntry } from "./routes.ts";
@@ -31,7 +31,7 @@ function nodeCount(html: string): number {
   return t.content.childNodes.length;
 }
 
-const staticNode = (html: string) => createStaticVNode(html, nodeCount(html));
+const staticNode = (html: string) => (html === "" ? createTextVNode("") : createStaticVNode(html, nodeCount(html)));
 
 function isMissing(error: unknown, name: string): boolean {
   const { code, message } = (error ?? {}) as { code?: unknown; message?: unknown };

@@ -25,7 +25,9 @@ fixtures/
 
 Besides the props, a fixture may hold `$slots` (each slot's content as HTML, `routerView` for what
 `<RouterView>` shows), `$route` (the location it renders at), `$stores` (Pinia state by store id)
-and `$locale`, as the component takes them. Give each component a typical case, an empty or falsy
+and `$locale`, as the component takes them. A slot whose content is `""` hydrates; a `routerView`
+of `""` does not, in Vue either: the server writes nothing for the page, and Vue's client takes
+every component, the page included, to begin at a node of the DOM. Give each component a typical case, an empty or falsy
 one, and a hostile one with markup-breaking characters (`<`, `&`, `"`, `'`) in every prop that
 reaches the page.
 

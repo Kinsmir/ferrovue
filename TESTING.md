@@ -49,7 +49,10 @@ fixtures/X/case.json            Vue hydrates it: no mismatch warnings, same DOM 
    `VUE_DISAGREES` (`conformance-cases.ts`), where Vue's own server and client renders
    differ and which must still mismatch: slot content whose every pushed string is comments and
    whitespace (an interpolation that writes nothing beside a list's fragment markers) shows the
-   fallback on the server, while the client keeps the empty text.
+   fallback on the server, while the client keeps the empty text; and a `<RouterView>` whose page
+   renders nothing (`"routerView": ""`, `App/empty-view.json`): the server writes no node for it,
+   and Vue's hydrator takes a component to begin at a node of the DOM, so it finds none where the
+   page should be. No page the fixture could render in its place writes nothing and hydrates.
 3. For a fixture with scope ids, which hydration does not compare, it renders the fixture afresh on
    the client and holds every element's `data-v-` ids to the recorded ones (except in
    `CLIENT_DIFFERS`, where Vue's own server and client disagree), and it checks that each scoped
@@ -69,7 +72,9 @@ unhead's own server writes a value in markup the HTML parser reads back as somet
 
 A fixture is a JSON object of props plus three optional keys:
 
-- `$slots`: each slot's content as HTML (`routerView` is the page `<RouterView>` shows)
+- `$slots`: each slot's content as HTML (`routerView` is the page `<RouterView>` shows); content
+  that is the empty string renders as an empty text node, which Vue hydrates against nothing
+  (`Frame/empty-slots.json`)
 - `$route`: the reader's location (`/` when absent)
 - `$stores`: Pinia state by store id
 
