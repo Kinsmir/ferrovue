@@ -92,35 +92,26 @@ A hole is content to its slot, so the slot's fallback never shows, and the fragm
 writes around slot content are already in place. What goes in a hole must be what the client's
 template would render in that slot, usually another component's render or island.
 
-With axum, for example, the pieces and the holes' content become one streamed body. This is the
-handler from the repository's `examples/fullstack` (`src/main.rs`), where `site.page` renders a page
-with its holes and `site.fill` renders one hole's content once its data is ready:
+With the `axum` or `actix-web` feature, `HtmlStream` does this for a response: give it the whole
+render and a future for each hole's content, and it sends each piece and each hole's content as
+soon as they are ready, the futures all running at once. This is the handler from the repository's
+`examples/fullstack` (`src/main.rs`), where `site.page` renders a page with its holes and
+`site.fill` renders one hole's content once its data is ready:
 
 ```rust,ignore
-use futures_util::{StreamExt, stream};
+use ferrovue::HtmlStream;
 
-enum Part {
-    Ready(String),
-    Later(Hole),
-}
-let Page { status, pieces, holes } = site.page(uri.path());
-let mut parts = Vec::with_capacity(pieces.len() + holes.len());
-let mut holes = holes.into_iter();
-for piece in pieces {
-    parts.push(Part::Ready(piece));
-    parts.extend(holes.next().map(Part::Later));
-}
-let body = stream::iter(parts).then(move |part| {
+let Page { status, html, holes } = site.page(uri.path());
+let body = HtmlStream::new(html).holes(holes.into_iter().map(|hole| {
     let site = Arc::clone(&site);
-    async move {
-        Ok::<_, Infallible>(match part {
-            Part::Ready(html) => html,
-            Part::Later(hole) => site.fill(&hole).await,
-        })
-    }
-});
-axum::body::Body::from_stream(body)
+    async move { site.fill(&hole).await }
+}));
+let status = StatusCode::from_u16(status).unwrap_or(StatusCode::OK);
+(status, body).into_response()
 ```
+
+[`web_frameworks`](crate::guide::web_frameworks) has the rest: a whole page, other statuses,
+actix-web, and other servers.
 
 A hole is written as `<fv-hole>`. Every interpolated value has its `<` escaped, and no template
 writes an element of that name, so only a hole produces it. Do not write the marker in content of

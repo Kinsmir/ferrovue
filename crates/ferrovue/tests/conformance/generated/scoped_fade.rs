@@ -50,3 +50,13 @@ pub fn html<'p>(props: &'p Props) -> fv::Html<'p, Props> {
 pub fn island<'p>(props: &'p Props) -> fv::Html<'p, Props> {
     fv::Html::island(NAME, props, render)
 }
+
+/// [`html`], holding the props: a handler that builds them can return it.
+pub fn into_html(props: Props) -> fv::Html<'static, Props> {
+    fv::Html::markup_owned(props, render)
+}
+
+/// [`island`], holding the props.
+pub fn into_island(props: Props) -> fv::Html<'static, Props> {
+    fv::Html::island_owned(NAME, props, render)
+}

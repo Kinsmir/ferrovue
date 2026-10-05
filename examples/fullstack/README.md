@@ -55,8 +55,8 @@ cargo run -p ferrovue-example-fullstack -- --render /books/dune
 | `client/components/AddToBasket.vue` | An island: rendered with `add_to_basket::island()`, so it carries `data-island` and `data-props`; its click handler uses the shared store |
 | `client/components/Reviews.vue` | The slow part of the book page, streamed into the hole as an island, with `v-show` the client toggles; `<style scoped>` |
 | `client/app.ts` | `hydrateState` then `mountIslands`, with one Pinia and one router for every island |
-| `src/pages.rs` | Rendering pages from the generated `route_table::router()`, `Props::new(…)`, `Slots`, `ferrovue::state_script_into`, `ferrovue::hole()` and `split_holes` |
-| `src/main.rs` | The axum server: a streamed body per page, `dist/assets` served beside it, and `--render` |
+| `src/pages.rs` | Rendering pages from the generated `route_table::router()`, `Props::new(…)`, `Slots`, `ferrovue::state_script_into`, `ferrovue::hole()`, and `reviews::into_island()`, a page holding its props that a handler returns |
+| `src/main.rs` | The axum server: a `ferrovue::HtmlStream` per page, a book's reviews alone at `/books/{id}/reviews`, `dist/assets` served beside it, and `--render` |
 | `src/assets.rs` | Finding the entry's hashed script and stylesheet in Vite's manifest, or loading from the dev server |
 | `test/hydration.test.ts` | The proof: the server's own HTML hydrates with no mismatch, and carries the scope ids the client build's stylesheet selects |
 | `browser/hydration.test.ts` | The same in Chromium, Firefox and WebKit: the server started on a free port, its pages opened, the islands clicked (`pnpm test:browser`) |
@@ -77,7 +77,8 @@ filled from the server's `<script id="__pinia">`.
 ### Streaming
 
 `BookPage` has a `reviews` slot. The server fills it with `ferrovue::hole()`, renders the whole
-document once, and cuts it with `split_holes`. The response body is a stream: the part before the
+document once, and responds with a `ferrovue::HtmlStream` of the document and a future for the
+hole's content (the crate's `axum` feature). The response body is a stream: the part before the
 hole goes out at once (header, book, basket, "Add to basket"), the reviews follow when the slow
 lookup returns, and the rest of the document after them. Watch it with
 `curl -N localhost:3000/books/dune`.

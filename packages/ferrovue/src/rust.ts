@@ -235,6 +235,9 @@ export function componentSource(comp: Component, ast: N[], ssr: string, componen
   const life = structLifetime(comp.props, comp) ? "<'_>" : "";
   const gen = life ? "<'p, 'a>" : "<'p>";
   const named = life ? "<'a>" : "";
+  // What holds its props borrows only what they borrow.
+  const owned = life ? "<'a>" : "";
+  const ownedLife = life ? "'a" : "'static";
   // An `interface Props` that `defineProps` takes is the props struct itself, written once below.
   const structs = [...comp.structs.values()]
     .filter((st) => st.name !== "Props" && !st.slot)
@@ -295,6 +298,16 @@ pub fn html${gen}(props: &'p Props${named}) -> fv::Html<'p, Props${named}> {
 /// The component as an island the client hydrates.
 pub fn island${gen}(props: &'p Props${named}) -> fv::Html<'p, Props${named}> {
     fv::Html::island(NAME, props, render)
+}
+
+/// [\`html\`], holding the props: a handler that builds them can return it.
+pub fn into_html${owned}(props: Props${named}) -> fv::Html<${ownedLife}, Props${named}> {
+    fv::Html::markup_owned(props, render)
+}
+
+/// [\`island\`], holding the props.
+pub fn into_island${owned}(props: Props${named}) -> fv::Html<${ownedLife}, Props${named}> {
+    fv::Html::island_owned(NAME, props, render)
 }
 `
     : `/// The component's markup, for a maud page that shows it.
@@ -397,8 +410,9 @@ impl Fixture {
 //! The component renderers, one module per \`.vue\` file.
 
 // The modules pass rustc's default warnings and clippy's default lints, with one exception:
-// \`dead_code\`. Every component gets the whole of its API (\`render\`, \`html\`, \`island\`, \`NAME\`, a
-// constructor and a setter per optional prop) and an app calls only what it needs.
+// \`dead_code\`. Every component gets the whole of its API (\`render\`, \`html\`, \`island\`, their
+// \`into_\` forms, \`NAME\`, a constructor and a setter per optional prop) and an app calls only what
+// it needs.
 #![allow(dead_code)]
 
 ${comps.map((c) => `pub mod ${c.module};`).join("\n")}${ctx.routes ? "\npub mod route_table;" : ""}${ctx.stores.size ? "\npub mod stores;" : ""}${ctx.typeStructs.size ? "\npub mod types;" : ""}${ctx.i18n ? "\npub mod i18n;" : ""}

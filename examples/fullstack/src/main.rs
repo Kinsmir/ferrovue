@@ -14,21 +14,20 @@ mod assets;
 mod catalogue;
 mod pages;
 
-use std::convert::Infallible;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
 use axum::Router;
-use axum::body::Body;
-use axum::extract::State;
-use axum::http::{StatusCode, Uri, header};
-use axum::response::Response;
-use futures_util::{StreamExt, stream};
+use axum::extract::{Path, State};
+use axum::http::{StatusCode, Uri};
+use axum::response::{IntoResponse, Response};
+use axum::routing::get;
+use ferrovue::HtmlStream;
 use tower_http::services::ServeDir;
 
 use assets::Assets;
-use pages::{Hole, Page, Site};
+use pages::{Page, Site};
 
 /// How long the reviews take to look up when serving: long enough to see the page stream.
 const REVIEW_DELAY: Duration = Duration::from_millis(800);
@@ -66,6 +65,7 @@ async fn serve(dist: PathBuf) {
     let site = Arc::new(Site::new(Assets::from_env(&dist), REVIEW_DELAY));
     let app = Router::new()
         .nest_service("/assets", ServeDir::new(dist.join("assets")))
+        .route("/books/{id}/reviews", get(reviews))
         .fallback(page)
         .with_state(site);
     let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_owned());
@@ -90,38 +90,26 @@ async fn serve(dist: PathBuf) {
 async fn page(State(site): State<Arc<Site>>, uri: Uri) -> Response {
     let Page {
         status,
-        pieces,
+        html,
         holes,
     } = site.page(uri.path());
-    enum Part {
-        Ready(String),
-        Later(Hole),
-    }
-    let mut parts = Vec::with_capacity(pieces.len() + holes.len());
-    let mut holes = holes.into_iter();
-    for piece in pieces {
-        parts.push(Part::Ready(piece));
-        parts.extend(holes.next().map(Part::Later));
-    }
-    let body = stream::iter(parts).then(move |part| {
+    let body = HtmlStream::new(html).holes(holes.into_iter().map(|hole| {
         let site = Arc::clone(&site);
-        async move {
-            Ok::<_, Infallible>(match part {
-                Part::Ready(html) => html,
-                Part::Later(hole) => site.fill(&hole).await,
-            })
-        }
-    });
-    Response::builder()
-        .status(StatusCode::from_u16(status).unwrap_or(StatusCode::OK))
-        .header(header::CONTENT_TYPE, "text/html; charset=utf-8")
-        .body(Body::from_stream(body))
-        .expect("a valid response")
+        async move { site.fill(&hole).await }
+    }));
+    let status = StatusCode::from_u16(status).unwrap_or(StatusCode::OK);
+    (status, body).into_response()
+}
+
+/// A book's reviews alone, the island its page streams in: for a client that fetches them again.
+async fn reviews(State(site): State<Arc<Site>>, Path(id): Path<String>) -> impl IntoResponse {
+    site.reviews(&id).await
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::pages::Hole;
 
     fn site() -> Site {
         let assets = Assets::Built {
@@ -174,7 +162,7 @@ mod tests {
         let site = site();
         let page = site.page("/books/dune");
         assert_eq!(page.holes, [Hole::Reviews("dune".to_owned())]);
-        let [before, after] = page.pieces.as_slice() else {
+        let [before, after] = ferrovue::split_holes(&page.html)[..] else {
             panic!("one hole, two pieces");
         };
         // Everything before the reviews goes out first, and the reviews are not in it.
@@ -199,6 +187,42 @@ mod tests {
         // The page whole is the pieces with the hole filled.
         let (_, whole) = site.render_to_string("/books/dune").await;
         assert_eq!(whole, format!("{before}{reviews}{after}"));
+    }
+
+    #[tokio::test]
+    async fn the_handler_streams_the_page_whole_with_its_status() {
+        let site = Arc::new(site());
+        for (path, status) in [("/books/dune", 200), ("/nowhere", 404)] {
+            let response = page(State(Arc::clone(&site)), Uri::from_static(path)).await;
+            assert_eq!(response.status(), status, "{path}");
+            assert_eq!(
+                response.headers()["content-type"],
+                "text/html; charset=utf-8"
+            );
+            let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+                .await
+                .expect("a body");
+            let (_, whole) = site.render_to_string(path).await;
+            assert_eq!(body, whole, "{path}");
+        }
+    }
+
+    #[tokio::test]
+    async fn the_reviews_are_a_response_of_their_own() {
+        let site = Arc::new(site());
+        let response = reviews(State(Arc::clone(&site)), Path("dune".to_owned()))
+            .await
+            .into_response();
+        assert_eq!(response.status(), 200);
+        assert_eq!(
+            response.headers()["content-type"],
+            "text/html; charset=utf-8"
+        );
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("a body");
+        let hole = Hole::Reviews("dune".to_owned());
+        assert_eq!(body, site.fill(&hole).await);
     }
 
     #[tokio::test]

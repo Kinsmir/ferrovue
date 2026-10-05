@@ -5,17 +5,19 @@
 use serde::Serialize;
 
 /// A component applied to its props, ready to be written: what a generated `html()` or `island()`
-/// returns.
+/// returns, borrowing the props, and `into_html()` or `into_island()`, holding them.
 ///
 /// Nothing renders until it is written, and then it is written straight into the caller's buffer:
 /// no buffer of its own, and no copy. `P` is the component's `Props`. `F` is the renderer: a plain
 /// function for a component that needs only its props, a closure holding the slots, the route, the
-/// stores, the translations or the teleports for one that takes those as well.
+/// stores, the translations or the teleports for one that takes those as well. One that holds its
+/// props borrows nothing from the caller, so a function that builds the props can return it.
 ///
 /// `Html` is the one type in this crate that writes raw bytes. Generated code is what builds it,
 /// and it writes by calling a generated renderer, whose every interpolation goes through
 /// [`escape_into`]. With the `maud` feature it implements `maud::Render`, so it can be spliced into
-/// a `maud::html!` template.
+/// a `maud::html!` template; with `axum` it is an `IntoResponse`, and with `actix-web` a
+/// `Responder`, so a handler can respond with it.
 ///
 /// [`guide::generated_code`](crate::guide::generated_code#html-and-island) explains which
 /// components have an `island()`.
@@ -48,17 +50,27 @@ use serde::Serialize;
 /// # pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
 /// #     fv::Html::island(NAME, props, render)
 /// # }
+/// # pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
+/// #     fv::Html::markup_owned(props, render)
 /// # }
-/// // `hello::html` and `hello::island` are what the compiler writes for `Hello.vue`.
+/// # }
+/// // `hello::html`, `hello::island` and `hello::into_html` are what the compiler writes for
+/// // `Hello.vue`.
 /// let props = hello::Props::new("Ada");
 /// assert_eq!(hello::html(&props).into_string(), "<p>Hello, Ada!</p>");
 /// assert_eq!(
 ///     hello::island(&props).into_string(),
 ///     r#"<div data-island="Hello" data-props="{&quot;name&quot;:&quot;Ada&quot;}"><p>Hello, Ada!</p></div>"#
 /// );
+///
+/// // `into_html` holds the props, so the function that makes them can return the page.
+/// fn greet(name: String) -> ferrovue::Html<'static, hello::Props<'static>> {
+///     hello::into_html(hello::Props::new(name))
+/// }
+/// assert_eq!(greet("Grace".into()).into_string(), "<p>Hello, Grace!</p>");
 /// ```
 pub struct Html<'p, P, F = fn(&mut String, &P)> {
-    props: &'p P,
+    props: Given<'p, P>,
     render: F,
     /// `Some(name)` wraps the markup as a hydratable island; `None` is the markup alone.
     island: Option<&'static str>,
@@ -72,7 +84,7 @@ impl<'p, P: Serialize, F: Fn(&mut String, &P)> Html<'p, P, F> {
     #[doc(hidden)]
     pub fn markup(props: &'p P, render: F) -> Self {
         Html {
-            props,
+            props: Given::Borrowed(props),
             render,
             island: None,
         }
@@ -82,7 +94,28 @@ impl<'p, P: Serialize, F: Fn(&mut String, &P)> Html<'p, P, F> {
     #[doc(hidden)]
     pub fn island(name: &'static str, props: &'p P, render: F) -> Self {
         Html {
-            props,
+            props: Given::Borrowed(props),
+            render,
+            island: Some(name),
+        }
+    }
+
+    /// [`Html::markup`] holding its props, for a page returned from where they were made. For
+    /// generated code, as [`Html::markup`] is.
+    #[doc(hidden)]
+    pub fn markup_owned(props: P, render: F) -> Self {
+        Html {
+            props: Given::Owned(props),
+            render,
+            island: None,
+        }
+    }
+
+    /// [`Html::island`] holding its props. For generated code, as [`Html::markup`] is.
+    #[doc(hidden)]
+    pub fn island_owned(name: &'static str, props: P, render: F) -> Self {
+        Html {
+            props: Given::Owned(props),
             render,
             island: Some(name),
         }
@@ -112,9 +145,10 @@ impl<'p, P: Serialize, F: Fn(&mut String, &P)> Html<'p, P, F> {
     /// assert_eq!(page, "<main><p>Hello, Ada!</p></main>");
     /// ```
     pub fn render_to(&self, buf: &mut String) {
+        let props = self.props.get();
         match self.island {
-            None => (self.render)(buf, self.props),
-            Some(name) => island_into(buf, name, self.props, &self.render),
+            None => (self.render)(buf, props),
+            Some(name) => island_into(buf, name, props, &self.render),
         }
     }
 
@@ -142,6 +176,22 @@ impl<'p, P: Serialize, F: Fn(&mut String, &P)> Html<'p, P, F> {
         let mut out = String::new();
         self.render_to(&mut out);
         out
+    }
+}
+
+/// The props an [`Html`] renders: borrowed from the caller, or its own.
+enum Given<'p, P> {
+    Borrowed(&'p P),
+    Owned(P),
+}
+
+impl<P> Given<'_, P> {
+    #[inline]
+    fn get(&self) -> &P {
+        match self {
+            Given::Borrowed(props) => props,
+            Given::Owned(props) => props,
+        }
     }
 }
 
@@ -1341,6 +1391,10 @@ pub use strings::{
     js_replace_all, js_slice, js_slice_items, js_slice_range, js_split, js_substring,
 };
 pub use teleport::{Teleports, teleport_into};
+#[cfg(feature = "stream")]
+mod web;
+#[cfg(feature = "stream")]
+pub use web::HtmlStream;
 
 #[cfg(test)]
 mod tests;

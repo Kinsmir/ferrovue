@@ -121,6 +121,16 @@ route.
 With the `maud` feature, `ferrovue::Html` implements `maud::Render`, so `(greeting::html(&props))` can go
 straight into a `maud::html!` page.
 
+With the `axum` feature, `Html` is an `IntoResponse`, and with `actix-web` a `Responder`: a handler
+responds with the component, as `text/html; charset=utf-8`. `into_html(props)` and
+`into_island(props)` take the props by value, so a handler that builds them returns the page:
+
+```rust
+async fn hello(Path(name): Path<String>) -> impl IntoResponse {
+    greeting::into_html(greeting::Props::new(name, 0))
+}
+```
+
 ## What a component may use
 
 ferrovue compiles `<script setup lang="ts">` components. Props are declared by type, with
@@ -308,7 +318,12 @@ hydrateState(pinia); // before app.mount(): every store starts from what the ser
 
 `ferrovue::hole()` is a slot whose content you write later. Render a layout with holes,
 `split_holes` the output, and stream the pieces with each hole's content between them, in whatever
-order the content is ready.
+order the content is ready. With the `axum` or `actix-web` feature, `ferrovue::HtmlStream` is that
+streamed response, from the render and a future for each hole's content:
+
+```rust
+let body = ferrovue::HtmlStream::new(page).hole(async move { reviews_of(&id).await });
+```
 
 ## Performance
 
