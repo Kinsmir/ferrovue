@@ -4,7 +4,7 @@
   "scopeId": "filepath",
   "stores": "client/stores",
   "router": {
-    "routes": "client/routes.json",
+    "routes": { "pages": "client/pages" },
     "linkActiveClass": "active",
     "linkExactActiveClass": "active"
   },

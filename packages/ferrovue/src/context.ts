@@ -44,11 +44,12 @@ export interface Config {
    * `crate::render::Trusted<'a>`. Without it, a component cannot use `v-html` at all. */
   trustedHtml?: string;
   /** A JSON file listing the app's routes as vue-router paths (`/users/:id`), which `<RouterLink>`
-   * resolves against. Without it, a component cannot use `<RouterLink>`. */
-  routes?: string;
-  /** The router, in full: its routes file, the history's base, and the class names
-   * `createRouter` gives active links. `routes` alone is shorthand for `{ routes }`. */
-  router?: { routes: string; base?: string; linkActiveClass?: string; linkExactActiveClass?: string };
+   * resolves against, or `{ pages }`: a folder of pages whose file names give the routes, as
+   * vue-router's file-based routing reads them. Without it, a component cannot use `<RouterLink>`. */
+  routes?: RoutesSource;
+  /** The router, in full: its routes, the history's base, and the class names `createRouter`
+   * gives active links. `routes` alone is shorthand for `{ routes }`. */
+  router?: { routes: RoutesSource; base?: string; linkActiveClass?: string; linkExactActiveClass?: string };
   /** The directory of Pinia stores (`.ts` files), whose state a component may read while it renders
    * on the server. */
   stores?: string;
@@ -72,6 +73,9 @@ export interface Config {
 }
 
 export type ScopeIdMode = "filepath" | "filepath-source";
+
+/** Where the routes come from: a JSON file of routes, or a folder of pages. */
+export type RoutesSource = string | { pages: string };
 
 export const CONFIG_FILE = "ferrovue.config.json";
 

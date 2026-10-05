@@ -56,7 +56,7 @@ crate that includes it needs **edition 2024**.
 |---|---|---|
 | `components` | yes | Directory of `.vue` files to compile |
 | `out` | yes | Directory the Rust modules are written to. **Everything in it is replaced.** |
-| `routes` | no | JSON file listing the app's routes: each a vue-router path, or `{ "path", "name", "children" }`. Needed for `<RouterLink>`, `<RouterView>` and `useRoute()` |
+| `routes` | no | JSON file listing the app's routes: each a vue-router path, or `{ "path", "name", "children" }`. Or `{ "pages": "client/pages" }`: a folder of pages, whose file names give the routes as vue-router's file-based routing reads them (`index.vue`, `[id].vue`, `[[id]].vue`, `[...path].vue`, `(group)` folders, a `name.vue` beside `name/` as its layout), each page compiled as a component. Needed for `<RouterLink>`, `<RouterView>` and `useRoute()` |
 | `router` | no | Instead of `routes`: `{ routes, base?, linkActiveClass?, linkExactActiveClass? }`, matching `createWebHistory(base)` and `createRouter`'s options |
 | `stores` | no | Directory of Pinia option stores whose state components may read |
 | `trustedHtml` | no | Rust type of a `TrustedHtml` prop (needed for `v-html`): `ferrovue::BasicHtml` (text with a few formatting tags, built in), `ferrovue::Sanitised` (HTML cleaned by ammonia, the `ammonia` feature), or a type of your own such as `crate::html::CleanHtml` |
@@ -187,7 +187,7 @@ ferrovue compiles `<script setup lang="ts">` components, and components with no 
 | Slots | default and named slots, fallbacks, `$slots.name` tests and the same through `useSlots()`, scoped slots (`<slot :item="x">` and `#item="{ item }"` or `v-slot="props"`), whose props a parent can hand to its own children |
 | Forms | `v-model` on text inputs, checkboxes, radios, `<select>` and `<textarea>` (renders the initial state) |
 | Built-ins | `<Transition>`, `<TransitionGroup>`, `<KeepAlive>`, `<Suspense>` (synchronous content), `<Teleport>` (to any target, nested, disabled: see below), `v-text`, `v-once`, `v-pre`, `v-memo`, custom directives listed in `clientDirectives` |
-| Vue Router | `<RouterLink>` (resolved by name or imported) with a string `to` or `{ name, params, query, hash }` / `{ path, query, hash }`, `active-class`, `exact-active-class`, `aria-current-value`, `replace`; vue-router's own encoding and active-link matching, nested routes included (a parent link is active on its children's pages, exact only on its own); a history base. `useRoute()` and `$route`: `path`, `fullPath`, `hash`, `name`, `params`, and `query` (a value written once, without `=`, or repeated, exactly as vue-router parses it; `typeof route.query.q === "string"` narrows one to a single string). `<RouterView>`, at the top and in nested route components: each takes the page it shows as a slot |
+| Vue Router | `<RouterLink>` (resolved by name or imported) with a string `to` or `{ name, params, query, hash }` / `{ path, query, hash }`, `active-class`, `exact-active-class`, `aria-current-value`, `replace`; vue-router's own encoding and active-link matching, nested routes included (a parent link is active on its children's pages, exact only on its own); a history base; optional parameters (`:id?`); routes built from a folder of pages, which the Vite plugin also gives the client as `ferrovue/routes`. `useRoute()` and `$route`: `path`, `fullPath`, `hash`, `name`, `params`, and `query` (a value written once, without `=`, or repeated, exactly as vue-router parses it; `typeof route.query.q === "string"` narrows one to a single string). `<RouterView>`, at the top and in nested route components: each takes the page it shows as a slot |
 | Pinia | option stores with a typed `state`, and setup stores (`defineStore(id, () => { … })`) whose returned refs are typed by `ref<T>()` or their initial literal; read through `useX()` or `storeToRefs`, in the template or in `computed`; getters that are an expression of the state, and a setup store's computeds, which may read each other |
 | vue-i18n | `$t` and `useI18n()`'s `t` and `locale`: named and list values, plurals by vue-i18n's rule, literals, linked messages with `upper`/`lower`/`capitalize`, nested and flat keys, fallback locales, a missing key shown as itself. Messages are parsed at build time by vue-i18n's own compiler |
 | `v-html` | only on a `TrustedHtml` prop (`import type { TrustedHtml } from "ferrovue/types"`) |
@@ -519,7 +519,8 @@ server reading Vite's manifest takes the `css` of the entry's `dynamicImports` a
 
 An application whose own navigation layer leaves the page can keep `<RouterLink>` for its `href`s
 and active classes with `linkRouter(routes, { navigate })` from `ferrovue/link-router`: a router
-over the routes file whose every navigation after the first goes to `navigate`. The routing guide
+over the routes file (or the default export of `ferrovue/routes`, with a folder of pages) whose
+every navigation after the first goes to `navigate`. The routing guide
 (`ferrovue::guide::routing`) explains each part of it.
 
 ### Hydrating a whole page
@@ -747,6 +748,8 @@ packages/ferrovue/           the compiler (npm package)
   src/islands.ts             `ferrovue/islands`, which the Vite plugin writes: every island, loaded lazily
   src/link-router.ts         `ferrovue/link-router`: `<RouterLink>` while the application navigates on its own
   src/routes.ts              a routes file as vue-router's route records
+  src/file-routes.ts         the routes vue-router's file-based routing builds from a folder of pages
+  src/page-routes.ts         `ferrovue/routes`, which the Vite plugin writes from the pages
   src/testing.ts             `ferrovue/testing`: utilities for a project's own conformance suite
   src/conformance.ts         `conformanceSuite`, which `ferrovue/testing` exports
   src/ssr.ts                 `attachSsrRender`, which `ferrovue/testing` exports

@@ -9,6 +9,6 @@ useHead({ title: "Not found", meta: [{ name: "robots", content: "noindex" }, { n
   <section class="not-found">
     <h1>Not found</h1>
     <p>Nothing lives at <code>{{ path }}</code>.</p>
-    <RouterLink :to="{ name: 'home' }">Back to all books</RouterLink>
+    <RouterLink :to="{ name: '/' }">Back to all books</RouterLink>
   </section>
 </template>

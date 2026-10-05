@@ -2,7 +2,7 @@
 import { computed } from "vue";
 import { useRoute } from "vue-router";
 import { useHead, useSeoMeta } from "@unhead/vue";
-import type { Book } from "./types";
+import type { Book } from "../../components/types";
 
 const props = defineProps<{ book: Book }>();
 const route = useRoute();

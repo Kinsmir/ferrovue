@@ -4,14 +4,15 @@ import { createRouter, createWebHistory, type Router, type RouterHistory } from 
 import { createHead } from "@unhead/vue/client";
 import { hydrateState, mountIslands, mountPage, type Islands } from "ferrovue";
 import islands from "ferrovue/islands";
+import { routeRecords } from "ferrovue/link-router";
+import pageRoutes from "ferrovue/routes";
 import BasketSummary from "./components/BasketSummary.vue";
-import routes from "./routes.json" with { type: "json" };
 
 export function createAppRouter(history: RouterHistory = createWebHistory()): Router {
   const ServerPage: Component = { render: () => null };
   return createRouter({
     history,
-    routes: routes.map((r) => ({ ...r, component: ServerPage })),
+    routes: routeRecords(pageRoutes, ServerPage),
     linkActiveClass: "active",
     linkExactActiveClass: "active",
   });
@@ -36,7 +37,7 @@ export async function hydrate(history?: RouterHistory): Promise<Hydrated> {
   summary?.mount(basket!);
 
   const head = createHead();
-  const page = document.getElementById("__fv_page") ? await mountPage(() => import("./components/Picks.vue"), islands, { pinia, router, plugins: [head] }) : undefined;
+  const page = document.getElementById("__fv_page") ? await mountPage(() => import("./pages/picks.vue"), islands, { pinia, router, plugins: [head] }) : undefined;
 
   const mounted = await mountIslands(islands, { pinia, router });
   return {

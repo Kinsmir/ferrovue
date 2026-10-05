@@ -214,7 +214,7 @@ describe.each(BROWSERS)("%s", (name) => {
     expect(now).toMatch(/<a [^>]*class="share" href="mailto:\?body=http[^"]*%2Fpicks"/);
     expect(now.replace(share, "")).toBe(parsed.replace(share, ""));
     const chunks = scripts.map((s) => /^\/assets\/(\w+)-/.exec(s)?.[1]).filter((c) => c && c !== "main");
-    expect(chunks).toEqual(expect.arrayContaining(["Picks", "Pick", "Reviews"]));
+    expect(chunks).toEqual(expect.arrayContaining(["picks", "Pick", "Reviews"]));
 
     const add = page.locator('.pick[data-id="dune"] button.add');
     await add.click();

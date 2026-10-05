@@ -731,5 +731,419 @@
       "/p/7",
       "/q/1"
     ]
+  },
+  "files": {
+    "routes": [
+      {
+        "path": "/",
+        "name": "/"
+      },
+      {
+        "path": "/",
+        "view": false,
+        "children": [
+          {
+            "path": "cart",
+            "name": "/(shop)/cart"
+          }
+        ]
+      },
+      {
+        "path": "/:path(.*)",
+        "name": "/[...path]"
+      },
+      {
+        "path": "/books",
+        "view": false,
+        "children": [
+          {
+            "path": "",
+            "name": "/books/"
+          },
+          {
+            "path": ":id",
+            "name": "/books/[id]"
+          }
+        ]
+      },
+      {
+        "path": "/opt",
+        "view": false,
+        "children": [
+          {
+            "path": ":id?",
+            "name": "/opt/[[id]]"
+          }
+        ]
+      },
+      {
+        "path": "/users",
+        "name": "/users",
+        "children": [
+          {
+            "path": "",
+            "name": "/users/"
+          },
+          {
+            "path": ":id?",
+            "name": "/users/[[id]]",
+            "children": [
+              {
+                "path": "posts",
+                "name": "/users/[[id]]/posts"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "path": "/mid/:a?/end",
+        "name": "mid"
+      },
+      {
+        "path": "/docs",
+        "view": false,
+        "children": [
+          {
+            "path": ":slug",
+            "name": "/docs/[slug]"
+          }
+        ]
+      },
+      {
+        "path": "/shelf",
+        "children": [
+          {
+            "path": "",
+            "name": "/shelf/"
+          }
+        ]
+      },
+      {
+        "path": "/:lang?",
+        "view": false,
+        "children": [
+          {
+            "path": "about",
+            "name": "/[[lang]]/about"
+          }
+        ]
+      }
+    ],
+    "links": [
+      [
+        "/books/dune",
+        "/books"
+      ],
+      [
+        "/books",
+        "/books"
+      ],
+      [
+        "/books",
+        "/books/dune"
+      ],
+      [
+        "/books/",
+        "/books"
+      ],
+      [
+        "/books/dune",
+        "/books/dune"
+      ],
+      [
+        "/opt",
+        "/opt"
+      ],
+      [
+        "/opt/1",
+        "/opt"
+      ],
+      [
+        "/opt",
+        "/opt/1"
+      ],
+      [
+        "/opt/1",
+        "/opt/1"
+      ],
+      [
+        "/opt/",
+        "/opt"
+      ],
+      [
+        "/users",
+        "/users"
+      ],
+      [
+        "/users/7",
+        "/users"
+      ],
+      [
+        "/users/7/posts",
+        "/users/7"
+      ],
+      [
+        "/users/posts",
+        "/users"
+      ],
+      [
+        "/users/7/posts",
+        "/users/7/posts"
+      ],
+      [
+        "/users/posts",
+        "/users/posts"
+      ],
+      [
+        "/users/7",
+        "/users/7/posts"
+      ],
+      [
+        "/mid/end",
+        "/mid/x/end"
+      ],
+      [
+        "/mid/x/end",
+        "/mid/end"
+      ],
+      [
+        "/mid/x/end",
+        "/mid/x/end"
+      ],
+      [
+        "/nowhere",
+        "/nowhere"
+      ],
+      [
+        "/cart",
+        "/cart"
+      ],
+      [
+        "/books/dune",
+        "/"
+      ],
+      [
+        "/",
+        "/"
+      ],
+      [
+        "/docs",
+        "/docs"
+      ],
+      [
+        "/docs/a",
+        "/docs"
+      ],
+      [
+        "/docs",
+        "/docs/a"
+      ],
+      [
+        "/shelf",
+        "/shelf"
+      ],
+      [
+        "/shelf/",
+        "/shelf"
+      ],
+      [
+        "/about",
+        "/about"
+      ],
+      [
+        "/en/about",
+        "/about"
+      ],
+      [
+        "/en/about",
+        "/en/about"
+      ]
+    ],
+    "named": [
+      [
+        "/users/7/posts",
+        {
+          "name": "/users/[[id]]/posts"
+        }
+      ],
+      [
+        "/users/7/posts",
+        {
+          "name": "/users/[[id]]"
+        }
+      ],
+      [
+        "/users/7",
+        {
+          "name": "/users/[[id]]",
+          "params": {
+            "id": "8"
+          }
+        }
+      ],
+      [
+        "/users",
+        {
+          "name": "/users/[[id]]"
+        }
+      ],
+      [
+        "/users/7",
+        {
+          "name": "/users/[[id]]",
+          "params": {
+            "id": "7"
+          }
+        }
+      ],
+      [
+        "/users/7",
+        {
+          "name": "/users/[[id]]"
+        }
+      ],
+      [
+        "/users/7",
+        {
+          "name": "/users"
+        }
+      ],
+      [
+        "/users/7",
+        {
+          "name": "/users/"
+        }
+      ],
+      [
+        "/opt/1",
+        {
+          "name": "/opt/[[id]]"
+        }
+      ],
+      [
+        "/opt",
+        {
+          "name": "/opt/[[id]]"
+        }
+      ],
+      [
+        "/opt/1",
+        {
+          "name": "/opt/[[id]]",
+          "params": {
+            "id": "1"
+          }
+        }
+      ],
+      [
+        "/opt",
+        {
+          "name": "/opt/[[id]]",
+          "params": {
+            "id": "a b"
+          }
+        }
+      ],
+      [
+        "/books/dune",
+        {
+          "name": "/books/"
+        }
+      ],
+      [
+        "/books",
+        {
+          "name": "/books/[id]",
+          "params": {
+            "id": "x"
+          }
+        }
+      ],
+      [
+        "/mid/x/end",
+        {
+          "name": "mid"
+        }
+      ],
+      [
+        "/mid/end",
+        {
+          "name": "mid",
+          "params": {
+            "a": "x"
+          }
+        }
+      ],
+      [
+        "/mid/x/end",
+        {
+          "name": "mid",
+          "params": {
+            "a": "x"
+          }
+        }
+      ],
+      [
+        "/zzz",
+        {
+          "name": "/[...path]",
+          "params": {
+            "path": "zzz"
+          }
+        }
+      ],
+      [
+        "/cart",
+        {
+          "name": "/(shop)/cart"
+        }
+      ],
+      [
+        "/",
+        {
+          "name": "/"
+        }
+      ],
+      [
+        "/en/about",
+        {
+          "name": "/[[lang]]/about"
+        }
+      ],
+      [
+        "/about",
+        {
+          "name": "/[[lang]]/about",
+          "params": {
+            "lang": "nl"
+          }
+        }
+      ]
+    ],
+    "locations": [
+      "/",
+      "/books",
+      "/books/",
+      "/books/dune",
+      "/opt",
+      "/opt/",
+      "/opt/1",
+      "/users",
+      "/users/7",
+      "/users/posts",
+      "/users/7/posts",
+      "/mid/end",
+      "/mid/a/end",
+      "/docs",
+      "/docs/x",
+      "/cart",
+      "/nowhere/deep",
+      "/USERS/7",
+      "/shelf",
+      "/about",
+      "/en/about",
+      "/en"
+    ]
   }
 }

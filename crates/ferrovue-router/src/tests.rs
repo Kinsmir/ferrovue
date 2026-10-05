@@ -51,8 +51,14 @@ struct Nested {
 struct NestedRoute {
     path: String,
     name: Option<String>,
+    #[serde(default = "shown")]
+    view: bool,
     #[serde(default)]
     children: Vec<NestedRoute>,
+}
+
+fn shown() -> bool {
+    true
 }
 
 #[derive(serde::Deserialize)]
@@ -75,23 +81,44 @@ fn route_defs(routes: &[NestedRoute]) -> &'static [RouteDef<'static>] {
         .map(|r| RouteDef {
             path: Box::leak(r.path.clone().into_boxed_str()),
             name: r.name.clone().map(|n| &*Box::leak(n.into_boxed_str())),
+            view: r.view,
             children: route_defs(&r.children),
         })
         .collect();
     Box::leak(defs.into_boxed_slice())
 }
 
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct NestedFile {
+    nested: Nested,
+    expected_nested: NestedExpected,
+    files: Nested,
+    expected_files: NestedExpected,
+}
+
+fn nested_file() -> NestedFile {
+    serde_json::from_str(include_str!("../tests/vectors/router.expected.json"))
+        .expect("router vectors")
+}
+
 #[test]
 fn nested_routes_resolve_and_activate_as_vue_router_does() {
-    #[derive(serde::Deserialize)]
-    #[serde(rename_all = "camelCase")]
-    struct File {
-        nested: Nested,
-        expected_nested: NestedExpected,
-    }
-    let file: File = serde_json::from_str(include_str!("../tests/vectors/router.expected.json"))
-        .expect("router vectors");
-    let (v, want) = (file.nested, file.expected_nested);
+    let file = nested_file();
+    check_nested(&file.nested, &file.expected_nested);
+}
+
+#[test]
+fn file_based_routes_resolve_and_activate_as_vue_router_does() {
+    let file = nested_file();
+    assert!(
+        file.files.locations.len() >= 20,
+        "the vectors were not all read"
+    );
+    check_nested(&file.files, &file.expected_files);
+}
+
+fn check_nested(v: &Nested, want: &NestedExpected) {
     let router = Router::tree(route_defs(&v.routes));
     for ((at, to), (href, active, exact)) in v.links.iter().zip(&want.links) {
         let link = router.at(at).link(to);
@@ -124,6 +151,15 @@ fn nested_routes_resolve_and_activate_as_vue_router_does() {
             (want.path.as_str(), want.name.as_deref()),
             "at {at:?}"
         );
+        let params: BTreeMap<String, String> = route
+            .matched
+            .as_ref()
+            .map(|(i, values)| router.params(*i, values))
+            .unwrap_or_default()
+            .into_iter()
+            .map(|(k, v)| (k.to_owned(), v.to_owned()))
+            .collect();
+        assert_eq!(params, want.params, "at {at:?}");
         for (name, value) in &want.params {
             assert_eq!(
                 route.param(name),
@@ -256,9 +292,44 @@ fn a_wildcard_before_the_end_is_refused() {
 }
 
 #[test]
-#[should_panic(expected = "a parameter is `:name` or `:name(.*)`")]
-fn an_optional_parameter_is_refused() {
-    Router::new(&["/a/:x?"]);
+#[should_panic(expected = "a parameter is `:name`, `:name?` or `:name(.*)`")]
+fn a_repeatable_parameter_is_refused() {
+    Router::new(&["/a/:x+"]);
+}
+
+#[test]
+#[should_panic(expected = "a parameter is `:name`, `:name?` or `:name(.*)`")]
+fn an_optional_wildcard_is_refused() {
+    Router::new(&["/a/:x(.*)?"]);
+}
+
+#[test]
+fn an_optional_parameter_left_out_is_absent() {
+    let router = Router::named(&[("/a/:x?/b", Some("ab"))]);
+    let route = router.at("/a/b");
+    assert_eq!(route.name(), Some("ab"));
+    assert_eq!(route.param("x"), None);
+    assert_eq!(router.at("/a/7/b").param("x"), Some("7"));
+    assert_eq!(route.link_named("ab", &[], "", "").href, "/a/b");
+}
+
+#[test]
+fn a_route_with_neither_view_nor_name_only_groups_its_children() {
+    let children = [RouteDef {
+        path: ":id",
+        name: Some("book"),
+        view: true,
+        children: &[],
+    }];
+    let router = Router::tree(&[RouteDef {
+        path: "/books",
+        name: None,
+        view: false,
+        children: &children,
+    }]);
+    assert_eq!(router.at("/books").name(), None);
+    assert!(!router.at("/books").link("/books").active);
+    assert_eq!(router.at("/books/dune").name(), Some("book"));
 }
 
 #[test]
@@ -343,11 +414,13 @@ fn a_router_and_its_route_show_what_they_matched_in_debug() {
     let children = [RouteDef {
         path: ":id(.*)",
         name: Some("doc"),
+        view: true,
         children: &[],
     }];
     let router = Router::tree(&[RouteDef {
         path: "/docs",
         name: None,
+        view: true,
         children: &children,
     }]);
     assert_eq!(

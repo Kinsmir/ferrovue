@@ -12,8 +12,8 @@ useHead({
 <template>
   <div class="layout picks">
     <header>
-      <RouterLink :to="{ name: 'home' }" class="brand">{{ shop }}</RouterLink>
-      <nav><RouterLink :to="{ name: 'picks' }">Staff picks</RouterLink></nav>
+      <RouterLink :to="{ name: '/' }" class="brand">{{ shop }}</RouterLink>
+      <nav><RouterLink :to="{ name: '/picks' }">Staff picks</RouterLink></nav>
     </header>
     <main><slot /></main>
     <aside class="reviews">

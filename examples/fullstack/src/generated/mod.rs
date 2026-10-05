@@ -11,13 +11,13 @@
 
 pub mod add_to_basket;
 pub mod basket_summary;
-pub mod book_list;
-pub mod book_page;
 pub mod layout;
-pub mod not_found;
 pub mod pick;
-pub mod picks;
 pub mod reviews;
+pub mod index;
+pub mod missing;
+pub mod books_id;
+pub mod picks;
 pub mod route_table;
 pub mod stores;
 pub mod types;
@@ -90,27 +90,6 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let state: stores::Stores = serde_json::from_value(fixture.stores.clone()).map_err(|e| e.to_string())?;
             basket_summary::render(&mut out, &props, &state);
         }
-        "BookList" => {
-            let props: book_list::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            let s_actions = |out: &mut String, _: &book_list::ActionsSlotProps<'_>| -> bool { out.push_str(fixture.slot("actions").unwrap_or_default()); true };
-            let router = route_table::router();
-            let route = router.at(&fixture.route);
-            let head = ferrovue::Head::without_defaults();
-            book_list::render(&mut out, &props, book_list::Slots { actions: fixture.slot("actions").map(|_| &s_actions as &book_list::ActionsSlot) }, &route, &head);
-            head_into(&mut out, &head);
-        }
-        "BookPage" => {
-            let props: book_page::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            let s_actions = |out: &mut String| out.push_str(fixture.slot("actions").unwrap_or_default());
-            let s_reviews = |out: &mut String| out.push_str(fixture.slot("reviews").unwrap_or_default());
-            let router = route_table::router();
-            let route = router.at(&fixture.route);
-            let head = ferrovue::Head::without_defaults();
-            book_page::render(&mut out, &props, book_page::Slots { actions: fixture.slot("actions").map(|_| ferrovue::Slot::new(&s_actions)), reviews: fixture.slot("reviews").map(|_| ferrovue::Slot::new(&s_reviews)) }, &route, &head);
-            head_into(&mut out, &head);
-        }
         "Layout" => {
             let props: layout::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -122,18 +101,43 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             layout::render(&mut out, &props, layout::Slots { router_view: ferrovue::Slot::new(&s_router_view) }, &route, &state, &head);
             head_into(&mut out, &head);
         }
-        "NotFound" => {
-            let props: not_found::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+        "Pick" => {
+            let props: pick::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            pick::render(&mut out, &props);
+        }
+        "Reviews" => {
+            let props: reviews::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            reviews::render(&mut out, &props);
+        }
+        "Index" => {
+            let props: index::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let s_actions = |out: &mut String, _: &index::ActionsSlotProps<'_>| -> bool { out.push_str(fixture.slot("actions").unwrap_or_default()); true };
+            let router = route_table::router();
+            let route = router.at(&fixture.route);
+            let head = ferrovue::Head::without_defaults();
+            index::render(&mut out, &props, index::Slots { actions: fixture.slot("actions").map(|_| &s_actions as &index::ActionsSlot) }, &route, &head);
+            head_into(&mut out, &head);
+        }
+        "Missing" => {
+            let props: missing::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let router = route_table::router();
             let route = router.at(&fixture.route);
             let head = ferrovue::Head::without_defaults();
-            not_found::render(&mut out, &props, &route, &head);
+            missing::render(&mut out, &props, &route, &head);
             head_into(&mut out, &head);
         }
-        "Pick" => {
-            let props: pick::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            pick::render(&mut out, &props);
+        "BooksId" => {
+            let props: books_id::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let s_actions = |out: &mut String| out.push_str(fixture.slot("actions").unwrap_or_default());
+            let s_reviews = |out: &mut String| out.push_str(fixture.slot("reviews").unwrap_or_default());
+            let router = route_table::router();
+            let route = router.at(&fixture.route);
+            let head = ferrovue::Head::without_defaults();
+            books_id::render(&mut out, &props, books_id::Slots { actions: fixture.slot("actions").map(|_| ferrovue::Slot::new(&s_actions)), reviews: fixture.slot("reviews").map(|_| ferrovue::Slot::new(&s_reviews)) }, &route, &head);
+            head_into(&mut out, &head);
         }
         "Picks" => {
             let props: picks::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -145,10 +149,6 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let head = ferrovue::Head::without_defaults();
             picks::render(&mut out, &props, picks::Slots { default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)), reviews: fixture.slot("reviews").map(|_| ferrovue::Slot::new(&s_reviews)) }, &route, &head);
             head_into(&mut out, &head);
-        }
-        "Reviews" => {
-            let props: reviews::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            reviews::render(&mut out, &props);
         }
         other => return Err(format!("no component called {other}")),
     }

@@ -10,7 +10,7 @@ import islandLoaders from "ferrovue/islands";
 import { hydrateRecordedPage } from "ferrovue/testing";
 import { createAppRouter, hydrate, type Hydrated } from "../client/app.ts";
 import BasketSummary from "../client/components/BasketSummary.vue";
-import Picks from "../client/components/Picks.vue";
+import Picks from "../client/pages/picks.vue";
 import Reviews from "../client/components/Reviews.vue";
 
 const headRendered = async (): Promise<void> => {

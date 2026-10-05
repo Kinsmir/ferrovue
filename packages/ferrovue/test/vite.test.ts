@@ -168,6 +168,64 @@ it("splits each island into a chunk of its own in a build", async () => {
   expect(entry.code).not.toContain("Hello, ");
 });
 
+function withPages(): void {
+  writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify({ components: "components", out: "gen", routes: { pages: "pages" } }));
+  mkdirSync(join(root, "pages", "books"), { recursive: true });
+  writeFileSync(join(root, "pages", "index.vue"), "<template><p>home</p></template>");
+  writeFileSync(join(root, "pages", "books", "[id].vue"), "<template><p>book</p></template>");
+}
+
+it("writes `ferrovue/routes`: the pages' routes, as vue-router's records and as a routes file lists them", async () => {
+  withPages();
+  const plugin = ferrovue({ root });
+  const resolveId = plugin.resolveId as (id: string) => string | null;
+  const load = plugin.load as (this: unknown, id: string) => string | null;
+  const code = load.call({}, resolveId("ferrovue/routes")!)!;
+  expect(code).toContain(`component: () => import(${JSON.stringify(join(root, "pages", "books", "[id].vue"))}),`);
+  const module = (await import(`data:text/javascript,${encodeURIComponent(code)}`)) as { routes: Array<Record<string, unknown>>; default: unknown };
+  expect(module.default).toEqual([
+    { path: "/", name: "/" },
+    { path: "/books", view: false, children: [{ path: ":id", name: "/books/[id]" }] },
+  ]);
+  expect(module.routes.map((r) => Object.keys(r))).toEqual([["path", "name", "component"], ["path", "children"]]);
+  expect(typeof module.routes[0]!.component).toBe("function");
+});
+
+it("refuses `ferrovue/routes` without a folder of pages", () => {
+  const plugin = ferrovue({ root });
+  const load = plugin.load as (this: unknown, id: string) => string | null;
+  expect(() => load.call({}, (plugin.resolveId as (id: string) => string)("ferrovue/routes"))).toThrow(/`ferrovue\/routes` is written from a folder of pages/);
+});
+
+it("reloads the dev server's page when a page is added", () => {
+  withPages();
+  const watcher = Object.assign(new EventEmitter(), { add: () => {} });
+  const sent: unknown[] = [];
+  const routesModule = { id: "ferrovue/routes" };
+  const server = {
+    watcher,
+    ws: { send: (payload: unknown) => sent.push(payload) },
+    config: { logger: { info: () => {}, error: () => {} } },
+    moduleGraph: { getModuleById: (id: string) => (id === "\0ferrovue/routes" ? routesModule : undefined), invalidateModule: () => {} },
+  } as unknown as ViteDevServer;
+  const plugin = ferrovue({ root });
+  (plugin.configureServer as (s: ViteDevServer) => void)(server);
+  (plugin.load as (this: unknown, id: string) => string | null).call({}, "\0ferrovue/routes");
+
+  writeFileSync(join(root, "pages", "index.vue"), "<template><p>home!</p></template>");
+  watcher.emit("change", join(root, "pages", "index.vue"));
+  expect(sent).toEqual([]);
+
+  writeFileSync(join(root, "pages", "about.vue"), "<template><p>about</p></template>");
+  watcher.emit("add", join(root, "pages", "about.vue"));
+  expect(sent).toEqual([{ type: "full-reload" }]);
+  expect(readFileSync(join(root, "gen", "about.rs"), "utf8")).toContain("about");
+});
+
+it("says what is missing when `ferrovue/routes` is imported without the plugin", async () => {
+  await expect(import("../src/page-routes.ts")).rejects.toThrow(/written by the Vite plugin from a folder of pages/);
+});
+
 it("says what is missing when `ferrovue/islands` is imported without the plugin", async () => {
   await expect(import("../src/islands.ts")).rejects.toThrow(/written by the Vite plugin: add `ferrovue\(\)` from `ferrovue\/vite`/);
 });

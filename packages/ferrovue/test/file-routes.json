@@ -1,0 +1,72 @@
+{
+  "pages": [
+    "index.vue",
+    "about.vue",
+    "users/index.vue",
+    "users/[id].vue"
+  ],
+  "params": [
+    "[id].vue",
+    "[[lang]]/about.vue",
+    "opt/[[id]].vue",
+    "[...path].vue",
+    "docs/[...slug].vue",
+    "docs/index.vue"
+  ],
+  "layouts": [
+    "users.vue",
+    "users/index.vue",
+    "users/[id].vue",
+    "users/[id]/edit.vue",
+    "users/[id]/posts/[post].vue",
+    "blog.vue",
+    "blog/[slug].vue",
+    "blog/[slug]/comments.vue"
+  ],
+  "groups": [
+    "(shop)/cart.vue",
+    "(shop)/checkout.vue",
+    "(marketing)/index.vue",
+    "(marketing)/pricing.vue",
+    "(admin).vue",
+    "(admin)/settings.vue",
+    "account/(tabs)/profile.vue"
+  ],
+  "dots": [
+    "users.edit.vue",
+    "users.[id].vue",
+    "a.b.c.vue",
+    "users/list.vue"
+  ],
+  "parents": [
+    "admin/_parent.vue",
+    "admin/index.vue",
+    "admin/settings.vue",
+    "admin/users/_parent.vue",
+    "admin/users/[id].vue"
+  ],
+  "folders": [
+    "a/b/c/d.vue",
+    "a/b/index.vue",
+    "x/y/[z].vue"
+  ],
+  "shop": [
+    "index.vue",
+    "books/[id].vue",
+    "picks.vue",
+    "[...path].vue"
+  ],
+  "order": [
+    "About.vue",
+    "about-us.vue",
+    "a_b.vue",
+    "Omega.vue",
+    "[slug].vue",
+    "index.vue",
+    "2024.vue",
+    "zeta/[id].vue",
+    "zeta/new.vue",
+    "zeta/[[page]].vue",
+    "zeta/[...rest].vue"
+  ]
+}

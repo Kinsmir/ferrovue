@@ -1,0 +1,377 @@
+{
+  "pages": [
+    {
+      "path": "/",
+      "name": "/",
+      "file": "pages/index.vue"
+    },
+    {
+      "path": "/about",
+      "name": "/about",
+      "file": "pages/about.vue"
+    },
+    {
+      "path": "/users",
+      "children": [
+        {
+          "path": "",
+          "name": "/users/",
+          "file": "pages/users/index.vue"
+        },
+        {
+          "path": ":id",
+          "name": "/users/[id]",
+          "file": "pages/users/[id].vue"
+        }
+      ]
+    }
+  ],
+  "params": [
+    {
+      "path": "/:id",
+      "name": "/[id]",
+      "file": "pages/[id].vue"
+    },
+    {
+      "path": "/:lang?",
+      "children": [
+        {
+          "path": "about",
+          "name": "/[[lang]]/about",
+          "file": "pages/[[lang]]/about.vue"
+        }
+      ]
+    },
+    {
+      "path": "/:path(.*)",
+      "name": "/[...path]",
+      "file": "pages/[...path].vue"
+    },
+    {
+      "path": "/docs",
+      "children": [
+        {
+          "path": "",
+          "name": "/docs/",
+          "file": "pages/docs/index.vue"
+        },
+        {
+          "path": ":slug(.*)",
+          "name": "/docs/[...slug]",
+          "file": "pages/docs/[...slug].vue"
+        }
+      ]
+    },
+    {
+      "path": "/opt",
+      "children": [
+        {
+          "path": ":id?",
+          "name": "/opt/[[id]]",
+          "file": "pages/opt/[[id]].vue"
+        }
+      ]
+    }
+  ],
+  "layouts": [
+    {
+      "path": "/blog",
+      "name": "/blog",
+      "file": "pages/blog.vue",
+      "children": [
+        {
+          "path": ":slug",
+          "name": "/blog/[slug]",
+          "file": "pages/blog/[slug].vue",
+          "children": [
+            {
+              "path": "comments",
+              "name": "/blog/[slug]/comments",
+              "file": "pages/blog/[slug]/comments.vue"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/users",
+      "name": "/users",
+      "file": "pages/users.vue",
+      "children": [
+        {
+          "path": "",
+          "name": "/users/",
+          "file": "pages/users/index.vue"
+        },
+        {
+          "path": ":id",
+          "name": "/users/[id]",
+          "file": "pages/users/[id].vue",
+          "children": [
+            {
+              "path": "edit",
+              "name": "/users/[id]/edit",
+              "file": "pages/users/[id]/edit.vue"
+            },
+            {
+              "path": "posts",
+              "children": [
+                {
+                  "path": ":post",
+                  "name": "/users/[id]/posts/[post]",
+                  "file": "pages/users/[id]/posts/[post].vue"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "groups": [
+    {
+      "path": "/",
+      "name": "/(admin)",
+      "file": "pages/(admin).vue",
+      "children": [
+        {
+          "path": "settings",
+          "name": "/(admin)/settings",
+          "file": "pages/(admin)/settings.vue"
+        }
+      ]
+    },
+    {
+      "path": "/",
+      "children": [
+        {
+          "path": "",
+          "name": "/(marketing)/",
+          "file": "pages/(marketing)/index.vue"
+        },
+        {
+          "path": "pricing",
+          "name": "/(marketing)/pricing",
+          "file": "pages/(marketing)/pricing.vue"
+        }
+      ]
+    },
+    {
+      "path": "/",
+      "children": [
+        {
+          "path": "cart",
+          "name": "/(shop)/cart",
+          "file": "pages/(shop)/cart.vue"
+        },
+        {
+          "path": "checkout",
+          "name": "/(shop)/checkout",
+          "file": "pages/(shop)/checkout.vue"
+        }
+      ]
+    },
+    {
+      "path": "/account",
+      "children": [
+        {
+          "path": "",
+          "children": [
+            {
+              "path": "profile",
+              "name": "/account/(tabs)/profile",
+              "file": "pages/account/(tabs)/profile.vue"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "dots": [
+    {
+      "path": "/a/b/c",
+      "name": "/a.b.c",
+      "file": "pages/a.b.c.vue"
+    },
+    {
+      "path": "/users",
+      "children": [
+        {
+          "path": "list",
+          "name": "/users/list",
+          "file": "pages/users/list.vue"
+        }
+      ]
+    },
+    {
+      "path": "/users/:id",
+      "name": "/users.[id]",
+      "file": "pages/users.[id].vue"
+    },
+    {
+      "path": "/users/edit",
+      "name": "/users.edit",
+      "file": "pages/users.edit.vue"
+    }
+  ],
+  "parents": [
+    {
+      "path": "/admin",
+      "file": "pages/admin/_parent.vue",
+      "children": [
+        {
+          "path": "",
+          "name": "/admin/",
+          "file": "pages/admin/index.vue"
+        },
+        {
+          "path": "settings",
+          "name": "/admin/settings",
+          "file": "pages/admin/settings.vue"
+        },
+        {
+          "path": "users",
+          "file": "pages/admin/users/_parent.vue",
+          "children": [
+            {
+              "path": ":id",
+              "name": "/admin/users/[id]",
+              "file": "pages/admin/users/[id].vue"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "folders": [
+    {
+      "path": "/a",
+      "children": [
+        {
+          "path": "b",
+          "children": [
+            {
+              "path": "",
+              "name": "/a/b/",
+              "file": "pages/a/b/index.vue"
+            },
+            {
+              "path": "c",
+              "children": [
+                {
+                  "path": "d",
+                  "name": "/a/b/c/d",
+                  "file": "pages/a/b/c/d.vue"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/x",
+      "children": [
+        {
+          "path": "y",
+          "children": [
+            {
+              "path": ":z",
+              "name": "/x/y/[z]",
+              "file": "pages/x/y/[z].vue"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "shop": [
+    {
+      "path": "/",
+      "name": "/",
+      "file": "pages/index.vue"
+    },
+    {
+      "path": "/:path(.*)",
+      "name": "/[...path]",
+      "file": "pages/[...path].vue"
+    },
+    {
+      "path": "/books",
+      "children": [
+        {
+          "path": ":id",
+          "name": "/books/[id]",
+          "file": "pages/books/[id].vue"
+        }
+      ]
+    },
+    {
+      "path": "/picks",
+      "name": "/picks",
+      "file": "pages/picks.vue"
+    }
+  ],
+  "order": [
+    {
+      "path": "/",
+      "name": "/",
+      "file": "pages/index.vue"
+    },
+    {
+      "path": "/:slug",
+      "name": "/[slug]",
+      "file": "pages/[slug].vue"
+    },
+    {
+      "path": "/2024",
+      "name": "/2024",
+      "file": "pages/2024.vue"
+    },
+    {
+      "path": "/a_b",
+      "name": "/a_b",
+      "file": "pages/a_b.vue"
+    },
+    {
+      "path": "/About",
+      "name": "/About",
+      "file": "pages/About.vue"
+    },
+    {
+      "path": "/about-us",
+      "name": "/about-us",
+      "file": "pages/about-us.vue"
+    },
+    {
+      "path": "/Omega",
+      "name": "/Omega",
+      "file": "pages/Omega.vue"
+    },
+    {
+      "path": "/zeta",
+      "children": [
+        {
+          "path": ":id",
+          "name": "/zeta/[id]",
+          "file": "pages/zeta/[id].vue"
+        },
+        {
+          "path": ":page?",
+          "name": "/zeta/[[page]]",
+          "file": "pages/zeta/[[page]].vue"
+        },
+        {
+          "path": ":rest(.*)",
+          "name": "/zeta/[...rest]",
+          "file": "pages/zeta/[...rest].vue"
+        },
+        {
+          "path": "new",
+          "name": "/zeta/new",
+          "file": "pages/zeta/new.vue"
+        }
+      ]
+    }
+  ]
+}

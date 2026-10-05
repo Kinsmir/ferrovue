@@ -62,7 +62,7 @@ needs it to.
 
 | When | Hooks | Used by |
 |---|---|---|
-| A run starts | `configure` returns the plugin's state for the run, read from its keys of `Config`; `prepare` reads files with the core's own readers, once every plugin is configured | all; `prepare`: stores |
+| A run starts | `configure` returns the plugin's state for the run, read from its keys of `Config`; `prepare` reads files with the core's own readers, once every plugin is configured; `components` names `.vue` files to compile beside the components directory's, each with its component name | all; `prepare`: stores; `components`: router (pages) |
 | A component is read | `sfc` (its `<style>` blocks), `templateOptions` (how Vue compiles its template), `importedType` (a type from a file the plugin owns), `struct` (where a type of its own is declared), `compiled` (what its compiled template renders or reads) | scoped styles; stores; router, i18n, `<Teleport>`, `<ClientOnly>` |
 | Every component at once | `analyse`, before any is generated | scoped styles, twins |
 | `<script setup>` | `scope` (its state for one setup), `scriptImport`, `scriptBinding` (a binding of its own, given the setup's `let`s to add to), `scriptStatement` (a statement of its own: `provide(…)`, `useHead(…)`) | router, stores, i18n, twins; provide and inject, the page head |
@@ -84,10 +84,9 @@ needs it to.
   `query` with `declare module "../model.ts" { interface PluginTys { … } }`, and the stores mark
   their own structs through `interface StructTy`. `values` tells the core what to do with them.
 
-An integration still to come (file-based routes) is a new file in
-`plugins/`, added to `plugins/index.ts`. Where no hook reaches what it needs, add one to `Plugin`,
-documented there and called from one place in the core, so the core still names no
-integration.
+A new integration is a new file in `plugins/`, added to `plugins/index.ts`. Where no hook reaches
+what it needs, add one to `Plugin`, documented there and called from one place in the core, so the
+core still names no integration.
 
 ## Pull requests
 

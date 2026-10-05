@@ -30,7 +30,8 @@ it in `ferrovue.config.json`:
 ```
 
 Each route is a path, or `{ "path", "name", "children" }`. Paths use the syntax ferrovue accepts:
-static segments, `:name` parameters, and a final `:name(.*)`. To match options passed to
+static segments, `:name` parameters, optional `:name?` parameters, and a final `:name(.*)`. To match
+options passed to
 `createRouter` and `createWebHistory`, use `router` instead of `routes`:
 
 ```json
@@ -38,6 +39,87 @@ static segments, `:name` parameters, and a final `:name(.*)`. To match options p
 ```
 
 The class names are written into the generated components; the base goes into `route_table.rs`.
+
+# File-based routes
+
+`routes` can name a folder of pages instead of a routes file. ferrovue then builds the routes from
+the files' paths as vue-router's file-based routing builds them (the plugin that was
+unplugin-vue-router, now `vue-router/vite`), and compiles every page as a component:
+
+```json
+{ "components": "client/components", "out": "src/generated", "routes": { "pages": "client/pages" } }
+```
+
+In `router`, it is `"router": { "routes": { "pages": "client/pages" }, "base": "/app/" }`. A folder
+of pages gives these routes:
+
+| File | Route | Name |
+|---|---|---|
+| `index.vue` | `/` | `/` |
+| `about.vue` | `/about` | `/about` |
+| `books/index.vue` | `/books` | `/books/` |
+| `books/[id].vue` | `/books/:id` | `/books/[id]` |
+| `[[lang]]/about.vue` | `/:lang?/about`, with `lang` optional | `/[[lang]]/about` |
+| `[...path].vue` | `/:path(.*)`, every path no other route matches | `/[...path]` |
+| `(shop)/cart.vue` | `/cart`: a group folder adds nothing to the path | `/(shop)/cart` |
+| `users.vue` and `users/[id].vue` | `/users`, whose `<RouterView>` shows `/users/:id` | `/users`, `/users/[id]` |
+| `users.edit.vue` | `/users/edit`, nested in nothing | `/users.edit` |
+| `admin/_parent.vue` | `/admin`, the layout of the pages in `admin/` | none |
+
+A route's name is vue-router's: the file's path, so a `<RouterLink>` writes
+`:to="{ name: '/books/[id]', params: { id } }"` and the server matches `route.name()` against
+`Some("/books/[id]")`. A folder with no `.vue` file of its own name beside it is a route with no
+component, which only groups the routes in it: vue-router never matches it itself, so without
+`books/index.vue`, `/books` matches no route (or the catch-all). The routes ferrovue builds are
+held to the ones vue-router's own plugin builds, recorded from it for a set of folders that uses
+each convention.
+
+Each page is compiled as a component named after its path in the folder, in PascalCase:
+`books/[id].vue` is `BooksId`, written to `books_id.rs`, with its fixtures under `fixtures/BooksId/`.
+A page whose name is a component's too, or another page's (`a-b.vue` and `a_b.vue`), is refused, as
+is one whose name starts with a digit.
+
+The client gets the same routes from `ferrovue/routes`, which the Vite plugin writes from the folder.
+Its `routes` are vue-router's records, each page loaded lazily, as `vue-router/auto-routes` gives
+them for the same folder:
+
+```ts
+import { createRouter, createWebHistory } from "vue-router";
+import { routes } from "ferrovue/routes";
+
+const router = createRouter({ history: createWebHistory(), routes });
+```
+
+An application already using vue-router's own plugin with its default options can keep it: its
+records are these. A client that only hydrates the pages the server rendered imports the default
+export instead, the routes as a routes file lists them, and gives every page a component that
+renders nothing; `routeRecords` from `ferrovue/link-router` leaves a folder without one, as
+vue-router's plugin does:
+
+```ts
+import { createRouter, createWebHistory } from "vue-router";
+import { routeRecords } from "ferrovue/link-router";
+import pageRoutes from "ferrovue/routes";
+
+const ServerPage = { render: () => null };
+const router = createRouter({ history: createWebHistory(), routes: routeRecords(pageRoutes, ServerPage) });
+```
+
+What a file name can say beyond this is refused, each with its code:
+
+| Refused | Code |
+|---|---|
+| `routes` that is neither a file nor `{ "pages": "…" }` | `FV1238` |
+| A pages folder that cannot be read | `FV1239` |
+| A parameter beside text in one part of the path (`prefix-[id].vue`), a repeatable parameter (`[id]+`), an optional catch-all (`[[...path]]`), a parameter parser (`[id=int]`), a character code (`[x+2E]`), a catch-all that holds other pages, and text other than letters, digits, `-` and `_` | `FV1240` |
+| A named view (`index@aside.vue`) | `FV1241` |
+| `definePage()` | `FV1242` |
+| A `<route>` block | `FV1243` |
+| `_parent.vue` in the pages folder itself, or in a folder with no other pages | `FV1244` |
+| A page whose component name is taken, or starts with a digit | `FV1245` |
+
+`definePage()` and `<route>` change a page's route at build time, from code ferrovue does not run;
+the server's routes come from the files' paths alone.
 
 # The generated route table
 
@@ -48,10 +130,11 @@ The class names are written into the generated components; the base goes into `r
 
 //! The app's routes: what `<RouterLink>` resolves against and `useRoute()` reads.
 
-/// Each route: its vue-router path, its name if it has one, and the routes nested in it.
+/// Each route: its vue-router path, its name if it has one, whether it shows a component, and the
+/// routes nested in it.
 pub const ROUTES: &[ferrovue::RouteDef<'static>] = &[
-    ferrovue::RouteDef { path: "/", name: None, children: &[] },
-    ferrovue::RouteDef { path: "/users/:name", name: None, children: &[] },
+    ferrovue::RouteDef { path: "/", name: None, view: true, children: &[] },
+    ferrovue::RouteDef { path: "/users/:name", name: None, view: true, children: &[] },
 ];
 
 /// Every route's full path, nested ones included.
@@ -125,10 +208,11 @@ defineProps<{ user: string }>();
 #
 # //! The app's routes: what `<RouterLink>` resolves against and `useRoute()` reads.
 #
-# /// Each route: its vue-router path, its name if it has one, and the routes nested in it.
+# /// Each route: its vue-router path, its name if it has one, whether it shows a component, and the
+# /// routes nested in it.
 # pub const ROUTES: &[ferrovue::RouteDef<'static>] = &[
-#     ferrovue::RouteDef { path: "/", name: None, children: &[] },
-#     ferrovue::RouteDef { path: "/users/:name", name: None, children: &[] },
+#     ferrovue::RouteDef { path: "/", name: None, view: true, children: &[] },
+#     ferrovue::RouteDef { path: "/users/:name", name: None, view: true, children: &[] },
 # ];
 #
 # /// Every route's full path, nested ones included.
@@ -350,7 +434,8 @@ a string or an array:
 | `route.params.slug` | [`Route::param`](crate::Route::param) |
 | `route.query.q` | [`Route::query`](crate::Route::query) |
 
-`route.meta` and `route.matched` are refused.
+`route.meta` and `route.matched` are refused. An optional parameter the location leaves out is
+absent, as in vue-router: `route.params.lang` is `undefined`, and `Route::param` is `None`.
 
 # Links when the application navigates on its own
 
@@ -361,7 +446,7 @@ hydration alike, as long as vue-router never leaves the page itself. Otherwise a
 route that nothing renders: the URL changes and the page does not.
 
 `linkRouter` from `ferrovue/link-router` builds that router from the same routes file the compiler
-reads, with the base and link classes of `ferrovue.config.json`'s `router`:
+reads (or, with a folder of pages, the default export of `ferrovue/routes`), with the base and link classes of `ferrovue.config.json`'s `router`:
 
 ```ts
 import { mountIslands } from "ferrovue";
