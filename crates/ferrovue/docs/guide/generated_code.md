@@ -72,6 +72,7 @@ pub fn render(
     fv_stores: &super::stores::Stores<'_>,        // reads a Pinia store
     fv_i18n: &fv::I18n,                           // $t or useI18n()
     fv_teleports: &fv::Teleports,                 // <Teleport>
+    fv_head: &fv::Head,                           // useHead() or useSeoMeta()
 )
 ```
 
@@ -247,7 +248,7 @@ rebuilds the component from the props in `data-props` and nothing else. It wraps
 
 with the props serialised by `serde_json` (a non-finite `f64` as JavaScript writes it, `NaN` or
 `Infinity`, where `serde_json` would write `null`) and attribute-escaped. A component that takes slots, the
-route, stores, translations or teleports has no `island`; the page's own Vue app hydrates it
+route, stores, translations, teleports or the page head has no `island`; the page's own Vue app hydrates it
 instead. See [`islands_and_hydration`](crate::guide::islands_and_hydration).
 
 `html` and `island` borrow the props, so the `Html` lives no longer than they do. Where `island`

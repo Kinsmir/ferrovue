@@ -15,7 +15,7 @@ import { registerHooks } from "node:module";
 const src = ${JSON.stringify(pathToFileURL(SRC).href)};
 registerHooks({
   resolve(specifier, context, next) {
-    if (/^(vite|vitest|vue-i18n|pinia|vue-router)(\\/|$)/.test(specifier)) {
+    if (/^(vite|vitest|vue-i18n|pinia|vue-router|@unhead\\/vue)(\\/|$)/.test(specifier)) {
       return next(specifier, { ...context, parentURL: ${JSON.stringify(nowhere)} });
     }
     return next(specifier, context.parentURL === import.meta.url ? { ...context, parentURL: src + "/testing.ts" } : context);
@@ -30,6 +30,9 @@ const { defineComponent, h } = await import("vue");
 const { renderToString } = await import("vue/server-renderer");
 const Hello = defineComponent({ props: { name: String }, render() { return h("p", "Hello, " + this.name); } });
 out.html = await renderToString(await fixtureApp(Hello, readFixture({ name: "Ada" }), null));
+const hydrating = await fixtureApp(Hello, readFixture({ name: "Ada" }), null, { hydrate: true });
+out.hydrating = await renderToString(hydrating);
+out.head = "$unhead" in hydrating.config.globalProperties;
 const failure = async (json, routes, options) => {
   try {
     await fixtureApp(Hello, readFixture(json), routes, options);
@@ -69,8 +72,10 @@ it("loads every entry of the package without the optional peers, vitest included
   });
 });
 
-it("renders a fixture with no routes, stores or locale without the optional peers", () => {
+it("renders a fixture with no routes, stores, locale or head without the optional peers", () => {
   expect(result.html).toBe("<p>Hello, Ada</p>");
+  expect(result.hydrating).toBe("<p>Hello, Ada</p>");
+  expect(result.head).toBe(false);
 });
 
 it("names the peer to install when a fixture needs one that is missing", () => {

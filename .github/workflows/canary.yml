@@ -33,6 +33,7 @@ jobs:
               "vue-router": ["vue-router"],
               pinia: ["pinia"],
               "vue-i18n": ["vue-i18n", "@intlify/message-compiler"],
+              "@unhead/vue": ["@unhead/vue", "unhead"],
             };
             const newest = (peer) => {
               const found = JSON.parse(execFileSync("pnpm", ["view", `${peer}@${peers[peer]}`, "version", "--json"], { encoding: "utf8" }));

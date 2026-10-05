@@ -54,7 +54,7 @@ pub fn js_trim_end(s: &str) -> &str {
     s.trim_end_matches(is_js_space)
 }
 
-fn is_js_space(c: char) -> bool {
+pub(crate) fn is_js_space(c: char) -> bool {
     matches!(
         c,
         '\u{9}' | '\u{A}' | '\u{B}' | '\u{C}' | '\u{D}' | ' ' | '\u{A0}' | '\u{1680}' | '\u{2000}'

@@ -65,10 +65,10 @@ needs it to.
 | A run starts | `configure` returns the plugin's state for the run, read from its keys of `Config`; `prepare` reads files with the core's own readers, once every plugin is configured | all; `prepare`: stores |
 | A component is read | `sfc` (its `<style>` blocks), `templateOptions` (how Vue compiles its template), `importedType` (a type from a file the plugin owns), `struct` (where a type of its own is declared), `compiled` (what its compiled template renders or reads) | scoped styles; stores; router, i18n, `<Teleport>`, `<ClientOnly>` |
 | Every component at once | `analyse`, before any is generated | scoped styles, twins |
-| `<script setup>` | `scope` (its state for one setup), `scriptImport`, `scriptBinding`, `scriptStatement` (a statement of its own, `provide(…)`) | router, stores, i18n, twins; provide and inject |
+| `<script setup>` | `scope` (its state for one setup), `scriptImport`, `scriptBinding`, `scriptStatement` (a statement of its own: `provide(…)`, `useHead(…)`) | router, stores, i18n, twins; provide and inject, the page head |
 | Expressions | `global` (`$route`), `call` (`$t(…)`), `member` (a field of the route, a store's getter), `equality` and `presence` (`typeof q === "string"`), `values` (what `??`, `===`, a test, `{{ }}` and an attribute make of a type it adds) | router, stores, i18n |
 | The compiled template | `resolveComponent` and `component` (`<RouterLink>`, `<RouterView>`, `<ClientOnly>`, a twin), `child` (a child it refuses), `childIds` (the scope ids a child's root is handed), `statement` (`_ssrRenderTeleport`) | router, `<ClientOnly>`, twins; scoped styles; `<Teleport>` |
-| The Rust written | `params` (a render parameter, its fixture field and how the conformance suite builds it; with `slotContext`, also handed to slot content by the outlet that renders it), `prelude` (lines at the start of a render, around the setup's), `slotFields` (`router_view`), `modules` (`route_table.rs`, `stores.rs`, `i18n.rs`, `twins.rs`, `provides.rs`) | router, stores, i18n, `<Teleport>`, provide and inject; provide and inject; router; router, stores, i18n, twins, provide and inject |
+| The Rust written | `params` (a render parameter, its fixture field and how the conformance suite builds it; with `slotContext`, also handed to slot content by the outlet that renders it), `prelude` (lines at the start of a render: `before` the setup's, and `after` them in `plugins/index.ts` order), `slotFields` (`router_view`), `modules` (`route_table.rs`, `stores.rs`, `i18n.rs`, `twins.rs`, `provides.rs`) | router, stores, i18n, `<Teleport>`, provide and inject, the page head; provide and inject, the page head; router; router, stores, i18n, twins, provide and inject |
 
 - **State lives in the run.** A plugin's module holds nothing that changes: `configure` returns its
   state for the run, which `runOf(plugin)` reads back, and `scope` its state for one component's
@@ -84,7 +84,7 @@ needs it to.
   `query` with `declare module "../model.ts" { interface PluginTys { … } }`, and the stores mark
   their own structs through `interface StructTy`. `values` tells the core what to do with them.
 
-An integration still to come (page head, file-based routes) is a new file in
+An integration still to come (file-based routes) is a new file in
 `plugins/`, added to `plugins/index.ts`. Where no hook reaches what it needs, add one to `Plugin`,
 documented there and called from one place in the core, so the core still names no
 integration.

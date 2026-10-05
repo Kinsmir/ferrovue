@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { useHead } from "@unhead/vue";
 import BasketSummary from "./BasketSummary.vue";
 
-defineProps<{ shop: string }>();
+const props = defineProps<{ shop: string }>();
+useHead({ title: props.shop, titleTemplate: `%s · ${props.shop}` });
 </script>
 
 <template>

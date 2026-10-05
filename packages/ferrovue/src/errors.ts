@@ -27,6 +27,7 @@ export const AREAS: Record<string, { name: string; guide?: string }> = {
   "14": { name: "vue-i18n", guide: "i18n" },
   "15": { name: "Raw HTML, client-only content, teleports and Rust twins", guide: "errors_and_limits" },
   "16": { name: "Provide and inject", guide: "provide_inject" },
+  "17": { name: "Page head", guide: "head" },
 };
 
 /** Every code the compiler raises. A code is never reused: one the compiler stops raising is marked
@@ -393,6 +394,24 @@ export const ERRORS = {
   FV1618: { title: "Setup that assigns to an injected value" },
   FV1619: { title: "Function and value provided under one key" },
   FV1620: { title: "`provide` or `inject` called inside an expression" },
+
+  FV1701: { title: "Options given to `useHead`" },
+  FV1702: { title: "Head input that is not an object literal" },
+  FV1703: { title: "Head key ferrovue does not translate" },
+  FV1704: { title: "Spread, computed key, hole or method in a head input" },
+  FV1705: {
+    title: "Function in a head input",
+    detail: "unhead calls a function given as a value on the server only when it takes no arguments, as a getter (`title: () => props.title`), which ferrovue evaluates. A `titleTemplate` function and an event handler (`onload`) run with arguments or on the client.",
+  },
+  FV1706: { title: "Head value of a type the head does not take" },
+  FV1707: { title: "`tagPosition`, `tagPriority` or `tagDuplicateStrategy` that is not a literal it accepts" },
+  FV1708: { title: "`useHeadSafe`" },
+  FV1709: { title: "`useSeoMeta` key or value ferrovue does not translate" },
+  FV1710: {
+    title: "`class` or `style` in the head that may be `null`",
+    detail: "unhead's server renderer throws on a `class` or `style` of `null`. Write `?? undefined`, which leaves the attribute out.",
+  },
+  FV1711: { title: "`innerHTML` or `textContent` on a head tag that has no content" },
 } as const satisfies Record<`FV${number}`, ErrorDoc>;
 
 /** A stable error code, as `FV0604`. */

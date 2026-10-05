@@ -48,12 +48,12 @@ cargo run -p ferrovue-example-fullstack -- --render /books/dune
 | `vite.config.ts` | `@vitejs/plugin-vue` with `componentIdGenerator: "filepath"`, so the build and the dev server give scoped styles the ids the server writes |
 | `client/routes.json` | Named routes, read by ferrovue for the server and by `client/app.ts` for the client: one list for both |
 | `client/stores/basket.ts` | A Pinia option store with getters (`count`, `empty`) |
-| `client/components/Layout.vue` | `<RouterView>`, `<RouterLink>`s by route name with params, the active-link class |
+| `client/components/Layout.vue` | `<RouterView>`, `<RouterLink>`s by route name with params, the active-link class; `useHead` with a `titleTemplate` the pages' titles go into |
 | `client/components/BasketSummary.vue` | Reading the store (state and getters, `storeToRefs`) on the server; `<style scoped>` |
 | `client/components/BookList.vue` | The home page: a list, named links with params, a scoped slot the server fills with an island per book |
-| `client/components/BookPage.vue` | The detail page: `useRoute()` params in the template and in a `computed`, a named slot, a slot left as a hole for streaming |
+| `client/components/BookPage.vue` | The detail page: `useRoute()` params in the template and in a `computed`, a named slot, a slot left as a hole for streaming; its title, description, canonical link and Open Graph tags from its props, with `useHead` and `useSeoMeta` |
 | `client/components/AddToBasket.vue` | An island: rendered with `add_to_basket::island()`, so it carries `data-island` and `data-props`; its click handler uses the shared store |
-| `client/components/Picks.vue` | The layout of the staff picks page, hydrated whole: a default slot of picks and a `reviews` slot streamed into a hole |
+| `client/components/Picks.vue` | The layout of the staff picks page, hydrated whole: a default slot of picks and a `reviews` slot streamed into a hole; a `useHead` that unhead's client head, given to `mountPage` in `client/app.ts`, takes over |
 | `client/components/Pick.vue` | A part of that page, rendered from its props, with an `AddToBasket` inside it |
 | `client/components/Reviews.vue` | The slow part of the book page, streamed into the hole as an island, with `v-show` the client toggles; `<style scoped>`; a Rust twin's component, and `<ClientOnly>` around one that reads `window` |
 | `client/components/NotFound.vue` | The page for an unknown book or path, which the server sends with status 404 |
@@ -61,7 +61,7 @@ cargo run -p ferrovue-example-fullstack -- --render /books/dune
 | `src/ui.rs` | The Rust twin of `StarRating`, listed under `twins` in `ferrovue.config.json` |
 | `fixtures/`, `test/conformance.test.ts`, `ferrovue::conformance!` in `src/main.rs` | The conformance suite, in two calls: every component's fixtures rendered by Vue through `conformanceSuite` from `ferrovue/testing` (`FERROVUE_FIXTURES_WRITE=1` records the `.html`) and by the generated Rust, byte for byte, which proves the twin too; the generated Rust checked to be current, and every recorded `.html` hydrated with no mismatch |
 | `client/app.ts` | `hydrateState`, `mountPage` on a page that carries a record, then `mountIslands` of `ferrovue/islands`, which the Vite plugin writes: every island by name, each loaded only on a page that holds it, with one Pinia and one router for them all |
-| `src/pages.rs` | Rendering pages from the generated `route_table::router()`, `Props::new(…)`, `Slots`, `ferrovue::state_script_into`, `ferrovue::hole()`, and `reviews::into_island()`, a page holding its props that a handler returns; `ferrovue::Page` for the staff picks, whose record is the last hole |
+| `src/pages.rs` | Rendering pages from the generated `route_table::router()`, `Props::new(…)`, `Slots`, `ferrovue::state_script_into`, `ferrovue::hole()`, and `reviews::into_island()`, a page holding its props that a handler returns; `ferrovue::Page` for the staff picks, whose record is the last hole; a `ferrovue::Head` per page, rendered after the body and written into `<head>` |
 | `src/catalogue.rs` | The shop's books and reviews, standing in for a database; the reviews arrive after a delay so the page has something to stream |
 | `src/main.rs` | The axum server: a `ferrovue::HtmlStream` per page, a book's reviews alone at `/books/{id}/reviews`, `dist/assets` served beside it, and `--render` |
 | `src/assets.rs` | Finding the entry's hashed script and stylesheets in Vite's manifest, the lazily loaded islands' stylesheets included, or loading from the dev server |

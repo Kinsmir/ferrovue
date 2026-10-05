@@ -32,6 +32,25 @@ impl<'a> Choice<'a> {
 }
 
 
+/// `TabsState` in `types/keys.ts`.
+#[derive(Debug, Clone, serde::Serialize)]
+#[cfg_attr(test, derive(serde::Deserialize))]
+pub struct TabsState<'a> {
+    #[serde(rename = "active")]
+    pub active: Cow<'a, str>,
+    #[serde(rename = "count")]
+    pub count: i64,
+}
+
+impl<'a> TabsState<'a> {
+    /// TabsState with its required fields.
+    pub fn new(active: impl Into<Cow<'a, str>>, count: i64) -> Self {
+        TabsState { active: active.into(), count }
+    }
+
+}
+
+
 /// `Role` in `types/models.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -148,25 +167,6 @@ impl<'a> Entry<'a> {
         self.note = Some(note.into());
         self
     }
-}
-
-
-/// `TabsState` in `types/keys.ts`.
-#[derive(Debug, Clone, serde::Serialize)]
-#[cfg_attr(test, derive(serde::Deserialize))]
-pub struct TabsState<'a> {
-    #[serde(rename = "active")]
-    pub active: Cow<'a, str>,
-    #[serde(rename = "count")]
-    pub count: i64,
-}
-
-impl<'a> TabsState<'a> {
-    /// TabsState with its required fields.
-    pub fn new(active: impl Into<Cow<'a, str>>, count: i64) -> Self {
-        TabsState { active: active.into(), count }
-    }
-
 }
 
 

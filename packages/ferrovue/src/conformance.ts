@@ -5,7 +5,7 @@ import { renderToString } from "vue/server-renderer";
 import { generate, loadConfig, type Config } from "./compiler.ts";
 import { unifiedDiff } from "./diff.ts";
 import { fixtureApp, peer, readFixture, type RouteEntry, type RouterOptions } from "./fixture.ts";
-import { settled } from "./settle.ts";
+import { headRendered, settled } from "./settle.ts";
 import { attachSsrRender } from "./ssr.ts";
 
 /** What `conformanceSuite` checks: the project, its components and its fixtures. `pinia`,
@@ -38,10 +38,54 @@ interface Case {
 
 export const TELEPORTS = "<!--fv-teleports-->";
 
-/** A recorded render as a page body to hydrate: the main HTML in `<div id="root">`, and what was
- * teleported in each target. */
+export const HEAD = "<!--fv-head-->";
+
+/** What unhead's server renderer wrote for a recorded render's head, as `renderSSRHead` gives it. */
+export interface RecordedHead {
+  headTags: string;
+  bodyTags: string;
+  bodyTagsOpen: string;
+  htmlAttrs: string;
+  bodyAttrs: string;
+}
+
+/** The head a recorded render wrote after its body, if it wrote one. */
+export function recordedHead(html: string): RecordedHead | null {
+  const at = html.indexOf(HEAD);
+  return at < 0 ? null : (JSON.parse(html.slice(at + HEAD.length)) as RecordedHead);
+}
+
+/** Render a fixture's app as the conformance suite records it: Vue's HTML, then what was teleported
+ * and what `useHead` asked for, each after its marker. */
+export async function renderFixture(app: App): Promise<string> {
+  const ssr: { teleports?: Record<string, string> } = {};
+  const main = await renderToString(app, ssr);
+  const teleported = Object.entries(ssr.teleports ?? {});
+  const html = teleported.length ? `${main}${TELEPORTS}${JSON.stringify(Object.fromEntries(teleported))}` : main;
+  const head = (app.config.globalProperties as { $unhead?: { render(): RecordedHead } }).$unhead?.render();
+  return head && Object.values(head).some(Boolean) ? `${html}${HEAD}${JSON.stringify(head)}` : html;
+}
+
+/** Put a recorded render's head into the document, as a page would write it: its tags in `<head>`,
+ * and its attributes on `<html>` and `<body>`. */
+export function placeHead(head: RecordedHead | null, doc: Document = document): void {
+  doc.head.innerHTML = head?.headTags ?? "";
+  const attrs = (el: Element, written: string): void => {
+    for (const name of el.getAttributeNames()) el.removeAttribute(name);
+    const t = doc.createElement("template");
+    t.innerHTML = `<div${written}></div>`;
+    const parsed = t.content.firstElementChild!;
+    for (const name of parsed.getAttributeNames()) el.setAttribute(name, parsed.getAttribute(name)!);
+  };
+  attrs(doc.documentElement, head?.htmlAttrs ?? "");
+  attrs(doc.body, head?.bodyAttrs ?? "");
+}
+
+/** A recorded render as a page body to hydrate: the main HTML in `<div id="root">`, what was
+ * teleported in each target, and the tags the head puts at the start and end of `<body>`. */
 export function hydrationBody(html: string): string {
-  const [main, teleported] = html.split(TELEPORTS);
+  const head = recordedHead(html);
+  const [main, teleported] = html.split(HEAD)[0]!.split(TELEPORTS);
   const targets = Object.entries(JSON.parse(teleported ?? "{}") as Record<string, string>);
   const intoBody = targets
     .filter(([t]) => t === "body")
@@ -51,7 +95,7 @@ export function hydrationBody(html: string): string {
     .filter(([t]) => t !== "body")
     .map(([t, content]) => `<div id="${t.replace(/^#/, "")}">${content}</div>`)
     .join("");
-  return `${intoBody}<div id="root">${main}</div>${elsewhere}`;
+  return `${head?.bodyTagsOpen ?? ""}${intoBody}<div id="root">${main}</div>${elsewhere}${head?.bodyTags ?? ""}`;
 }
 
 /** Where two renders first differ, with the text around it in each. */
@@ -147,6 +191,7 @@ function driftProblems(root: string, config: Config): string[] {
 
 async function hydrateFixture(app: App, html: string): Promise<string[]> {
   if (typeof document === "undefined") throw new Error("hydrating a fixture needs a DOM: run the suite with `environment: \"happy-dom\"` (or jsdom)");
+  placeHead(recordedHead(html));
   document.body.innerHTML = hydrationBody(html);
   const root = document.getElementById("root")!;
   const first = root.firstChild;
@@ -158,13 +203,16 @@ async function hydrateFixture(app: App, html: string): Promise<string[]> {
   try {
     app.mount(root);
     await settled(app);
+    await headRendered();
   } finally {
     console.warn = warn;
     console.error = error;
   }
   if (root.firstChild !== first) problems.push("Vue replaced the server's first node");
   app.unmount();
+  await headRendered();
   document.body.innerHTML = "";
+  placeHead(null);
   return problems;
 }
 
@@ -187,11 +235,11 @@ export function registerConformance(api: TestApi, options: ConformanceOptions): 
   const cases = casesIn(fixtures);
   const { routes, options: configured } = routerOptions(root, config);
   const appOptions: RouterOptions = { ...configured, pinia: options.pinia, vueRouter: options.vueRouter, vueI18n: options.vueI18n };
-  const app = async (c: Case): Promise<App> => {
+  const app = async (c: Case, hydrate = false): Promise<App> => {
     const component = given.get(c.component);
     if (!component) throw new Error(`the fixtures in ${c.component}/ name no component in \`components\``);
     const json = JSON.parse(readFileSync(`${c.base}.json`, "utf8")) as Record<string, unknown>;
-    return fixtureApp(component, readFixture(json), routes, appOptions);
+    return fixtureApp(component, readFixture(json), routes, { ...appOptions, hydrate });
   };
 
   api.describe("conformance", () => {
@@ -210,10 +258,7 @@ export function registerConformance(api: TestApi, options: ConformanceOptions): 
     api.describe("Vue renders each fixture to its recorded HTML", () => {
       for (const c of cases) {
         api.it(`${c.component}/${c.name}`, async () => {
-          const ssr: { teleports?: Record<string, string> } = {};
-          const main = await renderToString(await app(c), ssr);
-          const teleported = Object.entries(ssr.teleports ?? {});
-          const html = teleported.length ? `${main}${TELEPORTS}${JSON.stringify(Object.fromEntries(teleported))}` : main;
+          const html = await renderFixture(await app(c));
           if (record) {
             writeFileSync(`${c.base}.html`, html);
             return;
@@ -231,7 +276,7 @@ export function registerConformance(api: TestApi, options: ConformanceOptions): 
     api.describe("the recorded HTML hydrates without a mismatch", () => {
       for (const c of cases) {
         api.it(`${c.component}/${c.name}`, async () => {
-          const problems = await hydrateFixture(await app(c), recordedHtml(c));
+          const problems = await hydrateFixture(await app(c, true), recordedHtml(c));
           if (problems.length) throw new Error(`${c.component}/${c.name} did not hydrate exactly:\n${problems.join("\n")}`);
         });
       }

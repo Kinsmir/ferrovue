@@ -2,10 +2,9 @@ import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Component } from "vue";
-import { renderToString } from "vue/server-renderer";
 import { generate } from "../src/compiler.ts";
 import { attachSsrRender, fixtureApp, readFixture } from "../src/testing.ts";
-import { cases, CLIENT_ONLY, hydrationBody, OPTIONS, ROOT, ROUTES, TELEPORTS, VUE_DISAGREES } from "./conformance-cases.ts";
+import { cases, CLIENT_ONLY, HEAD, headRendered, hydrationBody, OPTIONS, placeHead, recordedHead, renderFixture, ROOT, ROUTES, TELEPORTS, UNHEAD_REWRITES, VUE_DISAGREES } from "./conformance-cases.ts";
 import { settled, stillLoading } from "../src/settle.ts";
 
 const WRITE = process.env.FERROVUE_FIXTURES_WRITE === "1";
@@ -42,10 +41,7 @@ describe("Vue renders each fixture to its recorded HTML", () => {
   for (const c of cases) {
     it(`${c.component}/${c.name}`, async () => {
       const app = await fixtureApp(components.get(c.component)!, readFixture(c.json), ROUTES, OPTIONS);
-      const ssr: { teleports?: Record<string, string> } = {};
-      const main = await renderToString(app, ssr);
-      const teleported = Object.entries(ssr.teleports ?? {});
-      const html = teleported.length ? `${main}${TELEPORTS}${JSON.stringify(Object.fromEntries(teleported))}` : main;
+      const html = await renderFixture(app);
       if (WRITE) writeFileSync(`${c.base}.html`, html);
       // oxlint-disable-next-line vitest/no-conditional-expect -- a recording run writes instead of comparing
       else expect(html).toBe(c.html);
@@ -64,14 +60,23 @@ describe.skipIf(WRITE)("the recorded HTML hydrates without a mismatch", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     document.body.innerHTML = "";
+    placeHead(null);
   });
   for (const c of cases) {
     it(`${c.component}/${c.name}`, async () => {
+      placeHead(recordedHead(c.html));
       document.body.innerHTML = hydrationBody(c.html);
+      const head = document.head.innerHTML;
       const before = document.getElementById("root")!.firstChild;
-      const app = await fixtureApp(components.get(c.component)!, readFixture(c.json), ROUTES, OPTIONS);
+      const app = await fixtureApp(components.get(c.component)!, readFixture(c.json), ROUTES, { ...OPTIONS, hydrate: true });
       app.mount("#root");
       await settled(app);
+      await headRendered();
+      const rewrites = UNHEAD_REWRITES.has(`${c.component}/${c.name}`);
+      // oxlint-disable-next-line vitest/no-conditional-expect -- unhead's own server writes these heads in markup the parser reads back otherwise
+      if (rewrites) expect(document.head.innerHTML, "the fixture is in UNHEAD_REWRITES").not.toBe(head);
+      // oxlint-disable-next-line vitest/no-conditional-expect -- the same check, for every other fixture
+      else expect(document.head.innerHTML, "unhead's client took over the head as the server wrote it").toBe(head);
       const mismatches = warnings.filter((w) => /hydrat|mismatch/i.test(w));
       const disagrees = VUE_DISAGREES.has(`${c.component}/${c.name}`);
       expect(disagrees ? [] : mismatches).toEqual([]);
@@ -79,6 +84,7 @@ describe.skipIf(WRITE)("the recorded HTML hydrates without a mismatch", () => {
       expect(document.getElementById("root")!.firstChild).toBe(before);
       expect(document.getElementById("root")!.innerHTML, "`<ClientOnly>` showed its content once mounted").toContain(CLIENT_ONLY[c.component] ?? "");
       app.unmount();
+      await headRendered();
     });
   }
 });
@@ -93,7 +99,7 @@ describe.skipIf(WRITE)("the recorded HTML carries the scope ids the client rende
   const checked = cases.filter((c) => c.html.includes(" data-v-") && !CLIENT_DIFFERS.has(c.component) && !CLIENT_DIFFERS.has(`${c.component}/${c.name}`));
   for (const c of checked) {
     it(`${c.component}/${c.name}`, async () => {
-      const [main, teleported] = c.html.split(TELEPORTS);
+      const [main, teleported] = c.html.split(HEAD)[0]!.split(TELEPORTS);
       const targets = Object.keys(JSON.parse(teleported ?? "{}") as Record<string, string>);
       document.body.innerHTML = `<div id="root"></div>${targets.map((t) => `<div id="${t.replace(/^#/, "")}"></div>`).join("")}`;
       const app = await fixtureApp(components.get(c.component)!, readFixture(c.json), ROUTES, { ...OPTIONS, client: true });

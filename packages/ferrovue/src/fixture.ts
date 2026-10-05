@@ -1,4 +1,4 @@
-import { createApp, createSSRApp, createStaticVNode, defineComponent, h, type App, type Component } from "vue";
+import { createApp, createSSRApp, createStaticVNode, defineComponent, h, type App, type Component, type Plugin } from "vue";
 import { routeRecords, type RouteEntry } from "./routes.ts";
 
 export { routeRecords, type RouteEntry } from "./routes.ts";
@@ -64,6 +64,16 @@ async function optionalPinia(stores: Record<string, unknown>): Promise<typeof im
   }
 }
 
+async function optionalHead(hydrate: boolean): Promise<Plugin | null> {
+  try {
+    if (hydrate) return (await import("@unhead/vue/client")).createHead();
+    return (await import("@unhead/vue/server")).createHead({ disableDefaults: true });
+  } catch (error) {
+    if (isMissing(error, "@unhead/vue")) return null;
+    throw error;
+  }
+}
+
 /** The router options ferrovue reproduces, as the project's configuration gives them. */
 export interface RouterOptions {
   base?: string;
@@ -75,6 +85,11 @@ export interface RouterOptions {
   /** Render on the client from scratch with `createApp`: the scope
    * ids a fresh client render writes, which the server's must equal for scoped styles to apply. */
   client?: boolean;
+  /** The app hydrates a page the DOM already holds: the head `@unhead/vue` gives it, when the
+   * project has it, is its client head, which takes over the tags in the document's head. Otherwise
+   * it is the server head `createHead({ disableDefaults: true })`, whose tags the conformance suite
+   * writes after the render. */
+  hydrate?: boolean;
   /** The application's own `pinia` module, used in place of the one `ferrovue/testing` would
    * import: under vitest the application's stores use the module Vite loads, which must be the
    * one that installs the fixture's state. */
@@ -100,6 +115,8 @@ export async function fixtureApp(
       .map(([name, html]) => [name, () => [staticNode(html)]]),
   );
   const app = (options.client ? createApp : createSSRApp)({ render: () => h(component, fixture.props, slots) });
+  const head = await optionalHead(options.hydrate ?? false);
+  if (head) app.use(head);
   const pinia = options.pinia ?? (await optionalPinia(fixture.stores));
   if (pinia) {
     const store = pinia.createPinia();

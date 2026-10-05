@@ -49,6 +49,13 @@ pub mod form;
 pub mod forward;
 pub mod frame;
 pub mod glyph;
+pub mod head_article;
+pub mod head_choice;
+pub mod head_note;
+pub mod head_page;
+pub mod head_seo;
+pub mod head_theme;
+pub mod head_theme_page;
 pub mod hollow;
 pub mod keywords;
 pub mod lifecycle;
@@ -169,6 +176,29 @@ fn teleports_into(out: &mut String, teleports: ferrovue::Teleports) {
         .map(|(t, html)| format!("{}:{}", serde_json::to_string(t).unwrap(), serde_json::to_string(html).unwrap()))
         .collect();
     out.push_str("<!--fv-teleports-->{");
+    out.push_str(&pairs.join(","));
+    out.push('}');
+}
+
+/// The head, after a marker, as the conformance suite writes unhead's: `{"headTags":"…",…}`.
+#[cfg(test)]
+fn head_into(out: &mut String, head: &ferrovue::Head) {
+    let html = head.render();
+    if html == ferrovue::HeadHtml::default() {
+        return;
+    }
+    let fields = [
+        ("headTags", &html.head_tags),
+        ("bodyTags", &html.body_tags),
+        ("bodyTagsOpen", &html.body_tags_open),
+        ("htmlAttrs", &html.html_attrs),
+        ("bodyAttrs", &html.body_attrs),
+    ];
+    let pairs: Vec<String> = fields
+        .iter()
+        .map(|(k, v)| format!("{}:{}", serde_json::to_string(k).unwrap(), serde_json::to_string(v).unwrap()))
+        .collect();
+    out.push_str("<!--fv-head-->{");
     out.push_str(&pairs.join(","));
     out.push('}');
 }
@@ -368,6 +398,50 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Glyph" => {
             let props: glyph::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             glyph::render(&mut out, &props);
+        }
+        "HeadArticle" => {
+            let props: head_article::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let head = ferrovue::Head::without_defaults();
+            head_article::render(&mut out, &props, &head);
+            head_into(&mut out, &head);
+        }
+        "HeadChoice" => {
+            let props: head_choice::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let head = ferrovue::Head::without_defaults();
+            head_choice::render(&mut out, &props, &head);
+            head_into(&mut out, &head);
+        }
+        "HeadNote" => {
+            let props: head_note::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let head = ferrovue::Head::without_defaults();
+            head_note::render(&mut out, &props, &head);
+            head_into(&mut out, &head);
+        }
+        "HeadPage" => {
+            let props: head_page::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let head = ferrovue::Head::without_defaults();
+            head_page::render(&mut out, &props, &head);
+            head_into(&mut out, &head);
+        }
+        "HeadSeo" => {
+            let props: head_seo::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let head = ferrovue::Head::without_defaults();
+            head_seo::render(&mut out, &props, &head);
+            head_into(&mut out, &head);
+        }
+        "HeadTheme" => {
+            let props: head_theme::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let s_default: &head_theme::DefaultSlot = &|out: &mut String, _: provides::Provides<'_>| -> bool { out.push_str(fixture.slot("default").unwrap_or_default()); true };
+            let head = ferrovue::Head::without_defaults();
+            head_theme::render(&mut out, &props, head_theme::Slots { default: fixture.slot("default").map(|_| s_default) }, provides::Provides::default(), &head);
+            head_into(&mut out, &head);
+        }
+        "HeadThemePage" => {
+            let props: head_theme_page::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let head = ferrovue::Head::without_defaults();
+            head_theme_page::render(&mut out, &props, provides::Provides::default(), &head);
+            head_into(&mut out, &head);
         }
         "Hollow" => {
             let props: hollow::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

@@ -35,3 +35,8 @@ export async function settled(app: App): Promise<void> {
   }
   throw new Error("async components were still loading after 20 rounds");
 }
+
+/** Wait for unhead's client head, which writes the document's head a task after a change. */
+export async function headRendered(): Promise<void> {
+  for (let i = 0; i < 2; i++) await new Promise((done) => setTimeout(done, 0));
+}

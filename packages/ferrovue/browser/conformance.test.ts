@@ -3,7 +3,7 @@ import vue from "@vitejs/plugin-vue";
 import { chromium, firefox, webkit, type Browser, type ConsoleMessage, type Page } from "playwright";
 import { build, type Rolldown } from "vite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { cases, CLIENT_ONLY, hydrationBody, OPTIONS, ROUTES, VUE_DISAGREES } from "../test/conformance-cases.ts";
+import { cases, CLIENT_ONLY, hydrationBody, OPTIONS, recordedHead, ROUTES, UNHEAD_REWRITES, VUE_DISAGREES } from "../test/conformance-cases.ts";
 import type { PageData } from "./entry.ts";
 
 const ORIGIN = "http://conformance.test";
@@ -36,11 +36,12 @@ beforeAll(async () => {
 function pageFor(c: (typeof cases)[number]): string {
   const data: PageData = { component: c.component, fixture: c.json, routes: ROUTES, options: OPTIONS };
   const json = JSON.stringify(data).replace(/</g, "\\u003c");
+  const head = recordedHead(c.html);
   return (
-    `<!doctype html><html><head><meta charset="utf-8"><title>${c.component}/${c.name}</title>` +
+    `<!doctype html><html${head?.htmlAttrs ?? ""}><head><meta charset="utf-8">${head ? "" : `<title>${c.component}/${c.name}</title>`}` +
     `<script type="application/json" id="fv-fixture">${json}</script>` +
-    `<script type="module" src="/entry.js"></script></head>` +
-    `<body>${hydrationBody(c.html)}</body></html>`
+    `<script type="module" src="/entry.js"></script>${head?.headTags ?? ""}</head>` +
+    `<body${head?.bodyAttrs ?? ""}>${hydrationBody(c.html)}</body></html>`
   );
 }
 
@@ -104,6 +105,8 @@ describe.each(BROWSERS)("%s", (name) => {
         expected = expected.replace(p.server, p.hydrated);
       }
       expect(result.after, "hydrating left the document as the browser parsed it").toBe(expected);
+      if (!recordedHead(c.html) || UNHEAD_REWRITES.has(`${c.component}/${c.name}`)) return;
+      expect(result.head.after, "unhead's client took over the head as the browser parsed it").toBe(result.head.before);
     });
   }
 });

@@ -33,9 +33,12 @@ pub struct Slots<'s> {
 }
 
 /// Write the component's server render into `out`.
-pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::Route<'_>) {
+pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::Route<'_>, fv_head: &fv::Head) {
     out.reserve(211 + props.book.id.len() + props.book.title.len() + props.book.author.len());
     let s_permalink = &*format!("/books/{}", fv_route.param("id").unwrap_or(""));
+    let s_summary = &*format!("{}, by {} ({})", props.book.title, props.book.author, fv::Js(props.book.year));
+    fv_head.push(fv::HeadValue::object([("title", fv::HeadValue::str(&props.book.title)), ("meta", fv::HeadValue::array([fv::HeadValue::object([("name", fv::HeadValue::str("description")), ("content", fv::HeadValue::str(s_summary))])])), ("link", fv::HeadValue::array([fv::HeadValue::object([("rel", fv::HeadValue::str("canonical")), ("href", fv::HeadValue::str(s_permalink))])]))]));
+    fv_head.push_seo_meta(fv::HeadValue::Object(Vec::new()), vec![("property", "og:title", fv::HeadValue::str(&props.book.title)), ("property", "og:description", fv::HeadValue::str(s_summary)), ("property", "og:type", fv::HeadValue::str("book")), ("property", "book:release_date", fv::HeadValue::str(&fv::Js(props.book.year).to_string()))]);
     out.push_str("<article class=\"book\"");
     if let Some(v) = fv_route.param("id") {
         if v.is_empty() {
@@ -64,6 +67,6 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>, fv_route: &'p fv::Route<'p>) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_slots, fv_route))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>, fv_route: &'p fv::Route<'p>, fv_head: &'p fv::Head) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
+    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_slots, fv_route, fv_head))
 }

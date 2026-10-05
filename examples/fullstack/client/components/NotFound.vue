@@ -1,5 +1,8 @@
 <script setup lang="ts">
-defineProps<{ path: string }>();
+import { useHead } from "@unhead/vue";
+
+const props = defineProps<{ path: string }>();
+useHead({ title: "Not found", meta: [{ name: "robots", content: "noindex" }, { name: "description", content: `Nothing lives at ${props.path}` }] });
 </script>
 
 <template>

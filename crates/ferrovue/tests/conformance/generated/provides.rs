@@ -10,10 +10,10 @@ use std::borrow::Cow;
 /// or the values the client app gives `app.provide`.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Provides<'p> {
-    /// What is provided under `TabsKey`, exported from `types/keys.ts`.
-    pub tabs_key: Option<&'p super::types::TabsState<'p>>,
     /// What is provided under `ThemeKey`, exported from `types/keys.ts`.
     pub theme_key: Option<&'p str>,
+    /// What is provided under `TabsKey`, exported from `types/keys.ts`.
+    pub tabs_key: Option<&'p super::types::TabsState<'p>>,
     /// What is provided under `"size"`.
     pub size: Option<i64>,
     /// What is provided under `AccentKey`, exported from `types/keys.ts`.

@@ -1316,3 +1316,55 @@ Function and value provided under one key.
 ## FV1620
 
 `provide` or `inject` called inside an expression.
+
+# Page head: FV17xx
+
+See [`head`](crate::guide::head).
+
+## FV1701
+
+Options given to `useHead`.
+
+## FV1702
+
+Head input that is not an object literal.
+
+## FV1703
+
+Head key ferrovue does not translate.
+
+## FV1704
+
+Spread, computed key, hole or method in a head input.
+
+## FV1705
+
+Function in a head input.
+
+unhead calls a function given as a value on the server only when it takes no arguments, as a getter (`title: () => props.title`), which ferrovue evaluates. A `titleTemplate` function and an event handler (`onload`) run with arguments or on the client.
+
+## FV1706
+
+Head value of a type the head does not take.
+
+## FV1707
+
+`tagPosition`, `tagPriority` or `tagDuplicateStrategy` that is not a literal it accepts.
+
+## FV1708
+
+`useHeadSafe`.
+
+## FV1709
+
+`useSeoMeta` key or value ferrovue does not translate.
+
+## FV1710
+
+`class` or `style` in the head that may be `null`.
+
+unhead's server renderer throws on a `class` or `style` of `null`. Write `?? undefined`, which leaves the attribute out.
+
+## FV1711
+
+`innerHTML` or `textContent` on a head tag that has no content.

@@ -37,8 +37,9 @@ pub struct Slots<'s> {
 }
 
 /// Write the component's server render into `out`.
-pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::Route<'_>) {
+pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::Route<'_>, fv_head: &fv::Head) {
     out.reserve(349 + props.shop.len() + props.featured.len());
+    fv_head.push(fv::HeadValue::object([("title", fv::HeadValue::str(&format!("Staff picks · {}", props.shop))), ("meta", fv::HeadValue::array([fv::HeadValue::object([("name", fv::HeadValue::str("description")), ("content", fv::HeadValue::str(&format!("{} and the rest of this week's staff picks", props.featured)))])])), ("htmlAttrs", fv::HeadValue::object([("class", fv::HeadValue::str("picks-page"))]))]));
     out.push_str("<div class=\"layout picks\"><header>");
     {
         let fv_link = {
@@ -83,6 +84,6 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>, fv_route: &'p fv::Route<'p>) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_slots, fv_route))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>, fv_route: &'p fv::Route<'p>, fv_head: &'p fv::Head) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
+    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_slots, fv_route, fv_head))
 }

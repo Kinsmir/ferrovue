@@ -455,6 +455,27 @@ defineProps<{ a: string }>();
       expect(out).toContain("fv_teleports: &fv::Teleports");
     });
 
+    it("pushes useHead and useSeoMeta onto the page's Head, before the template renders, and hands it down", () => {
+      const headed = `<script setup lang="ts">
+import { useHead as head, useSeoMeta } from "@unhead/vue";
+const props = defineProps<{ a: string }>();
+const entry = head({ title: () => props.a });
+useSeoMeta({ ogTitle: props.a, titleTemplate: "%s!", title: "t" });
+</script>
+<template><p>{{ a }}</p></template>`;
+      const parent = `<script setup lang="ts">
+import Child from "./Child.vue";
+defineProps<{ a: string }>();
+</script>
+<template><div><Child :a="a" /></div></template>`;
+      const files = compile(island(parent, { Child: headed }));
+      const out = files.get("child.rs")!;
+      expect(out).toContain('fv_head.push(fv::HeadValue::object([("title", fv::HeadValue::str(&props.a))]));');
+      expect(out).toContain('fv_head.push_seo_meta(fv::HeadValue::object([("title", fv::HeadValue::str("t")), ("titleTemplate", fv::HeadValue::str("%s!"))]), vec![("property", "og:title", fv::HeadValue::str(&props.a))]);');
+      expect(out.indexOf("fv_head.push(")).toBeLessThan(out.indexOf('out.push_str("<p>")'));
+      expect(files.get("x.rs")).toContain("fv_head: &fv::Head");
+    });
+
     it("renders Suspense's default content in place", () => {
       const out = compile(
         island(`<script setup lang="ts">
@@ -2151,6 +2172,146 @@ const value = defineModel<string | null>();
 <template><i>{{ value }}</i></template>`,
       /X\.vue:2:\d+: a `defineModel` of `T \| null` that is not `required`/,
     ],
+    [
+      "options given to useHead",
+      `<script setup lang="ts">
+import { useHead, useHeadSafe, useSeoMeta } from "@unhead/vue";
+const props = defineProps<{ a: string; n: string | null; tags: string[] }>();
+useHead({ title: props.a }, { tagPriority: "high" });
+</script>
+<template><i>{{ a }}</i></template>`,
+      /`useHead`'s options are not translated/,
+    ],
+    [
+      "a head input that is not an object literal",
+      `<script setup lang="ts">
+import { useHead, useHeadSafe, useSeoMeta } from "@unhead/vue";
+const props = defineProps<{ a: string; n: string | null; tags: string[] }>();
+useHead(props.a);
+</script>
+<template><i>{{ a }}</i></template>`,
+      /`useHead` takes an object literal, or a getter returning one/,
+    ],
+    [
+      "templateParams in the head",
+      `<script setup lang="ts">
+import { useHead, useHeadSafe, useSeoMeta } from "@unhead/vue";
+const props = defineProps<{ a: string; n: string | null; tags: string[] }>();
+useHead({ templateParams: { site: props.a } });
+</script>
+<template><i>{{ a }}</i></template>`,
+      /`templateParams` needs unhead's template params plugin/,
+    ],
+    [
+      "a head key ferrovue does not translate",
+      `<script setup lang="ts">
+import { useHead, useHeadSafe, useSeoMeta } from "@unhead/vue";
+const props = defineProps<{ a: string; n: string | null; tags: string[] }>();
+useHead({ bodyClass: props.a });
+</script>
+<template><i>{{ a }}</i></template>`,
+      /`bodyClass` is not a key of the head ferrovue translates/,
+    ],
+    [
+      "a spread in a head input",
+      `<script setup lang="ts">
+import { useHead, useHeadSafe, useSeoMeta } from "@unhead/vue";
+const props = defineProps<{ a: string; n: string | null; tags: string[] }>();
+useHead({ ...{ title: props.a } });
+</script>
+<template><i>{{ a }}</i></template>`,
+      /no spread, computed key or method/,
+    ],
+    [
+      "a titleTemplate function",
+      `<script setup lang="ts">
+import { useHead, useHeadSafe, useSeoMeta } from "@unhead/vue";
+const props = defineProps<{ a: string; n: string | null; tags: string[] }>();
+useHead({ titleTemplate: (t: string) => t + " - x" });
+</script>
+<template><i>{{ a }}</i></template>`,
+      /a `titleTemplate` function runs with the title/,
+    ],
+    [
+      "an event handler in the head",
+      `<script setup lang="ts">
+import { useHead, useHeadSafe, useSeoMeta } from "@unhead/vue";
+const props = defineProps<{ a: string; n: string | null; tags: string[] }>();
+useHead({ script: [{ src: "/a.js", onload: () => props.a }] });
+</script>
+<template><i>{{ a }}</i></template>`,
+      /`onload` is an event handler, which runs only on the client/,
+    ],
+    [
+      "a getter taking arguments in the head",
+      `<script setup lang="ts">
+import { useHead, useHeadSafe, useSeoMeta } from "@unhead/vue";
+const props = defineProps<{ a: string; n: string | null; tags: string[] }>();
+useHead({ title: (x: string) => props.a });
+</script>
+<template><i>{{ a }}</i></template>`,
+      /a function in a head input is a getter of its value/,
+    ],
+    [
+      "a head value of a list where one value goes",
+      `<script setup lang="ts">
+import { useHead, useHeadSafe, useSeoMeta } from "@unhead/vue";
+const props = defineProps<{ a: string; n: string | null; tags: string[] }>();
+useHead({ title: props.tags });
+</script>
+<template><i>{{ a }}</i></template>`,
+      /`title` is a list/,
+    ],
+    [
+      "a tagPosition that is not a literal",
+      `<script setup lang="ts">
+import { useHead, useHeadSafe, useSeoMeta } from "@unhead/vue";
+const props = defineProps<{ a: string; n: string | null; tags: string[] }>();
+useHead({ script: [{ src: "/a.js", tagPosition: props.a }] });
+</script>
+<template><i>{{ a }}</i></template>`,
+      /`tagPosition` is one of "head", "bodyClose", "bodyOpen", written as a literal/,
+    ],
+    [
+      "useHeadSafe",
+      `<script setup lang="ts">
+import { useHead, useHeadSafe, useSeoMeta } from "@unhead/vue";
+const props = defineProps<{ a: string; n: string | null; tags: string[] }>();
+useHeadSafe({ title: props.a });
+</script>
+<template><i>{{ a }}</i></template>`,
+      /`useHeadSafe` filters its input through unhead's safe input plugin/,
+    ],
+    [
+      "an object given to a useSeoMeta key",
+      `<script setup lang="ts">
+import { useHead, useHeadSafe, useSeoMeta } from "@unhead/vue";
+const props = defineProps<{ a: string; n: string | null; tags: string[] }>();
+useSeoMeta({ robots: { index: true } });
+</script>
+<template><i>{{ a }}</i></template>`,
+      /`robots` given an object or an array/,
+    ],
+    [
+      "a class in the head that may be null",
+      `<script setup lang="ts">
+import { useHead, useHeadSafe, useSeoMeta } from "@unhead/vue";
+const props = defineProps<{ a: string; n: string | null; tags: string[] }>();
+useHead({ htmlAttrs: { class: props.n } });
+</script>
+<template><i>{{ a }}</i></template>`,
+      /`class` may be `null`, on which unhead's renderer throws/,
+    ],
+    [
+      "textContent on a meta tag",
+      `<script setup lang="ts">
+import { useHead, useHeadSafe, useSeoMeta } from "@unhead/vue";
+const props = defineProps<{ a: string; n: string | null; tags: string[] }>();
+useHead({ meta: [{ name: "x", textContent: props.a }] });
+</script>
+<template><i>{{ a }}</i></template>`,
+      /`textContent` on a `meta`, which has no content/,
+    ],
   ];
 
   const children = {
@@ -2200,6 +2361,20 @@ defineProps<{ c: string | null }>();
     "a custom directive the configuration does not declare client-only": "FV0405",
     "a type that is both null and undefined": "FV0311",
     "a default for a nullable prop": "FV0307",
+    "options given to useHead": "FV1701",
+    "a head input that is not an object literal": "FV1702",
+    "templateParams in the head": "FV1703",
+    "a head key ferrovue does not translate": "FV1703",
+    "a spread in a head input": "FV1704",
+    "a titleTemplate function": "FV1705",
+    "an event handler in the head": "FV1705",
+    "a getter taking arguments in the head": "FV1705",
+    "a head value of a list where one value goes": "FV1706",
+    "a tagPosition that is not a literal": "FV1707",
+    "useHeadSafe": "FV1708",
+    "an object given to a useSeoMeta key": "FV1709",
+    "a class in the head that may be null": "FV1710",
+    "textContent on a meta tag": "FV1711",
   };
 
   const refusal = (project: string): GenError => {

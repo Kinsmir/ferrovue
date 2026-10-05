@@ -2,7 +2,8 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { RouteEntry, RouterOptions } from "../src/fixture.ts";
 
-export { hydrationBody, TELEPORTS } from "../src/conformance.ts";
+export { HEAD, hydrationBody, placeHead, recordedHead, renderFixture, TELEPORTS } from "../src/conformance.ts";
+export { headRendered } from "../src/settle.ts";
 
 export const ROOT = join(import.meta.dirname, "../../../crates/ferrovue/tests/conformance");
 const FIXTURES = join(ROOT, "fixtures");
@@ -22,6 +23,8 @@ const I18N = CONFIG.i18n && {
 export const OPTIONS: RouterOptions = I18N ? { i18n: I18N } : {};
 
 export const VUE_DISAGREES = new Set(["Hollow/absent.json", "Hollow/absent-on.json", "Hollow/whitespace.json", "Hollow/js-whitespace.json"]);
+
+export const UNHEAD_REWRITES = new Set(["HeadPage/hostile.json"]);
 
 export const CLIENT_ONLY: Record<string, string> = { ClientSide: 'class="gauge measured" max="100"' };
 
