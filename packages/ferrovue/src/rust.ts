@@ -92,7 +92,7 @@ function param(ty: Ty, comp: Component, arg: string): { ty: string; value: strin
 function builderSource(st: Struct, comp: Component, life: string): string {
   const required = st.fields.filter((f) => f.ty.k !== "opt");
   const optional = st.fields.filter((f) => f.ty.k === "opt");
-  const arg = (f: Field) => f.rust.replace(/^r#/, "");
+  const arg = (f: Field) => f.rust;
   const params = required.map((f) => `${arg(f)}: ${param(f.ty, comp, arg(f)).ty}`).join(", ");
   const inits = st.fields
     .map((f) => (f.ty.k === "opt" ? `${f.rust}: None` : fieldInit(f.rust, param(f.ty, comp, arg(f)).value)))

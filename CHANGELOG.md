@@ -25,6 +25,12 @@ released together and share version numbers.
   (`src/plugin.ts` and `src/plugins/`, described in CONTRIBUTING.md), so the core names none of
   them, and `expr.ts`, `template.ts` and `attrs.ts` are split into modules of under 500 lines.
 
+### Fixed
+
+- A prop named after a Rust keyword compiles: `Props::new` and the setters take `r#loop`, `r#type` and
+  the like, and `self`, `Self`, `super` and `crate`, which Rust cannot write as raw identifiers,
+  become `self_`, `Self_`, `super_` and `crate_` in Rust while keeping their name in the props' JSON (#19).
+
 ## [0.3.0] - 2026-10-05
 
 ### Added
