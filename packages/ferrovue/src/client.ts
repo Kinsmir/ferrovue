@@ -1,4 +1,4 @@
-import { createSSRApp, type App, type Component, type Plugin } from "vue";
+import { createSSRApp, defineComponent, onMounted, ref, type App, type Component, type Plugin } from "vue";
 import type { Pinia } from "pinia";
 import type { Router } from "vue-router";
 
@@ -101,6 +101,38 @@ export async function mountIslands(components: Record<string, IslandComponent>, 
     },
   };
 }
+
+type SsrSlot = (props: object, push: (chunk: unknown) => void, parent: unknown, scopeId: string) => unknown;
+
+/** Content only the browser renders. The server writes the `#fallback` slot, or nothing; the
+ * browser hydrates that fallback, then swaps in the default slot once mounted. ferrovue does not
+ * compile the default slot, so anything may go there: a component library's components, code that
+ * reads `window`. The swap happens only where Vue runs on the page, as in an island. */
+export const ClientOnly: Component = Object.assign(
+  defineComponent({
+    name: "ClientOnly",
+    inheritAttrs: false,
+    setup(_, { slots }) {
+      const mounted = ref(false);
+      onMounted(() => {
+        mounted.value = true;
+      });
+      return () => (mounted.value ? slots.default?.() : slots.fallback?.());
+    },
+  }),
+  {
+    ssrRender(ctx: { $slots: Record<string, SsrSlot | undefined> }, push: (chunk: unknown) => void, parent: unknown): void {
+      const fallback = ctx.$slots.fallback;
+      if (!fallback) {
+        push("<!---->");
+        return;
+      }
+      push("<!--[-->");
+      fallback({}, push, parent, "");
+      push("<!--]-->");
+    },
+  },
+);
 
 async function load(component: IslandComponent): Promise<Component | Error> {
   if (typeof component !== "function" || "props" in component || "displayName" in component || "__vccOpts" in component) return component;

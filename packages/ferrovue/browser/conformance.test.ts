@@ -1,8 +1,9 @@
+import { join } from "node:path";
 import vue from "@vitejs/plugin-vue";
 import { chromium, firefox, webkit, type Browser, type ConsoleMessage, type Page } from "playwright";
 import { build, type Rolldown } from "vite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { cases, hydrationBody, OPTIONS, ROUTES, VUE_DISAGREES } from "../test/conformance-cases.ts";
+import { cases, CLIENT_ONLY, hydrationBody, OPTIONS, ROUTES, VUE_DISAGREES } from "../test/conformance-cases.ts";
 import type { PageData } from "./entry.ts";
 
 const ORIGIN = "http://conformance.test";
@@ -23,6 +24,7 @@ beforeAll(async () => {
     root: import.meta.dirname,
     logLevel: "warn",
     plugins: [vue()],
+    resolve: { alias: [{ find: /^ferrovue\/client$/, replacement: join(import.meta.dirname, "../src/client.ts") }] },
     define: { __VUE_I18N_FULL_INSTALL__: "true", __VUE_I18N_LEGACY_API__: "false", __INTLIFY_PROD_DEVTOOLS__: "false" },
     build: { write: false, minify: false, rolldownOptions: { input: "entry.ts", output: { codeSplitting: false } } },
   }).finally(() => {
@@ -90,6 +92,7 @@ describe.each(BROWSERS)("%s", (name) => {
       const result = await page.evaluate(() => window.hydration!);
       const logged = await Promise.all(messages);
       expect(result.kept, "Vue kept the server's first node").toBe(true);
+      expect(result.settled, "`<ClientOnly>` showed its content once mounted").toContain(CLIENT_ONLY[c.component] ?? "");
       const disagrees = VUE_DISAGREES.has(`${c.component}/${c.name}`);
       expect(disagrees ? [] : logged).toEqual([]);
       expect(logged.length > 0, "a fixture mismatches exactly when it is in VUE_DISAGREES").toBe(disagrees);

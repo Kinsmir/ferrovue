@@ -42,6 +42,20 @@
       }
     }
   },
+  "twins": {
+    "StarRating": {
+      "rust": "crate::vendor::star_rating",
+      "props": {
+        "value": "int",
+        "max": "int?",
+        "label": "string?",
+        "readonly": "bool"
+      },
+      "slots": [
+        "default"
+      ]
+    }
+  },
   "clientDirectives": [
     "focus"
   ],
