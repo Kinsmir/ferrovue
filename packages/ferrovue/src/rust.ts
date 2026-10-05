@@ -7,7 +7,9 @@ import { ctx } from "./context.ts";
 import { lookupStruct } from "./typescript.ts";
 import { childOf } from "./expr.ts";
 import { Emitter } from "./emitter.ts";
-import { extraParams, fieldInit, slotFieldBorrows, slotFieldTy, slotTypeName, statements, takesSlots } from "./template.ts";
+import { statements } from "./template.ts";
+import { slotFieldBorrows, slotFieldTy, slotTypeName } from "./slots.ts";
+import { extraParams, fieldInit, takesSlots } from "./children.ts";
 import { paramsOf, renderParams, slotFieldsOf } from "./plugin.ts";
 import { scopeFor } from "./script.ts";
 
