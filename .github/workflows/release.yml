@@ -37,6 +37,24 @@ jobs:
           node-version: 24
       - name: Tag, manifests and changelog agree
         run: node scripts/release.ts check "$GITHUB_REF_NAME"
+      # Only a signed, annotated tag starts a release: GitHub must have verified its signature against
+      # a key on the tagger's account. A lightweight tag, or an unsigned or unverified one, stops the
+      # release here, before anything is staged or published.
+      - name: The tag is signed and GitHub verifies its signature
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ref=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$GITHUB_REF_NAME")
+          if [[ "$(jq -r .object.type <<<"$ref")" != tag ]]; then
+            echo "::error title=Unsigned release tag::$GITHUB_REF_NAME is a lightweight tag. Delete it and push a signed one: git tag -s $GITHUB_REF_NAME -m \"ferrovue ${GITHUB_REF_NAME#v}\""
+            exit 1
+          fi
+          tag=$(gh api "repos/$GITHUB_REPOSITORY/git/tags/$(jq -r .object.sha <<<"$ref")")
+          if [[ "$(jq -r .verification.verified <<<"$tag")" != true ]]; then
+            echo "::error title=Unsigned release tag::$GITHUB_REF_NAME is not signed, or GitHub cannot verify its signature ($(jq -r .verification.reason <<<"$tag")). Sign it with a key added to your GitHub account as a signing key: git tag -s $GITHUB_REF_NAME"
+            exit 1
+          fi
+          echo "$GITHUB_REF_NAME is signed by $(jq -r .tagger.name <<<"$tag"), verified by GitHub"
       # The crate's public API against the newest version on crates.io not newer than this one, with
       # the kind of release read from the two versions as Cargo reads them: 0.1.x to 0.2.0 may break
       # the API, 0.2.0 to 0.2.1 may only add to it, and 1.x to 2.0 may break it.

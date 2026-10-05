@@ -5,6 +5,11 @@ released together and share version numbers.
 
 ## [Unreleased]
 
+### Changed
+
+- A release starts only from a signed, annotated tag whose signature GitHub verifies; any other tag
+  stops the release workflow before anything is staged or published (`RELEASING.md`, "Signed tags").
+
 ## [0.3.0] - 2026-10-05
 
 ### Added
