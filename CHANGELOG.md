@@ -14,6 +14,15 @@ released together and share version numbers.
   `convert_case`, `http` and `syn` that dioxus, actix-web and the move to syn 3 bring in, each with
   its reason, so its output shows only new duplicates. The esbuild build approval, the root
   `fallow` script and lint ignore patterns that `.gitignore` already covers are gone.
+- `scripts/ferrovue-in.ts <directory> [arguments]` runs the `ferrovue` command in a project of the
+  repository; `pnpm conformance:generate`, `pnpm conformance:check` and CI's checks of the examples
+  use it. `pnpm typecheck` also checks the conformance suite's TypeScript (stores, types, vendor
+  components), with `erasableSyntaxOnly` off for its enums. The README links repository files by
+  their GitHub URL, so the links work on crates.io and npm. The crates leave `missing_docs` to the
+  workspace lints and no longer set `homepage`, which repeated `repository`; the crates without
+  features drop their docs.rs settings, which changed nothing in their documentation. The issue
+  and pull request templates name current versions, error codes and `pnpm lint`, and the
+  full-stack example restarts its server with bacon.
 
 ## [0.5.0] - 2026-10-05
 
