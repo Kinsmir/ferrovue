@@ -10,7 +10,7 @@ Three optional features turn renders into HTTP responses:
 
 ```toml
 [dependencies]
-ferrovue = { version = "0.2", features = ["axum"] }
+ferrovue = { version = "0.5", features = ["axum"] }
 ```
 
 Every response is `200 OK` with `Content-Type: text/html; charset=utf-8`; each framework's own way
