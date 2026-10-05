@@ -54,7 +54,7 @@ export interface Plugin<Run = unknown, Local = unknown> {
 
   scope?(s: Scope): Local;
   scriptImport?(s: Scope, st: N, from: string): boolean;
-  scriptBinding?(s: Scope, d: N): boolean;
+  scriptBinding?(s: Scope, d: N, lets: string[]): boolean;
   scriptStatement?(s: Scope, st: N): boolean;
   prelude?(s: Scope): { before: string[]; after: string[] };
 

@@ -49,7 +49,10 @@ fixtures/X/case.json            Vue hydrates it: no mismatch warnings, same DOM 
    `VUE_DISAGREES` (`conformance-cases.ts`), where Vue's own server and client renders
    differ and which must still mismatch: slot content whose every pushed string is comments and
    whitespace (an interpolation that writes nothing beside a list's fragment markers) shows the
-   fallback on the server, while the client keeps the empty text.
+   fallback on the server, while the client keeps the empty text; and a `<RouterView>` whose page
+   renders nothing (`"routerView": ""`, `App/empty-view.json`): the server writes no node for it,
+   and Vue's hydrator takes a component to begin at a node of the DOM, so it finds none where the
+   page should be. No page the fixture could render in its place writes nothing and hydrates.
 3. For a fixture with scope ids, which hydration does not compare, it renders the fixture afresh on
    the client and holds every element's `data-v-` ids to the recorded ones (except in
    `CLIENT_DIFFERS`, where Vue's own server and client disagree), and it checks that each scoped
@@ -69,7 +72,9 @@ unhead's own server writes a value in markup the HTML parser reads back as somet
 
 A fixture is a JSON object of props plus three optional keys:
 
-- `$slots`: each slot's content as HTML (`routerView` is the page `<RouterView>` shows)
+- `$slots`: each slot's content as HTML (`routerView` is the page `<RouterView>` shows); content
+  that is the empty string renders as an empty text node, which Vue hydrates against nothing
+  (`Frame/empty-slots.json`)
 - `$route`: the reader's location (`/` when absent)
 - `$stores`: Pinia state by store id
 
@@ -126,6 +131,7 @@ A fixture is a JSON object of props plus three optional keys:
 | `TagHeading`, `TagGallery`, `TagContent` | `<component :is>` over elements: an `as` prop with a default as a scoped component's root, a `computed` tag, void elements, a static `is`, inside `<Transition>` with `v-if`, `<slot>`s inside a chosen element whose parent content renders from virtual nodes (`<!--v-if-->`, fragments, forwarded), and what an element renders from virtual nodes: classes, styles, bare empty attributes, form controls, nested choices, lists of components, `<TransitionGroup>`, `<KeepAlive>`, comments |
 | `SlotProbe` | `useSlots()`: a slot's presence tested in the template and in a `computed` |
 | `TabsPage`, `Tabs`, `Tab`, `ThemedButton`, `ThemeScope` | `provide` and `inject` with `InjectionKey` symbols from `types/keys.ts` and string keys: a `Tabs`/`Tab` compound pair whose context is a `reactive()` object, a themed button with defaults, a factory default and a ref default, each rendered with and without a provider; a provider in a parent and a grandparent, a nearer one shadowing it, slot content seeing the providers of the component that renders it, a component injecting what it then provides anew, and a key holding a function |
+| `Swatch`, `SwatchShelf` | `inject` with an object default under an interface key: given as it is and by a factory, its fields from props, an optional field left out, a string key typed by `inject<T>`, read in a `computed`, an attribute and an interpolation; rendered alone and under a provider of the key |
 | `ThemedShelf`, `ThemedList` | The same through scoped slots and `:slotted()` slot scope ids, lists, fractions mixed with integers and booleans provided |
 | `HeadPage`, `HeadArticle`, `HeadSeo` | `useHead` and `useSeoMeta` from `@unhead/vue` in a parent and its children: a title template over a child's title, every kind of tag, `htmlAttrs` and `bodyAttrs` with class and style objects and lists, getters, `computed`s, a `meta` per item of a list (`.map`), a list as `content`, JSON in a `script`, `tagPosition`, `key`, tags a later component replaces, absent, `null`, empty and `"true"` values. The head unhead's server renders is recorded after the HTML, behind `<!--fv-head-->` |
 | `HeadTheme`, `HeadThemePage` | The page head beside `provide` and `inject`: a component that injects a theme, provides another and sets the head from the one it injected, inside a provider, with slot content (`HeadArticle`) that calls `useHead` and a child that injects what it provides |
@@ -160,6 +166,13 @@ FERROVUE_BROWSERS=chromium pnpm test:browser                             # one b
   Vue rewrites some attributes on purpose as it hydrates (it sets every dynamic prop again);
   those are listed, by fixture, in `PATCHED`, and the test fails if one stops happening. A
   fixture in `VUE_DISAGREES` must mismatch instead, as in happy-dom.
+- **Lazy islands** (`packages/ferrovue/browser/lazy.test.ts`): `lazy-entry.ts` is bundled with its
+  islands' components split into chunks of their own, and a page holds three islands from the
+  fixtures: one hydrated at once, one waiting for idle and one for `(min-width: 1000px)`. The page
+  holds back `requestIdleCallback` until the test releases it (then hands it to the browser's own),
+  and opens 800 pixels wide. The tests check that neither waiting island's chunk is requested
+  before its trigger, that each is requested once the browser is idle or the viewport is widened,
+  and that hydrating logs no warning and leaves the document as the browser parsed it.
 - **Full-stack example** (`examples/fullstack/browser/hydration.test.ts`): builds the client with
   `vite build` into a temporary directory (production Vue, with
   `__VUE_PROD_HYDRATION_MISMATCH_DETAILS__` so attribute mismatches are checked), builds the server

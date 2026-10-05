@@ -112,6 +112,8 @@ pub mod shown;
 pub mod slot_probe;
 pub mod strings;
 pub mod styles;
+pub mod swatch;
+pub mod swatch_shelf;
 pub mod tab;
 pub mod tabs;
 pub mod tabs_page;
@@ -726,6 +728,16 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Styles" => {
             let props: styles::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             styles::render(&mut out, &props);
+        }
+        "Swatch" => {
+            let props: swatch::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            swatch::render(&mut out, &props, provides::Provides::default());
+        }
+        "SwatchShelf" => {
+            let props: swatch_shelf::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let s_default: &swatch_shelf::DefaultSlot = &|out: &mut String, _: provides::Provides<'_>| -> bool { out.push_str(fixture.slot("default").unwrap_or_default()); true };
+            swatch_shelf::render(&mut out, &props, swatch_shelf::Slots { default: fixture.slot("default").map(|_| s_default) }, provides::Provides::default());
         }
         "Tab" => {
             let props: tab::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

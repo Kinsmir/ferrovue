@@ -105,6 +105,16 @@ describe("provide and inject", () => {
     expect(out).toContain("fv_provides.count_key.unwrap_or(0i64)");
   });
 
+  it("builds an object default as the key's interface, called once for a factory", () => {
+    const out = project({
+      X: sfc('const tabs = inject(TabsKey, { active: props.label, count: 1 });\nconst made = inject(TabsKey, () => ({ active: "made", count: 2 }), true);\nconst live = inject(TabsKey, reactive({ active: computed(() => props.label), count: 3 }));', "<b>{{ tabs.active }} {{ made.count }} {{ live.active }}</b>", "const props = defineProps<{ label: string }>();"),
+    }).get("x.rs")!;
+    expect(out).toContain("let fv_default_tabs = super::types::TabsState { active: std::borrow::Cow::Borrowed(&*props.label), count: 1i64 };");
+    expect(out).toContain("let fv_default_made = super::types::TabsState { active: std::borrow::Cow::Borrowed(\"made\"), count: 2i64 };");
+    expect(out).toContain("fv::escape_into(out, &fv_provides.tabs_key.unwrap_or(&fv_default_tabs).active);");
+    expect(out).toContain("fv_provides.tabs_key.unwrap_or(&fv_default_live).active");
+  });
+
   const refused: [string, Code, Record<string, string>, RegExp][] = [
     ["a key held in a local", "FV1601", { X: sfc('const key = "theme";\nconst theme = inject(key, "x");', "<b>{{ theme }}</b>") }, /an injection key is a string literal, or a `Symbol` exported/],
     ["a key a package exports", "FV1601", { X: sfc('const theme = inject(routerKey, "x");', "<b>{{ theme }}</b>", 'import { routerKey } from "vue-router";\ndefineProps<{ label: string }>();') }, /an injection key is a string literal/],
@@ -118,6 +128,12 @@ describe("provide and inject", () => {
     ["a provided value that may be absent", "FV1609", { X: sfc("provide(ThemeKey, props.note);", "<b />", "const props = defineProps<{ note?: string }>();") }, /fall back with `\?\?` before providing it/],
     ["a list computed in place", "FV1610", { X: sfc('provide("rows", props.rows.filter((r) => r !== ""));', "<b />", "const props = defineProps<{ rows: string[] }>();") }, /a provided list is one the component holds/],
     ["an object under a string key", "FV1611", { X: sfc('provide("tabs", { active: "a" });', "<b />") }, /an object is provided under `"tabs"`, which has no declared type/],
+    ["an object default under a key that holds a string", "FV1611", { X: sfc('const theme = inject(ThemeKey, { name: "x" });', "<b>{{ theme }}</b>") }, /an object is given as a default under `ThemeKey`, which holds a string/],
+    ["an object default under a string key without a type", "FV1611", { X: sfc('const tabs = inject("tabs", { active: "a" });', "<b>{{ tabs }}</b>") }, /an object is given as a default under `"tabs"`, which has no declared type/],
+    ["an object default with a field its interface lacks", "FV1612", { X: sfc('const tabs = inject(TabsKey, { active: "a", count: 1, extra: 2 });', "<b>{{ tabs.active }}</b>") }, /`TabsState` has no field `extra`/],
+    ["an object default missing a required field", "FV1612", { X: sfc('const tabs = inject(TabsKey, () => ({ active: "a" }), true);', "<b>{{ tabs.active }}</b>") }, /`TabsState` requires `count`/],
+    ["a ref inside a plain object default", "FV1612", { X: sfc('const active = ref("a");\nconst tabs = inject(TabsKey, { active, count: 1 });', "<b>{{ tabs.active }}</b>") }, /`active` is a ref, which a plain object keeps as one/],
+    ["a method in an object default", "FV1612", { X: sfc('const tabs = inject(TabsKey, { active: "a", count: 1, pick() {} });', "<b>{{ tabs.active }}</b>") }, /an object given as a default holds plain keys and values/],
     ["a ref inside a plain provided object", "FV1612", { X: sfc('const active = ref("a");\nprovide(TabsKey, { active, count: 1 });', "<b />") }, /`active` is a ref, which a plain object keeps as one/],
     ["a provided object with a field its interface lacks", "FV1612", { X: sfc('provide(TabsKey, { active: "a", count: 1, extra: 2 });', "<b />") }, /`TabsState` has no field `extra`/],
     ["a plain default for a key provided as a ref", "FV1613", { X: sfc("const count = inject(CountKey, 0);", "<b>{{ count }}</b>") }, /`CountKey` is provided as a ref, and this default is not one/],

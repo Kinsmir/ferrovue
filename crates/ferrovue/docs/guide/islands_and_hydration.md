@@ -134,12 +134,15 @@ assert_eq!(
 | [`Hydrate`](crate::Hydrate) | `data-hydrate` | The island hydrates |
 | --- | --- | --- |
 | `Visible` | `visible` | once any of it is in the viewport (Vue's `hydrateOnVisible`) |
+| `visible_with("200px")` | `visible:200px` | once any of it is within that root margin of the viewport (Vue's `hydrateOnVisible({ rootMargin })`) |
 | `Idle` | `idle` | once the browser is idle (Vue's `hydrateOnIdle`; 200 ms after mounting where the browser has no `requestIdleCallback`) |
 | `Interaction` | `interaction` | on the first `pointerenter`, `click` or `focus` within it |
 | `InteractionOn(&["keydown"])` | `interaction:keydown` | on the first of the events named, separated by spaces |
 | `media("(min-width: 60rem)")` | `media:(min-width: 60rem)` | once the media query matches (Vue's `hydrateOnMediaQuery`) |
 
-The attribute's value is escaped like any other, so a media query from anywhere is safe to write.
+The attribute's value is escaped like any other, so a media query or a margin from anywhere is safe
+to write. A root margin is CSS's, as `IntersectionObserver` reads it (`"200px"`, `"10% 0px"`); one
+the browser rejects is reported through `onError` and the island hydrates at once.
 The markup inside the wrapper is what `island()` writes without it, so hydrating later changes
 nothing about exactness: the island hydrates against the same bytes, at another moment.
 

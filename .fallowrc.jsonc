@@ -14,6 +14,7 @@
     "examples/fullstack/client/main.ts",
     "packages/ferrovue/browser/*.test.ts",
     "packages/ferrovue/browser/entry.ts",
+    "packages/ferrovue/browser/lazy-entry.ts",
     "scripts/inspect.ts"
   ],
   "ignorePatterns": [

@@ -36,6 +36,11 @@ use std::borrow::Cow;
 pub enum Hydrate {
     /// Once any part of the island is in the viewport, as Vue's `hydrateOnVisible` does.
     Visible,
+    /// [`Hydrate::Visible`] with this root margin: `"200px"` hydrates the island once it is within
+    /// 200 pixels of the viewport, as Vue's `hydrateOnVisible({ rootMargin })` does. The margin is
+    /// CSS's, as `IntersectionObserver` reads it; one the browser rejects hydrates the island at
+    /// once, and `mountIslands` reports it.
+    VisibleWith(Cow<'static, str>),
     /// Once the browser is idle, as Vue's `hydrateOnIdle` does.
     Idle,
     /// On the first `pointerenter`, `click` or `focus` within the island. The events that arrive
@@ -49,6 +54,11 @@ pub enum Hydrate {
 }
 
 impl Hydrate {
+    /// [`Hydrate::VisibleWith`] for this root margin.
+    pub fn visible_with(root_margin: impl Into<Cow<'static, str>>) -> Hydrate {
+        Hydrate::VisibleWith(root_margin.into())
+    }
+
     /// [`Hydrate::Media`] for this query.
     pub fn media(query: impl Into<Cow<'static, str>>) -> Hydrate {
         Hydrate::Media(query.into())
@@ -62,12 +72,14 @@ impl Hydrate {
     /// use ferrovue::Hydrate;
     ///
     /// assert_eq!(Hydrate::Idle.attribute(), "idle");
+    /// assert_eq!(Hydrate::visible_with("200px 0px").attribute(), "visible:200px 0px");
     /// assert_eq!(Hydrate::InteractionOn(&["click", "keydown"]).attribute(), "interaction:click keydown");
     /// assert_eq!(Hydrate::media("print").attribute(), "media:print");
     /// ```
     pub fn attribute(&self) -> Cow<'static, str> {
         match self {
             Hydrate::Visible => Cow::Borrowed("visible"),
+            Hydrate::VisibleWith(margin) => Cow::Owned(format!("visible:{margin}")),
             Hydrate::Idle => Cow::Borrowed("idle"),
             Hydrate::Interaction | Hydrate::InteractionOn([]) => Cow::Borrowed("interaction"),
             Hydrate::InteractionOn(events) => {

@@ -105,6 +105,11 @@ fn an_island_says_when_it_hydrates_after_its_props_and_keeps_its_markup() {
     let eager = Html::island("Label", &props, label).into_string();
     for (when, attribute) in [
         (Hydrate::Visible, "visible"),
+        (Hydrate::visible_with("200px"), "visible:200px"),
+        (
+            Hydrate::visible_with("10% 0px -5px"),
+            "visible:10% 0px -5px",
+        ),
         (Hydrate::Idle, "idle"),
         (Hydrate::Interaction, "interaction"),
         (Hydrate::InteractionOn(&[]), "interaction"),
@@ -126,18 +131,28 @@ fn an_island_says_when_it_hydrates_after_its_props_and_keeps_its_markup() {
 }
 
 #[test]
-fn a_hostile_media_query_cannot_leave_its_attribute() {
+fn a_hostile_media_query_or_root_margin_cannot_leave_its_attribute() {
     let props = Label { label: "x" };
-    for query in [
+    for (query, when, start) in [
         r#"x"><script>alert(1)</script>"#,
         "x' onmouseover='alert(1)",
         "&quot;\"&amp;<>",
         "(min-width: 1px)\n\" data-island=\"Other",
-    ] {
+    ]
+    .into_iter()
+    .flat_map(|query| {
+        [
+            (query, Hydrate::media(query), r#"" data-hydrate="media:"#),
+            (
+                query,
+                Hydrate::visible_with(query),
+                r#"" data-hydrate="visible:"#,
+            ),
+        ]
+    }) {
         let html = Html::island("Label", &props, label)
-            .hydrate(Hydrate::media(query))
+            .hydrate(when)
             .into_string();
-        let start = r#"" data-hydrate="media:"#;
         let at = html.find(start).expect("the attribute") + start.len();
         let (value, rest) = html[at..]
             .split_once('"')

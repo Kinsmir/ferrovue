@@ -29,10 +29,12 @@ released together and share version numbers.
 - Islands that hydrate later. `island(&props).hydrate(Hydrate::Visible)` writes
   `data-hydrate="visible"` on the island's wrapper, after `data-props`; `Hydrate::Idle`,
   `Hydrate::Interaction` (the first `pointerenter`, `click` or `focus` within the island),
-  `Hydrate::InteractionOn(&["keydown"])` and `Hydrate::media("(min-width: 60rem)")` write `idle`,
-  `interaction`, `interaction:keydown` and `media:(min-width: 60rem)`, escaped as any attribute is.
+  `Hydrate::InteractionOn(&["keydown"])`, `Hydrate::media("(min-width: 60rem)")` and
+  `Hydrate::visible_with("200px")` (a root margin) write `idle`, `interaction`, `interaction:keydown`,
+  `media:(min-width: 60rem)` and `visible:200px`, escaped as any attribute is.
   The markup inside the wrapper is unchanged. `mountIslands` waits on such an island with Vue's
-  `hydrateOnVisible`, `hydrateOnIdle` (200 ms where the browser has no `requestIdleCallback`) and
+  `hydrateOnVisible` (given the root margin, if any; one the browser rejects is reported and the
+  island hydrates at once), `hydrateOnIdle` (200 ms where the browser has no `requestIdleCallback`) and
   `hydrateOnMediaQuery`, or its own listeners for interaction, and calls the island's loader only
   when the trigger fires, so its chunk is fetched then. Events that reach an island waiting for
   interaction before it has hydrated are dispatched again once it has, so the click that woke it
@@ -42,11 +44,12 @@ released together and share version numbers.
   parts hydrate with their page. Dioxus's `to_element` writes the same attribute. In
   `examples/fullstack` the home page's buttons hydrate on interaction and the book page's reviews
   once visible, and the browser test checks that their chunks are requested only on a click and
-  after scrolling the reviews into view on a short screen.
+  after scrolling the reviews into view on a short screen; a browser test of the package
+  (`browser/lazy.test.ts`) does the same for islands waiting for idle and for a media query.
 - `provide` and `inject`, resolved through the component tree at build time. A key is a string
   literal or a `Symbol` exported from a `.ts` file and typed `InjectionKey<T>`; a value is a prop,
   a ref, a `computed`, a constant, or an object of them under an interface (`reactive()` unwraps
-  the refs in it, as in Vue). `inject` takes a default, or a factory with `true`. Every component
+  the refs in it, as in Vue). `inject` takes a default, or a factory with `true`; under a key whose type is an interface, the default may be an object of it (`inject(LookKey, { size: "md", tone: "plain" })`), given as it is or returned by the factory, whose fields are values the server computes. Every component
   that provides or injects, or renders one that does, takes the generated `Provides` after its
   other parameters, overlays what it provides, and hands it to its children and to its slots'
   content, which sees what the component rendering the slot provides, as Vue resolves it. A page
@@ -56,7 +59,7 @@ released together and share version numbers.
   absent, a ref and a plain value under one key, setup that assigns to an injected value, a
   provider holding `<RouterView>`, a string key injected inside a Rust twin's slot. The guide's
   new `provide_inject` page explains it; the conformance suite has a `Tabs`/`Tab` pair and a
-  themed button, with and without providers, recorded from Vue.
+  themed button, with and without providers, recorded from Vue, and `Swatch` and `SwatchShelf` cover object defaults.
 - `<component :is>` over a closed set of choices, compiled to a `match`: an imported component, an
   HTML element's name, a prop typed as a union of string literals (an `as` prop), an object of
   imported components or element names declared in setup or exported as a constant from a `.ts`
@@ -162,6 +165,13 @@ released together and share version numbers.
   application's vitest run describes both the options and `server.deps.inline: ["ferrovue"]`, and
   `examples/fullstack` tests both peers with ferrovue loaded from its built package, as an
   application loads it.
+- A fixture's slot content given as `""` hydrates. `fixtureApp` rendered it as a static node of
+  no nodes, which Vue's hydrator compares with the slot's closing `<!--]-->` and reports as a
+  mismatch; it is now an empty text node, which Vue hydrates against nothing, and the server
+  writes the same bytes as before. A `routerView` of `""` still mismatches, in Vue too: the server
+  writes no node for the page, and the client takes the page, a component, to begin at one. The
+  conformance suite records both (`Frame/empty-slots`, `App/empty-view`), and the testing guide
+  says so.
 
 ## [0.5.0] - 2026-10-05
 

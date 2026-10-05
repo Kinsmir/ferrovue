@@ -223,7 +223,7 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
         scope.children.set(d.id.name, loaded);
         continue;
       }
-      if (ctx.plugins.some((p) => p.scriptBinding?.(scope, d))) continue;
+      if (ctx.plugins.some((p) => p.scriptBinding?.(scope, d, lets))) continue;
       if (d.id.type !== "Identifier") {
         for (const name of patternNames(d.id)) scope.clientOnly.set(name, "it is destructured from a value the server does not have");
         continue;

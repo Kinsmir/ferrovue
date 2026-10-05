@@ -25,8 +25,11 @@ class Watcher {
   static all: Watcher[] = [];
   observed: Element[] = [];
   readonly callback: IntersectionObserverCallback;
-  constructor(callback: IntersectionObserverCallback) {
+  readonly options: IntersectionObserverInit | undefined;
+  constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+    if (options?.rootMargin !== undefined && !/^(-?\d+(px|%)\s*){1,4}$/.test(options.rootMargin)) throw new SyntaxError("rootMargin must be specified in pixels or percent");
     this.callback = callback;
+    this.options = options;
     Watcher.all.push(this);
   }
   observe(el: Element): void {
@@ -104,6 +107,38 @@ it("loads and hydrates an island that waits to be visible only once it is, leavi
   lazyIsland.querySelector("h4")!.click();
   await nextTick();
   expect(lazyIsland.firstElementChild!.getAttribute("data-count")).toBe("1");
+  islands.unmount();
+});
+
+it("hands a root margin to the observer of an island that waits to be visible", async () => {
+  const { pinia, lazyIsland, first } = page("visible:200px 0px");
+  const islands = await mountIslands(lazy("Text", "Counter"), { pinia });
+  expect(Watcher.all.map((w) => w.options)).toEqual([{ rootMargin: "200px 0px" }]);
+  expect(calls).toEqual(["Text"]);
+  Watcher.show(lazyIsland);
+  await vi.waitFor(() => expect(islands.apps).toHaveLength(2));
+  expect(mismatches()).toEqual([]);
+  expect(lazyIsland.firstChild).toBe(first);
+  islands.unmount();
+});
+
+it("observes with the default margin when the one given is empty", async () => {
+  const { pinia } = page("visible:");
+  const islands = await mountIslands(lazy("Text", "Counter"), { pinia });
+  expect(Watcher.all.map((w) => w.options)).toEqual([undefined]);
+  islands.unmount();
+});
+
+it("hydrates at once an island whose root margin the browser rejects, read exactly, and says so", async () => {
+  const margin = `200px" onclick="x' &amp; <b>`;
+  const { pinia, lazyIsland } = page(`visible:${margin}`);
+  expect(lazyIsland.dataset.hydrate).toBe(`visible:${margin}`);
+  const problems: string[] = [];
+  const islands = await mountIslands(lazy("Text", "Counter"), { pinia, onError: (_el, problem) => problems.push(problem) });
+  expect(islands.apps).toHaveLength(2);
+  expect(calls).toEqual(["Text", "Counter"]);
+  expect(problems).toEqual([`Counter has data-hydrate=${JSON.stringify(`visible:${margin}`)}, which the browser rejects (rootMargin must be specified in pixels or percent), so it hydrated at once`]);
+  expect(mismatches()).toEqual([]);
   islands.unmount();
 });
 

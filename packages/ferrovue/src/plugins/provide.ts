@@ -264,22 +264,21 @@ function concrete(ty: Ty): boolean {
   return ty.k === "list" || ty.k === "record" ? concrete(ty.of) : true;
 }
 
-function provideObject(s: Scope, site: Provided, obj: N, reactive: boolean): void {
-  const key = site.key;
+function structLiteral(s: Scope, key: Key, obj: N, reactive: boolean, what: string): string {
   if (key.ty?.k !== "struct") {
     const has = key.ty ? `holds ${describeTy(key.ty)}` : "has no declared type";
-    fail(s.comp, "FV1611", `an object is provided under ${key.label}, which ${has}: provide it under an \`InjectionKey<T>\` whose \`T\` is an interface from a shared \`.ts\` file`, obj);
+    fail(s.comp, "FV1611", `an object is ${what} under ${key.label}, which ${has}: use an \`InjectionKey<T>\` whose \`T\` is an interface from a shared \`.ts\` file`, obj);
   }
   const { st, path } = lookupStruct(s.comp, key.ty);
   const given = new Map<string, N>();
   for (const p of obj.properties) {
-    if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "FV1612", "a provided object holds plain keys and values: a function goes under a key of its own", p);
+    if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "FV1612", `an object ${what} holds plain keys and values: a function goes under a key of its own`, p);
     const name: string = p.key.type === "Identifier" ? p.key.name : String(p.key.value);
     const field = st!.fields.find((f) => camelize(f.js) === camelize(name));
     if (!field) fail(s.comp, "FV1612", `\`${st!.name}\` has no field \`${name}\``, p);
-    if (p.value.type === "ArrowFunctionExpression" || p.value.type === "FunctionExpression") fail(s.comp, "FV1612", "a provided object holds plain keys and values: a function goes under a key of its own", p);
+    if (p.value.type === "ArrowFunctionExpression" || p.value.type === "FunctionExpression") fail(s.comp, "FV1612", `an object ${what} holds plain keys and values: a function goes under a key of its own`, p);
     if (!reactive && isRef(s, p.value)) {
-      fail(s.comp, "FV1612", `\`${name}\` is a ref, which a plain object keeps as one: wrap the object in \`reactive()\`, which reads it, or provide \`.value\``, p.value);
+      fail(s.comp, "FV1612", `\`${name}\` is a ref, which a plain object keeps as one: wrap the object in \`reactive()\`, which reads it, or use \`.value\``, p.value);
     }
     given.set(field.js, p.value);
   }
@@ -292,9 +291,15 @@ function provideObject(s: Scope, site: Provided, obj: N, reactive: boolean): voi
     const v = expr(s, setupSource(node) ?? node);
     return fieldInit(f.rust, ownInto(s.comp, { ...v, ty: markHome(v.ty, s.comp.name) }, f.ty, node));
   });
+  return `${path}${st!.name} { ${inits.join(", ")} }`;
+}
+
+function provideObject(s: Scope, site: Provided, obj: N, reactive: boolean): void {
+  const key = site.key;
+  const literal = structLiteral(s, key, obj, reactive, "provided");
   const name = `fv_provided_${key.field.replace(/^r#/, "")}`;
   const own = scopeOf(provideInject, s);
-  own.lets.push(`let ${name} = ${path}${st!.name} { ${inits.join(", ")} };`);
+  own.lets.push(`let ${name} = ${literal};`);
   own.entries.push({ key, code: `Some(&${name})` });
 }
 
@@ -342,7 +347,7 @@ function provide(s: Scope, call: N): void {
   own.entries.push({ key, code: `Some(${slotFieldValue(s, v, node)})` });
 }
 
-function inject(s: Scope, d: N, init: N, asserted: boolean): void {
+function inject(s: Scope, d: N, init: N, asserted: boolean, lets: string[]): void {
   const site = runOf(provideInject).injected.get(init)!;
   const key = site.key;
   if (asserted) fail(s.comp, "FV1605", `\`!\` asserts that an ancestor provides ${key.label}, which a render without one breaks: read it with \`?.\`, or give \`inject\` a default`, d.init);
@@ -373,6 +378,16 @@ function inject(s: Scope, d: N, init: N, asserted: boolean): void {
   }
   const typeArg = init.typeParameters?.params?.[0];
   if (typeArg) settle(key, markHome(tyOfTs(s.comp, refInner(typeArg) ?? typeArg, s.comp.structs), s.comp.name), s.comp, typeArg);
+  const object = fallback !== null ? unwrapped(fallback, REACTIVE) : null;
+  if (object?.type === "ObjectExpression") {
+    const literal = structLiteral(s, key, object, defaultRef === true || calls(fallback, REACTIVE), "given as a default");
+    const name = `fv_default_${snake(local).replace(/^r#/, "")}`;
+    lets.push(`let ${name} = ${literal};`);
+    s.setup.set(local, { code: `${providesHere(s.comp) ? "fv_inherited" : "fv_provides"}.${key.field}.unwrap_or(&${name})`, ty: key.ty! });
+    if (keyRef ?? defaultRef ?? false) s.refs.add(local);
+    scopeOf(provideInject, s).injected.add(local);
+    return;
+  }
   if (key.ty === null && fallback !== null) {
     const ty = expr(s, fallback).ty;
     if (concrete(ty)) settle(key, markHome(ty, s.comp.name), s.comp, fallback);
@@ -449,7 +464,7 @@ export const provideInject: Plugin<ProvideRun, ProvideScope> = {
     for (const n of names.inject) own.inject.add(n);
     return false;
   },
-  scriptBinding(s, d) {
+  scriptBinding(s, d, lets) {
     const own = scopeOf(provideInject, s);
     if (!own.inject.size) return false;
     let init = d.init;
@@ -459,7 +474,7 @@ export const provideInject: Plugin<ProvideRun, ProvideScope> = {
       init = init.expression;
     }
     if (!calls(init, own.inject)) return false;
-    inject(s, d, init, asserted);
+    inject(s, d, init, asserted, lets);
     return true;
   },
   scriptStatement(s, st) {
