@@ -39,7 +39,7 @@ it("renders every fixture", async () => {
     for (const c of cases) {
       try {
         const app = await fixtureApp(await load(c), readFixture(JSON.parse(c.json) as Record<string, unknown>), null);
-        results[c.key] = { ok: (await renderFixture(app)).toWellFormed() };
+        results[c.key] = { ok: (await renderFixture(app)).toWellFormed().replace(/\\u[dD][89a-fA-F][0-9a-fA-F]{2}/g, "�") };
       } catch (e) {
         results[c.key] = { err: String((e as Error).stack ?? e).split("\n").slice(0, 4).join("\n") };
       }

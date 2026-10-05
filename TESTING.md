@@ -244,9 +244,11 @@ What it generates, with random nesting:
   content; `useHead` (`title`, `titleTemplate`, `htmlAttrs`, `bodyAttrs`, `meta`, `link`, plain
   values and getters) and `useSeoMeta`, in the component and in a child, compared with unhead's
   rendered head;
-- `<ClientOnly>` with and without a `#fallback`, its default slot holding anything; `useSlots()`
-  testing the default slot; `v-html` of a `TrustedHtml` prop with `ferrovue::BasicHtml` as the
-  `trustedHtml` type, whose values are HTML `BasicHtml` gives back unchanged;
+- `<Teleport>` to `body` or an id, sometimes `:disabled`, outside slot content, compared with what
+  Vue's server teleported; `<ClientOnly>` with and without a `#fallback`, its default slot holding
+  anything; `useSlots()` testing the default slot; `v-html` of a `TrustedHtml` prop with
+  `ferrovue::BasicHtml` as the `trustedHtml` type, whose values are HTML `BasicHtml` gives back
+  unchanged;
 - prop values meant to break things: markup and quotes, `</script>`, combining marks, emoji, RTL
   and bidi controls, JavaScript-only whitespace, case mappings that change length, empty strings,
   numbers written as strings, integers at ±(2⁵³ − 1), fractions such as `0.1`, `1e-7`, `1e21`,

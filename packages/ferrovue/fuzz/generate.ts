@@ -100,7 +100,8 @@ export type Node =
   | { k: "if"; branches: { cond: Expr | null; node: Node & { k: "el" } }[] }
   | { k: "for"; head: string; node: Node & { k: "el" } }
   | { k: "child"; name: HelperName; attrs: Attr[]; kids: Node[]; is?: { test: Expr; other: HelperName | InlineTag } }
-  | { k: "client"; kids: Node[]; fallback: Node[] | null };
+  | { k: "client"; kids: Node[]; fallback: Node[] | null }
+  | { k: "teleport"; to: string; disabled: Expr | null; kids: Node[] };
 
 type InlineTag = "span" | "b" | "em";
 
@@ -314,6 +315,10 @@ function printNode(n: Node, indent: string, extra: string[] = []): string {
       const open = `<${tag}${[...is, ...n.attrs.map(printAttr)].map((a) => " " + a).join("")}`;
       return n.kids.length ? `${open}>${n.kids.map((k) => printNode(k, indent + "  ")).join("")}</${tag}>` : `${open} />`;
     }
+    case "teleport": {
+      const disabled = n.disabled ? ` :disabled="${printExpr(n.disabled)}"` : "";
+      return `<Teleport to="${n.to}"${disabled}>${n.kids.map((k) => printNode(k, indent + "  ")).join("")}</Teleport>`;
+    }
     case "client": {
       const fallback = n.fallback === null ? "" : `<template #fallback>${n.fallback.map((k) => printNode(k, indent + "  ")).join("")}</template>`;
       return `<ClientOnly>${n.kids.map((k) => printNode(k, indent + "  ")).join("")}${fallback}</ClientOnly>`;
@@ -342,6 +347,7 @@ function rendered(template: Node[]): HelperName[] {
       else if (n.k === "if") walk(n.branches.map((b) => b.node));
       else if (n.k === "for") walk([n.node]);
       else if (n.k === "client") walk([...n.kids, ...(n.fallback ?? [])]);
+      else if (n.k === "teleport") walk(n.kids);
     }
   };
   walk(template);
@@ -769,6 +775,7 @@ class Gen {
   scope: Scope = { vars: [], lists: [], records: [], htmls: [] };
   favour: HelperName[] = [];
   vnode = false;
+  slotted = false;
   loopDepth = 0;
   nodes = 0;
   arrows = 0;
@@ -1342,7 +1349,15 @@ class Gen {
       [depth < 5 ? 2 : 0, () => this.forNode(depth, ctx)],
       [depth < 4 && ctx === "block" ? 3 : 0, () => this.child(depth)],
       [depth < 4 && ctx === "block" ? 0.6 : 0, () => this.clientOnly(depth)],
+      [depth < 4 && ctx === "block" && !this.slotted ? 0.4 : 0, () => this.teleport(depth)],
     ])();
+  }
+
+  teleport(depth: number): Node {
+    const r = this.r;
+    this.nodes++;
+    const to = r.pick(["body", "#modal", "#side"]);
+    return { k: "teleport", to, disabled: r.chance(0.3) ? this.bool(1) : null, kids: this.kids(depth + 1, "block") };
   }
 
   clientOnly(depth: number): Node {
@@ -1363,6 +1378,8 @@ class Gen {
     if (!HELPERS[name].slot || !r.chance(0.8)) return { k: "child", name, attrs, kids: [], ...is };
     const vnode = this.vnode;
     const hollow = this.hollow;
+    const slotted = this.slotted;
+    this.slotted = true;
     if (!this.hollow && r.chance(0.75)) this.hollow = true;
     if ("is" in is) this.vnode = true;
     try {
@@ -1370,6 +1387,7 @@ class Gen {
     } finally {
       this.hollow = hollow;
       this.vnode = vnode;
+      this.slotted = slotted;
     }
   }
 
@@ -1730,6 +1748,11 @@ function* exprSlots(nodes: Node[]): Generator<{ get: () => Expr; set: (e: Expr) 
       }
     } else if (n.k === "for") yield* exprSlots([n.node]);
     else if (n.k === "client") yield* exprSlots([...n.kids, ...(n.fallback ?? [])]);
+    else if (n.k === "teleport") {
+      const t = n;
+      if (t.disabled) yield { get: () => t.disabled!, set: (e) => (t.disabled = e) };
+      yield* exprSlots(t.kids);
+    }
     else if (n.k === "el" || n.k === "child") {
       if (n.k === "child" && n.is) {
         const is = n.is;
@@ -1787,7 +1810,10 @@ export function componentShrinks(c: Component): Component[] {
           walk(n.kids);
         } else if (n.k === "if") n.branches.forEach((b) => walk([b.node]));
         else if (n.k === "for") walk([n.node]);
-        else if (n.k === "client") {
+        else if (n.k === "teleport") {
+          acc.push(n.kids);
+          walk(n.kids);
+        } else if (n.k === "client") {
           acc.push(n.kids);
           walk(n.kids);
           if (n.fallback) {
@@ -1815,6 +1841,10 @@ export function componentShrinks(c: Component): Component[] {
     l.forEach((n, ni) => {
       if ((n.k === "el" && !n.void) || n.k === "child") edit((x) => (lists(x)[li]!.splice(ni, 1, ...(lists(x)[li]![ni] as Node & { kids: Node[] }).kids), true));
       if (n.k === "for") edit((x) => (lists(x)[li]!.splice(ni, 1, (lists(x)[li]![ni] as Node & { k: "for" }).node), true));
+      if (n.k === "teleport") {
+        edit((x) => (lists(x)[li]!.splice(ni, 1, ...(lists(x)[li]![ni] as Node & { k: "teleport" }).kids), true));
+        if (n.disabled) edit((x) => (((lists(x)[li]![ni] as Node & { k: "teleport" }).disabled = null), true));
+      }
       if (n.k === "client") {
         edit((x) => (lists(x)[li]!.splice(ni, 1, ...((lists(x)[li]![ni] as Node & { k: "client" }).fallback ?? [])), true));
         if (n.fallback) edit((x) => (((lists(x)[li]![ni] as Node & { k: "client" }).fallback = null), true));
@@ -1844,6 +1874,7 @@ export function componentShrinks(c: Component): Component[] {
         } else if (n.k === "if") walk(n.branches.map((b) => b.node));
         else if (n.k === "for") walk([n.node]);
         else if (n.k === "client") walk([...n.kids, ...(n.fallback ?? [])]);
+        else if (n.k === "teleport") walk(n.kids);
       }
     };
     walk(comp.template);
