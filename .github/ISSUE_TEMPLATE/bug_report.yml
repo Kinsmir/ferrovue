@@ -54,7 +54,7 @@ body:
     id: versions
     attributes:
       label: Versions
-      description: ferrovue (npm and crate), vue, vue-router, pinia, rustc, node
-      placeholder: ferrovue 0.1.0 / 0.1.0, vue 3.5.43, rustc 1.99.0, node 24
+      description: ferrovue (npm and crate), vue, vue-router, pinia, vue-i18n, rustc, node
+      placeholder: ferrovue 0.5.0 / 0.5.0, vue 3.5.43, vue-router 5.3.1, rustc 1.99.0, node 24
     validations:
       required: true
