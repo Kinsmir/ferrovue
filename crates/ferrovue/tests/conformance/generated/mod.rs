@@ -55,6 +55,7 @@ pub mod model;
 pub mod model_parent;
 pub mod narrowing;
 pub mod nav;
+pub mod number_includes;
 pub mod numbers;
 pub mod page;
 pub mod panel;
@@ -370,6 +371,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let router = route_table::router();
             let route = router.at(&fixture.route);
             nav::render(&mut out, &props, &route);
+        }
+        "NumberIncludes" => {
+            let props: number_includes::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            number_includes::render(&mut out, &props);
         }
         "Numbers" => {
             let props: numbers::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

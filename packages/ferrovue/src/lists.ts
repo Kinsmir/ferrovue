@@ -4,7 +4,7 @@ import { expr, fieldVal } from "./expr.ts";
 import { cond } from "./narrowing.ts";
 import { asF64, isNumber } from "./numbers.ts";
 import { asCow, isTemporary, lonely, meet, yieldsCow } from "./strings.ts";
-import { atom, operand, strArg, UNARY } from "./parens.ts";
+import { atom, binary, operand, strArg, UNARY } from "./parens.ts";
 
 const COW = "std::borrow::Cow::<str>";
 
@@ -186,9 +186,19 @@ export function computedListMethod(s: Scope, target: Val, method: string, args: 
   const of = target.ty.of;
   if (method === "includes" && args.length === 1) {
     const x = expr(s, args[0]);
-    if (!sameTy(x.ty, of) || !["str", "int", "float", "bool"].includes(of.k)) fail(s.comp, "`.includes()` looks for a value of the list's own type", args[0]);
+    const numbers = isNumber(x.ty) && isNumber(of);
+    if ((!sameTy(x.ty, of) && !numbers) || !["str", "int", "float", "bool"].includes(of.k)) fail(s.comp, "`.includes()` looks for a value of the list's own type", args[0]);
     if (of.k === "str") meet(s.comp, target, x, "`.includes()`", n, "equal");
-    const test = of.k === "str" ? `*v == ${x.code.startsWith("&*") ? `*${x.code.slice(2)}` : `*${operand(x.code, UNARY)}`}` : of.k === "float" ? `v == ${x.code} || (v.is_nan() && ${atom(x.code)}.is_nan())` : `v == ${x.code}`;
+    const test =
+      of.k === "str"
+        ? `*v == ${x.code.startsWith("&*") ? `*${x.code.slice(2)}` : `*${operand(x.code, UNARY)}`}`
+        : of.k === "float" && x.ty.k === "int"
+          ? binary("v", "==", asF64(x))
+          : of.k === "float"
+            ? `v == ${x.code} || (v.is_nan() && ${atom(x.code)}.is_nan())`
+            : of.k === "int" && x.ty.k === "float"
+              ? binary("v as f64", "==", x.code)
+              : `v == ${x.code}`;
     return { code: `${items(target)}.any(|v| ${test})`, ty: BOOL };
   }
   if (method === "join" && args.length <= 1) {
