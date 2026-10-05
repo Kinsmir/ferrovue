@@ -30,53 +30,55 @@ released together and share version numbers.
   `data-hydrate="visible"` on the island's wrapper, after `data-props`; `Hydrate::Idle`,
   `Hydrate::Interaction` (the first `pointerenter`, `click` or `focus` within the island),
   `Hydrate::InteractionOn(&["keydown"])`, `Hydrate::media("(min-width: 60rem)")` and
-  `Hydrate::visible_with("200px")` (a root margin) write `idle`, `interaction`, `interaction:keydown`,
-  `media:(min-width: 60rem)` and `visible:200px`, escaped as any attribute is.
-  The markup inside the wrapper is unchanged. `mountIslands` waits on such an island with Vue's
+  `Hydrate::visible_with("200px")` (a root margin) write `idle`, `interaction`,
+  `interaction:keydown`, `media:(min-width: 60rem)` and `visible:200px`, escaped as any attribute
+  is. The markup inside the wrapper is unchanged. `mountIslands` waits on such an island with Vue's
   `hydrateOnVisible` (given the root margin, if any; one the browser rejects is reported and the
-  island hydrates at once), `hydrateOnIdle` (200 ms where the browser has no `requestIdleCallback`) and
-  `hydrateOnMediaQuery`, or its own listeners for interaction, and calls the island's loader only
-  when the trigger fires, so its chunk is fetched then. Events that reach an island waiting for
+  island hydrates at once), `hydrateOnIdle` (200 ms where the browser has no `requestIdleCallback`)
+  and `hydrateOnMediaQuery`, or its own listeners for interaction, and calls the island's loader
+  only when the trigger fires, so its chunk is fetched then. Events that reach an island waiting for
   interaction before it has hydrated are dispatched again once it has, so the click that woke it
-  reaches its handler. It resolves once the other islands have mounted; the waiting ones join
-  `apps` as they hydrate, `unmount()` stops waiting for them, and a `data-hydrate` it does not know
-  is reported and hydrates at once. Islands without the attribute hydrate as before, and `Page`
-  parts hydrate with their page. Dioxus's `to_element` writes the same attribute. In
-  `examples/fullstack` the home page's buttons hydrate on interaction and the book page's reviews
-  once visible, and the browser test checks that their chunks are requested only on a click and
-  after scrolling the reviews into view on a short screen; a browser test of the package
-  (`browser/lazy.test.ts`) does the same for islands waiting for idle and for a media query.
+  reaches its handler. It resolves once the other islands have mounted; the waiting ones join `apps`
+  as they hydrate, `unmount()` stops waiting for them, and a `data-hydrate` it does not know is
+  reported and hydrates at once. Islands without the attribute hydrate as before, and `Page` parts
+  hydrate with their page. Dioxus's `to_element` writes the same attribute. In `examples/fullstack`
+  the home page's buttons hydrate on interaction and the book page's reviews once visible, and the
+  browser test checks that their chunks are requested only on a click and after scrolling the
+  reviews into view on a short screen; a browser test of the package (`browser/lazy.test.ts`) does
+  the same for islands waiting for idle and for a media query.
 - `provide` and `inject`, resolved through the component tree at build time. A key is a string
-  literal or a `Symbol` exported from a `.ts` file and typed `InjectionKey<T>`; a value is a prop,
-  a ref, a `computed`, a constant, or an object of them under an interface (`reactive()` unwraps
-  the refs in it, as in Vue). `inject` takes a default, or a factory with `true`; under a key whose type is an interface, the default may be an object of it (`inject(LookKey, { size: "md", tone: "plain" })`), given as it is or returned by the factory, whose fields are values the server computes. Every component
-  that provides or injects, or renders one that does, takes the generated `Provides` after its
-  other parameters, overlays what it provides, and hands it to its children and to its slots'
-  content, which sees what the component rendering the slot provides, as Vue resolves it. A page
-  rendered from Rust passes `Provides::default()`, or the values its client app gives
-  `app.provide`. A key holding a function is client-only, for event handlers. What cannot be
-  exact is refused with codes FV1601 to FV1620: other keys, `inject(key)!`, values that may be
-  absent, a ref and a plain value under one key, setup that assigns to an injected value, a
-  provider holding `<RouterView>`, a string key injected inside a Rust twin's slot. The guide's
-  new `provide_inject` page explains it; the conformance suite has a `Tabs`/`Tab` pair and a
-  themed button, with and without providers, recorded from Vue, and `Swatch` and `SwatchShelf` cover object defaults.
+  literal or a `Symbol` exported from a `.ts` file and typed `InjectionKey<T>`; a value is a prop, a
+  ref, a `computed`, a constant, or an object of them under an interface (`reactive()` unwraps the
+  refs in it, as in Vue). `inject` takes a default, or a factory with `true`; under a key whose type
+  is an interface, the default may be an object of it (`inject(LookKey, { size: "md", tone: "plain"
+  })`), given as it is or returned by the factory, whose fields are values the server computes.
+  Every component that provides or injects, or renders one that does, takes the generated `Provides`
+  after its other parameters, overlays what it provides, and hands it to its children and to its
+  slots' content, which sees what the component rendering the slot provides, as Vue resolves it. A
+  page rendered from Rust passes `Provides::default()`, or the values its client app gives
+  `app.provide`. A key holding a function is client-only, for event handlers. What cannot be exact
+  is refused with codes FV1601 to FV1620: other keys, `inject(key)!`, values that may be absent, a
+  ref and a plain value under one key, setup that assigns to an injected value, a provider holding
+  `<RouterView>`, a string key injected inside a Rust twin's slot. The guide's new `provide_inject`
+  page explains it; the conformance suite has a `Tabs`/`Tab` pair and a themed button, with and
+  without providers, recorded from Vue, and `Swatch` and `SwatchShelf` cover object defaults.
 - `<component :is>` over a closed set of choices, compiled to a `match`: an imported component, an
   HTML element's name, a prop typed as a union of string literals (an `as` prop), an object of
-  imported components or element names declared in setup or exported as a constant from a `.ts`
-  file and read by such a prop (`ICONS[name]`), and a `computed` or `?:` choosing among them. Each
-  choice gets props, fallthrough attributes, slots and scope ids as a static child would, inside
+  imported components or element names declared in setup or exported as a constant from a `.ts` file
+  and read by such a prop (`ICONS[name]`), and a `computed` or `?:` choosing among them. Each choice
+  gets props, fallthrough attributes, slots and scope ids as a static child would, inside
   `<KeepAlive>` and `<Transition>` too. An element it chooses renders its content, and the slot
   content a parent gives a `<slot>` inside it, by the rules Vue's server applies to virtual nodes
   (`<!--v-if-->`, bare empty attributes, slot scope ids written once each). Anything open (a
-  `string`, a `Component`, a key that is not a literal union) is still refused under FV0418, with
-  a message naming what is accepted; new codes refuse a prop that may be absent (FV0420), a key the
+  `string`, a `Component`, a key that is not a literal union) is still refused under FV0418, with a
+  message naming what is accepted; new codes refuse a prop that may be absent (FV0420), a key the
   object lacks (FV0421), a tag that is not an HTML element (FV0419), `v-html` and `v-text` on
   `<component :is>` (FV0422), `v-show` and `v-model` on a `<select>` in content rendered from
-  virtual nodes (FV0423), and a `<slot>` inside a chosen element that has fallback content
-  (FV0919) or is also rendered outside one (FV0920). The conformance suite covers every form with
-  a fixture per choice (`ShapePicker`, `ShapeRoot`, `TagHeading`, `TagGallery`, `TagContent`, and `ThemedChoice` with provide and inject), and
-  the fuzzer writes `<component :is>` choosing between a helper component and another one or an
-  element.
+  virtual nodes (FV0423), and a `<slot>` inside a chosen element that has fallback content (FV0919)
+  or is also rendered outside one (FV0920). The conformance suite covers every form with a fixture
+  per choice (`ShapePicker`, `ShapeRoot`, `TagHeading`, `TagGallery`, `TagContent`, and
+  `ThemedChoice` with provide and inject), and the fuzzer writes `<component :is>` choosing between
+  a helper component and another one or an element.
 - The page head: `useHead`, `useServerHead`, `useSeoMeta` and `useServerSeoMeta` from
   `@unhead/vue` 3 in `<script setup>`, with values the server computes: props, setup bindings,
   getters (`title: () => props.title`), and `list.map(x => ({ … }))` for a list of tags. A component
@@ -118,6 +120,22 @@ released together and share version numbers.
   The guide's `escaping` page has a table choosing between `BasicHtml`, `Sanitised` and a type of
   your own, and a recipe for the last with its three rules: sanitise before render, the client
   receives the same string, sanitise again on `Deserialize`.
+- Routes from a folder of pages, as vue-router's file-based routing builds them:
+  `"routes": { "pages": "client/pages" }` (or the same under `router.routes`). `index.vue`,
+  `[id].vue`, `[[id]].vue` (an optional parameter), `[...path].vue`, `(group)` folders, a
+  `name.vue` beside `name/` as its layout, `_parent.vue` and `users.edit.vue` give the paths and
+  names vue-router's plugin gives them (`/books/[id]`), held to routes recorded from
+  `vue-router/unplugin` for a set of folders that uses each convention. Each page is compiled as a
+  component named after its path (`books/[id].vue` is `BooksId`, in `books_id.rs`). The Vite plugin
+  writes `ferrovue/routes` for the client: `routes`, vue-router's records with each page loaded
+  lazily, and a default export listing the routes as a routes file does, for `routeRecords` and
+  `linkRouter`. The router matches optional parameters (`:id?`, absent from `Route::param` when the
+  location leaves them out) and routes that only group others, which it never matches itself, both
+  held to new vectors recorded from vue-router. What the server cannot build from a file's path is
+  refused with codes FV1238 to FV1245: a parameter beside text in one part of the path, repeatable
+  parameters, an optional catch-all, parameter parsers, named views, `definePage()`, a `<route>`
+  block, and a page whose component name is taken. The routing guide's new section explains it;
+  `examples/fullstack` builds its routes from `client/pages` instead of `routes.json`.
 
 ### Changed
 
@@ -125,7 +143,6 @@ released together and share version numbers.
   generated `route_table.rs` writes it, and a `RouteDef` written by hand needs `view: true`.
   `Route::link_named` takes a required parameter missing from `params` from the current location,
   as vue-router does.
-
 - **Breaking:** a `provide(…)` not imported from `vue` is refused (FV0105); it used to be ignored
   as client-only. Content of a `<RouterLink>` or of a Rust twin's slot that uses `v-show`, or
   `v-model` on a `<select>`, is refused (FV0423): Vue renders that content from virtual nodes, and
@@ -164,12 +181,12 @@ released together and share version numbers.
 - `fixtureApp` from `ferrovue/testing` takes the application's own `pinia`, `vueRouter` and
   `vueI18n` modules in its options (`{ pinia: await import("pinia") }`) and installs those. In a
   vitest run that loads `ferrovue/testing` from `node_modules` with Node while a peer goes through
-  Vite, the instance `fixtureApp` imported itself was not the one the component's stores, `useRoute()`
-  and `useI18n()` read, and a fixture with `$stores` failed with "there was no active Pinia" (#47).
-  Without the options it imports the peers as before. The README's new section on fixtures in an
-  application's vitest run describes both the options and `server.deps.inline: ["ferrovue"]`, and
-  `examples/fullstack` tests both peers with ferrovue loaded from its built package, as an
-  application loads it.
+  Vite, the instance `fixtureApp` imported itself was not the one the component's stores,
+  `useRoute()` and `useI18n()` read, and a fixture with `$stores` failed with "there was no active
+  Pinia" (#47). Without the options it imports the peers as before. The README's new section on
+  fixtures in an application's vitest run describes both the options and `server.deps.inline:
+  ["ferrovue"]`, and `examples/fullstack` tests both peers with ferrovue loaded from its built
+  package, as an application loads it.
 - A fixture's slot content given as `""` hydrates. `fixtureApp` rendered it as a static node of
   no nodes, which Vue's hydrator compares with the slot's closing `<!--]-->` and reports as a
   mismatch; it is now an empty text node, which Vue hydrates against nothing, and the server
