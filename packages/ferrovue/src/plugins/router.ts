@@ -1,6 +1,3 @@
-/* vue-router: `useRoute()` and `$route`, `<RouterView>`, and the routes file, with `<RouterLink>`
- * (`router-link.ts`) beside it. */
-
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { type Component, type N, type Scope, type Val, BOOL, fail, GenError, opt, rustStr, STR } from "../model.ts";
@@ -15,57 +12,39 @@ import { routerLink } from "./router-link.ts";
 
 declare module "../model.ts" {
   interface PluginTys {
-    /** `useRoute()` or `$route`: the reader's location, as vue-router resolved it. */
     route: { k: "route" };
-    /** `route.params`. */
     params: { k: "params" };
-    /** `route.query`, and one of its values: a string, `null`, an array of those, or absent. */
     queryobj: { k: "queryobj" };
     query: { k: "query" };
   }
 }
 
-/** A route as the routes file lists it: a vue-router path, and the name it may have. */
 export interface RouteDef {
-  /** The path as written: relative to the parent's unless it starts with \`/\`. */
   path: string;
   name?: string;
-  /** The routes nested in it. */
   children?: RouteDef[];
-  /** The path with its ancestors', as vue-router normalises it. */
   fullPath: string;
 }
 
-/** Every route, nested ones included, parents first. */
 export function allRoutes(routes: RouteDef[]): RouteDef[] {
   return routes.flatMap((r) => [r, ...allRoutes(r.children ?? [])]);
 }
 
-/** The configured router, read once per run. */
 interface RouterRun {
-  /** The routes, and the file they are read from, when there are any. */
   routes: RouteDef[] | null;
   file: string | null;
-  /** The history's base, and the class names active links take. */
   base: string;
   linkActive: string;
   linkExactActive: string;
-  /** The components that read the route: `useRoute()`, `$route`, or a `<RouterLink>`, which
-   * resolves against it. */
   readers: Set<Component>;
-  /** The components that hold `<RouterView>`: the page, which the server supplies. */
   views: Set<Component>;
 }
 
-/** What one setup scope named vue-router's own by: `useRoute`, and `RouterLink` and `RouterView`,
- * imported or resolved by the compiled template. */
 interface RouterScope {
   useRoute: string | null;
   components: Map<string, "RouterLink" | "RouterView">;
 }
 
-/** `typeof x === "string"` or `typeof x !== "string"`: the `x` tested, and whether the test is
- * negated. */
 function typeofString(n: N): { target: N; negated: boolean } | null {
   if (n.type !== "BinaryExpression" || (n.operator !== "===" && n.operator !== "!==")) return null;
   const isTypeof = (m: N) => m.type === "UnaryExpression" && m.operator === "typeof";
@@ -74,17 +53,14 @@ function typeofString(n: N): { target: N; negated: boolean } | null {
   return target ? { target, negated: n.operator === "!==" } : null;
 }
 
-/** The reader's route, which the component then takes. */
 function theRoute(s: Scope, n: N): Val {
   if (!runOf(router).routes) fail(s.comp, `reading the route needs \`routes\` in ${CONFIG_FILE}`, n);
   runOf(router).readers.add(s.comp);
   return { code: "fv_route", ty: { k: "route" } };
 }
 
-/** A field of the route: what `useRoute()` gives that the server knows as vue-router does. */
 function routeField(s: Scope, base: Val, prop: string, n: N): Val {
   if (base.ty.k === "params") {
-    // Every parameter is a string; absent when the route has none of that name.
     return { code: `fv_route.param(${rustStr(prop)})`, ty: opt(STR) };
   }
   if (base.ty.k === "queryobj") return { code: `fv_route.query(${rustStr(prop)})`, ty: { k: "query" } };
@@ -105,7 +81,6 @@ function routeField(s: Scope, base: Val, prop: string, n: N): Val {
   return fail(s.comp, `\`route.${prop}\` is not available on the server: \`path\`, \`fullPath\`, \`hash\`, \`name\`, \`params\` and \`query\` are`, n);
 }
 
-/** The routes file: vue-router paths, each a string or `{ "path", "name" }`. */
 export function readRoutes(root: string, file: string): RouteDef[] {
   const raw = JSON.parse(readFileSync(join(root, file), "utf8")) as unknown;
   if (!Array.isArray(raw)) throw new GenError(`${file} lists the routes in an array`);
@@ -115,7 +90,6 @@ export function readRoutes(root: string, file: string): RouteDef[] {
       if (typeof o?.path !== "string" || (o.name !== undefined && typeof o.name !== "string") || (o.children !== undefined && !Array.isArray(o.children))) {
         throw new GenError(`${file}: a route is a path, or \`{ "path": "…", "name": "…", "children": [ … ] }\``);
       }
-      // A child's path joins its parent's unless it starts with `/`; an empty one is the parent's.
       const fullPath =
         parent === null || o.path.startsWith("/") ? o.path : `${parent}${parent.endsWith("/") || o.path === "" ? "" : "/"}${o.path}`;
       const def: RouteDef = { path: o.path, fullPath };
@@ -126,7 +100,6 @@ export function readRoutes(root: string, file: string): RouteDef[] {
   return read(raw, null);
 }
 
-/** Route definitions as \`ferrovue::RouteDef\` literals, children nested. */
 function routeDefs(routes: RouteDef[], depth: number): string {
   const pad = "    ".repeat(depth);
   return routes
@@ -163,7 +136,6 @@ pub fn router() -> ferrovue::Router {
 `;
 }
 
-/** vue-router: `<RouterLink>`, `<RouterView>`, `useRoute()` and `$route`, and the routes file. */
 export const router: Plugin<RouterRun, RouterScope> = {
   name: "router",
   configure(config, root) {
@@ -179,7 +151,6 @@ export const router: Plugin<RouterRun, RouterScope> = {
     };
   },
   compiled(comp, code, script) {
-    // Resolved by name, as globally registered components are, or imported from `vue-router`.
     const imported = (exported: string) =>
       script.some(
         (st) => st.type === "ImportDeclaration" && st.source.value === "vue-router" &&
@@ -202,7 +173,6 @@ export const router: Plugin<RouterRun, RouterScope> = {
     return true;
   },
   scriptBinding(s, d) {
-    // `const route = useRoute()`: the reader's location.
     const { useRoute } = scopeOf(router, s);
     const init = d.init;
     if (useRoute === null || d.id.type !== "Identifier" || init?.type !== "CallExpression" || init.callee.type !== "Identifier" || init.callee.name !== useRoute) return false;
@@ -211,12 +181,10 @@ export const router: Plugin<RouterRun, RouterScope> = {
   },
   global: (s, name, n) => (name === "$route" ? theRoute(s, n) : null),
   member(s, base, prop, n, computed) {
-    // `route.query["q"]` and `route.params["id"]`, but not `route["path"]`.
     if (base.ty.k === "params" || base.ty.k === "queryobj" || (base.ty.k === "route" && !computed)) return routeField(s, base, prop, n);
     return null;
   },
   equality(s, n) {
-    // `typeof route.query.q === "string"`: a single value, not `null`, absent or repeated.
     const tested = typeofString(n);
     if (!tested) return null;
     const v = expr(s, tested.target);
@@ -225,7 +193,6 @@ export const router: Plugin<RouterRun, RouterScope> = {
     return boolOf(tested.negated ? not(one) : one);
   },
   presence(s, n) {
-    // A query value narrowed to a single string, which an attribute can then be bound to.
     const t = typeofString(n);
     if (!t) return undefined;
     const path = pathOf(t.target);
@@ -238,7 +205,6 @@ export const router: Plugin<RouterRun, RouterScope> = {
     describe: (ty) => (ty.k === "query" ? "a query value" : undefined),
     truthy: (v) => (v.ty.k === "query" ? `${atom(v.code)}.truthy()` : undefined),
     interpolate(e, v) {
-      // `toDisplayString` of a query value: a string, nothing for `null`, an array as JSON.
       if (v.ty.k !== "query") return false;
       e.stmt(`${atom(v.code)}.write_display(out);`);
       return true;
@@ -248,14 +214,11 @@ export const router: Plugin<RouterRun, RouterScope> = {
         ? { what: "a query value, which is an array when its key is repeated", fix: 'narrow it to one string, as `typeof route.query.q === "string" ? route.query.q : ""`' }
         : undefined,
     nullish(s, a, b, n) {
-      // A query value falls back for `undefined` and `null`, and stays a query value: an array
-      // given more than once stays an array.
       if (a.ty.k !== "query") return undefined;
       if (b.ty.k !== "str") fail(s.comp, "`??` after a query value takes a string", n);
       return { code: `${atom(a.code)}.or(${bare(b.code)})`, ty: a.ty };
     },
     equals(a, b) {
-      // A query value equals a string only when it is that single value.
       if (a.ty.k === "query" && b.ty.k === "str") return `${atom(a.code)}.is(${strArg(b.code)})`;
       if (b.ty.k === "query" && a.ty.k === "str") return `${atom(b.code)}.is(${strArg(a.code)})`;
       if (a.ty.k === "query" && b.ty.k === "undef") return `${atom(a.code)}.is_undefined()`;
@@ -280,7 +243,6 @@ export const router: Plugin<RouterRun, RouterScope> = {
           : undefined;
     if (routed === "RouterLink") routerLink(s, e, n);
     else if (routed === "RouterView") {
-      // vue-router renders the page as its own root, which takes this component's id.
       if (scopeIdOf(s.comp) !== null) fail(s.comp, "`<RouterView>` in a component with `<style scoped>` gives the page this component's id, which the server's page does not carry", n);
       e.stmt("fv_slots.router_view.render_to(out);");
     } else return false;

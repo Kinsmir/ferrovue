@@ -1,22 +1,3 @@
-/* ferrovue's compiler: `.vue` → Rust render functions.
- *
- * The input is not the template. It is what `@vue/compiler-sfc` compiles the template to for
- * server rendering — straight-line `_push` calls, `if`, `_ssrRenderList`, and a handful of
- * `@vue/server-renderer` helpers — so element structure, attribute order, whitespace and the
- * fragment markers are decided by Vue, and this file only has to translate a small, closed
- * vocabulary of JavaScript into Rust that writes the same bytes. The generated code calls the
- * `ferrovue` crate for everything Vue's runtime does.
- *
- * Anything outside that vocabulary is an error naming the component and the construct, never a
- * best guess: a guess that is wrong by one byte is a hydration mismatch in a browser, found by a
- * reader.
- *
- * A project describes itself in `ferrovue.config.json` at its root — see `Config` — and runs the
- * `ferrovue` command there. `generate()` is also what a drift test calls, so the committed files can
- * be held to exactly what this produces.
- *
- * This module is the public API; the translation lives in the modules beside it. */
-
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { type Config, ctx, loadConfig, tyOfName } from "./context.ts";
@@ -56,15 +37,10 @@ export function generate(root: string, config: Config = loadConfig(root)): Map<s
   const read = files.map((f) => readComponent(f, root));
   const components = new Map(read.map((r) => [r.comp.name, r.comp]));
   ctx.components = components;
-  // What a component reads — a store, the route — is known once its setup is read.
   const scopes = read.map((r) => scopeFor(r.comp, r.ast, components).scope);
-  // What the plugins work out from every component at once: which roots may be handed scope ids,
-  // and which slot content given a slot scope id. Then which components may be passed attributes
-  // beyond their props.
   const all = read.map((r, i) => ({ comp: r.comp, ssr: r.ssr, children: scopes[i]!.children, attrsBindings: scopes[i]!.attrsBindings }));
   for (const p of PLUGINS) p.analyse?.(all);
   attrsFlow(all);
-  // A render parameter reaches every component on the way down to one that reads it.
   for (const c of components.values()) c.takes = new Set(renderParams().filter((p) => p.reads(c)).map((p) => p.name));
   for (let changed = true; changed; ) {
     changed = false;
@@ -78,7 +54,6 @@ export function generate(root: string, config: Config = loadConfig(root)): Map<s
     }
   }
   const out = new Map<string, string>();
-  // A child before its parents, which read the props its scoped slots pass.
   const ordered: typeof read = [];
   const placed = new Set<string>();
   const place = (r: (typeof read)[number]): void => {
@@ -92,11 +67,9 @@ export function generate(root: string, config: Config = loadConfig(root)): Map<s
   };
   read.forEach(place);
   for (const r of ordered) {
-    // Numbered per component, so a file's text depends on its own source alone.
     ctx.narrowCount = 0;
     out.set(`${r.comp.module}.rs`, componentSource(r.comp, r.ast, r.ssr, components));
   }
-  // Beside the components, the modules the plugins write.
   const modules = PLUGINS.flatMap((p) => p.modules?.() ?? []);
   out.set("mod.rs", modSource(read.map((r) => r.comp), modules.map(([file]) => file)));
   for (const [file, text] of modules) out.set(file, text);
@@ -130,7 +103,6 @@ export function write(root: string, config: Config = loadConfig(root)): Written 
     try {
       old = readFileSync(join(target, name), "utf8");
     } catch {
-      // A new file.
     }
     if (old !== text) {
       writeFileSync(join(target, name), text);

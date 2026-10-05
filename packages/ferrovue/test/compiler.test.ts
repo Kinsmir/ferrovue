@@ -1,8 +1,3 @@
-/* The generator refuses what it cannot translate.
- *
- * Each case here is a component Vue renders one way and a careless translation would render
- * another, without failing: the conformance suite only catches it if some fixture happens to
- * exercise the construct. So each must be an error naming it instead. */
 import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -10,15 +5,12 @@ import { basename, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { generate, loadConfig } from "../src/compiler.ts";
 
-/** Every project a case made, removed after it. */
 const roots: string[] = [];
 
-/** The configuration every case here compiles under. */
 const CONFIG = { components: "components", out: "out" };
 
 const compile = (project: string) => generate(project, CONFIG);
 
-/** A project holding one component, `X.vue`, with this source, and any others named. */
 function island(source: string, others: Record<string, string> = {}): string {
   const made = mkdtempSync(join(tmpdir(), "ferrovue-"));
   roots.push(made);
@@ -54,7 +46,6 @@ defineProps<{ label: string }>();
     expect(borrowing).toContain("pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {");
     expect(borrowing).toContain("pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {\n    fv::Html::markup_owned(props, render)");
     expect(borrowing).toContain("pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {\n    fv::Html::island_owned(NAME, props, render)");
-    // Props that borrow nothing make a page that borrows nothing.
     const counting = compile(
       island(`<script setup lang="ts">
 defineProps<{ count: number }>();
@@ -374,7 +365,6 @@ const props = defineProps<{ items: string[]; name: string }>();
 <template><ul v-if="items.length" :title="'list of ' + name"><li v-for="i in items">{{ i }}</li></ul></template>`),
       ).get("x.rs")!;
       expect(out).toContain("props.items.len() as i64");
-      // A literal joins the format string.
       expect(out).toContain('format!("list of {}", props.name)');
     });
 
@@ -385,7 +375,6 @@ const props = defineProps<{ n: number; m: number }>();
 </script>
 <template><b :title="n + m"></b></template>`),
     ).get("x.rs")!;
-    // On doubles, as JavaScript adds: exact within 2⁵³, rounded beyond it.
     expect(sum).toContain("(props.n as f64 + props.m as f64) as i64");
     expect(() =>
       compile(
@@ -485,11 +474,9 @@ import Frame from "./Frame.vue";
 const props = defineProps<{ note?: string; tags: string[] }>();
 </script>
 <template><Frame title="t">${body}</Frame></template>`;
-      // `${note}<!--[-->`: a comment when the note writes nothing, or only whitespace.
       const markers = compile(island(parent(`{{ note }}<i v-for="t in tags">{{ t }}</i>`), { Frame: frame })).get("x.rs")!;
       expect(markers).toContain("let fv_chunk = out.len();");
       expect(markers).toContain("filled |= !fv::is_comment(&out[fv_chunk..]);");
-      // Literal text outside any comment is content, whatever the values write.
       const text = compile(island(parent(`{{ note }} of {{ tags.length }}<i v-for="t in tags">{{ t }}</i>`), { Frame: frame })).get("x.rs")!;
       expect(text).not.toContain("fv::is_comment");
       expect(text).toContain("default: Some(fv::Slot::new(&|out: &mut String| {");
@@ -524,7 +511,6 @@ import Lister from "./Lister.vue";
 defineProps<{ items: string[] }>();
 </script>
 <template><Lister :items="items"><template #item="{ text, index: n }"><b :data-n="n">{{ text }}</b></template></Lister></template>`;
-      // `A` sorts before `Lister`: the child is still generated first.
       const out = compile(island(lister, { A: parent, Lister: lister })).get("a.rs")!;
       expect(out).toMatch(/item: Some\(&\|out: &mut String, (fv_sp\d+): &super::lister::ItemSlotProps<'_>\| -> bool \{/);
       expect(out).toMatch(/fv::escape_into\(out, fv_sp\d+\.text\);/);
@@ -610,7 +596,6 @@ import Middle from "./Middle.vue";
       expect(out.get("leaf.rs")).toContain('render_scoped(out, props, "");');
       expect(out.get("leaf.rs")).toContain("out.push_str(fv_attrs);");
       expect(out.get("x.rs")).toContain(`super::middle::render_scoped(out, &super::middle::Props {  }, " data-v-${hash("components/X.vue")}");`);
-      // The middle one's root is the leaf, handed what the middle one inherits and its own id.
       expect(out.get("middle.rs")).toContain(`super::leaf::render_scoped(out, &super::leaf::Props { label: std::borrow::Cow::Borrowed("x") }, &fv::scope_attrs(fv_attrs, "data-v-${hash("components/Middle.vue")}", ""));`);
     });
 
@@ -668,8 +653,6 @@ defineProps<{ href: string }>();
       expect(out).toMatch(/out\.push_str\("\\" class=\\""\);\n.*\n\s+out\.push_str\("\\" data-v-[0-9a-f]{8}>go<\/a>"\);/);
       expect(() => withRoutes(island(scoped(`<main><RouterView /></main>`)))).toThrow(/`<RouterView>` in a component with `<style scoped>`/);
       expect(() => withRoutes(island(scoped(`<nav><RouterLink :to="href"><slot /></RouterLink></nav>`)))).toThrow(/X\.vue:4:33: a `<slot>` inside a `<RouterLink>` that takes scope ids/);
-      // Inside slot content given a `:slotted()` component's id, the elements in a link would take it
-      // otherwise than the compiled template writes it.
       const card = `<script setup lang="ts">
 defineSlots<{ default(): unknown }>();
 </script>
@@ -856,7 +839,6 @@ export const usePrefs = defineStore("prefs", () => ({}));
   });
 
   describe("error locations", () => {
-    /** The \`file:line:column\` an error starts with. */
     const where = (source: string, others: Record<string, string> = {}): string => {
       try {
         compile(island(source, others));
@@ -961,7 +943,6 @@ defineProps<{ on: boolean; c: string }>();
 </script>
 <template><p style="display: block; color: red" :style="{ color: c }" v-show="on">x</p></template>`),
       ).get("x.rs")!;
-      // `display` stays first, where the static style put it, with v-show's value when it hides.
       expect(out).toMatch(/if !props\.on \{\s*out\.push_str\("display:none;"\);\s*\} else \{\s*out\.push_str\("display:block;"\);/);
       expect(out).toContain("fv::escape_into(out, &props.c);");
     });
@@ -993,7 +974,6 @@ defineProps<{ price: Float; qty: number; rate?: Float }>();
       expect(out).toContain("fv::push_number(out, props.qty as f64 / 4.0);");
       expect(out).toContain("fv::js_round(props.price)");
       expect(out).toContain("props.rate.unwrap_or(0.5f64)");
-      // An integer remainder by a literal stays an integer.
       expect(out).toContain("fv::push_int(out, (props.qty as f64 % 3.0) as i64);");
     });
 

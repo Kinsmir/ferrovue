@@ -1,5 +1,3 @@
-/* The project's configuration, and the state one `generate()` run builds up. */
-
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import type { Plugin } from "./plugin.ts";
@@ -111,32 +109,19 @@ export function tyOfName(name: TypeName): Ty {
 /** Where `TrustedHtml` comes from. Only that import names the type `v-html` will write raw. */
 export const TYPES_MODULE = "ferrovue/types";
 
-/** What the configuration being compiled says, and what has been read so far: set up by
- * `generate()` at the start of each run, which is synchronous, so one run never sees another's. */
 export const ctx = {
-  /** The helpers of the configuration being compiled: name → Rust twin, typed. */
   helpers: {} as Record<string, { rust: string; params: Ty[]; ret: Ty; maxLen: number }>,
   helperModule: null as string | null,
   trustedHtml: null as string | null,
-  /** Custom directives declared to render nothing on the server. */
   clientDirectives: new Set<string>(),
-  /** The plugins of this run, in order, and the state each keeps for it (`runOf`). */
   plugins: [] as readonly Plugin[],
   runs: new Map<Plugin, unknown>(),
-  /** The project root, for resolving a component's imports. */
   rootDir: "",
-  /** Interfaces and object types declared in shared `.ts` files that components import, and type
-   * aliases there; the file each comes from. They are written once, to `types.rs`. */
   typeStructs: new Map<string, Struct>(),
   typeAliases: new Map<string, N>(),
   typeFiles: new Map<string, string>(),
-  /** The shared files read so far. */
   typeRead: new Set<string>(),
-  /** Every component being compiled, by name, for a type that names another one's props. */
   components: new Map<string, Component>(),
-  /** Numbers the bindings narrowing introduces, restarted per component so that a file's text
-   * depends on its own source alone. */
   narrowCount: 0,
-  /** The directory the components being compiled come from, for the generated headers. */
   componentsDir: "",
 };

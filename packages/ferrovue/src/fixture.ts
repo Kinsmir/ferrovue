@@ -1,21 +1,9 @@
-/* An app rendering one conformance fixture with the real Vue: its props, its slots' content, the
- * location it is rendered at under the real vue-router, Pinia's state and vue-i18n's locale.
- *
- * A fixture is a JSON object of props, plus keys that are not props:
- * - `$slots`: each slot's content as HTML, rendered as a static node so both sides write it
- *   exactly as given; `routerView` is the page `<RouterView>` shows.
- * - `$route`: the reader's location, `/` when absent.
- * - `$stores`: Pinia's state, by store id — every store the component reads, in full, because a
- *   store absent here is built from its own `state()`, which the server never runs.
- * - `$locale`: the locale, when the project translates.
- *
- * Nothing here reads a file or compiles anything, so a browser bundle can import it too: the
- * browser hydration tests (`packages/ferrovue/browser/`) build the same app there. */
 import { createApp, createSSRApp, createStaticVNode, defineComponent, h, type App, type Component } from "vue";
 import { createPinia } from "pinia";
 import { createMemoryHistory, createRouter, type RouteRecordRaw } from "vue-router";
 import { createI18n } from "vue-i18n";
 
+/** A conformance fixture: the props, and `$slots`, `$route`, `$stores` and `$locale`. */
 export interface Fixture {
   props: Record<string, unknown>;
   slots: Record<string, string>;
@@ -37,7 +25,6 @@ export function readFixture(json: Record<string, unknown>): Fixture {
   };
 }
 
-/** The top-level nodes in a piece of HTML, which a static node needs to hydrate. */
 function nodeCount(html: string): number {
   const t = document.createElement("template");
   t.innerHTML = html;
@@ -84,12 +71,10 @@ export async function fixtureApp(
       .map(([name, html]) => [name, () => [staticNode(html)]]),
   );
   const app = (options.client ? createApp : createSSRApp)({ render: () => h(component, fixture.props, slots) });
-  // As the client hydrates: the state the server rendered with, set before any store is first used.
   const pinia = createPinia();
   pinia.state.value = structuredClone(fixture.stores) as typeof pinia.state.value;
   app.use(pinia);
   if (options.i18n) {
-    // Messages read from the project's files at run time: their schema is not known to TypeScript.
     const i18nOptions = {
       legacy: false as const,
       locale: fixture.locale ?? options.i18n.locale,

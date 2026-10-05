@@ -1,7 +1,3 @@
-/* `<Teleport>`: markers where it stands, its content in the target's buffer, which the page writes.
- * Vue's own, not an integration, but a render parameter of its own like theirs: the page's
- * `Teleports`, which a component takes when it or a child renders a `<Teleport>`. */
-
 import { type Component, fail } from "../model.ts";
 import { expr } from "../expr.ts";
 import { cond } from "../narrowing.ts";
@@ -9,7 +5,6 @@ import { bare, strArg } from "../parens.ts";
 import { statements } from "../template.ts";
 import { type Plugin, runOf } from "../plugin.ts";
 
-/** The components that render a `<Teleport>` themselves. */
 type TeleportRun = Set<Component>;
 
 export const teleport: Plugin<TeleportRun> = {
@@ -37,7 +32,6 @@ export const teleport: Plugin<TeleportRun> = {
       ty: "&fv::Teleports",
       pageTy: "&'p fv::Teleports",
       reads: (c) => runOf(teleport).has(c),
-      // What was teleported follows the render, as the conformance suite records Vue's.
       test: { lines: ["let teleports = ferrovue::Teleports::new();"], arg: "&teleports", after: ["teleports_into(&mut out, teleports);"] },
       testSupport: `/// What was teleported, after a marker, as the conformance suite writes Vue's: \`{"target":"…"}\`.
 #[cfg(test)]

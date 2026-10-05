@@ -1,15 +1,4 @@
 #!/usr/bin/env node
-/* `ferrovue`: compile the project's components, run from its root.
- *
- *   ferrovue                  write the Rust modules to the configured output directory
- *   ferrovue --check          write nothing; exit 1 if the committed modules are not what would be written
- *   ferrovue --check --diff   show a unified diff of differences
- *   ferrovue --watch          write them, then again whenever a component, store, type file, the routes
- *                             or the configuration changes, until interrupted
- *   ferrovue init             scaffold a starter ferrovue.config.json and components directory
- *   ferrovue -c, --config     path to configuration file (default: ferrovue.config.json)
- *   ferrovue -v, --version    print the version and exit
- *   ferrovue -h, --help       print this help and exit */
 import { existsSync, mkdirSync, readFileSync, readdirSync, watch, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { type Config, CONFIG_FILE, GenError, generate, loadConfig, VERSION, write } from "./compiler.ts";
@@ -33,7 +22,6 @@ Options:
   -h, --help               print this help and exit
 `;
 
-/** A refused construct, or a broken configuration: the message alone, which names the file. */
 function report(e: unknown): void {
   if (e instanceof GenError || e instanceof SyntaxError) console.error(`error: ${e.message}`);
   else throw e;
@@ -89,7 +77,6 @@ function check(config: Config, showDiff = false): number {
   try {
     have = readdirSync(dir).filter((f) => f.endsWith(".rs"));
   } catch {
-    // An absent directory is simply stale.
   }
   const stale = [...want.keys()].filter((name) => {
     try {
@@ -128,8 +115,6 @@ function once(config: Config): void {
   console.log(`${config.out}: ${files.length} files, ${what}`);
 }
 
-/** Regenerate on every change to what the components are compiled from, reporting errors and
- * carrying on. The output directory itself, dependencies and build output are ignored. */
 function watchProject(configPath?: string): void {
   const run = (): void => {
     try {
@@ -144,7 +129,6 @@ function watchProject(configPath?: string): void {
     try {
       out = loadConfig(root, configPath).out;
     } catch {
-      // A broken configuration ignores nothing; the next run reports it.
     }
     const parts = file.split(sep);
     return (
@@ -156,7 +140,6 @@ function watchProject(configPath?: string): void {
   let timer: ReturnType<typeof setTimeout> | null = null;
   watch(root, { recursive: true }, (_event, name) => {
     if (!name || ignored(relative(root, join(root, name)))) return;
-    // Editors write a file in several steps: one run once they are done.
     if (timer) clearTimeout(timer);
     timer = setTimeout(run, 50);
   });

@@ -1,7 +1,3 @@
-/* The conformance suite's inputs, as both of its Vue halves read them: the fixtures with their
- * recorded HTML, the routes and locales of `crates/ferrovue/tests/conformance/`, and the page a
- * fixture's HTML is hydrated in — in happy-dom (`conformance.test.ts`) and in real browsers
- * (`packages/ferrovue/browser/`). */
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { RouteEntry, RouterOptions } from "../src/fixture.ts";
@@ -12,7 +8,6 @@ export const ROUTES = JSON.parse(readFileSync(join(ROOT, "routes.json"), "utf8")
 const CONFIG = JSON.parse(readFileSync(join(ROOT, "ferrovue.config.json"), "utf8")) as {
   i18n?: { messages: string; locale?: string; fallbackLocale?: string | string[] };
 };
-/** The project's locales, as vue-i18n is given them. */
 const I18N = CONFIG.i18n && {
   messages: Object.fromEntries(
     readdirSync(join(ROOT, CONFIG.i18n.messages))
@@ -22,27 +17,16 @@ const I18N = CONFIG.i18n && {
   locale: CONFIG.i18n.locale ?? "en",
   ...(CONFIG.i18n.fallbackLocale !== undefined ? { fallbackLocale: CONFIG.i18n.fallbackLocale } : {}),
 };
-/** The options `fixtureApp` is given for every fixture. */
 export const OPTIONS: RouterOptions = I18N ? { i18n: I18N } : {};
-/** Where a fixture's recorded HTML continues with what was teleported, as JSON by target. */
 export const TELEPORTS = "<!--fv-teleports-->";
 
-/** Fixtures whose recorded HTML Vue's own client hydrates with a mismatch, because Vue's server and
- * client renders disagree; the server's HTML is the one ferrovue matches. Slot content whose every
- * pushed string is comments and whitespace — an interpolation that writes nothing, or whitespace,
- * beside a list's fragment markers — gives way to the fallback on the server (`isComment` in
- * `ssrRenderSlot`), while the client keeps it, as any text node is content to `ensureValidVNode`.
- * Each must still mismatch, so the list stays true. */
 export const VUE_DISAGREES = new Set(["Hollow/absent.json", "Hollow/absent-on.json", "Hollow/whitespace.json", "Hollow/js-whitespace.json"]);
 
 export interface Case {
   component: string;
-  /** The fixture's file name, `case.json`. */
   name: string;
-  /** Its path without the extension, where the `.json` and `.html` sit. */
   base: string;
   json: Record<string, unknown>;
-  /** The recorded HTML, empty for a new fixture. */
   html: string;
 }
 
@@ -58,15 +42,11 @@ export const cases: Case[] = readdirSync(FIXTURES, { withFileTypes: true })
         try {
           html = readFileSync(`${base}.html`, "utf8");
         } catch {
-          // A new fixture: only a write run can supply its expected output.
         }
         return { component: d.name, name: f, base, json: JSON.parse(readFileSync(`${base}.json`, "utf8")) as Record<string, unknown>, html };
       }),
   );
 
-/** The body of the page a fixture's recorded HTML is hydrated in: the render in `#root`, and
- * teleported content in its targets, as a page places it — a teleport to `body` from the body's
- * first node, which is where Vue hydrates it from. */
 export function hydrationBody(html: string): string {
   const [main, teleported] = html.split(TELEPORTS);
   const targets = Object.entries(JSON.parse(teleported ?? "{}") as Record<string, string>);

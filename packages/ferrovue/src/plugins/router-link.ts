@@ -1,6 +1,3 @@
-/* `<RouterLink>` as vue-router renders it: its location resolved from the reader's route, the
- * active classes and `aria-current`, and the attributes and scope ids its `<a>` takes. */
-
 import { escapeHtml } from "@vue/shared";
 import { type N, type Scope, type Val, camelize, fail, rustStr } from "../model.ts";
 import { CONFIG_FILE } from "../context.ts";
@@ -19,21 +16,16 @@ import { allRoutes, router } from "./router.ts";
 
 export const ROUTER_LINK_PROPS = new Set(["to", "class", "activeClass", "exactActiveClass", "ariaCurrentValue"]);
 
-/** `<RouterLink>` props that change only what a click does, which the server does not render. */
 export const ROUTER_LINK_INERT = new Set(["replace", "viewTransition"]);
 
-/** The parameter names of a route path, in order. */
 export function routeParams(path: string): string[] {
   return [...path.matchAll(/:(\w+)/g)].map((m) => m[1]!);
 }
 
-/** A string written into a link, which vue-router percent-encodes: half of a surrogate pair makes
- * `encodeURI` throw, so Vue renders no page at all. */
 function noHalves(s: Scope, v: Val, n: N): void {
   if (v.lone) fail(s.comp, lonely("a `<RouterLink>` location"), n);
 }
 
-/** A value written into a URL — a parameter or a query value — as the `&str` vue-router stringifies. */
 export function urlText(s: Scope, v: Val, n: N): string {
   noHalves(s, v, n);
   if (v.ty.k === "str") return v.code;
@@ -42,7 +34,6 @@ export function urlText(s: Scope, v: Val, n: N): string {
   return fail(s.comp, "a route parameter is a string or a number that is present", n);
 }
 
-/** \`let fv_link = …;\`: a \`<RouterLink>\`'s \`to\` resolved from the reader's route. */
 export function resolveLink(s: Scope, e: Emitter, to: N): void {
   if (to.type !== "ObjectExpression") {
     const target = expr(s, to);
@@ -61,7 +52,6 @@ export function resolveLink(s: Scope, e: Emitter, to: N): void {
   }
   e.open("let fv_link =");
   const query = parts.get("query");
-  // The query, built only when the location has one.
   const search = query ? "&fv_search" : '""';
   if (query) {
     e.stmt("let mut fv_search = String::new();");
@@ -70,7 +60,6 @@ export function resolveLink(s: Scope, e: Emitter, to: N): void {
       if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "a query holds plain keys", p);
       const key = String(p.key.name ?? p.key.value);
       const v = expr(s, p.value);
-      // An absent value leaves its key out, as `undefined` does.
       if (v.ty.k === "undef") continue;
       if (v.ty.k === "opt") {
         e.open(`if let Some(v) = ${v.code}`);
@@ -119,8 +108,6 @@ export function resolveLink(s: Scope, e: Emitter, to: N): void {
   e.close(";");
 }
 
-/** \`<RouterLink to="...">\` as vue-router renders it: \`aria-current\` and the active classes when it
- * points where the reader is, then \`href\`, then the link's own class and attributes. */
 export function routerLink(s: Scope, e: Emitter, n: N): void {
   const [, rawProps, slots, , slotScopeId] = n.arguments;
   let props = rawProps;
@@ -142,18 +129,11 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
   }
   const to = fields.get("to");
   if (!to) fail(s.comp, "`<RouterLink>` needs `to`", n);
-  /* vue-router renders the link from virtual nodes (`renderElementVNode`). The `<a>` takes the ids
-   * of a component's root after its attributes: what the parent passes on when the link is its
-   * root, the id of the component that wrote it, and the slot scope ids around it — as
-   * `scope_attrs` gathers them. Its content takes that component's id, which the compiled template
-   * spells out, and the slot scope ids again, each once: unlike the raw `_scopeId` the compiled
-   * elements would write, so an element there is refused when there are some. */
   const passed = (rawProps?.type === "Identifier" && rawProps.name === "_attrs") || rawProps?.arguments?.some((a: N) => a.type === "Identifier" && a.name === "_attrs");
   const base = passed ? s.attrs : null;
   const slotted = slotScopeId ? s.sid : null;
   const scopeId = scopeIdOf(s.comp);
   const content = slots?.type === "ObjectExpression" ? slots.properties.filter((p: N) => (p.key?.name ?? p.key?.value) !== "_").map((p: N) => p.value) : [];
-  /** Whether the link's content holds a node that `is` picks out. */
   const holds = (is: (x: N) => boolean): boolean => {
     const within = (x: N): boolean => !!x && typeof x === "object" && (is(x) || Object.values(x).some(within));
     return content.some((c: N) => slotBody(s, c).some(within));
@@ -162,12 +142,10 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
   if (slotted !== null && holds(writesScopeId)) {
     fail(s.comp, "an element inside a `<RouterLink>` in slot content given a slot scope id: vue-router writes those ids by rules of its own", to);
   }
-  // A `<slot>` there is rendered as a virtual node too, which passes its own slot scope ids.
   if ((scopeId !== null || slotted !== null || base !== null) && holds((x) => x.type === "CallExpression" && x.callee.name === "_ssrRenderSlot")) {
     fail(s.comp, "a `<slot>` inside a `<RouterLink>` that takes scope ids: vue-router renders it by rules of its own", to);
   }
   if (!runOf(router).routes) fail(s.comp, `\`<RouterLink>\` needs \`routes\` in ${CONFIG_FILE}: the paths it resolves against`, n);
-  /** A literal-string prop, which the class names and `aria-current` must be. */
   const literal = (key: string, fallback: string): string => {
     const v = fields.get(key);
     if (!v) return fallback;
@@ -180,8 +158,6 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
   e.open("");
   resolveLink(s, e, to);
   e.lit("<a");
-  /* Attributes this component is passed fall through to the link: merged into its virtual node's
-   * props with the template's, then onto the `<a>` vue-router renders. */
   const parts = mergedParts(rawProps);
   const passedOn = (p: N): boolean => s.fallthrough !== null && ((isAttrs(p) && s.comp.inheritAttrs) || dollarAttrs(s, p));
   const fallsThrough = parts.some(passedOn);
@@ -201,8 +177,6 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
   e.lit(' href="');
   e.stmt("fv::escape_into(out, &fv_link.href);");
   e.lit('" class="');
-  // `{ [activeClass]: isActive, [exactActiveClass]: isExactActive }`. When the two are one class,
-  // the later key wins: the class goes with `isExactActive`.
   const linkItems =
     activeClass === exactClass
       ? [`if fv_link.exact { ${rustStr(exactClass)} } else { "" }`]
@@ -226,7 +200,6 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
   } else e.stmt(`out.push_str(&fv::scope_attrs(${base ?? '""'}, ${scopeId === null ? '""' : rustStr(scopeId)}, ${slotted ?? '""'}));`);
   if (fallsThrough) {
     e.close(" else {");
-    // The template's attributes for the link, merged in their order with those passed on.
     const sources: string[] = [];
     for (const p of parts) {
       if (passedOn(p)) sources.push(`${s.fallthrough}.list()`);
@@ -248,7 +221,6 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
       base === null && slotted === null
         ? rustStr(scopeId === null ? "" : ` ${scopeId}`)
         : `&fv::scope_attrs(${base ?? '""'}, ${scopeId === null ? '""' : rustStr(scopeId)}, ${slotted ?? '""'})`;
-    // vue-router's own: `aria-current` (`null` when the link is not exact), `href`, its classes.
     const linkOwn = [
       `("aria-current", if fv_link.exact { fv::Attr::str(${rustStr(ariaCurrent)}) } else { fv::Attr::Undefined })`,
       '("href", fv::Attr::str(&fv_link.href))',

@@ -1,13 +1,6 @@
-/* Attributes a parent passes a child beyond its props, which fall through to the child's root as
- * Vue's do: which components may be passed some, and which. A component that may be passed some
- * takes them as one `fv::Attrs`, with the scope ids a parent hands its root behind them, so this is
- * worked out for every component before any is generated, once the scope ids are (`analyse`). */
-
 import { parse as parseJs } from "@babel/parser";
 import { type Component, type N, declares } from "./model.ts";
 
-/** A child component's call and the attributes it passes: the names of those its props object
- * literals give, and whether they hold the parent's `_attrs` or `$attrs`. */
 interface AttrsCall {
   child: string;
   keys: string[];
@@ -15,7 +8,6 @@ interface AttrsCall {
   passesDollar: boolean;
 }
 
-/** Whether `n` is the template's `$attrs`: `_ctx.$attrs`, or a setup binding of `useAttrs()`. */
 export function isDollarAttrs(n: N, bindings: Set<string>): boolean {
   if (n?.type !== "MemberExpression" || n.object.type !== "Identifier") return false;
   const prop: string | undefined = n.computed ? n.property.value : n.property.name;
@@ -23,17 +15,11 @@ export function isDollarAttrs(n: N, bindings: Set<string>): boolean {
   return n.object.name === "$setup" && prop !== undefined && bindings.has(prop);
 }
 
-/** Whether a key a parent passes a child reaches it as an attribute, unless it is a prop: not one
- * Vue reserves, not a listener (which the server drops), not a model's modifiers. */
 export function passedKey(child: Component, key: string): boolean {
   if (["", "key", "ref", "ref_for", "ref_key", "innerHTML", "textContent"].includes(key) || /^on[^a-z]/.test(key)) return false;
   return !(key.endsWith("Modifiers") && declares(child, key === "modelModifiers" ? "modelValue" : key.slice(0, -"Modifiers".length)));
 }
 
-/** Set every component's `attrNames` and `idsInAttrs`: the attributes its parents' calls pass it
- * beyond its props, and those passed on to it — by a parent whose root it is, or that binds
- * `$attrs` to it — from that parent's own, a least fixed point. Runs after the plugins' analyses,
- * which decide whose roots may be handed scope ids. */
 export function attrsFlow(read: { comp: Component; ssr: string; children: Map<string, string>; attrsBindings: Set<string> }[]): void {
   const byName = new Map(read.map((r) => [r.comp.name, r.comp]));
   const flows = read.map((r) => {

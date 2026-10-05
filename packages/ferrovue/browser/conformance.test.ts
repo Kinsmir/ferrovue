@@ -1,16 +1,3 @@
-/* Every conformance fixture's recorded HTML, hydrated in real browsers.
- *
- * `conformance.test.ts` hydrates the same HTML in happy-dom, whose parser is not a browser's: where
- * a browser rebuilds markup as it parses (a `<div>` closing a `<p>`, a table's implied `<tbody>`,
- * `<select>`, entities), Vue hydrates against what the browser built, and only a browser shows the
- * mismatch. Each fixture is loaded as a page — the HTML as a server sends it, teleported content
- * in its targets — and hydrated by the components as a client build compiles them (`entry.ts`,
- * bundled once with Vite and Vue's development build). The test fails on any hydration warning and
- * any error the page logs, and checks that Vue kept the server's nodes and left the document as it
- * was parsed — apart from the attributes listed in `PATCHED`, which Vue rewrites on purpose, and
- * the fixtures in `VUE_DISAGREES`, which Vue's own client hydrates with a mismatch.
- *
- * Nothing listens on a port: Playwright answers the page's requests from memory. */
 import vue from "@vitejs/plugin-vue";
 import { chromium, firefox, webkit, type Browser, type ConsoleMessage, type Page } from "playwright";
 import { build, type Rolldown } from "vite";
@@ -20,27 +7,15 @@ import type { PageData } from "./entry.ts";
 
 const ORIGIN = "http://conformance.test";
 const LAUNCHERS = { chromium, firefox, webkit };
-/** The browsers to hydrate in. One that will not launch fails the run in CI, and elsewhere is
- * skipped with a warning: WebKit, for one, needs system libraries only some Linux systems have. */
 const BROWSERS = (process.env.FERROVUE_BROWSERS ?? "chromium,firefox,webkit").split(",") as (keyof typeof LAUNCHERS)[];
 
-/** Attributes Vue rewrites as it hydrates, by fixture: since 3.5 it sets every dynamic prop again,
- * and `v-show` sets `style.display`, so the browser serialises what it was given anew. Each is the
- * attribute as the server wrote it (and the browser parsed it), then as it is once hydrated; the
- * test fails if one no longer happens, so the list stays true. */
 const PATCHED: Record<string, { browsers?: string[]; server: string; hydrated: string }[]> = {
-  // `v-show` sets `style.display`, and the browser writes the declarations back that it could
-  // parse: the hostile colour is dropped.
   "Styles/hostile.json": [{ server: 'style="color:red&quot;&gt;&lt;script&gt;;display:none;"', hydrated: 'style="display: none;"' }],
-  // Vue sets `meter.max`, a double, and Firefox reflects it into the attribute with 15 significant
-  // digits: 2⁵³ reads back as 9007199254740990.
   "Numbers/tiny-and-huge.json": [{ browsers: ["firefox"], server: 'max="9007199254740992"', hydrated: 'max="9007199254740990"' }],
 };
 
-/** The bundle `entry.ts` builds to, with every component in it. */
 let bundle = "";
 beforeAll(async () => {
-  // Vue's development build, which reports every mismatch with what differed.
   const nodeEnv = process.env.NODE_ENV;
   process.env.NODE_ENV = "development";
   const result = (await build({
@@ -56,10 +31,8 @@ beforeAll(async () => {
   bundle = result.output.find((o): o is Rolldown.OutputChunk => o.type === "chunk" && o.isEntry)!.code;
 });
 
-/** The page a fixture is loaded as: its data in the head, its HTML as the body. */
 function pageFor(c: (typeof cases)[number]): string {
   const data: PageData = { component: c.component, fixture: c.json, routes: ROUTES, options: OPTIONS };
-  // `<` escaped, so no string in the fixture can close the script.
   const json = JSON.stringify(data).replace(/</g, "\\u003c");
   return (
     `<!doctype html><html><head><meta charset="utf-8"><title>${c.component}/${c.name}</title>` +
@@ -69,7 +42,6 @@ function pageFor(c: (typeof cases)[number]): string {
   );
 }
 
-/** A console message as Vue wrote it, with the elements it names as markup, not `JSHandle@node`. */
 async function describeMessage(m: ConsoleMessage): Promise<string> {
   const args = await Promise.all(
     m.args().map((a) =>
@@ -95,8 +67,6 @@ describe.each(BROWSERS)("%s", (name) => {
     }
     page = await browser.newPage();
     page.on("console", (m) => {
-      // The page's own, not the browser's (Firefox's password manager warns on some pages). Other
-      // warnings — a route with no match, a negative `v-for` range — are what the fixture tests.
       if (!m.location().url.startsWith(ORIGIN)) return;
       if (m.type() === "error" || (m.type() === "warning" && /hydrat|mismatch/i.test(m.text()))) messages.push(describeMessage(m));
     });
@@ -105,7 +75,6 @@ describe.each(BROWSERS)("%s", (name) => {
       const path = new URL(route.request().url()).pathname;
       if (path === "/entry.js") return route.fulfill({ contentType: "text/javascript", body: bundle });
       const html = pages.get(decodeURIComponent(path));
-      // Anything else a fixture refers to (`<img src="/a.png">`) is there, and empty.
       return html === undefined ? route.fulfill({ status: 204 }) : route.fulfill({ contentType: "text/html; charset=utf-8", body: html });
     });
   });
@@ -121,7 +90,6 @@ describe.each(BROWSERS)("%s", (name) => {
       const result = await page.evaluate(() => window.hydration!);
       const logged = await Promise.all(messages);
       expect(result.kept, "Vue kept the server's first node").toBe(true);
-      // Where Vue's own server and client disagree, it mismatches and patches the document.
       const disagrees = VUE_DISAGREES.has(`${c.component}/${c.name}`);
       expect(disagrees ? [] : logged).toEqual([]);
       expect(logged.length > 0, "a fixture mismatches exactly when it is in VUE_DISAGREES").toBe(disagrees);

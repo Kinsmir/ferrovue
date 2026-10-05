@@ -1,6 +1,3 @@
-/* Attributes as Vue's server renderer writes them: values, booleans, merged objects and what a parent
- * passes on, with `class` (`classes.ts`) and `style` (`styles.ts`) beside it. */
-
 import { escapeHtml, hyphenate, isBooleanAttr, isSSRSafeAttrName, propsToAttrMap } from "@vue/shared";
 import { type N, type Scope, type Ty, type Val, fail, GenError, rustStr } from "./model.ts";
 import { CONFIG_FILE, ctx } from "./context.ts";
@@ -14,11 +11,8 @@ import { claim } from "./plugin.ts";
 import { classAttr, classPresent, literalClass, maybeEqual, renderClass } from "./classes.ts";
 import { mergedStyle, renderStyle, styleAttr } from "./styles.ts";
 
-/** What a number written at run time is expected to take: most a page shows are shorter, and the
- * reservation is an estimate. */
 const NUMBER_BYTES = 6;
 
-/** A string, a number or a boolean written escaped: now when it is known, by JavaScript itself. */
 export function display(e: Emitter, v: Val): boolean {
   if (v.ty.k === "str" && known(v) !== undefined) e.lit(escapeHtml(unquote(v.code)));
   else if ((v.ty.k === "int" || v.ty.k === "float") && v.num !== undefined) e.lit(String(v.num));
@@ -26,14 +20,12 @@ export function display(e: Emitter, v: Val): boolean {
   else if (v.ty.k === "str") e.stmt(`fv::escape_into(out, ${strArg(v.code)});`);
   else if (v.ty.k === "int" || v.ty.k === "float") {
     e.stmt(`fv::${v.ty.k === "int" ? "push_int" : "push_number"}(out, ${bare(v.code)});`);
-    // Counted in the reservation, or a page of numbers outgrows it and is copied to a larger one.
     e.expect(NUMBER_BYTES);
   } else if (v.ty.k === "bool") e.stmt(`out.push_str(if ${condition(v.code)} { "true" } else { "false" });`);
   else return false;
   return true;
 }
 
-/** `toDisplayString`, escaped. */
 export function interpolate(e: Emitter, v: Val): void {
   if (display(e, v)) return;
   switch (v.ty.k) {
@@ -50,14 +42,10 @@ export function interpolate(e: Emitter, v: Val): void {
   }
 }
 
-/** The value half of `key="value"`, escaped. */
 export function attrValue(e: Emitter, v: Val): void {
   if (!display(e, v)) throw new GenError("an attribute value must be a string, a number or a boolean");
 }
 
-/** Vue's server renderer leaves out an attribute whose value is not a string, a number or a boolean
- * (`isRenderableAttrValue`), but hydration then sets it, to `String(value)`, without reporting a
- * mismatch: the page changes as it hydrates. So a value that may be anything else is refused. */
 function renderable(s: Scope, key: string, v: Val, n: N): void {
   const ty = v.ty.k === "opt" ? v.ty.of : v.ty;
   if (ty.k === "str" || ty.k === "int" || ty.k === "float" || ty.k === "bool" || ty.k === "undef") return;
@@ -67,7 +55,6 @@ function renderable(s: Scope, key: string, v: Val, n: N): void {
   fail(s.comp, `\`${key}\` is bound to ${what}: Vue's server renderer leaves the attribute out, and hydration then sets it, changing the page; ${fix}`, n);
 }
 
-/** `ssrRenderAttr(key, value)`: absent for null/undefined, `key="value"` for anything else. */
 export function renderAttr(s: Scope, e: Emitter, key: string, v: Val, n: N): void {
   renderable(s, key, v, n);
   if (v.ty.k === "undef") return;
@@ -82,8 +69,6 @@ export function renderAttr(s: Scope, e: Emitter, key: string, v: Val, n: N): voi
   e.lit(`"`);
 }
 
-/** `ssrRenderDynamicAttr(key, value)`: as `renderAttr`, but a boolean attribute is present or
- * absent, and an empty string renders the name alone. */
 export function renderDynamicAttr(s: Scope, e: Emitter, key: string, v: Val, n: N): void {
   const name = propsToAttrMap[key] ?? key.toLowerCase();
   if (!isSSRSafeAttrName(name)) fail(s.comp, `unsafe attribute name \`${name}\``, n);
@@ -91,7 +76,6 @@ export function renderDynamicAttr(s: Scope, e: Emitter, key: string, v: Val, n: 
   if (v.ty.k === "undef") return;
   const boolean = (t: Ty) => isBooleanAttr(name) || (name === "hidden" && (t.k === "bool" || t.k === "int" || t.k === "float"));
   if (v.ty.k === "opt" && boolean(v.ty.of)) {
-    // Present, or truthy when it is not a string: one test, with nothing to bind.
     e.open(`if ${v.ty.of.k === "str" ? `${atom(v.code)}.is_some()` : truthy(v)}`);
     e.lit(` ${name}`);
     e.close();
@@ -122,7 +106,6 @@ export function renderDynamicAttr(s: Scope, e: Emitter, key: string, v: Val, n: 
     e.lit(` ${name}`);
     e.close(" else {");
     e.lit(` ${name}="`);
-    // Re-evaluated rather than bound: every string expression here is a borrow or a pure call.
     attrValue(e, v);
     e.lit(`"`);
     e.close();
@@ -135,18 +118,13 @@ export function renderDynamicAttr(s: Scope, e: Emitter, key: string, v: Val, n: 
 
 export const IGNORED_PROPS = new Set(["", "key", "ref", "innerHTML", "textContent", "ref_key", "ref_for"]);
 
-/** `ssrRenderAttrs(_attrs)` on the root, when no attribute reaches it at run time: the scope ids a
- * parent handed it, already written as Vue writes them. */
 function inheritedAttrs(s: Scope, e: Emitter): void {
   if (s.attrs !== null) e.stmt(`out.push_str(${s.attrs});`);
 }
 
-/** `ssrGetDirectiveProps(_ctx, dir)`: a custom directive's server props, which are none for a
- * directive the configuration declares client-only. `false` when `n` is not such a call. */
 export function directiveProps(s: Scope, n: N): boolean {
   if (n?.type !== "CallExpression" || n.callee.type !== "Identifier" || n.callee.name !== "_ssrGetDirectiveProps") return false;
   const dir = n.arguments[1];
-  // `$setup["vFocus"]` for an imported directive, `_directive_focus` for a registered one.
   let name: string | null = null;
   if (dir?.type === "MemberExpression") {
     const local: string = dir.computed ? dir.property.value : dir.property.name;
@@ -158,13 +136,10 @@ export function directiveProps(s: Scope, n: N): boolean {
   return true;
 }
 
-/** Whether `n` is the root's `_attrs`: what a parent passes, then the scope ids. */
 export function isAttrs(n: N): boolean {
   return n?.type === "Identifier" && n.name === "_attrs";
 }
 
-/** Whether `n` is `$attrs` — `_ctx.$attrs`, or a `useAttrs()` binding — which a component whose
- * root is another's would find holding scope ids as well. */
 export function dollarAttrs(s: Scope, n: N): boolean {
   if (!isDollarAttrs(n, s.attrsBindings)) return false;
   if (s.comp.idsInAttrs) {
@@ -173,15 +148,10 @@ export function dollarAttrs(s: Scope, n: N): boolean {
   return true;
 }
 
-/** The parts `_mergeProps(…)` merges, or the one object that is not merged. */
 export function mergedParts(n: N): N[] {
   return n?.type === "CallExpression" && n.callee.type === "Identifier" && n.callee.name === "_mergeProps" ? n.arguments : [n];
 }
 
-/** `ssrRenderAttrs(obj)`, key by key in the object's order, and the inherited scope ids where the
- * root's `_attrs` is merged in. When a parent may pass attributes, which only the run time knows,
- * `$attrs` and the root's `_attrs` are merged with the element's own by `fv::attrs_into` — but only
- * when some were passed: with none, the element is written as it is without. */
 export function renderAttrs(s: Scope, e: Emitter, n: N): void {
   const parts = mergedParts(n);
   const passed = (p: N): boolean => s.fallthrough !== null && ((isAttrs(p) && s.comp.inheritAttrs) || dollarAttrs(s, p));
@@ -193,10 +163,8 @@ export function renderAttrs(s: Scope, e: Emitter, n: N): void {
   const at = e.lines.length;
   staticAttrs(s, e, n);
   e.flush();
-  // Nothing to write when nothing is passed: only the other branch is left.
   if (e.lines.length === at) e.replace(at - 1, `if ${s.fallthrough}.is_empty()`, `if !${s.fallthrough}.is_empty()`);
   else e.close(" else {");
-  // `_attrs` or `$attrs` alone is written as it is, with no `mergeProps` to normalise it.
   if (parts.length === 1 && parts[0] === n) {
     e.stmt(`fv::passed_attrs_into(out, ${s.fallthrough}.list(), ${isAttrs(n) && s.attrs !== null ? s.attrs : '""'});`);
     e.close();
@@ -217,7 +185,6 @@ export function renderAttrs(s: Scope, e: Emitter, n: N): void {
   e.close();
 }
 
-/** `ssrRenderAttrs(obj)` with nothing passed at run time: `$attrs` empty, `_attrs` the scope ids. */
 function staticAttrs(s: Scope, e: Emitter, n: N): void {
   if (isAttrs(n)) {
     inheritedAttrs(s, e);
@@ -231,8 +198,6 @@ function staticAttrs(s: Scope, e: Emitter, n: N): void {
       objectAttrs(s, e, merged, true);
       return;
     }
-    // The inherited ids take their place among the keys: after those given before `_attrs`, before
-    // those first given after it, such as `v-show`'s `style` when there is no other.
     const before = new Set(mergeProps(s, { ...n, arguments: n.arguments.slice(0, at) }).properties.map((p: N) => p.key.name ?? p.key.value));
     const part = (early: boolean): N => ({ ...merged, properties: merged.properties.filter((p: N) => before.has(p.key.name ?? p.key.value) === early) });
     objectAttrs(s, e, part(true), true);
@@ -243,16 +208,12 @@ function staticAttrs(s: Scope, e: Emitter, n: N): void {
   objectAttrs(s, e, n, false);
 }
 
-/** The keys of one attribute object. `merged` says `mergeProps` made it, which normalises the class
- * and the style first: a class that is `undefined` is left out, and a style given as text is parsed
- * and written back. */
 function objectAttrs(s: Scope, e: Emitter, n: N, merged: boolean): void {
   if (n.type !== "ObjectExpression") fail(s.comp, "attributes must be an object literal", n);
   for (const p of n.properties) {
     if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "attribute objects hold plain keys", p);
     const raw: string = p.key.type === "Identifier" ? p.key.name : p.key.value;
     if (IGNORED_PROPS.has(raw) || /^on[^a-z]/.test(raw) || raw.startsWith(".")) continue;
-    // Vue strips the `^` attribute-binding prefix before it looks at the name.
     const key = raw.startsWith("^") ? raw.slice(1) : raw;
     if (key === "className") {
       fail(s.comp, "`className` renders by its own rule in Vue; bind `class`", p);
@@ -275,10 +236,6 @@ function objectAttrs(s: Scope, e: Emitter, n: N, merged: boolean): void {
   }
 }
 
-/** `mergeProps(a, _attrs, b, …)` as one object literal, without `_attrs` and `$attrs`, which hold
- * what only the run time knows. Of the rest, `class` and `style` values are merged as an array —
- * unless a class equals the one so far, which Vue then keeps once — and any other key keeps the
- * place it first had with the last value given. */
 export function mergeProps(s: Scope, n: N): N {
   const merged = new Map<string, N>();
   for (const a of n.arguments) {
@@ -290,7 +247,6 @@ export function mergeProps(s: Scope, n: N): N {
       const key: string = p.key.type === "Identifier" ? p.key.name : p.key.value;
       const had = merged.get(key);
       if (had && key === "class" && maybeEqual(s, p.value)) {
-        // `ret.class !== toMerge.class`: a string equal to the class so far is not added again.
         const before = literalClass(had.value);
         if (before === null || p.value.type !== "StringLiteral") {
           fail(s.comp, "a class merged with a string that may equal the class before it, which Vue then writes once: bind an array", p);
@@ -299,7 +255,6 @@ export function mergeProps(s: Scope, n: N): N {
       } else if (had && (key === "class" || key === "style")) {
         merged.set(key, { ...p, value: { type: "ArrayExpression", elements: [had.value, p.value], fvMerged: true } });
       } else if (had) {
-        // `Map` keeps a key where it was first set, as a JavaScript object does.
         merged.set(key, { ...had, value: p.value });
       } else merged.set(key, p);
     }
@@ -307,9 +262,6 @@ export function mergeProps(s: Scope, n: N): N {
   return { type: "ObjectExpression", properties: [...merged.values()] };
 }
 
-/** The attributes of an object literal as `fv::Attr` entries, `("name", value)`, for a merge at run
- * time: given to a child component (`vnode`), whose virtual node normalises a class array or object
- * to a string, or an element's own (`own`), which `mergeProps` keeps as an object. */
 export function attrEntries(s: Scope, obj: N, side: "vnode" | "own"): string[] {
   const out: string[] = [];
   for (const p of obj.properties) {
@@ -321,7 +273,6 @@ export function attrEntries(s: Scope, obj: N, side: "vnode" | "own"): string[] {
   return out;
 }
 
-/** One attribute's value as an `fv::Attr`. */
 export function attrOf(s: Scope, key: string, n: N, side: "vnode" | "own"): string {
   if (key === "className") fail(s.comp, "`className` renders by its own rule in Vue; bind `class`", n);
   if (key === "class") return classAttr(s, n, side);
@@ -330,7 +281,6 @@ export function attrOf(s: Scope, key: string, n: N, side: "vnode" | "own"): stri
   return valueAttr(s, expr(s, n), n);
 }
 
-/** A string, a number, a boolean or `undefined` as an `fv::Attr`. */
 export function valueAttr(s: Scope, v: Val, n: N): string {
   switch (v.ty.k) {
     case "str":

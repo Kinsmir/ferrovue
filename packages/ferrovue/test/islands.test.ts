@@ -1,6 +1,3 @@
-/* `mountIslands` against pages as the Rust side writes them: each island the recorded conformance
- * HTML inside the wrapper `ferrovue::Html::island` writes (`tests/conformance.rs` holds the Rust
- * wrapper to this shape), with the stores' state in the script `state_script_into` writes. */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { escapeHtml } from "@vue/shared";
@@ -22,11 +19,9 @@ function fixture(component: string, name: string): { props: Record<string, unkno
   return { props, stores: $stores ?? {}, route: ($route as string | undefined) ?? "/", html: readFileSync(`${base}.html`, "utf8") };
 }
 
-/** What `Html::island` writes. */
 const island = (name: string, props: unknown, html: string): string =>
   `<div data-island="${escapeHtml(name)}" data-props="${escapeHtml(JSON.stringify(props))}">${html}</div>`;
 
-/** What `state_script_into` writes, with the same escapes. */
 const stateScript = (state: unknown): string =>
   `<script type="application/json" id="__pinia">${JSON.stringify(state).replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/&/g, "\\u0026")}</script>`;
 
@@ -52,7 +47,6 @@ it("hydrates each island from its own props, sharing one Pinia, without a mismat
   const islands = await mountIslands(components, { pinia });
   expect(islands.apps).toHaveLength(2);
   expect(warnings.filter((w) => /hydrat|mismatch/i.test(w))).toEqual([]);
-  // Hydrated in place: the server's nodes are the ones the apps now own.
   expect([...document.querySelectorAll("[data-island]")].map((el) => el.firstChild)).toEqual(before);
   islands.unmount();
 });
@@ -74,11 +68,8 @@ it("hydrates an island that links, once the router has resolved the location", a
 });
 
 it("hydrates a Float prop that is NaN or infinite as the number the server rendered", async () => {
-  // Three `Narrowing` islands as `tests/conformance.rs` holds the Rust side to writing them, with
-  // the bare `NaN` and infinities `serde_json` alone would have written as `null`.
   const page = readFileSync(join(ROOT, "islands.html"), "utf8").trim();
   const ratios = { NaN: Number.NaN, Infinity: Number.POSITIVE_INFINITY, "-Infinity": Number.NEGATIVE_INFINITY };
-  // The markup inside each island is Vue's own server render of those props.
   attachSsrRender(join(ROOT, "components", "Narrowing.vue"), "Narrowing", components.Narrowing!);
   const markup = await Promise.all(Object.values(ratios).map((ratio) => renderToString(createSSRApp(components.Narrowing!, { ratio }))));
   expect(page).toBe(Object.keys(ratios).map((written, i) => `<div data-island="Narrowing" data-props="${escapeHtml(`{"ratio":${written}}`)}">${markup[i]}</div>`).join(""));
@@ -87,11 +78,9 @@ it("hydrates a Float prop that is NaN or infinite as the number the server rende
   const islands = await mountIslands(components);
   expect(islands.apps).toHaveLength(3);
   expect(warnings).toEqual([]);
-  // The ratio each client rendered, which a mismatch would have patched in.
   expect([...document.querySelectorAll("section > p:nth-last-of-type(2)")].map((p) => p.textContent)).toEqual(["NaN|1|false", "Infinity|1|false", "-Infinity|1|false"]);
   islands.unmount();
 
-  // The same page with the `null`s `serde_json` alone writes does not hydrate cleanly.
   document.body.innerHTML = page.replace(/:(NaN|-?Infinity)/g, ":null");
   (await mountIslands(components)).unmount();
   expect(warnings).not.toEqual([]);
@@ -122,7 +111,6 @@ it("loads only the components the page names, each once, and mounts their island
   const badge = fixture("Badge", "full");
   document.body.innerHTML = `${stateScript(badge.stores)}${island("Text", text.props, text.html)}${island("Badge", badge.props, badge.html)}${island("Text", text.props, text.html)}`;
   const calls: string[] = [];
-  /** A loader as `ferrovue/islands` has it: a module, resolved later. Text's comes after Badge's. */
   const lazy = (name: string) => async () => {
     calls.push(name);
     await new Promise((resolve) => setTimeout(resolve, name === "Text" ? 10 : 0));

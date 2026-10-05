@@ -1,18 +1,3 @@
-/* Randomised differential testing: random components and props (`generate.ts`), rendered by Vue's
- * `renderToString` and by the Rust ferrovue generates, compared byte for byte; each difference
- * shrunk to a small case and saved under `fuzz/failures/`.
- *
- *   pnpm fuzz                                  a random seed (printed), 200 components
- *   FERROVUE_FUZZ_SEED=42 FERROVUE_FUZZ_COUNT=500 pnpm fuzz
- *   FERROVUE_FUZZ_SEED=42 FERROVUE_FUZZ_CASE=17 pnpm fuzz   only case 17 of seed 42
- *   FERROVUE_FUZZ_PLANT=1 pnpm fuzz            self-check: corrupt the generated Rust first
- *
- * Other knobs: `FERROVUE_FUZZ_DRY=1` (run the compiler only, to list what it refuses), `FERROVUE_FUZZ_FIXTURES` (per component, 4), `FERROVUE_FUZZ_SHRINK_MAX` (failing
- * to shrink, 10), `FERROVUE_FUZZ_KEEP=1` (keep `target/fuzz/<seed>/` for inspection).
- *
- * One batch is one vitest run (the Vue half, `vue-render.fuzz.ts`) and one `cargo test` of a
- * throwaway crate in `target/fuzz/harness/` that includes every case's generated modules, with its
- * own target directory `target/fuzz-target/` so that repeat runs build incrementally. */
 import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -38,22 +23,17 @@ const only = env.FERROVUE_FUZZ_CASE !== undefined ? Number(env.FERROVUE_FUZZ_CAS
 const plant = env.FERROVUE_FUZZ_PLANT === "1";
 const shrinkMax = Number(env.FERROVUE_FUZZ_SHRINK_MAX ?? 24);
 const keep = env.FERROVUE_FUZZ_KEEP === "1";
-/** Only generate the components and run the compiler: what it refuses, without rendering. */
 const dry = env.FERROVUE_FUZZ_DRY === "1";
 if (!Number.isSafeInteger(seed) || !Number.isSafeInteger(count)) throw new Error("FERROVUE_FUZZ_SEED and FERROVUE_FUZZ_COUNT are integers");
 
 const WORK = join(REPO, "target/fuzz", String(seed));
 const HARNESS = join(REPO, "target/fuzz/harness");
 const CARGO_TARGET = join(REPO, "target/fuzz-target");
-// A planted bug's failures prove the harness, and are not findings: kept out of `fuzz/failures/`.
 const FAILURES = plant ? join(REPO, "target/fuzz/planted-failures") : join(REPO, "fuzz/failures");
 
 const log = (s: string): void => void process.stdout.write(s + "\n");
 
-// ── One batch ───────────────────────────────────────────────────────────────────────────────────
-
 interface Item {
-  /** A Rust module name, unique in the batch. */
   id: string;
   component: Component;
   fixtures: Record<string, unknown>[];
@@ -67,12 +47,10 @@ type Outcome =
 
 interface Evaluated {
   refused: string | null;
-  /** The generated Rust does not compile. */
   compileError: string | null;
   outcomes: Outcome[];
 }
 
-/** The planted bug: one escaped interpolation per component written unescaped. */
 function plantBug(rust: string): string {
   return rust.replace(/fv::escape_into\(out, (.*)\);/, "out.push_str($1);");
 }
@@ -143,7 +121,6 @@ fn render_all() {
   return lines.join("\n");
 }
 
-/** Write, compile, render and compare a batch of components. */
 function evaluate(batch: string, items: Item[]): Map<string, Evaluated> {
   rmSync(batch, { recursive: true, force: true });
   const results = new Map<string, Evaluated>();
@@ -158,8 +135,6 @@ function evaluate(batch: string, items: Item[]): Map<string, Evaluated> {
     const ev: Evaluated = { refused: null, compileError: null, outcomes: [] };
     results.set(item.id, ev);
     try {
-      // Scope ids as `@vitejs/plugin-vue` gives them in the Vue half: development mode, from its root
-      // (`vitest.config.ts`).
       for (const [file, text] of generate(dir, { components: "components", out: "generated", scopeId: "filepath", viteRoot: import.meta.dirname })) {
         writeFileSync(join(dir, "generated", file), plant && file !== "mod.rs" ? plantBug(text) : text);
       }
@@ -170,7 +145,6 @@ function evaluate(batch: string, items: Item[]): Map<string, Evaluated> {
   }
   if (!live.length || dry) return results;
 
-  // Vue.
   const vueCases = live.flatMap((item) =>
     item.fixtures.map((f, i) => ({
       key: `${item.id}/${i}`,
@@ -187,8 +161,6 @@ function evaluate(batch: string, items: Item[]): Map<string, Evaluated> {
   if (!existsSync(vueOut)) throw new Error(`the Vue renderer failed:\n${vitest.output}`);
   const vue = JSON.parse(readFileSync(vueOut, "utf8")) as Record<string, { ok?: string; err?: string }>;
 
-  // Rust: one crate for the whole batch. A module that does not compile is set aside, and the rest
-  // built again.
   mkdirSync(join(HARNESS, "src"), { recursive: true });
   if (!existsSync(join(HARNESS, "Cargo.toml")) || readFileSync(join(HARNESS, "Cargo.toml"), "utf8") !== HARNESS_TOML) {
     writeFileSync(join(HARNESS, "Cargo.toml"), HARNESS_TOML);
@@ -205,7 +177,6 @@ function evaluate(batch: string, items: Item[]): Map<string, Evaluated> {
       env: { FERROVUE_FUZZ_CASES: join(batch, "rust-cases.json"), FERROVUE_FUZZ_OUT: rustOut, CARGO_TERM_COLOR: "never" },
     });
     if (existsSync(rustOut)) break;
-    // Which modules the errors are in.
     const bad = new Set<string>();
     for (const m of cargo.output.matchAll(/^(\S+?\.rs):\d+:\d+: error/gm)) {
       const hit = building.find((i) => m[1]!.startsWith(join(batch, i.id) + "/"));
@@ -234,8 +205,6 @@ function evaluate(batch: string, items: Item[]): Map<string, Evaluated> {
   return results;
 }
 
-// ── Shrinking ───────────────────────────────────────────────────────────────────────────────────
-
 interface Failure {
   index: number;
   kind: "mismatch" | "rust-error" | "compile-error";
@@ -247,7 +216,6 @@ interface Failure {
   done: boolean;
 }
 
-/** Only the props `c` still declares. */
 const fit = (c: Component, f: Record<string, unknown>): Record<string, unknown> =>
   Object.fromEntries(Object.entries(f).filter(([k]) => c.props.some((p) => p.name === k)));
 
@@ -328,8 +296,6 @@ function save(f: Failure): string {
   return dir;
 }
 
-// ── Main ────────────────────────────────────────────────────────────────────────────────────────
-
 const started = Date.now();
 log(`ferrovue fuzz: seed ${seed}, ${only !== null ? `case ${only}` : `${count} components`} × ${perComponent} fixtures${plant ? ", PLANTED BUG" : ""}`);
 log(`  reproduce with FERROVUE_FUZZ_SEED=${seed}${only !== null ? ` FERROVUE_FUZZ_CASE=${only}` : ` FERROVUE_FUZZ_COUNT=${count}`}${plant ? " FERROVUE_FUZZ_PLANT=1" : ""} pnpm fuzz`);
@@ -372,7 +338,6 @@ for (const i of indices) {
     } else {
       if (o.k === "mismatch") tally.mismatches++;
       else tally.rustErrors++;
-      // One failure per component is shrunk: its first failing fixture.
       if (first) failures.push({ index: i, kind: o.k, component: c.component, fixture: c.fixtures[fi]!, outcome: o, compileError: null, offset: 0, done: false });
       first = false;
     }
@@ -386,7 +351,6 @@ for (const [msg, at] of compileErrors) log(`  not compiling ×${at.length} (case
 for (const [msg, at] of vueErrors) log(`  Vue error ×${at.length} (cases ${at.slice(0, 8).join(", ")}): ${msg}`);
 
 if (failures.length) {
-  // Differences first; then at most two components per distinct compile error.
   const perError = new Map<string, number>();
   const toShrink = [
     ...failures.filter((f) => f.kind !== "compile-error"),
@@ -399,7 +363,6 @@ if (failures.length) {
   ].slice(0, shrinkMax);
   log(`\nshrinking ${toShrink.length} of ${failures.length} failing components…`);
   shrink(toShrink);
-  // Shrunk cases that differ only in names and literals are one finding: the first is saved.
   const signature = (f: Failure): string =>
     `${f.kind} ${f.compileError?.split("\n")[0]!.replace(/^\S+?:\d+:\d+: /, "") ?? ""} ${printComponent(f.component).replace(/'[^']*'/g, "''").replace(/\b[a-z]+\d+\b/g, "v").replace(/\b\d+(\.\d+)?(e[+-]?\d+)?\b/g, "0")}`;
   const seen = new Map<string, number>();

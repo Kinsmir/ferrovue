@@ -1,20 +1,3 @@
-/* Random components and fixtures for the differential fuzzer (`run.ts`), within the grammar ferrovue
- * accepts (README, "What a component may use").
- *
- * Everything is driven by a seeded PRNG: `generateCase(seed, index)` always returns the same
- * component and fixtures. A component is kept as a small AST (props, interfaces, template nodes,
- * expression trees) rather than text, so the shrinker can remove nodes, attributes and
- * sub-expressions and still print a valid component.
- *
- * Two rules keep the output inside what ferrovue promises:
- * - expressions are well typed as TypeScript types them, and optional values are only read where
- *   they may be (`??`, interpolation, attributes, tests, or inside a `v-if` that narrows them);
- * - integer arithmetic stays exact: each integer expression carries a bound on its magnitude, and
- *   an operation that could leave ±2⁵³ is not generated. */
-
-// ── PRNG ────────────────────────────────────────────────────────────────────────────────────────
-
-/** sfc32, seeded through splitmix32: small, fast and the same on every platform. */
 export class Rng {
   private a: number;
   private b: number;
@@ -36,7 +19,6 @@ export class Rng {
     this.d = mix();
     for (let i = 0; i < 12; i++) this.next();
   }
-  /** A float in [0, 1). */
   next(): number {
     const t = (((this.a + this.b) | 0) + this.d) | 0;
     this.d = (this.d + 1) | 0;
@@ -46,7 +28,6 @@ export class Rng {
     this.c = (this.c + t) | 0;
     return (t >>> 0) / 4294967296;
   }
-  /** An integer in [lo, hi]. */
   int(lo: number, hi: number): number {
     return lo + Math.floor(this.next() * (hi - lo + 1));
   }
@@ -57,7 +38,6 @@ export class Rng {
     if (!xs.length) throw new Error("pick from nothing");
     return xs[Math.floor(this.next() * xs.length)]!;
   }
-  /** One of the options, each with its weight. */
   weighted<T>(options: readonly (readonly [number, T])[]): T {
     const total = options.reduce((s, [w]) => s + w, 0);
     let r = this.next() * total;
@@ -68,33 +48,21 @@ export class Rng {
   }
 }
 
-// ── The component AST ───────────────────────────────────────────────────────────────────────────
-
 export type Ty = "str" | "int" | "float" | "bool";
 
-/** An expression: its type, an exclusive bound on its magnitude when it is an integer, its
- * sub-expressions, and how it prints given theirs (already parenthesised when not atomic). */
 export interface Expr {
   ty: Ty;
   bound: number;
   kids: Expr[];
   fmt: (kids: string[]) => string;
   atom: boolean;
-  /** A test that narrows an optional value: the shrinker leaves it alone. */
   fixed?: boolean;
-  /** The value named, when the expression is a plain reference. */
   ref?: string;
-  /** `&&`, whose operands TypeScript narrows in the branch it guards. */
   and?: boolean;
-  /** A string that may hold half of a surrogate pair (`slice`, `charAt`…): two of them never meet
-   * (compared, searched, side by side), which ferrovue refuses. */
   lone?: boolean;
-  /** An arrow function's body, which reads its parameter: the shrinker never lifts it out. */
   scoped?: boolean;
 }
 
-/** What a prop or an interface field holds, which says both its TypeScript type and how a fixture
- * value is drawn. */
 export type Spec =
   | { k: "str" }
   | { k: "int"; wide: boolean }
@@ -104,7 +72,6 @@ export type Spec =
   | { k: "opt"; of: Spec }
   | { k: "list"; of: Spec }
   | { k: "obj"; iface: string }
-  /** `Record<string, T>`, or `{ [key: string]: T }` when `dict`. */
   | { k: "record"; of: Spec; dict: boolean };
 
 export interface Iface {
@@ -127,21 +94,10 @@ export type Node =
   | { k: "el"; tag: string; attrs: Attr[]; kids: Node[]; void?: boolean }
   | { k: "text"; s: string }
   | { k: "interp"; e: Expr }
-  /** A `v-if` chain: each branch an element (or `<template>`), the last one's test `null` for
-   * `v-else`. */
   | { k: "if"; branches: { cond: Expr | null; node: Node & { k: "el" } }[] }
-  /** `v-for="(item, index) in source"` on the element. */
   | { k: "for"; head: string; node: Node & { k: "el" } }
-  /** A component of the fuzzer's own (`HELPERS`), its default slot given `kids`, passed `attrs`,
-   * none of which it declares as props: they fall through. */
   | { k: "child"; name: HelperName; attrs: Attr[]; kids: Node[] };
 
-/** Small components written beside every generated one, which it may render: what scope ids and
- * the attributes it passes reach depends on how they are built — a single root, a slot, a root
- * that is a component forwarding its slot, a fragment, a root that is another component, a root
- * with attributes of its own, `inheritAttrs: false` with `$attrs` bound before and after an
- * element's own, `useAttrs()` bound on a root that inherits them as well and on an element alone,
- * a root with none of its own, and a root that is a component given none. */
 export type HelperName = "FzLeaf" | "FzBox" | "FzFwd" | "FzPair" | "FzRoot" | "FzOwn" | "FzBind" | "FzUse" | "FzPlain" | "FzBare";
 
 const HELPERS: Record<HelperName, { template: string; imports: HelperName[]; slot: boolean; script?: string[] }> = {
@@ -167,19 +123,14 @@ export interface Component {
   ifaces: Iface[];
   props: { name: string; spec: Spec }[];
   template: Node[];
-  /** Whether it has `<style scoped>`. */
   scoped: boolean;
-  /** Whether each helper has `<style scoped>`, and whether those use `:slotted()`. */
   helpers: Record<HelperName, { scoped: boolean; slotted: boolean }>;
 }
 
 export interface Case {
-  /** The component, the fixtures drawn for it (props by name). */
   component: Component;
   fixtures: Record<string, unknown>[];
 }
-
-// ── Printing ────────────────────────────────────────────────────────────────────────────────────
 
 export function printExpr(e: Expr): string {
   return e.fmt(e.kids.map((k) => (k.atom ? printExpr(k) : `(${printExpr(k)})`)));
@@ -258,10 +209,8 @@ function printNode(n: Node, indent: string, extra: string[] = []): string {
   }
 }
 
-/** `<style scoped>`, with a `:slotted()` rule or without. */
 const scopedStyle = (slotted: boolean): string[] => ["", "<style scoped>", slotted ? ":slotted(i) { color: red; }" : "b { color: red; }", "</style>"];
 
-/** The helpers a template renders itself, in order of name. */
 function rendered(template: Node[]): HelperName[] {
   const used = new Set<HelperName>();
   const walk = (ns: Node[]): void => {
@@ -278,7 +227,6 @@ function rendered(template: Node[]): HelperName[] {
   return [...used].toSorted();
 }
 
-/** The helpers a template renders, and those they render in turn. */
 function helpersUsed(template: Node[]): HelperName[] {
   const used = new Set<HelperName>();
   const add = (name: HelperName): void => {
@@ -289,7 +237,6 @@ function helpersUsed(template: Node[]): HelperName[] {
   return [...used].toSorted();
 }
 
-/** The `.vue` file of each helper the component renders. */
 export function helperFiles(c: Component): [string, string][] {
   return helpersUsed(c.template).map((name) => {
     const h = HELPERS[name];
@@ -300,7 +247,6 @@ export function helperFiles(c: Component): [string, string][] {
   });
 }
 
-/** The `.vue` file. */
 export function printComponent(c: Component): string {
   const float = c.props.some((p) => usesFloat(p.spec)) || c.ifaces.some((i) => i.fields.some((f) => usesFloat(f.spec)));
   const lines = ['<script setup lang="ts">'];
@@ -321,12 +267,8 @@ export function printComponent(c: Component): string {
   return lines.join("\n");
 }
 
-/** The key a record's value is held under in a fixture: its entries as `[key, value]` pairs, in the
- * order the JSON gives them — which JavaScript reorders, and a key given twice. */
 const ENTRIES = "\u0000entries";
 
-/** A fixture as JSON, keeping negative zero (which `JSON.stringify` writes as `0`), and writing a
- * record's entries in their own order. */
 export function fixtureJson(fixture: Record<string, unknown>): string {
   const write = (v: unknown, pad: string): string => {
     const inner = pad + "  ";
@@ -341,8 +283,6 @@ export function fixtureJson(fixture: Record<string, unknown>): string {
   };
   return write(fixture, "") + "\n";
 }
-
-// ── Values ──────────────────────────────────────────────────────────────────────────────────────
 
 const HOSTILE = [
   "",
@@ -383,7 +323,6 @@ const HOSTILE = [
   "ŉ",
   "İi̇",
   "x".repeat(40),
-  // Numbers as strings, for `Number`, `parseInt` and `parseFloat`.
   "42",
   " 3.5e2px",
   "0x1F",
@@ -401,7 +340,6 @@ const CHARS = [..."abcXYZ09 _-.,!?<>&\"'`/=;:#%{}()[]", "é", "ß", " ", "́", 
 
 function randomString(r: Rng, hostile: boolean): string {
   if (hostile || r.chance(0.5)) {
-    // Lone surrogates are not valid JSON for serde, and not text a fixture can carry: kept out.
     const s = r.pick(HOSTILE);
     return s === "\ud800" || s === "a\u0000b" ? "<&>" : s;
   }
@@ -450,8 +388,6 @@ function randomValue(r: Rng, spec: Spec, ifaces: Map<string, Iface>, hostile: bo
       return o;
     }
     case "record": {
-      // Keys JavaScript puts first (array indices, in numeric order) among others, now and then one
-      // given twice: the last value counts, in the first place.
       const pairs: [string, unknown][] = [];
       for (let n = r.weighted([[1, 0], [2, 1], [4, r.int(2, 5)]]); n > 0; n--) {
         const key = r.chance(0.15) && pairs.length ? r.pick(pairs)[0] : r.chance(0.4) ? r.pick(RECORD_KEYS) : randomString(r, hostile);
@@ -464,7 +400,6 @@ function randomValue(r: Rng, spec: Spec, ifaces: Map<string, Iface>, hostile: bo
 
 const RECORD_KEYS = ["0", "1", "2", "10", "01", "-1", "1.5", "4294967294", "4294967295", "9007199254740993", "a", "b", "<b>", "&", "🦀", "", " "];
 
-/** Fixture props for `c`: every required prop, and each optional one present or not. */
 export function randomFixture(r: Rng, c: Component, hostile: boolean): Record<string, unknown> {
   const ifaces = new Map(c.ifaces.map((i) => [i.name, i]));
   const out: Record<string, unknown> = {};
@@ -475,12 +410,9 @@ export function randomFixture(r: Rng, c: Component, hostile: boolean): Record<st
   return out;
 }
 
-// ── Expressions ─────────────────────────────────────────────────────────────────────────────────
-
 const LIMIT = 2 ** 53;
 const BOUND_SMALL = 1000;
 
-/** A method's receiver: an integer literal needs parentheses (`(3).toFixed(1)`). */
 const recv = (a: string | undefined): string => (/^[\d.]+$/.test(a ?? "") ? `(${a})` : (a ?? ""));
 const atom = (ty: Ty, text: string, bound = 0): Expr => ({ ty, bound, kids: [], fmt: () => text, atom: true });
 const node = (ty: Ty, kids: Expr[], fmt: (k: string[]) => string, bound = 0, isAtom = false): Expr => ({
@@ -491,11 +423,8 @@ const node = (ty: Ty, kids: Expr[], fmt: (k: string[]) => string, bound = 0, isA
   atom: isAtom,
 });
 
-/** A literal string as a template can spell it inside a double-quoted attribute: single quotes,
- * with no quote, backslash or backtick inside. */
 const STR_LITS = ["", "a", "x y", "<i>", "a&b", "&amp;", "→", "é", "🦀", " pad ", "px", "-", ", ", "Σ", "ß"];
 const strLit = (s: string): Expr => atom("str", `'${s}'`);
-/** Text inside a template literal. */
 const TPL_TEXT = ["", " ", "n=", " & ", "<", "é", "/", "px", "🦀"];
 
 function numLit(x: number, ty: Ty): Expr {
@@ -503,13 +432,11 @@ function numLit(x: number, ty: Ty): Expr {
   return { ...atom(ty, text, Math.abs(x) + 1), atom: x >= 0 && !Object.is(x, -0) };
 }
 
-/** A value in scope: a prop, a field of a loop item, an index or a range value. */
 interface Var {
   name: string;
   ty: Ty;
   opt: boolean;
   bound: number;
-  /** A string item of a list that may hold halves of surrogate pairs. */
   lone?: boolean;
 }
 interface ListVar {
@@ -526,8 +453,6 @@ interface Scope {
   records: RecordVar[];
 }
 
-/** A list a template computes — a source, then `filter`, `map` or `slice` — printed from the kids
- * of the expression it is part of, from `at` on. */
 interface ListExpr {
   of: Spec;
   kids: Expr[];
@@ -535,12 +460,8 @@ interface ListExpr {
   lone: boolean;
 }
 
-/** The literals a replacement may be: `$` patterns JavaScript reads, and ones it leaves alone. */
 const REPLACEMENTS = ["", "-", "$&", "$$", "$`", "$'", "$1", "$<x>", "[$&]", "🦀", "$"];
-/** A string in single quotes, for a literal that may hold one. */
 const quoted = (s: string): string => `'${s.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
-/** String literals of characters below U+D800, which order alike against a half of a pair and the
- * U+FFFD ferrovue holds for it. */
 const LOW_LITS = ["", "a", "x y", "<i>", "a&b", "→", "é", "Σ", "ß", "-"];
 
 const specTy = (s: Spec): Ty | null =>
@@ -551,9 +472,7 @@ class Gen {
   scope: Scope = { vars: [], lists: [], records: [] };
   loopDepth = 0;
   nodes = 0;
-  /** Arrow functions made so far, which number their parameters apart. */
   arrows = 0;
-  /** Inside slot content made to write nothing visible as often as not (`hollowKids`). */
   hollow = false;
   readonly r: Rng;
   readonly ifaces: Map<string, Iface>;
@@ -562,15 +481,12 @@ class Gen {
     this.ifaces = ifaces;
   }
 
-  /** Add the values a spec makes visible under `name` (a prop or `item.field`). */
   bind(name: string, spec: Spec, prop = false, lone = false): void {
     if (spec.k === "list") this.scope.lists.push({ name, of: spec.of });
     else if (spec.k === "record") this.scope.records.push({ name, of: spec.of });
     else if (spec.k === "obj") for (const f of this.ifaces.get(spec.iface)!.fields) this.bind(`${name}.${f.name}`, f.spec);
     else if (spec.k === "opt") {
       const ty = specTy(spec.of);
-      // An absent optional boolean prop is `false` to Vue: it is read as a boolean. (A field of an
-      // object is not cast: absent, it is `undefined`.)
       if (ty) this.scope.vars.push({ name, ty, opt: !(prop && ty === "bool"), bound: specBound(spec.of) });
     } else {
       const ty = specTy(spec)!;
@@ -595,10 +511,6 @@ class Gen {
     return { ...atom(v.ty, v.name, v.bound), ref: v.name, ...(v.lone ? { lone: true } : {}) };
   }
 
-  // ── Lists computed in the template ──
-
-  /** An arrow function of a list's item (and its index, now and then), its body made by `body`
-   * with the parameters in scope. */
   arrow(of: Spec, lone: boolean, body: () => Expr): { params: string; body: Expr } {
     const n = this.arrows++;
     const p = `a${n}`;
@@ -611,8 +523,6 @@ class Gen {
     return { params: withIndex ? `(${p}, j${n})` : `(${p})`, body: { ...e, scoped: true } };
   }
 
-  /** A list of strings, integers or objects, computed: a list in scope, a record's keys or values, or
-   * a string split — then filtered, mapped or sliced. `null` when there is nothing to start from. */
   listExpr(d: number): ListExpr | null {
     const r = this.r;
     const lists = this.scope.lists.filter((l) => l.of.k === "str" || l.of.k === "int" || l.of.k === "obj");
@@ -626,7 +536,6 @@ class Gen {
       [2, () => {
         const s = this.str(d - 1);
         const sep = r.pick([",", " ", "", "a", "🦀", ", "]);
-        // An empty separator cuts between code units: a pair in two.
         return { of: { k: "str" }, kids: [s], fmt: (k, at) => `${recv(k[at])}.split(${quoted(sep)})`, lone: !!s.lone || sep === "" };
       }],
     ])();
@@ -639,7 +548,6 @@ class Gen {
           return { ...prev, kids: [...prev.kids, fn.body], fmt: (k, at) => `${prev.fmt(k, at)}.filter(${fn.params} => ${k[at + width]})` };
         }],
         [3, () => {
-          // To strings or to integers small enough to stay exact wherever they are used.
           let out: Expr | undefined;
           const fn = this.arrow(prev.of, prev.lone, () => (out = r.chance(0.6) ? this.str(d - 1) : this.int(d - 1, BOUND_SMALL)));
           const of: Spec = out!.ty === "str" ? { k: "str" } : { k: "int", wide: false };
@@ -656,7 +564,6 @@ class Gen {
     return l;
   }
 
-  /** An index: a small integer literal, or an integer or a fraction of any size. */
   small(): Expr {
     const r = this.r;
     return r.weighted<() => Expr>([
@@ -666,7 +573,6 @@ class Gen {
     ])();
   }
 
-  /** A string from a computed list: joined, found, or written as JSON. */
   fromList(d: number): Expr | null {
     const r = this.r;
     const l = this.listExpr(d);
@@ -674,7 +580,6 @@ class Gen {
     const str = l.of.k === "str";
     return r.weighted<() => Expr>([
       [4, () => {
-        // Halves of pairs would join with no separator between them.
         const sep = r.pick(str && l.lone ? ["', '", "'-'", "' & '"] : [null, "', '", "'-'", "''", "' & '"]);
         return { ty: "str", bound: 0, kids: l.kids, atom: true, fmt: (k) => `${l.fmt(k, 0)}.join(${sep ?? ""})`, ...(str && l.lone ? { lone: true } : {}) };
       }],
@@ -687,12 +592,10 @@ class Gen {
     ])();
   }
 
-  /** The length of a computed list of objects, as a string: what such a list gives a string. */
   objListLength(l: ListExpr): Expr {
     return { ty: "str", bound: 0, kids: l.kids, atom: true, fmt: (k) => `String(${l.fmt(k, 0)}.length)` };
   }
 
-  /** An integer from a computed list: its length, where an item is, or an item found. */
   intFromList(d: number): Expr | null {
     const r = this.r;
     const l = this.listExpr(d);
@@ -710,7 +613,6 @@ class Gen {
     ])();
   }
 
-  /** A boolean from a computed list: whether some or every item passes, or one is there. */
   boolFromList(d: number): Expr | null {
     const r = this.r;
     const l = this.listExpr(d);
@@ -728,8 +630,6 @@ class Gen {
     ])();
   }
 
-  // Each generator takes a depth budget; at zero it makes a leaf.
-
   str(d: number): Expr {
     const r = this.r;
     const leaf = (): Expr => {
@@ -744,12 +644,10 @@ class Gen {
     if (d <= 0 || r.chance(0.3)) return leaf();
     const lists = this.scope.lists.filter((l) => l.of.k === "str" || l.of.k === "int");
     const opts = this.vars("str", Infinity, true);
-    /** A string node, which may hold a half of a pair when any of `from` may. */
     const str = (kids: Expr[], fmt: (k: string[]) => string, from: Expr[] = kids, isAtom = false): Expr => ({
       ...node("str", kids, fmt, 0, isAtom),
       ...(from.some((k) => k.lone) ? { lone: true } : {}),
     });
-    /** Two strings side by side: never two halves of pairs, which would join. */
     const pair = (): [Expr, Expr] => {
       const a = this.str(d - 1);
       const b = this.str(d - 1);
@@ -770,7 +668,6 @@ class Gen {
           return str([this.str(d - 1)], ([a]) => `${recv(a)}.${m}()`, undefined, true);
         },
       ],
-      // Methods counting UTF-16 code units, whose results may cut a pair.
       [3, () => {
         const m = r.pick(["slice", "slice", "substring"]);
         const s = this.str(d - 1);
@@ -788,14 +685,12 @@ class Gen {
         const pattern = r.pick(["", "a", " ", "🦀", "<", "&", "ab"]);
         const repl = r.pick(REPLACEMENTS);
         const s = this.str(d - 1);
-        // `replaceAll("")` matches between code units, cutting pairs.
         const lone = !!s.lone || (m === "replaceAll" && pattern === "");
         return { ...node("str", [s], ([a]) => `${recv(a)}.${m}(${quoted(pattern)}, ${quoted(repl)})`, 0, true), ...(lone ? { lone } : {}) };
       }],
       [2, () => {
         const m = r.pick(["padStart", "padEnd"]);
         const s = this.str(d - 1);
-        // A fill cut short inside a pair would join a half at the start of `s`.
         const fill = r.pick(s.lone ? [null, "", "0", "ab", "é", " "] : [null, "", "0", "ab", "🦀", "é", " "]);
         const counts = this.vars("int", 11).filter((v) => /^c\d/.test(v.name));
         const width: Expr = counts.length && r.chance(0.3) ? this.varRef(r.pick(counts)) : numLit(r.int(0, 10), "int");
@@ -804,7 +699,6 @@ class Gen {
       }],
       [1, () => {
         const s = this.str(d - 1);
-        // Repeated, a string ending with one half and starting with the other joins them.
         if (s.lone) return leaf();
         return node("str", [s], ([a]) => `${recv(a)}.repeat(${r.int(0, 3)})`, 0, true);
       }],
@@ -841,7 +735,6 @@ class Gen {
       parts.push(r.weighted<() => Expr>([[4, () => this.str(d - 1)], [3, () => this.num(d - 1)], [1, () => this.bool(d - 1)]])());
     }
     const texts = [r.pick(TPL_TEXT), ...parts.map(() => r.pick(TPL_TEXT))];
-    // Two halves of pairs side by side would join: some text between them.
     for (let i = 1; i < parts.length; i++) if (parts[i - 1]!.lone && parts[i]!.lone && !texts[i]) texts[i] = " ";
     return {
       ty: "str",
@@ -849,12 +742,10 @@ class Gen {
       kids: parts,
       atom: true,
       ...(parts.some((p) => p.lone) ? { lone: true } : {}),
-      // Inside `${}` a sub-expression needs no parentheses, but they do no harm.
       fmt: (k) => "`" + texts[0] + k.map((s, i) => "${" + s + "}" + texts[i + 1]).join("") + "`",
     };
   }
 
-  /** An integer expression whose magnitude stays below `max`. */
   int(d: number, max = LIMIT): Expr {
     const r = this.r;
     const leaf = (): Expr => {
@@ -881,7 +772,6 @@ class Gen {
       [2, () => { const a = this.int(d - 1, max), b = this.int(d - 1, max), f = r.pick(["max", "min"]); return node("int", [a, b], ([x, y]) => `Math.${f}(${x}, ${y})`, Math.max(a.bound, b.bound), true); }],
       [1, () => { const a = this.int(d - 1, max); return node("int", [a], ([x]) => `Math.abs(${x})`, a.bound, true); }],
       [2, () => { const a = this.int(d - 1, max), b = this.int(d - 1, max); return node("int", [this.test(d - 1), a, b], ([c, x, y]) => `${c} ? ${x} : ${y}`, Math.max(a.bound, b.bound)); }],
-      // Where a literal is, in UTF-16 code units: searched for, a half of a pair is never one.
       [max > 2 ** 31 ? 2 : 0, () => { const m = r.pick(["indexOf", "lastIndexOf"]); const lit = r.pick(STR_LITS); return node("int", [this.str(d - 1)], ([a]) => `${recv(a)}.${m}('${lit}')`, 2 ** 31, true); }],
       [max > 2 ** 31 ? 2 : 0, () => this.intFromList(d) ?? leaf()],
     ];
@@ -898,7 +788,6 @@ class Gen {
         [vs.length ? 6 : 0, () => this.varRef(r.pick(vs))],
         [2, () => numLit(r.pick([0.5, 0.1, 1.5, 2.25, 1e-7, 0.3, 100.5, 3.14159, 1.005]), "float")],
         [opts.length ? 2 : 0, () => node("float", [this.varRef(r.pick(opts)), numLit(r.pick([0.5, 1.25, 0.1]), "float")], ([a, b]) => `${a} ?? ${b}`)],
-        // README: "`??`" on a `Float`; an integer fallback is refused today (`??` between different types).
         [opts.length ? 0.1 : 0, () => node("float", [this.varRef(r.pick(opts)), numLit(0, "float")], ([a, b]) => `${a} ?? ${b}`)],
         [vs.length ? 0 : 2, () => node("float", [this.int(0), this.int(0)], ([a, b]) => `${a} / ${b}`)],
       ])();
@@ -908,19 +797,16 @@ class Gen {
       [4, () => { const op = r.pick(["+", "-", "*"]); const [a, b] = r.chance(0.5) ? [this.float(d - 1), this.num(d - 1)] : [this.num(d - 1), this.float(d - 1)]; return node("float", [a, b], ([x, y]) => `${x} ${op} ${y}`); }],
       [3, () => node("float", [this.num(d - 1), this.num(d - 1)], ([x, y]) => `${x} / ${y}`)],
       [1, () => node("float", [this.float(d - 1), this.num(d - 1)], ([x, y]) => `${x} % ${y}`)],
-      // An integer divided by a value that may be zero is NaN: a fraction to ferrovue.
       [this.vars("int").length ? 1 : 0, () => node("float", [this.int(d - 1), this.varRef(r.pick(this.vars("int")))], ([x, y]) => `${x} % ${y}`)],
       [1, () => node("float", [this.float(d - 1)], ([x]) => `-${x}`)],
       [2, () => { const f = r.pick(["round", "floor", "ceil", "trunc", "abs"]); return node("float", [this.float(d - 1)], ([x]) => `Math.${f}(${x})`, 0, true); }],
       [1, () => { const f = r.pick(["max", "min"]); return node("float", [this.float(d - 1), this.num(d - 1)], ([x, y]) => `Math.${f}(${x}, ${y})`, 0, true); }],
       [1, () => node("float", [this.test(d - 1), this.float(d - 1), this.float(d - 1)], ([c, x, y]) => `${c} ? ${x} : ${y}`)],
-      // A string read as a number, `NaN` when it is none.
       [2, () => { const f = r.pick(["Number", "parseFloat", "parseInt", "parseInt", "parseInt"]); const radix = f === "parseInt" ? r.pick(["", ", 10", ", 16"]) : ""; return node("float", [this.str(d - 1)], ([s]) => `${f}(${s}${radix})`, 0, true); }],
     ];
     return r.weighted(options)();
   }
 
-  /** A number of either kind. */
   num(d: number): Expr {
     return this.r.chance(0.5) ? this.int(d) : this.float(d);
   }
@@ -939,10 +825,8 @@ class Gen {
         const op = r.pick(["===", "!=="]);
         const a = this.str(d - 1);
         const b = r.chance(0.6) ? strLit(r.pick(STR_LITS)) : this.str(d - 1);
-        // Two halves of pairs compared would be told apart by JavaScript alone.
         return node("bool", [a, a.lone && b.lone ? strLit(r.pick(STR_LITS)) : b], ([x, y]) => `${x} ${op} ${y}`);
       }],
-      // Strings ordered by UTF-16 code unit; a half of a pair only against characters below U+D800.
       [2, () => {
         const op = r.pick(["<", ">", "<=", ">="]);
         const a = this.str(d - 1);
@@ -955,7 +839,6 @@ class Gen {
       [1, () => {
         const m = r.pick(["includes", "startsWith", "endsWith"]);
         const needle = this.str(d - 1);
-        // A half of a pair searched for would be found in a whole pair by JavaScript alone.
         return node("bool", [this.str(d - 1), needle.lone ? strLit(r.pick(STR_LITS)) : needle], ([a, b]) => `${recv(a)}.${m}(${b})`, 0, true);
       }],
       [2, () => this.boolFromList(d) ?? leaf()],
@@ -969,7 +852,6 @@ class Gen {
     return r.weighted(options)();
   }
 
-  /** A test outside `v-if` (`?:`, a class object): a boolean, or one value by its truthiness. */
   test(d: number): Expr {
     const r = this.r;
     const optVars = this.scope.vars.filter((v) => v.opt);
@@ -983,12 +865,10 @@ class Gen {
     ])();
   }
 
-  /** A `v-if` test: `!`, `&&` and `||` combine the truthiness of values of any type. */
   cond(d: number): Expr {
     const r = this.r;
     const optVars = this.scope.vars.filter((v) => v.opt);
     if (optVars.length && r.chance(0.1)) {
-      // Presence, tested without reading the value.
       const v = r.pick(optVars);
       const op = r.pick(["===", "!=="]);
       return node("bool", [this.varRef(v)], ([a]) => `${a} ${op} undefined`);
@@ -1001,7 +881,6 @@ class Gen {
     ])();
   }
 
-  /** Something to interpolate. */
   text(d: number): Expr {
     const r = this.r;
     const opts = this.scope.vars.filter((v) => v.opt);
@@ -1011,12 +890,9 @@ class Gen {
       [3, () => this.float(d)],
       [2, () => this.bool(d)],
       [opts.length ? 2 : 0, () => this.varRef(r.pick(opts))],
-      // An integer literal beyond i64, or written with an exponent, as JavaScript allows.
       [0.1, () => atom("int", r.pick(["1e21", "1e20", "2e3", "9007199254740993"]), LIMIT)],
     ])();
   }
-
-  // ── Attributes ──
 
   classBind(): ClassBind {
     const r = this.r;
@@ -1033,12 +909,10 @@ class Gen {
       [
         3,
         () => {
-          // Literal names are distinct (TypeScript refuses a repeated one); computed ones may meet.
           const seen = new Set<string>();
           const entries: { key: string | Expr; cond: Expr }[] = [];
           for (let n = r.int(1, 3); n > 0; n--) {
             let key: string | Expr = r.chance(0.25) ? this.str(1) : name().replace(/^([\w]+)-([\w]+)$/, "'$1-$2'");
-            // Names that are halves of pairs would be told apart by JavaScript alone.
             if (typeof key !== "string" && key.lone && entries.some((en) => typeof en.key !== "string" && en.key.lone)) key = name().replace(/^([\w]+)-([\w]+)$/, "'$1-$2'");
             if (typeof key === "string" && seen.has(key)) continue;
             if (typeof key === "string") seen.add(key);
@@ -1098,13 +972,9 @@ class Gen {
       ])();
     }
     if (tag === "input" && r.chance(0.5)) add({ k: "bind", name: "value", e: this.text(1) }, "value");
-    // A static and a bound attribute of the same name: the static one first, as authors write it.
     return out.sort((a, b) => (a.k === "static" ? 0 : 1) - (b.k === "static" ? 0 : 1));
   }
 
-  // ── Nodes ──
-
-  /** Children for an element that holds flow (`block`) or phrasing (`inline`) content. */
   kids(depth: number, ctx: "block" | "inline" | "list"): Node[] {
     const r = this.r;
     const out: Node[] = [];
@@ -1133,7 +1003,6 @@ class Gen {
     return { k: "el", tag, attrs, kids: this.kids(depth + 1, inner) };
   }
 
-  /** An element, or `<template>`, to carry a directive. */
   carrier(depth: number, ctx: "block" | "inline" | "list"): Node & { k: "el" } {
     if (ctx !== "list" && this.r.chance(this.hollow ? 0.6 : 0.2)) {
       this.nodes++;
@@ -1161,12 +1030,10 @@ class Gen {
     ])();
   }
 
-  /** One of the helpers, with content for its slot when it has one. */
   child(depth: number): Node {
     const r = this.r;
     this.nodes++;
     const name = r.pick<HelperName>(["FzLeaf", "FzBox", "FzFwd", "FzPair", "FzRoot", "FzOwn", "FzBind", "FzUse", "FzPlain", "FzBare"]);
-    // Attributes it does not declare, which fall through to its root or its `$attrs`.
     const attrs = r.chance(0.6) ? this.attrs("div") : [];
     if (!HELPERS[name].slot || !r.chance(0.8)) return { k: "child", name, attrs, kids: [] };
     if (this.hollow || !r.chance(0.75)) return { k: "child", name, attrs, kids: this.kids(depth + 1, "block") };
@@ -1178,10 +1045,6 @@ class Gen {
     }
   }
 
-  /** A node of slot content that may write nothing visible, whose emptiness Vue decides from each
-   * string pushed (`isComment` in `ssrRenderSlot`): an interpolation of an optional value or of a
-   * string that may be empty or whitespace, whitespace text, or a loop, branch or `<template>` that
-   * may render nothing but its comments, holding more of the same. */
   hollowNode(depth: number, ctx: "block" | "inline"): Node {
     const r = this.r;
     const opts = this.scope.vars.filter((v) => v.opt);
@@ -1204,9 +1067,7 @@ class Gen {
     for (let i = 0; i < n; i++) {
       const narrowable = this.scope.vars.filter((v) => v.opt);
       if (narrowable.length && r.chance(0.3)) {
-        // A test that narrows: inside the branch the value is no longer optional.
         const v = r.pick(narrowable);
-        // Narrowed as TypeScript narrows it: by truthiness, or by `!== undefined`.
         const cond: Expr = { ...(r.chance(0.6) ? this.varRef(v) : node("bool", [this.varRef(v)], ([a]) => `${a} !== undefined`)), fixed: true };
         const el = this.withScope(() => {
           this.scope.vars = this.scope.vars.map((x) => (x === v ? { ...x, opt: false } : x));
@@ -1214,7 +1075,6 @@ class Gen {
         });
         branches.push({ cond, node: el });
       } else {
-        // `a && b` narrows each optional operand inside the branch, in TypeScript and in ferrovue.
         const cond = this.cond(r.int(1, 2));
         const narrowed = new Set<string>();
         const walk = (e: Expr): void => {
@@ -1244,7 +1104,6 @@ class Gen {
         const counts = this.scope.vars.filter((v) => v.ty === "int" && !v.opt && v.bound <= 10 && /^c\d/.test(v.name));
         const records = this.scope.records;
         if (records.length && r.chance(0.3)) {
-          // A record: `(value, key, index) in r`, or `([key, value], index) in Object.entries(r)`.
           const rec = r.pick(records);
           const key = `k${d}`;
           this.bind(item, rec.of);
@@ -1261,7 +1120,6 @@ class Gen {
           [counts.length ? 2 : 0, () => [r.pick(counts).name, { k: "count" }, false]],
           [1, () => [`[${Array.from({ length: r.int(1, 3) }, () => printExpr(strLit(r.pick(STR_LITS)))).join(", ")}]`, { k: "str" }, false]],
           [3, () => {
-            // A computed list, printed here: the shrinker removes the loop, not parts of its source.
             const l = this.listExpr(2);
             if (!l) return [String(r.int(0, 4)), { k: "count" }, false];
             return [l.fmt(l.kids.map((k) => (k.atom ? printExpr(k) : `(${printExpr(k)})`)), 0), l.of, l.lone];
@@ -1270,7 +1128,6 @@ class Gen {
         const [src, of, lone] = source;
         let head: string;
         if (of.k === "obj" && d === 0 && r.chance(0.3) && this.ifaces.get(of.iface)!.fields.some((f) => !this.scope.vars.some((v) => v.name === f.name))) {
-          // Destructured: the fields become names of their own.
           const fields = this.ifaces.get(of.iface)!.fields.filter((f) => !this.scope.vars.some((v) => v.name === f.name));
           const take = fields.filter(() => r.chance(0.6));
           if (!take.length && fields.length) take.push(fields[0]!);
@@ -1315,8 +1172,6 @@ const TEXTS = [
   "a\n  b",
 ];
 
-// ── Components ──────────────────────────────────────────────────────────────────────────────────
-
 function randomSpec(r: Rng, ifaces: Iface[], depth: number): Spec {
   return r.weighted<() => Spec>([
     [5, () => ({ k: "str" })],
@@ -1330,7 +1185,6 @@ function randomSpec(r: Rng, ifaces: Iface[], depth: number): Spec {
   ])();
 }
 
-/** The component and fixtures for case `index` of a run seeded `seed`. */
 export function generateCase(seed: number, index: number, fixtures = 4): Case {
   const r = new Rng(seed, index);
   const name = `C${String(index).padStart(4, "0")}`;
@@ -1354,7 +1208,6 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
   const template: Node[] = [];
   for (let n = r.weighted([[6, 1], [1, 2], [1, 3]]); n > 0; n--) template.push(g.node(0, "block"));
 
-  // Scoped styles, on the component and on each helper, `:slotted()` ones on those with a slot.
   const scoped = r.chance(0.35);
   const helpers = Object.fromEntries(
     (Object.keys(HELPERS) as HelperName[]).map((h) => [h, { scoped: r.chance(0.5), slotted: r.chance(0.5) }]),
@@ -1365,9 +1218,6 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
   return { component, fixtures: fx };
 }
 
-// ── Shrinking ───────────────────────────────────────────────────────────────────────────────────
-
-/** A deep copy that keeps functions (an expression's printer) by reference. */
 export function clone<T>(x: T): T {
   if (Array.isArray(x)) return x.map(clone) as T;
   if (x && typeof x === "object") {
@@ -1378,7 +1228,6 @@ export function clone<T>(x: T): T {
   return x;
 }
 
-/** The component without the props and interfaces its template no longer reads. */
 export function prune(c: Component): Component {
   const text = c.template.map((n) => printNode(n, "")).join("\n");
   const used = (name: string): boolean => new RegExp(`(?<![\\w.$'])${name.replace(/\$/g, "\\$")}(?![\\w$])`).test(text);
@@ -1395,7 +1244,6 @@ export function prune(c: Component): Component {
   return { ...c, props, ifaces: c.ifaces.filter((i) => live.has(i.name)) };
 }
 
-/** Every expression slot in a node tree, as getter/setter pairs. */
 function* exprSlots(nodes: Node[]): Generator<{ get: () => Expr; set: (e: Expr) => void }> {
   for (const n of nodes) {
     if (n.k === "interp") yield { get: () => n.e, set: (e) => (n.e = e) };
@@ -1421,8 +1269,6 @@ function* exprSlots(nodes: Node[]): Generator<{ get: () => Expr; set: (e: Expr) 
   }
 }
 
-/** Every way to make an expression smaller: a sub-expression of the same type in its place, or a
- * sub-expression's own shrinks. */
 const LITERALS: Record<Ty, Expr> = { str: strLit("a"), int: numLit(1, "int"), float: numLit(0.5, "float"), bool: atom("bool", "true") };
 
 function* exprShrinks(e: Expr): Generator<Expr> {
@@ -1430,7 +1276,6 @@ function* exprShrinks(e: Expr): Generator<Expr> {
   if (!e.fixed && (e.kids.length || e.ref)) yield LITERALS[e.ty];
   for (let i = 0; i < e.kids.length; i++) {
     for (const s of exprShrinks(e.kids[i]!)) {
-      // Keep the type of the operand: a test may take any type, an operand its own.
       if (s.ty !== e.kids[i]!.ty) continue;
       const kids = [...e.kids];
       kids[i] = s;
@@ -1439,14 +1284,12 @@ function* exprShrinks(e: Expr): Generator<Expr> {
   }
 }
 
-/** The edits the shrinker tries, largest first, each applied to a fresh copy of `c`. */
 export function componentShrinks(c: Component): Component[] {
   const out: Component[] = [];
   const edit = (f: (copy: Component) => boolean): void => {
     const copy = clone(c);
     if (f(copy)) out.push(prune(copy));
   };
-  // Lists of sibling nodes, found in the same order on a copy.
   const lists = (comp: Component): Node[][] => {
     const acc: Node[][] = [comp.template];
     const walk = (ns: Node[]): void => {
@@ -1462,7 +1305,6 @@ export function componentShrinks(c: Component): Component[] {
     return acc;
   };
   const ls = lists(c);
-  // Remove one node.
   ls.forEach((l, li) =>
     l.forEach((_, ni) =>
       edit((x) => {
@@ -1473,13 +1315,11 @@ export function componentShrinks(c: Component): Component[] {
       }),
     ),
   );
-  // Put a plain element's children (or a directive's element) in its place.
   ls.forEach((l, li) =>
     l.forEach((n, ni) => {
       if ((n.k === "el" && !n.void) || n.k === "child") edit((x) => (lists(x)[li]!.splice(ni, 1, ...(lists(x)[li]![ni] as Node & { kids: Node[] }).kids), true));
       if (n.k === "for") edit((x) => (lists(x)[li]!.splice(ni, 1, (lists(x)[li]![ni] as Node & { k: "for" }).node), true));
       if (n.k === "if") {
-        // One branch's element in place of the whole chain, its test dropped.
         n.branches.forEach((_, bi) => edit((x) => (lists(x)[li]!.splice(ni, 1, (lists(x)[li]![ni] as Node & { k: "if" }).branches[bi]!.node), true)));
         n.branches.forEach((_, bi) => {
           edit((x) => {
@@ -1487,7 +1327,6 @@ export function componentShrinks(c: Component): Component[] {
             const m = list[ni] as Node & { k: "if" };
             if (m.branches.length < 2) return false;
             m.branches.splice(bi, 1);
-            // A `v-else` left alone is shown always.
             if (m.branches[0]!.cond === null) list.splice(ni, 1, m.branches[0]!.node);
             return true;
           });
@@ -1495,7 +1334,6 @@ export function componentShrinks(c: Component): Component[] {
       }
     }),
   );
-  // Remove one attribute, or one entry of a class or style, of an element or a child.
   const elements = (comp: Component): (Node & { k: "el" | "child" })[] => {
     const acc: (Node & { k: "el" | "child" })[] = [];
     const walk = (ns: Node[]): void => {
@@ -1525,13 +1363,11 @@ export function componentShrinks(c: Component): Component[] {
       }
     });
   });
-  // Drop a scoped style, or a `:slotted()` rule.
   if (c.scoped) edit((x) => ((x.scoped = false), true));
   for (const h of helpersUsed(c.template)) {
     if (c.helpers[h].scoped) edit((x) => ((x.helpers[h].scoped = false), true));
     if (c.helpers[h].scoped && c.helpers[h].slotted && HELPERS[h].slot) edit((x) => ((x.helpers[h].slotted = false), true));
   }
-  // Make one expression smaller.
   const slots = [...exprSlots(c.template)];
   slots.forEach((s, si) => {
     let i = 0;
@@ -1548,7 +1384,6 @@ export function componentShrinks(c: Component): Component[] {
   return out;
 }
 
-/** The ways to make a fixture value smaller. */
 function* valueShrinks(v: unknown): Generator<unknown> {
   if (typeof v === "string") {
     if (v === "") return;
@@ -1568,7 +1403,6 @@ function* valueShrinks(v: unknown): Generator<unknown> {
     for (let i = 0; i < v.length; i++) yield [...v.slice(0, i), ...v.slice(i + 1)];
     for (let i = 0; i < v.length; i++) for (const s of valueShrinks(v[i])) yield v.map((x, j) => (j === i ? s : x));
   } else if (v && typeof v === "object" && ENTRIES in v) {
-    // A record: an entry left out, or one key or value made smaller.
     const pairs = (v as Record<string, [string, unknown][]>)[ENTRIES]!;
     for (let i = 0; i < pairs.length; i++) yield { [ENTRIES]: [...pairs.slice(0, i), ...pairs.slice(i + 1)] };
     for (let i = 0; i < pairs.length; i++) {
@@ -1582,7 +1416,6 @@ function* valueShrinks(v: unknown): Generator<unknown> {
   }
 }
 
-/** Smaller fixtures for `c`: an optional prop left out, or one value made smaller. */
 export function fixtureShrinks(c: Component, fixture: Record<string, unknown>): Record<string, unknown>[] {
   const out: Record<string, unknown>[] = [];
   const ifaces = new Map(c.ifaces.map((i) => [i.name, i]));
@@ -1606,12 +1439,10 @@ export function fixtureShrinks(c: Component, fixture: Record<string, unknown>): 
       });
     }
     for (const s of valueShrinks(fixture[p.name])) {
-      // A required integer stays an integer; a value keeps its type.
       if (typeof s === "number" && (p.spec.k === "int" || p.spec.k === "count" || (p.spec.k === "opt" && p.spec.of.k === "int")) && !Number.isInteger(s)) continue;
       out.push({ ...fixture, [p.name]: s });
     }
   }
-  // Only the props the component still declares.
   const keep = (f: Record<string, unknown>): Record<string, unknown> =>
     Object.fromEntries(Object.entries(f).filter(([k]) => c.props.some((p) => p.name === k)));
   return out.map(keep);

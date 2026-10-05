@@ -1,21 +1,12 @@
-/* What the browser does with a page ferrovue rendered. */
 import { createSSRApp, type App, type Component, type Plugin } from "vue";
 import type { Pinia } from "pinia";
 import type { Router } from "vue-router";
 
-/** A JSON string, skipped whole as it may hold the same letters, or a bare number JSON has no word
- * for, which the server writes as JavaScript does where `serde_json` alone would write `null`. */
 const BARE = /"(?:[^"\\]|\\.)*"|-?Infinity|NaN/g;
 const NON_FINITE: Record<string, number> = { NaN: Number.NaN, Infinity: Number.POSITIVE_INFINITY, "-Infinity": Number.NEGATIVE_INFINITY };
 
-/** `JSON.parse`, reading back the bare `NaN`, `Infinity` and `-Infinity` that an island's props and
- * the state script hold for a number that is not finite, so the client renders what the server did.
- * Throws as `JSON.parse` does on anything else that is not JSON. */
 function parseJson(text: string): unknown {
-  // Plain JSON: almost everything the server writes, and all it wrote before it wrote these.
   if (!/NaN|Infinity/.test(text)) return JSON.parse(text);
-  // Each token becomes a string that starts with more NULs in a row than any string in the text
-  // holds (JSON has one way to write a NUL, `\u0000`), so no other value can be mistaken for one.
   let escaped = "\\u0000";
   while (text.includes(escaped)) escaped += "\\u0000";
   const tag = JSON.parse(`"${escaped}"`) as string;
@@ -68,7 +59,6 @@ export async function mountIslands(components: Record<string, IslandComponent>, 
   const root = options.root ?? document;
   const report = options.onError ?? ((el: Element, problem: string) => console.warn(`[ferrovue] island left unhydrated: ${problem}`, el));
   const elements = Array.from(root.querySelectorAll<HTMLElement>("[data-island]"));
-  // Each component the page names, loaded once however many islands it has.
   const loading = new Map<string, Promise<Component | Error>>();
   for (const el of elements) {
     const name = el.dataset.island ?? "";
@@ -112,8 +102,6 @@ export async function mountIslands(components: Record<string, IslandComponent>, 
   };
 }
 
-/** The component itself, or what its loader resolves to: a module's default export, or the
- * component. A loader that rejects gives its error, which leaves only its own islands unhydrated. */
 async function load(component: IslandComponent): Promise<Component | Error> {
   if (typeof component !== "function" || "props" in component || "displayName" in component || "__vccOpts" in component) return component;
   try {

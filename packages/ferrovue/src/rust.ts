@@ -1,5 +1,3 @@
-/* The Rust source written for each component, and the modules beside them. */
-
 import { parse as parseJs } from "@babel/parser";
 import { basename } from "node:path";
 import { type Component, type Field, type N, type Struct, type Ty, blankComponent, fail, GenError, rustStr, snake, tagAst, takesAttrs } from "./model.ts";
@@ -15,7 +13,6 @@ import { scopeFor } from "./script.ts";
 
 export function needsLifetime(ty: Ty, comp: Component, seen: Set<string> = new Set()): boolean {
   switch (ty.k) {
-    // A record's keys are strings.
     case "str":
     case "record":
       return true;
@@ -23,7 +20,6 @@ export function needsLifetime(ty: Ty, comp: Component, seen: Set<string> = new S
     case "list":
       return needsLifetime(ty.of, comp, seen);
     case "struct": {
-      // A struct that holds itself borrows only if something else in it does.
       if (seen.has(ty.name)) return false;
       const { st, owner } = lookupStruct(comp, ty);
       const inner = new Set(seen).add(ty.name);
@@ -33,7 +29,6 @@ export function needsLifetime(ty: Ty, comp: Component, seen: Set<string> = new S
       const child = childOf(ty.name);
       return structLifetime(child.props, child);
     }
-    // A configured type that borrows says so by naming the props' lifetime: `Trusted<'a>`.
     case "html":
       return ctx.trustedHtml?.includes("'a") ?? false;
     default:
@@ -77,8 +72,6 @@ export function rustTy(ty: Ty, comp: Component): string {
   }
 }
 
-/** A constructor parameter for a field of type \`ty\`, and how its argument becomes the field's
- * value: strings from anything that turns into a \`Cow\`, lists of them from any iterator. */
 function param(ty: Ty, comp: Component, arg: string): { ty: string; value: string } {
   if (ty.k === "str") return { ty: "impl Into<Cow<'a, str>>", value: `${arg}.into()` };
   if (ty.k === "list" && ty.of.k === "str") {
@@ -87,8 +80,6 @@ function param(ty: Ty, comp: Component, arg: string): { ty: string; value: strin
   return { ty: rustTy(ty, comp), value: arg };
 }
 
-/** \`new\` with every required field, and a chainable setter for each optional one, so building
- * props from Rust takes neither \`Cow\` nor \`None\`. */
 function builderSource(st: Struct, comp: Component, life: string): string {
   const required = st.fields.filter((f) => f.ty.k !== "opt");
   const optional = st.fields.filter((f) => f.ty.k === "opt");
@@ -110,7 +101,6 @@ function builderSource(st: Struct, comp: Component, life: string): string {
     })
     .join("\n");
   const usesA = /'a/.test(params + setters);
-  // A struct without strings has no lifetime for its constructor to name.
   const impl = life ? "impl<'a>" : usesA ? "impl<'a>" : "impl";
   return `${impl} ${st.name}${life} {
     /// ${st.name} with ${required.length ? "its required fields" : "nothing set"}${optional.length ? ", every optional one absent" : ""}.
@@ -133,8 +123,6 @@ export function structSource(st: Struct, comp: Component, doc: string): string {
       return `${attrs}\n    pub ${f.rust}: ${rustTy(f.ty, comp)},`;
     })
     .join("\n");
-  /* `Deserialize` only for the conformance suite. Props go out as JSON and never come back in, and a
-   * `Deserialize` in production would be a way to make a `TrustedHtml` value out of any string. */
   return `${doc}#[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct ${st.name}${life} {
@@ -151,7 +139,6 @@ export function header(source: string, edit = "the `.vue` file"): string {
 `;
 }
 
-/** Rust expressions summing the lengths of the strings a value of type `ty` at `place` holds. */
 export function textLen(comp: Component, place: string, ty: Ty, seen: Set<string> = new Set()): string[] {
   switch (ty.k) {
     case "str":
@@ -167,7 +154,6 @@ export function textLen(comp: Component, place: string, ty: Ty, seen: Set<string
       }
       return [];
     case "struct": {
-      // A recursive structure is counted to its first level: the reservation is an estimate.
       if (seen.has(ty.name)) return [];
       const { st, owner } = lookupStruct(comp, ty);
       const inner = new Set(seen).add(ty.name);
@@ -186,17 +172,11 @@ export function textLen(comp: Component, place: string, ty: Ty, seen: Set<string
   }
 }
 
-/** `render`, and for a component a parent may hand scope ids or pass attributes to,
- * `render_scoped`, which takes them last, as `ssrRenderAttrs` writes them onto its root; `render`
- * hands it none. */
 function renderSource(comp: Component, life: string, args: string, e: Emitter): string {
   const doc = "/// Write the component's server render into `out`.\n";
-  // Props or ids the render never reads, as when a component only passes its slot on.
   const props = e.reads("props", 0) ? "props" : "_props";
   if (!comp.inherits && !takesAttrs(comp)) return `${doc}pub fn render(out: &mut String, ${props}: &Props${life}${extraParams(comp)}) {\n${e.lines.join("\n")}\n}`;
-  // A root that is a fragment, or a `<Teleport>`, takes no ids.
   const attrs = e.reads("fv_attrs", 0) ? "fv_attrs" : "_fv_attrs";
-  // A component a parent may pass attributes takes them with the ids, as one `fv::Attrs`.
   const [none, ty, what] = takesAttrs(comp)
     ? ["&fv::Attrs::NONE", "&fv::Attrs<'_>", "the attributes a parent passes beyond the props, and the scope ids it hands the root"]
     : ['""', "&str", "the scope ids a parent hands the root: ` data-v-…` each"];
@@ -211,8 +191,6 @@ ${e.lines.join("\n")}
 }`;
 }
 
-/** Whether the component gets an `island()`: it renders from its props alone, which `data-props` is
- * all the client gets to mount it with. */
 export function isIsland(comp: Component): boolean {
   return !takesSlots(comp) && comp.takes.size === 0;
 }
@@ -232,17 +210,11 @@ export function componentSource(comp: Component, ast: N[], ssr: string, componen
   const e = new Emitter();
   for (const l of lets) e.stmt(l);
   statements(scope, e, fn.body.body);
-  // A setup value the render never reads is not computed. Checked from the last up, since one may
-  // read another declared before it.
   for (let i = lets.length - 1; i >= 0; i--) {
     const name = /^let (\w+)/.exec(lets[i]!)![1]!;
     if (!e.reads(name, i + 1)) e.lines.splice(i, 1);
   }
   e.flush();
-  /* The literal markup, a loop's once per item, what the helpers can write, and every string the
-   * props hold. Literals in untaken branches overcount and escaping or a string used twice
-   * undercounts, so it is an estimate — close enough that the buffer is sized once, where
-   * reserving the literals alone leaves it to grow again at the first long label. */
   const text = textLen(comp, "props", { k: "struct", name: "Props" });
   const fixed = e.literalBytes + scope.helperBytes.n;
   const reserve = [...(fixed || !(e.perItem.length + text.length) ? [String(fixed)] : []), ...e.perItem, ...text];
@@ -251,16 +223,12 @@ export function componentSource(comp: Component, ast: N[], ssr: string, componen
   const life = structLifetime(comp.props, comp) ? "<'_>" : "";
   const gen = life ? "<'p, 'a>" : "<'p>";
   const named = life ? "<'a>" : "";
-  // What holds its props borrows only what they borrow.
   const owned = life ? "<'a>" : "";
   const ownedLife = life ? "'a" : "'static";
-  // An `interface Props` that `defineProps` takes is the props struct itself, written once below.
   const structs = [...comp.structs.values()]
     .filter((st) => st.name !== "Props" && !st.slot)
     .map((st) => structSource(st, comp, `/// \`${st.name}\` in \`${basename(comp.file)}\`.\n`))
     .join("\n");
-  // `Cow` is imported only where a field is one: a lifetime that comes from another component's props
-  // alone borrows through that type, not through a `Cow` written here.
   const usesCow = /Cow</.test(structs + structSource(comp.props, comp, ""));
   const plain = isIsland(comp);
   const slotFields = [
@@ -337,12 +305,10 @@ ${slotsStruct}${renderSource(comp, life, args, e)}
 ${wrappers}`;
 }
 
-/** Whether a component's `render_json` arm reads the fixture beyond the props. */
 function readsFixture(c: Component): boolean {
   return takesSlots(c) || paramsOf(c).some((p) => p.test.fixture);
 }
 
-/** `mod.rs`: the components' modules and `modules`, those the plugins write beside them. */
 export function modSource(comps: Component[], modules: string[]): string {
   const arms = comps
     .map((c) => {
@@ -355,7 +321,6 @@ export function modSource(comps: Component[], modules: string[]): string {
           const local = `s_${snake(n).replace(/^r#/, "")}`;
           const shape = c.slotShapes.get(n);
           if (shape) {
-            // A fixture's content for a scoped slot is static: it is given the props and ignores them.
             const life = shape.fields.some((f) => slotFieldBorrows(f.ty)) ? "<'_>" : "";
             lines.push(`let ${local} = |out: &mut String, _: &${c.module}::${shape.name}${life}${c.passesSlotIds ? ", _: &str" : ""}| -> bool { out.push_str(fixture.slot(${rustStr(n)}).unwrap_or_default()); true };`);
           } else lines.push(`let ${local} = |out: &mut String| out.push_str(fixture.slot(${rustStr(n)}).unwrap_or_default());`);
@@ -377,7 +342,6 @@ export function modSource(comps: Component[], modules: string[]): string {
       return `        ${rustStr(c.name)} => {\n${lines.map((l) => "            " + l).join("\n")}\n        }`;
     })
     .join("\n");
-  // Every parameter's field, whichever components take it.
   const fields = renderParams().flatMap((p) => (p.fixtureField === undefined ? [] : [p.fixtureField]));
   const defaults = renderParams().flatMap((p) => (p.fixtureDefault === undefined ? [] : [p.fixtureDefault]));
   const fixture = comps.some(readsFixture)

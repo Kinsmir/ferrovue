@@ -1,9 +1,3 @@
-/* ferrovue's own conformance suite: the components in `crates/ferrovue/tests/conformance/`
- * rendered by Vue, held to the recorded fixtures that the generated Rust is held to as well
- * (`crates/ferrovue/tests/conformance.rs`). They cover what a project's own components may not
- * exercise: slots, their fallbacks, `<RouterLink>` and `<RouterView>`.
- *
- * `FERROVUE_FIXTURES_WRITE=1` records the `.html` files from Vue instead of comparing. */
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -47,7 +41,6 @@ describe("Vue renders each fixture to its recorded HTML", () => {
   for (const c of cases) {
     it(`${c.component}/${c.name}`, async () => {
       const app = await fixtureApp(components.get(c.component)!, readFixture(c.json), ROUTES, OPTIONS);
-      // What was teleported follows the render, after a marker, as the generated Rust writes it.
       const ssr: { teleports?: Record<string, string> } = {};
       const main = await renderToString(app, ssr);
       const teleported = Object.entries(ssr.teleports ?? {});
@@ -59,7 +52,6 @@ describe("Vue renders each fixture to its recorded HTML", () => {
   }
 });
 
-// Skipped while recording: the HTML it would mount is what this run is writing.
 describe.skipIf(WRITE)("the recorded HTML hydrates without a mismatch", () => {
   let warnings: string[] = [];
   beforeEach(() => {
@@ -74,7 +66,6 @@ describe.skipIf(WRITE)("the recorded HTML hydrates without a mismatch", () => {
   });
   for (const c of cases) {
     it(`${c.component}/${c.name}`, async () => {
-      // Teleported content is placed in its targets, as a page places it.
       document.body.innerHTML = hydrationBody(c.html);
       const before = document.getElementById("root")!.firstChild;
       const app = await fixtureApp(components.get(c.component)!, readFixture(c.json), ROUTES, OPTIONS);
@@ -89,11 +80,6 @@ describe.skipIf(WRITE)("the recorded HTML hydrates without a mismatch", () => {
   }
 });
 
-/* Hydration keeps the server's attributes without comparing scope ids, so a wrong one would hydrate
- * cleanly and leave the scoped styles unapplied. Each element of the recorded HTML must carry the
- * ids a fresh client render gives it — except where Vue's own server render differs from its client
- * render, as `ScopedQuirks` shows: a `:slotted()` component's slot fallback, and a root with
- * `inheritAttrs: false` under a scoped component's root. */
 const CLIENT_DIFFERS = new Set(["ScopedQuirks", "ScopedCard/empty.json", "ScopedShelf/empty.json", "ScopedRack/empty.json", "PlainForward/empty.json"]);
 describe.skipIf(WRITE)("the recorded HTML carries the scope ids the client renders", () => {
   const ids = (root: ParentNode): string[] =>

@@ -1,4 +1,3 @@
-/* \`--check --diff\`'s unified diff, held to GNU \`diff -u\` on the same files. */
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -6,7 +5,6 @@ import { join } from "node:path";
 import { expect, it } from "vitest";
 import { unifiedDiff } from "../src/diff.ts";
 
-/** What \`diff -u\` writes for the two texts, without its trailing newline. */
 function gnu(before: string, after: string): string {
   const dir = mkdtempSync(join(tmpdir(), "ferrovue-diff-"));
   try {

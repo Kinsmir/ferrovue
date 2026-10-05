@@ -1,14 +1,3 @@
-/* Release chores, shared by a maintainer's machine and the release workflow.
- *
- *   node scripts/release.ts bump 0.2.0 [--pr]  set the version in every manifest, update the lockfile,
- *                                              and move the changelog's [Unreleased] notes under it;
- *                                              with --pr, commit on a release branch and open a PR
- *   node scripts/release.ts check v0.2.0       exit 1 unless the tag, every manifest and the changelog agree
- *   node scripts/release.ts notes 0.2.0        print that version's changelog notes, for the GitHub release
- *   node scripts/release.ts members            exit 1 unless both workspaces list every member by its path
- *   node scripts/release.ts crates             print the crates in the order they are published
- *
- * The crates and the npm package are released together and always share one version. */
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -20,11 +9,8 @@ const PACKAGE = join(ROOT, "packages/ferrovue/package.json");
 const CHANGELOG = join(ROOT, "CHANGELOG.md");
 const CRATES_DIR = join(ROOT, "crates");
 
-/** The crates published to crates.io, in the order they are published: each one before the crates
- * that depend on it, which crates.io must already have. */
 export const CRATES = ["ferrovue-core", "ferrovue-router", "ferrovue-i18n", "ferrovue"];
 
-/** SemVer 2.0: `1.2.3`, with an optional pre-release (`-rc.1`); build metadata is not used here. */
 const SEMVER = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$/;
 
 export function isVersion(v: string): boolean {
@@ -35,7 +21,6 @@ export function isPrerelease(v: string): boolean {
   return v.includes("-");
 }
 
-/** The version `[workspace.package]` declares, which the crate inherits. */
 export function cargoVersion(toml: string): string {
   const section = /^\[workspace\.package\]$([\s\S]*?)(?=^\[|(?![\s\S]))/m.exec(toml);
   const version = section && /^version\s*=\s*"([^"]+)"/m.exec(section[1]!);
@@ -43,7 +28,6 @@ export function cargoVersion(toml: string): string {
   return version[1]!;
 }
 
-/** `[workspace.dependencies]`'s body, from its header to the next section, or null. */
 function workspaceDependencies(toml: string): { start: number; end: number } | null {
   const header = /^\[workspace\.dependencies\]$/m.exec(toml);
   if (!header) return null;
@@ -52,11 +36,8 @@ function workspaceDependencies(toml: string): { start: number; end: number } | n
   return { start, end: next ? start + next.index : toml.length };
 }
 
-/** A line of `[workspace.dependencies]` naming one of the runtime's crates and its version. */
 const REQUIREMENT = /^(ferrovue[\w-]*)(\s*=\s*\{[^}\n]*\bversion\s*=\s*")([^"]*)(")/gm;
 
-/** What each of the runtime's own crates is required at in `[workspace.dependencies]`. The crates
- * depend on one another at exactly the release's version: `"=0.2.0"`. */
 export function cargoRequirements(toml: string): Map<string, string> {
   const deps = workspaceDependencies(toml);
   const found = new Map<string, string>();
@@ -64,8 +45,6 @@ export function cargoRequirements(toml: string): Map<string, string> {
   return found;
 }
 
-/** The workspace's version set, which every crate inherits, and the requirements on the runtime's
- * own crates set to exactly it. */
 export function setCargoVersion(toml: string, version: string): string {
   const old = cargoVersion(toml);
   const at = toml.indexOf("[workspace.package]");
@@ -81,12 +60,10 @@ export function packageVersion(json: string): string {
   return (JSON.parse(json) as { version: string }).version;
 }
 
-/** The package's version replaced in place, so the file keeps its formatting. */
 export function setPackageVersion(json: string, version: string): string {
   return json.replace(/("version"\s*:\s*)"[^"]*"/, `$1"${version}"`);
 }
 
-/** The notes under a version's heading, up to the next heading of the same level. */
 export function changelogNotes(changelog: string, version: string): string | null {
   const lines = changelog.split("\n");
   const start = lines.findIndex((l) => l.startsWith(`## [${version}]`));
@@ -95,7 +72,6 @@ export function changelogNotes(changelog: string, version: string): string | nul
   return lines.slice(start + 1, end < 0 ? undefined : end).join("\n").trim();
 }
 
-/** `[Unreleased]`'s notes moved under the new version, dated, with a fresh empty `[Unreleased]`. */
 export function releaseChangelog(changelog: string, version: string, date: string): string {
   if (changelogNotes(changelog, version) !== null) throw new Error(`CHANGELOG.md already has ${version}`);
   const unreleased = changelogNotes(changelog, "Unreleased");
@@ -104,8 +80,6 @@ export function releaseChangelog(changelog: string, version: string, date: strin
   return changelog.replace("## [Unreleased]", `## [Unreleased]\n\n## [${version}] - ${date}`);
 }
 
-/** The files a release is checked against. `crates` holds each crate's manifest, by the name of its
- * directory under `crates/`. */
 export interface ReleaseFiles {
   cargo: string;
   pkg: string;
@@ -113,7 +87,6 @@ export interface ReleaseFiles {
   crates?: Record<string, string>;
 }
 
-/** What disagrees between a tag and the repository, if anything. */
 export function checkRelease(tag: string, files: ReleaseFiles): string[] {
   const problems: string[] = [];
   const version = tag.replace(/^v/, "");
@@ -137,7 +110,6 @@ export function checkRelease(tag: string, files: ReleaseFiles): string[] {
   return problems;
 }
 
-/** The members a workspace lists: Cargo.toml's `members`, or pnpm-workspace.yaml's `packages`. */
 export function workspaceMembers(text: string, kind: "cargo" | "pnpm"): string[] {
   if (kind === "cargo") {
     const list = /^members\s*=\s*\[([^\]]*)\]/m.exec(text)?.[1] ?? "";
@@ -147,8 +119,6 @@ export function workspaceMembers(text: string, kind: "cargo" | "pnpm"): string[]
   return [...block.matchAll(/^[ \t]+-[ \t]*['"]?([^'"\n#]+?)['"]?[ \t]*$/gm)].map((m) => m[1]!);
 }
 
-/** What is wrong with a workspace's list of members: a wildcard, a member that is not there, or a
- * crate or package directory it leaves out. `dirs` are the directories that hold a manifest. */
 export function checkMembers(file: string, members: string[], dirs: string[]): string[] {
   const problems: string[] = [];
   for (const m of members) {
@@ -159,8 +129,6 @@ export function checkMembers(file: string, members: string[], dirs: string[]): s
   return problems;
 }
 
-/** The workspaces' member lists against the directories that hold a manifest, under the folders
- * the workspaces draw from. */
 function memberProblems(): string[] {
   const withManifest = (manifest: string): string[] =>
     ["crates", "examples", "packages"].flatMap((top) =>
@@ -201,7 +169,6 @@ function main(argv: string[]): number {
       writeFileSync(CHANGELOG, releaseChangelog(files.changelog, arg, date));
       writeFileSync(CARGO, setCargoVersion(files.cargo, arg));
       writeFileSync(PACKAGE, setPackageVersion(files.pkg, arg));
-      // The lockfile records the workspace's own versions too.
       run("cargo", ["update", "--workspace", "--offline"]);
       console.log(`ferrovue is at ${arg}: the crates ${CRATES.join(", ")} and the npm package`);
       if (flags.includes("--pr")) {

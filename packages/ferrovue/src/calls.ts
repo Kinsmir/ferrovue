@@ -1,6 +1,3 @@
-/* Calls: Vue's compiler helpers, the configured helpers, JavaScript's own functions (`String`,
- * `Number`, `Math`, `JSON.stringify`, …) and the methods of strings, numbers and lists. */
-
 import { type N, type Scope, type Ty, type Val, BOOL, fail, FLOAT, INT, sameTy, STR } from "./model.ts";
 import { ctx } from "./context.ts";
 import { claim } from "./plugin.ts";
@@ -27,7 +24,6 @@ export function call(s: Scope, n: N): Val {
         return fail(comp, "`v-model` comparison between these types", n);
       }
       case "_ssrIncludeBooleanAttr": {
-        // `!!value || value === ""`: every string is included, empty or not.
         const a = expr(s, args[0]);
         if (a.konst !== undefined) return a;
         if (a.ty.k === "str") return { code: "true", ty: BOOL, konst: true };
@@ -37,7 +33,6 @@ export function call(s: Scope, n: N): Val {
       case "_ssrLooseContain":
         return fail(comp, "`v-model` over an array", n);
     }
-    // A plugin's function, such as `t(…)` from `useI18n()`.
     const own = claim((p) => p.call?.(s, n));
     if (own) return own;
     const helper = s.helpers.get(callee.name);
@@ -48,7 +43,6 @@ export function call(s: Scope, n: N): Val {
       if (isNumber(a.ty)) return { code: `&*fv::Js(${bare(a.code)}).to_string()`, ty: STR };
       if (a.ty.k === "bool") return { code: `if ${condition(a.code)} { "true" } else { "false" }`, ty: STR };
     }
-    // Strings read as numbers, as JavaScript reads them: a fraction, `NaN` when there is no number.
     if (callee.name === "Number" && args.length === 1) {
       const a = expr(s, args[0]);
       if (a.ty.k === "str") return { code: `fv::js_number(${strArg(a.code)})`, ty: FLOAT };
@@ -58,7 +52,6 @@ export function call(s: Scope, n: N): Val {
     }
     if ((callee.name === "parseInt" && (args.length === 1 || args.length === 2)) || (callee.name === "parseFloat" && args.length === 1)) {
       const a = expr(s, args[0]);
-      // Not a number: `parseInt` reads it as a string, so `parseInt(0.0000005)` is 5.
       if (a.ty.k !== "str") fail(comp, `\`${callee.name}()\` takes a string`, args[0]);
       if (callee.name === "parseFloat") return { code: `fv::js_parse_float(${strArg(a.code)})`, ty: FLOAT };
       const radix = args[1];
@@ -81,18 +74,15 @@ export function call(s: Scope, n: N): Val {
     if (callee.object.type === "Identifier" && callee.object.name === "Object") return objectCall(s, method, args, n);
     if (callee.object.type === "Identifier" && callee.object.name === "JSON" && method === "stringify" && args.length === 1) {
       const v = expr(s, args[0]);
-      // A boolean is one of two literals, which need no `String`.
       if (v.ty.k === "bool") return { code: `if ${condition(v.code)} { "true" } else { "false" }`, ty: STR };
       return { code: `&*${json(s, v, args[0])}`, ty: STR };
     }
-    // A plugin's function, such as `$t(…)` in the template.
     const own = claim((p) => p.call?.(s, n));
     if (own) return own;
     if (callee.object.type === "Identifier" && (callee.object.name === "$setup" || callee.object.name === "_ctx")) {
       const helper = s.helpers.get(method);
       if (helper) return helperCall(s, helper, args, n);
     }
-    // `Math`, on numbers, as JavaScript computes it.
     if (callee.object.type === "Identifier" && callee.object.name === "Math") {
       const vals = args.map((a) => expr(s, a));
       if (vals.length && vals.every((v) => isNumber(v.ty))) {
@@ -120,7 +110,6 @@ export function call(s: Scope, n: N): Val {
           return { code: `fv::js_trim_start(${strArg(target.code)})`, ty: STR, ...lone };
         case "trimEnd":
           return { code: `fv::js_trim_end(${strArg(target.code)})`, ty: STR, ...lone };
-        // Unicode's default case mappings, which JavaScript and Rust both apply, final sigma included.
         case "toUpperCase":
           return { code: `&*${receiver(target.code)}.to_uppercase()`, ty: STR, ...lone };
         case "toLowerCase":
@@ -132,7 +121,6 @@ export function call(s: Scope, n: N): Val {
       if (m) return m;
     }
     if (isNumber(target.ty) && method === "toFixed" && args.length <= 1) {
-      // The digits are a literal, as they almost always are: 0 to 100.
       const d = args.length ? args[0] : { type: "NumericLiteral", value: 0 };
       if (d.type !== "NumericLiteral" || !Number.isInteger(d.value) || d.value < 0 || d.value > 100) {
         fail(comp, "`.toFixed()` takes a literal number of digits, from 0 to 100", n);
@@ -143,7 +131,6 @@ export function call(s: Scope, n: N): Val {
       return { code: `&*fv::Js(${bare(target.code)}).to_string()`, ty: STR };
     }
     if (target.ty.k === "list") {
-      // A list the props hold, of strings or integers, is searched and joined in place below.
       const inPlace = target.iter === undefined && !target.lone && (target.ty.of.k === "str" || target.ty.of.k === "int");
       const listed = listMethod(s, target, method, args, n) ?? (inPlace ? null : computedListMethod(s, target, method, args, n));
       if (listed) return listed;
@@ -158,7 +145,6 @@ export function call(s: Scope, n: N): Val {
         return { code: `${atom(target.code)}.iter().any(|v| ${test})`, ty: BOOL };
       }
       if (method === "join" && args.length <= 1) {
-        // JavaScript joins with a comma when given no separator.
         const sep: Val = args.length ? expr(s, args[0]) : { code: '","', ty: STR };
         if (sep.ty.k !== "str") fail(comp, "`.join()` takes a string", args[0]);
         const each = of.k === "str" ? `${atom(target.code)}.iter().map(|v| &**v)` : `${atom(target.code)}.iter().map(|v| fv::Js(*v).to_string())`;
@@ -170,7 +156,6 @@ export function call(s: Scope, n: N): Val {
   return fail(comp, "this call is not supported", n);
 }
 
-/** Whether `n` is `Object.<method>(…)`. */
 export function isObjectCall(n: N, method: string): boolean {
   return (
     n?.type === "CallExpression" && n.callee.type === "MemberExpression" && !n.callee.computed &&
@@ -178,9 +163,7 @@ export function isObjectCall(n: N, method: string): boolean {
   );
 }
 
-/** `JSON.stringify(v)` as a Rust `String`: of a string, a number, a boolean, or a list of those. */
 function json(s: Scope, v: Val, n: N): string {
-  // A half of a pair is written as an escape, `"\ud83e"`, which ferrovue cannot know to write.
   if (v.lone) fail(s.comp, lonely("`JSON.stringify()`"), n);
   const one = (code: string, ty: Ty): string => {
     switch (ty.k) {
@@ -197,7 +180,6 @@ function json(s: Scope, v: Val, n: N): string {
     }
   };
   if (v.ty.k === "list") {
-    // A routine of the item alone is mapped as itself, without a closure around it.
     const each = one("v", v.ty.of);
     const f = /^([\w:]+)\(v\)$/.exec(each)?.[1];
     return `format!("[{}]", ${items(v)}.map(${f ?? `|v| ${each}`}).collect::<Vec<_>>().join(","))`;

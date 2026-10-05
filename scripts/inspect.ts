@@ -1,9 +1,3 @@
-/* Show what each stage makes of one component: Vue's SSR compilation, Vue's render of it, and the
- * Rust ferrovue generates — the three things to compare when adding support for a construct.
- *
- *   node scripts/inspect.ts path/to/X.vue ['{"prop":"value"}']
- *
- * The component is compiled alone, in a temporary project, so it may import nothing but `vue`. */
 import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -21,8 +15,6 @@ const source = readFileSync(file, "utf8");
 
 const { descriptor } = parse(source, { filename: file });
 const script = compileScript(descriptor, { id: name });
-// A `<style scoped>` id as ferrovue computes it for the copy below, `c/Name.vue` in production mode,
-// so that both halves write the same one.
 const scopeId = descriptor.styles.some((st) => st.scoped)
   ? `data-v-${createHash("sha256").update(`c/${name}.vue${source}`).digest("hex").slice(0, 8)}`
   : undefined;
@@ -38,8 +30,6 @@ const { code } = compileTemplate({
 });
 console.log("── Vue SSR compilation ──\n" + code);
 
-// The script setup, compiled to a module Node runs: written beside this script so that `vue`
-// resolves, and as TypeScript, which Node strips.
 const runnable = join(import.meta.dirname, `.inspect-${process.pid}.ts`);
 try {
   writeFileSync(runnable, script.content);
