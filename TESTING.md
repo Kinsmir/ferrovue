@@ -332,8 +332,10 @@ a comment saying why it changes nothing. Where the right answer is defined by Ja
 vue-router or vue-i18n, the test that closes a gap takes it from them: a vector recorded with
 `pnpm vectors:record`, or a conformance fixture recorded with `pnpm conformance:record`.
 
-The **Mutants** workflow (`.github/workflows/mutants.yml`) runs every Monday and by hand, in two
-shards, and fails on any survivor that is not in the list. It is too slow for every pull request;
+The **Mutants** workflow (`.github/workflows/mutants.yml`) runs every Monday and by hand, in four
+shards, and fails on any survivor that is not in the list and on any entry of the list that no
+shard missed, which a test now catches and the list no longer needs. It is too slow for every pull
+request;
 run it locally on the functions a change touches (`-F`, or `--in-diff` with a diff file).
 
 ## Investigating a construct
