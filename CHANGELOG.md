@@ -44,7 +44,8 @@ released together and share version numbers.
   parts hydrate with their page. Dioxus's `to_element` writes the same attribute. In
   `examples/fullstack` the home page's buttons hydrate on interaction and the book page's reviews
   once visible, and the browser test checks that their chunks are requested only on a click and
-  after scrolling the reviews into view on a short screen.
+  after scrolling the reviews into view on a short screen; a browser test of the package
+  (`browser/lazy.test.ts`) does the same for islands waiting for idle and for a media query.
 - `provide` and `inject`, resolved through the component tree at build time. A key is a string
   literal or a `Symbol` exported from a `.ts` file and typed `InjectionKey<T>`; a value is a prop,
   a ref, a `computed`, a constant, or an object of them under an interface (`reactive()` unwraps

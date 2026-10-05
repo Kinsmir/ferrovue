@@ -161,6 +161,13 @@ FERROVUE_BROWSERS=chromium pnpm test:browser                             # one b
   Vue rewrites some attributes on purpose as it hydrates (it sets every dynamic prop again);
   those are listed, by fixture, in `PATCHED`, and the test fails if one stops happening. A
   fixture in `VUE_DISAGREES` must mismatch instead, as in happy-dom.
+- **Lazy islands** (`packages/ferrovue/browser/lazy.test.ts`): `lazy-entry.ts` is bundled with its
+  islands' components split into chunks of their own, and a page holds three islands from the
+  fixtures: one hydrated at once, one waiting for idle and one for `(min-width: 1000px)`. The page
+  holds back `requestIdleCallback` until the test releases it (then hands it to the browser's own),
+  and opens 800 pixels wide. The tests check that neither waiting island's chunk is requested
+  before its trigger, that each is requested once the browser is idle or the viewport is widened,
+  and that hydrating logs no warning and leaves the document as the browser parsed it.
 - **Full-stack example** (`examples/fullstack/browser/hydration.test.ts`): builds the client with
   `vite build` into a temporary directory (production Vue, with
   `__VUE_PROD_HYDRATION_MISMATCH_DETAILS__` so attribute mismatches are checked), builds the server
