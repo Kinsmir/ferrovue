@@ -48,6 +48,10 @@
       "types": "./dist/client.d.ts",
       "default": "./dist/client.js"
     },
+    "./link-router": {
+      "types": "./dist/link-router.d.ts",
+      "default": "./dist/link-router.js"
+    },
     "./islands": {
       "types": "./dist/islands.d.ts",
       "default": "./dist/islands.js"

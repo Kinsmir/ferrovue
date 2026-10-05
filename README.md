@@ -395,6 +395,11 @@ loaded, after the server's markup is on screen. Link those stylesheets from the 
 server reading Vite's manifest takes the `css` of the entry's `dynamicImports` as well as its own
 (`examples/fullstack/src/assets.rs`).
 
+An application whose own navigation layer leaves the page can keep `<RouterLink>` for its `href`s
+and active classes with `linkRouter(routes, { navigate })` from `ferrovue/link-router`: a router
+over the routes file whose every navigation after the first goes to `navigate`. The routing guide
+(`ferrovue::guide::routing`) explains each part of it.
+
 ### Hydrating Pinia state
 
 ```rust
@@ -517,6 +522,8 @@ packages/ferrovue/           the compiler (npm package)
   src/cli.ts, vite.ts        the `ferrovue` command and the Vite plugin
   src/client.ts              browser-side helpers: `mountIslands`, `hydrateState`
   src/islands.ts             `ferrovue/islands`, which the Vite plugin writes: every island, loaded lazily
+  src/link-router.ts         `ferrovue/link-router`: `<RouterLink>` while the application navigates on its own
+  src/routes.ts              a routes file as vue-router's route records
   src/testing.ts             utilities for a project's own conformance suite
   src/types.ts               `ferrovue/types`: `TrustedHtml`, `Float`
   test/                      compiler, CLI, router, vector, island, Vite and conformance tests

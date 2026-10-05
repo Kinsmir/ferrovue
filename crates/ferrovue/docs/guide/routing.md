@@ -352,6 +352,74 @@ a string or an array:
 
 `route.meta` and `route.matched` are refused.
 
+# Links when the application navigates on its own
+
+An application may already have a navigation layer of its own: it fetches the next page and swaps
+it in, with its own prefetching, page cache and scroll restoration. It can still use `<RouterLink>`
+for resolving `to` and for marking the link to the current page, on the server and after
+hydration alike, as long as vue-router never leaves the page itself. Otherwise a click pushes a
+route that nothing renders: the URL changes and the page does not.
+
+`linkRouter` from `ferrovue/link-router` builds that router from the same routes file the compiler
+reads, with the base and link classes of `ferrovue.config.json`'s `router`:
+
+```ts
+import { mountIslands } from "ferrovue";
+import islands from "ferrovue/islands";
+import { linkRouter } from "ferrovue/link-router";
+import routes from "./routes.json";
+
+const router = linkRouter(routes, {
+  navigate: (href) => navigateTheOldWay(href), // the application's own navigation
+  base: "/app/",                               // as `router.base` in ferrovue.config.json
+});
+await mountIslands(islands, { router });
+```
+
+`ferrovue/link-router` is the one entry that imports vue-router, which stays an optional peer: the
+package root and `ferrovue/client` do not load it.
+
+Written by hand, the router is this, and each part is there for a reason:
+
+```ts
+const Empty = { render: () => null };
+const history = createMemoryHistory(base);
+history.replace(location.pathname.slice(history.base.length) + location.search + location.hash);
+const router = createRouter({ history, routes: paths.map((path) => ({ path, component: Empty })) });
+router.beforeEach((to, from) => {
+  if (from === START_LOCATION) return true;
+  navigateTheOldWay(history.createHref(to.fullPath));
+  return false;
+});
+```
+
+- **Every route renders nothing.** The router matches locations and shows no page. vue-router
+  requires a component for each route, and an empty one renders nothing anywhere it could be shown.
+  Hydrated components must not hold a `<RouterView>`, whose content the client would render as
+  nothing.
+- **The first navigation passes.** It comes from `START_LOCATION`, vue-router's location before
+  any navigation, and resolves the page the server rendered. Until it finishes `router.isReady()`
+  does not resolve, `mountIslands` does not mount, and no link knows which page is current.
+- **Every later navigation is handed over and aborted.** The guard calls the application's
+  navigation with the `href`, base included, and returns `false`, so the router stays on the page
+  it started on: the active links keep matching the page that is on screen until the application
+  replaces it. A click on the link to the current page, which vue-router does not navigate at all,
+  is handed over too.
+- **A memory history.** vue-router's web history writes its own state into `history.state` when
+  the page has none, and listens to `popstate`, where an aborted navigation makes it step the browser's
+  history back again. The memory history starts at the page's location and touches neither, which
+  leaves the back and forward buttons to the application. Pass `history` to use another.
+- **The click belongs to the router.** `<RouterLink>` calls `preventDefault` on a plain left
+  click, so a document-level navigation listener sees `defaultPrevented` and leaves that click to
+  the guard. A click with a modifier key, on a `target="_blank"` link or already prevented is left
+  alone, and reaches the listener, or the browser, as on any link.
+
+What still works is everything `<RouterLink>` and `useRoute()` read from the current route:
+`href` with the base, the `router-link-active` and `router-link-exact-active` classes (nested
+routes included), `aria-current="page"`, and `useRoute()`'s path, params, query and hash. The router
+stays on the page it started on, so when the application swaps in another page, unmount the islands
+and mount them again with a new `linkRouter`, built at the new location.
+
 # Panics
 
 [`Router::tree`](crate::Router::tree) panics on a path outside the syntax above or a name used twice.
