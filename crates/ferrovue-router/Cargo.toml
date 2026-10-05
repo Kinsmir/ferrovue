@@ -10,6 +10,7 @@ documentation = "https://docs.rs/ferrovue-router"
 readme = "README.md"
 keywords = ["vue", "ssr", "router", "vue-router", "routing"]
 categories = ["template-engine", "web-programming"]
+exclude = ["/tests/vectors/"]
 
 [dependencies]
 ferrovue-core.workspace = true

@@ -123,6 +123,12 @@ released together and share version numbers.
 - `pnpm lint` covers the examples: oxlint checks their TypeScript and components with the
   repository's rules, and fallow knows the full-stack example's entry points (the Vite client
   entry, its components and its browser and adopter tests).
+- The published crates leave out the test data they do not need to build or document: the
+  conformance suite, the literal-props project, the recorded vectors and the benchmark's expected
+  HTML. The `ferrovue` crate goes from 1134 files (2.0 MiB, 386 KiB compressed) to 64 (620 KiB,
+  171 KiB compressed); `ferrovue-core` and `ferrovue-router` drop their vectors. The test and
+  benchmark targets stay in the package so it builds without warnings; they run from the
+  repository.
 
 ### Fixed
 

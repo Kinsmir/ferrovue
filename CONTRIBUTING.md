@@ -108,6 +108,9 @@ integration.
   `Cargo.toml`'s `[workspace.dependencies]`; a crate takes it with `name.workspace = true` or
   `name = { workspace = true, features = [...], optional = true }`, and `release.ts members` fails on
   one declared in a crate's own manifest.
+- Test data does not ship with the crates. A new directory of fixtures or vectors under a crate's
+  `tests/` or `benches/` goes into that crate's `exclude` in `Cargo.toml`; the docs, the README and
+  everything under `src/` that builds the library stay in the package.
 
 ## Licence
 
