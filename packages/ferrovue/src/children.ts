@@ -30,6 +30,7 @@ export function renderChild(s: Scope, e: Emitter, n: N, twin?: TwinCall): void {
   const childName = isSelf ? s.comp.name : local ? s.children.get(local) : undefined;
   const child = twin?.comp ?? (childName ? s.components.get(childName) : undefined);
   if (!child) fail(s.comp, "FV0501", `a child component must be imported from a \`.vue\` file among the components compiled, in ${ctx.componentsDir.replace(/\/$/, "")}`, n);
+  const later = !twin && local !== null && s.loadedLater.has(local);
   for (const p of ctx.plugins) p.child?.(s, child, n);
   const parts: N[] = !rawProps || rawProps.type === "NullLiteral" ? [] : mergedParts(rawProps);
   const merges = parts.length > 0 && parts[0] !== rawProps;
@@ -51,7 +52,7 @@ export function renderChild(s: Scope, e: Emitter, n: N, twin?: TwinCall): void {
     const v = expr(s, objects[0]);
     const own = child.name === s.comp.name && v.ty.k === "struct" && v.ty.name === "Props";
     if (own || (v.ty.k === "child" && v.ty.name === child.name)) {
-      callChild(s, e, child, v.code, slots, childAttrsArg(s, child, parts, merges, null, ids, n));
+      callChild(s, e, child, v.code, slots, childAttrsArg(s, child, parts, merges, null, ids, n), later);
       return;
     }
     fail(s.comp, "FV0503", `child props must be an object literal, or \`v-bind\` of ${child.name}'s own \`Props\``, n);
@@ -93,7 +94,7 @@ export function renderChild(s: Scope, e: Emitter, n: N, twin?: TwinCall): void {
     const v = expr(s, node);
     return fieldInit(f.rust, ownInto(s.comp, { ...v, ty: markHome(v.ty, s.comp.name) }, markHome(f.ty, child.name), node));
   });
-  callChild(s, e, child, `&super::${child.module}::Props { ${inits.join(", ")} }`, slots, childAttrsArg(s, child, parts, merges, fallthrough, ids, n));
+  callChild(s, e, child, `&super::${child.module}::Props { ${inits.join(", ")} }`, slots, childAttrsArg(s, child, parts, merges, fallthrough, ids, n), later);
 }
 
 export function array(key: string): boolean {
@@ -134,12 +135,18 @@ export function extraParams(c: Component, unread: (name: string) => boolean = ()
   return (takesSlots(c) ? ", fv_slots: Slots<'_>" : "") + paramsOf(c).map((p) => `, ${unread(p.name) ? "_" : ""}${p.name}: ${p.ty}`).join("");
 }
 
-export function callChild(s: Scope, e: Emitter, child: Component, propsCode: string, slots: N, attrs: string | null): void {
+export function callChild(s: Scope, e: Emitter, child: Component, propsCode: string, slots: N, attrs: string | null, later = false): void {
   const m = `super::${child.module}`;
   const scoped = child.inherits || takesAttrs(child);
   const trailing = paramsOf(child).map((p) => `, ${p.name}`).join("") + (scoped ? `, ${attrs ?? (takesAttrs(child) ? "&fv::Attrs::NONE" : '""')}` : "");
   const render = scoped ? "render_scoped" : "render";
+  const around = later ? ctx.plugins.flatMap((p) => p.loadedLater?.(child) ?? []) : [];
+  if (around.length) {
+    e.open("");
+    for (const line of around) e.stmt(line);
+  }
   callWith(s, e, child, m, `${m}::${render}(out, ${propsCode}`, `${m}::Slots`, trailing, slots);
+  if (around.length) e.close();
 }
 
 export function callWith(s: Scope, e: Emitter, child: Component, m: string, head: string, slotsTy: string, trailing: string, slots: N, vnode = false): void {
@@ -170,7 +177,7 @@ export function callWith(s: Scope, e: Emitter, child: Component, m: string, head
       continue;
     }
     const { body, param } = slotContent(s, value);
-    const asVnodes = vnode || slotAsVnodes(child, name);
+    const asVnodes = vnode || s.vnode || slotAsVnodes(child, name);
     const shape = child.slotShapes.get(name);
     const takesNone = param?.type === "Identifier" && param.name === "_";
     const sid = child.passesSlotIds ? `fv_sid${++ctx.narrowCount}` : null;

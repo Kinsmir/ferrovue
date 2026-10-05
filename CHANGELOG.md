@@ -194,6 +194,28 @@ released together and share version numbers.
   writes no node for the page, and the client takes the page, a component, to begin at one. The
   conformance suite records both (`Frame/empty-slots`, `App/empty-view`), and the testing guide
   says so.
+- The page head of a component `defineAsyncComponent` loads comes in the order Vue's server gives
+  it. Vue runs such a component's setup, and the setup of everything it renders, after the
+  components rendered without waiting, one level of nesting at a time, so its `useHead` entries
+  come after theirs and its title wins over a sibling's; ferrovue pushed them in the order of the
+  tree. The generated code renders it inside `Head::deferred()`, whose entries `Head::render` places
+  after the others, level by level. The conformance suite records it (`HeadLater`, `HeadNest`,
+  `HeadLeaf`).
+- Content Vue renders from virtual nodes (in an element `<component :is>` chooses, a
+  `<RouterLink>` or a twin's slot) writes what Vue's server writes there: attribute names in lower
+  case on HTML elements and as written on SVG elements and custom elements (`dataFoo` was written
+  as given, and a bound `:viewBox` on `<svg>` in lower case), a static `class` written before a
+  bound one first, and slot content given to a compiled component inside it rendered from virtual
+  nodes too. `:selected` on an `<option>` there is no longer refused as `v-model` (FV0423), and a
+  `<ClientOnly>` with a `#fallback` there, for which Vue's server writes an empty fragment that the
+  client then replaces, is refused (FV1511). The conformance suite records it (`TagCasing`).
+- A component whose file is named after a Rust keyword (`Type.vue`, `Match.vue`) is written to
+  `type.rs`, which its module `r#type` reads; it was written to `r#type.rs`, which did not compile.
+  A file name that is not a Rust name (`user-card.vue`), two names with the same snake case
+  (`FooBar.vue` and `Foo_bar.vue`, one of which overwrote the other), `Mod.vue` and a name a
+  module ferrovue writes already has are refused (FV0007).
+- `mountIslands` no longer dispatches the events that woke an island waiting for interaction again
+  when `unmount()` was called while its component loaded.
 
 ## [0.5.0] - 2026-10-05
 

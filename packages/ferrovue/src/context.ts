@@ -152,4 +152,5 @@ export const ctx = {
   components: new Map<string, Component>(),
   narrowCount: 0,
   componentsDir: "",
+  vnodeTag: null as string | null,
 };

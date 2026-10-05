@@ -1,10 +1,10 @@
-import { type N, type Scope, type Val, fail } from "./model.ts";
+import { type N, type Scope, type Val, fail, staticClassFirst } from "./model.ts";
 import { ctx } from "./context.ts";
 import { expr } from "./expr.ts";
 import { type Presence, boolOf, cond, known, narrowTo, presence, truthy } from "./narrowing.ts";
 import { CMP, condition, occurrences, operand } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
-import { interpolate, renderAttr, renderAttrs, renderDynamicAttr } from "./attrs.ts";
+import { interpolate, keepsAttrCase, renderAttr, renderAttrs, renderDynamicAttr } from "./attrs.ts";
 import { renderStyle } from "./styles.ts";
 import { renderClass } from "./classes.ts";
 import { renderChild } from "./children.ts";
@@ -23,6 +23,18 @@ function hidesByVShow(n: N): boolean {
   );
 }
 
+function selectsByModel(n: N): boolean {
+  if (n?.type === "CallExpression" && n.callee.type === "Identifier" && /^_ssrLoose(?:Equal|Contain)$/.test(n.callee.name)) return true;
+  if (n?.type === "CallExpression") return n.arguments.some(selectsByModel);
+  return n?.type === "ConditionalExpression" && [n.test, n.consequent, n.alternate].some(selectsByModel);
+}
+
+function inWrittenOrder(s: Scope, n: N): N {
+  if (n?.type !== "ArrayExpression" || n.elements.length !== 2 || n.elements[1]?.type !== "StringLiteral") return n;
+  const [bound, written] = n.elements;
+  return staticClassFirst(s.comp, bound) ? { ...n, elements: [written, bound] } : n;
+}
+
 export function slot(s: Scope, e: Emitter, n: N): void {
   if (n.type === "Identifier" && n.name === "_scopeId") {
     if (s.sid !== null) e.stmt(s.vnode ? `out.push_str(&fv::scope_attrs("", "", ${s.sid}));` : `out.push_str(${s.sid});`);
@@ -36,7 +48,7 @@ export function slot(s: Scope, e: Emitter, n: N): void {
         return;
       case "_ssrRenderAttr":
         if (a[0].type !== "StringLiteral") fail(s.comp, "FV0417", "attribute names are literal", n);
-        if (s.vnode) renderDynamicAttr(s, e, a[0].value, expr(s, a[1]), a[1]);
+        if (s.vnode) renderDynamicAttr(s, e, a[0].value, expr(s, a[1]), a[1], ctx.vnodeTag);
         else renderAttr(s, e, a[0].value, expr(s, a[1]), a[1]);
         return;
       case "_ssrRenderDynamicAttr":
@@ -48,7 +60,7 @@ export function slot(s: Scope, e: Emitter, n: N): void {
         renderAttrs(s, e, a[0]);
         return;
       case "_ssrRenderClass":
-        renderClass(s, e, a[0]);
+        renderClass(s, e, s.vnode ? inWrittenOrder(s, a[0]) : a[0]);
         return;
       case "_ssrRenderStyle":
         if (s.vnode && hidesByVShow(a[0])) fail(s.comp, "FV0423", `\`v-show\` ${FROM_VNODES}, where Vue writes no \`style\` while it shows: bind \`:style\` or use \`v-if\``, n);
@@ -71,7 +83,7 @@ export function slot(s: Scope, e: Emitter, n: N): void {
     fail(s.comp, "FV1502", "`v-html` renders only a `TrustedHtml` prop (from `ferrovue/types`)", n);
   }
   if (n.type === "ConditionalExpression" && n.consequent.type === "StringLiteral" && n.alternate.type === "StringLiteral") {
-    if (s.vnode && n.consequent.value === " selected") fail(s.comp, "FV0423", `\`v-model\` on a \`<select>\` ${FROM_VNODES}, where Vue marks no option \`selected\`: bind \`:selected\` on the options`, n);
+    if (s.vnode && n.consequent.value === " selected" && selectsByModel(n.test)) fail(s.comp, "FV0423", `\`v-model\` on a \`<select>\` ${FROM_VNODES}, where Vue marks no option \`selected\`: bind \`:selected\` on the options`, n);
     const t = expr(s, n.test);
     const k = known(t);
     if (k !== undefined) {
@@ -133,11 +145,47 @@ export function push(s: Scope, e: Emitter, n: N): void {
   e.stmt("filled |= !fv::is_comment(&out[fv_chunk..]);");
 }
 
+const START_TAG = /^<([A-Za-z][^\s/>]*)/;
+const ATTRIBUTE = /^(\s+)([^\s"'<>/=]+)(?:="([^"]*)")?/;
+
 function asVnodes(text: string): string {
-  return text
-    .split(/(<!--[^]*?-->)/)
-    .map((part, i) => (i % 2 ? part : part.replace(/ ([^\s"'<>/=]+)=""/g, (all, name: string) => (name === "class" || name === "style" ? all : ` ${name}`))))
-    .join("");
+  let out = "";
+  let at = 0;
+  while (at < text.length) {
+    const tag = ctx.vnodeTag;
+    if (tag === null) {
+      const lt = text.indexOf("<", at);
+      if (lt < 0) {
+        out += text.slice(at);
+        break;
+      }
+      out += text.slice(at, lt);
+      if (text.startsWith("<!--", lt)) {
+        const end = text.indexOf("-->", lt + 4);
+        at = end < 0 ? text.length : end + 3;
+        out += text.slice(lt, at);
+        continue;
+      }
+      const start = START_TAG.exec(text.slice(lt));
+      if (start) ctx.vnodeTag = start[1]!;
+      const taken = start?.[0] ?? "<";
+      out += taken;
+      at = lt + taken.length;
+      continue;
+    }
+    const attr = ATTRIBUTE.exec(text.slice(at));
+    if (attr) {
+      const [all, space, written, value] = attr as unknown as [string, string, string, string | undefined];
+      const name = keepsAttrCase(tag) ? written : written.toLowerCase();
+      out += value === "" && name !== "class" && name !== "style" ? `${space}${name}` : `${space}${name}${all.slice(space.length + written.length)}`;
+      at += all.length;
+      continue;
+    }
+    if (text[at] === ">") ctx.vnodeTag = null;
+    out += text[at];
+    at++;
+  }
+  return out;
 }
 
 function pushed(s: Scope, e: Emitter, n: N): void {

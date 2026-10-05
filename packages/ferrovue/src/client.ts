@@ -67,7 +67,7 @@ export interface Islands {
   unmount(): void;
 }
 
-type Trigger = (el: HTMLElement, hydrate: () => Promise<void>) => () => void;
+type Trigger = (el: HTMLElement, hydrate: () => Promise<boolean>) => () => void;
 
 const INTERACTIONS = ["pointerenter", "click", "focus"];
 
@@ -100,7 +100,7 @@ const interaction =
       }
     };
     function listen(e: Event): void {
-      if (early.push(e) === 1) void hydrate().then(replay);
+      if (early.push(e) === 1) void hydrate().then((mounted) => (mounted ? replay() : stop()));
     }
     for (const name of events) el.addEventListener(name, listen, true);
     return stop;
@@ -178,10 +178,12 @@ export async function mountIslands(components: Record<string, IslandComponent>, 
     try {
       waiting.push(
         wait(el, async () => {
-          if (started || stopped) return;
+          if (started || stopped) return false;
           started = true;
           const [component] = await Promise.all([loadIsland(name), ready]);
-          if (!stopped) mount(el, name, component);
+          if (stopped) return false;
+          mount(el, name, component);
+          return true;
         }),
       );
     } catch (e) {

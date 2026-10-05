@@ -1,6 +1,7 @@
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { basename, join } from "node:path";
+import { basename, join, relative } from "node:path";
 import { type Config, ctx, loadConfig, tyOfName } from "./context.ts";
+import { failIn, snake } from "./model.ts";
 import { importsOf, readComponent } from "./component.ts";
 import { scopeFor } from "./script.ts";
 import { attrsFlow } from "./fallthrough.ts";
@@ -17,6 +18,7 @@ export function generate(root: string, config: Config = loadConfig(root)): Map<s
   ctx.builders = config.builders ?? true;
   ctx.clientDirectives = new Set(config.clientDirectives ?? []);
   ctx.rootDir = root;
+  ctx.vnodeTag = null;
   ctx.typeStructs = new Map();
   ctx.typeAliases = new Map();
   ctx.typeFiles = new Map();
@@ -41,6 +43,18 @@ export function generate(root: string, config: Config = loadConfig(root)): Map<s
       .map((f) => ({ file: join(dir, f), name: basename(f, ".vue") })),
     ...PLUGINS.flatMap((p) => p.components?.() ?? []).map((c) => ({ file: join(root, c.file), name: c.name })),
   ];
+  const modulesOf = new Map<string, string>();
+  for (const f of files) {
+    const rel = relative(root, f.file);
+    if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(f.name)) {
+      failIn(rel, "FV0007", `the component is called \`${f.name}\` after its file, which is not a Rust name: name the file in PascalCase, letters and digits (\`UserCard.vue\`)`);
+    }
+    const file = moduleFile(snake(f.name));
+    if (file === "mod.rs") failIn(rel, "FV0007", `the component's module would be \`mod.rs\`, which holds the generated modules: rename the file`);
+    const taken = modulesOf.get(file);
+    if (taken) failIn(rel, "FV0007", `the component's module would be \`${file}\`, as ${taken}'s is: rename one of them`);
+    modulesOf.set(file, rel);
+  }
   const children = new Set(files.flatMap((f) => importsOf(readFileSync(f.file, "utf8")).filter((c) => c !== f.name)));
   const read = files.map((f) => readComponent(f.file, root, children.has(f.name), f.name));
   const components = new Map(read.map((r) => [r.comp.name, r.comp]));
@@ -77,12 +91,20 @@ export function generate(root: string, config: Config = loadConfig(root)): Map<s
   read.forEach(place);
   for (const r of ordered) {
     ctx.narrowCount = 0;
-    out.set(`${r.comp.module}.rs`, componentSource(r.comp, r.ast, r.ssr, components));
+    out.set(moduleFile(r.comp.module), componentSource(r.comp, r.ast, r.ssr, components));
   }
   const modules = PLUGINS.flatMap((p) => p.modules?.() ?? []);
   out.set("mod.rs", modSource(read.map((r) => r.comp), modules.map(([file]) => file)));
-  for (const [file, text] of modules) out.set(file, text);
+  for (const [file, text] of modules) {
+    const taken = modulesOf.get(file);
+    if (taken) failIn(taken, "FV0007", `the component's module would be \`${file}\`, which ferrovue writes for the project's ${file.replace(/\.rs$/, "").replaceAll("_", " ")}: rename the file`);
+    out.set(file, text);
+  }
   return out;
+}
+
+function moduleFile(module: string): string {
+  return `${module.replace(/^r#/, "")}.rs`;
 }
 
 /** Write what `generate` produces to the configured directory, replacing what is there. */

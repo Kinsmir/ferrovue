@@ -152,3 +152,31 @@ fn converts_rust_values_to_the_javascript_values_they_are() {
     assert_eq!(HeadValue::from(Some(true)), HeadValue::Bool(true));
     assert_eq!(HeadValue::from(None::<bool>), HeadValue::Undefined);
 }
+
+#[test]
+fn entries_pushed_while_deferred_come_after_the_others_level_by_level() {
+    let head = Head::without_defaults();
+    let meta = |name: &str| {
+        HeadValue::object([(
+            "meta",
+            HeadValue::array([HeadValue::object([
+                ("name", HeadValue::str(name)),
+                ("content", HeadValue::str(name)),
+            ])]),
+        )])
+    };
+    head.push(meta("a"));
+    {
+        let _later = head.deferred();
+        head.push(meta("c"));
+        {
+            let _later = head.deferred();
+            head.push(meta("e"));
+        }
+        head.push(meta("d"));
+    }
+    head.push(meta("b"));
+    let tags = head.render().head_tags;
+    let names: Vec<&str> = tags.lines().map(|l| &l[12..13]).collect();
+    assert_eq!(names, ["a", "b", "c", "d", "e"]);
+}

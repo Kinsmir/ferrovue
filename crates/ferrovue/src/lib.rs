@@ -34,6 +34,8 @@ pub use attrs::{
 pub use basic_html::BasicHtml;
 pub use class::{class_into, class_object};
 pub use conformance::check_fixtures;
+#[doc(hidden)]
+pub use head::HeadDeferral;
 pub use head::{Head, HeadHtml, HeadValue};
 pub use html::Html;
 pub use hydrate::Hydrate;
