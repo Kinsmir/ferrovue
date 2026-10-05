@@ -182,7 +182,7 @@ escapes the state, so no prop can end the element:
           "reviews":[{"c":"Reviews","p":{"reviews":[…]}}]}}
 ```
 
-This is the staff picks page of the repository's `examples/fullstack` (`src/pages.rs`), whose
+A shortened version of the staff picks page in `examples/fullstack` (`src/pages.rs`), whose
 reviews arrive after a slow lookup. The record goes in a hole of its own after the app's container,
 and [`PageRecord::script`](crate::PageRecord::script) is ready once every hole of the page is
 filled:
