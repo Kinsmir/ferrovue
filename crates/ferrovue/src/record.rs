@@ -133,3 +133,6 @@ impl<'de, V: Deserialize<'de>> Deserialize<'de> for Record<'_, V> {
             .collect())
     }
 }
+
+#[cfg(test)]
+mod tests;

@@ -429,7 +429,9 @@ ferrovue version.
 
 ```text
 crates/ferrovue/             the Rust runtime crate
-  src/                       runtime (escaping, JS numbers, router, i18n, teleports) + unit tests
+  src/                       runtime, a module per part (escaping, JS numbers, `Html`, slots, class
+                             and style, the state script, router, i18n, teleports), each module's
+                             unit tests beside it in <module>/tests.rs
   tests/conformance/         components, fixtures, recorded HTML, generated Rust
   tests/vectors/             vectors recorded from JavaScript, vue-router and vue-i18n
   tests/properties.rs        property-based tests of the runtime

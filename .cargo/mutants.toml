@@ -2,6 +2,6 @@
 # crate, and the crate's own tests — units, vectors, properties and conformance — must catch it.
 examine_globs = ["crates/ferrovue/src/**/*.rs"]
 # The unit tests themselves are not code to mutate.
-exclude_globs = ["crates/ferrovue/src/tests.rs", "crates/ferrovue/src/router/tests.rs"]
+exclude_globs = ["crates/ferrovue/src/**/tests.rs"]
 # `maud::Render` is part of the crate only with the feature.
 all_features = true

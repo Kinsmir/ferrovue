@@ -4,21 +4,21 @@
 
 # `MAX_SAFE_INTEGER` as 2⁵³ instead of 2⁵³ − 1: `push_int` then writes ±2⁵³ with `write!` rather
 # than through `push_number`, and both write "9007199254740992".
-crates/ferrovue/src/lib.rs: replace - with /
+crates/ferrovue/src/numbers.rs: replace - with /
 
 # `if x < 0.0` in the infinite branch and before writing the sign: zero has already returned, so
 # `x` is never 0 there.
-crates/ferrovue/src/lib.rs: replace < with <= in push_number
-crates/ferrovue/src/lib.rs: replace < with <= in push_number
+crates/ferrovue/src/numbers.rs: replace < with <= in push_number
+crates/ferrovue/src/numbers.rs: replace < with <= in push_number
 
 # The tie between two shortest spellings. `(b - b'0')` and `(b + b'0')` have the same parity, b'0'
 # being 48. The exact value of a tie is an odd multiple of 2⁻ʲ with j ≥ 2, whose decimal digits
 # end in 25 or 75, so the lower spelling never ends in 9 and `upper.len() == k` always holds; and
 # Rust's shortest formatting always gives the upper spelling of a tie (checked over 3.7 million
 # ties), so `digits == lower` never holds and only `digits == upper` decides.
-crates/ferrovue/src/lib.rs: replace - with + in push_number
-crates/ferrovue/src/lib.rs: replace && with || in push_number
-crates/ferrovue/src/lib.rs: replace == with != in push_number
+crates/ferrovue/src/numbers.rs: replace - with + in push_number
+crates/ferrovue/src/numbers.rs: replace && with || in push_number
+crates/ferrovue/src/numbers.rs: replace == with != in push_number
 
 # The plural choice when nothing gives one: −1 or 1, which `pluralDefault` reads through `Math.abs`
 # alike.

@@ -367,3 +367,6 @@ fn plural_index(choice: f64, cases: usize) -> Option<usize> {
         (index.fract() == 0.0).then_some(index as usize)
     }
 }
+
+#[cfg(test)]
+mod tests;

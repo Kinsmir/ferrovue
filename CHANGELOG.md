@@ -9,6 +9,9 @@ released together and share version numbers.
 
 - A release starts only from a signed, annotated tag whose signature GitHub verifies; any other tag
   stops the release workflow before anything is staged or published (`RELEASING.md`, "Signed tags").
+- The crate's `lib.rs` is split into modules, one per part of the runtime: escaping, numbers,
+  `Html`, slots and holes, `class`, the state script, `v-html`. Every public path is the same
+  (`ferrovue::escape_into`, `ferrovue::Html`, …), and so is everything generated code writes.
 
 ## [0.3.0] - 2026-10-05
 
