@@ -1,25 +1,6 @@
 //! vue-i18n's `t()`, for components that call `$t` or `useI18n().t`: part of
 //! [ferrovue](https://docs.rs/ferrovue)'s runtime.
 //!
-//! Use it through `ferrovue`, which re-exports this crate as `ferrovue::i18n`, and [`I18n`] as
-//! `ferrovue::I18n`, with its `i18n` feature, on by default: that is the path generated code and the
-//! documentation use. It is a crate of its own so that an application with no translations can turn
-//! the feature off and build none of it.
-//!
-//! The compiler parses every message with vue-i18n's own message compiler and writes the result as
-//! static tables of [`Part`]s, one [`Locale`] per locale file. At run time [`I18n::t`] evaluates a
-//! message the way vue-i18n's message context does: named and list interpolation, literals, linked
-//! messages with their modifiers, plural cases chosen by vue-i18n's default rule, and the fallback
-//! locales — and, when nothing has the key, the key itself.
-//!
-//! The locale is chosen per request: build an [`I18n`] for it and pass it to the components that
-//! translate, as the route is passed. The tables are written by the compiler, into the generated
-//! `i18n` module, whose `i18n(locale)` builds the [`I18n`]; [`Part`], [`Message`] and [`Locale`]
-//! are public so that generated code can spell them as constants, and [`Args`] and [`Value`] so
-//! that it can call [`I18n::t`]. The guide's
-//! [`i18n`](https://docs.rs/ferrovue/latest/ferrovue/guide/i18n/index.html) page shows the whole
-//! path.
-//!
 //! # Example
 //!
 //! ```
@@ -50,8 +31,6 @@
 use std::fmt::Write;
 
 /// One piece of a compiled message.
-///
-/// Written by the compiler into the generated `i18n` module, never by hand.
 #[derive(Debug)]
 pub enum Part {
     /// Text written as it is.
@@ -72,8 +51,6 @@ pub enum Part {
 }
 
 /// A compiled message: one case, or the cases of a plural message (`one | many`).
-///
-/// Written by the compiler into the generated `i18n` module.
 #[derive(Debug)]
 pub struct Message {
     /// The cases; a message without `|` has one.
@@ -82,8 +59,7 @@ pub struct Message {
 
 /// A locale's messages, by key — nested keys joined with dots — sorted for lookup.
 ///
-/// Written by the compiler into the generated `i18n` module's `LOCALES`. The messages must be
-/// sorted by key, byte by byte, because they are looked up by binary search.
+/// The messages must be sorted by key, byte by byte.
 #[derive(Debug)]
 pub struct Locale {
     /// The locale's name: its file's name, `en` for `en.json`.
@@ -103,9 +79,7 @@ impl Locale {
 
 /// A value interpolated into a message, written as `toDisplayString` writes it.
 ///
-/// Numbers are written as JavaScript writes them, with [`push_int`](ferrovue_core::push_int) and
-/// [`push_number`](ferrovue_core::push_number). `count` and `n` take the plural number when they are not
-/// given, or are given a falsy value.
+/// `count` and `n` take the plural number when they are not given, or are given a falsy value.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Value<'a> {
     /// A string, as it is.
@@ -128,7 +102,6 @@ impl Value<'_> {
         }
     }
 
-    /// JavaScript's truthiness, which decides whether `count` and `n` take the plural number.
     fn truthy(&self) -> bool {
         match self {
             Value::Str(s) => !s.is_empty(),
@@ -141,9 +114,6 @@ impl Value<'_> {
 
 /// What a `t()` call is given besides its key: `t(key, { named })`, `t(key, [list])`,
 /// `t(key, plural)`, or a named object and a plural together.
-///
-/// Generated code writes one per call, with every field spelled out; `Args::default()` is a call
-/// with no arguments.
 ///
 /// # Example
 ///
@@ -166,20 +136,13 @@ pub struct Args<'a> {
 }
 
 /// The messages and the locale one request renders in.
-///
-/// Build one per request with the generated `i18n::i18n(locale)`, which calls [`I18n::new`] with
-/// every locale's messages and the configured fallbacks, and pass it to each component that calls
-/// `$t` or `useI18n()`: it comes after the props, slots, route and stores in `render`'s parameters.
-/// Building one is cheap: the messages are static, and only the chain of locales is worked out.
 #[derive(Clone, Debug)]
 pub struct I18n {
     locales: &'static [Locale],
-    /// The locale, then its fallbacks, as indices into `locales`.
     chain: Vec<usize>,
     locale: String,
 }
 
-/// How deep linked messages may nest before a cycle is assumed.
 const MAX_LINK_DEPTH: usize = 32;
 
 impl I18n {
@@ -229,8 +192,7 @@ impl I18n {
     /// `t(key, …)`: the message in the first locale of the chain that has it, evaluated with these
     /// arguments — or the key itself when none does, as vue-i18n returns it.
     ///
-    /// The result is the message's text, not yet escaped: generated code escapes it like any other
-    /// interpolation.
+    /// The result is the message's text, not yet escaped.
     ///
     /// # Example
     ///
@@ -281,7 +243,6 @@ impl I18n {
         }
     }
 
-    /// The message for a key in the first locale of the chain that has it.
     fn find(&self, key: &str) -> Option<(&'static Locale, &'static Message)> {
         self.chain.iter().find_map(|&i| {
             let locale = &self.locales[i];
@@ -295,8 +256,6 @@ impl I18n {
             [only] => *only,
             cases => {
                 let index = plural_index(plural_choice(args), cases.len());
-                // As for an empty route parameter: a debug build fails the render as vue-i18n
-                // does, and a release build writes nothing for the message.
                 debug_assert!(
                     index.is_some(),
                     "a plural number of {} chooses none of the cases",
@@ -322,8 +281,6 @@ impl I18n {
                     }
                 }
                 Part::Linked { key, modifier } => {
-                    // Resolved as a message is, through the fallbacks; an unresolved link, or one
-                    // nested too deep, is written as its key.
                     let mut linked = String::new();
                     if depth < MAX_LINK_DEPTH
                         && let Some((_, m)) = self.find(key)
@@ -350,7 +307,6 @@ impl I18n {
     }
 }
 
-/// A named value, with `count` and `n` taking the plural number when they are not given, or falsy.
 fn named<'a>(args: &Args<'a>, name: &str) -> Option<Value<'a>> {
     let given = args.named.iter().find(|(k, _)| *k == name).map(|(_, v)| *v);
     match (name, args.plural) {
@@ -359,9 +315,6 @@ fn named<'a>(args: &Args<'a>, name: &str) -> Option<Value<'a>> {
     }
 }
 
-/// `getPluralIndex`: a finite numeric `count`, else a finite numeric `n`, else the plural number,
-/// else −1 — read from the values as given, before `count` and `n` take the plural number. A
-/// fraction is kept: `1.5` is not `1`.
 fn plural_choice(args: &Args<'_>) -> f64 {
     for name in ["count", "n"] {
         match args.named.iter().find(|(k, _)| *k == name).map(|(_, v)| *v) {
@@ -373,9 +326,6 @@ fn plural_choice(args: &Args<'_>) -> f64 {
     args.plural.map_or(-1.0, |n| n as f64)
 }
 
-/// `pluralDefault`: with two cases, singular for exactly one and plural otherwise; with more,
-/// zero, singular, then plural. With more than two, a fraction below 2 names no case — vue-i18n
-/// then throws, failing the render — and this is `None`.
 fn plural_index(choice: f64, cases: usize) -> Option<usize> {
     let choice = choice.abs();
     if cases == 2 {

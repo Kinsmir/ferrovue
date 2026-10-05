@@ -1,6 +1,3 @@
-//! Renders as HTTP responses: [`HtmlStream`], for a page sent in the order its parts are ready, and
-//! the axum and actix-web responses for it and for [`Html`].
-
 use std::convert::Infallible;
 use std::future::Future;
 use std::ops::Range;
@@ -14,11 +11,9 @@ use futures_core::Stream;
 use crate::Html;
 use crate::slots::HOLE;
 
-/// The `Content-Type` of every response here.
 #[cfg(any(feature = "axum", feature = "actix-web"))]
 const TEXT_HTML: &str = "text/html; charset=utf-8";
 
-/// What goes in one hole: still being written, or written and waiting its turn.
 enum Hole {
     Loading(Pin<Box<dyn Future<Output = String> + Send>>),
     Ready(String),
@@ -29,16 +24,9 @@ enum Hole {
 /// by the markup up to the next hole. [`guide::streaming`](crate::guide::streaming) explains holes.
 ///
 /// Give it the whole render, holes and all, and a future for each hole, in the order the holes
-/// appear: [`hole`](HtmlStream::hole) for one, [`holes`](HtmlStream::holes) for many. The futures
-/// run together, from the first time the stream is polled, and their output is written as it is,
-/// unescaped: a component's [`into_string`](crate::Html::into_string), usually an island. A hole
-/// given no future is left empty, and a future beyond the last hole is dropped without being run.
-///
-/// It is a [`Stream`] of byte chunks that never fails, which is what an HTTP body is made from;
-/// the pieces are slices of the render, never copied. With the `axum` feature it is an
-/// `IntoResponse`, and with `actix-web` a `Responder`: a `200 OK` of `text/html; charset=utf-8`,
-/// streamed, or sent whole with its length when the render has no holes, so it serves for any
-/// page. [`guide::web_frameworks`](crate::guide::web_frameworks) shows both.
+/// appear: [`hole`](HtmlStream::hole) for one, [`holes`](HtmlStream::holes) for many. Their output
+/// is written as it is, unescaped. A hole given no future is left empty, and a future beyond the
+/// last hole is dropped without being run.
 ///
 /// # Example
 ///
@@ -70,11 +58,8 @@ enum Hole {
 #[cfg_attr(docsrs, doc(cfg(feature = "stream")))]
 pub struct HtmlStream {
     page: Bytes,
-    /// Where each piece of `page` lies: one more than there are holes.
     pieces: Vec<Range<usize>>,
-    /// What goes in each hole, in order: as many as there are holes, at most.
     holes: Vec<Hole>,
-    /// What to send next: piece `next / 2` when even, hole `next / 2` when odd.
     next: usize,
 }
 
@@ -147,7 +132,6 @@ impl HtmlStream {
         contents.into_iter().fold(self, HtmlStream::hole)
     }
 
-    /// The page in one piece, when it has no holes: sent whole, with a `Content-Length`.
     #[cfg(any(feature = "axum", feature = "actix-web"))]
     fn whole(self) -> Result<Bytes, Self> {
         if self.pieces.len() == 1 {
@@ -158,8 +142,6 @@ impl HtmlStream {
     }
 }
 
-/// The page's length, its holes, and how many of them are still loading: the futures themselves
-/// have nothing to show.
 impl std::fmt::Debug for HtmlStream {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let loading = self
@@ -181,8 +163,6 @@ impl Stream for HtmlStream {
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let this = self.get_mut();
-        // Every hole still loading is polled, not only the next to send: each is written in turn,
-        // but all of them are fetched at once.
         for hole in &mut this.holes {
             if let Hole::Loading(content) = hole
                 && let Poll::Ready(html) = content.as_mut().poll(cx)
@@ -200,13 +180,11 @@ impl Stream for HtmlStream {
             } else {
                 match this.holes.get_mut(i) {
                     Some(Hole::Loading(_)) => return Poll::Pending,
-                    // Sent once: the next to send is always further on.
                     Some(Hole::Ready(html)) => Bytes::from(std::mem::take(html)),
                     None => Bytes::new(),
                 }
             };
             this.next += 1;
-            // An empty chunk is skipped: an HTTP body ends at an empty one.
             if !chunk.is_empty() {
                 return Poll::Ready(Some(Ok(chunk)));
             }
@@ -217,11 +195,6 @@ impl Stream for HtmlStream {
 /// A component as a whole response: `200 OK`, `text/html; charset=utf-8`, the markup. An
 /// [`island`](crate::guide::generated_code#html-and-island) is a response too, for a client that
 /// swaps it into a page.
-///
-/// A handler that builds the props returns `into_html(props)`, which holds them, and the page is
-/// rendered once the handler has returned. `html(&props)` borrows them, so it can be returned only
-/// when they outlive the handler, such as a `static`, and is otherwise ended with
-/// `.into_response()`.
 ///
 /// # Example
 ///
@@ -322,7 +295,6 @@ impl axum_core::response::IntoResponse for HtmlStream {
     }
 }
 
-/// `body`, as HTML.
 #[cfg(feature = "axum")]
 fn html_response(body: axum_core::body::Body) -> axum_core::response::Response {
     let mut response = axum_core::response::Response::new(body);
@@ -336,10 +308,6 @@ fn html_response(body: axum_core::body::Body) -> axum_core::response::Response {
 /// A component as a whole response: `200 OK`, `text/html; charset=utf-8`, the markup. An
 /// [`island`](crate::guide::generated_code#html-and-island) is a response too, for a client that
 /// swaps it into a page.
-///
-/// A handler that builds the props returns `into_html(props)`, which holds them. `html(&props)`
-/// borrows them, so it can be returned only when they outlive the handler, such as a `static`, and
-/// is otherwise made into an `HttpResponse` there and then (`.into()`).
 ///
 /// # Example
 ///
@@ -402,7 +370,6 @@ impl<P: serde::Serialize, F: Fn(&mut String, &P)> actix_web::Responder for Html<
     }
 }
 
-/// The response [`Html`]'s `Responder` gives, for a handler that returns an `HttpResponse`.
 #[cfg(feature = "actix-web")]
 #[cfg_attr(docsrs, doc(cfg(feature = "actix-web")))]
 impl<P: serde::Serialize, F: Fn(&mut String, &P)> From<Html<'_, P, F>> for actix_web::HttpResponse {
@@ -443,7 +410,6 @@ impl actix_web::Responder for HtmlStream {
     }
 }
 
-/// The response [`HtmlStream`]'s `Responder` gives, for a handler that returns an `HttpResponse`.
 #[cfg(feature = "actix-web")]
 #[cfg_attr(docsrs, doc(cfg(feature = "actix-web")))]
 impl From<HtmlStream> for actix_web::HttpResponse {
@@ -465,7 +431,6 @@ mod tests {
     use super::*;
     use crate::{hole, slot_into, split_holes};
 
-    /// `<h1>` and `<aside>` with a hole in each, and `</aside>` after.
     fn two_holes() -> String {
         let mut page = String::from("<h1>");
         slot_into(&mut page, Some(hole()), None);
@@ -475,7 +440,6 @@ mod tests {
         page
     }
 
-    /// Every chunk the stream sends, in order.
     async fn chunks(mut stream: HtmlStream) -> Vec<String> {
         let mut sent = Vec::new();
         while let Some(chunk) = poll_fn(|cx| Pin::new(&mut stream).poll_next(cx)).await {
@@ -485,7 +449,6 @@ mod tests {
         sent
     }
 
-    /// `html`, `ms` milliseconds from now.
     async fn after(ms: u64, html: &'static str) -> String {
         tokio::time::sleep(Duration::from_millis(ms)).await;
         html.to_owned()
@@ -495,7 +458,6 @@ mod tests {
     async fn the_pieces_are_split_holes_with_each_hole_filled_in_order() {
         let page = two_holes();
         let pieces: Vec<String> = split_holes(&page).into_iter().map(str::to_owned).collect();
-        // The second hole is ready first, and still sent second.
         let stream = HtmlStream::new(page)
             .hole(after(20, "first"))
             .hole(after(10, "second"));
@@ -532,7 +494,6 @@ mod tests {
     #[tokio::test]
     async fn empty_pieces_and_contents_are_not_sent() {
         let mut page = String::new();
-        // A hole at each end: the first piece is `<!--[-->` and the last is empty.
         slot_into(&mut page, Some(hole()), None);
         page.push_str(HOLE);
         let stream = HtmlStream::new(page).holes([after(0, ""), after(0, "x")]);
@@ -546,7 +507,6 @@ mod tests {
         use axum::body::HttpBody;
         use axum_core::response::IntoResponse;
 
-        // The server writes `Content-Length` from the body's exact size.
         let response = HtmlStream::new("<p>whole</p>".to_owned()).into_response();
         assert_eq!(response.status(), 200);
         assert_eq!(response.headers()["content-type"], TEXT_HTML);

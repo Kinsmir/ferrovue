@@ -1,6 +1,5 @@
 use super::*;
 
-/// `tests/vectors/comment.json`, recorded from `ssrRenderSlot`'s `isComment` on the TypeScript side.
 #[test]
 fn is_comment_is_what_ssr_render_slot_reads_as_nothing() {
     let vectors: Vec<(String, bool)> =
@@ -109,7 +108,6 @@ fn slot_content_is_given_the_slot_scope_id_after_a_space() {
         None
     ));
     assert_eq!(out, "<!--[--><p data-v-a-s>x</p><!--]-->");
-    // No id, and content that takes none, which ignores it.
     out.clear();
     slot_into_slotted(&mut out, Some(Slot::slotted(&content)), "", None);
     let plain = |out: &mut String| out.push_str("<i>y</i>");

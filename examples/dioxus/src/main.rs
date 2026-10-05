@@ -1,6 +1,4 @@
 //! A page that Dioxus renders on the server, with a Vue island in it that the browser hydrates.
-//!
-//! Regenerate `src/generated/` after changing a component: run `ferrovue` in this directory.
 
 #[rustfmt::skip]
 mod generated;
@@ -8,8 +6,6 @@ mod generated;
 use dioxus::prelude::*;
 use generated::counter;
 
-/// The page: Dioxus's own markup, a ferrovue island, and the client's script, which hydrates the
-/// island with `mountIslands({ Counter })` from `ferrovue/client`.
 #[component]
 fn Page(title: String, start: i64) -> Element {
     let clicks = counter::Props::new("Clicks", start);
@@ -17,16 +13,13 @@ fn Page(title: String, start: i64) -> Element {
     rsx! {
         main {
             h1 { "{title}" }
-            // The island element itself, straight into the page.
             {counter::island(&clicks)}
-            // The same, as `island()` writes it byte for byte, inside an element of the page's own.
             section { dangerous_inner_html: counter::island(&total).into_string() }
         }
         script { r#type: "module", src: "/assets/main.js" }
     }
 }
 
-/// The page's HTML, as `dioxus-ssr` writes it.
 fn render(title: &str, start: i64) -> String {
     let mut dom = VirtualDom::new_with_props(
         Page,

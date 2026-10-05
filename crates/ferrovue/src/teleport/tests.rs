@@ -11,7 +11,6 @@ fn teleported_content_goes_to_its_target_in_the_order_vue_collects_it() {
         false,
         &|out: &mut String| {
             out.push_str("<div>outer");
-            // Nested: it comes after the outer teleport, which took its place first.
             teleport_into(out, &teleports, "#modals", false, &|out: &mut String| {
                 out.push_str("<p>inner</p>")
             });

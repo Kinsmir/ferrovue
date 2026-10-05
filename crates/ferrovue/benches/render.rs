@@ -1,23 +1,14 @@
 //! The conformance suite's generated renderers, timed on the scenarios
 //! `packages/ferrovue/bench/ssr.bench.ts` times Vue's `renderToString` on.
-//!
-//! Each scenario's props are built here exactly as the JavaScript side builds them, and before
-//! anything is timed the output is held to `benches/expected/<scenario>.html`, which that side
-//! records from Vue: the two halves time the same work, writing the same bytes.
-//!
-//! What is timed: a fresh `String` and one call of the component's `render`. The props, the
-//! router and the route are built once, outside the loop, as an app holds them across requests.
 
 use std::hint::black_box;
 
 use criterion::{Criterion, criterion_group, criterion_main};
 
-// Written by the compiler, and shared with `tests/conformance.rs`: never reformatted.
 #[rustfmt::skip]
 #[path = "../tests/conformance/generated/mod.rs"]
 mod generated;
 
-/// The Rust twins of the helpers the components call.
 #[allow(dead_code)]
 #[path = "../tests/conformance/helpers.rs"]
 mod helpers;
@@ -36,13 +27,11 @@ impl ferrovue::TrustedHtml for Sanitised {
 
 use generated::{dashboard, lists, nav, panel, route_table, tree};
 
-/// `small`: one `<Nav>`, two `<RouterLink>`s resolved against the reader's location.
 fn small_props() -> nav::Props<'static> {
     nav::Props::new("/users/me", "Me & you").note("3 new")
 }
 const SMALL_ROUTE: &str = "/users/me";
 
-/// `list`: `<Lists>` with 1,000 words, 1,000 numbers and 100 groups of 10 members.
 fn list_props() -> lists::Props<'static> {
     let words = (0..1000).map(|i| {
         if i % 10 == 0 {
@@ -68,7 +57,6 @@ fn list_props() -> lists::Props<'static> {
     lists::Props::new(words, numbers, groups)
 }
 
-/// `tree`: a recursive `<Tree>`, a full binary tree 8 levels deep (255 nodes).
 fn tree_props() -> tree::Props<'static> {
     fn node(label: String, depth: u32) -> tree::Props<'static> {
         let children = if depth < 8 {
@@ -83,8 +71,6 @@ fn tree_props() -> tree::Props<'static> {
     node("n".to_owned(), 1)
 }
 
-/// `page`: `<Dashboard>`, 22 `<Panel>`s with named slots, a `<Text>`, and 20 `<Frame>`s each
-/// holding a loop.
 fn page_props() -> dashboard::Props<'static> {
     let panels = (0..20)
         .map(|i| {
@@ -96,7 +82,6 @@ fn page_props() -> dashboard::Props<'static> {
     dashboard::Props::new("Dashboard <beta>", panels, words, 42).footer("Updated & synced")
 }
 
-/// What Vue rendered for each scenario, recorded by the JavaScript half.
 const EXPECTED: [(&str, &str); 4] = [
     ("small", include_str!("expected/small.html")),
     ("list", include_str!("expected/list.html")),
@@ -108,7 +93,6 @@ fn expected(scenario: &str) -> &'static str {
     EXPECTED.iter().find(|(s, _)| *s == scenario).unwrap().1
 }
 
-/// Render once and hold the output to Vue's before any timing.
 fn check(scenario: &str, render: impl Fn(&mut String)) {
     let mut out = String::new();
     render(&mut out);

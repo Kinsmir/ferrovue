@@ -1,16 +1,3 @@
-//! JSON for the browser to read back: an island's props and the stores' state.
-//!
-//! `serde_json` writes `NaN` and the infinities as `null`, which the client would read back as a
-//! different value from the one the server rendered with: the server writes `NaN`, the client
-//! renders an empty string, and the page hydrates with a mismatch. Here they are written as
-//! JavaScript spells them, the bare tokens `NaN`, `Infinity` and `-Infinity`, which `JSON.parse`
-//! refuses and `ferrovue/client` reads back exactly (`parseJson` in `client.ts`). Everything else is
-//! `serde_json`'s output, byte for byte.
-//!
-//! `serde_json` decides a float is not finite before its [`Formatter`] sees it, and hands the
-//! formatter a `null` either way. So the serializer is wrapped: the wrapper notes the token a
-//! non-finite float stands for, and the formatter writes it in place of the `null` that follows.
-
 use std::cell::Cell;
 use std::io;
 
@@ -18,12 +5,8 @@ use serde::Serialize;
 use serde::ser::{self, Serializer};
 use serde_json::ser::Formatter;
 
-/// The token a non-finite float is to be written as, set just before `serde_json` asks the
-/// formatter for the `null` it writes for one.
 type Pending = Cell<Option<&'static str>>;
 
-/// `value` as JSON, with non-finite floats as JavaScript writes them. Empty if it fails to
-/// serialise, which a struct of strings, numbers and lists cannot.
 pub(crate) fn to_string<T: Serialize + ?Sized>(value: &T) -> String {
     let pending = Pending::new(None);
     let mut out = Vec::with_capacity(128);
@@ -31,11 +14,9 @@ pub(crate) fn to_string<T: Serialize + ?Sized>(value: &T) -> String {
     if value.serialize(Wrap(&mut json, &pending)).is_err() {
         return String::new();
     }
-    // `serde_json` writes UTF-8, and the tokens are ASCII.
     String::from_utf8(out).unwrap_or_default()
 }
 
-/// `serde_json`'s compact formatter, writing the pending token in place of a float's `null`.
 struct Tokens<'c>(&'c Pending);
 
 impl Formatter for Tokens<'_> {
@@ -44,7 +25,6 @@ impl Formatter for Tokens<'_> {
     }
 }
 
-/// What a non-finite float is written as: `String(x)` in JavaScript.
 fn token(x: f64) -> Option<&'static str> {
     if x.is_nan() {
         Some("NaN")
@@ -57,10 +37,8 @@ fn token(x: f64) -> Option<&'static str> {
     }
 }
 
-/// A serializer, or one of its compound parts, that hands every value inside it the same wrapping.
 struct Wrap<'c, S>(S, &'c Pending);
 
-/// A value to be serialised through [`Wrap`].
 struct Value<'v, 'c, T: ?Sized>(&'v T, &'c Pending);
 
 impl<T: Serialize + ?Sized> Serialize for Value<'_, '_, T> {
@@ -69,7 +47,6 @@ impl<T: Serialize + ?Sized> Serialize for Value<'_, '_, T> {
     }
 }
 
-/// Methods that hand the value on unchanged.
 macro_rules! forward {
     ($($method:ident($($arg:ident: $ty:ty),*);)*) => {
         $(fn $method(self, $($arg: $ty),*) -> Result<S::Ok, S::Error> {
@@ -110,8 +87,6 @@ impl<'c, S: Serializer> Serializer for Wrap<'c, S> {
         serialize_unit_variant(name: &'static str, index: u32, variant: &'static str);
     }
 
-    // `serde_json` asks for a `null` for exactly the floats that have a token, and the formatter
-    // takes the token as it writes it, so nothing is left pending for the next `null`.
     fn serialize_f32(self, v: f32) -> Result<S::Ok, S::Error> {
         self.1.set(token(v.into()));
         self.0.serialize_f32(v)
@@ -252,8 +227,6 @@ impl<S: ser::SerializeTupleVariant> ser::SerializeTupleVariant for Wrap<'_, S> {
     }
 }
 
-/// A map's keys are handed on unwrapped: JSON's keys are strings, and `serde_json` refuses a
-/// non-finite float key whatever it is wrapped in.
 impl<S: ser::SerializeMap> ser::SerializeMap for Wrap<'_, S> {
     type Ok = S::Ok;
     type Error = S::Error;
@@ -403,7 +376,6 @@ mod tests {
         Named { at: f64, n: i8 },
     }
 
-    /// Every shape `serde` has, each holding a float it must still reach.
     #[test]
     fn every_shape_of_value_hands_the_wrapping_on() {
         let value = (

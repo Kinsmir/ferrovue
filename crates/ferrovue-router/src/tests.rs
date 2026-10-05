@@ -1,7 +1,6 @@
 use super::*;
 use std::collections::BTreeMap;
 
-/// The vectors the TypeScript side runs against the real vue-router, with its answers recorded.
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Vectors {
@@ -17,21 +16,18 @@ struct Vectors {
     expected_bases: Vec<(String, bool)>,
 }
 
-/// A `to` written as an object.
 #[derive(serde::Deserialize)]
 struct Object {
     name: Option<String>,
     path: Option<String>,
     #[serde(default)]
     params: BTreeMap<String, String>,
-    /// `[key, value]` pairs, in the order vue-router writes them.
     #[serde(default)]
     query: Vec<(String, String)>,
     #[serde(default)]
     hash: String,
 }
 
-/// What `useRoute()` reads.
 #[derive(serde::Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 struct Location {
@@ -40,11 +36,9 @@ struct Location {
     name: Option<String>,
     params: BTreeMap<String, String>,
     full_path: String,
-    /// `[key, value]`, the value a string, `null`, or an array of those.
     query: Vec<(String, serde_json::Value)>,
 }
 
-/// Nested routes, with what vue-router answered for each link and location.
 #[derive(serde::Deserialize)]
 struct Nested {
     routes: Vec<NestedRoute>,
@@ -75,7 +69,6 @@ struct NestedLocation {
     params: BTreeMap<String, String>,
 }
 
-/// The vectors' routes as `RouteDef`s, which borrow for as long as the test runs.
 fn route_defs(routes: &[NestedRoute]) -> &'static [RouteDef<'static>] {
     let defs: Vec<RouteDef<'static>> = routes
         .iter()
@@ -337,7 +330,6 @@ fn an_empty_segment_is_refused() {
     Router::new(&["/a//b"]);
 }
 
-/// vue-router throws on an empty parameter; a debug build fails the render the same way.
 #[test]
 #[cfg(debug_assertions)]
 #[should_panic(expected = "missing required param")]
@@ -346,8 +338,6 @@ fn an_empty_parameter_fails_a_debug_render() {
     router.at("/").link_named("user", &[("id", "")], "", "");
 }
 
-/// Nested routes show by their full paths, in the order they are tried, and a route by where the
-/// reader is and what it matched.
 #[test]
 fn a_router_and_its_route_show_what_they_matched_in_debug() {
     let children = [RouteDef {

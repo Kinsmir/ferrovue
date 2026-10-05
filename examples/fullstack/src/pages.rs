@@ -1,9 +1,3 @@
-//! Every page the shop serves, rendered by the components ferrovue generated.
-//!
-//! A page is rendered whole, in one pass, with a [`ferrovue::hole`] wherever a part is slow to
-//! come by. The server sends it as a [`ferrovue::HtmlStream`]: the markup up to the first hole at
-//! once, and each hole's content as soon as it is ready.
-
 use std::time::Duration;
 
 use ferrovue::{Route, Router, Slot};
@@ -15,7 +9,6 @@ use crate::generated::{
     add_to_basket, book_list, book_page, layout, not_found, reviews, route_table,
 };
 
-/// The shop's name, in the layout and every title.
 const SHOP: &str = "Ferrovue Books";
 
 /// A rendered page, ready to stream: `html` with each of `holes` filled.
@@ -55,7 +48,6 @@ impl Site {
     /// The page at `location` (a path), rendered up to its holes.
     pub fn page(&self, location: &str) -> Page {
         let route = self.router.at(location);
-        // A real shop would read the reader's basket from their session.
         let stores = Stores::new(BasketState::new("guest", ["solaris"]));
         match (route.name(), route.param("id")) {
             (Some("home"), _) => self.home(&route, &stores),
@@ -99,7 +91,6 @@ impl Site {
         (status, out)
     }
 
-    /// The home page: every book, each with an "Add to basket" island in the list's scoped slot.
     fn home(&self, route: &Route<'_>, stores: &Stores<'_>) -> Page {
         let props = book_list::Props::new(catalogue::books());
         let actions = |out: &mut String, slot: &book_list::ActionsSlotProps<'_>| {
@@ -115,8 +106,6 @@ impl Site {
         self.document(200, SHOP, route, stores, &view, Vec::new())
     }
 
-    /// A book's page, streamed: everything but the reviews is sent at once, and the reviews when
-    /// they arrive.
     fn book(
         &self,
         route: &Route<'_>,
@@ -145,8 +134,6 @@ impl Site {
         self.document(404, SHOP, route, stores, &view, Vec::new())
     }
 
-    /// The HTML document around a route's page: the layout, the stores' state the client hydrates
-    /// from, and the client's script, with the holes `view` left.
     fn document(
         &self,
         status: u16,

@@ -1,8 +1,5 @@
 //! A guide to ferrovue: from a `.vue` file to a page a browser hydrates.
 //!
-//! These modules hold documentation alone. They have no items, and they are compiled only when
-//! rustdoc builds the documentation or collects its examples, so they cost nothing in a build.
-//!
 //! Read them in order the first time:
 //!
 //! 1. [`quick_start`]: install both halves, configure, generate, render.

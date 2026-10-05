@@ -1,26 +1,9 @@
-//! [`Html`]: a component applied to its props, and the island wrapper the client mounts on.
-
 use serde::Serialize;
 
 use crate::{escape_into, json};
 
 /// A component applied to its props, ready to be written: what a generated `html()` or `island()`
 /// returns, borrowing the props, and `into_html()` or `into_island()`, holding them.
-///
-/// Nothing renders until it is written, and then it is written straight into the caller's buffer:
-/// no buffer of its own, and no copy. `P` is the component's `Props`. `F` is the renderer: a plain
-/// function for a component that needs only its props, a closure holding the slots, the route, the
-/// stores, the translations or the teleports for one that takes those as well. One that holds its
-/// props borrows nothing from the caller, so a function that builds the props can return it.
-///
-/// `Html` is the one type in this crate that writes raw bytes. Generated code is what builds it,
-/// and it writes by calling a generated renderer, whose every interpolation goes through
-/// [`escape_into`]. With the `maud` feature it implements `maud::Render`, so it can be spliced into
-/// a `maud::html!` template; with `axum` it is an `IntoResponse`, and with `actix-web` a
-/// `Responder`, so a handler can respond with it.
-///
-/// [`guide::generated_code`](crate::guide::generated_code#html-and-island) explains which
-/// components have an `island()`.
 ///
 /// # Example
 ///
@@ -72,15 +55,13 @@ use crate::{escape_into, json};
 pub struct Html<'p, P, F = fn(&mut String, &P)> {
     pub(crate) props: Given<'p, P>,
     pub(crate) render: F,
-    /// `Some(name)` wraps the markup as a hydratable island; `None` is the markup alone.
     pub(crate) island: Option<&'static str>,
 }
 
 impl<'p, P: Serialize, F: Fn(&mut String, &P)> Html<'p, P, F> {
     /// The component's markup, which the client never hydrates.
     ///
-    /// Called by generated code alone: `render` is trusted to escape what it writes, which only a
-    /// generated renderer does. Anything else that builds one can write any bytes it likes.
+    /// `render` is trusted to escape what it writes, which only a generated renderer does.
     #[doc(hidden)]
     pub fn markup(props: &'p P, render: F) -> Self {
         Html {
@@ -179,7 +160,6 @@ impl<'p, P: Serialize, F: Fn(&mut String, &P)> Html<'p, P, F> {
     }
 }
 
-/// The props an [`Html`] renders: borrowed from the caller, or its own.
 pub(crate) enum Given<'p, P> {
     Borrowed(&'p P),
     Owned(P),
@@ -263,9 +243,6 @@ impl<P: Serialize, F: Fn(&mut String, &P)> maud::Render for Html<'_, P, F> {
     }
 }
 
-/// The island wrapper: the component's own markup inside the element the client mounts on, with
-/// the props it was rendered from as JSON in an attribute — never a `<script>`, so a page with a
-/// `script-src 'self'` policy needs no nonce for it.
 fn island_into<P: Serialize>(
     out: &mut String,
     name: &str,
@@ -275,11 +252,6 @@ fn island_into<P: Serialize>(
     out.push_str("<div data-island=\"");
     escape_into(out, name);
     out.push_str("\" data-props=\"");
-    // A struct of strings, numbers and lists cannot fail to serialise; if it somehow did, the client
-    // finds malformed props and leaves the server's markup as it is. `NaN` and the infinities are
-    // written as JavaScript writes them, which `mountIslands` reads back, where `serde_json` alone
-    // would write `null`. Serialised whole and then escaped: `serde_json` writes in many small
-    // pieces, and escaping each one costs more than the one extra buffer.
     let json = json::to_string(props);
     escape_into(out, &json);
     out.push_str("\">");

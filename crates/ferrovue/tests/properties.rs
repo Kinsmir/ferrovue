@@ -1,5 +1,4 @@
-//! Properties of the runtime that hold for every input, checked on generated ones: the fixtures and
-//! vectors pin exact bytes for chosen cases, these look for the case nobody thought to choose.
+//! Properties of the runtime that hold for every input.
 
 use ferrovue::{
     Slot, class_into, escape_into, hole, js_length, js_trim, slot_into, split_holes,
@@ -7,7 +6,6 @@ use ferrovue::{
 };
 use proptest::prelude::*;
 
-/// What a browser makes of escaped text: the five entities `escape_into` writes, undone.
 fn unescape(s: &str) -> String {
     s.replace("&quot;", "\"")
         .replace("&#39;", "'")

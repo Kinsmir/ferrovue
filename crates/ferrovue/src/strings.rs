@@ -1,12 +1,3 @@
-//! JavaScript's string methods, counted in UTF-16 code units as JavaScript counts them, and the
-//! conversions a template may write: `Number(s)`, `parseInt`, `parseFloat`, `JSON.stringify`.
-//!
-//! A JavaScript string can hold half of a surrogate pair: `"🦀".slice(0, 1)` is `"\uD83E"`. A Rust
-//! `&str` cannot. Where a method's result would hold such a half, these functions put U+FFFD in its
-//! place — the character a server sends for it when it writes JavaScript's string as UTF-8
-//! (`res.end`, `Buffer.from` and `TextEncoder` each replace a lone surrogate with U+FFFD) — so the
-//! page's bytes are the same, and so is the result's length in code units.
-
 use std::borrow::Cow;
 use std::cmp::Ordering;
 
@@ -22,8 +13,6 @@ use crate::push_number;
 /// assert_eq!(ferrovue::js_length("🦀"), 2); // two UTF-16 code units, as JavaScript counts
 /// ```
 pub fn js_length(s: &str) -> i64 {
-    // Each scalar value is one code unit, or two when it is outside the Basic Multilingual Plane —
-    // exactly the four-byte UTF-8 sequences. Most strings are ASCII, where it is the length.
     if s.is_ascii() {
         return s.len() as i64;
     }
@@ -79,16 +68,12 @@ fn is_js_space(c: char) -> bool {
     )
 }
 
-/// The longest string V8 makes: 2²⁹ − 24 code units. Making a longer one is a `RangeError`.
 const MAX_STRING_LENGTH: f64 = ((1 << 29) - 24) as f64;
 
-/// `ToIntegerOrInfinity`: `NaN` is 0, anything else is truncated toward zero.
 fn to_integer(x: f64) -> f64 {
-    // `+ 0.0` turns the `-0` of `trunc(-0.5)` into `0`.
     if x.is_nan() { 0.0 } else { x.trunc() + 0.0 }
 }
 
-/// An index as `slice` reads it: counted from the end when negative, then clamped to `0..=len`.
 fn relative(x: f64, len: usize) -> usize {
     let n = to_integer(x);
     let len = len as f64;
@@ -135,8 +120,6 @@ pub fn js_slice_items<T>(
     all.into_iter()
 }
 
-/// The byte where code unit `i` of `s` starts — or, when `i` falls between the two halves of a
-/// pair, where the pair ends, and `true`.
 fn boundary(s: &str, i: usize) -> (usize, bool) {
     let mut unit = 0;
     for (byte, c) in s.char_indices() {
@@ -152,7 +135,6 @@ fn boundary(s: &str, i: usize) -> (usize, bool) {
     (s.len(), false)
 }
 
-/// Code units `from..to` of `s`, a half pair at either end written as U+FFFD.
 fn units(s: &str, from: usize, to: usize) -> Cow<'_, str> {
     if from >= to {
         return Cow::Borrowed("");
@@ -165,7 +147,6 @@ fn units(s: &str, from: usize, to: usize) -> Cow<'_, str> {
     if !low_half && !high_half {
         return Cow::Borrowed(&s[start..end]);
     }
-    // A pair that `to` splits is four bytes, and only its first half is kept.
     let whole_end = if high_half { end - 4 } else { end };
     let mut out = String::with_capacity(whole_end.saturating_sub(start) + 6);
     if low_half {
@@ -180,7 +161,6 @@ fn units(s: &str, from: usize, to: usize) -> Cow<'_, str> {
     Cow::Owned(out)
 }
 
-/// Code unit `k` of `s`, which must be in range: its character, or U+FFFD for half of a pair.
 fn unit(s: &str, k: usize) -> &str {
     if s.is_ascii() {
         return &s[k..k + 1];
@@ -200,7 +180,6 @@ fn unit(s: &str, k: usize) -> &str {
     unreachable!("code unit {k} is in range")
 }
 
-/// The number of UTF-16 code units in `s`.
 fn length(s: &str) -> usize {
     js_length(s) as usize
 }
@@ -281,7 +260,6 @@ pub fn js_char_at(s: &str, index: f64) -> &str {
 /// assert_eq!(ferrovue::js_index_of("abc", "z"), -1);
 /// ```
 pub fn js_index_of(s: &str, search: &str) -> i64 {
-    // The first match of a whole string is the same whether bytes or code units are compared.
     s.find(search).map_or(-1, |byte| js_length(&s[..byte]))
 }
 
@@ -323,8 +301,6 @@ pub fn js_split<'s>(s: &'s str, separator: &str) -> Vec<Cow<'s, str>> {
     out
 }
 
-/// `GetSubstitution` for a string pattern, which has no captures: `$$` is `$`, `$&` the match,
-/// `` $` `` what precedes it and `$'` what follows. Any other `$` — `$1`, `$<name>` — is itself.
 fn substitute(out: &mut String, replacement: &str, s: &str, start: usize, end: usize) {
     let mut rest = replacement;
     while let Some(i) = rest.find('$') {
@@ -392,14 +368,11 @@ pub fn js_replace_all<'s>(s: &'s str, pattern: &str, replacement: &str) -> Cow<'
     Cow::Owned(out)
 }
 
-/// `replaceAll("", replacement)`: the replacement before every code unit and after the last,
-/// worked in UTF-16 — where a half pair split off may meet a half the replacement holds.
 fn replace_between_units(s: &str, replacement: &str) -> String {
     let units: Vec<u16> = s.encode_utf16().collect();
     let repl: Vec<u16> = replacement.encode_utf16().collect();
     let mut out: Vec<u16> = Vec::with_capacity(units.len() * (repl.len() + 1) + repl.len());
     for at in 0..=units.len() {
-        // `GetSubstitution` again, on code units: the match is empty, at `at`.
         let mut i = 0;
         while i < repl.len() {
             let next = repl.get(i + 1).copied();
@@ -428,7 +401,6 @@ fn replace_between_units(s: &str, replacement: &str) -> String {
     String::from_utf16_lossy(&out)
 }
 
-/// The first `n` code units of `fill` repeated, a pair cut at the end written as U+FFFD.
 fn filler(fill: &str, n: usize) -> String {
     if fill.is_ascii() {
         return fill.bytes().cycle().take(n).map(char::from).collect();
@@ -439,7 +411,6 @@ fn filler(fill: &str, n: usize) -> String {
 
 fn pad<'s>(s: &'s str, max_length: f64, fill: &str, at_start: bool) -> Cow<'s, str> {
     let len = length(s);
-    // `ToLength`: an integer from 0 to 2⁵³ − 1.
     let target = to_integer(max_length).clamp(0.0, 9_007_199_254_740_991.0);
     if target <= len as f64 || fill.is_empty() {
         return Cow::Borrowed(s);
@@ -536,20 +507,15 @@ pub fn js_repeat(s: &str, count: f64) -> String {
 /// ```
 pub fn js_cmp(a: &str, b: &str) -> Ordering {
     if a.is_ascii() || b.is_ascii() {
-        // Code units and bytes agree as far as one string is ASCII: wherever the two first differ,
-        // one of them holds an ASCII character, which comes first in both orders.
         return a.as_bytes().cmp(b.as_bytes());
     }
     a.encode_utf16().cmp(b.encode_utf16())
 }
 
-/// The value of an ASCII digit in `radix`, if it is one.
 fn digit(b: u8, radix: u32) -> Option<u32> {
     char::from(b).to_digit(radix)
 }
 
-/// Digits in a power-of-two radix as V8 reads them: exactly while they fit in 53 bits, then rounded
-/// to the nearest double, a tie to even.
 fn power_of_two_value(digits: &[u8], radix: u32) -> f64 {
     let bits = radix.trailing_zeros();
     let mut number: u64 = 0;
@@ -580,8 +546,6 @@ fn power_of_two_value(digits: &[u8], radix: u32) -> f64 {
     (number as f64) * 2f64.powi(exponent)
 }
 
-/// The length of the longest prefix of `s` that is a `StrDecimalLiteral` — a sign, then
-/// `Infinity` or digits with a point and an exponent — if there is one.
 fn decimal_prefix(s: &str) -> Option<usize> {
     let b = s.as_bytes();
     let digits_from = |mut i: usize| {
@@ -620,13 +584,10 @@ fn decimal_prefix(s: &str) -> Option<usize> {
     Some(i)
 }
 
-/// A `StrDecimalLiteral`, already checked, as the nearest double.
 fn decimal_value(literal: &str) -> f64 {
     match literal {
         "Infinity" | "+Infinity" => f64::INFINITY,
         "-Infinity" => f64::NEG_INFINITY,
-        // Rust's parse is correctly rounded, as ECMAScript's is, and reads the same grammar once
-        // `Infinity` is out of the way.
         _ => literal.parse().expect("a decimal literal"),
     }
 }
@@ -700,14 +661,10 @@ pub fn js_parse_int(s: &str, radix: u32) -> f64 {
     }
     let digits = &t.as_bytes()[..n];
     let value = if radix == 10 {
-        // Correctly rounded, as V8 reads them. (V8 keeps 310 digits after any leading zeros, which
-        // is already beyond the largest double.)
         t[..n].parse().expect("decimal digits")
     } else if radix.is_power_of_two() {
         power_of_two_value(digits, radix)
     } else {
-        // Not reached from generated code, which takes radix 10 or 16 alone: V8 rounds other radices
-        // its own way, step by step.
         digits.iter().fold(0.0, |acc, &d| {
             acc * f64::from(radix) + f64::from(digit(d, radix).expect("a digit"))
         })

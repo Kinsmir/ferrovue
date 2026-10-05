@@ -1,13 +1,9 @@
-//! The generated half of ferrovue's own conformance suite: the renderers in
-//! `conformance/generated/`, written by the compiler from `conformance/components/`, held to the
-//! HTML Vue recorded for each fixture (`packages/ferrovue/test/conformance.test.ts`).
+//! The generated half of ferrovue's conformance suite.
 
-// Written by the compiler, and held to its output byte for byte: never reformatted.
 #[rustfmt::skip]
 #[path = "conformance/generated/mod.rs"]
 mod generated;
 
-/// The Rust twins of the helpers the components call.
 #[path = "conformance/helpers.rs"]
 mod helpers;
 
@@ -48,7 +44,6 @@ fn every_fixture_renders_as_vue_rendered_it() {
     assert!(checked >= 50, "only {checked} fixtures were found");
 }
 
-/// What a browser reads an attribute's value as.
 fn unescape(s: &str) -> String {
     s.replace("&quot;", "\"")
         .replace("&#39;", "'")
@@ -57,8 +52,6 @@ fn unescape(s: &str) -> String {
         .replace("&amp;", "&")
 }
 
-/// An island is the component's own markup, wrapped with the props the client hydrates it from —
-/// which must be the props it was rendered with, or the client's first render differs.
 #[test]
 fn an_island_carries_the_props_it_was_rendered_from() {
     let json = r#"{"title":"\"><script>","count":-3,"on":true,"note":"é","padded":" x "}"#;
@@ -83,7 +76,6 @@ fn an_island_carries_the_props_it_was_rendered_from() {
     );
 }
 
-/// An absent optional prop is left out of the island's props, as it is absent to Vue; never `null`.
 #[test]
 fn an_island_leaves_absent_props_out() {
     let props: generated::text::Props =
@@ -93,9 +85,6 @@ fn an_island_leaves_absent_props_out() {
     assert!(!island.contains("note"), "{island}");
 }
 
-/// A `Float` prop that is `NaN` or infinite reaches the client as itself, not as the `null`
-/// `serde_json` would write. `islands.html` is this page, which `packages/ferrovue/test/islands.test.ts`
-/// holds to Vue's own render of the same props and hydrates with no mismatch.
 #[test]
 fn an_island_carries_numbers_that_are_not_finite() {
     use generated::narrowing;
@@ -110,8 +99,6 @@ fn an_island_carries_numbers_that_are_not_finite() {
     }
 }
 
-/// A component that takes slots, a route or stores has no island: what it was given beyond its
-/// props cannot travel to the client in an attribute.
 #[test]
 fn a_component_with_slots_renders_through_html() {
     let props: generated::frame::Props = serde_json::from_str(r#"{"title":"t"}"#).unwrap();
@@ -127,8 +114,6 @@ fn a_component_with_slots_renders_through_html() {
     );
 }
 
-/// A tree renders to depth with one buffer, its reservation an estimate rather than a limit. (60
-/// levels: deeper than that, `serde_json` refuses the fixture before the renderer sees it.)
 #[test]
 fn a_deep_tree_renders_whole() {
     let mut json = String::from(r#"{"label":"leaf","children":[]}"#);
@@ -144,8 +129,6 @@ fn a_deep_tree_renders_whole() {
     );
 }
 
-/// A scoped slot filled from Rust: a closure given the props the outlet passes, which returns
-/// whether it wrote content — and the fallback when it did not.
 #[test]
 fn a_scoped_slot_is_filled_by_a_closure_given_its_props() {
     use generated::data_list;
@@ -177,8 +160,6 @@ fn a_scoped_slot_is_filled_by_a_closure_given_its_props() {
     );
 }
 
-/// Props built in Rust with the generated constructors and setters render as the same props
-/// deserialised from a fixture do: no `Cow`, no `None`, strings and lists of them taken as they come.
 #[test]
 fn props_named_after_rust_keywords_are_built_with_constructors_and_setters() {
     use generated::keywords;
@@ -238,8 +219,6 @@ fn props_are_built_with_constructors_and_setters() {
     assert_eq!(lists.words.len(), 2);
 }
 
-/// Islands in a page that Dioxus renders: the markup inside each island is the HTML Vue recorded,
-/// byte for byte, with no hydration marker in it, and it carries the same props.
 #[cfg(feature = "dioxus")]
 mod dioxus {
     use super::{generated, unescape};
@@ -250,7 +229,6 @@ mod dioxus {
     use std::fs;
     use std::path::Path;
 
-    /// `<main><h1>Books</h1>{island}</main>`: `rsx! { main { h1 { "Books" } {island} } }`.
     static AROUND: Template = Template {
         roots: &[TemplateNode::Element {
             tag: "main",
@@ -270,7 +248,6 @@ mod dioxus {
         attr_paths: &[],
     };
 
-    /// `rsx! { main { dangerous_inner_html: html } }`.
     static INSIDE: Template = Template {
         roots: &[TemplateNode::Element {
             tag: "main",
@@ -282,7 +259,6 @@ mod dioxus {
         attr_paths: &[&[0]],
     };
 
-    /// The page as `dioxus-ssr` writes it, then as a fullstack server does, with hydration ids.
     fn rendered(page: impl Fn() -> Element) -> [String; 2] {
         let mut hydratable = Renderer::new();
         hydratable.pre_render = true;
@@ -292,7 +268,6 @@ mod dioxus {
         ]
     }
 
-    /// An island's `data-props` value as it is written, and the markup inside the island.
     fn split_island<'h>(html: &'h str, name: &str, hydration: &str) -> (&'h str, &'h str) {
         let rest = html
             .strip_prefix(&format!(r#"<div data-island="{name}" data-props=""#))
@@ -306,7 +281,6 @@ mod dioxus {
         (props, inner)
     }
 
-    /// What a browser reads an attribute's value as, whichever way its references are spelled.
     fn decoded(s: &str) -> String {
         unescape(
             &s.replace("&#34;", "&quot;")
@@ -333,7 +307,6 @@ mod dioxus {
                     let (ferrovue_props, inner) = split_island(&ferrovue, $name, "");
                     assert_eq!(inner, vue, "{}", json.display());
 
-                    // The island as an element of the page.
                     let [plain, hydratable] = rendered(|| {
                         Ok(VNode::new(
                             None,
@@ -355,7 +328,6 @@ mod dioxus {
                         assert_eq!(decoded(dioxus_props), decoded(ferrovue_props), "{}", json.display());
                     }
 
-                    // The island as the content of an element of the page's own: every byte.
                     let [plain, hydratable] = rendered(|| {
                         let html = generated::$module::island(&props).into_string();
                         Ok(VNode::new(

@@ -1,6 +1,5 @@
 use super::*;
 
-/// `tests/vectors/numbers.json`, recorded from JavaScript's `String(Number(input))`.
 #[test]
 fn numbers_are_written_as_javascript_writes_them() {
     let vectors: Vec<(String, String)> =
@@ -15,8 +14,6 @@ fn numbers_are_written_as_javascript_writes_them() {
     }
 }
 
-/// `tests/vectors/math.json`, recorded from JavaScript's `Math` and `toFixed`, with `-0` written
-/// as "-0" where `String` would hide its sign.
 #[test]
 fn math_is_javascripts_math() {
     let vectors: Vec<(String, String, String, String)> =
@@ -77,9 +74,6 @@ fn a_number_shows_in_debug() {
     assert_eq!(format!("{:?}", Js(2.5_f64)), "Js(2.5)");
 }
 
-/// `push_number` as it was written before its fast paths, the reference they are held to: the tie
-/// between two shortest spellings is looked for in every number, in its exact decimal expansion,
-/// all 1,100 digits of it.
 fn push_number_exactly(out: &mut String, x: f64) {
     use std::fmt::Write;
     if x.is_nan() {
@@ -87,7 +81,6 @@ fn push_number_exactly(out: &mut String, x: f64) {
         return;
     }
     if x == 0.0 {
-        // Negative zero too: `String(-0)` is `"0"`.
         out.push('0');
         return;
     }
@@ -98,13 +91,10 @@ fn push_number_exactly(out: &mut String, x: f64) {
     if x < 0.0 {
         out.push('-');
     }
-    // `{:e}` writes the shortest digits that round-trip, as JavaScript chooses them: `d.ddde±N`.
     let mut sci = String::new();
     let _ = write!(sci, "{:e}", x.abs());
     let (mantissa, exp) = sci.split_once('e').expect("`{:e}` writes an exponent");
     let mut digits: String = mantissa.chars().filter(|c| *c != '.').collect();
-    // ECMAScript breaks a tie between two shortest spellings — the number exactly halfway between
-    // them — toward the even digit, where Rust's shortest formatting may round the other way.
     let mut exact = String::new();
     let _ = write!(exact, "{:.1100e}", x.abs());
     if let Some((exact_mantissa, exact_exp)) = exact.split_once('e')
@@ -127,7 +117,6 @@ fn push_number_exactly(out: &mut String, x: f64) {
         }
     }
     let k = digits.len() as i32;
-    // The position of the decimal point relative to the digits, as the specification's `n`.
     let n = exp
         .parse::<i32>()
         .expect("`{:e}` writes an integer exponent")
@@ -163,29 +152,24 @@ fn written(push: fn(&mut String, f64), x: f64) -> String {
 proptest::proptest! {
     #![proptest_config(proptest::prelude::ProptestConfig::with_cases(20_000))]
 
-    /// Any double: what its bits make, NaN and infinities included.
     #[test]
     fn a_number_is_written_as_the_exact_reference_writes_it(bits in proptest::prelude::any::<u64>()) {
         let x = f64::from_bits(bits);
         proptest::prop_assert_eq!(written(push_number, x), written(push_number_exactly, x));
     }
 
-    /// `m / 2ⁿ`, whose exact decimal expansion is short enough to be a tie between two shortest
-    /// spellings, which the fast path decides from `m × 5ⁿ`.
     #[test]
     fn a_short_fraction_is_written_as_the_exact_reference_writes_it(m in 1u64..1 << 53, n in 0i32..64, negative in proptest::prelude::any::<bool>()) {
         let x = m as f64 * 2f64.powi(-n) * if negative { -1.0 } else { 1.0 };
         proptest::prop_assert_eq!(written(push_number, x), written(push_number_exactly, x));
     }
 
-    /// `m × 2ᵉ`, whole numbers from the exact ones up to past where a tie can be.
     #[test]
     fn a_large_whole_number_is_written_as_the_exact_reference_writes_it(m in 1u64..1 << 53, e in 0i32..100) {
         let x = m as f64 * 2f64.powi(e);
         proptest::prop_assert_eq!(written(push_number, x), written(push_number_exactly, x));
     }
 
-    /// Decimal numbers as a page holds them: a few digits, a decimal point somewhere.
     #[test]
     fn a_decimal_is_written_as_the_exact_reference_writes_it(digits in 0u64..100_000_000_000_000_000, point in -30i32..30) {
         let x: f64 = format!("{digits}e{point}").parse().expect("a decimal parses");

@@ -1,11 +1,3 @@
-//! Fallthrough attributes: what a parent passes a component beyond its props, merged as
-//! `mergeProps` merges them and written as `ssrRenderAttrs` writes them.
-//!
-//! A parent's compiled template knows every attribute it passes, but the child is compiled once for
-//! every parent, so the two meet here, at run time: the parent builds an [`Attrs`], and the child's
-//! root (or the element its template binds `$attrs` to) merges it with its own attributes through
-//! [`attrs_into`]. A component no parent passes attributes to never sees any of this.
-
 use std::borrow::Cow;
 
 use crate::{escape_into, js_trim, push_int, push_number, record};
@@ -59,7 +51,6 @@ impl<'a> Attr<'a> {
         Attr::Style(normal_order(res))
     }
 
-    /// JavaScript's truthiness.
     fn truthy(&self) -> bool {
         match self {
             Attr::Undefined => false,
@@ -71,7 +62,6 @@ impl<'a> Attr<'a> {
         }
     }
 
-    /// `===` of the class merged so far, which is `undefined` or a string, with a value.
     fn strict_eq(&self, other: &Attr<'_>) -> bool {
         match (self, other) {
             (Attr::Undefined, Attr::Undefined) => true,
@@ -80,8 +70,6 @@ impl<'a> Attr<'a> {
         }
     }
 
-    /// `normalizeClass` of the value alone: a string trimmed, an object's names, anything else
-    /// nothing.
     fn class_text(&self) -> &str {
         match self {
             Attr::Str(s) => js_trim(s),
@@ -90,7 +78,6 @@ impl<'a> Attr<'a> {
         }
     }
 
-    /// `String(value)`, for a string, a boolean or a number.
     fn write_string(&self, out: &mut String) {
         match self {
             Attr::Str(s) => escape_into(out, s),
@@ -138,7 +125,6 @@ impl<'a, T: Into<Attr<'a>>> From<Option<T>> for Attr<'a> {
     }
 }
 
-/// A list of attributes, borrowed from a parent's call or merged into one of its own.
 #[derive(Debug, Clone)]
 enum List<'a> {
     Borrowed(&'a [(&'a str, Attr<'a>)]),
@@ -147,11 +133,6 @@ enum List<'a> {
 
 /// What a parent passes a component beyond its props — `$attrs`, in the order given — and the scope
 /// ids its root inherits, ` data-v-…` each, which Vue keeps after them.
-///
-/// Generated parents build one for each child that may be passed attributes, and the child's
-/// `render_scoped` takes it; `render` passes [`Attrs::NONE`]. A child with nothing passed renders
-/// exactly as it would have without, and a component no parent passes attributes to takes the scope
-/// ids alone, as a `&str`.
 ///
 /// # Example
 ///
@@ -223,18 +204,13 @@ impl Default for Attrs<'_> {
     }
 }
 
-/// An attribute merged from several lists, with the index of the list that first gave its name.
 type Merged<'a> = (&'a str, Attr<'a>, usize);
 
-/// `mergeProps`: each name where it first appears with the last value given, except that classes
-/// are joined (once, when a value equals the class so far) and styles merged. Listeners are not
-/// rendered and never reach here.
 fn merge<'a>(sources: &[&[(&'a str, Attr<'a>)]]) -> Vec<Merged<'a>> {
     let mut ret: Vec<Merged<'a>> = Vec::new();
     for (i, source) in sources.iter().enumerate() {
         for (key, value) in source.iter() {
             let at = ret.iter().position(|(k, _, _)| k == key);
-            // An empty key (which `mergeProps` skips) is never written either.
             match *key {
                 "class" => {
                     let so_far = at.map_or(&Attr::Undefined, |j| &ret[j].1);
@@ -265,7 +241,6 @@ fn set<'a>(ret: &mut Vec<Merged<'a>>, at: Option<usize>, key: &'a str, value: At
     }
 }
 
-/// `normalizeClass([a, b])` of two normalised classes.
 fn join_classes(a: &str, b: &str) -> String {
     match (a.is_empty(), b.is_empty()) {
         (true, _) => b.to_owned(),
@@ -295,9 +270,6 @@ pub fn merge_props<'a>(sources: &[&[(&'a str, Attr<'a>)]]) -> Vec<(&'a str, Attr
 /// `ssrRenderAttrs(mergeProps(...sources))` for an element given fallthrough attributes, with the
 /// scope ids written after the attributes the first `ids_at + 1` sources give — where Vue's
 /// `_attrs`, which holds them as keys after the attributes, sits among the sources.
-///
-/// Called by generated code for the root of a component that was passed attributes, and for an
-/// element that binds `$attrs`.
 ///
 /// # Example
 ///
@@ -333,9 +305,6 @@ pub fn attrs_into(out: &mut String, sources: &[&[(&str, Attr<'_>)]], ids_at: usi
 /// (a class not trimmed for `mergeProps`, a style given as text written as it is), then the scope
 /// ids.
 ///
-/// Called by generated code for an element whose only attributes are those passed: a root with none
-/// of its own, an element binding `$attrs` alone.
-///
 /// # Example
 ///
 /// ```
@@ -352,8 +321,6 @@ pub fn passed_attrs_into(out: &mut String, list: &[(&str, Attr<'_>)], ids: &str)
     out.push_str(ids);
 }
 
-/// One key of `ssrRenderAttrs`, without a tag: a class or a style normalised, any other value by
-/// `ssrRenderDynamicAttr`.
 fn attr_into(out: &mut String, key: &str, value: &Attr<'_>) {
     const IGNORED: [&str; 6] = [
         "key",
@@ -389,13 +356,11 @@ fn attr_into(out: &mut String, key: &str, value: &Attr<'_>) {
     }
 }
 
-/// `isOn`: `on` followed by anything but a lowercase ASCII letter.
 fn is_on(key: &str) -> bool {
     let b = key.as_bytes();
     b.len() > 2 && b[0] == b'o' && b[1] == b'n' && !b[2].is_ascii_lowercase()
 }
 
-/// `isBooleanAttr` in `@vue/shared`.
 const BOOLEAN_ATTRS: [&str; 25] = [
     "itemscope",
     "allowfullscreen",
@@ -424,7 +389,6 @@ const BOOLEAN_ATTRS: [&str; 25] = [
     "selected",
 ];
 
-/// `ssrRenderDynamicAttr(key, value)` with no tag.
 fn dynamic_attr_into(out: &mut String, key: &str, value: &Attr<'_>) {
     if !matches!(
         value,
@@ -438,7 +402,6 @@ fn dynamic_attr_into(out: &mut String, key: &str, value: &Attr<'_>) {
         "httpEquiv" => "http-equiv".into(),
         _ => key.to_lowercase().into(),
     };
-    // `hidden` is boolean only for a boolean or a number: `hidden="until-found"` is a string.
     let boolean = if name == "hidden" {
         !matches!(value, Attr::Str(_))
     } else {
@@ -451,7 +414,6 @@ fn dynamic_attr_into(out: &mut String, key: &str, value: &Attr<'_>) {
         }
         return;
     }
-    // An unsafe name is one Vue refuses to write.
     if name.contains(['>', '/', '=', '"', '\'', '\t', '\n', '\x0c', '\r', ' ']) {
         return;
     }
@@ -465,8 +427,6 @@ fn dynamic_attr_into(out: &mut String, key: &str, value: &Attr<'_>) {
     out.push('"');
 }
 
-/// `ssrRenderStyle(value)`: nothing for a falsy value, a string as it is, an object as
-/// `name:value;` pairs — all escaped.
 fn style_into(out: &mut String, value: &Attr<'_>) {
     match value {
         Attr::Str(s) => escape_into(out, s),
@@ -492,9 +452,6 @@ fn style_into(out: &mut String, value: &Attr<'_>) {
 /// `ssrRenderStyle(normalizeStyle([css]))`: a style given as CSS text where Vue merges it, which
 /// parses it into properties and writes them back as `name:value;`, escaped.
 ///
-/// Called by generated code for a root bound to `:style="text"`, which Vue merges with whatever the
-/// component's parent passes on.
-///
 /// # Example
 ///
 /// ```
@@ -506,8 +463,6 @@ pub fn style_text_into(out: &mut String, css: &str) {
     style_into(out, &Attr::styles([Attr::str(css)]));
 }
 
-/// `hyphenate`: an ASCII capital after a letter, digit or `_` gets a `-` before it, then the whole
-/// is lowercased.
 fn hyphenate(key: &str) -> String {
     let mut s = String::with_capacity(key.len() + 2);
     let mut prev_word = false;
@@ -521,8 +476,6 @@ fn hyphenate(key: &str) -> String {
     s.to_lowercase()
 }
 
-/// One item of `normalizeStyle`'s array merged into `res`: an object's properties, a string's
-/// once parsed; anything else adds nothing.
 fn merge_style_into<'a>(res: &mut Vec<(Cow<'a, str>, Attr<'a>)>, item: Attr<'a>) {
     let entries = match item {
         Attr::Style(entries) => entries,
@@ -537,8 +490,6 @@ fn merge_style_into<'a>(res: &mut Vec<(Cow<'a, str>, Attr<'a>)>, item: Attr<'a>)
     }
 }
 
-/// An object's keys in JavaScript's order: array indices first, in numeric order, then the rest as
-/// they were added.
 fn normal_order<'a>(mut entries: Vec<(Cow<'a, str>, Attr<'a>)>) -> Vec<(Cow<'a, str>, Attr<'a>)> {
     if entries
         .iter()
@@ -549,8 +500,6 @@ fn normal_order<'a>(mut entries: Vec<(Cow<'a, str>, Attr<'a>)>) -> Vec<(Cow<'a, 
     entries
 }
 
-/// `parseStringStyle`: comments removed (but not inside quotes), split at each `;` outside
-/// parentheses, each part split at its first `:`, both halves trimmed.
 fn parse_style<'a>(css: &str) -> Vec<(Cow<'a, str>, Attr<'a>)> {
     let text = strip_comments(css);
     let mut res: Vec<(Cow<'a, str>, Attr<'a>)> = Vec::new();
@@ -558,7 +507,6 @@ fn parse_style<'a>(css: &str) -> Vec<(Cow<'a, str>, Attr<'a>)> {
         if item.is_empty() {
             continue;
         }
-        // `/:([^]+)/`: the first `:` with something after it.
         let Some((key, value)) = item.split_once(':').filter(|(_, v)| !v.is_empty()) else {
             continue;
         };
@@ -572,8 +520,6 @@ fn parse_style<'a>(css: &str) -> Vec<(Cow<'a, str>, Attr<'a>)> {
     normal_order(res)
 }
 
-/// `/"(?:[^"\\]|\\[^])*"|'(?:[^'\\]|\\[^])*'|\\[^]|\/\*[^]*?\*\//g`, each match kept unless it is a
-/// comment. A quote that is never closed matches nothing and is copied as it is.
 fn strip_comments(css: &str) -> Cow<'_, str> {
     if !css.contains("/*") {
         return Cow::Borrowed(css);
@@ -584,11 +530,8 @@ fn strip_comments(css: &str) -> Cow<'_, str> {
     while i < chars.len() {
         let c = chars[i];
         if c == '"' || c == '\'' {
-            // A quoted string, with escapes, up to its closing quote.
             let mut j = i + 1;
             let mut closed = false;
-            // A `\` takes the character after it, if there is one; when there is not, the quote is
-            // never closed.
             while j < chars.len() {
                 if chars[j] == '\\' {
                     j += 2;
@@ -623,8 +566,6 @@ fn strip_comments(css: &str) -> Cow<'_, str> {
     Cow::Owned(out)
 }
 
-/// The parts between the `;`s of `/;(?![^(]*\)/g`: a `;` followed by a `)` before any `(` is
-/// inside parentheses, and does not split.
 fn split_declarations(text: &str) -> Vec<&str> {
     let mut parts = Vec::new();
     let mut start = 0;
@@ -632,7 +573,6 @@ fn split_declarations(text: &str) -> Vec<&str> {
         if c != ';' {
             continue;
         }
-        // The `;` itself is neither bracket.
         let rest = &text[i..];
         let inside = rest
             .find(['(', ')'])
@@ -676,9 +616,6 @@ pub fn class_names(items: &[&str]) -> String {
 /// own id (`own`, `""` when it has no scoped styles), then the slot scope ids it is rendered inside
 /// (`slotted`, as the slot content was given them).
 ///
-/// Called by generated code for the root of a child component or of a `<RouterLink>`, when the ids
-/// it is handed are known only at run time.
-///
 /// # Example
 ///
 /// ```
@@ -686,9 +623,7 @@ pub fn class_names(items: &[&str]) -> String {
 /// assert_eq!(ferrovue::scope_attrs("", "data-v-a", " data-v-a data-v-c-s"), " data-v-a data-v-c-s");
 /// ```
 pub fn scope_attrs(inherited: &str, own: &str, slotted: &str) -> String {
-    // `inherited` is itself written this way: each key after one space.
     let mut keys: Vec<&str> = inherited.split(' ').filter(|k| !k.is_empty()).collect();
-    // Two spaces in a row in a slot scope id make an empty key, which `ssrRenderAttrs` skips.
     for key in std::iter::once(own).chain(js_trim(slotted).split(' ')) {
         if !key.is_empty() && !keys.contains(&key) {
             keys.push(key);

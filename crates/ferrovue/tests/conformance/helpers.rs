@@ -1,5 +1,3 @@
-//! The Rust twins of `components/helpers.ts`.
-
 pub fn plural(n: i64) -> &'static str {
     if n == 1 { "" } else { "s" }
 }

@@ -1,17 +1,6 @@
-//! Slots: `ssrRenderSlot` at a component's `<slot>` outlets, scoped slots, and holes for content
-//! written later.
-
 use crate::js_trim;
 
 /// What a parent puts in one of a component's slots.
-///
-/// A generated component that renders `<slot>` has a `Slots` struct with a field per slot:
-/// `Option<Slot>`, where `None` shows the slot's fallback, or a plain `Slot` for the page
-/// `<RouterView>` shows. From Rust, make one with [`Slot::new`] from a closure that writes the
-/// content, or with [`hole`] for content written later. It borrows the closure, and is `Copy`.
-///
-/// A scoped slot is not a `Slot` but a closure given the outlet's props; see [`scoped_slot_into`]
-/// and [`guide::slots`](crate::guide::slots).
 ///
 /// # Example
 ///
@@ -33,12 +22,8 @@ pub struct Slot<'s> {
 
 #[derive(Clone, Copy)]
 enum Body<'s> {
-    /// Always content, whatever it writes — as a component in a slot always is to Vue.
     Content(&'s dyn Fn(&mut String)),
-    /// A generated parent's markup, which reports whether it wrote anything but comments.
     Markup(&'s dyn Fn(&mut String) -> bool),
-    /// As `Markup`, for a component whose outlets pass a slot scope id (`:slotted` styles): the
-    /// content is given the id, ` data-v-…-s`, to write onto its elements.
     Slotted(&'s dyn Fn(&mut String, &str) -> bool),
 }
 
@@ -78,9 +63,6 @@ impl<'s> Slot<'s> {
     }
 
     /// A generated parent's slot content, returning whether it pushed anything but a comment.
-    ///
-    /// Called by generated code: content from a template that turns out to be only comments gives
-    /// way to the fallback, as in Vue.
     #[doc(hidden)]
     pub fn markup(render: &'s dyn Fn(&mut String) -> bool) -> Self {
         Slot {
@@ -122,15 +104,12 @@ impl<'s> Slot<'s> {
     }
 }
 
-/// `Slot { .. }`: its content is a closure, which only writing it shows.
 impl std::fmt::Debug for Slot<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Slot").finish_non_exhaustive()
     }
 }
 
-/// What a [`hole`] writes. Every interpolated value has its `<` escaped, so only a template's own
-/// markup could spell this, and no template writes an element called `fv-hole`.
 pub(crate) const HOLE: &str = "<fv-hole>";
 
 fn write_hole(out: &mut String) {
@@ -186,11 +165,7 @@ pub fn split_holes(rendered: &str) -> Vec<&str> {
 /// `ssrRenderSlot`: the slot's content between fragment markers, or its fallback when it was given
 /// none — or only comments, which is what Vue reads as nothing.
 ///
-/// Returns whether the slot's own content wrote anything but comments, which is what decides
-/// whether slot content that forwards this slot is itself empty. The fallback reports for itself.
-///
-/// Called by generated code at each `<slot>` outlet, with the component's `Slots` field and the
-/// slot's fallback, if it has one.
+/// Returns whether the slot's own content wrote anything but comments.
 ///
 /// # Example
 ///
@@ -218,9 +193,6 @@ pub fn slot_into(
 /// `data-v-…-s` from a component with `:slotted` styles, followed by the id its own slot content
 /// was given when the outlet forwards a slot; `""` for none. Generated content is given the id after
 /// a space; other content ignores it, as static markup does in Vue.
-///
-/// Called by generated code at each `<slot>` outlet of a component whose styles use `:slotted()`;
-/// [`guide::scoped_styles`](crate::guide::scoped_styles) shows one.
 ///
 /// # Example
 ///
@@ -257,7 +229,6 @@ pub fn slot_into_slotted(
         Some(Body::Slotted(f)) => f(out, &content_scope_id(slot_scope_id)),
         None => false,
     };
-    // Vue drops content of comments alone whether or not there is a fallback to show instead.
     if !filled {
         out.truncate(start);
         if let Some(fallback) = fallback {
@@ -268,8 +239,6 @@ pub fn slot_into_slotted(
     filled
 }
 
-/// What `ssrRenderSlotInner` hands slot content for an outlet's slot scope id: the id after a
-/// space, or nothing.
 fn content_scope_id(slot_scope_id: &str) -> std::borrow::Cow<'_, str> {
     if slot_scope_id.is_empty() {
         std::borrow::Cow::Borrowed("")
@@ -281,17 +250,11 @@ fn content_scope_id(slot_scope_id: &str) -> std::borrow::Cow<'_, str> {
 /// `isComment` in `@vue/server-renderer`, which `ssrRenderSlot` asks of each string slot content
 /// pushes: whether it is comments alone, with nothing between them but whitespace. Slot content
 /// that pushed nothing else gives way to the fallback.
-///
-/// Called by generated code on what one push of slot content wrote, when that depends on the
-/// values it interpolates: `${of1}<!--[-->` is a comment when `of1` writes nothing.
 #[doc(hidden)]
 pub fn is_comment(chunk: &str) -> bool {
-    // `/^<!--[\s\S]*-->$/`: the opening and closing markers do not overlap.
     if chunk.len() < 7 || !chunk.starts_with("<!--") || !chunk.ends_with("-->") {
         return false;
     }
-    // `!chunk.replace(/<!--[^]*?-->/gm, "").trim()`: each comment ends at the first `-->` after it
-    // opens, and what is left is whitespace.
     let mut rest = chunk;
     while let Some(open) = rest.find("<!--") {
         if !js_trim(&rest[..open]).is_empty() {
@@ -299,7 +262,6 @@ pub fn is_comment(chunk: &str) -> bool {
         }
         match rest[open + 4..].find("-->") {
             Some(close) => rest = &rest[open + 4 + close + 3..],
-            // An unclosed `<!--` is text.
             None => return false,
         }
     }
@@ -309,13 +271,9 @@ pub fn is_comment(chunk: &str) -> bool {
 /// `ssrRenderSlot` for a scoped slot: the content, given the props the outlet passes it, between
 /// fragment markers — or the fallback when there is no content, or the content wrote only comments.
 ///
-/// `slot` is a component's `Slots` field for a scoped slot, a closure taking the slot's props and
-/// returning whether it wrote anything but comments; one written by hand returns `true`, or
-/// `false` to discard what it wrote and show the fallback. Returns whether the content was filled,
-/// as [`slot_into`] does.
-///
-/// Called by generated code at each scoped `<slot>` outlet; [`guide::slots`](crate::guide::slots)
-/// shows the generated types a parent's closure takes.
+/// `slot` is a closure taking the slot's props and returning whether it wrote anything but
+/// comments; one written by hand returns `true`, or `false` to discard what it wrote and show the
+/// fallback. Returns whether the content was filled, as [`slot_into`] does.
 ///
 /// # Example
 ///
@@ -346,7 +304,6 @@ pub fn scoped_slot_into<P: ?Sized, F: Fn(&mut String, &P) -> bool + ?Sized>(
     let start = out.len();
     let filled = slot.is_some_and(|f| f(out, props));
     if !filled {
-        // Vue drops content of comments alone, and shows the fallback in its place.
         out.truncate(start);
         if let Some(fallback) = fallback {
             fallback(out);
@@ -358,10 +315,6 @@ pub fn scoped_slot_into<P: ?Sized, F: Fn(&mut String, &P) -> bool + ?Sized>(
 
 /// [`scoped_slot_into`] for an outlet that passes a slot scope id, as [`slot_into_slotted`] does:
 /// the content is given the props and the id, after a space.
-///
-/// Called by generated code at each scoped `<slot>` outlet of a component whose styles use
-/// `:slotted()`; a parent's closure takes the id as its third parameter, and may write it onto its
-/// elements.
 ///
 /// # Example
 ///

@@ -1,5 +1,4 @@
-//! Properties of the router that hold for every input, checked on generated ones: the vectors pin
-//! what vue-router answers for chosen cases, these look for the case nobody thought to choose.
+//! Properties of the router that hold for every input.
 
 use ferrovue_router::Router;
 use proptest::prelude::*;

@@ -1,13 +1,8 @@
-//! `class` bindings: `normalizeClass` of a list and of an object.
-
 use crate::{escape_into, js_trim, record};
 
 /// `escapeHtml(normalizeClass([...]))` for a list of strings: each one trimmed, the empty ones
 /// dropped, the rest joined with one space. `after` says a class has already been written, so the
 /// first item written here needs a separator too.
-///
-/// Called by generated code for a bound `:class`, inside the attribute's quotes, and for the
-/// classes of a `<RouterLink>`.
 ///
 /// # Example
 ///
@@ -42,9 +37,6 @@ pub fn class_into(out: &mut String, after: bool, items: &[&str]) {
 /// assert_eq!(ferrovue::class_object(&[(true, "active"), (true, " wide "), (false, "hidden")]), "active  wide");
 /// ```
 pub fn class_object(entries: &[(bool, &str)]) -> String {
-    // A JavaScript object: a name given twice is one name, where it first appeared, with the last
-    // condition given; and names that are array indices — `"0"`, `"12"` — come first, in numeric
-    // order, before the others in the order they were added.
     let mut names: Vec<(&str, bool)> = Vec::new();
     for (on, name) in entries {
         match names.iter_mut().find(|(n, _)| n == name) {
@@ -56,7 +48,6 @@ pub fn class_object(entries: &[(bool, &str)]) -> String {
         .into_iter()
         .map(|(n, on)| (record::array_index(n), n, on))
         .collect();
-    // Stable: the indices sorted among themselves, the other names kept as they came.
     ordered.sort_by_key(|(i, _, _)| i.map_or((1, 0), |i| (0, i)));
     let mut s = String::new();
     for (_, name, on) in ordered {
