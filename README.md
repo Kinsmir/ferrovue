@@ -639,6 +639,7 @@ examples/greeting/           the smallest setup: one component rendered from Rus
 examples/fullstack/          axum + Vite: islands, a page hydrated whole, Pinia state, routes and
                              streaming, <ClientOnly>, a Rust twin and its fixtures
 examples/dioxus/             a Dioxus page, rendered with dioxus-ssr, with an island in it
+scripts/ferrovue-in.ts       the `ferrovue` command run in a project of this repository (`pnpm conformance:check`, CI)
 scripts/inspect.ts           Vue's SSR code and render of a component beside the Rust ferrovue generates for it
 scripts/release.ts           the release version bump (see RELEASING.md)
 ```
