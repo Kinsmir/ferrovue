@@ -3,7 +3,7 @@
 ferrovue promises one thing: for every input it accepts, the Rust it generates writes the same
 bytes Vue's server renderer writes, and it refuses every input it can't translate. The suite is
 built around that promise. Wherever it can, it takes the expected answer from the real Vue,
-vue-router or JavaScript rather than from a hand-written string.
+vue-router or JavaScript.
 
 ```sh
 pnpm test                  # TypeScript: compiler, CLI, vectors, router, Vue half of conformance
@@ -150,8 +150,8 @@ the run: WebKit needs system libraries some Linux distributions do not ship. CI'
 browsers` job caches the browsers by Playwright version and installs their libraries each run.
 
 A fixture that mismatches only in a browser is a finding: the recorded HTML is Vue's own render, so
-the cause is the template (markup a browser rebuilds as it parses), not the generated Rust. Report
-it, and consider whether the compiler should refuse the template, rather than changing the fixture.
+the cause is the template: markup a browser rebuilds as it parses. Report
+it, leave the fixture as recorded, and consider whether the compiler should refuse the template.
 
 ## Randomised differential testing
 
@@ -241,7 +241,7 @@ nightly (`.github/workflows/fuzz.yml`) with 1,000 components and the date as the
 `FERROVUE_FUZZ_PLANT=1` checks the harness itself: before building, it writes one escaped
 interpolation per component unescaped (`out.push_str` for `fv::escape_into`). The run must then
 report mismatches and shrink one to a lone `{{ s }}` with a value such as `">"`. Its failures go to
-`target/fuzz/planted-failures/`, not `fuzz/failures/`.
+`target/fuzz/planted-failures/`, apart from the real ones in `fuzz/failures/`.
 
 ### Turning a failure into a conformance case
 

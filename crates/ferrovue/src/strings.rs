@@ -3,8 +3,8 @@ use std::cmp::Ordering;
 
 use crate::push_number;
 
-/// `String.prototype.length`: UTF-16 code units, which is what a template's `.length` counts, not
-/// the UTF-8 bytes of `str::len`, nor the scalar values of `chars().count()`.
+/// `String.prototype.length`: UTF-16 code units, which is what a template's `.length` counts.
+/// `str::len` counts UTF-8 bytes and `chars().count()` scalar values, and either can differ from it.
 ///
 /// # Example
 ///

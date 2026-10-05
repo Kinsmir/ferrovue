@@ -301,7 +301,7 @@ pub fn attrs_into(out: &mut String, sources: &[&[(&str, Attr<'_>)]], ids_at: usi
     }
 }
 
-/// `ssrRenderAttrs(attrs)` of one list, not merged with anything: each value as the parent gave it
+/// `ssrRenderAttrs(attrs)` of a single list, merged with nothing: each value as the parent gave it
 /// (a class not trimmed for `mergeProps`, a style given as text written as it is), then the scope
 /// ids.
 ///

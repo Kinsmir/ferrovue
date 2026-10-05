@@ -49,7 +49,7 @@ props, but Dioxus spells the five escaped characters as numeric references (`&#3
 `&#39;`, `&#60;`, `&#62;`) where Vue writes `&quot;`, `&amp;`, `&#39;`, `&lt;` and `&gt;`. A
 fullstack render, which Dioxus hydrates in the browser too, adds its own `data-node-hydration`
 attribute to the element. Neither changes what Vue hydrates: the props are read from the parsed
-attribute, and Vue mounts on the element's content, not the element.
+attribute, and Vue mounts on the element's content and leaves the element itself alone.
 
 ```rust
 # mod counter {
@@ -149,8 +149,8 @@ no attributes. The client never hydrates `html()` markup, so the `<div>` matters
 layout and styles.
 
 Either way, the element the markup is put in must be one the HTML parser leaves it in: a component
-whose root is an `<li>` or a `<tr>` belongs in a `<ul>` or a `<tbody>` of the page's own, through
-`dangerous_inner_html`, not in a `<div>`.
+whose root is an `<li>` or a `<tr>` belongs, through `dangerous_inner_html`, in a `<ul>` or a
+`<tbody>` of the page's own; inside a `<div>` the parser would move it.
 
 # In a fullstack app
 

@@ -55,7 +55,7 @@ Every component module has, in this order:
 | `into_html` and `into_island` | Beside `island`: `html` and `island` taking the props by value, so the `Html` holds them |
 
 `Props` has no lifetime when none of its fields borrow (a component whose props are all numbers
-and booleans has `Props`, not `Props<'a>`), and a component with no props has an empty `Props`.
+and booleans has a plain `Props`), and a component with no props has an empty `Props`.
 
 # `render` and its parameters
 
@@ -166,7 +166,7 @@ Vue's server drops but its client keeps) are refused at compile time.
 # `html` and `island`
 
 `html` takes the same parameters as `render`, minus the buffer, and returns an
-[`Html`](crate::Html): the render applied to its arguments, not yet run. Write it with
+[`Html`](crate::Html): the render applied to its arguments, run when it is written. Write it with
 [`Html::render_to`](crate::Html::render_to) or [`Html::into_string`](crate::Html::into_string), or,
 with the `maud` feature, splice it into a `maud::html!` template, where it is written straight into
 maud's buffer:

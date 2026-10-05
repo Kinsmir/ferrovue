@@ -346,7 +346,7 @@ page::render(&mut body, &props, &teleports);
 let modals = teleports.get("#modals").unwrap_or_default(); // inside <div id="modals">
 ```
 
-As Vue recommends, teleport to a dedicated element (`#modals`) rather than `body`: the browser hydrates
+As Vue recommends, teleport to a dedicated element such as `#modals`: the browser hydrates
 a target from its first node, and `body` also holds the app.
 
 ### Scoped slots from Rust

@@ -32,7 +32,7 @@ What the page carries for the client is escaped for its context as well:
 
 # Your own code is not escaped for you
 
-Slot closures and the parts of the page you write yourself are Rust, not templates: whatever they
+Slot closures and the parts of the page you write yourself are plain Rust: whatever they
 push is written as it is. Use [`escape_into`](crate::escape_into) for any text they write.
 
 # Scope ids

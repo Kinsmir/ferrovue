@@ -73,7 +73,7 @@ export interface RouterOptions {
   /** vue-i18n, when the project translates: every locale's messages, the default locale, and the
    * fallbacks. */
   i18n?: { messages: Record<string, unknown>; locale: string; fallbackLocale?: string | string[] };
-  /** Render on the client with `createApp`, rather than hydrate what the server rendered: the scope
+  /** Render on the client from scratch with `createApp`: the scope
    * ids a fresh client render writes, which the server's must equal for scoped styles to apply. */
   client?: boolean;
 }
