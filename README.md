@@ -84,12 +84,12 @@ defineProps<{ name: string; unread: number; note?: string }>();
 ### 4. Generate and render
 
 ```sh
-npx ferrovue init       # a starter ferrovue.config.json and components/Hello.vue
-npx ferrovue            # writes src/generated/{greeting.rs, mod.rs}
-npx ferrovue --check    # in CI: exits 1 if the committed modules are stale
-npx ferrovue --check --diff   # …and shows what differs, as `diff -u` does
-npx ferrovue --check --format json   # errors as JSON, for an editor or CI annotations
-npx ferrovue --watch    # regenerates when components or configs change
+pnpm ferrovue init      # a starter ferrovue.config.json and components/Hello.vue
+pnpm ferrovue           # writes src/generated/{greeting.rs, mod.rs}
+pnpm ferrovue --check   # in CI: exits 1 if the committed modules are stale
+pnpm ferrovue --check --diff  # …and shows what differs, as `diff -u` does
+pnpm ferrovue --check --format json  # errors as JSON, for an editor or CI annotations
+pnpm ferrovue --watch   # regenerates when components or configs change
 ```
 
 Every error carries a stable code, as `error[FV0602]: components/Card.vue:4:17: …`, documented in
@@ -115,8 +115,8 @@ let html: String = greeting::html(&props).into_string();
 let island = greeting::island(&props).into_string();
 
 // (`island()` exists for a component that renders from its props alone: the client rebuilds it from
-// `data-props`. One that also takes slots, the route, stores, translations or teleports has `html()`,
-// and the page's own app mounts it; see examples/fullstack.)
+// `data-props`. One that also takes slots, the route, stores, translations, teleports, provided
+// values or the page head has `html()`, and the page's own app mounts it; see examples/fullstack.)
 
 // …or straight into a buffer you already hold:
 let mut page = String::from("<!doctype html><body>");
@@ -203,6 +203,13 @@ Refused at compile time, each with an error that names the construct:
   over a prop that may be absent, or naming a key its object lacks or a tag that is not an HTML
   element; `v-html` or `v-text` on it; and, inside an element it chooses (which Vue renders from
   virtual nodes), a `<slot>` with fallback content, `v-show`, and `v-model` on a `<select>`
+- in provide and inject: a key that is neither a string literal nor an `InjectionKey` symbol exported
+  from a `.ts` file, `inject(key)!`, a value that may be `null` or `undefined`, values of different
+  types (or a ref and a plain value) under one key, setup that assigns to an injected value,
+  `provide` in a component holding `<RouterView>`, a string key injected inside a Rust twin's slot,
+  and `provide(…)` not imported from `vue`
+- `v-show`, and `v-model` on a `<select>`, in the content of a `<RouterLink>` or of a Rust twin's
+  slot, which Vue renders from virtual nodes
 - in the page head: options given to `useHead`, `useHeadSafe`, `templateParams`, a `titleTemplate`
   function, event handlers (`onload`), a `class` or `style` that may be `null` (on which unhead's
   renderer throws), and an object or array given to a `useSeoMeta` key
@@ -214,6 +221,9 @@ Refused at compile time, each with an error that names the construct:
 - custom directives not listed in `clientDirectives`
 - `watchEffect`, `watch` with `immediate`, `onServerPrefetch`, top-level `await`, and statements in setup that change state
 - `route.meta` and `route.matched`
+- in a folder of pages: a parameter beside text in one part of a path (`prefix-[id].vue`), repeatable
+  and optional catch-all parameters, parameter parsers (`[id=int]`), named views (`index@aside.vue`),
+  `definePage()`, a `<route>` block, and two pages, or a page and a component, with one component name
 - Pinia getters that read `this` or return a function
 - ordering comparisons between a string and a number, which JavaScript makes numeric
 - regular expressions (`.replace(/x/g, …)`, `.split(/,/)`), replacement functions, a search's
@@ -595,8 +605,8 @@ export default defineConfig({ test: { server: { deps: { inline: ["ferrovue"] } }
 
 `ferrovue::hole()` is a slot whose content you write later. Render a layout with holes,
 `split_holes` the output, and stream the pieces with each hole's content between them, in whatever
-order the content is ready. With the `axum` or `actix-web` feature, `ferrovue::HtmlStream` is that
-streamed response, from the render and a future for each hole's content:
+order the content is ready. With the `stream` feature (which `axum` and `actix-web` turn on),
+`ferrovue::HtmlStream` is that streamed body, from the render and a future for each hole's content:
 
 ```rust
 let body = ferrovue::HtmlStream::new(page).hole(async move { reviews_of(&id).await });
@@ -711,10 +721,14 @@ before it reaches you; a ferrovue patch follows when one does.
 ```text
 crates/ferrovue/             the Rust runtime crate, which generated code calls
   src/                       a module per part (`Html`, slots, class and style, the state script,
-                             strings, teleports, the page head, fallthrough attributes), each module's unit tests
-                             beside it in <module>/tests.rs; lib.rs re-exports them all, and the
-                             three crates below
+                             strings, teleports, the page head, fallthrough attributes, `BasicHtml`,
+                             `Sanitised`, the fixture check `conformance!` writes), each module's
+                             unit tests beside it in <module>/tests.rs; lib.rs re-exports them all,
+                             and the three crates below
+  docs/guide/                the crate guide, `ferrovue::guide` on docs.rs
   tests/conformance/         components, fixtures, recorded HTML, generated Rust
+  tests/literal_props/       components compiled with `"builders": false`
+  tests/sanitised/           a component whose `TrustedHtml` is `ferrovue::Sanitised`
   tests/vectors/             vectors recorded from JavaScript and Vue
   tests/properties.rs        property-based tests of the runtime
   benches/                   criterion benchmarks of generated renderers (see Performance)
@@ -736,6 +750,7 @@ packages/ferrovue/           the compiler (npm package)
                              the parentheses Rust needs
   src/attrs.ts, classes.ts, styles.ts, fallthrough.ts
                              attributes, class and style, attributes a parent passes on
+  src/dynamic.ts             `<component :is>` over a closed set of choices
   src/plugin.ts              the plugin interface (see CONTRIBUTING.md)
   src/plugins/               vue-router, Pinia, vue-i18n, scoped styles, <Teleport>, shared types,
                              <ClientOnly>, Rust twins, provide and inject, the page head
@@ -751,6 +766,7 @@ packages/ferrovue/           the compiler (npm package)
   src/file-routes.ts         the routes vue-router's file-based routing builds from a folder of pages
   src/page-routes.ts         `ferrovue/routes`, which the Vite plugin writes from the pages
   src/testing.ts             `ferrovue/testing`: utilities for a project's own conformance suite
+  src/fixture.ts, settle.ts  `fixtureApp` and `readFixture`, and waiting for async components to settle
   src/conformance.ts         `conformanceSuite`, which `ferrovue/testing` exports
   src/ssr.ts                 `attachSsrRender`, which `ferrovue/testing` exports
   src/hydration.ts           `hydrateRecordedPage`, which `ferrovue/testing` exports
@@ -760,8 +776,9 @@ packages/ferrovue/           the compiler (npm package)
   bench/                     Vue renderToString benchmarks, the other half of Performance
   fuzz/                      the randomised differential tester (`pnpm fuzz`)
 examples/greeting/           the smallest setup: one component rendered from Rust
-examples/fullstack/          axum + Vite: islands, a page hydrated whole, Pinia state, routes and
-                             streaming, <ClientOnly>, a Rust twin, and a conformance suite
+examples/fullstack/          axum + Vite: islands (some hydrating later), a page hydrated whole,
+                             Pinia state, routes from a folder of pages, the page head, streaming,
+                             <ClientOnly>, a Rust twin, and a conformance suite
 examples/dioxus/             a Dioxus page, rendered with dioxus-ssr, with an island in it
 scripts/ferrovue-in.ts       the `ferrovue` command run in a project of this repository (`pnpm conformance:check`, CI)
 scripts/inspect.ts           Vue's SSR code and render of a component beside the Rust ferrovue generates for it

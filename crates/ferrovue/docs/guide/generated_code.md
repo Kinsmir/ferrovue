@@ -1,7 +1,7 @@
 What the compiler writes, and the API each component gets.
 
 Generated code is ordinary Rust that calls this crate: there is no template engine and no
-reflection at run time. Commit it, and let `npx ferrovue --check` in CI catch a stale copy.
+reflection at run time. Commit it, and let `pnpm ferrovue --check` in CI catch a stale copy.
 
 # The output directory
 
