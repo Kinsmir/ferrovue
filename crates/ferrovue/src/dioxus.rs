@@ -176,7 +176,7 @@ pub fn state_script(id: &str, state: &impl Serialize) -> Element {
     // As in `state_script_into`.
     let json = crate::json::to_string(state);
     let mut content = String::with_capacity(json.len());
-    crate::json_escaped_into(&mut content, &json);
+    crate::state::json_escaped_into(&mut content, &json);
     element(
         STATE_SCRIPT,
         vec![

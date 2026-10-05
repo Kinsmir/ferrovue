@@ -1,0 +1,23 @@
+[package]
+name = "ferrovue-i18n"
+description = "vue-i18n's t() for ferrovue's server-rendered Vue components: messages compiled at build time, evaluated as vue-i18n evaluates them"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/ferrovue-i18n"
+readme = "README.md"
+keywords = ["vue", "ssr", "i18n", "vue-i18n", "translation"]
+categories = ["internationalization", "template-engine", "web-programming"]
+
+[dependencies]
+ferrovue-core.workspace = true
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[lints]
+workspace = true

@@ -795,6 +795,9 @@ dependencies = [
  "criterion",
  "dioxus-core",
  "dioxus-ssr",
+ "ferrovue-core",
+ "ferrovue-i18n",
+ "ferrovue-router",
  "futures-core",
  "http 1.5.0",
  "maud",
@@ -802,6 +805,14 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
+]
+
+[[package]]
+name = "ferrovue-core"
+version = "0.3.0"
+dependencies = [
+ "proptest",
+ "serde_json",
 ]
 
 [[package]]
@@ -832,6 +843,23 @@ name = "ferrovue-example-greeting"
 version = "0.0.0"
 dependencies = [
  "ferrovue",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "ferrovue-i18n"
+version = "0.3.0"
+dependencies = [
+ "ferrovue-core",
+]
+
+[[package]]
+name = "ferrovue-router"
+version = "0.3.0"
+dependencies = [
+ "ferrovue-core",
+ "proptest",
  "serde",
  "serde_json",
 ]

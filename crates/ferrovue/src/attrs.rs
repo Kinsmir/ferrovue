@@ -669,3 +669,38 @@ pub fn class_names(items: &[&str]) -> String {
     }
     s
 }
+
+/// The scope ids a component's root carries, written as `ssrRenderAttrs` writes them: ` data-v-…`
+/// each. Vue builds them as the keys of the component's `attrs` object, so an id already there keeps
+/// its place: first those the parent passes on when this component is its root, then the parent's
+/// own id (`own`, `""` when it has no scoped styles), then the slot scope ids it is rendered inside
+/// (`slotted`, as the slot content was given them).
+///
+/// Called by generated code for the root of a child component or of a `<RouterLink>`, when the ids
+/// it is handed are known only at run time.
+///
+/// # Example
+///
+/// ```
+/// assert_eq!(ferrovue::scope_attrs(" data-v-a", "data-v-b", ""), " data-v-a data-v-b");
+/// assert_eq!(ferrovue::scope_attrs("", "data-v-a", " data-v-a data-v-c-s"), " data-v-a data-v-c-s");
+/// ```
+pub fn scope_attrs(inherited: &str, own: &str, slotted: &str) -> String {
+    // `inherited` is itself written this way: each key after one space.
+    let mut keys: Vec<&str> = inherited.split(' ').filter(|k| !k.is_empty()).collect();
+    // Two spaces in a row in a slot scope id make an empty key, which `ssrRenderAttrs` skips.
+    for key in std::iter::once(own).chain(js_trim(slotted).split(' ')) {
+        if !key.is_empty() && !keys.contains(&key) {
+            keys.push(key);
+        }
+    }
+    let mut out = String::with_capacity(keys.iter().map(|k| k.len() + 1).sum());
+    for key in keys {
+        out.push(' ');
+        out.push_str(key);
+    }
+    out
+}
+
+#[cfg(test)]
+mod tests;

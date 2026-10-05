@@ -1,0 +1,28 @@
+[package]
+name = "ferrovue-core"
+description = "The primitives ferrovue's runtime crates share: Vue's HTML escaping, and numbers written as JavaScript writes them"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/ferrovue-core"
+readme = "README.md"
+keywords = ["vue", "ssr", "html", "escape", "javascript"]
+categories = ["template-engine", "web-programming", "value-formatting"]
+
+# No dependencies: escaping and writing numbers need only the standard library.
+[dependencies]
+
+[dev-dependencies]
+proptest = "1"
+# The vectors recorded from JavaScript (`tests/vectors/`) are JSON.
+serde_json = "1.0.151"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[lints]
+workspace = true

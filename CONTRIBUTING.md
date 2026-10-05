@@ -28,7 +28,9 @@ cargo deny check             # licences, advisories, duplicate crates and source
    `@vue/server-renderer`, `@vue/shared` or vue-router source in `node_modules` too: the rules you
    reproduce come from there, not from documentation.
 2. **Translate it** in `packages/ferrovue/src/compiler.ts`, with runtime support in
-   `crates/ferrovue/src/` if generated code needs it.
+   `crates/ferrovue/src/` if generated code needs it (`crates/ferrovue-router/` or
+   `crates/ferrovue-i18n/` for the router and vue-i18n, `crates/ferrovue-core/` for escaping and
+   numbers; `ferrovue` re-exports what they add, at its root).
 3. **Prove it with conformance.** Add a component under `crates/ferrovue/tests/conformance/components/`
    and fixtures beside the others: a typical case, an empty or falsy one, and a hostile one with
    markup-breaking characters in every prop that reaches the page. Run `pnpm conformance:generate`

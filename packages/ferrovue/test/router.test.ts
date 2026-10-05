@@ -1,6 +1,6 @@
 /* `<RouterLink>` and `useRoute()` as the real vue-router renders them, for the cases in
- * `crates/ferrovue/tests/vectors/router.json`, recorded in `router.expected.json` beside it, which
- * the Rust router (`crates/ferrovue/src/router.rs`) is held to:
+ * `crates/ferrovue-router/tests/vectors/router.json`, recorded in `router.expected.json` beside it, which
+ * the Rust router (`crates/ferrovue-router`) is held to:
  * - `links`: a string `to` from a location — the link's `href` and whether it is active;
  * - `objects`: a `{ name, params, query, hash }` or `{ path, … }` `to`, the same;
  * - `locations`: what `useRoute()` reads at a location — `path`, `hash`, `name`, `params`, `query`,
@@ -16,7 +16,7 @@ import { createSSRApp, defineComponent, h } from "vue";
 import { renderToString } from "vue/server-renderer";
 import { createMemoryHistory, createRouter, RouterLink, type RouteLocationRaw, type RouteRecordRaw, type Router } from "vue-router";
 
-const DIR = join(import.meta.dirname, "../../../crates/ferrovue/tests/vectors");
+const DIR = join(import.meta.dirname, "../../../crates/ferrovue-router/tests/vectors");
 interface Vectors {
   routes: string[];
   names: Record<string, string>;

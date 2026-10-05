@@ -46,9 +46,13 @@ pub mod slots {}
 #[doc = include_str!("../docs/guide/scoped_styles.md")]
 pub mod scoped_styles {}
 
+#[cfg(feature = "router")]
+#[cfg_attr(docsrs, doc(cfg(feature = "router")))]
 #[doc = include_str!("../docs/guide/routing.md")]
 pub mod routing {}
 
+#[cfg(feature = "i18n")]
+#[cfg_attr(docsrs, doc(cfg(feature = "i18n")))]
 #[doc = include_str!("../docs/guide/i18n.md")]
 pub mod i18n {}
 

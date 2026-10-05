@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  CRATES,
+  cargoRequirements,
   cargoVersion,
   changelogNotes,
   checkRelease,
@@ -12,15 +14,25 @@ import {
 } from "./release.ts";
 
 const CARGO = `[workspace]
-members = ["crates/ferrovue", "examples/*"]
+members = ["crates/*", "examples/*"]
 
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
 
+[workspace.dependencies]
+ferrovue-core = { path = "crates/ferrovue-core", version = "=0.1.0" }
+ferrovue-router = { path = "crates/ferrovue-router", version = "=0.1.0" }
+serde = { version = "0.1.0" }
+
 [workspace.lints.rust]
 unsafe_code = "forbid"
 `;
+
+/** Each crate's manifest, inheriting the workspace's version. */
+const CRATE_MANIFESTS = Object.fromEntries(
+  CRATES.map((name) => [name, `[package]\nname = "${name}"\nversion.workspace = true\n`]),
+);
 
 const PKG = `{
   "name": "ferrovue",
@@ -52,11 +64,18 @@ describe("release chores", () => {
     expect(isPrerelease("1.0.0")).toBe(false);
   });
 
-  it("sets the workspace version and only that", () => {
+  it("sets the workspace version and the runtime crates' requirements on each other, and only those", () => {
     const toml = setCargoVersion(CARGO, "0.2.0");
     expect(cargoVersion(toml)).toBe("0.2.0");
+    expect(cargoRequirements(toml)).toEqual(
+      new Map([
+        ["ferrovue-core", "=0.2.0"],
+        ["ferrovue-router", "=0.2.0"],
+      ]),
+    );
     expect(toml).toContain('edition = "2024"');
-    expect(toml.match(/0\.2\.0/g)).toHaveLength(1);
+    expect(toml).toContain('serde = { version = "0.1.0" }');
+    expect(toml.match(/0\.2\.0/g)).toHaveLength(3);
   });
 
   it("sets the package version in place, leaving dependencies alone", () => {
@@ -80,13 +99,41 @@ describe("release chores", () => {
     expect(() => releaseChangelog(CHANGELOG, "0.1.0", "2026-12-01")).toThrow(/already has/);
   });
 
-  it("checks a tag against both manifests and the changelog", () => {
-    const files = { cargo: CARGO, pkg: PKG, changelog: CHANGELOG };
+  it("checks a tag against every manifest and the changelog", () => {
+    const files = { cargo: CARGO, pkg: PKG, changelog: CHANGELOG, crates: CRATE_MANIFESTS };
     expect(checkRelease("v0.1.0", files)).toEqual([]);
-    const problems = checkRelease("v0.2.0", files);
-    expect(problems.join("\n")).toMatch(/Cargo\.toml is at 0\.1\.0/);
-    expect(problems.join("\n")).toMatch(/package\.json is at 0\.1\.0/);
-    expect(problems.join("\n")).toMatch(/no notes for 0\.2\.0/);
+    const problems = checkRelease("v0.2.0", files).join("\n");
+    expect(problems).toMatch(/Cargo\.toml is at 0\.1\.0/);
+    expect(problems).toMatch(/Cargo\.toml requires ferrovue-core at "=0\.1\.0", the tag at "=0\.2\.0"/);
+    expect(problems).toMatch(/Cargo\.toml requires ferrovue-router at "=0\.1\.0"/);
+    expect(problems).toMatch(/package\.json is at 0\.1\.0/);
+    expect(problems).toMatch(/no notes for 0\.2\.0/);
     expect(checkRelease("0.1.0", files).join("\n")).toMatch(/not a release tag/);
+  });
+
+  it("refuses a requirement on a runtime crate that is not exactly the release's version", () => {
+    const caret = CARGO.replace('version = "=0.1.0" }', 'version = "0.1.0" }');
+    const files = { cargo: caret, pkg: PKG, changelog: CHANGELOG };
+    expect(checkRelease("v0.1.0", files)).toEqual(['Cargo.toml requires ferrovue-core at "0.1.0", the tag at "=0.1.0"']);
+  });
+
+  it("refuses a crate with a version of its own, a crate no release publishes, and a missing one", () => {
+    const { "ferrovue-i18n": _, ...rest } = CRATE_MANIFESTS;
+    const crates = {
+      ...rest,
+      ferrovue: `[package]\nname = "ferrovue"\nversion = "0.1.0"\n`,
+      "ferrovue-extra": `[package]\nname = "ferrovue-extra"\nversion.workspace = true\n`,
+    };
+    expect(checkRelease("v0.1.0", { cargo: CARGO, pkg: PKG, changelog: CHANGELOG, crates })).toEqual([
+      "crates/ferrovue/Cargo.toml has a version of its own, not the workspace's",
+      "crates/ferrovue-extra is not in release.ts's CRATES, so no release would publish it",
+      "CRATES names ferrovue-i18n, which crates/ does not hold",
+    ]);
+  });
+
+  it("publishes each crate after the crates it depends on", () => {
+    expect(CRATES.indexOf("ferrovue-core")).toBeLessThan(CRATES.indexOf("ferrovue-router"));
+    expect(CRATES.indexOf("ferrovue-core")).toBeLessThan(CRATES.indexOf("ferrovue-i18n"));
+    expect(CRATES.at(-1)).toBe("ferrovue");
   });
 });

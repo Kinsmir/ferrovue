@@ -10,7 +10,74 @@
 use std::borrow::Cow;
 use std::cmp::Ordering;
 
-use crate::{js_length, js_trim, js_trim_start, push_number};
+use crate::push_number;
+
+/// `String.prototype.length`: UTF-16 code units, which is what a template's `.length` counts — not
+/// the UTF-8 bytes of `str::len`, nor the scalar values of `chars().count()`.
+///
+/// # Example
+///
+/// ```
+/// assert_eq!(ferrovue::js_length("café"), 4);
+/// assert_eq!(ferrovue::js_length("🦀"), 2); // two UTF-16 code units, as JavaScript counts
+/// ```
+pub fn js_length(s: &str) -> i64 {
+    // Each scalar value is one code unit, or two when it is outside the Basic Multilingual Plane —
+    // exactly the four-byte UTF-8 sequences. Most strings are ASCII, where it is the length.
+    if s.is_ascii() {
+        return s.len() as i64;
+    }
+    s.chars().map(char::len_utf16).sum::<usize>() as i64
+}
+
+/// `String.prototype.trim`: ECMAScript's WhiteSpace and LineTerminator sets, which are not Rust's
+/// `char::is_whitespace` — JavaScript trims U+FEFF and keeps U+0085.
+///
+/// # Example
+///
+/// ```
+/// assert_eq!(ferrovue::js_trim("\u{feff} a \u{3000}"), "a");
+/// assert_eq!(ferrovue::js_trim("\u{85}a"), "\u{85}a"); // JavaScript keeps U+0085
+/// ```
+pub fn js_trim(s: &str) -> &str {
+    s.trim_matches(is_js_space)
+}
+
+/// `String.prototype.trimStart`: [`js_trim`] at the start alone.
+///
+/// # Example
+///
+/// ```
+/// assert_eq!(ferrovue::js_trim_start("\u{a0} a "), "a ");
+/// ```
+pub fn js_trim_start(s: &str) -> &str {
+    s.trim_start_matches(is_js_space)
+}
+
+/// `String.prototype.trimEnd`: [`js_trim`] at the end alone.
+///
+/// # Example
+///
+/// ```
+/// assert_eq!(ferrovue::js_trim_end(" a \u{feff}"), " a");
+/// ```
+pub fn js_trim_end(s: &str) -> &str {
+    s.trim_end_matches(is_js_space)
+}
+
+fn is_js_space(c: char) -> bool {
+    matches!(
+        c,
+        '\u{9}' | '\u{A}' | '\u{B}' | '\u{C}' | '\u{D}' | ' ' | '\u{A0}' | '\u{1680}' | '\u{2000}'
+            ..='\u{200A}'
+                | '\u{2028}'
+                | '\u{2029}'
+                | '\u{202F}'
+                | '\u{205F}'
+                | '\u{3000}'
+                | '\u{FEFF}'
+    )
+}
 
 /// The longest string V8 makes: 2²⁹ − 24 code units. Making a longer one is a `RangeError`.
 const MAX_STRING_LENGTH: f64 = ((1 << 29) - 24) as f64;
@@ -711,3 +778,6 @@ pub fn js_json_number(x: f64) -> String {
     push_number(&mut out, x);
     out
 }
+
+#[cfg(test)]
+mod tests;

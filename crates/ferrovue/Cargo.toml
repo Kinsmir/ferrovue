@@ -13,6 +13,13 @@ keywords = ["vue", "ssr", "html", "templates", "hydration"]
 categories = ["template-engine", "web-programming"]
 
 [features]
+default = ["router", "i18n"]
+# vue-router: `Router`, `Route`, `Link`, `Query`, `RouteDef` and `query_into`, from `ferrovue-router`.
+# Generated code needs it when the project configures `routes` or `router`.
+router = ["dep:ferrovue-router"]
+# vue-i18n: the `i18n` module and `I18n`, from `ferrovue-i18n`. Generated code needs it when the
+# project configures `i18n`.
+i18n = ["dep:ferrovue-i18n"]
 # `impl maud::Render for Html`, so a generated renderer can be spliced into a maud page.
 maud = ["dep:maud"]
 # `HtmlStream`: a page rendered with holes, sent as a stream of its pieces and each hole's content.
@@ -25,6 +32,9 @@ actix-web = ["stream", "dep:actix-web"]
 dioxus = ["dep:dioxus-core"]
 
 [dependencies]
+ferrovue-core.workspace = true
+ferrovue-i18n = { workspace = true, optional = true }
+ferrovue-router = { workspace = true, optional = true }
 actix-web = { version = "4.15.0", default-features = false, optional = true }
 axum-core = { version = "0.5.6", optional = true }
 bytes = { version = "1.12.1", optional = true }
@@ -50,6 +60,13 @@ tokio = { version = "1.53.2", features = ["macros", "rt", "test-util", "time"] }
 [[bench]]
 name = "render"
 harness = false
+# It renders the conformance suite's components, which link and translate.
+required-features = ["router", "i18n"]
+
+# The conformance components cover routes and translations too.
+[[test]]
+name = "conformance"
+required-features = ["router", "i18n"]
 
 [package.metadata.docs.rs]
 all-features = true

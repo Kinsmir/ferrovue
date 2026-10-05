@@ -165,3 +165,6 @@ pub fn teleport_into(
     }
     out.push_str("<!--teleport end-->");
 }
+
+#[cfg(test)]
+mod tests;

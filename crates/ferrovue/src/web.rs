@@ -10,9 +10,9 @@ use std::task::{Context, Poll};
 use bytes::Bytes;
 use futures_core::Stream;
 
-use crate::HOLE;
 #[cfg(any(feature = "axum", feature = "actix-web"))]
 use crate::Html;
+use crate::slots::HOLE;
 
 /// The `Content-Type` of every response here.
 #[cfg(any(feature = "axum", feature = "actix-web"))]

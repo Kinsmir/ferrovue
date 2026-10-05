@@ -1,6 +1,6 @@
-/* The string routines the Rust crate reimplements, held to JavaScript's own: each vector file in
- * `crates/ferrovue/tests/vectors/` is read by the crate's unit tests too, so both sides agree with
- * the same answers. */
+/* The string routines the Rust crates reimplement, held to JavaScript's own: each vector file in
+ * `crates/ferrovue/tests/vectors/` and `crates/ferrovue-core/tests/vectors/` (escaping and numbers)
+ * is read by that crate's unit tests too, so both sides agree with the same answers. */
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { escapeHtml, normalizeClass } from "@vue/shared";
@@ -10,7 +10,8 @@ import { ssrRenderAttrs, ssrRenderSlotInner } from "vue/server-renderer";
 import { isComment } from "../src/template.ts";
 
 const DIR = join(import.meta.dirname, "../../../crates/ferrovue/tests/vectors");
-const read = (name: string): unknown => JSON.parse(readFileSync(join(DIR, name), "utf8"));
+const CORE = join(import.meta.dirname, "../../../crates/ferrovue-core/tests/vectors");
+const read = (name: string, dir = DIR): unknown => JSON.parse(readFileSync(join(dir, name), "utf8"));
 
 /** A vector file written one vector per line: thousands of them stay readable in a diff. */
 function writeVectors(name: string, vectors: unknown[]): void {
@@ -83,16 +84,16 @@ describe("vectors shared with the Rust crate", () => {
   });
 
   it("escape.json is Vue's escapeHtml", () => {
-    for (const [input, want] of (read("escape.json") as [string, string][])) expect(escapeHtml(input), JSON.stringify(input)).toBe(want);
+    for (const [input, want] of (read("escape.json", CORE) as [string, string][])) expect(escapeHtml(input), JSON.stringify(input)).toBe(want);
   });
 
   // Recorded from JavaScript with `FERROVUE_VECTORS_WRITE=1`: the inputs are decimal strings, which
   // both sides parse to the same double, and the expected text is `String(Number(input))`.
   it("numbers.json is Number.prototype.toString", () => {
-    const vectors = (read("numbers.json") as [string, string][]);
+    const vectors = (read("numbers.json", CORE) as [string, string][]);
     const recorded = vectors.map(([input]) => [input, String(Number(input))]);
     if (process.env.FERROVUE_VECTORS_WRITE === "1") {
-      writeFileSync(join(DIR, "numbers.json"), JSON.stringify(recorded, null, 1) + "\n");
+      writeFileSync(join(CORE, "numbers.json"), JSON.stringify(recorded, null, 1) + "\n");
       return;
     }
     expect(vectors).toEqual(recorded);
@@ -102,7 +103,7 @@ describe("vectors shared with the Rust crate", () => {
   // A number is written as `String` writes it, but `-0` as "-0": `String` hides the sign, which
   // `1 / x` shows.
   it("math.json is Math.round, Math.max, Math.min and toFixed", () => {
-    const vectors = (read("math.json") as [string, string, string, string][]);
+    const vectors = (read("math.json", CORE) as [string, string, string, string][]);
     const text = (n: number): string => (Object.is(n, -0) ? "-0" : String(n));
     const run = (op: string, x: string, arg: string): string => {
       switch (op) {
@@ -120,7 +121,7 @@ describe("vectors shared with the Rust crate", () => {
     };
     const recorded = vectors.map(([op, x, arg]) => [op, x, arg, run(op, x, arg)]);
     if (process.env.FERROVUE_VECTORS_WRITE === "1") {
-      writeFileSync(join(DIR, "math.json"), JSON.stringify(recorded, null, 1) + "\n");
+      writeFileSync(join(CORE, "math.json"), JSON.stringify(recorded, null, 1) + "\n");
       return;
     }
     expect(vectors).toEqual(recorded);

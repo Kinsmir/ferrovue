@@ -85,7 +85,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # The latest stable, and the `rust-version` the crate declares.
+        # The latest stable, and the `rust-version` the crates declare.
         toolchain: [stable, "1.99"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -95,12 +95,20 @@ jobs:
           components: clippy, rustfmt
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       - run: cargo test --workspace --all-features --locked
+      # Each crate alone, so that a dependency or feature another crate happens to bring in cannot
+      # hide one that a crate is missing.
+      - name: Each runtime crate's tests, on their own
+        run: for crate in ferrovue-core ferrovue-router ferrovue-i18n; do cargo test -p "$crate" --locked; done
       - run: cargo test -p ferrovue --no-default-features --locked
+      - name: Without its default features, ferrovue depends on neither the router nor the i18n crate
+        run: |
+          cargo tree -p ferrovue --no-default-features --edges normal --prefix none --locked | tee "$RUNNER_TEMP/tree.txt"
+          if grep -E '^ferrovue-(router|i18n) ' "$RUNNER_TEMP/tree.txt"; then exit 1; fi
       - run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
         if: matrix.toolchain == 'stable'
       - run: cargo fmt --all --check
         if: matrix.toolchain == 'stable'
-      - run: cargo doc --no-deps --all-features --locked
+      - run: cargo doc --workspace --no-deps --all-features --locked
         if: matrix.toolchain == 'stable'
         env:
           RUSTDOCFLAGS: -D warnings
@@ -200,8 +208,9 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: The crate packages and builds from its own tarball
-        run: cargo package -p ferrovue --locked
+      # Together: a crate whose new version is not on crates.io yet is read from the others' tarballs.
+      - name: The crates package and build from their own tarballs
+        run: cargo package -p ferrovue-core -p ferrovue-router -p ferrovue-i18n -p ferrovue --locked
       - name: The npm package packs, with its build, README and licences
         working-directory: packages/ferrovue
         run: |

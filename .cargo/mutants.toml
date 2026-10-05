@@ -1,7 +1,11 @@
-# cargo-mutants (TESTING.md, "Mutation testing"): each mutant is a small change to the runtime
-# crate, and the crate's own tests — units, vectors, properties and conformance — must catch it.
-examine_globs = ["crates/ferrovue/src/**/*.rs"]
+# cargo-mutants (TESTING.md, "Mutation testing"): each mutant is a small change to one of the
+# runtime's crates, and the runtime's tests — units, vectors, properties and conformance — must
+# catch it.
+examine_globs = ["crates/*/src/**/*.rs"]
 # The unit tests themselves are not code to mutate.
-exclude_globs = ["crates/ferrovue/src/tests.rs", "crates/ferrovue/src/router/tests.rs"]
+exclude_globs = ["crates/*/src/**/tests.rs"]
+# Every mutant is tested by all four crates' tests, not only its own crate's: the conformance suite
+# in `ferrovue` is what holds the router, i18n and number writing to Vue's output.
+test_package = ["ferrovue-core", "ferrovue-router", "ferrovue-i18n", "ferrovue"]
 # `maud::Render` is part of the crate only with the feature.
 all_features = true

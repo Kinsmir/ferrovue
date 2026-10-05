@@ -225,11 +225,30 @@ what Vue writes:
 
 | Feature | Default | What it adds |
 |---|---|---|
+| `router` | on | [`Router`], [`Route`], [`Link`], [`Query`], [`RouteDef`] and [`query_into`], for components that render `<RouterLink>` or `<RouterView>` or read `useRoute()`, from the `ferrovue-router` crate |
+| `i18n` | on | The [`i18n`] module and [`I18n`], for components that call `$t` or `useI18n()`, from the `ferrovue-i18n` crate |
 | `maud` | off | `impl maud::Render for Html`, so `(greeting::html(&props))` can go straight into a `maud::html!` page |
 | `stream` | off | `HtmlStream`: a page rendered with holes as a stream of byte chunks, each hole filled by a future |
 | `axum` | off | `stream`, and `IntoResponse` for `Html` and `HtmlStream`, so a handler returns `greeting::into_html(props)` ([`guide::web_frameworks`](crate::guide::web_frameworks)) |
 | `actix-web` | off | `stream`, and `Responder` for `Html` and `HtmlStream` |
 | `dioxus` | off | The `dioxus` module: `Html::to_element` and `impl IntoDynNode for Html`, so `{greeting::island(&props)}` can go straight into Dioxus 0.7's `rsx!`, and `dioxus::state_script`; the guide's `dioxus` page shows a page |
+
+An application with neither routes nor translations can turn the default features off
+(`default-features = false`) and builds neither `ferrovue-router` nor `ferrovue-i18n`. Generated
+code is the same either way: it names the router and translations only when the project configures
+them.
+
+# Crates
+
+The runtime is four crates, released together at one version; this one re-exports the others at
+its root, which is the one path generated code and this documentation use:
+
+| Crate | What it holds |
+|---|---|
+| `ferrovue` | This crate: what generated code calls, and the framework integrations |
+| [`ferrovue-core`](https://docs.rs/ferrovue-core) | [`escape_into`], and JavaScript's numbers ([`push_int`], [`push_number`], [`Js`], …), which the other three share |
+| [`ferrovue-router`](https://docs.rs/ferrovue-router) | [`Router`] and what goes with it (the `router` feature) |
+| [`ferrovue-i18n`](https://docs.rs/ferrovue-i18n) | [`i18n`] and [`I18n`] (the `i18n` feature) |
 
 # Rust version
 
