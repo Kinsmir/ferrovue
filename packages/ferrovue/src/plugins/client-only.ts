@@ -5,7 +5,7 @@ import { slotContent } from "../slots.ts";
 import { statements } from "../template.ts";
 import { type Plugin, runOf } from "../plugin.ts";
 
-export const CLIENT_MODULES = new Set(["ferrovue", "ferrovue/client"]);
+const CLIENT_MODULES = new Set(["ferrovue", "ferrovue/client"]);
 
 interface ClientOnlyRun {
   locals: Map<Component, Set<string>>;
