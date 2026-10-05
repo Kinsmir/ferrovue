@@ -50,6 +50,8 @@ pub mod forward;
 pub mod frame;
 pub mod glyph;
 pub mod head_article;
+pub mod head_choice;
+pub mod head_note;
 pub mod head_page;
 pub mod head_seo;
 pub mod head_theme;
@@ -401,6 +403,18 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: head_article::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let head = ferrovue::Head::without_defaults();
             head_article::render(&mut out, &props, &head);
+            head_into(&mut out, &head);
+        }
+        "HeadChoice" => {
+            let props: head_choice::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let head = ferrovue::Head::without_defaults();
+            head_choice::render(&mut out, &props, &head);
+            head_into(&mut out, &head);
+        }
+        "HeadNote" => {
+            let props: head_note::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let head = ferrovue::Head::without_defaults();
+            head_note::render(&mut out, &props, &head);
             head_into(&mut out, &head);
         }
         "HeadPage" => {

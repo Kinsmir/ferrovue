@@ -38,7 +38,7 @@ impl<'a> Props<'a> {
 pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>, fv_head: &fv::Head) {
     out.reserve(props.label.len() + props.theme.as_deref().map_or(0, str::len) + props.tags.iter().map(|v| v.len()).sum::<usize>());
     fv_head.push(fv::HeadValue::object([("titleTemplate", fv::HeadValue::str(&format!("%s | {}", props.label))), ("meta", fv::HeadValue::array([fv::HeadValue::object([("name", fv::HeadValue::str("theme")), ("content", fv::HeadValue::str("page"))])]))]));
-    super::theme_scope::render(out, &super::theme_scope::Props { theme: props.theme.as_deref().map(std::borrow::Cow::Borrowed) }, super::theme_scope::Slots {
+    super::theme_scope::render_scoped(out, &super::theme_scope::Props { theme: props.theme.as_deref().map(std::borrow::Cow::Borrowed) }, super::theme_scope::Slots {
         default: Some(&|out: &mut String, fv_provides: super::provides::Provides<'_>| -> bool {
             super::head_theme::render(out, &super::head_theme::Props { label: std::borrow::Cow::Borrowed(&*props.label) }, super::head_theme::Slots {
                 default: Some(&|out: &mut String, fv_provides: super::provides::Provides<'_>| -> bool {
@@ -49,7 +49,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides:
             }, fv_provides, fv_head);
             true
         }),
-    }, fv_provides);
+    }, fv_provides, &fv::Attrs::NONE);
 }
 
 /// The component's markup, for a maud page that shows it.

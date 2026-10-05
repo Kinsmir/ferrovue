@@ -127,6 +127,7 @@ A fixture is a JSON object of props plus three optional keys:
 | `ThemedShelf`, `ThemedList` | The same through scoped slots and `:slotted()` slot scope ids, lists, fractions mixed with integers and booleans provided |
 | `HeadPage`, `HeadArticle`, `HeadSeo` | `useHead` and `useSeoMeta` from `@unhead/vue` in a parent and its children: a title template over a child's title, every kind of tag, `htmlAttrs` and `bodyAttrs` with class and style objects and lists, getters, `computed`s, a `meta` per item of a list (`.map`), a list as `content`, JSON in a `script`, `tagPosition`, `key`, tags a later component replaces, absent, `null`, empty and `"true"` values. The head unhead's server renders is recorded after the HTML, behind `<!--fv-head-->` |
 | `HeadTheme`, `HeadThemePage` | The page head beside `provide` and `inject`: a component that injects a theme, provides another and sets the head from the one it injected, inside a provider, with slot content (`HeadArticle`) that calls `useHead` and a child that injects what it provides |
+| `HeadChoice`, `HeadNote` | The page head from components `<component :is>` chooses, by `?:` and from an object by a union prop, after a parent's title template |
 
 Every component has at least one **hostile** fixture: markup-breaking characters in every prop that
 reaches the page.
