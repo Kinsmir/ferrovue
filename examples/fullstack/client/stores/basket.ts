@@ -12,6 +12,7 @@ export const useBasket = defineStore("basket", {
     empty: (state) => state.ids.length === 0,
   },
   actions: {
+    // fallow-ignore-next-line unused-store-member -- AddToBasket calls it as useBasket().add(id)
     add(id: string) {
       if (!this.ids.includes(id)) this.ids.push(id);
     },
