@@ -88,22 +88,47 @@ export function isComment(text: string): boolean {
   return text.length <= 8 || !text.replace(/<!--[^]*?-->/gm, "").trim();
 }
 
-/** Whether a `_push` argument is content to `ssrRenderSlot`, rather than only comments. */
-export function pushesContent(s: Scope, n: N): boolean {
+/** Whether a `_push` argument is content to `ssrRenderSlot` rather than only comments — `"run"`
+ * when that depends on the values it interpolates (`${of1}<!--[-->` is a comment when `of1` writes
+ * nothing). Vue asks it of each pushed string, so the generated code asks `fv::is_comment` of what
+ * that push wrote. */
+export function pushesContent(n: N): boolean | "run" {
   if (n.type === "StringLiteral") return !isComment(n.value);
   if (n.type === "TemplateLiteral") {
-    if (n.expressions.length === 0) return !isComment(n.quasis[0].value.cooked);
-    if (n.quasis[0].value.cooked.startsWith("<!--")) {
-      fail(s.comp, "slot content that starts with a comment holding an interpolation", n);
-    }
-    return true;
+    const quasis: string[] = n.quasis.map((q: N) => q.value.cooked);
+    if (n.expressions.length === 0) return !isComment(quasis[0]!);
+    // A comment starts with `<!--` and ends with `-->`: literal text that cannot decides it now.
+    const first = quasis[0]!;
+    const last = quasis.at(-1)!;
+    if (!"<!--".startsWith(first) && !first.startsWith("<!--")) return true;
+    if (!"-->".endsWith(last) && !last.endsWith("-->")) return true;
+    /* An interpolated value is escaped, so it writes no `<` or `>`: every comment starts and ends in
+     * the literal text — unless a value is raw (`v-html`), or a marker could be split across text
+     * and a value. Then literal text left over once the comments are taken out is content, whatever
+     * the values write. */
+    const raw = n.expressions.some((x: N) => x.type !== "CallExpression" && !(x.type === "Identifier" && x.name === "_scopeId"));
+    const split = quasis.some((q, i) => (i > 0 && /^(?:-|--|!--|->|>)/.test(q)) || (i < quasis.length - 1 && /(?:<|<!|<!-|-|--)$/.test(q)));
+    if (!raw && !split && /\S/.test(quasis.join("\0").replace(/<!--[^]*?-->/g, "").replaceAll("\0", ""))) return true;
+    return "run";
   }
   // A component's render is a buffer, never a comment.
   return true;
 }
 
 export function push(s: Scope, e: Emitter, n: N): void {
-  if (s.fill && pushesContent(s, n)) e.stmt("filled = true;");
+  const content = s.fill ? pushesContent(n) : false;
+  if (content === true) e.stmt("filled = true;");
+  if (content !== "run") {
+    pushed(s, e, n);
+    return;
+  }
+  e.stmt("let fv_chunk = out.len();");
+  pushed(s, e, n);
+  e.stmt("filled |= !fv::is_comment(&out[fv_chunk..]);");
+}
+
+/** What one `_push` writes. */
+function pushed(s: Scope, e: Emitter, n: N): void {
   const text = n.type === "StringLiteral" ? n.value : n.type === "TemplateLiteral" && !n.expressions.length ? n.quasis[0].value.cooked : null;
   if (s.vnode && text === "<!---->") {
     e.lit("<!--v-if-->");
@@ -338,7 +363,7 @@ export function callChild(s: Scope, e: Emitter, child: Component, propsCode: str
     const sidParam = sid === null ? "" : `, ${sid}: &str`;
     /** The content's statements, then whether it pushed anything but comments. */
     const content = (inner: Scope): void => {
-      if (staticallyFilled(inner, body)) {
+      if (staticallyFilled(body)) {
         statements({ ...inner, fill: false }, e, body);
         e.stmt("true");
       } else {
@@ -383,7 +408,7 @@ export function callChild(s: Scope, e: Emitter, child: Component, propsCode: str
       content(inner);
       unread(opened, sid);
       e.close(")),");
-    } else if (staticallyFilled(inner, body)) {
+    } else if (staticallyFilled(body)) {
       e.open(`${field}: Some(fv::Slot::new(&|out: &mut String|`);
       statements({ ...inner, fill: false }, e, body);
       e.close(")),");
@@ -423,12 +448,12 @@ export function slotContent(s: Scope, value: N): { body: N[]; param: N } {
 
 /** Whether slot content always pushes something that is not a comment: a push of content outside
  * any `if` or loop. Then nothing has to be decided at run time. */
-export function staticallyFilled(s: Scope, body: N[]): boolean {
+export function staticallyFilled(body: N[]): boolean {
   return body.some(
     (st) =>
       st.type === "ExpressionStatement" && st.expression.type === "CallExpression" &&
       st.expression.callee.type === "Identifier" && st.expression.callee.name === "_push" &&
-      pushesContent(s, st.expression.arguments[0]),
+      pushesContent(st.expression.arguments[0]) === true,
   );
 }
 

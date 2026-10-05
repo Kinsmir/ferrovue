@@ -11,7 +11,7 @@ import type { Component } from "vue";
 import { renderToString } from "vue/server-renderer";
 import { generate } from "../src/compiler.ts";
 import { attachSsrRender, fixtureApp, readFixture } from "../src/testing.ts";
-import { cases, hydrationBody, OPTIONS, ROOT, ROUTES, TELEPORTS } from "./conformance-cases.ts";
+import { cases, hydrationBody, OPTIONS, ROOT, ROUTES, TELEPORTS, VUE_DISAGREES } from "./conformance-cases.ts";
 
 const WRITE = process.env.FERROVUE_FIXTURES_WRITE === "1";
 
@@ -79,7 +79,10 @@ describe.skipIf(WRITE)("the recorded HTML hydrates without a mismatch", () => {
       const before = document.getElementById("root")!.firstChild;
       const app = await fixtureApp(components.get(c.component)!, readFixture(c.json), ROUTES, OPTIONS);
       app.mount("#root");
-      expect(warnings.filter((w) => /hydrat|mismatch/i.test(w))).toEqual([]);
+      const mismatches = warnings.filter((w) => /hydrat|mismatch/i.test(w));
+      const disagrees = VUE_DISAGREES.has(`${c.component}/${c.name}`);
+      expect(disagrees ? [] : mismatches).toEqual([]);
+      expect(mismatches.length > 0, "a fixture mismatches exactly when it is in VUE_DISAGREES").toBe(disagrees);
       expect(document.getElementById("root")!.firstChild).toBe(before);
       app.unmount();
     });

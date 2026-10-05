@@ -479,6 +479,22 @@ const props = defineProps<{ on: boolean }>();
       expect(out).toContain("default: Some(fv::Slot::new(&|out: &mut String| {");
     });
 
+    it("asks of a push whose values decide whether it is only comments what it wrote", () => {
+      const parent = (body: string) => `<script setup lang="ts">
+import Frame from "./Frame.vue";
+const props = defineProps<{ note?: string; tags: string[] }>();
+</script>
+<template><Frame title="t">${body}</Frame></template>`;
+      // `${note}<!--[-->`: a comment when the note writes nothing, or only whitespace.
+      const markers = compile(island(parent(`{{ note }}<i v-for="t in tags">{{ t }}</i>`), { Frame: frame })).get("x.rs")!;
+      expect(markers).toContain("let fv_chunk = out.len();");
+      expect(markers).toContain("filled |= !fv::is_comment(&out[fv_chunk..]);");
+      // Literal text outside any comment is content, whatever the values write.
+      const text = compile(island(parent(`{{ note }} of {{ tags.length }}<i v-for="t in tags">{{ t }}</i>`), { Frame: frame })).get("x.rs")!;
+      expect(text).not.toContain("fv::is_comment");
+      expect(text).toContain("default: Some(fv::Slot::new(&|out: &mut String| {");
+    });
+
     it("reads $slots.x as whether the parent gave that slot content", () => {
       const source = `<script setup lang="ts">
 defineProps<{ title: string }>();

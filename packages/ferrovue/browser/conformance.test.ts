@@ -7,14 +7,15 @@
  * in its targets — and hydrated by the components as a client build compiles them (`entry.ts`,
  * bundled once with Vite and Vue's development build). The test fails on any hydration warning and
  * any error the page logs, and checks that Vue kept the server's nodes and left the document as it
- * was parsed — apart from the attributes listed in `PATCHED`, which Vue rewrites on purpose.
+ * was parsed — apart from the attributes listed in `PATCHED`, which Vue rewrites on purpose, and
+ * the fixtures in `VUE_DISAGREES`, which Vue's own client hydrates with a mismatch.
  *
  * Nothing listens on a port: Playwright answers the page's requests from memory. */
 import vue from "@vitejs/plugin-vue";
 import { chromium, firefox, webkit, type Browser, type ConsoleMessage, type Page } from "playwright";
 import { build, type Rolldown } from "vite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { cases, hydrationBody, OPTIONS, ROUTES } from "../test/conformance-cases.ts";
+import { cases, hydrationBody, OPTIONS, ROUTES, VUE_DISAGREES } from "../test/conformance-cases.ts";
 import type { PageData } from "./entry.ts";
 
 const ORIGIN = "http://conformance.test";
@@ -118,8 +119,13 @@ describe.each(BROWSERS)("%s", (name) => {
       messages = [];
       await page.goto(`${ORIGIN}/${c.component}/${c.name}`);
       const result = await page.evaluate(() => window.hydration!);
-      expect(await Promise.all(messages)).toEqual([]);
+      const logged = await Promise.all(messages);
       expect(result.kept, "Vue kept the server's first node").toBe(true);
+      // Where Vue's own server and client disagree, it mismatches and patches the document.
+      const disagrees = VUE_DISAGREES.has(`${c.component}/${c.name}`);
+      expect(disagrees ? [] : logged).toEqual([]);
+      expect(logged.length > 0, "a fixture mismatches exactly when it is in VUE_DISAGREES").toBe(disagrees);
+      if (disagrees) return;
       let expected = result.before;
       for (const p of PATCHED[`${c.component}/${c.name}`] ?? []) {
         if (p.browsers && !p.browsers.includes(name)) continue;

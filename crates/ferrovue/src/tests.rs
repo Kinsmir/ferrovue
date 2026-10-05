@@ -28,6 +28,17 @@ fn js_trim_is_javascripts_trim() {
 
 /// `tests/vectors/escape.json`, held to `@vue/shared`'s `escapeHtml` on the TypeScript side.
 #[test]
+fn is_comment_is_what_ssr_render_slot_reads_as_nothing() {
+    let vectors: Vec<(String, bool)> =
+        serde_json::from_str(include_str!("../tests/vectors/comment.json"))
+            .expect("comment vectors");
+    assert!(vectors.len() >= 20, "the vectors were not all read");
+    for (chunk, want) in &vectors {
+        assert_eq!(is_comment(chunk), *want, "isComment({chunk:?})");
+    }
+}
+
+#[test]
 fn escape_is_vues_escape_html() {
     let vectors: Vec<(String, String)> =
         serde_json::from_str(include_str!("../tests/vectors/escape.json")).expect("escape vectors");

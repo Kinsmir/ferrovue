@@ -14,6 +14,7 @@ pub mod app;
 pub mod arrays;
 pub mod attrs;
 pub mod badge;
+pub mod blank;
 pub mod branches;
 pub mod builtins;
 pub mod card;
@@ -40,6 +41,7 @@ pub mod fallthrough;
 pub mod form;
 pub mod forward;
 pub mod frame;
+pub mod hollow;
 pub mod lifecycle;
 pub mod links;
 pub mod lists;
@@ -170,6 +172,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let state: stores::Stores = serde_json::from_value(fixture.stores.clone()).map_err(|e| e.to_string())?;
             badge::render(&mut out, &props, &state);
         }
+        "Blank" => {
+            let props: blank::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            blank::render(&mut out, &props);
+        }
         "Branches" => {
             let props: branches::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             branches::render(&mut out, &props);
@@ -295,6 +301,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let s_head = |out: &mut String| out.push_str(fixture.slot("head").unwrap_or_default());
             let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
             frame::render(&mut out, &props, frame::Slots { head: fixture.slot("head").map(|_| ferrovue::Slot::new(&s_head)), default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)) });
+        }
+        "Hollow" => {
+            let props: hollow::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            hollow::render(&mut out, &props);
         }
         "Lifecycle" => {
             let props: lifecycle::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
