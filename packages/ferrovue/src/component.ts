@@ -106,8 +106,7 @@ function scriptOf(comp: Component, descriptor: SFCDescriptor): SFCScriptBlock {
   }
 }
 
-export function readComponent(file: string, root: string, isChild: boolean): { comp: Component; ast: N[]; ssr: string } {
-  const name = basename(file, ".vue");
+export function readComponent(file: string, root: string, isChild: boolean, name = basename(file, ".vue")): { comp: Component; ast: N[]; ssr: string } {
   const source = readFileSync(file, "utf8");
   const { descriptor, errors } = parseSfc(source, { filename: file });
   const rel = relative(root, file);

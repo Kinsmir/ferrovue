@@ -1035,6 +1035,42 @@ Route entry of an unsupported shape.
 
 `<RouterView>` in a child component.
 
+## FV1238
+
+`routes` that is neither a routes file nor `{ pages }`.
+
+## FV1239
+
+Pages folder that cannot be read.
+
+## FV1240
+
+Page file name the router cannot match.
+
+Each part of a page's path is plain text (letters, digits, `-` and `_`) or one whole parameter: `[id]`, `[[id]]` (optional) or `[...path]` (a catch-all, last). A parameter beside text in one part (`prefix-[id].vue`), a repeatable parameter (`[id]+`), an optional catch-all (`[[...path]]`), a parameter parser (`[id=int]`) and a character code (`[x+2E]`) are not matched on the server.
+
+## FV1241
+
+Named view in a page file name.
+
+## FV1242
+
+`definePage()` in a page.
+
+`definePage()` changes a page's route (its name, path, alias, meta or params) at build time. ferrovue builds the server's routes from the files' paths alone, so the two would disagree.
+
+## FV1243
+
+`<route>` block in a page.
+
+## FV1244
+
+`_parent.vue` with no pages to hold.
+
+## FV1245
+
+Page whose component name is taken or not a Rust name.
+
 # Pinia stores: FV13xx
 
 See [`pinia`](crate::guide::pinia).

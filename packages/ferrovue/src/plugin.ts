@@ -44,6 +44,7 @@ export interface Plugin<Run = unknown, Local = unknown> {
 
   configure?(config: Config, root: string): Run;
   prepare?(root: string): void;
+  components?(): { file: string; name: string }[];
 
   sfc?(comp: Component, descriptor: SFCDescriptor, file: string, source: string): void;
   templateOptions?(comp: Component): { id: string; scoped: boolean; slotted: boolean };

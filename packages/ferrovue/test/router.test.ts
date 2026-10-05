@@ -13,17 +13,21 @@ interface Vectors {
   objects: Array<[string, Record<string, unknown> & { query?: Array<[string, string]> }]>;
   locations: string[];
   bases: Array<[string, string, string]>;
-  nested: {
-    routes: NestedRoute[];
-    links: Array<[string, string]>;
-    named: Array<[string, RouteLocationRaw]>;
-    locations: string[];
-  };
+  nested: NestedVectors;
+  files: NestedVectors;
+}
+
+interface NestedVectors {
+  routes: NestedRoute[];
+  links: Array<[string, string]>;
+  named: Array<[string, RouteLocationRaw]>;
+  locations: string[];
 }
 
 interface NestedRoute {
   path: string;
   name?: string;
+  view?: boolean;
   children?: NestedRoute[];
 }
 const vectors = JSON.parse(readFileSync(join(DIR, "router.json"), "utf8")) as Vectors;
@@ -40,15 +44,20 @@ function makeRouter(base?: string): Router {
   });
 }
 
-function makeNestedRouter(): Router {
+function makeNestedRouter(routes: NestedRoute[]): Router {
   const View = defineComponent({ render: () => null });
-  const records = (routes: NestedRoute[]): RouteRecordRaw[] =>
-    routes.map((r) => ({ path: r.path, component: View, ...(r.name ? { name: r.name } : {}), ...(r.children ? { children: records(r.children) } : {}) }));
-  return createRouter({ history: createMemoryHistory(), routes: records(vectors.nested.routes) });
+  const records = (list: NestedRoute[]): RouteRecordRaw[] =>
+    list.map((r) => ({
+      path: r.path,
+      ...(r.view === false ? {} : { component: View }),
+      ...(r.name ? { name: r.name } : {}),
+      ...(r.children ? { children: records(r.children) } : {}),
+    }) as RouteRecordRaw);
+  return createRouter({ history: createMemoryHistory(), routes: records(routes) });
 }
 
-async function nestedLink(at: string, to: RouteLocationRaw): Promise<[string, boolean, boolean]> {
-  const router = makeNestedRouter();
+async function nestedLink(routes: NestedRoute[], at: string, to: RouteLocationRaw): Promise<[string, boolean, boolean]> {
+  const router = makeNestedRouter(routes);
   const app = createSSRApp({ render: () => h(RouterLink, { to }, () => "x") });
   app.use(router);
   await router.push(at);
@@ -92,6 +101,23 @@ async function location(at: string): Promise<{
   };
 }
 
+async function recordNested(v: NestedVectors): Promise<{
+  links: Array<[string, boolean, boolean]>;
+  named: Array<[string, boolean, boolean]>;
+  locations: Array<{ path: string; name: string | null; params: Record<string, string> }>;
+}> {
+  const recorded = { links: [] as Array<[string, boolean, boolean]>, named: [] as Array<[string, boolean, boolean]>, locations: [] as Array<{ path: string; name: string | null; params: Record<string, string> }> };
+  for (const [at, to] of v.links) recorded.links.push(await nestedLink(v.routes, at, to));
+  for (const [at, to] of v.named) recorded.named.push(await nestedLink(v.routes, at, to));
+  for (const at of v.locations) {
+    const router = makeNestedRouter(v.routes);
+    await router.push(at);
+    const r = router.currentRoute.value;
+    recorded.locations.push({ path: r.path, name: typeof r.name === "string" ? r.name : null, params: r.params as Record<string, string> });
+  }
+  return recorded;
+}
+
 it("records what RouterLink and useRoute() give for each vector", async () => {
   const warn = console.warn;
   console.warn = () => {};
@@ -107,16 +133,15 @@ it("records what RouterLink and useRoute() give for each vector", async () => {
     for (const at of vectors.locations) locations.push(await location(at));
     const bases: Array<[string, boolean]> = [];
     for (const [base, at, to] of vectors.bases) bases.push(await link(at, to, base));
-    const nested = { links: [] as Array<[string, boolean, boolean]>, named: [] as Array<[string, boolean, boolean]>, locations: [] as Array<{ path: string; name: string | null; params: Record<string, string> }> };
-    for (const [at, to] of vectors.nested.links) nested.links.push(await nestedLink(at, to));
-    for (const [at, to] of vectors.nested.named) nested.named.push(await nestedLink(at, to));
-    for (const at of vectors.nested.locations) {
-      const router = makeNestedRouter();
-      await router.push(at);
-      const r = router.currentRoute.value;
-      nested.locations.push({ path: r.path, name: typeof r.name === "string" ? r.name : null, params: r.params as Record<string, string> });
-    }
-    const recorded = { ...vectors, expected, expectedObjects: objects, expectedLocations: locations, expectedBases: bases, expectedNested: nested };
+    const recorded = {
+      ...vectors,
+      expected,
+      expectedObjects: objects,
+      expectedLocations: locations,
+      expectedBases: bases,
+      expectedNested: await recordNested(vectors.nested),
+      expectedFiles: await recordNested(vectors.files),
+    };
     if (process.env.FERROVUE_VECTORS_WRITE === "1") {
       writeFileSync(EXPECTED, JSON.stringify(recorded, null, 2) + "\n");
       return;

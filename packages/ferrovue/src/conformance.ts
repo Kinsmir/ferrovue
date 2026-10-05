@@ -4,6 +4,7 @@ import type { App, Component } from "vue";
 import { renderToString } from "vue/server-renderer";
 import { generate, loadConfig, type Config } from "./compiler.ts";
 import { unifiedDiff } from "./diff.ts";
+import { allPages, fileRoutes, pagesFolder, routeEntries } from "./file-routes.ts";
 import { fixtureApp, peer, readFixture, type RouteEntry, type RouterOptions } from "./fixture.ts";
 import { headRendered, settled } from "./settle.ts";
 import { attachSsrRender } from "./ssr.ts";
@@ -15,7 +16,9 @@ export interface ConformanceOptions extends Pick<RouterOptions, "pinia" | "vueRo
   /** The project's `ferrovue.config.json`. */
   config: string;
   /** Every component in the configured `components` directory, by file name or by the path
-   * `import.meta.glob` gives it: `import.meta.glob("../components/*.vue", { eager: true })`. */
+   * `import.meta.glob` gives it: `import.meta.glob("../components/*.vue", { eager: true })`; and
+   * with a folder of pages, every page, by the path `import.meta.glob("../pages/**\/*.vue")` gives
+   * it or by its component name (`BooksId`). */
   components: Record<string, Component | { default: Component }>;
   /** The fixtures, one directory per component holding `<case>.json` and `<case>.html`:
    * `fixtures` beside the configuration when not given. */
@@ -107,10 +110,20 @@ export function firstDifference(recorded: string, rendered: string): string {
   return `first difference at character ${at} (line ${lines.length}, column ${lines.at(-1)!.length + 1}):\n  recorded: ${around(recorded)}\n  rendered: ${around(rendered)}`;
 }
 
-function componentsByName(given: ConformanceOptions["components"]): Map<string, Component> {
+interface PageFile {
+  name: string;
+  file: string;
+  within: string;
+}
+
+function componentsByName(given: ConformanceOptions["components"], pages: PageFile[]): Map<string, Component> {
+  const nameOf = (key: string): string => {
+    const path = key.replaceAll("\\", "/");
+    return pages.find((p) => path.endsWith(`/${p.within}`))?.name ?? basename(key, ".vue");
+  };
   return new Map(
     Object.entries(given).map(([key, value]) => [
-      basename(key, ".vue"),
+      nameOf(key),
       (value as { default?: Component }).default ?? (value as Component),
     ]),
   );
@@ -118,7 +131,13 @@ function componentsByName(given: ConformanceOptions["components"]): Map<string, 
 
 function routerOptions(root: string, config: Config): { routes: RouteEntry[] | null; options: RouterOptions } {
   const router = config.router ?? (config.routes ? { routes: config.routes } : null);
-  const routes = router ? (JSON.parse(readFileSync(join(root, router.routes), "utf8")) as RouteEntry[]) : null;
+  const pages = pagesFolder(config);
+  const routes =
+    pages !== null
+      ? routeEntries(fileRoutes(root, pages))
+      : typeof router?.routes === "string"
+        ? (JSON.parse(readFileSync(join(root, router.routes), "utf8")) as RouteEntry[])
+        : null;
   const options: RouterOptions = {};
   if (router?.base !== undefined) options.base = router.base;
   if (router?.linkActiveClass !== undefined) options.linkActiveClass = router.linkActiveClass;
@@ -224,14 +243,21 @@ export function registerConformance(api: TestApi, options: ConformanceOptions): 
   const fixtures = resolve(root, options.fixtures ?? "fixtures");
   const record = options.record ?? process.env.FERROVUE_FIXTURES_WRITE === "1";
   const dir = join(root, config.components);
-  const files = existsSync(dir)
-    ? readdirSync(dir)
-        .filter((f) => f.endsWith(".vue"))
-        .map((f) => basename(f, ".vue"))
-        .toSorted()
-    : [];
-  const given = componentsByName(options.components);
-  for (const [name, component] of given) if (files.includes(name)) attachSsrRender(join(dir, `${name}.vue`), name, component);
+  const pagesDir = pagesFolder(config)?.replace(/\/+$/, "") ?? null;
+  const pages: PageFile[] =
+    pagesDir === null
+      ? []
+      : allPages(fileRoutes(root, pagesDir)).map((p) => ({ name: p.component!, file: join(root, p.file!), within: `${basename(pagesDir)}/${p.file!.slice(pagesDir.length + 1)}` }));
+  const sources = new Map<string, string>([
+    ...(existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith(".vue")) : []).map((f): [string, string] => [basename(f, ".vue"), join(dir, f)]),
+    ...pages.map((p): [string, string] => [p.name, p.file]),
+  ]);
+  const files = [...sources.keys()].toSorted();
+  const given = componentsByName(options.components, pages);
+  for (const [name, component] of given) {
+    const source = sources.get(name);
+    if (source) attachSsrRender(source, name, component);
+  }
   const cases = casesIn(fixtures);
   const { routes, options: configured } = routerOptions(root, config);
   const appOptions: RouterOptions = { ...configured, pinia: options.pinia, vueRouter: options.vueRouter, vueI18n: options.vueI18n };

@@ -121,6 +121,11 @@ released together and share version numbers.
 
 ### Changed
 
+- **Breaking:** `ferrovue::RouteDef` has a `view` field, whether the route shows a component; the
+  generated `route_table.rs` writes it, and a `RouteDef` written by hand needs `view: true`.
+  `Route::link_named` takes a required parameter missing from `params` from the current location,
+  as vue-router does.
+
 - **Breaking:** a `provide(…)` not imported from `vue` is refused (FV0105); it used to be ignored
   as client-only. Content of a `<RouterLink>` or of a Rust twin's slot that uses `v-show`, or
   `v-model` on a `<select>`, is refused (FV0423): Vue renders that content from virtual nodes, and

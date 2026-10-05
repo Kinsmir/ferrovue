@@ -3,10 +3,11 @@
 
 //! The app's routes: what `<RouterLink>` resolves against and `useRoute()` reads.
 
-/// Each route: its vue-router path, its name if it has one, and the routes nested in it.
+/// Each route: its vue-router path, its name if it has one, whether it shows a component, and the
+/// routes nested in it.
 pub const ROUTES: &[ferrovue::RouteDef<'static>] = &[
-    ferrovue::RouteDef { path: "/", name: None, children: &[] },
-    ferrovue::RouteDef { path: "/users/:name", name: None, children: &[] },
+    ferrovue::RouteDef { path: "/", name: None, view: true, children: &[] },
+    ferrovue::RouteDef { path: "/users/:name", name: None, view: true, children: &[] },
 ];
 
 /// Every route's full path, nested ones included.

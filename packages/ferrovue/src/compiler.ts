@@ -34,12 +34,15 @@ export function generate(root: string, config: Config = loadConfig(root)): Map<s
     ]),
   );
   const dir = join(root, config.components);
-  const files = readdirSync(dir)
-    .filter((f) => f.endsWith(".vue"))
-    .toSorted()
-    .map((f) => join(dir, f));
-  const children = new Set(files.flatMap((f) => importsOf(readFileSync(f, "utf8")).filter((c) => c !== basename(f, ".vue"))));
-  const read = files.map((f) => readComponent(f, root, children.has(basename(f, ".vue"))));
+  const files = [
+    ...readdirSync(dir)
+      .filter((f) => f.endsWith(".vue"))
+      .toSorted()
+      .map((f) => ({ file: join(dir, f), name: basename(f, ".vue") })),
+    ...PLUGINS.flatMap((p) => p.components?.() ?? []).map((c) => ({ file: join(root, c.file), name: c.name })),
+  ];
+  const children = new Set(files.flatMap((f) => importsOf(readFileSync(f.file, "utf8")).filter((c) => c !== f.name)));
+  const read = files.map((f) => readComponent(f.file, root, children.has(f.name), f.name));
   const components = new Map(read.map((r) => [r.comp.name, r.comp]));
   ctx.components = components;
   const scopes = read.map((r) => scopeFor(r.comp, r.ast, components).scope);
@@ -121,7 +124,7 @@ export function write(root: string, config: Config = loadConfig(root)): Written 
   return { files: [...files.keys()], changed, removed, islands };
 }
 
-export { CONFIG_FILE, loadConfig, TYPES_MODULE, type Config, type HelperSpec, type TwinSpec, type TypeName } from "./context.ts";
+export { CONFIG_FILE, loadConfig, TYPES_MODULE, type Config, type HelperSpec, type RoutesSource, type TwinSpec, type TypeName } from "./context.ts";
 export { GenError } from "./model.ts";
 
 export const VERSION: string = (() => {

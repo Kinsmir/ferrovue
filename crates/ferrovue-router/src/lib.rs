@@ -72,28 +72,36 @@ struct Pattern {
     tokens: Vec<Token>,
     score: Vec<i32>,
     name: Option<String>,
+    matchable: bool,
 }
 
 enum Token {
     Static(String),
-    Param { name: String, wildcard: bool },
+    Param {
+        name: String,
+        wildcard: bool,
+        optional: bool,
+    },
 }
+
+type Values = Vec<Option<String>>;
 
 const ROOT: i32 = 90;
 const STATIC: i32 = 80;
 const PARAM: i32 = 60;
+const OPTIONAL: i32 = 52;
 const WILDCARD: i32 = 20;
 
 impl Router {
-    /// A router over these paths, written as vue-router writes them: `/users/:id`,
+    /// A router over these paths, written as vue-router writes them: `/users/:id`, `/:lang?/about`,
     /// `/docs/:section/:page(.*)`.
     ///
     /// # Panics
     ///
-    /// On a path that does not start with `/`, a parameter that is not `:name` or `:name(.*)`, a
-    /// `(.*)` anywhere but the last segment, or a static segment that is not plain ASCII text. The
-    /// paths are part of the program, so this is a programming error, found the first time the
-    /// router is built.
+    /// On a path that does not start with `/`, a parameter that is not `:name`, `:name?` or
+    /// `:name(.*)`, a `(.*)` anywhere but the last segment, or a static segment that is not plain
+    /// ASCII text. The paths are part of the program, so this is a programming error, found the
+    /// first time the router is built.
     ///
     /// # Example
     ///
@@ -135,6 +143,7 @@ impl Router {
             .map(|(path, name)| RouteDef {
                 path,
                 name: *name,
+                view: true,
                 children: &[],
             })
             .collect();
@@ -157,7 +166,8 @@ impl Router {
     /// let router = Router::tree(&[RouteDef {
     ///     path: "/users/:id",
     ///     name: Some("user"),
-    ///     children: &[RouteDef { path: "posts", name: Some("user-posts"), children: &[] }],
+    ///     view: true,
+    ///     children: &[RouteDef { path: "posts", name: Some("user-posts"), view: true, children: &[] }],
     /// }]);
     /// let here = router.at("/users/7/posts");
     /// let parent = here.link("/users/7");
@@ -181,6 +191,7 @@ impl Router {
                 };
                 let mut pattern = Pattern::new(&path, d.name.map(str::to_owned));
                 pattern.parent = parent;
+                pattern.matchable = d.view || d.name.is_some();
                 records.push(pattern);
                 let me = records.len() - 1;
                 add(d.children, Some(me), records);
@@ -197,7 +208,7 @@ impl Router {
             }
         }
         let mut order: Vec<usize> = Vec::new();
-        for i in 0..records.len() {
+        for i in (0..records.len()).filter(|&i| records[i].matchable) {
             let (mut lower, mut upper) = (0, order.len());
             while lower != upper {
                 let mid = (lower + upper) / 2;
@@ -211,7 +222,9 @@ impl Router {
             }
             let mut ancestor = records[i].parent;
             while let Some(a) = ancestor {
-                if compare(&records[i].score, &records[a].score) == std::cmp::Ordering::Equal {
+                if records[a].matchable
+                    && compare(&records[i].score, &records[a].score) == std::cmp::Ordering::Equal
+                {
                     if let Some(at) = order[..upper].iter().rposition(|&x| x == a) {
                         upper = at;
                     }
@@ -221,6 +234,7 @@ impl Router {
             }
             order.insert(upper, i);
         }
+        order.extend((0..records.len()).filter(|&i| !records[i].matchable));
         let mut position = vec![0; records.len()];
         for (at, &i) in order.iter().enumerate() {
             position[i] = at;
@@ -250,7 +264,7 @@ impl Router {
         chain
     }
 
-    fn params<'a>(&'a self, i: usize, values: &'a [String]) -> Vec<(&'a str, &'a str)> {
+    fn params<'a>(&'a self, i: usize, values: &'a [Option<String>]) -> Vec<(&'a str, &'a str)> {
         self.routes[i]
             .tokens
             .iter()
@@ -258,7 +272,8 @@ impl Router {
                 Token::Param { name, .. } => Some(name.as_str()),
                 Token::Static(_) => None,
             })
-            .zip(values.iter().map(String::as_str))
+            .zip(values)
+            .filter_map(|(name, value)| Some((name, value.as_deref()?)))
             .collect()
     }
 
@@ -330,22 +345,26 @@ impl Router {
         }
     }
 
-    fn matched(&self, path: &str) -> Option<(usize, Vec<String>)> {
+    fn matched(&self, path: &str) -> Option<(usize, Values)> {
         self.routes
             .iter()
             .enumerate()
+            .filter(|(_, r)| r.matchable)
             .find_map(|(i, r)| r.parse(path).map(|params| (i, params)))
     }
 }
 
-/// A route as the routes file lists it: a path, its name if it has one, and the routes nested in
-/// it, rendered by the `<RouterView>` in its component.
+/// A route as the routes file lists it: a path, its name if it has one, whether it shows a
+/// component, and the routes nested in it, rendered by the `<RouterView>` in its component.
 #[derive(Clone, Copy, Debug)]
 pub struct RouteDef<'a> {
     /// The path, relative to the parent's unless it starts with `/`; empty for a default child.
     pub path: &'a str,
     /// The route's name.
     pub name: Option<&'a str>,
+    /// Whether it shows a component. A route with neither a view nor a name only groups the routes
+    /// nested in it, as a folder of file-based routes does, and vue-router never matches it.
+    pub view: bool,
     /// The routes nested in it.
     pub children: &'a [RouteDef<'a>],
 }
@@ -375,7 +394,7 @@ pub struct Route<'r> {
     router: &'r Router,
     path: String,
     hash: String,
-    matched: Option<(usize, Vec<String>)>,
+    matched: Option<(usize, Values)>,
     query: Vec<(String, Vec<Option<String>>)>,
     full_path: String,
 }
@@ -637,7 +656,8 @@ impl Route<'_> {
     }
 
     /// `route.params.<name>`: that parameter of the route the location matched, decoded; `None`
-    /// when the route has no such parameter, or the location matched no route.
+    /// when the route has no such parameter, an optional one the location leaves out, or the
+    /// location matched no route.
     pub fn param(&self, name: &str) -> Option<&str> {
         let (i, values) = self.matched.as_ref()?;
         let at = self.router.routes[*i]
@@ -648,7 +668,7 @@ impl Route<'_> {
                 Token::Static(_) => None,
             })
             .position(|n| n == name)?;
-        values.get(at).map(String::as_str)
+        values.get(at)?.as_deref()
     }
 
     /// Resolve a link from here: a string `to`, absolute or relative to the current path, with any
@@ -675,7 +695,7 @@ impl Route<'_> {
         }
     }
 
-    fn state(&self, target: Option<(usize, Vec<String>)>) -> (bool, bool) {
+    fn state(&self, target: Option<(usize, Values)>) -> (bool, bool) {
         let (Some((t, link_values)), Some((c, here_values))) = (target, self.matched.as_ref())
         else {
             return (false, false);
@@ -709,6 +729,10 @@ impl Route<'_> {
 
     /// Resolve `{ name, params, query, hash }`: the named route's path with each parameter
     /// encoded, then `search` (a query [`query_into`] built, without its `?`) and `hash`.
+    ///
+    /// An optional parameter left out of `params` is left out of the path, unless the route is
+    /// nested in one that has it optional and the current location gives it, which vue-router
+    /// then keeps.
     ///
     /// # Panics
     ///
@@ -746,25 +770,50 @@ impl Route<'_> {
             .iter()
             .position(|r| r.name.as_deref() == Some(name))
             .unwrap_or_else(|| panic!("no route is called {name:?}"));
-        let route = &self.router.routes[i];
+        let router = self.router;
+        let route = &router.routes[i];
+        let current = match &self.matched {
+            Some((c, values)) => router.params(*c, values),
+            None => Vec::new(),
+        };
+        let inherited: Vec<&str> = route.parent.map_or_else(Vec::new, |p| {
+            router.routes[p]
+                .tokens
+                .iter()
+                .filter_map(|t| match t {
+                    Token::Param {
+                        name,
+                        optional: true,
+                        ..
+                    } => Some(name.as_str()),
+                    _ => None,
+                })
+                .collect()
+        });
         let mut path = String::new();
         let mut values = Vec::new();
         for token in &route.tokens {
             path.push('/');
             match token {
                 Token::Static(text) => path.push_str(text),
-                Token::Param { name, .. } => {
-                    let value = params
-                        .iter()
-                        .find(|(k, _)| k == name)
-                        .map_or("", |(_, v)| v);
+                Token::Param { name, optional, .. } => {
+                    let given = params.iter().find(|(k, _)| k == name).map(|(_, v)| *v);
+                    let value = given.or_else(|| {
+                        let pick = !optional || inherited.contains(&name.as_str());
+                        pick.then(|| current.iter().find(|(k, _)| k == name).map(|(_, v)| *v))
+                            .flatten()
+                    });
+                    let text = value.unwrap_or("");
+                    if text.is_empty() && *optional {
+                        path.pop();
+                    }
                     debug_assert!(
-                        !value.is_empty(),
+                        *optional || !text.is_empty(),
                         "missing required param {name:?} for the route called {:?}",
                         route.name
                     );
-                    let encoded = encode_param(value);
-                    values.push(decode(&encoded));
+                    let encoded = encode_param(text);
+                    values.push(value.map(|_| decode(&encoded)));
                     path.push_str(&encoded);
                 }
             }
@@ -892,6 +941,7 @@ impl Pattern {
                 tokens: Vec::new(),
                 score: vec![ROOT],
                 name,
+                matchable: true,
             };
         }
         let segments: Vec<&str> = rest.split('/').collect();
@@ -899,13 +949,21 @@ impl Pattern {
         let mut score = Vec::new();
         for (i, seg) in segments.iter().enumerate() {
             if let Some(param) = seg.strip_prefix(':') {
+                let (param, optional) = match param.strip_suffix('?') {
+                    Some(param) => (param, true),
+                    None => (param, false),
+                };
                 let (name, wildcard) = match param.strip_suffix("(.*)") {
                     Some(name) => (name, true),
                     None => (param, false),
                 };
                 let named = !name.is_empty()
-                    && name.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_');
-                assert!(named, "a parameter is `:name` or `:name(.*)`: {path:?}");
+                    && name.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_')
+                    && !(wildcard && optional);
+                assert!(
+                    named,
+                    "a parameter is `:name`, `:name?` or `:name(.*)`: {path:?}"
+                );
                 assert!(
                     !wildcard || i == segments.len() - 1,
                     "`(.*)` is supported on the last segment only: {path:?}"
@@ -913,8 +971,13 @@ impl Pattern {
                 tokens.push(Token::Param {
                     name: name.to_owned(),
                     wildcard,
+                    optional,
                 });
-                score.push(if wildcard { WILDCARD } else { PARAM });
+                score.push(match (wildcard, optional) {
+                    (true, _) => WILDCARD,
+                    (false, true) => OPTIONAL,
+                    (false, false) => PARAM,
+                });
             } else {
                 let plain = !seg.is_empty()
                     && seg.is_ascii()
@@ -930,42 +993,67 @@ impl Pattern {
             tokens,
             score,
             name,
+            matchable: true,
         }
     }
 
-    fn parse(&self, path: &str) -> Option<Vec<String>> {
-        let mut rest = path;
+    fn parse(&self, path: &str) -> Option<Values> {
         let mut params = Vec::new();
-        for token in &self.tokens {
-            rest = rest.strip_prefix('/')?;
-            match token {
-                Token::Static(text) => {
-                    let head = rest.get(..text.len())?;
-                    if !head.eq_ignore_ascii_case(text) {
-                        return None;
+        self.parse_from(&self.tokens, path, &mut params)
+            .then_some(params)
+    }
+
+    fn parse_from(&self, tokens: &[Token], rest: &str, params: &mut Values) -> bool {
+        let Some((token, after)) = tokens.split_first() else {
+            return matches!(rest, "" | "/");
+        };
+        match token {
+            Token::Static(text) => {
+                let Some(rest) = rest.strip_prefix('/') else {
+                    return false;
+                };
+                match rest.get(..text.len()) {
+                    Some(head) if head.eq_ignore_ascii_case(text) => {
+                        self.parse_from(after, &rest[text.len()..], params)
                     }
-                    rest = &rest[text.len()..];
-                }
-                Token::Param {
-                    wildcard: false, ..
-                } => {
-                    let end = rest.find('/').unwrap_or(rest.len());
-                    if end == 0 {
-                        return None;
-                    }
-                    params.push(decode(&rest[..end]));
-                    rest = &rest[end..];
-                }
-                Token::Param { wildcard: true, .. } => {
-                    if rest.contains(['\n', '\r', '\u{2028}', '\u{2029}']) {
-                        return None;
-                    }
-                    params.push(decode(rest));
-                    rest = "";
+                    _ => false,
                 }
             }
+            Token::Param {
+                wildcard: false,
+                optional,
+                ..
+            } => {
+                if let Some(inner) = rest.strip_prefix('/') {
+                    let end = inner.find('/').unwrap_or(inner.len());
+                    if end > 0 {
+                        params.push(Some(decode(&inner[..end])));
+                        if self.parse_from(after, &inner[end..], params) {
+                            return true;
+                        }
+                        params.pop();
+                    }
+                }
+                if *optional {
+                    params.push(None);
+                    if self.parse_from(after, rest, params) {
+                        return true;
+                    }
+                    params.pop();
+                }
+                false
+            }
+            Token::Param { wildcard: true, .. } => {
+                let Some(rest) = rest.strip_prefix('/') else {
+                    return false;
+                };
+                if rest.contains(['\n', '\r', '\u{2028}', '\u{2029}']) {
+                    return false;
+                }
+                params.push(Some(decode(rest)));
+                self.parse_from(after, "", params)
+            }
         }
-        matches!(rest, "" | "/").then_some(params)
     }
 }
 

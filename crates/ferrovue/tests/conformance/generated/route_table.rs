@@ -3,17 +3,18 @@
 
 //! The app's routes: what `<RouterLink>` resolves against and `useRoute()` reads.
 
-/// Each route: its vue-router path, its name if it has one, and the routes nested in it.
+/// Each route: its vue-router path, its name if it has one, whether it shows a component, and the
+/// routes nested in it.
 pub const ROUTES: &[ferrovue::RouteDef<'static>] = &[
-    ferrovue::RouteDef { path: "/", name: Some("home"), children: &[] },
-    ferrovue::RouteDef { path: "/blog/:slug", name: Some("post"), children: &[] },
-    ferrovue::RouteDef { path: "/blog/:slug/:tab", name: Some("post-tab"), children: &[] },
-    ferrovue::RouteDef { path: "/users/:name", name: None, children: &[] },
-    ferrovue::RouteDef { path: "/search", name: Some("search"), children: &[] },
-    ferrovue::RouteDef { path: "/account", name: Some("account"), children: &[
-        ferrovue::RouteDef { path: "", name: Some("account-home"), children: &[] },
-        ferrovue::RouteDef { path: "orders", name: Some("orders"), children: &[
-            ferrovue::RouteDef { path: ":order", name: Some("order"), children: &[] },
+    ferrovue::RouteDef { path: "/", name: Some("home"), view: true, children: &[] },
+    ferrovue::RouteDef { path: "/blog/:slug", name: Some("post"), view: true, children: &[] },
+    ferrovue::RouteDef { path: "/blog/:slug/:tab", name: Some("post-tab"), view: true, children: &[] },
+    ferrovue::RouteDef { path: "/users/:name", name: None, view: true, children: &[] },
+    ferrovue::RouteDef { path: "/search", name: Some("search"), view: true, children: &[] },
+    ferrovue::RouteDef { path: "/account", name: Some("account"), view: true, children: &[
+        ferrovue::RouteDef { path: "", name: Some("account-home"), view: true, children: &[] },
+        ferrovue::RouteDef { path: "orders", name: Some("orders"), view: true, children: &[
+            ferrovue::RouteDef { path: ":order", name: Some("order"), view: true, children: &[] },
         ] },
     ] },
 ];

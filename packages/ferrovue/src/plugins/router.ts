@@ -1,12 +1,13 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { type Component, type N, type Scope, type Val, BOOL, fail, failIn, GenError, opt, rustStr, STR } from "../model.ts";
-import { CONFIG_FILE } from "../context.ts";
+import { type Config, CONFIG_FILE } from "../context.ts";
 import { expr } from "../expr.ts";
 import { boolOf, pathOf } from "../narrowing.ts";
 import { atom, bare, not, strArg } from "../parens.ts";
 import { type Plugin, runOf, scopeOf } from "../plugin.ts";
 import { header } from "../rust.ts";
+import { allPages, type FileRoute, fileRoutes } from "../file-routes.ts";
 import { scopeIdOf } from "./scoped.ts";
 import { routerLink } from "./router-link.ts";
 
@@ -22,6 +23,7 @@ declare module "../model.ts" {
 export interface RouteDef {
   path: string;
   name?: string;
+  view?: boolean;
   children?: RouteDef[];
   fullPath: string;
 }
@@ -33,6 +35,7 @@ export function allRoutes(routes: RouteDef[]): RouteDef[] {
 interface RouterRun {
   routes: RouteDef[] | null;
   file: string | null;
+  pages: FileRoute[] | null;
   base: string;
   linkActive: string;
   linkExactActive: string;
@@ -81,6 +84,39 @@ function routeField(s: Scope, base: Val, prop: string, n: N): Val {
   return fail(s.comp, "FV1231", `\`route.${prop}\` is not available on the server: \`path\`, \`fullPath\`, \`hash\`, \`name\`, \`params\` and \`query\` are`, n);
 }
 
+function joinPath(parent: string | null, path: string): string {
+  return parent === null || path.startsWith("/") ? path : `${parent}${parent.endsWith("/") || path === "" ? "" : "/"}${path}`;
+}
+
+function pageDefs(routes: FileRoute[], parent: string | null): RouteDef[] {
+  return routes.map((r) => {
+    const fullPath = joinPath(parent, r.path);
+    const def: RouteDef = { path: r.path, fullPath };
+    if (r.name !== undefined) def.name = r.name;
+    if (!r.file) def.view = false;
+    if (r.children) def.children = pageDefs(r.children, fullPath);
+    return def;
+  });
+}
+
+function readPages(root: string, config: Config, pages: string): FileRoute[] {
+  const routes = fileRoutes(root, pages);
+  let components: string[] = [];
+  try {
+    components = readdirSync(join(root, config.components)).filter((f) => f.endsWith(".vue")).map((f) => f.slice(0, -".vue".length));
+  } catch {
+  }
+  const named = new Map<string, string>();
+  for (const page of allPages(routes)) {
+    const name = page.component!;
+    if (!/^[A-Za-z]/.test(name)) failIn(page.file!, "FV1245", `the page's component would be called \`${name}\`, which is not a Rust name: start the file's name with a letter`);
+    const taken = named.get(name) ?? (components.includes(name) ? `${config.components.replace(/\/+$/, "")}/${name}.vue` : undefined);
+    if (taken) failIn(page.file!, "FV1245", `the page's component would be called \`${name}\`, as ${taken} is: rename one of them`);
+    named.set(name, page.file!);
+  }
+  return routes;
+}
+
 export function readRoutes(root: string, file: string): RouteDef[] {
   const raw = JSON.parse(readFileSync(join(root, file), "utf8")) as unknown;
   if (!Array.isArray(raw)) throw new GenError("FV1232", `${file} lists the routes in an array`, { file });
@@ -90,8 +126,7 @@ export function readRoutes(root: string, file: string): RouteDef[] {
       if (typeof o?.path !== "string" || (o.name !== undefined && typeof o.name !== "string") || (o.children !== undefined && !Array.isArray(o.children))) {
         failIn(file, "FV1233", `a route is a path, or \`{ "path": "…", "name": "…", "children": [ … ] }\``);
       }
-      const fullPath =
-        parent === null || o.path.startsWith("/") ? o.path : `${parent}${parent.endsWith("/") || o.path === "" ? "" : "/"}${o.path}`;
+      const fullPath = joinPath(parent, o.path);
       const def: RouteDef = { path: o.path, fullPath };
       if (o.name !== undefined) def.name = o.name;
       if (o.children) def.children = read(o.children as unknown[], fullPath);
@@ -106,16 +141,17 @@ function routeDefs(routes: RouteDef[], depth: number): string {
     .map((r) => {
       const name = r.name === undefined ? "None" : `Some(${rustStr(r.name)})`;
       const children = r.children?.length ? `&[\n${routeDefs(r.children, depth + 1)}\n${pad}]` : "&[]";
-      return `${pad}ferrovue::RouteDef { path: ${rustStr(r.path)}, name: ${name}, children: ${children} },`;
+      return `${pad}ferrovue::RouteDef { path: ${rustStr(r.path)}, name: ${name}, view: ${r.view !== false}, children: ${children} },`;
     })
     .join("\n");
 }
 
-export function routesSource(routes: RouteDef[], file: string): string {
-  return `${header(file, "the routes file")}
+export function routesSource(routes: RouteDef[], file: string, pages: boolean): string {
+  return `${header(file, pages ? "the pages" : "the routes file")}
 //! The app's routes: what \`<RouterLink>\` resolves against and \`useRoute()\` reads.
 
-/// Each route: its vue-router path, its name if it has one, and the routes nested in it.
+/// Each route: its vue-router path, its name if it has one, whether it shows a component, and the
+/// routes nested in it.
 pub const ROUTES: &[ferrovue::RouteDef<'static>] = &[
 ${routeDefs(routes, 1)}
 ];
@@ -140,9 +176,16 @@ export const router: Plugin<RouterRun, RouterScope> = {
   name: "router",
   configure(config, root) {
     const r = config.router ?? (config.routes ? { routes: config.routes } : null);
+    const source: unknown = r?.routes;
+    const folder = typeof source === "object" && source !== null && typeof (source as { pages?: unknown }).pages === "string" ? (source as { pages: string }).pages : null;
+    if (r && typeof source !== "string" && folder === null) {
+      throw new GenError("FV1238", `\`routes\` in ${CONFIG_FILE} is a JSON file of routes, or \`{ "pages": "…" }\`: the folder of pages vue-router's file-based routing reads`, { file: CONFIG_FILE });
+    }
+    const pages = folder === null ? null : readPages(root, config, folder);
     return {
-      routes: r ? readRoutes(root, r.routes) : null,
-      file: r?.routes ?? null,
+      routes: pages ? pageDefs(pages, null) : typeof source === "string" ? readRoutes(root, source) : null,
+      file: folder ?? (typeof source === "string" ? source : null),
+      pages,
       base: r?.base ?? "",
       linkActive: r?.linkActiveClass ?? "router-link-active",
       linkExactActive: r?.linkExactActiveClass ?? "router-link-exact-active",
@@ -265,8 +308,9 @@ export const router: Plugin<RouterRun, RouterScope> = {
       fixtureDefault: '    fn root() -> String {\n        "/".to_owned()\n    }',
     },
   ],
+  components: () => allPages(runOf(router).pages ?? []).map((p) => ({ file: p.file!, name: p.component! })),
   modules() {
-    const { routes, file } = runOf(router);
-    return routes ? [["route_table.rs", routesSource(routes, file!)]] : [];
+    const { routes, file, pages } = runOf(router);
+    return routes ? [["route_table.rs", routesSource(routes, file!, pages !== null)]] : [];
   },
 };

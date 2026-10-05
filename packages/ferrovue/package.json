@@ -56,6 +56,10 @@
       "types": "./dist/islands.d.ts",
       "default": "./dist/islands.js"
     },
+    "./routes": {
+      "types": "./dist/page-routes.d.ts",
+      "default": "./dist/page-routes.js"
+    },
     "./vite": {
       "types": "./dist/vite.d.ts",
       "default": "./dist/vite.js"

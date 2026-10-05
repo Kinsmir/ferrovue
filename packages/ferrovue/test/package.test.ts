@@ -40,7 +40,7 @@ it("keeps ferrovue/link-router to vue-router and the routes it is given", () => 
 });
 
 it("keeps every browser entry free of the compiler", () => {
-  for (const entry of ["src/client.ts", "src/types.ts", "src/islands.ts", "src/link-router.ts"]) {
+  for (const entry of ["src/client.ts", "src/types.ts", "src/islands.ts", "src/page-routes.ts", "src/link-router.ts"]) {
     const { files } = graph(entry);
     expect([...files].some((f) => f.endsWith("/compiler.ts")), entry).toBe(false);
   }

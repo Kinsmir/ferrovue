@@ -22,6 +22,10 @@ export function routeParams(path: string): string[] {
   return [...path.matchAll(/:(\w+)/g)].map((m) => m[1]!);
 }
 
+function optionalParams(path: string): string[] {
+  return [...path.matchAll(/:(\w+)\?/g)].map((m) => m[1]!);
+}
+
 function noHalves(s: Scope, v: Val, n: N): void {
   if (v.lone) fail(s.comp, "FV0706", lonely("a `<RouterLink>` location"), n);
 }
@@ -97,9 +101,10 @@ export function resolveLink(s: Scope, e: Emitter, to: N): void {
         given.set(key, p.value);
       }
     }
-    const missing = wanted.filter((w) => !given.has(w));
-    if (missing.length) fail(s.comp, "FV1214", `route \`${name.value}\` needs \`${missing.join("`, `")}\`: give every parameter`, to);
-    const list = wanted.map((w) => `(${rustStr(w)}, ${urlText(s, expr(s, given.get(w)), given.get(w))})`);
+    const optional = optionalParams(route.fullPath);
+    const missing = wanted.filter((w) => !given.has(w) && !optional.includes(w));
+    if (missing.length) fail(s.comp, "FV1214", `route \`${name.value}\` needs \`${missing.join("`, `")}\`: give every parameter it does not mark optional`, to);
+    const list = wanted.filter((w) => given.has(w)).map((w) => `(${rustStr(w)}, ${urlText(s, expr(s, given.get(w)), given.get(w))})`);
     e.stmt(`fv_route.link_named(${rustStr(name.value)}, &[${list.join(", ")}], ${search}, ${hash})`);
   } else if (path) {
     if (parts.has("params")) fail(s.comp, "FV1215", "a `to` with a `path` takes no `params`, which vue-router ignores", path);
