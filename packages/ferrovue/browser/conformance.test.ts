@@ -28,9 +28,6 @@ const BROWSERS = (process.env.FERROVUE_BROWSERS ?? "chromium,firefox,webkit").sp
  * attribute as the server wrote it (and the browser parsed it), then as it is once hydrated; the
  * test fails if one no longer happens, so the list stays true. */
 const PATCHED: Record<string, { browsers?: string[]; server: string; hydrated: string }[]> = {
-  // `route.query.q` is an array: Vue's server renderer leaves out an attribute that is not a
-  // string, number or boolean, and its client sets it to the array's `String()`.
-  "RouteInfo/query-many.json": [{ server: '<dd title="1">', hydrated: '<dd title="1" data-q="a b,&lt;b&gt;,">' }],
   // `v-show` sets `style.display`, and the browser writes the declarations back that it could
   // parse: the hostile colour is dropped.
   "Styles/hostile.json": [{ server: 'style="color:red&quot;&gt;&lt;script&gt;;display:none;"', hydrated: 'style="display: none;"' }],

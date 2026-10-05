@@ -26,7 +26,7 @@ export function slot(s: Scope, e: Emitter, n: N): void {
         return;
       case "_ssrRenderAttr":
         if (a[0].type !== "StringLiteral") fail(s.comp, "attribute names are literal", n);
-        renderAttr(e, a[0].value, expr(s, a[1]));
+        renderAttr(s, e, a[0].value, expr(s, a[1]), a[1]);
         return;
       // `:hidden`, whose rendering depends on the value's type: Vue cannot decide it at compile time.
       case "_ssrRenderDynamicAttr":

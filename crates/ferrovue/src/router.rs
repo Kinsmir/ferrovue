@@ -500,8 +500,8 @@ impl<'r> Query<'r> {
         }
     }
 
-    /// The value as an attribute writes it: only a string is written; `null`, `undefined` and an
-    /// array leave the attribute out.
+    /// The single string, when the value is one: `typeof route.query.q === "string"`, which narrows
+    /// it to what an attribute can be bound to. `null`, `undefined` and an array are `None`.
     ///
     /// # Example
     ///

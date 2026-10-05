@@ -27,7 +27,7 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
-    out.reserve(222 + props.label.len());
+    out.reserve(253 + props.label.len());
     let s_slug = fv_route.param("slug").unwrap_or("none");
     let s_on_post = fv_route.name() == Some("post");
     out.push_str("<dl");
@@ -71,18 +71,11 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
     } else {
         out.push_str("<!---->");
     }
-    out.push_str("<dd");
-    if let Some(v) = fv_route.query("q").attr_value() {
-        out.push_str(" data-q=\"");
-        fv::escape_into(out, v);
-        out.push('"');
-    }
-    if let Some(v) = fv_route.query("x").or("none").attr_value() {
-        out.push_str(" title=\"");
-        fv::escape_into(out, v);
-        out.push('"');
-    }
-    out.push('>');
+    out.push_str("<dd data-q=\"");
+    fv::escape_into(out, fv_route.query("q").attr_value().unwrap_or("not one"));
+    out.push_str("\" title=\"");
+    fv::escape_into(out, fv_route.query("x").attr_value().unwrap_or("none"));
+    out.push_str("\">");
     fv_route.query("q").write_display(out);
     out.push('|');
     fv_route.query("x").or("none").write_display(out);
@@ -91,6 +84,13 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
     out.push_str("</dd>");
     if fv_route.query("q").is_array() {
         out.push_str("<dd>several</dd>");
+    } else {
+        out.push_str("<!---->");
+    }
+    if let Some(n3) = fv_route.query("q").attr_value() {
+        out.push_str("<dd data-one=\"");
+        fv::escape_into(out, n3);
+        out.push_str("\">one</dd>");
     } else {
         out.push_str("<!---->");
     }
