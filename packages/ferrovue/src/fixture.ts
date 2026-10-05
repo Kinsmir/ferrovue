@@ -75,6 +75,16 @@ export interface RouterOptions {
   /** Render on the client from scratch with `createApp`: the scope
    * ids a fresh client render writes, which the server's must equal for scoped styles to apply. */
   client?: boolean;
+  /** The application's own `pinia` module, used in place of the one `ferrovue/testing` would
+   * import: under vitest the application's stores use the module Vite loads, which must be the
+   * one that installs the fixture's state. */
+  pinia?: typeof import("pinia");
+  /** The application's own `vue-router` module, used in place of the one `ferrovue/testing`
+   * would import. */
+  vueRouter?: typeof import("vue-router");
+  /** The application's own `vue-i18n` module, used in place of the one `ferrovue/testing` would
+   * import. */
+  vueI18n?: typeof import("vue-i18n");
 }
 
 /** An app rendering one fixture of `component`: with a router over `routes` when there are any. */
@@ -90,14 +100,14 @@ export async function fixtureApp(
       .map(([name, html]) => [name, () => [staticNode(html)]]),
   );
   const app = (options.client ? createApp : createSSRApp)({ render: () => h(component, fixture.props, slots) });
-  const pinia = await optionalPinia(fixture.stores);
+  const pinia = options.pinia ?? (await optionalPinia(fixture.stores));
   if (pinia) {
     const store = pinia.createPinia();
     store.state.value = structuredClone(fixture.stores) as typeof store.state.value;
     app.use(store);
   }
   if (options.i18n) {
-    const { createI18n } = await peer("vue-i18n", "the fixture is rendered with `i18n` options", () => import("vue-i18n"));
+    const { createI18n } = options.vueI18n ?? await peer("vue-i18n", "the fixture is rendered with `i18n` options", () => import("vue-i18n"));
     const i18nOptions = {
       legacy: false as const,
       locale: fixture.locale ?? options.i18n.locale,
@@ -109,7 +119,7 @@ export async function fixtureApp(
     app.use(createI18n(i18nOptions as Parameters<typeof createI18n>[0]));
   }
   if (routes) {
-    const { createMemoryHistory, createRouter } = await peer("vue-router", "the fixture is rendered with routes", () => import("vue-router"));
+    const { createMemoryHistory, createRouter } = options.vueRouter ?? await peer("vue-router", "the fixture is rendered with routes", () => import("vue-router"));
     const view = fixture.slots.routerView ?? "";
     const View = defineComponent({ render: () => staticNode(view) });
     const router = createRouter({

@@ -509,6 +509,34 @@ import { hydrateState } from "ferrovue";
 hydrateState(pinia); // before app.mount(): every store starts from what the server rendered
 ```
 
+### Fixtures in an application's vitest run
+
+`fixtureApp` from `ferrovue/testing` installs Pinia for a fixture's `$stores`, vue-router for its
+routes and vue-i18n for its `i18n` option, importing each itself. A component's `useBasket()`,
+`useRoute()` or `useI18n()` reads the instance its own import of the package gives it, so the two
+must be one module instance. vitest loads `ferrovue/testing` from `node_modules` with Node, and
+runs the application's code through Vite; where a peer goes through Vite too (listed in
+`server.deps.inline`, aliased, linked from elsewhere, or installed twice), the fixture installs a
+different instance from the one the component reads, and the render fails with Pinia's "there was
+no active Pinia" or an undefined route. Pass the application's own modules in the options:
+
+```ts
+const app = await fixtureApp(component, readFixture(json), routes, {
+  pinia: await import("pinia"),
+  vueRouter: await import("vue-router"),
+  vueI18n: await import("vue-i18n"),
+});
+```
+
+Without them, `fixtureApp` imports the peers itself, as before. Another way is to have vitest run
+ferrovue through Vite as well, which puts it on the application's module graph; this also covers
+`vue` itself, which `fixtureApp` always imports:
+
+```ts
+// vitest.config.ts
+export default defineConfig({ test: { server: { deps: { inline: ["ferrovue"] } } } });
+```
+
 ### Streaming with holes
 
 `ferrovue::hole()` is a slot whose content you write later. Render a layout with holes,

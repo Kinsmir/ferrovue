@@ -24,6 +24,18 @@ released together and share version numbers.
   and pull request templates name current versions, error codes and `pnpm lint`, and the
   full-stack example restarts its server with bacon.
 
+### Fixed
+
+- `fixtureApp` from `ferrovue/testing` takes the application's own `pinia`, `vueRouter` and
+  `vueI18n` modules in its options (`{ pinia: await import("pinia") }`) and installs those. In a
+  vitest run that loads `ferrovue/testing` from `node_modules` with Node while a peer goes through
+  Vite, the instance `fixtureApp` imported itself was not the one the component's stores, `useRoute()`
+  and `useI18n()` read, and a fixture with `$stores` failed with "there was no active Pinia" (#47).
+  Without the options it imports the peers as before. The README's new section on fixtures in an
+  application's vitest run describes both the options and `server.deps.inline: ["ferrovue"]`, and
+  `examples/fullstack` tests both peers with ferrovue loaded from its built package, as an
+  application loads it.
+
 ## [0.5.0] - 2026-10-05
 
 ### Added
