@@ -18,9 +18,5 @@ categories = ["template-engine", "web-programming", "value-formatting"]
 proptest.workspace = true
 serde_json.workspace = true
 
-[package.metadata.docs.rs]
-all-features = true
-rustdoc-args = ["--cfg", "docsrs"]
-
 [lints]
 workspace = true

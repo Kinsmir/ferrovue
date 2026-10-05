@@ -21,12 +21,7 @@
 //! let args = Args { named: &[("name", Value::Str("Ada"))], ..Args::default() };
 //! assert_eq!(i18n.t("greeting", &args), "Hello Ada!");
 //! ```
-#![cfg_attr(docsrs, feature(doc_cfg))]
-#![warn(
-    missing_docs,
-    missing_debug_implementations,
-    rustdoc::missing_crate_level_docs
-)]
+#![warn(missing_debug_implementations, rustdoc::missing_crate_level_docs)]
 
 use std::fmt::Write;
 

@@ -20,9 +20,5 @@ serde_json.workspace = true
 proptest.workspace = true
 serde.workspace = true
 
-[package.metadata.docs.rs]
-all-features = true
-rustdoc-args = ["--cfg", "docsrs"]
-
 [lints]
 workspace = true
