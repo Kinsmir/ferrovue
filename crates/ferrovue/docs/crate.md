@@ -198,7 +198,7 @@ the values a render needs besides its props.
 | [`Teleports`] | renders `<Teleport>` |
 | A generated `provides::Provides`, empty or holding what the client app gives `app.provide` | calls `provide` or `inject`, or renders one that does ([`guide::provide_inject`](crate::guide::provide_inject)) |
 | [`Head`] | calls `useHead` or `useSeoMeta`, or renders one that does ([`guide::head`](crate::guide::head)) |
-| [`BasicHtml`], `Sanitised` (the `ammonia` feature), or your own type implementing [`TrustedHtml`] | renders `v-html` |
+| [`BasicHtml`], [`InlineHtml`], `Sanitised` (the `ammonia` feature), or your own type implementing [`TrustedHtml`] | renders `v-html` |
 
 A prop declared `Record<string, T>` is a [`Record`], which keeps JavaScript's order of keys.
 

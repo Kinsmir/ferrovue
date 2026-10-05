@@ -1,12 +1,12 @@
 //! A component whose `TrustedHtml` prop is `ferrovue::Sanitised`, compiled with that `trustedHtml`,
-//! and `ferrovue::BasicHtml` read back by an HTML parser.
+//! and `ferrovue::BasicHtml` and `ferrovue::InlineHtml` read back by an HTML parser.
 
 #[rustfmt::skip]
 #[path = "sanitised/generated/mod.rs"]
 #[allow(missing_docs)]
 pub mod generated;
 
-use ferrovue::{BasicHtml, Sanitised};
+use ferrovue::{BasicHtml, InlineHtml, Sanitised};
 use generated::review;
 use proptest::prelude::*;
 
@@ -80,6 +80,18 @@ proptest! {
         let text = BasicHtml::from_text(&parts.concat());
         prop_assert_eq!(decoded(&as_parsed(text.as_str())), decoded(text.as_str()));
     }
+
+    #[test]
+    fn a_browser_parses_inline_html_in_a_paragraph_back_to_the_same_html(parts in prop::collection::vec(fragment(), 0..60)) {
+        let paragraph = format!("<p>{}</p>", InlineHtml::new(&parts.concat()).as_str());
+        prop_assert_eq!(decoded(&as_parsed(&paragraph)), decoded(&paragraph));
+    }
+}
+
+#[test]
+fn a_block_in_a_paragraph_is_what_the_parser_reads_differently() {
+    let paragraph = format!("<p>{}</p>", BasicHtml::new("a<p>b").as_str());
+    assert_ne!(as_parsed(&paragraph), paragraph);
 }
 
 const HOSTILE: &str = r#"<p>Loved it <img src="x" onerror="alert(1)"><a href="javascript:alert(2)">really</a></p><script>alert(3)</script>"#;

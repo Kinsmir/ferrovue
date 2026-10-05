@@ -55,21 +55,7 @@ impl BasicHtml {
 
     /// `untrusted`, escaped but for the tags in [`BasicHtml::TAGS`], balanced.
     pub fn new(untrusted: &str) -> Self {
-        let mut html = Builder::default();
-        let mut rest = untrusted;
-        while let Some(at) = rest.find(['<', '&', '\0', '\r']) {
-            escape_into(&mut html.out, &rest[..at]);
-            rest = &rest[at..];
-            let taken = match rest.as_bytes()[0] {
-                b'<' => html.tag(rest),
-                b'&' => html.reference(rest),
-                b'\r' => html.line_break(rest),
-                _ => 1,
-            };
-            rest = &rest[taken..];
-        }
-        escape_into(&mut html.out, rest);
-        BasicHtml(html.finish())
+        BasicHtml(build(untrusted, false))
     }
 
     /// Plain text: everything escaped, blank lines between paragraphs, each paragraph a `<p>` and
@@ -121,6 +107,88 @@ impl<'de> Deserialize<'de> for BasicHtml {
         let untrusted = String::deserialize(deserializer)?;
         Ok(BasicHtml::new(&untrusted))
     }
+}
+
+/// Untrusted text with a few inline formatting tags: a [`TrustedHtml`] that `v-html` may write
+/// inside a `<p>`.
+///
+/// [`InlineHtml::new`] builds it as [`BasicHtml::new`] does, keeping as tags only `<b>`, `<i>`,
+/// `<em>`, `<strong>`, `<code>` and `<br>`. Every other tag stays text, `<p>`, `<ul>`, `<ol>` and
+/// `<li>` and their end tags included, so the HTML holds nothing that closes the paragraph it is
+/// written into. Character references are kept, a lone `&` is escaped, NUL characters are left
+/// out, and `\r\n` and `\r` become `\n`; building again from the result gives the same result.
+///
+/// A prop typed `InlineHtml` from `ferrovue/types` is this type on the server, whatever
+/// `trustedHtml` names in `ferrovue.config.json`. It serialises as the string, and deserialising
+/// builds it again with [`InlineHtml::new`].
+///
+/// # Example
+///
+/// ```
+/// use ferrovue::InlineHtml;
+///
+/// let html = InlineHtml::new("<b>Bold</b><br>and <p>no paragraph</p> <i>open");
+/// assert_eq!(
+///     html.as_str(),
+///     "<b>Bold</b><br>and &lt;p&gt;no paragraph&lt;/p&gt; <i>open</i>"
+/// );
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
+#[serde(transparent)]
+pub struct InlineHtml(String);
+
+impl InlineHtml {
+    /// The tags [`InlineHtml::new`] writes as tags.
+    pub const TAGS: [&str; 6] = ["b", "i", "em", "strong", "code", "br"];
+
+    /// `untrusted`, escaped but for the tags in [`InlineHtml::TAGS`], balanced.
+    pub fn new(untrusted: &str) -> Self {
+        InlineHtml(build(untrusted, true))
+    }
+
+    /// The HTML.
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    /// The HTML, as an owned string.
+    pub fn into_string(self) -> String {
+        self.0
+    }
+}
+
+impl TrustedHtml for InlineHtml {
+    fn trusted_html(&self) -> &str {
+        &self.0
+    }
+}
+
+impl<'de> Deserialize<'de> for InlineHtml {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let untrusted = String::deserialize(deserializer)?;
+        Ok(InlineHtml::new(&untrusted))
+    }
+}
+
+fn build(untrusted: &str, inline: bool) -> String {
+    let mut html = Builder {
+        inline,
+        ..Builder::default()
+    };
+    let mut rest = untrusted;
+    while let Some(at) = rest.find(['<', '&', '\0', '\r']) {
+        escape_into(&mut html.out, &rest[..at]);
+        rest = &rest[at..];
+        let taken = match rest.as_bytes()[0] {
+            b'<' => html.tag(rest),
+            b'&' => html.reference(rest),
+            b'\r' => html.line_break(rest),
+            _ => 1,
+        };
+        rest = &rest[taken..];
+    }
+    escape_into(&mut html.out, rest);
+    html.finish()
 }
 
 const MAX_DEPTH: usize = 32;
@@ -175,6 +243,10 @@ impl Tag {
         matches!(self, Tag::B | Tag::I | Tag::Em | Tag::Strong | Tag::Code)
     }
 
+    fn is_inline(self) -> bool {
+        self.is_formatting() || self == Tag::Br
+    }
+
     fn is_list(self) -> bool {
         matches!(self, Tag::Ul | Tag::Ol)
     }
@@ -184,6 +256,7 @@ impl Tag {
 struct Builder {
     out: String,
     open: Vec<Tag>,
+    inline: bool,
 }
 
 impl Builder {
@@ -200,7 +273,8 @@ impl Builder {
                     Tag::named(&bytes[name_at..name_at + len])?,
                     name_at + len + 1,
                 ))
-            });
+            })
+            .filter(|&(tag, _)| !self.inline || tag.is_inline());
         match tag {
             Some((tag, len)) if closing && tag != Tag::Br => {
                 self.end(tag);
