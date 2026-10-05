@@ -14,7 +14,6 @@
     "coverage:rust": "cargo llvm-cov --workspace --all-features --html --output-dir target/coverage/rust",
     "lint": "oxlint --type-aware --deny-warnings && fallow dead-code",
     "lint:fix": "oxlint --type-aware --fix && fallow fix --yes --no-create-config",
-    "fallow": "fallow",
     "bench": "pnpm bench:rust && pnpm bench:js",
     "bench:rust": "cargo bench -p ferrovue --bench render",
     "bench:js": "NODE_ENV=production vitest run --config packages/ferrovue/bench/vitest.config.ts",
