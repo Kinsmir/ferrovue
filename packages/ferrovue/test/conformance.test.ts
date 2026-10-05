@@ -118,7 +118,7 @@ describe.skipIf(WRITE)("the recorded HTML carries the scope ids the client rende
   afterEach(() => {
     document.body.innerHTML = "";
   });
-  for (const c of cases.filter((c) => c.html.includes(" data-v-"))) {
+  for (const c of cases.filter((s) => s.html.includes(" data-v-"))) {
     it(`${c.component}/${c.name}`, async () => {
       const [main, teleported] = c.html.split(HEAD)[0]!.split(TELEPORTS);
       const targets = Object.keys(JSON.parse(teleported ?? "{}") as Record<string, string>);
