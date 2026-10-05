@@ -27,6 +27,14 @@ export const OPTIONS: RouterOptions = I18N ? { i18n: I18N } : {};
 /** Where a fixture's recorded HTML continues with what was teleported, as JSON by target. */
 export const TELEPORTS = "<!--fv-teleports-->";
 
+/** Fixtures whose recorded HTML Vue's own client hydrates with a mismatch, because Vue's server and
+ * client renders disagree; the server's HTML is the one ferrovue matches. Slot content whose every
+ * pushed string is comments and whitespace — an interpolation that writes nothing, or whitespace,
+ * beside a list's fragment markers — gives way to the fallback on the server (`isComment` in
+ * `ssrRenderSlot`), while the client keeps it, as any text node is content to `ensureValidVNode`.
+ * Each must still mismatch, so the list stays true. */
+export const VUE_DISAGREES = new Set(["Hollow/absent.json", "Hollow/absent-on.json", "Hollow/whitespace.json", "Hollow/js-whitespace.json"]);
+
 export interface Case {
   component: string;
   /** The fixture's file name, `case.json`. */

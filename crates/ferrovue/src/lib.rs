@@ -542,6 +542,34 @@ fn content_scope_id(slot_scope_id: &str) -> std::borrow::Cow<'_, str> {
     }
 }
 
+/// `isComment` in `@vue/server-renderer`, which `ssrRenderSlot` asks of each string slot content
+/// pushes: whether it is comments alone, with nothing between them but whitespace. Slot content
+/// that pushed nothing else gives way to the fallback.
+///
+/// Called by generated code on what one push of slot content wrote, when that depends on the
+/// values it interpolates: `${of1}<!--[-->` is a comment when `of1` writes nothing.
+#[doc(hidden)]
+pub fn is_comment(chunk: &str) -> bool {
+    // `/^<!--[\s\S]*-->$/`: the opening and closing markers do not overlap.
+    if chunk.len() < 7 || !chunk.starts_with("<!--") || !chunk.ends_with("-->") {
+        return false;
+    }
+    // `!chunk.replace(/<!--[^]*?-->/gm, "").trim()`: each comment ends at the first `-->` after it
+    // opens, and what is left is whitespace.
+    let mut rest = chunk;
+    while let Some(open) = rest.find("<!--") {
+        if !js_trim(&rest[..open]).is_empty() {
+            return false;
+        }
+        match rest[open + 4..].find("-->") {
+            Some(close) => rest = &rest[open + 4 + close + 3..],
+            // An unclosed `<!--` is text.
+            None => return false,
+        }
+    }
+    js_trim(rest).is_empty()
+}
+
 /// `ssrRenderSlot` for a scoped slot: the content, given the props the outlet passes it, between
 /// fragment markers — or the fallback when there is no content, or the content wrote only comments.
 ///

@@ -19,7 +19,7 @@ pnpm test:browser          # the same fixtures, and the full-stack example, hydr
 |---|---|---|---|
 | **Conformance** | `crates/ferrovue/tests/conformance/` | Each component × fixture renders identically in Vue and in the generated Rust, and Vue hydrates the HTML with no mismatch | `@vue/server-renderer`, Vue's hydration |
 | **Browser hydration** | `packages/ferrovue/browser/`, `examples/fullstack/browser/` | Every fixture's recorded HTML, parsed by Chromium, Firefox and WebKit, hydrates with no mismatch and is left as parsed; the full-stack example's pages do too, and their islands work | Vue's hydration, the browsers' HTML parsers |
-| **Shared vectors** | `crates/ferrovue/tests/vectors/` | The runtime's reimplementations of `trim`, `.length`, `escapeHtml`, `String(number)`, `Math`, `toFixed`, `normalizeClass` of an object, the string methods (`slice`, `at`, `split`, `replace`, `padStart`, … on astral characters, halves of pairs, negative and `NaN` indices), string ordering, `Number` / `parseInt` / `parseFloat`, `JSON.stringify` of strings, an object's order of keys, `mergeProps` and `ssrRenderAttrs` of attributes, and vue-router's link resolution (string and object `to`, named routes, query and hash encoding, history base) and `useRoute()` fields agree with the originals | JavaScript, `@vue/shared`, vue-router |
+| **Shared vectors** | `crates/ferrovue/tests/vectors/` | The runtime's reimplementations of `trim`, `.length`, `escapeHtml`, `String(number)`, `Math`, `toFixed`, `normalizeClass` of an object, `ssrRenderSlot`'s test of slot content that is only comments, the string methods (`slice`, `at`, `split`, `replace`, `padStart`, … on astral characters, halves of pairs, negative and `NaN` indices), string ordering, `Number` / `parseInt` / `parseFloat`, `JSON.stringify` of strings, an object's order of keys, `mergeProps` and `ssrRenderAttrs` of attributes, and vue-router's link resolution (string and object `to`, named routes, query and hash encoding, history base) and `useRoute()` fields agree with the originals | JavaScript, `@vue/shared`, `@vue/server-renderer`, vue-router |
 | **Compiler** | `packages/ferrovue/test/compiler.test.ts` | Constructs that a careless translation would get subtly wrong are refused with a named error; key translations have the expected shape | Hand-written |
 | **CLI** | `packages/ferrovue/test/cli.test.ts` | `ferrovue` writes, replaces, and `--check` detects stale and stray files | Hand-written |
 | **Runtime units** | `crates/ferrovue/src/tests.rs`, `src/router/tests.rs`, `src/web.rs` | Escaping, slots, fallbacks, holes, islands, the state script, router edge cases; a streamed page's order and the axum and actix-web responses | Hand-written |
@@ -39,7 +39,11 @@ fixtures/X/case.json            Vue hydrates it: no mismatch warnings, same DOM 
 
 1. `conformance.test.ts` renders each `fixtures/<Component>/<case>.json` with real Vue and compares
    the result with `<case>.html`.
-2. It mounts the recorded HTML and hydrates it, failing on any hydration warning.
+2. It mounts the recorded HTML and hydrates it, failing on any hydration warning — except for the
+   fixtures in `VUE_DISAGREES` (`conformance-cases.ts`), where Vue's own server and client renders
+   differ and which must still mismatch: slot content whose every pushed string is comments and
+   whitespace (an interpolation that writes nothing beside a list's fragment markers) shows the
+   fallback on the server, while the client keeps the empty text.
 3. For a fixture with scope ids, which hydration does not compare, it renders the fixture afresh on
    the client and holds every element's `data-v-` ids to the recorded ones (except in
    `CLIENT_DIFFERS`, where Vue's own server and client disagree), and it checks that each scoped
@@ -75,6 +79,7 @@ A fixture is a JSON object of props plus three optional keys:
 | `UserCard`, `UserList` | Types imported from a shared `.ts` file and from another component, string-literal unions, objects passed to children |
 | `DataList`, `DataTable`, `RowChip` | Scoped slots in a loop with fallbacks, props destructured and taken whole, empty content giving way to the fallback, a slot's object handed to a child |
 | `Frame`, `Forward`, `Page`, `Card` | Slots, fallbacks, comment-only content, slots forwarded through components |
+| `Hollow`, `Blank` | Slot content that may write nothing visible, which shows the fallback exactly when every string it pushes is comments and whitespace: interpolations of absent, empty and whitespace values beside a list's fragment markers, `<template v-if>` and `<template v-for>` of interpolations, whitespace text, a component rendering only a comment, named and scoped slots, a slot forwarded through another component |
 | `Panel`, `Dashboard` | Named slots, `$slots.x`, interpolating fallbacks, child props as literals, variables, lists and whole `Props` |
 | `Nav`, `Links`, `Menu`, `App` | `<RouterLink>` active matching, relative links, named routes, `query`/`hash`, link class props, imported `RouterLink`, `<RouterView>` |
 | `RouteInfo` | `useRoute()` and `$route`: path, hash, name, params |
@@ -117,7 +122,8 @@ FERROVUE_BROWSERS=chromium pnpm test:browser                             # one b
   and hydrates. The test fails on a hydration warning or any error the page logs, if Vue replaced
   the server's first node, or if hydrating changed the document as the browser parsed it.
   Vue rewrites some attributes on purpose as it hydrates (it sets every dynamic prop again);
-  those are listed, by fixture, in `PATCHED`, and the test fails if one stops happening.
+  those are listed, by fixture, in `PATCHED`, and the test fails if one stops happening. A
+  fixture in `VUE_DISAGREES` must mismatch instead, as in happy-dom.
 - **Full-stack example** (`examples/fullstack/browser/hydration.test.ts`): builds the client with
   `vite build` into a temporary directory (production Vue, with
   `__VUE_PROD_HYDRATION_MISMATCH_DETAILS__` so attribute mismatches are checked), builds the server
@@ -159,8 +165,11 @@ What it generates, with random nesting:
   attributes of its own, `inheritAttrs: false` with `$attrs` bound before and after an element's
   own, `useAttrs()` bound on a root that inherits them too, a root with none of its own and a root
   that is a component given none — given slot content and attributes they
-  do not declare, which fall through, at the root or nested; `<style scoped>` on the component and
-  on each child, with `:slotted()` on those with a slot;
+  do not declare, which fall through, at the root or nested — often slot content that may write
+  nothing visible (interpolations of optional, empty or whitespace values beside loops, branches
+  and `<template>`s that may render only their comments), which decides whether the fallback
+  shows; `<style scoped>` on the component and on each child, with `:slotted()` on those with a
+  slot;
 - string `+`, template literals, `?:`, `??`, `||`, `.length`, `.trim()` and the rest of the string
   methods — `slice`, `substring`, `at`, `charAt`, `indexOf`, `split`, `replace` and `replaceAll`
   with `$` patterns, `padStart`, `padEnd`, `repeat` — strings ordered with `<`, `String()`,

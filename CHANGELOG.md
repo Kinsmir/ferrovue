@@ -75,6 +75,16 @@ released together and share version numbers.
   `mergeProps` leaves them.
 - A string built from one a runtime routine borrows, as the left side of `||`, compiles:
   `text.slice(1).toLowerCase() || "-"`, `((words.find(…) ?? "x") + "a") || "-"`.
+- Slot content that writes nothing visible shows the slot's fallback exactly when Vue's does. Vue's
+  `ssrRenderSlot` reads content as empty when every string it pushed is comments with only
+  whitespace between them; ferrovue decided that from the template alone, so an interpolation pushed
+  with fragment markers (`{{ note }}<p v-for="…">`, `<template v-if>{{ a }}{{ b }}</template>`)
+  counted as content even when its values wrote nothing, or whitespace, and the slot showed nothing
+  instead of its fallback. Such a push is now checked as it is written, by Vue's rule (held to
+  vectors recorded from `ssrRenderSlot`), and slot content that ends a list or fragment with an interpolation
+  (`<p v-for="…"></p>{{ note }}`), which was refused, compiles. Found by the randomised differential
+  tester, which now writes slot content of this kind more often; kept as the `Hollow` conformance
+  component.
 
 ## [0.2.0] - 2026-10-04
 

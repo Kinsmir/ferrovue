@@ -6,7 +6,8 @@ import { join } from "node:path";
 import { escapeHtml, normalizeClass } from "@vue/shared";
 import { describe, expect, it } from "vitest";
 import { mergeProps } from "vue";
-import { ssrRenderAttrs } from "vue/server-renderer";
+import { ssrRenderAttrs, ssrRenderSlotInner } from "vue/server-renderer";
+import { isComment } from "../src/template.ts";
 
 const DIR = join(import.meta.dirname, "../../../crates/ferrovue/tests/vectors");
 const read = (name: string): unknown => JSON.parse(readFileSync(join(DIR, name), "utf8"));
@@ -59,6 +60,26 @@ function stringOp(op: string, input: string, args: string[]): unknown {
 describe("vectors shared with the Rust crate", () => {
   it("trim.json is String.prototype.trim", () => {
     for (const [input, want] of (read("trim.json") as [string, string][])) expect(input.trim(), JSON.stringify(input)).toBe(want);
+  });
+
+  // `[chunk, expected]`: whether `ssrRenderSlot` reads slot content that pushed `chunk` alone as
+  // nothing and shows the fallback, recorded from Vue with `FERROVUE_VECTORS_WRITE=1`. The compiler's
+  // own `isComment`, which decides what it can at compile time, is held to the same answers.
+  it("comment.json is ssrRenderSlot's isComment", () => {
+    const vectors = (read("comment.json") as [string, boolean][]);
+    const recorded = vectors.map(([chunk]) => {
+      let fallback = false;
+      const out: unknown[] = [];
+      const slots = { default: (_: unknown, push: (s: string) => void) => push(chunk) };
+      ssrRenderSlotInner(slots, "default", {}, () => (fallback = true), (s: unknown) => out.push(s), null as never);
+      return [chunk, fallback];
+    });
+    if (process.env.FERROVUE_VECTORS_WRITE === "1") {
+      writeVectors("comment.json", recorded);
+      return;
+    }
+    expect(vectors).toEqual(recorded);
+    for (const [chunk, want] of vectors) expect(isComment(chunk), JSON.stringify(chunk)).toBe(want);
   });
 
   it("escape.json is Vue's escapeHtml", () => {

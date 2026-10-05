@@ -553,6 +553,8 @@ class Gen {
   nodes = 0;
   /** Arrow functions made so far, which number their parameters apart. */
   arrows = 0;
+  /** Inside slot content made to write nothing visible as often as not (`hollowKids`). */
+  hollow = false;
   readonly r: Rng;
   readonly ifaces: Map<string, Iface>;
   constructor(r: Rng, ifaces: Map<string, Iface>) {
@@ -1106,6 +1108,10 @@ class Gen {
   kids(depth: number, ctx: "block" | "inline" | "list"): Node[] {
     const r = this.r;
     const out: Node[] = [];
+    if (this.hollow && ctx !== "list") {
+      for (let i = depth > 5 || this.nodes > 30 ? 1 : r.int(1, 3); i > 0; i--) out.push(this.hollowNode(depth, ctx));
+      return out;
+    }
     const n = depth > 3 || this.nodes > 30 ? r.int(0, 1) : r.int(1, 4);
     for (let i = 0; i < n; i++) out.push(this.node(depth, ctx));
     return out;
@@ -1129,7 +1135,7 @@ class Gen {
 
   /** An element, or `<template>`, to carry a directive. */
   carrier(depth: number, ctx: "block" | "inline" | "list"): Node & { k: "el" } {
-    if (ctx !== "list" && this.r.chance(0.2)) {
+    if (ctx !== "list" && this.r.chance(this.hollow ? 0.6 : 0.2)) {
       this.nodes++;
       return { k: "el", tag: "template", attrs: [], kids: this.kids(depth + 1, ctx) };
     }
@@ -1151,7 +1157,7 @@ class Gen {
       [depth < 5 ? 4 : 0, () => this.element(depth, ctx)],
       [depth < 5 ? 2 : 0, () => this.ifNode(depth, ctx)],
       [depth < 5 ? 2 : 0, () => this.forNode(depth, ctx)],
-      [depth < 4 && ctx === "block" ? 2 : 0, () => this.child(depth)],
+      [depth < 4 && ctx === "block" ? 3 : 0, () => this.child(depth)],
     ])();
   }
 
@@ -1162,7 +1168,33 @@ class Gen {
     const name = r.pick<HelperName>(["FzLeaf", "FzBox", "FzFwd", "FzPair", "FzRoot", "FzOwn", "FzBind", "FzUse", "FzPlain", "FzBare"]);
     // Attributes it does not declare, which fall through to its root or its `$attrs`.
     const attrs = r.chance(0.6) ? this.attrs("div") : [];
-    return { k: "child", name, attrs, kids: HELPERS[name].slot && r.chance(0.7) ? this.kids(depth + 1, "block") : [] };
+    if (!HELPERS[name].slot || !r.chance(0.8)) return { k: "child", name, attrs, kids: [] };
+    if (this.hollow || !r.chance(0.75)) return { k: "child", name, attrs, kids: this.kids(depth + 1, "block") };
+    this.hollow = true;
+    try {
+      return { k: "child", name, attrs, kids: this.kids(depth + 1, "block") };
+    } finally {
+      this.hollow = false;
+    }
+  }
+
+  /** A node of slot content that may write nothing visible, whose emptiness Vue decides from each
+   * string pushed (`isComment` in `ssrRenderSlot`): an interpolation of an optional value or of a
+   * string that may be empty or whitespace, whitespace text, or a loop, branch or `<template>` that
+   * may render nothing but its comments, holding more of the same. */
+  hollowNode(depth: number, ctx: "block" | "inline"): Node {
+    const r = this.r;
+    const opts = this.scope.vars.filter((v) => v.opt);
+    const deep = depth > 5 || this.nodes > 30;
+    return r.weighted<() => Node>([
+      [opts.length ? 4 : 0, () => ({ k: "interp", e: this.varRef(r.pick(opts)) })],
+      [2, () => ({ k: "interp", e: this.str(1) })],
+      [1, () => ({ k: "text", s: r.pick([" ", "  ", "\n    "]) })],
+      [deep ? 0 : 3, () => this.forNode(depth, ctx)],
+      [deep ? 0 : 3, () => this.ifNode(depth, ctx)],
+      [deep ? 0 : 1, () => this.element(depth, ctx)],
+      [deep || ctx !== "block" ? 0 : 1, () => this.child(depth)],
+    ])();
   }
 
   ifNode(depth: number, ctx: "block" | "inline" | "list"): Node {
