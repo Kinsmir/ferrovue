@@ -26,13 +26,13 @@ export function setupStatement(comp: Component, st: N): void {
       (p: N) => p.type === "ObjectProperty" && (p.key.name ?? p.key.value) === "immediate" && !(p.value.type === "BooleanLiteral" && !p.value.value),
     );
     if (!immediate) return;
-    fail(comp, "`watch` with `immediate` runs on the server, where its effect is not translated", st);
+    fail(comp, "FV0102", "`watch` with `immediate` runs on the server, where its effect is not translated", st);
   }
   if (name === "watchEffect" || name === "watchSyncEffect" || name === "watchPostEffect") {
-    fail(comp, `\`${name}\` runs once on the server, where its effect is not translated; use \`watch\` or \`onMounted\``, st);
+    fail(comp, "FV0103", `\`${name}\` runs once on the server, where its effect is not translated; use \`watch\` or \`onMounted\``, st);
   }
-  if (name === "onServerPrefetch") fail(comp, "`onServerPrefetch` fetches on the server; pass the data in as props instead", st);
-  fail(comp, `\`${st.expression?.type === "CallExpression" ? `${name ?? "a call"}()` : st.expression?.type}\` in setup could change what renders, and is not translated`, st);
+  if (name === "onServerPrefetch") fail(comp, "FV0104", "`onServerPrefetch` fetches on the server; pass the data in as props instead", st);
+  fail(comp, "FV0105", `\`${st.expression?.type === "CallExpression" ? `${name ?? "a call"}()` : st.expression?.type}\` in setup could change what renders, and is not translated`, st);
 }
 
 export function setupSource(init: N): N | null {
@@ -112,7 +112,7 @@ export function asyncChildren(comp: Component, ast: N[]): Map<string, string> {
       const imported = loader?.type === "ArrowFunctionExpression" && loader.params.length === 0 ? loader.body : null;
       const spec = imported?.type === "ImportExpression" ? imported.source : imported?.type === "CallExpression" && imported.callee.type === "Import" ? imported.arguments[0] : null;
       if (d.id.type !== "Identifier" || spec?.type !== "StringLiteral" || !spec.value.endsWith(".vue")) {
-        fail(comp, '`defineAsyncComponent` loads a component of this project, as `defineAsyncComponent(() => import("./Child.vue"))`', init);
+        fail(comp, "FV0106", '`defineAsyncComponent` loads a component of this project, as `defineAsyncComponent(() => import("./Child.vue"))`', init);
       }
       found.set(d.id.name, basename(spec.value, ".vue"));
     }
@@ -177,7 +177,7 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
         }
       } else if (ctx.helperModule !== null && from === ctx.helperModule) {
         for (const sp of st.specifiers) {
-          if (!ctx.helpers[sp.imported.name]) fail(comp, `\`${sp.imported.name}\` has no Rust twin: add it to \`helpers.functions\` in ${CONFIG_FILE}`, sp);
+          if (!ctx.helpers[sp.imported.name]) fail(comp, "FV1108", `\`${sp.imported.name}\` has no Rust twin: add it to \`helpers.functions\` in ${CONFIG_FILE}`, sp);
           scope.helpers.set(sp.local.name, sp.imported.name);
         }
       } else {
@@ -204,15 +204,15 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
       setupStatement(comp, st);
       continue;
     }
-    if (st.type !== "VariableDeclaration") fail(comp, `\`${st.type}\` in setup is not supported`, st);
+    if (st.type !== "VariableDeclaration") fail(comp, "FV0107", `\`${st.type}\` in setup is not supported`, st);
     for (const d of st.declarations) {
       const init0 = d.init;
       if (d.id.type === "ObjectPattern" && definePropsType(init0)) {
         for (const p of d.id.properties) {
-          if (p.type !== "ObjectProperty" || p.computed) fail(comp, "destructured props are plain names: `...rest` has no Rust type", p);
+          if (p.type !== "ObjectProperty" || p.computed) fail(comp, "FV0108", "destructured props are plain names: `...rest` has no Rust type", p);
           const key: string = p.key.type === "Identifier" ? p.key.name : p.key.value;
           const local = p.value.type === "AssignmentPattern" ? p.value.left : p.value;
-          if (local.type !== "Identifier") fail(comp, "destructured props are plain names", p);
+          if (local.type !== "Identifier") fail(comp, "FV0109", "destructured props are plain names", p);
           scope.setup.set(local.name, fieldVal(comp, "props", { k: "struct", name: "Props" }, key, p));
         }
         continue;

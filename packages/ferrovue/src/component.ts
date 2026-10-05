@@ -1,9 +1,9 @@
 import { parse as parseJs } from "@babel/parser";
-import { compileScript, compileTemplate, parse as parseSfc, type SFCBlock } from "@vue/compiler-sfc";
+import { compileScript, compileTemplate, parse as parseSfc, type SFCBlock, type SFCDescriptor, type SFCScriptBlock } from "@vue/compiler-sfc";
 import { readFileSync } from "node:fs";
 import { SourceMapConsumer } from "source-map-js";
 import { basename, relative } from "node:path";
-import { type Component, type N, absence, blankComponent, fail, opt, snake, sourceAt, tagAst } from "./model.ts";
+import { type Component, type N, absence, blankComponent, fail, GenError, opt, snake, sourceAt, tagAst } from "./model.ts";
 import { ctx } from "./context.ts";
 import { typesImports, declareTypes, defaultValue, definePropsType, ONE_NOTHING, readTypeFile, resolveImport, runtimeDefaults, structOf, tyOfTs } from "./typescript.ts";
 import { claim } from "./plugin.ts";
@@ -30,7 +30,7 @@ function inheritAttrs(comp: Component, statements: N[]): boolean {
     if (options?.type !== "ObjectExpression") continue;
     for (const p of options.properties) {
       if (p.type !== "ObjectProperty" || p.computed || (p.key.name ?? p.key.value) !== "inheritAttrs") continue;
-      if (p.value.type !== "BooleanLiteral") fail(comp, "`inheritAttrs` is `true` or `false`", p.value);
+      if (p.value.type !== "BooleanLiteral") fail(comp, "FV0101", "`inheritAttrs` is `true` or `false`", p.value);
       found = p.value.value;
     }
   }
@@ -74,7 +74,7 @@ function generics(comp: Component, source: string, block: SFCBlock): void {
   try {
     params = (parseJs(`${prefix}${text}> = 0;`, { sourceType: "module", plugins: ["typescript"] }).program.body[0] as N).typeParameters.params;
   } catch {
-    return fail(comp, "`generic` is a list of type parameters, as `T extends string`", sourceAt(source, valueAt));
+    return fail(comp, "FV0301", "`generic` is a list of type parameters, as `T extends string`", sourceAt(source, valueAt));
   }
   const rebase = (n: N): void => {
     if (!n || typeof n !== "object") return;
@@ -89,8 +89,20 @@ function generics(comp: Component, source: string, block: SFCBlock): void {
   tagAst(params, "source");
   for (const p of params) {
     const name: string = typeof p.name === "string" ? p.name : p.name.name;
-    if (!p.constraint) fail(comp, `\`${name}\` in \`generic\` has no constraint: the server renders \`${name}\` as the type it extends, \`${name} extends string\``, p);
+    if (!p.constraint) fail(comp, "FV0302", `\`${name}\` in \`generic\` has no constraint: the server renders \`${name}\` as the type it extends, \`${name} extends string\``, p);
     comp.aliases.set(name, p.constraint);
+  }
+}
+
+function scriptOf(comp: Component, descriptor: SFCDescriptor): SFCScriptBlock {
+  try {
+    return compileScript(descriptor, { id: comp.name });
+  } catch (e) {
+    if (!(e instanceof SyntaxError)) throw e;
+    const at = (e as { loc?: { line: number; column: number } }).loc;
+    const block = descriptor.scriptSetup!.loc.start;
+    const where = !at || descriptor.script ? {} : at.line === 1 ? { line: block.line, column: block.column + at.column } : { line: block.line + at.line - 1, column: at.column + 1 };
+    throw new GenError("FV0001", e.message, { file: comp.file, ...where }, e.message.split("\n")[0]);
   }
 }
 
@@ -101,20 +113,20 @@ export function readComponent(file: string, root: string, isChild: boolean): { c
   const rel = relative(root, file);
   const comp = blankComponent(name, snake(name), rel);
   comp.source = source;
-  if (errors.length) fail(comp, String(errors[0]), vueErrorNode(errors[0]));
+  if (errors.length) fail(comp, "FV0002", String(errors[0]), vueErrorNode(errors[0]));
   if (descriptor.script && !descriptor.scriptSetup) {
     const needs = isChild ? "a child component must have" : "an island needs";
-    fail(comp, `${needs} \`<script setup lang="ts">\`, or no script at all: a \`<script>\` without \`setup\` (the Options API, \`defineComponent\`) is not translated`, blockAt(source, descriptor.script));
+    fail(comp, "FV0003", `${needs} \`<script setup lang="ts">\`, or no script at all: a \`<script>\` without \`setup\` (the Options API, \`defineComponent\`) is not translated`, blockAt(source, descriptor.script));
   }
-  if (!descriptor.template) fail(comp, "a component needs a `<template>`: a render function is not translated", sourceAt(source, 0));
+  if (!descriptor.template) fail(comp, "FV0004", "a component needs a `<template>`: a render function is not translated", sourceAt(source, 0));
   for (const st of descriptor.styles) {
-    if (st.module) fail(comp, "`<style module>` renames classes in the bundler; use a global or scoped `<style>`, or a stylesheet", blockAt(source, st));
+    if (st.module) fail(comp, "FV1005", "`<style module>` renames classes in the bundler; use a global or scoped `<style>`, or a stylesheet", blockAt(source, st));
   }
   const cssVar = descriptor.styles.find((st) => /\bv-bind\s*\(/.test(st.content));
-  if (descriptor.cssVars.length) fail(comp, "`v-bind()` in `<style>` sets variables the server does not render; bind `:style` instead", cssVar ? blockAt(source, cssVar) : undefined);
+  if (descriptor.cssVars.length) fail(comp, "FV1006", "`v-bind()` in `<style>` sets variables the server does not render; bind `:style` instead", cssVar ? blockAt(source, cssVar) : undefined);
   for (const p of ctx.plugins) p.sfc?.(comp, descriptor, file, source);
 
-  const script = descriptor.scriptSetup ? compileScript(descriptor, { id: name }) : null;
+  const script = descriptor.scriptSetup ? scriptOf(comp, descriptor) : null;
   const ast: N[] = script?.scriptSetupAst ?? [];
   tagAst(ast, "source");
   const plainAst: N[] = script?.scriptAst ?? [];
@@ -163,7 +175,7 @@ export function readComponent(file: string, root: string, isChild: boolean): { c
     const call = s.type === "ExpressionStatement" ? s.expression : s.type === "VariableDeclaration" ? s.declarations[0]?.init : null;
     const inner = call?.type === "CallExpression" && call.callee.type === "Identifier" && call.callee.name === "withDefaults" ? call.arguments[0] : call;
     if (inner?.type === "CallExpression" && inner.callee.type === "Identifier" && inner.callee.name === "defineProps" && !inner.typeParameters) {
-      fail(comp, "props are declared with a type, `defineProps<{ ... }>()`: a runtime declaration has no Rust type", inner);
+      fail(comp, "FV0303", "props are declared with a type, `defineProps<{ ... }>()`: a runtime declaration has no Rust type", inner);
     }
     const found = definePropsType(call);
     if (found) propsTy = found;
@@ -174,7 +186,7 @@ export function readComponent(file: string, root: string, isChild: boolean): { c
   } else if (propsTy.type === "TSTypeReference" && comp.structs.has(propsTy.typeName.name)) {
     comp.props = { name: "Props", fields: comp.structs.get(propsTy.typeName.name)!.fields };
   } else {
-    fail(comp, "`defineProps` takes a type literal or an interface declared in the same block", propsTy);
+    fail(comp, "FV0304", "`defineProps` takes a type literal or an interface declared in the same block", propsTy);
   }
 
   for (const st of ast) {
@@ -183,14 +195,14 @@ export function readComponent(file: string, root: string, isChild: boolean): { c
       const call = d.init;
       if (call?.type !== "CallExpression" || call.callee.type !== "Identifier" || call.callee.name !== "defineModel") continue;
       const t = call.typeParameters?.params?.[0];
-      if (!t) fail(comp, "`defineModel` needs its type: `defineModel<string>()`", call);
+      if (!t) fail(comp, "FV0305", "`defineModel` needs its type: `defineModel<string>()`", call);
       const named = call.arguments[0]?.type === "StringLiteral" ? call.arguments[0].value : "modelValue";
       const options = call.arguments.find((a: N) => a.type === "ObjectExpression");
       const required = options?.properties.some(
         (p: N) => p.type === "ObjectProperty" && (p.key.name ?? p.key.value) === "required" && p.value.type === "BooleanLiteral" && p.value.value,
       );
       const base = tyOfTs(comp, t, comp.structs);
-      if (!required && absence(base) === "null") fail(comp, `a \`defineModel\` of \`T | null\` that is not \`required\` may be absent, which is \`undefined\`, or \`null\`: ${ONE_NOTHING}`, call);
+      if (!required && absence(base) === "null") fail(comp, "FV0306", `a \`defineModel\` of \`T | null\` that is not \`required\` may be absent, which is \`undefined\`, or \`null\`: ${ONE_NOTHING}`, call);
       comp.props.fields.push({ js: named, rust: snake(named), ty: required ? base : opt(base) });
       comp.models.set(d.id.name, named);
     }
@@ -201,7 +213,7 @@ export function readComponent(file: string, root: string, isChild: boolean): { c
     if (f.ty.k !== "opt") continue;
     const node = defaults.get(f.js);
     if (f.ty.none !== undefined) {
-      if (node) fail(comp, `a default for \`${f.js}\`, which is \`T | null\`: Vue gives it only when \`${f.js}\` is absent, which its Rust type, an \`Option\`, cannot be; fall back in the template with \`??\``, sourceDefault(ast, f.js) ?? node);
+      if (node) fail(comp, "FV0307", `a default for \`${f.js}\`, which is \`T | null\`: Vue gives it only when \`${f.js}\` is absent, which its Rust type, an \`Option\`, cannot be; fall back in the template with \`??\``, sourceDefault(ast, f.js) ?? node);
       continue;
     }
     if (node) f.dflt = defaultValue(comp, f, node, sourceDefault(ast, f.js) ?? undefined);
@@ -228,7 +240,7 @@ export function readComponent(file: string, root: string, isChild: boolean): { c
   const start = descriptor.template.loc.start;
   comp.templateStart = { line: start.line, column: start.column };
   if (compiled.map) comp.templateMap = new SourceMapConsumer(compiled.map);
-  if (compiled.errors.length) fail(comp, String(compiled.errors[0]), vueErrorNode(compiled.errors[0], comp.templateStart));
+  if (compiled.errors.length) fail(comp, "FV0005", String(compiled.errors[0]), vueErrorNode(compiled.errors[0], comp.templateStart));
   for (const m of compiled.code.matchAll(/_ssrRenderSlot\(_ctx\.\$slots, "([^"]+)"/g)) {
     if (!comp.slotNames.includes(m[1]!)) comp.slotNames.push(m[1]!);
   }

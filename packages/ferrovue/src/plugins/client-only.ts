@@ -73,15 +73,15 @@ export const clientOnly: Plugin<ClientOnlyRun> = {
     if (!runOf(clientOnly).locals.get(s.comp)?.has(setupName(n.arguments[0]) ?? "")) return false;
     const [, props, slots] = n.arguments;
     if (props && props.type !== "NullLiteral" && !isAttrs(props)) {
-      fail(s.comp, "`<ClientOnly>` takes no attributes: the server renders none of them; put them on an element inside it", props);
+      fail(s.comp, "FV1504", "`<ClientOnly>` takes no attributes: the server renders none of them; put them on an element inside it", props);
     }
     let fallback: N = null;
     if (slots && slots.type !== "NullLiteral") {
-      if (slots.type !== "ObjectExpression") fail(s.comp, "unexpected `<ClientOnly>` content", slots);
+      if (slots.type !== "ObjectExpression") fail(s.comp, "FV0006", "unexpected `<ClientOnly>` content", slots);
       for (const p of slots.properties) {
         const key: string | undefined = p.key?.name ?? p.key?.value;
         if (key === "_" || key === "default") continue;
-        if (key !== "fallback" || p.type !== "ObjectProperty" || p.computed) fail(s.comp, "`<ClientOnly>` has a default slot and a `#fallback` slot, and no other", p);
+        if (key !== "fallback" || p.type !== "ObjectProperty" || p.computed) fail(s.comp, "FV1505", "`<ClientOnly>` has a default slot and a `#fallback` slot, and no other", p);
         fallback = p.value;
       }
     }
@@ -90,7 +90,7 @@ export const clientOnly: Plugin<ClientOnlyRun> = {
       return true;
     }
     const { body, param } = slotContent(s, fallback);
-    if (param && !(param.type === "Identifier" && param.name === "_")) fail(s.comp, "`<ClientOnly>`'s `#fallback` passes no props", param);
+    if (param && !(param.type === "Identifier" && param.name === "_")) fail(s.comp, "FV1506", "`<ClientOnly>`'s `#fallback` passes no props", param);
     e.lit("<!--[-->");
     statements({ ...s, fill: false, vnode: false, sid: null }, e, body);
     e.lit("<!--]-->");

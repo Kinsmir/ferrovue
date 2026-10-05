@@ -23,6 +23,7 @@
     "conformance:check": "cd crates/ferrovue/tests/conformance && node ../../../../packages/ferrovue/src/cli.ts --check",
     "conformance:record": "FERROVUE_FIXTURES_WRITE=1 vitest run packages/ferrovue/test/conformance.test.ts packages/ferrovue/test/page.test.ts",
     "vectors:record": "FERROVUE_VECTORS_WRITE=1 vitest run packages/ferrovue/test/router.test.ts packages/ferrovue/test/vectors.test.ts",
+    "errors:generate": "FERROVUE_ERRORS_WRITE=1 vitest run packages/ferrovue/test/errors.test.ts",
     "fuzz": "node packages/ferrovue/fuzz/run.ts"
   },
   "devDependencies": {

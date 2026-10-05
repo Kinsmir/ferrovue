@@ -16,11 +16,11 @@ export const teleport: Plugin<TeleportRun> = {
   statement(s, e, c, st) {
     if (c.callee.type !== "Identifier" || c.callee.name !== "_ssrRenderTeleport") return false;
     const [, content, target, disabled] = c.arguments;
-    if (s.fill) fail(s.comp, "a `<Teleport>` in slot content whose emptiness is decided at run time", st);
+    if (s.fill) fail(s.comp, "FV1507", "a `<Teleport>` in slot content whose emptiness is decided at run time", st);
     const to = expr(s, target);
-    if (to.ty.k !== "str") fail(s.comp, "a `<Teleport>`'s `to` is a string", target);
+    if (to.ty.k !== "str") fail(s.comp, "FV1508", "a `<Teleport>`'s `to` is a string", target);
     const off = disabled ? bare(cond(s, disabled)) : "false";
-    if (content?.type !== "ArrowFunctionExpression" || content.body.type !== "BlockStatement") fail(s.comp, "unexpected `<Teleport>` content", st);
+    if (content?.type !== "ArrowFunctionExpression" || content.body.type !== "BlockStatement") fail(s.comp, "FV0006", "unexpected `<Teleport>` content", st);
     e.open(`fv::teleport_into(out, fv_teleports, ${strArg(to.code)}, ${off}, &|out: &mut String|`);
     statements(s, e, content.body.body);
     e.close(");");

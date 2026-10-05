@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 import { existsSync, mkdirSync, readFileSync, readdirSync, watch, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
-import { type Config, CONFIG_FILE, GenError, generate, loadConfig, VERSION, write } from "./compiler.ts";
+import { type Config, CONFIG_FILE, generate, loadConfig, VERSION, write } from "./compiler.ts";
 import { unifiedDiff } from "./diff.ts";
+import { diagnose, formatRefusal, isRefusal } from "./diagnostics.ts";
 
 const root = process.cwd();
 
@@ -16,15 +17,23 @@ Commands:
 Options:
       --check              check that generated files match committed files without writing
   -d, --diff               show unified diff of changes when checking (use with --check)
+      --format <format>    how to write errors and results: human (default) or json
       --watch              watch components, stores, routes and config for changes and regenerate
   -c, --config <path>      path to configuration file (default: ferrovue.config.json)
   -v, --version            print the version and exit
   -h, --help               print this help and exit
 `;
 
+let json = false;
+
+function emit(result: Record<string, unknown>): void {
+  console.log(JSON.stringify({ diagnostics: [], ...result }));
+}
+
 function report(e: unknown): void {
-  if (e instanceof GenError || e instanceof SyntaxError) console.error(`error: ${e.message}`);
-  else throw e;
+  if (!isRefusal(e)) throw e;
+  if (json) emit({ diagnostics: [diagnose(e)] });
+  else console.error(formatRefusal(e));
 }
 
 function initProject(targetRoot: string, configPath?: string): number {
@@ -86,6 +95,10 @@ function check(config: Config, showDiff = false): number {
     }
   });
   const extra = have.filter((name) => !want.has(name));
+  if (json) {
+    emit({ out: config.out, stale: stale.map((name) => `${config.out}/${name}`), notGenerated: extra.map((name) => `${config.out}/${name}`) });
+    return stale.length || extra.length ? 1 : 0;
+  }
   if (stale.length || extra.length) {
     const committed = (name: string): string => {
       try {
@@ -111,6 +124,7 @@ function check(config: Config, showDiff = false): number {
 
 function once(config: Config): void {
   const { files, changed, removed } = write(root, config);
+  if (json) return emit({ out: config.out, files, changed, removed });
   const what = changed.length || removed.length ? `${changed.length} changed, ${removed.length} removed` : "nothing changed";
   console.log(`${config.out}: ${files.length} files, ${what}`);
 }
@@ -143,7 +157,7 @@ function watchProject(configPath?: string): void {
     if (timer) clearTimeout(timer);
     timer = setTimeout(run, 50);
   });
-  console.log("watching for changes (Ctrl-C to stop)");
+  (json ? console.error : console.log)("watching for changes (Ctrl-C to stop)");
 }
 
 try {
@@ -161,6 +175,13 @@ try {
       configPath = rawArgs[++i];
     } else if (arg.startsWith("--config=")) {
       configPath = arg.slice("--config=".length);
+    } else if (arg === "--format" || arg.startsWith("--format=")) {
+      const format = arg === "--format" ? rawArgs[++i] : arg.slice("--format=".length);
+      if (format !== "human" && format !== "json") {
+        console.error(`error: '--format' is 'human' or 'json'`);
+        process.exit(1);
+      }
+      json = format === "json";
     } else {
       args.push(arg);
     }
@@ -174,6 +195,10 @@ try {
   }
   if ((args.includes("--diff") || args.includes("-d")) && !args.includes("--check")) {
     console.error("error: '--diff' requires '--check'");
+    process.exit(1);
+  }
+  if ((args.includes("--diff") || args.includes("-d")) && json) {
+    console.error("error: '--diff' writes text, and does not combine with '--format json'");
     process.exit(1);
   }
   if (args.includes("--version") || args.includes("-v")) {

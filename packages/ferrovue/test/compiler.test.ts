@@ -3,7 +3,8 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSyn
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { generate, loadConfig } from "../src/compiler.ts";
+import { GenError, generate, loadConfig } from "../src/compiler.ts";
+import { type Code, ERRORS } from "../src/errors.ts";
 
 const roots: string[] = [];
 
@@ -2055,10 +2056,57 @@ defineProps<{ c: string | null }>();
 <template><b>{{ c }}</b></template>`,
   };
 
+  const codes: Record<string, Code> = {
+    "a type parameter without a constraint": "FV0302",
+    "an enum read whole": "FV0208",
+    "an enum read by a key chosen at run time": "FV0222",
+    "a value read from `$attrs`, which has no type": "FV0415",
+    "a runtime props declaration, which has no types": "FV0303",
+    "watchEffect, which runs on the server": "FV0103",
+    "a setup statement that changes state": "FV0105",
+    "an interface whose name the generated Rust already uses": "FV0318",
+    "a strict comparison of a value that may be null or undefined": "FV0626",
+    "loose equality between values": "FV0619",
+    "a nullable prop the parent leaves out": "FV0507",
+    "two halves of surrogate pairs compared, which JavaScript tells apart": "FV0706",
+    "a negative literal count for repeat, which throws": "FV0714",
+    "toLocaleUpperCase, which depends on the server's locale": "FV0715",
+    "replace with a regular expression": "FV0710",
+    "an arrow function with a block body": "FV0806",
+    "Object.entries outside a v-for": "FV0816",
+    "a computed list as a slot prop": "FV0910",
+    "a component written with the Options API": "FV0003",
+    "a constructor called in the template": "FV0624",
+    "a CSS module, whose class names the bundler chooses": "FV1005",
+    "a style property whose place would depend on a condition": "FV1011",
+    "a dynamic component": "FV0418",
+    "a custom directive the configuration does not declare client-only": "FV0405",
+    "a type that is both null and undefined": "FV0311",
+    "a default for a nullable prop": "FV0307",
+  };
+
+  const refusal = (project: string): GenError => {
+    try {
+      compile(project);
+    } catch (e) {
+      if (e instanceof GenError) return e;
+      throw e;
+    }
+    throw new Error("compiled without an error");
+  };
+
+  it("names a code for every refusal it checks the code of", () => {
+    expect(Object.keys(codes).filter((what) => !refused.some(([w]) => w === what))).toEqual([]);
+  });
+
   for (const [what, source, message] of refused) {
     it(`refuses ${what}`, () => {
-      expect(() => compile(island(source, children))).toThrow(message);
-      expect(() => compile(island(source, children))).toThrow(/^components\/X\.vue:\d+:\d+: /);
+      const e = refusal(island(source, children));
+      expect(e.message).toMatch(message);
+      expect(e.message).toMatch(/^components\/X\.vue:\d+:\d+: /);
+      expect(Object.keys(ERRORS)).toContain(e.code);
+      expect(e.at).toMatchObject({ file: "components/X.vue", line: Number(e.message.split(":")[1]) });
+      expect(e.code).toBe(codes[what] ?? e.code);
     });
   }
 });

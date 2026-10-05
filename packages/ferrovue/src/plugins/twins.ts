@@ -21,17 +21,17 @@ function readTwins(specs: Record<string, TwinSpec>): TwinsRun {
   const twins: TwinsRun = new Map();
   for (const [name, spec] of Object.entries(specs)) {
     const where = `\`twins.${name}\` in ${CONFIG_FILE}`;
-    if (!/^[A-Z][A-Za-z0-9]*$/.test(name)) throw new GenError(`${where}: a twin is named as its component is, in PascalCase`);
+    if (!/^[A-Z][A-Za-z0-9]*$/.test(name)) throw new GenError("FV1109", `${where}: a twin is named as its component is, in PascalCase`, { file: CONFIG_FILE });
     if (typeof spec?.rust !== "string" || !/^[A-Za-z_]\w*(::[A-Za-z_]\w*)+$/.test(spec.rust)) {
-      throw new GenError(`${where} needs \`rust\`, the path of the function that renders it, as \`crate::ui::v_btn\``);
+      throw new GenError("FV1110", `${where} needs \`rust\`, the path of the function that renders it, as \`crate::ui::v_btn\``, { file: CONFIG_FILE });
     }
     const comp = blankComponent(name, "twins", CONFIG_FILE);
     for (const [js, type] of Object.entries(spec.props ?? {})) {
-      if (!/^[A-Za-z_$][\w$]*$/.test(js)) throw new GenError(`${where}: the prop \`${js}\` is named in camelCase`);
+      if (!/^[A-Za-z_$][\w$]*$/.test(js)) throw new GenError("FV1111", `${where}: the prop \`${js}\` is named in camelCase`, { file: CONFIG_FILE });
       comp.props.fields.push({ js, rust: snake(js), ty: tyOfName(type) });
     }
     for (const slot of spec.slots ?? []) {
-      if (!/^[A-Za-z_][\w-]*$/.test(slot)) throw new GenError(`${where}: the slot \`${slot}\` is not a plain name`);
+      if (!/^[A-Za-z_][\w-]*$/.test(slot)) throw new GenError("FV1112", `${where}: the slot \`${slot}\` is not a plain name`, { file: CONFIG_FILE });
       comp.slotNames.push(slot);
     }
     comp.inherits = true;
@@ -50,7 +50,7 @@ function init(s: Scope, f: Field, node: N | undefined, n: N, owner: string): str
   if (!node) {
     if (f.ty.k === "opt") return `${f.rust}: None`;
     if (f.ty.k === "bool") return `${f.rust}: false`;
-    return fail(s.comp, `${owner} requires \`${f.js}\``, n);
+    return fail(s.comp, "FV0506", `${owner} requires \`${f.js}\``, n);
   }
   if (f.ty.k === "bool" && node.type === "StringLiteral" && (node.value === "" || node.value === hyphenate(f.js))) return `${f.rust}: true`;
   const v = expr(s, node);
@@ -84,7 +84,7 @@ function rustTy(ty: Ty): string {
     case "opt":
       return `Option<${rustTy(ty.of)}>`;
     default:
-      throw new GenError(`no Rust type for a twin's prop of type ${JSON.stringify(ty)}`);
+      throw new GenError("FV1509", `no Rust type for a twin's prop of type ${JSON.stringify(ty)}`);
   }
 }
 
@@ -120,7 +120,7 @@ export const twinsPlugin: Plugin<TwinsRun, Map<string, Twin>> = {
   configure: (config) => readTwins(config.twins ?? {}),
   analyse(read) {
     for (const r of read) {
-      if (runOf(twinsPlugin).has(r.comp.name)) throw new GenError(`\`twins.${r.comp.name}\` in ${CONFIG_FILE} names ${r.comp.file}, which ferrovue compiles: a twin renders a component it does not`);
+      if (runOf(twinsPlugin).has(r.comp.name)) throw new GenError("FV1510", `\`twins.${r.comp.name}\` in ${CONFIG_FILE} names ${r.comp.file}, which ferrovue compiles: a twin renders a component it does not`, { file: CONFIG_FILE });
     }
   },
   scope: () => new Map(),

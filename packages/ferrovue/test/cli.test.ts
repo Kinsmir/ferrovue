@@ -1,5 +1,5 @@
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, expect, it } from "vitest";
@@ -81,7 +81,7 @@ defineProps<{ n: number }>();
   );
   const r = run();
   expect(r.status).toBe(1);
-  expect(r.stderr).toContain("error: components/Bad.vue:4:17: `.toPrecision()` is not supported");
+  expect(r.stderr).toContain("error[FV0602]: components/Bad.vue:4:17: `.toPrecision()` is not supported");
   expect(r.stderr).toContain(" 4 | <template><p>{{ n.toPrecision(2) }}</p></template>");
   expect(r.stderr).toContain("   |                 ^");
   expect(r.stderr).not.toContain("    at ");
@@ -102,7 +102,7 @@ it("--watch regenerates on a change, and reports an error without stopping", asy
 defineProps<{ name: string }>();
 </script>
 <template><p>{{ name / 2 }}</p></template>`);
-    await waitFor("error: components/Hello.vue");
+    await waitFor("error[FV0609]: components/Hello.vue");
     writeFileSync(join(root, "components", "Hello.vue"), `<script setup lang="ts">
 defineProps<{ name: string }>();
 </script>
@@ -154,7 +154,7 @@ it("fails with a clean message and no stack trace when ferrovue.config.json is m
   rmSync(join(root, "ferrovue.config.json"));
   const r = run();
   expect(r.status).toBe(1);
-  expect(r.stderr).toContain("error: cannot find `ferrovue.config.json`");
+  expect(r.stderr).toContain("error[FV1102]: cannot find `ferrovue.config.json`");
   expect(r.stderr).not.toContain("    at ");
 });
 
@@ -219,7 +219,7 @@ it("--config fails when option argument is missing", () => {
 it("--config fails when specified file does not exist", () => {
   const r = run("--config", "nonexistent.json");
   expect(r.status).toBe(1);
-  expect(r.stderr).toContain("error: cannot find `nonexistent.json`");
+  expect(r.stderr).toContain("error[FV1102]: cannot find `nonexistent.json`");
 });
 
 it("--check --diff shows line diffs for stale modules", () => {
@@ -258,3 +258,108 @@ it("--diff fails without --check", () => {
 });
 
 
+
+const BAD = `<script setup lang="ts">
+defineProps<{ n: number }>();
+</script>
+<template><p>{{ n.toPrecision(2) }}</p></template>`;
+
+const DOCS = "https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html";
+
+it("gives an error its code and where the code is documented", () => {
+  writeFileSync(join(root, "components", "Bad.vue"), BAD);
+  const r = run();
+  expect(r.status).toBe(1);
+  expect(r.stderr).toMatch(/^error\[FV0602\]: components\/Bad\.vue:4:17: /);
+  expect(r.stderr).toContain(`\n = docs: ${DOCS}#fv0602\n`);
+});
+
+it("--format json writes a refusal as a diagnostic, and fails as without it", () => {
+  writeFileSync(join(root, "components", "Bad.vue"), BAD);
+  for (const args of [["--format", "json"], ["--check", "--format=json"]]) {
+    const r = run(...args);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toBe("");
+    expect(JSON.parse(r.stdout)).toEqual({
+      diagnostics: [
+        {
+          file: "components/Bad.vue",
+          line: 4,
+          column: 17,
+          endLine: null,
+          endColumn: null,
+          code: "FV0602",
+          severity: "error",
+          title: "Unsupported method",
+          message: "`.toPrecision()` is not supported",
+          docs: `${DOCS}#fv0602`,
+        },
+      ],
+    });
+  }
+});
+
+it("--format json gives a construct in setup its end, and a file that does not parse its line", () => {
+  writeFileSync(
+    join(root, "components", "Bad.vue"),
+    `<script setup lang="ts">
+import { watchEffect } from "vue";
+watchEffect(() => {});
+</script>
+<template><i></i></template>`,
+  );
+  const [refused] = JSON.parse(run("--format", "json").stdout).diagnostics;
+  expect(refused).toMatchObject({ file: "components/Bad.vue", line: 3, column: 1, endLine: 3, endColumn: 23, code: "FV0103" });
+  writeFileSync(join(root, "components", "Bad.vue"), `<script setup lang="ts">\nconst x = ;\n</script>\n<template><i></i></template>`);
+  const [unparsed] = JSON.parse(run("--format", "json").stdout).diagnostics;
+  expect(unparsed).toMatchObject({ file: "components/Bad.vue", line: 2, column: 11, code: "FV0001", title: "Source file that does not parse" });
+  expect(unparsed.message).toMatch(/Unexpected token/);
+});
+
+it("--format json gives a configuration error its code and file", () => {
+  rmSync(join(root, "ferrovue.config.json"));
+  const r = run("--format", "json");
+  expect(r.status).toBe(1);
+  expect(JSON.parse(r.stdout).diagnostics[0]).toMatchObject({ file: "ferrovue.config.json", line: null, code: "FV1102" });
+});
+
+it("--format json reports what a run wrote, and what --check finds stale", () => {
+  const written = run("--format", "json");
+  expect(written.status).toBe(0);
+  expect(JSON.parse(written.stdout)).toEqual({ diagnostics: [], out: "src/generated", files: ["hello.rs", "mod.rs"], changed: ["hello.rs", "mod.rs"], removed: [] });
+  expect(JSON.parse(run("--check", "--format", "json").stdout)).toEqual({ diagnostics: [], out: "src/generated", stale: [], notGenerated: [] });
+  writeFileSync(join(root, "src/generated/hello.rs"), "// edited by hand");
+  writeFileSync(join(root, "src/generated/extra.rs"), "// not generated");
+  const r = run("--check", "--format", "json");
+  expect(r.status).toBe(1);
+  expect(JSON.parse(r.stdout)).toEqual({ diagnostics: [], out: "src/generated", stale: ["src/generated/hello.rs"], notGenerated: ["src/generated/extra.rs"] });
+});
+
+it("--format takes human or json, and json does not combine with --diff", () => {
+  expect(run("--format", "xml").stderr).toContain("error: '--format' is 'human' or 'json'");
+  const r = run("--check", "--diff", "--format", "json");
+  expect(r.status).toBe(1);
+  expect(r.stderr).toContain("does not combine with '--format json'");
+  expect(run("--format", "human").status).toBe(0);
+});
+
+it("matches its errors with the VS Code problem matchers the quick start gives", () => {
+  const guide = readFileSync(join(import.meta.dirname, "../../../crates/ferrovue/docs/guide/quick_start.md"), "utf8");
+  const tasks = JSON.parse(guide.match(/```json\n(\{\n {2}"version": "2\.0\.0"[\s\S]*?)```/)![1]!);
+  const matchers: { pattern: { regexp: string; kind?: string; code: number; file: number; line?: number; column?: number; message: number } }[] = tasks.tasks[0].problemMatcher;
+  const matched = (stderr: string) =>
+    stderr.split("\n").flatMap((text) =>
+      matchers.flatMap(({ pattern: p }) => {
+        const m = new RegExp(p.regexp).exec(text);
+        return m ? [{ kind: p.kind ?? "location", code: m[p.code], file: m[p.file], line: p.line && m[p.line], column: p.column && m[p.column], message: m[p.message] }] : [];
+      }),
+    );
+  writeFileSync(join(root, "components", "Bad.vue"), BAD);
+  expect(matched(run().stderr)).toEqual([{ kind: "location", code: "FV0602", file: "components/Bad.vue", line: "4", column: "17", message: "`.toPrecision()` is not supported" }]);
+  rmSync(join(root, "components", "Bad.vue"));
+  mkdirSync(join(root, "locales"));
+  writeFileSync(join(root, "locales", "en.json"), "{ nope");
+  writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify({ components: "components", out: "src/generated", i18n: { messages: "locales" } }));
+  const [locale] = matched(run().stderr);
+  expect(locale).toMatchObject({ kind: "file", code: "FV1401", file: "locales/en.json" });
+});

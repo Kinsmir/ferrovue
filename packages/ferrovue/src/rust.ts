@@ -58,7 +58,7 @@ export function rustTy(ty: Ty, comp: Component): string {
       return `ferrovue::Record<'a, ${rustTy(ty.of, comp)}>`;
     case "struct": {
       const { st, owner, path } = lookupStruct(comp, ty);
-      if (!st) throw new GenError(`no type \`${ty.name}\``);
+      if (!st) throw new GenError("FV0308", `no type \`${ty.name}\``);
       return `${path}${ty.name}${structLifetime(st, owner) ? "<'a>" : ""}`;
     }
     case "html":
@@ -68,7 +68,7 @@ export function rustTy(ty: Ty, comp: Component): string {
       return `super::${child.module}::Props${structLifetime(child.props, child) ? "<'a>" : ""}`;
     }
     default:
-      throw new GenError("no Rust type for `undefined`");
+      throw new GenError("FV0309", "no Rust type for `undefined`");
   }
 }
 
@@ -202,7 +202,7 @@ export function isIsland(comp: Component): boolean {
 
 export function componentSource(comp: Component, ast: N[], ssr: string, components: Map<string, Component>): string {
   if (takesAttrs(comp) && comp.inheritAttrs && comp.attrsDropped) {
-    fail(comp, `a root \`<Transition>\` or \`<KeepAlive>\` around a \`v-if\` in ${comp.name}, which a parent passes attributes: Vue's server drops them, where its client puts them on the element; set \`inheritAttrs: false\` and bind \`$attrs\` on the element`, comp.attrsDropped);
+    fail(comp, "FV0416", `a root \`<Transition>\` or \`<KeepAlive>\` around a \`v-if\` in ${comp.name}, which a parent passes attributes: Vue's server drops them, where its client puts them on the element; set \`inheritAttrs: false\` and bind \`$attrs\` on the element`, comp.attrsDropped);
   }
   const { scope, lets } = scopeFor(comp, ast, components);
   const program = parseJs(ssr, { sourceType: "module" }).program;
@@ -210,7 +210,7 @@ export function componentSource(comp: Component, ast: N[], ssr: string, componen
   const fn = (program.body as N[]).find(
     (s: N) => s.type === "ExportNamedDeclaration" && s.declaration?.id?.name === "ssrRender",
   )?.declaration;
-  if (!fn) fail(comp, "the compiled template has no `ssrRender`");
+  if (!fn) fail(comp, "FV0006", "the compiled template has no `ssrRender`");
 
   const e = new Emitter();
   for (const l of lets) e.stmt(l);

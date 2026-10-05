@@ -7,6 +7,20 @@ released together and share version numbers.
 
 ### Added
 
+- Stable error codes. Every error the compiler raises has a code, `FV` and four digits grouped by
+  area (`FV00xx` components and parsing, `FV01xx` script setup, `FV02xx` constants, `FV03xx` props
+  and types, `FV04xx` templates and attributes, `FV05xx` child components, `FV06xx` expressions,
+  `FV07xx` strings and numbers, `FV08xx` lists and loops, `FV09xx` slots, `FV10xx` classes and
+  styles, `FV11xx` configuration and helpers, `FV12xx` the router, `FV13xx` Pinia, `FV14xx`
+  vue-i18n, `FV15xx` raw HTML, `<ClientOnly>`, `<Teleport>` and Rust twins), and a code is never
+  reused. The CLI and the Vite plugin's overlay show it as `error[FV0602]: file:line:column: …`
+  with a link to its entry in the crate guide's new `error_codes` page, which `pnpm
+  errors:generate` writes from the compiler's list; `pnpm test` fails when the two differ or a
+  code is raised but not listed. `ferrovue --format json` (with or without `--check`) writes
+  diagnostics with the file, line, column, end where known, code, title, message and docs link,
+  keeping the exit status; the quick start gives a VS Code problem matcher for `tasks.json`, which
+  a test runs against the CLI's output. A syntax error in `<script setup>` is reported with its
+  file and line as `FV0001`.
 - Whole-page hydration beside islands (#33). `ferrovue::Page` takes the components a layout's
   slots hold as `Part`s, each made from the `Html` value that writes its markup, so the record of
   `(component, props)` per slot comes from what rendered the page; `Page::hole` leaves a slot to

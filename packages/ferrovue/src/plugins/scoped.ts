@@ -111,7 +111,7 @@ function childIds(s: Scope, child: Component, passesAttrs: boolean, inSlot: bool
   if (base === null && slotted === null) code = own === null ? null : rustStr(` ${own}`);
   else if (own === null && slotted === null) code = base;
   else code = `&fv::scope_attrs(${base ?? '""'}, ${own === null ? '""' : rustStr(own)}, ${slotted ?? '""'})`;
-  if (code !== null && !child.inherits) fail(s.comp, `${child.name} is handed scope ids its render does not take`, n);
+  if (code !== null && !child.inherits) fail(s.comp, "FV1012", `${child.name} is handed scope ids its render does not take`, n);
   return code;
 }
 

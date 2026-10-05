@@ -9,14 +9,14 @@ import { statements } from "./template.ts";
 export function list(s: Scope, e: Emitter, c: N): void {
   const fn = c.arguments[1];
   if (fn.type !== "ArrowFunctionExpression" || fn.body.type !== "BlockStatement") {
-    fail(s.comp, "unexpected `ssrRenderList` callback", c);
+    fail(s.comp, "FV0006", "unexpected `ssrRenderList` callback", c);
   }
   if (isObjectCall(c.arguments[0], "entries")) {
     const [pair, index] = fn.params as N[];
     const r = c.arguments[0].arguments.length === 1 ? expr(s, c.arguments[0].arguments[0]) : null;
-    if (r?.ty.k !== "record") return fail(s.comp, "`Object.entries()` takes a `Record<string, T>`", c.arguments[0]);
+    if (r?.ty.k !== "record") return fail(s.comp, "FV0814", "`Object.entries()` takes a `Record<string, T>`", c.arguments[0]);
     if (pair?.type !== "ArrayPattern" || pair.elements.length > 2 || pair.elements.some((x: N) => x?.type !== "Identifier")) {
-      return fail(s.comp, "a `v-for` over `Object.entries()` names its items `[key, value]`", pair ?? c);
+      return fail(s.comp, "FV0818", "a `v-for` over `Object.entries()` names its items `[key, value]`", pair ?? c);
     }
     recordLoop(s, e, r, fn, pair.elements[1], pair.elements[0], index);
     return;
@@ -52,7 +52,7 @@ export function list(s: Scope, e: Emitter, c: N): void {
     e.open(loop(bound, idx));
   } else if (src.ty.k === "list") {
     of = src.ty.of;
-    if (of.k === "undef") fail(s.comp, "`v-for` over an empty array literal", c);
+    if (of.k === "undef") fail(s.comp, "FV0819", "`v-for` over an empty array literal", c);
     const itemCode = `${itemName}_ref`;
     walk = `${atom(src.code)}.iter()`;
     bound = itemCode;
@@ -64,7 +64,7 @@ export function list(s: Scope, e: Emitter, c: N): void {
     else e.stmt(`let ${itemName} = *${itemName}_ref;`);
     itemLet = e.lines.length - 1;
   } else {
-    return fail(s.comp, "`v-for` walks an array, or counts to a number", c);
+    return fail(s.comp, "FV0820", "`v-for` walks an array, or counts to a number", c);
   }
   let idxLet = -1;
   if (idx) {
@@ -76,11 +76,11 @@ export function list(s: Scope, e: Emitter, c: N): void {
   else if (item.type === "ObjectPattern") {
     for (const p of item.properties) {
       if (p.type !== "ObjectProperty" || p.computed || p.value.type !== "Identifier") {
-        fail(s.comp, "a destructured `v-for` item binds plain names, without defaults", p);
+        fail(s.comp, "FV0821", "a destructured `v-for` item binds plain names, without defaults", p);
       }
       inner.set(p.value.name, fieldVal(s.comp, itemName, of, p.key.name ?? p.key.value, p));
     }
-  } else fail(s.comp, "a `v-for` item is a name or an object pattern", item);
+  } else fail(s.comp, "FV0822", "a `v-for` item is a name or an object pattern", item);
   if (index) inner.set(index.name, { code: idx!, ty: INT });
   const before = e.literalBytes;
   const fromProps = src.ty.k === "list" && src.iter === undefined && /^\(?props\./.test(src.code);
@@ -104,7 +104,7 @@ export function list(s: Scope, e: Emitter, c: N): void {
 function recordLoop(s: Scope, e: Emitter, r: Val, fn: N, value: N | undefined, key: N | undefined, index: N | undefined): void {
   if (r.ty.k !== "record") return;
   const of = r.ty.of;
-  for (const p of [key, index]) if (p && p.type !== "Identifier") fail(s.comp, "a record's key and index in `v-for` are plain names", p);
+  for (const p of [key, index]) if (p && p.type !== "Identifier") fail(s.comp, "FV0823", "a record's key and index in `v-for` are plain names", p);
   const n = ++ctx.narrowCount;
   const v = value?.type === "Identifier" ? snake(value.name) : `fv_value${n}`;
   const k = key ? snake(key.name) : `fv_key${n}`;
@@ -120,11 +120,11 @@ function recordLoop(s: Scope, e: Emitter, r: Val, fn: N, value: N | undefined, k
   else if (value?.type === "ObjectPattern" && (of.k === "struct" || of.k === "child")) {
     for (const p of value.properties) {
       if (p.type !== "ObjectProperty" || p.computed || p.value.type !== "Identifier") {
-        fail(s.comp, "a destructured `v-for` item binds plain names, without defaults", p);
+        fail(s.comp, "FV0821", "a destructured `v-for` item binds plain names, without defaults", p);
       }
       inner.set(p.value.name, fieldVal(s.comp, v, of, p.key.name ?? p.key.value, p));
     }
-  } else if (value) fail(s.comp, "a `v-for` item is a name, or an object pattern of an object", value);
+  } else if (value) fail(s.comp, "FV0822", "a `v-for` item is a name, or an object pattern of an object", value);
   if (key) inner.set(key.name, { code: k, ty: STR });
   if (index) inner.set(index.name, { code: i, ty: INT });
   const before = e.literalBytes;

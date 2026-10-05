@@ -65,10 +65,12 @@ defineProps<{ name: string; unread: number; note?: string }>();
 npx ferrovue            # write the modules
 npx ferrovue --check    # write nothing; exit 1 if the committed modules are stale (for CI)
 npx ferrovue --watch    # write them, then again on every change
+npx ferrovue --check --format json   # errors as JSON, for an editor or CI
 ```
 
 A Vite project can use the plugin in `ferrovue/vite` instead of `--watch`: it regenerates on change
-and shows a refused construct in Vite's error overlay.
+and shows a refused construct in Vite's error overlay. Each error has a stable code; [Editor and CI
+diagnostics](#editor-and-ci-diagnostics) describes the JSON output and a VS Code problem matcher.
 
 The compiler writes `src/generated/greeting.rs` and `src/generated/mod.rs`, which declares one
 module per component. This is `greeting.rs`, exactly as written (only the reservation is an
@@ -271,6 +273,102 @@ assert_eq!(
     )
 );
 ```
+
+# Editor and CI diagnostics
+
+Every error has a stable code, `FV` and four digits, listed in
+[`error_codes`](crate::guide::error_codes). The CLI writes it first, then the file, line and column,
+the message, the line quoted with a caret, and where the code is documented:
+
+```text
+error[FV0602]: components/Card.vue:4:17: `.toPrecision()` is not supported
+ 4 | <template><p>{{ n.toPrecision(2) }}</p></template>
+   |                 ^
+ = docs: https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#fv0602
+```
+
+`--format json` writes one JSON object per run to standard output instead, for an editor, a CI
+annotation or a script; the exit status is the same as without it:
+
+```sh
+npx ferrovue --check --format json
+npx ferrovue --format json
+```
+
+```json
+{
+  "diagnostics": [
+    {
+      "file": "components/Card.vue",
+      "line": 4,
+      "column": 17,
+      "endLine": null,
+      "endColumn": null,
+      "code": "FV0602",
+      "severity": "error",
+      "title": "Unsupported method",
+      "message": "`.toPrecision()` is not supported",
+      "docs": "https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#fv0602"
+    }
+  ]
+}
+```
+
+Lines and columns count from 1, and the end is exclusive. A field the compiler does not know is
+`null`: the end is known for a construct in `<script setup>`, the line and column for most errors
+in a `.vue` file, and only the file for a configuration, locale or routes file. A file that does not
+parse has the code `FV0001` and the parser's message. The compiler stops at the
+first error, so `diagnostics` holds one at most today. A run that succeeds adds `out`, `files`,
+`changed` and `removed`; `--check` adds `out`, `stale` and `notGenerated`, the modules it would
+rewrite or remove. `--format json` does not combine with `--diff`.
+
+In VS Code, a task with these problem matchers puts each error in the Problems panel and underlines
+it in the file. Add it to `.vscode/tasks.json` and run it with **Tasks: Run Task**:
+
+```json
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "ferrovue",
+      "type": "shell",
+      "command": "pnpm exec ferrovue",
+      "group": "build",
+      "problemMatcher": [
+        {
+          "owner": "ferrovue",
+          "source": "ferrovue",
+          "fileLocation": ["relative", "${workspaceFolder}"],
+          "pattern": {
+            "regexp": "^error\\[(FV\\d{4})\\]: ([^:]+):(\\d+):(\\d+): (.*)$",
+            "code": 1,
+            "file": 2,
+            "line": 3,
+            "column": 4,
+            "message": 5
+          }
+        },
+        {
+          "owner": "ferrovue",
+          "source": "ferrovue",
+          "fileLocation": ["relative", "${workspaceFolder}"],
+          "pattern": {
+            "regexp": "^error\\[(FV\\d{4})\\]: ([^:]+\\.(?:vue|ts|json)): (.*)$",
+            "kind": "file",
+            "code": 1,
+            "file": 2,
+            "message": 3
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+The first matcher reads an error at a line and column; the second one an error in a whole file, as
+in a locale file. Run the task from the directory that holds `ferrovue.config.json`, or set the
+task's `options.cwd` and `fileLocation` to it.
 
 From here:
 

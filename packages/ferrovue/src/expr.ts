@@ -41,10 +41,10 @@ export function describeTy(ty: Ty): string {
 }
 
 export function fieldVal(comp: Component, base: string, ty: Ty, js: string, node: N): Val {
-  if (ty.k !== "struct") fail(comp, `\`.${js}\` on a value that is not an object`, node);
+  if (ty.k !== "struct") fail(comp, "FV0604", `\`.${js}\` on a value that is not an object`, node);
   const { st, owner } = lookupStruct(comp, ty);
   const found = st?.fields.find((x) => x.js === js);
-  if (!found) fail(comp, `\`${ty.name}\` has no field \`${js}\``, node);
+  if (!found) fail(comp, "FV0605", `\`${ty.name}\` has no field \`${js}\``, node);
   const f = owner === comp ? found : { ...found, ty: markHome(found.ty, owner.name) };
   if (st!.slot) return { code: `${base}.${f.rust}`, ty: f.ty };
   const place = `${base}.${f.rust}`;
@@ -77,7 +77,7 @@ export function holdsNothing(comp: Component, v: Val, want: Ty, node: N, where: 
   if (takes === has || takes === "either") return;
   const is = has === "either" ? "may be `null` or `undefined`" : has === "null" ? "may be `null`" : "may be `undefined`";
   const fix = takes === null ? "narrow it with `v-if` first" : takes === "null" ? "write `?? null` after it" : "write `?? undefined` after it";
-  fail(comp, `a value that ${is} where ${where} takes ${describeTy(want)}, which Vue would hand it as it is: ${fix}`, node);
+  fail(comp, "FV0606", `a value that ${is} where ${where} takes ${describeTy(want)}, which Vue would hand it as it is: ${fix}`, node);
 }
 
 export function coerce(comp: Component, v: Val, want: Ty, node: N): string {
@@ -88,12 +88,12 @@ export function coerce(comp: Component, v: Val, want: Ty, node: N): string {
   if (want.k === "opt" && sameTy(v.ty, want.of)) return `Some(${bare(v.code)})`;
   if (want.k === "float" && v.ty.k === "int") return asF64(v);
   if (want.k === "opt" && want.of.k === "float" && v.ty.k === "int") return `Some(${asF64(v)})`;
-  return fail(comp, `a ${JSON.stringify(v.ty)} where ${JSON.stringify(want)} is expected`, node);
+  return fail(comp, "FV0607", `a ${JSON.stringify(v.ty)} where ${JSON.stringify(want)} is expected`, node);
 }
 
 export function childOf(name: string): Component {
   const c = ctx.components.get(name);
-  if (!c) throw new GenError(`\`Props\` is imported from ${name}.vue, which is not among the components compiled`);
+  if (!c) throw new GenError("FV0512", `\`Props\` is imported from ${name}.vue, which is not among the components compiled`);
   return c;
 }
 
@@ -142,7 +142,7 @@ export function expr(s: Scope, n: N): Val {
       return formatted(comp, [a, b], n, "`+`");
     }
     if (isNumber(a.ty) && isNumber(b.ty)) return arithmetic(a, "+", b, a.ty.k === "int" && b.ty.k === "int");
-    return fail(comp, "`+` joins a string to a string or a number, or adds two numbers", n);
+    return fail(comp, "FV0608", "`+` joins a string to a string or a number, or adds two numbers", n);
   }
   if (n.type === "BinaryExpression" && ["-", "*", "%", "/", "<", ">", "<=", ">="].includes(n.operator)) {
     const a = expr(s, n.left);
@@ -159,7 +159,7 @@ export function expr(s: Scope, n: N): Val {
           ? "narrow an optional one with `v-if` first"
           : `the other is ${describeTy(isNumber(a.ty) ? b.ty : a.ty)}`;
       const between = comparison ? "two numbers, or two strings," : "two numbers";
-      return fail(comp, `\`${n.operator}\` is supported between ${between} that are present: ${why}`, n);
+      return fail(comp, "FV0609", `\`${n.operator}\` is supported between ${between} that are present: ${why}`, n);
     }
     if (["<", ">", "<=", ">="].includes(n.operator)) return compare(a, n.operator, b);
     const intDivisor = n.right.type === "NumericLiteral" && Number.isInteger(n.right.value) && n.right.value !== 0;
@@ -178,17 +178,17 @@ export function expr(s: Scope, n: N): Val {
     case "ArrayExpression": {
       if (n.elements.length === 0) return { code: "[]", ty: { k: "list", of: UNDEF } };
       const values = n.elements.map((el: N) => {
-        if (!el || el.type === "SpreadElement") fail(comp, "an array literal holds plain values", n);
+        if (!el || el.type === "SpreadElement") fail(comp, "FV0610", "an array literal holds plain values", n);
         return expr(s, el);
       });
       const of = values[0]!.ty;
       if (!(of.k === "str" || of.k === "int" || of.k === "float" || of.k === "bool") || values.some((v: Val) => !sameTy(v.ty, of))) {
-        fail(comp, "an array literal holds strings, numbers or booleans, all of one type", n);
+        fail(comp, "FV0611", "an array literal holds strings, numbers or booleans, all of one type", n);
       }
       return { code: `[${values.map((v: Val) => bare(v.code)).join(", ")}]`, ty: { k: "list", of }, ...loneOf(...values) };
     }
     case "OptionalMemberExpression": {
-      if (n.computed) return fail(comp, "computed member access", n);
+      if (n.computed) return fail(comp, "FV0612", "computed member access", n);
       const base = expr(s, n.object);
       if (nothing(base.ty)) return { code: "None", ty: UNDEF };
       if (base.ty.k !== "opt") return fieldVal(comp, base.code, base.ty, n.property.name, n);
@@ -209,10 +209,10 @@ export function expr(s: Scope, n: N): Val {
       const local = s.locals.get(n.name) ?? s.setup.get(n.name);
       if (local) return local;
       if (s.clientOnly.has(n.name)) {
-        return fail(comp, `\`${n.name}\` is set up in a way the server cannot evaluate: ${s.clientOnly.get(n.name)}`, n);
+        return fail(comp, "FV0613", `\`${n.name}\` is set up in a way the server cannot evaluate: ${s.clientOnly.get(n.name)}`, n);
       }
       if (n.name === s.propsIdent) return { code: "props", ty: { k: "struct", name: "Props" } };
-      return fail(comp, `\`${n.name}\` is not available when rendering on the server`, n);
+      return fail(comp, "FV0601", `\`${n.name}\` is not available when rendering on the server`, n);
     }
     case "MemberExpression": {
       if (!n.computed && n.property.name === "value" && n.object.type === "Identifier" && s.refs.has(n.object.name) && !s.locals.has(n.object.name)) {
@@ -227,12 +227,12 @@ export function expr(s: Scope, n: N): Val {
           const own = claim((p) => p.member?.(s, base, n.property.value, n, true));
           if (own) return own;
         }
-        return fail(comp, "computed member access", n);
+        return fail(comp, "FV0612", "computed member access", n);
       }
       const prop = n.property.name as string;
       const slots = slotsObject(s, n.object);
       if (slots !== null) {
-        if (!comp.slotNames.includes(prop)) fail(comp, `\`${slots}.${prop}\` names a slot this template does not render`, n);
+        if (!comp.slotNames.includes(prop)) fail(comp, "FV0907", `\`${slots}.${prop}\` names a slot this template does not render`, n);
         return { code: `fv_slots.${snake(prop)}.is_some()`, ty: BOOL };
       }
       if (n.object.type === "Identifier") {
@@ -244,18 +244,18 @@ export function expr(s: Scope, n: N): Val {
             const global = n.object.name === "_ctx" ? claim((p) => p.global?.(s, prop, n)) : undefined;
             if (global) return global;
             if (n.object.name === "_ctx" && prop === "$attrs") {
-              return fail(comp, "`$attrs` is bound whole, with `v-bind=\"$attrs\"`; a value read from it has no type: declare it as a prop", n);
+              return fail(comp, "FV0415", "`$attrs` is bound whole, with `v-bind=\"$attrs\"`; a value read from it has no type: declare it as a prop", n);
             }
             const v = s.setup.get(prop);
             if (v) return v;
             if (prop === s.propsIdent) return { code: "props", ty: { k: "struct", name: "Props" } };
             if (s.clientOnly.has(prop)) {
-              return fail(comp, `\`${prop}\` is set up in a way the server cannot evaluate: ${s.clientOnly.get(prop)}`, n);
+              return fail(comp, "FV0613", `\`${prop}\` is set up in a way the server cannot evaluate: ${s.clientOnly.get(prop)}`, n);
             }
             if (n.object.name === "_ctx" && comp.props.fields.some((f) => f.js === prop)) {
               return fieldVal(comp, "props", { k: "struct", name: "Props" }, prop, n);
             }
-            return fail(comp, `\`${prop}\` is not available when rendering on the server`, n);
+            return fail(comp, "FV0601", `\`${prop}\` is not available when rendering on the server`, n);
           }
         }
       }
@@ -271,7 +271,7 @@ export function expr(s: Scope, n: N): Val {
           let right: Val | undefined;
           const code = narrowing(s, p, (inner) => (right = expr(inner, n.right)).code, () => String(n.operator === "||"));
           if (right?.ty.k === "bool") return { code, ty: BOOL };
-          return fail(comp, `\`${n.operator}\` is supported between booleans only`, n);
+          return fail(comp, "FV0614", `\`${n.operator}\` is supported between booleans only`, n);
         }
       }
       const a = expr(s, n.left);
@@ -282,7 +282,7 @@ export function expr(s: Scope, n: N): Val {
         if (nothing(a.ty)) return b;
         if (a.ty.k !== "opt") return a;
         if (nothing(b.ty)) return { ...a, ty: withAbsence(a.ty.of, absence(b.ty)) };
-        if (b.iter !== undefined) fail(comp, "`??` falling back to a computed list", n);
+        if (b.iter !== undefined) fail(comp, "FV0615", "`??` falling back to a computed list", n);
         if (a.held !== undefined && b.ty.k === "str") return { code: `&*${atom(a.held)}.unwrap_or(${asCow(b)})`, ty: STR, ...loneOf(a, b) };
         if (a.ty.of.k === "str" && b.ty.k === "str" && isTemporary(b)) {
           return { code: `&*${atom(a.code)}.map(std::borrow::Cow::<str>::Borrowed).unwrap_or(${asCow(b)})`, ty: STR, ...loneOf(a, b) };
@@ -291,7 +291,7 @@ export function expr(s: Scope, n: N): Val {
         if (b.ty.k === "opt" && sameTy(a.ty.of, b.ty.of)) return { code: `${atom(a.code)}.or(${bare(b.code)})`, ty: b.ty, ...loneOf(a, b) };
         if (a.ty.of.k === "float" && b.ty.k === "int") return { code: `${atom(a.code)}.unwrap_or(${bare(asF64(b))})`, ty: FLOAT };
         if (a.ty.of.k === "int" && b.ty.k === "float") return { code: `${atom(a.code)}.map(|v| v as f64).unwrap_or(${bare(b.code)})`, ty: FLOAT };
-        return fail(comp, "`??` between different types", n);
+        return fail(comp, "FV0616", "`??` between different types", n);
       }
       if (n.operator === "||") {
         if (a.ty.k === "bool" && b.ty.k === "bool") return boolOf(logical(a.code, "||", b.code));
@@ -310,10 +310,10 @@ export function expr(s: Scope, n: N): Val {
           const otherwise = a.ty.k === "str" ? strArg(b.code) : bare(b.code);
           return { code: `{ let a = ${bare(a.code)}; if ${truthy({ code: "a", ty: a.ty })} { a } else { ${otherwise} } }`, ty: a.ty, ...loneOf(a, b) };
         }
-        return fail(comp, "`||` between these types", n);
+        return fail(comp, "FV0617", "`||` between these types", n);
       }
       if (n.operator === "&&" && a.ty.k === "bool" && b.ty.k === "bool") return boolOf(logical(a.code, "&&", b.code));
-      return fail(comp, `\`${n.operator}\` is supported between booleans only`, n);
+      return fail(comp, "FV0614", `\`${n.operator}\` is supported between booleans only`, n);
     }
     case "UnaryExpression":
       if (n.operator === "!") {
@@ -325,10 +325,10 @@ export function expr(s: Scope, n: N): Val {
         if (a.ty.k === "int") return intFromF64(negate(asF64(a)));
         if (a.ty.k === "float") return { code: negate(a.code), ty: FLOAT };
       }
-      return fail(comp, `unary \`${n.operator}\``, n);
+      return fail(comp, "FV0618", `unary \`${n.operator}\``, n);
     case "BinaryExpression": {
       const test = nullTest(n);
-      if (n.operator !== "===" && n.operator !== "!==" && !test) fail(comp, `\`${n.operator}\`: \`==\` and \`!=\` compare with \`null\` or \`undefined\` only; use \`===\``, n);
+      if (n.operator !== "===" && n.operator !== "!==" && !test) fail(comp, "FV0619", `\`${n.operator}\`: \`==\` and \`!=\` compare with \`null\` or \`undefined\` only; use \`===\``, n);
       const whole = claim((p) => p.equality?.(s, n));
       if (whole) return whole;
       if (test) {
@@ -346,7 +346,7 @@ export function expr(s: Scope, n: N): Val {
         if (!test.strict && claim((p) => p.values?.describe?.(v.ty)) === undefined) {
           return { code: String(!test.is), ty: BOOL, konst: !test.is };
         }
-        if (!test.strict) fail(comp, `\`${n.operator}\` of ${describeTy(v.ty)}: compare with \`${test.is ? "===" : "!=="} undefined\``, n);
+        if (!test.strict) fail(comp, "FV0620", `\`${n.operator}\` of ${describeTy(v.ty)}: compare with \`${test.is ? "===" : "!=="} undefined\``, n);
       }
       const a = expr(s, n.left);
       const b = expr(s, n.right);
@@ -363,7 +363,7 @@ export function expr(s: Scope, n: N): Val {
       } else if (nothing(a.ty) || nothing(b.ty)) {
         const other = nothing(a.ty) ? b.ty : a.ty;
         const opaque = nothing(other) ? undefined : claim((p) => p.values?.describe?.(other));
-        if (opaque !== undefined) fail(comp, `\`${n.operator}\` between ${opaque} and ${describeTy(nothing(a.ty) ? a.ty : b.ty)}`, n);
+        if (opaque !== undefined) fail(comp, "FV0621", `\`${n.operator}\` between ${opaque} and ${describeTy(nothing(a.ty) ? a.ty : b.ty)}`, n);
         const same = a.ty.k === b.ty.k;
         const konst = n.operator === "===" ? same : !same;
         return { code: String(konst), ty: BOOL, konst };
@@ -377,7 +377,7 @@ export function expr(s: Scope, n: N): Val {
         eq = binary(a.code, "==", b.code);
       } else if (a.ty.k === "opt" && sameTy(a.ty.of, b.ty) && scalar(b.ty)) eq = binary(a.code, "==", `Some(${bare(b.code)})`);
       else if (b.ty.k === "opt" && sameTy(b.ty.of, a.ty) && scalar(a.ty)) eq = binary(`Some(${bare(a.code)})`, "==", b.code);
-      else return fail(comp, "`===` between these types", n);
+      else return fail(comp, "FV0622", "`===` between these types", n);
       return boolOf(n.operator === "===" ? eq : not(eq));
     }
     case "ConditionalExpression": {
@@ -424,13 +424,13 @@ export function expr(s: Scope, n: N): Val {
         if (sameTy(a.ty, b.ty)) return { code: choose(a.code, b.code), ty: a.ty, ...lone };
         return { code: choose(coerce(comp, a, ty, n), coerce(comp, b, ty, n)), ty, ...lone };
       }
-      return fail(comp, "the two branches of `?:` differ in type", n);
+      return fail(comp, "FV0623", "the two branches of `?:` differ in type", n);
     }
     case "NewExpression": {
       const made = n.callee.type === "Identifier" ? n.callee.name : n.callee.type === "MemberExpression" && !n.callee.computed ? `${n.callee.object.name ?? "…"}.${n.callee.property.name}` : "…";
-      return fail(comp, `\`new ${made}(…)\` builds an object the server has no twin for: compute the value in Rust and pass it as a prop`, n);
+      return fail(comp, "FV0624", `\`new ${made}(…)\` builds an object the server has no twin for: compute the value in Rust and pass it as a prop`, n);
     }
     default:
-      return fail(comp, `\`${n.type}\` is not supported in a template`, n);
+      return fail(comp, "FV0625", `\`${n.type}\` is not supported in a template`, n);
   }
 }

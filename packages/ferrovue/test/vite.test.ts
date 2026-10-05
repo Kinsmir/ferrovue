@@ -38,7 +38,7 @@ it("regenerates when a build starts", () => {
 
 it("fails a build on a refused construct, naming the line in the .vue file", () => {
   writeFileSync(join(root, "components", "Hello.vue"), bad);
-  expect(() => buildStart(ferrovue({ root }))).toThrow(/components\/Hello\.vue:4:24: `\/` is supported between two numbers that are present: the other is a string/);
+  expect(() => buildStart(ferrovue({ root }))).toThrow(/^error\[FV0609\]: components\/Hello\.vue:4:24: `\/` is supported between two numbers that are present: the other is a string[\s\S]*\n = docs: https:\/\/docs\.rs\/ferrovue\/latest\/ferrovue\/guide\/error_codes\/index\.html#fv0609$/);
 });
 
 it("regenerates on the dev server's changes, and shows a refusal in the error overlay", () => {
@@ -56,7 +56,8 @@ it("regenerates on the dev server's changes, and shows a refusal in the error ov
   writeFileSync(join(root, "components", "Hello.vue"), bad);
   watcher.emit("change", join(root, "components", "Hello.vue"));
   expect(sent).toHaveLength(1);
-  expect(JSON.stringify(sent[0])).toContain("Hello.vue:4:24");
+  expect(JSON.stringify(sent[0])).toContain("error[FV0609]: components/Hello.vue:4:24");
+  expect(logged.at(-1)).toContain("#fv0609");
 
   writeFileSync(join(root, "components", "Hello.vue"), good.replace("Hello", "Bye"));
   watcher.emit("change", join(root, "components", "Hello.vue"));

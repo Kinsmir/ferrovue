@@ -37,7 +37,12 @@ cargo deny check             # licences, advisories, duplicate crates and source
    markup-breaking characters in every prop that reaches the page. Run `pnpm conformance:generate`
    and `pnpm conformance:record`, read the recorded HTML, then run `cargo test`.
 4. **Refuse the edges.** Whatever part of the construct you do not translate exactly must be an
-   error. Add a case to `refused` in `packages/ferrovue/test/compiler.test.ts`.
+   error. Add a case to `refused` in `packages/ferrovue/test/compiler.test.ts`. Each error has a
+   stable code: add a new one to `ERRORS` in `packages/ferrovue/src/errors.ts`, after the last
+   of its area, with a short title, and run `pnpm errors:generate` to rewrite the guide's
+   `error_codes` page. A code is never reused or renumbered: one no longer raised gets `retired`
+   and stays. `pnpm test` fails on a code raised but not listed, listed but not raised, listed
+   twice, or an index that differs from the list.
 5. **Document it** in the README's "What a component may use" table and in `CHANGELOG.md` under
    `[Unreleased]`. If it changes what generated code looks like or adds to the runtime, update the
    crate's guide too (`crates/ferrovue/docs/`, published on docs.rs as `ferrovue::guide`): its

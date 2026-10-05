@@ -84,7 +84,7 @@ export function loadConfig(root: string, configPath?: string): Config {
     text = readFileSync(filePath, "utf8");
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === "ENOENT") {
-      throw new GenError(`cannot find \`${displayName}\` in ${root}`);
+      throw new GenError("FV1102", `cannot find \`${displayName}\` in ${root}`, { file: displayName });
     }
     throw e;
   }
@@ -92,16 +92,16 @@ export function loadConfig(root: string, configPath?: string): Config {
   try {
     raw = JSON.parse(text) as Partial<Config>;
   } catch (e) {
-    throw new GenError(`failed to parse \`${displayName}\`: ${(e as Error).message}`);
+    throw new GenError("FV1103", `failed to parse \`${displayName}\`: ${(e as Error).message}`, { file: displayName });
   }
   if (typeof raw.components !== "string" || typeof raw.out !== "string") {
-    throw new GenError(`${displayName} needs \`components\` and \`out\` directories`);
+    throw new GenError("FV1104", `${displayName} needs \`components\` and \`out\` directories`, { file: displayName });
   }
   if (raw.scopeId !== undefined && raw.scopeId !== "filepath" && raw.scopeId !== "filepath-source") {
-    throw new GenError(`\`scopeId\` in ${displayName} is "filepath" or "filepath-source", as \`@vitejs/plugin-vue\` computes it`);
+    throw new GenError("FV1105", `\`scopeId\` in ${displayName} is "filepath" or "filepath-source", as \`@vitejs/plugin-vue\` computes it`, { file: displayName });
   }
   if (raw.builders !== undefined && typeof raw.builders !== "boolean") {
-    throw new GenError(`\`builders\` in ${displayName} is \`true\` or \`false\`: whether each props struct gets \`new()\` and a setter per optional field`);
+    throw new GenError("FV1106", `\`builders\` in ${displayName} is \`true\` or \`false\`: whether each props struct gets \`new()\` and a setter per optional field`, { file: displayName });
   }
   return raw as Config;
 }
@@ -123,7 +123,7 @@ export function tyOfName(name: TypeName): Ty {
     case "bool":
       return BOOL;
     default:
-      throw new GenError(`unknown helper type \`${String(name)}\``);
+      throw new GenError("FV1107", `unknown helper type \`${String(name)}\``);
   }
 }
 

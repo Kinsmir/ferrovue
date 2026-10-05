@@ -20,11 +20,11 @@ export function slotContent(s: Scope, value: N): { body: N[]; param: N } {
       ? value.arguments[0]
       : null;
   if (fn?.type !== "ArrowFunctionExpression" || fn.body.type !== "BlockStatement") {
-    fail(s.comp, "unexpected slot content", value);
+    fail(s.comp, "FV0006", "unexpected slot content", value);
   }
   const branch = fn.body.body.length === 1 ? fn.body.body[0] : null;
   if (branch?.type !== "IfStatement" || branch.test.type !== "Identifier" || branch.test.name !== "_push") {
-    fail(s.comp, "unexpected slot content", fn);
+    fail(s.comp, "FV0006", "unexpected slot content", fn);
   }
   const body = branch.consequent.type === "BlockStatement" ? branch.consequent.body : [branch.consequent];
   return { body, param: fn.params[0] };
@@ -68,7 +68,7 @@ export function slotFieldTy(ty: Ty, comp: Component): string {
     case "opt":
       return `Option<${slotFieldTy(ty.of, comp)}>`;
     default:
-      throw new GenError(`no Rust type for a slot prop of type ${JSON.stringify(ty)}`);
+      throw new GenError("FV0908", `no Rust type for a slot prop of type ${JSON.stringify(ty)}`);
   }
 }
 
@@ -81,8 +81,8 @@ export function slotFieldValue(s: Scope, v: Val, n: N): string {
     case "bool":
       return bare(v.code);
     case "list":
-      if (v.code.startsWith("[")) fail(s.comp, "a slot prop is not an array literal: pass a list the component holds", n);
-      if (v.iter !== undefined) fail(s.comp, "a slot prop is not a computed list: pass a list the component holds", n);
+      if (v.code.startsWith("[")) fail(s.comp, "FV0909", "a slot prop is not an array literal: pass a list the component holds", n);
+      if (v.iter !== undefined) fail(s.comp, "FV0910", "a slot prop is not a computed list: pass a list the component holds", n);
       return borrowed(v.code);
     case "struct":
     case "child":
@@ -93,13 +93,13 @@ export function slotFieldValue(s: Scope, v: Val, n: N): string {
       if (v.ty.of.k === "opt" || nothing(v.ty.of)) break;
       return v.code;
   }
-  return fail(s.comp, "a slot prop is a string, a number, a boolean, an object or a list", n);
+  return fail(s.comp, "FV0911", "a slot prop is a string, a number, a boolean, an object or a list", n);
 }
 
 export function slotOutlet(s: Scope, e: Emitter, c: N): void {
   const [, nameNode, slotProps, fallback] = c.arguments;
-  if (nameNode?.type !== "StringLiteral") fail(s.comp, "a slot's name is literal", c);
-  if (slotProps?.type !== "ObjectExpression") fail(s.comp, "a slot's props are attributes or a `v-bind` object literal", c);
+  if (nameNode?.type !== "StringLiteral") fail(s.comp, "FV0912", "a slot's name is literal", c);
+  if (slotProps?.type !== "ObjectExpression") fail(s.comp, "FV0913", "a slot's props are attributes or a `v-bind` object literal", c);
   const slotName: string = nameNode.value;
   const field = `fv_slots.${snake(slotName)}`;
   const outlet = `\`<slot${slotName === "default" ? "" : ` name="${slotName}"`}>\``;
@@ -109,9 +109,9 @@ export function slotOutlet(s: Scope, e: Emitter, c: N): void {
     const fields: Field[] = [];
     const values: string[] = [];
     for (const p of slotProps.properties) {
-      if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "slot props hold plain names", p);
+      if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "FV0914", "slot props hold plain names", p);
       const key: string = p.key.name ?? p.key.value;
-      if (!/^[A-Za-z_$][\w$]*$/.test(key)) fail(s.comp, `slot prop \`${key}\` is not a plain name; write it in camelCase`, p);
+      if (!/^[A-Za-z_$][\w$]*$/.test(key)) fail(s.comp, "FV0915", `slot prop \`${key}\` is not a plain name; write it in camelCase`, p);
       const v = expr(s, p.value);
       fields.push({ js: key, rust: snake(key), ty: v.ty });
       values.push(fieldInit(snake(key), slotFieldValue(s, v, p.value)));
@@ -120,17 +120,17 @@ export function slotOutlet(s: Scope, e: Emitter, c: N): void {
     const shape: Struct = { name, fields, slot: true };
     const had = s.comp.slotShapes.get(slotName);
     if (had && JSON.stringify(had.fields) !== JSON.stringify(fields)) {
-      fail(s.comp, `every ${outlet} passes the same props, of the same types`, c);
+      fail(s.comp, "FV0916", `every ${outlet} passes the same props, of the same types`, c);
     }
     if (!had) {
-      if (s.comp.structs.has(name) && !s.comp.structs.get(name)!.slot) fail(s.comp, `\`${name}\` names this slot's props; rename the interface`, c);
+      if (s.comp.structs.has(name) && !s.comp.structs.get(name)!.slot) fail(s.comp, "FV0917", `\`${name}\` names this slot's props; rename the interface`, c);
       s.comp.slotShapes.set(slotName, shape);
       s.comp.structs.set(name, shape);
     }
     fn = "fv::scoped_slot_into";
     args = `${field}, &${name} { ${values.join(", ")} }`;
   } else if (s.comp.slotShapes.has(slotName)) {
-    fail(s.comp, `every ${outlet} passes the same props, of the same types`, c);
+    fail(s.comp, "FV0916", `every ${outlet} passes the same props, of the same types`, c);
   }
   const id = c.arguments[6];
   let slotted: string | null = null;
@@ -138,18 +138,18 @@ export function slotOutlet(s: Scope, e: Emitter, c: N): void {
   else if (id?.type === "BinaryExpression" && id.operator === "+" && id.left.type === "StringLiteral" && id.right.type === "Identifier" && id.right.name === "_scopeId") {
     slotted = s.sid === null ? rustStr(id.left.value) : `&[${rustStr(id.left.value)}, ${s.sid}].concat()`;
   } else if (id?.type === "Identifier" && id.name === "_scopeId") slotted = s.sid;
-  else if (id && id.type !== "NullLiteral") fail(s.comp, "unexpected slot scope id", id);
+  else if (id && id.type !== "NullLiteral") fail(s.comp, "FV0006", "unexpected slot scope id", id);
   if (s.comp.passesSlotIds) {
     fn = fn === "fv::slot_into" ? "fv::slot_into_slotted" : "fv::scoped_slot_into_slotted";
     args += `, ${slotted ?? '""'}`;
-  } else if (slotted !== null) fail(s.comp, "a slot scope id passed to content that does not take one", c);
+  } else if (slotted !== null) fail(s.comp, "FV0918", "a slot scope id passed to content that does not take one", c);
   const call = (rest: string) => (s.fill ? `if ${fn}(out, ${args}, ${rest}) { filled = true; }` : `${fn}(out, ${args}, ${rest});`);
   if (fallback?.type === "NullLiteral" || !fallback) {
     e.stmt(call("None"));
     return;
   }
   if (fallback.type !== "ArrowFunctionExpression" || fallback.body.type !== "BlockStatement") {
-    fail(s.comp, "unexpected slot fallback", fallback);
+    fail(s.comp, "FV0006", "unexpected slot fallback", fallback);
   }
   e.open(`${s.fill ? "if " : ""}${fn}(out, ${args}, Some(&mut |out: &mut String|`);
   statements(s, e, fallback.body.body);

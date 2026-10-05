@@ -4,14 +4,19 @@ What the compiler refuses, and what can still go wrong at run time.
 
 The compiler translates a closed set of constructs, each proven against Vue by the conformance
 suite. Anything else is an error, never an approximation, because an approximation would be a
-hydration mismatch in the browser. Errors point into the `.vue` file, with the line quoted and a
-caret under the construct. For example:
+hydration mismatch in the browser. Errors carry a stable code and point into the `.vue` file, with
+the line quoted and a caret under the construct. For example:
 
 ```text
-error: components/Card.vue:7:14: `<` is supported between two numbers, or two strings, that are present: the other is a string
+error[FV0609]: components/Card.vue:7:14: `<` is supported between two numbers, or two strings, that are present: the other is a string
  7 |     <p v-if="label < limit">{{ label }}</p>
    |              ^
+ = docs: https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#fv0609
 ```
+
+[`error_codes`](crate::guide::error_codes) lists every code. `ferrovue --format json` writes the
+same errors for an editor or a CI annotation, and a VS Code problem matcher puts them in the
+Problems panel: see [`quick_start`](crate::guide::quick_start#editor-and-ci-diagnostics).
 
 What is refused today, each with an error that names it:
 

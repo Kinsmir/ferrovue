@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { createParser } from "@intlify/message-compiler";
-import { type Component, type N, type Scope, type Val, fail, GenError, rustStr, STR } from "../model.ts";
+import { type Component, type N, type Scope, type Val, fail, failIn, rustStr, STR } from "../model.ts";
 import { expr } from "../expr.ts";
 import { bare, strArg } from "../parens.ts";
 import { header } from "../rust.ts";
@@ -42,7 +42,7 @@ function readLocales(root: string, config: { messages: string; locale?: string; 
     try {
       data = JSON.parse(readFileSync(join(dir, f), "utf8"));
     } catch (e) {
-      throw new GenError(`${file}: ${(e as Error).message}`);
+      failIn(file, "FV1401", (e as Error).message);
     }
     const messages = new Map<string, N>();
     const nested = new Map<string, string>();
@@ -60,7 +60,7 @@ function readLocales(root: string, config: { messages: string; locale?: string; 
       try {
         messages.set(key, parser.parse(text));
       } catch (e) {
-        throw new GenError(`${file}: message \`${key}\`: ${(e as Error).message}`);
+        failIn(file, "FV1402", `message \`${key}\`: ${(e as Error).message}`);
       }
     }
     return { name: basename(f, ".json"), file, messages };
@@ -83,15 +83,15 @@ function messageSource(file: string, key: string, ast: N): string {
       case 9:
         return `Part::Literal(${rustStr(item.value)})`;
       case 6: {
-        if (item.key?.type !== 7) throw new GenError(`${file}: message \`${key}\` links to a key chosen at run time, which is not supported`);
+        if (item.key?.type !== 7) failIn(file, "FV1403", `message \`${key}\` links to a key chosen at run time, which is not supported`);
         const modifier = item.modifier?.value;
         if (modifier !== undefined && !MODIFIERS.has(modifier)) {
-          throw new GenError(`${file}: message \`${key}\` uses the modifier \`${modifier}\`, which vue-i18n does not define`);
+          failIn(file, "FV1404", `message \`${key}\` uses the modifier \`${modifier}\`, which vue-i18n does not define`);
         }
         return `Part::Linked { key: ${rustStr(item.key.value)}, modifier: ${modifier === undefined ? "None" : `Some(${rustStr(modifier)})`} }`;
       }
       default:
-        throw new GenError(`${file}: message \`${key}\` holds a construct ferrovue does not render (node type ${item.type})`);
+        return failIn(file, "FV1405", `message \`${key}\` holds a construct ferrovue does not render (node type ${item.type})`);
     }
   };
   const items = (c: N): N[] => c.items ?? (c.static !== undefined ? [{ type: 3, value: c.static }] : []);
@@ -150,22 +150,22 @@ function i18nValue(s: Scope, n: N): string {
     case "bool":
       return `fv::i18n::Value::Bool(${bare(v.code)})`;
     default:
-      return fail(s.comp, "a value given to `t()` is a string, a number or a boolean that is present: narrow an optional one with `v-if` first", n);
+      return fail(s.comp, "FV1406", "a value given to `t()` is a string, a number or a boolean that is present: narrow an optional one with `v-if` first", n);
   }
 }
 
 function translate(s: Scope, args: N[], n: N): Val {
-  if (!runOf(i18n).setup) fail(s.comp, "`t()` needs `i18n` in ferrovue.config.json: where the locale files are", n);
-  if (args.length < 1 || args.length > 3) fail(s.comp, "`t()` takes a key, then named values, a list or a plural number", n);
+  if (!runOf(i18n).setup) fail(s.comp, "FV1407", "`t()` needs `i18n` in ferrovue.config.json: where the locale files are", n);
+  if (args.length < 1 || args.length > 3) fail(s.comp, "FV1408", "`t()` takes a key, then named values, a list or a plural number", n);
   const key = expr(s, args[0]);
-  if (key.ty.k !== "str") fail(s.comp, "the key given to `t()` is a string", args[0]);
+  if (key.ty.k !== "str") fail(s.comp, "FV1409", "the key given to `t()` is a string", args[0]);
   let named = "&[]";
   let list = "&[]";
   let plural = "None";
   for (const a of args.slice(1)) {
     if (a.type === "ObjectExpression") {
       const pairs = a.properties.map((p: N) => {
-        if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "named values hold plain keys", p);
+        if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "FV1410", "named values hold plain keys", p);
         return `(${rustStr(String(p.key.name ?? p.key.value))}, ${i18nValue(s, p.value)})`;
       });
       named = `&[${pairs.join(", ")}]`;
@@ -173,8 +173,8 @@ function translate(s: Scope, args: N[], n: N): Val {
       list = `&[${a.elements.map((el: N) => i18nValue(s, el)).join(", ")}]`;
     } else {
       const v = expr(s, a);
-      if (v.ty.k === "str") fail(s.comp, "a default message given to `t()` is not supported: add the message to the locale files", a);
-      if (v.ty.k !== "int") fail(s.comp, "the plural number given to `t()` is an integer", a);
+      if (v.ty.k === "str") fail(s.comp, "FV1411", "a default message given to `t()` is not supported: add the message to the locale files", a);
+      if (v.ty.k !== "int") fail(s.comp, "FV1412", "the plural number given to `t()` is an integer", a);
       plural = `Some(${bare(v.code)})`;
     }
   }
@@ -205,7 +205,7 @@ export const i18n: Plugin<I18nRun, I18nScope> = {
     }
     for (const p of d.id.properties) {
       if (p.type !== "ObjectProperty" || p.computed || p.value.type !== "Identifier") {
-        fail(s.comp, "`useI18n()` is destructured into plain names", p);
+        fail(s.comp, "FV1413", "`useI18n()` is destructured into plain names", p);
       }
       const key: string = p.key.name ?? p.key.value;
       if (key === "t") own.t.add(p.value.name);
