@@ -31,8 +31,8 @@ pnpm --filter ferrovue-example-fullstack dev                         # Vite on :
 VITE_DEV_SERVER=http://localhost:5173 cargo run -p ferrovue-example-fullstack
 ```
 
-Use `cargo watch -x 'run -p ferrovue-example-fullstack'` to restart the server when the generated
-Rust changes.
+Use [bacon](https://dystroy.org/bacon/)'s `bacon run-long -- -p ferrovue-example-fullstack` to restart
+the server when the generated Rust changes.
 
 To see one page as the server renders it:
 
