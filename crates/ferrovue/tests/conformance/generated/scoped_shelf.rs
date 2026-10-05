@@ -7,7 +7,7 @@ use ferrovue as fv;
 pub const NAME: &str = "ScopedShelf";
 
 /// The props `ScopedShelf.vue` declares.
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(Debug, Clone, Default, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props {
 

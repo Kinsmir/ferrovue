@@ -52,6 +52,9 @@ fixtures/X/case.json            Vue hydrates it: no mismatch warnings, same DOM 
 4. It checks that `generated/` is exactly what the compiler writes now.
 5. `tests/conformance.rs` renders every fixture through the generated Rust and compares the result
    with the same `.html`.
+6. `tests/conformance.rs` declares `generated/` as a public module, so `cargo clippy -- -D warnings`
+   holds the generated code to the lints a crate that exports it meets, such as
+   `new_without_default`, which clippy does not check on an item no other crate can reach.
 
 A fixture is a JSON object of props plus three optional keys:
 

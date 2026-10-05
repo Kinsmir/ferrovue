@@ -35,6 +35,11 @@ released together and share version numbers.
   peers when a fixture needs them, `vue-router` for routes, `pinia` for `$stores` and `vue-i18n` for
   the `i18n` option, and a fixture needing one that is not installed fails with an error naming the
   package to install. With the peers installed it renders as before (#22).
+- Generated `Props`, and the structs of shared types, whose fields are all optional or that have
+  none derive `Default` beside their argument-free `new()`, so a crate that includes them passes
+  `cargo clippy -- -D warnings` (`clippy::new_without_default`). The conformance suite's generated
+  modules are a public module of its test crate, so CI's clippy holds them to the lints a crate
+  that exports them meets (#21).
 
 ## [0.3.0] - 2026-10-05
 

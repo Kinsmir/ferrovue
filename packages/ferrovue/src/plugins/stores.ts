@@ -212,7 +212,10 @@ function storesSource(dir: string): string {
   const { stores, structs: states, files } = runOf(piniaStores);
   const home = storeHome(dir);
   const testDerive = (src: string) =>
-    src.replace("#[cfg_attr(test, derive(serde::Deserialize))]", "#[cfg_attr(test, derive(Default, serde::Deserialize))]\n#[cfg_attr(test, serde(default))]");
+    src.replace(
+      "#[cfg_attr(test, derive(serde::Deserialize))]",
+      `#[cfg_attr(test, derive(${src.includes("Default, serde::Serialize") ? "" : "Default, "}serde::Deserialize))]\n#[cfg_attr(test, serde(default))]`,
+    );
   const structs = [...states.values()]
     .map((st) => testDerive(structSource(st, home, `/// \`${st.name}\` in \`${files.get(st.name)}\`.\n`)))
     .join("\n");

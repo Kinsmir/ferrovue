@@ -123,7 +123,8 @@ export function structSource(st: Struct, comp: Component, doc: string): string {
       return `${attrs}\n    pub ${f.rust}: ${rustTy(f.ty, comp)},`;
     })
     .join("\n");
-  return `${doc}#[derive(Debug, Clone, serde::Serialize)]
+  const derives = st.fields.some((f) => f.ty.k !== "opt") ? "Debug, Clone" : "Debug, Clone, Default";
+  return `${doc}#[derive(${derives}, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct ${st.name}${life} {
 ${fields}

@@ -9,7 +9,7 @@ use ferrovue as fv;
 pub const NAME: &str = "ScopedCard";
 
 /// The props `ScopedCard.vue` declares.
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(Debug, Clone, Default, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
     #[serde(rename = "tone", default, skip_serializing_if = "Option::is_none")]

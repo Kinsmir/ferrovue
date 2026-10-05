@@ -69,6 +69,31 @@ const props = defineProps<{ label: string; items: string[] }>();
     expect(reserve).toContain("props.items.iter().map(|v| v.len()).sum::<usize>()");
   });
 
+  it("derives `Default` for a struct whose `new` takes no arguments, and only for one", () => {
+    const optional = compile(
+      island(`<script setup lang="ts">
+defineProps<{ note?: string }>();
+</script>
+<template><p>{{ note }}</p></template>`),
+    ).get("x.rs")!;
+    expect(optional).toContain("#[derive(Debug, Clone, Default, serde::Serialize)]\n#[cfg_attr(test, derive(serde::Deserialize))]\npub struct Props<'a> {");
+    expect(optional).toContain("pub fn new() -> Self {");
+    const none = compile(
+      island(`<script setup lang="ts">
+const greeting = "hi";
+</script>
+<template><p>{{ greeting }}</p></template>`),
+    ).get("x.rs")!;
+    expect(none).toContain("#[derive(Debug, Clone, Default, serde::Serialize)]\n#[cfg_attr(test, derive(serde::Deserialize))]\npub struct Props {");
+    const required = compile(
+      island(`<script setup lang="ts">
+defineProps<{ label: string; note?: string }>();
+</script>
+<template><p>{{ label }}{{ note }}</p></template>`),
+    ).get("x.rs")!;
+    expect(required).toContain("#[derive(Debug, Clone, serde::Serialize)]\n#[cfg_attr(test, derive(serde::Deserialize))]\npub struct Props<'a> {");
+  });
+
   describe("strings, computed lists and dictionaries", () => {
     it("counts a string's code units, and orders strings by them, through the runtime", () => {
       const out = compile(
