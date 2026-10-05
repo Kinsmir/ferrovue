@@ -1,5 +1,5 @@
 import { type Component, type N, type Scope, type Val, BOOL, fail, INT, opt, rustStr, STR } from "./model.ts";
-import { atom, bare, condition, enclosed, receiver, strArg } from "./parens.ts";
+import { atom, bare, binary, condition, enclosed, receiver, strArg } from "./parens.ts";
 import { computed } from "./lists.ts";
 import { expr } from "./expr.ts";
 import { known } from "./narrowing.ts";
@@ -56,6 +56,12 @@ export function yieldsCow(code: string): boolean {
 export function unquote(literal: string): string {
   const escapes: Record<string, string> = { n: "\n", r: "\r", t: "\t" };
   return literal.slice(1, -1).replace(/\\(?:u\{([0-9a-f]+)\}|(.))/g, (_, hex: string | undefined, c: string) => (hex ? String.fromCodePoint(parseInt(hex, 16)) : (escapes[c] ?? c)));
+}
+
+export function stringsEqual(a: Val, b: Val): string {
+  if (known(a) !== undefined && known(b) !== undefined) return String(unquote(a.code) === unquote(b.code));
+  if (a.code === '""' || b.code === '""') return `${receiver(a.code === '""' ? b.code : a.code)}.is_empty()`;
+  return binary(a.code, "==", b.code);
 }
 
 export function formatted(comp: Component, parts: (string | Val)[], n: N, what: string): Val {

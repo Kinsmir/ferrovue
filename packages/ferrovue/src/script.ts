@@ -5,6 +5,7 @@ import { definePropsType } from "./typescript.ts";
 import { expr, fieldVal } from "./expr.ts";
 import { collected, heldList } from "./lists.ts";
 import { bare, operand, UNARY } from "./parens.ts";
+import { known } from "./narrowing.ts";
 
 export const CLIENT_HOOKS = new Set([
   "onMounted", "onBeforeMount", "onUnmounted", "onBeforeUnmount", "onUpdated", "onBeforeUpdate",
@@ -175,7 +176,7 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
         scope.clientOnly.set(local, e.message.replace(/^[^:]*: /, ""));
         continue;
       }
-      if (v.ty.k === "undef") {
+      if (v.ty.k === "undef" || (v.ty.k === "str" && known(v) !== undefined)) {
         scope.setup.set(local, v);
         continue;
       }

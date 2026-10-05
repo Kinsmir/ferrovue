@@ -40,6 +40,10 @@ released together and share version numbers.
   `cargo clippy -- -D warnings` (`clippy::new_without_default`). The conformance suite's generated
   modules are a public module of its test crate, so CI's clippy holds them to the lints a crate
   that exports them meets (#21).
+- A setup binding whose value is a string literal, such as `ref("")`, and a `computed` of one are
+  folded into the render as constants, and `v-model` on a `<select>` or radio input compares a
+  string with an empty `value` by whether it is empty, so the generated code no longer trips
+  `clippy::const_is_empty` and `clippy::comparison_to_empty` (#21).
 
 ## [0.3.0] - 2026-10-05
 
