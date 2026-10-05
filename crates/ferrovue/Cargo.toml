@@ -10,6 +10,7 @@ documentation = "https://docs.rs/ferrovue"
 readme = "README.md"
 keywords = ["vue", "ssr", "html", "templates", "hydration"]
 categories = ["template-engine", "web-programming"]
+exclude = ["/benches/expected/", "/tests/conformance/", "/tests/literal_props/", "/tests/tsconfig.json", "/tests/vectors/"]
 
 [features]
 default = ["router", "i18n"]

@@ -59,6 +59,11 @@ A tag with a pre-release suffix (`v0.2.0-rc.1`) stages to npm under the `next` t
 Every publishing step skips a version its registry already has, crate by crate, so a run that failed
 halfway can simply be re-run.
 
+The crates are published without their test data: each crate's `exclude` in its `Cargo.toml` leaves
+out the conformance suite, the recorded vectors and the benchmark's expected HTML, so the tests and
+benchmarks run from the repository only. `cargo package -p <crate> --list` shows what a crate
+ships, and CI's "Packages publish cleanly" job builds each crate from its tarball.
+
 ## Signed tags
 
 Only a signed, annotated tag starts a release: the workflow's first job asks GitHub whether the tag
