@@ -66,6 +66,7 @@ cargo run -p ferrovue-example-fullstack -- --render /books/dune
 | `src/main.rs` | The axum server: a `ferrovue::HtmlStream` per page, a book's reviews alone at `/books/{id}/reviews`, `dist/assets` served beside it, and `--render` |
 | `src/assets.rs` | Finding the entry's hashed script and stylesheets in Vite's manifest, the lazily loaded islands' stylesheets included, or loading from the dev server |
 | `test/hydration.test.ts` | The proof: the server's own HTML hydrates with no mismatch, and carries the scope ids the client build's stylesheet selects |
+| `adopter/peers.test.ts`, `vitest.adopter.config.ts` | `fixtureApp` loaded from ferrovue's built package with Node, as an application's vitest run loads it, rendering fixtures with stores and a route through the application's own Pinia and vue-router |
 | `browser/hydration.test.ts` | The same in Chromium, Firefox and WebKit: the server started on a free port, its pages opened, the islands clicked, the reviews scrolled into view on a short screen before their code is fetched (`pnpm test:browser`) |
 
 ### Islands, and what isn't one

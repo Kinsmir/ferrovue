@@ -65,8 +65,8 @@ defineProps<{ name: string; unread: number; note?: string }>();
 **4. Generate.**
 
 ```sh
-npx ferrovue            # writes src/generated/greeting.rs and src/generated/mod.rs
-npx ferrovue --check    # in CI: exits 1 if the committed modules are stale
+pnpm ferrovue           # writes src/generated/greeting.rs and src/generated/mod.rs
+pnpm ferrovue --check   # in CI: exits 1 if the committed modules are stale
 ```
 
 **5. Include the modules and render.** Declare the module once, with `#[rustfmt::skip]` so that
@@ -193,6 +193,8 @@ the values a render needs besides its props.
 | A generated `stores::Stores` | reads Pinia state |
 | [`I18n`] (from the generated `i18n::i18n(locale)`) | calls `$t` or `useI18n()` |
 | [`Teleports`] | renders `<Teleport>` |
+| A generated `provides::Provides`, empty or holding what the client app gives `app.provide` | calls `provide` or `inject`, or renders one that does ([`guide::provide_inject`](crate::guide::provide_inject)) |
+| [`Head`] | calls `useHead` or `useSeoMeta`, or renders one that does ([`guide::head`](crate::guide::head)) |
 | [`BasicHtml`], `Sanitised` (the `ammonia` feature), or your own type implementing [`TrustedHtml`] | renders `v-html` |
 
 A prop declared `Record<string, T>` is a [`Record`], which keeps JavaScript's order of keys.
@@ -202,11 +204,18 @@ and these, to assemble a page:
 - [`Html`]: a component applied to its props, borrowed (`html(&props)`) or held
   (`into_html(props)`), written into a buffer with [`Html::render_to`] or returned with
   [`Html::into_string`];
+- [`Html::hydrate`] with a [`Hydrate`]: an island that hydrates once visible, when the browser is
+  idle, on interaction or when a media query matches;
+- [`Head::render`]: the tags and attributes of the page's `<head>`, `<html>` and `<body>`;
 - [`state_script_into`]: the stores' state for the client to hydrate from;
 - [`hole`] and [`split_holes`]: render a layout once and stream its parts;
 - `HtmlStream` (the `stream` feature): a page with holes as an HTTP body, each hole's content
   sent as soon as it is ready;
 - [`escape_into`]: text written into your own markup as Vue would write it.
+
+and, in tests, [`conformance!`] and [`check_fixtures`], which render an application's fixtures
+through its generated code and compare the bytes with the HTML recorded from Vue
+([`guide::testing`](crate::guide::testing)).
 
 The rest are Rust twins of JavaScript and Vue routines that generated code calls so that it writes
 what Vue writes:
@@ -261,8 +270,9 @@ uses let-chains, so the crate that includes it must use **edition 2024**.
 
 Use the same version of the npm package and of this crate: generated code is written against the
 runtime of its own release. Byte-identical output also depends on Vue's own SSR compiler, so the
-npm package pins `vue`, `@vue/compiler-sfc` and `@vue/server-renderer` to an exact version; your
-client should use that version of Vue too.
+npm package compiles with an exact `@vue/compiler-sfc`, and its fixtures are recorded from one
+version of Vue and of each integration. Your client may use any later patch of the same minor
+(`vue` `~3.5.43`); the repository's README lists the range of every peer.
 
 # Links
 

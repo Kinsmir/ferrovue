@@ -55,6 +55,7 @@ jobs:
             for name in vue @vue/compiler-sfc @vue/server-renderer @vue/shared vue-router pinia vue-i18n @intlify/message-compiler; do
               echo "| $name | $(node -p "require('$name/package.json').version") |"
             done
+            echo "| @unhead/vue | $(node -p "JSON.parse(require('fs').readFileSync('node_modules/@unhead/vue/package.json', 'utf8')).version") |"
           } | tee -a "$GITHUB_STEP_SUMMARY"
         working-directory: packages/ferrovue
       - name: Re-record the conformance fixtures and the vectors

@@ -25,6 +25,8 @@ What is refused today, each with an error that names it:
 - `<RouterView>` in a component with `<style scoped>`, which would give the page that component's
   id; and, since vue-router renders a link from virtual nodes, a `<slot>` inside a `<RouterLink>`
   that takes scope ids, or an element inside one in slot content given a `:slotted()` id;
+- `v-show`, and `v-model` on a `<select>`, in the content of a `<RouterLink>` or of a Rust twin's
+  slot, which Vue renders from virtual nodes;
 - `<component :is>` over an open set (a `string`, a `Component`, a key that is not a union of
   string literals), over a prop that may be absent, or naming a key its object lacks or a tag that
   is not an HTML element; `v-html` or `v-text` on it; and, inside an element it chooses, a `<slot>`
@@ -42,6 +44,10 @@ What is refused today, each with an error that names it:
 - `watchEffect`, `watch` with `immediate`, `onServerPrefetch`, top-level `await`, and statements in
   setup that change state;
 - `route.meta` and `route.matched`;
+- in a folder of pages: a parameter beside text in one part of a path (`prefix-[id].vue`),
+  repeatable and optional catch-all parameters, parameter parsers (`[id=int]`), named views
+  (`index@aside.vue`), `definePage()`, a `<route>` block, and two pages, or a page and a component,
+  with one component name. See [`routing`](crate::guide::routing#file-based-routes);
 - Pinia getters that read `this` or return a function;
 - ordering comparisons between a string and a number, which JavaScript makes numeric;
 - regular expressions (`.replace(/x/g, …)`, `.split(/,/)`), replacement functions, a search's
@@ -67,14 +73,18 @@ What is refused today, each with an error that names it:
   value to one string (`typeof route.query.q === "string" ? route.query.q : ""`);
 - `v-html` of anything but a `TrustedHtml` prop;
 - `provide` and `inject` beyond what the server can resolve exactly: keys that are not string
-  literals or exported `InjectionKey` symbols, `inject(key)!`, provided values that may be absent.
-  See [`provide_inject`](crate::guide::provide_inject#what-is-refused);
+  literals or exported `InjectionKey` symbols, `inject(key)!`, provided values that may be absent,
+  a ref and a plain value under one key, setup that assigns to an injected value, and `provide(…)`
+  not imported from `vue`. See [`provide_inject`](crate::guide::provide_inject#what-is-refused);
+- in the page head: options given to `useHead`, `useHeadSafe`, `templateParams`, a `titleTemplate`
+  function, event handlers, a `class` or `style` that may be `null`, and an object given to a
+  `useSeoMeta` key. See [`head`](crate::guide::head#what-a-component-may-pass);
 - any method call without a Rust twin.
 
-Client-only code is allowed where the server never runs it: lifecycle hooks, `watch` (not
-`immediate`), `defineEmits`, `defineExpose`, template refs, functions and what is injected under a key
-holding a function may be named from event handlers, which the server drops. The repository README's "What a component may use" table lists
-everything that is supported.
+Client-only code is allowed where the server never runs it: lifecycle hooks, `watch` (without
+`immediate`), `defineEmits`, `defineExpose`, template refs, functions and what is injected under a
+key holding a function may be named from event handlers, which the server drops. The repository
+README's "What a component may use" table lists everything that is supported.
 
 # Helpers
 
@@ -196,11 +206,11 @@ pub fn v_btn(out: &mut String, props: &VBtnProps<'_>, slots: VBtnSlots<'_>, attr
 ```
 
 **ferrovue does not check that a twin writes what Vue writes.** A twin's exactness rests on your
-code, as a helper's does. Hold each twin to
-Vue with fixtures of the components that use it, rendered by Vue and by the generated Rust and
-compared: the [`testing`](crate::guide::testing) page sets that up with `conformanceSuite` from
-`ferrovue/testing` and [`conformance!`](crate::conformance!). Slot content is written as a render function sees it, from virtual nodes:
-an absent `v-if` is `<!--v-if-->`. Fragment markers around a slot, and what an empty one shows, are
+code, as a helper's does. Hold each twin to Vue with fixtures of the components that use it,
+rendered by Vue and by the generated Rust and compared: the [`testing`](crate::guide::testing) page
+sets that up with `conformanceSuite` from `ferrovue/testing` and
+[`conformance!`](crate::conformance!). Slot content is written as a render function sees it, from
+virtual nodes: an absent `v-if` is `<!--v-if-->`. Fragment markers around a slot, and what an empty one shows, are
 the twin's to write, as they are the component's. The repository's `examples/fullstack` has a twin
 and its fixtures.
 

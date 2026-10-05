@@ -62,10 +62,10 @@ defineProps<{ name: string; unread: number; note?: string }>();
 # 4. Generate
 
 ```sh
-npx ferrovue            # write the modules
-npx ferrovue --check    # write nothing; exit 1 if the committed modules are stale (for CI)
-npx ferrovue --watch    # write them, then again on every change
-npx ferrovue --check --format json   # errors as JSON, for an editor or CI
+pnpm ferrovue           # write the modules
+pnpm ferrovue --check   # write nothing; exit 1 if the committed modules are stale (for CI)
+pnpm ferrovue --watch   # write them, then again on every change
+pnpm ferrovue --check --format json  # errors as JSON, for an editor or CI
 ```
 
 A Vite project can use the plugin in `ferrovue/vite` instead of `--watch`: it regenerates on change
@@ -291,8 +291,8 @@ error[FV0602]: components/Card.vue:4:17: `.toPrecision()` is not supported
 annotation or a script; the exit status is the same as without it:
 
 ```sh
-npx ferrovue --check --format json
-npx ferrovue --format json
+pnpm ferrovue --check --format json
+pnpm ferrovue --format json
 ```
 
 ```json

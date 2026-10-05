@@ -2,8 +2,8 @@
 
 The compiler sees the whole component tree, so it resolves each `inject` to what an ancestor
 provides while the page renders. Every component that provides or injects something, or renders
-one that does, takes a `Provides` after its other parameters: one field per key, `None` where no
-ancestor provides it. A component that provides overlays its values on the `Provides` it was given
+one that does, takes a `Provides` after its other parameters (only a `&Head` comes after it): one
+field per key, `None` where no ancestor provides it. A component that provides overlays its values on the `Provides` it was given
 and hands the result to its children and to the content of its slots.
 
 ```ts
@@ -253,6 +253,7 @@ Rust and handed in as a slot. Pass the page the same `Provides` the layout was g
 - setup that assigns to an injected value, which the components rendered before it would show
   unchanged;
 - a string-keyed `inject` inside a [Rust twin](crate::guide::errors_and_limits#rust-twins)'s slot,
-  whose library component may provide the same key on the client.
+  whose library component may provide the same key on the client;
+- a `provide(…)` not imported from `vue`, a call in setup that could change what renders (FV0105).
 
-[`error_codes`](crate::guide::error_codes) lists their codes, under FV16xx.
+[`error_codes`](crate::guide::error_codes) lists their codes, under FV16xx and FV0105.

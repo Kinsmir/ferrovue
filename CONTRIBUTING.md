@@ -53,22 +53,22 @@ compiler did, and that diff is what a reviewer needs to see.
 
 ## Compiler plugins
 
-What Vue's core does not do (vue-router, Pinia, vue-i18n) and scoped styles are compiler plugins,
-in `packages/ferrovue/src/plugins/`, so that the core compiler names none of them. A plugin is an
-object of optional hooks, `Plugin` in `src/plugin.ts`, where each hook is documented; the plugins
-are listed in `plugins/index.ts`, and the core calls their hooks at fixed points of a run. The
-interface is internal: it is not part of the npm package's API, and it changes when an integration
-needs it to.
+What Vue's core does not do (vue-router, Pinia, vue-i18n, the page head), scoped styles, and provide
+and inject are compiler plugins, in `packages/ferrovue/src/plugins/`, so that the core compiler
+names none of them. A plugin is an object of optional hooks, `Plugin` in `src/plugin.ts`, where each
+hook is documented; the plugins are listed in `plugins/index.ts`, and the core calls their hooks at
+fixed points of a run. The interface is internal: it is not part of the npm package's API, and it
+changes when an integration needs it to.
 
 | When | Hooks | Used by |
 |---|---|---|
 | A run starts | `configure` returns the plugin's state for the run, read from its keys of `Config`; `prepare` reads files with the core's own readers, once every plugin is configured; `components` names `.vue` files to compile beside the components directory's, each with its component name | all; `prepare`: stores; `components`: router (pages) |
-| A component is read | `sfc` (its `<style>` blocks), `templateOptions` (how Vue compiles its template), `importedType` (a type from a file the plugin owns), `struct` (where a type of its own is declared), `compiled` (what its compiled template renders or reads) | scoped styles; stores; router, i18n, `<Teleport>`, `<ClientOnly>` |
+| A component is read | `sfc` (its `<style>` blocks), `templateOptions` (how Vue compiles its template), `importedType` (a type from a file the plugin owns), `struct` (where a type of its own is declared), `compiled` (what its compiled template renders or reads) | `sfc`, `templateOptions`: scoped styles; `importedType`, `struct`: stores; `compiled`: router, i18n, `<Teleport>`, `<ClientOnly>`, provide and inject, the page head |
 | Every component at once | `analyse`, before any is generated | scoped styles, twins |
 | `<script setup>` | `scope` (its state for one setup), `scriptImport`, `scriptBinding` (a binding of its own, given the setup's `let`s to add to), `scriptStatement` (a statement of its own: `provide(…)`, `useHead(…)`) | router, stores, i18n, twins; provide and inject, the page head |
-| Expressions | `global` (`$route`), `call` (`$t(…)`), `member` (a field of the route, a store's getter), `equality` and `presence` (`typeof q === "string"`), `values` (what `??`, `===`, a test, `{{ }}` and an attribute make of a type it adds) | router, stores, i18n |
-| The compiled template | `resolveComponent` and `component` (`<RouterLink>`, `<RouterView>`, `<ClientOnly>`, a twin), `child` (a child it refuses), `childIds` (the scope ids a child's root is handed), `statement` (`_ssrRenderTeleport`) | router, `<ClientOnly>`, twins; scoped styles; `<Teleport>` |
-| The Rust written | `params` (a render parameter, its fixture field and how the conformance suite builds it; with `slotContext`, also handed to slot content by the outlet that renders it), `prelude` (lines at the start of a render: `before` the setup's, and `after` them in `plugins/index.ts` order), `slotFields` (`router_view`), `modules` (`route_table.rs`, `stores.rs`, `i18n.rs`, `twins.rs`, `provides.rs`) | router, stores, i18n, `<Teleport>`, provide and inject, the page head; provide and inject, the page head; router; router, stores, i18n, twins, provide and inject |
+| Expressions | `global` (`$route`), `call` (`$t(…)`), `member` (a field of the route, a store's getter), `equality` and `presence` (`typeof q === "string"`), `values` (what `??`, `===`, a test, `{{ }}` and an attribute make of a type it adds) | router, stores, i18n; `call`: i18n, provide and inject |
+| The compiled template | `resolveComponent` and `component` (`<RouterLink>`, `<RouterView>`, `<ClientOnly>`, a twin), `child` (a child it refuses), `childIds` (the scope ids a child's root is handed), `statement` (`_ssrRenderTeleport`) | `resolveComponent`, `component`: router, `<ClientOnly>`, twins; `child`: router, provide and inject; `childIds`: scoped styles; `statement`: `<Teleport>` |
+| The Rust written | `params` (a render parameter, its fixture field and how the conformance suite builds it; with `slotContext`, also handed to slot content by the outlet that renders it), `prelude` (lines at the start of a render: `before` the setup's, and `after` them in `plugins/index.ts` order), `slotFields` (`router_view`), `modules` (`route_table.rs`, `types.rs`, `stores.rs`, `i18n.rs`, `twins.rs`, `provides.rs`) | `params`: router, stores, i18n, `<Teleport>`, provide and inject, the page head; `prelude`: provide and inject, the page head; `slotFields`: router; `modules`: router, shared types, stores, i18n, twins, provide and inject |
 
 - **State lives in the run.** A plugin's module holds nothing that changes: `configure` returns its
   state for the run, which `runOf(plugin)` reads back, and `scope` its state for one component's

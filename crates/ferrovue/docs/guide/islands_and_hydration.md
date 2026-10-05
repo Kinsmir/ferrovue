@@ -99,8 +99,8 @@ Islands share the Pinia and router passed to `mountIslands`, so an island's clic
 a store another part of the page shows.
 
 Only a component whose render needs nothing but its props has an `island()`: its `data-props` is all
-the client gets. A component that takes slots, the route, stores, translations or teleports has
-`html()` alone.
+the client gets. A component that takes slots, the route, stores, translations, teleports, provided
+values or the page head has `html()` alone.
 
 ## Hydrating later
 
@@ -219,7 +219,7 @@ import islands from "ferrovue/islands";
 
 const pinia = createPinia();
 hydrateState(pinia);
-const app = await mountPage(() => import("./components/Picks.vue"), islands, { pinia, router });
+const app = await mountPage(() => import("./pages/picks.vue"), islands, { pinia, router });
 ```
 
 The layout and each component may be given as a component or a loader, as `mountIslands` takes
