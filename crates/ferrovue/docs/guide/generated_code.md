@@ -15,6 +15,7 @@ Everything in the configured `out` directory is replaced on each run.
 | `route_table.rs` | `routes` or `router` is configured | The routes and `router()`. See [`routing`](crate::guide::routing) |
 | `stores.rs` | `stores` is configured | A struct per store's state and `Stores`, all of them. See [`pinia`](crate::guide::pinia) |
 | `i18n.rs` | `i18n` is configured | Every locale's messages and `i18n(locale)`. See [`i18n`](crate::guide::i18n) |
+| `provides.rs` | a component calls `provide` or `inject` | `Provides`, what the components' ancestors provide, by key. See [`provide_inject`](crate::guide::provide_inject) |
 | `twins.rs` | `twins` is configured | Each twin's props and slots, and the signature its function must have. See [`errors_and_limits`](crate::guide::errors_and_limits#rust-twins) |
 
 Include the directory as one module. `#[rustfmt::skip]` keeps rustfmt from rewriting it:
@@ -72,6 +73,7 @@ pub fn render(
     fv_stores: &super::stores::Stores<'_>,        // reads a Pinia store
     fv_i18n: &fv::I18n,                           // $t or useI18n()
     fv_teleports: &fv::Teleports,                 // <Teleport>
+    fv_provides: super::provides::Provides<'_>,   // provide() or inject()
     fv_head: &fv::Head,                           // useHead() or useSeoMeta()
 )
 ```

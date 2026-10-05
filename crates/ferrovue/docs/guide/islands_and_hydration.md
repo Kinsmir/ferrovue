@@ -219,7 +219,7 @@ import islands from "ferrovue/islands";
 
 const pinia = createPinia();
 hydrateState(pinia);
-const app = await mountPage(() => import("./components/Picks.vue"), islands, { pinia, router });
+const app = await mountPage(() => import("./pages/picks.vue"), islands, { pinia, router });
 ```
 
 The layout and each component may be given as a component or a loader, as `mountIslands` takes

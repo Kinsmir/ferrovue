@@ -10,13 +10,14 @@
 //! 4. [`slots`]: slot content from Rust, named and scoped slots, fallbacks.
 //! 5. [`scoped_styles`]: `<style scoped>` ids, matching `@vitejs/plugin-vue`, and `:slotted()`.
 //! 6. [`routing`]: `<RouterLink>`, `<RouterView>` and `useRoute()`, with [`Router`](crate::Router)
-//!    and [`Route`](crate::Route).
+//!    and [`Route`](crate::Route); routes from a folder of pages.
 //! 7. [`i18n`]: vue-i18n's `$t`, with [`I18n`](crate::I18n).
 //! 8. [`teleports`]: `<Teleport>`, with [`Teleports`](crate::Teleports).
 //! 9. [`pinia`]: Pinia state on the server, and handing it to the client.
 //! 10. [`provide_inject`]: `provide` and `inject`, resolved through the component tree.
 //! 11. [`head`]: the page head from `useHead` and `useSeoMeta`, with [`Head`](crate::Head).
-//! 12. [`islands_and_hydration`]: what the browser does with the page.
+//! 12. [`islands_and_hydration`]: what the browser does with the page, and when each island
+//!     hydrates.
 //! 13. [`streaming`]: holes, for sending a page in the order its parts are ready.
 //! 14. [`web_frameworks`]: responding with a component or a streamed page from axum or
 //!     actix-web.
@@ -60,14 +61,14 @@ pub mod i18n {}
 #[doc = include_str!("../docs/guide/teleports.md")]
 pub mod teleports {}
 
-#[doc = include_str!("../docs/guide/head.md")]
-pub mod head {}
-
 #[doc = include_str!("../docs/guide/pinia.md")]
 pub mod pinia {}
 
 #[doc = include_str!("../docs/guide/provide_inject.md")]
 pub mod provide_inject {}
+
+#[doc = include_str!("../docs/guide/head.md")]
+pub mod head {}
 
 #[doc = include_str!("../docs/guide/islands_and_hydration.md")]
 pub mod islands_and_hydration {}
