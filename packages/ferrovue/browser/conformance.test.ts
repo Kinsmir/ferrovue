@@ -24,7 +24,7 @@ beforeAll(async () => {
     logLevel: "warn",
     plugins: [vue()],
     define: { __VUE_I18N_FULL_INSTALL__: "true", __VUE_I18N_LEGACY_API__: "false", __INTLIFY_PROD_DEVTOOLS__: "false" },
-    build: { write: false, minify: false, rolldownOptions: { input: "entry.ts" } },
+    build: { write: false, minify: false, rolldownOptions: { input: "entry.ts", output: { codeSplitting: false } } },
   }).finally(() => {
     process.env.NODE_ENV = nodeEnv;
   })) as Rolldown.RolldownOutput;

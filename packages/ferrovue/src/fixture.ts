@@ -1,7 +1,5 @@
 import { createApp, createSSRApp, createStaticVNode, defineComponent, h, type App, type Component } from "vue";
-import { createPinia } from "pinia";
-import { createMemoryHistory, createRouter, type RouteRecordRaw } from "vue-router";
-import { createI18n } from "vue-i18n";
+import type { RouteRecordRaw } from "vue-router";
 
 /** A conformance fixture: the props, and `$slots`, `$route`, `$stores` and `$locale`. */
 export interface Fixture {
@@ -32,6 +30,37 @@ function nodeCount(html: string): number {
 }
 
 const staticNode = (html: string) => createStaticVNode(html, nodeCount(html));
+
+function isMissing(error: unknown, name: string): boolean {
+  const { code, message } = (error ?? {}) as { code?: unknown; message?: unknown };
+  return (
+    (code === "ERR_MODULE_NOT_FOUND" || code === "MODULE_NOT_FOUND") &&
+    typeof message === "string" &&
+    (message.includes(`'${name}'`) || message.includes(`"${name}"`))
+  );
+}
+
+function missingPeer(name: string, needs: string, cause: unknown): Error {
+  return new Error(`ferrovue/testing: ${needs}, which needs \`${name}\`: install it in your project (\`npm install -D ${name}\`)`, { cause });
+}
+
+async function peer<T>(name: string, needs: string, load: () => Promise<T>): Promise<T> {
+  try {
+    return await load();
+  } catch (error) {
+    throw isMissing(error, name) ? missingPeer(name, needs, error) : error;
+  }
+}
+
+async function optionalPinia(stores: Record<string, unknown>): Promise<typeof import("pinia") | null> {
+  try {
+    return await import("pinia");
+  } catch (error) {
+    if (!isMissing(error, "pinia")) throw error;
+    if (Object.keys(stores).length > 0) throw missingPeer("pinia", "the fixture has `$stores`", error);
+    return null;
+  }
+}
 
 /** A route as a routes file lists it: a path, or a path and a name. */
 export type RouteEntry = string | { path: string; name?: string; children?: RouteEntry[] };
@@ -71,10 +100,14 @@ export async function fixtureApp(
       .map(([name, html]) => [name, () => [staticNode(html)]]),
   );
   const app = (options.client ? createApp : createSSRApp)({ render: () => h(component, fixture.props, slots) });
-  const pinia = createPinia();
-  pinia.state.value = structuredClone(fixture.stores) as typeof pinia.state.value;
-  app.use(pinia);
+  const pinia = await optionalPinia(fixture.stores);
+  if (pinia) {
+    const store = pinia.createPinia();
+    store.state.value = structuredClone(fixture.stores) as typeof store.state.value;
+    app.use(store);
+  }
   if (options.i18n) {
+    const { createI18n } = await peer("vue-i18n", "the fixture is rendered with `i18n` options", () => import("vue-i18n"));
     const i18nOptions = {
       legacy: false as const,
       locale: fixture.locale ?? options.i18n.locale,
@@ -86,6 +119,7 @@ export async function fixtureApp(
     app.use(createI18n(i18nOptions as Parameters<typeof createI18n>[0]));
   }
   if (routes) {
+    const { createMemoryHistory, createRouter } = await peer("vue-router", "the fixture is rendered with routes", () => import("vue-router"));
     const view = fixture.slots.routerView ?? "";
     const View = defineComponent({ render: () => staticNode(view) });
     const router = createRouter({
