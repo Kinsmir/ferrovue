@@ -1,0 +1,14 @@
+{
+  "layout": "Panel",
+  "record": {
+    "props": { "title": "Shelf", "count": 2 },
+    "slots": {
+      "default": [
+        { "c": "Text", "p": { "title": "Hello", "count": 3, "on": true, "note": "n", "score": -2, "padded": "  pad  " } },
+        { "c": "Prose", "p": { "body": "<p>Hello <em>world</em> &amp; more</p>", "aside": "<small>side</small>", "caption": "<not html>" } },
+        { "c": "Text", "p": { "title": "", "count": 0, "on": false, "padded": "" } }
+      ],
+      "footer": [{ "c": "Prose", "p": { "body": "", "caption": "" } }]
+    }
+  }
+}

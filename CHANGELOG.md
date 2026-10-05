@@ -7,6 +7,19 @@ released together and share version numbers.
 
 ### Added
 
+- Whole-page hydration beside islands (#33). `ferrovue::Page` takes the components a layout's
+  slots hold as `Part`s, each made from the `Html` value that writes its markup, so the record of
+  `(component, props)` per slot comes from what rendered the page; `Page::hole` leaves a slot to
+  fill while an `HtmlStream` sends the page, and `PageRecord` writes the record as a
+  `<script type="application/json">` escaped as `state_script_into` escapes the state, at once or
+  as the stream's last hole. `mountPage(layout, loaders, options)` from `ferrovue` reads the record,
+  loads only the components it names, and hydrates the layout with each slot rendered as a plain
+  array, with `pinia`, `router` and `plugins` as `mountIslands` takes them. `hydrateRecordedPage`
+  from `ferrovue/testing` hydrates a recorded page and throws on any mismatch. Page fixtures
+  recorded from Vue check the Rust render and the record, in happy-dom and in real browsers, and
+  `examples/fullstack` serves a page hydrated whole. A part written where Vue would give it a
+  `:slotted()` scope id panics, and a `TrustedHtml` prop is carried in the record in full; the
+  guide's `islands_and_hydration` page states the cost.
 - A weekly CI job (`.github/workflows/canary.yml`) installs the newest patch of Vue 3.5, vue-router,
   Pinia and vue-i18n that ferrovue's peer ranges allow, re-records the conformance fixtures and
   vectors from them, hydrates the committed HTML with them, and opens an issue when anything differs.

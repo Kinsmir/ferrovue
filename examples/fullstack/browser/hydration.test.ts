@@ -109,7 +109,7 @@ describe.each(BROWSERS)("%s", (name) => {
     scripts = [];
     await page.goto(`${origin}${path}`);
     await page.waitForFunction(() =>
-      [...document.querySelectorAll("[data-island], #basket")].every((el) => (el as { _vnode?: unknown })._vnode),
+      [...document.querySelectorAll("[data-island], #basket, #app")].every((el) => (el as { _vnode?: unknown })._vnode),
     );
   }
 
@@ -129,13 +129,14 @@ describe.each(BROWSERS)("%s", (name) => {
     expect(now).toBe(parsed);
   });
 
+  const share = /<span class="share"[^>]*>Share these reviews<\/span>|<a [^>]*class="share"[^>]*>Share these reviews<\/a>/;
+
   it("hydrates a streamed book page, whose islands then share the store", async ({ skip }) => {
     if (!browser) skip();
     await open("/books/dune");
     await page.locator(".review-list a.share").waitFor();
     expect(await Promise.all(messages)).toEqual([]);
     const [parsed, now] = await parsedAndNow();
-    const share = /<span class="share"[^>]*>Share these reviews<\/span>|<a [^>]*class="share"[^>]*>Share these reviews<\/a>/;
     expect(parsed).toMatch(/<span class="share"/);
     expect(now).toMatch(/<a [^>]*class="share" href="mailto:\?body=http[^"]*%2Fbooks%2Fdune"/);
     expect(now.replace(share, "")).toBe(parsed.replace(share, ""));
@@ -148,6 +149,29 @@ describe.each(BROWSERS)("%s", (name) => {
     expect(await add.textContent()).toBe("In the basket");
     expect(await add.isDisabled()).toBe(true);
 
+    const reviews = page.locator(".review-list li");
+    expect(await reviews.evaluateAll((items) => items.map((li) => (li as HTMLElement).style.display))).toEqual(["", "", "none"]);
+    await page.locator("button.more").click();
+    await page.locator("button.more").waitFor({ state: "detached" });
+    expect(await reviews.evaluateAll((items) => items.map((li) => (li as HTMLElement).style.display))).toEqual(["", "", ""]);
+    expect(await Promise.all(messages)).toEqual([]);
+  });
+
+  it("hydrates the staff picks as one app, loading only the components its record names", async ({ skip }) => {
+    if (!browser) skip();
+    await open("/picks");
+    await page.locator(".review-list a.share").waitFor();
+    expect(await Promise.all(messages)).toEqual([]);
+    const [parsed, now] = await parsedAndNow();
+    expect(parsed).toMatch(/<span class="share"/);
+    expect(now).toMatch(/<a [^>]*class="share" href="mailto:\?body=http[^"]*%2Fpicks"/);
+    expect(now.replace(share, "")).toBe(parsed.replace(share, ""));
+    const chunks = scripts.map((s) => /^\/assets\/(\w+)-/.exec(s)?.[1]).filter((c) => c && c !== "main");
+    expect(chunks).toEqual(expect.arrayContaining(["Picks", "Pick", "Reviews"]));
+
+    const add = page.locator('.pick[data-id="dune"] button.add');
+    await add.click();
+    await page.waitForFunction(() => document.querySelector('.pick[data-id="dune"] button.add')?.textContent === "In the basket");
     const reviews = page.locator(".review-list li");
     expect(await reviews.evaluateAll((items) => items.map((li) => (li as HTMLElement).style.display))).toEqual(["", "", "none"]);
     await page.locator("button.more").click();

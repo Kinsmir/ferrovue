@@ -5,6 +5,7 @@ import type { Component } from "vue";
 import * as serverRenderer from "vue/server-renderer";
 
 export { fixtureApp, readFixture, routeRecords, type Fixture, type RouteEntry, type RouterOptions } from "./fixture.ts";
+export { hydrateRecordedPage, type RecordedPage } from "./hydration.ts";
 
 /** Give a component compiled for the browser the `ssrRender` its SSR build would have. */
 export function attachSsrRender(file: string, name: string, component: Component): void {

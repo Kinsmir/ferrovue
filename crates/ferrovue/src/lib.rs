@@ -15,6 +15,7 @@ pub mod dioxus;
 pub mod guide;
 mod html;
 mod json;
+mod page;
 mod record;
 mod slots;
 mod state;
@@ -30,6 +31,7 @@ pub use attrs::{
 };
 pub use class::{class_into, class_object};
 pub use html::Html;
+pub use page::{Page, PageHole, PageRecord, PageScript, PageSlot, Part};
 pub use record::Record;
 #[doc(hidden)]
 pub use slots::is_comment;

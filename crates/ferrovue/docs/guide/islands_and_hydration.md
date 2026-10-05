@@ -6,7 +6,8 @@ interactive, the client's Vue hydrates the markup: it builds the same components
 works only if the server wrote exactly the bytes Vue would have written for the same input, which
 is what ferrovue guarantees; the rest of this page is about giving the client the same input.
 
-There are two ways to hydrate, and a page may use both.
+There are three ways to hydrate: islands, a page recorded part by part, and a whole app. A page
+may mix islands with either of the others.
 
 # Islands
 
@@ -100,6 +101,112 @@ a store another part of the page shows.
 Only a component whose render needs nothing but its props has an `island()`: its `data-props` is all
 the client gets. A component that takes slots, the route, stores, translations or teleports has
 `html()` alone.
+
+# Hydrating a page
+
+A page is often a layout whose slots hold components, each rendered from its own props: a header,
+a list, a pager, a sidebar. [`Page`](crate::Page) records that tree as it is written, so the client
+can hydrate the layout and everything in it as one app.
+
+Each slot's content is a list of [`Part`](crate::Part)s. A part is made from a component's `NAME`
+and the [`Html`](crate::Html) value that writes its markup, so the props recorded for it are the
+props it was rendered from. [`Page::slot`](crate::Page::slot) takes a slot's parts,
+[`Page::hole`](crate::Page::hole) leaves a slot to be filled while the page streams, and
+[`Page::render_to`](crate::Page::render_to) writes the layout and records its props. The record
+is a `<script type="application/json">`, escaped as [`state_script_into`](crate::state_script_into)
+escapes the state, so no prop can end the element:
+
+```json
+{"props":{"shop":"Ferrovue Books","featured":"Dune"},
+ "slots":{"default":[{"c":"Pick","p":{"book":{…},"note":"…"}},{"c":"Pick","p":{…}}],
+          "reviews":[{"c":"Reviews","p":{"reviews":[…]}}]}}
+```
+
+This is the staff picks page of the repository's `examples/fullstack` (`src/pages.rs`), whose
+reviews arrive after a slow lookup. The record goes in a hole of its own after the app's container,
+and [`PageRecord::script`](crate::PageRecord::script) is ready once every hole of the page is
+filled:
+
+```rust,ignore
+use ferrovue::{Page, Part};
+
+let mut page = Page::new();
+let parts = page.slot("default", picks.iter().map(|props| Part::new(pick::NAME, pick::html(props))));
+let later = page.hole("reviews");
+let mut out = String::from("<!doctype html>…<body><div id=\"app\">");
+let slots = picks::Slots { default: Some(parts.slot()), reviews: Some(later.slot()) };
+let record = page.render_to(&mut out, picks::html(&props, slots, &route));
+out.push_str("</div>");
+ferrovue::hole().render_to(&mut out); // where the record goes
+let body = HtmlStream::new(out)
+    .hole(async move {
+        let list = catalogue::reviews(&id).await;
+        later.fill([Part::new(reviews::NAME, reviews::into_html(reviews::Props::new(list)))])
+    })
+    .hole(record.script("__fv_page"));
+```
+
+A page written at once has no holes, and writes the record with
+[`PageRecord::script_into`](crate::PageRecord::script_into) instead.
+
+On the client, `mountPage` from `ferrovue` reads the record, loads the components it names and no
+others, waits for the router, and hydrates the layout on `#app`:
+
+```ts
+import { createPinia } from "pinia";
+import { hydrateState, mountPage } from "ferrovue";
+import islands from "ferrovue/islands";
+
+const pinia = createPinia();
+hydrateState(pinia);
+const app = await mountPage(() => import("./components/Picks.vue"), islands, { pinia, router });
+```
+
+The layout and each component may be given as a component or a loader, as `mountIslands` takes
+them, so `ferrovue/islands` serves when every part has an `island()`. `container` and `record`
+name another element to mount on and another script to read. The root renders each slot as a plain
+array of the recorded components, the shape of the markup the server wrote. A `v-for` over the
+parts in a template would add a fragment of its own, `<!--[-->…<!--]-->`, which the server never
+wrote, and every page would hydrate with a mismatch. `mountPage` rejects, leaving the page as the
+server rendered it, when the record or the container is missing or a component is not given or
+fails to load.
+
+Some things to know:
+
+- **A part is rendered from its props.** The record holds a part's props and nothing else, so a
+  part takes no slots. It may read the route and the stores, which the app is given.
+- **An empty slot stays empty.** A slot given no parts, or a hole dropped before it was filled, is
+  content to the layout, so its fallback does not show; the client renders it as an empty text node
+  for the same reason.
+- **`:slotted()` styles are refused.** Vue writes the slot scope id of a component with `:slotted()`
+  styles onto the root of each component in the slot, which a part's `html()` cannot do. A part
+  written into such an outlet panics, naming the id.
+- **An `island()` given as a part loses its wrapper.** The part belongs to the page's app, so it is
+  written as `html()` writes it.
+
+## Islands or a page
+
+Islands hydrate the interactive parts alone: each gets an app of its own, the rest of the page stays
+static HTML, and the browser fetches only the islands' code. A page hydrates the layout and every
+part in it: the layout can react to what a part does, every part shares the app's Pinia, router and
+plugins, and the browser fetches the code of every component the record names.
+
+The record has a cost. It repeats the text of every prop, `TrustedHtml` bodies included, so where
+the props are mostly text a page roughly doubles in size before compression. Islands repeat their
+props in the same way, for the interactive parts alone. ferrovue does not read a `TrustedHtml` prop
+back from the server's DOM: the record carries it whole. When size matters, put long prose outside
+the app's container, where the page writes it once.
+
+## Testing a page
+
+`hydrateRecordedPage` from `ferrovue/testing` takes a page as the server wrote it (the container
+and the record's script, or the container and the record as an object), puts it in the document
+and hydrates it with `mountPage`. It compares the markup as hydrating leaves it with the markup the
+server wrote, then waits for the page to settle: a `<ClientOnly>` shows its content and async
+components load, which are changes the app makes once mounted. It throws on any change hydrating
+made, on a node Vue replaced, and on anything Vue warns or logs as an error until the page has
+settled, and resolves to the app. `examples/fullstack` runs it on the staff picks page, in happy-dom; its browser test opens the
+page in Chromium, Firefox and WebKit.
 
 # Hydrating the whole app
 

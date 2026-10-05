@@ -1,0 +1,13 @@
+{
+  "layout": "Frame",
+  "record": {
+    "props": { "title": "Readings" },
+    "slots": {
+      "head": [{ "c": "Text", "p": { "title": "Gauges", "count": 2, "on": true, "padded": "" } }],
+      "default": [
+        { "c": "ClientSide", "p": { "title": "Readings", "level": 42, "note": "Measuring…" } },
+        { "c": "ClientSide", "p": { "title": "</h2><script>alert(1)</script>", "level": -7 } }
+      ]
+    }
+  }
+}

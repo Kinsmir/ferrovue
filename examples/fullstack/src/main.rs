@@ -87,7 +87,7 @@ async fn page(State(site): State<Arc<Site>>, uri: Uri) -> Response {
     } = site.page(uri.path());
     let body = HtmlStream::new(html).holes(holes.into_iter().map(|hole| {
         let site = Arc::clone(&site);
-        async move { site.fill(&hole).await }
+        async move { site.fill(hole).await }
     }));
     let status = StatusCode::from_u16(status).unwrap_or(StatusCode::OK);
     (status, body).into_response()
@@ -149,7 +149,11 @@ mod tests {
     async fn a_book_page_reads_its_route_and_streams_its_reviews() {
         let site = site();
         let page = site.page("/books/dune");
-        assert_eq!(page.holes, [Hole::Reviews("dune".to_owned())]);
+        assert!(
+            matches!(&page.holes[..], [Hole::Reviews(id)] if id == "dune"),
+            "{:?}",
+            page.holes
+        );
         let [before, after] = ferrovue::split_holes(&page.html)[..] else {
             panic!("one hole, two pieces");
         };
@@ -161,7 +165,7 @@ mod tests {
         assert!(before.contains("<code>/books/dune</code>"), "{before}");
         assert!(before.ends_with("<h2>Reviews</h2><!--[-->"), "{before}");
         assert!(after.starts_with("<!--]--></section>"), "{after}");
-        let reviews = site.fill(&page.holes[0]).await;
+        let reviews = site.fill(page.holes.into_iter().next().unwrap()).await;
         assert!(
             reviews.starts_with(r#"<div data-island="Reviews""#),
             "{reviews}"
@@ -177,7 +181,7 @@ mod tests {
     #[tokio::test]
     async fn the_handler_streams_the_page_whole_with_its_status() {
         let site = Arc::new(site());
-        for (path, status) in [("/books/dune", 200), ("/nowhere", 404)] {
+        for (path, status) in [("/books/dune", 200), ("/picks", 200), ("/nowhere", 404)] {
             let response = page(State(Arc::clone(&site)), Uri::from_static(path)).await;
             assert_eq!(response.status(), status, "{path}");
             assert_eq!(
@@ -190,6 +194,39 @@ mod tests {
             let (_, whole) = site.render_to_string(path).await;
             assert_eq!(body, whole, "{path}");
         }
+    }
+
+    #[tokio::test]
+    async fn the_picks_page_is_one_app_recorded_after_its_streamed_reviews() {
+        let (status, html) = site().render_to_string("/picks").await;
+        assert_eq!(status, 200);
+        assert!(
+            html.contains(r#"<body><div id="app"><div class="layout picks"><header>"#),
+            "{html}"
+        );
+        assert!(!html.contains("data-island"), "{html}");
+        assert!(
+            html.contains(r#"<main><!--[--><article class="pick" data-id="dune"><h2>Dune</h2>"#),
+            "{html}"
+        );
+        assert!(html.contains("Too much sand &lt;for me&gt;."), "{html}");
+        let record = html
+            .split_once(r#"</div><script type="application/json" id="__fv_page">"#)
+            .and_then(|(_, rest)| rest.split_once("</script>"))
+            .map(|(record, _)| record)
+            .expect("the record after the app");
+        assert!(
+            record.starts_with(r#"{"props":{"shop":"Ferrovue Books","featured":"Dune"},"slots":{"default":[{"c":"Pick","p":{"book":{"id":"dune","#),
+            "{record}"
+        );
+        assert!(
+            record.contains(r#""reviews":[{"c":"Reviews","p":{"reviews":[{"reader":"Ada","#),
+            "{record}"
+        );
+        assert!(
+            record.contains(r#"Too much sand \u003cfor me\u003e."#),
+            "{record}"
+        );
     }
 
     #[tokio::test]
@@ -207,7 +244,7 @@ mod tests {
             .await
             .expect("a body");
         let hole = Hole::Reviews("dune".to_owned());
-        assert_eq!(body, site.fill(&hole).await);
+        assert_eq!(body, site.fill(hole).await);
     }
 
     #[tokio::test]

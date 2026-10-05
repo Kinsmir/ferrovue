@@ -22,11 +22,14 @@ use crate::{escape_into, json};
 /// );
 /// ```
 pub fn state_script_into(out: &mut String, id: &str, state: &impl Serialize) {
+    json_script_into(out, id, &json::to_string(state));
+}
+
+pub(crate) fn json_script_into(out: &mut String, id: &str, json: &str) {
     out.push_str("<script type=\"application/json\" id=\"");
     escape_into(out, id);
     out.push_str("\">");
-    let json = json::to_string(state);
-    json_escaped_into(out, &json);
+    json_escaped_into(out, json);
     out.push_str("</script>");
 }
 

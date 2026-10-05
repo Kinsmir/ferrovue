@@ -1,0 +1,14 @@
+{
+  "layout": "Panel",
+  "record": {
+    "props": { "title": "</script><script>alert(1)</script><!--", "count": -1 },
+    "slots": {
+      "title": [
+        { "c": "Text", "p": { "title": "</script><!--<fv-hole>  ", "count": -9007199254740991, "on": true, "note": "</p><p>", "padded": "  <b>　 " } }
+      ],
+      "default": [
+        { "c": "Prose", "p": { "body": "<em>&lt;/script&gt;</em><!-- c -->", "aside": "", "caption": "</script>&amp;'\" <!--" } }
+      ]
+    }
+  }
+}

@@ -1,7 +1,7 @@
-import { createSSRApp, type Component } from "vue";
+import { createSSRApp, type App, type Component } from "vue";
 import { createPinia, type Pinia } from "pinia";
 import { createRouter, createWebHistory, type Router, type RouterHistory } from "vue-router";
-import { hydrateState, mountIslands, type Islands } from "ferrovue";
+import { hydrateState, mountIslands, mountPage, type Islands } from "ferrovue";
 import islands from "ferrovue/islands";
 import BasketSummary from "./components/BasketSummary.vue";
 import routes from "./routes.json" with { type: "json" };
@@ -20,6 +20,7 @@ export interface Hydrated {
   pinia: Pinia;
   router: Router;
   islands: Islands;
+  page?: App;
   unmount(): void;
 }
 
@@ -33,14 +34,18 @@ export async function hydrate(history?: RouterHistory): Promise<Hydrated> {
   const summary = basket ? createSSRApp(BasketSummary, { label: "Basket" }).use(pinia) : null;
   summary?.mount(basket!);
 
+  const page = document.getElementById("__fv_page") ? await mountPage(() => import("./components/Picks.vue"), islands, { pinia, router }) : undefined;
+
   const mounted = await mountIslands(islands, { pinia, router });
   return {
     pinia,
     router,
     islands: mounted,
+    page,
     unmount() {
       mounted.unmount();
       summary?.unmount();
+      page?.unmount();
     },
   };
 }

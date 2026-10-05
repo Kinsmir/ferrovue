@@ -6,7 +6,7 @@ import { renderToString } from "vue/server-renderer";
 import { generate } from "../src/compiler.ts";
 import { attachSsrRender, fixtureApp, readFixture } from "../src/testing.ts";
 import { cases, CLIENT_ONLY, hydrationBody, OPTIONS, ROOT, ROUTES, TELEPORTS, VUE_DISAGREES } from "./conformance-cases.ts";
-import { settled, stillLoading } from "./settle.ts";
+import { settled, stillLoading } from "../src/settle.ts";
 
 const WRITE = process.env.FERROVUE_FIXTURES_WRITE === "1";
 

@@ -15,6 +15,8 @@ pub mod book_list;
 pub mod book_page;
 pub mod layout;
 pub mod not_found;
+pub mod pick;
+pub mod picks;
 pub mod reviews;
 pub mod route_table;
 pub mod stores;
@@ -97,6 +99,19 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let router = route_table::router();
             let route = router.at(&fixture.route);
             not_found::render(&mut out, &props, &route);
+        }
+        "Pick" => {
+            let props: pick::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            pick::render(&mut out, &props);
+        }
+        "Picks" => {
+            let props: picks::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
+            let s_reviews = |out: &mut String| out.push_str(fixture.slot("reviews").unwrap_or_default());
+            let router = route_table::router();
+            let route = router.at(&fixture.route);
+            picks::render(&mut out, &props, picks::Slots { default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)), reviews: fixture.slot("reviews").map(|_| ferrovue::Slot::new(&s_reviews)) }, &route);
         }
         "Reviews" => {
             let props: reviews::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

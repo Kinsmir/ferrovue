@@ -1,0 +1,9 @@
+{
+  "layout": "Frame",
+  "record": {
+    "props": { "title": "Only a head" },
+    "slots": {
+      "head": [{ "c": "Prose", "p": { "body": "text<br><b>bold</b> tail", "caption": "c" } }]
+    }
+  }
+}

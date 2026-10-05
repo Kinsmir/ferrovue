@@ -4,9 +4,12 @@ import { join } from "node:path";
 import { afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
 import { nextTick, type Component } from "vue";
 import { createMemoryHistory } from "vue-router";
+import { createPinia } from "pinia";
 import islands from "ferrovue/islands";
-import { hydrate, type Hydrated } from "../client/app.ts";
+import { hydrateRecordedPage } from "ferrovue/testing";
+import { createAppRouter, hydrate, type Hydrated } from "../client/app.ts";
 import BasketSummary from "../client/components/BasketSummary.vue";
+import Picks from "../client/components/Picks.vue";
 import Reviews from "../client/components/Reviews.vue";
 
 const ROOT = join(import.meta.dirname, "../../..");
@@ -21,7 +24,7 @@ function render(path: string): string {
 
 const pages = new Map<string, string>();
 beforeAll(() => {
-  for (const path of ["/", "/books/dune"]) pages.set(path, render(path));
+  for (const path of ["/", "/books/dune", "/picks"]) pages.set(path, render(path));
 });
 
 let warnings: string[] = [];
@@ -39,11 +42,15 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-function put(path: string): void {
+function bodyOf(path: string): string {
   const body = /<body>([\s\S]*)<\/body>/.exec(pages.get(path)!)?.[1];
   expect(body, "the page has a body").toBeTruthy();
   expect(body).toMatch(/<script type="module" src="[^"]+"><\/script>$/);
-  document.body.innerHTML = body!.replace(/<script type="module"[^>]*><\/script>/g, "");
+  return body!.replace(/<script type="module"[^>]*><\/script>/g, "");
+}
+
+function put(path: string): void {
+  document.body.innerHTML = bodyOf(path);
 }
 
 async function hydrateAt(path: string): Promise<Hydrated> {
@@ -68,7 +75,7 @@ it("links the client build's stylesheets, scoped to the ids the server writes, t
 });
 
 it("loads every island by the name the server writes, and only those", async () => {
-  expect(Object.keys(islands)).toEqual(["AddToBasket", "Reviews"]);
+  expect(Object.keys(islands)).toEqual(["AddToBasket", "Pick", "Reviews"]);
   expect((await islands.Reviews!()).default).toBe(Reviews);
 });
 
@@ -114,4 +121,35 @@ it("hydrates a streamed book page, whose islands then share the store", async ()
   expect(document.querySelector("span.share")).toBeNull();
   expect(document.querySelector<HTMLAnchorElement>(".review-list a.share")!.href).toMatch(/^mailto:\?body=http/);
   expect(warnings).toEqual([]);
+});
+
+it("hydrates the staff picks as one app: the layout, and each part its record names", async () => {
+  put("/picks");
+  const container = document.getElementById("app")!;
+  const first = container.firstChild;
+  const { page, islands, pinia } = await hydrateAt("/picks");
+  expect(warnings).toEqual([]);
+  expect(page).toBeDefined();
+  expect(islands.apps).toHaveLength(0);
+  expect(container.firstChild).toBe(first);
+
+  const add = document.querySelector<HTMLButtonElement>('.pick[data-id="dune"] button.add')!;
+  add.click();
+  await nextTick();
+  expect(add.textContent).toBe("In the basket");
+  expect(pinia.state.value.basket).toEqual({ owner: "guest", ids: ["solaris", "dune"] });
+  document.querySelector<HTMLButtonElement>("button.more")!.click();
+  await nextTick();
+  expect([...document.querySelectorAll<HTMLElement>(".review-list li")].map((li) => li.style.display)).toEqual(["", "", ""]);
+  expect(warnings).toEqual([]);
+});
+
+it("hydrates the staff picks exactly with the testing helper, from the page the server wrote", async () => {
+  const history = createMemoryHistory();
+  history.replace("/picks");
+  const router = createAppRouter(history);
+  await router.replace("/picks");
+  const page = await hydrateRecordedPage({ html: bodyOf("/picks") }, Picks, islands, { pinia: createPinia(), router });
+  expect(document.querySelector(".review-list a.share")?.getAttribute("href")).toMatch(/^mailto:\?body=/);
+  page.unmount();
 });
