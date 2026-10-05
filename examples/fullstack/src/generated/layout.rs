@@ -33,8 +33,9 @@ pub struct Slots<'s> {
 }
 
 /// Write the component's server render into `out`.
-pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::Route<'_>, fv_stores: &super::stores::Stores<'_>) {
+pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::Route<'_>, fv_stores: &super::stores::Stores<'_>, fv_head: &fv::Head) {
     out.reserve(311 + props.shop.len());
+    fv_head.push(fv::HeadValue::object([("title", fv::HeadValue::str(&props.shop)), ("titleTemplate", fv::HeadValue::str(&format!("%s · {}", props.shop)))]));
     out.push_str("<div class=\"layout\"><header>");
     {
         let fv_link = {
@@ -90,6 +91,6 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>, fv_route: &'p fv::Route<'p>, fv_stores: &'p super::stores::Stores<'p>) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_slots, fv_route, fv_stores))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>, fv_route: &'p fv::Route<'p>, fv_stores: &'p super::stores::Stores<'p>, fv_head: &'p fv::Head) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
+    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_slots, fv_route, fv_stores, fv_head))
 }

@@ -26,8 +26,9 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
-pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
+pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>, fv_head: &fv::Head) {
     out.reserve(154 + props.path.len());
+    fv_head.push(fv::HeadValue::object([("title", fv::HeadValue::str("Not found")), ("meta", fv::HeadValue::array([fv::HeadValue::object([("name", fv::HeadValue::str("robots")), ("content", fv::HeadValue::str("noindex"))]), fv::HeadValue::object([("name", fv::HeadValue::str("description")), ("content", fv::HeadValue::str(&format!("Nothing lives at {}", props.path)))])]))]));
     out.push_str("<section class=\"not-found\"><h1>Not found</h1><p>Nothing lives at <code>");
     fv::escape_into(out, &props.path);
     out.push_str("</code>.</p>");
@@ -49,6 +50,6 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_route: &'p fv::Route<'p>) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_route))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_route: &'p fv::Route<'p>, fv_head: &'p fv::Head) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
+    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_route, fv_head))
 }

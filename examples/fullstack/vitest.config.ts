@@ -13,6 +13,7 @@ export default defineConfig({
           navigation: { disableChildFrameNavigation: true },
           disableJavaScriptFileLoading: true,
           disableCSSFileLoading: true,
+          handleDisabledFileLoadingAsSuccess: true,
         },
       },
     },

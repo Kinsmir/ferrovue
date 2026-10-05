@@ -96,7 +96,7 @@ describe.each(BROWSERS)("%s", (name) => {
     await page.route(`${origin}/**`, async (route) => {
       if (route.request().resourceType() !== "document") return route.continue();
       const response = await route.fetch();
-      const snapshot = "<script>document.currentScript.remove(); window.parsed = document.body.innerHTML;</script>";
+      const snapshot = "<script>document.currentScript.remove(); window.parsed = document.body.innerHTML; window.parsedHead = document.head.innerHTML;</script>";
       return route.fulfill({ response, body: (await response.text()).replace('<script type="module"', `${snapshot}$&`) });
     });
   });
@@ -179,6 +179,7 @@ describe.each(BROWSERS)("%s", (name) => {
     await open("/books/dune");
     await page.locator(".review-list a.share").waitFor();
     expect(await Promise.all(messages)).toEqual([]);
+    expect(await page.title()).toBe("Dune · Ferrovue Books");
     const [parsed, now] = await parsedAndNow();
     expect(parsed).toMatch(/<span class="share"/);
     expect(now).toMatch(/<a [^>]*class="share" href="mailto:\?body=http[^"]*%2Fbooks%2Fdune"/);
@@ -205,6 +206,9 @@ describe.each(BROWSERS)("%s", (name) => {
     await open("/picks");
     await page.locator(".review-list a.share").waitFor();
     expect(await Promise.all(messages)).toEqual([]);
+    const [parsedHead, head, title] = await page.evaluate(() => [(window as { parsedHead?: string }).parsedHead ?? "", document.head.innerHTML, document.title]);
+    expect(title).toBe("Staff picks · Ferrovue Books");
+    expect(head.replace(/<link rel="modulepreload"[^>]*>/g, ""), "unhead's client took over the head the server wrote").toBe(parsedHead);
     const [parsed, now] = await parsedAndNow();
     expect(parsed).toMatch(/<span class="share"/);
     expect(now).toMatch(/<a [^>]*class="share" href="mailto:\?body=http[^"]*%2Fpicks"/);

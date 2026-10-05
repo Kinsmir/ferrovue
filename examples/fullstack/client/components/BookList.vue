@@ -1,7 +1,12 @@
 <script setup lang="ts">
+import { useHead } from "@unhead/vue";
 import type { Book } from "./types";
 
-defineProps<{ books: Book[] }>();
+const props = defineProps<{ books: Book[] }>();
+useHead({
+  title: "All books",
+  meta: [{ name: "description", content: `${props.books.length} books, from ${props.books.map((b) => b.title).join(", ")}` }],
+});
 </script>
 
 <template>

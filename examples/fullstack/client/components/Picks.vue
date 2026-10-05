@@ -1,5 +1,12 @@
 <script setup lang="ts">
-defineProps<{ shop: string; featured: string }>();
+import { useHead } from "@unhead/vue";
+
+const props = defineProps<{ shop: string; featured: string }>();
+useHead({
+  title: () => `Staff picks · ${props.shop}`,
+  meta: [{ name: "description", content: () => `${props.featured} and the rest of this week's staff picks` }],
+  htmlAttrs: { class: "picks-page" },
+});
 </script>
 
 <template>

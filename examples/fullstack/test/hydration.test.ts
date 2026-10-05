@@ -5,12 +5,17 @@ import { afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
 import { nextTick, type Component } from "vue";
 import { createMemoryHistory } from "vue-router";
 import { createPinia } from "pinia";
+import { createHead } from "@unhead/vue/client";
 import islandLoaders from "ferrovue/islands";
 import { hydrateRecordedPage } from "ferrovue/testing";
 import { createAppRouter, hydrate, type Hydrated } from "../client/app.ts";
 import BasketSummary from "../client/components/BasketSummary.vue";
 import Picks from "../client/components/Picks.vue";
 import Reviews from "../client/components/Reviews.vue";
+
+const headRendered = async (): Promise<void> => {
+  for (let i = 0; i < 2; i++) await new Promise((done) => setTimeout(done, 0));
+};
 
 const ROOT = join(import.meta.dirname, "../../..");
 
@@ -41,6 +46,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
   document.body.innerHTML = "";
+  document.head.innerHTML = "";
 });
 
 function bodyOf(path: string): string {
@@ -149,10 +155,15 @@ it("hydrates a streamed book page, whose islands then share the store", async ()
 
 it("hydrates the staff picks as one app: the layout, and each part its record names", async () => {
   put("/picks");
+  document.head.innerHTML = /<head>([\s\S]*)<\/head>/.exec(pages.get("/picks")!)![1]!;
+  const head = document.head.innerHTML;
+  expect(document.title).toBe("Staff picks · Ferrovue Books");
   const container = document.getElementById("app")!;
   const first = container.firstChild;
   const { page, islands, pinia } = await hydrateAt("/picks");
+  await headRendered();
   expect(warnings).toEqual([]);
+  expect(document.head.innerHTML, "unhead's client took over the head the server wrote").toBe(head);
   expect(page).toBeDefined();
   expect(islands.apps).toHaveLength(0);
   expect(container.firstChild).toBe(first);
@@ -173,7 +184,7 @@ it("hydrates the staff picks exactly with the testing helper, from the page the 
   history.replace("/picks");
   const router = createAppRouter(history);
   await router.replace("/picks");
-  const page = await hydrateRecordedPage({ html: bodyOf("/picks") }, Picks, islandLoaders, { pinia: createPinia(), router });
+  const page = await hydrateRecordedPage({ html: bodyOf("/picks") }, Picks, islandLoaders, { pinia: createPinia(), router, plugins: [createHead()] });
   expect(document.querySelector(".review-list a.share")?.getAttribute("href")).toMatch(/^mailto:\?body=/);
   page.unmount();
 });

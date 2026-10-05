@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use ferrovue::{Hydrate, PageHole, PageScript, Part, Route, Router, Slot};
+use ferrovue::{Head, Hydrate, PageHole, PageScript, Part, Route, Router, Slot};
 
 use crate::assets::Assets;
 use crate::catalogue;
@@ -106,6 +106,7 @@ impl Site {
     }
 
     fn home(&self, route: &Route<'_>, stores: &Stores<'_>) -> Page {
+        let head = Head::new();
         let props = book_list::Props::new(catalogue::books());
         let actions = |out: &mut String, slot: &book_list::ActionsSlotProps<'_>| {
             add_to_basket::island(&add_to_basket::Props::new(slot.id, slot.title))
@@ -117,9 +118,9 @@ impl Site {
             let slots = book_list::Slots {
                 actions: Some(&actions),
             };
-            book_list::render(out, &props, slots, route);
+            book_list::render(out, &props, slots, route, &head);
         };
-        self.document(200, SHOP, route, stores, &view, Vec::new())
+        self.document(200, &head, route, stores, &view, Vec::new())
     }
 
     fn book(
@@ -128,8 +129,8 @@ impl Site {
         stores: &Stores<'_>,
         book: crate::generated::types::Book<'static>,
     ) -> Page {
+        let head = Head::new();
         let id = book.id.clone();
-        let title = format!("{} · {SHOP}", book.title);
         let add = add_to_basket::Props::new(id.clone(), book.title.clone());
         let props = book_page::Props::new(book);
         let actions = |out: &mut String| add_to_basket::island(&add).render_to(out);
@@ -138,10 +139,10 @@ impl Site {
                 actions: Some(Slot::new(&actions)),
                 reviews: Some(ferrovue::hole()),
             };
-            book_page::render(out, &props, slots, route);
+            book_page::render(out, &props, slots, route, &head);
         };
         let holes = vec![Hole::Reviews(id.into_owned())];
-        self.document(200, &title, route, stores, &view, holes)
+        self.document(200, &head, route, stores, &view, holes)
     }
 
     fn picks(&self, route: &Route<'_>, stores: &Stores<'_>) -> Page {
@@ -166,58 +167,71 @@ impl Site {
         );
         let reviews = page.hole("reviews");
         let props = picks::Props::new(SHOP, featured.title.clone());
-        let mut out = self.head(&format!("Staff picks · {SHOP}"));
-        out.push_str("<div id=\"app\">");
+        let head = Head::new();
+        let mut body = String::from("<div id=\"app\">");
         let slots = picks::Slots {
             default: Some(parts.slot()),
             reviews: Some(reviews.slot()),
         };
-        let record = page.render_to(&mut out, picks::html(&props, slots, route));
-        out.push_str("</div>");
-        ferrovue::hole().render_to(&mut out);
+        let record = page.render_to(&mut body, picks::html(&props, slots, route, &head));
+        body.push_str("</div>");
+        ferrovue::hole().render_to(&mut body);
         let holes = vec![
             Hole::PageReviews(featured.id.clone().into_owned(), reviews),
             Hole::Record(record.script("__fv_page")),
         ];
-        self.finish(200, out, stores, holes)
+        self.finish(200, &head, &body, stores, holes)
     }
 
     fn not_found(&self, route: &Route<'_>, stores: &Stores<'_>, location: &str) -> Page {
+        let head = Head::new();
         let props = not_found::Props::new(location);
-        let view = |out: &mut String| not_found::render(out, &props, route);
-        self.document(404, SHOP, route, stores, &view, Vec::new())
+        let view = |out: &mut String| not_found::render(out, &props, route, &head);
+        self.document(404, &head, route, stores, &view, Vec::new())
     }
 
     fn document(
         &self,
         status: u16,
-        title: &str,
+        head: &Head,
         route: &Route<'_>,
         stores: &Stores<'_>,
         view: &dyn Fn(&mut String),
         holes: Vec<Hole>,
     ) -> Page {
-        let mut out = self.head(title);
+        let mut body = String::new();
         let slots = layout::Slots {
             router_view: Slot::new(view),
         };
-        layout::render(&mut out, &layout::Props::new(SHOP), slots, route, stores);
-        self.finish(status, out, stores, holes)
-    }
-
-    fn head(&self, title: &str) -> String {
-        let mut out = String::from(
-            "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">\
-             <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>",
+        layout::render(
+            &mut body,
+            &layout::Props::new(SHOP),
+            slots,
+            route,
+            stores,
+            head,
         );
-        ferrovue::escape_into(&mut out, title);
-        out.push_str("</title>");
-        self.assets.styles_into(&mut out);
-        out.push_str("</head><body>");
-        out
+        self.finish(status, head, &body, stores, holes)
     }
 
-    fn finish(&self, status: u16, mut out: String, stores: &Stores<'_>, holes: Vec<Hole>) -> Page {
+    /// The document around `body`, once it is rendered: the head its components asked for with
+    /// `useHead`, as unhead's server renderer writes it, and the client's assets.
+    fn finish(
+        &self,
+        status: u16,
+        head: &Head,
+        body: &str,
+        stores: &Stores<'_>,
+        holes: Vec<Hole>,
+    ) -> Page {
+        let tags = head.render();
+        let mut out = format!("<!doctype html><html{}><head>", tags.html_attrs);
+        out.push_str(&tags.head_tags);
+        self.assets.styles_into(&mut out);
+        out.push_str(&format!("</head><body{}>", tags.body_attrs));
+        out.push_str(&tags.body_tags_open);
+        out.push_str(body);
+        out.push_str(&tags.body_tags);
         ferrovue::state_script_into(&mut out, "__pinia", stores);
         self.assets.scripts_into(&mut out);
         out.push_str("</body></html>");

@@ -229,6 +229,9 @@ importers:
 
   examples/fullstack:
     dependencies:
+      '@unhead/vue':
+        specifier: ^3.4.2
+        version: 3.4.2(@oxc-project/types@0.152.0)(lightningcss@1.33.0)(rolldown@1.2.12)(vite@8.3.2(@types/node@26.6.4))(vue@3.5.43(typescript@7.0.2))
       pinia:
         specifier: ^4.0.3
         version: 4.0.3(@vue/devtools-api@8.2.1)(typescript@7.0.2)(vue@3.5.43(typescript@7.0.2))
