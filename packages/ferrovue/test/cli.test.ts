@@ -1,6 +1,6 @@
 /* The `ferrovue` command, run as a project runs it: from the project's root, as a process. */
 import { spawn, spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, expect, it } from "vitest";
@@ -94,8 +94,10 @@ it("--watch regenerates on a change, and reports an error without stopping", asy
   let out = "";
   child.stdout.on("data", (d) => (out += d));
   child.stderr.on("data", (d) => (out += d));
+  // Up to 20 s for each step: a loaded machine starts Node and compiles slowly, and the test only
+  // waits as long as it has to.
   const waitFor = async (text: string): Promise<void> => {
-    for (let i = 0; i < 100 && !out.includes(text); i++) await new Promise((r) => setTimeout(r, 50));
+    for (let i = 0; i < 400 && !out.includes(text); i++) await new Promise((r) => setTimeout(r, 50));
     expect(out).toContain(text);
   };
   try {
@@ -113,7 +115,7 @@ defineProps<{ name: string }>();
   } finally {
     child.kill();
   }
-});
+}, 70_000);
 
 it("fails on a configuration without its two directories", () => {
   writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify({ components: "components" }));
@@ -121,3 +123,143 @@ it("fails on a configuration without its two directories", () => {
   expect(r.status).not.toBe(0);
   expect(r.stderr).toContain("needs `components` and `out`");
 });
+
+it("--version prints the version", () => {
+  const r = run("--version");
+  expect(r.status, r.stderr).toBe(0);
+  expect(r.stdout.trim()).toMatch(/^\d+\.\d+\.\d+/);
+});
+
+it("-v prints the version", () => {
+  const r = run("-v");
+  expect(r.status, r.stderr).toBe(0);
+  expect(r.stdout.trim()).toMatch(/^\d+\.\d+\.\d+/);
+});
+
+it("--help prints usage information", () => {
+  const r = run("--help");
+  expect(r.status, r.stderr).toBe(0);
+  expect(r.stdout).toContain("Usage: ferrovue");
+  expect(r.stdout).toContain("--check");
+  expect(r.stdout).toContain("--watch");
+  expect(r.stdout).toContain("--version");
+  expect(r.stdout).toContain("--help");
+  expect(r.stdout).toContain("--config");
+  expect(r.stdout).toContain("init");
+});
+
+it("-h prints usage information", () => {
+  const r = run("-h");
+  expect(r.status, r.stderr).toBe(0);
+  expect(r.stdout).toContain("Usage: ferrovue");
+});
+
+it("fails with a clean message and no stack trace when ferrovue.config.json is missing", () => {
+  rmSync(join(root, "ferrovue.config.json"));
+  const r = run();
+  expect(r.status).toBe(1);
+  expect(r.stderr).toContain("error: cannot find `ferrovue.config.json`");
+  expect(r.stderr).not.toContain("    at ");
+});
+
+it("fails on an unknown option or command", () => {
+  const r = run("--unknown-flag");
+  expect(r.status).toBe(1);
+  expect(r.stderr).toContain("error: unknown option or command '--unknown-flag'");
+});
+
+it("init scaffolds a starter configuration and component in an empty directory", () => {
+  const emptyDir = mkdtempSync(join(tmpdir(), "ferrovue-init-"));
+  try {
+    const r = spawnSync(process.execPath, [CLI, "init"], { cwd: emptyDir, encoding: "utf8" });
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stdout).toContain("created ferrovue.config.json");
+    expect(r.stdout).toContain("created components/Hello.vue");
+    expect(existsSync(join(emptyDir, "ferrovue.config.json"))).toBe(true);
+    expect(existsSync(join(emptyDir, "components/Hello.vue"))).toBe(true);
+
+    // Generating works immediately after init
+    const gen = spawnSync(process.execPath, [CLI], { cwd: emptyDir, encoding: "utf8" });
+    expect(gen.status, gen.stderr).toBe(0);
+    expect(existsSync(join(emptyDir, "src/generated/hello.rs"))).toBe(true);
+    expect(existsSync(join(emptyDir, "src/generated/mod.rs"))).toBe(true);
+  } finally {
+    rmSync(emptyDir, { recursive: true, force: true });
+  }
+});
+
+it("init fails if configuration file already exists", () => {
+  const r = run("init");
+  expect(r.status).toBe(1);
+  expect(r.stderr).toContain("error: configuration file already exists");
+});
+
+it("--config allows specifying a custom configuration file", () => {
+  writeFileSync(
+    join(root, "custom-ferrovue.json"),
+    JSON.stringify({ components: "components", out: "src/custom_out" }),
+  );
+  const r = run("--config", "custom-ferrovue.json");
+  expect(r.status, r.stderr).toBe(0);
+  expect(r.stdout).toContain("src/custom_out: 2 files");
+  expect(existsSync(join(root, "src/custom_out/hello.rs"))).toBe(true);
+});
+
+it("-c allows specifying a custom configuration file", () => {
+  writeFileSync(
+    join(root, "custom2.json"),
+    JSON.stringify({ components: "components", out: "src/custom2_out" }),
+  );
+  const r = run("-c", "custom2.json");
+  expect(r.status, r.stderr).toBe(0);
+  expect(r.stdout).toContain("src/custom2_out: 2 files");
+});
+
+it("--config fails when option argument is missing", () => {
+  const r = run("--config");
+  expect(r.status).toBe(1);
+  expect(r.stderr).toContain("error: option '--config' requires an argument");
+});
+
+it("--config fails when specified file does not exist", () => {
+  const r = run("--config", "nonexistent.json");
+  expect(r.status).toBe(1);
+  expect(r.stderr).toContain("error: cannot find `nonexistent.json`");
+});
+
+it("--check --diff shows line diffs for stale modules", () => {
+  run();
+  writeFileSync(join(root, "src/generated/hello.rs"), "// manual edit\n");
+  const r = run("--check", "--diff");
+  expect(r.status).toBe(1);
+  expect(r.stderr).toContain("stale: src/generated/hello.rs");
+  expect(r.stderr).toContain("--- a/src/generated/hello.rs");
+  expect(r.stderr).toContain("+++ b/src/generated/hello.rs");
+  expect(r.stderr).toContain("\n-// manual edit\n");
+  expect(r.stderr).toMatch(/\n\+pub struct Props/);
+});
+
+it("--check -d shows diff for ungenerated extra modules", () => {
+  run();
+  writeFileSync(join(root, "src/generated/extra.rs"), "// extra file\n");
+  const r = run("--check", "-d");
+  expect(r.status).toBe(1);
+  expect(r.stderr).toContain("not generated: src/generated/extra.rs");
+  expect(r.stderr).toContain("--- a/src/generated/extra.rs");
+  expect(r.stderr).toContain("+++ /dev/null");
+  expect(r.stderr).toContain("@@ -1,1 +0,0 @@\n-// extra file");
+});
+
+it("refuses an option it does not know, whatever else is given", () => {
+  const r = run("--check", "--bogus");
+  expect(r.status).toBe(1);
+  expect(r.stderr).toContain("unknown option or command '--bogus'");
+});
+
+it("--diff fails without --check", () => {
+  const r = run("--diff");
+  expect(r.status).toBe(1);
+  expect(r.stderr).toContain("error: '--diff' requires '--check'");
+});
+
+
