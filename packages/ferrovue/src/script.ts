@@ -2,11 +2,12 @@
 
 import { basename } from "node:path";
 import { type Component, type N, type Scope, type Val, fail, GenError, snake, STR, takesAttrs } from "./model.ts";
-import { type Store, CONFIG_FILE, ctx } from "./context.ts";
+import { CONFIG_FILE, ctx } from "./context.ts";
 import { definePropsType } from "./typescript.ts";
 import { expr, fieldVal, storeGetter, theRoute } from "./expr.ts";
 import { collected, heldList } from "./lists.ts";
-import { storeImport } from "./stores.ts";
+import { piniaStores, type Store, storeImport } from "./plugins/stores.ts";
+import { runOf } from "./plugin.ts";
 import { bare, operand, UNARY } from "./parens.ts";
 
 /** Lifecycle hooks, which never run on the server: setup may register them freely. */
@@ -118,8 +119,8 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
         for (const sp of st.specifiers) {
           const hook = sp.type === "ImportSpecifier" ? (sp.imported.name ?? sp.imported.value) : null;
           // A type from the store's file, which `readComponent` has already resolved.
-          if (st.importKind === "type" || sp.importKind === "type" || (hook !== null && ctx.storeStructs.has(hook))) continue;
-          const store = hook ? ctx.stores.get(hook) : undefined;
+          if (st.importKind === "type" || sp.importKind === "type" || (hook !== null && runOf(piniaStores).structs.has(hook))) continue;
+          const store = hook ? runOf(piniaStores).stores.get(hook) : undefined;
           if (!store || store.module !== storeImport(comp, from)) fail(comp, "import a store by its `use…` hook", sp);
           storeHooks.set(sp.local.name, store);
         }

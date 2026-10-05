@@ -3,23 +3,61 @@
 import { parse as parseJs } from "@babel/parser";
 import { readdirSync, readFileSync } from "node:fs";
 import { basename, dirname, join, relative, resolve } from "node:path";
-import { type Component, type Field, type N, type Ty, BOOL, fail, FLOAT, INT, opt, sameTy, snake, STR, tagAst, UNDEF } from "./model.ts";
-import { ctx, type StoreGetter } from "./context.ts";
-import { markStore, structOf, tyOfTs, typesImports } from "./typescript.ts";
-import { patternNames, setupStatement } from "./script.ts";
+import { type Component, type Field, type N, type Struct, type Ty, blankComponent, BOOL, fail, FLOAT, INT, opt, sameTy, snake, STR, tagAst, UNDEF } from "../model.ts";
+import { ctx } from "../context.ts";
+import { markStore, structOf, tyOfTs, typesImports } from "../typescript.ts";
+import { patternNames, setupStatement } from "../script.ts";
+import { type Plugin, runOf } from "../plugin.ts";
+import { header, structSource } from "../rust.ts";
+
+/** A getter: the parameter naming the state (an option store's), and the expression it returns.
+ * \`setup\` marks a setup store's \`computed\`, which reads the state's refs and the other getters by
+ * name, through \`.value\`. */
+export interface StoreGetter {
+  param: string | null;
+  body: N;
+  file: string;
+  setup?: true;
+}
+
+/** A Pinia option store: `export const usePrefs = defineStore("prefs", { state: (): PrefsState => ... })`. */
+export interface Store {
+  /** `usePrefs` */
+  hook: string;
+  /** `prefs`: its key in `pinia.state.value`. */
+  id: string;
+  /** `prefs`: its field in the generated `Stores`. */
+  field: string;
+  /** `PrefsState`: the interface its state is. */
+  state: string;
+  /** The file, without its extension, as an import names it once resolved. */
+  module: string;
+  /** Its getters: name → the parameter that names the state, and the expression returned. */
+  getters: Map<string, StoreGetter>;
+}
+
+/** The configured stores, read once per run. */
+interface StoresRun {
+  /** The stores' directory, as the configuration names it, when there is one. */
+  dir: string | null;
+  /** The stores, by hook name, and every interface their files declare. */
+  stores: Map<string, Store>;
+  structs: Map<string, Struct>;
+  /** The store file each of those interfaces is declared in. */
+  files: Map<string, string>;
+}
 
 /** The store module an import names, resolved and without its extension, when it is one. */
 export function storeImport(comp: Component, from: string): string | null {
-  if (!from.startsWith(".") || ctx.stores.size === 0) return null;
+  const { stores } = runOf(piniaStores);
+  if (!from.startsWith(".") || stores.size === 0) return null;
   const target = resolve(ctx.rootDir, dirname(comp.file), from).replace(/\.ts$/, "");
-  return [...ctx.stores.values()].some((s) => s.module === target) ? target : null;
+  return [...stores.values()].some((s) => s.module === target) ? target : null;
 }
 
 /** Every store in the configured directory, and the interfaces their files declare. */
-export function readStores(root: string, dir: string): void {
-  ctx.stores = new Map();
-  ctx.storeStructs = new Map();
-  ctx.storeFiles = new Map();
+function readStores(root: string, dir: string): void {
+  const run = runOf(piniaStores);
   const files = readdirSync(join(root, dir)).filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts")).toSorted();
   for (const f of files) {
     const path = join(root, dir, f);
@@ -31,14 +69,14 @@ export function readStores(root: string, dir: string): void {
     const decls = ast.map((st) => (st.type === "ExportNamedDeclaration" ? st.declaration : st)).filter(Boolean);
     const interfaces = decls.filter((d) => d.type === "TSInterfaceDeclaration");
     for (const d of interfaces) {
-      if (ctx.storeStructs.has(d.id.name)) fail(comp, `\`${d.id.name}\` is declared by another store too`, d);
-      ctx.storeStructs.set(d.id.name, { name: d.id.name, fields: [] });
-      ctx.storeFiles.set(d.id.name, comp.file);
+      if (run.structs.has(d.id.name)) fail(comp, `\`${d.id.name}\` is declared by another store too`, d);
+      run.structs.set(d.id.name, { name: d.id.name, fields: [] });
+      run.files.set(d.id.name, comp.file);
     }
     for (const d of interfaces) {
-      const st = structOf(comp, d.id.name, d.body.body, ctx.storeStructs);
+      const st = structOf(comp, d.id.name, d.body.body, run.structs);
       for (const field of st.fields) field.ty = markStore(field.ty);
-      ctx.storeStructs.set(d.id.name, st);
+      run.structs.set(d.id.name, st);
     }
     for (const d of decls) {
       if (d.type !== "VariableDeclaration") continue;
@@ -55,7 +93,7 @@ export function readStores(root: string, dir: string): void {
         const state = options.properties.find((p: N) => (p.key?.name ?? p.key?.value) === "state");
         const fn = state?.value ?? (state?.type === "ObjectMethod" ? state : null);
         const ret = fn?.returnType?.typeAnnotation;
-        if (ret?.type !== "TSTypeReference" || !ctx.storeStructs.has(ret.typeName.name)) {
+        if (ret?.type !== "TSTypeReference" || !run.structs.has(ret.typeName.name)) {
           fail(comp, "a store's `state` declares its return type, an interface in the same file: `state: (): State => ({ … })`", state ?? init);
         }
         const getters = new Map<string, StoreGetter>();
@@ -76,7 +114,7 @@ export function readStores(root: string, dir: string): void {
           // A getter the server cannot translate fails where a component reads it, not here.
           getters.set(name, { param: param?.type === "Identifier" ? param.name : null, body, file: comp.file });
         }
-        ctx.stores.set(v.id.name, {
+        run.stores.set(v.id.name, {
           hook: v.id.name,
           id: id.value,
           field: snake(id.value),
@@ -89,11 +127,11 @@ export function readStores(root: string, dir: string): void {
   }
 }
 
-/** A store file, as the thing its types are declared in: what errors name, and where they resolve. */
 /** A setup store: \`defineStore(id, () => { …; return { … } })\`. The refs it returns are its state —
  * typed by \`ref<T>(…)\`, or by the literal they start from — the computeds it returns its getters,
  * and its functions actions, which only the client runs. */
 function setupStore(comp: Component, hook: string, id: string, fn: N, path: string): void {
+  const run = runOf(piniaStores);
   if (fn.body.type !== "BlockStatement") fail(comp, "a setup store's function returns its state from a block: `() => { …; return { … } }`", fn);
   const refs = new Map<string, Ty>();
   const computeds = new Map<string, N>();
@@ -145,18 +183,19 @@ function setupStore(comp: Component, hook: string, id: string, fn: N, path: stri
     else if (!others.has(local)) fail(comp, `\`${local}\` is not declared in the store's function`, p);
   }
   const name = id.split(/[-_]/).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join("") + "State";
-  if (ctx.storeStructs.has(name)) fail(comp, `\`${name}\` names this setup store's state; rename the interface`, fn);
-  ctx.storeStructs.set(name, { name, fields: state });
-  ctx.storeFiles.set(name, comp.file);
-  ctx.stores.set(hook, { hook, id, field: snake(id), state: name, module: path.replace(/\.ts$/, ""), getters });
+  if (run.structs.has(name)) fail(comp, `\`${name}\` names this setup store's state; rename the interface`, fn);
+  run.structs.set(name, { name, fields: state });
+  run.files.set(name, comp.file);
+  run.stores.set(hook, { hook, id, field: snake(id), state: name, module: path.replace(/\.ts$/, ""), getters });
 }
 
 /** A setup store ref's type: \`ref<T>(…)\`, or what its initial literal is; optional when it has none. */
 function refType(comp: Component, init: N): Ty {
+  const run = runOf(piniaStores);
   const typed = init.typeParameters?.params?.[0];
   const value = init.arguments[0];
   if (typed) {
-    const ty = tyOfTs(comp, typed, ctx.storeStructs);
+    const ty = tyOfTs(comp, typed, run.structs);
     return value ? ty : opt(ty);
   }
   const literal = (n: N): Ty | null => {
@@ -173,38 +212,54 @@ function refType(comp: Component, init: N): Ty {
   return literal(value) ?? fail(comp, "a setup store's ref declares its type: `ref<string[]>([])`", init);
 }
 
+/** A store file, as the thing its types are declared in: what errors name, and where they resolve. */
 export function storeHome(file: string): Component {
-  return {
-    name: basename(file),
-    module: "stores",
-    file,
-    props: { name: "Props", fields: [] },
-    structs: ctx.storeStructs,
-    trustedName: null,
-    floatName: null,
-    childProps: new Map(),
-    imports: new Set(),
-    slotNames: [],
-    routerView: false,
-    routerLink: false,
-    readsRoute: false,
-    usesRoute: false,
-    readsStores: false,
-    usesStores: false,
-    readsI18n: false,
-    usesI18n: false,
-    readsTeleports: false,
-    usesTeleports: false,
-    models: new Map(),
-    aliases: new Map(),
-    importedTypes: new Map(),
-    slotShapes: new Map(),
-    scopeId: null,
-    slotted: false,
-    inheritAttrs: true,
-    inherits: false,
-    passesSlotIds: false,
-    attrNames: new Set(),
-    idsInAttrs: false,
-  };
+  return blankComponent(basename(file), "stores", file, runOf(piniaStores).structs);
 }
+
+function storesSource(dir: string): string {
+  const { stores, structs: states, files } = runOf(piniaStores);
+  const home = storeHome(dir);
+  // Test-only `Default` lets a fixture name only the stores it reads; the rest are never looked at.
+  const testDerive = (src: string) =>
+    src.replace("#[cfg_attr(test, derive(serde::Deserialize))]", "#[cfg_attr(test, derive(Default, serde::Deserialize))]\n#[cfg_attr(test, serde(default))]");
+  const structs = [...states.values()]
+    .map((st) => testDerive(structSource(st, home, `/// \`${st.name}\` in \`${files.get(st.name)}\`.\n`)))
+    .join("\n");
+  const all: Struct = {
+    name: "Stores",
+    fields: [...stores.values()].map((st) => ({ js: st.id, rust: st.field, ty: { k: "struct", name: st.state, store: true } })),
+  };
+  const top = testDerive(structSource(all, home, "/// Every store's state, keyed by id as `pinia.state.value` is: what the page sends the client.\n"));
+  return `${header(dir, "the store files")}
+//! The Pinia stores' state, which components read while they render on the server.
+
+${/Cow</.test(structs) ? "use std::borrow::Cow;\n\n" : ""}${structs}
+${top}`;
+}
+
+/** Pinia: the stores' state, read through \`useX()\`, \`storeToRefs\` and getters. */
+export const piniaStores: Plugin<StoresRun> = {
+  name: "stores",
+  configure: (config) => ({ dir: config.stores ?? null, stores: new Map(), structs: new Map(), files: new Map() }),
+  // Store files are TypeScript, which the core's own type reader reads: once the core is configured.
+  prepare(root) {
+    const { dir } = runOf(piniaStores);
+    if (dir) readStores(root, dir);
+  },
+  params: [
+    {
+      name: "fv_stores",
+      ty: "&super::stores::Stores<'_>",
+      pageTy: "&'p super::stores::Stores<'p>",
+      reads: (c) => c.readsStores,
+      test: { lines: ["let state: stores::Stores = serde_json::from_value(fixture.stores.clone()).map_err(|e| e.to_string())?;"], arg: "&state", fixture: true },
+      fixtureField: '    #[serde(rename = "$stores", default = "Fixture::no_stores")]\n    stores: serde_json::Value,',
+      fixtureDefault: "    fn no_stores() -> serde_json::Value {\n        serde_json::Value::Object(Default::default())\n    }",
+    },
+  ],
+  modules() {
+    const { dir, stores } = runOf(piniaStores);
+    return stores.size ? [["stores.rs", storesSource(dir!.replace(/\/?$/, "/"))]] : [];
+  },
+};

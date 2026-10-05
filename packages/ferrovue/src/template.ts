@@ -9,8 +9,9 @@ import { Emitter } from "./emitter.ts";
 import { attrOf, dollarAttrs, IGNORED_PROPS, interpolate, isAttrs, mergedParts, renderAttr, renderAttrs, renderClass, renderDynamicAttr, renderStyle } from "./attrs.ts";
 import { passedKey } from "./scoped.ts";
 import { isSSRSafeAttrName, propsToAttrMap } from "@vue/shared";
-import { routerLink } from "./router.ts";
+import { routerLink } from "./plugins/router.ts";
 import { rustTy } from "./rust.ts";
+import { paramsOf } from "./plugin.ts";
 
 /** One `${...}` inside a pushed template literal. */
 export function slot(s: Scope, e: Emitter, n: N): void {
@@ -313,13 +314,7 @@ export function takesSlots(c: Component): boolean {
 
 /** The arguments after `props` that a component's `render` takes. */
 export function extraParams(c: Component): string {
-  return (
-    (takesSlots(c) ? ", fv_slots: Slots<'_>" : "") +
-    (c.usesRoute ? ", fv_route: &fv::Route<'_>" : "") +
-    (c.usesStores ? ", fv_stores: &super::stores::Stores<'_>" : "") +
-    (c.usesI18n ? ", fv_i18n: &fv::I18n" : "") +
-    (c.usesTeleports ? ", fv_teleports: &fv::Teleports" : "")
-  );
+  return (takesSlots(c) ? ", fv_slots: Slots<'_>" : "") + paramsOf(c).map((p) => `, ${p.name}: ${p.ty}`).join("");
 }
 
 /** `render(out, props[, slots][, route])` for a child, with the slot content this template gives
@@ -339,9 +334,7 @@ export function callChild(s: Scope, e: Emitter, child: Component, propsCode: str
   }
   const m = `super::${child.module}`;
   const scoped = child.inherits || takesAttrs(child);
-  const route =
-    (child.usesRoute ? ", fv_route" : "") + (child.usesStores ? ", fv_stores" : "") + (child.usesI18n ? ", fv_i18n" : "") + (child.usesTeleports ? ", fv_teleports" : "") +
-    (scoped ? `, ${attrs ?? (takesAttrs(child) ? "&fv::Attrs::NONE" : '""')}` : "");
+  const route = paramsOf(child).map((p) => `, ${p.name}`).join("") + (scoped ? `, ${attrs ?? (takesAttrs(child) ? "&fv::Attrs::NONE" : '""')}` : "");
   const render = scoped ? "render_scoped" : "render";
   if (!takesSlots(child)) {
     e.stmt(`${m}::${render}(out, ${propsCode}${route});`);
@@ -647,19 +640,7 @@ export function statements(s: Scope, e: Emitter, body: N[]): void {
         else fail(s.comp, "unexpected `<Suspense>` content", c);
         continue;
       }
-      // `<Teleport>`: markers here, the content in its target's buffer, which the page writes.
-      if (callee === "_ssrRenderTeleport") {
-        const [, content, target, disabled] = c.arguments;
-        if (s.fill) fail(s.comp, "a `<Teleport>` in slot content whose emptiness is decided at run time", st);
-        const to = expr(s, target);
-        if (to.ty.k !== "str") fail(s.comp, "a `<Teleport>`'s `to` is a string", target);
-        const off = disabled ? bare(cond(s, disabled)) : "false";
-        if (content?.type !== "ArrowFunctionExpression" || content.body.type !== "BlockStatement") fail(s.comp, "unexpected `<Teleport>` content", st);
-        e.open(`fv::teleport_into(out, fv_teleports, ${strArg(to.code)}, ${off}, &|out: &mut String|`);
-        statements(s, e, content.body.body);
-        e.close(");");
-        continue;
-      }
+      if (ctx.plugins.some((p) => p.statement?.(s, e, c, st))) continue;
       if (callee === "_ssrRenderVNode") {
         fail(s.comp, "`<component :is>` chooses its component at run time; write the choices out with `v-if`", st);
       }

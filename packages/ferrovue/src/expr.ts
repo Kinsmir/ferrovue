@@ -3,7 +3,10 @@
 import { type Component, type N, type Scope, type Ty, type Val, BOOL, fail, FLOAT, GenError, INT, opt, rustStr, sameTy, snake, STR, UNDEF } from "./model.ts";
 import { CONFIG_FILE, ctx } from "./context.ts";
 import { lookupStruct, markHome } from "./typescript.ts";
-import { translate } from "./i18n.ts";
+import { translate } from "./plugins/i18n.ts";
+import { router } from "./plugins/router.ts";
+import { piniaStores } from "./plugins/stores.ts";
+import { runOf } from "./plugin.ts";
 import { AS, atom, bare, binary, condition, enclosed, FLIPPED, ifElse, logical, negate, not, occurrences, operand, receiver, strArg, UNARY } from "./parens.ts";
 import { collected, computed, computedListMethod, items, listMethod, objectCall } from "./lists.ts";
 
@@ -375,7 +378,7 @@ export function childOf(name: string): Component {
 
 /** The reader's route, which the component then takes. */
 export function theRoute(s: Scope, n: N): Val {
-  if (!ctx.routes) fail(s.comp, `reading the route needs \`routes\` in ${CONFIG_FILE}`, n);
+  if (!runOf(router).routes) fail(s.comp, `reading the route needs \`routes\` in ${CONFIG_FILE}`, n);
   s.comp.readsRoute = true;
   return { code: "fv_route", ty: { k: "route" } };
 }
@@ -419,7 +422,7 @@ function mentions(n: N, name: string): boolean {
 export function storeGetter(s: Scope, base: Val, name: string, node: N): Val | null {
   if (base.ty.k !== "struct" || !base.ty.store) return null;
   const stateName = base.ty.name;
-  const store = [...ctx.stores.values()].find((st) => st.state === stateName);
+  const store = [...runOf(piniaStores).stores.values()].find((st) => st.state === stateName);
   const g = store?.getters.get(name);
   if (!g) return null;
   const where = `getter \`${name}\` in ${g.file}`;
@@ -436,7 +439,7 @@ export function storeGetter(s: Scope, base: Val, name: string, node: N): Val | n
   const setup = new Map<string, Val>();
   const refs = new Set<string>();
   if (g.setup) {
-    const fields = ctx.storeStructs.get(stateName)?.fields ?? [];
+    const fields = runOf(piniaStores).structs.get(stateName)?.fields ?? [];
     for (const f of fields) {
       setup.set(f.js, fieldVal(s.comp, base.code, base.ty, f.js, node));
       refs.add(f.js);

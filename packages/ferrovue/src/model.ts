@@ -174,21 +174,13 @@ export interface Component {
   routerLink: boolean;
   /** Whether it reads the route itself: `useRoute()`, or `$route` in the template. */
   readsRoute: boolean;
-  /** Whether it renders a `<RouterLink>` or reads the route, itself or through a child, and so
-   * takes the route. */
-  usesRoute: boolean;
   /** Whether its setup reads a store. */
   readsStores: boolean;
-  /** Whether it reads a store, itself or through a child, and so takes the stores' state. */
-  usesStores: boolean;
-  /** Whether it translates — \`$t\`, or \`useI18n()\` in setup — and whether it or a child does, and
-   * so takes the request's \`I18n\`. */
+  /** Whether it translates: \`$t\`, or \`useI18n()\` in setup. */
   readsI18n: boolean;
-  usesI18n: boolean;
-  /** Whether it renders a \`<Teleport>\`, and whether it or a child does, and so takes the page's
-   * \`Teleports\`. */
-  readsTeleports: boolean;
-  usesTeleports: boolean;
+  /** The render parameters it takes (\`RenderParam\`), by name: those it reads, and those a child
+   * it renders takes. Known once every component is read. */
+  takes: Set<string>;
   /** `defineModel` bindings: local name → the prop it reads. */
   models: Map<string, string>;
   /** Type aliases it declares: name → the type. */
@@ -217,6 +209,40 @@ export interface Component {
   /** Whether its `$attrs` may hold scope ids: it is the root of a component that may be handed
    * some, which passes them on as attributes. */
   idsInAttrs: boolean;
+}
+
+/** A component with nothing read yet: what \`readComponent\` fills in, and what a \`.ts\` file stands
+ * in as while the types it declares are read, and written out. */
+export function blankComponent(name: string, module: string, file: string, structs: Map<string, Struct> = new Map()): Component {
+  return {
+    name,
+    module,
+    file,
+    props: { name: "Props", fields: [] },
+    structs,
+    trustedName: null,
+    floatName: null,
+    childProps: new Map(),
+    imports: new Set(),
+    slotNames: [],
+    routerView: false,
+    routerLink: false,
+    readsRoute: false,
+    readsStores: false,
+    readsI18n: false,
+    takes: new Set(),
+    models: new Map(),
+    aliases: new Map(),
+    importedTypes: new Map(),
+    slotShapes: new Map(),
+    scopeId: null,
+    slotted: false,
+    inheritAttrs: true,
+    inherits: false,
+    passesSlotIds: false,
+    attrNames: new Set(),
+    idsInAttrs: false,
+  };
 }
 
 export interface Scope {

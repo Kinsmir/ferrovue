@@ -2,12 +2,12 @@
 
 import { parse as parseJs } from "@babel/parser";
 import { readFileSync, statSync } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
-import { type Component, type Field, type N, type Struct, type Ty, BOOL, fail, FLOAT, INT, opt, RUST_PRELUDE, rustStr, sameTy, snake, STR, tagAst } from "./model.ts";
+import { basename, dirname, join, relative, resolve } from "node:path";
+import { type Component, type Field, type N, type Struct, type Ty, blankComponent, BOOL, fail, FLOAT, INT, opt, RUST_PRELUDE, rustStr, sameTy, snake, STR, tagAst } from "./model.ts";
 import { CONFIG_FILE, ctx, TYPES_MODULE } from "./context.ts";
 import { childOf } from "./expr.ts";
-
-import { storeHome } from "./stores.ts";
+import { runOf } from "./plugin.ts";
+import { piniaStores } from "./plugins/stores.ts";
 
 /** The local names \`TrustedHtml\` and \`Float\` are imported under from \`ferrovue/types\`. */
 export function typesImports(comp: Component, body: N[]): void {
@@ -151,8 +151,7 @@ export function readTypeFile(file: string): void {
   if (ctx.typeRead.has(file)) return;
   ctx.typeRead.add(file);
   const rel = relative(ctx.rootDir, file);
-  const home = storeHome(rel);
-  home.structs = ctx.typeStructs;
+  const home = blankComponent(basename(rel), "types", rel, ctx.typeStructs);
   home.aliases = ctx.typeAliases;
   home.source = readFileSync(file, "utf8");
   const body: N[] = parseJs(home.source, { sourceType: "module", plugins: ["typescript"] }).program.body;
@@ -184,7 +183,7 @@ export function markHome(ty: Ty, home: string): Ty {
  * the path the generated code names it by. */
 export function lookupStruct(comp: Component, ty: Ty & { k: "struct" }): { st: Struct | undefined; owner: Component; path: string } {
   // Named from the module being written: plainly within its own, by path from any other.
-  if (ty.store) return { st: ctx.storeStructs.get(ty.name), owner: comp, path: comp.module === "stores" ? "" : "super::stores::" };
+  if (ty.store) return { st: runOf(piniaStores).structs.get(ty.name), owner: comp, path: comp.module === "stores" ? "" : "super::stores::" };
   if (ty.home === "types") return { st: ctx.typeStructs.get(ty.name), owner: comp, path: comp.module === "types" ? "" : "super::types::" };
   if (ty.home !== undefined && ty.home !== comp.name) {
     const owner = childOf(ty.home);

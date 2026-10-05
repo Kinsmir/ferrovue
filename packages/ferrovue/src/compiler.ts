@@ -21,25 +21,18 @@ import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "nod
 import { join, resolve } from "node:path";
 import { type Config, ctx, loadConfig, tyOfName } from "./context.ts";
 import { readComponent } from "./component.ts";
-import { readRoutes } from "./router.ts";
-import { readStores } from "./stores.ts";
-import { i18nSource, readLocales } from "./i18n.ts";
 import { scopeFor } from "./script.ts";
 import { attrsFlow, scopeFlow } from "./scoped.ts";
-import { componentSource, isIsland, modSource, routesSource, storesSource, typesSource } from "./rust.ts";
+import { componentSource, isIsland, modSource } from "./rust.ts";
+import { renderParams } from "./plugin.ts";
+import { PLUGINS } from "./plugins/index.ts";
 
 /** Every generated file, keyed by its name in the output directory. */
 export function generate(root: string, config: Config = loadConfig(root)): Map<string, string> {
   ctx.componentsDir = config.components.replace(/\/?$/, "/");
   ctx.helperModule = config.helpers?.module ?? null;
   ctx.trustedHtml = config.trustedHtml ?? null;
-  const router = config.router ?? (config.routes ? { routes: config.routes } : null);
-  ctx.routes = router ? readRoutes(root, router.routes) : null;
-  ctx.routerBase = router?.base ?? "";
   ctx.clientDirectives = new Set(config.clientDirectives ?? []);
-  ctx.i18n = config.i18n ? readLocales(root, config.i18n) : null;
-  ctx.linkActive = router?.linkActiveClass ?? "router-link-active";
-  ctx.linkExactActive = router?.linkExactActiveClass ?? "router-link-exact-active";
   ctx.rootDir = root;
   ctx.scopeId = config.scopeId ?? "filepath-source";
   ctx.viteRoot = resolve(root, config.viteRoot ?? ".");
@@ -47,11 +40,10 @@ export function generate(root: string, config: Config = loadConfig(root)): Map<s
   ctx.typeAliases = new Map();
   ctx.typeFiles = new Map();
   ctx.typeRead = new Set();
-  if (config.stores) readStores(root, config.stores);
-  else {
-    ctx.stores = new Map();
-    ctx.storeStructs = new Map();
-  }
+  ctx.plugins = PLUGINS;
+  ctx.runs = new Map();
+  for (const p of PLUGINS) ctx.runs.set(p, p.configure?.(config, root));
+  for (const p of PLUGINS) p.prepare?.(root);
   ctx.helpers = Object.fromEntries(
     Object.entries(config.helpers?.functions ?? {}).map(([name, h]) => [
       name,
@@ -66,47 +58,22 @@ export function generate(root: string, config: Config = loadConfig(root)): Map<s
   const read = files.map((f) => readComponent(f, root));
   const components = new Map(read.map((r) => [r.comp.name, r.comp]));
   ctx.components = components;
-  // Whether a component reads a store or the route is known once its setup is read; both reach
-  // every component on the way down to one that does, and the route every one on the way down to
-  // a `<RouterLink>`.
+  // What a component reads — a store, the route — is known once its setup is read.
   const scopes = read.map((r) => scopeFor(r.comp, r.ast, components).scope);
   // Which roots may be handed scope ids, and which slot content given a slot scope id.
   scopeFlow(read.map((r, i) => ({ comp: r.comp, ssr: r.ssr, children: scopes[i]!.children })));
   // Which components may be passed attributes beyond their props.
   attrsFlow(read.map((r, i) => ({ comp: r.comp, ssr: r.ssr, children: scopes[i]!.children, attrsBindings: scopes[i]!.attrsBindings })));
-  for (const c of components.values()) c.usesRoute = c.routerLink || c.readsRoute;
+  // A render parameter reaches every component on the way down to one that reads it.
+  for (const c of components.values()) c.takes = new Set(renderParams().filter((p) => p.reads(c)).map((p) => p.name));
   for (let changed = true; changed; ) {
     changed = false;
     for (const c of components.values()) {
-      if (!c.usesRoute && [...c.imports].some((i) => components.get(i)?.usesRoute)) {
-        c.usesRoute = changed = true;
-      }
-    }
-  }
-  for (const c of components.values()) c.usesI18n = c.readsI18n;
-  for (let changed = true; changed; ) {
-    changed = false;
-    for (const c of components.values()) {
-      if (!c.usesI18n && [...c.imports].some((i) => components.get(i)?.usesI18n)) {
-        c.usesI18n = changed = true;
-      }
-    }
-  }
-  for (const c of components.values()) c.usesTeleports = c.readsTeleports;
-  for (let changed = true; changed; ) {
-    changed = false;
-    for (const c of components.values()) {
-      if (!c.usesTeleports && [...c.imports].some((i) => components.get(i)?.usesTeleports)) {
-        c.usesTeleports = changed = true;
-      }
-    }
-  }
-  for (const c of components.values()) c.usesStores = c.readsStores;
-  for (let changed = true; changed; ) {
-    changed = false;
-    for (const c of components.values()) {
-      if (!c.usesStores && [...c.imports].some((i) => components.get(i)?.usesStores)) {
-        c.usesStores = changed = true;
+      for (const name of [...c.imports].flatMap((i) => [...(components.get(i)?.takes ?? [])])) {
+        if (!c.takes.has(name)) {
+          c.takes.add(name);
+          changed = true;
+        }
       }
     }
   }
@@ -129,11 +96,10 @@ export function generate(root: string, config: Config = loadConfig(root)): Map<s
     ctx.narrowCount = 0;
     out.set(`${r.comp.module}.rs`, componentSource(r.comp, r.ast, r.ssr, components));
   }
-  out.set("mod.rs", modSource(read.map((r) => r.comp)));
-  if (ctx.routes) out.set("route_table.rs", routesSource(ctx.routes, router!.routes));
-  if (ctx.stores.size) out.set("stores.rs", storesSource(config.stores!.replace(/\/?$/, "/")));
-  if (ctx.typeStructs.size) out.set("types.rs", typesSource());
-  if (ctx.i18n) out.set("i18n.rs", i18nSource(ctx.i18n));
+  // Beside the components, the modules the plugins write.
+  const modules = PLUGINS.flatMap((p) => p.modules?.() ?? []);
+  out.set("mod.rs", modSource(read.map((r) => r.comp), modules.map(([file]) => file)));
+  for (const [file, text] of modules) out.set(file, text);
   return out;
 }
 

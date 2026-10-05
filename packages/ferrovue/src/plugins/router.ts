@@ -3,13 +3,42 @@
 import { escapeHtml } from "@vue/shared";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { type N, type Scope, type Val, camelize, fail, GenError, rustStr } from "./model.ts";
-import { allRoutes, type RouteDef, CONFIG_FILE, ctx } from "./context.ts";
-import { expr, lonely } from "./expr.ts";
-import { bare, condition, strArg } from "./parens.ts";
-import { Emitter } from "./emitter.ts";
-import { attrOf, classItems, dollarAttrs, IGNORED_PROPS, isAttrs, mergedParts, mergeProps, renderDynamicAttr, renderStyle } from "./attrs.ts";
-import { slotBody, statements } from "./template.ts";
+import { type N, type Scope, type Val, camelize, fail, GenError, rustStr } from "../model.ts";
+import { CONFIG_FILE } from "../context.ts";
+import { expr, lonely } from "../expr.ts";
+import { bare, condition, strArg } from "../parens.ts";
+import { Emitter } from "../emitter.ts";
+import { attrOf, classItems, dollarAttrs, IGNORED_PROPS, isAttrs, mergedParts, mergeProps, renderDynamicAttr, renderStyle } from "../attrs.ts";
+import { slotBody, statements } from "../template.ts";
+import { type Plugin, runOf } from "../plugin.ts";
+import { header } from "../rust.ts";
+
+/** A route as the routes file lists it: a vue-router path, and the name it may have. */
+export interface RouteDef {
+  /** The path as written: relative to the parent's unless it starts with \`/\`. */
+  path: string;
+  name?: string;
+  /** The routes nested in it. */
+  children?: RouteDef[];
+  /** The path with its ancestors', as vue-router normalises it. */
+  fullPath: string;
+}
+
+/** Every route, nested ones included, parents first. */
+export function allRoutes(routes: RouteDef[]): RouteDef[] {
+  return routes.flatMap((r) => [r, ...allRoutes(r.children ?? [])]);
+}
+
+/** The configured router, read once per run. */
+interface RouterRun {
+  /** The routes, and the file they are read from, when there are any. */
+  routes: RouteDef[] | null;
+  file: string | null;
+  /** The history's base, and the class names active links take. */
+  base: string;
+  linkActive: string;
+  linkExactActive: string;
+}
 
 export const ROUTER_LINK_PROPS = new Set(["to", "class", "activeClass", "exactActiveClass", "ariaCurrentValue"]);
 
@@ -85,7 +114,7 @@ export function resolveLink(s: Scope, e: Emitter, to: N): void {
   const path = parts.get("path");
   if (name) {
     if (name.type !== "StringLiteral") fail(s.comp, "a `to`'s `name` is a string literal, checked against the routes", name);
-    const route = allRoutes(ctx.routes!).find((r) => r.name === name.value);
+    const route = allRoutes(runOf(router).routes!).find((r) => r.name === name.value);
     if (!route) fail(s.comp, `no route is called \`${name.value}\``, name);
     const wanted = routeParams(route.fullPath);
     const given = new Map<string, N>();
@@ -160,7 +189,7 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
   if ((scopeId !== null || slotted !== null || base !== null) && holds((x) => x.type === "CallExpression" && x.callee.name === "_ssrRenderSlot")) {
     fail(s.comp, "a `<slot>` inside a `<RouterLink>` that takes scope ids: vue-router renders it by rules of its own", to);
   }
-  if (!ctx.routes) fail(s.comp, `\`<RouterLink>\` needs \`routes\` in ${CONFIG_FILE}: the paths it resolves against`, n);
+  if (!runOf(router).routes) fail(s.comp, `\`<RouterLink>\` needs \`routes\` in ${CONFIG_FILE}: the paths it resolves against`, n);
   /** A literal-string prop, which the class names and `aria-current` must be. */
   const literal = (key: string, fallback: string): string => {
     const v = fields.get(key);
@@ -168,8 +197,8 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
     if (v.type !== "StringLiteral") fail(s.comp, `\`${key}\` on \`<RouterLink>\` is a string literal`, v);
     return v.value;
   };
-  const activeClass = literal("activeClass", ctx.linkActive);
-  const exactClass = literal("exactActiveClass", ctx.linkExactActive);
+  const activeClass = literal("activeClass", runOf(router).linkActive);
+  const exactClass = literal("exactActiveClass", runOf(router).linkExactActive);
   const ariaCurrent = literal("ariaCurrentValue", "page");
   e.open("");
   resolveLink(s, e, to);
@@ -285,3 +314,70 @@ export function readRoutes(root: string, file: string): RouteDef[] {
     });
   return read(raw, null);
 }
+
+/** Route definitions as \`ferrovue::RouteDef\` literals, children nested. */
+function routeDefs(routes: RouteDef[], depth: number): string {
+  const pad = "    ".repeat(depth);
+  return routes
+    .map((r) => {
+      const name = r.name === undefined ? "None" : `Some(${rustStr(r.name)})`;
+      const children = r.children?.length ? `&[\n${routeDefs(r.children, depth + 1)}\n${pad}]` : "&[]";
+      return `${pad}ferrovue::RouteDef { path: ${rustStr(r.path)}, name: ${name}, children: ${children} },`;
+    })
+    .join("\n");
+}
+
+export function routesSource(routes: RouteDef[], file: string): string {
+  return `${header(file, "the routes file")}
+//! The app's routes: what \`<RouterLink>\` resolves against and \`useRoute()\` reads.
+
+/// Each route: its vue-router path, its name if it has one, and the routes nested in it.
+pub const ROUTES: &[ferrovue::RouteDef<'static>] = &[
+${routeDefs(routes, 1)}
+];
+
+/// Every route's full path, nested ones included.
+pub const PATHS: &[&str] = &[
+${allRoutes(routes).map((r) => `    ${rustStr(r.fullPath)},`).join("\n")}
+];
+
+/// The history's base, which every link's \`href\` starts with.
+pub const BASE: &str = ${rustStr(runOf(router).base)};
+
+/// The router these routes make: build it once, and resolve each request's location with
+/// [\`ferrovue::Router::at\`].
+pub fn router() -> ferrovue::Router {
+    ferrovue::Router::tree(ROUTES).with_base(BASE)
+}
+`;
+}
+
+/** vue-router: \`<RouterLink>\`, \`<RouterView>\`, \`useRoute()\` and \`$route\`, and the routes file. */
+export const router: Plugin<RouterRun> = {
+  name: "router",
+  configure(config, root) {
+    const r = config.router ?? (config.routes ? { routes: config.routes } : null);
+    return {
+      routes: r ? readRoutes(root, r.routes) : null,
+      file: r?.routes ?? null,
+      base: r?.base ?? "",
+      linkActive: r?.linkActiveClass ?? "router-link-active",
+      linkExactActive: r?.linkExactActiveClass ?? "router-link-exact-active",
+    };
+  },
+  params: [
+    {
+      name: "fv_route",
+      ty: "&fv::Route<'_>",
+      pageTy: "&'p fv::Route<'p>",
+      reads: (c) => c.routerLink || c.readsRoute,
+      test: { lines: ["let router = route_table::router();", "let route = router.at(&fixture.route);"], arg: "&route", fixture: true },
+      fixtureField: '    #[serde(rename = "$route", default = "Fixture::root")]\n    route: String,',
+      fixtureDefault: '    fn root() -> String {\n        "/".to_owned()\n    }',
+    },
+  ],
+  modules() {
+    const { routes, file } = runOf(router);
+    return routes ? [["route_table.rs", routesSource(routes, file!)]] : [];
+  },
+};

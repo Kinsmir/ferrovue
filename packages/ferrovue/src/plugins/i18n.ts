@@ -3,11 +3,11 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { createParser } from "@intlify/message-compiler";
-import { type N, type Scope, type Val, fail, GenError, rustStr, STR } from "./model.ts";
-import { ctx } from "./context.ts";
-import { expr } from "./expr.ts";
-import { bare, strArg } from "./parens.ts";
-import { header } from "./rust.ts";
+import { type N, type Scope, type Val, fail, GenError, rustStr, STR } from "../model.ts";
+import { expr } from "../expr.ts";
+import { bare, strArg } from "../parens.ts";
+import { header } from "../rust.ts";
+import { type Plugin, runOf } from "../plugin.ts";
 
 /** A locale's messages, each parsed by vue-i18n's own message compiler, by dotted key. */
 export interface LocaleMessages {
@@ -31,7 +31,7 @@ const MODIFIERS = new Set(["upper", "lower", "capitalize"]);
 
 /** Every message of every `*.json` locale file in the directory: nested objects joined with dots,
  * as vue-i18n resolves a path — a nested key first, then a flat key of the same spelling. */
-export function readLocales(root: string, config: { messages: string; locale?: string; fallbackLocale?: string | string[] }): I18nSetup {
+function readLocales(root: string, config: { messages: string; locale?: string; fallbackLocale?: string | string[] }): I18nSetup {
   const dir = join(root, config.messages);
   const files = readdirSync(dir).filter((f) => f.endsWith(".json")).toSorted();
   const parser = createParser({});
@@ -104,7 +104,7 @@ function byteOrder(a: string, b: string): number {
   return Buffer.compare(Buffer.from(a), Buffer.from(b));
 }
 
-export function i18nSource(setup: I18nSetup): string {
+function i18nSource(setup: I18nSetup): string {
   const locales = setup.locales
     .map((l) => {
       const keys = [...l.messages.keys()].toSorted(byteOrder);
@@ -160,7 +160,7 @@ function i18nValue(s: Scope, n: N): string {
 /** `t(key)`, `t(key, plural)`, `t(key, { named })`, `t(key, [list])`, `t(key, { named }, plural)`:
  * the message translated in the request's locale. */
 export function translate(s: Scope, args: N[], n: N): Val {
-  if (!ctx.i18n) fail(s.comp, "`t()` needs `i18n` in ferrovue.config.json: where the locale files are", n);
+  if (!runOf(i18n)) fail(s.comp, "`t()` needs `i18n` in ferrovue.config.json: where the locale files are", n);
   if (args.length < 1 || args.length > 3) fail(s.comp, "`t()` takes a key, then named values, a list or a plural number", n);
   const key = expr(s, args[0]);
   if (key.ty.k !== "str") fail(s.comp, "the key given to `t()` is a string", args[0]);
@@ -185,3 +185,23 @@ export function translate(s: Scope, args: N[], n: N): Val {
   }
   return { code: `&*fv_i18n.t(${strArg(key.code)}, &fv::i18n::Args { named: ${named}, list: ${list}, plural: ${plural} })`, ty: STR };
 }
+
+/** vue-i18n: \`$t\` and \`useI18n()\`, and the locale files. The run's state is the configured setup. */
+export const i18n: Plugin<I18nSetup | null> = {
+  name: "i18n",
+  configure: (config, root) => (config.i18n ? readLocales(root, config.i18n) : null),
+  params: [
+    {
+      name: "fv_i18n",
+      ty: "&fv::I18n",
+      pageTy: "&'p fv::I18n",
+      reads: (c) => c.readsI18n,
+      test: { lines: ["let i18n = i18n::i18n(fixture.locale.as_deref().unwrap_or(i18n::LOCALE));"], arg: "&i18n", fixture: true },
+      fixtureField: '    #[serde(rename = "$locale", default)]\n    locale: Option<String>,',
+    },
+  ],
+  modules() {
+    const setup = runOf(i18n);
+    return setup ? [["i18n.rs", i18nSource(setup)]] : [];
+  },
+};

@@ -5,9 +5,11 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { SourceMapConsumer } from "source-map-js";
 import { basename, relative, resolve, sep } from "node:path";
-import { type Component, type N, fail, opt, snake, tagAst } from "./model.ts";
+import { type Component, type N, blankComponent, fail, opt, snake, tagAst } from "./model.ts";
 import { ctx } from "./context.ts";
 import { typesImports, declareTypes, defaultValue, definePropsType, readTypeFile, resolveImport, runtimeDefaults, structOf, tyOfTs } from "./typescript.ts";
+import { runOf } from "./plugin.ts";
+import { piniaStores } from "./plugins/stores.ts";
 
 /** A Vue compiler error's position as a node \`fail\` can point at: its line and 1-based column,
  * offset by where the template starts when the error is in the template's content. */
@@ -56,39 +58,7 @@ export function readComponent(file: string, root: string): { comp: Component; as
   const source = readFileSync(file, "utf8");
   const { descriptor, errors } = parseSfc(source, { filename: file });
   const rel = relative(root, file);
-  const comp: Component = {
-    name,
-    module: snake(name),
-    file: rel,
-    props: { name: "Props", fields: [] },
-    structs: new Map(),
-    trustedName: null,
-    floatName: null,
-    childProps: new Map(),
-    imports: new Set(),
-    slotNames: [],
-    routerView: false,
-    routerLink: false,
-    readsRoute: false,
-    usesRoute: false,
-    readsStores: false,
-    usesStores: false,
-    readsI18n: false,
-    usesI18n: false,
-    readsTeleports: false,
-    usesTeleports: false,
-    models: new Map(),
-    aliases: new Map(),
-    importedTypes: new Map(),
-    slotShapes: new Map(),
-    scopeId: null,
-    slotted: false,
-    inheritAttrs: true,
-    inherits: false,
-    passesSlotIds: false,
-    attrNames: new Set(),
-    idsInAttrs: false,
-  };
+  const comp = blankComponent(name, snake(name), rel);
   comp.source = source;
   if (errors.length) fail(comp, String(errors[0]), vueErrorNode(errors[0]));
   if (!descriptor.scriptSetup || !descriptor.template) {
@@ -139,8 +109,9 @@ export function readComponent(file: string, root: string): { comp: Component; as
       const typeFile = resolveImport(comp.file, from);
       if (!typeFile) continue;
       const module = typeFile.replace(/\.ts$/, "");
-      if ([...ctx.stores.values()].some((x) => x.module === module)) {
-        if (ctx.storeStructs.has(typeName)) comp.importedTypes.set(sp.local.name, { k: "struct", name: typeName, store: true });
+      const stores = runOf(piniaStores);
+      if ([...stores.stores.values()].some((x) => x.module === module)) {
+        if (stores.structs.has(typeName)) comp.importedTypes.set(sp.local.name, { k: "struct", name: typeName, store: true });
         continue;
       }
       if (ctx.helperModule !== null && from === ctx.helperModule && !isType) continue;
@@ -244,6 +215,6 @@ export function readComponent(file: string, root: string): { comp: Component; as
   comp.routerView = compiled.code.includes('_resolveComponent("RouterView")') || imported("RouterView");
   comp.readsRoute = compiled.code.includes("_ctx.$route");
   comp.readsI18n = compiled.code.includes("_ctx.$t(");
-  comp.readsTeleports = compiled.code.includes("_ssrRenderTeleport(");
+  for (const p of ctx.plugins) p.compiled?.(comp, compiled.code, [...plainAst, ...ast]);
   return { comp, ast, ssr: compiled.code };
 }
