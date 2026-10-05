@@ -11,12 +11,7 @@
 //! assert_eq!((link.href.as_str(), link.active, link.exact), ("/blog/hello", true, true));
 //! assert!(!route.link("/").active);
 //! ```
-#![cfg_attr(docsrs, feature(doc_cfg))]
-#![warn(
-    missing_docs,
-    missing_debug_implementations,
-    rustdoc::missing_crate_level_docs
-)]
+#![warn(missing_debug_implementations, rustdoc::missing_crate_level_docs)]
 
 /// The routes, in the order vue-router tries them.
 ///

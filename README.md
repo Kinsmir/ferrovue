@@ -147,7 +147,7 @@ async fn hello(Path(name): Path<String>) -> impl IntoResponse {
 With the `dioxus` feature, a component goes into a Dioxus 0.7 page (`dioxus-ssr` or fullstack):
 `{greeting::island(&props)}` in `rsx!` is the island element itself, with exactly the markup Vue
 hydrates inside it. See `examples/dioxus` and the crate guide's
-[Dioxus page](crates/ferrovue/docs/guide/dioxus.md).
+[Dioxus page](https://github.com/Kinsmir/ferrovue/blob/main/crates/ferrovue/docs/guide/dioxus.md).
 
 ## What a component may use
 
@@ -284,7 +284,7 @@ The default is the plugin's production behaviour because the production build is
 get: with every option left alone, its styles apply. But plugin-vue hashes the path alone in its dev
 server, so with the default a page rendered during development carries other ids than the dev
 client and shows unstyled. The recommended setup is `componentIdGenerator: "filepath"` with
-`"scopeId": "filepath"`, as [`examples/fullstack`](examples/fullstack) does: the ids are then the
+`"scopeId": "filepath"`, as [`examples/fullstack`](https://github.com/Kinsmir/ferrovue/tree/main/examples/fullstack) does: the ids are then the
 same in development and production, and do not change, nor change the generated Rust, whenever a
 component's source does.
 
@@ -606,12 +606,14 @@ crates/ferrovue-i18n/        vue-i18n's t() (the `i18n` feature)
 packages/ferrovue/           the compiler (npm package)
   src/index.ts               `ferrovue`: the browser API, `mountIslands`, `mountPage`, `hydrateState` and the types
   src/compiler.ts            `ferrovue/compiler`: `generate`, `write`
+  src/context.ts, model.ts   `ferrovue.config.json`, and the types and values the compiler passes around
   src/component.ts, script.ts, typescript.ts, constants.ts
                              a `.vue` file read, <script setup>, TypeScript types, constants and enums
   src/template.ts, children.ts, slots.ts, loops.ts
                              the compiled template: statements, child components, slots, v-for
-  src/expr.ts, strings.ts, numbers.ts, narrowing.ts, calls.ts, lists.ts
-                             expressions: operators, strings, numbers, narrowing, calls, lists
+  src/expr.ts, strings.ts, numbers.ts, narrowing.ts, calls.ts, lists.ts, parens.ts
+                             expressions: operators, strings, numbers, narrowing, calls, lists,
+                             the parentheses Rust needs
   src/attrs.ts, classes.ts, styles.ts, fallthrough.ts
                              attributes, class and style, attributes a parent passes on
   src/plugin.ts              the plugin interface (see CONTRIBUTING.md)
@@ -619,6 +621,7 @@ packages/ferrovue/           the compiler (npm package)
                              <ClientOnly>, Rust twins
   src/rust.ts, emitter.ts    the Rust source written out
   src/cli.ts, vite.ts        the `ferrovue` command and the Vite plugin
+  src/diff.ts                the diff `ferrovue --check --diff` prints for a stale file
   src/errors.ts, diagnostics.ts
                              every error code with its title, and errors as the CLI, JSON and Vite show them
   src/client.ts              browser-side helpers: `mountIslands`, `mountPage`, `hydrateState`, `<ClientOnly>`
@@ -636,6 +639,8 @@ examples/greeting/           the smallest setup: one component rendered from Rus
 examples/fullstack/          axum + Vite: islands, a page hydrated whole, Pinia state, routes and
                              streaming, <ClientOnly>, a Rust twin and its fixtures
 examples/dioxus/             a Dioxus page, rendered with dioxus-ssr, with an island in it
+scripts/ferrovue-in.ts       the `ferrovue` command run in a project of this repository (`pnpm conformance:check`, CI)
+scripts/inspect.ts           Vue's SSR code and render of a component beside the Rust ferrovue generates for it
 scripts/release.ts           the release version bump (see RELEASING.md)
 ```
 
@@ -648,15 +653,15 @@ pnpm typecheck
 cargo test --all-features
 ```
 
-[TESTING.md](TESTING.md) explains how the suite fits together and how to add a case,
-[CONTRIBUTING.md](CONTRIBUTING.md) how to add support for a Vue construct, and
-[RELEASING.md](RELEASING.md) how a release is cut.
+[TESTING.md](https://github.com/Kinsmir/ferrovue/blob/main/TESTING.md) explains how the suite fits together and how to add a case,
+[CONTRIBUTING.md](https://github.com/Kinsmir/ferrovue/blob/main/CONTRIBUTING.md) how to add support for a Vue construct, and
+[RELEASING.md](https://github.com/Kinsmir/ferrovue/blob/main/RELEASING.md) how a release is cut.
 
-[`examples/fullstack`](examples/fullstack/README.md) is a complete app to copy: an axum server, a Vite client, islands, Pinia, vue-router and streaming, with a test that it hydrates.
+[`examples/fullstack`](https://github.com/Kinsmir/ferrovue/blob/main/examples/fullstack/README.md) is a complete app to copy: an axum server, a Vite client, islands, Pinia, vue-router and streaming, with a test that it hydrates.
 
 ## Licence
 
-Licensed under either of [Apache License, Version 2.0](LICENSE-APACHE) or [MIT licence](LICENSE-MIT),
+Licensed under either of [Apache License, Version 2.0](https://github.com/Kinsmir/ferrovue/blob/main/LICENSE-APACHE) or [MIT licence](https://github.com/Kinsmir/ferrovue/blob/main/LICENSE-MIT),
 at your option. Unless you explicitly state otherwise, any contribution you intentionally submit for
 inclusion in this work, as defined in the Apache-2.0 licence, is dual-licensed as above, without any
 additional terms or conditions.

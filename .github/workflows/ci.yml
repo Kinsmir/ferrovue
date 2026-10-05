@@ -37,11 +37,9 @@ jobs:
       - name: The conformance suite's generated Rust is current
         run: pnpm conformance:check
       - name: The example's generated Rust is current
-        working-directory: examples/greeting
-        run: node ../../packages/ferrovue/src/cli.ts --check
+        run: node scripts/ferrovue-in.ts examples/greeting --check
       - name: The Dioxus example's generated Rust is current
-        working-directory: examples/dioxus
-        run: node ../../packages/ferrovue/src/cli.ts --check
+        run: node scripts/ferrovue-in.ts examples/dioxus --check
 
   lint:
     name: Lint (oxlint, fallow)
