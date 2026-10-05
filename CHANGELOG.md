@@ -5,6 +5,15 @@ released together and share version numbers.
 
 ## [Unreleased]
 
+### Added
+
+- `ferrovue init`: scaffold a starter `ferrovue.config.json` and `components/Hello.vue`.
+- `--config <path>` (`-c`): read configuration from another file.
+- `ferrovue --check --diff` (`-d`): print a unified diff of stale or ungenerated modules.
+- `--version` (`-v`) and `--help` (`-h`).
+- Informative error when `ferrovue.config.json` is missing or invalid, without a stack trace.
+- `VERSION` constant exported from `ferrovue`.
+
 ## [0.2.0] - 2026-10-04
 
 ### Added

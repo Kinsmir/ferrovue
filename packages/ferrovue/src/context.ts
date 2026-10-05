@@ -1,7 +1,7 @@
 /* The project's configuration, and the state one `generate()` run builds up. */
 
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import type { I18nSetup } from "./i18n.ts";
 import { type Component, type N, type Struct, type Ty, BOOL, FLOAT, GenError, INT, opt, STR } from "./model.ts";
 
@@ -43,7 +43,7 @@ export interface Config {
    * `v-`: `["focus", "click-outside"]`. Any other custom directive is refused, since the server
    * cannot know what its `getSSRProps` would add. */
   clientDirectives?: string[];
-  /** vue-i18n: the directory of locale files (\`en.json\`, \`nl.json\`), the locale a page renders in
+  /** vue-i18n: the directory of locale files (`en.json`, `nl.json`), the locale a page renders in
    * when it names none, and the locales a missing message falls back to. */
   i18n?: { messages: string; locale?: string; fallbackLocale?: string | string[] };
   /** How a `<style scoped>` component's `data-v-` id is computed, which must be how
@@ -60,13 +60,29 @@ export type ScopeIdMode = "filepath" | "filepath-source";
 export const CONFIG_FILE = "ferrovue.config.json";
 
 /** Read the project's configuration. */
-export function loadConfig(root: string): Config {
-  const raw = JSON.parse(readFileSync(join(root, CONFIG_FILE), "utf8")) as Partial<Config>;
+export function loadConfig(root: string, configPath?: string): Config {
+  const filePath = configPath ? resolve(root, configPath) : join(root, CONFIG_FILE);
+  const displayName = configPath ?? CONFIG_FILE;
+  let text = "";
+  try {
+    text = readFileSync(filePath, "utf8");
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") {
+      throw new GenError(`cannot find \`${displayName}\` in ${root}`);
+    }
+    throw e;
+  }
+  let raw: Partial<Config>;
+  try {
+    raw = JSON.parse(text) as Partial<Config>;
+  } catch (e) {
+    throw new GenError(`failed to parse \`${displayName}\`: ${(e as Error).message}`);
+  }
   if (typeof raw.components !== "string" || typeof raw.out !== "string") {
-    throw new GenError(`${CONFIG_FILE} needs \`components\` and \`out\` directories`);
+    throw new GenError(`${displayName} needs \`components\` and \`out\` directories`);
   }
   if (raw.scopeId !== undefined && raw.scopeId !== "filepath" && raw.scopeId !== "filepath-source") {
-    throw new GenError(`\`scopeId\` in ${CONFIG_FILE} is "filepath" or "filepath-source", as \`@vitejs/plugin-vue\` computes it`);
+    throw new GenError(`\`scopeId\` in ${displayName} is "filepath" or "filepath-source", as \`@vitejs/plugin-vue\` computes it`);
   }
   return raw as Config;
 }

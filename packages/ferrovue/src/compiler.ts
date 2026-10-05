@@ -173,3 +173,13 @@ export function write(root: string, config: Config = loadConfig(root)): Written 
 
 export { CONFIG_FILE, loadConfig, TYPES_MODULE, type Config, type HelperSpec, type TypeName } from "./context.ts";
 export { GenError } from "./model.ts";
+
+export const VERSION: string = (() => {
+  try {
+    const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as { version?: string };
+    return pkg.version ?? "unknown";
+  } catch {
+    return "unknown";
+  }
+})();
+

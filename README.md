@@ -82,8 +82,11 @@ defineProps<{ name: string; unread: number; note?: string }>();
 ### 4. Generate and render
 
 ```sh
+npx ferrovue init       # a starter ferrovue.config.json and components/Hello.vue
 npx ferrovue            # writes src/generated/{greeting.rs, mod.rs}
 npx ferrovue --check    # in CI: exits 1 if the committed modules are stale
+npx ferrovue --check --diff   # …and shows what differs, as `diff -u` does
+npx ferrovue --watch    # regenerates when components or configs change
 ```
 
 ```rust
