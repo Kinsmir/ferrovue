@@ -51,6 +51,9 @@ pub mod frame;
 pub mod glyph;
 pub mod head_article;
 pub mod head_choice;
+pub mod head_later;
+pub mod head_leaf;
+pub mod head_nest;
 pub mod head_note;
 pub mod head_page;
 pub mod head_seo;
@@ -117,6 +120,7 @@ pub mod swatch_shelf;
 pub mod tab;
 pub mod tabs;
 pub mod tabs_page;
+pub mod tag_casing;
 pub mod tag_content;
 pub mod tag_gallery;
 pub mod tag_heading;
@@ -411,6 +415,26 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: head_choice::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let head = ferrovue::Head::without_defaults();
             head_choice::render(&mut out, &props, &head);
+            head_into(&mut out, &head);
+        }
+        "HeadLater" => {
+            let props: head_later::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let head = ferrovue::Head::without_defaults();
+            head_later::render(&mut out, &props, &head);
+            head_into(&mut out, &head);
+        }
+        "HeadLeaf" => {
+            let props: head_leaf::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
+            let head = ferrovue::Head::without_defaults();
+            head_leaf::render(&mut out, &props, head_leaf::Slots { default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)) }, &head);
+            head_into(&mut out, &head);
+        }
+        "HeadNest" => {
+            let props: head_nest::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let head = ferrovue::Head::without_defaults();
+            head_nest::render(&mut out, &props, &head);
             head_into(&mut out, &head);
         }
         "HeadNote" => {
@@ -752,6 +776,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "TabsPage" => {
             let props: tabs_page::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             tabs_page::render(&mut out, &props, provides::Provides::default());
+        }
+        "TagCasing" => {
+            let props: tag_casing::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            tag_casing::render(&mut out, &props);
         }
         "TagContent" => {
             let props: tag_content::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

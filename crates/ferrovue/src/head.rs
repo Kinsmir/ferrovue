@@ -1,5 +1,5 @@
 use std::borrow::{Borrow, Cow};
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering as AtomicOrdering};
@@ -282,7 +282,21 @@ enum Entry {
 /// ```
 #[derive(Debug)]
 pub struct Head {
-    entries: RefCell<Vec<Entry>>,
+    entries: RefCell<Vec<(usize, Entry)>>,
+    deferral: Cell<usize>,
+}
+
+/// While it lives, what is pushed to the [`Head`] it came from runs after everything pushed
+/// outside it, as the setup of a component `defineAsyncComponent` loads runs on Vue's server once
+/// the rest of the render has. Made by [`Head::deferred`].
+#[doc(hidden)]
+#[derive(Debug)]
+pub struct HeadDeferral<'h>(&'h Head);
+
+impl Drop for HeadDeferral<'_> {
+    fn drop(&mut self) {
+        self.0.deferral.set(self.0.deferral.get() - 1);
+    }
 }
 
 impl Default for Head {
@@ -328,7 +342,18 @@ impl Head {
     pub fn without_defaults() -> Head {
         Head {
             entries: RefCell::new(Vec::new()),
+            deferral: Cell::new(0),
         }
+    }
+
+    /// What the generated code renders a component loaded by `defineAsyncComponent` within: Vue's
+    /// server runs its setup, and the setup of everything it renders, after the components rendered
+    /// without waiting, so its entries come after theirs. Each level of such components nested in
+    /// one another comes after the level outside it.
+    #[doc(hidden)]
+    pub fn deferred(&self) -> HeadDeferral<'_> {
+        self.deferral.set(self.deferral.get() + 1);
+        HeadDeferral(self)
     }
 
     /// `useHead(input)`: an entry after those already pushed. `input` is an object
@@ -345,7 +370,9 @@ impl Head {
     /// assert_eq!(head.render().head_tags, "<title>Dune · Books</title>");
     /// ```
     pub fn push(&self, input: HeadValue) {
-        self.entries.borrow_mut().push(Entry::Input(input));
+        self.entries
+            .borrow_mut()
+            .push((self.deferral.get(), Entry::Input(input)));
     }
 
     /// `useSeoMeta`: `input` holds its `title` and `titleTemplate`, and `meta` each other key as
@@ -357,7 +384,9 @@ impl Head {
         input: HeadValue,
         meta: Vec<(&'static str, &'static str, HeadValue)>,
     ) {
-        self.entries.borrow_mut().push(Entry::SeoMeta(input, meta));
+        self.entries
+            .borrow_mut()
+            .push((self.deferral.get(), Entry::SeoMeta(input, meta)));
     }
 
     /// The head as unhead's `renderSSRHead` writes it.
@@ -394,7 +423,10 @@ impl Head {
 
     fn resolve(&self) -> Vec<Tag> {
         let mut all = Vec::new();
-        for (i, entry) in self.entries.borrow().iter().enumerate() {
+        let entries = self.entries.borrow();
+        let mut ordered: Vec<&(usize, Entry)> = entries.iter().collect();
+        ordered.sort_by_key(|(deferral, _)| *deferral);
+        for (i, (_, entry)) in ordered.into_iter().enumerate() {
             let mut tags = match entry {
                 Entry::Input(input) => entry_tags(input),
                 Entry::SeoMeta(input, meta) => {

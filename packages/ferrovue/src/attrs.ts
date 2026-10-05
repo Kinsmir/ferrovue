@@ -1,4 +1,4 @@
-import { escapeHtml, hyphenate, isBooleanAttr, isSSRSafeAttrName, propsToAttrMap } from "@vue/shared";
+import { escapeHtml, hyphenate, isBooleanAttr, isSSRSafeAttrName, isSVGTag, propsToAttrMap } from "@vue/shared";
 import { type N, type Scope, type Ty, type Val, fail, nothing, GenError, rustStr } from "./model.ts";
 import { CONFIG_FILE, ctx } from "./context.ts";
 import { describeTy, expr } from "./expr.ts";
@@ -70,8 +70,12 @@ export function renderAttr(s: Scope, e: Emitter, key: string, v: Val, n: N): voi
   e.lit(`"`);
 }
 
-export function renderDynamicAttr(s: Scope, e: Emitter, key: string, v: Val, n: N): void {
-  const name = propsToAttrMap[key] ?? key.toLowerCase();
+export function keepsAttrCase(tag: string): boolean {
+  return tag.indexOf("-") > 0 || isSVGTag(tag);
+}
+
+export function renderDynamicAttr(s: Scope, e: Emitter, key: string, v: Val, n: N, tag: string | null = null): void {
+  const name = tag !== null && keepsAttrCase(tag) ? key : (propsToAttrMap[key] ?? key.toLowerCase());
   if (!isSSRSafeAttrName(name)) fail(s.comp, "FV0404", `unsafe attribute name \`${name}\``, n);
   renderable(s, key, v, n);
   if (nothing(v.ty)) return;
@@ -84,7 +88,7 @@ export function renderDynamicAttr(s: Scope, e: Emitter, key: string, v: Val, n: 
   }
   if (v.ty.k === "opt") {
     e.open(`if let Some(v) = ${v.code}`);
-    renderDynamicAttr(s, e, key, { code: "v", ty: v.ty.of }, n);
+    renderDynamicAttr(s, e, key, { code: "v", ty: v.ty.of }, n, tag);
     e.close();
     return;
   }

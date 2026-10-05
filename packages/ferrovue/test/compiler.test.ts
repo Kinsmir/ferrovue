@@ -37,6 +37,23 @@ const props = defineProps<{ label: string }>();
     expect(out.get("x.rs")).toContain("pub fn render");
   });
 
+  it("writes a component named after a Rust keyword to the file its raw module name reads", () => {
+    const leaf = "<template><p>x</p></template>";
+    const out = compile(island(leaf, { Type: leaf, Match: leaf, Self: leaf }));
+    expect([...out.keys()].toSorted()).toEqual(["match.rs", "mod.rs", "self_.rs", "type.rs", "x.rs"]);
+    expect(out.get("mod.rs")).toContain("pub mod r#type;");
+  });
+
+  it.each([
+    [{ "My-Card": "" }, "components/My-Card.vue", "not a Rust name"],
+    [{ FooBar: "", Foo_bar: "" }, "components/Foo_bar.vue", "as components/FooBar.vue's is"],
+    [{ Mod: "" }, "components/Mod.vue", "`mod.rs`, which holds the generated modules"],
+  ])("refuses component files whose module would not be their own: %o", (files, file, message) => {
+    const leaf = "<template><p>x</p></template>";
+    const project = island(leaf, Object.fromEntries(Object.keys(files).map((name) => [name, leaf])));
+    expect(() => compile(project)).toThrow(expect.objectContaining({ code: "FV0007", at: { file }, message: expect.stringContaining(message) }));
+  });
+
   it("gives a component that needs only its props an html and island that hold them as well", () => {
     const borrowing = compile(
       island(`<script setup lang="ts">
@@ -2097,6 +2114,15 @@ const picked = ref("a");
       /`v-model` on a `<select>` in content Vue renders from virtual nodes/,
     ],
     [
+      "a ClientOnly fallback inside a dynamic element",
+      `<script setup lang="ts">
+import { ClientOnly } from "ferrovue/client";
+defineProps<{ tag: "div" | "p" }>();
+</script>
+<template><component :is="tag"><ClientOnly><template #fallback><b>wait</b></template><i>now</i></ClientOnly></component></template>`,
+      /X\.vue:5:\d+: `<ClientOnly>` with a `#fallback` in content Vue renders from virtual nodes/,
+    ],
+    [
       "a slot with fallback content inside a dynamic element",
       `<script setup lang="ts">
 defineProps<{ tag: "b" | "i" }>();
@@ -2413,6 +2439,7 @@ defineProps<{ c: string | null }>();
     "a slot with fallback content inside a dynamic element": "FV0919",
     "v-show inside a dynamic element": "FV0423",
     "v-model on a select inside a dynamic element": "FV0423",
+    "a ClientOnly fallback inside a dynamic element": "FV1511",
     "a slot rendered inside a dynamic element and outside one": "FV0920",
     "a custom directive the configuration does not declare client-only": "FV0405",
     "a type that is both null and undefined": "FV0311",

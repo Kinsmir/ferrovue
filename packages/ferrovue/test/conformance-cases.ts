@@ -24,7 +24,7 @@ export const OPTIONS: RouterOptions = I18N ? { i18n: I18N } : {};
 
 export const VUE_DISAGREES = new Set(["Hollow/absent.json", "Hollow/absent-on.json", "Hollow/whitespace.json", "Hollow/js-whitespace.json", "App/empty-view.json"]);
 
-export const UNHEAD_REWRITES = new Set(["HeadPage/hostile.json"]);
+export const UNHEAD_REWRITES = new Set(["HeadPage/hostile.json", "HeadLater/hostile.json", "HeadNest/hostile.json"]);
 
 export const CLIENT_ONLY: Record<string, string> = { ClientSide: 'class="gauge measured" max="100"' };
 

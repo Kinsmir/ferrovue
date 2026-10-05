@@ -89,6 +89,9 @@ export const clientOnly: Plugin<ClientOnlyRun> = {
       e.lit("<!---->");
       return true;
     }
+    if (s.vnode) {
+      fail(s.comp, "FV1511", "`<ClientOnly>` with a `#fallback` in content Vue renders from virtual nodes (in an element `<component :is>` chooses, a `<RouterLink>` or a twin's slot, or in slot content they render), where Vue's server writes an empty fragment instead of the fallback: leave out the `#fallback`, or move the `<ClientOnly>` outside that content", fallback);
+    }
     const { body, param } = slotContent(s, fallback);
     if (param && !(param.type === "Identifier" && param.name === "_")) fail(s.comp, "FV1506", "`<ClientOnly>`'s `#fallback` passes no props", param);
     e.lit("<!--[-->");

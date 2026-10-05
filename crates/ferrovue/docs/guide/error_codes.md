@@ -37,6 +37,12 @@ Unexpected construct in Vue's compiled template.
 
 The compiler met output of Vue's server compiler that it has no translation for. Please report it with the component that caused it.
 
+## FV0007
+
+Component file name that gives no Rust module of its own.
+
+Each component is written to a Rust module named after its file in snake case (`UserCard.vue` is `user_card.rs`). A file name that is not letters, digits and `_` starting with a letter, two names with the same snake case (`FooBar.vue` and `Foo_bar.vue`), `Mod.vue`, and a name a module ferrovue writes for the project already has (`Types.vue`, `Stores.vue`) are refused.
+
 # Script setup: FV01xx
 
 ## FV0101
@@ -1264,6 +1270,12 @@ Twin prop of a type with no Rust type.
 ## FV1510
 
 Twin for a component ferrovue compiles.
+
+## FV1511
+
+`<ClientOnly>` with a `#fallback` in content rendered from virtual nodes.
+
+Inside an element `<component :is>` chooses, inside a `<RouterLink>` or a twin's slot, and in the slot content they render, Vue's server renders from virtual nodes, and `<ClientOnly>` writes an empty fragment there instead of its fallback, which the client then renders and reports as a mismatch. Leave out the `#fallback`, or move the `<ClientOnly>` outside that content.
 
 # Provide and inject: FV16xx
 

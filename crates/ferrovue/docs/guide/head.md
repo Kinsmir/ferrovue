@@ -5,7 +5,8 @@ A component sets the title, meta tags and the rest of the head with
 [unhead](https://unhead.unjs.io) (`@unhead/vue` 3), as Nuxt's `useHead` and `useSeoMeta` do. The
 compiler translates each call in `<script setup>` into a push onto a [`Head`](crate::Head), in the
 order Vue's server would run them: a parent's setup before its children's, the children in the
-order they render. Once the body is rendered, [`Head::render`](crate::Head::render) gives what
+order they render, and a component `defineAsyncComponent` loads, with everything it renders, after
+the components rendered without waiting, as Vue's server waits for it. Once the body is rendered, [`Head::render`](crate::Head::render) gives what
 unhead's `renderSSRHead` gives for the same calls: the same tags, in the same order, deduplicated
 and escaped the same way, with the title template applied. The suite holds it to unhead's own
 renderer, over the conformance components and over hundreds of recorded heads

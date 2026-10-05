@@ -70,6 +70,7 @@ export interface Plugin<Run = unknown, Local = unknown> {
   component?(s: Scope, e: Emitter, n: N): boolean;
   child?(s: Scope, child: Component, n: N): void;
   childIds?(s: Scope, child: Component, passesAttrs: boolean, inSlot: boolean, n: N): string | null;
+  loadedLater?(child: Component): string[];
   statement?(s: Scope, e: Emitter, call: N, st: N): boolean;
 
   params?: RenderParam[];

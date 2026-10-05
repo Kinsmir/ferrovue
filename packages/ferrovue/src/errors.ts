@@ -45,6 +45,10 @@ export const ERRORS = {
     title: "Unexpected construct in Vue's compiled template",
     detail: "The compiler met output of Vue's server compiler that it has no translation for. Please report it with the component that caused it.",
   },
+  FV0007: {
+    title: "Component file name that gives no Rust module of its own",
+    detail: "Each component is written to a Rust module named after its file in snake case (`UserCard.vue` is `user_card.rs`). A file name that is not letters, digits and `_` starting with a letter, two names with the same snake case (`FooBar.vue` and `Foo_bar.vue`), `Mod.vue`, and a name a module ferrovue writes for the project already has (`Types.vue`, `Stores.vue`) are refused.",
+  },
 
   FV0101: { title: "`inheritAttrs` that is not `true` or `false`" },
   FV0102: { title: "`watch` with `immediate`" },
@@ -381,6 +385,10 @@ export const ERRORS = {
   FV1508: { title: "`<Teleport>` target that is not a string" },
   FV1509: { title: "Twin prop of a type with no Rust type" },
   FV1510: { title: "Twin for a component ferrovue compiles" },
+  FV1511: {
+    title: "`<ClientOnly>` with a `#fallback` in content rendered from virtual nodes",
+    detail: "Inside an element `<component :is>` chooses, inside a `<RouterLink>` or a twin's slot, and in the slot content they render, Vue's server renders from virtual nodes, and `<ClientOnly>` writes an empty fragment there instead of its fallback, which the client then renders and reports as a mismatch. Leave out the `#fallback`, or move the `<ClientOnly>` outside that content.",
+  },
 
   FV1601: { title: "Injection key that is not a string literal or a symbol exported from a `.ts` file" },
   FV1602: { title: "Injection key symbol without an `InjectionKey<T>` type" },

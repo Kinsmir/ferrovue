@@ -228,6 +228,7 @@ export interface Scope {
   components: Map<string, Component>;
   setup: Map<string, Val>;
   children: Map<string, string>;
+  loadedLater: Set<string>;
   helpers: Map<string, string>;
   locals: Map<string, Val>;
   propsIdent: string | null;
@@ -334,7 +335,21 @@ function written(comp: Component, node: N): N {
   }
 }
 
-function templateNode(comp: Component, test: (el: N) => N): N {
+export function staticClassFirst(comp: Component, bound: N): boolean {
+  const at = locate(comp, bound);
+  if (!at) return false;
+  const pos = [at.line, at.column + 1];
+  const before = (a: number[], b: number[]): boolean => a[0]! < b[0]! || (a[0] === b[0] && a[1]! <= b[1]!);
+  const within = (loc: N): boolean => before([loc.start.line, loc.start.column], pos) && before(pos, [loc.end.line, loc.end.column]);
+  const isBound = (p: N): boolean => p.type === 7 && p.name === "bind" && p.arg?.content === "class" && within(p.loc);
+  const el = templateNode(comp, (n) => (n.props.some(isBound) ? n : null), true);
+  if (!el) return false;
+  const props: N[] = el.props;
+  const literal = props.findIndex((p) => p.type === 6 && p.name === "class");
+  return literal >= 0 && literal < props.findIndex(isBound);
+}
+
+function templateNode(comp: Component, test: (el: N) => N, raw = false): N {
   const visit = (n: N): N => {
     const found = n.type === 1 ? test(n) : null;
     if (found) return found;
@@ -345,6 +360,7 @@ function templateNode(comp: Component, test: (el: N) => N): N {
     return null;
   };
   const found = comp.templateAst ? visit(comp.templateAst) : null;
+  if (raw) return found;
   return found && { type: "VueTemplate", loc: { start: { line: found.loc.start.line, column: found.loc.start.column - 1 } }, __fv: "source" };
 }
 

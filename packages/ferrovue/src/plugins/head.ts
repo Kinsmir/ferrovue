@@ -330,6 +330,7 @@ export const head: Plugin<Set<Component>, HeadScope> = {
     for (const name of d.id.type === "Identifier" ? [d.id.name] : []) s.clientOnly.set(name, "the entry `useHead` returns is for the client, which patches and disposes it");
     return true;
   },
+  loadedLater: (child) => (child.takes.has("fv_head") ? ["let _fv_later = fv_head.deferred();"] : []),
   prelude(s) {
     const after = scopeOf(head, s).calls.map(({ kind, call }) =>
       kind === "seo" ? `fv_head.push_seo_meta(${seoMeta(s, call.arguments[0])});` : `fv_head.push(${headInput(s, call.arguments[0])});`,

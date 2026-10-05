@@ -126,6 +126,7 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
     components,
     setup: new Map(),
     children: new Map(),
+    loadedLater: new Set(),
     helpers: new Map(),
     locals: new Map(),
     propsIdent: null,
@@ -221,6 +222,7 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
       const loaded = d.id.type === "Identifier" ? asyncs.get(d.id.name) : undefined;
       if (loaded !== undefined) {
         scope.children.set(d.id.name, loaded);
+        scope.loadedLater.add(d.id.name);
         continue;
       }
       if (ctx.plugins.some((p) => p.scriptBinding?.(scope, d, lets))) continue;
