@@ -43,7 +43,7 @@ function isMissing(error: unknown, name: string): boolean {
 }
 
 function missingPeer(name: string, needs: string, cause: unknown): Error {
-  return new Error(`ferrovue/testing: ${needs}, which needs \`${name}\`: install it in your project (\`npm install -D ${name}\`)`, { cause });
+  return new Error(`ferrovue/testing: ${needs}, which needs \`${name}\`: install it in your project (\`pnpm add -D ${name}\`, or your package manager's equivalent)`, { cause });
 }
 
 export async function peer<T>(name: string, needs: string, load: () => Promise<T>): Promise<T> {

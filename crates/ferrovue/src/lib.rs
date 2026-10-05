@@ -58,6 +58,7 @@ pub use strings::{
 pub use teleport::{Teleports, teleport_into};
 pub use trusted::{TrustedHtml, trusted_into};
 #[cfg(feature = "stream")]
+#[cfg_attr(docsrs, doc(cfg(feature = "stream")))]
 pub use web::HtmlStream;
 
 #[doc(inline)]
