@@ -83,7 +83,7 @@ impl std::fmt::Write for Short {
 }
 
 /// `Number.prototype.toString()`: JavaScript's shortest round-trip digits, laid out as ECMAScript
-/// lays them out — `0.30000000000000004`, `1e+21`, `1.5e-7`, `NaN`, `-Infinity`.
+/// lays them out: `0.30000000000000004`, `1e+21`, `1.5e-7`, `NaN`, `-Infinity`.
 ///
 /// # Example
 ///
@@ -206,8 +206,8 @@ fn few_exact_digits(x: f64) -> Option<(String, i32)> {
     (digits.len() <= 18).then(|| (digits.to_owned(), all.len() as i32 - 1 + scale))
 }
 
-/// `Math.round`: the nearest integer, a half rounding up toward +∞ — `-2.5` to `-2`, where Rust's
-/// `f64::round` gives `-3` — and `-0` from `-0.5` up to zero, which `1 / Math.round(x)` shows.
+/// `Math.round`: the nearest integer, a half rounding up toward +∞ (`-2.5` to `-2`, where Rust's
+/// `f64::round` gives `-3`), and `-0` from `-0.5` up to zero, which `1 / Math.round(x)` shows.
 ///
 /// # Example
 ///

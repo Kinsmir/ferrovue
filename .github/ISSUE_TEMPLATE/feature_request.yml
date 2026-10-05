@@ -1,5 +1,5 @@
 name: Feature request
-description: Anything else — the CLI, configuration, the Rust API, documentation.
+description: Anything else: the CLI, configuration, the Rust API, documentation.
 labels: [enhancement]
 body:
   - type: textarea

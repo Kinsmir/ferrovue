@@ -123,8 +123,8 @@ buffer grows once.
 
 # Fallthrough attributes
 
-What a parent passes a child beyond its props — `<Badge class="wide" :title="t" />` where `Badge`
-declares neither — falls through, as in Vue: onto the child's single root, merged with the root's
+What a parent passes a child beyond its props (`<Badge class="wide" :title="t" />` where `Badge`
+declares neither) falls through, as in Vue: onto the child's single root, merged with the root's
 own class and style and replacing its other attributes where they stand, or, with
 `inheritAttrs: false`, onto whatever element binds `v-bind="$attrs"` (or a `useAttrs()` binding).
 Two roots take none. A root that is another component passes them on to that one, merged with the
@@ -150,8 +150,8 @@ if fv_attrs.is_empty() {
 }
 ```
 
-With nothing passed — from `render`, which passes [`Attrs::NONE`](crate::Attrs::NONE), or from a
-parent that passes none — the root is written exactly as it would be without; only when attributes
+With nothing passed (from `render`, which passes [`Attrs::NONE`](crate::Attrs::NONE), or from a
+parent that passes none), the root is written exactly as it would be without; only when attributes
 arrive does [`attrs_into`](crate::attrs_into) merge them as Vue's `mergeProps` does and write them as
 `ssrRenderAttrs` does. A component no parent passes attributes to has neither: its `render_scoped`,
 if it has one, takes the scope ids alone as a `&str`.

@@ -27,7 +27,7 @@ pub fn class_into(out: &mut String, after: bool, items: &[&str]) {
 }
 
 /// `normalizeClass` of an object: the names whose condition holds, each followed by a space, the
-/// whole trimmed once — so a name's own surrounding spaces survive between its neighbours, as in
+/// whole trimmed once, so a name's own surrounding spaces survive between its neighbours, as in
 /// Vue. Generated code uses it for an object with computed names, which may hold any text.
 ///
 /// # Example

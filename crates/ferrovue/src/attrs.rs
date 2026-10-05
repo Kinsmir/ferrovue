@@ -131,7 +131,7 @@ enum List<'a> {
     Owned(Vec<(&'a str, Attr<'a>)>),
 }
 
-/// What a parent passes a component beyond its props — `$attrs`, in the order given — and the scope
+/// What a parent passes a component beyond its props (`$attrs`, in the order given) and the scope
 /// ids its root inherits, ` data-v-…` each, which Vue keeps after them.
 ///
 /// # Example
@@ -268,7 +268,7 @@ pub fn merge_props<'a>(sources: &[&[(&'a str, Attr<'a>)]]) -> Vec<(&'a str, Attr
 }
 
 /// `ssrRenderAttrs(mergeProps(...sources))` for an element given fallthrough attributes, with the
-/// scope ids written after the attributes the first `ids_at + 1` sources give — where Vue's
+/// scope ids written after the attributes the first `ids_at + 1` sources give, where Vue's
 /// `_attrs`, which holds them as keys after the attributes, sits among the sources.
 ///
 /// # Example

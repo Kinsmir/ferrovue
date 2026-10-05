@@ -145,7 +145,7 @@ released together and share version numbers.
   reports an island whose component did not load. `write` returns the islands it found.
 - The full-stack example hydrates from `ferrovue/islands`, and its server links the stylesheets of the
   lazily loaded islands up front.
-- Fallthrough attributes: what a parent passes a child beyond its props falls through as in Vue —
+- Fallthrough attributes: what a parent passes a child beyond its props falls through as in Vue:
   onto the child's single root, merged with its own class and style and replacing its other
   attributes where they stand (`undefined` included), none for two roots, on through a root that is
   a component or a `<RouterLink>`, and with `inheritAttrs: false` onto the elements and components
@@ -262,8 +262,8 @@ released together and share version numbers.
 - Narrowing as TypeScript narrows: `x !== undefined` as well as `x`, and `!x` or `x === undefined`
   for the `v-else`; in `?:`, `&&` and `||` as well as `v-if`. A value that is always present
   compares unequal to `undefined`; `??` and `?:` between an integer and a `Float` give a `Float`.
-- Testing: every conformance fixture is hydrated in real browsers — Chromium, Firefox and WebKit,
-  through Playwright — as well as in happy-dom, failing on a mismatch Vue reports and on any change
+- Testing: every conformance fixture is hydrated in real browsers (Chromium, Firefox and WebKit,
+  through Playwright) as well as in happy-dom, failing on a mismatch Vue reports and on any change
   hydrating makes to the document as the browser parsed it; the full-stack example's server is run
   and its pages hydrated and clicked through in each browser too (`pnpm test:browser`, and a CI
   job). The fixture app `ferrovue/testing` builds now comes from a module with no Node imports

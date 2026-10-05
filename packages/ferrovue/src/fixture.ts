@@ -78,7 +78,7 @@ export interface RouterOptions {
   client?: boolean;
 }
 
-/** Route records for vue-router, every route — nested ones too — given the fixture's view. */
+/** Route records for vue-router, every route, nested ones too, given the fixture's view. */
 export function routeRecords(routes: RouteEntry[], View: Component): RouteRecordRaw[] {
   return routes.map((r) =>
     typeof r === "string"

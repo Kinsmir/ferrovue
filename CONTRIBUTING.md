@@ -48,7 +48,7 @@ compiler did, and that diff is what a reviewer needs to see.
 
 ## Compiler plugins
 
-What Vue's core does not do — vue-router, Pinia, vue-i18n — and scoped styles are compiler plugins,
+What Vue's core does not do (vue-router, Pinia, vue-i18n) and scoped styles are compiler plugins,
 in `packages/ferrovue/src/plugins/`, so that the core compiler names none of them. A plugin is an
 object of optional hooks, `Plugin` in `src/plugin.ts`, where each hook is documented; the plugins
 are listed in `plugins/index.ts`, and the core calls their hooks at fixed points of a run. The
@@ -79,7 +79,7 @@ needs it to.
   `query` with `declare module "../model.ts" { interface PluginTys { … } }`, and the stores mark
   their own structs through `interface StructTy`. `values` tells the core what to do with them.
 
-An integration still to come — page head, provide/inject, file-based routes — is a new file in
+An integration still to come (page head, provide/inject, file-based routes) is a new file in
 `plugins/`, added to `plugins/index.ts`. Where no hook reaches what it needs, add one to `Plugin`,
 documented there and called from one place in the core, rather than naming the integration in the
 core.

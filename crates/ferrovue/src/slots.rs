@@ -117,7 +117,7 @@ fn write_hole(out: &mut String) {
 }
 
 /// A slot whose content the caller writes itself, later: render with holes, [`split_holes`] the
-/// output, and write the pieces with each hole's content between them — which is how a page streams
+/// output, and write the pieces with each hole's content between them, which is how a page streams
 /// its parts in the order they are ready. A hole is content to the slot, so its fallback never
 /// shows. [`guide::streaming`](crate::guide::streaming) shows a whole streamed page.
 ///
@@ -163,7 +163,7 @@ pub fn split_holes(rendered: &str) -> Vec<&str> {
 }
 
 /// `ssrRenderSlot`: the slot's content between fragment markers, or its fallback when it was given
-/// none — or only comments, which is what Vue reads as nothing.
+/// none, or only comments, which is what Vue reads as nothing.
 ///
 /// Returns whether the slot's own content wrote anything but comments.
 ///
@@ -269,7 +269,7 @@ pub fn is_comment(chunk: &str) -> bool {
 }
 
 /// `ssrRenderSlot` for a scoped slot: the content, given the props the outlet passes it, between
-/// fragment markers — or the fallback when there is no content, or the content wrote only comments.
+/// fragment markers, or the fallback when there is no content, or the content wrote only comments.
 ///
 /// `slot` is a closure taking the slot's props and returning whether it wrote anything but
 /// comments; one written by hand returns `true`, or `false` to discard what it wrote and show the

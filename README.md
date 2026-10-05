@@ -107,7 +107,7 @@ let island = greeting::island(&props).into_string();
 
 // (`island()` exists for a component that renders from its props alone: the client rebuilds it from
 // `data-props`. One that also takes slots, the route, stores, translations or teleports has `html()`,
-// and the page's own app mounts it — see examples/fullstack.)
+// and the page's own app mounts it; see examples/fullstack.)
 
 // …or straight into a buffer you already hold:
 let mut page = String::from("<!doctype html><body>");
@@ -148,7 +148,7 @@ ferrovue compiles `<script setup lang="ts">` components, and components with no 
 
 | Area | Supported |
 |---|---|
-| Prop types | `string`, `number` (integers, `i64`, written and computed as JavaScript does — exact within ±2⁵³), `Float` from `ferrovue/types` (fractions, `f64`), `boolean`, string-literal unions (`"sm" \| "md"`), `T \| undefined`, `T \| null` (an `Option` written as `null`), arrays (`T[]`, `Array<T>`, `readonly T[]`), interfaces and object type aliases (recursive ones too), dictionaries (`Record<string, T>`, `{ [key: string]: T }`, `ferrovue::Record` in Rust, which keeps JavaScript's order of keys), another component's exported `Props`, `TrustedHtml` |
+| Prop types | `string`, `number` (integers, `i64`, written and computed as JavaScript does, exact within ±2⁵³), `Float` from `ferrovue/types` (fractions, `f64`), `boolean`, string-literal unions (`"sm" \| "md"`), `T \| undefined`, `T \| null` (an `Option` written as `null`), arrays (`T[]`, `Array<T>`, `readonly T[]`), interfaces and object type aliases (recursive ones too), dictionaries (`Record<string, T>`, `{ [key: string]: T }`, `ferrovue::Record` in Rust, which keeps JavaScript's order of keys), another component's exported `Props`, `TrustedHtml` |
 | Shared types | Interfaces and type aliases imported from `.ts` files (generated once, into `types.rs`), from a store's file, or from another component's `.vue` file; objects of a shared type can be passed between components. A TypeScript `enum` whose members are literals is the type of its values: a string, or a number |
 | Constants | Constants imported from `.ts` files and `enum`s (imported, or declared in the component), evaluated when the component is compiled: strings, numbers, booleans, `null`, lists of them, objects of them read field by field (`LABELS.save`, `Tone.Loud`, `Rank[5]`), and lists of objects of them, which become a `const` in `types.rs` (`{ value, label }` items get a type named after the constant, `OptionsItem`, unless the constant is typed with an interface: `OPTIONS: Option[]`; a field that is `null` in some items is `T | null`). See [Constants](#constants) |
 | Props | `withDefaults`, destructured props with defaults (`const { size = "md" } = defineProps<…>()`), the props object (`const props = defineProps<…>()`, then `props.label` in the template or in script code), optional booleans (Vue casts an absent one to `false`), `defineModel` (named, required, with defaults), components with no props. A generic component (`<script setup generic="T extends Item">`) renders each type parameter as its constraint, which is all the template can rely on |
@@ -257,8 +257,8 @@ and line it is declared on.
 A `<style scoped>` component's elements carry `data-v-<id>`, and its CSS is rewritten by the client
 build to select them. The server has to write the id the client build chose, which is not something
 the browser checks when it hydrates: a wrong id hydrates cleanly and leaves the styles unapplied. So
-ferrovue computes it as `@vitejs/plugin-vue` does — the first 8 hex digits of a SHA-256 of the
-`.vue` file's path from Vite's root, followed by its source unless only the path is hashed — and the
+ferrovue computes it as `@vitejs/plugin-vue` does (the first 8 hex digits of a SHA-256 of the
+`.vue` file's path from Vite's root, followed by its source unless only the path is hashed), and the
 two must be configured alike:
 
 | `@vitejs/plugin-vue` | `ferrovue.config.json` |
@@ -296,8 +296,8 @@ String methods count as JavaScript counts: in UTF-16 code units, so `"🦀".leng
 from U+E000 to U+FFFF after one beyond U+FFFF. Each runtime routine is held to vectors recorded from
 JavaScript (`crates/*/tests/vectors/`).
 
-A JavaScript string can hold half of a surrogate pair — `"🦀".slice(0, 1)`, `.charAt(1)`,
-`.split("")` — and a Rust string cannot. ferrovue writes U+FFFD in its place, which is exactly what
+A JavaScript string can hold half of a surrogate pair (`"🦀".slice(0, 1)`, `.charAt(1)`,
+`.split("")`), and a Rust string cannot. ferrovue writes U+FFFD in its place, which is exactly what
 the page carries anyway: a server sends Vue's string as UTF-8, and UTF-8 writes each half as U+FFFD
 (`res.end`, `Buffer.from` and `TextEncoder` all do). Its length is the same. Where the half itself
 would decide the result, ferrovue refuses at compile time: two strings that may each hold a half
@@ -319,8 +319,8 @@ Where JavaScript throws, the generated code panics, as Vue's render rejects: a n
 
 ### Dictionaries
 
-A `Record<string, T>` prop is a `ferrovue::Record`, built from pairs —
-`[("b", 1), ("10", 2)].into_iter().collect()` — or read from JSON. It holds its keys in the order a
+A `Record<string, T>` prop is a `ferrovue::Record`, built from pairs
+(`[("b", 1), ("10", 2)].into_iter().collect()`) or read from JSON. It holds its keys in the order a
 JavaScript object does, array indices (`"0"` to `"4294967294"`) first in numeric order, so `v-for`
 walks them as Vue does, and it is written back as JSON in that order, which the browser reads back
 the same.

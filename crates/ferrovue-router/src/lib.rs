@@ -416,7 +416,7 @@ pub enum Query<'r> {
 
 impl<'r> Query<'r> {
     /// `{{ route.query.q }}`, escaped: nothing for `undefined` and `null`, the text for a string,
-    /// and an array as `toDisplayString` writes one — `JSON.stringify(value, null, 2)`.
+    /// and an array as `toDisplayString` writes one: `JSON.stringify(value, null, 2)`.
     ///
     /// # Example
     ///

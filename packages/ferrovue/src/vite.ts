@@ -9,7 +9,7 @@ export interface FerrovueOptions {
 }
 
 /** Whether a changed file can change what is generated: a component, a store or type file, the
- * routes or the configuration — anything but the output itself, dependencies and build output. */
+ * routes or the configuration: anything but the output itself, dependencies and build output. */
 export function affects(root: string, file: string): boolean {
   const rel = relative(root, file);
   if (rel.startsWith("..") || !/\.(vue|ts|json)$/.test(rel)) return false;
