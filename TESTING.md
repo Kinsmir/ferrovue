@@ -55,9 +55,10 @@ fixtures/X/case.json            Vue hydrates it: no mismatch warnings, same DOM 
    and Vue's hydrator takes a component to begin at a node of the DOM, so it finds none where the
    page should be. No page the fixture could render in its place writes nothing and hydrates.
 3. For a fixture with scope ids, which hydration does not compare, it renders the fixture afresh on
-   the client and holds every element's `data-v-` ids to the recorded ones (except in
-   `CLIENT_DIFFERS`, where Vue's own server and client disagree), and it checks that each scoped
-   component's id is the one `@vitejs/plugin-vue` gave it.
+   the client and holds every element's `data-v-` ids to the recorded ones, except in the fixtures
+   in `CLIENT_DIFFERS`, where Vue's own server and client disagree and which must still differ; and
+   it checks that each scoped component's id is the one `@vitejs/plugin-vue` gave it. Each of these
+   lists names fixtures that exist.
 4. It checks that `generated/` is exactly what the compiler writes now.
 5. `tests/conformance.rs` renders every fixture through the generated Rust and compares the result
    with the same `.html`.
@@ -166,7 +167,8 @@ FERROVUE_BROWSERS=chromium pnpm test:browser                             # one b
   the server's first node, or if hydrating changed the document as the browser parsed it.
   Vue rewrites some attributes on purpose as it hydrates (it sets every dynamic prop again);
   those are listed, by fixture, in `PATCHED`, and the test fails if one stops happening. A
-  fixture in `VUE_DISAGREES` must mismatch instead, as in happy-dom.
+  fixture in `VUE_DISAGREES` must mismatch instead, and the head of one in `UNHEAD_REWRITES` must
+  be rewritten, as in happy-dom.
 - **Lazy islands** (`packages/ferrovue/browser/lazy.test.ts`): `lazy-entry.ts` is bundled with its
   islands' components split into chunks of their own, and a page holds three islands from the
   fixtures: one hydrated at once, one waiting for idle and one for `(min-width: 1000px)`. The page
@@ -271,14 +273,16 @@ How a run works:
    smallest case is saved in `fuzz/failures/<seed>-<case>/`: the component, `fixture.json`, Vue's
    `vue.html`, ferrovue's `ferrovue.html` (or the compile error), and `about.txt`.
 
-`pnpm fuzz` exits 1 on a mismatch, a Rust error or generated Rust that does not compile. CI runs it
-nightly (`.github/workflows/fuzz.yml`) with 1,000 components and the date as the seed
+`pnpm fuzz` exits 1 on a mismatch, a Rust error, generated Rust that does not compile, a refusal, a
+fixture Vue cannot render, or a run that compares no fixture at all. CI runs it nightly
+(`.github/workflows/fuzz.yml`) with 1,000 components and the date as the seed
 (`FERROVUE_FUZZ_SEED=20261004`), and uploads `fuzz/failures/` when it fails.
 
 `FERROVUE_FUZZ_PLANT=1` checks the harness itself: before building, it writes one escaped
 interpolation per component unescaped (`out.push_str` for `fv::escape_into`). The run must then
 report mismatches and shrink one to a lone `{{ s }}` with a value such as `">"`. Its failures go to
-`target/fuzz/planted-failures/`, apart from the real ones in `fuzz/failures/`.
+`target/fuzz/planted-failures/`, apart from the real ones in `fuzz/failures/`. The nightly workflow
+runs it on 30 components before the real run and fails unless it reports a mismatch.
 
 ### Turning a failure into a conformance case
 
@@ -328,8 +332,10 @@ a comment saying why it changes nothing. Where the right answer is defined by Ja
 vue-router or vue-i18n, the test that closes a gap takes it from them: a vector recorded with
 `pnpm vectors:record`, or a conformance fixture recorded with `pnpm conformance:record`.
 
-The **Mutants** workflow (`.github/workflows/mutants.yml`) runs every Monday and by hand, in two
-shards, and fails on any survivor that is not in the list. It is too slow for every pull request;
+The **Mutants** workflow (`.github/workflows/mutants.yml`) runs every Monday and by hand, in four
+shards, and fails on any survivor that is not in the list and on any entry of the list that no
+shard missed, which a test now catches and the list no longer needs. It is too slow for every pull
+request;
 run it locally on the functions a change touches (`-F`, or `--in-diff` with a diff file).
 
 ## Investigating a construct

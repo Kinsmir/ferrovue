@@ -160,6 +160,16 @@ it("fails when there are no fixtures at all", async () => {
   expect(Object.keys(results)).toHaveLength(2);
 });
 
+it("fails a project with no components, which would otherwise check nothing", async () => {
+  rmSync(join(root, "components/Hello.vue"));
+  rmSync(join(root, "fixtures/Hello"), { recursive: true });
+  write(root);
+  const results = await outcomes({ components: {} });
+  expect(message(results["has fixtures for every component, and a component for every fixture"])).toBe(
+    ["the fixtures do not cover the components:", `there are no components in ${join(root, "components")}`].join("\n"),
+  );
+});
+
 it("fails generated Rust that is not what the generator writes now, with the diff", async () => {
   const file = join(root, "generated/hello.rs");
   writeFileSync(file, readFileSync(file, "utf8").replace("Hello, ", "Hi, "));

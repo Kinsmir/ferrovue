@@ -4,6 +4,7 @@ use super::*;
 fn a_record_keeps_javascripts_order_of_keys() {
     let vectors: Vec<(String, Vec<String>)> =
         serde_json::from_str(include_str!("../../tests/vectors/keys.json")).expect("key vectors");
+    assert!(vectors.len() >= 8, "the vectors were not all read");
     for (json, want) in &vectors {
         let record: Record<'_, i64> = serde_json::from_str(json).expect("a record");
         assert_eq!(record.keys().collect::<Vec<_>>(), *want, "{json}");

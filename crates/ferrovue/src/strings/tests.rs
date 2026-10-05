@@ -4,7 +4,7 @@ use super::*;
 fn js_trim_is_javascripts_trim() {
     let vectors: Vec<(String, String)> =
         serde_json::from_str(include_str!("../../tests/vectors/trim.json")).expect("trim vectors");
-    assert!(vectors.len() >= 6, "the vectors were not all read");
+    assert!(vectors.len() >= 10, "the vectors were not all read");
     for (input, want) in &vectors {
         assert_eq!(js_trim(input), want, "trim({input:?})");
     }
@@ -15,6 +15,7 @@ fn js_length_counts_utf16_code_units() {
     let vectors: Vec<(String, i64)> =
         serde_json::from_str(include_str!("../../tests/vectors/length.json"))
             .expect("length vectors");
+    assert!(vectors.len() >= 12, "the vectors were not all read");
     for (input, want) in &vectors {
         assert_eq!(js_length(input), *want, "length({input:?})");
     }
@@ -115,6 +116,7 @@ fn strings_are_read_as_numbers_as_javascript_reads_them() {
 fn strings_are_written_as_json_stringify_writes_them() {
     let vectors: Vec<(String, String)> =
         serde_json::from_str(include_str!("../../tests/vectors/json.json")).expect("json vectors");
+    assert!(vectors.len() >= 12, "the vectors were not all read");
     for (input, want) in &vectors {
         assert_eq!(&js_json_string(input), want, "{input:?}");
     }

@@ -11,12 +11,12 @@ released together and share version numbers.
 
 - A conformance suite for applications (#45), in two calls over a `fixtures/<Component>/<case>.json`
   directory. `await conformanceSuite({ config, components })` from `ferrovue/testing` registers
-  vitest tests that fail on a component with no fixtures or a fixture naming no component, on
-  generated Rust that differs from what `ferrovue` writes now (with the diff), on a fixture Vue
-  renders differently from its recorded `.html` (saying where they first differ), and on a
-  recorded `.html` that hydrates with any warning or with its first node replaced, once
-  `<ClientOnly>` and async components have settled; `FERROVUE_FIXTURES_WRITE=1` records the `.html`
-  files instead. It takes the application's own `pinia`, `vueRouter` and `vueI18n` modules, as
+  vitest tests that fail on a component with no fixtures, a fixture naming no component or no
+  components at all, on generated Rust that differs from what `ferrovue` writes now (with the
+  diff), on a fixture Vue renders differently from its recorded `.html` (saying where they first
+  differ), and on a recorded `.html` that hydrates with any warning or with its first node
+  replaced, once `<ClientOnly>` and async components have settled; `FERROVUE_FIXTURES_WRITE=1`
+  records the `.html` files instead. It takes the application's own `pinia`, `vueRouter` and `vueI18n` modules, as
   `fixtureApp` now does in its options, so the fixtures install the instances the application's
   stores and composables read. vitest is an optional peer, loaded only by `conformanceSuite`.
   `ferrovue::conformance!("fixtures", generated::render_json, at_least = n)` writes the Rust test

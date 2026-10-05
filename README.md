@@ -641,10 +641,10 @@ await conformanceSuite({
 ferrovue::conformance!("fixtures", generated::render_json, at_least = 24);
 ```
 
-The Vue half fails on a component with no fixtures, a fixture naming no component, generated Rust
-that differs from what `ferrovue` writes now, a fixture Vue renders differently from its `.html`,
-and a recorded `.html` that hydrates with any warning; `FERROVUE_FIXTURES_WRITE=1` records the
-`.html` files instead. The Rust half renders every fixture through the generated `render_json`,
+The Vue half fails on a component with no fixtures, a fixture naming no component, a project with
+no components, generated Rust that differs from what `ferrovue` writes now, a fixture Vue renders
+differently from its `.html`, and a recorded `.html` that hydrates with any warning;
+`FERROVUE_FIXTURES_WRITE=1` records the `.html` files instead. The Rust half renders every fixture through the generated `render_json`,
 compares the bytes, and fails when fewer than `at_least` fixtures are found. The crate's
 [`testing`](https://docs.rs/ferrovue/latest/ferrovue/guide/testing/index.html) guide has the
 details; `examples/fullstack` uses both.

@@ -19,6 +19,7 @@ fn escape_is_vues_escape_html() {
     let vectors: Vec<(String, String)> =
         serde_json::from_str(include_str!("../../tests/vectors/escape.json"))
             .expect("escape vectors");
+    assert!(vectors.len() >= 10, "the vectors were not all read");
     for (input, want) in &vectors {
         let mut out = String::new();
         escape_into(&mut out, input);

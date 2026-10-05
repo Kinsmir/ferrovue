@@ -33,6 +33,14 @@ jobs:
         with:
           cache-key: fuzz
       - uses: ./.github/actions/pnpm
+      - name: The harness catches a planted bug
+        run: |
+          if FERROVUE_FUZZ_PLANT=1 FERROVUE_FUZZ_SEED=3 FERROVUE_FUZZ_COUNT=30 FERROVUE_FUZZ_SHRINK_MAX=1 pnpm fuzz > "$RUNNER_TEMP/planted.log" 2>&1; then
+            cat "$RUNNER_TEMP/planted.log"
+            exit 1
+          fi
+          cat "$RUNNER_TEMP/planted.log"
+          grep -Eq 'Summary: .* mismatches [1-9]' "$RUNNER_TEMP/planted.log"
       - name: Fuzz
         env:
           SEED: ${{ inputs.seed }}
