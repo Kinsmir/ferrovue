@@ -5,11 +5,14 @@
 /// Appends `s` to `out` with those five characters written as entities, which makes it safe as
 /// text and as a quoted attribute value. Generated code writes every interpolated value through
 /// it; use it for any text your own code writes into a page or a slot.
-/// [`guide::escaping`](crate::guide::escaping) covers what escaping does and does not protect.
+/// [`guide::escaping`] covers what escaping does and does not protect.
+///
+/// [`guide::escaping`]: https://docs.rs/ferrovue/latest/ferrovue/guide/escaping/index.html
 ///
 /// # Example
 ///
 /// ```
+/// # use ferrovue_core as ferrovue;
 /// let mut out = String::from("<p>");
 /// ferrovue::escape_into(&mut out, r#"<a href="x">Tom & 'Jerry'</a>"#);
 /// assert_eq!(out, "<p>&lt;a href=&quot;x&quot;&gt;Tom &amp; &#39;Jerry&#39;&lt;/a&gt;");

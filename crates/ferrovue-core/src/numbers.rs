@@ -54,11 +54,14 @@ fn push_decimal(out: &mut String, n: u64) {
 /// writes the rounded number, or the page would not hydrate.
 ///
 /// Called by generated code for every interpolated `number` (an `i64`);
-/// [`guide::numbers`](crate::guide::numbers) explains how numbers are computed and written.
+/// [`guide::numbers`] explains how numbers are computed and written.
+///
+/// [`guide::numbers`]: https://docs.rs/ferrovue/latest/ferrovue/guide/numbers/index.html
 ///
 /// # Example
 ///
 /// ```
+/// # use ferrovue_core as ferrovue;
 /// let mut out = String::new();
 /// ferrovue::push_int(&mut out, 42);
 /// out.push(' ');
@@ -104,6 +107,7 @@ impl std::fmt::Write for Short {
 /// # Example
 ///
 /// ```
+/// # use ferrovue_core as ferrovue;
 /// let written = |x: f64| {
 ///     let mut out = String::new();
 ///     ferrovue::push_number(&mut out, x);
@@ -243,6 +247,7 @@ fn few_exact_digits(x: f64) -> Option<(String, i32)> {
 /// # Example
 ///
 /// ```
+/// # use ferrovue_core as ferrovue;
 /// use ferrovue::js_round;
 ///
 /// assert_eq!(js_round(2.5), 3.0);
@@ -268,6 +273,7 @@ pub fn js_round(x: f64) -> f64 {
 /// # Example
 ///
 /// ```
+/// # use ferrovue_core as ferrovue;
 /// use ferrovue::js_max;
 ///
 /// assert_eq!(js_max(2.0, 3.5), 3.5);
@@ -291,6 +297,7 @@ pub fn js_max(a: f64, b: f64) -> f64 {
 /// # Example
 ///
 /// ```
+/// # use ferrovue_core as ferrovue;
 /// use ferrovue::js_min;
 ///
 /// assert_eq!(js_min(2.0, 3.5), 2.0);
@@ -314,6 +321,7 @@ pub fn js_min(a: f64, b: f64) -> f64 {
 /// # Example
 ///
 /// ```
+/// # use ferrovue_core as ferrovue;
 /// use ferrovue::js_to_fixed;
 ///
 /// assert_eq!(js_to_fixed(2.5, 0), "3"); // an exact tie, away from zero; Rust's `{:.0}` gives "2"
@@ -397,6 +405,7 @@ fn increment_digits(digits: &str) -> String {
 /// # Example
 ///
 /// ```
+/// # use ferrovue_core as ferrovue;
 /// use ferrovue::Js;
 ///
 /// assert_eq!(format!("{} items", Js(3_i64)), "3 items");

@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to this project are documented here. The crate and the npm package are
+All notable changes to this project are documented here. The crates and the npm package are
 released together and share version numbers.
 
 ## [Unreleased]
@@ -12,6 +12,14 @@ released together and share version numbers.
 - The crate's `lib.rs` is split into modules, one per part of the runtime: escaping, numbers,
   `Html`, slots and holes, `class`, the state script, `v-html`. Every public path is the same
   (`ferrovue::escape_into`, `ferrovue::Html`, …), and so is everything generated code writes.
+- The runtime is four crates, released together at one version. vue-router's matching is
+  `ferrovue-router` and vue-i18n's `t()` is `ferrovue-i18n`; the escaping and the JavaScript number
+  writing all of them use is `ferrovue-core`. `ferrovue` depends on them at exactly its own version
+  and re-exports them where they were (`ferrovue::Router`, `ferrovue::I18n`, `ferrovue::i18n::…`,
+  `ferrovue::push_int`, …), so generated code and code using the crate do not change.
+- New default features of `ferrovue`, `router` and `i18n`, which bring in `ferrovue-router` and
+  `ferrovue-i18n`. An application with neither routes nor translations can set
+  `default-features = false` and build neither crate.
 
 ## [0.3.0] - 2026-10-05
 

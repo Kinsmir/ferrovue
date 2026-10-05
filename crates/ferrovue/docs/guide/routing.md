@@ -5,6 +5,9 @@ and the `router-link-active` and `router-link-exact-active` classes. Deciding th
 the link as the client's vue-router will, so [`Router`](crate::Router) is vue-router's own matching
 algorithm, held to vectors recorded from the real vue-router.
 
+The router is the `ferrovue-router` crate, which ferrovue re-exports at its root with the `router`
+feature. The feature is on by default; generated code needs it once the project configures routes.
+
 # Configuring the routes
 
 List the routes in a JSON file, the same file the client can import to build its router, and name

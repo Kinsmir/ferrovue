@@ -1,4 +1,10 @@
-//! Vue Router's location matching, for `<RouterLink>` on the server.
+//! Vue Router's location matching, for `<RouterLink>` and `useRoute()` on the server: part of
+//! [ferrovue](https://docs.rs/ferrovue)'s runtime.
+//!
+//! Use it through `ferrovue`, which re-exports every item here at its root ([`Router`] as
+//! `ferrovue::Router`, and so on) with its `router` feature, on by default: that is the path
+//! generated code and the documentation use. It is a crate of its own so that an application with no
+//! routes can turn the feature off and build none of it.
 //!
 //! A link renders differently when it points where the reader already is: `aria-current="page"`
 //! and the `router-link-active router-link-exact-active` classes. Deciding that means resolving the
@@ -9,17 +15,39 @@
 //! is nested in, and exactly active only on the route itself, with the same parameters.
 //!
 //! `tests/vectors/router.json` holds the cases both this and the real vue-router are run against.
+//! The guide's [`routing`] page covers the whole picture.
+//!
+//! [`routing`]: https://docs.rs/ferrovue/latest/ferrovue/guide/routing/index.html
+//!
+//! # Example
+//!
+//! ```
+//! # use ferrovue_router as ferrovue;
+//! let router = ferrovue::Router::new(&["/", "/blog/:slug"]);
+//! let route = router.at("/blog/hello");
+//! let link = route.link("/blog/hello");
+//! assert_eq!((link.href.as_str(), link.active, link.exact), ("/blog/hello", true, true));
+//! assert!(!route.link("/").active);
+//! ```
+#![cfg_attr(docsrs, feature(doc_cfg))]
+#![warn(
+    missing_docs,
+    missing_debug_implementations,
+    rustdoc::missing_crate_level_docs
+)]
 
 /// The routes, in the order vue-router tries them.
 ///
 /// Build it once, at start-up, usually with the generated `route_table::router()`, and keep it in
 /// the application's state: it is immutable, `Send` and `Sync`. For each request, [`Router::at`]
 /// gives the [`Route`] that components which link or read the route take.
-/// [`guide::routing`](crate::guide::routing) covers the whole picture.
+/// The guide's [`routing`](https://docs.rs/ferrovue/latest/ferrovue/guide/routing/index.html)
+/// page covers the whole picture.
 ///
 /// # Example
 ///
 /// ```
+/// # use ferrovue_router as ferrovue;
 /// use ferrovue::Router;
 ///
 /// let router = Router::new(&["/", "/blog/:slug", "/docs/:path(.*)"]);
@@ -41,6 +69,7 @@ pub struct Router {
 /// # Example
 ///
 /// ```
+/// # use ferrovue_router as ferrovue;
 /// let router = ferrovue::Router::named(&[("/", Some("home")), ("/users/:id", None)]).with_base("/app/");
 /// assert_eq!(
 ///     format!("{router:?}"),
@@ -105,6 +134,7 @@ impl Router {
     /// # Example
     ///
     /// ```
+    /// # use ferrovue_router as ferrovue;
     /// let router = ferrovue::Router::new(&["/", "/users/:id"]);
     /// assert_eq!(router.at("/users/7").param("id"), Some("7"));
     /// assert_eq!(router.at("/nowhere").param("id"), None);
@@ -122,6 +152,7 @@ impl Router {
     /// # Example
     ///
     /// ```
+    /// # use ferrovue_router as ferrovue;
     /// use ferrovue::Router;
     ///
     /// let router = Router::named(&[("/", Some("home")), ("/users/:id", Some("user"))]).with_base("/app/");
@@ -159,6 +190,7 @@ impl Router {
     /// # Example
     ///
     /// ```
+    /// # use ferrovue_router as ferrovue;
     /// use ferrovue::{RouteDef, Router};
     ///
     /// let router = Router::tree(&[RouteDef {
@@ -283,6 +315,7 @@ impl Router {
     /// # Example
     ///
     /// ```
+    /// # use ferrovue_router as ferrovue;
     /// let router = ferrovue::Router::new(&["/", "/blog/:slug"]).with_base("/app/");
     /// // A request for /app/blog/intro, with the base taken off.
     /// let route = router.at("/blog/intro");
@@ -319,6 +352,7 @@ impl Router {
     /// # Example
     ///
     /// ```
+    /// # use ferrovue_router as ferrovue;
     /// let router = ferrovue::Router::new(&["/", "/search"]);
     /// let route = router.at("/search?q=caf%C3%A9&page=2#results");
     /// assert_eq!(route.path(), "/search");
@@ -379,6 +413,7 @@ pub struct RouteDef<'a> {
 /// # Example
 ///
 /// ```
+/// # use ferrovue_router as ferrovue;
 /// let router = ferrovue::Router::named(&[("/", Some("home")), ("/blog/:slug", Some("post"))]);
 /// let route = router.at("/blog/intro?sort=new#comments");
 ///
@@ -415,6 +450,7 @@ pub struct Route<'r> {
 /// # Example
 ///
 /// ```
+/// # use ferrovue_router as ferrovue;
 /// use ferrovue::{Query, Router};
 ///
 /// let router = Router::new(&["/search"]);
@@ -444,6 +480,7 @@ impl<'r> Query<'r> {
     /// # Example
     ///
     /// ```
+    /// # use ferrovue_router as ferrovue;
     /// let router = ferrovue::Router::new(&["/search"]);
     /// let route = router.at("/search?q=a%3Cb&tag=x&tag=y");
     ///
@@ -458,7 +495,7 @@ impl<'r> Query<'r> {
     pub fn write_display(&self, out: &mut String) {
         match self {
             Query::Absent | Query::Null => {}
-            Query::One(s) => crate::escape_into(out, s),
+            Query::One(s) => ferrovue_core::escape_into(out, s),
             Query::Many(values) => {
                 let mut json = String::from("[\n");
                 for (i, v) in values.iter().enumerate() {
@@ -473,7 +510,7 @@ impl<'r> Query<'r> {
                     }
                 }
                 json.push_str("\n]");
-                crate::escape_into(out, &json);
+                ferrovue_core::escape_into(out, &json);
             }
         }
     }
@@ -483,6 +520,7 @@ impl<'r> Query<'r> {
     /// # Example
     ///
     /// ```
+    /// # use ferrovue_router as ferrovue;
     /// use ferrovue::Query;
     ///
     /// assert!(Query::One("x").truthy());
@@ -517,6 +555,7 @@ impl<'r> Query<'r> {
     /// # Example
     ///
     /// ```
+    /// # use ferrovue_router as ferrovue;
     /// use ferrovue::Query;
     ///
     /// assert_eq!(Query::Absent.or("none"), Query::One("none"));
@@ -538,6 +577,7 @@ impl<'r> Query<'r> {
     /// # Example
     ///
     /// ```
+    /// # use ferrovue_router as ferrovue;
     /// use ferrovue::Query;
     ///
     /// assert_eq!(Query::One("rust").attr_value(), Some("rust"));
@@ -581,6 +621,7 @@ fn parse_query(search: &str) -> Vec<(String, Vec<Option<String>>)> {
 /// # Example
 ///
 /// ```
+/// # use ferrovue_router as ferrovue;
 /// let router = ferrovue::Router::new(&["/", "/blog/:slug"]);
 /// let link = router.at("/blog/intro").link("/blog/intro#top");
 /// assert_eq!(link.href, "/blog/intro#top");
@@ -604,6 +645,7 @@ pub struct Link {
 /// # Example
 ///
 /// ```
+/// # use ferrovue_router as ferrovue;
 /// let router = ferrovue::Router::named(&[("/blog/:slug", Some("post"))]);
 /// assert_eq!(
 ///     format!("{:?}", router.at("/blog/intro?sort=new#comments")),
@@ -683,6 +725,7 @@ impl Route<'_> {
     /// # Example
     ///
     /// ```
+    /// # use ferrovue_router as ferrovue;
     /// let router = ferrovue::Router::new(&["/", "/blog/:slug"]);
     /// let here = router.at("/blog/intro");
     /// let link = here.link("/blog/intro?sort=new");
@@ -747,6 +790,7 @@ impl Route<'_> {
     /// # Example
     ///
     /// ```
+    /// # use ferrovue_router as ferrovue;
     /// let router = ferrovue::Router::named(&[("/", Some("home")), ("/books/:id", Some("book"))]);
     /// let route = router.at("/books/dune");
     ///
@@ -815,6 +859,7 @@ impl Route<'_> {
     /// # Example
     ///
     /// ```
+    /// # use ferrovue_router as ferrovue;
     /// let router = ferrovue::Router::new(&["/", "/search"]);
     /// let route = router.at("/");
     ///
@@ -856,6 +901,7 @@ impl Route<'_> {
 /// # Example
 ///
 /// ```
+/// # use ferrovue_router as ferrovue;
 /// let mut search = String::new();
 /// ferrovue::query_into(&mut search, "q", "a b&c");
 /// ferrovue::query_into(&mut search, "page", "2");

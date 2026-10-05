@@ -1,14 +1,15 @@
 /* Release chores, shared by a maintainer's machine and the release workflow.
  *
- *   node scripts/release.ts bump 0.2.0 [--pr]  set the version in both manifests, update the lockfile,
+ *   node scripts/release.ts bump 0.2.0 [--pr]  set the version in every manifest, update the lockfile,
  *                                              and move the changelog's [Unreleased] notes under it;
  *                                              with --pr, commit on a release branch and open a PR
- *   node scripts/release.ts check v0.2.0       exit 1 unless the tag, both manifests and the changelog agree
+ *   node scripts/release.ts check v0.2.0       exit 1 unless the tag, every manifest and the changelog agree
  *   node scripts/release.ts notes 0.2.0        print that version's changelog notes, for the GitHub release
+ *   node scripts/release.ts crates             print the crates in the order they are published
  *
- * The crate and the npm package are released together and always share one version. */
+ * The crates and the npm package are released together and always share one version. */
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -16,6 +17,11 @@ const ROOT = join(import.meta.dirname, "..");
 const CARGO = join(ROOT, "Cargo.toml");
 const PACKAGE = join(ROOT, "packages/ferrovue/package.json");
 const CHANGELOG = join(ROOT, "CHANGELOG.md");
+const CRATES_DIR = join(ROOT, "crates");
+
+/** The crates published to crates.io, in the order they are published: each one before the crates
+ * that depend on it, which crates.io must already have. */
+export const CRATES = ["ferrovue-core", "ferrovue-router", "ferrovue-i18n", "ferrovue"];
 
 /** SemVer 2.0: `1.2.3`, with an optional pre-release (`-rc.1`); build metadata is not used here. */
 const SEMVER = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$/;
@@ -36,12 +42,38 @@ export function cargoVersion(toml: string): string {
   return version[1]!;
 }
 
+/** `[workspace.dependencies]`'s body, from its header to the next section, or null. */
+function workspaceDependencies(toml: string): { start: number; end: number } | null {
+  const header = /^\[workspace\.dependencies\]$/m.exec(toml);
+  if (!header) return null;
+  const start = header.index + header[0].length;
+  const next = /^\[/m.exec(toml.slice(start));
+  return { start, end: next ? start + next.index : toml.length };
+}
+
+/** A line of `[workspace.dependencies]` naming one of the runtime's crates and its version. */
+const REQUIREMENT = /^(ferrovue[\w-]*)(\s*=\s*\{[^}\n]*\bversion\s*=\s*")([^"]*)(")/gm;
+
+/** What each of the runtime's own crates is required at in `[workspace.dependencies]`. The crates
+ * depend on one another at exactly the release's version: `"=0.2.0"`. */
+export function cargoRequirements(toml: string): Map<string, string> {
+  const deps = workspaceDependencies(toml);
+  const found = new Map<string, string>();
+  if (deps) for (const m of toml.slice(deps.start, deps.end).matchAll(REQUIREMENT)) found.set(m[1]!, m[3]!);
+  return found;
+}
+
+/** The workspace's version set, which every crate inherits, and the requirements on the runtime's
+ * own crates set to exactly it. */
 export function setCargoVersion(toml: string, version: string): string {
   const old = cargoVersion(toml);
   const at = toml.indexOf("[workspace.package]");
   const head = toml.slice(0, at);
-  const rest = toml.slice(at).replace(`version = "${old}"`, `version = "${version}"`);
-  return head + rest;
+  const out = head + toml.slice(at).replace(`version = "${old}"`, `version = "${version}"`);
+  const deps = workspaceDependencies(out);
+  if (!deps) return out;
+  const body = out.slice(deps.start, deps.end).replace(REQUIREMENT, `$1$2=${version}$4`);
+  return out.slice(0, deps.start) + body + out.slice(deps.end);
 }
 
 export function packageVersion(json: string): string {
@@ -71,14 +103,33 @@ export function releaseChangelog(changelog: string, version: string, date: strin
   return changelog.replace("## [Unreleased]", `## [Unreleased]\n\n## [${version}] - ${date}`);
 }
 
+/** The files a release is checked against. `crates` holds each crate's manifest, by the name of its
+ * directory under `crates/`. */
+export interface ReleaseFiles {
+  cargo: string;
+  pkg: string;
+  changelog: string;
+  crates?: Record<string, string>;
+}
+
 /** What disagrees between a tag and the repository, if anything. */
-export function checkRelease(tag: string, files: { cargo: string; pkg: string; changelog: string }): string[] {
+export function checkRelease(tag: string, files: ReleaseFiles): string[] {
   const problems: string[] = [];
   const version = tag.replace(/^v/, "");
   if (!tag.startsWith("v") || !isVersion(version)) problems.push(`${tag} is not a release tag (v1.2.3 or v1.2.3-rc.1)`);
   const cargo = cargoVersion(files.cargo);
   const pkg = packageVersion(files.pkg);
   if (cargo !== version) problems.push(`Cargo.toml is at ${cargo}, the tag at ${version}`);
+  for (const [name, requirement] of cargoRequirements(files.cargo)) {
+    if (requirement !== `=${version}`) problems.push(`Cargo.toml requires ${name} at "${requirement}", the tag at "=${version}"`);
+  }
+  if (files.crates) {
+    for (const [dir, manifest] of Object.entries(files.crates)) {
+      if (!/^version\.workspace\s*=\s*true$/m.test(manifest)) problems.push(`crates/${dir}/Cargo.toml has a version of its own, not the workspace's`);
+      if (!CRATES.includes(dir)) problems.push(`crates/${dir} is not in release.ts's CRATES, so no release would publish it`);
+    }
+    for (const name of CRATES) if (!(name in files.crates)) problems.push(`CRATES names ${name}, which crates/ does not hold`);
+  }
   if (pkg !== version) problems.push(`packages/ferrovue/package.json is at ${pkg}, the tag at ${version}`);
   const notes = changelogNotes(files.changelog, version);
   if (!notes) problems.push(`CHANGELOG.md has no notes for ${version}`);
@@ -91,7 +142,16 @@ function run(cmd: string, args: string[]): void {
 
 function main(argv: string[]): number {
   const [command, arg, ...flags] = argv;
-  const read = () => ({ cargo: readFileSync(CARGO, "utf8"), pkg: readFileSync(PACKAGE, "utf8"), changelog: readFileSync(CHANGELOG, "utf8") });
+  const read = (): ReleaseFiles => ({
+    cargo: readFileSync(CARGO, "utf8"),
+    pkg: readFileSync(PACKAGE, "utf8"),
+    changelog: readFileSync(CHANGELOG, "utf8"),
+    crates: Object.fromEntries(
+      readdirSync(CRATES_DIR, { withFileTypes: true })
+        .filter((d) => d.isDirectory())
+        .map((d) => [d.name, readFileSync(join(CRATES_DIR, d.name, "Cargo.toml"), "utf8")]),
+    ),
+  });
   switch (command) {
     case "bump": {
       if (!arg || !isVersion(arg)) {
@@ -105,7 +165,7 @@ function main(argv: string[]): number {
       writeFileSync(PACKAGE, setPackageVersion(files.pkg, arg));
       // The lockfile records the workspace's own versions too.
       run("cargo", ["update", "--workspace", "--offline"]);
-      console.log(`ferrovue is at ${arg}`);
+      console.log(`ferrovue is at ${arg}: the crates ${CRATES.join(", ")} and the npm package`);
       if (flags.includes("--pr")) {
         const branch = `release/v${arg}`;
         run("git", ["switch", "-c", branch]);
@@ -125,7 +185,7 @@ function main(argv: string[]): number {
       }
       const problems = checkRelease(arg, read());
       for (const p of problems) console.error(p);
-      if (!problems.length) console.log(`${arg} matches both manifests and the changelog`);
+      if (!problems.length) console.log(`${arg} matches every manifest and the changelog`);
       return problems.length ? 1 : 0;
     }
     case "notes": {
@@ -137,8 +197,11 @@ function main(argv: string[]): number {
       console.log(notes);
       return 0;
     }
+    case "crates":
+      console.log(CRATES.join(" "));
+      return 0;
     default:
-      console.error("usage: release.ts bump <version> [--pr] | check <tag> | notes <version>");
+      console.error("usage: release.ts bump <version> [--pr] | check <tag> | notes <version> | crates");
       return 2;
   }
 }

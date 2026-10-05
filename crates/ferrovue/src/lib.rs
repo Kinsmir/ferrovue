@@ -7,21 +7,19 @@
 )]
 
 // Each module holds one part of what generated code calls; everything public is re-exported here,
-// at the crate's root, which is the one path generated code and the documentation use.
+// at the crate's root, which is the one path generated code and the documentation use. Escaping and
+// numbers come from `ferrovue-core`, which the router and i18n crates share; the router and i18n
+// come from their own crates, behind features on by default.
 mod attrs;
 mod class;
 #[cfg(feature = "dioxus")]
 #[cfg_attr(docsrs, doc(cfg(feature = "dioxus")))]
 pub mod dioxus;
-mod escape;
 #[cfg(any(doc, doctest))]
 pub mod guide;
 mod html;
-pub mod i18n;
 mod json;
-mod numbers;
 mod record;
-mod router;
 mod slots;
 mod state;
 mod strings;
@@ -35,12 +33,8 @@ pub use attrs::{
     style_text_into,
 };
 pub use class::{class_into, class_object};
-pub use escape::escape_into;
 pub use html::Html;
-pub use i18n::I18n;
-pub use numbers::{Js, js_max, js_min, js_round, js_to_fixed, push_int, push_number};
 pub use record::Record;
-pub use router::{Link, Query, Route, RouteDef, Router, query_into};
 #[doc(hidden)]
 pub use slots::is_comment;
 pub use slots::{
@@ -58,3 +52,21 @@ pub use teleport::{Teleports, teleport_into};
 pub use trusted::{TrustedHtml, trusted_into};
 #[cfg(feature = "stream")]
 pub use web::HtmlStream;
+
+#[doc(inline)]
+pub use ferrovue_core::{
+    Js, escape_into, js_max, js_min, js_round, js_to_fixed, push_int, push_number,
+};
+#[cfg(feature = "i18n")]
+#[cfg_attr(docsrs, doc(cfg(feature = "i18n")))]
+#[doc(inline)]
+pub use ferrovue_i18n::I18n;
+#[cfg(feature = "router")]
+#[cfg_attr(docsrs, doc(cfg(feature = "router")))]
+#[doc(inline)]
+pub use ferrovue_router::{Link, Query, Route, RouteDef, Router, query_into};
+
+#[cfg(feature = "i18n")]
+#[cfg_attr(docsrs, doc(cfg(feature = "i18n")))]
+#[doc(inline)]
+pub use ferrovue_i18n as i18n;

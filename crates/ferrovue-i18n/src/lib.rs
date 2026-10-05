@@ -1,4 +1,10 @@
-//! vue-i18n's `t()`, for components that call `$t` or `useI18n().t`.
+//! vue-i18n's `t()`, for components that call `$t` or `useI18n().t`: part of
+//! [ferrovue](https://docs.rs/ferrovue)'s runtime.
+//!
+//! Use it through `ferrovue`, which re-exports this crate as `ferrovue::i18n`, and [`I18n`] as
+//! `ferrovue::I18n`, with its `i18n` feature, on by default: that is the path generated code and the
+//! documentation use. It is a crate of its own so that an application with no translations can turn
+//! the feature off and build none of it.
 //!
 //! The compiler parses every message with vue-i18n's own message compiler and writes the result as
 //! static tables of [`Part`]s, one [`Locale`] per locale file. At run time [`I18n::t`] evaluates a
@@ -10,11 +16,14 @@
 //! translate, as the route is passed. The tables are written by the compiler, into the generated
 //! `i18n` module, whose `i18n(locale)` builds the [`I18n`]; [`Part`], [`Message`] and [`Locale`]
 //! are public so that generated code can spell them as constants, and [`Args`] and [`Value`] so
-//! that it can call [`I18n::t`]. [`guide::i18n`](crate::guide::i18n) shows the whole path.
+//! that it can call [`I18n::t`]. The guide's
+//! [`i18n`](https://docs.rs/ferrovue/latest/ferrovue/guide/i18n/index.html) page shows the whole
+//! path.
 //!
 //! # Example
 //!
 //! ```
+//! # mod ferrovue { pub use ferrovue_i18n::I18n; pub use ferrovue_i18n as i18n; }
 //! use ferrovue::i18n::{Args, Locale, Message, Part, Value};
 //! use ferrovue::I18n;
 //!
@@ -31,6 +40,12 @@
 //! let args = Args { named: &[("name", Value::Str("Ada"))], ..Args::default() };
 //! assert_eq!(i18n.t("greeting", &args), "Hello Ada!");
 //! ```
+#![cfg_attr(docsrs, feature(doc_cfg))]
+#![warn(
+    missing_docs,
+    missing_debug_implementations,
+    rustdoc::missing_crate_level_docs
+)]
 
 use std::fmt::Write;
 
@@ -88,8 +103,8 @@ impl Locale {
 
 /// A value interpolated into a message, written as `toDisplayString` writes it.
 ///
-/// Numbers are written as JavaScript writes them, with [`push_int`](crate::push_int) and
-/// [`push_number`](crate::push_number). `count` and `n` take the plural number when they are not
+/// Numbers are written as JavaScript writes them, with [`push_int`](ferrovue_core::push_int) and
+/// [`push_number`](ferrovue_core::push_number). `count` and `n` take the plural number when they are not
 /// given, or are given a falsy value.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Value<'a> {
@@ -107,8 +122,8 @@ impl Value<'_> {
     fn write(&self, out: &mut String) {
         match self {
             Value::Str(s) => out.push_str(s),
-            Value::Int(n) => crate::push_int(out, *n),
-            Value::Float(x) => crate::push_number(out, *x),
+            Value::Int(n) => ferrovue_core::push_int(out, *n),
+            Value::Float(x) => ferrovue_core::push_number(out, *x),
             Value::Bool(b) => out.push_str(if *b { "true" } else { "false" }),
         }
     }
@@ -133,6 +148,7 @@ impl Value<'_> {
 /// # Example
 ///
 /// ```
+/// # mod ferrovue { pub use ferrovue_i18n::I18n; pub use ferrovue_i18n as i18n; }
 /// use ferrovue::i18n::{Args, Value};
 ///
 /// // t("greeting", { name: "Ada" }, 3)
@@ -174,6 +190,7 @@ impl I18n {
     /// # Example
     ///
     /// ```
+    /// # mod ferrovue { pub use ferrovue_i18n::I18n; pub use ferrovue_i18n as i18n; }
     /// use ferrovue::i18n::{Args, Locale, Message, Part};
     /// use ferrovue::I18n;
     ///
@@ -218,6 +235,7 @@ impl I18n {
     /// # Example
     ///
     /// ```
+    /// # mod ferrovue { pub use ferrovue_i18n::I18n; pub use ferrovue_i18n as i18n; }
     /// use ferrovue::i18n::{Args, Locale, Message, Part, Value};
     /// use ferrovue::I18n;
     ///

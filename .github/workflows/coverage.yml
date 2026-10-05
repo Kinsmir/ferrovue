@@ -1,6 +1,6 @@
 name: Coverage
 
-# How much of the runtime crate and the compiler the test suites run (TESTING.md, "Coverage"):
+# How much of the runtime's crates and the compiler the test suites run (TESTING.md, "Coverage"):
 # `cargo llvm-cov` for the Rust, vitest's V8 coverage for the TypeScript. The reports are uploaded
 # as an artifact and summarised on the run's page; nothing is sent to a coverage service, and
 # nothing here fails on a number, so it is not a required check.

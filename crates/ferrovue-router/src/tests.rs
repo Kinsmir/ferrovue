@@ -96,7 +96,7 @@ fn nested_routes_resolve_and_activate_as_vue_router_does() {
         nested: Nested,
         expected_nested: NestedExpected,
     }
-    let file: File = serde_json::from_str(include_str!("../../tests/vectors/router.expected.json"))
+    let file: File = serde_json::from_str(include_str!("../tests/vectors/router.expected.json"))
         .expect("router vectors");
     let (v, want) = (file.nested, file.expected_nested);
     let router = Router::tree(route_defs(&v.routes));
@@ -142,7 +142,7 @@ fn nested_routes_resolve_and_activate_as_vue_router_does() {
 }
 
 fn vectors() -> Vectors {
-    let text = include_str!("../../tests/vectors/router.expected.json");
+    let text = include_str!("../tests/vectors/router.expected.json");
     serde_json::from_str(text).expect("router vectors")
 }
 

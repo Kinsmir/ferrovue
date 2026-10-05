@@ -19,11 +19,11 @@ pnpm test:browser          # the same fixtures, and the full-stack example, hydr
 |---|---|---|---|
 | **Conformance** | `crates/ferrovue/tests/conformance/` | Each component × fixture renders identically in Vue and in the generated Rust, and Vue hydrates the HTML with no mismatch | `@vue/server-renderer`, Vue's hydration |
 | **Browser hydration** | `packages/ferrovue/browser/`, `examples/fullstack/browser/` | Every fixture's recorded HTML, parsed by Chromium, Firefox and WebKit, hydrates with no mismatch and is left as parsed; the full-stack example's pages do too, and their islands work | Vue's hydration, the browsers' HTML parsers |
-| **Shared vectors** | `crates/ferrovue/tests/vectors/` | The runtime's reimplementations of `trim`, `.length`, `escapeHtml`, `String(number)`, `Math`, `toFixed`, `normalizeClass` of an object, `ssrRenderSlot`'s test of slot content that is only comments, the string methods (`slice`, `at`, `split`, `replace`, `padStart`, … on astral characters, halves of pairs, negative and `NaN` indices), string ordering, `Number` / `parseInt` / `parseFloat`, `JSON.stringify` of strings, an object's order of keys, `mergeProps` and `ssrRenderAttrs` of attributes, and vue-router's link resolution (string and object `to`, named routes, query and hash encoding, history base) and `useRoute()` fields agree with the originals | JavaScript, `@vue/shared`, `@vue/server-renderer`, vue-router |
+| **Shared vectors** | `crates/*/tests/vectors/`: `ferrovue-core` (escaping, numbers), `ferrovue-router`, `ferrovue` (the rest) | The runtime's reimplementations of `trim`, `.length`, `escapeHtml`, `String(number)`, `Math`, `toFixed`, `normalizeClass` of an object, `ssrRenderSlot`'s test of slot content that is only comments, the string methods (`slice`, `at`, `split`, `replace`, `padStart`, … on astral characters, halves of pairs, negative and `NaN` indices), string ordering, `Number` / `parseInt` / `parseFloat`, `JSON.stringify` of strings, an object's order of keys, `mergeProps` and `ssrRenderAttrs` of attributes, and vue-router's link resolution (string and object `to`, named routes, query and hash encoding, history base) and `useRoute()` fields agree with the originals | JavaScript, `@vue/shared`, `@vue/server-renderer`, vue-router |
 | **Compiler** | `packages/ferrovue/test/compiler.test.ts` | Constructs that a careless translation would get subtly wrong are refused with a named error; key translations have the expected shape | Hand-written |
 | **CLI** | `packages/ferrovue/test/cli.test.ts` | `ferrovue` writes, replaces, and `--check` detects stale and stray files | Hand-written |
-| **Runtime units** | `crates/ferrovue/src/<module>/tests.rs` beside each module, `src/web.rs` | Escaping, slots, fallbacks, holes, islands, the state script, router edge cases; a streamed page's order and the axum and actix-web responses | Hand-written |
-| **Properties** | `crates/ferrovue/tests/properties.rs` | Invariants over generated inputs: escaped text has no markup and reads back whole; the state script can't be closed; router never panics | `proptest` |
+| **Runtime units** | `crates/*/src/<module>/tests.rs` beside each module, `crates/ferrovue-router/src/tests.rs`, `crates/ferrovue/src/web.rs` | Escaping, slots, fallbacks, holes, islands, the state script, router edge cases; a streamed page's order and the axum and actix-web responses | Hand-written |
+| **Properties** | `crates/ferrovue/tests/properties.rs`, `crates/ferrovue-router/tests/properties.rs`, `crates/ferrovue-core/src/*/tests.rs` | Invariants over generated inputs: escaped text has no markup and reads back whole; the state script can't be closed; router never panics; numbers and escaping are written as slower references write them | `proptest` |
 | **Differential fuzzing** | `packages/ferrovue/fuzz/` | Random components and props, within the grammar ferrovue accepts, render identically in Vue and in the generated Rust; each difference is shrunk to a small case (`pnpm fuzz`, nightly in CI, not part of `pnpm test`) | `@vue/server-renderer` |
 | **Mutation testing** | `.cargo/mutants.toml` | The tests above notice a small change to the runtime's source; every change they miss is listed, with the reason, as one that cannot alter the output (`cargo mutants`, weekly in CI) | cargo-mutants |
 | **Example** | `examples/greeting/` | Generated code compiles in an ordinary (non-test) consumer crate | `cargo build` |
@@ -259,15 +259,17 @@ not a tested one, which is what the mutation testing below is for.
 ## Mutation testing
 
 Coverage says a line ran; mutation testing says a test would notice if it were wrong.
-[cargo-mutants](https://mutants.rs) makes hundreds of small changes to the runtime crate's source
-(`crates/ferrovue/src`, configured in `.cargo/mutants.toml`) — `<` made `<=`, `&&` made `||`, a
-function's body replaced by a default value — and runs the crate's tests (units, vectors,
-properties and conformance) on each. A change that no test notices is a **surviving** mutant.
+[cargo-mutants](https://mutants.rs) makes hundreds of small changes to the runtime crates' source
+(`crates/*/src`, configured in `.cargo/mutants.toml`) — `<` made `<=`, `&&` made `||`, a function's
+body replaced by a default value — and runs all four crates' tests (units, vectors, properties and
+conformance) on each: the conformance suite in `ferrovue` holds the router, vue-i18n and the
+number writing to Vue's output too. A change that no test notices is a **surviving** mutant.
 
 ```sh
 cargo install cargo-mutants --locked
-cargo mutants -p ferrovue -j 4          # a few minutes; the results go to mutants.out/
-cargo mutants -p ferrovue -F js_round   # only the mutants whose name matches
+cargo mutants -j 4                      # every crate; the results go to mutants.out/
+cargo mutants -p ferrovue-core -j 4     # one crate's mutants, still tested by all four
+cargo mutants -F js_round               # only the mutants whose name matches
 ```
 
 A survivor is either a gap, closed by a test, or an **equivalent** mutant: a change that cannot
@@ -294,7 +296,8 @@ and what ferrovue generates (or the error it refuses with).
   it, then run `cargo test`.
 - **A new component:** add it to `components/`, run `pnpm conformance:generate`, add at least one
   fixture (plus a hostile one), and record as above. The suite fails if a component has no fixtures.
-- **A new router case:** add it to `tests/vectors/router.json` and run `pnpm vectors:record`.
+- **A new router case:** add it to `crates/ferrovue-router/tests/vectors/router.json` and run
+  `pnpm vectors:record`.
 - **A new string or number case:** add its inputs to `tests/vectors/strings.json`, `parse.json`,
   `compare.json`, `keys.json` or `json.json` (any expected value) and run `pnpm vectors:record`,
   which writes what JavaScript answers.

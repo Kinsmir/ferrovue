@@ -26,7 +26,7 @@ The project has two halves:
 | | What it is | Published as |
 |---|---|---|
 | `packages/ferrovue` | The compiler and the `ferrovue` command (TypeScript, runs on Node) | npm: [`ferrovue`](https://www.npmjs.com/package/ferrovue) |
-| `crates/ferrovue` | The runtime the generated Rust calls: escaping, slots, islands, `<RouterLink>` matching | crates.io: [`ferrovue`](https://crates.io/crates/ferrovue) ([API docs](https://docs.rs/ferrovue)) |
+| `crates/ferrovue` | The runtime the generated Rust calls: escaping, slots, islands, `<RouterLink>` matching. The router, vue-i18n and the escaping and number primitives they share are crates of their own (`crates/ferrovue-router`, `ferrovue-i18n`, `ferrovue-core`), which `ferrovue` re-exports | crates.io: [`ferrovue`](https://crates.io/crates/ferrovue) ([API docs](https://docs.rs/ferrovue)) |
 
 ## Quick start
 
@@ -117,6 +117,10 @@ greeting::render(&mut page, &props);
 With `routes` configured, the generated `route_table::router()` builds the router once. Resolve
 each request's location with `router.at(path)` and pass the result to the components that take a
 route.
+
+The router and vue-i18n are features of the crate, `router` and `i18n`, both on by default. An
+application with neither routes nor translations can leave them out, and build neither
+`ferrovue-router` nor `ferrovue-i18n`: `ferrovue = { version = "0.4", default-features = false }`.
 
 With the `maud` feature, `ferrovue::Html` implements `maud::Render`, so `(greeting::html(&props))` can go
 straight into a `maud::html!` page.
@@ -248,7 +252,7 @@ gives the ids that other component inherits.
 String methods count as JavaScript counts: in UTF-16 code units, so `"🦀".length` is 2 and
 `"🦀 crab".slice(3)` is `"crab"`. Strings are ordered by code unit too, which puts every character
 from U+E000 to U+FFFF after one beyond U+FFFF. Each runtime routine is held to vectors recorded from
-JavaScript (`crates/ferrovue/tests/vectors/`).
+JavaScript (`crates/*/tests/vectors/`).
 
 A JavaScript string can hold half of a surrogate pair — `"🦀".slice(0, 1)`, `.charAt(1)`,
 `.split("")` — and a Rust string cannot. ferrovue writes U+FFFD in its place, which is exactly what
@@ -428,14 +432,20 @@ ferrovue version.
 ## Repository layout
 
 ```text
-crates/ferrovue/             the Rust runtime crate
-  src/                       runtime, a module per part (escaping, JS numbers, `Html`, slots, class
-                             and style, the state script, router, i18n, teleports), each module's
-                             unit tests beside it in <module>/tests.rs
+crates/ferrovue/             the Rust runtime crate, which generated code calls
+  src/                       a module per part (`Html`, slots, class and style, the state script,
+                             strings, teleports, fallthrough attributes), each module's unit tests
+                             beside it in <module>/tests.rs; lib.rs re-exports them all, and the
+                             three crates below
   tests/conformance/         components, fixtures, recorded HTML, generated Rust
-  tests/vectors/             vectors recorded from JavaScript, vue-router and vue-i18n
+  tests/vectors/             vectors recorded from JavaScript and Vue
   tests/properties.rs        property-based tests of the runtime
   benches/                   criterion benchmarks of generated renderers (see Performance)
+crates/ferrovue-core/        escaping and JavaScript's numbers, which the other crates share
+  tests/vectors/             vectors recorded from escapeHtml, String(n), Math and toFixed
+crates/ferrovue-router/      vue-router's matching and links (the `router` feature)
+  tests/vectors/             vectors recorded from vue-router
+crates/ferrovue-i18n/        vue-i18n's t() (the `i18n` feature)
 packages/ferrovue/           the compiler (npm package)
   src/compiler.ts            the API: `generate`, `write`
   src/script.ts, template.ts, expr.ts, attrs.ts
