@@ -1,5 +1,5 @@
 import { type N, type Scope, type Ty, type Val, BOOL, FLOAT, INT } from "./model.ts";
-import { AS, binary, FLIPPED, operand } from "./parens.ts";
+import { AS, binary, FLIPPED, operand, UNARY } from "./parens.ts";
 import { expr } from "./expr.ts";
 
 export function isNumber(ty: Ty): boolean {
@@ -55,7 +55,8 @@ function fold(a: number, op: string, b: number): number | boolean {
 
 export function arithmetic(a: Val, op: string, b: Val, int: boolean): Val {
   if (a.num !== undefined && b.num !== undefined) return numberVal(fold(a.num, op, b.num) as number, int);
-  const f64 = binary(asF64(a), op, asF64(b));
+  const negated = op === "*" ? (b.num === -1 ? a : a.num === -1 ? b : null) : null;
+  const f64 = negated ? `-${operand(asF64(negated), UNARY)}` : binary(asF64(a), op, asF64(b));
   return int ? intFromF64(f64) : { code: f64, ty: FLOAT };
 }
 

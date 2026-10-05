@@ -31,7 +31,7 @@ impl<'a> Props<'a> {
 pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) {
     out.reserve(91 + props.label.len());
     let fv_inherited = fv_provides;
-    let s_flipped = props.n as f64 * -1.0;
+    let s_flipped = -(props.n as f64);
     let s_negated = -(props.n as f64);
     let s_padded = fv::js_pad_start(&props.label.to_lowercase(), 6.0f64, "0").into_owned();
     let fv_provided_tone = fv::js_pad_end(&props.label.to_uppercase(), 4.0f64, "!").into_owned();
