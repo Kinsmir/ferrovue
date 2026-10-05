@@ -149,6 +149,25 @@ fn written(push: fn(&mut String, f64), x: f64) -> String {
     out
 }
 
+fn few_exact_digits_exactly(x: f64) -> Option<(String, i32)> {
+    let exact = format!("{x:.1100e}");
+    let (mantissa, exp) = exact.split_once('e').expect("`{:e}` writes an exponent");
+    let digits: String = mantissa.chars().filter(|c| *c != '.').collect();
+    let digits = digits.trim_end_matches('0');
+    let exp = exp.parse().expect("`{:e}` writes an integer exponent");
+    (digits.len() <= 18).then(|| (digits.to_owned(), exp))
+}
+
+#[test]
+fn few_exact_digits_finds_eighteen_digits_in_two_to_the_59_times_ten_to_the_22() {
+    let x = 2f64.powi(59) * 1e22;
+    assert_eq!(
+        few_exact_digits(x),
+        Some(("576460752303423488".to_owned(), 39))
+    );
+    assert_eq!(few_exact_digits(x), few_exact_digits_exactly(x));
+}
+
 proptest::proptest! {
     #![proptest_config(proptest::prelude::ProptestConfig::with_cases(20_000))]
 
@@ -174,6 +193,12 @@ proptest::proptest! {
     fn a_decimal_is_written_as_the_exact_reference_writes_it(digits in 0u64..100_000_000_000_000_000, point in -30i32..30) {
         let x: f64 = format!("{digits}e{point}").parse().expect("a decimal parses");
         proptest::prop_assert_eq!(written(push_number, x), written(push_number_exactly, x));
+    }
+
+    #[test]
+    fn few_exact_digits_are_the_exact_expansion_when_it_is_short(m in 1u64..1 << 53, e in -60i32..100) {
+        let x = m as f64 * 2f64.powi(e);
+        proptest::prop_assert_eq!(few_exact_digits(x), few_exact_digits_exactly(x));
     }
 
     #[test]

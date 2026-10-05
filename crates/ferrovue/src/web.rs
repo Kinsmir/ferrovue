@@ -454,6 +454,17 @@ mod tests {
         html.to_owned()
     }
 
+    #[test]
+    fn a_stream_debugs_as_its_length_holes_loading_holes_and_next_piece() {
+        let page = two_holes();
+        let len = page.len();
+        let stream = HtmlStream::new(page).hole(after(0, "first"));
+        assert_eq!(
+            format!("{stream:?}"),
+            format!("HtmlStream {{ len: {len}, holes: 2, loading: 1, next: 0 }}")
+        );
+    }
+
     #[tokio::test(start_paused = true)]
     async fn the_pieces_are_split_holes_with_each_hole_filled_in_order() {
         let page = two_holes();

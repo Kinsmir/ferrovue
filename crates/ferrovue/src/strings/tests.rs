@@ -60,6 +60,14 @@ fn string_methods_are_javascripts() {
                 thrown.is_err(),
                 "{op}({s:?}, {args:?}) throws in JavaScript"
             );
+        } else if let Some(length) = want.get("length") {
+            let got = run();
+            let got = got.as_str().expect("a string");
+            assert_eq!(
+                js_length(got),
+                length.as_i64().expect("a length"),
+                "{op}({s:?}, {args:?})"
+            );
         } else {
             assert_eq!(&run(), want, "{op}({s:?}, {args:?})");
         }
@@ -89,6 +97,8 @@ fn strings_are_read_as_numbers_as_javascript_reads_them() {
             "parseInt" => js_parse_int(input, 0),
             "parseInt10" => js_parse_int(input, 10),
             "parseInt16" => js_parse_int(input, 16),
+            "parseInt7" => js_parse_int(input, 7),
+            "parseInt36" => js_parse_int(input, 36),
             "parseFloat" => js_parse_float(input),
             other => panic!("unknown op {other}"),
         };
@@ -140,4 +150,10 @@ fn padding_beyond_the_longest_string_panics_as_javascript_throws() {
         "a",
         "an empty fill pads nothing, and does not throw"
     );
+}
+
+#[test]
+fn padding_to_exactly_the_longest_string_v8_makes_does_not_panic() {
+    let s = "a".repeat(536_870_887);
+    assert_eq!(js_length(&js_pad_end(&s, 536_870_888.0, "b")), 536_870_888);
 }

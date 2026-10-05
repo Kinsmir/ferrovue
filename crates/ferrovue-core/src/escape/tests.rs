@@ -50,4 +50,10 @@ proptest::proptest! {
         escape_into(&mut out, &s);
         proptest::prop_assert_eq!(out, escape_bytewise(&s));
     }
+
+    #[test]
+    fn needs_escape_is_whether_any_byte_is_one_of_the_five(s in "[a\"&'<>é🦀 ]{0,40}|[aé🦀 ]{0,40}") {
+        let any = s.bytes().any(|b| matches!(b, b'"' | b'&' | b'\'' | b'<' | b'>'));
+        proptest::prop_assert_eq!(needs_escape(s.as_bytes()), any);
+    }
 }

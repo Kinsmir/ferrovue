@@ -22,7 +22,7 @@ function writeVectors(name: string, vectors: unknown[]): void {
 function stringOp(op: string, input: string, args: string[]): unknown {
   const num = (i: number): number | undefined => (args[i] === undefined ? undefined : Number(args[i]));
   const sent = (x: unknown): unknown =>
-    typeof x === "string" ? x.toWellFormed() : Array.isArray(x) ? x.map(sent) : x === undefined ? null : x;
+    typeof x === "string" ? (x.length > 1_000_000 ? { length: x.length } : x.toWellFormed()) : Array.isArray(x) ? x.map(sent) : x === undefined ? null : x;
   try {
     switch (op) {
       case "slice":
@@ -163,7 +163,8 @@ describe("vectors shared with the Rust crate", () => {
 
   // `[op, input, args, expected]`: numeric arguments are decimal strings both sides read with
   // `Number`; a string result is written as a server writes it, a lone surrogate as U+FFFD
-  // (`toWellFormed`); `null` is `undefined`, and `{ throws }` the error JavaScript throws.
+  // (`toWellFormed`) and one longer than a million code units as `{ length }`; `null` is
+  // `undefined`, and `{ throws }` the error JavaScript throws.
   it("strings.json is JavaScript's string methods", () => {
     const vectors = read("strings.json") as [string, string, string[], unknown][];
     const recorded = vectors.map(([op, input, args]) => [op, input, args, stringOp(op, input, args)]);
@@ -193,6 +194,10 @@ describe("vectors shared with the Rust crate", () => {
           return parseInt(input, 10);
         case "parseInt16":
           return parseInt(input, 16);
+        case "parseInt7":
+          return parseInt(input, 7);
+        case "parseInt36":
+          return parseInt(input, 36);
         case "parseFloat":
           return parseFloat(input);
         default:
