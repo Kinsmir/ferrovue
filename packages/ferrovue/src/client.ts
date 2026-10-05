@@ -14,7 +14,7 @@ function parseJson(text: string): unknown {
   return JSON.parse(quoted, (_key, value: unknown) => (typeof value === "string" && value.startsWith(tag) ? NON_FINITE[value.slice(tag.length)] : value));
 }
 
-/** Give Pinia the state the server rendered with — what `ferrovue::state_script_into` wrote — before
+/** Give Pinia the state the server rendered with (what `ferrovue::state_script_into` wrote) before
  * the app mounts, so every store starts from it and the hydrated markup agrees with the server's. */
 export function hydrateState(pinia: Pinia, id = "__pinia", doc: Document = document): void {
   const text = doc.getElementById(id)?.textContent;
@@ -36,7 +36,7 @@ export interface MountOptions {
   onError?: (element: Element, problem: string) => void;
 }
 
-/** A component, or a function that loads one — `() => import("./Counter.vue")` — so that the code
+/** A component, or a function that loads one (`() => import("./Counter.vue")`), so that the code
  * of an island not on the page is never fetched. A function is taken for a loader as vue-router
  * takes one for a lazy route: unless it has `props` or `displayName`, which mark a functional
  * component, or `__vccOpts`, a class component. `ferrovue/islands` maps the name of every island

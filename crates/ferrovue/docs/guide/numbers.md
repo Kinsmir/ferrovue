@@ -85,7 +85,7 @@ Comparisons are made between doubles too, and a number is falsy when it is `0` (
 | `x.toFixed(d)` | [`js_to_fixed`](crate::js_to_fixed) | An exact tie rounds away from zero, where Rust's formatting rounds to even |
 | `Math.floor`, `Math.ceil`, `Math.trunc`, `Math.abs` | `f64::floor`, `ceil`, `trunc`, `abs` | They agree |
 | `s.length` | [`js_length`](crate::js_length) | UTF-16 code units, not UTF-8 bytes. See [`strings`](crate::guide::strings) |
-| `Number(s)`, `parseInt(s)`, `parseFloat(s)` | [`js_number`](crate::js_number), [`js_parse_int`](crate::js_parse_int), [`js_parse_float`](crate::js_parse_float) | JavaScript's grammar for numbers, not Rust's `parse`. See [`strings`](crate::guide::strings) |
+| `Number(s)`, `parseInt(s)`, `parseFloat(s)` | [`js_number`](crate::js_number), [`js_parse_int`](crate::js_parse_int), [`js_parse_float`](crate::js_parse_float) | JavaScript's grammar for numbers, which differs from Rust's `parse`. See [`strings`](crate::guide::strings) |
 
 ```rust
 assert_eq!(ferrovue::js_round(-2.5), -2.0);
@@ -135,7 +135,7 @@ assert_eq!(html, r#"<div data-island="Gauge" data-props="{&quot;level&quot;:NaN}
 
 The tokens are not JSON, so code that reads the props with plain `JSON.parse` refuses them; an
 older `ferrovue` leaves such an island as the server rendered it and reports that its props
-are not JSON, rather than hydrating it with the wrong value. Upgrade the npm package with the crate.
+are not JSON, so it never hydrates with a wrong value. Upgrade the npm package with the crate.
 
 Integers beyond the range of `i64` itself cannot be represented at all; keep integer props and the
 results of integer arithmetic within ±2⁵³, where both sides agree exactly.

@@ -416,7 +416,7 @@ pub enum Query<'r> {
 
 impl<'r> Query<'r> {
     /// `{{ route.query.q }}`, escaped: nothing for `undefined` and `null`, the text for a string,
-    /// and an array as `toDisplayString` writes one — `JSON.stringify(value, null, 2)`.
+    /// and an array as `toDisplayString` writes one: `JSON.stringify(value, null, 2)`.
     ///
     /// # Example
     ///
@@ -499,7 +499,7 @@ impl<'r> Query<'r> {
     /// use ferrovue::Query;
     ///
     /// assert_eq!(Query::Absent.or("none"), Query::One("none"));
-    /// assert_eq!(Query::One("").or("none"), Query::One("")); // `??`, not `||`
+    /// assert_eq!(Query::One("").or("none"), Query::One("")); // `??` keeps the empty string
     /// ```
     pub fn or<'a>(self, fallback: &'a str) -> Query<'a>
     where

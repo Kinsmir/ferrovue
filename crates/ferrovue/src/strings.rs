@@ -3,8 +3,8 @@ use std::cmp::Ordering;
 
 use crate::push_number;
 
-/// `String.prototype.length`: UTF-16 code units, which is what a template's `.length` counts — not
-/// the UTF-8 bytes of `str::len`, nor the scalar values of `chars().count()`.
+/// `String.prototype.length`: UTF-16 code units, which is what a template's `.length` counts.
+/// `str::len` counts UTF-8 bytes and `chars().count()` scalar values, and either can differ from it.
 ///
 /// # Example
 ///
@@ -20,7 +20,7 @@ pub fn js_length(s: &str) -> i64 {
 }
 
 /// `String.prototype.trim`: ECMAScript's WhiteSpace and LineTerminator sets, which are not Rust's
-/// `char::is_whitespace` — JavaScript trims U+FEFF and keeps U+0085.
+/// `char::is_whitespace`: JavaScript trims U+FEFF and keeps U+0085.
 ///
 /// # Example
 ///
@@ -231,7 +231,7 @@ pub fn js_at(s: &str, index: f64) -> Option<&str> {
     (0.0 <= k && k < len).then(|| unit(s, k as usize))
 }
 
-/// `String.prototype.charAt(index)`: the code unit there, or `""` outside the string — a negative
+/// `String.prototype.charAt(index)`: the code unit there, or `""` outside the string (a negative
 /// index too.
 ///
 /// # Example
@@ -492,7 +492,7 @@ pub fn js_repeat(s: &str, count: f64) -> String {
 }
 
 /// How JavaScript orders two strings with `<`: by UTF-16 code unit, which is not the order of the
-/// characters — every character from U+E000 to U+FFFF sorts after one beyond U+FFFF, whose first
+/// characters: every character from U+E000 to U+FFFF sorts after one beyond U+FFFF, whose first
 /// unit is a surrogate.
 ///
 /// # Example
@@ -632,7 +632,7 @@ pub fn js_number(s: &str) -> f64 {
 }
 
 /// `parseInt(s)` (`radix` 0) or `parseInt(s, radix)`: leading whitespace and a sign skipped, a `0x`
-/// read as hexadecimal unless another radix is given, then as many digits as there are — or `NaN`
+/// read as hexadecimal unless another radix is given, then as many digits as there are, or `NaN`
 /// when there are none.
 ///
 /// # Example
@@ -672,7 +672,7 @@ pub fn js_parse_int(s: &str, radix: u32) -> f64 {
     if negative { -value } else { value }
 }
 
-/// `parseFloat(s)`: leading whitespace skipped, then the longest decimal literal there is — or
+/// `parseFloat(s)`: leading whitespace skipped, then the longest decimal literal there is, or
 /// `NaN` when there is none. Unlike `Number`, it reads no `0x`, and ignores what follows.
 ///
 /// # Example

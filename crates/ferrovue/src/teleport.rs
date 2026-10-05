@@ -108,7 +108,7 @@ impl Teleports {
     }
 }
 
-/// `ssrRenderTeleport`: the markers in place and the content in the target's buffer — or, when
+/// `ssrRenderTeleport`: the markers in place and the content in the target's buffer, or, when
 /// disabled, the content in place and empty anchors in the target.
 ///
 /// # Example

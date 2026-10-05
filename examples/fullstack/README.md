@@ -66,7 +66,7 @@ cargo run -p ferrovue-example-fullstack -- --render /books/dune
 The server's page is static HTML except where the client is told otherwise. ferrovue generates an
 `island()` function only for a component that renders from its props alone, because the island's
 `data-props` is all the client gets to mount it with. That is why `AddToBasket` calls
-`useBasket()` inside its click handler rather than in setup: the server render then needs no store,
+`useBasket()` inside its click handler, outside setup: the server render then needs no store,
 and the component stays an island.
 
 `client/app.ts` names no island: it hands `mountIslands` the `ferrovue/islands` module, which the

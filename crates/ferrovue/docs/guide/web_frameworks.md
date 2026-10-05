@@ -150,7 +150,7 @@ A page rendered with [`hole`](crate::hole)s ([`streaming`](crate::guide::streami
 pieces. Give `HtmlStream` the whole render and a future for each hole, in the order the holes
 appear: the markup up to the first hole goes out at once, and each hole's content, then the markup
 after it, as soon as that hole and every one before it are ready. The futures all run from the
-start, so the slowest decides when the page ends, not their sum.
+start, so the page ends when the slowest one does.
 
 ```rust
 # mod reviews {

@@ -88,7 +88,7 @@ assert_eq!(
 );
 ```
 
-The closure writes raw markup: it is your own code, not a template, so escape any text it writes
+The closure writes raw markup: it is your own code, which nothing escapes for you, so escape any text it writes
 with [`escape_into`](crate::escape_into). To put another component in the slot, call its renderer
 from the closure: `|out: &mut String| badge::render(out, &badge_props)`, or
 `|out: &mut String| badge::island(&badge_props).render_to(out)` to make it an island.

@@ -57,7 +57,7 @@ pub struct Message {
     pub cases: &'static [&'static [Part]],
 }
 
-/// A locale's messages, by key — nested keys joined with dots — sorted for lookup.
+/// A locale's messages, by key (nested keys joined with dots), sorted for lookup.
 ///
 /// The messages must be sorted by key, byte by byte.
 #[derive(Debug)]
@@ -190,9 +190,9 @@ impl I18n {
     }
 
     /// `t(key, …)`: the message in the first locale of the chain that has it, evaluated with these
-    /// arguments — or the key itself when none does, as vue-i18n returns it.
+    /// arguments, or the key itself when none does, as vue-i18n returns it.
     ///
-    /// The result is the message's text, not yet escaped.
+    /// The result is the message's text, unescaped.
     ///
     /// # Example
     ///

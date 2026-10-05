@@ -3,7 +3,7 @@
 ferrovue promises one thing: for every input it accepts, the Rust it generates writes the same
 bytes Vue's server renderer writes, and it refuses every input it can't translate. The suite is
 built around that promise. Wherever it can, it takes the expected answer from the real Vue,
-vue-router or JavaScript rather than from a hand-written string.
+vue-router or JavaScript.
 
 ```sh
 pnpm test                  # TypeScript: compiler, CLI, vectors, router, Vue half of conformance
@@ -41,7 +41,7 @@ fixtures/X/case.json            Vue hydrates it: no mismatch warnings, same DOM 
 
 1. `conformance.test.ts` renders each `fixtures/<Component>/<case>.json` with real Vue and compares
    the result with `<case>.html`.
-2. It mounts the recorded HTML and hydrates it, failing on any hydration warning — except for the
+2. It mounts the recorded HTML and hydrates it, failing on any hydration warning, except for the
    fixtures in `VUE_DISAGREES` (`conformance-cases.ts`), where Vue's own server and client renders
    differ and which must still mismatch: slot content whose every pushed string is comments and
    whitespace (an interpolation that writes nothing beside a list's fragment markers) shows the
@@ -91,7 +91,7 @@ A fixture is a JSON object of props plus three optional keys:
 | `RouteInfo` | `useRoute()` and `$route`: path, hash, name, params |
 | `Translated`, `Plurals` | vue-i18n's `$t` and `useI18n()`: named and list values, literals, linked messages and their modifiers, fallback locales; the plural case chosen by an integer, a fraction or a value that is not a finite number, and `count` and `n` given or taking the plural number |
 | `Badge`, `Cart` | Pinia state through the store and `storeToRefs`, getters, two stores, store reads in `computed` |
-| `ScopedPage` and its children | `<style scoped>`: the id on every element and what reaches each kind of child — `ScopedLeaf` (a root chosen by `v-if`), `ScopedRoot` (a root that is a component), `ScopedPair` (a fragment), `PlainBox` (no scoped styles), `ScopedCard` (`:slotted()`, a scoped slot, fallbacks), `PlainForward`, `ScopedShelf` and `ScopedRack` (slots forwarded into `:slotted()` ones, slot scope ids with two spaces), `ScopedFade` (a `<Transition>` root) — and `<KeepAlive>`, `<Teleport>` |
+| `ScopedPage` and its children | `<style scoped>`: the id on every element and what reaches each kind of child: `ScopedLeaf` (a root chosen by `v-if`), `ScopedRoot` (a root that is a component), `ScopedPair` (a fragment), `PlainBox` (no scoped styles), `ScopedCard` (`:slotted()`, a scoped slot, fallbacks), `PlainForward`, `ScopedShelf` and `ScopedRack` (slots forwarded into `:slotted()` ones, slot scope ids with two spaces), `ScopedFade` (a `<Transition>` root) — and `<KeepAlive>`, `<Teleport>` |
 | `ScopedTree` | A scoped component rendering itself, whose children's roots carry its id twice |
 | `ScopedNav`, `ScopedLink` | `<RouterLink>` in scoped components: the `<a>` and what it holds, a link that is a scoped component's root, a link in `:slotted()` slot content |
 | `ScopedQuirks`, `QuietLeaf` | Where Vue's server and client renders give different ids: a `:slotted()` component's fallback, `inheritAttrs: false` |
@@ -114,8 +114,8 @@ reaches the page.
 ## Hydrating in real browsers
 
 The conformance suite hydrates each fixture in happy-dom, whose HTML parser is not a browser's. A
-browser rebuilds some markup as it parses — a block element closes an open `<p>`, a table gains a
-`<tbody>` and pushes stray content out of it, `<select>` and `<template>` have rules of their own —
+browser rebuilds some markup as it parses: a block element closes an open `<p>`, a table gains a
+`<tbody>` and pushes stray content out of it, `<select>` and `<template>` have rules of their own;
 and Vue hydrates against what the browser built. A mismatch only a browser shows is a real one for
 readers, so `pnpm test:browser` hydrates in Chromium, Firefox and WebKit through
 [Playwright](https://playwright.dev):
@@ -150,8 +150,8 @@ the run: WebKit needs system libraries some Linux distributions do not ship. CI'
 browsers` job caches the browsers by Playwright version and installs their libraries each run.
 
 A fixture that mismatches only in a browser is a finding: the recorded HTML is Vue's own render, so
-the cause is the template (markup a browser rebuilds as it parses), not the generated Rust. Report
-it, and consider whether the compiler should refuse the template, rather than changing the fixture.
+the cause is the template: markup a browser rebuilds as it parses. Report
+it, leave the fixture as recorded, and consider whether the compiler should refuse the template.
 
 ## Randomised differential testing
 
@@ -173,19 +173,19 @@ What it generates, with random nesting:
   index;
 - static and bound attributes, boolean attributes, `:class` strings, arrays and objects (computed
   names too), `:style` objects merged with a static `style`;
-- child components written beside each one — a single root, a slot with a fallback, a root that is
+- child components written beside each one: a single root, a slot with a fallback, a root that is
   a component forwarding its slot, a fragment, a root that is another component, a root with
   attributes of its own, `inheritAttrs: false` with `$attrs` bound before and after an element's
   own, `useAttrs()` bound on a root that inherits them too, a root with none of its own and a root
-  that is a component given none — given slot content and attributes they
-  do not declare, which fall through, at the root or nested — often slot content that may write
+  that is a component given none, given slot content and attributes they
+  do not declare, which fall through, at the root or nested, often slot content that may write
   nothing visible (interpolations of optional, empty or whitespace values beside loops, branches
   and `<template>`s that may render only their comments), which decides whether the fallback
   shows; `<style scoped>` on the component and on each child, with `:slotted()` on those with a
   slot;
 - string `+`, template literals, `?:`, `??`, `||`, `.length`, `.trim()` and the rest of the string
-  methods — `slice`, `substring`, `at`, `charAt`, `indexOf`, `split`, `replace` and `replaceAll`
-  with `$` patterns, `padStart`, `padEnd`, `repeat` — strings ordered with `<`, `String()`,
+  methods (`slice`, `substring`, `at`, `charAt`, `indexOf`, `split`, `replace` and `replaceAll`
+  with `$` patterns, `padStart`, `padEnd`, `repeat`), strings ordered with `<`, `String()`,
   `.toString()`, `.toFixed()`, `Number()`, `parseInt()`, `parseFloat()`, `JSON.stringify()`, `Math`,
   and integer and fractional arithmetic;
 - lists computed from lists, `Object.keys` / `Object.values` and `split`, by `filter`, `map` and
@@ -241,7 +241,7 @@ nightly (`.github/workflows/fuzz.yml`) with 1,000 components and the date as the
 `FERROVUE_FUZZ_PLANT=1` checks the harness itself: before building, it writes one escaped
 interpolation per component unescaped (`out.push_str` for `fv::escape_into`). The run must then
 report mismatches and shrink one to a lone `{{ s }}` with a value such as `">"`. Its failures go to
-`target/fuzz/planted-failures/`, not `fuzz/failures/`.
+`target/fuzz/planted-failures/`, apart from the real ones in `fuzz/failures/`.
 
 ### Turning a failure into a conformance case
 
@@ -272,8 +272,8 @@ not a tested one, which is what the mutation testing below is for.
 
 Coverage says a line ran; mutation testing says a test would notice if it were wrong.
 [cargo-mutants](https://mutants.rs) makes hundreds of small changes to the runtime crates' source
-(`crates/*/src`, configured in `.cargo/mutants.toml`) — `<` made `<=`, `&&` made `||`, a function's
-body replaced by a default value — and runs all four crates' tests (units, vectors, properties and
+(`crates/*/src`, configured in `.cargo/mutants.toml`): `<` made `<=`, `&&` made `||`, a function's
+body replaced by a default value; it runs all four crates' tests (units, vectors, properties and
 conformance) on each: the conformance suite in `ferrovue` holds the router, vue-i18n and the
 number writing to Vue's output too. A change that no test notices is a **surviving** mutant.
 

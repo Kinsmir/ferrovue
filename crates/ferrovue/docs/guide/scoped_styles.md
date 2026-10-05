@@ -243,7 +243,7 @@ a component, carries only the ids it writes, so a component's scoped styles do n
 
 # Slots and `:slotted()`
 
-Slot content is the parent's markup, so it carries the parent's id, not the component's. A component
+Slot content is the parent's markup, so it carries the parent's id only. A component
 whose styles use `:slotted()`, `.note :slotted(p) { … }`, has them compiled to select
 `data-v-…-s`, the slot scope id, and its outlets pass that id to the content they render, which
 writes it onto its elements and hands it to the roots of components in it:

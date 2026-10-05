@@ -61,8 +61,8 @@ crates/ferrovue-router/src/lib.rs: replace > with >= in Router::at
 crates/ferrovue-router/src/lib.rs: replace < with <= in parse_url
 crates/ferrovue-router/src/lib.rs: replace > with >= in parse_url
 
-# `resolveRelativePath`. The loop always stops at a segment other than `.` or `..` — a final one is
-# followed by an empty segment — so `to_position` never reaches the end. And `from` is absolute: its
+# `resolveRelativePath`. The loop always stops at a segment other than `.` or `..` (a final one is
+# followed by an empty segment), so `to_position` never reaches the end. And `from` is absolute: its
 # first segment is empty, so stopping `..` at position 1 or at 0 joins the same empty prefix.
 crates/ferrovue-router/src/lib.rs: replace < with <= in resolve_relative_path
 crates/ferrovue-router/src/lib.rs: replace > with >= in resolve_relative_path

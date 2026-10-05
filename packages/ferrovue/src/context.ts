@@ -38,7 +38,7 @@ export interface Config {
   /** The directory of Pinia stores (`.ts` files), whose state a component may read while it renders
    * on the server. */
   stores?: string;
-  /** Custom directives that render nothing on the server — no `getSSRProps` — by name, without
+  /** Custom directives that render nothing on the server (no `getSSRProps`), by name, without
    * `v-`: `["focus", "click-outside"]`. Any other custom directive is refused, since the server
    * cannot know what its `getSSRProps` would add. */
   clientDirectives?: string[];

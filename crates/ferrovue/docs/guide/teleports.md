@@ -119,5 +119,5 @@ leaves empty anchors in its target, which must still be written for the client t
 
 # Choosing a target
 
-As Vue recommends, teleport to a dedicated element (`#modals`) rather than to `body`. The browser
+As Vue recommends, teleport to a dedicated element such as `#modals`. The browser
 hydrates a target from its first node, and `body` also holds the app.
