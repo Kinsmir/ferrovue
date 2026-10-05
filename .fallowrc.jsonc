@@ -12,16 +12,9 @@
     "scripts/inspect.ts"
   ],
   "ignorePatterns": [
-    "fuzz/**",
-    "**/dist/**",
-    "target/**",
-    "**/generated/**",
     "examples/fullstack/**",
     "packages/ferrovue/bench/**",
     "packages/ferrovue/fuzz/**"
-  ],
-  "ignoreExports": [
-    { "file": "crates/ferrovue/tests/conformance/**", "exports": ["*"] }
   ],
   "ignoreExportsUsedInFile": true,
   "ignoreDependencies": [
