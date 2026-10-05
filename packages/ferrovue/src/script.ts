@@ -150,7 +150,7 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
         }
         continue;
       }
-      // A binding to what a plugin provides: \`useRoute()\`, a store, \`storeToRefs\`, \`useI18n()\`.
+      // A binding to what a plugin provides: `useRoute()`, a store, `storeToRefs`, `useI18n()`.
       if (ctx.plugins.some((p) => p.scriptBinding?.(scope, d))) continue;
       if (d.id.type !== "Identifier") {
         // Destructuring anything else: client-side state the template may not read.

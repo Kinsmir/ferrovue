@@ -32,7 +32,7 @@ interface I18nRun {
   readers: Set<Component>;
 }
 
-/** What one setup scope named vue-i18n's own by: \`useI18n\`, and the bindings of its \`t\`. */
+/** What one setup scope named vue-i18n's own by: `useI18n`, and the bindings of its `t`. */
 interface I18nScope {
   useI18n: string | null;
   t: Set<string>;
@@ -198,7 +198,7 @@ function translate(s: Scope, args: N[], n: N): Val {
   return { code: `&*fv_i18n.t(${strArg(key.code)}, &fv::i18n::Args { named: ${named}, list: ${list}, plural: ${plural} })`, ty: STR };
 }
 
-/** vue-i18n: \`$t\` and \`useI18n()\`, and the locale files. */
+/** vue-i18n: `$t` and `useI18n()`, and the locale files. */
 export const i18n: Plugin<I18nRun, I18nScope> = {
   name: "i18n",
   configure: (config, root) => ({ setup: config.i18n ? readLocales(root, config.i18n) : null, readers: new Set() }),
@@ -216,7 +216,7 @@ export const i18n: Plugin<I18nRun, I18nScope> = {
     return true;
   },
   scriptBinding(s, d) {
-    // `const { t, locale } = useI18n()`: \`t\` translates, \`locale\` is the request's locale.
+    // `const { t, locale } = useI18n()`: `t` translates, `locale` is the request's locale.
     const own = scopeOf(i18n, s);
     const init = d.init;
     if (own.useI18n === null || d.id.type !== "ObjectPattern" || init?.type !== "CallExpression" || init.callee.type !== "Identifier" || init.callee.name !== own.useI18n) {

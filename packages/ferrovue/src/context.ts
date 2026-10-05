@@ -120,7 +120,7 @@ export const ctx = {
   trustedHtml: null as string | null,
   /** Custom directives declared to render nothing on the server. */
   clientDirectives: new Set<string>(),
-  /** The plugins of this run, in order, and the state each keeps for it (\`runOf\`). */
+  /** The plugins of this run, in order, and the state each keeps for it (`runOf`). */
   plugins: [] as readonly Plugin[],
   runs: new Map<Plugin, unknown>(),
   /** The project root, for resolving a component's imports. */

@@ -20,6 +20,10 @@ released together and share version numbers.
 - New default features of `ferrovue`, `router` and `i18n`, which bring in `ferrovue-router` and
   `ferrovue-i18n`. An application with neither routes nor translations can set
   `default-features = false` and build neither crate.
+- The compiler is restructured, with no change to anything it generates or refuses: vue-router,
+  Pinia stores, vue-i18n and scoped styles are compiler plugins behind an internal interface
+  (`src/plugin.ts` and `src/plugins/`, described in CONTRIBUTING.md), so the core names none of
+  them, and `expr.ts`, `template.ts` and `attrs.ts` are split into modules of under 500 lines.
 
 ## [0.3.0] - 2026-10-05
 

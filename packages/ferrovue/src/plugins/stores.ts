@@ -63,7 +63,7 @@ interface StoresRun {
 interface StoresScope {
   /** The stores' hooks it imports, by local name. */
   hooks: Map<string, Store>;
-  /** The local name of Pinia's \`storeToRefs\`. */
+  /** The local name of Pinia's `storeToRefs`. */
   storeToRefs: string | null;
   /** Setup bindings holding a store, by name. */
   values: Map<string, Store>;
@@ -321,7 +321,7 @@ function markStore(ty: Ty): Ty {
   return ty;
 }
 
-/** Pinia: the stores' state, read through \`useX()\`, \`storeToRefs\` and getters. */
+/** Pinia: the stores' state, read through `useX()`, `storeToRefs` and getters. */
 export const piniaStores: Plugin<StoresRun, StoresScope> = {
   name: "stores",
   configure: (config) => ({

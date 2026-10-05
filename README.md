@@ -448,10 +448,16 @@ crates/ferrovue-router/      vue-router's matching and links (the `router` featu
 crates/ferrovue-i18n/        vue-i18n's t() (the `i18n` feature)
 packages/ferrovue/           the compiler (npm package)
   src/compiler.ts            the API: `generate`, `write`
-  src/script.ts, template.ts, expr.ts, attrs.ts
-                             <script setup>, the compiled template, expressions, class/style
-  src/router.ts, stores.ts, i18n.ts
-                             vue-router, Pinia and vue-i18n
+  src/component.ts, script.ts, typescript.ts
+                             a `.vue` file read, <script setup>, TypeScript types
+  src/template.ts, children.ts, slots.ts, loops.ts
+                             the compiled template: statements, child components, slots, v-for
+  src/expr.ts, strings.ts, numbers.ts, narrowing.ts, calls.ts, lists.ts
+                             expressions: operators, strings, numbers, narrowing, calls, lists
+  src/attrs.ts, classes.ts, styles.ts, fallthrough.ts
+                             attributes, class and style, attributes a parent passes on
+  src/plugin.ts              the plugin interface (see CONTRIBUTING.md)
+  src/plugins/               vue-router, Pinia, vue-i18n, scoped styles, <Teleport>, shared types
   src/rust.ts, emitter.ts    the Rust source written out
   src/cli.ts, vite.ts        the `ferrovue` command and the Vite plugin
   src/client.ts              browser-side helpers: `mountIslands`, `hydrateState`

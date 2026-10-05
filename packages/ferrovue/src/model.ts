@@ -27,16 +27,16 @@ export type Ty =
   | PluginTys[keyof PluginTys];
 
 /** An interface's type. `home` marks a type declared elsewhere: `"types"` for a shared `.ts` file, or
- * the component whose \`.vue\` file declares it. A plugin may mark its own (\`declare module\`): a
- * store's state is \`store\`. */
+ * the component whose `.vue` file declares it. A plugin may mark its own (`declare module`): a
+ * store's state is `store`. */
 export interface StructTy {
   k: "struct";
   name: string;
   home?: string;
 }
 
-/** The types of values plugins add, by kind: each plugin declares its own here (\`declare module\`),
- * and tells the core what to do with them through its \`ValueHooks\`. */
+/** The types of values plugins add, by kind: each plugin declares its own here (`declare module`),
+ * and tells the core what to do with them through its `ValueHooks`. */
 export interface PluginTys {}
 
 export interface Field {
@@ -173,7 +173,7 @@ export interface Component {
   imports: Set<string>;
   /** The slots its template renders with `<slot>`, by name, in order of first appearance. */
   slotNames: string[];
-  /** The render parameters it takes (\`RenderParam\`), by name: those it reads, and those a child
+  /** The render parameters it takes (`RenderParam`), by name: those it reads, and those a child
    * it renders takes. Known once every component is read. */
   takes: Set<string>;
   /** `defineModel` bindings: local name → the prop it reads. */
@@ -203,7 +203,7 @@ export interface Component {
   idsInAttrs: boolean;
 }
 
-/** A component with nothing read yet: what \`readComponent\` fills in, and what a \`.ts\` file stands
+/** A component with nothing read yet: what `readComponent` fills in, and what a `.ts` file stands
  * in as while the types it declares are read, and written out. */
 export function blankComponent(name: string, module: string, file: string, structs: Map<string, Struct> = new Map()): Component {
   return {
@@ -277,7 +277,7 @@ export interface Scope {
   sid: string | null;
   /** Inside a `v-for` over a list of the props: the Rust name of its item, and the list. */
   loop?: { item: string; over: string };
-  /** Each plugin's state for this setup scope (\`scopeOf\`). */
+  /** Each plugin's state for this setup scope (`scopeOf`). */
   plugins: Map<Plugin, unknown>;
 }
 

@@ -1,7 +1,7 @@
 /* Attributes a parent passes a child beyond its props, which fall through to the child's root as
  * Vue's do: which components may be passed some, and which. A component that may be passed some
- * takes them as one \`fv::Attrs\`, with the scope ids a parent hands its root behind them, so this is
- * worked out for every component before any is generated, once the scope ids are (\`analyse\`). */
+ * takes them as one `fv::Attrs`, with the scope ids a parent hands its root behind them, so this is
+ * worked out for every component before any is generated, once the scope ids are (`analyse`). */
 
 import { parse as parseJs } from "@babel/parser";
 import { type Component, type N, declares } from "./model.ts";

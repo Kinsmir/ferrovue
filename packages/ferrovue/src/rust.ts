@@ -337,12 +337,12 @@ ${slotsStruct}${renderSource(comp, life, args, e)}
 ${wrappers}`;
 }
 
-/** Whether a component's \`render_json\` arm reads the fixture beyond the props. */
+/** Whether a component's `render_json` arm reads the fixture beyond the props. */
 function readsFixture(c: Component): boolean {
   return takesSlots(c) || paramsOf(c).some((p) => p.test.fixture);
 }
 
-/** \`mod.rs\`: the components' modules and \`modules\`, those the plugins write beside them. */
+/** `mod.rs`: the components' modules and `modules`, those the plugins write beside them. */
 export function modSource(comps: Component[], modules: string[]): string {
   const arms = comps
     .map((c) => {

@@ -19,7 +19,7 @@ declare module "../model.ts" {
     route: { k: "route" };
     /** `route.params`. */
     params: { k: "params" };
-    /** `route.query`, and one of its values: a string, \`null\`, an array of those, or absent. */
+    /** `route.query`, and one of its values: a string, `null`, an array of those, or absent. */
     queryobj: { k: "queryobj" };
     query: { k: "query" };
   }
@@ -50,14 +50,14 @@ interface RouterRun {
   base: string;
   linkActive: string;
   linkExactActive: string;
-  /** The components that read the route: \`useRoute()\`, \`$route\`, or a \`<RouterLink>\`, which
+  /** The components that read the route: `useRoute()`, `$route`, or a `<RouterLink>`, which
    * resolves against it. */
   readers: Set<Component>;
-  /** The components that hold \`<RouterView>\`: the page, which the server supplies. */
+  /** The components that hold `<RouterView>`: the page, which the server supplies. */
   views: Set<Component>;
 }
 
-/** What one setup scope named vue-router's own by: \`useRoute\`, and \`RouterLink\` and \`RouterView\`,
+/** What one setup scope named vue-router's own by: `useRoute`, and `RouterLink` and `RouterView`,
  * imported or resolved by the compiled template. */
 interface RouterScope {
   useRoute: string | null;
@@ -163,7 +163,7 @@ pub fn router() -> ferrovue::Router {
 `;
 }
 
-/** vue-router: \`<RouterLink>\`, \`<RouterView>\`, \`useRoute()\` and \`$route\`, and the routes file. */
+/** vue-router: `<RouterLink>`, `<RouterView>`, `useRoute()` and `$route`, and the routes file. */
 export const router: Plugin<RouterRun, RouterScope> = {
   name: "router",
   configure(config, root) {

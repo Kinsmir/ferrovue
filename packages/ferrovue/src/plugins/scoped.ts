@@ -22,7 +22,7 @@ import { type ScopeIdMode } from "../context.ts";
 import { type Plugin, runOf } from "../plugin.ts";
 
 /** Scoped styles in one run: how ids are computed, from which directory a component's path is
- * hashed, and each \`<style scoped>\` component's id and whether its styles use \`:slotted()\`. */
+ * hashed, and each `<style scoped>` component's id and whether its styles use `:slotted()`. */
 interface ScopedRun {
   mode: ScopeIdMode;
   viteRoot: string;
@@ -30,13 +30,13 @@ interface ScopedRun {
   slotted: Set<Component>;
 }
 
-/** \`data-v-…\`, the id a component's \`<style scoped>\` gives its elements, or \`null\` without one. */
+/** `data-v-…`, the id a component's `<style scoped>` gives its elements, or `null` without one. */
 export function scopeIdOf(comp: Component): string | null {
   return runOf(scoped).ids.get(comp) ?? null;
 }
 
-/** \`getHash\` in \`@vitejs/plugin-vue\`: the first 8 hex digits of the SHA-256 of the file's path from
- * Vite's root, with \`/\` between its parts, followed in \`"filepath-source"\` mode by its source. */
+/** `getHash` in `@vitejs/plugin-vue`: the first 8 hex digits of the SHA-256 of the file's path from
+ * Vite's root, with `/` between its parts, followed in `"filepath-source"` mode by its source. */
 function scopeHash(file: string, source: string): string {
   const { mode, viteRoot } = runOf(scoped);
   const path = relative(viteRoot, resolvePath(file)).split(sep).join("/");
@@ -153,7 +153,7 @@ function childIds(s: Scope, child: Component, passesAttrs: boolean, inSlot: bool
   return code;
 }
 
-/** Scoped styles: \`<style scoped>\` and \`:slotted()\`, and the ids they hand on. */
+/** Scoped styles: `<style scoped>` and `:slotted()`, and the ids they hand on. */
 export const scoped: Plugin<ScopedRun> = {
   name: "scoped",
   configure: (config, root) => ({

@@ -73,8 +73,8 @@ export interface ValueHooks {
   isArray?(v: Val): Val | undefined;
 }
 
-/** A component as \`analyse\` sees it: its compiled template, the child components its setup
- * imports by local name, and the setup bindings that hold \`useAttrs()\`. */
+/** A component as `analyse` sees it: its compiled template, the child components its setup
+ * imports by local name, and the setup bindings that hold `useAttrs()`. */
 export interface ReadComponent {
   comp: Component;
   ssr: string;
@@ -92,7 +92,7 @@ export interface Plugin<Run = unknown, Local = unknown> {
   prepare?(root: string): void;
 
   // Reading a component.
-  /** A component's single-file descriptor, before its template is compiled: its \`<style>\` blocks. */
+  /** A component's single-file descriptor, before its template is compiled: its `<style>` blocks. */
   sfc?(comp: Component, descriptor: SFCDescriptor, file: string, source: string): void;
   /** How Vue compiles the component's template, where the plugin decides it: its scope id. */
   templateOptions?(comp: Component): { id: string; scoped: boolean; slotted: boolean };
@@ -141,8 +141,8 @@ export interface Plugin<Run = unknown, Local = unknown> {
   component?(s: Scope, e: Emitter, n: N): boolean;
   /** A child component this one renders: refused here when the plugin cannot have it there. */
   child?(s: Scope, child: Component, n: N): void;
-  /** The ids a child's root is handed, as a Rust \`&str\` — \`null\` for none — given whether this
-   * component passes its own \`_attrs\` on to it and whether it is rendered in slot content. One
+  /** The ids a child's root is handed, as a Rust `&str` — `null` for none — given whether this
+   * component passes its own `_attrs` on to it and whether it is rendered in slot content. One
    * plugin gives them: scoped styles. */
   childIds?(s: Scope, child: Component, passesAttrs: boolean, inSlot: boolean, n: N): string | null;
   /** A statement of the compiled template that calls a helper the core does not translate

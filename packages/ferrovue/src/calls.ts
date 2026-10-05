@@ -37,7 +37,7 @@ export function call(s: Scope, n: N): Val {
       case "_ssrLooseContain":
         return fail(comp, "`v-model` over an array", n);
     }
-    // A plugin's function, such as \`t(…)\` from \`useI18n()\`.
+    // A plugin's function, such as `t(…)` from `useI18n()`.
     const own = claim((p) => p.call?.(s, n));
     if (own) return own;
     const helper = s.helpers.get(callee.name);
