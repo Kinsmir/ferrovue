@@ -1,5 +1,15 @@
 [workspace]
-members = ["crates/*", "examples/*"]
+# Listed one by one, never by wildcard: a new crate or example is added here on purpose, and
+# `node scripts/release.ts check` fails on one that is missing.
+members = [
+    "crates/ferrovue-core",
+    "crates/ferrovue-router",
+    "crates/ferrovue-i18n",
+    "crates/ferrovue",
+    "examples/greeting",
+    "examples/fullstack",
+    "examples/dioxus",
+]
 resolver = "3"
 
 [workspace.package]

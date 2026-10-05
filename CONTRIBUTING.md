@@ -95,6 +95,9 @@ core.
   RustSec advisory shows in the run without failing a pull request; it does fail a release.
 - A new dependency must be under a licence `deny.toml` allows (permissive ones compatible with
   MIT OR Apache-2.0) and come from crates.io.
+- A new crate, example or npm package is listed by its path in `Cargo.toml`'s `members` or
+  `pnpm-workspace.yaml`'s `packages`; neither uses wildcards, and `node scripts/release.ts members`
+  fails on a member that is missing (CI runs it on every pull request).
 
 ## Licence
 

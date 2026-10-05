@@ -1,5 +1,6 @@
+# Listed one by one, never by wildcard (`node scripts/release.ts check` fails on one that is missing).
 packages:
-  - packages/*
+  - packages/ferrovue
   - examples/fullstack
 
 # esbuild (a Vite dependency) unpacks its platform binary in a postinstall script, which pnpm blocks

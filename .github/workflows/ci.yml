@@ -60,6 +60,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
+      - name: Both workspaces list every member by its path, without wildcards
+        run: node scripts/release.ts members
 
   deny:
     name: Dependencies (cargo-deny ${{ matrix.checks }})
