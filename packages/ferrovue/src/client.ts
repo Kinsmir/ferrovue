@@ -1,4 +1,18 @@
-import { createSSRApp, createTextVNode, defineComponent, h, onMounted, ref, type App, type Component, type Plugin } from "vue";
+import {
+  createSSRApp,
+  createTextVNode,
+  defineComponent,
+  h,
+  hydrateOnIdle,
+  hydrateOnMediaQuery,
+  hydrateOnVisible,
+  onMounted,
+  ref,
+  type App,
+  type Component,
+  type HydrationStrategy,
+  type Plugin,
+} from "vue";
 import type { Pinia } from "pinia";
 import type { Router } from "vue-router";
 
@@ -32,7 +46,8 @@ export interface MountOptions {
   /** Where to look for islands: the whole document by default. */
   root?: ParentNode;
   /** Told about an island left as the server rendered it, because its component is not among
-   * those given or its props are malformed. Warns on the console by default. */
+   * those given, did not load or its props are malformed, and about one hydrated at once because
+   * its `data-hydrate` is not one this version knows. Warns on the console by default. */
   onError?: (element: Element, problem: string) => void;
 }
 
@@ -45,47 +60,98 @@ export type IslandComponent = Component | (() => Promise<Component | { default: 
 
 /** The islands mounted. */
 export interface Islands {
-  /** One app per island, in document order. */
+  /** One app per island hydrated so far: those hydrated at once in document order, then each
+   * island with a `data-hydrate` as it hydrates. */
   apps: App[];
-  /** Unmount every island, as a page leaving would. */
+  /** Unmount every island and stop waiting to hydrate the others, as a page leaving would. */
   unmount(): void;
+}
+
+type Trigger = (el: HTMLElement, hydrate: () => Promise<void>) => () => void;
+
+const INTERACTIONS = ["pointerenter", "click", "focus"];
+
+const strategy =
+  (wait: HydrationStrategy): Trigger =>
+  (el, hydrate) =>
+    wait(
+      () => void hydrate(),
+      (each) => void each(el),
+    ) ?? (() => {});
+
+const idle: Trigger = (el, hydrate) => {
+  if (typeof requestIdleCallback === "function") return strategy(hydrateOnIdle())(el, hydrate);
+  const timer = setTimeout(() => void hydrate(), 200);
+  return () => clearTimeout(timer);
+};
+
+const interaction =
+  (names: string[]): Trigger =>
+  (el, hydrate) => {
+    const events = names.length ? names : INTERACTIONS;
+    const early: Event[] = [];
+    const stop = (): void => {
+      for (const name of events) el.removeEventListener(name, listen, true);
+    };
+    const replay = (): void => {
+      stop();
+      for (const e of early.splice(0)) {
+        if (e.target instanceof Node && e.target.isConnected) e.target.dispatchEvent(new (e.constructor as typeof Event)(e.type, e));
+      }
+    };
+    function listen(e: Event): void {
+      if (early.push(e) === 1) void hydrate().then(replay);
+    }
+    for (const name of events) el.addEventListener(name, listen, true);
+    return stop;
+  };
+
+function trigger(when: string): Trigger | undefined {
+  const colon = when.indexOf(":");
+  const [kind, arg] = colon < 0 ? [when, undefined] : [when.slice(0, colon), when.slice(colon + 1)];
+  if (kind === "visible" && arg === undefined) return strategy(hydrateOnVisible());
+  if (kind === "idle" && arg === undefined) return idle;
+  if (kind === "interaction") return interaction((arg ?? "").split(/\s+/).filter(Boolean));
+  if (kind === "media" && arg !== undefined) return strategy(hydrateOnMediaQuery(arg || "all"));
+  return undefined;
 }
 
 /** Hydrate every island on the page: each `<div data-island="Name" data-props="…">` that
  * `Html::island` wrote becomes an app of the component of that name, given the props the server
  * rendered it with, mounted where it is. A loader is called only for an island the page holds, all
- * of them at once, and the islands mount in document order once every one has loaded. */
+ * of them at once, and the islands mount in document order once every one has loaded. An island
+ * with a `data-hydrate` (`Html::hydrate`) waits instead: once it is visible, the browser is idle,
+ * it is interacted with or a media query matches, its component is loaded and it hydrates. */
 export async function mountIslands(components: Record<string, IslandComponent>, options: MountOptions = {}): Promise<Islands> {
   const root = options.root ?? document;
   const report = options.onError ?? ((el: Element, problem: string) => console.warn(`[ferrovue] island left unhydrated: ${problem}`, el));
   const elements = Array.from(root.querySelectorAll<HTMLElement>("[data-island]"));
   const loading = new Map<string, Promise<Component | Error>>();
-  for (const el of elements) {
-    const name = el.dataset.island ?? "";
-    if (Object.hasOwn(components, name) && !loading.has(name)) loading.set(name, load(components[name]!));
-  }
-  const [loaded] = await Promise.all([
-    Promise.all([...loading].map(async ([name, pending]) => [name, await pending] as const)).then((pairs) => new Map(pairs)),
-    options.router?.isReady(),
-  ]);
+  const loadIsland = (name: string): Promise<Component | Error> => {
+    let pending = loading.get(name);
+    if (!pending) loading.set(name, (pending = load(components[name]!)));
+    return pending;
+  };
+  const ready = options.router?.isReady();
   const apps: App[] = [];
-  for (const el of elements) {
-    const name = el.dataset.island ?? "";
-    const component = loaded.get(name);
+  const waiting: (() => void)[] = [];
+  let stopped = false;
+
+  const mount = (el: HTMLElement, name: string, component: Component | Error | undefined): void => {
     if (!component) {
       report(el, `no component called ${JSON.stringify(name)} was given (\`ferrovue/islands\` holds every component that has an \`island()\`)`);
-      continue;
+      return;
     }
     if (component instanceof Error) {
       report(el, `${name} did not load: ${component.message}`);
-      continue;
+      return;
     }
     let props: Record<string, unknown>;
     try {
       props = parseJson(el.dataset.props ?? "{}") as Record<string, unknown>;
     } catch {
       report(el, `the props of ${name} are not JSON`);
-      continue;
+      return;
     }
     const app = createSSRApp(component, props);
     if (options.pinia) app.use(options.pinia);
@@ -93,10 +159,45 @@ export async function mountIslands(components: Record<string, IslandComponent>, 
     for (const plugin of options.plugins ?? []) app.use(plugin);
     app.mount(el);
     apps.push(app);
+  };
+
+  const now: HTMLElement[] = [];
+  for (const el of elements) {
+    const name = el.dataset.island ?? "";
+    const given = Object.hasOwn(components, name);
+    const when = el.dataset.hydrate;
+    const wait = given && when !== undefined ? trigger(when) : undefined;
+    if (!wait) {
+      if (given && when !== undefined) report(el, `${name} has data-hydrate=${JSON.stringify(when)}, which this version of ferrovue does not know, so it hydrated at once`);
+      if (given) void loadIsland(name);
+      now.push(el);
+      continue;
+    }
+    let started = false;
+    waiting.push(
+      wait(el, async () => {
+        if (started || stopped) return;
+        started = true;
+        const [component] = await Promise.all([loadIsland(name), ready]);
+        if (!stopped) mount(el, name, component);
+      }),
+    );
+  }
+
+  const names = new Set(now.map((el) => el.dataset.island ?? "").filter((name) => Object.hasOwn(components, name)));
+  const [loaded] = await Promise.all([
+    Promise.all([...names].map(async (name) => [name, await loadIsland(name)] as const)).then((pairs) => new Map(pairs)),
+    ready,
+  ]);
+  for (const el of now) {
+    const name = el.dataset.island ?? "";
+    mount(el, name, loaded.get(name));
   }
   return {
     apps,
     unmount() {
+      stopped = true;
+      for (const stop of waiting.splice(0)) stop();
       for (const app of apps.splice(0)) app.unmount();
     },
   };

@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use ferrovue::{PageHole, PageScript, Part, Route, Router, Slot};
+use ferrovue::{Hydrate, PageHole, PageScript, Part, Route, Router, Slot};
 
 use crate::assets::Assets;
 use crate::catalogue;
@@ -79,11 +79,12 @@ impl Site {
         }
     }
 
-    /// A book's reviews, as the island the client hydrates: what fills the book page's hole, and
-    /// a response of its own. It holds its props, so it outlives this call.
+    /// A book's reviews, as the island the client hydrates once it is scrolled into view: what
+    /// fills the book page's hole, and a response of its own. It holds its props, so it outlives
+    /// this call.
     pub async fn reviews(&self, id: &str) -> ferrovue::Html<'static, reviews::Props<'static>> {
         let list = catalogue::reviews(id, self.review_delay).await;
-        reviews::into_island(reviews::Props::new(list))
+        reviews::into_island(reviews::Props::new(list)).hydrate(Hydrate::Visible)
     }
 
     /// The whole page at once, every hole filled: what a client that can't stream would get.
@@ -107,7 +108,9 @@ impl Site {
     fn home(&self, route: &Route<'_>, stores: &Stores<'_>) -> Page {
         let props = book_list::Props::new(catalogue::books());
         let actions = |out: &mut String, slot: &book_list::ActionsSlotProps<'_>| {
-            add_to_basket::island(&add_to_basket::Props::new(slot.id, slot.title)).render_to(out);
+            add_to_basket::island(&add_to_basket::Props::new(slot.id, slot.title))
+                .hydrate(Hydrate::Interaction)
+                .render_to(out);
             true
         };
         let view = |out: &mut String| {

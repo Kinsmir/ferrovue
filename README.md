@@ -457,6 +457,24 @@ components alike, so a hand-written island can join them: `mountIslands({ ...isl
 An island whose name is not among them is left as the server rendered it, with a warning naming it
 (`onError` to handle it otherwise), as is one whose component fails to load.
 
+An island can wait to hydrate, and to fetch its code, until it is needed. `hydrate` on the
+server's `island()` writes a `data-hydrate` attribute on the wrapper, which `mountIslands` honours
+with Vue's lazy hydration strategies:
+
+```rust
+use ferrovue::Hydrate;
+
+reviews::island(&props).hydrate(Hydrate::Visible);               // scrolled into view
+chart::island(&props).hydrate(Hydrate::Idle);                    // the browser is idle
+counter::island(&props).hydrate(Hydrate::Interaction);           // pointerenter, click or focus
+menu::island(&props).hydrate(Hydrate::InteractionOn(&["keydown"]));
+sidebar::island(&props).hydrate(Hydrate::media("(min-width: 60rem)"));
+```
+
+The island's markup is unchanged, so nothing about exactness changes. An event that woke an island
+waiting for interaction is dispatched again once it has hydrated, so the first click is not lost.
+An island without `data-hydrate` hydrates at once, as before.
+
 An island's `<style>` goes into its chunk too, and Vite links it only once the island's script has
 loaded, after the server's markup is on screen. Link those stylesheets from the page up front: a
 server reading Vite's manifest takes the `css` of the entry's `dynamicImports` as well as its own

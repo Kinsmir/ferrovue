@@ -38,6 +38,7 @@ beforeEach(() => {
 afterEach(() => {
   app?.unmount();
   app = undefined;
+  vi.unstubAllGlobals();
   vi.restoreAllMocks();
   document.body.innerHTML = "";
 });
@@ -81,25 +82,48 @@ it("loads every island by the name the server writes, and only those", async () 
 
 const roots = (): (ChildNode | null)[] => [...document.querySelectorAll("[data-island], #basket")].map((el) => el.firstChild);
 
-it("hydrates the home page, an island per book and the store's summary, changing nothing", async () => {
+it("hydrates the home page's store summary, and a book's island once it is clicked, changing nothing", async () => {
   put("/");
   const nodes = roots();
   const html = document.body.innerHTML;
-  const { islands } = await hydrateAt("/");
+  const { islands, pinia } = await hydrateAt("/");
   expect(warnings).toEqual([]);
-  expect(islands.apps).toHaveLength(4);
+  expect(islands.apps).toHaveLength(0);
   expect(nodes).toHaveLength(5);
   expect(roots()).toEqual(nodes);
   expect(document.body.innerHTML).toBe(html);
   expect(scoped(document.querySelector("#basket .basket")!, scopeId(BasketSummary))).toBe(true);
+
+  const add = document.querySelector<HTMLButtonElement>("button.add")!;
+  add.click();
+  await vi.waitFor(() => expect(islands.apps).toHaveLength(1));
+  await nextTick();
+  expect(warnings).toEqual([]);
+  expect(roots()).toEqual(nodes);
+  expect(add.textContent).toBe("In the basket");
+  expect(pinia.state.value.basket).toEqual({ owner: "guest", ids: ["solaris", "dune"] });
+  expect(document.querySelector("#basket .basket")!.textContent).toBe("Basket of guest: 2 books");
 });
 
 it("hydrates a streamed book page, whose islands then share the store", async () => {
   put("/books/dune");
   const nodes = roots();
+  vi.stubGlobal(
+    "IntersectionObserver",
+    class {
+      readonly seen: IntersectionObserverCallback;
+      constructor(seen: IntersectionObserverCallback) {
+        this.seen = seen;
+      }
+      observe(target: Element): void {
+        queueMicrotask(() => this.seen([{ isIntersecting: true, target } as unknown as IntersectionObserverEntry], this as never));
+      }
+      disconnect(): void {}
+    },
+  );
   const { islands, pinia } = await hydrateAt("/books/dune");
+  await vi.waitFor(() => expect(islands.apps).toHaveLength(2));
   expect(warnings).toEqual([]);
-  expect(islands.apps).toHaveLength(2);
   expect(roots()).toEqual(nodes);
   expect(pinia.state.value.basket).toEqual({ owner: "guest", ids: ["solaris"] });
   const summary = document.querySelector("#basket .basket")!;

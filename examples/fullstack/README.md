@@ -66,7 +66,7 @@ cargo run -p ferrovue-example-fullstack -- --render /books/dune
 | `src/main.rs` | The axum server: a `ferrovue::HtmlStream` per page, a book's reviews alone at `/books/{id}/reviews`, `dist/assets` served beside it, and `--render` |
 | `src/assets.rs` | Finding the entry's hashed script and stylesheets in Vite's manifest, the lazily loaded islands' stylesheets included, or loading from the dev server |
 | `test/hydration.test.ts` | The proof: the server's own HTML hydrates with no mismatch, and carries the scope ids the client build's stylesheet selects |
-| `browser/hydration.test.ts` | The same in Chromium, Firefox and WebKit: the server started on a free port, its pages opened, the islands clicked (`pnpm test:browser`) |
+| `browser/hydration.test.ts` | The same in Chromium, Firefox and WebKit: the server started on a free port, its pages opened, the islands clicked, the reviews scrolled into view on a short screen before their code is fetched (`pnpm test:browser`) |
 
 ### Islands, and what isn't one
 
@@ -81,6 +81,13 @@ Vite plugin writes from the components that have an `island()`. A new island nee
 client, only the server calling its `island()`. Each is a chunk of its own, so the home page fetches
 `AddToBasket`'s code and not `Reviews`'s; the server links every island's stylesheet up front, so
 the markup is styled before its script arrives.
+
+`src/pages.rs` also says when each island hydrates. The home page's buttons are
+`.hydrate(Hydrate::Interaction)`: `AddToBasket`'s code is fetched when a pointer enters one, or one
+is clicked or focused, and the click that woke it is dispatched again once it has hydrated, so it
+still adds the book. The reviews are `.hydrate(Hydrate::Visible)`: on a screen too short to show
+them, their code is fetched once they are scrolled into view. The book page's own button hydrates
+at once.
 
 `BasketSummary` reads the store while it renders, so it has no `island()`. The layout wraps it in
 `<div id="basket">`, and `client/app.ts` hydrates it there with the same Pinia. Clicking "Add to
@@ -148,8 +155,10 @@ It builds the client into a temporary directory, with Vue's mismatch details kep
 builds leave out the attribute checks otherwise), builds the server and starts it on a free port
 with `DIST_DIR` pointing at that build, and opens the pages in Chromium, Firefox and WebKit through
 Playwright. It fails on any warning or error the page logs and on any change hydrating makes to the
-document as the browser parsed it, then clicks "Add to basket" and "Show all reviews". The server
-is stopped when the test ends.
+document as the browser parsed it, then clicks "Add to basket" and "Show all reviews". It records
+the scripts each page requests, so it checks that the home page fetches `AddToBasket`'s code only
+when a button is clicked, and that on a 200-pixel-high screen the book page fetches `Reviews`'s
+only once the reviews are scrolled into view. The server is stopped when the test ends.
 
 In your own app the store state, the routes and the props all come from your data, so give each
 page you serve a case in a test like this one.

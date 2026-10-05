@@ -109,9 +109,14 @@ describe.each(BROWSERS)("%s", (name) => {
     scripts = [];
     await page.goto(`${origin}${path}`);
     await page.waitForFunction(() =>
-      [...document.querySelectorAll("[data-island], #basket, #app")].every((el) => (el as { _vnode?: unknown })._vnode),
+      [...document.querySelectorAll("[data-island]:not([data-hydrate]), #basket, #app")].every((el) => (el as { _vnode?: unknown })._vnode),
     );
   }
+
+  const hydrated = (selector: string): Promise<boolean> =>
+    page.locator(selector).evaluate((el) => Boolean((el.closest("[data-island]") as { _vnode?: unknown } | null)?._vnode));
+
+  const share = /<span class="share"[^>]*>Share these reviews<\/span>|<a [^>]*class="share"[^>]*>Share these reviews<\/a>/;
 
   const parsedAndNow = (): Promise<[string, string]> =>
     page.evaluate(() => [
@@ -119,17 +124,55 @@ describe.each(BROWSERS)("%s", (name) => {
       document.body.innerHTML.replace(/<script type="module"[^>]*><\/script>$/, ""),
     ]);
 
-  it("hydrates the home page, an island per book and the store's summary, changing nothing", async ({ skip }) => {
+  it("hydrates the home page's store summary at once and a book's island when it is clicked, changing nothing", async ({ skip }) => {
     if (!browser) skip();
     await open("/");
+    await page.waitForLoadState("networkidle");
     expect(await Promise.all(messages)).toEqual([]);
-    expect(await page.locator("[data-island]").count()).toBe(4);
-    expect(scripts.filter((s) => /\/(AddToBasket|Reviews)-/.test(s))).toEqual([expect.stringMatching(/^\/assets\/AddToBasket-/)]);
+    expect(await page.locator('[data-island][data-hydrate="interaction"]').count()).toBe(4);
+    expect(scripts.filter((s) => /\/(AddToBasket|Reviews)-/.test(s))).toEqual([]);
     const [parsed, now] = await parsedAndNow();
     expect(now).toBe(parsed);
+
+    const add = page.locator('button.add[aria-label="Add Dune to the basket"]');
+    expect(await hydrated('button.add[aria-label="Add Dune to the basket"]')).toBe(false);
+    await add.click();
+    await page.waitForFunction(() => document.querySelector("#basket .basket")?.textContent === "Basket of guest: 2 books");
+    expect(await add.textContent()).toBe("In the basket");
+    expect(await hydrated('button.add[aria-label="Add Dune to the basket"]')).toBe(true);
+    expect(await hydrated('button.add[aria-label="Add Ficciones to the basket"]')).toBe(false);
+    expect(scripts.filter((s) => /\/(AddToBasket|Reviews)-/.test(s))).toEqual([expect.stringMatching(/^\/assets\/AddToBasket-/)]);
+    expect(await Promise.all(messages)).toEqual([]);
   });
 
-  const share = /<span class="share"[^>]*>Share these reviews<\/span>|<a [^>]*class="share"[^>]*>Share these reviews<\/a>/;
+  it("fetches the code of reviews below the fold only once they are scrolled into view", async ({ skip }) => {
+    if (!browser) skip();
+    await page.setViewportSize({ width: 800, height: 200 });
+    try {
+      await open("/books/dune");
+      await page.waitForLoadState("networkidle");
+      expect(await page.locator(".review-list").evaluate((el) => el.getBoundingClientRect().top > innerHeight)).toBe(true);
+      expect(await hydrated(".review-list")).toBe(false);
+      expect(scripts.filter((s) => /\/Reviews-/.test(s))).toEqual([]);
+      const [parsed, now] = await parsedAndNow();
+      expect(now).toBe(parsed);
+
+      await page.locator(".review-list").scrollIntoViewIfNeeded();
+      await page.locator(".review-list a.share").waitFor();
+      expect(scripts.filter((s) => /\/Reviews-/.test(s))).toEqual([expect.stringMatching(/^\/assets\/Reviews-/)]);
+      expect(await Promise.all(messages)).toEqual([]);
+      const [, later] = await parsedAndNow();
+      expect(later.replace(share, "")).toBe(parsed.replace(share, ""));
+
+      const reviews = page.locator(".review-list li");
+      await page.locator("button.more").click();
+      await page.locator("button.more").waitFor({ state: "detached" });
+      expect(await reviews.evaluateAll((items) => items.map((li) => (li as HTMLElement).style.display))).toEqual(["", "", ""]);
+      expect(await Promise.all(messages)).toEqual([]);
+    } finally {
+      await page.setViewportSize({ width: 1280, height: 720 });
+    }
+  });
 
   it("hydrates a streamed book page, whose islands then share the store", async ({ skip }) => {
     if (!browser) skip();

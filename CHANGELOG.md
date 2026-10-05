@@ -5,6 +5,26 @@ released together and share version numbers.
 
 ## [Unreleased]
 
+### Added
+
+- Islands that hydrate later. `island(&props).hydrate(Hydrate::Visible)` writes
+  `data-hydrate="visible"` on the island's wrapper, after `data-props`; `Hydrate::Idle`,
+  `Hydrate::Interaction` (the first `pointerenter`, `click` or `focus` within the island),
+  `Hydrate::InteractionOn(&["keydown"])` and `Hydrate::media("(min-width: 60rem)")` write `idle`,
+  `interaction`, `interaction:keydown` and `media:(min-width: 60rem)`, escaped as any attribute is.
+  The markup inside the wrapper is unchanged. `mountIslands` waits on such an island with Vue's
+  `hydrateOnVisible`, `hydrateOnIdle` (200 ms where the browser has no `requestIdleCallback`) and
+  `hydrateOnMediaQuery`, or its own listeners for interaction, and calls the island's loader only
+  when the trigger fires, so its chunk is fetched then. Events that reach an island waiting for
+  interaction before it has hydrated are dispatched again once it has, so the click that woke it
+  reaches its handler. It resolves once the other islands have mounted; the waiting ones join
+  `apps` as they hydrate, `unmount()` stops waiting for them, and a `data-hydrate` it does not know
+  is reported and hydrates at once. Islands without the attribute hydrate as before, and `Page`
+  parts hydrate with their page. Dioxus's `to_element` writes the same attribute. In
+  `examples/fullstack` the home page's buttons hydrate on interaction and the book page's reviews
+  once visible, and the browser test checks that their chunks are requested only on a click and
+  after scrolling the reviews into view on a short screen.
+
 ### Changed
 
 - Repository hygiene. The full-stack example's README builds the client before its hydration test,
