@@ -59,7 +59,7 @@ crate that includes it needs **edition 2024**.
 | `routes` | no | JSON file listing the app's routes: each a vue-router path, or `{ "path", "name", "children" }`. Needed for `<RouterLink>`, `<RouterView>` and `useRoute()` |
 | `router` | no | Instead of `routes`: `{ routes, base?, linkActiveClass?, linkExactActiveClass? }`, matching `createWebHistory(base)` and `createRouter`'s options |
 | `stores` | no | Directory of Pinia option stores whose state components may read |
-| `trustedHtml` | no | Rust type of a `TrustedHtml` prop, e.g. `crate::html::Sanitised` (needed for `v-html`) |
+| `trustedHtml` | no | Rust type of a `TrustedHtml` prop (needed for `v-html`): `ferrovue::Sanitised` with the crate's `ammonia` feature, or a type of your own such as `crate::html::Sanitised` |
 | `helpers` | no | `{ module, functions }`: functions a template may call, each mapped to a Rust twin |
 | `twins` | no | Components ferrovue does not compile, each rendered by a Rust function of yours: `{ "VBtn": { "rust": "crate::ui::v_btn", "props": { "label": "string" }, "slots": ["default"] } }`. See [Escape hatches](#escape-hatches) |
 | `i18n` | no | vue-i18n: `{ messages, locale?, fallbackLocale? }`, the directory of locale files (`en.json`, `nl.json`), the default locale and the fallbacks |
@@ -133,6 +133,11 @@ application with neither routes nor translations can leave them out, and build n
 
 With the `maud` feature, `ferrovue::Html` implements `maud::Render`, so `(greeting::html(&props))` can go
 straight into a `maud::html!` page.
+
+With the `ammonia` feature, `ferrovue::Sanitised` is HTML cleaned by [ammonia](https://docs.rs/ammonia):
+name it as `trustedHtml` and build a `v-html` prop with `Sanitised::new(untrusted)`, or
+`Sanitised::with(&builder, untrusted)` for a policy of your own. The server renders the cleaned
+string, and the island's `data-props` carries that same string to the client.
 
 With the `axum` feature, `Html` is an `IntoResponse`, and with `actix-web` a `Responder`: a handler
 responds with the component, as `text/html; charset=utf-8`. `into_html(props)` and

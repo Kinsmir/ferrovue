@@ -16,6 +16,8 @@ mod hydrate;
 mod json;
 mod page;
 mod record;
+#[cfg(feature = "ammonia")]
+mod sanitised;
 mod slots;
 mod state;
 mod strings;
@@ -35,6 +37,9 @@ pub use html::Html;
 pub use hydrate::Hydrate;
 pub use page::{Page, PageHole, PageRecord, PageScript, PageSlot, Part};
 pub use record::Record;
+#[cfg(feature = "ammonia")]
+#[cfg_attr(docsrs, doc(cfg(feature = "ammonia")))]
+pub use sanitised::Sanitised;
 #[doc(hidden)]
 pub use slots::is_comment;
 pub use slots::{
@@ -66,6 +71,10 @@ pub use ferrovue_i18n::I18n;
 #[doc(inline)]
 pub use ferrovue_router::{Link, Query, Route, RouteDef, Router, query_into};
 
+#[cfg(feature = "ammonia")]
+#[cfg_attr(docsrs, doc(cfg(feature = "ammonia")))]
+#[doc(no_inline)]
+pub use ammonia;
 #[cfg(feature = "i18n")]
 #[cfg_attr(docsrs, doc(cfg(feature = "i18n")))]
 #[doc(inline)]

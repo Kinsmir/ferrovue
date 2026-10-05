@@ -22,6 +22,10 @@ allow = [
 unused-allowed-license = "allow"
 confidence-threshold = 0.9
 private = { ignore = true }
+exceptions = [
+    { crate = "cssparser", allow = ["MPL-2.0"] },
+    { crate = "dtoa-short", allow = ["MPL-2.0"] },
+]
 
 [bans]
 multiple-versions = "warn"

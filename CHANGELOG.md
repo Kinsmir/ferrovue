@@ -94,6 +94,15 @@ released together and share version numbers.
   its client head over the recorded tags, which it takes over with no change. The guide's `head`
   page shows a page and the client; `examples/fullstack` sets its titles and meta tags from its
   components.
+- `ferrovue::Sanitised`, with the crate's new `ammonia` feature: HTML cleaned by ammonia, to name as
+  `"trustedHtml": "ferrovue::Sanitised"` for `v-html` props. `Sanitised::new(untrusted)` cleans with
+  ammonia's default policy (no scripts, event handlers or `javascript:` URLs) and
+  `Sanitised::with(&builder, untrusted)` with an `ammonia::Builder` of your own; `ferrovue::ammonia`
+  re-exports the crate. It renders the cleaned string unchanged and serialises as that string, so an
+  island's `data-props` carries exactly the HTML the server wrote and the client's `v-html` writes
+  the same. Deserialising one cleans the string again. The guide's `escaping` page says what the
+  default policy keeps; a component compiled with it (`tests/sanitised`) checks the render and the
+  props the client receives.
 
 ### Changed
 

@@ -5,6 +5,7 @@
     "crates/ferrovue/tests/conformance/stores/**",
     "crates/ferrovue/tests/conformance/types/**",
     "crates/ferrovue/tests/literal_props/components/**",
+    "crates/ferrovue/tests/sanitised/components/**",
     "examples/greeting/components/**",
     "examples/dioxus/components/**",
     "examples/fullstack/adopter/*.test.ts",

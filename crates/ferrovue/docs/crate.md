@@ -193,7 +193,7 @@ the values a render needs besides its props.
 | A generated `stores::Stores` | reads Pinia state |
 | [`I18n`] (from the generated `i18n::i18n(locale)`) | calls `$t` or `useI18n()` |
 | [`Teleports`] | renders `<Teleport>` |
-| Your own type implementing [`TrustedHtml`] | renders `v-html` |
+| `Sanitised` (the `ammonia` feature), or your own type implementing [`TrustedHtml`] | renders `v-html` |
 
 A prop declared `Record<string, T>` is a [`Record`], which keeps JavaScript's order of keys.
 
@@ -232,6 +232,7 @@ what Vue writes:
 | `stream` | off | `HtmlStream`: a page rendered with holes as a stream of byte chunks, each hole filled by a future |
 | `axum` | off | `stream`, and `IntoResponse` for `Html` and `HtmlStream`, so a handler returns `greeting::into_html(props)` ([`guide::web_frameworks`](crate::guide::web_frameworks)) |
 | `actix-web` | off | `stream`, and `Responder` for `Html` and `HtmlStream` |
+| `ammonia` | off | `Sanitised`, HTML cleaned by ammonia, to name as `trustedHtml` for `v-html` props, and the `ammonia` crate re-exported for a policy of your own ([`guide::escaping`](crate::guide::escaping)) |
 | `dioxus` | off | The `dioxus` module: `Html::to_element` and `impl IntoDynNode for Html`, so `{greeting::island(&props)}` can go straight into Dioxus 0.7's `rsx!`, and `dioxus::state_script`; the guide's `dioxus` page shows a page |
 
 An application with neither routes nor translations can turn the default features off

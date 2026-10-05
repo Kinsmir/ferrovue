@@ -60,9 +60,45 @@ defineProps<{ body: TrustedHtml; caption: string }>();
 </template>
 ```
 
-On the server, that prop's type is whatever `trustedHtml` names in `ferrovue.config.json`, a type of
-your own that implements [`TrustedHtml`](crate::TrustedHtml). Make it a type whose values can only
-come from your sanitiser, so that holding one is proof the HTML was made safe:
+On the server, that prop's type is whatever `trustedHtml` names in `ferrovue.config.json`, a type
+that implements [`TrustedHtml`](crate::TrustedHtml). `v-html` of anything else, a plain string or a
+translated message, is refused at compile time.
+
+## `ferrovue::Sanitised`, with the `ammonia` feature
+
+With the crate's `ammonia` feature, `ferrovue::Sanitised` is that type, ready made: HTML cleaned by
+[ammonia](https://docs.rs/ammonia).
+
+```json
+{ "trustedHtml": "ferrovue::Sanitised" }
+```
+
+```toml
+ferrovue = { version = "0.6", features = ["ammonia"] }
+```
+
+Sanitisation happens before render, when the value is built: `Sanitised::new(untrusted)` cleans
+with ammonia's default policy, `Sanitised::with(&builder, untrusted)` with an `ammonia::Builder` of
+your own (`ferrovue::ammonia` is the crate, re-exported). Rendering writes the cleaned string as it
+is. The value serialises as that string, so an island's `data-props` carries exactly what the
+server rendered, and the client's `v-html` writes the same string: server and client hold the same
+HTML, and hydration matches. Deserialising a `Sanitised` cleans the string again with the default
+policy, so no JSON can make one that skipped the sanitiser.
+
+Ammonia's default policy keeps the tags of text and documents (paragraphs, headings, lists,
+tables, links, images, emphasis, `<code>` and `<pre>`, and the like), with a few attributes each
+(`href` on links, `src`, `alt`, `width` and `height` on images, `title` and `lang` everywhere),
+and URLs whose scheme is on its list (`http`, `https`, `mailto` and other common ones) or that are
+relative. It removes everything else: `<script>`, `<style>`, SVG and MathML with their
+content, other elements such as `<form>` and `<button>` (keeping their text), event handler attributes,
+`class`, `id` and `style`, comments, and `javascript:` and other unlisted URLs. Links gain
+`rel="noopener noreferrer"`. It closes elements left open, so the HTML cannot reach past the
+element it is written into. A policy of your own can allow more, such as `class` on some tags.
+
+## A type of your own
+
+Make it a type whose values can only come from your sanitiser, so that holding one is proof the
+HTML was made safe:
 
 ```json
 { "trustedHtml": "crate::html::Sanitised" }
@@ -99,5 +135,3 @@ The generated props struct derives `Debug`, `Clone` and `serde::Serialize`, and
 `#[cfg_attr(test, derive(serde::Deserialize))]`). `#[serde(transparent)]` sends the HTML to an
 island's client as a plain string. Production code never deserialises props, so no request can
 turn an arbitrary string into a `Sanitised`.
-
-`v-html` of anything else, a plain string or a translated message, is refused at compile time.
