@@ -147,7 +147,7 @@ async fn hello(Path(name): Path<String>) -> impl IntoResponse {
 With the `dioxus` feature, a component goes into a Dioxus 0.7 page (`dioxus-ssr` or fullstack):
 `{greeting::island(&props)}` in `rsx!` is the island element itself, with exactly the markup Vue
 hydrates inside it. See `examples/dioxus` and the crate guide's
-[Dioxus page](crates/ferrovue/docs/guide/dioxus.md).
+[Dioxus page](https://github.com/Kinsmir/ferrovue/blob/main/crates/ferrovue/docs/guide/dioxus.md).
 
 ## What a component may use
 
@@ -284,7 +284,7 @@ The default is the plugin's production behaviour because the production build is
 get: with every option left alone, its styles apply. But plugin-vue hashes the path alone in its dev
 server, so with the default a page rendered during development carries other ids than the dev
 client and shows unstyled. The recommended setup is `componentIdGenerator: "filepath"` with
-`"scopeId": "filepath"`, as [`examples/fullstack`](examples/fullstack) does: the ids are then the
+`"scopeId": "filepath"`, as [`examples/fullstack`](https://github.com/Kinsmir/ferrovue/tree/main/examples/fullstack) does: the ids are then the
 same in development and production, and do not change, nor change the generated Rust, whenever a
 component's source does.
 
@@ -653,15 +653,15 @@ pnpm typecheck
 cargo test --all-features
 ```
 
-[TESTING.md](TESTING.md) explains how the suite fits together and how to add a case,
-[CONTRIBUTING.md](CONTRIBUTING.md) how to add support for a Vue construct, and
-[RELEASING.md](RELEASING.md) how a release is cut.
+[TESTING.md](https://github.com/Kinsmir/ferrovue/blob/main/TESTING.md) explains how the suite fits together and how to add a case,
+[CONTRIBUTING.md](https://github.com/Kinsmir/ferrovue/blob/main/CONTRIBUTING.md) how to add support for a Vue construct, and
+[RELEASING.md](https://github.com/Kinsmir/ferrovue/blob/main/RELEASING.md) how a release is cut.
 
-[`examples/fullstack`](examples/fullstack/README.md) is a complete app to copy: an axum server, a Vite client, islands, Pinia, vue-router and streaming, with a test that it hydrates.
+[`examples/fullstack`](https://github.com/Kinsmir/ferrovue/blob/main/examples/fullstack/README.md) is a complete app to copy: an axum server, a Vite client, islands, Pinia, vue-router and streaming, with a test that it hydrates.
 
 ## Licence
 
-Licensed under either of [Apache License, Version 2.0](LICENSE-APACHE) or [MIT licence](LICENSE-MIT),
+Licensed under either of [Apache License, Version 2.0](https://github.com/Kinsmir/ferrovue/blob/main/LICENSE-APACHE) or [MIT licence](https://github.com/Kinsmir/ferrovue/blob/main/LICENSE-MIT),
 at your option. Unless you explicitly state otherwise, any contribution you intentionally submit for
 inclusion in this work, as defined in the Apache-2.0 licence, is dual-licensed as above, without any
 additional terms or conditions.
