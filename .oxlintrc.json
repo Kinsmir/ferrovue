@@ -12,13 +12,10 @@
     "suspicious": "error"
   },
   "ignorePatterns": [
-    "**/dist/**",
-    "target/**",
     "crates/**",
     "examples/**",
     "packages/ferrovue/bench/**",
-    "packages/ferrovue/fuzz/**",
-    "**/generated/**"
+    "packages/ferrovue/fuzz/**"
   ],
   "rules": {
     "no-unused-vars": [
