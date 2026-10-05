@@ -3,7 +3,8 @@
  * `Teleports`, which a component takes when it or a child renders a `<Teleport>`. */
 
 import { type Component, fail } from "../model.ts";
-import { expr, cond } from "../expr.ts";
+import { expr } from "../expr.ts";
+import { cond } from "../narrowing.ts";
 import { bare, strArg } from "../parens.ts";
 import { statements } from "../template.ts";
 import { type Plugin, runOf } from "../plugin.ts";

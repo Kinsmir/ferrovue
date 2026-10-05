@@ -3,7 +3,10 @@
 import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, camelize, declares, fail, GenError, INT, rustStr, sameTy, snake, STR, takesAttrs } from "./model.ts";
 import { ctx } from "./context.ts";
 import { markHome } from "./typescript.ts";
-import { asF64, boolOf, cond, expr, fieldVal, isObjectCall, known, narrowTo, type Presence, presence, truthy } from "./expr.ts";
+import { expr, fieldVal } from "./expr.ts";
+import { isObjectCall } from "./calls.ts";
+import { type Presence, boolOf, cond, known, narrowTo, presence, truthy } from "./narrowing.ts";
+import { asF64 } from "./numbers.ts";
 import { atom, bare, CMP, condition, occurrences, operand, OR, strArg, UNARY } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
 import { attrOf, dollarAttrs, IGNORED_PROPS, interpolate, isAttrs, mergedParts, renderAttr, renderAttrs, renderClass, renderDynamicAttr, renderStyle } from "./attrs.ts";

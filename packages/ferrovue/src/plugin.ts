@@ -19,7 +19,7 @@ import type { SFCDescriptor } from "@vue/compiler-sfc";
 import { type Component, type N, type Scope, type Struct, type StructTy, type Ty, type Val } from "./model.ts";
 import { type Config, ctx } from "./context.ts";
 import { type Emitter } from "./emitter.ts";
-import { type Presence } from "./expr.ts";
+import type { Presence } from "./narrowing.ts";
 
 /** A value a render takes from its caller beyond the props and the slots — the route, the stores'
  * state, the request's translations — which a component takes when it reads it or renders a child

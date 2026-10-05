@@ -3,7 +3,9 @@
 import { escapeHtml, hyphenate, isBooleanAttr, isSSRSafeAttrName, parseStringStyle, propsToAttrMap } from "@vue/shared";
 import { type N, type Scope, type Ty, type Val, fail, GenError, rustStr, STR } from "./model.ts";
 import { CONFIG_FILE, ctx } from "./context.ts";
-import { cond, describeTy, expr, known, meet, truthy, unquote } from "./expr.ts";
+import { describeTy, expr } from "./expr.ts";
+import { cond, known, truthy } from "./narrowing.ts";
+import { meet, unquote } from "./strings.ts";
 import { atom, bare, condition, logical, not, receiver, strArg } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
 import { isDollarAttrs } from "./fallthrough.ts";
