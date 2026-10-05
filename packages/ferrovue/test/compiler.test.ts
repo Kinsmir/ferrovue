@@ -1193,6 +1193,114 @@ const props = defineProps<{ n: number }>();
     });
   });
 
+  describe("<ClientOnly>", () => {
+    const page = (inside: string, from = "ferrovue/client") => `<script setup lang="ts">
+import { ClientOnly } from "${from}";
+import Chart from "chart-library";
+defineProps<{ label: string }>();
+</script>
+<template><div><ClientOnly>${inside}</ClientOnly></div></template>`;
+
+    it("writes the fallback between fragment markers and skips the default slot", () => {
+      const out = compile(island(page(`<Chart :data="window.points" /><v-tooltip>{{ label.at(-1) }}</v-tooltip><template #fallback><p>{{ label }}</p></template>`))).get("x.rs")!;
+      expect(out).toContain('out.push_str("<div><!--[--><p>");\n    fv::escape_into(out, &props.label);\n    out.push_str("</p><!--]--></div>");');
+      expect(out).not.toContain("tooltip");
+    });
+
+    it("writes a comment where there is no fallback, imported from the package root too", () => {
+      const out = compile(island(page(`<Chart />`, "ferrovue"))).get("x.rs")!;
+      expect(out).toContain('out.push_str("<div><!----></div>");');
+    });
+
+    it("still refuses a component resolved by name outside it", () => {
+      const source = page(`<v-tooltip /></ClientOnly><v-tooltip /><ClientOnly>`);
+      expect(() => compile(island(source))).toThrow(/a component the template resolves by name must be imported/);
+    });
+
+    it("refuses attributes, slots other than the default and `#fallback`, and fallback props", () => {
+      expect(() => compile(island(page(`<Chart />`).replace("<ClientOnly>", '<ClientOnly class="wide">')))).toThrow(/`<ClientOnly>` takes no attributes/);
+      expect(() => compile(island(page(`<template #header>h</template>`)))).toThrow(/a default slot and a `#fallback` slot, and no other/);
+      expect(() => compile(island(page(`<template #fallback="{ x }">{{ x }}</template>`)))).toThrow(/`#fallback` passes no props/);
+    });
+  });
+
+  describe("defineAsyncComponent", () => {
+    const child = `<script setup lang="ts">
+defineProps<{ text: string }>();
+</script>
+<template><p>{{ text }}</p></template>`;
+    const parent = (declared: string) => `<script setup lang="ts">
+import { defineAsyncComponent as lazy } from "vue";
+const Later = ${declared};
+defineProps<{ label: string }>();
+</script>
+<template><div><Later :text="label" /></div></template>`;
+
+    it("renders the component it loads as a child", () => {
+      for (const declared of ['lazy(() => import("./Y.vue"))', 'lazy({ loader: () => import("./Y.vue"), delay: 200 })']) {
+        const out = compile(island(parent(declared), { Y: child })).get("x.rs")!;
+        expect(out, declared).toContain("super::y::render(out, &super::y::Props { text: std::borrow::Cow::Borrowed(&*props.label) });");
+      }
+    });
+
+    it("refuses a loader that is not an import of a `.vue` file", () => {
+      for (const declared of ['lazy(() => import("./y.ts"))', "lazy(() => import(name))", "lazy(load)"]) {
+        expect(() => compile(island(parent(declared).replace("const Later", "const name = 'Y';\nconst load = () => null;\nconst Later"), { Y: child })), declared).toThrow(/`defineAsyncComponent` loads a component of this project/);
+      }
+    });
+  });
+
+  describe("Rust twins", () => {
+    const config = {
+      ...CONFIG,
+      twins: {
+        VBtn: { rust: "crate::ui::v_btn", props: { label: "string" as const, size: "int?" as const, block: "bool" as const }, slots: ["default", "prepend"] },
+        VIcon: { rust: "crate::ui::v_icon" },
+      },
+    };
+    const using = (template: string, script = 'import { VBtn, VIcon } from "vuetify/components";') => `<script setup lang="ts">
+${script}
+defineProps<{ label: string }>();
+</script>
+<template>${template}</template>`;
+
+    it("calls the twin with its props, slots and attributes", () => {
+      const out = generate(island(using(`<VBtn :label="label" block class="wide"><b>{{ label }}</b></VBtn>`)), config).get("x.rs")!;
+      expect(out).toContain("crate::ui::v_btn(out, &super::twins::VBtnProps { label: &props.label, size: None, block: true }, super::twins::VBtnSlots {");
+      expect(out).toContain("default: Some(fv::Slot::new(&|out: &mut String| {");
+      expect(out).toContain("prepend: None,");
+      expect(out).toContain('}, &fv::Attrs::merged(&[&[("class", fv::Attr::str("wide"))]], ""));');
+    });
+
+    it("finds a twin the template resolves by name, as `<v-icon>`", () => {
+      const out = generate(island(using("<p><v-icon /></p>", "")), config).get("x.rs")!;
+      expect(out).toContain("crate::ui::v_icon(out, &super::twins::VIconProps {}, &fv::Attrs::NONE);");
+    });
+
+    it("writes the props, the slots and the signature each twin is held to", () => {
+      const twins = generate(island(using("<p />")), config).get("twins.rs")!;
+      expect(twins).toContain("pub struct VBtnProps<'a> {\n    pub label: &'a str,\n    pub size: Option<i64>,\n    pub block: bool,\n}");
+      expect(twins).toContain("pub struct VBtnSlots<'s> {\n    /// `#default`\n    pub default: Option<fv::Slot<'s>>,\n    /// `#prepend`\n    pub prepend: Option<fv::Slot<'s>>,\n}");
+      expect(twins).toContain("pub type VBtnRender = fn(&mut String, &VBtnProps<'_>, VBtnSlots<'_>, &fv::Attrs<'_>);\n\nconst _: VBtnRender = crate::ui::v_btn;");
+      expect(twins).toContain("pub struct VIconProps {\n}");
+      expect(twins).toContain("pub type VIconRender = fn(&mut String, &VIconProps, &fv::Attrs<'_>);");
+      expect(generate(island(using("<p />")), config).get("mod.rs")).toContain("pub mod twins;");
+      expect(compile(island(using("<p />", ""))).has("twins.rs")).toBe(false);
+    });
+
+    it("refuses a missing prop, a slot it does not name, and `v-bind` of an object", () => {
+      expect(() => generate(island(using("<VBtn />")), config)).toThrow(/VBtn requires `label`/);
+      expect(() => generate(island(using(`<VBtn :label="label"><template #append>a</template></VBtn>`)), config)).toThrow(/VBtn has no slot `append`/);
+      expect(() => generate(island(using(`<VBtn v-bind="$props" />`)), config)).toThrow(/the props of VBtn, a Rust twin, are attributes or an object literal/);
+    });
+
+    it("refuses a twin named after a component ferrovue compiles, and a twin without a function", () => {
+      expect(() => generate(island(using("<p />", "")), { ...config, twins: { X: { rust: "crate::x" } } })).toThrow(/`twins\.X` in ferrovue\.config\.json names components\/X\.vue, which ferrovue compiles/);
+      expect(() => generate(island(using("<p />", "")), { ...CONFIG, twins: { VBtn: { rust: "v_btn" } } })).toThrow(/`twins\.VBtn` in ferrovue\.config\.json needs `rust`/);
+      expect(() => generate(island(using("<p />", "")), { ...CONFIG, twins: { "v-btn": { rust: "crate::v_btn" } } })).toThrow(/in PascalCase/);
+    });
+  });
+
   describe("output", () => {
     const source = `<script setup lang="ts">
 const props = defineProps<{ label: string; note?: string }>();

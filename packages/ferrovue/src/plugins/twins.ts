@@ -1,7 +1,7 @@
 import { type Component, type Field, type N, type Scope, type Ty, blankComponent, camelize, fail, GenError, snake } from "../model.ts";
 import { CONFIG_FILE, type TwinSpec, tyOfName } from "../context.ts";
 import { coerce, expr } from "../expr.ts";
-import { bare } from "../parens.ts";
+import { bare, strArg } from "../parens.ts";
 import { header } from "../rust.ts";
 import { callWith, fieldInit, renderChild, type TwinCall } from "../children.ts";
 import { type Plugin, runOf, scopeOf } from "../plugin.ts";
@@ -53,7 +53,8 @@ function init(s: Scope, f: Field, node: N | undefined, n: N, owner: string): str
     return fail(s.comp, `${owner} requires \`${f.js}\``, n);
   }
   if (f.ty.k === "bool" && node.type === "StringLiteral" && (node.value === "" || node.value === hyphenate(f.js))) return `${f.rust}: true`;
-  return fieldInit(f.rust, bare(coerce(s.comp, expr(s, node), f.ty, node)));
+  const code = bare(coerce(s.comp, expr(s, node), f.ty, node));
+  return fieldInit(f.rust, f.ty.k === "str" ? strArg(code) : code);
 }
 
 function callOf(twin: Twin): TwinCall {
