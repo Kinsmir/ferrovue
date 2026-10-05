@@ -71,7 +71,10 @@ What is refused today, each with an error that names it:
   repeated. Vue's server renderer leaves such an attribute out, and hydration then sets it to the
   value's `String()` without reporting a mismatch. Join a list (`.join(",")`), or narrow a query
   value to one string (`typeof route.query.q === "string" ? route.query.q : ""`);
-- `v-html` of anything but a `TrustedHtml` prop;
+- `v-html` of anything but a `TrustedHtml` or `InlineHtml` prop; `v-html` on an element whose
+  content the browser's parser rebuilds (a table's structure, a `<select>`, SVG and MathML outside
+  the elements that hold HTML), and `v-html` in a `<p>` of HTML that is not `InlineHtml`. See
+  [`escaping`](crate::guide::escaping#where-v-html-may-go);
 - `provide` and `inject` beyond what the server can resolve exactly: keys that are not string
   literals or exported `InjectionKey` symbols, `inject(key)!`, provided values that may be absent,
   a ref and a plain value under one key, setup that assigns to an injected value, and `provide(…)`

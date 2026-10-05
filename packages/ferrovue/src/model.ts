@@ -17,7 +17,7 @@ export type Ty =
   | { k: "list"; of: Ty }
   | { k: "record"; of: Ty }
   | StructTy
-  | { k: "html" }
+  | { k: "html"; inline?: true }
   | { k: "child"; name: string }
   | PluginTys[keyof PluginTys];
 
@@ -182,6 +182,7 @@ export interface Component {
   props: Struct;
   structs: Map<string, Struct>;
   trustedName: string | null;
+  inlineName: string | null;
   floatName: string | null;
   childProps: Map<string, string>;
   imports: Set<string>;
@@ -206,6 +207,7 @@ export function blankComponent(name: string, module: string, file: string, struc
     props: { name: "Props", fields: [] },
     structs,
     trustedName: null,
+    inlineName: null,
     floatName: null,
     childProps: new Map(),
     imports: new Set(),
@@ -335,12 +337,32 @@ function written(comp: Component, node: N): N {
   }
 }
 
-export function staticClassFirst(comp: Component, bound: N): boolean {
-  const at = locate(comp, bound);
-  if (!at) return false;
+function covering(comp: Component, node: N): ((loc: N) => boolean) | null {
+  const at = locate(comp, node);
+  if (!at) return null;
   const pos = [at.line, at.column + 1];
   const before = (a: number[], b: number[]): boolean => a[0]! < b[0]! || (a[0] === b[0] && a[1]! <= b[1]!);
-  const within = (loc: N): boolean => before([loc.start.line, loc.start.column], pos) && before(pos, [loc.end.line, loc.end.column]);
+  return (loc: N): boolean => before([loc.start.line, loc.start.column], pos) && before(pos, [loc.end.line, loc.end.column]);
+}
+
+/** The element of the template whose `v-html` compiled to `node`, with the nodes around it, the nearest first. */
+export function vHtmlElement(comp: Component, node: N): { el: N; around: N[] } | null {
+  const within = covering(comp, node);
+  if (!within || !comp.templateAst) return null;
+  const visit = (n: N, around: N[]): { el: N; around: N[] } | null => {
+    if (n.type === 1 && n.props.some((p: N) => p.type === 7 && p.name === "html" && within(p.loc))) return { el: n, around };
+    for (const c of n.children ?? []) {
+      const found = visit(c, [n, ...around]);
+      if (found) return found;
+    }
+    return null;
+  };
+  return visit(comp.templateAst, []);
+}
+
+export function staticClassFirst(comp: Component, bound: N): boolean {
+  const within = covering(comp, bound);
+  if (!within) return false;
   const isBound = (p: N): boolean => p.type === 7 && p.name === "bind" && p.arg?.content === "class" && within(p.loc);
   const el = templateNode(comp, (n) => (n.props.some(isBound) ? n : null), true);
   if (!el) return false;

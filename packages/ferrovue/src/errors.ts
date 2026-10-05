@@ -389,6 +389,14 @@ export const ERRORS = {
     title: "`<ClientOnly>` with a `#fallback` in content rendered from virtual nodes",
     detail: "Inside an element `<component :is>` chooses, inside a `<RouterLink>` or a twin's slot, and in the slot content they render, Vue's server renders from virtual nodes, and `<ClientOnly>` writes an empty fragment there instead of its fallback, which the client then renders and reports as a mismatch. Leave out the `#fallback`, or move the `<ClientOnly>` outside that content.",
   },
+  FV1512: {
+    title: "`v-html` on an element whose content the browser rebuilds",
+    detail: "The browser's HTML parser moves markup written in a `<table>`, `<thead>`, `<tbody>`, `<tfoot>`, `<tr>` or `<colgroup>` out of the table, drops the tags written in a `<select>` or `<optgroup>`, and ends SVG or MathML at an HTML tag, so the page holds other nodes than the server wrote and hydration mismatches. Put `v-html` on a `<td>`, `<th>` or `<caption>`, write the options in the template, or use an HTML element inside a `<foreignObject>` or an `<mtext>`. See [`escaping`](crate::guide::escaping).",
+  },
+  FV1513: {
+    title: "`v-html` in a `<p>` of HTML that may hold blocks",
+    detail: "A block tag in the HTML (`<p>`, `<ul>`, `<div>`) ends the `<p>` it is written in where the browser reads it. Type the prop `InlineHtml` from `ferrovue/types`, which is `ferrovue::InlineHtml` on the server and keeps only inline tags, or put the HTML in a `<div>`. Slot content placed into a child's `<p>` is not seen at compile time. See [`escaping`](crate::guide::escaping).",
+  },
 
   FV1601: { title: "Injection key that is not a string literal or a symbol exported from a `.ts` file" },
   FV1602: { title: "Injection key symbol without an `InjectionKey<T>` type" },

@@ -136,6 +136,16 @@ released together and share version numbers.
   parameters, an optional catch-all, parameter parsers, named views, `definePage()`, a `<route>`
   block, and a page whose component name is taken. The routing guide's new section explains it;
   `examples/fullstack` builds its routes from `client/pages` instead of `routes.json`.
+- `InlineHtml` from `ferrovue/types`, trusted HTML of inline tags only, and its server type
+  `ferrovue::InlineHtml`. `InlineHtml::new(untrusted)` builds it as `BasicHtml::new` does, keeping
+  only `<b>`, `<i>`, `<em>`, `<strong>`, `<code>` and `<br>` as tags; `<p>`, the lists and their
+  end tags stay text. An `InlineHtml` prop is always `ferrovue::InlineHtml`, with no `trustedHtml`
+  configured, and `"trustedHtml": "ferrovue::InlineHtml"` makes every `TrustedHtml` prop inline.
+  It is the HTML `v-html` may write inside a `<p>` (below). Property tests check that building it
+  again gives the same HTML, that every `<` it writes starts one of its tags, and that html5ever
+  reads it inside a `<p>` back as written. The conformance suite records it inside a `<p>`
+  (`InlineProse`) and HTML in a `<td>`, a `<foreignObject>` and an `<mtext>` (`PlacedHtml`), each
+  hydrated in browsers.
 
 ### Changed
 
@@ -175,6 +185,17 @@ released together and share version numbers.
   171 KiB compressed); `ferrovue-core` and `ferrovue-router` drop their vectors. The test and
   benchmark targets stay in the package so it builds without warnings; they run from the
   repository.
+- **Breaking:** `v-html` where the browser's parser rebuilds the HTML is refused, since the page
+  then holds other nodes than the server wrote and hydration mismatches, in Vue too. On a
+  `<table>`, `<thead>`, `<tbody>`, `<tfoot>`, `<tr>` or `<colgroup>` (whose markup the parser moves
+  out of the table), a `<select>` or `<optgroup>` (whose tags it drops), an SVG element other than
+  `<foreignObject>`, `<desc>` and `<title>`, or a MathML element other than `<mi>`, `<mo>`, `<mn>`,
+  `<ms>`, `<mtext>` and an `<annotation-xml>` with a static HTML `encoding`, it is refused with
+  FV1512, which names the element to use instead. In a `<p>`, or an element inside one up to a
+  `<button>`, a table cell or another element that keeps blocks from ending the `<p>`, HTML that is
+  not `InlineHtml` is refused with FV1513, since a block in it ends the `<p>`. Slot content a child
+  places inside its own `<p>` is not seen at compile time. The escaping guide's new section lists
+  where `v-html` may go and with which type.
 
 ### Fixed
 
@@ -216,6 +237,9 @@ released together and share version numbers.
   module ferrovue writes already has are refused (FV0007).
 - `mountIslands` no longer dispatches the events that woke an island waiting for interaction again
   when `unmount()` was called while its component loaded.
+- A `.vue` file that is empty or holds only a `<style>` is refused (FV0002) at line 1, column 1,
+  and Vue's message names it by its path relative to the project, where it had no location and
+  the absolute path.
 
 ## [0.5.0] - 2026-10-05
 

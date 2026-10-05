@@ -1,7 +1,7 @@
 import { parse as parseJs } from "@babel/parser";
 import { basename } from "node:path";
 import { type Component, type Field, type N, type Struct, type Ty, blankComponent, fail, GenError, rustStr, snake, tagAst, takesAttrs } from "./model.ts";
-import { ctx } from "./context.ts";
+import { ctx, INLINE_HTML } from "./context.ts";
 import { lookupStruct } from "./typescript.ts";
 import { childOf } from "./expr.ts";
 import { Emitter } from "./emitter.ts";
@@ -31,7 +31,7 @@ export function needsLifetime(ty: Ty, comp: Component, seen: Set<string> = new S
       return structLifetime(child.props, child);
     }
     case "html":
-      return ctx.trustedHtml?.includes("'a") ?? false;
+      return !ty.inline && (ctx.trustedHtml?.includes("'a") ?? false);
     default:
       return false;
   }
@@ -63,7 +63,7 @@ export function rustTy(ty: Ty, comp: Component): string {
       return `${path}${ty.name}${structLifetime(st, owner) ? "<'a>" : ""}`;
     }
     case "html":
-      return ctx.trustedHtml!;
+      return ty.inline ? INLINE_HTML : ctx.trustedHtml!;
     case "child": {
       const child = childOf(ty.name);
       return `super::${child.module}::Props${structLifetime(child.props, child) ? "<'a>" : ""}`;

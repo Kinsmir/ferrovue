@@ -54,6 +54,18 @@ const props = defineProps<{ label: string }>();
     expect(() => compile(project)).toThrow(expect.objectContaining({ code: "FV0007", at: { file }, message: expect.stringContaining(message) }));
   });
 
+  it.each(["", "<style>p { color: red }</style>\n"])("refuses a component file with neither template nor script at its first line, naming it by its relative path: %j", (source) => {
+    const project = island(source);
+    expect(() => compile(project)).toThrow(
+      expect.objectContaining({
+        code: "FV0002",
+        at: expect.objectContaining({ file: "components/X.vue", line: 1, column: 1 }),
+        message: expect.stringMatching(/^components\/X\.vue:1:1: SyntaxError: At least one <template> or <script> is required in a single file component\. components\/X\.vue\n/),
+      }),
+    );
+    expect(() => compile(project)).not.toThrow(new RegExp(project));
+  });
+
   it("gives a component that needs only its props an html and island that hold them as well", () => {
     const borrowing = compile(
       island(`<script setup lang="ts">
@@ -629,6 +641,110 @@ const props = defineProps<{ body: TrustedHtml }>();
       expect(() => generate(island(source), { ...CONFIG, trustedHtml: "crate::sanitize::SafeHtml" })).toThrow(
         /unsupported prop type `TrustedHtml`/,
       );
+    });
+
+    const placed = (template: string, others: Record<string, string> = {}) => `<script setup lang="ts">
+import type { InlineHtml as Inline, TrustedHtml } from "ferrovue/types";
+${Object.keys(others)
+  .map((name) => `import ${name} from "./${name}.vue";\n`)
+  .join("")}const props = defineProps<{ body: TrustedHtml; short: Inline; maybe?: Inline; items: string[] }>();
+</script>
+<template>${template}</template>`;
+    const SAFE = { ...CONFIG, trustedHtml: "crate::sanitize::SafeHtml" };
+    const placing = (template: string, others: Record<string, string> = {}) => () => generate(island(placed(template, others), others), SAFE);
+
+    it("writes an InlineHtml prop as ferrovue::InlineHtml, inside a <p>, with no trustedHtml configured", () => {
+      const source = `<script setup lang="ts">
+import type { InlineHtml } from "ferrovue/types";
+defineProps<{ note: InlineHtml; extra?: InlineHtml }>();
+</script>
+<template><p v-html="note"></p><p><b v-html="extra"></b></p></template>`;
+      const out = compile(island(source)).get("x.rs")!;
+      expect(out).toContain("pub note: ferrovue::InlineHtml,");
+      expect(out).toContain("pub extra: Option<ferrovue::InlineHtml>,");
+      expect(out).toContain("fv::trusted_into(out, &props.note);");
+      expect(out).not.toContain("<'a>");
+    });
+
+    it("makes every TrustedHtml prop inline when trustedHtml names ferrovue::InlineHtml", () => {
+      const out = generate(island(placed(`<p v-html="body"></p>`)), { ...CONFIG, trustedHtml: "ferrovue::InlineHtml" }).get("x.rs")!;
+      expect(out).toContain("pub body: ferrovue::InlineHtml,");
+    });
+
+    it.each([
+      ["table", `<table v-html="body"></table>`],
+      ["thead", `<table><thead v-html="body"></thead></table>`],
+      ["tbody", `<table><tbody v-html="body"></tbody></table>`],
+      ["tfoot", `<table><tfoot v-html="body"></tfoot></table>`],
+      ["tr", `<table><tr v-html="body"></tr></table>`],
+      ["colgroup", `<table><colgroup v-html="body"></colgroup></table>`],
+    ])("refuses v-html on a <%s>, whose markup the parser moves out of the table", (tag, template) => {
+      expect(placing(template)).toThrow(
+        expect.objectContaining({ code: "FV1512", message: expect.stringMatching(new RegExp(`^components/X\\.vue:5:\\d+: \`v-html\` on \`<${tag}>\`.*a \`<td>\`, \`<th>\` or \`<caption>\``)) }),
+      );
+    });
+
+    it.each([
+      ["select", `<select v-html="body"></select>`],
+      ["optgroup", `<select><optgroup v-html="short"></optgroup></select>`],
+    ])("refuses v-html on a <%s>, whose tags the parser drops", (tag, template) => {
+      expect(placing(template)).toThrow(expect.objectContaining({ code: "FV1512", message: expect.stringMatching(new RegExp(`\`<${tag}>\`.*write the \`<option>\`s in the template`)) }));
+    });
+
+    it.each([
+      ["svg", `<svg v-html="body"></svg>`],
+      ["g", `<svg><g v-html="short"></g></svg>`],
+      ["text", `<svg><text v-html="body"></text></svg>`],
+    ])("refuses v-html on an SVG <%s>", (tag, template) => {
+      expect(placing(template)).toThrow(expect.objectContaining({ code: "FV1512", message: expect.stringMatching(new RegExp(`SVG \`<${tag}>\`.*inside a \`<foreignObject>\``)) }));
+    });
+
+    it.each([
+      ["math", `<math v-html="body"></math>`],
+      ["mrow", `<math><mrow v-html="body"></mrow></math>`],
+      ["annotation-xml", `<math><annotation-xml v-html="body"></annotation-xml></math>`],
+      ["annotation-xml", `<math><annotation-xml encoding="application/mathml+xml" v-html="body"></annotation-xml></math>`],
+      ["annotation-xml", `<math><annotation-xml :encoding="'text/html'" v-html="body"></annotation-xml></math>`],
+    ])("refuses v-html on a MathML <%s> that holds no HTML", (tag, template) => {
+      expect(placing(template)).toThrow(expect.objectContaining({ code: "FV1512", message: expect.stringMatching(new RegExp(`MathML \`<${tag}>\`.*on an \`<mtext>\``)) }));
+    });
+
+    it.each([
+      `<table><tr><td v-html="body"></td><th v-html="body"></th></tr><caption v-html="body"></caption></table>`,
+      `<svg><foreignObject v-html="body"></foreignObject><desc v-html="body"></desc><title v-html="body"></title><foreignObject><div v-html="body"></div></foreignObject></svg>`,
+      `<math><mi v-html="body"></mi><mo v-html="body"></mo><mn v-html="body"></mn><ms v-html="body"></ms><mtext v-html="body"></mtext></math>`,
+      `<math><annotation-xml encoding="text/html" v-html="body"></annotation-xml><annotation-xml encoding="Application/XHTML+XML" v-html="body"></annotation-xml></math>`,
+      `<select><option v-html="body"></option></select><span v-html="body"></span><div><span v-html="maybe"></span></div>`,
+    ])("accepts v-html where the browser keeps any markup: %s", (template) => {
+      expect(placing(template)).not.toThrow();
+    });
+
+    it.each([
+      [`<p v-html="body"></p>`, "on"],
+      [`<div>\n<p><b><span v-html="body" /></b></p></div>`, "inside"],
+      [`<p><template v-if="items.length"><span v-for="i in items" :key="i" v-html="body"></span></template></p>`, "inside"],
+      [`<p><slot><i v-html="body"></i></slot></p>`, "inside"],
+    ])("refuses v-html of HTML that may hold blocks in a <p>: %s", (template, where) => {
+      expect(placing(template)).toThrow(
+        expect.objectContaining({
+          code: "FV1513",
+          message: expect.stringMatching(new RegExp(`^components/X\\.vue:\\d+:\\d+: \`v-html\` ${where} a \`<p>\` .*type the prop \`InlineHtml\` from \`ferrovue/types\``)),
+        }),
+      );
+    });
+
+    it("points at the v-html it refuses", () => {
+      expect(placing(`<div><p v-html="short"></p>\n  <p><span v-html="body"></span></p></div>`)).toThrow(/^components\/X\.vue:6:19: `v-html` inside a `<p>`/);
+    });
+
+    it.each([
+      `<p v-html="short"></p><p><b v-html="maybe"></b></p>`,
+      `<p><button><span v-html="body"></span></button><object><span v-html="body"></span></object></p>`,
+      `<p><svg><foreignObject><div v-html="body"></div></foreignObject></svg></p>`,
+      `<p><template><span v-html="body"></span></template></p>`,
+      `<p><Y><span v-html="body"></span></Y></p>`,
+    ])("accepts v-html in a <p> where the parser keeps its blocks to themselves, or the HTML is inline: %s", (template) => {
+      expect(placing(template, template.includes("<Y>") ? { Y: "<template><div><slot /></div></template>" } : {})).not.toThrow();
     });
   });
 
