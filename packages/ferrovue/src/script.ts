@@ -14,7 +14,7 @@ export const CLIENT_HOOKS = new Set([
   "onActivated", "onDeactivated", "onErrorCaptured", "onRenderTracked", "onRenderTriggered",
 ]);
 
-export const INERT_CALLS = new Set(["defineEmits", "defineSlots", "defineOptions", "defineExpose", "defineProps", "withDefaults", "provide"]);
+export const INERT_CALLS = new Set(["defineEmits", "defineSlots", "defineOptions", "defineExpose", "defineProps", "withDefaults"]);
 
 export function setupStatement(comp: Component, st: N): void {
   const c = st.expression;
@@ -143,6 +143,7 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
     slotsBindings: new Set(),
     consts: new Map(),
     sid: null,
+    opaque: null,
     plugins: new Map(),
   };
   for (const p of ctx.plugins) if (p.scope) scope.plugins.set(p, p.scope(scope));
@@ -201,7 +202,7 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
       continue;
     }
     if (st.type === "ExpressionStatement") {
-      setupStatement(comp, st);
+      if (!ctx.plugins.some((p) => p.scriptStatement?.(scope, st))) setupStatement(comp, st);
       continue;
     }
     if (st.type !== "VariableDeclaration") fail(comp, "FV0107", `\`${st.type}\` in setup is not supported`, st);

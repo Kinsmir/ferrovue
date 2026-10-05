@@ -101,7 +101,14 @@ pub mod shown;
 pub mod slot_probe;
 pub mod strings;
 pub mod styles;
+pub mod tab;
+pub mod tabs;
+pub mod tabs_page;
 pub mod text;
+pub mod theme_scope;
+pub mod themed_button;
+pub mod themed_list;
+pub mod themed_shelf;
 pub mod translated;
 pub mod tree;
 pub mod user_card;
@@ -111,6 +118,7 @@ pub mod stores;
 pub mod types;
 pub mod i18n;
 pub mod twins;
+pub mod provides;
 
 /// What a fixture holds besides the props: each slot's content, and the location it renders at.
 #[cfg(test)]
@@ -614,9 +622,44 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: styles::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             styles::render(&mut out, &props);
         }
+        "Tab" => {
+            let props: tab::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            tab::render(&mut out, &props, provides::Provides::default());
+        }
+        "Tabs" => {
+            let props: tabs::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let s_default: &tabs::DefaultSlot = &|out: &mut String, _: provides::Provides<'_>| -> bool { out.push_str(fixture.slot("default").unwrap_or_default()); true };
+            tabs::render(&mut out, &props, tabs::Slots { default: fixture.slot("default").map(|_| s_default) }, provides::Provides::default());
+        }
+        "TabsPage" => {
+            let props: tabs_page::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            tabs_page::render(&mut out, &props, provides::Provides::default());
+        }
         "Text" => {
             let props: text::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             text::render(&mut out, &props);
+        }
+        "ThemeScope" => {
+            let props: theme_scope::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let s_default: &theme_scope::DefaultSlot = &|out: &mut String, _: provides::Provides<'_>| -> bool { out.push_str(fixture.slot("default").unwrap_or_default()); true };
+            theme_scope::render(&mut out, &props, theme_scope::Slots { default: fixture.slot("default").map(|_| s_default) }, provides::Provides::default());
+        }
+        "ThemedButton" => {
+            let props: themed_button::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            themed_button::render(&mut out, &props, provides::Provides::default());
+        }
+        "ThemedList" => {
+            let props: themed_list::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let s_row: &themed_list::RowSlot = &|out: &mut String, _: &themed_list::RowSlotProps<'_>, _: &str, _: provides::Provides<'_>| -> bool { out.push_str(fixture.slot("row").unwrap_or_default()); true };
+            let s_default: &themed_list::DefaultSlot = &|out: &mut String, _: &str, _: provides::Provides<'_>| -> bool { out.push_str(fixture.slot("default").unwrap_or_default()); true };
+            themed_list::render(&mut out, &props, themed_list::Slots { row: fixture.slot("row").map(|_| s_row), default: fixture.slot("default").map(|_| s_default) }, provides::Provides::default());
+        }
+        "ThemedShelf" => {
+            let props: themed_shelf::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            themed_shelf::render(&mut out, &props, provides::Provides::default());
         }
         "Translated" => {
             let props: translated::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

@@ -62,11 +62,14 @@ What is refused today, each with an error that names it:
   value's `String()` without reporting a mismatch. Join a list (`.join(",")`), or narrow a query
   value to one string (`typeof route.query.q === "string" ? route.query.q : ""`);
 - `v-html` of anything but a `TrustedHtml` prop;
+- `provide` and `inject` beyond what the server can resolve exactly: keys that are not string
+  literals or exported `InjectionKey` symbols, `inject(key)!`, provided values that may be absent.
+  See [`provide_inject`](crate::guide::provide_inject#what-is-refused);
 - any method call without a Rust twin.
 
 Client-only code is allowed where the server never runs it: lifecycle hooks, `watch` (not
-`immediate`), `defineEmits`, `defineExpose`, template refs and functions may be named from event
-handlers, which the server drops. The repository README's "What a component may use" table lists
+`immediate`), `defineEmits`, `defineExpose`, template refs, functions and what is injected under a key
+holding a function may be named from event handlers, which the server drops. The repository README's "What a component may use" table lists
 everything that is supported.
 
 # Helpers

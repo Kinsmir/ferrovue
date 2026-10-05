@@ -245,6 +245,7 @@ export interface Scope {
   slotsBindings: Set<string>;
   consts: Map<string, Const>;
   sid: string | null;
+  opaque: string | null;
   loop?: { item: string; over: string };
   plugins: Map<Plugin, unknown>;
 }

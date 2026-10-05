@@ -114,6 +114,8 @@ A fixture is a JSON object of props plus three optional keys:
 | `Picker` | A generic component (`generic="T extends Choice, K extends string"`), rendered with each type parameter as its constraint |
 | `Catalog` | Constants imported from `types/catalog.ts`, evaluated at build time: an object read by field and nested field, a list of strings, a list of numbers, lists of objects (one typed by an interface) in `types.rs`; enums imported and declared in the component, string and numeric, as a prop's type and read by member and by number |
 | `SlotProbe` | `useSlots()`: a slot's presence tested in the template and in a `computed` |
+| `TabsPage`, `Tabs`, `Tab`, `ThemedButton`, `ThemeScope` | `provide` and `inject` with `InjectionKey` symbols from `types/keys.ts` and string keys: a `Tabs`/`Tab` compound pair whose context is a `reactive()` object, a themed button with defaults, a factory default and a ref default, each rendered with and without a provider; a provider in a parent and a grandparent, a nearer one shadowing it, slot content seeing the providers of the component that renders it, a component injecting what it then provides anew, and a key holding a function |
+| `ThemedShelf`, `ThemedList` | The same through scoped slots and `:slotted()` slot scope ids, lists, fractions mixed with integers and booleans provided |
 
 Every component has at least one **hostile** fixture: markup-breaking characters in every prop that
 reaches the page.

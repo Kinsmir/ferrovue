@@ -1194,3 +1194,91 @@ Twin prop of a type with no Rust type.
 ## FV1510
 
 Twin for a component ferrovue compiles.
+
+# Provide and inject: FV16xx
+
+See [`provide_inject`](crate::guide::provide_inject).
+
+## FV1601
+
+Injection key that is not a string literal or a symbol exported from a `.ts` file.
+
+## FV1602
+
+Injection key symbol without an `InjectionKey<T>` type.
+
+## FV1603
+
+`provide` or `inject` with unsupported arguments.
+
+## FV1604
+
+`inject` that is not bound to a name at the top of `<script setup>`.
+
+## FV1605
+
+`inject(key)!`, asserting a provider.
+
+## FV1606
+
+`inject` of a string key with neither a default nor a type argument.
+
+## FV1607
+
+Function default without the factory flag.
+
+## FV1608
+
+Values of different types provided under one key.
+
+## FV1609
+
+Provided value that may be `null` or `undefined`.
+
+## FV1610
+
+Provided value of a form the context does not hold.
+
+## FV1611
+
+Object provided under a key without an interface type.
+
+## FV1612
+
+Provided object whose fields do not match its interface.
+
+## FV1613
+
+Ref and plain value under one key.
+
+## FV1614
+
+Key provided twice by one component.
+
+## FV1615
+
+Two keys that give the context one field name.
+
+## FV1616
+
+`provide` in a component that holds `<RouterView>`.
+
+The page `<RouterView>` shows is rendered from Rust and handed in as a slot, so it cannot see what the component provides. Provide the value above the router (in Rust, through the `Provides` the page is rendered with) or below it.
+
+## FV1617
+
+String-keyed `inject` inside a Rust twin's slot.
+
+Content in a twin's slot is a child of the library component the twin stands for, which may provide the same string key on the client. Use an `InjectionKey` symbol, which only the project provides.
+
+## FV1618
+
+Setup that assigns to an injected value.
+
+## FV1619
+
+Function and value provided under one key.
+
+## FV1620
+
+`provide` or `inject` called inside an expression.

@@ -24,6 +24,20 @@ released together and share version numbers.
   `examples/fullstack` the home page's buttons hydrate on interaction and the book page's reviews
   once visible, and the browser test checks that their chunks are requested only on a click and
   after scrolling the reviews into view on a short screen.
+- `provide` and `inject`, resolved through the component tree at build time. A key is a string
+  literal or a `Symbol` exported from a `.ts` file and typed `InjectionKey<T>`; a value is a prop,
+  a ref, a `computed`, a constant, or an object of them under an interface (`reactive()` unwraps
+  the refs in it, as in Vue). `inject` takes a default, or a factory with `true`. Every component
+  that provides or injects, or renders one that does, takes the generated `Provides` after its
+  other parameters, overlays what it provides, and hands it to its children and to its slots'
+  content, which sees what the component rendering the slot provides, as Vue resolves it. A page
+  rendered from Rust passes `Provides::default()`, or the values its client app gives
+  `app.provide`. A key holding a function is client-only, for event handlers. What cannot be
+  exact is refused with codes FV1601 to FV1620: other keys, `inject(key)!`, values that may be
+  absent, a ref and a plain value under one key, setup that assigns to an injected value, a
+  provider holding `<RouterView>`, a string key injected inside a Rust twin's slot. The guide's
+  new `provide_inject` page explains it; the conformance suite has a `Tabs`/`Tab` pair and a
+  themed button, with and without providers, recorded from Vue.
 
 ### Changed
 
