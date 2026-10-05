@@ -11,10 +11,12 @@ import {
   releaseChangelog,
   setCargoVersion,
   setPackageVersion,
+  checkMembers,
+  workspaceMembers,
 } from "./release.ts";
 
 const CARGO = `[workspace]
-members = ["crates/*", "examples/*"]
+members = ["crates/ferrovue-core", "crates/ferrovue-router", "crates/ferrovue"]
 
 [workspace.package]
 version = "0.1.0"
@@ -135,5 +137,25 @@ describe("release chores", () => {
     expect(CRATES.indexOf("ferrovue-core")).toBeLessThan(CRATES.indexOf("ferrovue-router"));
     expect(CRATES.indexOf("ferrovue-core")).toBeLessThan(CRATES.indexOf("ferrovue-i18n"));
     expect(CRATES.at(-1)).toBe("ferrovue");
+  });
+});
+
+describe("workspace members", () => {
+  it("reads Cargo.toml's members and pnpm-workspace.yaml's packages", () => {
+    expect(workspaceMembers(CARGO, "cargo")).toEqual(["crates/ferrovue-core", "crates/ferrovue-router", "crates/ferrovue"]);
+    const pnpm = "# a comment\npackages:\n  # listed one by one\n  - packages/ferrovue\n  - 'examples/fullstack'\n\nallowBuilds:\n  esbuild: true\n";
+    expect(workspaceMembers(pnpm, "pnpm")).toEqual(["packages/ferrovue", "examples/fullstack"]);
+  });
+
+  it("refuses a wildcard, a member that is not there, and a directory left out", () => {
+    expect(checkMembers("Cargo.toml", ["crates/a", "crates/b"], ["crates/a", "crates/b"])).toEqual([]);
+    expect(checkMembers("Cargo.toml", ["crates/*"], ["crates/a"])).toEqual([
+      'Cargo.toml lists "crates/*": list each member by its path, not by a wildcard',
+      "crates/a is not listed in Cargo.toml",
+    ]);
+    expect(checkMembers("pnpm-workspace.yaml", ["packages/gone"], ["packages/ferrovue"])).toEqual([
+      "pnpm-workspace.yaml lists packages/gone, which holds no manifest",
+      "packages/ferrovue is not listed in pnpm-workspace.yaml",
+    ]);
   });
 });

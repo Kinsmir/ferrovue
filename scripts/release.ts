@@ -5,11 +5,12 @@
  *                                              with --pr, commit on a release branch and open a PR
  *   node scripts/release.ts check v0.2.0       exit 1 unless the tag, every manifest and the changelog agree
  *   node scripts/release.ts notes 0.2.0        print that version's changelog notes, for the GitHub release
+ *   node scripts/release.ts members            exit 1 unless both workspaces list every member by its path
  *   node scripts/release.ts crates             print the crates in the order they are published
  *
  * The crates and the npm package are released together and always share one version. */
 import { execFileSync } from "node:child_process";
-import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -136,6 +137,43 @@ export function checkRelease(tag: string, files: ReleaseFiles): string[] {
   return problems;
 }
 
+/** The members a workspace lists: Cargo.toml's `members`, or pnpm-workspace.yaml's `packages`. */
+export function workspaceMembers(text: string, kind: "cargo" | "pnpm"): string[] {
+  if (kind === "cargo") {
+    const list = /^members\s*=\s*\[([^\]]*)\]/m.exec(text)?.[1] ?? "";
+    return [...list.matchAll(/"([^"]+)"/g)].map((m) => m[1]!);
+  }
+  const block = /^packages:\n((?:[ \t]+-[^\n]*\n?|[ \t]*#[^\n]*\n?)*)/m.exec(text)?.[1] ?? "";
+  return [...block.matchAll(/^[ \t]+-[ \t]*['"]?([^'"\n#]+?)['"]?[ \t]*$/gm)].map((m) => m[1]!);
+}
+
+/** What is wrong with a workspace's list of members: a wildcard, a member that is not there, or a
+ * crate or package directory it leaves out. `dirs` are the directories that hold a manifest. */
+export function checkMembers(file: string, members: string[], dirs: string[]): string[] {
+  const problems: string[] = [];
+  for (const m of members) {
+    if (/[*?[]/.test(m)) problems.push(`${file} lists "${m}": list each member by its path, not by a wildcard`);
+    else if (!dirs.includes(m)) problems.push(`${file} lists ${m}, which holds no manifest`);
+  }
+  for (const d of dirs) if (!members.includes(d)) problems.push(`${d} is not listed in ${file}`);
+  return problems;
+}
+
+/** The workspaces' member lists against the directories that hold a manifest, under the folders
+ * the workspaces draw from. */
+function memberProblems(): string[] {
+  const withManifest = (manifest: string): string[] =>
+    ["crates", "examples", "packages"].flatMap((top) =>
+      readdirSync(join(ROOT, top), { withFileTypes: true })
+        .filter((d) => d.isDirectory() && existsSync(join(ROOT, top, d.name, manifest)))
+        .map((d) => `${top}/${d.name}`),
+    );
+  return [
+    ...checkMembers("Cargo.toml", workspaceMembers(readFileSync(CARGO, "utf8"), "cargo"), withManifest("Cargo.toml")),
+    ...checkMembers("pnpm-workspace.yaml", workspaceMembers(readFileSync(join(ROOT, "pnpm-workspace.yaml"), "utf8"), "pnpm"), withManifest("package.json")),
+  ];
+}
+
 function run(cmd: string, args: string[]): void {
   execFileSync(cmd, args, { cwd: ROOT, stdio: "inherit" });
 }
@@ -178,12 +216,18 @@ function main(argv: string[]): number {
       }
       return 0;
     }
+    case "members": {
+      const problems = memberProblems();
+      for (const p of problems) console.error(p);
+      if (!problems.length) console.log("Cargo.toml and pnpm-workspace.yaml list every member by its path");
+      return problems.length ? 1 : 0;
+    }
     case "check": {
       if (!arg) {
         console.error("usage: release.ts check <tag>");
         return 2;
       }
-      const problems = checkRelease(arg, read());
+      const problems = [...checkRelease(arg, read()), ...memberProblems()];
       for (const p of problems) console.error(p);
       if (!problems.length) console.log(`${arg} matches every manifest and the changelog`);
       return problems.length ? 1 : 0;
