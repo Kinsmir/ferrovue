@@ -5,6 +5,8 @@ released together and share version numbers.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-05
+
 ### Added
 
 - Stable error codes. Every error the compiler raises has a code, `FV` and four digits grouped by
@@ -108,9 +110,14 @@ released together and share version numbers.
 - CI's jobs set up Rust and pnpm through shared composite actions, each job has a timeout, and a
   final **CI passed** job sums up the others. Only runs on `main` save the cargo, pnpm and
   Playwright caches; pull requests restore them without writing their own.
+- Every Rust dependency of the workspace, dev-dependencies included, is declared once in the root
+  `Cargo.toml`'s `[workspace.dependencies]`, and `node scripts/release.ts members` fails on one a
+  crate declares itself.
 
 ### Fixed
 
+- `undefined ?? x` gives `x`, and a value known to be `undefined` is falsy, as in JavaScript; the
+  compiler kept `undefined` for both.
 - `.includes()` of a list of numbers takes any number: a `Float` in a list of `number`s, a `number` in a
   list of `Float`s, or in a list mapped to fractions (`nums.map((v) => -v).includes(0)`), which were
   refused as a value of another type than the list's. It compares as JavaScript's `includes` does, `-0`
