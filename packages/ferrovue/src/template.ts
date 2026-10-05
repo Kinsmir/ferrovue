@@ -10,6 +10,7 @@ import { renderClass } from "./classes.ts";
 import { renderChild } from "./children.ts";
 import { slotOutlet } from "./slots.ts";
 import { list } from "./loops.ts";
+import { checkVHtmlPlacement } from "./vhtml.ts";
 import { dynamicComponent } from "./dynamic.ts";
 
 const FROM_VNODES = "in content Vue renders from virtual nodes (in an element `<component :is>` chooses, a `<RouterLink>` or a twin's slot, or in slot content they render)";
@@ -70,6 +71,8 @@ export function slot(s: Scope, e: Emitter, n: N): void {
   }
   if (n.type === "LogicalExpression" && n.operator === "??" && n.right.type === "StringLiteral" && n.right.value === "") {
     const v = expr(s, n.left);
+    const html = v.ty.k === "opt" ? v.ty.of : v.ty;
+    if (html.k === "html") checkVHtmlPlacement(s.comp, n, html.inline === true);
     if (v.ty.k === "html") {
       e.stmt(`fv::trusted_into(out, ${v.code});`);
       return;

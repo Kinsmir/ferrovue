@@ -59,7 +59,7 @@ crate that includes it needs **edition 2024**.
 | `routes` | no | JSON file listing the app's routes: each a vue-router path, or `{ "path", "name", "children" }`. Or `{ "pages": "client/pages" }`: a folder of pages, whose file names give the routes as vue-router's file-based routing reads them (`index.vue`, `[id].vue`, `[[id]].vue`, `[...path].vue`, `(group)` folders, a `name.vue` beside `name/` as its layout), each page compiled as a component. Needed for `<RouterLink>`, `<RouterView>` and `useRoute()` |
 | `router` | no | Instead of `routes`: `{ routes, base?, linkActiveClass?, linkExactActiveClass? }`, matching `createWebHistory(base)` and `createRouter`'s options |
 | `stores` | no | Directory of Pinia option stores whose state components may read |
-| `trustedHtml` | no | Rust type of a `TrustedHtml` prop (needed for `v-html`): `ferrovue::BasicHtml` (text with a few formatting tags, built in), `ferrovue::Sanitised` (HTML cleaned by ammonia, the `ammonia` feature), or a type of your own such as `crate::html::CleanHtml` |
+| `trustedHtml` | no | Rust type of a `TrustedHtml` prop (needed for `v-html`): `ferrovue::BasicHtml` (text with a few formatting tags, built in), `ferrovue::InlineHtml` (inline formatting tags only, built in, which makes every `TrustedHtml` prop inline HTML), `ferrovue::Sanitised` (HTML cleaned by ammonia, the `ammonia` feature), or a type of your own such as `crate::html::CleanHtml` |
 | `helpers` | no | `{ module, functions }`: functions a template may call, each mapped to a Rust twin |
 | `twins` | no | Components ferrovue does not compile, each rendered by a Rust function of yours: `{ "VBtn": { "rust": "crate::ui::v_btn", "props": { "label": "string" }, "slots": ["default"] } }`. See [Escape hatches](#escape-hatches) |
 | `i18n` | no | vue-i18n: `{ messages, locale?, fallbackLocale? }`, the directory of locale files (`en.json`, `nl.json`), the default locale and the fallbacks |
@@ -137,6 +137,9 @@ straight into a `maud::html!` page.
 For `v-html`, `ferrovue::BasicHtml` is built in: `BasicHtml::new(untrusted)` escapes everything but
 `<b>`, `<i>`, `<em>`, `<strong>`, `<code>`, `<br>`, `<p>`, `<ul>`, `<ol>` and `<li>` written with no
 attributes, and balances them; `BasicHtml::from_text(text)` turns plain text into paragraphs.
+`ferrovue::InlineHtml` does the same with `<b>`, `<i>`, `<em>`, `<strong>`, `<code>` and `<br>`
+only: it is what a prop typed `InlineHtml` from `ferrovue/types` is on the server, and the HTML
+`v-html` may write inside a `<p>`.
 With the `ammonia` feature, `ferrovue::Sanitised` is HTML cleaned by [ammonia](https://docs.rs/ammonia):
 name it as `trustedHtml` and build a `v-html` prop with `Sanitised::new(untrusted)`, or
 `Sanitised::with(&builder, untrusted)` for a policy of your own. The server renders the cleaned
@@ -165,7 +168,7 @@ ferrovue compiles `<script setup lang="ts">` components, and components with no 
 
 | Area | Supported |
 |---|---|
-| Prop types | `string`, `number` (integers, `i64`, written and computed as JavaScript does, exact within ±2⁵³), `Float` from `ferrovue/types` (fractions, `f64`), `boolean`, string-literal unions (`"sm" \| "md"`), `T \| undefined`, `T \| null` (an `Option` written as `null`), arrays (`T[]`, `Array<T>`, `readonly T[]`), interfaces and object type aliases (recursive ones too), dictionaries (`Record<string, T>`, `{ [key: string]: T }`, `ferrovue::Record` in Rust, which keeps JavaScript's order of keys), another component's exported `Props`, `TrustedHtml` |
+| Prop types | `string`, `number` (integers, `i64`, written and computed as JavaScript does, exact within ±2⁵³), `Float` from `ferrovue/types` (fractions, `f64`), `boolean`, string-literal unions (`"sm" \| "md"`), `T \| undefined`, `T \| null` (an `Option` written as `null`), arrays (`T[]`, `Array<T>`, `readonly T[]`), interfaces and object type aliases (recursive ones too), dictionaries (`Record<string, T>`, `{ [key: string]: T }`, `ferrovue::Record` in Rust, which keeps JavaScript's order of keys), another component's exported `Props`, `TrustedHtml`, `InlineHtml` |
 | Shared types | Interfaces and type aliases imported from `.ts` files (generated once, into `types.rs`), from a store's file, or from another component's `.vue` file; objects of a shared type can be passed between components. A TypeScript `enum` whose members are literals is the type of its values: a string, or a number |
 | Constants | Constants imported from `.ts` files and `enum`s (imported, or declared in the component), evaluated when the component is compiled: strings, numbers, booleans, `null`, lists of them, objects of them read field by field (`LABELS.save`, `Tone.Loud`, `Rank[5]`), and lists of objects of them, which become a `const` in `types.rs` (`{ value, label }` items get a type named after the constant, `OptionsItem`, unless the constant is typed with an interface: `OPTIONS: Option[]`; a field that is `null` in some items is `T | null`). See [Constants](#constants) |
 | Props | `withDefaults`, destructured props with defaults (`const { size = "md" } = defineProps<…>()`), the props object (`const props = defineProps<…>()`, then `props.label` in the template or in script code), optional booleans (Vue casts an absent one to `false`), `defineModel` (named, required, with defaults), components with no props. A generic component (`<script setup generic="T extends Item">`) renders each type parameter as its constraint, which is all the template can rely on |
@@ -190,7 +193,7 @@ ferrovue compiles `<script setup lang="ts">` components, and components with no 
 | Vue Router | `<RouterLink>` (resolved by name or imported) with a string `to` or `{ name, params, query, hash }` / `{ path, query, hash }`, `active-class`, `exact-active-class`, `aria-current-value`, `replace`; vue-router's own encoding and active-link matching, nested routes included (a parent link is active on its children's pages, exact only on its own); a history base; optional parameters (`:id?`); routes built from a folder of pages, which the Vite plugin also gives the client as `ferrovue/routes`. `useRoute()` and `$route`: `path`, `fullPath`, `hash`, `name`, `params`, and `query` (a value written once, without `=`, or repeated, exactly as vue-router parses it; `typeof route.query.q === "string"` narrows one to a single string). `<RouterView>`, at the top and in nested route components: each takes the page it shows as a slot |
 | Pinia | option stores with a typed `state`, and setup stores (`defineStore(id, () => { … })`) whose returned refs are typed by `ref<T>()` or their initial literal; read through `useX()` or `storeToRefs`, in the template or in `computed`; getters that are an expression of the state, and a setup store's computeds, which may read each other |
 | vue-i18n | `$t` and `useI18n()`'s `t` and `locale`: named and list values, plurals by vue-i18n's rule, literals, linked messages with `upper`/`lower`/`capitalize`, nested and flat keys, fallback locales, a missing key shown as itself. Messages are parsed at build time by vue-i18n's own compiler |
-| `v-html` | only on a `TrustedHtml` prop (`import type { TrustedHtml } from "ferrovue/types"`) |
+| `v-html` | only on a `TrustedHtml` prop (`import type { TrustedHtml } from "ferrovue/types"`), or an `InlineHtml` one (inline tags only, `ferrovue::InlineHtml` on the server, with no `trustedHtml` needed), the only HTML it may write inside a `<p>`; never on a table's structure, a `<select>` or `<optgroup>`, or an SVG or MathML element that holds no HTML. See the crate's [`escaping`](https://docs.rs/ferrovue/latest/ferrovue/guide/escaping/index.html#where-v-html-may-go) guide |
 | Page head | `useHead` (and `useServerHead`) from `@unhead/vue` 3: `title`, `titleTemplate`, `base`, `meta`, `link`, `script`, `style`, `noscript`, `htmlAttrs` and `bodyAttrs`, with values the server computes (props, setup bindings, getters such as `() => props.title`, `list.map(x => ({ … }))` for a list of tags), `key`, `tagPosition`, `tagPriority` and `tagDuplicateStrategy`; `useSeoMeta` (and `useServerSeoMeta`) of string, number, boolean and `null` values. Collected into a `ferrovue::Head` in the order Vue's server runs them, and written as unhead's `renderSSRHead` writes them: its tag order, deduplication, title template and escaping. See [Page head](#page-head) |
 
 Refused at compile time, each with an error that names the construct:
@@ -721,7 +724,8 @@ before it reaches you; a ferrovue patch follows when one does.
 ```text
 crates/ferrovue/             the Rust runtime crate, which generated code calls
   src/                       a module per part (`Html`, slots, class and style, the state script,
-                             strings, teleports, the page head, fallthrough attributes, `BasicHtml`,
+                             strings, teleports, the page head, fallthrough attributes, `BasicHtml`
+                             and `InlineHtml`,
                              `Sanitised`, the fixture check `conformance!` writes), each module's
                              unit tests beside it in <module>/tests.rs; lib.rs re-exports them all,
                              and the three crates below
@@ -743,8 +747,9 @@ packages/ferrovue/           the compiler (npm package)
   src/context.ts, model.ts   `ferrovue.config.json`, and the types and values the compiler passes around
   src/component.ts, script.ts, typescript.ts, constants.ts
                              a `.vue` file read, <script setup>, TypeScript types, constants and enums
-  src/template.ts, children.ts, slots.ts, loops.ts
-                             the compiled template: statements, child components, slots, v-for
+  src/template.ts, children.ts, slots.ts, loops.ts, vhtml.ts
+                             the compiled template: statements, child components, slots, v-for,
+                             where `v-html` may go
   src/expr.ts, strings.ts, numbers.ts, narrowing.ts, calls.ts, lists.ts, parens.ts
                              expressions: operators, strings, numbers, narrowing, calls, lists,
                              the parentheses Rust needs
@@ -770,7 +775,7 @@ packages/ferrovue/           the compiler (npm package)
   src/conformance.ts         `conformanceSuite`, which `ferrovue/testing` exports
   src/ssr.ts                 `attachSsrRender`, which `ferrovue/testing` exports
   src/hydration.ts           `hydrateRecordedPage`, which `ferrovue/testing` exports
-  src/types.ts               `ferrovue/types`: `TrustedHtml`, `Float`
+  src/types.ts               `ferrovue/types`: `TrustedHtml`, `InlineHtml`, `Float`
   test/                      compiler, CLI, router, vector, island, Vite and conformance tests
   browser/                   conformance fixtures and recorded pages hydrated in real browsers (`pnpm test:browser`)
   bench/                     Vue renderToString benchmarks, the other half of Performance

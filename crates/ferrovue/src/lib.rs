@@ -31,7 +31,7 @@ pub use attrs::{
     Attr, Attrs, attrs_into, class_names, merge_props, passed_attrs_into, scope_attrs,
     style_text_into,
 };
-pub use basic_html::BasicHtml;
+pub use basic_html::{BasicHtml, InlineHtml};
 pub use class::{class_into, class_object};
 pub use conformance::check_fixtures;
 #[doc(hidden)]

@@ -1,8 +1,8 @@
 //! Properties of the runtime that hold for every input.
 
 use ferrovue::{
-    BasicHtml, Slot, class_into, escape_into, hole, js_length, js_trim, slot_into, split_holes,
-    state_script_into,
+    BasicHtml, InlineHtml, Slot, class_into, escape_into, hole, js_length, js_trim, slot_into,
+    split_holes, state_script_into,
 };
 use proptest::prelude::*;
 
@@ -89,7 +89,7 @@ fn reference_len(s: &str) -> Option<usize> {
     ((1..=max).contains(&n) && b.get(start + n) == Some(&b';')).then_some(start + n + 1)
 }
 
-fn check_basic_html(html: &str) -> Result<(), String> {
+fn check_html(html: &str, tags: &[&str]) -> Result<(), String> {
     if html.contains(['\0', '\r', '"', '\'']) {
         return Err(format!("a character left unescaped: {html:?}"));
     }
@@ -112,7 +112,7 @@ fn check_basic_html(html: &str) -> Result<(), String> {
             Some(name) => (true, name),
             None => (false, &rest[1..end]),
         };
-        if !BASIC_TAGS.contains(&name) {
+        if !tags.contains(&name) {
             return Err(format!(
                 "`<` before something other than an allowed tag: {html:?}"
             ));
@@ -226,7 +226,7 @@ proptest! {
     #[test]
     fn basic_html_writes_only_its_tags_balanced_and_reads_back_as_itself(s in markup()) {
         let html = BasicHtml::new(&s);
-        check_basic_html(html.as_str()).map_err(TestCaseError::fail)?;
+        check_html(html.as_str(), &BASIC_TAGS).map_err(TestCaseError::fail)?;
         prop_assert_eq!(BasicHtml::new(html.as_str()), html.clone());
         let json = serde_json::to_string(&html).unwrap();
         prop_assert_eq!(serde_json::from_str::<BasicHtml>(&json).unwrap(), html);
@@ -235,8 +235,17 @@ proptest! {
     #[test]
     fn basic_html_from_text_writes_paragraphs_and_reads_back_as_itself(s in markup()) {
         let html = BasicHtml::from_text(&s);
-        check_basic_html(html.as_str()).map_err(TestCaseError::fail)?;
+        check_html(html.as_str(), &BASIC_TAGS).map_err(TestCaseError::fail)?;
         prop_assert!(!html.as_str().contains('\n'));
         prop_assert_eq!(BasicHtml::new(html.as_str()), html);
+    }
+
+    #[test]
+    fn inline_html_writes_only_inline_tags_balanced_and_reads_back_as_itself(s in markup()) {
+        let html = InlineHtml::new(&s);
+        check_html(html.as_str(), &InlineHtml::TAGS).map_err(TestCaseError::fail)?;
+        prop_assert_eq!(InlineHtml::new(html.as_str()), html.clone());
+        let json = serde_json::to_string(&html).unwrap();
+        prop_assert_eq!(serde_json::from_str::<InlineHtml>(&json).unwrap(), html);
     }
 }

@@ -2,7 +2,7 @@ import { parse as parseJs } from "@babel/parser";
 import { readFileSync, statSync } from "node:fs";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { type Absence, type Component, type Field, type N, type Struct, type Ty, absence, blankComponent, BOOL, fail, FLOAT, GenError, INT, joinAbsence, opt, RUST_PRELUDE, rustStr, sameTy, snake, STR, tagAst, withAbsence } from "./model.ts";
-import { CONFIG_FILE, ctx, TYPES_MODULE } from "./context.ts";
+import { CONFIG_FILE, ctx, INLINE_HTML, TYPES_MODULE } from "./context.ts";
 import { childOf } from "./expr.ts";
 import { claim } from "./plugin.ts";
 import { declareConsts, enumType } from "./constants.ts";
@@ -14,6 +14,7 @@ export function typesImports(comp: Component, body: N[]): void {
       if (sp.type !== "ImportSpecifier") continue;
       const name = sp.imported.name ?? sp.imported.value;
       if (name === "TrustedHtml") comp.trustedName = sp.local.name;
+      if (name === "InlineHtml") comp.inlineName = sp.local.name;
       if (name === "Float") comp.floatName = sp.local.name;
     }
   }
@@ -83,11 +84,12 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
       if (structs.has(name)) return { k: "struct", name };
       if (comp.childProps.has(name)) return { k: "child", name: comp.childProps.get(name)! };
       if (comp.floatName !== null && name === comp.floatName) return FLOAT;
+      if (comp.inlineName !== null && name === comp.inlineName) return { k: "html", inline: true };
       if (comp.trustedName !== null && name === comp.trustedName) {
         if (ctx.trustedHtml === null) {
-          fail(comp, "FV1503", `a \`TrustedHtml\` prop needs \`trustedHtml\` in ${CONFIG_FILE}: the Rust type it is`, t);
+          fail(comp, "FV1503", `a \`TrustedHtml\` prop needs \`trustedHtml\` in ${CONFIG_FILE}: the Rust type it is, or type it \`InlineHtml\` (inline tags only, \`ferrovue::InlineHtml\`)`, t);
         }
-        return { k: "html" };
+        return ctx.trustedHtml === INLINE_HTML ? { k: "html", inline: true } : { k: "html" };
       }
       const imported = comp.importedTypes.get(name);
       if (imported) return imported;

@@ -60,6 +60,7 @@ pub mod head_seo;
 pub mod head_theme;
 pub mod head_theme_page;
 pub mod hollow;
+pub mod inline_prose;
 pub mod keywords;
 pub mod lifecycle;
 pub mod links;
@@ -81,6 +82,7 @@ pub mod panel;
 pub mod parsing;
 pub mod pending;
 pub mod picker;
+pub mod placed_html;
 pub mod plain_box;
 pub mod plain_forward;
 pub mod plurals;
@@ -473,6 +475,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: hollow::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             hollow::render(&mut out, &props);
         }
+        "InlineProse" => {
+            let props: inline_prose::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            inline_prose::render(&mut out, &props);
+        }
         "Keywords" => {
             let props: keywords::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             keywords::render(&mut out, &props);
@@ -573,6 +579,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Picker" => {
             let props: picker::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             picker::render(&mut out, &props);
+        }
+        "PlacedHtml" => {
+            let props: placed_html::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            placed_html::render(&mut out, &props);
         }
         "PlainBox" => {
             let props: plain_box::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

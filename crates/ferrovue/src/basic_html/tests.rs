@@ -213,3 +213,54 @@ fn the_tags_are_the_ones_it_keeps() {
         assert_eq!(tag.name(), name);
     }
 }
+
+fn inline(s: &str) -> String {
+    InlineHtml::new(s).into_string()
+}
+
+#[test]
+fn inline_html_keeps_the_inline_tags() {
+    let html = "<b>a</b> <i>b</i> <em>c</em> <strong>d</strong> <code>e</code><br>f";
+    assert_eq!(inline(html), html);
+}
+
+#[test]
+fn inline_html_writes_block_tags_as_text() {
+    assert_eq!(
+        inline("<p>a</p><ul><li>b</li></ul><ol></ol>"),
+        "&lt;p&gt;a&lt;/p&gt;&lt;ul&gt;&lt;li&gt;b&lt;/li&gt;&lt;/ul&gt;&lt;ol&gt;&lt;/ol&gt;"
+    );
+    assert_eq!(inline("<b>a<p>b</b>"), "<b>a&lt;p&gt;b</b>");
+}
+
+#[test]
+fn inline_html_escapes_balances_and_reads_text_as_basic_html_does() {
+    assert_eq!(
+        inline("<b><i>a</b>b</i> & &amp; </br>\0\r\n<B>"),
+        "<b><i>a</i></b>b &amp; &amp; &lt;/br&gt;\n&lt;B&gt;"
+    );
+    let out = inline(&"<i>".repeat(40));
+    assert_eq!(out.matches("<i>").count(), MAX_DEPTH);
+}
+
+#[test]
+fn inline_html_reads_back_as_itself() {
+    let read: InlineHtml = serde_json::from_str(r#""<b>a</b><p>b""#).unwrap();
+    assert_eq!(read.as_str(), "<b>a</b>&lt;p&gt;b");
+    assert_eq!(InlineHtml::new(read.as_str()), read);
+    assert_eq!(
+        serde_json::to_string(&read).unwrap(),
+        r#""<b>a</b>&lt;p&gt;b""#
+    );
+    let mut out = String::new();
+    trusted_into(&mut out, &read);
+    assert_eq!(out, read.as_str());
+}
+
+#[test]
+fn the_inline_tags_are_the_inline_ones_it_keeps() {
+    for name in BasicHtml::TAGS {
+        let tag = Tag::named(name.as_bytes()).unwrap();
+        assert_eq!(tag.is_inline(), InlineHtml::TAGS.contains(&name), "{name}");
+    }
+}

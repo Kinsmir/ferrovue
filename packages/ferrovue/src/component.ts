@@ -112,7 +112,7 @@ export function readComponent(file: string, root: string, isChild: boolean, name
   const rel = relative(root, file);
   const comp = blankComponent(name, snake(name), rel);
   comp.source = source;
-  if (errors.length) fail(comp, "FV0002", String(errors[0]), vueErrorNode(errors[0]));
+  if (errors.length) fail(comp, "FV0002", String(errors[0]).replaceAll(file, rel), vueErrorNode(errors[0]) ?? sourceAt(source, 0));
   if (descriptor.script && !descriptor.scriptSetup) {
     const needs = isChild ? "a child component must have" : "an island needs";
     fail(comp, "FV0003", `${needs} \`<script setup lang="ts">\`, or no script at all: a \`<script>\` without \`setup\` (the Options API, \`defineComponent\`) is not translated`, blockAt(source, descriptor.script));

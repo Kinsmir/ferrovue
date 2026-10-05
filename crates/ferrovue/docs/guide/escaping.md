@@ -64,13 +64,56 @@ On the server, that prop's type is whatever `trustedHtml` names in `ferrovue.con
 that implements [`TrustedHtml`](crate::TrustedHtml). `v-html` of anything else, a plain string or a
 translated message, is refused at compile time.
 
-There are three ways to have one:
+There are four ways to have one:
 
 | Type | Needs | Takes | Use it for |
 |---|---|---|---|
 | [`BasicHtml`](crate::BasicHtml) | nothing | text with `<b>`, `<i>`, `<em>`, `<strong>`, `<code>`, `<br>`, `<p>`, `<ul>`, `<ol>` and `<li>`, or plain text | comments, reviews, bios: text from users with a little formatting |
+| [`InlineHtml`](crate::InlineHtml) | nothing | text with `<b>`, `<i>`, `<em>`, `<strong>`, `<code>` and `<br>` | a line of formatted text inside a `<p>` |
 | `ferrovue::Sanitised` | the `ammonia` feature | any HTML, cleaned to ammonia's policy or yours | Markdown rendered to HTML, CMS content, HTML from elsewhere |
 | a type of your own | your sanitiser | whatever your sanitiser accepts | another sanitiser, or a policy kept in one place |
+
+## Where `v-html` may go
+
+The browser reads the page with its HTML parser, which rebuilds markup in some places: it moves
+what is written in a table's structure out of the table, drops the tags inside a `<select>`, ends
+SVG and MathML at an HTML tag, and ends a `<p>` at a block such as `<p>`, `<ul>` or `<div>`. There
+the page holds other nodes than the server wrote, and hydration mismatches. Vue does the same, so
+ferrovue refuses `v-html` where it would happen:
+
+| Element carrying `v-html` | Allowed | Instead |
+|---|---|---|
+| `<table>`, `<thead>`, `<tbody>`, `<tfoot>`, `<tr>`, `<colgroup>` | no (FV1512) | a `<td>`, `<th>` or `<caption>` |
+| `<select>`, `<optgroup>` | no (FV1512) | the `<option>`s written in the template |
+| an SVG element other than `<foreignObject>`, `<desc>` and `<title>` | no (FV1512) | an HTML element inside a `<foreignObject>` |
+| a MathML element other than `<mi>`, `<mo>`, `<mn>`, `<ms>`, `<mtext>`, and `<annotation-xml>` with a static `encoding="text/html"` or `"application/xhtml+xml"` | no (FV1512) | an `<mtext>` |
+| a `<p>`, or an element inside one (through `<template>` and `<slot>`) | only an `InlineHtml` prop (FV1513) | a `<div>`, or the prop typed `InlineHtml` |
+| anything else | any trusted HTML | |
+
+The check for a `<p>` stops where the parser does: at a `<button>`, `<table>`, `<td>`, `<th>`,
+`<caption>`, `<object>`, `<marquee>`, `<applet>` or `<template>` element, which keeps a block
+inside it from ending the `<p>` around it, at an SVG or MathML element, and at a child component.
+Content written into a child component's slot is checked where it is written: the compiler cannot
+see that the child places it inside a `<p>`, and the same holds for a component whose root is
+rendered inside another component's `<p>`. Give such HTML the `InlineHtml` type.
+
+An `InlineHtml` prop comes from `ferrovue/types` and is always
+[`ferrovue::InlineHtml`](crate::InlineHtml) on the server, whatever `trustedHtml` names, so it needs
+no configuration:
+
+```vue
+<script setup lang="ts">
+import type { InlineHtml } from "ferrovue/types";
+defineProps<{ lead: InlineHtml }>();
+</script>
+
+<template>
+  <p class="lead" v-html="lead"></p>
+</template>
+```
+
+With `"trustedHtml": "ferrovue::InlineHtml"` in `ferrovue.config.json`, every `TrustedHtml` prop is
+inline HTML as well, and may go inside a `<p>`.
 
 ## `ferrovue::BasicHtml`
 

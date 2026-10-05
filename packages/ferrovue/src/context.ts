@@ -41,7 +41,8 @@ export interface Config {
   twins?: Record<string, TwinSpec>;
   /** The Rust type a `TrustedHtml` prop is, which must implement `ferrovue::TrustedHtml`, e.g.
    * `crate::sanitize::SafeHtml`. A type that borrows names the props' lifetime, `'a`:
-   * `crate::render::Trusted<'a>`. Without it, a component cannot use `v-html` at all. */
+   * `crate::render::Trusted<'a>`. `ferrovue::InlineHtml` makes every `TrustedHtml` prop inline HTML.
+   * Without it, only an `InlineHtml` prop may reach `v-html`. */
   trustedHtml?: string;
   /** A JSON file listing the app's routes as vue-router paths (`/users/:id`), which `<RouterLink>`
    * resolves against, or `{ pages }`: a folder of pages whose file names give the routes, as
@@ -130,6 +131,9 @@ export function tyOfName(name: TypeName): Ty {
       throw new GenError("FV1107", `unknown helper type \`${String(name)}\``);
   }
 }
+
+/** The Rust type of an `InlineHtml` prop, and of a `TrustedHtml` one when `trustedHtml` names it. */
+export const INLINE_HTML = "ferrovue::InlineHtml";
 
 /** Where `TrustedHtml` comes from. Only that import names the type `v-html` will write raw. */
 export const TYPES_MODULE = "ferrovue/types";
