@@ -232,6 +232,21 @@ What it generates, with random nesting:
 - lists computed from lists, `Object.keys` / `Object.values` and `split`, by `filter`, `map` and
   `slice` with arrow functions (an index too), chained, read by `.join()`, `.length`, `.includes()`,
   `some`, `every`, `find`, `findIndex` and `JSON.stringify`;
+- `<script setup>` beyond the props: `const props = defineProps(…)` read as `props.x` in the
+  template and in script, `computed`, `ref` and plain constants computed from the props, a
+  `generic="T extends Row"` parameter typing a list prop, `defineAsyncComponent` for a child;
+- constants and enums from a `.ts` file beside the component (strings, numbers, booleans, lists,
+  an object read field by field, a list of objects under an interface, a string `enum` and a
+  numeric one read both ways), or the enums declared in the component, and a string enum as a
+  prop type;
+- `provide` with a string key and with `InjectionKey`s (a plain value, a number and a `computed`),
+  a child that injects all three with defaults and a child that provides its own values to its slot
+  content; `useHead` (`title`, `titleTemplate`, `htmlAttrs`, `bodyAttrs`, `meta`, `link`, plain
+  values and getters) and `useSeoMeta`, in the component and in a child, compared with unhead's
+  rendered head;
+- `<ClientOnly>` with and without a `#fallback`, its default slot holding anything; `useSlots()`
+  testing the default slot; `v-html` of a `TrustedHtml` prop with `ferrovue::BasicHtml` as the
+  `trustedHtml` type, whose values are HTML `BasicHtml` gives back unchanged;
 - prop values meant to break things: markup and quotes, `</script>`, combining marks, emoji, RTL
   and bidi controls, JavaScript-only whitespace, case mappings that change length, empty strings,
   numbers written as strings, integers at ±(2⁵³ − 1), fractions such as `0.1`, `1e-7`, `1e21`,
@@ -242,7 +257,7 @@ ferrovue type them, optional values are read only where they may be, integer ari
 leaves ±2⁵³, and two strings that may each hold half of a surrogate pair never meet. So a component
 the compiler refuses is reported as a **refusal**, a finding of its own when the README says the
 construct is supported. Vue's HTML is compared as a server sends it, a half of a pair as U+FFFD
-(README, "Strings").
+(README, "Strings"), followed by the head unhead renders, as the conformance suite records it.
 
 ```sh
 pnpm fuzz                                              # a random seed (printed), 200 components

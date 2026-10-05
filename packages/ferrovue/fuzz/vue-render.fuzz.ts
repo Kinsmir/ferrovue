@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { it } from "vitest";
 import type { Component } from "vue";
-import { renderToString } from "vue/server-renderer";
+import { renderFixture } from "../src/conformance.ts";
 import { attachSsrRender, fixtureApp, readFixture } from "../src/testing.ts";
 
 interface VueCase {
@@ -39,7 +39,7 @@ it("renders every fixture", async () => {
     for (const c of cases) {
       try {
         const app = await fixtureApp(await load(c), readFixture(JSON.parse(c.json) as Record<string, unknown>), null);
-        results[c.key] = { ok: (await renderToString(app)).toWellFormed() };
+        results[c.key] = { ok: (await renderFixture(app)).toWellFormed() };
       } catch (e) {
         results[c.key] = { err: String((e as Error).stack ?? e).split("\n").slice(0, 4).join("\n") };
       }

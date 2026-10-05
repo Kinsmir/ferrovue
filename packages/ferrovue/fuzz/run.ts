@@ -135,7 +135,7 @@ function evaluate(batch: string, items: Item[]): Map<string, Evaluated> {
     const ev: Evaluated = { refused: null, compileError: null, outcomes: [] };
     results.set(item.id, ev);
     try {
-      for (const [file, text] of generate(dir, { components: "components", out: "generated", scopeId: "filepath", viteRoot: import.meta.dirname })) {
+      for (const [file, text] of generate(dir, { components: "components", out: "generated", scopeId: "filepath", viteRoot: import.meta.dirname, trustedHtml: "ferrovue::BasicHtml" })) {
         writeFileSync(join(dir, "generated", file), plant && file !== "mod.rs" ? plantBug(text) : text);
       }
       live.push(item);
