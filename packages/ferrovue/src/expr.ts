@@ -75,7 +75,12 @@ export function asCow(v: Val): string {
 /** Whether built code is a `Cow<str>` already: a runtime routine that borrows when it can
  * (`js_slice`, `js_replace`, `js_pad_start`, …), or a fallback taken from one (`.unwrap_or(Cow…)`). */
 export function yieldsCow(code: string): boolean {
-  return /^fv::js_(?:slice|substring|replace|replace_all|pad_start|pad_end)\(/.test(code) || /\.unwrap_or\(std::borrow::Cow::<str>::\w+\(.*\)\)$/s.test(code);
+  // The routine's call is the whole of it: `fv::js_slice(…).to_lowercase()` is a `String`.
+  const routine = /^fv::js_(?:slice|substring|replace|replace_all|pad_start|pad_end)(?=\()/.exec(code);
+  if (routine !== null) return enclosed(code.slice(routine[0].length));
+  // The fallback is the last call of it: `format!("{}a", x.unwrap_or(Cow…))` is a `String`.
+  const fallback = code.lastIndexOf(".unwrap_or(std::borrow::Cow::<str>::");
+  return fallback >= 0 && enclosed(code.slice(fallback + ".unwrap_or".length));
 }
 
 /** Whether a value is a JavaScript number: an integer or a fraction. */
@@ -682,6 +687,9 @@ export function expr(s: Scope, n: N): Val {
           case "$setup":
           case "_ctx": {
             if (n.object.name === "_ctx" && prop === "$route") return theRoute(s, n);
+            if (n.object.name === "_ctx" && prop === "$attrs") {
+              return fail(comp, "`$attrs` is bound whole, with `v-bind=\"$attrs\"`; a value read from it has no type: declare it as a prop", n);
+            }
             const v = s.setup.get(prop);
             if (v) return v;
             if (s.clientOnly.has(prop)) {

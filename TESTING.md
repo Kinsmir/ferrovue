@@ -19,7 +19,7 @@ pnpm test:browser          # the same fixtures, and the full-stack example, hydr
 |---|---|---|---|
 | **Conformance** | `crates/ferrovue/tests/conformance/` | Each component × fixture renders identically in Vue and in the generated Rust, and Vue hydrates the HTML with no mismatch | `@vue/server-renderer`, Vue's hydration |
 | **Browser hydration** | `packages/ferrovue/browser/`, `examples/fullstack/browser/` | Every fixture's recorded HTML, parsed by Chromium, Firefox and WebKit, hydrates with no mismatch and is left as parsed; the full-stack example's pages do too, and their islands work | Vue's hydration, the browsers' HTML parsers |
-| **Shared vectors** | `crates/ferrovue/tests/vectors/` | The runtime's reimplementations of `trim`, `.length`, `escapeHtml`, `String(number)`, `Math`, `toFixed`, `normalizeClass` of an object, the string methods (`slice`, `at`, `split`, `replace`, `padStart`, … on astral characters, halves of pairs, negative and `NaN` indices), string ordering, `Number` / `parseInt` / `parseFloat`, `JSON.stringify` of strings, an object's order of keys, and vue-router's link resolution (string and object `to`, named routes, query and hash encoding, history base) and `useRoute()` fields agree with the originals | JavaScript, `@vue/shared`, vue-router |
+| **Shared vectors** | `crates/ferrovue/tests/vectors/` | The runtime's reimplementations of `trim`, `.length`, `escapeHtml`, `String(number)`, `Math`, `toFixed`, `normalizeClass` of an object, the string methods (`slice`, `at`, `split`, `replace`, `padStart`, … on astral characters, halves of pairs, negative and `NaN` indices), string ordering, `Number` / `parseInt` / `parseFloat`, `JSON.stringify` of strings, an object's order of keys, `mergeProps` and `ssrRenderAttrs` of attributes, and vue-router's link resolution (string and object `to`, named routes, query and hash encoding, history base) and `useRoute()` fields agree with the originals | JavaScript, `@vue/shared`, vue-router |
 | **Compiler** | `packages/ferrovue/test/compiler.test.ts` | Constructs that a careless translation would get subtly wrong are refused with a named error; key translations have the expected shape | Hand-written |
 | **CLI** | `packages/ferrovue/test/cli.test.ts` | `ferrovue` writes, replaces, and `--check` detects stale and stray files | Hand-written |
 | **Runtime units** | `crates/ferrovue/src/tests.rs`, `src/router/tests.rs`, `src/web.rs` | Escaping, slots, fallbacks, holes, islands, the state script, router edge cases; a streamed page's order and the axum and actix-web responses | Hand-written |
@@ -84,6 +84,7 @@ A fixture is a JSON object of props plus three optional keys:
 | `ScopedTree` | A scoped component rendering itself, whose children's roots carry its id twice |
 | `ScopedNav`, `ScopedLink` | `<RouterLink>` in scoped components: the `<a>` and what it holds, a link that is a scoped component's root, a link in `:slotted()` slot content |
 | `ScopedQuirks`, `QuietLeaf` | Where Vue's server and client renders give different ids: a `:slotted()` component's fallback, `inheritAttrs: false` |
+| `Fallthrough` and its children, `ScopedFallthrough` | Attributes a child does not declare as props: onto a root with a class, a style, `v-show` and attributes of its own (`FallLeaf`: classes joined, once when equal, styles merged, the rest replaced where they stand, `undefined` too), with `inheritAttrs: false` onto elements that bind `$attrs` before and after their own (`FallInner`), dropped by two roots (`FallPair`), on through a root that is a component (`FallRoot`), and unmerged through one given nothing to `$attrs` bound alone (`FallBare`), through `useAttrs()` to an element and a component (`FallUse`), onto a `<RouterLink>` root (`FallLink`), onto a root chosen by `v-if` (`FallSwitch`), through a `<Transition>` root (`FallFade`), onto a root whose own class may be absent and whose style is text (`FallBinds`); with a scoped parent's ids after them |
 | `Strings` | String methods in UTF-16 code units (astral characters, `$` replacement patterns, padding, `split("")`), ordering by code unit, kept by `computed` |
 | `Arrays`, `Chips` | `filter`, `map`, `some`, `every`, `find`, `findIndex`, `slice` with arrow functions, chained and nested, with an index and destructuring, in `v-for`, `computed`, `?:` and a child's props; `JSON.stringify` |
 | `Records` | `Record<string, T>` and `{ [key: string]: T }` in JavaScript's order of keys (array indices first, a key given twice), `Object.keys` / `values` / `entries`, a record handed to a child |
@@ -154,9 +155,12 @@ What it generates, with random nesting:
 - static and bound attributes, boolean attributes, `:class` strings, arrays and objects (computed
   names too), `:style` objects merged with a static `style`;
 - child components written beside each one — a single root, a slot with a fallback, a root that is
-  a component forwarding its slot, a fragment, a root that is another component — given slot
-  content, at the root or nested; `<style scoped>` on the component and on each child, with
-  `:slotted()` on those with a slot;
+  a component forwarding its slot, a fragment, a root that is another component, a root with
+  attributes of its own, `inheritAttrs: false` with `$attrs` bound before and after an element's
+  own, `useAttrs()` bound on a root that inherits them too, a root with none of its own and a root
+  that is a component given none — given slot content and attributes they
+  do not declare, which fall through, at the root or nested; `<style scoped>` on the component and
+  on each child, with `:slotted()` on those with a slot;
 - string `+`, template literals, `?:`, `??`, `||`, `.length`, `.trim()` and the rest of the string
   methods — `slice`, `substring`, `at`, `charAt`, `indexOf`, `split`, `replace` and `replaceAll`
   with `$` patterns, `padStart`, `padEnd`, `repeat` — strings ordered with `<`, `String()`,

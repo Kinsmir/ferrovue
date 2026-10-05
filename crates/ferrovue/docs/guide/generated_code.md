@@ -49,7 +49,7 @@ Every component module has, in this order:
 | `…SlotProps<'v>` and `…Slot<'s>` | For each scoped slot: what its outlet passes (with `<'v>` only when it borrows), and the closure type a parent supplies. See [`slots`](crate::guide::slots) |
 | `Slots<'s>` | When the component renders a `<slot>` or `<RouterView>`: what a parent puts in each |
 | `render` | Write the component into a buffer |
-| `render_scoped` | Only for a component a parent may hand `<style scoped>` ids to: `render` with those ids last. Generated parents call it; it is `#[doc(hidden)]`. See [`scoped_styles`](crate::guide::scoped_styles) |
+| `render_scoped` | Only for a component a parent may hand `<style scoped>` ids to, or pass attributes it does not declare as props: `render` with those last. Generated parents call it; it is `#[doc(hidden)]`. See [`scoped_styles`](crate::guide::scoped_styles) and [fallthrough attributes](#fallthrough-attributes) |
 | `html` | The same render as an [`Html`](crate::Html) value |
 | `island` | Only for a component that renders from its props alone: the render wrapped as a hydratable island |
 | `into_html` and `into_island` | Beside `island`: `html` and `island` taking the props by value, so the `Html` holds them |
@@ -108,6 +108,9 @@ pub fn render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) {
 }
 ```
 
+A component that a parent passes attributes it does not declare as props takes them, with the ids,
+as one [`Attrs`](crate::Attrs) instead: see [fallthrough attributes](#fallthrough-attributes).
+
 A `render` or `render_scoped` that never reads its props, such as a component's that only passes
 its slot on, names the parameter `_props`, so that the module compiles without warnings; it is
 still the second parameter.
@@ -117,6 +120,48 @@ assembled in one `String`: write the document's head, render the body's componen
 buffer, write the tail. It first reserves an estimate of what it will write, from its literal
 markup, the strings its props hold and the numbers it writes, once per item for a loop, so that the
 buffer grows once.
+
+# Fallthrough attributes
+
+What a parent passes a child beyond its props — `<Badge class="wide" :title="t" />` where `Badge`
+declares neither — falls through, as in Vue: onto the child's single root, merged with the root's
+own class and style and replacing its other attributes where they stand, or, with
+`inheritAttrs: false`, onto whatever element binds `v-bind="$attrs"` (or a `useAttrs()` binding).
+Two roots take none. A root that is another component passes them on to that one, merged with the
+attributes it gives it. Listeners are dropped, as Vue's server drops them.
+
+The parent knows at compile time which attributes it passes, but the child is generated once for
+every parent, so the two meet at run time. A child that some parent passes attributes to takes
+`fv_attrs: &fv::Attrs<'_>` in its `render_scoped`, the attributes in order followed by the scope
+ids, and the parent builds them from its template:
+
+```rust,ignore
+// <Badge :label="name" class="wide" :title="note" /> in a parent's template:
+super::badge::render_scoped(out, &super::badge::Props { label: Cow::Borrowed(&props.name) },
+    &fv::Attrs::new(&[("class", fv::Attr::str("wide")), ("title", props.note.as_deref().map_or(fv::Attr::Undefined, fv::Attr::str))], ""));
+
+// Badge's root, `<b class="badge">`:
+out.push_str("<b");
+if fv_attrs.is_empty() {
+    out.push_str(" class=\"badge\"");
+    out.push_str(fv_attrs.ids());
+} else {
+    fv::attrs_into(out, &[&[("class", fv::Attr::str("badge"))], fv_attrs.list()], 1, fv_attrs.ids());
+}
+```
+
+With nothing passed — from `render`, which passes [`Attrs::NONE`](crate::Attrs::NONE), or from a
+parent that passes none — the root is written exactly as it would be without; only when attributes
+arrive does [`attrs_into`](crate::attrs_into) merge them as Vue's `mergeProps` does and write them as
+`ssrRenderAttrs` does. A component no parent passes attributes to has neither: its `render_scoped`,
+if it has one, takes the scope ids alone as a `&str`.
+
+Attribute names are what the parent's template gives, and their values strings, numbers, booleans
+or absent (`undefined`, which removes the root's own attribute of that name), a class or a style in
+any form a template binds. An attribute that would reach a prop of the component a root passes it on
+to, a value read from `$attrs` (it has no type), `$attrs` in a component whose `$attrs` would hold
+scope ids, and attributes passed to a root `<Transition>` or `<KeepAlive>` around a `v-if` (which
+Vue's server drops but its client keeps) are refused at compile time.
 
 # `html` and `island`
 

@@ -26,6 +26,17 @@ pub mod data_table;
 pub mod defaults;
 pub mod destructured;
 pub mod exprs;
+pub mod fall_bare;
+pub mod fall_binds;
+pub mod fall_fade;
+pub mod fall_inner;
+pub mod fall_leaf;
+pub mod fall_link;
+pub mod fall_pair;
+pub mod fall_root;
+pub mod fall_switch;
+pub mod fall_use;
+pub mod fallthrough;
 pub mod form;
 pub mod forward;
 pub mod frame;
@@ -55,6 +66,7 @@ pub mod route_info;
 pub mod row_chip;
 pub mod scoped_card;
 pub mod scoped_fade;
+pub mod scoped_fallthrough;
 pub mod scoped_leaf;
 pub mod scoped_link;
 pub mod scoped_nav;
@@ -217,6 +229,56 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: exprs::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             exprs::render(&mut out, &props);
         }
+        "FallBare" => {
+            let props: fall_bare::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            fall_bare::render(&mut out, &props);
+        }
+        "FallBinds" => {
+            let props: fall_binds::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            fall_binds::render(&mut out, &props);
+        }
+        "FallFade" => {
+            let props: fall_fade::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            fall_fade::render(&mut out, &props);
+        }
+        "FallInner" => {
+            let props: fall_inner::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            fall_inner::render(&mut out, &props);
+        }
+        "FallLeaf" => {
+            let props: fall_leaf::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            fall_leaf::render(&mut out, &props);
+        }
+        "FallLink" => {
+            let props: fall_link::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let router = route_table::router();
+            let route = router.at(&fixture.route);
+            fall_link::render(&mut out, &props, &route);
+        }
+        "FallPair" => {
+            let props: fall_pair::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            fall_pair::render(&mut out, &props);
+        }
+        "FallRoot" => {
+            let props: fall_root::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            fall_root::render(&mut out, &props);
+        }
+        "FallSwitch" => {
+            let props: fall_switch::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            fall_switch::render(&mut out, &props);
+        }
+        "FallUse" => {
+            let props: fall_use::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            fall_use::render(&mut out, &props);
+        }
+        "Fallthrough" => {
+            let props: fallthrough::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let router = route_table::router();
+            let route = router.at(&fixture.route);
+            fallthrough::render(&mut out, &props, &route);
+        }
         "Form" => {
             let props: form::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             form::render(&mut out, &props);
@@ -365,6 +427,13 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "ScopedFade" => {
             let props: scoped_fade::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             scoped_fade::render(&mut out, &props);
+        }
+        "ScopedFallthrough" => {
+            let props: scoped_fallthrough::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let router = route_table::router();
+            let route = router.at(&fixture.route);
+            scoped_fallthrough::render(&mut out, &props, &route);
         }
         "ScopedLeaf" => {
             let props: scoped_leaf::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

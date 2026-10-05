@@ -1,12 +1,14 @@
 /* The compiled template's statements: pushes, conditions, lists, child components and slots. */
 
-import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, fail, GenError, INT, rustStr, sameTy, snake, STR } from "./model.ts";
+import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, camelize, declares, fail, GenError, INT, rustStr, sameTy, snake, STR, takesAttrs } from "./model.ts";
 import { ctx } from "./context.ts";
 import { markHome } from "./typescript.ts";
 import { asF64, boolOf, cond, expr, fieldVal, isObjectCall, known, narrowTo, type Presence, presence, truthy } from "./expr.ts";
 import { atom, bare, CMP, condition, occurrences, operand, OR, strArg, UNARY } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
-import { IGNORED_PROPS, interpolate, renderAttr, renderAttrs, renderClass, renderDynamicAttr, renderStyle } from "./attrs.ts";
+import { attrOf, dollarAttrs, IGNORED_PROPS, interpolate, isAttrs, mergedParts, renderAttr, renderAttrs, renderClass, renderDynamicAttr, renderStyle } from "./attrs.ts";
+import { passedKey } from "./scoped.ts";
+import { isSSRSafeAttrName, propsToAttrMap } from "@vue/shared";
 import { routerLink } from "./router.ts";
 import { rustTy } from "./rust.ts";
 
@@ -157,9 +159,6 @@ function childAttrs(s: Scope, child: Component, passesAttrs: boolean, inSlot: bo
 
 export function renderChild(s: Scope, e: Emitter, n: N): void {
   const [target, rawProps, slots, , slotScopeId] = n.arguments;
-  // The parent's `_attrs`, which it passes on to a child that is its root.
-  const isAttrs = (a: N): boolean => a?.type === "Identifier" && a.name === "_attrs";
-  const passesAttrs = isAttrs(rawProps) || (rawProps?.type === "CallExpression" && rawProps.arguments.some(isAttrs));
   let local: string | null = null;
   if (target.type === "MemberExpression" && target.object.name === "$setup") {
     local = target.computed ? target.property.value : target.property.name;
@@ -167,57 +166,63 @@ export function renderChild(s: Scope, e: Emitter, n: N): void {
   const isSelf = target.type === "Identifier" && target.name === s.selfAlias.name;
   const childName = isSelf ? s.comp.name : local ? s.children.get(local) : undefined;
   const child = childName ? s.components.get(childName) : undefined;
-  // Inside a `v-for`, Vue merges a `{ ref_for: true }` marker into the props; it renders nothing.
-  let props = rawProps;
-  if (
-    props?.type === "CallExpression" && props.callee.type === "Identifier" && props.callee.name === "_mergeProps" &&
-    props.arguments.length === 2 && props.arguments[0].type === "ObjectExpression" &&
-    props.arguments[0].properties.every((p: N) => p.type === "ObjectProperty" && IGNORED_PROPS.has(p.key.name ?? p.key.value))
-  ) {
-    props = props.arguments[1];
-  }
-  // A component at the root of the template is handed the fallthrough attributes, which an island
-  // never has.
-  if (
-    props?.type === "CallExpression" && props.callee.type === "Identifier" && props.callee.name === "_mergeProps" &&
-    props.arguments.length === 2 && props.arguments[1].type === "Identifier" && props.arguments[1].name === "_attrs"
-  ) {
-    props = props.arguments[0];
-  }
-  // A child given no props at all: Vue passes `null`, or the empty fallthrough attributes.
-  if ((props?.type === "Identifier" && props.name === "_attrs") || props?.type === "NullLiteral" || !props) {
-    props = { type: "ObjectExpression", properties: [] };
-  }
   if (!child) fail(s.comp, "a child component must be an imported island", n);
   if (child.routerView) {
     fail(s.comp, `${child.name} holds \`<RouterView>\`: the server renders it at the top, never as a child`, n);
   }
+  // What the props merge: object literals — a `{ ref_for: true }` marker inside a `v-for` among
+  // them, which renders nothing — the parent's `_attrs` when the child is its root, and `$attrs`.
+  const parts: N[] = !rawProps || rawProps.type === "NullLiteral" ? [] : mergedParts(rawProps);
+  const merges = parts.length > 0 && parts[0] !== rawProps;
+  const passesAttrs = parts.some(isAttrs);
+  const passed = (p: N): boolean => s.fallthrough !== null && ((isAttrs(p) && s.comp.inheritAttrs) || dollarAttrs(s, p));
+  const marker = (p: N): boolean =>
+    p.type === "ObjectExpression" && p.properties.length > 0 && p.properties.every((q: N) => q.type === "ObjectProperty" && IGNORED_PROPS.has(q.key.name ?? q.key.value));
+  const objects = parts.filter((p) => !isAttrs(p) && !dollarAttrs(s, p) && !marker(p));
+  // Attributes this component is passed reach the child's props too, where a prop would take them.
+  if (parts.some(passed)) {
+    for (const name of s.comp.attrNames) {
+      if (declares(child, name)) {
+        fail(s.comp, `\`${name}\`, an attribute ${s.comp.name} may be passed, would reach ${child.name} as its prop \`${camelize(name)}\`, which an attribute has no type for`, n);
+      }
+    }
+  }
+  const ids = childAttrs(s, child, passesAttrs, !!slotScopeId, n);
   // `v-bind="x"`, where `x` is exactly the child's own `Props`: handed over as it is.
-  if (props.type !== "ObjectExpression") {
-    const v = expr(s, props);
+  if (objects.length === 1 && objects[0].type !== "ObjectExpression") {
+    const v = expr(s, objects[0]);
     // The component itself, however the template reached it: its own `Props` struct is the type.
     const own = child.name === s.comp.name && v.ty.k === "struct" && v.ty.name === "Props";
     if (own || (v.ty.k === "child" && v.ty.name === child.name)) {
-      callChild(s, e, child, v.code, slots, childAttrs(s, child, passesAttrs, !!slotScopeId, n));
+      callChild(s, e, child, v.code, slots, childAttrsArg(s, child, parts, merges, null, ids));
       return;
     }
     fail(s.comp, `child props must be an object literal, or \`v-bind\` of ${child.name}'s own \`Props\``, n);
   }
+  for (const p of objects) {
+    if (p.type !== "ObjectExpression") fail(s.comp, `child props must be an object literal, or \`v-bind\` of ${child.name}'s own \`Props\``, p);
+  }
 
   const given = new Map<string, N>();
-  for (const p of props.properties) {
-    if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "child props hold plain keys", p);
-    const key: string = p.key.type === "Identifier" ? p.key.name : p.key.value;
-    // Listeners, `v-model`'s `onUpdate:…` among them, run on the client alone; a model's modifiers
-    // change only what an update writes.
-    if (IGNORED_PROPS.has(key) || /^on[^a-z]/.test(key)) continue;
-    if (key.endsWith("Modifiers") && child.props.fields.some((f) => f.js === (key === "modelModifiers" ? "modelValue" : key.slice(0, -"Modifiers".length)))) continue;
-    if (!child.props.fields.some((f) => f.js === key)) {
-      // A key the child does not declare would fall through onto its root element as an
-      // attribute, which the generated child does not render.
-      fail(s.comp, `\`${key}\` is not a prop of ${child.name}`, p);
+  // Keys the child does not declare are attributes, which fall through to its root.
+  const fallthrough = new Set<N>();
+  for (const obj of objects) {
+    for (const p of obj.properties) {
+      if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "child props hold plain keys", p);
+      const key: string = p.key.type === "Identifier" ? p.key.name : String(p.key.value);
+      // Listeners, `v-model`'s `onUpdate:…` among them, run on the client alone; a model's modifiers
+      // change only what an update writes.
+      if (!passedKey(child, key)) continue;
+      const field = child.props.fields.find((f) => camelize(f.js) === camelize(key));
+      if (field) {
+        given.set(field.js, p.value);
+        continue;
+      }
+      if (array(key)) fail(s.comp, `an attribute named \`${key}\`, which JavaScript would put before the others`, p);
+      const name = propsToAttrMap[key] ?? key.toLowerCase();
+      if (key !== "class" && key !== "style" && !isSSRSafeAttrName(name)) fail(s.comp, `unsafe attribute name \`${name}\``, p);
+      fallthrough.add(p);
     }
-    given.set(key, p.value);
   }
   const inits = child.props.fields.map((f) => {
     const node = given.get(f.js);
@@ -230,7 +235,39 @@ export function renderChild(s: Scope, e: Emitter, n: N): void {
     const v = expr(s, node);
     return fieldInit(f.rust, ownInto(s.comp, { ...v, ty: markHome(v.ty, s.comp.name) }, markHome(f.ty, child.name), node));
   });
-  callChild(s, e, child, `&super::${child.module}::Props { ${inits.join(", ")} }`, slots, childAttrs(s, child, passesAttrs, !!slotScopeId, n));
+  callChild(s, e, child, `&super::${child.module}::Props { ${inits.join(", ")} }`, slots, childAttrsArg(s, child, parts, merges, fallthrough, ids));
+}
+
+/** Whether a name is an array index, which a JavaScript object lists before its other keys. */
+function array(key: string): boolean {
+  return /^(0|[1-9]\d*)$/.test(key) && Number(key) < 2 ** 32 - 1;
+}
+
+/** The last argument of a child's `render_scoped`: for a child a parent may pass attributes, the
+ * `fv::Attrs` this call passes — the keys of its props objects it does not declare, and what this
+ * component was passed, merged in their order — with the scope ids; for any other, the ids. */
+function childAttrsArg(s: Scope, child: Component, parts: N[], merges: boolean, fallthrough: Set<N> | null, ids: string | null): string | null {
+  const sources: string[] = [];
+  for (const p of parts) {
+    if (s.fallthrough !== null && ((isAttrs(p) && s.comp.inheritAttrs) || dollarAttrs(s, p))) {
+      sources.push(`${s.fallthrough}.list()`);
+    } else if (p.type === "ObjectExpression" && fallthrough !== null) {
+      const entries = p.properties.filter((q: N) => fallthrough.has(q)).map((q: N) => {
+        const key: string = q.key.type === "Identifier" ? q.key.name : String(q.key.value);
+        return `(${rustStr(key)}, ${attrOf(s, key, q.value, "vnode")})`;
+      });
+      if (entries.length) sources.push(`&[${entries.join(", ")}]`);
+    }
+  }
+  if (!takesAttrs(child)) {
+    if (sources.length) throw new GenError(`${s.comp.file}: ${child.name} is passed attributes it does not take`);
+    return ids;
+  }
+  if (!sources.length) return ids === null ? "&fv::Attrs::NONE" : `&fv::Attrs::scoped(${ids})`;
+  // One object literal, or `_attrs` or `$attrs` alone, is the child's as it is: only `_mergeProps`
+  // normalises what it merges, even one object.
+  if (sources.length === 1 && !merges) return `&fv::Attrs::new(${sources[0]}, ${ids ?? '""'})`;
+  return `&fv::Attrs::merged(&[${sources.join(", ")}], ${ids ?? '""'})`;
 }
 
 /** `name: value` in a struct literal, or the name alone when the value is a variable of that name. */
@@ -261,8 +298,8 @@ export function extraParams(c: Component): string {
 }
 
 /** `render(out, props[, slots][, route])` for a child, with the slot content this template gives
- * it as closures; `render_scoped`, with the scope ids its root is handed last, for a child that may
- * be handed some. */
+ * it as closures; `render_scoped`, with the scope ids its root is handed last — and the attributes
+ * it is passed, as `fv::Attrs` — for a child that may be handed some. */
 export function callChild(s: Scope, e: Emitter, child: Component, propsCode: string, slots: N, attrs: string | null): void {
   const given = new Map<string, N>();
   if (slots && slots.type !== "NullLiteral") {
@@ -276,10 +313,11 @@ export function callChild(s: Scope, e: Emitter, child: Component, propsCode: str
     }
   }
   const m = `super::${child.module}`;
+  const scoped = child.inherits || takesAttrs(child);
   const route =
     (child.usesRoute ? ", fv_route" : "") + (child.usesStores ? ", fv_stores" : "") + (child.usesI18n ? ", fv_i18n" : "") + (child.usesTeleports ? ", fv_teleports" : "") +
-    (child.inherits ? `, ${attrs ?? '""'}` : "");
-  const render = child.inherits ? "render_scoped" : "render";
+    (scoped ? `, ${attrs ?? (takesAttrs(child) ? "&fv::Attrs::NONE" : '""')}` : "");
+  const render = scoped ? "render_scoped" : "render";
   if (!takesSlots(child)) {
     e.stmt(`${m}::${render}(out, ${propsCode}${route});`);
     return;

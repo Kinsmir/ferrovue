@@ -42,7 +42,7 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(204 + props.text.len() + props.other.len() + props.sep.len() + props.fill.as_deref().map_or(0, str::len));
+    out.reserve(213 + props.text.len() + props.other.len() + props.sep.len() + props.fill.as_deref().map_or(0, str::len));
     let s_initial = &*fv::js_char_at(&props.text, 0.0f64).to_uppercase();
     let s_words = fv::js_split(&props.text, " ").into_iter().map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
     let s_short = &*fv::js_slice(&props.text, 0.0f64, Some(3.0f64));
@@ -149,7 +149,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     } else {
         out.push_str("<!---->");
     }
-    out.push_str("</section>");
+    out.push_str("<p>");
+    fv::escape_into(out, &{ let a = std::borrow::Cow::<str>::Owned(fv::js_slice(&props.text, 1.0f64, None).to_lowercase()); if !a.is_empty() { a } else { std::borrow::Cow::<str>::Borrowed("-") } });
+    out.push('|');
+    fv::escape_into(out, &{ let a = std::borrow::Cow::<str>::Owned(fv::js_replace(&props.other, "a", "b").to_uppercase()); if !a.is_empty() { a } else { std::borrow::Cow::<str>::Borrowed(&*props.sep) } });
+    out.push('|');
+    fv::escape_into(out, &{ let a = std::borrow::Cow::<str>::Owned(format!("{}a", fv::js_split(&props.text, " ").into_iter().find(|fv_s2| **fv_s2 == *props.sep).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).unwrap_or(std::borrow::Cow::<str>::Borrowed("ß")))); if !a.is_empty() { a } else { std::borrow::Cow::<str>::Borrowed("-") } });
+    out.push_str("</p></section>");
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.

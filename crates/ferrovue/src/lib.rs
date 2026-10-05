@@ -1421,6 +1421,7 @@ fn island_into<P: Serialize>(
     out.push_str("</div>");
 }
 
+mod attrs;
 #[cfg(any(doc, doctest))]
 pub mod guide;
 pub mod i18n;
@@ -1429,6 +1430,9 @@ mod record;
 mod router;
 mod strings;
 mod teleport;
+pub use attrs::{
+    Attr, Attrs, attrs_into, class_names, merge_props, passed_attrs_into, style_text_into,
+};
 pub use i18n::I18n;
 pub use record::Record;
 pub use router::{Link, Query, Route, RouteDef, Router, query_into};

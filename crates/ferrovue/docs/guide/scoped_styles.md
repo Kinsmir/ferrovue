@@ -232,7 +232,9 @@ slot content that may be given a slot scope id (below). `fv_attrs` holds those i
 ` data-v-…` with its leading space; [`scope_attrs`](crate::scope_attrs) puts them together in the
 order Vue's `ssrRenderAttrs` writes them, keeping each once. Recursion, fragments, a root chosen by
 `v-if`, `inheritAttrs: false`, `<Transition>`, `<KeepAlive>`, `<Teleport>` and `<RouterLink>` are
-handled as Vue renders them.
+handled as Vue renders them. A component a parent also passes attributes to takes the ids inside an
+[`Attrs`](crate::Attrs), after those attributes
+([`generated_code`](crate::guide::generated_code#fallthrough-attributes)).
 
 `render_scoped` is `#[doc(hidden)]`: call `render`. A component rendered from Rust, as a page's root
 or an island, has no parent to hand it ids, and `render` writes exactly what Vue's server renderer

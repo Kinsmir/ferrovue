@@ -1,7 +1,7 @@
 /* `<script setup>` read: what the server evaluates, and what stays on the client. */
 
 import { basename } from "node:path";
-import { type Component, type N, type Scope, type Val, fail, GenError, snake, STR } from "./model.ts";
+import { type Component, type N, type Scope, type Val, fail, GenError, snake, STR, takesAttrs } from "./model.ts";
 import { type Store, CONFIG_FILE, ctx } from "./context.ts";
 import { definePropsType } from "./typescript.ts";
 import { expr, fieldVal, storeGetter, theRoute } from "./expr.ts";
@@ -94,7 +94,10 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
     i18nT: new Set(),
     fill: false,
     vnode: false,
-    attrs: comp.inherits ? "fv_attrs" : null,
+    // A component a parent may pass attributes takes them with the scope ids, as one `fv::Attrs`.
+    attrs: comp.inherits ? (takesAttrs(comp) ? "fv_attrs.ids()" : "fv_attrs") : null,
+    fallthrough: takesAttrs(comp) ? "fv_attrs" : null,
+    attrsBindings: new Set(),
     sid: null,
   };
   const lets: string[] = [];
@@ -102,6 +105,7 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
   let storeToRefsName: string | null = null;
   let useRouteName: string | null = null;
   let useI18nName: string | null = null;
+  let useAttrsName: string | null = null;
   /** Setup bindings holding a store, by name. */
   const storeValues = new Map<string, Store>();
   for (const st of ast) {
@@ -131,6 +135,10 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
           const name = sp.type === "ImportSpecifier" ? (sp.imported.name ?? sp.imported.value) : null;
           if (name === "useI18n") useI18nName = sp.local.name;
           else scope.clientOnly.set(sp.local.name, `\`${name}\` from vue-i18n does not run on the server`);
+        }
+      } else if (from === "vue") {
+        for (const sp of st.specifiers) {
+          if (sp.type === "ImportSpecifier" && (sp.imported.name ?? sp.imported.value) === "useAttrs") useAttrsName = sp.local.name;
         }
       } else if (from === "pinia") {
         for (const sp of st.specifiers) {
@@ -226,6 +234,12 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
       // `const route = useRoute()`: the reader's location.
       if (useRouteName !== null && init0?.type === "CallExpression" && init0.callee.type === "Identifier" && init0.callee.name === useRouteName) {
         scope.setup.set(local, theRoute(scope, d));
+        continue;
+      }
+      // `const attrs = useAttrs()`: `$attrs`, which the template may bind whole.
+      if (useAttrsName !== null && init0?.type === "CallExpression" && init0.callee.type === "Identifier" && init0.callee.name === useAttrsName) {
+        scope.attrsBindings.add(local);
+        scope.clientOnly.set(local, "`useAttrs()` is bound whole, with `v-bind`; a value read from it has no type");
         continue;
       }
       // `const model = defineModel<string>()`: the model's prop.

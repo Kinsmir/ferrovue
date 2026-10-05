@@ -86,6 +86,8 @@ export function readComponent(file: string, root: string): { comp: Component; as
     inheritAttrs: true,
     inherits: false,
     passesSlotIds: false,
+    attrNames: new Set(),
+    idsInAttrs: false,
   };
   comp.source = source;
   if (errors.length) fail(comp, String(errors[0]), vueErrorNode(errors[0]));
@@ -214,6 +216,16 @@ export function readComponent(file: string, root: string): { comp: Component; as
     ssrCssVars: [],
     compilerOptions: { bindingMetadata: script.bindings, sourceMap: true },
   });
+  // `ssrInjectFallthroughAttrs`: a root `<Transition>` or `<KeepAlive>` passes `_attrs` on only to
+  // a lone element or component without `v-if` or `v-for`.
+  const kids = (n: N): N[] => n.children.filter((c: N) => c.type !== 3 && !(c.type === 2 && !c.content.trim()));
+  const roots = descriptor.template.ast ? kids(descriptor.template.ast) : [];
+  const wrapper = roots.length === 1 && roots[0].type === 1 && roots[0].tagType === 1 && ["Transition", "transition", "KeepAlive", "keep-alive"].includes(roots[0].tag) ? roots[0] : null;
+  if (wrapper) {
+    const inner = kids(wrapper);
+    const lone = inner.length === 1 && inner[0].type === 1 && (inner[0].tagType === 0 || inner[0].tagType === 1) && !inner[0].props.some((p: N) => p.type === 7 && ["if", "else-if", "else", "for"].includes(p.name));
+    if (!lone) comp.attrsDropped = { type: "VueTemplate", loc: { start: { line: wrapper.loc.start.line, column: wrapper.loc.start.column - 1 } }, __fv: "source" };
+  }
   const start = descriptor.template.loc.start;
   comp.templateStart = { line: start.line, column: start.column };
   if (compiled.map) comp.templateMap = new SourceMapConsumer(compiled.map);

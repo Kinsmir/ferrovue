@@ -151,7 +151,8 @@ ferrovue compiles `<script setup lang="ts">` components. Props are declared by t
 | `class` | strings, arrays, objects (`{ active: on }`, computed keys), `cond && "x"`, `cond ? "x" : null`, merged with a static `class` |
 | `style` | objects (camelCase or kebab-case keys, `--custom` properties), arrays of objects, strings, merged with a static `style`, and `v-show`; later values override earlier ones as in Vue. A global `<style>` block is allowed |
 | Scoped styles | `<style scoped>`: the id on every element, on child components' roots (a root that is itself a component, fragments, recursion and `inheritAttrs: false` as Vue renders them) and, from a component with `:slotted()` rules, on the slot content it is given, forwarded slots included; inside `<Transition>`, `<KeepAlive>`, `<Teleport>` and `v-if`; on `<RouterLink>` and what it holds, as vue-router renders them |
-| Components | imported child components, `v-bind` of a child's own `Props`, `v-model` on a child's `defineModel`, recursion |
+| Components | imported child components, `v-bind` of a child's own `Props`, `v-model` on a child's `defineModel`, recursion; props named in `kebab-case` or `camelCase` |
+| Fallthrough attributes | what a parent passes a child beyond its props (static and bound attributes, `class`, `style`, `data-*`, `aria-*`, booleans, `undefined`): onto its single root, merged with the root's own class and style and replacing its other attributes where they stand, as Vue's `mergeProps` merges them; none for two roots; on through a root that is a component, or a `<RouterLink>`; with `inheritAttrs: false`, onto the elements or components that bind `v-bind="$attrs"` or a `useAttrs()` binding, before or after their own; beside scope ids. Listeners are dropped, as Vue's server drops them. See the crate's [`generated_code`](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#fallthrough-attributes) guide |
 | Slots | default and named slots, fallbacks, `$slots.name` tests, scoped slots (`<slot :item="x">` and `#item="{ item }"` or `v-slot="props"`), whose props a parent can hand to its own children |
 | Forms | `v-model` on text inputs, checkboxes, radios, `<select>` and `<textarea>` (renders the initial state) |
 | Built-ins | `<Transition>`, `<TransitionGroup>`, `<KeepAlive>`, `<Suspense>` (synchronous content), `<Teleport>` (to any target, nested, disabled: see below), `v-text`, `v-once`, `v-pre`, `v-memo`, custom directives listed in `clientDirectives` |
@@ -189,6 +190,13 @@ Refused at compile time, each with an error that names the construct:
   repeated. Vue's server renderer leaves the attribute out and hydration then sets it, silently;
   join a list (`.join(",")`), or narrow a query value with `typeof route.query.q === "string"`
 - any method call without a Rust twin
+- a value read from `$attrs` or `useAttrs()` (`$attrs.title`), which has no type; an attribute a
+  component is passed that would reach a prop of the component (or `<RouterLink>`) its root passes it
+  on to; `$attrs` in a component that is the root of one that may be handed scope ids, where it would
+  hold them; an attribute named by a number, or bound to a `$route.query` value; a class merged by
+  `v-bind` with a string that may equal the class before it, which Vue would write once; attributes
+  passed to a component whose root is a `<Transition>` or `<KeepAlive>` around a `v-if`, which Vue's
+  server drops but its client keeps
 
 An object prop handed to a child component is cloned. Its strings are `Cow`s, so borrowed ones
 cost nothing to copy.
@@ -220,7 +228,8 @@ same in development and production, and do not change, nor change the generated 
 component's source does.
 
 A component a parent may hand ids to has a `render_scoped(…, attrs)` beside `render`, which
-generated parents call. A component whose outlets pass a slot scope id (`:slotted()`) takes slot
+generated parents call (for one a parent also passes attributes to, `attrs` is an `fv::Attrs`
+holding them and the ids). A component whose outlets pass a slot scope id (`:slotted()`) takes slot
 content that is given it: `Slot::slotted` for a slot, a third `&str` parameter for a scoped slot's
 closure. `render`, and content from Rust, need none of it: markup written from Rust carries no ids.
 
