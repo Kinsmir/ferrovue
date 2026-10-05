@@ -5,7 +5,7 @@ released together and share version numbers.
 
 ## [Unreleased]
 
-## [0.6.0] - 2026-10-05
+## [0.6.0] - 2026-10-06
 
 ### Added
 
