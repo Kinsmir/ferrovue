@@ -114,6 +114,84 @@ The twin must return what the TypeScript function returns for every input, or th
 hydrate; ferrovue cannot check that for you. Test the pair against shared vectors, as ferrovue's
 own runtime is tested.
 
+# Client-only content
+
+A component the compiler refuses can still be on the page if the server does not render it. Put it
+in `<ClientOnly>`, from `ferrovue/client`: the server writes the `#fallback` slot between fragment
+markers (or `<!---->` without one), the browser hydrates that fallback and swaps in the default
+slot once mounted. The compiler does not read the default slot at all, so any import or expression
+may go there. The swap happens only where Vue runs: inside an island, or an app hydrated whole.
+
+# Rust twins
+
+A component the server must render but ferrovue cannot compile, such as a component library's
+button, can be rendered by a function of yours. Name it in `ferrovue.config.json` with the props a
+template may pass it (typed as helpers' are) and the slots it may fill:
+
+```json
+{
+  "twins": {
+    "VBtn": { "rust": "crate::ui::v_btn", "props": { "label": "string", "block": "bool" }, "slots": ["default"] }
+  }
+}
+```
+
+`twins.rs` then holds `VBtnProps`, `VBtnSlots` and `VBtnRender`, the signature the generated
+parents call the function with: the buffer, the props, the slots, and the attributes the parent
+passes beyond the props together with the scope ids the root takes. An absent `bool` is `false`
+and a bare attribute (`<VBtn block>`) is `true`, as Vue casts them.
+
+```rust
+# mod generated { pub mod twins {
+# use ferrovue as fv;
+# #[derive(Debug, Clone, Copy)]
+# pub struct VBtnProps<'a> {
+#     pub label: &'a str,
+#     pub block: bool,
+# }
+# #[derive(Clone, Copy, Default)]
+# pub struct VBtnSlots<'s> {
+#     pub default: Option<fv::Slot<'s>>,
+# }
+# pub type VBtnRender = fn(&mut String, &VBtnProps<'_>, VBtnSlots<'_>, &fv::Attrs<'_>);
+# const _: VBtnRender = crate::v_btn;
+# } }
+use ferrovue::{Attr, Attrs};
+use generated::twins::{VBtnProps, VBtnSlots};
+
+// What `h("button", { class: ["v-btn", { block }] }, [label, slots.default?.()])` renders.
+pub fn v_btn(out: &mut String, props: &VBtnProps<'_>, slots: VBtnSlots<'_>, attrs: &Attrs<'_>) {
+    let class = if props.block { "v-btn block" } else { "v-btn" };
+    out.push_str("<button");
+    ferrovue::attrs_into(out, &[&[("class", Attr::str(class))], attrs.list()], 1, attrs.ids());
+    out.push('>');
+    ferrovue::escape_into(out, props.label);
+    match slots.default {
+        Some(slot) => {
+            out.push_str("<!--[-->");
+            slot.render_to(out);
+            out.push_str("<!--]-->");
+        }
+        None => out.push_str("<!---->"),
+    }
+    out.push_str("</button>");
+}
+# fn main() {
+# let mut out = String::new();
+# v_btn(&mut out, &VBtnProps { label: "Save", block: true }, VBtnSlots::default(), &Attrs::NONE);
+# assert_eq!(out, r#"<button class="v-btn block">Save<!----></button>"#);
+# }
+```
+
+**ferrovue does not check that a twin writes what Vue writes.** Everywhere else the compiler
+refuses what it cannot reproduce; here it takes your word, as it does for helpers. Hold each twin to
+Vue with fixtures: render the components that use it with Vue (`fixtureApp` and `attachSsrRender`
+from `ferrovue/testing`) and through the generated [`render_json`](crate::guide::generated_code#render_json-for-your-own-conformance-tests),
+and compare the two. Slot content is written as a render function sees it, from virtual nodes:
+an absent `v-if` is `<!--v-if-->`. Fragment markers around a slot, and what an empty one shows, are
+the twin's to write, as they are the component's. The repository's `examples/fullstack` has a twin
+and its fixtures.
+
 # At run time
 
 Generated code does not return errors: a render writes into a `String` and cannot fail. The few

@@ -61,6 +61,7 @@ crate that includes it needs **edition 2024**.
 | `stores` | no | Directory of Pinia option stores whose state components may read |
 | `trustedHtml` | no | Rust type of a `TrustedHtml` prop, e.g. `crate::html::Sanitised` (needed for `v-html`) |
 | `helpers` | no | `{ module, functions }`: functions a template may call, each mapped to a Rust twin |
+| `twins` | no | Components ferrovue does not compile, each rendered by a Rust function of yours: `{ "VBtn": { "rust": "crate::ui::v_btn", "props": { "label": "string" }, "slots": ["default"] } }`. See [Escape hatches](#escape-hatches) |
 | `i18n` | no | vue-i18n: `{ messages, locale?, fallbackLocale? }`, the directory of locale files (`en.json`, `nl.json`), the default locale and the fallbacks |
 | `clientDirectives` | no | Custom directives with no server output (no `getSSRProps`), by name without `v-`: `["focus"]` |
 | `scopeId` | no | How a `<style scoped>` id is hashed, as `@vitejs/plugin-vue` hashes it: `"filepath-source"` (the default, the plugin's in a production build) or `"filepath"`. See [Scoped styles](#scoped-styles) |
@@ -163,7 +164,8 @@ ferrovue compiles `<script setup lang="ts">` components, and components with no 
 | `class` | strings, arrays, objects (`{ active: on }`, computed keys), `cond && "x"`, `cond ? "x" : null`, merged with a static `class` |
 | `style` | objects (camelCase or kebab-case keys, `--custom` properties), arrays of objects, strings, merged with a static `style`, and `v-show`; later values override earlier ones as in Vue. A global `<style>` block is allowed |
 | Scoped styles | `<style scoped>`: the id on every element, on child components' roots (a root that is itself a component, fragments, recursion and `inheritAttrs: false` as Vue renders them) and, from a component with `:slotted()` rules, on the slot content it is given, forwarded slots included; inside `<Transition>`, `<KeepAlive>`, `<Teleport>` and `v-if`; on `<RouterLink>` and what it holds, as vue-router renders them |
-| Components | imported child components, `v-bind` of a child's own `Props`, `v-model` on a child's `defineModel`, recursion; props named in `kebab-case` or `camelCase` |
+| Components | imported child components, `v-bind` of a child's own `Props`, `v-model` on a child's `defineModel`, recursion; props named in `kebab-case` or `camelCase`; `defineAsyncComponent(() => import("./X.vue"))` (or `{ loader: … }`), rendered as the component it loads, which Vue's server renderer waits for |
+| Escape hatches | `<ClientOnly>` from `ferrovue/client`, whose default slot the server never renders, so anything may go in it; components listed in `twins`, rendered by Rust functions of yours. See [Escape hatches](#escape-hatches) |
 | Fallthrough attributes | what a parent passes a child beyond its props (static and bound attributes, `class`, `style`, `data-*`, `aria-*`, booleans, `undefined`): onto its single root, merged with the root's own class and style and replacing its other attributes where they stand, as Vue's `mergeProps` merges them; none for two roots; on through a root that is a component, or a `<RouterLink>`; with `inheritAttrs: false`, onto the elements or components that bind `v-bind="$attrs"` or a `useAttrs()` binding, before or after their own; beside scope ids. Listeners are dropped, as Vue's server drops them. See the crate's [`generated_code`](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#fallthrough-attributes) guide |
 | Slots | default and named slots, fallbacks, `$slots.name` tests and the same through `useSlots()`, scoped slots (`<slot :item="x">` and `#item="{ item }"` or `v-slot="props"`), whose props a parent can hand to its own children |
 | Forms | `v-model` on text inputs, checkboxes, radios, `<select>` and `<textarea>` (renders the initial state) |
@@ -335,6 +337,67 @@ request, in the reader's locale, and pass it to the components that translate:
 let i18n = generated::i18n::i18n("nl"); // falls back as configured
 page::render(&mut out, &props, &i18n);
 ```
+
+### Escape hatches
+
+Some components will never compile: a component library's render functions, `inject` chains, code
+that measures the page in `onMounted`. Two ways keep one of them from blocking the page around it.
+
+**`<ClientOnly>`**: the server writes its `#fallback` slot (or a comment, without one), and the
+browser hydrates that same fallback, then swaps in the default slot once mounted. Both sides render
+the fallback first, so this is exact by construction. ferrovue does not compile the default slot at
+all: any component, import or expression may go there.
+
+```vue
+<script setup lang="ts">
+import { ClientOnly } from "ferrovue/client";
+import { VDataTable } from "vuetify/components";
+
+defineProps<{ rows: { name: string }[] }>();
+</script>
+
+<template>
+  <ClientOnly>
+    <VDataTable :items="rows" />
+    <template #fallback><p class="loading">Loading the table…</p></template>
+  </ClientOnly>
+</template>
+```
+
+The swap needs Vue running on that part of the page, so put `<ClientOnly>` inside an island (or an
+app the client hydrates whole); elsewhere the fallback stays. `<ClientOnly>` takes no attributes.
+
+**Rust twins**: a component the server should render, written by you in Rust. List it under
+`twins` with the props a template may pass it and the slots it may fill:
+
+```json
+{
+  "twins": {
+    "VBtn": {
+      "rust": "crate::ui::v_btn",
+      "props": { "label": "string", "size": "int?", "block": "bool" },
+      "slots": ["default"]
+    }
+  }
+}
+```
+
+A template then uses `<VBtn>` (or `<v-btn>`), imported from anywhere or registered globally, and the
+generated parent calls `crate::ui::v_btn` with the props, the slots (each a `ferrovue::Slot`) and
+`&ferrovue::Attrs`: the attributes it is given beyond its props and the scope ids its root takes.
+`twins.rs` beside the components holds `VBtnProps`, `VBtnSlots` and the signature your function must
+have. Prop types are those of helpers (`string`, `int?`, …); an absent `bool` is `false`, and a
+bare `block` is `true`, as Vue casts them.
+
+**Exactness is your responsibility.** ferrovue cannot check that `v_btn` writes the bytes Vue's
+server renderer writes for `VBtn`: this is the one place where its guarantee rests on your code,
+as with helpers. Prove it with fixtures: render the components that use the twin with Vue through
+`ferrovue/testing`'s `fixtureApp` and `attachSsrRender`, and with Rust through the generated
+`render_json`, and compare. Slot content reaches the twin as a component's render function sees it
+(`<!--v-if-->` for an absent `v-if`, as Vue writes virtual nodes), and where the twin writes it, with
+or without fragment markers, is up to it, as it is up to the component. `examples/fullstack` has a
+twin (`src/ui.rs`), its fixtures (`fixtures/`), the Vue half (`test/fixtures.test.ts`) and the Rust
+half (`src/fixtures.rs`).
 
 ### Teleports
 
@@ -517,10 +580,11 @@ packages/ferrovue/           the compiler (npm package)
   src/attrs.ts, classes.ts, styles.ts, fallthrough.ts
                              attributes, class and style, attributes a parent passes on
   src/plugin.ts              the plugin interface (see CONTRIBUTING.md)
-  src/plugins/               vue-router, Pinia, vue-i18n, scoped styles, <Teleport>, shared types
+  src/plugins/               vue-router, Pinia, vue-i18n, scoped styles, <Teleport>, shared types,
+                             <ClientOnly>, Rust twins
   src/rust.ts, emitter.ts    the Rust source written out
   src/cli.ts, vite.ts        the `ferrovue` command and the Vite plugin
-  src/client.ts              browser-side helpers: `mountIslands`, `hydrateState`
+  src/client.ts              browser-side helpers: `mountIslands`, `hydrateState`, `<ClientOnly>`
   src/islands.ts             `ferrovue/islands`, which the Vite plugin writes: every island, loaded lazily
   src/link-router.ts         `ferrovue/link-router`: `<RouterLink>` while the application navigates on its own
   src/routes.ts              a routes file as vue-router's route records
@@ -531,7 +595,8 @@ packages/ferrovue/           the compiler (npm package)
   bench/                     Vue renderToString benchmarks, the other half of Performance
   fuzz/                      the randomised differential tester (`pnpm fuzz`)
 examples/greeting/           the smallest setup: one component rendered from Rust
-examples/fullstack/          axum + Vite: islands, Pinia state, routes and streaming
+examples/fullstack/          axum + Vite: islands, Pinia state, routes and streaming, <ClientOnly>,
+                             a Rust twin and its fixtures
 examples/dioxus/             a Dioxus page, rendered with dioxus-ssr, with an island in it
 scripts/release.ts           the release version bump (see RELEASING.md)
 ```

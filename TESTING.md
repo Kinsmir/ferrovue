@@ -42,7 +42,8 @@ fixtures/X/case.json            Vue hydrates it: no mismatch warnings, same DOM 
 
 1. `conformance.test.ts` renders each `fixtures/<Component>/<case>.json` with real Vue and compares
    the result with `<case>.html`.
-2. It mounts the recorded HTML and hydrates it, failing on any hydration warning, except for the
+2. It mounts the recorded HTML and hydrates it, waiting for async components to load and hydrate
+   (`test/settle.ts`), failing on any hydration warning, except for the
    fixtures in `VUE_DISAGREES` (`conformance-cases.ts`), where Vue's own server and client renders
    differ and which must still mismatch: slot content whose every pushed string is comments and
    whitespace (an interpolation that writes nothing beside a list's fragment markers) shows the
@@ -102,6 +103,9 @@ A fixture is a JSON object of props plus three optional keys:
 | `NumberIncludes` | `.includes()` across `number` and `Float`: a fraction in a list of integers, an integer in a list of fractions and in a list mapped to fractions, `-0` found as `0`, integers beyond 2⁵³ |
 | `Records` | `Record<string, T>` and `{ [key: string]: T }` in JavaScript's order of keys (array indices first, a key given twice), `Object.keys` / `values` / `entries`, a record handed to a child |
 | `Nullable`, `NullChild`, `Session` | `T \| null` props, interface fields, list items, slot props and Pinia state: `null` written and narrowed (`!== null`, `=== null`, `!= null`, `== null`, truthiness), `??`, `?.` over a nullable object and field, interpolations and attributes of `null`, `null` as a `?:` branch and a child's prop, `ref<T \| null>(null)` in setup |
+| `ClientSide` | `<ClientOnly>` with a fallback, without one, and inside another component's slot, around a stand-in for a library component that reads `window` (`vendor/Gauge.ts`); in the browser, the content replaces the fallback once mounted |
+| `Deferred` | `defineAsyncComponent`, as an arrow and with `loader`, given props, slot content and a scoped parent's id |
+| `Rated` | A Rust twin (`vendor.rs`) of a render-function component (`vendor/StarRating.ts`): props, a boolean cast from a bare attribute, attributes beyond its props, a slot written from virtual nodes |
 | `Parsing` | `Number`, `parseInt` (no radix, 10, 16) and `parseFloat` of strings, `JSON.stringify` of numbers, `NaN` and `Infinity` |
 | `PropsObject`, `Glyph`, `Divider` | The props object read in the template (`props.label`, with `withDefaults`); a child with no script and one with an empty `<script setup>`, which take no props, one given a class to fall through |
 | `Pending` | Refs that start empty, typed by their type argument: `ref<Row[]>([])`, `ref<User[]>([])`, `ref<string[]>([])`, `ref<Row \| undefined>()`, `ref<string>()`, `ref<number \| undefined>(undefined)` |

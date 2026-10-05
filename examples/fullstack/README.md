@@ -53,7 +53,10 @@ cargo run -p ferrovue-example-fullstack -- --render /books/dune
 | `client/components/BookList.vue` | The home page: a list, named links with params, a scoped slot the server fills with an island per book |
 | `client/components/BookPage.vue` | The detail page: `useRoute()` params in the template and in a `computed`, a named slot, a slot left as a hole for streaming |
 | `client/components/AddToBasket.vue` | An island: rendered with `add_to_basket::island()`, so it carries `data-island` and `data-props`; its click handler uses the shared store |
-| `client/components/Reviews.vue` | The slow part of the book page, streamed into the hole as an island, with `v-show` the client toggles; `<style scoped>` |
+| `client/components/Reviews.vue` | The slow part of the book page, streamed into the hole as an island, with `v-show` the client toggles; `<style scoped>`; a Rust twin's component, and `<ClientOnly>` around one that reads `window` |
+| `client/vendor/` | Stand-ins for a component library's components, which ferrovue does not compile: `StarRating`, rendered on the server by its Rust twin, and `ShareLink`, rendered only in the browser |
+| `src/ui.rs` | The Rust twin of `StarRating`, listed under `twins` in `ferrovue.config.json` |
+| `fixtures/`, `test/fixtures.test.ts`, `src/fixtures.rs` | What proves the twin: each fixture rendered by Vue through `ferrovue/testing` (`FERROVUE_FIXTURES_WRITE=1` records the `.html`) and by the generated Rust, byte for byte |
 | `client/app.ts` | `hydrateState`, then `mountIslands` of `ferrovue/islands`, which the Vite plugin writes: every island by name, each loaded only on a page that holds it, with one Pinia and one router for them all |
 | `src/pages.rs` | Rendering pages from the generated `route_table::router()`, `Props::new(…)`, `Slots`, `ferrovue::state_script_into`, `ferrovue::hole()`, and `reviews::into_island()`, a page holding its props that a handler returns |
 | `src/main.rs` | The axum server: a `ferrovue::HtmlStream` per page, a book's reviews alone at `/books/{id}/reviews`, `dist/assets` served beside it, and `--render` |
@@ -79,6 +82,18 @@ the markup is styled before its script arrives.
 `<div id="basket">`, and `client/app.ts` hydrates it there with the same Pinia. Clicking "Add to
 basket" in one island then updates the summary, because they share the store that `hydrateState`
 filled from the server's `<script id="__pinia">`.
+
+### Components ferrovue does not compile
+
+`Reviews` uses two components from `client/vendor/`, written as a component library writes them,
+with render functions. `StarRating` must be on the server's page, so `src/ui.rs` renders it: a Rust
+twin, named under `twins` in `ferrovue.config.json`, which the generated `reviews.rs` calls. ferrovue
+cannot check that the twin writes what Vue writes, so the fixtures do: `pnpm test` renders each
+`fixtures/Reviews/*.json` with Vue and compares it with the `.html` beside it, and `cargo test`
+renders the same JSON through the generated Rust and compares it with the same `.html`.
+
+`ShareLink` reads `window.location`, so it sits in `<ClientOnly>`: the server writes the fallback,
+the island hydrates it, and the link replaces it once the island is mounted.
 
 ### Streaming
 
