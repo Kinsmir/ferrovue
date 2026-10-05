@@ -258,6 +258,72 @@ fn a_hole_is_recorded_once_it_is_filled_or_dropped() {
     );
 }
 
+#[derive(Default)]
+struct Woken(std::sync::atomic::AtomicBool);
+
+impl std::task::Wake for Woken {
+    fn wake(self: Arc<Self>) {
+        self.0.store(true, std::sync::atomic::Ordering::SeqCst);
+    }
+}
+
+impl Woken {
+    fn take(&self) -> bool {
+        self.0.swap(false, std::sync::atomic::Ordering::SeqCst)
+    }
+}
+
+#[test]
+fn a_waiting_record_is_woken_once_its_last_hole_closes() {
+    let props = WordProps {
+        text: "late",
+        ratio: 1.0,
+    };
+    let mut page = Page::new();
+    let first = page.hole("default");
+    let second = page.hole("head");
+    let record = page.render_to(
+        &mut String::new(),
+        layout(&LayoutProps { title: "T" }, Slots::default(), ""),
+    );
+    let woken = Arc::new(Woken::default());
+    let waker = Waker::from(Arc::clone(&woken));
+    let mut cx = Context::from_waker(&waker);
+    let mut script = std::pin::pin!(record.script("p"));
+    assert!(script.as_mut().poll(&mut cx).is_pending());
+    first.fill([part(&props)]);
+    assert!(!woken.take());
+    assert!(script.as_mut().poll(&mut cx).is_pending());
+    drop(second);
+    assert!(woken.take());
+    let Poll::Ready(out) = script.as_mut().poll(&mut cx) else {
+        panic!("the record is written once every hole is closed");
+    };
+    assert!(
+        out.contains(
+            r#""slots":{"default":[{"c":"Word","p":{"text":"late","ratio":1.0}}],"head":[]}"#
+        ),
+        "{out}"
+    );
+}
+
+#[test]
+fn a_page_s_parts_show_what_they_record_in_debug() {
+    let props = WordProps {
+        text: "a",
+        ratio: 1.0,
+    };
+    assert_eq!(
+        format!("{:?}", part(&props)),
+        r#"Part { name: "Word", props: "{\"text\":\"a\",\"ratio\":1.0}", .. }"#
+    );
+    let mut page = Page::new();
+    let slot = page.slot("head", [part(&props)]);
+    let hole = page.hole("default");
+    assert_eq!(format!("{slot:?}"), "PageSlot { .. }");
+    assert_eq!(format!("{hole:?}"), "PageHole { index: 1, open: true, .. }");
+}
+
 #[test]
 #[should_panic(expected = "a hole of the page is not filled yet")]
 fn a_page_with_a_hole_open_is_not_written_at_once() {
