@@ -21,12 +21,14 @@ stream = ["dep:bytes", "dep:futures-core"]
 axum = ["stream", "dep:axum-core", "dep:http"]
 actix-web = ["stream", "dep:actix-web"]
 dioxus = ["dep:dioxus-core"]
+ammonia = ["dep:ammonia"]
 
 [dependencies]
 ferrovue-core.workspace = true
 ferrovue-i18n = { workspace = true, optional = true }
 ferrovue-router = { workspace = true, optional = true }
 actix-web = { workspace = true, optional = true }
+ammonia = { workspace = true, optional = true }
 axum-core = { workspace = true, optional = true }
 bytes = { workspace = true, optional = true }
 dioxus-core = { workspace = true, optional = true }
@@ -51,6 +53,10 @@ required-features = ["router", "i18n"]
 [[test]]
 name = "conformance"
 required-features = ["router", "i18n"]
+
+[[test]]
+name = "sanitised"
+required-features = ["ammonia"]
 
 [package.metadata.docs.rs]
 all-features = true

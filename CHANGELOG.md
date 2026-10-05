@@ -94,6 +94,27 @@ released together and share version numbers.
   its client head over the recorded tags, which it takes over with no change. The guide's `head`
   page shows a page and the client; `examples/fullstack` sets its titles and meta tags from its
   components.
+- `ferrovue::Sanitised`, with the crate's new `ammonia` feature: HTML cleaned by ammonia, to name as
+  `"trustedHtml": "ferrovue::Sanitised"` for `v-html` props. `Sanitised::new(untrusted)` cleans with
+  ammonia's default policy (no scripts, event handlers or `javascript:` URLs) and
+  `Sanitised::with(&builder, untrusted)` with an `ammonia::Builder` of your own; `ferrovue::ammonia`
+  re-exports the crate. It renders the cleaned string unchanged and serialises as that string, so an
+  island's `data-props` carries exactly the HTML the server wrote and the client's `v-html` writes
+  the same. Deserialising one cleans the string again. The guide's `escaping` page says what the
+  default policy keeps; a component compiled with it (`tests/sanitised`) checks the render and the
+  props the client receives.
+- `ferrovue::BasicHtml`, a `TrustedHtml` with no dependency and no feature: `"trustedHtml":
+  "ferrovue::BasicHtml"`. `BasicHtml::new(untrusted)` never parses its input as HTML: it escapes
+  every character and writes as tags only `<b>`, `<i>`, `<em>`, `<strong>`, `<code>`, `<br>`, `<p>`,
+  `<ul>`, `<ol>` and `<li>`, written exactly so with no attributes, closing what is left open,
+  leaving out end tags with nothing to close, and keeping blocks and list items where a browser
+  reads them back as written (32 elements deep at most). `BasicHtml::from_text(text)` escapes
+  everything and writes paragraphs and line breaks. Both serialise as the string; deserialising
+  builds it again, which gives the same HTML. Property tests check that every `<` in the output
+  starts one of those tags, balanced, and that html5ever parses it back to the same tags and text.
+  The guide's `escaping` page has a table choosing between `BasicHtml`, `Sanitised` and a type of
+  your own, and a recipe for the last with its three rules: sanitise before render, the client
+  receives the same string, sanitise again on `Deserialize`.
 
 ### Changed
 

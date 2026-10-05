@@ -60,44 +60,133 @@ defineProps<{ body: TrustedHtml; caption: string }>();
 </template>
 ```
 
-On the server, that prop's type is whatever `trustedHtml` names in `ferrovue.config.json`, a type of
-your own that implements [`TrustedHtml`](crate::TrustedHtml). Make it a type whose values can only
-come from your sanitiser, so that holding one is proof the HTML was made safe:
+On the server, that prop's type is whatever `trustedHtml` names in `ferrovue.config.json`, a type
+that implements [`TrustedHtml`](crate::TrustedHtml). `v-html` of anything else, a plain string or a
+translated message, is refused at compile time.
+
+There are three ways to have one:
+
+| Type | Needs | Takes | Use it for |
+|---|---|---|---|
+| [`BasicHtml`](crate::BasicHtml) | nothing | text with `<b>`, `<i>`, `<em>`, `<strong>`, `<code>`, `<br>`, `<p>`, `<ul>`, `<ol>` and `<li>`, or plain text | comments, reviews, bios: text from users with a little formatting |
+| `ferrovue::Sanitised` | the `ammonia` feature | any HTML, cleaned to ammonia's policy or yours | Markdown rendered to HTML, CMS content, HTML from elsewhere |
+| a type of your own | your sanitiser | whatever your sanitiser accepts | another sanitiser, or a policy kept in one place |
+
+## `ferrovue::BasicHtml`
+
+[`BasicHtml`](crate::BasicHtml) needs no sanitiser and no feature. It never reads the input as
+HTML: `BasicHtml::new(untrusted)` escapes every character, as [`escape_into`](crate::escape_into)
+does, and writes as tags only the ten tags above, spelled exactly so, in lower case and with no
+attributes. It closes what is left open, leaves out end tags with nothing to close, and keeps the
+tags in an order a browser reads back as written. Anything else, `<B>`, `<b class="x">`, `<a>` or
+`<script>`, is text on the page.
 
 ```json
-{ "trustedHtml": "crate::html::Sanitised" }
+{ "trustedHtml": "ferrovue::BasicHtml" }
+```
+
+```rust
+use ferrovue::BasicHtml;
+
+assert_eq!(
+    BasicHtml::new("<b>Great</b> <i>read<script>steal()</script>").as_str(),
+    "<b>Great</b> <i>read&lt;script&gt;steal()&lt;/script&gt;</i>"
+);
+assert_eq!(
+    BasicHtml::from_text("Line one\nline two\n\nNext <paragraph>").as_str(),
+    "<p>Line one<br>line two</p><p>Next &lt;paragraph&gt;</p>"
+);
+```
+
+`BasicHtml::from_text(text)` escapes everything and writes blank lines as paragraphs and other
+line breaks as `<br>`. Character references in the input (`&amp;`, `&#60;`) are kept, since they
+only ever write text.
+
+## `ferrovue::Sanitised`, with the `ammonia` feature
+
+With the crate's `ammonia` feature, `ferrovue::Sanitised` is HTML cleaned by
+[ammonia](https://docs.rs/ammonia).
+
+```json
+{ "trustedHtml": "ferrovue::Sanitised" }
+```
+
+```toml
+ferrovue = { version = "0.6", features = ["ammonia"] }
+```
+
+Sanitisation happens before render, when the value is built: `Sanitised::new(untrusted)` cleans
+with ammonia's default policy, `Sanitised::with(&builder, untrusted)` with an `ammonia::Builder` of
+your own (`ferrovue::ammonia` is the crate, re-exported). Rendering writes the cleaned string as it
+is. The value serialises as that string, so an island's `data-props` carries exactly what the
+server rendered, and the client's `v-html` writes the same string: server and client hold the same
+HTML, and hydration matches. Deserialising a `Sanitised` cleans the string again with the default
+policy, so no JSON can make one that skipped the sanitiser.
+
+Ammonia's default policy keeps the tags of text and documents (paragraphs, headings, lists,
+tables, links, images, emphasis, `<code>` and `<pre>`, and the like), with a few attributes each
+(`href` on links, `src`, `alt`, `width` and `height` on images, `title` and `lang` everywhere),
+and URLs whose scheme is on its list (`http`, `https`, `mailto` and other common ones) or that are
+relative. It removes everything else: `<script>`, `<style>`, SVG and MathML with their
+content, other elements such as `<form>` and `<button>` (keeping their text), event handler attributes,
+`class`, `id` and `style`, comments, and `javascript:` and other unlisted URLs. Links gain
+`rel="noopener noreferrer"`. It closes elements left open, so the HTML cannot reach past the
+element it is written into. A policy of your own can allow more, such as `class` on some tags.
+
+## A type of your own
+
+A type of your own implements [`TrustedHtml`](crate::TrustedHtml), with three rules:
+
+1. **Sanitise before render.** The only way to make a value runs the sanitiser, so holding one is
+   proof the HTML was made safe. Keep the field private and give the type no `From<String>`.
+2. **The client receives the same string.** `#[serde(transparent)]` serialises the value as the
+   string `trusted_html` returns, so an island's `data-props` carries the HTML the server wrote,
+   and the client's `v-html` writes it unchanged.
+3. **Sanitise again on `Deserialize`.** The generated props struct derives `serde::Deserialize`
+   under `cfg(test)`, so the type needs it. Deserialise a string and run it through the sanitiser,
+   so that no JSON can make a value that skipped it. A sanitiser whose output, cleaned again, is
+   the same output reads back what was serialised.
+
+```json
+{ "trustedHtml": "crate::html::CleanHtml" }
 ```
 
 ```rust
 // src/html.rs
 use ferrovue::TrustedHtml;
+use serde::{Deserialize, Deserializer};
 
 /// HTML that has been through the sanitiser: the only way to make one.
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
 #[serde(transparent)]
-pub struct Sanitised(String);
+pub struct CleanHtml(String);
 
-impl Sanitised {
+impl CleanHtml {
     pub fn new(untrusted: &str) -> Self {
-        // A real project calls its sanitiser here, `ammonia::clean(untrusted)` for example.
-        Sanitised(untrusted.replace('<', "&lt;"))
+        CleanHtml(sanitise(untrusted))
     }
 }
 
-impl TrustedHtml for Sanitised {
+impl TrustedHtml for CleanHtml {
     fn trusted_html(&self) -> &str {
         &self.0
     }
 }
+
+impl<'de> Deserialize<'de> for CleanHtml {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        Ok(CleanHtml::new(&String::deserialize(deserializer)?))
+    }
+}
+
+/// Your sanitiser. This one keeps no markup at all.
+fn sanitise(untrusted: &str) -> String {
+    untrusted.replace(['<', '>'], "")
+}
+# let html = CleanHtml::new("<script>x</script>");
 # let mut out = String::new();
-# ferrovue::trusted_into(&mut out, &Sanitised::new("<script>"));
-# assert_eq!(out, "&lt;script>");
+# ferrovue::trusted_into(&mut out, &html);
+# assert_eq!(out, "scriptx/script");
+# let json = serde_json::to_string(&html).unwrap();
+# assert_eq!(serde_json::from_str::<CleanHtml>(&json).unwrap(), html);
 ```
-
-The generated props struct derives `Debug`, `Clone` and `serde::Serialize`, and
-`serde::Deserialize` under `cfg(test)`, so the type needs the same derives (`Deserialize` may be
-`#[cfg_attr(test, derive(serde::Deserialize))]`). `#[serde(transparent)]` sends the HTML to an
-island's client as a plain string. Production code never deserialises props, so no request can
-turn an arbitrary string into a `Sanitised`.
-
-`v-html` of anything else, a plain string or a translated message, is refused at compile time.

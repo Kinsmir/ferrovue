@@ -210,6 +210,17 @@ defineProps<{ note?: string }>();
     });
   });
 
+  describe("ferrovue::Sanitised", () => {
+    it("is what the Rust test of a sanitised `v-html` compiles", () => {
+      const root = join(import.meta.dirname, "../../../crates/ferrovue/tests/sanitised");
+      const config = loadConfig(root);
+      expect(config.trustedHtml).toBe("ferrovue::Sanitised");
+      const out = generate(root, config);
+      expect([...out.keys()].toSorted()).toEqual(readdirSync(join(root, config.out)).toSorted());
+      for (const [name, text] of out) expect(readFileSync(join(root, config.out, name), "utf8"), name).toBe(text);
+    });
+  });
+
   describe("strings, computed lists and dictionaries", () => {
     it("counts a string's code units, and orders strings by them, through the runtime", () => {
       const out = compile(
