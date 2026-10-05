@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { expect, it } from "vitest";
 
@@ -6,6 +7,7 @@ const ROOT = join(import.meta.dirname, "..");
 const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as {
   exports: Record<string, { types: string; default: string }>;
   sideEffects: unknown;
+  peerDependencies: Record<string, string>;
 };
 
 function graph(entry: string): { files: Set<string>; packages: Set<string> } {
@@ -50,4 +52,17 @@ it("exports modules the build emits, with the compiler under ferrovue/compiler",
 
 it("is marked free of side effects, so bundlers drop what is not imported", () => {
   expect(pkg.sideEffects).toBe(false);
+});
+
+it("accepts the patches of exactly the Vue, vue-router, Pinia and vue-i18n minors its fixtures were recorded from", () => {
+  const require = createRequire(join(ROOT, "package.json"));
+  for (const name of ["vue", "vue-router", "pinia", "vue-i18n"]) {
+    const range = pkg.peerDependencies[name]!;
+    const installed = (require(`${name}/package.json`) as { version: string }).version;
+    const [major, minor, patch] = range.replace(/^~/, "").split(".").map(Number) as [number, number, number];
+    const [iMajor, iMinor, iPatch] = installed.split(".").map((n) => Number.parseInt(n, 10)) as [number, number, number];
+    expect(range, name).toMatch(/^~\d+\.\d+\.\d+$/);
+    expect([iMajor, iMinor], `${name} ${installed} against ${range}`).toEqual([major, minor]);
+    expect(iPatch, `${name} ${installed} against ${range}`).toBeGreaterThanOrEqual(patch);
+  }
 });

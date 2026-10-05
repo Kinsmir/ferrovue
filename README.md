@@ -424,10 +424,21 @@ still build, run and agree on the HTML. It never compares their timings.
 
 ## Versions
 
-Byte-identical output depends on Vue's own SSR compiler, so the package pins **`vue`,
-`@vue/compiler-sfc` and `@vue/server-renderer` to an exact version** (currently 3.5.43). Upgrading
-Vue means re-running the conformance suite (see [TESTING.md](TESTING.md)) and releasing a new
-ferrovue version.
+Byte-identical output depends on Vue's own SSR compiler, so ferrovue compiles with an exact
+`@vue/compiler-sfc` (currently 3.5.43), and its conformance fixtures are recorded from one version
+of Vue and of each integration. Your project may use any later patch of the same minor:
+
+| Peer | Supported | Recorded from |
+|---|---|---|
+| `vue` | `~3.5.43` (3.5.43 and later 3.5 patches) | 3.5.43 |
+| `vue-router` (optional) | `~5.3.1` | 5.3.1 |
+| `pinia` (optional) | `~4.0.3` | 4.0.3 |
+| `vue-i18n` (optional) | `~11.4.13` | 11.4.13 |
+
+A new minor of any of them (Vue 3.6, vue-router 5.4, …) needs a ferrovue release that re-records
+the fixtures from it. A weekly CI job re-records them from the newest patch each range allows and
+hydrates the committed HTML with it, so a patch that changes what Vue writes or hydrates is caught
+before it reaches you; a ferrovue patch follows when one does.
 
 ## Repository layout
 
