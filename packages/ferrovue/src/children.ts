@@ -1,5 +1,5 @@
 import { isSSRSafeAttrName, propsToAttrMap } from "@vue/shared";
-import { type Component, type N, type Scope, type Ty, type Val, camelize, declares, fail, nothing, GenError, rustStr, sameTy, snake, takesAttrs } from "./model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, camelize, declares, fail, nothing, rustStr, sameTy, snake, takesAttrs } from "./model.ts";
 import { ctx } from "./context.ts";
 import { markHome } from "./typescript.ts";
 import { expr, fieldVal, holdsNothing } from "./expr.ts";
@@ -21,7 +21,7 @@ export function renderChild(s: Scope, e: Emitter, n: N): void {
   const isSelf = target.type === "Identifier" && target.name === s.selfAlias.name;
   const childName = isSelf ? s.comp.name : local ? s.children.get(local) : undefined;
   const child = childName ? s.components.get(childName) : undefined;
-  if (!child) fail(s.comp, "a child component must be an imported island", n);
+  if (!child) fail(s.comp, `a child component must be imported from a \`.vue\` file among the components compiled, in ${ctx.componentsDir.replace(/\/$/, "")}`, n);
   for (const p of ctx.plugins) p.child?.(s, child, n);
   const parts: N[] = !rawProps || rawProps.type === "NullLiteral" ? [] : mergedParts(rawProps);
   const merges = parts.length > 0 && parts[0] !== rawProps;
@@ -42,7 +42,7 @@ export function renderChild(s: Scope, e: Emitter, n: N): void {
     const v = expr(s, objects[0]);
     const own = child.name === s.comp.name && v.ty.k === "struct" && v.ty.name === "Props";
     if (own || (v.ty.k === "child" && v.ty.name === child.name)) {
-      callChild(s, e, child, v.code, slots, childAttrsArg(s, child, parts, merges, null, ids));
+      callChild(s, e, child, v.code, slots, childAttrsArg(s, child, parts, merges, null, ids, n));
       return;
     }
     fail(s.comp, `child props must be an object literal, or \`v-bind\` of ${child.name}'s own \`Props\``, n);
@@ -79,14 +79,14 @@ export function renderChild(s: Scope, e: Emitter, n: N): void {
     const v = expr(s, node);
     return fieldInit(f.rust, ownInto(s.comp, { ...v, ty: markHome(v.ty, s.comp.name) }, markHome(f.ty, child.name), node));
   });
-  callChild(s, e, child, `&super::${child.module}::Props { ${inits.join(", ")} }`, slots, childAttrsArg(s, child, parts, merges, fallthrough, ids));
+  callChild(s, e, child, `&super::${child.module}::Props { ${inits.join(", ")} }`, slots, childAttrsArg(s, child, parts, merges, fallthrough, ids, n));
 }
 
 export function array(key: string): boolean {
   return /^(0|[1-9]\d*)$/.test(key) && Number(key) < 2 ** 32 - 1;
 }
 
-function childAttrsArg(s: Scope, child: Component, parts: N[], merges: boolean, fallthrough: Set<N> | null, ids: string | null): string | null {
+function childAttrsArg(s: Scope, child: Component, parts: N[], merges: boolean, fallthrough: Set<N> | null, ids: string | null, n: N): string | null {
   const sources: string[] = [];
   for (const p of parts) {
     if (s.fallthrough !== null && ((isAttrs(p) && s.comp.inheritAttrs) || dollarAttrs(s, p))) {
@@ -100,7 +100,7 @@ function childAttrsArg(s: Scope, child: Component, parts: N[], merges: boolean, 
     }
   }
   if (!takesAttrs(child)) {
-    if (sources.length) throw new GenError(`${s.comp.file}: ${child.name} is passed attributes it does not take`);
+    if (sources.length) fail(s.comp, `${child.name} is passed attributes it does not take`, n);
     return ids;
   }
   if (!sources.length) return ids === null ? "&fv::Attrs::NONE" : `&fv::Attrs::scoped(${ids})`;

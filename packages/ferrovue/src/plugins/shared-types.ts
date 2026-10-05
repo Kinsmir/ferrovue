@@ -4,5 +4,5 @@ import { type Plugin } from "../plugin.ts";
 
 export const sharedTypes: Plugin = {
   name: "types",
-  modules: () => (ctx.typeStructs.size ? [["types.rs", typesSource()]] : []),
+  modules: () => (ctx.typeStructs.size || ctx.typeConsts.size ? [["types.rs", typesSource()]] : []),
 };

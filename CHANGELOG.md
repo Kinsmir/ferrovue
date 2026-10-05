@@ -19,6 +19,24 @@ released together and share version numbers.
   (`T | null | undefined`, `x?: T | null`), a default for a nullable prop and a strict comparison
   of a value that may be either are refused with an error saying why. The fuzzer generates nullable
   props.
+- `props.x` in the template when `props` is bound to `defineProps()` or `withDefaults(…)`, as
+  script code could already read it.
+- Components with no `<script>`, or an empty `<script setup>` (an icon, a divider), compile as
+  components without props.
+- Refs that start empty are typed by their type argument: `ref<Row[]>([])` is an empty list of
+  `Row` that `v-for`, `.length` and `.join()` read, and `ref<Row>()`, `ref<T | undefined>()` and
+  `ref<T>(undefined)` are absent on the server.
+- Generic components: `<script setup generic="T extends Item">` renders each type parameter as its
+  constraint, which is all the template can rely on. A parameter without one is refused.
+- Constants imported from `.ts` files and TypeScript `enum`s (imported, or declared in the
+  component) are evaluated when the component is compiled: strings, numbers, booleans, lists of
+  them and objects of them read field by field are written where the template reads them
+  (`LABELS.save`, `Tone.Loud`, `Rank[5]`), and a list of objects becomes a `const` in `types.rs`,
+  typed by the interface it is declared with or by a struct named after it. An enum is also a prop
+  type: a string, or a number. A field that is `null` in some of a list's objects is nullable, as
+  `T | null` is. A constant that is not a literal is refused where it is read.
+- `useSlots()`: `slots.header` tests a slot's presence, in the template or in `computed`, as
+  `$slots.header` does.
 
 ### Changed
 
@@ -26,6 +44,16 @@ released together and share version numbers.
   longer fails the install. The optional peers are held to the minor the fixtures were recorded
   from: `vue-router` `~5.3.1` (was `^5.3.1`), `pinia` `~4.0.3` (was `^4.0.3`) and `vue-i18n`
   `~11.4.13` (was `^11.0.0`). The README's "Versions" lists them.
+- Every refusal names a line and column in the `.vue` file. Errors that had none now point at the
+  construct: `new Date(…)` (now "`new Date(…)` builds an object the server has no twin for"), an
+  object interpolated with `{{ }}`, a non-literal default in `withDefaults`, `<style module>` and
+  `v-bind()` in CSS, `<component :is>`, a component or custom directive the template cannot
+  resolve, `<RouterView>` in a scoped component, and expressions whose start the template's source
+  map does not cover.
+- A component written with the Options API is refused with "a child component must have
+  `<script setup lang="ts">`, or no script at all" when another component imports it, and "an
+  island needs …" otherwise, instead of a message about islands for both. A child that is not
+  among the compiled components says so instead of asking for an "imported island".
 
 ### Fixed
 

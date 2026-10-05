@@ -1,5 +1,6 @@
 import type { SourceMapConsumer } from "source-map-js";
 import type { Plugin } from "./plugin.ts";
+import type { Const } from "./constants.ts";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type N = any;
@@ -148,6 +149,7 @@ export interface Component {
   source?: string;
   templateMap?: SourceMapConsumer;
   templateStart?: { line: number; column: number };
+  templateAst?: N;
   attrsDropped?: N;
   props: Struct;
   structs: Map<string, Struct>;
@@ -212,6 +214,8 @@ export interface Scope {
   attrs: string | null;
   fallthrough: string | null;
   attrsBindings: Set<string>;
+  slotsBindings: Set<string>;
+  consts: Map<string, Const>;
   sid: string | null;
   loop?: { item: string; over: string };
   plugins: Map<Plugin, unknown>;
@@ -240,11 +244,79 @@ function locate(comp: Component, node: N): { line: number; column: number } | nu
   if (node.__fv === "source") return { line: start.line, column: start.column };
   if (node.__fv === "template" && comp.templateMap && comp.templateStart) {
     const o = comp.templateMap.originalPositionFor({ line: start.line, column: start.column });
-    if (o.line == null || o.column == null) return null;
+    if (o.line == null || o.column == null) return locateWithin(comp, node) ?? locate(comp, written(comp, node));
     const t = comp.templateStart;
     return o.line === 1 ? { line: t.line, column: t.column - 1 + o.column } : { line: t.line + o.line - 1, column: o.column };
   }
   return null;
+}
+
+function locateWithin(comp: Component, node: N): { line: number; column: number } | null {
+  const start = node.loc.start;
+  const inner = Object.entries(node)
+    .filter(([k, v]) => k !== "loc" && v && typeof v === "object")
+    .flatMap(([, v]) => (Array.isArray(v) ? v : [v]))
+    .filter((c: N) => c?.loc?.start)
+    .toSorted((a: N, b: N) => a.start - b.start);
+  for (const child of inner) {
+    const at = locate(comp, child);
+    if (!at) continue;
+    const c = child.loc.start;
+    const back = c.line === start.line ? c.column - start.column : 0;
+    return { line: at.line, column: Math.max(0, at.column - back) };
+  }
+  return null;
+}
+
+export function sourceAt(source: string, offset: number): N {
+  const before = source.slice(0, offset);
+  const line = before.split("\n").length;
+  return { type: "VueSource", loc: { start: { line, column: offset - before.lastIndexOf("\n") - 1 } }, __fv: "source" };
+}
+
+const plain = (name: string): string => name.replace(/[-_]/g, "").toLowerCase();
+
+function assetName(n: N, prefix: RegExp): string | null {
+  if (n?.type === "Identifier") return n.name.replace(prefix, "");
+  if (n?.type === "MemberExpression") return n.computed ? n.property.value : n.property.name;
+  return null;
+}
+
+function written(comp: Component, node: N): N {
+  const call = node.type === "VariableDeclaration" ? node.declarations[0]?.init : node.type === "ExpressionStatement" ? node.expression : node;
+  const callee = call?.type === "CallExpression" && call.callee.type === "Identifier" ? (call.callee.name as string) : null;
+  const tagged = (name: string | null): N => name && templateNode(comp, (el) => (plain(el.tag) === plain(name) ? el : null));
+  const directive = (name: string | null): N => name && templateNode(comp, (el) => el.props.find((p: N) => p.type === 7 && plain(p.name) === plain(name)));
+  switch (callee) {
+    case "_ssrRenderComponent":
+      return tagged(assetName(call.arguments[0], /^_component_/));
+    case "_resolveComponent":
+      return tagged(call.arguments[0]?.value ?? null);
+    case "_resolveDirective":
+      return directive(call.arguments[0]?.value ?? null);
+    case "_ssrGetDirectiveProps":
+      return directive(assetName(call.arguments[1], /^_directive_/)?.replace(/^v(?=[A-Z])/, "") ?? null);
+    case "_ssrRenderSlot": {
+      const name = call.arguments[1]?.value;
+      return templateNode(comp, (el) => (el.tag === "slot" && (el.props.find((p: N) => p.type === 6 && p.name === "name")?.value?.content ?? "default") === name ? el : null));
+    }
+    default:
+      return null;
+  }
+}
+
+function templateNode(comp: Component, test: (el: N) => N): N {
+  const visit = (n: N): N => {
+    const found = n.type === 1 ? test(n) : null;
+    if (found) return found;
+    for (const c of n.children ?? []) {
+      const inner = visit(c);
+      if (inner) return inner;
+    }
+    return null;
+  };
+  const found = comp.templateAst ? visit(comp.templateAst) : null;
+  return found && { type: "VueTemplate", loc: { start: { line: found.loc.start.line, column: found.loc.start.column - 1 } }, __fv: "source" };
 }
 
 function snippet(comp: Component, at: { line: number; column: number }): string {

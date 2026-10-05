@@ -1,10 +1,11 @@
 import { parse as parseJs } from "@babel/parser";
 import { readFileSync, statSync } from "node:fs";
 import { basename, dirname, join, relative, resolve } from "node:path";
-import { type Absence, type Component, type Field, type N, type Struct, type Ty, absence, blankComponent, BOOL, fail, FLOAT, INT, joinAbsence, opt, RUST_PRELUDE, rustStr, sameTy, snake, STR, tagAst, withAbsence } from "./model.ts";
+import { type Absence, type Component, type Field, type N, type Struct, type Ty, absence, blankComponent, BOOL, fail, FLOAT, GenError, INT, joinAbsence, opt, RUST_PRELUDE, rustStr, sameTy, snake, STR, tagAst, withAbsence } from "./model.ts";
 import { CONFIG_FILE, ctx, TYPES_MODULE } from "./context.ts";
 import { childOf } from "./expr.ts";
 import { claim } from "./plugin.ts";
+import { declareConsts, enumType } from "./constants.ts";
 
 export function typesImports(comp: Component, body: N[]): void {
   for (const s of body) {
@@ -117,6 +118,12 @@ export function declareTypes(comp: Component, body: N[], structs: Map<string, St
       const dictionary = d.typeAnnotation.members?.some((m: N) => m.type === "TSIndexSignature");
       if (d.typeAnnotation.type === "TSTypeLiteral" && !dictionary) decls.push({ name: d.id.name, members: d.typeAnnotation.members, node: d });
       else aliases.set(d.id.name, d.typeAnnotation);
+    } else if (d?.type === "TSEnumDeclaration") {
+      try {
+        aliases.set(d.id.name, enumType(comp, d));
+      } catch (e) {
+        if (!(e instanceof GenError)) throw e;
+      }
     }
   }
   for (const d of decls) {
@@ -150,6 +157,7 @@ export function readTypeFile(file: string): void {
   const body: N[] = parseJs(home.source, { sourceType: "module", plugins: ["typescript"] }).program.body;
   tagAst(body, "source");
   typesImports(home, body);
+  ctx.constDecls.set(file, declareConsts(home, body));
   const before = new Set(ctx.typeStructs.keys());
   const local = new Map<string, Struct>();
   const decls = declareTypes(home, body, local, ctx.typeAliases);
@@ -252,7 +260,7 @@ export function runtimeDefaults(comp: Component, content: string): Map<string, N
   return out;
 }
 
-export function defaultValue(comp: Component, f: Field, node: N): string {
+export function defaultValue(comp: Component, f: Field, node: N, written?: N): string {
   const of = f.ty.k === "opt" ? f.ty.of : f.ty;
   if (of.k === "str" && node.type === "StringLiteral") return rustStr(node.value);
   if (of.k === "int" && node.type === "NumericLiteral" && Number.isInteger(node.value)) return `${node.value}i64`;
@@ -263,5 +271,5 @@ export function defaultValue(comp: Component, f: Field, node: N): string {
   if (of.k === "list" && node.type === "ArrowFunctionExpression" && node.body.type === "ArrayExpression" && node.body.elements.length === 0) {
     return "&[]";
   }
-  return fail(comp, `the default of \`${f.js}\` must be a literal of its type, or \`() => []\` for a list`, node);
+  return fail(comp, `the default of \`${f.js}\` must be a literal of its type, or \`() => []\` for a list`, written ?? node);
 }

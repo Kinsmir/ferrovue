@@ -1,4 +1,4 @@
-import { type N, type Scope, type Ty, type Val, absence, BOOL, fail } from "./model.ts";
+import { type N, type Scope, type Ty, type Val, absence, BOOL, fail, nothing } from "./model.ts";
 import { ctx } from "./context.ts";
 import { claim } from "./plugin.ts";
 import { atom, bare, binary, condition, ifElse, logical, not, occurrences, receiver } from "./parens.ts";
@@ -7,6 +7,7 @@ import { expr } from "./expr.ts";
 
 export function known(v: Val): boolean | undefined {
   if (v.konst !== undefined) return v.konst;
+  if (nothing(v.ty)) return false;
   if (v.ty.k === "str" && /^"(?:[^"\\]|\\.)*"$/.test(v.code)) return v.code !== '""';
   if (v.num !== undefined) return v.num !== 0 && !Number.isNaN(v.num);
   return undefined;

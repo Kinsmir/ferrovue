@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import type { Plugin } from "./plugin.ts";
+import type { Declared } from "./constants.ts";
 import { type Component, type N, type Struct, type Ty, BOOL, FLOAT, GenError, INT, opt, STR } from "./model.ts";
 
 /** A type a helper takes or returns, as the configuration spells it. */
@@ -121,6 +122,8 @@ export const ctx = {
   typeAliases: new Map<string, N>(),
   typeFiles: new Map<string, string>(),
   typeRead: new Set<string>(),
+  constDecls: new Map<string, Map<string, Declared>>(),
+  typeConsts: new Map<string, { of: unknown; file: string; text: string }>(),
   components: new Map<string, Component>(),
   narrowCount: 0,
   componentsDir: "",

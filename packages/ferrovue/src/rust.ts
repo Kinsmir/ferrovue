@@ -399,13 +399,14 @@ ${arms}
 
 export function typesSource(): string {
   const home = blankComponent("types", "types", "types", ctx.typeStructs);
-  const files = [...new Set(ctx.typeFiles.values())].toSorted();
+  const files = [...new Set([...ctx.typeFiles.values(), ...[...ctx.typeConsts.values()].map((c) => c.file)])].toSorted();
   const structs = [...ctx.typeStructs.values()]
     .map((st) => structSource(st, home, `/// \`${st.name}\` in \`${ctx.typeFiles.get(st.name)}\`.\n`))
     .join("\n");
+  const consts = [...ctx.typeConsts.values()].map((c) => `${c.text}\n`).join("");
   return `${header(files.join(", "), "the type files")}
 //! The types components import from shared \`.ts\` files, written once so that components passing
 //! them to one another agree on them.
 
-${/Cow</.test(structs) ? "use std::borrow::Cow;\n\n" : ""}${structs}`;
+${/Cow</.test(structs) ? "use std::borrow::Cow;\n\n" : ""}${structs}${consts}`;
 }

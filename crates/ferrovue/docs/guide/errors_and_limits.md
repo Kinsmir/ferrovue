@@ -21,6 +21,12 @@ What is refused today, each with an error that names it:
   id; and, since vue-router renders a link from virtual nodes, a `<slot>` inside a `<RouterLink>`
   that takes scope ids, or an element inside one in slot content given a `:slotted()` id;
 - `<component :is>`;
+- the Options API (a `<script>` without `setup`), and a type parameter of a generic component with
+  no constraint (`generic="T"`): a generic component renders each type parameter as its
+  constraint;
+- constants that are not literals (`Date.now()`, a function), an object constant read whole or by
+  a key chosen at run time (`LABELS[key]`), and `new` (`new Date(at)`,
+  `new Intl.NumberFormat()`);
 - `<RouterLink custom>`, slot props that are array literals, defaults in destructured slot props,
   and outlets of one slot that pass different props;
 - custom directives not listed in `clientDirectives`;

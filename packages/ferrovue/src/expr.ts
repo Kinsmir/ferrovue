@@ -8,6 +8,7 @@ import { asCow, formatted, isTemporary, loneOf, meet, stringsEqual } from "./str
 import { arithmetic, asF64, compare, intFromF64, isNumber, negatedOrder, numberVal } from "./numbers.ts";
 import { boolOf, checkNullTest, choice, known, narrowing, narrowTo, nullTest, pathOf, presence, truthy } from "./narrowing.ts";
 import { call, isObjectCall } from "./calls.ts";
+import { constOf, constVal } from "./constants.ts";
 
 export function describeTy(ty: Ty): string {
   switch (ty.k) {
@@ -96,6 +97,14 @@ export function childOf(name: string): Component {
   return c;
 }
 
+function slotsObject(s: Scope, n: N): string | null {
+  if (n.type === "Identifier") return n.name === "$slots" || (s.slotsBindings.has(n.name) && !s.locals.has(n.name)) ? n.name : null;
+  if (n.type !== "MemberExpression" || n.computed || n.object.type !== "Identifier") return null;
+  const [owner, name]: [string, string] = [n.object.name, n.property.name];
+  if (owner === "_ctx" && name === "$slots") return "$slots";
+  return (owner === "$setup" || owner === "_ctx") && s.slotsBindings.has(name) ? name : null;
+}
+
 export function expr(s: Scope, n: N): Val {
   const comp = s.comp;
   const path = pathOf(n);
@@ -103,6 +112,8 @@ export function expr(s: Scope, n: N): Val {
     const narrowed = s.narrowed.get(path);
     if (narrowed) return narrowed;
   }
+  const named = constOf(s, n);
+  if (named) return constVal(named.c, { comp, node: n, what: named.what });
   if (n.type === "MemberExpression" && !n.computed && n.property.type === "Identifier" && n.property.name === "length") {
     if (isObjectCall(n.object, "entries") && n.object.arguments.length === 1) {
       const r = expr(s, n.object.arguments[0]);
@@ -219,12 +230,9 @@ export function expr(s: Scope, n: N): Val {
         return fail(comp, "computed member access", n);
       }
       const prop = n.property.name as string;
-      const slotsObject =
-        (n.object.type === "Identifier" && n.object.name === "$slots") ||
-        (n.object.type === "MemberExpression" && !n.object.computed && n.object.object.type === "Identifier" &&
-          n.object.object.name === "_ctx" && n.object.property.name === "$slots");
-      if (slotsObject) {
-        if (!comp.slotNames.includes(prop)) fail(comp, `\`$slots.${prop}\` names a slot this template does not render`, n);
+      const slots = slotsObject(s, n.object);
+      if (slots !== null) {
+        if (!comp.slotNames.includes(prop)) fail(comp, `\`${slots}.${prop}\` names a slot this template does not render`, n);
         return { code: `fv_slots.${snake(prop)}.is_some()`, ty: BOOL };
       }
       if (n.object.type === "Identifier") {
@@ -240,6 +248,7 @@ export function expr(s: Scope, n: N): Val {
             }
             const v = s.setup.get(prop);
             if (v) return v;
+            if (prop === s.propsIdent) return { code: "props", ty: { k: "struct", name: "Props" } };
             if (s.clientOnly.has(prop)) {
               return fail(comp, `\`${prop}\` is set up in a way the server cannot evaluate: ${s.clientOnly.get(prop)}`, n);
             }
@@ -417,7 +426,11 @@ export function expr(s: Scope, n: N): Val {
       }
       return fail(comp, "the two branches of `?:` differ in type", n);
     }
+    case "NewExpression": {
+      const made = n.callee.type === "Identifier" ? n.callee.name : n.callee.type === "MemberExpression" && !n.callee.computed ? `${n.callee.object.name ?? "…"}.${n.callee.property.name}` : "…";
+      return fail(comp, `\`new ${made}(…)\` builds an object the server has no twin for: compute the value in Rust and pass it as a prop`, n);
+    }
     default:
-      return fail(comp, `\`${n.type}\` is not supported in an island template`, n);
+      return fail(comp, `\`${n.type}\` is not supported in a template`, n);
   }
 }

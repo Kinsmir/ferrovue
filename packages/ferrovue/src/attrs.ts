@@ -26,7 +26,7 @@ export function display(e: Emitter, v: Val): boolean {
   return true;
 }
 
-export function interpolate(e: Emitter, v: Val): void {
+export function interpolate(s: Scope, e: Emitter, v: Val, n: N): void {
   if (display(e, v)) return;
   switch (v.ty.k) {
     case "undef":
@@ -34,12 +34,12 @@ export function interpolate(e: Emitter, v: Val): void {
       return;
     case "opt":
       e.open(`if let Some(v) = ${v.code}`);
-      interpolate(e, { code: "v", ty: v.ty.of });
+      interpolate(s, e, { code: "v", ty: v.ty.of }, n);
       e.close();
       return;
     default:
       if (ctx.plugins.some((p) => p.values?.interpolate?.(e, v))) return;
-      throw new GenError("only strings, numbers and booleans can be interpolated");
+      fail(s.comp, `\`{{ }}\` of ${describeTy(v.ty)}: only strings, numbers and booleans can be interpolated`, n);
   }
 }
 

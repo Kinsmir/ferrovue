@@ -142,15 +142,17 @@ hydrates inside it. See `examples/dioxus` and the crate guide's
 
 ## What a component may use
 
-ferrovue compiles `<script setup lang="ts">` components. Props are declared by type, with
+ferrovue compiles `<script setup lang="ts">` components, and components with no script at all
+(an icon, a divider), which take no props. Props are declared by type, with
 `defineProps<{ … }>()`, an interface, or a type alias.
 
 | Area | Supported |
 |---|---|
 | Prop types | `string`, `number` (integers, `i64`, written and computed as JavaScript does — exact within ±2⁵³), `Float` from `ferrovue/types` (fractions, `f64`), `boolean`, string-literal unions (`"sm" \| "md"`), `T \| undefined`, `T \| null` (an `Option` written as `null`), arrays (`T[]`, `Array<T>`, `readonly T[]`), interfaces and object type aliases (recursive ones too), dictionaries (`Record<string, T>`, `{ [key: string]: T }`, `ferrovue::Record` in Rust, which keeps JavaScript's order of keys), another component's exported `Props`, `TrustedHtml` |
-| Shared types | Interfaces and type aliases imported from `.ts` files (generated once, into `types.rs`), from a store's file, or from another component's `.vue` file; objects of a shared type can be passed between components |
-| Props | `withDefaults`, destructured props with defaults (`const { size = "md" } = defineProps<…>()`), optional booleans (Vue casts an absent one to `false`), `defineModel` (named, required, with defaults), components with no props |
-| Setup | `ref`/`shallowRef`, `computed` (an expression or a single `return`), plain `const`/`let`, `.value` in script code, helpers with Rust twins, a plain `<script>` block beside setup. Lifecycle hooks, `watch` (not `immediate`), `defineEmits`, `defineSlots`, `defineOptions`, `defineExpose`, `provide`, template refs (`ref(null)`, `useTemplateRef`) and functions are client-only. The template may name them only from event handlers, which the server drops |
+| Shared types | Interfaces and type aliases imported from `.ts` files (generated once, into `types.rs`), from a store's file, or from another component's `.vue` file; objects of a shared type can be passed between components. A TypeScript `enum` whose members are literals is the type of its values: a string, or a number |
+| Constants | Constants imported from `.ts` files and `enum`s (imported, or declared in the component), evaluated when the component is compiled: strings, numbers, booleans, `null`, lists of them, objects of them read field by field (`LABELS.save`, `Tone.Loud`, `Rank[5]`), and lists of objects of them, which become a `const` in `types.rs` (`{ value, label }` items get a type named after the constant, `OptionsItem`, unless the constant is typed with an interface: `OPTIONS: Option[]`; a field that is `null` in some items is `T | null`). See [Constants](#constants) |
+| Props | `withDefaults`, destructured props with defaults (`const { size = "md" } = defineProps<…>()`), the props object (`const props = defineProps<…>()`, then `props.label` in the template or in script code), optional booleans (Vue casts an absent one to `false`), `defineModel` (named, required, with defaults), components with no props. A generic component (`<script setup generic="T extends Item">`) renders each type parameter as its constraint, which is all the template can rely on |
+| Setup | `ref`/`shallowRef`, `computed` (an expression or a single `return`), refs that start empty, typed by their type argument (`ref<Row[]>([])`, `ref<Row>()`, `ref<string \| undefined>(undefined)`), plain `const`/`let`, `.value` in script code, helpers with Rust twins, a plain `<script>` block beside setup. Lifecycle hooks, `watch` (not `immediate`), `defineEmits`, `defineSlots`, `defineOptions`, `defineExpose`, `provide`, template refs (`ref(null)`, `useTemplateRef`) and functions are client-only. The template may name them only from event handlers, which the server drops |
 | Text | `{{ }}` of strings, integers and booleans; `+`, `-`, `*`, `/`, `%`, with integers and fractions as JavaScript computes them; `<`, `>`, `<=`, `>=` (between numbers, or between strings by UTF-16 code unit), `===`, `!==`; unary `-`, `!`; `??`, `\|\|`, `&&`, `?:`; template literals; optional chaining `a?.b`; `.length`; `String()`, `.toString()`, `.toFixed()`, `Math.max`/`min`/`abs`/`round`/`floor`/`ceil`/`trunc`; `Number()`, `parseInt()` (no radix, 10 or 16), `parseFloat()`; `JSON.stringify()` of strings, numbers, booleans and lists of those; array literals |
 | Strings | `.trim()`, `.trimStart()`, `.trimEnd()`, `.toUpperCase()`, `.toLowerCase()`, `.includes()`, `.startsWith()`, `.endsWith()`, `.indexOf()`, `.lastIndexOf()`, `.slice()`, `.substring()`, `.at()`, `.charAt()`, `.split()`, `.replace()` and `.replaceAll()` with string patterns (`$&`, `` $` ``, `$'`, `$$` read as JavaScript reads them), `.padStart()`, `.padEnd()`, `.repeat()`; indices and lengths count UTF-16 code units, as JavaScript's do (see [Strings](#strings)) |
 | Conditions | `v-if` / `v-else-if` / `v-else`, `?:`, `&&` and `||`, with optional and nullable values narrowed as TypeScript narrows them: `v-if="user"`, `user !== undefined`, `user !== null`, `user != null`, and `!user`, `user === undefined` or `user === null` for the `v-else` |
@@ -162,7 +164,7 @@ ferrovue compiles `<script setup lang="ts">` components. Props are declared by t
 | Scoped styles | `<style scoped>`: the id on every element, on child components' roots (a root that is itself a component, fragments, recursion and `inheritAttrs: false` as Vue renders them) and, from a component with `:slotted()` rules, on the slot content it is given, forwarded slots included; inside `<Transition>`, `<KeepAlive>`, `<Teleport>` and `v-if`; on `<RouterLink>` and what it holds, as vue-router renders them |
 | Components | imported child components, `v-bind` of a child's own `Props`, `v-model` on a child's `defineModel`, recursion; props named in `kebab-case` or `camelCase` |
 | Fallthrough attributes | what a parent passes a child beyond its props (static and bound attributes, `class`, `style`, `data-*`, `aria-*`, booleans, `undefined`): onto its single root, merged with the root's own class and style and replacing its other attributes where they stand, as Vue's `mergeProps` merges them; none for two roots; on through a root that is a component, or a `<RouterLink>`; with `inheritAttrs: false`, onto the elements or components that bind `v-bind="$attrs"` or a `useAttrs()` binding, before or after their own; beside scope ids. Listeners are dropped, as Vue's server drops them. See the crate's [`generated_code`](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#fallthrough-attributes) guide |
-| Slots | default and named slots, fallbacks, `$slots.name` tests, scoped slots (`<slot :item="x">` and `#item="{ item }"` or `v-slot="props"`), whose props a parent can hand to its own children |
+| Slots | default and named slots, fallbacks, `$slots.name` tests and the same through `useSlots()`, scoped slots (`<slot :item="x">` and `#item="{ item }"` or `v-slot="props"`), whose props a parent can hand to its own children |
 | Forms | `v-model` on text inputs, checkboxes, radios, `<select>` and `<textarea>` (renders the initial state) |
 | Built-ins | `<Transition>`, `<TransitionGroup>`, `<KeepAlive>`, `<Suspense>` (synchronous content), `<Teleport>` (to any target, nested, disabled: see below), `v-text`, `v-once`, `v-pre`, `v-memo`, custom directives listed in `clientDirectives` |
 | Vue Router | `<RouterLink>` (resolved by name or imported) with a string `to` or `{ name, params, query, hash }` / `{ path, query, hash }`, `active-class`, `exact-active-class`, `aria-current-value`, `replace`; vue-router's own encoding and active-link matching, nested routes included (a parent link is active on its children's pages, exact only on its own); a history base. `useRoute()` and `$route`: `path`, `fullPath`, `hash`, `name`, `params`, and `query` (a value written once, without `=`, or repeated, exactly as vue-router parses it; `typeof route.query.q === "string"` narrows one to a single string). `<RouterView>`, at the top and in nested route components: each takes the page it shows as a slot |
@@ -177,6 +179,10 @@ Refused at compile time, each with an error that names the construct:
   id; and, since vue-router renders a link from virtual nodes, a `<slot>` inside a `<RouterLink>`
   that takes scope ids, or an element inside one in slot content given a `:slotted()` id
 - `<component :is>`
+- the Options API (a `<script>` without `setup`), and a type parameter of a generic component with
+  no constraint (`generic="T"`)
+- constants that are not literals (`Date.now()`, a function), an object constant read whole or by a
+  key chosen at run time (`LABELS[key]`), and `new` (`new Date(at)`, `new Intl.NumberFormat()`)
 - `<RouterLink custom>`, slot props that are array literals, defaults in destructured slot props, and outlets of one slot that pass different props
 - custom directives not listed in `clientDirectives`
 - `watchEffect`, `watch` with `immediate`, `onServerPrefetch`, top-level `await`, and statements in setup that change state
@@ -209,8 +215,42 @@ Refused at compile time, each with an error that names the construct:
   passed to a component whose root is a `<Transition>` or `<KeepAlive>` around a `v-if`, which Vue's
   server drops but its client keeps
 
+Every error names the file, line and column, with the line quoted and a caret under the construct.
+
 An object prop handed to a child component is cloned. Its strings are `Cow`s, so borrowed ones
 cost nothing to copy.
+
+### Constants
+
+A constant a component imports from a `.ts` file, or an `enum`, is evaluated when the component is
+compiled, as `types.rs` holds the shared types:
+
+```ts
+// components/catalog.ts
+export const LABELS = { title: "Catalogue", empty: "Nothing yet" } as const;
+export const SIZES = ["sm", "md", "lg"] as const;
+export const SORTS = [
+  { key: "name", label: "By name" },
+  { key: "price", label: "By price" },
+] as const;
+export enum Tone { Calm = "calm", Loud = "loud" }
+```
+
+`{{ LABELS.title }}` and `v-if="tone === Tone.Loud"` are written into the page as the strings they
+are, and `v-for="s in SIZES"` walks an array literal. A list of objects becomes a `const` beside
+the shared types, with a type for its items (here `SortsItem`, or the interface the constant is
+declared with):
+
+```rust,ignore
+pub const SORTS: &[SortsItem<'static>] = &[
+    SortsItem { key: Cow::Borrowed("name"), label: Cow::Borrowed("By name") },
+    SortsItem { key: Cow::Borrowed("price"), label: Cow::Borrowed("By price") },
+];
+```
+
+A constant is a literal, a list, an object, or another constant of the same file. One that is
+anything else (`Date.now()`, a function) is refused where the template reads it, naming the file
+and line it is declared on.
 
 ### Scoped styles
 
@@ -462,8 +502,8 @@ crates/ferrovue-i18n/        vue-i18n's t() (the `i18n` feature)
 packages/ferrovue/           the compiler (npm package)
   src/index.ts               `ferrovue`: the browser API, `mountIslands`, `hydrateState` and the types
   src/compiler.ts            `ferrovue/compiler`: `generate`, `write`
-  src/component.ts, script.ts, typescript.ts
-                             a `.vue` file read, <script setup>, TypeScript types
+  src/component.ts, script.ts, typescript.ts, constants.ts
+                             a `.vue` file read, <script setup>, TypeScript types, constants and enums
   src/template.ts, children.ts, slots.ts, loops.ts
                              the compiled template: statements, child components, slots, v-for
   src/expr.ts, strings.ts, numbers.ts, narrowing.ts, calls.ts, lists.ts

@@ -1,7 +1,7 @@
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { type Config, ctx, loadConfig, tyOfName } from "./context.ts";
-import { readComponent } from "./component.ts";
+import { importsOf, readComponent } from "./component.ts";
 import { scopeFor } from "./script.ts";
 import { attrsFlow } from "./fallthrough.ts";
 import { componentSource, isIsland, modSource } from "./rust.ts";
@@ -19,6 +19,8 @@ export function generate(root: string, config: Config = loadConfig(root)): Map<s
   ctx.typeAliases = new Map();
   ctx.typeFiles = new Map();
   ctx.typeRead = new Set();
+  ctx.constDecls = new Map();
+  ctx.typeConsts = new Map();
   ctx.plugins = PLUGINS;
   ctx.runs = new Map();
   for (const p of PLUGINS) ctx.runs.set(p, p.configure?.(config, root));
@@ -34,7 +36,8 @@ export function generate(root: string, config: Config = loadConfig(root)): Map<s
     .filter((f) => f.endsWith(".vue"))
     .toSorted()
     .map((f) => join(dir, f));
-  const read = files.map((f) => readComponent(f, root));
+  const children = new Set(files.flatMap((f) => importsOf(readFileSync(f, "utf8")).filter((c) => c !== basename(f, ".vue"))));
+  const read = files.map((f) => readComponent(f, root, children.has(basename(f, ".vue"))));
   const components = new Map(read.map((r) => [r.comp.name, r.comp]));
   ctx.components = components;
   const scopes = read.map((r) => scopeFor(r.comp, r.ast, components).scope);
