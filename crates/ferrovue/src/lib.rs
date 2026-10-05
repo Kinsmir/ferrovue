@@ -11,6 +11,7 @@ pub mod dioxus;
 #[cfg(any(doc, doctest))]
 pub mod guide;
 mod html;
+mod hydrate;
 mod json;
 mod page;
 mod record;
@@ -29,6 +30,7 @@ pub use attrs::{
 pub use class::{class_into, class_object};
 pub use conformance::check_fixtures;
 pub use html::Html;
+pub use hydrate::Hydrate;
 pub use page::{Page, PageHole, PageRecord, PageScript, PageSlot, Part};
 pub use record::Record;
 #[doc(hidden)]

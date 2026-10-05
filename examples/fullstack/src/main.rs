@@ -119,6 +119,11 @@ mod tests {
             4,
             "{html}"
         );
+        assert_eq!(
+            html.matches(r#"data-hydrate="interaction""#).count(),
+            4,
+            "{html}"
+        );
         assert!(html.contains(r#"<a href="/books/left-hand""#), "{html}");
         assert!(
             html.contains(r#"<a aria-current="page" href="/" class="active brand">"#),
@@ -167,6 +172,10 @@ mod tests {
         let reviews = site.fill(page.holes.into_iter().next().unwrap()).await;
         assert!(
             reviews.starts_with(r#"<div data-island="Reviews""#),
+            "{reviews}"
+        );
+        assert!(
+            reviews.contains(r#"}]}" data-hydrate="visible"><div class="review-list""#),
             "{reviews}"
         );
         assert!(

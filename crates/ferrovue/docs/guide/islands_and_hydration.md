@@ -102,6 +102,63 @@ Only a component whose render needs nothing but its props has an `island()`: its
 the client gets. A component that takes slots, the route, stores, translations or teleports has
 `html()` alone.
 
+## Hydrating later
+
+An island hydrates as soon as `mountIslands` runs, and its code is fetched then. One the reader may
+never reach, or never touch, can wait: [`Html::hydrate`](crate::Html::hydrate) writes when it
+hydrates as a `data-hydrate` attribute on the wrapper, after `data-props`, and `mountIslands` loads
+its component and hydrates it only then.
+
+```rust
+# mod reviews {
+#     #[derive(serde::Serialize)]
+#     pub struct Props { pub count: i64 }
+#     pub fn render(out: &mut String, props: &Props) {
+#         out.push_str("<p>");
+#         ferrovue::push_int(out, props.count);
+#         out.push_str(" reviews</p>");
+#     }
+#     pub fn island(props: &Props) -> ferrovue::Html<'_, Props> {
+#         ferrovue::Html::island("Reviews", props, render)
+#     }
+# }
+use ferrovue::Hydrate;
+
+let props = reviews::Props { count: 3 };
+assert_eq!(
+    reviews::island(&props).hydrate(Hydrate::Visible).into_string(),
+    r#"<div data-island="Reviews" data-props="{&quot;count&quot;:3}" data-hydrate="visible"><p>3 reviews</p></div>"#
+);
+```
+
+| [`Hydrate`](crate::Hydrate) | `data-hydrate` | The island hydrates |
+| --- | --- | --- |
+| `Visible` | `visible` | once any of it is in the viewport (Vue's `hydrateOnVisible`) |
+| `Idle` | `idle` | once the browser is idle (Vue's `hydrateOnIdle`; 200 ms after mounting where the browser has no `requestIdleCallback`) |
+| `Interaction` | `interaction` | on the first `pointerenter`, `click` or `focus` within it |
+| `InteractionOn(&["keydown"])` | `interaction:keydown` | on the first of the events named, separated by spaces |
+| `media("(min-width: 60rem)")` | `media:(min-width: 60rem)` | once the media query matches (Vue's `hydrateOnMediaQuery`) |
+
+The attribute's value is escaped like any other, so a media query from anywhere is safe to write.
+The markup inside the wrapper is what `island()` writes without it, so hydrating later changes
+nothing about exactness: the island hydrates against the same bytes, at another moment.
+
+An island waiting for interaction listens on its wrapper in the capture phase, so a `focus`, which
+does not bubble, is heard from any element inside it. The events that arrive before it has hydrated
+(the `pointerenter` that started the fetch, then the `click`) are dispatched again on their targets
+once it has, so the click that woke a button still reaches its handler. Vue's own
+`hydrateOnInteraction` replays the first event alone, and has the component's code by then; an
+island fetches its code first.
+
+`mountIslands` resolves once the islands that hydrate at once have mounted. The others join
+`apps` as they hydrate, and `unmount()` stops waiting for those that have not. A `data-hydrate`
+value the client does not know, from a newer server, is reported through `onError` and the island
+hydrates at once.
+
+A waiting island keeps the props it was rendered with, so it hydrates exactly however long it
+waits. Its handlers do nothing until then, so a control the reader needs at once (a menu toggle,
+say) is better hydrated at once.
+
 # Hydrating a page
 
 A page is often a layout whose slots hold components, each rendered from its own props: a header,
@@ -182,7 +239,11 @@ Some things to know:
   styles onto the root of each component in the slot, which a part's `html()` cannot do. A part
   written into such an outlet panics, naming the id.
 - **An `island()` given as a part loses its wrapper.** The part belongs to the page's app, so it is
-  written as `html()` writes it.
+  written as `html()` writes it, and a `hydrate` given to it goes with the wrapper.
+- **A page hydrates at once.** The layout and every part are one app, which hydrates as one tree.
+  Vue can defer an async component's hydration inside an app, but it fetches the component's code
+  before the trigger fires, and a part waiting to hydrate would stop following the layout it
+  belongs to. Content that can wait belongs in an island outside the page's container.
 
 ## Islands or a page
 

@@ -108,11 +108,15 @@ impl<P: Serialize, F: Fn(&mut String, &P)> Html<'_, P, F> {
     pub fn to_element(&self) -> Element {
         let mut markup = String::new();
         (self.render)(&mut markup, self.props.get());
-        let mut attrs = Vec::with_capacity(3);
+        let mut attrs = Vec::with_capacity(4);
         if let Some(name) = self.island {
             attrs.push(Attribute::new("data-island", name, None, false));
             let json = crate::json::to_string(self.props.get());
             attrs.push(Attribute::new("data-props", json, None, false));
+            if let Some(hydrate) = &self.hydrate {
+                let value = hydrate.attribute().into_owned();
+                attrs.push(Attribute::new("data-hydrate", value, None, false));
+            }
         }
         attrs.push(Attribute::new(INNER_HTML, markup, None, false));
         element(DIV, attrs)
@@ -228,6 +232,22 @@ mod tests {
                 r#"<main data-node-hydration="0"><h1>Page</h1><div {attrs} data-node-hydration="1">{markup}</div></main>"#
             )
         );
+    }
+
+    #[test]
+    fn an_island_carries_when_it_hydrates_after_its_props() {
+        let props = Label { label: "x" };
+        let when = crate::Hydrate::media(r#"(min-width: 1px)" onclick="x"#);
+        let [plain, _] =
+            rendered(|| page(Html::island("Label", &props, label).hydrate(when.clone())));
+        assert!(
+            plain.starts_with(
+                r#"<main><h1>Page</h1><div data-island="Label" data-props="{&#34;label&#34;:&#34;x&#34;}" data-hydrate="media:(min-width: 1px)&#34; onclick=&#34;x"><b>x</b>"#
+            ),
+            "{plain}"
+        );
+        let [plain, _] = rendered(|| page(Html::markup(&props, label).hydrate(when.clone())));
+        assert!(!plain.contains("data-hydrate"), "{plain}");
     }
 
     #[test]

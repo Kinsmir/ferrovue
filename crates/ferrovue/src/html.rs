@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use crate::{escape_into, json};
+use crate::{Hydrate, escape_into, json};
 
 /// A component applied to its props, ready to be written: what a generated `html()` or `island()`
 /// returns, borrowing the props, and `into_html()` or `into_island()`, holding them.
@@ -56,6 +56,7 @@ pub struct Html<'p, P, F = fn(&mut String, &P)> {
     pub(crate) props: Given<'p, P>,
     pub(crate) render: F,
     pub(crate) island: Option<&'static str>,
+    pub(crate) hydrate: Option<Hydrate>,
 }
 
 impl<'p, P: Serialize, F: Fn(&mut String, &P)> Html<'p, P, F> {
@@ -68,6 +69,7 @@ impl<'p, P: Serialize, F: Fn(&mut String, &P)> Html<'p, P, F> {
             props: Given::Borrowed(props),
             render,
             island: None,
+            hydrate: None,
         }
     }
 
@@ -78,6 +80,7 @@ impl<'p, P: Serialize, F: Fn(&mut String, &P)> Html<'p, P, F> {
             props: Given::Borrowed(props),
             render,
             island: Some(name),
+            hydrate: None,
         }
     }
 
@@ -89,6 +92,7 @@ impl<'p, P: Serialize, F: Fn(&mut String, &P)> Html<'p, P, F> {
             props: Given::Owned(props),
             render,
             island: None,
+            hydrate: None,
         }
     }
 
@@ -99,7 +103,43 @@ impl<'p, P: Serialize, F: Fn(&mut String, &P)> Html<'p, P, F> {
             props: Given::Owned(props),
             render,
             island: Some(name),
+            hydrate: None,
         }
+    }
+
+    /// Hydrate the island when `when` says, fetching its code only then; an island is otherwise
+    /// hydrated as soon as `mountIslands` runs. The island's markup is unchanged: its wrapper gains a
+    /// `data-hydrate` attribute. A component that is not an island has no wrapper to carry it, and
+    /// is written as before; so is an island given to a [`Page`](crate::Page) as a
+    /// [`Part`](crate::Part).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # mod counter {
+    /// #     #[derive(serde::Serialize)]
+    /// #     pub struct Props { pub start: i64 }
+    /// #     pub fn render(out: &mut String, props: &Props) {
+    /// #         out.push_str("<button>");
+    /// #         ferrovue::push_int(out, props.start);
+    /// #         out.push_str("</button>");
+    /// #     }
+    /// #     pub fn island(props: &Props) -> ferrovue::Html<'_, Props> {
+    /// #         ferrovue::Html::island("Counter", props, render)
+    /// #     }
+    /// # }
+    /// use ferrovue::Hydrate;
+    ///
+    /// let props = counter::Props { start: 5 };
+    /// assert_eq!(
+    ///     counter::island(&props).hydrate(Hydrate::Interaction).into_string(),
+    ///     r#"<div data-island="Counter" data-props="{&quot;start&quot;:5}" data-hydrate="interaction"><button>5</button></div>"#
+    /// );
+    /// ```
+    #[must_use]
+    pub fn hydrate(mut self, when: Hydrate) -> Self {
+        self.hydrate = Some(when);
+        self
     }
 
     /// Write the markup onto the end of `buf`, leaving what `buf` already holds as it is: how a
@@ -129,7 +169,7 @@ impl<'p, P: Serialize, F: Fn(&mut String, &P)> Html<'p, P, F> {
         let props = self.props.get();
         match self.island {
             None => (self.render)(buf, props),
-            Some(name) => island_into(buf, name, props, &self.render),
+            Some(name) => island_into(buf, name, self.hydrate.as_ref(), props, &self.render),
         }
     }
 
@@ -200,8 +240,12 @@ impl<P> Given<'_, P> {
 /// ```
 impl<P: std::fmt::Debug, F> std::fmt::Debug for Html<'_, P, F> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Html")
-            .field("island", &self.island)
+        let mut debug = f.debug_struct("Html");
+        debug.field("island", &self.island);
+        if let Some(hydrate) = &self.hydrate {
+            debug.field("hydrate", hydrate);
+        }
+        debug
             .field("props", self.props.get())
             .finish_non_exhaustive()
     }
@@ -246,6 +290,7 @@ impl<P: Serialize, F: Fn(&mut String, &P)> maud::Render for Html<'_, P, F> {
 fn island_into<P: Serialize>(
     out: &mut String,
     name: &str,
+    hydrate: Option<&Hydrate>,
     props: &P,
     render: &impl Fn(&mut String, &P),
 ) {
@@ -254,6 +299,10 @@ fn island_into<P: Serialize>(
     out.push_str("\" data-props=\"");
     let json = json::to_string(props);
     escape_into(out, &json);
+    if let Some(hydrate) = hydrate {
+        out.push_str("\" data-hydrate=\"");
+        escape_into(out, &hydrate.attribute());
+    }
     out.push_str("\">");
     render(out, props);
     out.push_str("</div>");

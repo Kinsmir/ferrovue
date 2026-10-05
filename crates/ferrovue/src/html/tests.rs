@@ -98,3 +98,86 @@ fn markup_is_the_render_alone() {
     let props = Label { label: "a&b" };
     assert_eq!(Html::markup(&props, label).into_string(), "<b>a&amp;b</b>");
 }
+
+#[test]
+fn an_island_says_when_it_hydrates_after_its_props_and_keeps_its_markup() {
+    let props = Label { label: "x" };
+    let eager = Html::island("Label", &props, label).into_string();
+    for (when, attribute) in [
+        (Hydrate::Visible, "visible"),
+        (Hydrate::Idle, "idle"),
+        (Hydrate::Interaction, "interaction"),
+        (Hydrate::InteractionOn(&[]), "interaction"),
+        (
+            Hydrate::InteractionOn(&["click", "keydown"]),
+            "interaction:click keydown",
+        ),
+        (
+            Hydrate::media("(min-width: 40rem)"),
+            "media:(min-width: 40rem)",
+        ),
+    ] {
+        let html = Html::island("Label", &props, label)
+            .hydrate(when)
+            .into_string();
+        let marked = format!(r#"" data-hydrate="{attribute}">"#);
+        assert_eq!(html, eager.replacen("\">", &marked, 1));
+    }
+}
+
+#[test]
+fn a_hostile_media_query_cannot_leave_its_attribute() {
+    let props = Label { label: "x" };
+    for query in [
+        r#"x"><script>alert(1)</script>"#,
+        "x' onmouseover='alert(1)",
+        "&quot;\"&amp;<>",
+        "(min-width: 1px)\n\" data-island=\"Other",
+    ] {
+        let html = Html::island("Label", &props, label)
+            .hydrate(Hydrate::media(query))
+            .into_string();
+        let start = r#"" data-hydrate="media:"#;
+        let at = html.find(start).expect("the attribute") + start.len();
+        let (value, rest) = html[at..]
+            .split_once('"')
+            .expect("the end of the attribute");
+        assert_eq!(rest, "><b>x</b></div>", "{html}");
+        assert!(!value.contains(['<', '>', '\'']), "{value}");
+        let unescaped = value
+            .replace("&quot;", "\"")
+            .replace("&#39;", "'")
+            .replace("&lt;", "<")
+            .replace("&gt;", ">")
+            .replace("&amp;", "&");
+        assert_eq!(unescaped, query);
+        assert_eq!(html.matches("data-island=\"").count(), 1, "{html}");
+    }
+}
+
+#[test]
+fn markup_has_no_wrapper_to_say_when_it_hydrates() {
+    let props = Label { label: "x" };
+    assert_eq!(
+        Html::markup(&props, label)
+            .hydrate(Hydrate::Visible)
+            .into_string(),
+        "<b>x</b>"
+    );
+}
+
+#[test]
+fn html_shows_when_its_island_hydrates_in_debug() {
+    let props = Gauge {
+        level: 1.5,
+        marks: vec![],
+        top: None,
+    };
+    assert_eq!(
+        format!(
+            "{:?}",
+            Html::island("Gauge", &props, gauge).hydrate(Hydrate::media("print"))
+        ),
+        r#"Html { island: Some("Gauge"), hydrate: Media("print"), props: Gauge { level: 1.5, marks: [], top: None }, .. }"#
+    );
+}
