@@ -51,6 +51,34 @@ impl<'a> TabsState<'a> {
 }
 
 
+/// `Look` in `types/keys.ts`.
+#[derive(Debug, Clone, serde::Serialize)]
+#[cfg_attr(test, derive(serde::Deserialize))]
+pub struct Look<'a> {
+    #[serde(rename = "size")]
+    pub size: Cow<'a, str>,
+    #[serde(rename = "tone")]
+    pub tone: Cow<'a, str>,
+    #[serde(rename = "note", default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<Cow<'a, str>>,
+    #[serde(rename = "count")]
+    pub count: i64,
+}
+
+impl<'a> Look<'a> {
+    /// Look with its required fields, every optional one absent.
+    pub fn new(size: impl Into<Cow<'a, str>>, tone: impl Into<Cow<'a, str>>, count: i64) -> Self {
+        Look { size: size.into(), tone: tone.into(), note: None, count }
+    }
+
+    /// Set `note`, which is absent otherwise.
+    pub fn note(mut self, note: impl Into<Cow<'a, str>>) -> Self {
+        self.note = Some(note.into());
+        self
+    }
+}
+
+
 /// `Role` in `types/models.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]

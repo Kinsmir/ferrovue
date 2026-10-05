@@ -12,6 +12,10 @@ use std::borrow::Cow;
 pub struct Provides<'p> {
     /// What is provided under `ThemeKey`, exported from `types/keys.ts`.
     pub theme_key: Option<&'p str>,
+    /// What is provided under `LookKey`, exported from `types/keys.ts`.
+    pub look_key: Option<&'p super::types::Look<'p>>,
+    /// What is provided under `"look"`.
+    pub look: Option<&'p super::types::Look<'p>>,
     /// What is provided under `TabsKey`, exported from `types/keys.ts`.
     pub tabs_key: Option<&'p super::types::TabsState<'p>>,
     /// What is provided under `"size"`.

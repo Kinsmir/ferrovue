@@ -206,6 +206,11 @@ would apply without a provider, so fall back with `??` before providing it.
 What `inject` returns has the key's type, or is `undefined` without a provider and a default: read
 it with `?.` (`tabs?.active`). A default is a value of the key's type
 (`inject(ThemeKey, "light")`), or a factory with `true` (`inject("tone", () => "plain", true)`).
+Under a key whose type is an interface, the default may be an object of it, given as it is or
+returned by a factory: `inject(LookKey, { size: "md", tone: props.tone })` or
+`inject(LookKey, () => ({ size: "md", tone: "plain" }), true)`. Its fields are values the render
+computes, as in a provided object, an optional field may be left out, and the render builds the
+object once and reads it wherever no ancestor provides the key.
 Where the key is provided as a ref the default is a ref too (`inject(CountKey, ref(0))`), so that
 `.value` reads the same with a provider and without one.
 
@@ -242,7 +247,8 @@ Rust and handed in as a slot. Pass the page the same `Provides` the layout was g
 - a function given as a default without `true`;
 - values of different types, a ref and a plain value, or a function and a value under one key;
 - a value that may be `null` or `undefined`, a list computed in place (provide a `computed` of it),
-  a ref in a plain object, and an object under a key without an interface;
+  a ref in a plain object, and an object under a key without an interface, provided or given as
+  a default;
 - a key provided twice by one component, and two keys whose fields in `Provides` would share a name;
 - setup that assigns to an injected value, which the components rendered before it would show
   unchanged;

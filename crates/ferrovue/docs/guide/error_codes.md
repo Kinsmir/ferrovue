@@ -1275,11 +1275,11 @@ Provided value of a form the context does not hold.
 
 ## FV1611
 
-Object provided under a key without an interface type.
+Object provided or given as a default under a key without an interface type.
 
 ## FV1612
 
-Provided object whose fields do not match its interface.
+Provided or default object whose fields do not match its interface.
 
 ## FV1613
 

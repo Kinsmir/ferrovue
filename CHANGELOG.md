@@ -46,7 +46,7 @@ released together and share version numbers.
 - `provide` and `inject`, resolved through the component tree at build time. A key is a string
   literal or a `Symbol` exported from a `.ts` file and typed `InjectionKey<T>`; a value is a prop,
   a ref, a `computed`, a constant, or an object of them under an interface (`reactive()` unwraps
-  the refs in it, as in Vue). `inject` takes a default, or a factory with `true`. Every component
+  the refs in it, as in Vue). `inject` takes a default, or a factory with `true`; under a key whose type is an interface, the default may be an object of it (`inject(LookKey, { size: "md", tone: "plain" })`), given as it is or returned by the factory, whose fields are values the server computes. Every component
   that provides or injects, or renders one that does, takes the generated `Provides` after its
   other parameters, overlays what it provides, and hands it to its children and to its slots'
   content, which sees what the component rendering the slot provides, as Vue resolves it. A page
@@ -56,7 +56,7 @@ released together and share version numbers.
   absent, a ref and a plain value under one key, setup that assigns to an injected value, a
   provider holding `<RouterView>`, a string key injected inside a Rust twin's slot. The guide's
   new `provide_inject` page explains it; the conformance suite has a `Tabs`/`Tab` pair and a
-  themed button, with and without providers, recorded from Vue.
+  themed button, with and without providers, recorded from Vue, and `Swatch` and `SwatchShelf` cover object defaults.
 - `<component :is>` over a closed set of choices, compiled to a `match`: an imported component, an
   HTML element's name, a prop typed as a union of string literals (an `as` prop), an object of
   imported components or element names declared in setup or exported as a constant from a `.ts`
