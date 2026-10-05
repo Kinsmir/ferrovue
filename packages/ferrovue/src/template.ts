@@ -20,7 +20,7 @@ export function slot(s: Scope, e: Emitter, n: N): void {
     const a: N[] = n.arguments;
     switch (n.callee.name) {
       case "_ssrInterpolate":
-        interpolate(e, expr(s, a[0]));
+        interpolate(s, e, expr(s, a[0]), a[0]);
         return;
       case "_ssrRenderAttr":
         if (a[0].type !== "StringLiteral") fail(s.comp, "attribute names are literal", n);

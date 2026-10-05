@@ -9,7 +9,7 @@ export { fixtureApp, readFixture, routeRecords, type Fixture, type RouteEntry, t
 /** Give a component compiled for the browser the `ssrRender` its SSR build would have. */
 export function attachSsrRender(file: string, name: string, component: Component): void {
   const { descriptor } = parseSfc(readFileSync(file, "utf8"), { filename: file });
-  const script = compileScript(descriptor, { id: name });
+  const script = descriptor.script || descriptor.scriptSetup ? compileScript(descriptor, { id: name }) : null;
   const scopeId = (component as { __scopeId?: string }).__scopeId;
   if (!scopeId && descriptor.styles.some((st) => st.scoped)) {
     throw new Error(`${file}: a \`<style scoped>\` component without \`__scopeId\`: load it through \`@vitejs/plugin-vue\``);
@@ -22,7 +22,7 @@ export function attachSsrRender(file: string, name: string, component: Component
     slotted: descriptor.slotted,
     ssr: true,
     ssrCssVars: [],
-    compilerOptions: { bindingMetadata: script.bindings },
+    compilerOptions: script ? { bindingMetadata: script.bindings } : {},
   });
   const body = code
     .replace(/import \{([^}]*)\} from "vue"/g, (_, names: string) => `const {${names.replace(/ as /g, ": ")}} = __vue;`)

@@ -14,7 +14,7 @@ const name = basename(file, ".vue");
 const source = readFileSync(file, "utf8");
 
 const { descriptor } = parse(source, { filename: file });
-const script = compileScript(descriptor, { id: name });
+const script = descriptor.script || descriptor.scriptSetup ? compileScript(descriptor, { id: name }) : null;
 const scopeId = descriptor.styles.some((st) => st.scoped)
   ? `data-v-${createHash("sha256").update(`c/${name}.vue${source}`).digest("hex").slice(0, 8)}`
   : undefined;
@@ -26,13 +26,13 @@ const { code } = compileTemplate({
   slotted: descriptor.slotted,
   ssr: true,
   ssrCssVars: [],
-  compilerOptions: { bindingMetadata: script.bindings },
+  compilerOptions: script ? { bindingMetadata: script.bindings } : {},
 });
 console.log("── Vue SSR compilation ──\n" + code);
 
 const runnable = join(import.meta.dirname, `.inspect-${process.pid}.ts`);
 try {
-  writeFileSync(runnable, script.content);
+  writeFileSync(runnable, script?.content ?? "export default {};");
   const component = ((await import(runnable)) as { default: Component }).default;
   if (scopeId) (component as { __scopeId?: string }).__scopeId = scopeId;
   attachSsrRender(file, name, component);

@@ -1,7 +1,9 @@
 import { basename } from "node:path";
-import { type Component, type N, type Scope, type Val, fail, nothing, GenError, snake, takesAttrs } from "./model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, fail, nothing, GenError, snake, takesAttrs, UNDEF } from "./model.ts";
 import { CONFIG_FILE, ctx } from "./context.ts";
-import { definePropsType } from "./typescript.ts";
+import { definePropsType, resolveImport, tyOfTs } from "./typescript.ts";
+import { constOfDecl, type Declared, declareConsts } from "./constants.ts";
+import { rustTy } from "./rust.ts";
 import { expr, fieldVal } from "./expr.ts";
 import { collected, heldList } from "./lists.ts";
 import { bare, operand, UNARY } from "./parens.ts";
@@ -49,6 +51,21 @@ export function setupSource(init: N): N | null {
   return init;
 }
 
+function localTy(ty: Ty, comp: Component): string {
+  return rustTy(ty, comp).replace(/\bCow<'a, /g, "std::borrow::Cow<").replace(/'a\b/g, "'_");
+}
+
+function emptyRef(comp: Component, init: N): Val | null {
+  if (init?.type !== "CallExpression" || init.callee.type !== "Identifier" || !["ref", "shallowRef"].includes(init.callee.name)) return null;
+  const typed = init.typeParameters?.params?.[0];
+  const [value, ...rest] = init.arguments as N[];
+  if (rest.length) return null;
+  if (!value || (value.type === "Identifier" && value.name === "undefined")) return { code: "None", ty: UNDEF };
+  if (!typed || value.type !== "ArrayExpression" || value.elements.length > 0) return null;
+  const ty = tyOfTs(comp, typed, comp.structs);
+  return ty.k === "list" ? { code: `Vec::<${localTy(ty.of, comp)}>::new()`, ty } : null;
+}
+
 export function patternNames(p: N): string[] {
   switch (p?.type) {
     case "Identifier":
@@ -86,12 +103,24 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
     attrs: comp.inherits ? (takesAttrs(comp) ? "fv_attrs.ids()" : "fv_attrs") : null,
     fallthrough: takesAttrs(comp) ? "fv_attrs" : null,
     attrsBindings: new Set(),
+    slotsBindings: new Set(),
+    consts: new Map(),
     sid: null,
     plugins: new Map(),
   };
   for (const p of ctx.plugins) if (p.scope) scope.plugins.set(p, p.scope(scope));
+  const evaluable = (local: string, d: Declared, why: string): void => {
+    try {
+      scope.consts.set(local, constOfDecl(d));
+    } catch (e) {
+      if (!(e instanceof GenError)) throw e;
+      scope.clientOnly.set(local, `${why}: ${e.message.split("\n")[0]!}`);
+    }
+  };
+  const locals = declareConsts(comp, ast);
   const lets: string[] = [];
   let useAttrsName: string | null = null;
+  let useSlotsName: string | null = null;
   for (const st of ast) {
     if (st.type === "ImportDeclaration") {
       const from: string = st.source.value;
@@ -103,12 +132,22 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
       if (ctx.plugins.some((p) => p.scriptImport?.(scope, st, from))) continue;
       if (from === "vue") {
         for (const sp of st.specifiers) {
-          if (sp.type === "ImportSpecifier" && (sp.imported.name ?? sp.imported.value) === "useAttrs") useAttrsName = sp.local.name;
+          if (sp.type !== "ImportSpecifier") continue;
+          const imported: string = sp.imported.name ?? sp.imported.value;
+          if (imported === "useAttrs") useAttrsName = sp.local.name;
+          if (imported === "useSlots") useSlotsName = sp.local.name;
         }
       } else if (ctx.helperModule !== null && from === ctx.helperModule) {
         for (const sp of st.specifiers) {
           if (!ctx.helpers[sp.imported.name]) fail(comp, `\`${sp.imported.name}\` has no Rust twin: add it to \`helpers.functions\` in ${CONFIG_FILE}`, sp);
           scope.helpers.set(sp.local.name, sp.imported.name);
+        }
+      } else {
+        const file = resolveImport(comp.file, from);
+        const decls = file !== null ? ctx.constDecls.get(file) : undefined;
+        for (const sp of decls && st.importKind !== "type" ? st.specifiers : []) {
+          const d = sp.type === "ImportSpecifier" && sp.importKind !== "type" ? decls!.get(sp.imported.name ?? sp.imported.value) : undefined;
+          if (d?.exported) evaluable(sp.local.name, d, `it is imported from ${d.home.file}, where it is not a constant the compiler evaluates`);
         }
       }
       continue;
@@ -119,6 +158,10 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
     }
     const decl = st.type === "ExportNamedDeclaration" ? st.declaration : st;
     if (decl?.type === "TSInterfaceDeclaration" || decl?.type === "TSTypeAliasDeclaration") continue;
+    if (decl?.type === "TSEnumDeclaration") {
+      evaluable(decl.id.name, locals.get(decl.id.name)!, "it is not an enum the compiler evaluates");
+      continue;
+    }
     if (st.type === "ExpressionStatement") {
       setupStatement(comp, st);
       continue;
@@ -147,6 +190,10 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
         scope.clientOnly.set(local, "`useAttrs()` is bound whole, with `v-bind`; a value read from it has no type");
         continue;
       }
+      if (useSlotsName !== null && init0?.type === "CallExpression" && init0.callee.type === "Identifier" && init0.callee.name === useSlotsName) {
+        scope.slotsBindings.add(local);
+        continue;
+      }
       const model = comp.models.get(local);
       if (model !== undefined) {
         scope.setup.set(local, fieldVal(comp, "props", { k: "struct", name: "Props" }, model, d));
@@ -164,13 +211,14 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
       const source = setupSource(init0);
       const isRef = init0.type === "CallExpression" && init0.callee.type === "Identifier" && ["ref", "shallowRef", "computed"].includes(init0.callee.name);
       if (isRef) scope.refs.add(local);
-      if (!source) {
-        scope.clientOnly.set(local, "it is not a value the server computes: only `ref(…)`, `computed(() => …)` and plain expressions are");
-        continue;
-      }
       let v: Val;
       try {
-        v = expr(scope, source);
+        const empty = emptyRef(comp, init0);
+        if (!empty && !source) {
+          scope.clientOnly.set(local, "it is not a value the server computes: only `ref(…)`, `computed(() => …)` and plain expressions are");
+          continue;
+        }
+        v = empty ?? expr(scope, source);
       } catch (e) {
         if (!(e instanceof GenError)) throw e;
         scope.clientOnly.set(local, e.message.replace(/^[^:]*: /, ""));

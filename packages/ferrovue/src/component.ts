@@ -1,8 +1,9 @@
-import { compileScript, compileTemplate, parse as parseSfc } from "@vue/compiler-sfc";
+import { parse as parseJs } from "@babel/parser";
+import { compileScript, compileTemplate, parse as parseSfc, type SFCBlock } from "@vue/compiler-sfc";
 import { readFileSync } from "node:fs";
 import { SourceMapConsumer } from "source-map-js";
 import { basename, relative } from "node:path";
-import { type Component, type N, absence, blankComponent, fail, opt, snake, tagAst } from "./model.ts";
+import { type Component, type N, absence, blankComponent, fail, opt, snake, sourceAt, tagAst } from "./model.ts";
 import { ctx } from "./context.ts";
 import { typesImports, declareTypes, defaultValue, definePropsType, ONE_NOTHING, readTypeFile, resolveImport, runtimeDefaults, structOf, tyOfTs } from "./typescript.ts";
 import { claim } from "./plugin.ts";
@@ -51,7 +52,48 @@ function sourceDefault(ast: N[], key: string): N | null {
   return null;
 }
 
-export function readComponent(file: string, root: string): { comp: Component; ast: N[]; ssr: string } {
+function blockAt(source: string, block: SFCBlock): N {
+  return sourceAt(source, source.lastIndexOf(`<${block.type}`, block.loc.start.offset));
+}
+
+/** The `.vue` files a component imports, by name. */
+export function importsOf(source: string): string[] {
+  return [...source.matchAll(/\bfrom\s*["'](?:[^"']*\/)?([^"'/]+)\.vue["']/g)].map((m) => m[1]!);
+}
+
+function generics(comp: Component, source: string, block: SFCBlock): void {
+  const text = block.attrs.generic;
+  if (typeof text !== "string") return;
+  const open = source.lastIndexOf("<script", block.loc.start.offset);
+  const attr = source.slice(open, block.loc.start.offset).search(/\bgeneric\s*=\s*["']/);
+  const valueAt = open + attr + /^generic\s*=\s*["']/.exec(source.slice(open + attr))![0].length;
+  const at = sourceAt(source, valueAt).loc.start;
+  const prefix = "type T<";
+  let params: N[];
+  try {
+    params = (parseJs(`${prefix}${text}> = 0;`, { sourceType: "module", plugins: ["typescript"] }).program.body[0] as N).typeParameters.params;
+  } catch {
+    return fail(comp, "`generic` is a list of type parameters, as `T extends string`", sourceAt(source, valueAt));
+  }
+  const rebase = (n: N): void => {
+    if (!n || typeof n !== "object") return;
+    if (Array.isArray(n)) return n.forEach(rebase);
+    const start = n.loc?.start;
+    if (start && typeof n.type === "string") {
+      n.loc = { ...n.loc, start: start.line === 1 ? { line: at.line, column: at.column + start.column - prefix.length } : { line: at.line + start.line - 1, column: start.column } };
+    }
+    for (const [k, v] of Object.entries(n)) if (k !== "loc" && v && typeof v === "object") rebase(v);
+  };
+  rebase(params);
+  tagAst(params, "source");
+  for (const p of params) {
+    const name: string = typeof p.name === "string" ? p.name : p.name.name;
+    if (!p.constraint) fail(comp, `\`${name}\` in \`generic\` has no constraint: the server renders \`${name}\` as the type it extends, \`${name} extends string\``, p);
+    comp.aliases.set(name, p.constraint);
+  }
+}
+
+export function readComponent(file: string, root: string, isChild: boolean): { comp: Component; ast: N[]; ssr: string } {
   const name = basename(file, ".vue");
   const source = readFileSync(file, "utf8");
   const { descriptor, errors } = parseSfc(source, { filename: file });
@@ -59,19 +101,22 @@ export function readComponent(file: string, root: string): { comp: Component; as
   const comp = blankComponent(name, snake(name), rel);
   comp.source = source;
   if (errors.length) fail(comp, String(errors[0]), vueErrorNode(errors[0]));
-  if (!descriptor.scriptSetup || !descriptor.template) {
-    fail(comp, "an island needs `<script setup lang=\"ts\">` and a `<template>`");
+  if (descriptor.script && !descriptor.scriptSetup) {
+    const needs = isChild ? "a child component must have" : "an island needs";
+    fail(comp, `${needs} \`<script setup lang="ts">\`, or no script at all: a \`<script>\` without \`setup\` (the Options API, \`defineComponent\`) is not translated`, blockAt(source, descriptor.script));
   }
+  if (!descriptor.template) fail(comp, "a component needs a `<template>`: a render function is not translated", sourceAt(source, 0));
   for (const st of descriptor.styles) {
-    if (st.module) fail(comp, "`<style module>` renames classes in the bundler; use a global or scoped `<style>`, or a stylesheet");
+    if (st.module) fail(comp, "`<style module>` renames classes in the bundler; use a global or scoped `<style>`, or a stylesheet", blockAt(source, st));
   }
-  if (descriptor.cssVars.length) fail(comp, "`v-bind()` in `<style>` sets variables the server does not render; bind `:style` instead");
+  const cssVar = descriptor.styles.find((st) => /\bv-bind\s*\(/.test(st.content));
+  if (descriptor.cssVars.length) fail(comp, "`v-bind()` in `<style>` sets variables the server does not render; bind `:style` instead", cssVar ? blockAt(source, cssVar) : undefined);
   for (const p of ctx.plugins) p.sfc?.(comp, descriptor, file, source);
 
-  const script = compileScript(descriptor, { id: name });
-  const ast: N[] = script.scriptSetupAst ?? [];
+  const script = descriptor.scriptSetup ? compileScript(descriptor, { id: name }) : null;
+  const ast: N[] = script?.scriptSetupAst ?? [];
   tagAst(ast, "source");
-  const plainAst: N[] = script.scriptAst ?? [];
+  const plainAst: N[] = script?.scriptAst ?? [];
   tagAst(plainAst, "source");
 
   for (const s of [...plainAst, ...ast]) {
@@ -108,6 +153,7 @@ export function readComponent(file: string, root: string): { comp: Component; as
     }
   }
 
+  if (descriptor.scriptSetup) generics(comp, source, descriptor.scriptSetup);
   const decls = declareTypes(comp, [...plainAst, ...ast], comp.structs, comp.aliases);
   for (const d of decls) comp.structs.set(d.name, structOf(comp, d.name, d.members, comp.structs));
   let propsTy: N = null;
@@ -148,7 +194,7 @@ export function readComponent(file: string, root: string): { comp: Component; as
     }
   }
 
-  const defaults = runtimeDefaults(comp, script.content);
+  const defaults = runtimeDefaults(comp, script?.content ?? "");
   for (const f of comp.props.fields) {
     if (f.ty.k !== "opt") continue;
     const node = defaults.get(f.js);
@@ -156,7 +202,7 @@ export function readComponent(file: string, root: string): { comp: Component; as
       if (node) fail(comp, `a default for \`${f.js}\`, which is \`T | null\`: Vue gives it only when \`${f.js}\` is absent, which its Rust type, an \`Option\`, cannot be; fall back in the template with \`??\``, sourceDefault(ast, f.js) ?? node);
       continue;
     }
-    if (node) f.dflt = defaultValue(comp, f, node);
+    if (node) f.dflt = defaultValue(comp, f, node, sourceDefault(ast, f.js) ?? undefined);
     else if (f.ty.of.k === "bool") f.dflt = "false";
   }
 
@@ -166,7 +212,7 @@ export function readComponent(file: string, root: string): { comp: Component; as
     ...(claim((p) => p.templateOptions?.(comp)) ?? { id: name, scoped: false, slotted: false }),
     ssr: true,
     ssrCssVars: [],
-    compilerOptions: { bindingMetadata: script.bindings, sourceMap: true },
+    compilerOptions: { ...(script ? { bindingMetadata: script.bindings } : {}), sourceMap: true },
   });
   const kids = (n: N): N[] => n.children.filter((c: N) => c.type !== 3 && !(c.type === 2 && !c.content.trim()));
   const roots = descriptor.template.ast ? kids(descriptor.template.ast) : [];
@@ -176,6 +222,7 @@ export function readComponent(file: string, root: string): { comp: Component; as
     const lone = inner.length === 1 && inner[0].type === 1 && (inner[0].tagType === 0 || inner[0].tagType === 1) && !inner[0].props.some((p: N) => p.type === 7 && ["if", "else-if", "else", "for"].includes(p.name));
     if (!lone) comp.attrsDropped = { type: "VueTemplate", loc: { start: { line: wrapper.loc.start.line, column: wrapper.loc.start.column - 1 } }, __fv: "source" };
   }
+  comp.templateAst = descriptor.template.ast;
   const start = descriptor.template.loc.start;
   comp.templateStart = { line: start.line, column: start.column };
   if (compiled.map) comp.templateMap = new SourceMapConsumer(compiled.map);

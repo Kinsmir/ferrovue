@@ -13,6 +13,7 @@ a public field per prop, and a struct for every interface or object type alias t
 | `Float` (from `ferrovue/types`) | `f64` | `f64` |
 | `boolean` | `bool` | `bool` |
 | `"sm" \| "md" \| "lg"` | `Cow<'a, str>` | as `string` |
+| `enum Tone { Calm = "calm" }`, `enum Rank { Low, High }` | `Cow<'a, str>`, `i64`: the type of its members' values | as `string`, as `number` |
 | `string[]`, `Array<string>`, `readonly string[]` | `Vec<Cow<'a, str>>` | `impl IntoIterator<Item = impl Into<Cow<'a, str>>>` |
 | `number[]`, `Row[]`, … | `Vec<i64>`, `Vec<Row<'a>>`, … | the `Vec` |
 | `interface Row { … }`, `type Row = { … }` | a struct `Row<'a>` beside `Props`, or in `types.rs` when imported from a `.ts` file | the struct |
@@ -21,6 +22,7 @@ a public field per prop, and a struct for every interface or object type alias t
 | `TrustedHtml` (from `ferrovue/types`) | the type configured as `trustedHtml` | that type. See [`escaping`](crate::guide::escaping) |
 | `x?: T`, `x: T \| undefined` | `Option<T>` | a setter, `.x(value)` |
 | `x: T \| null` | `Option<T>`, written as `null` | a setter, `.x(value)` |
+| `T`, of `<script setup generic="T extends Row">` | the type of its constraint, `Row<'a>` | as the constraint |
 
 A `number` is an integer on the server, which is what most props are: counts, ids, indexes. Declare
 a prop that may hold a fraction as `Float`. [`numbers`](crate::guide::numbers) explains how both are
@@ -345,6 +347,11 @@ a value to one another agree on its type: `UserCard.vue` and `UserList.vue` impo
 `types/models.ts` both use `super::types::User<'a>`. A type imported from another component's `.vue`
 file is that component's struct (`super::data_list::Row<'a>`), and one imported from a store's file
 is the struct in `stores.rs`.
+
+A constant imported from a `.ts` file is evaluated when the component is compiled. A list of objects
+becomes a `const` in `types.rs`, `pub const SORTS: &[SortsItem<'static>]`, whose item type is the
+interface the constant is declared with (`SORTS: Sort[]`) or one named after it; strings, numbers,
+booleans, lists of them and an object's fields are written where the template reads them.
 
 Each generated struct has the same `new` and setters as `Props`, and derives `Debug`, `Clone` and
 `serde::Serialize`. `serde::Deserialize` is derived only under `cfg(test)`, for the conformance

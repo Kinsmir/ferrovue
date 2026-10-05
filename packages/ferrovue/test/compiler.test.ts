@@ -1148,7 +1148,133 @@ const props = defineProps<{ label: string; note?: string }>();
     });
   });
 
+  describe("idioms", () => {
+    const withFile = (project: string, name: string, text: string): string => {
+      writeFileSync(join(project, "components", name), text);
+      return project;
+    };
+
+    it("compiles a component without a script, or with an empty `<script setup>`, as one without props", () => {
+      const out = compile(
+        island(
+          `<script setup lang="ts">
+import Icon from "./Icon.vue";
+import Rule from "./Rule.vue";
+defineProps<{ label: string }>();
+</script>
+<template><p><Icon class="i" />{{ label }}<Rule /></p></template>`,
+          { Icon: `<template><svg><path d="M0 0" /></svg></template>`, Rule: `<script setup lang="ts"></script>\n<template><hr /></template>` },
+        ),
+      );
+      expect(out.get("icon.rs")).toMatch(/pub struct Props \{\s*\}/);
+      expect(out.get("rule.rs")).toContain("out.push_str(\"<hr>\");");
+    });
+
+    it("says a child, not an island, needs `<script setup>`", () => {
+      const project = island(
+        `<script setup lang="ts">
+import Old from "./Old.vue";
+</script>
+<template><Old /></template>`,
+        { Old: `<script lang="ts">\nexport default { name: "Old" };\n</script>\n<template><i>old</i></template>` },
+      );
+      expect(() => compile(project)).toThrow(/^components\/Old\.vue:1:1: a child component must have `<script setup lang="ts">`, or no script at all/);
+    });
+
+    it("reads constants and enums from a `.ts` file when it compiles", () => {
+      const project = withFile(
+        island(`<script setup lang="ts">
+import { LABELS, OPTIONS, Tone } from "./consts";
+defineProps<{ tone: Tone }>();
+</script>
+<template><p :class="tone">{{ LABELS.title }}<i v-for="o in OPTIONS">{{ o.label }}{{ o.price }}</i>{{ Tone.Loud }}</p></template>`),
+        "consts.ts",
+        `export const LABELS = { title: "T" } as const;
+export const OPTIONS = [{ label: "a", price: 1 }, { label: "b", price: 1.5, sale: true }];
+export enum Tone { Calm = "calm", Loud = "loud" }
+`,
+      );
+      const out = compile(project);
+      expect(out.get("types.rs")).toContain(
+        `pub const OPTIONS: &[OptionsItem<'static>] = &[
+    OptionsItem { label: Cow::Borrowed("a"), price: 1.0f64, sale: None },
+    OptionsItem { label: Cow::Borrowed("b"), price: 1.5f64, sale: Some(true) },
+];`,
+      );
+      expect(out.get("x.rs")).toContain("for o_ref in super::types::OPTIONS.iter()");
+      expect(out.get("x.rs")).toContain('out.push_str("<!--]-->loud</p>");');
+    });
+
+    it("types a field of a constant list that holds `null` as nullable, and refuses one both `null` and absent", () => {
+      const source = `<script setup lang="ts">
+import { ROWS } from "./consts";
+</script>
+<template><p><i v-for="r in ROWS">{{ r.badge ?? "-" }}</i></p></template>`;
+      const nullable = compile(withFile(island(source), "consts.ts", `export const ROWS = [{ badge: null }, { badge: "new" }];\n`));
+      expect(nullable.get("types.rs")).toContain('RowsItem { badge: None },\n    RowsItem { badge: Some(Cow::Borrowed("new")) },');
+      expect(() => compile(withFile(island(source), "consts.ts", `export const ROWS = [{ badge: null }, {}, { badge: "x" }];\n`))).toThrow(
+        /^components\/consts\.ts:1:21: `badge` in a constant list's objects is `null` in some and absent in others/,
+      );
+    });
+
+    it("refuses a constant it cannot evaluate where it is used, naming the file it comes from", () => {
+      const project = withFile(
+        island(`<script setup lang="ts">
+import { NOW } from "./consts";
+</script>
+<template><p>{{ NOW }}</p></template>`),
+        "consts.ts",
+        `export const NOW = Date.now();\n`,
+      );
+      expect(() => compile(project)).toThrow(
+        /X\.vue:4:17: `NOW` is set up in a way the server cannot evaluate: it is imported from components\/consts\.ts, where it is not a constant the compiler evaluates: components\/consts\.ts:1:20: a constant the compiler evaluates is a literal/,
+      );
+    });
+  });
+
   const refused: [string, string, RegExp][] = [
+    [
+      "a type parameter without a constraint",
+      `<script setup lang="ts" generic="T">
+defineProps<{ value: T }>();
+</script>
+<template><i>{{ value }}</i></template>`,
+      /X\.vue:1:34: `T` in `generic` has no constraint/,
+    ],
+    [
+      "a slot read through `useSlots()` that the template does not render",
+      `<script setup lang="ts">
+import { useSlots } from "vue";
+const slots = useSlots();
+</script>
+<template><div><i v-if="slots.footer">x</i><slot /></div></template>`,
+      /`slots\.footer` names a slot this template does not render/,
+    ],
+    [
+      "an enum read whole",
+      `<script setup lang="ts">
+enum Tone { Calm = "calm" }
+</script>
+<template><i>{{ Tone }}</i></template>`,
+      /`Tone` is an object, read one field at a time: `Tone\.Calm`/,
+    ],
+    [
+      "an enum read by a key chosen at run time",
+      `<script setup lang="ts">
+enum Tone { Calm = "calm" }
+defineProps<{ k: string }>();
+</script>
+<template><i>{{ Tone[k] }}</i></template>`,
+      /`Tone` read by a key chosen at run time/,
+    ],
+    [
+      "an enum member that is not a literal",
+      `<script setup lang="ts">
+enum Size { Small = "s".length }
+</script>
+<template><i>{{ Size.Small }}</i></template>`,
+      /`Size` is set up in a way the server cannot evaluate: it is not an enum the compiler evaluates: components\/X\.vue:2:21: a constant the compiler evaluates is a literal/,
+    ],
     [
       "a value read from `$attrs`, which has no type",
       `<script setup lang="ts">
@@ -1526,9 +1652,40 @@ const props = defineProps<{ when: Date }>();
       /unsupported prop type `Date`/,
     ],
     [
-      "a component without `<script setup>`",
-      `<template><i>x</i></template>`,
-      /needs `<script setup lang="ts">`/,
+      "a component written with the Options API",
+      `<script lang="ts">
+import { defineComponent } from "vue";
+export default defineComponent({ props: { a: String } });
+</script>
+<template><i>{{ a }}</i></template>`,
+      /an island needs `<script setup lang="ts">`, or no script at all/,
+    ],
+    [
+      "a constructor called in the template",
+      `<script setup lang="ts">
+defineProps<{ at: string }>();
+</script>
+<template>
+  <p>{{ new Date(at).getFullYear() }}</p>
+</template>`,
+      /X\.vue:5:9: `new Date\(…\)` builds an object the server has no twin for/,
+    ],
+    [
+      "a component that renders without a template",
+      `<script setup lang="ts">
+import { h } from "vue";
+defineRender(() => h("i"));
+</script>`,
+      /a component needs a `<template>`/,
+    ],
+    [
+      "an object interpolated",
+      `<script setup lang="ts">
+interface User { name: string }
+defineProps<{ user: User }>();
+</script>
+<template><i>{{ user }}</i></template>`,
+      /X\.vue:5:17: `\{\{ \}\}` of an object: only strings, numbers and booleans/,
     ],
     [
       "an `inheritAttrs` that is not a literal",
@@ -1722,6 +1879,7 @@ defineProps<{ c: string | null }>();
   for (const [what, source, message] of refused) {
     it(`refuses ${what}`, () => {
       expect(() => compile(island(source, children))).toThrow(message);
+      expect(() => compile(island(source, children))).toThrow(/^components\/X\.vue:\d+:\d+: /);
     });
   }
 });

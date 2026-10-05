@@ -11,7 +11,7 @@ Everything in the configured `out` directory is replaced on each run.
 |---|---|---|
 | `mod.rs` | always | One `pub mod` per file below, and a `#[cfg(test)]` `render_json` for a project's conformance tests |
 | `<component>.rs` | one per `.vue` file | The component's types and renderers: `DataList.vue` becomes `data_list.rs` |
-| `types.rs` | a component imports types from a `.ts` file | Those types, written once so components passing them to one another agree on them |
+| `types.rs` | a component imports types, or a list of objects, from a `.ts` file | Those types, written once so components passing them to one another agree on them, and each list as a `const` |
 | `route_table.rs` | `routes` or `router` is configured | The routes and `router()`. See [`routing`](crate::guide::routing) |
 | `stores.rs` | `stores` is configured | A struct per store's state and `Stores`, all of them. See [`pinia`](crate::guide::pinia) |
 | `i18n.rs` | `i18n` is configured | Every locale's messages and `i18n(locale)`. See [`i18n`](crate::guide::i18n) |

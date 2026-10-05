@@ -19,6 +19,7 @@ pub mod branches;
 pub mod builtins;
 pub mod card;
 pub mod cart;
+pub mod catalog;
 pub mod chips;
 pub mod constants;
 pub mod counter;
@@ -27,6 +28,7 @@ pub mod data_list;
 pub mod data_table;
 pub mod defaults;
 pub mod destructured;
+pub mod divider;
 pub mod exprs;
 pub mod fall_bare;
 pub mod fall_binds;
@@ -42,6 +44,7 @@ pub mod fallthrough;
 pub mod form;
 pub mod forward;
 pub mod frame;
+pub mod glyph;
 pub mod hollow;
 pub mod keywords;
 pub mod lifecycle;
@@ -62,9 +65,12 @@ pub mod numbers;
 pub mod page;
 pub mod panel;
 pub mod parsing;
+pub mod pending;
+pub mod picker;
 pub mod plain_box;
 pub mod plain_forward;
 pub mod plurals;
+pub mod props_object;
 pub mod prose;
 pub mod quiet_leaf;
 pub mod records;
@@ -87,6 +93,7 @@ pub mod scoped_tree;
 pub mod session;
 pub mod setup;
 pub mod shown;
+pub mod slot_probe;
 pub mod strings;
 pub mod styles;
 pub mod text;
@@ -202,6 +209,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let state: stores::Stores = serde_json::from_value(fixture.stores.clone()).map_err(|e| e.to_string())?;
             cart::render(&mut out, &props, &state);
         }
+        "Catalog" => {
+            let props: catalog::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            catalog::render(&mut out, &props);
+        }
         "Chips" => {
             let props: chips::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             chips::render(&mut out, &props);
@@ -240,6 +251,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Destructured" => {
             let props: destructured::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             destructured::render(&mut out, &props);
+        }
+        "Divider" => {
+            let props: divider::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            divider::render(&mut out, &props);
         }
         "Exprs" => {
             let props: exprs::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -311,6 +326,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let s_head = |out: &mut String| out.push_str(fixture.slot("head").unwrap_or_default());
             let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
             frame::render(&mut out, &props, frame::Slots { head: fixture.slot("head").map(|_| ferrovue::Slot::new(&s_head)), default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)) });
+        }
+        "Glyph" => {
+            let props: glyph::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            glyph::render(&mut out, &props);
         }
         "Hollow" => {
             let props: hollow::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -409,6 +428,14 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: parsing::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             parsing::render(&mut out, &props);
         }
+        "Pending" => {
+            let props: pending::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            pending::render(&mut out, &props);
+        }
+        "Picker" => {
+            let props: picker::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            picker::render(&mut out, &props);
+        }
         "PlainBox" => {
             let props: plain_box::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -426,6 +453,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let i18n = i18n::i18n(fixture.locale.as_deref().unwrap_or(i18n::LOCALE));
             plurals::render(&mut out, &props, &i18n);
+        }
+        "PropsObject" => {
+            let props: props_object::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            props_object::render(&mut out, &props);
         }
         "Prose" => {
             let props: prose::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -540,6 +571,14 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Shown" => {
             let props: shown::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             shown::render(&mut out, &props);
+        }
+        "SlotProbe" => {
+            let props: slot_probe::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let s_header = |out: &mut String| out.push_str(fixture.slot("header").unwrap_or_default());
+            let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
+            let s_footer = |out: &mut String| out.push_str(fixture.slot("footer").unwrap_or_default());
+            slot_probe::render(&mut out, &props, slot_probe::Slots { header: fixture.slot("header").map(|_| ferrovue::Slot::new(&s_header)), default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)), footer: fixture.slot("footer").map(|_| ferrovue::Slot::new(&s_footer)) });
         }
         "Strings" => {
             let props: strings::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

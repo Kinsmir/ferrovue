@@ -102,6 +102,11 @@ A fixture is a JSON object of props plus three optional keys:
 | `Records` | `Record<string, T>` and `{ [key: string]: T }` in JavaScript's order of keys (array indices first, a key given twice), `Object.keys` / `values` / `entries`, a record handed to a child |
 | `Nullable`, `NullChild`, `Session` | `T \| null` props, interface fields, list items, slot props and Pinia state: `null` written and narrowed (`!== null`, `=== null`, `!= null`, `== null`, truthiness), `??`, `?.` over a nullable object and field, interpolations and attributes of `null`, `null` as a `?:` branch and a child's prop, `ref<T \| null>(null)` in setup |
 | `Parsing` | `Number`, `parseInt` (no radix, 10, 16) and `parseFloat` of strings, `JSON.stringify` of numbers, `NaN` and `Infinity` |
+| `PropsObject`, `Glyph`, `Divider` | The props object read in the template (`props.label`, with `withDefaults`); a child with no script and one with an empty `<script setup>`, which take no props, one given a class to fall through |
+| `Pending` | Refs that start empty, typed by their type argument: `ref<Row[]>([])`, `ref<User[]>([])`, `ref<string[]>([])`, `ref<Row \| undefined>()`, `ref<string>()`, `ref<number \| undefined>(undefined)` |
+| `Picker` | A generic component (`generic="T extends Choice, K extends string"`), rendered with each type parameter as its constraint |
+| `Catalog` | Constants imported from `types/catalog.ts`, evaluated at build time: an object read by field and nested field, a list of strings, a list of numbers, lists of objects (one typed by an interface) in `types.rs`; enums imported and declared in the component, string and numeric, as a prop's type and read by member and by number |
+| `SlotProbe` | `useSlots()`: a slot's presence tested in the template and in a `computed` |
 
 Every component has at least one **hostile** fixture: markup-breaking characters in every prop that
 reaches the page.
