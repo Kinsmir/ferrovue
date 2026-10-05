@@ -62,6 +62,12 @@ released together and share version numbers.
   write exactly ferrovue's markup inside it, with no hydration marker; `ferrovue::dioxus::state_script`
   is `state_script_into` as an element. A guide page (`guide::dioxus`), and `examples/dioxus`.
 
+### Changed
+
+- The release workflow prints the command that approves the staged npm package, with its id when
+  npm reports one, as a notice at the top of the run and in the summaries of the npm and GitHub
+  release jobs, so a finished run says plainly that one step is left.
+
 ### Fixed
 
 - An attribute bound to a value that may be neither a string, a number nor a boolean is refused,
