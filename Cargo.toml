@@ -1,6 +1,4 @@
 [workspace]
-# Listed one by one, never by wildcard: a new crate or example is added here on purpose, and
-# `node scripts/release.ts check` fails on one that is missing.
 members = [
     "crates/ferrovue-core",
     "crates/ferrovue-router",

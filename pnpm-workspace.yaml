@@ -1,4 +1,3 @@
-# Listed one by one, never by wildcard (`node scripts/release.ts check` fails on one that is missing).
 packages:
   - packages/ferrovue
   - examples/fullstack
