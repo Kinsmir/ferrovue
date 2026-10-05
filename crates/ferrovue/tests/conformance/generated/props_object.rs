@@ -82,7 +82,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push_str(") ");
     fv::escape_into(out, &s_loud);
     out.push_str("</h3>");
-    super::divider::render(out, &super::divider::Props {  });
+    super::divider::render_scoped(out, &super::divider::Props {  }, &fv::Attrs::NONE);
     if props.tags.as_deref().unwrap_or(&[]).len() as i64 != 0 {
         out.push_str("<ul><!--[-->");
         for t_ref in props.tags.as_deref().unwrap_or(&[]).iter() {

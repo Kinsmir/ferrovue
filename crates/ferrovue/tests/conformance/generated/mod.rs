@@ -12,6 +12,7 @@
 pub mod account_nav;
 pub mod app;
 pub mod arrays;
+pub mod async_class;
 pub mod attrs;
 pub mod badge;
 pub mod blank;
@@ -236,6 +237,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Arrays" => {
             let props: arrays::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             arrays::render(&mut out, &props);
+        }
+        "AsyncClass" => {
+            let props: async_class::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            async_class::render(&mut out, &props);
         }
         "Attrs" => {
             let props: attrs::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
