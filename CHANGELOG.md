@@ -37,6 +37,11 @@ released together and share version numbers.
   `T | null` is. A constant that is not a literal is refused where it is read.
 - `useSlots()`: `slots.header` tests a slot's presence, in the template or in `computed`, as
   `$slots.header` does.
+- A `builders` key in `ferrovue.config.json`: with `false`, props structs, shared types and store
+  state are written without the `impl` holding `new()` and the chainable setters, for an app that
+  builds its props as struct literals. The fields stay public and the derives, `Default` included,
+  are unchanged. `true`, today's output, is the default; a value that is not a boolean is a config
+  error (#35).
 
 ### Changed
 

@@ -52,6 +52,9 @@ export interface Config {
   scopeId?: ScopeIdMode;
   /** Vite's root, from which a scope id hashes a component's path: the project root by default. */
   viteRoot?: string;
+  /** Whether each props struct and shared type gets `new()` and a chainable setter per optional
+   * field: `true` by default. With `false`, props are built as struct literals. */
+  builders?: boolean;
 }
 
 export type ScopeIdMode = "filepath" | "filepath-source";
@@ -82,6 +85,9 @@ export function loadConfig(root: string, configPath?: string): Config {
   }
   if (raw.scopeId !== undefined && raw.scopeId !== "filepath" && raw.scopeId !== "filepath-source") {
     throw new GenError(`\`scopeId\` in ${displayName} is "filepath" or "filepath-source", as \`@vitejs/plugin-vue\` computes it`);
+  }
+  if (raw.builders !== undefined && typeof raw.builders !== "boolean") {
+    throw new GenError(`\`builders\` in ${displayName} is \`true\` or \`false\`: whether each props struct gets \`new()\` and a setter per optional field`);
   }
   return raw as Config;
 }
@@ -114,6 +120,7 @@ export const ctx = {
   helpers: {} as Record<string, { rust: string; params: Ty[]; ret: Ty; maxLen: number }>,
   helperModule: null as string | null,
   trustedHtml: null as string | null,
+  builders: true,
   clientDirectives: new Set<string>(),
   plugins: [] as readonly Plugin[],
   runs: new Map<Plugin, unknown>(),

@@ -248,6 +248,13 @@ let literal = data_list::Props {
 assert!(literal.note.is_none());
 ```
 
+An app that builds every struct as a literal can leave the builders out with `"builders": false` in
+`ferrovue.config.json`: the `impl` with `new` and the setters is then not written for any props
+struct, shared type or store state, code that rustc would otherwise compile whether it is called or
+not. The structs keep their public fields and their derives, `Default` included, so a struct with no
+required field still takes `..Default::default()`. The key applies to the whole project: a shared
+type belongs to no component, and a `.vue` file has no place Vue reads that could mark it.
+
 # Dictionaries
 
 A `Record<string, T>` prop, or one declared `{ [key: string]: T }`, is a [`Record`](crate::Record):
@@ -353,6 +360,6 @@ becomes a `const` in `types.rs`, `pub const SORTS: &[SortsItem<'static>]`, whose
 interface the constant is declared with (`SORTS: Sort[]`) or one named after it; strings, numbers,
 booleans, lists of them and an object's fields are written where the template reads them.
 
-Each generated struct has the same `new` and setters as `Props`, and derives `Debug`, `Clone` and
+Each generated struct has the same `new` and setters as `Props` (none with `"builders": false`), and derives `Debug`, `Clone` and
 `serde::Serialize`. `serde::Deserialize` is derived only under `cfg(test)`, for the conformance
 helper: props go out to the client as JSON and never come back in.

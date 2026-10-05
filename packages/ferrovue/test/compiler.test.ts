@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -107,6 +107,75 @@ defineProps<{ label: string; note?: string }>();
 <template><p>{{ label }}{{ note }}</p></template>`),
     ).get("x.rs")!;
     expect(required).toContain("#[derive(Debug, Clone, serde::Serialize)]\n#[cfg_attr(test, derive(serde::Deserialize))]\npub struct Props<'a> {");
+  });
+
+  describe("builders", () => {
+    const withShared = () => {
+      const root = island(`<script setup lang="ts">
+import type { Row } from "../types/rows";
+defineProps<{ label: string; rows: Row[]; note?: string }>();
+</script>
+<template><p>{{ label }}{{ note }}<i v-for="r in rows" :key="r.id">{{ r.id }}</i></p></template>`);
+      mkdirSync(join(root, "types"));
+      writeFileSync(join(root, "types", "rows.ts"), "export interface Row { id: number; hint?: string }\n");
+      return root;
+    };
+    const fields = "    #[serde(rename = \"note\", default, skip_serializing_if = \"Option::is_none\")]\n    pub note: Option<Cow<'a, str>>,\n}\n";
+
+    it("gives every props struct and shared type `new` and a setter per optional field by default", () => {
+      const out = compile(withShared());
+      expect(out.get("x.rs")).toContain(`${fields}\nimpl<'a> Props<'a> {\n    /// Props with its required fields, every optional one absent.\n    pub fn new(`);
+      expect(out.get("x.rs")).toContain("pub fn note(mut self, note: impl Into<Cow<'a, str>>) -> Self {");
+      expect(out.get("types.rs")).toContain("impl<'a> Row<'a> {\n    /// Row with its required fields, every optional one absent.\n    pub fn new(id: i64) -> Self {");
+      expect(generate(withShared(), { ...CONFIG, builders: true })).toEqual(out);
+    });
+
+    it("leaves out every `impl` with `new` and the setters with `\"builders\": false`, keeping the fields and derives", () => {
+      const root = withShared();
+      const on = compile(root);
+      const off = generate(root, { ...CONFIG, builders: false });
+      for (const [name, text] of off) {
+        expect(text, name).not.toMatch(/^impl/m);
+        expect(text, name).not.toContain("pub fn new(");
+      }
+      expect(off.get("x.rs")).toContain(`#[derive(Debug, Clone, serde::Serialize)]\n#[cfg_attr(test, derive(serde::Deserialize))]\npub struct Props<'a> {`);
+      expect(off.get("x.rs")).toContain(`${fields}\n/// Write the component's server render into \`out\`.`);
+      expect(off.get("types.rs")).toContain("    pub hint: Option<Cow<'a, str>>,\n}\n");
+      const render = (text: string) => text.slice(text.indexOf("/// Write the component's server render"));
+      expect(render(off.get("x.rs")!)).toBe(render(on.get("x.rs")!));
+      expect(off.get("mod.rs")).toContain("// `into_` forms and `NAME`) and an app calls only what it needs.");
+    });
+
+    it("keeps `Default` on a struct with no required field with `\"builders\": false`", () => {
+      const out = generate(
+        island(`<script setup lang="ts">
+defineProps<{ note?: string }>();
+</script>
+<template><p>{{ note }}</p></template>`),
+        { ...CONFIG, builders: false },
+      ).get("x.rs")!;
+      expect(out).toContain("#[derive(Debug, Clone, Default, serde::Serialize)]\n#[cfg_attr(test, derive(serde::Deserialize))]\npub struct Props<'a> {");
+      expect(out).not.toContain("impl");
+    });
+
+    it("refuses a `builders` that is not a boolean", () => {
+      const root = island(`<template><p /></template>`);
+      for (const builders of ["false", 0, null]) {
+        writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify({ ...CONFIG, builders }));
+        expect(() => loadConfig(root)).toThrow(/`builders` in ferrovue\.config\.json is `true` or `false`/);
+      }
+      writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify({ ...CONFIG, builders: false }));
+      expect(loadConfig(root).builders).toBe(false);
+    });
+
+    it("is what the Rust test of struct literals compiles", () => {
+      const root = join(import.meta.dirname, "../../../crates/ferrovue/tests/literal_props");
+      const config = loadConfig(root);
+      expect(config.builders).toBe(false);
+      const out = generate(root, config);
+      expect([...out.keys()].toSorted()).toEqual(readdirSync(join(root, config.out)).toSorted());
+      for (const [name, text] of out) expect(readFileSync(join(root, config.out, name), "utf8"), name).toBe(text);
+    });
   });
 
   describe("strings, computed lists and dictionaries", () => {

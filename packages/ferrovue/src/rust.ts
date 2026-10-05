@@ -135,9 +135,7 @@ export function structSource(st: Struct, comp: Component, doc: string): string {
 pub struct ${st.name}${life} {
 ${fields}
 }
-
-${builderSource(st, comp, life)}
-`;
+${ctx.builders ? `\n${builderSource(st, comp, life)}\n` : ""}`;
 }
 
 export function header(source: string, edit = "the `.vue` file"): string {
@@ -375,8 +373,7 @@ ${defaults.map((d) => `${d}\n\n`).join("")}    fn slot(&self, name: &str) -> Opt
 
 // The modules pass rustc's default warnings and clippy's default lints, with one exception:
 // \`dead_code\`. Every component gets the whole of its API (\`render\`, \`html\`, \`island\`, their
-// \`into_\` forms, \`NAME\`, a constructor and a setter per optional prop) and an app calls only what
-// it needs.
+${ctx.builders ? "// `into_` forms, `NAME`, a constructor and a setter per optional prop) and an app calls only what\n// it needs." : "// `into_` forms and `NAME`) and an app calls only what it needs."}
 #![allow(dead_code)]
 
 ${comps.map((c) => `pub mod ${c.module};`).join("\n")}${modules.map((m) => `\npub mod ${m.replace(/\.rs$/, "")};`).join("")}
