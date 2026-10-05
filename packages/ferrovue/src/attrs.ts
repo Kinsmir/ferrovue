@@ -1,22 +1,25 @@
-/* Attributes as Vue's server renderer writes them: `class`, `style`, booleans, merged objects. */
+/* Attributes as Vue's server renderer writes them: values, booleans, merged objects and what a parent
+ * passes on, with `class` (`classes.ts`) and `style` (`styles.ts`) beside it. */
 
-import { escapeHtml, hyphenate, isBooleanAttr, isSSRSafeAttrName, parseStringStyle, propsToAttrMap } from "@vue/shared";
-import { type N, type Scope, type Ty, type Val, fail, GenError, rustStr, STR } from "./model.ts";
+import { escapeHtml, hyphenate, isBooleanAttr, isSSRSafeAttrName, propsToAttrMap } from "@vue/shared";
+import { type N, type Scope, type Ty, type Val, fail, GenError, rustStr } from "./model.ts";
 import { CONFIG_FILE, ctx } from "./context.ts";
 import { describeTy, expr } from "./expr.ts";
-import { cond, known, truthy } from "./narrowing.ts";
-import { meet, unquote } from "./strings.ts";
-import { atom, bare, condition, logical, not, receiver, strArg } from "./parens.ts";
+import { known, truthy } from "./narrowing.ts";
+import { unquote } from "./strings.ts";
+import { atom, bare, condition, receiver, strArg } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
 import { isDollarAttrs } from "./fallthrough.ts";
 import { claim } from "./plugin.ts";
+import { classAttr, classPresent, literalClass, maybeEqual, renderClass } from "./classes.ts";
+import { mergedStyle, renderStyle, styleAttr } from "./styles.ts";
 
 /** What a number written at run time is expected to take: most a page shows are shorter, and the
  * reservation is an estimate. */
 const NUMBER_BYTES = 6;
 
 /** A string, a number or a boolean written escaped: now when it is known, by JavaScript itself. */
-function display(e: Emitter, v: Val): boolean {
+export function display(e: Emitter, v: Val): boolean {
   if (v.ty.k === "str" && known(v) !== undefined) e.lit(escapeHtml(unquote(v.code)));
   else if ((v.ty.k === "int" || v.ty.k === "float") && v.num !== undefined) e.lit(String(v.num));
   else if (v.ty.k === "bool" && v.konst !== undefined) e.lit(String(v.konst));
@@ -128,113 +131,6 @@ export function renderDynamicAttr(s: Scope, e: Emitter, key: string, v: Val, n: 
   e.lit(` ${name}="`);
   attrValue(e, v);
   e.lit(`"`);
-}
-
-/** One item of a class list once it is flattened: literal text, known now, or a Rust `&str`
- * expression evaluated at run time — empty when the item contributes nothing. */
-export type ClassItem = { lit: string } | { code: string };
-
-/** `normalizeClass`'s view of a class binding, flattened: a string, an array of items, an object
- * of `name: condition`, `cond && "name"`, `cond ? "a" : null`. Every item is trimmed and the empty
- * ones dropped before they are joined with one space, which is what `class_into` does too, so an
- * object's keys become items of their own. */
-export function classItems(s: Scope, n: N): ClassItem[] {
-  switch (n.type) {
-    case "StringLiteral": {
-      const t = n.value.trim();
-      return t ? [{ lit: t }] : [];
-    }
-    case "ArrayExpression":
-      return n.elements.flatMap((el: N) => (el ? classItems(s, el) : []));
-    case "ObjectExpression":
-      // A computed name may hold spaces, which Vue keeps between the names it joins: such an object
-      // is normalised whole, at run time, as Vue normalises it.
-      // Normalised whole, at run time, as a JavaScript object: when a name is computed (and may hold
-      // spaces, repeat another, or be an array index), or a literal name repeats or is an index —
-      // which a JavaScript object lists first, in numeric order.
-      const literalNames = n.properties
-        .filter((p: N) => p.type === "ObjectProperty" && !p.computed)
-        .map((p: N) => (p.key.type === "Identifier" ? p.key.name : String(p.key.value)));
-      const arrayIndex = (k: string) => /^(0|[1-9]\d*)$/.test(k) && Number(k) < 2 ** 32 - 1;
-      if (
-        n.properties.some((p: N) => p.type === "ObjectProperty" && p.computed) ||
-        literalNames.some(arrayIndex) ||
-        new Set(literalNames).size !== literalNames.length
-      ) {
-        const keys: Val[] = [];
-        const entries = n.properties.map((p: N) => {
-          if (p.type !== "ObjectProperty") fail(s.comp, "a class object holds `name: condition` pairs", p);
-          const key: Val = p.computed ? expr(s, p.key) : { code: rustStr(p.key.type === "Identifier" ? p.key.name : String(p.key.value)), ty: STR };
-          if (key.ty.k !== "str") fail(s.comp, "a computed class name is a string", p.key);
-          // Names are told apart, which two halves of surrogate pairs would not be.
-          for (const other of keys) meet(s.comp, other, key, "a class object's names", p.key, "equal");
-          keys.push(key);
-          return `(${bare(cond(s, p.value))}, ${bare(key.code)})`;
-        });
-        return [{ code: `&*fv::class_object(&[${entries.join(", ")}])` }];
-      }
-      return n.properties.flatMap((p: N): ClassItem[] => {
-        if (p.type !== "ObjectProperty") fail(s.comp, "a class object holds `name: condition` pairs", p);
-        // A literal name is written as it is: an object's names are joined, not trimmed one by one.
-        let name: ClassItem;
-        if (!p.computed) {
-          const key: string = p.key.type === "Identifier" ? p.key.name : String(p.key.value);
-          if (key !== key.trim() || !key) fail(s.comp, `class name \`${key}\` has spaces around it`, p);
-          name = { lit: key };
-        } else {
-          const k = expr(s, p.key);
-          if (k.ty.k !== "str") fail(s.comp, "a computed class name is a string", p.key);
-          name = { code: `fv::js_trim(${strArg(k.code)})` };
-        }
-        const v = expr(s, p.value);
-        const on = known(v);
-        if (on !== undefined) return on ? [name] : [];
-        const text = "lit" in name ? rustStr(name.lit) : name.code;
-        return [{ code: `if ${condition(truthy(v))} { ${bare(text)} } else { "" }` }];
-      });
-    case "LogicalExpression":
-      if (n.operator === "&&") {
-        return conditional(cond(s, n.left), classItems(s, n.right));
-      }
-      break;
-    case "ConditionalExpression":
-      if (n.consequent.type === "NullLiteral" || n.alternate.type === "NullLiteral") {
-        const branch = n.consequent.type === "NullLiteral" ? n.alternate : n.consequent;
-        const test = cond(s, n.test);
-        return conditional(n.consequent.type === "NullLiteral" ? not(test) : test, classItems(s, branch));
-      }
-      break;
-  }
-  const v = expr(s, n);
-  if (v.ty.k === "str") return [{ code: v.code }];
-  if (v.ty.k === "opt" && v.ty.of.k === "str") return [{ code: `${atom(v.code)}.unwrap_or("")` }];
-  if (v.ty.k === "undef") return [];
-  return fail(s.comp, "a class is a string, an array, or an object of conditions", n);
-}
-
-/** Class items that apply only when \`test\` holds: each one, or nothing, decided now if it can be. */
-function conditional(test: string, items: ClassItem[]): ClassItem[] {
-  if (test === "true" || test === "false") return test === "true" ? items : [];
-  return items.map((it) => ({ code: `if ${condition(test)} { ${"lit" in it ? rustStr(it.lit) : bare(it.code)} } else { "" }` }));
-}
-
-/** `ssrRenderClass(value)`: normalised, then escaped. `after` says a class was already written. */
-export function renderClass(s: Scope, e: Emitter, n: N, after = false): void {
-  const items = classItems(s, n);
-  // Literal items before the first run-time one are written now; the rest go to `class_into`,
-  // which decides at run time whether each needs a separator.
-  let wrote = after;
-  let i = 0;
-  for (; i < items.length; i++) {
-    const it = items[i]!;
-    if (!("lit" in it)) break;
-    e.lit((wrote ? " " : "") + escapeHtml(it.lit));
-    wrote = true;
-  }
-  if (i < items.length) {
-    const rest = items.slice(i).map((it) => ("lit" in it ? rustStr(it.lit) : it.code));
-    e.stmt(`fv::class_into(out, ${wrote}, &[${rest.join(", ")}]);`);
-  }
 }
 
 export const IGNORED_PROPS = new Set(["", "key", "ref", "innerHTML", "textContent", "ref_key", "ref_for"]);
@@ -379,66 +275,6 @@ function objectAttrs(s: Scope, e: Emitter, n: N, merged: boolean): void {
   }
 }
 
-/** When `mergeProps` gives an element a `class` at all: unless every value it merges is
- * `undefined`, which `ret.class !== undefined` leaves out. */
-function classPresent(s: Scope, n: N): string {
-  if (n.fvMerged) return n.elements.reduce((acc: string, el: N) => logical(acc, "||", classPresent(s, el)), "false");
-  switch (n.type) {
-    case "StringLiteral":
-    case "NullLiteral":
-    case "ArrayExpression":
-    case "ObjectExpression":
-      return "true";
-    case "LogicalExpression":
-      if (n.operator === "&&") return logical(not(cond(s, n.left)), "||", classPresent(s, n.right));
-      break;
-    case "ConditionalExpression":
-      if (n.consequent.type === "NullLiteral") return logical(cond(s, n.test), "||", classPresent(s, n.alternate));
-      if (n.alternate.type === "NullLiteral") return logical(not(cond(s, n.test)), "||", classPresent(s, n.consequent));
-      break;
-  }
-  const v = expr(s, n);
-  if (v.ty.k === "undef") return "false";
-  if (v.ty.k === "opt") return `${atom(v.code)}.is_some()`;
-  return "true";
-}
-
-/** A style `mergeProps` merged: normalised, so that text is parsed into properties — by Vue's own
- * parser now when it is literal, by `fv::style_text_into` at run time when it is not. */
-function mergedStyle(s: Scope, e: Emitter, n: N): void {
-  if (n.type === "StringLiteral") {
-    renderStyle(s, e, { type: "ArrayExpression", elements: [n] });
-    return;
-  }
-  if (n.fvMerged || ["ObjectExpression", "ArrayExpression", "ConditionalExpression", "LogicalExpression", "NullLiteral"].includes(n.type)) {
-    renderStyle(s, e, n);
-    return;
-  }
-  const v = expr(s, n);
-  if (v.ty.k === "str") e.stmt(`fv::style_text_into(out, ${strArg(v.code)});`);
-  else if (v.ty.k === "opt" && v.ty.of.k === "str") {
-    e.open(`if let Some(v) = ${v.code}`);
-    e.stmt("fv::style_text_into(out, v);");
-    e.close();
-  } else if (v.ty.k !== "undef") fail(s.comp, "a style binding is a string, an object or an array", n);
-}
-
-/** Whether a class value could equal, as a string, the class merged before it: a string. */
-function maybeEqual(s: Scope, n: N): boolean {
-  if (n.type === "StringLiteral") return true;
-  if (n.fvMerged || ["ArrayExpression", "ObjectExpression", "NullLiteral", "LogicalExpression", "ConditionalExpression"].includes(n.type)) return false;
-  const v = expr(s, n);
-  return v.ty.k === "str" || (v.ty.k === "opt" && v.ty.of.k === "str");
-}
-
-/** A class value's names, known now: a literal, or literals merged. */
-function literalClass(n: N): string | null {
-  if (n.type === "StringLiteral") return n.value.trim();
-  if (!n.fvMerged) return null;
-  const parts = n.elements.map(literalClass);
-  return parts.includes(null) ? null : parts.filter(Boolean).join(" ");
-}
-
 /** `mergeProps(a, _attrs, b, …)` as one object literal, without `_attrs` and `$attrs`, which hold
  * what only the run time knows. Of the rest, `class` and `style` values are merged as an array —
  * unless a class equals the one so far, which Vue then keeps once — and any other key keeps the
@@ -495,7 +331,7 @@ export function attrOf(s: Scope, key: string, n: N, side: "vnode" | "own"): stri
 }
 
 /** A string, a number, a boolean or `undefined` as an `fv::Attr`. */
-function valueAttr(s: Scope, v: Val, n: N): string {
+export function valueAttr(s: Scope, v: Val, n: N): string {
   switch (v.ty.k) {
     case "str":
       return `fv::Attr::str(${strArg(v.code)})`;
@@ -514,197 +350,4 @@ function valueAttr(s: Scope, v: Val, n: N): string {
     }
   }
   return fail(s.comp, "an attribute that may fall through is a string, a number or a boolean", n);
-}
-
-/** A class as an `fv::Attr`: a string as it is, an array or an object by the names it normalises
- * to, `cond && x` and `cond ? x : y` decided at run time. */
-function classAttr(s: Scope, n: N, side: "vnode" | "own"): string {
-  switch (n.type) {
-    case "StringLiteral":
-      return `fv::Attr::str(${rustStr(n.value)})`;
-    // `null`, like `false`, joins as nothing and equals no class: an empty string does the same.
-    case "NullLiteral":
-      return 'fv::Attr::str("")';
-    case "ArrayExpression":
-    case "ObjectExpression": {
-      const items = classItems(s, n);
-      const names = items.every((it) => "lit" in it)
-        ? rustStr(items.map((it) => ("lit" in it ? it.lit : "")).join(" "))
-        : `fv::class_names(&[${items.map((it) => ("lit" in it ? rustStr(it.lit) : it.code)).join(", ")}])`;
-      const literal = names.startsWith('"');
-      if (side === "vnode") return literal ? `fv::Attr::str(${names})` : `fv::Attr::from(${names})`;
-      return `fv::Attr::Names(${literal ? `std::borrow::Cow::Borrowed(${names})` : `${names}.into()`})`;
-    }
-    case "LogicalExpression":
-      if (n.operator === "&&") return `if ${condition(cond(s, n.left))} { ${classAttr(s, n.right, side)} } else { fv::Attr::str("") }`;
-      break;
-    case "ConditionalExpression":
-      return `if ${condition(cond(s, n.test))} { ${classAttr(s, n.consequent, side)} } else { ${classAttr(s, n.alternate, side)} }`;
-  }
-  const v = expr(s, n);
-  if (v.ty.k === "str" || v.ty.k === "undef" || (v.ty.k === "opt" && v.ty.of.k === "str")) return valueAttr(s, v, n);
-  return fail(s.comp, "a class is a string, an array, or an object of conditions", n);
-}
-
-/** A style as an `fv::Attr`: text as it is, objects by their properties, arrays merged, `cond && x`
- * and `cond ? x : y` decided at run time. */
-function styleAttr(s: Scope, n: N): string {
-  switch (n.type) {
-    case "StringLiteral":
-      return `fv::Attr::str(${rustStr(n.value)})`;
-    case "NullLiteral":
-      return "fv::Attr::Undefined";
-    case "ObjectExpression": {
-      const entries = n.properties.map((p: N) => {
-        if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "a style object holds plain `property: value` pairs", p);
-        const key: string = p.key.type === "Identifier" ? p.key.name : String(p.key.value);
-        if (/^\d+$/.test(key) || key.startsWith(":")) fail(s.comp, `style property \`${key}\``, p);
-        return `(${rustStr(key)}, ${valueAttr(s, expr(s, p.value), p.value)})`;
-      });
-      return `fv::Attr::style([${entries.join(", ")}])`;
-    }
-    case "ArrayExpression":
-      return `fv::Attr::styles([${n.elements.map((el: N) => (el ? styleAttr(s, el) : "fv::Attr::Undefined")).join(", ")}])`;
-    case "LogicalExpression":
-      if (n.operator === "&&") return `if ${condition(cond(s, n.left))} { ${styleAttr(s, n.right)} } else { fv::Attr::Undefined }`;
-      break;
-    case "ConditionalExpression":
-      return `if ${condition(cond(s, n.test))} { ${styleAttr(s, n.consequent)} } else { ${styleAttr(s, n.alternate)} }`;
-  }
-  const v = expr(s, n);
-  if (v.ty.k === "str" || v.ty.k === "undef" || (v.ty.k === "opt" && v.ty.of.k === "str")) return valueAttr(s, v, n);
-  return fail(s.comp, "a style binding is a string, an object or an array", n);
-}
-
-/** One object of a style binding, and the run-time condition under which it is part of it. */
-export interface StyleItem {
-  cond: string | null;
-  entries: { key: string; css: string; value: N }[];
-}
-
-/** The objects a style binding merges, in order: an object literal, a static `style` the compiler
- * parsed, `v-show`'s `cond ? null : { display: "none" }`, and arrays of those. */
-export function styleItems(s: Scope, n: N, when: string | null): StyleItem[] {
-  // A condition known now: an object that never applies is left out, one that always does is not
-  // conditional.
-  if (when === "false") return [];
-  if (when === "true") when = null;
-  const both = (a: string | null, b: string) => (a === null ? b : logical(a, "&&", b));
-  switch (n.type) {
-    case "NullLiteral":
-      return [];
-    case "ArrayExpression":
-      return n.elements.flatMap((el: N) => (el ? styleItems(s, el, when) : []));
-    case "StringLiteral":
-      // Parsed as `normalizeStyle` parses a string inside an array, by Vue's own function.
-      return [{ cond: when, entries: Object.entries(parseStringStyle(n.value)).map(([key, v]) => ({ key, css: key, value: { type: "StringLiteral", value: v } })) }];
-    case "ConditionalExpression": {
-      const t = cond(s, n.test);
-      return [...styleItems(s, n.consequent, both(when, t)), ...styleItems(s, n.alternate, both(when, not(t)))];
-    }
-    case "LogicalExpression":
-      if (n.operator === "&&") return styleItems(s, n.right, both(when, cond(s, n.left)));
-      break;
-    case "ObjectExpression":
-      return [{
-        cond: when,
-        entries: n.properties.map((p: N) => {
-          if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "a style object holds plain `property: value` pairs", p);
-          const key: string = p.key.type === "Identifier" ? p.key.name : String(p.key.value);
-          // An integer-like key comes first in a JavaScript object whatever the order written.
-          if (/^\d+$/.test(key) || key.startsWith(":")) fail(s.comp, `style property \`${key}\``, p);
-          return { key, css: key.startsWith("--") ? key : hyphenate(key), value: p.value };
-        }),
-      }];
-  }
-  return fail(s.comp, "a style binding is an object, an array of objects, or a string on its own", n);
-}
-
-/** `ssrRenderStyle(value)`: a string as it is, or the objects merged — each property where it first
- * appears, with the last value given — and written `name:value;`, all escaped. */
-export function renderStyle(s: Scope, e: Emitter, n: N): void {
-  // A string on its own is written as it is, with no normalising.
-  if (n.type === "StringLiteral") {
-    e.lit(escapeHtml(n.value));
-    return;
-  }
-  if (n.type !== "ObjectExpression" && n.type !== "ArrayExpression" && n.type !== "ConditionalExpression" && n.type !== "LogicalExpression" && n.type !== "NullLiteral") {
-    const v = expr(s, n);
-    if (v.ty.k === "str") e.stmt(`fv::escape_into(out, ${strArg(v.code)});`);
-    else if (v.ty.k === "opt" && v.ty.of.k === "str") {
-      e.open(`if let Some(v) = ${v.code}`);
-      e.stmt("fv::escape_into(out, v);");
-      e.close();
-    } else if (v.ty.k !== "undef") fail(s.comp, "a style binding is a string, an object or an array", n);
-    return;
-  }
-  const items = styleItems(s, n, null);
-  // Each property, where it first appears, with every place that sets it.
-  const order: string[] = [];
-  const sets = new Map<string, { cond: string | null; css: string; value: N }[]>();
-  for (const it of items) {
-    for (const en of it.entries) {
-      if (!sets.has(en.key)) {
-        order.push(en.key);
-        sets.set(en.key, []);
-      }
-      sets.get(en.key)!.push({ cond: it.cond, css: en.css, value: en.value });
-    }
-  }
-  const write = (css: string, value: N): void => {
-    // A literal is stringified now, by JavaScript itself: `0.5`, `"1px"`.
-    if (value.type === "StringLiteral" || value.type === "NumericLiteral") {
-      e.lit(escapeHtml(`${css}:${String(value.value)};`));
-      return;
-    }
-    const v = expr(s, value);
-    const one = (w: Val): void => {
-      if (w.ty.k === "str" || w.ty.k === "int" || w.ty.k === "float") {
-        e.lit(`${escapeHtml(css)}:`);
-        display(e, w);
-        e.lit(";");
-      } else if (w.ty.k === "opt") {
-        e.open(`if let Some(v) = ${w.code}`);
-        one({ code: "v", ty: w.ty.of });
-        e.close();
-      }
-      // A boolean or `undefined` writes nothing — and, set later, removes what was set before.
-    };
-    one(v);
-  };
-  // A property's place is where an object that is present first sets it. When that object is
-  // conditional and the property is set again after another one first appears, the order would be
-  // decided at run time.
-  const flat = items.flatMap((it, i) => it.entries.map((en) => ({ key: en.key, item: i, cond: it.cond })));
-  for (const key of order) {
-    const at = flat.filter((f) => f.key === key);
-    if (at.length < 2 || at[0]!.cond === null) continue;
-    const first = flat.indexOf(at[0]!);
-    const again = flat.indexOf(at[at.length - 1]!);
-    const between = flat.slice(first + 1, again).some((f) => order.indexOf(f.key) > order.indexOf(key));
-    if (between) fail(s.comp, `the place of style property \`${key}\` would depend on a condition; set it unconditionally first`, n);
-  }
-  for (const key of order) {
-    // The last place that sets it wins: walked back to the first that always applies.
-    const chain: { cond: string | null; css: string; value: N }[] = [];
-    for (const set of sets.get(key)!.toReversed()) {
-      chain.push(set);
-      if (set.cond === null) break;
-    }
-    if (chain.length === 1 && chain[0]!.cond === null) {
-      write(chain[0]!.css, chain[0]!.value);
-      continue;
-    }
-    chain.forEach((set, i) => {
-      if (set.cond === null) {
-        e.close(" else {");
-      } else if (i === 0) {
-        e.open(`if ${condition(set.cond)}`);
-      } else {
-        e.close(` else if ${condition(set.cond)} {`);
-      }
-      write(set.css, set.value);
-    });
-    e.close();
-  }
 }
