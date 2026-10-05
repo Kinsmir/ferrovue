@@ -786,7 +786,7 @@ checksum = "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223"
 
 [[package]]
 name = "ferrovue"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "actix-web",
  "axum",
@@ -809,7 +809,7 @@ dependencies = [
 
 [[package]]
 name = "ferrovue-core"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "proptest",
  "serde_json",
@@ -849,14 +849,14 @@ dependencies = [
 
 [[package]]
 name = "ferrovue-i18n"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "ferrovue-core",
 ]
 
 [[package]]
 name = "ferrovue-router"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "ferrovue-core",
  "proptest",
