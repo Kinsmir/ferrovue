@@ -23,6 +23,9 @@ released together and share version numbers.
   features drop their docs.rs settings, which changed nothing in their documentation. The issue
   and pull request templates name current versions, error codes and `pnpm lint`, and the
   full-stack example restarts its server with bacon.
+- `pnpm lint` covers the examples: oxlint checks their TypeScript and components with the
+  repository's rules, and fallow knows the full-stack example's entry points (the Vite client
+  entry, its components and its browser and adopter tests).
 
 ### Fixed
 
