@@ -7,10 +7,10 @@ import { asF64, boolOf, cond, expr, fieldVal, isObjectCall, known, narrowTo, typ
 import { atom, bare, CMP, condition, occurrences, operand, OR, strArg, UNARY } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
 import { attrOf, dollarAttrs, IGNORED_PROPS, interpolate, isAttrs, mergedParts, renderAttr, renderAttrs, renderClass, renderDynamicAttr, renderStyle } from "./attrs.ts";
-import { passedKey } from "./scoped.ts";
+import { passedKey } from "./fallthrough.ts";
 import { isSSRSafeAttrName, propsToAttrMap } from "@vue/shared";
 import { rustTy } from "./rust.ts";
-import { paramsOf, slotFieldsOf } from "./plugin.ts";
+import { claim, paramsOf, slotFieldsOf } from "./plugin.ts";
 
 /** One `${...}` inside a pushed template literal. */
 export function slot(s: Scope, e: Emitter, n: N): void {
@@ -153,23 +153,6 @@ function pushed(s: Scope, e: Emitter, n: N): void {
   fail(s.comp, "this cannot be pushed", n);
 }
 
-/** The scope ids a child's root is handed, as a Rust `&str` (`null` for none), as
- * `renderComponentSubTree` gathers them into its `attrs`: what this component passes on when the
- * child is its root, unless the child sets `inheritAttrs: false`; this component's own id, the id of
- * the instance that created the child's virtual node — slot content's included, which renders as
- * the component that wrote it; and the slot scope id of the slot content the child is rendered in. */
-function childAttrs(s: Scope, child: Component, passesAttrs: boolean, inSlot: boolean, n: N): string | null {
-  const base = passesAttrs && child.inheritAttrs ? s.attrs : null;
-  const own = s.comp.scopeId;
-  const slotted = inSlot ? s.sid : null;
-  let code: string | null;
-  if (base === null && slotted === null) code = own === null ? null : rustStr(` ${own}`);
-  else if (own === null && slotted === null) code = base;
-  else code = `&fv::scope_attrs(${base ?? '""'}, ${own === null ? '""' : rustStr(own)}, ${slotted ?? '""'})`;
-  if (code !== null && !child.inherits) fail(s.comp, `${child.name} is handed scope ids its render does not take`, n);
-  return code;
-}
-
 export function renderChild(s: Scope, e: Emitter, n: N): void {
   const [target, rawProps, slots, , slotScopeId] = n.arguments;
   let local: string | null = null;
@@ -198,7 +181,8 @@ export function renderChild(s: Scope, e: Emitter, n: N): void {
       }
     }
   }
-  const ids = childAttrs(s, child, passesAttrs, !!slotScopeId, n);
+  // The scope ids its root is handed, which only a plugin gives (scoped styles).
+  const ids = claim((p) => p.childIds?.(s, child, passesAttrs, !!slotScopeId, n)) ?? null;
   // `v-bind="x"`, where `x` is exactly the child's own `Props`: handed over as it is.
   if (objects.length === 1 && objects[0].type !== "ObjectExpression") {
     const v = expr(s, objects[0]);

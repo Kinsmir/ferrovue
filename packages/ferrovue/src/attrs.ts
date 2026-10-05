@@ -6,7 +6,7 @@ import { CONFIG_FILE, ctx } from "./context.ts";
 import { cond, describeTy, expr, known, meet, truthy, unquote } from "./expr.ts";
 import { atom, bare, condition, logical, not, receiver, strArg } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
-import { isDollarAttrs } from "./scoped.ts";
+import { isDollarAttrs } from "./fallthrough.ts";
 import { claim } from "./plugin.ts";
 
 /** What a number written at run time is expected to take: most a page shows are shorter, and the

@@ -15,6 +15,7 @@
  * part of the generated code as well: it is the order of a render's parameters, of the fixture's
  * fields, and of the modules written beside the components. */
 
+import type { SFCDescriptor } from "@vue/compiler-sfc";
 import { type Component, type N, type Scope, type Struct, type StructTy, type Ty, type Val } from "./model.ts";
 import { type Config, ctx } from "./context.ts";
 import { type Emitter } from "./emitter.ts";
@@ -72,6 +73,15 @@ export interface ValueHooks {
   isArray?(v: Val): Val | undefined;
 }
 
+/** A component as \`analyse\` sees it: its compiled template, the child components its setup
+ * imports by local name, and the setup bindings that hold \`useAttrs()\`. */
+export interface ReadComponent {
+  comp: Component;
+  ssr: string;
+  children: Map<string, string>;
+  attrsBindings: Set<string>;
+}
+
 export interface Plugin<Run = unknown, Local = unknown> {
   name: string;
 
@@ -82,6 +92,10 @@ export interface Plugin<Run = unknown, Local = unknown> {
   prepare?(root: string): void;
 
   // Reading a component.
+  /** A component's single-file descriptor, before its template is compiled: its \`<style>\` blocks. */
+  sfc?(comp: Component, descriptor: SFCDescriptor, file: string, source: string): void;
+  /** How Vue compiles the component's template, where the plugin decides it: its scope id. */
+  templateOptions?(comp: Component): { id: string; scoped: boolean; slotted: boolean };
   /** A type a component imports from a `.ts` file the plugin owns (a store's): recorded in
    * `comp.importedTypes`, `true` when the file is the plugin's. */
   importedType?(comp: Component, file: string, name: string, local: string): boolean;
@@ -91,6 +105,9 @@ export interface Plugin<Run = unknown, Local = unknown> {
   /** Vue's SSR compilation of a component's template, and the statements of its script blocks:
    * what it renders or reads, found before any component is generated. */
   compiled?(comp: Component, code: string, script: N[]): void;
+  /** Every component of the run at once, each set up and compiled: for what reaches from one
+   * component to another (whose roots may be handed scope ids), before any is generated. */
+  analyse?(read: ReadComponent[]): void;
 
   // `<script setup>`.
   /** Its state for one component's setup scope — the names the setup bound to what the plugin
@@ -124,6 +141,10 @@ export interface Plugin<Run = unknown, Local = unknown> {
   component?(s: Scope, e: Emitter, n: N): boolean;
   /** A child component this one renders: refused here when the plugin cannot have it there. */
   child?(s: Scope, child: Component, n: N): void;
+  /** The ids a child's root is handed, as a Rust \`&str\` — \`null\` for none — given whether this
+   * component passes its own \`_attrs\` on to it and whether it is rendered in slot content. One
+   * plugin gives them: scoped styles. */
+  childIds?(s: Scope, child: Component, passesAttrs: boolean, inSlot: boolean, n: N): string | null;
   /** A statement of the compiled template that calls a helper the core does not translate
    * (`_ssrRenderTeleport(…)`): written into `e`, `true` when it is the plugin's. */
   statement?(s: Scope, e: Emitter, call: N, st: N): boolean;

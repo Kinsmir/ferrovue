@@ -139,7 +139,4 @@ export const ctx = {
   narrowCount: 0,
   /** The directory the components being compiled come from, for the generated headers. */
   componentsDir: "",
-  /** How scope ids are computed, and the directory a component's path is hashed from. */
-  scopeId: "filepath-source" as ScopeIdMode,
-  viteRoot: "",
 };

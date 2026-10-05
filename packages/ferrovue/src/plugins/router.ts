@@ -13,6 +13,7 @@ import { attrOf, classItems, dollarAttrs, IGNORED_PROPS, isAttrs, mergedParts, m
 import { slotBody, statements } from "../template.ts";
 import { type Plugin, runOf, scopeOf } from "../plugin.ts";
 import { header } from "../rust.ts";
+import { scopeIdOf } from "./scoped.ts";
 
 declare module "../model.ts" {
   interface PluginTys {
@@ -240,7 +241,7 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
   const passed = (rawProps?.type === "Identifier" && rawProps.name === "_attrs") || rawProps?.arguments?.some((a: N) => a.type === "Identifier" && a.name === "_attrs");
   const base = passed ? s.attrs : null;
   const slotted = slotScopeId ? s.sid : null;
-  const scopeId = s.comp.scopeId;
+  const scopeId = scopeIdOf(s.comp);
   const content = slots?.type === "ObjectExpression" ? slots.properties.filter((p: N) => (p.key?.name ?? p.key?.value) !== "_").map((p: N) => p.value) : [];
   /** Whether the link's content holds a node that `is` picks out. */
   const holds = (is: (x: N) => boolean): boolean => {
@@ -536,7 +537,7 @@ export const router: Plugin<RouterRun, RouterScope> = {
     if (routed === "RouterLink") routerLink(s, e, n);
     else if (routed === "RouterView") {
       // vue-router renders the page as its own root, which takes this component's id.
-      if (s.comp.scopeId !== null) fail(s.comp, "`<RouterView>` in a component with `<style scoped>` gives the page this component's id, which the server's page does not carry", n);
+      if (scopeIdOf(s.comp) !== null) fail(s.comp, "`<RouterView>` in a component with `<style scoped>` gives the page this component's id, which the server's page does not carry", n);
       e.stmt("fv_slots.router_view.render_to(out);");
     } else return false;
     return true;

@@ -18,11 +18,11 @@
  * This module is the public API; the translation lives in the modules beside it. */
 
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { type Config, ctx, loadConfig, tyOfName } from "./context.ts";
 import { readComponent } from "./component.ts";
 import { scopeFor } from "./script.ts";
-import { attrsFlow, scopeFlow } from "./scoped.ts";
+import { attrsFlow } from "./fallthrough.ts";
 import { componentSource, isIsland, modSource } from "./rust.ts";
 import { renderParams } from "./plugin.ts";
 import { PLUGINS } from "./plugins/index.ts";
@@ -34,8 +34,6 @@ export function generate(root: string, config: Config = loadConfig(root)): Map<s
   ctx.trustedHtml = config.trustedHtml ?? null;
   ctx.clientDirectives = new Set(config.clientDirectives ?? []);
   ctx.rootDir = root;
-  ctx.scopeId = config.scopeId ?? "filepath-source";
-  ctx.viteRoot = resolve(root, config.viteRoot ?? ".");
   ctx.typeStructs = new Map();
   ctx.typeAliases = new Map();
   ctx.typeFiles = new Map();
@@ -60,10 +58,12 @@ export function generate(root: string, config: Config = loadConfig(root)): Map<s
   ctx.components = components;
   // What a component reads — a store, the route — is known once its setup is read.
   const scopes = read.map((r) => scopeFor(r.comp, r.ast, components).scope);
-  // Which roots may be handed scope ids, and which slot content given a slot scope id.
-  scopeFlow(read.map((r, i) => ({ comp: r.comp, ssr: r.ssr, children: scopes[i]!.children })));
-  // Which components may be passed attributes beyond their props.
-  attrsFlow(read.map((r, i) => ({ comp: r.comp, ssr: r.ssr, children: scopes[i]!.children, attrsBindings: scopes[i]!.attrsBindings })));
+  // What the plugins work out from every component at once: which roots may be handed scope ids,
+  // and which slot content given a slot scope id. Then which components may be passed attributes
+  // beyond their props.
+  const all = read.map((r, i) => ({ comp: r.comp, ssr: r.ssr, children: scopes[i]!.children, attrsBindings: scopes[i]!.attrsBindings }));
+  for (const p of PLUGINS) p.analyse?.(all);
+  attrsFlow(all);
   // A render parameter reaches every component on the way down to one that reads it.
   for (const c of components.values()) c.takes = new Set(renderParams().filter((p) => p.reads(c)).map((p) => p.name));
   for (let changed = true; changed; ) {

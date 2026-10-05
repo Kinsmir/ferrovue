@@ -185,14 +185,11 @@ export interface Component {
   /** Its scoped slots, by name: the props each one's outlets pass, known once its render is
    * generated, which is why a child is generated before its parents. */
   slotShapes: Map<string, Struct>;
-  /** `data-v-…`, the id its `<style scoped>` gives its elements, or `null` without one. */
-  scopeId: string | null;
-  /** Whether its scoped styles use `:slotted()`, so that its outlets pass a slot scope id. */
-  slotted: boolean;
   /** `inheritAttrs` from `defineOptions`: `false` drops what a parent passes on to its root. */
   inheritAttrs: boolean;
   /** Whether a parent may hand its root scope ids — its own, those passed on to it, or a slot's —
-   * which it then takes as `fv_attrs`. Known once every component is read (`scopeFlow`). */
+   * which it then takes as `fv_attrs`. Known once every component is read, by a plugin's analysis
+   * (scoped styles). */
   inherits: boolean;
   /** Whether its outlets may pass slot content a slot scope id, which the content then takes as
    * `fv_sid`. Known once every component is read, as `inherits` is. */
@@ -225,8 +222,6 @@ export function blankComponent(name: string, module: string, file: string, struc
     aliases: new Map(),
     importedTypes: new Map(),
     slotShapes: new Map(),
-    scopeId: null,
-    slotted: false,
     inheritAttrs: true,
     inherits: false,
     passesSlotIds: false,
