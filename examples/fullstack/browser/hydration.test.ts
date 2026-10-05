@@ -132,9 +132,13 @@ describe.each(BROWSERS)("%s", (name) => {
   it("hydrates a streamed book page, whose islands then share the store", async ({ skip }) => {
     if (!browser) skip();
     await open("/books/dune");
+    await page.locator(".review-list a.share").waitFor();
     expect(await Promise.all(messages)).toEqual([]);
     const [parsed, now] = await parsedAndNow();
-    expect(now).toBe(parsed);
+    const share = /<span class="share"[^>]*>Share these reviews<\/span>|<a [^>]*class="share"[^>]*>Share these reviews<\/a>/;
+    expect(parsed).toMatch(/<span class="share"/);
+    expect(now).toMatch(/<a [^>]*class="share" href="mailto:\?body=http[^"]*%2Fbooks%2Fdune"/);
+    expect(now.replace(share, "")).toBe(parsed.replace(share, ""));
 
     const summary = page.locator("#basket .basket");
     expect(await summary.textContent()).toBe("Basket of guest: 1 book");

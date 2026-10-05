@@ -105,8 +105,8 @@ ${comp.slotNames.map((slot) => `    /// \`#${slot}\`\n    pub ${snake(slot)}: Op
     : "";
   const params = ["&mut String", `&${name}Props${life ? "<'_>" : ""}`, ...(comp.slotNames.length ? [`${name}Slots<'_>`] : []), "&fv::Attrs<'_>"];
   return `${props}${slots}
-/// How generated code calls \`${spec.rust}\`, which renders \`<${name}>\`: into the buffer, with
-/// the props, ${comp.slotNames.length ? "the slots, " : ""}and the attributes and scope ids its root takes.
+/// How generated code calls the twin of \`<${name}>\`: with the buffer, the props,
+/// ${comp.slotNames.length ? "the slots, " : ""}and the attributes and scope ids its root takes.
 pub type ${name}Render = fn(${params.join(", ")});
 
 const _: ${name}Render = ${spec.rust};

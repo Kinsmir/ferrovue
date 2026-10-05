@@ -25,7 +25,7 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(216 + 140 * props.reviews.len() + props.reviews.iter().map(|v| v.reader.len() + v.text.len()).sum::<usize>());
+    out.reserve(294 + 75 * props.reviews.len() + props.reviews.iter().map(|v| v.reader.len() + v.text.len()).sum::<usize>());
     out.push_str("<div class=\"review-list\" data-v-458b887c>");
     if props.reviews.len() as i64 != 0 {
         out.push_str("<ol data-v-458b887c><!--[-->");
@@ -36,11 +36,9 @@ pub fn render(out: &mut String, props: &Props<'_>) {
             if (i as f64) >= 2.0 || (i as f64).is_nan() {
                 out.push_str("display:none;");
             }
-            out.push_str("\" data-v-458b887c><span class=\"stars\" aria-label=\"");
-            fv::escape_into(out, &format!("{} out of 5", fv::Js(r.stars)));
             out.push_str("\" data-v-458b887c>");
-            fv::push_int(out, r.stars);
-            out.push_str("/5</span><q data-v-458b887c>");
+            crate::ui::star_rating(out, &super::twins::StarRatingProps { value: r.stars, max: None }, &fv::Attrs::scoped(" data-v-458b887c"));
+            out.push_str("<q data-v-458b887c>");
             fv::escape_into(out, &r.text);
             out.push_str("</q> — ");
             fv::escape_into(out, &r.reader);
@@ -57,7 +55,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     } else {
         out.push_str("<!---->");
     }
-    out.push_str("</div>");
+    out.push_str("<!--[--><span class=\"share\" data-v-458b887c>Share these reviews</span><!--]--></div>");
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.

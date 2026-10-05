@@ -7,6 +7,10 @@ mod generated;
 mod assets;
 mod catalogue;
 mod pages;
+mod ui;
+
+#[cfg(test)]
+mod fixtures;
 
 use std::path::PathBuf;
 use std::sync::Arc;

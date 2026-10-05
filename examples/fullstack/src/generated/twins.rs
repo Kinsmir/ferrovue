@@ -9,22 +9,13 @@ use ferrovue as fv;
 
 /// The props a template gives `<StarRating>`.
 #[derive(Debug, Clone, Copy)]
-pub struct StarRatingProps<'a> {
+pub struct StarRatingProps {
     pub value: i64,
     pub max: Option<i64>,
-    pub label: Option<&'a str>,
-    pub readonly: bool,
-}
-
-/// What a template puts in `<StarRating>`'s slots.
-#[derive(Clone, Copy, Default)]
-pub struct StarRatingSlots<'s> {
-    /// `#default`
-    pub default: Option<fv::Slot<'s>>,
 }
 
 /// How generated code calls the twin of `<StarRating>`: with the buffer, the props,
-/// the slots, and the attributes and scope ids its root takes.
-pub type StarRatingRender = fn(&mut String, &StarRatingProps<'_>, StarRatingSlots<'_>, &fv::Attrs<'_>);
+/// and the attributes and scope ids its root takes.
+pub type StarRatingRender = fn(&mut String, &StarRatingProps, &fv::Attrs<'_>);
 
-const _: StarRatingRender = crate::vendor::star_rating;
+const _: StarRatingRender = crate::ui::star_rating;
