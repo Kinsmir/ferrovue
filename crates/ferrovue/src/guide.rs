@@ -26,6 +26,10 @@
 //!     conversions to and from numbers.
 //! 15. [`escaping`]: what is escaped, where, and the one way to write raw HTML.
 //! 16. [`errors_and_limits`]: what the compiler refuses, and what can still go wrong at run time.
+#![cfg_attr(
+    feature = "dioxus",
+    doc = "17. [`dioxus`]: islands in a page that Dioxus renders, with the `dioxus` feature."
+)]
 
 #[doc = include_str!("../docs/guide/quick_start.md")]
 pub mod quick_start {}
@@ -74,3 +78,8 @@ pub mod escaping {}
 
 #[doc = include_str!("../docs/guide/errors_and_limits.md")]
 pub mod errors_and_limits {}
+
+#[cfg(feature = "dioxus")]
+#[cfg_attr(docsrs, doc(cfg(feature = "dioxus")))]
+#[doc = include_str!("../docs/guide/dioxus.md")]
+pub mod dioxus {}

@@ -55,6 +55,12 @@ released together and share version numbers.
   `<Transition>` or `<KeepAlive>` around a `v-if`, which Vue's server drops but its client keeps.
 - The fuzzer passes attributes to its child components, among them roots with attributes of their
   own, `inheritAttrs: false` with `$attrs`, and `useAttrs()`.
+- Dioxus 0.7: the crate's `dioxus` feature (`dioxus-core` alone, no default features) makes `Html`
+  an `IntoDynNode`, so `{greeting::island(&props)}` goes straight into `rsx!`, with
+  `Html::to_element` for the same as an `Element`. An island is its own `<div data-island
+  data-props>`, its markup inside as `dangerous_inner_html`, so `dioxus-ssr` and a fullstack render
+  write exactly ferrovue's markup inside it, with no hydration marker; `ferrovue::dioxus::state_script`
+  is `state_script_into` as an element. A guide page (`guide::dioxus`), and `examples/dioxus`.
 
 ### Fixed
 
