@@ -83,7 +83,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
     super::fall_switch::render_scoped(out, &super::fall_switch::Props { mode: std::borrow::Cow::Borrowed(if props.on { "on" } else { "off" }) }, &fv::Attrs::new(&[("class", fv::Attr::str("switched")), ("title", props.title.as_deref().map_or(fv::Attr::Undefined, fv::Attr::str))], ""));
     super::fall_switch::render_scoped(out, &super::fall_switch::Props { mode: std::borrow::Cow::Borrowed("none") }, &fv::Attrs::new(&[("class", fv::Attr::str("lost"))], ""));
     super::fall_fade::render_scoped(out, &super::fall_fade::Props { text: std::borrow::Cow::Borrowed(&*props.label) }, &fv::Attrs::new(&[("title", props.title.as_deref().map_or(fv::Attr::Undefined, fv::Attr::str)), ("class", fv::Attr::str("through"))], ""));
-    super::fall_bare::render_scoped(out, &super::fall_bare::Props {  }, &fv::Attrs::new(&[("class", props.title.as_deref().map_or(fv::Attr::Undefined, fv::Attr::str)), ("style", fv::Attr::str(&format!("margin: {}px", fv::Js(props.n)))), ("data-n", fv::Attr::Int(props.n))], ""));
+    super::fall_bare::render_scoped(out, &super::fall_bare::Props {  }, &fv::Attrs::new(&[("class", props.title.as_deref().map_or(fv::Attr::Undefined, fv::Attr::str)), ("style", fv::Attr::Str(std::borrow::Cow::<str>::Owned(format!("margin: {}px", fv::Js(props.n))))), ("data-n", fv::Attr::Int(props.n))], ""));
     out.push_str("</article>");
 }
 

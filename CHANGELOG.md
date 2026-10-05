@@ -44,6 +44,11 @@ released together and share version numbers.
   folded into the render as constants, and `v-model` on a `<select>` or radio input compares a
   string with an empty `value` by whether it is empty, so the generated code no longer trips
   `clippy::const_is_empty` and `clippy::comparison_to_empty` (#21).
+- Generated Rust that did not compile, found by the randomised differential tester: an attribute
+  passed to a child component whose value is a string built in a branch of `?:` or `&&`
+  (`:class="on ? 'a' : String(n)"`) now owns that string instead of borrowing a temporary, and an
+  arrow function's string item in a branch of `?:` (`find((w) => (on ? w : x))`) is borrowed
+  instead of taken as a `String` it is not.
 
 ## [0.3.0] - 2026-10-05
 

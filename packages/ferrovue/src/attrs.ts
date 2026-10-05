@@ -3,7 +3,7 @@ import { type N, type Scope, type Ty, type Val, fail, GenError, rustStr } from "
 import { CONFIG_FILE, ctx } from "./context.ts";
 import { describeTy, expr } from "./expr.ts";
 import { known, truthy } from "./narrowing.ts";
-import { unquote } from "./strings.ts";
+import { asCow, isTemporary, unquote } from "./strings.ts";
 import { atom, bare, condition, receiver, strArg } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
 import { isDollarAttrs } from "./fallthrough.ts";
@@ -284,7 +284,7 @@ export function attrOf(s: Scope, key: string, n: N, side: "vnode" | "own"): stri
 export function valueAttr(s: Scope, v: Val, n: N): string {
   switch (v.ty.k) {
     case "str":
-      return `fv::Attr::str(${strArg(v.code)})`;
+      return isTemporary(v) ? `fv::Attr::Str(${asCow(v)})` : `fv::Attr::str(${strArg(v.code)})`;
     case "int":
       return `fv::Attr::Int(${bare(v.code)})`;
     case "float":
