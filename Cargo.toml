@@ -16,7 +16,6 @@ edition = "2024"
 rust-version = "1.99"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/Kinsmir/ferrovue"
-homepage = "https://github.com/Kinsmir/ferrovue"
 
 [workspace.dependencies]
 ferrovue = { path = "crates/ferrovue", version = "=0.5.0" }

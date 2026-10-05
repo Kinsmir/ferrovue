@@ -6,7 +6,6 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-homepage.workspace = true
 documentation = "https://docs.rs/ferrovue-core"
 readme = "README.md"
 keywords = ["vue", "ssr", "html", "escape", "javascript"]
