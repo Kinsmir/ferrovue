@@ -273,8 +273,9 @@ How a run works:
    smallest case is saved in `fuzz/failures/<seed>-<case>/`: the component, `fixture.json`, Vue's
    `vue.html`, ferrovue's `ferrovue.html` (or the compile error), and `about.txt`.
 
-`pnpm fuzz` exits 1 on a mismatch, a Rust error or generated Rust that does not compile. CI runs it
-nightly (`.github/workflows/fuzz.yml`) with 1,000 components and the date as the seed
+`pnpm fuzz` exits 1 on a mismatch, a Rust error, generated Rust that does not compile, a refusal, a
+fixture Vue cannot render, or a run that compares no fixture at all. CI runs it nightly
+(`.github/workflows/fuzz.yml`) with 1,000 components and the date as the seed
 (`FERROVUE_FUZZ_SEED=20261004`), and uploads `fuzz/failures/` when it fails.
 
 `FERROVUE_FUZZ_PLANT=1` checks the harness itself: before building, it writes one escaped

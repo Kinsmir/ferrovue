@@ -389,4 +389,6 @@ if (failures.length) {
 
 if (!keep) rmSync(join(WORK, "shrink"), { recursive: true, force: true });
 log(`\ndone in ${((Date.now() - started) / 1000).toFixed(0)} s. Summary: seed ${seed}, components ${tally.components}, fixtures ${tally.fixtures}, matches ${tally.matches}, mismatches ${tally.mismatches}, rust-errors ${tally.rustErrors}, not-compiling ${tally.compileErrors}, refusals ${tally.refused}, vue-errors ${tally.vueErrors}`);
-process.exitCode = tally.mismatches + tally.rustErrors + tally.compileErrors > 0 ? 1 : 0;
+const compared = dry || tally.matches + tally.mismatches > 0;
+if (!compared) log("no fixture was compared");
+process.exitCode = tally.mismatches + tally.rustErrors + tally.compileErrors + tally.refused + tally.vueErrors > 0 || !compared ? 1 : 0;
