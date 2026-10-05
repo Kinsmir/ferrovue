@@ -278,7 +278,7 @@ are, and `v-for="s in SIZES"` walks an array literal. A list of objects becomes 
 the shared types, with a type for its items (here `SortsItem`, or the interface the constant is
 declared with):
 
-```rust,ignore
+```rust
 pub const SORTS: &[SortsItem<'static>] = &[
     SortsItem { key: Cow::Borrowed("name"), label: Cow::Borrowed("By name") },
     SortsItem { key: Cow::Borrowed("price"), label: Cow::Borrowed("By price") },

@@ -208,7 +208,11 @@ assert_eq!(
 
 and for `Tag`, which a scoped parent renders, a `render_scoped` beside `render`:
 
-```rust,ignore
+```rust
+# mod tag {
+# use std::borrow::Cow;
+# use ferrovue as fv;
+# pub struct Props<'a> { pub label: Cow<'a, str> }
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
     render_scoped(out, props, "");
@@ -224,6 +228,14 @@ pub fn render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) {
     fv::escape_into(out, &props.label);
     out.push_str("</span>");
 }
+# }
+# let mut out = String::new();
+# tag::render(&mut out, &tag::Props { label: "rust".into() });
+# tag::render_scoped(&mut out, &tag::Props { label: "vue".into() }, " data-v-2f4cdd4e");
+# assert_eq!(out, concat!(
+#     r#"<span class="tag" data-v-7f092129>rust</span>"#,
+#     r#"<span class="tag" data-v-2f4cdd4e data-v-7f092129>vue</span>"#,
+# ));
 ```
 
 A component has a `render_scoped` when a parent may hand its root ids: when a scoped component
@@ -268,7 +280,10 @@ The outlets call [`slot_into_slotted`](crate::slot_into_slotted) and
 [`slot_into`](crate::slot_into) and [`scoped_slot_into`](crate::scoped_slot_into) that take the
 slot scope id, and a scoped slot's closure takes the id as a third parameter:
 
-```rust,ignore
+```rust
+# mod note {
+# use ferrovue as fv;
+# pub struct Props { pub count: i64 }
 /// The props `<slot name="footer">` passes the content a parent gives it, borrowed for the render.
 pub struct FooterSlotProps {
     pub count: i64,
@@ -297,13 +312,45 @@ pub fn render(out: &mut String, props: &Props, fv_slots: Slots<'_>) {
     fv::scoped_slot_into_slotted(out, fv_slots.footer, &FooterSlotProps { count: props.count }, "data-v-421eaec8-s", None);
     out.push_str("</footer></aside>");
 }
+# }
+# let mut out = String::new();
+# note::render(&mut out, &note::Props { count: 2 }, note::Slots::default());
+# assert_eq!(
+#     out,
+#     r#"<aside class="note" data-v-421eaec8><!--[-->no note<!--]--><footer data-v-421eaec8><!--[--><!--]--></footer></aside>"#
+# );
 ```
 
 A generated parent fills such a slot with `Slot::slotted`, content that is given the id. This is
 `Notes.vue`, `<Note :count="2"><p>{{ text }}</p><template #footer="{ count }"><small>{{ count }}
 more</small></template></Note>`:
 
-```rust,ignore
+```rust
+# mod generated {
+# pub mod note {
+# use ferrovue as fv;
+# pub struct Props { pub count: i64 }
+# pub struct FooterSlotProps { pub count: i64 }
+# pub type FooterSlot<'s> = dyn Fn(&mut String, &FooterSlotProps, &str) -> bool + 's;
+# #[derive(Clone, Copy, Default)]
+# pub struct Slots<'s> {
+#     pub default: Option<fv::Slot<'s>>,
+#     pub footer: Option<&'s FooterSlot<'s>>,
+# }
+# pub fn render(out: &mut String, props: &Props, fv_slots: Slots<'_>) {
+#     out.push_str("<aside class=\"note\" data-v-421eaec8>");
+#     fv::slot_into_slotted(out, fv_slots.default, "data-v-421eaec8-s", Some(&mut |out: &mut String| {
+#         out.push_str("no note");
+#     }));
+#     out.push_str("<footer data-v-421eaec8>");
+#     fv::scoped_slot_into_slotted(out, fv_slots.footer, &FooterSlotProps { count: props.count }, "data-v-421eaec8-s", None);
+#     out.push_str("</footer></aside>");
+# }
+# }
+# pub mod notes {
+# use std::borrow::Cow;
+# use ferrovue as fv;
+# pub struct Props<'a> { pub text: Cow<'a, str> }
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(33 + props.text.len());
@@ -326,6 +373,17 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         }),
     });
 }
+# }
+# }
+# let mut out = String::new();
+# generated::notes::render(&mut out, &generated::notes::Props { text: "<hi>".into() });
+# assert_eq!(
+#     out,
+#     concat!(
+#         r#"<aside class="note" data-v-421eaec8><!--[--><p data-v-421eaec8-s>&lt;hi&gt;</p><!--]-->"#,
+#         r#"<footer data-v-421eaec8><!--[--><small data-v-421eaec8-s>2 more</small><!--]--></footer></aside>"#,
+#     )
+# );
 ```
 
 From Rust, fill the default slot with [`Slot::new`](crate::Slot::new) as for any component: such

@@ -98,16 +98,45 @@ soon as they are ready, the futures all running at once. This is the handler fro
 `examples/fullstack` (`src/main.rs`), where `site.page` renders a page with its holes and
 `site.fill` renders one hole's content once its data is ready:
 
-```rust,ignore
+```rust
+# #[cfg(feature = "axum")]
+# fn main() {
+# use std::sync::Arc;
+# use axum::http::{StatusCode, Uri};
+# use axum::response::{IntoResponse, Response};
+# struct Page { status: u16, html: String, holes: Vec<String> }
+# struct Site;
+# impl Site {
+#     fn page(&self, path: &str) -> Page {
+#         let mut html = String::from("<main>");
+#         ferrovue::escape_into(&mut html, path);
+#         ferrovue::hole().render_to(&mut html);
+#         html.push_str("</main>");
+#         Page { status: 404, html, holes: vec!["Dune".to_owned()] }
+#     }
+#     async fn fill(&self, hole: String) -> String {
+#         format!("<p>{hole}</p>")
+#     }
+# }
+# async fn page(site: Arc<Site>, uri: Uri) -> Response {
 use ferrovue::HtmlStream;
 
 let Page { status, html, holes } = site.page(uri.path());
 let body = HtmlStream::new(html).holes(holes.into_iter().map(|hole| {
     let site = Arc::clone(&site);
-    async move { site.fill(&hole).await }
+    async move { site.fill(hole).await }
 }));
 let status = StatusCode::from_u16(status).unwrap_or(StatusCode::OK);
 (status, body).into_response()
+# }
+# let runtime = tokio::runtime::Builder::new_current_thread().build().unwrap();
+# let response = runtime.block_on(page(Arc::new(Site), Uri::from_static("/books")));
+# assert_eq!(response.status(), 404);
+# let body = runtime.block_on(axum::body::to_bytes(response.into_body(), usize::MAX)).unwrap();
+# assert_eq!(body, "<main>/books<p>Dune</p></main>");
+# }
+# #[cfg(not(feature = "axum"))]
+# fn main() {}
 ```
 
 [`web_frameworks`](crate::guide::web_frameworks) has the rest: a whole page, other statuses,

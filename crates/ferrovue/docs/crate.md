@@ -72,9 +72,12 @@ pnpm ferrovue --check   # in CI: exits 1 if the committed modules are stale
 **5. Include the modules and render.** Declare the module once, with `#[rustfmt::skip]` so that
 `ferrovue --check` keeps comparing the files byte for byte:
 
-```rust,ignore
+```rust
 #[rustfmt::skip]
+# /*
 mod generated;
+# */
+# mod generated {}
 ```
 
 Each component's module has a `Props` struct, built with `new` and a setter per optional prop, and

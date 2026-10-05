@@ -78,11 +78,20 @@ The generated `mod.rs` has, in test builds, a `render_json(component, json)` tha
 component from a fixture. `conformance!` writes the test that renders every fixture through it and
 compares the bytes with the recorded `.html`:
 
-```rust,ignore
+```rust
 // src/main.rs or src/lib.rs
+#[rustfmt::skip]
+# /*
 mod generated;
+# */
+# mod generated {
+#     pub fn render_json(component: &str, _json: &str) -> Result<String, String> {
+#         Err(format!("no component called {component}"))
+#     }
+# }
 
 ferrovue::conformance!("fixtures", generated::render_json, at_least = 24);
+# fn main() {}
 ```
 
 The path is relative to the crate's manifest. The test fails, listing each fixture, when a render

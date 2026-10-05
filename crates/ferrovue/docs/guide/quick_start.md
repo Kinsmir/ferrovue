@@ -168,10 +168,13 @@ interpolation goes through [`escape_into`](crate::escape_into).
 Declare the generated module once. `#[rustfmt::skip]` keeps rustfmt from rewriting the files, which
 `ferrovue --check` would then report as stale:
 
-```rust,ignore
+```rust
 // src/main.rs or src/lib.rs
 #[rustfmt::skip]
+# /*
 mod generated;
+# */
+# mod generated { pub mod greeting { pub struct Props; } }
 
 use generated::greeting::{self, Props};
 ```

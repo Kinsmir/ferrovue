@@ -46,7 +46,9 @@ cargo deny check             # licences, advisories, duplicate crates and source
 5. **Document it** in the README's "What a component may use" table and in `CHANGELOG.md` under
    `[Unreleased]`. If it changes what generated code looks like or adds to the runtime, update the
    crate's guide too (`crates/ferrovue/docs/`, published on docs.rs as `ferrovue::guide`): its
-   examples copy generated code, and `cargo test --doc -p ferrovue` runs them.
+   examples copy generated code, and `cargo test --doc -p ferrovue --all-features` compiles and
+   runs every one of them, those for optional features included. An example that shows generated
+   code, or calls it, compiles against a hidden stand-in module of the same shape.
 
 Never re-record a fixture to make a failing test pass. A changed `.html` means Vue changed or the
 compiler did, and that diff is what a reviewer needs to see.

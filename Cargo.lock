@@ -832,6 +832,7 @@ dependencies = [
  "axum-core",
  "bytes",
  "criterion",
+ "dioxus",
  "dioxus-core",
  "dioxus-ssr",
  "ferrovue-core",
