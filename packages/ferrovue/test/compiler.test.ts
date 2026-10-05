@@ -609,6 +609,21 @@ const route = useRoute();
       expect(() => named(island(reader("meta.title")))).toThrow(/`route.meta` is not available on the server/);
     });
 
+    it("refuses a query value, an array when its key is repeated, as an attribute, unless narrowed to one string", () => {
+      const bound = (value: string, attr = ":data-q") => `<script setup lang="ts">
+import { useRoute } from "vue-router";
+defineProps<{ a: string }>();
+const route = useRoute();
+</script>
+<template><p ${attr}="${value}">x</p></template>`;
+      const refused = /components\/X\.vue:6:\d+: `data-q` is bound to a query value, which is an array when its key is repeated: .*hydration then sets it.*typeof route\.query\.q === "string"/;
+      expect(() => named(island(bound("route.query.q")))).toThrow(refused);
+      expect(() => named(island(bound("route.query.q ?? 'none'")))).toThrow(refused);
+      expect(() => named(island(bound("route.query.q", ":hidden")))).toThrow(/`hidden` is bound to a query value/);
+      const narrowed = named(island(bound("typeof route.query.q === 'string' ? route.query.q : 'none'"))).get("x.rs")!;
+      expect(narrowed).toContain('fv::escape_into(out, fv_route.query("q").attr_value().unwrap_or("none"));');
+    });
+
     it("writes RouterView as the page the server supplies, and refuses it below the top", () => {
       const app = `<script setup lang="ts">
 defineProps<{ title: string }>();
@@ -776,6 +791,19 @@ const props = defineProps<{ on: boolean }>();
 <template><p :hidden="on">x</p></template>`),
       ).get("x.rs")!;
       expect(out).toMatch(/if props\.on \{\s*out\.push_str\(" hidden"\);/);
+    });
+
+    it("refuses a list or an object as an attribute, which Vue's server renderer leaves out and hydration sets", () => {
+      const bound = (attr: string) => `<script setup lang="ts">
+interface Item { id: number }
+defineProps<{ tags: string[]; item: Item; more?: string[] }>();
+</script>
+<template><p ${attr}>x</p></template>`;
+      expect(() => compile(island(bound(`:data-tags="tags"`)))).toThrow(/components\/X\.vue:5:\d+: `data-tags` is bound to a list: .*join it into one string, as `\.join\(","\)`/);
+      expect(() => compile(island(bound(`:title="more"`)))).toThrow(/`title` is bound to a list/);
+      expect(() => compile(island(bound(`v-bind="{ 'aria-label': tags }"`)))).toThrow(/`aria-label` is bound to a list/);
+      expect(() => compile(island(bound(`:data-item="item"`)))).toThrow(/`data-item` is bound to an object/);
+      expect(compile(island(bound(`:data-tags="tags.join(',')"`))).get("x.rs")).toContain(" data-tags=");
     });
 
     it("counts a string's length in UTF-16 code units, as JavaScript does", () => {

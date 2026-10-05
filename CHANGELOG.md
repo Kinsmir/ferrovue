@@ -13,6 +13,17 @@ released together and share version numbers.
 - `--version` (`-v`) and `--help` (`-h`).
 - Informative error when `ferrovue.config.json` is missing or invalid, without a stack trace.
 - `VERSION` constant exported from `ferrovue`.
+- `typeof route.query.q === "string"` (or `!==`), which narrows a query value to a single string in
+  `v-if`, `&&` and `? :`, as TypeScript does.
+
+### Fixed
+
+- An attribute bound to a value that may be neither a string, a number nor a boolean is refused,
+  with an error at the binding: a `route.query` value (an array when its key is repeated), and a
+  list or an object, which were refused without a location. Vue's server renderer leaves such an
+  attribute out and its client then sets it to the value's `String()` without reporting a mismatch,
+  so ferrovue's matching render was rewritten on hydration (`:data-q="route.query.q"` on
+  `?q=a&q=b`, found by the real-browser hydration test). `class` and `style` are unaffected.
 
 ## [0.2.0] - 2026-10-04
 

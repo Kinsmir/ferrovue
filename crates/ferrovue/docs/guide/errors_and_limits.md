@@ -43,6 +43,11 @@ What is refused today, each with an error that names it:
   says it is not; `Object.entries()` anywhere but as a `v-for`'s source; dictionaries of optional
   values. See [`props`](crate::guide::props#dictionaries);
 - `null`;
+- an attribute (`class` and `style` aside) bound to a value that may be neither a string, a number
+  nor a boolean: a list, an object, or a `route.query` value, which is an array when its key is
+  repeated. Vue's server renderer leaves such an attribute out, and hydration then sets it to the
+  value's `String()` without reporting a mismatch. Join a list (`.join(",")`), or narrow a query
+  value to one string (`typeof route.query.q === "string" ? route.query.q : ""`);
 - `v-html` of anything but a `TrustedHtml` prop;
 - any method call without a Rust twin.
 

@@ -274,7 +274,26 @@ export interface Presence {
   truthy: boolean;
 }
 
+/** `typeof x === "string"` or `typeof x !== "string"`: the `x` tested, and whether the test is
+ * negated. */
+function typeofString(n: N): { target: N; negated: boolean } | null {
+  if (n.type !== "BinaryExpression" || (n.operator !== "===" && n.operator !== "!==")) return null;
+  const isTypeof = (m: N) => m.type === "UnaryExpression" && m.operator === "typeof";
+  const isString = (m: N) => m.type === "StringLiteral" && m.value === "string";
+  const target = isTypeof(n.left) && isString(n.right) ? n.left.argument : isTypeof(n.right) && isString(n.left) ? n.right.argument : null;
+  return target ? { target, negated: n.operator === "!==" } : null;
+}
+
 export function presence(s: Scope, n: N): Presence | null {
+  // A query value narrowed to a single string, which an attribute can then be bound to.
+  const t = typeofString(n);
+  if (t) {
+    const path = pathOf(t.target);
+    const v = expr(s, t.target);
+    if (path === null || v.ty.k !== "query") return null;
+    const option = `${atom(v.code)}.attr_value()`;
+    return { path, of: STR, negated: t.negated, truthy: false, option, present: `${option}.is_some()`, pattern: (name) => `let Some(${name}) = ${option}` };
+  }
   let target: N = n;
   let negated = false;
   let byTruth = true;
@@ -753,6 +772,14 @@ export function expr(s: Scope, n: N): Val {
       return fail(comp, `unary \`${n.operator}\``, n);
     case "BinaryExpression": {
       if (n.operator !== "===" && n.operator !== "!==") fail(comp, `\`${n.operator}\``, n);
+      // `typeof route.query.q === "string"`: a single value, not `null`, absent or repeated.
+      const tested = typeofString(n);
+      if (tested) {
+        const v = expr(s, tested.target);
+        if (v.ty.k !== "query") fail(comp, '`typeof` tests a query value only, as `typeof route.query.q === "string"`', n);
+        const one = `${atom(v.code)}.attr_value().is_some()`;
+        return boolOf(tested.negated ? not(one) : one);
+      }
       const a = expr(s, n.left);
       const b = expr(s, n.right);
       let eq: string;

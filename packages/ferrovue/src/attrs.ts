@@ -3,7 +3,7 @@
 import { escapeHtml, hyphenate, isBooleanAttr, isSSRSafeAttrName, parseStringStyle, propsToAttrMap } from "@vue/shared";
 import { type N, type Scope, type Ty, type Val, fail, GenError, rustStr, STR } from "./model.ts";
 import { CONFIG_FILE, ctx } from "./context.ts";
-import { cond, expr, known, meet, truthy, unquote } from "./expr.ts";
+import { cond, describeTy, expr, known, meet, truthy, unquote } from "./expr.ts";
 import { atom, bare, condition, logical, not, receiver, strArg } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
 
@@ -51,14 +51,27 @@ export function attrValue(e: Emitter, v: Val): void {
   if (!display(e, v)) throw new GenError("an attribute value must be a string, a number or a boolean");
 }
 
+/** Vue's server renderer leaves out an attribute whose value is not a string, a number or a boolean
+ * (`isRenderableAttrValue`), but hydration then sets it, to `String(value)`, without reporting a
+ * mismatch: the page changes as it hydrates. So a value that may be anything else is refused. */
+function renderable(s: Scope, key: string, v: Val, n: N): void {
+  const ty = v.ty.k === "opt" ? v.ty.of : v.ty;
+  if (ty.k === "str" || ty.k === "int" || ty.k === "float" || ty.k === "bool" || ty.k === "undef") return;
+  const what = ty.k === "query" ? "a query value, which is an array when its key is repeated" : describeTy(ty);
+  const fix =
+    ty.k === "query" ? 'narrow it to one string, as `typeof route.query.q === "string" ? route.query.q : ""`'
+    : ty.k === "list" ? 'join it into one string, as `.join(",")`'
+    : "bind a string, a number or a boolean";
+  fail(s.comp, `\`${key}\` is bound to ${what}: Vue's server renderer leaves the attribute out, and hydration then sets it, changing the page; ${fix}`, n);
+}
+
 /** `ssrRenderAttr(key, value)`: absent for null/undefined, `key="value"` for anything else. */
-export function renderAttr(e: Emitter, key: string, v: Val): void {
+export function renderAttr(s: Scope, e: Emitter, key: string, v: Val, n: N): void {
+  renderable(s, key, v, n);
   if (v.ty.k === "undef") return;
-  // Only a single query value is an attribute's value; `null` and an array leave it out.
-  if (v.ty.k === "query") v = { code: `${atom(v.code)}.attr_value()`, ty: { k: "opt", of: STR } };
   if (v.ty.k === "opt") {
     e.open(`if let Some(v) = ${v.code}`);
-    renderAttr(e, key, { code: "v", ty: v.ty.of });
+    renderAttr(s, e, key, { code: "v", ty: v.ty.of }, n);
     e.close();
     return;
   }
@@ -72,8 +85,8 @@ export function renderAttr(e: Emitter, key: string, v: Val): void {
 export function renderDynamicAttr(s: Scope, e: Emitter, key: string, v: Val, n: N): void {
   const name = propsToAttrMap[key] ?? key.toLowerCase();
   if (!isSSRSafeAttrName(name)) fail(s.comp, `unsafe attribute name \`${name}\``, n);
+  renderable(s, key, v, n);
   if (v.ty.k === "undef") return;
-  if (v.ty.k === "query") v = { code: `${atom(v.code)}.attr_value()`, ty: { k: "opt", of: STR } };
   const boolean = (t: Ty) => isBooleanAttr(name) || (name === "hidden" && (t.k === "bool" || t.k === "int" || t.k === "float"));
   if (v.ty.k === "opt" && boolean(v.ty.of)) {
     // Present, or truthy when it is not a string: one test, with nothing to bind.
