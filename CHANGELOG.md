@@ -89,7 +89,7 @@ released together and share version numbers.
   deduplicated by its keys (`key`, a meta's `name` or `property`, `canonical`, `charset`, …), with
   the title template applied and every value escaped as unhead escapes it. `Head::new()` holds
   unhead's defaults, as `createHead()` does, and `Head::without_defaults()` none. Conformance
-  components (`HeadPage`, `HeadArticle`, `HeadSeo`) and 440 heads recorded from unhead's server
+  components (`HeadPage`, `HeadArticle`, `HeadSeo`) and 458 heads recorded from unhead's server
   renderer (`tests/vectors/head.json`, hand-written and drawn at random with markup-breaking values
   in every field) hold it to unhead. `useHeadSafe`, options given to `useHead`, `templateParams`, a
   `titleTemplate` function, event handlers, a `class` or `style` that may be `null` and an object
