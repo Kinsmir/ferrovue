@@ -1,0 +1,26 @@
+name: Rust
+description: Installs a Rust toolchain and restores the cargo cache saved under a shared key
+inputs:
+  toolchain:
+    description: The toolchain to install
+    default: stable
+  components:
+    description: Components to add, comma separated
+    default: ""
+  cache-key:
+    description: The shared key of the cargo cache
+    required: true
+  save:
+    description: Save the cache at the end of the job, by default on main only
+    default: ${{ github.ref == 'refs/heads/main' }}
+runs:
+  using: composite
+  steps:
+    - uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master
+      with:
+        toolchain: ${{ inputs.toolchain }}
+        components: ${{ inputs.components }}
+    - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      with:
+        shared-key: ${{ inputs.cache-key }}
+        save-if: ${{ inputs.save }}
