@@ -98,11 +98,15 @@ export const RUST_KEYWORDS = new Set(
   ),
 );
 
+/** Keywords Rust does not accept as raw identifiers. */
+const NOT_RAW = new Set(["self", "Self", "super", "crate"]);
+
 /** Types the generated code names, which an interface of the same name would shadow. */
 export const RUST_PRELUDE = new Set(["Option", "Some", "None", "Vec", "String", "Box", "Result", "Ok", "Err", "Cow", "Slots", "Default"]);
 
 export function snake(js: string): string {
   const s = js.replace(/[A-Z]/g, (c) => "_" + c.toLowerCase()).replace(/^_/, "");
+  if (NOT_RAW.has(s)) return `${s}_`;
   return RUST_KEYWORDS.has(s) ? `r#${s}` : s;
 }
 

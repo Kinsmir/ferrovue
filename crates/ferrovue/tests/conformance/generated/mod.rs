@@ -42,6 +42,7 @@ pub mod form;
 pub mod forward;
 pub mod frame;
 pub mod hollow;
+pub mod keywords;
 pub mod lifecycle;
 pub mod links;
 pub mod lists;
@@ -305,6 +306,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Hollow" => {
             let props: hollow::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             hollow::render(&mut out, &props);
+        }
+        "Keywords" => {
+            let props: keywords::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            keywords::render(&mut out, &props);
         }
         "Lifecycle" => {
             let props: lifecycle::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

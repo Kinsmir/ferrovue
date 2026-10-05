@@ -180,6 +180,28 @@ fn a_scoped_slot_is_filled_by_a_closure_given_its_props() {
 /// Props built in Rust with the generated constructors and setters render as the same props
 /// deserialised from a fixture do: no `Cow`, no `None`, strings and lists of them taken as they come.
 #[test]
+fn props_named_after_rust_keywords_are_built_with_constructors_and_setters() {
+    use generated::keywords;
+    let built = keywords::Props::new("mp4", true, "<core>")
+        .r#match("m")
+        .self_(3)
+        .r#static(true)
+        .r#async("a&b");
+    let mut from_rust = String::new();
+    keywords::render(&mut from_rust, &built);
+    let fixture = generated::render_json(
+        "Keywords",
+        &std::fs::read_to_string(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/conformance/fixtures/Keywords/full.json"
+        ))
+        .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(from_rust, fixture);
+}
+
+#[test]
 fn props_are_built_with_constructors_and_setters() {
     use generated::{types, user_card};
     let built = user_card::Props::new(
