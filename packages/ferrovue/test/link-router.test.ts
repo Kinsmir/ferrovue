@@ -1,6 +1,6 @@
 import { createSSRApp, defineComponent, h } from "vue";
 import { renderToString } from "vue/server-renderer";
-import { createMemoryHistory, RouterLink, useRoute } from "vue-router";
+import { createMemoryHistory, isNavigationFailure, NavigationFailureType, RouterLink, useRoute } from "vue-router";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { linkRouter, type LinkRouterOptions, type RouteEntry } from "../src/link-router.ts";
 
@@ -48,7 +48,7 @@ it("lets the first navigation through and hands every later one to navigate, sta
   expect(navigate).not.toHaveBeenCalled();
 
   const failure = await router.push("/account/orders?page=2#top");
-  expect(failure).toBeTruthy();
+  expect(isNavigationFailure(failure, NavigationFailureType.aborted), "the navigation was aborted").toBe(true);
   expect(navigate).toHaveBeenCalledTimes(1);
   expect(navigate.mock.calls[0]![0]).toBe("/account/orders?page=2#top");
   expect(navigate.mock.calls[0]![1].name).toBe("orders");
