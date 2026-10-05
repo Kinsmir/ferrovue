@@ -281,7 +281,8 @@ fixture Vue cannot render, or a run that compares no fixture at all. CI runs it 
 `FERROVUE_FUZZ_PLANT=1` checks the harness itself: before building, it writes one escaped
 interpolation per component unescaped (`out.push_str` for `fv::escape_into`). The run must then
 report mismatches and shrink one to a lone `{{ s }}` with a value such as `">"`. Its failures go to
-`target/fuzz/planted-failures/`, apart from the real ones in `fuzz/failures/`.
+`target/fuzz/planted-failures/`, apart from the real ones in `fuzz/failures/`. The nightly workflow
+runs it on 30 components before the real run and fails unless it reports a mismatch.
 
 ### Turning a failure into a conformance case
 
