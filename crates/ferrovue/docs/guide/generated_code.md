@@ -164,6 +164,61 @@ to, a value read from `$attrs` (it has no type), `$attrs` in a component whose `
 scope ids, and attributes passed to a root `<Transition>` or `<KeepAlive>` around a `v-if` (which
 Vue's server drops but its client keeps) are refused at compile time.
 
+# `<component :is>`
+
+`<component :is>` compiles when every value it can take is known when compiling. Each of these is
+a closed set:
+
+- an imported component, `:is="Card"`, or an async one from `defineAsyncComponent`;
+- an HTML element's name, `is="h2"` or `:is="'h2'"`;
+- a prop typed as a union of string literals, `as: "h1" | "h2"` (or an alias or `enum` of them),
+  required or with a default;
+- an object of imported components or element names, declared in `<script setup>`
+  (`const ICONS = { star: Star, moon: Moon }`) or exported as a constant from a `.ts` file that
+  imports them, read by such a prop or a literal key: `ICONS[name]`, `ICONS.star`;
+- a `?:` or a `computed` that chooses among any of these.
+
+The choices become a `match` on the prop, or an `if` on the condition, and each arm renders its
+choice exactly as the static child or element would: the same props, fallthrough attributes, slots
+and scope ids. Choices that render the same component share an arm. A choice of elements alone
+writes the tag from the `match`:
+
+```rust,ignore
+// <component :is="ICONS[name]" :label="label" />, where ICONS = { star: Star, moon: Moon }:
+match &*props.name {
+    "star" => {
+        super::star::render(out, &super::star::Props { label: Cow::Borrowed(&props.label) });
+    }
+    _ => {
+        super::moon::render(out, &super::moon::Props { label: Cow::Borrowed(&props.label) });
+    }
+}
+
+// <component :is="as" class="heading"><slot /></component>, where as: "h1" | "h2":
+let fv_tag1 = match &*props.r#as { "h1" => "h1", _ => "h2" };
+out.push('<');
+out.push_str(fv_tag1);
+out.push_str(" class=\"heading\">");
+fv::slot_into(out, fv_slots.default, None);
+out.push_str("</");
+out.push_str(fv_tag1);
+out.push('>');
+```
+
+The last choice is the `match`'s `_` arm: a prop's Rust type is a `&str`, so a value outside the
+union TypeScript declares renders as the last choice. Inside `<KeepAlive>` and `<Transition>` the
+choice renders as it does elsewhere, as on Vue's server.
+
+Vue's server renders an element `<component :is>` chooses from virtual nodes, by rules that differ
+from a template's in a few places, and ferrovue follows them: a `v-if` that renders nothing writes
+`<!--v-if-->`, an attribute with an empty value is written bare (`alt`), and slot content a parent
+gives a `<slot>` inside the element is rendered the same way, through every component that passes
+it on. Where virtual nodes would differ in ways the compiler cannot reproduce, it refuses: a
+`<slot>` with fallback content inside such an element (Vue decides whether to show the fallback by
+rules of its own), one `<slot>` rendered both inside and outside one, `v-show` and `v-model` on a
+`<select>` inside one, and `v-html` or `v-text` on `<component :is>` itself, which Vue's server
+leaves empty.
+
 # `html` and `island`
 
 `html` takes the same parameters as `render`, minus the buffer, and returns an

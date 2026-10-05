@@ -42,17 +42,28 @@ pub struct Slots<'s> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_provides: super::provides::Provides<'_>) {
+    render_scoped(out, props, fv_slots, fv_provides, &fv::Attrs::NONE);
+}
+
+/// [`render`], with the attributes a parent passes beyond the props, and the scope ids it hands the root.
+#[doc(hidden)]
+pub fn render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_provides: super::provides::Provides<'_>, fv_attrs: &fv::Attrs<'_>) {
     out.reserve(50 + props.theme.as_deref().map_or(0, str::len));
     let fv_inherited = fv_provides;
     let s_mine = &*props.theme.as_deref().map(std::borrow::Cow::<str>::Borrowed).unwrap_or(std::borrow::Cow::<str>::Owned(format!("{}-inverse", fv_inherited.theme_key.unwrap_or("light"))));
     let fv_provides = super::provides::Provides { theme_key: Some(s_mine), tone: Some("scoped"), ..fv_inherited };
-    out.push_str("<div class=\"scope\"");
-    if fv_inherited.theme_key.unwrap_or("light").is_empty() {
-        out.push_str(" data-outer");
+    out.push_str("<div");
+    if fv_attrs.is_empty() {
+        out.push_str(" class=\"scope\"");
+        if fv_inherited.theme_key.unwrap_or("light").is_empty() {
+            out.push_str(" data-outer");
+        } else {
+            out.push_str(" data-outer=\"");
+            fv::escape_into(out, fv_inherited.theme_key.unwrap_or("light"));
+            out.push('"');
+        }
     } else {
-        out.push_str(" data-outer=\"");
-        fv::escape_into(out, fv_inherited.theme_key.unwrap_or("light"));
-        out.push('"');
+        fv::attrs_into(out, &[&[("class", fv::Attr::str("scope")), ("data-outer", fv::Attr::str(fv_inherited.theme_key.unwrap_or("light")))], fv_attrs.list()], 1, "");
     }
     out.push('>');
     fv::scoped_slot_into(out, fv_slots.default.map(|f| move |out: &mut String, _: &()| f(out, fv_provides)).as_ref(), &(), None);

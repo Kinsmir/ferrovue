@@ -11,6 +11,7 @@ import { passedKey } from "./fallthrough.ts";
 import { claim, paramsOf, slotContextOf, slotFieldsOf } from "./plugin.ts";
 import { statements } from "./template.ts";
 import { slotContent, slotFieldBorrows, staticallyFilled } from "./slots.ts";
+import { slotAsVnodes } from "./dynamic.ts";
 
 /** A component the project renders with a Rust function of its own, in place of a compiled one. */
 export interface TwinCall {
@@ -169,6 +170,7 @@ export function callWith(s: Scope, e: Emitter, child: Component, m: string, head
       continue;
     }
     const { body, param } = slotContent(s, value);
+    const asVnodes = vnode || slotAsVnodes(child, name);
     const shape = child.slotShapes.get(name);
     const takesNone = param?.type === "Identifier" && param.name === "_";
     const sid = child.passesSlotIds ? `fv_sid${++ctx.narrowCount}` : null;
@@ -203,7 +205,7 @@ export function callWith(s: Scope, e: Emitter, child: Component, m: string, head
       const life = shape.fields.some((f) => slotFieldBorrows(f.ty)) ? "<'_>" : "";
       e.open(`${field}: Some(&|out: &mut String, ${sp}: &${m}::${shape.name}${life}${sidParam}${contextParams}| -> bool`);
       const opened = e.lines.length - 1;
-      content({ ...s, locals, sid, vnode, opaque });
+      content({ ...s, locals, sid, vnode: asVnodes, opaque });
       unread(opened, sp);
       unread(opened, sid);
       for (const p of context) unread(opened, p.name);
@@ -211,7 +213,7 @@ export function callWith(s: Scope, e: Emitter, child: Component, m: string, head
       continue;
     }
     if (!takesNone) fail(s.comp, "FV0906", `\`<slot${name === "default" ? "" : ` name="${name}"`}>\` in ${child.name} passes no props`, param);
-    const inner: Scope = { ...s, sid, vnode, opaque };
+    const inner: Scope = { ...s, sid, vnode: asVnodes, opaque };
     if (context.length) {
       e.open(`${field}: Some(&|out: &mut String${sidParam}${contextParams}| -> bool`);
       const opened = e.lines.length - 1;

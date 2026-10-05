@@ -72,6 +72,37 @@ defineProps<{ gone: string | null; note?: string }>();
     expect(out).toContain("if let Some(n2) = props.note.as_deref() {");
   });
 
+  it("compiles `<component :is>` over a closed set to a match over its choices", () => {
+    const out = compile(
+      island(
+        `<script setup lang="ts">
+import Y from "./Y.vue";
+import Z from "./Z.vue";
+defineProps<{ kind: "y" | "z" | "rule"; tag: "b" | "i"; boxed: boolean }>();
+const KINDS = { y: Y, z: Z, rule: "hr" } as const;
+</script>
+<template><div><component :is="KINDS[kind]" :c="null" /><component :is="tag">t</component><component :is="boxed ? Y : 'span'" /></div></template>`,
+        {
+          Y: `<script setup lang="ts">
+defineProps<{ b?: string }>();
+</script>
+<template><b>{{ b }}</b></template>`,
+          Z: `<script setup lang="ts">
+defineProps<{ c: string | null }>();
+</script>
+<template><i>{{ c }}</i></template>`,
+        },
+      ),
+    ).get("x.rs")!;
+    expect(out).toContain("match &*props.kind {");
+    expect(out).toContain('"y" => {');
+    expect(out).toContain('"z" => {');
+    expect(out).toContain("super::z::render(out, &super::z::Props { c: None });");
+    expect(out).toContain("_ => {\n            out.push_str(\"<hr>\");");
+    expect(out).toContain('let fv_tag1 = match &*props.tag { "b" => "b", _ => "i" };');
+    expect(out).toContain("if props.boxed {");
+  });
+
   it("reserves a loop's markup per item and the text the props hold", () => {
     const out = compile(
       island(`<script setup lang="ts">
@@ -1920,12 +1951,89 @@ const props = defineProps<{ a: string }>();
       /`\.normalize\(\)` is not supported/,
     ],
     [
-      "a dynamic component",
+      "a dynamic component over any string",
       `<script setup lang="ts">
 defineProps<{ tag: string }>();
 </script>
 <template><div><component :is="tag" /></div></template>`,
-      /`<component :is>` chooses its component at run time/,
+      /X\.vue:4:\d+: `<component :is>` renders a closed set of choices: .*`tag` is not typed as a union of string literals/,
+    ],
+    [
+      "a dynamic component over a value from elsewhere",
+      `<script setup lang="ts">
+import { ref } from "vue";
+const chosen = ref<string>("b");
+</script>
+<template><div><component :is="chosen.toUpperCase()" /></div></template>`,
+      /`<component :is>` renders a closed set of choices: .*this value is not one of those/,
+    ],
+    [
+      "a dynamic component naming a custom element",
+      `<script setup lang="ts">
+defineProps<{ wide: boolean }>();
+</script>
+<template><div><component :is="wide ? 'my-wide' : 'b'" /></div></template>`,
+      /`my-wide` is not an HTML element `<component :is>` renders/,
+    ],
+    [
+      "a dynamic component over an optional prop",
+      `<script setup lang="ts">
+defineProps<{ tag?: "b" | "i" }>();
+</script>
+<template><div><component :is="tag">x</component></div></template>`,
+      /`tag` may be absent, where Vue renders `<!---->` or fails/,
+    ],
+    [
+      "a dynamic component reading a key its object lacks",
+      `<script setup lang="ts">
+import Y from "./Y.vue";
+defineProps<{ kind: "y" | "z" }>();
+const KINDS = { y: Y };
+</script>
+<template><div><component :is="KINDS[kind]" /></div></template>`,
+      /`z` is not a key of `KINDS`/,
+    ],
+    [
+      "v-html on a dynamic component",
+      `<script setup lang="ts">
+defineProps<{ tag: "b" | "i"; html: string }>();
+</script>
+<template><div><component :is="tag" v-html="html" /></div></template>`,
+      /X\.vue:4:\d+: `v-html` on `<component :is>`: Vue's server renders the element empty/,
+    ],
+    [
+      "v-show inside a dynamic element",
+      `<script setup lang="ts">
+defineProps<{ tag: "b" | "i"; on: boolean }>();
+</script>
+<template><component :is="tag"><u v-show="on">u</u></component></template>`,
+      /X\.vue:4:\d+: `v-show` in content Vue renders from virtual nodes/,
+    ],
+    [
+      "v-model on a select inside a dynamic element",
+      `<script setup lang="ts">
+import { ref } from "vue";
+defineProps<{ tag: "div" | "p" }>();
+const picked = ref("a");
+</script>
+<template><component :is="tag"><select v-model="picked"><option value="a">A</option></select></component></template>`,
+      /`v-model` on a `<select>` in content Vue renders from virtual nodes/,
+    ],
+    [
+      "a slot with fallback content inside a dynamic element",
+      `<script setup lang="ts">
+defineProps<{ tag: "b" | "i" }>();
+</script>
+<template><component :is="tag"><slot>none</slot></component></template>`,
+      /`<slot>` has fallback content and is rendered inside an element `<component :is>` chooses/,
+    ],
+    [
+      "a slot rendered inside a dynamic element and outside one",
+      `<script setup lang="ts">
+defineProps<{ tag: "b" | "i"; twice: boolean }>();
+</script>
+<template><component :is="tag" v-if="twice"><slot /></component><p v-else><slot /></p></template>`,
+      /`<slot>` is rendered both inside an element `<component :is>` chooses and outside one/,
     ],
     [
       "a custom directive the configuration does not declare client-only",
@@ -2079,7 +2187,16 @@ defineProps<{ c: string | null }>();
     "a constructor called in the template": "FV0624",
     "a CSS module, whose class names the bundler chooses": "FV1005",
     "a style property whose place would depend on a condition": "FV1011",
-    "a dynamic component": "FV0418",
+    "a dynamic component over any string": "FV0418",
+    "a dynamic component over a value from elsewhere": "FV0418",
+    "a dynamic component naming a custom element": "FV0419",
+    "a dynamic component over an optional prop": "FV0420",
+    "a dynamic component reading a key its object lacks": "FV0421",
+    "v-html on a dynamic component": "FV0422",
+    "a slot with fallback content inside a dynamic element": "FV0919",
+    "v-show inside a dynamic element": "FV0423",
+    "v-model on a select inside a dynamic element": "FV0423",
+    "a slot rendered inside a dynamic element and outside one": "FV0920",
     "a custom directive the configuration does not declare client-only": "FV0405",
     "a type that is both null and undefined": "FV0311",
     "a default for a nullable prop": "FV0307",

@@ -173,6 +173,7 @@ ferrovue compiles `<script setup lang="ts">` components, and components with no 
 | `style` | objects (camelCase or kebab-case keys, `--custom` properties), arrays of objects, strings, merged with a static `style`, and `v-show`; later values override earlier ones as in Vue. A global `<style>` block is allowed |
 | Scoped styles | `<style scoped>`: the id on every element, on child components' roots (a root that is itself a component, fragments, recursion and `inheritAttrs: false` as Vue renders them) and, from a component with `:slotted()` rules, on the slot content it is given, forwarded slots included; inside `<Transition>`, `<KeepAlive>`, `<Teleport>` and `v-if`; on `<RouterLink>` and what it holds, as vue-router renders them |
 | Components | imported child components, `v-bind` of a child's own `Props`, `v-model` on a child's `defineModel`, recursion; props named in `kebab-case` or `camelCase`; `defineAsyncComponent(() => import("./X.vue"))` (or `{ loader: … }`), rendered as the component it loads, which Vue's server renderer waits for |
+| `<component :is>` | over a closed set of choices, compiled to a `match`: an imported component (`:is="Card"`), an HTML element's name (`is="h2"`), a `computed` or `?:` choosing among them, a prop typed as a union of string literals (`as: "h1" \| "h2"`), and an object of imported components (or element names) declared in setup or imported from a `.ts` file, read by such a prop (`ICONS[name]`); props, fallthrough attributes, slots and scope ids reach each choice as they reach a static child; also inside `<KeepAlive>` and `<Transition>`. See the crate's [`generated_code`](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#component-is) guide |
 | Escape hatches | `<ClientOnly>` from `ferrovue/client`, whose default slot the server never renders, so anything may go in it; components listed in `twins`, rendered by Rust functions of yours. See [Escape hatches](#escape-hatches) |
 | Fallthrough attributes | what a parent passes a child beyond its props (static and bound attributes, `class`, `style`, `data-*`, `aria-*`, booleans, `undefined`): onto its single root, merged with the root's own class and style and replacing its other attributes where they stand, as Vue's `mergeProps` merges them; none for two roots; on through a root that is a component, or a `<RouterLink>`; with `inheritAttrs: false`, onto the elements or components that bind `v-bind="$attrs"` or a `useAttrs()` binding, before or after their own; beside scope ids. Listeners are dropped, as Vue's server drops them. See the crate's [`generated_code`](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#fallthrough-attributes) guide |
 | Slots | default and named slots, fallbacks, `$slots.name` tests and the same through `useSlots()`, scoped slots (`<slot :item="x">` and `#item="{ item }"` or `v-slot="props"`), whose props a parent can hand to its own children |
@@ -189,7 +190,10 @@ Refused at compile time, each with an error that names the construct:
 - `<RouterView>` in a component with `<style scoped>`, which would give the page that component's
   id; and, since vue-router renders a link from virtual nodes, a `<slot>` inside a `<RouterLink>`
   that takes scope ids, or an element inside one in slot content given a `:slotted()` id
-- `<component :is>`
+- `<component :is>` over an open set (a `string`, a `Component`, a key that is not a literal union),
+  over a prop that may be absent, or naming a key its object lacks or a tag that is not an HTML
+  element; `v-html` or `v-text` on it; and, inside an element it chooses (which Vue renders from
+  virtual nodes), a `<slot>` with fallback content, `v-show`, and `v-model` on a `<select>`
 - the Options API (a `<script>` without `setup`), and a type parameter of a generic component with
   no constraint (`generic="T"`)
 - constants that are not literals (`Date.now()`, a function), an object constant read whole or by a

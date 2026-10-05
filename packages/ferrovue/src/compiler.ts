@@ -4,6 +4,7 @@ import { type Config, ctx, loadConfig, tyOfName } from "./context.ts";
 import { importsOf, readComponent } from "./component.ts";
 import { scopeFor } from "./script.ts";
 import { attrsFlow } from "./fallthrough.ts";
+import { prepareDynamic } from "./dynamic.ts";
 import { componentSource, isIsland, modSource } from "./rust.ts";
 import { renderParams } from "./plugin.ts";
 import { PLUGINS } from "./plugins/index.ts";
@@ -42,7 +43,8 @@ export function generate(root: string, config: Config = loadConfig(root)): Map<s
   const components = new Map(read.map((r) => [r.comp.name, r.comp]));
   ctx.components = components;
   const scopes = read.map((r) => scopeFor(r.comp, r.ast, components).scope);
-  const all = read.map((r, i) => ({ comp: r.comp, ssr: r.ssr, children: scopes[i]!.children, attrsBindings: scopes[i]!.attrsBindings }));
+  const analysed = prepareDynamic(read.map((r, i) => ({ ...r, scope: scopes[i]! })));
+  const all = read.map((r, i) => ({ comp: r.comp, ssr: analysed[i]!, children: scopes[i]!.children, attrsBindings: scopes[i]!.attrsBindings }));
   for (const p of PLUGINS) p.analyse?.(all);
   attrsFlow(all);
   for (const c of components.values()) c.takes = new Set(renderParams().filter((p) => p.reads(c)).map((p) => p.name));

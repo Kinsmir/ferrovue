@@ -34,7 +34,7 @@ it("gives each `<style scoped>` component the id `@vitejs/plugin-vue` gave its c
   const files = generate(ROOT);
   for (const [name, c] of scoped) {
     const module = name.replace(/[A-Z]/g, (ch) => "_" + ch.toLowerCase()).replace(/^_/, "");
-    expect(files.get(`${module}.rs`), name).toContain(` ${(c as { __scopeId: string }).__scopeId}`);
+    expect(files.get(`${module}.rs`), name).toMatch(new RegExp(`[ "]${(c as { __scopeId: string }).__scopeId}\\b`));
   }
 });
 

@@ -6,6 +6,7 @@ import { rustTy } from "./rust.ts";
 import { fieldInit } from "./children.ts";
 import { pushesContent, statements } from "./template.ts";
 import { slotContextOf } from "./plugin.ts";
+import { isDynamicComponent } from "./dynamic.ts";
 
 function borrowed(code: string): string {
   return code.startsWith("&") || /^\w+$/.test(code) || /^fv_sp\d+\.\w+$/.test(code) ? code : `&${operand(code, UNARY)}`;
@@ -34,9 +35,10 @@ export function slotContent(s: Scope, value: N): { body: N[]; param: N } {
 export function staticallyFilled(body: N[]): boolean {
   return body.some(
     (st) =>
-      st.type === "ExpressionStatement" && st.expression.type === "CallExpression" &&
+      isDynamicComponent(st) ||
+      (st.type === "ExpressionStatement" && st.expression.type === "CallExpression" &&
       st.expression.callee.type === "Identifier" && st.expression.callee.name === "_push" &&
-      pushesContent(st.expression.arguments[0]) === true,
+      pushesContent(st.expression.arguments[0]) === true),
   );
 }
 
