@@ -2,7 +2,12 @@ use ferrovue::{Attr, Attrs};
 
 use crate::generated::twins::{StarRatingProps, StarRatingSlots};
 
-pub fn star_rating(out: &mut String, props: &StarRatingProps<'_>, slots: StarRatingSlots<'_>, attrs: &Attrs<'_>) {
+pub fn star_rating(
+    out: &mut String,
+    props: &StarRatingProps<'_>,
+    slots: StarRatingSlots<'_>,
+    attrs: &Attrs<'_>,
+) {
     let max = props.max.unwrap_or(5);
     let described;
     let label = match props.label {
@@ -16,13 +21,24 @@ pub fn star_rating(out: &mut String, props: &StarRatingProps<'_>, slots: StarRat
         ("class", Attr::str("stars")),
         ("role", Attr::str("img")),
         ("aria-label", Attr::str(label)),
-        ("data-readonly", if props.readonly { Attr::str("") } else { Attr::Undefined }),
+        (
+            "data-readonly",
+            if props.readonly {
+                Attr::str("")
+            } else {
+                Attr::Undefined
+            },
+        ),
     ];
     out.push_str("<div");
     ferrovue::attrs_into(out, &[&own, attrs.list()], 1, attrs.ids());
     out.push('>');
     for i in 0..max {
-        out.push_str(if i < props.value { r#"<span class="on">★</span>"# } else { r#"<span class="off">★</span>"# });
+        out.push_str(if i < props.value {
+            r#"<span class="on">★</span>"#
+        } else {
+            r#"<span class="off">★</span>"#
+        });
     }
     match slots.default {
         Some(slot) => {
