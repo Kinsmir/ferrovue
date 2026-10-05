@@ -17,8 +17,14 @@ const components = new Map(
 );
 for (const [name, component] of components) attachSsrRender(join(ROOT, "components", `${name}.vue`), name, component);
 
-it("has fixtures for every component", () => {
+it("has fixtures for every component, and recorded HTML for every fixture", () => {
+  expect(components.size).toBeGreaterThanOrEqual(120);
+  expect(cases.length).toBeGreaterThanOrEqual(390);
   expect([...new Set(cases.map((c) => c.component))].toSorted()).toEqual([...components.keys()].toSorted());
+  const files = readdirSync(join(ROOT, "fixtures"), { recursive: true, encoding: "utf8" }).filter((f) => /\.\w+$/.test(f));
+  const named = (ext: string): string[] => files.filter((f) => f.endsWith(ext)).map((f) => f.slice(0, -ext.length)).toSorted();
+  expect(files.filter((f) => !/\.(json|html)$/.test(f))).toEqual([]);
+  expect(named(".html")).toEqual(named(".json"));
 });
 
 it("has generated Rust that is what the generator writes now", () => {

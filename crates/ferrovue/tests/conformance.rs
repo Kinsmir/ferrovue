@@ -29,7 +29,7 @@ use std::path::Path;
 ferrovue::conformance!(
     "tests/conformance/fixtures",
     generated::render_json,
-    at_least = 50
+    at_least = 390
 );
 
 fn unescape(s: &str) -> String {
