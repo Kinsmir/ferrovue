@@ -7,6 +7,7 @@ import { cond, describeTy, expr, known, meet, truthy, unquote } from "./expr.ts"
 import { atom, bare, condition, logical, not, receiver, strArg } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
 import { isDollarAttrs } from "./scoped.ts";
+import { claim } from "./plugin.ts";
 
 /** What a number written at run time is expected to take: most a page shows are shorter, and the
  * reservation is an estimate. */
@@ -33,16 +34,13 @@ export function interpolate(e: Emitter, v: Val): void {
   switch (v.ty.k) {
     case "undef":
       return;
-    // `toDisplayString` of a query value: a string, nothing for `null`, an array as JSON.
-    case "query":
-      e.stmt(`${atom(v.code)}.write_display(out);`);
-      return;
     case "opt":
       e.open(`if let Some(v) = ${v.code}`);
       interpolate(e, { code: "v", ty: v.ty.of });
       e.close();
       return;
     default:
+      if (ctx.plugins.some((p) => p.values?.interpolate?.(e, v))) return;
       throw new GenError("only strings, numbers and booleans can be interpolated");
   }
 }
@@ -58,11 +56,9 @@ export function attrValue(e: Emitter, v: Val): void {
 function renderable(s: Scope, key: string, v: Val, n: N): void {
   const ty = v.ty.k === "opt" ? v.ty.of : v.ty;
   if (ty.k === "str" || ty.k === "int" || ty.k === "float" || ty.k === "bool" || ty.k === "undef") return;
-  const what = ty.k === "query" ? "a query value, which is an array when its key is repeated" : describeTy(ty);
-  const fix =
-    ty.k === "query" ? 'narrow it to one string, as `typeof route.query.q === "string" ? route.query.q : ""`'
-    : ty.k === "list" ? 'join it into one string, as `.join(",")`'
-    : "bind a string, a number or a boolean";
+  const own = claim((p) => p.values?.unbindable?.(ty));
+  const what = own?.what ?? describeTy(ty);
+  const fix = own?.fix ?? (ty.k === "list" ? 'join it into one string, as `.join(",")`' : "bind a string, a number or a boolean");
   fail(s.comp, `\`${key}\` is bound to ${what}: Vue's server renderer leaves the attribute out, and hydration then sets it, changing the page; ${fix}`, n);
 }
 

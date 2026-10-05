@@ -4,7 +4,7 @@ import { basename } from "node:path";
 import { type Component, type N, type Scope, type Val, fail, GenError, snake, STR, takesAttrs } from "./model.ts";
 import { CONFIG_FILE, ctx } from "./context.ts";
 import { definePropsType } from "./typescript.ts";
-import { expr, fieldVal, storeGetter, theRoute } from "./expr.ts";
+import { expr, fieldVal, storeGetter } from "./expr.ts";
 import { collected, heldList } from "./lists.ts";
 import { piniaStores, type Store, storeImport } from "./plugins/stores.ts";
 import { runOf } from "./plugin.ts";
@@ -90,7 +90,6 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
     narrowed: new Map(),
     selfAlias: { name: null },
     helperBytes: { n: 0 },
-    router: new Map(),
     directives: new Map(),
     i18nT: new Set(),
     fill: false,
@@ -100,11 +99,12 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
     fallthrough: takesAttrs(comp) ? "fv_attrs" : null,
     attrsBindings: new Set(),
     sid: null,
+    plugins: new Map(),
   };
+  for (const p of ctx.plugins) if (p.scope) scope.plugins.set(p, p.scope(scope));
   const lets: string[] = [];
   const storeHooks = new Map<string, Store>();
   let storeToRefsName: string | null = null;
-  let useRouteName: string | null = null;
   let useI18nName: string | null = null;
   let useAttrsName: string | null = null;
   /** Setup bindings holding a store, by name. */
@@ -115,7 +115,11 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
       if (from.endsWith(".vue")) {
         const def = st.specifiers.find((x: N) => x.type === "ImportDefaultSpecifier");
         if (def) scope.children.set(def.local.name, basename(from, ".vue"));
-      } else if (storeImport(comp, from)) {
+        continue;
+      }
+      // A module a plugin owns, such as vue-router, is the plugin's to read.
+      if (ctx.plugins.some((p) => p.scriptImport?.(scope, st, from))) continue;
+      if (storeImport(comp, from)) {
         for (const sp of st.specifiers) {
           const hook = sp.type === "ImportSpecifier" ? (sp.imported.name ?? sp.imported.value) : null;
           // A type from the store's file, which `readComponent` has already resolved.
@@ -123,13 +127,6 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
           const store = hook ? runOf(piniaStores).stores.get(hook) : undefined;
           if (!store || store.module !== storeImport(comp, from)) fail(comp, "import a store by its `use…` hook", sp);
           storeHooks.set(sp.local.name, store);
-        }
-      } else if (from === "vue-router") {
-        for (const sp of st.specifiers) {
-          const name = sp.type === "ImportSpecifier" ? (sp.imported.name ?? sp.imported.value) : null;
-          if (name === "useRoute") useRouteName = sp.local.name;
-          else if (name === "RouterLink" || name === "RouterView") scope.router.set(sp.local.name, name);
-          else scope.clientOnly.set(sp.local.name, `\`${name}\` from vue-router does not run on the server`);
         }
       } else if (from === "vue-i18n") {
         for (const sp of st.specifiers) {
@@ -182,6 +179,8 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
         }
         continue;
       }
+      // A binding to what a plugin provides: \`useRoute()\`.
+      if (ctx.plugins.some((p) => p.scriptBinding?.(scope, d))) continue;
       const calls = (name: string | null) =>
         name !== null && init0?.type === "CallExpression" && init0.callee.type === "Identifier" && init0.callee.name === name;
       // `const { t, locale } = useI18n()`: \`t\` translates, \`locale\` is the request's locale.
@@ -230,11 +229,6 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
         storeValues.set(local, hook);
         scope.setup.set(local, { code: `fv_stores.${hook.field}`, ty: { k: "struct", name: hook.state, store: true } });
         comp.readsStores = true;
-        continue;
-      }
-      // `const route = useRoute()`: the reader's location.
-      if (useRouteName !== null && init0?.type === "CallExpression" && init0.callee.type === "Identifier" && init0.callee.name === useRouteName) {
-        scope.setup.set(local, theRoute(scope, d));
         continue;
       }
       // `const attrs = useAttrs()`: `$attrs`, which the template may bind whole.

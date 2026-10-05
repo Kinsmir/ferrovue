@@ -1,6 +1,7 @@
 /* The compiler's model: the types it gives values, the shapes of components and scopes, and the errors it raises. (Not `types.ts`, which is the public `ferrovue/types` module.) */
 
 import type { SourceMapConsumer } from "source-map-js";
+import type { Plugin } from "./plugin.ts";
 
 // Babel's AST, read structurally: every access below checks `type` before it trusts a field.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -26,13 +27,11 @@ export type Ty =
   | { k: "html" }
   /** Another component's `Props`, imported from its `.vue` file: what `v-bind` hands that child. */
   | { k: "child"; name: string }
-  /** `useRoute()` or `$route`: the reader's location, as vue-router resolved it. */
-  | { k: "route" }
-  /** `route.params`. */
-  | { k: "params" }
-  /** `route.query`, and one of its values: a string, \`null\`, an array of those, or absent. */
-  | { k: "queryobj" }
-  | { k: "query" };
+  | PluginTys[keyof PluginTys];
+
+/** The types of values plugins add, by kind: each plugin declares its own here (\`declare module\`),
+ * and tells the core what to do with them through its \`ValueHooks\`. */
+export interface PluginTys {}
 
 export interface Field {
   js: string;
@@ -168,12 +167,6 @@ export interface Component {
   imports: Set<string>;
   /** The slots its template renders with `<slot>`, by name, in order of first appearance. */
   slotNames: string[];
-  /** Whether its template holds `<RouterView>`: the page, which the server supplies. */
-  routerView: boolean;
-  /** Whether its template holds `<RouterLink>`. */
-  routerLink: boolean;
-  /** Whether it reads the route itself: `useRoute()`, or `$route` in the template. */
-  readsRoute: boolean;
   /** Whether its setup reads a store. */
   readsStores: boolean;
   /** Whether it translates: \`$t\`, or \`useI18n()\` in setup. */
@@ -225,9 +218,6 @@ export function blankComponent(name: string, module: string, file: string, struc
     childProps: new Map(),
     imports: new Set(),
     slotNames: [],
-    routerView: false,
-    routerLink: false,
-    readsRoute: false,
     readsStores: false,
     readsI18n: false,
     takes: new Set(),
@@ -271,8 +261,6 @@ export interface Scope {
   selfAlias: { name: string | null };
   /** What the helper calls translated so far can write, shared by every copy of the scope. */
   helperBytes: { n: number };
-  /** The names the compiled template resolved `RouterLink` and `RouterView` under. */
-  router: Map<string, "RouterLink" | "RouterView">;
   /** Directives the compiled template resolved by name: local → the directive's name. */
   directives: Map<string, string>;
   /** Setup bindings that are vue-i18n's \`t\`, from \`const { t } = useI18n()\`. */
@@ -280,8 +268,8 @@ export interface Scope {
   /** Inside slot content whose emptiness is decided at run time: each push that is not a comment
    * sets the closure's `filled`, which is how Vue tells content from nothing (`ssrRenderSlot`). */
   fill: boolean;
-  /** Inside a `<RouterLink>`'s slot, which Vue renders from virtual nodes rather than pushes: an
-   * untaken `v-if` is `<!--v-if-->` there, not `<!---->`. */
+  /** Inside content a plugin renders from virtual nodes rather than pushes, such as a
+   * `<RouterLink>`'s slot: an untaken `v-if` is `<!--v-if-->` there, not `<!---->`. */
   vnode: boolean;
   /** The Rust value of `_attrs`, the scope ids this render's root inherits, as `ssrRenderAttrs`
    * writes them; `null` when the component inherits none. */
@@ -296,6 +284,8 @@ export interface Scope {
   sid: string | null;
   /** Inside a `v-for` over a list of the props: the Rust name of its item, and the list. */
   loop?: { item: string; over: string };
+  /** Each plugin's state for this setup scope (\`scopeOf\`). */
+  plugins: Map<Plugin, unknown>;
 }
 
 /** Where a node came from, which decides how its position is read: `source` for an AST parsed

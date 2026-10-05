@@ -9,9 +9,8 @@ import { Emitter } from "./emitter.ts";
 import { attrOf, dollarAttrs, IGNORED_PROPS, interpolate, isAttrs, mergedParts, renderAttr, renderAttrs, renderClass, renderDynamicAttr, renderStyle } from "./attrs.ts";
 import { passedKey } from "./scoped.ts";
 import { isSSRSafeAttrName, propsToAttrMap } from "@vue/shared";
-import { routerLink } from "./plugins/router.ts";
 import { rustTy } from "./rust.ts";
-import { paramsOf } from "./plugin.ts";
+import { paramsOf, slotFieldsOf } from "./plugin.ts";
 
 /** One `${...}` inside a pushed template literal. */
 export function slot(s: Scope, e: Emitter, n: N): void {
@@ -147,20 +146,8 @@ function pushed(s: Scope, e: Emitter, n: N): void {
     return;
   }
   if (n.type === "CallExpression" && n.callee.type === "Identifier" && n.callee.name === "_ssrRenderComponent") {
-    const target = n.arguments[0];
-    const routed =
-      target.type === "Identifier"
-        ? s.router.get(target.name)
-        : target.type === "MemberExpression" && target.object.name === "$setup"
-          ? s.router.get(target.computed ? target.property.value : target.property.name)
-          : undefined;
-    if (routed === "RouterLink") routerLink(s, e, n);
-    else if (routed === "RouterView") {
-      // vue-router renders the page as its own root, which takes this component's id.
-      if (s.comp.scopeId !== null) fail(s.comp, "`<RouterView>` in a component with `<style scoped>` gives the page this component's id, which the server's page does not carry", n);
-      e.stmt("fv_slots.router_view.render_to(out);");
-    }
-    else renderChild(s, e, n);
+    // A component a plugin renders itself, such as `<RouterLink>`, or an imported one.
+    if (!ctx.plugins.some((p) => p.component?.(s, e, n))) renderChild(s, e, n);
     return;
   }
   fail(s.comp, "this cannot be pushed", n);
@@ -193,9 +180,7 @@ export function renderChild(s: Scope, e: Emitter, n: N): void {
   const childName = isSelf ? s.comp.name : local ? s.children.get(local) : undefined;
   const child = childName ? s.components.get(childName) : undefined;
   if (!child) fail(s.comp, "a child component must be an imported island", n);
-  if (child.routerView) {
-    fail(s.comp, `${child.name} holds \`<RouterView>\`: the server renders it at the top, never as a child`, n);
-  }
+  for (const p of ctx.plugins) p.child?.(s, child, n);
   // What the props merge: object literals — a `{ ref_for: true }` marker inside a `v-for` among
   // them, which renders nothing — the parent's `_attrs` when the child is its root, and `$attrs`.
   const parts: N[] = !rawProps || rawProps.type === "NullLiteral" ? [] : mergedParts(rawProps);
@@ -309,7 +294,7 @@ function borrowed(code: string): string {
 
 /** Whether a component takes a `Slots` argument. */
 export function takesSlots(c: Component): boolean {
-  return c.slotNames.length > 0 || c.routerView;
+  return c.slotNames.length > 0 || slotFieldsOf(c).length > 0;
 }
 
 /** The arguments after `props` that a component's `render` takes. */
@@ -317,7 +302,7 @@ export function extraParams(c: Component): string {
   return (takesSlots(c) ? ", fv_slots: Slots<'_>" : "") + paramsOf(c).map((p) => `, ${p.name}: ${p.ty}`).join("");
 }
 
-/** `render(out, props[, slots][, route])` for a child, with the slot content this template gives
+/** `render(out, props[, slots][, …])` for a child, with the slot content this template gives
  * it as closures; `render_scoped`, with the scope ids its root is handed last — and the attributes
  * it is passed, as `fv::Attrs` — for a child that may be handed some. */
 export function callChild(s: Scope, e: Emitter, child: Component, propsCode: string, slots: N, attrs: string | null): void {
@@ -334,10 +319,10 @@ export function callChild(s: Scope, e: Emitter, child: Component, propsCode: str
   }
   const m = `super::${child.module}`;
   const scoped = child.inherits || takesAttrs(child);
-  const route = paramsOf(child).map((p) => `, ${p.name}`).join("") + (scoped ? `, ${attrs ?? (takesAttrs(child) ? "&fv::Attrs::NONE" : '""')}` : "");
+  const trailing = paramsOf(child).map((p) => `, ${p.name}`).join("") + (scoped ? `, ${attrs ?? (takesAttrs(child) ? "&fv::Attrs::NONE" : '""')}` : "");
   const render = scoped ? "render_scoped" : "render";
   if (!takesSlots(child)) {
-    e.stmt(`${m}::${render}(out, ${propsCode}${route});`);
+    e.stmt(`${m}::${render}(out, ${propsCode}${trailing});`);
     return;
   }
   e.open(`${m}::${render}(out, ${propsCode}, ${m}::Slots`);
@@ -413,7 +398,7 @@ export function callChild(s: Scope, e: Emitter, child: Component, propsCode: str
       e.close(")),");
     }
   }
-  e.close(`${route});`);
+  e.close(`${trailing});`);
 }
 
 /** The statements a parent's slot content pushes: the `if (_push)` half of its `_withCtx`. */
@@ -658,13 +643,11 @@ export function statements(s: Scope, e: Emitter, body: N[]): void {
         s.selfAlias.name = d.id.name;
         continue;
       }
-      const routed = init?.type === "CallExpression" && init.callee.type === "Identifier" &&
+      // A component a plugin provides by name, such as `RouterLink`.
+      const named = init?.type === "CallExpression" && init.callee.type === "Identifier" &&
         init.callee.name === "_resolveComponent" && init.arguments.length === 1 &&
         init.arguments[0]?.type === "StringLiteral" ? init.arguments[0].value : null;
-      if (routed === "RouterLink" || routed === "RouterView") {
-        s.router.set(d.id.name, routed);
-        continue;
-      }
+      if (named !== null && ctx.plugins.some((p) => p.resolveComponent?.(s, d.id.name, named))) continue;
       // `const _directive_focus = _resolveDirective("focus")`: a globally registered directive.
       if (init?.type === "CallExpression" && init.callee.type === "Identifier" && init.callee.name === "_resolveDirective" && init.arguments[0]?.type === "StringLiteral") {
         s.directives.set(d.id.name, init.arguments[0].value);

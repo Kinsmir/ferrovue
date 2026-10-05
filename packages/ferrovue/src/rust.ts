@@ -8,7 +8,7 @@ import { lookupStruct } from "./typescript.ts";
 import { childOf } from "./expr.ts";
 import { Emitter } from "./emitter.ts";
 import { extraParams, fieldInit, slotFieldBorrows, slotFieldTy, slotTypeName, statements, takesSlots } from "./template.ts";
-import { paramsOf, renderParams } from "./plugin.ts";
+import { paramsOf, renderParams, slotFieldsOf } from "./plugin.ts";
 import { scopeFor } from "./script.ts";
 
 export function needsLifetime(ty: Ty, comp: Component, seen: Set<string> = new Set()): boolean {
@@ -267,7 +267,7 @@ export function componentSource(comp: Component, ast: N[], ssr: string, componen
       const type = comp.slotShapes.has(n) ? `&'s ${slotTypeName(n, "Slot")}<'s>` : "fv::Slot<'s>";
       return `    /// ${outlet}\n    pub ${snake(n)}: Option<${type}>,`;
     }),
-    ...(comp.routerView ? ["    /// The page `<RouterView>` shows.\n    pub router_view: fv::Slot<'s>,"] : []),
+    ...slotFieldsOf(comp).map((f) => `    /// ${f.doc}\n    pub ${f.rust}: fv::Slot<'s>,`),
   ];
   const slotTypes = [...comp.slotShapes.entries()]
     .map(([n, shape]) => {
@@ -288,7 +288,7 @@ pub type ${slotTypeName(n, "Slot")}<'s> = dyn ${borrows ? "for<'v> " : ""}Fn(&mu
     .join("");
   const slotsStruct = takesSlots(comp)
     ? `${slotTypes}/// What a parent puts in the slots \`${basename(comp.file)}\` renders.
-#[derive(Clone, Copy${comp.routerView ? "" : ", Default"})]
+#[derive(Clone, Copy${slotFieldsOf(comp).length ? "" : ", Default"})]
 pub struct Slots<'s> {
 ${slotFields.join("\n")}
 }
@@ -348,7 +348,7 @@ export function modSource(comps: Component[], modules: string[]): string {
       let args = "";
       if (readsFixture(c)) lines.push("let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;");
       if (takesSlots(c)) {
-        const names = [...c.slotNames, ...(c.routerView ? ["routerView"] : [])];
+        const names = [...c.slotNames, ...slotFieldsOf(c).map((f) => f.js)];
         for (const n of names) {
           const local = `s_${snake(n).replace(/^r#/, "")}`;
           const shape = c.slotShapes.get(n);
@@ -363,7 +363,7 @@ export function modSource(comps: Component[], modules: string[]): string {
           const value = c.slotShapes.has(n) ? `&${local} as &${c.module}::${slotTypeName(n, "Slot")}` : `ferrovue::Slot::new(&${local})`;
           return `${snake(n)}: fixture.slot(${rustStr(n)}).map(|_| ${value})`;
         });
-        if (c.routerView) fields.push("router_view: ferrovue::Slot::new(&s_router_view)");
+        for (const f of slotFieldsOf(c)) fields.push(`${f.rust}: ferrovue::Slot::new(&s_${snake(f.js).replace(/^r#/, "")})`);
         args += `, ${c.module}::Slots { ${fields.join(", ")} }`;
       }
       for (const p of paramsOf(c)) {

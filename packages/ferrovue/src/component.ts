@@ -205,15 +205,6 @@ export function readComponent(file: string, root: string): { comp: Component; as
   for (const m of compiled.code.matchAll(/_ssrRenderSlot\(_ctx\.\$slots, "([^"]+)"/g)) {
     if (!comp.slotNames.includes(m[1]!)) comp.slotNames.push(m[1]!);
   }
-  // Resolved by name, as globally registered components are, or imported from `vue-router`.
-  const imported = (exported: string) =>
-    [...plainAst, ...ast].some(
-      (st) => st.type === "ImportDeclaration" && st.source.value === "vue-router" &&
-        st.specifiers.some((sp: N) => sp.type === "ImportSpecifier" && (sp.imported.name ?? sp.imported.value) === exported),
-    );
-  comp.routerLink = compiled.code.includes('_resolveComponent("RouterLink")') || imported("RouterLink");
-  comp.routerView = compiled.code.includes('_resolveComponent("RouterView")') || imported("RouterView");
-  comp.readsRoute = compiled.code.includes("_ctx.$route");
   comp.readsI18n = compiled.code.includes("_ctx.$t(");
   for (const p of ctx.plugins) p.compiled?.(comp, compiled.code, [...plainAst, ...ast]);
   return { comp, ast, ssr: compiled.code };

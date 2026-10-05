@@ -1,12 +1,11 @@
 /* Expressions translated to Rust, each with the type it evaluates to. */
 
 import { type Component, type N, type Scope, type Ty, type Val, BOOL, fail, FLOAT, GenError, INT, opt, rustStr, sameTy, snake, STR, UNDEF } from "./model.ts";
-import { CONFIG_FILE, ctx } from "./context.ts";
+import { ctx } from "./context.ts";
 import { lookupStruct, markHome } from "./typescript.ts";
 import { translate } from "./plugins/i18n.ts";
-import { router } from "./plugins/router.ts";
 import { piniaStores } from "./plugins/stores.ts";
-import { runOf } from "./plugin.ts";
+import { claim, runOf } from "./plugin.ts";
 import { AS, atom, bare, binary, condition, enclosed, FLIPPED, ifElse, logical, negate, not, occurrences, operand, receiver, strArg, UNARY } from "./parens.ts";
 import { collected, computed, computedListMethod, items, listMethod, objectCall } from "./lists.ts";
 
@@ -167,10 +166,8 @@ export function describeTy(ty: Ty): string {
       return `an optional ${describeTy(ty.of).replace(/^an? /, "")}`;
     case "undef":
       return "`undefined`";
-    case "query":
-      return "a query value";
     default:
-      return "a value of another kind";
+      return claim((p) => p.values?.describe?.(ty)) ?? "a value of another kind";
   }
 }
 
@@ -234,12 +231,10 @@ export function truthy(v: Val): string {
       return v.code;
     case "undef":
       return "false";
-    case "query":
-      return `${atom(v.code)}.truthy()`;
     case "opt":
       return `${atom(v.code)}.is_some_and(|v| ${truthy({ code: "v", ty: v.ty.of })})`;
     default:
-      return "true";
+      return claim((p) => p.values?.truthy?.(v)) ?? "true";
   }
 }
 
@@ -282,25 +277,11 @@ export interface Presence {
   truthy: boolean;
 }
 
-/** `typeof x === "string"` or `typeof x !== "string"`: the `x` tested, and whether the test is
- * negated. */
-function typeofString(n: N): { target: N; negated: boolean } | null {
-  if (n.type !== "BinaryExpression" || (n.operator !== "===" && n.operator !== "!==")) return null;
-  const isTypeof = (m: N) => m.type === "UnaryExpression" && m.operator === "typeof";
-  const isString = (m: N) => m.type === "StringLiteral" && m.value === "string";
-  const target = isTypeof(n.left) && isString(n.right) ? n.left.argument : isTypeof(n.right) && isString(n.left) ? n.right.argument : null;
-  return target ? { target, negated: n.operator === "!==" } : null;
-}
-
 export function presence(s: Scope, n: N): Presence | null {
-  // A query value narrowed to a single string, which an attribute can then be bound to.
-  const t = typeofString(n);
-  if (t) {
-    const path = pathOf(t.target);
-    const v = expr(s, t.target);
-    if (path === null || v.ty.k !== "query") return null;
-    const option = `${atom(v.code)}.attr_value()`;
-    return { path, of: STR, negated: t.negated, truthy: false, option, present: `${option}.is_some()`, pattern: (name) => `let Some(${name}) = ${option}` };
+  // A test of a plugin's own, such as a query value narrowed to a single string.
+  for (const p of ctx.plugins) {
+    const own = p.presence?.(s, n);
+    if (own !== undefined) return own;
   }
   let target: N = n;
   let negated = false;
@@ -374,37 +355,6 @@ export function childOf(name: string): Component {
   const c = ctx.components.get(name);
   if (!c) throw new GenError(`\`Props\` is imported from ${name}.vue, which is not among the components compiled`);
   return c;
-}
-
-/** The reader's route, which the component then takes. */
-export function theRoute(s: Scope, n: N): Val {
-  if (!runOf(router).routes) fail(s.comp, `reading the route needs \`routes\` in ${CONFIG_FILE}`, n);
-  s.comp.readsRoute = true;
-  return { code: "fv_route", ty: { k: "route" } };
-}
-
-/** A field of the route: what `useRoute()` gives that the server knows as vue-router does. */
-export function routeField(s: Scope, base: Val, prop: string, n: N): Val {
-  if (base.ty.k === "params") {
-    // Every parameter is a string; absent when the route has none of that name.
-    return { code: `fv_route.param(${rustStr(prop)})`, ty: opt(STR) };
-  }
-  if (base.ty.k === "queryobj") return { code: `fv_route.query(${rustStr(prop)})`, ty: { k: "query" } };
-  switch (prop) {
-    case "path":
-      return { code: "fv_route.path()", ty: STR };
-    case "hash":
-      return { code: "fv_route.hash()", ty: STR };
-    case "name":
-      return { code: "fv_route.name()", ty: opt(STR) };
-    case "params":
-      return { code: "fv_route", ty: { k: "params" } };
-    case "query":
-      return { code: "fv_route", ty: { k: "queryobj" } };
-    case "fullPath":
-      return { code: "fv_route.full_path()", ty: STR };
-  }
-  return fail(s.comp, `\`route.${prop}\` is not available on the server: \`path\`, \`fullPath\`, \`hash\`, \`name\`, \`params\` and \`query\` are`, n);
 }
 
 /** The getters being translated, so that two reading each other is an error, not a loop. */
@@ -669,7 +619,8 @@ export function expr(s: Scope, n: N): Val {
         }
         if (n.property.type === "StringLiteral") {
           const base = expr(s, n.object);
-          if (base.ty.k === "params" || base.ty.k === "queryobj") return routeField(s, base, n.property.value, n);
+          const own = claim((p) => p.member?.(s, base, n.property.value, n, true));
+          if (own) return own;
         }
         return fail(comp, "computed member access", n);
       }
@@ -689,7 +640,9 @@ export function expr(s: Scope, n: N): Val {
             return fieldVal(comp, "props", { k: "struct", name: "Props" }, prop, n);
           case "$setup":
           case "_ctx": {
-            if (n.object.name === "_ctx" && prop === "$route") return theRoute(s, n);
+            // A global a plugin provides: `$route`.
+            const global = n.object.name === "_ctx" ? claim((p) => p.global?.(s, prop, n)) : undefined;
+            if (global) return global;
             if (n.object.name === "_ctx" && prop === "$attrs") {
               return fail(comp, "`$attrs` is bound whole, with `v-bind=\"$attrs\"`; a value read from it has no type: declare it as a prop", n);
             }
@@ -706,8 +659,7 @@ export function expr(s: Scope, n: N): Val {
         }
       }
       const base = expr(s, n.object);
-      if (base.ty.k === "route" || base.ty.k === "params" || base.ty.k === "queryobj") return routeField(s, base, prop, n);
-      return storeGetter(s, base, prop, n) ?? fieldVal(comp, base.code, base.ty, prop, n);
+      return claim((p) => p.member?.(s, base, prop, n, false)) ?? storeGetter(s, base, prop, n) ?? fieldVal(comp, base.code, base.ty, prop, n);
     }
     case "CallExpression":
       return call(s, n);
@@ -726,12 +678,8 @@ export function expr(s: Scope, n: N): Val {
       const a = expr(s, n.left);
       const b = expr(s, n.right);
       if (n.operator === "??") {
-        // A query value falls back for `undefined` and `null`, and stays a query value: an array
-        // given more than once stays an array.
-        if (a.ty.k === "query") {
-          if (b.ty.k !== "str") fail(comp, "`??` after a query value takes a string", n);
-          return { code: `${atom(a.code)}.or(${bare(b.code)})`, ty: a.ty };
-        }
+        const own = claim((p) => p.values?.nullish?.(s, a, b, n));
+        if (own) return own;
         if (a.ty.k !== "opt") return a;
         if (b.ty.k === "undef") return a;
         if (b.iter !== undefined) fail(comp, "`??` falling back to a computed list", n);
@@ -783,25 +731,18 @@ export function expr(s: Scope, n: N): Val {
       return fail(comp, `unary \`${n.operator}\``, n);
     case "BinaryExpression": {
       if (n.operator !== "===" && n.operator !== "!==") fail(comp, `\`${n.operator}\``, n);
-      // `typeof route.query.q === "string"`: a single value, not `null`, absent or repeated.
-      const tested = typeofString(n);
-      if (tested) {
-        const v = expr(s, tested.target);
-        if (v.ty.k !== "query") fail(comp, '`typeof` tests a query value only, as `typeof route.query.q === "string"`', n);
-        const one = `${atom(v.code)}.attr_value().is_some()`;
-        return boolOf(tested.negated ? not(one) : one);
-      }
+      // A test a plugin translates whole: `typeof route.query.q === "string"`.
+      const whole = claim((p) => p.equality?.(s, n));
+      if (whole) return whole;
       const a = expr(s, n.left);
       const b = expr(s, n.right);
       let eq: string;
       const scalar = (t: Ty) => t.k === "str" || t.k === "int" || t.k === "bool";
       const strish = (t: Ty) => t.k === "str" || (t.k === "opt" && t.of.k === "str");
       if (strish(a.ty) && strish(b.ty)) meet(comp, a, b, `\`${n.operator}\``, n, "equal");
-      // A query value equals a string only when it is that single value.
-      if (a.ty.k === "query" && b.ty.k === "str") eq = `${atom(a.code)}.is(${strArg(b.code)})`;
-      else if (b.ty.k === "query" && a.ty.k === "str") eq = `${atom(b.code)}.is(${strArg(a.code)})`;
-      else if (a.ty.k === "query" && b.ty.k === "undef") eq = `${atom(a.code)}.is_undefined()`;
-      else if (b.ty.k === "query" && a.ty.k === "undef") eq = `${atom(b.code)}.is_undefined()`;
+      // A value of a plugin's type, compared as the plugin compares it.
+      const own = claim((p) => p.values?.equals?.(a, b));
+      if (own !== undefined) eq = own;
       else if (b.ty.k === "undef" && a.ty.k === "opt") eq = `${atom(a.code)}.is_none()`;
       else if (a.ty.k === "undef" && b.ty.k === "opt") eq = `${atom(b.code)}.is_none()`;
       else if (a.ty.k === "undef" || b.ty.k === "undef") {
@@ -947,7 +888,8 @@ export function call(s: Scope, n: N): Val {
     const method = callee.property.name as string;
     if (callee.object.type === "Identifier" && callee.object.name === "Array" && method === "isArray") {
       const a = expr(s, args[0]);
-      if (a.ty.k === "query") return { code: `${atom(a.code)}.is_array()`, ty: BOOL };
+      const own = claim((p) => p.values?.isArray?.(a));
+      if (own) return own;
       const is = a.ty.k === "list";
       return { code: String(is), ty: BOOL, konst: is };
     }
