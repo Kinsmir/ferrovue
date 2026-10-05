@@ -28,6 +28,11 @@ multiple-versions = "warn"
 wildcards = "deny"
 allow-wildcard-paths = true
 highlight = "all"
+skip = [
+    { crate = "convert_case:<0.10", reason = "dioxus 0.7's macros use convert_case 0.8 and derive_more 2 uses 0.10" },
+    { crate = "http:<1", reason = "actix-http 3 is built on http 0.2 and the axum stack on http 1" },
+    { crate = "syn:<3", reason = "derive and macro crates are moving from syn 2 to syn 3 one at a time" },
+]
 
 [sources]
 unknown-registry = "deny"
