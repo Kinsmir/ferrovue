@@ -56,11 +56,13 @@ cargo run -p ferrovue-example-fullstack -- --render /books/dune
 | `client/components/Picks.vue` | The layout of the staff picks page, hydrated whole: a default slot of picks and a `reviews` slot streamed into a hole |
 | `client/components/Pick.vue` | A part of that page, rendered from its props, with an `AddToBasket` inside it |
 | `client/components/Reviews.vue` | The slow part of the book page, streamed into the hole as an island, with `v-show` the client toggles; `<style scoped>`; a Rust twin's component, and `<ClientOnly>` around one that reads `window` |
+| `client/components/NotFound.vue` | The page for an unknown book or path, which the server sends with status 404 |
 | `client/vendor/` | Stand-ins for a component library's components, which ferrovue does not compile: `StarRating`, rendered on the server by its Rust twin, and `ShareLink`, rendered only in the browser |
 | `src/ui.rs` | The Rust twin of `StarRating`, listed under `twins` in `ferrovue.config.json` |
 | `fixtures/`, `test/fixtures.test.ts`, `src/fixtures.rs` | What proves the twin: each fixture rendered by Vue through `ferrovue/testing` (`FERROVUE_FIXTURES_WRITE=1` records the `.html`) and by the generated Rust, byte for byte |
 | `client/app.ts` | `hydrateState`, `mountPage` on a page that carries a record, then `mountIslands` of `ferrovue/islands`, which the Vite plugin writes: every island by name, each loaded only on a page that holds it, with one Pinia and one router for them all |
 | `src/pages.rs` | Rendering pages from the generated `route_table::router()`, `Props::new(…)`, `Slots`, `ferrovue::state_script_into`, `ferrovue::hole()`, and `reviews::into_island()`, a page holding its props that a handler returns; `ferrovue::Page` for the staff picks, whose record is the last hole |
+| `src/catalogue.rs` | The shop's books and reviews, standing in for a database; the reviews arrive after a delay so the page has something to stream |
 | `src/main.rs` | The axum server: a `ferrovue::HtmlStream` per page, a book's reviews alone at `/books/{id}/reviews`, `dist/assets` served beside it, and `--render` |
 | `src/assets.rs` | Finding the entry's hashed script and stylesheets in Vite's manifest, the lazily loaded islands' stylesheets included, or loading from the dev server |
 | `test/hydration.test.ts` | The proof: the server's own HTML hydrates with no mismatch, and carries the scope ids the client build's stylesheet selects |
@@ -120,6 +122,7 @@ page is an island; "Add to basket" and "Show all reviews" work because the app h
 ## The hydration test
 
 ```sh
+pnpm --filter ferrovue-example-fullstack build    # the client build whose manifest the pages link
 pnpm --filter ferrovue-example-fullstack test     # vitest, in happy-dom
 cargo test -p ferrovue-example-fullstack          # the server's pages, as strings
 ```
