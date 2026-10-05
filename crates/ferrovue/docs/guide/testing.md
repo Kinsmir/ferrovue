@@ -55,7 +55,8 @@ the application's own modules, imported by the test file: vitest may load `ferro
 Node and the application's code through Vite, and a store or composable finds its Pinia, router or
 i18n only in the module instance it was defined with. The suite:
 
-- fails when a component has no fixtures, or a fixture's directory names no component;
+- fails when a component has no fixtures, a fixture's directory names no component, or there are
+  no components at all;
 - fails when the generated Rust in `out` differs from what `ferrovue` writes now, with the diff;
 - renders each fixture with Vue's `renderToString`, through the `ssrRender` the component's SSR
   build has (`attachSsrRender`), with a router over the configured routes, Pinia state and

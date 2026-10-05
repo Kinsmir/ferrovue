@@ -178,9 +178,10 @@ function recordedHtml(c: Case): string {
   }
 }
 
-function coverageProblems(fixtures: string, cases: Case[], files: string[], given: Map<string, Component>): string[] {
+function coverageProblems(fixtures: string, components: string, cases: Case[], files: string[], given: Map<string, Component>): string[] {
   const problems: string[] = [];
   if (!existsSync(fixtures)) problems.push(`there is no fixtures directory at ${fixtures}`);
+  if (!files.length) problems.push(`there are no components in ${components}`);
   const withFixtures = new Set(cases.map((c) => c.component));
   for (const name of files) {
     if (!withFixtures.has(name)) problems.push(`${name} has no fixtures: add ${name}/<case>.json under ${fixtures}`);
@@ -270,7 +271,7 @@ export function registerConformance(api: TestApi, options: ConformanceOptions): 
 
   api.describe("conformance", () => {
     api.it("has fixtures for every component, and a component for every fixture", () => {
-      const problems = coverageProblems(fixtures, cases, files, given);
+      const problems = coverageProblems(fixtures, dir, cases, files, given);
       if (problems.length) throw new Error(`the fixtures do not cover the components:\n${problems.join("\n")}`);
     });
 
