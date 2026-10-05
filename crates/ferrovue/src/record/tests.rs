@@ -23,3 +23,18 @@ fn a_record_takes_the_last_value_of_a_repeated_key_in_its_first_place() {
     assert_eq!(record.len(), 2);
     assert!(Record::<'_, i64>::new().is_empty());
 }
+
+#[test]
+fn a_record_with_an_entry_is_not_empty() {
+    let record: Record<'_, i64> = [("a", 1)].into_iter().collect();
+    assert!(!record.is_empty());
+}
+
+#[test]
+fn a_record_read_from_anything_but_an_object_is_an_error_expecting_an_object() {
+    let error = serde_json::from_str::<Record<'_, i64>>("[1]").unwrap_err();
+    assert_eq!(
+        error.to_string(),
+        "invalid type: sequence, expected an object at line 1 column 0"
+    );
+}
