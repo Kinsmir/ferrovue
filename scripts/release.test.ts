@@ -11,6 +11,7 @@ import {
   releaseChangelog,
   setCargoVersion,
   setPackageVersion,
+  checkInheritedDependencies,
   checkMembers,
   workspaceMembers,
 } from "./release.ts";
@@ -156,5 +157,44 @@ describe("workspace members", () => {
       "pnpm-workspace.yaml lists packages/gone, which holds no manifest",
       "packages/ferrovue is not listed in pnpm-workspace.yaml",
     ]);
+  });
+
+  it("holds every member's dependencies to the workspace's", () => {
+    const inherited = [
+      "[package]",
+      'name = "a"',
+      "version.workspace = true",
+      "[dependencies]",
+      "serde.workspace = true",
+      'tokio = { workspace = true, features = ["rt"] }',
+      "[dev-dependencies]",
+      "proptest.workspace = true",
+      "[target.'cfg(unix)'.dependencies]",
+      "libc = { workspace = true, optional = true }",
+      "[dependencies.http]",
+      "workspace = true",
+      'features = ["std"]',
+      "[[bench]]",
+      'name = "render"',
+      "harness = false",
+      "[lints]",
+      "workspace = true",
+    ].join("\n");
+    expect(checkInheritedDependencies("crates/a/Cargo.toml", inherited)).toEqual([]);
+    const own = [
+      "[dependencies]",
+      'serde = "1"',
+      'ferrovue = { path = "../ferrovue" }',
+      "serde_json.workspace = false",
+      "[build-dependencies]",
+      'cc = { version = "1", workspace = false }',
+      "[dev-dependencies.tokio]",
+      'version = "1"',
+    ].join("\n");
+    expect(checkInheritedDependencies("crates/a/Cargo.toml", own)).toEqual(
+      ["serde", "ferrovue", "serde_json", "cc", "tokio"].map(
+        (d) => `crates/a/Cargo.toml declares ${d} itself: write it in [workspace.dependencies] and use \`workspace = true\``,
+      ),
+    );
   });
 });

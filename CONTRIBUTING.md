@@ -98,6 +98,10 @@ core.
 - A new crate, example or npm package is listed by its path in `Cargo.toml`'s `members` or
   `pnpm-workspace.yaml`'s `packages`; neither uses wildcards, and `node scripts/release.ts members`
   fails on a member that is missing (CI runs it on every pull request).
+- Every Rust dependency, dev-dependency included, has its version and default features in
+  `Cargo.toml`'s `[workspace.dependencies]`; a crate takes it with `name.workspace = true` or
+  `name = { workspace = true, features = [...], optional = true }`, and `release.ts members` fails on
+  one declared in a crate's own manifest.
 
 ## Licence
 
