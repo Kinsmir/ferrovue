@@ -5,6 +5,8 @@ released together and share version numbers.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-05
+
 ### Changed
 
 - **Breaking:** `import … from "ferrovue"` is the browser API (`mountIslands`, `hydrateState`, `TrustedHtml`, `Float`); the compiler's API (`generate`, `write`, the configuration types) moved to `ferrovue/compiler`. `ferrovue/client`, `ferrovue/types`, `ferrovue/islands`, `ferrovue/vite`, `ferrovue/testing` and the CLI are unchanged. The package is marked `"sideEffects": false`, its root bundles to about 2.4 kB instead of 1.2 MB, and a build no longer leaves files from earlier builds in `dist/`.
