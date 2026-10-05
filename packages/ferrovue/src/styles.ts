@@ -21,7 +21,7 @@ export function mergedStyle(s: Scope, e: Emitter, n: N): void {
     e.open(`if let Some(v) = ${v.code}`);
     e.stmt("fv::style_text_into(out, v);");
     e.close();
-  } else if (!nothing(v.ty)) fail(s.comp, "a style binding is a string, an object or an array", n);
+  } else if (!nothing(v.ty)) fail(s.comp, "FV1007", "a style binding is a string, an object or an array", n);
 }
 
 export function styleAttr(s: Scope, n: N): string {
@@ -32,9 +32,9 @@ export function styleAttr(s: Scope, n: N): string {
       return "fv::Attr::Undefined";
     case "ObjectExpression": {
       const entries = n.properties.map((p: N) => {
-        if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "a style object holds plain `property: value` pairs", p);
+        if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "FV1008", "a style object holds plain `property: value` pairs", p);
         const key: string = p.key.type === "Identifier" ? p.key.name : String(p.key.value);
-        if (/^\d+$/.test(key) || key.startsWith(":")) fail(s.comp, `style property \`${key}\``, p);
+        if (/^\d+$/.test(key) || key.startsWith(":")) fail(s.comp, "FV1009", `style property \`${key}\``, p);
         return `(${rustStr(key)}, ${valueAttr(s, expr(s, p.value), p.value)})`;
       });
       return `fv::Attr::style([${entries.join(", ")}])`;
@@ -49,7 +49,7 @@ export function styleAttr(s: Scope, n: N): string {
   }
   const v = expr(s, n);
   if (v.ty.k === "str" || nothing(v.ty) || (v.ty.k === "opt" && v.ty.of.k === "str")) return valueAttr(s, v, n);
-  return fail(s.comp, "a style binding is a string, an object or an array", n);
+  return fail(s.comp, "FV1007", "a style binding is a string, an object or an array", n);
 }
 
 export interface StyleItem {
@@ -79,14 +79,14 @@ export function styleItems(s: Scope, n: N, when: string | null): StyleItem[] {
       return [{
         cond: when,
         entries: n.properties.map((p: N) => {
-          if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "a style object holds plain `property: value` pairs", p);
+          if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "FV1008", "a style object holds plain `property: value` pairs", p);
           const key: string = p.key.type === "Identifier" ? p.key.name : String(p.key.value);
-          if (/^\d+$/.test(key) || key.startsWith(":")) fail(s.comp, `style property \`${key}\``, p);
+          if (/^\d+$/.test(key) || key.startsWith(":")) fail(s.comp, "FV1009", `style property \`${key}\``, p);
           return { key, css: key.startsWith("--") ? key : hyphenate(key), value: p.value };
         }),
       }];
   }
-  return fail(s.comp, "a style binding is an object, an array of objects, or a string on its own", n);
+  return fail(s.comp, "FV1010", "a style binding is an object, an array of objects, or a string on its own", n);
 }
 
 export function renderStyle(s: Scope, e: Emitter, n: N): void {
@@ -101,7 +101,7 @@ export function renderStyle(s: Scope, e: Emitter, n: N): void {
       e.open(`if let Some(v) = ${v.code}`);
       e.stmt("fv::escape_into(out, v);");
       e.close();
-    } else if (!nothing(v.ty)) fail(s.comp, "a style binding is a string, an object or an array", n);
+    } else if (!nothing(v.ty)) fail(s.comp, "FV1007", "a style binding is a string, an object or an array", n);
     return;
   }
   const items = styleItems(s, n, null);
@@ -142,7 +142,7 @@ export function renderStyle(s: Scope, e: Emitter, n: N): void {
     const first = flat.indexOf(at[0]!);
     const again = flat.indexOf(at[at.length - 1]!);
     const between = flat.slice(first + 1, again).some((f) => order.indexOf(f.key) > order.indexOf(key));
-    if (between) fail(s.comp, `the place of style property \`${key}\` would depend on a condition; set it unconditionally first`, n);
+    if (between) fail(s.comp, "FV1011", `the place of style property \`${key}\` would depend on a condition; set it unconditionally first`, n);
   }
   for (const key of order) {
     const chain: { cond: string | null; css: string; value: N }[] = [];

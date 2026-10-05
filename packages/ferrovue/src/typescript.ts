@@ -41,7 +41,7 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
       if (t.members.length === 1 && sig.type === "TSIndexSignature" && key?.type === "TSStringKeyword" && sig.typeAnnotation) {
         return recordOf(comp, sig.typeAnnotation.typeAnnotation, structs, seen);
       }
-      return fail(comp, "an object type in place: declare it as an interface, or as `{ [key: string]: T }` for a dictionary", t);
+      return fail(comp, "FV0310", "an object type in place: declare it as an interface, or as `{ [key: string]: T }` for a dictionary", t);
     }
     case "TSTypeOperator":
       if (t.operator === "readonly") return tyOfTs(comp, t.typeAnnotation, structs, seen);
@@ -64,9 +64,9 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
           tys.push(ty.k === "opt" ? ty.of : ty);
         }
       }
-      if (none === "either") return fail(comp, NULL_OR_UNDEFINED, t);
+      if (none === "either") return fail(comp, "FV0311", NULL_OR_UNDEFINED, t);
       const first = tys[0];
-      if (!first || tys.some((x) => !sameTy(x, first))) return fail(comp, "a union of different types has no Rust type", t);
+      if (!first || tys.some((x) => !sameTy(x, first))) return fail(comp, "FV0312", "a union of different types has no Rust type", t);
       return withAbsence(first, none);
     }
     case "TSTypeReference": {
@@ -77,7 +77,7 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
       }
       if (name === "Record" && t.typeParameters?.params?.length === 2) {
         const [key, value] = t.typeParameters.params;
-        if (key.type !== "TSStringKeyword") fail(comp, "a `Record` is keyed by `string`", key);
+        if (key.type !== "TSStringKeyword") fail(comp, "FV0313", "a `Record` is keyed by `string`", key);
         return recordOf(comp, value, structs, seen);
       }
       if (structs.has(name)) return { k: "struct", name };
@@ -85,7 +85,7 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
       if (comp.floatName !== null && name === comp.floatName) return FLOAT;
       if (comp.trustedName !== null && name === comp.trustedName) {
         if (ctx.trustedHtml === null) {
-          fail(comp, `a \`TrustedHtml\` prop needs \`trustedHtml\` in ${CONFIG_FILE}: the Rust type it is`, t);
+          fail(comp, "FV1503", `a \`TrustedHtml\` prop needs \`trustedHtml\` in ${CONFIG_FILE}: the Rust type it is`, t);
         }
         return { k: "html" };
       }
@@ -93,19 +93,19 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
       if (imported) return imported;
       const alias = comp.aliases.get(name);
       if (alias) {
-        if (seen.has(name)) fail(comp, `type \`${name}\` refers to itself through an alias`, t);
+        if (seen.has(name)) fail(comp, "FV0314", `type \`${name}\` refers to itself through an alias`, t);
         return tyOfTs(comp, alias, structs, new Set(seen).add(name));
       }
-      return fail(comp, `unsupported prop type \`${name}\`: declare it as an interface in the component, or import it from a \`.ts\` file`, t);
+      return fail(comp, "FV0315", `unsupported prop type \`${name}\`: declare it as an interface in the component, or import it from a \`.ts\` file`, t);
     }
   }
-  return fail(comp, `unsupported prop type \`${t.type}\``, t);
+  return fail(comp, "FV0316", `unsupported prop type \`${t.type}\``, t);
 }
 
 function recordOf(comp: Component, value: N, structs: Map<string, Struct>, seen: Set<string>): Ty {
   const of = tyOfTs(comp, value, structs, seen);
   const plain = (t: Ty): boolean => ["str", "int", "float", "bool", "struct", "child"].includes(t.k) || (t.k === "list" && plain(t.of));
-  if (!plain(of)) fail(comp, "a `Record`'s values are strings, numbers, booleans, objects or lists of those", value);
+  if (!plain(of)) fail(comp, "FV0317", "a `Record`'s values are strings, numbers, booleans, objects or lists of those", value);
   return { k: "record", of };
 }
 
@@ -128,7 +128,7 @@ export function declareTypes(comp: Component, body: N[], structs: Map<string, St
   }
   for (const d of decls) {
     if (RUST_PRELUDE.has(d.name)) {
-      fail(comp, `an interface called \`${d.name}\` would hide Rust's own \`${d.name}\` in the generated code; rename it`, d.node);
+      fail(comp, "FV0318", `an interface called \`${d.name}\` would hide Rust's own \`${d.name}\` in the generated code; rename it`, d.node);
     }
     structs.set(d.name, { name: d.name, fields: [] });
   }
@@ -162,7 +162,7 @@ export function readTypeFile(file: string): void {
   const local = new Map<string, Struct>();
   const decls = declareTypes(home, body, local, ctx.typeAliases);
   for (const d of decls) {
-    if (before.has(d.name)) fail(home, `\`${d.name}\` is declared by ${ctx.typeFiles.get(d.name)} too`, d.node);
+    if (before.has(d.name)) fail(home, "FV0319", `\`${d.name}\` is declared by ${ctx.typeFiles.get(d.name)} too`, d.node);
     ctx.typeStructs.set(d.name, local.get(d.name)!);
     ctx.typeFiles.set(d.name, rel);
   }
@@ -194,11 +194,11 @@ export function structOf(comp: Component, name: string, members: N[], structs: M
   const fields: Field[] = [];
   for (const m of members) {
     if (m.type !== "TSPropertySignature" || m.key.type !== "Identifier") {
-      fail(comp, `\`${name}\` may only hold plain named fields`, m);
+      fail(comp, "FV0320", `\`${name}\` may only hold plain named fields`, m);
     }
     const base = tyOfTs(comp, m.typeAnnotation.typeAnnotation, structs);
     if (m.optional && absence(base) === "null") {
-      fail(comp, `\`${m.key.name}?: T | null\` may be absent, which is \`undefined\`, or \`null\`: ${ONE_NOTHING}; declare it \`${m.key.name}: T | null\` or \`${m.key.name}?: T\``, m);
+      fail(comp, "FV0321", `\`${m.key.name}?: T | null\` may be absent, which is \`undefined\`, or \`null\`: ${ONE_NOTHING}; declare it \`${m.key.name}: T | null\` or \`${m.key.name}?: T\``, m);
     }
     if (m.optional && base.k === "opt") {
       fields.push({ js: m.key.name, rust: snake(m.key.name), ty: base });
@@ -271,5 +271,5 @@ export function defaultValue(comp: Component, f: Field, node: N, written?: N): s
   if (of.k === "list" && node.type === "ArrowFunctionExpression" && node.body.type === "ArrayExpression" && node.body.elements.length === 0) {
     return "&[]";
   }
-  return fail(comp, `the default of \`${f.js}\` must be a literal of its type, or \`() => []\` for a list`, written ?? node);
+  return fail(comp, "FV0322", `the default of \`${f.js}\` must be a literal of its type, or \`() => []\` for a list`, written ?? node);
 }

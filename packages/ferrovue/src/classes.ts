@@ -29,9 +29,9 @@ export function classItems(s: Scope, n: N): ClassItem[] {
       ) {
         const keys: Val[] = [];
         const entries = n.properties.map((p: N) => {
-          if (p.type !== "ObjectProperty") fail(s.comp, "a class object holds `name: condition` pairs", p);
+          if (p.type !== "ObjectProperty") fail(s.comp, "FV1001", "a class object holds `name: condition` pairs", p);
           const key: Val = p.computed ? expr(s, p.key) : { code: rustStr(p.key.type === "Identifier" ? p.key.name : String(p.key.value)), ty: STR };
-          if (key.ty.k !== "str") fail(s.comp, "a computed class name is a string", p.key);
+          if (key.ty.k !== "str") fail(s.comp, "FV1002", "a computed class name is a string", p.key);
           for (const other of keys) meet(s.comp, other, key, "a class object's names", p.key, "equal");
           keys.push(key);
           return `(${bare(cond(s, p.value))}, ${bare(key.code)})`;
@@ -39,15 +39,15 @@ export function classItems(s: Scope, n: N): ClassItem[] {
         return [{ code: `&*fv::class_object(&[${entries.join(", ")}])` }];
       }
       return n.properties.flatMap((p: N): ClassItem[] => {
-        if (p.type !== "ObjectProperty") fail(s.comp, "a class object holds `name: condition` pairs", p);
+        if (p.type !== "ObjectProperty") fail(s.comp, "FV1001", "a class object holds `name: condition` pairs", p);
         let name: ClassItem;
         if (!p.computed) {
           const key: string = p.key.type === "Identifier" ? p.key.name : String(p.key.value);
-          if (key !== key.trim() || !key) fail(s.comp, `class name \`${key}\` has spaces around it`, p);
+          if (key !== key.trim() || !key) fail(s.comp, "FV1003", `class name \`${key}\` has spaces around it`, p);
           name = { lit: key };
         } else {
           const k = expr(s, p.key);
-          if (k.ty.k !== "str") fail(s.comp, "a computed class name is a string", p.key);
+          if (k.ty.k !== "str") fail(s.comp, "FV1002", "a computed class name is a string", p.key);
           name = { code: `fv::js_trim(${strArg(k.code)})` };
         }
         const v = expr(s, p.value);
@@ -73,7 +73,7 @@ export function classItems(s: Scope, n: N): ClassItem[] {
   if (v.ty.k === "str") return [{ code: v.code }];
   if (v.ty.k === "opt" && v.ty.of.k === "str") return [{ code: `${atom(v.code)}.unwrap_or("")` }];
   if (nothing(v.ty)) return [];
-  return fail(s.comp, "a class is a string, an array, or an object of conditions", n);
+  return fail(s.comp, "FV1004", "a class is a string, an array, or an object of conditions", n);
 }
 
 function conditional(test: string, items: ClassItem[]): ClassItem[] {
@@ -157,5 +157,5 @@ export function classAttr(s: Scope, n: N, side: "vnode" | "own"): string {
   }
   const v = expr(s, n);
   if (v.ty.k === "str" || nothing(v.ty) || (v.ty.k === "opt" && v.ty.of.k === "str")) return valueAttr(s, v, n);
-  return fail(s.comp, "a class is a string, an array, or an object of conditions", n);
+  return fail(s.comp, "FV1004", "a class is a string, an array, or an object of conditions", n);
 }

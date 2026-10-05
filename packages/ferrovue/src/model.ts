@@ -1,6 +1,7 @@
 import type { SourceMapConsumer } from "source-map-js";
 import type { Plugin } from "./plugin.ts";
 import type { Const } from "./constants.ts";
+import type { Code } from "./errors.ts";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type N = any;
@@ -140,7 +141,34 @@ export function rustChar(ch: string): string {
   return `'${rustStr(ch).slice(1, -1)}'`;
 }
 
-export class GenError extends Error {}
+/** Where in a file an error is: lines and columns count from 1, and the end is exclusive. */
+export interface Location {
+  file: string;
+  line?: number;
+  column?: number;
+  endLine?: number;
+  endColumn?: number;
+}
+
+/** A construct the compiler refuses: its stable code, the message as shown, where it is, and what
+ * is refused without the location and the quoted line. */
+export class GenError extends Error {
+  readonly code: Code;
+  readonly at: Location | null;
+  readonly what: string;
+
+  constructor(code: Code, message: string, at: Location | null = null, what: string = message) {
+    super(message);
+    this.code = code;
+    this.at = at;
+    this.what = what;
+  }
+}
+
+/** Refuse something in a file that has no source to quote, as a locale or routes file. */
+export function failIn(file: string, code: Code, what: string): never {
+  throw new GenError(code, `${file}: ${what}`, { file }, what);
+}
 
 export interface Component {
   name: string;
@@ -327,10 +355,16 @@ function snippet(comp: Component, at: { line: number; column: number }): string 
   return `\n ${n} | ${text}\n ${" ".repeat(n.length)} | ${lead}^`;
 }
 
-export function fail(comp: Component, what: string, node?: N): never {
+function locateEnd(node: N): { endLine: number; endColumn: number } | null {
+  const end = node?.__fv === "source" ? node.loc?.end : null;
+  return end ? { endLine: end.line, endColumn: end.column + 1 } : null;
+}
+
+export function fail(comp: Component, code: Code, what: string, node?: N): never {
   const at = locate(comp, node);
-  if (!at) throw new GenError(`${comp.file}: ${what}`);
-  throw new GenError(`${comp.file}:${at.line}:${at.column + 1}: ${what}${snippet(comp, at)}`);
+  if (!at) throw new GenError(code, `${comp.file}: ${what}`, { file: comp.file }, what);
+  const where = { file: comp.file, line: at.line, column: at.column + 1, ...locateEnd(node) };
+  throw new GenError(code, `${comp.file}:${at.line}:${at.column + 1}: ${what}${snippet(comp, at)}`, where, what);
 }
 
 function canonical(_key: string, value: unknown): unknown {

@@ -23,7 +23,7 @@ export function routeParams(path: string): string[] {
 }
 
 function noHalves(s: Scope, v: Val, n: N): void {
-  if (v.lone) fail(s.comp, lonely("a `<RouterLink>` location"), n);
+  if (v.lone) fail(s.comp, "FV0706", lonely("a `<RouterLink>` location"), n);
 }
 
 export function urlText(s: Scope, v: Val, n: N): string {
@@ -31,23 +31,23 @@ export function urlText(s: Scope, v: Val, n: N): string {
   if (v.ty.k === "str") return v.code;
   if (v.ty.k === "int" || v.ty.k === "float") return `&*fv::Js(${bare(v.code)}).to_string()`;
   if (v.ty.k === "bool") return `if ${condition(v.code)} { "true" } else { "false" }`;
-  return fail(s.comp, "a route parameter is a string or a number that is present", n);
+  return fail(s.comp, "FV1201", "a route parameter is a string or a number that is present", n);
 }
 
 export function resolveLink(s: Scope, e: Emitter, to: N): void {
   if (to.type !== "ObjectExpression") {
     const target = expr(s, to);
-    if (target.ty.k !== "str") fail(s.comp, "`<RouterLink>`'s `to` is a string or an object literal", to);
+    if (target.ty.k !== "str") fail(s.comp, "FV1202", "`<RouterLink>`'s `to` is a string or an object literal", to);
     noHalves(s, target, to);
     e.stmt(`let fv_link = fv_route.link(${strArg(target.code)});`);
     return;
   }
   const parts = new Map<string, N>();
   for (const p of to.properties) {
-    if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "a `to` object holds plain keys", p);
+    if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "FV1203", "a `to` object holds plain keys", p);
     const key: string = p.key.name ?? p.key.value;
     if (["replace", "force", "state"].includes(key)) continue;
-    if (!["name", "path", "params", "query", "hash"].includes(key)) fail(s.comp, `\`${key}\` in a \`to\` object`, p);
+    if (!["name", "path", "params", "query", "hash"].includes(key)) fail(s.comp, "FV1204", `\`${key}\` in a \`to\` object`, p);
     parts.set(key, p.value);
   }
   e.open("let fv_link =");
@@ -55,13 +55,13 @@ export function resolveLink(s: Scope, e: Emitter, to: N): void {
   const search = query ? "&fv_search" : '""';
   if (query) {
     e.stmt("let mut fv_search = String::new();");
-    if (query.type !== "ObjectExpression") fail(s.comp, "a `to`'s `query` is an object literal", query);
+    if (query.type !== "ObjectExpression") fail(s.comp, "FV1205", "a `to`'s `query` is an object literal", query);
     for (const p of query.properties) {
-      if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "a query holds plain keys", p);
+      if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "FV1206", "a query holds plain keys", p);
       const key = String(p.key.name ?? p.key.value);
       const v = expr(s, p.value);
       if (v.ty.k === "null" || (v.ty.k === "opt" && v.ty.none !== undefined)) {
-        fail(s.comp, "a query value that may be `null`, which vue-router writes as the key alone: give `undefined` to leave it out", p.value);
+        fail(s.comp, "FV1207", "a query value that may be `null`, which vue-router writes as the key alone: give `undefined` to leave it out", p.value);
       }
       if (v.ty.k === "undef") continue;
       if (v.ty.k === "opt") {
@@ -75,39 +75,39 @@ export function resolveLink(s: Scope, e: Emitter, to: N): void {
   const h = parts.get("hash");
   if (h) {
     const v = expr(s, h);
-    if (v.ty.k !== "str") fail(s.comp, "a `to`'s `hash` is a string", h);
+    if (v.ty.k !== "str") fail(s.comp, "FV1208", "a `to`'s `hash` is a string", h);
     noHalves(s, v, h);
     hash = strArg(v.code);
   }
   const name = parts.get("name");
   const path = parts.get("path");
   if (name) {
-    if (name.type !== "StringLiteral") fail(s.comp, "a `to`'s `name` is a string literal, checked against the routes", name);
+    if (name.type !== "StringLiteral") fail(s.comp, "FV1209", "a `to`'s `name` is a string literal, checked against the routes", name);
     const route = allRoutes(runOf(router).routes!).find((r) => r.name === name.value);
-    if (!route) fail(s.comp, `no route is called \`${name.value}\``, name);
+    if (!route) fail(s.comp, "FV1210", `no route is called \`${name.value}\``, name);
     const wanted = routeParams(route.fullPath);
     const given = new Map<string, N>();
     const params = parts.get("params");
     if (params) {
-      if (params.type !== "ObjectExpression") fail(s.comp, "a `to`'s `params` is an object literal", params);
+      if (params.type !== "ObjectExpression") fail(s.comp, "FV1211", "a `to`'s `params` is an object literal", params);
       for (const p of params.properties) {
-        if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "params hold plain keys", p);
+        if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "FV1212", "params hold plain keys", p);
         const key = String(p.key.name ?? p.key.value);
-        if (!wanted.includes(key)) fail(s.comp, `route \`${name.value}\` has no parameter \`${key}\``, p);
+        if (!wanted.includes(key)) fail(s.comp, "FV1213", `route \`${name.value}\` has no parameter \`${key}\``, p);
         given.set(key, p.value);
       }
     }
     const missing = wanted.filter((w) => !given.has(w));
-    if (missing.length) fail(s.comp, `route \`${name.value}\` needs \`${missing.join("`, `")}\`: give every parameter`, to);
+    if (missing.length) fail(s.comp, "FV1214", `route \`${name.value}\` needs \`${missing.join("`, `")}\`: give every parameter`, to);
     const list = wanted.map((w) => `(${rustStr(w)}, ${urlText(s, expr(s, given.get(w)), given.get(w))})`);
     e.stmt(`fv_route.link_named(${rustStr(name.value)}, &[${list.join(", ")}], ${search}, ${hash})`);
   } else if (path) {
-    if (parts.has("params")) fail(s.comp, "a `to` with a `path` takes no `params`, which vue-router ignores", path);
+    if (parts.has("params")) fail(s.comp, "FV1215", "a `to` with a `path` takes no `params`, which vue-router ignores", path);
     const v = expr(s, path);
-    if (v.ty.k !== "str") fail(s.comp, "a `to`'s `path` is a string", path);
+    if (v.ty.k !== "str") fail(s.comp, "FV1216", "a `to`'s `path` is a string", path);
     noHalves(s, v, path);
     e.stmt(`fv_route.link_path(${strArg(v.code)}, ${search}, ${hash})`);
-  } else fail(s.comp, "a `to` object has a `name` or a `path`", to);
+  } else fail(s.comp, "FV1217", "a `to` object has a `name` or a `path`", to);
   e.close(";");
 }
 
@@ -117,21 +117,21 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
   if (props?.type === "CallExpression" && props.callee.type === "Identifier" && props.callee.name === "_mergeProps") {
     props = mergeProps(s, props);
   }
-  if (props?.type !== "ObjectExpression") fail(s.comp, "`<RouterLink>` takes literal attributes", n);
+  if (props?.type !== "ObjectExpression") fail(s.comp, "FV1218", "`<RouterLink>` takes literal attributes", n);
   const fields = new Map<string, N>();
   const attrs: N[] = [];
   for (const p of props.properties) {
-    if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "`<RouterLink>` attributes hold plain keys", p);
+    if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "FV1219", "`<RouterLink>` attributes hold plain keys", p);
     const raw: string = p.key.type === "Identifier" ? p.key.name : p.key.value;
     const key = raw.replace(/-(\w)/g, (_, c: string) => c.toUpperCase());
     if (ROUTER_LINK_PROPS.has(key)) fields.set(key, p.value);
     else if (/^on[^a-z]/.test(raw) || IGNORED_PROPS.has(raw) || ROUTER_LINK_INERT.has(key)) continue;
-    else if (key === "custom") fail(s.comp, "`custom` on `<RouterLink>` renders a scoped slot, which is not supported", p);
-    else if (key === "href" || key === "ariaCurrent") fail(s.comp, `\`${raw}\` on \`<RouterLink>\` is its own`, p);
+    else if (key === "custom") fail(s.comp, "FV1220", "`custom` on `<RouterLink>` renders a scoped slot, which is not supported", p);
+    else if (key === "href" || key === "ariaCurrent") fail(s.comp, "FV1221", `\`${raw}\` on \`<RouterLink>\` is its own`, p);
     else attrs.push({ ...p, key: { type: "StringLiteral", value: raw } });
   }
   const to = fields.get("to");
-  if (!to) fail(s.comp, "`<RouterLink>` needs `to`", n);
+  if (!to) fail(s.comp, "FV1222", "`<RouterLink>` needs `to`", n);
   const passed = (rawProps?.type === "Identifier" && rawProps.name === "_attrs") || rawProps?.arguments?.some((a: N) => a.type === "Identifier" && a.name === "_attrs");
   const base = passed ? s.attrs : null;
   const slotted = slotScopeId ? s.sid : null;
@@ -143,16 +143,16 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
   };
   const writesScopeId = (x: N): boolean => x.type === "TemplateLiteral" && x.expressions.some((y: N) => y.type === "Identifier" && y.name === "_scopeId");
   if (slotted !== null && holds(writesScopeId)) {
-    fail(s.comp, "an element inside a `<RouterLink>` in slot content given a slot scope id: vue-router writes those ids by rules of its own", to);
+    fail(s.comp, "FV1223", "an element inside a `<RouterLink>` in slot content given a slot scope id: vue-router writes those ids by rules of its own", to);
   }
   if ((scopeId !== null || slotted !== null || base !== null) && holds((x) => x.type === "CallExpression" && x.callee.name === "_ssrRenderSlot")) {
-    fail(s.comp, "a `<slot>` inside a `<RouterLink>` that takes scope ids: vue-router renders it by rules of its own", to);
+    fail(s.comp, "FV1224", "a `<slot>` inside a `<RouterLink>` that takes scope ids: vue-router renders it by rules of its own", to);
   }
-  if (!runOf(router).routes) fail(s.comp, `\`<RouterLink>\` needs \`routes\` in ${CONFIG_FILE}: the paths it resolves against`, n);
+  if (!runOf(router).routes) fail(s.comp, "FV1225", `\`<RouterLink>\` needs \`routes\` in ${CONFIG_FILE}: the paths it resolves against`, n);
   const literal = (key: string, fallback: string): string => {
     const v = fields.get(key);
     if (!v) return fallback;
-    if (v.type !== "StringLiteral") fail(s.comp, `\`${key}\` on \`<RouterLink>\` is a string literal`, v);
+    if (v.type !== "StringLiteral") fail(s.comp, "FV1226", `\`${key}\` on \`<RouterLink>\` is a string literal`, v);
     return v.value;
   };
   const activeClass = literal("activeClass", runOf(router).linkActive);
@@ -168,9 +168,9 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
     for (const name of s.comp.attrNames) {
       const key = camelize(name);
       if ((ROUTER_LINK_PROPS.has(key) && key !== "class") || ROUTER_LINK_INERT.has(key) || key === "custom" || key === "viewTransition") {
-        fail(s.comp, `\`${name}\`, an attribute ${s.comp.name} may be passed, would reach its \`<RouterLink>\` as a prop`, n);
+        fail(s.comp, "FV1227", `\`${name}\`, an attribute ${s.comp.name} may be passed, would reach its \`<RouterLink>\` as a prop`, n);
       }
-      if (key === "href" || key === "ariaCurrent") fail(s.comp, `\`${name}\`, an attribute ${s.comp.name} may be passed, would replace its \`<RouterLink>\`'s own`, n);
+      if (key === "href" || key === "ariaCurrent") fail(s.comp, "FV1228", `\`${name}\`, an attribute ${s.comp.name} may be passed, would replace its \`<RouterLink>\`'s own`, n);
     }
     e.open(`if ${s.fallthrough}.is_empty()`);
   }
@@ -234,11 +234,11 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
   }
   e.lit(">");
   if (slots && slots.type !== "NullLiteral") {
-    if (slots.type !== "ObjectExpression") fail(s.comp, "slots must be an object literal", slots);
+    if (slots.type !== "ObjectExpression") fail(s.comp, "FV0901", "slots must be an object literal", slots);
     for (const p of slots.properties) {
       const key: string = p.key?.type === "Identifier" ? p.key.name : p.key?.value;
       if (key === "_") continue;
-      if (key !== "default") fail(s.comp, "`<RouterLink>` has only its default slot", p);
+      if (key !== "default") fail(s.comp, "FV1229", "`<RouterLink>` has only its default slot", p);
       statements({ ...s, fill: false, vnode: true }, e, slotBody(s, p.value));
     }
   }

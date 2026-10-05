@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { type Component, type N, type Scope, type Val, BOOL, fail, GenError, opt, rustStr, STR } from "../model.ts";
+import { type Component, type N, type Scope, type Val, BOOL, fail, failIn, GenError, opt, rustStr, STR } from "../model.ts";
 import { CONFIG_FILE } from "../context.ts";
 import { expr } from "../expr.ts";
 import { boolOf, pathOf } from "../narrowing.ts";
@@ -54,7 +54,7 @@ function typeofString(n: N): { target: N; negated: boolean } | null {
 }
 
 function theRoute(s: Scope, n: N): Val {
-  if (!runOf(router).routes) fail(s.comp, `reading the route needs \`routes\` in ${CONFIG_FILE}`, n);
+  if (!runOf(router).routes) fail(s.comp, "FV1230", `reading the route needs \`routes\` in ${CONFIG_FILE}`, n);
   runOf(router).readers.add(s.comp);
   return { code: "fv_route", ty: { k: "route" } };
 }
@@ -78,17 +78,17 @@ function routeField(s: Scope, base: Val, prop: string, n: N): Val {
     case "fullPath":
       return { code: "fv_route.full_path()", ty: STR };
   }
-  return fail(s.comp, `\`route.${prop}\` is not available on the server: \`path\`, \`fullPath\`, \`hash\`, \`name\`, \`params\` and \`query\` are`, n);
+  return fail(s.comp, "FV1231", `\`route.${prop}\` is not available on the server: \`path\`, \`fullPath\`, \`hash\`, \`name\`, \`params\` and \`query\` are`, n);
 }
 
 export function readRoutes(root: string, file: string): RouteDef[] {
   const raw = JSON.parse(readFileSync(join(root, file), "utf8")) as unknown;
-  if (!Array.isArray(raw)) throw new GenError(`${file} lists the routes in an array`);
+  if (!Array.isArray(raw)) throw new GenError("FV1232", `${file} lists the routes in an array`, { file });
   const read = (list: unknown[], parent: string | null): RouteDef[] =>
     list.map((r: unknown): RouteDef => {
       const o = (typeof r === "string" ? { path: r } : r) as { path?: unknown; name?: unknown; children?: unknown };
       if (typeof o?.path !== "string" || (o.name !== undefined && typeof o.name !== "string") || (o.children !== undefined && !Array.isArray(o.children))) {
-        throw new GenError(`${file}: a route is a path, or \`{ "path": "…", "name": "…", "children": [ … ] }\``);
+        failIn(file, "FV1233", `a route is a path, or \`{ "path": "…", "name": "…", "children": [ … ] }\``);
       }
       const fullPath =
         parent === null || o.path.startsWith("/") ? o.path : `${parent}${parent.endsWith("/") || o.path === "" ? "" : "/"}${o.path}`;
@@ -188,7 +188,7 @@ export const router: Plugin<RouterRun, RouterScope> = {
     const tested = typeofString(n);
     if (!tested) return null;
     const v = expr(s, tested.target);
-    if (v.ty.k !== "query") fail(s.comp, '`typeof` tests a query value only, as `typeof route.query.q === "string"`', n);
+    if (v.ty.k !== "query") fail(s.comp, "FV1234", '`typeof` tests a query value only, as `typeof route.query.q === "string"`', n);
     const one = `${atom(v.code)}.attr_value().is_some()`;
     return boolOf(tested.negated ? not(one) : one);
   },
@@ -215,7 +215,7 @@ export const router: Plugin<RouterRun, RouterScope> = {
         : undefined,
     nullish(s, a, b, n) {
       if (a.ty.k !== "query") return undefined;
-      if (b.ty.k !== "str") fail(s.comp, "`??` after a query value takes a string", n);
+      if (b.ty.k !== "str") fail(s.comp, "FV1235", "`??` after a query value takes a string", n);
       return { code: `${atom(a.code)}.or(${bare(b.code)})`, ty: a.ty };
     },
     equals(a, b) {
@@ -243,14 +243,14 @@ export const router: Plugin<RouterRun, RouterScope> = {
           : undefined;
     if (routed === "RouterLink") routerLink(s, e, n);
     else if (routed === "RouterView") {
-      if (scopeIdOf(s.comp) !== null) fail(s.comp, "`<RouterView>` in a component with `<style scoped>` gives the page this component's id, which the server's page does not carry", n);
+      if (scopeIdOf(s.comp) !== null) fail(s.comp, "FV1236", "`<RouterView>` in a component with `<style scoped>` gives the page this component's id, which the server's page does not carry", n);
       e.stmt("fv_slots.router_view.render_to(out);");
     } else return false;
     return true;
   },
   child(s, child, n) {
     if (runOf(router).views.has(child)) {
-      fail(s.comp, `${child.name} holds \`<RouterView>\`: the server renders it at the top, never as a child`, n);
+      fail(s.comp, "FV1237", `${child.name} holds \`<RouterView>\`: the server renders it at the top, never as a child`, n);
     }
   },
   slotFields: (comp) => (runOf(router).views.has(comp) ? [{ js: "routerView", rust: "router_view", doc: "The page `<RouterView>` shows." }] : []),

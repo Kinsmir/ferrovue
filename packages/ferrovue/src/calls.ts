@@ -21,7 +21,7 @@ export function call(s: Scope, n: N): Val {
           meet(comp, a, b, "`v-model`", n, "equal");
           return boolOf(stringsEqual(a, b));
         }
-        return fail(comp, "`v-model` comparison between these types", n);
+        return fail(comp, "FV0413", "`v-model` comparison between these types", n);
       }
       case "_ssrIncludeBooleanAttr": {
         const a = expr(s, args[0]);
@@ -31,7 +31,7 @@ export function call(s: Scope, n: N): Val {
         return boolOf(truthy(a));
       }
       case "_ssrLooseContain":
-        return fail(comp, "`v-model` over an array", n);
+        return fail(comp, "FV0414", "`v-model` over an array", n);
     }
     const own = claim((p) => p.call?.(s, n));
     if (own) return own;
@@ -48,19 +48,19 @@ export function call(s: Scope, n: N): Val {
       if (a.ty.k === "str") return { code: `fv::js_number(${strArg(a.code)})`, ty: FLOAT };
       if (isNumber(a.ty)) return a;
       if (a.ty.k === "bool") return { code: `i64::from(${bare(a.code)})`, ty: INT };
-      return fail(comp, "`Number()` takes a string, a number or a boolean that is present", n);
+      return fail(comp, "FV0701", "`Number()` takes a string, a number or a boolean that is present", n);
     }
     if ((callee.name === "parseInt" && (args.length === 1 || args.length === 2)) || (callee.name === "parseFloat" && args.length === 1)) {
       const a = expr(s, args[0]);
-      if (a.ty.k !== "str") fail(comp, `\`${callee.name}()\` takes a string`, args[0]);
+      if (a.ty.k !== "str") fail(comp, "FV0702", `\`${callee.name}()\` takes a string`, args[0]);
       if (callee.name === "parseFloat") return { code: `fv::js_parse_float(${strArg(a.code)})`, ty: FLOAT };
       const radix = args[1];
       if (radix && !(radix.type === "NumericLiteral" && (radix.value === 10 || radix.value === 16))) {
-        fail(comp, "`parseInt()` takes a radix of 10 or 16, written as a literal", radix);
+        fail(comp, "FV0703", "`parseInt()` takes a radix of 10 or 16, written as a literal", radix);
       }
       return { code: `fv::js_parse_int(${strArg(a.code)}, ${radix ? radix.value : 0})`, ty: FLOAT };
     }
-    return fail(comp, `\`${callee.name}()\` is not available when rendering on the server`, n);
+    return fail(comp, "FV0601", `\`${callee.name}()\` is not available when rendering on the server`, n);
   }
   if (callee.type === "MemberExpression" && !callee.computed) {
     const method = callee.property.name as string;
@@ -98,7 +98,7 @@ export function call(s: Scope, n: N): Val {
           if (method === "floor" || method === "ceil" || method === "trunc") return { code: `${receiver(asF64(x))}.${method}()`, ty: FLOAT };
         }
       }
-      return fail(comp, `\`Math.${method}()\` is supported on numbers as \`max\`, \`min\`, \`abs\`, \`round\`, \`floor\`, \`ceil\` and \`trunc\``, n);
+      return fail(comp, "FV0704", `\`Math.${method}()\` is supported on numbers as \`max\`, \`min\`, \`abs\`, \`round\`, \`floor\`, \`ceil\` and \`trunc\``, n);
     }
     const target = expr(s, callee.object);
     if (target.ty.k === "str") {
@@ -123,7 +123,7 @@ export function call(s: Scope, n: N): Val {
     if (isNumber(target.ty) && method === "toFixed" && args.length <= 1) {
       const d = args.length ? args[0] : { type: "NumericLiteral", value: 0 };
       if (d.type !== "NumericLiteral" || !Number.isInteger(d.value) || d.value < 0 || d.value > 100) {
-        fail(comp, "`.toFixed()` takes a literal number of digits, from 0 to 100", n);
+        fail(comp, "FV0705", "`.toFixed()` takes a literal number of digits, from 0 to 100", n);
       }
       return { code: `&*fv::js_to_fixed(${bare(asF64(target))}, ${d.value})`, ty: STR };
     }
@@ -140,21 +140,21 @@ export function call(s: Scope, n: N): Val {
       if (method === "includes" && args.length === 1) {
         const v = expr(s, args[0]);
         if (of.k === "int" && v.ty.k === "float") return { code: `${atom(target.code)}.iter().any(|v| ${binary("*v as f64", "==", v.code)})`, ty: BOOL };
-        if (!sameTy(v.ty, of)) fail(comp, "`.includes()` looks for a value of the list's own type", args[0]);
+        if (!sameTy(v.ty, of)) fail(comp, "FV0801", "`.includes()` looks for a value of the list's own type", args[0]);
         if (of.k === "int") return { code: `${atom(target.code)}.contains(&${operand(v.code, UNARY)})`, ty: BOOL };
         const test = v.code === '""' ? "v.is_empty()" : binary("&**v", "==", v.code);
         return { code: `${atom(target.code)}.iter().any(|v| ${test})`, ty: BOOL };
       }
       if (method === "join" && args.length <= 1) {
         const sep: Val = args.length ? expr(s, args[0]) : { code: '","', ty: STR };
-        if (sep.ty.k !== "str") fail(comp, "`.join()` takes a string", args[0]);
+        if (sep.ty.k !== "str") fail(comp, "FV0802", "`.join()` takes a string", args[0]);
         const each = of.k === "str" ? `${atom(target.code)}.iter().map(|v| &**v)` : `${atom(target.code)}.iter().map(|v| fv::Js(*v).to_string())`;
         return { code: `&*${each}.collect::<Vec<_>>().join(${strArg(sep.code)})`, ty: STR, ...loneOf(sep) };
       }
     }
-    return fail(comp, `\`.${method}()\` is not supported`, n);
+    return fail(comp, "FV0602", `\`.${method}()\` is not supported`, n);
   }
-  return fail(comp, "this call is not supported", n);
+  return fail(comp, "FV0603", "this call is not supported", n);
 }
 
 export function isObjectCall(n: N, method: string): boolean {
@@ -165,7 +165,7 @@ export function isObjectCall(n: N, method: string): boolean {
 }
 
 function json(s: Scope, v: Val, n: N): string {
-  if (v.lone) fail(s.comp, lonely("`JSON.stringify()`"), n);
+  if (v.lone) fail(s.comp, "FV0706", lonely("`JSON.stringify()`"), n);
   const one = (code: string, ty: Ty): string => {
     switch (ty.k) {
       case "str":
@@ -177,7 +177,7 @@ function json(s: Scope, v: Val, n: N): string {
       case "bool":
         return `(if ${condition(code)} { "true" } else { "false" }).to_owned()`;
       default:
-        return fail(s.comp, "`JSON.stringify()` of a string, a number, a boolean or a list of those, present", n);
+        return fail(s.comp, "FV0707", "`JSON.stringify()` of a string, a number, a boolean or a list of those, present", n);
     }
   };
   if (v.ty.k === "list") {
@@ -190,7 +190,7 @@ function json(s: Scope, v: Val, n: N): string {
 
 export function helperCall(s: Scope, name: string, args: N[], n: N): Val {
   const h = ctx.helpers[name]!;
-  if (args.length !== h.params.length) fail(s.comp, `\`${name}\` takes ${h.params.length} argument(s)`, n);
+  if (args.length !== h.params.length) fail(s.comp, "FV1101", `\`${name}\` takes ${h.params.length} argument(s)`, n);
   const code = args.map((a, i) => bare(coerce(s.comp, expr(s, a), h.params[i]!, a))).join(", ");
   s.helperBytes.n += h.maxLen;
   return { code: `${h.rust}(${code})`, ty: h.ret };

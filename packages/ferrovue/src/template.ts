@@ -23,15 +23,15 @@ export function slot(s: Scope, e: Emitter, n: N): void {
         interpolate(s, e, expr(s, a[0]), a[0]);
         return;
       case "_ssrRenderAttr":
-        if (a[0].type !== "StringLiteral") fail(s.comp, "attribute names are literal", n);
+        if (a[0].type !== "StringLiteral") fail(s.comp, "FV0417", "attribute names are literal", n);
         renderAttr(s, e, a[0].value, expr(s, a[1]), a[1]);
         return;
       case "_ssrRenderDynamicAttr":
-        if (a[0].type !== "StringLiteral") fail(s.comp, "attribute names are literal", n);
+        if (a[0].type !== "StringLiteral") fail(s.comp, "FV0417", "attribute names are literal", n);
         renderDynamicAttr(s, e, a[0].value, expr(s, a[1]), n);
         return;
       case "_ssrRenderAttrs":
-        if (a.length > 1) fail(s.comp, "`ssrRenderAttrs` with a tag argument", n);
+        if (a.length > 1) fail(s.comp, "FV0006", "`ssrRenderAttrs` with a tag argument", n);
         renderAttrs(s, e, a[0]);
         return;
       case "_ssrRenderClass":
@@ -54,7 +54,7 @@ export function slot(s: Scope, e: Emitter, n: N): void {
       e.close();
       return;
     }
-    fail(s.comp, "`v-html` renders only a `TrustedHtml` prop (from `ferrovue/types`)", n);
+    fail(s.comp, "FV1502", "`v-html` renders only a `TrustedHtml` prop (from `ferrovue/types`)", n);
   }
   if (n.type === "ConditionalExpression" && n.consequent.type === "StringLiteral" && n.alternate.type === "StringLiteral") {
     const t = expr(s, n.test);
@@ -72,7 +72,7 @@ export function slot(s: Scope, e: Emitter, n: N): void {
     e.close();
     return;
   }
-  fail(s.comp, "this expression cannot be rendered on the server", n);
+  fail(s.comp, "FV0006", "this expression cannot be rendered on the server", n);
 }
 
 export function isComment(text: string): boolean {
@@ -130,7 +130,7 @@ function pushed(s: Scope, e: Emitter, n: N): void {
     if (!ctx.plugins.some((p) => p.component?.(s, e, n))) renderChild(s, e, n);
     return;
   }
-  fail(s.comp, "this cannot be pushed", n);
+  fail(s.comp, "FV0006", "this cannot be pushed", n);
 }
 
 export function statements(s: Scope, e: Emitter, body: N[]): void {
@@ -154,12 +154,12 @@ export function statements(s: Scope, e: Emitter, body: N[]): void {
         const def = c.arguments[1]?.properties?.find((p: N) => (p.key?.name ?? p.key?.value) === "default");
         if (!def) e.lit("<!---->");
         else if (def.value.type === "ArrowFunctionExpression" && def.value.body.type === "BlockStatement") statements(s, e, def.value.body.body);
-        else fail(s.comp, "unexpected `<Suspense>` content", c);
+        else fail(s.comp, "FV0006", "unexpected `<Suspense>` content", c);
         continue;
       }
       if (ctx.plugins.some((p) => p.statement?.(s, e, c, st))) continue;
       if (callee === "_ssrRenderVNode") {
-        fail(s.comp, "`<component :is>` chooses its component at run time; write the choices out with `v-if`", st);
+        fail(s.comp, "FV0418", "`<component :is>` chooses its component at run time; write the choices out with `v-if`", st);
       }
     }
     if (st.type === "VariableDeclaration" && st.declarations.length === 1) {
@@ -181,7 +181,7 @@ export function statements(s: Scope, e: Emitter, body: N[]): void {
         s.directives.set(d.id.name, init.arguments[0].value);
         continue;
       }
-      fail(s.comp, "a component the template resolves by name must be imported, or be this one", st);
+      fail(s.comp, "FV0513", "a component the template resolves by name must be imported, or be this one", st);
     }
     if (st.type === "IfStatement") {
       const branch = (b: N): N[] => (b.type === "BlockStatement" ? b.body : [b]);
@@ -265,6 +265,6 @@ export function statements(s: Scope, e: Emitter, body: N[]): void {
       e.close();
       continue;
     }
-    fail(s.comp, `\`${st.type}\` in the compiled template`, st);
+    fail(s.comp, "FV0006", `\`${st.type}\` in the compiled template`, st);
   }
 }

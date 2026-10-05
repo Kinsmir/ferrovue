@@ -74,11 +74,11 @@ export function checkNullTest(s: Scope, t: NullTest, v: Val): void {
   if (none === null || !t.strict || none === t.literal) return;
   const op = t.is ? "==" : "!=";
   if (none === "either") {
-    fail(s.comp, `\`${op}= ${t.literal}\` of a value that may be \`null\` or \`undefined\`, which its Rust \`Option\` cannot tell apart: test both with \`${op} null\``, t.target);
+    fail(s.comp, "FV0626", `\`${op}= ${t.literal}\` of a value that may be \`null\` or \`undefined\`, which its Rust \`Option\` cannot tell apart: test both with \`${op} null\``, t.target);
   }
   const other = t.literal === "null" ? "undefined" : "null";
   const what = none === "null" ? "is `T | null`, never `undefined`" : "is optional, which is `undefined` when absent, never `null`";
-  fail(s.comp, `\`${op}= ${t.literal}\` of a value that ${what}: compare with \`${other}\``, t.target);
+  fail(s.comp, "FV0627", `\`${op}= ${t.literal}\` of a value that ${what}: compare with \`${other}\``, t.target);
 }
 
 export interface Presence {

@@ -18,7 +18,7 @@ export function meet(comp: Component, a: Val, b: Val, what: string, n: N, how: "
     : how === "join" ? a.lone && b.lone
     : how === "search" ? b.lone || (a.lone && fffd(b))
     : (a.lone && b.lone) || (a.lone && fffd(b)) || (b.lone && fffd(a));
-  if (refused) fail(comp, lonely(what), n);
+  if (refused) fail(comp, "FV0706", lonely(what), n);
 }
 
 export function loneOf(...vs: (Val | undefined)[]): { lone?: true } {
@@ -86,7 +86,7 @@ export function formatted(comp: Component, parts: (string | Val)[], n: N, what: 
     if (part.ty.k === "str") args.push(receiver(part.code).replace(/^(fv::Js\(.*\))\.to_string\(\)$/s, "$1"));
     else if (isNumber(part.ty)) args.push(`fv::Js(${bare(part.code)})`);
     else if (part.ty.k === "bool") args.push(`if ${condition(part.code)} { "true" } else { "false" }`);
-    else fail(comp, "a template literal interpolates strings, numbers and booleans that are present", n);
+    else fail(comp, "FV0708", "a template literal interpolates strings, numbers and booleans that are present", n);
     fmt += "{}";
   }
   if (!args.length) return { code: rustStr(fmt.replace(/\{\{|\}\}/g, (c) => c[0]!)), ty: STR };
@@ -100,20 +100,20 @@ export function stringMethod(s: Scope, target: Val, method: string, args: N[], n
   const t = strArg(target.code);
   const arity = (least: number, most: number): void => {
     if (args.length < least || args.length > most) {
-      fail(comp, `\`.${method}()\` takes ${least === most ? least : `${least} to ${most}`} argument${most === 1 ? "" : "s"} here`, n);
+      fail(comp, "FV0709", `\`.${method}()\` takes ${least === most ? least : `${least} to ${most}`} argument${most === 1 ? "" : "s"} here`, n);
     }
   };
   const str = (i: number): Val => {
-    if (args[i]?.type === "RegExpLiteral") fail(comp, `\`.${method}()\` with a regular expression, which the server does not run: give it a string`, args[i]);
+    if (args[i]?.type === "RegExpLiteral") fail(comp, "FV0710", `\`.${method}()\` with a regular expression, which the server does not run: give it a string`, args[i]);
     const v = expr(s, args[i]);
-    if (v.ty.k !== "str") fail(comp, `\`.${method}()\` takes a string that is present`, args[i]);
+    if (v.ty.k !== "str") fail(comp, "FV0711", `\`.${method}()\` takes a string that is present`, args[i]);
     return v;
   };
   const num = (i: number, fallback: string): string => {
     if (args[i] === undefined) return fallback;
     const v = expr(s, args[i]);
     if (v.ty.k === "undef") return fallback;
-    if (!isNumber(v.ty)) fail(comp, `\`.${method}()\` takes a number that is present`, args[i]);
+    if (!isNumber(v.ty)) fail(comp, "FV0712", `\`.${method}()\` takes a number that is present`, args[i]);
     return asF64(v);
   };
   const cut = { lone: true };
@@ -160,7 +160,7 @@ export function stringMethod(s: Scope, target: Val, method: string, args: N[], n
     case "replaceAll": {
       arity(2, 2);
       if (args[1].type === "ArrowFunctionExpression" || args[1].type === "FunctionExpression") {
-        fail(comp, `\`.${method}()\` with a function, which the server does not run: give it a string`, args[1]);
+        fail(comp, "FV0713", `\`.${method}()\` with a function, which the server does not run: give it a string`, args[1]);
       }
       const [pattern, replacement] = [str(0), str(1)];
       meet(comp, target, pattern, `\`.${method}()\``, n, "search");
@@ -173,21 +173,21 @@ export function stringMethod(s: Scope, target: Val, method: string, args: N[], n
       arity(1, 2);
       const fill: Val = args.length > 1 ? str(1) : { code: '" "', ty: STR };
       const whole = fill.code.startsWith('"') && !/[\u{10000}-\u{10FFFF}]/u.test(fill.code);
-      if (fill.lone || (method === "padStart" && target.lone && !whole)) fail(comp, lonely(`\`.${method}()\``), n);
+      if (fill.lone || (method === "padStart" && target.lone && !whole)) fail(comp, "FV0706", lonely(`\`.${method}()\``), n);
       return { code: `&*fv::js_${method === "padStart" ? "pad_start" : "pad_end"}(${t}, ${num(0, "0.0")}, ${strArg(fill.code)})`, ty: STR, ...(target.lone || !whole ? cut : {}) };
     }
     case "repeat": {
       arity(1, 1);
       const c = args[0];
       if ((c.type === "UnaryExpression" && c.operator === "-" && c.argument.type === "NumericLiteral" && c.argument.value > 0) || (c.type === "Identifier" && c.name === "Infinity")) {
-        fail(comp, "`.repeat()` with a negative or infinite count, which throws a `RangeError`", c);
+        fail(comp, "FV0714", "`.repeat()` with a negative or infinite count, which throws a `RangeError`", c);
       }
-      if (target.lone) fail(comp, lonely("`.repeat()`"), n);
+      if (target.lone) fail(comp, "FV0706", lonely("`.repeat()`"), n);
       return { code: `&*fv::js_repeat(${t}, ${num(0, "0.0")})`, ty: STR };
     }
     case "toLocaleUpperCase":
     case "toLocaleLowerCase":
-      return fail(comp, `\`.${method}()\` maps case by the locale the server runs in, which the browser need not share: use \`.${method.replace("Locale", "")}()\``, n);
+      return fail(comp, "FV0715", `\`.${method}()\` maps case by the locale the server runs in, which the browser need not share: use \`.${method.replace("Locale", "")}()\``, n);
   }
   return null;
 }

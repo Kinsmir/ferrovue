@@ -9,10 +9,10 @@ import { atom, binary, operand, strArg, UNARY } from "./parens.ts";
 const COW = "std::borrow::Cow::<str>";
 
 function itemsTy(s: Scope, v: Val, n: N): Ty {
-  if (v.ty.k !== "list") return fail(s.comp, "not a list", n);
+  if (v.ty.k !== "list") return fail(s.comp, "FV0803", "not a list", n);
   const of = v.ty.of;
   if (!["str", "int", "float", "bool", "struct", "child"].includes(of.k)) {
-    fail(s.comp, "this method takes a list of strings, numbers, booleans or objects", n);
+    fail(s.comp, "FV0804", "this method takes a list of strings, numbers, booleans or objects", n);
   }
   return of;
 }
@@ -48,11 +48,11 @@ function itemVal(of: Ty, param: string, byRef: boolean, lone?: boolean): Val {
 function arrow(s: Scope, fn: N, list: Val, of: Ty, byRef: boolean, method: string, body: (inner: Scope) => string): { closure: string; enumerate: boolean } {
   const comp = s.comp;
   if (fn?.type !== "ArrowFunctionExpression" || fn.async || fn.params.length > 2) {
-    fail(comp, `\`.${method}()\` takes an arrow function of the item, and of its index: \`x => …\`, \`(x, i) => …\``, fn);
+    fail(comp, "FV0805", `\`.${method}()\` takes an arrow function of the item, and of its index: \`x => …\`, \`(x, i) => …\``, fn);
   }
-  if (fn.body.type === "BlockStatement") fail(comp, `\`.${method}()\` takes an arrow function whose body is an expression, without \`{ return … }\``, fn);
+  if (fn.body.type === "BlockStatement") fail(comp, "FV0806", `\`.${method}()\` takes an arrow function whose body is an expression, without \`{ return … }\``, fn);
   const [item, index] = fn.params as N[];
-  if (index && index.type !== "Identifier") fail(comp, "an arrow function's index is a plain name", index);
+  if (index && index.type !== "Identifier") fail(comp, "FV0807", "an arrow function's index is a plain name", index);
   const n = ++ctx.narrowCount;
   const p = of.k === "str" ? `fv_s${n}` : `fv_a${n}`;
   const i = `fv_i${n}`;
@@ -65,12 +65,12 @@ function arrow(s: Scope, fn: N, list: Val, of: Ty, byRef: boolean, method: strin
   } else if (item?.type === "ObjectPattern" && (of.k === "struct" || of.k === "child")) {
     for (const prop of item.properties) {
       if (prop.type !== "ObjectProperty" || prop.computed || prop.value.type !== "Identifier") {
-        fail(comp, "a destructured arrow function parameter binds plain names, without defaults", prop);
+        fail(comp, "FV0808", "a destructured arrow function parameter binds plain names, without defaults", prop);
       }
       locals.set(prop.value.name, fieldVal(comp, v.code, of, prop.key.name ?? prop.key.value, prop));
       bound.push(prop.value.name);
     }
-  } else if (item) fail(comp, "an arrow function's item is a name, or an object pattern of an object", item);
+  } else if (item) fail(comp, "FV0809", "an arrow function's item is a name, or an object pattern of an object", item);
   if (index) {
     locals.set(index.name, { code: i, ty: INT });
     bound.push(index.name);
@@ -106,7 +106,7 @@ function mapped(s: Scope, v: Val, n: N): string {
     case "child":
       return `&${operand(v.code, UNARY)}`;
     default:
-      return fail(s.comp, `\`.map()\` makes a list of strings, numbers, booleans or objects, not ${v.ty.k === "opt" ? "optional values" : "these"}`, n);
+      return fail(s.comp, "FV0810", `\`.map()\` makes a list of strings, numbers, booleans or objects, not ${v.ty.k === "opt" ? "optional values" : "these"}`, n);
   }
 }
 
@@ -116,11 +116,11 @@ export function listMethod(s: Scope, target: Val, method: string, args: N[], n: 
   const of = itemsTy(s, target, n);
   const it = items(target);
   if (method === "slice") {
-    if (args.length < 1 || args.length > 2) fail(comp, "`.slice()` takes a start, and an end", n);
+    if (args.length < 1 || args.length > 2) fail(comp, "FV0811", "`.slice()` takes a start, and an end", n);
     const [start, end] = args.map((a) => expr(s, a));
     const index = (v: Val | undefined): string | null => {
       if (v === undefined || v.ty.k === "undef") return null;
-      if (!isNumber(v.ty)) fail(comp, "`.slice()` takes numbers", n);
+      if (!isNumber(v.ty)) fail(comp, "FV0812", "`.slice()` takes numbers", n);
       return asF64(v);
     };
     const from = index(start) ?? "0.0";
@@ -131,7 +131,7 @@ export function listMethod(s: Scope, target: Val, method: string, args: N[], n: 
       target.lone,
     );
   }
-  if (args.length !== 1) fail(comp, `\`.${method}()\` takes one arrow function`, n);
+  if (args.length !== 1) fail(comp, "FV0813", `\`.${method}()\` takes one arrow function`, n);
   const fn = args[0];
   switch (method) {
     case "filter": {
@@ -169,16 +169,16 @@ export function listMethod(s: Scope, target: Val, method: string, args: N[], n: 
 export function objectCall(s: Scope, method: string, args: N[], n: N): Val {
   const comp = s.comp;
   const r = args.length === 1 ? expr(s, args[0]) : null;
-  if (r?.ty.k !== "record") return fail(comp, `\`Object.${method}()\` takes a \`Record<string, T>\``, n);
+  if (r?.ty.k !== "record") return fail(comp, "FV0814", `\`Object.${method}()\` takes a \`Record<string, T>\``, n);
   const of = r.ty.of;
   if (method === "keys") return computed(`${atom(r.code)}.keys().map(${COW}::Borrowed)`, STR);
   if (method === "values") {
-    if (of.k === "list") fail(comp, "`Object.values()` of a record of lists, which these methods cannot walk", n);
+    if (of.k === "list") fail(comp, "FV0815", "`Object.values()` of a record of lists, which these methods cannot walk", n);
     const values = of.k === "str" ? `.values().map(|v| ${COW}::Borrowed(&**v))` : of.k === "struct" || of.k === "child" ? ".values()" : ".values().copied()";
     return computed(`${atom(r.code)}${values}`, of);
   }
-  if (method === "entries") return fail(comp, "`Object.entries()` is supported as the source of a `v-for`: `([key, value], i) in Object.entries(r)`", n);
-  return fail(comp, `\`Object.${method}()\` is not supported: \`keys\`, \`values\` and \`entries\` of a record are`, n);
+  if (method === "entries") return fail(comp, "FV0816", "`Object.entries()` is supported as the source of a `v-for`: `([key, value], i) in Object.entries(r)`", n);
+  return fail(comp, "FV0817", `\`Object.${method}()\` is not supported: \`keys\`, \`values\` and \`entries\` of a record are`, n);
 }
 
 export function computedListMethod(s: Scope, target: Val, method: string, args: N[], n: N): Val | null {
@@ -187,7 +187,7 @@ export function computedListMethod(s: Scope, target: Val, method: string, args: 
   if (method === "includes" && args.length === 1) {
     const x = expr(s, args[0]);
     const numbers = isNumber(x.ty) && isNumber(of);
-    if ((!sameTy(x.ty, of) && !numbers) || !["str", "int", "float", "bool"].includes(of.k)) fail(s.comp, "`.includes()` looks for a value of the list's own type", args[0]);
+    if ((!sameTy(x.ty, of) && !numbers) || !["str", "int", "float", "bool"].includes(of.k)) fail(s.comp, "FV0801", "`.includes()` looks for a value of the list's own type", args[0]);
     if (of.k === "str") meet(s.comp, target, x, "`.includes()`", n, "equal");
     const test =
       of.k === "str"
@@ -204,9 +204,9 @@ export function computedListMethod(s: Scope, target: Val, method: string, args: 
   if (method === "join" && args.length <= 1) {
     if (!["str", "int", "float", "bool"].includes(of.k)) return null;
     const sep: Val = args.length ? expr(s, args[0]) : { code: '","', ty: STR };
-    if (sep.ty.k !== "str") fail(s.comp, "`.join()` takes a string", args[0]);
+    if (sep.ty.k !== "str") fail(s.comp, "FV0802", "`.join()` takes a string", args[0]);
     const parted = /^"[^"]/.test(sep.code);
-    if (of.k === "str" && target.lone && (!parted || sep.lone)) fail(s.comp, lonely("`.join()` with no literal separator"), n);
+    if (of.k === "str" && target.lone && (!parted || sep.lone)) fail(s.comp, "FV0706", lonely("`.join()` with no literal separator"), n);
     const each = of.k === "str" ? "" : of.k === "bool" ? `.map(|v| if v { "true" } else { "false" })` : ".map(|v| fv::Js(v).to_string())";
     return { code: `&*${items(target)}${each}.collect::<Vec<_>>().join(${strArg(sep.code)})`, ty: STR, ...(target.lone || sep.lone ? { lone: true } : {}) };
   }

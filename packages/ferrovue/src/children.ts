@@ -28,7 +28,7 @@ export function renderChild(s: Scope, e: Emitter, n: N, twin?: TwinCall): void {
   const isSelf = target.type === "Identifier" && target.name === s.selfAlias.name;
   const childName = isSelf ? s.comp.name : local ? s.children.get(local) : undefined;
   const child = twin?.comp ?? (childName ? s.components.get(childName) : undefined);
-  if (!child) fail(s.comp, `a child component must be imported from a \`.vue\` file among the components compiled, in ${ctx.componentsDir.replace(/\/$/, "")}`, n);
+  if (!child) fail(s.comp, "FV0501", `a child component must be imported from a \`.vue\` file among the components compiled, in ${ctx.componentsDir.replace(/\/$/, "")}`, n);
   for (const p of ctx.plugins) p.child?.(s, child, n);
   const parts: N[] = !rawProps || rawProps.type === "NullLiteral" ? [] : mergedParts(rawProps);
   const merges = parts.length > 0 && parts[0] !== rawProps;
@@ -40,30 +40,30 @@ export function renderChild(s: Scope, e: Emitter, n: N, twin?: TwinCall): void {
   if (parts.some(passed)) {
     for (const name of s.comp.attrNames) {
       if (declares(child, name)) {
-        fail(s.comp, `\`${name}\`, an attribute ${s.comp.name} may be passed, would reach ${child.name} as its prop \`${camelize(name)}\`, which an attribute has no type for`, n);
+        fail(s.comp, "FV0502", `\`${name}\`, an attribute ${s.comp.name} may be passed, would reach ${child.name} as its prop \`${camelize(name)}\`, which an attribute has no type for`, n);
       }
     }
   }
   const ids = claim((p) => p.childIds?.(s, child, passesAttrs, !!slotScopeId, n)) ?? null;
   if (objects.length === 1 && objects[0].type !== "ObjectExpression") {
-    if (twin) fail(s.comp, `the props of ${child.name}, a Rust twin, are attributes or an object literal`, objects[0]);
+    if (twin) fail(s.comp, "FV1501", `the props of ${child.name}, a Rust twin, are attributes or an object literal`, objects[0]);
     const v = expr(s, objects[0]);
     const own = child.name === s.comp.name && v.ty.k === "struct" && v.ty.name === "Props";
     if (own || (v.ty.k === "child" && v.ty.name === child.name)) {
       callChild(s, e, child, v.code, slots, childAttrsArg(s, child, parts, merges, null, ids, n));
       return;
     }
-    fail(s.comp, `child props must be an object literal, or \`v-bind\` of ${child.name}'s own \`Props\``, n);
+    fail(s.comp, "FV0503", `child props must be an object literal, or \`v-bind\` of ${child.name}'s own \`Props\``, n);
   }
   for (const p of objects) {
-    if (p.type !== "ObjectExpression") fail(s.comp, `child props must be an object literal, or \`v-bind\` of ${child.name}'s own \`Props\``, p);
+    if (p.type !== "ObjectExpression") fail(s.comp, "FV0503", `child props must be an object literal, or \`v-bind\` of ${child.name}'s own \`Props\``, p);
   }
 
   const given = new Map<string, N>();
   const fallthrough = new Set<N>();
   for (const obj of objects) {
     for (const p of obj.properties) {
-      if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "child props hold plain keys", p);
+      if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "FV0504", "child props hold plain keys", p);
       const key: string = p.key.type === "Identifier" ? p.key.name : String(p.key.value);
       if (!passedKey(child, key)) continue;
       const field = child.props.fields.find((f) => camelize(f.js) === camelize(key));
@@ -71,9 +71,9 @@ export function renderChild(s: Scope, e: Emitter, n: N, twin?: TwinCall): void {
         given.set(field.js, p.value);
         continue;
       }
-      if (array(key)) fail(s.comp, `an attribute named \`${key}\`, which JavaScript would put before the others`, p);
+      if (array(key)) fail(s.comp, "FV0505", `an attribute named \`${key}\`, which JavaScript would put before the others`, p);
       const name = propsToAttrMap[key] ?? key.toLowerCase();
-      if (key !== "class" && key !== "style" && !isSSRSafeAttrName(name)) fail(s.comp, `unsafe attribute name \`${name}\``, p);
+      if (key !== "class" && key !== "style" && !isSSRSafeAttrName(name)) fail(s.comp, "FV0404", `unsafe attribute name \`${name}\``, p);
       fallthrough.add(p);
     }
   }
@@ -85,8 +85,8 @@ export function renderChild(s: Scope, e: Emitter, n: N, twin?: TwinCall): void {
   const inits = child.props.fields.map((f) => {
     const node = given.get(f.js);
     if (!node) {
-      if (f.ty.k !== "opt") fail(s.comp, `${child.name} requires \`${f.js}\``, n);
-      if (f.ty.none !== undefined) fail(s.comp, `${child.name} requires \`${f.js}\`, which is \`T | null\`: Vue would hand it \`undefined\`; pass \`null\` for none`, n);
+      if (f.ty.k !== "opt") fail(s.comp, "FV0506", `${child.name} requires \`${f.js}\``, n);
+      if (f.ty.none !== undefined) fail(s.comp, "FV0507", `${child.name} requires \`${f.js}\`, which is \`T | null\`: Vue would hand it \`undefined\`; pass \`null\` for none`, n);
       return `${f.rust}: None`;
     }
     const v = expr(s, node);
@@ -113,7 +113,7 @@ function childAttrsArg(s: Scope, child: Component, parts: N[], merges: boolean, 
     }
   }
   if (!takesAttrs(child)) {
-    if (sources.length) fail(s.comp, `${child.name} is passed attributes it does not take`, n);
+    if (sources.length) fail(s.comp, "FV0508", `${child.name} is passed attributes it does not take`, n);
     return ids;
   }
   if (!sources.length) return ids === null ? "&fv::Attrs::NONE" : `&fv::Attrs::scoped(${ids})`;
@@ -144,12 +144,12 @@ export function callChild(s: Scope, e: Emitter, child: Component, propsCode: str
 export function callWith(s: Scope, e: Emitter, child: Component, m: string, head: string, slotsTy: string, trailing: string, slots: N, vnode = false): void {
   const given = new Map<string, N>();
   if (slots && slots.type !== "NullLiteral") {
-    if (slots.type !== "ObjectExpression") fail(s.comp, "slots must be an object literal", slots);
+    if (slots.type !== "ObjectExpression") fail(s.comp, "FV0901", "slots must be an object literal", slots);
     for (const p of slots.properties) {
       const key: string = p.key?.type === "Identifier" ? p.key.name : p.key?.value;
       if (key === "_") continue;
-      if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "slots hold plain keys", p);
-      if (!child.slotNames.includes(key)) fail(s.comp, `${child.name} has no slot \`${key}\``, p);
+      if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "FV0902", "slots hold plain keys", p);
+      if (!child.slotNames.includes(key)) fail(s.comp, "FV0903", `${child.name} has no slot \`${key}\``, p);
       given.set(key, p.value);
     }
   }
@@ -190,13 +190,13 @@ export function callWith(s: Scope, e: Emitter, child: Component, m: string, head
       if (param?.type === "ObjectPattern") {
         for (const p of param.properties) {
           if (p.type !== "ObjectProperty" || p.computed || p.value.type !== "Identifier") {
-            fail(s.comp, "slot props are destructured into plain names, without defaults", p);
+            fail(s.comp, "FV0904", "slot props are destructured into plain names, without defaults", p);
           }
           locals.set(p.value.name, fieldVal(s.comp, sp, ty, p.key.name ?? p.key.value, p));
         }
       } else if (param?.type === "Identifier" && !takesNone) {
         locals.set(param.name, { code: sp, ty });
-      } else if (!takesNone) fail(s.comp, "slot props are a name or an object pattern", param);
+      } else if (!takesNone) fail(s.comp, "FV0905", "slot props are a name or an object pattern", param);
       const life = shape.fields.some((f) => slotFieldBorrows(f.ty)) ? "<'_>" : "";
       e.open(`${field}: Some(&|out: &mut String, ${sp}: &${m}::${shape.name}${life}${sidParam}| -> bool`);
       const opened = e.lines.length - 1;
@@ -206,7 +206,7 @@ export function callWith(s: Scope, e: Emitter, child: Component, m: string, head
       e.close("),");
       continue;
     }
-    if (!takesNone) fail(s.comp, `\`<slot${name === "default" ? "" : ` name="${name}"`}>\` in ${child.name} passes no props`, param);
+    if (!takesNone) fail(s.comp, "FV0906", `\`<slot${name === "default" ? "" : ` name="${name}"`}>\` in ${child.name} passes no props`, param);
     const inner: Scope = { ...s, sid, vnode };
     if (sid !== null) {
       e.open(`${field}: Some(fv::Slot::slotted(&|out: &mut String${sidParam}| -> bool`);
@@ -233,7 +233,7 @@ export function ownInto(comp: Component, v: Val, want: Ty, node: N): string {
   holdsNothing(comp, v, want, node, "the prop");
   if (want.k === "opt" && nothing(v.ty)) return "None";
   if (want.k === "str") {
-    if (v.ty.k !== "str") fail(comp, "a string prop needs a string", node);
+    if (v.ty.k !== "str") fail(comp, "FV0509", "a string prop needs a string", node);
     return `std::borrow::Cow::Borrowed(${bare(v.code)})`;
   }
   if (want.k === "opt" && want.of.k === "str") {
@@ -251,7 +251,7 @@ export function ownInto(comp: Component, v: Val, want: Ty, node: N): string {
   if (objecty(want) && sameTy(v.ty, want)) return `${atom(v.code)}.${v.ty.k === "opt" ? "cloned" : "to_owned"}()`;
   if (want.k === "opt" && objecty(want.of) && sameTy(v.ty, want.of)) return `Some(${atom(v.code)}.to_owned())`;
   if (objecty(want) && v.ty.k === want.k && JSON.stringify(v.ty).includes('"struct"')) {
-    fail(comp, `a ${JSON.stringify(v.ty)} where the child takes a ${JSON.stringify(want)}: two components share a type only when both import it from one \`.ts\` file`, node);
+    fail(comp, "FV0510", `a ${JSON.stringify(v.ty)} where the child takes a ${JSON.stringify(want)}: two components share a type only when both import it from one \`.ts\` file`, node);
   }
   if (want.k === "list" && v.ty.k === "list" && v.ty.of.k === "undef") return "Vec::new()";
   if (want.k === "opt" && want.of.k === "list" && v.ty.k === "list") return `Some(${ownInto(comp, v, want.of, node)})`;
@@ -259,5 +259,5 @@ export function ownInto(comp: Component, v: Val, want: Ty, node: N): string {
     if (want.of.k === "str") return `${atom(v.code)}.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect()`;
     if (want.of.k === "int" || want.of.k === "float" || want.of.k === "bool") return `${atom(v.code)}.to_vec()`;
   }
-  return fail(comp, `a ${JSON.stringify(v.ty)} into a ${JSON.stringify(want)} prop`, node);
+  return fail(comp, "FV0511", `a ${JSON.stringify(v.ty)} into a ${JSON.stringify(want)} prop`, node);
 }

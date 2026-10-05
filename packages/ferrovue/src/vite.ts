@@ -1,7 +1,8 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative, resolve, sep } from "node:path";
 import type { Plugin, ResolvedConfig, ViteDevServer } from "vite";
-import { CONFIG_FILE, GenError, loadConfig, write, type Written } from "./compiler.ts";
+import { CONFIG_FILE, loadConfig, write, type Written } from "./compiler.ts";
+import { formatRefusal, isRefusal } from "./diagnostics.ts";
 
 export interface FerrovueOptions {
   /** The directory holding `ferrovue.config.json`: Vite's working directory by default. */
@@ -81,7 +82,7 @@ export default function ferrovue(options: FerrovueOptions = {}): Plugin {
       try {
         return islandsModule(root, islands ?? regenerate().islands);
       } catch (e) {
-        if (e instanceof GenError || e instanceof SyntaxError) this.error(e.message);
+        if (isRefusal(e)) this.error(formatRefusal(e));
         throw e;
       }
     },
@@ -96,7 +97,7 @@ export default function ferrovue(options: FerrovueOptions = {}): Plugin {
         if (mismatch && building) this.error(`ferrovue: ${mismatch}`);
         if (mismatch) this.warn(`ferrovue: ${mismatch}`);
       } catch (e) {
-        if (e instanceof GenError || e instanceof SyntaxError) this.error(e.message);
+        if (isRefusal(e)) this.error(formatRefusal(e));
         throw e;
       }
     },
@@ -116,9 +117,9 @@ export default function ferrovue(options: FerrovueOptions = {}): Plugin {
             server.ws.send({ type: "full-reload" });
           }
         } catch (e) {
-          if (!(e instanceof GenError || e instanceof SyntaxError)) throw e;
-          server.config.logger.error(`ferrovue: ${e.message}`, { timestamp: true });
-          server.ws.send({ type: "error", err: { message: `ferrovue: ${e.message}`, stack: "", plugin: "ferrovue" } });
+          if (!isRefusal(e)) throw e;
+          server.config.logger.error(`ferrovue: ${formatRefusal(e)}`, { timestamp: true });
+          server.ws.send({ type: "error", err: { message: `ferrovue: ${formatRefusal(e)}`, stack: "", plugin: "ferrovue" } });
         }
       };
       server.watcher.on("change", onChange);

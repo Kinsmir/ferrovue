@@ -88,8 +88,15 @@ npx ferrovue init       # a starter ferrovue.config.json and components/Hello.vu
 npx ferrovue            # writes src/generated/{greeting.rs, mod.rs}
 npx ferrovue --check    # in CI: exits 1 if the committed modules are stale
 npx ferrovue --check --diff   # …and shows what differs, as `diff -u` does
+npx ferrovue --check --format json   # errors as JSON, for an editor or CI annotations
 npx ferrovue --watch    # regenerates when components or configs change
 ```
+
+Every error carries a stable code, as `error[FV0602]: components/Card.vue:4:17: …`, documented in
+the crate's [`error_codes`](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html)
+guide. `--format json` writes the same errors as JSON with the exit status unchanged, and a VS Code
+problem matcher for `tasks.json` puts them in the Problems panel: both are in the
+[quick start](https://docs.rs/ferrovue/latest/ferrovue/guide/quick_start/index.html#editor-and-ci-diagnostics).
 
 ```rust
 #[rustfmt::skip]
@@ -612,6 +619,8 @@ packages/ferrovue/           the compiler (npm package)
                              <ClientOnly>, Rust twins
   src/rust.ts, emitter.ts    the Rust source written out
   src/cli.ts, vite.ts        the `ferrovue` command and the Vite plugin
+  src/errors.ts, diagnostics.ts
+                             every error code with its title, and errors as the CLI, JSON and Vite show them
   src/client.ts              browser-side helpers: `mountIslands`, `mountPage`, `hydrateState`, `<ClientOnly>`
   src/islands.ts             `ferrovue/islands`, which the Vite plugin writes: every island, loaded lazily
   src/link-router.ts         `ferrovue/link-router`: `<RouterLink>` while the application navigates on its own

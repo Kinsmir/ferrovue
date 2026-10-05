@@ -1,7 +1,7 @@
 import { parse as parseJs } from "@babel/parser";
 import { readdirSync, readFileSync } from "node:fs";
 import { basename, dirname, join, relative, resolve } from "node:path";
-import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, absence, blankComponent, BOOL, fail, FLOAT, GenError, INT, opt, sameTy, snake, STR, tagAst, UNDEF } from "../model.ts";
+import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, absence, blankComponent, BOOL, fail, failIn, FLOAT, GenError, INT, opt, sameTy, snake, STR, tagAst, UNDEF } from "../model.ts";
 import { ctx } from "../context.ts";
 import { ONE_NOTHING, structOf, tyOfTs, typesImports } from "../typescript.ts";
 import { patternNames, setupStatement } from "../script.ts";
@@ -66,7 +66,7 @@ function readStores(root: string, dir: string): void {
     const decls = ast.map((st) => (st.type === "ExportNamedDeclaration" ? st.declaration : st)).filter(Boolean);
     const interfaces = decls.filter((d) => d.type === "TSInterfaceDeclaration");
     for (const d of interfaces) {
-      if (run.structs.has(d.id.name)) fail(comp, `\`${d.id.name}\` is declared by another store too`, d);
+      if (run.structs.has(d.id.name)) fail(comp, "FV1301", `\`${d.id.name}\` is declared by another store too`, d);
       run.structs.set(d.id.name, { name: d.id.name, fields: [] });
       run.files.set(d.id.name, comp.file);
     }
@@ -81,26 +81,26 @@ function readStores(root: string, dir: string): void {
         const init = v.init;
         if (init?.type !== "CallExpression" || init.callee.type !== "Identifier" || init.callee.name !== "defineStore") continue;
         const [id, options] = init.arguments;
-        if (id?.type !== "StringLiteral") fail(comp, "a store's id is a string literal", init);
+        if (id?.type !== "StringLiteral") fail(comp, "FV1302", "a store's id is a string literal", init);
         if (options?.type === "ArrowFunctionExpression" || options?.type === "FunctionExpression") {
           setupStore(comp, v.id.name, id.value, options, path);
           continue;
         }
-        if (options?.type !== "ObjectExpression") fail(comp, "a store is `defineStore(id, { state, getters, actions })` or `defineStore(id, () => { … })`", init);
+        if (options?.type !== "ObjectExpression") fail(comp, "FV1303", "a store is `defineStore(id, { state, getters, actions })` or `defineStore(id, () => { … })`", init);
         const state = options.properties.find((p: N) => (p.key?.name ?? p.key?.value) === "state");
         const fn = state?.value ?? (state?.type === "ObjectMethod" ? state : null);
         const ret = fn?.returnType?.typeAnnotation;
         if (ret?.type !== "TSTypeReference" || !run.structs.has(ret.typeName.name)) {
-          fail(comp, "a store's `state` declares its return type, an interface in the same file: `state: (): State => ({ … })`", state ?? init);
+          fail(comp, "FV1304", "a store's `state` declares its return type, an interface in the same file: `state: (): State => ({ … })`", state ?? init);
         }
         const getters = new Map<string, StoreGetter>();
         const getterObj = options.properties.find((p: N) => (p.key?.name ?? p.key?.value) === "getters");
-        if (getterObj && getterObj.value?.type !== "ObjectExpression") fail(comp, "a store's `getters` is an object literal", getterObj);
+        if (getterObj && getterObj.value?.type !== "ObjectExpression") fail(comp, "FV1305", "a store's `getters` is an object literal", getterObj);
         for (const g of getterObj?.value.properties ?? []) {
           const getterFn = g.type === "ObjectMethod" ? g : g.value;
           const name: string = g.key?.name ?? g.key?.value;
           if (!getterFn || !["ArrowFunctionExpression", "FunctionExpression", "ObjectMethod"].includes(getterFn.type)) {
-            fail(comp, `getter \`${name}\` is a function of the state`, g);
+            fail(comp, "FV1306", `getter \`${name}\` is a function of the state`, g);
           }
           let body: N = getterFn.body;
           if (body.type === "BlockStatement") {
@@ -125,7 +125,7 @@ function readStores(root: string, dir: string): void {
 
 function setupStore(comp: Component, hook: string, id: string, fn: N, path: string): void {
   const run = runOf(piniaStores);
-  if (fn.body.type !== "BlockStatement") fail(comp, "a setup store's function returns its state from a block: `() => { …; return { … } }`", fn);
+  if (fn.body.type !== "BlockStatement") fail(comp, "FV1307", "a setup store's function returns its state from a block: `() => { …; return { … } }`", fn);
   const refs = new Map<string, Ty>();
   const computeds = new Map<string, N>();
   const others = new Set<string>();
@@ -143,7 +143,7 @@ function setupStore(comp: Component, hook: string, id: string, fn: N, path: stri
       setupStatement(comp, st);
       continue;
     }
-    if (st.type !== "VariableDeclaration") fail(comp, `\`${st.type}\` in a setup store is not supported`, st);
+    if (st.type !== "VariableDeclaration") fail(comp, "FV1308", `\`${st.type}\` in a setup store is not supported`, st);
     for (const d of st.declarations) {
       if (d.id.type !== "Identifier") {
         for (const name of patternNames(d.id)) others.add(name);
@@ -164,19 +164,19 @@ function setupStore(comp: Component, hook: string, id: string, fn: N, path: stri
       } else others.add(d.id.name);
     }
   }
-  if (returned?.type !== "ObjectExpression") fail(comp, "a setup store returns an object of its state, getters and actions", returned ?? fn);
+  if (returned?.type !== "ObjectExpression") fail(comp, "FV1309", "a setup store returns an object of its state, getters and actions", returned ?? fn);
   const state: Field[] = [];
   const getters = new Map<string, StoreGetter>();
   for (const p of returned.properties) {
-    if (p.type !== "ObjectProperty" || p.computed || p.value.type !== "Identifier") fail(comp, "a setup store returns plain names: `{ count, doubled, increment }`", p);
+    if (p.type !== "ObjectProperty" || p.computed || p.value.type !== "Identifier") fail(comp, "FV1310", "a setup store returns plain names: `{ count, doubled, increment }`", p);
     const key: string = p.key.name ?? p.key.value;
     const local: string = p.value.name;
     if (refs.has(local)) state.push({ js: key, rust: snake(key), ty: markStore(refs.get(local)!) });
     else if (computeds.has(local)) getters.set(key, { param: null, body: computeds.get(local), file: comp.file, setup: true });
-    else if (!others.has(local)) fail(comp, `\`${local}\` is not declared in the store's function`, p);
+    else if (!others.has(local)) fail(comp, "FV1311", `\`${local}\` is not declared in the store's function`, p);
   }
   const name = id.split(/[-_]/).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join("") + "State";
-  if (run.structs.has(name)) fail(comp, `\`${name}\` names this setup store's state; rename the interface`, fn);
+  if (run.structs.has(name)) fail(comp, "FV1312", `\`${name}\` names this setup store's state; rename the interface`, fn);
   run.structs.set(name, { name, fields: state });
   run.files.set(name, comp.file);
   run.stores.set(hook, { hook, id, field: snake(id), state: name, module: path.replace(/\.ts$/, ""), getters });
@@ -188,7 +188,7 @@ function refType(comp: Component, init: N): Ty {
   const value = init.arguments[0];
   if (typed) {
     const ty = tyOfTs(comp, typed, run.structs);
-    if (!value && absence(ty) === "null") fail(comp, `a \`ref<T | null>()\` with no value starts \`undefined\`, and may be set to \`null\`: ${ONE_NOTHING}; start it at \`null\``, init);
+    if (!value && absence(ty) === "null") fail(comp, "FV1313", `a \`ref<T | null>()\` with no value starts \`undefined\`, and may be set to \`null\`: ${ONE_NOTHING}; start it at \`null\``, init);
     return value ? ty : opt(ty);
   }
   const literal = (n: N): Ty | null => {
@@ -202,7 +202,7 @@ function refType(comp: Component, init: N): Ty {
     }
     return null;
   };
-  return literal(value) ?? fail(comp, "a setup store's ref declares its type: `ref<string[]>([])`", init);
+  return literal(value) ?? fail(comp, "FV1314", "a setup store's ref declares its type: `ref<string[]>([])`", init);
 }
 
 export function storeHome(file: string): Component {
@@ -245,12 +245,12 @@ function storeGetter(s: Scope, base: Val, name: string, node: N): Val | null {
   const g = store?.getters.get(name);
   if (!g) return null;
   const where = `getter \`${name}\` in ${g.file}`;
-  if (!g.body) fail(s.comp, `${where} returns a single expression`, node);
+  if (!g.body) fail(s.comp, "FV1315", `${where} returns a single expression`, node);
   const uses = (n: N, type: string): boolean =>
     !!n && typeof n === "object" && (n.type === type || Object.entries(n).some(([k, v]) => k !== "loc" && (Array.isArray(v) ? v.some((x) => uses(x, type)) : typeof v === "object" && uses(v, type))));
-  if (uses(g.body, "ThisExpression")) fail(s.comp, `${where} reads \`this\`; read the state through the getter's parameter`, node);
+  if (uses(g.body, "ThisExpression")) fail(s.comp, "FV1316", `${where} reads \`this\`; read the state through the getter's parameter`, node);
   if (g.body.type === "ArrowFunctionExpression" || g.body.type === "FunctionExpression") {
-    fail(s.comp, `${where} returns a function, which takes arguments only the client passes`, node);
+    fail(s.comp, "FV1317", `${where} returns a function, which takes arguments only the client passes`, node);
   }
   const locals = new Map<string, Val>();
   if (g.param) locals.set(g.param, { code: base.code, ty: base.ty });
@@ -264,7 +264,7 @@ function storeGetter(s: Scope, base: Val, name: string, node: N): Val | null {
     }
     for (const other of store!.getters.keys()) {
       if (other === name || !mentions(g.body, other)) continue;
-      if (runOf(piniaStores).inProgress.has(`${stateName}.${other}`)) fail(s.comp, `${where} and \`${other}\` read each other`, node);
+      if (runOf(piniaStores).inProgress.has(`${stateName}.${other}`)) fail(s.comp, "FV1318", `${where} and \`${other}\` read each other`, node);
       runOf(piniaStores).inProgress.add(`${stateName}.${name}`);
       try {
         setup.set(other, storeGetter(s, base, other, node)!);
@@ -277,7 +277,7 @@ function storeGetter(s: Scope, base: Val, name: string, node: N): Val | null {
   try {
     return expr({ ...s, locals, narrowed: new Map(), setup, refs, propsIdent: null }, g.body);
   } catch (e) {
-    if (e instanceof GenError) throw new GenError(`${s.comp.file}: ${where}: ${e.message.replace(/^[^:]*: /, "")}`);
+    if (e instanceof GenError) failIn(s.comp.file, e.code, `${where}: ${e.message.replace(/^[^:]*: /, "")}`);
     throw e;
   }
 }
@@ -319,7 +319,7 @@ export const piniaStores: Plugin<StoresRun, StoresScope> = {
         const hook = sp.type === "ImportSpecifier" ? (sp.imported.name ?? sp.imported.value) : null;
         if (st.importKind === "type" || sp.importKind === "type" || (hook !== null && runOf(piniaStores).structs.has(hook))) continue;
         const store = hook ? runOf(piniaStores).stores.get(hook) : undefined;
-        if (!store || store.module !== storeImport(comp, from)) fail(comp, "import a store by its `use…` hook", sp);
+        if (!store || store.module !== storeImport(comp, from)) fail(comp, "FV1319", "import a store by its `use…` hook", sp);
         own.hooks.set(sp.local.name, store);
       }
       return true;
@@ -340,10 +340,10 @@ export const piniaStores: Plugin<StoresRun, StoresScope> = {
     if (d.id.type === "ObjectPattern" && callee !== null && callee === own.storeToRefs) {
       const arg = init.arguments[0];
       const store = arg?.type === "Identifier" ? own.values.get(arg.name) : undefined;
-      if (!store || init.arguments.length !== 1) fail(comp, "`storeToRefs` takes a store bound in this setup", d);
+      if (!store || init.arguments.length !== 1) fail(comp, "FV1320", "`storeToRefs` takes a store bound in this setup", d);
       for (const p of d.id.properties) {
         if (p.type !== "ObjectProperty" || p.computed || p.value.type !== "Identifier") {
-          fail(comp, "`storeToRefs` is destructured into plain names", p);
+          fail(comp, "FV1321", "`storeToRefs` is destructured into plain names", p);
         }
         const key: string = p.key.type === "Identifier" ? p.key.name : p.key.value;
         const state: Val = { code: `fv_stores.${store.field}`, ty: { k: "struct", name: store.state, store: true } };
@@ -355,7 +355,7 @@ export const piniaStores: Plugin<StoresRun, StoresScope> = {
     }
     const hook = d.id.type === "Identifier" && callee !== null ? own.hooks.get(callee) : undefined;
     if (!hook) return false;
-    if (init.arguments.length) fail(comp, "a store hook takes no arguments", d);
+    if (init.arguments.length) fail(comp, "FV1322", "a store hook takes no arguments", d);
     own.values.set(d.id.name, hook);
     s.setup.set(d.id.name, { code: `fv_stores.${hook.field}`, ty: { k: "struct", name: hook.state, store: true } });
     runOf(piniaStores).readers.add(comp);
