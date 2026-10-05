@@ -2,13 +2,15 @@
 
 import { parse as parseJs } from "@babel/parser";
 import { basename } from "node:path";
-import { type Component, type Field, type N, type Struct, type Ty, fail, GenError, rustStr, snake, tagAst, takesAttrs } from "./model.ts";
-import { allRoutes, type RouteDef, ctx } from "./context.ts";
+import { type Component, type Field, type N, type Struct, type Ty, blankComponent, fail, GenError, rustStr, snake, tagAst, takesAttrs } from "./model.ts";
+import { ctx } from "./context.ts";
 import { lookupStruct } from "./typescript.ts";
 import { childOf } from "./expr.ts";
 import { Emitter } from "./emitter.ts";
-import { extraParams, fieldInit, slotFieldBorrows, slotFieldTy, slotTypeName, statements, takesSlots } from "./template.ts";
-import { storeHome } from "./stores.ts";
+import { statements } from "./template.ts";
+import { slotFieldBorrows, slotFieldTy, slotTypeName } from "./slots.ts";
+import { extraParams, fieldInit, takesSlots } from "./children.ts";
+import { paramsOf, renderParams, slotFieldsOf } from "./plugin.ts";
 import { scopeFor } from "./script.ts";
 
 export function needsLifetime(ty: Ty, comp: Component, seen: Set<string> = new Set()): boolean {
@@ -212,7 +214,7 @@ ${e.lines.join("\n")}
 /** Whether the component gets an `island()`: it renders from its props alone, which `data-props` is
  * all the client gets to mount it with. */
 export function isIsland(comp: Component): boolean {
-  return !takesSlots(comp) && !comp.usesRoute && !comp.usesStores && !comp.usesI18n && !comp.usesTeleports;
+  return !takesSlots(comp) && comp.takes.size === 0;
 }
 
 export function componentSource(comp: Component, ast: N[], ssr: string, components: Map<string, Component>): string {
@@ -267,7 +269,7 @@ export function componentSource(comp: Component, ast: N[], ssr: string, componen
       const type = comp.slotShapes.has(n) ? `&'s ${slotTypeName(n, "Slot")}<'s>` : "fv::Slot<'s>";
       return `    /// ${outlet}\n    pub ${snake(n)}: Option<${type}>,`;
     }),
-    ...(comp.routerView ? ["    /// The page `<RouterView>` shows.\n    pub router_view: fv::Slot<'s>,"] : []),
+    ...slotFieldsOf(comp).map((f) => `    /// ${f.doc}\n    pub ${f.rust}: fv::Slot<'s>,`),
   ];
   const slotTypes = [...comp.slotShapes.entries()]
     .map(([n, shape]) => {
@@ -288,21 +290,15 @@ pub type ${slotTypeName(n, "Slot")}<'s> = dyn ${borrows ? "for<'v> " : ""}Fn(&mu
     .join("");
   const slotsStruct = takesSlots(comp)
     ? `${slotTypes}/// What a parent puts in the slots \`${basename(comp.file)}\` renders.
-#[derive(Clone, Copy${comp.routerView ? "" : ", Default"})]
+#[derive(Clone, Copy${slotFieldsOf(comp).length ? "" : ", Default"})]
 pub struct Slots<'s> {
 ${slotFields.join("\n")}
 }
 
 `
     : "";
-  const args =
-    (takesSlots(comp) ? ", fv_slots" : "") + (comp.usesRoute ? ", fv_route" : "") + (comp.usesStores ? ", fv_stores" : "") + (comp.usesI18n ? ", fv_i18n" : "") + (comp.usesTeleports ? ", fv_teleports" : "");
-  const params =
-    (takesSlots(comp) ? ", fv_slots: Slots<'p>" : "") +
-    (comp.usesRoute ? ", fv_route: &'p fv::Route<'p>" : "") +
-    (comp.usesStores ? ", fv_stores: &'p super::stores::Stores<'p>" : "") +
-    (comp.usesI18n ? ", fv_i18n: &'p fv::I18n" : "") +
-    (comp.usesTeleports ? ", fv_teleports: &'p fv::Teleports" : "");
+  const args = (takesSlots(comp) ? ", fv_slots" : "") + paramsOf(comp).map((p) => `, ${p.name}`).join("");
+  const params = (takesSlots(comp) ? ", fv_slots: Slots<'p>" : "") + paramsOf(comp).map((p) => `, ${p.name}: ${p.pageTy}`).join("");
   const wrappers = plain
     ? `/// The component's markup, for a maud page that shows it without hydrating it.
 pub fn html${gen}(props: &'p Props${named}) -> fv::Html<'p, Props${named}> {
@@ -341,14 +337,20 @@ ${slotsStruct}${renderSource(comp, life, args, e)}
 ${wrappers}`;
 }
 
-export function modSource(comps: Component[]): string {
+/** Whether a component's `render_json` arm reads the fixture beyond the props. */
+function readsFixture(c: Component): boolean {
+  return takesSlots(c) || paramsOf(c).some((p) => p.test.fixture);
+}
+
+/** `mod.rs`: the components' modules and `modules`, those the plugins write beside them. */
+export function modSource(comps: Component[], modules: string[]): string {
   const arms = comps
     .map((c) => {
       const lines = [`let props: ${c.module}::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;`];
       let args = "";
-      if (takesSlots(c) || c.usesRoute || c.usesStores || c.usesI18n) lines.push("let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;");
+      if (readsFixture(c)) lines.push("let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;");
       if (takesSlots(c)) {
-        const names = [...c.slotNames, ...(c.routerView ? ["routerView"] : [])];
+        const names = [...c.slotNames, ...slotFieldsOf(c).map((f) => f.js)];
         for (const n of names) {
           const local = `s_${snake(n).replace(/^r#/, "")}`;
           const shape = c.slotShapes.get(n);
@@ -363,32 +365,22 @@ export function modSource(comps: Component[]): string {
           const value = c.slotShapes.has(n) ? `&${local} as &${c.module}::${slotTypeName(n, "Slot")}` : `ferrovue::Slot::new(&${local})`;
           return `${snake(n)}: fixture.slot(${rustStr(n)}).map(|_| ${value})`;
         });
-        if (c.routerView) fields.push("router_view: ferrovue::Slot::new(&s_router_view)");
+        for (const f of slotFieldsOf(c)) fields.push(`${f.rust}: ferrovue::Slot::new(&s_${snake(f.js).replace(/^r#/, "")})`);
         args += `, ${c.module}::Slots { ${fields.join(", ")} }`;
       }
-      if (c.usesRoute) {
-        lines.push("let router = route_table::router();", "let route = router.at(&fixture.route);");
-        args += ", &route";
-      }
-      if (c.usesStores) {
-        lines.push("let state: stores::Stores = serde_json::from_value(fixture.stores.clone()).map_err(|e| e.to_string())?;");
-        args += ", &state";
-      }
-      if (c.usesI18n) {
-        lines.push("let i18n = i18n::i18n(fixture.locale.as_deref().unwrap_or(i18n::LOCALE));");
-        args += ", &i18n";
-      }
-      if (c.usesTeleports) {
-        lines.push("let teleports = ferrovue::Teleports::new();");
-        args += ", &teleports";
+      for (const p of paramsOf(c)) {
+        lines.push(...p.test.lines);
+        args += `, ${p.test.arg}`;
       }
       lines.push(`${c.module}::render(&mut out, &props${args});`);
-      // What was teleported follows the render, as the conformance suite records Vue's.
-      if (c.usesTeleports) lines.push("teleports_into(&mut out, teleports);");
+      for (const p of paramsOf(c)) lines.push(...(p.test.after ?? []));
       return `        ${rustStr(c.name)} => {\n${lines.map((l) => "            " + l).join("\n")}\n        }`;
     })
     .join("\n");
-  const fixture = comps.some((c) => takesSlots(c) || c.usesRoute || c.usesStores || c.usesI18n)
+  // Every parameter's field, whichever components take it.
+  const fields = renderParams().flatMap((p) => (p.fixtureField === undefined ? [] : [p.fixtureField]));
+  const defaults = renderParams().flatMap((p) => (p.fixtureDefault === undefined ? [] : [p.fixtureDefault]));
+  const fixture = comps.some(readsFixture)
     ? `
 /// What a fixture holds besides the props: each slot's content, and the location it renders at.
 #[cfg(test)]
@@ -396,25 +388,12 @@ export function modSource(comps: Component[]): string {
 struct Fixture {
     #[serde(rename = "$slots", default)]
     slots: std::collections::HashMap<String, String>,
-    #[serde(rename = "$route", default = "Fixture::root")]
-    route: String,
-    #[serde(rename = "$stores", default = "Fixture::no_stores")]
-    stores: serde_json::Value,
-    #[serde(rename = "$locale", default)]
-    locale: Option<String>,
+${fields.join("\n")}
 }
 
 #[cfg(test)]
 impl Fixture {
-    fn root() -> String {
-        "/".to_owned()
-    }
-
-    fn no_stores() -> serde_json::Value {
-        serde_json::Value::Object(Default::default())
-    }
-
-    fn slot(&self, name: &str) -> Option<&str> {
+${defaults.map((d) => `${d}\n\n`).join("")}    fn slot(&self, name: &str) -> Option<&str> {
         self.slots.get(name).map(String::as_str)
     }
 }
@@ -429,25 +408,12 @@ impl Fixture {
 // it needs.
 #![allow(dead_code)]
 
-${comps.map((c) => `pub mod ${c.module};`).join("\n")}${ctx.routes ? "\npub mod route_table;" : ""}${ctx.stores.size ? "\npub mod stores;" : ""}${ctx.typeStructs.size ? "\npub mod types;" : ""}${ctx.i18n ? "\npub mod i18n;" : ""}
+${comps.map((c) => `pub mod ${c.module};`).join("\n")}${modules.map((m) => `\npub mod ${m.replace(/\.rs$/, "")};`).join("")}
 ${fixture}
-${comps.some((c) => c.usesTeleports) ? `/// What was teleported, after a marker, as the conformance suite writes Vue's: \`{"target":"…"}\`.
-#[cfg(test)]
-fn teleports_into(out: &mut String, teleports: ferrovue::Teleports) {
-    let targets = teleports.into_targets();
-    if targets.is_empty() {
-        return;
-    }
-    let pairs: Vec<String> = targets
-        .iter()
-        .map(|(t, html)| format!("{}:{}", serde_json::to_string(t).unwrap(), serde_json::to_string(html).unwrap()))
-        .collect();
-    out.push_str("<!--fv-teleports-->{");
-    out.push_str(&pairs.join(","));
-    out.push('}');
-}
-
-` : ""}/// Render one component from its props as JSON, for the conformance suite.
+${renderParams()
+  .filter((p) => p.testSupport !== undefined && comps.some((c) => c.takes.has(p.name)))
+  .map((p) => `${p.testSupport}\n\n`)
+  .join("")}/// Render one component from its props as JSON, for the conformance suite.
 #[cfg(test)]
 pub fn render_json(component: &str, json: &str) -> Result<String, String> {
     let mut out = String::new();
@@ -460,30 +426,8 @@ ${arms}
 `;
 }
 
-export function storesSource(dir: string): string {
-  const home = storeHome(dir);
-  // Test-only `Default` lets a fixture name only the stores it reads; the rest are never looked at.
-  const testDerive = (src: string) =>
-    src.replace("#[cfg_attr(test, derive(serde::Deserialize))]", "#[cfg_attr(test, derive(Default, serde::Deserialize))]\n#[cfg_attr(test, serde(default))]");
-  const structs = [...ctx.storeStructs.values()]
-    .map((st) => testDerive(structSource(st, home, `/// \`${st.name}\` in \`${ctx.storeFiles.get(st.name)}\`.\n`)))
-    .join("\n");
-  const all: Struct = {
-    name: "Stores",
-    fields: [...ctx.stores.values()].map((st) => ({ js: st.id, rust: st.field, ty: { k: "struct", name: st.state, store: true } })),
-  };
-  const top = testDerive(structSource(all, home, "/// Every store's state, keyed by id as `pinia.state.value` is: what the page sends the client.\n"));
-  return `${header(dir, "the store files")}
-//! The Pinia stores' state, which components read while they render on the server.
-
-${/Cow</.test(structs) ? "use std::borrow::Cow;\n\n" : ""}${structs}
-${top}`;
-}
-
 export function typesSource(): string {
-  const home = storeHome("types");
-  home.structs = ctx.typeStructs;
-  home.module = "types";
+  const home = blankComponent("types", "types", "types", ctx.typeStructs);
   const files = [...new Set(ctx.typeFiles.values())].toSorted();
   const structs = [...ctx.typeStructs.values()]
     .map((st) => structSource(st, home, `/// \`${st.name}\` in \`${ctx.typeFiles.get(st.name)}\`.\n`))
@@ -493,41 +437,4 @@ export function typesSource(): string {
 //! them to one another agree on them.
 
 ${/Cow</.test(structs) ? "use std::borrow::Cow;\n\n" : ""}${structs}`;
-}
-
-/** Route definitions as \`ferrovue::RouteDef\` literals, children nested. */
-function routeDefs(routes: RouteDef[], depth: number): string {
-  const pad = "    ".repeat(depth);
-  return routes
-    .map((r) => {
-      const name = r.name === undefined ? "None" : `Some(${rustStr(r.name)})`;
-      const children = r.children?.length ? `&[\n${routeDefs(r.children, depth + 1)}\n${pad}]` : "&[]";
-      return `${pad}ferrovue::RouteDef { path: ${rustStr(r.path)}, name: ${name}, children: ${children} },`;
-    })
-    .join("\n");
-}
-
-export function routesSource(routes: RouteDef[], file: string): string {
-  return `${header(file, "the routes file")}
-//! The app's routes: what \`<RouterLink>\` resolves against and \`useRoute()\` reads.
-
-/// Each route: its vue-router path, its name if it has one, and the routes nested in it.
-pub const ROUTES: &[ferrovue::RouteDef<'static>] = &[
-${routeDefs(routes, 1)}
-];
-
-/// Every route's full path, nested ones included.
-pub const PATHS: &[&str] = &[
-${allRoutes(routes).map((r) => `    ${rustStr(r.fullPath)},`).join("\n")}
-];
-
-/// The history's base, which every link's \`href\` starts with.
-pub const BASE: &str = ${rustStr(ctx.routerBase)};
-
-/// The router these routes make: build it once, and resolve each request's location with
-/// [\`ferrovue::Router::at\`].
-pub fn router() -> ferrovue::Router {
-    ferrovue::Router::tree(ROUTES).with_base(BASE)
-}
-`;
 }

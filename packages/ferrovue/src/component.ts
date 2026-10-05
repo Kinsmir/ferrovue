@@ -1,13 +1,13 @@
 /* One `.vue` file read: its props, models, imported types, and Vue's SSR compilation of its template. */
 
 import { compileScript, compileTemplate, parse as parseSfc } from "@vue/compiler-sfc";
-import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { SourceMapConsumer } from "source-map-js";
-import { basename, relative, resolve, sep } from "node:path";
-import { type Component, type N, fail, opt, snake, tagAst } from "./model.ts";
+import { basename, relative } from "node:path";
+import { type Component, type N, blankComponent, fail, opt, snake, tagAst } from "./model.ts";
 import { ctx } from "./context.ts";
 import { typesImports, declareTypes, defaultValue, definePropsType, readTypeFile, resolveImport, runtimeDefaults, structOf, tyOfTs } from "./typescript.ts";
+import { claim } from "./plugin.ts";
 
 /** A Vue compiler error's position as a node \`fail\` can point at: its line and 1-based column,
  * offset by where the template starts when the error is in the template's content. */
@@ -17,16 +17,6 @@ function vueErrorNode(err: unknown, within?: { line: number; column: number }): 
   const { line, column } = loc.start;
   const at = !within ? { line, column: column - 1 } : line === 1 ? { line: within.line, column: within.column - 1 + column - 1 } : { line: within.line + line - 1, column: column - 1 };
   return { type: "VueError", loc: { start: at }, __fv: "source" };
-}
-
-/** `getHash` in `@vitejs/plugin-vue`: the first 8 hex digits of the SHA-256 of the file's path from
- * Vite's root, with `/` between its parts, followed in `"filepath-source"` mode by its source. */
-function scopeHash(file: string, source: string): string {
-  const path = relative(ctx.viteRoot, resolve(file)).split(sep).join("/");
-  return createHash("sha256")
-    .update(ctx.scopeId === "filepath" ? path : path + source)
-    .digest("hex")
-    .slice(0, 8);
 }
 
 /** `inheritAttrs` as `defineOptions({ inheritAttrs })` or a plain `<script>`'s `export default`
@@ -56,53 +46,20 @@ export function readComponent(file: string, root: string): { comp: Component; as
   const source = readFileSync(file, "utf8");
   const { descriptor, errors } = parseSfc(source, { filename: file });
   const rel = relative(root, file);
-  const comp: Component = {
-    name,
-    module: snake(name),
-    file: rel,
-    props: { name: "Props", fields: [] },
-    structs: new Map(),
-    trustedName: null,
-    floatName: null,
-    childProps: new Map(),
-    imports: new Set(),
-    slotNames: [],
-    routerView: false,
-    routerLink: false,
-    readsRoute: false,
-    usesRoute: false,
-    readsStores: false,
-    usesStores: false,
-    readsI18n: false,
-    usesI18n: false,
-    readsTeleports: false,
-    usesTeleports: false,
-    models: new Map(),
-    aliases: new Map(),
-    importedTypes: new Map(),
-    slotShapes: new Map(),
-    scopeId: null,
-    slotted: false,
-    inheritAttrs: true,
-    inherits: false,
-    passesSlotIds: false,
-    attrNames: new Set(),
-    idsInAttrs: false,
-  };
+  const comp = blankComponent(name, snake(name), rel);
   comp.source = source;
   if (errors.length) fail(comp, String(errors[0]), vueErrorNode(errors[0]));
   if (!descriptor.scriptSetup || !descriptor.template) {
     fail(comp, "an island needs `<script setup lang=\"ts\">` and a `<template>`");
   }
-  // A global `<style>` block changes no markup. A scoped one adds `data-v-…` attributes, whose id is
-  // computed here as the bundler computes it. A CSS module renames classes, and `v-bind()` in CSS
-  // writes variables onto the root, neither of which the server reproduces.
+  // A global `<style>` block changes no markup; a scoped one is a plugin's. A CSS module renames
+  // classes, and `v-bind()` in CSS writes variables onto the root, neither of which the server
+  // reproduces.
   for (const st of descriptor.styles) {
     if (st.module) fail(comp, "`<style module>` renames classes in the bundler; use a global or scoped `<style>`, or a stylesheet");
   }
   if (descriptor.cssVars.length) fail(comp, "`v-bind()` in `<style>` sets variables the server does not render; bind `:style` instead");
-  if (descriptor.styles.some((st) => st.scoped)) comp.scopeId = `data-v-${scopeHash(file, source)}`;
-  comp.slotted = descriptor.slotted;
+  for (const p of ctx.plugins) p.sfc?.(comp, descriptor, file, source);
 
   const script = compileScript(descriptor, { id: name });
   const ast: N[] = script.scriptSetupAst ?? [];
@@ -138,11 +95,8 @@ export function readComponent(file: string, root: string): { comp: Component; as
       const isType = st.importKind === "type" || sp.importKind === "type";
       const typeFile = resolveImport(comp.file, from);
       if (!typeFile) continue;
-      const module = typeFile.replace(/\.ts$/, "");
-      if ([...ctx.stores.values()].some((x) => x.module === module)) {
-        if (ctx.storeStructs.has(typeName)) comp.importedTypes.set(sp.local.name, { k: "struct", name: typeName, store: true });
-        continue;
-      }
+      // A file a plugin owns, such as a store's, whose types it has read.
+      if (ctx.plugins.some((p) => p.importedType?.(comp, typeFile, typeName, sp.local.name))) continue;
       if (ctx.helperModule !== null && from === ctx.helperModule && !isType) continue;
       readTypeFile(typeFile);
       if (ctx.typeStructs.has(typeName)) comp.importedTypes.set(sp.local.name, { k: "struct", name: typeName, home: "types" });
@@ -207,11 +161,8 @@ export function readComponent(file: string, root: string): { comp: Component; as
   const compiled = compileTemplate({
     source: descriptor.template.content,
     filename: file,
-    // As `@vitejs/plugin-vue` compiles it: the scope id written onto every element, and passed to
-    // slot content only with `:slotted()` styles.
-    id: comp.scopeId ?? name,
-    scoped: comp.scopeId !== null,
-    slotted: comp.slotted,
+    // As `@vitejs/plugin-vue` compiles it, which a plugin may change: scoped styles.
+    ...(claim((p) => p.templateOptions?.(comp)) ?? { id: name, scoped: false, slotted: false }),
     ssr: true,
     ssrCssVars: [],
     compilerOptions: { bindingMetadata: script.bindings, sourceMap: true },
@@ -234,16 +185,6 @@ export function readComponent(file: string, root: string): { comp: Component; as
   for (const m of compiled.code.matchAll(/_ssrRenderSlot\(_ctx\.\$slots, "([^"]+)"/g)) {
     if (!comp.slotNames.includes(m[1]!)) comp.slotNames.push(m[1]!);
   }
-  // Resolved by name, as globally registered components are, or imported from `vue-router`.
-  const imported = (exported: string) =>
-    [...plainAst, ...ast].some(
-      (st) => st.type === "ImportDeclaration" && st.source.value === "vue-router" &&
-        st.specifiers.some((sp: N) => sp.type === "ImportSpecifier" && (sp.imported.name ?? sp.imported.value) === exported),
-    );
-  comp.routerLink = compiled.code.includes('_resolveComponent("RouterLink")') || imported("RouterLink");
-  comp.routerView = compiled.code.includes('_resolveComponent("RouterView")') || imported("RouterView");
-  comp.readsRoute = compiled.code.includes("_ctx.$route");
-  comp.readsI18n = compiled.code.includes("_ctx.$t(");
-  comp.readsTeleports = compiled.code.includes("_ssrRenderTeleport(");
+  for (const p of ctx.plugins) p.compiled?.(comp, compiled.code, [...plainAst, ...ast]);
   return { comp, ast, ssr: compiled.code };
 }

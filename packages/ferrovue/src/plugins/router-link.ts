@@ -1,15 +1,21 @@
-/* `<RouterLink>`, its locations, and the routes file. */
+/* `<RouterLink>` as vue-router renders it: its location resolved from the reader's route, the
+ * active classes and `aria-current`, and the attributes and scope ids its `<a>` takes. */
 
 import { escapeHtml } from "@vue/shared";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import { type N, type Scope, type Val, camelize, fail, GenError, rustStr } from "./model.ts";
-import { allRoutes, type RouteDef, CONFIG_FILE, ctx } from "./context.ts";
-import { expr, lonely } from "./expr.ts";
-import { bare, condition, strArg } from "./parens.ts";
-import { Emitter } from "./emitter.ts";
-import { attrOf, classItems, dollarAttrs, IGNORED_PROPS, isAttrs, mergedParts, mergeProps, renderDynamicAttr, renderStyle } from "./attrs.ts";
-import { slotBody, statements } from "./template.ts";
+import { type N, type Scope, type Val, camelize, fail, rustStr } from "../model.ts";
+import { CONFIG_FILE } from "../context.ts";
+import { expr } from "../expr.ts";
+import { lonely } from "../strings.ts";
+import { bare, condition, strArg } from "../parens.ts";
+import { Emitter } from "../emitter.ts";
+import { attrOf, dollarAttrs, IGNORED_PROPS, isAttrs, mergedParts, mergeProps, renderDynamicAttr } from "../attrs.ts";
+import { renderStyle } from "../styles.ts";
+import { classItems } from "../classes.ts";
+import { statements } from "../template.ts";
+import { slotBody } from "../slots.ts";
+import { runOf } from "../plugin.ts";
+import { scopeIdOf } from "./scoped.ts";
+import { allRoutes, router } from "./router.ts";
 
 export const ROUTER_LINK_PROPS = new Set(["to", "class", "activeClass", "exactActiveClass", "ariaCurrentValue"]);
 
@@ -85,7 +91,7 @@ export function resolveLink(s: Scope, e: Emitter, to: N): void {
   const path = parts.get("path");
   if (name) {
     if (name.type !== "StringLiteral") fail(s.comp, "a `to`'s `name` is a string literal, checked against the routes", name);
-    const route = allRoutes(ctx.routes!).find((r) => r.name === name.value);
+    const route = allRoutes(runOf(router).routes!).find((r) => r.name === name.value);
     if (!route) fail(s.comp, `no route is called \`${name.value}\``, name);
     const wanted = routeParams(route.fullPath);
     const given = new Map<string, N>();
@@ -145,7 +151,7 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
   const passed = (rawProps?.type === "Identifier" && rawProps.name === "_attrs") || rawProps?.arguments?.some((a: N) => a.type === "Identifier" && a.name === "_attrs");
   const base = passed ? s.attrs : null;
   const slotted = slotScopeId ? s.sid : null;
-  const scopeId = s.comp.scopeId;
+  const scopeId = scopeIdOf(s.comp);
   const content = slots?.type === "ObjectExpression" ? slots.properties.filter((p: N) => (p.key?.name ?? p.key?.value) !== "_").map((p: N) => p.value) : [];
   /** Whether the link's content holds a node that `is` picks out. */
   const holds = (is: (x: N) => boolean): boolean => {
@@ -160,7 +166,7 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
   if ((scopeId !== null || slotted !== null || base !== null) && holds((x) => x.type === "CallExpression" && x.callee.name === "_ssrRenderSlot")) {
     fail(s.comp, "a `<slot>` inside a `<RouterLink>` that takes scope ids: vue-router renders it by rules of its own", to);
   }
-  if (!ctx.routes) fail(s.comp, `\`<RouterLink>\` needs \`routes\` in ${CONFIG_FILE}: the paths it resolves against`, n);
+  if (!runOf(router).routes) fail(s.comp, `\`<RouterLink>\` needs \`routes\` in ${CONFIG_FILE}: the paths it resolves against`, n);
   /** A literal-string prop, which the class names and `aria-current` must be. */
   const literal = (key: string, fallback: string): string => {
     const v = fields.get(key);
@@ -168,8 +174,8 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
     if (v.type !== "StringLiteral") fail(s.comp, `\`${key}\` on \`<RouterLink>\` is a string literal`, v);
     return v.value;
   };
-  const activeClass = literal("activeClass", ctx.linkActive);
-  const exactClass = literal("exactActiveClass", ctx.linkExactActive);
+  const activeClass = literal("activeClass", runOf(router).linkActive);
+  const exactClass = literal("exactActiveClass", runOf(router).linkExactActive);
   const ariaCurrent = literal("ariaCurrentValue", "page");
   e.open("");
   resolveLink(s, e, to);
@@ -263,25 +269,4 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
   }
   e.lit("</a>");
   e.close();
-}
-
-/** The routes file: vue-router paths, each a string or `{ "path", "name" }`. */
-export function readRoutes(root: string, file: string): RouteDef[] {
-  const raw = JSON.parse(readFileSync(join(root, file), "utf8")) as unknown;
-  if (!Array.isArray(raw)) throw new GenError(`${file} lists the routes in an array`);
-  const read = (list: unknown[], parent: string | null): RouteDef[] =>
-    list.map((r: unknown): RouteDef => {
-      const o = (typeof r === "string" ? { path: r } : r) as { path?: unknown; name?: unknown; children?: unknown };
-      if (typeof o?.path !== "string" || (o.name !== undefined && typeof o.name !== "string") || (o.children !== undefined && !Array.isArray(o.children))) {
-        throw new GenError(`${file}: a route is a path, or \`{ "path": "…", "name": "…", "children": [ … ] }\``);
-      }
-      // A child's path joins its parent's unless it starts with `/`; an empty one is the parent's.
-      const fullPath =
-        parent === null || o.path.startsWith("/") ? o.path : `${parent}${parent.endsWith("/") || o.path === "" ? "" : "/"}${o.path}`;
-      const def: RouteDef = { path: o.path, fullPath };
-      if (o.name !== undefined) def.name = o.name;
-      if (o.children) def.children = read(o.children as unknown[], fullPath);
-      return def;
-    });
-  return read(raw, null);
 }

@@ -1,6 +1,7 @@
 /* The compiler's model: the types it gives values, the shapes of components and scopes, and the errors it raises. (Not `types.ts`, which is the public `ferrovue/types` module.) */
 
 import type { SourceMapConsumer } from "source-map-js";
+import type { Plugin } from "./plugin.ts";
 
 // Babel's AST, read structurally: every access below checks `type` before it trusts a field.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -18,21 +19,25 @@ export type Ty =
   /** `Record<string, T>`: an object used as a dictionary, `ferrovue::Record` in Rust, its keys in
    * JavaScript's order. */
   | { k: "record"; of: Ty }
-  /** `store` marks a Pinia store's state, or a type inside it, declared in a store's own file;
-   * `home` a type declared elsewhere: `"types"` for a shared `.ts` file, or the component whose
-   * `.vue` file declares it. */
-  | { k: "struct"; name: string; store?: true; home?: string }
+  | StructTy
   /** `TrustedHtml` from `ferrovue/types`: the configured Rust type, which `v-html` writes raw. */
   | { k: "html" }
   /** Another component's `Props`, imported from its `.vue` file: what `v-bind` hands that child. */
   | { k: "child"; name: string }
-  /** `useRoute()` or `$route`: the reader's location, as vue-router resolved it. */
-  | { k: "route" }
-  /** `route.params`. */
-  | { k: "params" }
-  /** `route.query`, and one of its values: a string, \`null\`, an array of those, or absent. */
-  | { k: "queryobj" }
-  | { k: "query" };
+  | PluginTys[keyof PluginTys];
+
+/** An interface's type. `home` marks a type declared elsewhere: `"types"` for a shared `.ts` file, or
+ * the component whose `.vue` file declares it. A plugin may mark its own (`declare module`): a
+ * store's state is `store`. */
+export interface StructTy {
+  k: "struct";
+  name: string;
+  home?: string;
+}
+
+/** The types of values plugins add, by kind: each plugin declares its own here (`declare module`),
+ * and tells the core what to do with them through its `ValueHooks`. */
+export interface PluginTys {}
 
 export interface Field {
   js: string;
@@ -168,27 +173,9 @@ export interface Component {
   imports: Set<string>;
   /** The slots its template renders with `<slot>`, by name, in order of first appearance. */
   slotNames: string[];
-  /** Whether its template holds `<RouterView>`: the page, which the server supplies. */
-  routerView: boolean;
-  /** Whether its template holds `<RouterLink>`. */
-  routerLink: boolean;
-  /** Whether it reads the route itself: `useRoute()`, or `$route` in the template. */
-  readsRoute: boolean;
-  /** Whether it renders a `<RouterLink>` or reads the route, itself or through a child, and so
-   * takes the route. */
-  usesRoute: boolean;
-  /** Whether its setup reads a store. */
-  readsStores: boolean;
-  /** Whether it reads a store, itself or through a child, and so takes the stores' state. */
-  usesStores: boolean;
-  /** Whether it translates — \`$t\`, or \`useI18n()\` in setup — and whether it or a child does, and
-   * so takes the request's \`I18n\`. */
-  readsI18n: boolean;
-  usesI18n: boolean;
-  /** Whether it renders a \`<Teleport>\`, and whether it or a child does, and so takes the page's
-   * \`Teleports\`. */
-  readsTeleports: boolean;
-  usesTeleports: boolean;
+  /** The render parameters it takes (`RenderParam`), by name: those it reads, and those a child
+   * it renders takes. Known once every component is read. */
+  takes: Set<string>;
   /** `defineModel` bindings: local name → the prop it reads. */
   models: Map<string, string>;
   /** Type aliases it declares: name → the type. */
@@ -198,14 +185,11 @@ export interface Component {
   /** Its scoped slots, by name: the props each one's outlets pass, known once its render is
    * generated, which is why a child is generated before its parents. */
   slotShapes: Map<string, Struct>;
-  /** `data-v-…`, the id its `<style scoped>` gives its elements, or `null` without one. */
-  scopeId: string | null;
-  /** Whether its scoped styles use `:slotted()`, so that its outlets pass a slot scope id. */
-  slotted: boolean;
   /** `inheritAttrs` from `defineOptions`: `false` drops what a parent passes on to its root. */
   inheritAttrs: boolean;
   /** Whether a parent may hand its root scope ids — its own, those passed on to it, or a slot's —
-   * which it then takes as `fv_attrs`. Known once every component is read (`scopeFlow`). */
+   * which it then takes as `fv_attrs`. Known once every component is read, by a plugin's analysis
+   * (scoped styles). */
   inherits: boolean;
   /** Whether its outlets may pass slot content a slot scope id, which the content then takes as
    * `fv_sid`. Known once every component is read, as `inherits` is. */
@@ -217,6 +201,33 @@ export interface Component {
   /** Whether its `$attrs` may hold scope ids: it is the root of a component that may be handed
    * some, which passes them on as attributes. */
   idsInAttrs: boolean;
+}
+
+/** A component with nothing read yet: what `readComponent` fills in, and what a `.ts` file stands
+ * in as while the types it declares are read, and written out. */
+export function blankComponent(name: string, module: string, file: string, structs: Map<string, Struct> = new Map()): Component {
+  return {
+    name,
+    module,
+    file,
+    props: { name: "Props", fields: [] },
+    structs,
+    trustedName: null,
+    floatName: null,
+    childProps: new Map(),
+    imports: new Set(),
+    slotNames: [],
+    takes: new Set(),
+    models: new Map(),
+    aliases: new Map(),
+    importedTypes: new Map(),
+    slotShapes: new Map(),
+    inheritAttrs: true,
+    inherits: false,
+    passesSlotIds: false,
+    attrNames: new Set(),
+    idsInAttrs: false,
+  };
 }
 
 export interface Scope {
@@ -245,17 +256,13 @@ export interface Scope {
   selfAlias: { name: string | null };
   /** What the helper calls translated so far can write, shared by every copy of the scope. */
   helperBytes: { n: number };
-  /** The names the compiled template resolved `RouterLink` and `RouterView` under. */
-  router: Map<string, "RouterLink" | "RouterView">;
   /** Directives the compiled template resolved by name: local → the directive's name. */
   directives: Map<string, string>;
-  /** Setup bindings that are vue-i18n's \`t\`, from \`const { t } = useI18n()\`. */
-  i18nT: Set<string>;
   /** Inside slot content whose emptiness is decided at run time: each push that is not a comment
    * sets the closure's `filled`, which is how Vue tells content from nothing (`ssrRenderSlot`). */
   fill: boolean;
-  /** Inside a `<RouterLink>`'s slot, which Vue renders from virtual nodes rather than pushes: an
-   * untaken `v-if` is `<!--v-if-->` there, not `<!---->`. */
+  /** Inside content a plugin renders from virtual nodes rather than pushes, such as a
+   * `<RouterLink>`'s slot: an untaken `v-if` is `<!--v-if-->` there, not `<!---->`. */
   vnode: boolean;
   /** The Rust value of `_attrs`, the scope ids this render's root inherits, as `ssrRenderAttrs`
    * writes them; `null` when the component inherits none. */
@@ -270,6 +277,8 @@ export interface Scope {
   sid: string | null;
   /** Inside a `v-for` over a list of the props: the Rust name of its item, and the list. */
   loop?: { item: string; over: string };
+  /** Each plugin's state for this setup scope (`scopeOf`). */
+  plugins: Map<Plugin, unknown>;
 }
 
 /** Where a node came from, which decides how its position is read: `source` for an AST parsed

@@ -1,0 +1,12 @@
+/* The compiler's plugins (`plugin.ts`). Their order is part of the generated code: a render's
+ * parameters, the fixture's fields and the modules beside the components follow it. */
+
+import { type Plugin } from "../plugin.ts";
+import { router } from "./router.ts";
+import { piniaStores } from "./stores.ts";
+import { sharedTypes } from "./shared-types.ts";
+import { i18n } from "./i18n.ts";
+import { teleport } from "./teleport.ts";
+import { scoped } from "./scoped.ts";
+
+export const PLUGINS: readonly Plugin[] = [router, piniaStores, sharedTypes, i18n, teleport, scoped];

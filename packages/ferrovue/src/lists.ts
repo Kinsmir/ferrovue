@@ -8,7 +8,10 @@
 
 import { type N, type Scope, type Ty, type Val, BOOL, fail, FLOAT, INT, opt, sameTy, STR } from "./model.ts";
 import { ctx } from "./context.ts";
-import { asCow, yieldsCow, asF64, cond, expr, fieldVal, isNumber, isTemporary, lonely, meet } from "./expr.ts";
+import { expr, fieldVal } from "./expr.ts";
+import { cond } from "./narrowing.ts";
+import { asF64, isNumber } from "./numbers.ts";
+import { asCow, isTemporary, lonely, meet, yieldsCow } from "./strings.ts";
 import { atom, operand, strArg, UNARY } from "./parens.ts";
 
 const COW = "std::borrow::Cow::<str>";

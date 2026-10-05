@@ -2,7 +2,7 @@
 
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import type { I18nSetup } from "./i18n.ts";
+import type { Plugin } from "./plugin.ts";
 import { type Component, type N, type Struct, type Ty, BOOL, FLOAT, GenError, INT, opt, STR } from "./model.ts";
 
 /** A type a helper takes or returns, as the configuration spells it. */
@@ -108,48 +108,6 @@ export function tyOfName(name: TypeName): Ty {
   }
 }
 
-/** A route as the routes file lists it: a vue-router path, and the name it may have. */
-export interface RouteDef {
-  /** The path as written: relative to the parent's unless it starts with \`/\`. */
-  path: string;
-  name?: string;
-  /** The routes nested in it. */
-  children?: RouteDef[];
-  /** The path with its ancestors', as vue-router normalises it. */
-  fullPath: string;
-}
-
-/** Every route, nested ones included, parents first. */
-export function allRoutes(routes: RouteDef[]): RouteDef[] {
-  return routes.flatMap((r) => [r, ...allRoutes(r.children ?? [])]);
-}
-
-/** A getter: the parameter naming the state (an option store's), and the expression it returns.
- * \`setup\` marks a setup store's \`computed\`, which reads the state's refs and the other getters by
- * name, through \`.value\`. */
-export interface StoreGetter {
-  param: string | null;
-  body: N;
-  file: string;
-  setup?: true;
-}
-
-/** A Pinia option store: `export const usePrefs = defineStore("prefs", { state: (): PrefsState => ... })`. */
-export interface Store {
-  /** `usePrefs` */
-  hook: string;
-  /** `prefs`: its key in `pinia.state.value`. */
-  id: string;
-  /** `prefs`: its field in the generated `Stores`. */
-  field: string;
-  /** `PrefsState`: the interface its state is. */
-  state: string;
-  /** The file, without its extension, as an import names it once resolved. */
-  module: string;
-  /** Its getters: name → the parameter that names the state, and the expression returned. */
-  getters: Map<string, StoreGetter>;
-}
-
 /** Where `TrustedHtml` comes from. Only that import names the type `v-html` will write raw. */
 export const TYPES_MODULE = "ferrovue/types";
 
@@ -162,17 +120,9 @@ export const ctx = {
   trustedHtml: null as string | null,
   /** Custom directives declared to render nothing on the server. */
   clientDirectives: new Set<string>(),
-  /** The configured routes, when there are any. */
-  routes: null as RouteDef[] | null,
-  /** The history's base, and the class names active links take, from the configured router. */
-  routerBase: "",
-  linkActive: "router-link-active",
-  linkExactActive: "router-link-exact-active",
-  /** The configured stores, by hook name, and every interface their files declare. */
-  stores: new Map<string, Store>(),
-  storeStructs: new Map<string, Struct>(),
-  /** The store file each of those interfaces is declared in. */
-  storeFiles: new Map<string, string>(),
+  /** The plugins of this run, in order, and the state each keeps for it (`runOf`). */
+  plugins: [] as readonly Plugin[],
+  runs: new Map<Plugin, unknown>(),
   /** The project root, for resolving a component's imports. */
   rootDir: "",
   /** Interfaces and object types declared in shared `.ts` files that components import, and type
@@ -189,9 +139,4 @@ export const ctx = {
   narrowCount: 0,
   /** The directory the components being compiled come from, for the generated headers. */
   componentsDir: "",
-  /** The configured locales and their messages, when there are any. */
-  i18n: null as I18nSetup | null,
-  /** How scope ids are computed, and the directory a component's path is hashed from. */
-  scopeId: "filepath-source" as ScopeIdMode,
-  viteRoot: "",
 };

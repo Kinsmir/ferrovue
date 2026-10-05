@@ -1,13 +1,13 @@
-/* vue-i18n: the locale files read and compiled to Rust tables, and `$t` / `useI18n().t` calls. */
+/* vue-i18n: the locale files read and compiled to Rust tables, `$t` and `useI18n()`. */
 
 import { readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { createParser } from "@intlify/message-compiler";
-import { type N, type Scope, type Val, fail, GenError, rustStr, STR } from "./model.ts";
-import { ctx } from "./context.ts";
-import { expr } from "./expr.ts";
-import { bare, strArg } from "./parens.ts";
-import { header } from "./rust.ts";
+import { type Component, type N, type Scope, type Val, fail, GenError, rustStr, STR } from "../model.ts";
+import { expr } from "../expr.ts";
+import { bare, strArg } from "../parens.ts";
+import { header } from "../rust.ts";
+import { type Plugin, runOf, scopeOf } from "../plugin.ts";
 
 /** A locale's messages, each parsed by vue-i18n's own message compiler, by dotted key. */
 export interface LocaleMessages {
@@ -26,12 +26,24 @@ export interface I18nSetup {
   fallback: string[];
 }
 
+/** vue-i18n in one run: the configured setup, and the components that translate. */
+interface I18nRun {
+  setup: I18nSetup | null;
+  readers: Set<Component>;
+}
+
+/** What one setup scope named vue-i18n's own by: `useI18n`, and the bindings of its `t`. */
+interface I18nScope {
+  useI18n: string | null;
+  t: Set<string>;
+}
+
 /** The modifiers vue-i18n defines for linked messages; any other would throw in the browser. */
 const MODIFIERS = new Set(["upper", "lower", "capitalize"]);
 
 /** Every message of every `*.json` locale file in the directory: nested objects joined with dots,
  * as vue-i18n resolves a path — a nested key first, then a flat key of the same spelling. */
-export function readLocales(root: string, config: { messages: string; locale?: string; fallbackLocale?: string | string[] }): I18nSetup {
+function readLocales(root: string, config: { messages: string; locale?: string; fallbackLocale?: string | string[] }): I18nSetup {
   const dir = join(root, config.messages);
   const files = readdirSync(dir).filter((f) => f.endsWith(".json")).toSorted();
   const parser = createParser({});
@@ -104,7 +116,7 @@ function byteOrder(a: string, b: string): number {
   return Buffer.compare(Buffer.from(a), Buffer.from(b));
 }
 
-export function i18nSource(setup: I18nSetup): string {
+function i18nSource(setup: I18nSetup): string {
   const locales = setup.locales
     .map((l) => {
       const keys = [...l.messages.keys()].toSorted(byteOrder);
@@ -159,8 +171,8 @@ function i18nValue(s: Scope, n: N): string {
 
 /** `t(key)`, `t(key, plural)`, `t(key, { named })`, `t(key, [list])`, `t(key, { named }, plural)`:
  * the message translated in the request's locale. */
-export function translate(s: Scope, args: N[], n: N): Val {
-  if (!ctx.i18n) fail(s.comp, "`t()` needs `i18n` in ferrovue.config.json: where the locale files are", n);
+function translate(s: Scope, args: N[], n: N): Val {
+  if (!runOf(i18n).setup) fail(s.comp, "`t()` needs `i18n` in ferrovue.config.json: where the locale files are", n);
   if (args.length < 1 || args.length > 3) fail(s.comp, "`t()` takes a key, then named values, a list or a plural number", n);
   const key = expr(s, args[0]);
   if (key.ty.k !== "str") fail(s.comp, "the key given to `t()` is a string", args[0]);
@@ -185,3 +197,68 @@ export function translate(s: Scope, args: N[], n: N): Val {
   }
   return { code: `&*fv_i18n.t(${strArg(key.code)}, &fv::i18n::Args { named: ${named}, list: ${list}, plural: ${plural} })`, ty: STR };
 }
+
+/** vue-i18n: `$t` and `useI18n()`, and the locale files. */
+export const i18n: Plugin<I18nRun, I18nScope> = {
+  name: "i18n",
+  configure: (config, root) => ({ setup: config.i18n ? readLocales(root, config.i18n) : null, readers: new Set() }),
+  compiled(comp, code) {
+    if (code.includes("_ctx.$t(")) runOf(i18n).readers.add(comp);
+  },
+  scope: () => ({ useI18n: null, t: new Set() }),
+  scriptImport(s, st, from) {
+    if (from !== "vue-i18n") return false;
+    for (const sp of st.specifiers) {
+      const name = sp.type === "ImportSpecifier" ? (sp.imported.name ?? sp.imported.value) : null;
+      if (name === "useI18n") scopeOf(i18n, s).useI18n = sp.local.name;
+      else s.clientOnly.set(sp.local.name, `\`${name}\` from vue-i18n does not run on the server`);
+    }
+    return true;
+  },
+  scriptBinding(s, d) {
+    // `const { t, locale } = useI18n()`: `t` translates, `locale` is the request's locale.
+    const own = scopeOf(i18n, s);
+    const init = d.init;
+    if (own.useI18n === null || d.id.type !== "ObjectPattern" || init?.type !== "CallExpression" || init.callee.type !== "Identifier" || init.callee.name !== own.useI18n) {
+      return false;
+    }
+    for (const p of d.id.properties) {
+      if (p.type !== "ObjectProperty" || p.computed || p.value.type !== "Identifier") {
+        fail(s.comp, "`useI18n()` is destructured into plain names", p);
+      }
+      const key: string = p.key.name ?? p.key.value;
+      if (key === "t") own.t.add(p.value.name);
+      else if (key === "locale") {
+        s.setup.set(p.value.name, { code: "fv_i18n.locale()", ty: STR });
+        s.refs.add(p.value.name);
+      } else s.clientOnly.set(p.value.name, `\`${key}\` from \`useI18n()\` does not run on the server`);
+    }
+    runOf(i18n).readers.add(s.comp);
+    return true;
+  },
+  call(s, n) {
+    // `$t(…)` in the template, and \`t(…)\` from \`useI18n()\`.
+    const callee = n.callee;
+    const { t } = scopeOf(i18n, s);
+    const translates =
+      callee.type === "Identifier"
+        ? t.has(callee.name)
+        : callee.object.type === "Identifier" &&
+          ((callee.object.name === "_ctx" && callee.property.name === "$t") || (callee.object.name === "$setup" && t.has(callee.property.name)));
+    return translates ? translate(s, n.arguments, n) : null;
+  },
+  params: [
+    {
+      name: "fv_i18n",
+      ty: "&fv::I18n",
+      pageTy: "&'p fv::I18n",
+      reads: (c) => runOf(i18n).readers.has(c),
+      test: { lines: ["let i18n = i18n::i18n(fixture.locale.as_deref().unwrap_or(i18n::LOCALE));"], arg: "&i18n", fixture: true },
+      fixtureField: '    #[serde(rename = "$locale", default)]\n    locale: Option<String>,',
+    },
+  ],
+  modules() {
+    const { setup } = runOf(i18n);
+    return setup ? [["i18n.rs", i18nSource(setup)]] : [];
+  },
+};

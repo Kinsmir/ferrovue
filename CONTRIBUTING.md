@@ -27,9 +27,10 @@ cargo deny check             # licences, advisories, duplicate crates and source
    compilation of a component, Vue's render, and what ferrovue generates today. Read the matching
    `@vue/server-renderer`, `@vue/shared` or vue-router source in `node_modules` too: the rules you
    reproduce come from there, not from documentation.
-2. **Translate it** in `packages/ferrovue/src/compiler.ts`, with runtime support in
-   `crates/ferrovue/src/` if generated code needs it (`crates/ferrovue-router/` or
-   `crates/ferrovue-i18n/` for the router and vue-i18n, `crates/ferrovue-core/` for escaping and
+2. **Translate it** in the compiler, `packages/ferrovue/src/` (the README's "Repository layout"
+   says which module does what), or in a plugin when it belongs to an integration (below), with
+   runtime support in `crates/ferrovue/src/` if generated code needs it (`crates/ferrovue-router/`
+   or `crates/ferrovue-i18n/` for the router and vue-i18n, `crates/ferrovue-core/` for escaping and
    numbers; `ferrovue` re-exports what they add, at its root).
 3. **Prove it with conformance.** Add a component under `crates/ferrovue/tests/conformance/components/`
    and fixtures beside the others: a typical case, an empty or falsy one, and a hostile one with
@@ -44,6 +45,44 @@ cargo deny check             # licences, advisories, duplicate crates and source
 
 Never re-record a fixture to make a failing test pass. A changed `.html` means Vue changed or the
 compiler did, and that diff is what a reviewer needs to see.
+
+## Compiler plugins
+
+What Vue's core does not do — vue-router, Pinia, vue-i18n — and scoped styles are compiler plugins,
+in `packages/ferrovue/src/plugins/`, so that the core compiler names none of them. A plugin is an
+object of optional hooks, `Plugin` in `src/plugin.ts`, where each hook is documented; the plugins
+are listed in `plugins/index.ts`, and the core calls their hooks at fixed points of a run. The
+interface is internal: it is not part of the npm package's API, and it changes when an integration
+needs it to.
+
+| When | Hooks | Used by |
+|---|---|---|
+| A run starts | `configure` returns the plugin's state for the run, read from its keys of `Config`; `prepare` reads files with the core's own readers, once every plugin is configured | all; `prepare`: stores |
+| A component is read | `sfc` (its `<style>` blocks), `templateOptions` (how Vue compiles its template), `importedType` (a type from a file the plugin owns), `struct` (where a type of its own is declared), `compiled` (what its compiled template renders or reads) | scoped styles; stores; router, i18n, `<Teleport>` |
+| Every component at once | `analyse`, before any is generated | scoped styles |
+| `<script setup>` | `scope` (its state for one setup), `scriptImport`, `scriptBinding` | router, stores, i18n |
+| Expressions | `global` (`$route`), `call` (`$t(…)`), `member` (a field of the route, a store's getter), `equality` and `presence` (`typeof q === "string"`), `values` (what `??`, `===`, a test, `{{ }}` and an attribute make of a type it adds) | router, stores, i18n |
+| The compiled template | `resolveComponent` and `component` (`<RouterLink>`, `<RouterView>`), `child` (a child it refuses), `childIds` (the scope ids a child's root is handed), `statement` (`_ssrRenderTeleport`) | router; scoped styles; `<Teleport>` |
+| The Rust written | `params` (a render parameter, its fixture field and how the conformance suite builds it), `slotFields` (`router_view`), `modules` (`route_table.rs`, `stores.rs`, `i18n.rs`) | router, stores, i18n, `<Teleport>`; router |
+
+- **State lives in the run.** A plugin's module holds nothing that changes: `configure` returns its
+  state for the run, which `runOf(plugin)` reads back, and `scope` its state for one component's
+  setup, which `scopeOf(plugin, s)` reads back.
+- **The first claim decides.** A hook that may claim a node or an import answers `null`, `false` or
+  `undefined` for anything not its own, and the first plugin to claim it in `plugins/index.ts`
+  order decides.
+- **The order is generated code.** Render parameters, the fixture's fields and the modules beside
+  the components follow the order of `plugins/index.ts`, which is why `<Teleport>` and the shared
+  types module, both the core's own, are written as plugins too. Add a plugin at the end, or the
+  generated code of every project changes.
+- **New kinds of value join the core's types** by declaration merging: the router adds `route` and
+  `query` with `declare module "../model.ts" { interface PluginTys { … } }`, and the stores mark
+  their own structs through `interface StructTy`. `values` tells the core what to do with them.
+
+An integration still to come — page head, provide/inject, file-based routes — is a new file in
+`plugins/`, added to `plugins/index.ts`. Where no hook reaches what it needs, add one to `Plugin`,
+documented there and called from one place in the core, rather than naming the integration in the
+core.
 
 ## Pull requests
 
