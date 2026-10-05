@@ -12,6 +12,7 @@
     "examples/fullstack/browser/*.test.ts",
     "examples/fullstack/client/components/**",
     "examples/fullstack/client/main.ts",
+    "examples/fullstack/client/pages/**",
     "packages/ferrovue/browser/*.test.ts",
     "packages/ferrovue/browser/entry.ts",
     "packages/ferrovue/browser/lazy-entry.ts",

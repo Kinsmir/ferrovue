@@ -9,8 +9,8 @@ useHead({ title: props.shop, titleTemplate: `%s · ${props.shop}` });
 <template>
   <div class="layout">
     <header>
-      <RouterLink :to="{ name: 'home' }" class="brand">{{ shop }}</RouterLink>
-      <nav><RouterLink :to="{ name: 'home' }">All books</RouterLink> <RouterLink :to="{ name: 'book', params: { id: 'dune' } }">Book of the week</RouterLink></nav>
+      <RouterLink :to="{ name: '/' }" class="brand">{{ shop }}</RouterLink>
+      <nav><RouterLink :to="{ name: '/' }">All books</RouterLink> <RouterLink :to="{ name: '/books/[id]', params: { id: 'dune' } }">Book of the week</RouterLink></nav>
       <div id="basket"><BasketSummary label="Basket" /></div>
     </header>
     <main><RouterView /></main>

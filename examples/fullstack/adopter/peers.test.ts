@@ -1,9 +1,8 @@
 import { expect, it } from "vitest";
 import { renderToString } from "vue/server-renderer";
 import { fixtureApp, readFixture } from "ferrovue/testing";
-import routes from "../client/routes.json" with { type: "json" };
 import BasketSummary from "../client/components/BasketSummary.vue";
-import BookPage from "../client/components/BookPage.vue";
+import BookPage from "../client/pages/books/[id].vue";
 
 const basket = readFixture({ label: "Basket", $stores: { basket: { owner: "Ada", ids: ["dune", "solaris"] } } });
 const book = readFixture({ book: { id: "dune", title: "Dune", author: "Frank Herbert", year: 1965 }, $route: "/books/dune" });
@@ -19,7 +18,7 @@ it("renders a fixture's stores with the application's own Pinia", async () => {
 });
 
 it("renders a fixture's route with the application's own vue-router", async () => {
-  const html = await renderToString(await fixtureApp(BookPage, book, routes, { vueRouter: await import("vue-router") }));
+  const html = await renderToString(await fixtureApp(BookPage, book, [{ path: "/books/:id", name: "/books/[id]" }], { vueRouter: await import("vue-router") }));
   expect(html).toContain('data-id="dune"');
   expect(html).toContain("<code>/books/dune</code>");
 });

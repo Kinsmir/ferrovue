@@ -39,7 +39,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route
     out.push_str("<div class=\"layout\"><header>");
     {
         let fv_link = {
-            fv_route.link_named("home", &[], "", "")
+            fv_route.link_named("/", &[], "", "")
         };
         out.push_str("<a");
         if fv_link.exact {
@@ -56,7 +56,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route
     out.push_str("<nav>");
     {
         let fv_link = {
-            fv_route.link_named("home", &[], "", "")
+            fv_route.link_named("/", &[], "", "")
         };
         out.push_str("<a");
         if fv_link.exact {
@@ -71,7 +71,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route
     out.push(' ');
     {
         let fv_link = {
-            fv_route.link_named("book", &[("id", "dune")], "", "")
+            fv_route.link_named("/books/[id]", &[("id", "dune")], "", "")
         };
         out.push_str("<a");
         if fv_link.exact {

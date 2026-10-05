@@ -44,23 +44,23 @@ cargo run -p ferrovue-example-fullstack -- --render /books/dune
 
 | File | Demonstrates |
 |---|---|
-| `ferrovue.config.json` | A `router` block (routes file, `linkActiveClass`), a `stores` directory, output in `src/generated/`, `"scopeId": "filepath"` |
+| `ferrovue.config.json` | A `router` block (a folder of pages, `linkActiveClass`), a `stores` directory, output in `src/generated/`, `"scopeId": "filepath"` |
 | `vite.config.ts` | `@vitejs/plugin-vue` with `componentIdGenerator: "filepath"`, so the build and the dev server give scoped styles the ids the server writes |
-| `client/routes.json` | Named routes, read by ferrovue for the server and by `client/app.ts` for the client: one list for both |
+| `client/pages/` | The routes, from the pages' file names as vue-router's file-based routing reads them: `index.vue` (`/`), `books/[id].vue` (`/books/:id`), `picks.vue` and the catch-all `[...missing].vue`, named `/`, `/books/[id]`, `/picks` and `/[...missing]`. ferrovue builds the server's `route_table.rs` from them and compiles each page (`index.rs`, `books_id.rs`, `picks.rs`, `missing.rs`); the Vite plugin gives the client the same routes as `ferrovue/routes` |
 | `client/stores/basket.ts` | A Pinia option store with getters (`count`, `empty`) |
 | `client/components/Layout.vue` | `<RouterView>`, `<RouterLink>`s by route name with params, the active-link class; `useHead` with a `titleTemplate` the pages' titles go into |
 | `client/components/BasketSummary.vue` | Reading the store (state and getters, `storeToRefs`) on the server; `<style scoped>` |
-| `client/components/BookList.vue` | The home page: a list, named links with params, a scoped slot the server fills with an island per book |
-| `client/components/BookPage.vue` | The detail page: `useRoute()` params in the template and in a `computed`, a named slot, a slot left as a hole for streaming; its title, description, canonical link and Open Graph tags from its props, with `useHead` and `useSeoMeta` |
+| `client/pages/index.vue` | The home page: a list, named links with params, a scoped slot the server fills with an island per book |
+| `client/pages/books/[id].vue` | The detail page: `useRoute()` params in the template and in a `computed`, a named slot, a slot left as a hole for streaming; its title, description, canonical link and Open Graph tags from its props, with `useHead` and `useSeoMeta` |
 | `client/components/AddToBasket.vue` | An island: rendered with `add_to_basket::island()`, so it carries `data-island` and `data-props`; its click handler uses the shared store |
-| `client/components/Picks.vue` | The layout of the staff picks page, hydrated whole: a default slot of picks and a `reviews` slot streamed into a hole; a `useHead` that unhead's client head, given to `mountPage` in `client/app.ts`, takes over |
+| `client/pages/picks.vue` | The layout of the staff picks page, hydrated whole: a default slot of picks and a `reviews` slot streamed into a hole; a `useHead` that unhead's client head, given to `mountPage` in `client/app.ts`, takes over |
 | `client/components/Pick.vue` | A part of that page, rendered from its props, with an `AddToBasket` inside it |
 | `client/components/Reviews.vue` | The slow part of the book page, streamed into the hole as an island, with `v-show` the client toggles; `<style scoped>`; a Rust twin's component, and `<ClientOnly>` around one that reads `window` |
-| `client/components/NotFound.vue` | The page for an unknown book or path, which the server sends with status 404 |
+| `client/pages/[...missing].vue` | The page for an unknown book or path, which the server sends with status 404 |
 | `client/vendor/` | Stand-ins for a component library's components, which ferrovue does not compile: `StarRating`, rendered on the server by its Rust twin, and `ShareLink`, rendered only in the browser |
 | `src/ui.rs` | The Rust twin of `StarRating`, listed under `twins` in `ferrovue.config.json` |
 | `fixtures/`, `test/conformance.test.ts`, `ferrovue::conformance!` in `src/main.rs` | The conformance suite, in two calls: every component's fixtures rendered by Vue through `conformanceSuite` from `ferrovue/testing` (`FERROVUE_FIXTURES_WRITE=1` records the `.html`) and by the generated Rust, byte for byte, which proves the twin too; the generated Rust checked to be current, and every recorded `.html` hydrated with no mismatch |
-| `client/app.ts` | `hydrateState`, `mountPage` on a page that carries a record, then `mountIslands` of `ferrovue/islands`, which the Vite plugin writes: every island by name, each loaded only on a page that holds it, with one Pinia and one router for them all |
+| `client/app.ts` | A router over `ferrovue/routes` whose every page renders nothing (`routeRecords`), `hydrateState`, `mountPage` on a page that carries a record, then `mountIslands` of `ferrovue/islands`, which the Vite plugin writes: every island by name, each loaded only on a page that holds it, with one Pinia and one router for them all |
 | `src/pages.rs` | Rendering pages from the generated `route_table::router()`, `Props::new(…)`, `Slots`, `ferrovue::state_script_into`, `ferrovue::hole()`, and `reviews::into_island()`, a page holding its props that a handler returns; `ferrovue::Page` for the staff picks, whose record is the last hole; a `ferrovue::Head` per page, rendered after the body and written into `<head>` |
 | `src/catalogue.rs` | The shop's books and reviews, standing in for a database; the reviews arrive after a delay so the page has something to stream |
 | `src/main.rs` | The axum server: a `ferrovue::HtmlStream` per page, a book's reviews alone at `/books/{id}/reviews`, `dist/assets` served beside it, and `--render` |
@@ -108,7 +108,7 @@ the island hydrates it, and the link replaces it once the island is mounted.
 
 ### Streaming
 
-`BookPage` has a `reviews` slot. The server fills it with `ferrovue::hole()`, renders the whole
+`books/[id].vue` has a `reviews` slot. The server fills it with `ferrovue::hole()`, renders the whole
 document once, and responds with a `ferrovue::HtmlStream` of the document and a future for the
 hole's content (the crate's `axum` feature). The response body is a stream: the part before the
 hole goes out at once (header, book, basket, "Add to basket"), the reviews follow when the slow
@@ -117,13 +117,13 @@ lookup returns, and the rest of the document after them. Watch it with
 
 ### A page hydrated whole
 
-`/picks` is built differently: `Picks.vue` is a layout whose default slot holds a `Pick` per book
+`/picks` is built differently: `picks.vue` is a layout whose default slot holds a `Pick` per book
 and whose `reviews` slot is a hole. `src/pages.rs` gives the slots to a `ferrovue::Page` as
 `Part`s, made from the same `pick::html(&props)` values that write the markup, renders the layout
 inside `<div id="app">`, and leaves one more hole after it for the record. The response streams the
 picks at once, the reviews when they arrive, and then the record, which `PageRecord::script` writes
 once every hole of the page is filled. `client/app.ts` finds the record and calls `mountPage`,
-which loads `Picks`, `Pick` and `Reviews` and hydrates the whole layout as one app. Nothing on the
+which loads `picks.vue`, `Pick` and `Reviews` and hydrates the whole layout as one app. Nothing on the
 page is an island; "Add to basket" and "Show all reviews" work because the app holds them.
 
 ## The hydration test

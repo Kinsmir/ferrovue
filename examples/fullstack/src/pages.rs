@@ -6,7 +6,7 @@ use crate::assets::Assets;
 use crate::catalogue;
 use crate::generated::stores::{BasketState, Stores};
 use crate::generated::{
-    add_to_basket, book_list, book_page, layout, not_found, pick, picks, reviews, route_table,
+    add_to_basket, books_id, index, layout, missing, pick, picks, reviews, route_table,
 };
 
 const SHOP: &str = "Ferrovue Books";
@@ -54,9 +54,9 @@ impl Site {
         let route = self.router.at(location);
         let stores = Stores::new(BasketState::new("guest", ["solaris"]));
         match (route.name(), route.param("id")) {
-            (Some("home"), _) => self.home(&route, &stores),
-            (Some("picks"), _) => self.picks(&route, &stores),
-            (Some("book"), Some(id)) => match catalogue::book(id) {
+            (Some("/"), _) => self.home(&route, &stores),
+            (Some("/picks"), _) => self.picks(&route, &stores),
+            (Some("/books/[id]"), Some(id)) => match catalogue::book(id) {
                 Some(book) => self.book(&route, &stores, book),
                 None => self.not_found(&route, &stores, location),
             },
@@ -107,18 +107,18 @@ impl Site {
 
     fn home(&self, route: &Route<'_>, stores: &Stores<'_>) -> Page {
         let head = Head::new();
-        let props = book_list::Props::new(catalogue::books());
-        let actions = |out: &mut String, slot: &book_list::ActionsSlotProps<'_>| {
+        let props = index::Props::new(catalogue::books());
+        let actions = |out: &mut String, slot: &index::ActionsSlotProps<'_>| {
             add_to_basket::island(&add_to_basket::Props::new(slot.id, slot.title))
                 .hydrate(Hydrate::Interaction)
                 .render_to(out);
             true
         };
         let view = |out: &mut String| {
-            let slots = book_list::Slots {
+            let slots = index::Slots {
                 actions: Some(&actions),
             };
-            book_list::render(out, &props, slots, route, &head);
+            index::render(out, &props, slots, route, &head);
         };
         self.document(200, &head, route, stores, &view, Vec::new())
     }
@@ -132,14 +132,14 @@ impl Site {
         let head = Head::new();
         let id = book.id.clone();
         let add = add_to_basket::Props::new(id.clone(), book.title.clone());
-        let props = book_page::Props::new(book);
+        let props = books_id::Props::new(book);
         let actions = |out: &mut String| add_to_basket::island(&add).render_to(out);
         let view = |out: &mut String| {
-            let slots = book_page::Slots {
+            let slots = books_id::Slots {
                 actions: Some(Slot::new(&actions)),
                 reviews: Some(ferrovue::hole()),
             };
-            book_page::render(out, &props, slots, route, &head);
+            books_id::render(out, &props, slots, route, &head);
         };
         let holes = vec![Hole::Reviews(id.into_owned())];
         self.document(200, &head, route, stores, &view, holes)
@@ -185,8 +185,8 @@ impl Site {
 
     fn not_found(&self, route: &Route<'_>, stores: &Stores<'_>, location: &str) -> Page {
         let head = Head::new();
-        let props = not_found::Props::new(location);
-        let view = |out: &mut String| not_found::render(out, &props, route, &head);
+        let props = missing::Props::new(location);
+        let view = |out: &mut String| missing::render(out, &props, route, &head);
         self.document(404, &head, route, stores, &view, Vec::new())
     }
 
