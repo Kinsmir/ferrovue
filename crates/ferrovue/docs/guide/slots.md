@@ -108,7 +108,9 @@ component. See [`routing`](crate::guide::routing) for a full example.
 A slot that passes props to its content, `<slot name="row" :row="r" :index="i" :first="i === 0">`,
 gets a struct of those props, borrowed for the render, and a closure type:
 
-```rust,ignore
+```rust
+# use std::borrow::Cow;
+# pub struct Row<'a> { pub label: Cow<'a, str> }
 /// The props `<slot name="row">` passes the content a parent gives it, borrowed for the render.
 pub struct RowSlotProps<'v> {
     pub row: &'v Row<'v>,
@@ -126,6 +128,16 @@ pub struct Slots<'s> {
     pub row: Option<&'s RowSlot<'s>>,
     // …
 }
+# let label = |out: &mut String, p: &RowSlotProps<'_>| {
+#     ferrovue::escape_into(out, p.label);
+#     true
+# };
+# let slots = Slots { row: Some(&label) };
+# let row = Row { label: Cow::Borrowed("Ada") };
+# let props = RowSlotProps { row: &row, index: 0, label: &row.label, tags: &[], first: true };
+# let mut out = String::new();
+# ferrovue::scoped_slot_into(&mut out, slots.row, &props, None);
+# assert_eq!(out, "<!--[-->Ada<!--]-->");
 ```
 
 Strings arrive as `&str`, lists as slices, objects by reference. The closure is called once per
@@ -336,8 +348,20 @@ From Rust nothing changes for a plain slot: [`Slot::new`](crate::Slot::new) cont
 id, as static markup is not in Vue. A scoped slot's closure type takes the id as a third parameter,
 ` data-v-…-s` with its leading space, which the closure may write onto its elements or ignore:
 
-```rust,ignore
+```rust
+# pub struct FooterSlotProps { pub count: i64 }
 pub type FooterSlot<'s> = dyn Fn(&mut String, &FooterSlotProps, &str) -> bool + 's;
+# let footer: &FooterSlot<'_> = &|out: &mut String, p: &FooterSlotProps, slot_scope_id: &str| {
+#     out.push_str("<small");
+#     out.push_str(slot_scope_id);
+#     out.push('>');
+#     ferrovue::push_int(out, p.count);
+#     out.push_str("</small>");
+#     true
+# };
+# let mut out = String::new();
+# ferrovue::scoped_slot_into_slotted(&mut out, Some(footer), &FooterSlotProps { count: 2 }, "data-v-1-s", None);
+# assert_eq!(out, "<!--[--><small data-v-1-s>2</small><!--]-->");
 ```
 
 [`scoped_styles`](crate::guide::scoped_styles#slots-and-slotted) has the whole example.

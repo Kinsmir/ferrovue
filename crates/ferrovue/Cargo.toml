@@ -41,6 +41,7 @@ serde_json.workspace = true
 [dev-dependencies]
 axum.workspace = true
 criterion = { workspace = true, features = ["cargo_bench_support"] }
+dioxus = { workspace = true, features = ["macro", "html", "signals"] }
 dioxus-ssr.workspace = true
 proptest.workspace = true
 tokio = { workspace = true, features = ["macros", "rt", "test-util", "time"] }

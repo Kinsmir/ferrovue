@@ -31,7 +31,14 @@ store keyed by its id, as `pinia.state.value` is. Getters are not fields: the co
 as expressions of the state wherever a component reads them, so they cannot disagree with it.
 Actions are client-only.
 
-```rust,ignore
+```rust
+# use std::borrow::Cow;
+# #[derive(Debug, Clone, serde::Serialize)]
+# pub struct CartState<'a> { pub owner: Cow<'a, str> }
+# #[derive(Debug, Clone, serde::Serialize)]
+# pub struct CounterState<'a> { pub label: Cow<'a, str> }
+# #[derive(Debug, Clone, serde::Serialize)]
+# pub struct PrefsState<'a> { pub density: Cow<'a, str> }
 /// Every store's state, keyed by id as `pinia.state.value` is: what the page sends the client.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(Default, serde::Deserialize))]
@@ -44,6 +51,15 @@ pub struct Stores<'a> {
     #[serde(rename = "prefs")]
     pub prefs: PrefsState<'a>,
 }
+# let stores = Stores {
+#     cart: CartState { owner: "guest".into() },
+#     counter: CounterState { label: "Clicks".into() },
+#     prefs: PrefsState { density: "compact".into() },
+# };
+# assert_eq!(
+#     serde_json::to_string(&stores).unwrap(),
+#     r#"{"cart":{"owner":"guest"},"counter":{"label":"Clicks"},"prefs":{"density":"compact"}}"#
+# );
 ```
 
 Every store is in `Stores`, whether or not the page reads it, because the client's Pinia is given

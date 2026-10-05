@@ -20,15 +20,18 @@ Everything in the configured `out` directory is replaced on each run.
 
 Include the directory as one module. `#[rustfmt::skip]` keeps rustfmt from rewriting it:
 
-```rust,ignore
+```rust
 #[rustfmt::skip]
+# /*
 mod generated;
+# */
+# mod generated {}
 ```
 
 The modules pass rustc's default warnings and `cargo clippy -- -D warnings`, so they can sit in a
 crate that denies warnings. `mod.rs` allows one lint for all of them, at its top:
 
-```rust,ignore
+```rust
 // The modules pass rustc's default warnings and clippy's default lints, with one exception:
 // `dead_code`. Every component gets the whole of its API (`render`, `html`, `island`, their
 // `into_` forms, `NAME`, a constructor and a setter per optional prop) and an app calls only what
@@ -64,7 +67,15 @@ and booleans has a plain `Props`), and a component with no props has an empty `P
 `render` always takes the buffer first and the props second. After them come only the parameters
 the component needs, always in this order:
 
-```rust,ignore
+```rust
+# #[cfg(all(feature = "router", feature = "i18n"))]
+# mod generated {
+# pub mod stores { pub struct Stores<'a>(pub &'a str); }
+# pub mod provides { pub struct Provides<'a>(pub &'a str); }
+# pub mod page {
+# use ferrovue as fv;
+# pub struct Props<'a>(pub &'a str);
+# pub struct Slots<'s>(pub fv::Slot<'s>);
 pub fn render(
     out: &mut String,
     props: &Props<'_>,
@@ -76,6 +87,9 @@ pub fn render(
     fv_provides: super::provides::Provides<'_>,   // provide() or inject()
     fv_head: &fv::Head,                           // useHead() or useSeoMeta()
 )
+# {}
+# }
+# }
 ```
 
 A component needs a parameter when it uses the feature itself **or renders a child that does**: a
@@ -85,22 +99,47 @@ strings. The `fv_` prefix keeps these names apart from anything a template names
 
 So, from the repository's own test components:
 
-```rust,ignore
+```rust
+# #[cfg(feature = "router")]
+# mod generated {
+# pub mod stores { pub struct Stores<'a>(pub &'a str); }
+# pub mod greeting {
+# pub struct Props<'a>(pub &'a str);
 // Greeting.vue: props alone.
 pub fn render(out: &mut String, props: &Props<'_>)
+# {}
+# }
+# pub mod layout {
+# use ferrovue as fv;
+# pub struct Props<'a>(pub &'a str);
+# pub struct Slots<'s>(pub fv::Slot<'s>);
 // Layout.vue: <RouterView> and two <RouterLink>s.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::Route<'_>)
+# {}
+# }
+# pub mod card {
+# pub struct Props<'a>(pub &'a str);
 // Card.vue: renders Badge, which reads a store.
 pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::Stores<'_>)
+# {}
+# }
+# pub mod modal {
+# use ferrovue as fv;
+# pub struct Props<'a>(pub &'a str);
 // Modal.vue: <Teleport>.
 pub fn render(out: &mut String, props: &Props<'_>, fv_teleports: &fv::Teleports)
+# {}
+# }
+# }
 ```
 
 A component that a parent may hand scope ids to (see [`scoped_styles`](crate::guide::scoped_styles))
 also has a `render_scoped`, which takes the parameters of `render` and then `fv_attrs: &str`, the
 ids its root carries besides its own. Its `render` calls it with `""`:
 
-```rust,ignore
+```rust
+# mod tag {
+# pub struct Props<'a>(pub &'a str);
 pub fn render(out: &mut String, props: &Props<'_>) {
     render_scoped(out, props, "");
 }
@@ -110,6 +149,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) {
     // …
 }
+# }
 ```
 
 A component that a parent passes attributes it does not declare as props takes them, with the ids,
@@ -139,10 +179,32 @@ every parent, so the two meet at run time. A child that some parent passes attri
 `fv_attrs: &fv::Attrs<'_>` in its `render_scoped`, the attributes in order followed by the scope
 ids, and the parent builds them from its template:
 
-```rust,ignore
+```rust
+# mod generated {
+# pub mod badge {
+#     use std::borrow::Cow;
+#     use ferrovue as fv;
+#     pub struct Props<'a> { pub label: Cow<'a, str> }
+#     pub fn render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::Attrs<'_>) {
+#         super::badge_root::write(out, fv_attrs);
+#         out.push('>');
+#         fv::escape_into(out, &props.label);
+#         out.push_str("</b>");
+#     }
+# }
+# pub mod parent {
+#     use std::borrow::Cow;
+#     use ferrovue as fv;
+#     pub struct Props<'a> { pub name: Cow<'a, str>, pub note: Option<Cow<'a, str>> }
+#     pub fn render(out: &mut String, props: &Props<'_>) {
 // <Badge :label="name" class="wide" :title="note" /> in a parent's template:
 super::badge::render_scoped(out, &super::badge::Props { label: Cow::Borrowed(&props.name) },
     &fv::Attrs::new(&[("class", fv::Attr::str("wide")), ("title", props.note.as_deref().map_or(fv::Attr::Undefined, fv::Attr::str))], ""));
+#     }
+# }
+# pub mod badge_root {
+#     use ferrovue as fv;
+#     pub fn write(out: &mut String, fv_attrs: &fv::Attrs<'_>) {
 
 // Badge's root, `<b class="badge">`:
 out.push_str("<b");
@@ -152,6 +214,19 @@ if fv_attrs.is_empty() {
 } else {
     fv::attrs_into(out, &[&[("class", fv::Attr::str("badge"))], fv_attrs.list()], 1, fv_attrs.ids());
 }
+#     }
+# }
+# }
+# use generated::{badge, parent};
+# let mut out = String::new();
+# parent::render(&mut out, &parent::Props { name: "Ada".into(), note: Some("hi".into()) });
+# assert_eq!(out, r#"<b class="badge wide" title="hi">Ada</b>"#);
+# out.clear();
+# parent::render(&mut out, &parent::Props { name: "Ada".into(), note: None });
+# assert_eq!(out, r#"<b class="badge wide">Ada</b>"#);
+# out.clear();
+# badge::render_scoped(&mut out, &badge::Props { label: "Ada".into() }, &ferrovue::Attrs::NONE);
+# assert_eq!(out, r#"<b class="badge">Ada</b>"#);
 ```
 
 With nothing passed (from `render`, which passes [`Attrs::NONE`](crate::Attrs::NONE), or from a
@@ -186,7 +261,30 @@ choice exactly as the static child or element would: the same props, fallthrough
 and scope ids. Choices that render the same component share an arm. A choice of elements alone
 writes the tag from the `match`:
 
-```rust,ignore
+```rust
+# mod generated {
+# pub mod star {
+#     use std::borrow::Cow;
+#     pub struct Props<'a> { pub label: Cow<'a, str> }
+#     pub fn render(out: &mut String, props: &Props<'_>) {
+#         out.push_str("<i class=\"star\">");
+#         ferrovue::escape_into(out, &props.label);
+#         out.push_str("</i>");
+#     }
+# }
+# pub mod moon {
+#     use std::borrow::Cow;
+#     pub struct Props<'a> { pub label: Cow<'a, str> }
+#     pub fn render(out: &mut String, props: &Props<'_>) {
+#         out.push_str("<i class=\"moon\">");
+#         ferrovue::escape_into(out, &props.label);
+#         out.push_str("</i>");
+#     }
+# }
+# pub mod icon {
+#     use std::borrow::Cow;
+#     pub struct Props<'a> { pub name: Cow<'a, str>, pub label: Cow<'a, str> }
+#     pub fn render(out: &mut String, props: &Props<'_>) {
 // <component :is="ICONS[name]" :label="label" />, where ICONS = { star: Star, moon: Moon }:
 match &*props.name {
     "star" => {
@@ -196,6 +294,14 @@ match &*props.name {
         super::moon::render(out, &super::moon::Props { label: Cow::Borrowed(&props.label) });
     }
 }
+#     }
+# }
+# pub mod heading {
+#     use std::borrow::Cow;
+#     use ferrovue as fv;
+#     pub struct Props<'a> { pub r#as: Cow<'a, str> }
+#     pub struct Slots<'s> { pub default: Option<fv::Slot<'s>> }
+#     pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
 
 // <component :is="as" class="heading"><slot /></component>, where as: "h1" | "h2":
 let fv_tag1 = match &*props.r#as { "h1" => "h1", _ => "h2" };
@@ -206,6 +312,17 @@ fv::slot_into(out, fv_slots.default, None);
 out.push_str("</");
 out.push_str(fv_tag1);
 out.push('>');
+#     }
+# }
+# }
+# use generated::{heading, icon};
+# let mut out = String::new();
+# icon::render(&mut out, &icon::Props { name: "star".into(), label: "Night".into() });
+# icon::render(&mut out, &icon::Props { name: "sun".into(), label: "Day".into() });
+# assert_eq!(out, r#"<i class="star">Night</i><i class="moon">Day</i>"#);
+# out.clear();
+# heading::render(&mut out, &heading::Props { r#as: "h1".into() }, heading::Slots { default: Some(ferrovue::Slot::new(&|out: &mut String| out.push_str("Hi"))) });
+# assert_eq!(out, r#"<h1 class="heading"><!--[-->Hi<!--]--></h1>"#);
 ```
 
 The last choice is the `match`'s `_` arm: a prop's Rust type is a `&str`, so a value outside the
@@ -230,12 +347,32 @@ leaves empty.
 with the `maud` feature, splice it into a `maud::html!` template, where it is written straight into
 maud's buffer:
 
-```rust,ignore
+```rust
+# mod greeting {
+#     use std::borrow::Cow;
+#     #[derive(serde::Serialize)]
+#     pub struct Props<'a> { pub name: Cow<'a, str> }
+#     pub fn render(out: &mut String, props: &Props<'_>) {
+#         out.push_str("<p>Hello, ");
+#         ferrovue::escape_into(out, &props.name);
+#         out.push_str("!</p>");
+#     }
+#     pub fn html<'p, 'a>(props: &'p Props<'a>) -> ferrovue::Html<'p, Props<'a>> {
+#         ferrovue::Html::markup(props, render)
+#     }
+# }
+# #[cfg(feature = "maud")]
+# fn main() {
+# let props = greeting::Props { name: "<Ada>".into() };
 // With ferrovue's `maud` feature.
 let page = maud::html! {
     (maud::DOCTYPE)
     body { (greeting::html(&props)) }
 };
+# assert_eq!(page.into_string(), "<!DOCTYPE html><body><p>Hello, &lt;Ada&gt;!</p></body>");
+# }
+# #[cfg(not(feature = "maud"))]
+# fn main() {}
 ```
 
 With the `axum` or `actix-web` feature, an `Html` is also a response of its own;
@@ -259,10 +396,29 @@ it borrows only what the props borrow (nothing, for props of `'static` strings o
 their own), so a function that builds the props can return the page, as a web handler does. Both
 render exactly as their borrowing forms.
 
-```rust,ignore
+```rust
+# mod greeting {
+#     use std::borrow::Cow;
+#     #[derive(serde::Serialize)]
+#     pub struct Props<'a> { pub name: Cow<'a, str>, pub unread: i64 }
+#     impl<'a> Props<'a> {
+#         pub fn new(name: impl Into<Cow<'a, str>>, unread: i64) -> Self {
+#             Props { name: name.into(), unread }
+#         }
+#     }
+#     pub fn render(out: &mut String, props: &Props<'_>) {
+#         out.push_str("<p>Hello, ");
+#         ferrovue::escape_into(out, &props.name);
+#         out.push_str("!</p>");
+#     }
+#     pub fn into_html<'a>(props: Props<'a>) -> ferrovue::Html<'a, Props<'a>> {
+#         ferrovue::Html::markup_owned(props, render)
+#     }
+# }
 fn greet(name: String) -> ferrovue::Html<'static, greeting::Props<'static>> {
     greeting::into_html(greeting::Props::new(name, 0))
 }
+# assert_eq!(greet("Ada".to_owned()).into_string(), "<p>Hello, Ada!</p>");
 ```
 
 # Names

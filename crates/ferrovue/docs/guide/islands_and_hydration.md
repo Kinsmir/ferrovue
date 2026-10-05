@@ -187,7 +187,67 @@ reviews arrive after a slow lookup. The record goes in a hole of its own after t
 and [`PageRecord::script`](crate::PageRecord::script) is ready once every hole of the page is
 filled:
 
-```rust,ignore
+```rust
+# #[cfg(all(feature = "stream", feature = "router"))]
+# fn main() {
+# mod pick {
+#     pub const NAME: &str = "Pick";
+#     #[derive(serde::Serialize)]
+#     pub struct Props<'a> { pub book: &'a str }
+#     pub fn render(out: &mut String, props: &Props<'_>) {
+#         out.push_str("<li>");
+#         ferrovue::escape_into(out, props.book);
+#         out.push_str("</li>");
+#     }
+#     pub fn html<'p, 'a>(props: &'p Props<'a>) -> ferrovue::Html<'p, Props<'a>> {
+#         ferrovue::Html::markup(props, render)
+#     }
+# }
+# mod reviews {
+#     pub const NAME: &str = "Reviews";
+#     #[derive(serde::Serialize)]
+#     pub struct Props { pub reviews: Vec<String> }
+#     impl Props {
+#         pub fn new(reviews: Vec<String>) -> Self { Props { reviews } }
+#     }
+#     pub fn render(out: &mut String, props: &Props) {
+#         out.push_str("<p>");
+#         ferrovue::push_int(out, props.reviews.len() as i64);
+#         out.push_str(" reviews</p>");
+#     }
+#     pub fn into_html(props: Props) -> ferrovue::Html<'static, Props> {
+#         ferrovue::Html::markup_owned(props, render)
+#     }
+# }
+# mod picks {
+#     use ferrovue as fv;
+#     #[derive(serde::Serialize)]
+#     pub struct Props<'a> { pub shop: &'a str }
+#     #[derive(Clone, Copy)]
+#     pub struct Slots<'s> { pub default: Option<fv::Slot<'s>>, pub reviews: Option<fv::Slot<'s>> }
+#     pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::Route<'_>) {
+#         out.push_str("<main><h1>");
+#         fv::escape_into(out, props.shop);
+#         out.push_str("</h1><ul>");
+#         fv::slot_into(out, fv_slots.default, None);
+#         out.push_str("</ul>");
+#         fv::slot_into(out, fv_slots.reviews, None);
+#         out.push_str("</main>");
+#         let _ = fv_route;
+#     }
+#     pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>, fv_route: &'p fv::Route<'p>) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
+#         fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_slots, fv_route))
+#     }
+# }
+# mod catalogue {
+#     pub async fn reviews(id: &str) -> Vec<String> { vec![format!("{id} is a classic.")] }
+# }
+# use ferrovue::HtmlStream;
+# let router = ferrovue::Router::named(&[("/picks", Some("picks"))]);
+# let route = router.at("/picks");
+# let picks = [pick::Props { book: "Dune" }, pick::Props { book: "Solaris" }];
+# let props = picks::Props { shop: "Ferrovue Books" };
+# let id = String::from("dune");
 use ferrovue::{Page, Part};
 
 let mut page = Page::new();
@@ -204,6 +264,10 @@ let body = HtmlStream::new(out)
         later.fill([Part::new(reviews::NAME, reviews::into_html(reviews::Props::new(list)))])
     })
     .hole(record.script("__fv_page"));
+# let _ = body;
+# }
+# #[cfg(not(all(feature = "stream", feature = "router")))]
+# fn main() {}
 ```
 
 A page written at once has no holes, and writes the record with

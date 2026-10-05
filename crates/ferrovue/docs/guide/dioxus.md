@@ -17,7 +17,33 @@ into `rsx!` between braces. [`Html::to_element`](crate::Html::to_element) is the
 `Element`. This is the page from the repository's `examples/dioxus` (`src/main.rs`), whose tests
 render it with `dioxus-ssr`:
 
-```rust,ignore
+```rust
+# mod generated {
+# pub mod counter {
+#     use std::borrow::Cow;
+#     use ferrovue as fv;
+#     pub const NAME: &str = "Counter";
+#     #[derive(Debug, Clone, serde::Serialize)]
+#     pub struct Props<'a> { pub label: Cow<'a, str>, pub start: i64 }
+#     impl<'a> Props<'a> {
+#         pub fn new(label: impl Into<Cow<'a, str>>, start: i64) -> Self {
+#             Props { label: label.into(), start }
+#         }
+#     }
+#     pub fn render(out: &mut String, props: &Props<'_>) {
+#         out.push_str("<button type=\"button\">");
+#         fv::escape_into(out, &props.label);
+#         out.push_str(": ");
+#         fv::push_int(out, props.start);
+#         out.push_str("</button>");
+#     }
+#     pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
+#         fv::Html::island(NAME, props, render)
+#     }
+# }
+# }
+# mod page {
+# use super::generated;
 use dioxus::prelude::*;
 use generated::counter;
 
@@ -32,6 +58,23 @@ fn Page(title: String, start: i64) -> Element {
         script { r#type: "module", src: "/assets/main.js" }
     }
 }
+# pub fn render(title: &str, start: i64) -> String {
+#     let mut dom = VirtualDom::new_with_props(Page, PageProps { title: title.to_owned(), start });
+#     dom.rebuild_in_place();
+#     dioxus_ssr::render(&dom)
+# }
+# }
+# fn main() {
+#     assert_eq!(
+#         page::render("Dioxus & Vue", 3),
+#         concat!(
+#             "<main><h1>Dioxus &#38; Vue</h1>",
+#             r#"<div data-island="Counter" data-props="{&#34;label&#34;:&#34;Clicks&#34;,&#34;start&#34;:3}">"#,
+#             r#"<button type="button">Clicks: 3</button></div></main>"#,
+#             r#"<script type="module" src="/assets/main.js"></script>"#,
+#         )
+#     );
+# }
 ```
 
 The client's script hydrates the island with `mountIslands` from `ferrovue`, as on any other
@@ -136,10 +179,47 @@ as a fullstack server does, and holds the markup inside each one to the HTML Vue
 To have an island written exactly as [`Html::into_string`](crate::Html::into_string) writes it,
 attributes included, give an element of the page's own the whole island as its content:
 
-```rust,ignore
+```rust
+# mod counter {
+#     use std::borrow::Cow;
+#     use ferrovue as fv;
+#     pub const NAME: &str = "Counter";
+#     #[derive(Debug, Clone, serde::Serialize)]
+#     pub struct Props<'a> { pub label: Cow<'a, str>, pub start: i64 }
+#     impl<'a> Props<'a> {
+#         pub fn new(label: impl Into<Cow<'a, str>>, start: i64) -> Self {
+#             Props { label: label.into(), start }
+#         }
+#     }
+#     pub fn render(out: &mut String, props: &Props<'_>) {
+#         out.push_str("<button type=\"button\">");
+#         fv::escape_into(out, &props.label);
+#         out.push_str(": ");
+#         fv::push_int(out, props.start);
+#         out.push_str("</button>");
+#     }
+#     pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
+#         fv::Html::island(NAME, props, render)
+#     }
+# }
+# fn main() {
+# use dioxus::prelude::*;
+# fn totals() -> Element {
+# let total = counter::Props::new("Total", 6);
 rsx! {
     section { dangerous_inner_html: counter::island(&total).into_string() }
 }
+# }
+# let mut dom = VirtualDom::new(totals);
+# dom.rebuild_in_place();
+# assert_eq!(
+#     dioxus_ssr::render(&dom),
+#     concat!(
+#         r#"<section><div data-island="Counter" data-props="{&quot;label&quot;:&quot;Total&quot;,&quot;start&quot;:6}">"#,
+#         r#"<button type="button">Total: 6</button></div></section>"#,
+#     )
+# );
+# }
 ```
 
 That is also the way to put the markup of a component that is not an island, from `html()`, into an
