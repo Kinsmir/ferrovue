@@ -52,6 +52,8 @@ pub mod glyph;
 pub mod head_article;
 pub mod head_page;
 pub mod head_seo;
+pub mod head_theme;
+pub mod head_theme_page;
 pub mod hollow;
 pub mod keywords;
 pub mod lifecycle;
@@ -411,6 +413,20 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: head_seo::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let head = ferrovue::Head::without_defaults();
             head_seo::render(&mut out, &props, &head);
+            head_into(&mut out, &head);
+        }
+        "HeadTheme" => {
+            let props: head_theme::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let s_default: &head_theme::DefaultSlot = &|out: &mut String, _: provides::Provides<'_>| -> bool { out.push_str(fixture.slot("default").unwrap_or_default()); true };
+            let head = ferrovue::Head::without_defaults();
+            head_theme::render(&mut out, &props, head_theme::Slots { default: fixture.slot("default").map(|_| s_default) }, provides::Provides::default(), &head);
+            head_into(&mut out, &head);
+        }
+        "HeadThemePage" => {
+            let props: head_theme_page::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let head = ferrovue::Head::without_defaults();
+            head_theme_page::render(&mut out, &props, provides::Provides::default(), &head);
             head_into(&mut out, &head);
         }
         "Hollow" => {
