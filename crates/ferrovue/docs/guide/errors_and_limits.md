@@ -183,8 +183,8 @@ pub fn v_btn(out: &mut String, props: &VBtnProps<'_>, slots: VBtnSlots<'_>, attr
 # }
 ```
 
-**ferrovue does not check that a twin writes what Vue writes.** Everywhere else the compiler
-refuses what it cannot reproduce; here it takes your word, as it does for helpers. Hold each twin to
+**ferrovue does not check that a twin writes what Vue writes.** A twin's exactness rests on your
+code, as a helper's does. Hold each twin to
 Vue with fixtures: render the components that use it with Vue (`fixtureApp` and `attachSsrRender`
 from `ferrovue/testing`) and through the generated [`render_json`](crate::guide::generated_code#render_json-for-your-own-conformance-tests),
 and compare the two. Slot content is written as a render function sees it, from virtual nodes:

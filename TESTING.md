@@ -42,9 +42,9 @@ fixtures/X/case.json            Vue hydrates it: no mismatch warnings, same DOM 
 
 1. `conformance.test.ts` renders each `fixtures/<Component>/<case>.json` with real Vue and compares
    the result with `<case>.html`.
-2. It mounts the recorded HTML and hydrates it, waiting for async components to load and hydrate
-   (`test/settle.ts`), failing on any hydration warning, except for the
-   fixtures in `VUE_DISAGREES` (`conformance-cases.ts`), where Vue's own server and client renders
+2. It mounts the recorded HTML, hydrates it and waits for async components to load and hydrate
+   (`test/settle.ts`). Any hydration warning fails the fixture, except in the fixtures in
+   `VUE_DISAGREES` (`conformance-cases.ts`), where Vue's own server and client renders
    differ and which must still mismatch: slot content whose every pushed string is comments and
    whitespace (an interpolation that writes nothing beside a list's fragment markers) shows the
    fallback on the server, while the client keeps the empty text.
@@ -105,6 +105,7 @@ A fixture is a JSON object of props plus three optional keys:
 | `Nullable`, `NullChild`, `Session` | `T \| null` props, interface fields, list items, slot props and Pinia state: `null` written and narrowed (`!== null`, `=== null`, `!= null`, `== null`, truthiness), `??`, `?.` over a nullable object and field, interpolations and attributes of `null`, `null` as a `?:` branch and a child's prop, `ref<T \| null>(null)` in setup |
 | `ClientSide` | `<ClientOnly>` with a fallback, without one, and inside another component's slot, around a stand-in for a library component that reads `window` (`vendor/Gauge.ts`); in the browser, the content replaces the fallback once mounted |
 | `Deferred` | `defineAsyncComponent`, as an arrow and with `loader`, given props, slot content and a scoped parent's id |
+| `EscapedIdioms` | Set A's idioms through the escape hatches: a template-only component in a `<ClientOnly>` fallback, an async template-only component, `props.x` handed to a twin |
 | `EscapedNull` | Nullable props through the escape hatches: into an async `NullChild`, a `<ClientOnly>` fallback, and a twin's optional prop by `?? undefined` |
 | `Rated` | A Rust twin (`vendor.rs`) of a render-function component (`vendor/StarRating.ts`): props, a boolean cast from a bare attribute, attributes beyond its props, a slot written from virtual nodes |
 | `Parsing` | `Number`, `parseInt` (no radix, 10, 16) and `parseFloat` of strings, `JSON.stringify` of numbers, `NaN` and `Infinity` |

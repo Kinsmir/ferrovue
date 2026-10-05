@@ -390,12 +390,11 @@ have. Prop types are those of helpers (`string`, `int?`, …); an absent `bool` 
 bare `block` is `true`, as Vue casts them.
 
 **Exactness is your responsibility.** ferrovue cannot check that `v_btn` writes the bytes Vue's
-server renderer writes for `VBtn`: this is the one place where its guarantee rests on your code,
-as with helpers. Prove it with fixtures: render the components that use the twin with Vue through
+server renderer writes for `VBtn`: its guarantee rests on your code here, as it does for helpers. Prove it with fixtures: render the components that use the twin with Vue through
 `ferrovue/testing`'s `fixtureApp` and `attachSsrRender`, and with Rust through the generated
 `render_json`, and compare. Slot content reaches the twin as a component's render function sees it
-(`<!--v-if-->` for an absent `v-if`, as Vue writes virtual nodes), and where the twin writes it, with
-or without fragment markers, is up to it, as it is up to the component. `examples/fullstack` has a
+(`<!--v-if-->` for an absent `v-if`, as Vue writes virtual nodes). The twin decides where it goes and
+whether fragment markers surround it, as the component does. `examples/fullstack` has a
 twin (`src/ui.rs`), its fixtures (`fixtures/`), the Vue half (`test/fixtures.test.ts`) and the Rust
 half (`src/fixtures.rs`).
 
