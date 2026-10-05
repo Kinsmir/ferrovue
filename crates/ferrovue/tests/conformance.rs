@@ -93,6 +93,23 @@ fn an_island_leaves_absent_props_out() {
     assert!(!island.contains("note"), "{island}");
 }
 
+/// A `Float` prop that is `NaN` or infinite reaches the client as itself, not as the `null`
+/// `serde_json` would write. `islands.html` is this page, which `packages/ferrovue/test/islands.test.ts`
+/// holds to Vue's own render of the same props and hydrates with no mismatch.
+#[test]
+fn an_island_carries_numbers_that_are_not_finite() {
+    use generated::narrowing;
+    let mut page = String::new();
+    for ratio in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+        narrowing::island(&narrowing::Props::new().ratio(ratio)).render_to(&mut page);
+    }
+    page.push('\n');
+    assert_eq!(page, include_str!("conformance/islands.html"));
+    for ratio in ["NaN", "Infinity", "-Infinity"] {
+        assert!(page.contains(&format!(r#"data-props="{{&quot;ratio&quot;:{ratio}}}""#)));
+    }
+}
+
 /// A component that takes slots, a route or stores has no island: what it was given beyond its
 /// props cannot travel to the client in an attribute.
 #[test]

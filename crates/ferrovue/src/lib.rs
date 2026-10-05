@@ -1,6 +1,10 @@
 #![doc = include_str!("../docs/crate.md")]
 #![cfg_attr(docsrs, feature(doc_cfg))]
-#![warn(missing_docs, rustdoc::missing_crate_level_docs)]
+#![warn(
+    missing_docs,
+    missing_debug_implementations,
+    rustdoc::missing_crate_level_docs
+)]
 
 use serde::Serialize;
 
@@ -195,6 +199,38 @@ impl<P> Given<'_, P> {
     }
 }
 
+/// The island's name, if it is one, and the props; the renderer is a function, shown as `..`.
+///
+/// # Example
+///
+/// ```
+/// # mod counter {
+/// #     #[derive(Debug, serde::Serialize)]
+/// #     pub struct Props { pub start: i64 }
+/// #     pub fn render(out: &mut String, props: &Props) {
+/// #         out.push_str("<button>");
+/// #         ferrovue::push_int(out, props.start);
+/// #         out.push_str("</button>");
+/// #     }
+/// #     pub fn island(props: &Props) -> ferrovue::Html<'_, Props> {
+/// #         ferrovue::Html::island("Counter", props, render)
+/// #     }
+/// # }
+/// let props = counter::Props { start: 5 };
+/// assert_eq!(
+///     format!("{:?}", counter::island(&props)),
+///     r#"Html { island: Some("Counter"), props: Props { start: 5 }, .. }"#
+/// );
+/// ```
+impl<P: std::fmt::Debug, F> std::fmt::Debug for Html<'_, P, F> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Html")
+            .field("island", &self.island)
+            .field("props", self.props.get())
+            .finish_non_exhaustive()
+    }
+}
+
 /// A component spliced into a `maud::html!` template, written straight into maud's buffer.
 ///
 /// # Example
@@ -347,6 +383,13 @@ impl<'s> Slot<'s> {
                 f(out, "");
             }
         }
+    }
+}
+
+/// `Slot { .. }`: its content is a closure, which only writing it shows.
+impl std::fmt::Debug for Slot<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Slot").finish_non_exhaustive()
     }
 }
 
@@ -1133,6 +1176,7 @@ fn increment_digits(digits: &str) -> String {
 /// assert_eq!(format!("{} items", Js(3_i64)), "3 items");
 /// assert_eq!(format!("{}", Js(1.5e-7_f64)), "1.5e-7");
 /// ```
+#[derive(Debug, Clone, Copy)]
 pub struct Js<T>(pub T);
 
 impl std::fmt::Display for Js<i64> {
@@ -1315,8 +1359,9 @@ pub fn state_script_into(out: &mut String, id: &str, state: &impl Serialize) {
     escape_into(out, id);
     out.push_str("\">");
     // As in `island_into`: a struct of strings, numbers and lists cannot fail to serialise, and if it
-    // somehow did the client would find no state and render from its own.
-    let json = serde_json::to_string(state).unwrap_or_default();
+    // somehow did the client would find no state and render from its own. `NaN` and the infinities
+    // are written as JavaScript writes them, which `hydrateState` reads back.
+    let json = json::to_string(state);
     json_escaped_into(out, &json);
     out.push_str("</script>");
 }
@@ -1364,11 +1409,12 @@ fn island_into<P: Serialize>(
     out.push_str("<div data-island=\"");
     escape_into(out, name);
     out.push_str("\" data-props=\"");
-    // A struct of strings, integers and booleans cannot fail to serialise; if it somehow did, the
-    // client finds malformed props and leaves the server's markup as it is. Serialised whole and
-    // then escaped: `serde_json` writes in many small pieces, and escaping each one costs more
-    // than the one extra buffer.
-    let json = serde_json::to_string(props).unwrap_or_default();
+    // A struct of strings, numbers and lists cannot fail to serialise; if it somehow did, the client
+    // finds malformed props and leaves the server's markup as it is. `NaN` and the infinities are
+    // written as JavaScript writes them, which `mountIslands` reads back, where `serde_json` alone
+    // would write `null`. Serialised whole and then escaped: `serde_json` writes in many small
+    // pieces, and escaping each one costs more than the one extra buffer.
+    let json = json::to_string(props);
     escape_into(out, &json);
     out.push_str("\">");
     render(out, props);
@@ -1378,6 +1424,7 @@ fn island_into<P: Serialize>(
 #[cfg(any(doc, doctest))]
 pub mod guide;
 pub mod i18n;
+mod json;
 mod record;
 mod router;
 mod strings;

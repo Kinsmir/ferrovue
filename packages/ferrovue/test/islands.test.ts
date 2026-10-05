@@ -5,11 +5,12 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { escapeHtml } from "@vue/shared";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import type { Component } from "vue";
+import { createSSRApp, type Component } from "vue";
+import { renderToString } from "vue/server-renderer";
 import { createPinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { hydrateState, mountIslands } from "../src/client.ts";
-import { routeRecords, type RouteEntry } from "../src/testing.ts";
+import { attachSsrRender, routeRecords, type RouteEntry } from "../src/testing.ts";
 
 const ROOT = join(import.meta.dirname, "../../../crates/ferrovue/tests/conformance");
 const modules = import.meta.glob<{ default: Component }>("../../../crates/ferrovue/tests/conformance/components/*.vue", { eager: true });
@@ -70,6 +71,30 @@ it("hydrates an island that links, once the router has resolved the location", a
   expect(islands.apps).toHaveLength(1);
   expect(warnings.filter((w) => /hydrat|mismatch/i.test(w))).toEqual([]);
   islands.unmount();
+});
+
+it("hydrates a Float prop that is NaN or infinite as the number the server rendered", async () => {
+  // Three `Narrowing` islands as `tests/conformance.rs` holds the Rust side to writing them, with
+  // the bare `NaN` and infinities `serde_json` alone would have written as `null`.
+  const page = readFileSync(join(ROOT, "islands.html"), "utf8").trim();
+  const ratios = { NaN: Number.NaN, Infinity: Number.POSITIVE_INFINITY, "-Infinity": Number.NEGATIVE_INFINITY };
+  // The markup inside each island is Vue's own server render of those props.
+  attachSsrRender(join(ROOT, "components", "Narrowing.vue"), "Narrowing", components.Narrowing!);
+  const markup = await Promise.all(Object.values(ratios).map((ratio) => renderToString(createSSRApp(components.Narrowing!, { ratio }))));
+  expect(page).toBe(Object.keys(ratios).map((written, i) => `<div data-island="Narrowing" data-props="${escapeHtml(`{"ratio":${written}}`)}">${markup[i]}</div>`).join(""));
+
+  document.body.innerHTML = page;
+  const islands = await mountIslands(components);
+  expect(islands.apps).toHaveLength(3);
+  expect(warnings).toEqual([]);
+  // The ratio each client rendered, which a mismatch would have patched in.
+  expect([...document.querySelectorAll("section > p:nth-last-of-type(2)")].map((p) => p.textContent)).toEqual(["NaN|1|false", "Infinity|1|false", "-Infinity|1|false"]);
+  islands.unmount();
+
+  // The same page with the `null`s `serde_json` alone writes does not hydrate cleanly.
+  document.body.innerHTML = page.replace(/:(NaN|-?Infinity)/g, ":null");
+  (await mountIslands(components)).unmount();
+  expect(warnings).not.toEqual([]);
 });
 
 it("leaves an island it cannot hydrate as the server rendered it, and says why", async () => {

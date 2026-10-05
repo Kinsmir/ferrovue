@@ -3,11 +3,31 @@ import { createSSRApp, type App, type Component, type Plugin } from "vue";
 import type { Pinia } from "pinia";
 import type { Router } from "vue-router";
 
+/** A JSON string, skipped whole as it may hold the same letters, or a bare number JSON has no word
+ * for, which the server writes as JavaScript does where `serde_json` alone would write `null`. */
+const BARE = /"(?:[^"\\]|\\.)*"|-?Infinity|NaN/g;
+const NON_FINITE: Record<string, number> = { NaN: Number.NaN, Infinity: Number.POSITIVE_INFINITY, "-Infinity": Number.NEGATIVE_INFINITY };
+
+/** `JSON.parse`, reading back the bare `NaN`, `Infinity` and `-Infinity` that an island's props and
+ * the state script hold for a number that is not finite, so the client renders what the server did.
+ * Throws as `JSON.parse` does on anything else that is not JSON. */
+function parseJson(text: string): unknown {
+  // Plain JSON: almost everything the server writes, and all it wrote before it wrote these.
+  if (!/NaN|Infinity/.test(text)) return JSON.parse(text);
+  // Each token becomes a string that starts with more NULs in a row than any string in the text
+  // holds (JSON has one way to write a NUL, `\u0000`), so no other value can be mistaken for one.
+  let escaped = "\\u0000";
+  while (text.includes(escaped)) escaped += "\\u0000";
+  const tag = JSON.parse(`"${escaped}"`) as string;
+  const quoted = text.replace(BARE, (match) => (match.startsWith('"') ? match : `"${escaped}${match}"`));
+  return JSON.parse(quoted, (_key, value: unknown) => (typeof value === "string" && value.startsWith(tag) ? NON_FINITE[value.slice(tag.length)] : value));
+}
+
 /** Give Pinia the state the server rendered with — what `ferrovue::state_script_into` wrote — before
  * the app mounts, so every store starts from it and the hydrated markup agrees with the server's. */
 export function hydrateState(pinia: Pinia, id = "__pinia", doc: Document = document): void {
   const text = doc.getElementById(id)?.textContent;
-  if (text) pinia.state.value = JSON.parse(text) as Pinia["state"]["value"];
+  if (text) pinia.state.value = parseJson(text) as Pinia["state"]["value"];
 }
 
 export interface MountOptions {
@@ -50,7 +70,7 @@ export async function mountIslands(components: Record<string, Component>, option
     }
     let props: Record<string, unknown>;
     try {
-      props = JSON.parse(el.dataset.props ?? "{}") as Record<string, unknown>;
+      props = parseJson(el.dataset.props ?? "{}") as Record<string, unknown>;
     } catch {
       report(el, `the props of ${name} are not JSON`);
       continue;

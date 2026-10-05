@@ -67,7 +67,10 @@ assert_eq!(
 ```
 
 The props travel as JSON, serialised with `serde_json` and escaped for the attribute, never in a
-`<script>`, so a page under a `script-src 'self'` policy needs no nonce for them. On the client,
+`<script>`, so a page under a `script-src 'self'` policy needs no nonce for them. A `Float` that is
+`NaN` or infinite is written as the bare token JavaScript writes (`NaN`, `Infinity`, `-Infinity`)
+rather than the `null` `serde_json` alone writes, so the client gets the number the server rendered;
+see [`numbers`](crate::guide::numbers#keeping-islands-exact). On the client,
 `mountIslands` from `ferrovue/client` hydrates every island on the page:
 
 ```ts
@@ -79,6 +82,10 @@ const pinia = createPinia();
 hydrateState(pinia);                                  // the state `state_script_into` wrote
 await mountIslands({ Counter }, { pinia, router });   // one Pinia and one router for every island
 ```
+
+`mountIslands` and `hydrateState` read the props and the state back with `JSON.parse`, taught the
+three tokens; anything else that is not JSON leaves the island as the server rendered it, and is
+reported.
 
 Islands share the Pinia and router passed to `mountIslands`, so an island's click handler can change
 a store another part of the page shows.
@@ -106,8 +113,9 @@ ferrovue's output is the same as Vue's for the same input, so a hydration mismat
 differed. The usual causes:
 
 - **Different data.** The client rendered with different props, state, route or locale.
-- **Numbers that JSON cannot carry.** An `f64` prop that is `NaN` or infinite is serialised by
-  `serde_json` as `null`, and an `i64` beyond ±2⁵³ is rounded by the browser's `JSON.parse`. See
+- **Numbers that JSON cannot carry.** An `i64` beyond ±2⁵³ is rounded by the browser. An `f64`
+  that is `NaN` or infinite travels as a bare token that only `ferrovue/client` reads, so a client
+  that parses the props itself, or a `ferrovue/client` older than the crate, cannot read them. See
   [`numbers`](crate::guide::numbers).
 - **Markup the browser rewrites.** HTML the parser moves or closes, such as a `<div>` inside a
   `<p>`, does not survive parsing in either renderer; Vue's own SSR has the same constraint.

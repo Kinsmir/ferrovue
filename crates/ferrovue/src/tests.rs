@@ -192,6 +192,67 @@ fn the_island_name_is_escaped_too() {
     );
 }
 
+#[derive(Debug, serde::Serialize)]
+struct Gauge {
+    level: f64,
+    marks: Vec<f64>,
+    top: Option<f64>,
+}
+
+fn gauge(out: &mut String, p: &Gauge) {
+    push_number(out, p.level);
+}
+
+/// `serde_json` alone writes `null` for these, which the client would render as something else.
+#[test]
+fn an_islands_numbers_that_are_not_finite_are_written_as_javascript_writes_them() {
+    let props = Gauge {
+        level: f64::NAN,
+        marks: vec![f64::INFINITY, 0.5, f64::NEG_INFINITY],
+        top: Some(f64::NEG_INFINITY),
+    };
+    assert_eq!(
+        Html::island("Gauge", &props, gauge).into_string(),
+        r#"<div data-island="Gauge" data-props="{&quot;level&quot;:NaN,&quot;marks&quot;:[Infinity,0.5,-Infinity],&quot;top&quot;:-Infinity}">NaN</div>"#
+    );
+}
+
+#[test]
+fn the_state_scripts_numbers_that_are_not_finite_are_written_as_javascript_writes_them() {
+    let mut out = String::new();
+    state_script_into(&mut out, "s", &[f64::NAN, f64::INFINITY, 1.0]);
+    assert_eq!(
+        out,
+        r#"<script type="application/json" id="s">[NaN,Infinity,1.0]</script>"#
+    );
+}
+
+#[test]
+fn html_shows_its_island_and_props_in_debug() {
+    let props = Gauge {
+        level: 1.5,
+        marks: vec![],
+        top: None,
+    };
+    assert_eq!(
+        format!("{:?}", Html::markup(&props, gauge)),
+        "Html { island: None, props: Gauge { level: 1.5, marks: [], top: None }, .. }"
+    );
+    assert_eq!(
+        format!("{:?}", Html::island("Gauge", &props, gauge)),
+        r#"Html { island: Some("Gauge"), props: Gauge { level: 1.5, marks: [], top: None }, .. }"#
+    );
+}
+
+#[test]
+fn a_slot_and_a_number_show_in_debug() {
+    let body = |out: &mut String| out.push_str("<p>x</p>");
+    assert_eq!(format!("{:?}", Slot::new(&body)), "Slot { .. }");
+    assert_eq!(format!("{:?}", hole()), "Slot { .. }");
+    assert_eq!(format!("{:?}", Some(Slot::new(&body))), "Some(Slot { .. })");
+    assert_eq!(format!("{:?}", Js(2.5_f64)), "Js(2.5)");
+}
+
 #[test]
 fn render_to_appends_to_what_the_buffer_holds() {
     let props = Label { label: "x" };

@@ -345,3 +345,40 @@ fn an_empty_parameter_fails_a_debug_render() {
     let router = Router::named(&[("/users/:id", Some("user"))]);
     router.at("/").link_named("user", &[("id", "")], "", "");
 }
+
+/// Nested routes show by their full paths, in the order they are tried, and a route by where the
+/// reader is and what it matched.
+#[test]
+fn a_router_and_its_route_show_what_they_matched_in_debug() {
+    let children = [RouteDef {
+        path: ":id(.*)",
+        name: Some("doc"),
+        children: &[],
+    }];
+    let router = Router::tree(&[RouteDef {
+        path: "/docs",
+        name: None,
+        children: &children,
+    }]);
+    assert_eq!(
+        format!("{router:?}"),
+        r#"Router { base: "", routes: {"/docs/:id(.*)": Some("doc"), "/docs": None} }"#
+    );
+    assert_eq!(
+        format!("{:?}", router.at("/docs/a/b?x=1")),
+        r#"Route { full_path: "/docs/a/b?x=1", name: Some("doc"), params: {"id": "a/b"}, .. }"#
+    );
+}
+
+#[test]
+fn a_link_is_compared_cloned_and_shown_whole() {
+    let router = Router::new(&["/", "/blog/:slug"]);
+    let route = router.at("/blog/intro");
+    let link = route.link("/blog/intro");
+    assert_eq!(link.clone(), route.link("/blog/intro"));
+    assert_ne!(link, route.link("/"));
+    assert_eq!(
+        format!("{link:?}"),
+        r#"Link { href: "/blog/intro", active: true, exact: true }"#
+    );
+}
