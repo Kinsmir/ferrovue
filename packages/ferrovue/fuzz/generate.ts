@@ -132,20 +132,34 @@ export type Node =
   | { k: "if"; branches: { cond: Expr | null; node: Node & { k: "el" } }[] }
   /** `v-for="(item, index) in source"` on the element. */
   | { k: "for"; head: string; node: Node & { k: "el" } }
-  /** A component of the fuzzer's own (`HELPERS`), its default slot given `kids`. */
-  | { k: "child"; name: HelperName; kids: Node[] };
+  /** A component of the fuzzer's own (`HELPERS`), its default slot given `kids`, passed `attrs`,
+   * none of which it declares as props: they fall through. */
+  | { k: "child"; name: HelperName; attrs: Attr[]; kids: Node[] };
 
-/** Small components written beside every generated one, which it may render: what scope ids reach
- * depends on how they are built — a single root, a slot, a root that is a component forwarding its
- * slot, a fragment, a root that is another component. */
-export type HelperName = "FzLeaf" | "FzBox" | "FzFwd" | "FzPair" | "FzRoot";
+/** Small components written beside every generated one, which it may render: what scope ids and
+ * the attributes it passes reach depends on how they are built — a single root, a slot, a root
+ * that is a component forwarding its slot, a fragment, a root that is another component, a root
+ * with attributes of its own, `inheritAttrs: false` with `$attrs` bound before and after an
+ * element's own, `useAttrs()` bound on a root that inherits them as well and on an element alone,
+ * a root with none of its own, and a root that is a component given none. */
+export type HelperName = "FzLeaf" | "FzBox" | "FzFwd" | "FzPair" | "FzRoot" | "FzOwn" | "FzBind" | "FzUse" | "FzPlain" | "FzBare";
 
-const HELPERS: Record<HelperName, { template: string; imports: HelperName[]; slot: boolean }> = {
+const HELPERS: Record<HelperName, { template: string; imports: HelperName[]; slot: boolean; script?: string[] }> = {
   FzLeaf: { template: `<b class="leaf">leaf</b>`, imports: [], slot: false },
   FzBox: { template: `<div class="box"><slot>box <i>fallback</i></slot></div>`, imports: [], slot: true },
   FzFwd: { template: `<FzBox><slot /></FzBox>`, imports: ["FzBox"], slot: true },
   FzPair: { template: `<i>one</i><i>two</i>`, imports: [], slot: false },
   FzRoot: { template: `<FzLeaf />`, imports: ["FzLeaf"], slot: false },
+  FzOwn: { template: `<em id="own" class="own" title="own" style="color: blue; margin: 0" data-own="1" :hidden="false">own</em>`, imports: [], slot: false },
+  FzBind: {
+    template: `<p class="bind"><span v-bind="$attrs" id="in" class="in">bind</span><i title="t" class="i" style="margin: 0" v-bind="$attrs" /></p>`,
+    imports: [],
+    slot: false,
+    script: ["defineOptions({ inheritAttrs: false });"],
+  },
+  FzUse: { template: `<s class="use" v-bind="attrs">use <u v-bind="attrs">u</u></s>`, imports: [], slot: false, script: ['import { useAttrs } from "vue";', "const attrs = useAttrs();"] },
+  FzPlain: { template: `<u>plain</u>`, imports: [], slot: false },
+  FzBare: { template: `<FzPlain />`, imports: ["FzPlain"], slot: false },
 };
 
 export interface Component {
@@ -230,8 +244,10 @@ function printNode(n: Node, indent: string, extra: string[] = []): string {
         .join(`\n${indent}`);
     case "for":
       return printNode(n.node, indent, [`v-for="${n.head}"`]);
-    case "child":
-      return n.kids.length ? `<${n.name}>${n.kids.map((k) => printNode(k, indent + "  ")).join("")}</${n.name}>` : `<${n.name} />`;
+    case "child": {
+      const open = `<${n.name}${n.attrs.map((a) => " " + printAttr(a)).join("")}`;
+      return n.kids.length ? `${open}>${n.kids.map((k) => printNode(k, indent + "  ")).join("")}</${n.name}>` : `${open} />`;
+    }
     case "el": {
       const attrs = [...extra, ...n.attrs.map(printAttr)];
       const open = `<${n.tag}${attrs.map((a) => " " + a).join("")}`;
@@ -278,7 +294,7 @@ export function helperFiles(c: Component): [string, string][] {
   return helpersUsed(c.template).map((name) => {
     const h = HELPERS[name];
     const flags = c.helpers[name];
-    const lines = ['<script setup lang="ts">', ...h.imports.map((i) => `import ${i} from "./${i}.vue";`), "defineProps<{}>();", "</script>", "", `<template>${h.template}</template>`];
+    const lines = ['<script setup lang="ts">', ...h.imports.map((i) => `import ${i} from "./${i}.vue";`), ...(h.script ?? []), "defineProps<{}>();", "</script>", "", `<template>${h.template}</template>`];
     if (flags.scoped) lines.push(...scopedStyle(flags.slotted && h.slot));
     return [`${name}.vue`, lines.join("\n") + "\n"];
   });
@@ -1143,8 +1159,10 @@ class Gen {
   child(depth: number): Node {
     const r = this.r;
     this.nodes++;
-    const name = r.pick<HelperName>(["FzLeaf", "FzBox", "FzFwd", "FzPair", "FzRoot"]);
-    return { k: "child", name, kids: HELPERS[name].slot && r.chance(0.7) ? this.kids(depth + 1, "block") : [] };
+    const name = r.pick<HelperName>(["FzLeaf", "FzBox", "FzFwd", "FzPair", "FzRoot", "FzOwn", "FzBind", "FzUse", "FzPlain", "FzBare"]);
+    // Attributes it does not declare, which fall through to its root or its `$attrs`.
+    const attrs = r.chance(0.6) ? this.attrs("div") : [];
+    return { k: "child", name, attrs, kids: HELPERS[name].slot && r.chance(0.7) ? this.kids(depth + 1, "block") : [] };
   }
 
   ifNode(depth: number, ctx: "block" | "inline" | "list"): Node {
@@ -1355,8 +1373,7 @@ function* exprSlots(nodes: Node[]): Generator<{ get: () => Expr; set: (e: Expr) 
         yield* exprSlots([b.node]);
       }
     } else if (n.k === "for") yield* exprSlots([n.node]);
-    else if (n.k === "child") yield* exprSlots(n.kids);
-    else if (n.k === "el") {
+    else if (n.k === "el" || n.k === "child") {
       for (const a of n.attrs) {
         if (a.k === "bind") yield { get: () => a.e, set: (e) => (a.e = e) };
         else if (a.k === "style") for (const en of a.entries) yield { get: () => en.e, set: (e) => (en.e = e) };
@@ -1446,17 +1463,16 @@ export function componentShrinks(c: Component): Component[] {
       }
     }),
   );
-  // Remove one attribute, or one entry of a class or style.
-  const elements = (comp: Component): (Node & { k: "el" })[] => {
-    const acc: (Node & { k: "el" })[] = [];
+  // Remove one attribute, or one entry of a class or style, of an element or a child.
+  const elements = (comp: Component): (Node & { k: "el" | "child" })[] => {
+    const acc: (Node & { k: "el" | "child" })[] = [];
     const walk = (ns: Node[]): void => {
       for (const n of ns) {
-        if (n.k === "el") {
+        if (n.k === "el" || n.k === "child") {
           acc.push(n);
           walk(n.kids);
         } else if (n.k === "if") walk(n.branches.map((b) => b.node));
         else if (n.k === "for") walk([n.node]);
-        else if (n.k === "child") walk(n.kids);
       }
     };
     walk(comp.template);

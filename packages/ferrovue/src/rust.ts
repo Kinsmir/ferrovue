@@ -2,7 +2,7 @@
 
 import { parse as parseJs } from "@babel/parser";
 import { basename } from "node:path";
-import { type Component, type Field, type N, type Struct, type Ty, fail, GenError, rustStr, snake, tagAst } from "./model.ts";
+import { type Component, type Field, type N, type Struct, type Ty, fail, GenError, rustStr, snake, tagAst, takesAttrs } from "./model.ts";
 import { allRoutes, type RouteDef, ctx } from "./context.ts";
 import { lookupStruct } from "./typescript.ts";
 import { childOf } from "./expr.ts";
@@ -184,22 +184,27 @@ export function textLen(comp: Component, place: string, ty: Ty, seen: Set<string
   }
 }
 
-/** `render`, and for a component a parent may hand scope ids to, `render_scoped`, which takes them
- * last, as `ssrRenderAttrs` writes them onto its root; `render` hands it none. */
+/** `render`, and for a component a parent may hand scope ids or pass attributes to,
+ * `render_scoped`, which takes them last, as `ssrRenderAttrs` writes them onto its root; `render`
+ * hands it none. */
 function renderSource(comp: Component, life: string, args: string, e: Emitter): string {
   const doc = "/// Write the component's server render into `out`.\n";
   // Props or ids the render never reads, as when a component only passes its slot on.
   const props = e.reads("props", 0) ? "props" : "_props";
-  if (!comp.inherits) return `${doc}pub fn render(out: &mut String, ${props}: &Props${life}${extraParams(comp)}) {\n${e.lines.join("\n")}\n}`;
+  if (!comp.inherits && !takesAttrs(comp)) return `${doc}pub fn render(out: &mut String, ${props}: &Props${life}${extraParams(comp)}) {\n${e.lines.join("\n")}\n}`;
   // A root that is a fragment, or a `<Teleport>`, takes no ids.
   const attrs = e.reads("fv_attrs", 0) ? "fv_attrs" : "_fv_attrs";
+  // A component a parent may pass attributes takes them with the ids, as one `fv::Attrs`.
+  const [none, ty, what] = takesAttrs(comp)
+    ? ["&fv::Attrs::NONE", "&fv::Attrs<'_>", "the attributes a parent passes beyond the props, and the scope ids it hands the root"]
+    : ['""', "&str", "the scope ids a parent hands the root: ` data-v-…` each"];
   return `${doc}pub fn render(out: &mut String, props: &Props${life}${extraParams(comp)}) {
-    render_scoped(out, props${args}, "");
+    render_scoped(out, props${args}, ${none});
 }
 
-/// [\`render\`], with the scope ids a parent hands the root: \` data-v-…\` each.
+/// [\`render\`], with ${what}.
 #[doc(hidden)]
-pub fn render_scoped(out: &mut String, ${props}: &Props${life}${extraParams(comp)}, ${attrs}: &str) {
+pub fn render_scoped(out: &mut String, ${props}: &Props${life}${extraParams(comp)}, ${attrs}: ${ty}) {
 ${e.lines.join("\n")}
 }`;
 }
@@ -211,6 +216,9 @@ export function isIsland(comp: Component): boolean {
 }
 
 export function componentSource(comp: Component, ast: N[], ssr: string, components: Map<string, Component>): string {
+  if (takesAttrs(comp) && comp.inheritAttrs && comp.attrsDropped) {
+    fail(comp, `a root \`<Transition>\` or \`<KeepAlive>\` around a \`v-if\` in ${comp.name}, which a parent passes attributes: Vue's server drops them, where its client puts them on the element; set \`inheritAttrs: false\` and bind \`$attrs\` on the element`, comp.attrsDropped);
+  }
   const { scope, lets } = scopeFor(comp, ast, components);
   const program = parseJs(ssr, { sourceType: "module" }).program;
   tagAst(program, "template");

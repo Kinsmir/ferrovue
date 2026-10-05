@@ -39,6 +39,22 @@ released together and share version numbers.
   reports an island whose component did not load. `write` returns the islands it found.
 - The full-stack example hydrates from `ferrovue/islands`, and its server links the stylesheets of the
   lazily loaded islands up front.
+- Fallthrough attributes: what a parent passes a child beyond its props falls through as in Vue —
+  onto the child's single root, merged with its own class and style and replacing its other
+  attributes where they stand (`undefined` included), none for two roots, on through a root that is
+  a component or a `<RouterLink>`, and with `inheritAttrs: false` onto the elements and components
+  that bind `v-bind="$attrs"` or a `useAttrs()` binding, before or after their own. Listeners are
+  dropped, as Vue's server drops them. A component some parent passes attributes to takes them with
+  its scope ids as one `ferrovue::Attrs` in its `render_scoped`; with none passed, its root is
+  written as before, and a component no parent passes attributes to is unchanged. The crate gains
+  `Attr`, `Attrs`, `attrs_into`, `merge_props`, `class_names` and `style_text_into`, held to vectors
+  recorded from Vue's `mergeProps` and `ssrRenderAttrs`. A parent's `kebab-case` attribute sets the
+  child's `camelCase` prop, as Vue matches them. Refused: a value read from `$attrs`, an attribute
+  that would reach a prop of the component a root passes it on to, `$attrs` in a component whose
+  `$attrs` would hold scope ids, an attribute named by a number, and attributes passed to a root
+  `<Transition>` or `<KeepAlive>` around a `v-if`, which Vue's server drops but its client keeps.
+- The fuzzer passes attributes to its child components, among them roots with attributes of their
+  own, `inheritAttrs: false` with `$attrs`, and `useAttrs()`.
 
 ### Fixed
 
@@ -54,6 +70,11 @@ released together and share version numbers.
   renders what the server did instead of hydrating with a mismatch nobody reported. Props and state
   without them are written and read as before. A client older than the crate refuses the tokens and
   leaves the island as the server rendered it, with a report.
+- A root bound to `:class` of an optional string that is absent no longer writes `class=""`, and a
+  root bound to `:style` of a string writes it parsed and normalised (`color:red;`), as Vue's
+  `mergeProps` leaves them.
+- A string built from one a runtime routine borrows, as the left side of `||`, compiles:
+  `text.slice(1).toLowerCase() || "-"`, `((words.find(…) ?? "x") + "a") || "-"`.
 
 ## [0.2.0] - 2026-10-04
 

@@ -31,6 +31,11 @@ values, but nothing checks what Rust passes. A value outside the union renders a
 Strings are `Cow`s so that props can borrow from what the request already holds, and so that a
 parent handing an object to a child copies only pointers.
 
+A parent's template names a child's props as Vue matches them, `camelCase` or `kebab-case`
+(`:item-count` sets `itemCount`). Anything else it passes is not a field of `Props`: it is an
+attribute, which falls through to the child's root
+([`generated_code`](crate::guide::generated_code#fallthrough-attributes)).
+
 # Optional props and defaults
 
 An optional prop is an `Option`, `None` unless its setter is called. A default from `withDefaults`

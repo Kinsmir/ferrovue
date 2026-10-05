@@ -167,13 +167,110 @@ const props = defineProps<{ items: ChildProps[] }>();
       expect(out).not.toContain("use std::borrow::Cow;");
     });
 
-    it("refuses a prop the child does not declare, which would fall through as an attribute", () => {
+    it("passes a key the child does not declare as an attribute, which falls through to its root", () => {
       const parent = `<script setup lang="ts">
 import Child from "./Child.vue";
 defineProps<{ a: string }>();
 </script>
-<template><div><Child :label="a" :colour="a" /></div></template>`;
-      expect(() => compile(island(parent, { Child: child }))).toThrow(/`colour` is not a prop of Child/);
+<template><div><Child :label="a" :colour="a" @click="() => {}" /></div></template>`;
+      const out = compile(island(parent, { Child: child }));
+      expect(out.get("x.rs")).toContain(`&fv::Attrs::new(&[("colour", fv::Attr::str(&props.a))], "")`);
+      expect(out.get("child.rs")).toContain("pub fn render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::Attrs<'_>)");
+      expect(out.get("child.rs")).toContain(`fv::passed_attrs_into(out, fv_attrs.list(), "");`);
+    });
+
+    it("gives a kebab-case key to the camelCase prop it names, as Vue does", () => {
+      const parent = `<script setup lang="ts">
+import Child from "./Child.vue";
+</script>
+<template><div><Child label="x" :co-unt="2" /></div></template>`;
+      const counted = child.replace("count?: number", "coUnt?: number");
+      const out = compile(island(parent, { Child: counted }));
+      expect(out.get("x.rs")).toContain("co_unt: Some(2i64)");
+      expect(out.get("child.rs")).not.toContain("fv::Attrs");
+    });
+
+    it("leaves a component no parent passes attributes as it was", () => {
+      const parent = `<script setup lang="ts">
+import Child from "./Child.vue";
+</script>
+<template><div><Child label="x" /></div></template>`;
+      const out = compile(island(parent, { Child: child }));
+      expect(out.get("child.rs")).not.toContain("render_scoped");
+      expect(out.get("x.rs")).toContain("super::child::render(out, ");
+    });
+
+    it("refuses an attribute that would reach a prop of the component a root passes it on to", () => {
+      const wrapper = `<script setup lang="ts">
+import Child from "./Child.vue";
+</script>
+<template><Child label="x" /></template>`;
+      const parent = `<script setup lang="ts">
+import W from "./W.vue";
+</script>
+<template><div><W count="2" /></div></template>`;
+      expect(() => compile(island(parent, { W: wrapper, Child: child }))).toThrow(/`count`, an attribute W may be passed, would reach Child as its prop `count`/);
+    });
+
+    it("refuses `$attrs` in a component that is the root of one that may be handed scope ids", () => {
+      const inner = `<script setup lang="ts">
+defineOptions({ inheritAttrs: false });
+</script>
+<template><p><b v-bind="$attrs">x</b></p></template>`;
+      const wrapper = `<script setup lang="ts">
+import Inner from "./Inner.vue";
+</script>
+<template><Inner /></template>`;
+      const parent = `<script setup lang="ts">
+import W from "./W.vue";
+</script>
+<template><div><W /></div></template>
+<style scoped>div { color: red; }</style>`;
+      expect(() => compile(island(parent, { W: wrapper, Inner: inner }))).toThrow(/`\$attrs` in Inner, the root of a component that may be handed scope ids/);
+    });
+
+    it("refuses attributes passed to a root `<Transition>` around a `v-if`, which Vue's server drops", () => {
+      const fade = `<script setup lang="ts">
+defineProps<{ on: boolean }>();
+</script>
+<template><Transition><b v-if="on">x</b></Transition></template>`;
+      const parent = `<script setup lang="ts">
+import Fade from "./Fade.vue";
+</script>
+<template><div><Fade :on="true" class="c" /></div></template>`;
+      expect(() => compile(island(parent, { Fade: fade }))).toThrow(/Fade\.vue:4:11: a root `<Transition>` or `<KeepAlive>` around a `v-if` in Fade/);
+    });
+
+    it("refuses an attribute named by a number, which a JavaScript object lists first", () => {
+      const parent = `<script setup lang="ts">
+import Child from "./Child.vue";
+</script>
+<template><div><Child label="x" v-bind="{ 7: 'seven' }" /></div></template>`;
+      expect(() => compile(island(parent, { Child: child }))).toThrow(/an attribute named `7`/);
+    });
+
+    it("refuses a `$route.query` value as an attribute that falls through", () => {
+      const parent = `<script setup lang="ts">
+import Child from "./Child.vue";
+</script>
+<template><div><Child label="x" :title="$route.query.q" /></div></template>`;
+      const project = island(parent, { Child: child });
+      writeFileSync(join(project, "routes.json"), '["/"]');
+      expect(() => generate(project, { ...CONFIG, routes: "routes.json" })).toThrow(/an attribute that may fall through is a string, a number or a boolean/);
+    });
+
+    it("refuses an attribute passed on to a `<RouterLink>` that would be its prop", () => {
+      const link = `<script setup lang="ts">
+defineProps<{}>();
+</script>
+<template><RouterLink to="/">go</RouterLink></template>`;
+      const parent = `<script setup lang="ts">
+import L from "./L.vue";
+</script>
+<template><div><L replace /></div></template>`;
+      const project = island(parent, { L: link });
+      writeFileSync(join(project, "routes.json"), '["/"]');
+      expect(() => generate(project, { ...CONFIG, routes: "routes.json" })).toThrow(/`replace`, an attribute L may be passed, would reach its `<RouterLink>` as a prop/);
     });
 
     it("refuses a child left without a prop it requires", () => {
@@ -981,6 +1078,31 @@ const props = defineProps<{ label: string; note?: string }>();
   });
 
   const refused: [string, string, RegExp][] = [
+    [
+      "a value read from `$attrs`, which has no type",
+      `<script setup lang="ts">
+defineProps<{}>();
+</script>
+<template><b :title="$attrs.title">x</b></template>`,
+      /`\$attrs` is bound whole/,
+    ],
+    [
+      "a value read from `useAttrs()`, which has no type",
+      `<script setup lang="ts">
+import { useAttrs } from "vue";
+const attrs = useAttrs();
+</script>
+<template><b :title="attrs.title">x</b></template>`,
+      /`useAttrs\(\)` is bound whole/,
+    ],
+    [
+      "a class merged with a string that may equal it, which Vue writes once",
+      `<script setup lang="ts">
+defineProps<{ s: string }>();
+</script>
+<template><b class="a" v-bind="{ class: s }">x</b></template>`,
+      /a class merged with a string that may equal the class before it/,
+    ],
     [
       "destructured props gathered with a rest element",
       `<script setup lang="ts">

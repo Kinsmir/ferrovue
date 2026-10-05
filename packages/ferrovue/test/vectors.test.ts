@@ -5,6 +5,8 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { escapeHtml, normalizeClass } from "@vue/shared";
 import { describe, expect, it } from "vitest";
+import { mergeProps } from "vue";
+import { ssrRenderAttrs } from "vue/server-renderer";
 
 const DIR = join(import.meta.dirname, "../../../crates/ferrovue/tests/vectors");
 const read = (name: string): unknown => JSON.parse(readFileSync(join(DIR, name), "utf8"));
@@ -115,6 +117,23 @@ describe("vectors shared with the Rust crate", () => {
     });
     if (process.env.FERROVUE_VECTORS_WRITE === "1") {
       writeFileSync(join(DIR, "class.json"), JSON.stringify(recorded, null, 1) + "\n");
+      return;
+    }
+    expect(vectors).toEqual(recorded);
+  });
+
+  // `[sources, expected]`: attribute lists as `[name, value]` pairs, merged in order by Vue's
+  // `mergeProps` and written by `ssrRenderAttrs`, recorded with `FERROVUE_VECTORS_WRITE=1`. A value
+  // is a string, a number or a boolean as it is, `null` for `undefined`, `{ "style": [[k, v], …] }`
+  // for a style object and `{ "names": "…" }` for a class bound to an array, which equals nothing.
+  it("attrs.json is ssrRenderAttrs of mergeProps", () => {
+    type Value = string | number | boolean | null | { style: [string, Value][] } | { names: string };
+    const vectors = read("attrs.json") as [[string, Value][][], string][];
+    const js = (v: Value): unknown =>
+      v === null ? undefined : typeof v !== "object" ? v : "names" in v ? [v.names] : Object.fromEntries(v.style.map(([k, x]) => [k, js(x)]));
+    const recorded = vectors.map(([sources]) => [sources, ssrRenderAttrs(mergeProps(...sources.map((s) => Object.fromEntries(s.map(([k, v]) => [k, js(v)])))))]);
+    if (process.env.FERROVUE_VECTORS_WRITE === "1") {
+      writeVectors("attrs.json", recorded);
       return;
     }
     expect(vectors).toEqual(recorded);

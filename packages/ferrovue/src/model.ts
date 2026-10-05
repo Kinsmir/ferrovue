@@ -101,6 +101,22 @@ export function snake(js: string): string {
   return RUST_KEYWORDS.has(s) ? `r#${s}` : s;
 }
 
+/** `camelize` in `@vue/shared`: how Vue matches an attribute a parent passes to a declared prop. */
+export function camelize(key: string): string {
+  return key.replace(/-(\w)/g, (_, c: string) => c.toUpperCase());
+}
+
+/** Whether a component declares the prop a parent passes as `key`, as `setFullProps` decides. */
+export function declares(comp: Component, key: string): boolean {
+  const camel = camelize(key);
+  return comp.props.fields.some((f) => camelize(f.js) === camel);
+}
+
+/** Whether a component may be passed attributes beyond its props, and so takes `fv::Attrs`. */
+export function takesAttrs(comp: Component): boolean {
+  return comp.attrNames.size > 0;
+}
+
 export function rustStr(s: string): string {
   let out = '"';
   for (const ch of s) {
@@ -137,6 +153,9 @@ export interface Component {
    * in the file, for an error found in the compiled code. */
   templateMap?: SourceMapConsumer;
   templateStart?: { line: number; column: number };
+  /** A root `<Transition>` or `<KeepAlive>` around anything but one plain element — a `v-if`, a
+   * `<template>` — whose content Vue's server gives no attributes and its client does. */
+  attrsDropped?: N;
   props: Struct;
   structs: Map<string, Struct>;
   /** The local name `TrustedHtml` was imported under from `ferrovue/types`, if it was. */
@@ -191,6 +210,13 @@ export interface Component {
   /** Whether its outlets may pass slot content a slot scope id, which the content then takes as
    * `fv_sid`. Known once every component is read, as `inherits` is. */
   passesSlotIds: boolean;
+  /** The attributes a parent may pass it beyond its props, by name: what falls through to its root,
+   * or to the element that binds `$attrs`. With any, its `render_scoped` takes them as
+   * `fv::Attrs`. Known once every component is read (`attrsFlow`). */
+  attrNames: Set<string>;
+  /** Whether its `$attrs` may hold scope ids: it is the root of a component that may be handed
+   * some, which passes them on as attributes. */
+  idsInAttrs: boolean;
 }
 
 export interface Scope {
@@ -234,6 +260,11 @@ export interface Scope {
   /** The Rust value of `_attrs`, the scope ids this render's root inherits, as `ssrRenderAttrs`
    * writes them; `null` when the component inherits none. */
   attrs: string | null;
+  /** The Rust `fv::Attrs` a parent passes this render beyond its props — `$attrs`, and what
+   * `_attrs` holds before the scope ids — or `null` when no parent passes any. */
+  fallthrough: string | null;
+  /** Setup bindings holding `useAttrs()`, which the template may bind as `$attrs`. */
+  attrsBindings: Set<string>;
   /** The Rust value of `_scopeId` inside slot content: the slot scope id the content is given, or
    * `null` where it is always empty. */
   sid: string | null;

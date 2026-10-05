@@ -204,5 +204,7 @@ export function storeHome(file: string): Component {
     inheritAttrs: true,
     inherits: false,
     passesSlotIds: false,
+    attrNames: new Set(),
+    idsInAttrs: false,
   };
 }

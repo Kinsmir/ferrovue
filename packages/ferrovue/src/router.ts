@@ -3,12 +3,12 @@
 import { escapeHtml } from "@vue/shared";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { type N, type Scope, type Val, fail, GenError, rustStr } from "./model.ts";
+import { type N, type Scope, type Val, camelize, fail, GenError, rustStr } from "./model.ts";
 import { allRoutes, type RouteDef, CONFIG_FILE, ctx } from "./context.ts";
 import { expr, lonely } from "./expr.ts";
 import { bare, condition, strArg } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
-import { classItems, IGNORED_PROPS, mergeProps, renderDynamicAttr, renderStyle } from "./attrs.ts";
+import { attrOf, classItems, dollarAttrs, IGNORED_PROPS, isAttrs, mergedParts, mergeProps, renderDynamicAttr, renderStyle } from "./attrs.ts";
 import { slotBody, statements } from "./template.ts";
 
 export const ROUTER_LINK_PROPS = new Set(["to", "class", "activeClass", "exactActiveClass", "ariaCurrentValue"]);
@@ -174,6 +174,21 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
   e.open("");
   resolveLink(s, e, to);
   e.lit("<a");
+  /* Attributes this component is passed fall through to the link: merged into its virtual node's
+   * props with the template's, then onto the `<a>` vue-router renders. */
+  const parts = mergedParts(rawProps);
+  const passedOn = (p: N): boolean => s.fallthrough !== null && ((isAttrs(p) && s.comp.inheritAttrs) || dollarAttrs(s, p));
+  const fallsThrough = parts.some(passedOn);
+  if (fallsThrough) {
+    for (const name of s.comp.attrNames) {
+      const key = camelize(name);
+      if ((ROUTER_LINK_PROPS.has(key) && key !== "class") || ROUTER_LINK_INERT.has(key) || key === "custom" || key === "viewTransition") {
+        fail(s.comp, `\`${name}\`, an attribute ${s.comp.name} may be passed, would reach its \`<RouterLink>\` as a prop`, n);
+      }
+      if (key === "href" || key === "ariaCurrent") fail(s.comp, `\`${name}\`, an attribute ${s.comp.name} may be passed, would replace its \`<RouterLink>\`'s own`, n);
+    }
+    e.open(`if ${s.fallthrough}.is_empty()`);
+  }
   e.open("if fv_link.exact");
   e.lit(` aria-current="${escapeHtml(ariaCurrent)}"`);
   e.close();
@@ -203,6 +218,39 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
   if (base === null && slotted === null) {
     if (scopeId !== null) e.lit(` ${scopeId}`);
   } else e.stmt(`out.push_str(&fv::scope_attrs(${base ?? '""'}, ${scopeId === null ? '""' : rustStr(scopeId)}, ${slotted ?? '""'}));`);
+  if (fallsThrough) {
+    e.close(" else {");
+    // The template's attributes for the link, merged in their order with those passed on.
+    const sources: string[] = [];
+    for (const p of parts) {
+      if (passedOn(p)) sources.push(`${s.fallthrough}.list()`);
+      else if (p.type === "ObjectExpression") {
+        const entries = p.properties
+          .filter((q: N) => {
+            const raw: string = q.key?.type === "Identifier" ? q.key.name : String(q.key?.value);
+            const key = camelize(raw);
+            return key === "class" || (!ROUTER_LINK_PROPS.has(key) && !ROUTER_LINK_INERT.has(key) && !/^on[^a-z]/.test(raw) && !IGNORED_PROPS.has(raw));
+          })
+          .map((q: N) => {
+            const raw: string = q.key.type === "Identifier" ? q.key.name : String(q.key.value);
+            return `(${rustStr(raw)}, ${attrOf(s, raw, q.value, "vnode")})`;
+          });
+        if (entries.length) sources.push(`&[${entries.join(", ")}]`);
+      }
+    }
+    const ids =
+      base === null && slotted === null
+        ? rustStr(scopeId === null ? "" : ` ${scopeId}`)
+        : `&fv::scope_attrs(${base ?? '""'}, ${scopeId === null ? '""' : rustStr(scopeId)}, ${slotted ?? '""'})`;
+    // vue-router's own: `aria-current` (`null` when the link is not exact), `href`, its classes.
+    const linkOwn = [
+      `("aria-current", if fv_link.exact { fv::Attr::str(${rustStr(ariaCurrent)}) } else { fv::Attr::Undefined })`,
+      '("href", fv::Attr::str(&fv_link.href))',
+      `("class", fv::Attr::from(fv::class_names(&[${linkItems.join(", ")}])))`,
+    ];
+    e.stmt(`fv::attrs_into(out, &[&[${linkOwn.join(", ")}], &fv::merge_props(&[${sources.join(", ")}])], 1, ${ids});`);
+    e.close();
+  }
   e.lit(">");
   if (slots && slots.type !== "NullLiteral") {
     if (slots.type !== "ObjectExpression") fail(s.comp, "slots must be an object literal", slots);

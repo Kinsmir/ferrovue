@@ -22,5 +22,6 @@ const last = computed(() => props.text.toUpperCase().at(-1));
     <p>{{ text < other }}|{{ text > other }}|{{ text <= other }}|{{ text >= other }}|{{ other < "～" }}|{{ text.slice(0, 1) < "b" }}</p>
     <p>{{ short }}|{{ last ?? "-" }}|{{ n > 1 ? text.toUpperCase().at(1) : undefined }}|{{ short.length < 3 ? short.padEnd(3, "_") : short }}</p>
     <b v-if="text.slice(0, 1) === 'a'">starts with a</b>
+    <p>{{ text.slice(1).toLowerCase() || "-" }}|{{ other.replace("a", "b").toUpperCase() || sep }}|{{ ((text.split(" ").find((w) => w === sep) ?? "ß") + "a") || "-" }}</p>
   </section>
 </template>
