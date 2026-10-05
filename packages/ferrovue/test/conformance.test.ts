@@ -89,15 +89,30 @@ describe.skipIf(WRITE)("the recorded HTML hydrates without a mismatch", () => {
   }
 });
 
-const CLIENT_DIFFERS = new Set(["ScopedQuirks", "ScopedCard/empty.json", "ScopedShelf/empty.json", "ScopedRack/empty.json", "PlainForward/empty.json"]);
+const CLIENT_DIFFERS = new Set([
+  "ScopedQuirks/empty.json",
+  "ScopedQuirks/hostile.json",
+  "ScopedQuirks/noted.json",
+  "ScopedCard/empty.json",
+  "ScopedShelf/empty.json",
+  "ScopedRack/empty.json",
+  "PlainForward/empty.json",
+]);
+
+it("lists only fixtures that exist, and with scope ids in CLIENT_DIFFERS", () => {
+  const scoped = new Set(cases.filter((c) => c.html.includes(" data-v-")).map((c) => `${c.component}/${c.name}`));
+  const all = new Set(cases.map((c) => `${c.component}/${c.name}`));
+  expect([...CLIENT_DIFFERS].filter((k) => !scoped.has(k))).toEqual([]);
+  expect([...VUE_DISAGREES, ...UNHEAD_REWRITES].filter((k) => !all.has(k))).toEqual([]);
+});
+
 describe.skipIf(WRITE)("the recorded HTML carries the scope ids the client renders", () => {
   const ids = (root: ParentNode): string[] =>
     [...root.querySelectorAll("*")].map((el) => `${el.tagName} ${el.getAttributeNames().filter((a) => a.startsWith("data-v-")).toSorted().join(" ")}`);
   afterEach(() => {
     document.body.innerHTML = "";
   });
-  const checked = cases.filter((c) => c.html.includes(" data-v-") && !CLIENT_DIFFERS.has(c.component) && !CLIENT_DIFFERS.has(`${c.component}/${c.name}`));
-  for (const c of checked) {
+  for (const c of cases.filter((c) => c.html.includes(" data-v-"))) {
     it(`${c.component}/${c.name}`, async () => {
       const [main, teleported] = c.html.split(HEAD)[0]!.split(TELEPORTS);
       const targets = Object.keys(JSON.parse(teleported ?? "{}") as Record<string, string>);
@@ -107,7 +122,11 @@ describe.skipIf(WRITE)("the recorded HTML carries the scope ids the client rende
       if (stillLoading(app)) await settled(app);
       const recorded = document.createElement("template");
       recorded.innerHTML = main!;
-      expect(ids(recorded.content)).toEqual(ids(document.getElementById("root")!));
+      const server = ids(recorded.content);
+      const client = ids(document.getElementById("root")!);
+      const differs = CLIENT_DIFFERS.has(`${c.component}/${c.name}`);
+      expect(differs ? [] : server).toEqual(differs ? [] : client);
+      expect(JSON.stringify(server) !== JSON.stringify(client), "a fixture's ids differ exactly when it is in CLIENT_DIFFERS").toBe(differs);
       app.unmount();
     });
   }

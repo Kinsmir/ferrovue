@@ -55,9 +55,10 @@ fixtures/X/case.json            Vue hydrates it: no mismatch warnings, same DOM 
    and Vue's hydrator takes a component to begin at a node of the DOM, so it finds none where the
    page should be. No page the fixture could render in its place writes nothing and hydrates.
 3. For a fixture with scope ids, which hydration does not compare, it renders the fixture afresh on
-   the client and holds every element's `data-v-` ids to the recorded ones (except in
-   `CLIENT_DIFFERS`, where Vue's own server and client disagree), and it checks that each scoped
-   component's id is the one `@vitejs/plugin-vue` gave it.
+   the client and holds every element's `data-v-` ids to the recorded ones, except in the fixtures
+   in `CLIENT_DIFFERS`, where Vue's own server and client disagree and which must still differ; and
+   it checks that each scoped component's id is the one `@vitejs/plugin-vue` gave it. Each of these
+   lists names fixtures that exist.
 4. It checks that `generated/` is exactly what the compiler writes now.
 5. `tests/conformance.rs` renders every fixture through the generated Rust and compares the result
    with the same `.html`.
