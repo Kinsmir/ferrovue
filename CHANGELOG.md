@@ -240,6 +240,20 @@ released together and share version numbers.
 - A `.vue` file that is empty or holds only a `<style>` is refused (FV0002) at line 1, column 1,
   and Vue's message names it by its path relative to the project, where it had no location and
   the absolute path.
+- In content Vue renders from virtual nodes, a static `class` written before `:class` with other
+  attributes between the two is refused (FV1013): Vue writes the class where the static one
+  stands, and ferrovue where `:class` stands. A `:class` array there keeps the static names first
+  too (`class="a" :class="[x, y]"` is `class="a x y"`). Found by the fuzzer; `VnodeClass` records
+  it.
+- A setup value or a provided value that is a string built from another temporary
+  (`props.label.toLowerCase().padStart(6, "0")`) compiles: the generated Rust borrowed a value
+  dropped at the end of its statement. Setup strings built by `format!` and the like are held as
+  the `String` itself.
+- An integer setup value computed through JavaScript's arithmetic (`props.n * -1`, `(-1) * 0`)
+  keeps `-0`, so `1 / value` is `-Infinity` as in Vue; it was cast to an integer first.
+- Strings holding bidirectional controls (U+202A to U+202E, U+2066 to U+2069) in a template,
+  a constant or a setup value compile: they are escaped in the generated Rust, whose compiler
+  rejects them written out. `SetupValues` records these three.
 
 ## [0.5.0] - 2026-10-05
 
