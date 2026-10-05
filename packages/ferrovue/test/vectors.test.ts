@@ -63,6 +63,26 @@ function stringOp(op: string, input: string, args: string[]): unknown {
 }
 
 describe("vectors shared with the Rust crate", () => {
+  it("holds every vector it was written with", () => {
+    const floors: [string, number, string?][] = [
+      ["trim.json", 10],
+      ["length.json", 12],
+      ["comment.json", 28],
+      ["class.json", 14],
+      ["attrs.json", 61],
+      ["strings.json", 4655],
+      ["compare.json", 400],
+      ["parse.json", 498],
+      ["keys.json", 8],
+      ["json.json", 12],
+      ["head.json", 458],
+      ["escape.json", 10, CORE],
+      ["numbers.json", 370, CORE],
+      ["math.json", 715, CORE],
+    ];
+    expect(floors.map(([name, least, dir]) => [name, Math.min((read(name, dir) as unknown[]).length, least)])).toEqual(floors.map(([name, least]) => [name, least]));
+  });
+
   it("trim.json is String.prototype.trim", () => {
     for (const [input, want] of (read("trim.json") as [string, string][])) expect(input.trim(), JSON.stringify(input)).toBe(want);
   });

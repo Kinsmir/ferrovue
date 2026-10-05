@@ -55,6 +55,7 @@ function withoutComponents(routes: FileRoute[]): Recorded[] {
 }
 
 it("records the routes vue-router builds from each folder of pages", async () => {
+  expect(Object.keys(trees).length).toBeGreaterThanOrEqual(9);
   const recorded: Record<string, Recorded[]> = {};
   for (const [name, files] of Object.entries(trees)) {
     recorded[name] = await vueRouterRoutes(project(Object.fromEntries(files.map((f) => [f, page]))));

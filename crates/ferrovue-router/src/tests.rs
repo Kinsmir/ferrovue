@@ -119,6 +119,13 @@ fn file_based_routes_resolve_and_activate_as_vue_router_does() {
 }
 
 fn check_nested(v: &Nested, want: &NestedExpected) {
+    assert!(
+        !v.links.is_empty() && !v.named.is_empty() && !v.locations.is_empty(),
+        "the vectors were not all read"
+    );
+    assert_eq!(v.links.len(), want.links.len());
+    assert_eq!(v.named.len(), want.named.len());
+    assert_eq!(v.locations.len(), want.locations.len());
     let router = Router::tree(route_defs(&v.routes));
     for ((at, to), (href, active, exact)) in v.links.iter().zip(&want.links) {
         let link = router.at(at).link(to);
@@ -204,6 +211,7 @@ fn links_resolve_as_vue_router_resolves_them() {
 fn object_links_resolve_as_vue_router_resolves_them() {
     let v = vectors();
     assert!(v.objects.len() >= 20, "the vectors were not all read");
+    assert_eq!(v.objects.len(), v.expected_objects.len());
     let router = router(&v);
     for ((at, to), (href, active)) in v.objects.iter().zip(&v.expected_objects) {
         let mut search = String::new();
@@ -235,6 +243,8 @@ fn object_links_resolve_as_vue_router_resolves_them() {
 #[test]
 fn use_route_reads_what_vue_router_reads() {
     let v = vectors();
+    assert!(v.locations.len() >= 18, "the vectors were not all read");
+    assert_eq!(v.locations.len(), v.expected_locations.len());
     let router = router(&v);
     for (at, want) in v.locations.iter().zip(&v.expected_locations) {
         let route = router.at(at);
@@ -268,6 +278,8 @@ fn use_route_reads_what_vue_router_reads() {
 #[test]
 fn links_under_a_base_resolve_as_vue_router_resolves_them() {
     let v = vectors();
+    assert!(v.bases.len() >= 6, "the vectors were not all read");
+    assert_eq!(v.bases.len(), v.expected_bases.len());
     for ((base, at, to), (href, active)) in v.bases.iter().zip(&v.expected_bases) {
         let router = router(&v).with_base(base);
         let link = router.at(at).link(to);
