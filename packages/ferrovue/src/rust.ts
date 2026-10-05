@@ -224,8 +224,8 @@ export function componentSource(comp: Component, ast: N[], ssr: string, componen
   for (const l of opening) e.stmt(l);
   statements(scope, e, fn.body.body);
   for (let i = opening.length - 1; i >= 0; i--) {
-    const name = /^let (\w+)/.exec(opening[i]!)![1]!;
-    if (!e.reads(name, i + 1)) e.lines.splice(i, 1);
+    const name = /^let (\w+)/.exec(opening[i]!)?.[1];
+    if (name !== undefined && !e.reads(name, i + 1)) e.lines.splice(i, 1);
   }
   e.flush();
   const text = textLen(comp, "props", { k: "struct", name: "Props" });

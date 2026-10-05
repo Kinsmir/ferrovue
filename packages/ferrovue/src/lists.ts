@@ -45,7 +45,7 @@ function itemVal(of: Ty, param: string, byRef: boolean, lone?: boolean): Val {
   return { code, ty: of, ...(lone ? { lone } : {}) };
 }
 
-function arrow(s: Scope, fn: N, list: Val, of: Ty, byRef: boolean, method: string, body: (inner: Scope) => string): { closure: string; enumerate: boolean } {
+export function arrow(s: Scope, fn: N, list: Val, of: Ty, byRef: boolean, method: string, body: (inner: Scope) => string): { closure: string; enumerate: boolean } {
   const comp = s.comp;
   if (fn?.type !== "ArrowFunctionExpression" || fn.async || fn.params.length > 2) {
     fail(comp, "FV0805", `\`.${method}()\` takes an arrow function of the item, and of its index: \`x => …\`, \`(x, i) => …\``, fn);

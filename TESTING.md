@@ -19,7 +19,7 @@ pnpm test:browser          # the same fixtures, and the full-stack example, hydr
 |---|---|---|---|
 | **Conformance** | `crates/ferrovue/tests/conformance/` | Each component × fixture renders identically in Vue and in the generated Rust, and Vue hydrates the HTML with no mismatch | `@vue/server-renderer`, Vue's hydration |
 | **Browser hydration** | `packages/ferrovue/browser/`, `examples/fullstack/browser/` | Every fixture's recorded HTML, parsed by Chromium, Firefox and WebKit, hydrates with no mismatch and is left as parsed; the full-stack example's pages do too, and their islands work | Vue's hydration, the browsers' HTML parsers |
-| **Shared vectors** | `crates/*/tests/vectors/`: `ferrovue-core` (escaping, numbers), `ferrovue-router`, `ferrovue` (the rest) | The runtime's reimplementations of `trim`, `.length`, `escapeHtml`, `String(number)`, `Math`, `toFixed`, `normalizeClass` of an object, `ssrRenderSlot`'s test of slot content that is only comments, the string methods (`slice`, `at`, `split`, `replace`, `padStart`, … on astral characters, halves of pairs, negative and `NaN` indices), string ordering, `Number` / `parseInt` / `parseFloat`, `JSON.stringify` of strings, an object's order of keys, `mergeProps` and `ssrRenderAttrs` of attributes, and vue-router's link resolution (string and object `to`, named routes, query and hash encoding, history base) and `useRoute()` fields agree with the originals | JavaScript, `@vue/shared`, `@vue/server-renderer`, vue-router |
+| **Shared vectors** | `crates/*/tests/vectors/`: `ferrovue-core` (escaping, numbers), `ferrovue-router`, `ferrovue` (the rest) | The runtime's reimplementations of `trim`, `.length`, `escapeHtml`, `String(number)`, `Math`, `toFixed`, `normalizeClass` of an object, `ssrRenderSlot`'s test of slot content that is only comments, the string methods (`slice`, `at`, `split`, `replace`, `padStart`, … on astral characters, halves of pairs, negative and `NaN` indices), string ordering, `Number` / `parseInt` / `parseFloat`, `JSON.stringify` of strings, an object's order of keys, `mergeProps` and `ssrRenderAttrs` of attributes, unhead's server head (`head.json`: tag order, deduplication, title templates and escaping, over hand-written heads and heads drawn at random with markup-breaking values), and vue-router's link resolution (string and object `to`, named routes, query and hash encoding, history base) and `useRoute()` fields agree with the originals | JavaScript, `@vue/shared`, `@vue/server-renderer`, `@unhead/vue`, vue-router |
 | **Compiler** | `packages/ferrovue/test/compiler.test.ts` | Constructs that a careless translation would get subtly wrong are refused with a named error; key translations have the expected shape | Hand-written |
 | **CLI** | `packages/ferrovue/test/cli.test.ts` | `ferrovue` writes, replaces, and `--check` detects stale and stray files | Hand-written |
 | **Runtime units** | `crates/*/src/<module>/tests.rs` beside each module, `crates/ferrovue-router/src/tests.rs`, `crates/ferrovue/src/web.rs` | Escaping, slots, fallbacks, holes, islands, the state script, router edge cases; a streamed page's order and the axum and actix-web responses | Hand-written |
@@ -58,6 +58,12 @@ fixtures/X/case.json            Vue hydrates it: no mismatch warnings, same DOM 
 6. `tests/conformance.rs` declares `generated/` as a public module, so `cargo clippy -- -D warnings`
    holds the generated code to the lints a crate that exports it meets, such as
    `new_without_default`, which clippy does not check on an item no other crate can reach.
+
+A fixture whose components call `useHead` records the head unhead's server head renders after
+its HTML, behind `<!--fv-head-->`, and the generated `render_json` writes `Head::render` the same
+way. Hydrating it puts the recorded tags in the document's head and installs unhead's client
+head, which must take them over unchanged, except in the fixtures in `UNHEAD_REWRITES`, where
+unhead's own server writes a value in markup the HTML parser reads back as something else.
 
 A fixture is a JSON object of props plus three optional keys:
 
@@ -119,6 +125,7 @@ A fixture is a JSON object of props plus three optional keys:
 | `SlotProbe` | `useSlots()`: a slot's presence tested in the template and in a `computed` |
 | `TabsPage`, `Tabs`, `Tab`, `ThemedButton`, `ThemeScope` | `provide` and `inject` with `InjectionKey` symbols from `types/keys.ts` and string keys: a `Tabs`/`Tab` compound pair whose context is a `reactive()` object, a themed button with defaults, a factory default and a ref default, each rendered with and without a provider; a provider in a parent and a grandparent, a nearer one shadowing it, slot content seeing the providers of the component that renders it, a component injecting what it then provides anew, and a key holding a function |
 | `ThemedShelf`, `ThemedList` | The same through scoped slots and `:slotted()` slot scope ids, lists, fractions mixed with integers and booleans provided |
+| `HeadPage`, `HeadArticle`, `HeadSeo` | `useHead` and `useSeoMeta` from `@unhead/vue` in a parent and its children: a title template over a child's title, every kind of tag, `htmlAttrs` and `bodyAttrs` with class and style objects and lists, getters, `computed`s, a `meta` per item of a list (`.map`), a list as `content`, JSON in a `script`, `tagPosition`, `key`, tags a later component replaces, absent, `null`, empty and `"true"` values. The head unhead's server renders is recorded after the HTML, behind `<!--fv-head-->` |
 
 Every component has at least one **hostile** fixture: markup-breaking characters in every prop that
 reaches the page.

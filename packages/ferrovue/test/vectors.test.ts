@@ -7,7 +7,11 @@ import { escapeHtml, normalizeClass } from "@vue/shared";
 import { describe, expect, it } from "vitest";
 import { mergeProps } from "vue";
 import { ssrRenderAttrs, ssrRenderSlotInner } from "vue/server-renderer";
+import { useHead, useSeoMeta } from "@unhead/vue";
+import { createHead } from "@unhead/vue/server";
 import { isComment } from "../src/template.ts";
+import { seoMetaKey } from "../src/plugins/head.ts";
+import { type Call, headCases } from "./head-inputs.ts";
 
 const DIR = join(import.meta.dirname, "../../../crates/ferrovue/tests/vectors");
 const CORE = join(import.meta.dirname, "../../../crates/ferrovue-core/tests/vectors");
@@ -227,4 +231,35 @@ describe("vectors shared with the Rust crate", () => {
   it("length.json is String.prototype.length", () => {
     for (const [input, want] of (read("length.json") as [string, number][])) expect(input.length, JSON.stringify(input)).toBe(want);
   });
+
+  // `{ defaults, calls, expected }`: each call `{ head }` as `Head::push` takes it, or `{ seo }` as
+  // the compiler writes `useSeoMeta` (its title and template, then each key's attribute and name),
+  // and what unhead's server head renders, recorded with `FERROVUE_VECTORS_WRITE=1`.
+  it("head.json is unhead's server head", () => {
+    const recorded = headCases().map(({ defaults, calls }) => {
+      const head = createHead(defaults ? {} : { disableDefaults: true });
+      for (const call of calls) {
+        if ("head" in call) useHead(call.head, { head });
+        else useSeoMeta(call.seo, { head });
+      }
+      return { defaults, calls: calls.map(written), expected: head.render() };
+    });
+    if (process.env.FERROVUE_VECTORS_WRITE === "1") return writeVectors("head.json", recorded);
+    expect(read("head.json")).toEqual(recorded);
+  });
 });
+
+function encoded(v: unknown): unknown {
+  if (v === undefined) return { $u: 1 };
+  if (typeof v === "number" && (!Number.isFinite(v) || Object.is(v, -0))) return { $n: Object.is(v, -0) ? "-0" : String(v) };
+  if (Array.isArray(v)) return v.map(encoded);
+  if (v && typeof v === "object") return { $o: Object.keys(v).map((k) => [k, encoded((v as Record<string, unknown>)[k])]) };
+  return v;
+}
+
+function written(call: Call): unknown {
+  if ("head" in call) return { head: encoded(call.head) };
+  const { title, titleTemplate, ...rest } = call.seo;
+  const meta = Object.entries(rest).map(([key, value]) => [...seoMetaKey(key), encoded(value)]);
+  return { seo: [encoded({ title, titleTemplate }), meta] };
+}

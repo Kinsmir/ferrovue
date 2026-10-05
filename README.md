@@ -183,6 +183,7 @@ ferrovue compiles `<script setup lang="ts">` components, and components with no 
 | Pinia | option stores with a typed `state`, and setup stores (`defineStore(id, () => { … })`) whose returned refs are typed by `ref<T>()` or their initial literal; read through `useX()` or `storeToRefs`, in the template or in `computed`; getters that are an expression of the state, and a setup store's computeds, which may read each other |
 | vue-i18n | `$t` and `useI18n()`'s `t` and `locale`: named and list values, plurals by vue-i18n's rule, literals, linked messages with `upper`/`lower`/`capitalize`, nested and flat keys, fallback locales, a missing key shown as itself. Messages are parsed at build time by vue-i18n's own compiler |
 | `v-html` | only on a `TrustedHtml` prop (`import type { TrustedHtml } from "ferrovue/types"`) |
+| Page head | `useHead` (and `useServerHead`) from `@unhead/vue` 3: `title`, `titleTemplate`, `base`, `meta`, `link`, `script`, `style`, `noscript`, `htmlAttrs` and `bodyAttrs`, with values the server computes (props, setup bindings, getters such as `() => props.title`, `list.map(x => ({ … }))` for a list of tags), `key`, `tagPosition`, `tagPriority` and `tagDuplicateStrategy`; `useSeoMeta` (and `useServerSeoMeta`) of string, number, boolean and `null` values. Collected into a `ferrovue::Head` in the order Vue's server runs them, and written as unhead's `renderSSRHead` writes them: its tag order, deduplication, title template and escaping. See [Page head](#page-head) |
 
 Refused at compile time, each with an error that names the construct:
 
@@ -194,6 +195,9 @@ Refused at compile time, each with an error that names the construct:
   over a prop that may be absent, or naming a key its object lacks or a tag that is not an HTML
   element; `v-html` or `v-text` on it; and, inside an element it chooses (which Vue renders from
   virtual nodes), a `<slot>` with fallback content, `v-show`, and `v-model` on a `<select>`
+- in the page head: options given to `useHead`, `useHeadSafe`, `templateParams`, a `titleTemplate`
+  function, event handlers (`onload`), a `class` or `style` that may be `null` (on which unhead's
+  renderer throws), and an object or array given to a `useSeoMeta` key
 - the Options API (a `<script>` without `setup`), and a type parameter of a generic component with
   no constraint (`generic="T"`)
 - constants that are not literals (`Date.now()`, a function), an object constant read whole or by a
@@ -421,6 +425,25 @@ let modals = teleports.get("#modals").unwrap_or_default(); // inside <div id="mo
 
 As Vue recommends, teleport to a dedicated element such as `#modals`: the browser hydrates
 a target from its first node, and `body` also holds the app.
+
+### Page head
+
+A component that calls `useHead` or `useSeoMeta` from `@unhead/vue` takes a `ferrovue::Head`, which
+collects the calls of the whole tree in the order Vue's server runs them. After rendering the body,
+write the head as unhead's server renderer writes it:
+
+```rust
+let head = ferrovue::Head::new(); // createHead(): lang="en", charset and viewport; or Head::without_defaults()
+book_page::render(&mut body, &props, &head);
+let tags = head.render(); // head_tags, body_tags_open, body_tags, html_attrs, body_attrs
+let page = format!("<html{}><head>{}</head><body{}>{}{}{}</body></html>",
+    tags.html_attrs, tags.head_tags, tags.body_attrs, tags.body_tags_open, body, tags.body_tags);
+```
+
+On the client the head is unhead's: give the page's app its client head,
+`mountPage(layout, islands, { plugins: [createHead()] })` with `createHead` from
+`@unhead/vue/client`, and it takes over the tags the server wrote. The crate's
+[`head`](https://docs.rs/ferrovue/latest/ferrovue/guide/head/index.html) guide has the details.
 
 ### Scoped slots from Rust
 
@@ -666,6 +689,7 @@ of Vue and of each integration. Your project may use any later patch of the same
 | `vue-router` (optional) | `~5.3.1` | 5.3.1 |
 | `pinia` (optional) | `~4.0.3` | 4.0.3 |
 | `vue-i18n` (optional) | `~11.4.13` | 11.4.13 |
+| `@unhead/vue` (optional) | `~3.4.2` | 3.4.2 |
 
 A new minor of any of them (Vue 3.6, vue-router 5.4, …) needs a ferrovue release that re-records
 the fixtures from it. A weekly CI job re-records them from the newest patch each range allows and
@@ -677,7 +701,7 @@ before it reaches you; a ferrovue patch follows when one does.
 ```text
 crates/ferrovue/             the Rust runtime crate, which generated code calls
   src/                       a module per part (`Html`, slots, class and style, the state script,
-                             strings, teleports, fallthrough attributes), each module's unit tests
+                             strings, teleports, the page head, fallthrough attributes), each module's unit tests
                              beside it in <module>/tests.rs; lib.rs re-exports them all, and the
                              three crates below
   tests/conformance/         components, fixtures, recorded HTML, generated Rust
@@ -704,7 +728,7 @@ packages/ferrovue/           the compiler (npm package)
                              attributes, class and style, attributes a parent passes on
   src/plugin.ts              the plugin interface (see CONTRIBUTING.md)
   src/plugins/               vue-router, Pinia, vue-i18n, scoped styles, <Teleport>, shared types,
-                             <ClientOnly>, Rust twins, provide and inject
+                             <ClientOnly>, Rust twins, provide and inject, the page head
   src/rust.ts, emitter.ts    the Rust source written out
   src/cli.ts, vite.ts        the `ferrovue` command and the Vite plugin
   src/diff.ts                the diff `ferrovue --check --diff` prints for a stale file

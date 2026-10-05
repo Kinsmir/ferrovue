@@ -60,11 +60,17 @@ it("is marked free of side effects, so bundlers drop what is not imported", () =
   expect(pkg.sideEffects).toBe(false);
 });
 
-it("accepts the patches of exactly the Vue, vue-router, Pinia and vue-i18n minors its fixtures were recorded from", () => {
+function installedVersion(name: string): string {
   const require = createRequire(join(ROOT, "package.json"));
-  for (const name of ["vue", "vue-router", "pinia", "vue-i18n"]) {
+  let dir = dirname(require.resolve(name));
+  while (!existsSync(join(dir, "package.json")) || (JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { name?: string }).name !== name) dir = dirname(dir);
+  return (JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { version: string }).version;
+}
+
+it("accepts the patches of exactly the Vue, vue-router, Pinia, vue-i18n and unhead minors its fixtures were recorded from", () => {
+  for (const name of ["vue", "vue-router", "pinia", "vue-i18n", "@unhead/vue"]) {
     const range = pkg.peerDependencies[name]!;
-    const installed = (require(`${name}/package.json`) as { version: string }).version;
+    const installed = installedVersion(name);
     const [major, minor, patch] = range.replace(/^~/, "").split(".").map(Number) as [number, number, number];
     const [iMajor, iMinor, iPatch] = installed.split(".").map((n) => Number.parseInt(n, 10)) as [number, number, number];
     expect(range, name).toMatch(/^~\d+\.\d+\.\d+$/);

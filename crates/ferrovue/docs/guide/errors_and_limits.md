@@ -239,7 +239,7 @@ island gets empty props and the client leaves the server's markup as it is.
 - **Optional values must be narrowed** before use, as TypeScript requires: `v-if="user"`,
   `user !== undefined`, `??`.
 - **One render per buffer at a time**: a render borrows its `String` mutably; render pages in
-  parallel by giving each its own buffer. [`Teleports`](crate::Teleports) is per page and not
-  `Sync`.
+  parallel by giving each its own buffer. [`Teleports`](crate::Teleports) and
+  [`Head`](crate::Head) are per page and not `Sync`.
 - **Same versions**: generated code and this crate are released together. After upgrading either,
   regenerate with the matching compiler.

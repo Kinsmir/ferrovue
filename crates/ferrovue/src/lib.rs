@@ -10,6 +10,7 @@ mod conformance;
 pub mod dioxus;
 #[cfg(any(doc, doctest))]
 pub mod guide;
+mod head;
 mod html;
 mod hydrate;
 mod json;
@@ -29,6 +30,7 @@ pub use attrs::{
 };
 pub use class::{class_into, class_object};
 pub use conformance::check_fixtures;
+pub use head::{Head, HeadHtml, HeadValue};
 pub use html::Html;
 pub use hydrate::Hydrate;
 pub use page::{Page, PageHole, PageRecord, PageScript, PageSlot, Part};

@@ -55,6 +55,26 @@ released together and share version numbers.
   a fixture per choice (`ShapePicker`, `ShapeRoot`, `TagHeading`, `TagGallery`, `TagContent`, and `ThemedChoice` with provide and inject), and
   the fuzzer writes `<component :is>` choosing between a helper component and another one or an
   element.
+- The page head: `useHead`, `useServerHead`, `useSeoMeta` and `useServerSeoMeta` from
+  `@unhead/vue` 3 in `<script setup>`, with values the server computes: props, setup bindings,
+  getters (`title: () => props.title`), and `list.map(x => ({ … }))` for a list of tags. A component
+  that calls one, or renders a child that does, takes a `ferrovue::Head`, which collects the calls
+  in the order Vue's server runs them; after the body renders, `Head::render()` gives what unhead's
+  `renderSSRHead` gives: the tags for `<head>`, the start and end of `<body>`, and the attributes of
+  `<html>` and `<body>`, in unhead's order (its capo weights, `tagPriority`, `tagPosition`),
+  deduplicated by its keys (`key`, a meta's `name` or `property`, `canonical`, `charset`, …), with
+  the title template applied and every value escaped as unhead escapes it. `Head::new()` holds
+  unhead's defaults, as `createHead()` does, and `Head::without_defaults()` none. Conformance
+  components (`HeadPage`, `HeadArticle`, `HeadSeo`) and 440 heads recorded from unhead's server
+  renderer (`tests/vectors/head.json`, hand-written and drawn at random with markup-breaking values
+  in every field) hold it to unhead. `useHeadSafe`, options given to `useHead`, `templateParams`, a
+  `titleTemplate` function, event handlers, a `class` or `style` that may be `null` and an object
+  given to a `useSeoMeta` key are refused with codes `FV1701` to `FV1711`. `@unhead/vue` is an
+  optional peer of the npm package: `fixtureApp` and `conformanceSuite` install its server head
+  when it is installed, and record the head after the fixture's HTML; hydrating a fixture installs
+  its client head over the recorded tags, which it takes over with no change. The guide's `head`
+  page shows a page and the client; `examples/fullstack` sets its titles and meta tags from its
+  components.
 
 ### Changed
 

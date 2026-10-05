@@ -77,6 +77,7 @@
     "source-map-js": "^1.2.2"
   },
   "devDependencies": {
+    "@unhead/vue": "^3.4.2",
     "@vue/server-renderer": "3.5.43",
     "pinia": "^4.0.3",
     "playwright": "1.63.0",
@@ -87,6 +88,7 @@
     "vue-router": "^5.3.1"
   },
   "peerDependencies": {
+    "@unhead/vue": "~3.4.2",
     "pinia": "~4.0.3",
     "vite": ">=6",
     "vitest": ">=5",
@@ -95,6 +97,9 @@
     "vue-router": "~5.3.1"
   },
   "peerDependenciesMeta": {
+    "@unhead/vue": {
+      "optional": true
+    },
     "vue-router": {
       "optional": true
     },
