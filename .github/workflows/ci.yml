@@ -9,7 +9,7 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -21,18 +21,16 @@ jobs:
   typescript:
     name: TypeScript (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
         node: [22, 24]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: ./.github/actions/pnpm
         with:
           node-version: ${{ matrix.node }}
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
@@ -48,14 +46,12 @@ jobs:
   lint:
     name: Lint (oxlint, fallow)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: ./.github/actions/pnpm
         with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          save: ${{ github.ref == 'refs/heads/main' }}
       - run: pnpm lint
       - name: Both workspaces list every member by its path, without wildcards
         run: node scripts/release.ts members
@@ -63,14 +59,15 @@ jobs:
   deny:
     name: Dependencies (cargo-deny ${{ matrix.checks }})
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
         checks: [advisories, bans licenses sources]
-    continue-on-error: ${{ matrix.checks == 'advisories' && !startsWith(github.ref, 'refs/tags/') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
+        continue-on-error: ${{ matrix.checks == 'advisories' && !startsWith(github.ref, 'refs/tags/') }}
         with:
           command: check ${{ matrix.checks }}
           rust-version: stable
@@ -78,17 +75,18 @@ jobs:
   rust:
     name: Rust (${{ matrix.toolchain }})
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         toolchain: [stable, "1.99"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master
+      - uses: ./.github/actions/rust
         with:
           toolchain: ${{ matrix.toolchain }}
           components: clippy, rustfmt
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+          cache-key: rust
       - run: cargo test --workspace --all-features --locked
       - name: Each runtime crate's tests, on their own
         run: for crate in ferrovue-core ferrovue-router ferrovue-i18n; do cargo test -p "$crate" --locked; done
@@ -109,10 +107,12 @@ jobs:
   examples:
     name: Example renders
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: ./.github/actions/rust
+        with:
+          cache-key: examples
       - name: The example builds outside a test build, and renders its page
         run: cargo run -p ferrovue-example-greeting --locked | grep -q 'data-island="Greeting"'
       - name: The Dioxus example renders its page, with the island in it
@@ -121,16 +121,13 @@ jobs:
   fullstack:
     name: Full-stack example hydrates
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: ./.github/actions/rust
         with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          cache-key: fullstack
+      - uses: ./.github/actions/pnpm
       - name: Build ferrovue, which the example imports as a package (ferrovue/vite, ferrovue/client)
         run: pnpm --filter ferrovue build
       - name: The example's generated Rust is current
@@ -158,21 +155,18 @@ jobs:
   browser:
     name: Hydrates in real browsers
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: ./.github/actions/rust
         with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          cache-key: browser
+      - uses: ./.github/actions/pnpm
       - name: The Playwright version, whose browsers to fetch
         id: playwright
         working-directory: packages/ferrovue
         run: echo "version=$(node -p 'require("playwright/package.json").version')" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         id: browsers
         with:
           path: ~/.cache/ms-playwright
@@ -180,6 +174,11 @@ jobs:
       - name: Chromium, Firefox and WebKit, with the system libraries they need
         if: steps.browsers.outputs.cache-hit != 'true'
         run: pnpm --filter ferrovue exec playwright install --with-deps chromium firefox webkit
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: github.ref == 'refs/heads/main' && steps.browsers.outputs.cache-hit != 'true'
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ steps.browsers.outputs.cache-primary-key }}
       - name: The system libraries the cached browsers need
         if: steps.browsers.outputs.cache-hit == 'true'
         run: pnpm --filter ferrovue exec playwright install-deps chromium firefox webkit
@@ -189,16 +188,13 @@ jobs:
   package:
     name: Packages publish cleanly
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: ./.github/actions/rust
         with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          cache-key: package
+      - uses: ./.github/actions/pnpm
       - name: The crates package and build from their own tarballs
         run: cargo package -p ferrovue-core -p ferrovue-router -p ferrovue-i18n -p ferrovue --locked
       - name: The npm package packs, with its build, README and licences
@@ -222,19 +218,30 @@ jobs:
   bench:
     name: Benchmarks run (quick)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: ./.github/actions/rust
         with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          cache-key: bench
+      - uses: ./.github/actions/pnpm
       - name: ferrovue's generated renderers (criterion)
         run: cargo bench -p ferrovue --bench render --locked -- --warm-up-time 1 --measurement-time 2
       - name: Vue's renderToString (tinybench)
         run: pnpm bench:js
         env:
           FERROVUE_BENCH_QUICK: "1"
+
+  passed:
+    name: CI passed
+    if: always()
+    needs: [typescript, lint, deny, rust, examples, fullstack, browser, package, bench]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every job passed
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "$RESULTS"
+          for result in $RESULTS; do [[ "$result" == success ]] || exit 1; done

@@ -91,6 +91,9 @@ released together and share version numbers.
   `<script setup lang="ts">`, or no script at all" when another component imports it, and "an
   island needs …" otherwise, instead of a message about islands for both. A child that is not
   among the compiled components says so instead of asking for an "imported island".
+- CI's jobs set up Rust and pnpm through shared composite actions, each job has a timeout, and a
+  final **CI passed** job sums up the others. Only runs on `main` save the cargo, pnpm and
+  Playwright caches; pull requests restore them without writing their own.
 
 ### Fixed
 

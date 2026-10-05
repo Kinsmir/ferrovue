@@ -18,6 +18,7 @@ jobs:
   verify:
     name: The tag matches the repository
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     outputs:
       version: ${{ steps.version.outputs.version }}
       prerelease: ${{ steps.version.outputs.prerelease }}
@@ -72,6 +73,7 @@ jobs:
     name: Stage on npm
     needs: [verify, ci]
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     outputs:
       approve: ${{ steps.stage.outputs.approve }}
     permissions:
@@ -79,14 +81,10 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: ./.github/actions/pnpm
         with:
-          node-version: 24
-          cache: pnpm
           registry-url: https://registry.npmjs.org
       - run: npm install -g npm@^12
-      - run: pnpm install --frozen-lockfile
       - name: Stage the package, unless this version is already on npm
         id: stage
         working-directory: packages/ferrovue
@@ -127,6 +125,7 @@ jobs:
     name: Publish on crates.io
     needs: [verify, ci]
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     environment: release
     permissions:
       contents: read
@@ -166,17 +165,13 @@ jobs:
     name: GitHub release
     needs: [verify, npm, crates]
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/pnpm
       - name: Build every package to attach
         env:
           VERSION: ${{ needs.verify.outputs.version }}

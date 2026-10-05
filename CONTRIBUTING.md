@@ -92,7 +92,8 @@ integration.
 - CI must be green: tests on Node 22 and 24 and on stable Rust and the declared minimum, `pnpm lint`,
   clippy and rustfmt, docs, the example, hydration in real browsers (`pnpm test:browser`), both
   packages packing cleanly, and `cargo deny` on the dependencies' licences, bans and sources. A new
-  RustSec advisory shows in the run without failing a pull request; it does fail a release.
+  RustSec advisory shows in the run without failing a pull request; it does fail a release. The
+  **CI passed** job sums up the rest: it fails when any other CI job does.
 - A new dependency must be under a licence `deny.toml` allows (permissive ones compatible with
   MIT OR Apache-2.0) and come from crates.io.
 - A new crate, example or npm package is listed by its path in `Cargo.toml`'s `members` or
