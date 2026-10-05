@@ -501,6 +501,7 @@ with Vue's lazy hydration strategies:
 use ferrovue::Hydrate;
 
 reviews::island(&props).hydrate(Hydrate::Visible);               // scrolled into view
+footer::island(&props).hydrate(Hydrate::visible_with("200px"));  // within 200px of the view
 chart::island(&props).hydrate(Hydrate::Idle);                    // the browser is idle
 counter::island(&props).hydrate(Hydrate::Interaction);           // pointerenter, click or focus
 menu::island(&props).hydrate(Hydrate::InteractionOn(&["keydown"]));

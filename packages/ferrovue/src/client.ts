@@ -109,7 +109,7 @@ const interaction =
 function trigger(when: string): Trigger | undefined {
   const colon = when.indexOf(":");
   const [kind, arg] = colon < 0 ? [when, undefined] : [when.slice(0, colon), when.slice(colon + 1)];
-  if (kind === "visible" && arg === undefined) return strategy(hydrateOnVisible());
+  if (kind === "visible") return strategy(hydrateOnVisible(arg ? { rootMargin: arg } : undefined));
   if (kind === "idle" && arg === undefined) return idle;
   if (kind === "interaction") return interaction((arg ?? "").split(/\s+/).filter(Boolean));
   if (kind === "media" && arg !== undefined) return strategy(hydrateOnMediaQuery(arg || "all"));
@@ -120,7 +120,8 @@ function trigger(when: string): Trigger | undefined {
  * `Html::island` wrote becomes an app of the component of that name, given the props the server
  * rendered it with, mounted where it is. A loader is called only for an island the page holds, all
  * of them at once, and the islands mount in document order once every one has loaded. An island
- * with a `data-hydrate` (`Html::hydrate`) waits instead: once it is visible, the browser is idle,
+ * with a `data-hydrate` (`Html::hydrate`) waits instead: once it is visible (or within a root margin
+ * of the viewport), the browser is idle,
  * it is interacted with or a media query matches, its component is loaded and it hydrates. */
 export async function mountIslands(components: Record<string, IslandComponent>, options: MountOptions = {}): Promise<Islands> {
   const root = options.root ?? document;
@@ -174,14 +175,20 @@ export async function mountIslands(components: Record<string, IslandComponent>, 
       continue;
     }
     let started = false;
-    waiting.push(
-      wait(el, async () => {
-        if (started || stopped) return;
-        started = true;
-        const [component] = await Promise.all([loadIsland(name), ready]);
-        if (!stopped) mount(el, name, component);
-      }),
-    );
+    try {
+      waiting.push(
+        wait(el, async () => {
+          if (started || stopped) return;
+          started = true;
+          const [component] = await Promise.all([loadIsland(name), ready]);
+          if (!stopped) mount(el, name, component);
+        }),
+      );
+    } catch (e) {
+      report(el, `${name} has data-hydrate=${JSON.stringify(when)}, which the browser rejects (${e instanceof Error ? e.message : String(e)}), so it hydrated at once`);
+      void loadIsland(name);
+      now.push(el);
+    }
   }
 
   const names = new Set(now.map((el) => el.dataset.island ?? "").filter((name) => Object.hasOwn(components, name)));

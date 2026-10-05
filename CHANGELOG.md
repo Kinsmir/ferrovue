@@ -29,10 +29,12 @@ released together and share version numbers.
 - Islands that hydrate later. `island(&props).hydrate(Hydrate::Visible)` writes
   `data-hydrate="visible"` on the island's wrapper, after `data-props`; `Hydrate::Idle`,
   `Hydrate::Interaction` (the first `pointerenter`, `click` or `focus` within the island),
-  `Hydrate::InteractionOn(&["keydown"])` and `Hydrate::media("(min-width: 60rem)")` write `idle`,
-  `interaction`, `interaction:keydown` and `media:(min-width: 60rem)`, escaped as any attribute is.
+  `Hydrate::InteractionOn(&["keydown"])`, `Hydrate::media("(min-width: 60rem)")` and
+  `Hydrate::visible_with("200px")` (a root margin) write `idle`, `interaction`, `interaction:keydown`,
+  `media:(min-width: 60rem)` and `visible:200px`, escaped as any attribute is.
   The markup inside the wrapper is unchanged. `mountIslands` waits on such an island with Vue's
-  `hydrateOnVisible`, `hydrateOnIdle` (200 ms where the browser has no `requestIdleCallback`) and
+  `hydrateOnVisible` (given the root margin, if any; one the browser rejects is reported and the
+  island hydrates at once), `hydrateOnIdle` (200 ms where the browser has no `requestIdleCallback`) and
   `hydrateOnMediaQuery`, or its own listeners for interaction, and calls the island's loader only
   when the trigger fires, so its chunk is fetched then. Events that reach an island waiting for
   interaction before it has hydrated are dispatched again once it has, so the click that woke it
