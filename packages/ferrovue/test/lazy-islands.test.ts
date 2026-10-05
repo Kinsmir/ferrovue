@@ -161,6 +161,19 @@ it("hydrates an island that waits for interaction on the first event, then dispa
   islands.unmount();
 });
 
+it("dispatches no event again into an island unmounted while its component loads", async () => {
+  const { pinia, lazyIsland } = page("interaction");
+  const islands = await mountIslands(lazy("Text", "Counter"), { pinia });
+  const heard: string[] = [];
+  document.addEventListener("click", () => heard.push("click"));
+  lazyIsland.querySelector("h4")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  islands.unmount();
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  expect(calls).toEqual(["Text", "Counter"]);
+  expect(islands.apps).toHaveLength(0);
+  expect(heard).toEqual(["click"]);
+});
+
 it("hears a focus within the island, which does not bubble", async () => {
   const { pinia, lazyIsland } = page("interaction");
   const islands = await mountIslands(lazy("Text", "Counter"), { pinia });
