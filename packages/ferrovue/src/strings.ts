@@ -33,7 +33,7 @@ export function isTemporary(v: Val): boolean {
   if (v.ty.k !== "str") return false;
   const trimmed = /^fv::js_trim(?:_start|_end)?\(([^]*)\)$/.exec(v.code);
   if (trimmed?.[1] !== undefined) return isTemporary({ code: trimmed[1].replace(/^&(?!\*)/, "&*"), ty: v.ty });
-  return /^&\*(?![\w.]+$)/.test(v.code) || /\.unwrap_or\(&\*(?![\w.]+\)$)/.test(v.code);
+  return /^&\*(?!\**[\w.]+$)/.test(v.code) || /\.unwrap_or\(&\*(?!\**[\w.]+\)$)/.test(v.code);
 }
 
 export function asCow(v: Val): string {

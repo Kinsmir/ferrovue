@@ -52,7 +52,7 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(584 + props.s1.len() + props.os1.as_deref().map_or(0, str::len) + props.l2.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(600 + props.s1.len() + props.os1.as_deref().map_or(0, str::len) + props.l2.iter().map(|v| v.len()).sum::<usize>());
     out.push_str("<div><p>1e+21|100000000000000000000|9007199254740992</p><i alt=\"100000000000000000000\" id=\"1e+21\"></i><b placeholder=\"");
     fv::escape_into(out, &(if props.s1.starts_with("Σ") { std::borrow::Cow::<str>::Borrowed(&*props.s1) } else { std::borrow::Cow::<str>::Owned(fv::js_to_fixed(1.0f64, 0)) }));
     out.push_str("\"></b><p>");
@@ -148,7 +148,17 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     fv::escape_into(out, &props.l2.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_s6| fv::js_split(&props.s1, " ").into_iter().map(|_| std::borrow::Cow::<str>::Owned(fv_s6.to_string())).any(|_| props.b0)).collect::<Vec<_>>().join(","));
     out.push('|');
     fv::escape_into(out, &(if props.b0 { std::borrow::Cow::<str>::Borrowed("a") } else { std::borrow::Cow::<str>::Owned(fv::js_char_at(&"é".to_uppercase(), 0.0f64).to_owned()) }));
-    out.push_str("</p></div>");
+    out.push_str("</p>");
+    super::fall_leaf::render_scoped(out, &super::fall_leaf::Props { label: std::borrow::Cow::Borrowed("x"), shown: None, note: None }, &fv::Attrs::new(&[("class", if props.b0 { fv::Attr::str("a") } else { fv::Attr::Str(std::borrow::Cow::<str>::Owned(fv::Js(props.f2).to_string())) }), ("title", fv::Attr::Str(if props.b0 { std::borrow::Cow::<str>::Owned(fv::Js(props.n3).to_string()) } else { std::borrow::Cow::<str>::Borrowed("b") }))], ""));
+    super::fall_pair::render_scoped(out, &super::fall_pair::Props { first: std::borrow::Cow::Borrowed("y") }, &fv::Attrs::new(&[("class", if true { fv::Attr::Str(std::borrow::Cow::<str>::Owned(fv::Js(0.5f64).to_string())) } else { fv::Attr::str(", ") })], ""));
+    out.push_str("<!--[-->");
+    for x_cow in fv::js_split(&props.s1, " ").into_iter().filter(|_| !props.b0) {
+        let x: &str = &x_cow;
+        out.push_str("<b>");
+        fv::escape_into(out, &fv::js_split("a", ",").into_iter().find(|fv_s10| if props.b0 { !fv_s10.is_empty() } else { !x.is_empty() }).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).unwrap_or(std::borrow::Cow::<str>::Borrowed("&")));
+        out.push_str("</b>");
+    }
+    out.push_str("<!--]--></div>");
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.

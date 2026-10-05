@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import FallLeaf from "./FallLeaf.vue";
+import FallPair from "./FallPair.vue";
 defineProps<{ s1: string; b0: boolean; os1?: string; ob2?: boolean; f2: number; l2: string[]; l4: number[]; n3: number }>();
 </script>
 
@@ -30,5 +32,7 @@ defineProps<{ s1: string; b0: boolean; os1?: string; ob2?: boolean; f2: number; 
     <i v-for="w in (f2).toFixed(3).split('.').slice(0, -1)">{{ w }}</i>
     <i v-for="x in s1.replace(' ', '$&').split('a')"></i><b v-for="x in s1.replaceAll('b', '$\'').split('')"></b><u v-for="x in s1.replace('<', '$`').split('🦀')"></u>
     <p>{{ s1.split(',').map((w) => w.substring(1)).join(', ') }}|{{ b0 ? (0.5).toFixed(1).replace('.', ',') : '-' }}|{{ b0 ? '-' : `px${f2}n=`.padStart(9, '·') }}|{{ l2.map((w, j) => -j).map((z) => 42 / z).join(',') }}|{{ l2.filter((w) => s1.split(' ').map(() => w).some(() => b0)).join(',') }}|{{ b0 ? 'a' : 'é'.toUpperCase().charAt(0) }}</p>
+    <FallLeaf label="x" :class="b0 ? 'a' : String(f2)" :title="b0 ? String(n3) : 'b'" /><FallPair first="y" :class="true ? String(0.5) : ', '" />
+    <b v-for="x in s1.split(' ').filter(() => !b0)">{{ 'a'.split(',').find((a) => (b0 ? a : x)) ?? '&amp;' }}</b>
   </div>
 </template>
