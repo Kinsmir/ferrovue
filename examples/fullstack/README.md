@@ -54,10 +54,10 @@ cargo run -p ferrovue-example-fullstack -- --render /books/dune
 | `client/components/BookPage.vue` | The detail page: `useRoute()` params in the template and in a `computed`, a named slot, a slot left as a hole for streaming |
 | `client/components/AddToBasket.vue` | An island: rendered with `add_to_basket::island()`, so it carries `data-island` and `data-props`; its click handler uses the shared store |
 | `client/components/Reviews.vue` | The slow part of the book page, streamed into the hole as an island, with `v-show` the client toggles; `<style scoped>` |
-| `client/app.ts` | `hydrateState` then `mountIslands`, with one Pinia and one router for every island |
+| `client/app.ts` | `hydrateState`, then `mountIslands` of `ferrovue/islands`, which the Vite plugin writes: every island by name, each loaded only on a page that holds it, with one Pinia and one router for them all |
 | `src/pages.rs` | Rendering pages from the generated `route_table::router()`, `Props::new(…)`, `Slots`, `ferrovue::state_script_into`, `ferrovue::hole()`, and `reviews::into_island()`, a page holding its props that a handler returns |
 | `src/main.rs` | The axum server: a `ferrovue::HtmlStream` per page, a book's reviews alone at `/books/{id}/reviews`, `dist/assets` served beside it, and `--render` |
-| `src/assets.rs` | Finding the entry's hashed script and stylesheet in Vite's manifest, or loading from the dev server |
+| `src/assets.rs` | Finding the entry's hashed script and stylesheets in Vite's manifest, the lazily loaded islands' stylesheets included, or loading from the dev server |
 | `test/hydration.test.ts` | The proof: the server's own HTML hydrates with no mismatch, and carries the scope ids the client build's stylesheet selects |
 | `browser/hydration.test.ts` | The same in Chromium, Firefox and WebKit: the server started on a free port, its pages opened, the islands clicked (`pnpm test:browser`) |
 
@@ -68,6 +68,12 @@ The server's page is static HTML except where the client is told otherwise. ferr
 `data-props` is all the client gets to mount it with. That is why `AddToBasket` calls
 `useBasket()` inside its click handler rather than in setup: the server render then needs no store,
 and the component stays an island.
+
+`client/app.ts` names no island: it hands `mountIslands` the `ferrovue/islands` module, which the
+Vite plugin writes from the components that have an `island()`. A new island needs nothing on the
+client, only the server calling its `island()`. Each is a chunk of its own, so the home page fetches
+`AddToBasket`'s code and not `Reviews`'s; the server links every island's stylesheet up front, so
+the markup is styled before its script arrives.
 
 `BasketSummary` reads the store while it renders, so it has no `island()`. The layout wraps it in
 `<div id="basket">`, and `client/app.ts` hydrates it there with the same Pinia. Clicking "Add to

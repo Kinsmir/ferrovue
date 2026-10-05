@@ -1,11 +1,12 @@
 /* The Vite plugin, driven as Vite drives it: `buildStart` with a plugin context, and a dev server's
- * watcher, logger and error channel. */
+ * watcher, logger, module graph and error channel; and `ferrovue/islands` through a real build. */
 import { EventEmitter } from "node:events";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import vuePlugin from "@vitejs/plugin-vue";
 import { afterEach, beforeEach, expect, it } from "vitest";
-import type { ViteDevServer } from "vite";
+import { build, type Rolldown, type ViteDevServer } from "vite";
 import ferrovue, { affects } from "../src/vite.ts";
 
 let root = "";
@@ -51,6 +52,7 @@ it("regenerates on the dev server's changes, and shows a refusal in the error ov
     watcher,
     ws: { send: (payload: unknown) => sent.push(payload) },
     config: { logger: { info: (m: string) => logged.push(m), error: (m: string) => logged.push(m) } },
+    moduleGraph: { getModuleById: () => undefined },
   } as unknown as ViteDevServer;
   (ferrovue({ root }).configureServer as (s: ViteDevServer) => void)(server);
 
@@ -102,4 +104,79 @@ it("ignores the output, dependencies, and files of other kinds", () => {
   expect(affects(root, join(root, "node_modules", "vue", "index.ts"))).toBe(false);
   expect(affects(root, join(root, "styles", "app.css"))).toBe(false);
   expect(affects(root, join(root, "..", "elsewhere.vue"))).toBe(false);
+});
+
+/** A component that takes a slot, so has no `island()`. */
+const frame = `<script setup lang="ts">
+defineProps<{ title: string }>();
+</script>
+<template><section><h2>{{ title }}</h2><slot /></section></template>`;
+
+it("writes `ferrovue/islands`: a loader for each component that has an `island()`", () => {
+  writeFileSync(join(root, "components", "Frame.vue"), frame);
+  const plugin = ferrovue({ root });
+  expect(plugin.enforce).toBe("pre");
+  const resolveId = plugin.resolveId as (id: string) => string | null;
+  const load = plugin.load as (this: unknown, id: string) => string | null;
+  const id = resolveId("ferrovue/islands")!;
+  expect(resolveId("ferrovue/client")).toBeNull();
+  expect(load.call({}, "elsewhere")).toBeNull();
+  // Loaded before any build started: it generates to find the islands.
+  expect(load.call({}, id)).toBe(`export default {\n  "Hello": () => import(${JSON.stringify(join(root, "components", "Hello.vue"))}),\n};\n`);
+  expect(readFileSync(join(root, "gen", "hello.rs"), "utf8")).toContain("pub fn island");
+});
+
+it("reloads the dev server's page when the islands change, and only then", () => {
+  const watcher = Object.assign(new EventEmitter(), { add: () => {} });
+  const sent: unknown[] = [];
+  const invalidated: unknown[] = [];
+  const islandsModule = { id: "ferrovue/islands" };
+  const server = {
+    watcher,
+    ws: { send: (payload: unknown) => sent.push(payload) },
+    config: { logger: { info: () => {}, error: () => {} } },
+    moduleGraph: { getModuleById: (id: string) => (id === "\0ferrovue/islands" ? islandsModule : undefined), invalidateModule: (m: unknown) => invalidated.push(m) },
+  } as unknown as ViteDevServer;
+  const plugin = ferrovue({ root });
+  (plugin.configureServer as (s: ViteDevServer) => void)(server);
+  buildStart(plugin);
+
+  // A change to an island's text leaves the set as it was.
+  writeFileSync(join(root, "components", "Hello.vue"), good.replace("Hello", "Bye"));
+  watcher.emit("change", join(root, "components", "Hello.vue"));
+  expect(sent).toEqual([]);
+
+  writeFileSync(join(root, "components", "Card.vue"), good);
+  watcher.emit("add", join(root, "components", "Card.vue"));
+  expect(invalidated).toEqual([islandsModule]);
+  expect(sent).toEqual([{ type: "full-reload" }]);
+
+  // A component that is no island changes nothing the page loads.
+  writeFileSync(join(root, "components", "Frame.vue"), frame);
+  watcher.emit("add", join(root, "components", "Frame.vue"));
+  expect(sent).toHaveLength(1);
+});
+
+it("splits each island into a chunk of its own in a build", async () => {
+  writeFileSync(join(root, "components", "Frame.vue"), frame);
+  writeFileSync(join(root, "components", "Card.vue"), good.replace("<p>", '<p class="card">'));
+  writeFileSync(join(root, "main.ts"), 'import islands from "ferrovue/islands";\nObject.assign(globalThis, { islands });\n');
+  const out = (await build({
+    root,
+    configFile: false,
+    logLevel: "silent",
+    plugins: [vuePlugin(), ferrovue({ root })],
+    build: { write: false, rolldownOptions: { input: join(root, "main.ts"), external: ["vue"] } },
+  })) as Rolldown.RolldownOutput;
+  const chunks = out.output.filter((o): o is Rolldown.OutputChunk => o.type === "chunk");
+  // A chunk per island, beside the entry and one they share: plugin-vue's helpers.
+  const islands = chunks.flatMap((c) => (c.facadeModuleId?.endsWith(".vue") ? [c.facadeModuleId.slice(root.length)] : []));
+  expect(islands.toSorted()).toEqual(["/components/Card.vue", "/components/Hello.vue"]);
+  const entry = chunks.find((c) => c.isEntry)!;
+  expect(entry.dynamicImports).toHaveLength(2);
+  expect(entry.code).not.toContain("Hello, ");
+});
+
+it("says what is missing when `ferrovue/islands` is imported without the plugin", async () => {
+  await expect(import("../src/islands.ts")).rejects.toThrow(/written by the Vite plugin: add `ferrovue\(\)` from `ferrovue\/vite`/);
 });

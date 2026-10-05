@@ -9,9 +9,12 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
-import { nextTick } from "vue";
+import { nextTick, type Component } from "vue";
 import { createMemoryHistory } from "vue-router";
-import { components, hydrate, type Hydrated } from "../client/app.ts";
+import islands from "ferrovue/islands";
+import { hydrate, type Hydrated } from "../client/app.ts";
+import BasketSummary from "../client/components/BasketSummary.vue";
+import Reviews from "../client/components/Reviews.vue";
 
 const ROOT = join(import.meta.dirname, "../../..");
 
@@ -63,19 +66,24 @@ async function hydrateAt(path: string): Promise<Hydrated> {
 
 /** The `data-v-` id the client build gave a component with `<style scoped>`. Hydration keeps the
  * server's attributes without comparing it, so a different one would leave the styles unapplied. */
-function scopeId(name: string): string {
-  const id = (components[name] as { __scopeId?: string }).__scopeId;
-  expect(id, `${name} has scoped styles`).toMatch(/^data-v-[0-9a-f]{8}$/);
+function scopeId(component: Component): string {
+  const id = (component as { __scopeId?: string }).__scopeId;
+  expect(id, `${(component as { __name?: string }).__name} has scoped styles`).toMatch(/^data-v-[0-9a-f]{8}$/);
   return id!;
 }
 
 /** Whether every element from `root` down carries `id`. */
 const scoped = (root: Element, id: string): boolean => [root, ...root.querySelectorAll("*")].every((el) => el.hasAttribute(id));
 
-it("scopes the client build's stylesheet to the ids the server writes", () => {
-  const manifest = JSON.parse(readFileSync(join(import.meta.dirname, "../dist/.vite/manifest.json"), "utf8")) as Record<string, { css?: string[] }>;
-  const css = manifest["client/main.ts"]!.css!.map((f) => readFileSync(join(import.meta.dirname, "../dist", f), "utf8")).join("");
-  for (const name of ["BasketSummary", "Reviews"]) expect(css).toContain(`[${scopeId(name)}]`);
+it("links the client build's stylesheets, scoped to the ids the server writes, the lazy islands' too", () => {
+  const links = [...pages.get("/books/dune")!.matchAll(/<link rel="stylesheet" href="\/([^"]+)">/g)].map((m) => m[1]!);
+  const css = links.map((f) => readFileSync(join(import.meta.dirname, "../dist", f), "utf8")).join("");
+  for (const component of [BasketSummary, Reviews]) expect(css).toContain(`[${scopeId(component)}]`);
+});
+
+it("loads every island by the name the server writes, and only those", async () => {
+  expect(Object.keys(islands)).toEqual(["AddToBasket", "Reviews"]);
+  expect((await islands.Reviews!()).default).toBe(Reviews);
 });
 
 /** The first node in each hydrated root: Vue keeps the server's node when it hydrates cleanly. */
@@ -92,7 +100,7 @@ it("hydrates the home page, an island per book and the store's summary, changing
   expect(roots()).toEqual(nodes);
   expect(document.body.innerHTML).toBe(html);
   // The summary's scoped styles reach the server's elements.
-  expect(scoped(document.querySelector("#basket .basket")!, scopeId("BasketSummary"))).toBe(true);
+  expect(scoped(document.querySelector("#basket .basket")!, scopeId(BasketSummary))).toBe(true);
 });
 
 it("hydrates a streamed book page, whose islands then share the store", async () => {
@@ -115,7 +123,7 @@ it("hydrates a streamed book page, whose islands then share the store", async ()
   expect(summary.textContent).toBe("Basket of guest: 2 books");
 
   // The streamed reviews island: two of three shown, until the button shows the rest.
-  expect(scoped(document.querySelector(".review-list")!, scopeId("Reviews"))).toBe(true);
+  expect(scoped(document.querySelector(".review-list")!, scopeId(Reviews))).toBe(true);
   const items = [...document.querySelectorAll<HTMLElement>(".review-list li")];
   expect(items.map((li) => li.style.display)).toEqual(["", "", "none"]);
   document.querySelector<HTMLButtonElement>("button.more")!.click();

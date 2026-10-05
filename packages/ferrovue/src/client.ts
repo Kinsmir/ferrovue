@@ -45,6 +45,13 @@ export interface MountOptions {
   onError?: (element: Element, problem: string) => void;
 }
 
+/** A component, or a function that loads one — `() => import("./Counter.vue")` — so that the code
+ * of an island not on the page is never fetched. A function is taken for a loader as vue-router
+ * takes one for a lazy route: unless it has `props` or `displayName`, which mark a functional
+ * component, or `__vccOpts`, a class component. `ferrovue/islands` maps the name of every island
+ * to a loader. */
+export type IslandComponent = Component | (() => Promise<Component | { default: Component }>);
+
 /** The islands mounted. */
 export interface Islands {
   /** One app per island, in document order. */
@@ -55,17 +62,32 @@ export interface Islands {
 
 /** Hydrate every island on the page: each `<div data-island="Name" data-props="…">` that
  * `Html::island` wrote becomes an app of the component of that name, given the props the server
- * rendered it with, mounted where it is. */
-export async function mountIslands(components: Record<string, Component>, options: MountOptions = {}): Promise<Islands> {
+ * rendered it with, mounted where it is. A loader is called only for an island the page holds, all
+ * of them at once, and the islands mount in document order once every one has loaded. */
+export async function mountIslands(components: Record<string, IslandComponent>, options: MountOptions = {}): Promise<Islands> {
   const root = options.root ?? document;
   const report = options.onError ?? ((el: Element, problem: string) => console.warn(`[ferrovue] island left unhydrated: ${problem}`, el));
-  if (options.router) await options.router.isReady();
-  const apps: App[] = [];
-  for (const el of Array.from(root.querySelectorAll<HTMLElement>("[data-island]"))) {
+  const elements = Array.from(root.querySelectorAll<HTMLElement>("[data-island]"));
+  // Each component the page names, loaded once however many islands it has.
+  const loading = new Map<string, Promise<Component | Error>>();
+  for (const el of elements) {
     const name = el.dataset.island ?? "";
-    const component = components[name];
+    if (Object.hasOwn(components, name) && !loading.has(name)) loading.set(name, load(components[name]!));
+  }
+  const [loaded] = await Promise.all([
+    Promise.all([...loading].map(async ([name, pending]) => [name, await pending] as const)).then((pairs) => new Map(pairs)),
+    options.router?.isReady(),
+  ]);
+  const apps: App[] = [];
+  for (const el of elements) {
+    const name = el.dataset.island ?? "";
+    const component = loaded.get(name);
     if (!component) {
-      report(el, `no component called ${JSON.stringify(name)} was given`);
+      report(el, `no component called ${JSON.stringify(name)} was given (\`ferrovue/islands\` holds every component that has an \`island()\`)`);
+      continue;
+    }
+    if (component instanceof Error) {
+      report(el, `${name} did not load: ${component.message}`);
       continue;
     }
     let props: Record<string, unknown>;
@@ -88,4 +110,16 @@ export async function mountIslands(components: Record<string, Component>, option
       for (const app of apps.splice(0)) app.unmount();
     },
   };
+}
+
+/** The component itself, or what its loader resolves to: a module's default export, or the
+ * component. A loader that rejects gives its error, which leaves only its own islands unhydrated. */
+async function load(component: IslandComponent): Promise<Component | Error> {
+  if (typeof component !== "function" || "props" in component || "displayName" in component || "__vccOpts" in component) return component;
+  try {
+    const loaded = await (component as () => Promise<Component | { default: Component }>)();
+    return typeof loaded === "object" && "default" in loaded ? loaded.default : loaded;
+  } catch (e) {
+    return e instanceof Error ? e : new Error(String(e));
+  }
 }

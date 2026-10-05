@@ -8,13 +8,11 @@ import { createSSRApp, type Component } from "vue";
 import { createPinia, type Pinia } from "pinia";
 import { createRouter, createWebHistory, type Router, type RouterHistory } from "vue-router";
 import { hydrateState, mountIslands, type Islands } from "ferrovue/client";
+// Every component with an `island()`, by name, each loaded only when the page holds one: the
+// ferrovue Vite plugin writes this from what the compiler found.
+import islands from "ferrovue/islands";
+import BasketSummary from "./components/BasketSummary.vue";
 import routes from "./routes.json" with { type: "json" };
-
-// Every component, by name: `data-island="AddToBasket"` is `components/AddToBasket.vue`.
-const modules = import.meta.glob<{ default: Component }>("./components/*.vue", { eager: true });
-export const components: Record<string, Component> = Object.fromEntries(
-  Object.entries(modules).map(([path, m]) => [path.replace(/^.*\/(\w+)\.vue$/, "$1"), m.default]),
-);
 
 /** The router the server's `route_table` mirrors: the same routes file, and the same link classes
  * as `ferrovue.config.json`. The pages are the server's, so no route has a view of its own here. */
@@ -45,16 +43,16 @@ export async function hydrate(history?: RouterHistory): Promise<Hydrated> {
   // A component that reads a store has no `island()` on the server, which writes props alone; the
   // layout wraps this one in `#basket` so it can be hydrated here, from the shared store.
   const basket = document.getElementById("basket");
-  const summary = basket && components.BasketSummary ? createSSRApp(components.BasketSummary, { label: "Basket" }).use(pinia) : null;
+  const summary = basket ? createSSRApp(BasketSummary, { label: "Basket" }).use(pinia) : null;
   summary?.mount(basket!);
 
-  const islands = await mountIslands(components, { pinia, router });
+  const mounted = await mountIslands(islands, { pinia, router });
   return {
     pinia,
     router,
-    islands,
+    islands: mounted,
     unmount() {
-      islands.unmount();
+      mounted.unmount();
       summary?.unmount();
     },
   };

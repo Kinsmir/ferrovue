@@ -26,7 +26,7 @@ import { readStores } from "./stores.ts";
 import { i18nSource, readLocales } from "./i18n.ts";
 import { scopeFor } from "./script.ts";
 import { scopeFlow } from "./scoped.ts";
-import { componentSource, modSource, routesSource, storesSource, typesSource } from "./rust.ts";
+import { componentSource, isIsland, modSource, routesSource, storesSource, typesSource } from "./rust.ts";
 
 /** Every generated file, keyed by its name in the output directory. */
 export function generate(root: string, config: Config = loadConfig(root)): Map<string, string> {
@@ -144,6 +144,9 @@ export interface Written {
   changed: string[];
   /** The files removed, which the components no longer produce. */
   removed: string[];
+  /** Every component that has an `island()`, by the name `data-island` carries, with its `.vue`
+   * file relative to the root: what `ferrovue/islands` loads. */
+  islands: Record<string, string>;
 }
 
 /** Write what \`generate\` produces to the configured directory: only the files whose text changed,
@@ -168,7 +171,8 @@ export function write(root: string, config: Config = loadConfig(root)): Written 
   }
   const removed = readdirSync(target).filter((f) => f.endsWith(".rs") && !files.has(f));
   for (const f of removed) rmSync(join(target, f));
-  return { files: [...files.keys()], changed, removed };
+  const islands = Object.fromEntries([...ctx.components.values()].filter(isIsland).map((c) => [c.name, c.file]));
+  return { files: [...files.keys()], changed, removed, islands };
 }
 
 export { CONFIG_FILE, loadConfig, TYPES_MODULE, type Config, type HelperSpec, type TypeName } from "./context.ts";

@@ -4,7 +4,8 @@
  * reader gets it. The client is built once (`vite build`, with Vue's mismatch details kept, which
  * production builds leave out), the server is started on a free port to serve it, and each page
  * is opened in each browser. The test fails on any warning or error the page logs, checks that
- * hydrating left the document as the browser parsed it, and clicks through the islands. */
+ * hydrating left the document as the browser parsed it, that a page fetches the code of its own
+ * islands alone, and clicks through the islands. */
 import { execFileSync, spawn, type ChildProcess } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -91,6 +92,8 @@ describe.each(BROWSERS)("%s", (name) => {
   let browser: Browser | undefined;
   let page: Page;
   let messages: Promise<string>[] = [];
+  /** The scripts the page fetched: each island's code only where the page holds one. */
+  let scripts: string[] = [];
   beforeAll(async () => {
     try {
       browser = await LAUNCHERS[name].launch();
@@ -105,6 +108,9 @@ describe.each(BROWSERS)("%s", (name) => {
       if ((m.type() === "warning" || m.type() === "error") && m.location().url.startsWith(origin)) messages.push(describeMessage(m));
     });
     page.on("pageerror", (e) => void messages.push(Promise.resolve(`uncaught: ${e.message}`)));
+    page.on("request", (r) => {
+      if (r.resourceType() === "script") scripts.push(new URL(r.url()).pathname);
+    });
     // The document as the browser parsed it, kept by a script the page runs just before the
     // client's: what hydrating must leave as it is.
     await page.route(`${origin}/**`, async (route) => {
@@ -121,6 +127,7 @@ describe.each(BROWSERS)("%s", (name) => {
   /** Open the page at `path`, and wait until every island and the basket summary are hydrated. */
   async function open(path: string): Promise<void> {
     messages = [];
+    scripts = [];
     await page.goto(`${origin}${path}`);
     // An app's container holds its root vnode once it has mounted.
     await page.waitForFunction(() =>
@@ -140,6 +147,8 @@ describe.each(BROWSERS)("%s", (name) => {
     await open("/");
     expect(await Promise.all(messages)).toEqual([]);
     expect(await page.locator("[data-island]").count()).toBe(4);
+    // Four AddToBasket islands, and no Reviews to load.
+    expect(scripts.filter((s) => /\/(AddToBasket|Reviews)-/.test(s))).toEqual([expect.stringMatching(/^\/assets\/AddToBasket-/)]);
     const [parsed, now] = await parsedAndNow();
     expect(now).toBe(parsed);
   });

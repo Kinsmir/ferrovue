@@ -76,16 +76,21 @@ see [`numbers`](crate::guide::numbers#keeping-islands-exact). On the client,
 ```ts
 import { createPinia } from "pinia";
 import { hydrateState, mountIslands } from "ferrovue/client";
-import Counter from "./components/Counter.vue";
+import islands from "ferrovue/islands";
 
 const pinia = createPinia();
 hydrateState(pinia);                                  // the state `state_script_into` wrote
-await mountIslands({ Counter }, { pinia, router });   // one Pinia and one router for every island
+await mountIslands(islands, { pinia, router });       // one Pinia and one router for every island
 ```
 
 `mountIslands` and `hydrateState` read the props and the state back with `JSON.parse`, taught the
 three tokens; anything else that is not JSON leaves the island as the server rendered it, and is
 reported.
+
+`ferrovue/islands` is written by the Vite plugin (`ferrovue/vite`): every component that has an
+`island()`, keyed by its `NAME`, each a lazy `import()`. The bundler gives each island a chunk of its
+own, and a page fetches only those of the islands it holds. `mountIslands` also takes components
+themselves, `mountIslands({ Counter })`, or a mixture of the two.
 
 Islands share the Pinia and router passed to `mountIslands`, so an island's click handler can change
 a store another part of the page shows.

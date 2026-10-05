@@ -32,6 +32,13 @@ released together and share version numbers.
   `Router` (its base and each route's full path and name), `Route` (the full path, the route's name
   and its parameters), `Html` (the island's name and the props), `Slot` (`Slot { .. }`) and `Js`.
   `Link` derives `Debug`, `Clone`, `PartialEq` and `Eq`.
+- `ferrovue/islands`, written by the Vite plugin: every component that has an `island()`, by the name
+  `data-island` carries, each a lazy `import()`, so `mountIslands(islands)` needs no list of
+  components and a page fetches the code of its own islands alone. `mountIslands` takes loaders
+  (`() => import("./Counter.vue")`) beside components, loads each component a page names once, and
+  reports an island whose component did not load. `write` returns the islands it found.
+- The full-stack example hydrates from `ferrovue/islands`, and its server links the stylesheets of the
+  lazily loaded islands up front.
 
 ### Fixed
 
