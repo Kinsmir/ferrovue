@@ -3,7 +3,6 @@
 import { type Component, type N, type Scope, type Ty, type Val, BOOL, fail, FLOAT, GenError, INT, opt, rustStr, sameTy, snake, STR, UNDEF } from "./model.ts";
 import { ctx } from "./context.ts";
 import { lookupStruct, markHome } from "./typescript.ts";
-import { translate } from "./plugins/i18n.ts";
 import { claim } from "./plugin.ts";
 import { AS, atom, bare, binary, condition, enclosed, FLIPPED, ifElse, logical, negate, not, occurrences, operand, receiver, strArg, UNARY } from "./parens.ts";
 import { collected, computed, computedListMethod, items, listMethod, objectCall } from "./lists.ts";
@@ -796,7 +795,9 @@ export function call(s: Scope, n: N): Val {
       case "_ssrLooseContain":
         return fail(comp, "`v-model` over an array", n);
     }
-    if (s.i18nT.has(callee.name)) return translate(s, args, n);
+    // A plugin's function, such as \`t(…)\` from \`useI18n()\`.
+    const own = claim((p) => p.call?.(s, n));
+    if (own) return own;
     const helper = s.helpers.get(callee.name);
     if (helper) return helperCall(s, helper, args, n);
     if (callee.name === "String" && args.length === 1) {
@@ -842,9 +843,9 @@ export function call(s: Scope, n: N): Val {
       if (v.ty.k === "bool") return { code: `if ${condition(v.code)} { "true" } else { "false" }`, ty: STR };
       return { code: `&*${json(s, v, args[0])}`, ty: STR };
     }
-    // `$t(…)` in the template, and \`t(…)\` from \`useI18n()\`.
-    if (callee.object.type === "Identifier" && callee.object.name === "_ctx" && method === "$t") return translate(s, args, n);
-    if (callee.object.type === "Identifier" && callee.object.name === "$setup" && s.i18nT.has(method)) return translate(s, args, n);
+    // A plugin's function, such as `$t(…)` in the template.
+    const own = claim((p) => p.call?.(s, n));
+    if (own) return own;
     if (callee.object.type === "Identifier" && (callee.object.name === "$setup" || callee.object.name === "_ctx")) {
       const helper = s.helpers.get(method);
       if (helper) return helperCall(s, helper, args, n);

@@ -173,8 +173,6 @@ export interface Component {
   imports: Set<string>;
   /** The slots its template renders with `<slot>`, by name, in order of first appearance. */
   slotNames: string[];
-  /** Whether it translates: \`$t\`, or \`useI18n()\` in setup. */
-  readsI18n: boolean;
   /** The render parameters it takes (\`RenderParam\`), by name: those it reads, and those a child
    * it renders takes. Known once every component is read. */
   takes: Set<string>;
@@ -222,7 +220,6 @@ export function blankComponent(name: string, module: string, file: string, struc
     childProps: new Map(),
     imports: new Set(),
     slotNames: [],
-    readsI18n: false,
     takes: new Set(),
     models: new Map(),
     aliases: new Map(),
@@ -266,8 +263,6 @@ export interface Scope {
   helperBytes: { n: number };
   /** Directives the compiled template resolved by name: local → the directive's name. */
   directives: Map<string, string>;
-  /** Setup bindings that are vue-i18n's \`t\`, from \`const { t } = useI18n()\`. */
-  i18nT: Set<string>;
   /** Inside slot content whose emptiness is decided at run time: each push that is not a comment
    * sets the closure's `filled`, which is how Vue tells content from nothing (`ssrRenderSlot`). */
   fill: boolean;

@@ -199,7 +199,6 @@ export function readComponent(file: string, root: string): { comp: Component; as
   for (const m of compiled.code.matchAll(/_ssrRenderSlot\(_ctx\.\$slots, "([^"]+)"/g)) {
     if (!comp.slotNames.includes(m[1]!)) comp.slotNames.push(m[1]!);
   }
-  comp.readsI18n = compiled.code.includes("_ctx.$t(");
   for (const p of ctx.plugins) p.compiled?.(comp, compiled.code, [...plainAst, ...ast]);
   return { comp, ast, ssr: compiled.code };
 }

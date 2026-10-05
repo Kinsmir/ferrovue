@@ -1,7 +1,7 @@
 /* `<script setup>` read: what the server evaluates, and what stays on the client. */
 
 import { basename } from "node:path";
-import { type Component, type N, type Scope, type Val, fail, GenError, snake, STR, takesAttrs } from "./model.ts";
+import { type Component, type N, type Scope, type Val, fail, GenError, snake, takesAttrs } from "./model.ts";
 import { CONFIG_FILE, ctx } from "./context.ts";
 import { definePropsType } from "./typescript.ts";
 import { expr, fieldVal } from "./expr.ts";
@@ -89,7 +89,6 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
     selfAlias: { name: null },
     helperBytes: { n: 0 },
     directives: new Map(),
-    i18nT: new Set(),
     fill: false,
     vnode: false,
     // A component a parent may pass attributes takes them with the scope ids, as one `fv::Attrs`.
@@ -101,7 +100,6 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
   };
   for (const p of ctx.plugins) if (p.scope) scope.plugins.set(p, p.scope(scope));
   const lets: string[] = [];
-  let useI18nName: string | null = null;
   let useAttrsName: string | null = null;
   for (const st of ast) {
     if (st.type === "ImportDeclaration") {
@@ -113,13 +111,7 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
       }
       // A module a plugin owns, such as vue-router or a store's file, is the plugin's to read.
       if (ctx.plugins.some((p) => p.scriptImport?.(scope, st, from))) continue;
-      if (from === "vue-i18n") {
-        for (const sp of st.specifiers) {
-          const name = sp.type === "ImportSpecifier" ? (sp.imported.name ?? sp.imported.value) : null;
-          if (name === "useI18n") useI18nName = sp.local.name;
-          else scope.clientOnly.set(sp.local.name, `\`${name}\` from vue-i18n does not run on the server`);
-        }
-      } else if (from === "vue") {
+      if (from === "vue") {
         for (const sp of st.specifiers) {
           if (sp.type === "ImportSpecifier" && (sp.imported.name ?? sp.imported.value) === "useAttrs") useAttrsName = sp.local.name;
         }
@@ -158,26 +150,8 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
         }
         continue;
       }
-      // A binding to what a plugin provides: \`useRoute()\`, a store, \`storeToRefs\`.
+      // A binding to what a plugin provides: \`useRoute()\`, a store, \`storeToRefs\`, \`useI18n()\`.
       if (ctx.plugins.some((p) => p.scriptBinding?.(scope, d))) continue;
-      const calls = (name: string | null) =>
-        name !== null && init0?.type === "CallExpression" && init0.callee.type === "Identifier" && init0.callee.name === name;
-      // `const { t, locale } = useI18n()`: \`t\` translates, \`locale\` is the request's locale.
-      if (d.id.type === "ObjectPattern" && calls(useI18nName)) {
-        for (const p of d.id.properties) {
-          if (p.type !== "ObjectProperty" || p.computed || p.value.type !== "Identifier") {
-            fail(comp, "`useI18n()` is destructured into plain names", p);
-          }
-          const key: string = p.key.name ?? p.key.value;
-          if (key === "t") scope.i18nT.add(p.value.name);
-          else if (key === "locale") {
-            scope.setup.set(p.value.name, { code: "fv_i18n.locale()", ty: STR });
-            scope.refs.add(p.value.name);
-          } else scope.clientOnly.set(p.value.name, `\`${key}\` from \`useI18n()\` does not run on the server`);
-        }
-        comp.readsI18n = true;
-        continue;
-      }
       if (d.id.type !== "Identifier") {
         // Destructuring anything else: client-side state the template may not read.
         for (const name of patternNames(d.id)) scope.clientOnly.set(name, "it is destructured from a value the server does not have");
