@@ -1450,6 +1450,9 @@ fn island_into<P: Serialize>(
 }
 
 mod attrs;
+#[cfg(feature = "dioxus")]
+#[cfg_attr(docsrs, doc(cfg(feature = "dioxus")))]
+pub mod dioxus;
 #[cfg(any(doc, doctest))]
 pub mod guide;
 pub mod i18n;

@@ -44,6 +44,9 @@ jobs:
       - name: The example's generated Rust is current
         working-directory: examples/greeting
         run: node ../../packages/ferrovue/src/cli.ts --check
+      - name: The Dioxus example's generated Rust is current
+        working-directory: examples/dioxus
+        run: node ../../packages/ferrovue/src/cli.ts --check
 
   lint:
     name: Lint (oxlint, fallow)
@@ -111,6 +114,8 @@ jobs:
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       - name: The example builds outside a test build, and renders its page
         run: cargo run -p ferrovue-example-greeting --locked | grep -q 'data-island="Greeting"'
+      - name: The Dioxus example renders its page, with the island in it
+        run: cargo run -p ferrovue-example-dioxus --locked | grep -q 'data-island="Counter"'
 
   fullstack:
     name: Full-stack example hydrates

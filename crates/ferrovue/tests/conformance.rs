@@ -215,3 +215,166 @@ fn props_are_built_with_constructors_and_setters() {
     let lists = generated::lists::Props::new(["a", "b"], vec![1, 2], vec![]);
     assert_eq!(lists.words.len(), 2);
 }
+
+/// Islands in a page that Dioxus renders: the markup inside each island is the HTML Vue recorded,
+/// byte for byte, with no hydration marker in it, and it carries the same props.
+#[cfg(feature = "dioxus")]
+mod dioxus {
+    use super::{generated, unescape};
+    use dioxus_core::{
+        Attribute, Element, IntoDynNode, Template, TemplateAttribute, TemplateNode, VNode,
+    };
+    use dioxus_ssr::Renderer;
+    use std::fs;
+    use std::path::Path;
+
+    /// `<main><h1>Books</h1>{island}</main>`: `rsx! { main { h1 { "Books" } {island} } }`.
+    static AROUND: Template = Template {
+        roots: &[TemplateNode::Element {
+            tag: "main",
+            namespace: None,
+            attrs: &[],
+            children: &[
+                TemplateNode::Element {
+                    tag: "h1",
+                    namespace: None,
+                    attrs: &[],
+                    children: &[TemplateNode::Text { text: "Books" }],
+                },
+                TemplateNode::Dynamic { id: 0 },
+            ],
+        }],
+        node_paths: &[&[0, 1]],
+        attr_paths: &[],
+    };
+
+    /// `rsx! { main { dangerous_inner_html: html } }`.
+    static INSIDE: Template = Template {
+        roots: &[TemplateNode::Element {
+            tag: "main",
+            namespace: None,
+            attrs: &[TemplateAttribute::Dynamic { id: 0 }],
+            children: &[],
+        }],
+        node_paths: &[],
+        attr_paths: &[&[0]],
+    };
+
+    /// The page as `dioxus-ssr` writes it, then as a fullstack server does, with hydration ids.
+    fn rendered(page: impl Fn() -> Element) -> [String; 2] {
+        let mut hydratable = Renderer::new();
+        hydratable.pre_render = true;
+        [
+            Renderer::new().render_element(page()),
+            hydratable.render_element(page()),
+        ]
+    }
+
+    /// An island's `data-props` value as it is written, and the markup inside the island.
+    fn split_island<'h>(html: &'h str, name: &str, hydration: &str) -> (&'h str, &'h str) {
+        let rest = html
+            .strip_prefix(&format!(r#"<div data-island="{name}" data-props=""#))
+            .unwrap_or_else(|| panic!("an island's start tag: {html}"));
+        let (props, rest) = rest.split_once('"').expect("the end of data-props");
+        let inner = rest
+            .strip_prefix(hydration)
+            .and_then(|r| r.strip_prefix('>'))
+            .and_then(|r| r.strip_suffix("</div>"))
+            .unwrap_or_else(|| panic!("the rest of the island: {rest}"));
+        (props, inner)
+    }
+
+    /// What a browser reads an attribute's value as, whichever way its references are spelled.
+    fn decoded(s: &str) -> String {
+        unescape(
+            &s.replace("&#34;", "&quot;")
+                .replace("&#60;", "&lt;")
+                .replace("&#62;", "&gt;")
+                .replace("&#38;", "&amp;"),
+        )
+    }
+
+    macro_rules! islands_in_a_dioxus_page {
+        ($($name:literal => $module:ident),* $(,)?) => {{
+            let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/conformance/fixtures");
+            let mut checked = 0;
+            $(
+                for file in fs::read_dir(root.join($name)).expect("fixtures") {
+                    let json = file.expect("fixture").path();
+                    if json.extension().is_none_or(|e| e != "json") {
+                        continue;
+                    }
+                    let source = fs::read_to_string(&json).unwrap();
+                    let props: generated::$module::Props = serde_json::from_str(&source).unwrap();
+                    let vue = fs::read_to_string(json.with_extension("html")).expect("recorded HTML");
+                    let ferrovue = generated::$module::island(&props).into_string();
+                    let (ferrovue_props, inner) = split_island(&ferrovue, $name, "");
+                    assert_eq!(inner, vue, "{}", json.display());
+
+                    // The island as an element of the page.
+                    let [plain, hydratable] = rendered(|| {
+                        Ok(VNode::new(
+                            None,
+                            AROUND,
+                            Box::new([generated::$module::island(&props).into_dyn_node()]),
+                            Box::new([]),
+                        ))
+                    });
+                    for (page, start, hydration) in [
+                        (&plain, "<main>", ""),
+                        (&hydratable, r#"<main data-node-hydration="0">"#, r#" data-node-hydration="1""#),
+                    ] {
+                        let island = page
+                            .strip_prefix(&format!("{start}<h1>Books</h1>"))
+                            .and_then(|p| p.strip_suffix("</main>"))
+                            .unwrap_or_else(|| panic!("the page around the island: {page}"));
+                        let (dioxus_props, inner) = split_island(island, $name, hydration);
+                        assert_eq!(inner, vue, "{}", json.display());
+                        assert_eq!(decoded(dioxus_props), decoded(ferrovue_props), "{}", json.display());
+                    }
+
+                    // The island as the content of an element of the page's own: every byte.
+                    let [plain, hydratable] = rendered(|| {
+                        let html = generated::$module::island(&props).into_string();
+                        Ok(VNode::new(
+                            None,
+                            INSIDE,
+                            Box::new([]),
+                            Box::new([Box::new([Attribute::new("dangerous_inner_html", html, None, false)])]),
+                        ))
+                    });
+                    assert_eq!(plain, format!("<main>{ferrovue}</main>"), "{}", json.display());
+                    assert_eq!(
+                        hydratable,
+                        format!(r#"<main data-node-hydration="0">{ferrovue}</main>"#),
+                        "{}",
+                        json.display()
+                    );
+                    checked += 1;
+                }
+            )*
+            checked
+        }};
+    }
+
+    #[test]
+    fn an_island_in_a_dioxus_page_is_the_island_vue_hydrates() {
+        let checked = islands_in_a_dioxus_page! {
+            "Text" => text,
+            "Strings" => strings,
+            "Numbers" => numbers,
+            "Exprs" => exprs,
+            "Markup" => markup,
+            "Attrs" => attrs,
+            "Lists" => lists,
+            "UserCard" => user_card,
+            "Records" => records,
+            "Regressions" => regressions,
+            "ScopedLeaf" => scoped_leaf,
+            "Prose" => prose,
+            "Parsing" => parsing,
+            "Chips" => chips,
+        };
+        assert!(checked >= 50, "only {checked} fixtures were found");
+    }
+}

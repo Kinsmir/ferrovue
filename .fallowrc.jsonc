@@ -9,6 +9,7 @@
     "crates/ferrovue/tests/conformance/stores/**",
     "crates/ferrovue/tests/conformance/types/**",
     "examples/greeting/components/**",
+    "examples/dioxus/components/**",
     "packages/ferrovue/browser/*.test.ts",
     "packages/ferrovue/browser/entry.ts",
     "scripts/inspect.ts"

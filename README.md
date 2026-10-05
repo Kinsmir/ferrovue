@@ -131,6 +131,11 @@ async fn hello(Path(name): Path<String>) -> impl IntoResponse {
 }
 ```
 
+With the `dioxus` feature, a component goes into a Dioxus 0.7 page (`dioxus-ssr` or fullstack):
+`{greeting::island(&props)}` in `rsx!` is the island element itself, with exactly the markup Vue
+hydrates inside it. See `examples/dioxus` and the crate guide's
+[Dioxus page](crates/ferrovue/docs/guide/dioxus.md).
+
 ## What a component may use
 
 ferrovue compiles `<script setup lang="ts">` components. Props are declared by type, with
@@ -447,6 +452,7 @@ packages/ferrovue/           the compiler (npm package)
   fuzz/                      the randomised differential tester (`pnpm fuzz`)
 examples/greeting/           the smallest setup: one component rendered from Rust
 examples/fullstack/          axum + Vite: islands, Pinia state, routes and streaming
+examples/dioxus/             a Dioxus page, rendered with dioxus-ssr, with an island in it
 scripts/release.ts           the release version bump (see RELEASING.md)
 ```
 

@@ -27,7 +27,8 @@ pnpm test:browser          # the same fixtures, and the full-stack example, hydr
 | **Differential fuzzing** | `packages/ferrovue/fuzz/` | Random components and props, within the grammar ferrovue accepts, render identically in Vue and in the generated Rust; each difference is shrunk to a small case (`pnpm fuzz`, nightly in CI, not part of `pnpm test`) | `@vue/server-renderer` |
 | **Mutation testing** | `.cargo/mutants.toml` | The tests above notice a small change to the runtime's source; every change they miss is listed, with the reason, as one that cannot alter the output (`cargo mutants`, weekly in CI) | cargo-mutants |
 | **Example** | `examples/greeting/` | Generated code compiles in an ordinary (non-test) consumer crate | `cargo build` |
-| **Full-stack example** | `examples/fullstack/` | An axum server's pages, streamed through holes, hydrate in the client built from the same components with no mismatch, their islands load from `ferrovue/islands` and share the store, and their elements carry the scope ids the client build's stylesheet selects | Vue's hydration (`pnpm --filter ferrovue-example-fullstack test`) |
+| **Dioxus** | `crates/ferrovue/tests/conformance.rs` (`--features dioxus`), `examples/dioxus/` | Every island fixture, rendered into a Dioxus page by `dioxus-ssr` (plainly and with fullstack hydration ids), holds exactly the HTML Vue recorded, with no marker inside it, and carries the same props; an island inside an element's `dangerous_inner_html` is every byte of `island()`; an `rsx!` page holds the example's island | `@vue/server-renderer`, `dioxus-ssr` |
+| **Full-stack example** | `examples/fullstack/` | An axum server's pages, streamed through holes, hydrate in the client built from the same components with no mismatch, their islands share the store, and their elements carry the scope ids the client build's stylesheet selects | Vue's hydration (`pnpm --filter ferrovue-example-fullstack test`) |
 
 ### Conformance in detail
 
