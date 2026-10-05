@@ -70,7 +70,9 @@ The props travel as JSON, serialised with `serde_json` and escaped for the attri
 `<script>`, so a page under a `script-src 'self'` policy needs no nonce for them. A `Float` that is
 `NaN` or infinite is written as the bare token JavaScript writes (`NaN`, `Infinity`, `-Infinity`)
 rather than the `null` `serde_json` alone writes, so the client gets the number the server rendered;
-see [`numbers`](crate::guide::numbers#keeping-islands-exact). On the client,
+see [`numbers`](crate::guide::numbers#keeping-islands-exact). An optional prop that is `None` is
+left out, which the client reads as `undefined`, and a nullable one (`T | null`) is written as
+`null`; see [`props`](crate::guide::props#nullable-props). On the client,
 `mountIslands` from `ferrovue` hydrates every island on the page:
 
 ```ts

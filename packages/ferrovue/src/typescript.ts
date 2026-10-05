@@ -1,7 +1,7 @@
 import { parse as parseJs } from "@babel/parser";
 import { readFileSync, statSync } from "node:fs";
 import { basename, dirname, join, relative, resolve } from "node:path";
-import { type Component, type Field, type N, type Struct, type Ty, blankComponent, BOOL, fail, FLOAT, INT, opt, RUST_PRELUDE, rustStr, sameTy, snake, STR, tagAst } from "./model.ts";
+import { type Absence, type Component, type Field, type N, type Struct, type Ty, absence, blankComponent, BOOL, fail, FLOAT, INT, joinAbsence, opt, RUST_PRELUDE, rustStr, sameTy, snake, STR, tagAst, withAbsence } from "./model.ts";
 import { CONFIG_FILE, ctx, TYPES_MODULE } from "./context.ts";
 import { childOf } from "./expr.ts";
 import { claim } from "./plugin.ts";
@@ -17,6 +17,10 @@ export function typesImports(comp: Component, body: N[]): void {
     }
   }
 }
+
+export const ONE_NOTHING = "its Rust type is an `Option`, whose `None` cannot be both, as `=== null` and the props sent to the client would need";
+
+const NULL_OR_UNDEFINED = `a type that is both \`null\` and \`undefined\`: ${ONE_NOTHING}; keep one of them`;
 
 export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen: Set<string> = new Set()): Ty {
   switch (t.type) {
@@ -47,14 +51,22 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
       if (t.literal.type === "BooleanLiteral") return BOOL;
       break;
     case "TSUnionType": {
-      const parts: N[] = t.types.filter((u: N) => u.type !== "TSUndefinedKeyword");
-      if (t.types.some((u: N) => u.type === "TSNullKeyword" || (u.type === "TSLiteralType" && u.literal.type === "NullLiteral"))) {
-        return fail(comp, "`null` in a type: use `undefined`, which is what an absent value is", t);
+      const isNull = (u: N) => u.type === "TSNullKeyword" || (u.type === "TSLiteralType" && u.literal.type === "NullLiteral");
+      let none: Absence | null = null;
+      const tys: Ty[] = [];
+      for (const u of t.types) {
+        if (u.type === "TSUndefinedKeyword") none = joinAbsence(none, "undefined");
+        else if (isNull(u)) none = joinAbsence(none, "null");
+        else {
+          const ty = tyOfTs(comp, u, structs, seen);
+          none = joinAbsence(none, absence(ty));
+          tys.push(ty.k === "opt" ? ty.of : ty);
+        }
       }
-      const tys = parts.map((u) => tyOfTs(comp, u, structs, seen));
+      if (none === "either") return fail(comp, NULL_OR_UNDEFINED, t);
       const first = tys[0];
       if (!first || tys.some((x) => !sameTy(x, first))) return fail(comp, "a union of different types has no Rust type", t);
-      return parts.length < t.types.length ? opt(first) : first;
+      return withAbsence(first, none);
     }
     case "TSTypeReference": {
       const name: string | undefined = t.typeName.type === "Identifier" ? t.typeName.name : undefined;
@@ -177,6 +189,9 @@ export function structOf(comp: Component, name: string, members: N[], structs: M
       fail(comp, `\`${name}\` may only hold plain named fields`, m);
     }
     const base = tyOfTs(comp, m.typeAnnotation.typeAnnotation, structs);
+    if (m.optional && absence(base) === "null") {
+      fail(comp, `\`${m.key.name}?: T | null\` may be absent, which is \`undefined\`, or \`null\`: ${ONE_NOTHING}; declare it \`${m.key.name}: T | null\` or \`${m.key.name}?: T\``, m);
+    }
     if (m.optional && base.k === "opt") {
       fields.push({ js: m.key.name, rust: snake(m.key.name), ty: base });
       continue;

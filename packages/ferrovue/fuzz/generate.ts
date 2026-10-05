@@ -70,6 +70,7 @@ export type Spec =
   | { k: "float" }
   | { k: "bool" }
   | { k: "opt"; of: Spec }
+  | { k: "nul"; of: Spec }
   | { k: "list"; of: Spec }
   | { k: "obj"; iface: string }
   | { k: "record"; of: Spec; dict: boolean };
@@ -149,6 +150,8 @@ function tsType(spec: Spec): string {
       return "boolean";
     case "opt":
       return tsType(spec.of);
+    case "nul":
+      return `${tsType(spec.of)} | null`;
     case "list":
       return `${tsType(spec.of)}[]`;
     case "obj":
@@ -159,7 +162,7 @@ function tsType(spec: Spec): string {
 }
 
 const usesFloat = (spec: Spec): boolean =>
-  spec.k === "float" || ((spec.k === "opt" || spec.k === "list" || spec.k === "record") && usesFloat(spec.of));
+  spec.k === "float" || ((spec.k === "opt" || spec.k === "nul" || spec.k === "list" || spec.k === "record") && usesFloat(spec.of));
 
 function printAttr(a: Attr): string {
   switch (a.k) {
@@ -374,6 +377,8 @@ function randomValue(r: Rng, spec: Spec, ifaces: Map<string, Iface>, hostile: bo
       return r.chance(0.5);
     case "opt":
       return r.chance(0.35) ? undefined : randomValue(r, spec.of, ifaces, hostile);
+    case "nul":
+      return r.chance(0.35) ? null : randomValue(r, spec.of, ifaces, hostile);
     case "list": {
       const out: unknown[] = [];
       for (let n = r.weighted([[1, 0], [2, 1], [4, r.int(2, 4)]]); n > 0; n--) out.push(randomValue(r, spec.of, ifaces, hostile));
@@ -436,6 +441,7 @@ interface Var {
   name: string;
   ty: Ty;
   opt: boolean;
+  nul?: boolean;
   bound: number;
   lone?: boolean;
 }
@@ -488,6 +494,9 @@ class Gen {
     else if (spec.k === "opt") {
       const ty = specTy(spec.of);
       if (ty) this.scope.vars.push({ name, ty, opt: !(prop && ty === "bool"), bound: specBound(spec.of) });
+    } else if (spec.k === "nul") {
+      const ty = specTy(spec.of);
+      if (ty) this.scope.vars.push({ name, ty, opt: true, nul: true, bound: specBound(spec.of) });
     } else {
       const ty = specTy(spec)!;
       this.scope.vars.push({ name, ty, opt: false, bound: specBound(spec), ...(lone && ty === "str" ? { lone } : {}) });
@@ -870,8 +879,10 @@ class Gen {
     const optVars = this.scope.vars.filter((v) => v.opt);
     if (optVars.length && r.chance(0.1)) {
       const v = r.pick(optVars);
-      const op = r.pick(["===", "!=="]);
-      return node("bool", [this.varRef(v)], ([a]) => `${a} ${op} undefined`);
+      const op = r.pick(["===", "!==", "==", "!="]);
+      const literal = op.length === 2 ? r.pick(["null", "undefined"]) : v.nul ? "null" : "undefined";
+      const flipped = r.chance(0.2);
+      return node("bool", [this.varRef(v)], ([a]) => (flipped ? `${literal} ${op} ${a}` : `${a} ${op} ${literal}`));
     }
     if (d <= 0 || r.chance(0.6)) return this.test(d);
     return r.weighted<() => Expr>([
@@ -1068,7 +1079,8 @@ class Gen {
       const narrowable = this.scope.vars.filter((v) => v.opt);
       if (narrowable.length && r.chance(0.3)) {
         const v = r.pick(narrowable);
-        const cond: Expr = { ...(r.chance(0.6) ? this.varRef(v) : node("bool", [this.varRef(v)], ([a]) => `${a} !== undefined`)), fixed: true };
+        const test = r.chance(0.3) ? `!= ${r.pick(["null", "undefined"])}` : `!== ${v.nul ? "null" : "undefined"}`;
+        const cond: Expr = { ...(r.chance(0.6) ? this.varRef(v) : node("bool", [this.varRef(v)], ([a]) => `${a} ${test}`)), fixed: true };
         const el = this.withScope(() => {
           this.scope.vars = this.scope.vars.map((x) => (x === v ? { ...x, opt: false } : x));
           return this.carrier(depth, ctx);
@@ -1179,6 +1191,7 @@ function randomSpec(r: Rng, ifaces: Iface[], depth: number): Spec {
     [3, () => ({ k: "float" })],
     [3, () => ({ k: "bool" })],
     [depth === 0 ? 4 : 1, () => ({ k: "opt", of: r.pick<Spec>([{ k: "str" }, { k: "int", wide: false }, { k: "float" }, { k: "bool" }]) })],
+    [depth === 0 ? 3 : 1, () => ({ k: "nul", of: r.pick<Spec>([{ k: "str" }, { k: "int", wide: false }, { k: "float" }, { k: "bool" }]) })],
     [depth === 0 ? 2 : 1, () => ({ k: "list", of: r.pick<Spec>([{ k: "str" }, { k: "str" }, { k: "int", wide: false }]) })],
     [depth === 0 && ifaces.length ? 2 : 0, () => ({ k: "list", of: { k: "obj", iface: r.pick(ifaces).name } })],
     [depth === 0 ? 1 : 0, () => ({ k: "record", of: r.pick<Spec>([{ k: "str" }, { k: "int", wide: false }, { k: "bool" }]), dict: r.chance(0.3) })],
@@ -1196,7 +1209,7 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
     ifaces.push({ name: `Row${ifaces.length}`, fields });
   }
   const props: { name: string; spec: Spec }[] = [];
-  const prefix = (s: Spec): string => (s.k === "opt" ? "o" + prefix(s.of) : s.k === "list" ? "l" : s.k === "record" ? "d" : { str: "s", int: "n", count: "c", float: "f", bool: "b", obj: "r" }[s.k]);
+  const prefix = (s: Spec): string => (s.k === "opt" ? "o" + prefix(s.of) : s.k === "nul" ? "z" + prefix(s.of) : s.k === "list" ? "l" : s.k === "record" ? "d" : { str: "s", int: "n", count: "c", float: "f", bool: "b", obj: "r" }[s.k]);
   for (let i = r.int(1, 7); i > 0; i--) {
     const spec = randomSpec(r, ifaces, 0);
     props.push({ name: `${prefix(spec)}${props.length}`, spec });
@@ -1234,7 +1247,7 @@ export function prune(c: Component): Component {
   const props = c.props.filter((p) => used(p.name));
   const live = new Set<string>();
   const visit = (s: Spec): void => {
-    if (s.k === "opt" || s.k === "list") visit(s.of);
+    if (s.k === "opt" || s.k === "nul" || s.k === "list") visit(s.of);
     else if (s.k === "obj" && !live.has(s.iface)) {
       live.add(s.iface);
       c.ifaces.find((i) => i.name === s.iface)!.fields.forEach((f) => visit(f.spec));
@@ -1419,27 +1432,30 @@ function* valueShrinks(v: unknown): Generator<unknown> {
 export function fixtureShrinks(c: Component, fixture: Record<string, unknown>): Record<string, unknown>[] {
   const out: Record<string, unknown>[] = [];
   const ifaces = new Map(c.ifaces.map((i) => [i.name, i]));
-  const optionalFields = (s: Spec): Set<string> =>
-    s.k === "list" && s.of.k === "obj" ? new Set(ifaces.get(s.of.iface)!.fields.filter((f) => f.spec.k === "opt").map((f) => f.name)) : new Set();
+  const fieldsOf = (s: Spec, k: "opt" | "nul"): Set<string> =>
+    s.k === "list" && s.of.k === "obj" ? new Set(ifaces.get(s.of.iface)!.fields.filter((f) => f.spec.k === k).map((f) => f.name)) : new Set();
   for (const p of c.props) {
     if (!(p.name in fixture)) continue;
     if (p.spec.k === "opt") {
       const { [p.name]: _, ...rest } = fixture;
       out.push(rest);
     }
-    const opt = optionalFields(p.spec);
-    if (opt.size) {
+    if (p.spec.k === "nul" && fixture[p.name] !== null) out.push({ ...fixture, [p.name]: null });
+    const opt = fieldsOf(p.spec, "opt");
+    const nul = fieldsOf(p.spec, "nul");
+    if (opt.size || nul.size) {
       const list = fixture[p.name] as Record<string, unknown>[];
       list.forEach((item, i) => {
         for (const k of Object.keys(item)) {
-          if (!opt.has(k)) continue;
-          const { [k]: _, ...rest } = item;
-          out.push({ ...fixture, [p.name]: list.map((x, j) => (j === i ? rest : x)) });
+          if (opt.has(k)) {
+            const { [k]: _, ...rest } = item;
+            out.push({ ...fixture, [p.name]: list.map((x, j) => (j === i ? rest : x)) });
+          } else if (nul.has(k) && item[k] !== null) out.push({ ...fixture, [p.name]: list.map((x, j) => (j === i ? { ...item, [k]: null } : x)) });
         }
       });
     }
     for (const s of valueShrinks(fixture[p.name])) {
-      if (typeof s === "number" && (p.spec.k === "int" || p.spec.k === "count" || (p.spec.k === "opt" && p.spec.of.k === "int")) && !Number.isInteger(s)) continue;
+      if (typeof s === "number" && (p.spec.k === "int" || p.spec.k === "count" || ((p.spec.k === "opt" || p.spec.k === "nul") && p.spec.of.k === "int")) && !Number.isInteger(s)) continue;
       out.push({ ...fixture, [p.name]: s });
     }
   }

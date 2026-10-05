@@ -1,8 +1,8 @@
 import { isSSRSafeAttrName, propsToAttrMap } from "@vue/shared";
-import { type Component, type N, type Scope, type Ty, type Val, camelize, declares, fail, GenError, rustStr, sameTy, snake, takesAttrs } from "./model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, camelize, declares, fail, nothing, GenError, rustStr, sameTy, snake, takesAttrs } from "./model.ts";
 import { ctx } from "./context.ts";
 import { markHome } from "./typescript.ts";
-import { expr, fieldVal } from "./expr.ts";
+import { expr, fieldVal, holdsNothing } from "./expr.ts";
 import { asF64 } from "./numbers.ts";
 import { atom, bare } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
@@ -73,6 +73,7 @@ export function renderChild(s: Scope, e: Emitter, n: N): void {
     const node = given.get(f.js);
     if (!node) {
       if (f.ty.k !== "opt") fail(s.comp, `${child.name} requires \`${f.js}\``, n);
+      if (f.ty.none !== undefined) fail(s.comp, `${child.name} requires \`${f.js}\`, which is \`T | null\`: Vue would hand it \`undefined\`; pass \`null\` for none`, n);
       return `${f.rust}: None`;
     }
     const v = expr(s, node);
@@ -212,12 +213,13 @@ export function callChild(s: Scope, e: Emitter, child: Component, propsCode: str
 }
 
 export function ownInto(comp: Component, v: Val, want: Ty, node: N): string {
+  holdsNothing(comp, v, want, node, "the prop");
+  if (want.k === "opt" && nothing(v.ty)) return "None";
   if (want.k === "str") {
     if (v.ty.k !== "str") fail(comp, "a string prop needs a string", node);
     return `std::borrow::Cow::Borrowed(${bare(v.code)})`;
   }
   if (want.k === "opt" && want.of.k === "str") {
-    if (v.ty.k === "undef") return "None";
     if (v.ty.k === "str") return `Some(std::borrow::Cow::Borrowed(${bare(v.code)}))`;
     if (v.ty.k === "opt" && v.ty.of.k === "str") return `${atom(v.code)}.map(std::borrow::Cow::Borrowed)`;
   }

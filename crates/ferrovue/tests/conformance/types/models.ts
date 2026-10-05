@@ -14,3 +14,10 @@ export interface User {
 }
 
 export type Badge = { label: string; tone?: string };
+
+export interface Entry {
+  title: string;
+  deletedAt: string | null;
+  score: number | null;
+  note?: string;
+}

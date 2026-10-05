@@ -84,3 +84,43 @@ impl<'a> Badge<'a> {
     }
 }
 
+
+/// `Entry` in `types/models.ts`.
+#[derive(Debug, Clone, serde::Serialize)]
+#[cfg_attr(test, derive(serde::Deserialize))]
+pub struct Entry<'a> {
+    #[serde(rename = "title")]
+    pub title: Cow<'a, str>,
+    #[serde(rename = "deletedAt")]
+    pub deleted_at: Option<Cow<'a, str>>,
+    #[serde(rename = "score")]
+    pub score: Option<i64>,
+    #[serde(rename = "note", default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<Cow<'a, str>>,
+}
+
+impl<'a> Entry<'a> {
+    /// Entry with its required fields, every optional one absent and every nullable one `null`.
+    pub fn new(title: impl Into<Cow<'a, str>>) -> Self {
+        Entry { title: title.into(), deleted_at: None, score: None, note: None }
+    }
+
+    /// Set `deletedAt`, which is `null` otherwise.
+    pub fn deleted_at(mut self, deleted_at: impl Into<Cow<'a, str>>) -> Self {
+        self.deleted_at = Some(deleted_at.into());
+        self
+    }
+
+    /// Set `score`, which is `null` otherwise.
+    pub fn score(mut self, score: i64) -> Self {
+        self.score = Some(score);
+        self
+    }
+
+    /// Set `note`, which is absent otherwise.
+    pub fn note(mut self, note: impl Into<Cow<'a, str>>) -> Self {
+        self.note = Some(note.into());
+        self
+    }
+}
+

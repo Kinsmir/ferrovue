@@ -80,6 +80,12 @@ function param(ty: Ty, comp: Component, arg: string): { ty: string; value: strin
   return { ty: rustTy(ty, comp), value: arg };
 }
 
+function absentNote(optional: Field[]): string {
+  const nulls = optional.filter((f) => f.ty.k === "opt" && f.ty.none === "null").length;
+  if (!nulls) return optional.length ? ", every optional one absent" : "";
+  return nulls === optional.length ? ", every nullable one `null`" : ", every optional one absent and every nullable one `null`";
+}
+
 function builderSource(st: Struct, comp: Component, life: string): string {
   const required = st.fields.filter((f) => f.ty.k !== "opt");
   const optional = st.fields.filter((f) => f.ty.k === "opt");
@@ -93,7 +99,7 @@ function builderSource(st: Struct, comp: Component, life: string): string {
     .map((f) => {
       const p = param((f.ty as Ty & { k: "opt" }).of, comp, arg(f));
       return `
-    /// Set \`${f.js}\`, which is absent otherwise.
+    /// Set \`${f.js}\`, which is ${(f.ty as Ty & { k: "opt" }).none === "null" ? "`null`" : "absent"} otherwise.
     pub fn ${f.rust}(mut self, ${arg(f)}: ${p.ty}) -> Self {
         self.${f.rust} = Some(${p.value});
         self
@@ -103,7 +109,7 @@ function builderSource(st: Struct, comp: Component, life: string): string {
   const usesA = /'a/.test(params + setters);
   const impl = life ? "impl<'a>" : usesA ? "impl<'a>" : "impl";
   return `${impl} ${st.name}${life} {
-    /// ${st.name} with ${required.length ? "its required fields" : "nothing set"}${optional.length ? ", every optional one absent" : ""}.
+    /// ${st.name} with ${required.length ? "its required fields" : "nothing set"}${absentNote(optional)}.
 ${required.length > 7 ? "    // One argument per required field, however many the type declares.\n    #[allow(clippy::too_many_arguments)]\n" : ""}    pub fn new(${params}) -> Self {
         ${st.name} { ${inits} }
     }
@@ -117,7 +123,7 @@ export function structSource(st: Struct, comp: Component, doc: string): string {
   const fields = st.fields
     .map((f) => {
       const attrs =
-        f.ty.k === "opt"
+        f.ty.k === "opt" && f.ty.none === undefined
           ? `    #[serde(rename = ${rustStr(f.js)}, default, skip_serializing_if = "Option::is_none")]`
           : `    #[serde(rename = ${rustStr(f.js)})]`;
       return `${attrs}\n    pub ${f.rust}: ${rustTy(f.ty, comp)},`;

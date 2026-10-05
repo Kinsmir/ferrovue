@@ -138,7 +138,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push('|');
     out.push_str(if props.on.unwrap_or(false) { "true" } else { "false" });
     out.push_str("</p><p");
-    if let Some(v) = (if let Some(n16) = props.label.as_deref() { Some(std::borrow::Cow::<str>::Owned(format!("{}!", n16))) } else { None }).as_deref() {
+    if let Some(v) = props.label.as_deref().map(|n16| std::borrow::Cow::<str>::Owned(format!("{}!", n16))).as_deref() {
         out.push_str(" title=\"");
         fv::escape_into(out, v);
         out.push('"');

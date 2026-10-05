@@ -59,6 +59,8 @@ export function list(s: Scope, e: Emitter, c: N): void {
     e.open(loop(bound, idx));
     if (of.k === "str") e.stmt(`let ${itemName}: &str = ${itemCode};`);
     else if (of.k === "struct" || of.k === "child") e.stmt(`let ${itemName} = ${itemCode};`);
+    else if (of.k === "opt" && of.of.k === "str") e.stmt(`let ${itemName} = ${itemCode}.as_deref();`);
+    else if (of.k === "opt" && !["int", "float", "bool"].includes(of.of.k)) e.stmt(`let ${itemName} = ${itemCode}.as_ref();`);
     else e.stmt(`let ${itemName} = *${itemName}_ref;`);
     itemLet = e.lines.length - 1;
   } else {

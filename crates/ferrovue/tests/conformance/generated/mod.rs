@@ -55,6 +55,8 @@ pub mod model;
 pub mod model_parent;
 pub mod narrowing;
 pub mod nav;
+pub mod null_child;
+pub mod nullable;
 pub mod number_includes;
 pub mod numbers;
 pub mod page;
@@ -82,6 +84,7 @@ pub mod scoped_rack;
 pub mod scoped_root;
 pub mod scoped_shelf;
 pub mod scoped_tree;
+pub mod session;
 pub mod setup;
 pub mod shown;
 pub mod strings;
@@ -372,6 +375,16 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let route = router.at(&fixture.route);
             nav::render(&mut out, &props, &route);
         }
+        "NullChild" => {
+            let props: null_child::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let s_default = |out: &mut String, _: &null_child::DefaultSlotProps<'_>| -> bool { out.push_str(fixture.slot("default").unwrap_or_default()); true };
+            null_child::render(&mut out, &props, null_child::Slots { default: fixture.slot("default").map(|_| &s_default as &null_child::DefaultSlot) });
+        }
+        "Nullable" => {
+            let props: nullable::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            nullable::render(&mut out, &props);
+        }
         "NumberIncludes" => {
             let props: number_includes::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             number_includes::render(&mut out, &props);
@@ -513,6 +526,12 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "ScopedTree" => {
             let props: scoped_tree::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             scoped_tree::render(&mut out, &props);
+        }
+        "Session" => {
+            let props: session::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let state: stores::Stores = serde_json::from_value(fixture.stores.clone()).map_err(|e| e.to_string())?;
+            session::render(&mut out, &props, &state);
         }
         "Setup" => {
             let props: setup::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

@@ -139,6 +139,37 @@ impl<'a> PrefsState<'a> {
 }
 
 
+/// `SessionState` in `stores/session.ts`.
+#[derive(Debug, Clone, Default, serde::Serialize)]
+#[cfg_attr(test, derive(serde::Deserialize))]
+#[cfg_attr(test, serde(default))]
+pub struct SessionState<'a> {
+    #[serde(rename = "user")]
+    pub user: Option<Cow<'a, str>>,
+    #[serde(rename = "visits")]
+    pub visits: Option<i64>,
+}
+
+impl<'a> SessionState<'a> {
+    /// SessionState with nothing set, every nullable one `null`.
+    pub fn new() -> Self {
+        SessionState { user: None, visits: None }
+    }
+
+    /// Set `user`, which is `null` otherwise.
+    pub fn user(mut self, user: impl Into<Cow<'a, str>>) -> Self {
+        self.user = Some(user.into());
+        self
+    }
+
+    /// Set `visits`, which is `null` otherwise.
+    pub fn visits(mut self, visits: i64) -> Self {
+        self.visits = Some(visits);
+        self
+    }
+}
+
+
 /// Every store's state, keyed by id as `pinia.state.value` is: what the page sends the client.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(Default, serde::Deserialize))]
@@ -150,12 +181,14 @@ pub struct Stores<'a> {
     pub counter: CounterState<'a>,
     #[serde(rename = "prefs")]
     pub prefs: PrefsState<'a>,
+    #[serde(rename = "session")]
+    pub session: SessionState<'a>,
 }
 
 impl<'a> Stores<'a> {
     /// Stores with its required fields.
-    pub fn new(cart: CartState<'a>, counter: CounterState<'a>, prefs: PrefsState<'a>) -> Self {
-        Stores { cart, counter, prefs }
+    pub fn new(cart: CartState<'a>, counter: CounterState<'a>, prefs: PrefsState<'a>, session: SessionState<'a>) -> Self {
+        Stores { cart, counter, prefs, session }
     }
 
 }

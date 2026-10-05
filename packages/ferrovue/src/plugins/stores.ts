@@ -1,9 +1,9 @@
 import { parse as parseJs } from "@babel/parser";
 import { readdirSync, readFileSync } from "node:fs";
 import { basename, dirname, join, relative, resolve } from "node:path";
-import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, blankComponent, BOOL, fail, FLOAT, GenError, INT, opt, sameTy, snake, STR, tagAst, UNDEF } from "../model.ts";
+import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, absence, blankComponent, BOOL, fail, FLOAT, GenError, INT, opt, sameTy, snake, STR, tagAst, UNDEF } from "../model.ts";
 import { ctx } from "../context.ts";
-import { structOf, tyOfTs, typesImports } from "../typescript.ts";
+import { ONE_NOTHING, structOf, tyOfTs, typesImports } from "../typescript.ts";
 import { patternNames, setupStatement } from "../script.ts";
 import { expr, fieldVal } from "../expr.ts";
 import { type Plugin, runOf, scopeOf } from "../plugin.ts";
@@ -188,6 +188,7 @@ function refType(comp: Component, init: N): Ty {
   const value = init.arguments[0];
   if (typed) {
     const ty = tyOfTs(comp, typed, run.structs);
+    if (!value && absence(ty) === "null") fail(comp, `a \`ref<T | null>()\` with no value starts \`undefined\`, and may be set to \`null\`: ${ONE_NOTHING}; start it at \`null\``, init);
     return value ? ty : opt(ty);
   }
   const literal = (n: N): Ty | null => {

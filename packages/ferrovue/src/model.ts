@@ -10,7 +10,8 @@ export type Ty =
   | { k: "float" }
   | { k: "bool" }
   | { k: "undef" }
-  | { k: "opt"; of: Ty }
+  | { k: "null" }
+  | { k: "opt"; of: Ty; none?: "null" | "either" }
   | { k: "list"; of: Ty }
   | { k: "record"; of: Ty }
   | StructTy
@@ -60,7 +61,33 @@ export const BOOL: Ty = { k: "bool" };
 
 export const UNDEF: Ty = { k: "undef" };
 
-export const opt = (of: Ty): Ty => (of.k === "opt" ? of : { k: "opt", of });
+export const NULL: Ty = { k: "null" };
+
+export type Absence = "undefined" | "null" | "either";
+
+export const opt = (of: Ty): Ty => (of.k !== "opt" ? { k: "opt", of } : of.none === undefined ? of : { k: "opt", of: of.of, none: "either" });
+
+export function absence(ty: Ty): Absence | null {
+  if (ty.k === "undef") return "undefined";
+  if (ty.k === "null") return "null";
+  if (ty.k === "opt") return ty.none ?? "undefined";
+  return null;
+}
+
+export function joinAbsence(a: Absence | null, b: Absence | null): Absence | null {
+  if (a === null || a === b) return b;
+  if (b === null) return a;
+  return "either";
+}
+
+export function withAbsence(of: Ty, none: Absence | null): Ty {
+  if (none === null) return of;
+  return none === "undefined" ? { k: "opt", of } : { k: "opt", of, none };
+}
+
+export function nothing(ty: Ty): boolean {
+  return ty.k === "undef" || ty.k === "null";
+}
 
 export const RUST_KEYWORDS = new Set(
   "as break const continue crate else enum extern false fn for if impl in let loop match mod move mut pub ref return self Self static struct super trait true type unsafe use where while async await dyn abstract become box do final macro override priv typeof unsized virtual yield try".split(
@@ -234,6 +261,11 @@ export function fail(comp: Component, what: string, node?: N): never {
   throw new GenError(`${comp.file}:${at.line}:${at.column + 1}: ${what}${snippet(comp, at)}`);
 }
 
+function canonical(_key: string, value: unknown): unknown {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  return Object.fromEntries(Object.entries(value).toSorted(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
+}
+
 export function sameTy(a: Ty, b: Ty): boolean {
-  return JSON.stringify(a) === JSON.stringify(b);
+  return JSON.stringify(a, canonical) === JSON.stringify(b, canonical);
 }
