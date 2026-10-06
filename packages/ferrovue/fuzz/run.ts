@@ -1,12 +1,13 @@
 import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { generate } from "../src/compiler.ts";
 import {
   type Case,
   type Component,
   caseSize,
   componentShrinks,
+  configOf,
   fixtureJson,
   fixtureShrinks,
   generateCase,
@@ -130,12 +131,12 @@ function evaluate(batch: string, items: Item[]): Map<string, Evaluated> {
     mkdirSync(join(dir, "components"), { recursive: true });
     mkdirSync(join(dir, "generated"), { recursive: true });
     writeFileSync(join(dir, "components", `${item.component.name}.vue`), printComponent(item.component));
-    for (const [file, text] of helperFiles(item.component)) writeFileSync(join(dir, "components", file), text);
+    for (const [file, text] of helperFiles(item.component)) write(join(dir, "components", file), text);
     item.fixtures.forEach((f, i) => writeFileSync(join(dir, `fixture${i}.json`), fixtureJson(f)));
     const ev: Evaluated = { refused: null, compileError: null, outcomes: [] };
     results.set(item.id, ev);
     try {
-      for (const [file, text] of generate(dir, { components: "components", out: "generated", scopeId: "filepath", viteRoot: import.meta.dirname, trustedHtml: "ferrovue::BasicHtml" })) {
+      for (const [file, text] of generate(dir, configOf(item.component, import.meta.dirname))) {
         writeFileSync(join(dir, "generated", file), plant && file !== "mod.rs" ? plantBug(text) : text);
       }
       live.push(item);
@@ -151,6 +152,8 @@ function evaluate(batch: string, items: Item[]): Map<string, Evaluated> {
       file: join(batch, item.id, "components", `${item.component.name}.vue`),
       name: item.component.name,
       json: fixtureJson(f),
+      root: join(batch, item.id),
+      config: configOf(item.component, import.meta.dirname),
     })),
   );
   writeFileSync(join(batch, "vue-cases.json"), JSON.stringify(vueCases));
@@ -217,7 +220,12 @@ interface Failure {
 }
 
 const fit = (c: Component, f: Record<string, unknown>): Record<string, unknown> =>
-  Object.fromEntries(Object.entries(f).filter(([k]) => c.props.some((p) => p.name === k)));
+  Object.fromEntries(Object.entries(f).filter(([k]) => k.startsWith("$") || c.props.some((p) => p.name === k)));
+
+function write(file: string, text: string): void {
+  mkdirSync(dirname(file), { recursive: true });
+  writeFileSync(file, text);
+}
 
 const reproduces = (f: Failure, ev: Evaluated | undefined): boolean => {
   if (!ev) return false;
@@ -276,8 +284,12 @@ function save(f: Failure): string {
   const dir = join(FAILURES, `${seed}-${f.index}`);
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, `${f.component.name}.vue`), printComponent(f.component));
-  for (const [file, text] of helperFiles(f.component)) writeFileSync(join(dir, file), text);
+  const files = helperFiles(f.component);
+  const nested = files.some(([file]) => file.startsWith("../"));
+  const components = nested ? join(dir, "components") : dir;
+  write(join(components, `${f.component.name}.vue`), printComponent(f.component));
+  for (const [file, text] of files) write(join(components, file), text);
+  if (nested) write(join(dir, "ferrovue.config.json"), JSON.stringify(configOf(f.component, "."), null, 2) + "\n");
   writeFileSync(join(dir, "fixture.json"), fixtureJson(f.fixture));
   const o = f.outcome;
   if (o && "vue" in o) writeFileSync(join(dir, "vue.html"), o.vue);

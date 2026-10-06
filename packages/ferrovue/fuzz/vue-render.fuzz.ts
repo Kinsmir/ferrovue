@@ -2,7 +2,8 @@ import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { it } from "vitest";
 import type { Component } from "vue";
-import { renderFixture } from "../src/conformance.ts";
+import type { Config } from "../src/compiler.ts";
+import { fixtureOptions, renderFixture } from "../src/conformance.ts";
 import { attachSsrRender, fixtureApp, readFixture } from "../src/testing.ts";
 
 interface VueCase {
@@ -10,6 +11,8 @@ interface VueCase {
   file: string;
   name: string;
   json: string;
+  root: string;
+  config: Config;
 }
 
 it("renders every fixture", async () => {
@@ -38,7 +41,8 @@ it("renders every fixture", async () => {
   try {
     for (const c of cases) {
       try {
-        const app = await fixtureApp(await load(c), readFixture(JSON.parse(c.json) as Record<string, unknown>), null);
+        const { routes, options } = fixtureOptions(c.root, c.config);
+        const app = await fixtureApp(await load(c), readFixture(JSON.parse(c.json) as Record<string, unknown>), routes, options);
         results[c.key] = { ok: (await renderFixture(app)).toWellFormed().replace(/\\u[dD][89a-fA-F][0-9a-fA-F]{2}/g, "�") };
       } catch (e) {
         results[c.key] = { err: String((e as Error).stack ?? e).split("\n").slice(0, 4).join("\n") };

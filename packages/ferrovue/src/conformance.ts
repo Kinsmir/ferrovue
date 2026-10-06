@@ -129,7 +129,8 @@ function componentsByName(given: ConformanceOptions["components"], pages: PageFi
   );
 }
 
-function routerOptions(root: string, config: Config): { routes: RouteEntry[] | null; options: RouterOptions } {
+/** The routes and the router and vue-i18n options a project's fixtures render with, from its configuration. */
+export function fixtureOptions(root: string, config: Config): { routes: RouteEntry[] | null; options: RouterOptions } {
   const router = config.router ?? (config.routes ? { routes: config.routes } : null);
   const pages = pagesFolder(config);
   const routes =
@@ -260,7 +261,7 @@ export function registerConformance(api: TestApi, options: ConformanceOptions): 
     if (source) attachSsrRender(source, name, component);
   }
   const cases = casesIn(fixtures);
-  const { routes, options: configured } = routerOptions(root, config);
+  const { routes, options: configured } = fixtureOptions(root, config);
   const appOptions: RouterOptions = { ...configured, pinia: options.pinia, vueRouter: options.vueRouter, vueI18n: options.vueI18n };
   const app = async (c: Case, hydrate = false): Promise<App> => {
     const component = given.get(c.component);

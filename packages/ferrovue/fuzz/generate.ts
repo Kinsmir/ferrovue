@@ -1,3 +1,5 @@
+import type { Config } from "../src/compiler.ts";
+
 export class Rng {
   private a: number;
   private b: number;
@@ -101,7 +103,14 @@ export type Node =
   | { k: "for"; head: string; node: Node & { k: "el" } }
   | { k: "child"; name: HelperName; attrs: Attr[]; kids: Node[]; is?: { test: Expr; other: HelperName | InlineTag } }
   | { k: "client"; kids: Node[]; fallback: Node[] | null }
-  | { k: "teleport"; to: string; disabled: Expr | null; kids: Node[] };
+  | { k: "teleport"; to: string; disabled: Expr | null; kids: Node[] }
+  | { k: "link"; to: LinkTo; attrs: Attr[]; kids: Node[]; active: string | null; exact: string | null }
+  | { k: "read"; text: string };
+
+export type LinkTo =
+  | { k: "lit"; path: string }
+  | { k: "str"; e: Expr }
+  | { k: "obj"; name: string | null; path: string | null; params: { key: string; e: Expr }[]; query: { key: string; e: Expr }[]; hash: string | null };
 
 type InlineTag = "span" | "b" | "em";
 
@@ -213,6 +222,33 @@ export interface Provide {
   e: Expr;
 }
 
+export interface RouteNode {
+  path: string;
+  name: string | null;
+  children: RouteNode[];
+}
+
+export interface AppRouter {
+  routes: RouteNode[];
+  base: string | null;
+  active: string | null;
+  exact: string | null;
+}
+
+export interface StoreDef {
+  id: string;
+  hook: string;
+  local: string;
+  setup: boolean;
+  fields: { name: string; spec: Spec }[];
+  getters: { name: string; e: Expr }[];
+  refs: string[];
+}
+
+export interface Messages {
+  locales: Record<string, Record<string, string>>;
+}
+
 export interface Component {
   name: string;
   ifaces: Iface[];
@@ -228,6 +264,9 @@ export interface Component {
   localEnums: boolean;
   asyncHelpers: HelperName[];
   generic: string | null;
+  router: AppRouter | null;
+  stores: StoreDef[];
+  i18n: Messages | null;
 }
 
 export interface Case {
@@ -293,6 +332,20 @@ function printAttr(a: Attr): string {
   }
 }
 
+function printTo(to: LinkTo): string {
+  if (to.k === "lit") return to.path;
+  if (to.k === "str") return printExpr(to.e);
+  const entries = (xs: { key: string; e: Expr }[]): string => `{ ${xs.map((x) => `${x.key}: ${printExpr(x.e)}`).join(", ")} }`;
+  const parts = [
+    ...(to.name !== null ? [`name: '${to.name}'`] : []),
+    ...(to.path !== null ? [`path: '${to.path}'`] : []),
+    ...(to.params.length ? [`params: ${entries(to.params)}`] : []),
+    ...(to.query.length ? [`query: ${entries(to.query)}`] : []),
+    ...(to.hash !== null ? [`hash: '${to.hash}'`] : []),
+  ];
+  return `{ ${parts.join(", ")} }`;
+}
+
 function printNode(n: Node, indent: string, extra: string[] = []): string {
   switch (n.k) {
     case "text":
@@ -314,6 +367,12 @@ function printNode(n: Node, indent: string, extra: string[] = []): string {
       const is = n.is ? [`:is="${test} ? ${n.name} : ${other}"`] : [];
       const open = `<${tag}${[...is, ...n.attrs.map(printAttr)].map((a) => " " + a).join("")}`;
       return n.kids.length ? `${open}>${n.kids.map((k) => printNode(k, indent + "  ")).join("")}</${tag}>` : `${open} />`;
+    }
+    case "read":
+      return `{{ ${n.text} }}`;
+    case "link": {
+      const attrs = [`${n.to.k === "lit" ? "to" : ":to"}="${printTo(n.to)}"`, ...(n.active ? [`active-class="${n.active}"`] : []), ...(n.exact ? [`exact-active-class="${n.exact}"`] : []), ...n.attrs.map(printAttr)];
+      return `<RouterLink ${attrs.join(" ")}>${n.kids.map((k) => printNode(k, indent + "  ")).join("")}</RouterLink>`;
     }
     case "teleport": {
       const disabled = n.disabled ? ` :disabled="${printExpr(n.disabled)}"` : "";
@@ -347,7 +406,7 @@ function rendered(template: Node[]): HelperName[] {
       else if (n.k === "if") walk(n.branches.map((b) => b.node));
       else if (n.k === "for") walk([n.node]);
       else if (n.k === "client") walk([...n.kids, ...(n.fallback ?? [])]);
-      else if (n.k === "teleport") walk(n.kids);
+      else if (n.k === "teleport" || n.k === "link") walk(n.kids);
     }
   };
   walk(template);
@@ -444,6 +503,148 @@ function constsUsed(c: Component): string[] {
   return used;
 }
 
+const FZ_ITEM: Iface = {
+  name: "FzItem",
+  fields: [
+    { name: "sku", spec: { k: "str" } },
+    { name: "qty", spec: { k: "int", wide: false } },
+    { name: "tag", spec: { k: "opt", of: { k: "str" } } },
+  ],
+};
+
+function routesJson(routes: RouteNode[]): unknown[] {
+  return routes.map((r) => (r.name === null && !r.children.length ? r.path : { path: r.path, ...(r.name !== null ? { name: r.name } : {}), ...(r.children.length ? { children: routesJson(r.children) } : {}) }));
+}
+
+const storeUses = (f: { spec: Spec }, k: (s: Spec) => boolean): boolean => {
+  const visit = (s: Spec): boolean => k(s) || ((s.k === "opt" || s.k === "nul" || s.k === "list") && visit(s.of));
+  return visit(f.spec);
+};
+
+function storeFile(st: StoreDef): string {
+  const float = st.fields.some((f) => storeUses(f, (s) => s.k === "float"));
+  const items = st.fields.some((f) => storeUses(f, (s) => s.k === "obj"));
+  const lines = ['import { defineStore } from "pinia";'];
+  if (st.setup) lines.push(`import { ${st.getters.length ? "computed, " : ""}ref } from "vue";`);
+  if (float) lines.push('import type { Float } from "ferrovue/types";');
+  lines.push("");
+  if (items) {
+    lines.push(`export interface ${FZ_ITEM.name} {`, ...FZ_ITEM.fields.map((f) => `  ${f.name}${f.spec.k === "opt" ? "?" : ""}: ${tsType(f.spec)};`), "}", "");
+  }
+  if (!st.setup) {
+    const state = `${st.hook.slice(3)}State`;
+    lines.push(`export interface ${state} {`, ...st.fields.map((f) => `  ${f.name}${f.spec.k === "opt" ? "?" : ""}: ${tsType(f.spec)};`), "}", "");
+    const initial = st.fields.filter((f) => f.spec.k !== "opt").map((f) => `${f.name}: ${initialOf(f.spec)}`);
+    lines.push(`export const ${st.hook} = defineStore("${st.id}", {`, `  state: (): ${state} => ({ ${initial.join(", ")} }),`);
+    if (st.getters.length) lines.push("  getters: {", ...st.getters.map((g) => `    ${g.name}: (state) => ${printExpr(g.e)},`), "  },");
+    lines.push("});", "");
+    return lines.join("\n");
+  }
+  lines.push(`export const ${st.hook} = defineStore("${st.id}", () => {`);
+  for (const f of st.fields) {
+    const typed = f.spec.k === "str" || f.spec.k === "int" || f.spec.k === "bool";
+    lines.push(`  const ${f.name} = ref${typed ? "" : `<${tsType(f.spec)}>`}(${initialOf(f.spec)});`);
+  }
+  for (const g of st.getters) lines.push(`  const ${g.name} = computed(() => ${printExpr(g.e)});`);
+  lines.push(`  return { ${[...st.fields.map((f) => f.name), ...st.getters.map((g) => g.name)].join(", ")} };`, "});", "");
+  return lines.join("\n");
+}
+
+function initialOf(spec: Spec): string {
+  switch (spec.k) {
+    case "str":
+      return '""';
+    case "int":
+      return "0";
+    case "float":
+      return "0.5";
+    case "bool":
+      return "false";
+    case "nul":
+      return "null";
+    case "list":
+      return "[]";
+    default:
+      return "undefined";
+  }
+}
+
+function localeJson(messages: Record<string, string>): string {
+  const tree: Record<string, unknown> = {};
+  for (const [key, source] of Object.entries(messages)) {
+    const path = key.split(".");
+    let at = tree;
+    for (const part of path.slice(0, -1)) at = (at[part] ??= {}) as Record<string, unknown>;
+    at[path.at(-1)!] = source;
+  }
+  return JSON.stringify(tree, null, 2) + "\n";
+}
+
+const READS_ROUTE = /(?<![\w.$])route\./;
+const CALLS_T = /(?<![\w.$])t\(/;
+
+function contextText(c: Component): string {
+  return `${templateText(c)}\n${scriptLines(c).join("\n")}`;
+}
+
+function storesUsed(c: Component, text = contextText(c)): { st: StoreDef; refs: string[]; local: boolean }[] {
+  return c.stores
+    .map((st) => {
+      const refs = st.refs.filter((r) => mentions(text, r));
+      return { st, refs, local: refs.length > 0 || new RegExp(`(?<![\\w.$])${st.local}\\.`).test(text) };
+    })
+    .filter((u) => u.local);
+}
+
+function contextLines(c: Component): { imports: string[]; lines: string[] } {
+  const text = contextText(c);
+  const imports: string[] = [];
+  const lines: string[] = [];
+  if (c.router && READS_ROUTE.test(text)) {
+    imports.push('import { useRoute } from "vue-router";');
+    lines.push("const route = useRoute();");
+  }
+  const used = storesUsed(c, text);
+  if (used.some((u) => u.refs.length)) imports.push('import { storeToRefs } from "pinia";');
+  for (const u of used) {
+    imports.push(`import { ${u.st.hook} } from "../stores/${u.st.id}";`);
+    lines.push(`const ${u.st.local} = ${u.st.hook}();`);
+    if (u.refs.length) lines.push(`const { ${u.refs.join(", ")} } = storeToRefs(${u.st.local});`);
+  }
+  if (c.i18n) {
+    const names = [...(CALLS_T.test(text) ? ["t"] : []), ...(mentions(text, "locale") ? ["locale"] : [])];
+    if (names.length) {
+      imports.push('import { useI18n } from "vue-i18n";');
+      lines.push(`const { ${names.join(", ")} } = useI18n();`);
+    }
+  }
+  return { imports, lines };
+}
+
+/** The `ferrovue.config.json` of a case: the routes, stores and locales it carries. */
+export function configOf(c: Component, viteRoot: string): Config {
+  const r = c.router;
+  return {
+    components: "components",
+    out: "generated",
+    scopeId: "filepath",
+    viteRoot,
+    trustedHtml: "ferrovue::BasicHtml",
+    ...(r
+      ? {
+          router: {
+            routes: "routes.json",
+            ...(r.base !== null ? { base: r.base } : {}),
+            ...(r.active !== null ? { linkActiveClass: r.active } : {}),
+            ...(r.exact !== null ? { linkExactActiveClass: r.exact } : {}),
+          },
+        }
+      : {}),
+    ...(c.stores.length ? { stores: "stores" } : {}),
+    ...(c.i18n ? { i18n: { messages: "locales", locale: "en", fallbackLocale: "en" } } : {}),
+  };
+}
+
 export function helperFiles(c: Component): [string, string][] {
   const used = helpersUsed(c.template);
   const files = used.map((name): [string, string] => {
@@ -455,6 +656,9 @@ export function helperFiles(c: Component): [string, string][] {
   });
   if (used.includes("FzInj") || c.provides.some((p) => p.key !== "str")) files.push(["fz-keys.ts", KEYS_FILE]);
   if (c.consts && constsUsed(c).length) files.push(["fz-consts.ts", constsFile(c.consts)]);
+  if (c.router) files.push(["../routes.json", JSON.stringify(routesJson(c.router.routes), null, 2) + "\n"]);
+  for (const st of c.stores) files.push([`../stores/${st.id}.ts`, storeFile(st)]);
+  if (c.i18n) for (const [locale, messages] of Object.entries(c.i18n.locales)) files.push([`../locales/${locale}.json`, localeJson(messages)]);
   return files;
 }
 
@@ -489,6 +693,8 @@ export function printComponent(c: Component): string {
   if (keys.length) lines.push(`import { ${keys.join(", ")} } from "./fz-keys";`);
   const types = [...(float ? ["Float"] : []), ...(inline ? ["InlineHtml"] : []), ...(trusted ? ["TrustedHtml"] : [])];
   if (types.length) lines.push(`import type { ${types.join(", ")} } from "ferrovue/types";`);
+  const context = contextLines(c);
+  lines.push(...context.imports);
   lines.push("");
   for (const name of asyncs) lines.push(`const ${name} = defineAsyncComponent(() => import("./${name}.vue"));`);
   if (asyncs.length) lines.push("");
@@ -504,6 +710,7 @@ export function printComponent(c: Component): string {
   });
   const define = props.length ? `defineProps<{ ${props.join("; ")} }>();` : "defineProps<{}>();";
   lines.push(c.propsVar || /(?<![\w.$])props\./.test(`${tpl}\n${script.join("\n")}`) ? `const props = ${define}` : define);
+  lines.push(...context.lines);
   lines.push(...script);
   lines.push("</script>", "", "<template>");
   for (const n of c.template) lines.push("  " + printNode(n, "  "));
@@ -703,12 +910,26 @@ function randomConsts(r: Rng): Consts {
 const RECORD_KEYS = ["0", "1", "2", "10", "01", "-1", "1.5", "4294967294", "4294967295", "9007199254740993", "a", "b", "<b>", "&", "🦀", "", " "];
 
 export function randomFixture(r: Rng, c: Component, hostile: boolean): Record<string, unknown> {
-  const ifaces = new Map(c.ifaces.map((i) => [i.name, i]));
+  const ifaces = new Map([...c.ifaces, FZ_ITEM].map((i) => [i.name, i]));
   const out: Record<string, unknown> = {};
   for (const p of c.props) {
     const v = randomValue(r, p.spec, ifaces, hostile);
     if (v !== undefined) out[p.name] = v;
   }
+  if (c.router) out.$route = randomLocation(r, c.router);
+  if (c.stores.length) {
+    out.$stores = Object.fromEntries(
+      c.stores.map((st) => {
+        const state: Record<string, unknown> = {};
+        for (const f of st.fields) {
+          const v = randomValue(r, f.spec, ifaces, hostile);
+          if (v !== undefined) state[f.name] = v;
+        }
+        return [st.id, state];
+      }),
+    );
+  }
+  if (c.i18n && r.chance(0.7)) out.$locale = r.pick(["en", "nl", "fr"]);
   return out;
 }
 
@@ -778,6 +999,11 @@ class Gen {
   favour: HelperName[] = [];
   vnode = false;
   para = false;
+  routes: FlatRoute[] = [];
+  reads: string[] = [];
+  tKeys: TKey[] = [];
+  tNames: string[] = [];
+  inLink = false;
   slotted = false;
   loopDepth = 0;
   nodes = 0;
@@ -955,6 +1181,7 @@ class Gen {
         [vs.length ? 6 : 0, () => this.varRef(r.pick(vs))],
         [2, () => strLit(r.pick(STR_LITS))],
         [opts.length ? 2 : 0, () => node("str", [this.varRef(r.pick(opts)), strLit(r.pick(STR_LITS))], ([a, b]) => `${a} ?? ${b}`)],
+        [this.tKeys.length && this.tNames.length ? 2 : 0, () => this.translated(d)],
       ])();
     };
     if (d <= 0 || r.chance(0.3)) return leaf();
@@ -1042,6 +1269,36 @@ class Gen {
       ],
     ];
     return r.weighted(options)();
+  }
+
+  translated(d: number): Expr {
+    const r = this.r;
+    const t = r.pick(this.tNames);
+    if (r.chance(0.06)) return atom("str", `${t}('${r.pick(["missing", "menu.none", "no.such.key"])}')`);
+    const k = r.pick(this.tKeys);
+    const arg = (): Expr => (r.chance(0.6) ? this.str(d - 1) : this.int(d - 1, BOUND_SMALL));
+    const call = (kids: Expr[], fmt: (ks: string[]) => string): Expr => ({ ...node("str", kids, fmt, 0, true), ...(kids.some((x) => x.lone) ? { lone: true } : {}) });
+    switch (k.kind) {
+      case "plain":
+        return atom("str", `${t}('${k.key}')`);
+      case "named": {
+        const names = k.names.filter(() => r.chance(0.85));
+        return call(names.map(arg), (ks) => `${t}('${k.key}', { ${names.map((n, i) => `${n}: ${ks[i]}`).join(", ")} })`);
+      }
+      case "list":
+        return call([arg(), arg()], ([a, b]) => `${t}('${k.key}', [${a}, ${b}])`);
+      case "plural": {
+        const counts = this.vars("int", BOUND_SMALL).filter((v) => !/^[xa]\d/.test(v.name));
+        const plural = (): Expr => (counts.length && r.chance(0.7) ? this.varRef(r.pick(counts)) : numLit(r.int(0, 12), "int"));
+        const n = plural();
+        const name = k.names[0]!;
+        return r.weighted<() => Expr>([
+          [3, () => call([n], ([a]) => `${t}('${k.key}', ${a})`)],
+          [2, () => call([n], ([a]) => `${t}('${k.key}', { ${name}: ${a} })`)],
+          [1, () => call([n, plural()], ([a, b]) => `${t}('${k.key}', { ${name}: ${a} }, ${b})`)],
+        ])();
+      }
+    }
   }
 
   template(d: number): Expr {
@@ -1318,7 +1575,7 @@ class Gen {
       ctx === "list"
         ? "li"
         : ctx === "inline"
-          ? r.weighted([[5, r.pick(["span", "b", "i", "em", "strong", "a", "small", "code", "label"])], [1, r.pick(["br", "img", "input"])]])
+          ? r.weighted([[5, r.pick(this.inLink ? ["span", "b", "i", "em", "strong", "small", "code", "label"] : ["span", "b", "i", "em", "strong", "a", "small", "code", "label"])], [1, r.pick(["br", "img", "input"])]])
           : r.weighted([[4, r.pick(["div", "section", "article", "header", "footer"])], [2, "p"], [2, r.pick(["ul", "ol"])], [3, r.pick(["span", "b", "em"])], [1, r.pick(["br", "hr", "img", "input"])]]);
     const isVoid = ["br", "hr", "img", "input"].includes(tag);
     const attrs = this.attrs(tag);
@@ -1364,7 +1621,51 @@ class Gen {
       [depth < 4 && ctx === "block" ? 3 : 0, () => this.child(depth)],
       [depth < 4 && ctx === "block" ? 0.6 : 0, () => this.clientOnly(depth)],
       [depth < 4 && ctx === "block" && !this.slotted ? 0.4 : 0, () => this.teleport(depth)],
+      [depth < 5 && this.routes.length && !this.slotted ? 2 : 0, () => this.link(depth)],
+      [this.reads.length ? 1 : 0, () => ({ k: "read", text: r.pick(this.reads) })],
     ])();
+  }
+
+  link(depth: number): Node {
+    const r = this.r;
+    this.nodes++;
+    const route = r.pick(this.routes);
+    const present = (p: string): Expr => node("str", [whole(this.str(1))], ([a]) => `${a} || '${p}'`);
+    const query = (): { key: string; e: Expr }[] => (r.chance(0.4) ? ["q", "tab"].filter(() => r.chance(0.6)).map((key) => ({ key, e: whole(this.str(1)) })) : []);
+    const hash = (): string | null => (r.chance(0.25) ? r.pick(["#top", "#a-b", "#é"]) : null);
+    const last = route.params.at(-1);
+    const prefix = last && !last.optional && !last.rest && route.full.endsWith(`:${last.name}`) ? route.full.slice(0, -last.name.length - 1) : null;
+    const to = r.weighted<() => LinkTo>([
+      [2, () => ({ k: "lit", path: literalPath(r, route) })],
+      [prefix !== null ? 2 : 0, () => ({ k: "str", e: node("str", [whole(this.str(1))], ([a]) => `'${prefix}' + ${a}`) })],
+      [route.name !== null ? 3 : 0, () => ({
+        k: "obj",
+        name: route.name,
+        path: null,
+        params: route.params.filter((p) => !p.optional || r.chance(0.5)).map((p) => ({ key: p.name, e: p.optional ? whole(this.str(1)) : present(p.name) })),
+        query: query(),
+        hash: hash(),
+      })],
+      [route.params.length === 0 ? 1 : 0, () => ({ k: "obj", name: null, path: route.full, params: [], query: query(), hash: hash() })],
+    ])();
+    const vnode = this.vnode;
+    const inLink = this.inLink;
+    this.vnode = true;
+    this.inLink = true;
+    try {
+      const attrs = r.chance(0.3) ? this.attrs("a").filter((a) => a.k !== "static" || a.name !== "class") : [];
+      return {
+        k: "link",
+        to,
+        attrs,
+        kids: this.kids(depth + 1, "inline"),
+        active: r.chance(0.2) ? r.pick(["on", "is-here"]) : null,
+        exact: r.chance(0.2) ? r.pick(["exact", "is-here"]) : null,
+      };
+    } finally {
+      this.vnode = vnode;
+      this.inLink = inLink;
+    }
   }
 
   teleport(depth: number): Node {
@@ -1624,6 +1925,174 @@ function headCall(g: Gen, kind: HeadCall["kind"]): HeadCall {
   return { kind, entries: chosen.map(([at, v]) => ({ at, v: v() })) };
 }
 
+interface FlatRoute {
+  full: string;
+  name: string | null;
+  params: { name: string; optional: boolean; rest: boolean }[];
+}
+
+interface TKey {
+  key: string;
+  kind: "plain" | "named" | "list" | "plural";
+  names: string[];
+}
+
+function flatRoutes(routes: RouteNode[], parent = ""): FlatRoute[] {
+  return routes.flatMap((r) => {
+    const full = r.path.startsWith("/") ? r.path : r.path === "" ? parent || "/" : `${parent === "/" ? "" : parent}/${r.path}`;
+    const params = [...full.matchAll(/:(\w+)(\?|\(\.\*\))?/g)].map((m) => ({ name: m[1]!, optional: m[2] === "?", rest: m[2] === "(.*)" }));
+    return [{ full, name: r.name, params }, ...flatRoutes(r.children, full)];
+  });
+}
+
+const PARAM_VALUES = ["a", "x-y", "42", "hello world", "é", "🦀", "a+b", "%E2%9C%93", "Ab_C"];
+
+function literalPath(r: Rng, route: FlatRoute): string {
+  return route.full.replace(/\/:(\w+)(\?|\(\.\*\))?/g, (_: string, _name: string, mark?: string) => {
+    if (mark === "?" && r.chance(0.5)) return "";
+    if (mark === "(.*)") return `/${r.pick(["deep/er", "x", "a b/c"])}`;
+    return `/${r.pick(["a", "x-y", "42", "é"])}`;
+  }) || "/";
+}
+
+function randomRouter(r: Rng): AppRouter {
+  const leaf = (path: string, name: string | null): RouteNode => ({ path, name, children: [] });
+  const routes: RouteNode[] = [leaf("/", "home")];
+  if (r.chance(0.7)) routes.push(leaf("/blog/:slug", "post"));
+  if (r.chance(0.5)) routes.push(leaf("/blog/:slug/:tab", "post-tab"));
+  if (r.chance(0.5)) routes.push(leaf("/users/:name", null));
+  if (r.chance(0.4)) routes.push(leaf("/docs/:lang?/intro", "intro"));
+  if (r.chance(0.6)) routes.push(leaf("/search", "search"));
+  if (r.chance(0.5)) {
+    routes.push({ path: "/account", name: "account", children: [leaf("", "account-home"), { path: "orders", name: "orders", children: [leaf(":order", "order")] }] });
+  }
+  if (r.chance(0.3)) routes.push(leaf("/:rest(.*)", "missing"));
+  return {
+    routes,
+    base: r.chance(0.2) ? "/app/" : null,
+    active: r.chance(0.2) ? "act" : null,
+    exact: r.chance(0.2) ? "exact-act" : null,
+  };
+}
+
+function randomLocation(r: Rng, router: AppRouter): string {
+  const routes = flatRoutes(router.routes);
+  const route = r.pick(routes);
+  let path = route.full.replace(/\/:(\w+)(\?|\(\.\*\))?/g, (_: string, _name: string, mark?: string) => {
+    if (mark === "?" && r.chance(0.4)) return "";
+    if (mark === "(.*)") return `/${r.pick(["deep/er", "x", "nothing/here/at/all"])}`;
+    return `/${r.pick(PARAM_VALUES)}`;
+  }) || "/";
+  if (r.chance(0.15)) path = r.pick(["/nowhere", "/blog", "/account/orders/7/x"]);
+  if (r.chance(0.4)) path += r.pick(["?q=rust", "?q=a&q=b", "?tab=x&q=", "?flag", "?q=%3Cb%3E"]);
+  if (r.chance(0.2)) path += r.pick(["#top", "#a-b"]);
+  return path;
+}
+
+const MESSAGE_KEYS = ["greet", "apples", "pair", "note", "loud", "menu.title", "menu.sub.item", "menu.count"];
+
+function messageText(r: Rng): string {
+  const raw = randomString(r, false).replace(/[\n\t]/g, " ");
+  return raw.replace(/[{}@|]/g, (c) => `{'${c}'}`);
+}
+
+function messageSource(r: Rng, k: TKey, earlier: TKey[]): string {
+  const text = (): string => messageText(r);
+  switch (k.kind) {
+    case "plain": {
+      const links = earlier.filter((e) => e.kind === "plain" || e.kind === "named");
+      const link = links.length && r.chance(0.5) ? ` @${r.pick(["", ".upper", ".lower", ".capitalize"])}:${r.pick(links).key}` : "";
+      return `${text()}${link}${r.chance(0.2) ? " {'{'}x{'}'}" : ""}`;
+    }
+    case "named":
+      return k.names.map((n) => `${text()}{${n}}`).join("") + text();
+    case "list":
+      return `${text()}{0}${text()}{1}${text()}`;
+    case "plural": {
+      const cases = Array.from({ length: r.int(2, 3) }, (_, i) => `${text()}${i ? `{${k.names[0]}}` : ""}${text() || "x"}`.trim() || "x");
+      return cases.join(" | ");
+    }
+  }
+}
+
+function randomMessages(r: Rng): { messages: Messages; keys: TKey[] } {
+  const keys: TKey[] = [];
+  for (const key of MESSAGE_KEYS) {
+    if (!r.chance(0.5)) continue;
+    const kind = r.pick<TKey["kind"]>(["plain", "plain", "named", "list", "plural"]);
+    const names = kind === "named" ? ["name", "who"].filter((_, i) => i === 0 || r.chance(0.5)) : kind === "plural" ? [r.pick(["count", "n"])] : [];
+    keys.push({ key, kind, names });
+  }
+  if (!keys.length) keys.push({ key: "greet", kind: "plain", names: [] });
+  const en: Record<string, string> = {};
+  const nl: Record<string, string> = {};
+  keys.forEach((k, i) => {
+    en[k.key] = messageSource(r, k, keys.slice(0, i));
+    if (r.chance(0.6)) nl[k.key] = messageSource(r, k, keys.slice(0, i));
+  });
+  return { messages: { locales: { en, ...(Object.keys(nl).length ? { nl } : {}) } }, keys };
+}
+
+function randomStores(r: Rng, g: Gen): StoreDef[] {
+  const stores: StoreDef[] = [];
+  const option: { name: string; spec: Spec }[] = [
+    { name: "title", spec: { k: "str" } },
+    { name: "count", spec: { k: "int", wide: false } },
+    { name: "ratio", spec: { k: "float" } },
+    { name: "on", spec: { k: "bool" } },
+    { name: "note", spec: { k: "opt", of: { k: "str" } } },
+    { name: "tag", spec: { k: "nul", of: { k: "str" } } },
+    { name: "tags", spec: { k: "list", of: { k: "str" } } },
+    { name: "items", spec: { k: "list", of: { k: "obj", iface: FZ_ITEM.name } } },
+  ];
+  const setup: { name: string; spec: Spec }[] = [
+    { name: "label", spec: { k: "str" } },
+    { name: "n", spec: { k: "int", wide: false } },
+    { name: "flag", spec: { k: "bool" } },
+    { name: "owner", spec: { k: "nul", of: { k: "str" } } },
+    { name: "picks", spec: { k: "list", of: { k: "int", wide: false } } },
+    { name: "share", spec: { k: "float" } },
+  ];
+  const make = (id: string, hook: string, isSetup: boolean, all: { name: string; spec: Spec }[], getter: string, read: (f: string) => string): void => {
+    const fields = all.filter(() => r.chance(0.6));
+    if (!fields.length) fields.push(all[0]!);
+    const saved = g.scope;
+    g.scope = { vars: [], lists: [], records: [], htmls: [] };
+    for (const f of fields) g.bind(read(f.name), f.spec);
+    const getters: { name: string; e: Expr }[] = [];
+    for (let i = r.weighted([[2, 0], [3, 1], [2, 2]]); i > 0; i--) {
+      getters.push({ name: `${getter}${getters.length}`, e: scriptExpr(g, r.pick<Ty>(["str", "str", "int", "float", "bool"]), r.int(1, 2)) });
+    }
+    g.scope = saved;
+    const refs = [...fields.map((f) => f.name), ...getters.map((x) => x.name)].filter(() => r.chance(0.25));
+    stores.push({ id, hook, local: id, setup: isSetup, fields, getters, refs });
+  };
+  if (r.chance(0.7)) make("fz", "useFz", false, option, "og", (f) => `state.${f}`);
+  if (r.chance(0.6)) make("fzs", "useFzs", true, setup, "sg", (f) => `${f}.value`);
+  return stores;
+}
+
+function bindStores(g: Gen, stores: StoreDef[], withRefs: boolean): void {
+  for (const st of stores) {
+    for (const f of st.fields) g.bind(`${st.local}.${f.name}`, f.spec);
+    for (const x of st.getters) g.scope.vars.push({ name: `${st.local}.${x.name}`, ty: x.e.ty, opt: false, bound: x.e.ty === "int" ? Math.max(x.e.bound, 1) : 0, ...(x.e.lone ? { lone: true } : {}) });
+    if (!withRefs) continue;
+    for (const ref of st.refs) {
+      const f = st.fields.find((x) => x.name === ref);
+      if (f) g.bind(ref, f.spec);
+      const x = st.getters.find((y) => y.name === ref);
+      if (x) g.scope.vars.push({ name: ref, ty: x.e.ty, opt: false, bound: x.e.ty === "int" ? Math.max(x.e.bound, 1) : 0, ...(x.e.lone ? { lone: true } : {}) });
+    }
+  }
+}
+
+function bindRoute(g: Gen, router: AppRouter, template: boolean): void {
+  g.routes = template ? flatRoutes(router.routes) : [];
+  const names = [...new Set(flatRoutes(router.routes).flatMap((x) => x.params.map((p) => p.name)))];
+  for (const v of ["route.path", "route.fullPath", "route.hash", ...(template ? ["$route.path"] : [])]) g.scope.vars.push({ name: v, ty: "str", opt: false, bound: 0 });
+  g.reads = template ? ["route.name", "route.query.q", "$route.query.tab", ...names.flatMap((n) => [`route.params.${n}`, `$route.params.${n}`])] : [];
+}
+
 export function generateCase(seed: number, index: number, fixtures = 4): Case {
   const r = new Rng(seed, index);
   const name = `C${String(index).padStart(4, "0")}`;
@@ -1654,8 +2123,13 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
     props.push({ name: `${prefix(spec)}${props.length}`, spec });
   }
 
-  const g = new Gen(r, new Map([...ifaces, ROW_IFACE].map((i) => [i.name, i])));
+  const g = new Gen(r, new Map([...ifaces, ROW_IFACE, FZ_ITEM].map((i) => [i.name, i])));
   const fresh = (): Scope => ({ vars: [], lists: [], records: [], htmls: [] });
+  const router = r.chance(0.3) ? randomRouter(r) : null;
+  const stores = r.chance(0.3) ? randomStores(r, g) : [];
+  const i18n = r.chance(0.3) ? randomMessages(r) : null;
+  const useT = r.chance(0.5);
+  const scoped = r.chance(0.35);
   const propsVar = r.chance(0.3);
   const bindings: Binding[] = [];
   const provides: Provide[] = [];
@@ -1664,6 +2138,12 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
     g.scope = fresh();
     for (const p of props) g.bind(`props.${p.name}`, p.spec, true);
     if (consts) bindConsts(g, consts, 0.5);
+    bindStores(g, stores, false);
+    if (router) bindRoute(g, router, false);
+    if (i18n && useT) {
+      g.tKeys = i18n.keys;
+      g.tNames = ["t"];
+    }
     for (let n = r.weighted([[2, 0], [3, 1], [2, 2], [1, 3]]); n > 0; n--) {
       const kind = r.weighted<Binding["kind"]>([[3, "computed"], [2, "const"], [1, "ref"]]);
       const ty = r.pick<Ty>(["str", "str", "int", "float", "bool"]);
@@ -1687,10 +2167,16 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
   if (consts) bindConsts(g, consts, 0.35);
   for (const b of bindings) g.scope.vars.push(bindingVar(b));
   if (provides.length) g.favour = ["FzInj", "FzProv"];
+  bindStores(g, stores, true);
+  if (router) bindRoute(g, router, true);
+  if (i18n) {
+    g.tKeys = i18n.keys;
+    g.tNames = useT ? ["t", "$t"] : ["$t"];
+    if (useT) g.scope.vars.push({ name: "locale", ty: "str", opt: false, bound: 0 });
+  }
   const template: Node[] = [];
   for (let n = r.weighted([[6, 1], [1, 2], [1, 3]]); n > 0; n--) template.push(g.node(0, "block"));
 
-  const scoped = r.chance(0.35);
   const helpers = Object.fromEntries(
     (Object.keys(HELPERS) as HelperName[]).map((h) => [h, { scoped: r.chance(0.5), slotted: r.chance(0.5) }]),
   ) as Component["helpers"];
@@ -1710,6 +2196,9 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
     localEnums: r.chance(0.3),
     asyncHelpers: (Object.keys(HELPERS) as HelperName[]).filter(() => r.chance(0.15)),
     generic: objLists.length && r.chance(0.3) ? ((r.pick(objLists).spec as Spec & { k: "list" }).of as Spec & { k: "obj" }).iface : null,
+    router,
+    stores,
+    i18n: i18n?.messages ?? null,
   });
   const fx: Record<string, unknown>[] = [];
   for (let i = 0; i < fixtures; i++) fx.push(randomFixture(r, component, i === 0));
@@ -1750,7 +2239,11 @@ export function prune(c: Component): Component {
     }
   };
   props.forEach((p) => visit(p.spec));
-  return { ...c, props, bindings, ifaces: c.ifaces.filter((i) => live.has(i.name)) };
+  const full = `${text}\n${scriptLines({ ...c, bindings }).join("\n")}`;
+  const routed = /<RouterLink|\$route\.|(?<![\w.$])route\./.test(full);
+  const translated = /\$t\(|(?<![\w.$])t\(/.test(full) || mentions(full, "locale");
+  const stores = storesUsed({ ...c, bindings }, full).map((u) => ({ ...u.st, refs: u.refs }));
+  return { ...c, props, bindings, ifaces: c.ifaces.filter((i) => live.has(i.name)), router: routed ? c.router : null, i18n: translated ? c.i18n : null, stores };
 }
 
 function* exprSlots(nodes: Node[]): Generator<{ get: () => Expr; set: (e: Expr) => void }> {
@@ -1763,7 +2256,12 @@ function* exprSlots(nodes: Node[]): Generator<{ get: () => Expr; set: (e: Expr) 
       }
     } else if (n.k === "for") yield* exprSlots([n.node]);
     else if (n.k === "client") yield* exprSlots([...n.kids, ...(n.fallback ?? [])]);
-    else if (n.k === "teleport") {
+    else if (n.k === "link") {
+      const to = n.to;
+      if (to.k === "str") yield { get: () => to.e, set: (e) => (to.e = e) };
+      else if (to.k === "obj") for (const x of [...to.params, ...to.query]) yield { get: () => x.e, set: (e) => (x.e = e) };
+      yield* exprSlots(n.kids);
+    } else if (n.k === "teleport") {
       const t = n;
       if (t.disabled) yield { get: () => t.disabled!, set: (e) => (t.disabled = e) };
       yield* exprSlots(t.kids);
@@ -1789,6 +2287,7 @@ function* exprSlots(nodes: Node[]): Generator<{ get: () => Expr; set: (e: Expr) 
 }
 
 function* allSlots(c: Component): Generator<{ get: () => Expr; set: (e: Expr) => void }> {
+  for (const st of c.stores) for (const g of st.getters) yield { get: () => g.e, set: (e) => (g.e = e) };
   for (const b of c.bindings) if (b.kind !== "ref") yield { get: () => b.e, set: (e) => (b.e = e) };
   for (const p of c.provides) if (!p.e.fixed) yield { get: () => p.e, set: (e) => (p.e = whole(e)) };
   for (const h of c.head) for (const en of h.entries) yield { get: () => en.v.e, set: (e) => (en.v.e = whole(e)) };
@@ -1825,7 +2324,7 @@ export function componentShrinks(c: Component): Component[] {
           walk(n.kids);
         } else if (n.k === "if") n.branches.forEach((b) => walk([b.node]));
         else if (n.k === "for") walk([n.node]);
-        else if (n.k === "teleport") {
+        else if (n.k === "teleport" || n.k === "link") {
           acc.push(n.kids);
           walk(n.kids);
         } else if (n.k === "client") {
@@ -1856,6 +2355,16 @@ export function componentShrinks(c: Component): Component[] {
     l.forEach((n, ni) => {
       if ((n.k === "el" && !n.void) || n.k === "child") edit((x) => (lists(x)[li]!.splice(ni, 1, ...(lists(x)[li]![ni] as Node & { kids: Node[] }).kids), true));
       if (n.k === "for") edit((x) => (lists(x)[li]!.splice(ni, 1, (lists(x)[li]![ni] as Node & { k: "for" }).node), true));
+      if (n.k === "link") {
+        const at = (x: Component): Node & { k: "link" } => lists(x)[li]![ni] as Node & { k: "link" };
+        edit((x) => (lists(x)[li]!.splice(ni, 1, ...at(x).kids), true));
+        if (n.to.k !== "lit" || n.to.path !== "/") edit((x) => ((at(x).to = { k: "lit", path: "/" }), true));
+        if (n.to.k === "obj" && n.to.query.length) edit((x) => (((at(x).to as LinkTo & { k: "obj" }).query = []), true));
+        if (n.to.k === "obj" && n.to.hash !== null) edit((x) => (((at(x).to as LinkTo & { k: "obj" }).hash = null), true));
+        if (n.active !== null) edit((x) => ((at(x).active = null), true));
+        if (n.exact !== null) edit((x) => ((at(x).exact = null), true));
+        n.attrs.forEach((_, ai) => edit((x) => (at(x).attrs.splice(ai, 1), true)));
+      }
       if (n.k === "teleport") {
         edit((x) => (lists(x)[li]!.splice(ni, 1, ...(lists(x)[li]![ni] as Node & { k: "teleport" }).kids), true));
         if (n.disabled) edit((x) => (((lists(x)[li]![ni] as Node & { k: "teleport" }).disabled = null), true));
@@ -1889,7 +2398,7 @@ export function componentShrinks(c: Component): Component[] {
         } else if (n.k === "if") walk(n.branches.map((b) => b.node));
         else if (n.k === "for") walk([n.node]);
         else if (n.k === "client") walk([...n.kids, ...(n.fallback ?? [])]);
-        else if (n.k === "teleport") walk(n.kids);
+        else if (n.k === "teleport" || n.k === "link") walk(n.kids);
       }
     };
     walk(comp.template);
@@ -1916,6 +2425,29 @@ export function componentShrinks(c: Component): Component[] {
   });
   if (c.scoped) edit((x) => ((x.scoped = false), true));
   if (c.propsVar) edit((x) => ((x.propsVar = false), true));
+  if (c.router?.base) edit((x) => ((x.router!.base = null), true));
+  if (c.router?.active) edit((x) => ((x.router!.active = null), true));
+  if (c.router?.exact) edit((x) => ((x.router!.exact = null), true));
+  c.router?.routes.forEach((route, ri) => {
+    if (ri > 0) edit((x) => (x.router!.routes.splice(ri, 1), true));
+    if (route.children.length) edit((x) => ((x.router!.routes[ri]!.children = []), true));
+  });
+  if (c.i18n && Object.keys(c.i18n.locales).length > 1) edit((x) => ((x.i18n!.locales = { en: x.i18n!.locales.en! }), true));
+  if (c.i18n) {
+    for (const key of Object.keys(c.i18n.locales.en ?? {})) {
+      edit((x) => {
+        for (const m of Object.values(x.i18n!.locales)) delete m[key];
+        return true;
+      });
+    }
+  }
+  c.stores.forEach((st, si) => {
+    st.getters.forEach((_, gi) => edit((x) => (x.stores[si]!.getters.splice(gi, 1), true)));
+    st.refs.forEach((_, fi) => edit((x) => (x.stores[si]!.refs.splice(fi, 1), true)));
+    st.fields.forEach((_, fi) => {
+      if (st.fields.length > 1) edit((x) => (x.stores[si]!.fields.splice(fi, 1), true));
+    });
+  });
   if (c.localEnums) edit((x) => ((x.localEnums = false), true));
   if (c.generic !== null) edit((x) => ((x.generic = null), true));
   if (c.asyncHelpers.length) edit((x) => ((x.asyncHelpers = []), true));
@@ -2019,8 +2551,16 @@ export function fixtureShrinks(c: Component, fixture: Record<string, unknown>): 
       out.push({ ...fixture, [p.name]: s });
     }
   }
+  if (typeof fixture.$route === "string" && fixture.$route !== "/") out.push({ ...fixture, $route: "/" });
+  if (fixture.$locale !== undefined) {
+    const { $locale: _, ...rest } = fixture;
+    out.push(rest);
+  }
+  if (fixture.$stores && typeof fixture.$stores === "object") {
+    for (const s of valueShrinks(fixture.$stores)) out.push({ ...fixture, $stores: s });
+  }
   const keep = (f: Record<string, unknown>): Record<string, unknown> =>
-    Object.fromEntries(Object.entries(f).filter(([k]) => c.props.some((p) => p.name === k)));
+    Object.fromEntries(Object.entries(f).filter(([k]) => k.startsWith("$") || c.props.some((p) => p.name === k)));
   return out.map(keep);
 }
 
