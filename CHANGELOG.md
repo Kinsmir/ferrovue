@@ -262,6 +262,21 @@ released together and share version numbers.
 - An attribute that falls through holding `??` whose fallback ends in another `??`
   (`note ?? (tags.find(…) ?? "-")`) compiles: the generated Rust wrapped a `Cow` in another.
   `AsyncClass` records it.
+- A component that reads Pinia stores compiles when no store's state holds a string: `stores.rs`
+  writes `Stores` without a lifetime then, and the component took `&Stores<'_>`. The
+  `literal_props` test project has such a store.
+- The messages a message links to (`@:key`, at any depth) are looked up from the locale where
+  `t()` found that message, as vue-i18n does: with `nl` falling back to `en`, an English-only
+  message linking to `common.hi` writes the English `common.hi`, where ferrovue wrote the Dutch
+  one. `Translated` records it, with a Dutch message linking through an English one.
+- `.map()` over strings whose arrow returns the item on one branch and a new string on the other
+  (`words.split(" ").map((w) => (on ? w.toUpperCase() : w))`, or `$t(…)` in place of
+  `toUpperCase()`) compiles: the generated Rust returned a borrow of the item from the closure.
+  `MappedChoice` records it.
+- A `v-for` inside another, over a list the outer item holds that is filtered or mapped with a
+  value narrowed by a `v-if` around it (`shelf.tags.map((t) => note + t)` under `v-if="note"`),
+  compiles: the size the generated `render` reserves up front read that value outside the `if`.
+  `NarrowedRows` records it.
 
 ## [0.5.0] - 2026-10-05
 

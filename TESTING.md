@@ -249,6 +249,24 @@ What it generates, with random nesting:
   anything; `useSlots()` testing the default slot; `v-html` of a `TrustedHtml` prop with
   `ferrovue::BasicHtml` as the `trustedHtml` type, or of an `InlineHtml` prop (the only kind placed
   inside a `<p>`), whose values are HTML the type gives back unchanged;
+- a configuration of its own per case, written beside it as a project's would be:
+  - a routes file drawn from static routes, parameters, an optional parameter, nested routes with
+    an empty child path and a catch-all, sometimes with a `base` and link classes; `<RouterLink>`
+    to a literal path, a string built from a value, `{ name, params, query, hash }` and
+    `{ path, query, hash }`, with `active-class` and `exact-active-class`, its content rendered
+    from virtual nodes; `useRoute()` and `$route` (`path`, `fullPath`, `hash`, `name`, `params`,
+    `query`) in the template and in `computed`; each fixture's `$route` a location with parameters
+    that need encoding, a query and a hash, or one no route matches;
+  - Pinia stores: an option store (strings, numbers, a `Float`, a boolean, an optional and a
+    nullable field, lists of strings and of objects, getters of the state) and a setup store
+    (refs typed by their literal or by `ref<T>()`, `null`, `computed` getters), read as
+    `store.x`, through `storeToRefs` and in `computed`, with every store's state in the fixture's
+    `$stores`;
+  - vue-i18n locales (`en`, part of `nl`) with plain, named, list, plural and linked messages
+    (`@:`, `@.upper:` and the other modifiers) holding markup and literals for `{`, `}`, `@` and
+    `|`, read with `$t` and `t` from `useI18n()` (named values, a list, a plural number, a `count`
+    or `n`, a missing key) inside any string expression, and `locale`; each fixture's `$locale` is
+    `en`, `nl`, `fr` (no messages, so every key falls back) or none;
 - prop values meant to break things: markup and quotes, `</script>`, combining marks, emoji, RTL
   and bidi controls, JavaScript-only whitespace, case mappings that change length, empty strings,
   numbers written as strings, integers at ±(2⁵³ − 1), fractions such as `0.1`, `1e-7`, `1e21`,
@@ -277,9 +295,11 @@ work directory).
 How a run works:
 
 1. The components and fixtures are written to `target/fuzz/<seed>/cases/`, one directory per
-   component, and `generate()` runs on each.
+   component with its routes file, stores and locales, and `generate()` runs on each with that
+   case's configuration.
 2. One vitest run (`packages/ferrovue/fuzz/vitest.config.ts`, `@vitejs/plugin-vue`, the same
-   `attachSsrRender` and `fixtureApp` as the conformance suite) renders every fixture with Vue.
+   `attachSsrRender`, `fixtureApp` and `fixtureOptions` as the conformance suite, so a real
+   vue-router, Pinia and vue-i18n) renders every fixture with Vue.
 3. One `cargo test` of a throwaway crate, `target/fuzz/harness/`, which includes every component's
    generated modules, renders every fixture through `render_json`. Its target directory,
    `target/fuzz-target/`, is shared between runs, so the runtime crate is built once.
@@ -288,9 +308,12 @@ How a run works:
    compile, and refusals, with the message of each.
 5. Each failure is **shrunk**: nodes, `v-if` and `v-for` directives, attributes, class and style
    entries removed, sub-expressions replaced by smaller ones, prop values made shorter or left out,
-   for as long as the failure stays. The candidates of each round are checked in one batch. The
-   smallest case is saved in `fuzz/failures/<seed>-<case>/`: the component, `fixture.json`, Vue's
-   `vue.html`, ferrovue's `ferrovue.html` (or the compile error), and `about.txt`.
+   routes, link targets, messages, a locale, stores, getters and state fields removed, the
+   location set to `/`, for as long as the failure stays. The candidates of each round are checked
+   in one batch. The smallest case is saved in `fuzz/failures/<seed>-<case>/`: the component,
+   `fixture.json`, Vue's `vue.html`, ferrovue's `ferrovue.html` (or the compile error), and
+   `about.txt`; a case with routes, stores or locales is saved as a project, its components in
+   `components/` beside its `ferrovue.config.json`.
 
 `pnpm fuzz` exits 1 on a mismatch, a Rust error, generated Rust that does not compile, a refusal, a
 fixture Vue cannot render, or a run that compares no fixture at all. CI runs it nightly
