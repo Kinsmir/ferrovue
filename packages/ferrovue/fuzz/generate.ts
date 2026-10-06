@@ -75,7 +75,7 @@ export type Spec =
   | { k: "obj"; iface: string }
   | { k: "record"; of: Spec; dict: boolean }
   | { k: "enum"; values: string[] }
-  | { k: "html" };
+  | { k: "html"; inline: boolean };
 
 export interface Iface {
   name: string;
@@ -263,11 +263,11 @@ function tsType(spec: Spec): string {
     case "enum":
       return "Tone";
     case "html":
-      return "TrustedHtml";
+      return spec.inline ? "InlineHtml" : "TrustedHtml";
   }
 }
 
-const usesHtml = (spec: Spec): boolean => spec.k === "html" || (spec.k === "opt" && usesHtml(spec.of));
+const usesHtml = (spec: Spec, inline: boolean): boolean => (spec.k === "html" && spec.inline === inline) || (spec.k === "opt" && usesHtml(spec.of, inline));
 const usesEnum = (spec: Spec): boolean => spec.k === "enum" || (spec.k === "opt" && usesEnum(spec.of));
 
 const usesFloat = (spec: Spec): boolean =>
@@ -463,7 +463,8 @@ const genericOf = (c: Component): string | null =>
 
 export function printComponent(c: Component): string {
   const float = c.props.some((p) => usesFloat(p.spec)) || c.ifaces.some((i) => i.fields.some((f) => usesFloat(f.spec)));
-  const html = c.props.some((p) => usesHtml(p.spec));
+  const trusted = c.props.some((p) => usesHtml(p.spec, false));
+  const inline = c.props.some((p) => usesHtml(p.spec, true));
   const tpl = templateText(c);
   const script = scriptLines(c);
   const helpers = rendered(c.template);
@@ -486,7 +487,7 @@ export function printComponent(c: Component): string {
   if (consts.some((n) => !local(n))) lines.push(`import { ${consts.filter((n) => !local(n)).toSorted().join(", ")} } from "./fz-consts";`);
   const keys = [...new Set(c.provides.filter((p) => p.key !== "str").map((p) => (p.key === "num" ? "FzNum" : "FzLive")))].toSorted();
   if (keys.length) lines.push(`import { ${keys.join(", ")} } from "./fz-keys";`);
-  const types = [...(float ? ["Float"] : []), ...(html ? ["TrustedHtml"] : [])];
+  const types = [...(float ? ["Float"] : []), ...(inline ? ["InlineHtml"] : []), ...(trusted ? ["TrustedHtml"] : [])];
   if (types.length) lines.push(`import type { ${types.join(", ")} } from "ferrovue/types";`);
   lines.push("");
   for (const name of asyncs) lines.push(`const ${name} = defineAsyncComponent(() => import("./${name}.vue"));`);
@@ -645,7 +646,7 @@ function randomValue(r: Rng, spec: Spec, ifaces: Map<string, Iface>, hostile: bo
     case "enum":
       return r.pick(spec.values);
     case "html":
-      return basicHtml(r, hostile, 0, "flow");
+      return basicHtml(r, hostile, 0, spec.inline ? "inline" : "flow");
   }
 }
 
@@ -740,6 +741,7 @@ interface Var {
   nul?: boolean;
   bound: number;
   lone?: boolean;
+  inline?: boolean;
 }
 interface ListVar {
   name: string;
@@ -775,6 +777,7 @@ class Gen {
   scope: Scope = { vars: [], lists: [], records: [], htmls: [] };
   favour: HelperName[] = [];
   vnode = false;
+  para = false;
   slotted = false;
   loopDepth = 0;
   nodes = 0;
@@ -788,7 +791,10 @@ class Gen {
   }
 
   bind(name: string, spec: Spec, prop = false, lone = false): void {
-    if (spec.k === "html" || (spec.k === "opt" && spec.of.k === "html")) this.scope.htmls.push({ name, ty: "html", opt: spec.k === "opt", bound: 0 });
+    if (spec.k === "html" || (spec.k === "opt" && spec.of.k === "html")) {
+      const html = spec.k === "opt" ? spec.of : spec;
+      this.scope.htmls.push({ name, ty: "html", opt: spec.k === "opt", bound: 0, ...(html.k === "html" && html.inline ? { inline: true } : {}) });
+    }
     else if (spec.k === "list") this.scope.lists.push({ name, of: spec.of });
     else if (spec.k === "record") this.scope.records.push({ name, of: spec.of });
     else if (spec.k === "obj") for (const f of this.ifaces.get(spec.iface)!.fields) this.bind(`${name}.${f.name}`, f.spec);
@@ -1317,11 +1323,19 @@ class Gen {
     const isVoid = ["br", "hr", "img", "input"].includes(tag);
     const attrs = this.attrs(tag);
     if (isVoid) return { k: "el", tag, attrs, kids: [], void: true };
-    if (this.scope.htmls.length && ["div", "section", "article", "p", "span", "li", "em"].includes(tag) && r.chance(0.3)) {
-      return { k: "el", tag, attrs, kids: [], html: { ...this.varRef(r.pick(this.scope.htmls)), fixed: true } };
+    const para = this.para || tag === "p";
+    const htmls = this.scope.htmls.filter((v) => !para || v.inline);
+    if (htmls.length && ["div", "section", "article", "p", "span", "li", "em"].includes(tag) && r.chance(0.3)) {
+      return { k: "el", tag, attrs, kids: [], html: { ...this.varRef(r.pick(htmls)), fixed: true } };
     }
     const inner = tag === "ul" || tag === "ol" ? "list" : ["div", "section", "article", "header", "footer", "li", "template"].includes(tag) ? (ctx === "inline" ? "inline" : "block") : "inline";
-    return { k: "el", tag, attrs, kids: this.kids(depth + 1, inner) };
+    const outer = this.para;
+    this.para = para;
+    try {
+      return { k: "el", tag, attrs, kids: this.kids(depth + 1, inner) };
+    } finally {
+      this.para = outer;
+    }
   }
 
   carrier(depth: number, ctx: "block" | "inline" | "list"): Node & { k: "el" } {
@@ -1635,7 +1649,8 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
     props.push({ name: `${prefix(spec)}${props.length}`, spec });
   }
   if (r.chance(0.12)) {
-    const spec: Spec = r.chance(0.7) ? { k: "html" } : { k: "opt", of: { k: "html" } };
+    const html: Spec = { k: "html", inline: r.chance(0.4) };
+    const spec: Spec = r.chance(0.7) ? html : { k: "opt", of: html };
     props.push({ name: `${prefix(spec)}${props.length}`, spec });
   }
 
