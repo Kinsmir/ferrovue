@@ -35,7 +35,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push_str("<em>");
     fv::escape_into(out, &props.title);
     out.push_str("</em><!--]-->");
-    super::divider::render(out, &super::divider::Props {  });
+    super::divider::render_scoped(out, &super::divider::Props {  }, &fv::Attrs::NONE);
     crate::vendor::star_rating(out, &super::twins::StarRatingProps { value: props.stars, max: None, label: Some(&*props.title), readonly: false }, super::twins::StarRatingSlots {
         default: None,
     }, &fv::Attrs::NONE);

@@ -228,24 +228,35 @@ impl I18n {
     /// assert_eq!(i18n.t("no.such.key", &Args::default()), "no.such.key");
     /// ```
     pub fn t(&self, key: &str, args: &Args<'_>) -> String {
-        match self.find(key) {
-            Some((_, message)) => {
+        match self.find(0, key) {
+            Some((at, message)) => {
                 let mut out = String::new();
-                self.evaluate(message, args, &mut out, 0);
+                self.evaluate(message, at, args, &mut out, 0);
                 out
             }
             None => key.to_owned(),
         }
     }
 
-    fn find(&self, key: &str) -> Option<(&'static Locale, &'static Message)> {
-        self.chain.iter().find_map(|&i| {
-            let locale = &self.locales[i];
-            locale.get(key).map(|m| (locale, m))
-        })
+    /// The message under `key` in the first locale of the chain from position `from` on, with the
+    /// position of the locale that has it: every message `t()` links to, however deep, is looked
+    /// up from the locale the message `t()` found came from, as vue-i18n does.
+    fn find(&self, from: usize, key: &str) -> Option<(usize, &'static Message)> {
+        self.chain
+            .iter()
+            .enumerate()
+            .skip(from)
+            .find_map(|(at, &i)| self.locales[i].get(key).map(|m| (at, m)))
     }
 
-    fn evaluate(&self, message: &Message, args: &Args<'_>, out: &mut String, depth: usize) {
+    fn evaluate(
+        &self,
+        message: &Message,
+        from: usize,
+        args: &Args<'_>,
+        out: &mut String,
+        depth: usize,
+    ) {
         let case = match message.cases {
             [] => return,
             [only] => *only,
@@ -278,9 +289,9 @@ impl I18n {
                 Part::Linked { key, modifier } => {
                     let mut linked = String::new();
                     if depth < MAX_LINK_DEPTH
-                        && let Some((_, m)) = self.find(key)
+                        && let Some((_, m)) = self.find(from, key)
                     {
-                        self.evaluate(m, args, &mut linked, depth + 1);
+                        self.evaluate(m, from, args, &mut linked, depth + 1);
                     }
                     if linked.is_empty() {
                         linked.push_str(key);

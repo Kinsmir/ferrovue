@@ -1,4 +1,4 @@
-import { type N, type Scope, type Val, fail, staticClassFirst } from "./model.ts";
+import { type N, type Scope, type Val, fail } from "./model.ts";
 import { ctx } from "./context.ts";
 import { expr } from "./expr.ts";
 import { type Presence, boolOf, cond, known, narrowTo, presence, truthy } from "./narrowing.ts";
@@ -6,7 +6,7 @@ import { CMP, condition, occurrences, operand } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
 import { interpolate, keepsAttrCase, renderAttr, renderAttrs, renderDynamicAttr } from "./attrs.ts";
 import { renderStyle } from "./styles.ts";
-import { renderClass } from "./classes.ts";
+import { renderClass, vnodeClass } from "./classes.ts";
 import { renderChild } from "./children.ts";
 import { slotOutlet } from "./slots.ts";
 import { list } from "./loops.ts";
@@ -28,12 +28,6 @@ function selectsByModel(n: N): boolean {
   if (n?.type === "CallExpression" && n.callee.type === "Identifier" && /^_ssrLoose(?:Equal|Contain)$/.test(n.callee.name)) return true;
   if (n?.type === "CallExpression") return n.arguments.some(selectsByModel);
   return n?.type === "ConditionalExpression" && [n.test, n.consequent, n.alternate].some(selectsByModel);
-}
-
-function inWrittenOrder(s: Scope, n: N): N {
-  if (n?.type !== "ArrayExpression" || n.elements.length !== 2 || n.elements[1]?.type !== "StringLiteral") return n;
-  const [bound, written] = n.elements;
-  return staticClassFirst(s.comp, bound) ? { ...n, elements: [written, bound] } : n;
 }
 
 export function slot(s: Scope, e: Emitter, n: N): void {
@@ -61,7 +55,7 @@ export function slot(s: Scope, e: Emitter, n: N): void {
         renderAttrs(s, e, a[0]);
         return;
       case "_ssrRenderClass":
-        renderClass(s, e, s.vnode ? inWrittenOrder(s, a[0]) : a[0]);
+        renderClass(s, e, s.vnode ? vnodeClass(s, a[0]) : a[0]);
         return;
       case "_ssrRenderStyle":
         if (s.vnode && hidesByVShow(a[0])) fail(s.comp, "FV0423", `\`v-show\` ${FROM_VNODES}, where Vue writes no \`style\` while it shows: bind \`:style\` or use \`v-if\``, n);

@@ -837,6 +837,12 @@ Style property whose place depends on a condition.
 
 Scope ids handed to a component whose render does not take them.
 
+## FV1013
+
+`class` written apart from a later `:class` in content rendered from virtual nodes.
+
+Inside an element `<component :is>` chooses, in the slot content such an element renders, and inside a `<RouterLink>`, Vue's server renders from virtual nodes, where a static `class` written before `:class` keeps its place and its names come first. ferrovue writes them so when nothing stands between the two; with attributes between them, write the two next to each other, or `:class` first.
+
 # Configuration and helpers: FV11xx
 
 See [`quick_start`](crate::guide::quick_start).

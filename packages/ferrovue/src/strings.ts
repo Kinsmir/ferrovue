@@ -46,11 +46,25 @@ export function asCow(v: Val): string {
   return `std::borrow::Cow::<str>::Owned(${built})`;
 }
 
+/** A temporary string as a value a `let` can hold past its statement: a `String`, or a `Cow`
+ * borrowing nothing the statement made. */
+export function heldStr(v: Val): string {
+  const cow = asCow(v);
+  const owned = /^std::borrow::Cow::<str>::Owned\(([^]*)\)$/.exec(cow)?.[1];
+  return owned !== undefined && enclosed(`(${owned})`) ? owned : cow;
+}
+
 export function yieldsCow(code: string): boolean {
   const routine = /^fv::js_(?:slice|substring|replace|replace_all|pad_start|pad_end)(?=\()/.exec(code);
   if (routine !== null) return enclosed(code.slice(routine[0].length));
-  const fallback = code.lastIndexOf(".unwrap_or(std::borrow::Cow::<str>::");
-  return fallback >= 0 && enclosed(code.slice(fallback + ".unwrap_or".length));
+  const marker = ".unwrap_or(";
+  for (let at = code.lastIndexOf(marker); at >= 0; at = code.lastIndexOf(marker, at - 1)) {
+    const rest = code.slice(at + ".unwrap_or".length);
+    if (!enclosed(rest)) continue;
+    const fallback = rest.slice(1, -1);
+    return fallback.startsWith("std::borrow::Cow::<str>::") || yieldsCow(fallback);
+  }
+  return false;
 }
 
 export function unquote(literal: string): string {

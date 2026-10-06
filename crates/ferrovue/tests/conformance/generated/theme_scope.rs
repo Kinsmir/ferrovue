@@ -50,8 +50,8 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_provi
 pub fn render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_provides: super::provides::Provides<'_>, fv_attrs: &fv::Attrs<'_>) {
     out.reserve(50 + props.theme.as_deref().map_or(0, str::len));
     let fv_inherited = fv_provides;
-    let s_mine = &*props.theme.as_deref().map(std::borrow::Cow::<str>::Borrowed).unwrap_or(std::borrow::Cow::<str>::Owned(format!("{}-inverse", fv_inherited.theme_key.unwrap_or("light"))));
-    let fv_provides = super::provides::Provides { theme_key: Some(s_mine), tone: Some("scoped"), ..fv_inherited };
+    let s_mine = props.theme.as_deref().map(std::borrow::Cow::<str>::Borrowed).unwrap_or(std::borrow::Cow::<str>::Owned(format!("{}-inverse", fv_inherited.theme_key.unwrap_or("light"))));
+    let fv_provides = super::provides::Provides { theme_key: Some(&s_mine), tone: Some("scoped"), ..fv_inherited };
     out.push_str("<div");
     if fv_attrs.is_empty() {
         out.push_str(" class=\"scope\"");

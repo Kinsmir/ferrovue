@@ -1,11 +1,12 @@
-//! Components compiled with `"builders": false`, whose props are built as struct literals.
+//! Components compiled with `"builders": false`, whose props and store state are built as struct
+//! literals.
 
 #[rustfmt::skip]
 #[path = "literal_props/generated/mod.rs"]
 #[allow(missing_docs)]
 pub mod generated;
 
-use generated::{badge, card, types};
+use generated::{badge, card, stores, tally, types};
 
 #[test]
 fn props_built_as_struct_literals_render() {
@@ -51,4 +52,34 @@ fn a_struct_with_no_required_field_still_derives_default() {
         },
     );
     assert_eq!(out, r#"<span class="badge">new<b>3</b></span>"#);
+}
+
+#[test]
+fn stores_holding_no_string_take_no_lifetime() {
+    let mut out = String::new();
+    let state = stores::Stores {
+        tally: stores::TallyState {
+            count: 3,
+            open: true,
+            best: None,
+        },
+    };
+    tally::render(
+        &mut out,
+        &tally::Props {
+            label: "Ada & co".into(),
+        },
+        &state,
+    );
+    assert_eq!(out, r#"<p class="open">Ada &amp; co: 3 (6) <!----></p>"#);
+    out.clear();
+    let state = stores::Stores {
+        tally: stores::TallyState {
+            count: -2,
+            open: false,
+            best: Some(7),
+        },
+    };
+    tally::render(&mut out, &tally::Props { label: "Bo".into() }, &state);
+    assert_eq!(out, r#"<p class="">Bo: -2 (-4) <b>7</b></p>"#);
 }

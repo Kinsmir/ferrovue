@@ -95,7 +95,7 @@ export function list(s: Scope, e: Emitter, c: N): void {
   const body = e.literalBytes - before;
   e.literalBytes = before;
   if (body > 0 && fromProps) e.perItem.push(`${body === 1 ? "" : `${body} * `}${atom(src.code)}.len()`);
-  else if (body > 0 && src.ty.k === "list" && s.loop && src.code.startsWith(`${s.loop.item}.`)) {
+  else if (body > 0 && src.ty.k === "list" && s.loop && src.iter === undefined && new RegExp(`^${s.loop.item}(?:\\.\\w+)+$`).test(src.code)) {
     const outer = s.loop;
     e.perItem.push(`${body === 1 ? "" : `${body} * `}${atom(outer.over)}.iter().map(|${outer.item}| ${src.code}.len()).sum::<usize>()`);
   }

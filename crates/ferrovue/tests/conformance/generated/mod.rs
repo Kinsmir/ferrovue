@@ -12,6 +12,8 @@
 pub mod account_nav;
 pub mod app;
 pub mod arrays;
+pub mod async_class;
+pub mod async_class_root;
 pub mod attrs;
 pub mod badge;
 pub mod blank;
@@ -65,12 +67,14 @@ pub mod keywords;
 pub mod lifecycle;
 pub mod links;
 pub mod lists;
+pub mod mapped_choice;
 pub mod markup;
 pub mod menu;
 pub mod meter;
 pub mod modal;
 pub mod model;
 pub mod model_parent;
+pub mod narrowed_rows;
 pub mod narrowing;
 pub mod nav;
 pub mod null_child;
@@ -109,6 +113,7 @@ pub mod scoped_shelf;
 pub mod scoped_tree;
 pub mod session;
 pub mod setup;
+pub mod setup_values;
 pub mod shape_circle;
 pub mod shape_picker;
 pub mod shape_root;
@@ -136,6 +141,7 @@ pub mod translated;
 pub mod tree;
 pub mod user_card;
 pub mod user_list;
+pub mod vnode_class;
 pub mod route_table;
 pub mod stores;
 pub mod types;
@@ -234,6 +240,14 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Arrays" => {
             let props: arrays::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             arrays::render(&mut out, &props);
+        }
+        "AsyncClass" => {
+            let props: async_class::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            async_class::render(&mut out, &props);
+        }
+        "AsyncClassRoot" => {
+            let props: async_class_root::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            async_class_root::render(&mut out, &props);
         }
         "Attrs" => {
             let props: attrs::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -498,6 +512,12 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: lists::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             lists::render(&mut out, &props);
         }
+        "MappedChoice" => {
+            let props: mapped_choice::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let i18n = i18n::i18n(fixture.locale.as_deref().unwrap_or(i18n::LOCALE));
+            mapped_choice::render(&mut out, &props, &i18n);
+        }
         "Markup" => {
             let props: markup::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             markup::render(&mut out, &props);
@@ -526,6 +546,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "ModelParent" => {
             let props: model_parent::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             model_parent::render(&mut out, &props);
+        }
+        "NarrowedRows" => {
+            let props: narrowed_rows::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            narrowed_rows::render(&mut out, &props);
         }
         "Narrowing" => {
             let props: narrowing::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -720,6 +744,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: setup::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             setup::render(&mut out, &props);
         }
+        "SetupValues" => {
+            let props: setup_values::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            setup_values::render(&mut out, &props, provides::Provides::default());
+        }
         "ShapeCircle" => {
             let props: shape_circle::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -853,6 +881,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "UserList" => {
             let props: user_list::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             user_list::render(&mut out, &props);
+        }
+        "VnodeClass" => {
+            let props: vnode_class::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            vnode_class::render(&mut out, &props);
         }
         other => return Err(format!("no component called {other}")),
     }

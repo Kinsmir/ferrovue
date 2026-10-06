@@ -29,8 +29,8 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::I18n) {
-    out.reserve(88 + props.name.len());
-    let s_title = &*fv_i18n.t("greeting", &fv::i18n::Args { named: &[("name", fv::i18n::Value::Str(&props.name))], list: &[], plural: None });
+    out.reserve(90 + props.name.len());
+    let s_title = fv_i18n.t("greeting", &fv::i18n::Args { named: &[("name", fv::i18n::Value::Str(&props.name))], list: &[], plural: None });
     out.push_str("<section");
     if fv_i18n.locale().is_empty() {
         out.push_str(" lang");
@@ -47,7 +47,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::I18n) {
         out.push('"');
     }
     out.push_str("><h1>");
-    fv::escape_into(out, s_title);
+    fv::escape_into(out, &s_title);
     out.push_str("</h1><p>");
     fv::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args { named: &[], list: &[], plural: Some(props.count) }));
     out.push('|');
@@ -68,6 +68,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::I18n) {
     fv::escape_into(out, &fv_i18n.t("missingLink", &fv::i18n::Args { named: &[], list: &[], plural: None }));
     out.push_str("</p><p>");
     fv::escape_into(out, &fv_i18n.t("onlyEnglish", &fv::i18n::Args { named: &[], list: &[], plural: None }));
+    out.push('|');
+    fv::escape_into(out, &fv_i18n.t("englishLink", &fv::i18n::Args { named: &[], list: &[], plural: None }));
+    out.push('|');
+    fv::escape_into(out, &fv_i18n.t("hop", &fv::i18n::Args { named: &[], list: &[], plural: None }));
     out.push('|');
     fv::escape_into(out, &fv_i18n.t("no.such.key", &fv::i18n::Args { named: &[], list: &[], plural: None }));
     out.push('|');

@@ -37,8 +37,8 @@ impl<'a> Props<'a> {
 pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) {
     out.reserve(29 + props.theme.len() + props.active.len() + props.inner.len() + props.names.iter().map(|v| v.len()).sum::<usize>());
     let fv_inherited = fv_provides;
-    let fv_provided_accent_key = &*props.theme.to_uppercase();
-    let fv_provides = super::provides::Provides { theme_key: Some(&props.theme), size: Some(props.size), accent_key: Some(fv_provided_accent_key), ..fv_inherited };
+    let fv_provided_accent_key = props.theme.to_uppercase();
+    let fv_provides = super::provides::Provides { theme_key: Some(&props.theme), size: Some(props.size), accent_key: Some(&*fv_provided_accent_key), ..fv_inherited };
     out.push_str("<main>");
     super::themed_button::render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed("direct") }, fv_provides, "");
     super::tabs::render(out, &super::tabs::Props { active: std::borrow::Cow::Borrowed(&*props.active), count: props.names.len() as i64, title: std::borrow::Cow::Borrowed("outer") }, super::tabs::Slots {

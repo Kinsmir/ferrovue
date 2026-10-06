@@ -129,7 +129,7 @@ export function rustStr(s: string): string {
     else if (ch === "\n") out += "\\n";
     else if (ch === "\r") out += "\\r";
     else if (ch === "\t") out += "\\t";
-    else if (c < 0x20 || c === 0x7f) out += `\\u{${c.toString(16)}}`;
+    else if (c < 0x20 || c === 0x7f || (c >= 0x202a && c <= 0x202e) || (c >= 0x2066 && c <= 0x2069)) out += `\\u{${c.toString(16)}}`;
     else out += ch;
   }
   return out + '"';
@@ -360,18 +360,22 @@ export function vHtmlElement(comp: Component, node: N): { el: N; around: N[] } |
   return visit(comp.templateAst, []);
 }
 
-export function staticClassFirst(comp: Component, bound: N): boolean {
-  const within = covering(comp, bound);
-  if (!within) return false;
-  const isBound = (p: N): boolean => p.type === 7 && p.name === "bind" && p.arg?.content === "class" && within(p.loc);
-  const el = templateNode(comp, (n) => (n.props.some(isBound) ? n : null), true);
-  if (!el) return false;
-  const props: N[] = el.props;
-  const literal = props.findIndex((p) => p.type === 6 && p.name === "class");
-  return literal >= 0 && literal < props.findIndex(isBound);
+/** The template element holding the directive the compiled `node` came from. */
+export function directiveOwner(comp: Component, node: N): N {
+  const within = covering(comp, node);
+  if (!within || !comp.templateAst) return null;
+  const visit = (n: N): N => {
+    if (n.type === 1 && n.props.some((p: N) => p.type === 7 && within(p.loc))) return n;
+    for (const c of n.children ?? []) {
+      const found = visit(c);
+      if (found) return found;
+    }
+    return null;
+  };
+  return visit(comp.templateAst);
 }
 
-function templateNode(comp: Component, test: (el: N) => N, raw = false): N {
+function templateNode(comp: Component, test: (el: N) => N): N {
   const visit = (n: N): N => {
     const found = n.type === 1 ? test(n) : null;
     if (found) return found;
@@ -382,7 +386,6 @@ function templateNode(comp: Component, test: (el: N) => N, raw = false): N {
     return null;
   };
   const found = comp.templateAst ? visit(comp.templateAst) : null;
-  if (raw) return found;
   return found && { type: "VueTemplate", loc: { start: { line: found.loc.start.line, column: found.loc.start.column - 1 } }, __fv: "source" };
 }
 

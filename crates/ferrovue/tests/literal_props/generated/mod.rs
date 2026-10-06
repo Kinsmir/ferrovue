@@ -10,7 +10,38 @@
 
 pub mod badge;
 pub mod card;
+pub mod tally;
+pub mod stores;
 pub mod types;
+
+/// What a fixture holds besides the props: each slot's content, and the location it renders at.
+#[cfg(test)]
+#[derive(serde::Deserialize)]
+struct Fixture {
+    #[serde(rename = "$slots", default)]
+    slots: std::collections::HashMap<String, String>,
+    #[serde(rename = "$route", default = "Fixture::root")]
+    route: String,
+    #[serde(rename = "$stores", default = "Fixture::no_stores")]
+    stores: serde_json::Value,
+    #[serde(rename = "$locale", default)]
+    locale: Option<String>,
+}
+
+#[cfg(test)]
+impl Fixture {
+    fn root() -> String {
+        "/".to_owned()
+    }
+
+    fn no_stores() -> serde_json::Value {
+        serde_json::Value::Object(Default::default())
+    }
+
+    fn slot(&self, name: &str) -> Option<&str> {
+        self.slots.get(name).map(String::as_str)
+    }
+}
 
 /// Render one component from its props as JSON, for the conformance suite.
 #[cfg(test)]
@@ -24,6 +55,12 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Card" => {
             let props: card::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             card::render(&mut out, &props);
+        }
+        "Tally" => {
+            let props: tally::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let state: stores::Stores = serde_json::from_value(fixture.stores.clone()).map_err(|e| e.to_string())?;
+            tally::render(&mut out, &props, &state);
         }
         other => return Err(format!("no component called {other}")),
     }

@@ -331,13 +331,15 @@ choice renders as it does elsewhere, as on Vue's server.
 
 Vue's server renders an element `<component :is>` chooses from virtual nodes, by rules that differ
 from a template's in a few places, and ferrovue follows them: a `v-if` that renders nothing writes
-`<!--v-if-->`, an attribute with an empty value is written bare (`alt`), and slot content a parent
+`<!--v-if-->`, an attribute with an empty value is written bare (`alt`), a static `class` written
+just before `:class` gives its names first (`class="a x"`), and slot content a parent
 gives a `<slot>` inside the element is rendered the same way, through every component that passes
 it on. Where virtual nodes would differ in ways the compiler cannot reproduce, it refuses: a
 `<slot>` with fallback content inside such an element (Vue decides whether to show the fallback by
 rules of its own), one `<slot>` rendered both inside and outside one, `v-show` and `v-model` on a
-`<select>` inside one, and `v-html` or `v-text` on `<component :is>` itself, which Vue's server
-leaves empty.
+`<select>` inside one, a static `class` with other attributes between it and a later `:class`
+(Vue writes it where the static one stands), and `v-html` or `v-text` on `<component :is>`
+itself, which Vue's server leaves empty.
 
 # `html` and `island`
 

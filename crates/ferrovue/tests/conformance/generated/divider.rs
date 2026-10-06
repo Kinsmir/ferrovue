@@ -23,9 +23,21 @@ impl Props {
 
 
 /// Write the component's server render into `out`.
-pub fn render(out: &mut String, _props: &Props) {
+pub fn render(out: &mut String, props: &Props) {
+    render_scoped(out, props, &fv::Attrs::NONE);
+}
+
+/// [`render`], with the attributes a parent passes beyond the props, and the scope ids it hands the root.
+#[doc(hidden)]
+pub fn render_scoped(out: &mut String, _props: &Props, fv_attrs: &fv::Attrs<'_>) {
     out.reserve(20);
-    out.push_str("<hr class=\"divider\">");
+    out.push_str("<hr");
+    if fv_attrs.is_empty() {
+        out.push_str(" class=\"divider\"");
+    } else {
+        fv::attrs_into(out, &[&[("class", fv::Attr::str("divider"))], fv_attrs.list()], 1, "");
+    }
+    out.push('>');
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.

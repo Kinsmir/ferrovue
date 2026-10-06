@@ -240,6 +240,43 @@ released together and share version numbers.
 - A `.vue` file that is empty or holds only a `<style>` is refused (FV0002) at line 1, column 1,
   and Vue's message names it by its path relative to the project, where it had no location and
   the absolute path.
+- In content Vue renders from virtual nodes, a static `class` written before `:class` with other
+  attributes between the two is refused (FV1013): Vue writes the class where the static one
+  stands, and ferrovue where `:class` stands. A `:class` array there keeps the static names first
+  too (`class="a" :class="[x, y]"` is `class="a x y"`). Found by the fuzzer; `VnodeClass` records
+  it.
+- A setup value or a provided value that is a string built from another temporary
+  (`props.label.toLowerCase().padStart(6, "0")`) compiles: the generated Rust borrowed a value
+  dropped at the end of its statement. Setup strings built by `format!` and the like are held as
+  the `String` itself.
+- An integer setup value computed through JavaScript's arithmetic (`props.n * -1`, `(-1) * 0`)
+  keeps `-0`, so `1 / value` is `-Infinity` as in Vue; it was cast to an integer first.
+- Strings holding bidirectional controls (U+202A to U+202E, U+2066 to U+2069) in a template,
+  a constant or a setup value compile: they are escaped in the generated Rust, whose compiler
+  rejects them written out. `SetupValues` records these three.
+- A string `:class` given to a component loaded with `defineAsyncComponent` is written twice when
+  it has whitespace around it (`:class="' a '"` is `class="… a a"`), as Vue's async wrapper hands
+  it on once trimmed and once as written; ferrovue wrote it once. Where Vue merges the props first
+  (the component is its parent's root, or takes `v-bind` or a static `class` too), the class
+  arrives trimmed and is written once, as before. `AsyncClass` and `AsyncClassRoot` record both.
+- An attribute that falls through holding `??` whose fallback ends in another `??`
+  (`note ?? (tags.find(…) ?? "-")`) compiles: the generated Rust wrapped a `Cow` in another.
+  `AsyncClass` records it.
+- A component that reads Pinia stores compiles when no store's state holds a string: `stores.rs`
+  writes `Stores` without a lifetime then, and the component took `&Stores<'_>`. The
+  `literal_props` test project has such a store.
+- The messages a message links to (`@:key`, at any depth) are looked up from the locale where
+  `t()` found that message, as vue-i18n does: with `nl` falling back to `en`, an English-only
+  message linking to `common.hi` writes the English `common.hi`, where ferrovue wrote the Dutch
+  one. `Translated` records it, with a Dutch message linking through an English one.
+- `.map()` over strings whose arrow returns the item on one branch and a new string on the other
+  (`words.split(" ").map((w) => (on ? w.toUpperCase() : w))`, or `$t(…)` in place of
+  `toUpperCase()`) compiles: the generated Rust returned a borrow of the item from the closure.
+  `MappedChoice` records it.
+- A `v-for` inside another, over a list the outer item holds that is filtered or mapped with a
+  value narrowed by a `v-if` around it (`shelf.tags.map((t) => note + t)` under `v-if="note"`),
+  compiles: the size the generated `render` reserves up front read that value outside the `if`.
+  `NarrowedRows` records it.
 
 ## [0.5.0] - 2026-10-05
 

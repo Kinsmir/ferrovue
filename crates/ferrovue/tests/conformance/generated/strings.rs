@@ -43,9 +43,9 @@ impl<'a> Props<'a> {
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(213 + props.text.len() + props.other.len() + props.sep.len() + props.fill.as_deref().map_or(0, str::len));
-    let s_initial = &*fv::js_char_at(&props.text, 0.0f64).to_uppercase();
+    let s_initial = fv::js_char_at(&props.text, 0.0f64).to_uppercase().to_owned();
     let s_words = fv::js_split(&props.text, " ").into_iter().map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
-    let s_short = &*fv::js_slice(&props.text, 0.0f64, Some(3.0f64));
+    let s_short = fv::js_slice(&props.text, 0.0f64, Some(3.0f64)).into_owned();
     let s_last = fv::js_at(&props.text.to_uppercase(), -1.0f64).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned()));
     out.push_str("<section><p>");
     fv::escape_into(out, &fv::js_slice(&props.text, 0.0f64, Some(5.0f64)));
@@ -68,7 +68,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push('|');
     fv::escape_into(out, fv::js_char_at(&props.text, props.n as f64));
     out.push('|');
-    fv::escape_into(out, s_initial);
+    fv::escape_into(out, &s_initial);
     out.push('|');
     fv::escape_into(out, fv::js_char_at(&props.text, 99.0f64));
     out.push('|');
@@ -134,7 +134,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push('|');
     out.push_str(if fv::js_cmp(&fv::js_slice(&props.text, 0.0f64, Some(1.0f64)), "b").is_lt() { "true" } else { "false" });
     out.push_str("</p><p>");
-    fv::escape_into(out, s_short);
+    fv::escape_into(out, &s_short);
     out.push('|');
     fv::escape_into(out, s_last.as_deref().unwrap_or("-"));
     out.push('|');
@@ -142,7 +142,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         fv::escape_into(out, v);
     }
     out.push('|');
-    fv::escape_into(out, &(if (fv::js_length(s_short) as f64) < 3.0 { std::borrow::Cow::<str>::Owned(fv::js_pad_end(s_short, 3.0f64, "_").into_owned()) } else { std::borrow::Cow::<str>::Borrowed(s_short) }));
+    fv::escape_into(out, &(if (fv::js_length(&s_short) as f64) < 3.0 { std::borrow::Cow::<str>::Owned(fv::js_pad_end(&s_short, 3.0f64, "_").into_owned()) } else { std::borrow::Cow::<str>::Borrowed(&*s_short) }));
     out.push_str("</p>");
     if &*fv::js_slice(&props.text, 0.0f64, Some(1.0f64)) == "a" {
         out.push_str("<b>starts with a</b>");

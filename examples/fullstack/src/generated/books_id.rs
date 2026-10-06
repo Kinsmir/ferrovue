@@ -35,10 +35,10 @@ pub struct Slots<'s> {
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::Route<'_>, fv_head: &fv::Head) {
     out.reserve(211 + props.book.id.len() + props.book.title.len() + props.book.author.len());
-    let s_permalink = &*format!("/books/{}", fv_route.param("id").unwrap_or(""));
-    let s_summary = &*format!("{}, by {} ({})", props.book.title, props.book.author, fv::Js(props.book.year));
-    fv_head.push(fv::HeadValue::object([("title", fv::HeadValue::str(&props.book.title)), ("meta", fv::HeadValue::array([fv::HeadValue::object([("name", fv::HeadValue::str("description")), ("content", fv::HeadValue::str(s_summary))])])), ("link", fv::HeadValue::array([fv::HeadValue::object([("rel", fv::HeadValue::str("canonical")), ("href", fv::HeadValue::str(s_permalink))])]))]));
-    fv_head.push_seo_meta(fv::HeadValue::Object(Vec::new()), vec![("property", "og:title", fv::HeadValue::str(&props.book.title)), ("property", "og:description", fv::HeadValue::str(s_summary)), ("property", "og:type", fv::HeadValue::str("book")), ("property", "book:release_date", fv::HeadValue::str(&fv::Js(props.book.year).to_string()))]);
+    let s_permalink = format!("/books/{}", fv_route.param("id").unwrap_or(""));
+    let s_summary = format!("{}, by {} ({})", props.book.title, props.book.author, fv::Js(props.book.year));
+    fv_head.push(fv::HeadValue::object([("title", fv::HeadValue::str(&props.book.title)), ("meta", fv::HeadValue::array([fv::HeadValue::object([("name", fv::HeadValue::str("description")), ("content", fv::HeadValue::str(&s_summary))])])), ("link", fv::HeadValue::array([fv::HeadValue::object([("rel", fv::HeadValue::str("canonical")), ("href", fv::HeadValue::str(&s_permalink))])]))]));
+    fv_head.push_seo_meta(fv::HeadValue::Object(Vec::new()), vec![("property", "og:title", fv::HeadValue::str(&props.book.title)), ("property", "og:description", fv::HeadValue::str(&s_summary)), ("property", "og:type", fv::HeadValue::str("book")), ("property", "book:release_date", fv::HeadValue::str(&fv::Js(props.book.year).to_string()))]);
     out.push_str("<article class=\"book\"");
     if let Some(v) = fv_route.param("id") {
         if v.is_empty() {
@@ -58,7 +58,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route
     out.push_str("</p>");
     fv::slot_into(out, fv_slots.actions, None);
     out.push_str("<p class=\"permalink\">Permalink: <code>");
-    fv::escape_into(out, s_permalink);
+    fv::escape_into(out, &s_permalink);
     out.push_str("</code></p><section class=\"reviews\"><h2>Reviews</h2>");
     fv::slot_into(out, fv_slots.reviews, Some(&mut |out: &mut String| {
         out.push_str("<p>Loading reviews…</p>");

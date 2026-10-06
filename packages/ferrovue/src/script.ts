@@ -8,6 +8,8 @@ import { expr, fieldVal } from "./expr.ts";
 import { collected, heldList } from "./lists.ts";
 import { bare, operand, UNARY } from "./parens.ts";
 import { known } from "./narrowing.ts";
+import { heldStr, isTemporary } from "./strings.ts";
+import { intFromF64 } from "./numbers.ts";
 
 export const CLIENT_HOOKS = new Set([
   "onMounted", "onBeforeMount", "onUnmounted", "onBeforeUnmount", "onUpdated", "onBeforeUpdate",
@@ -284,6 +286,16 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
       if (v.held !== undefined) {
         lets.push(`let ${name} = ${v.held};`);
         scope.setup.set(local, { code: `${name}.as_deref()`, ty: v.ty, ...lone });
+        continue;
+      }
+      if (v.ty.k === "int" && v.f64 !== undefined && (v.code.endsWith(" as i64") || Object.is(v.num, -0))) {
+        lets.push(`let ${name} = ${bare(v.f64)};`);
+        scope.setup.set(local, { ...intFromF64(name), ...lone, ...(v.num !== undefined ? { num: v.num } : {}), ...(v.konst !== undefined ? { konst: v.konst } : {}) });
+        continue;
+      }
+      if (isTemporary(v)) {
+        lets.push(`let ${name} = ${heldStr(v)};`);
+        scope.setup.set(local, { code: `&*${name}`, ty: v.ty, ...lone });
         continue;
       }
       const place = v.ty.k === "list" || v.ty.k === "record" || v.ty.k === "struct" || v.ty.k === "child";

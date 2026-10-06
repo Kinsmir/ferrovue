@@ -12,6 +12,8 @@ use std::borrow::Cow;
 pub struct Provides<'p> {
     /// What is provided under `ThemeKey`, exported from `types/keys.ts`.
     pub theme_key: Option<&'p str>,
+    /// What is provided under `"tone"`.
+    pub tone: Option<&'p str>,
     /// What is provided under `LookKey`, exported from `types/keys.ts`.
     pub look_key: Option<&'p super::types::Look<'p>>,
     /// What is provided under `"look"`.
@@ -22,8 +24,6 @@ pub struct Provides<'p> {
     pub size: Option<i64>,
     /// What is provided under `AccentKey`, exported from `types/keys.ts`.
     pub accent_key: Option<&'p str>,
-    /// What is provided under `"tone"`.
-    pub tone: Option<&'p str>,
     /// What is provided under `"tags"`.
     pub tags: Option<&'p [Cow<'p, str>]>,
     /// What is provided under `"ratio"`.

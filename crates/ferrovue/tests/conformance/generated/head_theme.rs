@@ -39,8 +39,8 @@ pub struct Slots<'s> {
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_provides: super::provides::Provides<'_>, fv_head: &fv::Head) {
     out.reserve(44 + props.label.len());
     let fv_inherited = fv_provides;
-    let fv_provided_theme_key = &*format!("{}+head", fv_inherited.theme_key.unwrap_or("light"));
-    let fv_provides = super::provides::Provides { theme_key: Some(fv_provided_theme_key), ..fv_inherited };
+    let fv_provided_theme_key = format!("{}+head", fv_inherited.theme_key.unwrap_or("light"));
+    let fv_provides = super::provides::Provides { theme_key: Some(&*fv_provided_theme_key), ..fv_inherited };
     fv_head.push(fv::HeadValue::object([("title", fv::HeadValue::str(&format!("{} in {}", props.label, fv_inherited.theme_key.unwrap_or("light")))), ("htmlAttrs", fv::HeadValue::object([("data-theme", fv::HeadValue::str(fv_inherited.theme_key.unwrap_or("light")))])), ("meta", fv::HeadValue::array([fv::HeadValue::object([("name", fv::HeadValue::str("theme")), ("content", fv::HeadValue::str(fv_inherited.theme_key.unwrap_or("light")))])]))]));
     out.push_str("<section");
     if fv_inherited.theme_key.unwrap_or("light").is_empty() {

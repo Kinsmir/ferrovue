@@ -62,7 +62,8 @@ export function renderChild(s: Scope, e: Emitter, n: N, twin?: TwinCall): void {
   }
 
   const given = new Map<string, N>();
-  const fallthrough = new Set<N>();
+  const fallthrough = new Map<N, N>();
+  const loaded = !merges && local !== null && s.loadedLater.has(local);
   for (const obj of objects) {
     for (const p of obj.properties) {
       if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "FV0504", "child props hold plain keys", p);
@@ -76,7 +77,7 @@ export function renderChild(s: Scope, e: Emitter, n: N, twin?: TwinCall): void {
       if (array(key)) fail(s.comp, "FV0505", `an attribute named \`${key}\`, which JavaScript would put before the others`, p);
       const name = propsToAttrMap[key] ?? key.toLowerCase();
       if (key !== "class" && key !== "style" && !isSSRSafeAttrName(name)) fail(s.comp, "FV0404", `unsafe attribute name \`${name}\``, p);
-      fallthrough.add(p);
+      fallthrough.set(p, loaded && key === "class" ? loadedClass(s, p.value) : p.value);
     }
   }
   if (twin) {
@@ -101,7 +102,33 @@ export function array(key: string): boolean {
   return /^(0|[1-9]\d*)$/.test(key) && Number(key) < 2 ** 32 - 1;
 }
 
-function childAttrsArg(s: Scope, child: Component, parts: N[], merges: boolean, fallthrough: Set<N> | null, ids: string | null, n: N): string | null {
+/** A string `:class` given to a component `defineAsyncComponent` loads, in props no `mergeProps`
+ * normalised: Vue's wrapper hands on the class once as written and once trimmed, so a class with
+ * whitespace around it is written twice. */
+const lengthOf = (n: N): N => ({ type: "MemberExpression", object: n, property: { type: "Identifier", name: "length" }, computed: false });
+
+function holdsClassLiteral(n: N): boolean {
+  if (n.type === "ObjectExpression" || n.type === "ArrayExpression") return true;
+  if (n.type === "ConditionalExpression") return holdsClassLiteral(n.consequent) || holdsClassLiteral(n.alternate);
+  if (n.type === "LogicalExpression") return holdsClassLiteral(n.left) || holdsClassLiteral(n.right);
+  return false;
+}
+
+function loadedClass(s: Scope, value: N): N {
+  if (value.type === "ConditionalExpression" && (holdsClassLiteral(value.consequent) || holdsClassLiteral(value.alternate))) {
+    return { ...value, consequent: loadedClass(s, value.consequent), alternate: loadedClass(s, value.alternate) };
+  }
+  if (holdsClassLiteral(value) || expr(s, value).ty.k !== "str") return value;
+  const trimmed = { type: "CallExpression", callee: { type: "MemberExpression", object: value, property: { type: "Identifier", name: "trim" }, computed: false }, arguments: [] };
+  return {
+    type: "ConditionalExpression",
+    test: { type: "BinaryExpression", operator: "===", left: lengthOf(trimmed), right: lengthOf(value) },
+    consequent: value,
+    alternate: { type: "ArrayExpression", elements: [trimmed, value] },
+  };
+}
+
+function childAttrsArg(s: Scope, child: Component, parts: N[], merges: boolean, fallthrough: Map<N, N> | null, ids: string | null, n: N): string | null {
   const sources: string[] = [];
   for (const p of parts) {
     if (s.fallthrough !== null && ((isAttrs(p) && s.comp.inheritAttrs) || dollarAttrs(s, p))) {
@@ -109,7 +136,7 @@ function childAttrsArg(s: Scope, child: Component, parts: N[], merges: boolean, 
     } else if (p.type === "ObjectExpression" && fallthrough !== null) {
       const entries = p.properties.filter((q: N) => fallthrough.has(q)).map((q: N) => {
         const key: string = q.key.type === "Identifier" ? q.key.name : String(q.key.value);
-        return `(${rustStr(key)}, ${attrOf(s, key, q.value, "vnode")})`;
+        return `(${rustStr(key)}, ${attrOf(s, key, fallthrough.get(q), "vnode")})`;
       });
       if (entries.length) sources.push(`&[${entries.join(", ")}]`);
     }

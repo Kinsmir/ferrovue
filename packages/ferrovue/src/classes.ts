@@ -1,5 +1,5 @@
 import { escapeHtml } from "@vue/shared";
-import { type N, type Scope, type Val, fail, nothing, rustStr, STR } from "./model.ts";
+import { type N, type Scope, type Val, directiveOwner, fail, nothing, rustStr, STR } from "./model.ts";
 import { expr } from "./expr.ts";
 import { cond, known, truthy } from "./narrowing.ts";
 import { meet } from "./strings.ts";
@@ -95,6 +95,27 @@ export function renderClass(s: Scope, e: Emitter, n: N, after = false): void {
     const rest = items.slice(i).map((it) => ("lit" in it ? rustStr(it.lit) : it.code));
     e.stmt(`fv::class_into(out, ${wrote}, &[${rest.join(", ")}]);`);
   }
+}
+
+const UNWRITTEN = new Set(["on", "if", "else-if", "else", "for", "slot", "once", "memo", "cloak", "pre"]);
+
+/** The class list of an element in content Vue renders from virtual nodes, in the order Vue's
+ * client compiler merges a static `class` written before `:class`: the static names first, at the
+ * place of the static `class`. */
+export function vnodeClass(s: Scope, n: N): N {
+  const last = n.type === "ArrayExpression" ? n.elements.at(-1) : null;
+  if (n.fvMerged || last?.type !== "StringLiteral" || n.elements.length < 2) return n;
+  const el = directiveOwner(s.comp, n.elements[0]);
+  if (!el) return n;
+  const own = el.props.findIndex((p: N) => p.type === 6 && p.name === "class");
+  const bound = el.props.findIndex((p: N) => p.type === 7 && p.name === "bind" && p.arg?.content === "class");
+  if (own < 0 || bound < own) return n;
+  const between = el.props.slice(own + 1, bound).find((p: N) => p.type === 6 || !UNWRITTEN.has(p.name));
+  if (between) {
+    const at = { type: "VueTemplate", loc: { start: { line: between.loc.start.line, column: between.loc.start.column - 1 } }, __fv: "source" };
+    fail(s.comp, "FV1013", "in content Vue renders from virtual nodes, a `class` written before `:class` is written where the `class` stands, and Vue's server compiler moves it to where `:class` stands; write the two next to each other, or `:class` first", at);
+  }
+  return { ...n, elements: [last, ...n.elements.slice(0, -1)] };
 }
 
 export function classPresent(s: Scope, n: N): string {

@@ -89,7 +89,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push_str("<!--]--></ul><p>");
     fv::escape_into(out, &props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_s7| std::borrow::Cow::<str>::Owned(fv::js_trim(&fv_s7).to_owned())).filter(|fv_s8| !fv_s8.is_empty()).collect::<Vec<_>>().join(", "));
     out.push('|');
-    fv::escape_into(out, &props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).enumerate().map(|(fv_i9, fv_s9)| { let fv_i9 = fv_i9 as i64; std::borrow::Cow::<str>::Owned(format!("{}:{}", fv::Js(fv_i9), fv::Js(fv::js_length(&fv_s9)))) }).collect::<Vec<_>>().join(" "));
+    fv::escape_into(out, &props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).enumerate().map(|(fv_i9, fv_s9)| { let fv_i9 = fv_i9 as i64; std::borrow::Cow::<str>::Owned(std::borrow::Cow::<str>::Owned(format!("{}:{}", fv::Js(fv_i9), fv::Js(fv::js_length(&fv_s9)))).into_owned()) }).collect::<Vec<_>>().join(" "));
     out.push_str("</p><p>");
     fv::escape_into(out, &props.nums.iter().copied().filter(|fv_a10| *fv_a10 as f64 % 2.0 == 0.0).map(|fv_a11| fv_a11 as f64 * 10.0).map(|v| fv::Js(v).to_string()).collect::<Vec<_>>().join("-"));
     out.push('|');

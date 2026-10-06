@@ -7,7 +7,7 @@ import { ONE_NOTHING, structOf, tyOfTs, typesImports } from "../typescript.ts";
 import { patternNames, setupStatement } from "../script.ts";
 import { expr, fieldVal } from "../expr.ts";
 import { type Plugin, runOf, scopeOf } from "../plugin.ts";
-import { header, structSource } from "../rust.ts";
+import { header, structLifetime, structSource } from "../rust.ts";
 
 declare module "../model.ts" {
   interface StructTy {
@@ -209,8 +209,20 @@ export function storeHome(file: string): Component {
   return blankComponent(basename(file), "stores", file, runOf(piniaStores).structs);
 }
 
+function storesStruct(): Struct {
+  return {
+    name: "Stores",
+    fields: [...runOf(piniaStores).stores.values()].map((st) => ({ js: st.id, rust: st.field, ty: { k: "struct", name: st.state, store: true } })),
+  };
+}
+
+function storesBorrow(): boolean {
+  const { dir } = runOf(piniaStores);
+  return dir !== null && structLifetime(storesStruct(), storeHome(dir.replace(/\/?$/, "/")));
+}
+
 function storesSource(dir: string): string {
-  const { stores, structs: states, files } = runOf(piniaStores);
+  const { structs: states, files } = runOf(piniaStores);
   const home = storeHome(dir);
   const testDerive = (src: string) =>
     src.replace(
@@ -220,11 +232,7 @@ function storesSource(dir: string): string {
   const structs = [...states.values()]
     .map((st) => testDerive(structSource(st, home, `/// \`${st.name}\` in \`${files.get(st.name)}\`.\n`)))
     .join("\n");
-  const all: Struct = {
-    name: "Stores",
-    fields: [...stores.values()].map((st) => ({ js: st.id, rust: st.field, ty: { k: "struct", name: st.state, store: true } })),
-  };
-  const top = testDerive(structSource(all, home, "/// Every store's state, keyed by id as `pinia.state.value` is: what the page sends the client.\n"));
+  const top = testDerive(structSource(storesStruct(), home, "/// Every store's state, keyed by id as `pinia.state.value` is: what the page sends the client.\n"));
   return `${header(dir, "the store files")}
 //! The Pinia stores' state, which components read while they render on the server.
 
@@ -365,8 +373,12 @@ export const piniaStores: Plugin<StoresRun, StoresScope> = {
   params: [
     {
       name: "fv_stores",
-      ty: "&super::stores::Stores<'_>",
-      pageTy: "&'p super::stores::Stores<'p>",
+      get ty() {
+        return storesBorrow() ? "&super::stores::Stores<'_>" : "&super::stores::Stores";
+      },
+      get pageTy() {
+        return storesBorrow() ? "&'p super::stores::Stores<'p>" : "&'p super::stores::Stores";
+      },
       reads: (c) => runOf(piniaStores).readers.has(c),
       test: { lines: ["let state: stores::Stores = serde_json::from_value(fixture.stores.clone()).map_err(|e| e.to_string())?;"], arg: "&state", fixture: true },
       fixtureField: '    #[serde(rename = "$stores", default = "Fixture::no_stores")]\n    stores: serde_json::Value,',
