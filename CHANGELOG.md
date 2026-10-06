@@ -185,6 +185,11 @@ released together and share version numbers.
   171 KiB compressed); `ferrovue-core` and `ferrovue-router` drop their vectors. The test and
   benchmark targets stay in the package so it builds without warnings; they run from the
   repository.
+- CI checks the npm dependencies with `pnpm audit` and the workflows with zizmor. An advisory that
+  reaches the npm package's dependencies or peers shows in the run without failing a pull request
+  and fails a release, as a RustSec advisory does; one in development tooling only shows. The
+  workflows check out without keeping the token, the release workflow's Node setup restores no
+  cache, and Dependabot waits seven days before proposing a new version.
 - **Breaking:** `v-html` where the browser's parser rebuilds the HTML is refused, since the page
   then holds other nodes than the server wrote and hydration mismatches, in Vue too. On a
   `<table>`, `<thead>`, `<tbody>`, `<tfoot>`, `<tr>` or `<colgroup>` (whose markup the parser moves

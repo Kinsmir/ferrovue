@@ -28,6 +28,8 @@ jobs:
         node: [22, 24]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/pnpm
         with:
           node-version: ${{ matrix.node }}
@@ -47,6 +49,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/pnpm
         with:
           save: ${{ github.ref == 'refs/heads/main' }}
@@ -64,11 +68,86 @@ jobs:
         checks: [advisories, bans licenses sources]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
         continue-on-error: ${{ matrix.checks == 'advisories' && !startsWith(github.ref, 'refs/tags/') }}
         with:
           command: check ${{ matrix.checks }}
           rust-version: stable
+
+  audit:
+    name: Dependencies (pnpm audit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: No known advisory reaches the npm package's dependencies or peers
+        continue-on-error: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        run: |
+          pnpm audit --json > "$RUNNER_TEMP/audit.json" || true
+          node --input-type=module -e '
+            import { appendFileSync, readFileSync } from "node:fs";
+            const report = JSON.parse(readFileSync(process.argv[1], "utf8"));
+            if (!report.advisories) {
+              console.log(JSON.stringify(report, null, 2));
+              console.log("::error title=pnpm audit::pnpm audit returned no advisory report");
+              process.exit(1);
+            }
+            const manifest = JSON.parse(readFileSync("packages/ferrovue/package.json", "utf8"));
+            const shipped = new Set(Object.keys({ ...manifest.dependencies, ...manifest.peerDependencies }));
+            const reachesPackage = (path) => {
+              const [importer, dependency] = path.split(">");
+              return importer === "packages__ferrovue" && shipped.has(dependency);
+            };
+            const advisories = Object.values(report.advisories)
+              .map((advisory) => {
+                const paths = [...new Set(advisory.findings.flatMap((finding) => finding.paths))];
+                return { ...advisory, paths, published: paths.some(reachesPackage) };
+              })
+              .toSorted((a, b) => b.published - a.published);
+            const command = (text) => text.replaceAll("%", "%25").replaceAll("\r", "%0D").replaceAll("\n", "%0A");
+            const cell = (text) => String(text).replaceAll("|", "\\|").replaceAll("\n", " ");
+            const lines = ["### npm advisories (pnpm audit)", ""];
+            if (advisories.length === 0) {
+              lines.push("No known advisories in pnpm-lock.yaml.");
+            } else {
+              lines.push("| Advisory | Severity | Package | Patched in | Reaches | Paths |", "|---|---|---|---|---|---|");
+            }
+            for (const advisory of advisories) {
+              const versions = [...new Set(advisory.findings.map((finding) => finding.version))].join(", ");
+              const shown = advisory.paths.slice(0, 5).join("<br>") + (advisory.paths.length > 5 ? `<br>and ${advisory.paths.length - 5} more` : "");
+              const reach = advisory.published ? "the npm package" : "development only";
+              lines.push(`| [${cell(advisory.github_advisory_id)}](${advisory.url}): ${cell(advisory.title)} | ${cell(advisory.severity)} | ${cell(advisory.module_name)} ${cell(versions)} | ${cell(advisory.patched_versions)} | ${reach} | ${cell(shown)} |`);
+              const level = advisory.published ? "error" : "warning";
+              const title = advisory.published ? "Advisory in the npm package" : "Advisory in development tooling";
+              console.log(`::${level} title=${title}::${command(`${advisory.github_advisory_id} (${advisory.severity}) in ${advisory.module_name} ${versions}: ${advisory.title}. ${advisory.url}`)}`);
+            }
+            appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join("\n") + "\n");
+            if (advisories.some((advisory) => advisory.published)) process.exit(1);
+          ' "$RUNNER_TEMP/audit.json"
+
+  zizmor:
+    name: Workflows (zizmor)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482 # v0.6.4
+        with:
+          version: 1.30.1
+          min-severity: medium
+          advanced-security: false
+          annotations: true
 
   rust:
     name: Rust (${{ matrix.toolchain }})
@@ -80,6 +159,8 @@ jobs:
         toolchain: [stable, "1.99"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/rust
         with:
           toolchain: ${{ matrix.toolchain }}
@@ -108,6 +189,8 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/rust
         with:
           cache-key: examples
@@ -122,6 +205,8 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/rust
         with:
           cache-key: fullstack
@@ -156,6 +241,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/rust
         with:
           cache-key: browser
@@ -189,6 +276,8 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/rust
         with:
           cache-key: package
@@ -219,6 +308,8 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/rust
         with:
           cache-key: bench
@@ -233,7 +324,7 @@ jobs:
   passed:
     name: CI passed
     if: always()
-    needs: [typescript, lint, deny, rust, examples, fullstack, browser, package, bench]
+    needs: [typescript, lint, deny, audit, zizmor, rust, examples, fullstack, browser, package, bench]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
