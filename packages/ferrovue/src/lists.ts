@@ -96,7 +96,7 @@ function mapped(s: Scope, v: Val, n: N): string {
       if (v.code.startsWith("&*fv::") && yieldsCow(v.code.slice(2))) return `${COW}::Owned(${v.code.slice(2)}.into_owned())`;
       const item = /^&\**(fv_s\d+)$/.exec(v.code)?.[1];
       if (item !== undefined) return `${COW}::Owned(${item}.to_string())`;
-      if (isTemporary(v)) return asCow(v);
+      if (isTemporary(v)) return /\bfv_s\d+\b/.test(v.code) ? `${COW}::Owned(${atom(asCow(v))}.into_owned())` : asCow(v);
       return /\bfv_s\d+\b/.test(v.code) ? `${COW}::Owned(${atom(v.code)}.to_owned())` : `${COW}::Borrowed(${strArg(v.code)})`;
     case "int":
     case "float":

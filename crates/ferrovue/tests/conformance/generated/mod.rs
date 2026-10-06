@@ -67,12 +67,14 @@ pub mod keywords;
 pub mod lifecycle;
 pub mod links;
 pub mod lists;
+pub mod mapped_choice;
 pub mod markup;
 pub mod menu;
 pub mod meter;
 pub mod modal;
 pub mod model;
 pub mod model_parent;
+pub mod narrowed_rows;
 pub mod narrowing;
 pub mod nav;
 pub mod null_child;
@@ -510,6 +512,12 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: lists::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             lists::render(&mut out, &props);
         }
+        "MappedChoice" => {
+            let props: mapped_choice::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let i18n = i18n::i18n(fixture.locale.as_deref().unwrap_or(i18n::LOCALE));
+            mapped_choice::render(&mut out, &props, &i18n);
+        }
         "Markup" => {
             let props: markup::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             markup::render(&mut out, &props);
@@ -538,6 +546,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "ModelParent" => {
             let props: model_parent::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             model_parent::render(&mut out, &props);
+        }
+        "NarrowedRows" => {
+            let props: narrowed_rows::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            narrowed_rows::render(&mut out, &props);
         }
         "Narrowing" => {
             let props: narrowing::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
