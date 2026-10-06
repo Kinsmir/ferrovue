@@ -1276,7 +1276,7 @@ class Gen {
         [2, () => { const name = r.pick(["title", "data-k", "id", "lang"]); add({ k: "static", name, value: r.pick(["x", "a &amp; b", "&lt;&gt;", "", "é 🦀", "'q'"]) }, name); }],
         [1, () => add({ k: "static", name: "class", value: r.pick(["card", "a  b", " pad "]) }, "class")],
         [1, () => add({ k: "static", name: "style", value: r.pick(["color: red", "margin: 0;", "display:none"]) }, "style")],
-        [1, () => add({ k: "static", name: r.pick(["disabled", "hidden"]), value: null }, "boolean")],
+        [1, () => { const name = r.pick(["disabled", "hidden"]); add({ k: "static", name, value: null }, this.vnode ? name : "boolean"); }],
         [5, () => { const name = r.pick(["title", "data-x", "aria-label", "id", "data-n", "tabindex", "lang", "alt", "placeholder"]); add({ k: "bind", name, e: this.text(2) }, name); }],
         [2, () => { const name = r.pick(["disabled", "hidden", "readonly", "checked"]); add({ k: "bind", name, e: r.chance(0.8) ? this.bool(2) : this.test(1) }, name); }],
         [3, () => add({ k: "class", v: this.classBind() }, ":class")],
@@ -1365,7 +1365,7 @@ class Gen {
     this.nodes++;
     const kids = this.kids(depth + 1, "block");
     if (r.chance(0.3)) kids.push({ k: "text", s: "{{ Math.random().toFixed(3) }}" });
-    return { k: "client", kids, fallback: r.chance(0.6) ? this.kids(depth + 1, "block") : null };
+    return { k: "client", kids, fallback: !this.vnode && r.chance(0.6) ? this.kids(depth + 1, "block") : null };
   }
 
   child(depth: number): Node {
