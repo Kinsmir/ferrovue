@@ -23,8 +23,12 @@ jobs:
       fail-fast: false
       matrix:
         shard: [0, 1, 2, 3]
+    env:
+      SHARD: ${{ matrix.shard }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/rust
         with:
           cache-key: mutants
@@ -33,7 +37,7 @@ jobs:
           tool: cargo-mutants
       - name: Run cargo-mutants on this shard
         run: |
-          cargo mutants -p ferrovue-core -p ferrovue-router -p ferrovue-i18n -p ferrovue --in-place --shard ${{ matrix.shard }}/4 || status=$?
+          cargo mutants -p ferrovue-core -p ferrovue-router -p ferrovue-i18n -p ferrovue --in-place --shard "$SHARD/4" || status=$?
           if [[ "${status:-0}" != 0 && "${status:-0}" != 2 && "${status:-0}" != 3 ]]; then exit "$status"; fi
       - name: Every surviving mutant is a known equivalent
         run: |
@@ -41,7 +45,7 @@ jobs:
           grep -v -e '^#' -e '^$' .cargo/mutants-equivalent.txt | sort > "$RUNNER_TEMP/known.txt"
           comm -23 "$RUNNER_TEMP/missed.txt" "$RUNNER_TEMP/known.txt" > "$RUNNER_TEMP/unexplained.txt"
           {
-            echo "### Mutants, shard ${{ matrix.shard }}/4"
+            echo "### Mutants, shard $SHARD/4"
             echo
             echo "| Caught | Timed out | Missed (known equivalent) | Missed (unexplained) | Unviable |"
             echo "|---:|---:|---:|---:|---:|"
@@ -73,6 +77,8 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: mutants-*
