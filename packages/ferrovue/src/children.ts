@@ -63,7 +63,7 @@ export function renderChild(s: Scope, e: Emitter, n: N, twin?: TwinCall): void {
 
   const given = new Map<string, N>();
   const fallthrough = new Map<N, N>();
-  const loaded = local !== null && s.loadedLater.has(local);
+  const loaded = !merges && local !== null && s.loadedLater.has(local);
   for (const obj of objects) {
     for (const p of obj.properties) {
       if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "FV0504", "child props hold plain keys", p);
@@ -102,8 +102,9 @@ export function array(key: string): boolean {
   return /^(0|[1-9]\d*)$/.test(key) && Number(key) < 2 ** 32 - 1;
 }
 
-/** A string `:class` given to a component `defineAsyncComponent` loads: Vue's wrapper hands on the
- * class once as written and once trimmed, so a class with whitespace around it is written twice. */
+/** A string `:class` given to a component `defineAsyncComponent` loads, in props no `mergeProps`
+ * normalised: Vue's wrapper hands on the class once as written and once trimmed, so a class with
+ * whitespace around it is written twice. */
 const lengthOf = (n: N): N => ({ type: "MemberExpression", object: n, property: { type: "Identifier", name: "length" }, computed: false });
 
 function holdsClassLiteral(n: N): boolean {

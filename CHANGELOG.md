@@ -256,10 +256,12 @@ released together and share version numbers.
   rejects them written out. `SetupValues` records these three.
 - A string `:class` given to a component loaded with `defineAsyncComponent` is written twice when
   it has whitespace around it (`:class="' a '"` is `class="… a a"`), as Vue's async wrapper hands
-  it on once trimmed and once as written; ferrovue wrote it once.
+  it on once trimmed and once as written; ferrovue wrote it once. Where Vue merges the props first
+  (the component is its parent's root, or takes `v-bind` or a static `class` too), the class
+  arrives trimmed and is written once, as before. `AsyncClass` and `AsyncClassRoot` record both.
 - An attribute that falls through holding `??` whose fallback ends in another `??`
   (`note ?? (tags.find(…) ?? "-")`) compiles: the generated Rust wrapped a `Cow` in another.
-  `AsyncClass` records both.
+  `AsyncClass` records it.
 
 ## [0.5.0] - 2026-10-05
 
