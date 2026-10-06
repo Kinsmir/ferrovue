@@ -1,5 +1,6 @@
 {
   "components": "components",
   "out": "generated",
-  "builders": false
+  "builders": false,
+  "stores": "stores"
 }
