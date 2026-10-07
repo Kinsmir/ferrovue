@@ -41,7 +41,11 @@ jobs:
         if: inputs.set-version
         env:
           VERSION: ${{ inputs.version }}
-        run: node scripts/release.ts set-version "$VERSION"
+        # set-version's `cargo update --offline` resolves from the registry cache, which an
+        # uncached runner fills from Cargo.lock first.
+        run: |
+          cargo fetch --locked
+          node scripts/release.ts set-version "$VERSION"
       - name: Pack the crates and the npm package
         env:
           VERSION: ${{ inputs.version }}
