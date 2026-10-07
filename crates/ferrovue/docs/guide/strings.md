@@ -192,7 +192,10 @@ A list's `.slice(start, end)` takes the same range as a string's, counted in ite
 [`js_slice_items`](crate::js_slice_items) takes the items [`js_slice_range`](crate::js_slice_range)
 gives. The other array methods with an arrow function, `.filter()`, `.map()`, `.some()`, `.every()`,
 `.find()` and `.findIndex()`, become Rust iterator adaptors, as they have no JavaScript corners to
-reproduce.
+reproduce. Given `Boolean` in place of an arrow function, each takes the item's truthiness, as
+`x => !!x` does: `.filter(Boolean)` drops empty strings, `0`, `NaN` and `false`, and, over a list or
+an array literal whose items may be `null` or `undefined`, the absent ones too, leaving a list of the
+values.
 
 ```rust
 let words = ["a", "b", "c", "d"];

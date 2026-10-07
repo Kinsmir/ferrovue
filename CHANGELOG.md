@@ -7,6 +7,11 @@ released together and share version numbers.
 
 ### Added
 
+- `Boolean` is taken as the function of `.filter()`, `.map()`, `.some()`, `.every()`, `.find()` and
+  `.findIndex()`, as `x => !!x`, and `Boolean(x)` as a call. `.filter(Boolean)` of a list whose items
+  may be `null` or `undefined`, or of an array literal holding optional values
+  (`[name, title, city].filter(Boolean).join(" · ")`), keeps the items present and truthy as a list
+  of the values, which the other list methods then take.
 - The Vite plugin takes `config`, the configuration file relative to `root`, as `ferrovue --config`
   does: `ferrovue({ config: "config/ferrovue.json" })`.
 - Release assets carry build provenance: the `.tgz` and `.crate` files attached to a GitHub release

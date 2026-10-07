@@ -1,0 +1,10 @@
+{
+  "person": { "name": "Ada Lovelace", "title": "Countess", "city": "London" },
+  "tags": ["math", null, "", "engines", null],
+  "counts": [3, 0, null, 12, -1],
+  "ratios": [0.5, 0, 2, -0.25],
+  "people": [{ "name": "Ada", "city": null }, null, { "name": "", "title": "", "city": "" }],
+  "words": ["", "alpha", "", "beta"],
+  "flags": [true, false, true],
+  "urgent": true
+}

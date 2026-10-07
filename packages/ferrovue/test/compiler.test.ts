@@ -276,6 +276,30 @@ defineProps<{ counts: Record<string, number>; labels: { [key: string]: string } 
       expect(out).toContain("for (_, t_ref) in props.labels.iter() {");
     });
 
+    it("takes Boolean as a list method's function, and keeps the present items of optional ones", () => {
+      const out = compile(
+        island(`<script setup lang="ts">
+interface Row { n: number }
+const props = defineProps<{ tags: (string | null)[]; rows: (Row | null)[]; words: string[]; name: string; title?: string }>();
+</script>
+<template><i>{{ tags.filter(Boolean).join() }}{{ rows.filter(Boolean).length }}{{ words.some(Boolean) }}{{ [name, title, null].filter(Boolean).join(" ") }}{{ Boolean(title) }}</i></template>`),
+      ).get("x.rs")!;
+      expect(out).toContain("props.tags.iter().filter_map(|v| v.as_deref()).map(std::borrow::Cow::<str>::Borrowed).filter(|fv_s1| !fv_s1.is_empty())");
+      expect(out).toContain("props.rows.iter().filter_map(|v| v.as_ref()).count()");
+      expect(out).toMatch(/\.any\(\|fv_s\d+\| !fv_s\d+\.is_empty\(\)\)/);
+      expect(out).toContain("[Some(&*props.name), props.title.as_deref()].into_iter().flatten()");
+      expect(out).toContain("props.title.as_deref().is_some_and(|v| !v.is_empty())");
+    });
+
+    it("refuses a local named Boolean as it refuses any function passed by name", () => {
+      const project = island(`<script setup lang="ts">
+const props = defineProps<{ words: string[] }>();
+const Boolean = (w: string) => w.length > 1;
+</script>
+<template><i>{{ words.filter(Boolean).length }}</i></template>`);
+      expect(() => compile(project)).toThrow(expect.objectContaining({ code: "FV0805" }));
+    });
+
     it("chains array methods as iterators, binding only the parameters the body reads", () => {
       const out = compile(
         island(`<script setup lang="ts">
@@ -1991,12 +2015,28 @@ const props = defineProps<{ tags: string[] }>();
       /`\.filter\(\)` takes an arrow function whose body is an expression/,
     ],
     [
-      "a function passed to filter by name",
+      "a function other than Boolean passed to map by name",
       `<script setup lang="ts">
-const props = defineProps<{ tags: string[] }>();
+const props = defineProps<{ nums: number[] }>();
 </script>
-<template><i>{{ tags.filter(Boolean).length }}</i></template>`,
-      /`\.filter\(\)` takes an arrow function of the item/,
+<template><i>{{ nums.map(String).join() }}</i></template>`,
+      /`\.map\(\)` takes an arrow function of the item, and of its index: `x => …`, `\(x, i\) => …`, or `Boolean`/,
+    ],
+    [
+      "a method other than filter(Boolean) over a list of optional values, whose absent items it would skip",
+      `<script setup lang="ts">
+const props = defineProps<{ tags: (string | null)[] }>();
+</script>
+<template><i>{{ tags.every(Boolean) }}</i></template>`,
+      /this method takes a list of strings, numbers, booleans or objects/,
+    ],
+    [
+      "an array literal filtered by Boolean whose items are of different types",
+      `<script setup lang="ts">
+const props = defineProps<{ name?: string; age?: number }>();
+</script>
+<template><i>{{ [name, age].filter(Boolean).join() }}</i></template>`,
+      /an array literal holds strings, numbers or booleans, all of one type, each of which may be absent/,
     ],
     [
       "map to optional values",

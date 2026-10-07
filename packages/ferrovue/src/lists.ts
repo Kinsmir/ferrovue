@@ -4,7 +4,7 @@ import { expr, fieldVal } from "./expr.ts";
 import { cond } from "./narrowing.ts";
 import { asF64, isNumber } from "./numbers.ts";
 import { asCow, isTemporary, lonely, meet, yieldsCow } from "./strings.ts";
-import { atom, binary, operand, strArg, UNARY } from "./parens.ts";
+import { atom, bare, binary, operand, strArg, UNARY } from "./parens.ts";
 
 const COW = "std::borrow::Cow::<str>";
 
@@ -48,7 +48,7 @@ function itemVal(of: Ty, param: string, byRef: boolean, lone?: boolean): Val {
 export function arrow(s: Scope, fn: N, list: Val, of: Ty, byRef: boolean, method: string, body: (inner: Scope) => string): { closure: string; enumerate: boolean } {
   const comp = s.comp;
   if (fn?.type !== "ArrowFunctionExpression" || fn.async || fn.params.length > 2) {
-    fail(comp, "FV0805", `\`.${method}()\` takes an arrow function of the item, and of its index: \`x => …\`, \`(x, i) => …\``, fn);
+    fail(comp, "FV0805", `\`.${method}()\` takes an arrow function of the item, and of its index: \`x => …\`, \`(x, i) => …\`, or \`Boolean\``, fn);
   }
   if (fn.body.type === "BlockStatement") fail(comp, "FV0806", `\`.${method}()\` takes an arrow function whose body is an expression, without \`{ return … }\``, fn);
   const [item, index] = fn.params as N[];
@@ -110,9 +110,72 @@ function mapped(s: Scope, v: Val, n: N): string {
   }
 }
 
+/** Is `n` the global `Boolean` (`.filter(Boolean)`, `Boolean(x)`), which no name in the component shadows? */
+export function isBoolean(s: Scope, n: N): boolean {
+  return n?.type === "Identifier" && n.name === "Boolean" && ![s.locals, s.setup, s.helpers, s.clientOnly].some((names) => names.has(n.name));
+}
+
+// JavaScript calls `Boolean` with the item alone, and it returns the item's truthiness: it is
+// `x => x` where a condition is wanted, and `x => !!x` for `.map()`.
+function booleanArrow(n: N, method: string): N {
+  const item = { ...n, name: "fv$item" };
+  const not = (argument: N): N => ({ ...n, type: "UnaryExpression", operator: "!", prefix: true, argument });
+  return { ...n, type: "ArrowFunctionExpression", async: false, params: [item], body: method === "map" ? not(not(item)) : item };
+}
+
+// The items of a list of optional values that are present, as a list of the values: what
+// `.filter(Boolean)` keeps of it, before it drops the falsy ones.
+function present(target: Val): Val | null {
+  if (target.ty.k !== "list" || target.ty.of.k !== "opt" || target.iter !== undefined) return null;
+  const of = target.ty.of.of;
+  const list = atom(target.code);
+  switch (of.k) {
+    case "str":
+      return computed(`${list}.iter().filter_map(|v| v.as_deref()).map(${COW}::Borrowed)`, of, target.lone);
+    case "int":
+    case "float":
+    case "bool":
+      return computed(`${list}.iter().filter_map(|v| *v)`, of);
+    case "struct":
+    case "child":
+      return computed(`${list}.iter().filter_map(|v| v.as_ref())`, of);
+    default:
+      return null;
+  }
+}
+
+/**
+ * An array literal some of whose items may be absent, filtered by `Boolean`
+ * (`[name, title].filter(Boolean)`): the items that are present, as a list. `null` when none may
+ * be absent, which is an ordinary array literal.
+ */
+export function presentLiteral(s: Scope, n: N): Val | null {
+  const comp = s.comp;
+  const values = n.elements.map((el: N) => {
+    if (!el || el.type === "SpreadElement") fail(comp, "FV0610", "an array literal holds plain values", n);
+    return expr(s, el);
+  });
+  if (!values.some((v: Val) => v.ty.k === "opt" || v.ty.k === "null" || v.ty.k === "undef")) return null;
+  const kept = values.filter((v: Val) => v.ty.k !== "null" && v.ty.k !== "undef");
+  const of = kept.map((v: Val) => (v.ty.k === "opt" ? v.ty.of : v.ty))[0];
+  if (of === undefined) return computed("std::iter::empty::<bool>()", BOOL);
+  if (!["str", "int", "float", "bool"].includes(of.k) || kept.some((v: Val) => !sameTy(v.ty.k === "opt" ? v.ty.of : v.ty, of))) {
+    fail(comp, "FV0611", "an array literal holds strings, numbers or booleans, all of one type, each of which may be absent", n);
+  }
+  const options = kept.map((v: Val) => (v.ty.k === "opt" ? bare(v.code) : `Some(${bare(v.code)})`));
+  const flat = `[${options.join(", ")}].into_iter().flatten()`;
+  return computed(of.k === "str" ? `${flat}.map(${COW}::Borrowed)` : flat, of, kept.some((v: Val) => v.lone));
+}
+
 export function listMethod(s: Scope, target: Val, method: string, args: N[], n: N): Val | null {
   const comp = s.comp;
   if (!["filter", "map", "some", "every", "find", "findIndex", "slice"].includes(method)) return null;
+  if (args.length === 1 && isBoolean(s, args[0])) {
+    const kept = method === "filter" ? present(target) : null;
+    const of = itemsTy(s, kept ?? target, n);
+    if (method === "filter" && (of.k === "struct" || of.k === "child")) return kept ?? computed(items(target), of, target.lone);
+    return listMethod(s, kept ?? target, method, [booleanArrow(args[0], method)], n);
+  }
   const of = itemsTy(s, target, n);
   const it = items(target);
   if (method === "slice") {

@@ -1,0 +1,10 @@
+{
+  "person": { "name": "", "title": "", "city": "" },
+  "tags": [],
+  "counts": [],
+  "ratios": [],
+  "people": [],
+  "words": [],
+  "flags": [],
+  "urgent": false
+}
