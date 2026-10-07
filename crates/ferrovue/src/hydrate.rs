@@ -55,11 +55,13 @@ pub enum Hydrate {
 
 impl Hydrate {
     /// [`Hydrate::VisibleWith`] for this root margin.
+    #[must_use]
     pub fn visible_with(root_margin: impl Into<Cow<'static, str>>) -> Hydrate {
         Hydrate::VisibleWith(root_margin.into())
     }
 
     /// [`Hydrate::Media`] for this query.
+    #[must_use]
     pub fn media(query: impl Into<Cow<'static, str>>) -> Hydrate {
         Hydrate::Media(query.into())
     }
@@ -76,6 +78,7 @@ impl Hydrate {
     /// assert_eq!(Hydrate::InteractionOn(&["click", "keydown"]).attribute(), "interaction:click keydown");
     /// assert_eq!(Hydrate::media("print").attribute(), "media:print");
     /// ```
+    #[must_use]
     pub fn attribute(&self) -> Cow<'static, str> {
         match self {
             Hydrate::Visible => Cow::Borrowed("visible"),

@@ -21,12 +21,13 @@
 //! let args = Args { named: &[("name", Value::Str("Ada"))], ..Args::default() };
 //! assert_eq!(i18n.t("greeting", &args), "Hello Ada!");
 //! ```
-#![warn(missing_debug_implementations, rustdoc::missing_crate_level_docs)]
+#![warn(rustdoc::missing_crate_level_docs)]
 
 use std::fmt::Write;
 
 /// One piece of a compiled message.
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum Part {
     /// Text written as it is.
     Text(&'static str),
@@ -76,6 +77,7 @@ impl Locale {
 ///
 /// `count` and `n` take the plural number when they are not given, or are given a falsy value.
 #[derive(Clone, Copy, Debug, PartialEq)]
+#[non_exhaustive]
 pub enum Value<'a> {
     /// A string, as it is.
     Str(&'a str),
@@ -162,6 +164,7 @@ impl I18n {
     /// assert_eq!(i18n.locale(), "nl-BE");
     /// assert_eq!(i18n.t("hi", &Args::default()), "hi");
     /// ```
+    #[must_use]
     pub fn new(locales: &'static [Locale], locale: &str, fallback: &[&str]) -> I18n {
         let index = |name: &str| locales.iter().position(|l| l.name == name);
         let mut chain: Vec<usize> = Vec::new();
@@ -180,6 +183,7 @@ impl I18n {
     }
 
     /// The current locale, as `useI18n().locale` reads it.
+    #[must_use]
     pub fn locale(&self) -> &str {
         &self.locale
     }
@@ -227,6 +231,7 @@ impl I18n {
     /// // A key no locale has is written as itself.
     /// assert_eq!(i18n.t("no.such.key", &Args::default()), "no.such.key");
     /// ```
+    #[must_use]
     pub fn t(&self, key: &str, args: &Args<'_>) -> String {
         match self.find(0, key) {
             Some((at, message)) => {

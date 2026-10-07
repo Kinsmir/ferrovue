@@ -294,25 +294,25 @@ fn links_under_a_base_resolve_as_vue_router_resolves_them() {
 #[test]
 #[should_panic(expected = "two routes are called")]
 fn two_routes_of_one_name_are_refused() {
-    Router::named(&[("/a", Some("x")), ("/b", Some("x"))]);
+    let _ = Router::named(&[("/a", Some("x")), ("/b", Some("x"))]);
 }
 
 #[test]
 #[should_panic(expected = "`(.*)` is supported on the last segment only")]
 fn a_wildcard_before_the_end_is_refused() {
-    Router::new(&["/a/:x(.*)/b"]);
+    let _ = Router::new(&["/a/:x(.*)/b"]);
 }
 
 #[test]
 #[should_panic(expected = "a parameter is `:name`, `:name?` or `:name(.*)`")]
 fn a_repeatable_parameter_is_refused() {
-    Router::new(&["/a/:x+"]);
+    let _ = Router::new(&["/a/:x+"]);
 }
 
 #[test]
 #[should_panic(expected = "a parameter is `:name`, `:name?` or `:name(.*)`")]
 fn an_optional_wildcard_is_refused() {
-    Router::new(&["/a/:x(.*)?"]);
+    let _ = Router::new(&["/a/:x(.*)?"]);
 }
 
 #[test]
@@ -398,19 +398,19 @@ fn relative_links_resolve_against_the_location() {
 #[test]
 #[should_panic(expected = "a route path starts with `/`")]
 fn a_relative_route_is_refused() {
-    Router::new(&["a/b"]);
+    let _ = Router::new(&["a/b"]);
 }
 
 #[test]
 #[should_panic(expected = "a static segment is plain ASCII text")]
 fn a_non_ascii_static_segment_is_refused() {
-    Router::new(&["/café"]);
+    let _ = Router::new(&["/café"]);
 }
 
 #[test]
 #[should_panic(expected = "a static segment is plain ASCII text")]
 fn an_empty_segment_is_refused() {
-    Router::new(&["/a//b"]);
+    let _ = Router::new(&["/a//b"]);
 }
 
 #[test]
@@ -418,7 +418,7 @@ fn an_empty_segment_is_refused() {
 #[should_panic(expected = "missing required param")]
 fn an_empty_parameter_fails_a_debug_render() {
     let router = Router::named(&[("/users/:id", Some("user"))]);
-    router.at("/").link_named("user", &[("id", "")], "", "");
+    let _ = router.at("/").link_named("user", &[("id", "")], "", "");
 }
 
 #[test]

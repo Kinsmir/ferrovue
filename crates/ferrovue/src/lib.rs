@@ -1,6 +1,6 @@
 #![doc = include_str!("../docs/crate.md")]
 #![cfg_attr(docsrs, feature(doc_cfg))]
-#![warn(missing_debug_implementations, rustdoc::missing_crate_level_docs)]
+#![warn(rustdoc::missing_crate_level_docs)]
 
 mod attrs;
 mod basic_html;

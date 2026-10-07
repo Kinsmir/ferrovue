@@ -221,6 +221,7 @@ fn few_exact_digits(x: f64) -> Option<(String, i32)> {
 /// assert!(js_round(-0.2).is_sign_negative()); // -0, as JavaScript gives
 /// assert!(js_round(f64::NAN).is_nan());
 /// ```
+#[must_use]
 pub fn js_round(x: f64) -> f64 {
     let f = x.floor();
     let r = if x - f >= 0.5 { f + 1.0 } else { f };
@@ -245,6 +246,7 @@ pub fn js_round(x: f64) -> f64 {
 /// assert!(js_max(1.0, f64::NAN).is_nan()); // `f64::max` gives 1
 /// assert!(js_max(-0.0, 0.0).is_sign_positive());
 /// ```
+#[must_use]
 pub fn js_max(a: f64, b: f64) -> f64 {
     if a.is_nan() || b.is_nan() {
         f64::NAN
@@ -269,6 +271,7 @@ pub fn js_max(a: f64, b: f64) -> f64 {
 /// assert!(js_min(1.0, f64::NAN).is_nan()); // `f64::min` gives 1
 /// assert!(js_min(0.0, -0.0).is_sign_negative());
 /// ```
+#[must_use]
 pub fn js_min(a: f64, b: f64) -> f64 {
     if a.is_nan() || b.is_nan() {
         f64::NAN
@@ -294,6 +297,7 @@ pub fn js_min(a: f64, b: f64) -> f64 {
 /// assert_eq!(js_to_fixed(-0.04, 1), "-0.0");
 /// assert_eq!(js_to_fixed(1e21, 2), "1e+21");
 /// ```
+#[must_use]
 pub fn js_to_fixed(x: f64, digits: u32) -> String {
     use std::fmt::Write;
     if x.is_nan() {

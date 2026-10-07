@@ -41,16 +41,19 @@ impl<V> Default for Record<'_, V> {
 
 impl<'a, V> Record<'a, V> {
     /// An empty record.
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// The number of entries.
+    #[must_use]
     pub fn len(&self) -> usize {
         self.entries.len()
     }
 
     /// Whether there are no entries.
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
@@ -71,6 +74,7 @@ impl<'a, V> Record<'a, V> {
     }
 
     /// The value of `key`, if there is one.
+    #[must_use]
     pub fn get(&self, key: &str) -> Option<&V> {
         self.entries.iter().find(|(k, _)| k == key).map(|(_, v)| v)
     }

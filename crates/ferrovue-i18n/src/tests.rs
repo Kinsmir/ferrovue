@@ -48,7 +48,7 @@ fn a_fraction_that_chooses_no_case_fails_a_debug_render() {
         named: &named,
         ..Args::default()
     };
-    I18n::new(UNEVALUABLE, "en", &[]).t("apples", &args);
+    let _ = I18n::new(UNEVALUABLE, "en", &[]).t("apples", &args);
 }
 
 #[test]

@@ -33,6 +33,7 @@ impl Teleports {
     /// let teleports = ferrovue::Teleports::new();
     /// assert_eq!(teleports.get("#modals"), None);
     /// ```
+    #[must_use]
     pub fn new() -> Teleports {
         Teleports::default()
     }
@@ -56,6 +57,7 @@ impl Teleports {
     /// );
     /// assert_eq!(teleports.get("#other"), None);
     /// ```
+    #[must_use]
     pub fn get(&self, target: &str) -> Option<String> {
         self.targets
             .borrow()
@@ -79,6 +81,7 @@ impl Teleports {
     /// let targets: Vec<String> = teleports.into_targets().into_iter().map(|(target, _)| target).collect();
     /// assert_eq!(targets, ["#overlay", "#modals"]);
     /// ```
+    #[must_use]
     pub fn into_targets(self) -> Vec<(String, String)> {
         self.targets
             .into_inner()

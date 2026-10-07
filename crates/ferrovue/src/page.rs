@@ -139,6 +139,7 @@ fn lock(record: &Shared) -> MutexGuard<'_, Recorded> {
 
 impl Page {
     /// A page with no slots yet.
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -230,6 +231,7 @@ impl PageSlot<'_> {
     /// When the layout writes it where Vue would give it a slot scope id: an outlet of a
     /// component with `:slotted()` styles, which Vue writes onto each part's root and a part's
     /// `html()` cannot.
+    #[must_use]
     pub fn slot(&self) -> Slot<'_> {
         Slot::slotted(&*self.render)
     }
@@ -237,11 +239,13 @@ impl PageSlot<'_> {
 
 impl PageHole {
     /// The hole as the layout's slot content. Panics where [`PageSlot::slot`] does.
+    #[must_use]
     pub fn slot(&self) -> Slot<'static> {
         Slot::slotted(&write_hole)
     }
 
     /// Record the parts and return their markup: the content of this hole.
+    #[must_use]
     pub fn fill<'p>(mut self, parts: impl IntoIterator<Item = Part<'p>>) -> String {
         let parts: Vec<Part<'p>> = parts.into_iter().collect();
         let mut out = String::new();

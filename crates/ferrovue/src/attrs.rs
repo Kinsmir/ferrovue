@@ -5,6 +5,7 @@ use crate::{escape_into, js_trim, push_int, push_number, record};
 /// One attribute's value, as Vue holds it once the parent's virtual node is made: `createVNode`
 /// has already normalised a class given as an array or an object, and a style given as an array.
 #[derive(Debug, Clone, PartialEq)]
+#[non_exhaustive]
 pub enum Attr<'a> {
     /// `undefined`, an absent optional value. It writes nothing, and in a merge it replaces the
     /// attribute an element sets itself.
@@ -27,11 +28,13 @@ pub enum Attr<'a> {
 
 impl<'a> Attr<'a> {
     /// A borrowed string.
+    #[must_use]
     pub const fn str(s: &'a str) -> Self {
         Attr::Str(Cow::Borrowed(s))
     }
 
     /// A style object of literal property names, in the order given.
+    #[must_use]
     pub fn style(entries: impl IntoIterator<Item = (&'a str, Attr<'a>)>) -> Self {
         Attr::Style(normal_order(
             entries
@@ -43,6 +46,7 @@ impl<'a> Attr<'a> {
 
     /// `normalizeStyle` of an array: the objects merged in order, each property where it first
     /// appears with the last value given, and a string parsed as CSS text.
+    #[must_use]
     pub fn styles(items: impl IntoIterator<Item = Attr<'a>>) -> Self {
         let mut res = Vec::new();
         for item in items {
@@ -158,6 +162,7 @@ impl<'a> Attrs<'a> {
     pub const NONE: Attrs<'static> = Attrs::scoped("");
 
     /// The attributes a parent passes, and the scope ids.
+    #[must_use]
     pub const fn new(list: &'a [(&'a str, Attr<'a>)], ids: &'a str) -> Self {
         Attrs {
             list: List::Borrowed(list),
@@ -166,12 +171,14 @@ impl<'a> Attrs<'a> {
     }
 
     /// No attributes, only scope ids.
+    #[must_use]
     pub const fn scoped(ids: &'a str) -> Self {
         Attrs::new(&[], ids)
     }
 
     /// `mergeProps` of several lists, in order, with the scope ids: what a component whose root is
     /// another component passes that one, its own attributes for it and those it was passed.
+    #[must_use]
     pub fn merged(sources: &[&[(&'a str, Attr<'a>)]], ids: &'a str) -> Self {
         Attrs {
             list: List::Owned(merge_props(sources)),
@@ -180,6 +187,7 @@ impl<'a> Attrs<'a> {
     }
 
     /// The attributes, in order.
+    #[must_use]
     pub fn list(&self) -> &[(&'a str, Attr<'a>)] {
         match &self.list {
             List::Borrowed(l) => l,
@@ -188,11 +196,13 @@ impl<'a> Attrs<'a> {
     }
 
     /// The scope ids: ` data-v-…` each.
+    #[must_use]
     pub fn ids(&self) -> &str {
         &self.ids
     }
 
     /// Whether no attribute was passed, though there may be scope ids.
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.list().is_empty()
     }
@@ -263,6 +273,7 @@ fn join_classes(a: &str, b: &str) -> String {
 /// ]);
 /// assert_eq!(merged, [("class", Attr::str("a b")), ("id", Attr::Undefined)]);
 /// ```
+#[must_use]
 pub fn merge_props<'a>(sources: &[&[(&'a str, Attr<'a>)]]) -> Vec<(&'a str, Attr<'a>)> {
     merge(sources).into_iter().map(|(k, v, _)| (k, v)).collect()
 }
@@ -595,6 +606,7 @@ fn split_declarations(text: &str) -> Vec<&str> {
 /// ```
 /// assert_eq!(ferrovue::class_names(&[" a ", "", "b"]), "a b");
 /// ```
+#[must_use]
 pub fn class_names(items: &[&str]) -> String {
     let mut s = String::new();
     for item in items {
@@ -622,6 +634,7 @@ pub fn class_names(items: &[&str]) -> String {
 /// assert_eq!(ferrovue::scope_attrs(" data-v-a", "data-v-b", ""), " data-v-a data-v-b");
 /// assert_eq!(ferrovue::scope_attrs("", "data-v-a", " data-v-a data-v-c-s"), " data-v-a data-v-c-s");
 /// ```
+#[must_use]
 pub fn scope_attrs(inherited: &str, own: &str, slotted: &str) -> String {
     let mut keys: Vec<&str> = inherited.split(' ').filter(|k| !k.is_empty()).collect();
     for key in std::iter::once(own).chain(js_trim(slotted).split(' ')) {

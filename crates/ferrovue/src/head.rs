@@ -30,6 +30,7 @@ use crate::strings::{is_js_space, js_cmp, js_json_number, js_json_string, js_rep
 /// assert!(matches!(input, HeadValue::Object(_)));
 /// ```
 #[derive(Debug, Clone, PartialEq, Default)]
+#[non_exhaustive]
 pub enum HeadValue {
     /// `undefined`: a key given it is left out.
     #[default]
@@ -50,26 +51,31 @@ pub enum HeadValue {
 
 impl HeadValue {
     /// A string.
+    #[must_use]
     pub fn str(s: &str) -> HeadValue {
         HeadValue::Str(s.to_owned())
     }
 
     /// An integer, as the JavaScript number it is.
+    #[must_use]
     pub fn int(n: impl Borrow<i64>) -> HeadValue {
         HeadValue::Number(*n.borrow() as f64)
     }
 
     /// A number.
+    #[must_use]
     pub fn float(x: impl Borrow<f64>) -> HeadValue {
         HeadValue::Number(*x.borrow())
     }
 
     /// A boolean.
+    #[must_use]
     pub fn bool(b: impl Borrow<bool>) -> HeadValue {
         HeadValue::Bool(*b.borrow())
     }
 
     /// An array.
+    #[must_use]
     pub fn array(items: impl IntoIterator<Item = HeadValue>) -> HeadValue {
         HeadValue::Array(items.into_iter().collect())
     }
@@ -308,6 +314,7 @@ impl Default for Head {
 impl Head {
     /// The head `createHead()` from `@unhead/vue/server` makes: holding unhead's defaults,
     /// `lang="en"` on `<html>`, `<meta charset="utf-8">` and the viewport.
+    #[must_use]
     pub fn new() -> Head {
         let head = Head::without_defaults();
         head.push(HeadValue::object([
@@ -339,6 +346,7 @@ impl Head {
     /// ```
     /// assert_eq!(ferrovue::Head::without_defaults().render(), ferrovue::HeadHtml::default());
     /// ```
+    #[must_use]
     pub fn without_defaults() -> Head {
         Head {
             entries: RefCell::new(Vec::new()),
@@ -351,6 +359,7 @@ impl Head {
     /// without waiting, so its entries come after theirs. Each level of such components nested in
     /// one another comes after the level outside it.
     #[doc(hidden)]
+    #[must_use]
     pub fn deferred(&self) -> HeadDeferral<'_> {
         self.deferral.set(self.deferral.get() + 1);
         HeadDeferral(self)
@@ -390,6 +399,7 @@ impl Head {
     }
 
     /// The head as unhead's `renderSSRHead` writes it.
+    #[must_use]
     pub fn render(&self) -> HeadHtml {
         let tags = self.resolve();
         let mut html = HeadHtml::default();

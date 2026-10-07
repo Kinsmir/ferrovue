@@ -339,7 +339,7 @@ fn a_waiting_record_is_woken_once_its_last_hole_closes() {
     let mut cx = Context::from_waker(&waker);
     let mut script = std::pin::pin!(record.script("p"));
     assert!(script.as_mut().poll(&mut cx).is_pending());
-    first.fill([part(&props)]);
+    let _ = first.fill([part(&props)]);
     assert!(!woken.take());
     assert!(script.as_mut().poll(&mut cx).is_pending());
     drop(second);
