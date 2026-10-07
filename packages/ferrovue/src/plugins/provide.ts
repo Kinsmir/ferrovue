@@ -1,4 +1,3 @@
-import { relative } from "node:path";
 import { type Component, type N, type Scope, type Ty, type Val, absence, blankComponent, camelize, fail, nothing, opt, sameTy, snake } from "../model.ts";
 import { ctx } from "../context.ts";
 import { type Declared } from "../constants.ts";
@@ -8,6 +7,7 @@ import { slotFieldBorrows, slotFieldTy, slotFieldValue } from "../slots.ts";
 import { fieldInit, ownInto } from "../children.ts";
 import { setupSource } from "../script.ts";
 import { header } from "../rust.ts";
+import { relativePath } from "../paths.ts";
 import { heldStr, isTemporary } from "../strings.ts";
 import { type Plugin, runOf, scopeOf, slotFieldsOf } from "../plugin.ts";
 
@@ -137,7 +137,7 @@ function keyOf(comp: Component, n: N, script: N[]): Key {
     const file = imported ? resolveImport(comp.file, imported.from) : null;
     const decl = file !== null ? ctx.constDecls.get(file)?.get(imported!.name) : undefined;
     if (decl?.exported && decl.node.type === "VariableDeclarator" && symbolInit(decl.node.init)) {
-      const rel = relative(ctx.rootDir, file!);
+      const rel = relativePath(ctx.rootDir, file!);
       return keyNamed(comp, n, `${rel}#${imported!.name}`, `\`${imported!.name}\``, rel, snake(imported!.name), () => declaredOf(decl));
     }
   }

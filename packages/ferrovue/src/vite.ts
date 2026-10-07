@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
-import { join, relative, resolve, sep } from "node:path";
+import { join, resolve, sep } from "node:path";
+import { relativePath } from "./paths.ts";
 import type { Plugin, ResolvedConfig, ViteDevServer } from "vite";
 import { CONFIG_FILE, loadConfig, write, type Written } from "./compiler.ts";
 import { formatRefusal, isRefusal } from "./diagnostics.ts";
@@ -13,16 +14,16 @@ export interface FerrovueOptions {
 /** Whether a changed file can change what is generated: a component, a store or type file, the
  * routes or the configuration: anything but the output itself, dependencies and build output. */
 export function affects(root: string, file: string): boolean {
-  const rel = relative(root, file);
+  const rel = relativePath(root, file);
   if (rel.startsWith("..") || !/\.(vue|ts|json)$/.test(rel)) return false;
   let out = "";
   try {
     out = loadConfig(root).out;
   } catch {
   }
-  const parts = rel.split(sep);
+  const parts = rel.split("/");
   if (parts.some((p) => p === "node_modules" || p === "target" || p === ".git" || p === "dist")) return false;
-  return out === "" || !(rel === out || rel.startsWith(out + sep));
+  return out === "" || !(rel === out || rel.startsWith(out + "/"));
 }
 
 /** How `@vitejs/plugin-vue`, as this build configures it, computes a `<style scoped>` id: from the

@@ -1,6 +1,7 @@
 import { parse as parseJs } from "@babel/parser";
 import { readdirSync, readFileSync } from "node:fs";
-import { basename, dirname, join, relative, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
+import { relativePath } from "../paths.ts";
 import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, absence, blankComponent, BOOL, fail, failIn, FLOAT, GenError, INT, opt, sameTy, snake, STR, tagAst, UNDEF } from "../model.ts";
 import { ctx } from "../context.ts";
 import { ONE_NOTHING, structOf, tyOfTs, typesImports } from "../typescript.ts";
@@ -58,7 +59,7 @@ function readStores(root: string, dir: string): void {
   const files = readdirSync(join(root, dir)).filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts")).toSorted();
   for (const f of files) {
     const path = join(root, dir, f);
-    const comp = storeHome(relative(root, path));
+    const comp = storeHome(relativePath(root, path));
     comp.source = readFileSync(path, "utf8");
     const ast: N[] = parseJs(comp.source, { sourceType: "module", plugins: ["typescript"] }).program.body;
     tagAst(ast, "source");
