@@ -26,10 +26,9 @@ fn or<T: Serialize + ?Sized>(value: &T, refused: &str) -> String {
         Err(e) => {
             // A debug build stops here, so props that cannot be written are found where they are
             // rendered; this crate's own tests check what a release build writes instead.
-            debug_assert!(
-                cfg!(test),
-                "serde_json cannot write these props as JSON: {e}"
-            );
+            if cfg!(all(debug_assertions, not(test))) {
+                panic!("serde_json cannot write these props as JSON: {e}");
+            }
             refused.to_owned()
         }
     }
