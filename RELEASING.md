@@ -43,10 +43,16 @@ becomes public until a maintainer approves it, once on each registry.
      a new minor version before 1.0, a new major version after. A crate crates.io does not have yet
      is skipped;
    - runs the full CI on the tag;
-   - **stages** the npm package, which is not public yet;
+   - **packs** every package once, in a job with no publishing rights: the crates (`cargo package`)
+     and the npm tarball (`pnpm pack`, which builds `dist` and writes concrete versions in place of
+     `workspace:` and `catalog:`), uploaded as the run's `packages` artifact with their SHA-256 in
+     the job's summary;
+   - **stages** that npm tarball, which is not public yet. The staging job checks out nothing and
+     installs nothing but a pinned npm: it is the job that holds the OIDC token npm trusts;
    - **waits** for approval of the `release` environment before publishing the crates, each after
      the crates it depends on;
-   - creates the GitHub release with the changelog notes and every package attached.
+   - attests the build provenance of the packed files (`actions/attest-build-provenance`), and
+     creates the GitHub release with the changelog notes and those same files attached.
 6. **Approve both:**
    - **npm:** `npm stage approve <id>`, which asks for your 2FA. The run prints the command, with the
      id when npm reports one, as a notice at the top of its page and in the npm and GitHub release
@@ -58,6 +64,17 @@ A tag with a pre-release suffix (`v0.2.0-rc.1`) stages to npm under the `next` t
 
 Every publishing step skips a version its registry already has, crate by crate, so a run that failed
 halfway can simply be re-run.
+
+The `.tgz` on the GitHub release is byte for byte the one npm staged. Anyone can check a downloaded
+file against the attestation:
+
+```sh
+gh attestation verify ferrovue-0.2.0.tgz --repo Kinsmir/ferrovue
+```
+
+`cargo publish` packs the crates again in the job that publishes them, so the `.crate` files on the
+release are the same sources, not necessarily the same bytes as crates.io's; `cargo package --list`
+or unpacking both shows the files agree.
 
 The crates are published without their test data: each crate's `exclude` in its `Cargo.toml` leaves
 out the conformance suite, the recorded vectors and the benchmark's expected HTML, so the tests and
