@@ -1,6 +1,6 @@
 {
   "person": { "name": "<script>alert(1)</script>", "title": "\"Dr\" & 'Prof'", "city": "🦀 Zürich" },
-  "tags": ["<b>", null, "&amp;", " ", "\u0000"],
+  "tags": ["<b>", null, "&amp;", " ", "</li><li>"],
   "counts": [9007199254740991, -9007199254740991, 0],
   "ratios": [1e21, -0, 0.30000000000000004, 1e-7],
   "people": [null, { "name": "</li>", "city": "&" }],
