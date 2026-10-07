@@ -21,6 +21,12 @@ uvx zizmor .                 # security lint of the workflows, composite actions
 
 `pnpm lint:fix` applies the fixes both tools can make on their own; review the diff before committing.
 
+With [just](https://just.systems), `just check` runs the pull request template's checklist in one
+go: type check, lint and tests on both sides, Clippy and rustfmt, the generated code's `--check`s
+and `cargo deny check` (`just --list` shows the parts). `rust-toolchain.toml` selects stable Rust
+with Clippy and rustfmt, `.node-version` the Node.js CI mostly runs (for fnm, nodenv and the like),
+and `.editorconfig` the repository's whitespace, leaving recorded fixtures byte for byte.
+
 [TESTING.md](TESTING.md) explains how the suite fits together.
 
 ## Adding support for a Vue construct
