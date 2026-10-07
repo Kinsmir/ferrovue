@@ -6,6 +6,7 @@ import { CONFIG_FILE, ctx, INLINE_HTML, TYPES_MODULE } from "./context.ts";
 import { childOf } from "./expr.ts";
 import { claim } from "./plugin.ts";
 import { declareConsts, enumType } from "./constants.ts";
+import { parseTs } from "./files.ts";
 
 export function typesImports(comp: Component, body: N[]): void {
   for (const s of body) {
@@ -156,7 +157,7 @@ export function readTypeFile(file: string): void {
   const home = blankComponent(basename(rel), "types", rel, ctx.typeStructs);
   home.aliases = ctx.typeAliases;
   home.source = readFileSync(file, "utf8");
-  const body: N[] = parseJs(home.source, { sourceType: "module", plugins: ["typescript"] }).program.body;
+  const body = parseTs(home);
   tagAst(body, "source");
   typesImports(home, body);
   ctx.constDecls.set(file, declareConsts(home, body));

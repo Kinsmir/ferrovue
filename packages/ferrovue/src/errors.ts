@@ -286,6 +286,13 @@ export const ERRORS = {
   FV1110: { title: "Twin without `rust`" },
   FV1111: { title: "Twin prop name that is not camelCase" },
   FV1112: { title: "Twin slot name that is not a plain name" },
+  FV1113: { title: "Configuration that is not a JSON object" },
+  FV1114: {
+    title: "Unknown configuration key",
+    detail: "A key ferrovue does not read is refused rather than ignored, as it is most often a misspelt one (`component` for `components`). The message names the key it most likely means.",
+  },
+  FV1115: { title: "Configuration value of the wrong type" },
+  FV1116: { title: "Directory the configuration names that cannot be read" },
 
   FV1201: { title: "Route parameter that is not a present string or number" },
   FV1202: { title: "`to` that is not a string or an object literal" },
@@ -338,6 +345,8 @@ export const ERRORS = {
   FV1243: { title: "`<route>` block in a page" },
   FV1244: { title: "`_parent.vue` with no pages to hold" },
   FV1245: { title: "Page whose component name is taken or not a Rust name" },
+  FV1246: { title: "Routes file that cannot be read" },
+  FV1247: { title: "Routes file that is not valid JSON" },
 
   FV1301: { title: "Type declared by two stores" },
   FV1302: { title: "Store id that is not a string literal" },

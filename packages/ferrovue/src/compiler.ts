@@ -2,7 +2,8 @@ import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "nod
 import { basename, join, relative } from "node:path";
 import { type Config, ctx, loadConfig, tyOfName } from "./context.ts";
 import { failIn, snake } from "./model.ts";
-import { importsOf, readComponent } from "./component.ts";
+import { readComponent, refuseOptionsApi } from "./component.ts";
+import { listDir } from "./files.ts";
 import { scopeFor } from "./script.ts";
 import { attrsFlow } from "./fallthrough.ts";
 import { prepareDynamic } from "./dynamic.ts";
@@ -37,7 +38,7 @@ export function generate(root: string, config: Config = loadConfig(root)): Map<s
   );
   const dir = join(root, config.components);
   const files = [
-    ...readdirSync(dir)
+    ...listDir(root, config.components, "components")
       .filter((f) => f.endsWith(".vue"))
       .toSorted()
       .map((f) => ({ file: join(dir, f), name: basename(f, ".vue") })),
@@ -55,8 +56,10 @@ export function generate(root: string, config: Config = loadConfig(root)): Map<s
     if (taken) failIn(rel, "FV0007", `the component's module would be \`${file}\`, as ${taken}'s is: rename one of them`);
     modulesOf.set(file, rel);
   }
-  const children = new Set(files.flatMap((f) => importsOf(readFileSync(f.file, "utf8")).filter((c) => c !== f.name)));
-  const read = files.map((f) => readComponent(f.file, root, children.has(f.name), f.name));
+  const read = files.map((f) => readComponent(f.file, root, f.name));
+  const children = new Set(read.flatMap((r) => [...r.comp.imports, ...r.comp.childProps.values()].filter((c) => c !== r.comp.name)));
+  for (const r of read) if (r.optionsApi) refuseOptionsApi(r.comp, r.optionsApi, children.has(r.comp.name));
+  const byName = new Map(read.map((r) => [r.comp.name, r]));
   const components = new Map(read.map((r) => [r.comp.name, r.comp]));
   ctx.components = components;
   const scopes = read.map((r) => scopeFor(r.comp, r.ast, components).scope);
@@ -83,7 +86,7 @@ export function generate(root: string, config: Config = loadConfig(root)): Map<s
     if (placed.has(r.comp.name)) return;
     placed.add(r.comp.name);
     for (const i of r.comp.imports) {
-      const dep = read.find((x) => x.comp.name === i);
+      const dep = byName.get(i);
       if (dep) place(dep);
     }
     ordered.push(r);

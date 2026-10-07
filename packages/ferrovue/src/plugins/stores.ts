@@ -1,8 +1,8 @@
-import { parse as parseJs } from "@babel/parser";
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, absence, blankComponent, BOOL, fail, failIn, FLOAT, GenError, INT, opt, sameTy, snake, STR, tagAst, UNDEF } from "../model.ts";
 import { ctx } from "../context.ts";
+import { listDir, parseTs } from "../files.ts";
 import { ONE_NOTHING, structOf, tyOfTs, typesImports } from "../typescript.ts";
 import { patternNames, setupStatement } from "../script.ts";
 import { expr, fieldVal } from "../expr.ts";
@@ -55,12 +55,12 @@ function storeImport(comp: Component, from: string): string | null {
 
 function readStores(root: string, dir: string): void {
   const run = runOf(piniaStores);
-  const files = readdirSync(join(root, dir)).filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts")).toSorted();
+  const files = listDir(root, dir, "stores").filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts")).toSorted();
   for (const f of files) {
     const path = join(root, dir, f);
     const comp = storeHome(relative(root, path));
     comp.source = readFileSync(path, "utf8");
-    const ast: N[] = parseJs(comp.source, { sourceType: "module", plugins: ["typescript"] }).program.body;
+    const ast = parseTs(comp);
     tagAst(ast, "source");
     typesImports(comp, ast);
     const decls = ast.map((st) => (st.type === "ExportNamedDeclaration" ? st.declaration : st)).filter(Boolean);

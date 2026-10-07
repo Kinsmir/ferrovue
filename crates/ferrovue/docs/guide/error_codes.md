@@ -895,6 +895,24 @@ Twin prop name that is not camelCase.
 
 Twin slot name that is not a plain name.
 
+## FV1113
+
+Configuration that is not a JSON object.
+
+## FV1114
+
+Unknown configuration key.
+
+A key ferrovue does not read is refused rather than ignored, as it is most often a misspelt one (`component` for `components`). The message names the key it most likely means.
+
+## FV1115
+
+Configuration value of the wrong type.
+
+## FV1116
+
+Directory the configuration names that cannot be read.
+
 # Router: FV12xx
 
 See [`routing`](crate::guide::routing).
@@ -1082,6 +1100,14 @@ Named view in a page file name.
 ## FV1245
 
 Page whose component name is taken or not a Rust name.
+
+## FV1246
+
+Routes file that cannot be read.
+
+## FV1247
+
+Routes file that is not valid JSON.
 
 # Pinia stores: FV13xx
 

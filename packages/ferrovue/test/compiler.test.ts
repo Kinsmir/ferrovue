@@ -2610,3 +2610,133 @@ defineProps<{ c: string | null }>();
     });
   }
 });
+
+describe("the configuration", () => {
+  const configured = (config: unknown): string => {
+    const root = island(`<template><p /></template>`);
+    writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify(config));
+    return root;
+  };
+  const refusedWith = (config: unknown): GenError => {
+    try {
+      loadConfig(configured(config));
+    } catch (e) {
+      if (e instanceof GenError) return e;
+      throw e;
+    }
+    throw new Error("loaded without an error");
+  };
+  const helper = (spec: unknown) => ({ ...CONFIG, helpers: { module: "./helpers", functions: { plural: spec } } });
+  const cases: [string, unknown, Code, RegExp][] = [
+    ["null", null, "FV1113", /^ferrovue\.config\.json holds `null`, where it holds an object/],
+    ["an array", [CONFIG], "FV1113", /holds an array/],
+    ["a string", "components", "FV1113", /holds a string/],
+    ["a misspelt key", { components: "components", out: "out", store: "stores" }, "FV1114", /^ferrovue\.config\.json has no key `store`: did you mean `stores`\?$/],
+    ["a misspelt required key", { component: "components", out: "out" }, "FV1114", /did you mean `components`\?/],
+    ["a key in the wrong case", { ...CONFIG, I18n: { messages: "locales" } }, "FV1114", /did you mean `i18n`\?/],
+    ["a key like none", { ...CONFIG, plugins: [] }, "FV1114", /has no key `plugins`: it takes `components`, `out`/],
+    ["a misspelt key in `router`", { ...CONFIG, router: { routes: "routes.json", linkActiveClas: "on" } }, "FV1114", /^`router` in ferrovue\.config\.json has no key `linkActiveClas`: did you mean `linkActiveClass`\?/],
+    ["a string of client directives", { ...CONFIG, clientDirectives: "focus" }, "FV1115", /^`clientDirectives` in ferrovue\.config\.json is a list of directive names/],
+    ["a helper without `params`", helper({ rust: "crate::plural", returns: "string" }), "FV1115", /`helpers\.functions\.plural\.params` in ferrovue\.config\.json is the list of types/],
+    ["a helper without `rust`", helper({ params: [], returns: "string" }), "FV1115", /`helpers\.functions\.plural\.rust` in ferrovue\.config\.json is a string/],
+    ["a helper type ferrovue does not know", helper({ rust: "crate::plural", params: ["number"], returns: "string" }), "FV1107", /`helpers\.functions\.plural\.params\[0\]` in ferrovue\.config\.json is "number", not a type a helper or twin takes/],
+    ["a helper without `returns`", helper({ rust: "crate::plural", params: [] }), "FV1107", /`helpers\.functions\.plural\.returns` in ferrovue\.config\.json is missing/],
+    ["a negative `maxLen`", helper({ rust: "crate::plural", params: [], returns: "string", maxLen: -1 }), "FV1115", /`helpers\.functions\.plural\.maxLen`/],
+    ["helpers without `functions`", { ...CONFIG, helpers: { module: "./helpers" } }, "FV1115", /`helpers\.functions`/],
+    ["a twin prop of an unknown type", { ...CONFIG, twins: { VBtn: { rust: "crate::v_btn", props: { label: "text" } } } }, "FV1107", /`twins\.VBtn\.props\.label` in ferrovue\.config\.json is "text"/],
+    ["twins in a list", { ...CONFIG, twins: [] }, "FV1115", /^`twins` in ferrovue\.config\.json is an object of twins/],
+    ["twin slots that are not a list", { ...CONFIG, twins: { VBtn: { rust: "crate::v_btn", slots: "default" } } }, "FV1115", /`twins\.VBtn\.slots`/],
+    ["routes of neither kind", { ...CONFIG, routes: { folder: "pages" } }, "FV1238", /^`routes` in ferrovue\.config\.json is a JSON file of routes, or `\{ "pages": "…" \}`/],
+    ["router routes of neither kind", { ...CONFIG, router: { routes: 1 } }, "FV1238", /^`router\.routes` in/],
+    ["a router base that is not a string", { ...CONFIG, router: { routes: "routes.json", base: 1 } }, "FV1115", /^`router\.base` in ferrovue\.config\.json is a string/],
+    ["i18n as a string", { ...CONFIG, i18n: "locales" }, "FV1115", /^`i18n` in ferrovue\.config\.json is an object/],
+    ["i18n without `messages`", { ...CONFIG, i18n: { locale: "en" } }, "FV1115", /^`i18n\.messages` in ferrovue\.config\.json is a string/],
+    ["a fallback locale that is a number", { ...CONFIG, i18n: { messages: "locales", fallbackLocale: 1 } }, "FV1115", /`i18n\.fallbackLocale`/],
+    ["stores that is not a string", { ...CONFIG, stores: ["stores"] }, "FV1115", /^`stores` in ferrovue\.config\.json is a string/],
+    ["a `trustedHtml` that is not a string", { ...CONFIG, trustedHtml: true }, "FV1115", /^`trustedHtml`/],
+    ["a `viteRoot` that is not a string", { ...CONFIG, viteRoot: 1 }, "FV1115", /^`viteRoot`/],
+  ];
+  for (const [what, config, code, message] of cases) {
+    it(`refuses ${what}`, () => {
+      const e = refusedWith(config);
+      expect(e.code).toBe(code);
+      expect(e.message).toMatch(message);
+      expect(e.at).toEqual({ file: "ferrovue.config.json" });
+    });
+  }
+
+  it("takes every key the README lists, and the repository's own configurations", () => {
+    const full = {
+      ...CONFIG,
+      router: { routes: { pages: "pages" }, base: "/app", linkActiveClass: "on", linkExactActiveClass: "here" },
+      stores: "stores",
+      trustedHtml: "ferrovue::InlineHtml",
+      helpers: { module: "./helpers", functions: { plural: { rust: "crate::plural", params: ["int", "string?"], returns: "string", maxLen: 1 } } },
+      twins: { VBtn: { rust: "crate::v_btn", props: { label: "string" }, slots: ["default"] } },
+      i18n: { messages: "locales", locale: "en", fallbackLocale: ["en"] },
+      clientDirectives: ["focus"],
+      scopeId: "filepath",
+      viteRoot: ".",
+      builders: false,
+    };
+    expect(loadConfig(configured(full))).toEqual(full);
+    for (const dir of ["crates/ferrovue/tests/conformance", "examples/fullstack", "examples/greeting"]) {
+      expect(() => loadConfig(join(import.meta.dirname, "../../..", dir)), dir).not.toThrow();
+    }
+  });
+});
+
+describe("the project's inputs", () => {
+  const failure = (run: () => unknown): GenError => {
+    try {
+      run();
+    } catch (e) {
+      if (e instanceof GenError) return e;
+      throw e;
+    }
+    throw new Error("compiled without an error");
+  };
+  const page = `<template><p /></template>`;
+
+  it("refuses a components, stores or messages directory that does not exist", () => {
+    const root = island(page);
+    expect(failure(() => generate(root, { components: "nowhere", out: "out" }))).toMatchObject({ code: "FV1116", message: "cannot read the `components` directory `nowhere`: it does not exist", at: { file: "nowhere" } });
+    expect(failure(() => generate(root, { ...CONFIG, stores: "stores" }))).toMatchObject({ code: "FV1116", message: "cannot read the `stores` directory `stores`: it does not exist" });
+    expect(failure(() => generate(root, { ...CONFIG, i18n: { messages: "locales" } }))).toMatchObject({ code: "FV1116", message: "cannot read the `i18n.messages` directory `locales`: it does not exist" });
+    writeFileSync(join(root, "locales"), "");
+    expect(failure(() => generate(root, { ...CONFIG, i18n: { messages: "locales" } })).message).toMatch(/it is not a directory$/);
+  });
+
+  it("refuses a routes file that is missing, is not JSON, or is not a list of routes", () => {
+    const root = island(page);
+    const routes = (text: string | null) => {
+      if (text !== null) writeFileSync(join(root, "routes.json"), text);
+      return failure(() => generate(root, { ...CONFIG, routes: "routes.json" }));
+    };
+    expect(routes(null)).toMatchObject({ code: "FV1246", message: "routes.json: cannot read the file: it does not exist", at: { file: "routes.json" } });
+    const malformed = routes(`["/", "/about"`);
+    expect(malformed.code).toBe("FV1247");
+    expect(malformed.message).toMatch(/^routes\.json: /);
+    expect(malformed.at).toEqual({ file: "routes.json" });
+    expect(routes(`{ "path": "/" }`)).toMatchObject({ code: "FV1232", at: { file: "routes.json" } });
+    expect(routes(`[{ "name": "home" }]`)).toMatchObject({ code: "FV1233", at: { file: "routes.json" } });
+  });
+
+  it("refuses a store or a type file that does not parse, naming the file and where it stopped", () => {
+    const root = island(`<script setup lang="ts">
+import type { Item } from "../types";
+defineProps<{ item: Item }>();
+</script>
+<template><p>{{ item.name }}</p></template>`);
+    writeFileSync(join(root, "types.ts"), "export interface Item {\n  name: string\n  size: = 2;\n}\n");
+    const typed = failure(() => compile(root));
+    expect(typed.code).toBe("FV0001");
+    expect(typed.at).toMatchObject({ file: "types.ts", line: 3 });
+    expect(typed.message).toMatch(/^types\.ts:3:\d+: Unexpected token\n 3 \| {3}size: = 2;\n/);
+    mkdirSync(join(root, "stores"));
+    writeFileSync(join(root, "stores", "prefs.ts"), `import { defineStore } from "pinia";\nexport const usePrefs = defineStore("prefs", {\n`);
+    const store = failure(() => generate(root, { ...CONFIG, stores: "stores" }));
+    expect(store.code).toBe("FV0001");
+    expect(store.at).toMatchObject({ file: "stores/prefs.ts", line: 3, column: 1 });
+  });
+});
