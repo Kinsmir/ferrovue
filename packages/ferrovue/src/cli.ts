@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { existsSync, mkdirSync, readFileSync, readdirSync, watch, writeFileSync } from "node:fs";
-import { dirname, join, relative, resolve, sep } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
+import { relativePath } from "./paths.ts";
 import { type Config, CONFIG_FILE, generate, isGenerated, loadConfig, VERSION, write } from "./compiler.ts";
 import { unifiedDiff } from "./diff.ts";
 import { diagnose, formatRefusal, isRefusal } from "./diagnostics.ts";
@@ -148,16 +149,16 @@ function watchProject(configPath?: string): void {
       out = loadConfig(root, configPath).out;
     } catch {
     }
-    const parts = file.split(sep);
+    const parts = file.split("/");
     return (
       parts.some((p) => p === "node_modules" || p === "target" || p === ".git" || p === "dist") ||
-      (out !== "" && (file === out || file.startsWith(out + sep))) ||
+      (out !== "" && (file === out || file.startsWith(out + "/"))) ||
       !/\.(vue|ts|json)$/.test(file)
     );
   };
   let timer: ReturnType<typeof setTimeout> | null = null;
   const watcher = watch(root, { recursive: true }, (_event, name) => {
-    if (!name || ignored(relative(root, join(root, name)))) return;
+    if (!name || ignored(relativePath(root, join(root, name)))) return;
     if (timer) clearTimeout(timer);
     timer = setTimeout(run, 50);
   });

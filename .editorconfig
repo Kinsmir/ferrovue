@@ -1,0 +1,24 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.rs]
+indent_size = 4
+
+[justfile]
+indent_size = 4
+
+[*.md]
+trim_trailing_whitespace = false
+
+# Recorded output (Vue's HTML, router and number vectors, the benchmark's expected pages) is kept
+# byte for byte as it was recorded, final newline or not.
+[{*.html,crates/*/tests/vectors/**,crates/ferrovue/tests/conformance/fixtures/**,crates/ferrovue/benches/expected/**}]
+insert_final_newline = unset
+trim_trailing_whitespace = unset

@@ -2,7 +2,8 @@ import { parse as parseJs } from "@babel/parser";
 import { compileScript, compileTemplate, parse as parseSfc, type SFCBlock, type SFCDescriptor, type SFCScriptBlock } from "@vue/compiler-sfc";
 import { readFileSync } from "node:fs";
 import { SourceMapConsumer } from "source-map-js";
-import { basename, relative } from "node:path";
+import { basename } from "node:path";
+import { relativePath } from "./paths.ts";
 import { type Component, type N, absence, blankComponent, fail, GenError, opt, snake, sourceAt, tagAst } from "./model.ts";
 import { ctx } from "./context.ts";
 import { typesImports, declareTypes, defaultValue, definePropsType, ONE_NOTHING, readTypeFile, resolveImport, runtimeDefaults, structOf, tyOfTs } from "./typescript.ts";
@@ -109,7 +110,7 @@ function scriptOf(comp: Component, descriptor: SFCDescriptor): SFCScriptBlock {
 export function readComponent(file: string, root: string, isChild: boolean, name = basename(file, ".vue")): { comp: Component; ast: N[]; ssr: string } {
   const source = readFileSync(file, "utf8");
   const { descriptor, errors } = parseSfc(source, { filename: file });
-  const rel = relative(root, file);
+  const rel = relativePath(root, file);
   const comp = blankComponent(name, snake(name), rel);
   comp.source = source;
   if (errors.length) fail(comp, "FV0002", String(errors[0]).replaceAll(file, rel), vueErrorNode(errors[0]) ?? sourceAt(source, 0));

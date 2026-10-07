@@ -1,5 +1,6 @@
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { basename, join, relative } from "node:path";
+import { basename, join } from "node:path";
+import { relativePath } from "./paths.ts";
 import { type Config, ctx, loadConfig, tyOfName } from "./context.ts";
 import { failIn, snake } from "./model.ts";
 import { importsOf, readComponent } from "./component.ts";
@@ -45,7 +46,7 @@ export function generate(root: string, config: Config = loadConfig(root)): Map<s
   ];
   const modulesOf = new Map<string, string>();
   for (const f of files) {
-    const rel = relative(root, f.file);
+    const rel = relativePath(root, f.file);
     if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(f.name)) {
       failIn(rel, "FV0007", `the component is called \`${f.name}\` after its file, which is not a Rust name: name the file in PascalCase, letters and digits (\`UserCard.vue\`)`);
     }

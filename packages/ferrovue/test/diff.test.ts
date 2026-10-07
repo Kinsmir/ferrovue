@@ -17,9 +17,12 @@ function gnu(before: string, after: string): string {
   }
 }
 
+// GNU diff, the reference, is not on the PATH of every Windows machine.
+const hasDiff = spawnSync("diff", ["--version"]).status === 0;
+
 const lines = (n: number, f: (i: number) => string = (i) => `line ${i}`): string => Array.from({ length: n }, (_, i) => f(i + 1)).join("\n") + "\n";
 
-it.each([
+it.skipIf(!hasDiff).each([
   ["one line changed in the middle", lines(20), lines(20, (i) => (i === 10 ? "changed" : `line ${i}`))],
   ["a line added and one removed far apart", lines(30), lines(30, (i) => `line ${i}`).replace("line 3\n", "").replace("line 25\n", "line 25\nadded\n")],
   ["changes close enough to share a hunk", lines(12), lines(12, (i) => (i === 4 || i === 8 ? `new ${i}` : `line ${i}`))],
