@@ -28,8 +28,8 @@ const PRIORITIES = new Set(["critical", "high", "low"]);
 const STRATEGIES = new Set(["replace", "merge"]);
 const OBJECT_KEYS = new Set(Object.getOwnPropertyNames(Object.prototype));
 
-const META_NAMESPACES = ["twitter", "fediverse"];
-const PROPERTY_NAMESPACES = ["og", "book", "article", "profile", "fb", "payment"];
+const META_NAMESPACES = new Set(["twitter", "fediverse"]);
+const PROPERTY_NAMESPACES = new Set(["og", "book", "article", "profile", "fb", "payment"]);
 const HTTP_EQUIV_KEYS = new Set(["contentType", "defaultStyle", "xUaCompatible", "refresh", "contentSecurityPolicy"]);
 const META_ALIASES: Record<string, string> = {
   articleExpirationTime: "article:expiration_time",
@@ -59,7 +59,7 @@ function fixKeyCase(key: string): string {
   const prefix = updated.indexOf("-");
   if (prefix === -1) return updated;
   const ns = updated.slice(0, prefix);
-  return META_NAMESPACES.includes(ns) || PROPERTY_NAMESPACES.includes(ns) ? key.replace(/([A-Z])/g, ":$1").toLowerCase() : updated;
+  return META_NAMESPACES.has(ns) || PROPERTY_NAMESPACES.has(ns) ? key.replace(/([A-Z])/g, ":$1").toLowerCase() : updated;
 }
 
 /** The meta tag `useSeoMeta` writes for a key with a string value: the attribute it sets, and the
@@ -70,7 +70,7 @@ export function seoMetaKey(key: string): [attr: string, name: string] {
   if (HTTP_EQUIV_KEYS.has(key)) return ["http-equiv", name];
   const fixed = fixKeyCase(key);
   const colon = fixed.indexOf(":");
-  return [colon !== -1 && PROPERTY_NAMESPACES.includes(fixed.slice(0, colon)) ? "property" : "name", name];
+  return [colon !== -1 && PROPERTY_NAMESPACES.has(fixed.slice(0, colon)) ? "property" : "name", name];
 }
 
 function keyOf(comp: Component, p: N): string {

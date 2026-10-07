@@ -303,7 +303,10 @@ export function valueAttr(s: Scope, v: Val, n: N): string {
       const of = v.ty.of.k;
       const make = of === "str" ? "fv::Attr::str" : of === "int" ? "fv::Attr::Int" : of === "float" ? "fv::Attr::Float" : of === "bool" ? "fv::Attr::Bool" : null;
       if (make !== null) return `${atom(v.code)}.map_or(fv::Attr::Undefined, ${make})`;
+      break;
     }
+    default:
+      break;
   }
   return fail(s.comp, "FV0412", "an attribute that may fall through is a string, a number or a boolean", n);
 }

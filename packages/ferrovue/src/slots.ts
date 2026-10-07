@@ -95,6 +95,8 @@ export function slotFieldValue(s: Scope, v: Val, n: N): string {
       if (v.ty.of.k === "list") return `${atom(v.code)}.map(|v| &v[..])`;
       if (v.ty.of.k === "opt" || nothing(v.ty.of)) break;
       return v.code;
+    default:
+      break;
   }
   return fail(s.comp, "FV0911", "a slot prop is a string, a number, a boolean, an object or a list", n);
 }
