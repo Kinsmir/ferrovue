@@ -1329,46 +1329,78 @@ fn props_into(out: &mut String, props: &Props) {
         if key.is_empty() || invalid_attr_name(key) {
             continue;
         }
-        let text = match value {
-            Prop::Value(HeadValue::Bool(false) | HeadValue::Null) => continue,
-            Prop::Value(HeadValue::Bool(true)) => {
-                out.push(' ');
-                out.push_str(key);
-                continue;
-            }
-            Prop::Value(v) => v.js_string(),
-            Prop::Class(classes) if key == "class" => classes.join(" "),
-            Prop::Style(styles) if key == "style" => styles
-                .iter()
-                .map(|(k, v)| format!("{k}:{v}"))
-                .collect::<Vec<_>>()
-                .join(";"),
-            other => other.js_string(),
-        };
+        if let Prop::Value(HeadValue::Bool(false) | HeadValue::Null) = value {
+            continue;
+        }
         out.push(' ');
         out.push_str(key);
-        out.push_str("=\"");
-        out.push_str(&text.replace('"', "&quot;"));
-        out.push('"');
+        match value {
+            Prop::Value(HeadValue::Bool(true)) => continue,
+            Prop::Value(v) => quoted_into(out, &v.js_string()),
+            Prop::Class(classes) if key == "class" => {
+                out.push_str("=\"");
+                for (i, class) in classes.iter().enumerate() {
+                    if i > 0 {
+                        out.push(' ');
+                    }
+                    quotes_escaped_into(out, class);
+                }
+                out.push('"');
+            }
+            Prop::Style(styles) if key == "style" => {
+                out.push_str("=\"");
+                for (i, (k, v)) in styles.iter().enumerate() {
+                    if i > 0 {
+                        out.push(';');
+                    }
+                    quotes_escaped_into(out, k);
+                    out.push(':');
+                    quotes_escaped_into(out, v);
+                }
+                out.push('"');
+            }
+            other => quoted_into(out, &other.js_string()),
+        }
     }
 }
 
-fn replace_close_tag(content: &str, tag: &str) -> String {
-    let needle = format!("</{tag}");
-    let lower = content.to_ascii_lowercase();
-    if !lower.contains(&needle) {
-        return content.to_owned();
+/// `="text"`, with each `"` in it written `&quot;`.
+fn quoted_into(out: &mut String, text: &str) {
+    out.push_str("=\"");
+    quotes_escaped_into(out, text);
+    out.push('"');
+}
+
+fn quotes_escaped_into(out: &mut String, text: &str) {
+    let mut parts = text.split('"');
+    if let Some(first) = parts.next() {
+        out.push_str(first);
     }
-    let mut out = String::with_capacity(content.len() + 4);
+    for part in parts {
+        out.push_str("&quot;");
+        out.push_str(part);
+    }
+}
+
+/// `content` with every `</tag`, in any case, written `<\/tag`.
+fn replace_close_tag_into(out: &mut String, content: &str, tag: &str) {
     let mut at = 0;
-    while let Some(i) = lower[at..].find(&needle) {
-        out.push_str(&content[at..at + i]);
-        out.push_str("<\\/");
-        out.push_str(tag);
-        at += i + needle.len();
+    for (i, _) in content.match_indices("</") {
+        let name = content.as_bytes()[i + 2..].get(..tag.len());
+        // What `content.toLowerCase()` would hold there: `tag` itself is not lowercased.
+        let closes = name.is_some_and(|name| {
+            name.iter()
+                .zip(tag.as_bytes())
+                .all(|(c, t)| c.to_ascii_lowercase() == *t)
+        });
+        if i >= at && closes {
+            out.push_str(&content[at..i]);
+            out.push_str("<\\/");
+            out.push_str(tag);
+            at = i + 2 + tag.len();
+        }
     }
     out.push_str(&content[at..]);
-    out
 }
 
 fn tag_into(out: &mut String, tag: &Tag) {
@@ -1390,7 +1422,7 @@ fn tag_into(out: &mut String, tag: &Tag) {
         if tag.tag == "title" {
             escape_html_into(out, &content);
         } else {
-            out.push_str(&replace_close_tag(&content, &tag.tag));
+            replace_close_tag_into(out, &content, &tag.tag);
         }
     }
     out.push_str("</");

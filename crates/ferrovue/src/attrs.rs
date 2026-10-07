@@ -214,37 +214,47 @@ impl Default for Attrs<'_> {
     }
 }
 
-type Merged<'a> = (&'a str, Attr<'a>, usize);
+/// A merged attribute: its name, its value (borrowed from its source unless merging made it) and
+/// the position of the last source that gave it.
+type Merged<'s, 'a> = (&'a str, Cow<'s, Attr<'a>>, usize);
 
-fn merge<'a>(sources: &[&[(&'a str, Attr<'a>)]]) -> Vec<Merged<'a>> {
-    let mut ret: Vec<Merged<'a>> = Vec::new();
+fn merge<'s, 'a>(sources: &'s [&'s [(&'a str, Attr<'a>)]]) -> Vec<Merged<'s, 'a>> {
+    let mut ret: Vec<Merged<'s, 'a>> = Vec::with_capacity(sources.iter().map(|s| s.len()).sum());
     for (i, source) in sources.iter().enumerate() {
         for (key, value) in source.iter() {
             let at = ret.iter().position(|(k, _, _)| k == key);
             match *key {
                 "class" => {
-                    let so_far = at.map_or(&Attr::Undefined, |j| &ret[j].1);
+                    let so_far = at.map_or(&Attr::Undefined, |j| &*ret[j].1);
                     if !so_far.strict_eq(value) {
                         let joined = join_classes(so_far.class_text(), value.class_text());
-                        set(&mut ret, at, key, Attr::Str(Cow::Owned(joined)), i);
+                        let joined = Cow::Owned(Attr::Str(Cow::Owned(joined)));
+                        set(&mut ret, at, key, joined, i);
                     }
                 }
                 "style" => {
                     let mut res = Vec::new();
                     if let Some(j) = at {
-                        merge_style_into(&mut res, ret[j].1.clone());
+                        merge_style_into(&mut res, ret[j].1.clone().into_owned());
                     }
                     merge_style_into(&mut res, value.clone());
-                    set(&mut ret, at, key, Attr::Style(normal_order(res)), i);
+                    let style = Cow::Owned(Attr::Style(normal_order(res)));
+                    set(&mut ret, at, key, style, i);
                 }
-                _ => set(&mut ret, at, key, value.clone(), i),
+                _ => set(&mut ret, at, key, Cow::Borrowed(value), i),
             }
         }
     }
     ret
 }
 
-fn set<'a>(ret: &mut Vec<Merged<'a>>, at: Option<usize>, key: &'a str, value: Attr<'a>, i: usize) {
+fn set<'s, 'a>(
+    ret: &mut Vec<Merged<'s, 'a>>,
+    at: Option<usize>,
+    key: &'a str,
+    value: Cow<'s, Attr<'a>>,
+    i: usize,
+) {
     match at {
         Some(j) => ret[j].1 = value,
         None => ret.push((key, value, i)),
@@ -255,7 +265,13 @@ fn join_classes(a: &str, b: &str) -> String {
     match (a.is_empty(), b.is_empty()) {
         (true, _) => b.to_owned(),
         (_, true) => a.to_owned(),
-        _ => format!("{a} {b}"),
+        _ => {
+            let mut joined = String::with_capacity(a.len() + 1 + b.len());
+            joined.push_str(a);
+            joined.push(' ');
+            joined.push_str(b);
+            joined
+        }
     }
 }
 
@@ -275,7 +291,10 @@ fn join_classes(a: &str, b: &str) -> String {
 /// ```
 #[must_use]
 pub fn merge_props<'a>(sources: &[&[(&'a str, Attr<'a>)]]) -> Vec<(&'a str, Attr<'a>)> {
-    merge(sources).into_iter().map(|(k, v, _)| (k, v)).collect()
+    merge(sources)
+        .into_iter()
+        .map(|(k, v, _)| (k, v.into_owned()))
+        .collect()
 }
 
 /// `ssrRenderAttrs(mergeProps(...sources))` for an element given fallthrough attributes, with the
@@ -411,6 +430,7 @@ fn dynamic_attr_into(out: &mut String, key: &str, value: &Attr<'_>) {
         "acceptCharset" => "accept-charset".into(),
         "htmlFor" => "for".into(),
         "httpEquiv" => "http-equiv".into(),
+        _ if is_lowercase_ascii(key) => key.into(),
         _ => key.to_lowercase().into(),
     };
     let boolean = if name == "hidden" {
@@ -446,7 +466,7 @@ fn style_into(out: &mut String, value: &Attr<'_>) {
                 if !matches!(v, Attr::Str(_) | Attr::Int(_) | Attr::Float(_)) {
                     continue;
                 }
-                if key.starts_with("--") {
+                if key.starts_with("--") || is_lowercase_ascii(key) {
                     escape_into(out, key);
                 } else {
                     escape_into(out, &hyphenate(key));
@@ -484,7 +504,17 @@ fn hyphenate(key: &str) -> String {
         prev_word = c.is_ascii_alphanumeric() || c == '_';
         s.push(c);
     }
-    s.to_lowercase()
+    if s.is_ascii() {
+        s.make_ascii_lowercase();
+        s
+    } else {
+        s.to_lowercase()
+    }
+}
+
+/// Whether `toLowerCase` and `hyphenate` would leave `key` as it is, without asking Unicode.
+fn is_lowercase_ascii(key: &str) -> bool {
+    key.bytes().all(|b| b.is_ascii() && !b.is_ascii_uppercase())
 }
 
 fn merge_style_into<'a>(res: &mut Vec<(Cow<'a, str>, Attr<'a>)>, item: Attr<'a>) {

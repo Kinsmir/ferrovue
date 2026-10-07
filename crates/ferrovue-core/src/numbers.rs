@@ -65,9 +65,37 @@ pub fn push_int(out: &mut String, n: i64) {
     }
 }
 
+/// ASCII text on the stack, long enough for any `u128` in decimal: what `push_number` writes and
+/// reads digits in, so writing a fraction allocates nothing.
 struct Short {
-    buf: [u8; 32],
+    buf: [u8; 48],
     len: usize,
+}
+
+impl Short {
+    const fn new() -> Short {
+        Short {
+            buf: [0; 48],
+            len: 0,
+        }
+    }
+
+    fn of(digits: &str) -> Short {
+        let mut short = Short::new();
+        short.extend(digits.bytes());
+        short
+    }
+
+    fn extend(&mut self, bytes: impl Iterator<Item = u8>) {
+        for b in bytes {
+            self.buf[self.len] = b;
+            self.len += 1;
+        }
+    }
+
+    fn as_str(&self) -> &str {
+        std::str::from_utf8(&self.buf[..self.len]).expect("only ASCII is written")
+    }
 }
 
 impl std::fmt::Write for Short {
@@ -121,19 +149,20 @@ pub fn push_number(out: &mut String, x: f64) {
         push_decimal(out, x as u64);
         return;
     }
-    let mut sci = Short {
-        buf: [0; 32],
-        len: 0,
-    };
+    let mut sci = Short::new();
     let _ = write!(sci, "{x:e}");
-    let sci = std::str::from_utf8(&sci.buf[..sci.len]).expect("`{:e}` writes ASCII");
-    let (mantissa, exp) = sci.split_once('e').expect("`{:e}` writes an exponent");
+    let (mantissa, exp) = sci
+        .as_str()
+        .split_once('e')
+        .expect("`{:e}` writes an exponent");
     let exp: i32 = exp.parse().expect("`{:e}` writes an integer exponent");
-    let mut digits: String = mantissa.chars().filter(|c| *c != '.').collect();
+    let mut digits = Short::new();
+    digits.extend(mantissa.bytes().filter(|b| *b != b'.'));
     if let Some((exact, exact_exp)) = few_exact_digits(x)
         && exact_exp == exp
     {
-        let k = digits.len();
+        let exact = exact.as_str();
+        let k = digits.len;
         if exact.len() == k + 1 && exact.ends_with('5') {
             let lower = &exact[..k];
             let upper = increment_digits(lower);
@@ -142,15 +171,16 @@ pub fn push_number(out: &mut String, x: f64) {
                     .last()
                     .is_some_and(|b| (b - b'0').is_multiple_of(2))
             };
-            if upper.len() == k && (digits == lower || digits == upper) {
-                digits = if even(lower) { lower.to_owned() } else { upper };
+            if upper.len() == k && (digits.as_str() == lower || digits.as_str() == upper) {
+                digits = Short::of(if even(lower) { lower } else { &upper });
             }
         }
     }
+    let digits = digits.as_str();
     let k = digits.len() as i32;
     let n = exp + 1;
     if k <= n && n <= 21 {
-        out.push_str(&digits);
+        out.push_str(digits);
         out.extend(std::iter::repeat_n('0', (n - k) as usize));
     } else if 0 < n && n <= 21 {
         out.push_str(&digits[..n as usize]);
@@ -159,7 +189,7 @@ pub fn push_number(out: &mut String, x: f64) {
     } else if -6 < n && n <= 0 {
         out.push_str("0.");
         out.extend(std::iter::repeat_n('0', (-n) as usize));
-        out.push_str(&digits);
+        out.push_str(digits);
     } else {
         out.push_str(&digits[..1]);
         if k > 1 {
@@ -171,7 +201,8 @@ pub fn push_number(out: &mut String, x: f64) {
     }
 }
 
-fn few_exact_digits(x: f64) -> Option<(String, i32)> {
+fn few_exact_digits(x: f64) -> Option<(Short, i32)> {
+    use std::fmt::Write;
     let bits = x.to_bits();
     let biased = ((bits >> 52) & 0x7ff) as i32;
     let fraction = bits & ((1 << 52) - 1);
@@ -190,20 +221,21 @@ fn few_exact_digits(x: f64) -> Option<(String, i32)> {
     } else if e <= 74 {
         (u128::from(m) << e, 0)
     } else if e < 82 {
-        use std::fmt::Write;
         let mut s = String::new();
         let _ = write!(s, "{x:.40e}");
         let (mantissa, exp) = s.split_once('e')?;
         let digits: String = mantissa.chars().filter(|c| *c != '.').collect();
         let digits = digits.trim_end_matches('0');
         let exp = exp.parse().ok()?;
-        return (digits.len() <= 18).then(|| (digits.to_owned(), exp));
+        return (digits.len() <= 18).then(|| (Short::of(digits), exp));
     } else {
         return None;
     };
-    let all = value.to_string();
-    let digits = all.trim_end_matches('0');
-    (digits.len() <= 18).then(|| (digits.to_owned(), all.len() as i32 - 1 + scale))
+    let mut digits = Short::new();
+    let _ = write!(digits, "{value}");
+    let all = digits.len;
+    digits.len = digits.as_str().trim_end_matches('0').len();
+    (digits.len <= 18).then_some((digits, all as i32 - 1 + scale))
 }
 
 /// `Math.round`: the nearest integer, a half rounding up toward +∞ (`-2.5` to `-2`, where Rust's
