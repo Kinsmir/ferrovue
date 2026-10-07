@@ -43,6 +43,7 @@
 [[[["dataFoo","x"],["ARIA-Label","y"]]]," datafoo=\"x\" aria-label=\"y\""],
 [[[["^title","t"],[".prop","p"],["onClick","f"],["key","k"],["ref","r"],["","e"],["on","o"],["onx","y"]]]," title=\"t\" on=\"o\" onx=\"y\""],
 [[[["innerHTML","h"],["textContent","t"],["ref_key","a"],["ref_for",true],["a b","unsafe"]]],""],
+[[[["a\tb","1"],["a\nb","2"],["a\fb","3"],["a\rb","4"],["a>b","5"],["a/b","6"],["a=b","7"],["a\"b","8"],["a'b","9"],["a\u000bb","10"],["a b","11"],["a\u0000b","12"],["a<b","13"]]]," a\u000bb=\"10\" a b=\"11\" a\u0000b=\"12\" a<b=\"13\""],
 [[[["class","a"],["id","x"]],[["data-k","v"],["class","b"]],[["style",{"style":[["display","none"]]}]]]," class=\"a b\" id=\"x\" data-k=\"v\" style=\"display:none;\""],
 [[[["title",null]],[["title","late"]]]," title=\"late\""],
 [[[["style","a: \"/*\" ; b: 1 /* gone */; c: \\/* d"]]]," style=\"a:&quot;/*&quot;;b:1;c:\\/* d;\""],
