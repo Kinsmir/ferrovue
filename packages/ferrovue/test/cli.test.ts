@@ -179,21 +179,21 @@ it("refuses a missing components directory by its code", () => {
   expect(r.stderr).toContain("error[FV1116]: cannot read the `components` directory `missing`: it does not exist");
 });
 
-it("refuses options that do not combine", () => {
-  for (const [args, message] of [
-    [["--check", "--watch"], "'--check' does not combine with '--watch'"],
-    [["--watch", "--check"], "'--check' does not combine with '--watch'"],
-    [["init", "--check"], "'init' does not combine with '--check'"],
-    [["init", "--watch"], "'init' does not combine with '--watch'"],
-    [["init", "-d"], "'init' does not combine with '-d'"],
-    [["init", "--format", "json"], "'init' does not combine with '--format json'"],
-  ] as const) {
+for (const [args, message] of [
+  [["--check", "--watch"], "'--check' does not combine with '--watch'"],
+  [["--watch", "--check"], "'--check' does not combine with '--watch'"],
+  [["init", "--check"], "'init' does not combine with '--check'"],
+  [["init", "--watch"], "'init' does not combine with '--watch'"],
+  [["init", "-d"], "'init' does not combine with '-d'"],
+  [["init", "--format", "json"], "'init' does not combine with '--format json'"],
+] as const) {
+  it(`refuses ${args.join(" ")}, options that do not combine`, () => {
     const r = run(...args);
-    expect(r.status, args.join(" ")).toBe(1);
+    expect(r.status).toBe(1);
     expect(r.stderr).toBe(`error: ${message}\n`);
-  }
-  expect(readdirSync(root)).not.toContain("src");
-});
+    expect(readdirSync(root)).not.toContain("src");
+  });
+}
 
 it("fails on a configuration without its two directories", () => {
   writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify({ components: "components" }));
