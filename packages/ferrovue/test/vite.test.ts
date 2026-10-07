@@ -1,7 +1,7 @@
 import { EventEmitter } from "node:events";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import vuePlugin from "@vitejs/plugin-vue";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { build, type Rolldown, type ViteDevServer } from "vite";
@@ -17,7 +17,8 @@ defineProps<{ name: string }>();
 const bad = good.replace("{{ name }}", "{{ name / 2 }}");
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), "ferrovue-vite-"));
+  // The real path: macOS's temporary directory is reached through a symlink, which Vite resolves.
+  root = realpathSync(mkdtempSync(join(tmpdir(), "ferrovue-vite-")));
   mkdirSync(join(root, "components"));
   writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify({ components: "components", out: "gen" }));
   writeFileSync(join(root, "components", "Hello.vue"), good);
@@ -173,7 +174,7 @@ it("writes `ferrovue/islands`: a loader for each component that has an `island()
   const id = resolveId("ferrovue/islands")!;
   expect(resolveId("ferrovue/client")).toBeNull();
   expect(load.call({}, "elsewhere")).toBeNull();
-  expect(load.call({}, id)).toBe(`export default {\n  "Hello": () => import(${JSON.stringify(join(root, "components", "Hello.vue"))}),\n};\n`);
+  expect(load.call({}, id)).toBe(`export default {\n  "Hello": () => import(${JSON.stringify(join(root, "components", "Hello.vue").split(sep).join("/"))}),\n};\n`);
   expect(readFileSync(join(root, "gen", "hello.rs"), "utf8")).toContain("pub fn island");
 });
 
@@ -238,7 +239,7 @@ it("writes `ferrovue/routes`: the pages' routes, as vue-router's records and as 
   const resolveId = plugin.resolveId as (id: string) => string | null;
   const load = plugin.load as (this: unknown, id: string) => string | null;
   const code = load.call({}, resolveId("ferrovue/routes")!)!;
-  expect(code).toContain(`component: () => import(${JSON.stringify(join(root, "pages", "books", "[id].vue"))}),`);
+  expect(code).toContain(`component: () => import(${JSON.stringify(join(root, "pages", "books", "[id].vue").split(sep).join("/"))}),`);
   const module = (await import(`data:text/javascript,${encodeURIComponent(code)}`)) as { routes: Array<Record<string, unknown>>; default: unknown };
   expect(module.default).toEqual([
     { path: "/", name: "/" },

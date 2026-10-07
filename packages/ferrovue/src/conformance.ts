@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { basename, dirname, join, relative, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
+import { relativePath } from "./paths.ts";
 import type { App, Component } from "vue";
 import { renderToString } from "vue/server-renderer";
 import { generate, loadConfig, type Config } from "./compiler.ts";
@@ -202,7 +203,7 @@ function driftProblems(root: string, config: Config): string[] {
     if (!existsSync(path)) problems.push(`${file} is missing`);
     else {
       const committed = readFileSync(path, "utf8");
-      if (committed !== text) problems.push(unifiedDiff(relative(root, path), committed, text).trimEnd());
+      if (committed !== text) problems.push(unifiedDiff(relativePath(root, path), committed, text).trimEnd());
     }
   }
   const stale = existsSync(out) ? readdirSync(out).filter((f) => f.endsWith(".rs") && !files.has(f)) : [];

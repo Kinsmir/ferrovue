@@ -1,4 +1,4 @@
-import { basename, join } from "node:path";
+import { basename, posix } from "node:path";
 import { createParser } from "@intlify/message-compiler";
 import { type Component, type N, type Scope, type Val, fail, failIn, rustStr, STR } from "../model.ts";
 import { expr } from "../expr.ts";
@@ -36,7 +36,7 @@ function readLocales(root: string, config: { messages: string; locale?: string; 
   const files = listDir(root, config.messages, "i18n.messages").filter((f) => f.endsWith(".json")).toSorted();
   const parser = createParser({});
   const locales = files.map((f): LocaleMessages => {
-    const file = join(config.messages, f);
+    const file = posix.join(config.messages, f);
     const data = readJsonFile(root, file, { invalid: "FV1401" });
     const messages = new Map<string, N>();
     const nested = new Map<string, string>();

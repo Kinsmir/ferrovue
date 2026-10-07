@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { existsSync, mkdirSync, readFileSync, readdirSync, watch, writeFileSync } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { relativePath } from "./paths.ts";
 import { type Config, CONFIG_FILE, generate, isGenerated, loadConfig, VERSION, write } from "./compiler.ts";
 import { unifiedDiff } from "./diff.ts";
 import { diagnose, formatRefusal, isRefusal } from "./diagnostics.ts";
@@ -40,7 +41,7 @@ function report(e: unknown): void {
 function initProject(targetRoot: string, configPath?: string): number {
   const configFile = configPath ? resolve(targetRoot, configPath) : join(targetRoot, CONFIG_FILE);
   if (existsSync(configFile)) {
-    console.error(`error: configuration file already exists: ${relative(targetRoot, configFile) || CONFIG_FILE}`);
+    console.error(`error: configuration file already exists: ${relativePath(targetRoot, configFile) || CONFIG_FILE}`);
     return 1;
   }
   const defaultComponents = "components";
@@ -52,7 +53,7 @@ function initProject(targetRoot: string, configPath?: string): number {
     out: defaultOut,
   };
   writeFileSync(configFile, JSON.stringify(config, null, 2) + "\n");
-  console.log(`created ${relative(targetRoot, configFile) || CONFIG_FILE}`);
+  console.log(`created ${relativePath(targetRoot, configFile) || CONFIG_FILE}`);
 
   const compDir = join(targetRoot, defaultComponents);
   mkdirSync(compDir, { recursive: true });
@@ -70,7 +71,7 @@ defineProps<{ name: string }>();
 </template>
 `,
     );
-    console.log(`created ${join(defaultComponents, "Hello.vue")}`);
+    console.log(`created ${defaultComponents}/Hello.vue`);
   }
 
   const outDir = join(targetRoot, defaultOut);

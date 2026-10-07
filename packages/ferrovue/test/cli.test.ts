@@ -1,4 +1,4 @@
-import { spawn, spawnSync } from "node:child_process";
+import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -23,6 +23,15 @@ defineProps<{ name: string }>();
 });
 
 afterEach(() => rmSync(root, { recursive: true, force: true }));
+
+/** Stop a `--watch`, and wait for it to exit: Windows does not remove a directory a process still
+ * has as its working directory. */
+async function stop(child: ChildProcess): Promise<void> {
+  if (child.exitCode !== null || child.signalCode !== null) return;
+  const exited = new Promise((r) => child.once("exit", r));
+  child.kill();
+  await exited;
+}
 
 it("writes one module per component, and the module tying them together", () => {
   const r = run();
@@ -117,7 +126,7 @@ defineProps<{ name: string }>();
 <template><p>Bye, {{ name }}</p></template>`);
     await waitFor("1 changed");
   } finally {
-    child.kill();
+    await stop(child);
   }
 }, 70_000);
 
@@ -138,7 +147,7 @@ it("--watch reports an error that is not a refusal without stopping", async () =
     await waitFor("nothing changed");
     expect(child.exitCode).toBeNull();
   } finally {
-    child.kill();
+    await stop(child);
   }
 }, 70_000);
 
@@ -168,7 +177,7 @@ it("--watch regenerates on its inputs only, with `out` written as a relative pat
     await waitFor("3 files, 2 changed");
     expect(runs()).toBe(2);
   } finally {
-    child.kill();
+    await stop(child);
   }
 }, 70_000);
 

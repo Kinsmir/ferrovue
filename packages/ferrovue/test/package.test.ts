@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { expect, it } from "vitest";
+import { relativePath } from "../src/paths.ts";
 
 const ROOT = join(import.meta.dirname, "..");
 const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as {
@@ -30,13 +31,13 @@ function graph(entry: string): { files: Set<string>; packages: Set<string> } {
 it("keeps the package root to the browser API, reaching only Vue", () => {
   const { files, packages } = graph("src/index.ts");
   expect([...packages].toSorted()).toEqual(["vue"]);
-  expect([...files].map((f) => f.slice(ROOT.length + 1)).toSorted()).toEqual(["src/client.ts", "src/index.ts", "src/types.ts"]);
+  expect([...files].map((f) => relativePath(ROOT, f)).toSorted()).toEqual(["src/client.ts", "src/index.ts", "src/types.ts"]);
 });
 
 it("keeps ferrovue/link-router to vue-router and the routes it is given", () => {
   const { files, packages } = graph("src/link-router.ts");
   expect([...packages].toSorted()).toEqual(["vue-router"]);
-  expect([...files].map((f) => f.slice(ROOT.length + 1)).toSorted()).toEqual(["src/link-router.ts", "src/routes.ts"]);
+  expect([...files].map((f) => relativePath(ROOT, f)).toSorted()).toEqual(["src/link-router.ts", "src/routes.ts"]);
 });
 
 it("keeps every browser entry free of the compiler", () => {

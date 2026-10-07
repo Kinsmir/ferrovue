@@ -1,9 +1,10 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, relative } from "node:path";
+import { dirname, join } from "node:path";
 import { afterEach, expect, it } from "vitest";
 import { createRoutesContext, resolveOptions } from "vue-router/unplugin";
 import { fileRoutes, type FileRoute } from "../src/file-routes.ts";
+import { relativePath } from "../src/paths.ts";
 
 const TREES = join(import.meta.dirname, "file-routes.json");
 const EXPECTED = join(import.meta.dirname, "file-routes.expected.json");
@@ -38,7 +39,7 @@ async function vueRouterRoutes(root: string): Promise<Recorded[]> {
   await context.scanPages(false);
   const code = context.generateRoutes();
   const list = code.slice(code.indexOf("export const routes = ") + "export const routes = ".length, code.indexOf("\nexport function handleHotUpdate"));
-  const literal = list.replace(/\(\) => import\('([^']*)'\)/g, (_, file: string) => JSON.stringify(relative(root, file)));
+  const literal = list.replace(/\(\) => import\('([^']*)'\)/g, (_, file: string) => JSON.stringify(relativePath(root, file)));
   const raw = ((await import(`data:text/javascript,${encodeURIComponent(`export default ${literal}`)}`)) as { default: Array<Recorded & { component?: string }> }).default;
   const shape = (routes: Array<Recorded & { component?: string }>): Recorded[] =>
     routes.map((r) => ({
