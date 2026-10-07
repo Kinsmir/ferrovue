@@ -64,6 +64,7 @@ impl<'p, P: Serialize, F: Fn(&mut String, &P)> Html<'p, P, F> {
     ///
     /// `render` is trusted to escape what it writes, which only a generated renderer does.
     #[doc(hidden)]
+    #[must_use]
     pub fn markup(props: &'p P, render: F) -> Self {
         Html {
             props: Given::Borrowed(props),
@@ -75,6 +76,7 @@ impl<'p, P: Serialize, F: Fn(&mut String, &P)> Html<'p, P, F> {
 
     /// The component as an island the client hydrates. For generated code, as [`Html::markup`] is.
     #[doc(hidden)]
+    #[must_use]
     pub fn island(name: &'static str, props: &'p P, render: F) -> Self {
         Html {
             props: Given::Borrowed(props),
@@ -87,6 +89,7 @@ impl<'p, P: Serialize, F: Fn(&mut String, &P)> Html<'p, P, F> {
     /// [`Html::markup`] holding its props, for a page returned from where they were made. For
     /// generated code, as [`Html::markup`] is.
     #[doc(hidden)]
+    #[must_use]
     pub fn markup_owned(props: P, render: F) -> Self {
         Html {
             props: Given::Owned(props),
@@ -98,6 +101,7 @@ impl<'p, P: Serialize, F: Fn(&mut String, &P)> Html<'p, P, F> {
 
     /// [`Html::island`] holding its props. For generated code, as [`Html::markup`] is.
     #[doc(hidden)]
+    #[must_use]
     pub fn island_owned(name: &'static str, props: P, render: F) -> Self {
         Html {
             props: Given::Owned(props),
@@ -193,6 +197,7 @@ impl<'p, P: Serialize, F: Fn(&mut String, &P)> Html<'p, P, F> {
     /// let html: String = hello::html(&hello::Props { name: "<Ada>" }).into_string();
     /// assert_eq!(html, "<p>Hello, &lt;Ada&gt;!</p>");
     /// ```
+    #[must_use]
     pub fn into_string(self) -> String {
         let mut out = String::new();
         self.render_to(&mut out);
@@ -297,8 +302,7 @@ fn island_into<P: Serialize>(
     out.push_str("<div data-island=\"");
     escape_into(out, name);
     out.push_str("\" data-props=\"");
-    let json = json::to_string(props);
-    escape_into(out, &json);
+    json::escaped_into(out, props);
     if let Some(hydrate) = hydrate {
         out.push_str("\" data-hydrate=\"");
         escape_into(out, &hydrate.attribute());

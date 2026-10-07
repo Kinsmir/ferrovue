@@ -7,14 +7,73 @@ use serde_json::ser::Formatter;
 
 type Pending = Cell<Option<&'static str>>;
 
+/// `value` as JSON, or nothing when serde_json refuses it (a map whose keys are not strings or
+/// numbers, a `Serialize` that fails): an island's `data-props` the client then reports as not
+/// JSON, and a state script `hydrateState` skips.
 pub(crate) fn to_string<T: Serialize + ?Sized>(value: &T) -> String {
-    let pending = Pending::new(None);
-    let mut out = Vec::with_capacity(128);
-    let mut json = serde_json::Serializer::with_formatter(&mut out, Tokens(&pending));
-    if value.serialize(Wrap(&mut json, &pending)).is_err() {
-        return String::new();
+    or(value, "")
+}
+
+/// `value` as JSON, or `null` when serde_json refuses it: for a value inside a larger document,
+/// the page's record, which one refused value must not leave unreadable.
+pub(crate) fn to_string_or_null<T: Serialize + ?Sized>(value: &T) -> String {
+    or(value, "null")
+}
+
+/// [`to_string`] escaped for an attribute's value, written straight into `out`.
+pub(crate) fn escaped_into<T: Serialize + ?Sized>(out: &mut String, value: &T) {
+    let start = out.len();
+    if let Err(e) = write(Escaped(out), value) {
+        out.truncate(start);
+        refused(&e);
     }
-    String::from_utf8(out).unwrap_or_default()
+}
+
+fn or<T: Serialize + ?Sized>(value: &T, refused_as: &str) -> String {
+    match try_to_string(value) {
+        Ok(json) => json,
+        Err(e) => {
+            refused(&e);
+            refused_as.to_owned()
+        }
+    }
+}
+
+fn refused(e: &serde_json::Error) {
+    // A debug build stops here, so props that cannot be written are found where they are
+    // rendered; this crate's own tests check what a release build writes instead.
+    if cfg!(all(debug_assertions, not(test))) {
+        panic!("serde_json cannot write these props as JSON: {e}");
+    }
+}
+
+fn try_to_string<T: Serialize + ?Sized>(value: &T) -> serde_json::Result<String> {
+    let mut out = Vec::with_capacity(128);
+    write(&mut out, value)?;
+    // serde_json writes nothing but UTF-8.
+    Ok(String::from_utf8(out).unwrap_or_default())
+}
+
+fn write<W: io::Write, T: Serialize + ?Sized>(writer: W, value: &T) -> serde_json::Result<()> {
+    let pending = Pending::new(None);
+    let mut json = serde_json::Serializer::with_formatter(writer, Tokens(&pending));
+    value.serialize(Wrap(&mut json, &pending))
+}
+
+/// Escapes what serde_json writes as it goes. serde_json writes whole characters each time, cutting
+/// a string only where it escapes an ASCII one.
+struct Escaped<'o>(&'o mut String);
+
+impl io::Write for Escaped<'_> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        let text = std::str::from_utf8(buf).map_err(io::Error::other)?;
+        crate::escape_into(self.0, text);
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
 }
 
 struct Tokens<'c>(&'c Pending);
@@ -280,7 +339,7 @@ impl<S: ser::SerializeStructVariant> ser::SerializeStructVariant for Wrap<'_, S>
 
 #[cfg(test)]
 mod tests {
-    use super::to_string;
+    use super::{escaped_into, to_string, to_string_or_null, try_to_string};
     use serde::Serialize;
     use std::collections::BTreeMap;
 
@@ -404,9 +463,37 @@ mod tests {
     }
 
     #[test]
-    fn what_serde_json_refuses_gives_nothing() {
+    fn what_serde_json_refuses_gives_nothing_or_null() {
         let by_list: BTreeMap<Vec<i64>, f64> = [(vec![1], f64::NAN)].into_iter().collect();
         assert!(serde_json::to_string(&by_list).is_err());
+        assert!(try_to_string(&by_list).is_err());
         assert_eq!(to_string(&by_list), "");
+        assert_eq!(to_string_or_null(&by_list), "null");
+        assert_eq!(to_string_or_null(&[1.5, f64::NAN]), "[1.5,NaN]");
+        let mut out = String::from("a");
+        escaped_into(&mut out, &by_list);
+        assert_eq!(out, "a");
+    }
+
+    #[test]
+    fn written_escaped_is_what_escaping_the_json_gives() {
+        let value = serde_json::json!({
+            "<k>": "a\"b'c&d<e>\u{2028}é🦀\n\\", "n": [f64::MAX, 0.1], "z": null, "x": "<\u{0}>"
+        });
+        let by_number: BTreeMap<i64, (f64, &str)> = [(1, (f64::NAN, "'"))].into_iter().collect();
+        for (written, json) in [
+            (written_escaped(&value), to_string(&value)),
+            (written_escaped(&by_number), to_string(&by_number)),
+        ] {
+            let mut escaped = String::new();
+            crate::escape_into(&mut escaped, &json);
+            assert_eq!(written, escaped);
+        }
+    }
+
+    fn written_escaped<T: serde::Serialize>(value: &T) -> String {
+        let mut out = String::new();
+        escaped_into(&mut out, value);
+        out
     }
 }

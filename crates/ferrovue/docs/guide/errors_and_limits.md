@@ -237,8 +237,11 @@ panics are programming errors, found the first time the code runs:
   [`strings`](crate::guide::strings#panics).
 
 Serialising an island's props or the stores' state cannot fail for the types the compiler
-generates. If a hand-written [`TrustedHtml`](crate::TrustedHtml) type's `Serialize` fails, the
-island gets empty props and the client leaves the server's markup as it is.
+generates. If a hand-written [`TrustedHtml`](crate::TrustedHtml) type's `Serialize` fails, or
+hand-written props hold a map serde_json refuses (one keyed by a list), a debug build panics where
+they are rendered. A release build gives the island empty props, which the client reports and
+leaves the server's markup as it is, and records `null` for them in a [`Page`](crate::Page)'s
+record, which the client still reads.
 
 # Limits worth knowing
 

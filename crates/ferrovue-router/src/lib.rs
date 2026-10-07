@@ -11,7 +11,7 @@
 //! assert_eq!((link.href.as_str(), link.active, link.exact), ("/blog/hello", true, true));
 //! assert!(!route.link("/").active);
 //! ```
-#![warn(missing_debug_implementations, rustdoc::missing_crate_level_docs)]
+#![warn(rustdoc::missing_crate_level_docs)]
 
 /// The routes, in the order vue-router tries them.
 ///
@@ -111,6 +111,7 @@ impl Router {
     /// assert_eq!(router.at("/users/7").param("id"), Some("7"));
     /// assert_eq!(router.at("/nowhere").param("id"), None);
     /// ```
+    #[must_use]
     pub fn new(paths: &[&str]) -> Router {
         Router::named(&paths.iter().map(|p| (*p, None)).collect::<Vec<_>>())
     }
@@ -137,6 +138,7 @@ impl Router {
     /// assert_eq!(link.href, "/app/users/7");
     /// assert!(link.active);
     /// ```
+    #[must_use]
     pub fn named(routes: &[(&str, Option<&str>)]) -> Router {
         let defs: Vec<RouteDef<'_>> = routes
             .iter()
@@ -174,6 +176,7 @@ impl Router {
     /// // The parent is active on its child's page, but not exactly.
     /// assert!(parent.active && !parent.exact);
     /// ```
+    #[must_use]
     pub fn tree(defs: &[RouteDef<'_>]) -> Router {
         fn add(defs: &[RouteDef<'_>], parent: Option<usize>, records: &mut Vec<Pattern>) {
             for d in defs {
@@ -291,6 +294,7 @@ impl Router {
     /// assert_eq!(link.href, "/app/blog/intro");
     /// assert!(link.exact);
     /// ```
+    #[must_use]
     pub fn with_base(mut self, base: &str) -> Router {
         let mut b = if base.is_empty() || base.starts_with('/') || base.starts_with('#') {
             base.to_owned()
@@ -325,6 +329,7 @@ impl Router {
     /// assert_eq!(route.query("q").attr_value(), Some("café"));
     /// assert_eq!(route.hash(), "#results");
     /// ```
+    #[must_use]
     pub fn at(&self, location: &str) -> Route<'_> {
         let (path, full_path) = parse_url(location, "/");
         let hash_pos = location.find('#');
@@ -417,6 +422,7 @@ pub struct Route<'r> {
 /// assert!(route.query("tag").is_array());
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq)]
+#[non_exhaustive]
 pub enum Query<'r> {
     /// No such key: `undefined`.
     Absent,
@@ -481,6 +487,7 @@ impl<'r> Query<'r> {
     /// assert!(!Query::One("").truthy());
     /// assert!(!Query::Null.truthy() && !Query::Absent.truthy());
     /// ```
+    #[must_use]
     pub fn truthy(&self) -> bool {
         match self {
             Query::One(s) => !s.is_empty(),
@@ -490,16 +497,19 @@ impl<'r> Query<'r> {
     }
 
     /// `route.query.q === text`: only a single value can equal a string.
+    #[must_use]
     pub fn is(&self, text: &str) -> bool {
         matches!(self, Query::One(s) if *s == text)
     }
 
     /// `route.query.q === undefined`.
+    #[must_use]
     pub fn is_undefined(&self) -> bool {
         matches!(self, Query::Absent)
     }
 
     /// `Array.isArray(route.query.q)`.
+    #[must_use]
     pub fn is_array(&self) -> bool {
         matches!(self, Query::Many(_))
     }
@@ -515,6 +525,7 @@ impl<'r> Query<'r> {
     /// assert_eq!(Query::Absent.or("none"), Query::One("none"));
     /// assert_eq!(Query::One("").or("none"), Query::One("")); // `??` keeps the empty string
     /// ```
+    #[must_use]
     pub fn or<'a>(self, fallback: &'a str) -> Query<'a>
     where
         'r: 'a,
@@ -537,6 +548,7 @@ impl<'r> Query<'r> {
     /// assert_eq!(Query::One("rust").attr_value(), Some("rust"));
     /// assert_eq!(Query::Null.attr_value(), None);
     /// ```
+    #[must_use]
     pub fn attr_value(&self) -> Option<&'r str> {
         match self {
             Query::One(s) => Some(s),
@@ -623,16 +635,19 @@ impl std::fmt::Debug for Route<'_> {
 
 impl Route<'_> {
     /// The location's path, without its query or hash.
+    #[must_use]
     pub fn path(&self) -> &str {
         &self.path
     }
 
     /// `route.hash`: the location's hash, with its `#`, decoded; empty when there is none.
+    #[must_use]
     pub fn hash(&self) -> &str {
         &self.hash
     }
 
     /// `route.query.<key>`.
+    #[must_use]
     pub fn query(&self, key: &str) -> Query<'_> {
         match self.query.iter().find(|(k, _)| k == key) {
             None => Query::Absent,
@@ -645,11 +660,13 @@ impl Route<'_> {
     }
 
     /// `route.fullPath`: the path, then the query and hash as they were written.
+    #[must_use]
     pub fn full_path(&self) -> &str {
         &self.full_path
     }
 
     /// `route.name`: the name of the route the location matched, if it has one.
+    #[must_use]
     pub fn name(&self) -> Option<&str> {
         let (i, _) = self.matched.as_ref()?;
         self.router.routes[*i].name.as_deref()
@@ -658,6 +675,7 @@ impl Route<'_> {
     /// `route.params.<name>`: that parameter of the route the location matched, decoded; `None`
     /// when the route has no such parameter, an optional one the location leaves out, or the
     /// location matched no route.
+    #[must_use]
     pub fn param(&self, name: &str) -> Option<&str> {
         let (i, values) = self.matched.as_ref()?;
         let at = self.router.routes[*i]
@@ -685,6 +703,7 @@ impl Route<'_> {
     /// assert!(link.active, "the query does not change which route it is");
     /// assert!(!here.link("/").active);
     /// ```
+    #[must_use]
     pub fn link(&self, to: &str) -> Link {
         let (path, full) = parse_url(to, &self.path);
         let (active, exact) = self.state(self.router.matched(&path));
@@ -757,6 +776,7 @@ impl Route<'_> {
     /// // Parameters are encoded as vue-router encodes them.
     /// assert_eq!(route.link_named("book", &[("id", "a/b c")], "", "").href, "/books/a%2Fb%20c");
     /// ```
+    #[must_use]
     pub fn link_named(
         &self,
         name: &str,
@@ -846,6 +866,7 @@ impl Route<'_> {
     /// assert_eq!(link.href, "/search?q=a+b");
     /// assert!(!link.active);
     /// ```
+    #[must_use]
     pub fn link_path(&self, path: &str, search: &str, hash: &str) -> Link {
         let (path, _) = parse_url(path, &self.path);
         let (active, exact) = self.state(self.router.matched(&path));

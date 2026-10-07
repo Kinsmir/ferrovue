@@ -2,7 +2,7 @@
 
 #[rustfmt::skip]
 #[path = "conformance/generated/mod.rs"]
-#[allow(missing_docs)]
+#[allow(missing_docs, missing_debug_implementations)]
 pub mod generated;
 
 #[path = "conformance/helpers.rs"]

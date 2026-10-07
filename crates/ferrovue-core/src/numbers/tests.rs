@@ -149,6 +149,10 @@ fn written(push: fn(&mut String, f64), x: f64) -> String {
     out
 }
 
+fn owned_exact_digits(x: f64) -> Option<(String, i32)> {
+    few_exact_digits(x).map(|(digits, exp)| (digits.as_str().to_owned(), exp))
+}
+
 fn few_exact_digits_exactly(x: f64) -> Option<(String, i32)> {
     let exact = format!("{x:.1100e}");
     let (mantissa, exp) = exact.split_once('e').expect("`{:e}` writes an exponent");
@@ -162,10 +166,10 @@ fn few_exact_digits_exactly(x: f64) -> Option<(String, i32)> {
 fn few_exact_digits_finds_eighteen_digits_in_two_to_the_59_times_ten_to_the_22() {
     let x = 2f64.powi(59) * 1e22;
     assert_eq!(
-        few_exact_digits(x),
+        owned_exact_digits(x),
         Some(("576460752303423488".to_owned(), 39))
     );
-    assert_eq!(few_exact_digits(x), few_exact_digits_exactly(x));
+    assert_eq!(owned_exact_digits(x), few_exact_digits_exactly(x));
 }
 
 proptest::proptest! {
@@ -198,7 +202,7 @@ proptest::proptest! {
     #[test]
     fn few_exact_digits_are_the_exact_expansion_when_it_is_short(m in 1u64..1 << 53, e in -60i32..100) {
         let x = m as f64 * 2f64.powi(e);
-        proptest::prop_assert_eq!(few_exact_digits(x), few_exact_digits_exactly(x));
+        proptest::prop_assert_eq!(owned_exact_digits(x), few_exact_digits_exactly(x));
     }
 
     #[test]
