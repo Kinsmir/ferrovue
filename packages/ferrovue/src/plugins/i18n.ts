@@ -1,10 +1,10 @@
-import { readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { createParser } from "@intlify/message-compiler";
 import { type Component, type N, type Scope, type Val, fail, failIn, rustStr, STR } from "../model.ts";
 import { expr } from "../expr.ts";
 import { bare, strArg } from "../parens.ts";
 import { header } from "../rust.ts";
+import { listDir, readJsonFile } from "../files.ts";
 import { type Plugin, runOf, scopeOf } from "../plugin.ts";
 
 export interface LocaleMessages {
@@ -33,17 +33,11 @@ interface I18nScope {
 const MODIFIERS = new Set(["upper", "lower", "capitalize"]);
 
 function readLocales(root: string, config: { messages: string; locale?: string; fallbackLocale?: string | string[] }): I18nSetup {
-  const dir = join(root, config.messages);
-  const files = readdirSync(dir).filter((f) => f.endsWith(".json")).toSorted();
+  const files = listDir(root, config.messages, "i18n.messages").filter((f) => f.endsWith(".json")).toSorted();
   const parser = createParser({});
   const locales = files.map((f): LocaleMessages => {
     const file = join(config.messages, f);
-    let data: unknown;
-    try {
-      data = JSON.parse(readFileSync(join(dir, f), "utf8"));
-    } catch (e) {
-      failIn(file, "FV1401", (e as Error).message);
-    }
+    const data = readJsonFile(root, file, { invalid: "FV1401" });
     const messages = new Map<string, N>();
     const nested = new Map<string, string>();
     const flat = new Map<string, string>();

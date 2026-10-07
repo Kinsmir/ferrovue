@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { type Component, type N, type Scope, type Val, BOOL, fail, failIn, GenError, opt, rustStr, STR } from "../model.ts";
 import { type Config, CONFIG_FILE } from "../context.ts";
@@ -7,6 +7,7 @@ import { boolOf, pathOf } from "../narrowing.ts";
 import { atom, bare, not, strArg } from "../parens.ts";
 import { type Plugin, runOf, scopeOf } from "../plugin.ts";
 import { header } from "../rust.ts";
+import { readJsonFile } from "../files.ts";
 import { allPages, type FileRoute, fileRoutes } from "../file-routes.ts";
 import { scopeIdOf } from "./scoped.ts";
 import { routerLink } from "./router-link.ts";
@@ -118,7 +119,7 @@ function readPages(root: string, config: Config, pages: string): FileRoute[] {
 }
 
 export function readRoutes(root: string, file: string): RouteDef[] {
-  const raw = JSON.parse(readFileSync(join(root, file), "utf8")) as unknown;
+  const raw = readJsonFile(root, file, { missing: "FV1246", invalid: "FV1247" });
   if (!Array.isArray(raw)) throw new GenError("FV1232", `${file} lists the routes in an array`, { file });
   const read = (list: unknown[], parent: string | null): RouteDef[] =>
     list.map((r: unknown): RouteDef => {
