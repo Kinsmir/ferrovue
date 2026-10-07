@@ -7,14 +7,41 @@ use serde_json::ser::Formatter;
 
 type Pending = Cell<Option<&'static str>>;
 
+/// `value` as JSON, or nothing when serde_json refuses it (a map whose keys are not strings or
+/// numbers, a `Serialize` that fails): an island's `data-props` the client then reports as not
+/// JSON, and a state script `hydrateState` skips.
 pub(crate) fn to_string<T: Serialize + ?Sized>(value: &T) -> String {
+    or(value, "")
+}
+
+/// `value` as JSON, or `null` when serde_json refuses it: for a value inside a larger document,
+/// the page's record, which one refused value must not leave unreadable.
+pub(crate) fn to_string_or_null<T: Serialize + ?Sized>(value: &T) -> String {
+    or(value, "null")
+}
+
+fn or<T: Serialize + ?Sized>(value: &T, refused: &str) -> String {
+    match try_to_string(value) {
+        Ok(json) => json,
+        Err(e) => {
+            // A debug build stops here, so props that cannot be written are found where they are
+            // rendered; this crate's own tests check what a release build writes instead.
+            debug_assert!(
+                cfg!(test),
+                "serde_json cannot write these props as JSON: {e}"
+            );
+            refused.to_owned()
+        }
+    }
+}
+
+fn try_to_string<T: Serialize + ?Sized>(value: &T) -> serde_json::Result<String> {
     let pending = Pending::new(None);
     let mut out = Vec::with_capacity(128);
     let mut json = serde_json::Serializer::with_formatter(&mut out, Tokens(&pending));
-    if value.serialize(Wrap(&mut json, &pending)).is_err() {
-        return String::new();
-    }
-    String::from_utf8(out).unwrap_or_default()
+    value.serialize(Wrap(&mut json, &pending))?;
+    // serde_json writes nothing but UTF-8.
+    Ok(String::from_utf8(out).unwrap_or_default())
 }
 
 struct Tokens<'c>(&'c Pending);
@@ -280,7 +307,7 @@ impl<S: ser::SerializeStructVariant> ser::SerializeStructVariant for Wrap<'_, S>
 
 #[cfg(test)]
 mod tests {
-    use super::to_string;
+    use super::{to_string, to_string_or_null, try_to_string};
     use serde::Serialize;
     use std::collections::BTreeMap;
 
@@ -404,9 +431,12 @@ mod tests {
     }
 
     #[test]
-    fn what_serde_json_refuses_gives_nothing() {
+    fn what_serde_json_refuses_gives_nothing_or_null() {
         let by_list: BTreeMap<Vec<i64>, f64> = [(vec![1], f64::NAN)].into_iter().collect();
         assert!(serde_json::to_string(&by_list).is_err());
+        assert!(try_to_string(&by_list).is_err());
         assert_eq!(to_string(&by_list), "");
+        assert_eq!(to_string_or_null(&by_list), "null");
+        assert_eq!(to_string_or_null(&[1.5, f64::NAN]), "[1.5,NaN]");
     }
 }

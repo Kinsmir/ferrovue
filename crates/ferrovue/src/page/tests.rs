@@ -145,6 +145,54 @@ fn numbers_json_cannot_carry_are_recorded_as_javascript_writes_them() {
 }
 
 #[test]
+fn props_serde_json_refuses_are_recorded_as_null_and_the_record_still_reads() {
+    #[derive(Serialize)]
+    struct ByList {
+        scores: std::collections::BTreeMap<Vec<i64>, f64>,
+    }
+    fn nothing(_: &mut String, _: &ByList) {}
+    let by_list = ByList {
+        scores: [(vec![1], 2.0)].into_iter().collect(),
+    };
+    let props = WordProps {
+        text: "ok",
+        ratio: 1.0,
+    };
+    let mut page = Page::new();
+    let body = page.slot(
+        "default",
+        [
+            Part::new("ByList", Html::markup(&by_list, nothing)),
+            part(&props),
+        ],
+    );
+    let slots = Slots {
+        head: None,
+        default: Some(body.slot()),
+    };
+    let mut out = String::new();
+    let record = page.render_to(
+        &mut out,
+        Html::markup(&by_list, |out: &mut String, _: &ByList| {
+            slot_into(out, slots.default, None);
+        }),
+    );
+    out.clear();
+    record.script_into(&mut out, "p");
+    let read: serde_json::Value = serde_json::from_str(script_body(&out, "p")).unwrap();
+    assert_eq!(
+        read,
+        serde_json::json!({
+            "props": null,
+            "slots": { "default": [
+                { "c": "ByList", "p": null },
+                { "c": "Word", "p": { "text": "ok", "ratio": 1.0 } },
+            ] },
+        })
+    );
+}
+
+#[test]
 fn an_island_is_written_without_its_wrapper() {
     let props = WordProps {
         text: "w",

@@ -189,7 +189,7 @@ impl Page {
         layout: Html<'_, P, F>,
     ) -> PageRecord {
         let props = layout.props.get();
-        lock(&self.record).props = json::to_string(props);
+        lock(&self.record).props = json::to_string_or_null(props);
         (layout.render)(out, props);
         PageRecord {
             record: self.record,
@@ -213,7 +213,7 @@ impl<'p> Part<'p> {
         name: &'static str,
         html: Html<'p, P, F>,
     ) -> Self {
-        let props = json::to_string(html.props.get());
+        let props = json::to_string_or_null(html.props.get());
         Part {
             name,
             props,
