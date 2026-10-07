@@ -20,15 +20,18 @@ updates:
       cargo:
         patterns: ["*"]
 
+  # The root covers every pnpm workspace member and the catalog in pnpm-workspace.yaml.
   - package-ecosystem: npm
-    directories: ["/", "/packages/ferrovue"]
+    directory: /
     schedule:
       interval: weekly
     cooldown:
       default-days: 7
     groups:
+      # Vue and the peers the conformance fixtures are recorded against: one pull request, so the
+      # recordings move together.
       vue:
-        patterns: ["vue", "@vue/*", "vue-router", "pinia"]
+        patterns: ["vue", "@vue/*", "vue-router", "pinia", "vue-i18n", "@intlify/*", "@unhead/vue"]
       tooling:
         patterns: ["*"]
-        exclude-patterns: ["vue", "@vue/*", "vue-router", "pinia"]
+        exclude-patterns: ["vue", "@vue/*", "vue-router", "pinia", "vue-i18n", "@intlify/*", "@unhead/vue"]

@@ -12,7 +12,7 @@
 //! out.push_str("</p>");
 //! assert_eq!(out, "<p>Tom &amp; Jerry 0.30000000000000004</p>");
 //! ```
-#![warn(missing_debug_implementations, rustdoc::missing_crate_level_docs)]
+#![warn(rustdoc::missing_crate_level_docs)]
 
 mod escape;
 mod numbers;

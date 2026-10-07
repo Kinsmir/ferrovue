@@ -25,7 +25,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [22, 24]
+        # 22.18 is the floor packages/ferrovue/package.json's engines allow.
+        node: ["22.18", 22, 24, 26]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -36,6 +37,27 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+      - name: The conformance suite's generated Rust is current
+        run: pnpm conformance:check
+      - name: The example's generated Rust is current
+        run: node scripts/ferrovue-in.ts examples/greeting --check
+      - name: The Dioxus example's generated Rust is current
+        run: node scripts/ferrovue-in.ts examples/dioxus --check
+
+  typescript-os:
+    name: TypeScript (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/pnpm
+      - run: pnpm test
       - name: The conformance suite's generated Rust is current
         run: pnpm conformance:check
       - name: The example's generated Rust is current
@@ -156,14 +178,23 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        toolchain: [stable, "1.99"]
+        # msrv: the rust-version in Cargo.toml's [workspace.package].
+        toolchain: [stable, msrv]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: The minimum supported Rust version, from Cargo.toml
+        id: msrv
+        if: matrix.toolchain == 'msrv'
+        run: |
+          version=$(sed -n 's/^rust-version = "\([0-9.]*\)"$/\1/p' Cargo.toml)
+          if [[ -z "$version" ]]; then echo "::error title=No rust-version::Cargo.toml has no rust-version = \"x.y\" line"; exit 1; fi
+          echo "rust-version $version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
       - uses: ./.github/actions/rust
         with:
-          toolchain: ${{ matrix.toolchain }}
+          toolchain: ${{ steps.msrv.outputs.version || matrix.toolchain }}
           components: clippy, rustfmt
           cache-key: rust
       - run: cargo test --workspace --all-features --locked
@@ -182,6 +213,26 @@ jobs:
         if: matrix.toolchain == 'stable'
         env:
           RUSTDOCFLAGS: -D warnings
+
+  docs-rs:
+    name: Docs build as docs.rs builds them (nightly)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/rust
+        with:
+          toolchain: nightly
+          cache-key: docs-rs
+      # [package.metadata.docs.rs]: all-features, rustdoc-args = ["--cfg", "docsrs"]. Nightly can
+      # break on its own, so only a release tag fails on it.
+      - name: cargo +nightly doc, with --cfg docsrs
+        continue-on-error: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        env:
+          RUSTDOCFLAGS: --cfg docsrs -D warnings
+        run: cargo doc --workspace --all-features --no-deps --locked
 
   examples:
     name: Example renders
@@ -292,13 +343,18 @@ jobs:
           for f in package/dist/cli.js package/dist/compiler.js package/dist/compiler.d.ts package/README.md package/LICENSE-MIT package/LICENSE-APACHE; do
             grep -qx "$f" "$RUNNER_TEMP/files.txt" || { echo "missing from the npm package: $f"; exit 1; }
           done
+          if tar -xzOf "$RUNNER_TEMP"/ferrovue-*.tgz package/package.json | grep -E '"(catalog|workspace):'; then
+            echo "the packed package.json still names a pnpm protocol, which npm cannot install"
+            exit 1
+          fi
       - name: The packed command runs from node_modules
         run: |
           mkdir -p "$RUNNER_TEMP/consumer/components" && cd "$RUNNER_TEMP/consumer"
           echo '{"name":"consumer","private":true,"type":"module"}' > package.json
           echo '{"components":"components","out":"gen"}' > ferrovue.config.json
           cp "$GITHUB_WORKSPACE/examples/greeting/components/Greeting.vue" components/
-          npm install --no-audit --no-fund "$RUNNER_TEMP"/ferrovue-*.tgz vue@3.5.43
+          vue=$(cd "$GITHUB_WORKSPACE/packages/ferrovue" && node -p 'require("vue/package.json").version')
+          npm install --no-audit --no-fund "$RUNNER_TEMP"/ferrovue-*.tgz "vue@$vue"
           npx ferrovue
           test -f gen/greeting.rs
 
@@ -324,7 +380,7 @@ jobs:
   passed:
     name: CI passed
     if: always()
-    needs: [typescript, lint, deny, audit, zizmor, rust, examples, fullstack, browser, package, bench]
+    needs: [typescript, typescript-os, lint, deny, audit, zizmor, rust, docs-rs, examples, fullstack, browser, package, bench]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

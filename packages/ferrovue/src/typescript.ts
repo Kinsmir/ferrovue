@@ -1,11 +1,13 @@
 import { parse as parseJs } from "@babel/parser";
 import { readFileSync, statSync } from "node:fs";
-import { basename, dirname, join, relative, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
+import { relativePath } from "./paths.ts";
 import { type Absence, type Component, type Field, type N, type Struct, type Ty, absence, blankComponent, BOOL, fail, FLOAT, GenError, INT, joinAbsence, opt, RUST_PRELUDE, rustStr, sameTy, snake, STR, tagAst, withAbsence } from "./model.ts";
 import { CONFIG_FILE, ctx, INLINE_HTML, TYPES_MODULE } from "./context.ts";
 import { childOf } from "./expr.ts";
 import { claim } from "./plugin.ts";
 import { declareConsts, enumType } from "./constants.ts";
+import { parseTs } from "./files.ts";
 
 export function typesImports(comp: Component, body: N[]): void {
   for (const s of body) {
@@ -152,11 +154,11 @@ export function resolveImport(fromFile: string, spec: string): string | null {
 export function readTypeFile(file: string): void {
   if (ctx.typeRead.has(file)) return;
   ctx.typeRead.add(file);
-  const rel = relative(ctx.rootDir, file);
+  const rel = relativePath(ctx.rootDir, file);
   const home = blankComponent(basename(rel), "types", rel, ctx.typeStructs);
   home.aliases = ctx.typeAliases;
   home.source = readFileSync(file, "utf8");
-  const body: N[] = parseJs(home.source, { sourceType: "module", plugins: ["typescript"] }).program.body;
+  const body = parseTs(home);
   tagAst(body, "source");
   typesImports(home, body);
   ctx.constDecls.set(file, declareConsts(home, body));

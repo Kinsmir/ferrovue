@@ -26,6 +26,9 @@ const shrinkMax = Number(env.FERROVUE_FUZZ_SHRINK_MAX ?? 24);
 const keep = env.FERROVUE_FUZZ_KEEP === "1";
 const dry = env.FERROVUE_FUZZ_DRY === "1";
 if (!Number.isSafeInteger(seed) || !Number.isSafeInteger(count)) throw new Error("FERROVUE_FUZZ_SEED and FERROVUE_FUZZ_COUNT are integers");
+if (!Number.isSafeInteger(perComponent) || perComponent < 1) throw new Error("FERROVUE_FUZZ_FIXTURES is a positive integer");
+if (!Number.isSafeInteger(shrinkMax) || shrinkMax < 0) throw new Error("FERROVUE_FUZZ_SHRINK_MAX is an integer, 0 or more");
+if (only !== null && (!Number.isSafeInteger(only) || only < 0)) throw new Error("FERROVUE_FUZZ_CASE is an integer, 0 or more");
 
 const WORK = join(REPO, "target/fuzz", String(seed));
 const HARNESS = join(REPO, "target/fuzz/harness");

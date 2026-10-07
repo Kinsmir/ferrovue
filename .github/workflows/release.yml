@@ -47,7 +47,10 @@ jobs:
             exit 1
           fi
           echo "$GITHUB_REF_NAME is signed by $(jq -r .tagger.name <<<"$tag"), verified by GitHub"
-      - uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
+      - uses: ./.github/actions/rust
+        with:
+          cache: "false"
+          cache-key: release
       - uses: taiki-e/install-action@e407f7bafb71fd004bc5c2da3032e5470cbb6ef0 # v2.87.24
         with:
           tool: cargo-semver-checks
@@ -72,9 +75,41 @@ jobs:
     name: CI
     uses: ./.github/workflows/ci.yml
 
+  pack:
+    name: Pack every package
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/rust
+        with:
+          cache: "false"
+          cache-key: release
+      - uses: ./.github/actions/pnpm
+      - name: Pack the crates and the npm package, once, for npm to stage and the GitHub release to attach
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/packages"
+          crates=$(node scripts/release.ts crates)
+          cargo package $(printf -- '-p %s ' $crates) --locked --no-verify
+          for crate in $crates; do cp "target/package/$crate-$VERSION.crate" "$RUNNER_TEMP/packages/"; done
+          (cd packages/ferrovue && pnpm pack --pack-destination "$RUNNER_TEMP/packages")
+          test -f "$RUNNER_TEMP/packages/ferrovue-$VERSION.tgz"
+          (cd "$RUNNER_TEMP/packages" && sha256sum -- * | tee -a "$GITHUB_STEP_SUMMARY")
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: packages
+          path: ${{ runner.temp }}/packages/
+          if-no-files-found: error
+          retention-days: 14
+
   npm:
     name: Stage on npm
-    needs: [verify, ci]
+    needs: [verify, ci, pack]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     outputs:
@@ -83,16 +118,20 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # No checkout and no install: the job that can mint an OIDC token runs nothing but npm, on the
+      # tarball the pack job made.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          persist-credentials: false
-      - uses: ./.github/actions/pnpm
-        with:
+          node-version: 24
           registry-url: https://registry.npmjs.org
-      - run: npm install -g npm@^12
+          package-manager-cache: false
+      - run: npm install -g npm@12.2.0
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: packages
+          path: ${{ runner.temp }}/packages
       - name: Stage the package, unless this version is already on npm
         id: stage
-        working-directory: packages/ferrovue
         env:
           VERSION: ${{ needs.verify.outputs.version }}
           TAG: ${{ needs.verify.outputs.prerelease == 'true' && 'next' || 'latest' }}
@@ -101,7 +140,7 @@ jobs:
             echo "ferrovue@$VERSION is already on npm"
             exit 0
           fi
-          npm stage publish --provenance --access public --tag "$TAG" --json | tee "$RUNNER_TEMP/stage.json"
+          npm stage publish "$RUNNER_TEMP/packages/ferrovue-$VERSION.tgz" --provenance --access public --tag "$TAG" --json | tee "$RUNNER_TEMP/stage.json"
           id=$(node -e '
             const out = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
             const find = (v) => v && typeof v === "object" ? (v.stageId ?? v.stage_id ?? v.id ?? Object.values(v).map(find).find(Boolean)) : undefined;
@@ -139,7 +178,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
+      - uses: ./.github/actions/rust
+        with:
+          cache: "false"
+          cache-key: release
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
@@ -171,26 +213,31 @@ jobs:
 
   github:
     name: GitHub release
-    needs: [verify, npm, crates]
+    needs: [verify, pack, npm, crates]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: write
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
-      - uses: ./.github/actions/pnpm
-      - name: Build every package to attach
-        env:
-          VERSION: ${{ needs.verify.outputs.version }}
-        run: |
-          crates=$(node scripts/release.ts crates)
-          cargo package $(printf -- '-p %s ' $crates) --locked --no-verify
-          for crate in $crates; do echo "target/package/$crate-$VERSION.crate"; done > "$RUNNER_TEMP/crates.txt"
-          (cd packages/ferrovue && pnpm pack --pack-destination "$RUNNER_TEMP")
-          node scripts/release.ts notes "$GITHUB_REF_NAME" > "$RUNNER_TEMP/notes.md"
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: packages
+          path: ${{ runner.temp }}/packages
+      - name: Attest where each package was built
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            ${{ runner.temp }}/packages/*.crate
+            ${{ runner.temp }}/packages/*.tgz
       - name: Create the release, unless it exists
         env:
           GH_TOKEN: ${{ github.token }}
@@ -201,10 +248,10 @@ jobs:
             echo "the release $GITHUB_REF_NAME exists"
             exit 0
           fi
-          mapfile -t crates < "$RUNNER_TEMP/crates.txt"
+          node scripts/release.ts notes "$GITHUB_REF_NAME" > "$RUNNER_TEMP/notes.md"
           gh release create "$GITHUB_REF_NAME" --verify-tag --title "ferrovue $VERSION" \
             --notes-file "$RUNNER_TEMP/notes.md" $([[ "$PRERELEASE" == true ]] && echo --prerelease) \
-            "${crates[@]}" "$RUNNER_TEMP/ferrovue-$VERSION.tgz"
+            "$RUNNER_TEMP"/packages/*.crate "$RUNNER_TEMP/packages/ferrovue-$VERSION.tgz"
       - name: Remind of the npm approval
         if: needs.npm.outputs.approve != ''
         env:

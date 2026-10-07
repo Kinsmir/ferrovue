@@ -65,6 +65,7 @@ pub struct HtmlStream {
 
 impl HtmlStream {
     /// A page to send: a render with holes, or without, as one piece.
+    #[must_use]
     pub fn new(rendered: String) -> Self {
         let mut pieces = Vec::new();
         let mut start = 0;
@@ -100,6 +101,7 @@ impl HtmlStream {
     ///     .hole(async move { format!("<p>the reviews of {id}</p>") })
     ///     .hole(std::future::ready(String::from("<p>related books</p>")));
     /// ```
+    #[must_use]
     pub fn hole(mut self, content: impl Future<Output = String> + Send + 'static) -> Self {
         if self.holes.len() + 1 < self.pieces.len() {
             self.holes.push(Hole::Loading(Box::pin(content)));
@@ -124,6 +126,7 @@ impl HtmlStream {
     ///     ["Dune", "Solaris", "Kindred"].map(|title| async move { format!("<li>{title}</li>") }),
     /// );
     /// ```
+    #[must_use]
     pub fn holes<I>(self, contents: I) -> Self
     where
         I: IntoIterator,

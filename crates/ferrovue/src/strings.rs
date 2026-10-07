@@ -12,6 +12,7 @@ use crate::push_number;
 /// assert_eq!(ferrovue::js_length("café"), 4);
 /// assert_eq!(ferrovue::js_length("🦀"), 2); // two UTF-16 code units, as JavaScript counts
 /// ```
+#[must_use]
 pub fn js_length(s: &str) -> i64 {
     if s.is_ascii() {
         return s.len() as i64;
@@ -28,6 +29,7 @@ pub fn js_length(s: &str) -> i64 {
 /// assert_eq!(ferrovue::js_trim("\u{feff} a \u{3000}"), "a");
 /// assert_eq!(ferrovue::js_trim("\u{85}a"), "\u{85}a"); // JavaScript keeps U+0085
 /// ```
+#[must_use]
 pub fn js_trim(s: &str) -> &str {
     s.trim_matches(is_js_space)
 }
@@ -39,6 +41,7 @@ pub fn js_trim(s: &str) -> &str {
 /// ```
 /// assert_eq!(ferrovue::js_trim_start("\u{a0} a "), "a ");
 /// ```
+#[must_use]
 pub fn js_trim_start(s: &str) -> &str {
     s.trim_start_matches(is_js_space)
 }
@@ -50,6 +53,7 @@ pub fn js_trim_start(s: &str) -> &str {
 /// ```
 /// assert_eq!(ferrovue::js_trim_end(" a \u{feff}"), " a");
 /// ```
+#[must_use]
 pub fn js_trim_end(s: &str) -> &str {
     s.trim_end_matches(is_js_space)
 }
@@ -94,6 +98,7 @@ fn relative(x: f64, len: usize) -> usize {
 /// assert_eq!(ferrovue::js_slice_range(5, 4.0, Some(1.0)), (4, 4));
 /// assert_eq!(ferrovue::js_slice_range(5, f64::NAN, Some(2.9)), (0, 2));
 /// ```
+#[must_use]
 pub fn js_slice_range(len: usize, start: f64, end: Option<f64>) -> (usize, usize) {
     let from = relative(start, len);
     let to = end.map_or(len, |e| relative(e, len));
@@ -108,6 +113,7 @@ pub fn js_slice_range(len: usize, start: f64, end: Option<f64>) -> (usize, usize
 /// let last_two: Vec<i64> = ferrovue::js_slice_items([1, 2, 3].into_iter(), -2.0, None).collect();
 /// assert_eq!(last_two, [2, 3]);
 /// ```
+#[must_use]
 pub fn js_slice_items<T>(
     items: impl Iterator<Item = T>,
     start: f64,
@@ -193,6 +199,7 @@ fn length(s: &str) -> usize {
 /// // Half of 🦀 is a lone surrogate in JavaScript, sent as U+FFFD.
 /// assert_eq!(ferrovue::js_slice("🦀x", 1.0, None), "\u{FFFD}x");
 /// ```
+#[must_use]
 pub fn js_slice(s: &str, start: f64, end: Option<f64>) -> Cow<'_, str> {
     let (from, to) = js_slice_range(length(s), start, end);
     units(s, from, to)
@@ -208,6 +215,7 @@ pub fn js_slice(s: &str, start: f64, end: Option<f64>) -> Cow<'_, str> {
 /// assert_eq!(ferrovue::js_substring("ferrovue", -3.0, Some(4.0)), "ferr");
 /// assert_eq!(ferrovue::js_substring("🦀 crab", 3.0, None), "crab");
 /// ```
+#[must_use]
 pub fn js_substring(s: &str, start: f64, end: Option<f64>) -> Cow<'_, str> {
     let len = length(s);
     let clamp = |x: f64| to_integer(x).clamp(0.0, len as f64) as usize;
@@ -224,6 +232,7 @@ pub fn js_substring(s: &str, start: f64, end: Option<f64>) -> Cow<'_, str> {
 /// assert_eq!(ferrovue::js_at("abc", -1.0), Some("c"));
 /// assert_eq!(ferrovue::js_at("abc", 3.0), None);
 /// ```
+#[must_use]
 pub fn js_at(s: &str, index: f64) -> Option<&str> {
     let len = length(s) as f64;
     let n = to_integer(index);
@@ -242,6 +251,7 @@ pub fn js_at(s: &str, index: f64) -> Option<&str> {
 /// // Half of 🦀, sent as U+FFFD.
 /// assert_eq!(ferrovue::js_char_at("🦀", 1.0), "\u{FFFD}");
 /// ```
+#[must_use]
 pub fn js_char_at(s: &str, index: f64) -> &str {
     let n = to_integer(index);
     if n < 0.0 || n >= length(s) as f64 {
@@ -259,6 +269,7 @@ pub fn js_char_at(s: &str, index: f64) -> &str {
 /// assert_eq!(ferrovue::js_index_of("🦀 crab", "crab"), 3);
 /// assert_eq!(ferrovue::js_index_of("abc", "z"), -1);
 /// ```
+#[must_use]
 pub fn js_index_of(s: &str, search: &str) -> i64 {
     s.find(search).map_or(-1, |byte| js_length(&s[..byte]))
 }
@@ -271,6 +282,7 @@ pub fn js_index_of(s: &str, search: &str) -> i64 {
 /// assert_eq!(ferrovue::js_last_index_of("🦀 a 🦀 a", "a"), 8);
 /// assert_eq!(ferrovue::js_last_index_of("abc", "z"), -1);
 /// ```
+#[must_use]
 pub fn js_last_index_of(s: &str, search: &str) -> i64 {
     s.rfind(search).map_or(-1, |byte| js_length(&s[..byte]))
 }
@@ -285,6 +297,7 @@ pub fn js_last_index_of(s: &str, search: &str) -> i64 {
 /// assert_eq!(ferrovue::js_split("", ","), [""]);
 /// assert!(ferrovue::js_split("", "").is_empty());
 /// ```
+#[must_use]
 pub fn js_split<'s>(s: &'s str, separator: &str) -> Vec<Cow<'s, str>> {
     if !separator.is_empty() {
         return s.split(separator).map(Cow::Borrowed).collect();
@@ -327,6 +340,7 @@ fn substitute(out: &mut String, replacement: &str, s: &str, start: usize, end: u
 /// assert_eq!(ferrovue::js_replace("a-b-c", "-", "+"), "a+b-c");
 /// assert_eq!(ferrovue::js_replace("abc", "b", "[$&$`$'$$$1]"), "a[bac$$1]c");
 /// ```
+#[must_use]
 pub fn js_replace<'s>(s: &'s str, pattern: &str, replacement: &str) -> Cow<'s, str> {
     let Some(start) = s.find(pattern) else {
         return Cow::Borrowed(s);
@@ -349,6 +363,7 @@ pub fn js_replace<'s>(s: &'s str, pattern: &str, replacement: &str) -> Cow<'s, s
 /// assert_eq!(ferrovue::js_replace_all("ab", "", "."), ".a.b.");
 /// assert_eq!(ferrovue::js_replace_all("abc", "z", "y"), "abc");
 /// ```
+#[must_use]
 pub fn js_replace_all<'s>(s: &'s str, pattern: &str, replacement: &str) -> Cow<'s, str> {
     if pattern.is_empty() {
         return Cow::Owned(replace_between_units(s, replacement));
@@ -440,6 +455,7 @@ fn pad<'s>(s: &'s str, max_length: f64, fill: &str, at_start: bool) -> Cow<'s, s
 /// assert_eq!(ferrovue::js_pad_start("7", 3.0, "0"), "007");
 /// assert_eq!(ferrovue::js_pad_start("abc", 10.0, "123"), "1231231abc");
 /// ```
+#[must_use]
 pub fn js_pad_start<'s>(s: &'s str, max_length: f64, fill: &str) -> Cow<'s, str> {
     pad(s, max_length, fill, true)
 }
@@ -457,6 +473,7 @@ pub fn js_pad_start<'s>(s: &'s str, max_length: f64, fill: &str) -> Cow<'s, str>
 /// // 🦀 is two code units: padding by one keeps its first half, sent as U+FFFD.
 /// assert_eq!(ferrovue::js_pad_end("a", 2.0, "🦀"), "a\u{FFFD}");
 /// ```
+#[must_use]
 pub fn js_pad_end<'s>(s: &'s str, max_length: f64, fill: &str) -> Cow<'s, str> {
     pad(s, max_length, fill, false)
 }
@@ -475,6 +492,7 @@ pub fn js_pad_end<'s>(s: &'s str, max_length: f64, fill: &str) -> Cow<'s, str> {
 /// assert_eq!(ferrovue::js_repeat("ab", 2.9), "abab");
 /// assert!(std::panic::catch_unwind(|| ferrovue::js_repeat("ab", -1.0)).is_err());
 /// ```
+#[must_use]
 pub fn js_repeat(s: &str, count: f64) -> String {
     let n = to_integer(count);
     if n < 0.0 || n == f64::INFINITY {
@@ -505,6 +523,7 @@ pub fn js_repeat(s: &str, count: f64) -> String {
 /// assert_eq!(ferrovue::js_cmp("～", "🦀"), Ordering::Greater);
 /// assert_eq!("～".cmp("🦀"), Ordering::Less);
 /// ```
+#[must_use]
 pub fn js_cmp(a: &str, b: &str) -> Ordering {
     if a.is_ascii() || b.is_ascii() {
         return a.as_bytes().cmp(b.as_bytes());
@@ -603,6 +622,7 @@ fn decimal_value(literal: &str) -> f64 {
 /// assert_eq!(ferrovue::js_number(""), 0.0);
 /// assert!(ferrovue::js_number("12px").is_nan());
 /// ```
+#[must_use]
 pub fn js_number(s: &str) -> f64 {
     let t = js_trim(s);
     if t.is_empty() {
@@ -643,6 +663,7 @@ pub fn js_number(s: &str) -> f64 {
 /// assert_eq!(ferrovue::js_parse_int("0x1F", 10), 0.0);
 /// assert!(ferrovue::js_parse_int("px", 10).is_nan());
 /// ```
+#[must_use]
 pub fn js_parse_int(s: &str, radix: u32) -> f64 {
     let t = js_trim_start(s);
     let negative = t.starts_with('-');
@@ -682,6 +703,7 @@ pub fn js_parse_int(s: &str, radix: u32) -> f64 {
 /// assert_eq!(ferrovue::js_parse_float("0x10"), 0.0);
 /// assert!(ferrovue::js_parse_float(".e1").is_nan());
 /// ```
+#[must_use]
 pub fn js_parse_float(s: &str) -> f64 {
     let t = js_trim_start(s);
     decimal_prefix(t).map_or(f64::NAN, |n| decimal_value(&t[..n]))
@@ -694,6 +716,7 @@ pub fn js_parse_float(s: &str) -> f64 {
 /// ```
 /// assert_eq!(ferrovue::js_json_string("a\"b\n\u{1}"), r#""a\"b\n\u0001""#);
 /// ```
+#[must_use]
 pub fn js_json_string(s: &str) -> String {
     use std::fmt::Write;
     let mut out = String::with_capacity(s.len() + 2);
@@ -727,6 +750,7 @@ pub fn js_json_string(s: &str) -> String {
 /// assert_eq!(ferrovue::js_json_number(-0.0), "0");
 /// assert_eq!(ferrovue::js_json_number(f64::INFINITY), "null");
 /// ```
+#[must_use]
 pub fn js_json_number(x: f64) -> String {
     if !x.is_finite() {
         return "null".to_owned();

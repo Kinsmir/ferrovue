@@ -39,21 +39,25 @@ pub struct Sanitised(String);
 
 impl Sanitised {
     /// `untrusted`, cleaned with ammonia's default policy.
+    #[must_use]
     pub fn new(untrusted: &str) -> Self {
         Sanitised(ammonia::clean(untrusted))
     }
 
     /// `untrusted`, cleaned with `policy`.
+    #[must_use]
     pub fn with(policy: &ammonia::Builder<'_>, untrusted: &str) -> Self {
         Sanitised(policy.clean(untrusted).to_string())
     }
 
     /// The cleaned HTML.
+    #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
     }
 
     /// The cleaned HTML, as an owned string.
+    #[must_use]
     pub fn into_string(self) -> String {
         self.0
     }

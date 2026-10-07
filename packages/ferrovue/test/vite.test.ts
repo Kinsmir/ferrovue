@@ -1,11 +1,13 @@
 import { EventEmitter } from "node:events";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import vuePlugin from "@vitejs/plugin-vue";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { build, type Rolldown, type ViteDevServer } from "vite";
-import ferrovue, { affects } from "../src/vite.ts";
+import { loadConfig, write } from "../src/compiler.ts";
+import { affects, inputsOf } from "../src/inputs.ts";
+import ferrovue from "../src/vite.ts";
 
 let root = "";
 const good = `<script setup lang="ts">
@@ -15,7 +17,8 @@ defineProps<{ name: string }>();
 const bad = good.replace("{{ name }}", "{{ name / 2 }}");
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), "ferrovue-vite-"));
+  // The real path: macOS's temporary directory is reached through a symlink, which Vite resolves.
+  root = realpathSync(mkdtempSync(join(tmpdir(), "ferrovue-vite-")));
   mkdirSync(join(root, "components"));
   writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify({ components: "components", out: "gen" }));
   writeFileSync(join(root, "components", "Hello.vue"), good);
@@ -92,14 +95,69 @@ it("fails a build whose `<style scoped>` ids plugin-vue computes otherwise, and 
   expect(warned).toHaveLength(1);
 });
 
-it("ignores the output, dependencies, and files of other kinds", () => {
-  expect(affects(root, join(root, "components", "Hello.vue"))).toBe(true);
-  expect(affects(root, join(root, "stores", "prefs.ts"))).toBe(true);
-  expect(affects(root, join(root, "gen", "hello.rs"))).toBe(false);
-  expect(affects(root, join(root, "gen", "types.json"))).toBe(false);
-  expect(affects(root, join(root, "node_modules", "vue", "index.ts"))).toBe(false);
-  expect(affects(root, join(root, "styles", "app.css"))).toBe(false);
-  expect(affects(root, join(root, "..", "elsewhere.vue"))).toBe(false);
+it("regenerates on the configuration, components, stores, messages, pages, routes and the type files read, and nothing else", () => {
+  mkdirSync(join(root, "stores"));
+  mkdirSync(join(root, "locales"));
+  mkdirSync(join(root, "pages", "books"), { recursive: true });
+  const config = { components: "./components/", out: "./gen", stores: "stores", i18n: { messages: "locales" }, routes: { pages: "pages" } };
+  writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify(config));
+  writeFileSync(join(root, "types.ts"), "export interface Item { name: string }\n");
+  writeFileSync(join(root, "components", "Hello.vue"), `<script setup lang="ts">\nimport type { Item } from "../types";\ndefineProps<{ item: Item }>();\n</script>\n<template><p>{{ item.name }}</p></template>`);
+  write(root, loadConfig(root));
+  const inputs = inputsOf(root, "ferrovue.config.json", loadConfig(root));
+  const at = (...path: string[]) => affects(inputs, join(root, ...path));
+  for (const path of [["ferrovue.config.json"], ["components", "Hello.vue"], ["components", "Card.vue"], ["components"], ["types.ts"], ["stores", "prefs.ts"], ["locales", "en.json"], ["pages", "books", "[id].vue"]]) {
+    expect(at(...path), path.join("/")).toBe(true);
+  }
+  for (const path of [["gen", "hello.rs"], ["gen", "types.json"], ["vite.config.ts"], ["package.json"], ["tsconfig.json"], ["helpers.ts"], ["components", "Hello.test.ts"], ["components", "nested", "Deep.vue"], ["stores", "prefs.json"], ["node_modules", "vue", "index.ts"], ["styles", "app.css"], ["..", "elsewhere.vue"]]) {
+    expect(at(...path), path.join("/")).toBe(false);
+  }
+  writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify({ ...config, routes: "routes.json" }));
+  expect(affects(inputsOf(root, "ferrovue.config.json", loadConfig(root)), join(root, "routes.json"))).toBe(true);
+  expect(affects(inputsOf(root, "custom.json", null), join(root, "custom.json"))).toBe(true);
+  expect(affects(inputsOf(root, "custom.json", null), join(root, "components", "Hello.vue"))).toBe(false);
+});
+
+it("does not regenerate on the dev server's change to a file that is not an input", () => {
+  writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify({ components: "./components", out: "./gen" }));
+  const watcher = Object.assign(new EventEmitter(), { add: () => {} });
+  const logged: string[] = [];
+  const server = {
+    watcher,
+    ws: { send: () => {} },
+    config: { logger: { info: (m: string) => logged.push(m), error: (m: string) => logged.push(m) } },
+    moduleGraph: { getModuleById: () => undefined },
+  } as unknown as ViteDevServer;
+  const plugin = ferrovue({ root });
+  (plugin.configureServer as (s: ViteDevServer) => void)(server);
+  buildStart(plugin);
+  rmSync(join(root, "gen"), { recursive: true });
+  for (const file of ["vite.config.ts", "package.json", "tsconfig.json", "src/main.ts"]) watcher.emit("change", join(root, file));
+  expect(existsSync(join(root, "gen"))).toBe(false);
+  expect(logged).toEqual([]);
+  watcher.emit("change", join(root, "components", "Hello.vue"));
+  expect(existsSync(join(root, "gen", "hello.rs"))).toBe(true);
+});
+
+it("reads the configuration file the `config` option names", () => {
+  rmSync(join(root, "ferrovue.config.json"));
+  writeFileSync(join(root, "ssr.json"), JSON.stringify({ components: "components", out: "ssr" }));
+  const watcher = Object.assign(new EventEmitter(), { add: () => {} });
+  const server = {
+    watcher,
+    ws: { send: () => {} },
+    config: { logger: { info: () => {}, error: () => {} } },
+    moduleGraph: { getModuleById: () => undefined },
+  } as unknown as ViteDevServer;
+  const plugin = ferrovue({ root, config: "ssr.json" });
+  (plugin.configureServer as (s: ViteDevServer) => void)(server);
+  buildStart(plugin);
+  expect(readFileSync(join(root, "ssr", "hello.rs"), "utf8")).toContain("Hello, ");
+  writeFileSync(join(root, "ssr.json"), JSON.stringify({ components: "components", out: "ssr2" }));
+  watcher.emit("change", join(root, "ssr.json"));
+  expect(existsSync(join(root, "ssr2", "hello.rs"))).toBe(true);
+  expect(() => buildStart(ferrovue({ root }))).toThrow(/error\[FV1102\]: cannot find `ferrovue\.config\.json`/);
+  expect(() => buildStart(ferrovue({ root, config: "missing.json" }))).toThrow(/cannot find `missing\.json`/);
 });
 
 const frame = `<script setup lang="ts">
@@ -116,7 +174,7 @@ it("writes `ferrovue/islands`: a loader for each component that has an `island()
   const id = resolveId("ferrovue/islands")!;
   expect(resolveId("ferrovue/client")).toBeNull();
   expect(load.call({}, "elsewhere")).toBeNull();
-  expect(load.call({}, id)).toBe(`export default {\n  "Hello": () => import(${JSON.stringify(join(root, "components", "Hello.vue"))}),\n};\n`);
+  expect(load.call({}, id)).toBe(`export default {\n  "Hello": () => import(${JSON.stringify(join(root, "components", "Hello.vue").split(sep).join("/"))}),\n};\n`);
   expect(readFileSync(join(root, "gen", "hello.rs"), "utf8")).toContain("pub fn island");
 });
 
@@ -181,7 +239,7 @@ it("writes `ferrovue/routes`: the pages' routes, as vue-router's records and as 
   const resolveId = plugin.resolveId as (id: string) => string | null;
   const load = plugin.load as (this: unknown, id: string) => string | null;
   const code = load.call({}, resolveId("ferrovue/routes")!)!;
-  expect(code).toContain(`component: () => import(${JSON.stringify(join(root, "pages", "books", "[id].vue"))}),`);
+  expect(code).toContain(`component: () => import(${JSON.stringify(join(root, "pages", "books", "[id].vue").split(sep).join("/"))}),`);
   const module = (await import(`data:text/javascript,${encodeURIComponent(code)}`)) as { routes: Array<Record<string, unknown>>; default: unknown };
   expect(module.default).toEqual([
     { path: "/", name: "/" },

@@ -9,12 +9,11 @@
   ],
   "categories": {
     "correctness": "error",
-    "suspicious": "error"
+    "suspicious": "error",
+    "perf": "error"
   },
   "ignorePatterns": [
-    "crates/**",
-    "packages/ferrovue/bench/**",
-    "packages/ferrovue/fuzz/**"
+    "crates/**"
   ],
   "rules": {
     "no-unused-vars": [
@@ -55,7 +54,15 @@
           "_vnode"
         ]
       }
-    ]
+    ],
+    "typescript/switch-exhaustiveness-check": [
+      "error",
+      {
+        "considerDefaultExhaustiveForUnions": true
+      }
+    ],
+    "eslint/no-await-in-loop": "off",
+    "oxc/no-map-spread": "off"
   },
   "overrides": [
     {
@@ -69,6 +76,22 @@
         "typescript/no-unsafe-call": "off",
         "typescript/no-unsafe-member-access": "off",
         "typescript/no-unsafe-return": "off"
+      }
+    },
+    {
+      "files": [
+        "packages/ferrovue/bench/**/*.ts",
+        "packages/ferrovue/fuzz/**/*.ts"
+      ],
+      "rules": {
+        "typescript/consistent-return": "off",
+        "typescript/no-misused-spread": "off",
+        "oxc/approx-constant": "off",
+        "unicorn/no-array-sort": "off",
+        "eslint/no-unmodified-loop-condition": "off",
+        "eslint/no-shadow": "off",
+        "vitest/expect-expect": "off",
+        "vitest/no-conditional-expect": "off"
       }
     }
   ]

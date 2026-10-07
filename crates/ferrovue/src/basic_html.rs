@@ -54,12 +54,14 @@ impl BasicHtml {
     ];
 
     /// `untrusted`, escaped but for the tags in [`BasicHtml::TAGS`], balanced.
+    #[must_use]
     pub fn new(untrusted: &str) -> Self {
         BasicHtml(build(untrusted, false))
     }
 
     /// Plain text: everything escaped, blank lines between paragraphs, each paragraph a `<p>` and
     /// each line break within one a `<br>`.
+    #[must_use]
     pub fn from_text(text: &str) -> Self {
         let text = text
             .replace('\0', "")
@@ -86,11 +88,13 @@ impl BasicHtml {
     }
 
     /// The HTML.
+    #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
     }
 
     /// The HTML, as an owned string.
+    #[must_use]
     pub fn into_string(self) -> String {
         self.0
     }
@@ -142,16 +146,19 @@ impl InlineHtml {
     pub const TAGS: [&str; 6] = ["b", "i", "em", "strong", "code", "br"];
 
     /// `untrusted`, escaped but for the tags in [`InlineHtml::TAGS`], balanced.
+    #[must_use]
     pub fn new(untrusted: &str) -> Self {
         InlineHtml(build(untrusted, true))
     }
 
     /// The HTML.
+    #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
     }
 
     /// The HTML, as an owned string.
+    #[must_use]
     pub fn into_string(self) -> String {
         self.0
     }

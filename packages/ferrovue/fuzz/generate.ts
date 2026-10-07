@@ -2480,7 +2480,7 @@ export function componentShrinks(c: Component): Component[] {
   return out;
 }
 
-function* valueShrinks(v: unknown): Generator<unknown> {
+function* valueShrinks(v: unknown): Generator {
   if (typeof v === "string") {
     if (v === "") return;
     yield "";
@@ -2490,7 +2490,7 @@ function* valueShrinks(v: unknown): Generator<unknown> {
       yield cps.slice(Math.ceil(cps.length / 2)).join("");
       if (cps.length <= 12) for (let i = 0; i < cps.length; i++) yield [...cps.slice(0, i), ...cps.slice(i + 1)].join("");
     }
-    if (/[^a]/.test(v) && /^[\x20-\x7e]*$/.test(v) === false) yield v.replace(/[\x20-\x7e]/g, "");
+    if (/[^a]/.test(v) && !/^[\x20-\x7e]*$/.test(v)) yield v.replace(/[\x20-\x7e]/g, "");
   } else if (typeof v === "number") {
     if (v !== 0 && !Object.is(v, -0)) yield 0;
     if (Number.isInteger(v) && Math.abs(v) > 1) yield Math.trunc(v / 2);

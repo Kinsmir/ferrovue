@@ -38,8 +38,8 @@ cargo add ferrovue serde --features serde/derive
 cargo add --dev serde_json    # the generated conformance helper uses it under cfg(test)
 ```
 
-ferrovue supports the latest stable Rust, currently **1.99**. Generated code uses let-chains, so the
-crate that includes it needs **edition 2024**.
+ferrovue needs Rust **1.89** or later (CI tests that and the latest stable). Generated code uses
+let-chains, so the crate that includes it needs **edition 2024**.
 
 ### 2. Configure
 
@@ -55,7 +55,7 @@ crate that includes it needs **edition 2024**.
 | Key | Required | Meaning |
 |---|---|---|
 | `components` | yes | Directory of `.vue` files to compile |
-| `out` | yes | Directory the Rust modules are written to. **Everything in it is replaced.** |
+| `out` | yes | Directory the Rust modules are written to. **Every module ferrovue wrote there is replaced**, and one no component produces any more is removed; a `.rs` file without ferrovue's `// @generated` header is left alone, and `--check` reports it |
 | `routes` | no | JSON file listing the app's routes: each a vue-router path, or `{ "path", "name", "children" }`. Or `{ "pages": "client/pages" }`: a folder of pages, whose file names give the routes as vue-router's file-based routing reads them (`index.vue`, `[id].vue`, `[[id]].vue`, `[...path].vue`, `(group)` folders, a `name.vue` beside `name/` as its layout), each page compiled as a component. Needed for `<RouterLink>`, `<RouterView>` and `useRoute()` |
 | `router` | no | Instead of `routes`: `{ routes, base?, linkActiveClass?, linkExactActiveClass? }`, matching `createWebHistory(base)` and `createRouter`'s options |
 | `stores` | no | Directory of Pinia option stores whose state components may read |
@@ -91,6 +91,22 @@ pnpm ferrovue --check --diff  # …and shows what differs, as `diff -u` does
 pnpm ferrovue --check --format json  # errors as JSON, for an editor or CI annotations
 pnpm ferrovue --watch   # regenerates when components or configs change
 ```
+
+`-c, --config <path>` reads another configuration file. `--watch` regenerates on a change to what a
+run reads (the configuration, the components, stores, locale messages, pages or routes file, and
+the `.ts` files components import types from), not on any other file of the project. A Vite project
+can use the plugin instead, which does the same in its dev server and before a build:
+
+```ts
+// vite.config.ts
+import ferrovue from "ferrovue/vite";
+
+export default { plugins: [ferrovue({ config: "config/ferrovue.json" })] };
+```
+
+`root` is the project root the configuration's paths are relative to (Vite's working directory by
+default), and `config` the configuration file in it, as `--config` takes it (`ferrovue.config.json`
+by default).
 
 Every error carries a stable code, as `error[FV0602]: components/Card.vue:4:17: …`, documented in
 the crate's [`error_codes`](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html)

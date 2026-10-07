@@ -1,12 +1,14 @@
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { basename, join, relative } from "node:path";
+import { basename, join } from "node:path";
+import { relativePath } from "./paths.ts";
 import { type Config, ctx, loadConfig, tyOfName } from "./context.ts";
 import { failIn, snake } from "./model.ts";
-import { importsOf, readComponent } from "./component.ts";
+import { readComponent, refuseOptionsApi } from "./component.ts";
+import { listDir } from "./files.ts";
 import { scopeFor } from "./script.ts";
 import { attrsFlow } from "./fallthrough.ts";
 import { prepareDynamic } from "./dynamic.ts";
-import { componentSource, isIsland, modSource } from "./rust.ts";
+import { componentSource, GENERATED, isIsland, modSource } from "./rust.ts";
 import { renderParams } from "./plugin.ts";
 import { PLUGINS } from "./plugins/index.ts";
 
@@ -37,7 +39,7 @@ export function generate(root: string, config: Config = loadConfig(root)): Map<s
   );
   const dir = join(root, config.components);
   const files = [
-    ...readdirSync(dir)
+    ...listDir(root, config.components, "components")
       .filter((f) => f.endsWith(".vue"))
       .toSorted()
       .map((f) => ({ file: join(dir, f), name: basename(f, ".vue") })),
@@ -45,7 +47,7 @@ export function generate(root: string, config: Config = loadConfig(root)): Map<s
   ];
   const modulesOf = new Map<string, string>();
   for (const f of files) {
-    const rel = relative(root, f.file);
+    const rel = relativePath(root, f.file);
     if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(f.name)) {
       failIn(rel, "FV0007", `the component is called \`${f.name}\` after its file, which is not a Rust name: name the file in PascalCase, letters and digits (\`UserCard.vue\`)`);
     }
@@ -55,8 +57,10 @@ export function generate(root: string, config: Config = loadConfig(root)): Map<s
     if (taken) failIn(rel, "FV0007", `the component's module would be \`${file}\`, as ${taken}'s is: rename one of them`);
     modulesOf.set(file, rel);
   }
-  const children = new Set(files.flatMap((f) => importsOf(readFileSync(f.file, "utf8")).filter((c) => c !== f.name)));
-  const read = files.map((f) => readComponent(f.file, root, children.has(f.name), f.name));
+  const read = files.map((f) => readComponent(f.file, root, f.name));
+  const children = new Set(read.flatMap((r) => [...r.comp.imports, ...r.comp.childProps.values()].filter((c) => c !== r.comp.name)));
+  for (const r of read) if (r.optionsApi) refuseOptionsApi(r.comp, r.optionsApi, children.has(r.comp.name));
+  const byName = new Map(read.map((r) => [r.comp.name, r]));
   const components = new Map(read.map((r) => [r.comp.name, r.comp]));
   ctx.components = components;
   const scopes = read.map((r) => scopeFor(r.comp, r.ast, components).scope);
@@ -83,7 +87,7 @@ export function generate(root: string, config: Config = loadConfig(root)): Map<s
     if (placed.has(r.comp.name)) return;
     placed.add(r.comp.name);
     for (const i of r.comp.imports) {
-      const dep = read.find((x) => x.comp.name === i);
+      const dep = byName.get(i);
       if (dep) place(dep);
     }
     ordered.push(r);
@@ -103,11 +107,20 @@ export function generate(root: string, config: Config = loadConfig(root)): Map<s
   return out;
 }
 
+/** Whether a file starts with the header ferrovue writes, so `write` removes only what an earlier
+ * run wrote and never a module of the app's own put in the output directory by mistake. */
+export function isGenerated(file: string): boolean {
+  try {
+    return readFileSync(file, "utf8").startsWith(GENERATED);
+  } catch {
+    return false;
+  }
+}
+
 function moduleFile(module: string): string {
   return `${module.replace(/^r#/, "")}.rs`;
 }
 
-/** Write what `generate` produces to the configured directory, replacing what is there. */
 /** What \`write\` changed in the output directory. */
 export interface Written {
   /** Every file the output directory now holds. */
@@ -140,7 +153,7 @@ export function write(root: string, config: Config = loadConfig(root)): Written 
       changed.push(name);
     }
   }
-  const removed = readdirSync(target).filter((f) => f.endsWith(".rs") && !files.has(f));
+  const removed = readdirSync(target).filter((f) => f.endsWith(".rs") && !files.has(f) && isGenerated(join(target, f)));
   for (const f of removed) rmSync(join(target, f));
   const islands = Object.fromEntries([...ctx.components.values()].filter(isIsland).map((c) => [c.name, c.file]));
   return { files: [...files.keys()], changed, removed, islands };

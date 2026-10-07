@@ -36,6 +36,7 @@ pub fn class_into(out: &mut String, after: bool, items: &[&str]) {
 /// // `{ active: true, [" wide "]: true, hidden: false }`
 /// assert_eq!(ferrovue::class_object(&[(true, "active"), (true, " wide "), (false, "hidden")]), "active  wide");
 /// ```
+#[must_use]
 pub fn class_object(entries: &[(bool, &str)]) -> String {
     let mut names: Vec<(&str, bool)> = Vec::new();
     for (on, name) in entries {

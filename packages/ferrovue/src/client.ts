@@ -154,12 +154,18 @@ export async function mountIslands(components: Record<string, IslandComponent>, 
       report(el, `the props of ${name} are not JSON`);
       return;
     }
-    const app = createSSRApp(component, props);
-    if (options.pinia) app.use(options.pinia);
-    if (options.router) app.use(options.router);
-    for (const plugin of options.plugins ?? []) app.use(plugin);
-    app.mount(el);
-    apps.push(app);
+    // One island that throws as it mounts (its setup, a plugin) is reported, and leaves the others
+    // to hydrate.
+    try {
+      const app = createSSRApp(component, props);
+      if (options.pinia) app.use(options.pinia);
+      if (options.router) app.use(options.router);
+      for (const plugin of options.plugins ?? []) app.use(plugin);
+      app.mount(el);
+      apps.push(app);
+    } catch (e) {
+      report(el, `${name} did not mount: ${e instanceof Error ? e.message : String(e)}`);
+    }
   };
 
   const now: HTMLElement[] = [];
@@ -258,12 +264,14 @@ async function load(component: IslandComponent): Promise<Component | Error> {
  * it: its name (`c`) and the props it was rendered from (`p`). */
 export interface PagePart {
   c: string;
-  p: Record<string, unknown>;
+  /** `null` where serde_json refused the props, which the part then renders without. */
+  p: Record<string, unknown> | null;
 }
 
 /** What `ferrovue::PageRecord` writes: the layout's props, and each slot's parts in order. */
 export interface PageRecord {
-  props: Record<string, unknown>;
+  /** `null` where serde_json refused the props, which the layout then renders without. */
+  props: Record<string, unknown> | null;
   slots: Record<string, PagePart[]>;
 }
 

@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 import { existsSync, mkdirSync, readFileSync, readdirSync, watch, writeFileSync } from "node:fs";
-import { dirname, join, relative, resolve, sep } from "node:path";
-import { type Config, CONFIG_FILE, generate, loadConfig, VERSION, write } from "./compiler.ts";
+import { dirname, join, resolve } from "node:path";
+import { relativePath } from "./paths.ts";
+import { type Config, CONFIG_FILE, generate, isGenerated, loadConfig, VERSION, write } from "./compiler.ts";
 import { unifiedDiff } from "./diff.ts";
 import { diagnose, formatRefusal, isRefusal } from "./diagnostics.ts";
+import { affects, type Inputs, inputsOf } from "./inputs.ts";
 
 const root = process.cwd();
 
@@ -39,7 +41,7 @@ function report(e: unknown): void {
 function initProject(targetRoot: string, configPath?: string): number {
   const configFile = configPath ? resolve(targetRoot, configPath) : join(targetRoot, CONFIG_FILE);
   if (existsSync(configFile)) {
-    console.error(`error: configuration file already exists: ${relative(targetRoot, configFile) || CONFIG_FILE}`);
+    console.error(`error: configuration file already exists: ${relativePath(targetRoot, configFile) || CONFIG_FILE}`);
     return 1;
   }
   const defaultComponents = "components";
@@ -51,7 +53,7 @@ function initProject(targetRoot: string, configPath?: string): number {
     out: defaultOut,
   };
   writeFileSync(configFile, JSON.stringify(config, null, 2) + "\n");
-  console.log(`created ${relative(targetRoot, configFile) || CONFIG_FILE}`);
+  console.log(`created ${relativePath(targetRoot, configFile) || CONFIG_FILE}`);
 
   const compDir = join(targetRoot, defaultComponents);
   mkdirSync(compDir, { recursive: true });
@@ -69,7 +71,7 @@ defineProps<{ name: string }>();
 </template>
 `,
     );
-    console.log(`created ${join(defaultComponents, "Hello.vue")}`);
+    console.log(`created ${defaultComponents}/Hello.vue`);
   }
 
   const outDir = join(targetRoot, defaultOut);
@@ -112,7 +114,8 @@ function check(config: Config, showDiff = false): number {
       if (showDiff) console.error(unifiedDiff(`${config.out}/${name}`, committed(name), want.get(name)!));
     }
     for (const name of extra) {
-      console.error(`not generated: ${config.out}/${name}`);
+      const foreign = isGenerated(join(dir, name)) ? "" : ` (not written by ferrovue, so \`ferrovue\` leaves it: move it out of ${config.out})`;
+      console.error(`not generated: ${config.out}/${name}${foreign}`);
       if (showDiff) console.error(unifiedDiff(`${config.out}/${name}`, committed(name), ""));
     }
     console.error("run `ferrovue` to regenerate");
@@ -130,32 +133,33 @@ function once(config: Config): void {
 }
 
 function watchProject(configPath?: string): void {
+  let inputs: Inputs;
   const run = (): void => {
+    let config: Config | null = null;
     try {
-      once(loadConfig(root, configPath));
+      config = loadConfig(root, configPath);
+      once(config);
     } catch (e) {
-      report(e);
+      // A refusal is reported as one; anything else (a folder renamed away, a file read as it is
+      // written) is shown too, and the watch carries on for the change that puts it right.
+      if (isRefusal(e)) report(e);
+      else console.error(`error: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      inputs = inputsOf(root, configPath ?? CONFIG_FILE, config);
     }
   };
   run();
-  const ignored = (file: string): boolean => {
-    let out = "";
-    try {
-      out = loadConfig(root, configPath).out;
-    } catch {
-    }
-    const parts = file.split(sep);
-    return (
-      parts.some((p) => p === "node_modules" || p === "target" || p === ".git" || p === "dist") ||
-      (out !== "" && (file === out || file.startsWith(out + sep))) ||
-      !/\.(vue|ts|json)$/.test(file)
-    );
-  };
   let timer: ReturnType<typeof setTimeout> | null = null;
-  watch(root, { recursive: true }, (_event, name) => {
-    if (!name || ignored(relative(root, join(root, name)))) return;
+  // One recursive watch of the root, filtered to the inputs: watching each input directory instead
+  // would miss one created later, and the type files may be anywhere.
+  const watcher = watch(root, { recursive: true }, (_event, name) => {
+    if (!name || !affects(inputs, join(root, name))) return;
     if (timer) clearTimeout(timer);
     timer = setTimeout(run, 50);
+  });
+  watcher.on("error", (e) => {
+    console.error(`error: stopped watching: ${e.message}`);
+    process.exitCode = 1;
   });
   (json ? console.error : console.log)("watching for changes (Ctrl-C to stop)");
 }
@@ -193,6 +197,16 @@ try {
     console.error(`error: unknown option or command '${unknown}'\n\nRun \`ferrovue --help\` for usage.`);
     process.exit(1);
   }
+  const conflict = (a: string, b: string): never => {
+    console.error(`error: '${a}' does not combine with '${b}'`);
+    return process.exit(1);
+  };
+  if (args.includes("init")) {
+    const other = args.find((a) => a === "--check" || a === "--watch" || a === "--diff" || a === "-d");
+    if (other !== undefined) conflict("init", other);
+    if (json) conflict("init", "--format json");
+  }
+  if (args.includes("--check") && args.includes("--watch")) conflict("--check", "--watch");
   if ((args.includes("--diff") || args.includes("-d")) && !args.includes("--check")) {
     console.error("error: '--diff' requires '--check'");
     process.exit(1);

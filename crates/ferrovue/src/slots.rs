@@ -135,6 +135,7 @@ fn write_hole(out: &mut String) {
 /// assert_eq!(pieces, ["<main><!--[-->", "<!--]--></main>"]);
 /// // Write pieces[0], then the page when it is ready, then pieces[1].
 /// ```
+#[must_use]
 pub fn hole() -> Slot<'static> {
     Slot::new(&write_hole)
 }
@@ -158,6 +159,7 @@ pub fn hole() -> Slot<'static> {
 /// // Without holes, the render is one piece.
 /// assert_eq!(split_holes("<p>all at once</p>"), ["<p>all at once</p>"]);
 /// ```
+#[must_use]
 pub fn split_holes(rendered: &str) -> Vec<&str> {
     rendered.split(HOLE).collect()
 }
@@ -251,6 +253,7 @@ fn content_scope_id(slot_scope_id: &str) -> std::borrow::Cow<'_, str> {
 /// pushes: whether it is comments alone, with nothing between them but whitespace. Slot content
 /// that pushed nothing else gives way to the fallback.
 #[doc(hidden)]
+#[must_use]
 pub fn is_comment(chunk: &str) -> bool {
     if chunk.len() < 7 || !chunk.starts_with("<!--") || !chunk.ends_with("-->") {
         return false;

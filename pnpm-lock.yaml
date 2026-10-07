@@ -162,30 +162,81 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+catalogs:
+  default:
+    '@intlify/message-compiler':
+      specifier: 11.4.13
+      version: 11.4.13
+    '@types/node':
+      specifier: ^26.6.2
+      version: 26.6.4
+    '@unhead/vue':
+      specifier: ^3.4.2
+      version: 3.4.2
+    '@vitejs/plugin-vue':
+      specifier: ^6.0.9
+      version: 6.0.9
+    '@vue/compiler-sfc':
+      specifier: 3.5.43
+      version: 3.5.43
+    '@vue/server-renderer':
+      specifier: 3.5.43
+      version: 3.5.43
+    '@vue/shared':
+      specifier: 3.5.43
+      version: 3.5.43
+    happy-dom:
+      specifier: ^20.14.5
+      version: 20.14.5
+    pinia:
+      specifier: ^4.0.3
+      version: 4.0.3
+    playwright:
+      specifier: 1.63.0
+      version: 1.63.0
+    typescript:
+      specifier: ^7.0.2
+      version: 7.0.2
+    vite:
+      specifier: ^8.3.0
+      version: 8.3.2
+    vitest:
+      specifier: ^5.0.1
+      version: 5.0.3
+    vue:
+      specifier: 3.5.43
+      version: 3.5.43
+    vue-i18n:
+      specifier: 11.4.13
+      version: 11.4.13
+    vue-router:
+      specifier: ^5.3.1
+      version: 5.3.1
+
 importers:
 
   .:
     devDependencies:
       '@types/node':
-        specifier: ^26.6.2
+        specifier: 'catalog:'
         version: 26.6.4
       '@unhead/vue':
-        specifier: ^3.4.2
+        specifier: 'catalog:'
         version: 3.4.2(@oxc-project/types@0.152.0)(lightningcss@1.33.0)(rolldown@1.2.12)(vite@8.3.2(@types/node@26.6.4))(vue@3.5.43(typescript@7.0.2))
       '@vitejs/plugin-vue':
-        specifier: ^6.0.9
+        specifier: 'catalog:'
         version: 6.0.9(vite@8.3.2(@types/node@26.6.4))(vue@3.5.43(typescript@7.0.2))
       '@vitest/coverage-v8':
         specifier: ^5.0.3
         version: 5.0.3(vitest@5.0.3)
       '@vue/compiler-sfc':
-        specifier: 3.5.43
+        specifier: 'catalog:'
         version: 3.5.43
       '@vue/server-renderer':
-        specifier: 3.5.43
+        specifier: 'catalog:'
         version: 3.5.43
       '@vue/shared':
-        specifier: 3.5.43
+        specifier: 'catalog:'
         version: 3.5.43
       fallow:
         specifier: ^3.31.0
@@ -194,7 +245,7 @@ importers:
         specifier: workspace:*
         version: link:packages/ferrovue
       happy-dom:
-        specifier: ^20.14.5
+        specifier: 'catalog:'
         version: 20.14.5
       oxlint:
         specifier: 1.86.0
@@ -203,68 +254,68 @@ importers:
         specifier: 7.0.2003
         version: 7.0.2003
       pinia:
-        specifier: ^4.0.3
+        specifier: 'catalog:'
         version: 4.0.3(@vue/devtools-api@8.2.1)(typescript@7.0.2)(vue@3.5.43(typescript@7.0.2))
       tinybench:
         specifier: ^6.2.0
         version: 6.2.0
       typescript:
-        specifier: ^7.0.2
+        specifier: 'catalog:'
         version: 7.0.2
       vite:
-        specifier: ^8.3.0
+        specifier: 'catalog:'
         version: 8.3.2(@types/node@26.6.4)
       vitest:
-        specifier: ^5.0.1
+        specifier: 'catalog:'
         version: 5.0.3(@types/node@26.6.4)(@vitest/coverage-v8@5.0.3)(happy-dom@20.14.5)(vite@8.3.2(@types/node@26.6.4))
       vue:
-        specifier: 3.5.43
+        specifier: 'catalog:'
         version: 3.5.43(typescript@7.0.2)
       vue-i18n:
-        specifier: 11.4.13
+        specifier: 'catalog:'
         version: 11.4.13(vue@3.5.43(typescript@7.0.2))
       vue-router:
-        specifier: ^5.3.1
+        specifier: 'catalog:'
         version: 5.3.1(@vue/compiler-sfc@3.5.43)(pinia@4.0.3(@vue/devtools-api@8.2.1)(typescript@7.0.2)(vue@3.5.43(typescript@7.0.2)))(rolldown@1.2.12)(vite@8.3.2(@types/node@26.6.4))(vue@3.5.43(typescript@7.0.2))
 
   examples/fullstack:
     dependencies:
       '@unhead/vue':
-        specifier: ^3.4.2
+        specifier: 'catalog:'
         version: 3.4.2(@oxc-project/types@0.152.0)(lightningcss@1.33.0)(rolldown@1.2.12)(vite@8.3.2(@types/node@26.6.4))(vue@3.5.43(typescript@7.0.2))
       pinia:
-        specifier: ^4.0.3
+        specifier: 'catalog:'
         version: 4.0.3(@vue/devtools-api@8.2.1)(typescript@7.0.2)(vue@3.5.43(typescript@7.0.2))
       vue:
-        specifier: 3.5.43
+        specifier: 'catalog:'
         version: 3.5.43(typescript@7.0.2)
       vue-router:
-        specifier: ^5.3.1
+        specifier: 'catalog:'
         version: 5.3.1(@vue/compiler-sfc@3.5.43)(pinia@4.0.3(@vue/devtools-api@8.2.1)(typescript@7.0.2)(vue@3.5.43(typescript@7.0.2)))(rolldown@1.2.12)(vite@8.3.2(@types/node@26.6.4))(vue@3.5.43(typescript@7.0.2))
     devDependencies:
       '@types/node':
-        specifier: ^26.6.2
+        specifier: 'catalog:'
         version: 26.6.4
       '@vitejs/plugin-vue':
-        specifier: ^6.0.9
+        specifier: 'catalog:'
         version: 6.0.9(vite@8.3.2(@types/node@26.6.4))(vue@3.5.43(typescript@7.0.2))
       ferrovue:
         specifier: workspace:*
         version: link:../../packages/ferrovue
       happy-dom:
-        specifier: ^20.14.5
+        specifier: 'catalog:'
         version: 20.14.5
       playwright:
-        specifier: 1.63.0
+        specifier: 'catalog:'
         version: 1.63.0
       typescript:
-        specifier: ^7.0.2
+        specifier: 'catalog:'
         version: 7.0.2
       vite:
-        specifier: ^8.3.0
+        specifier: 'catalog:'
         version: 8.3.2(@types/node@26.6.4)
       vitest:
-        specifier: ^5.0.1
+        specifier: 'catalog:'
         version: 5.0.3(@types/node@26.6.4)(@vitest/coverage-v8@5.0.3)(happy-dom@20.14.5)(vite@8.3.2(@types/node@26.6.4))
 
   packages/ferrovue:
@@ -273,44 +324,44 @@ importers:
         specifier: ^7.29.9
         version: 7.29.9
       '@intlify/message-compiler':
-        specifier: 11.4.13
+        specifier: 'catalog:'
         version: 11.4.13
       '@vue/compiler-sfc':
-        specifier: 3.5.43
+        specifier: 'catalog:'
         version: 3.5.43
       '@vue/shared':
-        specifier: 3.5.43
+        specifier: 'catalog:'
         version: 3.5.43
       source-map-js:
         specifier: ^1.2.2
         version: 1.2.2
     devDependencies:
       '@unhead/vue':
-        specifier: ^3.4.2
+        specifier: 'catalog:'
         version: 3.4.2(@oxc-project/types@0.152.0)(lightningcss@1.33.0)(rolldown@1.2.12)(vite@8.3.2(@types/node@26.6.4))(vue@3.5.43(typescript@7.0.2))
       '@vue/server-renderer':
-        specifier: 3.5.43
+        specifier: 'catalog:'
         version: 3.5.43
       pinia:
-        specifier: ^4.0.3
+        specifier: 'catalog:'
         version: 4.0.3(@vue/devtools-api@8.2.1)(typescript@7.0.2)(vue@3.5.43(typescript@7.0.2))
       playwright:
-        specifier: 1.63.0
+        specifier: 'catalog:'
         version: 1.63.0
       vite:
-        specifier: ^8.3.0
+        specifier: 'catalog:'
         version: 8.3.2(@types/node@26.6.4)
       vitest:
-        specifier: ^5.0.1
+        specifier: 'catalog:'
         version: 5.0.3(@types/node@26.6.4)(@vitest/coverage-v8@5.0.3)(happy-dom@20.14.5)(vite@8.3.2(@types/node@26.6.4))
       vue:
-        specifier: 3.5.43
+        specifier: 'catalog:'
         version: 3.5.43(typescript@7.0.2)
       vue-i18n:
-        specifier: 11.4.13
+        specifier: 'catalog:'
         version: 11.4.13(vue@3.5.43(typescript@7.0.2))
       vue-router:
-        specifier: ^5.3.1
+        specifier: 'catalog:'
         version: 5.3.1(@vue/compiler-sfc@3.5.43)(pinia@4.0.3(@vue/devtools-api@8.2.1)(typescript@7.0.2)(vue@3.5.43(typescript@7.0.2)))(rolldown@1.2.12)(vite@8.3.2(@types/node@26.6.4))(vue@3.5.43(typescript@7.0.2))
 
 packages:

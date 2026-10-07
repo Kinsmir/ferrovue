@@ -1,4 +1,4 @@
-import { spawn, spawnSync } from "node:child_process";
+import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -24,6 +24,15 @@ defineProps<{ name: string }>();
 
 afterEach(() => rmSync(root, { recursive: true, force: true }));
 
+/** Stop a `--watch`, and wait for it to exit: Windows does not remove a directory a process still
+ * has as its working directory. */
+async function stop(child: ChildProcess): Promise<void> {
+  if (child.exitCode !== null || child.signalCode !== null) return;
+  const exited = new Promise((r) => child.once("exit", r));
+  child.kill();
+  await exited;
+}
+
 it("writes one module per component, and the module tying them together", () => {
   const r = run();
   expect(r.status, r.stderr).toBe(0);
@@ -40,11 +49,19 @@ it("rewrites nothing that did not change, so a Rust build does not rebuild it", 
   expect(statSync(join(root, "src/generated/hello.rs")).mtimeMs).toBe(before);
 });
 
-it("replaces what the output directory held", () => {
-  mkdirSync(join(root, "src/generated"), { recursive: true });
-  writeFileSync(join(root, "src/generated/old.rs"), "// gone");
-  expect(run().status).toBe(0);
-  expect(readdirSync(join(root, "src/generated"))).not.toContain("old.rs");
+it("removes the modules it wrote that no component produces, and leaves the app's own", () => {
+  run();
+  const generated = readFileSync(join(root, "src/generated/hello.rs"), "utf8");
+  writeFileSync(join(root, "src/generated/gone.rs"), generated);
+  writeFileSync(join(root, "src/generated/main.rs"), "fn main() {}\n");
+  const r = run();
+  expect(r.status, r.stderr).toBe(0);
+  expect(r.stdout).toContain("1 removed");
+  expect(existsSync(join(root, "src/generated/gone.rs"))).toBe(false);
+  expect(readFileSync(join(root, "src/generated/main.rs"), "utf8")).toBe("fn main() {}\n");
+  const c = run("--check");
+  expect(c.status).toBe(1);
+  expect(c.stderr).toContain("not generated: src/generated/main.rs (not written by ferrovue");
 });
 
 it("--check passes on what it just wrote", () => {
@@ -109,9 +126,83 @@ defineProps<{ name: string }>();
 <template><p>Bye, {{ name }}</p></template>`);
     await waitFor("1 changed");
   } finally {
-    child.kill();
+    await stop(child);
   }
 }, 70_000);
+
+it("--watch reports an error that is not a refusal without stopping", async () => {
+  const child = spawn(process.execPath, [CLI, "--watch"], { cwd: root });
+  let out = "";
+  child.stdout.on("data", (d) => (out += d));
+  child.stderr.on("data", (d) => (out += d));
+  const waitFor = async (text: string): Promise<void> => {
+    for (let i = 0; i < 400 && !out.includes(text); i++) await new Promise((r) => setTimeout(r, 50));
+    expect(out).toContain(text);
+  };
+  try {
+    await waitFor("watching for changes");
+    mkdirSync(join(root, "components", "Broken.vue"));
+    await waitFor("EISDIR");
+    rmSync(join(root, "components", "Broken.vue"), { recursive: true });
+    await waitFor("nothing changed");
+    expect(child.exitCode).toBeNull();
+  } finally {
+    await stop(child);
+  }
+}, 70_000);
+
+it("--watch regenerates on its inputs only, with `out` written as a relative path", async () => {
+  writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify({ components: "./components", out: "./src/generated" }));
+  const child = spawn(process.execPath, [CLI, "--watch"], { cwd: root });
+  let out = "";
+  child.stdout.on("data", (d) => (out += d));
+  child.stderr.on("data", (d) => (out += d));
+  const runs = () => out.split("\n").filter((l) => l.startsWith("./src/generated: ")).length;
+  const waitFor = async (text: string): Promise<void> => {
+    for (let i = 0; i < 400 && !out.includes(text); i++) await new Promise((r) => setTimeout(r, 50));
+    expect(out).toContain(text);
+  };
+  try {
+    await waitFor("watching for changes");
+    expect(runs()).toBe(1);
+    writeFileSync(join(root, "vite.config.ts"), "export default {};\n");
+    writeFileSync(join(root, "package.json"), "{}\n");
+    writeFileSync(join(root, "tsconfig.json"), "{}\n");
+    mkdirSync(join(root, "src"), { recursive: true });
+    writeFileSync(join(root, "src", "main.ts"), "export {};\n");
+    writeFileSync(join(root, "src", "generated", "extra.json"), "{}\n");
+    await new Promise((r) => setTimeout(r, 500));
+    expect(runs()).toBe(1);
+    writeFileSync(join(root, "components", "Card.vue"), "<template><p>card</p></template>");
+    await waitFor("3 files, 2 changed");
+    expect(runs()).toBe(2);
+  } finally {
+    await stop(child);
+  }
+}, 70_000);
+
+it("refuses a missing components directory by its code", () => {
+  writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify({ components: "missing", out: "src/generated" }));
+  const r = run();
+  expect(r.status).toBe(1);
+  expect(r.stderr).toContain("error[FV1116]: cannot read the `components` directory `missing`: it does not exist");
+});
+
+for (const [args, message] of [
+  [["--check", "--watch"], "'--check' does not combine with '--watch'"],
+  [["--watch", "--check"], "'--check' does not combine with '--watch'"],
+  [["init", "--check"], "'init' does not combine with '--check'"],
+  [["init", "--watch"], "'init' does not combine with '--watch'"],
+  [["init", "-d"], "'init' does not combine with '-d'"],
+  [["init", "--format", "json"], "'init' does not combine with '--format json'"],
+] as const) {
+  it(`refuses ${args.join(" ")}, options that do not combine`, () => {
+    const r = run(...args);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toBe(`error: ${message}\n`);
+    expect(readdirSync(root)).not.toContain("src");
+  });
+}
 
 it("fails on a configuration without its two directories", () => {
   writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify({ components: "components" }));
@@ -321,6 +412,19 @@ it("--format json gives a configuration error its code and file", () => {
   const r = run("--format", "json");
   expect(r.status).toBe(1);
   expect(JSON.parse(r.stdout).diagnostics[0]).toMatchObject({ file: "ferrovue.config.json", line: null, code: "FV1102" });
+});
+
+it("--format json gives a malformed routes file and configuration their codes and files", () => {
+  writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify({ components: "components", out: "src/generated", routes: "routes.json" }));
+  writeFileSync(join(root, "routes.json"), `["/", `);
+  const r = run("--format", "json");
+  expect(r.status).toBe(1);
+  expect(r.stderr).toBe("");
+  expect(JSON.parse(r.stdout).diagnostics).toEqual([expect.objectContaining({ file: "routes.json", line: null, code: "FV1247", title: "Routes file that is not valid JSON" })]);
+  writeFileSync(join(root, "ferrovue.config.json"), "null");
+  expect(JSON.parse(run("--format", "json").stdout).diagnostics[0]).toMatchObject({ file: "ferrovue.config.json", code: "FV1113" });
+  writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify({ components: "components", out: "src/generated", componets: "x" }));
+  expect(JSON.parse(run("--format", "json").stdout).diagnostics[0]).toMatchObject({ file: "ferrovue.config.json", code: "FV1114", message: "ferrovue.config.json has no key `componets`: did you mean `components`?" });
 });
 
 it("--format json reports what a run wrote, and what --check finds stale", () => {

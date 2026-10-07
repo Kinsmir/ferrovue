@@ -1,28 +1,18 @@
 import { readdirSync, readFileSync } from "node:fs";
-import { join, relative, resolve, sep } from "node:path";
+import { join, resolve, sep } from "node:path";
 import type { Plugin, ResolvedConfig, ViteDevServer } from "vite";
-import { CONFIG_FILE, loadConfig, write, type Written } from "./compiler.ts";
+import { type Config, CONFIG_FILE, loadConfig, write, type Written } from "./compiler.ts";
 import { formatRefusal, isRefusal } from "./diagnostics.ts";
 import { allPages, type FileRoute, fileRoutes, pagesFolder } from "./file-routes.ts";
+import { affects, type Inputs, inputsOf, watched } from "./inputs.ts";
 
 export interface FerrovueOptions {
-  /** The directory holding `ferrovue.config.json`: Vite's working directory by default. */
+  /** The project root, which the configuration's paths are relative to: Vite's working directory
+   * by default. */
   root?: string;
-}
-
-/** Whether a changed file can change what is generated: a component, a store or type file, the
- * routes or the configuration: anything but the output itself, dependencies and build output. */
-export function affects(root: string, file: string): boolean {
-  const rel = relative(root, file);
-  if (rel.startsWith("..") || !/\.(vue|ts|json)$/.test(rel)) return false;
-  let out = "";
-  try {
-    out = loadConfig(root).out;
-  } catch {
-  }
-  const parts = rel.split(sep);
-  if (parts.some((p) => p === "node_modules" || p === "target" || p === ".git" || p === "dist")) return false;
-  return out === "" || !(rel === out || rel.startsWith(out + sep));
+  /** The configuration file, relative to `root`, as the CLI's `--config` takes it:
+   * `ferrovue.config.json` by default. */
+  config?: string;
 }
 
 /** How `@vitejs/plugin-vue`, as this build configures it, computes a `<style scoped>` id: from the
@@ -36,11 +26,11 @@ export function vueScopeIds(config: ResolvedConfig): { mode: "filepath" | "filep
 }
 
 /** Why the server's scope ids would differ from the client's, when a component has `<style scoped>`
- * and `ferrovue.config.json` computes them otherwise than plugin-vue: a page would hydrate cleanly
- * and show unstyled. */
-export function scopeIdMismatch(root: string, vue: { mode: string; root: string } | null): string | null {
+ * and the configuration, `configFile`, computes them otherwise than plugin-vue: a page would
+ * hydrate cleanly and show unstyled. */
+export function scopeIdMismatch(root: string, vue: { mode: string; root: string } | null, configFile = CONFIG_FILE): string | null {
   if (!vue) return null;
-  const config = loadConfig(root);
+  const config = loadConfig(root, configFile);
   const mode = config.scopeId ?? "filepath-source";
   const viteRoot = resolve(root, config.viteRoot ?? ".");
   if (mode === vue.mode && viteRoot === vue.root) return null;
@@ -59,7 +49,7 @@ export function scopeIdMismatch(root: string, vue: { mode: string; root: string 
     }
   }
   if (!files.some((f) => /<style\b[^>]*\bscoped\b/.test(readFileSync(join(root, f), "utf8")))) return null;
-  return `\`<style scoped>\` ids: @vitejs/plugin-vue hashes "${vue.mode}" from ${vue.root}, ${CONFIG_FILE} "${mode}" from ${viteRoot}; set \`scopeId\` and \`viteRoot\` to match, or plugin-vue's \`features.componentIdGenerator\``;
+  return `\`<style scoped>\` ids: @vitejs/plugin-vue hashes "${vue.mode}" from ${vue.root}, ${configFile} "${mode}" from ${viteRoot}; set \`scopeId\` and \`viteRoot\` to match, or plugin-vue's \`features.componentIdGenerator\``;
 }
 
 const ISLANDS = "ferrovue/islands";
@@ -106,16 +96,24 @@ ${routesTree(root, routes, "  ", false)}
  * and `ferrovue/routes` modules. */
 export default function ferrovue(options: FerrovueOptions = {}): Plugin {
   const root = resolve(options.root ?? process.cwd());
+  const configFile = options.config ?? CONFIG_FILE;
   let islands: Record<string, string> | null = null;
   let routes: string | null = null;
+  let inputs: Inputs | null = null;
   const regenerate = (): Written => {
-    const written = write(root, loadConfig(root));
-    islands = written.islands;
-    return written;
+    let config: Config | null = null;
+    try {
+      config = loadConfig(root, configFile);
+      const written = write(root, config);
+      islands = written.islands;
+      return written;
+    } finally {
+      inputs = inputsOf(root, configFile, config);
+    }
   };
   const pagesModule = (): string => {
-    const pages = pagesFolder(loadConfig(root));
-    if (pages === null) throw new Error(`ferrovue: \`${ROUTES}\` is written from a folder of pages: set \`"routes": { "pages": "…" }\` in ${CONFIG_FILE}`);
+    const pages = pagesFolder(loadConfig(root, configFile));
+    if (pages === null) throw new Error(`ferrovue: \`${ROUTES}\` is written from a folder of pages: set \`"routes": { "pages": "…" }\` in ${configFile}`);
     return routesModule(root, fileRoutes(root, pages));
   };
   let vue: ReturnType<typeof vueScopeIds> = null;
@@ -143,7 +141,7 @@ export default function ferrovue(options: FerrovueOptions = {}): Plugin {
     buildStart() {
       try {
         regenerate();
-        const mismatch = scopeIdMismatch(root, vue);
+        const mismatch = scopeIdMismatch(root, vue, configFile);
         if (mismatch && building) this.error(`ferrovue: ${mismatch}`);
         if (mismatch) this.warn(`ferrovue: ${mismatch}`);
       } catch (e) {
@@ -152,9 +150,17 @@ export default function ferrovue(options: FerrovueOptions = {}): Plugin {
       }
     },
     configureServer(server: ViteDevServer) {
-      server.watcher.add(resolve(root, CONFIG_FILE));
+      if (!inputs) {
+        let config: Config | null = null;
+        try {
+          config = loadConfig(root, configFile);
+        } catch {
+        }
+        inputs = inputsOf(root, configFile, config);
+      }
+      server.watcher.add(watched(inputs));
       const onChange = (file: string): void => {
-        if (!affects(root, file)) return;
+        if (!inputs || !affects(inputs, resolve(file))) return;
         try {
           const before = JSON.stringify(islands);
           const { changed, removed } = regenerate();
@@ -176,10 +182,13 @@ export default function ferrovue(options: FerrovueOptions = {}): Plugin {
             }
           }
         } catch (e) {
-          if (!isRefusal(e)) throw e;
-          server.config.logger.error(`ferrovue: ${formatRefusal(e)}`, { timestamp: true });
-          server.ws.send({ type: "error", err: { message: `ferrovue: ${formatRefusal(e)}`, stack: "", plugin: "ferrovue" } });
+          // Thrown from a watcher's listener, anything but a refusal would take the dev server down:
+          // show it like one, and regenerate on the change that puts it right.
+          const message = isRefusal(e) ? formatRefusal(e) : `error: ${e instanceof Error ? e.message : String(e)}`;
+          server.config.logger.error(`ferrovue: ${message}`, { timestamp: true });
+          server.ws.send({ type: "error", err: { message: `ferrovue: ${message}`, stack: "", plugin: "ferrovue" } });
         }
+        server.watcher.add(watched(inputs));
       };
       server.watcher.on("change", onChange);
       server.watcher.on("add", onChange);

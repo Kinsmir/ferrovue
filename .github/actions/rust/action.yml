@@ -13,14 +13,24 @@ inputs:
   save:
     description: Save the cache at the end of the job, by default on main only
     default: ${{ github.ref == 'refs/heads/main' }}
+  cache:
+    description: Restore the cargo cache at all; "false" for a job that publishes what it builds
+    default: "true"
 runs:
   using: composite
   steps:
-    - uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master
+    - id: toolchain
+      uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master
       with:
         toolchain: ${{ inputs.toolchain }}
         components: ${{ inputs.components }}
+    - name: Use that toolchain in the workspace, over rust-toolchain.toml's
+      shell: bash
+      env:
+        TOOLCHAIN: ${{ steps.toolchain.outputs.name }}
+      run: rustup override set "$TOOLCHAIN" --path "$GITHUB_WORKSPACE"
     - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      if: inputs.cache == 'true'
       with:
         shared-key: ${{ inputs.cache-key }}
         save-if: ${{ inputs.save }}

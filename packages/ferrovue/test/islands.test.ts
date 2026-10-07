@@ -173,3 +173,14 @@ it("leaves the islands of a component that did not load as the server rendered t
   expect(document.body.innerHTML).toContain("<p>kept</p>");
   islands.unmount();
 });
+
+it("reports an island that throws as it mounts, and still hydrates the ones after it", async () => {
+  document.body.innerHTML = `${island("Throws", {}, "<p>kept</p>")}${island("Plain", { label: "hi" }, "<b>hi</b>")}`;
+  const Throws = { setup: (): never => { throw new Error("broken setup"); } };
+  const Plain = Object.assign((props: { label: string }) => h("b", props.label), { props: ["label"] });
+  const problems: string[] = [];
+  const islands = await mountIslands({ Throws, Plain }, { onError: (_el, problem) => problems.push(problem) });
+  expect(islands.apps.map((app) => Reflect.get(app, "_component"))).toEqual([Plain]);
+  expect(problems).toEqual(["Throws did not mount: broken setup"]);
+  islands.unmount();
+});

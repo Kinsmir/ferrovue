@@ -2,7 +2,8 @@ import { parse as parseJs } from "@babel/parser";
 import { compileScript, compileTemplate, parse as parseSfc, type SFCBlock, type SFCDescriptor, type SFCScriptBlock } from "@vue/compiler-sfc";
 import { readFileSync } from "node:fs";
 import { SourceMapConsumer } from "source-map-js";
-import { basename, relative } from "node:path";
+import { basename } from "node:path";
+import { relativePath } from "./paths.ts";
 import { type Component, type N, absence, blankComponent, fail, GenError, opt, snake, sourceAt, tagAst } from "./model.ts";
 import { ctx } from "./context.ts";
 import { typesImports, declareTypes, defaultValue, definePropsType, ONE_NOTHING, readTypeFile, resolveImport, runtimeDefaults, structOf, tyOfTs } from "./typescript.ts";
@@ -57,11 +58,6 @@ function blockAt(source: string, block: SFCBlock): N {
   return sourceAt(source, source.lastIndexOf(`<${block.type}`, block.loc.start.offset));
 }
 
-/** The `.vue` files a component imports, by name. */
-export function importsOf(source: string): string[] {
-  return [...source.matchAll(/\bfrom\s*["'](?:[^"']*\/)?([^"'/]+)\.vue["']/g)].map((m) => m[1]!);
-}
-
 function generics(comp: Component, source: string, block: SFCBlock): void {
   const text = block.attrs.generic;
   if (typeof text !== "string") return;
@@ -106,17 +102,23 @@ function scriptOf(comp: Component, descriptor: SFCDescriptor): SFCScriptBlock {
   }
 }
 
-export function readComponent(file: string, root: string, isChild: boolean, name = basename(file, ".vue")): { comp: Component; ast: N[]; ssr: string } {
+/** Refuse a component written with the Options API, which `readComponent` read no further: as a
+ * child when another component imports it, as an island otherwise. */
+export function refuseOptionsApi(comp: Component, script: N, isChild: boolean): never {
+  const needs = isChild ? "a child component must have" : "an island needs";
+  return fail(comp, "FV0003", `${needs} \`<script setup lang="ts">\`, or no script at all: a \`<script>\` without \`setup\` (the Options API, \`defineComponent\`) is not translated`, script);
+}
+
+/** A component, read and its template compiled. One written with the Options API is read no
+ * further than its `<script>`, `optionsApi`, for `refuseOptionsApi` once every component is read. */
+export function readComponent(file: string, root: string, name = basename(file, ".vue")): { comp: Component; ast: N[]; ssr: string; optionsApi?: N } {
   const source = readFileSync(file, "utf8");
   const { descriptor, errors } = parseSfc(source, { filename: file });
-  const rel = relative(root, file);
+  const rel = relativePath(root, file);
   const comp = blankComponent(name, snake(name), rel);
   comp.source = source;
   if (errors.length) fail(comp, "FV0002", String(errors[0]).replaceAll(file, rel), vueErrorNode(errors[0]) ?? sourceAt(source, 0));
-  if (descriptor.script && !descriptor.scriptSetup) {
-    const needs = isChild ? "a child component must have" : "an island needs";
-    fail(comp, "FV0003", `${needs} \`<script setup lang="ts">\`, or no script at all: a \`<script>\` without \`setup\` (the Options API, \`defineComponent\`) is not translated`, blockAt(source, descriptor.script));
-  }
+  if (descriptor.script && !descriptor.scriptSetup) return { comp, ast: [], ssr: "", optionsApi: blockAt(source, descriptor.script) };
   if (!descriptor.template) fail(comp, "FV0004", "a component needs a `<template>`: a render function is not translated", sourceAt(source, 0));
   for (const st of descriptor.styles) {
     if (st.module) fail(comp, "FV1005", "`<style module>` renames classes in the bundler; use a global or scoped `<style>`, or a stylesheet", blockAt(source, st));
