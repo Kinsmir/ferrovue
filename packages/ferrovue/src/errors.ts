@@ -213,7 +213,7 @@ export const ERRORS = {
   FV0802: { title: "`.join()` with a separator that is not a string" },
   FV0803: { title: "List method on a value that is not a list" },
   FV0804: { title: "List method over a list of unsupported items" },
-  FV0805: { title: "List method given anything but an arrow function" },
+  FV0805: { title: "List method given anything but an arrow function or `Boolean`" },
   FV0806: { title: "Arrow function with a block body" },
   FV0807: { title: "Arrow function index that is not a plain name" },
   FV0808: { title: "Defaults or nested patterns in an arrow function's item" },

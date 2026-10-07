@@ -625,7 +625,7 @@ List method over a list of unsupported items.
 
 ## FV0805
 
-List method given anything but an arrow function.
+List method given anything but an arrow function or `Boolean`.
 
 ## FV0806
 

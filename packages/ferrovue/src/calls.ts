@@ -2,7 +2,7 @@ import { type N, type Scope, type Ty, type Val, BOOL, fail, FLOAT, INT, sameTy, 
 import { ctx } from "./context.ts";
 import { claim } from "./plugin.ts";
 import { atom, bare, binary, condition, operand, receiver, strArg, UNARY } from "./parens.ts";
-import { computedListMethod, items, listMethod, objectCall } from "./lists.ts";
+import { computedListMethod, isBoolean, items, listMethod, objectCall, presentLiteral } from "./lists.ts";
 import { lonely, loneOf, meet, stringMethod, stringsEqual } from "./strings.ts";
 import { asF64, intFromF64, isNumber } from "./numbers.ts";
 import { boolOf, truthy } from "./narrowing.ts";
@@ -37,6 +37,7 @@ export function call(s: Scope, n: N): Val {
     if (own) return own;
     const helper = s.helpers.get(callee.name);
     if (helper) return helperCall(s, helper, args, n);
+    if (isBoolean(s, callee) && args.length === 1) return boolOf(truthy(expr(s, args[0])));
     if (callee.name === "String" && args.length === 1) {
       const a = expr(s, args[0]);
       if (a.ty.k === "str") return a;
@@ -100,7 +101,8 @@ export function call(s: Scope, n: N): Val {
       }
       return fail(comp, "FV0704", `\`Math.${method}()\` is supported on numbers as \`max\`, \`min\`, \`abs\`, \`round\`, \`floor\`, \`ceil\` and \`trunc\``, n);
     }
-    const target = expr(s, callee.object);
+    const literal = method === "filter" && args.length === 1 && isBoolean(s, args[0]) && callee.object.type === "ArrayExpression";
+    const target = (literal ? presentLiteral(s, callee.object) : null) ?? expr(s, callee.object);
     if (target.ty.k === "str") {
       const lone = loneOf(target);
       switch (args.length === 0 ? method : "") {

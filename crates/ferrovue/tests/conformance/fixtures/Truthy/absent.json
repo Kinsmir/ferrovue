@@ -1,0 +1,10 @@
+{
+  "person": { "name": "Grace", "city": null },
+  "tags": [null, null],
+  "counts": [null, 0],
+  "ratios": [0],
+  "people": [null],
+  "words": ["", ""],
+  "flags": [false],
+  "urgent": false
+}
