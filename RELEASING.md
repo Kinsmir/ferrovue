@@ -26,7 +26,9 @@ becomes public until a maintainer approves it, once on each registry.
 
    This sets the version in `Cargo.toml` (the workspace's version, which every crate takes, and
    the `=0.2.0` the crates require one another at) and `packages/ferrovue/package.json`, updates
-   `Cargo.lock`, moves the changelog notes under `## [0.2.0] - <today>`, and opens a
+   `Cargo.lock`, moves the changelog notes under `## [0.2.0] - <today>`, points the changelog's
+   `[Unreleased]` link at `v0.2.0...HEAD` and adds a `[0.2.0]` link comparing with the tag before
+   it, and opens a
    `release/v0.2.0` pull request. Without `--pr` it only edits the files.
 4. When CI is green, merge it, then tag the merge commit and push the tag:
 
@@ -75,6 +77,18 @@ gh attestation verify ferrovue-0.2.0.tgz --repo Kinsmir/ferrovue
 `cargo publish` packs the crates again in the job that publishes them, so the `.crate` files on the
 release are the same sources, not necessarily the same bytes as crates.io's; `cargo package --list`
 or unpacking both shows the files agree.
+
+## Release dry run
+
+The **Release dry run** workflow does what a release does short of publishing, for a throwaway
+pre-release of the current version (`0.6.0-dryrun.<run>`): it checks the manifests and the
+changelog as the release's first job does, renders the notes, packs every package through the same
+`pack.yml` the release calls (after `release.ts set-version`), and has the release's npm stage the
+tarball with `--dry-run`. It runs on pull requests that change the release's workflows, actions or
+script, weekly, and by hand from the Actions tab, so a broken step shows up before a tag does. It
+cannot cover the signed-tag check, `cargo-semver-checks` against the next version, crates.io's
+publish, the provenance attestation or creating the GitHub release: those need a tag, an OIDC token
+or write access.
 
 The crates are published without their test data: each crate's `exclude` in its `Cargo.toml` leaves
 out the conformance suite, the recorded vectors and the benchmark's expected HTML, so the tests and

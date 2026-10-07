@@ -76,36 +76,11 @@ jobs:
     uses: ./.github/workflows/ci.yml
 
   pack:
-    name: Pack every package
+    name: Pack
     needs: verify
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/rust
-        with:
-          cache: "false"
-          cache-key: release
-      - uses: ./.github/actions/pnpm
-      - name: Pack the crates and the npm package, once, for npm to stage and the GitHub release to attach
-        env:
-          VERSION: ${{ needs.verify.outputs.version }}
-        run: |
-          mkdir -p "$RUNNER_TEMP/packages"
-          crates=$(node scripts/release.ts crates)
-          cargo package $(printf -- '-p %s ' $crates) --locked --no-verify
-          for crate in $crates; do cp "target/package/$crate-$VERSION.crate" "$RUNNER_TEMP/packages/"; done
-          (cd packages/ferrovue && pnpm pack --pack-destination "$RUNNER_TEMP/packages")
-          test -f "$RUNNER_TEMP/packages/ferrovue-$VERSION.tgz"
-          (cd "$RUNNER_TEMP/packages" && sha256sum -- * | tee -a "$GITHUB_STEP_SUMMARY")
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: packages
-          path: ${{ runner.temp }}/packages/
-          if-no-files-found: error
-          retention-days: 14
+    uses: ./.github/workflows/pack.yml
+    with:
+      version: ${{ needs.verify.outputs.version }}
 
   npm:
     name: Stage on npm

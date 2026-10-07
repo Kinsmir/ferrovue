@@ -22,7 +22,7 @@ export interface Hydrated {
   pinia: Pinia;
   router: Router;
   islands: Islands;
-  page?: App;
+  page?: App | undefined;
   unmount(): void;
 }
 

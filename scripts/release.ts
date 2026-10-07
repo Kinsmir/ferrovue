@@ -68,8 +68,22 @@ export function changelogNotes(changelog: string, version: string): string | nul
   const lines = changelog.split("\n");
   const start = lines.findIndex((l) => l.startsWith(`## [${version}]`));
   if (start < 0) return null;
-  const end = lines.findIndex((l, i) => i > start && l.startsWith("## ["));
+  const end = lines.findIndex((l, i) => i > start && (l.startsWith("## [") || LINK.test(l)));
   return lines.slice(start + 1, end < 0 ? undefined : end).join("\n").trim();
+}
+
+/** A link reference at the changelog's foot: `[0.6.0]: https://…/compare/v0.5.0...v0.6.0`. */
+const LINK = /^\[([^\]]+)\]:\s*(\S+)\s*$/;
+const UNRELEASED_LINK = /^\[Unreleased\]:\s*(\S+)\/compare\/(v[^.\s]\S*?)\.\.\.HEAD\s*$/m;
+
+/** The changelog's links once `version` is released: `[Unreleased]` compares from its tag, and
+ * `version` gets a link of its own, comparing with the tag `[Unreleased]` compared from. A
+ * changelog with no `[Unreleased]` link is left as it is. */
+export function releaseLinks(changelog: string, version: string): string {
+  const unreleased = UNRELEASED_LINK.exec(changelog);
+  if (!unreleased) return changelog;
+  const [line, base, previous] = unreleased;
+  return changelog.replace(line, `[Unreleased]: ${base}/compare/v${version}...HEAD\n[${version}]: ${base}/compare/${previous}...v${version}`);
 }
 
 export function releaseChangelog(changelog: string, version: string, date: string): string {
@@ -77,7 +91,7 @@ export function releaseChangelog(changelog: string, version: string, date: strin
   const unreleased = changelogNotes(changelog, "Unreleased");
   if (unreleased === null) throw new Error("CHANGELOG.md has no [Unreleased] section");
   if (!unreleased) throw new Error("CHANGELOG.md's [Unreleased] section is empty: write the notes first");
-  return changelog.replace("## [Unreleased]", `## [Unreleased]\n\n## [${version}] - ${date}`);
+  return releaseLinks(changelog.replace("## [Unreleased]", `## [Unreleased]\n\n## [${version}] - ${date}`), version);
 }
 
 export interface ReleaseFiles {
@@ -107,6 +121,8 @@ export function checkRelease(tag: string, files: ReleaseFiles): string[] {
   if (pkg !== version) problems.push(`packages/ferrovue/package.json is at ${pkg}, the tag at ${version}`);
   const notes = changelogNotes(files.changelog, version);
   if (!notes) problems.push(`CHANGELOG.md has no notes for ${version}`);
+  const links = files.changelog.split("\n").filter((l) => LINK.test(l));
+  if (links.length && !links.some((l) => l.startsWith(`[${version}]:`))) problems.push(`CHANGELOG.md has no link for ${version}: \`release.ts bump\` writes it`);
   return problems;
 }
 
@@ -181,6 +197,13 @@ function run(cmd: string, args: string[]): void {
   execFileSync(cmd, args, { cwd: ROOT, stdio: "inherit" });
 }
 
+/** Set the crates' and the npm package's version, leaving the changelog alone. */
+function setVersion(files: ReleaseFiles, version: string): void {
+  writeFileSync(CARGO, setCargoVersion(files.cargo, version));
+  writeFileSync(PACKAGE, setPackageVersion(files.pkg, version));
+  run("cargo", ["update", "--workspace", "--offline"]);
+}
+
 function main(argv: string[]): number {
   const [command, arg, ...flags] = argv;
   const read = (): ReleaseFiles => ({
@@ -202,9 +225,7 @@ function main(argv: string[]): number {
       const files = read();
       const date = new Date().toISOString().slice(0, 10);
       writeFileSync(CHANGELOG, releaseChangelog(files.changelog, arg, date));
-      writeFileSync(CARGO, setCargoVersion(files.cargo, arg));
-      writeFileSync(PACKAGE, setPackageVersion(files.pkg, arg));
-      run("cargo", ["update", "--workspace", "--offline"]);
+      setVersion(files, arg);
       console.log(`ferrovue is at ${arg}: the crates ${CRATES.join(", ")} and the npm package`);
       if (flags.includes("--pr")) {
         const branch = `release/v${arg}`;
@@ -246,8 +267,20 @@ function main(argv: string[]): number {
     case "crates":
       console.log(CRATES.join(" "));
       return 0;
+    case "version":
+      console.log(cargoVersion(read().cargo));
+      return 0;
+    case "set-version": {
+      // For the release dry run, which packs and stages a version nobody publishes.
+      if (!arg || !isVersion(arg)) {
+        console.error("usage: release.ts set-version <version>");
+        return 2;
+      }
+      setVersion(read(), arg);
+      return 0;
+    }
     default:
-      console.error("usage: release.ts bump <version> [--pr] | check <tag> | notes <version> | crates");
+      console.error("usage: release.ts bump <version> [--pr] | check <tag> | notes <version> | crates | version | set-version <version>");
       return 2;
   }
 }

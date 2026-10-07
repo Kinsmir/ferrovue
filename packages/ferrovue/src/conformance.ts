@@ -26,7 +26,7 @@ export interface ConformanceOptions extends Pick<RouterOptions, "pinia" | "vueRo
   fixtures?: string;
   /** Write each fixture's `.html` from Vue's render instead of comparing it: when
    * `FERROVUE_FIXTURES_WRITE=1` is set, if not given. */
-  record?: boolean;
+  record?: boolean | undefined;
 }
 
 interface TestApi {

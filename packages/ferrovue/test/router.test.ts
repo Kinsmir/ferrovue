@@ -52,7 +52,7 @@ function makeNestedRouter(routes: NestedRoute[]): Router {
       ...(r.view === false ? {} : { component: View }),
       ...(r.name ? { name: r.name } : {}),
       ...(r.children ? { children: records(r.children) } : {}),
-    }) as RouteRecordRaw);
+    }));
   return createRouter({ history: createMemoryHistory(), routes: records(routes) });
 }
 

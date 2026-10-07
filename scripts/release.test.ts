@@ -101,6 +101,19 @@ describe("release chores", () => {
     expect(() => releaseChangelog(CHANGELOG, "0.1.0", "2026-12-01")).toThrow(/already has/);
   });
 
+  it("moves the [Unreleased] link on, and links the new version from the tag before it", () => {
+    const BASE = "https://github.com/Kinsmir/ferrovue";
+    const linked = `${CHANGELOG.trimEnd()}\n\n[Unreleased]: ${BASE}/compare/v0.1.0...HEAD\n[0.1.0]: ${BASE}/releases/tag/v0.1.0\n`;
+    const out = releaseChangelog(linked, "0.2.0", "2026-11-01");
+    expect(out).toContain(`[Unreleased]: ${BASE}/compare/v0.2.0...HEAD\n[0.2.0]: ${BASE}/compare/v0.1.0...v0.2.0\n[0.1.0]: ${BASE}/releases/tag/v0.1.0\n`);
+    expect(changelogNotes(out, "0.1.0")).toBe("- First.");
+    expect(releaseChangelog(CHANGELOG, "0.2.0", "2026-11-01")).not.toContain("]: ");
+    const files = { cargo: CARGO, pkg: PKG, changelog: linked, crates: CRATE_MANIFESTS };
+    expect(checkRelease("v0.1.0", files)).toEqual([]);
+    const unlinked = { ...files, changelog: linked.replace(/^\[0\.1\.0\]: .*\n/m, "") };
+    expect(checkRelease("v0.1.0", unlinked).join("\n")).toMatch(/no link for 0\.1\.0/);
+  });
+
   it("checks a tag against every manifest and the changelog", () => {
     const files = { cargo: CARGO, pkg: PKG, changelog: CHANGELOG, crates: CRATE_MANIFESTS };
     expect(checkRelease("v0.1.0", files)).toEqual([]);

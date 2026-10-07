@@ -93,13 +93,13 @@ export interface RouterOptions {
   /** The application's own `pinia` module, used in place of the one `ferrovue/testing` would
    * import: under vitest the application's stores use the module Vite loads, which must be the
    * one that installs the fixture's state. */
-  pinia?: typeof import("pinia");
+  pinia?: typeof import("pinia") | undefined;
   /** The application's own `vue-router` module, used in place of the one `ferrovue/testing`
    * would import. */
-  vueRouter?: typeof import("vue-router");
+  vueRouter?: typeof import("vue-router") | undefined;
   /** The application's own `vue-i18n` module, used in place of the one `ferrovue/testing` would
    * import. */
-  vueI18n?: typeof import("vue-i18n");
+  vueI18n?: typeof import("vue-i18n") | undefined;
 }
 
 /** An app rendering one fixture of `component`: with a router over `routes` when there are any. */

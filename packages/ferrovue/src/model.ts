@@ -249,7 +249,7 @@ export interface Scope {
   consts: Map<string, Const>;
   sid: string | null;
   opaque: string | null;
-  loop?: { item: string; over: string };
+  loop?: { item: string; over: string } | undefined;
   plugins: Map<Plugin, unknown>;
 }
 

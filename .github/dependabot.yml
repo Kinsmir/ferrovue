@@ -35,3 +35,9 @@ updates:
       tooling:
         patterns: ["*"]
         exclude-patterns: ["vue", "@vue/*", "vue-router", "pinia", "vue-i18n", "@intlify/*", "@unhead/vue"]
+    ignore:
+      # ferrovue reads the ASTs @vue/compiler-sfc parses with Babel 7 beside the ones it parses
+      # itself, so both must be Babel 7: Babel 8 changes the shape of type annotations. Move to 8
+      # in the pull request that moves Vue to a compiler-sfc on Babel 8.
+      - dependency-name: "@babel/parser"
+        update-types: ["version-update:semver-major"]

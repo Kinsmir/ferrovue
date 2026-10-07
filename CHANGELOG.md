@@ -15,6 +15,11 @@ released together and share version numbers.
 - `rust-toolchain.toml`, `.node-version`, `.editorconfig` and a `justfile` whose `just check` runs
   the pull request checklist; versions repeated across the workspace's manifests come from a pnpm
   catalog.
+- A release dry run (`.github/workflows/release-dry-run.yml`): on pull requests that change the
+  release's workflows or script, weekly and by hand, it packs every package for a throwaway
+  pre-release through the release's own `pack.yml` and has npm stage it with `--dry-run`.
+- The criterion benchmark times the runtime's attribute merging, number writing and head rendering
+  on their own, each checked against the output it writes.
 
 ### Changed
 
@@ -41,6 +46,12 @@ released together and share version numbers.
   `match` over them outside their crate needs a wildcard arm.
 - Fewer allocations when merging attributes, writing fractions, rendering the head and writing an
   island's props; the output is unchanged.
+- `release.ts bump` moves the changelog's `[Unreleased]` link to the new version and adds the new
+  version's link, and `release.ts check` refuses a changelog that has links but none for the
+  version.
+- `fixtureApp`'s `pinia`, `vueRouter` and `vueI18n` options and `conformanceSuite`'s `record` accept
+  `undefined`, for a project type-checked with `exactOptionalPropertyTypes`, which the workspace now
+  uses itself.
 
 ### Fixed
 
