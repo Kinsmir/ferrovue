@@ -75,21 +75,21 @@
   },
   "dependencies": {
     "@babel/parser": "^7.29.9",
-    "@intlify/message-compiler": "11.4.13",
-    "@vue/compiler-sfc": "3.5.43",
-    "@vue/shared": "3.5.43",
+    "@intlify/message-compiler": "catalog:",
+    "@vue/compiler-sfc": "catalog:",
+    "@vue/shared": "catalog:",
     "source-map-js": "^1.2.2"
   },
   "devDependencies": {
-    "@unhead/vue": "^3.4.2",
-    "@vue/server-renderer": "3.5.43",
-    "pinia": "^4.0.3",
-    "playwright": "1.63.0",
-    "vite": "^8.3.0",
-    "vitest": "^5.0.1",
-    "vue": "3.5.43",
-    "vue-i18n": "11.4.13",
-    "vue-router": "^5.3.1"
+    "@unhead/vue": "catalog:",
+    "@vue/server-renderer": "catalog:",
+    "pinia": "catalog:",
+    "playwright": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:",
+    "vue": "catalog:",
+    "vue-i18n": "catalog:",
+    "vue-router": "catalog:"
   },
   "peerDependencies": {
     "@unhead/vue": "~3.4.2",

@@ -343,6 +343,10 @@ jobs:
           for f in package/dist/cli.js package/dist/compiler.js package/dist/compiler.d.ts package/README.md package/LICENSE-MIT package/LICENSE-APACHE; do
             grep -qx "$f" "$RUNNER_TEMP/files.txt" || { echo "missing from the npm package: $f"; exit 1; }
           done
+          if tar -xzOf "$RUNNER_TEMP"/ferrovue-*.tgz package/package.json | grep -E '"(catalog|workspace):'; then
+            echo "the packed package.json still names a pnpm protocol, which npm cannot install"
+            exit 1
+          fi
       - name: The packed command runs from node_modules
         run: |
           mkdir -p "$RUNNER_TEMP/consumer/components" && cd "$RUNNER_TEMP/consumer"
