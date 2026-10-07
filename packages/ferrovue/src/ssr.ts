@@ -20,7 +20,7 @@ export function attachSsrRender(file: string, name: string, component: Component
     slotted: descriptor.slotted,
     ssr: true,
     ssrCssVars: [],
-    compilerOptions: script ? { bindingMetadata: script.bindings } : {},
+    compilerOptions: script?.bindings ? { bindingMetadata: script.bindings } : {},
   });
   const body = code
     .replace(/import \{([^}]*)\} from "vue"/g, (_, names: string) => `const {${names.replace(/ as /g, ": ")}} = __vue;`)

@@ -1,0 +1,85 @@
+name: Release dry run
+
+# What a release does short of publishing, for a throwaway pre-release of the current version
+# (`0.6.0-dryrun.<run>`): the changelog and manifests agree, the notes render, the packages pack
+# through the release's own pack workflow, and npm would stage the tarball. It runs when the
+# release's workflows or script change, weekly to catch npm or an action changing under them, and
+# by hand. Not covered: the signed-tag check, cargo-semver-checks, crates.io's publish, the
+# provenance attestation and creating the GitHub release, which need a tag or write access.
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/release.yml
+      - .github/workflows/pack.yml
+      - .github/workflows/release-dry-run.yml
+      - .github/actions/**
+      - scripts/release.ts
+  schedule:
+    - cron: "41 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  version:
+    name: The changelog and manifests agree, and the notes render
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - id: version
+        name: A pre-release of the current version that is never published
+        run: |
+          current=$(node scripts/release.ts version)
+          node scripts/release.ts check "v$current"
+          node scripts/release.ts notes "v$current" >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$current" == *-* ]]; then suffix=".dryrun.$GITHUB_RUN_NUMBER"; else suffix="-dryrun.$GITHUB_RUN_NUMBER"; fi
+          echo "version=$current$suffix" >> "$GITHUB_OUTPUT"
+
+  pack:
+    name: Pack
+    needs: version
+    uses: ./.github/workflows/pack.yml
+    with:
+      version: ${{ needs.version.outputs.version }}
+      set-version: true
+      artifact: packages-dry-run
+
+  npm:
+    name: npm would stage the tarball
+    needs: [version, pack]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # As the release's npm job, with the same npm, but no OIDC token: no provenance, and --dry-run.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - run: npm install -g npm@12.2.0
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: packages-dry-run
+          path: ${{ runner.temp }}/packages
+      - name: Stage it, as a dry run
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          crates=$(ls "$RUNNER_TEMP"/packages/*.crate | wc -l)
+          if [[ "$crates" != 4 ]]; then echo "::error::expected 4 crates, the pack made $crates"; exit 1; fi
+          npm stage publish "$RUNNER_TEMP/packages/ferrovue-$VERSION.tgz" --dry-run --access public --tag next

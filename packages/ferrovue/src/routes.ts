@@ -11,11 +11,11 @@ export function routeRecords(routes: RouteEntry[], View: Component): RouteRecord
   return routes.map((r) =>
     typeof r === "string"
       ? { path: r, component: View }
-      : ({
+      : {
           path: r.path,
           ...(r.view === false ? {} : { component: View }),
           ...(r.name ? { name: r.name } : {}),
           ...(r.children ? { children: routeRecords(r.children, View) } : {}),
-        } as RouteRecordRaw),
+        },
   );
 }

@@ -4,6 +4,7 @@
 use std::hint::black_box;
 
 use criterion::{Criterion, criterion_group, criterion_main};
+use ferrovue::{Attr, Head, HeadValue};
 
 #[rustfmt::skip]
 #[path = "../tests/conformance/generated/mod.rs"]
@@ -154,5 +155,114 @@ fn bench(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, bench);
+/// Attributes merged from an element, a parent's fallthrough and a bound style object, as a root that
+/// takes `$attrs` writes them.
+fn merged_attrs(out: &mut String) {
+    ferrovue::attrs_into(
+        out,
+        &[
+            &[("id", Attr::str("own")), ("class", Attr::str("card"))],
+            &[
+                ("title", Attr::str("<t>")),
+                ("data-k", Attr::str("v")),
+                ("ariaLabel", Attr::str("x")),
+                ("class", Attr::str("big")),
+            ],
+            &[(
+                "style",
+                Attr::style([("display", Attr::str("none")), ("fontSize", Attr::Int(12))]),
+            )],
+        ],
+        1,
+        " data-v-1",
+    );
+}
+
+/// Fractions, which JavaScript writes with the fewest digits that read back the same.
+fn fractions(out: &mut String) {
+    for x in [0.1, 2.5, 1234.5678, 0.30000000000000004, 1e-7, 19.99] {
+        ferrovue::push_number(out, black_box(x));
+        out.push(' ');
+    }
+}
+
+/// A head with a title, a meta tag, inline JSON-LD and attributes on `<html>`.
+fn head() -> Head {
+    let head = Head::new();
+    head.push(HeadValue::object([
+        ("title", HeadValue::str("Dune \"2\"")),
+        (
+            "meta",
+            HeadValue::array([HeadValue::object([
+                ("name", HeadValue::str("description")),
+                ("content", HeadValue::str("A \"desert\" planet")),
+            ])]),
+        ),
+        (
+            "script",
+            HeadValue::array([HeadValue::object([
+                ("type", HeadValue::str("application/ld+json")),
+                ("innerHTML", HeadValue::str("{\"a\":\"</script>\"}")),
+            ])]),
+        ),
+        (
+            "htmlAttrs",
+            HeadValue::object([
+                ("class", HeadValue::str("a b")),
+                ("lang", HeadValue::str("en")),
+            ]),
+        ),
+    ]));
+    head
+}
+
+/// The runtime's own paths that the scenarios above barely reach, each checked against what it
+/// wrote when it was last made faster, so a change to its output fails here as well as in the
+/// vectors.
+fn runtime(c: &mut Criterion) {
+    let mut group = c.benchmark_group("runtime");
+
+    let mut out = String::new();
+    merged_attrs(&mut out);
+    assert_eq!(out, MERGED_ATTRS);
+    group.bench_function("attrs_into", |b| {
+        let mut out = String::with_capacity(256);
+        b.iter(|| {
+            out.clear();
+            merged_attrs(black_box(&mut out));
+        })
+    });
+
+    let mut out = String::new();
+    fractions(&mut out);
+    assert_eq!(out, FRACTIONS);
+    group.bench_function("push_number", |b| {
+        let mut out = String::with_capacity(256);
+        b.iter(|| {
+            out.clear();
+            fractions(black_box(&mut out));
+        })
+    });
+
+    let html = head().render();
+    assert_eq!((html.head_tags.as_str(), html.html_attrs.as_str()), HEAD);
+    group.bench_function("head", |b| b.iter(|| black_box(head()).render()));
+
+    group.finish();
+}
+
+const MERGED_ATTRS: &str = r#" id="own" class="card big" title="&lt;t&gt;" data-k="v" arialabel="x" data-v-1 style="display:none;font-size:12;""#;
+const FRACTIONS: &str = "0.1 2.5 1234.5678 0.30000000000000004 1e-7 19.99 ";
+const HEAD: (&str, &str) = (
+    concat!(
+        "<meta charset=\"utf-8\">\n",
+        "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n",
+        "<title>Dune &quot;2&quot;</title>\n",
+        "<meta name=\"description\" content=\"A &quot;desert&quot; planet\">\n",
+        r#"<script type="application/ld+json">{"a":"\u003C/script>"}</script>"#,
+    ),
+    r#" lang="en" class="a b""#,
+);
+
+criterion_group!(benches, bench, runtime);
 criterion_main!(benches);
