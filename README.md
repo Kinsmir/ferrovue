@@ -55,7 +55,7 @@ crate that includes it needs **edition 2024**.
 | Key | Required | Meaning |
 |---|---|---|
 | `components` | yes | Directory of `.vue` files to compile |
-| `out` | yes | Directory the Rust modules are written to. **Everything in it is replaced.** |
+| `out` | yes | Directory the Rust modules are written to. **Every module ferrovue wrote there is replaced**, and one no component produces any more is removed; a `.rs` file without ferrovue's `// @generated` header is left alone, and `--check` reports it |
 | `routes` | no | JSON file listing the app's routes: each a vue-router path, or `{ "path", "name", "children" }`. Or `{ "pages": "client/pages" }`: a folder of pages, whose file names give the routes as vue-router's file-based routing reads them (`index.vue`, `[id].vue`, `[[id]].vue`, `[...path].vue`, `(group)` folders, a `name.vue` beside `name/` as its layout), each page compiled as a component. Needed for `<RouterLink>`, `<RouterView>` and `useRoute()` |
 | `router` | no | Instead of `routes`: `{ routes, base?, linkActiveClass?, linkExactActiveClass? }`, matching `createWebHistory(base)` and `createRouter`'s options |
 | `stores` | no | Directory of Pinia option stores whose state components may read |

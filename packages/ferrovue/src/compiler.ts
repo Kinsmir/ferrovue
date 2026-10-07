@@ -6,7 +6,7 @@ import { importsOf, readComponent } from "./component.ts";
 import { scopeFor } from "./script.ts";
 import { attrsFlow } from "./fallthrough.ts";
 import { prepareDynamic } from "./dynamic.ts";
-import { componentSource, isIsland, modSource } from "./rust.ts";
+import { componentSource, GENERATED, isIsland, modSource } from "./rust.ts";
 import { renderParams } from "./plugin.ts";
 import { PLUGINS } from "./plugins/index.ts";
 
@@ -103,11 +103,20 @@ export function generate(root: string, config: Config = loadConfig(root)): Map<s
   return out;
 }
 
+/** Whether a file starts with the header ferrovue writes, so `write` removes only what an earlier
+ * run wrote and never a module of the app's own put in the output directory by mistake. */
+export function isGenerated(file: string): boolean {
+  try {
+    return readFileSync(file, "utf8").startsWith(GENERATED);
+  } catch {
+    return false;
+  }
+}
+
 function moduleFile(module: string): string {
   return `${module.replace(/^r#/, "")}.rs`;
 }
 
-/** Write what `generate` produces to the configured directory, replacing what is there. */
 /** What \`write\` changed in the output directory. */
 export interface Written {
   /** Every file the output directory now holds. */
@@ -140,7 +149,7 @@ export function write(root: string, config: Config = loadConfig(root)): Written 
       changed.push(name);
     }
   }
-  const removed = readdirSync(target).filter((f) => f.endsWith(".rs") && !files.has(f));
+  const removed = readdirSync(target).filter((f) => f.endsWith(".rs") && !files.has(f) && isGenerated(join(target, f)));
   for (const f of removed) rmSync(join(target, f));
   const islands = Object.fromEntries([...ctx.components.values()].filter(isIsland).map((c) => [c.name, c.file]));
   return { files: [...files.keys()], changed, removed, islands };

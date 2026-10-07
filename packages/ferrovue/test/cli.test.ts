@@ -40,11 +40,19 @@ it("rewrites nothing that did not change, so a Rust build does not rebuild it", 
   expect(statSync(join(root, "src/generated/hello.rs")).mtimeMs).toBe(before);
 });
 
-it("replaces what the output directory held", () => {
-  mkdirSync(join(root, "src/generated"), { recursive: true });
-  writeFileSync(join(root, "src/generated/old.rs"), "// gone");
-  expect(run().status).toBe(0);
-  expect(readdirSync(join(root, "src/generated"))).not.toContain("old.rs");
+it("removes the modules it wrote that no component produces, and leaves the app's own", () => {
+  run();
+  const generated = readFileSync(join(root, "src/generated/hello.rs"), "utf8");
+  writeFileSync(join(root, "src/generated/gone.rs"), generated);
+  writeFileSync(join(root, "src/generated/main.rs"), "fn main() {}\n");
+  const r = run();
+  expect(r.status, r.stderr).toBe(0);
+  expect(r.stdout).toContain("1 removed");
+  expect(existsSync(join(root, "src/generated/gone.rs"))).toBe(false);
+  expect(readFileSync(join(root, "src/generated/main.rs"), "utf8")).toBe("fn main() {}\n");
+  const c = run("--check");
+  expect(c.status).toBe(1);
+  expect(c.stderr).toContain("not generated: src/generated/main.rs (not written by ferrovue");
 });
 
 it("--check passes on what it just wrote", () => {
@@ -108,6 +116,27 @@ defineProps<{ name: string }>();
 </script>
 <template><p>Bye, {{ name }}</p></template>`);
     await waitFor("1 changed");
+  } finally {
+    child.kill();
+  }
+}, 70_000);
+
+it("--watch reports an error that is not a refusal without stopping", async () => {
+  const child = spawn(process.execPath, [CLI, "--watch"], { cwd: root });
+  let out = "";
+  child.stdout.on("data", (d) => (out += d));
+  child.stderr.on("data", (d) => (out += d));
+  const waitFor = async (text: string): Promise<void> => {
+    for (let i = 0; i < 400 && !out.includes(text); i++) await new Promise((r) => setTimeout(r, 50));
+    expect(out).toContain(text);
+  };
+  try {
+    await waitFor("watching for changes");
+    writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify({ components: "missing", out: "src/generated" }));
+    await waitFor("ENOENT");
+    writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify({ components: "components", out: "src/generated" }));
+    await waitFor("nothing changed");
+    expect(child.exitCode).toBeNull();
   } finally {
     child.kill();
   }

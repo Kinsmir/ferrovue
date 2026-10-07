@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { existsSync, mkdirSync, readFileSync, readdirSync, watch, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
-import { type Config, CONFIG_FILE, generate, loadConfig, VERSION, write } from "./compiler.ts";
+import { type Config, CONFIG_FILE, generate, isGenerated, loadConfig, VERSION, write } from "./compiler.ts";
 import { unifiedDiff } from "./diff.ts";
 import { diagnose, formatRefusal, isRefusal } from "./diagnostics.ts";
 
@@ -112,7 +112,8 @@ function check(config: Config, showDiff = false): number {
       if (showDiff) console.error(unifiedDiff(`${config.out}/${name}`, committed(name), want.get(name)!));
     }
     for (const name of extra) {
-      console.error(`not generated: ${config.out}/${name}`);
+      const foreign = isGenerated(join(dir, name)) ? "" : ` (not written by ferrovue, so \`ferrovue\` leaves it: move it out of ${config.out})`;
+      console.error(`not generated: ${config.out}/${name}${foreign}`);
       if (showDiff) console.error(unifiedDiff(`${config.out}/${name}`, committed(name), ""));
     }
     console.error("run `ferrovue` to regenerate");
@@ -134,7 +135,10 @@ function watchProject(configPath?: string): void {
     try {
       once(loadConfig(root, configPath));
     } catch (e) {
-      report(e);
+      // A refusal is reported as one; anything else (a folder renamed away, a file read as it is
+      // written) is shown too, and the watch carries on for the change that puts it right.
+      if (isRefusal(e)) report(e);
+      else console.error(`error: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
   run();
@@ -152,10 +156,14 @@ function watchProject(configPath?: string): void {
     );
   };
   let timer: ReturnType<typeof setTimeout> | null = null;
-  watch(root, { recursive: true }, (_event, name) => {
+  const watcher = watch(root, { recursive: true }, (_event, name) => {
     if (!name || ignored(relative(root, join(root, name)))) return;
     if (timer) clearTimeout(timer);
     timer = setTimeout(run, 50);
+  });
+  watcher.on("error", (e) => {
+    console.error(`error: stopped watching: ${e.message}`);
+    process.exitCode = 1;
   });
   (json ? console.error : console.log)("watching for changes (Ctrl-C to stop)");
 }

@@ -176,9 +176,11 @@ export default function ferrovue(options: FerrovueOptions = {}): Plugin {
             }
           }
         } catch (e) {
-          if (!isRefusal(e)) throw e;
-          server.config.logger.error(`ferrovue: ${formatRefusal(e)}`, { timestamp: true });
-          server.ws.send({ type: "error", err: { message: `ferrovue: ${formatRefusal(e)}`, stack: "", plugin: "ferrovue" } });
+          // Thrown from a watcher's listener, anything but a refusal would take the dev server down:
+          // show it like one, and regenerate on the change that puts it right.
+          const message = isRefusal(e) ? formatRefusal(e) : `error: ${e instanceof Error ? e.message : String(e)}`;
+          server.config.logger.error(`ferrovue: ${message}`, { timestamp: true });
+          server.ws.send({ type: "error", err: { message: `ferrovue: ${message}`, stack: "", plugin: "ferrovue" } });
         }
       };
       server.watcher.on("change", onChange);
