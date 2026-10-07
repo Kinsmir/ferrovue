@@ -38,8 +38,8 @@ cargo add ferrovue serde --features serde/derive
 cargo add --dev serde_json    # the generated conformance helper uses it under cfg(test)
 ```
 
-ferrovue supports the latest stable Rust, currently **1.99**. Generated code uses let-chains, so the
-crate that includes it needs **edition 2024**.
+ferrovue needs Rust **1.89** or later (CI tests that and the latest stable). Generated code uses
+let-chains, so the crate that includes it needs **edition 2024**.
 
 ### 2. Configure
 

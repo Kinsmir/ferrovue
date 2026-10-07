@@ -264,12 +264,14 @@ async function load(component: IslandComponent): Promise<Component | Error> {
  * it: its name (`c`) and the props it was rendered from (`p`). */
 export interface PagePart {
   c: string;
-  p: Record<string, unknown>;
+  /** `null` where serde_json refused the props, which the part then renders without. */
+  p: Record<string, unknown> | null;
 }
 
 /** What `ferrovue::PageRecord` writes: the layout's props, and each slot's parts in order. */
 export interface PageRecord {
-  props: Record<string, unknown>;
+  /** `null` where serde_json refused the props, which the layout then renders without. */
+  props: Record<string, unknown> | null;
   slots: Record<string, PagePart[]>;
 }
 
