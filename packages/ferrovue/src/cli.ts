@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 import { existsSync, mkdirSync, readFileSync, readdirSync, watch, writeFileSync } from "node:fs";
-import { dirname, join, relative, resolve, sep } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { type Config, CONFIG_FILE, generate, isGenerated, loadConfig, VERSION, write } from "./compiler.ts";
 import { unifiedDiff } from "./diff.ts";
 import { diagnose, formatRefusal, isRefusal } from "./diagnostics.ts";
+import { affects, type Inputs, inputsOf } from "./inputs.ts";
 
 const root = process.cwd();
 
@@ -131,33 +132,27 @@ function once(config: Config): void {
 }
 
 function watchProject(configPath?: string): void {
+  let inputs: Inputs;
   const run = (): void => {
+    let config: Config | null = null;
     try {
-      once(loadConfig(root, configPath));
+      config = loadConfig(root, configPath);
+      once(config);
     } catch (e) {
       // A refusal is reported as one; anything else (a folder renamed away, a file read as it is
       // written) is shown too, and the watch carries on for the change that puts it right.
       if (isRefusal(e)) report(e);
       else console.error(`error: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      inputs = inputsOf(root, configPath ?? CONFIG_FILE, config);
     }
   };
   run();
-  const ignored = (file: string): boolean => {
-    let out = "";
-    try {
-      out = loadConfig(root, configPath).out;
-    } catch {
-    }
-    const parts = file.split(sep);
-    return (
-      parts.some((p) => p === "node_modules" || p === "target" || p === ".git" || p === "dist") ||
-      (out !== "" && (file === out || file.startsWith(out + sep))) ||
-      !/\.(vue|ts|json)$/.test(file)
-    );
-  };
   let timer: ReturnType<typeof setTimeout> | null = null;
+  // One recursive watch of the root, filtered to the inputs: watching each input directory instead
+  // would miss one created later, and the type files may be anywhere.
   const watcher = watch(root, { recursive: true }, (_event, name) => {
-    if (!name || ignored(relative(root, join(root, name)))) return;
+    if (!name || !affects(inputs, join(root, name))) return;
     if (timer) clearTimeout(timer);
     timer = setTimeout(run, 50);
   });
@@ -201,6 +196,16 @@ try {
     console.error(`error: unknown option or command '${unknown}'\n\nRun \`ferrovue --help\` for usage.`);
     process.exit(1);
   }
+  const conflict = (a: string, b: string): never => {
+    console.error(`error: '${a}' does not combine with '${b}'`);
+    return process.exit(1);
+  };
+  if (args.includes("init")) {
+    const other = args.find((a) => a === "--check" || a === "--watch" || a === "--diff" || a === "-d");
+    if (other !== undefined) conflict("init", other);
+    if (json) conflict("init", "--format json");
+  }
+  if (args.includes("--check") && args.includes("--watch")) conflict("--check", "--watch");
   if ((args.includes("--diff") || args.includes("-d")) && !args.includes("--check")) {
     console.error("error: '--diff' requires '--check'");
     process.exit(1);

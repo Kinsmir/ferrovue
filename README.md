@@ -92,6 +92,22 @@ pnpm ferrovue --check --format json  # errors as JSON, for an editor or CI annot
 pnpm ferrovue --watch   # regenerates when components or configs change
 ```
 
+`-c, --config <path>` reads another configuration file. `--watch` regenerates on a change to what a
+run reads (the configuration, the components, stores, locale messages, pages or routes file, and
+the `.ts` files components import types from), not on any other file of the project. A Vite project
+can use the plugin instead, which does the same in its dev server and before a build:
+
+```ts
+// vite.config.ts
+import ferrovue from "ferrovue/vite";
+
+export default { plugins: [ferrovue({ config: "config/ferrovue.json" })] };
+```
+
+`root` is the project root the configuration's paths are relative to (Vite's working directory by
+default), and `config` the configuration file in it, as `--config` takes it (`ferrovue.config.json`
+by default).
+
 Every error carries a stable code, as `error[FV0602]: components/Card.vue:4:17: …`, documented in
 the crate's [`error_codes`](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html)
 guide. `--format json` writes the same errors as JSON with the exit status unchanged, and a VS Code
