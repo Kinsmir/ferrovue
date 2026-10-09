@@ -9,5 +9,6 @@ import { clientOnly } from "./client-only.ts";
 import { twinsPlugin } from "./twins.ts";
 import { provideInject } from "./provide.ts";
 import { head } from "./head.ts";
+import { cssModules } from "./css-modules.ts";
 
-export const PLUGINS: readonly Plugin[] = [router, piniaStores, sharedTypes, i18n, teleport, scoped, clientOnly, twinsPlugin, provideInject, head];
+export const PLUGINS: readonly Plugin[] = [router, piniaStores, sharedTypes, i18n, teleport, scoped, clientOnly, twinsPlugin, provideInject, head, cssModules];

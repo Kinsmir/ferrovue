@@ -28,6 +28,18 @@ pub mod chips;
 pub mod client_side;
 pub mod constants;
 pub mod counter;
+pub mod css_vars;
+pub mod css_vars_bound;
+pub mod css_vars_branch;
+pub mod css_vars_later;
+pub mod css_vars_leaf;
+pub mod css_vars_link;
+pub mod css_vars_page;
+pub mod css_vars_root;
+pub mod css_vars_shapes;
+pub mod css_vars_show;
+pub mod css_vars_tag;
+pub mod css_vars_wait;
 pub mod dashboard;
 pub mod data_list;
 pub mod data_table;
@@ -81,6 +93,8 @@ pub mod meter;
 pub mod modal;
 pub mod model;
 pub mod model_parent;
+pub mod moduled;
+pub mod moduled_chip;
 pub mod narrowed_rows;
 pub mod narrowing;
 pub mod nav;
@@ -314,6 +328,62 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let state: stores::Stores = serde_json::from_value(fixture.stores.clone()).map_err(|e| e.to_string())?;
             counter::render(&mut out, &props, &state);
+        }
+        "CssVars" => {
+            let props: css_vars::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            css_vars::render(&mut out, &props);
+        }
+        "CssVarsBound" => {
+            let props: css_vars_bound::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            css_vars_bound::render(&mut out, &props);
+        }
+        "CssVarsBranch" => {
+            let props: css_vars_branch::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            css_vars_branch::render(&mut out, &props);
+        }
+        "CssVarsLater" => {
+            let props: css_vars_later::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            css_vars_later::render(&mut out, &props);
+        }
+        "CssVarsLeaf" => {
+            let props: css_vars_leaf::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
+            css_vars_leaf::render(&mut out, &props, css_vars_leaf::Slots { default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)) });
+        }
+        "CssVarsLink" => {
+            let props: css_vars_link::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let router = route_table::router();
+            let route = router.at(&fixture.route);
+            css_vars_link::render(&mut out, &props, &route);
+        }
+        "CssVarsPage" => {
+            let props: css_vars_page::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            css_vars_page::render(&mut out, &props);
+        }
+        "CssVarsRoot" => {
+            let props: css_vars_root::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            css_vars_root::render(&mut out, &props);
+        }
+        "CssVarsShapes" => {
+            let props: css_vars_shapes::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let router = route_table::router();
+            let route = router.at(&fixture.route);
+            css_vars_shapes::render(&mut out, &props, &route);
+        }
+        "CssVarsShow" => {
+            let props: css_vars_show::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            css_vars_show::render(&mut out, &props);
+        }
+        "CssVarsTag" => {
+            let props: css_vars_tag::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            css_vars_tag::render(&mut out, &props);
+        }
+        "CssVarsWait" => {
+            let props: css_vars_wait::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            css_vars_wait::render(&mut out, &props);
         }
         "Dashboard" => {
             let props: dashboard::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -576,6 +646,14 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "ModelParent" => {
             let props: model_parent::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             model_parent::render(&mut out, &props);
+        }
+        "Moduled" => {
+            let props: moduled::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            moduled::render(&mut out, &props);
+        }
+        "ModuledChip" => {
+            let props: moduled_chip::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            moduled_chip::render(&mut out, &props);
         }
         "NarrowedRows" => {
             let props: narrowed_rows::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

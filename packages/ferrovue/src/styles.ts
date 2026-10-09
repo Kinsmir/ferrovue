@@ -1,10 +1,117 @@
 import { escapeHtml, hyphenate, parseStringStyle } from "@vue/shared";
-import { type N, type Scope, type Val, fail, nothing, rustStr } from "./model.ts";
-import { expr } from "./expr.ts";
-import { cond } from "./narrowing.ts";
-import { condition, logical, not, strArg } from "./parens.ts";
+import { type Component, type N, type Scope, type Val, fail, nothing, rustStr } from "./model.ts";
+import { describeTy, expr } from "./expr.ts";
+import { cond, known } from "./narrowing.ts";
+import { condition, logical, not, receiver, strArg } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
 import { display, valueAttr } from "./attrs.ts";
+import { isTemporary } from "./strings.ts";
+
+/** Put the object Vue's server compiler declares as `_cssVars`, the `v-bind()` variables in
+ * `<style>`, in place of each use of it in the compiled template's statements, with each value
+ * marked to be written as `ssrRenderStyle` writes a variable. */
+export function inlineCssVars(comp: Component, body: N[]): N[] {
+  const at = body.findIndex((st) => st.type === "VariableDeclaration" && st.declarations[0]?.id?.name === "_cssVars");
+  if (at < 0) return body;
+  const vars: N[] = body[at].declarations[0].init.properties[0].value.properties;
+  const place = (n: N, where: N): N => {
+    if (Array.isArray(n)) return n.map((x) => place(x, where));
+    if (!n || typeof n !== "object") return n;
+    const copy: N = {};
+    for (const [k, v] of Object.entries(n)) copy[k] = k === "loc" ? where.loc : place(v, where);
+    if (typeof n.type === "string") copy.__fv = "source";
+    return copy;
+  };
+  const object = (): N => ({
+    type: "ObjectExpression",
+    properties: [{
+      type: "ObjectProperty",
+      computed: false,
+      key: { type: "Identifier", name: "style" },
+      value: {
+        type: "ObjectExpression",
+        properties: vars.map((p, i) => {
+          const where = comp.cssVarsAt?.[i] ?? p;
+          return {
+            type: "ObjectProperty",
+            computed: false,
+            key: { type: "StringLiteral", value: String(p.key.value).replace(/^:/, "") },
+            value: { type: "FvCssVar", value: place(p.value, where), loc: where.loc, __fv: where.__fv },
+          };
+        }),
+      },
+    }],
+  });
+  const swap = (n: N): void => {
+    if (!n || typeof n !== "object") return;
+    for (const [k, v] of Object.entries(n)) {
+      if (k === "loc") continue;
+      if (Array.isArray(v)) {
+        v.forEach((x, i) => {
+          if (x?.type === "Identifier" && x.name === "_cssVars") v[i] = object();
+          else swap(x);
+        });
+      } else if (v && typeof v === "object") {
+        if ((v as N).type === "Identifier" && (v as N).name === "_cssVars") n[k] = object();
+        else swap(v);
+      }
+    }
+  };
+  const rest = body.filter((_, i) => i !== at);
+  swap(rest);
+  return rest;
+}
+
+function cssVarOf(s: Scope, n: N): Val {
+  const v = expr(s, n.value);
+  const of = v.ty.k === "opt" ? v.ty.of : v.ty;
+  if (!nothing(v.ty) && of.k !== "str" && of.k !== "int" && of.k !== "float") {
+    fail(s.comp, "FV1006", `\`v-bind()\` in \`<style>\` of ${describeTy(of)}: Vue writes a string or a number, and warns of anything else`, n);
+  }
+  return v;
+}
+
+function writeCssVar(s: Scope, e: Emitter, css: string, n: N): void {
+  const one = (v: Val): void => {
+    if (nothing(v.ty)) {
+      e.lit(`${escapeHtml(css)}:initial;`);
+      return;
+    }
+    if (v.ty.k === "opt") {
+      e.open(`if let Some(v) = ${v.code}`);
+      one({ code: "v", ty: v.ty.of });
+      e.close(" else {");
+      e.lit(`${escapeHtml(css)}:initial;`);
+      e.close();
+      return;
+    }
+    e.lit(`${escapeHtml(css)}:`);
+    const k = v.ty.k === "str" ? known(v) : true;
+    if (k === false) e.lit(" ");
+    else if (k === undefined && isTemporary(v)) e.stmt(`match AsRef::<str>::as_ref(${strArg(v.code)}) { "" => out.push(' '), v => fv::escape_into(out, v) }`);
+    else if (k === undefined) {
+      e.open(`if ${receiver(v.code)}.is_empty()`);
+      e.lit(" ");
+      e.close(" else {");
+      display(e, v);
+      e.close();
+    } else display(e, v);
+    e.lit(";");
+  };
+  one(cssVarOf(s, n));
+}
+
+function cssVarAttr(s: Scope, n: N): string {
+  const one = (v: Val): string => {
+    if (nothing(v.ty)) return 'fv::Attr::str("initial")';
+    if (v.ty.k === "opt") return `match ${v.code} { Some(v) => ${one({ code: "v", ty: v.ty.of })}, None => fv::Attr::str("initial") }`;
+    const k = v.ty.k === "str" ? known(v) : true;
+    if (k === false) return 'fv::Attr::str(" ")';
+    if (k === undefined) return `if ${receiver(v.code)}.is_empty() { fv::Attr::str(" ") } else { ${valueAttr(s, v, n)} }`;
+    return valueAttr(s, v, n);
+  };
+  return one(cssVarOf(s, n));
+}
 
 export function mergedStyle(s: Scope, e: Emitter, n: N): void {
   if (n.type === "StringLiteral") {
@@ -35,7 +142,7 @@ export function styleAttr(s: Scope, n: N): string {
         if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "FV1008", "a style object holds plain `property: value` pairs", p);
         const key: string = p.key.type === "Identifier" ? p.key.name : String(p.key.value);
         if (/^\d+$/.test(key) || key.startsWith(":")) fail(s.comp, "FV1009", `style property \`${key}\``, p);
-        return `(${rustStr(key)}, ${valueAttr(s, expr(s, p.value), p.value)})`;
+        return `(${rustStr(key)}, ${p.value.type === "FvCssVar" ? cssVarAttr(s, p.value) : valueAttr(s, expr(s, p.value), p.value)})`;
       });
       return `fv::Attr::style([${entries.join(", ")}])`;
     }
@@ -117,6 +224,10 @@ export function renderStyle(s: Scope, e: Emitter, n: N): void {
     }
   }
   const write = (css: string, value: N): void => {
+    if (value.type === "FvCssVar") {
+      writeCssVar(s, e, css, value);
+      return;
+    }
     if (value.type === "StringLiteral" || value.type === "NumericLiteral") {
       e.lit(escapeHtml(`${css}:${String(value.value)};`));
       return;

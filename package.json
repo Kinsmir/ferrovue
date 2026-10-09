@@ -21,7 +21,7 @@
     "conformance:generate": "node scripts/ferrovue-in.ts crates/ferrovue/tests/conformance",
     "conformance:check": "node scripts/ferrovue-in.ts crates/ferrovue/tests/conformance --check",
     "conformance:record": "FERROVUE_FIXTURES_WRITE=1 vitest run packages/ferrovue/test/conformance.test.ts packages/ferrovue/test/page.test.ts",
-    "vectors:record": "FERROVUE_VECTORS_WRITE=1 vitest run packages/ferrovue/test/router.test.ts packages/ferrovue/test/vectors.test.ts packages/ferrovue/test/file-routes.test.ts",
+    "vectors:record": "FERROVUE_VECTORS_WRITE=1 vitest run packages/ferrovue/test/router.test.ts packages/ferrovue/test/vectors.test.ts packages/ferrovue/test/file-routes.test.ts packages/ferrovue/test/css-modules.test.ts",
     "errors:generate": "FERROVUE_ERRORS_WRITE=1 vitest run packages/ferrovue/test/errors.test.ts",
     "schema:generate": "FERROVUE_SCHEMA_WRITE=1 vitest run packages/ferrovue/test/schema.test.ts",
     "api:report": "node scripts/api-report.ts",

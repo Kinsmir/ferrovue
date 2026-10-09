@@ -7,6 +7,7 @@ import { childOf } from "./expr.ts";
 import { Emitter } from "./emitter.ts";
 import { occurrences } from "./parens.ts";
 import { statements } from "./template.ts";
+import { inlineCssVars } from "./styles.ts";
 import { slotFieldBorrows, slotFieldTy, slotTypeName } from "./slots.ts";
 import { extraParams, fieldInit, takesSlots } from "./children.ts";
 import { paramsOf, renderParams, slotContextOf, slotFieldsOf } from "./plugin.ts";
@@ -242,7 +243,7 @@ export function componentSource(comp: Component, ast: N[], ssr: string, componen
   const preludes = ctx.plugins.flatMap((p) => (p.prelude ? [p.prelude(scope)] : []));
   const opening = [...preludes.flatMap((p) => p.before), ...lets, ...preludes.flatMap((p) => p.after)];
   for (const l of opening) e.stmt(l);
-  statements(scope, e, fn.body.body);
+  statements(scope, e, inlineCssVars(comp, fn.body.body));
   for (let i = opening.length - 1; i >= 0; i--) {
     const name = /^let (\w+)/.exec(opening[i]!)?.[1];
     if (name !== undefined && !e.reads(name, i + 1)) e.lines.splice(i, 1);

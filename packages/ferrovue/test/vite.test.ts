@@ -95,6 +95,63 @@ it("fails a build whose `<style scoped>` ids plugin-vue computes otherwise, and 
   expect(warned).toHaveLength(1);
 });
 
+function started(plugin: ReturnType<typeof ferrovue>, config: Record<string, unknown>): string[] {
+  const warned: string[] = [];
+  (plugin.configResolved as (c: unknown) => void)(config);
+  const hook = plugin.buildStart as (this: { error(m: string): never; warn(m: string): void }) => void;
+  hook.call({
+    error(m: string): never {
+      throw new Error(m);
+    },
+    warn: (m: string) => void warned.push(m),
+  });
+  return warned;
+}
+
+it("fails a build whose `v-bind()` variables plugin-vue names otherwise, and warns the dev server", () => {
+  writeFileSync(join(root, "components", "Hello.vue"), `${good}\n<style>p { color: v-bind(name) }</style>`);
+  const vite = (command: "build" | "serve", features: Record<string, unknown> = {}) => ({
+    plugins: [{ name: "vite:vue", api: { options: { features } } }],
+    root,
+    isProduction: command === "build",
+    command,
+  });
+  expect(started(ferrovue({ root }), vite("build"))).toEqual([]);
+  expect(() => started(ferrovue({ root }), vite("build", { componentIdGenerator: "filepath" }))).toThrow(/the ids `v-bind\(\)` in `<style>` names its variables by: @vitejs\/plugin-vue hashes "filepath"/);
+  expect(started(ferrovue({ root }), vite("serve"))).toEqual([expect.stringMatching(/plugin-vue hashes "filepath"/)]);
+  writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify({ components: "components", out: "gen", scopeId: "filepath" }));
+  expect(started(ferrovue({ root }), vite("build", { componentIdGenerator: "filepath" }))).toEqual([]);
+  expect(started(ferrovue({ root }), vite("serve"))).toEqual([expect.stringMatching(/compiles for development, where ferrovue\.config\.json has `"isProduction": true`; set `isProduction` to false/)]);
+  writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify({ components: "components", out: "gen", scopeId: "filepath", isProduction: false }));
+  expect(started(ferrovue({ root }), vite("serve"))).toEqual([]);
+  expect(() => started(ferrovue({ root }), vite("build", { componentIdGenerator: "filepath" }))).toThrow(/compiles for production, where ferrovue\.config\.json has `"isProduction": false`/);
+});
+
+it("fails a build whose CSS modules Vite names otherwise than the configuration", () => {
+  const pattern = "[local]_[hash:base64:5]";
+  writeFileSync(join(root, "components", "Hello.vue"), `<template><p :class="$style.hi">hi</p></template>\n<style module>.hi { color: red }</style>`);
+  writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify({ components: "components", out: "gen", cssModules: { generateScopedName: pattern } }));
+  const cwd = process.cwd();
+  const vite = (css: Record<string, unknown>) => ({ plugins: [], root, isProduction: true, command: "build", css });
+  try {
+    process.chdir(root);
+    expect(started(ferrovue({ root }), vite({ modules: { generateScopedName: pattern } }))).toEqual([]);
+    expect(() => started(ferrovue({ root }), vite({}))).toThrow(/Vite's `css\.modules\.generateScopedName` is unset, ferrovue\.config\.json's `cssModules\.generateScopedName` "\[local\]_\[hash:base64:5\]"/);
+    expect(() => started(ferrovue({ root }), vite({ modules: { generateScopedName: () => "x" } }))).toThrow(/is a function/);
+    expect(() => started(ferrovue({ root }), vite({ modules: { generateScopedName: pattern, hashPrefix: "x" } }))).toThrow(/`css\.modules\.hashPrefix` is "x"/);
+    expect(() => started(ferrovue({ root }), vite({ modules: { generateScopedName: pattern, localsConvention: "camelCase" } }))).toThrow(/localsConvention/);
+    expect(() => started(ferrovue({ root }), vite({ modules: { generateScopedName: pattern, scopeBehaviour: "global" } }))).toThrow(/scopeBehaviour/);
+    expect(() => started(ferrovue({ root }), vite({ transformer: "lightningcss", modules: { generateScopedName: pattern } }))).toThrow(/lightningcss/);
+    expect(() => started(ferrovue({ root }), vite({ modules: false }))).toThrow(/`css\.modules` is `false`/);
+    process.chdir(join(root, "components"));
+    expect(() => started(ferrovue({ root }), vite({ modules: { generateScopedName: pattern } }))).toThrow(/Vite runs in .*components, from which it hashes a module's path/);
+    writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify({ components: "components", out: "gen", cssModules: { generateScopedName: "[local]" } }));
+    expect(started(ferrovue({ root }), vite({ modules: { generateScopedName: "[local]" } }))).toEqual([]);
+  } finally {
+    process.chdir(cwd);
+  }
+});
+
 it("regenerates on the configuration, components, stores, messages, pages, routes and the type files read, and nothing else", () => {
   mkdirSync(join(root, "stores"));
   mkdirSync(join(root, "locales"));

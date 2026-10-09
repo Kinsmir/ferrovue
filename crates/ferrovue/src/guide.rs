@@ -8,7 +8,8 @@
 //! 3. [`props`]: how each TypeScript prop type becomes a Rust type, and how to build props;
 //!    dictionaries, with [`Record`](crate::Record).
 //! 4. [`slots`]: slot content from Rust, named and scoped slots, fallbacks.
-//! 5. [`scoped_styles`]: `<style scoped>` ids, matching `@vitejs/plugin-vue`, and `:slotted()`.
+//! 5. [`scoped_styles`]: `<style scoped>` ids, matching `@vitejs/plugin-vue`, and `:slotted()`;
+//!    `v-bind()` in `<style>`; CSS modules.
 //! 6. [`routing`]: `<RouterLink>`, `<RouterView>` and `useRoute()`, with [`Router`](crate::Router)
 //!    and [`Route`](crate::Route); routes from a folder of pages.
 //! 7. [`i18n`]: vue-i18n's `$t`, with [`I18n`](crate::I18n).

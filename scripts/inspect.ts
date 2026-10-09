@@ -25,7 +25,7 @@ const { code } = compileTemplate({
   scoped: !!scopeId,
   slotted: descriptor.slotted,
   ssr: true,
-  ssrCssVars: [],
+  ssrCssVars: descriptor.cssVars,
   compilerOptions: script?.bindings ? { bindingMetadata: script.bindings } : {},
 });
 console.log("── Vue SSR compilation ──\n" + code);

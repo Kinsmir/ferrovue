@@ -22,8 +22,9 @@ Problems panel: see [`quick_start`](crate::guide::quick_start#editor-and-ci-diag
 
 What is refused today, each with an error that names it:
 
-- `<style module>`, and `v-bind()` in CSS (`<style scoped>` and a global `<style>` block are fine:
-  see [`scoped_styles`](crate::guide::scoped_styles));
+- `<style module>` without `cssModules` in the configuration, a module in another file, one a
+  preprocessor compiles or one that imports from another file, and `v-bind()` in `<style>` of a value
+  that is not a string or a number (see [`scoped_styles`](crate::guide::scoped_styles));
 - `<RouterView>` in a component with `<style scoped>`, which would give the page that component's
   id; and, since vue-router renders a link from virtual nodes, a `<slot>` inside a `<RouterLink>`
   that takes scope ids, or an element inside one in slot content given a `:slotted()` id;
@@ -252,7 +253,9 @@ record, which the client still reads.
   U+FFFD, as a server sends it. See [`strings`](crate::guide::strings).
 - **Scope ids** are computed as `@vitejs/plugin-vue` computes them only when `scopeId` and
   `viteRoot` match its configuration; a wrong id hydrates cleanly and leaves the styles unapplied.
-  See [`scoped_styles`](crate::guide::scoped_styles).
+  The same holds for the names of `v-bind()` variables in `<style>`, which follow `isProduction`
+  too, and for CSS module classes, which follow `cssModules`. The Vite plugin compares them. See
+  [`scoped_styles`](crate::guide::scoped_styles).
 - **String-literal unions** are not checked in Rust: a value outside the union renders as given.
 - **Optional values must be narrowed** before use, as TypeScript requires: `v-if="user"`,
   `user !== undefined`, `??`.

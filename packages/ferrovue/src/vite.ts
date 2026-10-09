@@ -16,24 +16,16 @@ export interface FerrovueOptions {
 }
 
 /** How `@vitejs/plugin-vue`, as this build configures it, computes a `<style scoped>` id: from the
- * path alone or the path and source, hashed from Vite's root. `null` without the plugin, or with an
- * id generator of its own. */
-export function vueScopeIds(config: ResolvedConfig): { mode: "filepath" | "filepath-source"; root: string } | null {
+ * path alone or the path and source, hashed from Vite's root; and whether it compiles for production.
+ * `null` without the plugin, or with an id generator of its own. */
+export function vueScopeIds(config: ResolvedConfig): { mode: "filepath" | "filepath-source"; root: string; production: boolean } | null {
   const vue = config.plugins.find((p) => p.name === "vite:vue");
   const generator = (vue?.api as { options?: { features?: { componentIdGenerator?: unknown } } } | undefined)?.options?.features?.componentIdGenerator;
   if (!vue || (generator !== undefined && generator !== "filepath" && generator !== "filepath-source")) return null;
-  return { mode: generator ?? (config.isProduction ? "filepath-source" : "filepath"), root: resolve(config.root) };
+  return { mode: generator ?? (config.isProduction ? "filepath-source" : "filepath"), root: resolve(config.root), production: config.isProduction };
 }
 
-/** Why the server's scope ids would differ from the client's, when a component has `<style scoped>`
- * and the configuration, `configFile`, computes them otherwise than plugin-vue: a page would
- * hydrate cleanly and show unstyled. */
-export function scopeIdMismatch(root: string, vue: { mode: string; root: string } | null, configFile = CONFIG_FILE): string | null {
-  if (!vue) return null;
-  const config = loadConfig(root, configFile, ignore);
-  const mode = config.scopeId ?? "filepath-source";
-  const viteRoot = resolve(root, config.viteRoot ?? ".");
-  if (mode === vue.mode && viteRoot === vue.root) return null;
+function componentSources(root: string, config: Config): string[] {
   let files: string[] = [];
   try {
     files = readdirSync(join(root, config.components))
@@ -48,8 +40,64 @@ export function scopeIdMismatch(root: string, vue: { mode: string; root: string 
     } catch {
     }
   }
-  if (!files.some((f) => /<style\b[^>]*\bscoped\b/.test(readFileSync(join(root, f), "utf8")))) return null;
-  return `\`<style scoped>\` ids: @vitejs/plugin-vue hashes "${vue.mode}" from ${vue.root}, ${configFile} "${mode}" from ${viteRoot}; set \`scopeId\` and \`viteRoot\` to match, or plugin-vue's \`features.componentIdGenerator\``;
+  return files.map((f) => readFileSync(join(root, f), "utf8"));
+}
+
+const SCOPED = /<style\b[^>]*\bscoped\b/;
+const CSS_VARS = /<style\b[^>]*>[^]*?\bv-bind\s*\([^]*?<\/style>/;
+const MODULE = /<style\b[^>]*\bmodule\b/;
+
+/** Why the server's scope ids, or the CSS variables `v-bind()` sets, would differ from the client's,
+ * when a component has `<style scoped>` or `v-bind()` in `<style>` and the configuration,
+ * `configFile`, computes them otherwise than plugin-vue: a page would hydrate and show unstyled. */
+export function scopeIdMismatch(root: string, vue: { mode: string; root: string; production?: boolean } | null, configFile = CONFIG_FILE): string | null {
+  if (!vue) return null;
+  const config = loadConfig(root, configFile, ignore);
+  const mode = config.scopeId ?? "filepath-source";
+  const viteRoot = resolve(root, config.viteRoot ?? ".");
+  const production = config.isProduction ?? true;
+  const sameIds = mode === vue.mode && viteRoot === vue.root;
+  const sameNames = vue.production === undefined || production === vue.production;
+  if (sameIds && sameNames) return null;
+  const sources = componentSources(root, config);
+  const scoped = sources.some((s) => SCOPED.test(s));
+  const vars = sources.some((s) => CSS_VARS.test(s));
+  if (!sameIds && (scoped || vars)) {
+    return `${scoped ? "`<style scoped>` ids" : "the ids `v-bind()` in `<style>` names its variables by"}: @vitejs/plugin-vue hashes "${vue.mode}" from ${vue.root}, ${configFile} "${mode}" from ${viteRoot}; set \`scopeId\` and \`viteRoot\` to match, or plugin-vue's \`features.componentIdGenerator\``;
+  }
+  if (!sameNames && vars) {
+    return `\`v-bind()\` in \`<style>\`: @vitejs/plugin-vue compiles ${vue.production ? "for production" : "for development"}, where ${configFile} has \`"isProduction": ${production}\`; set \`isProduction\` to ${vue.production}`;
+  }
+  return null;
+}
+
+/** Why the class names of the server's CSS modules would differ from those Vite gives the client,
+ * when a component has `<style module>` and Vite's `css`, run from `cwd`, names them otherwise than
+ * `cssModules` in the configuration, `configFile`. */
+export function cssModulesMismatch(root: string, css: ResolvedConfig["css"] | undefined, cwd: string, configFile = CONFIG_FILE): string | null {
+  const config = loadConfig(root, configFile, ignore);
+  const own = config.cssModules;
+  if (!own || !componentSources(root, config).some((s) => MODULE.test(s))) return null;
+  const modules = css?.modules;
+  const set = (what: string): string => `\`<style module>\` class names: ${what}`;
+  if (css?.transformer === "lightningcss") return set("Vite names them with lightningcss (`css.transformer`), where ferrovue computes postcss-modules' names; use the PostCSS transformer");
+  if (modules === false) return set("Vite's `css.modules` is `false`, which leaves CSS modules unprocessed");
+  if (modules?.generateScopedName !== own.generateScopedName) {
+    const theirs = typeof modules?.generateScopedName === "function" ? "a function" : modules?.generateScopedName === undefined ? "unset" : JSON.stringify(modules.generateScopedName);
+    return set(`Vite's \`css.modules.generateScopedName\` is ${theirs}, ${configFile}'s \`cssModules.generateScopedName\` ${JSON.stringify(own.generateScopedName)}; set the two alike, to a string`);
+  }
+  if ((modules.hashPrefix ?? "") !== (own.hashPrefix ?? "")) {
+    return set(`Vite's \`css.modules.hashPrefix\` is ${JSON.stringify(modules.hashPrefix ?? "")}, ${configFile}'s \`cssModules.hashPrefix\` ${JSON.stringify(own.hashPrefix ?? "")}`);
+  }
+  if (modules.localsConvention !== undefined) return set("Vite's `css.modules.localsConvention` renames the classes a template reads; leave it unset");
+  if (modules.scopeBehaviour === "global" || modules.globalModulePaths?.length || modules.exportGlobals) {
+    return set("Vite's `css.modules` makes some names global (`scopeBehaviour`, `globalModulePaths`, `exportGlobals`); leave those unset");
+  }
+  const context = resolve(root, own.context ?? config.viteRoot ?? ".");
+  if (/\[(?:[^\]]*:)?(?:hash|contenthash|path|folder)\b/i.test(own.generateScopedName) && context !== resolve(cwd)) {
+    return set(`Vite runs in ${resolve(cwd)}, from which it hashes a module's path, where ${configFile}'s \`cssModules.context\` is ${context}; run Vite there, or set \`cssModules.context\``);
+  }
+  return null;
 }
 
 const ignore = (): void => {};
@@ -119,6 +167,7 @@ export default function ferrovue(options: FerrovueOptions = {}): Plugin {
     return routesModule(root, fileRoutes(root, pages));
   };
   let vue: ReturnType<typeof vueScopeIds> = null;
+  let css: ResolvedConfig["css"] | undefined;
   let building = true;
   return {
     name: "ferrovue",
@@ -138,12 +187,13 @@ export default function ferrovue(options: FerrovueOptions = {}): Plugin {
     },
     configResolved(config) {
       vue = vueScopeIds(config);
+      css = config.css;
       building = config.command === "build";
     },
     buildStart() {
       try {
         regenerate((w) => this.warn(formatWarning(w)));
-        const mismatch = scopeIdMismatch(root, vue, configFile);
+        const mismatch = scopeIdMismatch(root, vue, configFile) ?? cssModulesMismatch(root, css, process.cwd(), configFile);
         if (mismatch && building) this.error(`ferrovue: ${mismatch}`);
         if (mismatch) this.warn(`ferrovue: ${mismatch}`);
       } catch (e) {

@@ -47,7 +47,7 @@ export interface Plugin<Run = unknown, Local = unknown> {
   components?(): { file: string; name: string }[];
 
   sfc?(comp: Component, descriptor: SFCDescriptor, file: string, source: string): void;
-  templateOptions?(comp: Component): { id: string; scoped: boolean; slotted: boolean };
+  templateOptions?(comp: Component): { id: string; scoped: boolean; slotted: boolean; ssrCssVars: string[]; isProd: boolean };
   importedType?(comp: Component, file: string, name: string, local: string): boolean;
   struct?(ty: StructTy): { st: Struct | undefined; module: string } | null;
   compiled?(comp: Component, code: string, script: N[]): void;

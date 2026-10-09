@@ -10,7 +10,9 @@ const FIXTURES = join(ROOT, "fixtures");
 export const ROUTES = JSON.parse(readFileSync(join(ROOT, "routes.json"), "utf8")) as RouteEntry[];
 const CONFIG = JSON.parse(readFileSync(join(ROOT, "ferrovue.config.json"), "utf8")) as {
   i18n?: { messages: string; locale?: string; fallbackLocale?: string | string[] };
+  cssModules: { generateScopedName: string };
 };
+export const CSS_MODULES = CONFIG.cssModules;
 const I18N = CONFIG.i18n && {
   messages: Object.fromEntries(
     readdirSync(join(ROOT, CONFIG.i18n.messages))
@@ -22,7 +24,7 @@ const I18N = CONFIG.i18n && {
 };
 export const OPTIONS: RouterOptions = I18N ? { i18n: I18N } : {};
 
-export const VUE_DISAGREES = new Set(["Hollow/absent.json", "Hollow/absent-on.json", "Hollow/whitespace.json", "Hollow/js-whitespace.json", "App/empty-view.json"]);
+export const VUE_DISAGREES = new Set(["Hollow/absent.json", "Hollow/absent-on.json", "Hollow/whitespace.json", "Hollow/js-whitespace.json", "App/empty-view.json", "CssVars/empty.json", "CssVars/hostile.json", "CssVarsPage/empty.json", "CssVarsPage/hostile.json", "CssVarsWait/typical.json"]);
 
 export const UNHEAD_REWRITES = new Set(["HeadPage/hostile.json", "HeadLater/hostile.json", "HeadNest/hostile.json"]);
 

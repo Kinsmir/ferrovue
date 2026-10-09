@@ -47,6 +47,7 @@
         "allow": [
           "__fv",
           "__scopeId",
+          "__cssModules",
           "__asyncLoader",
           "__asyncResolved",
           "__name",

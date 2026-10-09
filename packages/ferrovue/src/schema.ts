@@ -84,6 +84,13 @@ export const CONFIG_SCHEMA: Schema = {
     },
     scopeId: { type: "string", enum: ["filepath", "filepath-source"], default: "filepath-source" },
     viteRoot: { type: "string", default: "." },
+    isProduction: { type: "boolean", default: true },
+    cssModules: {
+      type: "object",
+      properties: { generateScopedName: STRING, hashPrefix: { type: "string", default: "" }, context: STRING },
+      required: ["generateScopedName"],
+      additionalProperties: false,
+    },
     builders: { type: "boolean", default: true },
   },
   required: ["components", "out"],

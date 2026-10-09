@@ -263,8 +263,14 @@ export const ERRORS = {
   FV1002: { title: "Computed class name that is not a string" },
   FV1003: { title: "Class name with spaces around it" },
   FV1004: { title: "Class binding of an unsupported type" },
-  FV1005: { title: "`<style module>`" },
-  FV1006: { title: "`v-bind()` in CSS" },
+  FV1005: {
+    title: "`<style module>` without `cssModules` in the configuration",
+    detail: "Vite names a CSS module's classes by `css.modules.generateScopedName`. ferrovue computes the same names when `cssModules` in `ferrovue.config.json` is set as that option is; without it, it cannot know them.",
+  },
+  FV1006: {
+    title: "`v-bind()` in CSS of a value that is not a string or a number",
+    detail: "Vue's server writes a variable `v-bind()` sets from a string or a number, `initial` for `null` and `undefined`, and warns of anything else.",
+  },
   FV1007: { title: "Style binding of an unsupported type" },
   FV1008: { title: "Computed or spread key in a style object" },
   FV1009: { title: "Style property named by a number or starting with `:`" },
@@ -275,6 +281,11 @@ export const ERRORS = {
     title: "`class` written apart from a later `:class` in content rendered from virtual nodes",
     detail: "Inside an element `<component :is>` chooses, in the slot content such an element renders, and inside a `<RouterLink>`, Vue's server renders from virtual nodes, where a static `class` written before `:class` keeps its place and its names come first. ferrovue writes them so when nothing stands between the two; with attributes between them, write the two next to each other, or `:class` first.",
   },
+  FV1014: {
+    title: "`<style module>` whose class names ferrovue cannot compute",
+    detail: "ferrovue names the classes of a CSS module written in the component in plain CSS, as postcss-modules does in Vite. A module in another file (`src`), one a preprocessor compiles (`lang`), and one that imports names from another file (`composes: x from \"./a.css\"`, `@value x from \"./a.css\"`) are refused.",
+  },
+  FV1015: { title: "`useCssModule` of a module the component does not declare" },
 
   FV1101: { title: "Helper called with the wrong number of arguments" },
   FV1102: { title: "Configuration file not found" },

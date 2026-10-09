@@ -3,6 +3,10 @@
   "out": "generated",
   "scopeId": "filepath",
   "viteRoot": "../../../..",
+  "isProduction": false,
+  "cssModules": {
+    "generateScopedName": "[name]__[local]___[hash:base64:5]"
+  },
   "routes": "routes.json",
   "stores": "stores",
   "trustedHtml": "crate::Sanitised",
