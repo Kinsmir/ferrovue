@@ -9,7 +9,7 @@ import { allPages, fileRoutes, pagesFolder, routeEntries } from "./file-routes.t
 import { fixtureApp, peer, readFixture, type RouteEntry, type RouterOptions } from "./fixture.ts";
 import { headRendered, settled } from "./settle.ts";
 import { attachSsrRender } from "./ssr.ts";
-import { applyCssVars, renderDifference, renderedShape } from "./client-render.ts";
+import { applyCssVars, parsedShape, renderDifference, renderedShape } from "./client-render.ts";
 
 /** What `conformanceSuite` checks: the project, its components and its fixtures. `pinia`,
  * `vueRouter` and `vueI18n` are the application's own modules (`pinia: await import("pinia")`),
@@ -260,7 +260,7 @@ export async function clientRenderDifference(app: App, html: string): Promise<st
   if (typeof document === "undefined") throw new Error("rendering a fixture on the client needs a DOM: run the suite with `environment: \"happy-dom\"` (or jsdom)");
   document.body.innerHTML = hydrationBody(html);
   const root = document.getElementById("root")!;
-  const expected = renderedShape(root);
+  const expected = parsedShape(root);
   root.replaceChildren();
   app.config.warnHandler = () => {};
   const { warn } = console;

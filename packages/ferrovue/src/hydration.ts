@@ -1,6 +1,6 @@
 import type { App, Component, Plugin } from "vue";
 import { mountPage, readPage, renderPage, type IslandComponent, type PageOptions, type PageRecord, type RenderPageOptions } from "./client.ts";
-import { renderDifference, renderedShape, shapeAtMount } from "./client-render.ts";
+import { parsedShape, renderDifference, shapeAtMount } from "./client-render.ts";
 import { settled } from "./settle.ts";
 
 /** A page as the server wrote it: `html` holds the container and, unless `record` is given, the
@@ -109,7 +109,7 @@ export async function renderRecordedPage(
   const selector = options.container ?? "#app";
   const container = typeof selector === "string" ? doc.querySelector(selector) : selector;
   if (!container) throw new Error(`the recorded page has no ${selector as string}`);
-  const expected = renderedShape(container);
+  const expected = parsedShape(container);
   const problems: string[] = [];
   const watch: Plugin = {
     install(app) {

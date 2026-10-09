@@ -122,8 +122,9 @@ const ATTRIBUTE_ON_NO_PROPERTY = ["Builtins/hostile.json", "Builtins/off.json", 
 const ASYNC_AND_CLIENT_ONLY = ["EscapedIdioms/empty.json", "EscapedIdioms/hostile.json", "EscapedIdioms/typical.json", "EscapedNull/hostile.json", "EscapedNull/null.json", "EscapedNull/present.json"];
 const STYLE_THE_CLIENT_DROPS = ["Unsanitised/hostile.json", "CssVars/hostile.json"];
 const CSS_VARS_ONLY_THE_CLIENT_SETS = ["CssVarsBranch/on.json", "CssVarsShapes/on.json", "CssVarsShapes/hostile.json", "CssVarsPage/full.json", "CssVarsPage/hostile.json"];
+const HAPPY_DOM_SELECTS_THE_SECOND_OPTION = ["Catalog/high.json"];
 const HOLLOW_SLOTS = [...VUE_DISAGREES].filter((k) => k.startsWith("Hollow/"));
-const CLIENT_RENDER_DIFFERS = new Set([...CLIENT_DIFFERS, ...HOLLOW_SLOTS, ...SELECT_MATCHES_NO_OPTION, ...ATTRIBUTE_ON_NO_PROPERTY, ...ASYNC_AND_CLIENT_ONLY, ...STYLE_THE_CLIENT_DROPS, ...CSS_VARS_ONLY_THE_CLIENT_SETS]);
+const CLIENT_RENDER_DIFFERS = new Set([...CLIENT_DIFFERS, ...HOLLOW_SLOTS, ...SELECT_MATCHES_NO_OPTION, ...ATTRIBUTE_ON_NO_PROPERTY, ...ASYNC_AND_CLIENT_ONLY, ...STYLE_THE_CLIENT_DROPS, ...CSS_VARS_ONLY_THE_CLIENT_SETS, ...HAPPY_DOM_SELECTS_THE_SECOND_OPTION]);
 
 it("lists only fixtures that exist, and with scope ids in CLIENT_DIFFERS", () => {
   const scoped = new Set(cases.filter((c) => c.html.includes(" data-v-")).map((c) => `${c.component}/${c.name}`));
