@@ -83,7 +83,10 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
         if (key.type !== "TSStringKeyword") fail(comp, "FV0313", "a `Record` is keyed by `string`", key);
         return recordOf(comp, value, structs, seen);
       }
-      if (structs.has(name)) return { k: "struct", name };
+      if (structs.has(name)) {
+        if (structs === ctx.typeStructs) reachType(name);
+        return { k: "struct", name };
+      }
       if (comp.childProps.has(name)) return { k: "child", name: comp.childProps.get(name)! };
       if (comp.floatName !== null && name === comp.floatName) return FLOAT;
       if (comp.inlineName !== null && name === comp.inlineName) return { k: "html", inline: true };
@@ -94,7 +97,10 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
         return ctx.trustedHtml === INLINE_HTML ? { k: "html", inline: true } : { k: "html" };
       }
       const imported = comp.importedTypes.get(name);
-      if (imported) return imported;
+      if (imported) {
+        if (imported.k === "struct" && imported.home === "types") reachType(imported.name);
+        return imported;
+      }
       const alias = comp.aliases.get(name);
       if (alias) {
         if (seen.has(name)) fail(comp, "FV0314", `type \`${name}\` refers to itself through an alias`, t);
@@ -130,13 +136,14 @@ export function declareTypes(comp: Component, body: N[], structs: Map<string, St
       }
     }
   }
-  for (const d of decls) {
-    if (RUST_PRELUDE.has(d.name)) {
-      fail(comp, "FV0318", `an interface called \`${d.name}\` would hide Rust's own \`${d.name}\` in the generated code; rename it`, d.node);
-    }
-    structs.set(d.name, { name: d.name, fields: [] });
-  }
+  for (const d of decls) structs.set(d.name, { name: d.name, fields: [] });
   return decls;
+}
+
+export function refusePrelude(comp: Component, d: N): void {
+  if (RUST_PRELUDE.has(d.name)) {
+    fail(comp, "FV0318", `an interface called \`${d.name}\` would hide Rust's own \`${d.name}\` in the generated code; rename it`, d.node);
+  }
 }
 
 export function resolveImport(fromFile: string, spec: string): string | null {
@@ -162,19 +169,42 @@ export function readTypeFile(file: string): void {
   tagAst(body, "source");
   typesImports(home, body);
   ctx.constDecls.set(file, declareConsts(home, body));
-  const before = new Set(ctx.typeStructs.keys());
-  const local = new Map<string, Struct>();
-  const decls = declareTypes(home, body, local, ctx.typeAliases);
-  for (const d of decls) {
-    if (before.has(d.name)) fail(home, "FV0319", `\`${d.name}\` is declared by ${ctx.typeFiles.get(d.name)} too`, d.node);
-    ctx.typeStructs.set(d.name, local.get(d.name)!);
+  for (const d of declareTypes(home, body, new Map(), ctx.typeAliases)) {
+    const known = ctx.typeDecls.get(d.name);
+    if (known === undefined && ctx.typeStructs.has(d.name)) fail(home, "FV0319", `\`${d.name}\` is declared by ${ctx.typeFiles.get(d.name)} too`, d.node);
+    if (known !== undefined && ctx.typeReached.has(d.name)) fail(home, "FV0319", `\`${d.name}\` is declared by ${known[0]!.home.file} too`, d.node);
+    if (known !== undefined) {
+      if (known.at(-1)!.home.file === rel) known.pop();
+      known.push({ home, members: d.members, node: d.node });
+      continue;
+    }
+    ctx.typeDecls.set(d.name, [{ home, members: d.members, node: d.node }]);
+    ctx.typeStructs.set(d.name, { name: d.name, fields: [] });
     ctx.typeFiles.set(d.name, rel);
   }
-  for (const d of decls) {
-    const st = structOf(home, d.name, d.members, ctx.typeStructs);
+}
+
+/** Translate a type a `.ts` file declares, the first time something the server renders reaches it. */
+export function reachType(name: string): void {
+  const decls = ctx.typeDecls.get(name);
+  if (decls === undefined || ctx.typeReached.has(name)) return;
+  ctx.typeReached.add(name);
+  try {
+    const [first, again] = decls;
+    if (again !== undefined) fail(again.home, "FV0319", `\`${name}\` is declared by ${first!.home.file} too`, again.node);
+    refusePrelude(first!.home, { name, node: first!.node });
+    const st = structOf(first!.home, name, first!.members, ctx.typeStructs);
     for (const f of st.fields) f.ty = markHome(f.ty, "types");
-    ctx.typeStructs.set(d.name, st);
+    ctx.typeStructs.set(name, st);
+  } catch (e) {
+    ctx.typeReached.delete(name);
+    throw e;
   }
+}
+
+/** Whether `types.rs` holds the type: one built from a constant list, or a declared one something reached. */
+export function typeWritten(name: string): boolean {
+  return !ctx.typeDecls.has(name) || ctx.typeReached.has(name);
 }
 
 export function markHome(ty: Ty, home: string): Ty {
@@ -186,7 +216,10 @@ export function markHome(ty: Ty, home: string): Ty {
 export function lookupStruct(comp: Component, ty: Ty & { k: "struct" }): { st: Struct | undefined; owner: Component; path: string } {
   const own = claim((p) => p.struct?.(ty));
   if (own) return { st: own.st, owner: comp, path: comp.module === own.module ? "" : `super::${own.module}::` };
-  if (ty.home === "types") return { st: ctx.typeStructs.get(ty.name), owner: comp, path: comp.module === "types" ? "" : "super::types::" };
+  if (ty.home === "types") {
+    reachType(ty.name);
+    return { st: ctx.typeStructs.get(ty.name), owner: comp, path: comp.module === "types" ? "" : "super::types::" };
+  }
   if (ty.home !== undefined && ty.home !== comp.name) {
     const owner = childOf(ty.home);
     return { st: owner.structs.get(ty.name), owner, path: `super::${owner.module}::` };

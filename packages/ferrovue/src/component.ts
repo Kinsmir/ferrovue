@@ -6,7 +6,7 @@ import { basename } from "node:path";
 import { relativePath } from "./paths.ts";
 import { type Component, type N, absence, blankComponent, fail, GenError, opt, snake, sourceAt, tagAst } from "./model.ts";
 import { ctx } from "./context.ts";
-import { typesImports, declareTypes, defaultValue, definePropsType, ONE_NOTHING, readTypeFile, resolveImport, runtimeDefaults, structOf, tyOfTs } from "./typescript.ts";
+import { typesImports, declareTypes, defaultValue, definePropsType, ONE_NOTHING, readTypeFile, refusePrelude, resolveImport, runtimeDefaults, structOf, tyOfTs } from "./typescript.ts";
 import { claim } from "./plugin.ts";
 import { asyncChildren } from "./script.ts";
 
@@ -170,6 +170,7 @@ export function readComponent(file: string, root: string, name = basename(file, 
 
   if (descriptor.scriptSetup) generics(comp, source, descriptor.scriptSetup);
   const decls = declareTypes(comp, [...plainAst, ...ast], comp.structs, comp.aliases);
+  for (const d of decls) refusePrelude(comp, d);
   for (const d of decls) comp.structs.set(d.name, structOf(comp, d.name, d.members, comp.structs));
   let propsTy: N = null;
   for (const s of ast) {

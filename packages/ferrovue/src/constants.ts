@@ -1,5 +1,5 @@
 import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, blankComponent, BOOL, fail, FLOAT, INT, NULL, RUST_PRELUDE, rustStr, sameTy, snake, STR, UNDEF, withAbsence } from "./model.ts";
-import { ONE_NOTHING } from "./typescript.ts";
+import { ONE_NOTHING, reachType } from "./typescript.ts";
 import { ctx } from "./context.ts";
 import { numberVal } from "./numbers.ts";
 import { structLifetime } from "./rust.ts";
@@ -186,6 +186,7 @@ function listVal(c: Const & { k: "list" }): Val {
   }
   if (!c.items.every((i) => i.k === "object")) fail(c.home, "FV0211", "a constant list holds plain values of one kind, or objects", c.node);
   const objects = c.items as (Const & { k: "object" })[];
+  if (c.typed !== null) reachType(c.typed);
   const st = c.typed !== null ? ctx.typeStructs.get(c.typed)! : itemStruct(c, objects);
   const name = rustConstName(c.path);
   const owner = ctx.typeConsts.get(name);
