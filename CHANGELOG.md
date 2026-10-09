@@ -120,6 +120,19 @@ released together and share version numbers.
   where it was left out; a listener whose name is chosen at run time, or comes from `v-on` of an
   object, given to such a child is FV0514.
 
+### Documentation
+
+- A threat model, the guide's `security` page, which `escaping` and `SECURITY.md` link to: the trust
+  boundaries, every place the runtime and generated code write data that may come from a reader
+  (text, attribute values and names, CSS, island props, the state script and page record, the head,
+  `<RouterLink>`, translated messages, `v-html`, teleports, holes, scope ids, twins and helpers),
+  the guarantee there with the code and tests behind it, what ferrovue inherits from Vue, and where
+  an external review should start. The `Unsanitised` conformance component holds the inherited
+  cases to Vue (`javascript:` URLs, `srcdoc`, a bound `onclick` on an element and falling through,
+  CSS); the head vectors gain hostile attribute names and `<!--<script>` in scripts; the compiler's
+  tests refuse an unsafe bound attribute name, a name chosen at run time and `v-bind` of an object
+  that is not a literal.
+
 ## [0.6.0] - 2026-10-06
 
 ### Added

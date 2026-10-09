@@ -2720,6 +2720,30 @@ useHead({ meta: [{ name: "x", textContent: props.a }] });
 <template><i>{{ a }}</i></template>`,
       /`textContent` on a `meta`, which has no content/,
     ],
+    [
+      "an attribute name Vue's server renderer skips as unsafe",
+      `<script setup lang="ts">
+defineProps<{ a: string }>();
+</script>
+<template><i :x'y="a">x</i></template>`,
+      /unsafe attribute name `x'y`/,
+    ],
+    [
+      "an attribute name chosen at run time",
+      `<script setup lang="ts">
+defineProps<{ name: string; a: string }>();
+</script>
+<template><i :[name]="a">x</i></template>`,
+      /attribute objects hold plain keys/,
+    ],
+    [
+      "attributes bound from an object that is not a literal",
+      `<script setup lang="ts">
+const props = defineProps<{ a: string; extra: Record<string, string> }>();
+</script>
+<template><i v-bind="props.extra">{{ a }}</i></template>`,
+      /`_mergeProps` of object literals is supported/,
+    ],
   ];
 
   const children = {
@@ -2744,6 +2768,9 @@ defineProps<{ onSale?: boolean }>();
     "an enum read whole": "FV0208",
     "an enum read by a key chosen at run time": "FV0222",
     "a value read from `$attrs`, which has no type": "FV0415",
+    "an attribute name Vue's server renderer skips as unsafe": "FV0404",
+    "an attribute name chosen at run time": "FV0408",
+    "attributes bound from an object that is not a literal": "FV0410",
     "a runtime props declaration, which has no types": "FV0303",
     "watchEffect, which runs on the server": "FV0103",
     "a setup statement that changes state": "FV0105",

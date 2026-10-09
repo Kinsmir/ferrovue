@@ -146,6 +146,8 @@ pub mod themed_shelf;
 pub mod translated;
 pub mod tree;
 pub mod truthy;
+pub mod unsanitised;
+pub mod unsanitised_leaf;
 pub mod user_card;
 pub mod user_list;
 pub mod vnode_class;
@@ -900,6 +902,14 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Truthy" => {
             let props: truthy::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             truthy::render(&mut out, &props);
+        }
+        "Unsanitised" => {
+            let props: unsanitised::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            unsanitised::render(&mut out, &props);
+        }
+        "UnsanitisedLeaf" => {
+            let props: unsanitised_leaf::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            unsanitised_leaf::render(&mut out, &props);
         }
         "UserCard" => {
             let props: user_card::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
