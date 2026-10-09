@@ -57,6 +57,18 @@ function blockAt(source: string, block: SFCBlock): N {
   return sourceAt(source, source.lastIndexOf(`<${block.type}`, block.loc.start.offset));
 }
 
+function cssVarsAt(source: string, descriptor: SFCDescriptor): N[] {
+  const at = new Map<string, N>();
+  for (const st of descriptor.styles) {
+    for (const m of st.content.matchAll(/v-bind\s*\(\s*(?:'([^']*)'|"([^"]*)"|([^)'"]*))/g)) {
+      const raw = m[1] ?? m[2] ?? m[3]!.trim();
+      if (!at.has(raw)) at.set(raw, sourceAt(source, st.loc.start.offset + m.index));
+    }
+  }
+  const block = descriptor.styles.find((st) => /\bv-bind\s*\(/.test(st.content));
+  return descriptor.cssVars.map((v) => at.get(v) ?? (block ? blockAt(source, block) : sourceAt(source, 0)));
+}
+
 function generics(comp: Component, source: string, block: SFCBlock): void {
   const text = block.attrs.generic;
   if (typeof text !== "string") return;
@@ -119,11 +131,7 @@ export function readComponent(file: string, root: string, name = basename(file, 
   if (errors.length) fail(comp, "FV0002", String(errors[0]).replaceAll(file, rel), vueErrorNode(errors[0]) ?? sourceAt(source, 0));
   if (descriptor.script && !descriptor.scriptSetup) return { comp, ast: [], ssr: "", optionsApi: blockAt(source, descriptor.script) };
   if (!descriptor.template) fail(comp, "FV0004", "a component needs a `<template>`: a render function is not translated", sourceAt(source, 0));
-  for (const st of descriptor.styles) {
-    if (st.module) fail(comp, "FV1005", "`<style module>` renames classes in the bundler; use a global or scoped `<style>`, or a stylesheet", blockAt(source, st));
-  }
-  const cssVar = descriptor.styles.find((st) => /\bv-bind\s*\(/.test(st.content));
-  if (descriptor.cssVars.length) fail(comp, "FV1006", "`v-bind()` in `<style>` sets variables the server does not render; bind `:style` instead", cssVar ? blockAt(source, cssVar) : undefined);
+  comp.cssVarsAt = cssVarsAt(source, descriptor);
   for (const p of ctx.plugins) p.sfc?.(comp, descriptor, file, source);
 
   const script = descriptor.scriptSetup ? scriptOf(comp, descriptor) : null;
@@ -224,9 +232,8 @@ export function readComponent(file: string, root: string, name = basename(file, 
   const compiled = compileTemplate({
     source: descriptor.template.content,
     filename: file,
-    ...(claim((p) => p.templateOptions?.(comp)) ?? { id: name, scoped: false, slotted: false }),
+    ...(claim((p) => p.templateOptions?.(comp)) ?? { id: name, scoped: false, slotted: false, ssrCssVars: [], isProd: true }),
     ssr: true,
-    ssrCssVars: [],
     compilerOptions: { ...(script ? { bindingMetadata: script.bindings } : {}), sourceMap: true },
   });
   const kids = (n: N): N[] => n.children.filter((c: N) => c.type !== 3 && !(c.type === 2 && !c.content.trim()));

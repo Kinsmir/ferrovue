@@ -3,7 +3,7 @@ import vue from "@vitejs/plugin-vue";
 import { chromium, firefox, webkit, type Browser, type ConsoleMessage, type Page } from "playwright";
 import { build, type Rolldown } from "vite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { cases, CLIENT_ONLY, hydrationBody, OPTIONS, recordedHead, ROUTES, UNHEAD_REWRITES, VUE_DISAGREES } from "../test/conformance-cases.ts";
+import { cases, CLIENT_ONLY, CSS_MODULES, hydrationBody, OPTIONS, recordedHead, ROUTES, UNHEAD_REWRITES, VUE_DISAGREES } from "../test/conformance-cases.ts";
 import type { PageData } from "./entry.ts";
 
 const ORIGIN = "http://conformance.test";
@@ -12,6 +12,26 @@ const BROWSERS = (process.env.FERROVUE_BROWSERS ?? "chromium,firefox,webkit").sp
 
 const PATCHED: Record<string, { browsers?: string[]; server: string; hydrated: string }[]> = {
   "Styles/hostile.json": [{ server: 'style="color:red&quot;&gt;&lt;script&gt;;display:none;"', hydrated: 'style="display: none;"' }],
+  "CssVarsBranch/on.json": [{ server: '<b data-v-d62f6e13="">c</b>', hydrated: '<b data-v-d62f6e13="" style="--d62f6e13-tone: pink;">c</b>' }],
+  "CssVarsShapes/on.json": [{ server: '<b data-v-d62f6e13="">c</b>', hydrated: '<b data-v-d62f6e13="" style="--d62f6e13-tone: teal;">c</b>' }],
+  "CssVarsShapes/hostile.json": [
+    {
+      browsers: ["chromium", "firefox"],
+      server: '<b data-v-d62f6e13="">c</b>',
+      hydrated: `<b data-v-d62f6e13="" style="--d62f6e13-tone: &quot;&lt;/main&gt;&quot; '&lt;i&gt;' &amp;;">c</b>`,
+    },
+    {
+      browsers: ["webkit"],
+      server: '<b data-v-d62f6e13="">c</b>',
+      hydrated: '<b data-v-d62f6e13="" style="--d62f6e13-tone: &quot;&lt;/main&gt;&quot; &quot;&lt;i&gt;&quot; &amp;;">c</b>',
+    },
+  ],
+  "CssVarsPage/full.json": [
+    {
+      server: "<i>a</i><i>b</i>",
+      hydrated: '<i style="--d9e366c1-tone: maroon; --d9e366c1-size: 2;">a</i><i style="--d9e366c1-tone: maroon; --d9e366c1-size: 2;">b</i>',
+    },
+  ],
   "Numbers/tiny-and-huge.json": [{ browsers: ["firefox"], server: 'max="9007199254740992"', hydrated: 'max="9007199254740990"' }],
 };
 
@@ -21,12 +41,13 @@ beforeAll(async () => {
   process.env.NODE_ENV = "development";
   const result = (await build({
     configFile: false,
-    root: import.meta.dirname,
+    root: join(import.meta.dirname, "../../.."),
     logLevel: "warn",
     plugins: [vue()],
+    css: { modules: { generateScopedName: CSS_MODULES.generateScopedName } },
     resolve: { alias: [{ find: /^ferrovue\/client$/, replacement: join(import.meta.dirname, "../src/client.ts") }] },
     define: { __VUE_I18N_FULL_INSTALL__: "true", __VUE_I18N_LEGACY_API__: "false", __INTLIFY_PROD_DEVTOOLS__: "false" },
-    build: { write: false, minify: false, rolldownOptions: { input: "entry.ts", output: { codeSplitting: false } } },
+    build: { write: false, minify: false, rolldownOptions: { input: join(import.meta.dirname, "entry.ts"), output: { codeSplitting: false } } },
   }).finally(() => {
     process.env.NODE_ENV = nodeEnv;
   })) as Rolldown.RolldownOutput;

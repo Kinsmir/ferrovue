@@ -30,6 +30,28 @@ released together and share version numbers.
   `…Slot` types of a component that passes on `Provides`, and the derives of `Props` and `Slots`.
 - `crates/ferrovue-contract`, an unpublished crate that generates every item of that contract and
   uses each from hand-written Rust, run in CI with its generated code checked by `ferrovue --check`.
+- `v-bind()` in `<style>`, scoped or global: the variables are written into the `style` of the
+  component's root (each root of a fragment, a root `<template v-if>`'s elements, a root that is a
+  component, `<component :is>`, an async component or a `<RouterLink>`) where Vue's server writes
+  them, merged after the root's own `style` and what a parent passes, with `undefined` and `null`
+  as `initial` and an empty string as a space. Their names follow the component's id and the new
+  `isProduction` key of `ferrovue.config.json`, which says whether plugin-vue compiles for
+  production (`vite build`, the default) or development; the Vite plugin fails a build in which
+  either differs from plugin-vue's. A `v-bind()` of a value that is not a string or a number is
+  refused (FV1006).
+- CSS modules: `<style module>`, `<style module="name">`, `$style.x` and `useCssModule()`, when
+  `cssModules` in `ferrovue.config.json` (`{ generateScopedName, hashPrefix?, context? }`) mirrors
+  Vite's `css.modules`. Each class is a constant computed as postcss-modules computes it in Vite, with
+  the same libraries, recorded from Vite as vectors (`packages/ferrovue/test/css-modules.json`). The
+  Vite plugin fails a build whose `css.modules` names the classes otherwise (another pattern or
+  `hashPrefix`, another working directory for a pattern that hashes the path, `localsConvention`,
+  global scoping, the lightningcss transformer). `<style module>` without `cssModules` stays refused
+  (FV1005), and a module in another file, one a preprocessor compiles, one that imports from another
+  file (FV1014) and `useCssModule` of a module the component lacks (FV1015) are refused.
+- `attachSsrRender` (`ferrovue/testing`) compiles `v-bind()` in `<style>` with the names plugin-vue
+  gave the component, and gives hydration in Node the variables Vue's Node build leaves out; a
+  fresh client render (`conformanceSuite`, `renderRecordedPage`) sets them as a browser's Vue does
+  once mounted, and compares custom properties by name in any order.
 - `Boolean` is taken as the function of `.filter()`, `.map()`, `.some()`, `.every()`, `.find()` and
   `.findIndex()`, as `x => !!x`, and `Boolean(x)` as a call. `.filter(Boolean)` of a list whose items
   may be `null` or `undefined`, or of an array literal holding optional values

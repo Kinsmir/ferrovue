@@ -10,6 +10,11 @@ export interface Config {
     builders?: boolean;
     clientDirectives?: string[];
     components: string;
+    cssModules?: {
+        generateScopedName: string;
+        hashPrefix?: string;
+        context?: string;
+    };
     helpers?: {
         module: string;
         functions: Record<string, HelperSpec>;
@@ -19,6 +24,7 @@ export interface Config {
         locale?: string;
         fallbackLocale?: string | string[];
     };
+    isProduction?: boolean;
     out: string;
     router?: {
         routes: RoutesSource;

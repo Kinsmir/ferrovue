@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSyn
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { compileTemplate, parse as parseSfc } from "@vue/compiler-sfc";
 import { GenError, generate, loadConfig } from "../src/compiler.ts";
 import { type Code, ERRORS } from "../src/errors.ts";
 import { GENERATED_VERSION } from "../src/rust.ts";
@@ -2409,22 +2410,33 @@ defineProps<{ a: string }>();
       /`inheritAttrs` is `true` or `false`/,
     ],
     [
-      "a CSS module, whose class names the bundler chooses",
+      "a CSS module without `cssModules` in the configuration",
       `<script setup lang="ts">
 defineProps<{ a: string }>();
 </script>
 <template><i>{{ a }}</i></template>
 <style module>.i { color: red }</style>`,
-      /`<style module>`/,
+      /X\.vue:5:1: `<style module>` takes its class names from Vite's `css\.modules`: set `cssModules` in ferrovue\.config\.json/,
     ],
     [
-      "v-bind() in a style block",
+      "v-bind() in a style block of a boolean",
       `<script setup lang="ts">
-const props = defineProps<{ a: string }>();
+const props = defineProps<{ a: string; on: boolean }>();
 </script>
 <template><i>{{ a }}</i></template>
+<style>
+i { color: v-bind(a); width: v-bind('on'); }
+</style>`,
+      /X\.vue:6:30: `v-bind\(\)` in `<style>` of a boolean: Vue writes a string or a number/,
+    ],
+    [
+      "v-bind() in a style block of a list",
+      `<script setup lang="ts">
+const props = defineProps<{ a: string[] }>();
+</script>
+<template><i>{{ a.length }}</i></template>
 <style>i { color: v-bind(a) }</style>`,
-      /`v-bind\(\)` in `<style>`/,
+      /X\.vue:5:19: `v-bind\(\)` in `<style>` of a list/,
     ],
     [
       "a style property whose place would depend on a condition",
@@ -2875,7 +2887,9 @@ defineProps<{ onSale?: boolean }>();
     "a computed list as a slot prop": "FV0910",
     "a component written with the Options API": "FV0003",
     "a constructor called in the template": "FV0624",
-    "a CSS module, whose class names the bundler chooses": "FV1005",
+    "a CSS module without `cssModules` in the configuration": "FV1005",
+    "v-bind() in a style block of a boolean": "FV1006",
+    "v-bind() in a style block of a list": "FV1006",
     "a style property whose place would depend on a condition": "FV1011",
     "a dynamic component over any string": "FV0418",
     "a dynamic component over a value from elsewhere": "FV0418",
@@ -2934,6 +2948,98 @@ defineProps<{ onSale?: boolean }>();
   }
 });
 
+describe("`v-bind()` in `<style>`", () => {
+  const source = `<script setup lang="ts">
+const props = defineProps<{ color: string; gap?: number }>();
+</script>
+<template><p>x</p></template>
+<style>
+p { color: v-bind(color); gap: v-bind(gap); width: v-bind('color + "px"'); }
+</style>`;
+  const vueNames = (id: string, isProd: boolean): string[] => {
+    const { descriptor } = parseSfc(source, { filename: "X.vue" });
+    const { code } = compileTemplate({ source: descriptor.template!.content, filename: "X.vue", id: `data-v-${id}`, ssr: true, ssrCssVars: descriptor.cssVars, isProd });
+    return [...code.matchAll(/^\s*"(:--(?:[^"\\]|\\.)*)":/gm)].map((m) => JSON.parse(`"${m[1]!.slice(1)}"`) as string);
+  };
+  const hash = (text: string) => createHash("sha256").update(text).digest("hex").slice(0, 8);
+
+  it("names the variables as Vue's compiler does, for production by default and for development", () => {
+    const root = island(source);
+    const production = vueNames(hash(`components/X.vue${source}`), true);
+    const development = vueNames(hash("components/X.vue"), false);
+    expect(production).toHaveLength(3);
+    expect(production.filter((n) => n.includes("color") || n.includes("gap"))).toEqual([]);
+    expect(development[2]).toBe(`--${hash("components/X.vue")}-color\\ \\+\\ \\"px\\"`);
+    const written = (config: object) => generate(root, { ...CONFIG, ...config }).get("x.rs")!;
+    const literal = (name: string): string => `${name.replaceAll('"', "&quot;").replaceAll("\\", "\\\\")}:`;
+    for (const name of production) expect(written({})).toContain(literal(name));
+    for (const name of development) expect(written({ scopeId: "filepath", isProduction: false })).toContain(literal(name));
+    expect(written({})).not.toContain(literal(development[0]!));
+  });
+
+  it("writes `initial` for an absent value and a space for an empty string, as `ssrRenderStyle` does", () => {
+    const out = generate(island(source), { ...CONFIG, scopeId: "filepath", isProduction: false }).get("x.rs")!;
+    expect(out).toContain(`-gap:initial;");`);
+    expect(out).toContain("out.push(' ');");
+  });
+});
+
+describe("`<style module>`", () => {
+  const MODULES = { ...CONFIG, cssModules: { generateScopedName: "[local]_x" } };
+  const refusalWith = (source: string): GenError => {
+    try {
+      generate(island(source), MODULES);
+    } catch (e) {
+      if (e instanceof GenError) return e;
+      throw e;
+    }
+    throw new Error("compiled without an error");
+  };
+
+  it.each([
+    ["a module in another file", `<template><i /></template>\n<style module src="./x.css"></style>`, "FV1014", /^components\/X\.vue:2:1: `<style module src>`/],
+    ["a module a preprocessor compiles", `<template><i /></template>\n<style module lang="scss">.a { .b { color: red } }</style>`, "FV1014", /^components\/X\.vue:2:1: `<style module lang="scss">`/],
+    ["a class composed from another file", `<template><i /></template>\n<style module>.a { composes: b from "./b.css"; }</style>`, "FV1014", /cannot name: it imports from another file/],
+    ["a value imported from another file", `<template><i /></template>\n<style module>@value b from "./b.css";\n.a { color: b; }</style>`, "FV1014", /cannot name: it imports from another file/],
+    ["CSS that does not parse", `<template><i /></template>\n<style module>.a { color: red</style>`, "FV1014", /cannot name: .*Unclosed block/],
+    [
+      "`useCssModule` of a module the component lacks",
+      `<script setup lang="ts">\nimport { useCssModule } from "vue";\nconst c = useCssModule("nope");\n</script>\n<template><i :class="c.a" /></template>\n<style module>.a { color: red }</style>`,
+      "FV1015",
+      /^components\/X\.vue:3:11: `useCssModule\("nope"\)` names no `<style module="nope">` of this component/,
+    ],
+    [
+      "`useCssModule` of a name chosen at run time",
+      `<script setup lang="ts">\nimport { useCssModule } from "vue";\nconst props = defineProps<{ n: string }>();\nconst c = useCssModule(props.n);\n</script>\n<template><i :class="c.a" /></template>\n<style module>.a { color: red }</style>`,
+      "FV1015",
+      /takes the name of a `<style module>` as a string literal/,
+    ],
+  ])("refuses %s", (_, source, code, message) => {
+    const e = refusalWith(source);
+    expect(e.code).toBe(code);
+    expect(e.message).toMatch(message);
+  });
+
+  it("reads a module's classes as constant strings, and a class it lacks as `undefined`", () => {
+    const out = generate(
+      island(`<script setup lang="ts">
+import { useCssModule } from "vue";
+const theme = useCssModule("theme");
+</script>
+<template><p :class="[$style.a, $style.missing, theme.b]" :title="$style.missing">{{ $style['a-b'] }}</p></template>
+<style module>.a { color: red } .a-b { color: blue }</style>
+<style module="theme">.b { color: red }</style>`),
+      MODULES,
+    ).get("x.rs")!;
+    expect(out).toContain('fv::class_into(out, false, &["a_x", "b_x"]);\n    out.push_str("\\">a-b_x</p>");');
+  });
+
+  it("refuses a module bound whole", () => {
+    const e = refusalWith(`<template><i :title="$style" /></template>\n<style module>.a { color: red }</style>`);
+    expect(e.message).toMatch(/`title` is bound to the CSS module `\$style`.*bind one of its classes, as `\$style\.name`/);
+  });
+});
+
 describe("the configuration", () => {
   const configured = (config: unknown): string => {
     const root = island(`<template><p /></template>`);
@@ -2960,6 +3066,10 @@ describe("the configuration", () => {
     ["a key like none", { ...CONFIG, plugins: [] }, "FV1114", /has no key `plugins`: it takes `components`, `out`/],
     ["a misspelt key in `router`", { ...CONFIG, router: { routes: "routes.json", linkActiveClas: "on" } }, "FV1114", /^`router` in ferrovue\.config\.json has no key `linkActiveClas`: did you mean `linkActiveClass`\?/],
     ["a string of client directives", { ...CONFIG, clientDirectives: "focus" }, "FV1115", /^`clientDirectives` in ferrovue\.config\.json is a list of directive names/],
+    ["`isProduction` that is not a boolean", { ...CONFIG, isProduction: "yes" }, "FV1115", /^`isProduction` in ferrovue\.config\.json is `true` or `false`/],
+    ["`cssModules` without a pattern", { ...CONFIG, cssModules: {} }, "FV1115", /^`cssModules\.generateScopedName` in ferrovue\.config\.json is a string/],
+    ["`cssModules` that is a string", { ...CONFIG, cssModules: "[local]" }, "FV1115", /^`cssModules` in ferrovue\.config\.json is an object/],
+    ["a misspelt key in `cssModules`", { ...CONFIG, cssModules: { generateScopedName: "[local]", hashPrefx: "" } }, "FV1114", /did you mean `hashPrefix`\?/],
     ["a helper without `params`", helper({ rust: "crate::plural", returns: "string" }), "FV1115", /`helpers\.functions\.plural\.params` in ferrovue\.config\.json is the list of types/],
     ["a helper without `rust`", helper({ params: [], returns: "string" }), "FV1115", /`helpers\.functions\.plural\.rust` in ferrovue\.config\.json is a string/],
     ["a helper type ferrovue does not know", helper({ rust: "crate::plural", params: ["number"], returns: "string" }), "FV1107", /`helpers\.functions\.plural\.params\[0\]` in ferrovue\.config\.json is "number", not a type a helper or twin takes/],

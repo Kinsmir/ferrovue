@@ -73,6 +73,8 @@ read `$schema`. Offline, the copy in the installed package works as well:
 | `clientDirectives` | no | Custom directives with no server output (no `getSSRProps`), by name without `v-`: `["focus"]` |
 | `scopeId` | no | How a `<style scoped>` id is hashed, as `@vitejs/plugin-vue` hashes it: `"filepath-source"` (the default, the plugin's in a production build) or `"filepath"`. See [Scoped styles](#scoped-styles) |
 | `viteRoot` | no | Vite's root, relative to this file's directory, from which a component's path is hashed (default `.`) |
+| `isProduction` | no | Whether `@vitejs/plugin-vue` compiles for production, as Vite's `isProduction`: `true` (the default) for `vite build`, `false` for the dev server. It names the variables `v-bind()` in `<style>` sets. See [Scoped styles](#scoped-styles) |
+| `cssModules` | no | `{ generateScopedName, hashPrefix?, context? }`, as Vite's `css.modules` names CSS module classes: needed for `<style module>`. `context` is the directory Vite runs in (default `viteRoot`). See [Scoped styles](#scoped-styles) |
 | `builders` | no | `false` leaves out each props struct's and shared type's `new()` and setters, for an app that builds its props as struct literals (default `true`) |
 
 ### 3. Write a component
@@ -224,6 +226,8 @@ ferrovue compiles `<script setup lang="ts">` components, and components with no 
 | `class` | strings, arrays, objects (`{ active: on }`, computed keys), `cond && "x"`, `cond ? "x" : null`, merged with a static `class` |
 | `style` | objects (camelCase or kebab-case keys, `--custom` properties), arrays of objects, strings, merged with a static `style`, and `v-show`; later values override earlier ones as in Vue. A global `<style>` block is allowed |
 | Scoped styles | `<style scoped>`: the id on every element, on child components' roots (a root that is itself a component, fragments, recursion and `inheritAttrs: false` as Vue renders them) and, from a component with `:slotted()` rules, on the slot content it is given, forwarded slots included; inside `<Transition>`, `<KeepAlive>`, `<Teleport>` and `v-if`; on `<RouterLink>` and what it holds, as vue-router renders them |
+| `v-bind()` in `<style>` | variables bound to props, setup values, `computed`s and constants, quoted expressions included (`v-bind('size + "px"')`), in a scoped or global `<style>`: written into the root's `style` after its own and what a parent passes, on each root of a fragment, and handed to a root that is a component, as Vue's server writes them; `undefined` and `null` as `initial`, an empty string as a space; named as plugin-vue names them for production or development (`isProduction`) |
+| CSS modules | `<style module>` and `<style module="name">`, read as `$style.x`, `name.x`, `$style['x-y']` and through `useCssModule()`, each class a constant in the generated code, when `cssModules` mirrors Vite's `css.modules.generateScopedName`: computed as postcss-modules computes it in Vite (`[local]`, `[name]`, `[hash:base64:5]`, `[path]` and the rest), composed classes, `@value`s and keyframes included |
 | Components | imported child components, `v-bind` of a child's own `Props`, listeners in any form (`@x`, `v-on="obj"`, `@[name]`), which the server skips, `v-model` on a child's `defineModel`, recursion; props named in `kebab-case` or `camelCase`; `defineAsyncComponent(() => import("./X.vue"))` (or `{ loader: … }`), rendered as the component it loads, which Vue's server renderer waits for |
 | `<component :is>` | over a closed set of choices, compiled to a `match`: an imported component (`:is="Card"`), an HTML element's name (`is="h2"`), a `computed` or `?:` choosing among them, a prop typed as a union of string literals (`as: "h1" \| "h2"`), and an object of imported components (or element names) declared in setup or imported from a `.ts` file, read by such a prop (`ICONS[name]`); props, fallthrough attributes, slots and scope ids reach each choice as they reach a static child; also inside `<KeepAlive>` and `<Transition>`. See the crate's [`generated_code`](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#component-is) guide |
 | Escape hatches | `<ClientOnly>` from `ferrovue/client`, whose default slot the server never renders, so anything may go in it; components listed in `twins`, rendered by Rust functions of yours. See [Escape hatches](#escape-hatches) |
@@ -239,7 +243,9 @@ ferrovue compiles `<script setup lang="ts">` components, and components with no 
 
 Refused at compile time, each with an error that names the construct:
 
-- `<style module>`, and `v-bind()` in CSS
+- `<style module>` without `cssModules` in the configuration; a CSS module in another file, one a
+  preprocessor compiles, or one that imports from another file; `v-bind()` in `<style>` of a value
+  that is not a string or a number
 - `<RouterView>` in a component with `<style scoped>`, which would give the page that component's
   id; and, since vue-router renders a link from virtual nodes, a `<slot>` inside a `<RouterLink>`
   that takes scope ids, or an element inside one in slot content given a `:slotted()` id
@@ -351,6 +357,15 @@ two must be configured alike:
 Set `viteRoot` when Vite's root is not the directory holding `ferrovue.config.json`. The Vite
 plugin (`ferrovue/vite`) compares the two when a component has scoped styles: a build in which they
 differ fails, and the dev server warns.
+
+`v-bind()` in `<style>` sets CSS variables on the component's root, which Vue's server writes into
+its `style` and ferrovue writes there too. Their names follow the same id, and whether plugin-vue
+compiles for production (`vite build`) or development (the dev server): set `isProduction` to match,
+`true` by default. CSS modules (`<style module>`) take their class names from Vite's
+`css.modules.generateScopedName`: set it to a pattern, and `cssModules` in `ferrovue.config.json` to
+the same, and ferrovue computes each class as postcss-modules does in Vite. The Vite plugin compares
+both, and fails a build in which they differ. See the crate's
+[`scoped_styles`](https://docs.rs/ferrovue/latest/ferrovue/guide/scoped_styles/index.html) guide.
 
 The default is the plugin's production behaviour because the production build is the one readers
 get: with every option left alone, its styles apply. But plugin-vue hashes the path alone in its dev

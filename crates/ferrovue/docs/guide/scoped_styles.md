@@ -1,4 +1,5 @@
-`<style scoped>`: the `data-v-` attributes Vue's server renderer writes.
+`<style scoped>`, `v-bind()` in `<style>` and CSS modules: what Vue's server renderer writes for a
+component's styles.
 
 A component with `<style scoped>` has its CSS rewritten by the client build to select its own
 elements only: `.tag { … }` becomes `.tag[data-v-7f092129] { … }`, and every element the
@@ -492,9 +493,173 @@ since the server's HTML is what it promises to match:
 
 Hydration keeps the server's attributes in both cases, as it does for a page Vue rendered.
 
+# `v-bind()` in `<style>`
+
+`v-bind()` in a `<style>` block, scoped or not, binds a CSS custom property to an expression of the
+component's props and setup:
+
+```vue
+<!-- client/components/Swatch.vue -->
+<script setup lang="ts">
+defineProps<{ color: string; size?: number }>();
+</script>
+
+<template>
+  <span class="swatch">{{ color }}</span>
+</template>
+
+<style scoped>
+.swatch { background: v-bind(color); width: v-bind(size); }
+</style>
+```
+
+The client build rewrites the CSS to read `var(--…)`, and Vue's server compiler writes each variable
+into the `style` of the component's root, after the root's own `style` and what a parent passes it.
+The generated code writes them where Vue's server does:
+
+- on the root element, or on each element of a root with several, and on the elements of a root
+  `<template v-if>`;
+- given to a root that is a component, a `<component :is>`, an async component or a `<RouterLink>`,
+  as a `style` attribute it falls through to;
+- on nothing for a root `v-for`, `<Transition>`, `<KeepAlive>` or `<Teleport>`, where Vue's server
+  writes none (Vue's client sets them there once it has mounted, on a page Vue rendered as on one
+  ferrovue rendered).
+
+A value is a string or a number, which Vue writes as `ssrRenderStyle` does: `undefined` and `null`
+as `initial`, an empty string as a space, and the text escaped for the attribute (`"` as `&quot;`,
+`<` as `&lt;`), nothing more. A `v-bind()` of a boolean, a list or an object is refused (FV1006),
+since Vue warns of it. The expression may be quoted, with spaces and quotes of its own:
+`v-bind('size + "px"')`.
+
+The names follow the component's id, which is computed as for a scoped component (and is computed
+for a component whose `v-bind()` is in a global `<style>` too), and whether plugin-vue compiles for
+production: a hash of the id and the expression in production, the id and the expression escaped in
+development. `isProduction` in `ferrovue.config.json` says which, as Vite's own setting does:
+
+| `@vitejs/plugin-vue` | `ferrovue.config.json` |
+|---|---|
+| `vite build` | `"isProduction": true` (the default) |
+| the dev server | `"isProduction": false` |
+
+The Vite plugin compares both settings when a component has `v-bind()` in `<style>`: a build in which
+they differ fails, and the dev server warns. With `"scopeId": "filepath"` and `"isProduction": false`,
+`Swatch` renders:
+
+```rust
+# mod swatch {
+# use std::borrow::Cow;
+# use ferrovue as fv;
+# pub struct Props<'a> { pub color: Cow<'a, str>, pub size: Option<i64> }
+/// Write the component's server render into `out`.
+pub fn render(out: &mut String, props: &Props<'_>) {
+    out.reserve(119 + props.color.len());
+    out.push_str("<span class=\"swatch\" style=\"--95abae23-color:");
+    if props.color.is_empty() {
+        out.push(' ');
+    } else {
+        fv::escape_into(out, &props.color);
+    }
+    out.push(';');
+    if let Some(v) = props.size {
+        out.push_str("--95abae23-size:");
+        fv::push_int(out, v);
+        out.push(';');
+    } else {
+        out.push_str("--95abae23-size:initial;");
+    }
+    out.push_str("\" data-v-95abae23>");
+    fv::escape_into(out, &props.color);
+    out.push_str("</span>");
+}
+# }
+# let mut out = String::new();
+# swatch::render(&mut out, &swatch::Props { color: "teal".into(), size: Some(4) });
+# swatch::render(&mut out, &swatch::Props { color: "".into(), size: None });
+# assert_eq!(out, concat!(
+#     r#"<span class="swatch" style="--95abae23-color:teal;--95abae23-size:4;" data-v-95abae23>teal</span>"#,
+#     r#"<span class="swatch" style="--95abae23-color: ;--95abae23-size:initial;" data-v-95abae23></span>"#,
+# ));
+```
+
+and, compiled for production, the same with `--v52530d6a` and `--v3881b919` for the names.
+
+Vue's client checks the variables as it hydrates, and itself reports a mismatch for a value that
+is empty or blank, or that holds a `;`, which it reads back otherwise than its server wrote it. A
+`<Suspense>` root's content carries the variables on the server, where the client does not look for
+them, which it reports too. ferrovue writes what Vue's server writes in each case.
+
+# CSS modules
+
+A `<style module>` block's classes are renamed by the bundler, and a template reads their new names
+from `$style` (`<style module="name">` from `name`, and `useCssModule()` or `useCssModule("name")`
+in setup):
+
+```vue
+<!-- client/components/Toggle.vue -->
+<script setup lang="ts">
+defineProps<{ label: string; active: boolean }>();
+</script>
+
+<template>
+  <button :class="[$style.button, { [$style.active]: active }]">{{ label }}</button>
+</template>
+
+<style module>
+.button { padding: 0 1em; }
+.active { font-weight: bold; }
+</style>
+```
+
+Vite names them by `css.modules.generateScopedName`, through postcss-modules. Left unset, the name
+holds a hash of the CSS and a line number, which changes as the block does; ferrovue computes the
+names only when the pattern is set, in Vite and as `cssModules` in `ferrovue.config.json` alike, and
+refuses `<style module>` otherwise (FV1005):
+
+```ts
+// vite.config.ts
+export default defineConfig({
+  css: { modules: { generateScopedName: "[local]_[hash:base64:5]" } },
+  plugins: [vue(), ferrovue()],
+});
+```
+
+```json
+{ "components": "client/components", "out": "src/generated", "cssModules": { "generateScopedName": "[local]_[hash:base64:5]" } }
+```
+
+`Toggle` then renders `<button class="button_cmjmr active_Sa5O5">`: each name is a constant in the
+generated code, and a class the module does not have is `undefined`, as in Vue.
+
+The pattern is any string postcss-modules takes, and ferrovue computes it with the same libraries:
+
+| Part | What it is |
+|---|---|
+| `[local]` | the class as written |
+| `[hash:base64:5]` | a hash of `hashPrefix`, the module's path from the directory Vite runs in, and the class (xxhash64 by default; `[md5:hash:hex:8]` and the like choose another hash and digest) |
+| `[name]` | the module's file name as Vite sees it, the component's with plugin-vue's query: `Toggle-vue-vue-type-style-index-0-lang-module` |
+| `[path]`, `[folder]`, `[ext]` | the module's directory from the directory Vite runs in, its last folder, and `css` |
+
+A hash and `[path]` take the module's path from the directory Vite runs in, its working directory:
+set `cssModules.context` to it, relative to `ferrovue.config.json`, when it is not `viteRoot`. The
+path holds the component's id for a `<style module scoped>`, so its names follow `scopeId` too.
+`cssModules.hashPrefix` is Vite's `css.modules.hashPrefix`.
+
+The Vite plugin compares the two when a component has `<style module>`, and fails a build in which
+Vite would name the classes otherwise: another pattern, another `hashPrefix`, another working
+directory for a pattern that hashes the path, a `localsConvention` (which renames the classes a
+template reads), global scoping, or `css.transformer: "lightningcss"`, which names them by rules of
+its own.
+
+ferrovue reads the module as written in the component, in plain CSS, as Vite does before plugin-vue
+compiles it. It refuses (FV1014) a module in another file (`src`), one a preprocessor compiles
+(`lang="scss"`), and one that imports from another file (`composes: x from "./a.css"`,
+`@value x from "./a.css"`). A PostCSS plugin of the project's runs before postcss-modules in Vite;
+one that adds or renames classes changes names ferrovue does not see.
+
 # What is refused
 
-- `<style module>`, and `v-bind()` in CSS;
+- `<style module>` without `cssModules` in the configuration, and the modules above;
+- `v-bind()` in `<style>` of a value that is not a string or a number;
 - `<RouterView>` in a component with `<style scoped>`, which would give the page that component's id;
 - since vue-router renders a link from virtual nodes, a `<slot>` inside a `<RouterLink>` that takes
   scope ids, and an element inside a `<RouterLink>` in slot content given a `:slotted()` id.

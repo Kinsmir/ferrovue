@@ -8,6 +8,9 @@ import type { Plugin as Plugin_2 } from 'vite';
 import type { ResolvedConfig } from 'vite';
 
 // @public
+export function cssModulesMismatch(root: string, css: ResolvedConfig["css"] | undefined, cwd: string, configFile?: string): string | null;
+
+// @public
 function ferrovue(options?: FerrovueOptions): Plugin_2;
 export default ferrovue;
 
@@ -26,12 +29,14 @@ export function routesModule(root: string, routes: FileRoute[]): string;
 export function scopeIdMismatch(root: string, vue: {
     mode: string;
     root: string;
+    production?: boolean;
 } | null, configFile?: string): string | null;
 
 // @public
 export function vueScopeIds(config: ResolvedConfig): {
     mode: "filepath" | "filepath-source";
     root: string;
+    production: boolean;
 } | null;
 
 // (No @packageDocumentation comment for this package)

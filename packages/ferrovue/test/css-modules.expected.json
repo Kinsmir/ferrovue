@@ -1,0 +1,629 @@
+[
+  {
+    "Card.vue": {
+      "$style": {
+        "primary": "#f00",
+        "secondary": "blue",
+        "card": "Card-vue-vue-type-style-index-0-lang-module__card___oa-Xs",
+        "title": "Card-vue-vue-type-style-index-0-lang-module__title___QF5c9",
+        "active": "Card-vue-vue-type-style-index-0-lang-module__active___xKx90",
+        "red-dash": "Card-vue-vue-type-style-index-0-lang-module__red-dash___82dZ2",
+        "under_score": "Card-vue-vue-type-style-index-0-lang-module__under_score___J-HTF",
+        "Upper": "Card-vue-vue-type-style-index-0-lang-module__Upper___4gTMd",
+        "inside": "Card-vue-vue-type-style-index-0-lang-module__inside___dQRBO",
+        "narrow": "Card-vue-vue-type-style-index-0-lang-module__narrow___rZHvP",
+        "comp": "Card-vue-vue-type-style-index-0-lang-module__comp___BgfuX Card-vue-vue-type-style-index-0-lang-module__title___QF5c9 Card-vue-vue-type-style-index-0-lang-module__active___xKx90",
+        "comp2": "Card-vue-vue-type-style-index-0-lang-module__comp2___AZh1W Card-vue-vue-type-style-index-0-lang-module__comp___BgfuX Card-vue-vue-type-style-index-0-lang-module__title___QF5c9 Card-vue-vue-type-style-index-0-lang-module__active___xKx90 outside",
+        "anim": "Card-vue-vue-type-style-index-0-lang-module__anim___cM9ZJ",
+        "spin": "Card-vue-vue-type-style-index-0-lang-module__spin___H2BGc",
+        "fade": "Card-vue-vue-type-style-index-0-lang-module__fade___JDuZG",
+        "sm:hidden": "Card-vue-vue-type-style-index-0-lang-module__sm--hidden___1aoMO",
+        "10x": "Card-vue-vue-type-style-index-0-lang-module__-31-0x___LMpxc",
+        "é": "Card-vue-vue-type-style-index-0-lang-module__é___0LP5K",
+        "wide-only": "Card-vue-vue-type-style-index-0-lang-module__wide-only___0kkgG",
+        "a": "Card-vue-vue-type-style-index-0-lang-module__a___fEmus",
+        "b": "Card-vue-vue-type-style-index-0-lang-module__b___JSp6T",
+        "c": "Card-vue-vue-type-style-index-0-lang-module__c___Obmcc",
+        "d": "Card-vue-vue-type-style-index-0-lang-module__d___R2uKj",
+        "e": "Card-vue-vue-type-style-index-0-lang-module__e___p8zn2",
+        "ident": "Card-vue-vue-type-style-index-0-lang-module__ident___83J2l"
+      }
+    },
+    "Theme.vue": {
+      "theme": {
+        "again": "Theme-vue-vue-type-style-index-5-lang-module__again___TlAfX"
+      },
+      "$style": {
+        "plain": "Theme-vue-vue-type-style-index-2-lang-module__plain___gvsCG"
+      },
+      "scoped": {
+        "dot": "Theme-vue-vue-type-style-index-3-scoped-038dc2ae-lang-module__dot___RK7oN",
+        "wrap": "Theme-vue-vue-type-style-index-3-scoped-038dc2ae-lang-module__wrap___VCa6p",
+        "inner": "Theme-vue-vue-type-style-index-3-scoped-038dc2ae-lang-module__inner___ACRj5",
+        "framed": "Theme-vue-vue-type-style-index-3-scoped-038dc2ae-lang-module__framed___FrZsP",
+        "holder": "Theme-vue-vue-type-style-index-3-scoped-038dc2ae-lang-module__holder___iCM6J",
+        "slotted": "Theme-vue-vue-type-style-index-3-scoped-038dc2ae-lang-module__slotted___IgTWs",
+        "legacy": "Theme-vue-vue-type-style-index-3-scoped-038dc2ae-lang-module__legacy___ChCE7"
+      },
+      "titled": {
+        "titled": "Theme-vue-vue-type-style-index-4-title-a-20b-26c-data-x-true-lang-module__titled___WbE7a"
+      }
+    },
+    "sub/Deep.vue": {
+      "$style": {
+        "deep": "Deep-vue-vue-type-style-index-0-lang-module__deep___vdePs",
+        "deep-two": "Deep-vue-vue-type-style-index-0-lang-module__deep-two___IjYpm"
+      }
+    }
+  },
+  {
+    "Card.vue": {
+      "$style": {
+        "primary": "#f00",
+        "secondary": "blue",
+        "card": "Card-vue-vue-type-style-index-0-lang-module__card___oa-Xs",
+        "title": "Card-vue-vue-type-style-index-0-lang-module__title___QF5c9",
+        "active": "Card-vue-vue-type-style-index-0-lang-module__active___xKx90",
+        "red-dash": "Card-vue-vue-type-style-index-0-lang-module__red-dash___82dZ2",
+        "under_score": "Card-vue-vue-type-style-index-0-lang-module__under_score___J-HTF",
+        "Upper": "Card-vue-vue-type-style-index-0-lang-module__Upper___4gTMd",
+        "inside": "Card-vue-vue-type-style-index-0-lang-module__inside___dQRBO",
+        "narrow": "Card-vue-vue-type-style-index-0-lang-module__narrow___rZHvP",
+        "comp": "Card-vue-vue-type-style-index-0-lang-module__comp___BgfuX Card-vue-vue-type-style-index-0-lang-module__title___QF5c9 Card-vue-vue-type-style-index-0-lang-module__active___xKx90",
+        "comp2": "Card-vue-vue-type-style-index-0-lang-module__comp2___AZh1W Card-vue-vue-type-style-index-0-lang-module__comp___BgfuX Card-vue-vue-type-style-index-0-lang-module__title___QF5c9 Card-vue-vue-type-style-index-0-lang-module__active___xKx90 outside",
+        "anim": "Card-vue-vue-type-style-index-0-lang-module__anim___cM9ZJ",
+        "spin": "Card-vue-vue-type-style-index-0-lang-module__spin___H2BGc",
+        "fade": "Card-vue-vue-type-style-index-0-lang-module__fade___JDuZG",
+        "sm:hidden": "Card-vue-vue-type-style-index-0-lang-module__sm--hidden___1aoMO",
+        "10x": "Card-vue-vue-type-style-index-0-lang-module__-31-0x___LMpxc",
+        "é": "Card-vue-vue-type-style-index-0-lang-module__é___0LP5K",
+        "wide-only": "Card-vue-vue-type-style-index-0-lang-module__wide-only___0kkgG",
+        "a": "Card-vue-vue-type-style-index-0-lang-module__a___fEmus",
+        "b": "Card-vue-vue-type-style-index-0-lang-module__b___JSp6T",
+        "c": "Card-vue-vue-type-style-index-0-lang-module__c___Obmcc",
+        "d": "Card-vue-vue-type-style-index-0-lang-module__d___R2uKj",
+        "e": "Card-vue-vue-type-style-index-0-lang-module__e___p8zn2",
+        "ident": "Card-vue-vue-type-style-index-0-lang-module__ident___83J2l"
+      }
+    },
+    "Theme.vue": {
+      "theme": {
+        "again": "Theme-vue-vue-type-style-index-5-lang-module__again___TlAfX"
+      },
+      "$style": {
+        "plain": "Theme-vue-vue-type-style-index-2-lang-module__plain___gvsCG"
+      },
+      "scoped": {
+        "dot": "Theme-vue-vue-type-style-index-3-scoped-99e0ace9-lang-module__dot___aMka-",
+        "wrap": "Theme-vue-vue-type-style-index-3-scoped-99e0ace9-lang-module__wrap___Gw9Ik",
+        "inner": "Theme-vue-vue-type-style-index-3-scoped-99e0ace9-lang-module__inner___XTJOl",
+        "framed": "Theme-vue-vue-type-style-index-3-scoped-99e0ace9-lang-module__framed___1rwf9",
+        "holder": "Theme-vue-vue-type-style-index-3-scoped-99e0ace9-lang-module__holder___Sgocu",
+        "slotted": "Theme-vue-vue-type-style-index-3-scoped-99e0ace9-lang-module__slotted___bAn8P",
+        "legacy": "Theme-vue-vue-type-style-index-3-scoped-99e0ace9-lang-module__legacy___pYYBq"
+      },
+      "titled": {
+        "titled": "Theme-vue-vue-type-style-index-4-title-a-20b-26c-data-x-true-lang-module__titled___WbE7a"
+      }
+    },
+    "sub/Deep.vue": {
+      "$style": {
+        "deep": "Deep-vue-vue-type-style-index-0-lang-module__deep___vdePs",
+        "deep-two": "Deep-vue-vue-type-style-index-0-lang-module__deep-two___IjYpm"
+      }
+    }
+  },
+  {
+    "Card.vue": {
+      "$style": {
+        "primary": "#f00",
+        "secondary": "blue",
+        "card": "card_bJIwv9HG",
+        "title": "title_TBO40aYt",
+        "active": "active_OhCbNJJC",
+        "red-dash": "red-dash_zUGvQv3Y",
+        "under_score": "under_score_LB93T6P9",
+        "Upper": "Upper_nmPyRoMc",
+        "inside": "inside_52P4y7-S",
+        "narrow": "narrow_ThkAqFUK",
+        "comp": "comp_u1HRztBH title_TBO40aYt active_OhCbNJJC",
+        "comp2": "comp2_ZKct6740 comp_u1HRztBH title_TBO40aYt active_OhCbNJJC outside",
+        "anim": "anim_TTF0jxTn",
+        "spin": "spin_10dHbsUH",
+        "fade": "fade_n4RK05Mb",
+        "sm:hidden": "sm--hidden_JKvFlrAC",
+        "10x": "_-31-0x_iYsgcfNo",
+        "é": "é_4MexM3yg",
+        "wide-only": "wide-only_wZBvJ39M",
+        "a": "a_R2Rnbghg",
+        "b": "b_YPkLVrh2",
+        "c": "c_X02Q8o-B",
+        "d": "d_QvcJ4HAg",
+        "e": "e_KxVXQcPr",
+        "ident": "ident_-grxenGw"
+      }
+    },
+    "Theme.vue": {
+      "theme": {
+        "again": "again_mI1zeTKk"
+      },
+      "$style": {
+        "plain": "plain_VFIToyCE"
+      },
+      "scoped": {
+        "dot": "dot_I9TxV0XZ",
+        "wrap": "wrap_XvYI5gww",
+        "inner": "inner_52hnenq7",
+        "framed": "framed_qVyqmw5D",
+        "holder": "holder_HI--XIWi",
+        "slotted": "slotted_iCAhKdZd",
+        "legacy": "legacy_E9Yek9EO"
+      },
+      "titled": {
+        "titled": "titled_fZy9JHIR"
+      }
+    },
+    "sub/Deep.vue": {
+      "$style": {
+        "deep": "deep_aFd-rrxY",
+        "deep-two": "deep-two_VKneVOHn"
+      }
+    }
+  },
+  {
+    "Card.vue": {
+      "$style": {
+        "primary": "#f00",
+        "secondary": "blue",
+        "card": "packages-ferrovue-test-css-modules-Card-vue-vue-type-style-index-0-lang-module__card",
+        "title": "packages-ferrovue-test-css-modules-Card-vue-vue-type-style-index-0-lang-module__title",
+        "active": "packages-ferrovue-test-css-modules-Card-vue-vue-type-style-index-0-lang-module__active",
+        "red-dash": "packages-ferrovue-test-css-modules-Card-vue-vue-type-style-index-0-lang-module__red-dash",
+        "under_score": "packages-ferrovue-test-css-modules-Card-vue-vue-type-style-index-0-lang-module__under_score",
+        "Upper": "packages-ferrovue-test-css-modules-Card-vue-vue-type-style-index-0-lang-module__Upper",
+        "inside": "packages-ferrovue-test-css-modules-Card-vue-vue-type-style-index-0-lang-module__inside",
+        "narrow": "packages-ferrovue-test-css-modules-Card-vue-vue-type-style-index-0-lang-module__narrow",
+        "comp": "packages-ferrovue-test-css-modules-Card-vue-vue-type-style-index-0-lang-module__comp packages-ferrovue-test-css-modules-Card-vue-vue-type-style-index-0-lang-module__title packages-ferrovue-test-css-modules-Card-vue-vue-type-style-index-0-lang-module__active",
+        "comp2": "packages-ferrovue-test-css-modules-Card-vue-vue-type-style-index-0-lang-module__comp2 packages-ferrovue-test-css-modules-Card-vue-vue-type-style-index-0-lang-module__comp packages-ferrovue-test-css-modules-Card-vue-vue-type-style-index-0-lang-module__title packages-ferrovue-test-css-modules-Card-vue-vue-type-style-index-0-lang-module__active outside",
+        "anim": "packages-ferrovue-test-css-modules-Card-vue-vue-type-style-index-0-lang-module__anim",
+        "spin": "packages-ferrovue-test-css-modules-Card-vue-vue-type-style-index-0-lang-module__spin",
+        "fade": "packages-ferrovue-test-css-modules-Card-vue-vue-type-style-index-0-lang-module__fade",
+        "sm:hidden": "packages-ferrovue-test-css-modules-Card-vue-vue-type-style-index-0-lang-module__sm--hidden",
+        "10x": "packages-ferrovue-test-css-modules-Card-vue-vue-type-style-index-0-lang-module__-31-0x",
+        "é": "packages-ferrovue-test-css-modules-Card-vue-vue-type-style-index-0-lang-module__é",
+        "wide-only": "packages-ferrovue-test-css-modules-Card-vue-vue-type-style-index-0-lang-module__wide-only",
+        "a": "packages-ferrovue-test-css-modules-Card-vue-vue-type-style-index-0-lang-module__a",
+        "b": "packages-ferrovue-test-css-modules-Card-vue-vue-type-style-index-0-lang-module__b",
+        "c": "packages-ferrovue-test-css-modules-Card-vue-vue-type-style-index-0-lang-module__c",
+        "d": "packages-ferrovue-test-css-modules-Card-vue-vue-type-style-index-0-lang-module__d",
+        "e": "packages-ferrovue-test-css-modules-Card-vue-vue-type-style-index-0-lang-module__e",
+        "ident": "packages-ferrovue-test-css-modules-Card-vue-vue-type-style-index-0-lang-module__ident"
+      }
+    },
+    "Theme.vue": {
+      "theme": {
+        "again": "packages-ferrovue-test-css-modules-Theme-vue-vue-type-style-index-5-lang-module__again"
+      },
+      "$style": {
+        "plain": "packages-ferrovue-test-css-modules-Theme-vue-vue-type-style-index-2-lang-module__plain"
+      },
+      "scoped": {
+        "dot": "packages-ferrovue-test-css-modules-Theme-vue-vue-type-style-index-3-scoped-038dc2ae-lang-module__dot",
+        "wrap": "packages-ferrovue-test-css-modules-Theme-vue-vue-type-style-index-3-scoped-038dc2ae-lang-module__wrap",
+        "inner": "packages-ferrovue-test-css-modules-Theme-vue-vue-type-style-index-3-scoped-038dc2ae-lang-module__inner",
+        "framed": "packages-ferrovue-test-css-modules-Theme-vue-vue-type-style-index-3-scoped-038dc2ae-lang-module__framed",
+        "holder": "packages-ferrovue-test-css-modules-Theme-vue-vue-type-style-index-3-scoped-038dc2ae-lang-module__holder",
+        "slotted": "packages-ferrovue-test-css-modules-Theme-vue-vue-type-style-index-3-scoped-038dc2ae-lang-module__slotted",
+        "legacy": "packages-ferrovue-test-css-modules-Theme-vue-vue-type-style-index-3-scoped-038dc2ae-lang-module__legacy"
+      },
+      "titled": {
+        "titled": "packages-ferrovue-test-css-modules-Theme-vue-vue-type-style-index-4-title-a-20b-26c-data-x-true-lang-module__titled"
+      }
+    },
+    "sub/Deep.vue": {
+      "$style": {
+        "deep": "packages-ferrovue-test-css-modules-sub-Deep-vue-vue-type-style-index-0-lang-module__deep",
+        "deep-two": "packages-ferrovue-test-css-modules-sub-Deep-vue-vue-type-style-index-0-lang-module__deep-two"
+      }
+    }
+  },
+  {
+    "Card.vue": {
+      "$style": {
+        "primary": "#f00",
+        "secondary": "blue",
+        "card": "css-modules-card-a1afd7",
+        "title": "css-modules-title-405e5c",
+        "active": "css-modules-active-c4ac7d",
+        "red-dash": "css-modules-red-dash-f36759",
+        "under_score": "css-modules-under_score-27f1d3",
+        "Upper": "css-modules-Upper-e204cc",
+        "inside": "css-modules-inside-750441",
+        "narrow": "css-modules-narrow-ad91ef",
+        "comp": "css-modules-comp-0607ee css-modules-title-405e5c css-modules-active-c4ac7d",
+        "comp2": "css-modules-comp2-019875 css-modules-comp-0607ee css-modules-title-405e5c css-modules-active-c4ac7d outside",
+        "anim": "css-modules-anim-70cf59",
+        "spin": "css-modules-spin-1f6046",
+        "fade": "css-modules-fade-243b99",
+        "sm:hidden": "css-modules-sm--hidden-d5aa0c",
+        "10x": "css-modules--31-0x-2cca71",
+        "é": "css-modules-é-d0b3f9",
+        "wide-only": "css-modules-wide-only-d24920",
+        "a": "css-modules-a-7c49ae",
+        "b": "css-modules-b-252a7a",
+        "c": "css-modules-c-39b99c",
+        "d": "css-modules-d-476b8a",
+        "e": "css-modules-e-a7cce7",
+        "ident": "css-modules-ident-f37276"
+      }
+    },
+    "Theme.vue": {
+      "theme": {
+        "again": "css-modules-again-4e501f"
+      },
+      "$style": {
+        "plain": "css-modules-plain-82fb02"
+      },
+      "scoped": {
+        "dot": "css-modules-dot-44aee8",
+        "wrap": "css-modules-wrap-5426ba",
+        "inner": "css-modules-inner-002463",
+        "framed": "css-modules-framed-16b66c",
+        "holder": "css-modules-holder-88233a",
+        "slotted": "css-modules-slotted-2204d6",
+        "legacy": "css-modules-legacy-0a1084"
+      },
+      "titled": {
+        "titled": "css-modules-titled-59b13b"
+      }
+    },
+    "sub/Deep.vue": {
+      "$style": {
+        "deep": "sub-deep-bdd78f",
+        "deep-two": "sub-deep-two-223629"
+      }
+    }
+  },
+  {
+    "Card.vue": {
+      "$style": {
+        "primary": "#f00",
+        "secondary": "blue",
+        "card": "_card_X4XerJT",
+        "title": "_title_rOZ6yzF",
+        "active": "_active_WyFxzLq",
+        "red-dash": "_red-dash_KWx6zV4",
+        "under_score": "_under_score_NqEfFPt",
+        "Upper": "_Upper_wjlm4Qc",
+        "inside": "_inside_U-ZvDJs",
+        "narrow": "_narrow_A0H4Let",
+        "comp": "_comp_tb8Ceto _title_rOZ6yzF _active_WyFxzLq",
+        "comp2": "_comp2_cLpVjXs _comp_tb8Ceto _title_rOZ6yzF _active_WyFxzLq outside",
+        "anim": "_anim_ofOWk5L",
+        "spin": "_spin_gwHvWS5",
+        "fade": "_fade_0k42I51",
+        "sm:hidden": "_sm--hidden_XuzMi94",
+        "10x": "_-31-0x_d05OJRj",
+        "é": "_é_fVciAjA",
+        "wide-only": "_wide-only_Pn0nqXS",
+        "a": "_a_ZknF67v",
+        "b": "_b_OF39KXt",
+        "c": "_c_HMYt8gO",
+        "d": "_d_e3r1g7N",
+        "e": "_e_DRKuzrT",
+        "ident": "_ident_hiJa6Ui"
+      }
+    },
+    "Theme.vue": {
+      "theme": {
+        "again": "_again_npPBd--"
+      },
+      "$style": {
+        "plain": "_plain_XrRiie2"
+      },
+      "scoped": {
+        "dot": "_dot_68QcTz1",
+        "wrap": "_wrap_CBxVG-G",
+        "inner": "_inner_Hy4IdIN",
+        "framed": "_framed_zyYv5-j",
+        "holder": "_holder_k7Hj8aS",
+        "slotted": "_slotted_0sWnjfR",
+        "legacy": "_legacy_kp-sIJg"
+      },
+      "titled": {
+        "titled": "_titled_1SlsWw-"
+      }
+    },
+    "sub/Deep.vue": {
+      "$style": {
+        "deep": "_deep_14nM78t",
+        "deep-two": "_deep-two_jvY4xQ5"
+      }
+    }
+  },
+  {
+    "Card.vue": {
+      "$style": {
+        "primary": "#f00",
+        "secondary": "blue",
+        "card": "a1afd7b0c265e75e",
+        "title": "_405e5cf7029fd6d4",
+        "active": "c4ac7dd07f6f679a",
+        "red-dash": "f36759da313910dd",
+        "under_score": "_27f1d31793056947",
+        "Upper": "e204cc743acd119f",
+        "inside": "_75044139c0abdaac",
+        "narrow": "ad91ef3d8493bbeb",
+        "comp": "_0607ee5d9639fe80 _405e5cf7029fd6d4 c4ac7dd07f6f679a",
+        "comp2": "_01987558f13c7bc7 _0607ee5d9639fe80 _405e5cf7029fd6d4 c4ac7dd07f6f679a outside",
+        "anim": "_70cf5925f0ccac72",
+        "spin": "_1f60467142760a21",
+        "fade": "_243b9919f9957f29",
+        "sm:hidden": "d5aa0c38fa4953b4",
+        "10x": "_2cca71718e151911",
+        "é": "d0b3f928b2af6f9f",
+        "wide-only": "d249201997b45c5a",
+        "a": "_7c49aeb2e76e2d6c",
+        "b": "_252a7a4c61c3eca2",
+        "c": "_39b99c73680f49ed",
+        "d": "_476b8a8f5c486401",
+        "e": "a7cce7db293a8648",
+        "ident": "f3727695d598a4f4"
+      }
+    },
+    "Theme.vue": {
+      "theme": {
+        "again": "_4e501f5c9536f80e"
+      },
+      "$style": {
+        "plain": "_82fb021806c89f26"
+      },
+      "scoped": {
+        "dot": "_44aee8378d37458f",
+        "wrap": "_5426baa7a35390db",
+        "inner": "_002463e5a2d32961",
+        "framed": "_16b66c3e34f0d262",
+        "holder": "_88233a26c00772b9",
+        "slotted": "_2204d6b28c9349a2",
+        "legacy": "_0a1084efedaf97ab"
+      },
+      "titled": {
+        "titled": "_59b13b6b130668a9"
+      }
+    },
+    "sub/Deep.vue": {
+      "$style": {
+        "deep": "bdd78fb120a50fe4",
+        "deep-two": "_2236299adbc48b31"
+      }
+    }
+  },
+  {
+    "Card.vue": {
+      "$style": {
+        "primary": "#f00",
+        "secondary": "blue",
+        "card": "card-oa-XsM",
+        "title": "title-QF5c9w",
+        "active": "active-xKx90H",
+        "red-dash": "red-dash-82dZ2j",
+        "under_score": "under_score-J-HTF5",
+        "Upper": "Upper-4gTMdD",
+        "inside": "inside-dQRBOc",
+        "narrow": "narrow-rZHvPY",
+        "comp": "comp-BgfuXZ title-QF5c9w active-xKx90H",
+        "comp2": "comp2-AZh1WP comp-BgfuXZ title-QF5c9w active-xKx90H outside",
+        "anim": "anim-cM9ZJf",
+        "spin": "spin-H2BGcU",
+        "fade": "fade-JDuZGf",
+        "sm:hidden": "sm--hidden-1aoMOP",
+        "10x": "_-31-0x-LMpxcY",
+        "é": "é-0LP5KL",
+        "wide-only": "wide-only-0kkgGZ",
+        "a": "a-fEmusu",
+        "b": "b-JSp6TG",
+        "c": "c-Obmcc2",
+        "d": "d-R2uKj1",
+        "e": "e-p8zn2y",
+        "ident": "ident-83J2ld"
+      }
+    },
+    "Theme.vue": {
+      "theme": {
+        "again": "again-TlAfXJ"
+      },
+      "$style": {
+        "plain": "plain-gvsCGA"
+      },
+      "scoped": {
+        "dot": "dot-aMka-I",
+        "wrap": "wrap-Gw9Ik0",
+        "inner": "inner-XTJOlW",
+        "framed": "framed-1rwf9f",
+        "holder": "holder-SgocuF",
+        "slotted": "slotted-bAn8PF",
+        "legacy": "legacy-pYYBqR"
+      },
+      "titled": {
+        "titled": "titled-WbE7ax"
+      }
+    },
+    "sub/Deep.vue": {
+      "$style": {
+        "deep": "deep-vdePsS",
+        "deep-two": "deep-two-IjYpmt"
+      }
+    }
+  },
+  {
+    "Card.vue": {
+      "$style": {
+        "primary": "#f00",
+        "secondary": "blue",
+        "card": "css-card--sha1-hash-base64url-5-",
+        "title": "css-title--sha1-hash-base64url-5-",
+        "active": "css-active--sha1-hash-base64url-5-",
+        "red-dash": "css-red-dash--sha1-hash-base64url-5-",
+        "under_score": "css-under_score--sha1-hash-base64url-5-",
+        "Upper": "css-Upper--sha1-hash-base64url-5-",
+        "inside": "css-inside--sha1-hash-base64url-5-",
+        "narrow": "css-narrow--sha1-hash-base64url-5-",
+        "comp": "css-comp--sha1-hash-base64url-5- css-title--sha1-hash-base64url-5- css-active--sha1-hash-base64url-5-",
+        "comp2": "css-comp2--sha1-hash-base64url-5- css-comp--sha1-hash-base64url-5- css-title--sha1-hash-base64url-5- css-active--sha1-hash-base64url-5- outside",
+        "anim": "css-anim--sha1-hash-base64url-5-",
+        "spin": "css-spin--sha1-hash-base64url-5-",
+        "fade": "css-fade--sha1-hash-base64url-5-",
+        "sm:hidden": "css-sm--hidden--sha1-hash-base64url-5-",
+        "10x": "css--31-0x--sha1-hash-base64url-5-",
+        "é": "css-é--sha1-hash-base64url-5-",
+        "wide-only": "css-wide-only--sha1-hash-base64url-5-",
+        "a": "css-a--sha1-hash-base64url-5-",
+        "b": "css-b--sha1-hash-base64url-5-",
+        "c": "css-c--sha1-hash-base64url-5-",
+        "d": "css-d--sha1-hash-base64url-5-",
+        "e": "css-e--sha1-hash-base64url-5-",
+        "ident": "css-ident--sha1-hash-base64url-5-"
+      }
+    },
+    "Theme.vue": {
+      "theme": {
+        "again": "css-again--sha1-hash-base64url-5-"
+      },
+      "$style": {
+        "plain": "css-plain--sha1-hash-base64url-5-"
+      },
+      "scoped": {
+        "dot": "css-dot--sha1-hash-base64url-5-",
+        "wrap": "css-wrap--sha1-hash-base64url-5-",
+        "inner": "css-inner--sha1-hash-base64url-5-",
+        "framed": "css-framed--sha1-hash-base64url-5-",
+        "holder": "css-holder--sha1-hash-base64url-5-",
+        "slotted": "css-slotted--sha1-hash-base64url-5-",
+        "legacy": "css-legacy--sha1-hash-base64url-5-"
+      },
+      "titled": {
+        "titled": "css-titled--sha1-hash-base64url-5-"
+      }
+    },
+    "sub/Deep.vue": {
+      "$style": {
+        "deep": "css-deep--sha1-hash-base64url-5-",
+        "deep-two": "css-deep-two--sha1-hash-base64url-5-"
+      }
+    }
+  },
+  {
+    "Card.vue": {
+      "$style": {
+        "primary": "#f00",
+        "secondary": "blue",
+        "card": "xcard-jQ5Z-ijp-lihsx-7aUZa1",
+        "title": "xtitle-sRRA-qcu-oedz4-VmNeEw",
+        "active": "xactive-fFFA-ixo-oki4k-ytONpO",
+        "red-dash": "xred-dash-p5Sp-edv-g8po3-fRlzk7",
+        "under_score": "xunder_score-BMai-hut-3facn-YPlsQn",
+        "Upper": "xUpper-kjXd-vla-qcfs2-xErjay",
+        "inside": "xinside-7YQn-kif-01wtx-yJyPsx",
+        "narrow": "xnarrow-LRnp-pez-9di25-kkuyn3",
+        "comp": "xcomp-nX4m-oru-e0dmu-3GFBUG xtitle-sRRA-qcu-oedz4-VmNeEw xactive-fFFA-ixo-oki4k-ytONpO",
+        "comp2": "xcomp2-EFT8-ssn-zv8jl-e4H7uV xcomp-nX4m-oru-e0dmu-3GFBUG xtitle-sRRA-qcu-oedz4-VmNeEw xactive-fFFA-ixo-oki4k-ytONpO outside",
+        "anim": "xanim-5cUd-ldw-ntze8-rEFDQA",
+        "spin": "xspin-GhWT-wcd-dvllr-3V76iP",
+        "fade": "xfade-ZrSm-cjk-caj38-aMMnAg",
+        "sm:hidden": "xsm--hidden-ZuEi-lib-rvxlh-S55mCx",
+        "10x": "x-31-0x-kgnW-dey-scjl8-nmop7m",
+        "é": "xé-3BdL-ezw-5yz80-csf6a4",
+        "wide-only": "xwide-only-RrQE-xag-jrpoy-HUia9I",
+        "a": "xa-E6nW-djg-u6vzw-rgf71W",
+        "b": "xb-ViGZ-tof-xzsx1-TnrCq9",
+        "c": "xc-3VZt-jzt-6vho9-UlEEY1",
+        "d": "xd-oKEx-uxb-0zadj-zwZ8jl",
+        "e": "xe-whPz-fop-et1uv-xGZh0b",
+        "ident": "xident-qaCX-vbf-vsn3n-mkIWe7"
+      }
+    },
+    "Theme.vue": {
+      "theme": {
+        "again": "xagain-Kpwf-hza-ra1ce-FU8uJg"
+      },
+      "$style": {
+        "plain": "xplain-nSSf-bnm-r7csi-LPGaS6"
+      },
+      "scoped": {
+        "dot": "xdot-CKu1-zro-833us-PTRite",
+        "wrap": "xwrap-HHiN-mkq-7ryhg-D03BLm",
+        "inner": "xinner-fgGC-qsu-4xr7k-nwxZYI",
+        "framed": "xframed-AZTU-iwk-emo7q-qmoB8O",
+        "holder": "xholder-GQq9-pfs-51q4o-Uzgxo4",
+        "slotted": "xslotted-9ADY-dyo-wtd7m-t7QsJs",
+        "legacy": "xlegacy-HyfW-vcc-48c96-VPW5ZM"
+      },
+      "titled": {
+        "titled": "xtitled-Pw7e-vpx-8k6e1-CpJgCZ"
+      }
+    },
+    "sub/Deep.vue": {
+      "$style": {
+        "deep": "xdeep-Te92-gvd-y1tx9-vqHFqB",
+        "deep-two": "xdeep-two-9iqf-wyk-s70gy-RaRALo"
+      }
+    }
+  },
+  {
+    "Card.vue": {
+      "$style": {
+        "primary": "#f00",
+        "secondary": "blue",
+        "card": "card",
+        "title": "title",
+        "active": "active",
+        "red-dash": "red-dash",
+        "under_score": "under_score",
+        "Upper": "Upper",
+        "inside": "inside",
+        "narrow": "narrow",
+        "comp": "comp title active",
+        "comp2": "comp2 comp title active outside",
+        "anim": "anim",
+        "spin": "spin",
+        "fade": "fade",
+        "sm:hidden": "sm--hidden",
+        "10x": "_-31-0x",
+        "é": "é",
+        "wide-only": "wide-only",
+        "a": "a",
+        "b": "b",
+        "c": "c",
+        "d": "d",
+        "e": "e",
+        "ident": "ident"
+      }
+    },
+    "Theme.vue": {
+      "theme": {
+        "again": "again"
+      },
+      "$style": {
+        "plain": "plain"
+      },
+      "scoped": {
+        "dot": "dot",
+        "wrap": "wrap",
+        "inner": "inner",
+        "framed": "framed",
+        "holder": "holder",
+        "slotted": "slotted",
+        "legacy": "legacy"
+      },
+      "titled": {
+        "titled": "titled"
+      }
+    },
+    "sub/Deep.vue": {
+      "$style": {
+        "deep": "deep",
+        "deep-two": "deep-two"
+      }
+    }
+  }
+]

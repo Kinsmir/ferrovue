@@ -97,12 +97,31 @@ export interface Config {
   scopeId?: ScopeIdMode;
   /** Vite's root, from which a scope id hashes a component's path: the project root by default. */
   viteRoot?: string;
+  /** Whether `@vitejs/plugin-vue` compiles for production, as Vite's `isProduction`: `true` (the
+   * default) for `vite build`, `false` for the dev server. It decides the names of the CSS
+   * variables `v-bind()` in `<style>` sets: a hash in production, the expression in development. */
+  isProduction?: boolean;
+  /** CSS modules (`<style module>`): how Vite's `css.modules` names their classes, which ferrovue
+   * computes as postcss-modules does. Without it, `<style module>` is refused. */
+  cssModules?: {
+    /** The pattern of a class's name, as Vite's `css.modules.generateScopedName`:
+     * `"[local]_[hash:base64:5]"`. */
+    generateScopedName: string;
+    /** Vite's `css.modules.hashPrefix`, hashed before a module's path. */
+    hashPrefix?: string;
+    /** The directory Vite runs in, its working directory, from which a hash takes a module's path,
+     * relative to this file's directory: `viteRoot` by default. */
+    context?: string;
+  };
   /** Whether each props struct and shared type gets `new()` and a chainable setter per optional
    * field: `true` by default. With `false`, props are built as struct literals. */
   builders?: boolean;
 }
 
 export type ScopeIdMode = "filepath" | "filepath-source";
+
+/** The options of Vite's `css.modules` that decide a class's name, as postcss-modules reads them. */
+export type CssModulesConfig = NonNullable<Config["cssModules"]>;
 
 /** Where the routes come from: a JSON file of routes, or a folder of pages. */
 export type RoutesSource =
@@ -212,6 +231,15 @@ export function checkConfig(raw: unknown, file: string, warn: (warning: GenError
     throw new GenError("FV1106", `\`builders\` in ${file} is \`true\` or \`false\`: whether each props struct gets \`new()\` and a setter per optional field`, { file });
   }
   for (const key of ["$schema", "stores", "trustedHtml", "viteRoot"]) string(raw, key, key);
+  if (raw.isProduction !== undefined && typeof raw.isProduction !== "boolean") wrong("isProduction", "`true` or `false`: whether `@vitejs/plugin-vue` compiles for production");
+  if (raw.cssModules !== undefined) {
+    const m = raw.cssModules;
+    if (!isObject(m)) return wrong("cssModules", "an object: `{ generateScopedName, hashPrefix?, context? }`");
+    keys(m, "cssModules", shape.cssModules);
+    string(m, "generateScopedName", "cssModules.generateScopedName", true);
+    string(m, "hashPrefix", "cssModules.hashPrefix");
+    string(m, "context", "cssModules.context");
+  }
   if (raw.clientDirectives !== undefined && !isStrings(raw.clientDirectives)) wrong("clientDirectives", 'a list of directive names, as `["focus"]`');
   if (raw.routes !== undefined) routesSource(raw.routes, "routes");
   if (raw.router !== undefined) {

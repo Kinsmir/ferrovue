@@ -52,7 +52,10 @@ export function attrsFlow(read: { comp: Component; ssr: string; children: Map<st
         if (child) {
           calls.push({
             child,
-            keys: parts.filter((p) => p.type === "ObjectExpression").flatMap((p) => p.properties.filter((q: N) => q.type === "ObjectProperty" && !q.computed).map((q: N): string => q.key.name ?? String(q.key.value))),
+            keys: [
+              ...parts.filter((p) => p.type === "ObjectExpression").flatMap((p) => p.properties.filter((q: N) => q.type === "ObjectProperty" && !q.computed).map((q: N): string => q.key.name ?? String(q.key.value))),
+              ...(parts.some((p) => p.type === "Identifier" && p.name === "_cssVars") ? ["style"] : []),
+            ],
             passesAttrs: parts.some((p) => p.type === "Identifier" && p.name === "_attrs"),
             passesDollar: parts.some((p) => isDollarAttrs(p, r.attrsBindings)),
           });

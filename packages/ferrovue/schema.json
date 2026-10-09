@@ -285,6 +285,39 @@
       "type": "string",
       "default": "."
     },
+    "isProduction": {
+      "description": "Whether `@vitejs/plugin-vue` compiles for production, as Vite's `isProduction`: `true` (the default) for `vite build`, `false` for the dev server. It decides the names of the CSS variables `v-bind()` in `<style>` sets: a hash in production, the expression in development.",
+      "markdownDescription": "Whether `@vitejs/plugin-vue` compiles for production, as Vite's `isProduction`: `true` (the default) for `vite build`, `false` for the dev server. It decides the names of the CSS variables `v-bind()` in `<style>` sets: a hash in production, the expression in development.",
+      "type": "boolean",
+      "default": true
+    },
+    "cssModules": {
+      "description": "CSS modules (`<style module>`): how Vite's `css.modules` names their classes, which ferrovue computes as postcss-modules does. Without it, `<style module>` is refused.",
+      "markdownDescription": "CSS modules (`<style module>`): how Vite's `css.modules` names their classes, which ferrovue computes as postcss-modules does. Without it, `<style module>` is refused.",
+      "type": "object",
+      "properties": {
+        "generateScopedName": {
+          "description": "The pattern of a class's name, as Vite's `css.modules.generateScopedName`: `\"[local]_[hash:base64:5]\"`.",
+          "markdownDescription": "The pattern of a class's name, as Vite's `css.modules.generateScopedName`: `\"[local]_[hash:base64:5]\"`.",
+          "type": "string"
+        },
+        "hashPrefix": {
+          "description": "Vite's `css.modules.hashPrefix`, hashed before a module's path.",
+          "markdownDescription": "Vite's `css.modules.hashPrefix`, hashed before a module's path.",
+          "type": "string",
+          "default": ""
+        },
+        "context": {
+          "description": "The directory Vite runs in, its working directory, from which a hash takes a module's path, relative to this file's directory: `viteRoot` by default.",
+          "markdownDescription": "The directory Vite runs in, its working directory, from which a hash takes a module's path, relative to this file's directory: `viteRoot` by default.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "generateScopedName"
+      ],
+      "additionalProperties": false
+    },
     "builders": {
       "description": "Whether each props struct and shared type gets `new()` and a chainable setter per optional field: `true` by default. With `false`, props are built as struct literals.",
       "markdownDescription": "Whether each props struct and shared type gets `new()` and a chainable setter per optional field: `true` by default. With `false`, props are built as struct literals.",

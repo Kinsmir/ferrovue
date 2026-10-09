@@ -18,6 +18,8 @@
     "packages/ferrovue/browser/*.test.ts",
     "packages/ferrovue/browser/entry.ts",
     "packages/ferrovue/browser/lazy-entry.ts",
+    "packages/ferrovue/test/css-modules/**",
+    "packages/ferrovue/test/css-modules-build.ts",
     "scripts/inspect.ts"
   ],
   "ignorePatterns": [

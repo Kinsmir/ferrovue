@@ -1,0 +1,13 @@
+[
+  { "generateScopedName": "[name]__[local]___[hash:base64:5]" },
+  { "generateScopedName": "[name]__[local]___[hash:base64:5]", "scopeId": "filepath" },
+  { "generateScopedName": "[local]_[hash:base64:8]", "hashPrefix": "app" },
+  { "generateScopedName": "[path][name]__[local]" },
+  { "generateScopedName": "[folder]-[local]-[hash:hex:6]" },
+  { "generateScopedName": "_[local]_[md5:hash:base64:7]" },
+  { "generateScopedName": "[hash]" },
+  { "generateScopedName": "[local]-[contenthash:base64:6]", "scopeId": "filepath" },
+  { "generateScopedName": "[ext]-[LOCAL]-[sha1:hash:base64url:5]" },
+  { "generateScopedName": "x[local]-[hash:base58:4]-[hash:base26:3]-[hash:base36:5]-[hash:base62:6]" },
+  { "generateScopedName": "[local]" }
+]

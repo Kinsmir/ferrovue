@@ -127,6 +127,8 @@ const FULL = {
   i18n: { messages: "locales", locale: "en", fallbackLocale: ["en"] },
   scopeId: "filepath",
   viteRoot: ".",
+  isProduction: false,
+  cssModules: { generateScopedName: "[local]_[hash:base64:5]", hashPrefix: "p", context: "." },
   builders: false,
 };
 
@@ -245,6 +247,7 @@ describe("the configuration's JSON Schema", () => {
       router: { routes: "routes.json" },
       i18n: { messages: "locales" },
       helpers: { module: "./helpers", functions: { plural: { rust: "crate::plural", params: ["int"], returns: "string" } } },
+      cssModules: { generateScopedName: "[local]_[hash:base64:5]" },
     };
     const files = {
       "routes.json": '["/", "/about"]',
@@ -254,8 +257,9 @@ describe("the configuration's JSON Schema", () => {
 import { plural } from "./helpers";
 defineProps<{ n: number; note?: string }>();
 </script>
-<template><p class="c"><RouterLink to="/about">{{ $t("hi") }}{{ plural(n) }}</RouterLink>{{ note }}</p></template>
+<template><p class="c"><RouterLink to="/about" :class="$style.m">{{ $t("hi") }}{{ plural(n) }}</RouterLink>{{ note }}</p></template>
 <style scoped>.c { color: red }</style>
+<style module>.m { width: v-bind(n) }</style>
 `,
     };
     const other: Record<string, unknown> = {
@@ -267,6 +271,8 @@ defineProps<{ n: number; note?: string }>();
       "router.linkExactActiveClass": "here",
       "i18n.locale": "nl",
       "helpers.functions.*.maxLen": 5,
+      isProduction: false,
+      "cssModules.hashPrefix": "p",
     };
     const defaults = valuePaths(FULL, CONFIG_SCHEMA).filter((p) => p.node.default !== undefined);
     expect(defaults.map((p) => p.name).toSorted()).toEqual(Object.keys(other).toSorted());

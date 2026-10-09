@@ -8,7 +8,9 @@ import { type Plugin, runOf } from "../plugin.ts";
 interface ScopedRun {
   mode: ScopeIdMode;
   viteRoot: string;
+  production: boolean;
   ids: Map<Component, string>;
+  cssVars: Map<Component, { id: string; vars: string[] }>;
   slotted: Set<Component>;
 }
 
@@ -16,13 +18,20 @@ export function scopeIdOf(comp: Component): string | null {
   return runOf(scoped).ids.get(comp) ?? null;
 }
 
-function scopeHash(file: string, source: string): string {
-  const { mode, viteRoot } = runOf(scoped);
+/** The id `@vitejs/plugin-vue` gives a component, `descriptor.id`: a hash of its path from Vite's
+ * root, followed by its source unless `mode` hashes the path alone. */
+export function componentId(file: string, source: string, mode: ScopeIdMode, viteRoot: string): string {
   const path = relative(viteRoot, resolvePath(file)).split(sep).join("/");
   return createHash("sha256")
     .update(mode === "filepath" ? path : path + source)
     .digest("hex")
     .slice(0, 8);
+}
+
+/** The component's id, `componentId`, as the configuration computes it. */
+export function scopeHash(file: string, source: string): string {
+  const { mode, viteRoot } = runOf(scoped);
+  return componentId(file, source, mode, viteRoot);
 }
 
 interface Call {
@@ -120,17 +129,23 @@ export const scoped: Plugin<ScopedRun> = {
   configure: (config, root) => ({
     mode: config.scopeId ?? "filepath-source",
     viteRoot: resolvePath(root, config.viteRoot ?? "."),
+    production: config.isProduction ?? true,
     ids: new Map(),
+    cssVars: new Map(),
     slotted: new Set(),
   }),
   sfc(comp, descriptor, file, source) {
     const run = runOf(scoped);
-    if (descriptor.styles.some((st) => st.scoped)) run.ids.set(comp, `data-v-${scopeHash(file, source)}`);
+    const hash = descriptor.styles.some((st) => st.scoped) || descriptor.cssVars.length ? scopeHash(file, source) : null;
+    if (descriptor.styles.some((st) => st.scoped)) run.ids.set(comp, `data-v-${hash}`);
+    if (descriptor.cssVars.length) run.cssVars.set(comp, { id: `data-v-${hash}`, vars: descriptor.cssVars });
     if (descriptor.slotted) run.slotted.add(comp);
   },
   templateOptions(comp) {
+    const run = runOf(scoped);
     const id = scopeIdOf(comp);
-    return { id: id ?? comp.name, scoped: id !== null, slotted: runOf(scoped).slotted.has(comp) };
+    const vars = run.cssVars.get(comp);
+    return { id: id ?? vars?.id ?? comp.name, scoped: id !== null, slotted: run.slotted.has(comp), ssrCssVars: vars?.vars ?? [], isProd: run.production };
   },
   analyse: (read) => scopeFlow(read),
   childIds,
