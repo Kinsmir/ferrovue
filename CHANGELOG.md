@@ -7,6 +7,12 @@ released together and share version numbers.
 
 ### Added
 
+- The types the public API names are exported where it names them: `ErrorCode` and
+  `SourceLocation` (a `GenError`'s `code` and `at`) from `ferrovue/compiler`, with `ERRORS`, the
+  table of every code and its title, and `docsUrl(code)`; `FileRoute` from `ferrovue/vite`;
+  `RouteEntry` from `ferrovue/routes`; and `IslandComponent`, `MountOptions`, `PageOptions`,
+  `PagePart`, `PageRecord` and `RenderPageOptions` from `ferrovue/testing`.
+
 - `ferrovue/volar`, a plugin for Vue's language tools (`@vue/language-core` 3.3, the Vue (Official)
   extension's language server): named in `vueCompilerOptions.plugins` in `tsconfig.json`, it
   compiles the project as a component is edited, with the editor's unsaved text, and underlines what
@@ -98,8 +104,9 @@ released together and share version numbers.
   `hydrateState(pinia, { text })` reads fetched state with the same `NaN` and `Infinity` handling,
   and `linkRouter` takes the next page's `location`. `renderRecordedPage` from `ferrovue/testing`
   checks that a page rendered from its record on the client shows the recorded HTML, comments and
-  empty text aside, and `conformanceSuite` checks a fresh client render of every fixture the same
-  way, with `clientDiffers` for the fixtures whose client render Vue itself writes differently.
+  empty text aside, and `conformanceSuite` with `clientRender: true` checks a fresh client render of
+  every fixture the same way, with `clientDiffers` for the fixtures whose client render Vue itself
+  writes differently.
   `examples/fullstack` features one staff pick after another without a reload.
 
 ### Changed

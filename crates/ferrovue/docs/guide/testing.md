@@ -64,7 +64,11 @@ i18n only in the module instance it was defined with. The suite:
   `.html`, saying where the two first differ;
 - hydrates each recorded `.html` with Vue, waiting for `<ClientOnly>` to show its content and async
   components to load, and fails on any warning or error Vue logs, or when Vue replaces the
-  server's first node.
+  server's first node;
+- with `clientRender: true`, or with `clientDiffers` given, renders each fixture afresh on the
+  client and fails where it shows other than the recorded `.html`, except the fixtures listed in
+  `clientDiffers` (see [client renders](crate::guide::islands_and_hydration)). An application
+  that renders the next page from its record on navigation turns this on.
 
 `FERROVUE_FIXTURES_WRITE=1` records instead: each fixture's `.html` is written from Vue's render,
 and nothing is hydrated. Read the recorded HTML before committing it; a changed `.html` means Vue

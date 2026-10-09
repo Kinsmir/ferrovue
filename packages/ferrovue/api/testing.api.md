@@ -20,6 +20,7 @@ export function attachSsrRender(file: string, name: string, component: Component
 // @public
 export interface ConformanceOptions extends Pick<RouterOptions, "pinia" | "vueRouter" | "vueI18n"> {
     clientDiffers?: string[];
+    clientRender?: boolean;
     components: Record<string, Component | {
         default: Component;
     }>;
@@ -47,11 +48,43 @@ export interface Fixture {
 // @public
 export function fixtureApp(component: Component, fixture: Fixture, routes: RouteEntry[] | null, options?: RouterOptions): Promise<App>;
 
-// Warning: (ae-forgotten-export) The symbol "IslandComponent" needs to be exported by the entry point testing.d.ts
-// Warning: (ae-forgotten-export) The symbol "PageOptions" needs to be exported by the entry point testing.d.ts
-//
 // @public
 export function hydrateRecordedPage(page: RecordedPage, layout: Component, components: Record<string, IslandComponent>, options?: PageOptions): Promise<App>;
+
+// @public
+export type IslandComponent = Component | (() => Promise<Component | {
+    default: Component;
+}>);
+
+// @public (undocumented)
+export interface MountOptions {
+    onError?: (element: Element, problem: string) => void;
+    pinia?: Pinia;
+    plugins?: Plugin_2[];
+    root?: ParentNode;
+    router?: Router;
+}
+
+// @public (undocumented)
+export interface PageOptions extends Pick<MountOptions, "pinia" | "router" | "plugins"> {
+    container?: Element | string;
+    doc?: Document;
+    record?: string;
+}
+
+// @public
+export interface PagePart {
+    // (undocumented)
+    c: string;
+    p: Record<string, unknown> | null;
+}
+
+// @public
+export interface PageRecord {
+    props: Record<string, unknown> | null;
+    // (undocumented)
+    slots: Record<string, PagePart[]>;
+}
 
 // @public
 export function readFixture(json: Record<string, unknown>): Fixture;
@@ -60,14 +93,19 @@ export function readFixture(json: Record<string, unknown>): Fixture;
 export interface RecordedPage {
     // (undocumented)
     html: string;
-    // Warning: (ae-forgotten-export) The symbol "PageRecord" needs to be exported by the entry point testing.d.ts
-    //
     // (undocumented)
     record?: PageRecord;
 }
 
-// Warning: (ae-forgotten-export) The symbol "RenderPageOptions" needs to be exported by the entry point testing.d.ts
-//
+// @public (undocumented)
+export interface RenderPageOptions extends Pick<MountOptions, "pinia" | "router" | "plugins"> {
+    container?: Element | string;
+    doc?: Document;
+    previous?: {
+        unmount(): void;
+    } | undefined;
+}
+
 // @public
 export function renderRecordedPage(page: RecordedPage, layout: Component, components: Record<string, IslandComponent>, options?: RenderPageOptions & {
     record?: string;

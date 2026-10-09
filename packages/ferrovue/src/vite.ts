@@ -6,6 +6,8 @@ import { formatRefusal, formatWarning, isRefusal } from "./diagnostics.ts";
 import { allPages, type FileRoute, fileRoutes, pagesFolder } from "./file-routes.ts";
 import { affects, type Inputs, inputsOf, watched } from "./inputs.ts";
 
+export type { FileRoute } from "./file-routes.ts";
+
 export interface FerrovueOptions {
   /** The project root, which the configuration's paths are relative to: Vite's working directory
    * by default. */

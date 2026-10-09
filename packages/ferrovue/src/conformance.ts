@@ -28,6 +28,9 @@ export interface ConformanceOptions extends Pick<RouterOptions, "pinia" | "vueRo
   /** Write each fixture's `.html` from Vue's render instead of comparing it: when
    * `FERROVUE_FIXTURES_WRITE=1` is set, if not given. */
   record?: boolean | undefined;
+  /** Check that a fresh client render of each fixture shows its recorded HTML, which an
+   * application that navigates between pages relies on: on when `clientDiffers` is given. */
+  clientRender?: boolean;
   /** The fixtures (`Component/case.json`) whose fresh client render Vue itself makes differ from
    * its server render, which the check of client renders then expects to differ: a `v-model`
    * `<select>` whose value matches no option, which the client leaves with none selected; an
@@ -350,6 +353,7 @@ export function registerConformance(api: TestApi, options: ConformanceOptions): 
       }
     });
 
+    if (!(options.clientRender ?? options.clientDiffers !== undefined)) return;
     const differs = new Set(options.clientDiffers ?? []);
     api.describe("a fresh client render shows the recorded HTML", () => {
       for (const c of cases) {
@@ -368,10 +372,10 @@ export function registerConformance(api: TestApi, options: ConformanceOptions): 
  * every component has fixtures and every fixture a component, the generated Rust is what the
  * generator writes now, Vue renders each fixture to its recorded `.html` (or records it, with
  * `FERROVUE_FIXTURES_WRITE=1`), each recorded `.html` hydrates with no warning and the server's
- * nodes kept, and a fresh client render of each fixture shows its recorded `.html`, as
- * `clientRenderDifference` compares them, except the fixtures listed in `clientDiffers`. That last
- * check is what an application that navigates between pages relies on when it renders the next page
- * from its record. Await it at the top of a test file run in a DOM environment such as happy-dom. */
+ * nodes kept. With `clientRender` or `clientDiffers`, a fresh client render of each fixture shows
+ * its recorded `.html`, as `clientRenderDifference` compares them, except the fixtures listed in
+ * `clientDiffers`: what an application that navigates between pages relies on when it renders the
+ * next page from its record. Await it at the top of a test file run in a DOM environment such as happy-dom. */
 export async function conformanceSuite(options: ConformanceOptions): Promise<void> {
   const vitest = await peer("vitest", "`conformanceSuite` registers vitest tests", () => import("vitest"));
   registerConformance(vitest, options);

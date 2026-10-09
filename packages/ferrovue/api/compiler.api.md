@@ -44,19 +44,1086 @@ export interface Config {
 export const CONFIG_FILE = "ferrovue.config.json";
 
 // @public
+export function docsUrl(code: string): string;
+
+// @public
+export type ErrorCode = keyof typeof ERRORS;
+
+// @public
+export interface ErrorDoc {
+    detail?: string;
+    retired?: string;
+    title: string;
+}
+
+// @public
+export const ERRORS: {
+    readonly FV0001: {
+        readonly title: "Source file that does not parse";
+        readonly detail: "A `<script setup>` block, or a file it reads, is not valid TypeScript. The message is the parser's own, with the line and column where it stopped.";
+    };
+    readonly FV0002: {
+        readonly title: "Component file Vue cannot parse";
+    };
+    readonly FV0003: {
+        readonly title: "`<script>` without `setup`";
+    };
+    readonly FV0004: {
+        readonly title: "Component without a `<template>`";
+    };
+    readonly FV0005: {
+        readonly title: "Template Vue cannot compile";
+    };
+    readonly FV0006: {
+        readonly title: "Unexpected construct in Vue's compiled template";
+        readonly detail: "The compiler met output of Vue's server compiler that it has no translation for. Please report it with the component that caused it.";
+    };
+    readonly FV0007: {
+        readonly title: "Component file name that gives no Rust module of its own";
+        readonly detail: "Each component is written to a Rust module named after its file in snake case (`UserCard.vue` is `user_card.rs`). A file name that is not letters, digits and `_` starting with a letter, two names with the same snake case (`FooBar.vue` and `Foo_bar.vue`), `Mod.vue`, and a name a module ferrovue writes for the project already has (`Types.vue`, `Stores.vue`) are refused.";
+    };
+    readonly FV0101: {
+        readonly title: "`inheritAttrs` that is not `true` or `false`";
+    };
+    readonly FV0102: {
+        readonly title: "`watch` with `immediate`";
+    };
+    readonly FV0103: {
+        readonly title: "Effect that runs once on the server";
+    };
+    readonly FV0104: {
+        readonly title: "`onServerPrefetch`";
+    };
+    readonly FV0105: {
+        readonly title: "Statement in setup that could change what renders";
+    };
+    readonly FV0106: {
+        readonly title: "`defineAsyncComponent` of anything but a component of this project";
+    };
+    readonly FV0107: {
+        readonly title: "Unsupported statement in setup";
+    };
+    readonly FV0108: {
+        readonly title: "`...rest` in destructured props";
+    };
+    readonly FV0109: {
+        readonly title: "Destructured prop that is not a plain name";
+    };
+    readonly FV0201: {
+        readonly title: "Constant that refers to itself";
+    };
+    readonly FV0202: {
+        readonly title: "Enum member without a value after a string member";
+    };
+    readonly FV0203: {
+        readonly title: "Enum member value that is not a string or number literal";
+    };
+    readonly FV0204: {
+        readonly title: "Field a constant object does not have";
+    };
+    readonly FV0205: {
+        readonly title: "Spread or hole in a constant list";
+    };
+    readonly FV0206: {
+        readonly title: "Computed or spread key in a constant object";
+    };
+    readonly FV0207: {
+        readonly title: "Constant that is not a literal";
+    };
+    readonly FV0208: {
+        readonly title: "Constant object read whole";
+    };
+    readonly FV0209: {
+        readonly title: "`null` in a constant list of plain values";
+    };
+    readonly FV0210: {
+        readonly title: "Constant list of plain values of different types";
+    };
+    readonly FV0211: {
+        readonly title: "Constant list mixing plain values and objects";
+    };
+    readonly FV0212: {
+        readonly title: "Two constant lists with one Rust name";
+    };
+    readonly FV0213: {
+        readonly title: "Object in a constant list without a required field";
+    };
+    readonly FV0214: {
+        readonly title: "`null` for a field that is not nullable";
+    };
+    readonly FV0215: {
+        readonly title: "Field of the wrong type in a constant list's object";
+    };
+    readonly FV0216: {
+        readonly title: "Field of an unsupported type in a constant list's objects";
+    };
+    readonly FV0217: {
+        readonly title: "Field that is only ever `null`";
+    };
+    readonly FV0218: {
+        readonly title: "Field `null` in some objects and absent in others";
+    };
+    readonly FV0219: {
+        readonly title: "Field of different types across a constant list's objects";
+    };
+    readonly FV0220: {
+        readonly title: "Constant list's object type declared twice";
+    };
+    readonly FV0221: {
+        readonly title: "Constant list's object type named as a Rust type";
+    };
+    readonly FV0222: {
+        readonly title: "Constant object read by a key chosen at run time";
+    };
+    readonly FV0301: {
+        readonly title: "`generic` that is not a list of type parameters";
+    };
+    readonly FV0302: {
+        readonly title: "Type parameter without a constraint";
+        readonly detail: "A generic component renders each type parameter as its constraint, so `generic=\"T\"` alone gives the server no type. Write `generic=\"T extends string\"`.";
+    };
+    readonly FV0303: {
+        readonly title: "Props declared at run time";
+    };
+    readonly FV0304: {
+        readonly title: "Props type not declared in the component";
+    };
+    readonly FV0305: {
+        readonly title: "`defineModel` without a type";
+    };
+    readonly FV0306: {
+        readonly title: "`defineModel` of a nullable type that is not required";
+    };
+    readonly FV0307: {
+        readonly title: "Default for a nullable prop";
+    };
+    readonly FV0308: {
+        readonly title: "Unknown type";
+    };
+    readonly FV0309: {
+        readonly title: "Type that is only `undefined`";
+    };
+    readonly FV0310: {
+        readonly title: "Object type written in place";
+    };
+    readonly FV0311: {
+        readonly title: "Type that may be both `null` and `undefined`";
+        readonly detail: "A Rust `Option` holds one kind of nothing, where JavaScript has two. Declare `T | null` or `x?: T`, never both. See [`props`](crate::guide::props#nullable-props).";
+    };
+    readonly FV0312: {
+        readonly title: "Union of different types";
+    };
+    readonly FV0313: {
+        readonly title: "`Record` not keyed by `string`";
+    };
+    readonly FV0314: {
+        readonly title: "Type alias that refers to itself";
+    };
+    readonly FV0315: {
+        readonly title: "Unsupported named type";
+    };
+    readonly FV0316: {
+        readonly title: "Unsupported type";
+    };
+    readonly FV0317: {
+        readonly title: "`Record` of unsupported values";
+    };
+    readonly FV0318: {
+        readonly title: "Interface named as a Rust type";
+    };
+    readonly FV0319: {
+        readonly title: "Type declared in two files";
+    };
+    readonly FV0320: {
+        readonly title: "Interface with members other than plain named fields";
+    };
+    readonly FV0321: {
+        readonly title: "Optional field of a nullable type";
+    };
+    readonly FV0322: {
+        readonly title: "Prop default that is not a literal";
+    };
+    readonly FV0401: {
+        readonly title: "Interpolation of a value that is not a string, a number or a boolean";
+    };
+    readonly FV0402: {
+        readonly title: "Attribute value of an unsupported type";
+    };
+    readonly FV0403: {
+        readonly title: "Attribute bound to a value Vue's server leaves out";
+        readonly detail: "Vue's server renderer leaves out an attribute bound to a list, an object or a `route.query` value, and hydration then sets it to the value's `String()` without reporting a mismatch. Join a list (`.join(\",\")`) or narrow a query value to one string.";
+    };
+    readonly FV0404: {
+        readonly title: "Unsafe attribute name";
+    };
+    readonly FV0405: {
+        readonly title: "Custom directive not listed in `clientDirectives`";
+        readonly detail: "A custom directive's `getSSRProps` may add attributes on the server, which ferrovue does not run. List a directive that adds none in `clientDirectives`.";
+    };
+    readonly FV0406: {
+        readonly title: "`$attrs` on a root that takes scope ids";
+    };
+    readonly FV0407: {
+        readonly title: "Attributes that are not an object literal";
+    };
+    readonly FV0408: {
+        readonly title: "Computed or spread key in an attribute object";
+    };
+    readonly FV0409: {
+        readonly title: "`className` bound in place of `class`";
+    };
+    readonly FV0410: {
+        readonly title: "Merged attributes that are not object literals";
+    };
+    readonly FV0411: {
+        readonly title: "Class merged with a string that may repeat the class before it";
+    };
+    readonly FV0412: {
+        readonly title: "Fallthrough attribute of an unsupported type";
+    };
+    readonly FV0413: {
+        readonly title: "`v-model` comparing values of types it cannot compare";
+    };
+    readonly FV0414: {
+        readonly title: "`v-model` over an array";
+    };
+    readonly FV0415: {
+        readonly title: "Value read from `$attrs`";
+    };
+    readonly FV0416: {
+        readonly title: "Root `<Transition>` or `<KeepAlive>` around `v-if` that is given attributes";
+    };
+    readonly FV0417: {
+        readonly title: "Attribute name chosen at run time";
+    };
+    readonly FV0418: {
+        readonly title: "`<component :is>` over a value that is not a closed set";
+        readonly detail: "`<component :is>` compiles to a `match` over its choices, so each one must be known when compiling: an imported component, an HTML element's name, a `computed` or `?:` choosing among them, a prop typed as a union of string literals, or an object of imported components read by such a prop. A `string`, a `Component` or a value from elsewhere could be anything.";
+    };
+    readonly FV0419: {
+        readonly title: "`<component :is>` naming something other than an HTML element";
+    };
+    readonly FV0420: {
+        readonly title: "`<component :is>` over a prop that may be absent";
+    };
+    readonly FV0421: {
+        readonly title: "`<component :is>` reading a key its object does not have";
+    };
+    readonly FV0422: {
+        readonly title: "`v-html` or `v-text` on `<component :is>`";
+    };
+    readonly FV0423: {
+        readonly title: "`v-show`, or `v-model` on `<select>`, in content rendered from virtual nodes";
+        readonly detail: "Inside an element `<component :is>` chooses, in the slot content such an element renders, and inside a `<RouterLink>`, Vue's server renders from virtual nodes, where `v-show` writes no `style` while it shows and `v-model` on a `<select>` marks no option `selected`. Bind `:style` or `:selected` yourself.";
+    };
+    readonly FV0501: {
+        readonly title: "Child component that is not among the compiled components";
+    };
+    readonly FV0502: {
+        readonly title: "Fallthrough attribute that would reach a child's prop";
+    };
+    readonly FV0503: {
+        readonly title: "Child props that are not an object literal";
+    };
+    readonly FV0504: {
+        readonly title: "Computed or spread key in child props";
+    };
+    readonly FV0505: {
+        readonly title: "Attribute named by an integer";
+    };
+    readonly FV0506: {
+        readonly title: "Required prop not passed";
+    };
+    readonly FV0507: {
+        readonly title: "Required nullable prop not passed";
+    };
+    readonly FV0508: {
+        readonly title: "Attributes passed to a child that takes none";
+    };
+    readonly FV0509: {
+        readonly title: "String prop given a value that is not a string";
+    };
+    readonly FV0510: {
+        readonly title: "One type declared separately by parent and child";
+    };
+    readonly FV0511: {
+        readonly title: "Prop given a value of another type";
+    };
+    readonly FV0512: {
+        readonly title: "`Props` imported from a component that is not compiled";
+    };
+    readonly FV0513: {
+        readonly title: "Component resolved by name that is not imported";
+    };
+    readonly FV0514: {
+        readonly title: "Listener of unknown name given to a child with a prop named like a listener";
+    };
+    readonly FV0601: {
+        readonly title: "Name or function not available on the server";
+    };
+    readonly FV0602: {
+        readonly title: "Unsupported method";
+    };
+    readonly FV0603: {
+        readonly title: "Unsupported call";
+    };
+    readonly FV0604: {
+        readonly title: "Field read on a value that is not an object";
+    };
+    readonly FV0605: {
+        readonly title: "Field the type does not have";
+    };
+    readonly FV0606: {
+        readonly title: "Value that may be absent where its target cannot take it as it is";
+    };
+    readonly FV0607: {
+        readonly title: "Value of an unexpected type";
+    };
+    readonly FV0608: {
+        readonly title: "`+` between unsupported types";
+    };
+    readonly FV0609: {
+        readonly title: "Comparison between unsupported or absent values";
+    };
+    readonly FV0610: {
+        readonly title: "Spread or hole in an array literal";
+    };
+    readonly FV0611: {
+        readonly title: "Array literal of different types";
+    };
+    readonly FV0612: {
+        readonly title: "Computed member access";
+    };
+    readonly FV0613: {
+        readonly title: "Value set up in a way the server cannot evaluate";
+    };
+    readonly FV0614: {
+        readonly title: "Logical operator between values that are not booleans";
+    };
+    readonly FV0615: {
+        readonly title: "`??` falling back to a computed list";
+    };
+    readonly FV0616: {
+        readonly title: "`??` between different types";
+    };
+    readonly FV0617: {
+        readonly title: "`||` between unsupported types";
+    };
+    readonly FV0618: {
+        readonly title: "Unsupported unary operator";
+    };
+    readonly FV0619: {
+        readonly title: "`==` or `!=` with anything but `null` or `undefined`";
+    };
+    readonly FV0620: {
+        readonly title: "Loose test against `undefined` of a value of a plugin's type";
+    };
+    readonly FV0621: {
+        readonly title: "Comparison of a plugin's value with `null` or `undefined`";
+    };
+    readonly FV0622: {
+        readonly title: "`===` between different types";
+    };
+    readonly FV0623: {
+        readonly title: "Branches of `?:` of different types";
+    };
+    readonly FV0624: {
+        readonly title: "`new` in an expression";
+    };
+    readonly FV0625: {
+        readonly title: "Unsupported expression";
+    };
+    readonly FV0626: {
+        readonly title: "Strict test of a value that may be `null` or `undefined`";
+    };
+    readonly FV0627: {
+        readonly title: "Strict test against the absence a value cannot have";
+    };
+    readonly FV0628: {
+        readonly title: "`as` or `satisfies` stating a type the value does not have";
+    };
+    readonly FV0701: {
+        readonly title: "`Number()` of an unsupported value";
+    };
+    readonly FV0702: {
+        readonly title: "`parseInt()` or `parseFloat()` of a value that is not a string";
+    };
+    readonly FV0703: {
+        readonly title: "`parseInt()` with a radix other than a literal 10 or 16";
+    };
+    readonly FV0704: {
+        readonly title: "Unsupported `Math` method";
+    };
+    readonly FV0705: {
+        readonly title: "`.toFixed()` without a literal number of digits from 0 to 100";
+    };
+    readonly FV0706: {
+        readonly title: "String that may hold half of a surrogate pair compared, searched or joined";
+        readonly detail: "`slice`, `substring`, `at`, `charAt` and `split(\"\")` can cut a surrogate pair in half. JavaScript keeps the half where ferrovue holds U+FFFD, so two such strings may compare, search or join differently. See [`strings`](crate::guide::strings#halves-of-surrogate-pairs).";
+    };
+    readonly FV0707: {
+        readonly title: "`JSON.stringify()` of an unsupported value";
+    };
+    readonly FV0708: {
+        readonly title: "Template literal of values that are not present strings, numbers or booleans";
+    };
+    readonly FV0709: {
+        readonly title: "String method with the wrong number of arguments";
+    };
+    readonly FV0710: {
+        readonly title: "Regular expression given to a string method";
+    };
+    readonly FV0711: {
+        readonly title: "String method given a value that is not a present string";
+    };
+    readonly FV0712: {
+        readonly title: "String method given a value that is not a present number";
+    };
+    readonly FV0713: {
+        readonly title: "Function given to a string method";
+    };
+    readonly FV0714: {
+        readonly title: "`.repeat()` by a negative or infinite count";
+    };
+    readonly FV0715: {
+        readonly title: "Case mapping by the server's locale";
+    };
+    readonly FV0801: {
+        readonly title: "`.includes()` of a value of another type than the list's";
+    };
+    readonly FV0802: {
+        readonly title: "`.join()` with a separator that is not a string";
+    };
+    readonly FV0803: {
+        readonly title: "List method on a value that is not a list";
+    };
+    readonly FV0804: {
+        readonly title: "List method over a list of unsupported items";
+    };
+    readonly FV0805: {
+        readonly title: "List method given anything but an arrow function or `Boolean`";
+    };
+    readonly FV0806: {
+        readonly title: "Arrow function with a block body";
+    };
+    readonly FV0807: {
+        readonly title: "Arrow function index that is not a plain name";
+    };
+    readonly FV0808: {
+        readonly title: "Defaults or nested patterns in an arrow function's item";
+    };
+    readonly FV0809: {
+        readonly title: "Arrow function item bound by an unsupported pattern";
+    };
+    readonly FV0810: {
+        readonly title: "`.map()` to optional or unsupported values";
+    };
+    readonly FV0811: {
+        readonly title: "`.slice()` with more than two arguments";
+    };
+    readonly FV0812: {
+        readonly title: "`.slice()` of values that are not numbers";
+    };
+    readonly FV0813: {
+        readonly title: "List method given more than one function";
+    };
+    readonly FV0814: {
+        readonly title: "`Object` method of a value that is not a `Record`";
+    };
+    readonly FV0815: {
+        readonly title: "`Object.values()` of a record of lists";
+    };
+    readonly FV0816: {
+        readonly title: "`Object.entries()` outside a `v-for`";
+    };
+    readonly FV0817: {
+        readonly title: "Unsupported `Object` method";
+    };
+    readonly FV0818: {
+        readonly title: "`v-for` over `Object.entries()` without `[key, value]`";
+    };
+    readonly FV0819: {
+        readonly title: "`v-for` over an empty array literal";
+    };
+    readonly FV0820: {
+        readonly title: "`v-for` over a value that is not a list or a number";
+    };
+    readonly FV0821: {
+        readonly title: "Defaults or nested patterns in a `v-for` item";
+    };
+    readonly FV0822: {
+        readonly title: "`v-for` item bound by an unsupported pattern";
+    };
+    readonly FV0823: {
+        readonly title: "`v-for` key or index that is not a plain name";
+    };
+    readonly FV0901: {
+        readonly title: "Slots that are not an object literal";
+    };
+    readonly FV0902: {
+        readonly title: "Computed or spread slot name";
+    };
+    readonly FV0903: {
+        readonly title: "Content for a slot the child does not have";
+    };
+    readonly FV0904: {
+        readonly title: "Defaults or nested patterns in destructured slot props";
+    };
+    readonly FV0905: {
+        readonly title: "Slot props bound by an unsupported pattern";
+    };
+    readonly FV0906: {
+        readonly title: "Slot props taken from a slot that passes none";
+    };
+    readonly FV0907: {
+        readonly title: "Slot read that the template does not render";
+    };
+    readonly FV0908: {
+        readonly title: "Slot prop of a type with no Rust type";
+    };
+    readonly FV0909: {
+        readonly title: "Array literal as a slot prop";
+    };
+    readonly FV0910: {
+        readonly title: "Computed list as a slot prop";
+    };
+    readonly FV0911: {
+        readonly title: "Slot prop of an unsupported type";
+    };
+    readonly FV0912: {
+        readonly title: "Slot name that is not literal";
+    };
+    readonly FV0913: {
+        readonly title: "Slot props that are not attributes or an object literal";
+    };
+    readonly FV0914: {
+        readonly title: "Computed or spread key in slot props";
+    };
+    readonly FV0915: {
+        readonly title: "Slot prop name that is not a plain name";
+    };
+    readonly FV0916: {
+        readonly title: "Outlets of one slot that pass different props";
+    };
+    readonly FV0917: {
+        readonly title: "Interface named as a slot's props type";
+    };
+    readonly FV0918: {
+        readonly title: "Slot scope id given to content that takes none";
+    };
+    readonly FV0919: {
+        readonly title: "`<slot>` with fallback content inside an element `<component :is>` chooses";
+        readonly detail: "Inside an element that `<component :is>` chooses, Vue renders a slot's content as virtual nodes and decides whether to show the fallback by rules of their own. Give the fallback from the parent instead.";
+    };
+    readonly FV0920: {
+        readonly title: "`<slot>` rendered both inside and outside an element `<component :is>` chooses";
+    };
+    readonly FV1001: {
+        readonly title: "Computed or spread key in a class object";
+    };
+    readonly FV1002: {
+        readonly title: "Computed class name that is not a string";
+    };
+    readonly FV1003: {
+        readonly title: "Class name with spaces around it";
+    };
+    readonly FV1004: {
+        readonly title: "Class binding of an unsupported type";
+    };
+    readonly FV1005: {
+        readonly title: "`<style module>` without `cssModules` in the configuration";
+        readonly detail: "Vite names a CSS module's classes by `css.modules.generateScopedName`. ferrovue computes the same names when `cssModules` in `ferrovue.config.json` is set as that option is; without it, it cannot know them.";
+    };
+    readonly FV1006: {
+        readonly title: "`v-bind()` in CSS of a value that is not a string or a number";
+        readonly detail: "Vue's server writes a variable `v-bind()` sets from a string or a number, `initial` for `null` and `undefined`, and warns of anything else.";
+    };
+    readonly FV1007: {
+        readonly title: "Style binding of an unsupported type";
+    };
+    readonly FV1008: {
+        readonly title: "Computed or spread key in a style object";
+    };
+    readonly FV1009: {
+        readonly title: "Style property named by a number or starting with `:`";
+    };
+    readonly FV1010: {
+        readonly title: "Style array mixing a string with objects";
+    };
+    readonly FV1011: {
+        readonly title: "Style property whose place depends on a condition";
+    };
+    readonly FV1012: {
+        readonly title: "Scope ids handed to a component whose render does not take them";
+    };
+    readonly FV1013: {
+        readonly title: "`class` written apart from a later `:class` in content rendered from virtual nodes";
+        readonly detail: "Inside an element `<component :is>` chooses, in the slot content such an element renders, and inside a `<RouterLink>`, Vue's server renders from virtual nodes, where a static `class` written before `:class` keeps its place and its names come first. ferrovue writes them so when nothing stands between the two; with attributes between them, write the two next to each other, or `:class` first.";
+    };
+    readonly FV1014: {
+        readonly title: "`<style module>` whose class names ferrovue cannot compute";
+        readonly detail: "ferrovue names the classes of a CSS module written in the component in plain CSS, as postcss-modules does in Vite. A module in another file (`src`), one a preprocessor compiles (`lang`), and one that imports names from another file (`composes: x from \"./a.css\"`, `@value x from \"./a.css\"`) are refused.";
+    };
+    readonly FV1015: {
+        readonly title: "`useCssModule` of a module the component does not declare";
+    };
+    readonly FV1101: {
+        readonly title: "Helper called with the wrong number of arguments";
+    };
+    readonly FV1102: {
+        readonly title: "Configuration file not found";
+    };
+    readonly FV1103: {
+        readonly title: "Configuration file that is not valid JSON";
+    };
+    readonly FV1104: {
+        readonly title: "Configuration without `components` or `out`";
+    };
+    readonly FV1105: {
+        readonly title: "Unsupported `scopeId`";
+    };
+    readonly FV1106: {
+        readonly title: "`builders` that is not `true` or `false`";
+    };
+    readonly FV1107: {
+        readonly title: "Unknown helper type";
+    };
+    readonly FV1108: {
+        readonly title: "Imported function without a Rust twin";
+    };
+    readonly FV1109: {
+        readonly title: "Twin name that is not PascalCase";
+    };
+    readonly FV1110: {
+        readonly title: "Twin without `rust`";
+    };
+    readonly FV1111: {
+        readonly title: "Twin prop name that is not camelCase";
+    };
+    readonly FV1112: {
+        readonly title: "Twin slot name that is not a plain name";
+    };
+    readonly FV1113: {
+        readonly title: "Configuration that is not a JSON object";
+    };
+    readonly FV1114: {
+        readonly title: "Unknown configuration key";
+        readonly detail: "A key ferrovue does not read is refused rather than ignored, as it is most often a misspelt one (`component` for `components`). The message names the key it most likely means.";
+    };
+    readonly FV1115: {
+        readonly title: "Configuration value of the wrong type";
+    };
+    readonly FV1116: {
+        readonly title: "Directory the configuration names that cannot be read";
+    };
+    readonly FV1117: {
+        readonly title: "Deprecated configuration key";
+        readonly detail: "A warning: ferrovue still reads the key, and stops reading it in the next major release. The message names what to write instead. A key is deprecated for at least one minor release before it is removed.";
+    };
+    readonly FV1118: {
+        readonly title: "Deprecated command-line option";
+        readonly detail: "A warning: the option still works, and is removed in the next major release. The message names what to use instead. An option is deprecated for at least one minor release before it is removed.";
+    };
+    readonly FV1201: {
+        readonly title: "Route parameter that is not a present string or number";
+    };
+    readonly FV1202: {
+        readonly title: "`to` that is not a string or an object literal";
+    };
+    readonly FV1203: {
+        readonly title: "Computed or spread key in a `to` object";
+    };
+    readonly FV1204: {
+        readonly title: "Unsupported key in a `to` object";
+    };
+    readonly FV1205: {
+        readonly title: "`query` that is not an object literal";
+    };
+    readonly FV1206: {
+        readonly title: "Computed or spread key in a query";
+    };
+    readonly FV1207: {
+        readonly title: "Query value that may be `null`";
+    };
+    readonly FV1208: {
+        readonly title: "`hash` that is not a string";
+    };
+    readonly FV1209: {
+        readonly title: "Route name that is not a string literal";
+    };
+    readonly FV1210: {
+        readonly title: "Unknown route name";
+    };
+    readonly FV1211: {
+        readonly title: "`params` that is not an object literal";
+    };
+    readonly FV1212: {
+        readonly title: "Computed or spread key in `params`";
+    };
+    readonly FV1213: {
+        readonly title: "Unknown route parameter";
+    };
+    readonly FV1214: {
+        readonly title: "Route parameter not given";
+    };
+    readonly FV1215: {
+        readonly title: "`to` with both `path` and `params`";
+    };
+    readonly FV1216: {
+        readonly title: "`path` that is not a string";
+    };
+    readonly FV1217: {
+        readonly title: "`to` without `name` or `path`";
+    };
+    readonly FV1218: {
+        readonly title: "`<RouterLink>` attributes that are not literal";
+    };
+    readonly FV1219: {
+        readonly title: "Computed or spread key in `<RouterLink>` attributes";
+    };
+    readonly FV1220: {
+        readonly title: "`custom` on `<RouterLink>`";
+    };
+    readonly FV1221: {
+        readonly title: "`href` or `aria-current` set on `<RouterLink>`";
+    };
+    readonly FV1222: {
+        readonly title: "`<RouterLink>` without `to`";
+    };
+    readonly FV1223: {
+        readonly title: "Element in a `<RouterLink>` given a slot scope id";
+    };
+    readonly FV1224: {
+        readonly title: "`<slot>` in a `<RouterLink>` that takes scope ids";
+    };
+    readonly FV1225: {
+        readonly title: "`<RouterLink>` without `routes` configured";
+    };
+    readonly FV1226: {
+        readonly title: "`<RouterLink>` attribute that is not a string literal";
+    };
+    readonly FV1227: {
+        readonly title: "Fallthrough attribute that would reach a `<RouterLink>` prop";
+    };
+    readonly FV1228: {
+        readonly title: "Fallthrough attribute that would replace a `<RouterLink>` attribute";
+    };
+    readonly FV1229: {
+        readonly title: "`<RouterLink>` slot other than the default";
+    };
+    readonly FV1230: {
+        readonly title: "Route read without `routes` configured";
+    };
+    readonly FV1231: {
+        readonly title: "Route field not available on the server";
+    };
+    readonly FV1232: {
+        readonly title: "Routes file that is not an array";
+    };
+    readonly FV1233: {
+        readonly title: "Route entry of an unsupported shape";
+    };
+    readonly FV1234: {
+        readonly title: "`typeof` of anything but a query value";
+    };
+    readonly FV1235: {
+        readonly title: "`??` after a query value with a fallback that is not a string";
+    };
+    readonly FV1236: {
+        readonly title: "`<RouterView>` in a component with `<style scoped>`";
+    };
+    readonly FV1237: {
+        readonly title: "`<RouterView>` in a child component";
+    };
+    readonly FV1238: {
+        readonly title: "`routes` that is neither a routes file nor `{ pages }`";
+    };
+    readonly FV1239: {
+        readonly title: "Pages folder that cannot be read";
+    };
+    readonly FV1240: {
+        readonly title: "Page file name the router cannot match";
+        readonly detail: "Each part of a page's path is plain text (letters, digits, `-` and `_`) or one whole parameter: `[id]`, `[[id]]` (optional) or `[...path]` (a catch-all, last). A parameter beside text in one part (`prefix-[id].vue`), a repeatable parameter (`[id]+`), an optional catch-all (`[[...path]]`), a parameter parser (`[id=int]`) and a character code (`[x+2E]`) are not matched on the server.";
+    };
+    readonly FV1241: {
+        readonly title: "Named view in a page file name";
+    };
+    readonly FV1242: {
+        readonly title: "`definePage()` in a page";
+        readonly detail: "`definePage()` changes a page's route (its name, path, alias, meta or params) at build time. ferrovue builds the server's routes from the files' paths alone, so the two would disagree.";
+    };
+    readonly FV1243: {
+        readonly title: "`<route>` block in a page";
+    };
+    readonly FV1244: {
+        readonly title: "`_parent.vue` with no pages to hold";
+    };
+    readonly FV1245: {
+        readonly title: "Page whose component name is taken or not a Rust name";
+    };
+    readonly FV1246: {
+        readonly title: "Routes file that cannot be read";
+    };
+    readonly FV1247: {
+        readonly title: "Routes file that is not valid JSON";
+    };
+    readonly FV1301: {
+        readonly title: "Type declared by two stores";
+    };
+    readonly FV1302: {
+        readonly title: "Store id that is not a string literal";
+    };
+    readonly FV1303: {
+        readonly title: "Store of an unsupported shape";
+    };
+    readonly FV1304: {
+        readonly title: "Store `state` without a declared return type";
+    };
+    readonly FV1305: {
+        readonly title: "Store `getters` that is not an object literal";
+    };
+    readonly FV1306: {
+        readonly title: "Getter that is not a function of the state";
+    };
+    readonly FV1307: {
+        readonly title: "Setup store without a block body";
+    };
+    readonly FV1308: {
+        readonly title: "Unsupported statement in a setup store";
+    };
+    readonly FV1309: {
+        readonly title: "Setup store that does not return an object";
+    };
+    readonly FV1310: {
+        readonly title: "Setup store returning anything but plain names";
+    };
+    readonly FV1311: {
+        readonly title: "Setup store returning a name it does not declare";
+    };
+    readonly FV1312: {
+        readonly title: "Interface named as a setup store's state type";
+    };
+    readonly FV1313: {
+        readonly title: "`ref<T | null>()` without a value";
+    };
+    readonly FV1314: {
+        readonly title: "Setup store `ref` without a type";
+    };
+    readonly FV1315: {
+        readonly title: "Getter with a block body";
+    };
+    readonly FV1316: {
+        readonly title: "Getter that reads `this`";
+    };
+    readonly FV1317: {
+        readonly title: "Getter that returns a function";
+    };
+    readonly FV1318: {
+        readonly title: "Getters that read each other";
+    };
+    readonly FV1319: {
+        readonly title: "Store imported by anything but its `use…` hook";
+    };
+    readonly FV1320: {
+        readonly title: "`storeToRefs` of anything but a store bound in setup";
+    };
+    readonly FV1321: {
+        readonly title: "`storeToRefs` not destructured into plain names";
+    };
+    readonly FV1322: {
+        readonly title: "Store hook called with arguments";
+    };
+    readonly FV1401: {
+        readonly title: "Locale file that is not valid JSON";
+    };
+    readonly FV1402: {
+        readonly title: "Locale message that does not parse";
+    };
+    readonly FV1403: {
+        readonly title: "Linked message with a key chosen at run time";
+    };
+    readonly FV1404: {
+        readonly title: "Linked message with an unknown modifier";
+    };
+    readonly FV1405: {
+        readonly title: "Locale message construct ferrovue does not render";
+    };
+    readonly FV1406: {
+        readonly title: "`t()` value that is not a present string, number or boolean";
+    };
+    readonly FV1407: {
+        readonly title: "`t()` without `i18n` configured";
+    };
+    readonly FV1408: {
+        readonly title: "`t()` with unsupported arguments";
+    };
+    readonly FV1409: {
+        readonly title: "`t()` key that is not a string";
+    };
+    readonly FV1410: {
+        readonly title: "Computed or spread key in `t()`'s named values";
+    };
+    readonly FV1411: {
+        readonly title: "Default message given to `t()`";
+    };
+    readonly FV1412: {
+        readonly title: "Plural number that is not an integer";
+    };
+    readonly FV1413: {
+        readonly title: "`useI18n()` not destructured into plain names";
+    };
+    readonly FV1501: {
+        readonly title: "Twin props that are not attributes or an object literal";
+    };
+    readonly FV1502: {
+        readonly title: "`v-html` of anything but a `TrustedHtml` prop";
+        readonly detail: "`v-html` writes raw HTML, which ferrovue allows only from a type you mark as trusted. See [`escaping`](crate::guide::escaping).";
+    };
+    readonly FV1503: {
+        readonly title: "`TrustedHtml` prop without `trustedHtml` configured";
+    };
+    readonly FV1504: {
+        readonly title: "Attributes on `<ClientOnly>`";
+    };
+    readonly FV1505: {
+        readonly title: "`<ClientOnly>` slot other than the default and `#fallback`";
+    };
+    readonly FV1506: {
+        readonly title: "Slot props taken from `<ClientOnly>`'s `#fallback`";
+    };
+    readonly FV1507: {
+        readonly title: "`<Teleport>` in slot content whose emptiness is decided at run time";
+    };
+    readonly FV1508: {
+        readonly title: "`<Teleport>` target that is not a string";
+    };
+    readonly FV1509: {
+        readonly title: "Twin prop of a type with no Rust type";
+    };
+    readonly FV1510: {
+        readonly title: "Twin for a component ferrovue compiles";
+    };
+    readonly FV1511: {
+        readonly title: "`<ClientOnly>` with a `#fallback` in content rendered from virtual nodes";
+        readonly detail: "Inside an element `<component :is>` chooses, inside a `<RouterLink>` or a twin's slot, and in the slot content they render, Vue's server renders from virtual nodes, and `<ClientOnly>` writes an empty fragment there instead of its fallback, which the client then renders and reports as a mismatch. Leave out the `#fallback`, or move the `<ClientOnly>` outside that content.";
+    };
+    readonly FV1512: {
+        readonly title: "`v-html` on an element whose content the browser rebuilds";
+        readonly detail: "The browser's HTML parser moves markup written in a `<table>`, `<thead>`, `<tbody>`, `<tfoot>`, `<tr>` or `<colgroup>` out of the table, drops the tags written in a `<select>` or `<optgroup>`, and ends SVG or MathML at an HTML tag, so the page holds other nodes than the server wrote and hydration mismatches. Put `v-html` on a `<td>`, `<th>` or `<caption>`, write the options in the template, or use an HTML element inside a `<foreignObject>` or an `<mtext>`. See [`escaping`](crate::guide::escaping).";
+    };
+    readonly FV1513: {
+        readonly title: "`v-html` in a `<p>` of HTML that may hold blocks";
+        readonly detail: "A block tag in the HTML (`<p>`, `<ul>`, `<div>`) ends the `<p>` it is written in where the browser reads it. Type the prop `InlineHtml` from `ferrovue/types`, which is `ferrovue::InlineHtml` on the server and keeps only inline tags, or put the HTML in a `<div>`. Slot content placed into a child's `<p>` is not seen at compile time. See [`escaping`](crate::guide::escaping).";
+    };
+    readonly FV1601: {
+        readonly title: "Injection key that is not a string literal or a symbol exported from a `.ts` file";
+    };
+    readonly FV1602: {
+        readonly title: "Injection key symbol without an `InjectionKey<T>` type";
+    };
+    readonly FV1603: {
+        readonly title: "`provide` or `inject` with unsupported arguments";
+    };
+    readonly FV1604: {
+        readonly title: "`inject` that is not bound to a name at the top of `<script setup>`";
+    };
+    readonly FV1605: {
+        readonly title: "`inject(key)!`, asserting a provider";
+    };
+    readonly FV1606: {
+        readonly title: "`inject` of a string key with neither a default nor a type argument";
+    };
+    readonly FV1607: {
+        readonly title: "Function default without the factory flag";
+    };
+    readonly FV1608: {
+        readonly title: "Values of different types provided under one key";
+    };
+    readonly FV1609: {
+        readonly title: "Provided value that may be `null` or `undefined`";
+    };
+    readonly FV1610: {
+        readonly title: "Provided value of a form the context does not hold";
+    };
+    readonly FV1611: {
+        readonly title: "Object provided or given as a default under a key without an interface type";
+    };
+    readonly FV1612: {
+        readonly title: "Provided or default object whose fields do not match its interface";
+    };
+    readonly FV1613: {
+        readonly title: "Ref and plain value under one key";
+    };
+    readonly FV1614: {
+        readonly title: "Key provided twice by one component";
+    };
+    readonly FV1615: {
+        readonly title: "Two keys that give the context one field name";
+    };
+    readonly FV1616: {
+        readonly title: "`provide` in a component that holds `<RouterView>`";
+        readonly detail: "The page `<RouterView>` shows is rendered from Rust and handed in as a slot, so it cannot see what the component provides. Provide the value above the router (in Rust, through the `Provides` the page is rendered with) or below it.";
+    };
+    readonly FV1617: {
+        readonly title: "String-keyed `inject` inside a Rust twin's slot";
+        readonly detail: "Content in a twin's slot is a child of the library component the twin stands for, which may provide the same string key on the client. Use an `InjectionKey` symbol, which only the project provides.";
+    };
+    readonly FV1618: {
+        readonly title: "Setup that assigns to an injected value";
+    };
+    readonly FV1619: {
+        readonly title: "Function and value provided under one key";
+    };
+    readonly FV1620: {
+        readonly title: "`provide` or `inject` called inside an expression";
+    };
+    readonly FV1701: {
+        readonly title: "Options given to `useHead`";
+    };
+    readonly FV1702: {
+        readonly title: "Head input that is not an object literal";
+    };
+    readonly FV1703: {
+        readonly title: "Head key ferrovue does not translate";
+    };
+    readonly FV1704: {
+        readonly title: "Spread, computed key, hole or method in a head input";
+    };
+    readonly FV1705: {
+        readonly title: "Function in a head input";
+        readonly detail: "unhead calls a function given as a value on the server only when it takes no arguments, as a getter (`title: () => props.title`), which ferrovue evaluates. A `titleTemplate` function and an event handler (`onload`) run with arguments or on the client.";
+    };
+    readonly FV1706: {
+        readonly title: "Head value of a type the head does not take";
+    };
+    readonly FV1707: {
+        readonly title: "`tagPosition`, `tagPriority` or `tagDuplicateStrategy` that is not a literal it accepts";
+    };
+    readonly FV1708: {
+        readonly title: "`useHeadSafe`";
+    };
+    readonly FV1709: {
+        readonly title: "`useSeoMeta` key or value ferrovue does not translate";
+    };
+    readonly FV1710: {
+        readonly title: "`class` or `style` in the head that may be `null`";
+        readonly detail: "unhead's server renderer throws on a `class` or `style` of `null`. Write `?? undefined`, which leaves the attribute out.";
+    };
+    readonly FV1711: {
+        readonly title: "`innerHTML` or `textContent` on a head tag that has no content";
+    };
+};
+
+// @public
 export function generate(root: string, config?: Config, sources?: ReadonlyMap<string, string>): Map<string, string>;
 
 // @public
 export class GenError extends Error {
-    constructor(code: Code, message: string, at?: Location_2 | null, what?: string);
-    // Warning: (ae-forgotten-export) The symbol "Location_2" needs to be exported by the entry point compiler.d.ts
-    //
+    constructor(code: ErrorCode, message: string, at?: SourceLocation | null, what?: string);
     // (undocumented)
-    readonly at: Location_2 | null;
-    // Warning: (ae-forgotten-export) The symbol "Code" needs to be exported by the entry point compiler.d.ts
-    //
+    readonly at: SourceLocation | null;
     // (undocumented)
-    readonly code: Code;
+    readonly code: ErrorCode;
     // (undocumented)
     readonly what: string;
 }
@@ -82,6 +1149,20 @@ export type RoutesSource = string | {
 
 // @public (undocumented)
 export type ScopeIdMode = "filepath" | "filepath-source";
+
+// @public
+export interface SourceLocation {
+    // (undocumented)
+    column?: number;
+    // (undocumented)
+    endColumn?: number;
+    // (undocumented)
+    endLine?: number;
+    // (undocumented)
+    file: string;
+    // (undocumented)
+    line?: number;
+}
 
 // @public
 export interface TwinSpec {
