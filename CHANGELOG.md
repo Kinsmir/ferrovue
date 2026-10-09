@@ -79,6 +79,16 @@ released together and share version numbers.
   refused: a module imported for its functions may declare `type Row = Record<string, unknown>`.
   Two files declaring a type of one name are refused (FV0319) once the name is reached.
 
+### Security
+
+- A value in the page head could move a streaming hole. unhead escapes only `"` in an attribute
+  value and only the closing tag in `<script>`, `<style>` and `<noscript>` content, and ferrovue
+  writes the head exactly as unhead does, so a `useHead` value holding `<fv-hole>` (a title in
+  `og:title`, say) put a hole marker into a page whose head is rendered into the string
+  `HtmlStream` and `split_holes` cut. The first hole's content was then written inside the head
+  attribute, ending it, and what followed the marker in the value was read as markup. The marker
+  is now `<fv-hole"</script</style</noscript>`, which no value ferrovue or unhead writes can hold.
+
 ### Fixed
 
 - A component whose `render` takes more than seven arguments (slots, the route, stores,

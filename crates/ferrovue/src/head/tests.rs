@@ -180,3 +180,64 @@ fn entries_pushed_while_deferred_come_after_the_others_level_by_level() {
     let names: Vec<&str> = tags.lines().map(|l| &l[12..13]).collect();
     assert_eq!(names, ["a", "b", "c", "d", "e"]);
 }
+
+#[test]
+fn no_head_value_writes_the_hole_marker() {
+    let s = HeadValue::str;
+    for value in [
+        "<fv-hole>",
+        crate::slots::HOLE,
+        &crate::slots::HOLE.to_uppercase(),
+    ] {
+        let head = Head::without_defaults();
+        head.push(HeadValue::object([
+            ("title", s(value)),
+            (
+                "htmlAttrs",
+                HeadValue::object([("class", s(value)), ("data-x", s(value))]),
+            ),
+            (
+                "bodyAttrs",
+                HeadValue::object([("style", HeadValue::object([("color", s(value))]))]),
+            ),
+            (
+                "meta",
+                HeadValue::array([HeadValue::object([
+                    ("name", s("description")),
+                    ("content", s(value)),
+                ])]),
+            ),
+            (
+                "link",
+                HeadValue::array([HeadValue::object([
+                    ("rel", s("canonical")),
+                    ("href", s(value)),
+                ])]),
+            ),
+            (
+                "script",
+                HeadValue::array([
+                    HeadValue::object([("innerHTML", s(value)), ("key", s("a"))]),
+                    HeadValue::object([("textContent", s(value)), ("key", s("b"))]),
+                    HeadValue::object([
+                        ("type", s("application/ld+json")),
+                        ("innerHTML", HeadValue::object([("name", s(value))])),
+                    ]),
+                ]),
+            ),
+            ("style", HeadValue::array([s(value)])),
+            ("noscript", HeadValue::array([s(value)])),
+        ]));
+        let html = head.render();
+        for part in [
+            &html.head_tags,
+            &html.body_tags,
+            &html.body_tags_open,
+            &html.html_attrs,
+            &html.body_attrs,
+        ] {
+            assert!(!part.contains(crate::slots::HOLE), "{part}");
+        }
+        assert_eq!(html.head_tags.lines().count(), 8, "{}", html.head_tags);
+    }
+}

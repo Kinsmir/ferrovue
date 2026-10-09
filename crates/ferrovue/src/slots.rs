@@ -110,7 +110,7 @@ impl std::fmt::Debug for Slot<'_> {
     }
 }
 
-pub(crate) const HOLE: &str = "<fv-hole>";
+pub(crate) const HOLE: &str = "<fv-hole\"</script</style</noscript>";
 
 fn write_hole(out: &mut String) {
     out.push_str(HOLE);

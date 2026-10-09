@@ -142,6 +142,8 @@ let status = StatusCode::from_u16(status).unwrap_or(StatusCode::OK);
 [`web_frameworks`](crate::guide::web_frameworks) has the rest: a whole page, other statuses,
 actix-web, and other servers.
 
-A hole is written as `<fv-hole>`. Every interpolated value has its `<` escaped, and no template
-writes an element of that name, so only a hole produces it. Do not write the marker in content of
-your own, such as a slot closure, or the page will be cut there too.
+A hole is written as a marker, `<fv-hole"</script</style</noscript>`, which no value ferrovue
+writes can hold: every interpolated value has its `<` escaped, the page head's attribute values
+have their `"` escaped, and its `<script>`, `<style>` and `<noscript>` content has its closing tag
+rewritten, so only a hole produces it, wherever data from readers goes. Do not write the marker in
+content of your own, such as a slot closure, or the page will be cut there too.
