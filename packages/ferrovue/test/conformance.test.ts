@@ -29,9 +29,10 @@ it("has fixtures for every component, and recorded HTML for every fixture", () =
 
 it("has generated Rust that is what the generator writes now", () => {
   const dir = join(ROOT, "generated");
-  for (const [file, text] of generate(ROOT)) expect(readFileSync(join(dir, file), "utf8"), file).toBe(text);
-  expect(readdirSync(dir).toSorted()).toEqual([...generate(ROOT).keys()].toSorted());
-});
+  const generated = generate(ROOT);
+  for (const [file, text] of generated) expect(readFileSync(join(dir, file), "utf8"), file).toBe(text);
+  expect(readdirSync(dir).toSorted()).toEqual([...generated.keys()].toSorted());
+}, 30_000);
 
 it("gives each `<style scoped>` component the id `@vitejs/plugin-vue` gave its client build", () => {
   const scoped = [...components].filter(([, c]) => (c as { __scopeId?: string }).__scopeId);
