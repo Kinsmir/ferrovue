@@ -41,6 +41,10 @@ export function structLifetime(st: Struct, comp: Component): boolean {
   return st.fields.some((f) => needsLifetime(f.ty, comp, new Set([st.name])));
 }
 
+export function localTy(ty: Ty, comp: Component): string {
+  return rustTy(ty, comp).replace(/\bCow<'a, /g, "std::borrow::Cow<").replace(/'a\b/g, "'_");
+}
+
 export function rustTy(ty: Ty, comp: Component): string {
   switch (ty.k) {
     case "str":

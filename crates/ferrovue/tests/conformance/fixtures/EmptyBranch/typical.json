@@ -1,0 +1,1 @@
+{"label": "Root", "flag": false, "others": [{"label": "Other", "flag": false, "others": []}], "item": {"id": "root", "tags": ["a", "b"], "children": [{"label": "Leaf", "flag": true, "others": [], "item": {"id": "leaf", "children": []}}, {"label": "Bare", "flag": false, "others": []}]}}

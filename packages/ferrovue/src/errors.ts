@@ -190,6 +190,7 @@ export const ERRORS = {
   FV0625: { title: "Unsupported expression" },
   FV0626: { title: "Strict test of a value that may be `null` or `undefined`" },
   FV0627: { title: "Strict test against the absence a value cannot have" },
+  FV0628: { title: "`as` or `satisfies` stating a type the value does not have" },
 
   FV0701: { title: "`Number()` of an unsupported value" },
   FV0702: { title: "`parseInt()` or `parseFloat()` of a value that is not a string" },

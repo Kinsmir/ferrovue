@@ -1,10 +1,10 @@
 import { basename } from "node:path";
-import { type Component, type N, type Scope, type Ty, type Val, fail, nothing, GenError, snake, takesAttrs, UNDEF } from "./model.ts";
+import { type Component, type N, type Scope, type Val, fail, nothing, GenError, snake, takesAttrs, UNDEF } from "./model.ts";
 import { CONFIG_FILE, ctx } from "./context.ts";
 import { definePropsType, resolveImport, tyOfTs } from "./typescript.ts";
 import { constOfDecl, type Declared, declareConsts } from "./constants.ts";
-import { rustTy } from "./rust.ts";
-import { expr, fieldVal } from "./expr.ts";
+import { localTy } from "./rust.ts";
+import { expr, fieldVal, typedBy } from "./expr.ts";
 import { collected, heldList } from "./lists.ts";
 import { bare, operand, UNARY } from "./parens.ts";
 import { known } from "./narrowing.ts";
@@ -53,8 +53,8 @@ export function setupSource(init: N): N | null {
   return init;
 }
 
-function localTy(ty: Ty, comp: Component): string {
-  return rustTy(ty, comp).replace(/\bCow<'a, /g, "std::borrow::Cow<").replace(/'a\b/g, "'_");
+function statedTy(init: N): N | undefined {
+  return init.type === "TSAsExpression" || init.type === "TSSatisfiesExpression" ? init.typeAnnotation : undefined;
 }
 
 function emptyRef(comp: Component, init: N): Val | null {
@@ -256,9 +256,11 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
         scope.propsIdent = local;
         continue;
       }
-      const source = setupSource(init0);
       const isRef = init0.type === "CallExpression" && init0.callee.type === "Identifier" && ["ref", "shallowRef", "computed"].includes(init0.callee.name);
       if (isRef) scope.refs.add(local);
+      const typed = isRef ? init0.typeParameters?.params?.[0] : (d.id.typeAnnotation?.typeAnnotation ?? statedTy(init0));
+      const untyped = setupSource(init0);
+      const source = untyped && typed ? typedBy(untyped, typed) : untyped;
       let v: Val;
       try {
         const empty = emptyRef(comp, init0);
@@ -278,6 +280,11 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
       }
       const name = `s_${snake(local).replace(/^r#/, "")}`;
       const lone = v.lone ? { lone: true } : {};
+      if (v.slice) {
+        lets.push(`let ${name} = ${bare(v.code)};`);
+        scope.setup.set(local, { code: name, ty: v.ty, slice: true, ...lone });
+        continue;
+      }
       if (v.ty.k === "list" && v.iter !== undefined) {
         lets.push(`let ${name} = ${collected(v)};`);
         scope.setup.set(local, heldList(name, v.ty.of, v.lone));

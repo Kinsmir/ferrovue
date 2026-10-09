@@ -50,6 +50,7 @@ export interface Val {
   iter?: string;
   lone?: boolean;
   held?: string;
+  slice?: boolean;
   num?: number;
   format?: { text: string; args: string[] };
 }

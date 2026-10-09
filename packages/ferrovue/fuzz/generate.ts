@@ -1071,6 +1071,11 @@ class Gen {
     const records = this.scope.records.filter((x) => x.of.k === "str" || x.of.k === "int");
     let l: ListExpr = r.weighted<() => ListExpr>([
       [lists.length ? 5 : 0, () => { const v = r.pick(lists); return { of: v.of, kids: [], fmt: () => v.name, lone: false }; }],
+      [lists.length ? 2 : 0, () => {
+        const v = r.pick(lists);
+        const [yes, no] = r.chance(0.5) ? [v.name, "[]"] : ["[]", v.name];
+        return { of: v.of, kids: [this.test(d - 1)], fmt: (k, at) => `(${k[at]} ? ${yes} : ${no})`, lone: false };
+      }],
       [records.length ? 2 : 0, () => {
         const v = r.pick(records);
         return r.chance(0.5) ? { of: { k: "str" }, kids: [], fmt: () => `Object.keys(${v.name})`, lone: false } : { of: v.of, kids: [], fmt: () => `Object.values(${v.name})`, lone: false };

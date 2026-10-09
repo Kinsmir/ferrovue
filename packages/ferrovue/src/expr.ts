@@ -1,9 +1,9 @@
 import { type Component, type N, type Scope, type Ty, type Val, absence, BOOL, fail, FLOAT, GenError, INT, joinAbsence, nothing, NULL, opt, rustStr, sameTy, snake, STR, UNDEF, withAbsence } from "./model.ts";
 import { ctx } from "./context.ts";
-import { lookupStruct, markHome } from "./typescript.ts";
+import { lookupStruct, markHome, tyOfTs } from "./typescript.ts";
 import { claim } from "./plugin.ts";
 import { atom, bare, binary, enclosed, logical, negate, not, occurrences, strArg } from "./parens.ts";
-import { collected } from "./lists.ts";
+import { collected, sliced, typedEmpty, untypedEmpty } from "./lists.ts";
 import { asCow, formatted, isTemporary, loneOf, meet, stringsEqual } from "./strings.ts";
 import { arithmetic, asF64, compare, intFromF64, isNumber, negatedOrder, numberVal } from "./numbers.ts";
 import { boolOf, checkNullTest, choice, known, narrowing, narrowTo, nullTest, pathOf, presence, truthy } from "./narrowing.ts";
@@ -51,7 +51,7 @@ export function fieldVal(comp: Component, base: string, ty: Ty, js: string, node
   if (f.dflt !== undefined && f.ty.k === "opt") {
     const of = f.ty.of;
     if (of.k === "str") return { code: `${place}.as_deref().unwrap_or(${f.dflt})`, ty: STR };
-    if (of.k === "list") return { code: `${place}.as_deref().unwrap_or(${f.dflt})`, ty: of };
+    if (of.k === "list") return { code: `${place}.as_deref().unwrap_or(${f.dflt})`, ty: of, slice: true };
     return { code: `${place}.unwrap_or(${f.dflt})`, ty: of };
   }
   switch (f.ty.k) {
@@ -103,6 +103,47 @@ function slotsObject(s: Scope, n: N): string | null {
   const [owner, name]: [string, string] = [n.object.name, n.property.name];
   if (owner === "_ctx" && name === "$slots") return "$slots";
   return (owner === "$setup" || owner === "_ctx") && s.slotsBindings.has(name) ? name : null;
+}
+
+/** `n` with the type `t` given to each empty array literal it may evaluate to, as an `as T[]` on it. */
+export function typedBy(n: N, t: N): N {
+  switch (n.type) {
+    case "ArrayExpression":
+      return n.elements.length === 0 ? { ...n, type: "TSAsExpression", expression: n, typeAnnotation: t, fvGiven: true } : n;
+    case "ParenthesizedExpression":
+      return { ...n, expression: typedBy(n.expression, t) };
+    case "ConditionalExpression":
+      return { ...n, consequent: typedBy(n.consequent, t), alternate: typedBy(n.alternate, t) };
+    case "LogicalExpression":
+      return n.operator === "&&" ? n : { ...n, right: typedBy(n.right, t) };
+    default:
+      return n;
+  }
+}
+
+function stated(s: Scope, n: N): Val {
+  const comp = s.comp;
+  const keyword = n.type === "TSAsExpression" ? "as" : "satisfies";
+  const t = n.typeAnnotation;
+  if (t.type === "TSTypeReference" && t.typeName.type === "Identifier" && t.typeName.name === "const" && !t.typeParameters) return expr(s, n.expression);
+  let want: Ty;
+  try {
+    want = tyOfTs(comp, t, comp.structs);
+  } catch (e) {
+    if (!(e instanceof GenError) || !n.fvGiven) throw e;
+    return expr(s, n.expression);
+  }
+  const list = want.k === "opt" ? want.of : want;
+  let inner: N = n.expression;
+  while (inner.type === "ParenthesizedExpression") inner = inner.expression;
+  if (inner.type === "ArrayExpression" && inner.elements.length === 0) {
+    if (list.k === "list") return typedEmpty(comp, list.of);
+    if (n.fvGiven) return expr(s, n.expression);
+    return fail(comp, "FV0628", `\`${keyword}\` gives an empty array literal ${describeTy(want)}, which it is not`, n);
+  }
+  const v = expr(s, typedBy(n.expression, t));
+  if (sameTy(v.ty, want) || (isNumber(v.ty) && isNumber(want)) || (want.k === "opt" && sameTy(v.ty, want.of))) return v;
+  return fail(comp, "FV0628", `\`${keyword}\` states ${describeTy(want)} of ${describeTy(v.ty)}, which the server keeps as it is: write the value with the type it has`, n);
 }
 
 export function expr(s: Scope, n: N): Val {
@@ -192,7 +233,9 @@ export function expr(s: Scope, n: N): Val {
       const base = expr(s, n.object);
       if (nothing(base.ty)) return { code: "None", ty: UNDEF };
       if (base.ty.k !== "opt") return fieldVal(comp, base.code, base.ty, n.property.name, n);
-      const f = fieldVal(comp, "v", base.ty.of, n.property.name, n);
+      const field = fieldVal(comp, "v", base.ty.of, n.property.name, n);
+      const place = ["list", "record", "struct"].includes(field.ty.k) && /^v(?:\.[\w#]+)+$/.test(field.code);
+      const f = place ? { ...field, code: `&${field.code}` } : field;
       if (f.ty.k === "opt") return { code: `${atom(base.code)}.and_then(|v| ${f.code})`, ty: opt(f.ty) };
       return { code: `${atom(base.code)}.map(|v| ${f.code})`, ty: opt(f.ty) };
     }
@@ -283,6 +326,9 @@ export function expr(s: Scope, n: N): Val {
         if (a.ty.k !== "opt") return a;
         if (nothing(b.ty)) return { ...a, ty: withAbsence(a.ty.of, absence(b.ty)) };
         if (b.iter !== undefined) fail(comp, "FV0615", "`??` falling back to a computed list", n);
+        if (a.ty.of.k === "list" && b.ty.k === "list" && (untypedEmpty(b) || (sameTy(a.ty.of, b.ty) && !b.code.startsWith("[")))) {
+          return { code: `${atom(a.code)}.map(|v| &v[..]).unwrap_or(${untypedEmpty(b) ? "&[]" : sliced(b)})`, ty: a.ty.of, slice: true, ...loneOf(a, b) };
+        }
         if (a.held !== undefined && b.ty.k === "str") return { code: `&*${atom(a.held)}.unwrap_or(${asCow(b)})`, ty: STR, ...loneOf(a, b) };
         if (a.ty.of.k === "str" && b.ty.k === "str" && isTemporary(b)) {
           return { code: `&*${atom(a.code)}.map(std::borrow::Cow::<str>::Borrowed).unwrap_or(${asCow(b)})`, ty: STR, ...loneOf(a, b) };
@@ -383,12 +429,25 @@ export function expr(s: Scope, n: N): Val {
     case "ConditionalExpression": {
       const t = expr(s, n.test);
       const k = known(t);
-      if (k !== undefined) return expr(s, k ? n.consequent : n.alternate);
+      if (k !== undefined) {
+        const chosen = expr(s, k ? n.consequent : n.alternate);
+        if (!untypedEmpty(chosen)) return chosen;
+        try {
+          const other = expr(s, k ? n.alternate : n.consequent);
+          return other.ty.k === "list" && other.ty.of.k !== "undef" ? typedEmpty(comp, other.ty.of) : chosen;
+        } catch (e) {
+          if (!(e instanceof GenError)) throw e;
+          return chosen;
+        }
+      }
       const p = presence(s, n.test);
       const name = p ? `n${++ctx.narrowCount}` : "";
-      const a = expr(p && !p.negated ? narrowTo(s, p, name) : s, n.consequent);
-      const b = expr(p && p.negated ? narrowTo(s, p, name) : s, n.alternate);
+      let a = expr(p && !p.negated ? narrowTo(s, p, name) : s, n.consequent);
+      let b = expr(p && p.negated ? narrowTo(s, p, name) : s, n.alternate);
       if (sameTy(a.ty, b.ty) && a.code === b.code && (!name || !occurrences(a.code, name))) return a;
+      const [emptyA, emptyB] = [untypedEmpty(a), untypedEmpty(b)];
+      if (emptyA && b.ty.k === "list") a = { ...a, ty: b.ty };
+      if (emptyB && a.ty.k === "list") b = { ...b, ty: a.ty };
       const second = (code: string) => (a.ty.k === "str" ? strArg(code) : bare(code));
       const choose = (yes: string, no: string): string => {
         if (!p) return choice(truthy(t), bare(yes), second(no));
@@ -403,9 +462,13 @@ export function expr(s: Scope, n: N): Val {
       if (sameTy(a.ty, b.ty) && a.ty.k === "str" && (isTemporary(a) || isTemporary(b))) {
         return { code: `&*(${choose(asCow(a), asCow(b))})`, ty: STR, ...lone };
       }
-      if (sameTy(a.ty, b.ty) && a.ty.k === "list" && (a.iter !== undefined || b.iter !== undefined)) {
-        const both = `(${choose(collected(a), collected(b))})`;
-        return { code: both, ty: a.ty, iter: `${both}.into_iter()`, ...lone };
+      if (sameTy(a.ty, b.ty) && a.ty.k === "list" && a.ty.of.k !== "undef") {
+        const owned = (v: Val, empty: boolean): boolean => !empty && (v.iter !== undefined || v.code.startsWith("["));
+        if (owned(a, emptyA) || owned(b, emptyB)) {
+          const both = `(${choose(emptyA ? "Vec::new()" : collected(a), emptyB ? "Vec::new()" : collected(b))})`;
+          return { code: both, ty: a.ty, iter: `${both}.into_iter()`, ...lone };
+        }
+        return { code: choose(emptyA ? "&[]" : sliced(a), emptyB ? "&[]" : sliced(b)), ty: a.ty, slice: true, ...lone };
       }
       const optStr = (v: Val) => nothing(v.ty) || (v.ty.k === "opt" && v.ty.of.k === "str") || v.ty.k === "str";
       if (sameTy(a.ty, b.ty) && a.ty.k !== "opt") return { code: choose(a.code, b.code), ty: a.ty, ...lone };
@@ -426,6 +489,9 @@ export function expr(s: Scope, n: N): Val {
       }
       return fail(comp, "FV0623", "the two branches of `?:` differ in type", n);
     }
+    case "TSAsExpression":
+    case "TSSatisfiesExpression":
+      return stated(s, n);
     case "NewExpression": {
       const made = n.callee.type === "Identifier" ? n.callee.name : n.callee.type === "MemberExpression" && !n.callee.computed ? `${n.callee.object.name ?? "…"}.${n.callee.property.name}` : "…";
       return fail(comp, "FV0624", `\`new ${made}(…)\` builds an object the server has no twin for: compute the value in Rust and pass it as a prop`, n);

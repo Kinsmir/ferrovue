@@ -145,6 +145,15 @@ released together and share version numbers.
   object, given to such a child is FV0514.
 - The quick start's table of configuration keys lists `twins`, and says that `out` keeps files
   ferrovue did not write.
+- An empty array literal takes its element type from the list it stands beside, so
+  `shallowRef(props.item ? props.item.children : [])` compiles (#76). It does so in either branch of
+  `?:` and after `??`, in setup, `computed` and the template, and also takes the type from
+  `[] as T[]`, `[] satisfies T[]`, a typed constant (`const none: T[] = []`) and the type argument
+  of `ref`, `shallowRef` and `computed`. The generated Rust borrows the chosen list as a slice and
+  takes `&[]` for the empty one. A `?:` between two lists and a `??` falling back to a list borrow
+  them the same way, and a list or object read through `?.` is borrowed. `as` and `satisfies` are
+  read in expressions: one that states the type the value already has is accepted, and one that
+  states another is FV0628.
 
 ### Security
 

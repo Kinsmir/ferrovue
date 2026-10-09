@@ -542,6 +542,10 @@ Strict test of a value that may be `null` or `undefined`.
 
 Strict test against the absence a value cannot have.
 
+## FV0628
+
+`as` or `satisfies` stating a type the value does not have.
+
 # Strings and numbers: FV07xx
 
 See [`strings`](crate::guide::strings).
