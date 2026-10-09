@@ -1,0 +1,1 @@
+{"label": "<script>\"x\" & 'y'</script>", "flag": true, "others": [{"label": "<script>\"x\" & 'y'</script>", "flag": false, "others": []}], "item": {"id": "<script>\"x\" & 'y'</script>", "tags": ["<script>\"x\" & 'y'</script>", "</li><li>"], "children": [{"label": "</li><li>", "flag": false, "others": [], "item": {"id": "<script>\"x\" & 'y'</script>", "children": []}}]}}

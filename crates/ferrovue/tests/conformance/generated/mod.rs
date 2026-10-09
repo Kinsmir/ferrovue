@@ -35,6 +35,7 @@ pub mod defaults;
 pub mod deferred;
 pub mod destructured;
 pub mod divider;
+pub mod empty_branch;
 pub mod escaped_idioms;
 pub mod escaped_null;
 pub mod exprs;
@@ -346,6 +347,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Divider" => {
             let props: divider::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             divider::render(&mut out, &props);
+        }
+        "EmptyBranch" => {
+            let props: empty_branch::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            empty_branch::render(&mut out, &props);
         }
         "EscapedIdioms" => {
             let props: escaped_idioms::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

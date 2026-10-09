@@ -325,6 +325,94 @@ defineProps<{ tags: string[]; nums: number[] }>();
     });
   });
 
+  describe("empty array literals", () => {
+    const tree = (setup: string, template = `<i v-for="x in a">{{ x.label }}</i>`) =>
+      compile(
+        island(`<script setup lang="ts">
+import { computed, ref, shallowRef } from "vue";
+interface Item { id: string; children: Props[]; tags?: string[] }
+export interface Props { label: string; flag: boolean; others: Props[]; item?: Item }
+const props = defineProps<Props>();
+${setup}
+</script>
+<template>${template}</template>`),
+      ).get("x.rs")!;
+
+    it.each([
+      ["seeds a ref", "const a = shallowRef(props.item ? props.item.children : []);"],
+      ["seeds a ref from a typed constant", "const none: Props[] = [];\nconst a = shallowRef(props.item ? props.item.children : none);"],
+      ["seeds a ref from `as Props[]`", "const a = shallowRef(props.item ? props.item.children : ([] as Props[]));"],
+      ["seeds a ref from `satisfies Props[]`", "const a = ref(props.item ? props.item.children : ([] satisfies Props[]));"],
+      ["seeds a ref given its type", "const a = ref<Props[]>(props.item ? props.item.children : []);"],
+      ["seeds a constant given its type", "const a: Props[] = props.item ? props.item.children : [];"],
+      ["is a computed", "const a = computed(() => (props.item ? props.item.children : []));"],
+    ])("takes its element type from the other branch of `?:` where it %s, borrowing the prop's list", (_, setup) => {
+      const out = tree(setup);
+      expect(out).toMatch(/let s_a = if let Some\(n\d+\) = props\.item\.as_ref\(\) \{ &n\d+\.children\[\.\.\] \} else \{ (?:&\[\]|s_none|<&\[Props<'_>\]>::default\(\)) \};/);
+      expect(out).toContain("for x_ref in s_a.iter() {");
+      expect(out).not.toContain(".collect::<Vec<_>>()");
+    });
+
+    it("walks a `?:` between a list and an empty one in the template", () => {
+      const out = tree("", `<i v-for="x in (flag ? others : [])">{{ x.label }}</i><b>{{ (item ? item.children : []).length }}</b>`);
+      expect(out).toContain("for x_ref in (if props.flag { &props.others[..] } else { &[] }).iter() {");
+      expect(out).toMatch(/\(if let Some\(n\d+\) = props\.item\.as_ref\(\) \{ &n\d+\.children\[\.\.\] \} else \{ &\[\] \}\)\.len\(\) as i64/);
+    });
+
+    it("types the empty array literal a `?:` with a constant test chooses by the branch it leaves", () => {
+      const out = tree("", `<i v-for="x in (false ? others : [])">{{ x.label }}</i><b>{{ (true ? [] : item?.tags ?? []).length }}</b>`);
+      expect(out).toContain("for x_ref in <&[Props<'_>]>::default().iter() {");
+      expect(out).toContain("<&[std::borrow::Cow<str>]>::default().len() as i64");
+    });
+
+    it("borrows both lists of a `?:` between two", () => {
+      const out = tree("", `<i v-for="x in (flag ? others : item ? item.children : [])">{{ x.label }}</i>`);
+      expect(out).toMatch(/if props\.flag \{ &props\.others\[\.\.\] \} else \{ if let Some\(n\d+\) = props\.item\.as_ref\(\) \{ &n\d+\.children\[\.\.\] \} else \{ &\[\] \} \}/);
+    });
+
+    it("falls back to an empty list, or another list, with `??` after `?.`", () => {
+      const out = tree("const a = computed(() => props.item?.children ?? []);", `<i v-for="x in a">{{ x.label }}</i>{{ (item?.tags ?? []).join() }}{{ (item?.children ?? others).length }}`);
+      expect(out).toContain("let s_a = props.item.as_ref().map(|v| &v.children).map(|v| &v[..]).unwrap_or(&[]);");
+      expect(out).toContain("props.item.as_ref().and_then(|v| v.tags.as_ref()).map(|v| &v[..]).unwrap_or(&[])");
+      expect(out).toContain("props.item.as_ref().map(|v| &v.children).map(|v| &v[..]).unwrap_or(&props.others[..]).len()");
+    });
+
+    it("collects a computed list chosen against an empty one", () => {
+      const out = tree("const a = computed(() => (props.flag ? props.others.map((o) => o.label) : []));", `<i>{{ a.join() }}</i>`);
+      expect(out).toMatch(/\(if props\.flag \{ props\.others\.iter\(\)\.map\(.*\.collect::<Vec<_>>\(\) \} else \{ Vec::new\(\) \}\)/);
+    });
+
+    it("reads an object field through `?.` by reference", () => {
+      const out = compile(
+        island(`<script setup lang="ts">
+interface Inner { n: number }
+interface Outer { inner: Inner }
+defineProps<{ outer?: Outer }>();
+</script>
+<template><i>{{ outer?.inner?.n }}</i></template>`),
+      ).get("x.rs")!;
+      expect(out).toContain("props.outer.as_ref().map(|v| &v.inner)");
+    });
+
+    it.each([
+      ["a value `as` a type the server holds it as", "const a = computed(() => props.label as string);", "<i>{{ a }}</i>"],
+      ["a number `as` another kind of number", "const a = computed(() => props.others.length as number);", "<i>{{ a }}</i>"],
+    ])("accepts %s", (_, setup, template) => {
+      expect(tree(setup, template)).toContain("pub fn render");
+    });
+
+    it.each([
+      ["a string `as` a number", "const a = computed(() => props.label as number);", /`as` states a number of a string/],
+      ["an empty array literal `as` a string", "const a = computed(() => [] as string);", /`as` gives an empty array literal a string/],
+    ])("refuses %s, which the server would hold as it is", (_, setup, message) => {
+      expect(() => tree(setup, "<i>{{ a }}</i>")).toThrow(expect.objectContaining({ code: "FV0613", message: expect.stringMatching(message) }));
+    });
+
+    it("leaves a `?:` between two empty array literals untyped", () => {
+      expect(() => tree("", `<i v-for="x in (flag ? [] : [])">{{ x }}</i>`)).toThrow(expect.objectContaining({ code: "FV0819" }));
+    });
+  });
+
   describe("child components", () => {
     const child = `<script setup lang="ts">
 export interface Props { label: string; count?: number }

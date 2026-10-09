@@ -1,7 +1,8 @@
-import { type N, type Scope, type Ty, type Val, BOOL, fail, FLOAT, INT, opt, sameTy, STR } from "./model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, BOOL, fail, FLOAT, INT, opt, sameTy, STR } from "./model.ts";
 import { ctx } from "./context.ts";
 import { expr, fieldVal } from "./expr.ts";
 import { cond } from "./narrowing.ts";
+import { localTy } from "./rust.ts";
 import { asF64, isNumber } from "./numbers.ts";
 import { asCow, isTemporary, lonely, meet, yieldsCow } from "./strings.ts";
 import { atom, bare, binary, operand, strArg, UNARY } from "./parens.ts";
@@ -32,6 +33,18 @@ export function computed(iter: string, of: Ty, lone?: boolean): Val {
 export function collected(v: Val): string {
   const of = v.ty.k === "list" ? v.ty.of : v.ty;
   return `${items(v)}${of.k === "str" ? `.map(|v| ${COW}::Owned(v.into_owned()))` : ""}.collect::<Vec<_>>()`;
+}
+
+export function sliced(v: Val): string {
+  return v.slice ? v.code : `&${atom(v.code)}[..]`;
+}
+
+export function untypedEmpty(v: Val): boolean {
+  return v.ty.k === "list" && v.ty.of.k === "undef";
+}
+
+export function typedEmpty(comp: Component, of: Ty): Val {
+  return { code: `<&[${localTy(of, comp)}]>::default()`, ty: { k: "list", of }, slice: true };
 }
 
 export function heldList(name: string, of: Ty, lone?: boolean): Val {
