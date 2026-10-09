@@ -1,6 +1,6 @@
 {
   "name": "ferrovue",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Vue templates compiled to Rust render functions: server-side rendering with no JavaScript at run time",
   "license": "MIT OR Apache-2.0",
   "repository": {

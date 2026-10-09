@@ -708,7 +708,7 @@ export const ERRORS: {
     };
     readonly FV1114: {
         readonly title: "Unknown configuration key";
-        readonly detail: "A key ferrovue does not read is refused rather than ignored, as it is most often a misspelt one (`component` for `components`). The message names the key it most likely means.";
+        readonly detail: "A key ferrovue does not read is refused, as it is most often a misspelt one (`component` for `components`). The message names the key it most likely means.";
     };
     readonly FV1115: {
         readonly title: "Configuration value of the wrong type";

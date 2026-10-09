@@ -5,6 +5,8 @@ released together and share version numbers.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-09
+
 ### Added
 
 - The types the public API names are exported where it names them: `ErrorCode` and
@@ -978,7 +980,8 @@ released together and share version numbers.
 - Slot content made only of comments (a `v-if` not taken, for example) was kept when the slot had
   no fallback. Vue drops it, so the bytes differed.
 
-[Unreleased]: https://github.com/Kinsmir/ferrovue/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/Kinsmir/ferrovue/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/Kinsmir/ferrovue/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/Kinsmir/ferrovue/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/Kinsmir/ferrovue/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/Kinsmir/ferrovue/compare/v0.3.0...v0.4.0
