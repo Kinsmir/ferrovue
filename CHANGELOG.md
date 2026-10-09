@@ -5,6 +5,13 @@ released together and share version numbers.
 
 ## [Unreleased]
 
+### Fixed
+
+- `conformanceSuite`'s client-render check and `renderRecordedPage` read the selection of a
+  recorded `<select>` from its `selected` attributes, as the HTML parser does. happy-dom 20.14
+  selects the second option on parsing a `<select>` whose `selected` option comes later, so a
+  correct client render was reported as differing (#91).
+
 ## [0.7.0] - 2026-10-09
 
 ### Added

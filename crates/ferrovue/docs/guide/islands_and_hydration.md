@@ -403,6 +403,8 @@ properties Vue's client sets for `v-bind()` in `<style>` once mounted, after the
 any order), and an
 `<input>`'s `value` and `checked`, a `<textarea>`'s `value` and an `<option>`'s `selected` by the
 state the browser holds, which the client sets as properties where the server writes attributes.
+In the markup as parsed, an `<option>`'s selection is the one the HTML parser gives it from the
+`selected` attributes, which happy-dom's property misreports once a later option is selected.
 The render is compared as mounting leaves it, where a `<ClientOnly>` still shows the fallback the
 server wrote, and, where that differs while async components are loading, once they have loaded.
 What is teleported out of the page is not compared.

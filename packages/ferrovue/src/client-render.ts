@@ -6,7 +6,31 @@ const escapeText = (text: string): string => text.replace(/&/g, "&amp;").replace
 
 const STATE_ATTRS: Record<string, string[]> = { INPUT: ["value", "checked"], TEXTAREA: ["value"], OPTION: ["selected"] };
 
-function element(el: Element, scratch: HTMLElement): string {
+function selectOf(option: Element): HTMLSelectElement | null {
+  const parent = option.parentElement;
+  const select = parent?.tagName === "OPTGROUP" ? parent.parentElement : parent;
+  return select?.tagName === "SELECT" ? (select as HTMLSelectElement) : null;
+}
+
+function optionsOf(select: Element): Element[] {
+  return [...select.children].flatMap((child) => (child.tagName === "OPTION" ? [child] : child.tagName === "OPTGROUP" ? [...child.children].filter((c) => c.tagName === "OPTION") : []));
+}
+
+function parsedSelected(option: Element): boolean {
+  const select = selectOf(option);
+  if (!select || select.hasAttribute("multiple") || Number(select.getAttribute("size")) > 1) return option.hasAttribute("selected");
+  const options = optionsOf(select);
+  const disabled = (o: Element) => o.hasAttribute("disabled") || (o.parentElement?.tagName === "OPTGROUP" && o.parentElement.hasAttribute("disabled"));
+  const chosen = options.findLast((o) => o.hasAttribute("selected")) ?? options.find((o) => !disabled(o));
+  return option === chosen;
+}
+
+function stateOf(el: Element, name: string, parsed: boolean): unknown {
+  if (parsed && el.tagName === "OPTION") return parsedSelected(el);
+  return (el as unknown as Record<string, unknown>)[name];
+}
+
+function element(el: Element, scratch: HTMLElement, parsed: boolean): string {
   const state = STATE_ATTRS[el.tagName] ?? [];
   const attrs = el
     .getAttributeNames()
@@ -17,8 +41,8 @@ function element(el: Element, scratch: HTMLElement): string {
   if (classes.length) attrs.push(` class=${JSON.stringify(classes.join(" "))}`);
   const style = styleShape(el.getAttribute("style") ?? "", scratch);
   if (style) attrs.push(` style=${JSON.stringify(style)}`);
-  for (const name of state) attrs.push(` .${name}=${JSON.stringify((el as unknown as Record<string, unknown>)[name])}`);
-  const children = el.tagName === "TEXTAREA" ? "" : nodes(el.childNodes, scratch);
+  for (const name of state) attrs.push(` .${name}=${JSON.stringify(stateOf(el, name, parsed))}`);
+  const children = el.tagName === "TEXTAREA" ? "" : nodes(el.childNodes, scratch, parsed);
   return `<${el.localName}${attrs.join("")}>${children}</${el.localName}>`;
 }
 
@@ -35,7 +59,7 @@ function styleShape(text: string, scratch: HTMLElement): string {
   return [...own, ...custom.toSorted()].join(" ");
 }
 
-function nodes(list: NodeListOf<ChildNode>, scratch: HTMLElement): string {
+function nodes(list: NodeListOf<ChildNode>, scratch: HTMLElement, parsed: boolean): string {
   let out = "";
   let text = "";
   for (const node of list) {
@@ -44,7 +68,7 @@ function nodes(list: NodeListOf<ChildNode>, scratch: HTMLElement): string {
       continue;
     }
     if (node.nodeType !== 1) continue;
-    out += escapeText(text) + element(node as Element, scratch);
+    out += escapeText(text) + element(node as Element, scratch, parsed);
     text = "";
   }
   return out + escapeText(text);
@@ -57,7 +81,14 @@ function nodes(list: NodeListOf<ChildNode>, scratch: HTMLElement): string {
  * `<input>`'s `value` and `checked`, a `<textarea>`'s `value`, an `<option>`'s `selected`) by its
  * property, which Vue's client sets where the server writes the attribute. */
 export function renderedShape(container: Element): string {
-  return nodes(container.childNodes, container.ownerDocument.createElement("div"));
+  return nodes(container.childNodes, container.ownerDocument.createElement("div"), false);
+}
+
+/** `renderedShape` of markup as the browser parsed it, untouched since: an `<option>`'s state is
+ * the selection the HTML parser gives it, from the `selected` attributes (the last one in a single
+ * `<select>`, or its first enabled option without one), which happy-dom's property misreports. */
+export function parsedShape(container: Element): string {
+  return nodes(container.childNodes, container.ownerDocument.createElement("div"), true);
 }
 
 /** A plugin that takes what the app is mounted on, and its `renderedShape` as `mount` returns,
