@@ -5,7 +5,7 @@ import { basename } from "node:path";
 import { relativePath } from "./paths.ts";
 import { type Component, type N, absence, blankComponent, fail, GenError, opt, snake, sourceAt, tagAst } from "./model.ts";
 import { ctx, readSource } from "./context.ts";
-import { typesImports, declareTypes, defaultValue, definePropsType, ONE_NOTHING, readTypeFile, refusePrelude, resolveImport, runtimeDefaults, structOf, tyOfTs } from "./typescript.ts";
+import { typesImports, declareTypes, defaultValue, definePropsType, ONE_NOTHING, reachLocal, readTypeFile, resolveImport, runtimeDefaults, structOf, tyOfTs } from "./typescript.ts";
 import { claim } from "./plugin.ts";
 import { asyncChildren } from "./script.ts";
 
@@ -177,8 +177,7 @@ export function readComponent(file: string, root: string, name = basename(file, 
 
   if (descriptor.scriptSetup) generics(comp, source, descriptor.scriptSetup);
   const decls = declareTypes(comp, [...plainAst, ...ast], comp.structs, comp.aliases);
-  for (const d of decls) refusePrelude(comp, d);
-  for (const d of decls) comp.structs.set(d.name, structOf(comp, d.name, d.members, comp.structs));
+  for (const d of decls) comp.typeDecls.set(d.name, { members: d.members, node: d.node });
   let propsTy: N = null;
   for (const s of ast) {
     const call = s.type === "ExpressionStatement" ? s.expression : s.type === "VariableDeclaration" ? s.declarations[0]?.init : null;
@@ -193,7 +192,11 @@ export function readComponent(file: string, root: string, name = basename(file, 
   } else if (propsTy.type === "TSTypeLiteral") {
     comp.props = structOf(comp, "Props", propsTy.members, comp.structs);
   } else if (propsTy.type === "TSTypeReference" && comp.structs.has(propsTy.typeName.name)) {
-    comp.props = { name: "Props", fields: comp.structs.get(propsTy.typeName.name)!.fields };
+    reachLocal(comp, propsTy.typeName.name);
+    const st = comp.structs.get(propsTy.typeName.name)!;
+    const refused = st.refused?.values().next().value;
+    if (refused !== undefined) throw refused;
+    comp.props = { name: "Props", fields: st.fields };
   } else {
     fail(comp, "FV0304", "`defineProps` takes a type literal or an interface declared in the same block", propsTy);
   }

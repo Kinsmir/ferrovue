@@ -9,6 +9,7 @@ import { scopeFor } from "./script.ts";
 import { attrsFlow } from "./fallthrough.ts";
 import { prepareDynamic } from "./dynamic.ts";
 import { componentSource, GENERATED, isIsland, modSource } from "./rust.ts";
+import { requireWhole } from "./typescript.ts";
 import { renderParams } from "./plugin.ts";
 import { PLUGINS } from "./plugins/index.ts";
 
@@ -67,6 +68,7 @@ export function generate(root: string, config: Config = loadConfig(root), source
   const byName = new Map(read.map((r) => [r.comp.name, r]));
   const components = new Map(read.map((r) => [r.comp.name, r.comp]));
   ctx.components = components;
+  for (const c of components.values()) for (const f of c.props.fields) requireWhole(c, f.ty);
   const scopes = read.map((r) => scopeFor(r.comp, r.ast, components).scope);
   const analysed = prepareDynamic(read.map((r, i) => ({ ...r, scope: scopes[i]! })));
   const all = read.map((r, i) => ({ comp: r.comp, ssr: analysed[i]!, children: scopes[i]!.children, attrsBindings: scopes[i]!.attrsBindings }));
@@ -97,11 +99,19 @@ export function generate(root: string, config: Config = loadConfig(root), source
     ordered.push(r);
   };
   read.forEach(place);
-  for (const r of ordered) {
+  const built = ordered.map((r) => {
     ctx.narrowCount = 0;
-    out.set(moduleFile(r.comp.module), componentSource(r.comp, r.ast, r.ssr, components));
+    const file = moduleFile(r.comp.module);
+    out.set(file, "");
+    return { file, source: componentSource(r.comp, r.ast, r.ssr, components) };
+  });
+  const reached = (): number => ctx.typeReached.size + [...components.values()].reduce((n, c) => n + c.reached.size, 0);
+  let modules: [string, string][] = [];
+  for (let before = -1; before !== reached(); ) {
+    before = reached();
+    for (const { file, source } of built) out.set(file, source());
+    modules = PLUGINS.flatMap((p) => p.modules?.() ?? []);
   }
-  const modules = PLUGINS.flatMap((p) => p.modules?.() ?? []);
   out.set("mod.rs", modSource(read.map((r) => r.comp), modules.map(([file]) => file)));
   for (const [file, text] of modules) {
     const taken = modulesOf.get(file);

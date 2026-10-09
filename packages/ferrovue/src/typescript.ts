@@ -85,6 +85,7 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
       }
       if (structs.has(name)) {
         if (structs === ctx.typeStructs) reachType(name);
+        else if (structs === comp.structs) reachLocal(comp, name);
         return { k: "struct", name };
       }
       if (comp.childProps.has(name)) return { k: "child", name: comp.childProps.get(name)! };
@@ -193,13 +194,40 @@ export function reachType(name: string): void {
     const [first, again] = decls;
     if (again !== undefined) fail(again.home, "FV0319", `\`${name}\` is declared by ${first!.home.file} too`, again.node);
     refusePrelude(first!.home, { name, node: first!.node });
-    const st = structOf(first!.home, name, first!.members, ctx.typeStructs);
+    const st = structOf(first!.home, name, first!.members, ctx.typeStructs, true);
     for (const f of st.fields) f.ty = markHome(f.ty, "types");
     ctx.typeStructs.set(name, st);
   } catch (e) {
     ctx.typeReached.delete(name);
     throw e;
   }
+}
+
+/** Translate an interface a component declares, the first time something the server renders reaches it. */
+export function reachLocal(comp: Component, name: string): void {
+  const decl = comp.typeDecls.get(name);
+  if (decl === undefined || comp.reached.has(name)) return;
+  comp.reached.add(name);
+  try {
+    refusePrelude(comp, { name, node: decl.node });
+    comp.structs.set(name, structOf(comp, name, decl.members, comp.structs, true));
+  } catch (e) {
+    comp.reached.delete(name);
+    throw e;
+  }
+}
+
+/** Refuse a type whose every field a value of it must carry, as props and store state do, where one
+ * of its fields, or of the types it holds, has no Rust type. */
+export function requireWhole(comp: Component, ty: Ty, seen: Set<Struct> = new Set()): void {
+  if (ty.k === "opt" || ty.k === "list" || ty.k === "record") return requireWhole(comp, ty.of, seen);
+  if (ty.k !== "struct") return;
+  const { st, owner } = lookupStruct(comp, ty);
+  if (st === undefined || seen.has(st)) return;
+  seen.add(st);
+  const refused = st.refused?.values().next().value;
+  if (refused !== undefined) throw refused;
+  for (const f of st.fields) requireWhole(owner, f.ty, seen);
 }
 
 /** Whether `types.rs` holds the type: one built from a constant list, or a declared one something reached. */
@@ -222,28 +250,44 @@ export function lookupStruct(comp: Component, ty: Ty & { k: "struct" }): { st: S
   }
   if (ty.home !== undefined && ty.home !== comp.name) {
     const owner = childOf(ty.home);
+    reachLocal(owner, ty.name);
     return { st: owner.structs.get(ty.name), owner, path: `super::${owner.module}::` };
   }
-  return { st: ty.name === "Props" ? comp.props : comp.structs.get(ty.name), owner: comp, path: "" };
+  if (ty.name === "Props") return { st: comp.props, owner: comp, path: "" };
+  reachLocal(comp, ty.name);
+  return { st: comp.structs.get(ty.name), owner: comp, path: "" };
 }
 
-export function structOf(comp: Component, name: string, members: N[], structs: Map<string, Struct>): Struct {
+export function structOf(comp: Component, name: string, members: N[], structs: Map<string, Struct>, lenient = false): Struct {
   const fields: Field[] = [];
+  const refused = new Map<string, GenError>();
   for (const m of members) {
-    if (m.type !== "TSPropertySignature" || m.key.type !== "Identifier") {
-      fail(comp, "FV0320", `\`${name}\` may only hold plain named fields`, m);
+    try {
+      fields.push(fieldOf(comp, name, m, structs));
+    } catch (e) {
+      if (!lenient || !(e instanceof GenError)) throw e;
+      const key = memberKey(m);
+      if (!refused.has(key)) refused.set(key, e);
     }
-    const base = tyOfTs(comp, m.typeAnnotation.typeAnnotation, structs);
-    if (m.optional && absence(base) === "null") {
-      fail(comp, "FV0321", `\`${m.key.name}?: T | null\` may be absent, which is \`undefined\`, or \`null\`: ${ONE_NOTHING}; declare it \`${m.key.name}: T | null\` or \`${m.key.name}?: T\``, m);
-    }
-    if (m.optional && base.k === "opt") {
-      fields.push({ js: m.key.name, rust: snake(m.key.name), ty: base });
-      continue;
-    }
-    fields.push({ js: m.key.name, rust: snake(m.key.name), ty: m.optional ? opt(base) : base });
   }
-  return { name, fields };
+  return refused.size ? { name, fields, refused } : { name, fields };
+}
+
+function memberKey(m: N): string {
+  if (m.type !== "TSPropertySignature" && m.type !== "TSMethodSignature") return "";
+  if (m.computed) return "";
+  return m.key.type === "Identifier" ? m.key.name : m.key.type === "StringLiteral" ? m.key.value : "";
+}
+
+function fieldOf(comp: Component, name: string, m: N, structs: Map<string, Struct>): Field {
+  if (m.type !== "TSPropertySignature" || m.key.type !== "Identifier") {
+    fail(comp, "FV0320", `\`${name}\` may only hold plain named fields`, m);
+  }
+  const base = tyOfTs(comp, m.typeAnnotation.typeAnnotation, structs);
+  if (m.optional && absence(base) === "null") {
+    fail(comp, "FV0321", `\`${m.key.name}?: T | null\` may be absent, which is \`undefined\`, or \`null\`: ${ONE_NOTHING}; declare it \`${m.key.name}: T | null\` or \`${m.key.name}?: T\``, m);
+  }
+  return { js: m.key.name, rust: snake(m.key.name), ty: m.optional && base.k !== "opt" ? opt(base) : base };
 }
 
 export function definePropsType(call: N): N | null {

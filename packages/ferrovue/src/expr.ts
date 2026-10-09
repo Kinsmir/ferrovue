@@ -44,7 +44,11 @@ export function fieldVal(comp: Component, base: string, ty: Ty, js: string, node
   if (ty.k !== "struct") fail(comp, "FV0604", `\`.${js}\` on a value that is not an object`, node);
   const { st, owner } = lookupStruct(comp, ty);
   const found = st?.fields.find((x) => x.js === js);
-  if (!found) fail(comp, "FV0605", `\`${ty.name}\` has no field \`${js}\``, node);
+  if (!found) {
+    const refused = st?.refused?.get(js) ?? st?.refused?.get("");
+    if (refused !== undefined) throw refused;
+    fail(comp, "FV0605", `\`${ty.name}\` has no field \`${js}\``, node);
+  }
   const f = owner === comp ? found : { ...found, ty: markHome(found.ty, owner.name) };
   if (st!.slot) return { code: `${base}.${f.rust}`, ty: f.ty };
   const place = `${base}.${f.rust}`;

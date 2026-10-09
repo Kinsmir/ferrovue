@@ -166,6 +166,12 @@ released together and share version numbers.
 
 ### Fixed
 
+- A component's own interfaces and object type aliases are translated only when the server render
+  reaches them (#77), as a `.ts` file's are: a type only an event handler uses is neither written
+  nor refused, and the component's module holds only the reached ones. A field whose type has no Rust counterpart (`items: HTMLElement[]`) is left out of
+  a type reached only by values the server computes, such as `shallowRef<Cat[]>([])`, and reading
+  it on the server is refused where it is declared. A type a prop or `defineModel` reaches keeps
+  every field, and such a field is still refused there.
 - A component whose `render` takes more than seven arguments (slots, the route, stores,
   translations, teleports, `Provides` and the head, through its children) generates code that
   passes `cargo clippy -- -D warnings`: its `render`, `render_scoped` and `html` allow

@@ -274,6 +274,7 @@ function structLiteral(s: Scope, key: Key, obj: N, reactive: boolean, what: stri
     if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "FV1612", `an object ${what} holds plain keys and values: a function goes under a key of its own`, p);
     const name: string = p.key.type === "Identifier" ? p.key.name : String(p.key.value);
     const field = st!.fields.find((f) => camelize(f.js) === camelize(name));
+    if (!field && st!.refused?.has(name)) continue;
     if (!field) fail(s.comp, "FV1612", `\`${st!.name}\` has no field \`${name}\``, p);
     if (p.value.type === "ArrowFunctionExpression" || p.value.type === "FunctionExpression") fail(s.comp, "FV1612", `an object ${what} holds plain keys and values: a function goes under a key of its own`, p);
     if (!reactive && isRef(s, p.value)) {

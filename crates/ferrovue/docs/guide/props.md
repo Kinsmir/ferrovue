@@ -355,13 +355,23 @@ a value to one another agree on its type: `UserCard.vue` and `UserList.vue` impo
 file is that component's struct (`super::data_list::Row<'a>`), and one imported from a store's file
 is the struct in `stores.rs`.
 
-`types.rs` holds the types of `.ts` files that the server render reaches: those of a component's
-props and `defineModel` (a type parameter's constraint included), its own interfaces, a provided or
-injected value, a `ref` the server computes, and a constant list declared with an interface,
-together with the types of their fields. Only these are checked. A type nothing reaches is neither written nor
-refused, so a module a component imports for its functions may declare types with no Rust
-counterpart (`type Row = Record<string, unknown>`), and an exported interface no component uses has
-no struct.
+A component's own interfaces and object type aliases, and those of the `.ts` files it imports, are
+translated when the server render reaches them: through a component's props and `defineModel` (a
+type parameter's constraint included), a provided or injected value, a `ref` or other binding the
+server computes, and a constant list declared with an interface, together with the types of their
+fields. The component's module and `types.rs` hold only these, and only these are checked. A type
+nothing reaches is neither written nor refused, so a module a component imports for its functions
+may declare types with no Rust counterpart (`type Row = Record<string, unknown>`), an interface only
+an event handler uses may hold an `HTMLElement`, and an exported interface no component uses has no
+struct.
+
+A field whose type has no Rust counterpart is left out of its struct when only values the server
+computes reach the type. With `interface Cat { id: string; items: HTMLElement[] }` and
+`const cats = shallowRef<Cat[]>([])`, a template that reads `cats.length` or `cat.id` compiles, and
+`Cat` is a struct with `id` alone. Reading `items` on the server, in the template or in a
+`computed` the template reads, is refused where the field is declared, with its code. Props,
+`defineModel` and the types their fields hold keep every field, since the props come from Rust and
+are sent to the client, so such a field in a type a prop reaches is refused where it is declared.
 
 A constant imported from a `.ts` file is evaluated when the component is compiled. A list of objects
 becomes a `const` in `types.rs`, `pub const SORTS: &[SortsItem<'static>]`, whose item type is the
