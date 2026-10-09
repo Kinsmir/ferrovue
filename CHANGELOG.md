@@ -5,6 +5,8 @@ released together and share version numbers.
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-10-09
+
 ### Fixed
 
 - `conformanceSuite`'s client-render check and `renderRecordedPage` read the selection of a
@@ -987,7 +989,8 @@ released together and share version numbers.
 - Slot content made only of comments (a `v-if` not taken, for example) was kept when the slot had
   no fallback. Vue drops it, so the bytes differed.
 
-[Unreleased]: https://github.com/Kinsmir/ferrovue/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/Kinsmir/ferrovue/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/Kinsmir/ferrovue/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/Kinsmir/ferrovue/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/Kinsmir/ferrovue/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/Kinsmir/ferrovue/compare/v0.4.0...v0.5.0
