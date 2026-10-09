@@ -427,6 +427,10 @@ Prop given a value of another type.
 
 Component resolved by name that is not imported.
 
+## FV0514
+
+Listener of unknown name given to a child with a prop named like a listener.
+
 # Expressions: FV06xx
 
 ## FV0601

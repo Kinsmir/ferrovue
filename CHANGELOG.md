@@ -21,7 +21,6 @@ released together and share version numbers.
   `…Slot` types of a component that passes on `Provides`, and the derives of `Props` and `Slots`.
 - `crates/ferrovue-contract`, an unpublished crate that generates every item of that contract and
   uses each from hand-written Rust, run in CI with its generated code checked by `ferrovue --check`.
-
 - `Boolean` is taken as the function of `.filter()`, `.map()`, `.some()`, `.every()`, `.find()` and
   `.findIndex()`, as `x => !!x`, and `Boolean(x)` as a call. `.filter(Boolean)` of a list whose items
   may be `null` or `undefined`, or of an array literal holding optional values
@@ -97,6 +96,12 @@ released together and share version numbers.
   files at LF line endings, as the generated Rust and the recorded fixtures are compared byte for
   byte.
 - The release job installs an exact npm version while it holds the publishing token.
+- Listeners on a component are skipped whatever form its props take: `@loaded`, `v-on:x.once`,
+  `@update:x`, `v-on="handlers"` and `@[name]` beside a `v-bind` of the child's own `Props`
+  (a component rendering itself included) compile, where they were FV0503 (#75). A prop the child
+  declares with a name like a listener (`onSale`) takes the value bound to it, as Vue gives it,
+  where it was left out; a listener whose name is chosen at run time, or comes from `v-on` of an
+  object, given to such a child is FV0514.
 
 ## [0.6.0] - 2026-10-06
 

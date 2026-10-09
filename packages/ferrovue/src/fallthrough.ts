@@ -16,8 +16,13 @@ export function isDollarAttrs(n: N, bindings: Set<string>): boolean {
 }
 
 export function passedKey(child: Component, key: string): boolean {
-  if (["", "key", "ref", "ref_for", "ref_key", "innerHTML", "textContent"].includes(key) || /^on[^a-z]/.test(key)) return false;
+  if (["", "key", "ref", "ref_for", "ref_key", "innerHTML", "textContent"].includes(key)) return false;
+  if (isListener(key)) return declares(child, key);
   return !(key.endsWith("Modifiers") && declares(child, key === "modelModifiers" ? "modelValue" : key.slice(0, -"Modifiers".length)));
+}
+
+export function isListener(key: string): boolean {
+  return /^on[^a-z]/.test(key);
 }
 
 export function attrsFlow(read: { comp: Component; ssr: string; children: Map<string, string>; attrsBindings: Set<string> }[]): void {

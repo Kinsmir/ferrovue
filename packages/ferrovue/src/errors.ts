@@ -161,6 +161,7 @@ export const ERRORS = {
   FV0511: { title: "Prop given a value of another type" },
   FV0512: { title: "`Props` imported from a component that is not compiled" },
   FV0513: { title: "Component resolved by name that is not imported" },
+  FV0514: { title: "Listener of unknown name given to a child with a prop named like a listener" },
 
   FV0601: { title: "Name or function not available on the server" },
   FV0602: { title: "Unsupported method" },

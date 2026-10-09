@@ -100,6 +100,7 @@ A fixture is a JSON object of props plus three optional keys:
 | `Builtins` | `Transition`, `TransitionGroup`, `KeepAlive`, `Suspense`, `v-text`, `v-once`, `v-pre`, `v-memo`, a client-only directive |
 | `Prose` | `v-html` of `TrustedHtml`, required and optional |
 | `Tree` | A recursive, self-rendering component |
+| `Listened`, `Listeners`, `ListenLeaf`, `ListenSale` | Listeners on components, skipped by the server: a component rendering itself through `v-bind` of its own `Props` beside `@loaded`; `@x` for emits the child declares and for ones it does not, with modifiers, `@update:x`, `v-on` of an object and `@[name]`, beside an object literal, a fallthrough attribute and a `v-bind` of the child's `Props`; a prop named like a listener (`onSale`) given a value |
 | `UserCard`, `UserList` | Types imported from a shared `.ts` file and from another component, string-literal unions, objects passed to children |
 | `DataList`, `DataTable`, `RowChip` | Scoped slots in a loop with fallbacks, props destructured and taken whole, empty content giving way to the fallback, a slot's object handed to a child |
 | `Frame`, `Forward`, `Page`, `Card` | Slots, fallbacks, comment-only content, slots forwarded through components |
