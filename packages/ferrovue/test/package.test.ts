@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { expect, it } from "vitest";
 import { relativePath } from "../src/paths.ts";
 
@@ -43,16 +43,16 @@ it("keeps ferrovue/link-router to vue-router and the routes it is given", () => 
 it("keeps ferrovue/volar to the compiler, naming Vue's language tools only for their types", () => {
   const { files, packages } = graph("src/volar.ts");
   expect(packages.has("@vue/language-core")).toBe(false);
-  expect([...files].some((f) => f.endsWith("/compiler.ts"))).toBe(true);
+  expect([...files].some((f) => basename(f) === "compiler.ts")).toBe(true);
   for (const entry of ["src/index.ts", "src/compiler.ts", "src/vite.ts"]) {
-    expect([...graph(entry).files].some((f) => f.endsWith("/volar.ts") || f.endsWith("/editor.ts")), entry).toBe(false);
+    expect([...graph(entry).files].some((f) => ["volar.ts", "editor.ts"].includes(basename(f))), entry).toBe(false);
   }
 });
 
 it("keeps every browser entry free of the compiler", () => {
   for (const entry of ["src/client.ts", "src/types.ts", "src/islands.ts", "src/page-routes.ts", "src/link-router.ts"]) {
     const { files } = graph(entry);
-    expect([...files].some((f) => f.endsWith("/compiler.ts")), entry).toBe(false);
+    expect([...files].some((f) => basename(f) === "compiler.ts"), entry).toBe(false);
   }
 });
 
