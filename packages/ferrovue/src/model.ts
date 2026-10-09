@@ -40,6 +40,7 @@ export interface Struct {
   name: string;
   fields: Field[];
   slot?: true;
+  refused?: Map<string, GenError>;
 }
 
 export interface Val {
@@ -183,6 +184,8 @@ export interface Component {
   cssVarsAt?: N[];
   props: Struct;
   structs: Map<string, Struct>;
+  typeDecls: Map<string, { members: N[]; node: N }>;
+  reached: Set<string>;
   trustedName: string | null;
   inlineName: string | null;
   floatName: string | null;
@@ -208,6 +211,8 @@ export function blankComponent(name: string, module: string, file: string, struc
     file,
     props: { name: "Props", fields: [] },
     structs,
+    typeDecls: new Map(),
+    reached: new Set(),
     trustedName: null,
     inlineName: null,
     floatName: null,

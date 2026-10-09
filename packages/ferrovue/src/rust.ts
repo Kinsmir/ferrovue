@@ -227,7 +227,8 @@ export function isIsland(comp: Component): boolean {
   return !takesSlots(comp) && comp.takes.size === 0;
 }
 
-export function componentSource(comp: Component, ast: N[], ssr: string, components: Map<string, Component>): string {
+/** The component's module, built once nothing the server renders reaches more of its interfaces. */
+export function componentSource(comp: Component, ast: N[], ssr: string, components: Map<string, Component>): () => string {
   if (takesAttrs(comp) && comp.inheritAttrs && comp.attrsDropped) {
     fail(comp, "FV0416", `a root \`<Transition>\` or \`<KeepAlive>\` around a \`v-if\` in ${comp.name}, which a parent passes attributes: Vue's server drops them, where its client puts them on the element; set \`inheritAttrs: false\` and bind \`$attrs\` on the element`, comp.attrsDropped);
   }
@@ -259,11 +260,6 @@ export function componentSource(comp: Component, ast: N[], ssr: string, componen
   const named = life ? "<'a>" : "";
   const owned = life ? "<'a>" : "";
   const ownedLife = life ? "'a" : "'static";
-  const structs = [...comp.structs.values()]
-    .filter((st) => st.name !== "Props" && !st.slot)
-    .map((st) => structSource(st, comp, `/// \`${st.name}\` in \`${basename(comp.file)}\`.\n`))
-    .join("\n");
-  const usesCow = /Cow</.test(structs + structSource(comp.props, comp, ""));
   const plain = isIsland(comp);
   const context = slotContextOf(comp);
   const contextTys = context.map((p) => `, ${p.ty}`).join("");
@@ -341,16 +337,24 @@ ${manyArgs(1 + renderParamCount(comp))}pub fn html${gen}(props: &'p Props${named
     fv::Html::markup(props, move |out: &mut String, props: &Props${named}| render(out, props${args}))
 }
 `;
-  return `${header(comp.file)}
+  const render = renderSource(comp, life, args, e);
+  return () => {
+    const structs = [...comp.structs.values()]
+      .filter((st) => st.name !== "Props" && !st.slot && (!comp.typeDecls.has(st.name) || comp.reached.has(st.name)))
+      .map((st) => structSource(st, comp, `/// \`${st.name}\` in \`${basename(comp.file)}\`.\n`))
+      .join("\n");
+    const usesCow = /Cow</.test(structs + structSource(comp.props, comp, ""));
+    return `${header(comp.file)}
 ${usesCow ? "use std::borrow::Cow;\n\n" : ""}use ferrovue as fv;
 
 /// The component's name, as \`data-island\` carries it.
 pub const NAME: &str = ${rustStr(comp.name)};
 
 ${structs ? structs + "\n" : ""}${structSource(comp.props, comp, `/// The props \`${basename(comp.file)}\` declares.\n`)}
-${slotsStruct}${renderSource(comp, life, args, e)}
+${slotsStruct}${render}
 
 ${wrappers}`;
+  };
 }
 
 function readsFixture(c: Component): boolean {

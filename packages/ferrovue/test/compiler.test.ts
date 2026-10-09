@@ -1906,6 +1906,64 @@ defineProps<{ ${props} }>();
         expect.objectContaining({ code: "FV0319", message: expect.stringMatching(/^components\/other\.ts:1:1: `Row` is declared by components\/thread\.ts too/) }),
       );
     });
+
+    const cats = (declared: string, template: string, setup = "const cats = shallowRef<Cat[]>([]);") =>
+      island(`<script setup lang="ts">
+import { shallowRef } from "vue";
+${declared}
+${setup}
+</script>
+<template>${template}</template>`);
+
+    it("translates the fields of a component's own type that the server render reads, and drops the others", () => {
+      for (const declared of ["interface Cat { id: string; items: HTMLElement[] }", "type Cat = { id: string; items: HTMLElement[] };"]) {
+        const x = compile(cats(declared, `<div v-if="cats.length">x</div>`)).get("x.rs")!;
+        expect(x).toMatch(/pub struct Cat<'a> \{\n {4}#\[serde\(rename = "id"\)\]\n {4}pub id: Cow<'a, str>,\n\}/);
+        expect(x).not.toContain("items");
+      }
+      expect(compile(cats("interface Cat { id: string; items: HTMLElement[]; pick(): void }", `<b v-for="c in cats">{{ c.id }}</b>`)).get("x.rs")).toContain("pub struct Cat<'a>");
+      const shared = withFile(cats(`import type { Cat } from "./cats";`, `<b v-for="c in cats">{{ c.id }}</b>`), "cats.ts", "export interface Cat { id: string; anchor: HTMLElement }\n");
+      const types = compile(shared).get("types.rs")!;
+      expect(types).toContain("pub struct Cat<'a>");
+      expect(types).not.toContain("anchor");
+    });
+
+    it("refuses a dropped field where its type is declared once the server render reads it", () => {
+      const declared = "interface Cat { id: string; items: HTMLElement[] }";
+      for (const template of [`<b v-for="c in cats">{{ c.items.length }}</b>`, `<b v-for="{ items } in cats">{{ items.length }}</b>`]) {
+        expect(() => compile(cats(declared, template))).toThrow(
+          expect.objectContaining({ code: "FV0315", at: expect.objectContaining({ file: "components/X.vue", line: 3, column: 36 }) }),
+        );
+      }
+      expect(() => compile(cats("interface Cat { id: string; [key: string]: string | HTMLElement }", `<b v-for="c in cats">{{ c.name }}</b>`))).toThrow(
+        expect.objectContaining({ code: "FV0320", at: expect.objectContaining({ line: 3, column: 29 }) }),
+      );
+    });
+
+    it("leaves alone a component's types that nothing the server renders reaches", () => {
+      const declared = "interface Cat { el: HTMLElement }\ninterface Option { a: string }";
+      for (const setup of ["function pick(c: Cat): Option { return { a: c.el.id }; }", "const picked = shallowRef<Cat | null>(null);", "let els: Array<{ el: HTMLElement }> = [];"]) {
+        const x = compile(cats(declared, `<p @click="() => {}">x</p>`, setup)).get("x.rs")!;
+        expect(x).not.toMatch(/pub struct (Cat|Option)\b/);
+      }
+    });
+
+    it("refuses a component's type a prop or a model reaches where its field is declared", () => {
+      const declared = "interface Cat { id: string; items: HTMLElement[] }\ninterface Crate { cat: Cat }";
+      for (const setup of ["defineProps<{ cat: Cat }>();", "defineProps<Cat>();", "defineProps<{ crates: Crate[] }>();", `const cat = defineModel<Cat>({ required: true });`]) {
+        expect(() => compile(cats(declared, "<p>x</p>", setup))).toThrow(
+          expect.objectContaining({ code: "FV0315", at: expect.objectContaining({ file: "components/X.vue", line: 3, column: 36 }) }),
+        );
+      }
+      const child = `<script setup lang="ts">
+import type { Cat } from "./X.vue";
+defineProps<{ cats: Cat[] }>();
+</script>
+<template><p v-for="c in cats">{{ c.id }}</p></template>`;
+      const project = cats("export interface Cat { id: string; items: HTMLElement[] }", `<Child :cats="cats" />`, `import Child from "./Child.vue";\nconst cats = shallowRef<Cat[]>([]);`);
+      writeFileSync(join(project, "components", "Child.vue"), child);
+      expect(() => compile(project)).toThrow(expect.objectContaining({ code: "FV0315", at: expect.objectContaining({ file: "components/X.vue", line: 3, column: 43 }) }));
+    });
   });
 
   const refused: [string, string, RegExp][] = [

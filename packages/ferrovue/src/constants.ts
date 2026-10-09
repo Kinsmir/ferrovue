@@ -193,7 +193,7 @@ function listVal(c: Const & { k: "list" }): Val {
   if (owner && owner.of !== c) fail(c.home, "FV0212", `a constant list called \`${name}\` in Rust comes from ${owner.file} too; rename one`, c.node);
   const life = structLifetime(st, blankComponent("types", "types", "types", ctx.typeStructs)) ? "<'static>" : "";
   const rows = objects.map((o, i) => {
-    for (const key of o.fields.keys()) if (!st.fields.some((f) => f.js === key)) fail(c.home, "FV0204", `\`${st.name}\` has no field \`${key}\``, o.node);
+    for (const key of o.fields.keys()) if (!st.fields.some((f) => f.js === key) && !st.refused?.has(key)) fail(c.home, "FV0204", `\`${st.name}\` has no field \`${key}\``, o.node);
     const inits = st.fields.map((f) => `${f.rust}: ${fieldLiteral(c, f, o.fields.get(f.js), objects[i]!.node)}`);
     return `    ${st.name} { ${inits.join(", ")} },`;
   });

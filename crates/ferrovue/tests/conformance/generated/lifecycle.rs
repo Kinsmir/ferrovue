@@ -27,6 +27,23 @@ impl<'a> Item<'a> {
 }
 
 
+/// `Panel` in `Lifecycle.vue`.
+#[derive(Debug, Clone, serde::Serialize)]
+#[cfg_attr(test, derive(serde::Deserialize))]
+pub struct Panel<'a> {
+    #[serde(rename = "title")]
+    pub title: Cow<'a, str>,
+}
+
+impl<'a> Panel<'a> {
+    /// Panel with its required fields.
+    pub fn new(title: impl Into<Cow<'a, str>>) -> Self {
+        Panel { title: title.into() }
+    }
+
+}
+
+
 /// The props `Lifecycle.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -48,17 +65,31 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(95 + 17 * props.items.len() + props.items.iter().map(|v| v.name.len()).sum::<usize>() + props.query.len());
+    out.reserve(125 + 17 * props.items.len() + props.items.iter().map(|v| v.name.len()).sum::<usize>() + props.query.len());
     let s_m_a_x = 3i64;
     let s_shown = fv::js_trim(&props.query);
     let s_total = props.items.len() as i64;
+    let s_panels = &Vec::<Panel<'_>>::new();
     out.push_str("<section data-mounted=\"false\"><p>");
     fv::escape_into(out, s_shown);
     out.push_str(" (");
     fv::push_int(out, s_total);
     out.push_str(" of max ");
     fv::push_int(out, s_m_a_x);
-    out.push_str(")</p><ul><!--[-->");
+    out.push_str(")</p>");
+    if s_panels.len() as i64 != 0 {
+        out.push_str("<p><!--[-->");
+        for panel_ref in s_panels.iter() {
+            let panel = panel_ref;
+            out.push_str("<b>");
+            fv::escape_into(out, &panel.title);
+            out.push_str("</b>");
+        }
+        out.push_str("<!--]--></p>");
+    } else {
+        out.push_str("<!---->");
+    }
+    out.push_str("<ul><!--[-->");
     for item_ref in props.items.iter() {
         let item = item_ref;
         out.push_str("<li>#");
