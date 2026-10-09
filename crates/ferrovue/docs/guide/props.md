@@ -355,6 +355,14 @@ a value to one another agree on its type: `UserCard.vue` and `UserList.vue` impo
 file is that component's struct (`super::data_list::Row<'a>`), and one imported from a store's file
 is the struct in `stores.rs`.
 
+`types.rs` holds the types of `.ts` files that the server render reaches: those of a component's
+props and `defineModel` (a type parameter's constraint included), its own interfaces, a provided or
+injected value, a `ref` the server computes, and a constant list declared with an interface,
+together with the types of their fields. Only these are checked. A type nothing reaches is neither written nor
+refused, so a module a component imports for its functions may declare types with no Rust
+counterpart (`type Row = Record<string, unknown>`), and an exported interface no component uses has
+no struct.
+
 A constant imported from a `.ts` file is evaluated when the component is compiled. A list of objects
 becomes a `const` in `types.rs`, `pub const SORTS: &[SortsItem<'static>]`, whose item type is the
 interface the constant is declared with (`SORTS: Sort[]`) or one named after it; strings, numbers,

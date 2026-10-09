@@ -267,6 +267,8 @@ export const ctx = {
   typeStructs: new Map<string, Struct>(),
   typeAliases: new Map<string, N>(),
   typeFiles: new Map<string, string>(),
+  typeDecls: new Map<string, { home: Component; members: N[]; node: N }[]>(),
+  typeReached: new Set<string>(),
   typeRead: new Set<string>(),
   constDecls: new Map<string, Map<string, Declared>>(),
   typeConsts: new Map<string, { of: unknown; file: string; text: string }>(),

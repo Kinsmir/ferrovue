@@ -42,7 +42,7 @@ Everything in the configured `out` directory is replaced on each run.
 |---|---|---|
 | `mod.rs` | always | The [version check](#the-version-check), one `pub mod` per file below, and a `#[cfg(test)]` `render_json` for a project's conformance tests |
 | `<component>.rs` | one per `.vue` file, pages included | The component's types and renderers: `DataList.vue` becomes `data_list.rs`, and the page `books/[id].vue` becomes `books_id.rs` |
-| `types.rs` | the server render reaches a type or a constant exported from a `.ts` file | The shared types the render reaches (the types of props and of their fields, of provided and injected values, of store state and of twins' props), written once so components passing them to one another agree on them, and each constant a template reads, as a `const` |
+| `types.rs` | the server render reaches a type or a constant exported from a `.ts` file | The shared types the render reaches (the types of props and of their fields, of provided and injected values, of store state and of twins' props), in the order their files declare them and written once so components passing them to one another agree on them, and each constant a template reads, as a `const`. See [shared types](crate::guide::props#shared-types) |
 | `route_table.rs` | `routes` or `router` is configured | `ROUTES`, `PATHS`, `BASE` and `router()`. See [`routing`](crate::guide::routing) |
 | `stores.rs` | `stores` is configured | A struct per store's state, named for its id (`cart` has `CartState`), the types it uses, and `Stores`, with a field per store. See [`pinia`](crate::guide::pinia) |
 | `i18n.rs` | `i18n` is configured | `LOCALE`, `FALLBACK`, every locale's messages in `LOCALES`, and `i18n(locale)`. See [`i18n`](crate::guide::i18n) |

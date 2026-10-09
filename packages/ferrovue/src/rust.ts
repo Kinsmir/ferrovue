@@ -2,7 +2,7 @@ import { parse as parseJs } from "@babel/parser";
 import { basename } from "node:path";
 import { type Component, type Field, type N, type Struct, type Ty, blankComponent, fail, GenError, rustStr, snake, tagAst, takesAttrs } from "./model.ts";
 import { ctx, INLINE_HTML } from "./context.ts";
-import { lookupStruct } from "./typescript.ts";
+import { lookupStruct, typeWritten } from "./typescript.ts";
 import { childOf } from "./expr.ts";
 import { Emitter } from "./emitter.ts";
 import { occurrences } from "./parens.ts";
@@ -441,8 +441,9 @@ ${arms}
 
 export function typesSource(): string {
   const home = blankComponent("types", "types", "types", ctx.typeStructs);
-  const files = [...new Set([...ctx.typeFiles.values(), ...[...ctx.typeConsts.values()].map((c) => c.file)])].toSorted();
-  const structs = [...ctx.typeStructs.values()]
+  const written = [...ctx.typeStructs.values()].filter((st) => typeWritten(st.name));
+  const files = [...new Set([...written.map((st) => ctx.typeFiles.get(st.name)!), ...[...ctx.typeConsts.values()].map((c) => c.file)])].toSorted();
+  const structs = written
     .map((st) => structSource(st, home, `/// \`${st.name}\` in \`${ctx.typeFiles.get(st.name)}\`.\n`))
     .join("\n");
   const consts = [...ctx.typeConsts.values()].map((c) => `${c.text}\n`).join("");

@@ -71,6 +71,13 @@ released together and share version numbers.
 - `fixtureApp`'s `pinia`, `vueRouter` and `vueI18n` options and `conformanceSuite`'s `record` accept
   `undefined`, for a project type-checked with `exactOptionalPropertyTypes`, which the workspace now
   uses itself.
+- A `.ts` file's types are translated only when the server render reaches them (#77): through a
+  component's props or model and their fields, a component's own interfaces, a provided or injected
+  value, a `ref` the server computes, or a constant list declared with an interface. `types.rs`
+  holds only those types, so an exported interface nothing reaches is no longer written there, and
+  `types.rs` is not written at all when nothing reaches one. A type nothing reaches is no longer
+  refused: a module imported for its functions may declare `type Row = Record<string, unknown>`.
+  Two files declaring a type of one name are refused (FV0319) once the name is reached.
 
 ### Fixed
 
