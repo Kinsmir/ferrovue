@@ -302,7 +302,7 @@ export const ERRORS = {
   FV1113: { title: "Configuration that is not a JSON object" },
   FV1114: {
     title: "Unknown configuration key",
-    detail: "A key ferrovue does not read is refused rather than ignored, as it is most often a misspelt one (`component` for `components`). The message names the key it most likely means.",
+    detail: "A key ferrovue does not read is refused, as it is most often a misspelt one (`component` for `components`). The message names the key it most likely means.",
   },
   FV1115: { title: "Configuration value of the wrong type" },
   FV1116: { title: "Directory the configuration names that cannot be read" },

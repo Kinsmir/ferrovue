@@ -155,7 +155,7 @@ route.
 
 The router and vue-i18n are features of the crate, `router` and `i18n`, both on by default. An
 application with neither routes nor translations can leave them out, and build neither
-`ferrovue-router` nor `ferrovue-i18n`: `ferrovue = { version = "0.6", default-features = false }`.
+`ferrovue-router` nor `ferrovue-i18n`: `ferrovue = { version = "0.7", default-features = false }`.
 
 With the `maud` feature, `ferrovue::Html` implements `maud::Render`, so `(greeting::html(&props))` can go
 straight into a `maud::html!` page.

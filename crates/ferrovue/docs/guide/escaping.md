@@ -159,7 +159,7 @@ With the crate's `ammonia` feature, `ferrovue::Sanitised` is HTML cleaned by
 ```
 
 ```toml
-ferrovue = { version = "0.6", features = ["ammonia"] }
+ferrovue = { version = "0.7", features = ["ammonia"] }
 ```
 
 Sanitisation happens before render, when the value is built: `Sanitised::new(untrusted)` cleans
