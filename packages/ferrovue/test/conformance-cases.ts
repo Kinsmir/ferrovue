@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { RouteEntry, RouterOptions } from "../src/fixture.ts";
 
-export { HEAD, hydrationBody, placeHead, recordedHead, renderFixture, TELEPORTS } from "../src/conformance.ts";
+export { clientRenderDifference, HEAD, hydrationBody, placeHead, recordedHead, renderFixture, TELEPORTS } from "../src/conformance.ts";
 export { headRendered } from "../src/settle.ts";
 
 export const ROOT = join(import.meta.dirname, "../../../crates/ferrovue/tests/conformance");

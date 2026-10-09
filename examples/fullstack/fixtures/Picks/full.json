@@ -1,1 +1,1 @@
-{"shop":"Bookshop","featured":"Dune","$route":"/picks","$slots":{"default":"<article class=\"pick\">Dune</article>","reviews":"<ol><li>Spice.</li></ol>"}}
+{"shop":"Bookshop","featured":"Dune","books":[{"id":"dune","title":"Dune","author":"Frank Herbert","year":1965},{"id":"left-hand","title":"The Left Hand of Darkness","author":"Ursula K. Le Guin","year":1969}],"$route":"/picks?featured=dune","$slots":{"default":"<article class=\"pick\">Dune</article>","reviews":"<ol><li>Spice.</li></ol>"}}

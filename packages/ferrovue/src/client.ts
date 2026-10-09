@@ -1,4 +1,5 @@
 import {
+  createApp,
   createSSRApp,
   createTextVNode,
   defineComponent,
@@ -28,11 +29,214 @@ function parseJson(text: string): unknown {
   return JSON.parse(quoted, (_key, value: unknown) => (typeof value === "string" && value.startsWith(tag) ? NON_FINITE[value.slice(tag.length)] : value));
 }
 
+/** The state of a page already read: the text of its state's script, as `readPage` gives it. */
+export interface StateText {
+  text: string | undefined;
+}
+
 /** Give Pinia the state the server rendered with (what `ferrovue::state_script_into` wrote) before
- * the app mounts, so every store starts from it and the hydrated markup agrees with the server's. */
-export function hydrateState(pinia: Pinia, id = "__pinia", doc: Document = document): void {
-  const text = doc.getElementById(id)?.textContent;
+ * the app mounts, so every store starts from it and the markup agrees with the server's. The state
+ * is read from the script with the `id` given (`__pinia` by default) in `doc`, or given as
+ * `{ text }`: the `state` of a fetched page that `readPage` read. Either way the numbers JSON
+ * cannot carry (`NaN`, `Infinity`) are read back. Pinia is left alone when there is no state. */
+export function hydrateState(pinia: Pinia, from: string | StateText = "__pinia", doc: Document = document): void {
+  const text = typeof from === "string" ? doc.getElementById(from)?.textContent : from.text;
   if (text) pinia.state.value = parseJson(text) as Pinia["state"]["value"];
+}
+
+const SPACE = /[\t\n\f\r ]/;
+const TAG_END = /[\t\n\f\r />]/;
+const RAW_TEXT = new Set(["script", "style", "textarea", "title", "xmp", "iframe", "noembed", "noframes", "noscript"]);
+const FOREIGN = new Set(["svg", "math"]);
+const LEAVES_FOREIGN = new Set(
+  "b big blockquote body br center code dd div dl dt em embed h1 h2 h3 h4 h5 h6 head hr i img li listing menu meta nobr ol p pre ruby s small span strong strike sub sup table tt u ul var".split(" "),
+);
+const REFERENCES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'" };
+
+interface Tag {
+  name: string;
+  attrs: Map<string, string>;
+  end: number;
+  selfClosing: boolean;
+}
+
+function decodeAttr(value: string): string {
+  if (!value.includes("&")) return value;
+  return value.replace(/&(?:#(\d+);?|#[xX]([0-9a-fA-F]+);?|(amp|lt|gt|quot|apos);)/g, (_match, dec?: string, hex?: string, named?: string) => {
+    if (named) return REFERENCES[named]!;
+    const code = dec ? Number.parseInt(dec, 10) : Number.parseInt(hex!, 16);
+    return code > 0 && code <= 0x10ffff && !(code >= 0xd800 && code <= 0xdfff) ? String.fromCodePoint(code) : "\uFFFD";
+  });
+}
+
+function readTag(html: string, at: number): Tag | undefined {
+  let i = at;
+  while (i < html.length && !TAG_END.test(html[i]!)) i++;
+  const name = html.slice(at, i).toLowerCase();
+  const attrs = new Map<string, string>();
+  let selfClosing = false;
+  for (;;) {
+    while (i < html.length && (SPACE.test(html[i]!) || html[i] === "/")) selfClosing = html[i++] === "/";
+    if (i >= html.length) return undefined;
+    if (html[i] === ">") return { name, attrs, end: i + 1, selfClosing };
+    selfClosing = false;
+    const start = i++;
+    while (i < html.length && !/[\t\n\f\r />=]/.test(html[i]!)) i++;
+    const key = html.slice(start, i).toLowerCase();
+    while (i < html.length && SPACE.test(html[i]!)) i++;
+    let value = "";
+    if (html[i] === "=") {
+      i++;
+      while (i < html.length && SPACE.test(html[i]!)) i++;
+      const quote = html[i];
+      if (quote === '"' || quote === "'") {
+        const close = html.indexOf(quote, i + 1);
+        if (close < 0) return undefined;
+        value = html.slice(i + 1, close);
+        i = close + 1;
+      } else {
+        const from = i;
+        while (i < html.length && !/[\t\n\f\r >]/.test(html[i]!)) i++;
+        value = html.slice(from, i);
+      }
+    }
+    if (!attrs.has(key)) attrs.set(key, decodeAttr(value));
+  }
+}
+
+function tagAt(lower: string, at: number, name: string, closing: boolean): boolean {
+  const open = closing ? `</${name}` : `<${name}`;
+  return lower.startsWith(open, at) && TAG_END.test(lower[at + open.length] ?? "");
+}
+
+function scriptDataEnd(lower: string, from: number): number {
+  let escaped = 0;
+  let dashes = 0;
+  for (let i = from; i < lower.length; i++) {
+    if (escaped === 0) {
+      if (lower.startsWith("<!--", i)) {
+        escaped = 1;
+        dashes = 2;
+        i += 3;
+      } else if (tagAt(lower, i, "script", true)) return i;
+      continue;
+    }
+    const ch = lower[i];
+    if (ch === "-") {
+      dashes++;
+      continue;
+    }
+    if (ch === ">" && dashes >= 2) escaped = 0;
+    else if (ch === "<" && tagAt(lower, i, "script", true)) {
+      if (escaped === 1) return i;
+      escaped = 1;
+    } else if (ch === "<" && escaped === 1 && tagAt(lower, i, "script", false)) escaped = 2;
+    dashes = 0;
+  }
+  return -1;
+}
+
+function rawTextEnd(lower: string, from: number, name: string): number {
+  if (name === "script") return scriptDataEnd(lower, from);
+  for (let i = lower.indexOf(`</${name}`, from); i >= 0; i = lower.indexOf(`</${name}`, i + 1)) if (tagAt(lower, i, name, true)) return i;
+  return -1;
+}
+
+function commentEnd(html: string, from: number): number {
+  if (html.startsWith(">", from)) return from + 1;
+  if (html.startsWith("->", from)) return from + 2;
+  for (let i = html.indexOf("--", from); i >= 0; i = html.indexOf("--", i + 1)) {
+    if (html[i + 2] === ">") return i + 3;
+    if (html.startsWith("!>", i + 2)) return i + 4;
+  }
+  return html.length;
+}
+
+function scriptText(html: string, id: string): string | undefined {
+  const lower = html.toLowerCase();
+  let template = 0;
+  let foreign = 0;
+  let i = 0;
+  for (;;) {
+    const lt = html.indexOf("<", i);
+    if (lt < 0) return undefined;
+    i = lt + 1;
+    if (html.startsWith("<!--", lt)) {
+      i = commentEnd(html, lt + 4);
+      continue;
+    }
+    if (foreign > 0 && html.startsWith("<![CDATA[", lt)) {
+      const close = html.indexOf("]]>", lt);
+      i = close < 0 ? html.length : close + 3;
+      continue;
+    }
+    const closing = html[lt + 1] === "/";
+    const at = closing ? lt + 2 : lt + 1;
+    if (!/[a-zA-Z]/.test(html[at] ?? "")) {
+      if (html[lt + 1] === "!" || html[lt + 1] === "?" || (closing && at < html.length)) {
+        const close = html.indexOf(">", at);
+        i = close < 0 ? html.length : close + 1;
+      }
+      continue;
+    }
+    const tag = readTag(html, at);
+    if (!tag) return undefined;
+    i = tag.end;
+    if (FOREIGN.has(tag.name)) {
+      if (closing) foreign = Math.max(0, foreign - 1);
+      else if (!tag.selfClosing) foreign++;
+      continue;
+    }
+    if (foreign > 0) {
+      if (closing ? tag.name === "br" || tag.name === "p" : LEAVES_FOREIGN.has(tag.name)) foreign = 0;
+      else continue;
+    }
+    if (tag.name === "template") {
+      template = closing ? Math.max(0, template - 1) : template + 1;
+      continue;
+    }
+    if (closing || !RAW_TEXT.has(tag.name)) {
+      if (tag.name === "plaintext") return undefined;
+      continue;
+    }
+    const end = rawTextEnd(lower, i, tag.name);
+    if (tag.name === "script" && template === 0 && tag.attrs.get("id") === id) return html.slice(i, end < 0 ? html.length : end);
+    if (end < 0) return undefined;
+    const close = readTag(html, end + 2);
+    if (!close) return undefined;
+    i = close.end;
+  }
+}
+
+/** The `id`s of the scripts `readPage` reads. */
+export interface ReadPageOptions {
+  /** The `id` of the record's script, as given to `PageRecord::script_into`: `__fv_page` by default. */
+  record?: string;
+  /** The `id` of the state's script, as given to `ferrovue::state_script_into`: `__pinia` by default. */
+  state?: string;
+}
+
+/** A page read out of the HTML of its document. */
+export interface ReadPage {
+  /** The record `ferrovue::PageRecord` wrote, with the numbers JSON cannot carry read back. */
+  record: PageRecord;
+  /** The text of the state's script, for `hydrateState(pinia, { text: state })`: `undefined` when
+   * the page carries no state. */
+  state: string | undefined;
+}
+
+/** Read the record and the state of a page out of the HTML of its document, as a navigation that
+ * fetches the next page receives it. It needs no `DOMParser`, so it also runs in a worker and on a
+ * server. Each script is the one the browser's `getElementById` would find in the parsed document:
+ * the first `<script>` with that `id` outside a `<template>`, an `<svg>` and a `<math>`, with
+ * comments, attribute values and the text of `<script>`, `<style>`, `<textarea>`, `<title>` and the
+ * other raw-text elements passed over as the HTML parser passes over them. Throws when the page
+ * carries no record. */
+export function readPage(html: string, options: ReadPageOptions = {}): ReadPage {
+  const id = options.record ?? "__fv_page";
+  const text = scriptText(html, id);
+  if (!text) throw new Error(`[ferrovue] the page has no record: no <script id="${id}">`);
+  return { record: parseJson(text) as PageRecord, state: scriptText(html, options.state ?? "__pinia") || undefined };
 }
 
 export interface MountOptions {
@@ -284,21 +488,46 @@ export interface PageOptions extends Pick<MountOptions, "pinia" | "router" | "pl
   doc?: Document;
 }
 
+export interface PageAppOptions extends Pick<MountOptions, "pinia" | "router" | "plugins"> {
+  /** `false` for an app that renders the page from its record into an empty container, as
+   * `renderPage` does, in place of hydrating the server's markup. */
+  hydrate?: boolean;
+}
+
 /** The app of a page: its root renders `layout` with the record's props, and each slot as the
  * components the record names, in order, as a plain array, which hydrates the markup the server
- * wrote with no fragment of its own. `components` must hold every component the record names. */
-export function createPageApp(layout: Component, record: PageRecord, components: Record<string, Component>, options: PageOptions = {}): App {
+ * wrote with no fragment of its own. With `hydrate: false` the same tree is rendered from scratch,
+ * so the first page and every page shown after it are one shape of app. `components` must hold
+ * every component the record names. */
+export function createPageApp(layout: Component, record: PageRecord, components: Record<string, Component>, options: PageAppOptions = {}): App {
   const slots = Object.fromEntries(
     Object.entries(record.slots).map(([name, parts]) => [
       name,
       () => (parts.length ? parts.map((part) => h(components[part.c]!, part.p)) : [createTextVNode("")]),
     ]),
   );
-  const app = createSSRApp({ name: "FerrovuePage", render: () => h(layout, record.props, slots) });
+  const app = (options.hydrate === false ? createApp : createSSRApp)({ name: "FerrovuePage", render: () => h(layout, record.props, slots) });
   if (options.pinia) app.use(options.pinia);
   if (options.router) app.use(options.router);
   for (const plugin of options.plugins ?? []) app.use(plugin);
   return app;
+}
+
+function containerOf(options: { container?: Element | string; doc?: Document }): Element {
+  const selector = options.container ?? "#app";
+  const container = typeof selector === "string" ? (options.doc ?? document).querySelector(selector) : selector;
+  if (!container) throw new Error(`[ferrovue] the page has no ${selector as string} to mount on`);
+  return container;
+}
+
+async function loadPage(caller: string, layout: IslandComponent, record: PageRecord, components: Record<string, IslandComponent>): Promise<[Component, Record<string, Component>]> {
+  const names = new Set(Object.values(record.slots).flatMap((parts) => parts.map((part) => part.c)));
+  const loading = [...names].map(async (name) => {
+    if (!Object.hasOwn(components, name)) throw new Error(`[ferrovue] no component called ${JSON.stringify(name)} was given to ${caller}`);
+    return [name, await loadOrThrow(name, components[name]!)] as const;
+  });
+  const [root, parts] = await Promise.all([loadOrThrow("the layout", layout), Promise.all(loading)]);
+  return [root, Object.fromEntries(parts)];
 }
 
 /** Hydrate a page `ferrovue::Page` rendered: read its record, load the components it names (and
@@ -307,21 +536,49 @@ export function createPageApp(layout: Component, record: PageRecord, components:
  * given or does not load. */
 export async function mountPage(layout: IslandComponent, components: Record<string, IslandComponent>, options: PageOptions = {}): Promise<App> {
   const doc = options.doc ?? document;
-  const selector = options.container ?? "#app";
-  const container = typeof selector === "string" ? doc.querySelector(selector) : selector;
-  if (!container) throw new Error(`[ferrovue] the page has no ${selector as string} to mount on`);
+  const container = containerOf(options);
   const id = options.record ?? "__fv_page";
   const text = doc.getElementById(id)?.textContent;
   if (!text) throw new Error(`[ferrovue] the page has no record: no <script id="${id}">`);
   const record = parseJson(text) as PageRecord;
-  const names = new Set(Object.values(record.slots).flatMap((parts) => parts.map((part) => part.c)));
-  const loading = [...names].map(async (name) => {
-    if (!Object.hasOwn(components, name)) throw new Error(`[ferrovue] no component called ${JSON.stringify(name)} was given to mountPage`);
-    return [name, await loadOrThrow(name, components[name]!)] as const;
-  });
-  const [root, parts] = await Promise.all([loadOrThrow("the layout", layout), Promise.all(loading), options.router?.isReady()]);
-  const app = createPageApp(root, record, Object.fromEntries(parts), options);
+  const [[root, parts]] = await Promise.all([loadPage("mountPage", layout, record, components), options.router?.isReady()]);
+  const app = createPageApp(root, record, parts, options);
   app.mount(container);
+  return app;
+}
+
+export interface RenderPageOptions extends Pick<MountOptions, "pinia" | "router" | "plugins"> {
+  /** The element holding the page shown now, or a selector for it: `#app` by default. */
+  container?: Element | string;
+  /** What shows the page now: the app `mountPage` or `renderPage` returned, or the islands
+   * `mountIslands` mounted. It is unmounted once the next page is mounted. */
+  previous?: { unmount(): void } | undefined;
+  /** The document the container is in. */
+  doc?: Document;
+}
+
+/** Show the next page of a navigation from its record, as `readPage` read it out of the fetched
+ * document: load the components it names (and no others), render the app `createPageApp` builds
+ * with `hydrate: false` into a copy of the container with no children, wait for the router, put the
+ * copy in the container's place, mount, and then unmount `previous`. The next app is mounted
+ * before the previous one is unmounted, so a router both use stays started. `router` must be at the
+ * next page's location: `linkRouter` with the `location` the navigation goes to. Rejects, leaving
+ * the page shown as it is, when the container is missing or a component is not given or does not
+ * load. */
+export async function renderPage(layout: IslandComponent, components: Record<string, IslandComponent>, record: PageRecord, options: RenderPageOptions = {}): Promise<App> {
+  const container = containerOf(options);
+  const [root, parts] = await loadPage("renderPage", layout, record, components);
+  const app = createPageApp(root, record, parts, { ...options, hydrate: false });
+  await options.router?.isReady();
+  const next = container.cloneNode(false) as Element;
+  container.replaceWith(next);
+  try {
+    app.mount(next);
+  } catch (e) {
+    next.replaceWith(container);
+    throw e;
+  }
+  options.previous?.unmount();
   return app;
 }
 

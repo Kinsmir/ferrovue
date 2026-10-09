@@ -7,7 +7,7 @@ import { createMemoryHistory } from "vue-router";
 import { createPinia } from "pinia";
 import { createHead } from "@unhead/vue/client";
 import islandLoaders from "ferrovue/islands";
-import { hydrateRecordedPage } from "ferrovue/testing";
+import { hydrateRecordedPage, renderRecordedPage } from "ferrovue/testing";
 import { createAppRouter, hydrate, type Hydrated } from "../client/app.ts";
 import BasketSummary from "../client/components/BasketSummary.vue";
 import Picks from "../client/pages/picks.vue";
@@ -29,7 +29,7 @@ function render(path: string): string {
 
 const pages = new Map<string, string>();
 beforeAll(() => {
-  for (const path of ["/", "/books/dune", "/picks"]) pages.set(path, render(path));
+  for (const path of ["/", "/books/dune", "/picks", "/picks?featured=left-hand"]) pages.set(path, render(path));
 });
 
 let warnings: string[] = [];
@@ -177,6 +177,48 @@ it("hydrates the staff picks as one app: the layout, and each part its record na
   await nextTick();
   expect([...document.querySelectorAll<HTMLElement>(".review-list li")].map((li) => li.style.display)).toEqual(["", "", ""]);
   expect(warnings).toEqual([]);
+});
+
+it("shows the next staff picks from the record of the page it fetches, in place of the one hydrated", async () => {
+  put("/picks");
+  const { page: first, show } = await hydrateAt("/picks");
+  const old = document.getElementById("app")!;
+  const fetched: string[] = [];
+  vi.stubGlobal("fetch", async (href: string) => {
+    fetched.push(href);
+    return new Response(pages.get(href), { headers: { "content-type": "text/html; charset=utf-8" } });
+  });
+  document.querySelector<HTMLButtonElement>('.pick[data-id="dune"] button.add')!.click();
+  await nextTick();
+  await show("/picks?featured=left-hand");
+  await headRendered();
+  expect(fetched).toEqual(["/picks?featured=left-hand"]);
+  expect(warnings).toEqual([]);
+  expect(old.isConnected).toBe(false);
+  expect(first).toBeDefined();
+  expect(old.innerHTML, "the hydrated page was unmounted").toBe("");
+  expect(document.querySelector(".reviews h2")!.textContent).toBe("Readers on The Left Hand of Darkness");
+  expect(document.querySelector(".review-list q")!.textContent).toBe("Winter, and what it does to people.");
+  expect(document.title).toBe("Staff picks · Ferrovue Books");
+
+  const add = document.querySelector<HTMLButtonElement>('.pick[data-id="dune"] button.add')!;
+  expect(add.textContent, "the next page starts from the state the server wrote into it").toBe("Add to basket");
+  add.click();
+  await nextTick();
+  expect(add.textContent).toBe("In the basket");
+  expect(app!.pinia.state.value.basket).toEqual({ owner: "guest", ids: ["solaris", "dune"] });
+  expect(app!.router.currentRoute.value.fullPath).toBe("/picks?featured=left-hand");
+  expect(warnings).toEqual([]);
+});
+
+it("renders the staff picks from their record as the server wrote them, with the testing helper", async () => {
+  const history = createMemoryHistory();
+  history.replace("/picks?featured=left-hand");
+  const router = createAppRouter(history);
+  await router.replace("/picks?featured=left-hand");
+  const page = await renderRecordedPage({ html: bodyOf("/picks?featured=left-hand") }, Picks, islandLoaders, { pinia: createPinia(), router, plugins: [createHead()] });
+  expect(document.querySelector(".reviews h2")!.textContent).toBe("Readers on The Left Hand of Darkness");
+  page.unmount();
 });
 
 it("hydrates the staff picks exactly with the testing helper, from the page the server wrote", async () => {

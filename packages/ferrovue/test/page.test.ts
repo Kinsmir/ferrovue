@@ -1,10 +1,12 @@
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { defineComponent, h, type Component } from "vue";
+import { defineComponent, h, nextTick, type Component } from "vue";
 import { renderToString } from "vue/server-renderer";
-import { createPageApp, mountPage, type PageRecord } from "../src/client.ts";
-import { hydrateRecordedPage } from "../src/hydration.ts";
+import { createMemoryHistory, createRouter, RouterLink, useRoute } from "vue-router";
+import { createPageApp, mountPage, renderPage, type PageRecord } from "../src/client.ts";
+import { hydrateRecordedPage, renderRecordedPage } from "../src/hydration.ts";
+import { linkRouter } from "../src/link-router.ts";
 import { attachSsrRender } from "../src/testing.ts";
 import { CLIENT_ONLY, ROOT } from "./conformance-cases.ts";
 
@@ -73,6 +75,16 @@ describe.skipIf(WRITE)("each recorded page hydrates exactly", () => {
   }
 });
 
+describe.skipIf(WRITE)("each recorded page renders from its record on the client as the server wrote it", () => {
+  for (const page of pages) {
+    it(`pages/${page.name}`, async () => {
+      const app = await renderRecordedPage({ html: `<div id="app">${page.html}</div>`, record: page.record }, components[page.layout]!, components);
+      expect(document.getElementById("app")!.innerHTML).not.toBe("");
+      app.unmount();
+    });
+  }
+});
+
 const Shelf = defineComponent({ props: { title: String }, setup: (props, { slots }) => () => h("ul", [h("li", props.title), slots.default?.()]) });
 const Item = defineComponent({ props: { label: String, n: Number }, setup: (props) => () => h("li", `${props.label} ${props.n}`) });
 const shelf: PageRecord = { props: { title: "s" }, slots: { default: [{ c: "Item", p: { label: "a", n: 1 } }, { c: "Item", p: { label: "b", n: 2 } }] } };
@@ -120,4 +132,80 @@ it("refuses a page whose record or container is missing, or whose components are
   };
   await expect(mountPage(Shelf, { Item: failing })).rejects.toThrow(/Item did not load: offline/);
   expect(document.getElementById("app")!.innerHTML).toBe(shelfHtml);
+});
+
+const next: PageRecord = { props: { title: "t" }, slots: { default: [{ c: "Item", p: { label: "c", n: 3 } }] } };
+
+it("renders the next page from its record in place of the page shown, which it unmounts once the next is mounted", async () => {
+  document.body.innerHTML = `<div id="app" class="shell">${shelfHtml}</div><script type="application/json" id="__fv_page">${JSON.stringify(shelf)}</script>`;
+  const first = await mountPage(Shelf, { Item });
+  const old = document.getElementById("app")!;
+  let shownAtUnmount = "";
+  const unmount = first.unmount.bind(first);
+  const previous = {
+    unmount: () => {
+      shownAtUnmount = document.getElementById("app")!.innerHTML;
+      unmount();
+    },
+  };
+  const unused = vi.fn<() => Promise<{ default: Component }>>(async () => ({ default: Item }));
+  const app = await renderPage(Shelf, { Item: async () => ({ default: Item }), Unused: unused }, next, { previous });
+  const shown = document.getElementById("app")!;
+  expect(shown).not.toBe(old);
+  expect(shown.className).toBe("shell");
+  expect(shown.innerHTML).toBe("<ul><li>t</li><li>c 3</li></ul>");
+  expect(shownAtUnmount).toBe("<ul><li>t</li><li>c 3</li></ul>");
+  expect(old.isConnected).toBe(false);
+  expect(unused).not.toHaveBeenCalled();
+  app.unmount();
+});
+
+it("keeps a router both pages use started, as the next page is mounted before the previous is unmounted", async () => {
+  const Linked = defineComponent({ props: { title: String }, setup: (props, { slots }) => () => h("nav", [h(RouterLink, { to: "/b" }, () => props.title), slots.default?.()]) });
+  const history = createMemoryHistory();
+  history.replace("/a");
+  const router = createRouter({ history, routes: [{ path: "/a", component: Item }, { path: "/b", component: Item }] });
+  document.body.innerHTML = '<div id="app"></div>';
+  const first = createPageApp(Linked, shelf, { Item }, { router, hydrate: false });
+  await router.isReady();
+  first.mount("#app");
+  const app = await renderPage(Linked, { Item }, next, { router, previous: first });
+  expect(router.currentRoute.value.fullPath).toBe("/a");
+  await router.push("/b");
+  await nextTick();
+  expect(document.querySelector("#app a")!.className).toBe("router-link-active router-link-exact-active");
+  app.unmount();
+});
+
+it("waits for a router not yet started, as linkRouter gives one at the next page's location", async () => {
+  const navigate = vi.fn<(href: string) => void>();
+  const router = linkRouter(["/", "/next"], { navigate, location: "/next?q=1" });
+  const Where = defineComponent({ setup: () => () => h("p", useRoute().fullPath) });
+  document.body.innerHTML = '<div id="app">old</div>';
+  const app = await renderPage(Where, {}, { props: null, slots: {} }, { router });
+  expect(document.getElementById("app")!.innerHTML).toBe("<p>/next?q=1</p>");
+  expect(navigate).not.toHaveBeenCalled();
+  app.unmount();
+});
+
+it("refuses a next page whose container is missing or whose components are not all given, leaving the page shown", async () => {
+  document.body.innerHTML = `<div id="app">${shelfHtml}</div>`;
+  const previous = { unmount: vi.fn<() => void>() };
+  await expect(renderPage(Shelf, { Item }, next, { container: "#nowhere", previous })).rejects.toThrow(/no #nowhere to mount on/);
+  await expect(renderPage(Shelf, {}, next, { previous })).rejects.toThrow(/no component called "Item" was given to renderPage/);
+  const failing = async (): Promise<{ default: Component }> => {
+    throw new Error("offline");
+  };
+  await expect(renderPage(Shelf, { Item: failing }, next, { previous })).rejects.toThrow(/Item did not load: offline/);
+  expect(document.getElementById("app")!.innerHTML).toBe(shelfHtml);
+  expect(previous.unmount).not.toHaveBeenCalled();
+});
+
+it("fails a recorded page whose record the client renders differently", async () => {
+  const html = `<div id="app"><ul><li>s</li><!--[--><li>a 1</li><li>b 3</li><!--]--></ul></div>`;
+  await expect(renderRecordedPage({ html, record: shelf }, Shelf, { Item })).rejects.toThrow(
+    "the page did not render from its record exactly:\nthe client renders it differently:\n  server: <ul><li>s</li><li>a 1</li><li>b 3</li></ul>\n  client: <ul><li>s</li><li>a 1</li><li>b 2</li></ul>",
+  );
+  const app = await renderRecordedPage({ html: html.replace("b 3", "b 2") + `<script type="application/json" id="__fv_page">${JSON.stringify(shelf)}</script>` }, Shelf, { Item });
+  app.unmount();
 });

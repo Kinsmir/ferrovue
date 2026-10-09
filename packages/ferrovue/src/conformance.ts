@@ -9,6 +9,7 @@ import { allPages, fileRoutes, pagesFolder, routeEntries } from "./file-routes.t
 import { fixtureApp, peer, readFixture, type RouteEntry, type RouterOptions } from "./fixture.ts";
 import { headRendered, settled } from "./settle.ts";
 import { attachSsrRender } from "./ssr.ts";
+import { renderDifference, renderedShape } from "./client-render.ts";
 
 /** What `conformanceSuite` checks: the project, its components and its fixtures. `pinia`,
  * `vueRouter` and `vueI18n` are the application's own modules (`pinia: await import("pinia")`),
@@ -27,6 +28,14 @@ export interface ConformanceOptions extends Pick<RouterOptions, "pinia" | "vueRo
   /** Write each fixture's `.html` from Vue's render instead of comparing it: when
    * `FERROVUE_FIXTURES_WRITE=1` is set, if not given. */
   record?: boolean | undefined;
+  /** The fixtures (`Component/case.json`) whose fresh client render Vue itself makes differ from
+   * its server render, which the check of client renders then expects to differ: a `v-model`
+   * `<select>` whose value matches no option, which the client leaves with none selected; an
+   * attribute such as `disabled` bound on an element with no such property, which the client
+   * writes as `"true"`; a `<TransitionGroup>`'s `name`, which only the server writes; a slot's scope
+   * ids; and an async component beside a `<ClientOnly>`, whose content shows by the time the
+   * component has loaded. */
+  clientDiffers?: string[];
 }
 
 interface TestApi {
@@ -238,6 +247,35 @@ async function hydrateFixture(app: App, html: string): Promise<string[]> {
   return problems;
 }
 
+/** Render a fixture's app on the client from scratch, with `createApp` (`fixtureApp`'s `client`
+ * option), into a document laid out as `hydrationBody` lays out its recorded render, and say where
+ * the client's DOM differs from the main HTML the browser parsed, as `renderedShape` compares
+ * them: as mounting leaves it, where `<ClientOnly>` still shows its fallback, and, where that
+ * differs while async components are loading, once they have loaded. What is teleported and the
+ * head are not compared. `null` where they agree. */
+export async function clientRenderDifference(app: App, html: string): Promise<string | null> {
+  if (typeof document === "undefined") throw new Error("rendering a fixture on the client needs a DOM: run the suite with `environment: \"happy-dom\"` (or jsdom)");
+  document.body.innerHTML = hydrationBody(html);
+  const root = document.getElementById("root")!;
+  const expected = renderedShape(root);
+  root.replaceChildren();
+  app.config.warnHandler = () => {};
+  const { warn } = console;
+  console.warn = () => {};
+  let difference: string | null;
+  try {
+    app.mount(root);
+    difference = await renderDifference(app, root, renderedShape(root), expected);
+    app.unmount();
+    await headRendered();
+  } finally {
+    console.warn = warn;
+  }
+  document.body.innerHTML = "";
+  placeHead(null);
+  return difference;
+}
+
 /** Register the conformance suite with the given `describe` and `it`. */
 export function registerConformance(api: TestApi, options: ConformanceOptions): void {
   const configFile = resolve(options.config);
@@ -264,11 +302,11 @@ export function registerConformance(api: TestApi, options: ConformanceOptions): 
   const cases = casesIn(fixtures);
   const { routes, options: configured } = fixtureOptions(root, config);
   const appOptions: RouterOptions = { ...configured, pinia: options.pinia, vueRouter: options.vueRouter, vueI18n: options.vueI18n };
-  const app = async (c: Case, hydrate = false): Promise<App> => {
+  const app = async (c: Case, mode: Pick<RouterOptions, "hydrate" | "client"> = {}): Promise<App> => {
     const component = given.get(c.component);
     if (!component) throw new Error(`the fixtures in ${c.component}/ name no component in \`components\``);
     const json = JSON.parse(readFileSync(`${c.base}.json`, "utf8")) as Record<string, unknown>;
-    return fixtureApp(component, readFixture(json), routes, { ...appOptions, hydrate });
+    return fixtureApp(component, readFixture(json), routes, { ...appOptions, ...mode });
   };
 
   api.describe("conformance", () => {
@@ -305,8 +343,20 @@ export function registerConformance(api: TestApi, options: ConformanceOptions): 
     api.describe("the recorded HTML hydrates without a mismatch", () => {
       for (const c of cases) {
         api.it(`${c.component}/${c.name}`, async () => {
-          const problems = await hydrateFixture(await app(c, true), recordedHtml(c));
+          const problems = await hydrateFixture(await app(c, { hydrate: true }), recordedHtml(c));
           if (problems.length) throw new Error(`${c.component}/${c.name} did not hydrate exactly:\n${problems.join("\n")}`);
+        });
+      }
+    });
+
+    const differs = new Set(options.clientDiffers ?? []);
+    api.describe("a fresh client render shows the recorded HTML", () => {
+      for (const c of cases) {
+        const key = `${c.component}/${c.name}`;
+        api.it(key, async () => {
+          const difference = await clientRenderDifference(await app(c, { client: true }), recordedHtml(c));
+          if (difference && !differs.has(key)) throw new Error(`${key}: ${difference}\n(list it in \`clientDiffers\` where Vue's own client render differs from its server render)`);
+          if (!difference && differs.has(key)) throw new Error(`${key} is in \`clientDiffers\`, but the client renders it as the server did: take it out`);
         });
       }
     });
@@ -316,8 +366,11 @@ export function registerConformance(api: TestApi, options: ConformanceOptions): 
 /** Register vitest tests holding a project's components to Vue, as ferrovue's own suite does:
  * every component has fixtures and every fixture a component, the generated Rust is what the
  * generator writes now, Vue renders each fixture to its recorded `.html` (or records it, with
- * `FERROVUE_FIXTURES_WRITE=1`), and each recorded `.html` hydrates with no warning and the server's
- * nodes kept. Await it at the top of a test file run in a DOM environment such as happy-dom. */
+ * `FERROVUE_FIXTURES_WRITE=1`), each recorded `.html` hydrates with no warning and the server's
+ * nodes kept, and a fresh client render of each fixture shows its recorded `.html`, as
+ * `clientRenderDifference` compares them, except the fixtures listed in `clientDiffers`. That last
+ * check is what an application that navigates between pages relies on when it renders the next page
+ * from its record. Await it at the top of a test file run in a DOM environment such as happy-dom. */
 export async function conformanceSuite(options: ConformanceOptions): Promise<void> {
   const vitest = await peer("vitest", "`conformanceSuite` registers vitest tests", () => import("vitest"));
   registerConformance(vitest, options);

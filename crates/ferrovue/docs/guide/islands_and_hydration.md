@@ -312,6 +312,64 @@ Some things to know:
   before the trigger fires, and a part waiting to hydrate would stop following the layout it
   belongs to. Content that can wait belongs in an island outside the page's container.
 
+## Navigating between pages
+
+An application that goes from one server-rendered page to the next without a reload fetches the
+next document and shows it from its record, with the same app `mountPage` built for the first page.
+`readPage` from `ferrovue` reads the record and the state's text out of the fetched HTML. It needs no
+`DOMParser`, so it also runs in a worker. It finds each script as the HTML parser does, so an id
+inside a prop, a comment, an attribute or another script's text is passed over. `renderPage`
+then renders the record into the page:
+
+```ts
+import { createPinia } from "pinia";
+import { hydrateState, readPage, renderPage, type App } from "ferrovue";
+import islands from "ferrovue/islands";
+import { linkRouter } from "ferrovue/link-router";
+import routes from "ferrovue/routes";
+
+let current: App | undefined; // what mountPage returned for the first page
+
+async function navigate(href: string): Promise<void> {
+  const next = readPage(await (await fetch(href)).text());
+  const pinia = createPinia();
+  hydrateState(pinia, { text: next.state });
+  const router = linkRouter(routes, { navigate, location: href });
+  history.pushState(null, "", href);
+  current = await renderPage(() => import("./pages/picks.vue"), islands, next.record, { pinia, router, previous: current });
+}
+```
+
+`renderPage` loads the components the record names and no others, builds the app with
+`createPageApp(layout, record, components, { hydrate: false })`, which renders the same tree as the
+hydrated first page, each slot a plain array of its parts, and waits for the router. It then puts an
+empty copy of the container (`#app`, or `container`) in the container's place, mounts the app on
+it, and unmounts `previous` after that. The order matters when both pages use one router: vue-router
+resets a router once the last app using it is unmounted, so the next app is mounted first. It
+rejects, leaving the page as it is, when the container is missing or a component is not given or
+fails to load.
+
+Some things to know:
+
+- **The router must be at the next page.** The browser's location still names the page shown when
+  the next one renders, so a router built from it resolves the wrong route. `linkRouter` takes the
+  next page's `location`, as the `href` its `navigate` is given, and starts there; a router of your
+  own takes a memory history replaced at that location.
+- **The state is the next page's.** `hydrateState(pinia, { text })` reads the state the fetched page
+  carries, `NaN` and infinities included, into a fresh Pinia. Setting `pinia.state.value` on a
+  Pinia whose stores are already in use leaves those stores on the old state, so either start a new
+  Pinia per page or keep the current one and leave the fetched state aside.
+- **Mount where the URL already names the page.** A component that reads `window.location` as it
+  mounts sees the URL of the moment it renders, so push the next URL before `renderPage`.
+- **The record names no layout.** The application knows which layout each route uses, as it does
+  for `mountPage`.
+- **The head is the app's.** `@unhead/vue`'s client head, given in `plugins` to every page, takes
+  the next page's tags as its app mounts and drops the previous page's as it unmounts.
+
+`examples/fullstack` goes between staff picks this way: `client/app.ts` gives the page a
+`linkRouter` whose `navigate` fetches the next page and shows it, pushes the URL, and shows the
+page the URL names again on `popstate`.
+
 ## Islands or a page
 
 Islands hydrate the interactive parts alone: each gets an app of its own, the rest of the page stays
@@ -335,6 +393,23 @@ components load, which are changes the app makes once mounted. It throws on any 
 made, on a node Vue replaced, and on anything Vue warns or logs as an error until the page has
 settled, and resolves to the app. `examples/fullstack` runs it on the staff picks page, in happy-dom; its browser test opens the
 page in Chromium, Firefox and WebKit.
+
+`renderRecordedPage` takes the same page and shows it again from its record with `renderPage`, as
+a navigation shows it, and throws where the client's DOM differs from the markup the browser
+parsed, and on anything Vue warns or logs as an error. Vue's client and server write some things
+differently that mean the same, so the two are compared with comments and empty text nodes left
+out, adjacent text joined, a `class` by its classes, a `style` by its declarations, and an
+`<input>`'s `value` and `checked`, a `<textarea>`'s `value` and an `<option>`'s `selected` by the
+state the browser holds, which the client sets as properties where the server writes attributes.
+The render is compared as mounting leaves it, where a `<ClientOnly>` still shows the fallback the
+server wrote, and, where that differs while async components are loading, once they have loaded.
+What is teleported out of the page is not compared.
+
+`conformanceSuite` holds every fixture to the same comparison: a fresh client render of each shows
+its recorded HTML. Where Vue's own client render differs from its server render, list the fixture
+in `clientDiffers`: a `v-model` `<select>` whose value matches no option, an attribute such as
+`disabled` bound on an element without that property, a `<TransitionGroup>`'s `name`, the slot
+scope ids of a slotted component, and an async component beside a `<ClientOnly>`.
 
 # Hydrating the whole app
 

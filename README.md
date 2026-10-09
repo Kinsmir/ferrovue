@@ -589,6 +589,24 @@ The record repeats the text of every prop, so a page hydrated this way is larger
 islands; the guide's `islands_and_hydration` page compares the two, and `examples/fullstack` serves
 a page of each kind.
 
+An application that goes to the next page without a reload shows it from the record in the fetched
+document, with the same app:
+
+```ts
+import { hydrateState, readPage, renderPage } from "ferrovue";
+
+const next = readPage(await (await fetch(href)).text()); // no DOMParser: works in a worker too
+const pinia = createPinia();
+hydrateState(pinia, { text: next.state });
+const router = linkRouter(routes, { navigate, location: href }); // at the next page's location
+current = await renderPage(() => import("./Picks.vue"), islands, next.record, { pinia, router, previous: current });
+```
+
+`renderPage` mounts the next page's app in place of the container before it unmounts `previous`, so
+a router both use stays started. `renderRecordedPage` from `ferrovue/testing` checks that a page
+rendered from its record on the client shows what the server wrote, and `conformanceSuite` checks
+the same of every fixture.
+
 ### Hydrating Pinia state
 
 ```rust
@@ -777,7 +795,7 @@ crates/ferrovue-i18n/        vue-i18n's t() (the `i18n` feature)
 crates/ferrovue-contract/    unpublished: Rust using every item of the generated-code contract,
                              and the version check's message (trybuild)
 packages/ferrovue/           the compiler (npm package)
-  src/index.ts               `ferrovue`: the browser API, `mountIslands`, `mountPage`, `hydrateState` and the types
+  src/index.ts               `ferrovue`: the browser API, `mountIslands`, `mountPage`, `readPage`, `renderPage`, `hydrateState` and the types
   src/compiler.ts            `ferrovue/compiler`: `generate`, `write`
   src/context.ts, model.ts   `ferrovue.config.json`, and the types and values the compiler passes around
   src/schema.ts              the configuration's keys, types and defaults, from which `schema.json` is written
@@ -801,7 +819,7 @@ packages/ferrovue/           the compiler (npm package)
   src/diff.ts                the diff `ferrovue --check --diff` prints for a stale file
   src/errors.ts, diagnostics.ts
                              every error code with its title, and errors as the CLI, JSON and Vite show them
-  src/client.ts              browser-side helpers: `mountIslands`, `mountPage`, `hydrateState`, `<ClientOnly>`
+  src/client.ts              browser-side helpers: `mountIslands`, `mountPage`, `readPage`, `renderPage`, `hydrateState`, `<ClientOnly>`
   src/islands.ts             `ferrovue/islands`, which the Vite plugin writes: every island, loaded lazily
   src/link-router.ts         `ferrovue/link-router`: `<RouterLink>` while the application navigates on its own
   src/routes.ts              a routes file as vue-router's route records
@@ -811,7 +829,8 @@ packages/ferrovue/           the compiler (npm package)
   src/fixture.ts, settle.ts  `fixtureApp` and `readFixture`, and waiting for async components to settle
   src/conformance.ts         `conformanceSuite`, which `ferrovue/testing` exports
   src/ssr.ts                 `attachSsrRender`, which `ferrovue/testing` exports
-  src/hydration.ts           `hydrateRecordedPage`, which `ferrovue/testing` exports
+  src/hydration.ts           `hydrateRecordedPage` and `renderRecordedPage`, which `ferrovue/testing` exports
+  src/client-render.ts       the DOM of a client render as it is compared with the server's markup
   src/types.ts               `ferrovue/types`: `TrustedHtml`, `InlineHtml`, `Float`
   test/                      compiler, CLI, router, vector, island, Vite and conformance tests
   api/                       the package's API report, an `.api.md` per export and `cli.txt` (`pnpm api:report`)

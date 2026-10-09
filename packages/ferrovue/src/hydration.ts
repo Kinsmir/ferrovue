@@ -1,5 +1,6 @@
 import type { App, Component, Plugin } from "vue";
-import { mountPage, type IslandComponent, type PageOptions, type PageRecord } from "./client.ts";
+import { mountPage, readPage, renderPage, type IslandComponent, type PageOptions, type PageRecord, type RenderPageOptions } from "./client.ts";
+import { renderDifference, renderedShape, shapeAtMount } from "./client-render.ts";
 import { settled } from "./settle.ts";
 
 /** A page as the server wrote it: `html` holds the container and, unless `record` is given, the
@@ -83,6 +84,54 @@ export async function hydrateRecordedPage(
   if (problems.length) {
     app.unmount();
     throw new Error(`the page did not hydrate exactly:\n${problems.join("\n")}`);
+  }
+  return app;
+}
+
+/** Put a recorded page into the document's body and show it again from its record with
+ * `renderPage`, as a navigation shows the next page, throwing where the client's render differs
+ * from the markup the browser parsed, as `renderedShape` compares them (comments and empty text
+ * aside, classes, styles and form controls by what they hold), and on anything Vue warns or logs as
+ * an error. The render is compared as mounting leaves it, where `<ClientOnly>` still shows its
+ * fallback as the server wrote it, and, where that differs while async components are loading,
+ * once they have loaded. What is teleported out of the page is not compared. Resolves to the app,
+ * mounted. */
+export async function renderRecordedPage(
+  page: RecordedPage,
+  layout: Component,
+  components: Record<string, IslandComponent>,
+  options: RenderPageOptions & { record?: string } = {},
+): Promise<App> {
+  const doc = options.doc ?? document;
+  const id = options.record ?? "__fv_page";
+  doc.body.innerHTML = page.html + (page.record ? recordScript(id, page.record) : "");
+  const record = page.record ?? readPage(page.html, { record: id }).record;
+  const selector = options.container ?? "#app";
+  const container = typeof selector === "string" ? doc.querySelector(selector) : selector;
+  if (!container) throw new Error(`the recorded page has no ${selector as string}`);
+  const expected = renderedShape(container);
+  const problems: string[] = [];
+  const watch: Plugin = {
+    install(app) {
+      app.config.warnHandler = (message) => void problems.push(`warning: ${message}`);
+    },
+  };
+  const mounted = shapeAtMount();
+  const { warn, error } = console;
+  console.warn = (...args: unknown[]) => void problems.push(`console.warn: ${args.map(String).join(" ")}`);
+  console.error = (...args: unknown[]) => void problems.push(`console.error: ${args.map(String).join(" ")}`);
+  let app: App;
+  try {
+    app = await renderPage(layout, components, record, { ...options, doc, container, plugins: [...(options.plugins ?? []), watch, mounted.plugin] });
+    const difference = await renderDifference(app, mounted.container() ?? container, mounted.shape() ?? "", expected);
+    if (difference) problems.push(difference);
+  } finally {
+    console.warn = warn;
+    console.error = error;
+  }
+  if (problems.length) {
+    app.unmount();
+    throw new Error(`the page did not render from its record exactly:\n${problems.join("\n")}`);
   }
   return app;
 }

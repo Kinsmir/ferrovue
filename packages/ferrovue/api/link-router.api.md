@@ -19,6 +19,7 @@ export interface LinkRouterOptions {
     history?: RouterHistory;
     linkActiveClass?: string;
     linkExactActiveClass?: string;
+    location?: string;
     navigate: (href: string, to: RouteLocationNormalized) => void;
 }
 

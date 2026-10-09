@@ -53,21 +53,21 @@ cargo run -p ferrovue-example-fullstack -- --render /books/dune
 | `client/pages/index.vue` | The home page: a list, named links with params, a scoped slot the server fills with an island per book |
 | `client/pages/books/[id].vue` | The detail page: `useRoute()` params in the template and in a `computed`, a named slot, a slot left as a hole for streaming; its title, description, canonical link and Open Graph tags from its props, with `useHead` and `useSeoMeta` |
 | `client/components/AddToBasket.vue` | An island: rendered with `add_to_basket::island()`, so it carries `data-island` and `data-props`; its click handler uses the shared store |
-| `client/pages/picks.vue` | The layout of the staff picks page, hydrated whole: a default slot of picks and a `reviews` slot streamed into a hole; a `useHead` that unhead's client head, given to `mountPage` in `client/app.ts`, takes over |
+| `client/pages/picks.vue` | The layout of the staff picks page, hydrated whole: a default slot of picks and a `reviews` slot streamed into a hole; a `useHead` that unhead's client head, given to `mountPage` in `client/app.ts`, takes over; links that feature another pick (`?featured=`), which the client follows without a reload |
 | `client/components/Pick.vue` | A part of that page, rendered from its props, with an `AddToBasket` inside it |
 | `client/components/Reviews.vue` | The slow part of the book page, streamed into the hole as an island, with `v-show` the client toggles; `<style scoped>`; a Rust twin's component, and `<ClientOnly>` around one that reads `window` |
 | `client/pages/[...missing].vue` | The page for an unknown book or path, which the server sends with status 404 |
 | `client/vendor/` | Stand-ins for a component library's components, which ferrovue does not compile: `StarRating`, rendered on the server by its Rust twin, and `ShareLink`, rendered only in the browser |
 | `src/ui.rs` | The Rust twin of `StarRating`, listed under `twins` in `ferrovue.config.json` |
 | `fixtures/`, `test/conformance.test.ts`, `ferrovue::conformance!` in `src/main.rs` | The conformance suite, in two calls: every component's fixtures rendered by Vue through `conformanceSuite` from `ferrovue/testing` (`FERROVUE_FIXTURES_WRITE=1` records the `.html`) and by the generated Rust, byte for byte, which proves the twin too; the generated Rust checked to be current, and every recorded `.html` hydrated with no mismatch |
-| `client/app.ts` | A router over `ferrovue/routes` whose every page renders nothing (`routeRecords`), `hydrateState`, `mountPage` on a page that carries a record, then `mountIslands` of `ferrovue/islands`, which the Vite plugin writes: every island by name, each loaded only on a page that holds it, with one Pinia and one router for them all |
+| `client/app.ts` | A router over `ferrovue/routes` whose every page renders nothing (`routeRecords`), `hydrateState`, `mountPage` on a page that carries a record, then `mountIslands` of `ferrovue/islands`, which the Vite plugin writes: every island by name, each loaded only on a page that holds it, with one Pinia and one router for them all; on the staff picks, a `linkRouter` whose `navigate` shows the next pick with `readPage` and `renderPage` |
 | `src/pages.rs` | Rendering pages from the generated `route_table::router()`, `Props::new(…)`, `Slots`, `ferrovue::state_script_into`, `ferrovue::hole()`, and `reviews::into_island()`, a page holding its props that a handler returns; `ferrovue::Page` for the staff picks, whose record is the last hole; a `ferrovue::Head` per page, rendered after the body and written into `<head>` |
 | `src/catalogue.rs` | The shop's books and reviews, standing in for a database; the reviews arrive after a delay so the page has something to stream |
 | `src/main.rs` | The axum server: a `ferrovue::HtmlStream` per page, a book's reviews alone at `/books/{id}/reviews`, `dist/assets` served beside it, and `--render` |
 | `src/assets.rs` | Finding the entry's hashed script and stylesheets in Vite's manifest, the lazily loaded islands' stylesheets included, or loading from the dev server |
-| `test/hydration.test.ts` | The proof: the server's own HTML hydrates with no mismatch, and carries the scope ids the client build's stylesheet selects |
+| `test/hydration.test.ts` | The proof: the server's own HTML hydrates with no mismatch, carries the scope ids the client build's stylesheet selects, and a staff picks page fetched from the server renders from its record in place of the one hydrated |
 | `adopter/peers.test.ts`, `vitest.adopter.config.ts` | `fixtureApp` loaded from ferrovue's built package with Node, as an application's vitest run loads it, rendering fixtures with stores and a route through the application's own Pinia and vue-router |
-| `browser/hydration.test.ts` | The same in Chromium, Firefox and WebKit: the server started on a free port, its pages opened, the islands clicked, the reviews scrolled into view on a short screen before their code is fetched (`pnpm test:browser`) |
+| `browser/hydration.test.ts` | The same in Chromium, Firefox and WebKit: the server started on a free port, its pages opened, the islands clicked, the reviews scrolled into view on a short screen before their code is fetched, one pick featured after another without a reload (`pnpm test:browser`) |
 
 ### Islands, and what isn't one
 
@@ -126,6 +126,14 @@ picks at once, the reviews when they arrive, and then the record, which `PageRec
 once every hole of the page is filled. `client/app.ts` finds the record and calls `mountPage`,
 which loads `picks.vue`, `Pick` and `Reviews` and hydrates the whole layout as one app. Nothing on the
 page is an island; "Add to basket" and "Show all reviews" work because the app holds them.
+
+The links under the reviews feature another pick (`/picks?featured=left-hand`) without a reload.
+The page's router is a `linkRouter`, so a click goes to its `navigate`, which fetches the next
+document, reads its record and state with `readPage`, pushes the URL and shows the page with
+`renderPage`: the same app as the first page, with a fresh Pinia from the next page's state and a
+`linkRouter` at its location, mounted in place of `#app` before the previous page's app is
+unmounted. Back and forward show the page the URL names the same way. A link to any other page
+loads it.
 
 ## The hydration test
 

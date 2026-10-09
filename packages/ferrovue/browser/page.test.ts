@@ -31,11 +31,11 @@ beforeAll(async () => {
   process.env.NODE_ENV = "development";
   const result = (await build({
     configFile: false,
-    root: import.meta.dirname,
+    root: join(import.meta.dirname, "../../.."),
     logLevel: "warn",
     plugins: [vue()],
     resolve: { alias: [{ find: /^ferrovue\/client$/, replacement: join(import.meta.dirname, "../src/client.ts") }] },
-    build: { write: false, minify: false, rolldownOptions: { input: "page-entry.ts", output: { codeSplitting: false } } },
+    build: { write: false, minify: false, rolldownOptions: { input: join(import.meta.dirname, "page-entry.ts"), output: { codeSplitting: false } } },
   }).finally(() => {
     process.env.NODE_ENV = nodeEnv;
   })) as Rolldown.RolldownOutput;
@@ -85,6 +85,51 @@ describe.each(BROWSERS)("%s", (name) => {
       for (const shown of named.map((c) => CLIENT_ONLY[c]).filter(Boolean)) expect(result, "`<ClientOnly>` showed its content once mounted").toContain(shown);
     });
   }
+
+  for (const file of cases.keys()) {
+    if (file === FRAGMENTED) continue;
+    it(`renders ${file} from its record as the server wrote it`, async ({ skip }) => {
+      if (!browser) skip();
+      await page.goto(`${ORIGIN}/${file}`);
+      await page.evaluate(() => window.pageHydration!);
+      expect(await page.evaluate(() => window.pageRender!())).toMatch(/^rendered: /);
+    });
+  }
+
+  it("reads the record the browser's own parser finds, past what only looks like one", async ({ skip }) => {
+    if (!browser) skip();
+    await page.goto(`${ORIGIN}/shelf.json`);
+    const record = JSON.stringify(shelf.record).replace(/[<>&\u2028\u2029]/g, (ch) => `\\u${ch.charCodeAt(0).toString(16).padStart(4, "0")}`);
+    const real = `<script type="application/json" id="__fv_page">${record}</script>`;
+    const fake = '<script type="application/json" id="__fv_page">{"props":{"fake":true},"slots":{}}</script>';
+    const around = [
+      `<div data-props='{"html":"${fake}"}'></div>`,
+      `<!-- ${fake} -->`,
+      `<!--x--!><!-- ${fake} --!>`,
+      `<!-->${fake}`,
+      `<!--->${fake}`,
+      `<!---- ${fake} ---->`,
+      `<textarea>${fake}</textarea>`,
+      `<title>${fake}</TITLE >`,
+      `<style>p::after { content: '${fake}' }</style>`,
+      `<template><p>${fake}</p></template>`,
+      `<script>var s = '${fake.replace("</script>", "")}';</script>`,
+      `<script>x = "<!--<script>"; ${fake} --></script>`,
+      `<script>x = "<!--<script>"</script>${fake}--></script>`,
+      `<script>x = "<!--"; y = "-->"</script>${fake}`,
+      `<script><!--<script></script>--></script>${fake}`,
+      `<?php ${fake} ?>`,
+      `<! ${fake.replace(/>/g, "")}>`,
+      `<SCRIPT ID=__fv_page TYPE=application/json>{"props":{"upper":true},"slots":{}}</SCRIPT>`,
+      `<script id="&#95;&#x5f;fv&#95;page">{"props":{"referenced":true},"slots":{}}</script>`,
+      `<div title="a>b" data-x=c>d</div>${fake}`,
+    ];
+    for (const html of around) {
+      const doc = `<!doctype html><html><head><title>t</title></head><body>${html}<div id="app"></div>${real}</body></html>`;
+      const [read, parsed] = await page.evaluate((d) => window.readsAsParsed!(d), doc);
+      expect(read, html).toBe(parsed);
+    }
+  });
 
   it("fails on a fragment the client does not render", async ({ skip }) => {
     if (!browser) skip();

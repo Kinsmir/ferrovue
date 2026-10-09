@@ -1,1 +1,1 @@
-{"shop":"<b>Shop</b>","featured":"\"Dune\" & <Solaris>","$route":"/"}
+{"shop":"<b>Shop</b>","featured":"\"Dune\" & <Solaris>","books":[{"id":"a b&c=d","title":"</a><script>alert(1)</script>","author":"","year":0}],"$route":"/"}

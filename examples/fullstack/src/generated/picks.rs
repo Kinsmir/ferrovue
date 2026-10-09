@@ -16,12 +16,14 @@ pub struct Props<'a> {
     pub shop: Cow<'a, str>,
     #[serde(rename = "featured")]
     pub featured: Cow<'a, str>,
+    #[serde(rename = "books")]
+    pub books: Vec<super::types::Book<'a>>,
 }
 
 impl<'a> Props<'a> {
     /// Props with its required fields.
-    pub fn new(shop: impl Into<Cow<'a, str>>, featured: impl Into<Cow<'a, str>>) -> Self {
-        Props { shop: shop.into(), featured: featured.into() }
+    pub fn new(shop: impl Into<Cow<'a, str>>, featured: impl Into<Cow<'a, str>>, books: Vec<super::types::Book<'a>>) -> Self {
+        Props { shop: shop.into(), featured: featured.into(), books }
     }
 
 }
@@ -38,7 +40,7 @@ pub struct Slots<'s> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::Route<'_>, fv_head: &fv::Head) {
-    out.reserve(349 + props.shop.len() + props.featured.len());
+    out.reserve(393 + 44 * props.books.len() + props.shop.len() + props.featured.len() + props.books.iter().map(|v| v.id.len() + v.title.len() + v.author.len()).sum::<usize>());
     fv_head.push(fv::HeadValue::object([("title", fv::HeadValue::str(&format!("Staff picks · {}", props.shop))), ("meta", fv::HeadValue::array([fv::HeadValue::object([("name", fv::HeadValue::str("description")), ("content", fv::HeadValue::str(&format!("{} and the rest of this week's staff picks", props.featured)))])])), ("htmlAttrs", fv::HeadValue::object([("class", fv::HeadValue::str("picks-page"))]))]));
     out.push_str("<div class=\"layout picks\"><header>");
     {
@@ -80,7 +82,29 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route
     fv::slot_into(out, fv_slots.reviews, Some(&mut |out: &mut String| {
         out.push_str("<p>Loading reviews…</p>");
     }));
-    out.push_str("</aside><footer>One app: the layout and every part in it, hydrated from the record the server wrote.</footer></div>");
+    out.push_str("<nav class=\"featured\"><!--[-->");
+    for book_ref in props.books.iter() {
+        let book = book_ref;
+        {
+            let fv_link = {
+                let mut fv_search = String::new();
+                fv::query_into(&mut fv_search, "featured", &book.id);
+                fv_route.link_named("/picks", &[], &fv_search, "")
+            };
+            out.push_str("<a");
+            if fv_link.exact {
+                out.push_str(" aria-current=\"page\"");
+            }
+            out.push_str(" href=\"");
+            fv::escape_into(out, &fv_link.href);
+            out.push_str("\" class=\"");
+            fv::class_into(out, false, &[if fv_link.exact { "active" } else { "" }]);
+            out.push_str("\">");
+            fv::escape_into(out, &book.title);
+            out.push_str("</a>");
+        }
+    }
+    out.push_str("<!--]--></nav></aside><footer>One app: the layout and every part in it, hydrated from the record the server wrote.</footer></div>");
 }
 
 /// The component's markup, for a maud page that shows it.

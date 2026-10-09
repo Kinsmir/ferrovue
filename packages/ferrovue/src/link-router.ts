@@ -14,19 +14,26 @@ export interface LinkRouterOptions {
   linkActiveClass?: string;
   /** As `router.linkExactActiveClass` in `ferrovue.config.json`. */
   linkExactActiveClass?: string;
-  /** The history the router reads its first location from. By default a memory history at the
-   * page's location: the router neither writes to the browser's history nor listens to it. */
+  /** The location of the page the router is for, as an `href` with the base (the one `navigate`
+   * is given): the page a navigation goes to, which the browser's location is not yet. The
+   * browser's location by default. */
+  location?: string;
+  /** The history the router reads its first location from. By default a memory history at
+   * `location`: the router neither writes to the browser's history nor listens to it. */
   history?: RouterHistory;
 }
 
 const Empty = { render: () => null };
 
-function pageHistory(base: string | undefined): RouterHistory {
+function pageHistory(base: string | undefined, location: string | undefined): RouterHistory {
   const history = createMemoryHistory(base);
-  const { pathname, search, hash } = window.location;
+  const href = location ?? window.location.pathname + window.location.search + window.location.hash;
+  const end = href.search(/[?#]/);
+  const pathname = end < 0 ? href : href.slice(0, end);
+  const rest = end < 0 ? "" : href.slice(end);
   const prefix = history.base;
   const path = prefix && pathname.toLowerCase().startsWith(prefix.toLowerCase()) ? pathname.slice(prefix.length) || "/" : pathname;
-  history.replace(path + search + hash);
+  history.replace(path + rest);
   return history;
 }
 
@@ -36,7 +43,7 @@ function pageHistory(base: string | undefined): RouterHistory {
  * click included, is handed to `navigate` and aborted, so the router stays on that page. Build one
  * for each page the application shows. */
 export function linkRouter(routes: RouteEntry[], options: LinkRouterOptions): Router {
-  const history = options.history ?? pageHistory(options.base);
+  const history = options.history ?? pageHistory(options.base, options.location);
   const router = createRouter({
     history,
     routes: routeRecords(routes, Empty),
