@@ -16,8 +16,14 @@ const PATCHED: Record<string, { browsers?: string[]; server: string; hydrated: s
   "CssVarsShapes/on.json": [{ server: '<b data-v-d62f6e13="">c</b>', hydrated: '<b data-v-d62f6e13="" style="--d62f6e13-tone: teal;">c</b>' }],
   "CssVarsShapes/hostile.json": [
     {
+      browsers: ["chromium", "firefox"],
       server: '<b data-v-d62f6e13="">c</b>',
       hydrated: `<b data-v-d62f6e13="" style="--d62f6e13-tone: &quot;&lt;/main&gt;&quot; '&lt;i&gt;' &amp;;">c</b>`,
+    },
+    {
+      browsers: ["webkit"],
+      server: '<b data-v-d62f6e13="">c</b>',
+      hydrated: '<b data-v-d62f6e13="" style="--d62f6e13-tone: &quot;&lt;/main&gt;&quot; &quot;&lt;i&gt;&quot; &amp;;">c</b>',
     },
   ],
   "CssVarsPage/full.json": [

@@ -1,5 +1,6 @@
 import { rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, sep } from "node:path";
+import { pathToFileURL } from "node:url";
 import vue from "@vitejs/plugin-vue";
 import { build, type Rolldown } from "vite";
 
@@ -15,7 +16,7 @@ const result = (await build({
     {
       name: "entry",
       resolveId: (id) => (id.endsWith(entry) ? `\0${entry}` : null),
-      load: (id) => (id === `\0${entry}` ? files.map((f, i) => `export { default as c${i} } from ${JSON.stringify(join(dir, f))};`).join("\n") : null),
+      load: (id) => (id === `\0${entry}` ? files.map((f, i) => `export { default as c${i} } from ${JSON.stringify(join(dir, f).split(sep).join("/"))};`).join("\n") : null),
     },
   ],
   css: { modules: { generateScopedName: config.generateScopedName, ...(config.hashPrefix !== undefined ? { hashPrefix: config.hashPrefix } : {}) } },
@@ -25,7 +26,7 @@ const code = result.output.find((o): o is Rolldown.OutputChunk => o.type === "ch
 const built = join(import.meta.dirname, `.css-modules-${process.pid}.mjs`);
 try {
   writeFileSync(built, code);
-  const loaded = (await import(built)) as Record<string, { __cssModules?: Record<string, Record<string, string>> }>;
+  const loaded = (await import(pathToFileURL(built).href)) as Record<string, { __cssModules?: Record<string, Record<string, string>> }>;
   process.stdout.write(JSON.stringify(Object.fromEntries(files.map((f, i) => [f, { ...loaded[`c${i}`]!.__cssModules }]))));
 } finally {
   rmSync(built, { force: true });
