@@ -80,6 +80,20 @@ it("starts from the page's location without the base, and hands navigate the hre
   expect(window.location.href).toBe("http://link-router.test/app/users/ada?tab=posts#latest");
 });
 
+it("starts from the location a navigation goes to, given as the href navigate was handed", async () => {
+  setUrl("http://link-router.test/app/account");
+  const navigate = vi.fn<Navigate>();
+  const router = linkRouter(ROUTES, { navigate, base: "/app/", location: "/app/users/grace?tab=posts#latest" });
+  await router.push(router.options.history.location);
+  expect(router.currentRoute.value.fullPath).toBe("/users/grace?tab=posts#latest");
+  expect(router.currentRoute.value.params).toEqual({ name: "grace" });
+  const bare = linkRouter(ROUTES, { navigate, location: "/account/orders#top" });
+  await bare.push(bare.options.history.location);
+  expect(bare.currentRoute.value.name).toBe("orders");
+  expect(navigate).not.toHaveBeenCalled();
+  expect(window.location.pathname).toBe("/app/account");
+});
+
 it("marks the active links of a hydrated page and leaves a click to navigate", async () => {
   const serverRouter = linkRouter(ROUTES, { navigate: () => {}, history: atLocation("/account/orders") });
   const server = createSSRApp(Nav).use(serverRouter);

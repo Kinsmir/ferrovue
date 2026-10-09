@@ -83,7 +83,7 @@ async fn page(State(site): State<Arc<Site>>, uri: Uri) -> Response {
         status,
         html,
         holes,
-    } = site.page(uri.path());
+    } = site.page(uri.path_and_query().map_or(uri.path(), |p| p.as_str()));
     let body = HtmlStream::new(html).holes(holes.into_iter().map(|hole| {
         let site = Arc::clone(&site);
         async move { site.fill(hole).await }
@@ -224,7 +224,13 @@ mod tests {
             .map(|(record, _)| record)
             .expect("the record after the app");
         assert!(
-            record.starts_with(r#"{"props":{"shop":"Ferrovue Books","featured":"Dune"},"slots":{"default":[{"c":"Pick","p":{"book":{"id":"dune","#),
+            record.starts_with(
+                r#"{"props":{"shop":"Ferrovue Books","featured":"Dune","books":[{"id":"dune","#
+            ),
+            "{record}"
+        );
+        assert!(
+            record.contains(r#"},"slots":{"default":[{"c":"Pick","p":{"book":{"id":"dune","#),
             "{record}"
         );
         assert!(
@@ -235,6 +241,30 @@ mod tests {
             record.contains(r#"Too much sand \u003cfor me\u003e."#),
             "{record}"
         );
+    }
+
+    #[tokio::test]
+    async fn the_picks_page_features_the_pick_its_query_names() {
+        let site = site();
+        let (_, html) = site.render_to_string("/picks?featured=left-hand").await;
+        assert!(
+            html.contains("<h2>Readers on The Left Hand of Darkness</h2>"),
+            "{html}"
+        );
+        assert!(
+            html.contains("Winter, and what it does to people."),
+            "{html}"
+        );
+        assert!(
+            html.contains(
+                r#"href="/picks?featured=left-hand" class="active">The Left Hand of Darkness</a>"#
+            ),
+            "{html}"
+        );
+        for unknown in ["/picks?featured=solaris", "/picks?featured"] {
+            let (_, html) = site.render_to_string(unknown).await;
+            assert!(html.contains("<h2>Readers on Dune</h2>"), "{unknown}");
+        }
     }
 
     #[tokio::test]

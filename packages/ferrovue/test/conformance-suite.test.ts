@@ -65,12 +65,31 @@ it("passes a project whose fixtures Vue renders and hydrates as recorded, with c
     "Vue renders each fixture to its recorded HTML > Hello/hostile.json": "passed",
     "the recorded HTML hydrates without a mismatch > Hello/ada.json": "passed",
     "the recorded HTML hydrates without a mismatch > Hello/hostile.json": "passed",
+    "a fresh client render shows the recorded HTML > Hello/ada.json": "passed",
+    "a fresh client render shows the recorded HTML > Hello/hostile.json": "passed",
   });
+});
+
+it("fails a fixture the client renders differently unless it is listed in clientDiffers, and a listed one it renders alike", async () => {
+  writeFileSync(join(root, "fixtures/Hello/ada.html"), '<p class="hello">Hello, Ada<!--[--><b>3</b><!--]--></p>');
+  const client = "a fresh client render shows the recorded HTML > ";
+  const results = await outcomes();
+  expect(message(results[`${client}Hello/ada.json`])).toBe(
+    [
+      "Hello/ada.json: the client renders it differently:",
+      '  server: <p class="hello">Hello, Ada<b>3</b></p>',
+      '  client: <p class="hello">Hello, Ada<b>2</b></p>',
+      "(list it in `clientDiffers` where Vue's own client render differs from its server render)",
+    ].join("\n"),
+  );
+  const listed = await outcomes({ clientDiffers: ["Hello/ada.json", "Hello/hostile.json"] });
+  expect(listed[`${client}Hello/ada.json`]).toBe("passed");
+  expect(message(listed[`${client}Hello/hostile.json`])).toBe("Hello/hostile.json is in `clientDiffers`, but the client renders it as the server did: take it out");
 });
 
 it("takes the components as `import.meta.glob` gives them", async () => {
   const components = import.meta.glob<{ default: Component }>("./suite/components/*.vue", { eager: true });
-  expect(Object.values(await outcomes({ components }))).toEqual(Array(6).fill("passed"));
+  expect(Object.values(await outcomes({ components }))).toEqual(Array(8).fill("passed"));
 });
 
 it("installs the application's own Pinia module in every fixture's app", async () => {
@@ -83,8 +102,8 @@ it("installs the application's own Pinia module in every fixture's app", async (
       return pinia.createPinia();
     },
   };
-  expect(Object.values(await outcomes({ pinia: own }))).toEqual(Array(6).fill("passed"));
-  expect(created).toBe(4);
+  expect(Object.values(await outcomes({ pinia: own }))).toEqual(Array(8).fill("passed"));
+  expect(created).toBe(6);
 });
 
 it("fails a fixture Vue renders differently, saying where, with both renders to diff", async () => {

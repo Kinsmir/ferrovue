@@ -226,4 +226,44 @@ describe.each(BROWSERS)("%s", (name) => {
     expect(await reviews.evaluateAll((items) => items.map((li) => (li as HTMLElement).style.display))).toEqual(["", "", ""]);
     expect(await Promise.all(messages)).toEqual([]);
   });
+
+  it("goes from one staff pick to another without a reload, rendering the page it fetches from its record", async ({ skip }) => {
+    if (!browser) skip();
+    await open("/picks");
+    await page.locator(".review-list a.share").waitFor();
+    await page.evaluate(() => void ((window as { stayed?: boolean }).stayed = true));
+    const add = page.locator('.pick[data-id="dune"] button.add');
+    await add.click();
+    await page.waitForFunction(() => document.querySelector('.pick[data-id="dune"] button.add')?.textContent === "In the basket");
+    const documents: string[] = [];
+    page.on("request", (r) => {
+      if (r.resourceType() === "document") documents.push(new URL(r.url()).pathname);
+    });
+
+    await page.locator("nav.featured a", { hasText: "The Left Hand of Darkness" }).click();
+    await page.waitForFunction(() => document.querySelector(".reviews h2")?.textContent === "Readers on The Left Hand of Darkness");
+    expect(page.url()).toBe(`${origin}/picks?featured=left-hand`);
+    expect(await page.evaluate(() => (window as { stayed?: boolean }).stayed), "the page did not reload").toBe(true);
+    expect(documents).toEqual([]);
+    expect(await page.locator(".review-list q").allTextContents()).toEqual(["Winter, and what it does to people."]);
+    expect(await page.locator(".review-list a.share").getAttribute("href")).toMatch(/featured%3Dleft-hand$/);
+    expect(await page.title()).toBe("Staff picks · Ferrovue Books");
+    expect(await add.textContent(), "the next page starts from the state its document carries").toBe("Add to basket");
+    await add.click();
+    await page.waitForFunction(() => document.querySelector('.pick[data-id="dune"] button.add')?.textContent === "In the basket");
+
+    await page.locator("nav.featured a", { hasText: "Dune" }).click();
+    await page.waitForFunction(() => document.querySelector(".reviews h2")?.textContent === "Readers on Dune");
+    expect(page.url()).toBe(`${origin}/picks?featured=dune`);
+    await page.locator("button.more").click();
+    await page.locator("button.more").waitFor({ state: "detached" });
+    expect(await page.locator(".review-list li").evaluateAll((items) => items.map((li) => (li as HTMLElement).style.display))).toEqual(["", "", ""]);
+
+    await page.goBack();
+    await page.waitForFunction(() => document.querySelector(".reviews h2")?.textContent === "Readers on The Left Hand of Darkness");
+    expect(page.url()).toBe(`${origin}/picks?featured=left-hand`);
+    expect(await page.evaluate(() => (window as { stayed?: boolean }).stayed)).toBe(true);
+    expect(await page.locator("#app").count()).toBe(1);
+    expect(await Promise.all(messages)).toEqual([]);
+  });
 });

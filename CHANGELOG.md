@@ -58,6 +58,18 @@ released together and share version numbers.
 - `release.ts bump` and `release.ts check` accept a changelog's subsections only as Keep a Changelog
   names and orders them: Added, Changed, Deprecated, Removed, Fixed, Security.
 - `ScopeIdMode`, the type of `scopeId`, is exported from `ferrovue/compiler`.
+- Navigating between pages (#74). `readPage(html)` from `ferrovue` reads a fetched document's
+  `PageRecord` and Pinia state text with no `DOMParser`, finding each script as the HTML parser
+  does, past comments, attribute values, raw text and script escapes. `renderPage(layout,
+  components, record, { previous })` shows the next page from its record with the app
+  `createPageApp(…, { hydrate: false })` builds, the same tree the first page hydrated, in place of
+  the container, mounting it before `previous` is unmounted so a router both use stays started.
+  `hydrateState(pinia, { text })` reads fetched state with the same `NaN` and `Infinity` handling,
+  and `linkRouter` takes the next page's `location`. `renderRecordedPage` from `ferrovue/testing`
+  checks that a page rendered from its record on the client shows the recorded HTML, comments and
+  empty text aside, and `conformanceSuite` checks a fresh client render of every fixture the same
+  way, with `clientDiffers` for the fixtures whose client render Vue itself writes differently.
+  `examples/fullstack` features one staff pick after another without a reload.
 
 ### Changed
 

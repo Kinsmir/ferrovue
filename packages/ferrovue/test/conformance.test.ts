@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Component } from "vue";
 import { generate } from "../src/compiler.ts";
 import { attachSsrRender, fixtureApp, readFixture } from "../src/testing.ts";
-import { cases, CLIENT_ONLY, HEAD, headRendered, hydrationBody, OPTIONS, placeHead, recordedHead, renderFixture, ROOT, ROUTES, TELEPORTS, UNHEAD_REWRITES, VUE_DISAGREES } from "./conformance-cases.ts";
+import { cases, CLIENT_ONLY, clientRenderDifference, HEAD, headRendered, hydrationBody, OPTIONS, placeHead, recordedHead, renderFixture, ROOT, ROUTES, TELEPORTS, UNHEAD_REWRITES, VUE_DISAGREES } from "./conformance-cases.ts";
 import { settled, stillLoading } from "../src/settle.ts";
 
 const WRITE = process.env.FERROVUE_FIXTURES_WRITE === "1";
@@ -95,6 +95,17 @@ describe.skipIf(WRITE)("the recorded HTML hydrates without a mismatch", () => {
   }
 });
 
+describe.skipIf(WRITE)("a fresh client render shows the recorded HTML", () => {
+  for (const c of cases) {
+    it(`${c.component}/${c.name}`, async () => {
+      const difference = await clientRenderDifference(await fixtureApp(components.get(c.component)!, readFixture(c.json), ROUTES, { ...OPTIONS, client: true }), c.html);
+      const differs = CLIENT_RENDER_DIFFERS.has(`${c.component}/${c.name}`);
+      expect(differs ? null : difference).toBeNull();
+      expect(difference !== null, "a fixture's client render differs exactly when it is in CLIENT_RENDER_DIFFERS").toBe(differs);
+    });
+  }
+});
+
 const CLIENT_DIFFERS = new Set([
   "ScopedQuirks/empty.json",
   "ScopedQuirks/hostile.json",
@@ -105,11 +116,17 @@ const CLIENT_DIFFERS = new Set([
   "PlainForward/empty.json",
 ]);
 
+const SELECT_MATCHES_NO_OPTION = ["Constants/hostile.json", "Constants/typical.json", "Form/blank.json", "Form/unknown-option.json"];
+const ATTRIBUTE_ON_NO_PROPERTY = ["Builtins/hostile.json", "Builtins/off.json", "Builtins/on.json", "Fallthrough/full.json", "Fallthrough/hostile.json", "Fallthrough/off.json"];
+const ASYNC_AND_CLIENT_ONLY = ["EscapedIdioms/empty.json", "EscapedIdioms/hostile.json", "EscapedIdioms/typical.json", "EscapedNull/hostile.json", "EscapedNull/null.json", "EscapedNull/present.json"];
+const HOLLOW_SLOTS = [...VUE_DISAGREES].filter((k) => k.startsWith("Hollow/"));
+const CLIENT_RENDER_DIFFERS = new Set([...CLIENT_DIFFERS, ...HOLLOW_SLOTS, ...SELECT_MATCHES_NO_OPTION, ...ATTRIBUTE_ON_NO_PROPERTY, ...ASYNC_AND_CLIENT_ONLY]);
+
 it("lists only fixtures that exist, and with scope ids in CLIENT_DIFFERS", () => {
   const scoped = new Set(cases.filter((c) => c.html.includes(" data-v-")).map((c) => `${c.component}/${c.name}`));
   const all = new Set(cases.map((c) => `${c.component}/${c.name}`));
   expect([...CLIENT_DIFFERS].filter((k) => !scoped.has(k))).toEqual([]);
-  expect([...VUE_DISAGREES, ...UNHEAD_REWRITES].filter((k) => !all.has(k))).toEqual([]);
+  expect([...VUE_DISAGREES, ...UNHEAD_REWRITES, ...CLIENT_RENDER_DIFFERS].filter((k) => !all.has(k))).toEqual([]);
 });
 
 describe.skipIf(WRITE)("the recorded HTML carries the scope ids the client renders", () => {

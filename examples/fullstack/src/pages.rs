@@ -157,7 +157,11 @@ impl Site {
             .into_iter()
             .filter_map(|(id, note)| Some(pick::Props::new(catalogue::book(id)?, note)))
             .collect();
-        let featured = &picks[0].book;
+        let asked = route.query("featured").attr_value();
+        let featured = picks
+            .iter()
+            .find(|pick| Some(&*pick.book.id) == asked)
+            .map_or(&picks[0].book, |pick| &pick.book);
         let mut page = ferrovue::Page::new();
         let parts = page.slot(
             "default",
@@ -166,7 +170,11 @@ impl Site {
                 .map(|props| Part::new(pick::NAME, pick::html(props))),
         );
         let reviews = page.hole("reviews");
-        let props = picks::Props::new(SHOP, featured.title.clone());
+        let books = picks
+            .iter()
+            .map(|pick| pick.book.clone())
+            .collect::<Vec<_>>();
+        let props = picks::Props::new(SHOP, featured.title.clone(), books);
         let head = Head::new();
         let mut body = String::from("<div id=\"app\">");
         let slots = picks::Slots {
