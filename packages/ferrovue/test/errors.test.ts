@@ -32,7 +32,8 @@ function index(): string {
 field of \`ferrovue --format json\`. A code names one kind of refusal and is never given to another:
 one the compiler stops raising stays listed here, marked retired. The first two digits are the
 area. [\`errors_and_limits\`](crate::guide::errors_and_limits) explains what the compiler refuses
-and why.
+and why. A warning, such as one for a deprecated configuration key, has a code of its own, shown as
+\`warning[FV1117]\` and with the \`severity\` \`"warning"\` in JSON.
 
 This page is generated from the compiler's list in \`packages/ferrovue/src/errors.ts\` by
 \`pnpm errors:generate\`; \`pnpm test\` fails when the two differ.

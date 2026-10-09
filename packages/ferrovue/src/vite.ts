@@ -1,8 +1,8 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
 import type { Plugin, ResolvedConfig, ViteDevServer } from "vite";
-import { type Config, CONFIG_FILE, loadConfig, write, type Written } from "./compiler.ts";
-import { formatRefusal, isRefusal } from "./diagnostics.ts";
+import { type Config, CONFIG_FILE, type GenError, loadConfig, write, type Written } from "./compiler.ts";
+import { formatRefusal, formatWarning, isRefusal } from "./diagnostics.ts";
 import { allPages, type FileRoute, fileRoutes, pagesFolder } from "./file-routes.ts";
 import { affects, type Inputs, inputsOf, watched } from "./inputs.ts";
 
@@ -30,7 +30,7 @@ export function vueScopeIds(config: ResolvedConfig): { mode: "filepath" | "filep
  * hydrate cleanly and show unstyled. */
 export function scopeIdMismatch(root: string, vue: { mode: string; root: string } | null, configFile = CONFIG_FILE): string | null {
   if (!vue) return null;
-  const config = loadConfig(root, configFile);
+  const config = loadConfig(root, configFile, ignore);
   const mode = config.scopeId ?? "filepath-source";
   const viteRoot = resolve(root, config.viteRoot ?? ".");
   if (mode === vue.mode && viteRoot === vue.root) return null;
@@ -51,6 +51,8 @@ export function scopeIdMismatch(root: string, vue: { mode: string; root: string 
   if (!files.some((f) => /<style\b[^>]*\bscoped\b/.test(readFileSync(join(root, f), "utf8")))) return null;
   return `\`<style scoped>\` ids: @vitejs/plugin-vue hashes "${vue.mode}" from ${vue.root}, ${configFile} "${mode}" from ${viteRoot}; set \`scopeId\` and \`viteRoot\` to match, or plugin-vue's \`features.componentIdGenerator\``;
 }
+
+const ignore = (): void => {};
 
 const ISLANDS = "ferrovue/islands";
 const ISLANDS_ID = `\0${ISLANDS}`;
@@ -100,10 +102,10 @@ export default function ferrovue(options: FerrovueOptions = {}): Plugin {
   let islands: Record<string, string> | null = null;
   let routes: string | null = null;
   let inputs: Inputs | null = null;
-  const regenerate = (): Written => {
+  const regenerate = (warn: (warning: GenError) => void): Written => {
     let config: Config | null = null;
     try {
-      config = loadConfig(root, configFile);
+      config = loadConfig(root, configFile, warn);
       const written = write(root, config);
       islands = written.islands;
       return written;
@@ -112,7 +114,7 @@ export default function ferrovue(options: FerrovueOptions = {}): Plugin {
     }
   };
   const pagesModule = (): string => {
-    const pages = pagesFolder(loadConfig(root, configFile));
+    const pages = pagesFolder(loadConfig(root, configFile, ignore));
     if (pages === null) throw new Error(`ferrovue: \`${ROUTES}\` is written from a folder of pages: set \`"routes": { "pages": "…" }\` in ${configFile}`);
     return routesModule(root, fileRoutes(root, pages));
   };
@@ -128,7 +130,7 @@ export default function ferrovue(options: FerrovueOptions = {}): Plugin {
       if (id !== ISLANDS_ID && id !== ROUTES_ID) return null;
       try {
         if (id === ROUTES_ID) return (routes ??= pagesModule());
-        return islandsModule(root, islands ?? regenerate().islands);
+        return islandsModule(root, islands ?? regenerate((w) => this.warn(formatWarning(w))).islands);
       } catch (e) {
         if (isRefusal(e)) this.error(formatRefusal(e));
         throw e;
@@ -140,7 +142,7 @@ export default function ferrovue(options: FerrovueOptions = {}): Plugin {
     },
     buildStart() {
       try {
-        regenerate();
+        regenerate((w) => this.warn(formatWarning(w)));
         const mismatch = scopeIdMismatch(root, vue, configFile);
         if (mismatch && building) this.error(`ferrovue: ${mismatch}`);
         if (mismatch) this.warn(`ferrovue: ${mismatch}`);
@@ -153,7 +155,7 @@ export default function ferrovue(options: FerrovueOptions = {}): Plugin {
       if (!inputs) {
         let config: Config | null = null;
         try {
-          config = loadConfig(root, configFile);
+          config = loadConfig(root, configFile, ignore);
         } catch {
         }
         inputs = inputsOf(root, configFile, config);
@@ -163,7 +165,7 @@ export default function ferrovue(options: FerrovueOptions = {}): Plugin {
         if (!inputs || !affects(inputs, resolve(file))) return;
         try {
           const before = JSON.stringify(islands);
-          const { changed, removed } = regenerate();
+          const { changed, removed } = regenerate((w) => server.config.logger.warn(`ferrovue: ${formatWarning(w)}`, { timestamp: true }));
           if (changed.length || removed.length) {
             server.config.logger.info(`ferrovue: ${changed.length} changed, ${removed.length} removed`, { timestamp: true });
           }

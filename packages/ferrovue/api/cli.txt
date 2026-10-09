@@ -1,0 +1,15 @@
+Usage: ferrovue [command] [options]
+
+Compile Vue components to Rust render functions, run from the project root.
+
+Commands:
+  init                     scaffold starter ferrovue.config.json and components
+
+Options:
+      --check              check that generated files match committed files without writing
+  -d, --diff               show unified diff of changes when checking (use with --check)
+      --format <format>    how to write errors and results: human (default) or json
+      --watch              watch components, stores, routes and config for changes and regenerate
+  -c, --config <path>      path to configuration file (default: ferrovue.config.json)
+  -v, --version            print the version and exit
+  -h, --help               print this help and exit

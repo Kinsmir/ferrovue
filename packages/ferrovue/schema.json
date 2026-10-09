@@ -1,0 +1,300 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ferrovue.config.json",
+  "description": "What `ferrovue.config.json` holds. Paths are relative to the project root.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "description": "The JSON Schema an editor checks the file against. ferrovue does not read it.",
+      "markdownDescription": "The JSON Schema an editor checks the file against. ferrovue does not read it.",
+      "type": "string"
+    },
+    "components": {
+      "description": "The directory of `.vue` files to compile.",
+      "markdownDescription": "The directory of `.vue` files to compile.",
+      "type": "string"
+    },
+    "out": {
+      "description": "The directory the Rust modules are written to. A module ferrovue wrote there is replaced or removed; any other file is left alone.",
+      "markdownDescription": "The directory the Rust modules are written to. A module ferrovue wrote there is replaced or removed; any other file is left alone.",
+      "type": "string"
+    },
+    "helpers": {
+      "description": "The module components import their helpers from, and the Rust twin of each export.",
+      "markdownDescription": "The module components import their helpers from, and the Rust twin of each export.",
+      "type": "object",
+      "properties": {
+        "module": {
+          "description": "The module a component imports the helpers from, as its imports name it: `./helpers`.",
+          "markdownDescription": "The module a component imports the helpers from, as its imports name it: `./helpers`.",
+          "type": "string"
+        },
+        "functions": {
+          "description": "Each function a template may call, by its name in that module.",
+          "markdownDescription": "Each function a template may call, by its name in that module.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "rust": {
+                "description": "The Rust path the generated code calls, e.g. `crate::helpers::format_count`.",
+                "markdownDescription": "The Rust path the generated code calls, e.g. `crate::helpers::format_count`.",
+                "type": "string"
+              },
+              "params": {
+                "description": "The type of each argument, in order.",
+                "markdownDescription": "The type of each argument, in order.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "string",
+                    "string?",
+                    "int",
+                    "int?",
+                    "float",
+                    "float?",
+                    "bool"
+                  ]
+                }
+              },
+              "returns": {
+                "description": "The type it returns.",
+                "markdownDescription": "The type it returns.",
+                "type": "string",
+                "enum": [
+                  "string",
+                  "string?",
+                  "int",
+                  "int?",
+                  "float",
+                  "float?",
+                  "bool"
+                ]
+              },
+              "maxLen": {
+                "description": "The longest string it returns, which is what a call adds to the buffer reservation.",
+                "markdownDescription": "The longest string it returns, which is what a call adds to the buffer reservation.",
+                "type": "integer",
+                "default": 0,
+                "minimum": 0
+              }
+            },
+            "required": [
+              "rust",
+              "params",
+              "returns"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "module",
+        "functions"
+      ],
+      "additionalProperties": false
+    },
+    "twins": {
+      "description": "Components ferrovue does not compile, by the name a template gives them (`VBtn`, which `<v-btn>` finds too), each rendered by a Rust function of the project's.",
+      "markdownDescription": "Components ferrovue does not compile, by the name a template gives them (`VBtn`, which `<v-btn>` finds too), each rendered by a Rust function of the project's.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "rust": {
+            "description": "The Rust path the generated parent calls, e.g. `crate::ui::v_btn`.",
+            "markdownDescription": "The Rust path the generated parent calls, e.g. `crate::ui::v_btn`.",
+            "type": "string"
+          },
+          "props": {
+            "description": "Each prop a template may pass it, by its name in Vue, with its type.",
+            "markdownDescription": "Each prop a template may pass it, by its name in Vue, with its type.",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "enum": [
+                "string",
+                "string?",
+                "int",
+                "int?",
+                "float",
+                "float?",
+                "bool"
+              ]
+            }
+          },
+          "slots": {
+            "description": "The slots a template may fill, by name: `[\"default\", \"prepend\"]`.",
+            "markdownDescription": "The slots a template may fill, by name: `[\"default\", \"prepend\"]`.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "rust"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "trustedHtml": {
+      "description": "The Rust type a `TrustedHtml` prop is, which must implement `ferrovue::TrustedHtml`, e.g. `crate::sanitize::SafeHtml`. A type that borrows names the props' lifetime, `'a`: `crate::render::Trusted<'a>`. `ferrovue::InlineHtml` makes every `TrustedHtml` prop inline HTML. Without it, only an `InlineHtml` prop may reach `v-html`.",
+      "markdownDescription": "The Rust type a `TrustedHtml` prop is, which must implement `ferrovue::TrustedHtml`, e.g. `crate::sanitize::SafeHtml`. A type that borrows names the props' lifetime, `'a`: `crate::render::Trusted<'a>`. `ferrovue::InlineHtml` makes every `TrustedHtml` prop inline HTML. Without it, only an `InlineHtml` prop may reach `v-html`.",
+      "type": "string"
+    },
+    "routes": {
+      "description": "A JSON file listing the app's routes as vue-router paths (`/users/:id`), which `<RouterLink>` resolves against, or `{ pages }`: a folder of pages whose file names give the routes, as vue-router's file-based routing reads them. Without it, a component cannot use `<RouterLink>`.",
+      "markdownDescription": "A JSON file listing the app's routes as vue-router paths (`/users/:id`), which `<RouterLink>` resolves against, or `{ pages }`: a folder of pages whose file names give the routes, as vue-router's file-based routing reads them. Without it, a component cannot use `<RouterLink>`.",
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "pages": {
+              "description": "The folder of pages, each a component, whose file names give the routes.",
+              "markdownDescription": "The folder of pages, each a component, whose file names give the routes.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "pages"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "router": {
+      "description": "The router, in full: its routes, the history's base, and the class names `createRouter` gives active links. `routes` alone is shorthand for `{ routes }`.",
+      "markdownDescription": "The router, in full: its routes, the history's base, and the class names `createRouter` gives active links. `routes` alone is shorthand for `{ routes }`.",
+      "type": "object",
+      "properties": {
+        "routes": {
+          "description": "Where the routes come from, as `routes` takes them.",
+          "markdownDescription": "Where the routes come from, as `routes` takes them.",
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "pages": {
+                  "description": "The folder of pages, each a component, whose file names give the routes.",
+                  "markdownDescription": "The folder of pages, each a component, whose file names give the routes.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "pages"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "base": {
+          "description": "The base `createWebHistory` is given, which every link starts with.",
+          "markdownDescription": "The base `createWebHistory` is given, which every link starts with.",
+          "type": "string",
+          "default": ""
+        },
+        "linkActiveClass": {
+          "description": "The class of a link to the current route or one of its parents.",
+          "markdownDescription": "The class of a link to the current route or one of its parents.",
+          "type": "string",
+          "default": "router-link-active"
+        },
+        "linkExactActiveClass": {
+          "description": "The class of a link to exactly the current route.",
+          "markdownDescription": "The class of a link to exactly the current route.",
+          "type": "string",
+          "default": "router-link-exact-active"
+        }
+      },
+      "required": [
+        "routes"
+      ],
+      "additionalProperties": false
+    },
+    "stores": {
+      "description": "The directory of Pinia stores (`.ts` files), whose state a component may read while it renders on the server.",
+      "markdownDescription": "The directory of Pinia stores (`.ts` files), whose state a component may read while it renders on the server.",
+      "type": "string"
+    },
+    "clientDirectives": {
+      "description": "Custom directives that render nothing on the server (no `getSSRProps`), by name, without `v-`: `[\"focus\", \"click-outside\"]`. Any other custom directive is refused, since the server cannot know what its `getSSRProps` would add.",
+      "markdownDescription": "Custom directives that render nothing on the server (no `getSSRProps`), by name, without `v-`: `[\"focus\", \"click-outside\"]`. Any other custom directive is refused, since the server cannot know what its `getSSRProps` would add.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "i18n": {
+      "description": "vue-i18n: the directory of locale files (`en.json`, `nl.json`), the locale a page renders in when it names none, and the locales a missing message falls back to.",
+      "markdownDescription": "vue-i18n: the directory of locale files (`en.json`, `nl.json`), the locale a page renders in when it names none, and the locales a missing message falls back to.",
+      "type": "object",
+      "properties": {
+        "messages": {
+          "description": "The directory of locale files, one per locale: `en.json`, `nl.json`.",
+          "markdownDescription": "The directory of locale files, one per locale: `en.json`, `nl.json`.",
+          "type": "string"
+        },
+        "locale": {
+          "description": "The locale a page renders in when it names none.",
+          "markdownDescription": "The locale a page renders in when it names none.",
+          "type": "string",
+          "default": "en"
+        },
+        "fallbackLocale": {
+          "description": "The locale or locales, in order, a message missing from the page's locale is looked up in.",
+          "markdownDescription": "The locale or locales, in order, a message missing from the page's locale is looked up in.",
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        }
+      },
+      "required": [
+        "messages"
+      ],
+      "additionalProperties": false
+    },
+    "scopeId": {
+      "description": "How a `<style scoped>` component's `data-v-` id is computed, which must be how `@vitejs/plugin-vue` computes it for the client: from the file's path (`\"filepath\"`, the plugin's choice in development, and with `features.componentIdGenerator: \"filepath\"`), or its path and source (`\"filepath-source\"`, the plugin's choice for a production build).",
+      "markdownDescription": "How a `<style scoped>` component's `data-v-` id is computed, which must be how `@vitejs/plugin-vue` computes it for the client: from the file's path (`\"filepath\"`, the plugin's choice in development, and with `features.componentIdGenerator: \"filepath\"`), or its path and source (`\"filepath-source\"`, the plugin's choice for a production build).",
+      "type": "string",
+      "enum": [
+        "filepath",
+        "filepath-source"
+      ],
+      "default": "filepath-source"
+    },
+    "viteRoot": {
+      "description": "Vite's root, from which a scope id hashes a component's path: the project root by default.",
+      "markdownDescription": "Vite's root, from which a scope id hashes a component's path: the project root by default.",
+      "type": "string",
+      "default": "."
+    },
+    "builders": {
+      "description": "Whether each props struct and shared type gets `new()` and a chainable setter per optional field: `true` by default. With `false`, props are built as struct literals.",
+      "markdownDescription": "Whether each props struct and shared type gets `new()` and a chainable setter per optional field: `true` by default. With `false`, props are built as struct literals.",
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "components",
+    "out"
+  ],
+  "additionalProperties": false
+}

@@ -37,6 +37,8 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+      - name: The npm package's API report and CLI help are current
+        run: pnpm api:check
       - name: The conformance suite's generated Rust is current
         run: pnpm conformance:check
       - name: The example's generated Rust is current

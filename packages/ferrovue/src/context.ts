@@ -4,6 +4,8 @@ import type { Plugin } from "./plugin.ts";
 import type { Declared } from "./constants.ts";
 import { type Component, type N, type Struct, type Ty, BOOL, FLOAT, GenError, INT, opt, STR } from "./model.ts";
 import type { Code } from "./errors.ts";
+import { formatWarning } from "./diagnostics.ts";
+import { CONFIG_SCHEMA, type Schema, TYPE_NAMES } from "./schema.ts";
 
 /** A type a helper takes or returns, as the configuration spells it. */
 export type TypeName = "string" | "string?" | "int" | "int?" | "float" | "float?" | "bool";
@@ -12,7 +14,9 @@ export type TypeName = "string" | "string?" | "int" | "int?" | "float" | "float?
 export interface HelperSpec {
   /** The Rust path the generated code calls, e.g. `crate::helpers::format_count`. */
   rust: string;
+  /** The type of each argument, in order. */
   params: TypeName[];
+  /** The type it returns. */
   returns: TypeName;
   /** The longest string it returns, which is what a call adds to the buffer reservation. */
   maxLen?: number;
@@ -31,12 +35,20 @@ export interface TwinSpec {
 
 /** What `ferrovue.config.json` holds. Paths are relative to the project root. */
 export interface Config {
+  /** The JSON Schema an editor checks the file against. ferrovue does not read it. */
+  $schema?: string;
   /** The directory of `.vue` files to compile. */
   components: string;
-  /** The directory the Rust modules are written to. Everything in it is replaced. */
+  /** The directory the Rust modules are written to. A module ferrovue wrote there is replaced or
+   * removed; any other file is left alone. */
   out: string;
   /** The module components import their helpers from, and the Rust twin of each export. */
-  helpers?: { module: string; functions: Record<string, HelperSpec> };
+  helpers?: {
+    /** The module a component imports the helpers from, as its imports name it: `./helpers`. */
+    module: string;
+    /** Each function a template may call, by its name in that module. */
+    functions: Record<string, HelperSpec>;
+  };
   /** Components ferrovue does not compile, by the name a template gives them (`VBtn`, which
    * `<v-btn>` finds too), each rendered by a Rust function of the project's. */
   twins?: Record<string, TwinSpec>;
@@ -51,7 +63,16 @@ export interface Config {
   routes?: RoutesSource;
   /** The router, in full: its routes, the history's base, and the class names `createRouter`
    * gives active links. `routes` alone is shorthand for `{ routes }`. */
-  router?: { routes: RoutesSource; base?: string; linkActiveClass?: string; linkExactActiveClass?: string };
+  router?: {
+    /** Where the routes come from, as `routes` takes them. */
+    routes: RoutesSource;
+    /** The base `createWebHistory` is given, which every link starts with. */
+    base?: string;
+    /** The class of a link to the current route or one of its parents. */
+    linkActiveClass?: string;
+    /** The class of a link to exactly the current route. */
+    linkExactActiveClass?: string;
+  };
   /** The directory of Pinia stores (`.ts` files), whose state a component may read while it renders
    * on the server. */
   stores?: string;
@@ -61,7 +82,14 @@ export interface Config {
   clientDirectives?: string[];
   /** vue-i18n: the directory of locale files (`en.json`, `nl.json`), the locale a page renders in
    * when it names none, and the locales a missing message falls back to. */
-  i18n?: { messages: string; locale?: string; fallbackLocale?: string | string[] };
+  i18n?: {
+    /** The directory of locale files, one per locale: `en.json`, `nl.json`. */
+    messages: string;
+    /** The locale a page renders in when it names none. */
+    locale?: string;
+    /** The locale or locales, in order, a message missing from the page's locale is looked up in. */
+    fallbackLocale?: string | string[];
+  };
   /** How a `<style scoped>` component's `data-v-` id is computed, which must be how
    * `@vitejs/plugin-vue` computes it for the client: from the file's path (`"filepath"`, the
    * plugin's choice in development, and with `features.componentIdGenerator: "filepath"`), or its
@@ -77,12 +105,19 @@ export interface Config {
 export type ScopeIdMode = "filepath" | "filepath-source";
 
 /** Where the routes come from: a JSON file of routes, or a folder of pages. */
-export type RoutesSource = string | { pages: string };
+export type RoutesSource =
+  | string
+  | {
+      /** The folder of pages, each a component, whose file names give the routes. */
+      pages: string;
+    };
 
 export const CONFIG_FILE = "ferrovue.config.json";
 
-/** Read the project's configuration. */
-export function loadConfig(root: string, configPath?: string): Config {
+const warnOnConsole = (warning: GenError): void => console.warn(formatWarning(warning));
+
+/** Read the project's configuration, handing `warn` a warning for each deprecated key it holds. */
+export function loadConfig(root: string, configPath?: string, warn: (warning: GenError) => void = warnOnConsole): Config {
   const filePath = configPath ? resolve(root, configPath) : join(root, CONFIG_FILE);
   const displayName = configPath ?? CONFIG_FILE;
   let text = "";
@@ -100,13 +135,8 @@ export function loadConfig(root: string, configPath?: string): Config {
   } catch (e) {
     throw new GenError("FV1103", `failed to parse \`${displayName}\`: ${(e as Error).message}`, { file: displayName });
   }
-  return checkConfig(raw, displayName);
+  return checkConfig(raw, displayName, warn);
 }
-
-const TYPE_NAMES: readonly string[] = ["string", "string?", "int", "int?", "float", "float?", "bool"] satisfies TypeName[];
-
-/** Every key of `Config`. */
-const KEYS = ["components", "out", "routes", "router", "stores", "trustedHtml", "helpers", "twins", "i18n", "clientDirectives", "scopeId", "viteRoot", "builders"];
 
 type Json = Record<string, unknown>;
 
@@ -135,16 +165,18 @@ function closest(key: string, known: readonly string[]): string | null {
   return best;
 }
 
-/** Check what a configuration file holds against `Config`, naming the first key that is unknown or
- * of the wrong shape. */
-function checkConfig(raw: unknown, file: string): Config {
+/** Check what a configuration file holds against `schema`, naming the first key that is unknown or
+ * of the wrong shape, and handing `warn` a warning for each deprecated key. */
+export function checkConfig(raw: unknown, file: string, warn: (warning: GenError) => void, schema: Schema = CONFIG_SCHEMA): Config {
   const refuse = (code: Code, what: string): never => {
     throw new GenError(code, what, { file });
   };
   const wrong = (key: string, shape: string): never => refuse("FV1115", `\`${key}\` in ${file} is ${shape}`);
-  const keys = (o: Json, path: string, known: readonly string[]): void => {
+  const keys = (o: Json, path: string, node: Schema | false | undefined): void => {
+    const props = (node && node.properties) || {};
     for (const k of Object.keys(o)) {
-      if (known.includes(k)) continue;
+      if (props[k]) continue;
+      const known = Object.keys(props).filter((x) => !x.startsWith("$") && !props[x]!.deprecated);
       const near = closest(k, known);
       const hint = near ? `did you mean \`${near}\`?` : `it takes ${known.map((x) => `\`${x}\``).join(", ")}`;
       refuse("FV1114", `${path ? `\`${path}\` in ${file}` : file} has no key \`${k}\`: ${hint}`);
@@ -167,7 +199,9 @@ function checkConfig(raw: unknown, file: string): Config {
     const what = Array.isArray(raw) ? "an array" : raw === null ? "`null`" : `a ${typeof raw}`;
     return refuse("FV1113", `${file} holds ${what}, where it holds an object: \`{ "components": "components", "out": "src/generated" }\``);
   }
-  keys(raw, "", KEYS);
+  const shape = schema.properties ?? {};
+  const entry = (node: Schema | undefined): Schema | undefined => node?.additionalProperties || undefined;
+  keys(raw, "", schema);
   if (typeof raw.components !== "string" || typeof raw.out !== "string") {
     throw new GenError("FV1104", `${file} needs \`components\` and \`out\` directories`, { file });
   }
@@ -177,20 +211,20 @@ function checkConfig(raw: unknown, file: string): Config {
   if (raw.builders !== undefined && typeof raw.builders !== "boolean") {
     throw new GenError("FV1106", `\`builders\` in ${file} is \`true\` or \`false\`: whether each props struct gets \`new()\` and a setter per optional field`, { file });
   }
-  for (const key of ["stores", "trustedHtml", "viteRoot"]) string(raw, key, key);
+  for (const key of ["$schema", "stores", "trustedHtml", "viteRoot"]) string(raw, key, key);
   if (raw.clientDirectives !== undefined && !isStrings(raw.clientDirectives)) wrong("clientDirectives", 'a list of directive names, as `["focus"]`');
   if (raw.routes !== undefined) routesSource(raw.routes, "routes");
   if (raw.router !== undefined) {
     const r = raw.router;
     if (!isObject(r)) return wrong("router", "an object: `{ routes, base?, linkActiveClass?, linkExactActiveClass? }`");
-    keys(r, "router", ["routes", "base", "linkActiveClass", "linkExactActiveClass"]);
+    keys(r, "router", shape.router);
     routesSource(r.routes, "router.routes");
     for (const key of ["base", "linkActiveClass", "linkExactActiveClass"]) string(r, key, `router.${key}`);
   }
   if (raw.i18n !== undefined) {
     const i = raw.i18n;
     if (!isObject(i)) return wrong("i18n", "an object: `{ messages, locale?, fallbackLocale? }`");
-    keys(i, "i18n", ["messages", "locale", "fallbackLocale"]);
+    keys(i, "i18n", shape.i18n);
     string(i, "messages", "i18n.messages", true);
     string(i, "locale", "i18n.locale");
     if (i.fallbackLocale !== undefined && typeof i.fallbackLocale !== "string" && !isStrings(i.fallbackLocale)) wrong("i18n.fallbackLocale", "a locale or a list of them");
@@ -198,13 +232,13 @@ function checkConfig(raw: unknown, file: string): Config {
   if (raw.helpers !== undefined) {
     const h = raw.helpers;
     if (!isObject(h)) return wrong("helpers", "an object: `{ module, functions }`");
-    keys(h, "helpers", ["module", "functions"]);
+    keys(h, "helpers", shape.helpers);
     string(h, "module", "helpers.module", true);
     if (!isObject(h.functions)) return wrong("helpers.functions", "an object of functions by name, each `{ rust, params, returns, maxLen? }`");
     for (const [name, spec] of Object.entries(h.functions)) {
       const path = `helpers.functions.${name}`;
       if (!isObject(spec)) return wrong(path, "an object: `{ rust, params, returns, maxLen? }`");
-      keys(spec, path, ["rust", "params", "returns", "maxLen"]);
+      keys(spec, path, entry(shape.helpers?.properties?.functions));
       string(spec, "rust", `${path}.rust`, true);
       if (!Array.isArray(spec.params)) return wrong(`${path}.params`, 'the list of types the function takes, as `["int"]`');
       spec.params.forEach((t, i) => typeName(t, `${path}.params[${i}]`));
@@ -217,7 +251,8 @@ function checkConfig(raw: unknown, file: string): Config {
     for (const [name, spec] of Object.entries(raw.twins)) {
       const path = `twins.${name}`;
       if (!isObject(spec)) return wrong(path, "an object: `{ rust, props?, slots? }`");
-      keys(spec, path, ["rust", "props", "slots"]);
+      keys(spec, path, entry(shape.twins));
+      if (typeof spec.rust !== "string") refuse("FV1110", `\`${path}\` in ${file} needs \`rust\`, the path of the function that renders it, as \`crate::ui::v_btn\``);
       if (spec.props !== undefined) {
         if (!isObject(spec.props)) return wrong(`${path}.props`, 'an object of prop types by name, as `{ "label": "string" }`');
         for (const [prop, t] of Object.entries(spec.props)) typeName(t, `${path}.props.${prop}`);
@@ -225,6 +260,17 @@ function checkConfig(raw: unknown, file: string): Config {
       if (spec.slots !== undefined && !isStrings(spec.slots)) wrong(`${path}.slots`, 'a list of slot names, as `["default"]`');
     }
   }
+  const deprecated = (o: unknown, node: Schema, path: string): void => {
+    if (!isObject(o)) return;
+    for (const [k, v] of Object.entries(o)) {
+      const at = path ? `${path}.${k}` : k;
+      const prop = node.properties?.[k] ?? (node.additionalProperties || undefined);
+      if (!prop) continue;
+      if (prop.deprecated) warn(new GenError("FV1117", `\`${at}\` in ${file} is deprecated since ${prop.deprecated.since}, and goes in the next major release: use ${prop.deprecated.use}`, { file }));
+      deprecated(v, prop, at);
+    }
+  };
+  deprecated(raw, schema, "");
   return raw as unknown as Config;
 }
 

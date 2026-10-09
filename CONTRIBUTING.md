@@ -98,6 +98,44 @@ A new integration is a new file in `plugins/`, added to `plugins/index.ts`. Wher
 what it needs, add one to `Plugin`, documented there and called from one place in the core, so the
 core still names no integration.
 
+## The npm package's contract
+
+What a project relies on from the npm package is checked in the repository, so a pull request that
+changes it shows the change:
+
+- **Exports.** `packages/ferrovue/api/*.api.md` is an [API Extractor](https://api-extractor.com/)
+  report of each entry of `package.json`'s `exports` (`ferrovue.api.md` for the package root), and
+  `api/cli.txt` is `ferrovue --help`. `pnpm api:report` builds the package and rewrites them;
+  `pnpm api:check`, run in CI, fails when they differ from what the build exports. A change to a
+  report is a change to the public API: say so in the CHANGELOG.
+- **Configuration.** `packages/ferrovue/schema.json` is the JSON Schema of `ferrovue.config.json`,
+  shipped as `ferrovue/schema.json` and published with every version at
+  `https://cdn.jsdelivr.net/npm/ferrovue@<version>/schema.json`, the `$schema` `ferrovue init`
+  writes. The keys, types and defaults are `CONFIG_SCHEMA` in `src/schema.ts`, which the
+  configuration's validation reads its keys from; the descriptions are the TSDoc of `Config` in
+  `src/context.ts`. `pnpm schema:generate` writes the file, and `pnpm test` fails when the schema and
+  `Config` disagree on a key, a type or whether it is required, when a default is not what the
+  compiler does without the key, or when the file is stale.
+- **Command-line options** are `FLAGS` in `src/args.ts`, which `--help` is written from.
+
+### Deprecating
+
+Something users rely on is removed only in a major release, after at least one minor release in
+which it still works and warns:
+
+- **A crate item** gets `#[deprecated(since = "0.7.0", note = "use `Other` instead")]`.
+- **A configuration key** gets `deprecated: { since: "0.7.0", use: "`newKey`" }` in
+  `CONFIG_SCHEMA` and a `@deprecated` tag in its TSDoc (the schema test checks the two agree). The
+  compiler still reads it, and warns with `warning[FV1117]` naming the replacement; the JSON Schema
+  marks it deprecated, so editors strike it through. A misspelt key is never taken for a deprecated
+  one.
+- **A command-line option** gets `deprecated: { since: "0.7.0", use: "'--new'" }` in `FLAGS`; it
+  still works, warns with `warning[FV1118]`, and `--help` marks it.
+
+Either warning goes to standard error, or into `diagnostics` with the `severity` `"warning"` under
+`--format json`, and does not change the exit status. List what a release deprecates in the
+CHANGELOG's `### Deprecated` subsection, and what it removes under `### Removed`.
+
 ## Pull requests
 
 - Keep a pull request to one change; the template's checklist covers what CI cannot.

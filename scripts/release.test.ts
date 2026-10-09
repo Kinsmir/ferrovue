@@ -9,6 +9,7 @@ import {
   isVersion,
   packageVersion,
   releaseChangelog,
+  sectionProblems,
   setCargoVersion,
   setPackageVersion,
   checkInheritedDependencies,
@@ -99,6 +100,18 @@ describe("release chores", () => {
     const empty = releaseChangelog(CHANGELOG, "0.2.0", "2026-11-01");
     expect(() => releaseChangelog(empty, "0.3.0", "2026-12-01")).toThrow(/empty/);
     expect(() => releaseChangelog(CHANGELOG, "0.1.0", "2026-12-01")).toThrow(/already has/);
+  });
+
+  it("takes the subsections Keep a Changelog names, Deprecated among them, each once and in its order", () => {
+    expect(sectionProblems("### Added\n\n- a\n\n### Changed\n\n- b\n\n### Deprecated\n\n- c\n\n### Removed\n\n- d\n\n### Fixed\n\n- e\n\n### Security\n\n- f", "0.2.0")).toEqual([]);
+    expect(sectionProblems("### Deprecated\n\n- c\n\n### Added\n\n- a", "0.2.0")).toEqual([
+      "CHANGELOG.md's 0.2.0 has its sections as Deprecated, Added: each once, in the order Added, Changed, Deprecated, Removed, Fixed, Security",
+    ]);
+    expect(sectionProblems("### Added\n\n- a\n\n### Added\n\n- b", "0.2.0")).toHaveLength(1);
+    expect(sectionProblems("### Docs\n\n- a", "0.2.0")).toEqual(['CHANGELOG.md\'s 0.2.0 has a section "Docs": it takes Added, Changed, Deprecated, Removed, Fixed, Security']);
+    expect(() => releaseChangelog(CHANGELOG.replace("### Added", "### Notes"), "0.2.0", "2026-11-01")).toThrow(/has a section "Notes"/);
+    const files = { cargo: CARGO, pkg: PKG, changelog: CHANGELOG.replace("## [0.1.0] - 2026-10-04\n\n", "## [0.1.0] - 2026-10-04\n\n### Fixed\n\n- x\n\n### Added\n\n"), crates: CRATE_MANIFESTS };
+    expect(checkRelease("v0.1.0", files).join("\n")).toMatch(/in the order Added/);
   });
 
   it("moves the [Unreleased] link on, and links the new version from the tag before it", () => {
