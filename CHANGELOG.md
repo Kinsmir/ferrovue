@@ -8,6 +8,8 @@ released together and share version numbers.
 ### Changed
 
 - The npm package depends on `postcss` `^8.5.29`.
+- The repository develops and tests with oxlint 1.87, Playwright 1.64 and vscode-uri 3.2, and its
+  `Cargo.lock` takes the latest patch and minor releases Rust 1.89 builds.
 
 ## [0.7.1] - 2026-10-09
 

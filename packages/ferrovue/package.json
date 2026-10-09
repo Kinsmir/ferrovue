@@ -103,7 +103,7 @@
     "typescript-js": "npm:typescript@6.0.3",
     "vite": "catalog:",
     "vitest": "catalog:",
-    "vscode-uri": "3.1.0",
+    "vscode-uri": "3.2.0",
     "vue": "catalog:",
     "vue-i18n": "catalog:",
     "vue-router": "catalog:"
