@@ -85,7 +85,7 @@
     "@vue/compiler-sfc": "catalog:",
     "@vue/shared": "catalog:",
     "generic-names": "^4.0.0",
-    "postcss": "^8.5.28",
+    "postcss": "^8.5.29",
     "postcss-modules-extract-imports": "^3.1.0",
     "postcss-modules-local-by-default": "^4.2.0",
     "postcss-modules-scope": "^3.2.1",
