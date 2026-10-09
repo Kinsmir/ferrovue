@@ -6,7 +6,7 @@ import { relativePath } from "../src/paths.ts";
 
 const ROOT = join(import.meta.dirname, "..");
 const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as {
-  exports: Record<string, { types: string; default: string }>;
+  exports: Record<string, string | { types: string; default: string }>;
   sideEffects: unknown;
   peerDependencies: Record<string, string>;
 };
@@ -47,10 +47,14 @@ it("keeps every browser entry free of the compiler", () => {
   }
 });
 
-it("exports modules the build emits, with the compiler under ferrovue/compiler", () => {
-  expect(pkg.exports["."]!.default).toBe("./dist/index.js");
-  expect(pkg.exports["./compiler"]!.default).toBe("./dist/compiler.js");
-  for (const [name, target] of Object.entries(pkg.exports)) {
+it("exports modules the build emits, with the compiler under ferrovue/compiler, and the configuration's schema", () => {
+  expect(pkg.exports["."]).toMatchObject({ default: "./dist/index.js" });
+  expect(pkg.exports["./compiler"]).toMatchObject({ default: "./dist/compiler.js" });
+  expect(pkg.exports["./schema.json"]).toBe("./schema.json");
+  expect(existsSync(join(ROOT, "schema.json"))).toBe(true);
+  const modules = Object.entries(pkg.exports).filter((e): e is [string, { types: string; default: string }] => typeof e[1] === "object");
+  expect(modules.length).toBe(Object.keys(pkg.exports).length - 1);
+  for (const [name, target] of modules) {
     const source = target.default.replace(/^\.\/dist\//, "src/").replace(/\.js$/, ".ts");
     expect(existsSync(join(ROOT, source)), `${name} → ${source}`).toBe(true);
     expect(target.types, name).toBe(target.default.replace(/\.js$/, ".d.ts"));

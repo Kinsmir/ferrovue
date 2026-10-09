@@ -72,6 +72,21 @@ export function changelogNotes(changelog: string, version: string): string | nul
   return lines.slice(start + 1, end < 0 ? undefined : end).join("\n").trim();
 }
 
+/** The subsections a version's notes may have, in the order they come. */
+export const SECTIONS = ["Added", "Changed", "Deprecated", "Removed", "Fixed", "Security"];
+
+/** What is wrong with the subsections of a version's notes: one that is not in `SECTIONS`, or one
+ * out of their order. */
+export function sectionProblems(notes: string, version: string): string[] {
+  const headings = [...notes.matchAll(/^### (.*)$/gm)].map((m) => m[1]!.trim());
+  const problems = headings.filter((h) => !SECTIONS.includes(h)).map((h) => `CHANGELOG.md's ${version} has a section "${h}": it takes ${SECTIONS.join(", ")}`);
+  const known = headings.filter((h) => SECTIONS.includes(h));
+  if (known.some((h, i) => i > 0 && SECTIONS.indexOf(h) <= SECTIONS.indexOf(known[i - 1]!))) {
+    problems.push(`CHANGELOG.md's ${version} has its sections as ${known.join(", ")}: each once, in the order ${SECTIONS.join(", ")}`);
+  }
+  return problems;
+}
+
 /** A link reference at the changelog's foot: `[0.6.0]: https://…/compare/v0.5.0...v0.6.0`. */
 const LINK = /^\[([^\]]+)\]:\s*(\S+)\s*$/;
 const UNRELEASED_LINK = /^\[Unreleased\]:\s*(\S+)\/compare\/(v[^.\s]\S*?)\.\.\.HEAD\s*$/m;
@@ -91,6 +106,8 @@ export function releaseChangelog(changelog: string, version: string, date: strin
   const unreleased = changelogNotes(changelog, "Unreleased");
   if (unreleased === null) throw new Error("CHANGELOG.md has no [Unreleased] section");
   if (!unreleased) throw new Error("CHANGELOG.md's [Unreleased] section is empty: write the notes first");
+  const problems = sectionProblems(unreleased, "Unreleased");
+  if (problems.length) throw new Error(problems.join("\n"));
   return releaseLinks(changelog.replace("## [Unreleased]", `## [Unreleased]\n\n## [${version}] - ${date}`), version);
 }
 
@@ -122,6 +139,7 @@ export function checkRelease(tag: string, files: ReleaseFiles): string[] {
   if (pkg !== version) problems.push(`packages/ferrovue/package.json is at ${pkg}, the tag at ${version}`);
   const notes = changelogNotes(files.changelog, version);
   if (!notes) problems.push(`CHANGELOG.md has no notes for ${version}`);
+  else problems.push(...sectionProblems(notes, version));
   const links = files.changelog.split("\n").filter((l) => LINK.test(l));
   if (links.length && !links.some((l) => l.startsWith(`[${version}]:`))) problems.push(`CHANGELOG.md has no link for ${version}: \`release.ts bump\` writes it`);
   return problems;

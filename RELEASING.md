@@ -9,7 +9,10 @@ becomes public until a maintainer approves it, once on each registry.
 
 ## Cutting a release
 
-1. Make sure `CHANGELOG.md`'s `[Unreleased]` section describes what is shipping.
+1. Make sure `CHANGELOG.md`'s `[Unreleased]` section describes what is shipping. Its subsections
+   are those of [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), each at most once and in
+   this order: `### Added`, `### Changed`, `### Deprecated`, `### Removed`, `### Fixed`,
+   `### Security`. `release.ts bump` and `release.ts check` refuse any other heading or order.
 2. Choose the version. While the crates are at 0.x, a release that breaks a public API bumps the
    minor version (0.1.3 to 0.2.0) and one that does not bumps the patch (0.2.0 to 0.2.1), as Cargo
    reads versions. `cargo semver-checks -p <crate>` (`cargo install cargo-semver-checks --locked`)
@@ -95,6 +98,23 @@ gh attestation verify ferrovue-0.2.0.tgz --repo Kinsmir/ferrovue
 `cargo publish` packs the crates again in the job that publishes them, so the `.crate` files on the
 release are the same sources, not necessarily the same bytes as crates.io's; `cargo package --list`
 or unpacking both shows the files agree.
+
+## Deprecations
+
+A release removes only what an earlier minor release deprecated, and only in a major release (after
+1.0; before it, a minor one). Before 1.0 and after it, a deprecation lasts at least one minor
+release:
+
+- a crate item carries `#[deprecated]` in at least one minor release before the major that removes
+  it, and `cargo-semver-checks` reports the removal as breaking;
+- a configuration key or command-line option warns (`FV1117`, `FV1118`) for at least one minor
+  release before it is removed, and its removal is listed under `### Removed`;
+- the npm package's exports change only with `packages/ferrovue/api` (`pnpm api:report`), so a
+  removed export shows in the release's diff.
+
+Before a major release, search for `#[deprecated`, `deprecated:` in `packages/ferrovue/src/schema.ts`
+and `packages/ferrovue/src/args.ts`, and remove what has been deprecated for at least one minor
+release.
 
 ## Release dry run
 

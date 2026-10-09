@@ -23,6 +23,7 @@
   },
   "files": [
     "dist",
+    "schema.json",
     "README.md",
     "LICENSE-MIT",
     "LICENSE-APACHE"
@@ -63,7 +64,8 @@
     "./vite": {
       "types": "./dist/vite.d.ts",
       "default": "./dist/vite.js"
-    }
+    },
+    "./schema.json": "./schema.json"
   },
   "sideEffects": false,
   "bin": {

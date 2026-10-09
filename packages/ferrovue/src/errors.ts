@@ -294,6 +294,14 @@ export const ERRORS = {
   },
   FV1115: { title: "Configuration value of the wrong type" },
   FV1116: { title: "Directory the configuration names that cannot be read" },
+  FV1117: {
+    title: "Deprecated configuration key",
+    detail: "A warning: ferrovue still reads the key, and stops reading it in the next major release. The message names what to write instead. A key is deprecated for at least one minor release before it is removed.",
+  },
+  FV1118: {
+    title: "Deprecated command-line option",
+    detail: "A warning: the option still works, and is removed in the next major release. The message names what to use instead. An option is deprecated for at least one minor release before it is removed.",
+  },
 
   FV1201: { title: "Route parameter that is not a present string or number" },
   FV1202: { title: "`to` that is not a string or an object literal" },

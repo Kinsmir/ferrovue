@@ -47,10 +47,17 @@ let-chains, so the crate that includes it needs **edition 2024**.
 
 ```json
 {
+  "$schema": "https://cdn.jsdelivr.net/npm/ferrovue@0.7.0/schema.json",
   "components": "client/components",
   "out": "src/generated"
 }
 ```
+
+`$schema` points an editor at the configuration's JSON Schema, published with each version of the
+npm package, so VS Code and other JSON editors complete the keys, describe them on hover and flag a
+misspelt one. Name the version of `ferrovue` you use; `ferrovue init` writes it. ferrovue does not
+read `$schema`. Offline, the copy in the installed package works as well:
+`"$schema": "./node_modules/ferrovue/schema.json"`.
 
 | Key | Required | Meaning |
 |---|---|---|
@@ -736,6 +743,15 @@ the fixtures from it. A weekly CI job re-records them from the newest patch each
 hydrates the committed HTML with it, so a patch that changes what Vue writes or hydrates is caught
 before it reaches you; a ferrovue patch follows when one does.
 
+### Deprecations
+
+Something ferrovue stops supporting is deprecated first, for at least one minor release, and
+removed in the next major release. A deprecated item of the crates carries `#[deprecated]`, so the
+Rust compiler warns where it is used. A deprecated configuration key warns with
+`warning[FV1117]` and a deprecated command-line option with `warning[FV1118]`, each naming what
+replaces it, and the JSON Schema marks the key deprecated for editors. Each release's CHANGELOG lists
+what it deprecates under "Deprecated".
+
 ## Repository layout
 
 ```text
@@ -764,6 +780,7 @@ packages/ferrovue/           the compiler (npm package)
   src/index.ts               `ferrovue`: the browser API, `mountIslands`, `mountPage`, `hydrateState` and the types
   src/compiler.ts            `ferrovue/compiler`: `generate`, `write`
   src/context.ts, model.ts   `ferrovue.config.json`, and the types and values the compiler passes around
+  src/schema.ts              the configuration's keys, types and defaults, from which `schema.json` is written
   src/component.ts, script.ts, typescript.ts, constants.ts
                              a `.vue` file read, <script setup>, TypeScript types, constants and enums
   src/template.ts, children.ts, slots.ts, loops.ts, vhtml.ts
@@ -779,7 +796,8 @@ packages/ferrovue/           the compiler (npm package)
   src/plugins/               vue-router, Pinia, vue-i18n, scoped styles, <Teleport>, shared types,
                              <ClientOnly>, Rust twins, provide and inject, the page head
   src/rust.ts, emitter.ts    the Rust source written out
-  src/cli.ts, vite.ts        the `ferrovue` command and the Vite plugin
+  src/cli.ts, args.ts, vite.ts
+                             the `ferrovue` command, its options, and the Vite plugin
   src/diff.ts                the diff `ferrovue --check --diff` prints for a stale file
   src/errors.ts, diagnostics.ts
                              every error code with its title, and errors as the CLI, JSON and Vite show them
@@ -796,6 +814,8 @@ packages/ferrovue/           the compiler (npm package)
   src/hydration.ts           `hydrateRecordedPage`, which `ferrovue/testing` exports
   src/types.ts               `ferrovue/types`: `TrustedHtml`, `InlineHtml`, `Float`
   test/                      compiler, CLI, router, vector, island, Vite and conformance tests
+  api/                       the package's API report, an `.api.md` per export and `cli.txt` (`pnpm api:report`)
+  schema.json                the JSON Schema of `ferrovue.config.json` (`pnpm schema:generate`)
   browser/                   conformance fixtures and recorded pages hydrated in real browsers (`pnpm test:browser`)
   bench/                     Vue renderToString benchmarks, the other half of Performance
   fuzz/                      the randomised differential tester (`pnpm fuzz`)
@@ -807,6 +827,7 @@ examples/dioxus/             a Dioxus page, rendered with dioxus-ssr, with an is
 scripts/ferrovue-in.ts       the `ferrovue` command run in a project of this repository (`pnpm conformance:check`, CI)
 scripts/inspect.ts           Vue's SSR code and render of a component beside the Rust ferrovue generates for it
 scripts/release.ts           the release version bump (see RELEASING.md)
+scripts/api-report.ts        the npm package's API report, written and checked (`pnpm api:report`, `pnpm api:check`)
 ```
 
 ## Development

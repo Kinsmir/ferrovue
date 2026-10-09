@@ -25,21 +25,29 @@ let-chains, and the latest stable Rust.
 
 ```json
 {
+  "$schema": "https://cdn.jsdelivr.net/npm/ferrovue@0.7.0/schema.json",
   "components": "client/components",
   "out": "src/generated",
   "routes": "client/routes.json"
 }
 ```
 
+`$schema` names the configuration's JSON Schema, which every version of the npm package ships as
+`schema.json`; `ferrovue init` writes it with the version that runs. VS Code reads it with no
+extension or setting: it completes the keys, describes each on hover, and underlines a misspelt
+key, a value of the wrong type and a deprecated key. ferrovue does not read `$schema`. Without
+network access, point it at the installed package: `"./node_modules/ferrovue/schema.json"`.
+
 | Key | Required | Meaning |
 |---|---|---|
 | `components` | yes | Directory of `.vue` files to compile |
-| `out` | yes | Directory the Rust modules are written to. **Everything in it is replaced.** |
+| `out` | yes | Directory the Rust modules are written to. **Every module ferrovue wrote there is replaced**, and one no component produces any more is removed; a `.rs` file without ferrovue's `// @generated` header is left alone |
 | `routes` | no | JSON file listing the app's routes: each a vue-router path, or `{ "path", "name", "children" }`. Needed for `<RouterLink>`, `<RouterView>` and `useRoute()`. See [`routing`](crate::guide::routing) |
 | `router` | no | Instead of `routes`: `{ routes, base?, linkActiveClass?, linkExactActiveClass? }`, matching `createWebHistory(base)` and `createRouter`'s options |
 | `stores` | no | Directory of Pinia stores whose state components may read. See [`pinia`](crate::guide::pinia) |
 | `trustedHtml` | no | Rust path of the type a `TrustedHtml` prop is: `ferrovue::BasicHtml`, `ferrovue::Sanitised` with the `ammonia` feature, or a type of your own such as `crate::html::CleanHtml`. Needed for `v-html`. See [`escaping`](crate::guide::escaping) |
 | `helpers` | no | `{ module, functions }`: functions a template may call, each mapped to a Rust twin. See [`errors_and_limits`](crate::guide::errors_and_limits#helpers) |
+| `twins` | no | Components ferrovue does not compile, each rendered by a Rust function of yours: `{ "VBtn": { "rust": "crate::ui::v_btn", "props": { "label": "string" }, "slots": ["default"] } }`. See [`errors_and_limits`](crate::guide::errors_and_limits#rust-twins) |
 | `i18n` | no | vue-i18n: `{ messages, locale?, fallbackLocale? }`: the directory of locale files (`en.json`, `nl.json`), the default locale and the fallbacks. See [`i18n`](crate::guide::i18n) |
 | `clientDirectives` | no | Custom directives with no server output, by name without `v-`: `["focus"]` |
 | `scopeId` | no | How a `<style scoped>` id is hashed, as `@vitejs/plugin-vue` hashes it: `"filepath-source"` (the default, the plugin's in a production build) or `"filepath"`. See [`scoped_styles`](crate::guide::scoped_styles) |
@@ -321,7 +329,10 @@ Lines and columns count from 1, and the end is exclusive. A field the compiler d
 `null`: the end is known for a construct in `<script setup>`, the line and column for most errors
 in a `.vue` file, and only the file for a configuration, locale or routes file. A file that does not
 parse has the code `FV0001` and the parser's message. The compiler stops at the
-first error, so `diagnostics` holds one at most today. A run that succeeds adds `out`, `files`,
+first error, so `diagnostics` holds one error at most today. A warning, such as one for a deprecated
+configuration key (`FV1117`) or command-line option (`FV1118`), is a diagnostic with the
+`severity` `"warning"`, listed before the error, and does not change the exit status; without
+`--format json` it is written to standard error as `warning[FV1117]: …`. A run that succeeds adds `out`, `files`,
 `changed` and `removed`; `--check` adds `out`, `stale` and `notGenerated`, the modules it would
 rewrite or remove. `--format json` does not combine with `--diff`.
 

@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, expect, it } from "vitest";
+import { type Flag, FLAGS, helpText, parseArgs } from "../src/args.ts";
 
 const CLI = join(import.meta.dirname, "../src/cli.ts");
 let root = "";
@@ -235,6 +236,27 @@ it("--help prints usage information", () => {
   expect(r.stdout).toContain("init");
 });
 
+it("prints the help committed in api/cli.txt, the CLI's part of the package's contract", () => {
+  const committed = readFileSync(join(import.meta.dirname, "../api/cli.txt"), "utf8");
+  expect(run("--help").stdout, "run `pnpm api:report`").toBe(committed);
+});
+
+it("refuses an option without its value, and a value given to an option that takes none", () => {
+  expect(run("--format").stderr).toBe("error: option '--format' requires an argument\n");
+  expect(run("--check=yes").stderr).toBe("error: option '--check' takes no value\n");
+});
+
+it("warns of a deprecated option, naming what replaces it, and still reads it", () => {
+  const flags: Flag[] = [...FLAGS, { names: ["--verify"], help: "check", deprecated: { since: "0.7.0", use: "'--check'" } }];
+  const parsed = parseArgs(["--verify", "--format=json"], flags);
+  if ("error" in parsed) throw new Error(parsed.error);
+  expect(parsed.options).toEqual(new Map<string, string | true>([["--verify", true], ["--format", "json"]]));
+  expect(parsed.warnings).toEqual([expect.objectContaining({ code: "FV1118", message: "'--verify' is deprecated since 0.7.0, and goes in the next major release: use '--check'" })]);
+  expect(helpText(flags)).toContain("      --verify             check (deprecated: use '--check')");
+  const current = parseArgs(["--check", "-d"]);
+  expect("error" in current ? current.error : current.warnings).toEqual([]);
+});
+
 it("-h prints usage information", () => {
   const r = run("-h");
   expect(r.status, r.stderr).toBe(0);
@@ -264,6 +286,12 @@ it("init scaffolds a starter configuration and component in an empty directory",
     expect(r.stdout).toContain("created components/Hello.vue");
     expect(existsSync(join(emptyDir, "ferrovue.config.json"))).toBe(true);
     expect(existsSync(join(emptyDir, "components/Hello.vue"))).toBe(true);
+    const { version } = JSON.parse(readFileSync(join(import.meta.dirname, "../package.json"), "utf8")) as { version: string };
+    expect(JSON.parse(readFileSync(join(emptyDir, "ferrovue.config.json"), "utf8"))).toEqual({
+      $schema: `https://cdn.jsdelivr.net/npm/ferrovue@${version}/schema.json`,
+      components: "components",
+      out: "src/generated",
+    });
 
     const gen = spawnSync(process.execPath, [CLI], { cwd: emptyDir, encoding: "utf8" });
     expect(gen.status, gen.stderr).toBe(0);

@@ -18,6 +18,7 @@ rust:
 # The committed generated Rust is what the compiler writes today.
 generated:
     pnpm conformance:check
+    pnpm api:check
     node scripts/ferrovue-in.ts examples/greeting --check
     node scripts/ferrovue-in.ts examples/dioxus --check
     node scripts/ferrovue-in.ts crates/ferrovue-contract --check

@@ -39,6 +39,25 @@ released together and share version numbers.
   pre-release through the release's own `pack.yml` and has npm stage it with `--dry-run`.
 - The criterion benchmark times the runtime's attribute merging, number writing and head rendering
   on their own, each checked against the output it writes.
+- A JSON Schema of `ferrovue.config.json`, shipped in the npm package as `ferrovue/schema.json` and
+  published with each version at `https://cdn.jsdelivr.net/npm/ferrovue@<version>/schema.json`.
+  `ferrovue init` writes that URL as `$schema`, which ferrovue accepts and does not read, so VS Code
+  completes and describes the keys with no extension. The configuration's validation reads its keys
+  from the same definition, and a test fails when the schema and the `Config` type disagree on a key,
+  a type, a required key or a description, or a default differs from what the compiler does without
+  the key.
+- An API report of the npm package: `packages/ferrovue/api` holds an API Extractor report of each
+  export and `ferrovue --help`, which `pnpm api:report` writes and `pnpm api:check` checks in CI.
+- A deprecation policy (README, CONTRIBUTING.md, RELEASING.md): a crate item carries `#[deprecated]`,
+  and a configuration key or command-line option warns, for at least one minor release before it
+  is removed in a major one. A deprecated key warns with `warning[FV1117]` and a deprecated option
+  with `warning[FV1118]`, each naming its replacement; `--format json` lists warnings in
+  `diagnostics` with the `severity` `"warning"`, the Vite plugin through Vite's logger, and
+  `loadConfig` takes a function to hand them to (`console.warn` by default). The JSON Schema marks a
+  deprecated key for editors, and `--help` a deprecated option.
+- `release.ts bump` and `release.ts check` accept a changelog's subsections only as Keep a Changelog
+  names and orders them: Added, Changed, Deprecated, Removed, Fixed, Security.
+- `ScopeIdMode`, the type of `scopeId`, is exported from `ferrovue/compiler`.
 
 ### Changed
 
@@ -88,6 +107,11 @@ released together and share version numbers.
   CSS); the head vectors gain hostile attribute names and `<!--<script>` in scripts; the compiler's
   tests refuse an unsafe bound attribute name, a name chosen at run time and `v-bind` of an object
   that is not a literal.
+- A twin without a string `rust` is refused when the configuration is read (FV1110), with the
+  other configuration errors.
+- `ferrovue --format` without a value is refused as `--config` without one is ("option '--format'
+  requires an argument"), and a value given to an option that takes none (`--check=yes`) is
+  refused.
 
 ### Fixed
 
@@ -119,6 +143,8 @@ released together and share version numbers.
   declares with a name like a listener (`onSale`) takes the value bound to it, as Vue gives it,
   where it was left out; a listener whose name is chosen at run time, or comes from `v-on` of an
   object, given to such a child is FV0514.
+- The quick start's table of configuration keys lists `twins`, and says that `out` keeps files
+  ferrovue did not write.
 
 ### Security
 

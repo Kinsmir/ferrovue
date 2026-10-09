@@ -2,35 +2,31 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, watch, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { relativePath } from "./paths.ts";
-import { type Config, CONFIG_FILE, generate, isGenerated, loadConfig, VERSION, write } from "./compiler.ts";
+import { type Config, CONFIG_FILE, type GenError, generate, isGenerated, loadConfig, VERSION, write } from "./compiler.ts";
+import { helpText, parseArgs } from "./args.ts";
 import { unifiedDiff } from "./diff.ts";
-import { diagnose, formatRefusal, isRefusal } from "./diagnostics.ts";
+import { type Diagnostic, diagnose, formatRefusal, formatWarning, isRefusal } from "./diagnostics.ts";
 import { affects, type Inputs, inputsOf } from "./inputs.ts";
 
 const root = process.cwd();
 
-const HELP = `Usage: ferrovue [command] [options]
-
-Compile Vue components to Rust render functions, run from the project root.
-
-Commands:
-  init                     scaffold starter ferrovue.config.json and components
-
-Options:
-      --check              check that generated files match committed files without writing
-  -d, --diff               show unified diff of changes when checking (use with --check)
-      --format <format>    how to write errors and results: human (default) or json
-      --watch              watch components, stores, routes and config for changes and regenerate
-  -c, --config <path>      path to configuration file (default: ferrovue.config.json)
-  -v, --version            print the version and exit
-  -h, --help               print this help and exit
-`;
+const SCHEMA_URL = `https://cdn.jsdelivr.net/npm/ferrovue@${VERSION}/schema.json`;
 
 let json = false;
+let warnings: Diagnostic[] = [];
 
-function emit(result: Record<string, unknown>): void {
-  console.log(JSON.stringify({ diagnostics: [], ...result }));
+function warn(warning: GenError): void {
+  if (json) warnings.push(diagnose(warning, "warning"));
+  else console.error(formatWarning(warning));
 }
+
+function emit(result: Record<string, unknown> & { diagnostics?: Diagnostic[] }): void {
+  const { diagnostics = [], ...rest } = result;
+  console.log(JSON.stringify({ diagnostics: [...warnings, ...diagnostics], ...rest }));
+  warnings = [];
+}
+
+const load = (configPath?: string): Config => loadConfig(root, configPath, warn);
 
 function report(e: unknown): void {
   if (!isRefusal(e)) throw e;
@@ -49,6 +45,7 @@ function initProject(targetRoot: string, configPath?: string): number {
 
   mkdirSync(dirname(configFile), { recursive: true });
   const config = {
+    $schema: SCHEMA_URL,
     components: defaultComponents,
     out: defaultOut,
   };
@@ -137,7 +134,7 @@ function watchProject(configPath?: string): void {
   const run = (): void => {
     let config: Config | null = null;
     try {
-      config = loadConfig(root, configPath);
+      config = load(configPath);
       once(config);
     } catch (e) {
       // A refusal is reported as one; anything else (a folder renamed away, a file read as it is
@@ -165,69 +162,50 @@ function watchProject(configPath?: string): void {
 }
 
 try {
-  const rawArgs = process.argv.slice(2);
-  let configPath: string | undefined;
-  const args: string[] = [];
-
-  for (let i = 0; i < rawArgs.length; i++) {
-    const arg = rawArgs[i]!;
-    if (arg === "-c" || arg === "--config") {
-      if (i + 1 >= rawArgs.length || rawArgs[i + 1]!.startsWith("-")) {
-        console.error(`error: option '${arg}' requires an argument`);
-        process.exit(1);
-      }
-      configPath = rawArgs[++i];
-    } else if (arg.startsWith("--config=")) {
-      configPath = arg.slice("--config=".length);
-    } else if (arg === "--format" || arg.startsWith("--format=")) {
-      const format = arg === "--format" ? rawArgs[++i] : arg.slice("--format=".length);
-      if (format !== "human" && format !== "json") {
-        console.error(`error: '--format' is 'human' or 'json'`);
-        process.exit(1);
-      }
-      json = format === "json";
-    } else {
-      args.push(arg);
-    }
-  }
-
-  const known = new Set(["init", "--check", "--diff", "-d", "--watch", "-v", "--version", "-h", "--help"]);
-  const unknown = args.find((a) => !known.has(a));
-  if (unknown !== undefined) {
-    console.error(`error: unknown option or command '${unknown}'\n\nRun \`ferrovue --help\` for usage.`);
+  const parsed = parseArgs(process.argv.slice(2));
+  if ("error" in parsed) {
+    console.error(`error: ${parsed.error}`);
     process.exit(1);
   }
+  const { command, options, spelt } = parsed;
+  const configPath = options.get("--config") as string | undefined;
+  const format = options.get("--format");
+  if (format !== undefined && format !== "human" && format !== "json") {
+    console.error(`error: '--format' is 'human' or 'json'`);
+    process.exit(1);
+  }
+  json = format === "json";
+  for (const w of parsed.warnings) warn(w);
   const conflict = (a: string, b: string): never => {
     console.error(`error: '${a}' does not combine with '${b}'`);
     return process.exit(1);
   };
-  if (args.includes("init")) {
-    const other = args.find((a) => a === "--check" || a === "--watch" || a === "--diff" || a === "-d");
-    if (other !== undefined) conflict("init", other);
+  if (command === "init") {
+    const other = ["--check", "--watch", "--diff"].find((o) => options.has(o));
+    if (other !== undefined) conflict("init", spelt.get(other)!);
     if (json) conflict("init", "--format json");
   }
-  if (args.includes("--check") && args.includes("--watch")) conflict("--check", "--watch");
-  if ((args.includes("--diff") || args.includes("-d")) && !args.includes("--check")) {
+  if (options.has("--check") && options.has("--watch")) conflict("--check", "--watch");
+  if (options.has("--diff") && !options.has("--check")) {
     console.error("error: '--diff' requires '--check'");
     process.exit(1);
   }
-  if ((args.includes("--diff") || args.includes("-d")) && json) {
+  if (options.has("--diff") && json) {
     console.error("error: '--diff' writes text, and does not combine with '--format json'");
     process.exit(1);
   }
-  if (args.includes("--version") || args.includes("-v")) {
+  if (options.has("--version")) {
     console.log(VERSION);
-  } else if (args.includes("--help") || args.includes("-h")) {
-    console.log(HELP.trimEnd());
-  } else if (args.includes("init")) {
+  } else if (options.has("--help")) {
+    console.log(helpText());
+  } else if (command === "init") {
     process.exitCode = initProject(root, configPath);
-  } else if (args.includes("--watch")) {
+  } else if (options.has("--watch")) {
     watchProject(configPath);
-  } else if (args.includes("--check")) {
-    const showDiff = args.includes("--diff") || args.includes("-d");
-    process.exitCode = check(loadConfig(root, configPath), showDiff);
+  } else if (options.has("--check")) {
+    process.exitCode = check(load(configPath), options.has("--diff"));
   } else {
-    once(loadConfig(root, configPath));
+    once(load(configPath));
   }
 } catch (e) {
   report(e);
