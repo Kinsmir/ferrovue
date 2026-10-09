@@ -4,6 +4,7 @@ members = [
     "crates/ferrovue-router",
     "crates/ferrovue-i18n",
     "crates/ferrovue",
+    "crates/ferrovue-contract",
     "examples/greeting",
     "examples/fullstack",
     "examples/dioxus",
@@ -39,6 +40,7 @@ serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
 tokio = "1.53.2"
 tower-http = "0.7.1"
+trybuild = "1.0.122"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

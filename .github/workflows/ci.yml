@@ -43,6 +43,8 @@ jobs:
         run: node scripts/ferrovue-in.ts examples/greeting --check
       - name: The Dioxus example's generated Rust is current
         run: node scripts/ferrovue-in.ts examples/dioxus --check
+      - name: The contract test's generated Rust is current
+        run: node scripts/ferrovue-in.ts crates/ferrovue-contract --check
 
   typescript-os:
     name: TypeScript (${{ matrix.os }})
@@ -64,6 +66,8 @@ jobs:
         run: node scripts/ferrovue-in.ts examples/greeting --check
       - name: The Dioxus example's generated Rust is current
         run: node scripts/ferrovue-in.ts examples/dioxus --check
+      - name: The contract test's generated Rust is current
+        run: node scripts/ferrovue-in.ts crates/ferrovue-contract --check
 
   lint:
     name: Lint (oxlint, fallow)

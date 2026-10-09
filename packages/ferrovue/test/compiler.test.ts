@@ -5,6 +5,7 @@ import { basename, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { GenError, generate, loadConfig } from "../src/compiler.ts";
 import { type Code, ERRORS } from "../src/errors.ts";
+import { GENERATED_VERSION } from "../src/rust.ts";
 
 const roots: string[] = [];
 
@@ -236,6 +237,17 @@ defineProps<{ note?: string }>();
       const out = generate(root, config);
       expect([...out.keys()].toSorted()).toEqual(readdirSync(join(root, config.out)).toSorted());
       for (const [name, text] of out) expect(readFileSync(join(root, config.out, name), "utf8"), name).toBe(text);
+    });
+  });
+
+  describe("the version of generated code", () => {
+    it("is checked by mod.rs against the versions the ferrovue crate supports, the newest of which it is", () => {
+      const out = compile(island(`<template><p /></template>`));
+      expect(out.get("mod.rs")).toContain(`\n#![allow(dead_code)]\n\nferrovue::__compat!(${GENERATED_VERSION});\n\npub mod x;`);
+      const compat = readFileSync(join(import.meta.dirname, "../../../crates/ferrovue/src/compat.rs"), "utf8");
+      const supported = [...compat.matchAll(/^    \((\d+)\) => \{\};$/gm)].map((m) => Number(m[1]));
+      expect(Math.max(...supported)).toBe(GENERATED_VERSION);
+      expect(compat).toContain(`supports version${supported.length > 1 ? "s" : ""} ${supported.length > 1 ? `${Math.min(...supported)} to ` : ""}${GENERATED_VERSION}: `);
     });
   });
 

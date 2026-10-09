@@ -20,6 +20,7 @@ generated:
     pnpm conformance:check
     node scripts/ferrovue-in.ts examples/greeting --check
     node scripts/ferrovue-in.ts examples/dioxus --check
+    node scripts/ferrovue-in.ts crates/ferrovue-contract --check
 
 # Licences, advisories, duplicate crates and sources (deny.toml).
 deny:

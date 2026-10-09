@@ -18,7 +18,25 @@ becomes public until a maintainer approves it, once on each registry.
    whose version is too small. It does not follow a re-export from another crate: `ferrovue::Router`
    is checked as `ferrovue_router::Router`, and `crates/ferrovue/tests/paths.rs` holds each path
    `ferrovue` re-exports in place.
-3. Bump the version and open the release pull request:
+3. Check the version of generated code. Every generated `mod.rs` opens with
+   `ferrovue::__compat!(N)`, where `N` is `GENERATED_VERSION` in `packages/ferrovue/src/rust.ts`,
+   and the `ferrovue` crate accepts the versions the arms of `__compat!` in
+   `crates/ferrovue/src/compat.rs` list. Compare the generated code and the crate with the last
+   release's:
+   - if generated code now calls something in the crates that the last release lacks, or calls
+     it differently, add the next number as an arm, set `GENERATED_VERSION` to it and say "supports
+     versions M to N" in the macro's message, so that the last release's crate refuses the new code
+     and the new crate still takes the old;
+   - if the crates dropped or changed something the last release's generated code calls, remove
+     the arms that code's versions had, so that the new crate refuses it with a message in place
+     of type errors. This is a breaking change to the generated-code contract
+     (`crates/ferrovue/docs/guide/generated_code.md`).
+
+   `compiler.test.ts` checks that `GENERATED_VERSION` is the newest version the crate accepts and
+   the message names the range, and `crates/ferrovue-contract/tests/compat.rs` checks the message
+   a version the crate does not accept stops the build with (`TRYBUILD=overwrite cargo test -p
+   ferrovue-contract --test compat` records it again).
+4. Bump the version and open the release pull request:
 
    ```sh
    node scripts/release.ts bump 0.2.0 --pr
@@ -30,7 +48,7 @@ becomes public until a maintainer approves it, once on each registry.
    `[Unreleased]` link at `v0.2.0...HEAD` and adds a `[0.2.0]` link comparing with the tag before
    it, and opens a
    `release/v0.2.0` pull request. Without `--pr` it only edits the files.
-4. When CI is green, merge it, then tag the merge commit and push the tag:
+5. When CI is green, merge it, then tag the merge commit and push the tag:
 
    ```sh
    git switch main && git pull
@@ -38,7 +56,7 @@ becomes public until a maintainer approves it, once on each registry.
    git push origin v0.2.0
    ```
 
-5. The **Release** workflow then:
+6. The **Release** workflow then:
    - checks the tag against every manifest and the changelog (`node scripts/release.ts check v0.2.0`);
    - checks each crate's public API against its newest version on crates.io not newer than the tag
      (`cargo-semver-checks`, the kind of release read from the two versions): breaking changes need
@@ -55,7 +73,7 @@ becomes public until a maintainer approves it, once on each registry.
      the crates it depends on;
    - attests the build provenance of the packed files (`actions/attest-build-provenance`), and
      creates the GitHub release with the changelog notes and those same files attached.
-6. **Approve both:**
+7. **Approve both:**
    - **npm:** `npm stage approve <id>`, which asks for your 2FA. The run prints the command, with the
      id when npm reports one, as a notice at the top of its page and in the npm and GitHub release
      jobs' summaries; otherwise `npm stage list ferrovue` shows the id.

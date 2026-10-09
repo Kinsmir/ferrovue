@@ -7,6 +7,21 @@ released together and share version numbers.
 
 ### Added
 
+- Generated code checks its version against the `ferrovue` crate's: `mod.rs` opens with
+  `ferrovue::__compat!(1)`, and generated code of a version the crate does not support stops the
+  build at that line with one message saying to use the npm package and the crate of one release
+  and generate the code again, in place of a list of type errors. The version changes only when
+  generated code changes in a way the crate must match (RELEASING.md). Code generated before this
+  release has no check; regenerate it.
+- The generated-code guide states the contract: which files, modules and items are stable (`NAME`,
+  `Props` with its fields, `new` and setters, `Slots`, `…SlotProps`, `…Slot`, `render` and the order
+  of its parameters, `html`, `island`, `into_html`, `into_island`, `types.rs`, `route_table.rs`,
+  `stores.rs`, `i18n.rs`, `provides.rs`, `twins.rs`, `render_json`), and that `render_scoped`, the
+  `#[doc(hidden)]` items and parameter names are outside it. It now covers page modules' names, the
+  `…Slot` types of a component that passes on `Provides`, and the derives of `Props` and `Slots`.
+- `crates/ferrovue-contract`, an unpublished crate that generates every item of that contract and
+  uses each from hand-written Rust, run in CI with its generated code checked by `ferrovue --check`.
+
 - `Boolean` is taken as the function of `.filter()`, `.map()`, `.some()`, `.every()`, `.find()` and
   `.findIndex()`, as `x => !!x`, and `Boolean(x)` as a call. `.filter(Boolean)` of a list whose items
   may be `null` or `undefined`, or of an array literal holding optional values
@@ -60,6 +75,10 @@ released together and share version numbers.
 
 ### Fixed
 
+- A component whose `render` takes more than seven arguments (slots, the route, stores,
+  translations, teleports, `Provides` and the head, through its children) generates code that
+  passes `cargo clippy -- -D warnings`: its `render`, `render_scoped` and `html` allow
+  `clippy::too_many_arguments`, as a props constructor with more than seven required props does.
 - A components, stores or messages directory that does not exist is FV1116, and a routes file
   that is missing or not JSON is FV1246 or FV1247, each naming the path, where these were a raw
   ENOENT or an FV0001 with no file. A store or type file that does not parse is FV0001 with its

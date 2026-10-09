@@ -9,6 +9,8 @@
 // it needs.
 #![allow(dead_code)]
 
+ferrovue::__compat!(1);
+
 pub mod account_nav;
 pub mod app;
 pub mod arrays;
