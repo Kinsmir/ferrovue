@@ -14,13 +14,13 @@ import type { Router } from 'vue-router';
 export const ClientOnly: Component;
 
 // @public
-export function createPageApp(layout: Component, record: PageRecord, components: Record<string, Component>, options?: PageOptions): App;
+export function createPageApp(layout: Component, record: PageRecord, components: Record<string, Component>, options?: PageAppOptions): App;
 
 // @public
 export type Float = number;
 
 // @public
-export function hydrateState(pinia: Pinia, id?: string, doc?: Document): void;
+export function hydrateState(pinia: Pinia, from?: string | StateText, doc?: Document): void;
 
 // @public
 export type InlineHtml = TrustedHtml & {
@@ -54,6 +54,11 @@ export interface MountOptions {
 export function mountPage(layout: IslandComponent, components: Record<string, IslandComponent>, options?: PageOptions): Promise<App>;
 
 // @public (undocumented)
+export interface PageAppOptions extends Pick<MountOptions, "pinia" | "router" | "plugins"> {
+    hydrate?: boolean;
+}
+
+// @public (undocumented)
 export interface PageOptions extends Pick<MountOptions, "pinia" | "router" | "plugins"> {
     container?: Element | string;
     doc?: Document;
@@ -72,6 +77,39 @@ export interface PageRecord {
     props: Record<string, unknown> | null;
     // (undocumented)
     slots: Record<string, PagePart[]>;
+}
+
+// @public
+export interface ReadPage {
+    record: PageRecord;
+    state: string | undefined;
+}
+
+// @public
+export function readPage(html: string, options?: ReadPageOptions): ReadPage;
+
+// @public
+export interface ReadPageOptions {
+    record?: string;
+    state?: string;
+}
+
+// @public
+export function renderPage(layout: IslandComponent, components: Record<string, IslandComponent>, record: PageRecord, options?: RenderPageOptions): Promise<App>;
+
+// @public (undocumented)
+export interface RenderPageOptions extends Pick<MountOptions, "pinia" | "router" | "plugins"> {
+    container?: Element | string;
+    doc?: Document;
+    previous?: {
+        unmount(): void;
+    } | undefined;
+}
+
+// @public
+export interface StateText {
+    // (undocumented)
+    text: string | undefined;
 }
 
 // @public

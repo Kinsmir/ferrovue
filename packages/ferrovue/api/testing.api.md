@@ -19,6 +19,7 @@ export function attachSsrRender(file: string, name: string, component: Component
 
 // @public
 export interface ConformanceOptions extends Pick<RouterOptions, "pinia" | "vueRouter" | "vueI18n"> {
+    clientDiffers?: string[];
     components: Record<string, Component | {
         default: Component;
     }>;
@@ -64,6 +65,13 @@ export interface RecordedPage {
     // (undocumented)
     record?: PageRecord;
 }
+
+// Warning: (ae-forgotten-export) The symbol "RenderPageOptions" needs to be exported by the entry point testing.d.ts
+//
+// @public
+export function renderRecordedPage(page: RecordedPage, layout: Component, components: Record<string, IslandComponent>, options?: RenderPageOptions & {
+    record?: string;
+}): Promise<App>;
 
 // @public
 export type RouteEntry = string | {
