@@ -1,11 +1,12 @@
 import type { IR, SFCParseResult, VueLanguagePlugin, VueLanguagePluginReturn } from "@vue/language-core";
-import { type EditorOptions, type Located, refusalsIn } from "./editor.ts";
+import { type Located, refusalsIn } from "./editor.ts";
 
-/** What the plugin takes beside its name in `vueCompilerOptions.plugins`: `config`, the
- * configuration file's path from the project root, and `codeLinks`, `false` to give each error its
- * code as plain text with the docs link in the message, for an editor that cannot follow a code's
- * link. */
-export interface VolarOptions extends EditorOptions {
+/** What the plugin takes beside its name in `vueCompilerOptions.plugins`. */
+export interface VolarOptions {
+  /** The configuration file's path from the project root, `ferrovue.config.json` by default. */
+  config?: string;
+  /** `false` gives each error its code as plain text, with the docs link in the message, for an
+   * editor that cannot follow a code's link. */
   codeLinks?: boolean;
 }
 
