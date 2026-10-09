@@ -4,5 +4,8 @@
     "resolveJsonModule": true,
     "types": ["node", "vite/client"]
   },
-  "include": ["client/**/*.ts", "client/**/*.json", "test/**/*.ts", "adopter/**/*.ts", "browser/**/*.ts", "vite.config.ts", "vitest.config.ts", "vitest.browser.config.ts", "vitest.adopter.config.ts"]
+  "include": ["client/**/*.vue", "client/**/*.ts", "client/**/*.json", "test/**/*.ts", "adopter/**/*.ts", "browser/**/*.ts", "vite.config.ts", "vitest.config.ts", "vitest.browser.config.ts", "vitest.adopter.config.ts"],
+  "vueCompilerOptions": {
+    "plugins": ["ferrovue/volar"]
+  }
 }

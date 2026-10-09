@@ -6,7 +6,7 @@ import { pathToFileURL } from "node:url";
 import { afterAll, beforeAll, expect, it } from "vitest";
 
 const SRC = join(import.meta.dirname, "../src");
-const ENTRIES = ["index", "compiler", "types", "testing", "client", "link-router", "islands", "vite"];
+const ENTRIES = ["index", "compiler", "types", "testing", "client", "link-router", "islands", "vite", "volar"];
 let root = "";
 let result: Record<string, unknown> = {};
 
@@ -15,7 +15,7 @@ import { registerHooks } from "node:module";
 const src = ${JSON.stringify(pathToFileURL(SRC).href)};
 registerHooks({
   resolve(specifier, context, next) {
-    if (/^(vite|vitest|vue-i18n|pinia|vue-router|@unhead\\/vue)(\\/|$)/.test(specifier)) {
+    if (/^(vite|vitest|vue-i18n|pinia|vue-router|@unhead\\/vue|@vue\\/language-core)(\\/|$)/.test(specifier)) {
       return next(specifier, { ...context, parentURL: ${JSON.stringify(nowhere)} });
     }
     return next(specifier, context.parentURL === import.meta.url ? { ...context, parentURL: src + "/testing.ts" } : context);
@@ -69,6 +69,7 @@ it("loads every entry of the package without the optional peers, vitest included
     "link-router": expect.stringContaining("vue-router") as unknown,
     islands: expect.stringContaining("ferrovue/islands is written by the Vite plugin") as unknown,
     vite: "loaded",
+    volar: "loaded",
   });
 });
 

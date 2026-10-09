@@ -1,11 +1,10 @@
 import { parse as parseJs } from "@babel/parser";
 import { compileScript, compileTemplate, parse as parseSfc, type SFCBlock, type SFCDescriptor, type SFCScriptBlock } from "@vue/compiler-sfc";
-import { readFileSync } from "node:fs";
 import { SourceMapConsumer } from "source-map-js";
 import { basename } from "node:path";
 import { relativePath } from "./paths.ts";
 import { type Component, type N, absence, blankComponent, fail, GenError, opt, snake, sourceAt, tagAst } from "./model.ts";
-import { ctx } from "./context.ts";
+import { ctx, readSource } from "./context.ts";
 import { typesImports, declareTypes, defaultValue, definePropsType, ONE_NOTHING, readTypeFile, refusePrelude, resolveImport, runtimeDefaults, structOf, tyOfTs } from "./typescript.ts";
 import { claim } from "./plugin.ts";
 import { asyncChildren } from "./script.ts";
@@ -112,7 +111,7 @@ export function refuseOptionsApi(comp: Component, script: N, isChild: boolean): 
 /** A component, read and its template compiled. One written with the Options API is read no
  * further than its `<script>`, `optionsApi`, for `refuseOptionsApi` once every component is read. */
 export function readComponent(file: string, root: string, name = basename(file, ".vue")): { comp: Component; ast: N[]; ssr: string; optionsApi?: N } {
-  const source = readFileSync(file, "utf8");
+  const source = readSource(file);
   const { descriptor, errors } = parseSfc(source, { filename: file });
   const rel = relativePath(root, file);
   const comp = blankComponent(name, snake(name), rel);
