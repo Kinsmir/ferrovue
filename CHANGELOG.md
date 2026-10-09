@@ -5,6 +5,10 @@ released together and share version numbers.
 
 ## [Unreleased]
 
+### Changed
+
+- The npm package depends on `postcss` `^8.5.29`.
+
 ## [0.7.1] - 2026-10-09
 
 ### Fixed
