@@ -1,0 +1,1 @@
+{"url":"javascript:alert(1)\"><script>x</script>","doc":"<script>alert(1)</script><img src=x onerror=alert(2)>","handler":"alert(1)\" onmouseover=\"alert(2)","color":"red;background:url(https://evil.example/x)\"><b>","css":"color:red;position:fixed;inset:0;</style><script>"}

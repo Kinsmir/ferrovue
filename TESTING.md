@@ -99,6 +99,7 @@ A fixture is a JSON object of props plus three optional keys:
 | `Form` | `v-model` on input, checkbox, select, radio and textarea |
 | `Builtins` | `Transition`, `TransitionGroup`, `KeepAlive`, `Suspense`, `v-text`, `v-once`, `v-pre`, `v-memo`, a client-only directive |
 | `Prose` | `v-html` of `TrustedHtml`, required and optional |
+| `Unsanitised`, `UnsanitisedLeaf` | What Vue escapes and does not sanitise: a `javascript:` URL in `href`, `src` and `formaction`, `srcdoc`, `onclick` bound on an element and falling through to a child's root, CSS in a style object and a style string (the guide's `security` page) |
 | `Tree` | A recursive, self-rendering component |
 | `Listened`, `Listeners`, `ListenLeaf`, `ListenSale` | Listeners on components, skipped by the server: a component rendering itself through `v-bind` of its own `Props` beside `@loaded`; `@x` for emits the child declares and for ones it does not, with modifiers, `@update:x`, `v-on` of an object and `@[name]`, beside an object literal, a fallthrough attribute and a `v-bind` of the child's `Props`; a prop named like a listener (`onSale`) given a value |
 | `UserCard`, `UserList` | Types imported from a shared `.ts` file and from another component, string-literal unions, objects passed to children |

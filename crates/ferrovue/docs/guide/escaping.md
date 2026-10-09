@@ -1,5 +1,8 @@
 What is escaped, where, and the one way to write raw HTML.
 
+[`security`](crate::guide::security) is the threat model behind this page: every place ferrovue
+writes data from readers, the code and tests behind each guarantee, and what it inherits from Vue.
+
 # Everything a template interpolates is escaped
 
 Every value the generated code writes into the page goes through [`escape_into`](crate::escape_into),
@@ -19,9 +22,10 @@ The property tests check that escaped text holds no markup and reads back as it 
 string.
 
 Escaping keeps a value inside its context; it does not make every value safe in every context, any
-more than it does in Vue. A `javascript:` URL bound to `:href` is still a `javascript:` URL, and a
-string bound to `:style` is still CSS. Validate URLs from users before rendering them, as a Vue app
-would.
+more than it does in Vue. A `javascript:` URL bound to `:href` is still a `javascript:` URL, a
+string bound to `:style` is still CSS, `:srcdoc` is still a document and `:onclick` is still script.
+Validate URLs from users before rendering them, as a Vue app would. The
+[threat model](crate::guide::security#what-ferrovue-inherits-from-vue) lists every such case.
 
 What the page carries for the client is escaped for its context as well:
 

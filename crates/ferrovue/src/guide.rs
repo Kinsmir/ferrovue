@@ -25,12 +25,14 @@
 //! 16. [`strings`]: JavaScript's strings in Rust: UTF-16 indices, halves of pairs, ordering,
 //!     conversions to and from numbers.
 //! 17. [`escaping`]: what is escaped, where, and the one way to write raw HTML.
-//! 18. [`testing`]: holding your own components to Vue, with fixtures and two calls.
-//! 19. [`errors_and_limits`]: what the compiler refuses, and what can still go wrong at run time.
-//! 20. [`error_codes`]: every error code the compiler raises.
+//! 18. [`security`]: the threat model: every place data from readers is written, the guarantee
+//!     there, and what is inherited from Vue.
+//! 19. [`testing`]: holding your own components to Vue, with fixtures and two calls.
+//! 20. [`errors_and_limits`]: what the compiler refuses, and what can still go wrong at run time.
+//! 21. [`error_codes`]: every error code the compiler raises.
 #![cfg_attr(
     feature = "dioxus",
-    doc = "21. [`dioxus`]: islands in a page that Dioxus renders, with the `dioxus` feature."
+    doc = "22. [`dioxus`]: islands in a page that Dioxus renders, with the `dioxus` feature."
 )]
 
 #[doc = include_str!("../docs/guide/quick_start.md")]
@@ -87,6 +89,9 @@ pub mod strings {}
 
 #[doc = include_str!("../docs/guide/escaping.md")]
 pub mod escaping {}
+
+#[doc = include_str!("../docs/guide/security.md")]
+pub mod security {}
 
 #[doc = include_str!("../docs/guide/testing.md")]
 pub mod testing {}

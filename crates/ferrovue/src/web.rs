@@ -506,6 +506,40 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn a_value_in_the_head_cannot_move_a_hole() {
+        use crate::{Head, HeadValue};
+
+        for hostile in [
+            String::from("<fv-hole><script>alert(1)</script>"),
+            format!("{HOLE}<script>alert(1)</script>"),
+        ] {
+            let head = Head::without_defaults();
+            head.push(HeadValue::object([
+                (
+                    "meta",
+                    HeadValue::array([HeadValue::object([
+                        ("name", HeadValue::str("description")),
+                        ("content", HeadValue::str(&hostile)),
+                    ])]),
+                ),
+                ("style", HeadValue::array([HeadValue::str(&hostile)])),
+            ]));
+            let tags = head.render();
+            let mut page = format!("<head>{}</head><main>", tags.head_tags);
+            slot_into(&mut page, Some(hole()), None);
+            page.push_str("</main>");
+            let stream = HtmlStream::new(page).hole(after(0, r#"<div class="a">ok</div>"#));
+            assert_eq!(
+                chunks(stream).await.concat(),
+                format!(
+                    r#"<head>{}</head><main><!--[--><div class="a">ok</div><!--]--></main>"#,
+                    tags.head_tags
+                )
+            );
+        }
+    }
+
+    #[tokio::test]
     async fn empty_pieces_and_contents_are_not_sent() {
         let mut page = String::new();
         slot_into(&mut page, Some(hole()), None);

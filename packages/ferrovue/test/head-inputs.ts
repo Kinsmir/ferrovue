@@ -229,6 +229,18 @@ const hand: HeadCase[] = [
   { defaults: false, calls: [{ head: { bodyAttrs: { Foo: "x", "DATA-Y": "y" } } }] },
   { defaults: false, calls: [{ head: { title: { textContent: "t", Foo: "x", "": "e", "a b": "s", tagPosition: null } } }] },
   { defaults: false, calls: [{ head: { link: [{ "bad name": "x" }, { "": "y" }] } }] },
+  {
+    defaults: false,
+    calls: [
+      {
+        head: {
+          bodyAttrs: { "a>b": "1", "a<b": "2", "a=b": "3", "a/b": "4", "a'b": "5", "a\tb": "6", "a\u000bb": "7", "a\u0000b": "8", "a b": "9", "a b": "10", "a\u007fb": "11", "a\u0080b": "12", onclick: "alert(1)" },
+          link: [{ rel: "icon", href: "/a", "x>y": "z", "x\ny": "z", "x\u001fy": "z" }],
+        },
+      },
+    ],
+  },
+  { defaults: false, calls: [{ head: { script: [{ innerHTML: "<!--<script>", key: "a" }, { type: "application/ld+json", innerHTML: { name: "<!--<script>" } }, { textContent: "</script ><script>alert(1)</script>", key: "b" }] } }] },
   { defaults: false, calls: [{ head: { link: [{ rel: "icon", href: "/a", id: "fav", media: "m" }] } }, { head: { link: [{ rel: "icon", href: "/b", id: "fav", tagDuplicateStrategy: "merge" }] } }] },
   { defaults: false, calls: [{ head: { link: [{ rel: "icon", href: "/a", key: "k", media: "m" }] } }, { head: { link: [{ rel: "icon", href: "/b", key: "k", tagDuplicateStrategy: "replace" }] } }] },
   { defaults: false, calls: [{ head: { meta: [{ name: "x", content: "1", tagPriority: "bogus" }, { name: "y", content: "2" }] } }] },

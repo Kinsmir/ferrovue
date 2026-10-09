@@ -10,6 +10,33 @@ fn script_elements_are_removed_with_their_content() {
 }
 
 #[test]
+fn no_value_holds_a_hole() {
+    for input in [
+        crate::slots::HOLE,
+        "<fv-hole>",
+        "<p title='<fv-hole\"</script</style</noscript>'>x</p>",
+    ] {
+        let mut policy = ammonia::Builder::new();
+        policy
+            .add_tags(["fv-hole"])
+            .add_generic_attributes(["title"]);
+        for html in [Sanitised::new(input), Sanitised::with(&policy, input)] {
+            assert!(!html.as_str().contains(crate::slots::HOLE), "{html:?}");
+        }
+        assert!(
+            !crate::BasicHtml::new(input)
+                .as_str()
+                .contains(crate::slots::HOLE)
+        );
+        assert!(
+            !crate::InlineHtml::new(input)
+                .as_str()
+                .contains(crate::slots::HOLE)
+        );
+    }
+}
+
+#[test]
 fn event_handlers_are_removed() {
     assert_eq!(
         Sanitised::new(r#"<img src="a.png" onerror="alert(1)"><b onmouseover=alert(1)>x</b>"#)
