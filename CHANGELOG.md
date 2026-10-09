@@ -78,16 +78,16 @@ released together and share version numbers.
   `types.rs` is not written at all when nothing reaches one. A type nothing reaches is no longer
   refused: a module imported for its functions may declare `type Row = Record<string, unknown>`.
   Two files declaring a type of one name are refused (FV0319) once the name is reached.
-
-### Security
-
-- A value in the page head could move a streaming hole. unhead escapes only `"` in an attribute
-  value and only the closing tag in `<script>`, `<style>` and `<noscript>` content, and ferrovue
-  writes the head exactly as unhead does, so a `useHead` value holding `<fv-hole>` (a title in
-  `og:title`, say) put a hole marker into a page whose head is rendered into the string
-  `HtmlStream` and `split_holes` cut. The first hole's content was then written inside the head
-  attribute, ending it, and what followed the marker in the value was read as markup. The marker
-  is now `<fv-hole"</script</style</noscript>`, which no value ferrovue or unhead writes can hold.
+- A threat model, the guide's `security` page, which `escaping` and `SECURITY.md` link to: the trust
+  boundaries, every place the runtime and generated code write data that may come from a reader
+  (text, attribute values and names, CSS, island props, the state script and page record, the head,
+  `<RouterLink>`, translated messages, `v-html`, teleports, holes, scope ids, twins and helpers),
+  the guarantee there with the code and tests behind it, what ferrovue inherits from Vue, and where
+  an external review should start. The `Unsanitised` conformance component holds the inherited
+  cases to Vue (`javascript:` URLs, `srcdoc`, a bound `onclick` on an element and falling through,
+  CSS); the head vectors gain hostile attribute names and `<!--<script>` in scripts; the compiler's
+  tests refuse an unsafe bound attribute name, a name chosen at run time and `v-bind` of an object
+  that is not a literal.
 
 ### Fixed
 
@@ -120,18 +120,22 @@ released together and share version numbers.
   where it was left out; a listener whose name is chosen at run time, or comes from `v-on` of an
   object, given to such a child is FV0514.
 
-### Documentation
+### Security
 
-- A threat model, the guide's `security` page, which `escaping` and `SECURITY.md` link to: the trust
-  boundaries, every place the runtime and generated code write data that may come from a reader
-  (text, attribute values and names, CSS, island props, the state script and page record, the head,
-  `<RouterLink>`, translated messages, `v-html`, teleports, holes, scope ids, twins and helpers),
-  the guarantee there with the code and tests behind it, what ferrovue inherits from Vue, and where
-  an external review should start. The `Unsanitised` conformance component holds the inherited
-  cases to Vue (`javascript:` URLs, `srcdoc`, a bound `onclick` on an element and falling through,
-  CSS); the head vectors gain hostile attribute names and `<!--<script>` in scripts; the compiler's
-  tests refuse an unsafe bound attribute name, a name chosen at run time and `v-bind` of an object
-  that is not a literal.
+- A value in the page head could move a streaming hole. unhead escapes only `"` in an attribute
+  value and only the closing tag in `<script>`, `<style>` and `<noscript>` content, and ferrovue
+  writes the head exactly as unhead does, so a `useHead` value holding `<fv-hole>` (a title in
+  `og:title`, say) put a hole marker into a page whose head is rendered into the string
+  `HtmlStream` and `split_holes` cut. The first hole's content was then written inside the head
+  attribute, ending it, and what followed the marker in the value was read as markup. The marker
+  is now `<fv-hole"</script</style</noscript>`, which no value ferrovue or unhead writes can hold.
+- A value in the page head could move a streaming hole. unhead escapes only `"` in an attribute
+  value and only the closing tag in `<script>`, `<style>` and `<noscript>` content, and ferrovue
+  writes the head exactly as unhead does, so a `useHead` value holding `<fv-hole>` (a title in
+  `og:title`, say) put a hole marker into a page whose head is rendered into the string
+  `HtmlStream` and `split_holes` cut. The first hole's content was then written inside the head
+  attribute, ending it, and what followed the marker in the value was read as markup. The marker
+  is now `<fv-hole"</script</style</noscript>`, which no value ferrovue or unhead writes can hold.
 
 ## [0.6.0] - 2026-10-06
 
