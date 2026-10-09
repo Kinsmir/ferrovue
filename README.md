@@ -758,6 +758,8 @@ crates/ferrovue-core/        escaping and JavaScript's numbers, which the other 
 crates/ferrovue-router/      vue-router's matching and links (the `router` feature)
   tests/vectors/             vectors recorded from vue-router
 crates/ferrovue-i18n/        vue-i18n's t() (the `i18n` feature)
+crates/ferrovue-contract/    unpublished: Rust using every item of the generated-code contract,
+                             and the version check's message (trybuild)
 packages/ferrovue/           the compiler (npm package)
   src/index.ts               `ferrovue`: the browser API, `mountIslands`, `mountPage`, `hydrateState` and the types
   src/compiler.ts            `ferrovue/compiler`: `generate`, `write`

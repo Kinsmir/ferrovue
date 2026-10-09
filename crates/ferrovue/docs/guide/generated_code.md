@@ -3,20 +3,51 @@ What the compiler writes, and the API each component gets.
 Generated code is ordinary Rust that calls this crate: there is no template engine and no
 reflection at run time. Commit it, and let `pnpm ferrovue --check` in CI catch a stale copy.
 
+# What is stable
+
+Applications write Rust against generated modules, so their shape is API. What this page
+documents is the contract: within a major version, a newer compiler keeps every item below, with
+the name, the type shape and, for functions, the parameters in the order given here, and the Rust
+an application writes against them keeps compiling. That is:
+
+- the files of the output directory and the module names they give (`DataList.vue` is
+  `data_list`, `pages/books/[id].vue` is `books_id`), and the version check at the top of `mod.rs`;
+- in each component module: `NAME`; `Props`, its public fields and, with `builders` on (the
+  default), its `new` and its setters; the structs of local types, with the same; `Slots`, each
+  `…SlotProps` and each `…Slot`; `render`, with its parameters in the order
+  [below](#render-and-its-parameters); `html`; and, for a component that renders from its props
+  alone, `island`, `into_html` and `into_island`;
+- `types.rs`'s structs and constants, `route_table.rs`'s `ROUTES`, `PATHS`, `BASE` and `router()`,
+  `stores.rs`'s state structs and `Stores`, `i18n.rs`'s `LOCALE`, `FALLBACK`, `LOCALES` and
+  `i18n(locale)`, `provides.rs`'s `Provides`, and `twins.rs`'s `…Props`, `…Slots` and `…Render`;
+- the derives the tables below list, which an application relies on to copy, print and serialise
+  what it builds;
+- `render_json`, under `#[cfg(test)]`, and the fixture keys it reads.
+
+Outside the contract, and free to change in any release: `render_scoped` and every other
+`#[doc(hidden)]` item; the bodies of functions, and the order of what they reserve, write and
+call; the names of `render`'s parameters (an unread one is named with a leading `_`); private
+items, such as the fixture plumbing in `mod.rs`; comments; and the order of the `pub mod` lines.
+What `render` writes is held to Vue's output, which the conformance suite checks.
+
+The repository's `crates/ferrovue-contract` crate generates every item listed here from a few
+components and uses each as an application would; CI builds and runs it against the compiler of
+the same commit, so a change that breaks an item fails there first.
+
 # The output directory
 
 Everything in the configured `out` directory is replaced on each run.
 
 | File | Written when | Holds |
 |---|---|---|
-| `mod.rs` | always | One `pub mod` per file below, and a `#[cfg(test)]` `render_json` for a project's conformance tests |
-| `<component>.rs` | one per `.vue` file | The component's types and renderers: `DataList.vue` becomes `data_list.rs` |
-| `types.rs` | a component imports types, or a list of objects, from a `.ts` file | Those types, written once so components passing them to one another agree on them, and each list as a `const` |
-| `route_table.rs` | `routes` or `router` is configured | The routes and `router()`. See [`routing`](crate::guide::routing) |
-| `stores.rs` | `stores` is configured | A struct per store's state and `Stores`, all of them. See [`pinia`](crate::guide::pinia) |
-| `i18n.rs` | `i18n` is configured | Every locale's messages and `i18n(locale)`. See [`i18n`](crate::guide::i18n) |
-| `provides.rs` | a component calls `provide` or `inject` | `Provides`, what the components' ancestors provide, by key. See [`provide_inject`](crate::guide::provide_inject) |
-| `twins.rs` | `twins` is configured | Each twin's props and slots, and the signature its function must have. See [`errors_and_limits`](crate::guide::errors_and_limits#rust-twins) |
+| `mod.rs` | always | The [version check](#the-version-check), one `pub mod` per file below, and a `#[cfg(test)]` `render_json` for a project's conformance tests |
+| `<component>.rs` | one per `.vue` file, pages included | The component's types and renderers: `DataList.vue` becomes `data_list.rs`, and the page `books/[id].vue` becomes `books_id.rs` |
+| `types.rs` | the server render reaches a type or a constant exported from a `.ts` file | The shared types the render reaches (the types of props and of their fields, of provided and injected values, of store state and of twins' props), written once so components passing them to one another agree on them, and each constant a template reads, as a `const` |
+| `route_table.rs` | `routes` or `router` is configured | `ROUTES`, `PATHS`, `BASE` and `router()`. See [`routing`](crate::guide::routing) |
+| `stores.rs` | `stores` is configured | A struct per store's state, named for its id (`cart` has `CartState`), the types it uses, and `Stores`, with a field per store. See [`pinia`](crate::guide::pinia) |
+| `i18n.rs` | `i18n` is configured | `LOCALE`, `FALLBACK`, every locale's messages in `LOCALES`, and `i18n(locale)`. See [`i18n`](crate::guide::i18n) |
+| `provides.rs` | a component calls `provide` or `inject` | `Provides`, what the components' ancestors provide, with a field per key. See [`provide_inject`](crate::guide::provide_inject) |
+| `twins.rs` | `twins` is configured | Each twin's `…Props` and `…Slots`, and `…Render`, the signature its function must have. See [`errors_and_limits`](crate::guide::errors_and_limits#rust-twins) |
 
 Include the directory as one module. `#[rustfmt::skip]` keeps rustfmt from rewriting it:
 
@@ -39,8 +70,35 @@ crate that denies warnings. `mod.rs` allows one lint for all of them, at its top
 #![allow(dead_code)]
 ```
 
-The only other allow is on a props constructor that takes more than seven required props, which
-allows `clippy::too_many_arguments` because it takes one argument per required field.
+The only other allow is `clippy::too_many_arguments`, on a function that takes more than seven
+arguments: a props constructor with more than seven required props, which takes one argument per
+required field, and a `render`, `render_scoped` or `html` that takes most of the parameters
+[below](#render-and-its-parameters).
+
+# The version check
+
+Generated code calls the `ferrovue` crate, so the two must come from compatible releases. Below
+the `allow`, `mod.rs` names the version of generated code its compiler writes:
+
+```rust
+ferrovue::__compat!(1);
+```
+
+The version is a number that changes only when generated code changes in a way the crate must
+match: when the compiler starts calling something an older crate lacks, or the crate stops
+supporting something older generated code calls. Each crate accepts the versions it supports and
+stops the build at this line for any other, before the compiler reports anything else:
+
+```text
+error: this module was generated as version 2 of ferrovue's generated code, and this `ferrovue` crate supports version 1: use the `ferrovue` npm package and the `ferrovue` crate of one release, and run `ferrovue` to generate the module again
+ --> src/generated/mod.rs:12:1
+   |
+12 | ferrovue::__compat!(2);
+   | ^^^^^^^^^^^^^^^^^^^^^^
+```
+
+`__compat!` itself is `#[doc(hidden)]` and may change form in any release; the check at the top of
+`mod.rs` stays.
 
 # A component's module
 
@@ -48,13 +106,13 @@ Every component module has, in this order:
 
 | Item | What it is |
 |---|---|
-| `NAME` | The component's name, `"DataList"`: what `data-island` carries |
+| `NAME` | The component's name, `"DataList"`: what `data-island` carries, and what a [`Part`](crate::Part) of a [`Page`](crate::Page) records |
 | One struct per local `interface` or object `type` | `Row` for `export interface Row { … }`, with the same derives and builder as `Props` |
-| `Props<'a>` | The props, one field per prop. See [`props`](crate::guide::props) |
-| `…SlotProps<'v>` and `…Slot<'s>` | For each scoped slot: what its outlet passes (with `<'v>` only when it borrows), and the closure type a parent supplies. See [`slots`](crate::guide::slots) |
-| `Slots<'s>` | When the component renders a `<slot>` or `<RouterView>`: what a parent puts in each |
+| `Props<'a>` | The props, one public field per prop, deriving `Debug`, `Clone` and `serde::Serialize`, and `Default` when every prop is optional. With `builders` on, `Props::new` takes the required props in declaration order and each optional prop other than one named `new` has a setter of its name. See [`props`](crate::guide::props) |
+| `…SlotProps<'v>` and `…Slot<'s>` | For each scoped slot: what its outlet passes (with `<'v>` only when it borrows), and the closure type a parent supplies. A component that takes `fv_provides` has a `…Slot<'s>` for each of its slots, scoped or not, whose closure is also given the `Provides` its content renders with. See [`slots`](crate::guide::slots) |
+| `Slots<'s>` | When the component renders a `<slot>` or `<RouterView>`: what a parent puts in each, an `Option` per `<slot>` and the page as `router_view`. It derives `Clone` and `Copy`, and `Default` when it has no `router_view` |
 | `render` | Write the component into a buffer |
-| `render_scoped` | Only for a component a parent may hand `<style scoped>` ids to, or pass attributes it does not declare as props: `render` with those last. Generated parents call it; it is `#[doc(hidden)]`. See [`scoped_styles`](crate::guide::scoped_styles) and [fallthrough attributes](#fallthrough-attributes) |
+| `render_scoped` | Only for a component a parent may hand `<style scoped>` ids to, or pass attributes it does not declare as props: `render` with those last. Generated parents call it; it is `#[doc(hidden)]` and outside the contract. See [`scoped_styles`](crate::guide::scoped_styles) and [fallthrough attributes](#fallthrough-attributes) |
 | `html` | The same render as an [`Html`](crate::Html) value |
 | `island` | Only for a component that renders from its props alone: the render wrapped as a hydratable island |
 | `into_html` and `into_island` | Beside `island`: `html` and `island` taking the props by value, so the `Html` holds them |
@@ -428,11 +486,16 @@ fn greet(name: String) -> ferrovue::Html<'static, greeting::Props<'static>> {
 | In the `.vue` file | In Rust |
 |---|---|
 | `DataList.vue` | module `data_list`, `NAME` `"DataList"` |
+| the page `books/[id].vue` | module `books_id`, `NAME` `"BooksId"`: the PascalCase of its path in the pages folder |
+| a module name that is a Rust keyword, `type` | module `r#type`, in `type.rs`; `self`, `super` and `crate` take a `_`: `self_` |
 | prop `showHead` | field `show_head`, with `#[serde(rename = "showHead")]` so the island's JSON uses Vue's name |
 | prop `type` (a Rust keyword) | field `r#type` |
 | `v-model` / `defineModel()` | field `model_value`, renamed `modelValue` |
 | `<slot name="row">` | `Slots::row`, `RowSlotProps`, `RowSlot` |
 | `<RouterView>` | `Slots::router_view` |
+| a store with id `cart` | `stores::CartState`, `Stores::cart` |
+| the twin `StarRating` | `twins::StarRatingProps`, `StarRatingSlots`, `StarRatingRender` |
+| `provide(ThemeKey, …)`, `provide("tone", …)` | `Provides::theme_key`, `Provides::tone` |
 
 # `render_json`, for your own conformance tests
 

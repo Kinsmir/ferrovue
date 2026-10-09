@@ -5,6 +5,7 @@
 mod attrs;
 mod basic_html;
 mod class;
+mod compat;
 mod conformance;
 #[cfg(feature = "dioxus")]
 #[cfg_attr(docsrs, doc(cfg(feature = "dioxus")))]

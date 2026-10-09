@@ -9,6 +9,8 @@
 // it needs.
 #![allow(dead_code)]
 
+ferrovue::__compat!(1);
+
 pub mod add_to_basket;
 pub mod basket_summary;
 pub mod layout;

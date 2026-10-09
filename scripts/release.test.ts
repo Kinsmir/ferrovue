@@ -146,6 +146,11 @@ describe("release chores", () => {
     ]);
   });
 
+  it("leaves a crate that is not published, such as the contract test, out of the release", () => {
+    const crates = { ...CRATE_MANIFESTS, "ferrovue-contract": `[package]\nname = "ferrovue-contract"\nversion = "0.0.0"\npublish = false\n` };
+    expect(checkRelease("v0.1.0", { cargo: CARGO, pkg: PKG, changelog: CHANGELOG, crates })).toEqual([]);
+  });
+
   it("publishes each crate after the crates it depends on", () => {
     expect(CRATES.indexOf("ferrovue-core")).toBeLessThan(CRATES.indexOf("ferrovue-router"));
     expect(CRATES.indexOf("ferrovue-core")).toBeLessThan(CRATES.indexOf("ferrovue-i18n"));

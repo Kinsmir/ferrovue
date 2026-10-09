@@ -8,6 +8,8 @@
 // `into_` forms and `NAME`) and an app calls only what it needs.
 #![allow(dead_code)]
 
+ferrovue::__compat!(1);
+
 pub mod badge;
 pub mod card;
 pub mod tally;

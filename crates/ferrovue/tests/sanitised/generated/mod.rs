@@ -9,6 +9,8 @@
 // it needs.
 #![allow(dead_code)]
 
+ferrovue::__compat!(1);
+
 pub mod review;
 
 /// Render one component from its props as JSON, for the conformance suite.

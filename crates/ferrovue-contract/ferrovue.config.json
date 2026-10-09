@@ -1,0 +1,23 @@
+{
+  "components": "components",
+  "out": "src/generated",
+  "router": {
+    "routes": { "pages": "pages" }
+  },
+  "stores": "stores",
+  "i18n": {
+    "messages": "locales",
+    "locale": "en",
+    "fallbackLocale": "en"
+  },
+  "twins": {
+    "StarRating": {
+      "rust": "crate::twins::star_rating",
+      "props": {
+        "value": "int",
+        "max": "int?"
+      },
+      "slots": ["default"]
+    }
+  }
+}

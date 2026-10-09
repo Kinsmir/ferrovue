@@ -9,6 +9,8 @@
 // it needs.
 #![allow(dead_code)]
 
+ferrovue::__compat!(1);
+
 pub mod greeting;
 pub mod layout;
 pub mod route_table;

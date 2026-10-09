@@ -1,0 +1,7 @@
+error: this module was generated as version 2 of ferrovue's generated code, and this `ferrovue` crate supports version 1: use the `ferrovue` npm package and the `ferrovue` crate of one release, and run `ferrovue` to generate the module again
+ --> tests/compat/newer.rs:1:1
+  |
+1 | ferrovue::__compat!(2);
+  | ^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: this error originates in the macro `ferrovue::__compat` (in Nightly builds, run with -Z macro-backtrace for more info)

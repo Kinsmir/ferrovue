@@ -113,6 +113,7 @@ export function checkRelease(tag: string, files: ReleaseFiles): string[] {
   }
   if (files.crates) {
     for (const [dir, manifest] of Object.entries(files.crates)) {
+      if (/^publish\s*=\s*false$/m.test(manifest)) continue;
       if (!/^version\.workspace\s*=\s*true$/m.test(manifest)) problems.push(`crates/${dir}/Cargo.toml has a version of its own, not the workspace's`);
       if (!CRATES.includes(dir)) problems.push(`crates/${dir} is not in release.ts's CRATES, so no release would publish it`);
     }

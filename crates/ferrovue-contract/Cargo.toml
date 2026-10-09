@@ -1,0 +1,19 @@
+[package]
+name = "ferrovue-contract"
+description = "Rust written against generated code, using every item the generated-code guide documents as stable"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+ferrovue.workspace = true
+serde.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+trybuild.workspace = true
+
+[lints]
+workspace = true
