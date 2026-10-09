@@ -6,8 +6,8 @@ import { expr, fieldVal, holdsNothing } from "./expr.ts";
 import { asF64 } from "./numbers.ts";
 import { atom, bare } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
-import { attrOf, dollarAttrs, IGNORED_PROPS, isAttrs, mergedParts } from "./attrs.ts";
-import { passedKey } from "./fallthrough.ts";
+import { attrOf, dollarAttrs, isAttrs, mergedParts } from "./attrs.ts";
+import { isListener, passedKey } from "./fallthrough.ts";
 import { claim, paramsOf, slotContextOf, slotFieldsOf } from "./plugin.ts";
 import { statements } from "./template.ts";
 import { slotContent, slotFieldBorrows, staticallyFilled } from "./slots.ts";
@@ -36,8 +36,16 @@ export function renderChild(s: Scope, e: Emitter, n: N, twin?: TwinCall): void {
   const merges = parts.length > 0 && parts[0] !== rawProps;
   const passesAttrs = parts.some(isAttrs);
   const passed = (p: N): boolean => s.fallthrough !== null && ((isAttrs(p) && s.comp.inheritAttrs) || dollarAttrs(s, p));
+  const handlers = (p: N): boolean => {
+    const dynamic = p.type === "ObjectProperty" && p.computed && isCall(p.key, "_toHandlerKey");
+    if (!isCall(p, "_toHandlers") && !dynamic) return false;
+    const declared = child.props.fields.find((f) => isListener(f.js));
+    if (declared) fail(s.comp, "FV0514", `a listener whose name is not known before rendering, given to ${child.name}, which declares \`${declared.js}\` as a prop`, p);
+    return true;
+  };
+  const silent = (p: N): boolean => p.type === "ObjectProperty" && !p.computed && !passedKey(child, p.key.name ?? String(p.key.value));
   const marker = (p: N): boolean =>
-    p.type === "ObjectExpression" && p.properties.length > 0 && p.properties.every((q: N) => q.type === "ObjectProperty" && IGNORED_PROPS.has(q.key.name ?? q.key.value));
+    handlers(p) || (p.type === "ObjectExpression" && p.properties.length > 0 && p.properties.every((q: N) => silent(q) || handlers(q)));
   const objects = parts.filter((p) => !isAttrs(p) && !dollarAttrs(s, p) && !marker(p));
   if (parts.some(passed)) {
     for (const name of s.comp.attrNames) {
@@ -66,6 +74,7 @@ export function renderChild(s: Scope, e: Emitter, n: N, twin?: TwinCall): void {
   const loaded = !merges && local !== null && s.loadedLater.has(local);
   for (const obj of objects) {
     for (const p of obj.properties) {
+      if (handlers(p)) continue;
       if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "FV0504", "child props hold plain keys", p);
       const key: string = p.key.type === "Identifier" ? p.key.name : String(p.key.value);
       if (!passedKey(child, key)) continue;
@@ -96,6 +105,10 @@ export function renderChild(s: Scope, e: Emitter, n: N, twin?: TwinCall): void {
     return fieldInit(f.rust, ownInto(s.comp, { ...v, ty: markHome(v.ty, s.comp.name) }, markHome(f.ty, child.name), node));
   });
   callChild(s, e, child, `&super::${child.module}::Props { ${inits.join(", ")} }`, slots, childAttrsArg(s, child, parts, merges, fallthrough, ids, n), later);
+}
+
+function isCall(n: N, callee: string): boolean {
+  return n?.type === "CallExpression" && n.callee.type === "Identifier" && n.callee.name === callee;
 }
 
 export function array(key: string): boolean {

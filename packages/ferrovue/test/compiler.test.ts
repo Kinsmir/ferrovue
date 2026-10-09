@@ -375,6 +375,52 @@ const props = defineProps<{ items: ChildProps[] }>();
       expect(out).not.toContain("use std::borrow::Cow;");
     });
 
+    it("hands a component rendering itself a v-bind of its own Props beside a listener, which the server skips", () => {
+      const row = `<script setup lang="ts">
+export interface Props { id: string; label: string; rows: Props[] }
+defineProps<Props>();
+const emit = defineEmits<{ loaded: [rows: Props[]] }>();
+function take(row: Props, more: Props[]) {
+  emit("loaded", [row, ...more]);
+}
+</script>
+<template><div>{{ label }}<X v-for="r in rows" :key="r.id" v-bind="r" @loaded="(more) => take(r, more)" /></div></template>`;
+      const out = compile(island(row)).get("x.rs")!;
+      expect(out).toContain("super::x::render(out, r);");
+    });
+
+    it("skips listeners beside a v-bind of the child's Props, in every form", () => {
+      const parent = `<script setup lang="ts">
+import Child from "./Child.vue";
+import type { Props as ChildProps } from "./Child.vue";
+const props = defineProps<{ items: ChildProps[]; ev: string }>();
+function note() {}
+const handlers = { click: note, Picked: note };
+</script>
+<template><ul>
+  <Child v-for="item in items" v-bind="item" @picked="note" v-on:hover.once="note" @update:label="note" />
+  <Child v-for="item in items" v-bind="item" v-on="handlers" />
+  <Child v-for="item in items" v-bind="item" @[ev]="note" />
+  <Child label="x" title="t" @[ev]="note" @click="note" />
+</ul></template>`;
+      const out = compile(island(parent, { Child: child })).get("x.rs")!;
+      expect(out.match(/super::child::render(_scoped)?\(out, item(, &fv::Attrs::NONE)?\);/g)).toHaveLength(3);
+      expect(out).toContain(`("title", fv::Attr::str("t"))`);
+      expect(out).not.toMatch(/"on[A-Z]/);
+    });
+
+    it("gives a prop named like a listener the value bound to it, as Vue does", () => {
+      const sale = `<script setup lang="ts">
+defineProps<{ label: string; onSale?: boolean }>();
+</script>
+<template><b>{{ label }}<i v-if="onSale">!</i></b></template>`;
+      const parent = `<script setup lang="ts">
+import Sale from "./Sale.vue";
+</script>
+<template><div><Sale label="x" :on-sale="true" /></div></template>`;
+      expect(compile(island(parent, { Sale: sale })).get("x.rs")).toContain("on_sale: Some(true)");
+    });
+
     it("passes a key the child does not declare as an attribute, which falls through to its root", () => {
       const parent = `<script setup lang="ts">
 import Child from "./Child.vue";
@@ -1691,6 +1737,26 @@ import { NOW } from "./consts";
 
   const refused: [string, string, RegExp][] = [
     [
+      "a listener of a name chosen at run time given to a child with a prop named like a listener",
+      `<script setup lang="ts">
+import W from "./W.vue";
+defineProps<{ ev: string }>();
+function note() {}
+</script>
+<template><W @[ev]="note" /></template>`,
+      /X\.vue:6:\d+: a listener whose name is not known before rendering, given to W, which declares `onSale` as a prop/,
+    ],
+    [
+      "listeners from an object given to a child with a prop named like a listener",
+      `<script setup lang="ts">
+import W from "./W.vue";
+function note() {}
+const handlers = { sale: note };
+</script>
+<template><W v-on="handlers" /></template>`,
+      /a listener whose name is not known before rendering, given to W, which declares `onSale` as a prop/,
+    ],
+    [
       "a type parameter without a constraint",
       `<script setup lang="ts" generic="T">
 defineProps<{ value: T }>();
@@ -2581,10 +2647,16 @@ defineProps<{ b?: string }>();
 defineProps<{ c: string | null }>();
 </script>
 <template><b>{{ c }}</b></template>`,
+    W: `<script setup lang="ts">
+defineProps<{ onSale?: boolean }>();
+</script>
+<template><b v-if="onSale">!</b></template>`,
   };
 
   const codes: Record<string, Code> = {
     "a type parameter without a constraint": "FV0302",
+    "a listener of a name chosen at run time given to a child with a prop named like a listener": "FV0514",
+    "listeners from an object given to a child with a prop named like a listener": "FV0514",
     "an enum read whole": "FV0208",
     "an enum read by a key chosen at run time": "FV0222",
     "a value read from `$attrs`, which has no type": "FV0415",

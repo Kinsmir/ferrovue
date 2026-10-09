@@ -68,6 +68,10 @@ pub mod inline_prose;
 pub mod keywords;
 pub mod lifecycle;
 pub mod links;
+pub mod listen_leaf;
+pub mod listen_sale;
+pub mod listened;
+pub mod listeners;
 pub mod lists;
 pub mod mapped_choice;
 pub mod markup;
@@ -510,6 +514,22 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let router = route_table::router();
             let route = router.at(&fixture.route);
             links::render(&mut out, &props, &route);
+        }
+        "ListenLeaf" => {
+            let props: listen_leaf::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            listen_leaf::render(&mut out, &props);
+        }
+        "ListenSale" => {
+            let props: listen_sale::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            listen_sale::render(&mut out, &props);
+        }
+        "Listened" => {
+            let props: listened::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            listened::render(&mut out, &props);
+        }
+        "Listeners" => {
+            let props: listeners::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            listeners::render(&mut out, &props);
         }
         "Lists" => {
             let props: lists::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
