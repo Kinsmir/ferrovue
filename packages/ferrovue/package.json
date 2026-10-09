@@ -65,6 +65,10 @@
       "types": "./dist/vite.d.ts",
       "default": "./dist/vite.js"
     },
+    "./volar": {
+      "types": "./dist/volar.d.ts",
+      "default": "./dist/volar.js"
+    },
     "./schema.json": "./schema.json"
   },
   "sideEffects": false,
@@ -84,17 +88,23 @@
   },
   "devDependencies": {
     "@unhead/vue": "catalog:",
+    "@vue/language-core": "3.3.12",
+    "@vue/language-service": "3.3.12",
     "@vue/server-renderer": "catalog:",
     "pinia": "catalog:",
     "playwright": "catalog:",
+    "typescript": "catalog:",
+    "typescript-js": "npm:typescript@6.0.3",
     "vite": "catalog:",
     "vitest": "catalog:",
+    "vscode-uri": "3.1.0",
     "vue": "catalog:",
     "vue-i18n": "catalog:",
     "vue-router": "catalog:"
   },
   "peerDependencies": {
     "@unhead/vue": "~3.4.2",
+    "@vue/language-core": "^3.3.0",
     "pinia": "~4.0.3",
     "vite": ">=6",
     "vitest": ">=5",
@@ -119,6 +129,9 @@
       "optional": true
     },
     "vitest": {
+      "optional": true
+    },
+    "@vue/language-core": {
       "optional": true
     }
   }

@@ -1,5 +1,5 @@
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { basename, join } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { relativePath } from "./paths.ts";
 import { type Config, ctx, loadConfig, tyOfName } from "./context.ts";
 import { failIn, snake } from "./model.ts";
@@ -12,8 +12,10 @@ import { componentSource, GENERATED, isIsland, modSource } from "./rust.ts";
 import { renderParams } from "./plugin.ts";
 import { PLUGINS } from "./plugins/index.ts";
 
-/** Every generated file, keyed by its name in the output directory. */
-export function generate(root: string, config: Config = loadConfig(root)): Map<string, string> {
+/** Every generated file, keyed by its name in the output directory. `sources` holds the text of
+ * components by path, read in place of their files, as an editor's unsaved buffers. */
+export function generate(root: string, config: Config = loadConfig(root), sources: ReadonlyMap<string, string> = new Map()): Map<string, string> {
+  ctx.sources = new Map([...sources].map(([file, text]) => [resolve(root, file), text]));
   ctx.componentsDir = config.components.replace(/\/?$/, "/");
   ctx.helperModule = config.helpers?.module ?? null;
   ctx.trustedHtml = config.trustedHtml ?? null;

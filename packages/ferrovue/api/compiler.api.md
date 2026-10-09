@@ -38,7 +38,7 @@ export interface Config {
 export const CONFIG_FILE = "ferrovue.config.json";
 
 // @public
-export function generate(root: string, config?: Config): Map<string, string>;
+export function generate(root: string, config?: Config, sources?: ReadonlyMap<string, string>): Map<string, string>;
 
 // @public
 export class GenError extends Error {

@@ -16,7 +16,9 @@ error[FV0609]: components/Card.vue:7:14: `<` is supported between two numbers, o
 
 [`error_codes`](crate::guide::error_codes) lists every code. `ferrovue --format json` writes the
 same errors for an editor or a CI annotation, and a VS Code problem matcher puts them in the
-Problems panel: see [`quick_start`](crate::guide::quick_start#editor-and-ci-diagnostics).
+Problems panel: see [`quick_start`](crate::guide::quick_start#editor-and-ci-diagnostics). The
+`ferrovue/volar` plugin for Vue's language tools underlines them in the editor as you type: see
+[`quick_start`](crate::guide::quick_start#diagnostics-in-your-editor).
 
 What is refused today, each with an error that names it:
 

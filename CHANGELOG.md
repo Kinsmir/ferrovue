@@ -7,6 +7,15 @@ released together and share version numbers.
 
 ### Added
 
+- `ferrovue/volar`, a plugin for Vue's language tools (`@vue/language-core` 3.3, the Vue (Official)
+  extension's language server): named in `vueCompilerOptions.plugins` in `tsconfig.json`, it
+  compiles the project as a component is edited, with the editor's unsaved text, and underlines what
+  ferrovue refuses in it, with the error's code linked to its documentation. An error in the
+  template is underlined on the construct; one in `<script setup>` or `<style>` on the block's
+  opening tag, with its line and column in the message. `config` names another configuration file
+  and `codeLinks: false` gives the code as plain text. `generate` takes the text of components in
+  place of their files as a third argument. The full-stack example enables the plugin, and its
+  README describes restarting the server with bacon when the generated Rust changes.
 - Generated code checks its version against the `ferrovue` crate's: `mod.rs` opens with
   `ferrovue::__compat!(1)`, and generated code of a version the crate does not support stops the
   build at that line with one message saying to use the npm package and the crate of one release

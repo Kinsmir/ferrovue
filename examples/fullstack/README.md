@@ -31,8 +31,21 @@ pnpm --filter ferrovue-example-fullstack dev                         # Vite on :
 VITE_DEV_SERVER=http://localhost:5173 cargo run -p ferrovue-example-fullstack
 ```
 
-Use [bacon](https://dystroy.org/bacon/)'s `bacon run-long -- -p ferrovue-example-fullstack` to restart
-the server when the generated Rust changes.
+That is the client half of hot reload. For the server half, run the Rust server under
+[bacon](https://dystroy.org/bacon/) in place of `cargo run`. bacon watches `src/`, which holds
+`src/generated/`, so each time the ferrovue plugin rewrites a module, it rebuilds the server and
+restarts it:
+
+```sh
+VITE_DEV_SERVER=http://localhost:5173 bacon run-long -- -p ferrovue-example-fullstack
+```
+
+The plugin writes only the modules whose text changed, so an edit that changes no generated Rust
+restarts nothing.
+
+`tsconfig.json` names the `ferrovue/volar` plugin, so in VS Code with the Vue (Official) extension a
+component's errors are underlined as you edit it (see the quick start's "Diagnostics in your
+editor").
 
 To see one page as the server renders it:
 

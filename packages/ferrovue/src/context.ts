@@ -322,4 +322,11 @@ export const ctx = {
   narrowCount: 0,
   componentsDir: "",
   vnodeTag: null as string | null,
+  sources: new Map<string, string>(),
 };
+
+/** A component's text: what the run was given for its path, as an editor's unsaved buffer, or the
+ * file on disk. */
+export function readSource(file: string): string {
+  return ctx.sources.get(resolve(file)) ?? readFileSync(file, "utf8");
+}

@@ -120,6 +120,7 @@ the crate's [`error_codes`](https://docs.rs/ferrovue/latest/ferrovue/guide/error
 guide. `--format json` writes the same errors as JSON with the exit status unchanged, and a VS Code
 problem matcher for `tasks.json` puts them in the Problems panel: both are in the
 [quick start](https://docs.rs/ferrovue/latest/ferrovue/guide/quick_start/index.html#editor-and-ci-diagnostics).
+In the editor, the `ferrovue/volar` plugin shows them as you type (step 5).
 
 ```rust
 #[rustfmt::skip]
@@ -182,6 +183,23 @@ With the `dioxus` feature, a component goes into a Dioxus 0.7 page (`dioxus-ssr`
 `{greeting::island(&props)}` in `rsx!` is the island element itself, with exactly the markup Vue
 hydrates inside it. See `examples/dioxus` and the crate guide's
 [Dioxus page](https://github.com/Kinsmir/ferrovue/blob/main/crates/ferrovue/docs/guide/dioxus.md).
+
+### 5. Diagnostics in your editor
+
+`ferrovue/volar` is a plugin for Vue's language tools, which the Vue (Official) extension for VS Code
+and Vue support in other editors run. It compiles the project as you type and underlines what
+ferrovue refuses in the open component, with the error's code linked to its documentation. Name it
+in the `tsconfig.json` that includes your components, then run **Vue: Restart Vue and TS servers**:
+
+```json
+{
+  "include": ["components/**/*.vue", "components/**/*.ts"],
+  "vueCompilerOptions": { "plugins": ["ferrovue/volar"] }
+}
+```
+
+The [quick start](https://docs.rs/ferrovue/latest/ferrovue/guide/quick_start/index.html#diagnostics-in-your-editor)
+has the details; `examples/fullstack/tsconfig.json` enables it.
 
 ## What a component may use
 
@@ -819,6 +837,7 @@ packages/ferrovue/           the compiler (npm package)
   src/diff.ts                the diff `ferrovue --check --diff` prints for a stale file
   src/errors.ts, diagnostics.ts
                              every error code with its title, and errors as the CLI, JSON and Vite show them
+  src/volar.ts, editor.ts    `ferrovue/volar`: errors in the editor, from a plugin for Vue's language tools
   src/client.ts              browser-side helpers: `mountIslands`, `mountPage`, `readPage`, `renderPage`, `hydrateState`, `<ClientOnly>`
   src/islands.ts             `ferrovue/islands`, which the Vite plugin writes: every island, loaded lazily
   src/link-router.ts         `ferrovue/link-router`: `<RouterLink>` while the application navigates on its own

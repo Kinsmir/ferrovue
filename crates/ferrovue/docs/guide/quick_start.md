@@ -336,8 +336,9 @@ configuration key (`FV1117`) or command-line option (`FV1118`), is a diagnostic 
 `changed` and `removed`; `--check` adds `out`, `stale` and `notGenerated`, the modules it would
 rewrite or remove. `--format json` does not combine with `--diff`.
 
-In VS Code, a task with these problem matchers puts each error in the Problems panel and underlines
-it in the file. Add it to `.vscode/tasks.json` and run it with **Tasks: Run Task**:
+In VS Code, a task with these problem matchers puts each error of a run in the Problems panel and
+underlines it in the file; the plugin in [the next section](#diagnostics-in-your-editor) shows them
+as you type. Add the task to `.vscode/tasks.json` and run it with **Tasks: Run Task**:
 
 ```json
 {
@@ -383,6 +384,55 @@ it in the file. Add it to `.vscode/tasks.json` and run it with **Tasks: Run Task
 The first matcher reads an error at a line and column; the second one an error in a whole file, as
 in a locale file. Run the task from the directory that holds `ferrovue.config.json`, or set the
 task's `options.cwd` and `fileLocation` to it.
+
+# Diagnostics in your editor
+
+`ferrovue/volar` is a plugin for Vue's language tools, the language server that the Vue (Official)
+extension for VS Code and Vue support in other editors run. While you edit a component, it compiles
+the project with the editor's text of that component in place of the file, and shows what ferrovue
+refuses in it where the editor shows Vue's own template errors: underlined, with the error's code,
+which links to the code's entry in [`error_codes`](crate::guide::error_codes).
+
+Name the plugin in `vueCompilerOptions` in the `tsconfig.json` whose `include` covers the
+components, then run **Vue: Restart Vue and TS servers** from the command palette (or reload the
+window):
+
+```json
+{
+  "include": ["components/**/*.vue", "components/**/*.ts"],
+  "vueCompilerOptions": {
+    "plugins": ["ferrovue/volar"]
+  }
+}
+```
+
+A refused `{{ n.toPrecision(2) }}` is then underlined at `n`, and its hover and the Problems panel
+read:
+
+```text
+ferrovue: `.toPrecision()` is not supported  vue(FV0602)
+```
+
+where `FV0602` opens the error's documentation.
+
+- An error in the template is underlined on the construct. Vue's language server checks the inside
+  of `<script setup>` and `<style>` through TypeScript and CSS only, so an error there is underlined
+  on the block's opening tag, as `<script setup lang="ts">`, and its message ends with its line and
+  column, as `(at 2:21)`. An error about the whole component is at its start.
+- The plugin finds the project from the component: the nearest directory above it that holds
+  `ferrovue.config.json`. A configuration file of another name or place is named with `config`,
+  relative to the project root, as `--config` takes it:
+  `"plugins": [{ "name": "ferrovue/volar", "config": "config/ferrovue.json" }]`.
+- The compiler stops at the first error in the project, so while one component has an error, the
+  others show none. A component is checked again each time its text changes: after an edit to a
+  store, a shared type or another component, the open component shows the result on its next edit.
+- The error's code carries its link in the form VS Code reads. For an editor that shows that form
+  wrongly, `"codeLinks": false` gives the code as text and puts the link at the end of the message.
+- TypeScript's server and `vue-tsc` load the same plugins; this one does nothing in them, so
+  `vue-tsc` does not report these errors. In CI, run `ferrovue --check`.
+- The plugin needs `@vue/language-core` 3.3 or newer, the version of Vue (Official) 3.3. Vue's
+  language tools load it with `require`, which loads an ES module on Node.js 22.12 or newer; the
+  language server runs on the editor's own Node.js.
 
 From here:
 
