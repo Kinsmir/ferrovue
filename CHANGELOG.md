@@ -48,8 +48,10 @@ released together and share version numbers.
   global scoping, the lightningcss transformer). `<style module>` without `cssModules` stays refused
   (FV1005), and a module in another file, one a preprocessor compiles, one that imports from another
   file (FV1014) and `useCssModule` of a module the component lacks (FV1015) are refused.
-- `attachSsrRender` (`ferrovue/testing`) compiles `v-bind()` in `<style>` as plugin-vue does, and
-  gives hydration in Node the variables Vue's Node build leaves out.
+- `attachSsrRender` (`ferrovue/testing`) compiles `v-bind()` in `<style>` with the names plugin-vue
+  gave the component, and gives hydration in Node the variables Vue's Node build leaves out; a
+  fresh client render (`conformanceSuite`, `renderRecordedPage`) sets them as a browser's Vue does
+  once mounted, and compares custom properties by name in any order.
 - `Boolean` is taken as the function of `.filter()`, `.map()`, `.some()`, `.every()`, `.find()` and
   `.findIndex()`, as `x => !!x`, and `Boolean(x)` as a call. `.filter(Boolean)` of a list whose items
   may be `null` or `undefined`, or of an array literal holding optional values

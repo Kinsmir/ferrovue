@@ -398,7 +398,9 @@ page in Chromium, Firefox and WebKit.
 a navigation shows it, and throws where the client's DOM differs from the markup the browser
 parsed, and on anything Vue warns or logs as an error. Vue's client and server write some things
 differently that mean the same, so the two are compared with comments and empty text nodes left
-out, adjacent text joined, a `class` by its classes, a `style` by its declarations, and an
+out, adjacent text joined, a `class` by its classes, a `style` by its declarations (the custom
+properties Vue's client sets for `v-bind()` in `<style>` once mounted, after the others, by name in
+any order), and an
 `<input>`'s `value` and `checked`, a `<textarea>`'s `value` and an `<option>`'s `selected` by the
 state the browser holds, which the client sets as properties where the server writes attributes.
 The render is compared as mounting leaves it, where a `<ClientOnly>` still shows the fallback the
@@ -409,7 +411,10 @@ What is teleported out of the page is not compared.
 its recorded HTML. Where Vue's own client render differs from its server render, list the fixture
 in `clientDiffers`: a `v-model` `<select>` whose value matches no option, an attribute such as
 `disabled` bound on an element without that property, a `<TransitionGroup>`'s `name`, the slot
-scope ids of a slotted component, and an async component beside a `<ClientOnly>`.
+scope ids of a slotted component, an async component beside a `<ClientOnly>`, and the `v-bind()`
+variables in `<style>` the client sets on a root `v-for`'s elements or a `<Transition>` root, where
+the server writes none. In Node, where Vue's build sets no such variables, the suite sets them as a
+browser's Vue does, from what `attachSsrRender` gives each component.
 
 # Hydrating the whole app
 

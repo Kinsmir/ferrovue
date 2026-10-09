@@ -9,7 +9,7 @@ import { allPages, fileRoutes, pagesFolder, routeEntries } from "./file-routes.t
 import { fixtureApp, peer, readFixture, type RouteEntry, type RouterOptions } from "./fixture.ts";
 import { headRendered, settled } from "./settle.ts";
 import { attachSsrRender } from "./ssr.ts";
-import { renderDifference, renderedShape } from "./client-render.ts";
+import { applyCssVars, renderDifference, renderedShape } from "./client-render.ts";
 
 /** What `conformanceSuite` checks: the project, its components and its fixtures. `pinia`,
  * `vueRouter` and `vueI18n` are the application's own modules (`pinia: await import("pinia")`),
@@ -265,6 +265,7 @@ export async function clientRenderDifference(app: App, html: string): Promise<st
   let difference: string | null;
   try {
     app.mount(root);
+    applyCssVars(app);
     difference = await renderDifference(app, root, renderedShape(root), expected);
     app.unmount();
     await headRendered();
