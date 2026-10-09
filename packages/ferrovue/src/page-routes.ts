@@ -13,4 +13,6 @@ export const routes: RouteRecordRaw[] = unwritten();
  * and `linkRouter` take, for a client whose pages the server renders. */
 const entries: RouteEntry[] = unwritten();
 
+export type { RouteEntry };
+
 export default entries;

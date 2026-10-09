@@ -407,8 +407,8 @@ The render is compared as mounting leaves it, where a `<ClientOnly>` still shows
 server wrote, and, where that differs while async components are loading, once they have loaded.
 What is teleported out of the page is not compared.
 
-`conformanceSuite` holds every fixture to the same comparison: a fresh client render of each shows
-its recorded HTML. Where Vue's own client render differs from its server render, list the fixture
+With `clientRender: true`, `conformanceSuite` holds every fixture to the same comparison: a fresh
+client render of each shows its recorded HTML. Where Vue's own client render differs from its server render, list the fixture
 in `clientDiffers`: a `v-model` `<select>` whose value matches no option, an attribute such as
 `disabled` bound on an element without that property, a `<TransitionGroup>`'s `name`, the slot
 scope ids of a slotted component, an async component beside a `<ClientOnly>`, and the `v-bind()`

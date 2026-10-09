@@ -20,8 +20,15 @@ export interface FerrovueOptions {
     root?: string;
 }
 
-// Warning: (ae-forgotten-export) The symbol "FileRoute" needs to be exported by the entry point vite.d.ts
-//
+// @public
+export interface FileRoute {
+    children?: FileRoute[];
+    component?: string;
+    file?: string;
+    name?: string;
+    path: string;
+}
+
 // @public
 export function routesModule(root: string, routes: FileRoute[]): string;
 

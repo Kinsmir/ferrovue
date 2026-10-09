@@ -6,11 +6,17 @@
 
 import type { RouteRecordRaw } from 'vue-router';
 
-// Warning: (ae-forgotten-export) The symbol "RouteEntry" needs to be exported by the entry point page-routes.d.ts
-//
 // @public
 const entries: RouteEntry[];
 export default entries;
+
+// @public
+export type RouteEntry = string | {
+    path: string;
+    name?: string;
+    view?: boolean;
+    children?: RouteEntry[];
+};
 
 // @public
 export const routes: RouteRecordRaw[];

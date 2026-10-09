@@ -164,7 +164,8 @@ export function write(root: string, config: Config = loadConfig(root)): Written 
 }
 
 export { CONFIG_FILE, loadConfig, TYPES_MODULE, type Config, type HelperSpec, type RoutesSource, type ScopeIdMode, type TwinSpec, type TypeName } from "./context.ts";
-export { GenError } from "./model.ts";
+export { GenError, type Location as SourceLocation } from "./model.ts";
+export { docsUrl, ERRORS, type Code as ErrorCode, type ErrorDoc } from "./errors.ts";
 
 export const VERSION: string = (() => {
   try {

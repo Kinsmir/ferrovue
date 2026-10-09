@@ -10,4 +10,5 @@ await conformanceSuite({
   },
   pinia: await import("pinia"),
   vueRouter: await import("vue-router"),
+  clientRender: true,
 });
