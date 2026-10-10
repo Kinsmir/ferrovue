@@ -307,7 +307,8 @@ defineProps<{ name: string }>();
   const manifest = JSON.parse(String((output.find((o) => o.fileName === ".vite/manifest.json") as Rolldown.OutputAsset).source)) as Record<string, { file: string }>;
   const keys = Object.fromEntries(Object.entries(manifest).map(([key, chunk]) => [chunk.file, key]));
   // Card imports Hello, so Hello is bundled into a chunk the manifest does not key by its source.
-  expect(keys[islands.Card!]).toBe("components/Card.vue");
+  // Relative to Vite's root, which a Windows runner's temporary folder can spell in its short form.
+  expect(keys[islands.Card!]).toMatch(/(^|\/)components\/Card\.vue$/);
   expect(keys[islands.Hello!]).toMatch(/^_/);
 
   expect((await built("meta/build.json")).map((o) => o.fileName)).toContain("meta/ferrovue-islands.json");
