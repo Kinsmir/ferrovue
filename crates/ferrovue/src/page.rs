@@ -128,6 +128,7 @@ type SlotContent<'p> = dyn Fn(&mut String, &str) -> bool + 'p;
 #[derive(Debug, Default)]
 struct Recorded {
     props: String,
+    names: Vec<&'static str>,
     slots: Vec<(String, Option<String>)>,
     open: usize,
     waker: Option<Waker>,
@@ -156,6 +157,7 @@ impl Page {
     ) -> PageSlot<'p> {
         let parts: Vec<Part<'p>> = parts.into_iter().collect();
         self.add(slot, Some(parts_json(&parts)));
+        lock(&self.record).name(&parts);
         PageSlot {
             render: Box::new(move |out, slot_scope_id| {
                 refuse_slotted(slot_scope_id);
@@ -221,6 +223,12 @@ impl<'p> Part<'p> {
             render: Box::new(move |out| (html.render)(out, html.props.get())),
         }
     }
+
+    /// The component's name, as it was given.
+    #[must_use]
+    pub fn name(&self) -> &'static str {
+        self.name
+    }
 }
 
 impl PageSlot<'_> {
@@ -252,6 +260,7 @@ impl PageHole {
         for part in &parts {
             (part.render)(&mut out);
         }
+        lock(&self.record).name(&parts);
         self.close(parts_json(&parts));
         out
     }
@@ -278,6 +287,15 @@ impl Drop for PageHole {
 }
 
 impl PageRecord {
+    /// The names of the components the record holds so far, each once, in the order they were
+    /// given: those of every slot, and of each hole filled by now. The client loads each from
+    /// `ferrovue/islands`, so [`Chunks::for_islands`](crate::Chunks::for_islands) says which
+    /// scripts to preload for them.
+    #[must_use]
+    pub fn island_names(&self) -> Vec<&'static str> {
+        lock(&self.record).names.clone()
+    }
+
     /// Write the record as a `<script type="application/json">` with the given `id`, escaped as
     /// [`state_script_into`](crate::state_script_into) escapes the state: `"__fv_page"` is what
     /// `mountPage` reads by default.
@@ -322,6 +340,14 @@ impl Future for PageScript {
 }
 
 impl Recorded {
+    fn name(&mut self, parts: &[Part<'_>]) {
+        for part in parts {
+            if !self.names.contains(&part.name) {
+                self.names.push(part.name);
+            }
+        }
+    }
+
     fn to_json(&self) -> String {
         let mut out = String::from("{\"props\":");
         out.push_str(&self.props);

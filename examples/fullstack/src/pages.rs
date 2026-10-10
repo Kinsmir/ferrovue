@@ -120,7 +120,8 @@ impl Site {
             };
             index::render(out, &props, slots, route, &head);
         };
-        self.document(200, &head, route, stores, &view, Vec::new())
+        let body = in_layout(&head, route, stores, &view);
+        self.finish(200, &head, &body, stores, &[], Vec::new())
     }
 
     fn book(
@@ -142,7 +143,9 @@ impl Site {
             books_id::render(out, &props, slots, route, &head);
         };
         let holes = vec![Hole::Reviews(id.into_owned())];
-        self.document(200, &head, route, stores, &view, holes)
+        let islands = [add_to_basket::NAME];
+        let body = in_layout(&head, route, stores, &view);
+        self.finish(200, &head, &body, stores, &islands, holes)
     }
 
     fn picks(&self, route: &Route<'_>, stores: &Stores<'_>) -> Page {
@@ -184,58 +187,41 @@ impl Site {
         let record = page.render_to(&mut body, picks::html(&props, slots, route, &head));
         body.push_str("</div>");
         ferrovue::hole().render_to(&mut body);
+        let mut islands = record.island_names();
+        islands.push(reviews::NAME);
         let holes = vec![
             Hole::PageReviews(featured.id.clone().into_owned(), reviews),
             Hole::Record(record.script("__fv_page")),
         ];
-        self.finish(200, &head, &body, stores, holes)
+        self.finish(200, &head, &body, stores, &islands, holes)
     }
 
     fn not_found(&self, route: &Route<'_>, stores: &Stores<'_>, location: &str) -> Page {
         let head = Head::new();
         let props = missing::Props::new(location);
         let view = |out: &mut String| missing::render(out, &props, route, &head);
-        self.document(404, &head, route, stores, &view, Vec::new())
-    }
-
-    fn document(
-        &self,
-        status: u16,
-        head: &Head,
-        route: &Route<'_>,
-        stores: &Stores<'_>,
-        view: &dyn Fn(&mut String),
-        holes: Vec<Hole>,
-    ) -> Page {
-        let mut body = String::new();
-        let slots = layout::Slots {
-            router_view: Slot::new(view),
-        };
-        layout::render(
-            &mut body,
-            &layout::Props::new(SHOP),
-            slots,
-            route,
-            stores,
-            head,
-        );
-        self.finish(status, head, &body, stores, holes)
+        let body = in_layout(&head, route, stores, &view);
+        self.finish(404, &head, &body, stores, &[], Vec::new())
     }
 
     /// The document around `body`, once it is rendered: the head its components asked for with
-    /// `useHead`, as unhead's server renderer writes it, and the client's assets.
+    /// `useHead`, as unhead's server renderer writes it, and the client's assets, with the chunks
+    /// of the `islands` the page hydrates at once preloaded. The head is written once the body is, so it
+    /// can name every island, those of the holes included.
     fn finish(
         &self,
         status: u16,
         head: &Head,
         body: &str,
         stores: &Stores<'_>,
+        islands: &[&str],
         holes: Vec<Hole>,
     ) -> Page {
         let tags = head.render();
         let mut out = format!("<!doctype html><html{}><head>", tags.html_attrs);
         out.push_str(&tags.head_tags);
         self.assets.styles_into(&mut out);
+        self.assets.preloads_into(&mut out, islands.iter().copied());
         out.push_str(&format!("</head><body{}>", tags.body_attrs));
         out.push_str(&tags.body_tags_open);
         out.push_str(body);
@@ -254,4 +240,26 @@ impl Site {
             holes,
         }
     }
+}
+
+/// The body of a page whose `view` goes in the layout's `<RouterView>`.
+fn in_layout(
+    head: &Head,
+    route: &Route<'_>,
+    stores: &Stores<'_>,
+    view: &dyn Fn(&mut String),
+) -> String {
+    let mut body = String::new();
+    let slots = layout::Slots {
+        router_view: Slot::new(view),
+    };
+    layout::render(
+        &mut body,
+        &layout::Props::new(SHOP),
+        slots,
+        route,
+        stores,
+        head,
+    );
+    body
 }
