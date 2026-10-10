@@ -73,7 +73,7 @@ it("fails a build whose `<style scoped>` ids plugin-vue computes otherwise, and 
   const configured = (command: "build" | "serve", features: Record<string, unknown> = {}) => {
     const plugin = ferrovue({ root });
     const vue = { name: "vite:vue", api: { options: { features } } };
-    (plugin.configResolved as (c: unknown) => void)({ plugins: [vue], root, isProduction: command === "build", command });
+    (plugin.configResolved as (c: unknown) => void)({ plugins: [vue], root, isProduction: command === "build", command, build: { manifest: false, ssr: false } });
     return plugin;
   };
   const warned: string[] = [];
@@ -97,7 +97,7 @@ it("fails a build whose `<style scoped>` ids plugin-vue computes otherwise, and 
 
 function started(plugin: ReturnType<typeof ferrovue>, config: Record<string, unknown>): string[] {
   const warned: string[] = [];
-  (plugin.configResolved as (c: unknown) => void)(config);
+  (plugin.configResolved as (c: unknown) => void)({ build: { manifest: false, ssr: false }, ...config });
   const hook = plugin.buildStart as (this: { error(m: string): never; warn(m: string): void }) => void;
   hook.call({
     error(m: string): never {
@@ -281,6 +281,37 @@ it("splits each island into a chunk of its own in a build", async () => {
   const entry = chunks.find((c) => c.isEntry)!;
   expect(entry.dynamicImports).toHaveLength(2);
   expect(entry.code).not.toContain("Hello, ");
+});
+
+it("writes beside the manifest the chunk that holds each island, its own or one it shares", async () => {
+  const card = `<script setup lang="ts">
+import Hello from "./Hello.vue";
+defineProps<{ name: string }>();
+</script>
+<template><div><Hello :name="name" /></div></template>`;
+  writeFileSync(join(root, "components", "Card.vue"), card);
+  writeFileSync(join(root, "components", "Frame.vue"), frame);
+  writeFileSync(join(root, "main.ts"), 'import islands from "ferrovue/islands";\nObject.assign(globalThis, { islands });\n');
+  const built = async (manifest: boolean | string): Promise<Rolldown.OutputBundle[string][]> =>
+    ((await build({
+      root,
+      configFile: false,
+      logLevel: "silent",
+      plugins: [vuePlugin(), ferrovue({ root })],
+      build: { write: false, manifest, rolldownOptions: { input: join(root, "main.ts"), external: ["vue"] } },
+    })) as Rolldown.RolldownOutput).output;
+  const output = await built(true);
+  const asset = output.find((o) => o.fileName === ".vite/ferrovue-islands.json") as Rolldown.OutputAsset;
+  const islands = JSON.parse(String(asset.source)) as Record<string, string>;
+  expect(Object.keys(islands)).toEqual(["Card", "Hello"]);
+  const manifest = JSON.parse(String((output.find((o) => o.fileName === ".vite/manifest.json") as Rolldown.OutputAsset).source)) as Record<string, { file: string }>;
+  const keys = Object.fromEntries(Object.entries(manifest).map(([key, chunk]) => [chunk.file, key]));
+  // Card imports Hello, so Hello is bundled into a chunk the manifest does not key by its source.
+  expect(keys[islands.Card!]).toBe("components/Card.vue");
+  expect(keys[islands.Hello!]).toMatch(/^_/);
+
+  expect((await built("meta/build.json")).map((o) => o.fileName)).toContain("meta/ferrovue-islands.json");
+  expect((await built(false)).map((o) => o.fileName).filter((f) => f.endsWith(".json"))).toEqual([]);
 });
 
 function withPages(): void {

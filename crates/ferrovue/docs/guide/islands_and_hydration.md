@@ -418,6 +418,65 @@ variables in `<style>` the client sets on a root `v-for`'s elements or a `<Trans
 the server writes none. In Node, where Vue's build sets no such variables, the suite sets them as a
 browser's Vue does, from what `attachSsrRender` gives each component.
 
+# Preloading the islands
+
+Each island is loaded on demand, and the browser finds its scripts one import at a time: the entry
+script, once the HTML is parsed; the app and Vue, once the entry runs; the islands, once the page
+has been read; and what they import. The server knows every island the page holds, so it can name
+their chunks up front with `<link rel="modulepreload">`, and the browser fetches them alongside the
+entry. [`Chunks`](crate::Chunks) reads Vite's manifest (`build.manifest: true` writes
+`.vite/manifest.json`) and `.vite/ferrovue-islands.json`, which the Vite plugin writes beside it
+with the chunk that holds each island. An island another component also imports has no chunk of its
+own, and no key in the manifest: it is bundled into a chunk they share, which that file names.
+
+```rust
+# let manifest = r#"{
+#     "client/main.ts": { "file": "assets/main.js", "isEntry": true, "dynamicImports": ["client/app.ts"] },
+#     "client/app.ts": { "file": "assets/app.js", "imports": ["_vue.js"], "dynamicImports": ["client/components/Counter.vue"] },
+#     "client/components/Counter.vue": { "file": "assets/Counter.js", "imports": ["_vue.js"] },
+#     "_vue.js": { "file": "assets/vue.js" }
+# }"#;
+# let islands = r#"{ "Counter": "assets/Counter.js" }"#;
+// Read once, at start-up, from `dist/.vite/manifest.json` and `dist/.vite/ferrovue-islands.json`.
+let chunks = ferrovue::Chunks::from_manifest(manifest, islands)?;
+
+// For each page:
+let mut preloads = chunks.preloads();
+let mut head = String::new();
+preloads.source_into(&mut head, "client/app.ts"); // a chunk the entry imports dynamically
+preloads.islands_into(&mut head, ["Counter"]); // a page's `record.island_names()`, or your own
+assert_eq!(
+    head,
+    concat!(
+        r#"<link rel="modulepreload" href="/assets/app.js">"#,
+        r#"<link rel="modulepreload" href="/assets/vue.js">"#,
+        r#"<link rel="modulepreload" href="/assets/Counter.js">"#,
+    )
+);
+# Ok::<(), ferrovue::ManifestError>(())
+```
+
+An island needs its own chunk and those it imports statically, never the entry, which the page's
+`<script>` loads, nor what it imports dynamically. [`Preloads`](crate::Preloads) writes each URL
+once per page however many islands share it, as most share Vue's chunk;
+[`for_islands`](crate::Chunks::for_islands) gives the URLs instead, for a `Link` header, say.
+[`with_base`](crate::Chunks::with_base) serves them under Vite's `base`. In development Vite serves
+the sources and there is no manifest: link nothing.
+
+Where the links go:
+
+- **Never inside the hydration root.** A `<link>` in the element an app hydrates is a node the
+  client does not render: a hydration mismatch. Put them in `<head>`, or in `<body>` outside the
+  app's container, where `modulepreload` is allowed too.
+- **A page written at once** knows every island before it writes `<head>`: render the body first,
+  as the full-stack example does.
+- **A streamed page** flushes its head before its content is known. Preload the app and the islands
+  of what is already rendered (the header, the slots given at once) in `<head>`, and each hole's
+  islands with its content, after the app's container closes, beside the record's `<script>`:
+  [`PageRecord::island_names`](crate::PageRecord::island_names) names those of the slots and the
+  holes filled by then, and a hole's parts name themselves with [`Part::name`](crate::Part::name).
+  Keep one `Preloads` for the page so nothing is linked twice.
+
 # Hydrating the whole app
 
 The other way is the ordinary Vue SSR setup: the server renders the whole page body from one root

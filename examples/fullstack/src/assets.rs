@@ -14,6 +14,8 @@ pub enum Assets {
         /// The stylesheets the entry imports, and those of the chunks it loads later: each island's
         /// own, which the page links up front so the server's markup is styled before it hydrates.
         styles: Vec<String>,
+        /// The chunks of the build, for preloading the islands a page renders.
+        chunks: ferrovue::Chunks,
     },
     /// Vite's dev server at this origin (`http://localhost:5173`), which serves the sources and
     /// hot-reloads them.
@@ -77,9 +79,15 @@ impl Assets {
                 }
             }
         }
+        let islands_path = dist.join(".vite/ferrovue-islands.json");
+        let islands = std::fs::read_to_string(&islands_path)
+            .map_err(|e| format!("{}: {e}", islands_path.display()))?;
+        let chunks = ferrovue::Chunks::from_manifest(&text, &islands)
+            .map_err(|e| format!("{}: {e}", dist.display()))?;
         Ok(Assets::Built {
             script: format!("/{}", entry.file),
             styles,
+            chunks,
         })
     }
 
@@ -91,6 +99,15 @@ impl Assets {
                 ferrovue::escape_into(out, href);
                 out.push_str("\">");
             }
+        }
+    }
+
+    /// A `<link rel="modulepreload">` for each chunk the islands called `names` load, so the
+    /// browser fetches them alongside the entry rather than once the client asks for them. In
+    /// development Vite serves the sources, one module at a time.
+    pub fn preloads_into<'n>(&self, out: &mut String, names: impl IntoIterator<Item = &'n str>) {
+        if let Assets::Built { chunks, .. } = self {
+            chunks.preloads().islands_into(out, names);
         }
     }
 
@@ -121,21 +138,32 @@ mod tests {
         let dist = std::env::temp_dir().join(format!("ferrovue-assets-{}", std::process::id()));
         std::fs::create_dir_all(dist.join(".vite")).unwrap();
         let manifest = r#"{
-            "client/main.ts": { "file": "assets/main.js", "css": ["assets/main.css"], "dynamicImports": ["client/components/A.vue", "client/components/B.vue"] },
+            "client/main.ts": { "file": "assets/main.js", "isEntry": true, "css": ["assets/main.css"], "dynamicImports": ["client/components/A.vue", "client/components/B.vue"] },
             "client/components/A.vue": { "file": "assets/A.js", "css": ["assets/A.css"], "imports": ["client/main.ts", "_shared.js"] },
             "client/components/B.vue": { "file": "assets/B.js", "imports": ["client/main.ts", "_shared.js"] },
             "_shared.js": { "file": "assets/shared.js", "css": ["assets/shared.css"] }
         }"#;
         std::fs::write(dist.join(".vite/manifest.json"), manifest).unwrap();
+        let islands = r#"{ "A": "assets/A.js" }"#;
+        std::fs::write(dist.join(".vite/ferrovue-islands.json"), islands).unwrap();
         let assets = Assets::from_manifest(&dist);
         std::fs::remove_dir_all(&dist).unwrap();
-        let Ok(Assets::Built { script, styles }) = assets else {
+        let Ok(Assets::Built {
+            script,
+            styles,
+            chunks,
+        }) = assets
+        else {
             panic!("no build: {assets:?}");
         };
         assert_eq!(script, "/assets/main.js");
         assert_eq!(
             styles,
             ["/assets/main.css", "/assets/A.css", "/assets/shared.css"]
+        );
+        assert_eq!(
+            chunks.for_islands(["A"]),
+            ["/assets/A.js", "/assets/shared.js"]
         );
     }
 }

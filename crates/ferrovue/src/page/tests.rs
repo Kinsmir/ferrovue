@@ -272,6 +272,32 @@ fn a_part_is_refused_where_vue_would_give_it_a_slot_scope_id() {
 }
 
 #[test]
+fn the_record_names_its_components_once_as_its_slots_and_holes_are_given_them() {
+    let props = WordProps {
+        text: "w",
+        ratio: 1.0,
+    };
+    let other = |props| Part::new("Other", Html::markup(props, word));
+    let mut page = Page::new();
+    let head = page.slot("head", [part(&props), other(&props), part(&props)]);
+    let late = page.hole("default");
+    let mut out = String::new();
+    let slots = Slots {
+        head: Some(head.slot()),
+        default: Some(late.slot()),
+    };
+    let record = page.render_to(&mut out, layout(&LayoutProps { title: "T" }, slots, ""));
+    assert_eq!(record.island_names(), ["Word", "Other"]);
+    let parts = [Part::new("Late", Html::markup(&props, word)), part(&props)];
+    assert_eq!(
+        parts.iter().map(Part::name).collect::<Vec<_>>(),
+        ["Late", "Word"]
+    );
+    let _ = late.fill(parts);
+    assert_eq!(record.island_names(), ["Word", "Other", "Late"]);
+}
+
+#[test]
 fn a_hole_is_recorded_once_it_is_filled_or_dropped() {
     let props = WordProps {
         text: "late",

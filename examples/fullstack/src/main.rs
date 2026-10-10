@@ -102,9 +102,22 @@ mod tests {
     use crate::pages::Hole;
 
     fn site() -> Site {
+        let manifest = r#"{
+            "client/main.ts": { "file": "assets/main.js", "isEntry": true, "imports": ["_vue.js"] },
+            "client/components/AddToBasket.vue": { "file": "assets/AddToBasket.js", "imports": ["_vue.js", "client/main.ts"] },
+            "client/components/Pick.vue": { "file": "assets/Pick.js", "imports": ["_vue.js"] },
+            "client/components/Reviews.vue": { "file": "assets/Reviews.js", "imports": ["_vue.js"] },
+            "_vue.js": { "file": "assets/vue.js" }
+        }"#;
+        let islands = r#"{
+            "AddToBasket": "assets/AddToBasket.js",
+            "Pick": "assets/Pick.js",
+            "Reviews": "assets/Reviews.js"
+        }"#;
         let assets = Assets::Built {
             script: "/assets/main.js".to_owned(),
             styles: vec!["/assets/main.css".to_owned()],
+            chunks: ferrovue::Chunks::from_manifest(manifest, islands).unwrap(),
         };
         Site::new(assets, Duration::ZERO)
     }
@@ -138,7 +151,11 @@ mod tests {
             "{html}"
         );
         assert!(
-            html.contains(r#"<link rel="stylesheet" href="/assets/main.css">"#),
+            html.contains(concat!(
+                r#"<link rel="stylesheet" href="/assets/main.css">"#,
+                r#"<link rel="modulepreload" href="/assets/AddToBasket.js">"#,
+                r#"<link rel="modulepreload" href="/assets/vue.js"></head>"#,
+            )),
             "{html}"
         );
         assert!(
@@ -213,6 +230,14 @@ mod tests {
             "{html}"
         );
         assert!(!html.contains("data-island"), "{html}");
+        assert!(
+            html.contains(concat!(
+                r#"<link rel="modulepreload" href="/assets/Pick.js">"#,
+                r#"<link rel="modulepreload" href="/assets/vue.js">"#,
+                r#"<link rel="modulepreload" href="/assets/Reviews.js"></head>"#,
+            )),
+            "{html}"
+        );
         assert!(
             html.contains(r#"<main><!--[--><article class="pick" data-id="dune"><h2>Dune</h2>"#),
             "{html}"

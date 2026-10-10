@@ -4,6 +4,7 @@
 
 mod attrs;
 mod basic_html;
+mod chunks;
 mod class;
 mod compat;
 mod conformance;
@@ -33,6 +34,7 @@ pub use attrs::{
     style_text_into,
 };
 pub use basic_html::{BasicHtml, InlineHtml};
+pub use chunks::{Chunks, ManifestError, Preloads};
 pub use class::{class_into, class_object};
 pub use conformance::check_fixtures;
 #[doc(hidden)]
