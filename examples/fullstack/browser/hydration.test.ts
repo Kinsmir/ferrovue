@@ -208,7 +208,9 @@ describe.each(BROWSERS)("%s", (name) => {
     expect(await Promise.all(messages)).toEqual([]);
     const [parsedHead, head, title] = await page.evaluate(() => [(window as { parsedHead?: string }).parsedHead ?? "", document.head.innerHTML, document.title]);
     expect(title).toBe("Staff picks · Ferrovue Books");
-    expect(head.replace(/<link rel="modulepreload"[^>]*>/g, ""), "unhead's client took over the head the server wrote").toBe(parsedHead);
+    const preloads = /<link rel="modulepreload"[^>]*>/g;
+    expect(head.replace(preloads, ""), "unhead's client took over the head the server wrote").toBe(parsedHead.replace(preloads, ""));
+    expect(parsedHead.match(preloads)?.map((link) => /\/assets\/([A-Za-z]+)-/.exec(link)?.[1])).toEqual(expect.arrayContaining(["Pick", "Reviews"]));
     const [parsed, now] = await parsedAndNow();
     expect(parsed).toMatch(/<span class="share"/);
     expect(now).toMatch(/<a [^>]*class="share" href="mailto:\?body=http[^"]*%2Fpicks"/);

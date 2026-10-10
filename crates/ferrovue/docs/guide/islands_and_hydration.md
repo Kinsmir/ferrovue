@@ -463,6 +463,10 @@ once per page however many islands share it, as most share Vue's chunk;
 [`with_base`](crate::Chunks::with_base) serves them under Vite's `base`. In development Vite serves
 the sources and there is no manifest: link nothing.
 
+Preload the islands that hydrate at once. An island given a [`Hydrate`](crate::Hydrate) waits to be
+seen, clicked or idle before it fetches its code; preloading it fetches that code with the page,
+which is what waiting was meant to spare.
+
 Where the links go:
 
 - **Never inside the hydration root.** A `<link>` in the element an app hydrates is a node the

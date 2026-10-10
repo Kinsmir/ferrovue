@@ -13,8 +13,8 @@ released together and share version numbers.
   `Chunks::preloads()` writes the links of one page, each URL once, in `<head>` and after the
   app's container alike; `for_islands` and `for_source` give the URLs, the latter for a chunk the
   entry imports dynamically; `with_base` serves them under Vite's `base`. The islands guide's
-  "Preloading the islands" says where the links may go, and the full-stack example preloads the
-  islands of each page.
+  "Preloading the islands" says which islands to preload (those that hydrate at once) and where
+  the links may go, and the full-stack example preloads them on each page.
 - A client build with a manifest writes `.vite/ferrovue-islands.json` beside it (beside the
   manifest's own path when `build.manifest` names one): each island's name with the file of the
   chunk that holds it, which `Chunks` reads with the manifest. An island another component imports

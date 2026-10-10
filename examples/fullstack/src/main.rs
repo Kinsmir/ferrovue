@@ -151,11 +151,7 @@ mod tests {
             "{html}"
         );
         assert!(
-            html.contains(concat!(
-                r#"<link rel="stylesheet" href="/assets/main.css">"#,
-                r#"<link rel="modulepreload" href="/assets/AddToBasket.js">"#,
-                r#"<link rel="modulepreload" href="/assets/vue.js"></head>"#,
-            )),
+            html.contains(r#"<link rel="stylesheet" href="/assets/main.css"></head>"#),
             "{html}"
         );
         assert!(
@@ -179,6 +175,13 @@ mod tests {
             panic!("one hole, two pieces");
         };
         assert!(before.contains("<h1>Dune</h1>"), "{before}");
+        assert!(
+            before.contains(concat!(
+                r#"<link rel="modulepreload" href="/assets/AddToBasket.js">"#,
+                r#"<link rel="modulepreload" href="/assets/vue.js"></head>"#,
+            )),
+            "{before}"
+        );
         assert!(
             before.contains(r#"<article class="book" data-id="dune">"#),
             "{before}"

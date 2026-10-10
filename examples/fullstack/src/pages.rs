@@ -120,9 +120,10 @@ impl Site {
             };
             index::render(out, &props, slots, route, &head);
         };
-        let islands = [add_to_basket::NAME];
+        // Each book's button hydrates once it is clicked: preloading it would fetch at once what
+        // the page means to fetch only then.
         let body = in_layout(&head, route, stores, &view);
-        self.finish(200, &head, &body, stores, &islands, Vec::new())
+        self.finish(200, &head, &body, stores, &[], Vec::new())
     }
 
     fn book(
@@ -144,7 +145,8 @@ impl Site {
             books_id::render(out, &props, slots, route, &head);
         };
         let holes = vec![Hole::Reviews(id.into_owned())];
-        let islands = [add_to_basket::NAME, reviews::NAME];
+        // The reviews hydrate once they are scrolled into view, so only the button is preloaded.
+        let islands = [add_to_basket::NAME];
         let body = in_layout(&head, route, stores, &view);
         self.finish(200, &head, &body, stores, &islands, holes)
     }
@@ -207,7 +209,7 @@ impl Site {
 
     /// The document around `body`, once it is rendered: the head its components asked for with
     /// `useHead`, as unhead's server renderer writes it, and the client's assets, with the chunks
-    /// of the `islands` the page hydrates preloaded. The head is written once the body is, so it
+    /// of the `islands` the page hydrates at once preloaded. The head is written once the body is, so it
     /// can name every island, those of the holes included.
     fn finish(
         &self,
