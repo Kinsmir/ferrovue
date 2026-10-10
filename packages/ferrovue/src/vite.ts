@@ -144,16 +144,12 @@ ${routesTree(root, routes, "  ", false)}
 `;
 }
 
-/** Where a client build with a manifest writes `ferrovue-islands.json`: beside the manifest. */
 function islandsFile(manifest: boolean | string, ssr: boolean | string): string | null {
   if (!manifest || ssr) return null;
   const written = typeof manifest === "string" ? manifest : ".vite/manifest.json";
   return posix.join(posix.dirname(written), "ferrovue-islands.json");
 }
 
-/** Each island's name with the file of the chunk that holds it, which `ferrovue::Chunks` finds in
- * the manifest. An island another chunk also imports has no chunk of its own: it is bundled into
- * one they share, which the manifest does not key by the island's source. */
 function islandsJson(root: string, islands: Record<string, string>, bundle: Iterable<{ type: string; fileName: string; moduleIds?: readonly string[] }>): string {
   const names = new Map(Object.entries(islands).map(([name, file]) => [resolve(root, file), name]));
   const files: Record<string, string> = {};

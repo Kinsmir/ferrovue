@@ -1,7 +1,5 @@
 use super::*;
 
-// What `vite build` writes for an entry that loads the app dynamically, the app importing
-// `ferrovue/islands`, and two islands sharing Vue and a helper.
 const MANIFEST: &str = r#"{
     "client/main.ts": { "file": "assets/main.js", "isEntry": true, "css": ["assets/main.css"], "dynamicImports": ["client/app.ts"] },
     "client/app.ts": { "file": "assets/app.js", "isDynamicEntry": true, "imports": ["_vue.js"], "dynamicImports": ["client/components/Cart.vue", "client/components/Reviews.vue"] },
@@ -12,7 +10,6 @@ const MANIFEST: &str = r#"{
     "_vue.js": { "file": "assets/vue.js" }
 }"#;
 
-// What the Vite plugin writes for them, and an island the build does not hold.
 const ISLANDS: &str = r#"{
     "Cart": "assets/Cart.js",
     "Reviews": "assets/Reviews.js",
@@ -103,8 +100,6 @@ fn a_page_links_each_url_once_across_head_and_body() {
 
 #[test]
 fn an_island_bundled_into_a_shared_chunk_is_found_by_its_file() {
-    // `Badge.vue` is imported by `Card.vue` as well as `ferrovue/islands`, so it has no chunk of
-    // its own, and no key in the manifest.
     let manifest = r#"{
         "client/main.ts": { "file": "assets/main.js", "isEntry": true, "dynamicImports": ["_Badge-1.js", "client/components/Card.vue"] },
         "client/components/Card.vue": { "file": "assets/Card-2.js", "isDynamicEntry": true, "imports": ["_Badge-1.js"] },

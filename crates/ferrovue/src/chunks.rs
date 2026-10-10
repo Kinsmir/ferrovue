@@ -148,7 +148,6 @@ impl Chunks {
         }
     }
 
-    /// The files `key` needs, depth first from `key`, skipping the keys in `seen` and entries.
     fn needed<'c>(&'c self, key: &'c str, seen: &mut HashSet<&'c str>) -> Vec<&'c str> {
         let mut files = Vec::new();
         let mut stack = vec![key];

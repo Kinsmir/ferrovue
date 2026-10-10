@@ -103,8 +103,8 @@ impl Assets {
     }
 
     /// A `<link rel="modulepreload">` for each chunk the islands called `names` load, so the
-    /// browser fetches them alongside the entry rather than once the client asks for them. In
-    /// development Vite serves the sources, one module at a time.
+    /// browser fetches them alongside the entry. In development Vite serves the sources, one
+    /// module at a time.
     pub fn preloads_into<'n>(&self, out: &mut String, names: impl IntoIterator<Item = &'n str>) {
         if let Assets::Built { chunks, .. } = self {
             chunks.preloads().islands_into(out, names);

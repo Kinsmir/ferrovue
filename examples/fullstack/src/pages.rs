@@ -120,8 +120,6 @@ impl Site {
             };
             index::render(out, &props, slots, route, &head);
         };
-        // Each book's button hydrates once it is clicked: preloading it would fetch at once what
-        // the page means to fetch only then.
         let body = in_layout(&head, route, stores, &view);
         self.finish(200, &head, &body, stores, &[], Vec::new())
     }
@@ -145,7 +143,6 @@ impl Site {
             books_id::render(out, &props, slots, route, &head);
         };
         let holes = vec![Hole::Reviews(id.into_owned())];
-        // The reviews hydrate once they are scrolled into view, so only the button is preloaded.
         let islands = [add_to_basket::NAME];
         let body = in_layout(&head, route, stores, &view);
         self.finish(200, &head, &body, stores, &islands, holes)
