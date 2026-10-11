@@ -36,6 +36,8 @@ jobs:
         with:
           tool: cargo-mutants
       - name: Run cargo-mutants on this shard
+        env:
+          CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER: prlimit --as=4294967296 --
         run: |
           cargo mutants -p ferrovue-core -p ferrovue-router -p ferrovue-i18n -p ferrovue --in-place --shard "$SHARD/4" || status=$?
           if [[ "${status:-0}" != 0 && "${status:-0}" != 2 && "${status:-0}" != 3 ]]; then exit "$status"; fi
