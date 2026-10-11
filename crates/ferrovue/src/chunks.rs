@@ -107,7 +107,9 @@ impl Chunks {
     }
 
     /// Serve the files under `base`, Vite's `base`, ending in `/` (`"/static/"`,
-    /// `"https://cdn.example.com/"`), in place of `/`.
+    /// `"https://cdn.example.com/"`), in place of `/`. A link's URL is read against the page's, so
+    /// a relative base such as `"./"` names the files under each page's own path: give the path or
+    /// URL the build is served from.
     #[must_use]
     pub fn with_base(mut self, base: impl Into<String>) -> Self {
         self.base = base.into();

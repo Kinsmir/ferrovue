@@ -18,7 +18,9 @@ released together and share version numbers.
 - A client build with a manifest writes `.vite/ferrovue-islands.json` beside it (beside the
   manifest's own path when `build.manifest` names one): each island's name with the file of the
   chunk that holds it, which `Chunks` reads with the manifest. An island another component imports
-  is bundled into a chunk they share, which the manifest does not key by the island's source.
+  is bundled into a chunk they share, which the manifest does not key by the island's source. In
+  an app build (`vite build --app`), the client environment's build writes it, as that
+  environment's `build.manifest` says, and the server's does not.
 - `PageRecord::island_names()` names the components a page's record holds so far, and
   `Part::name()` a part's.
 

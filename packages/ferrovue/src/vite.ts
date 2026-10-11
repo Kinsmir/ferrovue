@@ -144,8 +144,9 @@ ${routesTree(root, routes, "  ", false)}
 `;
 }
 
-function islandsFile(manifest: boolean | string, ssr: boolean | string): string | null {
-  if (!manifest || ssr) return null;
+function islandsFile({ consumer, build }: { consumer: "client" | "server"; build: { manifest: boolean | string } }): string | null {
+  const { manifest } = build;
+  if (!manifest || consumer !== "client") return null;
   const written = typeof manifest === "string" ? manifest : ".vite/manifest.json";
   return posix.join(posix.dirname(written), "ferrovue-islands.json");
 }
@@ -191,7 +192,6 @@ export default function ferrovue(options: FerrovueOptions = {}): Plugin {
   let vue: ReturnType<typeof vueScopeIds> = null;
   let css: ResolvedConfig["css"] | undefined;
   let building = true;
-  let manifest: string | null = null;
   return {
     name: "ferrovue",
     enforce: "pre",
@@ -212,7 +212,6 @@ export default function ferrovue(options: FerrovueOptions = {}): Plugin {
       vue = vueScopeIds(config);
       css = config.css;
       building = config.command === "build";
-      manifest = islandsFile(config.build.manifest, config.build.ssr);
     },
     buildStart() {
       try {
@@ -226,6 +225,7 @@ export default function ferrovue(options: FerrovueOptions = {}): Plugin {
       }
     },
     generateBundle(_, bundle) {
+      const manifest = islandsFile(this.environment.config);
       if (manifest === null || islands === null) return;
       this.emitFile({ type: "asset", fileName: manifest, source: islandsJson(root, islands, Object.values(bundle)) });
     },
