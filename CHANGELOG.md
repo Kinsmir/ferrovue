@@ -27,6 +27,8 @@ released together and share version numbers.
 - The npm package depends on `postcss` `^8.5.29`.
 - The repository develops and tests with oxlint 1.87, Playwright 1.64 and vscode-uri 3.2, and its
   `Cargo.lock` takes the latest patch and minor releases Rust 1.89 builds.
+- CI runs cargo-deny from its released binary. The action it used before built a Docker image from
+  Docker Hub on every run, and Docker Hub's limit on anonymous pulls failed the job.
 
 ## [0.7.1] - 2026-10-09
 
