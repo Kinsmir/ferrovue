@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join, sep } from "node:path";
 import vuePlugin from "@vitejs/plugin-vue";
 import { afterEach, beforeEach, expect, it } from "vitest";
-import { build, type Rolldown, type ViteDevServer } from "vite";
+import { build, createBuilder, type Rolldown, type ViteDevServer } from "vite";
 import { loadConfig, write } from "../src/compiler.ts";
 import { affects, inputsOf } from "../src/inputs.ts";
 import ferrovue from "../src/vite.ts";
@@ -311,6 +311,26 @@ defineProps<{ name: string }>();
 
   expect((await built("meta/build.json")).map((o) => o.fileName)).toContain("meta/ferrovue-islands.json");
   expect((await built(false)).map((o) => o.fileName).filter((f) => f.endsWith(".json"))).toEqual([]);
+});
+
+it("writes the islands of an app's client build only, beside that build's manifest", async () => {
+  writeFileSync(join(root, "components", "Frame.vue"), frame);
+  writeFileSync(join(root, "main.ts"), 'import islands from "ferrovue/islands";\nObject.assign(globalThis, { islands });\n');
+  const input = join(root, "main.ts");
+  const builder = await createBuilder({
+    root,
+    configFile: false,
+    logLevel: "silent",
+    plugins: [vuePlugin(), ferrovue({ root })],
+    environments: {
+      client: { build: { write: false, manifest: "client.json", rolldownOptions: { input, external: ["vue"] } } },
+      ssr: { build: { write: false, manifest: true, rolldownOptions: { input, external: [/^vue(\/|$)/] } } },
+    },
+  });
+  const files = async (name: string): Promise<string[]> =>
+    ((await builder.build(builder.environments[name]!)) as Rolldown.RolldownOutput).output.map((o) => o.fileName).filter((f) => f.endsWith(".json"));
+  expect((await files("client")).toSorted()).toEqual(["client.json", "ferrovue-islands.json"]);
+  expect(await files("ssr")).toEqual([".vite/manifest.json"]);
 });
 
 function withPages(): void {
