@@ -10,6 +10,10 @@ released together and share version numbers.
 - CI only, with no change to the crates or the npm package: CI installs Rust with
   `dtolnay/rust-toolchain` at its current `master` commit, which zizmor checks the pin's comment
   against.
+- CI only, with no change to the crates or the npm package: the weekly mutation-testing workflow
+  runs each test binary with 4 GiB of address space, on any runner architecture. A mutant that
+  allocates without end now aborts its test, which counts as caught, where it used to exhaust the
+  runner's memory and end the whole shard.
 
 ## [0.7.2] - 2026-10-11
 

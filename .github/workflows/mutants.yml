@@ -37,7 +37,7 @@ jobs:
           tool: cargo-mutants
       - name: Run cargo-mutants on this shard
         run: |
-          cargo mutants -p ferrovue-core -p ferrovue-router -p ferrovue-i18n -p ferrovue --in-place --shard "$SHARD/4" || status=$?
+          cargo mutants -p ferrovue-core -p ferrovue-router -p ferrovue-i18n -p ferrovue --in-place --shard "$SHARD/4" --cargo-arg="--config=target.'cfg(all())'.runner = ['prlimit', '--as=4294967296', '--']" || status=$?
           if [[ "${status:-0}" != 0 && "${status:-0}" != 2 && "${status:-0}" != 3 ]]; then exit "$status"; fi
       - name: Every surviving mutant is a known equivalent
         run: |
