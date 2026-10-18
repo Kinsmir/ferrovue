@@ -93,7 +93,16 @@ reported.
 `ferrovue/islands` is written by the Vite plugin (`ferrovue/vite`): every component that has an
 `island()`, keyed by its `NAME`, each a lazy `import()`. The bundler gives each island a chunk of its
 own, and a page fetches only those of the islands it holds. `mountIslands` also takes components
-themselves, `mountIslands({ Counter })`, or a mixture of the two.
+themselves, `mountIslands({ Counter })`, or a mixture of the two, so a hand-written island can join
+the others: `mountIslands({ ...islands, Chart })`. An island whose name is not among them is left as
+the server rendered it, with a warning naming it (`onError` handles it otherwise), as is one whose
+component fails to load.
+
+The islands are exactly the components that have an `island()`, as the compiler finds while it
+generates them. That is the only set the server can write `data-island` for, so it needs no folder
+convention or list to keep in step: a component becomes an island when the server calls its
+`island()`. Each is keyed by its `NAME`, the file name without `.vue`, which is what `data-island`
+carries.
 
 Islands share the Pinia and router passed to `mountIslands`, so an island's click handler can change
 a store another part of the page shows.
@@ -462,6 +471,11 @@ once per page however many islands share it, as most share Vue's chunk;
 [`for_islands`](crate::Chunks::for_islands) gives the URLs instead, for a `Link` header, say.
 [`with_base`](crate::Chunks::with_base) serves them under Vite's `base`. In development Vite serves
 the sources and there is no manifest: link nothing.
+
+An island's `<style>` goes into its chunk too, and Vite links it only once the island's script has
+loaded, after the server's markup is on screen. Link those stylesheets from the page up front: a
+server reading Vite's manifest takes the `css` of the entry's `dynamicImports` as well as its own,
+as `examples/fullstack/src/assets.rs` does.
 
 Preload the islands that hydrate at once. An island given a [`Hydrate`](crate::Hydrate) waits to be
 seen, clicked or idle before it fetches its code; preloading it fetches that code with the page,

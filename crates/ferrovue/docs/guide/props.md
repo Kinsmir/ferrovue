@@ -373,11 +373,48 @@ computes reach the type. With `interface Cat { id: string; items: HTMLElement[] 
 `defineModel` and the types their fields hold keep every field, since the props come from Rust and
 are sent to the client, so such a field in a type a prop reaches is refused where it is declared.
 
-A constant imported from a `.ts` file is evaluated when the component is compiled. A list of objects
-becomes a `const` in `types.rs`, `pub const SORTS: &[SortsItem<'static>]`, whose item type is the
-interface the constant is declared with (`SORTS: Sort[]`) or one named after it; strings, numbers,
-booleans, lists of them and an object's fields are written where the template reads them.
+A constant imported from a `.ts` file is evaluated when the component is compiled; see
+[constants](#constants).
 
 Each generated struct has the same `new` and setters as `Props` (none with `"builders": false`), and derives `Debug`, `Clone` and
 `serde::Serialize`. `serde::Deserialize` is derived only under `cfg(test)`, for the conformance
-helper: props go out to the client as JSON and never come back in.
+helper: props go out to the client as JSON and never come back in. An object prop handed to a child
+component is cloned; its strings are `Cow`s, so borrowed ones cost nothing to copy.
+
+# Constants
+
+A constant a component imports from a `.ts` file, or an `enum`, imported or declared in the
+component, is evaluated when the component is compiled, as `types.rs` holds the shared types:
+
+```ts
+// components/catalog.ts
+export const LABELS = { title: "Catalogue", empty: "Nothing yet" } as const;
+export const SIZES = ["sm", "md", "lg"] as const;
+export const SORTS = [
+  { key: "name", label: "By name" },
+  { key: "price", label: "By price" },
+] as const;
+export enum Tone { Calm = "calm", Loud = "loud" }
+```
+
+Strings, numbers, booleans, `null`, lists of them and objects of them read field by field
+(`LABELS.save`, `Tone.Loud`, `Rank[5]`) are written where the template reads them:
+`{{ LABELS.title }}` and `v-if="tone === Tone.Loud"` go into the page as the strings they are, and
+`v-for="s in SIZES"` walks an array literal. A list of objects becomes a `const` in `types.rs`, with
+a type for its items: the interface the constant is declared with (`SORTS: Sort[]`), or one named
+after the constant, here `SortsItem`. A field that is `null` in some items is `T | null`.
+
+```rust
+# use std::borrow::Cow;
+# pub struct SortsItem<'a> { pub key: Cow<'a, str>, pub label: Cow<'a, str> }
+pub const SORTS: &[SortsItem<'static>] = &[
+    SortsItem { key: Cow::Borrowed("name"), label: Cow::Borrowed("By name") },
+    SortsItem { key: Cow::Borrowed("price"), label: Cow::Borrowed("By price") },
+];
+# assert_eq!(SORTS[1].label, "By price");
+```
+
+A constant is a literal, a list, an object, or another constant of the same file. One that is
+anything else (`Date.now()`, a function) is refused where the template reads it, naming the file
+and line it is declared on. So are an object constant read whole or by a key chosen at run time
+(`LABELS[key]`), and `new` of anything but `Date` (`new Map()`).

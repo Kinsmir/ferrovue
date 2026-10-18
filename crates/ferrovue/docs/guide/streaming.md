@@ -92,7 +92,7 @@ A hole is content to its slot, so the slot's fallback never shows, and the fragm
 writes around slot content are already in place. What goes in a hole must be what the client's
 template would render in that slot, usually another component's render or island.
 
-With the `axum` or `actix-web` feature, `HtmlStream` does this for a response: give it the whole
+With the `stream` feature, which `axum` and `actix-web` turn on, `HtmlStream` does this for a response: give it the whole
 render and a future for each hole's content, and it sends each piece and each hole's content as
 soon as they are ready, the futures all running at once. This is the handler from the repository's
 `examples/fullstack` (`src/main.rs`), where `site.page` renders a page with its holes and
