@@ -12,6 +12,7 @@ export default defineConfig({
   css: { modules: { generateScopedName: conformance.cssModules.generateScopedName } },
   resolve: { alias: [{ find: /^ferrovue\/client$/, replacement: fileURLToPath(new URL("packages/ferrovue/src/client.ts", import.meta.url)) }] },
   test: {
+    fsModuleCache: false,
     environment: "happy-dom",
     environmentOptions: {
       happyDOM: {

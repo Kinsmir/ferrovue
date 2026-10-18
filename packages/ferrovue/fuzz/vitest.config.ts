@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [vue()],
   resolve: { alias: [{ find: /^ferrovue\/client$/, replacement: fileURLToPath(new URL("../src/client.ts", import.meta.url)) }] },
   test: {
+    fsModuleCache: false,
     root: import.meta.dirname,
     environment: "happy-dom",
     include: ["vue-render.fuzz.ts"],
