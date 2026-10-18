@@ -60,5 +60,8 @@
 [[[["class",1]],[["class",1]]]," class=\"\""],
 [[[["style","x: url(a;b) f(g); y: 1; z: (p; q"]]]," style=\"x:url(a;b) f(g);y:1;z:(p;\""],
 [[[["style","a: \\\"x /* c */ \"; b: 1/2 */ 3"]]]," style=\"a:\\&quot;x  &quot;;b:1/2 */ 3;\""],
-[[[["style","a: 1/2 /* c */ ; b: 'p\\"]],[["style","c: 1 /* d */ \\"]]]," style=\"a:1/2;b:&#39;p\\;c:1  \\;\""]
+[[[["style","a: 1/2 /* c */ ; b: 'p\\"]],[["style","c: 1 /* d */ \\"]]]," style=\"a:1/2;b:&#39;p\\;c:1  \\;\""],
+[[[["ID","x"],["TITLE","t"]]]," id=\"x\" title=\"t\""],
+[[[["style",{"style":[["--MyVar",1],["COLOR","red"]]}]]]," style=\"--MyVar:1;c-o-l-o-r:red;\""],
+[[[["style",{"style":[["--MyVar",1]]}]]]," style=\"--MyVar:1;\""]
 ]
