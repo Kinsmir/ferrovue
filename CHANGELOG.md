@@ -17,6 +17,10 @@ released together and share version numbers.
 - CI only, with no change to the crates or the npm package: the mutation-testing workflow runs in
   eight shards, which take turns through the list of mutants, and gives each mutant's tests 90
   seconds. Two of its four shards used to reach the job's 90-minute limit before they finished.
+- CI only, with no change to the crates or the npm package: the mutation-testing workflow posts no
+  GitHub annotation for each surviving mutant, which put a warning on every run for each of the 47
+  known equivalents. A survivor `.cargo/mutants-equivalent.txt` does not list is still named in
+  the shard's summary and fails the job.
 - Tests only, with no change to the crates or the npm package: vectors recorded from Vue and
   vue-router for attribute and style keys in capitals, a `--` custom property with capitals and a
   child route with an absolute path under a matchable parent, `BasicHtml` references of the
