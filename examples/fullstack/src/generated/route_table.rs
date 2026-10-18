@@ -6,12 +6,12 @@
 /// Each route: its vue-router path, its name if it has one, whether it shows a component, and the
 /// routes nested in it.
 pub const ROUTES: &[ferrovue::RouteDef<'static>] = &[
-    ferrovue::RouteDef { path: "/", name: Some("/"), view: true, children: &[] },
-    ferrovue::RouteDef { path: "/:missing(.*)", name: Some("/[...missing]"), view: true, children: &[] },
-    ferrovue::RouteDef { path: "/books", name: None, view: false, children: &[
-        ferrovue::RouteDef { path: ":id", name: Some("/books/[id]"), view: true, children: &[] },
-    ] },
-    ferrovue::RouteDef { path: "/picks", name: Some("/picks"), view: true, children: &[] },
+    ferrovue::RouteDef::new("/").with_name("/"),
+    ferrovue::RouteDef::new("/:missing(.*)").with_name("/[...missing]"),
+    ferrovue::RouteDef::new("/books").with_view(false).with_children(&[
+        ferrovue::RouteDef::new(":id").with_name("/books/[id]"),
+    ]),
+    ferrovue::RouteDef::new("/picks").with_name("/picks"),
 ];
 
 /// Every route's full path, nested ones included.

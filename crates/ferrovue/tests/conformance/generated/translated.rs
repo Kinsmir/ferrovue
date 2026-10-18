@@ -30,7 +30,7 @@ impl<'a> Props<'a> {
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::I18n) {
     out.reserve(90 + props.name.len());
-    let s_title = fv_i18n.t("greeting", &fv::i18n::Args { named: &[("name", fv::i18n::Value::Str(&props.name))], list: &[], plural: None });
+    let s_title = fv_i18n.t("greeting", &fv::i18n::Args::new().with_named(&[("name", fv::i18n::Value::Str(&props.name))]));
     out.push_str("<section");
     if fv_i18n.locale().is_empty() {
         out.push_str(" lang");
@@ -39,47 +39,47 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::I18n) {
         fv::escape_into(out, fv_i18n.locale());
         out.push('"');
     }
-    if fv_i18n.t("common.app", &fv::i18n::Args { named: &[], list: &[], plural: None }).is_empty() {
+    if fv_i18n.t("common.app", &fv::i18n::Args::new()).is_empty() {
         out.push_str(" title");
     } else {
         out.push_str(" title=\"");
-        fv::escape_into(out, &fv_i18n.t("common.app", &fv::i18n::Args { named: &[], list: &[], plural: None }));
+        fv::escape_into(out, &fv_i18n.t("common.app", &fv::i18n::Args::new()));
         out.push('"');
     }
     out.push_str("><h1>");
     fv::escape_into(out, &s_title);
     out.push_str("</h1><p>");
-    fv::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args { named: &[], list: &[], plural: Some(props.count) }));
+    fv::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args::new().with_plural(props.count)));
     out.push('|');
-    fv::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args { named: &[("count", fv::i18n::Value::Int(props.count))], list: &[], plural: None }));
+    fv::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args::new().with_named(&[("count", fv::i18n::Value::Int(props.count))])));
     out.push('|');
-    fv::escape_into(out, &fv_i18n.t("items", &fv::i18n::Args { named: &[], list: &[], plural: Some(props.count) }));
+    fv::escape_into(out, &fv_i18n.t("items", &fv::i18n::Args::new().with_plural(props.count)));
     out.push('|');
-    fv::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args { named: &[], list: &[], plural: None }));
+    fv::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args::new()));
     out.push('|');
-    fv::escape_into(out, &fv_i18n.t("greeting", &fv::i18n::Args { named: &[("name", fv::i18n::Value::Str("x"))], list: &[], plural: Some(props.count) }));
+    fv::escape_into(out, &fv_i18n.t("greeting", &fv::i18n::Args::new().with_named(&[("name", fv::i18n::Value::Str("x"))]).with_plural(props.count)));
     out.push_str("</p><p>");
-    fv::escape_into(out, &fv_i18n.t("list", &fv::i18n::Args { named: &[], list: &[fv::i18n::Value::Str(&props.name), fv::i18n::Value::Int(props.count)], plural: None }));
+    fv::escape_into(out, &fv_i18n.t("list", &fv::i18n::Args::new().with_list(&[fv::i18n::Value::Str(&props.name), fv::i18n::Value::Int(props.count)])));
     out.push('|');
-    fv::escape_into(out, &fv_i18n.t("literal", &fv::i18n::Args { named: &[], list: &[], plural: None }));
+    fv::escape_into(out, &fv_i18n.t("literal", &fv::i18n::Args::new()));
     out.push('|');
-    fv::escape_into(out, &fv_i18n.t("linked", &fv::i18n::Args { named: &[], list: &[], plural: None }));
+    fv::escape_into(out, &fv_i18n.t("linked", &fv::i18n::Args::new()));
     out.push('|');
-    fv::escape_into(out, &fv_i18n.t("missingLink", &fv::i18n::Args { named: &[], list: &[], plural: None }));
+    fv::escape_into(out, &fv_i18n.t("missingLink", &fv::i18n::Args::new()));
     out.push_str("</p><p>");
-    fv::escape_into(out, &fv_i18n.t("onlyEnglish", &fv::i18n::Args { named: &[], list: &[], plural: None }));
+    fv::escape_into(out, &fv_i18n.t("onlyEnglish", &fv::i18n::Args::new()));
     out.push('|');
-    fv::escape_into(out, &fv_i18n.t("englishLink", &fv::i18n::Args { named: &[], list: &[], plural: None }));
+    fv::escape_into(out, &fv_i18n.t("englishLink", &fv::i18n::Args::new()));
     out.push('|');
-    fv::escape_into(out, &fv_i18n.t("hop", &fv::i18n::Args { named: &[], list: &[], plural: None }));
+    fv::escape_into(out, &fv_i18n.t("hop", &fv::i18n::Args::new()));
     out.push('|');
-    fv::escape_into(out, &fv_i18n.t("no.such.key", &fv::i18n::Args { named: &[], list: &[], plural: None }));
+    fv::escape_into(out, &fv_i18n.t("no.such.key", &fv::i18n::Args::new()));
     out.push('|');
-    fv::escape_into(out, &fv_i18n.t("flat.key", &fv::i18n::Args { named: &[], list: &[], plural: None }));
+    fv::escape_into(out, &fv_i18n.t("flat.key", &fv::i18n::Args::new()));
     out.push('|');
-    fv::escape_into(out, &fv_i18n.t("nested.deep.key", &fv::i18n::Args { named: &[], list: &[], plural: None }));
+    fv::escape_into(out, &fv_i18n.t("nested.deep.key", &fv::i18n::Args::new()));
     out.push('|');
-    fv::escape_into(out, &fv_i18n.t("html", &fv::i18n::Args { named: &[("name", fv::i18n::Value::Str(&props.name))], list: &[], plural: None }));
+    fv::escape_into(out, &fv_i18n.t("html", &fv::i18n::Args::new().with_named(&[("name", fv::i18n::Value::Str(&props.name))])));
     out.push_str("</p></section>");
 }
 

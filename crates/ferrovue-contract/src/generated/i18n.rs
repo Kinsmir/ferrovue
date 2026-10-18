@@ -13,18 +13,12 @@ pub const FALLBACK: &[&str] = &["en"];
 
 /// Every locale's messages.
 pub static LOCALES: &[Locale] = &[
-    Locale {
-        name: "en",
-        messages: &[
-            ("hello", Message { cases: &[&[Part::Text("Hello, "), Part::Named("name"), Part::Text("!")]] }),
-        ],
-    },
-    Locale {
-        name: "nl",
-        messages: &[
-            ("hello", Message { cases: &[&[Part::Text("Hallo, "), Part::Named("name"), Part::Text("!")]] }),
-        ],
-    },
+    Locale::new("en", &[
+        ("hello", Message::new(&[&[Part::Text("Hello, "), Part::Named("name"), Part::Text("!")]])),
+    ]),
+    Locale::new("nl", &[
+        ("hello", Message::new(&[&[Part::Text("Hallo, "), Part::Named("name"), Part::Text("!")]])),
+    ]),
 ];
 
 /// The messages in `locale`, with the configured fallbacks: build one per request.

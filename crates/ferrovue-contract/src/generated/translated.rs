@@ -29,7 +29,7 @@ impl<'a> Props<'a> {
 pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::I18n) {
     out.reserve(7 + props.name.len());
     out.push_str("<p>");
-    fv::escape_into(out, &fv_i18n.t("hello", &fv::i18n::Args { named: &[("name", fv::i18n::Value::Str(&props.name))], list: &[], plural: None }));
+    fv::escape_into(out, &fv_i18n.t("hello", &fv::i18n::Args::new().with_named(&[("name", fv::i18n::Value::Str(&props.name))])));
     out.push_str("</p>");
 }
 
