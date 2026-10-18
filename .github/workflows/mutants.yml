@@ -16,13 +16,13 @@ env:
 
 jobs:
   mutants:
-    name: Mutants (shard ${{ matrix.shard }}/4)
+    name: Mutants (shard ${{ matrix.shard }}/8)
     runs-on: ubuntu-latest
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
-        shard: [0, 1, 2, 3]
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
     env:
       SHARD: ${{ matrix.shard }}
     steps:
@@ -37,7 +37,7 @@ jobs:
           tool: cargo-mutants
       - name: Run cargo-mutants on this shard
         run: |
-          cargo mutants -p ferrovue-core -p ferrovue-router -p ferrovue-i18n -p ferrovue --in-place --shard "$SHARD/4" --cargo-arg="--config=target.'cfg(all())'.runner = ['prlimit', '--as=4294967296', '--']" || status=$?
+          cargo mutants -p ferrovue-core -p ferrovue-router -p ferrovue-i18n -p ferrovue --in-place --shard "$SHARD/8" --sharding round-robin --timeout 90 --cargo-arg="--config=target.'cfg(all())'.runner = ['prlimit', '--as=4294967296', '--']" || status=$?
           if [[ "${status:-0}" != 0 && "${status:-0}" != 2 && "${status:-0}" != 3 ]]; then exit "$status"; fi
       - name: Every surviving mutant is a known equivalent
         run: |
@@ -45,7 +45,7 @@ jobs:
           grep -v -e '^#' -e '^$' .cargo/mutants-equivalent.txt | sort > "$RUNNER_TEMP/known.txt"
           comm -23 "$RUNNER_TEMP/missed.txt" "$RUNNER_TEMP/known.txt" > "$RUNNER_TEMP/unexplained.txt"
           {
-            echo "### Mutants, shard $SHARD/4"
+            echo "### Mutants, shard $SHARD/8"
             echo
             echo "| Caught | Timed out | Missed (known equivalent) | Missed (unexplained) | Unviable |"
             echo "|---:|---:|---:|---:|---:|"

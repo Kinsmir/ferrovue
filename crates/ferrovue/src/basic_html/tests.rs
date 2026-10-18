@@ -67,6 +67,9 @@ fn references_stay_text() {
         basic("&#60;b&#x3e; &eacute; &#X3C;"),
         "&#60;b&#x3e; &eacute; &#X3C;"
     );
+    assert_eq!(basic("&#1234567; &#x10FFFF;"), "&#1234567; &#x10FFFF;");
+    let long = format!("&{};", "a".repeat(32));
+    assert_eq!(basic(&long), long);
 }
 
 #[test]

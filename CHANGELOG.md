@@ -14,6 +14,16 @@ released together and share version numbers.
   runs each test binary with 4 GiB of address space, on any runner architecture. A mutant that
   allocates without end now aborts its test, which counts as caught, where it used to exhaust the
   runner's memory and end the whole shard.
+- CI only, with no change to the crates or the npm package: the mutation-testing workflow runs in
+  eight shards, which take turns through the list of mutants, and gives each mutant's tests 90
+  seconds. Two of its four shards used to reach the job's 90-minute limit before they finished.
+- Tests only, with no change to the crates or the npm package: vectors recorded from Vue and
+  vue-router for attribute and style keys in capitals, a `--` custom property with capitals and a
+  child route with an absolute path under a matchable parent, `BasicHtml` references of the
+  longest length, `ManifestError::source` and a debug build's panic on props serde_json refuses.
+  Each closes a gap the mutation run found; `.cargo/mutants-equivalent.txt` gives the reason for
+  five more survivors that cannot change what the code returns, and no longer lists `plural_choice`
+  with its `-` deleted, which a unit test catches.
 
 ## [0.7.2] - 2026-10-11
 

@@ -570,6 +570,16 @@
             "name": "p-home"
           }
         ]
+      },
+      {
+        "path": "/about",
+        "name": "about",
+        "children": [
+          {
+            "path": "/:any",
+            "name": "about-any"
+          }
+        ]
       }
     ],
     "links": [
@@ -729,7 +739,9 @@
       "/docs",
       "/shop",
       "/p/7",
-      "/q/1"
+      "/q/1",
+      "/about",
+      "/team"
     ]
   },
   "files": {

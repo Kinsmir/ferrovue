@@ -45,10 +45,6 @@ crates/ferrovue-core/src/escape.rs: replace | with ^ in needs_escape
 crates/ferrovue-core/src/escape.rs: replace | with ^ in needs_escape
 crates/ferrovue-core/src/escape.rs: replace | with ^ in needs_escape
 
-# The plural choice when nothing gives one: −1 or 1, which `pluralDefault` reads through `Math.abs`
-# alike.
-crates/ferrovue-i18n/src/lib.rs: delete - in plural_choice
-
 # Stripping a hash history's base before its `#` when the `#` is at index 0 or later: at 0,
 # `b[0..]` is `b` itself.
 crates/ferrovue-router/src/lib.rs: replace > with >= in Router::with_base
@@ -112,3 +108,14 @@ crates/ferrovue/src/head.rs: replace < with <= in outranks
 # A `Prop::Class` is only ever set under "class", and a `Prop::Style` only under "style".
 crates/ferrovue/src/head.rs: replace match guard key == "class" with true in props_into
 crates/ferrovue/src/head.rs: replace match guard key == "style" with true in props_into
+
+# `is_lowercase_ascii` is a shortcut: for a key it holds for, `to_lowercase` and `hyphenate` give the key back unchanged.
+crates/ferrovue/src/attrs.rs: replace match guard is_lowercase_ascii(key) with false in dynamic_attr_into
+crates/ferrovue/src/attrs.rs: replace is_lowercase_ascii -> bool with false
+
+# `reference_len` counting at most `max` characters of a reference: one longer than `max` is then followed by another allowed character, never `;`, and is refused as it was.
+crates/ferrovue/src/basic_html.rs: replace + with * in reference_len
+
+# `reference_len` ending a reference one or two characters early: the `Builder` writes what it leaves as text, and those characters, alphanumerics and the `;`, are the same when escaped.
+crates/ferrovue/src/basic_html.rs: replace + with - in reference_len
+crates/ferrovue/src/basic_html.rs: replace + with * in reference_len

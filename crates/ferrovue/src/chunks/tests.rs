@@ -123,6 +123,13 @@ fn what_is_not_a_manifest_is_refused() {
             .starts_with("not a Vite manifest: missing field `file`"),
         "{error}"
     );
+    let source = std::error::Error::source(&error).map(ToString::to_string);
+    assert!(
+        source
+            .as_deref()
+            .is_some_and(|s| s.starts_with("missing field `file`")),
+        "{source:?}"
+    );
     assert!(Chunks::from_manifest("[", ISLANDS).is_err());
     let error = Chunks::from_manifest(MANIFEST, r#"{"Cart": 1}"#).unwrap_err();
     assert!(
