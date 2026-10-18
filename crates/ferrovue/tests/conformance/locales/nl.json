@@ -6,5 +6,7 @@
   "common": { "hi": "hoi daar" },
   "linked": "@:common.app zegt @.lower:common.hi",
   "html": "<i>{name}</i>",
-  "hop": "@:englishHop"
+  "hop": "@:englishHop",
+  "price": "€ {amount}",
+  "posted": "Geplaatst op {date}"
 }

@@ -12,6 +12,8 @@ import { createHead } from "@unhead/vue/server";
 import { isComment } from "../src/template.ts";
 import { seoMetaKey } from "../src/plugins/head.ts";
 import { type Call, headCases } from "./head-inputs.ts";
+import { portableTime } from "../src/plugins/dates.ts";
+import { DATE_METHODS, dateCases } from "./date-inputs.ts";
 
 const DIR = join(import.meta.dirname, "../../../crates/ferrovue/tests/vectors");
 const CORE = join(import.meta.dirname, "../../../crates/ferrovue-core/tests/vectors");
@@ -76,6 +78,7 @@ describe("vectors shared with the Rust crate", () => {
       ["keys.json", 8],
       ["json.json", 12],
       ["head.json", 458],
+      ["dates.json", 5000],
       ["escape.json", 10, CORE],
       ["numbers.json", 370, CORE],
       ["math.json", 715, CORE],
@@ -246,6 +249,29 @@ describe("vectors shared with the Rust crate", () => {
     const recorded = vectors.map(([input]) => [input, JSON.stringify(input)]);
     if (process.env.FERROVUE_VECTORS_WRITE === "1") return writeVectors("json.json", recorded);
     expect(vectors).toEqual(recorded);
+  });
+
+  // `[op, input, expected]`: `Date.parse` of a string, `null` where ferrovue refuses it as outside the
+  // format every engine reads alike, or `new Date(Number(input))` and a method read from it, a
+  // number written as `String` writes it with `-0` told apart, and `{ throws }` the error thrown.
+  it("dates.json is Date.parse, new Date and the UTC methods", () => {
+    const shown = (x: number): string => (Object.is(x, -0) ? "-0" : String(x));
+    const run = (op: string, input: string): unknown => {
+      if (op === "parse") return portableTime(input) === undefined ? null : shown(Date.parse(input));
+      const date = new Date(Number(input));
+      if (op === "Date") return shown(date.getTime());
+      try {
+        const method = op as (typeof DATE_METHODS)[number];
+        const got = date[method]();
+        return typeof got === "string" ? got : shown(got);
+      } catch (e) {
+        if (e instanceof RangeError) return { throws: "RangeError" };
+        throw e;
+      }
+    };
+    const recorded = dateCases().map(([op, input]) => [op, input, run(op, input)]);
+    if (process.env.FERROVUE_VECTORS_WRITE === "1") return writeVectors("dates.json", recorded);
+    expect(read("dates.json")).toEqual(recorded);
   });
 
   it("length.json is String.prototype.length", () => {

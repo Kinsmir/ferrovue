@@ -28,6 +28,7 @@ export const AREAS: Record<string, { name: string; guide?: string }> = {
   "15": { name: "Raw HTML, client-only content, teleports and Rust twins", guide: "errors_and_limits" },
   "16": { name: "Provide and inject", guide: "provide_inject" },
   "17": { name: "Page head", guide: "head" },
+  "18": { name: "Dates and locale formatting", guide: "dates_and_prices" },
 };
 
 /** Every code the compiler raises. A code is never reused: one the compiler stops raising is marked
@@ -476,6 +477,27 @@ export const ERRORS = {
     detail: "unhead's server renderer throws on a `class` or `style` of `null`. Write `?? undefined`, which leaves the attribute out.",
   },
   FV1711: { title: "`innerHTML` or `textContent` on a head tag that has no content" },
+
+  FV1801: {
+    title: "The current time: `new Date()` or `Date.now()`",
+    detail: "The server renders at one moment and the browser hydrates at another, so the text would differ. Read the time in Rust and pass it as a prop: an ISO string, or a number of milliseconds. See [`dates_and_prices`](crate::guide::dates_and_prices).",
+  },
+  FV1802: {
+    title: "`new Date()` or `Date.parse()` of anything but one present string or number",
+    detail: "`new Date(year, month, …)` reads its parts in the time zone of the machine running it. A value that may be absent gives an invalid date for `undefined` and the epoch for `null`. See [`dates_and_prices`](crate::guide::dates_and_prices).",
+  },
+  FV1803: {
+    title: "Date string that browsers may read differently",
+    detail: "ECMAScript specifies how a date alone (`2024-05-01`, `2024-05`, `2024`) and a date and time with a `Z` or an offset (`2024-05-01T09:30:00.000Z`, `2024-05-01T09:30+02:00`) are read. A date and time with neither is read in the time zone of the machine running it, and every other string by each engine's own rules, as are fields out of range (`2024-02-30`, `T24:00`). A literal is checked when the component is compiled; a string from the props is checked as it renders, and one outside the format panics. See [`dates_and_prices`](crate::guide::dates_and_prices).",
+  },
+  FV1804: {
+    title: "`Date` method or function ferrovue does not translate",
+    detail: "A date is read with `.toISOString()`, `.getTime()`, `.valueOf()` and the `.getUTC…()` methods, which do not depend on the time zone. The local getters (`.getFullYear()`, `.getHours()`), `.getTimezoneOffset()` and `.toString()` read the time zone of the machine running them, which differs between the server and the reader's browser. See [`dates_and_prices`](crate::guide::dates_and_prices).",
+  },
+  FV1805: {
+    title: "Locale formatting with `Intl`, `.toLocaleString()`, `.localeCompare()`, `$d` or `$n`",
+    detail: "`Intl` formats from locale data each JavaScript engine ships, and Node, Chromium, Firefox and Safari write some dates, times and numbers differently (spaces, separators, abbreviations), so no server can write what every reader's browser writes. This refusal is permanent. Format the value in Rust and pass it as a string prop, or write it with `.toFixed()` and `.toISOString()` into a message `$t` translates. See [`dates_and_prices`](crate::guide::dates_and_prices).",
+  },
 } as const satisfies Record<`FV${number}`, ErrorDoc>;
 
 /** A stable error code, as `FV0604`. */

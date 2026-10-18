@@ -1,8 +1,9 @@
 //! Properties of the runtime that hold for every input.
 
 use ferrovue::{
-    BasicHtml, InlineHtml, Slot, class_into, escape_into, hole, js_length, js_trim, slot_into,
-    split_holes, state_script_into,
+    BasicHtml, InlineHtml, Slot, class_into, escape_into, hole, js_date_parse, js_length,
+    js_to_iso_string, js_trim, js_utc_date, js_utc_full_year, js_utc_hours, js_utc_milliseconds,
+    js_utc_minutes, js_utc_month, js_utc_seconds, slot_into, split_holes, state_script_into,
 };
 use proptest::prelude::*;
 
@@ -166,6 +167,23 @@ proptest! {
         let t = js_trim(&s);
         prop_assert_eq!(js_trim(t), t);
         prop_assert!(s.contains(t));
+    }
+
+    #[test]
+    fn every_date_reads_back_from_its_iso_string_with_the_fields_it_is_read_with(t in -8_640_000_000_000_000_i64..=8_640_000_000_000_000) {
+        let t = t as f64;
+        let iso = js_to_iso_string(t);
+        prop_assert_eq!(js_date_parse(&iso), t);
+        let (date, time) = iso.split_at(iso.len() - 14);
+        let year: f64 = date[..date.len() - 6].parse().unwrap();
+        let field = |s: &str| s.parse::<f64>().unwrap();
+        prop_assert_eq!(js_utc_full_year(t), year);
+        prop_assert_eq!(js_utc_month(t) + 1.0, field(&date[date.len() - 5..date.len() - 3]));
+        prop_assert_eq!(js_utc_date(t), field(&date[date.len() - 2..]));
+        prop_assert_eq!(js_utc_hours(t), field(&time[1..3]));
+        prop_assert_eq!(js_utc_minutes(t), field(&time[4..6]));
+        prop_assert_eq!(js_utc_seconds(t), field(&time[7..9]));
+        prop_assert_eq!(js_utc_milliseconds(t), field(&time[10..13]));
     }
 
     #[test]

@@ -8,6 +8,7 @@ mod chunks;
 mod class;
 mod compat;
 mod conformance;
+mod dates;
 #[cfg(feature = "dioxus")]
 #[cfg_attr(docsrs, doc(cfg(feature = "dioxus")))]
 pub mod dioxus;
@@ -37,6 +38,11 @@ pub use chunks::{Chunks, ManifestError, Preloads};
 #[doc(hidden)]
 pub use class::{class_into, class_object};
 pub use conformance::check_fixtures;
+#[doc(hidden)]
+pub use dates::{
+    js_date_parse, js_time_clip, js_to_iso_string, js_utc_date, js_utc_day, js_utc_full_year,
+    js_utc_hours, js_utc_milliseconds, js_utc_minutes, js_utc_month, js_utc_seconds,
+};
 #[doc(hidden)]
 pub use head::HeadDeferral;
 pub use head::{Head, HeadHtml, HeadValue};

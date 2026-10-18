@@ -83,6 +83,7 @@ export function call(s: Scope, n: N): Val {
     if (callee.object.type === "Identifier" && (callee.object.name === "$setup" || callee.object.name === "_ctx")) {
       const helper = s.helpers.get(method);
       if (helper) return helperCall(s, helper, args, n);
+      if (s.clientOnly.has(method)) return fail(comp, "FV0613", `\`${method}\` is set up in a way the server cannot evaluate: ${s.clientOnly.get(method)}`, n);
     }
     if (callee.object.type === "Identifier" && callee.object.name === "Math") {
       const vals = args.map((a) => expr(s, a));
@@ -103,6 +104,8 @@ export function call(s: Scope, n: N): Val {
     }
     const literal = method === "filter" && args.length === 1 && isBoolean(s, args[0]) && callee.object.type === "ArrayExpression";
     const target = (literal ? presentLiteral(s, callee.object) : null) ?? expr(s, callee.object);
+    const typed = claim((p) => p.method?.(s, target, method, args, n));
+    if (typed) return typed;
     if (target.ty.k === "str") {
       const lone = loneOf(target);
       switch (args.length === 0 ? method : "") {

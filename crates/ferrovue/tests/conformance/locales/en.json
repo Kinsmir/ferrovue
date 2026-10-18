@@ -14,5 +14,7 @@
   "nested": { "deep": { "key": "deep value" } },
   "html": "<b>{name}</b> & co",
   "loud": "LOUD Noise",
-  "shout": "@.lower:loud"
+  "shout": "@.lower:loud",
+  "price": "€{amount}",
+  "posted": "Posted on {date}"
 }

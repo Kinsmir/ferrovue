@@ -44,6 +44,7 @@ pub mod css_vars_wait;
 pub mod dashboard;
 pub mod data_list;
 pub mod data_table;
+pub mod dates;
 pub mod defaults;
 pub mod deferred;
 pub mod destructured;
@@ -113,6 +114,7 @@ pub mod placed_html;
 pub mod plain_box;
 pub mod plain_forward;
 pub mod plurals;
+pub mod prices;
 pub mod props_object;
 pub mod prose;
 pub mod quiet_leaf;
@@ -407,6 +409,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "DataTable" => {
             let props: data_table::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             data_table::render(&mut out, &props);
+        }
+        "Dates" => {
+            let props: dates::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            dates::render(&mut out, &props);
         }
         "Defaults" => {
             let props: defaults::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -745,6 +751,12 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let i18n = i18n::i18n(fixture.locale.as_deref().unwrap_or(i18n::LOCALE));
             plurals::render(&mut out, &props, &i18n);
+        }
+        "Prices" => {
+            let props: prices::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let i18n = i18n::i18n(fixture.locale.as_deref().unwrap_or(i18n::LOCALE));
+            prices::render(&mut out, &props, &i18n);
         }
         "PropsObject" => {
             let props: props_object::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

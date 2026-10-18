@@ -5,6 +5,28 @@ released together and share version numbers.
 
 ## [Unreleased]
 
+### Added
+
+- Dates in templates, in the part of `Date` that reads the same on the server and in every
+  browser: `new Date(s)` and `Date.parse(s)` of a string in ECMAScript's date time string format
+  (a date alone, or a date and time with a `Z` or an offset; four-digit and expanded years),
+  `new Date(ms)` of a number, and `.toISOString()`, `.getTime()`, `.valueOf()` and the
+  `.getUTC…()` methods, invalid dates included. Generated code calls the runtime's twins
+  (`js_date_parse`, `js_time_clip`, `js_to_iso_string` and `js_utc_full_year` to
+  `js_utc_milliseconds`, `#[doc(hidden)]` as the other twins are), held to vectors recorded from Node (`tests/vectors/dates.json`), which Chromium and Firefox read alike in
+  four time zones. A date literal outside the format is refused when compiling (FV1803), and
+  `js_date_parse` panics on a string from the props outside it, which browsers may each read
+  differently.
+- Error codes in a new area, FV18xx, each pointing to the new guide page `dates_and_prices`:
+  FV1801 for the current time (`new Date()`, `Date.now()`), FV1802 for `new Date` of anything but
+  one present string or number, FV1803 for a date string outside the format, FV1804 for the local
+  getters and the other `Date` methods, and FV1805, permanent, for `Intl`, `.toLocaleString()`,
+  `.toLocaleDateString()`, `.toLocaleTimeString()`, `.localeCompare()` and vue-i18n's `$d` and
+  `$n`. `new Date(…)` used to be refused as FV0624 and `.toLocaleString()` as FV0602.
+- The guide page `dates_and_prices`: dates in a template, prices and formatted dates written in
+  Rust and passed as strings or filled into vue-i18n messages, end to end, with the `Dates` and
+  `Prices` conformance components.
+
 ### Changed
 
 - **Breaking:** `ferrovue::HeadHtml` and `ferrovue::Link` (`ferrovue_router::Link`) are
@@ -30,6 +52,10 @@ released together and share version numbers.
 - `Slot::new`, `Part::new`, `Page::slot`, `PageRecord::script`, `HeadValue::object`,
   `Chunks::for_islands` and `Chunks::for_source` are `#[must_use]`: a call whose result is dropped
   warns.
+- A number compared with itself (`x === x`, true unless `x` is `NaN`) compiles to `!x.is_nan()`,
+  which Clippy accepts in generated code.
+- A call of a setup binding the server cannot evaluate (`const { d } = useI18n()`, then `d(x)`)
+  is refused as FV0613 with the reason, where it was refused as FV0601 naming `$setup`.
 - The npm package compiles with `@vue/compiler-sfc` 3.5.44, and the conformance fixtures are
   recorded from Vue 3.5.44, vue-router 5.4.0, Pinia 4.1.0, vue-i18n 11.4.15 and `@unhead/vue`
   3.4.3, which render every fixture as the previous versions did. The peer ranges follow them:

@@ -1,0 +1,94 @@
+use super::*;
+use crate::push_number;
+
+fn shown(x: f64) -> String {
+    let mut out = String::new();
+    if x == 0.0 && x.is_sign_negative() {
+        out.push('-');
+    }
+    push_number(&mut out, x);
+    out
+}
+
+fn panics<T>(run: impl FnOnce() -> T + std::panic::UnwindSafe) -> bool {
+    let hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(|_| {}));
+    let thrown = std::panic::catch_unwind(run).is_err();
+    std::panic::set_hook(hook);
+    thrown
+}
+
+#[test]
+fn dates_are_javascripts() {
+    let vectors: Vec<(String, String, serde_json::Value)> =
+        serde_json::from_str(include_str!("../../tests/vectors/dates.json")).expect("date vectors");
+    assert!(vectors.len() >= 4000, "the vectors were not all read");
+    let mut accepted = 0;
+    let mut refused = 0;
+    for (op, input, want) in &vectors {
+        if op == "parse" {
+            if want.is_null() {
+                refused += 1;
+                assert!(
+                    panics(|| js_date_parse(input)),
+                    "{input:?} is outside the portable format"
+                );
+            } else {
+                accepted += 1;
+                assert_eq!(
+                    Some(shown(js_date_parse(input)).as_str()),
+                    want.as_str(),
+                    "Date.parse({input:?})"
+                );
+            }
+            continue;
+        }
+        let x: f64 = input.parse().unwrap_or_else(|_| panic!("{input:?} parses"));
+        let t = js_time_clip(x);
+        if op == "toISOString" {
+            if want.get("throws").is_some() {
+                assert!(
+                    panics(|| js_to_iso_string(t)),
+                    "toISOString({input}) throws"
+                );
+            } else {
+                assert_eq!(
+                    Some(js_to_iso_string(t).as_str()),
+                    want.as_str(),
+                    "toISOString({input})"
+                );
+            }
+            continue;
+        }
+        let got = match op.as_str() {
+            "Date" => t,
+            "getUTCFullYear" => js_utc_full_year(t),
+            "getUTCMonth" => js_utc_month(t),
+            "getUTCDate" => js_utc_date(t),
+            "getUTCDay" => js_utc_day(t),
+            "getUTCHours" => js_utc_hours(t),
+            "getUTCMinutes" => js_utc_minutes(t),
+            "getUTCSeconds" => js_utc_seconds(t),
+            "getUTCMilliseconds" => js_utc_milliseconds(t),
+            other => panic!("unknown op {other}"),
+        };
+        assert_eq!(Some(shown(got).as_str()), want.as_str(), "{op}({input})");
+    }
+    assert!(accepted >= 1000, "{accepted} portable strings");
+    assert!(refused >= 300, "{refused} strings outside the format");
+}
+
+#[test]
+fn every_date_writes_the_string_it_reads_back_from() {
+    for t in [
+        -8.64e15,
+        -62_198_755_200_001.0,
+        -1.0,
+        0.0,
+        951_782_400_000.0,
+        253_402_300_800_000.0,
+        8.64e15,
+    ] {
+        assert_eq!(js_date_parse(&js_to_iso_string(t)), t);
+    }
+}

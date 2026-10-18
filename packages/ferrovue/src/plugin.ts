@@ -61,6 +61,8 @@ export interface Plugin<Run = unknown, Local = unknown> {
 
   global?(s: Scope, name: string, n: N): Val | null;
   call?(s: Scope, n: N): Val | null;
+  construct?(s: Scope, n: N): Val | null;
+  method?(s: Scope, target: Val, method: string, args: N[], n: N): Val | null;
   member?(s: Scope, base: Val, prop: string, n: N, computed: boolean): Val | null;
   equality?(s: Scope, n: N): Val | null;
   presence?(s: Scope, n: N): Presence | null | undefined;

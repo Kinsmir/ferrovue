@@ -206,6 +206,8 @@ export const i18n: Plugin<I18nRun, I18nScope> = {
       else if (key === "locale") {
         s.setup.set(p.value.name, { code: "fv_i18n.locale()", ty: STR });
         s.refs.add(p.value.name);
+      } else if (key === "d" || key === "n") {
+        s.clientOnly.set(p.value.name, `\`${key}\` from \`useI18n()\` formats by locale with \`Intl\`, whose output differs between Node and each browser (see the \`dates_and_prices\` guide)`);
       } else s.clientOnly.set(p.value.name, `\`${key}\` from \`useI18n()\` does not run on the server`);
     }
     runOf(i18n).readers.add(s.comp);
