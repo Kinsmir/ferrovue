@@ -126,6 +126,12 @@ released together and share version numbers.
   `ammonia::Builder` in place of `ferrovue::ammonia::Builder`. The crates re-export no other
   third-party crate.
 
+### Fixed
+
+- FV0613 for a setup binding the server cannot evaluate gives one location, where the template
+  reads the binding. It used to repeat the location and source line of the expression inside the
+  setup, after the reason.
+
 ### Security
 
 - The `ammonia` feature requires ammonia 4.2.4, which fixes RUSTSEC-2021-0157 and RUSTSEC-2026-0373

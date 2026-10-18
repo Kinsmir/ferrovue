@@ -2150,6 +2150,15 @@ const label = props.label.normalize();
       /`label` is set up in a way the server cannot evaluate/,
     ],
     [
+      "a setup binding it cannot evaluate, located once, where the template reads it",
+      `<script setup lang="ts">
+const props = defineProps<{ label: string }>();
+const label = props.label.normalize();
+</script>
+<template><i>{{ label }}</i></template>`,
+      /^components\/X\.vue:5:17: `label` is set up in a way the server cannot evaluate: (?!.*X\.vue:\d)/,
+    ],
+    [
       "an interface whose name the generated Rust already uses",
       `<script setup lang="ts">
 interface Option { label: string }
