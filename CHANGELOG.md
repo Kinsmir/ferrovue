@@ -14,6 +14,9 @@ released together and share version numbers.
   runs each test binary with 4 GiB of address space, on any runner architecture. A mutant that
   allocates without end now aborts its test, which counts as caught, where it used to exhaust the
   runner's memory and end the whole shard.
+- CI only, with no change to the crates or the npm package: the mutation-testing workflow runs in
+  eight shards, which take turns through the list of mutants, and gives each mutant's tests 90
+  seconds. Two of its four shards used to reach the job's 90-minute limit before they finished.
 
 ## [0.7.2] - 2026-10-11
 
