@@ -5,6 +5,8 @@ released together and share version numbers.
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-18
+
 ### Added
 
 - Dates in templates, in the part of `Date` that reads the same on the server and in every
@@ -13,8 +15,9 @@ released together and share version numbers.
   `new Date(ms)` of a number, and `.toISOString()`, `.getTime()`, `.valueOf()` and the
   `.getUTC…()` methods, invalid dates included. Generated code calls the runtime's twins
   (`js_date_parse`, `js_time_clip`, `js_to_iso_string` and `js_utc_full_year` to
-  `js_utc_milliseconds`, `#[doc(hidden)]` as the other twins are), held to vectors recorded from Node (`tests/vectors/dates.json`), which Chromium and Firefox read alike in
-  four time zones. A date literal outside the format is refused when compiling (FV1803), and
+  `js_utc_milliseconds`, `#[doc(hidden)]` as the other twins are), held to vectors recorded from
+  Node (`tests/vectors/dates.json`), which Chromium, Firefox and WebKit read alike in four time
+  zones. A date literal outside the format is refused when compiling (FV1803), and
   `js_date_parse` panics on a string from the props outside it, which browsers may each read
   differently. Both refuse a date and time whose fields, read as UTC, lie beyond ±8.64 × 10¹⁵ ms
   while its offset brings it within (`+275760-09-13T01:00+01:00`), which Safari reads as an invalid
@@ -1192,7 +1195,8 @@ released together and share version numbers.
 - Slot content made only of comments (a `v-if` not taken, for example) was kept when the slot had
   no fallback. Vue drops it, so the bytes differed.
 
-[Unreleased]: https://github.com/Kinsmir/ferrovue/compare/v0.7.2...HEAD
+[Unreleased]: https://github.com/Kinsmir/ferrovue/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/Kinsmir/ferrovue/compare/v0.7.2...v0.8.0
 [0.7.2]: https://github.com/Kinsmir/ferrovue/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/Kinsmir/ferrovue/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/Kinsmir/ferrovue/compare/v0.6.0...v0.7.0
