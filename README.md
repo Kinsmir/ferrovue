@@ -10,7 +10,7 @@ Vue single-file components compiled to Rust render functions. A Rust server rend
 HTML with no JavaScript runtime, and the browser hydrates that HTML with the same `.vue` file.
 
 - **No Node on the server.** The compiler runs at build time; the server is your Rust binary, and a
-  render is a function call that writes into a `String`, 8 to 135 times faster than Vue's
+  render is a function call that writes into a `String`, 7.7 to 135 times faster than Vue's
   `renderToString` in the benchmarks (see [Performance](#performance)).
 - **Byte-identical to Vue.** The generated Rust writes exactly the bytes Vue's `renderToString`
   writes for the same props, so Vue hydrates the page without a mismatch. Every supported construct
