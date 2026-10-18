@@ -1,0 +1,6 @@
+{
+  "toolchain": "1.99.0",
+  "target": "x86_64-unknown-linux-musl",
+  "budget": 5,
+  "instructions": null
+}

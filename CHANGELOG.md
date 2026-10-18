@@ -83,6 +83,16 @@ released together and share version numbers.
   GitHub annotation for each surviving mutant, which put a warning on every run for each of the 47
   known equivalents. A survivor `.cargo/mutants-equivalent.txt` does not list is still named in
   the shard's summary and fails the job.
+- CI only, with no change to the crates or the npm package: performance budgets. The
+  **Instruction counts** job runs the benchmark scenarios under Callgrind with gungraun 0.20, built
+  with Rust 1.99.0 for `x86_64-unknown-linux-musl` on `ubuntu-24.04`, uploads the counts as the
+  `instructions` artifact, and fails when one runs more than 5% more instructions than
+  `crates/ferrovue/benches/instructions.json` records (`pnpm bench:instructions`). The committed
+  counts come from that artifact (`pnpm bench:instructions:from-ci`); while the file is a
+  placeholder the job only records, and on a release tag it fails. The **Build-time budgets** job
+  generates a 500-component project and fails when `ferrovue` takes over 10 s on it, or
+  `cargo build` of the generated modules over 60 s (dev) or 90 s (release) (`pnpm budget:build`).
+  TESTING.md describes both.
 - Tests only, with no change to the crates or the npm package: vectors recorded from Vue and
   vue-router for attribute and style keys in capitals, a `--` custom property with capitals and a
   child route with an absolute path under a matchable parent, `BasicHtml` references of the

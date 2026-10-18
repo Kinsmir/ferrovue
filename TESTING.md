@@ -31,6 +31,7 @@ pnpm test:browser          # the same fixtures, and the full-stack example, hydr
 | **Runtime fuzzing** | `fuzz/` | `escape_into`, an island's `data-props`, the state script and the attribute writers hold their invariants on any input libFuzzer finds: escaped text reads back whole and holds no markup, JSON reads back as the value it was written from and holds nothing that ends its attribute or its `<script>` (`cargo +nightly fuzz run <target>`, nightly in CI) | References written in the fuzz crate, serde_json |
 | **Vue canary** | `.github/workflows/canary.yml` | The newest Vue 3.5, vue-router, Pinia, vue-i18n and `@unhead/vue` patches the peer ranges allow record the same fixtures and vectors as are committed, and hydrate the committed HTML (weekly in CI; an issue is opened on a difference) | `@vue/server-renderer`, Vue's hydration |
 | **Mutation testing** | `.cargo/mutants.toml` | The tests above notice a small change to the runtime's source; every change they miss is listed, with the reason, as one that cannot alter the output (`cargo mutants`, weekly in CI) | cargo-mutants |
+| **Performance budgets** | `crates/ferrovue/benches/instructions.rs`, `scripts/build-budget.ts` | The generated renderers run no more than 5% more instructions than the committed baseline; ferrovue and `cargo build` handle a 500-component project within their time budgets | Callgrind (gungraun), wall-clock |
 | **Example** | `examples/greeting/` | Generated code compiles in an ordinary (non-test) consumer crate | `cargo build` |
 | **Generated-code contract** | `crates/ferrovue-contract/` | Components that generate every item `generated_code.md` documents as stable compile, and hand-written Rust uses each as an application would (`render`'s parameters pinned as function pointers, props built with builders and as literals, `html`, `island`, the owned forms, slots, a recorded page, `render_json`); a `mod.rs` naming a version of generated code the crate does not accept stops the build with the message `tests/compat/newer.stderr` holds (trybuild); CI checks the generated Rust is current with `ferrovue --check` | Hand-written, trybuild |
 | **Struct literals** | `crates/ferrovue/tests/literal_props/`, `literal_props.rs` | Code generated with `"builders": false` compiles, and renders from props built as struct literals; `compiler.test.ts` checks the committed Rust is current | Hand-written |
@@ -466,6 +467,122 @@ shards, and fails on any survivor that is not in the list and on any entry of th
 shard missed, which a test now catches and the list no longer needs. It is too slow for every pull
 request;
 run it locally on the functions a change touches (`-F`, or `--in-diff` with a diff file).
+
+## Performance budgets
+
+Two CI jobs hold ferrovue's speed to a budget: the instructions the generated renderers run, and
+the time a large project takes to compile. The criterion and tinybench benchmarks in the README's
+Performance section measure time per render and are reported only.
+
+### Instruction counts
+
+`crates/ferrovue/benches/instructions.rs` runs the scenarios of `benches/render.rs` once each
+under Valgrind's Callgrind, through [gungraun](https://github.com/gungraun/gungraun), and counts
+the instructions each executes: `small`, `list`, `tree` and `page`, and the runtime's
+`attrs_into`, `push_number` and `head`. Both benchmarks take their props and their checks from
+`benches/scenarios/`: each scenario's output is compared with its expected HTML before it is
+measured, and building the props and the router is left out of the count. A count is the same
+from run to run, on a busy laptop and on a shared runner alike.
+
+`crates/ferrovue/benches/instructions.json` is the baseline: a count for each scenario, the Rust
+release and target they were measured with, and the budget in percent. **The committed counts are
+the CI runner's.** The **Instruction counts** job runs `node scripts/instructions.ts` on
+`ubuntu-24.04`, writes the counts and the comparison to the run's summary, uploads the counts as
+the `instructions` artifact (in the baseline's own format), and fails when a scenario runs more
+than 5% more instructions than its baseline, or when the benchmark and the baseline do not name
+the same scenarios. A scenario that got cheaper passes; take the new counts then too, so the next
+regression is measured from them.
+
+A count depends on the code the compiler emitted and on the C library it calls for allocation and
+copying, so the baseline is tied to four things:
+
+- **An exact Rust release**, the file's `toolchain`. `rust-toolchain.toml` follows stable for
+  everything else; the script runs `cargo +<toolchain>`, and the CI job installs that release.
+  Moving the counts to a newer Rust is a baseline update of its own, in its own commit.
+- **The `x86_64-unknown-linux-musl` target.** The Rust toolchain ships musl and links it
+  statically, so the machine's glibc plays no part. Built against glibc, the same benchmark gave
+  counts up to 25% apart on Arch (glibc 2.44) and Ubuntu 24.04 (glibc 2.39); built for musl, the
+  two agree within 0.05%, with Valgrind 3.25 and 3.22.
+- **The runner image**, `ubuntu-24.04`, named in the job where the other jobs take
+  `ubuntu-latest`. It fixes the Valgrind that apt installs (3.22), so the move of `ubuntu-latest`
+  to Ubuntu 26.04 changes no count. Moving the job to a newer image is a baseline update too.
+- **gungraun's version** in `Cargo.lock`. `gungraun-runner` must be the same version, which
+  `node scripts/instructions.ts --print runner-version` prints.
+
+**Taking the counts from CI** is one command, run on the branch whose CI run should provide them:
+
+```sh
+pnpm bench:instructions:from-ci           # the latest CI run on the commit checked out
+pnpm bench:instructions:from-ci 123456789 # or a given run's id
+```
+
+It downloads that run's `instructions` artifact with `gh` and writes it over `instructions.json`.
+The procedure after a change that moves the counts, or after a rebase onto one, is: push the branch
+(or start CI on it with `gh workflow run ci.yml --ref <branch>`), wait for its **Instruction
+counts** job, run `pnpm bench:instructions:from-ci`, review the diff and commit it. The job fails
+on the first push when the counts moved past the budget; it still uploads them, which is what the
+command reads.
+
+**A placeholder** baseline has `"instructions": null`. The job then compares nothing: it records
+the counts, uploads them, and passes with a warning on the run. On a release tag (the release
+workflow runs CI with `GITHUB_REF_TYPE` set to `tag`) a placeholder fails the job, so a release
+always carries real counts. A pull request whose code changes before it merges can commit a
+placeholder and fill it from CI as its last commit.
+
+To run it locally, on x86_64 Linux with Valgrind installed from your distribution:
+
+```sh
+rustup toolchain install 1.99.0                                 # the toolchain in instructions.json
+rustup target add --toolchain 1.99.0 x86_64-unknown-linux-musl
+cargo install gungraun-runner --version 0.20.0 --locked
+pnpm bench:instructions                                         # compare with the committed baseline
+pnpm bench:instructions:update --baseline target/local.json     # record a baseline of this machine
+pnpm bench:instructions --baseline target/local.json            # compare with it while you work
+pnpm bench:instructions:update --baseline target/local.json --toolchain 1.100.0
+```
+
+Musl makes this machine's counts agree with the runner's to within a small fraction of a percent,
+so a local comparison with the committed baseline is meaningful, but the committed file is written
+from CI only. `--update` without `--baseline` rewrites `instructions.json` from this machine,
+which is for trying a change out and is not committed. Every run also writes its counts to
+`target/instructions/instructions.json`.
+
+`GUNGRAUN_VALGRIND_BIN` names a Valgrind that is not on `PATH`. The benchmarks' dev-dependency
+criterion builds one C file; the script compiles it with `cc` unless
+`CC_x86_64_unknown_linux_musl` names another compiler. gungraun keeps Callgrind's profiles in
+`target/gungraun/`, where `callgrind_annotate` shows which functions a change made dearer.
+
+A change that costs instructions on purpose, such as a construct that now renders as Vue does and
+needs more work for it, takes the CI run's counts in the same pull request, whose description says
+why; the diff of `instructions.json` shows the cost.
+
+### Build-time budgets
+
+`pnpm budget:build` (`scripts/build-budget.ts`) writes a project of 500 components into
+`target/budget/`, from code and the same on every run. The components take five shapes in turn: a
+card with conditionals, a loop and a default slot; a table with a bound style; a form with bound
+attributes; a group that renders the three components before it; and a layout with named slots
+around the group before it, so components nest the way pages, layouts and widgets do. ferrovue
+writes about 45,000 lines of Rust from them. The script times three steps:
+
+| Step | This machine | Budget |
+|---|---|---|
+| `ferrovue` (the CLI, run from source on Node) writing the 500 modules | 1.1 s | 10 s |
+| `cargo build` of the generated crate, dev profile | 4.4 s | 60 s |
+| `cargo build --release` of the generated crate | 7.1 s | 90 s |
+
+"This machine" is the one the README's Performance section names. Each build compiles the
+generated crate alone, from clean and with `CARGO_INCREMENTAL=0`: its dependencies are built before
+the clock starts.
+
+Wall-clock time on a shared runner moves with the runner's CPU and its neighbours, by two to three
+times between runs, and a busy laptop shows the same spread. The budgets sit near ten times this
+machine's times, about four times a runner's, so they catch a step that grows by an order of
+magnitude, such as a quadratic pass in the compiler or generated code that sends type checking or
+monomorphisation out of bounds, and let ordinary noise pass. A step over its budget is timed once
+more and fails only if both runs are over. The **Build-time budgets** job writes the times to the
+run's summary, where slower drift shows across runs without failing one. The budgets are the
+`BUDGETS` constant at the top of the script; raise one only with a measurement that shows why.
 
 ## Investigating a construct
 
