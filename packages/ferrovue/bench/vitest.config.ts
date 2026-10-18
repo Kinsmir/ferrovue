@@ -7,6 +7,7 @@ export default defineConfig({
   plugins: [vue()],
   resolve: { alias: [{ find: /^ferrovue\/client$/, replacement: join(import.meta.dirname, "../src/client.ts") }] },
   test: {
+    fsModuleCache: false,
     environment: "node",
     include: ["packages/ferrovue/bench/**/*.bench.ts"],
     fileParallelism: false,

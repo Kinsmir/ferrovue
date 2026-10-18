@@ -5,6 +5,7 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   plugins: [vue({ features: { componentIdGenerator: "filepath" } }), ferrovue({ root: import.meta.dirname })],
   test: {
+    fsModuleCache: false,
     environment: "happy-dom",
     environmentOptions: {
       happyDOM: {
