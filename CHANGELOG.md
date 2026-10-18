@@ -117,6 +117,9 @@ released together and share version numbers.
   JSON to its value through serde_json). The nightly fuzz workflow runs each for ten minutes, and
   CI checks the fuzz crate's formatting and, with cargo-deny, its dependencies; `deny.toml` allows
   the NCSA licence of `libfuzzer-sys`'s bundled libFuzzer.
+- CI only, with no change to the crates or the npm package: the workflows run
+  `actions/setup-node` 7.1.0, `actions/upload-artifact` 7.0.2, `actions/download-artifact` 8.0.2
+  and `taiki-e/install-action` 2.87.27, each pinned to the commit its tag names.
 
 ### Removed
 
