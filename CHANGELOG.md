@@ -121,6 +121,10 @@ released together and share version numbers.
   `actions/setup-node` 7.1.0, `actions/upload-artifact` 7.0.2, `actions/download-artifact` 8.0.2
   and `taiki-e/install-action` 2.87.27, each pinned to the commit its tag names.
 
+- CI only, with no change to the crates or the npm package: `.github/zizmor.yml` lets the
+  `dtolnay/rust-toolchain` pin in `.github/actions/rust/action.yml` name `master`, a branch with no
+  release tags, without failing zizmor's `ref-version-mismatch` check each time upstream pushes to
+  it.
 ### Removed
 
 - **Breaking:** `ferrovue::ammonia`, the `ammonia` feature's re-export of the ammonia crate. A
