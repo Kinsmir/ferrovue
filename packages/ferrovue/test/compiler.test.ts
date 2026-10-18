@@ -277,6 +277,20 @@ defineProps<{ note?: string }>();
     });
   });
 
+  describe("a dateType of the project's own", () => {
+    it("is what the Rust test of clipped time values compiles, from the conformance suite's component", () => {
+      const root = join(import.meta.dirname, "../../../crates/ferrovue/tests/own_dates");
+      const config = loadConfig(root);
+      expect(config.dateType).toBe("crate::Loose");
+      for (const name of readdirSync(join(root, config.components))) {
+        expect(readFileSync(join(root, config.components, name), "utf8"), name).toBe(readFileSync(join(root, "../conformance/components", name), "utf8"));
+      }
+      const out = generate(root, config);
+      expect([...out.keys()].toSorted()).toEqual(readdirSync(join(root, config.out)).toSorted());
+      for (const [name, text] of out) expect(readFileSync(join(root, config.out, name), "utf8"), name).toBe(text);
+    });
+  });
+
   describe("strings, computed lists and dictionaries", () => {
     it("counts a string's code units, and orders strings by them, through the runtime", () => {
       const out = compile(
@@ -1595,11 +1609,11 @@ defineProps<{ at: Date; maybe: Date | null; later?: Date; made: Date }>();
       expect(x).toContain('    #[serde(rename = "deleted", default, with = "fv::opt_date_prop")]\n    pub deleted: Option<ferrovue::JsDate>,');
       expect(x).toContain("pub fn new(posted: ferrovue::JsDate) -> Self {");
       expect(x).toContain("pub fn edited(mut self, edited: ferrovue::JsDate) -> Self {");
-      expect(x).toContain("let s_year = fv::js_utc_full_year(fv::JsTime::time_value(&props.posted));");
-      expect(x).toContain("fv::escape_into(out, &fv::js_to_iso_string(fv::JsTime::time_value(&props.posted)));");
-      expect(x).toContain("if let Some(n1) = props.edited.as_ref().map(fv::JsTime::time_value) {");
+      expect(x).toContain("let s_year = fv::js_utc_full_year(fv::js_time_of(&props.posted));");
+      expect(x).toContain("fv::escape_into(out, &fv::js_to_iso_string(fv::js_time_of(&props.posted)));");
+      expect(x).toContain("if let Some(n1) = props.edited.as_ref().map(fv::js_time_of) {");
       expect(x).toContain(
-        "&super::stamp::Props { at: fv::js_date_prop(fv::JsTime::time_value(&props.posted)), maybe: props.deleted.as_ref().map(fv::JsTime::time_value).map(fv::js_date_prop), later: props.edited.as_ref().map(fv::JsTime::time_value).map(fv::js_date_prop), made: fv::js_date_prop(fv::js_time_clip(s_year)) }",
+        "&super::stamp::Props { at: fv::js_date_prop(fv::js_time_of(&props.posted)), maybe: props.deleted.as_ref().map(fv::js_time_of).map(fv::js_date_prop), later: props.edited.as_ref().map(fv::js_time_of).map(fv::js_date_prop), made: fv::js_date_prop(fv::js_time_clip(s_year)) }",
       );
       const chrono = generate(island(posted, { Stamp: stamp }), { ...CONFIG, dateType: "chrono::DateTime<chrono::Utc>" });
       expect(chrono.get("x.rs")).toContain('    #[serde(rename = "posted", with = "fv::date_prop")]\n    pub posted: chrono::DateTime<chrono::Utc>,');
@@ -1614,7 +1628,7 @@ const props = defineProps<Props>();
 </script>
 <template><p>{{ props.posted.getUTCDate() }}{{ label }}</p></template>`)).get("x.rs")!;
       expect(out).toContain("    pub posted: ferrovue::JsDate,");
-      expect(out).toContain("fv::push_number(out, fv::js_utc_date(fv::JsTime::time_value(&props.posted)));");
+      expect(out).toContain("fv::push_number(out, fv::js_utc_date(fv::js_time_of(&props.posted)));");
     });
 
     it("refuses a Date anywhere but a component's own prop, which the client could not revive", () => {

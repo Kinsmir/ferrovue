@@ -54,7 +54,7 @@ pub use hydrate::Hydrate;
 pub use js_date::DateOutOfRange;
 pub use js_date::{JsDate, JsTime};
 #[doc(hidden)]
-pub use js_date::{date_prop, js_date_prop, opt_date_prop};
+pub use js_date::{date_prop, js_date_prop, js_time_of, opt_date_prop};
 pub use page::{Page, PageHole, PageRecord, PageScript, PageSlot, Part};
 pub use record::Record;
 #[cfg(feature = "ammonia")]

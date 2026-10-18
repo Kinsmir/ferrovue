@@ -66,9 +66,9 @@ export function fieldVal(comp: Component, base: string, ty: Ty, js: string, node
     case "child":
       return { code: `&${place}`, ty: f.ty };
     case "date":
-      return { code: `fv::JsTime::time_value(&${place})`, ty: f.ty };
+      return { code: `fv::js_time_of(&${place})`, ty: f.ty };
     case "opt":
-      if (f.ty.of.k === "date") return { code: `${place}.as_ref().map(fv::JsTime::time_value)`, ty: f.ty };
+      if (f.ty.of.k === "date") return { code: `${place}.as_ref().map(fv::js_time_of)`, ty: f.ty };
       if (f.ty.of.k === "html") return { code: `${place}.as_ref()`, ty: f.ty };
       if (f.ty.of.k === "str") return { code: `${place}.as_deref()`, ty: f.ty };
       if (f.ty.of.k === "int" || f.ty.of.k === "float" || f.ty.of.k === "bool") return { code: place, ty: f.ty };

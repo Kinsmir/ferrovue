@@ -44,25 +44,25 @@ impl Props {
 pub fn render(out: &mut String, props: &Props) {
     out.reserve(107);
     out.push_str("<footer>");
-    fv::push_number(out, fv::JsTime::time_value(&props.at));
+    fv::push_number(out, fv::js_time_of(&props.at));
     out.push('|');
-    fv::push_number(out, fv::js_utc_seconds(fv::JsTime::time_value(&props.shown)));
+    fv::push_number(out, fv::js_utc_seconds(fv::js_time_of(&props.shown)));
     out.push(' ');
-    if let Some(n1) = props.edited.as_ref().map(fv::JsTime::time_value) {
+    if let Some(n1) = props.edited.as_ref().map(fv::js_time_of) {
         out.push_str("<span>");
         fv::push_number(out, n1);
         out.push_str("</span>");
     } else {
         out.push_str("<!---->");
     }
-    if let Some(n2) = props.deleted.as_ref().map(fv::JsTime::time_value) {
+    if let Some(n2) = props.deleted.as_ref().map(fv::js_time_of) {
         out.push_str("<span>");
         fv::push_number(out, fv::js_utc_full_year(n2));
         out.push_str("</span>");
     } else {
         out.push_str("<!---->");
     }
-    if props.edited.as_ref().map(fv::JsTime::time_value).is_some() && props.deleted.as_ref().map(fv::JsTime::time_value).is_some() {
+    if props.edited.as_ref().map(fv::js_time_of).is_some() && props.deleted.as_ref().map(fv::js_time_of).is_some() {
         out.push_str("<span>both</span>");
     } else {
         out.push_str("<!---->");

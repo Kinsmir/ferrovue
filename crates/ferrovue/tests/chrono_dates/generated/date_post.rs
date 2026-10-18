@@ -47,34 +47,34 @@ impl<'a> Props<'a> {
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(246 + 16 * props.tags.len() + props.title.len() + props.tags.iter().map(|v| v.len()).sum::<usize>());
-    let s_valid = !fv::JsTime::time_value(&props.posted).is_nan();
-    let s_year = fv::js_utc_full_year(fv::JsTime::time_value(&props.posted));
-    let s_shown = props.edited.as_ref().map(fv::JsTime::time_value).unwrap_or(fv::JsTime::time_value(&props.posted));
+    let s_valid = !fv::js_time_of(&props.posted).is_nan();
+    let s_year = fv::js_utc_full_year(fv::js_time_of(&props.posted));
+    let s_shown = props.edited.as_ref().map(fv::js_time_of).unwrap_or(fv::js_time_of(&props.posted));
     out.push_str("<article><h2>");
     fv::escape_into(out, &props.title);
     out.push_str("</h2>");
     if s_valid {
         out.push_str("<p><time datetime=\"");
-        fv::escape_into(out, &fv::js_to_iso_string(fv::JsTime::time_value(&props.posted)));
+        fv::escape_into(out, &fv::js_to_iso_string(fv::js_time_of(&props.posted)));
         out.push_str("\">");
-        fv::push_number(out, fv::js_utc_date(fv::JsTime::time_value(&props.posted)));
+        fv::push_number(out, fv::js_utc_date(fv::js_time_of(&props.posted)));
         out.push('/');
-        fv::push_number(out, fv::js_utc_month(fv::JsTime::time_value(&props.posted)) + 1.0);
+        fv::push_number(out, fv::js_utc_month(fv::js_time_of(&props.posted)) + 1.0);
         out.push('/');
         fv::push_number(out, s_year);
         out.push_str("</time></p>");
     } else {
         out.push_str("<p>invalid: ");
-        fv::push_number(out, fv::JsTime::time_value(&props.posted));
+        fv::push_number(out, fv::js_time_of(&props.posted));
         out.push('|');
         fv::push_number(out, s_year);
         out.push('|');
-        fv::push_number(out, fv::JsTime::time_value(&props.posted));
+        fv::push_number(out, fv::js_time_of(&props.posted));
         out.push('|');
-        fv::push_number(out, fv::js_utc_day(fv::JsTime::time_value(&props.posted)));
+        fv::push_number(out, fv::js_utc_day(fv::js_time_of(&props.posted)));
         out.push_str("</p>");
     }
-    if let Some(n1) = props.edited.as_ref().map(fv::JsTime::time_value) {
+    if let Some(n1) = props.edited.as_ref().map(fv::js_time_of) {
         out.push_str("<p>edited ");
         fv::push_number(out, n1);
         out.push_str(" on day ");
@@ -83,7 +83,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     } else {
         out.push_str("<p>never edited</p>");
     }
-    if let Some(n2) = props.deleted.as_ref().map(fv::JsTime::time_value) {
+    if let Some(n2) = props.deleted.as_ref().map(fv::js_time_of) {
         out.push_str("<p>deleted at ");
         fv::push_number(out, fv::js_utc_hours(n2));
         out.push(':');
@@ -101,11 +101,11 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         out.push_str("<li>");
         fv::escape_into(out, tag);
         out.push(' ');
-        fv::push_number(out, fv::js_utc_milliseconds(fv::JsTime::time_value(&props.posted)) + i as f64);
+        fv::push_number(out, fv::js_utc_milliseconds(fv::js_time_of(&props.posted)) + i as f64);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul>");
-    super::date_stamp::render(out, &super::date_stamp::Props { at: fv::js_date_prop(fv::JsTime::time_value(&props.posted)), edited: props.edited.as_ref().map(fv::JsTime::time_value).map(fv::js_date_prop), deleted: props.deleted.as_ref().map(fv::JsTime::time_value).map(fv::js_date_prop), shown: fv::js_date_prop(s_shown) });
+    super::date_stamp::render(out, &super::date_stamp::Props { at: fv::js_date_prop(fv::js_time_of(&props.posted)), edited: props.edited.as_ref().map(fv::js_time_of).map(fv::js_date_prop), deleted: props.deleted.as_ref().map(fv::js_time_of).map(fv::js_date_prop), shown: fv::js_date_prop(s_shown) });
     out.push_str("</article>");
 }
 

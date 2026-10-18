@@ -42,23 +42,23 @@ impl Props {
 pub fn render(out: &mut String, props: &Props) {
     out.reserve(80);
     out.push_str("<time");
-    if fv::js_to_iso_string(fv::JsTime::time_value(&props.at)).is_empty() {
+    if fv::js_to_iso_string(fv::js_time_of(&props.at)).is_empty() {
         out.push_str(" datetime");
     } else {
         out.push_str(" datetime=\"");
-        fv::escape_into(out, &fv::js_to_iso_string(fv::JsTime::time_value(&props.at)));
+        fv::escape_into(out, &fv::js_to_iso_string(fv::js_time_of(&props.at)));
         out.push('"');
     }
     out.push('>');
-    fv::push_number(out, fv::js_utc_full_year(fv::JsTime::time_value(&props.at)));
-    if let Some(n1) = props.edited.as_ref().map(fv::JsTime::time_value) {
+    fv::push_number(out, fv::js_utc_full_year(fv::js_time_of(&props.at)));
+    if let Some(n1) = props.edited.as_ref().map(fv::js_time_of) {
         out.push_str("<b>");
         fv::push_number(out, n1);
         out.push_str("</b>");
     } else {
         out.push_str("<!---->");
     }
-    if let Some(n2) = props.deleted.as_ref().map(fv::JsTime::time_value) {
+    if let Some(n2) = props.deleted.as_ref().map(fv::js_time_of) {
         out.push_str("<i>");
         fv::push_number(out, fv::js_utc_date(n2));
         out.push_str("</i>");

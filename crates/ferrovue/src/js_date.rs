@@ -13,9 +13,13 @@ use crate::dates::{iso_time, js_time_clip, js_to_iso_string};
 /// [`JsTime`](crate::JsTime).
 ///
 /// An island's `data-props` carries it as `toISOString()` writes it, and an invalid date as `NaN`,
-/// which `ferrovue/client` turns back into a `Date` before Vue hydrates. serde_json, which writes
-/// no `NaN`, writes an invalid date as `null`. It reads back from such a string, or from a number of
-/// milliseconds.
+/// which `ferrovue/client` turns back into a `Date` before Vue hydrates. It reads back from such a
+/// string, or from a number of milliseconds.
+///
+/// serde_json writes no `NaN`, so it writes an invalid date as `null`, which does not read back: an
+/// `Option<JsDate>` holding [`JsDate::INVALID`] reads back as `None`, and a `JsDate` that is invalid
+/// fails to read. `Deserialize` asks the format what it holds (`deserialize_any`), so it reads only
+/// self-describing formats, such as JSON, and not bincode or postcard.
 ///
 /// # Example
 ///
@@ -175,6 +179,10 @@ impl<'de> Deserialize<'de> for JsDate {
 /// `chrono::DateTime<chrono::Utc>` with the `chrono` feature; `dateType` in `ferrovue.config.json`
 /// chooses which one the props are.
 ///
+/// Generated code clips what `time_value` returns as `new Date(value)` does, in the markup and in
+/// an island's `data-props` alike: a fraction is truncated toward zero, and a value that is not
+/// finite or lies beyond ±8.64 × 10¹⁵ is an invalid date. An implementation need not clip it.
+///
 /// # Example
 ///
 /// ```
@@ -186,7 +194,7 @@ impl<'de> Deserialize<'de> for JsDate {
 ///
 /// impl JsTime for Seconds {
 ///     fn time_value(&self) -> f64 {
-///         ferrovue::JsDate::from_millis(self.0 as f64 * 1000.0).time_value()
+///         self.0 as f64 * 1000.0
 ///     }
 ///
 ///     fn from_time_value(t: f64) -> Option<Self> {
@@ -215,6 +223,14 @@ impl JsTime for JsDate {
     fn from_time_value(t: f64) -> Option<JsDate> {
         Some(JsDate::from_millis(t))
     }
+}
+
+/// `new Date(x.time_value())`: the time value a `Date` prop gives the template, clipped as
+/// JavaScript clips it.
+#[doc(hidden)]
+#[must_use]
+pub fn js_time_of<T: JsTime>(date: &T) -> f64 {
+    js_time_clip(date.time_value())
 }
 
 /// A child's `Date` prop, from the date its parent passes.

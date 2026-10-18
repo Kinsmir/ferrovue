@@ -162,7 +162,8 @@ The prop's Rust field is the type `dateType` in `ferrovue.config.json` names:
 | a type of your own | that type, which implements [`JsTime`](crate::JsTime) | what its `from_time_value` takes |
 
 The generated `render` reads the prop through [`JsTime::time_value`](crate::JsTime::time_value),
-the time value JavaScript keeps, so it is the same whichever type the field is, and the parsing
+the time value JavaScript keeps, clipped as `new Date()` clips it, so it is the same whichever
+type the field is, and the parsing
 and the `getUTC…` twins are ferrovue's own, held to the same vectors as the dates a template
 builds:
 
@@ -210,13 +211,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push_str("<article><h2>");
     fv::escape_into(out, &props.title);
     out.push_str("</h2><p>");
-    fv::push_number(out, fv::js_utc_date(fv::JsTime::time_value(&props.posted)));
+    fv::push_number(out, fv::js_utc_date(fv::js_time_of(&props.posted)));
     out.push('/');
-    fv::push_number(out, fv::js_utc_month(fv::JsTime::time_value(&props.posted)) + 1.0);
+    fv::push_number(out, fv::js_utc_month(fv::js_time_of(&props.posted)) + 1.0);
     out.push('/');
-    fv::push_number(out, fv::js_utc_full_year(fv::JsTime::time_value(&props.posted)));
+    fv::push_number(out, fv::js_utc_full_year(fv::js_time_of(&props.posted)));
     out.push_str("</p>");
-    if let Some(n1) = props.edited.as_ref().map(fv::JsTime::time_value) {
+    if let Some(n1) = props.edited.as_ref().map(fv::js_time_of) {
         out.push_str("<p>edited ");
         fv::escape_into(out, &fv::js_slice(&fv::js_to_iso_string(n1), 0.0f64, Some(10.0f64)));
         out.push_str("</p>");
@@ -263,8 +264,14 @@ component's props from JSON itself, and hands them to `createSSRApp`, calls
 `reviveDates(component, props)` from `ferrovue` first.
 
 A fixture or a page record may give a date as such a string or as a number of milliseconds, and
-JSON read into the props with serde takes either. serde_json, which writes no `NaN`, writes an
-invalid [`JsDate`](crate::JsDate) as `null`.
+JSON read into the props with serde takes either. serde_json writes no `NaN`, so it writes an
+invalid [`JsDate`](crate::JsDate) as `null`, which does not read back: an `Option<JsDate>` holding
+an invalid date reads back as `None`, and a required one fails to read. A `JsDate` reads only from
+a self-describing format, such as JSON, and not from bincode or postcard.
+
+Generated code reads a `Date` prop through [`JsTime::time_value`](crate::JsTime::time_value) and
+clips the value as `new Date(value)` does, so a type of your own that returns a fraction or a value
+beyond the range renders, and travels in `data-props`, as the date JavaScript would make of it.
 
 Only a component's own props are dates the client can find. A `Date` inside a list, a dictionary
 or an object prop, and one in Pinia state, an `inject`, a `ref` or a `defineModel`, would reach
