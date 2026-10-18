@@ -86,7 +86,7 @@ jobs:
       - name: Fuzz for ten minutes
         env:
           TARGET: ${{ matrix.target }}
-        run: cargo fuzz run --target x86_64-unknown-linux-gnu "$TARGET" -- -max_total_time=600 -print_final_stats=1
+        run: cargo fuzz run --target x86_64-unknown-linux-gnu "$TARGET" -- -max_total_time=600 -rss_limit_mb=6144 -print_final_stats=1
       - name: Keep the inputs that reach new code
         if: success()
         env:

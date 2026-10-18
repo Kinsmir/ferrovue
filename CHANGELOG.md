@@ -143,7 +143,9 @@ released together and share version numbers.
   from the corpus the last good run of its target saved, minimised with `cargo fuzz cmin`, so the
   nights build on one another. The jobs build for `x86_64-unknown-linux-gnu`: the prebuilt
   cargo-fuzz that CI installs targets musl by default, where AddressSanitizer cannot run, so no
-  cargo-fuzz job had built on CI before.
+  cargo-fuzz job had built on CI before. libFuzzer may use 6 GiB: under AddressSanitizer the
+  `json` and `state_script` targets pass libFuzzer's default 2 GiB within ten minutes, while
+  without it they stay at 33 MiB over 1.5 million runs.
 ### Removed
 
 - **Breaking:** `ferrovue::ammonia`, the `ammonia` feature's re-export of the ammonia crate. A
