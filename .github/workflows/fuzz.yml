@@ -86,12 +86,12 @@ jobs:
       - name: Fuzz for ten minutes
         env:
           TARGET: ${{ matrix.target }}
-        run: cargo fuzz run "$TARGET" -- -max_total_time=600 -print_final_stats=1
+        run: cargo fuzz run --target x86_64-unknown-linux-gnu "$TARGET" -- -max_total_time=600 -print_final_stats=1
       - name: Keep the inputs that reach new code
         if: success()
         env:
           TARGET: ${{ matrix.target }}
-        run: cargo fuzz cmin "$TARGET"
+        run: cargo fuzz cmin --target x86_64-unknown-linux-gnu "$TARGET"
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: success()
         with:

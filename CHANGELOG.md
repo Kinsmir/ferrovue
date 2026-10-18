@@ -141,7 +141,9 @@ released together and share version numbers.
 
 - CI only, with no change to the crates or the npm package: each nightly cargo-fuzz job starts
   from the corpus the last good run of its target saved, minimised with `cargo fuzz cmin`, so the
-  nights build on one another.
+  nights build on one another. The jobs build for `x86_64-unknown-linux-gnu`: the prebuilt
+  cargo-fuzz that CI installs targets musl by default, where AddressSanitizer cannot run, so no
+  cargo-fuzz job had built on CI before.
 ### Removed
 
 - **Breaking:** `ferrovue::ammonia`, the `ammonia` feature's re-export of the ammonia crate. A
