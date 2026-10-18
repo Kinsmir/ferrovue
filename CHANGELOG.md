@@ -16,7 +16,9 @@ released together and share version numbers.
   `js_utc_milliseconds`, `#[doc(hidden)]` as the other twins are), held to vectors recorded from Node (`tests/vectors/dates.json`), which Chromium and Firefox read alike in
   four time zones. A date literal outside the format is refused when compiling (FV1803), and
   `js_date_parse` panics on a string from the props outside it, which browsers may each read
-  differently.
+  differently. Both refuse a date and time whose fields, read as UTC, lie beyond ±8.64 × 10¹⁵ ms
+  while its offset brings it within (`+275760-09-13T01:00+01:00`), which Safari reads as an invalid
+  date and the other engines as a valid one.
 - Error codes in a new area, FV18xx, each pointing to the new guide page `dates_and_prices`:
   FV1801 for the current time (`new Date()`, `Date.now()`), FV1802 for `new Date` of anything but
   one present string or number, FV1803 for a date string outside the format, FV1804 for the local

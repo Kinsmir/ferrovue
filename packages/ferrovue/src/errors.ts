@@ -488,7 +488,7 @@ export const ERRORS = {
   },
   FV1803: {
     title: "Date string that browsers may read differently",
-    detail: "ECMAScript specifies how a date alone (`2024-05-01`, `2024-05`, `2024`) and a date and time with a `Z` or an offset (`2024-05-01T09:30:00.000Z`, `2024-05-01T09:30+02:00`) are read. A date and time with neither is read in the time zone of the machine running it, and every other string by each engine's own rules, as are fields out of range (`2024-02-30`, `T24:00`). A literal is checked when the component is compiled; a string from the props is checked as it renders, and one outside the format panics. See [`dates_and_prices`](crate::guide::dates_and_prices).",
+    detail: "ECMAScript specifies how a date alone (`2024-05-01`, `2024-05`, `2024`) and a date and time with a `Z` or an offset (`2024-05-01T09:30:00.000Z`, `2024-05-01T09:30+02:00`) are read. A date and time with neither is read in the time zone of the machine running it, and every other string by each engine's own rules, as are fields out of range (`2024-02-30`, `T24:00`) and fields beyond the range of dates that an offset brings back within it (`+275760-09-13T01:00+01:00`), which Safari reads as invalid. A literal is checked when the component is compiled; a string from the props is checked as it renders, and one outside the format panics. See [`dates_and_prices`](crate::guide::dates_and_prices).",
   },
   FV1804: {
     title: "`Date` method or function ferrovue does not translate",

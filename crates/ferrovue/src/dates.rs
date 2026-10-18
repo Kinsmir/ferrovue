@@ -29,7 +29,9 @@ pub fn js_time_clip(x: f64) -> f64 {
 /// On any other string: a date and time without a `Z` or offset, which JavaScript reads in the
 /// time zone of the machine running it, and every string outside the format (`"May 1, 2024"`,
 /// `"2024-5-1"`, `"2024-02-30"`, `"2024-05-01 09:30Z"`), which each engine reads by rules of its
-/// own. A server cannot know what the reader's browser makes of them.
+/// own; and a date and time whose fields lie beyond ±8.64 × 10¹⁵ ms read as UTC while its offset
+/// brings it within (`"+275760-09-13T01:00+01:00"`), which Safari reads as an invalid date and the
+/// other engines as a valid one. A server cannot know what the reader's browser makes of them.
 ///
 /// # Example
 ///
@@ -303,7 +305,11 @@ fn iso_time(s: &[u8]) -> Option<f64> {
             let sign = c.sign()?;
             let hours = c.within(2, 0, 23)?;
             c.eat(b':').then_some(())?;
+            let fields = ms as f64;
             ms -= sign * (hours * 60 + c.within(2, 0, 59)?) * 60_000;
+            if js_time_clip(fields).is_nan() && !js_time_clip(ms as f64).is_nan() {
+                return None;
+            }
         }
     }
     if c.at != s.len() {

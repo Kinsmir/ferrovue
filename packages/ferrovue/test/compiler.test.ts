@@ -2519,6 +2519,14 @@ defineProps<{ at: string }>();
       /`new Date\(\)` of "2024-01-15T10:00", which is not a date alone nor a date and time with a `Z` or an offset/,
     ],
     [
+      "a date beyond the range whose offset brings it within",
+      `<script setup lang="ts">
+defineProps<{ at: string }>();
+</script>
+<template><p>{{ Date.parse("+275760-09-13T01:00+01:00") }}</p></template>`,
+      /`Date\.parse\(\)` of "\+275760-09-13T01:00\+01:00"/,
+    ],
+    [
       "a date string outside the date time string format",
       `<script setup lang="ts">
 defineProps<{ at: string }>();
@@ -3126,6 +3134,7 @@ defineProps<{ onSale?: boolean }>();
     "Date.parse of a number": "FV1802",
     "a date string read in the local time zone": "FV1803",
     "a date string outside the date time string format": "FV1803",
+    "a date beyond the range whose offset brings it within": "FV1803",
     "a date read in the local time zone": "FV1804",
     "a date written by toString": "FV1804",
     "Date.UTC": "FV1804",

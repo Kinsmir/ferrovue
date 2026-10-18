@@ -22,14 +22,20 @@ function daysInMonth(year: number, month: number): number {
 /** The time value `Date.parse(s)` gives a string every JavaScript engine reads alike: one in
  * ECMAScript's date time string format, a date alone or a date and time with a `Z` or an offset, its
  * fields within their ranges. `undefined` for any other string, which an engine may read by rules of
- * its own, or in the time zone of the machine running it. */
+ * its own, or in the time zone of the machine running it, and for a date and time whose fields lie
+ * beyond ±8.64 × 10¹⁵ ms read as UTC while its offset brings it within, which Safari reads as an
+ * invalid date and the other engines as a valid one. */
 export function portableTime(s: string): number | undefined {
   const m = PORTABLE.exec(s);
   if (!m || m[1] === "-000000" || (m[4] !== undefined && m[7] === undefined)) return undefined;
   const [year, month, day, hours, minutes, seconds, , zoneHours, zoneMinutes] = m.slice(1).map((x) => (x === undefined ? undefined : Number(x)));
   const within = (x: number | undefined, low: number, high: number) => x === undefined || (x >= low && x <= high);
   const fields = [within(month, 1, 12), within(day, 1, daysInMonth(year!, month ?? 1)), within(hours, 0, 23), within(minutes, 0, 59), within(seconds, 0, 59), within(zoneHours, 0, 23), within(zoneMinutes, 0, 59)];
-  return fields.every(Boolean) ? Date.parse(s) : undefined;
+  if (!fields.every(Boolean)) return undefined;
+  const t = Date.parse(s);
+  const zone = m[7];
+  if (zone !== undefined && zone !== "Z" && Number.isNaN(Date.parse(s.slice(0, -zone.length) + "Z")) && !Number.isNaN(t)) return undefined;
+  return t;
 }
 
 const LOCAL_GETTERS = new Map([

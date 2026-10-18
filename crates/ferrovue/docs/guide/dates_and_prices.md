@@ -68,12 +68,16 @@ the time zone:
 - a year of four digits, or of six with a sign (`+010000`, `-000001`), as `.toISOString()` writes
   it;
 - fields within their ranges: a month from 01 to 12, a day that the month has, hours to 23,
-  minutes and seconds to 59, milliseconds as three digits.
+  minutes and seconds to 59, milliseconds as three digits;
+- with an offset, a date and time whose fields, read as UTC, lie within ±8.64 × 10¹⁵ ms of 1970,
+  or one the offset leaves beyond it, which is an invalid date everywhere.
 
 Everything else is refused, because browsers would not agree on it: a date and time with no `Z` or
 offset (read in local time), `2024-02-30` (which V8 and Firefox read as 1 March), `2024-01-00`
 (which Firefox reads as 31 December, V8 as invalid), a lowercase `t` or `z`, a space for the `T`,
-`T24:00`, one or two fractional digits, `"May 1, 2024"`, an empty string and `-000000`. A string
+`T24:00`, one or two fractional digits, `"May 1, 2024"`, an empty string, `-000000`, and a date
+and time at the edge of the range whose offset brings it inside (`+275760-09-13T01:00+01:00`,
+which Safari reads as invalid and the other engines as the last valid moment). A string
 literal in the template is checked when the component is compiled
 ([FV1803](crate::guide::error_codes#fv1803)). A string from the props is checked as it renders, and
 `js_date_parse` panics on one outside the format, since the server cannot
