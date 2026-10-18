@@ -78,10 +78,25 @@ jobs:
       - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
         with:
           tool: cargo-fuzz
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: fuzz/corpus/${{ matrix.target }}
+          key: cargo-fuzz-corpus-${{ matrix.target }}-${{ github.run_id }}
+          restore-keys: cargo-fuzz-corpus-${{ matrix.target }}-
       - name: Fuzz for ten minutes
         env:
           TARGET: ${{ matrix.target }}
-        run: cargo fuzz run "$TARGET" -- -max_total_time=600 -print_final_stats=1
+        run: cargo fuzz run --target x86_64-unknown-linux-gnu "$TARGET" -- -max_total_time=600 -rss_limit_mb=6144 -print_final_stats=1
+      - name: Keep the inputs that reach new code
+        if: success()
+        env:
+          TARGET: ${{ matrix.target }}
+        run: cargo fuzz cmin --target x86_64-unknown-linux-gnu "$TARGET"
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: success()
+        with:
+          path: fuzz/corpus/${{ matrix.target }}
+          key: cargo-fuzz-corpus-${{ matrix.target }}-${{ github.run_id }}
       - name: Upload the failing input
         if: failure() && hashFiles('fuzz/artifacts/**') != ''
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
