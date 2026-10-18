@@ -422,7 +422,10 @@ cargo +nightly fuzz fmt json fuzz/artifacts/json/<crash>  # the failing input, a
 
 A failing input is written to `fuzz/artifacts/<target>/`; the corpus grows in `fuzz/corpus/<target>/`.
 Both are ignored by git. The nightly **Fuzz** workflow runs each target for ten minutes in a job of
-its own, beside the differential fuzzer, and uploads the failing input when one fails.
+its own, beside the differential fuzzer, and uploads the failing input when one fails. Each job
+starts from the corpus the last good run of its target saved in the Actions cache, and after a
+good run keeps only the inputs that reach new code (`cargo fuzz cmin`) and saves them for the
+next night.
 
 ## Coverage
 

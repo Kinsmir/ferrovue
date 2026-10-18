@@ -139,6 +139,9 @@ released together and share version numbers.
   conformance component added since then was left out and a check over all of them passed without
   it.
 
+- CI only, with no change to the crates or the npm package: each nightly cargo-fuzz job starts
+  from the corpus the last good run of its target saved, minimised with `cargo fuzz cmin`, so the
+  nights build on one another.
 ### Removed
 
 - **Breaking:** `ferrovue::ammonia`, the `ammonia` feature's re-export of the ammonia crate. A
