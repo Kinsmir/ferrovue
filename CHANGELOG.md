@@ -5,6 +5,14 @@ released together and share version numbers.
 
 ## [Unreleased]
 
+### Security
+
+- The `ammonia` feature requires ammonia 4.2.4, which fixes RUSTSEC-2021-0157 and RUSTSEC-2026-0373
+  (CSS `url()` escaped and matched wrongly in a `style` attribute) and RUSTSEC-2021-0158 (XSS
+  through SVG `animateMotion`, `animateTransform` and `animateColor`). `Sanitised::new` cleans
+  with ammonia's default policy, which allows no `style` attribute and no SVG; a `Sanitised::with`
+  policy that allows either was exposed with ammonia 4.2.1 to 4.2.3.
+
 ### Changed
 
 - CI only, with no change to the crates or the npm package: CI installs Rust with
