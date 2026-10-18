@@ -10,7 +10,7 @@ documentation = "https://docs.rs/ferrovue"
 readme = "README.md"
 keywords = ["vue", "ssr", "html", "templates", "hydration"]
 categories = ["template-engine", "web-programming"]
-exclude = ["/benches/expected/", "/tests/conformance/", "/tests/literal_props/", "/tests/tsconfig.json", "/tests/vectors/"]
+exclude = ["/benches/expected/", "/benches/instructions.json", "/tests/conformance/", "/tests/literal_props/", "/tests/tsconfig.json", "/tests/vectors/"]
 
 [features]
 default = ["router", "i18n"]
@@ -43,11 +43,17 @@ axum.workspace = true
 criterion = { workspace = true, features = ["cargo_bench_support"] }
 dioxus = { workspace = true, features = ["macro", "html", "signals"] }
 dioxus-ssr.workspace = true
+gungraun.workspace = true
 proptest.workspace = true
 tokio = { workspace = true, features = ["macros", "rt", "test-util", "time"] }
 
 [[bench]]
 name = "render"
+harness = false
+required-features = ["router", "i18n"]
+
+[[bench]]
+name = "instructions"
 harness = false
 required-features = ["router", "i18n"]
 

@@ -391,10 +391,64 @@ jobs:
         env:
           FERROVUE_BENCH_QUICK: "1"
 
+  instructions:
+    name: Instruction counts (5% budget)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: The toolchain and gungraun version the baseline was measured with
+        id: baseline
+        run: |
+          echo "toolchain=$(node scripts/instructions.ts --print toolchain)" >> "$GITHUB_OUTPUT"
+          echo "runner=$(node scripts/instructions.ts --print runner-version)" >> "$GITHUB_OUTPUT"
+      - uses: ./.github/actions/rust
+        with:
+          toolchain: ${{ steps.baseline.outputs.toolchain }}
+          cache-key: instructions
+      - name: Valgrind, the musl target and gungraun-runner
+        env:
+          TOOLCHAIN: ${{ steps.baseline.outputs.toolchain }}
+          RUNNER: ${{ steps.baseline.outputs.runner }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends valgrind
+          rustup target add --toolchain "$TOOLCHAIN" x86_64-unknown-linux-musl
+          cargo install gungraun-runner --version "$RUNNER" --locked
+      - name: Each scenario within 5% of crates/ferrovue/benches/instructions.json
+        run: node scripts/instructions.ts
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: instructions
+          path: target/instructions/instructions.json
+          if-no-files-found: warn
+
+  build-budget:
+    name: Build-time budgets (500 components)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/rust
+        with:
+          cache-key: build-budget
+      - uses: ./.github/actions/pnpm
+      - name: The compiler and cargo build of the generated modules within their budgets
+        run: node scripts/build-budget.ts
+
   passed:
     name: CI passed
     if: always()
-    needs: [typescript, typescript-os, lint, deny, audit, zizmor, rust, docs-rs, examples, fullstack, browser, package, bench]
+    needs: [typescript, typescript-os, lint, deny, audit, zizmor, rust, docs-rs, examples, fullstack, browser, package, bench, instructions, build-budget]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

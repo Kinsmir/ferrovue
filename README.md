@@ -780,7 +780,10 @@ pnpm bench:record   # rewrite benches/expected/*.html from Vue, after changing a
 ```
 
 The benchmarks are not part of `pnpm test`. CI runs both in a short mode only to check that they
-still build, run and agree on the HTML. It never compares their timings.
+still build, run and agree on the HTML. It never compares their timings. What CI does hold to a
+budget is the number of instructions each scenario runs, within 5% of a committed baseline, and
+the time ferrovue and `cargo build` take on a project of 500 components; [TESTING.md](https://github.com/Kinsmir/ferrovue/blob/main/TESTING.md#performance-budgets)
+describes both.
 
 ## Versions
 
@@ -826,7 +829,7 @@ crates/ferrovue/             the Rust runtime crate, which generated code calls
   tests/sanitised/           a component whose `TrustedHtml` is `ferrovue::Sanitised`
   tests/vectors/             vectors recorded from JavaScript and Vue
   tests/properties.rs        property-based tests of the runtime
-  benches/                   criterion benchmarks of generated renderers (see Performance)
+  benches/                   criterion and instruction-count benchmarks of generated renderers
 crates/ferrovue-core/        escaping and JavaScript's numbers, which the other crates share
   tests/vectors/             vectors recorded from escapeHtml, String(n), Math and toFixed
 crates/ferrovue-router/      vue-router's matching and links (the `router` feature)
