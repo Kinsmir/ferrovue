@@ -58,3 +58,34 @@ jobs:
           name: fuzz-failures-${{ github.run_id }}
           path: fuzz/failures/
           if-no-files-found: ignore
+
+  cargo-fuzz:
+    name: cargo fuzz (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [escape, json, state_script, attrs]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/rust
+        with:
+          toolchain: nightly
+          cache-key: cargo-fuzz
+      - uses: taiki-e/install-action@e407f7bafb71fd004bc5c2da3032e5470cbb6ef0 # v2.87.24
+        with:
+          tool: cargo-fuzz
+      - name: Fuzz for ten minutes
+        env:
+          TARGET: ${{ matrix.target }}
+        run: cargo fuzz run "$TARGET" -- -max_total_time=600 -print_final_stats=1
+      - name: Upload the failing input
+        if: failure() && hashFiles('fuzz/artifacts/**') != ''
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cargo-fuzz-${{ matrix.target }}-${{ github.run_id }}
+          path: fuzz/artifacts/
+          if-no-files-found: ignore
