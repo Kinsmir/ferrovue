@@ -176,8 +176,8 @@ that builds an `Attrs` passes the ids generated code gave it, never data.
 ## Rust twins, helpers and the application's own markup
 
 A Rust twin writes its component's HTML itself, and a helper computes a value the template uses.
-ferrovue cannot check either against Vue; the README says so, and their exactness is the
-application's assertion. A helper returns a string, number or boolean that generated code escapes
+ferrovue cannot check either against Vue, as [`errors_and_limits`](crate::guide::errors_and_limits#rust-twins)
+says, and their exactness is the application's assertion. A helper returns a string, number or boolean that generated code escapes
 like any other value, so a helper cannot write markup. A twin writes into the page directly, and must
 escape what it writes: [`escape_into`](crate::escape_into) for text and values, and
 [`attrs_into`](crate::attrs_into) or [`passed_attrs_into`](crate::passed_attrs_into) for the

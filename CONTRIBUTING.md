@@ -27,7 +27,97 @@ and `cargo deny check` (`just --list` shows the parts). `rust-toolchain.toml` se
 with Clippy and rustfmt, `.node-version` the Node.js CI mostly runs (for fnm, nodenv and the like),
 and `.editorconfig` the repository's whitespace, leaving recorded fixtures byte for byte.
 
-[TESTING.md](TESTING.md) explains how the suite fits together.
+[TESTING.md](TESTING.md) explains how the suite fits together and how to add a case, and
+[RELEASING.md](RELEASING.md) how a release is cut. `pnpm bench` runs the benchmarks the README's
+Performance section reports: `pnpm bench:rust` is `cargo bench -p ferrovue --bench render`
+(`crates/ferrovue/benches/render.rs`), `pnpm bench:js` Vue's `renderToString` with tinybench
+(`packages/ferrovue/bench/ssr.bench.ts`), and `pnpm bench:record` rewrites
+`benches/expected/*.html` from Vue after a scenario changes. They are not part of `pnpm test`.
+
+## Repository layout
+
+```text
+crates/ferrovue/             the Rust runtime crate, which generated code calls
+  src/                       a module per part (`Html`, slots, class and style, the state script,
+                             strings, teleports, the page head, fallthrough attributes, `BasicHtml`
+                             and `InlineHtml`,
+                             `Sanitised`, the fixture check `conformance!` writes), each module's
+                             unit tests beside it in <module>/tests.rs; lib.rs re-exports them all,
+                             and the three crates below
+  docs/guide/                the crate guide, `ferrovue::guide` on docs.rs
+  tests/conformance/         components, fixtures, recorded HTML, generated Rust
+  tests/literal_props/       components compiled with `"builders": false`
+  tests/sanitised/           a component whose `TrustedHtml` is `ferrovue::Sanitised`
+  tests/vectors/             vectors recorded from JavaScript and Vue
+  tests/properties.rs        property-based tests of the runtime
+  benches/                   criterion and instruction-count benchmarks of generated renderers
+crates/ferrovue-core/        escaping and JavaScript's numbers, which the other crates share
+  tests/vectors/             vectors recorded from escapeHtml, String(n), Math and toFixed
+crates/ferrovue-router/      vue-router's matching and links (the `router` feature)
+  tests/vectors/             vectors recorded from vue-router
+crates/ferrovue-i18n/        vue-i18n's t() (the `i18n` feature)
+crates/ferrovue-contract/    unpublished: Rust using every item of the generated-code contract,
+                             and the version check's message (trybuild)
+packages/ferrovue/           the compiler (npm package)
+  src/index.ts               `ferrovue`: the browser API, `mountIslands`, `mountPage`, `readPage`, `renderPage`, `hydrateState` and the types
+  src/compiler.ts            `ferrovue/compiler`: `generate`, `write`
+  src/context.ts, model.ts   `ferrovue.config.json`, and the types and values the compiler passes around
+  src/schema.ts              the configuration's keys, types and defaults, from which `schema.json` is written
+  src/component.ts, script.ts, typescript.ts, constants.ts
+                             a `.vue` file read, <script setup>, TypeScript types, constants and enums
+  src/template.ts, children.ts, slots.ts, loops.ts, vhtml.ts
+                             the compiled template: statements, child components, slots, v-for,
+                             where `v-html` may go
+  src/expr.ts, strings.ts, numbers.ts, narrowing.ts, calls.ts, lists.ts, parens.ts
+                             expressions: operators, strings, numbers, narrowing, calls, lists,
+                             the parentheses Rust needs
+  src/attrs.ts, classes.ts, styles.ts, fallthrough.ts
+                             attributes, class and style, attributes a parent passes on
+  src/dynamic.ts             `<component :is>` over a closed set of choices
+  src/plugin.ts              the plugin interface (see Compiler plugins below)
+  src/plugins/               vue-router, Pinia, vue-i18n, scoped styles, <Teleport>, shared types,
+                             <ClientOnly>, Rust twins, provide and inject, the page head
+  src/rust.ts, emitter.ts    the Rust source written out
+  src/cli.ts, args.ts, vite.ts
+                             the `ferrovue` command, its options, and the Vite plugin
+  src/diff.ts                the diff `ferrovue --check --diff` prints for a stale file
+  src/inputs.ts              what a run reads, which `--watch` and the Vite plugin regenerate on
+  src/files.ts, paths.ts     reading the directories and files the configuration names, and paths
+                             written with `/` on every platform
+  src/errors.ts, diagnostics.ts
+                             every error code with its title, and errors as the CLI, JSON and Vite show them
+  src/volar.ts, editor.ts    `ferrovue/volar`: errors in the editor, from a plugin for Vue's language tools
+  src/client.ts              browser-side helpers: `mountIslands`, `mountPage`, `readPage`, `renderPage`, `hydrateState`, `<ClientOnly>`
+  src/islands.ts             `ferrovue/islands`, which the Vite plugin writes: every island, loaded lazily
+  src/link-router.ts         `ferrovue/link-router`: `<RouterLink>` while the application navigates on its own
+  src/routes.ts              a routes file as vue-router's route records
+  src/file-routes.ts         the routes vue-router's file-based routing builds from a folder of pages
+  src/page-routes.ts         `ferrovue/routes`, which the Vite plugin writes from the pages
+  src/testing.ts             `ferrovue/testing`: utilities for a project's own conformance suite
+  src/fixture.ts, settle.ts  `fixtureApp` and `readFixture`, and waiting for async components to settle
+  src/conformance.ts         `conformanceSuite`, which `ferrovue/testing` exports
+  src/ssr.ts                 `attachSsrRender`, which `ferrovue/testing` exports
+  src/hydration.ts           `hydrateRecordedPage` and `renderRecordedPage`, which `ferrovue/testing` exports
+  src/client-render.ts       the DOM of a client render as it is compared with the server's markup
+  src/types.ts               `ferrovue/types`: `TrustedHtml`, `InlineHtml`, `Float`
+  test/                      compiler, CLI, router, vector, island, Vite and conformance tests
+  api/                       the package's API report, an `.api.md` per export and `cli.txt` (`pnpm api:report`)
+  schema.json                the JSON Schema of `ferrovue.config.json` (`pnpm schema:generate`)
+  browser/                   conformance fixtures and recorded pages hydrated in real browsers (`pnpm test:browser`)
+  bench/                     Vue renderToString benchmarks, the other half of Performance
+  fuzz/                      the randomised differential tester (`pnpm fuzz`)
+examples/greeting/           the smallest setup: one component rendered from Rust
+examples/fullstack/          axum + Vite: islands (some hydrating later), a page hydrated whole,
+                             Pinia state, routes from a folder of pages, the page head, streaming,
+                             <ClientOnly>, a Rust twin, and a conformance suite
+examples/dioxus/             a Dioxus page, rendered with dioxus-ssr, with an island in it
+fuzz/                        cargo-fuzz targets for the runtime's escaping and JSON (see TESTING.md)
+scripts/ferrovue-in.ts       the `ferrovue` command run in a project of this repository (`pnpm conformance:check`, CI)
+scripts/inspect.ts           Vue's SSR code and render of a component beside the Rust ferrovue generates for it
+scripts/release.ts           the release version bump and the members check (see RELEASING.md)
+scripts/api-report.ts        the npm package's API report, written and checked (`pnpm api:report`, `pnpm api:check`)
+scripts/traceability.test.ts the README's "What a component may use" rows, traced to conformance components in TESTING.md
+```
 
 ## Adding support for a Vue construct
 
@@ -35,7 +125,7 @@ and `.editorconfig` the repository's whitespace, leaving recorded fixtures byte 
    compilation of a component, Vue's render, and what ferrovue generates today. Read the matching
    `@vue/server-renderer`, `@vue/shared` or vue-router source in `node_modules` too: the rules you
    reproduce are defined there.
-2. **Translate it** in the compiler, `packages/ferrovue/src/` (the README's "Repository layout"
+2. **Translate it** in the compiler, `packages/ferrovue/src/` ([Repository layout](#repository-layout)
    says which module does what), or in a plugin when it belongs to an integration (below), with
    runtime support in `crates/ferrovue/src/` if generated code needs it (`crates/ferrovue-router/`
    or `crates/ferrovue-i18n/` for the router and vue-i18n, `crates/ferrovue-core/` for escaping and

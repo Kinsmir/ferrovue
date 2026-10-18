@@ -339,7 +339,7 @@ ferrovue type them, optional values are read only where they may be, integer ari
 leaves ±2⁵³, and two strings that may each hold half of a surrogate pair never meet. So a component
 the compiler refuses is reported as a **refusal**, a finding of its own when the README says the
 construct is supported. Vue's HTML is compared as a server sends it, a half of a pair as U+FFFD
-(README, "Strings"), followed by the head unhead renders, as the conformance suite records it.
+(the guide's `strings` page), followed by the head unhead renders, as the conformance suite records it.
 
 ```sh
 pnpm fuzz                                              # a random seed (printed), 200 components

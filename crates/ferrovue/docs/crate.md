@@ -272,8 +272,9 @@ its root, which is the one path generated code and this documentation use:
 
 # Rust version
 
-ferrovue supports the latest stable Rust (the `rust-version` in its manifest). The generated code
-uses let-chains, so the crate that includes it must use **edition 2024**.
+ferrovue needs Rust 1.89 or later, the `rust-version` in its manifest, and CI tests that and the
+latest stable. The generated code uses let-chains, so the crate that includes it must use
+**edition 2024**.
 
 # Versions
 

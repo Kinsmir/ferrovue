@@ -88,8 +88,17 @@ What is refused today, each with an error that names it:
   a ref and a plain value under one key, setup that assigns to an injected value, and `provide(…)`
   not imported from `vue`. See [`provide_inject`](crate::guide::provide_inject#what-is-refused);
 - in the page head: options given to `useHead`, `useHeadSafe`, `templateParams`, a `titleTemplate`
-  function, event handlers, a `class` or `style` that may be `null`, and an object given to a
-  `useSeoMeta` key. See [`head`](crate::guide::head#what-a-component-may-pass);
+  function, event handlers, a `class` or `style` that may be `null` (on which unhead's renderer
+  throws), and an object or array given to a `useSeoMeta` key. See
+  [`head`](crate::guide::head#what-a-component-may-pass);
+- a value read from `$attrs` or `useAttrs()` (`$attrs.title`), which has no type; an attribute a
+  component is passed that would reach a prop of the component (or `<RouterLink>`) its root passes
+  it on to; `$attrs` in a component that is the root of one that may be handed scope ids, where it
+  would hold them; an attribute named by a number, or bound to a `$route.query` value; a class
+  merged by `v-bind` with a string that may equal the class before it, which Vue would write once;
+  and attributes passed to a component whose root is a `<Transition>` or `<KeepAlive>` around a
+  `v-if`, which Vue's server drops but its client keeps. See
+  [`generated_code`](crate::guide::generated_code#fallthrough-attributes);
 - any method call without a Rust twin.
 
 Client-only code is allowed where the server never runs it: lifecycle hooks, `watch` (without
@@ -149,11 +158,35 @@ own runtime is tested.
 
 # Client-only content
 
+Some components will never compile: a component library's render functions, code that measures the
+page in `onMounted`. `<ClientOnly>` and [Rust twins](#rust-twins) keep one of them from blocking
+the page around it.
+
 A component the compiler refuses can still be on the page if the server does not render it. Put it
 in `<ClientOnly>`, from `ferrovue/client`: the server writes the `#fallback` slot between fragment
 markers (or `<!---->` without one), the browser hydrates that fallback and swaps in the default
-slot once mounted. The compiler does not read the default slot at all, so any import or expression
-may go there. The swap happens only where Vue runs: inside an island, or an app hydrated whole.
+slot once mounted. Both sides render the fallback first, so this is exact by construction. The
+compiler does not read the default slot at all, so any component, import or expression may go
+there:
+
+```vue
+<script setup lang="ts">
+import { ClientOnly } from "ferrovue/client";
+import { VDataTable } from "vuetify/components";
+
+defineProps<{ rows: { name: string }[] }>();
+</script>
+
+<template>
+  <ClientOnly>
+    <VDataTable :items="rows" />
+    <template #fallback><p class="loading">Loading the table…</p></template>
+  </ClientOnly>
+</template>
+```
+
+The swap happens only where Vue runs: inside an island, or an app hydrated whole. Elsewhere the
+fallback stays. `<ClientOnly>` takes no attributes.
 
 # Rust twins
 
@@ -171,8 +204,9 @@ template may pass it (typed as helpers' are) and the slots it may fill:
 
 `twins.rs` then holds `VBtnProps`, `VBtnSlots` and `VBtnRender`, the signature the generated
 parents call the function with: the buffer, the props, the slots, and the attributes the parent
-passes beyond the props together with the scope ids the root takes. An absent `bool` is `false`
-and a bare attribute (`<VBtn block>`) is `true`, as Vue casts them.
+passes beyond the props together with the scope ids the root takes. A template uses `<VBtn>` (or
+`<v-btn>`), imported from anywhere or registered globally. An absent `bool` is `false` and a bare
+attribute (`<VBtn block>`) is `true`, as Vue casts them.
 
 ```rust
 # mod generated { pub mod twins {
@@ -223,7 +257,7 @@ sets that up with `conformanceSuite` from `ferrovue/testing` and
 [`conformance!`](crate::conformance!). Slot content is written as a render function sees it, from
 virtual nodes: an absent `v-if` is `<!--v-if-->`. Fragment markers around a slot, and what an empty one shows, are
 the twin's to write, as they are the component's. The repository's `examples/fullstack` has a twin
-and its fixtures.
+(`src/ui.rs`) and its fixtures (`fixtures/`).
 
 # At run time
 

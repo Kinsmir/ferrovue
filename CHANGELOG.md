@@ -5,6 +5,19 @@ released together and share version numbers.
 
 ## [Unreleased]
 
+### Changed
+
+- The README is a landing page: what ferrovue is and why to use it, the quick start, what a
+  component may use, a list of the guides, performance, versions and the licence, with the
+  crates.io and npm version badges side by side, then docs.rs, CI and the licence. Its reference
+  sections moved into the crate guide: constants into `props`, `<ClientOnly>` and Rust twins into
+  `errors_and_limits` (which also holds the list of what is refused), fixtures in an application's
+  own vitest tests (`fixtureApp`) into `testing`, an island whose name is unknown and the islands'
+  stylesheets into `islands_and_hydration`, and the `stream` feature into `streaming`; the other
+  sections were covered by their guide pages already. The repository layout and the benchmark
+  commands moved into CONTRIBUTING.md. The quick start names the 0.8.0 schema, and the guide's
+  `Cargo.toml` lines version 0.8.
+
 ## [0.8.0] - 2026-10-18
 
 ### Added
