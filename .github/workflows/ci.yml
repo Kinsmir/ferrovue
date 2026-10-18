@@ -105,6 +105,10 @@ jobs:
         continue-on-error: ${{ matrix.checks == 'advisories' && !startsWith(github.ref, 'refs/tags/') }}
         env:
           CHECKS: ${{ matrix.checks }}
+      - run: cargo deny --manifest-path fuzz/Cargo.toml --config deny.toml check $CHECKS
+        continue-on-error: ${{ matrix.checks == 'advisories' && !startsWith(github.ref, 'refs/tags/') }}
+        env:
+          CHECKS: ${{ matrix.checks }}
 
   audit:
     name: Dependencies (pnpm audit)
@@ -216,6 +220,8 @@ jobs:
       - run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
         if: matrix.toolchain == 'stable'
       - run: cargo fmt --all --check
+        if: matrix.toolchain == 'stable'
+      - run: cargo fmt --manifest-path fuzz/Cargo.toml --check
         if: matrix.toolchain == 'stable'
       - run: cargo doc --workspace --no-deps --all-features --locked
         if: matrix.toolchain == 'stable'

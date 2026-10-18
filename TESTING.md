@@ -28,6 +28,7 @@ pnpm test:browser          # the same fixtures, and the full-stack example, hydr
 | **Runtime units** | `crates/*/src/<module>/tests.rs` beside each module, `crates/ferrovue-router/src/tests.rs`, `crates/ferrovue/src/web.rs` | Escaping, slots, fallbacks, holes, islands, the state script, router edge cases; a streamed page's order and the axum and actix-web responses | Hand-written |
 | **Properties** | `crates/ferrovue/tests/properties.rs`, `crates/ferrovue-router/tests/properties.rs`, `crates/ferrovue-core/src/*/tests.rs` | Invariants over generated inputs: escaped text has no markup and reads back whole; the state script can't be closed; router never panics; numbers and escaping are written as slower references write them | `proptest` |
 | **Differential fuzzing** | `packages/ferrovue/fuzz/` | Random components and props, within the grammar ferrovue accepts, render identically in Vue and in the generated Rust; each difference is shrunk to a small case (`pnpm fuzz`, nightly in CI, not part of `pnpm test`) | `@vue/server-renderer` |
+| **Runtime fuzzing** | `fuzz/` | `escape_into`, an island's `data-props`, the state script and the attribute writers hold their invariants on any input libFuzzer finds: escaped text reads back whole and holds no markup, JSON reads back as the value it was written from and holds nothing that ends its attribute or its `<script>` (`cargo +nightly fuzz run <target>`, nightly in CI) | References written in the fuzz crate, serde_json |
 | **Vue canary** | `.github/workflows/canary.yml` | The newest Vue 3.5, vue-router, Pinia, vue-i18n and `@unhead/vue` patches the peer ranges allow record the same fixtures and vectors as are committed, and hydrate the committed HTML (weekly in CI; an issue is opened on a difference) | `@vue/server-renderer`, Vue's hydration |
 | **Mutation testing** | `.cargo/mutants.toml` | The tests above notice a small change to the runtime's source; every change they miss is listed, with the reason, as one that cannot alter the output (`cargo mutants`, weekly in CI) | cargo-mutants |
 | **Example** | `examples/greeting/` | Generated code compiles in an ordinary (non-test) consumer crate | `cargo build` |
@@ -97,6 +98,7 @@ A fixture is a JSON object of props plus three optional keys:
 | `Branches` | `v-if` / `v-else-if` / `v-else`, `!`, `&&` / `\|\|`, `===` / `!==`, `undefined`, narrowing, `<template v-if>` |
 | `Lists` | `v-for` over strings, numbers and objects, index, nesting, `<template v-for>`, empty lists |
 | `Attrs` | Boolean attributes, `:hidden`, empty values, numbers, absent optionals, `data-` / `aria-`, all class shapes |
+| `BoundObject` | `v-bind` of an object literal on elements, before and after their own attributes: strings, numbers, booleans, `undefined`, `data-` / `aria-`, a class array after a static class, a style object merged with a static `style`, a form control's `value` and `disabled` |
 | `Styles`, `Shown` | `:style` objects, arrays, strings and conditional objects merged with a static `style`; `v-show`, including on the root; a global `<style>` block |
 | `Markup` | Entities, void elements, SVG attributes, `<pre>` whitespace, whitespace condensing |
 | `Setup`, `Lifecycle` | `ref`, `computed`, plain constants, helpers; hooks, `watch`, emits, template refs, `defineOptions`/`defineSlots`/`defineExpose`, a plain `<script>` block, an interface with fields the server never reads (an `HTMLElement`, a method) behind a `shallowRef` |
@@ -152,11 +154,51 @@ A fixture is a JSON object of props plus three optional keys:
 | `ThemedShelf`, `ThemedList` | The same through scoped slots and `:slotted()` slot scope ids, lists, fractions mixed with integers and booleans provided |
 | `HeadPage`, `HeadArticle`, `HeadSeo` | `useHead` and `useSeoMeta` from `@unhead/vue` in a parent and its children: a title template over a child's title, every kind of tag, `htmlAttrs` and `bodyAttrs` with class and style objects and lists, getters, `computed`s, a `meta` per item of a list (`.map`), a list as `content`, JSON in a `script`, `tagPosition`, `key`, tags a later component replaces, absent, `null`, empty and `"true"` values. The head unhead's server renders is recorded after the HTML, behind `<!--fv-head-->` |
 | `HeadTheme`, `HeadThemePage` | The page head beside `provide` and `inject`: a component that injects a theme, provides another and sets the head from the one it injected, inside a provider, with slot content (`HeadArticle`) that calls `useHead` and a child that injects what it provides |
+| `HeadServer` | `useServerHead` and `useServerSeoMeta` beside `useHead`: `tagPriority` by name and by number, `tagDuplicateStrategy` replacing a tag `useHead` set and merging `htmlAttrs`, getters, `null` and empty values |
 | `HeadChoice`, `HeadNote` | The page head from components `<component :is>` chooses, by `?:` and from an object by a union prop, after a parent's title template |
 | `HeadLater`, `HeadNest`, `HeadLeaf` | The page head from components `defineAsyncComponent` loads, whose setup Vue's server runs after the components rendered without waiting, level by level: inside a component, in a list, in another's slot content and holding slot content of their own |
 
 Every component has at least one **hostile** fixture: markup-breaking characters in every prop that
 reaches the page.
+
+### The README's rows and the components that exercise them
+
+Each row of the README's "What a component may use" table, by its first cell, and the conformance
+components whose fixtures exercise it. `scripts/traceability.test.ts`, part of `pnpm test`, fails
+when a row of the README is missing here, when this table names a row the README no longer has, or
+when it names a component that is not in `components/` with fixtures of its own.
+
+| README row | Components |
+|---|---|
+| Prop types | `Text`, `Attrs`, `Numbers`, `Narrowing`, `Nullable`, `UserCard`, `UserList`, `Tree`, `Records`, `Rated`, `Prose`, `InlineProse`, `Dashboard` |
+| Shared types | `UserCard`, `UserList`, `DataTable`, `RowChip`, `Dashboard`, `Cart`, `Catalog` |
+| Constants | `Catalog`, `Constants` |
+| Props | `Defaults`, `Destructured`, `PropsObject`, `Model`, `ModelParent`, `Picker`, `Glyph`, `Divider` |
+| Setup | `Setup`, `SetupValues`, `Lifecycle`, `Pending`, `EmptyBranch` |
+| Provide and inject | `TabsPage`, `Tabs`, `Tab`, `ThemedButton`, `ThemeScope`, `Swatch`, `SwatchShelf`, `ThemedShelf`, `ThemedList`, `ThemedChoice` |
+| Text | `Text`, `Exprs`, `Numbers`, `Meter`, `Parsing`, `Regressions` |
+| Strings | `Strings`, `Exprs`, `Text` |
+| Conditions | `Branches`, `Narrowing`, `Nullable` |
+| Lists | `Lists`, `Arrays`, `Chips`, `Truthy`, `NumberIncludes`, `NarrowedRows`, `Exprs` |
+| Dictionaries | `Records`, `Chips` |
+| Attributes | `Attrs`, `BoundObject`, `Keywords` |
+| `class` | `Attrs`, `BoundObject`, `VnodeClass`, `AsyncClass` |
+| `style` | `Styles`, `Shown`, `BoundObject` |
+| Scoped styles | `ScopedPage`, `ScopedLeaf`, `ScopedRoot`, `ScopedPair`, `ScopedCard`, `ScopedShelf`, `ScopedRack`, `ScopedFade`, `ScopedTree`, `ScopedNav`, `ScopedLink`, `ScopedQuirks` |
+| `v-bind()` in `<style>` | `CssVars`, `CssVarsPage`, `CssVarsRoot`, `CssVarsLeaf`, `CssVarsShow`, `CssVarsBound`, `CssVarsTag`, `CssVarsLink`, `CssVarsWait`, `CssVarsLater`, `CssVarsBranch`, `CssVarsShapes` |
+| CSS modules | `Moduled`, `ModuledChip` |
+| Components | `UserList`, `Dashboard`, `Listened`, `Listeners`, `ListenLeaf`, `ListenSale`, `ModelParent`, `Tree`, `Deferred`, `AsyncClass` |
+| `<component :is>` | `ShapePicker`, `ShapeRoot`, `TagHeading`, `TagGallery`, `TagContent`, `TagCasing`, `ThemedChoice`, `HeadChoice` |
+| Escape hatches | `ClientSide`, `Rated`, `EscapedIdioms`, `EscapedNull` |
+| Fallthrough attributes | `Fallthrough`, `FallLeaf`, `FallInner`, `FallPair`, `FallRoot`, `FallBare`, `FallUse`, `FallLink`, `FallSwitch`, `FallFade`, `FallBinds`, `ScopedFallthrough` |
+| Slots | `Frame`, `Forward`, `Page`, `Card`, `Panel`, `Dashboard`, `DataList`, `DataTable`, `Hollow`, `Blank`, `SlotProbe` |
+| Forms | `Form`, `Constants` |
+| Built-ins | `Builtins`, `Modal`, `ScopedPage` |
+| Vue Router | `Nav`, `Links`, `Menu`, `App`, `AccountNav`, `RouteInfo` |
+| Pinia | `Badge`, `Cart`, `Counter`, `Session` |
+| vue-i18n | `Translated`, `Plurals`, `MappedChoice` |
+| `v-html` | `Prose`, `InlineProse`, `PlacedHtml` |
+| Page head | `HeadPage`, `HeadArticle`, `HeadSeo`, `HeadServer`, `HeadTheme`, `HeadThemePage`, `HeadChoice`, `HeadNote`, `HeadLater`, `HeadNest`, `HeadLeaf` |
 
 ## Hydrating in real browsers
 
@@ -351,6 +393,33 @@ runs it on 30 components before the real run and fails unless it reports a misma
    the saved `vue.html`.
 3. `cargo test` fails until the compiler or runtime is fixed; then it is a regression test. Delete
    the directory from `fuzz/failures/`.
+
+## Fuzzing the runtime
+
+The conformance suite and the differential fuzzer compare whole pages; the runtime's escaping and
+JSON writing are also fuzzed on their own with [cargo-fuzz](https://rust-fuzz.github.io/book/cargo-fuzz.html),
+which runs libFuzzer on nightly Rust. The fuzz crate, `fuzz/`, is a workspace of its own, so the
+nightly-only `libfuzzer-sys` stays out of the main workspace's builds, tests and mutation runs; its
+dependencies are declared in its own `[workspace.dependencies]`, `node scripts/release.ts members`
+checks that it takes them from there, and CI's cargo-deny job checks them against `deny.toml`.
+
+| Target | Calls | What every input must give |
+|---|---|---|
+| `escape` | `ferrovue_core::escape_into`, through both crates | The text `@vue/shared`'s `escapeHtml` writes, built one character at a time in the fuzz crate; no raw `"`, `'`, `<` or `>`, and `&` only at the start of one of the five entities; the entities read back to the input; what `out` held before left as it was |
+| `json` | `Html::island` (`data-props`, `json.rs`'s writer that escapes as it goes) | Every shape of value serde hands a serializer (structs, maps with repeated keys, variants, options, `f32`, `NaN` and the infinities) written as a reference writer writes it, escaped as `escapeHtml` escapes it; the attribute's value holds no raw `"`, `'`, `<`, `>` or `&` and reads back to that JSON; for a value whose floats are finite `f64`s, serde_json reads the JSON back as the value |
+| `state_script` | `state_script_into` (`json.rs`, `json_escaped_into`) | The element as written around the JSON, its `id` escaped; JSON with no `<`, `>`, `&`, U+2028 or U+2029, equal to the reference JSON with each written as a JSON escape; for a value whose floats are finite `f64`s, serde_json reads it back as the value |
+| `attrs` | `attrs_into`, `passed_attrs_into`, `style_text_into` | Attributes of any names and values, merged from any number of lists, read back as a list of ` name` or ` name="value"`: no name holds a space, `/`, `>`, `=`, `"` or `'` (a name may be empty, as `ssrRenderAttrs` writes one for the key `^`), every value is escaped text, the scope ids are written once, and no more attributes are written than were given |
+
+```sh
+cargo install cargo-fuzz --locked
+cargo +nightly fuzz run escape                          # until stopped or a failure
+cargo +nightly fuzz run json -- -max_total_time=120     # two minutes
+cargo +nightly fuzz fmt json fuzz/artifacts/json/<crash>  # the failing input, as Rust's Debug prints it
+```
+
+A failing input is written to `fuzz/artifacts/<target>/`; the corpus grows in `fuzz/corpus/<target>/`.
+Both are ignored by git. The nightly **Fuzz** workflow runs each target for ten minutes in a job of
+its own, beside the differential fuzzer, and uploads the failing input when one fails.
 
 ## Coverage
 

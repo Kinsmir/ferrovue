@@ -1,0 +1,54 @@
+[package]
+name = "ferrovue-fuzz"
+version = "0.0.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[workspace]
+members = ["."]
+
+[workspace.dependencies]
+ferrovue = { path = "../crates/ferrovue", default-features = false }
+ferrovue-core = { path = "../crates/ferrovue-core" }
+libfuzzer-sys = { version = "0.4.13", features = ["arbitrary-derive"] }
+serde = "1.0.229"
+serde_json = { version = "1.0.154", features = ["float_roundtrip"] }
+
+[dependencies]
+ferrovue.workspace = true
+ferrovue-core.workspace = true
+libfuzzer-sys.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[[bin]]
+name = "escape"
+path = "fuzz_targets/escape.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "json"
+path = "fuzz_targets/json.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "attrs"
+path = "fuzz_targets/attrs.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "state_script"
+path = "fuzz_targets/state_script.rs"
+test = false
+doc = false
+bench = false

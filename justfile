@@ -14,6 +14,7 @@ rust:
     cargo test --workspace --all-features --locked
     cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
     cargo fmt --all --check
+    cargo fmt --manifest-path fuzz/Cargo.toml --check
 
 # The committed generated Rust is what the compiler writes today.
 generated:

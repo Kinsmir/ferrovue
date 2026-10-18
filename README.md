@@ -877,10 +877,12 @@ examples/fullstack/          axum + Vite: islands (some hydrating later), a page
                              Pinia state, routes from a folder of pages, the page head, streaming,
                              <ClientOnly>, a Rust twin, and a conformance suite
 examples/dioxus/             a Dioxus page, rendered with dioxus-ssr, with an island in it
+fuzz/                        cargo-fuzz targets for the runtime's escaping and JSON (see TESTING.md)
 scripts/ferrovue-in.ts       the `ferrovue` command run in a project of this repository (`pnpm conformance:check`, CI)
 scripts/inspect.ts           Vue's SSR code and render of a component beside the Rust ferrovue generates for it
 scripts/release.ts           the release version bump (see RELEASING.md)
 scripts/api-report.ts        the npm package's API report, written and checked (`pnpm api:report`, `pnpm api:check`)
+scripts/traceability.test.ts the README's "What a component may use" rows, traced to conformance components in TESTING.md
 ```
 
 ## Development

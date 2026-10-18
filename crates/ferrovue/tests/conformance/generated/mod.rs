@@ -19,6 +19,7 @@ pub mod async_class_root;
 pub mod attrs;
 pub mod badge;
 pub mod blank;
+pub mod bound_object;
 pub mod branches;
 pub mod builtins;
 pub mod card;
@@ -74,6 +75,7 @@ pub mod head_nest;
 pub mod head_note;
 pub mod head_page;
 pub mod head_seo;
+pub mod head_server;
 pub mod head_theme;
 pub mod head_theme_page;
 pub mod hollow;
@@ -286,6 +288,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Blank" => {
             let props: blank::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             blank::render(&mut out, &props);
+        }
+        "BoundObject" => {
+            let props: bound_object::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            bound_object::render(&mut out, &props);
         }
         "Branches" => {
             let props: branches::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -553,6 +559,12 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: head_seo::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let head = ferrovue::Head::without_defaults();
             head_seo::render(&mut out, &props, &head);
+            head_into(&mut out, &head);
+        }
+        "HeadServer" => {
+            let props: head_server::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let head = ferrovue::Head::without_defaults();
+            head_server::render(&mut out, &props, &head);
             head_into(&mut out, &head);
         }
         "HeadTheme" => {

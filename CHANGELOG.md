@@ -62,6 +62,19 @@ released together and share version numbers.
   Each closes a gap the mutation run found; `.cargo/mutants-equivalent.txt` gives the reason for
   five more survivors that cannot change what the code returns, and no longer lists `plural_choice`
   with its `-` deleted, which a unit test catches.
+- Tests only, with no change to the crates or the npm package: `TESTING.md` traces each row of the
+  README's "What a component may use" table to the conformance components that exercise it, and
+  `scripts/traceability.test.ts`, part of `pnpm test`, fails on a row left out, a row the README no
+  longer has, or a component that is not in the suite with fixtures. Two conformance components
+  are new, with fixtures recorded from Vue: `BoundObject` (`v-bind` of an object literal on
+  elements, beside their own attributes, class and style) and `HeadServer` (`useServerHead` and
+  `useServerSeoMeta` beside `useHead`, `tagPriority` and `tagDuplicateStrategy`).
+- Tests only, with no change to the crates or the npm package: `fuzz/` holds cargo-fuzz targets
+  for `escape_into`, an island's `data-props`, the state script and the attribute writers, each
+  checked against a reference written in the fuzz crate and read back (escaped text to its input,
+  JSON to its value through serde_json). The nightly fuzz workflow runs each for ten minutes, and
+  CI checks the fuzz crate's formatting and, with cargo-deny, its dependencies; `deny.toml` allows
+  the NCSA licence of `libfuzzer-sys`'s bundled libFuzzer.
 
 ### Removed
 
