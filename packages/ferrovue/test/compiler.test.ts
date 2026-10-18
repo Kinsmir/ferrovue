@@ -1540,6 +1540,36 @@ defineProps<{ price: Float; qty: number; rate?: Float }>();
     });
   });
 
+  describe("dates", () => {
+    const dated = (script: string, template: string) => `<script setup lang="ts">
+import { computed } from "vue";
+const props = defineProps<{ at: string; ms: number }>();
+${script}
+</script>
+<template><p>${template}</p></template>`;
+
+    it("reads a date as a time value, through the runtime's twins of Date", () => {
+      const out = compile(
+        island(dated("const d = computed(() => new Date(props.at));", '{{ d.toISOString() }}|{{ d.getUTCFullYear() }}|{{ new Date(ms).getTime() }}|{{ Date.parse(at) }}|{{ new Date("2024-01-15T10:00Z").valueOf() }}|{{ d.getTime() === d.getTime() }}')),
+      ).get("x.rs")!;
+      expect(out).toContain("let s_d = fv::js_date_parse(&props.at);");
+      expect(out).toContain("fv::escape_into(out, &fv::js_to_iso_string(s_d));");
+      expect(out).toContain("fv::push_number(out, fv::js_utc_full_year(s_d));");
+      expect(out).toContain("fv::push_number(out, fv::js_time_clip(props.ms as f64));");
+      expect(out).toContain("fv::push_number(out, fv::js_date_parse(&props.at));");
+      expect(out).toContain("fv::push_number(out, 1705312800000.0f64);");
+      expect(out).toContain("if !s_d.is_nan() {");
+    });
+
+    it("refuses where a setup binding reads the current time or formats by locale", () => {
+      expect(() => compile(island(dated("const now = new Date();", "{{ now.toISOString() }}")))).toThrow(/`now` is set up in a way the server cannot evaluate: .*`new Date\(\)` is the time it runs/);
+      const formatter = dated('const money = new Intl.NumberFormat("en", { style: "currency", currency: "EUR" });', "{{ money.format(ms) }}");
+      expect(() => compile(island(formatter))).toThrow(/`money` is set up in a way the server cannot evaluate: .*`Intl` formats by locale/);
+      const i18n = dated('import { useI18n } from "vue-i18n";\nconst { d } = useI18n();', "{{ d(ms) }}");
+      expect(() => compile(island(i18n))).toThrow(/`d` from `useI18n\(\)` formats by locale with `Intl`.*`dates_and_prices`/);
+    });
+  });
+
   describe("vue-i18n", () => {
     const withLocales = (root: string, messages: Record<string, unknown>) => {
       mkdirSync(join(root, "locales"), { recursive: true });
@@ -2436,9 +2466,161 @@ export default defineComponent({ props: { a: String } });
 defineProps<{ at: string }>();
 </script>
 <template>
-  <p>{{ new Date(at).getFullYear() }}</p>
+  <p>{{ new Set([at]).size }}</p>
 </template>`,
-      /X\.vue:5:9: `new Date\(…\)` builds an object the server has no twin for/,
+      /X\.vue:5:9: `new Set\(…\)` builds an object the server has no twin for/,
+    ],
+    [
+      "the current time with new Date()",
+      `<script setup lang="ts">
+defineProps<{ at: string }>();
+</script>
+<template><p>{{ new Date().toISOString() }}</p></template>`,
+      /`new Date\(\)` is the time it runs, which differs between the server's render and the browser's hydration.*`dates_and_prices`/,
+    ],
+    [
+      "the current time with Date.now()",
+      `<script setup lang="ts">
+defineProps<{ at: string }>();
+</script>
+<template><p>{{ Date.now() }}</p></template>`,
+      /`Date\.now\(\)` is the time it runs/,
+    ],
+    [
+      "a date built from its parts in the local time zone",
+      `<script setup lang="ts">
+defineProps<{ y: number }>();
+</script>
+<template><p>{{ new Date(y, 0).toISOString() }}</p></template>`,
+      /`new Date\(year, month, …\)` reads its parts in the time zone of the machine running it/,
+    ],
+    [
+      "a date built from a value that may be absent",
+      `<script setup lang="ts">
+defineProps<{ at?: string }>();
+</script>
+<template><p>{{ new Date(at).toISOString() }}</p></template>`,
+      /`new Date\(\)` takes one string or one number that is present/,
+    ],
+    [
+      "Date.parse of a number",
+      `<script setup lang="ts">
+defineProps<{ at: number }>();
+</script>
+<template><p>{{ Date.parse(at) }}</p></template>`,
+      /`Date\.parse\(\)` takes a string that is present/,
+    ],
+    [
+      "a date string read in the local time zone",
+      `<script setup lang="ts">
+defineProps<{ at: string }>();
+</script>
+<template><p>{{ new Date("2024-01-15T10:00").toISOString() }}</p></template>`,
+      /`new Date\(\)` of "2024-01-15T10:00", which is not a date alone nor a date and time with a `Z` or an offset/,
+    ],
+    [
+      "a date beyond the range whose offset brings it within",
+      `<script setup lang="ts">
+defineProps<{ at: string }>();
+</script>
+<template><p>{{ Date.parse("+275760-09-13T01:00+01:00") }}</p></template>`,
+      /`Date\.parse\(\)` of "\+275760-09-13T01:00\+01:00"/,
+    ],
+    [
+      "a date string outside the date time string format",
+      `<script setup lang="ts">
+defineProps<{ at: string }>();
+</script>
+<template><p>{{ Date.parse("Jan 15 2024") }}</p></template>`,
+      /`Date\.parse\(\)` of "Jan 15 2024"/,
+    ],
+    [
+      "a date read in the local time zone",
+      `<script setup lang="ts">
+defineProps<{ at: string }>();
+</script>
+<template><p>{{ new Date(at).getFullYear() }}</p></template>`,
+      /X\.vue:4:\d+: `\.getFullYear\(\)` reads the date in the time zone of the machine running it.*use `\.getUTCFullYear\(\)`/,
+    ],
+    [
+      "a date written by toString",
+      `<script setup lang="ts">
+defineProps<{ at: string }>();
+</script>
+<template><p>{{ new Date(at).toString() }}</p></template>`,
+      /`\.toString\(\)` on a `Date` is not supported/,
+    ],
+    [
+      "Date.UTC",
+      `<script setup lang="ts">
+defineProps<{ y: number }>();
+</script>
+<template><p>{{ Date.UTC(y, 0) }}</p></template>`,
+      /`Date\.UTC\(\)` is not supported/,
+    ],
+    [
+      "a number formatted by locale",
+      `<script setup lang="ts">
+defineProps<{ n: number }>();
+</script>
+<template><p>{{ n.toLocaleString() }}</p></template>`,
+      /`\.toLocaleString\(\)` formats by locale with `Intl`, whose output differs between Node, Chromium, Firefox and Safari.*`dates_and_prices`/,
+    ],
+    [
+      "a date formatted by locale",
+      `<script setup lang="ts">
+defineProps<{ at: string }>();
+</script>
+<template><p>{{ new Date(at).toLocaleDateString("en-GB") }}</p></template>`,
+      /`\.toLocaleDateString\(\)` formats by locale/,
+    ],
+    [
+      "strings compared by locale",
+      `<script setup lang="ts">
+defineProps<{ a: string; b: string }>();
+</script>
+<template><p>{{ a.localeCompare(b) }}</p></template>`,
+      /`\.localeCompare\(\)` formats by locale/,
+    ],
+    [
+      "an Intl formatter",
+      `<script setup lang="ts">
+defineProps<{ n: number }>();
+</script>
+<template><p>{{ new Intl.NumberFormat("en").format(n) }}</p></template>`,
+      /`Intl` formats by locale/,
+    ],
+    [
+      "an Intl formatter called without new",
+      `<script setup lang="ts">
+defineProps<{ n: number }>();
+</script>
+<template><p>{{ Intl.NumberFormat("en").format(n) }}</p></template>`,
+      /`Intl` formats by locale/,
+    ],
+    [
+      "vue-i18n's number formatting",
+      `<script setup lang="ts">
+defineProps<{ n: number }>();
+</script>
+<template><p>{{ $n(n) }}</p></template>`,
+      /vue-i18n's `\$n` formats by locale/,
+    ],
+    [
+      "a date interpolated whole",
+      `<script setup lang="ts">
+defineProps<{ at: string }>();
+</script>
+<template><p>{{ new Date(at) }}</p></template>`,
+      /`\{\{ \}\}` of a `Date`/,
+    ],
+    [
+      "a date bound to an attribute",
+      `<script setup lang="ts">
+defineProps<{ at: string }>();
+</script>
+<template><time :datetime="new Date(at)">x</time></template>`,
+      /`datetime` is bound to a `Date`.*bind `\.toISOString\(\)`/,
     ],
     [
       "a component that renders without a template",
@@ -2945,6 +3127,25 @@ defineProps<{ onSale?: boolean }>();
     "a computed list as a slot prop": "FV0910",
     "a component written with the Options API": "FV0003",
     "a constructor called in the template": "FV0624",
+    "the current time with new Date()": "FV1801",
+    "the current time with Date.now()": "FV1801",
+    "a date built from its parts in the local time zone": "FV1802",
+    "a date built from a value that may be absent": "FV1802",
+    "Date.parse of a number": "FV1802",
+    "a date string read in the local time zone": "FV1803",
+    "a date string outside the date time string format": "FV1803",
+    "a date beyond the range whose offset brings it within": "FV1803",
+    "a date read in the local time zone": "FV1804",
+    "a date written by toString": "FV1804",
+    "Date.UTC": "FV1804",
+    "a number formatted by locale": "FV1805",
+    "a date formatted by locale": "FV1805",
+    "strings compared by locale": "FV1805",
+    "an Intl formatter": "FV1805",
+    "an Intl formatter called without new": "FV1805",
+    "vue-i18n's number formatting": "FV1805",
+    "a date interpolated whole": "FV0401",
+    "a date bound to an attribute": "FV0403",
     "a CSS module without `cssModules` in the configuration": "FV1005",
     "v-bind() in a style block of a boolean": "FV1006",
     "v-bind() in a style block of a list": "FV1006",

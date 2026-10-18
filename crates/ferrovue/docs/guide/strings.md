@@ -120,7 +120,8 @@ assert_eq!(js_pad_start("7", 3.0, "0"), "007");
 The patterns are strings: a regular expression (`.replace(/x/g, …)`, `.split(/,/)`), a replacement
 function, a search's starting position or a split's limit (`.includes(x, 3)`, `.split(",", 2)`) are
 refused, as are `.toLocaleUpperCase()` and `.toLocaleLowerCase()`, since the server's locale is not
-the browser's.
+the browser's, and `.localeCompare()` and `.toLocaleString()`, which format with `Intl`
+([`dates_and_prices`](crate::guide::dates_and_prices)).
 
 # Halves of surrogate pairs
 

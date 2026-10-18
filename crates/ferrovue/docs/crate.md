@@ -230,8 +230,9 @@ what Vue writes. Those a hand-written twin or page may call too are documented h
 The others are `#[doc(hidden)]`: JavaScript's string methods counted in UTF-16 code units
 (`js_length`, `js_slice`, `js_split` and the rest the [`strings`](crate::guide::strings) page
 lists), `Number`, `parseInt`, `parseFloat` and `JSON.stringify` (`js_number`, `js_parse_int`,
-`js_parse_float`, `js_json_number`, `js_json_string`), a list's `slice` (`js_slice_range`,
-`js_slice_items`), and Vue's class, style, scope id, slot outlet, teleport and `v-html` helpers
+`js_parse_float`, `js_json_number`, `js_json_string`), dates as time values in UTC
+(`js_date_parse`, `js_time_clip`, `js_to_iso_string` and `js_utc_full_year` to
+`js_utc_milliseconds`), a list's `slice` (`js_slice_range`, `js_slice_items`), and Vue's class, style, scope id, slot outlet, teleport and `v-html` helpers
 (`class_into`, `class_object`, `class_names`, `style_text_into`, `merge_props`, `scope_attrs`,
 `slot_into_slotted`, `scoped_slot_into`, `scoped_slot_into_slotted`, `teleport_into`,
 `trusted_into`). Only generated code calls them, so their signatures follow the version of

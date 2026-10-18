@@ -25,15 +25,17 @@
 //! 15. [`numbers`]: JavaScript's number semantics in Rust.
 //! 16. [`strings`]: JavaScript's strings in Rust: UTF-16 indices, halves of pairs, ordering,
 //!     conversions to and from numbers.
-//! 17. [`escaping`]: what is escaped, where, and the one way to write raw HTML.
-//! 18. [`security`]: the threat model: every place data from readers is written, the guarantee
+//! 17. [`dates_and_prices`]: dates from ISO strings and numbers, read in UTC, and prices and
+//!     formatted dates written in Rust or translated, since `Intl` differs between browsers.
+//! 18. [`escaping`]: what is escaped, where, and the one way to write raw HTML.
+//! 19. [`security`]: the threat model: every place data from readers is written, the guarantee
 //!     there, and what is inherited from Vue.
-//! 19. [`testing`]: holding your own components to Vue, with fixtures and two calls.
-//! 20. [`errors_and_limits`]: what the compiler refuses, and what can still go wrong at run time.
-//! 21. [`error_codes`]: every error code the compiler raises.
+//! 20. [`testing`]: holding your own components to Vue, with fixtures and two calls.
+//! 21. [`errors_and_limits`]: what the compiler refuses, and what can still go wrong at run time.
+//! 22. [`error_codes`]: every error code the compiler raises.
 #![cfg_attr(
     feature = "dioxus",
-    doc = "22. [`dioxus`]: islands in a page that Dioxus renders, with the `dioxus` feature."
+    doc = "23. [`dioxus`]: islands in a page that Dioxus renders, with the `dioxus` feature."
 )]
 
 #[doc = include_str!("../docs/guide/quick_start.md")]
@@ -87,6 +89,9 @@ pub mod numbers {}
 
 #[doc = include_str!("../docs/guide/strings.md")]
 pub mod strings {}
+
+#[doc = include_str!("../docs/guide/dates_and_prices.md")]
+pub mod dates_and_prices {}
 
 #[doc = include_str!("../docs/guide/escaping.md")]
 pub mod escaping {}

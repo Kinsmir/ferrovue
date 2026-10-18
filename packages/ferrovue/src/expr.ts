@@ -9,6 +9,7 @@ import { arithmetic, asF64, compare, intFromF64, isNumber, negatedOrder, numberV
 import { boolOf, checkNullTest, choice, known, narrowing, narrowTo, nullTest, pathOf, presence, truthy } from "./narrowing.ts";
 import { call, isObjectCall } from "./calls.ts";
 import { constOf, constVal } from "./constants.ts";
+import { localeRefusal } from "./plugins/dates.ts";
 
 export function describeTy(ty: Ty): string {
   switch (ty.k) {
@@ -259,6 +260,7 @@ export function expr(s: Scope, n: N): Val {
         return fail(comp, "FV0613", `\`${n.name}\` is set up in a way the server cannot evaluate: ${s.clientOnly.get(n.name)}`, n);
       }
       if (n.name === s.propsIdent) return { code: "props", ty: { k: "struct", name: "Props" } };
+      if (n.name === "Intl") return localeRefusal(s, "`Intl`", n);
       return fail(comp, "FV0601", `\`${n.name}\` is not available when rendering on the server`, n);
     }
     case "MemberExpression": {
@@ -497,6 +499,8 @@ export function expr(s: Scope, n: N): Val {
     case "TSSatisfiesExpression":
       return stated(s, n);
     case "NewExpression": {
+      const own = claim((p) => p.construct?.(s, n));
+      if (own) return own;
       const made = n.callee.type === "Identifier" ? n.callee.name : n.callee.type === "MemberExpression" && !n.callee.computed ? `${n.callee.object.name ?? "…"}.${n.callee.property.name}` : "…";
       return fail(comp, "FV0624", `\`new ${made}(…)\` builds an object the server has no twin for: compute the value in Rust and pass it as a prop`, n);
     }

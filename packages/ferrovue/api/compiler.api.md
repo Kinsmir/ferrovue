@@ -1112,6 +1112,26 @@ export const ERRORS: {
     readonly FV1711: {
         readonly title: "`innerHTML` or `textContent` on a head tag that has no content";
     };
+    readonly FV1801: {
+        readonly title: "The current time: `new Date()` or `Date.now()`";
+        readonly detail: "The server renders at one moment and the browser hydrates at another, so the text would differ. Read the time in Rust and pass it as a prop: an ISO string, or a number of milliseconds. See [`dates_and_prices`](crate::guide::dates_and_prices).";
+    };
+    readonly FV1802: {
+        readonly title: "`new Date()` or `Date.parse()` of anything but one present string or number";
+        readonly detail: "`new Date(year, month, …)` reads its parts in the time zone of the machine running it. A value that may be absent gives an invalid date for `undefined` and the epoch for `null`. See [`dates_and_prices`](crate::guide::dates_and_prices).";
+    };
+    readonly FV1803: {
+        readonly title: "Date string that browsers may read differently";
+        readonly detail: "ECMAScript specifies how a date alone (`2024-05-01`, `2024-05`, `2024`) and a date and time with a `Z` or an offset (`2024-05-01T09:30:00.000Z`, `2024-05-01T09:30+02:00`) are read. A date and time with neither is read in the time zone of the machine running it, and every other string by each engine's own rules, as are fields out of range (`2024-02-30`, `T24:00`) and fields beyond the range of dates that an offset brings back within it (`+275760-09-13T01:00+01:00`), which Safari reads as invalid. A literal is checked when the component is compiled; a string from the props is checked as it renders, and one outside the format panics. See [`dates_and_prices`](crate::guide::dates_and_prices).";
+    };
+    readonly FV1804: {
+        readonly title: "`Date` method or function ferrovue does not translate";
+        readonly detail: "A date is read with `.toISOString()`, `.getTime()`, `.valueOf()` and the `.getUTC…()` methods, which do not depend on the time zone. The local getters (`.getFullYear()`, `.getHours()`), `.getTimezoneOffset()` and `.toString()` read the time zone of the machine running them, which differs between the server and the reader's browser. See [`dates_and_prices`](crate::guide::dates_and_prices).";
+    };
+    readonly FV1805: {
+        readonly title: "Locale formatting with `Intl`, `.toLocaleString()`, `.localeCompare()`, `$d` or `$n`";
+        readonly detail: "`Intl` formats from locale data each JavaScript engine ships, and Node, Chromium, Firefox and Safari write some dates, times and numbers differently (spaces, separators, abbreviations), so no server can write what every reader's browser writes. This refusal is permanent. Format the value in Rust and pass it as a string prop, or write it with `.toFixed()` and `.toISOString()` into a message `$t` translates. See [`dates_and_prices`](crate::guide::dates_and_prices).";
+    };
 };
 
 // @public

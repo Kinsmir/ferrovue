@@ -32,6 +32,8 @@ pub static LOCALES: &[Locale] = &[
             ("missingLink", Message { cases: &[&[Part::Text("see "), Part::Linked { key: "does.not.exist", modifier: None }]] }),
             ("nested.deep.key", Message { cases: &[&[Part::Text("deep value")]] }),
             ("onlyEnglish", Message { cases: &[&[Part::Text("only in English")]] }),
+            ("posted", Message { cases: &[&[Part::Text("Posted on "), Part::Named("date")]] }),
+            ("price", Message { cases: &[&[Part::Text("€"), Part::Named("amount")]] }),
             ("shout", Message { cases: &[&[Part::Linked { key: "loud", modifier: Some("lower") }]] }),
         ],
     },
@@ -46,6 +48,8 @@ pub static LOCALES: &[Locale] = &[
             ("items", Message { cases: &[&[Part::Text("één item")], &[Part::Named("n"), Part::Text(" items")]] }),
             ("linked", Message { cases: &[&[Part::Linked { key: "common.app", modifier: None }, Part::Text(" zegt "), Part::Linked { key: "common.hi", modifier: Some("lower") }]] }),
             ("list", Message { cases: &[&[Part::List(0), Part::Text(" en "), Part::List(1)]] }),
+            ("posted", Message { cases: &[&[Part::Text("Geplaatst op "), Part::Named("date")]] }),
+            ("price", Message { cases: &[&[Part::Text("€ "), Part::Named("amount")]] }),
         ],
     },
 ];

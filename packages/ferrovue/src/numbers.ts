@@ -1,5 +1,5 @@
 import { type N, type Scope, type Ty, type Val, BOOL, FLOAT, INT } from "./model.ts";
-import { AS, binary, FLIPPED, operand, UNARY } from "./parens.ts";
+import { AS, atom, binary, FLIPPED, operand, UNARY } from "./parens.ts";
 import { expr } from "./expr.ts";
 
 export function isNumber(ty: Ty): boolean {
@@ -64,6 +64,11 @@ export function compare(a: Val, op: string, b: Val): Val {
   if (a.num !== undefined && b.num !== undefined) {
     const konst = fold(a.num, op, b.num) as boolean;
     return { code: String(konst), ty: BOOL, konst };
+  }
+  if (asF64(a) === asF64(b)) {
+    if (op === "<" || op === ">") return { code: "false", ty: BOOL, konst: false };
+    if (a.ty.k === "int") return { code: "true", ty: BOOL, konst: true };
+    return { code: `!${atom(asF64(a))}.is_nan()`, ty: BOOL };
   }
   return { code: binary(asF64(a), op, asF64(b)), ty: BOOL };
 }

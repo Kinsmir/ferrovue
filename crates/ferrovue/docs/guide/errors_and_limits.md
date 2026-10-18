@@ -39,8 +39,13 @@ What is refused today, each with an error that names it:
   no constraint (`generic="T"`): a generic component renders each type parameter as its
   constraint;
 - constants that are not literals (`Date.now()`, a function), an object constant read whole or by
-  a key chosen at run time (`LABELS[key]`), and `new` (`new Date(at)`,
-  `new Intl.NumberFormat()`);
+  a key chosen at run time (`LABELS[key]`), and `new` of anything but `Date` (`new Map()`);
+- the current time (`new Date()`, `Date.now()`), `new Date(year, month, …)`, a date string outside
+  ECMAScript's date time string format or with a time and no `Z` or offset, the local getters
+  (`.getFullYear()`, `.getHours()`), `.toString()` and the other `Date` methods; and,
+  permanently, locale formatting: `Intl`, `.toLocaleString()`, `.toLocaleDateString()`,
+  `.toLocaleTimeString()`, `.localeCompare()` and vue-i18n's `$d` and `$n`. See
+  [`dates_and_prices`](crate::guide::dates_and_prices);
 - `<RouterLink custom>`, slot props that are array literals, defaults in destructured slot props,
   and outlets of one slot that pass different props;
 - custom directives not listed in `clientDirectives`;
@@ -238,6 +243,10 @@ panics are programming errors, found the first time the code runs:
   `js_pad_end` panic where JavaScript throws a `RangeError`: a negative or
   infinite `.repeat()` count, or a result longer than V8's longest string. See
   [`strings`](crate::guide::strings#panics).
+- `js_date_parse` panics on a string outside ECMAScript's date time
+  string format, or a date and time without a `Z` or offset, which browsers may each read
+  differently; `js_to_iso_string` panics on an invalid date, where
+  JavaScript throws a `RangeError`. See [`dates_and_prices`](crate::guide::dates_and_prices).
 
 Serialising an island's props or the stores' state cannot fail for the types the compiler
 generates. If a hand-written [`TrustedHtml`](crate::TrustedHtml) type's `Serialize` fails, or
