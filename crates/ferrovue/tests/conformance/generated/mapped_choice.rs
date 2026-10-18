@@ -39,7 +39,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::I18n) {
         out.push('"');
     }
     out.push('>');
-    fv::escape_into(out, &fv::js_split(&props.words, " ").into_iter().map(|fv_s2| std::borrow::Cow::<str>::Owned((if props.on { std::borrow::Cow::<str>::Owned(fv_i18n.t("common.app", &fv::i18n::Args { named: &[], list: &[], plural: None })) } else { std::borrow::Cow::<str>::Borrowed(&*fv_s2) }).into_owned())).collect::<Vec<_>>().join("|"));
+    fv::escape_into(out, &fv::js_split(&props.words, " ").into_iter().map(|fv_s2| std::borrow::Cow::<str>::Owned((if props.on { std::borrow::Cow::<str>::Owned(fv_i18n.t("common.app", &fv::i18n::Args::new())) } else { std::borrow::Cow::<str>::Borrowed(&*fv_s2) }).into_owned())).collect::<Vec<_>>().join("|"));
     out.push_str("</p>");
 }
 

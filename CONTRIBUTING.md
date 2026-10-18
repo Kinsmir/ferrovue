@@ -109,9 +109,10 @@ last release (RELEASING.md):
   implements itself (a page, a hand-written twin, a `TrustedHtml` type) and what
   `docs/guide/generated_code.md` names, and link to no hidden item from the visible docs.
 - **Types that may grow are `#[non_exhaustive]`.** Every public enum, and every struct with public
-  fields that only the crates build. A struct generated code builds with a literal (`RouteDef`,
-  `i18n::Locale`, `i18n::Message`, `i18n::Args`) or a newtype it wraps values in (`Js`) stays
-  exhaustive, since generated code is another crate.
+  fields. Code outside the crate, generated code included, builds one through a constructor and
+  `with_` methods (`RouteDef::new("/books").with_name("books")`, `i18n::Args::new().with_plural(n)`),
+  which are `const fn` where a generated `const` or `static` table calls them. A newtype generated
+  code wraps values in (`Js`) stays exhaustive.
 - **Values pointless to drop are `#[must_use]`**: constructors, builders, getters, and a method that
   consumes `self` to return its result. A function that writes into a buffer and returns whether it
   wrote anything is not.

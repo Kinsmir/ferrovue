@@ -97,6 +97,12 @@ error: this module was generated as version 2 of ferrovue's generated code, and 
    | ^^^^^^^^^^^^^^^^^^^^^^
 ```
 
+A newer crate stops an older module the same way once it no longer supports what the module calls.
+The 0.8 crate supports version 2 alone: modules of version 1, from 0.7, build
+[`RouteDef`](crate::RouteDef), [`Locale`](crate::i18n::Locale), [`Message`](crate::i18n::Message)
+and [`Args`](crate::i18n::Args) with struct literals, and these types are `#[non_exhaustive]` from
+0.8 on, so version 2 builds them with their `const` constructors and `with_` methods.
+
 `__compat!` itself is `#[doc(hidden)]` and may change form in any release; the check at the top of
 `mod.rs` stays.
 

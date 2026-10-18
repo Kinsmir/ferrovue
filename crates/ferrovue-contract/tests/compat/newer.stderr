@@ -1,4 +1,4 @@
-error: this module was generated as version 3 of ferrovue's generated code, and this `ferrovue` crate supports versions 1 to 2: use the `ferrovue` npm package and the `ferrovue` crate of one release, and run `ferrovue` to generate the module again
+error: this module was generated as version 3 of ferrovue's generated code, and this `ferrovue` crate supports version 2: use the `ferrovue` npm package and the `ferrovue` crate of one release, and run `ferrovue` to generate the module again
  --> tests/compat/newer.rs:1:1
   |
 1 | ferrovue::__compat!(3);

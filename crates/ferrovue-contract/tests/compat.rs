@@ -5,6 +5,6 @@
 fn the_version_check_names_what_to_do() {
     let cases = trybuild::TestCases::new();
     cases.pass("tests/compat/current.rs");
-    cases.pass("tests/compat/previous.rs");
+    cases.compile_fail("tests/compat/previous.rs");
     cases.compile_fail("tests/compat/newer.rs");
 }

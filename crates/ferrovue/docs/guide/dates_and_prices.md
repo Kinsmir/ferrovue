@@ -201,20 +201,14 @@ The generated `render` computes the amount and the date with the runtime's twins
 # pub const LOCALE: &str = "en";
 # pub const FALLBACK: &[&str] = &["en"];
 # pub static LOCALES: &[Locale] = &[
-#     Locale {
-#         name: "en",
-#         messages: &[
-#             ("posted", Message { cases: &[&[Part::Text("Posted on "), Part::Named("date")]] }),
-#             ("price", Message { cases: &[&[Part::Text("€"), Part::Named("amount")]] }),
-#         ],
-#     },
-#     Locale {
-#         name: "nl",
-#         messages: &[
-#             ("posted", Message { cases: &[&[Part::Text("Geplaatst op "), Part::Named("date")]] }),
-#             ("price", Message { cases: &[&[Part::Text("€ "), Part::Named("amount")]] }),
-#         ],
-#     },
+#     Locale::new("en", &[
+#         ("posted", Message::new(&[&[Part::Text("Posted on "), Part::Named("date")]])),
+#         ("price", Message::new(&[&[Part::Text("€"), Part::Named("amount")]])),
+#     ]),
+#     Locale::new("nl", &[
+#         ("posted", Message::new(&[&[Part::Text("Geplaatst op "), Part::Named("date")]])),
+#         ("price", Message::new(&[&[Part::Text("€ "), Part::Named("amount")]])),
+#     ]),
 # ];
 # pub fn i18n(locale: &str) -> ferrovue::I18n {
 #     ferrovue::I18n::new(LOCALES, locale, FALLBACK)
@@ -264,11 +258,11 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::I18n) {
         out.push('"');
     }
     out.push_str("><p>");
-    fv::escape_into(out, &fv_i18n.t("price", &fv::i18n::Args { named: &[("amount", fv::i18n::Value::Str(&s_amount))], list: &[], plural: None }));
+    fv::escape_into(out, &fv_i18n.t("price", &fv::i18n::Args::new().with_named(&[("amount", fv::i18n::Value::Str(&s_amount))])));
     out.push_str("</p><p>");
     fv::escape_into(out, &props.total);
     out.push_str("</p><p>");
-    fv::escape_into(out, &fv_i18n.t("posted", &fv::i18n::Args { named: &[("date", fv::i18n::Value::Str(&fv::js_slice(&fv::js_to_iso_string(fv::js_date_parse(&props.posted)), 0.0f64, Some(10.0f64))))], list: &[], plural: None }));
+    fv::escape_into(out, &fv_i18n.t("posted", &fv::i18n::Args::new().with_named(&[("date", fv::i18n::Value::Str(&fv::js_slice(&fv::js_to_iso_string(fv::js_date_parse(&props.posted)), 0.0f64, Some(10.0f64))))])));
     out.push_str("</p><time datetime=\"");
     fv::escape_into(out, &fv::js_to_iso_string(fv::js_date_parse(&props.posted)));
     out.push_str("\">");

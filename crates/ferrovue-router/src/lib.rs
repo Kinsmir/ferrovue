@@ -143,10 +143,8 @@ impl Router {
         let defs: Vec<RouteDef<'_>> = routes
             .iter()
             .map(|(path, name)| RouteDef {
-                path,
                 name: *name,
-                view: true,
-                children: &[],
+                ..RouteDef::new(path)
             })
             .collect();
         Router::tree(&defs)
@@ -165,12 +163,9 @@ impl Router {
     /// # use ferrovue_router as ferrovue;
     /// use ferrovue::{RouteDef, Router};
     ///
-    /// let router = Router::tree(&[RouteDef {
-    ///     path: "/users/:id",
-    ///     name: Some("user"),
-    ///     view: true,
-    ///     children: &[RouteDef { path: "posts", name: Some("user-posts"), view: true, children: &[] }],
-    /// }]);
+    /// let router = Router::tree(&[RouteDef::new("/users/:id")
+    ///     .with_name("user")
+    ///     .with_children(&[RouteDef::new("posts").with_name("user-posts")])]);
     /// let here = router.at("/users/7/posts");
     /// let parent = here.link("/users/7");
     /// // The parent is active on its child's page, but not exactly.
@@ -361,7 +356,29 @@ impl Router {
 
 /// A route as the routes file lists it: a path, its name if it has one, whether it shows a
 /// component, and the routes nested in it, rendered by the `<RouterView>` in its component.
+///
+/// Build one with [`RouteDef::new`] and its `with_` methods, which are `const`, so a route table
+/// can be a `const` or a `static`.
+///
+/// # Example
+///
+/// ```
+/// # use ferrovue_router as ferrovue;
+/// use ferrovue::{RouteDef, Router};
+///
+/// const ROUTES: &[RouteDef<'static>] = &[
+///     RouteDef::new("/").with_name("home"),
+///     RouteDef::new("/books").with_view(false).with_children(&[
+///         RouteDef::new(":id").with_name("book"),
+///     ]),
+/// ];
+///
+/// let router = Router::tree(ROUTES);
+/// assert_eq!(router.at("/books/dune").name(), Some("book"));
+/// assert_eq!(router.at("/books").name(), None);
+/// ```
 #[derive(Clone, Copy, Debug)]
+#[non_exhaustive]
 pub struct RouteDef<'a> {
     /// The path, relative to the parent's unless it starts with `/`; empty for a default child.
     pub path: &'a str,
@@ -372,6 +389,80 @@ pub struct RouteDef<'a> {
     pub view: bool,
     /// The routes nested in it.
     pub children: &'a [RouteDef<'a>],
+}
+
+impl<'a> RouteDef<'a> {
+    /// A route at `path` that shows a component, with no name and no nested routes.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use ferrovue_router as ferrovue;
+    /// let def = ferrovue::RouteDef::new("/about");
+    /// assert_eq!(def.path, "/about");
+    /// assert_eq!(def.name, None);
+    /// assert!(def.view && def.children.is_empty());
+    /// ```
+    #[must_use]
+    pub const fn new(path: &'a str) -> RouteDef<'a> {
+        RouteDef {
+            path,
+            name: None,
+            view: true,
+            children: &[],
+        }
+    }
+
+    /// The route, named `name`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use ferrovue_router as ferrovue;
+    /// let def = ferrovue::RouteDef::new("/users/:id").with_name("user");
+    /// assert_eq!(def.name, Some("user"));
+    /// ```
+    #[must_use]
+    pub const fn with_name(self, name: &'a str) -> RouteDef<'a> {
+        RouteDef {
+            name: Some(name),
+            ..self
+        }
+    }
+
+    /// The route, showing a component when `view` is true. A route with neither a view nor a name
+    /// only groups the routes nested in it.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use ferrovue_router as ferrovue;
+    /// let def = ferrovue::RouteDef::new("/books").with_view(false);
+    /// assert!(!def.view);
+    /// ```
+    #[must_use]
+    pub const fn with_view(self, view: bool) -> RouteDef<'a> {
+        RouteDef { view, ..self }
+    }
+
+    /// The route, with `children` nested in it.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use ferrovue_router as ferrovue;
+    /// use ferrovue::RouteDef;
+    ///
+    /// const USER: RouteDef<'static> = RouteDef::new("/users/:id").with_children(&[
+    ///     RouteDef::new(""),
+    ///     RouteDef::new("posts"),
+    /// ]);
+    /// assert_eq!(USER.children[1].path, "posts");
+    /// ```
+    #[must_use]
+    pub const fn with_children(self, children: &'a [RouteDef<'a>]) -> RouteDef<'a> {
+        RouteDef { children, ..self }
+    }
 }
 
 /// Where the reader is, which is what every link on the page is compared with.

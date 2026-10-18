@@ -327,18 +327,10 @@ fn an_optional_parameter_left_out_is_absent() {
 
 #[test]
 fn a_route_with_neither_view_nor_name_only_groups_its_children() {
-    let children = [RouteDef {
-        path: ":id",
-        name: Some("book"),
-        view: true,
-        children: &[],
-    }];
-    let router = Router::tree(&[RouteDef {
-        path: "/books",
-        name: None,
-        view: false,
-        children: &children,
-    }]);
+    let children = [RouteDef::new(":id").with_name("book")];
+    let router = Router::tree(&[RouteDef::new("/books")
+        .with_view(false)
+        .with_children(&children)]);
     assert_eq!(router.at("/books").name(), None);
     assert!(!router.at("/books").link("/books").active);
     assert_eq!(router.at("/books/dune").name(), Some("book"));

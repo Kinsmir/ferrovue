@@ -140,9 +140,10 @@ function routeDefs(routes: RouteDef[], depth: number): string {
   const pad = "    ".repeat(depth);
   return routes
     .map((r) => {
-      const name = r.name === undefined ? "None" : `Some(${rustStr(r.name)})`;
-      const children = r.children?.length ? `&[\n${routeDefs(r.children, depth + 1)}\n${pad}]` : "&[]";
-      return `${pad}ferrovue::RouteDef { path: ${rustStr(r.path)}, name: ${name}, view: ${r.view !== false}, children: ${children} },`;
+      const name = r.name === undefined ? "" : `.with_name(${rustStr(r.name)})`;
+      const view = r.view === false ? ".with_view(false)" : "";
+      const children = r.children?.length ? `.with_children(&[\n${routeDefs(r.children, depth + 1)}\n${pad}])` : "";
+      return `${pad}ferrovue::RouteDef::new(${rustStr(r.path)})${name}${view}${children},`;
     })
     .join("\n");
 }

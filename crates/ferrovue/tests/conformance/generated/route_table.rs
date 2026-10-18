@@ -6,17 +6,17 @@
 /// Each route: its vue-router path, its name if it has one, whether it shows a component, and the
 /// routes nested in it.
 pub const ROUTES: &[ferrovue::RouteDef<'static>] = &[
-    ferrovue::RouteDef { path: "/", name: Some("home"), view: true, children: &[] },
-    ferrovue::RouteDef { path: "/blog/:slug", name: Some("post"), view: true, children: &[] },
-    ferrovue::RouteDef { path: "/blog/:slug/:tab", name: Some("post-tab"), view: true, children: &[] },
-    ferrovue::RouteDef { path: "/users/:name", name: None, view: true, children: &[] },
-    ferrovue::RouteDef { path: "/search", name: Some("search"), view: true, children: &[] },
-    ferrovue::RouteDef { path: "/account", name: Some("account"), view: true, children: &[
-        ferrovue::RouteDef { path: "", name: Some("account-home"), view: true, children: &[] },
-        ferrovue::RouteDef { path: "orders", name: Some("orders"), view: true, children: &[
-            ferrovue::RouteDef { path: ":order", name: Some("order"), view: true, children: &[] },
-        ] },
-    ] },
+    ferrovue::RouteDef::new("/").with_name("home"),
+    ferrovue::RouteDef::new("/blog/:slug").with_name("post"),
+    ferrovue::RouteDef::new("/blog/:slug/:tab").with_name("post-tab"),
+    ferrovue::RouteDef::new("/users/:name"),
+    ferrovue::RouteDef::new("/search").with_name("search"),
+    ferrovue::RouteDef::new("/account").with_name("account").with_children(&[
+        ferrovue::RouteDef::new("").with_name("account-home"),
+        ferrovue::RouteDef::new("orders").with_name("orders").with_children(&[
+            ferrovue::RouteDef::new(":order").with_name("order"),
+        ]),
+    ]),
 ];
 
 /// Every route's full path, nested ones included.

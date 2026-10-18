@@ -133,8 +133,8 @@ the server's routes come from the files' paths alone.
 /// Each route: its vue-router path, its name if it has one, whether it shows a component, and the
 /// routes nested in it.
 pub const ROUTES: &[ferrovue::RouteDef<'static>] = &[
-    ferrovue::RouteDef { path: "/", name: None, view: true, children: &[] },
-    ferrovue::RouteDef { path: "/users/:name", name: None, view: true, children: &[] },
+    ferrovue::RouteDef::new("/"),
+    ferrovue::RouteDef::new("/users/:name"),
 ];
 
 /// Every route's full path, nested ones included.
@@ -154,6 +154,10 @@ pub fn router() -> ferrovue::Router {
 # }
 # let _ = route_table::router();
 ```
+
+Each route is a [`RouteDef`](crate::RouteDef), built with `RouteDef::new` and its `with_name`,
+`with_view` and `with_children`, which are `const`. A route table written by hand for
+[`Router::tree`](crate::Router::tree) is built the same way.
 
 # A router per application, a route per request
 
@@ -211,8 +215,8 @@ defineProps<{ user: string }>();
 # /// Each route: its vue-router path, its name if it has one, whether it shows a component, and the
 # /// routes nested in it.
 # pub const ROUTES: &[ferrovue::RouteDef<'static>] = &[
-#     ferrovue::RouteDef { path: "/", name: None, view: true, children: &[] },
-#     ferrovue::RouteDef { path: "/users/:name", name: None, view: true, children: &[] },
+#     ferrovue::RouteDef::new("/"),
+#     ferrovue::RouteDef::new("/users/:name"),
 # ];
 #
 # /// Every route's full path, nested ones included.

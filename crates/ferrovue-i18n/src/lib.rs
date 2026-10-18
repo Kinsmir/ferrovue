@@ -9,16 +9,13 @@
 //! use ferrovue::I18n;
 //!
 //! // What the compiler writes for `en.json`: `{ "greeting": "Hello {name}!" }`.
-//! static LOCALES: &[Locale] = &[Locale {
-//!     name: "en",
-//!     messages: &[(
-//!         "greeting",
-//!         Message { cases: &[&[Part::Text("Hello "), Part::Named("name"), Part::Text("!")]] },
-//!     )],
-//! }];
+//! static LOCALES: &[Locale] = &[Locale::new(
+//!     "en",
+//!     &[("greeting", Message::new(&[&[Part::Text("Hello "), Part::Named("name"), Part::Text("!")]]))],
+//! )];
 //!
 //! let i18n = I18n::new(LOCALES, "en", &[]);
-//! let args = Args { named: &[("name", Value::Str("Ada"))], ..Args::default() };
+//! let args = Args::new().with_named(&[("name", Value::Str("Ada"))]);
 //! assert_eq!(i18n.t("greeting", &args), "Hello Ada!");
 //! ```
 #![warn(rustdoc::missing_crate_level_docs)]
@@ -48,15 +45,41 @@ pub enum Part {
 
 /// A compiled message: one case, or the cases of a plural message (`one | many`).
 #[derive(Debug)]
+#[non_exhaustive]
 pub struct Message {
     /// The cases; a message without `|` has one.
     pub cases: &'static [&'static [Part]],
+}
+
+impl Message {
+    /// A message of these cases, the parts of each in order. It is `const`, so a message table
+    /// can be a `static`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # mod ferrovue { pub use ferrovue_i18n as i18n; }
+    /// use ferrovue::i18n::{Message, Part};
+    ///
+    /// // "no apples | one apple | {count} apples"
+    /// static APPLES: Message = Message::new(&[
+    ///     &[Part::Text("no apples")],
+    ///     &[Part::Text("one apple")],
+    ///     &[Part::Named("count"), Part::Text(" apples")],
+    /// ]);
+    /// assert_eq!(APPLES.cases.len(), 3);
+    /// ```
+    #[must_use]
+    pub const fn new(cases: &'static [&'static [Part]]) -> Message {
+        Message { cases }
+    }
 }
 
 /// A locale's messages, by key (nested keys joined with dots), sorted for lookup.
 ///
 /// The messages must be sorted by key, byte by byte.
 #[derive(Debug)]
+#[non_exhaustive]
 pub struct Locale {
     /// The locale's name: its file's name, `en` for `en.json`.
     pub name: &'static str,
@@ -65,6 +88,33 @@ pub struct Locale {
 }
 
 impl Locale {
+    /// The locale `name` with `messages`, which must be sorted by key, byte by byte. It is
+    /// `const`, so the locales can be a `static`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # mod ferrovue { pub use ferrovue_i18n::I18n; pub use ferrovue_i18n as i18n; }
+    /// use ferrovue::i18n::{Args, Locale, Message, Part};
+    /// use ferrovue::I18n;
+    ///
+    /// static LOCALES: &[Locale] = &[
+    ///     Locale::new("en", &[
+    ///         ("bye", Message::new(&[&[Part::Text("Bye")]])),
+    ///         ("hi", Message::new(&[&[Part::Text("Hi")]])),
+    ///     ]),
+    ///     Locale::new("nl", &[("hi", Message::new(&[&[Part::Text("Hoi")]]))]),
+    /// ];
+    ///
+    /// let i18n = I18n::new(LOCALES, "nl", &["en"]);
+    /// assert_eq!(i18n.t("hi", &Args::new()), "Hoi");
+    /// assert_eq!(i18n.t("bye", &Args::new()), "Bye");
+    /// ```
+    #[must_use]
+    pub const fn new(name: &'static str, messages: &'static [(&'static str, Message)]) -> Locale {
+        Locale { name, messages }
+    }
+
     fn get(&'static self, key: &str) -> Option<&'static Message> {
         self.messages
             .binary_search_by(|(k, _)| (*k).cmp(key))
@@ -119,10 +169,11 @@ impl Value<'_> {
 /// use ferrovue::i18n::{Args, Value};
 ///
 /// // t("greeting", { name: "Ada" }, 3)
-/// let args = Args { named: &[("name", Value::Str("Ada"))], list: &[], plural: Some(3) };
+/// let args = Args::new().with_named(&[("name", Value::Str("Ada"))]).with_plural(3);
 /// assert_eq!(args.plural, Some(3));
 /// ```
 #[derive(Clone, Copy, Debug, Default)]
+#[non_exhaustive]
 pub struct Args<'a> {
     /// `{ name: value }`.
     pub named: &'a [(&'a str, Value<'a>)],
@@ -130,6 +181,76 @@ pub struct Args<'a> {
     pub list: &'a [Value<'a>],
     /// The number that chooses a plural case.
     pub plural: Option<i64>,
+}
+
+impl<'a> Args<'a> {
+    /// `t(key)`: no named values, no list and no plural number, as [`Args::default`] is.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # mod ferrovue { pub use ferrovue_i18n as i18n; }
+    /// let args = ferrovue::i18n::Args::new();
+    /// assert!(args.named.is_empty() && args.list.is_empty());
+    /// assert_eq!(args.plural, None);
+    /// ```
+    #[must_use]
+    pub const fn new() -> Args<'a> {
+        Args {
+            named: &[],
+            list: &[],
+            plural: None,
+        }
+    }
+
+    /// The arguments, with these named values: `t(key, { name: value })`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # mod ferrovue { pub use ferrovue_i18n as i18n; }
+    /// use ferrovue::i18n::{Args, Value};
+    ///
+    /// let args = Args::new().with_named(&[("name", Value::Str("Ada")), ("age", Value::Int(36))]);
+    /// assert_eq!(args.named[1], ("age", Value::Int(36)));
+    /// ```
+    #[must_use]
+    pub const fn with_named(self, named: &'a [(&'a str, Value<'a>)]) -> Args<'a> {
+        Args { named, ..self }
+    }
+
+    /// The arguments, with this list: `t(key, [value, …])`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # mod ferrovue { pub use ferrovue_i18n as i18n; }
+    /// use ferrovue::i18n::{Args, Value};
+    ///
+    /// let args = Args::new().with_list(&[Value::Str("Rust"), Value::Bool(true)]);
+    /// assert_eq!(args.list[0], Value::Str("Rust"));
+    /// ```
+    #[must_use]
+    pub const fn with_list(self, list: &'a [Value<'a>]) -> Args<'a> {
+        Args { list, ..self }
+    }
+
+    /// The arguments, with the number that chooses a plural case: `t(key, n)`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # mod ferrovue { pub use ferrovue_i18n as i18n; }
+    /// let args = ferrovue::i18n::Args::new().with_plural(2);
+    /// assert_eq!(args.plural, Some(2));
+    /// ```
+    #[must_use]
+    pub const fn with_plural(self, plural: i64) -> Args<'a> {
+        Args {
+            plural: Some(plural),
+            ..self
+        }
+    }
 }
 
 /// The messages and the locale one request renders in.
@@ -155,8 +276,8 @@ impl I18n {
     /// use ferrovue::I18n;
     ///
     /// static LOCALES: &[Locale] = &[
-    ///     Locale { name: "en", messages: &[("hi", Message { cases: &[&[Part::Text("hi")]] })] },
-    ///     Locale { name: "nl", messages: &[] },
+    ///     Locale::new("en", &[("hi", Message::new(&[&[Part::Text("hi")]]))]),
+    ///     Locale::new("nl", &[]),
     /// ];
     ///
     /// // A Belgian reader: no `nl-BE` messages, so Dutch, then English.
@@ -202,34 +323,31 @@ impl I18n {
     ///
     /// // `{ "apples": "no apples | one apple | {count} apples", "app": "ferrovue",
     /// //    "about": "@.upper:app and {0}" }`
-    /// static LOCALES: &[Locale] = &[Locale {
-    ///     name: "en",
-    ///     messages: &[
-    ///         ("about", Message { cases: &[&[
-    ///             Part::Linked { key: "app", modifier: Some("upper") },
-    ///             Part::Text(" and "),
-    ///             Part::List(0),
-    ///         ]] }),
-    ///         ("app", Message { cases: &[&[Part::Text("ferrovue")]] }),
-    ///         ("apples", Message { cases: &[
-    ///             &[Part::Text("no apples")],
-    ///             &[Part::Text("one apple")],
-    ///             &[Part::Named("count"), Part::Text(" apples")],
-    ///         ] }),
-    ///     ],
-    /// }];
+    /// static LOCALES: &[Locale] = &[Locale::new("en", &[
+    ///     ("about", Message::new(&[&[
+    ///         Part::Linked { key: "app", modifier: Some("upper") },
+    ///         Part::Text(" and "),
+    ///         Part::List(0),
+    ///     ]])),
+    ///     ("app", Message::new(&[&[Part::Text("ferrovue")]])),
+    ///     ("apples", Message::new(&[
+    ///         &[Part::Text("no apples")],
+    ///         &[Part::Text("one apple")],
+    ///         &[Part::Named("count"), Part::Text(" apples")],
+    ///     ])),
+    /// ])];
     /// let i18n = I18n::new(LOCALES, "en", &[]);
     ///
     /// // t("apples", 0), t("apples", 1), t("apples", 5)
-    /// let plural = |n| i18n.t("apples", &Args { plural: Some(n), ..Args::default() });
+    /// let plural = |n| i18n.t("apples", &Args::new().with_plural(n));
     /// assert_eq!([plural(0), plural(1), plural(5)], ["no apples", "one apple", "5 apples"]);
     ///
     /// // t("about", ["Rust"])
-    /// let args = Args { list: &[Value::Str("Rust")], ..Args::default() };
+    /// let args = Args::new().with_list(&[Value::Str("Rust")]);
     /// assert_eq!(i18n.t("about", &args), "FERROVUE and Rust");
     ///
     /// // A key no locale has is written as itself.
-    /// assert_eq!(i18n.t("no.such.key", &Args::default()), "no.such.key");
+    /// assert_eq!(i18n.t("no.such.key", &Args::new()), "no.such.key");
     /// ```
     #[must_use]
     pub fn t(&self, key: &str, args: &Args<'_>) -> String {

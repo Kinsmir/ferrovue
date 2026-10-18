@@ -89,7 +89,7 @@ function messageSource(file: string, key: string, ast: N): string {
     }
   };
   const items = (c: N): N[] => c.items ?? (c.static !== undefined ? [{ type: 3, value: c.static }] : []);
-  return `Message { cases: &[${cases.map((c) => `&[${items(c).map(part).join(", ")}]`).join(", ")}] }`;
+  return `Message::new(&[${cases.map((c) => `&[${items(c).map(part).join(", ")}]`).join(", ")}])`;
 }
 
 function byteOrder(a: string, b: string): number {
@@ -100,13 +100,11 @@ function i18nSource(setup: I18nSetup): string {
   const locales = setup.locales
     .map((l) => {
       const keys = [...l.messages.keys()].toSorted(byteOrder);
-      const entries = keys.map((k) => `            (${rustStr(k)}, ${messageSource(l.file, k, l.messages.get(k))}),`).join("\n");
-      return `    Locale {
-        name: ${rustStr(l.name)},
-        messages: &[
+      if (keys.length === 0) return `    Locale::new(${rustStr(l.name)}, &[]),`;
+      const entries = keys.map((k) => `        (${rustStr(k)}, ${messageSource(l.file, k, l.messages.get(k))}),`).join("\n");
+      return `    Locale::new(${rustStr(l.name)}, &[
 ${entries}
-        ],
-    },`;
+    ]),`;
     })
     .join("\n");
   return `${header(setup.dir.replace(/\/?$/, "/"), "the locale files")}
@@ -153,26 +151,26 @@ function translate(s: Scope, args: N[], n: N): Val {
   if (args.length < 1 || args.length > 3) fail(s.comp, "FV1408", "`t()` takes a key, then named values, a list or a plural number", n);
   const key = expr(s, args[0]);
   if (key.ty.k !== "str") fail(s.comp, "FV1409", "the key given to `t()` is a string", args[0]);
-  let named = "&[]";
-  let list = "&[]";
-  let plural = "None";
+  let named = "";
+  let list = "";
+  let plural = "";
   for (const a of args.slice(1)) {
     if (a.type === "ObjectExpression") {
       const pairs = a.properties.map((p: N) => {
         if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "FV1410", "named values hold plain keys", p);
         return `(${rustStr(String(p.key.name ?? p.key.value))}, ${i18nValue(s, p.value)})`;
       });
-      named = `&[${pairs.join(", ")}]`;
+      named = `.with_named(&[${pairs.join(", ")}])`;
     } else if (a.type === "ArrayExpression") {
-      list = `&[${a.elements.map((el: N) => i18nValue(s, el)).join(", ")}]`;
+      list = `.with_list(&[${a.elements.map((el: N) => i18nValue(s, el)).join(", ")}])`;
     } else {
       const v = expr(s, a);
       if (v.ty.k === "str") fail(s.comp, "FV1411", "a default message given to `t()` is not supported: add the message to the locale files", a);
       if (v.ty.k !== "int") fail(s.comp, "FV1412", "the plural number given to `t()` is an integer", a);
-      plural = `Some(${bare(v.code)})`;
+      plural = `.with_plural(${bare(v.code)})`;
     }
   }
-  return { code: `&*fv_i18n.t(${strArg(key.code)}, &fv::i18n::Args { named: ${named}, list: ${list}, plural: ${plural} })`, ty: STR };
+  return { code: `&*fv_i18n.t(${strArg(key.code)}, &fv::i18n::Args::new()${named}${list}${plural})`, ty: STR };
 }
 
 export const i18n: Plugin<I18nRun, I18nScope> = {
