@@ -2,5 +2,13 @@
   "toolchain": "1.99.0",
   "target": "x86_64-unknown-linux-musl",
   "budget": 5,
-  "instructions": null
+  "instructions": {
+    "small": 16079,
+    "list": 1018862,
+    "tree": 127710,
+    "page": 67189,
+    "attrs_into": 9483,
+    "push_number": 8772,
+    "head": 149358
+  }
 }
