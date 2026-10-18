@@ -5,6 +5,12 @@ released together and share version numbers.
 
 ## [Unreleased]
 
+### Changed
+
+- CI only, with no change to the crates or the npm package: CI installs Rust with
+  `dtolnay/rust-toolchain` at its current `master` commit, which zizmor checks the pin's comment
+  against.
+
 ## [0.7.2] - 2026-10-11
 
 ### Added
