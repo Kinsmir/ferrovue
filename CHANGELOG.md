@@ -9,9 +9,9 @@ released together and share version numbers.
 
 - **Breaking:** `ferrovue::HeadHtml` and `ferrovue::Link` (`ferrovue_router::Link`) are
   `#[non_exhaustive]`, so a later release can add a field. Their fields stay public to read. Code
-  outside the crates no longer builds either with a struct literal and destructures one with `..`:
-  start from `HeadHtml::default()` and set its fields, and take a `Link` from `Route::link`,
-  `link_named` or `link_path`.
+  outside the crates can no longer build either with a struct literal, and a pattern that
+  destructures one ends in `..`. Start from `HeadHtml::default()` and set its fields, and take a
+  `Link` from `Route::link`, `link_named` or `link_path`.
 - **Breaking:** the runtime functions only generated code calls are `#[doc(hidden)]`, outside the
   API `cargo-semver-checks` holds to semver: `js_length`, `js_trim`, `js_trim_start`,
   `js_trim_end`, `js_slice`, `js_substring`, `js_at`, `js_char_at`, `js_index_of`,
