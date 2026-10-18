@@ -23,7 +23,7 @@ ferrovue = { path = "crates/ferrovue", version = "=0.7.2" }
 ferrovue-core = { path = "crates/ferrovue-core", version = "=0.7.2" }
 ferrovue-i18n = { path = "crates/ferrovue-i18n", version = "=0.7.2" }
 ferrovue-router = { path = "crates/ferrovue-router", version = "=0.7.2" }
-actix-web = { version = "4.15.0", default-features = false }
+actix-web = { version = "4.17.0", default-features = false }
 ammonia = "4.2.4"
 axum = { version = "0.8.9", default-features = false }
 axum-core = "0.5.6"
@@ -35,10 +35,10 @@ dioxus-ssr = { version = "0.7.10", default-features = false }
 futures-core = { version = "0.3.34", default-features = false }
 http = "1.5.0"
 maud = "0.27.0"
-proptest = "1"
+proptest = "1.12.0"
 serde = { version = "1.0.229", features = ["derive"] }
-serde_json = "1.0.151"
-tokio = "1.53.2"
+serde_json = "1.0.154"
+tokio = "1.53.3"
 tower-http = "0.7.1"
 trybuild = "1.0.122"
 
