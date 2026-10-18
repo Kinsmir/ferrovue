@@ -81,7 +81,7 @@ Generated code calls the `ferrovue` crate, so the two must come from compatible 
 the `allow`, `mod.rs` names the version of generated code its compiler writes:
 
 ```rust
-ferrovue::__compat!(1);
+ferrovue::__compat!(2);
 ```
 
 The version is a number that changes only when generated code changes in a way the crate must
