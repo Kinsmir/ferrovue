@@ -5,16 +5,31 @@ released together and share version numbers.
 
 ## [Unreleased]
 
-### Security
-
-- The `ammonia` feature requires ammonia 4.2.4, which fixes RUSTSEC-2021-0157 and RUSTSEC-2026-0373
-  (CSS `url()` escaped and matched wrongly in a `style` attribute) and RUSTSEC-2021-0158 (XSS
-  through SVG `animateMotion`, `animateTransform` and `animateColor`). `Sanitised::new` cleans
-  with ammonia's default policy, which allows no `style` attribute and no SVG; a `Sanitised::with`
-  policy that allows either was exposed with ammonia 4.2.1 to 4.2.3.
-
 ### Changed
 
+- **Breaking:** `ferrovue::HeadHtml` and `ferrovue::Link` (`ferrovue_router::Link`) are
+  `#[non_exhaustive]`, so a later release can add a field. Their fields stay public to read. Code
+  outside the crates no longer builds either with a struct literal and destructures one with `..`:
+  start from `HeadHtml::default()` and set its fields, and take a `Link` from `Route::link`,
+  `link_named` or `link_path`.
+- **Breaking:** the runtime functions only generated code calls are `#[doc(hidden)]`, outside the
+  API `cargo-semver-checks` holds to semver: `js_length`, `js_trim`, `js_trim_start`,
+  `js_trim_end`, `js_slice`, `js_substring`, `js_at`, `js_char_at`, `js_index_of`,
+  `js_last_index_of`, `js_split`, `js_replace`, `js_replace_all`, `js_pad_start`, `js_pad_end`,
+  `js_repeat`, `js_cmp`, `js_json_string`, `js_json_number`, `js_number`, `js_parse_int`,
+  `js_parse_float`, `js_slice_range`, `js_slice_items`, `class_into`, `class_object`,
+  `class_names`, `style_text_into`, `merge_props`, `scope_attrs`, `slot_into_slotted`,
+  `scoped_slot_into`, `scoped_slot_into_slotted`, `teleport_into` and `trusted_into`. Each keeps its
+  path and signature in this release, so code that calls one still compiles; from now on a release
+  may change one along with the version of generated code that `__compat!` checks. An application
+  that calls one of them itself (a test holding its own helper to JavaScript's `trim`, say) keeps
+  its own copy, or asks for the function to be made public again. What an application calls or
+  implements stays documented: the numbers of `ferrovue-core`, `slot_into`, `attrs_into`,
+  `passed_attrs_into`, `query_into`, and every type. CONTRIBUTING.md's new "The crates' contract"
+  section sets out the rules.
+- `Slot::new`, `Part::new`, `Page::slot`, `PageRecord::script`, `HeadValue::object`,
+  `Chunks::for_islands` and `Chunks::for_source` are `#[must_use]`: a call whose result is dropped
+  warns.
 - The npm package compiles with `@vue/compiler-sfc` 3.5.44, and the conformance fixtures are
   recorded from Vue 3.5.44, vue-router 5.4.0, Pinia 4.1.0, vue-i18n 11.4.15 and `@unhead/vue`
   3.4.3, which render every fixture as the previous versions did. The peer ranges follow them:
@@ -47,6 +62,22 @@ released together and share version numbers.
   Each closes a gap the mutation run found; `.cargo/mutants-equivalent.txt` gives the reason for
   five more survivors that cannot change what the code returns, and no longer lists `plural_choice`
   with its `-` deleted, which a unit test catches.
+
+### Removed
+
+- **Breaking:** `ferrovue::ammonia`, the `ammonia` feature's re-export of the ammonia crate. A
+  `Sanitised::with` policy of your own takes `ammonia` 4 as a dependency of your own crate
+  (`ammonia = "4"`, which Cargo resolves to the release ferrovue uses), and names it
+  `ammonia::Builder` in place of `ferrovue::ammonia::Builder`. The crates re-export no other
+  third-party crate.
+
+### Security
+
+- The `ammonia` feature requires ammonia 4.2.4, which fixes RUSTSEC-2021-0157 and RUSTSEC-2026-0373
+  (CSS `url()` escaped and matched wrongly in a `style` attribute) and RUSTSEC-2021-0158 (XSS
+  through SVG `animateMotion`, `animateTransform` and `animateColor`). `Sanitised::new` cleans
+  with ammonia's default policy, which allows no `style` attribute and no SVG; a `Sanitised::with`
+  policy that allows either was exposed with ammonia 4.2.1 to 4.2.3.
 
 ## [0.7.2] - 2026-10-11
 

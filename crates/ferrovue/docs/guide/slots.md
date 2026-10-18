@@ -334,14 +334,14 @@ content from a template uses a variant of [`Slot`](crate::Slot) that reports whe
 anything but comments, so that a `<template #head><b v-if="show">…</b></template>` that renders
 only `<!---->` gives way to the fallback as it does in Vue. A slot forwarded through several
 components keeps that answer. [`slot_into`](crate::slot_into) and
-[`scoped_slot_into`](crate::scoped_slot_into) are the functions the outlet calls.
+`scoped_slot_into` are the functions the outlet calls.
 
 # Components with `:slotted()` styles
 
 A component whose `<style scoped>` uses `:slotted()` passes a slot scope id, `data-v-…-s`, to the
 content of each of its slots, which writes it onto its elements. Its outlets call
-[`slot_into_slotted`](crate::slot_into_slotted) and
-[`scoped_slot_into_slotted`](crate::scoped_slot_into_slotted) instead, and generated parents fill its
+`slot_into_slotted` and
+`scoped_slot_into_slotted` instead, and generated parents fill its
 plain slots with `Slot::slotted`, content that is given the id.
 
 From Rust nothing changes for a plain slot: [`Slot::new`](crate::Slot::new) content is not given the

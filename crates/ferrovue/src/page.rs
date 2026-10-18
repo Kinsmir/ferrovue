@@ -150,6 +150,7 @@ impl Page {
     /// # Panics
     ///
     /// If the page already has a slot called `slot`.
+    #[must_use]
     pub fn slot<'p>(
         &mut self,
         slot: &str,
@@ -212,6 +213,7 @@ impl Page {
 
 impl<'p> Part<'p> {
     /// The component called `name`, as `html` writes it.
+    #[must_use]
     pub fn new<P: Serialize + 'p, F: Fn(&mut String, &P) + 'p>(
         name: &'static str,
         html: Html<'p, P, F>,
@@ -316,6 +318,7 @@ impl PageRecord {
     /// The record's `<script>`, ready once every hole of the page is filled or dropped. Leave a
     /// [`hole`](crate::hole) for it after the app's container and give it to the
     /// `HtmlStream` (the `stream` feature) after the futures of the page's holes.
+    #[must_use]
     pub fn script(self, id: impl Into<String>) -> PageScript {
         PageScript {
             record: self.record,

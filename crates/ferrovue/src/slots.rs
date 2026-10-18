@@ -56,6 +56,7 @@ impl<'s> Slot<'s> {
     /// slot_into(&mut out, Some(Slot::new(&nothing)), Some(&mut |out: &mut String| out.push_str("fallback")));
     /// assert_eq!(out, "<!--[--><!--]-->");
     /// ```
+    #[must_use]
     pub fn new(render: &'s dyn Fn(&mut String)) -> Self {
         Slot {
             body: Body::Content(render),

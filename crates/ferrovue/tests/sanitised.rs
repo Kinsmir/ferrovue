@@ -11,7 +11,7 @@ use generated::review;
 use proptest::prelude::*;
 
 fn as_parsed(html: &str) -> String {
-    let mut policy = ferrovue::ammonia::Builder::empty();
+    let mut policy = ammonia::Builder::empty();
     policy.add_tags(BasicHtml::TAGS);
     policy.clean(html).to_string()
 }

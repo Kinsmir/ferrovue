@@ -29,7 +29,7 @@ use crate::TrustedHtml;
 /// assert_eq!(out, body.as_str());
 /// assert_eq!(serde_json::to_string(&body).unwrap(), r#""<p>Hi <a rel=\"noopener noreferrer\">you</a></p>""#);
 ///
-/// let mut policy = ferrovue::ammonia::Builder::empty();
+/// let mut policy = ammonia::Builder::empty();
 /// policy.add_tags(["em"]);
 /// assert_eq!(Sanitised::with(&policy, "<p><em>only</em> this</p>").as_str(), "<em>only</em> this");
 /// ```

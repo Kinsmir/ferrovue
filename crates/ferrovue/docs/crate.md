@@ -221,18 +221,23 @@ through its generated code and compare the bytes with the HTML recorded from Vue
 ([`guide::testing`](crate::guide::testing)).
 
 The rest are Rust twins of JavaScript and Vue routines that generated code calls so that it writes
-what Vue writes:
+what Vue writes. Those a hand-written twin or page may call too are documented here:
 
-- numbers: [`push_int`], [`push_number`], [`Js`], [`js_to_fixed`], [`js_round`], [`js_max`],
-  [`js_min`], [`js_number`], [`js_parse_int`], [`js_parse_float`], [`js_json_number`];
-- strings, counted in UTF-16 code units: [`js_length`], [`js_trim`], [`js_trim_start`],
-  [`js_trim_end`], [`js_slice`], [`js_substring`], [`js_at`], [`js_char_at`], [`js_index_of`],
-  [`js_last_index_of`], [`js_split`], [`js_replace`], [`js_replace_all`], [`js_pad_start`],
-  [`js_pad_end`], [`js_repeat`], [`js_cmp`], [`js_json_string`];
-- lists: [`js_slice_range`], [`js_slice_items`];
-- Vue's own: [`class_into`], [`class_object`], [`slot_into`], [`slot_into_slotted`],
-  [`scoped_slot_into`], [`scoped_slot_into_slotted`], [`scope_attrs`], [`teleport_into`],
-  [`trusted_into`] and [`query_into`].
+- numbers: [`push_int`], [`push_number`], [`Js`], [`js_to_fixed`], [`js_round`], [`js_max`] and
+  [`js_min`];
+- Vue's own: [`slot_into`], [`attrs_into`], [`passed_attrs_into`] and [`query_into`].
+
+The others are `#[doc(hidden)]`: JavaScript's string methods counted in UTF-16 code units
+(`js_length`, `js_slice`, `js_split` and the rest the [`strings`](crate::guide::strings) page
+lists), `Number`, `parseInt`, `parseFloat` and `JSON.stringify` (`js_number`, `js_parse_int`,
+`js_parse_float`, `js_json_number`, `js_json_string`), a list's `slice` (`js_slice_range`,
+`js_slice_items`), and Vue's class, style, scope id, slot outlet, teleport and `v-html` helpers
+(`class_into`, `class_object`, `class_names`, `style_text_into`, `merge_props`, `scope_attrs`,
+`slot_into_slotted`, `scoped_slot_into`, `scoped_slot_into_slotted`, `teleport_into`,
+`trusted_into`). Only generated code calls them, so their signatures follow the version of
+generated code (the `__compat!` check at the top of a generated `mod.rs`) and may change in any
+release; the [`generated_code`](crate::guide::generated_code#what-is-stable) page says what is
+stable.
 
 # Feature flags
 
@@ -244,7 +249,7 @@ what Vue writes:
 | `stream` | off | `HtmlStream`: a page rendered with holes as a stream of byte chunks, each hole filled by a future |
 | `axum` | off | `stream`, and `IntoResponse` for `Html` and `HtmlStream`, so a handler returns `greeting::into_html(props)` ([`guide::web_frameworks`](crate::guide::web_frameworks)) |
 | `actix-web` | off | `stream`, and `Responder` for `Html` and `HtmlStream` |
-| `ammonia` | off | `Sanitised`, HTML cleaned by ammonia, to name as `trustedHtml` for `v-html` props, and the `ammonia` crate re-exported for a policy of your own ([`guide::escaping`](crate::guide::escaping)) |
+| `ammonia` | off | `Sanitised`, HTML cleaned by ammonia, to name as `trustedHtml` for `v-html` props ([`guide::escaping`](crate::guide::escaping) shows a policy of your own, with `ammonia` 4 as your own dependency) |
 | `dioxus` | off | The `dioxus` module: `Html::to_element` and `impl IntoDynNode for Html`, so `{greeting::island(&props)}` can go straight into Dioxus 0.7's `rsx!`, and `dioxus::state_script`; the guide's `dioxus` page shows a page |
 
 An application with neither routes nor translations can turn the default features off
