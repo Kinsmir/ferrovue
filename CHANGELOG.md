@@ -15,6 +15,17 @@ released together and share version numbers.
 
 ### Changed
 
+- The npm package compiles with `@vue/compiler-sfc` 3.5.44, and the conformance fixtures are
+  recorded from Vue 3.5.44, vue-router 5.4.0, Pinia 4.1.0, vue-i18n 11.4.15 and `@unhead/vue`
+  3.4.3, which render every fixture as the previous versions did. The peer ranges follow them:
+  `vue` `~3.5.44`, `vue-router` `~5.4.0` (was `~5.3.1`), `pinia` `~4.1.0` (was `~4.0.3`),
+  `vue-i18n` `~11.4.15` and `@unhead/vue` `~3.4.3`. The package depends on `postcss` `^8.5.30`
+  and `@intlify/message-compiler` 11.4.15.
+- `ferrovue` and `ferrovue-router` require `serde_json` 1.0.154, and `ferrovue`'s `actix-web`
+  feature actix-web 4.17.0. The repository develops and tests with tokio 1.53.3, proptest 1.12,
+  happy-dom 21, vitest 5.0.5, Playwright 1.64.1, oxlint 1.88 and fallow 3.34, and its `Cargo.lock`
+  and `pnpm-lock.yaml` take the latest patch and minor releases Rust 1.89 and pnpm's one-day
+  minimum release age allow.
 - CI only, with no change to the crates or the npm package: CI installs Rust with
   `dtolnay/rust-toolchain` at its current `master` commit, which zizmor checks the pin's comment
   against.

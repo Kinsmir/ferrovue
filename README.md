@@ -778,18 +778,18 @@ still build, run and agree on the HTML. It never compares their timings.
 ## Versions
 
 Byte-identical output depends on Vue's own SSR compiler, so ferrovue compiles with an exact
-`@vue/compiler-sfc` (currently 3.5.43), and its conformance fixtures are recorded from one version
+`@vue/compiler-sfc` (currently 3.5.44), and its conformance fixtures are recorded from one version
 of Vue and of each integration. Your project may use any later patch of the same minor:
 
 | Peer | Supported | Recorded from |
 |---|---|---|
-| `vue` | `~3.5.43` (3.5.43 and later 3.5 patches) | 3.5.43 |
-| `vue-router` (optional) | `~5.3.1` | 5.3.1 |
-| `pinia` (optional) | `~4.0.3` | 4.0.3 |
-| `vue-i18n` (optional) | `~11.4.13` | 11.4.13 |
-| `@unhead/vue` (optional) | `~3.4.2` | 3.4.2 |
+| `vue` | `~3.5.44` (3.5.44 and later 3.5 patches) | 3.5.44 |
+| `vue-router` (optional) | `~5.4.0` | 5.4.0 |
+| `pinia` (optional) | `~4.1.0` | 4.1.0 |
+| `vue-i18n` (optional) | `~11.4.15` | 11.4.15 |
+| `@unhead/vue` (optional) | `~3.4.3` | 3.4.3 |
 
-A new minor of any of them (Vue 3.6, vue-router 5.4, …) needs a ferrovue release that re-records
+A new minor of any of them (Vue 3.6, vue-router 5.5, …) needs a ferrovue release that re-records
 the fixtures from it. A weekly CI job re-records them from the newest patch each range allows and
 hydrates the committed HTML with it, so a patch that changes what Vue writes or hydrates is caught
 before it reaches you; a ferrovue patch follows when one does.

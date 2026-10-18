@@ -275,7 +275,7 @@ Use the same version of the npm package and of this crate: generated code is wri
 runtime of its own release. Byte-identical output also depends on Vue's own SSR compiler, so the
 npm package compiles with an exact `@vue/compiler-sfc`, and its fixtures are recorded from one
 version of Vue and of each integration. Your client may use any later patch of the same minor
-(`vue` `~3.5.43`); the repository's README lists the range of every peer.
+(`vue` `~3.5.44`); the repository's README lists the range of every peer.
 
 # Links
 
