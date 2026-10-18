@@ -9,7 +9,7 @@
 // it needs.
 #![allow(dead_code)]
 
-ferrovue::__compat!(2);
+ferrovue::__compat!(3);
 
 pub mod account_nav;
 pub mod app;
@@ -44,6 +44,8 @@ pub mod css_vars_wait;
 pub mod dashboard;
 pub mod data_list;
 pub mod data_table;
+pub mod date_post;
+pub mod date_stamp;
 pub mod dates;
 pub mod defaults;
 pub mod deferred;
@@ -412,6 +414,14 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "DataTable" => {
             let props: data_table::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             data_table::render(&mut out, &props);
+        }
+        "DatePost" => {
+            let props: date_post::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            date_post::render(&mut out, &props);
+        }
+        "DateStamp" => {
+            let props: date_stamp::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            date_stamp::render(&mut out, &props);
         }
         "Dates" => {
             let props: dates::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

@@ -10,7 +10,7 @@ documentation = "https://docs.rs/ferrovue"
 readme = "README.md"
 keywords = ["vue", "ssr", "html", "templates", "hydration"]
 categories = ["template-engine", "web-programming"]
-exclude = ["/benches/expected/", "/benches/instructions.json", "/tests/conformance/", "/tests/literal_props/", "/tests/tsconfig.json", "/tests/vectors/"]
+exclude = ["/benches/expected/", "/benches/instructions.json", "/tests/chrono_dates/", "/tests/conformance/", "/tests/literal_props/", "/tests/own_dates/", "/tests/tsconfig.json", "/tests/vectors/"]
 
 [features]
 default = ["router", "i18n"]
@@ -22,6 +22,7 @@ axum = ["stream", "dep:axum-core", "dep:http"]
 actix-web = ["stream", "dep:actix-web"]
 dioxus = ["dep:dioxus-core"]
 ammonia = ["dep:ammonia"]
+chrono = ["dep:chrono"]
 
 [dependencies]
 ferrovue-core.workspace = true
@@ -31,6 +32,7 @@ actix-web = { workspace = true, optional = true }
 ammonia = { workspace = true, optional = true }
 axum-core = { workspace = true, optional = true }
 bytes = { workspace = true, optional = true }
+chrono = { workspace = true, optional = true }
 dioxus-core = { workspace = true, optional = true }
 futures-core = { workspace = true, optional = true }
 http = { workspace = true, optional = true }
@@ -64,6 +66,10 @@ required-features = ["router", "i18n"]
 [[test]]
 name = "sanitised"
 required-features = ["ammonia"]
+
+[[test]]
+name = "chrono_dates"
+required-features = ["chrono"]
 
 [package.metadata.docs.rs]
 all-features = true

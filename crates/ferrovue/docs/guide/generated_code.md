@@ -81,7 +81,7 @@ Generated code calls the `ferrovue` crate, so the two must come from compatible 
 the `allow`, `mod.rs` names the version of generated code its compiler writes:
 
 ```rust
-ferrovue::__compat!(2);
+ferrovue::__compat!(3);
 ```
 
 The version is a number that changes only when generated code changes in a way the crate must
@@ -90,10 +90,10 @@ supporting something older generated code calls. Each crate accepts the versions
 stops the build at this line for any other, before the compiler reports anything else:
 
 ```text
-error: this module was generated as version 2 of ferrovue's generated code, and this `ferrovue` crate supports version 1: use the `ferrovue` npm package and the `ferrovue` crate of one release, and run `ferrovue` to generate the module again
+error: this module was generated as version 3 of ferrovue's generated code, and this `ferrovue` crate supports version 2: use the `ferrovue` npm package and the `ferrovue` crate of one release, and run `ferrovue` to generate the module again
  --> src/generated/mod.rs:12:1
    |
-12 | ferrovue::__compat!(2);
+12 | ferrovue::__compat!(3);
    | ^^^^^^^^^^^^^^^^^^^^^^
 ```
 
@@ -101,7 +101,10 @@ A newer crate stops an older module the same way once it no longer supports what
 The 0.8 crate supports version 2 alone: modules of version 1, from 0.7, build
 [`RouteDef`](crate::RouteDef), [`Locale`](crate::i18n::Locale), [`Message`](crate::i18n::Message)
 and [`Args`](crate::i18n::Args) with struct literals, and these types are `#[non_exhaustive]` from
-0.8 on, so version 2 builds them with their `const` constructors and `with_` methods.
+0.8 on, so version 2 builds them with their `const` constructors and `with_` methods. Version 3
+adds `Date` props, which generated code reads through [`JsTime`](crate::JsTime), hands to a child
+and writes into `data-props` with helpers the 0.8 crate lacks; the crate after 0.8 supports
+versions 2 and 3, since a module of version 2 calls nothing it changed.
 
 `__compat!` itself is `#[doc(hidden)]` and may change form in any release; the check at the top of
 `mod.rs` stays.

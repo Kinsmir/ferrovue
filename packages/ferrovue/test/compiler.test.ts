@@ -263,6 +263,34 @@ defineProps<{ note?: string }>();
     });
   });
 
+  describe("chrono::DateTime<chrono::Utc>", () => {
+    it("is what the Rust test of chrono Date props compiles, from the conformance suite's components", () => {
+      const root = join(import.meta.dirname, "../../../crates/ferrovue/tests/chrono_dates");
+      const config = loadConfig(root);
+      expect(config.dateType).toBe("chrono::DateTime<chrono::Utc>");
+      for (const name of readdirSync(join(root, config.components))) {
+        expect(readFileSync(join(root, config.components, name), "utf8"), name).toBe(readFileSync(join(root, "../conformance/components", name), "utf8"));
+      }
+      const out = generate(root, config);
+      expect([...out.keys()].toSorted()).toEqual(readdirSync(join(root, config.out)).toSorted());
+      for (const [name, text] of out) expect(readFileSync(join(root, config.out, name), "utf8"), name).toBe(text);
+    });
+  });
+
+  describe("a dateType of the project's own", () => {
+    it("is what the Rust test of clipped time values compiles, from the conformance suite's component", () => {
+      const root = join(import.meta.dirname, "../../../crates/ferrovue/tests/own_dates");
+      const config = loadConfig(root);
+      expect(config.dateType).toBe("crate::Loose");
+      for (const name of readdirSync(join(root, config.components))) {
+        expect(readFileSync(join(root, config.components, name), "utf8"), name).toBe(readFileSync(join(root, "../conformance/components", name), "utf8"));
+      }
+      const out = generate(root, config);
+      expect([...out.keys()].toSorted()).toEqual(readdirSync(join(root, config.out)).toSorted());
+      for (const [name, text] of out) expect(readFileSync(join(root, config.out, name), "utf8"), name).toBe(text);
+    });
+  });
+
   describe("strings, computed lists and dictionaries", () => {
     it("counts a string's code units, and orders strings by them, through the runtime", () => {
       const out = compile(
@@ -1440,7 +1468,7 @@ watchEffect(() => {});
 <template><i></i></template>`)).toBe("components/X.vue:4:1");
       expect(where(`<script setup lang="ts">
 defineProps<{
-  when: Date;
+  when: Map<string, string>;
 }>();
 </script>
 <template><i></i></template>`)).toBe("components/X.vue:3:9");
@@ -1559,6 +1587,93 @@ ${script}
       expect(out).toContain("fv::push_number(out, fv::js_date_parse(&props.at));");
       expect(out).toContain("fv::push_number(out, 1705312800000.0f64);");
       expect(out).toContain("if !(*s_d).is_nan() {");
+    });
+
+    const posted = `<script setup lang="ts">
+import { computed } from "vue";
+import Stamp from "./Stamp.vue";
+const props = defineProps<{ posted: Date; edited?: Date; deleted: Date | null }>();
+const year = computed(() => props.posted.getUTCFullYear());
+</script>
+<template><p><time :datetime="posted.toISOString()">{{ year }}</time><b v-if="edited">{{ edited.getTime() }}</b><Stamp :at="posted" :maybe="deleted" :later="edited" :made="new Date(year)" /></p></template>`;
+    const stamp = `<script setup lang="ts">
+defineProps<{ at: Date; maybe: Date | null; later?: Date; made: Date }>();
+</script>
+<template><i>{{ at.getTime() }}</i></template>`;
+
+    it("gives a Date prop the Rust type dateType names, read through JsTime and written into data-props as JsDate writes it", () => {
+      const out = compile(island(posted, { Stamp: stamp }));
+      const x = out.get("x.rs")!;
+      expect(x).toContain('    #[serde(rename = "posted", with = "fv::date_prop")]\n    pub posted: ferrovue::JsDate,');
+      expect(x).toContain('    #[serde(rename = "edited", default, skip_serializing_if = "Option::is_none", with = "fv::opt_date_prop")]\n    pub edited: Option<ferrovue::JsDate>,');
+      expect(x).toContain('    #[serde(rename = "deleted", default, with = "fv::opt_date_prop")]\n    pub deleted: Option<ferrovue::JsDate>,');
+      expect(x).toContain("pub fn new(posted: ferrovue::JsDate) -> Self {");
+      expect(x).toContain("pub fn edited(mut self, edited: ferrovue::JsDate) -> Self {");
+      expect(x).toContain("let s_year = fv::js_utc_full_year(fv::js_time_of(&props.posted));");
+      expect(x).toContain("fv::escape_into(out, &fv::js_to_iso_string(fv::js_time_of(&props.posted)));");
+      expect(x).toContain("if let Some(n1) = props.edited.as_ref().map(fv::js_time_of) {");
+      expect(x).toContain(
+        "&super::stamp::Props { at: fv::js_date_prop(fv::js_time_of(&props.posted)), maybe: props.deleted.as_ref().map(fv::js_time_of).map(fv::js_date_prop), later: props.edited.as_ref().map(fv::js_time_of).map(fv::js_date_prop), made: fv::js_date_prop(fv::js_time_clip(s_year)) }",
+      );
+      const chrono = generate(island(posted, { Stamp: stamp }), { ...CONFIG, dateType: "chrono::DateTime<chrono::Utc>" });
+      expect(chrono.get("x.rs")).toContain('    #[serde(rename = "posted", with = "fv::date_prop")]\n    pub posted: chrono::DateTime<chrono::Utc>,');
+      expect(chrono.get("stamp.rs")).toContain("    pub later: Option<chrono::DateTime<chrono::Utc>>,");
+      expect(chrono.get("x.rs")!.replaceAll("chrono::DateTime<chrono::Utc>", "ferrovue::JsDate")).toBe(x);
+    });
+
+    it("gives a Date prop of a props interface the same Rust type", () => {
+      const out = compile(island(`<script setup lang="ts">
+interface Props { posted: Date; label: string }
+const props = defineProps<Props>();
+</script>
+<template><p>{{ props.posted.getUTCDate() }}{{ label }}</p></template>`)).get("x.rs")!;
+      expect(out).toContain("    pub posted: ferrovue::JsDate,");
+      expect(out).toContain("fv::push_number(out, fv::js_utc_date(fv::js_time_of(&props.posted)));");
+    });
+
+    it("refuses a Date anywhere but a component's own prop, which the client could not revive", () => {
+      const refusal = /FV1806|only a component's own prop may be a `Date`, which the client turns back into one from the prop's declared type/;
+      const props = (decl: string, extra = "") => `<script setup lang="ts">
+${extra}
+const props = defineProps<${decl}>();
+</script>
+<template><i></i></template>`;
+      for (const source of [
+        props("{ days: Date[] }"),
+        props("{ days: Array<Date | null> }"),
+        props("{ byName: Record<string, Date> }"),
+        props("{ row: Row }", "interface Row { at: Date }"),
+        props("{ self: Props; at: Date }", "interface Props { at: Date; self?: Props }"),
+      ]) {
+        expect(() => compile(island(source)), source).toThrow(refusal);
+      }
+      const nested = island(props("{ cards: CardProps[] }", 'import type { Props as CardProps } from "./Card.vue";'), { Card: stamp });
+      expect(() => compile(nested)).toThrow(/`cards` holds a `Date` inside a list or an object: only a component's own prop may be a `Date`/);
+      const typed = `<script setup lang="ts">
+import { ref } from "vue";
+const at = ref<Date[]>([]);
+</script>
+<template><i>{{ at.length }}</i></template>`;
+      expect(() => compile(island(typed))).toThrow(refusal);
+      const model = `<script setup lang="ts">
+const at = defineModel<Date>({ required: true });
+</script>
+<template><i>{{ at.getTime() }}</i></template>`;
+      expect(() => compile(island(model))).toThrow(refusal);
+    });
+
+    it("refuses a Date prop interpolated, bound to an attribute, given a default or handed to a prop of another type", () => {
+      const props = (template: string, script = "") => `<script setup lang="ts">
+import Stamp from "./Stamp.vue";
+const props = ${script || "defineProps<{ at: Date; maybe?: Date; label: string }>()"};
+</script>
+<template><p>${template}<Stamp :at="at" :maybe="null" :made="at" /></p></template>`;
+      expect(() => compile(island(props("{{ at }}"), { Stamp: stamp }))).toThrow(/`\{\{ \}\}` of a `Date`/);
+      expect(() => compile(island(props('<b :title="at"></b>'), { Stamp: stamp }))).toThrow(/a `Date`/);
+      expect(() => compile(island(props("{{ maybe }}"), { Stamp: stamp }))).toThrow(/`\{\{ \}\}` of a `Date`/);
+      expect(() => compile(island(props("", "withDefaults(defineProps<{ at: Date; maybe?: Date }>(), { maybe: () => new Date(0) })"), { Stamp: stamp }))).toThrow(/the default of `maybe` must be a literal of its type/);
+      const wrong = props("").replace(':made="at"', ':made="label"');
+      expect(() => compile(island(wrong, { Stamp: stamp }))).toThrow(/FV0511|into a/);
     });
 
     it("refuses where a setup binding reads the current time or formats by locale", () => {
@@ -2522,10 +2637,10 @@ const props = defineProps<{ n: number }>();
     [
       "a prop type with no Rust twin",
       `<script setup lang="ts">
-const props = defineProps<{ when: Date }>();
+const props = defineProps<{ when: Map<string, string> }>();
 </script>
 <template><i></i></template>`,
-      /unsupported prop type `Date`/,
+      /unsupported prop type `Map`/,
     ],
     [
       "a component written with the Options API",

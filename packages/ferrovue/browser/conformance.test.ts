@@ -77,6 +77,23 @@ async function describeMessage(m: ConsoleMessage): Promise<string> {
 
 const pages = new Map(cases.map((c) => [`/${c.component}/${c.name}`, pageFor(c)]));
 
+const ZONES = ["Pacific/Kiritimati", "America/St_Johns", "Asia/Kathmandu"];
+const DATED = cases.filter((c) => c.component === "DatePost" || c.component === "DateStamp");
+
+async function serve(page: Page, logged: (message: Promise<string>) => void): Promise<void> {
+  page.on("console", (m) => {
+    if (!m.location().url.startsWith(ORIGIN)) return;
+    if (m.type() === "error" || (m.type() === "warning" && /hydrat|mismatch/i.test(m.text()))) logged(describeMessage(m));
+  });
+  page.on("pageerror", (e) => logged(Promise.resolve(`uncaught: ${e.message}`)));
+  await page.route(`${ORIGIN}/**`, (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === "/entry.js") return route.fulfill({ contentType: "text/javascript", body: bundle });
+    const html = pages.get(decodeURIComponent(path));
+    return html === undefined ? route.fulfill({ status: 204 }) : route.fulfill({ contentType: "text/html; charset=utf-8", body: html });
+  });
+}
+
 describe.each(BROWSERS)("%s", (name) => {
   let browser: Browser | undefined;
   let page: Page;
@@ -90,17 +107,7 @@ describe.each(BROWSERS)("%s", (name) => {
       return;
     }
     page = await browser.newPage();
-    page.on("console", (m) => {
-      if (!m.location().url.startsWith(ORIGIN)) return;
-      if (m.type() === "error" || (m.type() === "warning" && /hydrat|mismatch/i.test(m.text()))) messages.push(describeMessage(m));
-    });
-    page.on("pageerror", (e) => void messages.push(Promise.resolve(`uncaught: ${e.message}`)));
-    await page.route(`${ORIGIN}/**`, (route) => {
-      const path = new URL(route.request().url()).pathname;
-      if (path === "/entry.js") return route.fulfill({ contentType: "text/javascript", body: bundle });
-      const html = pages.get(decodeURIComponent(path));
-      return html === undefined ? route.fulfill({ status: 204 }) : route.fulfill({ contentType: "text/html; charset=utf-8", body: html });
-    });
+    await serve(page, (m) => void messages.push(m));
   });
   afterAll(async () => {
     await browser?.close();
@@ -130,6 +137,29 @@ describe.each(BROWSERS)("%s", (name) => {
       const rewrites = UNHEAD_REWRITES.has(`${c.component}/${c.name}`);
       expect(rewrites ? "" : result.head.after, "unhead's client took over the head as the browser parsed it").toBe(rewrites ? "" : result.head.before);
       expect(result.head.after !== result.head.before, "a head is rewritten exactly when its fixture is in UNHEAD_REWRITES").toBe(rewrites);
+    });
+  }
+
+  for (const zone of ZONES) {
+    it(`hydrates every fixture with a Date prop in ${zone} as it was recorded`, async ({ skip }) => {
+      if (!browser) skip();
+      expect(DATED.length).toBeGreaterThanOrEqual(9);
+      const context = await browser!.newContext({ timezoneId: zone });
+      const zoned = await context.newPage();
+      const logged: Promise<string>[] = [];
+      await serve(zoned, (m) => void logged.push(m));
+      try {
+        expect(await zoned.evaluate(() => new Date(0).getTimezoneOffset())).not.toBe(0);
+        for (const c of DATED) {
+          await zoned.goto(`${ORIGIN}/${c.component}/${c.name}`);
+          const result = await zoned.evaluate(() => window.hydration!);
+          expect(await Promise.all(logged), `${c.component}/${c.name}`).toEqual([]);
+          expect(result.after, `${c.component}/${c.name}`).toBe(result.before);
+          expect(result.kept).toBe(true);
+        }
+      } finally {
+        await context.close();
+      }
     });
   }
 });

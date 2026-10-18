@@ -300,6 +300,11 @@ export function ownInto(comp: Component, v: Val, want: Ty, node: N): string {
     if (v.ty.k === "str") return `Some(std::borrow::Cow::Borrowed(${bare(v.code)}))`;
     if (v.ty.k === "opt" && v.ty.of.k === "str") return `${atom(v.code)}.map(std::borrow::Cow::Borrowed)`;
   }
+  if (want.k === "date" && v.ty.k === "date") return `fv::js_date_prop(${bare(v.code)})`;
+  if (want.k === "opt" && want.of.k === "date") {
+    if (v.ty.k === "date") return `Some(fv::js_date_prop(${bare(v.code)}))`;
+    if (v.ty.k === "opt" && v.ty.of.k === "date") return `${atom(v.code)}.map(fv::js_date_prop)`;
+  }
   if (sameTy(v.ty, want) && (want.k === "int" || want.k === "float" || want.k === "bool")) return v.code;
   if (want.k === "opt" && sameTy(v.ty, want.of) && (v.ty.k === "int" || v.ty.k === "float" || v.ty.k === "bool")) return `Some(${bare(v.code)})`;
   if (want.k === "float" && v.ty.k === "int") return asF64(v);

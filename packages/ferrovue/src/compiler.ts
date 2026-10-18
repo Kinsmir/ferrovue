@@ -1,7 +1,7 @@
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { relativePath } from "./paths.ts";
-import { type Config, ctx, loadConfig, tyOfName } from "./context.ts";
+import { type Config, ctx, JS_DATE, loadConfig, tyOfName } from "./context.ts";
 import { failIn, snake } from "./model.ts";
 import { readComponent, refuseOptionsApi } from "./component.ts";
 import { listDir } from "./files.ts";
@@ -9,7 +9,7 @@ import { scopeFor } from "./script.ts";
 import { attrsFlow } from "./fallthrough.ts";
 import { prepareDynamic } from "./dynamic.ts";
 import { componentSource, GENERATED, isIsland, modSource } from "./rust.ts";
-import { requireWhole } from "./typescript.ts";
+import { refuseNestedDates, requireWhole } from "./typescript.ts";
 import { renderParams } from "./plugin.ts";
 import { PLUGINS } from "./plugins/index.ts";
 
@@ -20,6 +20,7 @@ export function generate(root: string, config: Config = loadConfig(root), source
   ctx.componentsDir = config.components.replace(/\/?$/, "/");
   ctx.helperModule = config.helpers?.module ?? null;
   ctx.trustedHtml = config.trustedHtml ?? null;
+  ctx.dateType = config.dateType ?? JS_DATE;
   ctx.builders = config.builders ?? true;
   ctx.clientDirectives = new Set(config.clientDirectives ?? []);
   ctx.rootDir = root;
@@ -69,6 +70,7 @@ export function generate(root: string, config: Config = loadConfig(root), source
   const components = new Map(read.map((r) => [r.comp.name, r.comp]));
   ctx.components = components;
   for (const c of components.values()) for (const f of c.props.fields) requireWhole(c, f.ty);
+  for (const c of components.values()) refuseNestedDates(c, c.props.fields, c.propsAt);
   const scopes = read.map((r) => scopeFor(r.comp, r.ast, components).scope);
   const analysed = prepareDynamic(read.map((r, i) => ({ ...r, scope: scopes[i]! })));
   const all = read.map((r, i) => ({ comp: r.comp, ssr: analysed[i]!, children: scopes[i]!.children, attrsBindings: scopes[i]!.attrsBindings }));

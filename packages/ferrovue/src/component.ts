@@ -190,9 +190,9 @@ export function readComponent(file: string, root: string, name = basename(file, 
   }
   if (!propsTy) {
   } else if (propsTy.type === "TSTypeLiteral") {
-    comp.props = structOf(comp, "Props", propsTy.members, comp.structs);
+    comp.props = structOf(comp, "Props", propsTy.members, comp.structs, false, true);
   } else if (propsTy.type === "TSTypeReference" && comp.structs.has(propsTy.typeName.name)) {
-    reachLocal(comp, propsTy.typeName.name);
+    reachLocal(comp, propsTy.typeName.name, true);
     const st = comp.structs.get(propsTy.typeName.name)!;
     const refused = st.refused?.values().next().value;
     if (refused !== undefined) throw refused;
@@ -220,6 +220,7 @@ export function readComponent(file: string, root: string, name = basename(file, 
     }
   }
 
+  comp.propsAt = propsTy;
   const defaults = runtimeDefaults(comp, script?.content ?? "");
   for (const f of comp.props.fields) {
     if (f.ty.k !== "opt") continue;

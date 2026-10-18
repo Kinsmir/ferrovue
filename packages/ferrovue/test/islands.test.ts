@@ -109,6 +109,40 @@ it("hydrates a nullable prop from the null the server wrote, which an absent pro
   expect(warnings.filter((w) => /hydrat|mismatch/i.test(w))).not.toEqual([]);
 });
 
+it("hydrates a Date prop from the ISO string or NaN the server wrote, as a Date", async () => {
+  const page = readFileSync(join(ROOT, "date-islands.html"), "utf8").trim();
+  attachSsrRender(join(ROOT, "components", "DatePost.vue"), "DatePost", components.DatePost!);
+  attachSsrRender(join(ROOT, "components", "DateStamp.vue"), "DateStamp", components.DateStamp!);
+  const islands = [...page.matchAll(/<div data-island="DatePost" data-props="([^"]*)">(.*?)<\/div>(?=<div data-island|$)/g)];
+  expect(islands).toHaveLength(3);
+  const dates = [
+    { posted: new Date("2024-03-10T08:05:09.007Z"), edited: new Date("+010000-01-01T00:00:00.000Z"), deleted: null },
+    { posted: new Date(Number.NaN), deleted: new Date(-1) },
+    { posted: new Date(-8.64e15), deleted: new Date(Number.NaN) },
+  ];
+  for (const [i, [, attr, html]] of islands.entries()) {
+    const props = JSON.parse(attr!.replace(/&quot;/g, '"').replace(/&amp;/g, "&").replace(/:NaN/g, ":null")) as Record<string, unknown>;
+    expect(await renderToString(createSSRApp(components.DatePost!, { ...props, ...dates[i] }))).toBe(html);
+  }
+
+  document.body.innerHTML = page;
+  const mounted = await mountIslands(components);
+  expect(mounted.apps).toHaveLength(3);
+  expect(warnings).toEqual([]);
+  const given = mounted.apps.map((app) => (app._instance?.props ?? {}) as Record<string, unknown>);
+  expect(given.map((p) => [p.posted instanceof Date, (p.posted as Date).getTime(), p.deleted instanceof Date ? p.deleted.getTime() : p.deleted])).toEqual([
+    [true, 1710057909007, null],
+    [true, Number.NaN, -1],
+    [true, -8.64e15, Number.NaN],
+  ]);
+  expect(given[0]!.edited).toEqual(new Date("+010000-01-01T00:00:00.000Z"));
+  mounted.unmount();
+
+  document.body.innerHTML = page.replace("&quot;posted&quot;:NaN", "&quot;posted&quot;:null");
+  (await mountIslands(components)).unmount();
+  expect(warnings.filter((w) => /Invalid prop|hydrat|mismatch/i.test(w))).not.toEqual([]);
+});
+
 it("leaves an island it cannot hydrate as the server rendered it, and says why", async () => {
   const text = fixture("Text", "full");
   document.body.innerHTML = `${island("Missing", {}, "<p>kept</p>")}<div data-island="Text" data-props="{not json">${text.html}</div>${island("Text", text.props, text.html)}`;

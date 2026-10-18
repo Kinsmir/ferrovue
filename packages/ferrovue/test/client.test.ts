@@ -1,7 +1,8 @@
 import { expect, it } from "vitest";
 import { createPinia } from "pinia";
-import { createApp, h, nextTick } from "vue";
-import { ClientOnly, hydrateState, readPage, type PageRecord } from "../src/client.ts";
+import { type Component, createApp, defineComponent, h, nextTick, type PropType } from "vue";
+import { renderToString } from "vue/server-renderer";
+import { ClientOnly, createPageApp, hydrateState, readPage, reviveDates, type PageRecord } from "../src/client.ts";
 
 it("hands Pinia the state the server escaped into the page", () => {
   document.body.innerHTML =
@@ -123,4 +124,45 @@ it("reads a record no end tag closes, and stops at text that never ends", () => 
   expect(() => readPage(`<textarea>${script("__fv_page", json(RECORD))}`)).toThrow(/no record/);
   expect(() => readPage(`<plaintext>${script("__fv_page", json(RECORD))}`)).toThrow(/no record/);
   expect(() => readPage(`<div title="${script("__fv_page", json(RECORD))}`)).toThrow(/no record/);
+});
+
+const DATED = {
+  at: { type: Date, required: true as const },
+  maybe: { type: [Date, null] as PropType<Date | null>, required: true as const },
+  later: Date,
+  label: String,
+  count: Number,
+};
+
+const Dated = defineComponent({
+  props: DATED,
+  render() {
+    const shown = (d: unknown): string => (d instanceof Date ? String(d.getTime()) : String(d));
+    return h("p", [this.at, this.maybe, this.later].map(shown).join("|") + `|${this.label}|${this.count}`);
+  },
+});
+
+it("turns each prop a component declares a Date from its ISO string or number back into a Date", () => {
+  const given = { at: "+010000-01-01T00:00:00.000Z", maybe: null, later: Number.NaN, label: "2024-01-01", count: 5, extra: "2024-01-01" };
+  const revived = reviveDates(Dated, given);
+  expect(revived).toEqual({ ...given, at: new Date(253402300800000), later: new Date(Number.NaN) });
+  expect(revived.later).toBeInstanceOf(Date);
+  expect(given.at).toBe("+010000-01-01T00:00:00.000Z");
+  const plain = { label: "x" };
+  expect(reviveDates(Dated, plain)).toBe(plain);
+  expect(reviveDates(Dated, null)).toBeNull();
+  expect(reviveDates(defineComponent({ props: ["at"], render: () => null }), { at: "2024-01-01" })).toEqual({ at: "2024-01-01" });
+  expect(reviveDates(defineComponent({ props: { at: Date }, render: () => null }), { at: 0 }).at).toEqual(new Date(0));
+});
+
+it("renders a page whose layout and parts take Dates from the record's JSON", async () => {
+  const record = readPage('<script type="application/json" id="__fv_page">{"props":{"at":"1970-01-01T00:00:00.001Z","maybe":NaN},"slots":{"default":[{"c":"Dated","p":{"at":-1,"maybe":"1970-01-01","later":"1970-01-02"}}]}}</script>').record;
+  const Layout = defineComponent({
+    props: DATED,
+    setup(props, { slots }) {
+      return () => h("main", [h(Dated as Component, { at: props.at, maybe: props.maybe, later: props.later }), slots.default?.()]);
+    },
+  });
+  const html = await renderToString(createPageApp(Layout, record, { Dated }, { hydrate: false }));
+  expect(html).toBe("<main><p>1|NaN|undefined|undefined|undefined</p><!--[--><p>-1|0|86400000|undefined|undefined</p><!--]--></main>");
 });

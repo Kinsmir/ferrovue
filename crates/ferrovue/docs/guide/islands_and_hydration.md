@@ -73,7 +73,9 @@ The props travel as JSON, serialised with `serde_json` and escaped for the attri
 where `serde_json` alone writes `null`, so the client gets the number the server rendered;
 see [`numbers`](crate::guide::numbers#keeping-islands-exact). An optional prop that is `None` is
 left out, which the client reads as `undefined`, and a nullable one (`T | null`) is written as
-`null`; see [`props`](crate::guide::props#nullable-props). On the client,
+`null`; see [`props`](crate::guide::props#nullable-props). A `Date` prop is written as its ISO
+string, an invalid one as `NaN`, and the client turns it back into a `Date` before hydrating; see
+[`dates_and_prices`](crate::guide::dates_and_prices#in-the-islands-props). On the client,
 `mountIslands` from `ferrovue` hydrates every island on the page:
 
 ```ts

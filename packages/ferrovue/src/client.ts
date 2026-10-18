@@ -29,6 +29,28 @@ function parseJson(text: string): unknown {
   return JSON.parse(quoted, (_key, value: unknown) => (typeof value === "string" && value.startsWith(tag) ? NON_FINITE[value.slice(tag.length)] : value));
 }
 
+function declaresDate(declared: unknown): boolean {
+  const type = declared !== null && typeof declared === "object" && "type" in declared ? declared.type : declared;
+  return type === Date || (Array.isArray(type) && type.includes(Date));
+}
+
+/** The props a component is given, with each prop it declares a `Date` turned from what JSON
+ * carries, the ISO string `toISOString()` writes or a number of milliseconds (`NaN` for an invalid
+ * date), back into a `Date`, as the server rendered it. Vue's compiler declares a prop typed `Date`
+ * as `{ type: Date }`, and one typed `Date | null` as `{ type: [Date, null] }`. `mountIslands`,
+ * `mountPage` and `renderPage` call it; an app that hands a component props it read from JSON
+ * itself calls it too. */
+export function reviveDates<P extends Record<string, unknown> | null>(component: Component, props: P): P {
+  const declared = (component as { props?: unknown }).props;
+  if (!props || !declared || typeof declared !== "object" || Array.isArray(declared)) return props;
+  let revived: Record<string, unknown> | null = null;
+  for (const [key, type] of Object.entries(declared)) {
+    const value = props[key];
+    if ((typeof value === "string" || typeof value === "number") && declaresDate(type)) (revived ??= { ...props })[key] = new Date(value);
+  }
+  return (revived ?? props) as P;
+}
+
 /** The state of a page already read: the text of its state's script, as `readPage` gives it. */
 export interface StateText {
   text: string | undefined;
@@ -361,7 +383,7 @@ export async function mountIslands(components: Record<string, IslandComponent>, 
     // One island that throws as it mounts (its setup, a plugin) is reported, and leaves the others
     // to hydrate.
     try {
-      const app = createSSRApp(component, props);
+      const app = createSSRApp(component, reviveDates(component, props));
       if (options.pinia) app.use(options.pinia);
       if (options.router) app.use(options.router);
       for (const plugin of options.plugins ?? []) app.use(plugin);
@@ -503,10 +525,10 @@ export function createPageApp(layout: Component, record: PageRecord, components:
   const slots = Object.fromEntries(
     Object.entries(record.slots).map(([name, parts]) => [
       name,
-      () => (parts.length ? parts.map((part) => h(components[part.c]!, part.p)) : [createTextVNode("")]),
+      () => (parts.length ? parts.map((part) => h(components[part.c]!, reviveDates(components[part.c]!, part.p))) : [createTextVNode("")]),
     ]),
   );
-  const app = (options.hydrate === false ? createApp : createSSRApp)({ name: "FerrovuePage", render: () => h(layout, record.props, slots) });
+  const app = (options.hydrate === false ? createApp : createSSRApp)({ name: "FerrovuePage", render: () => h(layout, reviveDates(layout, record.props), slots) });
   if (options.pinia) app.use(options.pinia);
   if (options.router) app.use(options.router);
   for (const plugin of options.plugins ?? []) app.use(plugin);

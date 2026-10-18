@@ -120,6 +120,7 @@ const FULL = {
   helpers: { module: "./helpers", functions: { plural: { rust: "crate::plural", params: ["int"], returns: "string", maxLen: 1 } } },
   twins: { VBtn: { rust: "crate::v_btn", props: { label: "string" }, slots: ["default"] } },
   trustedHtml: "ferrovue::InlineHtml",
+  dateType: "ferrovue::JsDate",
   routes: "routes.json",
   router: { routes: { pages: "pages" }, base: "/app", linkActiveClass: "on", linkExactActiveClass: "here" },
   stores: "stores",
@@ -255,7 +256,7 @@ describe("the configuration's JSON Schema", () => {
       "locales/nl.json": '{ "hi": "hallo" }',
       "components/Card.vue": `<script setup lang="ts">
 import { plural } from "./helpers";
-defineProps<{ n: number; note?: string }>();
+defineProps<{ n: number; note?: string; at?: Date }>();
 </script>
 <template><p class="c"><RouterLink to="/about" :class="$style.m">{{ $t("hi") }}{{ plural(n) }}</RouterLink>{{ note }}</p></template>
 <style scoped>.c { color: red }</style>
@@ -264,6 +265,7 @@ defineProps<{ n: number; note?: string }>();
     };
     const other: Record<string, unknown> = {
       builders: false,
+      dateType: "chrono::DateTime<chrono::Utc>",
       scopeId: "filepath",
       viteRoot: "sub",
       "router.base": "/app",

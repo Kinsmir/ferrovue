@@ -17,6 +17,7 @@ pub mod guide;
 mod head;
 mod html;
 mod hydrate;
+mod js_date;
 mod json;
 mod page;
 mod record;
@@ -48,6 +49,12 @@ pub use head::HeadDeferral;
 pub use head::{Head, HeadHtml, HeadValue};
 pub use html::Html;
 pub use hydrate::Hydrate;
+#[cfg(feature = "chrono")]
+#[cfg_attr(docsrs, doc(cfg(feature = "chrono")))]
+pub use js_date::DateOutOfRange;
+pub use js_date::{JsDate, JsTime};
+#[doc(hidden)]
+pub use js_date::{date_prop, js_date_prop, js_time_of, opt_date_prop};
 pub use page::{Page, PageHole, PageRecord, PageScript, PageSlot, Part};
 pub use record::Record;
 #[cfg(feature = "ammonia")]

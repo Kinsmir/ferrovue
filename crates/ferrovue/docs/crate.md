@@ -199,6 +199,7 @@ the values a render needs besides its props.
 | A generated `provides::Provides`, empty or holding what the client app gives `app.provide` | calls `provide` or `inject`, or renders one that does ([`guide::provide_inject`](crate::guide::provide_inject)) |
 | [`Head`] | calls `useHead` or `useSeoMeta`, or renders one that does ([`guide::head`](crate::guide::head)) |
 | [`BasicHtml`], [`InlineHtml`], `Sanitised` (the `ammonia` feature), or your own type implementing [`TrustedHtml`] | renders `v-html` |
+| [`JsDate`], `chrono::DateTime<Utc>` (the `chrono` feature), or your own type implementing [`JsTime`] | takes a `Date` prop ([`guide::dates_and_prices`](crate::guide::dates_and_prices#date-props)) |
 
 A prop declared `Record<string, T>` is a [`Record`], which keeps JavaScript's order of keys.
 
@@ -232,7 +233,8 @@ The others are `#[doc(hidden)]`: JavaScript's string methods counted in UTF-16 c
 lists), `Number`, `parseInt`, `parseFloat` and `JSON.stringify` (`js_number`, `js_parse_int`,
 `js_parse_float`, `js_json_number`, `js_json_string`), dates as time values in UTC
 (`js_date_parse`, `js_time_clip`, `js_to_iso_string` and `js_utc_full_year` to
-`js_utc_milliseconds`), a list's `slice` (`js_slice_range`, `js_slice_items`), and Vue's class, style, scope id, slot outlet, teleport and `v-html` helpers
+`js_utc_milliseconds`), a `Date` prop handed to a child and written into `data-props`
+(`js_time_of`, `js_date_prop`, `date_prop`, `opt_date_prop`), a list's `slice` (`js_slice_range`, `js_slice_items`), and Vue's class, style, scope id, slot outlet, teleport and `v-html` helpers
 (`class_into`, `class_object`, `class_names`, `style_text_into`, `merge_props`, `scope_attrs`,
 `slot_into_slotted`, `scoped_slot_into`, `scoped_slot_into_slotted`, `teleport_into`,
 `trusted_into`). Only generated code calls them, so their signatures follow the version of
@@ -251,6 +253,7 @@ stable.
 | `axum` | off | `stream`, and `IntoResponse` for `Html` and `HtmlStream`, so a handler returns `greeting::into_html(props)` ([`guide::web_frameworks`](crate::guide::web_frameworks)) |
 | `actix-web` | off | `stream`, and `Responder` for `Html` and `HtmlStream` |
 | `ammonia` | off | `Sanitised`, HTML cleaned by ammonia, to name as `trustedHtml` for `v-html` props ([`guide::escaping`](crate::guide::escaping) shows a policy of your own, with `ammonia` 4 as your own dependency) |
+| `chrono` | off | `JsTime` for `chrono::DateTime<Utc>`, to name as `dateType` for `Date` props, `From<DateTime<Utc>>` for [`JsDate`], and `TryFrom<JsDate>` for `DateTime<Utc>`, whose error, `DateOutOfRange`, is an invalid date or one beyond chrono's ±262,142 years ([`guide::dates_and_prices`](crate::guide::dates_and_prices#chrono)) |
 | `dioxus` | off | The `dioxus` module: `Html::to_element` and `impl IntoDynNode for Html`, so `{greeting::island(&props)}` can go straight into Dioxus 0.7's `rsx!`, and `dioxus::state_script`; the guide's `dioxus` page shows a page |
 
 An application with neither routes nor translations can turn the default features off

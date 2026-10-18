@@ -1,5 +1,6 @@
 import { createApp, createSSRApp, createStaticVNode, createTextVNode, defineComponent, h, type App, type Component, type Plugin } from "vue";
 import { routeRecords, type RouteEntry } from "./routes.ts";
+import { reviveDates } from "./client.ts";
 
 export { routeRecords, type RouteEntry } from "./routes.ts";
 
@@ -114,7 +115,7 @@ export async function fixtureApp(
       .filter(([name]) => name !== "routerView")
       .map(([name, html]) => [name, () => [staticNode(html)]]),
   );
-  const app = (options.client ? createApp : createSSRApp)({ render: () => h(component, fixture.props, slots) });
+  const app = (options.client ? createApp : createSSRApp)({ render: () => h(component, reviveDates(component, fixture.props), slots) });
   const head = await optionalHead(options.hydrate ?? false);
   if (head) app.use(head);
   const pinia = options.pinia ?? (await optionalPinia(fixture.stores));

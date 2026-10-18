@@ -181,6 +181,7 @@ export interface Component {
   templateStart?: { line: number; column: number };
   templateAst?: N;
   attrsDropped?: N;
+  propsAt?: N;
   cssVarsAt?: N[];
   props: Struct;
   structs: Map<string, Struct>;

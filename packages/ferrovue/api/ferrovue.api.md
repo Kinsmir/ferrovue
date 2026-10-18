@@ -107,6 +107,9 @@ export interface RenderPageOptions extends Pick<MountOptions, "pinia" | "router"
 }
 
 // @public
+export function reviveDates<P extends Record<string, unknown> | null>(component: Component, props: P): P;
+
+// @public
 export interface StateText {
     // (undocumented)
     text: string | undefined;

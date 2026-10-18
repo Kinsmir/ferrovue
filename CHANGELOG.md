@@ -5,8 +5,38 @@ released together and share version numbers.
 
 ## [Unreleased]
 
+### Added
+
+- `Date` props: a prop the component types `Date`, optional (`edited?: Date`) or nullable
+  (`deleted: Date | null`) too, read with `.toISOString()`, `.getTime()`, `.valueOf()` and the
+  `.getUTC…()` methods in the template, a `computed`, `v-if` and `v-for`, and handed to a child's
+  `Date` prop. Its Rust field is `ferrovue::JsDate` by default: a JavaScript time value, invalid
+  dates included, built with `JsDate::from_millis`, `JsDate::parse` (the strings the template's
+  `new Date(s)` accepts), `JsDate::now` or `From<SystemTime>`, with `Serialize` and `Deserialize`.
+  The new configuration key `dateType` names another Rust type, which implements the new trait
+  `ferrovue::JsTime`, through which generated code reads either, clipping what it returns as
+  `new Date(value)` does. An island's `data-props` carries a date as its ISO string and an invalid
+  one as `NaN`, and `mountIslands`, `mountPage`, `renderPage` and `fixtureApp` turn each prop the
+  component declares a `Date` back into one before Vue hydrates, so the browser reads the time
+  value the server read, in any time zone.
+  `reviveDates(component, props)`, exported from `ferrovue` and `ferrovue/client`, does the same
+  for an app that reads a component's props from JSON itself.
+- The `chrono` feature, off by default: `JsTime` for `chrono::DateTime<Utc>`, to name as
+  `"dateType": "chrono::DateTime<chrono::Utc>"`, `From<DateTime<Utc>>` for `JsDate`, and
+  `TryFrom<JsDate>` for `DateTime<Utc>`, which fails with `ferrovue::DateOutOfRange` for an invalid
+  date and for one beyond chrono's ±262,142 years. JavaScript's dates reach from −271821 to
+  +275760, so the parsing and the `getUTC…` twins stay ferrovue's own, held to `dates.json`.
+- FV1806, for a `Date` anywhere but a component's own prop: inside a list, a dictionary or an
+  object prop, in Pinia state, `inject`, `ref` or `defineModel`, which would reach the client as a
+  string.
+
 ### Changed
 
+- Generated code is version 3 (`ferrovue::__compat!(3)`): a `Date` prop calls `JsTime`, the
+  `#[doc(hidden)]` `js_time_of` and `js_date_prop` and the serde helpers `date_prop` and `opt_date_prop`, which the
+  0.8 crate lacks. The crate still builds modules of version 2, which call nothing that changed.
+- The API reports gain `reviveDates` (`ferrovue`, `ferrovue/client`) and `Config.dateType` and
+  FV1806 (`ferrovue/compiler`).
 - The README is a landing page: what ferrovue is and why to use it, the quick start, what a
   component may use, a list of the guides, performance, versions and the licence, with the
   crates.io and npm version badges side by side, then docs.rs, CI and the licence. Its reference
