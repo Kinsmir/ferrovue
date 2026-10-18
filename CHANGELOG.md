@@ -5,6 +5,11 @@ released together and share version numbers.
 
 ## [Unreleased]
 
+### Changed
+
+- The README shows the crates.io and npm version badges side by side, then docs.rs, CI and the
+  licence.
+
 ## [0.8.0] - 2026-10-18
 
 ### Added
