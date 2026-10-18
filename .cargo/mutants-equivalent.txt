@@ -45,10 +45,6 @@ crates/ferrovue-core/src/escape.rs: replace | with ^ in needs_escape
 crates/ferrovue-core/src/escape.rs: replace | with ^ in needs_escape
 crates/ferrovue-core/src/escape.rs: replace | with ^ in needs_escape
 
-# The plural choice when nothing gives one: −1 or 1, which `pluralDefault` reads through `Math.abs`
-# alike.
-crates/ferrovue-i18n/src/lib.rs: delete - in plural_choice
-
 # Stripping a hash history's base before its `#` when the `#` is at index 0 or later: at 0,
 # `b[0..]` is `b` itself.
 crates/ferrovue-router/src/lib.rs: replace > with >= in Router::with_base

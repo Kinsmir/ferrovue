@@ -22,7 +22,8 @@ released together and share version numbers.
   child route with an absolute path under a matchable parent, `BasicHtml` references of the
   longest length, `ManifestError::source` and a debug build's panic on props serde_json refuses.
   Each closes a gap the mutation run found; `.cargo/mutants-equivalent.txt` gives the reason for
-  five more survivors that cannot change what the code returns.
+  five more survivors that cannot change what the code returns, and no longer lists `plural_choice`
+  with its `-` deleted, which a unit test catches.
 
 ## [0.7.2] - 2026-10-11
 
