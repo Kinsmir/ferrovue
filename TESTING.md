@@ -103,6 +103,7 @@ A fixture is a JSON object of props plus three optional keys:
 | `Styles`, `Shown` | `:style` objects, arrays, strings and conditional objects merged with a static `style`; `v-show`, including on the root; a global `<style>` block |
 | `Markup` | Entities, void elements, SVG attributes, `<pre>` whitespace, whitespace condensing |
 | `Setup`, `Lifecycle` | `ref`, `computed`, plain constants, helpers; hooks, `watch`, emits, template refs, `defineOptions`/`defineSlots`/`defineExpose`, a plain `<script>` block, an interface with fields the server never reads (an `HTMLElement`, a method) behind a `shallowRef` |
+| `Unread`, `UnreadFold`, `UnreadVar` | `computed`s that throw in JavaScript (`.repeat()` of a negative count, `.toISOString()` of an invalid date, `.padStart()` beyond the longest string) evaluated where the render first reads them, once: never read, read under a `v-if` that is false, read by another `computed`, in a `v-for`, in slot content a child does not render, as a child's prop; a `v-bind()` in `<style>`, which Vue evaluates as its render starts |
 | `Constants` | Setup bindings that start as a string literal, and `computed`s of them, written into the page and tested as constants; strings compared with the empty one in `===`, `v-if` and `v-model` on `<select>` and radio inputs |
 | `Defaults`, `Destructured` | `withDefaults`, the boolean cast, destructured props with defaults and new names, class objects |
 | `Model`, `ModelParent` | `defineModel` (named, required, default) and `v-model` on a component |
@@ -176,7 +177,7 @@ when it names a component that is not in `components/` with fixtures of its own.
 | Shared types | `UserCard`, `UserList`, `DataTable`, `RowChip`, `Dashboard`, `Cart`, `Catalog` |
 | Constants | `Catalog`, `Constants` |
 | Props | `Defaults`, `Destructured`, `PropsObject`, `Model`, `ModelParent`, `Picker`, `Glyph`, `Divider` |
-| Setup | `Setup`, `SetupValues`, `Lifecycle`, `Pending`, `EmptyBranch` |
+| Setup | `Setup`, `SetupValues`, `Lifecycle`, `Pending`, `EmptyBranch`, `Unread`, `UnreadVar` |
 | Provide and inject | `TabsPage`, `Tabs`, `Tab`, `ThemedButton`, `ThemeScope`, `Swatch`, `SwatchShelf`, `ThemedShelf`, `ThemedList`, `ThemedChoice` |
 | Text | `Text`, `Exprs`, `Numbers`, `Meter`, `Parsing`, `Regressions` |
 | Strings | `Strings`, `Exprs`, `Text` |

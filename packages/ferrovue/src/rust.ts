@@ -7,7 +7,7 @@ import { childOf } from "./expr.ts";
 import { Emitter } from "./emitter.ts";
 import { occurrences } from "./parens.ts";
 import { statements } from "./template.ts";
-import { inlineCssVars } from "./styles.ts";
+import { cssVarsReads, inlineCssVars } from "./styles.ts";
 import { slotFieldBorrows, slotFieldTy, slotTypeName } from "./slots.ts";
 import { extraParams, fieldInit, takesSlots } from "./children.ts";
 import { paramsOf, renderParams, slotContextOf, slotFieldsOf } from "./plugin.ts";
@@ -232,7 +232,7 @@ export function componentSource(comp: Component, ast: N[], ssr: string, componen
   if (takesAttrs(comp) && comp.inheritAttrs && comp.attrsDropped) {
     fail(comp, "FV0416", `a root \`<Transition>\` or \`<KeepAlive>\` around a \`v-if\` in ${comp.name}, which a parent passes attributes: Vue's server drops them, where its client puts them on the element; set \`inheritAttrs: false\` and bind \`$attrs\` on the element`, comp.attrsDropped);
   }
-  const { scope, lets } = scopeFor(comp, ast, components);
+  const { scope, lets, lazies } = scopeFor(comp, ast, components);
   const program = parseJs(ssr, { sourceType: "module" }).program;
   tagAst(program, "template");
   const fn = (program.body as N[]).find(
@@ -242,7 +242,8 @@ export function componentSource(comp: Component, ast: N[], ssr: string, componen
 
   const e = new Emitter();
   const preludes = ctx.plugins.flatMap((p) => (p.prelude ? [p.prelude(scope)] : []));
-  const opening = [...preludes.flatMap((p) => p.before), ...lets, ...preludes.flatMap((p) => p.after)];
+  const forced = [...cssVarsReads(fn.body.body)].flatMap((name) => (lazies.has(name) ? [`std::cell::LazyCell::force(&${lazies.get(name)!});`] : []));
+  const opening = [...preludes.flatMap((p) => p.before), ...lets, ...forced, ...preludes.flatMap((p) => p.after)];
   for (const l of opening) e.stmt(l);
   statements(scope, e, inlineCssVars(comp, fn.body.body));
   for (let i = opening.length - 1; i >= 0; i--) {

@@ -320,6 +320,43 @@ fn props_are_built_with_constructors_and_setters() {
     assert_eq!(lists.words.len(), 2);
 }
 
+fn render_unread(props: &str) -> String {
+    generated::render_json("Unread", props).unwrap()
+}
+
+#[test]
+fn a_computed_that_would_throw_is_not_evaluated_until_the_render_reads_it() {
+    let html = render_unread(
+        r#"{"when":"2024-13-01T00:00Z","show":false,"count":-1,"word":"ab","width":3,"tags":["x"]}"#,
+    );
+    assert!(html.contains("<p>hidden</p>"), "{html}");
+}
+
+#[test]
+#[should_panic(expected = "RangeError: Invalid count value: -1")]
+fn a_computed_the_render_reads_panics_where_javascript_throws() {
+    render_unread(
+        r#"{"when":"2024-03-10T08:05:09.007Z","show":true,"count":-1,"word":"ab","width":3,"tags":["x"]}"#,
+    );
+}
+
+#[test]
+#[should_panic(expected = "RangeError: Invalid time value")]
+fn an_invalid_date_the_render_reads_panics_where_to_iso_string_throws() {
+    render_unread(
+        r#"{"when":"+275760-09-13T00:00:00.001Z","show":true,"count":1,"word":"ab","width":3,"tags":[]}"#,
+    );
+}
+
+#[test]
+#[should_panic(expected = "RangeError: Invalid string length")]
+fn a_computed_in_a_style_variable_is_evaluated_as_the_render_starts() {
+    let _ = generated::render_json(
+        "UnreadVar",
+        r#"{"show":false,"word":"ab","width":1000000000}"#,
+    );
+}
+
 #[cfg(feature = "dioxus")]
 mod dioxus {
     use super::{generated, unescape};
