@@ -165,6 +165,9 @@ pub mod themed_shelf;
 pub mod translated;
 pub mod tree;
 pub mod truthy;
+pub mod unread;
+pub mod unread_fold;
+pub mod unread_var;
 pub mod unsanitised;
 pub mod unsanitised_leaf;
 pub mod user_card;
@@ -1009,6 +1012,20 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Truthy" => {
             let props: truthy::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             truthy::render(&mut out, &props);
+        }
+        "Unread" => {
+            let props: unread::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            unread::render(&mut out, &props);
+        }
+        "UnreadFold" => {
+            let props: unread_fold::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
+            unread_fold::render(&mut out, &props, unread_fold::Slots { default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)) });
+        }
+        "UnreadVar" => {
+            let props: unread_var::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            unread_var::render(&mut out, &props);
         }
         "Unsanitised" => {
             let props: unsanitised::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

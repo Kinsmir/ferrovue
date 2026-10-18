@@ -165,7 +165,12 @@ export function ifElse(code: string): { test: string; yes: string; no: string } 
 export function strArg(code: string): string {
   const branches = ifElse(code);
   if (branches) return `if ${branches.test} { ${strArg(branches.yes)} } else { ${strArg(branches.no)} }`;
+  if (/^\(\*\w+\)$/.test(code)) return bare(code);
   const m = /^&\*(\**)(.*)$/s.exec(code);
+  if (m && !m[1]) {
+    const lazy = /^\(\*(\w+)\)$/.exec(m[2]!)?.[1];
+    if (lazy !== undefined) return `&${lazy}`;
+  }
   if (!m || (binding(m[2]!) < ATOM && !enclosed(m[2]!))) return code;
   return m[1] ? m[2]! : `&${m[2]}`;
 }

@@ -98,9 +98,23 @@ string at all.
 A date beyond ±8.64 × 10¹⁵ ms from 1970 (about 275,000 years) is invalid, as in JavaScript:
 `.getTime()` and every `.getUTC…()` method give `NaN`, and `.toISOString()` throws a `RangeError`,
 on which the generated code panics. Test a date that may be invalid before writing it, with
-`d.getTime() === d.getTime()` (false only for `NaN`). A `computed` is worked out once before the
-render in Rust, where Vue works it out when the template first reads it, so call `.toISOString()`
-of a date that may be invalid in the template, under the `v-if` that tests it.
+`d.getTime() === d.getTime()` (false only for `NaN`). A `computed` that may panic is worked out
+where the render first reads it, once, as Vue works it out, so a `computed` of `.toISOString()`
+renders when the template reads it only under the `v-if` that tests the date:
+
+```vue
+<script setup lang="ts">
+import { computed } from "vue";
+const props = defineProps<{ published: string }>();
+const date = computed(() => new Date(props.published));
+const iso = computed(() => date.value.toISOString());
+</script>
+
+<template>
+  <time v-if="date.getTime() === date.getTime()" :datetime="iso">{{ iso.slice(0, 10) }}</time>
+  <span v-else>no date</span>
+</template>
+```
 
 ## The current time
 

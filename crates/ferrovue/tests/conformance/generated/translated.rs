@@ -30,7 +30,7 @@ impl<'a> Props<'a> {
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::I18n) {
     out.reserve(90 + props.name.len());
-    let s_title = fv_i18n.t("greeting", &fv::i18n::Args::new().with_named(&[("name", fv::i18n::Value::Str(&props.name))]));
+    let s_title = std::cell::LazyCell::new(|| fv_i18n.t("greeting", &fv::i18n::Args::new().with_named(&[("name", fv::i18n::Value::Str(&props.name))])));
     out.push_str("<section");
     if fv_i18n.locale().is_empty() {
         out.push_str(" lang");

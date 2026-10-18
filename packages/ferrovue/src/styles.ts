@@ -62,6 +62,24 @@ export function inlineCssVars(comp: Component, body: N[]): N[] {
   return rest;
 }
 
+/** The setup bindings the `_cssVars` object reads, which Vue's server evaluates as its render
+ * starts. */
+export function cssVarsReads(body: N[]): Set<string> {
+  const names = new Set<string>();
+  const declared = body.find((st) => st.type === "VariableDeclaration" && st.declarations[0]?.id?.name === "_cssVars");
+  const walk = (n: N): void => {
+    if (!n || typeof n !== "object") return;
+    if (Array.isArray(n)) return n.forEach(walk);
+    if (n.type === "MemberExpression" && n.object.type === "Identifier" && (n.object.name === "$setup" || n.object.name === "_ctx")) {
+      const name = n.computed ? n.property.value : n.property.name;
+      if (typeof name === "string") names.add(name);
+    }
+    for (const [k, v] of Object.entries(n)) if (k !== "loc" && v && typeof v === "object") walk(v);
+  };
+  walk(declared?.declarations[0].init);
+  return names;
+}
+
 function cssVarOf(s: Scope, n: N): Val {
   const v = expr(s, n.value);
   const of = v.ty.k === "opt" ? v.ty.of : v.ty;

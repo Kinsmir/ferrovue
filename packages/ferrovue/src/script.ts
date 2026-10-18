@@ -6,7 +6,7 @@ import { constOfDecl, type Declared, declareConsts } from "./constants.ts";
 import { localTy } from "./rust.ts";
 import { expr, fieldVal, typedBy } from "./expr.ts";
 import { collected, heldList } from "./lists.ts";
-import { bare, operand, UNARY } from "./parens.ts";
+import { bare, occurrences, operand, UNARY } from "./parens.ts";
 import { known } from "./narrowing.ts";
 import { heldStr, isTemporary } from "./strings.ts";
 import { intFromF64 } from "./numbers.ts";
@@ -122,7 +122,34 @@ export function asyncChildren(comp: Component, ast: N[]): Map<string, string> {
   return found;
 }
 
-export function scopeFor(comp: Component, ast: N[], components: Map<string, Component>): { scope: Scope; lets: string[] } {
+const PANICS = /\bfv::js_(?:repeat|pad_start|pad_end|date_parse|to_iso_string)\(|\bfv_i18n\.t\(/;
+
+function mayPanic(scope: Scope, lazies: Map<string, string>, init: string): boolean {
+  if (PANICS.test(init)) return true;
+  if ([...scope.helpers.values()].some((h) => init.includes(`${ctx.helpers[h]!.rust}(`))) return true;
+  return [...lazies.values()].some((name) => occurrences(init, name) > 0);
+}
+
+function binding(v: Val): { init: string; read: (at: string) => Val } {
+  const lone = v.lone ? { lone: true } : {};
+  if (v.slice) return { init: bare(v.code), read: (at) => ({ code: at, ty: v.ty, slice: true, ...lone }) };
+  if (v.ty.k === "list" && v.iter !== undefined) return { init: collected(v), read: (at) => heldList(at, v.ty.k === "list" ? v.ty.of : v.ty, v.lone) };
+  if (v.held !== undefined) return { init: v.held, read: (at) => ({ code: `${at}.as_deref()`, ty: v.ty, ...lone }) };
+  if (v.ty.k === "int" && v.f64 !== undefined && (v.code.endsWith(" as i64") || Object.is(v.num, -0))) {
+    return {
+      init: bare(v.f64),
+      read: (at) => ({ ...intFromF64(at), ...lone, ...(v.num !== undefined ? { num: v.num } : {}), ...(v.konst !== undefined ? { konst: v.konst } : {}) }),
+    };
+  }
+  if (isTemporary(v)) return { init: heldStr(v), read: (at) => ({ code: `&*${at}`, ty: v.ty, ...lone }) };
+  const place = v.ty.k === "list" || v.ty.k === "record" || v.ty.k === "struct" || v.ty.k === "child";
+  return {
+    init: place ? `&${operand(v.code, UNARY)}` : bare(v.code),
+    read: (at) => ({ code: at, ty: v.ty, ...lone, ...(v.konst !== undefined ? { konst: v.konst } : {}) }),
+  };
+}
+
+export function scopeFor(comp: Component, ast: N[], components: Map<string, Component>): { scope: Scope; lets: string[]; lazies: Map<string, string> } {
   const scope: Scope = {
     comp,
     components,
@@ -160,6 +187,7 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
   };
   const locals = declareConsts(comp, ast);
   const lets: string[] = [];
+  const lazies = new Map<string, string>();
   const asyncs = asyncChildren(comp, ast);
   let useAttrsName: string | null = null;
   let useSlotsName: string | null = null;
@@ -258,6 +286,7 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
       }
       const isRef = init0.type === "CallExpression" && init0.callee.type === "Identifier" && ["ref", "shallowRef", "computed"].includes(init0.callee.name);
       if (isRef) scope.refs.add(local);
+      const isComputed = isRef && init0.callee.name === "computed";
       const typed = isRef ? init0.typeParameters?.params?.[0] : (d.id.typeAnnotation?.typeAnnotation ?? statedTy(init0));
       const untyped = setupSource(init0);
       const source = untyped && typed ? typedBy(untyped, typed) : untyped;
@@ -279,36 +308,12 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
         continue;
       }
       const name = `s_${snake(local).replace(/^r#/, "")}`;
-      const lone = v.lone ? { lone: true } : {};
-      if (v.slice) {
-        lets.push(`let ${name} = ${bare(v.code)};`);
-        scope.setup.set(local, { code: name, ty: v.ty, slice: true, ...lone });
-        continue;
-      }
-      if (v.ty.k === "list" && v.iter !== undefined) {
-        lets.push(`let ${name} = ${collected(v)};`);
-        scope.setup.set(local, heldList(name, v.ty.of, v.lone));
-        continue;
-      }
-      if (v.held !== undefined) {
-        lets.push(`let ${name} = ${v.held};`);
-        scope.setup.set(local, { code: `${name}.as_deref()`, ty: v.ty, ...lone });
-        continue;
-      }
-      if (v.ty.k === "int" && v.f64 !== undefined && (v.code.endsWith(" as i64") || Object.is(v.num, -0))) {
-        lets.push(`let ${name} = ${bare(v.f64)};`);
-        scope.setup.set(local, { ...intFromF64(name), ...lone, ...(v.num !== undefined ? { num: v.num } : {}), ...(v.konst !== undefined ? { konst: v.konst } : {}) });
-        continue;
-      }
-      if (isTemporary(v)) {
-        lets.push(`let ${name} = ${heldStr(v)};`);
-        scope.setup.set(local, { code: `&*${name}`, ty: v.ty, ...lone });
-        continue;
-      }
-      const place = v.ty.k === "list" || v.ty.k === "record" || v.ty.k === "struct" || v.ty.k === "child";
-      lets.push(`let ${name} = ${place ? `&${operand(v.code, UNARY)}` : bare(v.code)};`);
-      scope.setup.set(local, { code: name, ty: v.ty, ...lone, ...(v.konst !== undefined ? { konst: v.konst } : {}) });
+      const { init, read } = binding(v);
+      const lazy = isComputed && mayPanic(scope, lazies, init);
+      lets.push(lazy ? `let ${name} = std::cell::LazyCell::new(|| ${init});` : `let ${name} = ${init};`);
+      scope.setup.set(local, read(lazy ? `(*${name})` : name));
+      if (lazy) lazies.set(local, name);
     }
   }
-  return { scope, lets };
+  return { scope, lets, lazies };
 }

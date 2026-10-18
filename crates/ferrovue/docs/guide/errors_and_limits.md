@@ -248,6 +248,12 @@ panics are programming errors, found the first time the code runs:
   differently; `js_to_iso_string` panics on an invalid date, where
   JavaScript throws a `RangeError`. See [`dates_and_prices`](crate::guide::dates_and_prices).
 
+A `computed` whose expression calls one of these, `t()` or a helper, or reads such a `computed`, is
+worked out where the render first reads it, once, as Vue works it out: one the template reads only
+under a `v-if` that is false, or in slot content a child does not render, does not panic. One that
+a `v-bind()` in `<style>` reads is worked out as the render starts, where Vue's server works out
+the component's style variables.
+
 Serialising an island's props or the stores' state cannot fail for the types the compiler
 generates. If a hand-written [`TrustedHtml`](crate::TrustedHtml) type's `Serialize` fails, or
 hand-written props hold a map serde_json refuses (one keyed by a list), a debug build panics where

@@ -210,4 +210,6 @@ assert_eq!(last_two, ["c", "d"]);
 
 Where JavaScript throws, the generated code panics, as Vue's render fails: a negative or infinite
 `.repeat()` count, and a `.repeat()`, `.padStart()` or `.padEnd()` longer than the longest string V8
-makes, 2²⁹ − 24 code units. A `.repeat()` by a negative literal is refused at compile time.
+makes, 2²⁹ − 24 code units. A `.repeat()` by a negative literal is refused at compile time. A
+`computed` that calls one of them is worked out where the render first reads it, once, as Vue
+works it out, so it panics only when the render reads it.

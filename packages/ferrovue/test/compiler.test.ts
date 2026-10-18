@@ -1552,13 +1552,13 @@ ${script}
       const out = compile(
         island(dated("const d = computed(() => new Date(props.at));", '{{ d.toISOString() }}|{{ d.getUTCFullYear() }}|{{ new Date(ms).getTime() }}|{{ Date.parse(at) }}|{{ new Date("2024-01-15T10:00Z").valueOf() }}|{{ d.getTime() === d.getTime() }}')),
       ).get("x.rs")!;
-      expect(out).toContain("let s_d = fv::js_date_parse(&props.at);");
-      expect(out).toContain("fv::escape_into(out, &fv::js_to_iso_string(s_d));");
-      expect(out).toContain("fv::push_number(out, fv::js_utc_full_year(s_d));");
+      expect(out).toContain("let s_d = std::cell::LazyCell::new(|| fv::js_date_parse(&props.at));");
+      expect(out).toContain("fv::escape_into(out, &fv::js_to_iso_string(*s_d));");
+      expect(out).toContain("fv::push_number(out, fv::js_utc_full_year(*s_d));");
       expect(out).toContain("fv::push_number(out, fv::js_time_clip(props.ms as f64));");
       expect(out).toContain("fv::push_number(out, fv::js_date_parse(&props.at));");
       expect(out).toContain("fv::push_number(out, 1705312800000.0f64);");
-      expect(out).toContain("if !s_d.is_nan() {");
+      expect(out).toContain("if !(*s_d).is_nan() {");
     });
 
     it("refuses where a setup binding reads the current time or formats by locale", () => {
@@ -1567,6 +1567,67 @@ ${script}
       expect(() => compile(island(formatter))).toThrow(/`money` is set up in a way the server cannot evaluate: .*`Intl` formats by locale/);
       const i18n = dated('import { useI18n } from "vue-i18n";\nconst { d } = useI18n();', "{{ d(ms) }}");
       expect(() => compile(island(i18n))).toThrow(/`d` from `useI18n\(\)` formats by locale with `Intl`.*`dates_and_prices`/);
+    });
+  });
+
+  describe("computeds that may throw", () => {
+    const setup = (script: string, template: string, style = "") => `<script setup lang="ts">
+import { computed } from "vue";
+const props = defineProps<{ at: string; word: string; n: number; tags: string[]; on: boolean }>();
+${script}
+</script>
+<template><section>${template}</section></template>${style}`;
+    const render = (script: string, template: string, style = ""): string => {
+      const out = compile(island(setup(script, template, style))).get("x.rs")!;
+      const at = out.indexOf("pub fn render");
+      return out.slice(at, out.indexOf("\n}\n", at));
+    };
+
+    it("keeps a computed that cannot panic as a value evaluated before the render", () => {
+      const out = render("const upper = computed(() => props.word.toUpperCase());\nconst first = computed(() => props.word.slice(0, 1));", '<p v-if="on">{{ upper }}|{{ first }}</p>');
+      expect(out).toContain("let s_upper = props.word.to_uppercase();");
+      expect(out).toMatch(/let s_first = fv::js_slice\(/);
+      expect(out).not.toContain("LazyCell");
+    });
+
+    it("evaluates a computed whose twin panics where JavaScript throws when the render first reads it", () => {
+      const out = render(
+        "const many = computed(() => props.word.repeat(props.n));\nconst wide = computed(() => props.word.padEnd(props.n));\nconst iso = computed(() => new Date(props.at).toISOString());\nconst ms = computed(() => Date.parse(props.at));",
+        '<p v-if="on">{{ many }}|{{ wide }}|{{ iso }}|{{ ms }}</p>',
+      );
+      expect(out).toContain("let s_many = std::cell::LazyCell::new(|| fv::js_repeat(&props.word, props.n as f64));");
+      expect(out).toMatch(/let s_wide = std::cell::LazyCell::new\(\|\| fv::js_pad_end\(/);
+      expect(out).toContain("let s_iso = std::cell::LazyCell::new(|| fv::js_to_iso_string(fv::js_date_parse(&props.at)));");
+      expect(out).toContain("let s_ms = std::cell::LazyCell::new(|| fv::js_date_parse(&props.at));");
+      expect(out).toMatch(/if props\.on \{\n\s+out\.push_str\("<p>"\);\n\s+fv::escape_into\(out, &s_many\);/);
+      expect(out).toContain("fv::push_number(out, *s_ms);");
+    });
+
+    it("makes a computed lazy when it reads one that is, and leaves one that reads none as it is", () => {
+      const out = render(
+        "const iso = computed(() => new Date(props.at).toISOString());\nconst stamp = computed(() => `${iso.value}!`);\nconst size = computed(() => stamp.value.length);\nconst label = computed(() => props.word + '?');",
+        '<p v-if="on">{{ size }}|{{ label }}</p>',
+      );
+      expect(out).toContain('let s_stamp = std::cell::LazyCell::new(|| format!("{}!", (*s_iso)));');
+      expect(out).toContain("let s_size = std::cell::LazyCell::new(|| fv::js_length(&s_stamp));");
+      expect(out).toContain('let s_label = format!("{}?", props.word);');
+      expect(out).toContain("fv::push_int(out, *s_size);");
+    });
+
+    it("drops a computed the render never reads, and holds lists and optional strings lazily", () => {
+      const out = render(
+        "const unused = computed(() => props.word.repeat(props.n));\nconst copies = computed(() => props.tags.map((t) => t.repeat(2)));\nconst echoed = computed(() => (props.on ? props.word.repeat(props.n) : undefined));",
+        '<i v-for="c in copies">{{ c }}</i>{{ echoed ?? "-" }}',
+      );
+      expect(out).not.toContain("s_unused");
+      expect(out).toMatch(/let s_copies = std::cell::LazyCell::new\(\|\| props\.tags\.iter\(\).*\.collect::<Vec<_>>\(\)\);/);
+      expect(out).toContain("for c_cow in (*s_copies).iter()");
+      expect(out).toContain('fv::escape_into(out, (*s_echoed).as_deref().unwrap_or("-"));');
+    });
+
+    it("evaluates a lazy computed a `v-bind()` in `<style>` reads as the render starts, as Vue's server does", () => {
+      const out = render("const wide = computed(() => props.word.padStart(props.n));", '<p v-if="on">x</p>', "\n<style>p { width: v-bind(wide); }</style>");
+      expect(out).toMatch(/let s_wide = std::cell::LazyCell::new\(.*\);\n\s+std::cell::LazyCell::force\(&s_wide\);/);
     });
   });
 

@@ -41,28 +41,28 @@ impl<'a> Props<'a> {
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(270 + 23 * props.days.len() + props.published.len() + props.updated.as_deref().map_or(0, str::len) + props.days.iter().map(|v| v.len()).sum::<usize>());
-    let s_date = fv::js_date_parse(&props.published);
+    let s_date = std::cell::LazyCell::new(|| fv::js_date_parse(&props.published));
     let s_moment = fv::js_time_clip(props.at as f64 + props.offset);
     let s_valid = !s_moment.is_nan();
-    let s_year = fv::js_utc_full_year(s_date);
+    let s_year = std::cell::LazyCell::new(|| fv::js_utc_full_year(*s_date));
     out.push_str("<article><time datetime=\"");
-    fv::escape_into(out, &fv::js_to_iso_string(s_date));
+    fv::escape_into(out, &fv::js_to_iso_string(*s_date));
     out.push_str("\">");
-    fv::push_number(out, fv::js_utc_date(s_date));
+    fv::push_number(out, fv::js_utc_date(*s_date));
     out.push('/');
-    fv::push_number(out, fv::js_utc_month(s_date) + 1.0);
+    fv::push_number(out, fv::js_utc_month(*s_date) + 1.0);
     out.push('/');
-    fv::push_number(out, s_year);
+    fv::push_number(out, *s_year);
     out.push_str("</time><p>");
     fv::push_number(out, fv::js_date_parse(&props.published));
     out.push('|');
     fv::push_number(out, fv::js_date_parse(&props.published));
     out.push('|');
-    fv::push_number(out, s_date);
+    fv::push_number(out, *s_date);
     out.push('|');
-    fv::push_number(out, fv::js_utc_day(s_date));
+    fv::push_number(out, fv::js_utc_day(*s_date));
     out.push_str("</p><p>");
-    fv::escape_into(out, &format!("{}:{}:{}.{}", fv::Js(fv::js_utc_hours(s_date)), fv::js_pad_start(&fv::Js(fv::js_utc_minutes(s_date)).to_string(), 2.0f64, "0"), fv::js_pad_start(&fv::Js(fv::js_utc_seconds(s_date)).to_string(), 2.0f64, "0"), fv::Js(fv::js_utc_milliseconds(s_date))));
+    fv::escape_into(out, &format!("{}:{}:{}.{}", fv::Js(fv::js_utc_hours(*s_date)), fv::js_pad_start(&fv::Js(fv::js_utc_minutes(*s_date)).to_string(), 2.0f64, "0"), fv::js_pad_start(&fv::Js(fv::js_utc_seconds(*s_date)).to_string(), 2.0f64, "0"), fv::Js(fv::js_utc_milliseconds(*s_date))));
     out.push_str("</p>");
     if let Some(n1) = props.updated.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<p>");
@@ -103,7 +103,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push('|');
     fv::escape_into(out, &fv::js_to_iso_string(1709188200000.0f64));
     out.push('|');
-    fv::push_number(out, s_date);
+    fv::push_number(out, *s_date);
     out.push_str("</p><ul><!--[-->");
     for day_ref in props.days.iter() {
         let day: &str = day_ref;

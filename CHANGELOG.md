@@ -152,6 +152,17 @@ released together and share version numbers.
 - FV0613 for a setup binding the server cannot evaluate gives one location, where the template
   reads the binding. It used to repeat the location and source line of the expression inside the
   setup, after the reason.
+- A `computed` that throws in JavaScript no longer panics when the render does not read it (#112).
+  Generated code worked out every `computed` before the render, where Vue works one out when the
+  render first reads it, so `new Date(s).toISOString()` of an invalid date or `.repeat()` of a
+  negative count panicked under a `v-if` that is false, where Vue renders the page. A `computed`
+  whose expression may panic (`.repeat()`, `.padStart()`, `.padEnd()`, `new Date(s)`,
+  `Date.parse(s)`, `.toISOString()`, `t()` and helpers, or another such `computed`) is now a
+  `std::cell::LazyCell`, worked out at its first read and kept for the rest of the render; one a
+  `v-bind()` in `<style>` reads is worked out as the render starts, as Vue's server works out the
+  style variables. Every other `computed` is generated as before. The `Unread`, `UnreadFold` and
+  `UnreadVar` conformance components hold the cases, and the `dates_and_prices`, `strings` and
+  `errors_and_limits` guides drop the advice to call a throwing method under a `v-if`.
 
 ### Security
 

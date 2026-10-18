@@ -44,7 +44,7 @@ impl<'a> Props<'a> {
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(108 + props.name.as_deref().map_or(0, str::len));
     let s_none = props.count as f64 == 0.0;
-    let s_label = format!("{} item{}", fv::Js(props.count), crate::helpers::plural(props.count));
+    let s_label = std::cell::LazyCell::new(|| format!("{} item{}", fv::Js(props.count), crate::helpers::plural(props.count)));
     out.push_str("<div class=\"setup");
     fv::class_into(out, true, &[crate::helpers::tone(props.score)]);
     out.push_str("\"><h2>Results</h2><p>");
