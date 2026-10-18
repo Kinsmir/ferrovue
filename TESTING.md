@@ -179,6 +179,7 @@ when it names a component that is not in `components/` with fixtures of its own.
 | Provide and inject | `TabsPage`, `Tabs`, `Tab`, `ThemedButton`, `ThemeScope`, `Swatch`, `SwatchShelf`, `ThemedShelf`, `ThemedList`, `ThemedChoice` |
 | Text | `Text`, `Exprs`, `Numbers`, `Meter`, `Parsing`, `Regressions` |
 | Strings | `Strings`, `Exprs`, `Text` |
+| Dates | `Dates`, `Prices` |
 | Conditions | `Branches`, `Narrowing`, `Nullable` |
 | Lists | `Lists`, `Arrays`, `Chips`, `Truthy`, `NumberIncludes`, `NarrowedRows`, `Exprs` |
 | Dictionaries | `Records`, `Chips` |
