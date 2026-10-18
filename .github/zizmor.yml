@@ -1,0 +1,4 @@
+rules:
+  ref-version-mismatch:
+    ignore:
+      - action.yml:23
