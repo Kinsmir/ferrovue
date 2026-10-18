@@ -98,6 +98,24 @@ A new integration is a new file in `plugins/`, added to `plugins/index.ts`. Wher
 what it needs, add one to `Plugin`, documented there and called from one place in the core, so the
 core still names no integration.
 
+## The crates' contract
+
+The crates' API is what their documentation shows, which `cargo-semver-checks` compares with the
+last release (RELEASING.md):
+
+- **Generated code's own helpers are hidden.** A runtime function or method that only generated
+  code calls gets `#[doc(hidden)]`, on its `pub use` at the crate root or on the item, and is
+  versioned with generated code through `__compat!`. Keep visible what an application calls or
+  implements itself (a page, a hand-written twin, a `TrustedHtml` type) and what
+  `docs/guide/generated_code.md` names, and link to no hidden item from the visible docs.
+- **Types that may grow are `#[non_exhaustive]`.** Every public enum, and every struct with public
+  fields that only the crates build. A struct generated code builds with a literal (`RouteDef`,
+  `i18n::Locale`, `i18n::Message`, `i18n::Args`) or a newtype it wraps values in (`Js`) stays
+  exhaustive, since generated code is another crate.
+- **Values pointless to drop are `#[must_use]`**: constructors, builders, getters, and a method that
+  consumes `self` to return its result. A function that writes into a buffer and returns whether it
+  wrote anything is not.
+
 ## The npm package's contract
 
 What a project relies on from the npm package is checked in the repository, so a pull request that

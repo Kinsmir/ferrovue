@@ -164,10 +164,18 @@ ferrovue = { version = "0.7", features = ["ammonia"] }
 
 Sanitisation happens before render, when the value is built: `Sanitised::new(untrusted)` cleans
 with ammonia's default policy, `Sanitised::with(&builder, untrusted)` with an `ammonia::Builder` of
-your own (`ferrovue::ammonia` is the crate, re-exported). Rendering writes the cleaned string as it
-is. The value serialises as that string, so an island's `data-props` carries exactly what the
-server rendered, and the client's `v-html` writes the same string: server and client hold the same
-HTML, and hydration matches. Deserialising a `Sanitised` cleans the string again with the default
+your own. For a policy of your own, add ammonia to your own `Cargo.toml` as well:
+
+```toml
+ammonia = "4"
+```
+
+Cargo resolves it to the same 4.x release ferrovue uses, so `Sanitised::with` takes the
+`ammonia::Builder` you build.
+
+Rendering writes the cleaned string as it is. The value serialises as that string, so an island's
+`data-props` carries exactly what the server rendered, and the client's `v-html` writes the same
+string: server and client hold the same HTML, and hydration matches. Deserialising a `Sanitised` cleans the string again with the default
 policy, so no JSON can make one that skipped the sanitiser.
 
 Ammonia's default policy keeps the tags of text and documents (paragraphs, headings, lists,

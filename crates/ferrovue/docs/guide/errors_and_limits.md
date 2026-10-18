@@ -234,8 +234,8 @@ panics are programming errors, found the first time the code runs:
 - [`I18n::t`](crate::I18n::t) panics in a debug build when a fractional plural number chooses none
   of a message's cases (`1.5` with three cases), where vue-i18n throws. A release build writes
   nothing for the message.
-- [`js_repeat`](crate::js_repeat), [`js_pad_start`](crate::js_pad_start) and
-  [`js_pad_end`](crate::js_pad_end) panic where JavaScript throws a `RangeError`: a negative or
+- `js_repeat`, `js_pad_start` and
+  `js_pad_end` panic where JavaScript throws a `RangeError`: a negative or
   infinite `.repeat()` count, or a result longer than V8's longest string. See
   [`strings`](crate::guide::strings#panics).
 

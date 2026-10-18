@@ -3,6 +3,8 @@ JavaScript's strings, in Rust.
 A JavaScript string is a sequence of UTF-16 code units; a Rust `str` is UTF-8. Vue renders with
 JavaScript's string methods, so wherever the two would differ the generated code calls a Rust twin
 that counts and compares as JavaScript does. Each twin is held to vectors recorded from JavaScript.
+The twins are `#[doc(hidden)]`: this page describes what they do, and their signatures follow the
+version of generated code, outside the crate's stable API.
 
 # Counting in UTF-16 code units
 
@@ -92,16 +94,16 @@ where JavaScript counts a negative index from the end, so does the twin.
 
 | JavaScript | Rust |
 |---|---|
-| `s.length` | [`js_length`](crate::js_length) |
-| `s.trim()`, `s.trimStart()`, `s.trimEnd()` | [`js_trim`](crate::js_trim), [`js_trim_start`](crate::js_trim_start), [`js_trim_end`](crate::js_trim_end): JavaScript's whitespace, which is not Rust's |
-| `s.slice(start, end)` | [`js_slice`](crate::js_slice) |
-| `s.substring(start, end)` | [`js_substring`](crate::js_substring) |
-| `s.at(i)`, `s.charAt(i)` | [`js_at`](crate::js_at) (`None` for `undefined`), [`js_char_at`](crate::js_char_at) |
-| `s.indexOf(x)`, `s.lastIndexOf(x)` | [`js_index_of`](crate::js_index_of), [`js_last_index_of`](crate::js_last_index_of) |
-| `s.split(x)` | [`js_split`](crate::js_split) |
-| `s.replace(x, y)`, `s.replaceAll(x, y)` | [`js_replace`](crate::js_replace), [`js_replace_all`](crate::js_replace_all), with the `$&`, `` $` ``, `$'` and `$$` patterns JavaScript reads in `y` |
-| `s.padStart(n, x)`, `s.padEnd(n, x)` | [`js_pad_start`](crate::js_pad_start), [`js_pad_end`](crate::js_pad_end) |
-| `s.repeat(n)` | [`js_repeat`](crate::js_repeat) |
+| `s.length` | `js_length` |
+| `s.trim()`, `s.trimStart()`, `s.trimEnd()` | `js_trim`, `js_trim_start`, `js_trim_end`: JavaScript's whitespace, which is not Rust's |
+| `s.slice(start, end)` | `js_slice` |
+| `s.substring(start, end)` | `js_substring` |
+| `s.at(i)`, `s.charAt(i)` | `js_at` (`None` for `undefined`), `js_char_at` |
+| `s.indexOf(x)`, `s.lastIndexOf(x)` | `js_index_of`, `js_last_index_of` |
+| `s.split(x)` | `js_split` |
+| `s.replace(x, y)`, `s.replaceAll(x, y)` | `js_replace`, `js_replace_all`, with the `$&`, `` $` ``, `$'` and `$$` patterns JavaScript reads in `y` |
+| `s.padStart(n, x)`, `s.padEnd(n, x)` | `js_pad_start`, `js_pad_end` |
+| `s.repeat(n)` | `js_repeat` |
 | `s.includes(x)`, `s.startsWith(x)`, `s.endsWith(x)` | `str::contains`, `starts_with`, `ends_with`: they agree |
 | `s.toUpperCase()`, `s.toLowerCase()` | `str::to_uppercase`, `to_lowercase`: they agree, `ß` becoming `SS` included |
 
@@ -150,7 +152,7 @@ remain, by design:
 # Ordering
 
 `<`, `>`, `<=` and `>=` between two strings order them by UTF-16 code unit, as JavaScript does, with
-[`js_cmp`](crate::js_cmp). That is not the order of the characters: every character from U+E000 to
+`js_cmp`. That is not the order of the characters: every character from U+E000 to
 U+FFFF comes after one beyond U+FFFF, whose first code unit is a surrogate.
 
 ```rust
@@ -167,11 +169,11 @@ Ordering a string against a number is refused: JavaScript converts the string to
 
 | JavaScript | Rust |
 |---|---|
-| `Number(s)` | [`js_number`](crate::js_number): JavaScript's whitespace trimmed, `""` is 0, `0x`, `0o` and `0b` read, anything else that is not a number `NaN` |
-| `parseInt(s)`, `parseInt(s, 10)`, `parseInt(s, 16)` | [`js_parse_int`](crate::js_parse_int): the leading digits, or `NaN` |
-| `parseFloat(s)` | [`js_parse_float`](crate::js_parse_float): the longest decimal literal at the start, or `NaN` |
-| `JSON.stringify(s)` of a string | [`js_json_string`](crate::js_json_string) |
-| `JSON.stringify(x)` of a number | [`js_json_number`](crate::js_json_number): `null` for `NaN` and the infinities |
+| `Number(s)` | `js_number`: JavaScript's whitespace trimmed, `""` is 0, `0x`, `0o` and `0b` read, anything else that is not a number `NaN` |
+| `parseInt(s)`, `parseInt(s, 10)`, `parseInt(s, 16)` | `js_parse_int`: the leading digits, or `NaN` |
+| `parseFloat(s)` | `js_parse_float`: the longest decimal literal at the start, or `NaN` |
+| `JSON.stringify(s)` of a string | `js_json_string` |
+| `JSON.stringify(x)` of a number | `js_json_number`: `null` for `NaN` and the infinities |
 | `String(x)`, `` `${x}` ``, `x.toString()` | [`push_number`](crate::push_number), [`Js`](crate::Js). See [`numbers`](crate::guide::numbers) |
 
 Of a string, all three give a `Float`, since the result may be a fraction or `NaN`. `JSON.stringify`
@@ -189,7 +191,7 @@ assert_eq!(ferrovue::js_json_number(f64::NAN), "null");
 # Slicing lists
 
 A list's `.slice(start, end)` takes the same range as a string's, counted in items:
-[`js_slice_items`](crate::js_slice_items) takes the items [`js_slice_range`](crate::js_slice_range)
+`js_slice_items` takes the items `js_slice_range`
 gives. The other array methods with an arrow function, `.filter()`, `.map()`, `.some()`, `.every()`,
 `.find()` and `.findIndex()`, become Rust iterator adaptors, as they have no JavaScript corners to
 reproduce. Given `Boolean` in place of an arrow function, each takes the item's truthiness, as

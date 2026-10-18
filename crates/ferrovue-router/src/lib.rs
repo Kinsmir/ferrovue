@@ -591,6 +591,7 @@ fn parse_query(search: &str) -> Vec<(String, Vec<Option<String>>)> {
 /// assert!(link.active && link.exact);
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Link {
     /// What the anchor's `href` is.
     pub href: String,

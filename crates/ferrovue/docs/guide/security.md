@@ -170,7 +170,7 @@ guarantee: ferrovue writes what it holds.
 
 `data-v-…` attributes are written as they are. They come from the compiler (hashes of the
 component's path and source) and reach components through `render_scoped` and
-[`Attrs`](crate::Attrs); [`scope_attrs`](crate::scope_attrs) joins them without escaping. Code
+[`Attrs`](crate::Attrs); `scope_attrs` joins them without escaping. Code
 that builds an `Attrs` passes the ids generated code gave it, never data.
 
 ## Rust twins, helpers and the application's own markup

@@ -119,6 +119,7 @@ impl Chunks {
     /// The URLs the islands called `names` need, each once: an island's own chunk, then those
     /// it imports. A name that is no island of the build, or an island the manifest lacks, needs
     /// nothing.
+    #[must_use]
     pub fn for_islands<'n>(&self, names: impl IntoIterator<Item = &'n str>) -> Vec<String> {
         let mut seen = HashSet::new();
         names
@@ -131,6 +132,7 @@ impl Chunks {
 
     /// The URLs the chunk of the manifest's key `key` needs (a module the entry imports
     /// dynamically, such as `"client/app.ts"`): its own and those it imports, each once.
+    #[must_use]
     pub fn for_source(&self, key: &str) -> Vec<String> {
         let Some((key, _)) = self.chunks.get_key_value(key) else {
             return Vec::new();

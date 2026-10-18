@@ -82,6 +82,7 @@ impl HeadValue {
 
     /// An object of these keys and values: a key given twice keeps its first place and its last
     /// value, as in a JavaScript object literal.
+    #[must_use]
     pub fn object<K: Into<Cow<'static, str>>>(
         entries: impl IntoIterator<Item = (K, HeadValue)>,
     ) -> HeadValue {
@@ -242,6 +243,7 @@ fn js_key_place<'k>(keys: impl ExactSizeIterator<Item = &'k str>, key: &str) -> 
 /// <html{html_attrs}><head>…{head_tags}</head><body{body_attrs}>{body_tags_open}…{body_tags}</body></html>
 /// ```
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct HeadHtml {
     /// The tags inside `<head>`, one per line.
     pub head_tags: String,

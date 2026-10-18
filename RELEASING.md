@@ -20,7 +20,9 @@ becomes public until a maintainer approves it, once on each registry.
    release workflow runs the same check on every crate crates.io already has, and stops a release
    whose version is too small. It does not follow a re-export from another crate: `ferrovue::Router`
    is checked as `ferrovue_router::Router`, and `crates/ferrovue/tests/paths.rs` holds each path
-   `ferrovue` re-exports in place.
+   `ferrovue` re-exports in place. A `#[doc(hidden)]` item is outside the API it compares, and
+   hiding one it compared before counts as breaking; CONTRIBUTING.md's "The crates' contract"
+   says which items are hidden, `#[non_exhaustive]` and `#[must_use]`.
 3. Check the version of generated code. Every generated `mod.rs` opens with
    `ferrovue::__compat!(N)`, where `N` is `GENERATED_VERSION` in `packages/ferrovue/src/rust.ts`,
    and the `ferrovue` crate accepts the versions the arms of `__compat!` in

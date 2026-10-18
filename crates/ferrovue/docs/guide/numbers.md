@@ -84,8 +84,8 @@ Comparisons are made between doubles too, and a number is falsy when it is `0` (
 | `Math.max(a, b)`, `Math.min(a, b)` | [`js_max`](crate::js_max), [`js_min`](crate::js_min) | `NaN` if either is, where `f64::max` ignores a `NaN` |
 | `x.toFixed(d)` | [`js_to_fixed`](crate::js_to_fixed) | An exact tie rounds away from zero, where Rust's formatting rounds to even |
 | `Math.floor`, `Math.ceil`, `Math.trunc`, `Math.abs` | `f64::floor`, `ceil`, `trunc`, `abs` | They agree |
-| `s.length` | [`js_length`](crate::js_length) | UTF-16 code units, not UTF-8 bytes. See [`strings`](crate::guide::strings) |
-| `Number(s)`, `parseInt(s)`, `parseFloat(s)` | [`js_number`](crate::js_number), [`js_parse_int`](crate::js_parse_int), [`js_parse_float`](crate::js_parse_float) | JavaScript's grammar for numbers, which differs from Rust's `parse`. See [`strings`](crate::guide::strings) |
+| `s.length` | `js_length` | UTF-16 code units, as JavaScript counts them. See [`strings`](crate::guide::strings) |
+| `Number(s)`, `parseInt(s)`, `parseFloat(s)` | `js_number`, `js_parse_int`, `js_parse_float` | JavaScript's grammar for numbers, which differs from Rust's `parse`. See [`strings`](crate::guide::strings) |
 
 ```rust
 assert_eq!(ferrovue::js_round(-2.5), -2.0);

@@ -242,7 +242,7 @@ pub fn render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) {
 A component has a `render_scoped` when a parent may hand its root ids: when a scoped component
 renders it, when it is the root of a component that may be handed ids itself, or when it sits in
 slot content that may be given a slot scope id (below). `fv_attrs` holds those ids, each written
-` data-v-…` with its leading space; [`scope_attrs`](crate::scope_attrs) puts them together in the
+` data-v-…` with its leading space; `scope_attrs` puts them together in the
 order Vue's `ssrRenderAttrs` writes them, keeping each once. Recursion, fragments, a root chosen by
 `v-if`, `inheritAttrs: false`, `<Transition>`, `<KeepAlive>`, `<Teleport>` and `<RouterLink>` are
 handled as Vue renders them. A component a parent also passes attributes to takes the ids inside an
@@ -276,9 +276,9 @@ defineProps<{ count: number }>();
 </style>
 ```
 
-The outlets call [`slot_into_slotted`](crate::slot_into_slotted) and
-[`scoped_slot_into_slotted`](crate::scoped_slot_into_slotted), the variants of
-[`slot_into`](crate::slot_into) and [`scoped_slot_into`](crate::scoped_slot_into) that take the
+The outlets call `slot_into_slotted` and
+`scoped_slot_into_slotted`, the variants of
+[`slot_into`](crate::slot_into) and `scoped_slot_into` that take the
 slot scope id, and a scoped slot's closure takes the id as a third parameter:
 
 ```rust
