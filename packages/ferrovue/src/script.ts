@@ -271,7 +271,7 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
         v = empty ?? expr(scope, source);
       } catch (e) {
         if (!(e instanceof GenError)) throw e;
-        scope.clientOnly.set(local, e.message.replace(/^[^:]*: /, ""));
+        scope.clientOnly.set(local, e.what);
         continue;
       }
       if (nothing(v.ty) || (v.ty.k === "str" && known(v) !== undefined)) {
