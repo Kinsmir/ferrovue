@@ -9,7 +9,7 @@
 // it needs.
 #![allow(dead_code)]
 
-ferrovue::__compat!(2);
+ferrovue::__compat!(3);
 
 pub mod blank;
 pub mod cart_badge;
@@ -19,6 +19,7 @@ pub mod greeting;
 pub mod head_note;
 pub mod modal;
 pub mod picker;
+pub mod posted;
 pub mod rated;
 pub mod shell;
 pub mod theme_scope;
@@ -147,6 +148,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Picker" => {
             let props: picker::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             picker::render(&mut out, &props);
+        }
+        "Posted" => {
+            let props: posted::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            posted::render(&mut out, &props);
         }
         "Rated" => {
             let props: rated::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

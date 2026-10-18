@@ -1,4 +1,4 @@
-export { ClientOnly, hydrateState, mountIslands, type IslandComponent, type Islands, type MountOptions, type StateText } from "./client.ts";
+export { ClientOnly, hydrateState, mountIslands, reviveDates, type IslandComponent, type Islands, type MountOptions, type StateText } from "./client.ts";
 export {
   createPageApp,
   mountPage,

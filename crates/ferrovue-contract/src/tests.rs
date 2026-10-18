@@ -1,11 +1,11 @@
 use std::borrow::Cow;
 
-use ferrovue::{Head, Html, I18n, Page, Part, Route, Slot, Teleports};
+use ferrovue::{Head, Html, I18n, JsDate, Page, Part, Route, Slot, Teleports};
 
 use crate::generated::{
     blank, books_id, cart_badge, counter, data_list, greeting, head_note, i18n, index, modal,
-    picker, provides, rated, render_json, route_table, shell, stores, theme_scope, themed_button,
-    translated, twins, types,
+    picker, posted, provides, rated, render_json, route_table, shell, stores, theme_scope,
+    themed_button, translated, twins, types,
 };
 
 const _: fn(&mut String, &greeting::Props<'_>) = greeting::render;
@@ -20,6 +20,7 @@ const _: fn(&mut String, &theme_scope::Props<'_>, theme_scope::Slots<'_>, provid
     theme_scope::render;
 const _: fn(&mut String, &head_note::Props<'_>, &Head) = head_note::render;
 const _: fn(&mut String, &rated::Props) = rated::render;
+const _: fn(&mut String, &posted::Props) = posted::render;
 const _: fn(&mut String, &index::Props<'_>) = index::render;
 const _: fn(&mut String, &books_id::Props<'_>) = books_id::render;
 #[allow(clippy::type_complexity)]
@@ -42,6 +43,7 @@ struct Owned {
     blank: blank::Props,
     picker: picker::Props,
     rated: rated::Props,
+    posted: posted::Props,
     cart_badge: cart_badge::Props,
     count: data_list::CountSlotProps,
     star: twins::StarRatingProps,
@@ -98,6 +100,25 @@ fn props_are_built_with_new_and_setters_or_as_literals() {
         render(|out| blank::render(out, &blank::Props::new())),
         render(|out| blank::render(out, &blank::Props::default()))
     );
+}
+
+#[test]
+fn a_date_prop_is_a_js_date_the_island_carries_as_its_iso_string() {
+    let at = JsDate::parse("2024-05-01T09:30+02:00").unwrap();
+    let built = posted::Props::new(at).edited(JsDate::from_millis(1.0));
+    let literal = posted::Props {
+        at,
+        edited: Some(JsDate::from_millis(1.0)),
+        deleted: None,
+    };
+    let expected = r#"<time datetime="2024-05-01T07:30:00.000Z">2024<b>1</b><!----></time>"#;
+    assert_eq!(render(|out| posted::render(out, &built)), expected);
+    assert_eq!(posted::html(&literal).into_string(), expected);
+    let island = posted::island(&posted::Props::new(at).deleted(JsDate::INVALID)).into_string();
+    assert!(island.starts_with(r#"<div data-island="Posted" data-props="{&quot;at&quot;:&quot;2024-05-01T07:30:00.000Z&quot;,&quot;deleted&quot;:NaN}">"#), "{island}");
+    let read: posted::Props =
+        serde_json::from_str(r#"{"at":"2024-05-01T07:30:00.000Z","deleted":null}"#).unwrap();
+    assert_eq!(read.at, at);
 }
 
 #[test]

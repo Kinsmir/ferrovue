@@ -78,7 +78,7 @@ it("reports a refusal in the editor's unsaved template on the construct, with it
 it("follows the text as it is edited, showing each refusal once and none once it is fixed", async () => {
   const check = editor();
   const first = CLEAN.replace("{{ n }}", "{{ n.toPrecision(2) }}");
-  const second = CLEAN.replace("defineProps<{ n: number }>();", "defineProps<{ n: number; when: Date }>();");
+  const second = CLEAN.replace("defineProps<{ n: number }>();", "defineProps<{ n: number; when: Map<string, string> }>();");
   expect((await check(first)).map((d) => d.range.start)).toEqual([at(first, "n.toPrecision")]);
   expect(shown(await check(first + "\n"))).toHaveLength(1);
   expect(shown(await check(second)).map((d) => d.code)).toEqual([{ value: "FV0315", target: `${DOCS}#fv0315` }]);
@@ -86,12 +86,12 @@ it("follows the text as it is edited, showing each refusal once and none once it
 });
 
 it("reports a refusal in <script setup> on its tag, where the editor can place it, naming the line and column", async () => {
-  const text = CLEAN.replace("n: number", "when: Date").replace("{{ n }}", "{{ when }}");
+  const text = CLEAN.replace("n: number", "when: Map<string, string>").replace("{{ n }}", "{{ when }}");
   expect(shown(await editor()(text))).toEqual([
     {
       range: { start: { line: 0, character: 0 }, end: { line: 0, character: '<script setup lang="ts">'.length } },
       code: { value: "FV0315", target: `${DOCS}#fv0315` },
-      message: "ferrovue: unsupported prop type `Date`: declare it as an interface in the component, or import it from a `.ts` file (at 2:21)",
+      message: "ferrovue: unsupported prop type `Map`: declare it as an interface in the component, or import it from a `.ts` file (at 2:21)",
     },
   ]);
 });

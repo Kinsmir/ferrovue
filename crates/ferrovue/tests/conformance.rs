@@ -111,6 +111,33 @@ fn an_island_carries_null_for_a_nullable_prop() {
 }
 
 #[test]
+fn an_island_carries_its_dates_as_iso_strings_and_an_invalid_one_as_nan() {
+    use ferrovue::JsDate;
+    use generated::date_post;
+    let date = |iso: &str| JsDate::parse(iso).expect(iso);
+    let posts = [
+        date_post::Props::new(date("2024-03-10T08:05:09.007Z"), "Spring", ["a", "b"])
+            .edited(date("+010000-01-01")),
+        date_post::Props::new(JsDate::INVALID, "Invalid", ["t"]).deleted(JsDate::from_millis(-1.0)),
+        date_post::Props::new(date("-271821-04-20"), "", Vec::<&str>::new())
+            .deleted(JsDate::INVALID),
+    ];
+    let mut page = String::new();
+    for props in &posts {
+        date_post::island(props).render_to(&mut page);
+    }
+    page.push('\n');
+    assert_eq!(page, include_str!("conformance/date-islands.html"));
+    assert!(page.contains(
+        r#"data-props="{&quot;posted&quot;:&quot;2024-03-10T08:05:09.007Z&quot;,&quot;edited&quot;:&quot;+010000-01-01T00:00:00.000Z&quot;,&quot;deleted&quot;:null,"#
+    ));
+    assert!(page.contains(
+        r#"{&quot;posted&quot;:NaN,&quot;deleted&quot;:&quot;1969-12-31T23:59:59.999Z&quot;,"#
+    ));
+    assert!(page.contains(r#"&quot;deleted&quot;:NaN,"#));
+}
+
+#[test]
 fn a_component_with_slots_renders_through_html() {
     let props: generated::frame::Props = serde_json::from_str(r#"{"title":"t"}"#).unwrap();
     let body = |out: &mut String| out.push_str("<p>hi</p>");

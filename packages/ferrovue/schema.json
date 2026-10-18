@@ -144,6 +144,12 @@
       "markdownDescription": "The Rust type a `TrustedHtml` prop is, which must implement `ferrovue::TrustedHtml`, e.g. `crate::sanitize::SafeHtml`. A type that borrows names the props' lifetime, `'a`: `crate::render::Trusted<'a>`. `ferrovue::InlineHtml` makes every `TrustedHtml` prop inline HTML. Without it, only an `InlineHtml` prop may reach `v-html`.",
       "type": "string"
     },
+    "dateType": {
+      "description": "The Rust type a `Date` prop is, which must implement `ferrovue::JsTime`: `ferrovue::JsDate` by default, or `chrono::DateTime<chrono::Utc>` with the crate's `chrono` feature.",
+      "markdownDescription": "The Rust type a `Date` prop is, which must implement `ferrovue::JsTime`: `ferrovue::JsDate` by default, or `chrono::DateTime<chrono::Utc>` with the crate's `chrono` feature.",
+      "type": "string",
+      "default": "ferrovue::JsDate"
+    },
     "routes": {
       "description": "A JSON file listing the app's routes as vue-router paths (`/users/:id`), which `<RouterLink>` resolves against, or `{ pages }`: a folder of pages whose file names give the routes, as vue-router's file-based routing reads them. Without it, a component cannot use `<RouterLink>`.",
       "markdownDescription": "A JSON file listing the app's routes as vue-router paths (`/users/:id`), which `<RouterLink>` resolves against, or `{ pages }`: a folder of pages whose file names give the routes, as vue-router's file-based routing reads them. Without it, a component cannot use `<RouterLink>`.",

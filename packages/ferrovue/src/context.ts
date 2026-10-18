@@ -57,6 +57,10 @@ export interface Config {
    * `crate::render::Trusted<'a>`. `ferrovue::InlineHtml` makes every `TrustedHtml` prop inline HTML.
    * Without it, only an `InlineHtml` prop may reach `v-html`. */
   trustedHtml?: string;
+  /** The Rust type a `Date` prop is, which must implement `ferrovue::JsTime`:
+   * `ferrovue::JsDate` by default, or `chrono::DateTime<chrono::Utc>` with the crate's `chrono`
+   * feature. */
+  dateType?: string;
   /** A JSON file listing the app's routes as vue-router paths (`/users/:id`), which `<RouterLink>`
    * resolves against, or `{ pages }`: a folder of pages whose file names give the routes, as
    * vue-router's file-based routing reads them. Without it, a component cannot use `<RouterLink>`. */
@@ -230,7 +234,7 @@ export function checkConfig(raw: unknown, file: string, warn: (warning: GenError
   if (raw.builders !== undefined && typeof raw.builders !== "boolean") {
     throw new GenError("FV1106", `\`builders\` in ${file} is \`true\` or \`false\`: whether each props struct gets \`new()\` and a setter per optional field`, { file });
   }
-  for (const key of ["$schema", "stores", "trustedHtml", "viteRoot"]) string(raw, key, key);
+  for (const key of ["$schema", "stores", "trustedHtml", "dateType", "viteRoot"]) string(raw, key, key);
   if (raw.isProduction !== undefined && typeof raw.isProduction !== "boolean") wrong("isProduction", "`true` or `false`: whether `@vitejs/plugin-vue` compiles for production");
   if (raw.cssModules !== undefined) {
     const m = raw.cssModules;
@@ -326,6 +330,9 @@ export function tyOfName(name: TypeName): Ty {
 /** The Rust type of an `InlineHtml` prop, and of a `TrustedHtml` one when `trustedHtml` names it. */
 export const INLINE_HTML = "ferrovue::InlineHtml";
 
+/** The Rust type of a `Date` prop when `dateType` names none. */
+export const JS_DATE = "ferrovue::JsDate";
+
 /** Where `TrustedHtml` comes from. Only that import names the type `v-html` will write raw. */
 export const TYPES_MODULE = "ferrovue/types";
 
@@ -333,6 +340,7 @@ export const ctx = {
   helpers: {} as Record<string, { rust: string; params: Ty[]; ret: Ty; maxLen: number }>,
   helperModule: null as string | null,
   trustedHtml: null as string | null,
+  dateType: JS_DATE,
   builders: true,
   clientDirectives: new Set<string>(),
   plugins: [] as readonly Plugin[],

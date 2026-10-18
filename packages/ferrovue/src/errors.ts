@@ -498,6 +498,10 @@ export const ERRORS = {
     title: "Locale formatting with `Intl`, `.toLocaleString()`, `.localeCompare()`, `$d` or `$n`",
     detail: "`Intl` formats from locale data each JavaScript engine ships, and Node, Chromium, Firefox and Safari write some dates, times and numbers differently (spaces, separators, abbreviations), so no server can write what every reader's browser writes. This refusal is permanent. Format the value in Rust and pass it as a string prop, or write it with `.toFixed()` and `.toISOString()` into a message `$t` translates. See [`dates_and_prices`](crate::guide::dates_and_prices).",
   },
+  FV1806: {
+    title: "`Date` anywhere but a component's own prop",
+    detail: "A prop typed `Date` (optional or nullable too) is a `ferrovue::JsDate`, or the type `dateType` names, and an island's `data-props` carries it as its ISO string, which the client turns back into a `Date` because the prop's declared type says it is one. A `Date` inside a list, a dictionary or an object prop, and one in an interface the props do not declare, in Pinia state, `inject`, `ref` or `defineModel`, have no declared type the client could read, so they would reach the browser as strings. Pass the ISO string or the number of milliseconds and build the date with `new Date()`. See [`dates_and_prices`](crate::guide::dates_and_prices).",
+  },
 } as const satisfies Record<`FV${number}`, ErrorDoc>;
 
 /** A stable error code, as `FV0604`. */

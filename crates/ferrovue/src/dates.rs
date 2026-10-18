@@ -267,7 +267,7 @@ impl Cursor<'_> {
     }
 }
 
-fn iso_time(s: &[u8]) -> Option<f64> {
+pub(crate) fn iso_time(s: &[u8]) -> Option<f64> {
     let mut c = Cursor { s, at: 0 };
     let year = match c.sign() {
         Some(sign) => {

@@ -41,13 +41,14 @@ crates/ferrovue/             the Rust runtime crate, which generated code calls
   src/                       a module per part (`Html`, slots, class and style, the state script,
                              strings, teleports, the page head, fallthrough attributes, `BasicHtml`
                              and `InlineHtml`,
-                             `Sanitised`, the fixture check `conformance!` writes), each module's
+                             `Sanitised`, `JsDate`, the fixture check `conformance!` writes), each module's
                              unit tests beside it in <module>/tests.rs; lib.rs re-exports them all,
                              and the three crates below
   docs/guide/                the crate guide, `ferrovue::guide` on docs.rs
   tests/conformance/         components, fixtures, recorded HTML, generated Rust
   tests/literal_props/       components compiled with `"builders": false`
   tests/sanitised/           a component whose `TrustedHtml` is `ferrovue::Sanitised`
+  tests/chrono_dates/        the conformance suite's `Date` components, compiled with chrono's type
   tests/vectors/             vectors recorded from JavaScript and Vue
   tests/properties.rs        property-based tests of the runtime
   benches/                   criterion and instruction-count benchmarks of generated renderers

@@ -46,6 +46,7 @@ network access, point it at the installed package: `"./node_modules/ferrovue/sch
 | `router` | no | Instead of `routes`: `{ routes, base?, linkActiveClass?, linkExactActiveClass? }`, matching `createWebHistory(base)` and `createRouter`'s options |
 | `stores` | no | Directory of Pinia stores whose state components may read. See [`pinia`](crate::guide::pinia) |
 | `trustedHtml` | no | Rust path of the type a `TrustedHtml` prop is: `ferrovue::BasicHtml`, `ferrovue::Sanitised` with the `ammonia` feature, or a type of your own such as `crate::html::CleanHtml`. Needed for `v-html`. See [`escaping`](crate::guide::escaping) |
+| `dateType` | no | Rust path of the type a `Date` prop is: `ferrovue::JsDate` (the default), `chrono::DateTime<chrono::Utc>` with the `chrono` feature, or a type of your own that implements [`JsTime`](crate::JsTime). See [`dates_and_prices`](crate::guide::dates_and_prices#date-props) |
 | `helpers` | no | `{ module, functions }`: functions a template may call, each mapped to a Rust twin. See [`errors_and_limits`](crate::guide::errors_and_limits#helpers) |
 | `twins` | no | Components ferrovue does not compile, each rendered by a Rust function of yours: `{ "VBtn": { "rust": "crate::ui::v_btn", "props": { "label": "string" }, "slots": ["default"] } }`. See [`errors_and_limits`](crate::guide::errors_and_limits#rust-twins) |
 | `i18n` | no | vue-i18n: `{ messages, locale?, fallbackLocale? }`: the directory of locale files (`en.json`, `nl.json`), the default locale and the fallbacks. See [`i18n`](crate::guide::i18n) |

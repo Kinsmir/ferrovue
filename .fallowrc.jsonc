@@ -6,6 +6,7 @@
     "crates/ferrovue/tests/conformance/types/**",
     "crates/ferrovue-contract/components/**",
     "crates/ferrovue-contract/pages/**",
+    "crates/ferrovue/tests/chrono_dates/components/**",
     "crates/ferrovue/tests/literal_props/components/**",
     "crates/ferrovue/tests/sanitised/components/**",
     "examples/greeting/components/**",
