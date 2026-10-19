@@ -185,6 +185,178 @@ pub fn js_utc_milliseconds(t: f64) -> f64 {
     time_part(t, 1, 1000)
 }
 
+const WEEKDAYS: [&str; 7] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTHS: [&str; 12] = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+/// `Date.prototype.toUTCString` of a time value: `Thu, 01 Jan 1970 00:00:00 GMT`, the year written
+/// with at least four digits and a `-` before year 0 (`Fri, 01 Jan -0001 00:00:00 GMT`), and
+/// `Invalid Date` for an invalid date.
+///
+/// # Example
+///
+/// ```
+/// assert_eq!(ferrovue::js_to_utc_string(0.0), "Thu, 01 Jan 1970 00:00:00 GMT");
+/// assert_eq!(ferrovue::js_to_utc_string(f64::NAN), "Invalid Date");
+/// ```
+#[must_use]
+pub fn js_to_utc_string(t: f64) -> String {
+    let Some(t) = time(t) else {
+        return "Invalid Date".to_owned();
+    };
+    let days = t.div_euclid(MS_PER_DAY);
+    let (year, month, day) = civil(days);
+    let ms = t.rem_euclid(MS_PER_DAY);
+    let sign = if year < 0 { "-" } else { "" };
+    format!(
+        "{}, {day:02} {} {sign}{:04} {:02}:{:02}:{:02} GMT",
+        WEEKDAYS[(days + 4).rem_euclid(7) as usize],
+        MONTHS[(month - 1) as usize],
+        year.abs(),
+        ms / 3_600_000,
+        ms / 60_000 % 60,
+        ms / 1000 % 60
+    )
+}
+
+/// `Date.prototype.toJSON` of a time value: its ISO string, or `None` (JavaScript's `null`) for an
+/// invalid date.
+///
+/// # Example
+///
+/// ```
+/// assert_eq!(ferrovue::js_to_json(0.0).as_deref(), Some("1970-01-01T00:00:00.000Z"));
+/// assert_eq!(ferrovue::js_to_json(f64::NAN), None);
+/// ```
+#[must_use]
+pub fn js_to_json(t: f64) -> Option<String> {
+    time(t).map(|_| js_to_iso_string(t))
+}
+
+/// `JSON.stringify(d)` of a date of this time value: its ISO string quoted, or `null` for an
+/// invalid date.
+///
+/// # Example
+///
+/// ```
+/// assert_eq!(ferrovue::js_json_date(0.0), r#""1970-01-01T00:00:00.000Z""#);
+/// assert_eq!(ferrovue::js_json_date(f64::NAN), "null");
+/// ```
+#[must_use]
+pub fn js_json_date(t: f64) -> String {
+    js_to_json(t).map_or_else(|| "null".to_owned(), |iso| format!("\"{iso}\""))
+}
+
+const EXACT: f64 = 9_007_199_254_740_992.0;
+
+fn integer(x: f64) -> f64 {
+    x.trunc() + 0.0
+}
+
+fn v8_day(year: f64, month: f64, date: f64) -> f64 {
+    if !((-1e6..=1e6).contains(&year) && (-1e7..=1e7).contains(&month)) {
+        return f64::NAN;
+    }
+    const DELTA: i64 = 399_999;
+    let days_before =
+        |y: i64| 365 * (y + DELTA) + (y + DELTA) / 4 - (y + DELTA) / 100 + (y + DELTA) / 400;
+    let mut y = year as i64;
+    let mut m = month as i64;
+    y += m / 12;
+    m %= 12;
+    if m < 0 {
+        m += 12;
+        y -= 1;
+    }
+    const COMMON: [i64; 12] = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+    const LEAP: [i64; 12] = [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335];
+    let table = if y % 4 != 0 || (y % 100 == 0 && y % 400 != 0) {
+        COMMON
+    } else {
+        LEAP
+    };
+    let day = days_before(y) - days_before(1970) + table[m as usize];
+    (day - 1) as f64 + integer(date)
+}
+
+/// `Date.UTC(year, month, date, hours, minutes, seconds, ms)`: the time value of a date and time
+/// in UTC, each part truncated toward zero, a year from 0 to 99 read as 1900 to 1999, a month or a
+/// day beyond its range carried into the next, and `NaN` where a part is not finite or the time
+/// lies beyond ±8.64 × 10¹⁵ ms. The parts JavaScript leaves out are `0`, `0`, `1`, `0`, `0`, `0`.
+///
+/// # Panics
+///
+/// Where engines compute different dates: a year beyond ±1,000,000, a month beyond ±10,000,000,
+/// or a year before −399,999 once the month is carried into it, unless the date is invalid in
+/// every engine, since V8 reads them by rules of its own, which Firefox and Safari do not share;
+/// and a part worth more than 2⁵³ ms that the others bring back within the range of dates, which
+/// Node rounds otherwise than the browsers.
+///
+/// # Example
+///
+/// ```
+/// assert_eq!(ferrovue::js_date_utc(2024.0, 1.0, 29.0, 0.0, 0.0, 0.0, 0.0), 1_709_164_800_000.0);
+/// assert_eq!(ferrovue::js_date_utc(99.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0), 915_148_800_000.0);
+/// assert!(ferrovue::js_date_utc(f64::NAN, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0).is_nan());
+/// ```
+#[must_use]
+pub fn js_date_utc(
+    year: f64,
+    month: f64,
+    date: f64,
+    hours: f64,
+    minutes: f64,
+    seconds: f64,
+    ms: f64,
+) -> f64 {
+    let parts = [year, month, date, hours, minutes, seconds, ms];
+    if !parts.iter().all(|x| x.is_finite()) {
+        return f64::NAN;
+    }
+    let mut year = year;
+    let whole = integer(year);
+    if (0.0..=99.0).contains(&whole) {
+        year = 1900.0 + whole;
+    }
+    let terms = [
+        integer(hours) * 3_600_000.0,
+        integer(minutes) * 60_000.0,
+        integer(seconds) * 1000.0,
+    ];
+    let time = terms[0] + terms[1] + terms[2] + integer(ms);
+    if !time.is_finite() {
+        return f64::NAN;
+    }
+    let carried = integer(year) + (integer(month) / 12.0).floor();
+    let agreed =
+        (-1e6..=1e6).contains(&year) && (-1e7..=1e7).contains(&month) && carried >= -399_999.0;
+    let differs = || -> ! {
+        panic!(
+            "ferrovue: Date.UTC({}, {}, {}, {hours}, {minutes}, {seconds}, {ms}) is a date \
+             engines compute differently (see ferrovue::guide::dates_and_prices)",
+            parts[0], parts[1], parts[2]
+        )
+    };
+    if !agreed {
+        if carried.abs() >= 399_999.0 && integer(date).abs() <= 1e7 && time.abs() <= 1e15 {
+            return f64::NAN;
+        }
+        differs();
+    }
+    let days = v8_day(year, month, date) * MS_PER_DAY as f64;
+    let t = days + time;
+    let largest = terms.iter().fold(days.abs(), |m, x| m.max(x.abs()));
+    if t.is_finite() && largest > EXACT && t.abs() <= MAX_TIME + largest * 2f64.powi(-50) {
+        differs();
+    }
+    if t.is_finite() && t.abs() <= MAX_TIME {
+        integer(t)
+    } else {
+        f64::NAN
+    }
+}
+
 fn time(t: f64) -> Option<i64> {
     let t = js_time_clip(t);
     (!t.is_nan()).then_some(t as i64)

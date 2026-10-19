@@ -1606,6 +1606,21 @@ ${script}
       expect(out).toContain("if !(*s_d).is_nan() {");
     });
 
+    it("writes a date as toUTCString, toJSON and JSON.stringify do, builds one with Date.UTC and orders two", () => {
+      const out = compile(
+        island(dated("const d = computed(() => new Date(props.at));\nconst j = computed(() => d.value.toJSON());", '{{ d.toUTCString() }}|{{ j ?? "none" }}|{{ JSON.stringify(d) }}|{{ Date.UTC(ms) }}|{{ Date.UTC(99, 11, 31, 23, 59, 59.9, 999.5) }}|{{ Date.UTC(ms, 1, 2) }}|{{ d < new Date(ms) }}|{{ d >= d }}<b :title="d.toJSON()"></b>')),
+      ).get("x.rs")!;
+      expect(out).toContain("let s_j = std::cell::LazyCell::new(|| fv::js_to_json(*s_d).map(std::borrow::Cow::<str>::Owned));");
+      expect(out).toContain("fv::escape_into(out, &fv::js_to_utc_string(*s_d));");
+      expect(out).toContain('fv::escape_into(out, (*s_j).as_deref().unwrap_or("none"));');
+      expect(out).toContain("fv::escape_into(out, &fv::js_json_date(*s_d));");
+      expect(out).toContain("fv::push_number(out, fv::js_date_utc(props.ms as f64, 0.0f64, 1.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64));");
+      expect(out).toContain('out.push_str("|946684799999|");');
+      expect(out).toContain('out.push_str(if (*s_d) < fv::js_time_clip(props.ms as f64) { "true" } else { "false" });');
+      expect(out).toContain('out.push_str(if !(*s_d).is_nan() { "true" } else { "false" });');
+      expect(out).toContain("if let Some(v) = fv::js_to_json(*s_d).as_deref() {");
+    });
+
     const posted = `<script setup lang="ts">
 import { computed } from "vue";
 import Stamp from "./Stamp.vue";
@@ -2431,7 +2446,7 @@ import Z from "./Z.vue";
 const props = defineProps<{ a: string; n: number }>();
 </script>
 <template><i v-if="a < n">x</i></template>`,
-      /`<` is supported between two numbers, or two strings, that are present: the other is a string/,
+      /`<` is supported between two numbers, two strings or two dates that are present: the other is a string/,
     ],
     [
       "two halves of surrogate pairs compared, which JavaScript tells apart",
@@ -2759,12 +2774,60 @@ defineProps<{ at: string }>();
       /`\.toString\(\)` on a `Date` is not supported/,
     ],
     [
-      "Date.UTC",
+      "Date.UTC of no parts",
       `<script setup lang="ts">
 defineProps<{ y: number }>();
 </script>
-<template><p>{{ Date.UTC(y, 0) }}</p></template>`,
-      /`Date\.UTC\(\)` is not supported/,
+<template><p>{{ Date.UTC() }}</p></template>`,
+      /`Date\.UTC\(\)` takes from one to seven numbers/,
+    ],
+    [
+      "Date.UTC of a value that may be absent",
+      `<script setup lang="ts">
+defineProps<{ y?: number }>();
+</script>
+<template><p>{{ Date.UTC(2024, y) }}</p></template>`,
+      /`Date\.UTC\(\)` takes numbers that are present: this is an optional number/,
+    ],
+    [
+      "Date.UTC of a year engines compute differently",
+      `<script setup lang="ts">
+defineProps<{ y: number }>();
+</script>
+<template><p>{{ Date.UTC(-500000, 0, 182000000) }}</p></template>`,
+      /`Date\.UTC\(-500000, 0, 182000000\)` is a date engines compute differently: V8 reads a year beyond ±1,000,000/,
+    ],
+    [
+      "two dates compared with ===",
+      `<script setup lang="ts">
+defineProps<{ a: Date; b: Date }>();
+</script>
+<template><p v-if="a === b">same</p></template>`,
+      /`===` between a `Date` and a `Date` is true only when the two are one object, so two dates of the same time are unequal: compare time values, `a\.getTime\(\) === b\.getTime\(\)`/,
+    ],
+    [
+      "a date compared with a string by ==",
+      `<script setup lang="ts">
+defineProps<{ a: Date; s: string }>();
+</script>
+<template><p v-if="a == s">same</p></template>`,
+      /`==` between a `Date` and a string compares the date as an object, or as its `\.toString\(\)` in the time zone of the machine running it: compare time values/,
+    ],
+    [
+      "a date ordered against a number",
+      `<script setup lang="ts">
+defineProps<{ a: Date; n: number }>();
+</script>
+<template><p v-if="a < n">before</p></template>`,
+      /`<` is supported between two numbers, two strings or two dates that are present: the other is a `Date`/,
+    ],
+    [
+      "JSON.stringify of a date that may be absent",
+      `<script setup lang="ts">
+defineProps<{ a?: Date }>();
+</script>
+<template><p>{{ JSON.stringify(a) }}</p></template>`,
+      /`JSON\.stringify\(\)` of a string, a number, a boolean, a date or a list of those, present/,
     ],
     [
       "a number formatted by locale",
@@ -3408,7 +3471,13 @@ defineProps<{ onSale?: boolean }>();
     "a date beyond the range whose offset brings it within": "FV1803",
     "a date read in the local time zone": "FV1804",
     "a date written by toString": "FV1804",
-    "Date.UTC": "FV1804",
+    "Date.UTC of no parts": "FV1807",
+    "Date.UTC of a value that may be absent": "FV1807",
+    "Date.UTC of a year engines compute differently": "FV1808",
+    "two dates compared with ===": "FV1809",
+    "a date compared with a string by ==": "FV1809",
+    "a date ordered against a number": "FV0609",
+    "JSON.stringify of a date that may be absent": "FV0707",
     "a number formatted by locale": "FV1805",
     "a date formatted by locale": "FV1805",
     "strings compared by locale": "FV1805",

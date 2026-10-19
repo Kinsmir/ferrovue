@@ -40,6 +40,22 @@ released together and share version numbers.
 - FV0716 and FV0717, for `.toPrecision()` with an argument other than a literal from 1 to 100 and
   `.toExponential()` with one other than a literal from 0 to 100, where JavaScript throws a
   `RangeError` or the compiler cannot know the argument.
+- More of `Date`, as V8 computes it: `.toUTCString()` (`Thu, 01 Jan 1970 00:00:00 GMT`, years
+  beyond four digits and before year 0 as V8 writes them, `Invalid Date` for an invalid date);
+  `.toJSON()`, a `string | null` that is `null` for an invalid date, written as nothing in `{{ }}`
+  and leaving a bound attribute out; `JSON.stringify()` of a date, its ISO string quoted or `null`;
+  `Date.UTC()` of one to seven numbers, each truncated, a year from 0 to 99 read as 1900 to 1999,
+  parts carried into the next, `NaN` beyond the range, and literal parts worked out when compiling;
+  and `<`, `<=`, `>` and `>=` between two dates, which compare their time values and are false when
+  either is invalid. The runtime's `js_to_utc_string`, `js_to_json`, `js_json_date` and
+  `js_date_utc` are held to new vectors in `dates.json`, recorded from Node and read alike by
+  Chromium and Firefox, and to the new `DateFormats` conformance component.
+- FV1807, for `Date.UTC()` of no parts, more than seven, or a part that is not a number that is
+  present; FV1808, for literal parts of `Date.UTC()` that V8 computes by rules Firefox and Safari do
+  not share (a year beyond ±1,000,000, a month beyond ±10,000,000, a year before −399,999, or a
+  part beyond 2⁵³ ms brought back within the range), on which `js_date_utc` panics when they come
+  from the props; FV1809, for `===`, `!==`, `==` and `!=` with a `Date`, which compare whether two
+  dates are one object, with a message that says to compare `.getTime()`.
 
 ### Changed
 
@@ -47,7 +63,10 @@ released together and share version numbers.
   `#[doc(hidden)]` `js_time_of` and `js_date_prop` and the serde helpers `date_prop` and `opt_date_prop`, which the
   0.8 crate lacks. The crate still builds modules of version 2, which call nothing that changed.
 - The API reports gain `reviveDates` (`ferrovue`, `ferrovue/client`) and `Config.dateType` and
-  FV1806, FV0716 and FV0717 (`ferrovue/compiler`).
+  FV0716, FV0717 and FV1806 to FV1809 (`ferrovue/compiler`).
+- Generated code of version 3 also calls the `#[doc(hidden)]` `js_to_utc_string`, `js_to_json`,
+  `js_json_date` and `js_date_utc`. FV0609 names two dates beside two numbers and two strings, and
+  `==` or `!=` with a date is refused with FV1809 where it was FV0619.
 - `.toFixed()` takes a fractional literal, truncated as JavaScript truncates it (`toFixed(2.5)` is
   `toFixed(2)`), and `undefined`, which is `toFixed(0)`; it refused both before.
 - The guide's examples of a refusal (the CLI's message, `--format json` and the editor) show
@@ -71,7 +90,9 @@ released together and share version numbers.
   template has tested with `d.getTime() === d.getTime()`, directly or through a `computed` the
   render reads only under that test. Each fixture's dates come from `test/date-inputs.ts`, the
   strings and time values `dates.json` records: ISO strings across the range of years, expanded
-  years and both edges, numbers with fractions, and invalid dates.
+  years and both edges, numbers with fractions, and invalid dates. It also writes
+  `.toUTCString()`, `JSON.stringify()` and `.toJSON()` of any date, `Date.UTC()` of one to seven
+  parts wherever a number goes, and `<`, `<=`, `>` and `>=` between two dates in conditions.
 - Tests only: the differential fuzzer generates `.toPrecision()` and `.toExponential()` of any
   number, without an argument and with whole and fractional literals in range, and the conformance
   suite gains `Precision`, ten fixtures recorded from Vue.

@@ -122,7 +122,7 @@ export function asyncChildren(comp: Component, ast: N[]): Map<string, string> {
   return found;
 }
 
-const PANICS = /\bfv::js_(?:repeat|pad_start|pad_end|date_parse|to_iso_string)\(|\bfv_i18n\.t\(/;
+const PANICS = /\bfv::js_(?:repeat|pad_start|pad_end|date_parse|date_utc|to_iso_string)\(|\bfv_i18n\.t\(/;
 
 function mayPanic(scope: Scope, lazies: Map<string, string>, init: string): boolean {
   if (PANICS.test(init)) return true;

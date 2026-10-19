@@ -23,8 +23,10 @@ fn dates_are_javascripts() {
     let vectors: Vec<(String, String, serde_json::Value)> =
         serde_json::from_str(include_str!("../../tests/vectors/dates.json")).expect("date vectors");
     assert!(vectors.len() >= 4000, "the vectors were not all read");
+    let number = |text: &str| -> f64 { text.parse().unwrap_or_else(|_| panic!("{text:?} parses")) };
     let mut accepted = 0;
     let mut refused = 0;
+    let mut utc_refused = 0;
     for (op, input, want) in &vectors {
         if op == "parse" {
             if want.is_null() {
@@ -43,8 +45,42 @@ fn dates_are_javascripts() {
             }
             continue;
         }
-        let x: f64 = input.parse().unwrap_or_else(|_| panic!("{input:?} parses"));
-        let t = js_time_clip(x);
+        if op == "UTC" {
+            let mut parts = [f64::NAN, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0];
+            for (part, text) in parts.iter_mut().zip(input.split(',')) {
+                *part = number(text);
+            }
+            let utc = || {
+                js_date_utc(
+                    parts[0], parts[1], parts[2], parts[3], parts[4], parts[5], parts[6],
+                )
+            };
+            if want.is_null() {
+                utc_refused += 1;
+                assert!(
+                    panics(utc),
+                    "Date.UTC({input}) is computed differently by each engine"
+                );
+            } else {
+                assert_eq!(
+                    Some(shown(utc()).as_str()),
+                    want.as_str(),
+                    "Date.UTC({input})"
+                );
+            }
+            continue;
+        }
+        let t = js_time_clip(number(input));
+        let text = match op.as_str() {
+            "toUTCString" => Some(js_to_utc_string(t)),
+            "toJSON" => js_to_json(t),
+            "stringify" => Some(js_json_date(t)),
+            _ => None,
+        };
+        if op == "toJSON" || text.is_some() {
+            assert_eq!(text.as_deref(), want.as_str(), "{op}({input})");
+            continue;
+        }
         if op == "toISOString" {
             if want.get("throws").is_some() {
                 assert!(
@@ -76,6 +112,7 @@ fn dates_are_javascripts() {
     }
     assert!(accepted >= 1000, "{accepted} portable strings");
     assert!(refused >= 300, "{refused} strings outside the format");
+    assert!(utc_refused >= 20, "{utc_refused} parts of Date.UTC refused");
 }
 
 #[test]

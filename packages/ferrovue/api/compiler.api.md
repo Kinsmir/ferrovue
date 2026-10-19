@@ -1133,7 +1133,7 @@ export const ERRORS: {
     };
     readonly FV1804: {
         readonly title: "`Date` method or function ferrovue does not translate";
-        readonly detail: "A date is read with `.toISOString()`, `.getTime()`, `.valueOf()` and the `.getUTC…()` methods, which do not depend on the time zone. The local getters (`.getFullYear()`, `.getHours()`), `.getTimezoneOffset()` and `.toString()` read the time zone of the machine running them, which differs between the server and the reader's browser. See [`dates_and_prices`](crate::guide::dates_and_prices).";
+        readonly detail: "A date is read with `.toISOString()`, `.toUTCString()`, `.toJSON()`, `.getTime()`, `.valueOf()` and the `.getUTC…()` methods, which do not depend on the time zone. The local getters (`.getFullYear()`, `.getHours()`), `.getTimezoneOffset()` and `.toString()` read the time zone of the machine running them, which differs between the server and the reader's browser. See [`dates_and_prices`](crate::guide::dates_and_prices).";
     };
     readonly FV1805: {
         readonly title: "Locale formatting with `Intl`, `.toLocaleString()`, `.localeCompare()`, `$d` or `$n`";
@@ -1142,6 +1142,18 @@ export const ERRORS: {
     readonly FV1806: {
         readonly title: "`Date` anywhere but a component's own prop";
         readonly detail: "A prop typed `Date` (optional or nullable too) is a `ferrovue::JsDate`, or the type `dateType` names, and an island's `data-props` carries it as its ISO string, which the client turns back into a `Date` because the prop's declared type says it is one. A `Date` inside a list, a dictionary or an object prop, and one in an interface the props do not declare, in Pinia state, `inject`, `ref` or `defineModel`, have no declared type the client could read, so they would reach the browser as strings. Pass the ISO string or the number of milliseconds and build the date with `new Date()`. See [`dates_and_prices`](crate::guide::dates_and_prices).";
+    };
+    readonly FV1807: {
+        readonly title: "`Date.UTC()` of anything but one to seven numbers that are present";
+        readonly detail: "`Date.UTC(year, month, date, hours, minutes, seconds, ms)` takes numbers, each truncated toward zero, the month counted from 0. A value that may be absent would give `NaN` for `undefined` and `0` for `null`: narrow it with `v-if` or give it a default. See [`dates_and_prices`](crate::guide::dates_and_prices).";
+    };
+    readonly FV1808: {
+        readonly title: "`Date.UTC()` of parts engines compute differently";
+        readonly detail: "V8 computes a year beyond ±1,000,000, a month beyond ±10,000,000 and a year before −399,999 by rules of its own, which Firefox and Safari do not share, so a day or hours that bring the date back within the range give another date in each; and Node rounds a part worth more than 2⁵³ ms that the others bring back within the range otherwise than the browsers. Literal parts are checked when the component is compiled; parts from the props are checked as it renders, and `js_date_utc` panics on them. See [`dates_and_prices`](crate::guide::dates_and_prices).";
+    };
+    readonly FV1809: {
+        readonly title: "`===`, `!==`, `==` or `!=` with a `Date`";
+        readonly detail: "Two `Date`s are equal in JavaScript only when they are one object, so two dates of the same time are unequal, and `==` with a string compares the date's `.toString()`, in the time zone of the machine running it. Compare time values: `a.getTime() === b.getTime()`. `<`, `<=`, `>` and `>=` between two dates compare their time values, and are false when either is invalid. See [`dates_and_prices`](crate::guide::dates_and_prices).";
     };
 };
 

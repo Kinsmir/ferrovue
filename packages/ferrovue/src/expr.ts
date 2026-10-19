@@ -197,6 +197,8 @@ export function expr(s: Scope, n: N): Val {
     const a = expr(s, n.left);
     const b = expr(s, n.right);
     const comparison = ["<", ">", "<=", ">="].includes(n.operator);
+    const ordered = comparison ? claim((p) => p.values?.order?.(a, n.operator, b)) : undefined;
+    if (ordered) return ordered;
     if (comparison && a.ty.k === "str" && b.ty.k === "str") {
       meet(comp, a, b, `\`${n.operator}\``, n, "order");
       const is = { "<": "lt", ">": "gt", "<=": "le", ">=": "ge" }[n.operator as "<"];
@@ -207,7 +209,7 @@ export function expr(s: Scope, n: N): Val {
         a.ty.k === "opt" || b.ty.k === "opt"
           ? "narrow an optional one with `v-if` first"
           : `the other is ${describeTy(isNumber(a.ty) ? b.ty : a.ty)}`;
-      const between = comparison ? "two numbers, or two strings," : "two numbers";
+      const between = comparison ? "two numbers, two strings or two dates" : "two numbers";
       return fail(comp, "FV0609", `\`${n.operator}\` is supported between ${between} that are present: ${why}`, n);
     }
     if (["<", ">", "<=", ">="].includes(n.operator)) return compare(a, n.operator, b);
@@ -383,6 +385,10 @@ export function expr(s: Scope, n: N): Val {
       return fail(comp, "FV0618", `unary \`${n.operator}\``, n);
     case "BinaryExpression": {
       const test = nullTest(n);
+      if (n.operator !== "===" && n.operator !== "!==" && !test) {
+        const [a, b] = [expr(s, n.left), expr(s, n.right)];
+        claim((p) => p.values?.refuseEquality?.(s, a, b, n));
+      }
       if (n.operator !== "===" && n.operator !== "!==" && !test) fail(comp, "FV0619", `\`${n.operator}\`: \`==\` and \`!=\` compare with \`null\` or \`undefined\` only; use \`===\``, n);
       const whole = claim((p) => p.equality?.(s, n));
       if (whole) return whole;
@@ -409,6 +415,7 @@ export function expr(s: Scope, n: N): Val {
       const scalar = (t: Ty) => t.k === "str" || t.k === "int" || t.k === "bool";
       const strish = (t: Ty) => t.k === "str" || (t.k === "opt" && t.of.k === "str");
       if (strish(a.ty) && strish(b.ty)) meet(comp, a, b, `\`${n.operator}\``, n, "equal");
+      claim((p) => p.values?.refuseEquality?.(s, a, b, n));
       const own = claim((p) => p.values?.equals?.(a, b));
       if (own !== undefined) eq = own;
       else if ((nothing(b.ty) && a.ty.k === "opt") || (nothing(a.ty) && b.ty.k === "opt")) {
