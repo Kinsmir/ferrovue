@@ -276,6 +276,19 @@ What it generates, with random nesting:
   `>`, presence tests and narrowing); `v-for` over lists, objects (destructured too), array literals,
   number ranges, computed lists and dictionaries (`(value, key, i) in r`, `Object.entries`), with an
   index;
+- `Date` props, required, optional (`x?: Date`) and nullable (`Date | null`), and the dates of
+  0.8.0 in any component: `new Date()` of an ISO literal, of a number and of another date,
+  `Date.parse()` of an ISO literal, dates chosen with `?:` and `??` and held in a `computed`, read
+  with `.getTime()`, `.valueOf()` and the eight `.getUTC…()` methods wherever a number goes (text,
+  attributes, `:class` and `:style`, conditions, the body of a `v-for`, `useHead`); `v-if` that
+  narrows an optional or nullable date (`d`, `d !== undefined`, `d != null`, `d !== null`) or tests
+  it with `d.getTime() === d.getTime()`, under which `.toISOString()` is read, directly and through
+  a `computed` of it that the render reads only there, so an invalid date leaves it unread; a child
+  `FzDate` given dates, `null` and optional dates for its `Date` and `Date | null` props, which
+  hands one on to a child of its own. A fixture gives each date as a string or a number from
+  `test/date-inputs.ts` (the hand-written edges and the drawn values `dates.json` records, those
+  the date time string format accepts), valid, invalid and at both edges of the range; Vue gets
+  `Date`s from it through `fixtureApp`, and the Rust reads the same JSON;
 - static and bound attributes, boolean attributes, `:class` strings, arrays and objects (computed
   names too), `:style` objects merged with a static `style`;
 - child components written beside each one: a single root, a slot with a fallback, a root that is
@@ -338,7 +351,8 @@ What it generates, with random nesting:
 
 Only what ferrovue promises to accept is generated: expressions are typed as TypeScript and
 ferrovue type them, optional values are read only where they may be, integer arithmetic never
-leaves ±2⁵³, and two strings that may each hold half of a surrogate pair never meet. So a component
+leaves ±2⁵³, two strings that may each hold half of a surrogate pair never meet, and a date is read
+only through its methods, `.toISOString()` only where it is known valid. So a component
 the compiler refuses is reported as a **refusal**, a finding of its own when the README says the
 construct is supported. Vue's HTML is compared as a server sends it, a half of a pair as U+FFFD
 (the guide's `strings` page), followed by the head unhead renders, as the conformance suite records it.

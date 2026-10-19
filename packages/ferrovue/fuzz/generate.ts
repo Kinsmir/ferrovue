@@ -1,4 +1,6 @@
 import type { Config } from "../src/compiler.ts";
+import { portableTime } from "../src/plugins/dates.ts";
+import { DATE_METHODS, HAND_STRINGS, HAND_TIMES, dateCases } from "../test/date-inputs.ts";
 
 export class Rng {
   private a: number;
@@ -50,7 +52,7 @@ export class Rng {
   }
 }
 
-export type Ty = "str" | "int" | "float" | "bool" | "html";
+export type Ty = "str" | "int" | "float" | "bool" | "html" | "date";
 
 export interface Expr {
   ty: Ty;
@@ -59,6 +61,7 @@ export interface Expr {
   fmt: (kids: string[]) => string;
   atom: boolean;
   fixed?: boolean;
+  valid?: boolean;
   ref?: string;
   and?: boolean;
   lone?: boolean;
@@ -77,7 +80,8 @@ export type Spec =
   | { k: "obj"; iface: string }
   | { k: "record"; of: Spec; dict: boolean }
   | { k: "enum"; values: string[] }
-  | { k: "html"; inline: boolean };
+  | { k: "html"; inline: boolean }
+  | { k: "date" };
 
 export interface Iface {
   name: string;
@@ -128,9 +132,11 @@ export type HelperName =
   | "FzInj"
   | "FzProv"
   | "FzHead"
-  | "FzSlots";
+  | "FzSlots"
+  | "FzDate"
+  | "FzStamp";
 
-const HELPERS: Record<HelperName, { template: string; imports: HelperName[]; slot: boolean; script?: string[] }> = {
+const HELPERS: Record<HelperName, { template: string; imports: HelperName[]; slot: boolean; script?: string[]; props?: string }> = {
   FzLeaf: { template: `<b class="leaf">leaf</b>`, imports: [], slot: false },
   FzBox: { template: `<div class="box"><slot>box <i>fallback</i></slot></div>`, imports: [], slot: true },
   FzFwd: { template: `<FzBox><slot /></FzBox>`, imports: ["FzBox"], slot: true },
@@ -180,6 +186,18 @@ const HELPERS: Record<HelperName, { template: string; imports: HelperName[]; slo
     slot: true,
     script: ['import { useSlots } from "vue";', "const slots = useSlots();"],
   },
+  FzDate: {
+    template: `<time class="date">{{ at.getTime() }}|{{ at.getUTCFullYear() }}-{{ at.getUTCMonth() + 1 }}<b v-if="gone !== null">{{ gone.getUTCDate() }}</b><FzStamp :at="was ?? at" :was="was" /></time>`,
+    imports: ["FzStamp"],
+    slot: false,
+    props: "defineProps<{ at: Date; was?: Date; gone: Date | null }>();",
+  },
+  FzStamp: {
+    template: `<small class="stamp">{{ at.getUTCSeconds() }}<i v-if="was">{{ was.getTime() }}</i><b v-if="at.getTime() === at.getTime()">{{ at.toISOString() }}</b></small>`,
+    imports: [],
+    slot: false,
+    props: "defineProps<{ at: Date; was?: Date }>();",
+  },
 };
 
 const KEYS_FILE = `import type { InjectionKey, Ref } from "vue";
@@ -205,6 +223,7 @@ export interface Binding {
   name: string;
   kind: "computed" | "const" | "ref";
   e: Expr;
+  lazy?: string;
 }
 
 export interface HeadValue {
@@ -303,6 +322,8 @@ function tsType(spec: Spec): string {
       return "Tone";
     case "html":
       return spec.inline ? "InlineHtml" : "TrustedHtml";
+    case "date":
+      return "Date";
   }
 }
 
@@ -650,7 +671,7 @@ export function helperFiles(c: Component): [string, string][] {
   const files = used.map((name): [string, string] => {
     const h = HELPERS[name];
     const flags = c.helpers[name];
-    const lines = ['<script setup lang="ts">', ...h.imports.map((i) => `import ${i} from "./${i}.vue";`), ...(h.script ?? []), "defineProps<{}>();", "</script>", "", `<template>${h.template}</template>`];
+    const lines = ['<script setup lang="ts">', ...h.imports.map((i) => `import ${i} from "./${i}.vue";`), ...(h.script ?? []), h.props ?? "defineProps<{}>();", "</script>", "", `<template>${h.template}</template>`];
     if (flags.scoped) lines.push(...scopedStyle(flags.slotted && h.slot));
     return [`${name}.vue`, lines.join("\n") + "\n"];
   });
@@ -804,8 +825,32 @@ function randomString(r: Rng, hostile: boolean): string {
 const MAX = 2 ** 53 - 1;
 const FLOATS = [0, -0, 0.1, 0.2, 0.30000000000000004, 0.5, 1.5, 2.5, -2.5, 1.005, 1.45, 123.456, 1e-7, 1.5e-7, 1e-6, 0.000001234, 1e21, 1.5e21, 1e20, 1.2345678901234568e20, -1e21, 1e300, 5e-324, 1.7976931348623157e308, 3, -7, 2 ** 53, 0.1 + 0.7];
 
+const timeOf = (x: string | number): number => new Date(x).getTime();
+const portable = (xs: Iterable<string>): string[] => [...new Set(xs)].filter((s) => portableTime(s) !== undefined);
+const finite = (xs: Iterable<number>): number[] => [...new Set(xs)].filter(Number.isFinite);
+const CASES = dateCases();
+const DATE_STRINGS = portable(CASES.filter(([op]) => op === "parse").map(([, s]) => s));
+const DATE_TIMES = finite(CASES.filter(([op]) => op === "Date").map(([, x]) => Number(x)));
+const EDGE_STRINGS = portable(HAND_STRINGS);
+const EDGE_TIMES = finite(HAND_TIMES);
+const INVALID_DATES = [...EDGE_STRINGS, ...EDGE_TIMES].filter((x) => Number.isNaN(timeOf(x)));
+const VALID_STRINGS = DATE_STRINGS.filter((s) => !Number.isNaN(timeOf(s)));
+const VALID_TIMES = DATE_TIMES.filter((x) => !Number.isNaN(timeOf(x)));
+
+function dateValue(r: Rng, hostile: boolean): string | number {
+  return r.weighted<() => string | number>([
+    [hostile ? 3 : 1, () => r.pick(EDGE_STRINGS)],
+    [hostile ? 2 : 1, () => r.pick(EDGE_TIMES)],
+    [hostile ? 2 : 1, () => r.pick(INVALID_DATES)],
+    [4, () => r.pick(DATE_STRINGS)],
+    [2, () => r.pick(DATE_TIMES)],
+  ])();
+}
+
 function randomValue(r: Rng, spec: Spec, ifaces: Map<string, Iface>, hostile: boolean): unknown {
   switch (spec.k) {
+    case "date":
+      return dateValue(r, hostile);
     case "str":
       return randomString(r, hostile);
     case "int":
@@ -972,12 +1017,24 @@ interface RecordVar {
   name: string;
   of: Spec;
 }
+interface DateVar {
+  name: string;
+  key: string;
+  opt: boolean;
+  nul?: boolean;
+  valid?: boolean;
+}
 interface Scope {
   vars: Var[];
   lists: ListVar[];
   records: RecordVar[];
   htmls: Var[];
+  dates: DateVar[];
 }
+
+const DATE_READS = ["getTime", "valueOf", ...DATE_METHODS.filter((m) => m !== "toISOString")];
+const isoLit = (s: string): Expr => ({ ...atom("date", `new Date('${s}')`), ...(Number.isNaN(timeOf(s)) ? {} : { valid: true }) });
+const msLit = (x: number): Expr => ({ ...atom("date", `new Date(${numText(x)})`), ...(Number.isNaN(timeOf(x)) ? {} : { valid: true }) });
 
 interface ListExpr {
   of: Spec;
@@ -995,7 +1052,9 @@ const specTy = (s: Spec): Ty | null =>
 const specBound = (s: Spec): number => (s.k === "int" ? (s.wide ? LIMIT : BOUND_SMALL) : s.k === "count" ? 10 : 0);
 
 class Gen {
-  scope: Scope = { vars: [], lists: [], records: [], htmls: [] };
+  scope: Scope = { vars: [], lists: [], records: [], htmls: [], dates: [] };
+  lazies: { dep: string; v: Var }[] = [];
+  dateLits = 0;
   favour: HelperName[] = [];
   vnode = false;
   para = false;
@@ -1017,7 +1076,11 @@ class Gen {
   }
 
   bind(name: string, spec: Spec, prop = false, lone = false): void {
-    if (spec.k === "html" || (spec.k === "opt" && spec.of.k === "html")) {
+    const date = spec.k === "date" ? spec : (spec.k === "opt" || spec.k === "nul") && spec.of.k === "date" ? spec.of : null;
+    if (date) {
+      const key = name.replace(/^props\./, "");
+      this.scope.dates.push({ name, key, opt: spec.k !== "date", ...(spec.k === "nul" ? { nul: true } : {}) });
+    } else if (spec.k === "html" || (spec.k === "opt" && spec.of.k === "html")) {
       const html = spec.k === "opt" ? spec.of : spec;
       this.scope.htmls.push({ name, ty: "html", opt: spec.k === "opt", bound: 0, ...(html.k === "html" && html.inline ? { inline: true } : {}) });
     }
@@ -1037,7 +1100,7 @@ class Gen {
   }
 
   withScope<T>(f: () => T): T {
-    const saved = { vars: [...this.scope.vars], lists: [...this.scope.lists], records: [...this.scope.records], htmls: [...this.scope.htmls] };
+    const saved = { vars: [...this.scope.vars], lists: [...this.scope.lists], records: [...this.scope.records], htmls: [...this.scope.htmls], dates: [...this.scope.dates] };
     try {
       return f();
     } finally {
@@ -1051,6 +1114,51 @@ class Gen {
 
   varRef(v: Var): Expr {
     return { ...atom(v.ty, v.name, v.bound), ref: v.name, ...(v.lone ? { lone: true } : {}) };
+  }
+
+  dateRef(v: DateVar): Expr {
+    return { ...atom("date", v.name), ref: v.name, ...(v.valid ? { valid: true } : {}) };
+  }
+
+  dateWeight(w: number): number {
+    return this.scope.dates.length ? w : w * this.dateLits;
+  }
+
+  date(d: number, valid = false): Expr {
+    const r = this.r;
+    const vars = this.scope.dates.filter((v) => !v.opt && (!valid || v.valid));
+    const opts = this.scope.dates.filter((v) => v.opt);
+    const leaf = (): Expr =>
+      r.weighted<() => Expr>([
+        [vars.length ? 6 : 0, () => this.dateRef(r.pick(vars))],
+        [3, () => isoLit(r.pick(valid ? VALID_STRINGS : r.chance(0.3) ? EDGE_STRINGS : DATE_STRINGS))],
+        [2, () => msLit(r.pick(valid ? VALID_TIMES : r.chance(0.3) ? EDGE_TIMES : DATE_TIMES))],
+      ])();
+    if (d <= 0 || r.chance(0.4)) return leaf();
+    const either = (a: Expr, b: Expr): { valid?: true } => (a.valid && b.valid ? { valid: true } : {});
+    return r.weighted<() => Expr>([
+      [valid ? 0 : 2, () => node("date", [this.num(d - 1)], ([a]) => `new Date(${a})`, 0, true)],
+      [1, () => {
+        const e = this.date(d - 1, valid);
+        return { ...node("date", [e], ([a]) => `new Date(${a})`, 0, true), ...either(e, e) };
+      }],
+      [2, () => {
+        const [a, b] = [this.date(d - 1, valid), this.date(d - 1, valid)];
+        return { ...node("date", [this.test(d - 1), a, b], ([c, x, y]) => `${c} ? ${x} : ${y}`), ...either(a, b) };
+      }],
+      [opts.length && !valid ? 2 : 0, () => node("date", [this.dateRef(r.pick(opts)), this.date(d - 1)], ([a, b]) => `${a} ?? ${b}`)],
+    ])();
+  }
+
+  dateNum(d: number): Expr {
+    const r = this.r;
+    if (r.chance(0.1)) return atom("float", `Date.parse('${r.pick(r.chance(0.3) ? EDGE_STRINGS : DATE_STRINGS)}')`);
+    const m = r.pick(DATE_READS);
+    return node("float", [this.date(d - 1)], ([a]) => `${a}.${m}()`, 0, true);
+  }
+
+  isoString(d: number): Expr {
+    return node("str", [this.date(d - 1, true)], ([a]) => `${a}.toISOString()`, 0, true);
   }
 
   arrow(of: Spec, lone: boolean, body: () => Expr): { params: string; body: Expr } {
@@ -1255,6 +1363,7 @@ class Gen {
         return v.lone ? leaf() : node("str", [v], ([a]) => `JSON.stringify(${a})`, 0, true);
       }],
       [3, () => this.fromList(d) ?? leaf()],
+      [this.dateWeight(2), () => this.isoString(d)],
       [1, () => node("str", [this.num(d - 1)], ([a]) => `String(${a})`, 0, true)],
       [1, () => node("str", [this.num(d - 1)], ([a]) => `${recv(a)}.toString()`, 0, true)],
       [
@@ -1368,10 +1477,12 @@ class Gen {
         [opts.length ? 2 : 0, () => node("float", [this.varRef(r.pick(opts)), numLit(r.pick([0.5, 1.25, 0.1]), "float")], ([a, b]) => `${a} ?? ${b}`)],
         [opts.length ? 0.1 : 0, () => node("float", [this.varRef(r.pick(opts)), numLit(0, "float")], ([a, b]) => `${a} ?? ${b}`)],
         [vs.length ? 0 : 2, () => node("float", [this.int(0), this.int(0)], ([a, b]) => `${a} / ${b}`)],
+        [this.dateWeight(3), () => this.dateNum(0)],
       ])();
     };
     if (d <= 0 || r.chance(0.3)) return leaf();
     const options: [number, () => Expr][] = [
+      [this.dateWeight(3), () => this.dateNum(d)],
       [4, () => { const op = r.pick(["+", "-", "*"]); const [a, b] = r.chance(0.5) ? [this.float(d - 1), this.num(d - 1)] : [this.num(d - 1), this.float(d - 1)]; return node("float", [a, b], ([x, y]) => `${x} ${op} ${y}`); }],
       [3, () => node("float", [this.num(d - 1), this.num(d - 1)], ([x, y]) => `${x} / ${y}`)],
       [1, () => node("float", [this.float(d - 1), this.num(d - 1)], ([x, y]) => `${x} % ${y}`)],
@@ -1690,6 +1801,7 @@ class Gen {
 
   child(depth: number): Node {
     const r = this.r;
+    if (r.chance(this.dateWeight(0.25))) return this.dateChild();
     this.nodes++;
     const names: HelperName[] = ["FzLeaf", "FzBox", "FzFwd", "FzPair", "FzRoot", "FzOwn", "FzBind", "FzUse", "FzPlain", "FzBare", "FzInj", "FzProv", "FzHead", "FzSlots"];
     const name = this.favour.length && r.chance(0.5) ? r.pick(this.favour) : r.pick(names);
@@ -1731,6 +1843,12 @@ class Gen {
     const branches: { cond: Expr | null; node: Node & { k: "el" } }[] = [];
     const n = r.weighted([[4, 1], [3, 2], [1, 3]]);
     for (let i = 0; i < n; i++) {
+      const guards = this.scope.dates.filter((v) => v.opt || !v.valid);
+      if (guards.length && r.chance(0.35)) {
+        const lazy = guards.filter((v) => !v.opt && this.lazies.some((l) => l.dep === v.key));
+        branches.push(this.dateBranch(r.pick(lazy.length && r.chance(0.6) ? lazy : guards), depth, ctx));
+        continue;
+      }
       const narrowable = this.scope.vars.filter((v) => v.opt);
       if (narrowable.length && r.chance(0.3)) {
         const v = r.pick(narrowable);
@@ -1758,6 +1876,40 @@ class Gen {
     }
     if (r.chance(0.5)) branches.push({ cond: null, node: this.carrier(depth, ctx) });
     return { k: "if", branches };
+  }
+
+  dateBranch(v: DateVar, depth: number, ctx: "block" | "inline" | "list"): { cond: Expr; node: Node & { k: "el" } } {
+    const r = this.r;
+    const same = `${v.name}.getTime() === ${v.name}.getTime()`;
+    const present = v.nul ? `${v.name} !== null` : `${v.name} !== undefined`;
+    const text = v.opt ? r.pick([v.name, present, `${v.name} != null`, `${v.name} && ${same}`, `${present} && ${same}`]) : r.chance(0.85) ? same : `${v.name}.getTime() !== ${v.name}.getTime()`;
+    const valid = text.endsWith(same);
+    const el = this.withScope(() => {
+      this.scope.dates = this.scope.dates.map((x) => (x === v ? { ...x, opt: false, ...(valid ? { valid } : {}) } : x));
+      const lazies = valid ? this.lazies.filter((l) => l.dep === v.key).map((l) => l.v) : [];
+      this.scope.vars.push(...lazies);
+      const carried = this.carrier(depth, ctx);
+      if (lazies.length && !carried.void && !carried.html && !["ul", "ol"].includes(carried.tag) && r.chance(0.7)) carried.kids.unshift({ k: "interp", e: this.varRef(r.pick(lazies)) });
+      return carried;
+    });
+    return { cond: { ...atom("bool", text), fixed: true }, node: el };
+  }
+
+  dateChild(): Node {
+    const r = this.r;
+    this.nodes++;
+    const opts = this.scope.dates.filter((v) => v.opt && !v.nul);
+    const nuls = this.scope.dates.filter((v) => v.nul && v.opt);
+    const attrs: Attr[] = [{ k: "bind", name: "at", e: this.date(r.int(0, 2)) }];
+    if (r.chance(0.6)) attrs.push({ k: "bind", name: "was", e: opts.length && r.chance(0.6) ? this.dateRef(r.pick(opts)) : this.date(1) });
+    const gone = r.weighted<() => Expr>([
+      [nuls.length ? 3 : 0, () => this.dateRef(r.pick(nuls))],
+      [1, () => atom("date", "null")],
+      [2, () => this.date(1)],
+    ])();
+    attrs.push({ k: "bind", name: "gone", e: gone });
+    if (r.chance(0.4)) attrs.push(...this.attrs("div"));
+    return { k: "child", name: "FzDate", attrs, kids: [] };
   }
 
   forNode(depth: number, ctx: "block" | "inline" | "list"): Node {
@@ -2062,7 +2214,7 @@ function randomStores(r: Rng, g: Gen): StoreDef[] {
     const fields = all.filter(() => r.chance(0.6));
     if (!fields.length) fields.push(all[0]!);
     const saved = g.scope;
-    g.scope = { vars: [], lists: [], records: [], htmls: [] };
+    g.scope = { vars: [], lists: [], records: [], htmls: [], dates: [] };
     for (const f of fields) g.bind(read(f.name), f.spec);
     const getters: { name: string; e: Expr }[] = [];
     for (let i = r.weighted([[2, 0], [3, 1], [2, 2]]); i > 0; i--) {
@@ -2110,7 +2262,7 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
   }
   const props: { name: string; spec: Spec }[] = [];
   const prefix = (s: Spec): string =>
-    s.k === "opt" ? "o" + prefix(s.of) : s.k === "nul" ? "z" + prefix(s.of) : s.k === "list" ? "l" : s.k === "record" ? "d" : { str: "s", int: "n", count: "c", float: "f", bool: "b", obj: "r", enum: "t", html: "h" }[s.k];
+    s.k === "opt" ? "o" + prefix(s.of) : s.k === "nul" ? "z" + prefix(s.of) : s.k === "list" ? "l" : s.k === "record" ? "d" : { str: "s", int: "n", count: "c", float: "f", bool: "b", obj: "r", enum: "t", html: "h", date: "m" }[s.k];
   for (let i = r.int(1, 7); i > 0; i--) {
     const spec = randomSpec(r, ifaces, 0);
     props.push({ name: `${prefix(spec)}${props.length}`, spec });
@@ -2127,12 +2279,19 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
     const spec: Spec = r.chance(0.7) ? html : { k: "opt", of: html };
     props.push({ name: `${prefix(spec)}${props.length}`, spec });
   }
+  if (r.chance(0.3)) {
+    for (let n = r.int(1, 3); n > 0; n--) {
+      const spec = r.weighted<Spec>([[3, { k: "date" }], [2, { k: "opt", of: { k: "date" } }], [2, { k: "nul", of: { k: "date" } }]]);
+      props.push({ name: `${prefix(spec)}${props.length}`, spec });
+    }
+  }
 
   const g = new Gen(r, new Map([...ifaces, ROW_IFACE, FZ_ITEM].map((i) => [i.name, i])));
-  const fresh = (): Scope => ({ vars: [], lists: [], records: [], htmls: [] });
+  const fresh = (): Scope => ({ vars: [], lists: [], records: [], htmls: [], dates: [] });
   const router = r.chance(0.3) ? randomRouter(r) : null;
   const stores = r.chance(0.3) ? randomStores(r, g) : [];
   const i18n = r.chance(0.3) ? randomMessages(r) : null;
+  g.dateLits = r.chance(0.25) ? 1 : 0;
   const useT = r.chance(0.5);
   const scoped = r.chance(0.35);
   const propsVar = r.chance(0.3);
@@ -2157,20 +2316,33 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
       bindings.push(binding);
       if (kind === "const") g.scope.vars.push(bindingVar(binding));
     }
+    for (let n = g.dateWeight(1) ? r.weighted([[2, 0], [3, 1], [1, 2]]) : 0; n > 0; n--) bindings.push({ name: `cmp${bindings.length}`, kind: "computed", e: g.date(r.int(1, 2)) });
     if (r.chance(0.35)) {
       if (r.chance(0.7)) provides.push({ key: "str", e: whole(g.str(r.int(0, 2))) });
       if (r.chance(0.5)) provides.push({ key: "num", e: g.int(r.int(0, 2), BOUND_SMALL) });
-      const live = bindings.filter((b) => b.kind !== "const" && b.e.ty === "str");
+      const live = bindings.filter((b) => b.kind !== "const" && b.e.ty === "str" && b.lazy === undefined);
       if (live.length && r.chance(0.6)) provides.push({ key: "live", e: { ...atom("str", r.pick(live).name), fixed: true } });
     }
     if (r.chance(0.3)) head.push(headCall(g, "useHead"));
     if (r.chance(0.15)) head.push(headCall(g, "useSeoMeta"));
   }
+  const sure = props.filter((p) => p.spec.k === "date");
+  for (let n = sure.length && r.chance(0.6) ? r.int(1, 2) : 0; n > 0; n--) {
+    const p = r.pick(sure);
+    const tail = r.pick(["", ".slice(0, 10)", ".slice(11)", ".length"]);
+    const read = `props.${p.name}.toISOString()${tail}`;
+    const e = tail === ".length" ? atom("int", read, 100) : { ...atom("str", read), ...(tail ? { lone: true } : {}) };
+    bindings.push({ name: `cmp${bindings.length}`, kind: "computed", e, lazy: p.name });
+  }
 
   g.scope = fresh();
   for (const p of props) g.bind(propsVar && r.chance(0.4) ? `props.${p.name}` : p.name, p.spec, true);
   if (consts) bindConsts(g, consts, 0.35);
-  for (const b of bindings) g.scope.vars.push(bindingVar(b));
+  for (const b of bindings) {
+    if (b.e.ty === "date") g.scope.dates.push({ name: b.name, key: b.name, opt: false, ...(b.e.valid ? { valid: true } : {}) });
+    else if (b.lazy !== undefined) g.lazies.push({ dep: b.lazy, v: bindingVar(b) });
+    else g.scope.vars.push(bindingVar(b));
+  }
   if (provides.length) g.favour = ["FzInj", "FzProv"];
   bindStores(g, stores, true);
   if (router) bindRoute(g, router, true);
@@ -2299,7 +2471,7 @@ function* allSlots(c: Component): Generator<{ get: () => Expr; set: (e: Expr) =>
   yield* exprSlots(c.template);
 }
 
-const LITERALS: Record<Ty, Expr> = { str: strLit("a"), int: numLit(1, "int"), float: numLit(0.5, "float"), bool: atom("bool", "true"), html: atom("html", "''") };
+const LITERALS: Record<Ty, Expr> = { str: strLit("a"), int: numLit(1, "int"), float: numLit(0.5, "float"), bool: atom("bool", "true"), html: atom("html", "''"), date: { ...atom("date", "new Date(0)"), valid: true } };
 
 function* exprShrinks(e: Expr): Generator<Expr> {
   for (const k of e.kids) if (k.ty === e.ty && !k.fixed && !k.scoped) yield k;
@@ -2549,6 +2721,12 @@ export function fixtureShrinks(c: Component, fixture: Record<string, unknown>): 
     }
     if (base.k === "html") {
       if (fixture[p.name] !== "") out.push({ ...fixture, [p.name]: "" });
+      continue;
+    }
+    if (base.k === "date" || (base.k === "nul" && base.of.k === "date")) {
+      const v = fixture[p.name];
+      if (typeof v === "string") out.push({ ...fixture, [p.name]: Number.isNaN(timeOf(v)) ? 8.64e15 + 1 : timeOf(v) });
+      if (typeof v === "number") for (const s of valueShrinks(v)) out.push({ ...fixture, [p.name]: s });
       continue;
     }
     for (const s of valueShrinks(fixture[p.name])) {
