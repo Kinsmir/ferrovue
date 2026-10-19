@@ -620,6 +620,12 @@ Case mapping by the server's locale.
 
 `.toExponential()` without a literal number of digits from 0 to 100.
 
+## FV0718
+
+`isNaN()`, `isFinite()` or a `Number.is…()` test of a value that is not a number.
+
+`Number.isNaN()`, `Number.isFinite()`, `Number.isInteger()` and `Number.isSafeInteger()` take a number, present or optional, and are `false` for any other value, which they do not convert; the global `isNaN()` and `isFinite()` convert theirs as `Number()` does and take a present number. Test a date with `Number.isNaN(d.getTime())`, and a string with `Number.isNaN(Number(s))`.
+
 # Lists and loops: FV08xx
 
 See [`props`](crate::guide::props).

@@ -30,8 +30,10 @@ export function truthy(v: Val): string {
     case "undef":
     case "null":
       return "false";
-    case "opt":
-      return `${atom(v.code)}.is_some_and(|v| ${truthy({ code: "v", ty: v.ty.of })})`;
+    case "opt": {
+      const each = truthy({ code: "v", ty: v.ty.of });
+      return each === "true" ? `${atom(v.code)}.is_some()` : `${atom(v.code)}.is_some_and(|v| ${each})`;
+    }
     default:
       return claim((p) => p.values?.truthy?.(v)) ?? "true";
   }

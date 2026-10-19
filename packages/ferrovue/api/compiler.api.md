@@ -495,6 +495,10 @@ export const ERRORS: {
     readonly FV0717: {
         readonly title: "`.toExponential()` without a literal number of digits from 0 to 100";
     };
+    readonly FV0718: {
+        readonly title: "`isNaN()`, `isFinite()` or a `Number.is…()` test of a value that is not a number";
+        readonly detail: "`Number.isNaN()`, `Number.isFinite()`, `Number.isInteger()` and `Number.isSafeInteger()` take a number, present or optional, and are `false` for any other value, which they do not convert; the global `isNaN()` and `isFinite()` convert theirs as `Number()` does and take a present number. Test a date with `Number.isNaN(d.getTime())`, and a string with `Number.isNaN(Number(s))`.";
+    };
     readonly FV0801: {
         readonly title: "`.includes()` of a value of another type than the list's";
     };
