@@ -29,6 +29,17 @@ released together and share version numbers.
 - FV1806, for a `Date` anywhere but a component's own prop: inside a list, a dictionary or an
   object prop, in Pinia state, `inject`, `ref` or `defineModel`, which would reach the client as a
   string.
+- `.toPrecision()` and `.toExponential()` of a number, with no argument or a literal one, written
+  as V8 writes them: rounded from the exact value of the double, an exact tie away from zero, with
+  JavaScript's choice between fixed and exponential notation and its `e+N` exponent.
+  `toPrecision()` without an argument is `String(x)`, and `toExponential()` without one writes the
+  shortest digits that read back as the number. The crate gains their twins, `js_to_precision` and
+  `js_to_exponential`, held to 9,672 vectors recorded from Node in `precision.json`: hand-written
+  edges (ties, carries, `-0`, subnormals, 10²¹ and beyond, the largest double), every argument from
+  0 to 100 for a third of them, and 1,500 numbers drawn across the exponents.
+- FV0716 and FV0717, for `.toPrecision()` with an argument other than a literal from 1 to 100 and
+  `.toExponential()` with one other than a literal from 0 to 100, where JavaScript throws a
+  `RangeError` or the compiler cannot know the argument.
 
 ### Changed
 
@@ -36,7 +47,11 @@ released together and share version numbers.
   `#[doc(hidden)]` `js_time_of` and `js_date_prop` and the serde helpers `date_prop` and `opt_date_prop`, which the
   0.8 crate lacks. The crate still builds modules of version 2, which call nothing that changed.
 - The API reports gain `reviveDates` (`ferrovue`, `ferrovue/client`) and `Config.dateType` and
-  FV1806 (`ferrovue/compiler`).
+  FV1806, FV0716 and FV0717 (`ferrovue/compiler`).
+- `.toFixed()` takes a fractional literal, truncated as JavaScript truncates it (`toFixed(2.5)` is
+  `toFixed(2)`), and `undefined`, which is `toFixed(0)`; it refused both before.
+- The guide's examples of a refusal (the CLI's message, `--format json` and the editor) show
+  `{{ n.toLocaleString() }}`, refused with FV1805, now that `.toPrecision()` compiles.
 - The README is a landing page: what ferrovue is and why to use it, the quick start, what a
   component may use, a list of the guides, performance, versions and the licence, with the
   crates.io and npm version badges side by side, then docs.rs, CI and the licence. Its reference
@@ -57,6 +72,9 @@ released together and share version numbers.
   render reads only under that test. Each fixture's dates come from `test/date-inputs.ts`, the
   strings and time values `dates.json` records: ISO strings across the range of years, expanded
   years and both edges, numbers with fractions, and invalid dates.
+- Tests only: the differential fuzzer generates `.toPrecision()` and `.toExponential()` of any
+  number, without an argument and with whole and fractional literals in range, and the conformance
+  suite gains `Precision`, ten fixtures recorded from Vue.
 
 ## [0.8.0] - 2026-10-18
 

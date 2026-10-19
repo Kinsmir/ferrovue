@@ -41,6 +41,50 @@ fn math_is_javascripts_math() {
 }
 
 #[test]
+fn precision_and_exponent_are_javascripts() {
+    let vectors: Vec<(String, String, String, String)> =
+        serde_json::from_str(include_str!("../../tests/vectors/precision.json"))
+            .expect("precision vectors");
+    assert!(vectors.len() >= 9000, "the vectors were not all read");
+    for (op, x, arg, want) in &vectors {
+        let x: f64 = x.parse().unwrap_or_else(|_| panic!("{x:?} parses"));
+        let arg: Option<u32> = (!arg.is_empty()).then(|| arg.parse().expect("a whole number"));
+        let got = match (op.as_str(), arg) {
+            ("toPrecision", Some(p)) => js_to_precision(x, p),
+            ("toPrecision", None) => written(push_number, x),
+            ("toExponential", f) => js_to_exponential(x, f),
+            (other, _) => panic!("unknown op {other}"),
+        };
+        assert_eq!(&got, want, "({x}).{op}({arg:?})");
+    }
+}
+
+#[test]
+#[should_panic(expected = "from 1 to 100")]
+fn a_precision_of_zero_panics() {
+    let _ = js_to_precision(1.0, 0);
+}
+
+#[test]
+#[should_panic(expected = "from 1 to 100")]
+fn a_precision_above_100_panics() {
+    let _ = js_to_precision(1.0, 101);
+}
+
+#[test]
+#[should_panic(expected = "from 0 to 100")]
+fn more_than_100_fraction_digits_panic() {
+    let _ = js_to_exponential(1.0, Some(101));
+}
+
+#[test]
+fn a_number_that_is_not_finite_is_written_whatever_the_precision() {
+    assert_eq!(js_to_precision(f64::NAN, 0), "NaN");
+    assert_eq!(js_to_precision(f64::NEG_INFINITY, 101), "-Infinity");
+    assert_eq!(js_to_exponential(f64::INFINITY, Some(101)), "Infinity");
+}
+
+#[test]
 fn integers_beyond_two_to_the_53_are_written_rounded_as_javascript_does() {
     for (n, want) in [
         (9_007_199_254_740_991, "9007199254740991"),
@@ -203,6 +247,14 @@ proptest::proptest! {
     fn few_exact_digits_are_the_exact_expansion_when_it_is_short(m in 1u64..1 << 53, e in -60i32..100) {
         let x = m as f64 * 2f64.powi(e);
         proptest::prop_assert_eq!(owned_exact_digits(x), few_exact_digits_exactly(x));
+    }
+
+    #[test]
+    fn seventeen_digits_and_the_shortest_exponential_read_back_as_the_number(bits in proptest::prelude::any::<u64>()) {
+        let x = f64::from_bits(bits);
+        proptest::prop_assume!(x.is_finite());
+        proptest::prop_assert_eq!(js_to_precision(x, 17).parse::<f64>().ok(), Some(x));
+        proptest::prop_assert_eq!(js_to_exponential(x, None).parse::<f64>().ok(), Some(x));
     }
 
     #[test]

@@ -76,13 +76,16 @@ Some operations always give a `Float`, because they do in JavaScript:
 Comparisons are made between doubles too, and a number is falsy when it is `0` (or, for a `Float`,
 `NaN`), as in JavaScript.
 
-`Math` and `toFixed` have twins where Rust's own functions differ from JavaScript's:
+`Math`, `toFixed`, `toPrecision` and `toExponential` have twins where Rust's own functions differ
+from JavaScript's:
 
 | JavaScript | Rust | Why not the standard method |
 |---|---|---|
 | `Math.round(x)` | [`js_round`](crate::js_round) | A half rounds toward +∞: `-2.5` to `-2`, where `f64::round` gives `-3`; and from `-0.5` up to zero the result is `-0`, which `1 / Math.round(x)` shows (`-Infinity`) |
 | `Math.max(a, b)`, `Math.min(a, b)` | [`js_max`](crate::js_max), [`js_min`](crate::js_min) | `NaN` if either is, where `f64::max` ignores a `NaN` |
 | `x.toFixed(d)` | [`js_to_fixed`](crate::js_to_fixed) | An exact tie rounds away from zero, where Rust's formatting rounds to even |
+| `x.toPrecision(p)` | [`js_to_precision`](crate::js_to_precision) | The same ties, and JavaScript's choice of an exponent (`1.2e+5`) below 10⁻⁶ and from 10ᵖ up; `x.toPrecision()` is `String(x)` |
+| `x.toExponential(f)`, `x.toExponential()` | [`js_to_exponential`](crate::js_to_exponential) | The same ties, and JavaScript's exponent, `e+5` where Rust writes `e5`; without an argument, the digits `String(x)` writes |
 | `Math.floor`, `Math.ceil`, `Math.trunc`, `Math.abs` | `f64::floor`, `ceil`, `trunc`, `abs` | They agree |
 | `s.length` | `js_length` | UTF-16 code units, as JavaScript counts them. See [`strings`](crate::guide::strings) |
 | `Number(s)`, `parseInt(s)`, `parseFloat(s)` | `js_number`, `js_parse_int`, `js_parse_float` | JavaScript's grammar for numbers, which differs from Rust's `parse`. See [`strings`](crate::guide::strings) |
@@ -93,7 +96,16 @@ assert_eq!(1.0 / ferrovue::js_round(-0.4), f64::NEG_INFINITY); // Math.round(-0.
 assert!(ferrovue::js_max(1.0, f64::NAN).is_nan());
 assert_eq!(ferrovue::js_to_fixed(1.005, 2), "1.00"); // 1.005 is 1.00499999999999989… as a double
 assert_eq!(ferrovue::js_to_fixed(2.5, 0), "3");      // a true tie: away from zero
+assert_eq!(ferrovue::js_to_precision(0.125, 2), "0.13");
+assert_eq!(ferrovue::js_to_precision(123_456.0, 3), "1.23e+5");
+assert_eq!(ferrovue::js_to_exponential(1.5e-7, None), "1.5e-7");
 ```
+
+Their argument is a number literal, or none: from 0 to 100 digits for `toFixed` and
+`toExponential`, a precision from 1 to 100 for `toPrecision`, a fraction truncated as JavaScript
+truncates it (`toPrecision(2.9)` is `toPrecision(2)`). Any other argument, which JavaScript may
+answer with a `RangeError`, is refused when the component is compiled (`FV0705`, `FV0716`,
+`FV0717`).
 
 # Keeping islands exact
 

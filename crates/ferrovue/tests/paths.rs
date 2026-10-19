@@ -2,7 +2,10 @@
 //! `ferrovue-i18n`.
 
 #[allow(unused_imports)]
-use ferrovue::{Js, escape_into, js_max, js_min, js_round, js_to_fixed, push_int, push_number};
+use ferrovue::{
+    Js, escape_into, js_max, js_min, js_round, js_to_exponential, js_to_fixed, js_to_precision,
+    push_int, push_number,
+};
 
 #[cfg(feature = "router")]
 #[allow(unused_imports)]

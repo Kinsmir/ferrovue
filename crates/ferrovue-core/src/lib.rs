@@ -18,4 +18,7 @@ mod escape;
 mod numbers;
 
 pub use escape::escape_into;
-pub use numbers::{Js, js_max, js_min, js_round, js_to_fixed, push_int, push_number};
+pub use numbers::{
+    Js, js_max, js_min, js_round, js_to_exponential, js_to_fixed, js_to_precision, push_int,
+    push_number,
+};

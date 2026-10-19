@@ -61,15 +61,15 @@ it("reports nothing for a component ferrovue accepts", async () => {
 });
 
 it("reports a refusal in the editor's unsaved template on the construct, with its code linked to the docs", async () => {
-  const text = CLEAN.replace("{{ n }}", "{{ n.toPrecision(2) }}");
-  const start = at(text, "n.toPrecision");
+  const text = CLEAN.replace("{{ n }}", "{{ n.toLocaleString() }}");
+  const start = at(text, "n.toLocaleString");
   expect(await editor()(text)).toEqual([
     {
       range: { start, end: start },
       severity: 1,
       source: "vue",
-      code: { value: "FV0602", target: `${DOCS}#fv0602` },
-      message: "ferrovue: `.toPrecision()` is not supported",
+      code: { value: "FV1805", target: `${DOCS}#fv1805` },
+      message: "ferrovue: `.toLocaleString()` formats by locale with `Intl`, whose output differs between Node, Chromium, Firefox and Safari: format the value in Rust and pass a string, or translate it with `$t` (see the `dates_and_prices` guide)",
       data: expect.anything() as unknown,
     },
   ]);
@@ -77,9 +77,9 @@ it("reports a refusal in the editor's unsaved template on the construct, with it
 
 it("follows the text as it is edited, showing each refusal once and none once it is fixed", async () => {
   const check = editor();
-  const first = CLEAN.replace("{{ n }}", "{{ n.toPrecision(2) }}");
+  const first = CLEAN.replace("{{ n }}", "{{ n.toLocaleString() }}");
   const second = CLEAN.replace("defineProps<{ n: number }>();", "defineProps<{ n: number; when: Map<string, string> }>();");
-  expect((await check(first)).map((d) => d.range.start)).toEqual([at(first, "n.toPrecision")]);
+  expect((await check(first)).map((d) => d.range.start)).toEqual([at(first, "n.toLocaleString")]);
   expect(shown(await check(first + "\n"))).toHaveLength(1);
   expect(shown(await check(second)).map((d) => d.code)).toEqual([{ value: "FV0315", target: `${DOCS}#fv0315` }]);
   expect(await check(CLEAN)).toEqual([]);
@@ -108,15 +108,15 @@ it("reports a refusal of the whole component at its start", async () => {
 });
 
 it("leaves a refusal in another component to that component", async () => {
-  const check = editor({}, { "Above.vue": CLEAN.replace("{{ n }}", "{{ n.toPrecision(2) }}") });
-  expect(await check(CLEAN.replace("{{ n }}", "{{ n.toPrecision(3) }}"))).toEqual([]);
+  const check = editor({}, { "Above.vue": CLEAN.replace("{{ n }}", "{{ n.toLocaleString() }}") });
+  expect(await check(CLEAN.replace("{{ n }}", "{{ n.toLocaleString('nl') }}"))).toEqual([]);
 });
 
 it("gives the code as plain text and the link in the message with codeLinks off", async () => {
-  const text = CLEAN.replace("{{ n }}", "{{ n.toPrecision(3) }}");
+  const text = CLEAN.replace("{{ n }}", "{{ n.toLocaleString('nl') }}");
   const [found] = await editor({ codeLinks: false })(text);
-  expect(found?.code).toBe("FV0602");
-  expect(found?.message).toBe(`ferrovue: \`.toPrecision()\` is not supported\n${DOCS}#fv0602`);
+  expect(found?.code).toBe("FV1805");
+  expect(found?.message).toBe(`ferrovue: \`.toLocaleString()\` formats by locale with \`Intl\`, whose output differs between Node, Chromium, Firefox and Safari: format the value in Rust and pass a string, or translate it with \`$t\` (see the \`dates_and_prices\` guide)\n${DOCS}#fv1805`);
 });
 
 it("does nothing in TypeScript's server or vue-tsc, which do not show these errors", () => {

@@ -95,12 +95,12 @@ it("fails, naming the file and the construct, on a component it cannot translate
     `<script setup lang="ts">
 defineProps<{ n: number }>();
 </script>
-<template><p>{{ n.toPrecision(2) }}</p></template>`,
+<template><p>{{ n.toLocaleString() }}</p></template>`,
   );
   const r = run();
   expect(r.status).toBe(1);
-  expect(r.stderr).toContain("error[FV0602]: components/Bad.vue:4:17: `.toPrecision()` is not supported");
-  expect(r.stderr).toContain(" 4 | <template><p>{{ n.toPrecision(2) }}</p></template>");
+  expect(r.stderr).toContain("error[FV1805]: components/Bad.vue:4:17: `.toLocaleString()` formats by locale with `Intl`, whose output differs between Node, Chromium, Firefox and Safari: format the value in Rust and pass a string, or translate it with `$t` (see the `dates_and_prices` guide)");
+  expect(r.stderr).toContain(" 4 | <template><p>{{ n.toLocaleString() }}</p></template>");
   expect(r.stderr).toContain("   |                 ^");
   expect(r.stderr).not.toContain("    at ");
 });
@@ -381,7 +381,7 @@ it("--diff fails without --check", () => {
 const BAD = `<script setup lang="ts">
 defineProps<{ n: number }>();
 </script>
-<template><p>{{ n.toPrecision(2) }}</p></template>`;
+<template><p>{{ n.toLocaleString() }}</p></template>`;
 
 const DOCS = "https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html";
 
@@ -389,8 +389,8 @@ it("gives an error its code and where the code is documented", () => {
   writeFileSync(join(root, "components", "Bad.vue"), BAD);
   const r = run();
   expect(r.status).toBe(1);
-  expect(r.stderr).toMatch(/^error\[FV0602\]: components\/Bad\.vue:4:17: /);
-  expect(r.stderr).toContain(`\n = docs: ${DOCS}#fv0602\n`);
+  expect(r.stderr).toMatch(/^error\[FV1805\]: components\/Bad\.vue:4:17: /);
+  expect(r.stderr).toContain(`\n = docs: ${DOCS}#fv1805\n`);
 });
 
 it("--format json writes a refusal as a diagnostic, and fails as without it", () => {
@@ -407,11 +407,11 @@ it("--format json writes a refusal as a diagnostic, and fails as without it", ()
           column: 17,
           endLine: null,
           endColumn: null,
-          code: "FV0602",
+          code: "FV1805",
           severity: "error",
-          title: "Unsupported method",
-          message: "`.toPrecision()` is not supported",
-          docs: `${DOCS}#fv0602`,
+          title: "Locale formatting with `Intl`, `.toLocaleString()`, `.localeCompare()`, `$d` or `$n`",
+          message: "`.toLocaleString()` formats by locale with `Intl`, whose output differs between Node, Chromium, Firefox and Safari: format the value in Rust and pass a string, or translate it with `$t` (see the `dates_and_prices` guide)",
+          docs: `${DOCS}#fv1805`,
         },
       ],
     });
@@ -487,7 +487,7 @@ it("matches its errors with the VS Code problem matchers the quick start gives",
       }),
     );
   writeFileSync(join(root, "components", "Bad.vue"), BAD);
-  expect(matched(run().stderr)).toEqual([{ kind: "location", code: "FV0602", file: "components/Bad.vue", line: "4", column: "17", message: "`.toPrecision()` is not supported" }]);
+  expect(matched(run().stderr)).toEqual([{ kind: "location", code: "FV1805", file: "components/Bad.vue", line: "4", column: "17", message: "`.toLocaleString()` formats by locale with `Intl`, whose output differs between Node, Chromium, Firefox and Safari: format the value in Rust and pass a string, or translate it with `$t` (see the `dates_and_prices` guide)" }]);
   rmSync(join(root, "components", "Bad.vue"));
   mkdirSync(join(root, "locales"));
   writeFileSync(join(root, "locales", "en.json"), "{ nope");

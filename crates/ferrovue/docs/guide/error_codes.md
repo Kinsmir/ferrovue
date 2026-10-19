@@ -612,6 +612,14 @@ Function given to a string method.
 
 Case mapping by the server's locale.
 
+## FV0716
+
+`.toPrecision()` without a literal precision from 1 to 100.
+
+## FV0717
+
+`.toExponential()` without a literal number of digits from 0 to 100.
+
 # Lists and loops: FV08xx
 
 See [`props`](crate::guide::props).
