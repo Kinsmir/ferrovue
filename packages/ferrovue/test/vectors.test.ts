@@ -336,9 +336,9 @@ function drawnNumber(rand: () => number): number {
     bits.setUint32(4, int(2 ** 32));
     return bits.getFloat64(0);
   }
-  if (r < 0.6) return sign * int(2 ** 30) * 10 ** (int(40) - 20);
+  if (r < 0.6) return Number(`${sign * int(2 ** 30)}e${int(40) - 20}`);
   if (r < 0.8) return (sign * (2 * int(2 ** 20) + 1)) / 2 ** (1 + int(30));
-  return sign * (int(10 ** 6) + 0.5) * 10 ** (int(30) - 15);
+  return Number(`${sign < 0 ? "-" : ""}${int(10 ** 6)}.5e${int(30) - 15}`);
 }
 
 function precisionCases(): [string, string, string][] {
