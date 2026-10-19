@@ -330,7 +330,7 @@ export function expr(s: Scope, n: N): Val {
       }
       const a = expr(s, n.left);
       const b = expr(s, n.right);
-      if (n.operator === "??") {
+      if (n.operator === "??" || (n.operator === "||" && (a.ty.k === "opt" ? a.ty.of : a.ty).k === "date")) {
         const own = claim((p) => p.values?.nullish?.(s, a, b, n));
         if (own) return own;
         if (nothing(a.ty)) return b;
@@ -348,7 +348,7 @@ export function expr(s: Scope, n: N): Val {
         if (b.ty.k === "opt" && sameTy(a.ty.of, b.ty.of)) return { code: `${atom(a.code)}.or(${bare(b.code)})`, ty: b.ty, ...loneOf(a, b) };
         if (a.ty.of.k === "float" && b.ty.k === "int") return { code: `${atom(a.code)}.unwrap_or(${bare(asF64(b))})`, ty: FLOAT };
         if (a.ty.of.k === "int" && b.ty.k === "float") return { code: `${atom(a.code)}.map(|v| v as f64).unwrap_or(${bare(b.code)})`, ty: FLOAT };
-        return fail(comp, "FV0616", "`??` between different types", n);
+        return n.operator === "??" ? fail(comp, "FV0616", "`??` between different types", n) : fail(comp, "FV0617", "`||` between these types", n);
       }
       if (n.operator === "||") {
         if (a.ty.k === "bool" && b.ty.k === "bool") return boolOf(logical(a.code, "||", b.code));

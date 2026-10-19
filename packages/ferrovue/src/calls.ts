@@ -7,7 +7,7 @@ import { computedListMethod, isBoolean, items, listMethod, objectCall, presentLi
 import { lonely, loneOf, meet, stringMethod, stringsEqual } from "./strings.ts";
 import { asF64, intFromF64, isNumber } from "./numbers.ts";
 import { boolOf, truthy } from "./narrowing.ts";
-import { coerce, expr } from "./expr.ts";
+import { coerce, describeTy, expr } from "./expr.ts";
 
 const DIGITS = new Map<string, [Code, number, string]>([
   ["toFixed", ["FV0705", 0, "number of digits"]],
@@ -68,6 +68,7 @@ export function call(s: Scope, n: N): Val {
       }
       return { code: `fv::js_parse_int(${strArg(a.code)}, ${radix ? radix.value : 0})`, ty: FLOAT };
     }
+    if ((callee.name === "isNaN" || callee.name === "isFinite") && !s.locals.has(callee.name) && !s.setup.has(callee.name)) return numberTest(s, callee.name, args, n, true);
     return fail(comp, "FV0601", `\`${callee.name}()\` is not available when rendering on the server`, n);
   }
   if (callee.type === "MemberExpression" && !callee.computed) {
@@ -80,6 +81,7 @@ export function call(s: Scope, n: N): Val {
       return { code: String(is), ty: BOOL, konst: is };
     }
     if (callee.object.type === "Identifier" && callee.object.name === "Object") return objectCall(s, method, args, n);
+    if (callee.object.type === "Identifier" && callee.object.name === "Number" && NUMBER_TESTS.has(method)) return numberTest(s, method, args, n, false);
     if (callee.object.type === "Identifier" && callee.object.name === "JSON" && method === "stringify" && args.length === 1) {
       const v = expr(s, args[0]);
       if (v.ty.k === "bool") return { code: `if ${condition(v.code)} { "true" } else { "false" }`, ty: STR };
@@ -172,6 +174,48 @@ export function call(s: Scope, n: N): Val {
     return fail(comp, "FV0602", `\`.${method}()\` is not supported`, n);
   }
   return fail(comp, "FV0603", "this call is not supported", n);
+}
+
+const NUMBER_TESTS = new Set(["isNaN", "isFinite", "isInteger", "isSafeInteger"]);
+
+function floatTest(method: string, x: string): string {
+  switch (method) {
+    case "isNaN":
+      return `${receiver(x)}.is_nan()`;
+    case "isFinite":
+      return `${receiver(x)}.is_finite()`;
+    case "isInteger":
+      return `${receiver(x)}.fract() == 0.0`;
+    default:
+      return /^[\w.]+$/.test(x) ? `${x}.fract() == 0.0 && ${x}.abs() <= 9_007_199_254_740_991.0` : `matches!(${bare(x)}, v if v.fract() == 0.0 && v.abs() <= 9_007_199_254_740_991.0)`;
+  }
+}
+
+function intTest(method: string, x: string): string {
+  if (method === "isSafeInteger") return `(-9_007_199_254_740_991..=9_007_199_254_740_991).contains(&${operand(x, UNARY)})`;
+  return String(method !== "isNaN");
+}
+
+function numberTest(s: Scope, method: string, args: N[], n: N, global: boolean): Val {
+  const name = global ? `\`${method}()\`` : `\`Number.${method}()\``;
+  if (args.length !== 1) return fail(s.comp, "FV0718", `${name} takes one number`, n);
+  const v = expr(s, args[0]);
+  if (isNumber(v.ty)) {
+    if (v.num !== undefined) {
+      const konst = (Number as unknown as Record<string, (x: number) => boolean>)[method]!(v.num);
+      return { code: String(konst), ty: BOOL, konst };
+    }
+    return boolOf(v.ty.k === "int" ? intTest(method, v.code) : floatTest(method, v.code));
+  }
+  if (!global && v.ty.k === "opt" && isNumber(v.ty.of)) {
+    const each = v.ty.of.k === "int" ? intTest(method, "v") : floatTest(method, "v");
+    if (each === "false") return { code: "false", ty: BOOL, konst: false };
+    return boolOf(each === "true" ? `${atom(v.code)}.is_some()` : `${atom(v.code)}.is_some_and(|v| ${each})`);
+  }
+  if (global) {
+    return fail(s.comp, "FV0718", `${name} converts its argument as \`Number()\` does, which the server does for a number only: write \`Number.${method}(Number(x))\` for a string, or pass a present number`, args[0]);
+  }
+  return fail(s.comp, "FV0718", `${name} of ${describeTy(v.ty)}, for which it is \`false\` whatever it holds, since it does not convert its argument: pass a number, present or optional`, args[0]);
 }
 
 export function isObjectCall(n: N, method: string): boolean {

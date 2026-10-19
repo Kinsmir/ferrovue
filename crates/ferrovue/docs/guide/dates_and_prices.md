@@ -39,12 +39,13 @@ work in UTC:
 | `d.getUTCHours()`, `getUTCMinutes()`, `getUTCSeconds()`, `getUTCMilliseconds()` | `js_utc_hours` and the rest | the time of day in UTC |
 | `a < b`, `a <= b`, `a > b`, `a >= b` | the time values compared | whether `a` comes before or after `b`; `false` when either is invalid |
 
-A date can be held in a `computed`, chosen with `?:`, built inside a `v-for`, ordered against
-another with `<`, `<=`, `>` and `>=`, and handed to a child's `Date` prop ([below](#date-props)).
-It cannot be interpolated or bound whole (Vue would write its `.toString()`, in the server's time
-zone). Two dates are equal under `===` only when they are one object, so `===`, `!==`, `==` and
-`!=` with a date are refused ([FV1809](crate::guide::error_codes#fv1809)): compare
-`a.getTime() === b.getTime()`.
+A date can be held in a `computed`, chosen with `?:`, `??` or `||`, built inside a `v-for`,
+ordered against another with `<`, `<=`, `>` and `>=`, and handed to a child's `Date` prop
+([below](#date-props)). A date is always truthy, an invalid one too, so `edited || posted` is
+`edited` whenever it is present, as `edited ?? posted` is. It cannot be interpolated or bound
+whole (Vue would write its `.toString()`, in the server's time zone). Two dates are equal under
+`===` only when they are one object, so `===`, `!==`, `==` and `!=` with a date are refused
+([FV1809](crate::guide::error_codes#fv1809)): compare `a.getTime() === b.getTime()`.
 
 `.toJSON()` is a `string | null`, as for any nullable value: `{{ }}` writes nothing for `null`,
 an attribute bound to it is left out, and `?? "no date"` or `v-if="d.toJSON() !== null"` choose
@@ -128,7 +129,8 @@ string at all.
 A date beyond ±8.64 × 10¹⁵ ms from 1970 (about 275,000 years) is invalid, as in JavaScript:
 `.getTime()` and every `.getUTC…()` method give `NaN`, and `.toISOString()` throws a `RangeError`,
 on which the generated code panics. Test a date that may be invalid before writing it, with
-`d.getTime() === d.getTime()` (false only for `NaN`). A `computed` that may panic is worked out
+`!Number.isNaN(d.getTime())`, or with `d.getTime() === d.getTime()` (false only for `NaN`), which
+says the same. A `computed` that may panic is worked out
 where the render first reads it, once, as Vue works it out, so a `computed` of `.toISOString()`
 renders when the template reads it only under the `v-if` that tests the date:
 
@@ -141,7 +143,7 @@ const iso = computed(() => date.value.toISOString());
 </script>
 
 <template>
-  <time v-if="date.getTime() === date.getTime()" :datetime="iso">{{ iso.slice(0, 10) }}</time>
+  <time v-if="!Number.isNaN(date.getTime())" :datetime="iso">{{ iso.slice(0, 10) }}</time>
   <span v-else>no date</span>
 </template>
 ```

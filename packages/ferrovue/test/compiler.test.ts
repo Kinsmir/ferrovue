@@ -1621,6 +1621,28 @@ ${script}
       expect(out).toContain("if let Some(v) = fv::js_to_json(*s_d).as_deref() {");
     });
 
+    it("tests a number with Number.isNaN and its kin, and takes a date's || as its ??", () => {
+      const out = compile(
+        island(`<script setup lang="ts">
+import type { Float } from "ferrovue/types";
+defineProps<{ at: Date; edited?: Date; deleted: Date | null; n: number; x: Float; maybe?: Float }>();
+</script>
+<template><p v-if="!Number.isNaN(at.getTime())">{{ Number.isFinite(x) }}|{{ Number.isInteger(x) }}|{{ Number.isSafeInteger(x + 1) }}|{{ Number.isSafeInteger(n) }}|{{ Number.isInteger(n) }}|{{ isNaN(x) }}|{{ Number.isNaN(maybe) }}|{{ (edited || at).getTime() }}|{{ (deleted || edited || at).getTime() }}|{{ (at || edited).getTime() }}|{{ Boolean(edited) }}<b v-if="!Number.isSafeInteger(n)">big</b></p></template>`),
+      ).get("x.rs")!;
+      expect(out).toContain("if !fv::js_time_of(&props.at).is_nan() {");
+      expect(out).toContain("if props.x.is_finite() {");
+      expect(out).toContain("if props.x.fract() == 0.0 {");
+      expect(out).toContain("if matches!(props.x + 1.0, v if v.fract() == 0.0 && v.abs() <= 9_007_199_254_740_991.0) {");
+      expect(out).toContain("if (-9_007_199_254_740_991..=9_007_199_254_740_991).contains(&props.n) {");
+      expect(out).toContain("if !(-9_007_199_254_740_991..=9_007_199_254_740_991).contains(&props.n) {");
+      expect(out).toContain("|true|");
+      expect(out).toContain("if props.maybe.is_some_and(|v| v.is_nan()) {");
+      expect(out).toContain("fv::push_number(out, props.edited.as_ref().map(fv::js_time_of).unwrap_or(fv::js_time_of(&props.at)));");
+      expect(out).toContain("props.deleted.as_ref().map(fv::js_time_of).or(props.edited.as_ref().map(fv::js_time_of)).unwrap_or(fv::js_time_of(&props.at))");
+      expect(out).toContain("fv::push_number(out, fv::js_time_of(&props.at));");
+      expect(out).toContain("if props.edited.as_ref().map(fv::js_time_of).is_some() {");
+    });
+
     const posted = `<script setup lang="ts">
 import { computed } from "vue";
 import Stamp from "./Stamp.vue";
@@ -2694,6 +2716,54 @@ defineProps<{ at: string }>();
       /X\.vue:5:9: `new Set\(…\)` builds an object the server has no twin for/,
     ],
     [
+      "Number.isNaN of a string, which it does not convert",
+      `<script setup lang="ts">
+defineProps<{ s: string }>();
+</script>
+<template><p>{{ Number.isNaN(s) }}</p></template>`,
+      /X\.vue:4:30: `Number\.isNaN\(\)` of a string, for which it is `false` whatever it holds, since it does not convert its argument/,
+    ],
+    [
+      "Number.isFinite of a date",
+      `<script setup lang="ts">
+defineProps<{ d: Date }>();
+</script>
+<template><p v-if="Number.isFinite(d)">x</p></template>`,
+      /`Number\.isFinite\(\)` of a `Date`, for which it is `false` whatever it holds/,
+    ],
+    [
+      "Number.isInteger without an argument",
+      `<script setup lang="ts">
+defineProps<{ n: number }>();
+</script>
+<template><p>{{ Number.isInteger() }}</p></template>`,
+      /`Number\.isInteger\(\)` takes one number/,
+    ],
+    [
+      "the global isNaN of a string, which it converts",
+      `<script setup lang="ts">
+defineProps<{ s: string }>();
+</script>
+<template><p>{{ isNaN(s) }}</p></template>`,
+      /`isNaN\(\)` converts its argument as `Number\(\)` does, which the server does for a number only: write `Number\.isNaN\(Number\(x\)\)` for a string/,
+    ],
+    [
+      "the global isFinite of an optional number",
+      `<script setup lang="ts">
+defineProps<{ n?: number }>();
+</script>
+<template><p>{{ isFinite(n) }}</p></template>`,
+      /`isFinite\(\)` converts its argument/,
+    ],
+    [
+      "|| between a date and a string",
+      `<script setup lang="ts">
+defineProps<{ d?: Date }>();
+</script>
+<template><p>{{ d || "never" }}</p></template>`,
+      /`\|\|` between these types/,
+    ],
+    [
       "the current time with new Date()",
       `<script setup lang="ts">
 defineProps<{ at: string }>();
@@ -3461,6 +3531,12 @@ defineProps<{ onSale?: boolean }>();
     "a computed list as a slot prop": "FV0910",
     "a component written with the Options API": "FV0003",
     "a constructor called in the template": "FV0624",
+    "Number.isNaN of a string, which it does not convert": "FV0718",
+    "Number.isFinite of a date": "FV0718",
+    "Number.isInteger without an argument": "FV0718",
+    "the global isNaN of a string, which it converts": "FV0718",
+    "the global isFinite of an optional number": "FV0718",
+    "|| between a date and a string": "FV0617",
     "the current time with new Date()": "FV1801",
     "the current time with Date.now()": "FV1801",
     "a date built from its parts in the local time zone": "FV1802",

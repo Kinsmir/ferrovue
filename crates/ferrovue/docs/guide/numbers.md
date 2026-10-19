@@ -89,6 +89,20 @@ from JavaScript's:
 | `Math.floor`, `Math.ceil`, `Math.trunc`, `Math.abs` | `f64::floor`, `ceil`, `trunc`, `abs` | They agree |
 | `s.length` | `js_length` | UTF-16 code units, as JavaScript counts them. See [`strings`](crate::guide::strings) |
 | `Number(s)`, `parseInt(s)`, `parseFloat(s)` | `js_number`, `js_parse_int`, `js_parse_float` | JavaScript's grammar for numbers, which differs from Rust's `parse`. See [`strings`](crate::guide::strings) |
+| `Number.isNaN(x)`, `isNaN(x)` | `f64::is_nan` | They agree |
+| `Number.isFinite(x)`, `isFinite(x)` | `f64::is_finite` | They agree |
+| `Number.isInteger(x)` | `x.fract() == 0.0` | Rust has no method of its own; `-0` is an integer, `NaN` and the infinities are not |
+| `Number.isSafeInteger(x)` | `x.fract() == 0.0 && x.abs() <= 9_007_199_254_740_991.0` | An integer within ±(2⁵³ − 1) |
+
+A `number` prop holds an integer, which is never `NaN` nor infinite, so the compiler writes
+`Number.isNaN(n)` as `false` and `Number.isFinite(n)` as `true`, and `Number.isSafeInteger(n)`
+compares the `i64` with 2⁵³ − 1. Of an optional number, each test is `false` when the number is
+absent, as in JavaScript. The four `Number` tests do not convert their argument: of a string, a
+boolean or a `Date` each is always `false`, which is refused as a mistake
+([FV0718](crate::guide::error_codes#fv0718)): write `Number.isNaN(Number(s))` for a string and
+`Number.isNaN(d.getTime())` for a date. The global `isNaN()` and `isFinite()` convert theirs as
+`Number()` does, and are accepted of a present number, where they agree with `Number.isNaN()` and
+`Number.isFinite()`.
 
 ```rust
 assert_eq!(ferrovue::js_round(-2.5), -2.0);

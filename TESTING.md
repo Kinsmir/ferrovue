@@ -122,6 +122,7 @@ A fixture is a JSON object of props plus three optional keys:
 | `Panel`, `Dashboard` | Named slots, `$slots.x`, interpolating fallbacks, child props as literals, variables, lists and whole `Props` |
 | `Nav`, `Links`, `Menu`, `App` | `<RouterLink>` active matching, relative links, named routes, `query`/`hash`, link class props, imported `RouterLink`, `<RouterView>` |
 | `RouteInfo` | `useRoute()` and `$route`: path, hash, name, params |
+| `DateGuards` | A date's validity tested with `!Number.isNaN(d.getTime())`, `Number.isFinite` and the rest, in `v-if` and a `computed`; `\|\|` between dates, required, optional and nullable, chained, narrowed under `v-if`, beside `??` and `?:` of the same shapes: valid, invalid and absent dates, the edges of the range |
 | `DatePost`, `DateStamp` | `Date` props, required, optional and nullable, read in `computed`, `v-if` and `v-for` and handed to a child's `Date` props, from a prop and from a `computed`, with the child's props an interface: typical dates, expanded years, the edges of the range, invalid dates given as numbers and as strings beyond it, absent ones |
 | `DateFormats` | `.toUTCString()`, `.toJSON()` (interpolated, bound, tested against `null` and given a fallback with `??`) and `JSON.stringify()` of `Date` props and dates built from strings and numbers; `Date.UTC()` of one, two and seven parts, from the props and as literals worked out when compiling, held in a `computed`; `<`, `<=`, `>` and `>=` between two dates, in a `computed`, `v-if` and `:class`: typical dates, two-digit years and parts carried into the next month, the edges of the range and expanded years, invalid dates, hostile text |
 | `Dates`, `Prices` | `new Date` of ISO strings (dates alone, offsets, expanded years, the edges of the range) and of numbers, `Date.parse`, `.toISOString()`, `.getTime()` and the `.getUTC…()` methods in `computed`, `v-if` and `v-for`, invalid dates; a price formatted in Rust beside one written with `.toFixed()` into a `$t` message, and a date both ways, in two locales |
@@ -146,6 +147,7 @@ A fixture is a JSON object of props plus three optional keys:
 | `EscapedNull` | Nullable props through the escape hatches: into an async `NullChild`, a `<ClientOnly>` fallback, and a twin's optional prop by `?? undefined` |
 | `Rated` | A Rust twin (`vendor.rs`) of a render-function component (`vendor/StarRating.ts`): props, a boolean cast from a bare attribute, attributes beyond its props, a slot written from virtual nodes |
 | `Parsing` | `Number`, `parseInt` (no radix, 10, 16) and `parseFloat` of strings, `JSON.stringify` of numbers, `NaN` and `Infinity` |
+| `NumberTests` | `Number.isNaN`, `Number.isFinite`, `Number.isInteger` and `Number.isSafeInteger` of integers, fractions, optional numbers and strings read with `Number()`, and the global `isNaN` and `isFinite` of numbers, in text, attributes, `:class`, `v-show`, `v-if` / `v-else-if`, `computed`, arrow functions and `&&` / `\|\|` / `!`: `NaN`, ±`Infinity`, `-0`, integers at and beyond ±(2⁵³ − 1), `1e300`, `5e-324`, absent values |
 | `PropsObject`, `Glyph`, `Divider` | The props object read in the template (`props.label`, with `withDefaults`); a child with no script and one with an empty `<script setup>`, which take no props, one given a class to fall through |
 | `Pending` | Refs that start empty, typed by their type argument: `ref<Row[]>([])`, `ref<User[]>([])`, `ref<string[]>([])`, `ref<Row \| undefined>()`, `ref<string>()`, `ref<number \| undefined>(undefined)` |
 | `EmptyBranch` | Empty array literals typed by the list beside them: `?:` between a prop's list and `[]`, a typed empty constant and `[] as T[]` seeding `shallowRef`, `ref<T[]>`, `computed` and the template's `v-for`; `?.` and `??` falling back to `[]` and to another list; a `?:` between two lists, nested; a computed list and an array literal chosen against `[]` |
@@ -183,9 +185,9 @@ when it names a component that is not in `components/` with fixtures of its own.
 | Props | `Defaults`, `Destructured`, `PropsObject`, `Model`, `ModelParent`, `Picker`, `Glyph`, `Divider` |
 | Setup | `Setup`, `SetupValues`, `Lifecycle`, `Pending`, `EmptyBranch`, `Unread`, `UnreadVar` |
 | Provide and inject | `TabsPage`, `Tabs`, `Tab`, `ThemedButton`, `ThemeScope`, `Swatch`, `SwatchShelf`, `ThemedShelf`, `ThemedList`, `ThemedChoice` |
-| Text | `Text`, `Exprs`, `Numbers`, `Precision`, `Meter`, `Parsing`, `Regressions` |
+| Text | `Text`, `Exprs`, `Numbers`, `Precision`, `Meter`, `Parsing`, `NumberTests`, `Regressions` |
 | Strings | `Strings`, `Exprs`, `Text` |
-| Dates | `Dates`, `Prices`, `DatePost`, `DateStamp`, `DateFormats` |
+| Dates | `Dates`, `Prices`, `DatePost`, `DateStamp`, `DateFormats`, `DateGuards` |
 | Conditions | `Branches`, `Narrowing`, `Nullable` |
 | Lists | `Lists`, `Arrays`, `Chips`, `Truthy`, `NumberIncludes`, `NarrowedRows`, `Exprs` |
 | Dictionaries | `Records`, `Chips` |
@@ -280,16 +282,18 @@ What it generates, with random nesting:
   index;
 - `Date` props, required, optional (`x?: Date`) and nullable (`Date | null`), and the dates of
   0.8.0 in any component: `new Date()` of an ISO literal, of a number and of another date,
-  `Date.parse()` of an ISO literal, dates chosen with `?:` and `??` and held in a `computed`, read
-  with `.getTime()`, `.valueOf()` and the eight `.getUTC…()` methods wherever a number goes (text,
-  attributes, `:class` and `:style`, conditions, the body of a `v-for`, `useHead`), with
-  `.toUTCString()`, `JSON.stringify()` and `.toJSON() ?? 'x'` wherever a string goes, and with
-  `.toJSON()` interpolated and bound alone; `Date.UTC()` of one to seven parts wherever a number
-  goes (integers and fractions, the last part any number); `<`, `<=`, `>` and `>=` between two
-  dates in any condition; `v-if` that
-  narrows an optional or nullable date (`d`, `d !== undefined`, `d != null`, `d !== null`) or tests
-  it with `d.getTime() === d.getTime()`, under which `.toISOString()` is read, directly and through
-  a `computed` of it that the render reads only there, so an invalid date leaves it unread; a child
+  `Date.parse()` of an ISO literal, dates chosen with `?:`, `??` and `||` (an optional or nullable
+  date on the left, chained) and held in a `computed`, read with `.getTime()`, `.valueOf()` and
+  the eight `.getUTC…()` methods wherever a number goes (text, attributes, `:class` and `:style`,
+  conditions, the body of a `v-for`, `useHead`), with `.toUTCString()`, `JSON.stringify()` and
+  `.toJSON() ?? 'x'` wherever a string goes, and with `.toJSON()` interpolated and bound alone;
+  `Date.UTC()` of one to seven parts wherever a number goes (integers and fractions, the last part
+  any number); `<`, `<=`, `>` and `>=` between two dates in any condition; `v-if` that narrows an
+  optional or nullable date (`d`, `d !== undefined`, `d != null`, `d !== null`) or tests it with
+  `d.getTime() === d.getTime()`, `!Number.isNaN(d.getTime())`, `Number.isFinite(d.getTime())` or
+  `!isNaN(d.valueOf())` (and the opposite tests for invalid dates), under which `.toISOString()`
+  is read, directly and through a `computed` of it that the render reads only there, so an invalid
+  date leaves it unread; a child
   `FzDate` given dates, `null` and optional dates for its `Date` and `Date | null` props, which
   hands one on to a child of its own. A fixture gives each date as a string or a number from
   `test/date-inputs.ts` (the hand-written edges and the drawn values `dates.json` records, those
@@ -312,7 +316,10 @@ What it generates, with random nesting:
   with `$` patterns, `padStart`, `padEnd`, `repeat`), strings ordered with `<`, `String()`,
   `.toString()`, `.toFixed()`, `.toPrecision()` and `.toExponential()` (without an argument and with
   whole and fractional literals in range), `Number()`, `parseInt()`, `parseFloat()`,
-  `JSON.stringify()`, `Math`, and integer and fractional arithmetic;
+  `JSON.stringify()`, `Math`, and integer and fractional arithmetic; `Number.isNaN()`,
+  `Number.isFinite()`, `Number.isInteger()` and `Number.isSafeInteger()` of integers, fractions
+  (`NaN` and the infinities among them, from `/`, `%`, parsing and invalid dates) and optional
+  numbers, and `isNaN()` and `isFinite()` of numbers, wherever a boolean goes;
 - lists computed from lists, `Object.keys` / `Object.values` and `split`, by `filter`, `map` and
   `slice` with arrow functions (an index too), chained, read by `.join()`, `.length`, `.includes()`,
   `some`, `every`, `find`, `findIndex` and `JSON.stringify`;

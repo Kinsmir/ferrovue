@@ -45,6 +45,7 @@ pub mod dashboard;
 pub mod data_list;
 pub mod data_table;
 pub mod date_formats;
+pub mod date_guards;
 pub mod date_post;
 pub mod date_stamp;
 pub mod dates;
@@ -107,6 +108,7 @@ pub mod nav;
 pub mod null_child;
 pub mod nullable;
 pub mod number_includes;
+pub mod number_tests;
 pub mod numbers;
 pub mod page;
 pub mod panel;
@@ -421,6 +423,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: date_formats::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             date_formats::render(&mut out, &props);
         }
+        "DateGuards" => {
+            let props: date_guards::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            date_guards::render(&mut out, &props);
+        }
         "DatePost" => {
             let props: date_post::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             date_post::render(&mut out, &props);
@@ -720,6 +726,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "NumberIncludes" => {
             let props: number_includes::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             number_includes::render(&mut out, &props);
+        }
+        "NumberTests" => {
+            let props: number_tests::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            number_tests::render(&mut out, &props);
         }
         "Numbers" => {
             let props: numbers::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

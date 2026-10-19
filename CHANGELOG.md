@@ -56,6 +56,17 @@ released together and share version numbers.
   part beyond 2⁵³ ms brought back within the range), on which `js_date_utc` panics when they come
   from the props; FV1809, for `===`, `!==`, `==` and `!=` with a `Date`, which compare whether two
   dates are one object, with a message that says to compare `.getTime()`.
+- `Number.isNaN()`, `Number.isFinite()`, `Number.isInteger()` and `Number.isSafeInteger()` of a
+  number, an integer or a `Float`, present or optional (`false` when absent), and the global
+  `isNaN()` and `isFinite()` of a present number, wherever a boolean goes: text, attributes,
+  `v-if`, `v-show`, `computed`, arrow functions, `&&`, `||` and `!`. A date's validity is now
+  tested with `!Number.isNaN(d.getTime())` too, beside `d.getTime() === d.getTime()`.
+- `||` between dates, the left one optional or nullable too (`edited || posted`): a date is always
+  truthy, an invalid one included, so it gives the left date when present, as `??` does.
+- FV0718, for `Number.isNaN()` and its kin of a value that is not a number, for which they are
+  always `false` (`Number.isNaN(s)` of a string, `Number.isFinite(d)` of a date), and for the
+  global `isNaN()` and `isFinite()` of anything but a present number, which they would convert:
+  the message points to `Number.isNaN(Number(s))` and `Number.isNaN(d.getTime())`.
 
 ### Changed
 
@@ -63,7 +74,7 @@ released together and share version numbers.
   `#[doc(hidden)]` `js_time_of` and `js_date_prop` and the serde helpers `date_prop` and `opt_date_prop`, which the
   0.8 crate lacks. The crate still builds modules of version 2, which call nothing that changed.
 - The API reports gain `reviveDates` (`ferrovue`, `ferrovue/client`) and `Config.dateType` and
-  FV0716, FV0717 and FV1806 to FV1809 (`ferrovue/compiler`).
+  FV0716, FV0717, FV0718 and FV1806 to FV1809 (`ferrovue/compiler`).
 - Generated code of version 3 also calls the `#[doc(hidden)]` `js_to_utc_string`, `js_to_json`,
   `js_json_date` and `js_date_utc`. FV0609 names two dates beside two numbers and two strings, and
   `==` or `!=` with a date is refused with FV1809 where it was FV0619.
@@ -96,6 +107,16 @@ released together and share version numbers.
 - Tests only: the differential fuzzer generates `.toPrecision()` and `.toExponential()` of any
   number, without an argument and with whole and fractional literals in range, and the conformance
   suite gains `Precision`, ten fixtures recorded from Vue.
+- Tests only: the differential fuzzer generates `Number.isNaN()`, `Number.isFinite()`,
+  `Number.isInteger()` and `Number.isSafeInteger()` of integers, fractions and optional numbers,
+  `isNaN()` and `isFinite()` of numbers, wherever a boolean goes, tests a date's validity with them
+  as well as with `d.getTime() === d.getTime()`, and chooses dates with `||`.
+
+### Fixed
+
+- A truthiness test that is not a narrowing, such as `Boolean(user)`, of an optional or nullable
+  object, list or `Date` wrote a closure whose parameter it never read (`is_some_and(|v| true)`),
+  on which rustc warns; it is now `is_some()`.
 
 ## [0.8.0] - 2026-10-18
 

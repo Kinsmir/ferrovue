@@ -1148,6 +1148,16 @@ class Gen {
         return { ...node("date", [this.test(d - 1), a, b], ([c, x, y]) => `${c} ? ${x} : ${y}`), ...either(a, b) };
       }],
       [opts.length && !valid ? 2 : 0, () => node("date", [this.dateRef(r.pick(opts)), this.date(d - 1)], ([a, b]) => `${a} ?? ${b}`)],
+      [opts.length && !valid ? 2 : 0, () => node("date", [this.dateRef(r.pick(opts)), this.date(d - 1)], ([a, b]) => `${a} || ${b}`)],
+      [opts.length > 1 && !valid ? 1 : 0, () => {
+        const a = r.pick(opts);
+        const b = r.pick(opts.filter((v) => v !== a));
+        return node("date", [this.dateRef(a), this.dateRef(b), this.date(d - 1)], ([x, y, z]) => `${x} || ${y} || ${z}`);
+      }],
+      [1, () => {
+        const [a, b] = [this.date(d - 1, valid), this.date(d - 1)];
+        return { ...node("date", [a, b], ([x, y]) => `${x} || ${y}`), ...(a.valid ? { valid: true } : {}) };
+      }],
     ])();
   }
 
@@ -1577,8 +1587,21 @@ class Gen {
       [2, () => { const m = r.pick(["includes", "startsWith", "endsWith"]); const lit = r.pick(STR_LITS); return node("bool", [this.str(d - 1)], ([a]) => `${recv(a)}.${m}('${lit}')`, 0, true); }],
       [strLists.length ? 1 : 0, () => atom("bool", `${r.pick(strLists).name}.includes('${r.pick(STR_LITS)}')`)],
       [this.dateWeight(2), () => this.dateOrder(d)],
+      [3, () => this.numberTest(d)],
     ];
     return r.weighted(options)();
+  }
+
+  numberTest(d: number): Expr {
+    const r = this.r;
+    const m = r.pick(["isNaN", "isFinite", "isInteger", "isSafeInteger"]);
+    const opts = this.scope.vars.filter((v) => v.opt && (v.ty === "int" || v.ty === "float"));
+    return r.weighted<() => Expr>([
+      [4, () => node("bool", [this.num(d - 1)], ([a]) => `Number.${m}(${a})`, 0, true)],
+      [3, () => node("bool", [this.float(d - 1)], ([a]) => `Number.${m}(${a})`, 0, true)],
+      [opts.length ? 2 : 0, () => node("bool", [this.varRef(r.pick(opts))], ([a]) => `Number.${m}(${a})`, 0, true)],
+      [2, () => { const f = r.pick(["isNaN", "isFinite"]); return node("bool", [this.num(d - 1)], ([a]) => `${f}(${a})`, 0, true); }],
+    ])();
   }
 
   test(d: number): Expr {
@@ -1921,9 +1944,10 @@ class Gen {
 
   dateBranch(v: DateVar, depth: number, ctx: "block" | "inline" | "list"): { cond: Expr; node: Node & { k: "el" } } {
     const r = this.r;
-    const same = `${v.name}.getTime() === ${v.name}.getTime()`;
+    const same = r.pick([`${v.name}.getTime() === ${v.name}.getTime()`, `!Number.isNaN(${v.name}.getTime())`, `Number.isFinite(${v.name}.getTime())`, `!isNaN(${v.name}.valueOf())`]);
     const present = v.nul ? `${v.name} !== null` : `${v.name} !== undefined`;
-    const text = v.opt ? r.pick([v.name, present, `${v.name} != null`, `${v.name} && ${same}`, `${present} && ${same}`]) : r.chance(0.85) ? same : `${v.name}.getTime() !== ${v.name}.getTime()`;
+    const invalid = r.pick([`${v.name}.getTime() !== ${v.name}.getTime()`, `Number.isNaN(${v.name}.getTime())`, `!Number.isFinite(${v.name}.valueOf())`]);
+    const text = v.opt ? r.pick([v.name, present, `${v.name} != null`, `${v.name} && ${same}`, `${present} && ${same}`]) : r.chance(0.85) ? same : invalid;
     const valid = text.endsWith(same);
     const el = this.withScope(() => {
       this.scope.dates = this.scope.dates.map((x) => (x === v ? { ...x, opt: false, ...(valid ? { valid } : {}) } : x));
