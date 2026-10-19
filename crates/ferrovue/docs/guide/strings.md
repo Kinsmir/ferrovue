@@ -202,14 +202,50 @@ truthiness, as `x => !!x` does: `.filter(Boolean)` drops empty strings, `0`, `Na
 over a list or an array literal whose items may be `null` or `undefined`, the absent ones too,
 leaving a list of the values. `.indexOf()` and `.lastIndexOf()` compare with `===`: `NaN` is found
 nowhere, though `.includes()` finds it, and `-0` is found as `0`. `.concat()` chains the items of
-lists of one item type, numbers whether `number` or `Float`.
+lists of one item type, numbers whether `number` or `Float`, and so does a spread in an array
+literal, `[...a, x, ...b]`.
+
+# Building lists
+
+`.reduce(f, init)` and `.reduceRight(f, init)` fold the items with `js_reduce`, from the end for
+`.reduceRight()`, keeping the index each item has in the list. The accumulator's type is fixed when
+compiling, from the initial value and the function's body: an integer start whose body gives a
+fraction, or may give `-0` (`acc * -x`), accumulates a `Float`, and a string grows by `+`, under the
+rules `+` follows for halves of surrogate pairs. Without an initial value JavaScript throws on an
+empty list, so both are refused without one.
+
+`.toSorted()` without a comparator orders the items by `String(x)`, compared by UTF-16 code unit
+as `js_cmp` compares them: `js_sorted_by_string` sorts `[10, 9, 1]` to `[1, 10, 9]`, puts `NaN`
+after `Infinity` and leaves `-0` and `0`, both `"0"`, in their order. With a comparator, the
+compiler accepts the shapes whose order it can reproduce for every input: `a - b` and `b - a` of
+integers or of integer fields (`a.n - b.n`), whose sign `js_order` takes, and `?:` over `<`, `>`,
+`<=`, `>=`, `===` and `!==` of integers or strings, giving literals whose signs make a consistent
+order (`a < b ? -1 : a > b ? 1 : 0`). `js_sorted` sorts by it, and, as V8 and SpiderMonkey do,
+keeps the items it finds equal in their order. A `Float` key is refused: once a `NaN` is among the
+keys, the comparator is inconsistent and each engine orders the items its own way. So is
+`localeCompare`, which depends on the locale. `.toReversed()` is the items from the end, and
+`[...list].sort(…)` and `[...list].reverse()` are the same as `.toSorted(…)` and `.toReversed()`;
+`.sort()` and `.reverse()` of a prop or state would change it in place, and are refused.
+
+`Math.max(...xs)` and `Math.min(...xs)` fold the items with `js_max` and `js_min` from `-Infinity`
+and `Infinity`, which they give for an empty list, `NaN` when any item is, and `0` above `-0`.
 
 ```rust
+use std::cmp::Ordering;
+
 let words = ["a", "b", "c", "d"];
 let last_two: Vec<&str> = ferrovue::js_slice_items(words.iter().copied(), -2.0, None).collect();
 assert_eq!(last_two, ["c", "d"]);
 assert_eq!(ferrovue::js_item_at(words.iter().copied(), -1.0), Some("d"));
 assert_eq!(ferrovue::js_item_at(words.iter().copied(), 4.0), None);
+
+let sorted: Vec<i64> = ferrovue::js_sorted_by_string([10, 9, 1].into_iter(), |v| ferrovue::Js(*v).to_string()).collect();
+assert_eq!(sorted, [1, 10, 9]);
+let by_value: Vec<i64> = ferrovue::js_sorted([10, 9, 1].into_iter(), |a, b| ferrovue::js_order(*a as f64, *b as f64)).collect();
+assert_eq!(by_value, [1, 9, 10]);
+assert_eq!(ferrovue::js_order(f64::NAN, 1.0), Ordering::Equal);
+assert_eq!(ferrovue::js_reduce(words.iter().rev(), String::new(), |acc, w| acc + w), "dcba");
+assert!([0.0, -0.0].into_iter().fold(f64::INFINITY, ferrovue::js_min).is_sign_negative());
 ```
 
 # Panics

@@ -89,6 +89,7 @@ pub mod keywords;
 pub mod lifecycle;
 pub mod links;
 pub mod list_access;
+pub mod list_building;
 pub mod listen_leaf;
 pub mod listen_sale;
 pub mod listened;
@@ -640,6 +641,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "ListAccess" => {
             let props: list_access::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             list_access::render(&mut out, &props);
+        }
+        "ListBuilding" => {
+            let props: list_building::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            list_building::render(&mut out, &props);
         }
         "ListenLeaf" => {
             let props: listen_leaf::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

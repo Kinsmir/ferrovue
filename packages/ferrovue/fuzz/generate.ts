@@ -514,7 +514,8 @@ function scriptLines(c: Component): string[] {
 
 const templateText = (c: Component): string => c.template.map((n) => printNode(n, "")).join("\n");
 
-const mentions = (text: string, name: string): boolean => new RegExp(`(?<![\\w.$'])${name.replace(/\$/g, "\\$")}(?![\\w$])`).test(text);
+const FREE = "(?<![\\w$])(?:(?<=\\.\\.\\.)|(?<!\\.))";
+const mentions = (text: string, name: string): boolean => new RegExp(`(?<!')${FREE}${name.replace(/\$/g, "\\$")}(?![\\w$])`).test(text);
 
 function constsUsed(c: Component): string[] {
   if (!c.consts) return [];
@@ -601,8 +602,8 @@ function localeJson(messages: Record<string, string>): string {
   return JSON.stringify(tree, null, 2) + "\n";
 }
 
-const READS_ROUTE = /(?<![\w.$])route\./;
-const CALLS_T = /(?<![\w.$])t\(/;
+const READS_ROUTE = new RegExp(`${FREE}route\\.`);
+const CALLS_T = new RegExp(`${FREE}t\\(`);
 
 function contextText(c: Component): string {
   return `${templateText(c)}\n${scriptLines(c).join("\n")}`;
@@ -612,7 +613,7 @@ function storesUsed(c: Component, text = contextText(c)): { st: StoreDef; refs: 
   return c.stores
     .map((st) => {
       const refs = st.refs.filter((r) => mentions(text, r));
-      return { st, refs, local: refs.length > 0 || new RegExp(`(?<![\\w.$])${st.local}\\.`).test(text) };
+      return { st, refs, local: refs.length > 0 || new RegExp(`${FREE}${st.local}\\.`).test(text) };
     })
     .filter((u) => u.local);
 }
@@ -730,7 +731,7 @@ export function printComponent(c: Component): string {
     return `${p.name}${p.spec.k === "opt" ? "?" : ""}: ${ty}`;
   });
   const define = props.length ? `defineProps<{ ${props.join("; ")} }>();` : "defineProps<{}>();";
-  lines.push(c.propsVar || /(?<![\w.$])props\./.test(`${tpl}\n${script.join("\n")}`) ? `const props = ${define}` : define);
+  lines.push(c.propsVar || new RegExp(`${FREE}props\\.`).test(`${tpl}\n${script.join("\n")}`) ? `const props = ${define}` : define);
   lines.push(...context.lines);
   lines.push(...script);
   lines.push("</script>", "", "<template>");
@@ -1042,6 +1043,7 @@ interface ListExpr {
   kids: Expr[];
   fmt: (kids: string[], at: number) => string;
   lone: boolean;
+  mapped?: boolean;
 }
 
 const REPLACEMENTS = ["", "-", "$&", "$$", "$`", "$'", "$1", "$<x>", "[$&]", "🦀", "$"];
@@ -1239,7 +1241,7 @@ class Gen {
           let out: Expr | undefined;
           const fn = this.arrow(prev.of, prev.lone, () => (out = r.chance(0.6) ? this.str(d - 1) : this.int(d - 1, BOUND_SMALL)));
           const of: Spec = out!.ty === "str" ? { k: "str" } : { k: "int", wide: false };
-          return { of, kids: [...prev.kids, fn.body], fmt: (k, at) => `${prev.fmt(k, at)}.map(${fn.params} => ${k[at + width]})`, lone: !!out!.lone };
+          return { of, kids: [...prev.kids, fn.body], fmt: (k, at) => `${prev.fmt(k, at)}.map(${fn.params} => ${k[at + width]})`, lone: !!out!.lone, ...(of.k === "int" ? { mapped: true } : {}) };
         }],
         [2, () => {
           const a = this.small();
@@ -1257,9 +1259,99 @@ class Gen {
           ])();
           return { ...prev, fmt: (k, at) => `${prev.fmt(k, at)}.concat(${other})` };
         }],
+        [1, () => {
+          const copy = r.chance(0.3);
+          return { ...prev, fmt: (k, at) => (copy ? `[...${prev.fmt(k, at)}].reverse()` : `${prev.fmt(k, at)}.toReversed()`) };
+        }],
+        [prev.of.k === "obj" || prev.lone ? 0 : 1, () => {
+          const copy = r.chance(0.3);
+          return { ...prev, fmt: (k, at) => (copy ? `[...${prev.fmt(k, at)}].sort()` : `${prev.fmt(k, at)}.toSorted()`) };
+        }],
+        [1, () => {
+          const cmp = this.comparator(prev);
+          if (cmp === null) return prev;
+          const copy = r.chance(0.3);
+          return { ...prev, fmt: (k, at) => (copy ? `[...${prev.fmt(k, at)}].sort(${cmp})` : `${prev.fmt(k, at)}.toSorted(${cmp})`) };
+        }],
+        [1, () => {
+          const same = this.scope.lists.filter((v) => JSON.stringify(v.of) === JSON.stringify(prev.of));
+          const lit = prev.of.k === "str" ? `'${r.pick(STR_LITS)}'` : prev.of.k === "int" ? String(r.int(-3, 9)) : null;
+          const shape = r.weighted<(list: string) => string>([
+            [same.length ? 3 : 0, (list) => `[...${list}, ...${r.pick(same).name}]`],
+            [lit ? 2 : 0, (list) => `[${lit}, ...${list}]`],
+            [lit ? 2 : 0, (list) => `[...${list}, ${lit}, ...${list}]`],
+            [1, (list) => `[...${list}]`],
+            [1, (list) => `[...[], ...${list}]`],
+          ]);
+          return { ...prev, fmt: (k, at) => shape(prev.fmt(k, at)) };
+        }],
       ])();
     }
     return l;
+  }
+
+  comparator(l: ListExpr): string | null {
+    const r = this.r;
+    const n = this.arrows++;
+    const [a, b] = [`c${n}`, `e${n}`];
+    let key = "";
+    let int = l.of.k === "int";
+    if (l.of.k === "obj") {
+      const fields = this.ifaces.get(l.of.iface)?.fields.filter((f) => f.spec.k === "int" || f.spec.k === "count" || f.spec.k === "str") ?? [];
+      if (!fields.length) return null;
+      const f = r.pick(fields);
+      key = `.${f.name}`;
+      int = f.spec.k !== "str";
+    } else if ((l.of.k === "str" && l.lone) || (l.of.k !== "str" && l.of.k !== "int") || l.mapped) {
+      return null;
+    }
+    const [x, y] = [`${a}${key}`, `${b}${key}`];
+    return r.weighted<() => string>([
+      [int ? 3 : 0, () => `(${a}, ${b}) => ${x} - ${y}`],
+      [int ? 2 : 0, () => `(${a}, ${b}) => ${y} - ${x}`],
+      [2, () => `(${a}, ${b}) => (${x} < ${y} ? -1 : ${x} > ${y} ? 1 : 0)`],
+      [2, () => `(${a}, ${b}) => (${x} > ${y} ? -1 : ${x} < ${y} ? 1 : 0)`],
+      [1, () => `(${a}, ${b}) => (${x} === ${y} ? 0 : ${x} < ${y} ? 1 : -1)`],
+      [1, () => `(${a}, ${b}) => (${y} <= ${x} ? (${x} === ${y} ? 0 : 1) : -1)`],
+    ])();
+  }
+
+  reduction(l: ListExpr, d: number, ty: "str" | "num" | "bool"): Expr {
+    const r = this.r;
+    const n = this.arrows++;
+    const [acc, p] = [`acc${n}`, `a${n}`];
+    const withIndex = r.chance(0.25);
+    const method = r.chance(0.3) ? "reduceRight" : "reduce";
+    const e = this.withScope(() => {
+      this.bind(p, l.of, false, l.lone);
+      if (withIndex) this.scope.vars.push({ name: `j${n}`, ty: "int", opt: false, bound: 100 });
+      if (ty === "str") {
+        const part = this.str(d - 1);
+        return part.lone ? strLit(r.pick(LOW_LITS)) : part;
+      }
+      return ty === "num" ? this.int(d - 1, BOUND_SMALL) : this.bool(d - 1);
+    });
+    const params = withIndex ? `(${acc}, ${p}, j${n})` : `(${acc}, ${p})`;
+    const step = r.weighted<(x: string) => string>(
+      ty === "str"
+        ? [[3, (x) => `${acc} + (${x})`], [1, (x) => `(${x}) + ${acc}`]]
+        : ty === "num"
+          ? [[3, (x) => `${acc} + (${x})`], [1, (x) => `Math.max(${acc}, ${x})`], [1, (x) => `${acc} - (${x})`]]
+          : [[1, (x) => `${acc} && (${x})`], [1, (x) => `${acc} || (${x})`]],
+    );
+    const init = ty === "str" ? `'${r.pick(STR_LITS)}'` : ty === "num" ? String(r.pick([0, 1, -1, 0.5, -0])) : r.pick(["true", "false"]);
+    const out: Ty = ty === "num" ? "float" : ty;
+    return { ty: out, bound: 0, kids: [...l.kids, { ...e, scoped: true }], atom: true, fmt: (k) => `${l.fmt(k, 0)}.${method}(${params} => ${step(k[l.kids.length]!)}, ${init})` };
+  }
+
+  spreadExtreme(d: number): Expr | null {
+    const r = this.r;
+    const l = this.listExpr(d);
+    if (!l || l.of.k !== "int") return null;
+    const f = r.pick(["max", "min"]);
+    const extra = r.weighted<string>([[3, ""], [1, ", 0"], [1, ", -0"], [1, ", 0.5"]]);
+    const before = r.chance(0.2) ? "1, " : "";
+    return { ty: "float", bound: 0, kids: l.kids, atom: true, fmt: (k) => `Math.${f}(${before}...${l.fmt(k, 0)}${extra})` };
   }
 
   small(): Expr {
@@ -1301,6 +1393,7 @@ class Gen {
         const fallback = r.pick(STR_LITS);
         return { ty: "str", bound: 0, kids: [...l.kids, fn.body], atom: false, fmt: (k) => `${l.fmt(k, 0)}.findLast(${fn.params} => ${k[l.kids.length]}) ?? '${fallback}'`, ...lone };
       }],
+      [l.lone ? 0 : 2, () => this.reduction(l, d, "str")],
     ])();
   }
 
@@ -1425,6 +1518,7 @@ class Gen {
         const x = l.of.k === "str" ? `'${r.pick(STR_LITS)}'` : String(r.pick([0, 1, 2, -1, 7]));
         return { ty: "bool", bound: 0, kids: l.kids, atom: true, fmt: (k) => `${l.fmt(k, 0)}.includes(${x})` };
       }],
+      [1, () => this.reduction(l, d, "bool")],
     ])();
   }
 
@@ -1652,6 +1746,8 @@ class Gen {
       [2, () => { const f = r.pick(["round", "floor", "ceil", "trunc", "abs"]); return node("float", [this.float(d - 1)], ([x]) => `Math.${f}(${x})`, 0, true); }],
       [1, () => { const f = r.pick(["max", "min"]); return node("float", [this.float(d - 1), this.num(d - 1)], ([x, y]) => `Math.${f}(${x}, ${y})`, 0, true); }],
       [1, () => node("float", [this.test(d - 1), this.float(d - 1), this.float(d - 1)], ([c, x, y]) => `${c} ? ${x} : ${y}`)],
+      [2, () => this.spreadExtreme(d) ?? leaf()],
+      [1, () => { const l = this.listExpr(d); return l && !l.lone ? this.reduction(l, d, "num") : leaf(); }],
       [2, () => { const f = r.pick(["Number", "parseFloat", "parseInt", "parseInt", "parseInt"]); const radix = f === "parseInt" ? r.pick(["", ", 10", ", 16"]) : ""; return node("float", [this.str(d - 1)], ([s]) => `${f}(${s}${radix})`, 0, true); }],
     ];
     return r.weighted(options)();
@@ -2583,7 +2679,7 @@ export function prune(c: Component): Component {
     }
   }
   const bindings = c.bindings.filter((b) => kept.has(b));
-  const used = (name: string): boolean => mentions(text, name) || new RegExp(`(?<![\\w.$])props\\.${name}(?![\\w$])`).test(text);
+  const used = (name: string): boolean => mentions(text, name) || new RegExp(`${FREE}props\\.${name}(?![\\w$])`).test(text);
   const props = c.props.filter((p) => used(p.name));
   const live = new Set<string>();
   const visit = (s: Spec): void => {
@@ -2595,8 +2691,8 @@ export function prune(c: Component): Component {
   };
   props.forEach((p) => visit(p.spec));
   const full = `${text}\n${scriptLines({ ...c, bindings }).join("\n")}`;
-  const routed = /<RouterLink|\$route\.|(?<![\w.$])route\./.test(full);
-  const translated = /\$t\(|(?<![\w.$])t\(/.test(full) || mentions(full, "locale");
+  const routed = /<RouterLink|\$route\./.test(full) || READS_ROUTE.test(full);
+  const translated = /\$t\(/.test(full) || CALLS_T.test(full) || mentions(full, "locale");
   const stores = storesUsed({ ...c, bindings }, full).map((u) => ({ ...u.st, refs: u.refs }));
   return { ...c, props, bindings, ifaces: c.ifaces.filter((i) => live.has(i.name)), router: routed ? c.router : null, i18n: translated ? c.i18n : null, stores };
 }

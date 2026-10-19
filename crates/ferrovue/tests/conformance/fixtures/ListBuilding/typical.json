@@ -1,0 +1,1 @@
+{"words":["beta","alpha","gamma","alpha"],"nums":[10,9,1,100,2],"prices":[2.5,0.5,10,1],"rows":[{"name":"one","n":2,"tag":"a"},{"name":"two","n":1},{"name":"three","n":2,"tag":"c"},{"name":"four","n":1}],"flags":[true,false,true],"word":"alpha"}
