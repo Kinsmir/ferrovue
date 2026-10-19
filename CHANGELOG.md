@@ -173,6 +173,9 @@ released together and share version numbers.
   `decodeURIComponent()`) is refused with FV0633, naming what it translates, where FV0601 said the
   whole global was not available. `typeof` of anything but a query value, which the router refused
   with FV1234, is the core's now, and FV1234 is retired.
+- `Math.exp()`, `Math.log()`, the trigonometric functions and their kin are refused with FV0719
+  where they were FV0704. A `Date` prop compiles where it was refused with FV0315, and a `Date`
+  inside a list, a dictionary or an object prop is refused with FV1806 where it was FV0315.
 - Generated code of version 3 also calls the `#[doc(hidden)]` `js_to_utc_string`, `js_to_json`,
   `js_json_date` and `js_date_utc`. FV0609 names two dates beside two numbers and two strings, and
   `==` or `!=` with a date is refused with FV1809 where it was FV0619.
