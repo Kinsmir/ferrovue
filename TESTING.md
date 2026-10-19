@@ -139,6 +139,7 @@ A fixture is a JSON object of props plus three optional keys:
 | `Arrays`, `Chips` | `filter`, `map`, `some`, `every`, `find`, `findIndex`, `slice` with arrow functions, chained and nested, with an index and destructuring, in `v-for`, `computed`, `?:` and a child's props; `JSON.stringify` |
 | `Truthy` | `Boolean` as the function of `filter`, `map`, `some`, `every`, `find`, `findIndex`: empty strings, `0`, `-0` and `false` dropped; `.filter(Boolean)` of `T \| null` list items (strings, numbers, objects) and of an array literal holding optional fields, a `?:` with an `undefined` branch and `null`, in `computed`, `v-for` with an index and `.join()`; `Boolean(x)` |
 | `ListAccess` | Items by index: `list[i]` with literal, variable and negative indices, `.at()` with integers, fractions and negative indices, beyond either end and of empty lists, over lists of strings, numbers, objects and nullable items, computed lists and array literals, narrowed by `v-if`, through `?.` and `??` and in `computed`; `.indexOf()` and `.lastIndexOf()` with `===` (`NaN` never found, `-0` found as `0`, a fraction in a list of integers), `.findLast()` and `.findLastIndex()` with an index, destructuring and `Boolean`, `.concat()` of props, array literals, `[]` and computed lists; `.includes()` and `.lastIndexOf()` of a `v-for` item named `v` |
+| `ListBuilding` | `.reduce()` and `.reduceRight()` into integers, `Float`s (an integer start widened by a fractional or `-0` body, `-0` as the start), strings (astral characters, the index joined) and booleans; `.toReversed()`; `.toSorted()` without a comparator over integers (`[10, 9, 1]`), `Float`s (`NaN`, `-0` and `0`, `1e21`, the subnormals), strings by UTF-16 code unit and booleans, and with `a - b`, `b - a`, `a.k - b.k` and `?:` comparators, ties kept in their order; `[...list].sort()` and `[...list].reverse()`; spread in array literals of strings, of integers and `Float`s widened, of `[]` and of objects in `v-for`; `Math.max(...xs)` and `Math.min(...xs)` of empty lists, `NaN` and `-0`; in text, `computed` and `v-for`: empty lists, single items, ties |
 | `OptionalChains` | Optional chains that go on past `?.`: string methods and `.length` (`s?.trim().length`, `s?.toUpperCase()`, `s?.split(",").length`), list methods and indices (`tags?.[1]`, `tags?.at(-1)?.toUpperCase()`, `tags?.filter(…).length`, `tags?.map(…).join()`), fields of fields and of optional fields (`user?.profile?.site?.length`), numbers (`count?.toFixed(2)`), dates (`when?.getTime()`, `when?.toUTCString()`, `seen?.toJSON()`, `seen?.toUTCString().length`, valid, invalid and at the edges of the range), over optional and nullable values that are present, absent and empty; in `computed`, `v-if`, `??` and `v-for` |
 | `NumberIncludes` | `.includes()` across `number` and `Float`: a fraction in a list of integers, an integer in a list of fractions and in a list mapped to fractions, `-0` found as `0`, integers beyond 2⁵³ |
 | `Records` | `Record<string, T>` and `{ [key: string]: T }` in JavaScript's order of keys (array indices first, a key given twice), `Object.keys` / `values` / `entries`, a record handed to a child |
@@ -191,7 +192,7 @@ when it names a component that is not in `components/` with fixtures of its own.
 | Strings | `Strings`, `Exprs`, `Text` |
 | Dates | `Dates`, `Prices`, `DatePost`, `DateStamp`, `DateFormats`, `DateGuards` |
 | Conditions | `Branches`, `Narrowing`, `Nullable` |
-| Lists | `Lists`, `Arrays`, `Chips`, `Truthy`, `NumberIncludes`, `NarrowedRows`, `Exprs`, `ListAccess` |
+| Lists | `Lists`, `Arrays`, `Chips`, `Truthy`, `NumberIncludes`, `NarrowedRows`, `Exprs`, `ListAccess`, `ListBuilding` |
 | Dictionaries | `Records`, `Chips` |
 | Attributes | `Attrs`, `BoundObject`, `Keywords` |
 | `class` | `Attrs`, `BoundObject`, `VnodeClass`, `AsyncClass` |
@@ -329,6 +330,11 @@ What it generates, with random nesting:
   `JSON.stringify`, and an item by its index (`[i]` with a literal, negative ones too, or an integer,
   and `.at()` with any number), read with `??`, through a method after `?.`, or by a field of an
   item of a list of objects;
+- lists built by `.toReversed()`, `.toSorted()` without a comparator and with `a - b`, `b - a`,
+  `a.k - b.k` and `?:` comparators over `<`, `>`, `<=` and `===` of integers and strings,
+  `[...list].sort(…)`, `[...list].reverse()` and spread in array literals (of lists of the same
+  items, a literal and `[]`); `.reduce()` and `.reduceRight()` of any list into a string, a number
+  or a boolean, with an index too; `Math.max(...xs)` and `Math.min(...xs)` beside other numbers;
 - optional chains from an optional or nullable string or number that go on past `?.`: string
   methods, `.length`, `.indexOf()`, `.at()` and `.split()` followed by list reads, `.toFixed()` and
   `.toString()`, with `?.` again after each value that may be absent, read with `??` or as a

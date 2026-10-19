@@ -176,3 +176,77 @@ fn list_at_counts_from_either_end_as_javascript_does() {
     assert_eq!(at(f64::NEG_INFINITY), None);
     assert_eq!(js_item_at(std::iter::empty::<i64>(), 0.0), None);
 }
+
+#[test]
+fn sorting_keeps_equal_items_in_their_order() {
+    let pairs = [(2, 'a'), (1, 'b'), (2, 'c'), (1, 'd')];
+    let sorted: Vec<_> = js_sorted(pairs.into_iter(), |a, b| a.0.cmp(&b.0)).collect();
+    assert_eq!(sorted, [(1, 'b'), (1, 'd'), (2, 'a'), (2, 'c')]);
+    let down: Vec<_> = js_sorted(pairs.into_iter(), |a, b| b.0.cmp(&a.0)).collect();
+    assert_eq!(down, [(2, 'a'), (2, 'c'), (1, 'b'), (1, 'd')]);
+    assert_eq!(js_sorted(std::iter::empty::<i64>(), i64::cmp).count(), 0);
+}
+
+#[test]
+fn default_sort_orders_by_string_as_javascript_does() {
+    let key = |v: &f64| crate::Js(*v).to_string();
+    let numbers = [
+        10.0,
+        9.0,
+        1.0,
+        -1.0,
+        f64::NAN,
+        f64::INFINITY,
+        0.0,
+        -0.0,
+        1e21,
+        2.5,
+    ];
+    let sorted: Vec<String> = js_sorted_by_string(numbers.into_iter(), key)
+        .map(|v| key(&v))
+        .collect();
+    assert_eq!(
+        sorted,
+        [
+            "-1", "0", "0", "1", "10", "1e+21", "2.5", "9", "Infinity", "NaN"
+        ]
+    );
+    let zeros: Vec<bool> = js_sorted_by_string([0.0, -0.0, 0.0].into_iter(), key)
+        .map(f64::is_sign_negative)
+        .collect();
+    assert_eq!(zeros, [false, true, false]);
+    let words: Vec<&str> = js_sorted_by_string(["\u{ff5e}", "\u{1f980}", "a"].into_iter(), |v| {
+        (*v).to_owned()
+    })
+    .collect();
+    assert_eq!(words, ["a", "\u{1f980}", "\u{ff5e}"]);
+}
+
+#[test]
+fn order_is_the_sign_of_the_difference() {
+    assert_eq!(js_order(1.0, 2.0), Ordering::Less);
+    assert_eq!(js_order(2.0, 1.0), Ordering::Greater);
+    assert_eq!(js_order(2.0, 2.0), Ordering::Equal);
+    assert_eq!(js_order(-0.0, 0.0), Ordering::Equal);
+    assert_eq!(js_order(f64::NAN, 1.0), Ordering::Equal);
+    assert_eq!(
+        js_order(f64::NEG_INFINITY, f64::NEG_INFINITY),
+        Ordering::Equal
+    );
+    assert_eq!(js_order(f64::NEG_INFINITY, 0.0), Ordering::Less);
+    assert_eq!(js_order(5e-324, 0.0), Ordering::Greater);
+}
+
+#[test]
+fn reduce_folds_from_the_initial_value() {
+    assert_eq!(
+        js_reduce([1, 2, 3].into_iter(), 10, |acc, x| acc * 2 + x),
+        91
+    );
+    assert_eq!(
+        js_reduce(["x", "y"].into_iter().rev(), String::new(), |acc, x| acc
+            + x),
+        "yx"
+    );
+    assert!(js_reduce(std::iter::empty::<f64>(), -0.0, |acc, x| acc + x).is_sign_negative());
+}

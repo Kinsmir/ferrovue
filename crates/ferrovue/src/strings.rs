@@ -149,6 +149,90 @@ pub fn js_item_at<T>(items: impl Iterator<Item = T>, index: f64) -> Option<T> {
     }
 }
 
+/// `Array.prototype.reduce(step, init)` of a list's items: `step` given the value so far and each
+/// item in turn, starting from `init`.
+///
+/// # Example
+///
+/// ```
+/// let joined = ferrovue::js_reduce(["a", "b"].into_iter(), String::from(">"), |acc, x| acc + x);
+/// assert_eq!(joined, ">ab");
+/// assert_eq!(ferrovue::js_reduce(std::iter::empty::<i64>(), 7, |acc, x| acc + x), 7);
+/// ```
+#[must_use]
+pub fn js_reduce<T, A>(items: impl Iterator<Item = T>, init: A, step: impl FnMut(A, T) -> A) -> A {
+    items.fold(init, step)
+}
+
+/// `Array.prototype.toSorted(compare)` of a list's items: sorted by `compare`, keeping the order
+/// of items it finds equal, as JavaScript's engines do.
+///
+/// # Example
+///
+/// ```
+/// let pairs = [(2, "a"), (1, "b"), (2, "c")];
+/// let sorted: Vec<_> = ferrovue::js_sorted(pairs.into_iter(), |a, b| a.0.cmp(&b.0)).collect();
+/// assert_eq!(sorted, [(1, "b"), (2, "a"), (2, "c")]);
+/// ```
+#[must_use]
+pub fn js_sorted<T>(
+    items: impl Iterator<Item = T>,
+    compare: impl FnMut(&T, &T) -> Ordering,
+) -> std::vec::IntoIter<T> {
+    let mut all: Vec<T> = items.collect();
+    all.sort_by(compare);
+    all.into_iter()
+}
+
+/// `Array.prototype.toSorted()` without a comparator: the items ordered by the strings `key` gives
+/// them, `String(x)` in JavaScript, compared by UTF-16 code unit as [`js_cmp`] compares them, items
+/// with equal strings in their order.
+///
+/// # Example
+///
+/// ```
+/// let key = |v: &i64| ferrovue::Js(*v).to_string();
+/// let sorted: Vec<i64> = ferrovue::js_sorted_by_string([10, 9, 1].into_iter(), key).collect();
+/// assert_eq!(sorted, [1, 10, 9]);
+/// ```
+#[must_use]
+pub fn js_sorted_by_string<T>(
+    items: impl Iterator<Item = T>,
+    mut key: impl FnMut(&T) -> String,
+) -> std::vec::IntoIter<T> {
+    let mut keyed: Vec<(String, T)> = items.map(|v| (key(&v), v)).collect();
+    keyed.sort_by(|a, b| js_cmp(&a.0, &b.0));
+    keyed
+        .into_iter()
+        .map(|(_, v)| v)
+        .collect::<Vec<T>>()
+        .into_iter()
+}
+
+/// The order a sort takes from a comparator returning `a - b`: by the sign of the difference, and
+/// equal where it is `NaN` or zero.
+///
+/// # Example
+///
+/// ```
+/// use std::cmp::Ordering;
+///
+/// assert_eq!(ferrovue::js_order(1.0, 2.0), Ordering::Less);
+/// assert_eq!(ferrovue::js_order(-0.0, 0.0), Ordering::Equal);
+/// assert_eq!(ferrovue::js_order(f64::INFINITY, f64::INFINITY), Ordering::Equal);
+/// ```
+#[must_use]
+pub fn js_order(a: f64, b: f64) -> Ordering {
+    let d = a - b;
+    if d < 0.0 {
+        Ordering::Less
+    } else if d > 0.0 {
+        Ordering::Greater
+    } else {
+        Ordering::Equal
+    }
+}
+
 fn boundary(s: &str, i: usize) -> (usize, bool) {
     let mut unit = 0;
     for (byte, c) in s.char_indices() {

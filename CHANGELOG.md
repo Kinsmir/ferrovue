@@ -83,6 +83,30 @@ released together and share version numbers.
   joins lists of one item type, or of numbers whether `number` or `Float`, and refuses others with
   FV0827. Generated code calls the new `#[doc(hidden)]` `js_item_at` for `.at()`, part of
   version 3.
+- `.reduce()` and `.reduceRight()` of a list with an initial value, whose arrow function takes the
+  accumulator, the item and its index. The accumulator is a string, a number or a boolean, its type
+  fixed from the initial value and the function's body: an integer start whose body gives a
+  fraction, or may give `-0`, accumulates a `Float`, and strings join by `+` with the rules of
+  `+` itself, so a function joining strings that may hold halves of surrogate pairs is refused
+  with FV0706. Without an initial value either is refused with FV0828, since JavaScript throws on
+  an empty list, and an accumulator of another type, or a body that changes its type, with FV0829.
+- `.toReversed()`, and `.toSorted()` without a comparator, which orders the items by `String(x)`
+  compared by UTF-16 code unit as JavaScript does (`[10, 9, 1]` sorts to `[1, 10, 9]`, `NaN` among
+  the letters), or with a comparator of a shape the server orders by exactly: `(a, b) => a - b`,
+  `b - a`, `a.k - b.k` and `b.k - a.k` over integers, and `?:` over `<`, `>`, `<=`, `>=`, `===`
+  and `!==` of integers or strings giving numbers whose signs make a consistent order (`a < b ? -1
+  : a > b ? 1 : 0`). The sort is stable, as in V8 and SpiderMonkey. Other comparators are refused
+  with FV0830, a `Float` key among them, since a `NaN` makes the comparator inconsistent and each
+  engine orders the items its own way; a list of objects without a comparator with FV0831; and a
+  `localeCompare` comparator with FV1805. `[...list].sort(…)` and `[...list].reverse()` are the
+  same as `.toSorted(…)` and `.toReversed()`, and `.sort()` and `.reverse()` of a prop or state,
+  which change it in place, are refused with FV0832, pointing to them.
+- Spread in array literals, `[...a, x, ...b]`, of lists and values of one item type, numbers whether
+  `number` or `Float`, and of lists of objects of one type; anything else is refused with FV0833.
+  `Math.max(...xs)` and `Math.min(...xs)`, beside other numbers too, fold the items as JavaScript
+  does: `-Infinity` and `Infinity` for no items, `NaN` when any is, and `-0` below `0`. Generated
+  code calls the new `#[doc(hidden)]` `js_reduce`, `js_sorted`, `js_sorted_by_string` and
+  `js_order`, part of version 3.
 
 ### Changed
 
@@ -90,8 +114,8 @@ released together and share version numbers.
   `#[doc(hidden)]` `js_time_of` and `js_date_prop` and the serde helpers `date_prop` and `opt_date_prop`, which the
   0.8 crate lacks. The crate still builds modules of version 2, which call nothing that changed.
 - The API reports gain `reviveDates` (`ferrovue`, `ferrovue/client`) and `Config.dateType` and
-  FV0629, FV0630, FV0716, FV0717, FV0718, FV0824 to FV0827 and FV1806 to FV1809, and FV0604's title
-  names a value that may be absent (`ferrovue/compiler`).
+  FV0629, FV0630, FV0716, FV0717, FV0718, FV0824 to FV0833 and FV1806 to FV1809, FV0604's title
+  names a value that may be absent, and FV0610's names a hole alone (`ferrovue/compiler`).
 - Generated code of version 3 also calls the `#[doc(hidden)]` `js_to_utc_string`, `js_to_json`,
   `js_json_date` and `js_date_utc`. FV0609 names two dates beside two numbers and two strings, and
   `==` or `!=` with a date is refused with FV1809 where it was FV0619.
@@ -132,6 +156,14 @@ released together and share version numbers.
   `??`, with a method after `?.` and by a field of an object; `.indexOf()`, `.lastIndexOf()`,
   `.findLast()`, `.findLastIndex()` and `.concat()`; and optional chains from optional and nullable
   strings and numbers through string methods, `.split()` and list reads.
+- Tests only: the differential fuzzer generates `.reduce()` and `.reduceRight()` into strings,
+  numbers and booleans, `.toReversed()`, `.toSorted()` with and without comparators of each shape
+  the compiler accepts, `[...list].sort()` and `[...list].reverse()`, spread in array literals and
+  `Math.max(...xs)` and `Math.min(...xs)`. A name the template reads only after `...` is now
+  declared in the component's script, as any other name it reads is. The conformance suite gains
+  `ListBuilding`, seven fixtures recorded from Vue.
+- FV0610's title and message name a hole in an array literal alone: a spread compiles now, or is
+  refused with FV0833.
 
 ### Fixed
 

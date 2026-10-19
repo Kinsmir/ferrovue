@@ -1,11 +1,11 @@
-import { type Component, type N, type Scope, type Ty, type Val, BOOL, fail, FLOAT, INT, opt, sameTy, STR } from "./model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, BOOL, fail, FLOAT, INT, opt, sameTy, STR, UNDEF } from "./model.ts";
 import { ctx } from "./context.ts";
 import { describeTy, expr, fieldVal } from "./expr.ts";
 import { cond } from "./narrowing.ts";
 import { localTy } from "./rust.ts";
 import { asF64, isNumber } from "./numbers.ts";
 import { asCow, isTemporary, lonely, meet, yieldsCow } from "./strings.ts";
-import { atom, bare, binary, operand, strArg, UNARY } from "./parens.ts";
+import { atom, bare, binary, enclosed, operand, strArg, UNARY } from "./parens.ts";
 
 const COW = "std::borrow::Cow::<str>";
 
@@ -164,8 +164,9 @@ function present(target: Val): Val | null {
  */
 export function presentLiteral(s: Scope, n: N): Val | null {
   const comp = s.comp;
+  if (n.elements.some((el: N) => el?.type === "SpreadElement")) return null;
   const values = n.elements.map((el: N) => {
-    if (!el || el.type === "SpreadElement") fail(comp, "FV0610", "an array literal holds plain values", n);
+    if (!el) fail(comp, "FV0610", "an array literal holds plain values", n);
     return expr(s, el);
   });
   if (!values.some((v: Val) => v.ty.k === "opt" || v.ty.k === "null" || v.ty.k === "undef")) return null;
@@ -216,8 +217,285 @@ export function picked(s: Scope, target: Val, n: N, fromList: (list: string) => 
   return fail(s.comp, "FV0804", "an item is read from a list of strings, numbers, booleans or objects, each of which may be absent", n);
 }
 
+const RISKS_NEGATIVE_ZERO = /-[\w(]|\s[*%]\s/;
+
+function ownedString(v: Val, acc: string): string {
+  if (v.code === `&*${acc}`) return acc;
+  if (v.code === '""') return "String::new()";
+  const built = /^&\*(format!\(.*\))$/s.exec(v.code)?.[1];
+  if (built !== undefined && enclosed(built.slice("format!".length))) return built;
+  return `String::from(${bare(v.code)})`;
+}
+
+function reduced(s: Scope, target: Val, method: string, args: N[], n: N): Val {
+  const comp = s.comp;
+  if (args.length < 2) {
+    fail(comp, "FV0828", `\`.${method}()\` takes an initial value after its function: without one, JavaScript throws a \`TypeError\` on an empty list`, n);
+  }
+  if (args.length > 2) fail(comp, "FV0829", `\`.${method}()\` takes a function and an initial value`, n);
+  const of = itemsTy(s, target, n);
+  const fn = args[0];
+  if (fn?.type !== "ArrowFunctionExpression" || fn.async || fn.params.length < 2 || fn.params.length > 3 || fn.params[0].type !== "Identifier") {
+    fail(comp, "FV0829", `\`.${method}()\` takes an arrow function of the accumulator, the item and its index: \`(acc, x) => …\` or \`(acc, x, i) => …\``, fn);
+  }
+  const accName: string = fn.params[0].name;
+  const init = expr(s, args[1]);
+  if (!["str", "int", "float", "bool"].includes(init.ty.k)) {
+    fail(comp, "FV0829", `\`.${method}()\` accumulates a string, a number or a boolean that is present, and its initial value is ${describeTy(init.ty)}`, args[1]);
+  }
+  let accTy: Ty = init.ty.k === "int" && init.f64 !== undefined && RISKS_NEGATIVE_ZERO.test(init.f64) ? FLOAT : init.ty;
+  let lone = !!init.lone;
+  const item = { ...fn, params: fn.params.slice(1) };
+  const narrowed = new Map([...s.narrowed].filter(([path]) => path !== accName && !path.startsWith(`${accName}.`) && !path.startsWith(`${accName}[`)));
+  for (;;) {
+    const acc = `fv_acc${++ctx.narrowCount}`;
+    const accVal: Val = accTy.k === "str" ? { code: `&*${acc}`, ty: STR, ...(lone ? { lone } : {}) } : { code: acc, ty: accTy };
+    const outer: Scope = { ...s, locals: new Map(s.locals).set(accName, accVal), narrowed };
+    const seen = { wider: false, loner: false };
+    const { closure, enumerate } = arrow(outer, item, target, of, false, method, (inner) => {
+      const out = expr(inner, fn.body);
+      const changes = `the function gives ${describeTy(out.ty)} where the accumulator, from its initial value, is ${describeTy(accTy)}`;
+      switch (accTy.k) {
+        case "str":
+          if (out.ty.k !== "str") fail(comp, "FV0829", `\`.${method}()\` keeps one type of accumulator, and ${changes}`, fn.body);
+          if (out.lone && !lone) seen.loner = true;
+          return ownedString(out, acc);
+        case "int":
+          if (out.ty.k === "float" || (out.ty.k === "int" && out.f64 !== undefined && RISKS_NEGATIVE_ZERO.test(out.f64))) seen.wider = true;
+          else if (out.ty.k !== "int") fail(comp, "FV0829", `\`.${method}()\` keeps one type of accumulator, and ${changes}`, fn.body);
+          return bare(out.code);
+        case "float":
+          if (!isNumber(out.ty)) fail(comp, "FV0829", `\`.${method}()\` keeps one type of accumulator, and ${changes}`, fn.body);
+          return bare(asF64(out));
+        default:
+          if (out.ty.k !== "bool") fail(comp, "FV0829", `\`.${method}()\` keeps one type of accumulator, and ${changes}`, fn.body);
+          return bare(out.code);
+      }
+    });
+    if (seen.wider) {
+      accTy = FLOAT;
+      continue;
+    }
+    if (seen.loner) {
+      lone = true;
+      continue;
+    }
+    const start = accTy.k === "str" ? ownedString(init, "") : accTy.k === "float" ? bare(asF64(init)) : bare(init.code);
+    const reads = new RegExp(`\\b${acc}\\b`).test(closure);
+    const step = closure.replace(/^\|/, `|${reads ? acc : "_"}, `);
+    const from = method === "reduce" ? `${items(target)}${enumerate ? ".enumerate()" : ""}` : `${backwards(target)}${enumerate ? ".enumerate()" : ""}.rev()`;
+    const folded = `fv::js_reduce(${from}, ${start}, ${step})`;
+    if (accTy.k === "str") return { code: `&*${folded}`, ty: STR, ...(lone ? { lone } : {}) };
+    return { code: folded, ty: accTy };
+  }
+}
+
+function keyPath(node: N, param: string): string | null {
+  while (node?.type === "ParenthesizedExpression") node = node.expression;
+  if (node?.type === "Identifier") return node.name === param ? "" : null;
+  if (node?.type === "MemberExpression" && !node.computed && node.property.type === "Identifier") {
+    const base = keyPath(node.object, param);
+    return base === null ? null : `${base}.${node.property.name}`;
+  }
+  return null;
+}
+
+type Shape = { path: string; ascending: boolean | null; subtracted: boolean };
+
+function literalNumber(node: N): number | null {
+  while (node?.type === "ParenthesizedExpression") node = node.expression;
+  if (node?.type === "NumericLiteral") return node.value;
+  if (node?.type === "UnaryExpression" && (node.operator === "-" || node.operator === "+")) {
+    const x = literalNumber(node.argument);
+    return x === null ? null : node.operator === "-" ? -x : x;
+  }
+  return null;
+}
+
+function comparatorShape(fn: N): Shape | null {
+  const [a, b] = fn.params.map((p: N) => p.name as string);
+  let body: N = fn.body;
+  while (body?.type === "ParenthesizedExpression") body = body.expression;
+  if (body?.type === "BinaryExpression" && body.operator === "-") {
+    const [la, rb, lb, ra] = [keyPath(body.left, a), keyPath(body.right, b), keyPath(body.left, b), keyPath(body.right, a)];
+    if (la !== null && la === rb) return { path: la, ascending: true, subtracted: true };
+    if (lb !== null && lb === ra) return { path: lb, ascending: false, subtracted: true };
+    return null;
+  }
+  let path: string | null | undefined;
+  const test = (node: N, order: number): boolean | null => {
+    while (node?.type === "ParenthesizedExpression") node = node.expression;
+    if (node?.type !== "BinaryExpression" || !["<", ">", "<=", ">=", "===", "!=="].includes(node.operator)) return null;
+    let rel: number;
+    const [la, rb, lb, ra] = [keyPath(node.left, a), keyPath(node.right, b), keyPath(node.left, b), keyPath(node.right, a)];
+    if (la !== null && la === rb) rel = order;
+    else if (lb !== null && lb === ra) rel = -order;
+    else return null;
+    const p = la !== null && la === rb ? la : lb;
+    if (path !== undefined && path !== p) return null;
+    path = p;
+    switch (node.operator) {
+      case "<":
+        return rel < 0;
+      case ">":
+        return rel > 0;
+      case "<=":
+        return rel <= 0;
+      case ">=":
+        return rel >= 0;
+      case "===":
+        return rel === 0;
+      default:
+        return rel !== 0;
+    }
+  };
+  const result = (node: N, order: number): number | null => {
+    while (node?.type === "ParenthesizedExpression") node = node.expression;
+    if (node?.type === "ConditionalExpression") {
+      const t = test(node.test, order);
+      return t === null ? null : result(t ? node.consequent : node.alternate, order);
+    }
+    return literalNumber(node);
+  };
+  const [less, equal, greater] = [result(body, -1), result(body, 0), result(body, 1)];
+  if (less === null || equal === null || greater === null || [less, equal, greater].some(Number.isNaN)) return null;
+  if (Math.sign(equal) !== 0 || Math.sign(less) !== -Math.sign(greater)) return null;
+  if (path === undefined || less === 0) return { path: "", ascending: null, subtracted: false };
+  return { path: path ?? "", ascending: less < 0, subtracted: false };
+}
+
+function sortedBy(s: Scope, target: Val, of: Ty, fn: N): Val {
+  const comp = s.comp;
+  const shapes = "`(a, b) => a - b`, `(a, b) => a.k - b.k` over integers, or `?:` over `<` and `>` of integers or strings giving -1, 0 and 1";
+  if (fn?.type !== "ArrowFunctionExpression" || fn.async || fn.params.length !== 2 || fn.params.some((p: N) => p.type !== "Identifier") || fn.body.type === "BlockStatement") {
+    fail(comp, "FV0830", `\`.toSorted()\` takes a comparator of a shape the server orders by, as JavaScript does: ${shapes}`, fn);
+  }
+  const k = ++ctx.narrowCount;
+  const [pa, pb] = [`fv_l${k}`, `fv_r${k}`];
+  const locals = new Map(s.locals).set(fn.params[0].name, itemVal(of, pa, true, target.lone)).set(fn.params[1].name, itemVal(of, pb, true, target.lone));
+  const bound: string[] = fn.params.map((p: N) => p.name as string);
+  const narrowed = new Map([...s.narrowed].filter(([path]) => !bound.some((b) => path === b || path.startsWith(`${b}.`) || path.startsWith(`${b}[`))));
+  const inner: Scope = { ...s, locals, narrowed };
+  const shape = comparatorShape(fn);
+  if (shape === null) {
+    expr(inner, fn.body);
+    fail(comp, "FV0830", `\`.toSorted()\` takes a comparator of a shape the server orders by, as JavaScript does: ${shapes}`, fn.body);
+  }
+  if (shape.ascending === null) return computed(items(target), of, target.lone);
+  const key = (name: string): Val => {
+    let node: N = { type: "Identifier", name, loc: fn.body.loc, start: fn.body.start, end: fn.body.end };
+    for (const field of shape.path.split(".").slice(1)) node = { type: "MemberExpression", computed: false, object: node, property: { type: "Identifier", name: field }, loc: fn.body.loc, start: fn.body.start, end: fn.body.end };
+    return expr(inner, node);
+  };
+  const [ka, kb] = [key(fn.params[0].name), key(fn.params[1].name)];
+  const [x, y] = shape.ascending ? [ka, kb] : [kb, ka];
+  let order: string;
+  if (ka.ty.k === "int") order = `fv::js_order(${bare(asF64(x))}, ${bare(asF64(y))})`;
+  else if (ka.ty.k === "str" && !shape.subtracted) {
+    if (ka.lone) fail(comp, "FV0706", lonely("`.toSorted()`"), fn.body);
+    order = `fv::js_cmp(${strArg(x.code)}, ${strArg(y.code)})`;
+  } else if (ka.ty.k === "float") {
+    return fail(comp, "FV0830", "`.toSorted()` by a `Float`, which may be `NaN`: JavaScript then takes the comparator as inconsistent and each engine orders the items its own way. Sort by an integer or a string", fn.body);
+  } else {
+    return fail(comp, "FV0830", `\`.toSorted()\` orders by ${shape.subtracted ? "integers" : "integers or strings"}, and this key is ${describeTy(ka.ty)}`, fn.body);
+  }
+  const reads = (name: string) => new RegExp(`\\b${name}\\b`).test(order);
+  return computed(`fv::js_sorted(${items(target)}, |${reads(pa) ? pa : "_"}, ${reads(pb) ? pb : "_"}| ${order})`, of, target.lone);
+}
+
+function sorted(s: Scope, target: Val, args: N[], n: N): Val {
+  const comp = s.comp;
+  const of = itemsTy(s, target, n);
+  if (args.length > 1) fail(comp, "FV0830", "`.toSorted()` takes one comparator, or none", n);
+  if (args.length === 1 && !(args[0].type === "Identifier" && args[0].name === "undefined")) return sortedBy(s, target, of, args[0]);
+  const it = items(target);
+  switch (of.k) {
+    case "str":
+      if (target.lone) fail(comp, "FV0706", lonely("`.toSorted()`"), n);
+      return computed(`fv::js_sorted(${it}, |a, b| fv::js_cmp(a, b))`, of);
+    case "int":
+    case "float":
+      return computed(`fv::js_sorted_by_string(${it}, |v| fv::Js(*v).to_string())`, of);
+    case "bool":
+      return computed(`fv::js_sorted(${it}, bool::cmp)`, of);
+    default:
+      return fail(comp, "FV0831", "`.toSorted()` without a comparator orders objects by `String(x)`, which is `[object Object]` for each: give it a comparator, `(a, b) => a.k - b.k`", n);
+  }
+}
+
+/** An array literal holding spread lists (`[...a, x, ...b]`): the items of each part in turn, as a computed list. */
+export function spreadLiteral(s: Scope, n: N): Val {
+  const comp = s.comp;
+  const parts = n.elements.map((el: N) => {
+    if (!el) fail(comp, "FV0610", "an array literal holds plain values, without holes", n);
+    if (el.type !== "SpreadElement") return { one: expr(s, el), node: el };
+    const list = expr(s, el.argument);
+    if (list.ty.k !== "list") fail(comp, "FV0833", `\`...\` in an array literal spreads a list, and this is ${describeTy(list.ty)}`, el);
+    return { list, node: el };
+  }).filter((p: { list?: Val }) => p.list === undefined || !untypedEmpty(p.list));
+  const tys: Ty[] = parts.map((p: { one?: Val; list?: Val }) => (p.list ? (p.list.ty as { of: Ty }).of : p.one!.ty));
+  if (tys.length === 0) return { code: "[]", ty: { k: "list", of: UNDEF } };
+  const own = tys[0]!;
+  const numbers = tys.every(isNumber);
+  const scalar = ["str", "int", "float", "bool"].includes(own.k);
+  const objects = (own.k === "struct" || own.k === "child") && parts.every((p: { list?: Val }) => p.list !== undefined);
+  if ((!scalar && !objects) || (!numbers && tys.some((t) => !sameTy(t, own)))) {
+    const bad = parts.find((_: unknown, i: number) => !sameTy(tys[i]!, own)) ?? parts[0];
+    fail(comp, "FV0833", "an array literal spreads lists of one item type, strings, numbers, booleans or objects, and holds plain values of that type beside them (numbers whether `number` or `Float`)", bad.node);
+  }
+  const of = numbers && tys.some((t) => t.k === "float") ? FLOAT : own;
+  const pieces: string[] = [];
+  let plain: string[] = [];
+  const flush = () => {
+    if (plain.length) pieces.push(`[${plain.join(", ")}]${pieces.length ? "" : ".into_iter()"}`);
+    plain = [];
+  };
+  for (const p of parts as { one?: Val; list?: Val }[]) {
+    if (p.list) {
+      flush();
+      pieces.push(of.k === "float" && p.list.ty.k === "list" && p.list.ty.of.k === "int" ? `${items(p.list)}.map(|v| v as f64)` : items(p.list));
+    } else {
+      const v = p.one!;
+      plain.push(of.k === "str" ? asCow(v) : of.k === "float" ? bare(asF64(v)) : bare(v.code));
+    }
+  }
+  flush();
+  const lone = parts.some((p: { one?: Val; list?: Val }) => (p.list ?? p.one)!.lone);
+  return computed(pieces.slice(1).reduce((acc, piece) => `${acc}.chain(${piece})`, pieces[0]!), of, lone);
+}
+
+/** `Math.max(...xs)` and `Math.min(...xs)`: every number of the parts folded from `-Infinity` or `Infinity`, as JavaScript folds them. */
+export function spreadExtreme(s: Scope, method: "max" | "min", args: N[]): Val {
+  const pieces = args.map((a) => {
+    if (a?.type === "SpreadElement") {
+      const list = expr(s, a.argument);
+      if (list.ty.k !== "list" || (!isNumber(list.ty.of) && !untypedEmpty(list))) fail(s.comp, "FV0704", `\`Math.${method}(...xs)\` spreads a list of numbers, and this is ${list.ty.k === "list" ? "a list of other values" : describeTy(list.ty)}`, a);
+      if (untypedEmpty(list)) return null;
+      return list.ty.of.k === "int" ? `${items(list)}.map(|v| v as f64)` : items(list);
+    }
+    const v = expr(s, a);
+    if (!isNumber(v.ty)) fail(s.comp, "FV0704", `\`Math.${method}()\` takes numbers that are present`, a);
+    return `std::iter::once(${bare(asF64(v))})`;
+  }).filter((p): p is string => p !== null);
+  const start = method === "max" ? "f64::NEG_INFINITY" : "f64::INFINITY";
+  if (pieces.length === 0) return { code: start, ty: FLOAT, num: method === "max" ? -Infinity : Infinity };
+  const all = pieces.slice(1).reduce((acc, piece) => `${acc}.chain(${piece})`, pieces[0]!);
+  return { code: `${all}.fold(${start}, fv::js_${method})`, ty: FLOAT };
+}
+
 export function listMethod(s: Scope, target: Val, method: string, args: N[], n: N): Val | null {
   const comp = s.comp;
+  if (method === "reduce" || method === "reduceRight") return reduced(s, target, method, args, n);
+  if (method === "toReversed") {
+    if (args.length !== 0) fail(comp, "FV0602", "`.toReversed()` takes no arguments", n);
+    const of = itemsTy(s, target, n);
+    const held = target.iter !== undefined && /^[\w.]+\.iter\(\)(?:\.copied\(\)|\.map\(\|v\| std::borrow::Cow::<str>::Borrowed\(&\*\*v\)\))?$/.test(target.iter);
+    return computed(`${held ? target.iter : backwards(target)}.rev()`, of, target.lone);
+  }
+  if (method === "toSorted") return sorted(s, target, args, n);
+  if (method === "sort" || method === "reverse") {
+    fail(comp, "FV0832", `\`.${method}()\` changes the list in place, which a render must not do to its props or state: write \`.${method === "sort" ? "toSorted" : "toReversed"}()\`, or \`[...list].${method}(…)\``, n);
+  }
   if (method === "at") {
     if (args.length !== 1) fail(comp, "FV0825", "`.at()` takes one index", n);
     const i = expr(s, args[0]);

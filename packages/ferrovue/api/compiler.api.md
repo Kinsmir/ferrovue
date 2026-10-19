@@ -387,7 +387,7 @@ export const ERRORS: {
         readonly title: "Comparison between unsupported or absent values";
     };
     readonly FV0610: {
-        readonly title: "Spread or hole in an array literal";
+        readonly title: "Hole in an array literal";
     };
     readonly FV0611: {
         readonly title: "Array literal of different types";
@@ -585,6 +585,24 @@ export const ERRORS: {
     };
     readonly FV0827: {
         readonly title: "`.concat()` of anything but lists of the same item type";
+    };
+    readonly FV0828: {
+        readonly title: "`.reduce()` or `.reduceRight()` without an initial value";
+    };
+    readonly FV0829: {
+        readonly title: "`.reduce()` or `.reduceRight()` whose accumulator changes type or is not a string, number or boolean";
+    };
+    readonly FV0830: {
+        readonly title: "`.toSorted()` with a comparator of a shape the server does not order by";
+    };
+    readonly FV0831: {
+        readonly title: "`.toSorted()` without a comparator of a list of objects";
+    };
+    readonly FV0832: {
+        readonly title: "`.sort()` or `.reverse()` of a list in place";
+    };
+    readonly FV0833: {
+        readonly title: "Array spread of anything but lists of the same item type";
     };
     readonly FV0901: {
         readonly title: "Slots that are not an object literal";

@@ -472,7 +472,7 @@ Comparison between unsupported or absent values.
 
 ## FV0610
 
-Spread or hole in an array literal.
+Hole in an array literal.
 
 ## FV0611
 
@@ -745,6 +745,30 @@ List item read by an index that is not an integer.
 ## FV0827
 
 `.concat()` of anything but lists of the same item type.
+
+## FV0828
+
+`.reduce()` or `.reduceRight()` without an initial value.
+
+## FV0829
+
+`.reduce()` or `.reduceRight()` whose accumulator changes type or is not a string, number or boolean.
+
+## FV0830
+
+`.toSorted()` with a comparator of a shape the server does not order by.
+
+## FV0831
+
+`.toSorted()` without a comparator of a list of objects.
+
+## FV0832
+
+`.sort()` or `.reverse()` of a list in place.
+
+## FV0833
+
+Array spread of anything but lists of the same item type.
 
 # Slots: FV09xx
 

@@ -3596,6 +3596,196 @@ defineProps<{ n: number; p: number }>();
 <template><p>{{ n.toExponential(p) }}</p></template>`,
       /`\.toExponential\(\)` takes a literal number of digits, from 0 to 100/,
     ],
+    [
+      "`.reduce()` without an initial value",
+      `<script setup lang="ts">
+import type { Float } from "ferrovue/types";
+interface Row { name: string; n: number }
+defineProps<{ words: string[]; nums: number[]; prices: Float[]; rows: Row[]; word: string }>();
+</script>
+<template><p>{{ nums.reduce((a, x) => a + x) }}</p></template>`,
+      /`\.reduce\(\)` takes an initial value after its function: without one, JavaScript throws/,
+    ],
+    [
+      "`.reduceRight()` without an initial value",
+      `<script setup lang="ts">
+import type { Float } from "ferrovue/types";
+interface Row { name: string; n: number }
+defineProps<{ words: string[]; nums: number[]; prices: Float[]; rows: Row[]; word: string }>();
+</script>
+<template><p>{{ words.reduceRight((a, w) => a + w) }}</p></template>`,
+      /`\.reduceRight\(\)` takes an initial value/,
+    ],
+    [
+      "`.reduce()` whose function changes the accumulator's type",
+      `<script setup lang="ts">
+import type { Float } from "ferrovue/types";
+interface Row { name: string; n: number }
+defineProps<{ words: string[]; nums: number[]; prices: Float[]; rows: Row[]; word: string }>();
+</script>
+<template><p>{{ nums.reduce((a, x) => a + ",", 0) }}</p></template>`,
+      /`\.reduce\(\)` keeps one type of accumulator, and the function gives a string where the accumulator, from its initial value, is a number/,
+    ],
+    [
+      "`.reduce()` into a list",
+      `<script setup lang="ts">
+import type { Float } from "ferrovue/types";
+interface Row { name: string; n: number }
+defineProps<{ words: string[]; nums: number[]; prices: Float[]; rows: Row[]; word: string }>();
+</script>
+<template><p>{{ nums.reduce((a, x) => a, []).length }}</p></template>`,
+      /`\.reduce\(\)` accumulates a string, a number or a boolean that is present/,
+    ],
+    [
+      "`.reduce()` given a function that is not an arrow function of the accumulator and the item",
+      `<script setup lang="ts">
+import type { Float } from "ferrovue/types";
+interface Row { name: string; n: number }
+defineProps<{ words: string[]; nums: number[]; prices: Float[]; rows: Row[]; word: string }>();
+</script>
+<template><p>{{ nums.reduce((a) => a, 0) }}</p></template>`,
+      /`\.reduce\(\)` takes an arrow function of the accumulator, the item and its index/,
+    ],
+    [
+      "`.reduce()` joining halves of surrogate pairs",
+      `<script setup lang="ts">
+import type { Float } from "ferrovue/types";
+interface Row { name: string; n: number }
+defineProps<{ words: string[]; nums: number[]; prices: Float[]; rows: Row[]; word: string }>();
+</script>
+<template><p>{{ words.reduce((a, w) => a + w.slice(0, 1), "") }}</p></template>`,
+      /with a string that may hold half of a surrogate pair/,
+    ],
+    [
+      "`.toSorted()` subtracting `Float` keys",
+      `<script setup lang="ts">
+import type { Float } from "ferrovue/types";
+interface Row { name: string; n: number }
+defineProps<{ words: string[]; nums: number[]; prices: Float[]; rows: Row[]; word: string }>();
+</script>
+<template><p>{{ prices.toSorted((a, b) => a - b).join() }}</p></template>`,
+      /`\.toSorted\(\)` by a `Float`, which may be `NaN`/,
+    ],
+    [
+      "`.toSorted()` with a comparator that is not consistent",
+      `<script setup lang="ts">
+import type { Float } from "ferrovue/types";
+interface Row { name: string; n: number }
+defineProps<{ words: string[]; nums: number[]; prices: Float[]; rows: Row[]; word: string }>();
+</script>
+<template><p>{{ nums.toSorted((a, b) => (a < b ? -1 : 0)).join() }}</p></template>`,
+      /`\.toSorted\(\)` takes a comparator of a shape the server orders by/,
+    ],
+    [
+      "`.toSorted()` with a comparator of another shape",
+      `<script setup lang="ts">
+import type { Float } from "ferrovue/types";
+interface Row { name: string; n: number }
+defineProps<{ words: string[]; nums: number[]; prices: Float[]; rows: Row[]; word: string }>();
+</script>
+<template><p>{{ nums.toSorted((a, b) => a * b).join() }}</p></template>`,
+      /`\.toSorted\(\)` takes a comparator of a shape the server orders by/,
+    ],
+    [
+      "`.toSorted()` subtracting strings",
+      `<script setup lang="ts">
+import type { Float } from "ferrovue/types";
+interface Row { name: string; n: number }
+defineProps<{ words: string[]; nums: number[]; prices: Float[]; rows: Row[]; word: string }>();
+</script>
+<template><p>{{ words.toSorted((a, b) => a - b).join() }}</p></template>`,
+      /`\.toSorted\(\)` orders by integers, and this key is a string/,
+    ],
+    [
+      "`.toSorted()` by `localeCompare`",
+      `<script setup lang="ts">
+import type { Float } from "ferrovue/types";
+interface Row { name: string; n: number }
+defineProps<{ words: string[]; nums: number[]; prices: Float[]; rows: Row[]; word: string }>();
+</script>
+<template><p>{{ words.toSorted((a, b) => a.localeCompare(b)).join() }}</p></template>`,
+      /`\.localeCompare\(\)` formats by locale/,
+    ],
+    [
+      "`.toSorted()` of objects without a comparator",
+      `<script setup lang="ts">
+import type { Float } from "ferrovue/types";
+interface Row { name: string; n: number }
+defineProps<{ words: string[]; nums: number[]; prices: Float[]; rows: Row[]; word: string }>();
+</script>
+<template><p>{{ rows.toSorted().length }}</p></template>`,
+      /`\.toSorted\(\)` without a comparator orders objects by `String\(x\)`/,
+    ],
+    [
+      "`.toSorted()` of strings that may hold halves of surrogate pairs",
+      `<script setup lang="ts">
+import type { Float } from "ferrovue/types";
+interface Row { name: string; n: number }
+defineProps<{ words: string[]; nums: number[]; prices: Float[]; rows: Row[]; word: string }>();
+</script>
+<template><p>{{ words.map((w) => w.slice(1)).toSorted().join() }}</p></template>`,
+      /`\.toSorted\(\)` with a string that may hold half of a surrogate pair/,
+    ],
+    [
+      "`.sort()` of a prop in place",
+      `<script setup lang="ts">
+import type { Float } from "ferrovue/types";
+interface Row { name: string; n: number }
+defineProps<{ words: string[]; nums: number[]; prices: Float[]; rows: Row[]; word: string }>();
+</script>
+<template><p>{{ nums.sort().join() }}</p></template>`,
+      /`\.sort\(\)` changes the list in place.*write `\.toSorted\(\)`, or `\[\.\.\.list\]\.sort\(…\)`/,
+    ],
+    [
+      "`.reverse()` of a prop in place",
+      `<script setup lang="ts">
+import type { Float } from "ferrovue/types";
+interface Row { name: string; n: number }
+defineProps<{ words: string[]; nums: number[]; prices: Float[]; rows: Row[]; word: string }>();
+</script>
+<template><p>{{ words.reverse().join() }}</p></template>`,
+      /`\.reverse\(\)` changes the list in place.*write `\.toReversed\(\)`/,
+    ],
+    [
+      "an array literal spreading lists of different item types",
+      `<script setup lang="ts">
+import type { Float } from "ferrovue/types";
+interface Row { name: string; n: number }
+defineProps<{ words: string[]; nums: number[]; prices: Float[]; rows: Row[]; word: string }>();
+</script>
+<template><p>{{ [...words, ...nums].length }}</p></template>`,
+      /an array literal spreads lists of one item type/,
+    ],
+    [
+      "an array literal spreading a string",
+      `<script setup lang="ts">
+import type { Float } from "ferrovue/types";
+interface Row { name: string; n: number }
+defineProps<{ words: string[]; nums: number[]; prices: Float[]; rows: Row[]; word: string }>();
+</script>
+<template><p>{{ [...word].length }}</p></template>`,
+      /`\.\.\.` in an array literal spreads a list, and this is a string/,
+    ],
+    [
+      "an array literal spreading objects beside a plain value",
+      `<script setup lang="ts">
+import type { Float } from "ferrovue/types";
+interface Row { name: string; n: number }
+defineProps<{ words: string[]; nums: number[]; prices: Float[]; rows: Row[]; word: string }>();
+</script>
+<template><p>{{ [...rows, word].length }}</p></template>`,
+      /an array literal spreads lists of one item type/,
+    ],
+    [
+      "`Math.max()` of a spread list of strings",
+      `<script setup lang="ts">
+import type { Float } from "ferrovue/types";
+interface Row { name: string; n: number }
+defineProps<{ words: string[]; nums: number[]; prices: Float[]; rows: Row[]; word: string }>();
+</script>
+<template><p>{{ Math.max(...words) }}</p></template>`,
+      /`Math\.max\(\.\.\.xs\)` spreads a list of numbers, and this is a list of other values/,
+    ],
   ];
 
   const children = {
@@ -3663,6 +3853,25 @@ defineProps<{ onSale?: boolean }>();
     "`.indexOf()` of an object": "FV0826",
     "`.concat()` of a list of another item type": "FV0827",
     "`.concat()` of a value that is not a list": "FV0827",
+    "`.reduce()` without an initial value": "FV0828",
+    "`.reduceRight()` without an initial value": "FV0828",
+    "`.reduce()` whose function changes the accumulator's type": "FV0829",
+    "`.reduce()` into a list": "FV0829",
+    "`.reduce()` given a function that is not an arrow function of the accumulator and the item": "FV0829",
+    "`.reduce()` joining halves of surrogate pairs": "FV0706",
+    "`.toSorted()` subtracting `Float` keys": "FV0830",
+    "`.toSorted()` with a comparator that is not consistent": "FV0830",
+    "`.toSorted()` with a comparator of another shape": "FV0830",
+    "`.toSorted()` subtracting strings": "FV0830",
+    "`.toSorted()` by `localeCompare`": "FV1805",
+    "`.toSorted()` of objects without a comparator": "FV0831",
+    "`.toSorted()` of strings that may hold halves of surrogate pairs": "FV0706",
+    "`.sort()` of a prop in place": "FV0832",
+    "`.reverse()` of a prop in place": "FV0832",
+    "an array literal spreading lists of different item types": "FV0833",
+    "an array literal spreading a string": "FV0833",
+    "an array literal spreading objects beside a plain value": "FV0833",
+    "`Math.max()` of a spread list of strings": "FV0704",
     "an optional call": "FV0629",
     "`??` after an optional chain that computes a list, falling back to another list": "FV0630",
     "a field read from a value that may be absent": "FV0604",

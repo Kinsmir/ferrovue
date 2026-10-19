@@ -3,7 +3,7 @@ import { ctx } from "./context.ts";
 import { lookupStruct, markHome, tyOfTs } from "./typescript.ts";
 import { claim } from "./plugin.ts";
 import { atom, bare, binary, enclosed, logical, negate, not, occurrences, receiver, strArg } from "./parens.ts";
-import { collected, picked, sliced, typedEmpty, untypedEmpty } from "./lists.ts";
+import { collected, picked, sliced, spreadLiteral, typedEmpty, untypedEmpty } from "./lists.ts";
 import { asCow, formatted, isTemporary, loneOf, meet, stringsEqual } from "./strings.ts";
 import { arithmetic, asF64, compare, intFromF64, isNumber, negatedOrder, numberVal } from "./numbers.ts";
 import { boolOf, checkNullTest, choice, known, narrowing, narrowTo, nullTest, pathOf, presence, truthy } from "./narrowing.ts";
@@ -292,8 +292,9 @@ export function expr(s: Scope, n: N): Val {
     }
     case "ArrayExpression": {
       if (n.elements.length === 0) return { code: "[]", ty: { k: "list", of: UNDEF } };
+      if (n.elements.some((el: N) => el?.type === "SpreadElement")) return spreadLiteral(s, n);
       const values = n.elements.map((el: N) => {
-        if (!el || el.type === "SpreadElement") fail(comp, "FV0610", "an array literal holds plain values", n);
+        if (!el) fail(comp, "FV0610", "an array literal holds plain values, without holes", n);
         return expr(s, el);
       });
       const of = values[0]!.ty;

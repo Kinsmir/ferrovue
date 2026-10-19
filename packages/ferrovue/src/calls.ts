@@ -3,7 +3,7 @@ import { ctx } from "./context.ts";
 import type { Code } from "./errors.ts";
 import { claim } from "./plugin.ts";
 import { atom, bare, binary, condition, operand, receiver, strArg, UNARY } from "./parens.ts";
-import { computedListMethod, isBoolean, items, listMethod, objectCall, presentLiteral } from "./lists.ts";
+import { computedListMethod, isBoolean, items, listMethod, objectCall, presentLiteral, spreadExtreme } from "./lists.ts";
 import { lonely, loneOf, meet, stringMethod, stringsEqual } from "./strings.ts";
 import { asF64, intFromF64, isNumber } from "./numbers.ts";
 import { boolOf, truthy } from "./narrowing.ts";
@@ -95,6 +95,7 @@ export function call(s: Scope, n: N): Val {
       if (s.clientOnly.has(method)) return fail(comp, "FV0613", `\`${method}\` is set up in a way the server cannot evaluate: ${s.clientOnly.get(method)}`, n);
     }
     if (callee.object.type === "Identifier" && callee.object.name === "Math") {
+      if ((method === "max" || method === "min") && args.some((a) => a?.type === "SpreadElement")) return spreadExtreme(s, method, args);
       const vals = args.map((a) => expr(s, a));
       if (vals.length && vals.every((v) => isNumber(v.ty))) {
         const ints = vals.every((v) => v.ty.k === "int");
@@ -110,6 +111,10 @@ export function call(s: Scope, n: N): Val {
         }
       }
       return fail(comp, "FV0704", `\`Math.${method}()\` is supported on numbers as \`max\`, \`min\`, \`abs\`, \`round\`, \`floor\`, \`ceil\` and \`trunc\``, n);
+    }
+    if ((method === "sort" || method === "reverse") && callee.object.type === "ArrayExpression") {
+      const copy = expr(s, callee.object);
+      if (copy.ty.k === "list") return listMethod(s, copy, method === "sort" ? "toSorted" : "toReversed", args, n)!;
     }
     const literal = method === "filter" && args.length === 1 && isBoolean(s, args[0]) && callee.object.type === "ArrayExpression";
     const target = (literal ? presentLiteral(s, callee.object) : null) ?? expr(s, callee.object);
