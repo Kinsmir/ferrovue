@@ -1,7 +1,8 @@
-import { type Component, type N, type Scope, type Val, BOOL, fail, INT, opt, rustStr, STR } from "./model.ts";
+import { type Component, type N, type Scope, type Val, BOOL, fail, FLOAT, INT, nothing, opt, rustStr, STR } from "./model.ts";
+import type { Code } from "./errors.ts";
 import { atom, bare, binary, condition, enclosed, receiver, strArg } from "./parens.ts";
-import { computed } from "./lists.ts";
-import { expr } from "./expr.ts";
+import { computed, items } from "./lists.ts";
+import { describeTy, expr } from "./expr.ts";
 import { known } from "./narrowing.ts";
 import { asF64, isNumber } from "./numbers.ts";
 
@@ -55,7 +56,7 @@ export function heldStr(v: Val): string {
 }
 
 export function yieldsCow(code: string): boolean {
-  const routine = /^fv::js_(?:slice|substring|replace|replace_all|pad_start|pad_end)(?=\()/.exec(code);
+  const routine = /^fv::js_(?:slice|substring|substr|replace|replace_all|pad_start|pad_end)(?=\()/.exec(code);
   if (routine !== null) return enclosed(code.slice(routine[0].length));
   const marker = ".unwrap_or(";
   for (let at = code.lastIndexOf(marker); at >= 0; at = code.lastIndexOf(marker, at - 1)) {
@@ -78,10 +79,59 @@ export function stringsEqual(a: Val, b: Val): string {
   return binary(a.code, "==", b.code);
 }
 
-export function formatted(comp: Component, parts: (string | Val)[], n: N, what: string): Val {
+const SCALAR = new Set(["str", "int", "float", "bool"]);
+
+/**
+ * `v` as JavaScript's `String()` and a template literal write it, where that is not the value
+ * itself: an absent value as `undefined` or `null`, a list as its items joined by `,` (an absent
+ * item as nothing). Strings, numbers and booleans are returned as they are; any other value is
+ * refused with `code`.
+ */
+export function stringOf(comp: Component, v: Val, n: N, what: string, code: Code): Val {
+  if (SCALAR.has(v.ty.k)) return v;
+  if (nothing(v.ty)) return { code: rustStr(v.ty.k === "null" ? "null" : "undefined"), ty: STR };
+  const lone = loneOf(v);
+  const written = (arg: string): Val => ({ code: `&*format!("{}", ${arg})`, ty: STR, format: { text: "{}", args: [arg] }, ...lone });
+  if (v.ty.k === "opt" && SCALAR.has(v.ty.of.k)) {
+    if (v.ty.none === "either") {
+      fail(comp, "FV0721", `${what} of a value that may be \`null\` or \`undefined\`, which JavaScript writes as \`null\` or \`undefined\` and its Rust \`Option\` cannot tell apart: give it a fallback with \`??\``, n);
+    }
+    const word = rustStr(v.ty.none === "null" ? "null" : "undefined");
+    switch (v.ty.of.k) {
+      case "str":
+        return { code: `${atom(v.code)}.unwrap_or(${word})`, ty: STR, ...lone };
+      case "bool":
+        return written(`fv::JsOr(${atom(v.code)}.map(|v| if v { "true" } else { "false" }), ${word})`);
+      default:
+        return written(`fv::JsOr(${atom(v.code)}.map(fv::Js), ${word})`);
+    }
+  }
+  if (v.ty.k === "list") {
+    const of = v.ty.of;
+    const joined = (each: string): Val => ({ code: `&*${each}.collect::<Vec<_>>().join(",")`, ty: STR, ...lone });
+    if (of.k === "undef") return { code: '""', ty: STR };
+    if (of.k === "str") return joined(items(v));
+    if (of.k === "bool") return joined(`${items(v)}.map(|v| if v { "true" } else { "false" })`);
+    if (of.k === "int" || of.k === "float") return joined(`${items(v)}.map(|v| fv::Js(v).to_string())`);
+    if (of.k === "opt" && v.iter === undefined && SCALAR.has(of.of.k)) {
+      const each = `${atom(v.code)}.iter()`;
+      if (of.of.k === "str") return joined(`${each}.map(|v| v.as_deref().unwrap_or(""))`);
+      if (of.of.k === "bool") return joined(`${each}.map(|v| match v { Some(true) => "true", Some(false) => "false", None => "" })`);
+      return joined(`${each}.map(|v| v.map_or_else(String::new, |v| fv::Js(v).to_string()))`);
+    }
+  }
+  return fail(comp, code, `${what} of ${describeTy(v.ty)}: it writes strings, numbers and booleans, present or optional, and lists of them`, n);
+}
+
+function mayBeEmpty(v: Val): boolean {
+  return v.ty.k === "str" && !nonEmptyLiteral(v);
+}
+
+export function formatted(comp: Component, given: (string | Val)[], n: N, what: string): Val {
   let fmt = "";
   const args: string[] = [];
   let before: Val | undefined;
+  const parts = given.map((p) => (typeof p === "string" ? p : stringOf(comp, p, n, what, "FV0708")));
   const lone = loneOf(...parts.map((p) => (typeof p === "string" ? undefined : p)));
   for (const part of parts) {
     if (typeof part === "string" || (part.ty.k === "str" && known(part) !== undefined)) {
@@ -91,7 +141,7 @@ export function formatted(comp: Component, parts: (string | Val)[], n: N, what: 
       continue;
     }
     if (before) meet(comp, before, part, what, n, "join");
-    before = part;
+    if (!before?.lone || part.lone || !mayBeEmpty(part)) before = part;
     if (part.format) {
       fmt += part.format.text;
       args.push(...part.format.args);
@@ -99,13 +149,13 @@ export function formatted(comp: Component, parts: (string | Val)[], n: N, what: 
     }
     if (part.ty.k === "str") args.push(receiver(part.code).replace(/^(fv::Js\(.*\))\.to_string\(\)$/s, "$1"));
     else if (isNumber(part.ty)) args.push(`fv::Js(${bare(part.code)})`);
-    else if (part.ty.k === "bool") args.push(`if ${condition(part.code)} { "true" } else { "false" }`);
-    else fail(comp, "FV0708", "a template literal interpolates strings, numbers and booleans that are present", n);
+    else args.push(`if ${condition(part.code)} { "true" } else { "false" }`);
     fmt += "{}";
   }
   if (!args.length) return { code: rustStr(fmt.replace(/\{\{|\}\}/g, (c) => c[0]!)), ty: STR };
   const one = parts.filter((p) => (typeof p === "string" ? p !== "" : p.code !== '""'));
   if (fmt === "{}" && one.length === 1 && typeof one[0] !== "string" && one[0]!.ty.k === "str") return one[0]!;
+  if (fmt === "{}" && one.length === 1 && typeof one[0] !== "string" && one[0]!.ty.k === "bool") return { code: args[0]!, ty: STR };
   return { code: `&*format!(${rustStr(fmt)}, ${args.join(", ")})`, ty: STR, format: { text: fmt, args }, ...lone };
 }
 
@@ -123,52 +173,84 @@ export function stringMethod(s: Scope, target: Val, method: string, args: N[], n
     if (v.ty.k !== "str") fail(comp, "FV0711", `\`.${method}()\` takes a string that is present`, args[i]);
     return v;
   };
-  const num = (i: number, fallback: string): string => {
+  const num = (i: number, fallback: string, absent: string): string => {
     if (args[i] === undefined) return fallback;
     const v = expr(s, args[i]);
     if (v.ty.k === "undef") return fallback;
-    if (!isNumber(v.ty)) fail(comp, "FV0712", `\`.${method}()\` takes a number that is present`, args[i]);
+    if (v.ty.k === "null") return "0.0";
+    if (v.ty.k === "opt" && isNumber(v.ty.of) && v.ty.none !== "either") {
+      return `${atom(v.code)}.map_or(${v.ty.none === "null" ? "0.0" : absent}, |v| ${v.ty.of.k === "int" ? "v as f64" : "v"})`;
+    }
+    if (!isNumber(v.ty)) fail(comp, "FV0712", `\`.${method}()\` takes a number, present or optional`, args[i]);
     return asF64(v);
   };
   const cut = { lone: true };
+  const noHalves = (): void => {
+    if (target.lone) fail(comp, "FV0706", lonely(`\`.${method}()\``), n);
+  };
   switch (method) {
     case "includes":
     case "startsWith":
     case "endsWith": {
-      arity(1, 1);
+      arity(1, 2);
       const x = str(0);
       meet(comp, target, x, `\`.${method}()\``, n, "search");
+      const at = num(1, "", method === "endsWith" ? "f64::INFINITY" : "0.0");
+      if (at) {
+        const rust = { includes: "includes_from", startsWith: "starts_with_at", endsWith: "ends_with_at" }[method];
+        return { code: `fv::js_${rust}(${t}, ${strArg(x.code)}, ${bare(at)})`, ty: BOOL };
+      }
       const rust = { includes: "contains", startsWith: "starts_with", endsWith: "ends_with" }[method];
       return { code: `${receiver(target.code)}.${rust}(${bare(x.code)})`, ty: BOOL };
     }
     case "indexOf":
     case "lastIndexOf": {
-      arity(1, 1);
+      arity(1, 2);
       const x = str(0);
       meet(comp, target, x, `\`.${method}()\``, n, "search");
-      return { code: `fv::js_${method === "indexOf" ? "index_of" : "last_index_of"}(${t}, ${strArg(x.code)})`, ty: INT };
+      const at = num(1, "", method === "indexOf" ? "0.0" : "f64::NAN");
+      const rust = method === "indexOf" ? "index_of" : "last_index_of";
+      if (at) return { code: `fv::js_${rust}_from(${t}, ${strArg(x.code)}, ${bare(at)})`, ty: INT };
+      return { code: `fv::js_${rust}(${t}, ${strArg(x.code)})`, ty: INT };
     }
+    case "substr": {
+      arity(0, 2);
+      const length = num(1, "", "f64::INFINITY");
+      return { code: `&*fv::js_substr(${t}, ${num(0, "0.0", "0.0")}, ${length ? `Some(${bare(length)})` : "None"})`, ty: STR, ...cut };
+    }
+    case "charCodeAt":
+      arity(0, 1);
+      noHalves();
+      return { code: `fv::js_char_code_at(${t}, ${num(0, "0.0", "0.0")})`, ty: FLOAT };
+    case "codePointAt":
+      arity(0, 1);
+      noHalves();
+      return { code: `fv::js_code_point_at(${t}, ${num(0, "0.0", "0.0")})`, ty: opt(INT) };
+    case "concat":
+      return formatted(comp, [target, ...args.map((a: N) => stringOf(comp, expr(s, a), a, "`.concat()`", "FV0723"))], n, "`.concat()`");
     case "slice":
     case "substring": {
       arity(0, 2);
-      const end = num(1, "");
-      return { code: `&*fv::js_${method}(${t}, ${num(0, "0.0")}, ${end ? `Some(${end})` : "None"})`, ty: STR, ...cut };
+      const end = num(1, "", "f64::INFINITY");
+      return { code: `&*fv::js_${method}(${t}, ${num(0, "0.0", "0.0")}, ${end ? `Some(${end})` : "None"})`, ty: STR, ...cut };
     }
     case "at": {
       arity(1, 1);
-      const at = `fv::js_at(${t}, ${num(0, "0.0")})`;
+      const at = `fv::js_at(${t}, ${num(0, "0.0", "0.0")})`;
       if (!isTemporary(target)) return { code: at, ty: opt(STR), ...cut };
       const held = `${at}.map(|v| std::borrow::Cow::<str>::Owned(v.to_owned()))`;
       return { code: `${atom(held)}.as_deref()`, ty: opt(STR), held, ...cut };
     }
     case "charAt":
       arity(0, 1);
-      return { code: `${isTemporary(target) ? "&*" : ""}fv::js_char_at(${t}, ${num(0, "0.0")})`, ty: STR, ...cut };
+      return { code: `${isTemporary(target) ? "&*" : ""}fv::js_char_at(${t}, ${num(0, "0.0", "0.0")})`, ty: STR, ...cut };
     case "split": {
-      arity(1, 1);
+      arity(1, 2);
       const sep = str(0);
       meet(comp, target, sep, "`.split()`", n, "search");
-      return computed(`fv::js_split(${t}, ${strArg(sep.code)}).into_iter()`, STR, target.lone || !nonEmptyLiteral(sep));
+      const limit = num(1, "", "4_294_967_295.0");
+      const pieces = limit ? `fv::js_split_limit(${t}, ${strArg(sep.code)}, ${bare(limit)})` : `fv::js_split(${t}, ${strArg(sep.code)})`;
+      return computed(`${pieces}.into_iter()`, STR, target.lone || !nonEmptyLiteral(sep));
     }
     case "replace":
     case "replaceAll": {
@@ -188,7 +270,7 @@ export function stringMethod(s: Scope, target: Val, method: string, args: N[], n
       const fill: Val = args.length > 1 ? str(1) : { code: '" "', ty: STR };
       const whole = fill.code.startsWith('"') && !/[\u{10000}-\u{10FFFF}]/u.test(fill.code);
       if (fill.lone || (method === "padStart" && target.lone && !whole)) fail(comp, "FV0706", lonely(`\`.${method}()\``), n);
-      return { code: `&*fv::js_${method === "padStart" ? "pad_start" : "pad_end"}(${t}, ${num(0, "0.0")}, ${strArg(fill.code)})`, ty: STR, ...(target.lone || !whole ? cut : {}) };
+      return { code: `&*fv::js_${method === "padStart" ? "pad_start" : "pad_end"}(${t}, ${num(0, "0.0", "0.0")}, ${strArg(fill.code)})`, ty: STR, ...(target.lone || !whole ? cut : {}) };
     }
     case "repeat": {
       arity(1, 1);
@@ -197,7 +279,7 @@ export function stringMethod(s: Scope, target: Val, method: string, args: N[], n
         fail(comp, "FV0714", "`.repeat()` with a negative or infinite count, which throws a `RangeError`", c);
       }
       if (target.lone) fail(comp, "FV0706", lonely("`.repeat()`"), n);
-      return { code: `&*fv::js_repeat(${t}, ${num(0, "0.0")})`, ty: STR };
+      return { code: `&*fv::js_repeat(${t}, ${num(0, "0.0", "0.0")})`, ty: STR };
     }
     case "toLocaleUpperCase":
     case "toLocaleLowerCase":

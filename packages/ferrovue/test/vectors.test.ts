@@ -1,5 +1,5 @@
 /* The string routines the Rust crates reimplement, held to JavaScript's own: each vector file in
- * `crates/ferrovue/tests/vectors/` and `crates/ferrovue-core/tests/vectors/` (escaping and numbers)
+ * `crates/ferrovue/tests/vectors/` and `crates/ferrovue-core/tests/vectors/` (escaping, numbers and URIs)
  * is read by that crate's unit tests too, so both sides agree with the same answers. */
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -14,6 +14,7 @@ import { seoMetaKey } from "../src/plugins/head.ts";
 import { type Call, headCases } from "./head-inputs.ts";
 import { portableTime, portableUtc } from "../src/plugins/dates.ts";
 import { DATE_METHODS, dateCases } from "./date-inputs.ts";
+import { exactPower } from "../src/numbers.ts";
 
 const DIR = join(import.meta.dirname, "../../../crates/ferrovue/tests/vectors");
 const CORE = join(import.meta.dirname, "../../../crates/ferrovue-core/tests/vectors");
@@ -40,11 +41,25 @@ function stringOp(op: string, input: string, args: string[]): unknown {
       case "charAt":
         return sent(input.charAt(num(0)!));
       case "indexOf":
-        return input.indexOf(args[0]!);
+        return input.indexOf(args[0]!, num(1));
       case "lastIndexOf":
-        return input.lastIndexOf(args[0]!);
+        return input.lastIndexOf(args[0]!, num(1));
+      case "includes":
+        return input.includes(args[0]!, num(1));
+      case "startsWith":
+        return input.startsWith(args[0]!, num(1));
+      case "endsWith":
+        return input.endsWith(args[0]!, num(1));
       case "split":
-        return sent(input.split(args[0]!));
+        return sent(input.split(args[0]!, num(1)));
+      case "substr":
+        return sent(input.substr(num(0)!, num(1)));
+      case "charCodeAt": {
+        const code = input.charCodeAt(num(0)!);
+        return Number.isNaN(code) ? "NaN" : code;
+      }
+      case "codePointAt":
+        return sent(input.codePointAt(num(0)!));
       case "replace":
         return sent(input.replace(args[0]!, args[1]!));
       case "replaceAll":
@@ -72,7 +87,7 @@ describe("vectors shared with the Rust crate", () => {
       ["comment.json", 28],
       ["class.json", 14],
       ["attrs.json", 61],
-      ["strings.json", 4655],
+      ["strings.json", 12863],
       ["compare.json", 400],
       ["parse.json", 498],
       ["keys.json", 8],
@@ -81,7 +96,8 @@ describe("vectors shared with the Rust crate", () => {
       ["dates.json", 6800],
       ["escape.json", 10, CORE],
       ["numbers.json", 370, CORE],
-      ["math.json", 715, CORE],
+      ["math.json", 2173, CORE],
+      ["uri.json", 1202, CORE],
       ["precision.json", 9000, CORE],
     ];
     expect(floors.map(([name, least, dir]) => [name, Math.min((read(name, dir) as unknown[]).length, least)])).toEqual(floors.map(([name, least]) => [name, least]));
@@ -130,7 +146,7 @@ describe("vectors shared with the Rust crate", () => {
   // `[op, x, arg, expected]`, the expected text recorded from JavaScript with `FERROVUE_VECTORS_WRITE=1`.
   // A number is written as `String` writes it, but `-0` as "-0": `String` hides the sign, which
   // `1 / x` shows.
-  it("math.json is Math.round, Math.max, Math.min and toFixed", () => {
+  it("math.json is Math.round, Math.max, Math.min, Math.sqrt, Math.sign, Math's constants, ** and toFixed", () => {
     const vectors = (read("math.json", CORE) as [string, string, string, string][]);
     const text = (n: number): string => (Object.is(n, -0) ? "-0" : String(n));
     const run = (op: string, x: string, arg: string): string => {
@@ -143,6 +159,18 @@ describe("vectors shared with the Rust crate", () => {
           return text(Math.max(Number(x), Number(arg)));
         case "min":
           return text(Math.min(Number(x), Number(arg)));
+        case "sqrt":
+          return text(Math.sqrt(Number(x)));
+        case "sign":
+          return text(Math.sign(Number(x)));
+        case "constant":
+          return text(Math[x as "PI"]);
+        case "pow": {
+          const [a, b] = [Number(x), Number(arg)];
+          const got = a ** b;
+          if (Math.pow(a, b) !== got) throw new Error(`${x} ** ${arg} is not Math.pow(${x}, ${arg})`);
+          return text(got);
+        }
         default:
           throw new Error(op);
       }
@@ -153,6 +181,19 @@ describe("vectors shared with the Rust crate", () => {
       return;
     }
     expect(vectors).toEqual(recorded);
+  });
+
+  it("math.json's powers are the exact ones the compiler works out", () => {
+    const powers = (read("math.json", CORE) as [string, string, string, string][]).filter(([op]) => op === "pow");
+    expect(powers.length).toBeGreaterThan(700);
+    for (const [, x, arg, want] of powers) expect([x, arg, exactPower(Number(x), Number(arg))]).toEqual([x, arg, Number(want)]);
+  });
+
+  // `[op, input, expected]`, recorded from JavaScript with `FERROVUE_VECTORS_WRITE=1`.
+  it("uri.json is encodeURIComponent and encodeURI", () => {
+    const recorded = uriCases().map(([op, input]) => [op, input, op === "encodeURI" ? encodeURI(input) : encodeURIComponent(input)]);
+    if (process.env.FERROVUE_VECTORS_WRITE === "1") return writeVectors("uri.json", recorded, CORE);
+    expect(read("uri.json", CORE)).toEqual(recorded);
   });
 
   it("precision.json is toPrecision and toExponential", () => {
@@ -368,6 +409,18 @@ function precisionCases(): [string, string, string][] {
     if (i % 10 === 0) cases.push(["toPrecision", x, ""]);
   }
   return cases;
+}
+
+function uriCases(): [string, string][] {
+  const rand = precisionPrng(20261020);
+  const ascii = Array.from({ length: 128 }, (_, c) => String.fromCharCode(c));
+  const edges = [
+    "", "\u0080", "\u00ff", "\u07ff", "\u0800", "\ud7ff", "\ue000", "\ufffd", "\uffff", "\u{10000}", "\u{10ffff}", "🦀", "👨‍👩‍👧", "é", "日本語",
+    ";/?:@&=+$,#", "-_.!~*'()", "[]|{}^`\\\"<>% ", "https://example.com/a b?q=1&r=é#top", "a+b c", "100%", "\u2028\u2029", "\u0000\u001f\u007f",
+  ];
+  const pool = ["a", "Z", "0", " ", "-", "_", ".", "!", "~", "*", "'", "(", ")", ";", "/", "?", ":", "@", "&", "=", "+", "$", ",", "#", "%", "[", "]", "|", "\"", "<", "é", "ß", "€", "日", "\ufffd", "\u{1f980}", "\u{10ffff}", "\u0000", "\n"];
+  const drawn = Array.from({ length: 450 }, () => Array.from({ length: 1 + Math.floor(rand() * 12) }, () => (rand() < 0.1 ? String.fromCodePoint(Math.floor(rand() * 0xd800)) : pool[Math.floor(rand() * pool.length)]!)).join(""));
+  return [...ascii, ...edges, ...drawn].flatMap((input) => [["encodeURIComponent", input], ["encodeURI", input]] as [string, string][]);
 }
 
 function encoded(v: unknown): unknown {

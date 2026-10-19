@@ -90,21 +90,28 @@ assert_eq!(out, r#"<p title="ADA">A. #0007 A–M</p>"#);
 ```
 
 An index is an `f64`, because it is a JavaScript number: a fraction is truncated, `NaN` is 0, and
-where JavaScript counts a negative index from the end, so does the twin.
+where JavaScript counts a negative index from the end, so does the twin. A position or a limit
+that is `undefined`, or an optional number that is absent, is the default JavaScript takes for it
+(the start, or the end for `.endsWith()` and `.lastIndexOf()`).
 
 | JavaScript | Rust |
 |---|---|
 | `s.length` | `js_length` |
-| `s.trim()`, `s.trimStart()`, `s.trimEnd()` | `js_trim`, `js_trim_start`, `js_trim_end`: JavaScript's whitespace, which is not Rust's |
+| `s.trim()`, `s.trimStart()`, `s.trimEnd()`, and `s.trimLeft()`, `s.trimRight()` | `js_trim`, `js_trim_start`, `js_trim_end`: JavaScript's whitespace, which is not Rust's |
 | `s.slice(start, end)` | `js_slice` |
 | `s.substring(start, end)` | `js_substring` |
+| `s.substr(start, length)` | `js_substr`: `start` counts from the end when negative |
 | `s.at(i)`, `s.charAt(i)` | `js_at` (`None` for `undefined`), `js_char_at` |
+| `s.charCodeAt(i)`, `s.codePointAt(i)` | `js_char_code_at` (`NaN` outside the string), `js_code_point_at` (`None` for `undefined`; inside a pair, the second half alone) |
 | `s.indexOf(x)`, `s.lastIndexOf(x)` | `js_index_of`, `js_last_index_of` |
-| `s.split(x)` | `js_split` |
+| `s.indexOf(x, i)`, `s.lastIndexOf(x, i)` | `js_index_of_from`, `js_last_index_of_from`: `""` is found at `i` itself, and a `NaN` position for `.lastIndexOf()` is the end |
+| `s.split(x)`, `s.split(x, n)` | `js_split`, `js_split_limit`: the first `n` pieces, `n` taken as `ToUint32` takes it (`-1` is 4294967295, 2³² is 0) |
+| `s.concat(a, b)` | a `format!`, each argument written as `String()` writes it |
 | `s.replace(x, y)`, `s.replaceAll(x, y)` | `js_replace`, `js_replace_all`, with the `$&`, `` $` ``, `$'` and `$$` patterns JavaScript reads in `y` |
 | `s.padStart(n, x)`, `s.padEnd(n, x)` | `js_pad_start`, `js_pad_end` |
 | `s.repeat(n)` | `js_repeat` |
 | `s.includes(x)`, `s.startsWith(x)`, `s.endsWith(x)` | `str::contains`, `starts_with`, `ends_with`: they agree |
+| `s.includes(x, i)`, `s.startsWith(x, i)`, `s.endsWith(x, i)` | `js_includes_from`, `js_starts_with_at`, `js_ends_with_at`: inside a pair only `""` starts or ends |
 | `s.toUpperCase()`, `s.toLowerCase()` | `str::to_uppercase`, `to_lowercase`: they agree, `ß` becoming `SS` included |
 
 ```rust
@@ -117,11 +124,22 @@ assert_eq!(js_split("a,b,", ","), ["a", "b", ""]);
 assert_eq!(js_pad_start("7", 3.0, "0"), "007");
 ```
 
-The patterns are strings: a regular expression (`.replace(/x/g, …)`, `.split(/,/)`), a replacement
-function, a search's starting position or a split's limit (`.includes(x, 3)`, `.split(",", 2)`) are
-refused, as are `.toLocaleUpperCase()` and `.toLocaleLowerCase()`, since the server's locale is not
-the browser's, and `.localeCompare()` and `.toLocaleString()`, which format with `Intl`
-([`dates_and_prices`](crate::guide::dates_and_prices)).
+A position inside a surrogate pair gives what JavaScript gives: a search string that holds no half
+cannot start at the pair's second half, so `"🦀x".indexOf("x", 1)` is 2 and `"🦀x".startsWith("x", 1)`
+is `false`, while `"🦀".indexOf("", 1)` is 1.
+
+```rust
+assert_eq!(ferrovue::js_index_of_from("🦀x", "x", 1.0), 2);
+assert!(!ferrovue::js_starts_with_at("🦀x", "x", 1.0));
+assert_eq!(ferrovue::js_split_limit("a,b,c", ",", 2.0), ["a", "b"]);
+assert_eq!(ferrovue::js_substr("ferrovue", -3.0, None), "vue");
+assert_eq!(ferrovue::js_code_point_at("🦀", 0.0), Some(0x1F980));
+```
+
+The patterns are strings: a regular expression (`.replace(/x/g, …)`, `.split(/,/)`) and a
+replacement function are refused, as are `.toLocaleUpperCase()` and `.toLocaleLowerCase()`, since
+the server's locale is not the browser's, and `.localeCompare()` and `.toLocaleString()`, which
+format with `Intl` ([`dates_and_prices`](crate::guide::dates_and_prices)).
 
 # Halves of surrogate pairs
 
@@ -139,9 +157,11 @@ assert_eq!(ferrovue::js_split("🦀", ""), ["\u{FFFD}", "\u{FFFD}"]);
 Where the half itself would decide the result, the compiler refuses: two strings that may each hold
 a half compared or ordered, side by side (`a.slice(0, 1) + b.slice(1)`, a `.join("")`, a class
 object's names), one searched for in another (`.includes(a.charAt(0))`), repeated or padded where
-halves would join, ordered against anything but a literal below U+D800, or written by
-`JSON.stringify` (which escapes it) or into a `<RouterLink>` (whose encoding throws). Three corners
-remain, by design:
+halves would join (beside one another, or with only a string that may be empty between them),
+ordered against anything but a literal below U+D800, read by `.charCodeAt()` or `.codePointAt()`
+(which would read U+FFFD's code), or written by `JSON.stringify` (which escapes it), by
+`encodeURIComponent()` and `encodeURI()` or into a `<RouterLink>` (whose encoding throws). Three
+corners remain, by design:
 
 - a string holding U+FFFD in the props compares equal to a half, or finds one, where JavaScript
   would tell them apart;
@@ -176,6 +196,15 @@ Ordering a string against a number is refused: JavaScript converts the string to
 | `JSON.stringify(s)` of a string | `js_json_string` |
 | `JSON.stringify(x)` of a number | `js_json_number`: `null` for `NaN` and the infinities |
 | `String(x)`, `` `${x}` ``, `x.toString()` | [`push_number`](crate::push_number), [`Js`](crate::Js). See [`numbers`](crate::guide::numbers) |
+| `String(x)`, `` `${x}` ``, `s.concat(x)` of a value that may be absent | `undefined`, or `null` for a value typed `T \| null` |
+| `String(xs)`, `` `${xs}` `` of a list | the items joined by `,`, as `xs.join()` joins them: an item that is `null` or `undefined` as nothing |
+
+`{{ x }}` is not `String(x)`: Vue writes an absent value as nothing and a list as JSON, two spaces
+deep (`toDisplayString`), so `{{ label }}` of an absent label writes nothing where
+`` {{ `${label}` }} `` writes `undefined`, and `{{ tags }}` of a list is refused where
+`` {{ `${tags}` }} `` writes `a,b`. A value that may be either `null` or `undefined`, which its Rust
+`Option` cannot tell apart, is refused ([FV0721](crate::guide::error_codes#fv0721)): give it a
+fallback with `??`.
 
 Of a string, all three give a `Float`, since the result may be a fraction or `NaN`. `JSON.stringify`
 also takes a boolean and a list of strings, numbers or booleans, which the generated code writes
@@ -187,6 +216,24 @@ assert_eq!(ferrovue::js_parse_int("  42px", 10), 42.0);
 assert_eq!(ferrovue::js_parse_float(" 1.5e3px"), 1500.0);
 assert_eq!(ferrovue::js_json_string("say \"hi\""), r#""say \"hi\"""#);
 assert_eq!(ferrovue::js_json_number(f64::NAN), "null");
+```
+
+# URIs
+
+`encodeURIComponent(s)` and `encodeURI(s)` write each byte of a character's UTF-8 as `%XX`, the
+hexadecimal digits in upper case, except the characters JavaScript keeps:
+[`js_encode_uri_component`](crate::js_encode_uri_component) keeps the ASCII letters and digits and
+`-_.!~*'()`, and [`js_encode_uri`](crate::js_encode_uri) the characters a URI reserves as well,
+`;/?:@&=+$,#`. Both are held to `uri.json`, every ASCII character and a few hundred strings drawn at
+random, recorded from Node and read alike by Chromium and Firefox. Their argument is a string, or
+anything `String()` writes (`encodeURIComponent(page)` of a number). JavaScript throws a `URIError`
+on half of a surrogate pair, which ferrovue holds as U+FFFD, so a string that may hold one is
+refused ([FV0706](crate::guide::error_codes#fv0706)). `decodeURI()` and `decodeURIComponent()`,
+which throw on a malformed escape, are refused too.
+
+```rust
+assert_eq!(ferrovue::js_encode_uri_component("rust & vue/é"), "rust%20%26%20vue%2F%C3%A9");
+assert_eq!(ferrovue::js_encode_uri("/a b?q=1&r=[2]#top"), "/a%20b?q=1&r=%5B2%5D#top");
 ```
 
 # Slicing lists

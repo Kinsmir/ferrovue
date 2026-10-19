@@ -53,9 +53,9 @@ crates/ferrovue/             the Rust runtime crate, which generated code calls
   tests/vectors/             vectors recorded from JavaScript and Vue
   tests/properties.rs        property-based tests of the runtime
   benches/                   criterion and instruction-count benchmarks of generated renderers
-crates/ferrovue-core/        escaping and JavaScript's numbers, which the other crates share
+crates/ferrovue-core/        escaping, JavaScript's numbers and URI encoding, which the other crates share
   tests/vectors/             vectors recorded from escapeHtml, String(n), Math, toFixed,
-                             toPrecision and toExponential
+                             toPrecision, toExponential, encodeURIComponent and encodeURI
 crates/ferrovue-router/      vue-router's matching and links (the `router` feature)
   tests/vectors/             vectors recorded from vue-router
 crates/ferrovue-i18n/        vue-i18n's t() (the `i18n` feature)

@@ -2429,6 +2429,219 @@ const props = defineProps<{ entry?: Entry }>();
       /X\.vue:5:\d+: `=== null` of a value that may be `null` or `undefined`, .*test both with `== null`/,
     ],
     [
+      "encodeURIComponent of a string that may hold half of a surrogate pair",
+      `<script setup lang="ts">
+defineProps<{ a: string }>();
+</script>
+<template><i>{{ encodeURIComponent(a.slice(0, 1)) }}</i></template>`,
+      /`encodeURIComponent\(\)` with a string that may hold half of a surrogate pair.*`URIError`/,
+    ],
+    [
+      "encodeURI of an object",
+      `<script setup lang="ts">
+interface U { n: string }
+defineProps<{ u: U }>();
+</script>
+<template><i>{{ encodeURI(u) }}</i></template>`,
+      /`encodeURI\(\)` of an object: it writes strings, numbers and booleans, present or optional, and lists of them/,
+    ],
+    [
+      "String of two values",
+      `<script setup lang="ts">
+defineProps<{ a: string }>();
+</script>
+<template><i>{{ String(a, a) }}</i></template>`,
+      /`String\(\)` takes one value/,
+    ],
+    [
+      "String of a value that may be null or undefined",
+      `<script setup lang="ts">
+defineProps<{ on: boolean; a?: string }>();
+</script>
+<template><i>{{ String(on ? a : null) }}</i></template>`,
+      /`String\(\)` of a value that may be `null` or `undefined`, which JavaScript writes as `null` or `undefined` and its Rust `Option` cannot tell apart/,
+    ],
+    [
+      "a template literal of an object",
+      `<script setup lang="ts">
+interface U { n: string }
+defineProps<{ u: U }>();
+</script>
+<template><i>{{ \`\${u}\` }}</i></template>`,
+      /a template literal of an object: it writes strings, numbers and booleans/,
+    ],
+    [
+      ".concat() of an object",
+      `<script setup lang="ts">
+interface U { n: string }
+defineProps<{ a: string; u: U }>();
+</script>
+<template><i>{{ a.concat(u) }}</i></template>`,
+      /`\.concat\(\)` of an object/,
+    ],
+    [
+      "charCodeAt of a string that may hold half of a surrogate pair",
+      `<script setup lang="ts">
+defineProps<{ a: string }>();
+</script>
+<template><i>{{ a.at(0)?.charCodeAt(0) }}</i></template>`,
+      /`\.charCodeAt\(\)` with a string that may hold half of a surrogate pair/,
+    ],
+    [
+      "codePointAt of a string that may hold half of a surrogate pair",
+      `<script setup lang="ts">
+defineProps<{ a: string }>();
+</script>
+<template><i>{{ a.substr(1).codePointAt(0) }}</i></template>`,
+      /`\.codePointAt\(\)` with a string that may hold half of a surrogate pair/,
+    ],
+    [
+      "Math.cbrt, which engines round differently",
+      `<script setup lang="ts">
+defineProps<{ x: number }>();
+</script>
+<template><i>{{ Math.cbrt(x) }}</i></template>`,
+      /`Math\.cbrt\(\)` is computed by each JavaScript engine's own routine/,
+    ],
+    [
+      "Math.hypot, which engines round differently",
+      `<script setup lang="ts">
+defineProps<{ x: number }>();
+</script>
+<template><i>{{ Math.hypot(x, x) }}</i></template>`,
+      /`Math\.hypot\(\)` is computed by each JavaScript engine's own routine/,
+    ],
+    [
+      "a power of a value known only when rendering",
+      `<script setup lang="ts">
+defineProps<{ x: number }>();
+</script>
+<template><i>{{ x ** 2 }}</i></template>`,
+      /`\*\*` of a value known only when rendering: ferrovue works `\*\*` out when compiling/,
+    ],
+    [
+      "a power with a negative exponent",
+      `<script setup lang="ts">
+defineProps<{ x: number }>();
+</script>
+<template><i>{{ 10 ** -2 }}</i></template>`,
+      /`\*\*` of 10 and -2, which is not an integer to a whole power from 0/,
+    ],
+    [
+      "Math.pow of a fraction",
+      `<script setup lang="ts">
+defineProps<{ x: number }>();
+</script>
+<template><i>{{ Math.pow(1.5, 2) }}</i></template>`,
+      /`Math\.pow\(\)` of 1\.5 and 2/,
+    ],
+    [
+      "a power beyond 2^53",
+      `<script setup lang="ts">
+defineProps<{ x: number }>();
+</script>
+<template><i>{{ 3 ** 34 }}</i></template>`,
+      /`\*\*` of 3 and 34, which is not an integer to a whole power from 0 with a result within/,
+    ],
+    [
+      "the in operator",
+      `<script setup lang="ts">
+interface U { n: string }
+defineProps<{ u: U }>();
+</script>
+<template><i>{{ 'n' in u }}</i></template>`,
+      /`in` tests whether an object has a key/,
+    ],
+    [
+      "instanceof",
+      `<script setup lang="ts">
+interface U { n: string }
+defineProps<{ u: U }>();
+</script>
+<template><i>{{ u instanceof Object }}</i></template>`,
+      /`instanceof` tests an object's prototype/,
+    ],
+    [
+      "a bitwise operator",
+      `<script setup lang="ts">
+defineProps<{ x: number }>();
+</script>
+<template><i>{{ x & 1 }}</i></template>`,
+      /`&` works on the 32-bit integers JavaScript converts its operands to/,
+    ],
+    [
+      "a shift",
+      `<script setup lang="ts">
+defineProps<{ x: number }>();
+</script>
+<template><i>{{ x >>> 1 }}</i></template>`,
+      /`>>>` works on the 32-bit integers/,
+    ],
+    [
+      "JSON.stringify with an indentation",
+      `<script setup lang="ts">
+defineProps<{ a: string }>();
+</script>
+<template><pre>{{ JSON.stringify(a, null, 2) }}</pre></template>`,
+      /`JSON\.stringify\(\)` with a replacer or an indentation/,
+    ],
+    [
+      "JSON.parse",
+      `<script setup lang="ts">
+defineProps<{ a: string }>();
+</script>
+<template><i>{{ JSON.parse(a) }}</i></template>`,
+      /`JSON\.parse\(\)` is not supported: of `JSON`, the server translates `JSON\.stringify\(x\)`/,
+    ],
+    [
+      "String.fromCharCode",
+      `<script setup lang="ts">
+defineProps<{ x: number }>();
+</script>
+<template><i>{{ String.fromCharCode(x) }}</i></template>`,
+      /`String\.fromCharCode\(\)` is not supported: of `String`, the server translates `String\(x\)`/,
+    ],
+    [
+      "decodeURIComponent",
+      `<script setup lang="ts">
+defineProps<{ a: string }>();
+</script>
+<template><i>{{ decodeURIComponent(a) }}</i></template>`,
+      /`decodeURIComponent\(\)` is not supported: the server does not translate `decodeURIComponent`/,
+    ],
+    [
+      "a Math constant that does not exist",
+      `<script setup lang="ts">
+defineProps<{ x: number }>();
+</script>
+<template><i>{{ Math.TAU }}</i></template>`,
+      /`Math\.TAU` is not supported: of `Math`, the server translates/,
+    ],
+    [
+      "Number.parseFloat",
+      `<script setup lang="ts">
+defineProps<{ a: string }>();
+</script>
+<template><i>{{ Number.parseFloat(a) }}</i></template>`,
+      /`Number\.parseFloat\(\)` is not supported: of `Number`, the server translates/,
+    ],
+    [
+      "typeof compared with undefined of a value that may be null or undefined",
+      `<script setup lang="ts">
+defineProps<{ on: boolean; a?: string }>();
+</script>
+<template><i>{{ typeof (on ? a : null) === 'undefined' }}</i></template>`,
+      /`typeof` compared with "undefined" of a value that may be `null` \(an "object"\) or `undefined`/,
+    ],
+    [
+      "typeof of a value that may be null or undefined",
+      `<script setup lang="ts">
+defineProps<{ on: boolean; a?: string }>();
+</script>
+<template><i>{{ typeof (on ? a : null) }}</i></template>`,
+      /`typeof` compared with "string" of a value that may be `null`/,
+    ],
+    [
       "loose equality between values",
       `<script setup lang="ts">
 const props = defineProps<{ a: string; b: string }>();
@@ -2503,6 +2716,14 @@ const props = defineProps<{ a: string }>();
       /a template literal with a string that may hold half of a surrogate pair/,
     ],
     [
+      "halves of surrogate pairs either side of a string that may be empty in a template literal",
+      `<script setup lang="ts">
+const props = defineProps<{ a: string; b: string }>();
+</script>
+<template><i>{{ \`\${a.charAt(0)}\${b}\${a.slice(1)}\` }}</i></template>`,
+      /a template literal with a string that may hold half of a surrogate pair/,
+    ],
+    [
       "a half of a surrogate pair ordered against a string beyond U+D7FF",
       `<script setup lang="ts">
 const props = defineProps<{ a: string; b: string }>();
@@ -2567,12 +2788,12 @@ const props = defineProps<{ a: string }>();
       /`\.replace\(\)` with a function/,
     ],
     [
-      "includes with a starting position",
+      "includes with a starting position that is a string",
       `<script setup lang="ts">
 const props = defineProps<{ a: string }>();
 </script>
-<template><i>{{ a.includes("x", 2) }}</i></template>`,
-      /`\.includes\(\)` takes 1 argument here/,
+<template><i>{{ a.includes("x", "2") }}</i></template>`,
+      /`\.includes\(\)` takes a number, present or optional/,
     ],
     [
       "parseInt with a radix other than 10 or 16",
@@ -3819,6 +4040,32 @@ defineProps<{ onSale?: boolean }>();
     "an interface whose name the generated Rust already uses": "FV0318",
     "a strict comparison of a value that may be null or undefined": "FV0626",
     "loose equality between values": "FV0619",
+    "encodeURIComponent of a string that may hold half of a surrogate pair": "FV0706",
+    "encodeURI of an object": "FV0723",
+    "String of two values": "FV0723",
+    "String of a value that may be null or undefined": "FV0721",
+    "a template literal of an object": "FV0708",
+    ".concat() of an object": "FV0723",
+    "charCodeAt of a string that may hold half of a surrogate pair": "FV0706",
+    "codePointAt of a string that may hold half of a surrogate pair": "FV0706",
+    "Math.cbrt, which engines round differently": "FV0719",
+    "Math.hypot, which engines round differently": "FV0719",
+    "a power of a value known only when rendering": "FV0720",
+    "a power with a negative exponent": "FV0720",
+    "Math.pow of a fraction": "FV0720",
+    "a power beyond 2^53": "FV0720",
+    "the in operator": "FV0631",
+    "instanceof": "FV0631",
+    "a bitwise operator": "FV0632",
+    "a shift": "FV0632",
+    "JSON.stringify with an indentation": "FV0633",
+    "JSON.parse": "FV0633",
+    "String.fromCharCode": "FV0633",
+    "decodeURIComponent": "FV0633",
+    "a Math constant that does not exist": "FV0633",
+    "Number.parseFloat": "FV0633",
+    "typeof compared with undefined of a value that may be null or undefined": "FV0722",
+    "typeof of a value that may be null or undefined": "FV0722",
     "a nullable prop the parent leaves out": "FV0507",
     "two halves of surrogate pairs compared, which JavaScript tells apart": "FV0706",
     "a negative literal count for repeat, which throws": "FV0714",

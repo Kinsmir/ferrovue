@@ -1,6 +1,6 @@
 [package]
 name = "ferrovue-core"
-description = "The primitives ferrovue's runtime crates share: Vue's HTML escaping, and numbers written as JavaScript writes them"
+description = "The primitives ferrovue's runtime crates share: Vue's HTML escaping, and numbers and URIs written as JavaScript writes them"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

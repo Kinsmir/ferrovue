@@ -1,5 +1,5 @@
 //! The primitives [ferrovue](https://docs.rs/ferrovue)'s runtime crates share: Vue's HTML escaping,
-//! and numbers written as JavaScript writes them.
+//! numbers written as JavaScript writes them, and URIs encoded as JavaScript encodes them.
 //!
 //! # Example
 //!
@@ -16,9 +16,13 @@
 
 mod escape;
 mod numbers;
+mod uri;
 
 pub use escape::escape_into;
 pub use numbers::{
-    Js, js_max, js_min, js_round, js_to_exponential, js_to_fixed, js_to_precision, push_int,
-    push_number,
+    Js, js_max, js_min, js_round, js_sign, js_to_exponential, js_to_fixed, js_to_precision,
+    push_int, push_number,
 };
+pub use uri::{js_encode_uri, js_encode_uri_component};
+#[doc(hidden)]
+pub use uri::{kept_by_encode_uri, percent_encode_into};

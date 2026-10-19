@@ -14,11 +14,37 @@ fn numbers_are_written_as_javascript_writes_them() {
     }
 }
 
+fn exact_power(base: &str, exponent: &str) -> f64 {
+    let base: i128 = base.parse().expect("an integer base");
+    let power = base
+        .checked_pow(exponent.parse().expect("a whole exponent"))
+        .expect("a power within i128");
+    assert!(
+        power.unsigned_abs() <= 1 << 53,
+        "{base} ** {exponent} is exact"
+    );
+    power as f64
+}
+
+fn constant(name: &str) -> f64 {
+    match name {
+        "E" => std::f64::consts::E,
+        "LN10" => std::f64::consts::LN_10,
+        "LN2" => std::f64::consts::LN_2,
+        "LOG10E" => std::f64::consts::LOG10_E,
+        "LOG2E" => std::f64::consts::LOG2_E,
+        "PI" => std::f64::consts::PI,
+        "SQRT1_2" => std::f64::consts::FRAC_1_SQRT_2,
+        "SQRT2" => std::f64::consts::SQRT_2,
+        other => panic!("unknown constant {other}"),
+    }
+}
+
 #[test]
 fn math_is_javascripts_math() {
     let vectors: Vec<(String, String, String, String)> =
         serde_json::from_str(include_str!("../../tests/vectors/math.json")).expect("math vectors");
-    assert!(vectors.len() >= 600, "the vectors were not all read");
+    assert!(vectors.len() >= 1700, "the vectors were not all read");
     let num = |s: &str| -> f64 { s.parse().unwrap_or_else(|_| panic!("{s:?} parses")) };
     let text = |x: f64| {
         if x == 0.0 && x.is_sign_negative() {
@@ -34,6 +60,10 @@ fn math_is_javascripts_math() {
             "toFixed" => js_to_fixed(num(x), arg.parse().unwrap()),
             "max" => text(js_max(num(x), num(arg))),
             "min" => text(js_min(num(x), num(arg))),
+            "sqrt" => text(num(x).sqrt()),
+            "sign" => text(js_sign(num(x))),
+            "constant" => text(constant(x)),
+            "pow" => text(exact_power(x, arg)),
             other => panic!("unknown op {other}"),
         };
         assert_eq!(&got, want, "{op}({x}, {arg})");

@@ -5,11 +5,17 @@ import { claim } from "./plugin.ts";
 import { atom, bare, binary, enclosed, logical, negate, not, occurrences, receiver, strArg } from "./parens.ts";
 import { collected, picked, sliced, spreadLiteral, typedEmpty, untypedEmpty } from "./lists.ts";
 import { asCow, formatted, isTemporary, loneOf, meet, stringsEqual } from "./strings.ts";
-import { arithmetic, asF64, compare, intFromF64, isNumber, negatedOrder, numberVal } from "./numbers.ts";
-import { boolOf, checkNullTest, choice, known, narrowing, narrowTo, nullTest, pathOf, presence, truthy } from "./narrowing.ts";
-import { call, isObjectCall } from "./calls.ts";
+import { arithmetic, asF64, compare, intFromF64, isNumber, negatedOrder, numberVal, power } from "./numbers.ts";
+import { boolOf, checkNullTest, choice, known, narrowing, narrowTo, nullTest, pathOf, presence, truthy, typeofCompare, typeofTest, typeofVal } from "./narrowing.ts";
+import { BUILTINS, builtin, call, isObjectCall } from "./calls.ts";
 import { constOf, constVal } from "./constants.ts";
 import { localeRefusal } from "./plugins/dates.ts";
+
+const MATH_CONSTANTS = new Map(["E", "LN10", "LN2", "LOG10E", "LOG2E", "PI", "SQRT1_2", "SQRT2"].map((k) => [k, Math[k as "PI"]]));
+
+const NUMBER_CONSTANTS = new Map(
+  ["EPSILON", "MAX_SAFE_INTEGER", "MAX_VALUE", "MIN_SAFE_INTEGER", "MIN_VALUE", "NaN", "NEGATIVE_INFINITY", "POSITIVE_INFINITY"].map((k) => [k, Number[k as "NaN"]]),
+);
 
 export function describeTy(ty: Ty): string {
   switch (ty.k) {
@@ -257,6 +263,17 @@ export function expr(s: Scope, n: N): Val {
     if (isNumber(a.ty) && isNumber(b.ty)) return arithmetic(a, "+", b, a.ty.k === "int" && b.ty.k === "int");
     return fail(comp, "FV0608", "`+` joins a string to a string or a number, or adds two numbers", n);
   }
+  if (n.type === "BinaryExpression" && n.operator === "**") return power(s, n.left, n.right, n, "`**`");
+  if (n.type === "BinaryExpression" && (n.operator === "in" || n.operator === "instanceof")) {
+    const what =
+      n.operator === "in"
+        ? "tests whether an object has a key, which the server does not translate: for a record, write `Object.keys(r).includes(key)`"
+        : "tests an object's prototype, which the server's typed values do not carry: each value's type is known when compiling";
+    return fail(comp, "FV0631", `\`${n.operator}\` ${what}`, n);
+  }
+  if (n.type === "BinaryExpression" && ["&", "|", "^", "<<", ">>", ">>>"].includes(n.operator)) {
+    return fail(comp, "FV0632", `\`${n.operator}\` works on the 32-bit integers JavaScript converts its operands to, which the server does not translate: compute it in Rust and pass it as a prop`, n);
+  }
   if (n.type === "BinaryExpression" && ["-", "*", "%", "/", "<", ">", "<=", ">="].includes(n.operator)) {
     const a = expr(s, n.left);
     const b = expr(s, n.right);
@@ -322,7 +339,9 @@ export function expr(s: Scope, n: N): Val {
         return fail(comp, "FV0613", `\`${n.name}\` is set up in a way the server cannot evaluate: ${s.clientOnly.get(n.name)}`, n);
       }
       if (n.name === s.propsIdent) return { code: "props", ty: { k: "struct", name: "Props" } };
+      if (n.name === "Infinity" || n.name === "NaN") return numberVal(Number(n.name), false);
       if (n.name === "Intl") return localeRefusal(s, "`Intl`", n);
+      if (BUILTINS.has(n.name)) return builtin(s, n.name, n);
       return fail(comp, "FV0601", `\`${n.name}\` is not available when rendering on the server`, n);
     }
     case "MemberExpression": {
@@ -346,6 +365,11 @@ export function expr(s: Scope, n: N): Val {
       if (slots !== null) {
         if (!comp.slotNames.includes(prop)) fail(comp, "FV0907", `\`${slots}.${prop}\` names a slot this template does not render`, n);
         return { code: `fv_slots.${snake(prop)}.is_some()`, ty: BOOL };
+      }
+      if (n.object.type === "Identifier" && BUILTINS.has(n.object.name) && !s.locals.has(n.object.name) && !s.setup.has(n.object.name)) {
+        const value = n.object.name === "Math" ? MATH_CONSTANTS.get(prop) : n.object.name === "Number" ? NUMBER_CONSTANTS.get(prop) : undefined;
+        if (value !== undefined) return numberVal(value, Number.isSafeInteger(value));
+        return builtin(s, `${n.object.name}.${prop}`, n);
       }
       if (n.object.type === "Identifier") {
         switch (n.object.name) {
@@ -441,8 +465,11 @@ export function expr(s: Scope, n: N): Val {
         if (a.ty.k === "int") return intFromF64(negate(asF64(a)));
         if (a.ty.k === "float") return { code: negate(a.code), ty: FLOAT };
       }
+      if (n.operator === "typeof") return typeofVal(s, n);
       return fail(comp, "FV0618", `unary \`${n.operator}\``, n);
     case "BinaryExpression": {
+      const tested = typeofCompare(n);
+      if (tested) return claim((p) => p.equality?.(s, n)) ?? typeofTest(s, tested, n);
       const test = nullTest(n);
       if (n.operator !== "===" && n.operator !== "!==" && !test) {
         const [a, b] = [expr(s, n.left), expr(s, n.right)];

@@ -97,6 +97,7 @@ pub mod listeners;
 pub mod lists;
 pub mod mapped_choice;
 pub mod markup;
+pub mod math_more;
 pub mod menu;
 pub mod meter;
 pub mod modal;
@@ -154,6 +155,8 @@ pub mod shape_root;
 pub mod shape_square;
 pub mod shown;
 pub mod slot_probe;
+pub mod string_of;
+pub mod string_search;
 pub mod strings;
 pub mod styles;
 pub mod swatch;
@@ -174,11 +177,13 @@ pub mod themed_shelf;
 pub mod translated;
 pub mod tree;
 pub mod truthy;
+pub mod typeof_tests;
 pub mod unread;
 pub mod unread_fold;
 pub mod unread_var;
 pub mod unsanitised;
 pub mod unsanitised_leaf;
+pub mod uri_parts;
 pub mod user_card;
 pub mod user_list;
 pub mod vnode_class;
@@ -676,6 +681,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: markup::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             markup::render(&mut out, &props);
         }
+        "MathMore" => {
+            let props: math_more::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            math_more::render(&mut out, &props);
+        }
         "Menu" => {
             let props: menu::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -963,6 +972,14 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let s_footer = |out: &mut String| out.push_str(fixture.slot("footer").unwrap_or_default());
             slot_probe::render(&mut out, &props, slot_probe::Slots { header: fixture.slot("header").map(|_| ferrovue::Slot::new(&s_header)), default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)), footer: fixture.slot("footer").map(|_| ferrovue::Slot::new(&s_footer)) });
         }
+        "StringOf" => {
+            let props: string_of::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            string_of::render(&mut out, &props);
+        }
+        "StringSearch" => {
+            let props: string_search::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            string_search::render(&mut out, &props);
+        }
         "Strings" => {
             let props: strings::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             strings::render(&mut out, &props);
@@ -1058,6 +1075,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: truthy::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             truthy::render(&mut out, &props);
         }
+        "TypeofTests" => {
+            let props: typeof_tests::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            typeof_tests::render(&mut out, &props);
+        }
         "Unread" => {
             let props: unread::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             unread::render(&mut out, &props);
@@ -1079,6 +1100,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "UnsanitisedLeaf" => {
             let props: unsanitised_leaf::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             unsanitised_leaf::render(&mut out, &props);
+        }
+        "UriParts" => {
+            let props: uri_parts::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            uri_parts::render(&mut out, &props);
         }
         "UserCard" => {
             let props: user_card::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

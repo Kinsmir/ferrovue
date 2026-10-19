@@ -4,9 +4,10 @@
 [![docs.rs](https://img.shields.io/docsrs/ferrovue-core)](https://docs.rs/ferrovue-core)
 
 The primitives that [ferrovue](https://crates.io/crates/ferrovue)'s runtime crates share: Vue's
-HTML escaping (`escapeHtml`), and numbers written and computed as JavaScript writes and computes
-them (`String(n)`, `Math.round`, `Math.max`, `Math.min`, `toFixed`,
-`toPrecision`, `toExponential`).
+HTML escaping (`escapeHtml`), numbers written and computed as JavaScript writes and computes
+them (`String(n)`, `Math.round`, `Math.max`, `Math.min`, `Math.sign`, `toFixed`,
+`toPrecision`, `toExponential`), and URIs encoded as `encodeURIComponent` and `encodeURI` encode
+them, which `ferrovue-router` encodes its links with too.
 
 You don't need to depend on this crate: `ferrovue` re-exports every item at its root
 (`ferrovue::escape_into`, `ferrovue::push_int`, …), which is the path generated code uses.
