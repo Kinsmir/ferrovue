@@ -149,6 +149,13 @@ released together and share version numbers.
   `instanceof`; FV0632, for the bitwise and shift operators; FV0633, for a part of `JSON`, `Math`,
   `Number`, `String`, `Array` and JavaScript's other globals that the server does not translate,
   naming what it translates of the one used.
+- The guide pages [`upgrading_to_0_9`](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_9/index.html)
+  and [`upgrading_to_0_8`](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_8/index.html),
+  for a project moving from 0.8 and from 0.7: the steps to take (the versions to bump, the modules
+  to generate again, the Rust and the error codes that change), the behaviour that changed, and
+  what is newly supported, each linking to the page that covers it. The README's list of guides,
+  its versions paragraph and the `generated_code` page's version check link to them, and
+  CONTRIBUTING.md names the Node versions CI tests: 22.18, 22, 24 and 26.
 
 ### Changed
 
@@ -166,6 +173,9 @@ released together and share version numbers.
   `decodeURIComponent()`) is refused with FV0633, naming what it translates, where FV0601 said the
   whole global was not available. `typeof` of anything but a query value, which the router refused
   with FV1234, is the core's now, and FV1234 is retired.
+- `Math.exp()`, `Math.log()`, the trigonometric functions and their kin are refused with FV0719
+  where they were FV0704. A `Date` prop compiles where it was refused with FV0315, and a `Date`
+  inside a list, a dictionary or an object prop is refused with FV1806 where it was FV0315.
 - Generated code of version 3 also calls the `#[doc(hidden)]` `js_to_utc_string`, `js_to_json`,
   `js_json_date` and `js_date_utc`. FV0609 names two dates beside two numbers and two strings, and
   `==` or `!=` with a date is refused with FV1809 where it was FV0619.
