@@ -401,9 +401,9 @@ ${setup}
 
     it("falls back to an empty list, or another list, with `??` after `?.`", () => {
       const out = tree("const a = computed(() => props.item?.children ?? []);", `<i v-for="x in a">{{ x.label }}</i>{{ (item?.tags ?? []).join() }}{{ (item?.children ?? others).length }}`);
-      expect(out).toContain("let s_a = props.item.as_ref().map(|v| &v.children).map(|v| &v[..]).unwrap_or(&[]);");
-      expect(out).toContain("props.item.as_ref().and_then(|v| v.tags.as_ref()).map(|v| &v[..]).unwrap_or(&[])");
-      expect(out).toContain("props.item.as_ref().map(|v| &v.children).map(|v| &v[..]).unwrap_or(&props.others[..]).len()");
+      expect(out).toMatch(/let s_a = props\.item\.as_ref\(\)\.map\(\|(fv_o\d+)\| &\1\.children\)\.map\(\|v\| &v\[\.\.\]\)\.unwrap_or\(&\[\]\);/);
+      expect(out).toMatch(/props\.item\.as_ref\(\)\.and_then\(\|(fv_o\d+)\| \1\.tags\.as_ref\(\)\)\.map\(\|v\| &v\[\.\.\]\)\.unwrap_or\(&\[\]\)/);
+      expect(out).toMatch(/props\.item\.as_ref\(\)\.map\(\|(fv_o\d+)\| &\1\.children\)\.map\(\|v\| &v\[\.\.\]\)\.unwrap_or\(&props\.others\[\.\.\]\)\.len\(\)/);
     });
 
     it("collects a computed list chosen against an empty one", () => {
@@ -420,7 +420,7 @@ defineProps<{ outer?: Outer }>();
 </script>
 <template><i>{{ outer?.inner?.n }}</i></template>`),
       ).get("x.rs")!;
-      expect(out).toContain("props.outer.as_ref().map(|v| &v.inner)");
+      expect(out).toMatch(/props\.outer\.as_ref\(\)\.map\(\|(fv_o\d+)\| &\1\.inner\)/);
     });
 
     it.each([
@@ -2678,7 +2678,7 @@ defineProps<{ row: Row }>();
 defineProps<{ m: Record<string, string> }>();
 </script>
 <template><i>{{ m.title }}</i></template>`,
-      /`\.title` on a value that is not an object/,
+      /`\.title` of a record, which has no field `title`/,
     ],
     [
       "a ternary whose branches differ in type",
@@ -3182,10 +3182,125 @@ defineProps<{ user: User }>();
     [
       "computed member access",
       `<script setup lang="ts">
-defineProps<{ names: string[]; i: number }>();
+defineProps<{ m: Record<string, string>; k: string }>();
+</script>
+<template><i>{{ m[k] }}</i></template>`,
+      /computed member access of a record/,
+    ],
+    [
+      "a list item read by a `Float` index",
+      `<script setup lang="ts">
+import type { Float } from "ferrovue/types";
+defineProps<{ names: string[]; f: Float }>();
+</script>
+<template><i>{{ names[f] }}</i></template>`,
+      /reads a list's item by an integer index, .*a `Float`, which may hold a fraction/,
+    ],
+    [
+      "a list item read by a string index",
+      `<script setup lang="ts">
+defineProps<{ names: string[]; k: string }>();
+</script>
+<template><i>{{ names[k] }}</i></template>`,
+      /reads a list's item by an integer index, .*this index is a string/,
+    ],
+    [
+      "a list item read by an optional index",
+      `<script setup lang="ts">
+defineProps<{ names: string[]; i?: number }>();
 </script>
 <template><i>{{ names[i] }}</i></template>`,
-      /computed member access/,
+      /reads a list's item by an integer index, .*this index is an optional number/,
+    ],
+    [
+      "`.at()` of a list given a string",
+      `<script setup lang="ts">
+defineProps<{ names: string[]; k: string }>();
+</script>
+<template><i>{{ names.at(k) }}</i></template>`,
+      /`\.at\(\)` takes a number that is present, and this index is a string/,
+    ],
+    [
+      "`.at()` of a list given no index",
+      `<script setup lang="ts">
+defineProps<{ names: string[] }>();
+</script>
+<template><i>{{ names.at() }}</i></template>`,
+      /`\.at\(\)` takes one index/,
+    ],
+    [
+      "`.indexOf()` with a position to start from",
+      `<script setup lang="ts">
+defineProps<{ names: string[]; a: string }>();
+</script>
+<template><i>{{ names.indexOf(a, 1) }}</i></template>`,
+      /`\.indexOf\(\)` takes one value to look for, without a position to start from/,
+    ],
+    [
+      "`.lastIndexOf()` of a value of another type than the list's",
+      `<script setup lang="ts">
+defineProps<{ names: string[]; n: number }>();
+</script>
+<template><i>{{ names.lastIndexOf(n) }}</i></template>`,
+      /`\.lastIndexOf\(\)` looks for a value of the list's own type/,
+    ],
+    [
+      "`.indexOf()` of an object",
+      `<script setup lang="ts">
+interface Row { a: string }
+defineProps<{ rows: Row[]; row: Row }>();
+</script>
+<template><i>{{ rows.indexOf(row) }}</i></template>`,
+      /`\.indexOf\(\)` looks for a value of the list's own type, in a list of strings, numbers or booleans/,
+    ],
+    [
+      "`.concat()` of a list of another item type",
+      `<script setup lang="ts">
+defineProps<{ names: string[]; nums: number[] }>();
+</script>
+<template><i>{{ names.concat(nums).length }}</i></template>`,
+      /`\.concat\(\)` joins lists of the list's own item type, a string/,
+    ],
+    [
+      "`.concat()` of a value that is not a list",
+      `<script setup lang="ts">
+defineProps<{ names: string[]; a: string }>();
+</script>
+<template><i>{{ names.concat(a).length }}</i></template>`,
+      /`\.concat\(\)` joins lists of the list's own item type/,
+    ],
+    [
+      "`??` after an optional chain that computes a list, falling back to another list",
+      `<script setup lang="ts">
+defineProps<{ tags?: string[]; others: string[] }>();
+</script>
+<template><i>{{ (tags?.filter((t) => t !== "") ?? others).length }}</i></template>`,
+      /`\?\?` after an optional chain that computes a list, falling back to another list: fall back to `\[\]`/,
+    ],
+    [
+      "an optional call",
+      `<script setup lang="ts">
+defineProps<{ a: string }>();
+function f() { return 1; }
+</script>
+<template><i>{{ f?.() }}</i></template>`,
+      /`\?\.\(\)` calls a function that may be absent/,
+    ],
+    [
+      "a field read from a value that may be absent",
+      `<script setup lang="ts">
+defineProps<{ a?: string }>();
+</script>
+<template><i>{{ a.length }}</i></template>`,
+      /`\.length` of an optional string, which may be absent: narrow it with `v-if` first, or read it with `\?\.length`/,
+    ],
+    [
+      "an optional chain into a method that is not supported",
+      `<script setup lang="ts">
+defineProps<{ a?: string }>();
+</script>
+<template><i>{{ a?.normalize() }}</i></template>`,
+      /`\.normalize\(\)` is not supported/,
     ],
     [
       "`.includes()` of a value of another type than the list's",
@@ -3537,6 +3652,21 @@ defineProps<{ onSale?: boolean }>();
     "the global isNaN of a string, which it converts": "FV0718",
     "the global isFinite of an optional number": "FV0718",
     "|| between a date and a string": "FV0617",
+    "computed member access": "FV0612",
+    "a list item read by a `Float` index": "FV0824",
+    "a list item read by a string index": "FV0824",
+    "a list item read by an optional index": "FV0824",
+    "`.at()` of a list given a string": "FV0825",
+    "`.at()` of a list given no index": "FV0825",
+    "`.indexOf()` with a position to start from": "FV0826",
+    "`.lastIndexOf()` of a value of another type than the list's": "FV0826",
+    "`.indexOf()` of an object": "FV0826",
+    "`.concat()` of a list of another item type": "FV0827",
+    "`.concat()` of a value that is not a list": "FV0827",
+    "an optional call": "FV0629",
+    "`??` after an optional chain that computes a list, falling back to another list": "FV0630",
+    "a field read from a value that may be absent": "FV0604",
+    "an optional chain into a method that is not supported": "FV0602",
     "the current time with new Date()": "FV1801",
     "the current time with Date.now()": "FV1801",
     "a date built from its parts in the local time zone": "FV1802",

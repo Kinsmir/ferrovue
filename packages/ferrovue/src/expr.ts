@@ -2,8 +2,8 @@ import { type Component, type N, type Scope, type Ty, type Val, absence, BOOL, f
 import { ctx } from "./context.ts";
 import { lookupStruct, markHome, tyOfTs } from "./typescript.ts";
 import { claim } from "./plugin.ts";
-import { atom, bare, binary, enclosed, logical, negate, not, occurrences, strArg } from "./parens.ts";
-import { collected, sliced, typedEmpty, untypedEmpty } from "./lists.ts";
+import { atom, bare, binary, enclosed, logical, negate, not, occurrences, receiver, strArg } from "./parens.ts";
+import { collected, picked, sliced, typedEmpty, untypedEmpty } from "./lists.ts";
 import { asCow, formatted, isTemporary, loneOf, meet, stringsEqual } from "./strings.ts";
 import { arithmetic, asF64, compare, intFromF64, isNumber, negatedOrder, numberVal } from "./numbers.ts";
 import { boolOf, checkNullTest, choice, known, narrowing, narrowTo, nullTest, pathOf, presence, truthy } from "./narrowing.ts";
@@ -42,7 +42,10 @@ export function describeTy(ty: Ty): string {
 }
 
 export function fieldVal(comp: Component, base: string, ty: Ty, js: string, node: N): Val {
-  if (ty.k !== "struct") fail(comp, "FV0604", `\`.${js}\` on a value that is not an object`, node);
+  if (ty.k !== "struct") {
+    if (ty.k === "opt" || nothing(ty)) fail(comp, "FV0604", `\`.${js}\` of ${describeTy(ty)}, which may be absent: narrow it with \`v-if\` first, or read it with \`?.${js}\``, node);
+    fail(comp, "FV0604", `\`.${js}\` of ${describeTy(ty)}, which has no field \`${js}\``, node);
+  }
   const { st, owner } = lookupStruct(comp, ty);
   const found = st?.fields.find((x) => x.js === js);
   if (!found) {
@@ -154,6 +157,67 @@ function stated(s: Scope, n: N): Val {
   return fail(comp, "FV0628", `\`${keyword}\` states ${describeTy(want)} of ${describeTy(v.ty)}, which the server keeps as it is: write the value with the type it has`, n);
 }
 
+function indexed(s: Scope, list: Val, key: N, n: N): Val {
+  const i = expr(s, key);
+  if (i.ty.k !== "int") {
+    const is = i.ty.k === "float" ? "a `Float`, which may hold a fraction" : describeTy(i.ty);
+    return fail(s.comp, "FV0824", `\`[…]\` reads a list's item by an integer index, a \`number\` that is present, and this index is ${is}: \`.at()\` takes any number`, key);
+  }
+  if (i.num !== undefined && i.num >= 0 && list.iter === undefined) return picked(s, list, n, (l) => (i.num === 0 ? `${l}.first()` : `${l}.get(${i.num})`), (it) => it);
+  const at = `usize::try_from(${bare(i.code)}).unwrap_or(usize::MAX)`;
+  return picked(s, list, n, (l) => `${l}.get(${at})`, (it) => `${atom(it)}.nth(${at})`);
+}
+
+function plainChain(n: N, link: N, hole: N): N {
+  if (n === link) return { ...n, type: "MemberExpression", optional: undefined, object: hole };
+  if (n.type === "OptionalCallExpression") return { ...n, type: "CallExpression", optional: undefined, callee: plainChain(n.callee, link, hole) };
+  return { ...n, type: "MemberExpression", optional: undefined, object: plainChain(n.object, link, hole) };
+}
+
+function ownedCow(v: Val): string {
+  if (!isTemporary(v)) return `std::borrow::Cow::<str>::Owned(${receiver(v.code)}.to_owned())`;
+  const cow = asCow(v);
+  return cow.startsWith("std::borrow::Cow::<str>::Owned(") ? cow : `std::borrow::Cow::<str>::Owned(${atom(cow)}.into_owned())`;
+}
+
+function optionalChain(s: Scope, n: N): Val {
+  const comp = s.comp;
+  let link: N = n;
+  while (!link.optional) {
+    link = link.type === "OptionalCallExpression" ? link.callee : link.object;
+    if (link?.type !== "OptionalMemberExpression" && link?.type !== "OptionalCallExpression") return fail(comp, "FV0625", "this optional chain is not supported in a template", n);
+  }
+  if (link.type === "OptionalCallExpression") {
+    return fail(comp, "FV0629", "`?.()` calls a function that may be absent, and a template's functions are always present: write the call without `?.`", link);
+  }
+  const base = expr(s, link.object);
+  if (nothing(base.ty)) return { code: "None", ty: UNDEF };
+  const k = ++ctx.narrowCount;
+  const hole: N = { ...link.object, type: "Identifier", name: `fv$o${k}` };
+  const rest = plainChain(n, link, hole);
+  const within = (v: Val): Scope => ({ ...s, locals: new Map(s.locals).set(hole.name, v) });
+  if (base.ty.k !== "opt") return expr(within(base), rest);
+  const name = `fv_o${k}`;
+  const inner = expr(within({ code: name, ty: base.ty.of, ...loneOf(base) }), rest);
+  if (nothing(inner.ty)) return { code: "None", ty: UNDEF };
+  const lone = loneOf(base, inner);
+  const over = (body: string, flat: boolean): string => {
+    if (bare(body) === name) return base.code;
+    const named = new RegExp(`^([\\w:]+)\\(${name}\\)$`).exec(bare(body))?.[1];
+    return `${atom(base.code)}.${flat ? "and_then" : "map"}(${named ?? `|${name}| ${bare(body)}`})`;
+  };
+  const heldBy = (held: string, ty: Ty): Val => ({ code: `${atom(held)}.as_deref()`, ty, held, ...lone });
+  if (inner.ty.k === "list" && inner.iter !== undefined) return heldBy(over(collected(inner), false), opt(inner.ty));
+  if (inner.ty.k === "opt") {
+    if (inner.held !== undefined) return heldBy(over(inner.held, true), opt(inner.ty));
+    if (base.held !== undefined && inner.ty.of.k === "str") return heldBy(over(`${atom(inner.code)}.map(|v| std::borrow::Cow::<str>::Owned(v.to_owned()))`, true), opt(inner.ty));
+    return { code: over(inner.code, true), ty: opt(inner.ty), ...lone };
+  }
+  if (inner.ty.k === "str" && (isTemporary(inner) || base.held !== undefined)) return heldBy(over(ownedCow(inner), false), opt(STR));
+  const place = ["list", "record", "struct"].includes(inner.ty.k) && new RegExp(`^${name}(?:\\.[\\w#]+)+$`).test(inner.code);
+  return { code: over(place ? `&${inner.code}` : inner.code, false), ty: opt(inner.ty), ...lone };
+}
+
 export function expr(s: Scope, n: N): Val {
   const comp = s.comp;
   const path = pathOf(n);
@@ -238,17 +302,9 @@ export function expr(s: Scope, n: N): Val {
       }
       return { code: `[${values.map((v: Val) => bare(v.code)).join(", ")}]`, ty: { k: "list", of }, ...loneOf(...values) };
     }
-    case "OptionalMemberExpression": {
-      if (n.computed) return fail(comp, "FV0612", "computed member access", n);
-      const base = expr(s, n.object);
-      if (nothing(base.ty)) return { code: "None", ty: UNDEF };
-      if (base.ty.k !== "opt") return fieldVal(comp, base.code, base.ty, n.property.name, n);
-      const field = fieldVal(comp, "v", base.ty.of, n.property.name, n);
-      const place = ["list", "record", "struct"].includes(field.ty.k) && /^v(?:\.[\w#]+)+$/.test(field.code);
-      const f = place ? { ...field, code: `&${field.code}` } : field;
-      if (f.ty.k === "opt") return { code: `${atom(base.code)}.and_then(|v| ${f.code})`, ty: opt(f.ty) };
-      return { code: `${atom(base.code)}.map(|v| ${f.code})`, ty: opt(f.ty) };
-    }
+    case "OptionalMemberExpression":
+    case "OptionalCallExpression":
+      return optionalChain(s, n);
     case "StringLiteral":
       return { code: rustStr(n.value), ty: STR };
     case "NumericLiteral":
@@ -276,12 +332,13 @@ export function expr(s: Scope, n: N): Val {
         if (n.object.type === "Identifier" && n.object.name === "$setup" && n.property.type === "StringLiteral") {
           return expr(s, { ...n.property, type: "Identifier", name: n.property.value });
         }
+        const base = expr(s, n.object);
         if (n.property.type === "StringLiteral") {
-          const base = expr(s, n.object);
           const own = claim((p) => p.member?.(s, base, n.property.value, n, true));
           if (own) return own;
         }
-        return fail(comp, "FV0612", "computed member access", n);
+        if (base.ty.k === "list") return indexed(s, base, n.property, n);
+        return fail(comp, "FV0612", `computed member access of ${describeTy(base.ty)}: \`[…]\` reads an item of a list, by an integer index`, n);
       }
       const prop = n.property.name as string;
       const slots = slotsObject(s, n.object);
@@ -337,8 +394,9 @@ export function expr(s: Scope, n: N): Val {
         if (a.ty.k !== "opt") return a;
         if (nothing(b.ty)) return { ...a, ty: withAbsence(a.ty.of, absence(b.ty)) };
         if (b.iter !== undefined) fail(comp, "FV0615", "`??` falling back to a computed list", n);
+        if (a.held !== undefined && b.ty.k === "list" && !untypedEmpty(b)) fail(comp, "FV0630", "`??` after an optional chain that computes a list, falling back to another list: fall back to `[]`", n);
         if (a.ty.of.k === "list" && b.ty.k === "list" && (untypedEmpty(b) || (sameTy(a.ty.of, b.ty) && !b.code.startsWith("[")))) {
-          return { code: `${atom(a.code)}.map(|v| &v[..]).unwrap_or(${untypedEmpty(b) ? "&[]" : sliced(b)})`, ty: a.ty.of, slice: true, ...loneOf(a, b) };
+          return { code: `${atom(a.code)}${a.held !== undefined ? "" : ".map(|v| &v[..])"}.unwrap_or(${untypedEmpty(b) ? "&[]" : sliced(b)})`, ty: a.ty.of, slice: true, ...loneOf(a, b) };
         }
         if (a.held !== undefined && b.ty.k === "str") return { code: `&*${atom(a.held)}.unwrap_or(${asCow(b)})`, ty: STR, ...loneOf(a, b) };
         if (a.ty.of.k === "str" && b.ty.k === "str" && isTemporary(b)) {

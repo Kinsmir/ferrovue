@@ -1,0 +1,1 @@
+{"words":["alpha","beta","beta","g"],"nums":[3,1,4,1,5],"prices":[0.5,2,-0.0,0.5,1],"rows":[{"name":"one","n":1,"note":"first"},{"name":"two","n":2},{"name":"neg","n":-3,"note":"last"}],"tags":["a",null,"c"],"i":1,"f":0.5,"word":"beta","maybe":["x","y"]}

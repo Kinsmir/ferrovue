@@ -159,3 +159,20 @@ fn padding_to_exactly_the_longest_string_v8_makes_does_not_panic() {
     let s = "a".repeat(536_870_887);
     assert_eq!(js_length(&js_pad_end(&s, 536_870_888.0, "b")), 536_870_888);
 }
+
+#[test]
+fn list_at_counts_from_either_end_as_javascript_does() {
+    let at = |index: f64| js_item_at([10, 20, 30].into_iter(), index);
+    assert_eq!(at(0.0), Some(10));
+    assert_eq!(at(2.9), Some(30));
+    assert_eq!(at(-0.5), Some(10));
+    assert_eq!(at(-1.0), Some(30));
+    assert_eq!(at(-3.0), Some(10));
+    assert_eq!(at(-3.5), Some(10));
+    assert_eq!(at(-4.0), None);
+    assert_eq!(at(3.0), None);
+    assert_eq!(at(f64::NAN), Some(10));
+    assert_eq!(at(f64::INFINITY), None);
+    assert_eq!(at(f64::NEG_INFINITY), None);
+    assert_eq!(js_item_at(std::iter::empty::<i64>(), 0.0), None);
+}

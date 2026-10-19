@@ -369,7 +369,7 @@ export const ERRORS: {
         readonly title: "Unsupported call";
     };
     readonly FV0604: {
-        readonly title: "Field read on a value that is not an object";
+        readonly title: "Field read on a value that is not an object, or that may be absent";
     };
     readonly FV0605: {
         readonly title: "Field the type does not have";
@@ -442,6 +442,12 @@ export const ERRORS: {
     };
     readonly FV0628: {
         readonly title: "`as` or `satisfies` stating a type the value does not have";
+    };
+    readonly FV0629: {
+        readonly title: "Optional call `?.()`";
+    };
+    readonly FV0630: {
+        readonly title: "`??` between a list an optional chain computes and another list";
     };
     readonly FV0701: {
         readonly title: "`Number()` of an unsupported value";
@@ -567,6 +573,18 @@ export const ERRORS: {
     };
     readonly FV0823: {
         readonly title: "`v-for` key or index that is not a plain name";
+    };
+    readonly FV0824: {
+        readonly title: "List item read by an index that is not an integer";
+    };
+    readonly FV0825: {
+        readonly title: "`.at()` of a list given anything but one number";
+    };
+    readonly FV0826: {
+        readonly title: "`.indexOf()` or `.lastIndexOf()` given anything but one value of the list's type";
+    };
+    readonly FV0827: {
+        readonly title: "`.concat()` of anything but lists of the same item type";
     };
     readonly FV0901: {
         readonly title: "Slots that are not an object literal";

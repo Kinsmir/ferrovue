@@ -448,7 +448,7 @@ Unsupported call.
 
 ## FV0604
 
-Field read on a value that is not an object.
+Field read on a value that is not an object, or that may be absent.
 
 ## FV0605
 
@@ -545,6 +545,14 @@ Strict test against the absence a value cannot have.
 ## FV0628
 
 `as` or `satisfies` stating a type the value does not have.
+
+## FV0629
+
+Optional call `?.()`.
+
+## FV0630
+
+`??` between a list an optional chain computes and another list.
 
 # Strings and numbers: FV07xx
 
@@ -721,6 +729,22 @@ Defaults or nested patterns in a `v-for` item.
 ## FV0823
 
 `v-for` key or index that is not a plain name.
+
+## FV0824
+
+List item read by an index that is not an integer.
+
+## FV0825
+
+`.at()` of a list given anything but one number.
+
+## FV0826
+
+`.indexOf()` or `.lastIndexOf()` given anything but one value of the list's type.
+
+## FV0827
+
+`.concat()` of anything but lists of the same item type.
 
 # Slots: FV09xx
 

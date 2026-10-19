@@ -167,7 +167,7 @@ export const ERRORS = {
   FV0601: { title: "Name or function not available on the server" },
   FV0602: { title: "Unsupported method" },
   FV0603: { title: "Unsupported call" },
-  FV0604: { title: "Field read on a value that is not an object" },
+  FV0604: { title: "Field read on a value that is not an object, or that may be absent" },
   FV0605: { title: "Field the type does not have" },
   FV0606: { title: "Value that may be absent where its target cannot take it as it is" },
   FV0607: { title: "Value of an unexpected type" },
@@ -192,6 +192,8 @@ export const ERRORS = {
   FV0626: { title: "Strict test of a value that may be `null` or `undefined`" },
   FV0627: { title: "Strict test against the absence a value cannot have" },
   FV0628: { title: "`as` or `satisfies` stating a type the value does not have" },
+  FV0629: { title: "Optional call `?.()`" },
+  FV0630: { title: "`??` between a list an optional chain computes and another list" },
 
   FV0701: { title: "`Number()` of an unsupported value" },
   FV0702: { title: "`parseInt()` or `parseFloat()` of a value that is not a string" },
@@ -241,6 +243,10 @@ export const ERRORS = {
   FV0821: { title: "Defaults or nested patterns in a `v-for` item" },
   FV0822: { title: "`v-for` item bound by an unsupported pattern" },
   FV0823: { title: "`v-for` key or index that is not a plain name" },
+  FV0824: { title: "List item read by an index that is not an integer" },
+  FV0825: { title: "`.at()` of a list given anything but one number" },
+  FV0826: { title: "`.indexOf()` or `.lastIndexOf()` given anything but one value of the list's type" },
+  FV0827: { title: "`.concat()` of anything but lists of the same item type" },
 
   FV0901: { title: "Slots that are not an object literal" },
   FV0902: { title: "Computed or spread slot name" },

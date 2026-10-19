@@ -130,11 +130,11 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push('|');
     fv::escape_into(out, &props.scores.values().map(|fv_a7| std::borrow::Cow::<str>::Borrowed(&fv_a7.by)).collect::<Vec<_>>().join("/"));
     out.push('|');
-    out.push_str(if props.labels.keys().map(std::borrow::Cow::<str>::Borrowed).any(|v| *v == *"a") { "true" } else { "false" });
+    out.push_str(if props.labels.keys().map(std::borrow::Cow::<str>::Borrowed).any(|fv_x8| *fv_x8 == *"a") { "true" } else { "false" });
     out.push_str("</p>");
-    if let Some(n8) = props.extra.as_ref() {
+    if let Some(n9) = props.extra.as_ref() {
         out.push_str("<!--[-->");
-        for (flag, on_ref) in n8.iter() {
+        for (flag, on_ref) in n9.iter() {
             let on = *on_ref;
             out.push_str("<i data-on=\"");
             out.push_str(if on { "true" } else { "false" });

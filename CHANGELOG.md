@@ -67,6 +67,22 @@ released together and share version numbers.
   always `false` (`Number.isNaN(s)` of a string, `Number.isFinite(d)` of a date), and for the
   global `isNaN()` and `isFinite()` of anything but a present number, which they would convert:
   the message points to `Number.isNaN(Number(s))` and `Number.isNaN(d.getTime())`.
+- List items by index: `list[i]` with an integer `i`, and `list.at(i)`, which counts from the end
+  when `i` is negative. Either is `T | undefined`, `undefined` outside the list, narrowed by `v-if`
+  (`v-if="rows[0]"`) and taken by `??`, `?.` and `{{ }}` as other optional values are; `list?.[i]`
+  reads an item of an optional list. An index that is a `Float`, a string or a value that may be
+  absent is refused with FV0824, and `.at()` given anything but one number with FV0825.
+- Optional chains that go on past `?.`: `s?.length`, `s?.trim()`, `user?.profile.bio`,
+  `s?.trim().length`, `tags?.at(-1)?.toUpperCase()`, with every property and method the value has
+  when present. Once the value is absent, the whole chain is `undefined`, as in JavaScript.
+  `f?.()` is refused with FV0629, and `??` from a list such a chain computes to another list with
+  FV0630 (`?? []` is accepted).
+- `.indexOf()` and `.lastIndexOf()` of a list, compared with `===`: `NaN` is found nowhere and `-0`
+  is found as `0`. A value of another type, or a position to start from, is refused with FV0826.
+  `.findLast()` and `.findLastIndex()` take what `.find()` and `.findIndex()` take. `.concat()`
+  joins lists of one item type, or of numbers whether `number` or `Float`, and refuses others with
+  FV0827. Generated code calls the new `#[doc(hidden)]` `js_item_at` for `.at()`, part of
+  version 3.
 
 ### Changed
 
@@ -74,7 +90,8 @@ released together and share version numbers.
   `#[doc(hidden)]` `js_time_of` and `js_date_prop` and the serde helpers `date_prop` and `opt_date_prop`, which the
   0.8 crate lacks. The crate still builds modules of version 2, which call nothing that changed.
 - The API reports gain `reviveDates` (`ferrovue`, `ferrovue/client`) and `Config.dateType` and
-  FV0716, FV0717, FV0718 and FV1806 to FV1809 (`ferrovue/compiler`).
+  FV0629, FV0630, FV0716, FV0717, FV0718, FV0824 to FV0827 and FV1806 to FV1809, and FV0604's title
+  names a value that may be absent (`ferrovue/compiler`).
 - Generated code of version 3 also calls the `#[doc(hidden)]` `js_to_utc_string`, `js_to_json`,
   `js_json_date` and `js_date_utc`. FV0609 names two dates beside two numbers and two strings, and
   `==` or `!=` with a date is refused with FV1809 where it was FV0619.
@@ -111,12 +128,20 @@ released together and share version numbers.
   `Number.isInteger()` and `Number.isSafeInteger()` of integers, fractions and optional numbers,
   `isNaN()` and `isFinite()` of numbers, wherever a boolean goes, tests a date's validity with them
   as well as with `d.getTime() === d.getTime()`, and chooses dates with `||`.
+- Tests only: the differential fuzzer generates list items by index (`[i]` with literal, negative and computed indices, and `.at()`) read with
+  `??`, with a method after `?.` and by a field of an object; `.indexOf()`, `.lastIndexOf()`,
+  `.findLast()`, `.findLastIndex()` and `.concat()`; and optional chains from optional and nullable
+  strings and numbers through string methods, `.split()` and list reads.
 
 ### Fixed
 
 - A truthiness test that is not a narrowing, such as `Boolean(user)`, of an optional or nullable
   object, list or `Date` wrote a closure whose parameter it never read (`is_some_and(|v| true)`),
   on which rustc warns; it is now `is_some()`.
+- `.includes()` of a computed list, or of a list of fractions, looking for a `v-for` item named `v`
+  compared each item with itself, and was `true` for every list that was not empty.
+- FV0604 for `.length` or another field of an optional value says that it may be absent, and to
+  narrow it with `v-if` or read it with `?.`. It said the value was not an object.
 
 ## [0.8.0] - 2026-10-18
 

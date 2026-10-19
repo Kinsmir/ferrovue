@@ -35,17 +35,17 @@ pub fn render(out: &mut String, props: &Props) {
     out.push_str("<p>");
     out.push_str(if props.nums.iter().any(|v| *v as f64 == props.ratio) { "true" } else { "false" });
     out.push('|');
-    out.push_str(if fv::js_slice_items(props.nums.iter().copied(), 1.0f64, None).any(|v| v as f64 == props.ratio) { "true" } else { "false" });
+    out.push_str(if fv::js_slice_items(props.nums.iter().copied(), 1.0f64, None).any(|fv_x1| fv_x1 as f64 == props.ratio) { "true" } else { "false" });
     out.push('|');
-    out.push_str(if props.prices.iter().copied().any(|v| v == props.qty as f64) { "true" } else { "false" });
+    out.push_str(if props.prices.iter().copied().any(|fv_x2| fv_x2 == props.qty as f64) { "true" } else { "false" });
     out.push('|');
-    out.push_str(if props.prices.iter().copied().filter(|fv_a1| *fv_a1 != 0.5).any(|v| v == props.qty as f64) { "true" } else { "false" });
+    out.push_str(if props.prices.iter().copied().filter(|fv_a3| *fv_a3 != 0.5).any(|fv_x4| fv_x4 == props.qty as f64) { "true" } else { "false" });
     out.push('|');
-    out.push_str(if props.nums.iter().copied().map(|fv_a2| -(fv_a2 as f64)).any(|v| v == 0.0) { "true" } else { "false" });
+    out.push_str(if props.nums.iter().copied().map(|fv_a5| -(fv_a5 as f64)).any(|fv_x6| fv_x6 == 0.0) { "true" } else { "false" });
     out.push('|');
-    out.push_str(if props.nums.iter().copied().map(|fv_a3| -(fv_a3 as f64)).any(|v| v == props.qty as f64) { "true" } else { "false" });
+    out.push_str(if props.nums.iter().copied().map(|fv_a7| -(fv_a7 as f64)).any(|fv_x8| fv_x8 == props.qty as f64) { "true" } else { "false" });
     out.push('|');
-    out.push_str(if props.nums.iter().copied().map(|fv_a4| fv_a4 as f64 * 2.0).any(|v| v == 4.0) { "true" } else { "false" });
+    out.push_str(if props.nums.iter().copied().map(|fv_a9| fv_a9 as f64 * 2.0).any(|fv_x10| fv_x10 == 4.0) { "true" } else { "false" });
     out.push_str("</p>");
 }
 

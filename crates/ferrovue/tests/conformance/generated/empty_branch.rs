@@ -71,17 +71,17 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     let s_stated = if let Some(n3) = props.item.as_ref() { &n3.children[..] } else { <&[Props<'_>]>::default() };
     let s_typed = if props.flag { &props.others[..] } else { <&[Props<'_>]>::default() };
     let s_flipped = if props.item.as_ref().is_some() { &[] } else { &props.others[..] };
-    let s_chained = props.item.as_ref().map(|v| &v.children).map(|v| &v[..]).unwrap_or(&[]);
-    let s_tags = props.item.as_ref().and_then(|v| v.tags.as_ref()).map(|v| &v[..]).unwrap_or(&[]);
-    let s_nested = if props.flag { &props.others[..] } else { if let Some(n5) = props.item.as_ref() { &n5.children[..] } else { &[] } };
-    let s_labels = (if props.flag { props.others.iter().map(|fv_a6| std::borrow::Cow::<str>::Borrowed(&fv_a6.label)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { Vec::new() }).into_iter().map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
+    let s_chained = props.item.as_ref().map(|fv_o5| &fv_o5.children).map(|v| &v[..]).unwrap_or(&[]);
+    let s_tags = props.item.as_ref().and_then(|fv_o6| fv_o6.tags.as_ref()).map(|v| &v[..]).unwrap_or(&[]);
+    let s_nested = if props.flag { &props.others[..] } else { if let Some(n7) = props.item.as_ref() { &n7.children[..] } else { &[] } };
+    let s_labels = (if props.flag { props.others.iter().map(|fv_a8| std::borrow::Cow::<str>::Borrowed(&fv_a8.label)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { Vec::new() }).into_iter().map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
     out.push_str("<section><h2>");
     fv::escape_into(out, &props.label);
     out.push_str("</h2><ul><!--[-->");
     for x_ref in s_seeded.iter() {
         let x = x_ref;
         out.push_str("<li>");
-        if let Some(v) = x.item.as_ref().map(|v| &*v.id) {
+        if let Some(v) = x.item.as_ref().map(|fv_o9| &*fv_o9.id) {
             fv::escape_into(out, v);
         }
         out.push('|');
@@ -123,7 +123,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     for x_ref in s_chained.iter() {
         let x = x_ref;
         out.push_str("<p>");
-        fv::escape_into(out, x.item.as_ref().map(|v| &*v.id).unwrap_or("none"));
+        fv::escape_into(out, x.item.as_ref().map(|fv_o10| &*fv_o10.id).unwrap_or("none"));
         out.push_str("</p>");
     }
     out.push_str("<!--]--><!--[-->");
@@ -147,7 +147,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push(' ');
     fv::push_int(out, s_none.len() as i64);
     out.push_str("</p><!--[-->");
-    for x_ref in (if let Some(n7) = props.item.as_ref() { &n7.children[..] } else { &[] }).iter() {
+    for x_ref in (if let Some(n11) = props.item.as_ref() { &n11.children[..] } else { &[] }).iter() {
         let x = x_ref;
         out.push_str("<i>");
         fv::escape_into(out, &x.label);
@@ -175,11 +175,11 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         out.push_str("</u>");
     }
     out.push_str("<!--]--><s>");
-    fv::push_int(out, (if let Some(n8) = props.item.as_ref() { &n8.children[..] } else { &[] }).len() as i64);
+    fv::push_int(out, (if let Some(n12) = props.item.as_ref() { &n12.children[..] } else { &[] }).len() as i64);
     out.push(' ');
-    fv::escape_into(out, &props.item.as_ref().and_then(|v| v.tags.as_ref()).map(|v| &v[..]).unwrap_or(&[]).iter().map(|v| &**v).collect::<Vec<_>>().join(","));
+    fv::escape_into(out, &props.item.as_ref().and_then(|fv_o13| fv_o13.tags.as_ref()).map(|v| &v[..]).unwrap_or(&[]).iter().map(|v| &**v).collect::<Vec<_>>().join(","));
     out.push(' ');
-    fv::push_int(out, props.item.as_ref().map(|v| &v.children).map(|v| &v[..]).unwrap_or(&props.others[..]).len() as i64);
+    fv::push_int(out, props.item.as_ref().map(|fv_o14| &fv_o14.children).map(|v| &v[..]).unwrap_or(&props.others[..]).len() as i64);
     out.push_str("</s></section>");
 }
 

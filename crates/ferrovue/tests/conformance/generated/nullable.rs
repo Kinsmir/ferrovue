@@ -208,24 +208,24 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push('|');
     out.push_str(if props.label.as_deref().is_none() { "true" } else { "false" });
     out.push_str("</p><p>");
-    if let Some(v) = props.entry.as_ref().map(|v| &*v.title) {
+    if let Some(v) = props.entry.as_ref().map(|fv_o9| &*fv_o9.title) {
         fv::escape_into(out, v);
     }
     out.push('|');
-    fv::escape_into(out, props.entry.as_ref().and_then(|v| v.deleted_at.as_deref()).unwrap_or("live"));
+    fv::escape_into(out, props.entry.as_ref().and_then(|fv_o10| fv_o10.deleted_at.as_deref()).unwrap_or("live"));
     out.push('|');
-    fv::push_int(out, props.entry.as_ref().and_then(|v| v.score).unwrap_or(0i64));
+    fv::push_int(out, props.entry.as_ref().and_then(|fv_o11| fv_o11.score).unwrap_or(0i64));
     out.push('|');
-    if let Some(v) = props.entry.as_ref().and_then(|v| v.note.as_deref()) {
+    if let Some(v) = props.entry.as_ref().and_then(|fv_o12| fv_o12.note.as_deref()) {
         fv::escape_into(out, v);
     }
     out.push('|');
-    out.push_str(if props.entry.as_ref().and_then(|v| v.deleted_at.as_deref()).is_none() { "true" } else { "false" });
+    out.push_str(if props.entry.as_ref().and_then(|fv_o13| fv_o13.deleted_at.as_deref()).is_none() { "true" } else { "false" });
     out.push_str("</p>");
-    if let Some(n9) = props.entry.as_ref() {
+    if let Some(n14) = props.entry.as_ref() {
         out.push_str("<p>");
-        fv::escape_into(out, &n9.title);
-        fv::escape_into(out, &(if let Some(n10) = n9.deleted_at.as_deref() { std::borrow::Cow::<str>::Owned(format!(" (deleted {})", n10)) } else { std::borrow::Cow::<str>::Borrowed("") }));
+        fv::escape_into(out, &n14.title);
+        fv::escape_into(out, &(if let Some(n15) = n14.deleted_at.as_deref() { std::borrow::Cow::<str>::Owned(format!(" (deleted {})", n15)) } else { std::borrow::Cow::<str>::Borrowed("") }));
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");
@@ -275,11 +275,11 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     }
     out.push_str("</p><p>unpicked|true|</p>");
     super::null_child::render(out, &super::null_child::Props { value: props.label.as_deref().map(std::borrow::Cow::Borrowed), entry: props.entry.as_ref().cloned() }, super::null_child::Slots {
-        default: Some(&|out: &mut String, fv_sp16: &super::null_child::DefaultSlotProps<'_>| -> bool {
+        default: Some(&|out: &mut String, fv_sp21: &super::null_child::DefaultSlotProps<'_>| -> bool {
             let mut filled = false;
             let fv_chunk = out.len();
-            fv::escape_into(out, &(if let Some(n17) = fv_sp16.v { std::borrow::Cow::<str>::Owned(format!("slot:{}", n17)) } else { std::borrow::Cow::<str>::Borrowed("slot:null") }));
-            fv::escape_into(out, fv_sp16.e.and_then(|v| v.deleted_at.as_deref()).unwrap_or(""));
+            fv::escape_into(out, &(if let Some(n22) = fv_sp21.v { std::borrow::Cow::<str>::Owned(format!("slot:{}", n22)) } else { std::borrow::Cow::<str>::Borrowed("slot:null") }));
+            fv::escape_into(out, fv_sp21.e.and_then(|fv_o23| fv_o23.deleted_at.as_deref()).unwrap_or(""));
             filled |= !fv::is_comment(&out[fv_chunk..]);
             filled
         }),
@@ -287,7 +287,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     super::null_child::render(out, &super::null_child::Props { value: None, entry: None }, super::null_child::Slots {
         default: None,
     });
-    super::null_child::render(out, &super::null_child::Props { value: props.entry.as_ref().and_then(|v| v.deleted_at.as_deref()).map(std::borrow::Cow::Borrowed), entry: props.entries.iter().find(|fv_a18| fv_a18.deleted_at.as_deref().is_none()).cloned() }, super::null_child::Slots {
+    super::null_child::render(out, &super::null_child::Props { value: props.entry.as_ref().and_then(|fv_o24| fv_o24.deleted_at.as_deref()).map(std::borrow::Cow::Borrowed), entry: props.entries.iter().find(|fv_a25| fv_a25.deleted_at.as_deref().is_none()).cloned() }, super::null_child::Slots {
         default: None,
     });
     out.push_str("</section>");

@@ -192,18 +192,24 @@ assert_eq!(ferrovue::js_json_number(f64::NAN), "null");
 # Slicing lists
 
 A list's `.slice(start, end)` takes the same range as a string's, counted in items:
-`js_slice_items` takes the items `js_slice_range`
-gives. The other array methods with an arrow function, `.filter()`, `.map()`, `.some()`, `.every()`,
-`.find()` and `.findIndex()`, become Rust iterator adaptors, as they have no JavaScript corners to
-reproduce. Given `Boolean` in place of an arrow function, each takes the item's truthiness, as
-`x => !!x` does: `.filter(Boolean)` drops empty strings, `0`, `NaN` and `false`, and, over a list or
-an array literal whose items may be `null` or `undefined`, the absent ones too, leaving a list of the
-values.
+`js_slice_items` takes the items `js_slice_range` gives. `.at(i)` is the item `js_item_at` picks,
+counted from the end when `i` is negative and `undefined` outside the list, and `list[i]` with an
+integer `i` is `list.get(i)`, `undefined` for a negative `i` too. The other array methods with an
+arrow function, `.filter()`, `.map()`, `.some()`, `.every()`, `.find()`, `.findIndex()`,
+`.findLast()` and `.findLastIndex()`, become Rust iterator adaptors, as they have no JavaScript
+corners to reproduce. Given `Boolean` in place of an arrow function, each takes the item's
+truthiness, as `x => !!x` does: `.filter(Boolean)` drops empty strings, `0`, `NaN` and `false`, and,
+over a list or an array literal whose items may be `null` or `undefined`, the absent ones too,
+leaving a list of the values. `.indexOf()` and `.lastIndexOf()` compare with `===`: `NaN` is found
+nowhere, though `.includes()` finds it, and `-0` is found as `0`. `.concat()` chains the items of
+lists of one item type, numbers whether `number` or `Float`.
 
 ```rust
 let words = ["a", "b", "c", "d"];
 let last_two: Vec<&str> = ferrovue::js_slice_items(words.iter().copied(), -2.0, None).collect();
 assert_eq!(last_two, ["c", "d"]);
+assert_eq!(ferrovue::js_item_at(words.iter().copied(), -1.0), Some("d"));
+assert_eq!(ferrovue::js_item_at(words.iter().copied(), 4.0), None);
 ```
 
 # Panics

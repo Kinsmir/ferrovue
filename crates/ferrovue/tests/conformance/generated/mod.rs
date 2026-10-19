@@ -88,6 +88,7 @@ pub mod inline_prose;
 pub mod keywords;
 pub mod lifecycle;
 pub mod links;
+pub mod list_access;
 pub mod listen_leaf;
 pub mod listen_sale;
 pub mod listened;
@@ -110,6 +111,7 @@ pub mod nullable;
 pub mod number_includes;
 pub mod number_tests;
 pub mod numbers;
+pub mod optional_chains;
 pub mod page;
 pub mod panel;
 pub mod parsing;
@@ -635,6 +637,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let route = router.at(&fixture.route);
             links::render(&mut out, &props, &route);
         }
+        "ListAccess" => {
+            let props: list_access::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            list_access::render(&mut out, &props);
+        }
         "ListenLeaf" => {
             let props: listen_leaf::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             listen_leaf::render(&mut out, &props);
@@ -734,6 +740,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Numbers" => {
             let props: numbers::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             numbers::render(&mut out, &props);
+        }
+        "OptionalChains" => {
+            let props: optional_chains::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            optional_chains::render(&mut out, &props);
         }
         "Page" => {
             let props: page::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

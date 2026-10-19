@@ -1,6 +1,6 @@
 import { type Component, type N, type Scope, type Ty, type Val, BOOL, fail, FLOAT, INT, opt, sameTy, STR } from "./model.ts";
 import { ctx } from "./context.ts";
-import { expr, fieldVal } from "./expr.ts";
+import { describeTy, expr, fieldVal } from "./expr.ts";
 import { cond } from "./narrowing.ts";
 import { localTy } from "./rust.ts";
 import { asF64, isNumber } from "./numbers.ts";
@@ -88,7 +88,7 @@ export function arrow(s: Scope, fn: N, list: Val, of: Ty, byRef: boolean, method
     locals.set(index.name, { code: i, ty: INT });
     bound.push(index.name);
   }
-  const narrowed = new Map([...s.narrowed].filter(([path]) => !bound.some((b) => path === b || path.startsWith(`${b}.`))));
+  const narrowed = new Map([...s.narrowed].filter(([path]) => !bound.some((b) => path === b || path.startsWith(`${b}.`) || path.startsWith(`${b}[`))));
   const code = body({ ...s, locals, narrowed });
   const reads = (name: string) => new RegExp(`\\b${name}\\b`).test(code);
   const pName = reads(p) ? p : "_";
@@ -180,9 +180,77 @@ export function presentLiteral(s: Scope, n: N): Val | null {
   return computed(of.k === "str" ? `${flat}.map(${COW}::Borrowed)` : flat, of, kept.some((v: Val) => v.lone));
 }
 
+function backwards(target: Val): string {
+  return target.iter === undefined ? items(target) : `${target.iter}.collect::<Vec<_>>().into_iter()`;
+}
+
+/**
+ * The item of `target` that `fromList` (given the list) or `fromIter` (given its items) picks, as
+ * an optional value: `undefined` where the list has no item there.
+ */
+export function picked(s: Scope, target: Val, n: N, fromList: (list: string) => string, fromIter: (items: string) => string): Val {
+  const of = target.ty.k === "list" ? target.ty.of : target.ty;
+  const lone = target.lone ? { lone: true as const } : {};
+  if (target.iter !== undefined) {
+    const got = fromIter(target.iter);
+    if (of.k === "str") return { code: `${atom(got)}.as_deref()`, ty: opt(STR), held: `${got}.map(|v| ${COW}::Owned(v.into_owned()))`, ...lone };
+    if (["int", "float", "bool", "struct", "child"].includes(of.k)) return { code: got, ty: opt(of) };
+  } else {
+    const got = fromList(atom(target.code));
+    const inner = of.k === "opt" ? of.of : of;
+    const flat = of.k === "opt";
+    switch (inner.k) {
+      case "str":
+        return { code: flat ? `${got}.and_then(|v| v.as_deref())` : `${got}.map(|v| &**v)`, ty: opt(of), ...lone };
+      case "int":
+      case "float":
+      case "bool":
+        return { code: flat ? `${got}.and_then(|v| *v)` : `${got}.copied()`, ty: opt(of) };
+      case "struct":
+      case "child":
+        return { code: flat ? `${got}.and_then(|v| v.as_ref())` : got, ty: opt(of) };
+      default:
+        break;
+    }
+  }
+  return fail(s.comp, "FV0804", "an item is read from a list of strings, numbers, booleans or objects, each of which may be absent", n);
+}
+
 export function listMethod(s: Scope, target: Val, method: string, args: N[], n: N): Val | null {
   const comp = s.comp;
-  if (!["filter", "map", "some", "every", "find", "findIndex", "slice"].includes(method)) return null;
+  if (method === "at") {
+    if (args.length !== 1) fail(comp, "FV0825", "`.at()` takes one index", n);
+    const i = expr(s, args[0]);
+    if (!isNumber(i.ty)) fail(comp, "FV0825", `\`.at()\` takes a number that is present, and this index is ${describeTy(i.ty)}`, args[0]);
+    const f = bare(asF64(i));
+    return picked(s, target, n, (list) => `fv::js_item_at(${list}.iter(), ${f})`, (it) => `fv::js_item_at(${it}, ${f})`);
+  }
+  if (method === "indexOf" || method === "lastIndexOf") {
+    if (args.length !== 1) fail(comp, "FV0826", `\`.${method}()\` takes one value to look for, without a position to start from`, n);
+    const of = target.ty.k === "list" ? target.ty.of : target.ty;
+    const x = expr(s, args[0]);
+    const v = `fv_x${++ctx.narrowCount}`;
+    const test = sameItem(s, target, of, x, v, "FV0826", method, args[0]);
+    const it = items(target);
+    const found = method === "indexOf" ? `${it}.position(|${v}| ${test})` : `${backwards(target)}.rposition(|${v}| ${test})`;
+    return { code: `${found}.map_or(-1, |i| i as i64)`, ty: INT };
+  }
+  if (method === "concat") {
+    const own = itemsTy(s, target, n);
+    const parts = args.map((a) => {
+      const part = a?.type === "SpreadElement" ? null : expr(s, a);
+      const numbers = part?.ty.k === "list" && isNumber(part.ty.of) && isNumber(own);
+      if (part?.ty.k !== "list" || (!untypedEmpty(part) && !sameTy(part.ty.of, own) && !numbers)) {
+        fail(comp, "FV0827", `\`.concat()\` joins lists of the list's own item type, ${describeTy(own)}`, a);
+      }
+      return part;
+    }).filter((p) => !untypedEmpty(p));
+    const of = [target, ...parts].some((p) => p.ty.k === "list" && p.ty.of.k === "float") ? FLOAT : own;
+    const each = (p: Val): string => (of.k === "float" && p.ty.k === "list" && p.ty.of.k === "int" ? `${items(p)}.map(|v| v as f64)` : items(p));
+    const joined = parts.reduce((acc, p) => `${acc}.chain(${each(p)})`, each(target));
+    return computed(joined, of, [target, ...parts].some((p) => p.lone));
+  }
+  if (!["filter", "map", "some", "every", "find", "findIndex", "findLast", "findLastIndex", "slice"].includes(method)) return null;
   if (args.length === 1 && isBoolean(s, args[0])) {
     const kept = method === "filter" ? present(target) : null;
     const of = itemsTy(s, kept ?? target, n);
@@ -228,16 +296,20 @@ export function listMethod(s: Scope, target: Val, method: string, args: N[], n: 
       const { closure, enumerate } = arrow(s, fn, target, of, false, method, (inner) => cond(inner, fn.body));
       return { code: `${it}${enumerate ? ".enumerate()" : ""}.${method === "some" ? "any" : "all"}(${closure})`, ty: BOOL };
     }
-    case "find": {
+    case "find":
+    case "findLast": {
       const { closure, enumerate } = arrow(s, fn, target, of, true, method, (inner) => cond(inner, fn.body));
-      const found = enumerate ? `${it}.enumerate().find(${closure}).map(|(_, v)| v)` : `${it}.find(${closure})`;
+      const from = method === "find" ? it : backwards(target);
+      const rev = method === "find" ? "" : ".rev()";
+      const found = enumerate ? `${from}.enumerate()${rev}.find(${closure}).map(|(_, v)| v)` : `${from}${rev}.find(${closure})`;
       const lone = target.lone ? { lone: true } : {};
       if (of.k === "str") return { code: `${atom(found)}.as_deref()`, ty: opt(STR), held: `${found}.map(|v| ${COW}::Owned(v.into_owned()))`, ...lone };
       return { code: found, ty: opt(of), ...lone };
     }
     default: {
       const { closure, enumerate } = arrow(s, fn, target, of, false, method, (inner) => cond(inner, fn.body));
-      return { code: `${it}${enumerate ? ".enumerate()" : ""}.position(${closure}).map_or(-1, |i| i as i64)`, ty: INT };
+      const [from, search] = method === "findIndex" ? [it, "position"] : [backwards(target), "rposition"];
+      return { code: `${from}${enumerate ? ".enumerate()" : ""}.${search}(${closure}).map_or(-1, |i| i as i64)`, ty: INT };
     }
   }
 }
@@ -257,25 +329,27 @@ export function objectCall(s: Scope, method: string, args: N[], n: N): Val {
   return fail(comp, "FV0817", `\`Object.${method}()\` is not supported: \`keys\`, \`values\` and \`entries\` of a record are`, n);
 }
 
+function sameItem(s: Scope, target: Val, of: Ty, x: Val, v: string, code: "FV0801" | "FV0826", method: string, n: N): string {
+  const numbers = isNumber(x.ty) && isNumber(of);
+  if ((!sameTy(x.ty, of) && !numbers) || !["str", "int", "float", "bool"].includes(of.k)) {
+    fail(s.comp, code, `\`.${method}()\` looks for a value of the list's own type, in a list of strings, numbers or booleans`, n);
+  }
+  if (of.k === "str") meet(s.comp, target, x, `\`.${method}()\``, n, "equal");
+  if (of.k === "str") return `*${v} == ${x.code.startsWith("&*") ? `*${x.code.slice(2)}` : `*${operand(x.code, UNARY)}`}`;
+  if (of.k === "float" && x.ty.k === "int") return binary(v, "==", asF64(x));
+  if (of.k === "int" && x.ty.k === "float") return binary(`${v} as f64`, "==", x.code);
+  return of.k === "bool" ? binary(v, "==", x.code) : `${v} == ${x.code}`;
+}
+
 export function computedListMethod(s: Scope, target: Val, method: string, args: N[], n: N): Val | null {
   if (target.ty.k !== "list") return null;
   const of = target.ty.of;
   if (method === "includes" && args.length === 1) {
     const x = expr(s, args[0]);
-    const numbers = isNumber(x.ty) && isNumber(of);
-    if ((!sameTy(x.ty, of) && !numbers) || !["str", "int", "float", "bool"].includes(of.k)) fail(s.comp, "FV0801", "`.includes()` looks for a value of the list's own type", args[0]);
-    if (of.k === "str") meet(s.comp, target, x, "`.includes()`", n, "equal");
-    const test =
-      of.k === "str"
-        ? `*v == ${x.code.startsWith("&*") ? `*${x.code.slice(2)}` : `*${operand(x.code, UNARY)}`}`
-        : of.k === "float" && x.ty.k === "int"
-          ? binary("v", "==", asF64(x))
-          : of.k === "float"
-            ? `v == ${x.code} || (v.is_nan() && ${atom(x.code)}.is_nan())`
-            : of.k === "int" && x.ty.k === "float"
-              ? binary("v as f64", "==", x.code)
-              : `v == ${x.code}`;
-    return { code: `${items(target)}.any(|v| ${test})`, ty: BOOL };
+    const v = `fv_x${++ctx.narrowCount}`;
+    const test = sameItem(s, target, of, x, v, "FV0801", "includes", args[0]);
+    const nan = of.k === "float" && x.ty.k === "float" ? ` || (${v}.is_nan() && ${atom(x.code)}.is_nan())` : "";
+    return { code: `${items(target)}.any(|${v}| ${test}${nan})`, ty: BOOL };
   }
   if (method === "join" && args.length <= 1) {
     if (!["str", "int", "float", "bool"].includes(of.k)) return null;

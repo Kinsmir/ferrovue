@@ -234,7 +234,7 @@ lists), `Number`, `parseInt`, `parseFloat` and `JSON.stringify` (`js_number`, `j
 `js_parse_float`, `js_json_number`, `js_json_string`), dates as time values in UTC
 (`js_date_parse`, `js_time_clip`, `js_to_iso_string` and `js_utc_full_year` to
 `js_utc_milliseconds`), a `Date` prop handed to a child and written into `data-props`
-(`js_time_of`, `js_date_prop`, `date_prop`, `opt_date_prop`), a list's `slice` (`js_slice_range`, `js_slice_items`), and Vue's class, style, scope id, slot outlet, teleport and `v-html` helpers
+(`js_time_of`, `js_date_prop`, `date_prop`, `opt_date_prop`), a list's `slice` and `at` (`js_slice_range`, `js_slice_items`, `js_item_at`), and Vue's class, style, scope id, slot outlet, teleport and `v-html` helpers
 (`class_into`, `class_object`, `class_names`, `style_text_into`, `merge_props`, `scope_attrs`,
 `slot_into_slotted`, `scoped_slot_into`, `scoped_slot_into_slotted`, `teleport_into`,
 `trusted_into`). Only generated code calls them, so their signatures follow the version of
