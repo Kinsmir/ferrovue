@@ -29,6 +29,9 @@ export interface ValueHooks {
   unbindable?(ty: Ty): { what: string; fix: string } | undefined;
   nullish?(s: Scope, a: Val, b: Val, n: N): Val | undefined;
   equals?(a: Val, b: Val): string | undefined;
+  order?(a: Val, op: string, b: Val): Val | undefined;
+  refuseEquality?(s: Scope, a: Val, b: Val, n: N): void;
+  json?(v: Val): string | undefined;
   isArray?(v: Val): Val | undefined;
 }
 

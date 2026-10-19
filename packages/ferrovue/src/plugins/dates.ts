@@ -1,8 +1,8 @@
-import { type N, type Scope, type Val, fail, FLOAT, STR } from "../model.ts";
+import { type N, type Scope, type Ty, type Val, fail, FLOAT, nothing, STR } from "../model.ts";
 import { type Plugin } from "../plugin.ts";
 import { bare, strArg } from "../parens.ts";
-import { asF64, numberVal } from "../numbers.ts";
-import { expr } from "../expr.ts";
+import { asF64, compare, numberVal } from "../numbers.ts";
+import { describeTy, expr } from "../expr.ts";
 
 declare module "../model.ts" {
   interface PluginTys {
@@ -36,6 +36,61 @@ export function portableTime(s: string): number | undefined {
   const zone = m[7];
   if (zone !== undefined && zone !== "Z" && Number.isNaN(Date.parse(s.slice(0, -zone.length) + "Z")) && !Number.isNaN(t)) return undefined;
   return t;
+}
+
+const COMMON_DAYS = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+
+function v8Day(year: number, month: number, date: number): number {
+  const before = (y: number) => 365 * (y + 399_999) + Math.trunc((y + 399_999) / 4) - Math.trunc((y + 399_999) / 100) + Math.trunc((y + 399_999) / 400);
+  let y = Math.trunc(year) + Math.trunc(Math.trunc(month) / 12);
+  let m = Math.trunc(month) % 12;
+  if (m < 0) [m, y] = [m + 12, y - 1];
+  const leap = y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0);
+  return before(y) - before(1970) + COMMON_DAYS[m]! + (leap && m >= 2 ? 1 : 0) - 1 + Math.trunc(date);
+}
+
+/** Whether `Date.UTC(...parts)` gives what every JavaScript engine gives. V8 reads a year beyond
+ * ±1,000,000, a month beyond ±10,000,000, and a year before −399,999 once the month is carried into
+ * it by rules of its own, which Firefox and Safari do not share, so those are portable only where
+ * the date is invalid in every engine; and a part worth more than 2⁵³ ms that the others bring back
+ * within the range of dates is rounded by Node otherwise than by the browsers. */
+export function portableUtc(parts: readonly number[]): boolean {
+  const [year = NaN, month = 0, date = 1, hours = 0, minutes = 0, seconds = 0, ms = 0] = parts;
+  if (![year, month, date, hours, minutes, seconds, ms].every(Number.isFinite)) return true;
+  const int = Math.trunc;
+  const terms = [int(hours) * 3_600_000, int(minutes) * 60_000, int(seconds) * 1000];
+  const time = terms[0]! + terms[1]! + terms[2]! + int(ms);
+  if (!Number.isFinite(time)) return true;
+  const y = int(year) >= 0 && int(year) <= 99 ? 1900 + int(year) : year;
+  const carried = int(y) + Math.floor(int(month) / 12);
+  if (!(Math.abs(y) <= 1e6 && Math.abs(month) <= 1e7 && carried >= -399_999)) {
+    return Math.abs(carried) >= 399_999 && Math.abs(int(date)) <= 1e7 && Math.abs(time) <= 1e15;
+  }
+  const days = v8Day(y, month, date) * 86_400_000;
+  const t = days + time;
+  const largest = Math.max(Math.abs(days), ...terms.map(Math.abs));
+  return !(Number.isFinite(t) && largest > 2 ** 53 && Math.abs(t) <= 8.64e15 + largest * 2 ** -50);
+}
+
+const UTC_DEFAULTS = ["0.0f64", "1.0f64", "0.0f64", "0.0f64", "0.0f64", "0.0f64"];
+
+function fromParts(s: Scope, n: N): Val {
+  const args: N[] = n.arguments;
+  if (args.length < 1 || args.length > 7) return fail(s.comp, "FV1807", `\`Date.UTC()\` takes from one to seven numbers: a year, a month from 0 and the day, hours, minutes, seconds and milliseconds that follow (${GUIDE})`, n);
+  const vals = args.map((a) => {
+    const v = expr(s, a);
+    if (v.ty.k !== "int" && v.ty.k !== "float") fail(s.comp, "FV1807", `\`Date.UTC()\` takes numbers that are present: this is ${describeTy(v.ty)}`, a);
+    return v;
+  });
+  if (vals.every((v) => v.num !== undefined)) {
+    const parts = vals.map((v) => v.num!);
+    if (!portableUtc(parts)) {
+      return fail(s.comp, "FV1808", `\`Date.UTC(${parts.join(", ")})\` is a date engines compute differently: V8 reads a year beyond ±1,000,000, a month beyond ±10,000,000 and a year before −399,999 by rules of its own, and Node rounds a part beyond 2⁵³ ms otherwise than the browsers (${GUIDE})`, n);
+    }
+    return numberVal(Date.UTC(...(parts as [number])), false);
+  }
+  const code = [...vals.map((v) => bare(asF64(v))), ...UTC_DEFAULTS.slice(vals.length - 1)].join(", ");
+  return { code: `fv::js_date_utc(${code})`, ty: FLOAT };
 }
 
 const LOCAL_GETTERS = new Map([
@@ -128,13 +183,16 @@ export const dates: Plugin = {
     if (!global(s, object, "Date")) return null;
     if (method === "now") return fail(s.comp, "FV1801", `\`Date.now()\` is the time it runs, which differs between the server's render and the browser's hydration: pass the time as a prop (${GUIDE})`, n);
     if (method === "parse" && n.arguments.length === 1) return parsed(s, n.arguments[0], "`Date.parse()`");
-    return fail(s.comp, "FV1804", `\`Date.${method}()\` is not supported: build a date with \`new Date()\` of an ISO string or a number of milliseconds (${GUIDE})`, n);
+    if (method === "UTC") return fromParts(s, n);
+    return fail(s.comp, "FV1804", `\`Date.${method}()\` is not supported: build a date with \`new Date()\` of an ISO string or a number of milliseconds, or with \`Date.UTC()\` of its parts (${GUIDE})`, n);
   },
   method(s, target, method, args, n) {
     if (target.ty.k !== "date") return null;
     const t = bare(target.code);
     const plain = args.length === 0;
     if (plain && method === "toISOString") return { code: `&*fv::js_to_iso_string(${t})`, ty: STR };
+    if (plain && method === "toUTCString") return { code: `&*fv::js_to_utc_string(${t})`, ty: STR };
+    if (plain && method === "toJSON") return { code: `fv::js_to_json(${t}).as_deref()`, ty: { k: "opt", of: STR, none: "null" }, held: `fv::js_to_json(${t}).map(std::borrow::Cow::<str>::Owned)` };
     if (plain && (method === "getTime" || method === "valueOf")) return { code: target.code, ty: FLOAT };
     const utc = UTC_GETTERS.get(method);
     if (plain && utc !== undefined) return { code: `fv::js_utc_${utc}(${t})`, ty: FLOAT };
@@ -142,9 +200,22 @@ export const dates: Plugin = {
       const instead = LOCAL_GETTERS.get(method);
       return fail(s.comp, "FV1804", `\`.${method}()\` reads the date in the time zone of the machine running it, which differs between the server and the reader's browser${instead ? `: use \`.${instead}()\`` : ""} (${GUIDE})`, n);
     }
-    return fail(s.comp, "FV1804", `\`.${method}(${plain ? "" : "…"})\` on a \`Date\` is not supported: a date is read with \`.toISOString()\`, \`.getTime()\` and the \`.getUTC…()\` methods (${GUIDE})`, n);
+    return fail(s.comp, "FV1804", `\`.${method}(${plain ? "" : "…"})\` on a \`Date\` is not supported: a date is read with \`.toISOString()\`, \`.toUTCString()\`, \`.toJSON()\`, \`.getTime()\` and the \`.getUTC…()\` methods (${GUIDE})`, n);
   },
   values: {
+    order(a, op, b) {
+      if (a.ty.k !== "date" || b.ty.k !== "date") return undefined;
+      return compare({ code: a.code, ty: FLOAT }, op, { code: b.code, ty: FLOAT });
+    },
+    refuseEquality(s, a, b, n) {
+      const dated = (ty: Ty) => ty.k === "date" || (ty.k === "opt" && ty.of.k === "date");
+      if (!(dated(a.ty) || dated(b.ty)) || nothing(a.ty) || nothing(b.ty)) return;
+      const why = dated(a.ty) && dated(b.ty)
+        ? "is true only when the two are one object, so two dates of the same time are unequal"
+        : "compares the date as an object, or as its `.toString()` in the time zone of the machine running it";
+      fail(s.comp, "FV1809", `\`${n.operator}\` between ${describeTy(a.ty)} and ${describeTy(b.ty)} ${why}: compare time values, \`a.getTime() === b.getTime()\` (${GUIDE})`, n);
+    },
+    json: (v) => (v.ty.k === "date" ? `fv::js_json_date(${bare(v.code)})` : undefined),
     describe: (ty) => (ty.k === "date" ? "a `Date`" : undefined),
     unbindable: (ty) =>
       ty.k === "date" ? { what: "a `Date`", fix: "bind `.toISOString()`, or format it in Rust and pass a string" } : undefined,

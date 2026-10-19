@@ -26,18 +26,29 @@ work in UTC:
 | `new Date(s)`, `Date.parse(s)` | `js_date_parse` | the time value of an ISO string (below) |
 | `new Date(ms)` | `js_time_clip` | `ms` truncated, or an invalid date beyond ±8.64 × 10¹⁵ |
 | `new Date(d)` | the same time value | a copy of the date `d` |
+| `Date.UTC(y, m, d, h, min, s, ms)` | `js_date_utc` | the time value of a date and time in UTC, from one to seven parts (below) |
 | `d.toISOString()` | `js_to_iso_string` | `2024-05-01T09:30:00.000Z`; `+275760-09-13T00:00:00.000Z` outside the years 0000 to 9999 |
+| `d.toUTCString()` | `js_to_utc_string` | `Wed, 01 May 2024 09:30:00 GMT`; `Fri, 01 Jan -0001 00:00:00 GMT` before year 0; `Invalid Date` |
+| `d.toJSON()` | `js_to_json` | the ISO string, or `null` for an invalid date |
+| `JSON.stringify(d)` | `js_json_date` | the ISO string in quotes, or `null` |
 | `d.getTime()`, `d.valueOf()` | the time value | milliseconds since 1970, or `NaN` |
 | `d.getUTCFullYear()` | `js_utc_full_year` | the year, negative before year 0 |
 | `d.getUTCMonth()` | `js_utc_month` | 0 for January to 11 |
 | `d.getUTCDate()` | `js_utc_date` | the day of the month, from 1 |
 | `d.getUTCDay()` | `js_utc_day` | 0 for Sunday to 6 |
 | `d.getUTCHours()`, `getUTCMinutes()`, `getUTCSeconds()`, `getUTCMilliseconds()` | `js_utc_hours` and the rest | the time of day in UTC |
+| `a < b`, `a <= b`, `a > b`, `a >= b` | the time values compared | whether `a` comes before or after `b`; `false` when either is invalid |
 
-A date can be held in a `computed`, chosen with `?:`, built inside a `v-for`, and handed to a
-child's `Date` prop ([below](#date-props)). It cannot be interpolated or bound whole (Vue would
-write its `.toString()`, in the server's time zone), or compared with `===` or `<`: read
-`.toISOString()` or `.getTime()` from it.
+A date can be held in a `computed`, chosen with `?:`, built inside a `v-for`, ordered against
+another with `<`, `<=`, `>` and `>=`, and handed to a child's `Date` prop ([below](#date-props)).
+It cannot be interpolated or bound whole (Vue would write its `.toString()`, in the server's time
+zone). Two dates are equal under `===` only when they are one object, so `===`, `!==`, `==` and
+`!=` with a date are refused ([FV1809](crate::guide::error_codes#fv1809)): compare
+`a.getTime() === b.getTime()`.
+
+`.toJSON()` is a `string | null`, as for any nullable value: `{{ }}` writes nothing for `null`,
+an attribute bound to it is left out, and `?? "no date"` or `v-if="d.toJSON() !== null"` choose
+what to write instead.
 
 ```vue
 <script setup lang="ts">
@@ -54,8 +65,26 @@ const date = computed(() => new Date(props.published));
 ```
 
 Each of these is held to vectors recorded from Node (`tests/vectors/dates.json`: thousands of
-strings and time values, drawn at random beside the edge cases), and the strings and numbers it
-accepts are read alike by Chromium and Firefox in four time zones, from UTC−3:30 to UTC+14.
+strings, time values and parts of `Date.UTC`, drawn at random beside the edge cases), and the
+strings, numbers and parts it accepts are read alike by Chromium and Firefox in four time zones,
+from UTC−3:30 to UTC+14.
+
+## Dates from their parts
+
+`Date.UTC(year, month, date, hours, minutes, seconds, ms)` takes from one to seven numbers, the
+month counted from 0, and gives a time value: each part truncated toward zero, a year from 0 to 99
+read as 1900 to 1999, a month or a day beyond its range carried into the next (`Date.UTC(2024, 12)`
+is January 2025, `Date.UTC(2024, 0, 0)` is 31 December 2023), and `NaN` for a part that is not a
+finite number or a time beyond ±8.64 × 10¹⁵ ms. `new Date(Date.UTC(…))` makes the date. Parts that
+are literals are worked out when the component is compiled.
+
+Engines do not agree on every part. V8 computes a year beyond ±1,000,000, a month beyond
+±10,000,000 and a year before −399,999 by rules of its own, so a day or hours that bring such a
+date back within the range give another date in Firefox and Safari; and a part worth more than 2⁵³
+ms that the others bring back within the range is rounded by Node otherwise than by the browsers.
+Literals like these are refused ([FV1808](crate::guide::error_codes#fv1808)), and `js_date_utc`
+panics on parts from the props like these. Every other date, and every date invalid in all of
+them, is computed as JavaScript computes it.
 
 ## The strings a date is built from
 

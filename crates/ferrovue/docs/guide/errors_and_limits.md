@@ -8,7 +8,7 @@ hydration mismatch in the browser. Errors carry a stable code and point into the
 the line quoted and a caret under the construct. For example:
 
 ```text
-error[FV0609]: components/Card.vue:7:14: `<` is supported between two numbers, or two strings, that are present: the other is a string
+error[FV0609]: components/Card.vue:7:14: `<` is supported between two numbers, two strings or two dates that are present: the other is a string
  7 |     <p v-if="label < limit">{{ label }}</p>
    |              ^
  = docs: https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#fv0609

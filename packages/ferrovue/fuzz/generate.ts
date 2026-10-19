@@ -1032,7 +1032,8 @@ interface Scope {
   dates: DateVar[];
 }
 
-const DATE_READS = ["getTime", "valueOf", ...DATE_METHODS.filter((m) => m !== "toISOString")];
+const DATE_TEXTS = new Set<string>(["toISOString", "toUTCString", "toJSON"]);
+const DATE_READS = ["getTime", "valueOf", ...DATE_METHODS.filter((m) => !DATE_TEXTS.has(m))];
 const isoLit = (s: string): Expr => ({ ...atom("date", `new Date('${s}')`), ...(Number.isNaN(timeOf(s)) ? {} : { valid: true }) });
 const msLit = (x: number): Expr => ({ ...atom("date", `new Date(${numText(x)})`), ...(Number.isNaN(timeOf(x)) ? {} : { valid: true }) });
 
@@ -1159,6 +1160,28 @@ class Gen {
 
   isoString(d: number): Expr {
     return node("str", [this.date(d - 1, true)], ([a]) => `${a}.toISOString()`, 0, true);
+  }
+
+  dateText(d: number): Expr {
+    const r = this.r;
+    return r.weighted<() => Expr>([
+      [3, () => node("str", [this.date(d - 1)], ([a]) => `${a}.toUTCString()`, 0, true)],
+      [2, () => node("str", [this.date(d - 1)], ([a]) => `JSON.stringify(${a})`, 0, true)],
+      [2, () => node("str", [this.date(d - 1), strLit(r.pick(STR_LITS))], ([a, b]) => `${a}.toJSON() ?? ${b}`)],
+    ])();
+  }
+
+  dateUtc(d: number): Expr {
+    const r = this.r;
+    const part = (max: number): Expr => (r.chance(0.15) ? numLit(r.pick([0.5, -0.5, 99.9, 1.5, -1.25]), "float") : this.int(d - 1, max));
+    const parts = [part(200_000), part(10_000), part(1_000_000), part(1_000_000), part(1_000_000), part(1_000_000)].slice(0, r.int(1, 6));
+    if (parts.length === 6 && r.chance(0.5)) parts.push(this.num(d - 1));
+    return node("float", parts, (xs) => `Date.UTC(${xs.join(", ")})`, 0, true);
+  }
+
+  dateOrder(d: number): Expr {
+    const op = this.r.pick(["<", ">", "<=", ">="]);
+    return node("bool", [this.date(d - 1), this.date(d - 1)], ([a, b]) => `${a} ${op} ${b}`);
   }
 
   arrow(of: Spec, lone: boolean, body: () => Expr): { params: string; body: Expr } {
@@ -1364,6 +1387,7 @@ class Gen {
       }],
       [3, () => this.fromList(d) ?? leaf()],
       [this.dateWeight(2), () => this.isoString(d)],
+      [this.dateWeight(2), () => this.dateText(d)],
       [1, () => node("str", [this.num(d - 1)], ([a]) => `String(${a})`, 0, true)],
       [1, () => node("str", [this.num(d - 1)], ([a]) => `${recv(a)}.toString()`, 0, true)],
       [
@@ -1497,6 +1521,7 @@ class Gen {
     if (d <= 0 || r.chance(0.3)) return leaf();
     const options: [number, () => Expr][] = [
       [this.dateWeight(3), () => this.dateNum(d)],
+      [1, () => this.dateUtc(d)],
       [4, () => { const op = r.pick(["+", "-", "*"]); const [a, b] = r.chance(0.5) ? [this.float(d - 1), this.num(d - 1)] : [this.num(d - 1), this.float(d - 1)]; return node("float", [a, b], ([x, y]) => `${x} ${op} ${y}`); }],
       [3, () => node("float", [this.num(d - 1), this.num(d - 1)], ([x, y]) => `${x} / ${y}`)],
       [1, () => node("float", [this.float(d - 1), this.num(d - 1)], ([x, y]) => `${x} % ${y}`)],
@@ -1551,6 +1576,7 @@ class Gen {
       [2, () => node("bool", [this.bool(d - 1), this.bool(d - 1)], ([a, b]) => `${a} || ${b}`)],
       [2, () => { const m = r.pick(["includes", "startsWith", "endsWith"]); const lit = r.pick(STR_LITS); return node("bool", [this.str(d - 1)], ([a]) => `${recv(a)}.${m}('${lit}')`, 0, true); }],
       [strLists.length ? 1 : 0, () => atom("bool", `${r.pick(strLists).name}.includes('${r.pick(STR_LITS)}')`)],
+      [this.dateWeight(2), () => this.dateOrder(d)],
     ];
     return r.weighted(options)();
   }
@@ -1595,6 +1621,7 @@ class Gen {
       [3, () => this.float(d)],
       [2, () => this.bool(d)],
       [opts.length ? 2 : 0, () => this.varRef(r.pick(opts))],
+      [this.dateWeight(1), () => node("str", [this.date(d - 1)], ([a]) => `${a}.toJSON()`, 0, true)],
       [0.1, () => atom("int", r.pick(["1e21", "1e20", "2e3", "9007199254740993"]), LIMIT)],
     ])();
   }

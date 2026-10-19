@@ -194,7 +194,7 @@ function json(s: Scope, v: Val, n: N): string {
       case "bool":
         return `(if ${condition(code)} { "true" } else { "false" }).to_owned()`;
       default:
-        return fail(s.comp, "FV0707", "`JSON.stringify()` of a string, a number, a boolean or a list of those, present", n);
+        return claim((p) => p.values?.json?.({ code, ty })) ?? fail(s.comp, "FV0707", "`JSON.stringify()` of a string, a number, a boolean, a date or a list of those, present", n);
     }
   };
   if (v.ty.k === "list") {

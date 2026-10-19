@@ -10,18 +10,20 @@ const ZONES = ["Pacific/Kiritimati", "America/St_Johns", "Asia/Kathmandu", "UTC"
 type Vector = [string, string, unknown];
 
 const VECTORS = (JSON.parse(readFileSync(join(import.meta.dirname, "../../../crates/ferrovue/tests/vectors/dates.json"), "utf8")) as Vector[]).filter(
-  ([op, , want]) => op !== "parse" || want !== null,
+  ([op, , want]) => (op !== "parse" && op !== "UTC") || want !== null,
 );
 
 function differences(vectors: Vector[]): string[] {
   const shown = (x: number): string => (Object.is(x, -0) ? "-0" : String(x));
   const run = (op: string, input: string): unknown => {
     if (op === "parse") return shown(Date.parse(input));
+    if (op === "UTC") return shown(Date.UTC(...(input.split(",").map(Number) as [number])));
     if (op === "Date") return shown(new Date(Number(input)).getTime());
+    if (op === "stringify") return JSON.stringify(new Date(Number(input)));
     const date = new Date(Number(input)) as unknown as Record<string, () => unknown>;
     try {
       const got = date[op]!.call(date);
-      return typeof got === "string" ? got : shown(got as number);
+      return got === null || typeof got === "string" ? got : shown(got as number);
     } catch (e) {
       return e instanceof RangeError ? { throws: "RangeError" } : String(e);
     }

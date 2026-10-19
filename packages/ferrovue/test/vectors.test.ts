@@ -12,7 +12,7 @@ import { createHead } from "@unhead/vue/server";
 import { isComment } from "../src/template.ts";
 import { seoMetaKey } from "../src/plugins/head.ts";
 import { type Call, headCases } from "./head-inputs.ts";
-import { portableTime } from "../src/plugins/dates.ts";
+import { portableTime, portableUtc } from "../src/plugins/dates.ts";
 import { DATE_METHODS, dateCases } from "./date-inputs.ts";
 
 const DIR = join(import.meta.dirname, "../../../crates/ferrovue/tests/vectors");
@@ -78,7 +78,7 @@ describe("vectors shared with the Rust crate", () => {
       ["keys.json", 8],
       ["json.json", 12],
       ["head.json", 458],
-      ["dates.json", 5000],
+      ["dates.json", 6800],
       ["escape.json", 10, CORE],
       ["numbers.json", 370, CORE],
       ["math.json", 715, CORE],
@@ -264,18 +264,25 @@ describe("vectors shared with the Rust crate", () => {
   });
 
   // `[op, input, expected]`: `Date.parse` of a string, `null` where ferrovue refuses it as outside the
-  // format every engine reads alike, or `new Date(Number(input))` and a method read from it, a
-  // number written as `String` writes it with `-0` told apart, and `{ throws }` the error thrown.
-  it("dates.json is Date.parse, new Date and the UTC methods", () => {
+  // format every engine reads alike; `new Date(Number(input))` and a method read from it or
+  // `JSON.stringify` of it, a number written as `String` writes it with `-0` told apart, and
+  // `{ throws }` the error thrown; and `Date.UTC` of the parts joined in `input`, `null` where
+  // ferrovue refuses them as computed differently by each engine.
+  it("dates.json is Date.parse, new Date, Date.UTC, the UTC methods and JSON.stringify", () => {
     const shown = (x: number): string => (Object.is(x, -0) ? "-0" : String(x));
     const run = (op: string, input: string): unknown => {
       if (op === "parse") return portableTime(input) === undefined ? null : shown(Date.parse(input));
+      if (op === "UTC") {
+        const parts = input.split(",").map(Number) as [number, ...number[]];
+        return portableUtc(parts) ? shown(Date.UTC(...parts)) : null;
+      }
       const date = new Date(Number(input));
       if (op === "Date") return shown(date.getTime());
+      if (op === "stringify") return JSON.stringify(date);
       try {
         const method = op as (typeof DATE_METHODS)[number];
         const got = date[method]();
-        return typeof got === "string" ? got : shown(got);
+        return got === null || typeof got === "string" ? got : shown(got);
       } catch (e) {
         if (e instanceof RangeError) return { throws: "RangeError" };
         throw e;

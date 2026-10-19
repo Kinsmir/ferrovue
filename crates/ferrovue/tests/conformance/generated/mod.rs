@@ -44,6 +44,7 @@ pub mod css_vars_wait;
 pub mod dashboard;
 pub mod data_list;
 pub mod data_table;
+pub mod date_formats;
 pub mod date_post;
 pub mod date_stamp;
 pub mod dates;
@@ -415,6 +416,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "DataTable" => {
             let props: data_table::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             data_table::render(&mut out, &props);
+        }
+        "DateFormats" => {
+            let props: date_formats::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            date_formats::render(&mut out, &props);
         }
         "DatePost" => {
             let props: date_post::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
