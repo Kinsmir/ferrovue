@@ -20,8 +20,8 @@ const CORE = join(import.meta.dirname, "../../../crates/ferrovue-core/tests/vect
 const read = (name: string, dir = DIR): unknown => JSON.parse(readFileSync(join(dir, name), "utf8"));
 
 /** A vector file written one vector per line: thousands of them stay readable in a diff. */
-function writeVectors(name: string, vectors: unknown[]): void {
-  writeFileSync(join(DIR, name), `[\n${vectors.map((v) => JSON.stringify(v)).join(",\n")}\n]\n`);
+function writeVectors(name: string, vectors: unknown[], dir = DIR): void {
+  writeFileSync(join(dir, name), `[\n${vectors.map((v) => JSON.stringify(v)).join(",\n")}\n]\n`);
 }
 
 /** One string method applied as `strings.json` describes it, its result as a server sends it. */
@@ -82,6 +82,7 @@ describe("vectors shared with the Rust crate", () => {
       ["escape.json", 10, CORE],
       ["numbers.json", 370, CORE],
       ["math.json", 715, CORE],
+      ["precision.json", 9000, CORE],
     ];
     expect(floors.map(([name, least, dir]) => [name, Math.min((read(name, dir) as unknown[]).length, least)])).toEqual(floors.map(([name, least]) => [name, least]));
   });
@@ -152,6 +153,17 @@ describe("vectors shared with the Rust crate", () => {
       return;
     }
     expect(vectors).toEqual(recorded);
+  });
+
+  it("precision.json is toPrecision and toExponential", () => {
+    const run = (op: string, x: string, arg: string): string => {
+      const n = Number(x);
+      const a = arg === "" ? undefined : Number(arg);
+      return op === "toPrecision" ? n.toPrecision(a) : n.toExponential(a);
+    };
+    const recorded = precisionCases().map(([op, x, arg]) => [op, x, arg, run(op, x, arg)]);
+    if (process.env.FERROVUE_VECTORS_WRITE === "1") return writeVectors("precision.json", recorded, CORE);
+    expect(read("precision.json", CORE)).toEqual(recorded);
   });
 
   // `[entries, expected]`: a class object as `[name, condition]` pairs in source order, which
@@ -294,6 +306,62 @@ describe("vectors shared with the Rust crate", () => {
     expect(read("head.json")).toEqual(recorded);
   });
 });
+
+const PRECISION_EDGES = [
+  0, -0, NaN, Infinity, -Infinity, 1, -1, 0.5, -0.5, 1.5, 2.5, -2.5, 0.125, 0.375, 1.25, 1.005, 1.45, 4.35, 8.345, 0.1, 0.3, 0.1 + 0.2,
+  123.456, -123.456, 9.5, 99.5, 999.5, 0.95, 9.995, 99.99, 999999.5, 1e-6, 1e-7, 1.5e-7, 0.0000015, 0.000001234, 1e-5, 123456, 1234567,
+  1e15, 1e20, 1e21, 999999999999999900000, 1.0000000000000001e21, 123456789012345680000, 2 ** 53, 2 ** 53 + 2, -(2 ** 63), 1e100,
+  1.7976931348623157e308, -1.7976931348623157e308, 2.2250738585072014e-308, 2.225073858507201e-308, 5e-324, -5e-324, 1e-323, 2 ** -1074 * 3,
+  2 ** -100, 2 ** -60, 2 ** 70, 2 ** 1023, Number.EPSILON, 1 / 3, 2 / 3, Math.PI, Math.E, 0.045, 0.055, 5.55, 1.15,
+];
+
+function precisionPrng(seed: number): () => number {
+  let s = seed >>> 0;
+  return () => {
+    s = (s + 0x6d2b79f5) >>> 0;
+    let t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function drawnNumber(rand: () => number): number {
+  const int = (n: number): number => Math.floor(rand() * n);
+  const sign = rand() < 0.5 ? -1 : 1;
+  const r = rand();
+  if (r < 0.4) {
+    const bits = new DataView(new ArrayBuffer(8));
+    bits.setUint32(0, ((sign < 0 ? 0x80000000 : 0) | (int(2047) << 20) | int(1 << 20)) >>> 0);
+    bits.setUint32(4, int(2 ** 32));
+    return bits.getFloat64(0);
+  }
+  if (r < 0.6) return sign * int(2 ** 30) * 10 ** (int(40) - 20);
+  if (r < 0.8) return (sign * (2 * int(2 ** 20) + 1)) / 2 ** (1 + int(30));
+  return sign * (int(10 ** 6) + 0.5) * 10 ** (int(30) - 15);
+}
+
+function precisionCases(): [string, string, string][] {
+  const rand = precisionPrng(20261019);
+  const text = (x: number): string => (Object.is(x, -0) ? "-0" : String(x));
+  const some = ["", "0", "1", "2", "3", "5", "10", "16", "17", "20", "21", "50", "100"];
+  const cases: [string, string, string][] = [];
+  PRECISION_EDGES.forEach((x, i) => {
+    const args = i % 3 === 0 ? ["", ...Array.from({ length: 101 }, (_, k) => String(k))] : some;
+    for (const arg of args) {
+      if (arg !== "0") cases.push(["toPrecision", text(x), arg]);
+      cases.push(["toExponential", text(x), arg]);
+    }
+  });
+  for (let i = 0; i < 1500; i++) {
+    const x = text(drawnNumber(rand));
+    cases.push(["toPrecision", x, String(1 + Math.floor(rand() * 100))]);
+    cases.push(["toExponential", x, String(Math.floor(rand() * 101))]);
+    if (i % 3 === 0) cases.push(["toExponential", x, ""]);
+    if (i % 10 === 0) cases.push(["toPrecision", x, ""]);
+  }
+  return cases;
+}
 
 function encoded(v: unknown): unknown {
   if (v === undefined) return { $u: 1 };

@@ -1374,6 +1374,20 @@ class Gen {
         },
       ],
       [
+        2,
+        () => {
+          const p = r.pick(["", "", "1", "1", "2", "3", "3", "4", "6", "10", "16", "17", "21", "2.5", "100"]);
+          return node("str", [this.num(d - 1)], ([a]) => `${recv(a)}.toPrecision(${p})`, 0, true);
+        },
+      ],
+      [
+        2,
+        () => {
+          const f = r.pick(["", "", "0", "0", "1", "2", "2", "3", "5", "15", "16", "20", "1.5", "100"]);
+          return node("str", [this.num(d - 1)], ([a]) => `${recv(a)}.toExponential(${f})`, 0, true);
+        },
+      ],
+      [
         lists.length ? 2 : 0,
         () => {
           const l = r.pick(lists);

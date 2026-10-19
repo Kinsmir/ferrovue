@@ -1,5 +1,6 @@
 import { type N, type Scope, type Ty, type Val, BOOL, fail, FLOAT, INT, sameTy, STR } from "./model.ts";
 import { ctx } from "./context.ts";
+import type { Code } from "./errors.ts";
 import { claim } from "./plugin.ts";
 import { atom, bare, binary, condition, operand, receiver, strArg, UNARY } from "./parens.ts";
 import { computedListMethod, isBoolean, items, listMethod, objectCall, presentLiteral } from "./lists.ts";
@@ -7,6 +8,12 @@ import { lonely, loneOf, meet, stringMethod, stringsEqual } from "./strings.ts";
 import { asF64, intFromF64, isNumber } from "./numbers.ts";
 import { boolOf, truthy } from "./narrowing.ts";
 import { coerce, expr } from "./expr.ts";
+
+const DIGITS = new Map<string, [Code, number, string]>([
+  ["toFixed", ["FV0705", 0, "number of digits"]],
+  ["toPrecision", ["FV0716", 1, "precision"]],
+  ["toExponential", ["FV0717", 0, "number of digits"]],
+]);
 
 export function call(s: Scope, n: N): Val {
   const comp = s.comp;
@@ -125,12 +132,17 @@ export function call(s: Scope, n: N): Val {
       const m = stringMethod(s, target, method, args, n);
       if (m) return m;
     }
-    if (isNumber(target.ty) && method === "toFixed" && args.length <= 1) {
-      const d = args.length ? args[0] : { type: "NumericLiteral", value: 0 };
-      if (d.type !== "NumericLiteral" || !Number.isInteger(d.value) || d.value < 0 || d.value > 100) {
-        fail(comp, "FV0705", "`.toFixed()` takes a literal number of digits, from 0 to 100", n);
-      }
-      return { code: `&*fv::js_to_fixed(${bare(asF64(target))}, ${d.value})`, ty: STR };
+    const digits = isNumber(target.ty) && args.length <= 1 ? DIGITS.get(method) : undefined;
+    if (digits) {
+      const [code, low, what] = digits;
+      const a = args[0];
+      const given = a === undefined || (a.type === "Identifier" && a.name === "undefined") ? undefined : a.type === "NumericLiteral" ? Math.trunc(a.value) : NaN;
+      if (given !== undefined && !(given >= low && given <= 100)) fail(comp, code, `\`.${method}()\` takes a literal ${what}, from ${low} to 100`, n);
+      const x = bare(asF64(target));
+      if (method === "toFixed") return { code: `&*fv::js_to_fixed(${x}, ${given ?? 0})`, ty: STR };
+      if (method === "toExponential") return { code: `&*fv::js_to_exponential(${x}, ${given === undefined ? "None" : `Some(${given})`})`, ty: STR };
+      if (given === undefined) return { code: `&*fv::Js(${bare(target.code)}).to_string()`, ty: STR };
+      return { code: `&*fv::js_to_precision(${x}, ${given})`, ty: STR };
     }
     if (isNumber(target.ty) && method === "toString" && args.length === 0) {
       return { code: `&*fv::Js(${bare(target.code)}).to_string()`, ty: STR };

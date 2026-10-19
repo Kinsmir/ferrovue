@@ -1440,7 +1440,7 @@ defineProps<{ n: number }>();
 
 <template>
   <div>
-    <p>{{ n.toPrecision(2) }}</p>
+    <p>{{ n.toLocaleString() }}</p>
   </div>
 </template>`)).toBe("components/X.vue:7:11");
     });
@@ -1456,7 +1456,7 @@ defineProps<{ a: string }>();
       expect(where(`<script setup lang="ts">
 defineProps<{ n: number }>();
 </script>
-<template><b>{{ n.toPrecision(2) }}</b></template>`)).toBe("components/X.vue:4:17");
+<template><b>{{ n.toLocaleString() }}</b></template>`)).toBe("components/X.vue:4:17");
     });
 
     it("points at a setup statement and a prop type", () => {
@@ -1479,8 +1479,8 @@ defineProps<{
         compile(island(`<script setup lang="ts">
 defineProps<{ n: number }>();
 </script>
-<template><b>{{ n.toPrecision(2) }}</b></template>`)),
-      ).toThrow(" 4 | <template><b>{{ n.toPrecision(2) }}</b></template>\n   |                 ^");
+<template><b>{{ n.toLocaleString() }}</b></template>`)),
+      ).toThrow(" 4 | <template><b>{{ n.toLocaleString() }}</b></template>\n   |                 ^");
     });
   });
 
@@ -1560,6 +1560,23 @@ defineProps<{ price: Float; qty: number; rate?: Float }>();
       expect(out).toContain("fv::js_round(props.price)");
       expect(out).toContain("props.rate.unwrap_or(0.5f64)");
       expect(out).toContain("fv::push_int(out, (props.qty as f64 % 3.0) as i64);");
+    });
+
+    it("writes toPrecision and toExponential with the runtime's twins, a fractional argument truncated as for toFixed", () => {
+      const source = numbers.replace(
+        "{{ qty % 3 }}",
+        "{{ qty % 3 }}|{{ price.toPrecision(3) }}|{{ qty.toPrecision(100.5) }}|{{ price.toPrecision() }}|{{ qty.toPrecision(undefined) }}|{{ price.toExponential(0) }}|{{ qty.toExponential(2.9) }}|{{ price.toExponential() }}|{{ price.toExponential(undefined) }}|{{ price.toFixed(1.5) }}|{{ qty.toFixed(undefined) }}",
+      );
+      const out = compile(island(source)).get("x.rs")!;
+      expect(out).toContain("fv::js_to_precision(props.price, 3)");
+      expect(out).toContain("fv::js_to_fixed(props.price, 1)");
+      expect(out).toContain("fv::js_to_fixed(props.qty as f64, 0)");
+      expect(out).toContain("fv::js_to_precision(props.qty as f64, 100)");
+      expect(out).toContain("fv::Js(props.price).to_string()");
+      expect(out).toContain("fv::Js(props.qty).to_string()");
+      expect(out).toContain("fv::js_to_exponential(props.price, Some(0))");
+      expect(out).toContain("fv::js_to_exponential(props.qty as f64, Some(2))");
+      expect(out.match(/fv::js_to_exponential\(props\.price, None\)/g)).toHaveLength(2);
     });
 
     it("refuses toFixed with digits that are not a literal", () => {
@@ -3275,6 +3292,62 @@ const props = defineProps<{ a: string; extra: Record<string, string> }>();
 <template><i v-bind="props.extra">{{ a }}</i></template>`,
       /`_mergeProps` of object literals is supported/,
     ],
+    [
+      "a precision of 0 for toPrecision, which throws",
+      `<script setup lang="ts">
+defineProps<{ n: number; p: number }>();
+</script>
+<template><p>{{ n.toPrecision(0) }}</p></template>`,
+      /`\.toPrecision\(\)` takes a literal precision, from 1 to 100/,
+    ],
+    [
+      "a precision that truncates to 0 for toPrecision",
+      `<script setup lang="ts">
+defineProps<{ n: number; p: number }>();
+</script>
+<template><p>{{ n.toPrecision(0.9) }}</p></template>`,
+      /`\.toPrecision\(\)` takes a literal precision, from 1 to 100/,
+    ],
+    [
+      "a precision above 100 for toPrecision",
+      `<script setup lang="ts">
+defineProps<{ n: number; p: number }>();
+</script>
+<template><p>{{ n.toPrecision(101) }}</p></template>`,
+      /`\.toPrecision\(\)` takes a literal precision, from 1 to 100/,
+    ],
+    [
+      "a precision for toPrecision that is not a literal",
+      `<script setup lang="ts">
+defineProps<{ n: number; p: number }>();
+</script>
+<template><p>{{ n.toPrecision(p) }}</p></template>`,
+      /`\.toPrecision\(\)` takes a literal precision, from 1 to 100/,
+    ],
+    [
+      "more than 100 digits for toExponential",
+      `<script setup lang="ts">
+defineProps<{ n: number; p: number }>();
+</script>
+<template><p>{{ n.toExponential(101) }}</p></template>`,
+      /`\.toExponential\(\)` takes a literal number of digits, from 0 to 100/,
+    ],
+    [
+      "a negative number of digits for toExponential",
+      `<script setup lang="ts">
+defineProps<{ n: number; p: number }>();
+</script>
+<template><p>{{ n.toExponential(-1) }}</p></template>`,
+      /`\.toExponential\(\)` takes a literal number of digits, from 0 to 100/,
+    ],
+    [
+      "a number of digits for toExponential that is not a literal",
+      `<script setup lang="ts">
+defineProps<{ n: number; p: number }>();
+</script>
+<template><p>{{ n.toExponential(p) }}</p></template>`,
+      /`\.toExponential\(\)` takes a literal number of digits, from 0 to 100/,
+    ],
   ];
 
   const children = {
@@ -3312,6 +3385,13 @@ defineProps<{ onSale?: boolean }>();
     "two halves of surrogate pairs compared, which JavaScript tells apart": "FV0706",
     "a negative literal count for repeat, which throws": "FV0714",
     "toLocaleUpperCase, which depends on the server's locale": "FV0715",
+    "a precision of 0 for toPrecision, which throws": "FV0716",
+    "a precision that truncates to 0 for toPrecision": "FV0716",
+    "a precision above 100 for toPrecision": "FV0716",
+    "a precision for toPrecision that is not a literal": "FV0716",
+    "more than 100 digits for toExponential": "FV0717",
+    "a negative number of digits for toExponential": "FV0717",
+    "a number of digits for toExponential that is not a literal": "FV0717",
     "replace with a regular expression": "FV0710",
     "an arrow function with a block body": "FV0806",
     "Object.entries outside a v-for": "FV0816",

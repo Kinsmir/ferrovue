@@ -116,6 +116,7 @@ pub mod placed_html;
 pub mod plain_box;
 pub mod plain_forward;
 pub mod plurals;
+pub mod precision;
 pub mod prices;
 pub mod props_object;
 pub mod prose;
@@ -764,6 +765,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let i18n = i18n::i18n(fixture.locale.as_deref().unwrap_or(i18n::LOCALE));
             plurals::render(&mut out, &props, &i18n);
+        }
+        "Precision" => {
+            let props: precision::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            precision::render(&mut out, &props);
         }
         "Prices" => {
             let props: prices::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

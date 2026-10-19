@@ -295,10 +295,10 @@ Every error has a stable code, `FV` and four digits, listed in
 the message, the line quoted with a caret, and where the code is documented:
 
 ```text
-error[FV0602]: components/Card.vue:4:17: `.toPrecision()` is not supported
- 4 | <template><p>{{ n.toPrecision(2) }}</p></template>
+error[FV1805]: components/Card.vue:4:17: `.toLocaleString()` formats by locale with `Intl`, whose output differs between Node, Chromium, Firefox and Safari: format the value in Rust and pass a string, or translate it with `$t` (see the `dates_and_prices` guide)
+ 4 | <template><p>{{ n.toLocaleString() }}</p></template>
    |                 ^
- = docs: https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#fv0602
+ = docs: https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#fv1805
 ```
 
 `--format json` writes one JSON object per run to standard output instead, for an editor, a CI
@@ -318,11 +318,11 @@ pnpm ferrovue --format json
       "column": 17,
       "endLine": null,
       "endColumn": null,
-      "code": "FV0602",
+      "code": "FV1805",
       "severity": "error",
-      "title": "Unsupported method",
-      "message": "`.toPrecision()` is not supported",
-      "docs": "https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#fv0602"
+      "title": "Locale formatting with `Intl`, `.toLocaleString()`, `.localeCompare()`, `$d` or `$n`",
+      "message": "`.toLocaleString()` formats by locale with `Intl`, whose output differs between Node, Chromium, Firefox and Safari: format the value in Rust and pass a string, or translate it with `$t` (see the `dates_and_prices` guide)",
+      "docs": "https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#fv1805"
     }
   ]
 }
@@ -409,14 +409,14 @@ window):
 }
 ```
 
-A refused `{{ n.toPrecision(2) }}` is then underlined at `n`, and its hover and the Problems panel
+A refused `{{ n.toLocaleString() }}` is then underlined at `n`, and its hover and the Problems panel
 read:
 
 ```text
-ferrovue: `.toPrecision()` is not supported  vue(FV0602)
+ferrovue: `.toLocaleString()` formats by locale with `Intl`, whose output differs between Node, Chromium, Firefox and Safari: format the value in Rust and pass a string, or translate it with `$t` (see the `dates_and_prices` guide)  vue(FV1805)
 ```
 
-where `FV0602` opens the error's documentation.
+where `FV1805` opens the error's documentation.
 
 - An error in the template is underlined on the construct. Vue's language server checks the inside
   of `<script setup>` and `<style>` through TypeScript and CSS only, so an error there is underlined

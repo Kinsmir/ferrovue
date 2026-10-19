@@ -83,7 +83,8 @@ pub use web::HtmlStream;
 
 #[doc(inline)]
 pub use ferrovue_core::{
-    Js, escape_into, js_max, js_min, js_round, js_to_fixed, push_int, push_number,
+    Js, escape_into, js_max, js_min, js_round, js_to_exponential, js_to_fixed, js_to_precision,
+    push_int, push_number,
 };
 #[cfg(feature = "i18n")]
 #[cfg_attr(docsrs, doc(cfg(feature = "i18n")))]

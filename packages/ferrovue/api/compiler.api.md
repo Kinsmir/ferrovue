@@ -489,6 +489,12 @@ export const ERRORS: {
     readonly FV0715: {
         readonly title: "Case mapping by the server's locale";
     };
+    readonly FV0716: {
+        readonly title: "`.toPrecision()` without a literal precision from 1 to 100";
+    };
+    readonly FV0717: {
+        readonly title: "`.toExponential()` without a literal number of digits from 0 to 100";
+    };
     readonly FV0801: {
         readonly title: "`.includes()` of a value of another type than the list's";
     };

@@ -149,6 +149,34 @@ pub fn push_number(out: &mut String, x: f64) {
         push_decimal(out, x as u64);
         return;
     }
+    let (digits, exp) = shortest_digits(x);
+    let digits = digits.as_str();
+    let k = digits.len() as i32;
+    let n = exp + 1;
+    if k <= n && n <= 21 {
+        out.push_str(digits);
+        out.extend(std::iter::repeat_n('0', (n - k) as usize));
+    } else if 0 < n && n <= 21 {
+        out.push_str(&digits[..n as usize]);
+        out.push('.');
+        out.push_str(&digits[n as usize..]);
+    } else if -6 < n && n <= 0 {
+        out.push_str("0.");
+        out.extend(std::iter::repeat_n('0', (-n) as usize));
+        out.push_str(digits);
+    } else {
+        out.push_str(&digits[..1]);
+        if k > 1 {
+            out.push('.');
+            out.push_str(&digits[1..]);
+        }
+        let e = n - 1;
+        let _ = write!(out, "e{}{}", if e < 0 { '-' } else { '+' }, e.abs());
+    }
+}
+
+fn shortest_digits(x: f64) -> (Short, i32) {
+    use std::fmt::Write;
     let mut sci = Short::new();
     let _ = write!(sci, "{x:e}");
     let (mantissa, exp) = sci
@@ -176,29 +204,7 @@ pub fn push_number(out: &mut String, x: f64) {
             }
         }
     }
-    let digits = digits.as_str();
-    let k = digits.len() as i32;
-    let n = exp + 1;
-    if k <= n && n <= 21 {
-        out.push_str(digits);
-        out.extend(std::iter::repeat_n('0', (n - k) as usize));
-    } else if 0 < n && n <= 21 {
-        out.push_str(&digits[..n as usize]);
-        out.push('.');
-        out.push_str(&digits[n as usize..]);
-    } else if -6 < n && n <= 0 {
-        out.push_str("0.");
-        out.extend(std::iter::repeat_n('0', (-n) as usize));
-        out.push_str(digits);
-    } else {
-        out.push_str(&digits[..1]);
-        if k > 1 {
-            out.push('.');
-            out.push_str(&digits[1..]);
-        }
-        let e = n - 1;
-        let _ = write!(out, "e{}{}", if e < 0 { '-' } else { '+' }, e.abs());
-    }
+    (digits, exp)
 }
 
 fn few_exact_digits(x: f64) -> Option<(Short, i32)> {
@@ -331,7 +337,6 @@ pub fn js_min(a: f64, b: f64) -> f64 {
 /// ```
 #[must_use]
 pub fn js_to_fixed(x: f64, digits: u32) -> String {
-    use std::fmt::Write;
     if x.is_nan() {
         return "NaN".to_owned();
     }
@@ -341,41 +346,183 @@ pub fn js_to_fixed(x: f64, digits: u32) -> String {
         return s;
     }
     let d = digits as usize;
-    let mut out = String::new();
-    let _ = write!(out, "{:.*}", d, x.abs());
-    let mut exact = String::new();
-    let _ = write!(exact, "{:.1100}", x.abs());
-    let exact = exact.trim_end_matches('0');
-    let fraction = exact.split_once('.').map_or("", |(_, f)| f);
-    if fraction.len() == d + 1 && fraction.ends_with('5') {
-        out = round_up_magnitude(&exact[..exact.len() - 1]);
-    }
+    let (exact, exp) = exact_digits(x);
+    let scaled = match usize::try_from(exp + 1 + digits as i32) {
+        Ok(0) => if exact.as_bytes()[0] >= b'5' {
+            "1"
+        } else {
+            "0"
+        }
+        .to_owned(),
+        Ok(keep) => rounded_half_up(&exact, keep),
+        Err(_) => "0".to_owned(),
+    };
+    let mut out = String::with_capacity(d + 3);
     if x < 0.0 {
-        out.insert(0, '-');
+        out.push('-');
+    }
+    out.extend(std::iter::repeat_n(
+        '0',
+        (d + 1).saturating_sub(scaled.len()),
+    ));
+    out.push_str(&scaled);
+    if d > 0 {
+        out.insert(out.len() - d, '.');
     }
     out
 }
 
-fn round_up_magnitude(digits: &str) -> String {
-    let digits = digits.trim_end_matches('.');
-    let mut bytes: Vec<u8> = digits.bytes().collect();
-    let mut i = bytes.len();
-    loop {
-        if i == 0 {
-            bytes.insert(0, b'1');
-            break;
-        }
-        i -= 1;
-        match bytes[i] {
-            b'.' => continue,
-            b'9' => bytes[i] = b'0',
-            d => {
-                bytes[i] = d + 1;
-                break;
-            }
-        }
+/// `Number.prototype.toPrecision(precision)`: the number rounded to `precision` significant
+/// digits, from its exact binary value, an exact tie rounding away from zero. It is written with
+/// an exponent (`1.2e+5`, `1.2e-7`) when the exponent is below -6 or at least `precision`, and
+/// without one otherwise; `NaN` and the infinities are written as `String(x)` writes them.
+/// `toPrecision()` without an argument is `String(x)`, which [`push_number`] writes.
+///
+/// # Panics
+///
+/// When `precision` is 0 or above 100 and `x` is finite, where JavaScript throws a `RangeError`.
+///
+/// # Example
+///
+/// ```
+/// # use ferrovue_core as ferrovue;
+/// use ferrovue::js_to_precision;
+///
+/// assert_eq!(js_to_precision(123.456, 4), "123.5");
+/// assert_eq!(js_to_precision(123_456.0, 2), "1.2e+5");
+/// assert_eq!(js_to_precision(0.000_001_5, 2), "0.0000015");
+/// assert_eq!(js_to_precision(2.5, 1), "3"); // an exact tie, away from zero
+/// assert_eq!(js_to_precision(-0.0, 3), "0.00");
+/// ```
+#[must_use]
+pub fn js_to_precision(x: f64, precision: u32) -> String {
+    use std::fmt::Write;
+    if !x.is_finite() {
+        let mut s = String::new();
+        push_number(&mut s, x);
+        return s;
     }
-    String::from_utf8(bytes).expect("ASCII digits")
+    assert!(
+        (1..=100).contains(&precision),
+        "toPrecision() takes a precision from 1 to 100: {precision} was given"
+    );
+    let p = precision as usize;
+    let (digits, e) = significant(x, p);
+    let mut out = String::with_capacity(p + 8);
+    if x < 0.0 {
+        out.push('-');
+    }
+    if e < -6 || e >= precision as i32 {
+        push_mantissa(&mut out, &digits);
+        let _ = write!(out, "e{}{}", if e < 0 { '-' } else { '+' }, e.abs());
+    } else if let Ok(point) = usize::try_from(e) {
+        let whole = point + 1;
+        out.push_str(&digits[..whole]);
+        if whole < p {
+            out.push('.');
+            out.push_str(&digits[whole..]);
+        }
+    } else {
+        out.push_str("0.");
+        out.extend(std::iter::repeat_n('0', (-e - 1) as usize));
+        out.push_str(&digits);
+    }
+    out
+}
+
+/// `Number.prototype.toExponential(fractionDigits)`: the number written with one digit before the
+/// point and an exponent, `1.23e+5`. Given `Some(f)`, the digits are rounded to `f` places after
+/// the point from the number's exact binary value, an exact tie rounding away from zero; given
+/// `None`, as `toExponential()` without an argument, they are as many as it takes to tell the
+/// number from every other, the digits `String(x)` writes. `NaN` and the infinities are written as
+/// `String(x)` writes them.
+///
+/// # Panics
+///
+/// When `fraction_digits` is above 100 and `x` is finite, where JavaScript throws a `RangeError`.
+///
+/// # Example
+///
+/// ```
+/// # use ferrovue_core as ferrovue;
+/// use ferrovue::js_to_exponential;
+///
+/// assert_eq!(js_to_exponential(123_456.0, Some(2)), "1.23e+5");
+/// assert_eq!(js_to_exponential(0.000_15, None), "1.5e-4");
+/// assert_eq!(js_to_exponential(1.25, Some(1)), "1.3e+0"); // an exact tie, away from zero
+/// assert_eq!(js_to_exponential(-0.0, None), "0e+0");
+/// ```
+#[must_use]
+pub fn js_to_exponential(x: f64, fraction_digits: Option<u32>) -> String {
+    use std::fmt::Write;
+    if !x.is_finite() {
+        let mut s = String::new();
+        push_number(&mut s, x);
+        return s;
+    }
+    let (digits, e) = match fraction_digits {
+        Some(f) => {
+            assert!(
+                f <= 100,
+                "toExponential() takes from 0 to 100 fraction digits: {f} were given"
+            );
+            significant(x, f as usize + 1)
+        }
+        None if x == 0.0 => ("0".to_owned(), 0),
+        None => {
+            let (digits, e) = shortest_digits(x.abs());
+            (digits.as_str().to_owned(), e)
+        }
+    };
+    let mut out = String::with_capacity(digits.len() + 8);
+    if x < 0.0 {
+        out.push('-');
+    }
+    push_mantissa(&mut out, &digits);
+    let _ = write!(out, "e{}{}", if e < 0 { '-' } else { '+' }, e.abs());
+    out
+}
+
+fn push_mantissa(out: &mut String, digits: &str) {
+    out.push_str(&digits[..1]);
+    if digits.len() > 1 {
+        out.push('.');
+        out.push_str(&digits[1..]);
+    }
+}
+
+fn significant(x: f64, keep: usize) -> (String, i32) {
+    let (exact, e) = exact_digits(x);
+    let mut digits = rounded_half_up(&exact, keep);
+    if digits.len() > keep {
+        digits.truncate(keep);
+        (digits, e + 1)
+    } else {
+        (digits, e)
+    }
+}
+
+fn exact_digits(x: f64) -> (String, i32) {
+    use std::fmt::Write;
+    let mut s = String::new();
+    let _ = write!(s, "{:.800e}", x.abs());
+    let (mantissa, exp) = s.split_once('e').expect("`{:e}` writes an exponent");
+    let exp = exp.parse().expect("`{:e}` writes an integer exponent");
+    let mut digits: String = mantissa.chars().filter(|c| *c != '.').collect();
+    digits.truncate(digits.trim_end_matches('0').len().max(1));
+    (digits, exp)
+}
+
+fn rounded_half_up(exact: &str, keep: usize) -> String {
+    match exact.as_bytes().get(keep) {
+        None => {
+            let mut digits = exact.to_owned();
+            digits.extend(std::iter::repeat_n('0', keep - exact.len()));
+            digits
+        }
+        Some(&next) if next >= b'5' => increment_digits(&exact[..keep]),
+        Some(_) => exact[..keep].to_owned(),
+    }
 }
 
 fn increment_digits(digits: &str) -> String {

@@ -211,6 +211,8 @@ export const ERRORS = {
   FV0713: { title: "Function given to a string method" },
   FV0714: { title: "`.repeat()` by a negative or infinite count" },
   FV0715: { title: "Case mapping by the server's locale" },
+  FV0716: { title: "`.toPrecision()` without a literal precision from 1 to 100" },
+  FV0717: { title: "`.toExponential()` without a literal number of digits from 0 to 100" },
 
   FV0801: { title: "`.includes()` of a value of another type than the list's" },
   FV0802: { title: "`.join()` with a separator that is not a string" },

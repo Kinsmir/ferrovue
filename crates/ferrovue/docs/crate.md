@@ -224,8 +224,8 @@ through its generated code and compare the bytes with the HTML recorded from Vue
 The rest are Rust twins of JavaScript and Vue routines that generated code calls so that it writes
 what Vue writes. Those a hand-written twin or page may call too are documented here:
 
-- numbers: [`push_int`], [`push_number`], [`Js`], [`js_to_fixed`], [`js_round`], [`js_max`] and
-  [`js_min`];
+- numbers: [`push_int`], [`push_number`], [`Js`], [`js_to_fixed`], [`js_to_precision`],
+  [`js_to_exponential`], [`js_round`], [`js_max`] and [`js_min`];
 - Vue's own: [`slot_into`], [`attrs_into`], [`passed_attrs_into`] and [`query_into`].
 
 The others are `#[doc(hidden)]`: JavaScript's string methods counted in UTF-16 code units

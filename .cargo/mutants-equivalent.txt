@@ -16,9 +16,9 @@ crates/ferrovue-core/src/numbers.rs: replace < with <= in push_number
 # end in 25 or 75, so the lower spelling never ends in 9 and `upper.len() == k` always holds; and
 # Rust's shortest formatting always gives the upper spelling of a tie (checked over 3.7 million
 # ties), so `digits == lower` never holds and only `digits == upper` decides.
-crates/ferrovue-core/src/numbers.rs: replace - with + in push_number
-crates/ferrovue-core/src/numbers.rs: replace && with || in push_number
-crates/ferrovue-core/src/numbers.rs: replace == with != in push_number
+crates/ferrovue-core/src/numbers.rs: replace - with + in shortest_digits
+crates/ferrovue-core/src/numbers.rs: replace && with || in shortest_digits
+crates/ferrovue-core/src/numbers.rs: replace == with != in shortest_digits
 
 # The capacity `push_decimal` reserves, with `start` ≥ 4 as `n` ≤ 2⁵³: the characters pushed are the same.
 crates/ferrovue-core/src/numbers.rs: replace - with + in push_decimal
