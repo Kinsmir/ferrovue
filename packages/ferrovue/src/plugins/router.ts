@@ -233,7 +233,7 @@ export const router: Plugin<RouterRun, RouterScope> = {
     const tested = typeofString(n);
     if (!tested) return null;
     const v = expr(s, tested.target);
-    if (v.ty.k !== "query") fail(s.comp, "FV1234", '`typeof` tests a query value only, as `typeof route.query.q === "string"`', n);
+    if (v.ty.k !== "query") return null;
     const one = `${atom(v.code)}.attr_value().is_some()`;
     return boolOf(tested.negated ? not(one) : one);
   },
@@ -242,7 +242,8 @@ export const router: Plugin<RouterRun, RouterScope> = {
     if (!t) return undefined;
     const path = pathOf(t.target);
     const v = expr(s, t.target);
-    if (path === null || v.ty.k !== "query") return null;
+    if (v.ty.k !== "query") return undefined;
+    if (path === null) return null;
     const option = `${atom(v.code)}.attr_value()`;
     return { path, of: STR, negated: t.negated, truthy: false, option, present: `${option}.is_some()`, pattern: (name) => `let Some(${name}) = ${option}` };
   },

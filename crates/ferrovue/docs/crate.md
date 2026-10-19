@@ -225,13 +225,15 @@ The rest are Rust twins of JavaScript and Vue routines that generated code calls
 what Vue writes. Those a hand-written twin or page may call too are documented here:
 
 - numbers: [`push_int`], [`push_number`], [`Js`], [`js_to_fixed`], [`js_to_precision`],
-  [`js_to_exponential`], [`js_round`], [`js_max`] and [`js_min`];
+  [`js_to_exponential`], [`js_round`], [`js_sign`], [`js_max`] and [`js_min`];
+- URIs: [`js_encode_uri_component`] and [`js_encode_uri`];
 - Vue's own: [`slot_into`], [`attrs_into`], [`passed_attrs_into`] and [`query_into`].
 
 The others are `#[doc(hidden)]`: JavaScript's string methods counted in UTF-16 code units
 (`js_length`, `js_slice`, `js_split` and the rest the [`strings`](crate::guide::strings) page
 lists), `Number`, `parseInt`, `parseFloat` and `JSON.stringify` (`js_number`, `js_parse_int`,
-`js_parse_float`, `js_json_number`, `js_json_string`), dates as time values in UTC
+`js_parse_float`, `js_json_number`, `js_json_string`), an optional value written as `String()`
+writes it (`JsOr`), dates as time values in UTC
 (`js_date_parse`, `js_time_clip`, `js_to_iso_string` and `js_utc_full_year` to
 `js_utc_milliseconds`), a `Date` prop handed to a child and written into `data-props`
 (`js_time_of`, `js_date_prop`, `date_prop`, `opt_date_prop`), a list's `slice`, `at`, `reduce` and `toSorted` (`js_slice_range`, `js_slice_items`, `js_item_at`, `js_reduce`, `js_sorted`, `js_sorted_by_string`, `js_order`), and Vue's class, style, scope id, slot outlet, teleport and `v-html` helpers

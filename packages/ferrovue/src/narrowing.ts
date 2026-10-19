@@ -1,9 +1,9 @@
-import { type N, type Scope, type Ty, type Val, absence, BOOL, fail, nothing } from "./model.ts";
+import { type N, type Scope, type Ty, type Val, absence, BOOL, fail, nothing, rustStr, STR } from "./model.ts";
 import { ctx } from "./context.ts";
 import { claim } from "./plugin.ts";
 import { atom, bare, binary, condition, ifElse, logical, not, occurrences, receiver } from "./parens.ts";
 import { isNumber, negatedOrder } from "./numbers.ts";
-import { expr } from "./expr.ts";
+import { describeTy, expr } from "./expr.ts";
 
 export function known(v: Val): boolean | undefined {
   if (v.konst !== undefined) return v.konst;
@@ -84,6 +84,76 @@ export function checkNullTest(s: Scope, t: NullTest, v: Val): void {
   fail(s.comp, "FV0627", `\`${op}= ${t.literal}\` of a value that ${what}: compare with \`${other}\``, t.target);
 }
 
+/** `typeof target === literal`, `!==`, `==` or `!=`, either way round. */
+export interface TypeofCompare {
+  target: N;
+  literal: string;
+  equal: boolean;
+}
+
+export function typeofCompare(n: N): TypeofCompare | null {
+  if (n.type !== "BinaryExpression" || !["===", "!==", "==", "!="].includes(n.operator)) return null;
+  const isTypeof = (m: N) => m.type === "UnaryExpression" && m.operator === "typeof";
+  const [t, lit] = isTypeof(n.left) && n.right.type === "StringLiteral" ? [n.left, n.right] : isTypeof(n.right) && n.left.type === "StringLiteral" ? [n.right, n.left] : [null, null];
+  return t ? { target: t.argument, literal: lit.value, equal: n.operator.startsWith("=") } : null;
+}
+
+function typeName(s: Scope, ty: Ty, n: N): string {
+  switch (ty.k) {
+    case "str":
+    case "html":
+      return "string";
+    case "int":
+    case "float":
+      return "number";
+    case "bool":
+      return "boolean";
+    case "undef":
+      return "undefined";
+    case "null":
+    case "list":
+    case "record":
+    case "struct":
+    case "child":
+    case "date":
+      return "object";
+    default:
+      return fail(s.comp, "FV0722", `\`typeof\` of ${describeTy(ty)}, whose JavaScript type the compiler does not know`, n);
+  }
+}
+
+/** What `typeof v` gives: `present` for a value that is there, and `absent` for an optional one
+ * that is not (`null` when `v` cannot be absent, `either` when it may be `null` or `undefined`). */
+function typeNames(s: Scope, v: Val, n: N): { present: string; absent: string | null } {
+  if (v.ty.k !== "opt") return { present: typeName(s, v.ty, n), absent: null };
+  const absent = v.ty.none === "null" ? "object" : v.ty.none === "either" ? "either" : "undefined";
+  return { present: typeName(s, v.ty.of, n), absent };
+}
+
+function eitherRefused(s: Scope, literal: string, n: N): never {
+  return fail(s.comp, "FV0722", `\`typeof\` compared with "${literal}" of a value that may be \`null\` (an "object") or \`undefined\`, which its Rust \`Option\` cannot tell apart: test it with \`== null\``, n);
+}
+
+export function typeofVal(s: Scope, n: N): Val {
+  const v = expr(s, n.argument);
+  const { present, absent } = typeNames(s, v, n.argument);
+  if (absent === null || absent === present) return { code: rustStr(present), ty: STR };
+  if (absent === "either") return eitherRefused(s, present, n);
+  return { code: `if ${atom(v.code)}.is_some() { ${rustStr(present)} } else { ${rustStr(absent)} }`, ty: STR };
+}
+
+export function typeofTest(s: Scope, t: TypeofCompare, n: N): Val {
+  const v = expr(s, t.target);
+  const { present, absent } = typeNames(s, v, t.target);
+  const konst = (is: boolean): Val => ({ code: String(is === t.equal), ty: BOOL, konst: is === t.equal });
+  if (absent === null) return konst(present === t.literal);
+  if (absent === "either" && (t.literal === "undefined" || t.literal === "object")) return eitherRefused(s, t.literal, n);
+  if (present === t.literal && absent === t.literal) return konst(true);
+  if (present === t.literal) return boolOf(t.equal ? `${atom(v.code)}.is_some()` : `${atom(v.code)}.is_none()`);
+  if (absent === t.literal) return boolOf(t.equal ? `${atom(v.code)}.is_none()` : `${atom(v.code)}.is_some()`);
+  return konst(false);
+}
+
 export interface Presence {
   path: string;
   pattern: (name: string) => string;
@@ -106,17 +176,30 @@ export function presence(s: Scope, n: N): Presence | null {
     target = n.argument;
     negated = true;
   } else if (n.type === "BinaryExpression") {
+    const tested = typeofCompare(n);
     const test = nullTest(n);
-    if (!test) return null;
-    target = test.target;
-    negated = test.is;
-    byTruth = false;
+    if (tested) {
+      target = tested.target;
+      byTruth = false;
+    } else if (!test) return null;
+    else {
+      target = test.target;
+      negated = test.is;
+      byTruth = false;
+    }
   }
   const path = pathOf(target);
   if (path === null) return null;
   const v = expr(s, target);
   if (v.ty.k !== "opt") return null;
-  if (n.type === "BinaryExpression") checkNullTest(s, nullTest(n)!, v);
+  const tested = typeofCompare(n);
+  if (tested) {
+    const { present, absent } = typeNames(s, v, target);
+    if (absent === "either" || present === absent) return null;
+    if (tested.literal === present) negated = !tested.equal;
+    else if (tested.literal === absent) negated = tested.equal;
+    else return null;
+  } else if (n.type === "BinaryExpression") checkNullTest(s, nullTest(n)!, v);
   const of: Ty = v.ty.of;
   const scalar = of.k === "str" || of.k === "int" || of.k === "float" || of.k === "bool";
   const filtered = byTruth && scalar;

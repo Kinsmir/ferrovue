@@ -394,6 +394,239 @@ pub fn js_last_index_of(s: &str, search: &str) -> i64 {
     s.rfind(search).map_or(-1, |byte| js_length(&s[..byte]))
 }
 
+fn clamped_unit(s: &str, x: f64) -> usize {
+    to_integer(x).clamp(0.0, length(s) as f64) as usize
+}
+
+fn char_start(s: &str, unit: usize) -> usize {
+    match boundary(s, unit) {
+        (byte, true) => byte - 4,
+        (byte, false) => byte,
+    }
+}
+
+/// `String.prototype.includes(search, position)`: whether `search` starts at or after the code unit
+/// `position`.
+///
+/// # Example
+///
+/// ```
+/// assert!(ferrovue::js_includes_from("abcabc", "a", 1.0));
+/// assert!(!ferrovue::js_includes_from("abcabc", "a", 4.0));
+/// assert!(ferrovue::js_includes_from("abc", "", 99.0));
+/// ```
+#[must_use]
+pub fn js_includes_from(s: &str, search: &str, position: f64) -> bool {
+    let (byte, _) = boundary(s, clamped_unit(s, position));
+    s[byte..].contains(search)
+}
+
+/// `String.prototype.startsWith(search, position)`: whether `search` starts at the code unit
+/// `position`. Inside a surrogate pair only `""` does.
+///
+/// # Example
+///
+/// ```
+/// assert!(ferrovue::js_starts_with_at("abc", "bc", 1.0));
+/// assert!(!ferrovue::js_starts_with_at("🦀x", "x", 1.0));
+/// assert!(ferrovue::js_starts_with_at("abc", "", -5.0));
+/// ```
+#[must_use]
+pub fn js_starts_with_at(s: &str, search: &str, position: f64) -> bool {
+    match boundary(s, clamped_unit(s, position)) {
+        (_, true) => search.is_empty(),
+        (byte, false) => s[byte..].starts_with(search),
+    }
+}
+
+/// `String.prototype.endsWith(search, endPosition)`: whether `search` ends at the code unit
+/// `endPosition`. Inside a surrogate pair only `""` does.
+///
+/// # Example
+///
+/// ```
+/// assert!(ferrovue::js_ends_with_at("abc", "ab", 2.0));
+/// assert!(!ferrovue::js_ends_with_at("x🦀", "x", 2.0));
+/// assert!(ferrovue::js_ends_with_at("abc", "abc", f64::INFINITY));
+/// ```
+#[must_use]
+pub fn js_ends_with_at(s: &str, search: &str, end_position: f64) -> bool {
+    match boundary(s, clamped_unit(s, end_position)) {
+        (_, true) => search.is_empty(),
+        (byte, false) => s[..byte].ends_with(search),
+    }
+}
+
+/// `String.prototype.indexOf(search, position)`: the first code unit at or after `position` where
+/// `search` starts, or -1. `""` is found at `position` itself, inside a surrogate pair too.
+///
+/// # Example
+///
+/// ```
+/// assert_eq!(ferrovue::js_index_of_from("abcabc", "a", 1.0), 3);
+/// assert_eq!(ferrovue::js_index_of_from("abc", "", 10.0), 3);
+/// assert_eq!(ferrovue::js_index_of_from("🦀", "", 1.0), 1);
+/// ```
+#[must_use]
+pub fn js_index_of_from(s: &str, search: &str, position: f64) -> i64 {
+    let from = clamped_unit(s, position);
+    if search.is_empty() {
+        return from as i64;
+    }
+    let (byte, _) = boundary(s, from);
+    s[byte..]
+        .find(search)
+        .map_or(-1, |at| js_length(&s[..byte + at]))
+}
+
+/// `String.prototype.lastIndexOf(search, position)`: the last code unit at or before `position`
+/// where `search` starts, or -1. A `position` that is `NaN` is the end of the string.
+///
+/// # Example
+///
+/// ```
+/// assert_eq!(ferrovue::js_last_index_of_from("abcabc", "a", 2.0), 0);
+/// assert_eq!(ferrovue::js_last_index_of_from("abcabc", "a", f64::NAN), 3);
+/// assert_eq!(ferrovue::js_last_index_of_from("abc", "", 1.0), 1);
+/// ```
+#[must_use]
+pub fn js_last_index_of_from(s: &str, search: &str, position: f64) -> i64 {
+    let len = length(s);
+    let searched = length(search);
+    if searched > len {
+        return -1;
+    }
+    let pos = if position.is_nan() {
+        f64::INFINITY
+    } else {
+        to_integer(position)
+    };
+    let start = pos.clamp(0.0, (len - searched) as f64) as usize;
+    if search.is_empty() {
+        return start as i64;
+    }
+    let mut end = (char_start(s, start) + search.len()).min(s.len());
+    while !s.is_char_boundary(end) {
+        end -= 1;
+    }
+    s[..end].rfind(search).map_or(-1, |at| js_length(&s[..at]))
+}
+
+/// `String.prototype.substr(start, length)`: `length` code units from `start`, which counts from
+/// the end when negative.
+///
+/// # Example
+///
+/// ```
+/// assert_eq!(ferrovue::js_substr("ferrovue", 5.0, Some(2.0)), "vu");
+/// assert_eq!(ferrovue::js_substr("ferrovue", -3.0, None), "vue");
+/// assert_eq!(ferrovue::js_substr("ferrovue", 1.0, Some(-1.0)), "");
+/// ```
+#[must_use]
+pub fn js_substr(s: &str, start: f64, length: Option<f64>) -> Cow<'_, str> {
+    let len = self::length(s);
+    let from = relative(start, len);
+    let count = length.map_or(len, |l| to_integer(l).clamp(0.0, len as f64) as usize);
+    units(s, from, (from + count).min(len))
+}
+
+/// `String.prototype.charCodeAt(index)`: the code unit there, or `NaN` outside the string.
+///
+/// # Example
+///
+/// ```
+/// assert_eq!(ferrovue::js_char_code_at("abc", 1.0), 98.0);
+/// assert_eq!(ferrovue::js_char_code_at("🦀", 1.0), 56704.0);
+/// assert!(ferrovue::js_char_code_at("abc", 3.0).is_nan());
+/// ```
+#[must_use]
+pub fn js_char_code_at(s: &str, index: f64) -> f64 {
+    let n = to_integer(index);
+    if n < 0.0 || n >= length(s) as f64 {
+        return f64::NAN;
+    }
+    f64::from(
+        s.encode_utf16()
+            .nth(n as usize)
+            .expect("a code unit in range"),
+    )
+}
+
+/// `String.prototype.codePointAt(index)`: the code point that starts at the code unit there, the
+/// second half of a pair alone when `index` is inside one, or `None` (JavaScript's `undefined`)
+/// outside the string.
+///
+/// # Example
+///
+/// ```
+/// assert_eq!(ferrovue::js_code_point_at("🦀", 0.0), Some(0x1F980));
+/// assert_eq!(ferrovue::js_code_point_at("🦀", 1.0), Some(0xDD80));
+/// assert_eq!(ferrovue::js_code_point_at("abc", -1.0), None);
+/// ```
+#[must_use]
+pub fn js_code_point_at(s: &str, index: f64) -> Option<i64> {
+    let n = to_integer(index);
+    if n < 0.0 || n >= length(s) as f64 {
+        return None;
+    }
+    let mut rest = s.encode_utf16().skip(n as usize);
+    let first = rest.next().expect("a code unit in range");
+    let point = match (first, rest.next()) {
+        (0xD800..=0xDBFF, Some(second @ 0xDC00..=0xDFFF)) => {
+            0x10000 + ((u32::from(first) - 0xD800) << 10) + (u32::from(second) - 0xDC00)
+        }
+        _ => u32::from(first),
+    };
+    Some(i64::from(point))
+}
+
+/// `String.prototype.split(separator, limit)`: [`js_split`], its first `limit` pieces, the limit
+/// taken as JavaScript's `ToUint32` takes it (`-1` is 4294967295, `NaN` and the infinities 0).
+///
+/// # Example
+///
+/// ```
+/// assert_eq!(ferrovue::js_split_limit("a,b,c", ",", 2.0), ["a", "b"]);
+/// assert_eq!(ferrovue::js_split_limit("a,b,c", ",", -1.0), ["a", "b", "c"]);
+/// assert!(ferrovue::js_split_limit("a,b,c", ",", 4294967296.0).is_empty());
+/// ```
+#[must_use]
+pub fn js_split_limit<'s>(s: &'s str, separator: &str, limit: f64) -> Vec<Cow<'s, str>> {
+    let lim = if limit.is_finite() {
+        limit.trunc().rem_euclid(4_294_967_296.0) as usize
+    } else {
+        0
+    };
+    if lim == 0 {
+        return Vec::new();
+    }
+    let mut pieces = js_split(s, separator);
+    pieces.truncate(lim);
+    pieces
+}
+
+/// An optional value as JavaScript's `String()` and template literals write one: the value, or
+/// `undefined` or `null` (`.1`) when it is absent.
+///
+/// # Example
+///
+/// ```
+/// let n: Option<i64> = None;
+/// assert_eq!(format!("{}", ferrovue::JsOr(n.map(ferrovue::Js), "undefined")), "undefined");
+/// assert_eq!(format!("{}", ferrovue::JsOr(Some(ferrovue::Js(2.5)), "null")), "2.5");
+/// ```
+#[derive(Debug, Clone, Copy)]
+pub struct JsOr<T>(pub Option<T>, pub &'static str);
+
+impl<T: std::fmt::Display> std::fmt::Display for JsOr<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.0 {
+            Some(v) => v.fmt(f),
+            None => f.write_str(self.1),
+        }
+    }
+}
+
 /// `String.prototype.split(separator)` with a string separator. An empty separator splits between
 /// every code unit, which cuts a pair in two.
 ///

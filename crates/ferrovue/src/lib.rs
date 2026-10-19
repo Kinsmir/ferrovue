@@ -67,10 +67,12 @@ pub use slots::{is_comment, scoped_slot_into, scoped_slot_into_slotted, slot_int
 pub use state::state_script_into;
 #[doc(hidden)]
 pub use strings::{
-    js_at, js_char_at, js_cmp, js_index_of, js_item_at, js_json_number, js_json_string,
-    js_last_index_of, js_length, js_number, js_order, js_pad_end, js_pad_start, js_parse_float,
-    js_parse_int, js_reduce, js_repeat, js_replace, js_replace_all, js_slice, js_slice_items,
-    js_slice_range, js_sorted, js_sorted_by_string, js_split, js_substring, js_trim, js_trim_end,
+    JsOr, js_at, js_char_at, js_char_code_at, js_cmp, js_code_point_at, js_ends_with_at,
+    js_includes_from, js_index_of, js_index_of_from, js_item_at, js_json_number, js_json_string,
+    js_last_index_of, js_last_index_of_from, js_length, js_number, js_order, js_pad_end,
+    js_pad_start, js_parse_float, js_parse_int, js_reduce, js_repeat, js_replace, js_replace_all,
+    js_slice, js_slice_items, js_slice_range, js_sorted, js_sorted_by_string, js_split,
+    js_split_limit, js_starts_with_at, js_substr, js_substring, js_trim, js_trim_end,
     js_trim_start,
 };
 pub use teleport::Teleports;
@@ -85,8 +87,8 @@ pub use web::HtmlStream;
 
 #[doc(inline)]
 pub use ferrovue_core::{
-    Js, escape_into, js_max, js_min, js_round, js_to_exponential, js_to_fixed, js_to_precision,
-    push_int, push_number,
+    Js, escape_into, js_encode_uri, js_encode_uri_component, js_max, js_min, js_round, js_sign,
+    js_to_exponential, js_to_fixed, js_to_precision, push_int, push_number,
 };
 #[cfg(feature = "i18n")]
 #[cfg_attr(docsrs, doc(cfg(feature = "i18n")))]

@@ -67,6 +67,21 @@ nullable (use `== null`). A parent passes a nullable prop always, `null` for non
 an optional value to it, or a nullable one to an optional prop, without `?? null` or
 `?? undefined`.
 
+# `typeof`
+
+Every value a template reads has a type the compiler knows, so `typeof x` is worked out when
+compiling: `"string"` for a string, `"number"` for a `number` or a `Float`, `"boolean"`, and
+`"object"` for an object, a list, a record, a `Date` and `null`. Of an optional value it is the
+value's type when present and `"undefined"` when absent, so `typeof x === "string"` and
+`typeof x !== "undefined"` test whether it is present and narrow it as `x !== undefined` does
+(`v-if="typeof label === 'string'"`, then `label.length` inside). Of a nullable one, absent is
+`"object"`, as `typeof null` is in JavaScript. A comparison with any other name is `false`. Where
+the answer depends on whether a value that may be either `null` or `undefined` is which,
+`typeof (on ? a : null) === "undefined"`, it is refused
+([FV0722](crate::guide::error_codes#fv0722)), as is `typeof` of a value from a plugin whose type is
+its own; `typeof route.query.q === "string"` is the router's own
+([`routing`](crate::guide::routing)).
+
 # Optional chains and list items
 
 `a?.b` is `undefined` when `a` is absent, and so is a chain that goes on past it as a whole

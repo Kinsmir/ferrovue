@@ -1,7 +1,7 @@
 # Releasing ferrovue
 
 The runtime's crates on crates.io and the compiler (`ferrovue` on npm) are released together and
-always share one version. The crates are `ferrovue-core` (escaping and numbers), `ferrovue-router`,
+always share one version. The crates are `ferrovue-core` (escaping, numbers and URIs), `ferrovue-router`,
 `ferrovue-i18n` and `ferrovue`, which depends on the other three at exactly its own version and
 re-exports them; `node scripts/release.ts crates` lists them in the order they are published. A
 release is one pull request and one tag. CI checks everything and stages every package; nothing

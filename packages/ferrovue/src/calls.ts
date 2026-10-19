@@ -4,8 +4,8 @@ import type { Code } from "./errors.ts";
 import { claim } from "./plugin.ts";
 import { atom, bare, binary, condition, operand, receiver, strArg, UNARY } from "./parens.ts";
 import { computedListMethod, isBoolean, items, listMethod, objectCall, presentLiteral, spreadExtreme } from "./lists.ts";
-import { lonely, loneOf, meet, stringMethod, stringsEqual } from "./strings.ts";
-import { asF64, intFromF64, isNumber } from "./numbers.ts";
+import { formatted, lonely, loneOf, meet, stringMethod, stringOf, stringsEqual } from "./strings.ts";
+import { asF64, intFromF64, isNumber, numberVal, power } from "./numbers.ts";
 import { boolOf, truthy } from "./narrowing.ts";
 import { coerce, describeTy, expr } from "./expr.ts";
 
@@ -45,11 +45,22 @@ export function call(s: Scope, n: N): Val {
     const helper = s.helpers.get(callee.name);
     if (helper) return helperCall(s, helper, args, n);
     if (isBoolean(s, callee) && args.length === 1) return boolOf(truthy(expr(s, args[0])));
-    if (callee.name === "String" && args.length === 1) {
+    const global = !s.locals.has(callee.name) && !s.setup.has(callee.name);
+    if (callee.name === "String" && global) {
+      if (args.length !== 1) return fail(comp, "FV0723", "`String()` takes one value", n);
       const a = expr(s, args[0]);
       if (a.ty.k === "str") return a;
       if (isNumber(a.ty)) return { code: `&*fv::Js(${bare(a.code)}).to_string()`, ty: STR };
       if (a.ty.k === "bool") return { code: `if ${condition(a.code)} { "true" } else { "false" }`, ty: STR };
+      return formatted(comp, [stringOf(comp, a, args[0], "`String()`", "FV0723")], n, "`String()`");
+    }
+    if ((callee.name === "encodeURIComponent" || callee.name === "encodeURI") && global) {
+      const name = `\`${callee.name}()\``;
+      if (args.length !== 1) return fail(comp, "FV0723", `${name} takes one value`, n);
+      const a = expr(s, args[0]);
+      if (a.lone) fail(comp, "FV0706", `${lonely(name)}; it throws a \`URIError\` on a half`, n);
+      const text = a.ty.k === "str" ? a : formatted(comp, [stringOf(comp, a, args[0], name, "FV0723")], n, name);
+      return { code: `&*fv::js_${callee.name === "encodeURI" ? "encode_uri" : "encode_uri_component"}(${strArg(text.code)})`, ty: STR };
     }
     if (callee.name === "Number" && args.length === 1) {
       const a = expr(s, args[0]);
@@ -68,7 +79,8 @@ export function call(s: Scope, n: N): Val {
       }
       return { code: `fv::js_parse_int(${strArg(a.code)}, ${radix ? radix.value : 0})`, ty: FLOAT };
     }
-    if ((callee.name === "isNaN" || callee.name === "isFinite") && !s.locals.has(callee.name) && !s.setup.has(callee.name)) return numberTest(s, callee.name, args, n, true);
+    if ((callee.name === "isNaN" || callee.name === "isFinite") && global) return numberTest(s, callee.name, args, n, true);
+    if (global && BUILTINS.has(callee.name)) return builtin(s, `${callee.name}()`, n);
     return fail(comp, "FV0601", `\`${callee.name}()\` is not available when rendering on the server`, n);
   }
   if (callee.type === "MemberExpression" && !callee.computed) {
@@ -87,6 +99,9 @@ export function call(s: Scope, n: N): Val {
       if (v.ty.k === "bool") return { code: `if ${condition(v.code)} { "true" } else { "false" }`, ty: STR };
       return { code: `&*${json(s, v, args[0])}`, ty: STR };
     }
+    if (callee.object.type === "Identifier" && callee.object.name === "JSON" && method === "stringify") {
+      return fail(comp, "FV0633", "`JSON.stringify()` with a replacer or an indentation, which the server does not write: give it one value, `JSON.stringify(x)`", n);
+    }
     const own = claim((p) => p.call?.(s, n));
     if (own) return own;
     if (callee.object.type === "Identifier" && (callee.object.name === "$setup" || callee.object.name === "_ctx")) {
@@ -96,6 +111,10 @@ export function call(s: Scope, n: N): Val {
     }
     if (callee.object.type === "Identifier" && callee.object.name === "Math") {
       if ((method === "max" || method === "min") && args.some((a) => a?.type === "SpreadElement")) return spreadExtreme(s, method, args);
+      if (method === "pow" && args.length === 2) return power(s, args[0], args[1], n, "`Math.pow()`");
+      if (ROUNDED_BY_EACH.has(method)) {
+        return fail(comp, "FV0719", `\`Math.${method}()\` is computed by each JavaScript engine's own routine, which need not round its result as another engine or Rust does, so the page could show digits the browser's render does not: compute it in Rust and pass it as a prop`, n);
+      }
       const vals = args.map((a) => expr(s, a));
       if (vals.length && vals.every((v) => isNumber(v.ty))) {
         const ints = vals.every((v) => v.ty.k === "int");
@@ -108,9 +127,18 @@ export function call(s: Scope, n: N): Val {
           if (method === "abs") return ints ? intFromF64(`${receiver(asF64(x))}.abs()`) : { code: `${receiver(x.code)}.abs()`, ty: FLOAT };
           if (method === "round") return { code: `fv::js_round(${bare(asF64(x))})`, ty: FLOAT };
           if (method === "floor" || method === "ceil" || method === "trunc") return { code: `${receiver(asF64(x))}.${method}()`, ty: FLOAT };
+          if (method === "sqrt") return x.num !== undefined ? numberVal(Math.sqrt(x.num), false) : { code: `${receiver(asF64(x))}.sqrt()`, ty: FLOAT };
+          if (method === "sign") {
+            if (x.num !== undefined) return numberVal(Math.sign(x.num), ints);
+            const sign = `fv::js_sign(${bare(asF64(x))})`;
+            return ints ? intFromF64(sign) : { code: sign, ty: FLOAT };
+          }
         }
       }
-      return fail(comp, "FV0704", `\`Math.${method}()\` is supported on numbers as \`max\`, \`min\`, \`abs\`, \`round\`, \`floor\`, \`ceil\` and \`trunc\``, n);
+      return fail(comp, "FV0704", `\`Math.${method}()\` is supported on numbers as \`max\`, \`min\`, \`abs\`, \`round\`, \`floor\`, \`ceil\`, \`trunc\`, \`sqrt\`, \`sign\` and \`pow\``, n);
+    }
+    if (callee.object.type === "Identifier" && BUILTINS.has(callee.object.name) && !s.locals.has(callee.object.name) && !s.setup.has(callee.object.name)) {
+      return builtin(s, `${callee.object.name}.${method}()`, n);
     }
     if ((method === "sort" || method === "reverse") && callee.object.type === "ArrayExpression") {
       const copy = expr(s, callee.object);
@@ -128,7 +156,10 @@ export function call(s: Scope, n: N): Val {
         case "trimStart":
           return { code: `fv::js_trim_start(${strArg(target.code)})`, ty: STR, ...lone };
         case "trimEnd":
+        case "trimRight":
           return { code: `fv::js_trim_end(${strArg(target.code)})`, ty: STR, ...lone };
+        case "trimLeft":
+          return { code: `fv::js_trim_start(${strArg(target.code)})`, ty: STR, ...lone };
         case "toUpperCase":
           return { code: `&*${receiver(target.code)}.to_uppercase()`, ty: STR, ...lone };
         case "toLowerCase":
@@ -182,6 +213,38 @@ export function call(s: Scope, n: N): Val {
 }
 
 const NUMBER_TESTS = new Set(["isNaN", "isFinite", "isInteger", "isSafeInteger"]);
+
+const ROUNDED_BY_EACH = new Set(
+  "acos acosh asin asinh atan atan2 atanh cbrt cos cosh exp expm1 hypot log log10 log1p log2 sin sinh tan tanh".split(" "),
+);
+
+/** The globals of JavaScript a template may name, which the server translates only some of. */
+export const BUILTINS = new Set(
+  "Array BigInt Boolean JSON Map Math Number Object RegExp Set String Symbol console decodeURI decodeURIComponent encodeURI encodeURIComponent isFinite isNaN parseFloat parseInt".split(" "),
+);
+
+const OF_BUILTINS: Record<string, string> = {
+  Array: "`Array.isArray(x)`",
+  Boolean: "`Boolean(x)` and `.filter(Boolean)`",
+  JSON: "`JSON.stringify(x)`",
+  Math: "`Math.max`, `min`, `abs`, `round`, `floor`, `ceil`, `trunc`, `sqrt`, `sign` and `pow`, and its constants",
+  Number: "`Number(x)`, `Number.isNaN`, `isFinite`, `isInteger` and `isSafeInteger`, and its constants",
+  Object: "`Object.keys`, `Object.values` and `Object.entries` of a record",
+  String: "`String(x)`",
+  encodeURI: "`encodeURI(s)`",
+  encodeURIComponent: "`encodeURIComponent(s)`",
+  isFinite: "`isFinite(n)`",
+  isNaN: "`isNaN(n)`",
+  parseFloat: "`parseFloat(s)`",
+  parseInt: "`parseInt(s)` and `parseInt(s, radix)`",
+};
+
+/** Refuses `what`, a use of one of JavaScript's globals the server does not translate. */
+export function builtin(s: Scope, what: string, n: N): never {
+  const name = /^\w+/.exec(what)![0];
+  const of = OF_BUILTINS[name];
+  return fail(s.comp, "FV0633", `\`${what}\` is not supported: ${of ? `of \`${name}\`, the server translates ${of}` : `the server does not translate \`${name}\``}`, n);
+}
 
 function floatTest(method: string, x: string): string {
   switch (method) {

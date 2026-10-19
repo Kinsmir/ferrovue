@@ -41,9 +41,27 @@ fn string_methods_are_javascripts() {
                 "substring" => js_substring(s, num(0), opt(1)).into(),
                 "at" => js_at(s, num(0)).into(),
                 "charAt" => js_char_at(s, num(0)).into(),
+                "indexOf" if args.len() == 2 => js_index_of_from(s, &args[0], num(1)).into(),
                 "indexOf" => js_index_of(s, &args[0]).into(),
+                "lastIndexOf" if args.len() == 2 => {
+                    js_last_index_of_from(s, &args[0], num(1)).into()
+                }
                 "lastIndexOf" => js_last_index_of(s, &args[0]).into(),
+                "includes" => js_includes_from(s, &args[0], num(1)).into(),
+                "startsWith" => js_starts_with_at(s, &args[0], num(1)).into(),
+                "endsWith" => js_ends_with_at(s, &args[0], num(1)).into(),
+                "split" if args.len() == 2 => js_split_limit(s, &args[0], num(1)).into(),
                 "split" => js_split(s, &args[0]).into(),
+                "substr" => js_substr(s, num(0), opt(1)).into(),
+                "charCodeAt" => {
+                    let code = js_char_code_at(s, num(0));
+                    if code.is_nan() {
+                        "NaN".into()
+                    } else {
+                        (code as i64).into()
+                    }
+                }
+                "codePointAt" => js_code_point_at(s, num(0)).into(),
                 "replace" => js_replace(s, &args[0], &args[1]).into(),
                 "replaceAll" => js_replace_all(s, &args[0], &args[1]).into(),
                 "padStart" => js_pad_start(s, num(0), fill).into(),

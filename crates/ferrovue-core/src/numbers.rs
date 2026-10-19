@@ -270,6 +270,32 @@ pub fn js_round(x: f64) -> f64 {
     }
 }
 
+/// `Math.sign`: 1 or -1 by the sign of a number other than zero, and `NaN`, `0` and `-0` as they
+/// are, where Rust's `f64::signum` gives 1 for `0`.
+///
+/// # Example
+///
+/// ```
+/// # use ferrovue_core as ferrovue;
+/// use ferrovue::js_sign;
+///
+/// assert_eq!(js_sign(-7.5), -1.0);
+/// assert_eq!(js_sign(1e-300), 1.0);
+/// assert!(js_sign(-0.0).is_sign_negative()); // -0, as JavaScript gives
+/// assert_eq!(js_sign(0.0), 0.0); // `f64::signum` gives 1
+/// assert!(js_sign(f64::NAN).is_nan());
+/// ```
+#[must_use]
+pub fn js_sign(x: f64) -> f64 {
+    if x > 0.0 {
+        1.0
+    } else if x < 0.0 {
+        -1.0
+    } else {
+        x
+    }
+}
+
 /// `Math.max` of two numbers: `NaN` if either is, where Rust's `f64::max` ignores a `NaN`.
 ///
 /// `+0` is larger than `-0`, as in JavaScript.

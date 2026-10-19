@@ -554,6 +554,22 @@ Optional call `?.()`.
 
 `??` between a list an optional chain computes and another list.
 
+## FV0631
+
+`in` or `instanceof`.
+
+`in` and `instanceof` read an object's keys and prototype as the page renders, which the server's typed values do not carry. Test a record's key with `Object.keys(r).includes(key)`.
+
+## FV0632
+
+Bitwise or shift operator.
+
+## FV0633
+
+Part of JavaScript's own globals the server does not translate.
+
+`JSON`, `Math`, `Number`, `String` and the other globals a template may name are translated only in part: `JSON.stringify(x)` of one value, `String(x)`, `Number(x)` and the `Number.is…()` tests, the `Math` methods and constants the [`numbers`](crate::guide::numbers) page lists, `encodeURI` and `encodeURIComponent`. The message names what the server translates of the one used.
+
 # Strings and numbers: FV07xx
 
 See [`strings`](crate::guide::strings).
@@ -580,9 +596,9 @@ Unsupported `Math` method.
 
 ## FV0706
 
-String that may hold half of a surrogate pair compared, searched or joined.
+String that may hold half of a surrogate pair compared, searched, joined or encoded.
 
-`slice`, `substring`, `at`, `charAt` and `split("")` can cut a surrogate pair in half. JavaScript keeps the half where ferrovue holds U+FFFD, so two such strings may compare, search or join differently. See [`strings`](crate::guide::strings#halves-of-surrogate-pairs).
+`slice`, `substring`, `substr`, `at`, `charAt` and `split("")` can cut a surrogate pair in half. JavaScript keeps the half where ferrovue holds U+FFFD, so two such strings may compare, search or join differently, `charCodeAt` and `codePointAt` would read U+FFFD's code, and `encodeURI` and `encodeURIComponent`, which throw a `URIError` on a half, would encode U+FFFD. See [`strings`](crate::guide::strings#halves-of-surrogate-pairs).
 
 ## FV0707
 
@@ -590,7 +606,7 @@ String that may hold half of a surrogate pair compared, searched or joined.
 
 ## FV0708
 
-Template literal of values that are not present strings, numbers or booleans.
+Template literal of a value it cannot write.
 
 ## FV0709
 
@@ -633,6 +649,30 @@ Case mapping by the server's locale.
 `isNaN()`, `isFinite()` or a `Number.is…()` test of a value that is not a number.
 
 `Number.isNaN()`, `Number.isFinite()`, `Number.isInteger()` and `Number.isSafeInteger()` take a number, present or optional, and are `false` for any other value, which they do not convert; the global `isNaN()` and `isFinite()` convert theirs as `Number()` does and take a present number. Test a date with `Number.isNaN(d.getTime())`, and a string with `Number.isNaN(Number(s))`.
+
+## FV0719
+
+`Math` function engines round differently.
+
+`Math.cbrt`, `Math.hypot`, `Math.exp`, `Math.log`, the trigonometric functions and their kin are computed by each JavaScript engine's own routine, which the specification leaves free to round differently, and Rust's do not promise V8's digits either. Compute the value in Rust and pass it as a prop.
+
+## FV0720
+
+`**` or `Math.pow()` other than an exact integer power known when compiling.
+
+Engines compute powers by different routines: Node 22's V8 writes `10 ** -20` as `1.0000000000000001e-20`, Node 24's and Firefox's as `1e-20`, and above 2⁵³ they round in their own ways. The compiler works out `a ** b` and `Math.pow(a, b)` when both are known, `a` an integer and `b` a whole number from 0, with a result within ±2⁵³, which every engine gives exactly.
+
+## FV0721
+
+Value that may be `null` or `undefined` written as a string.
+
+## FV0722
+
+`typeof` the compiler cannot work out.
+
+## FV0723
+
+`String()`, `.concat()` or `encodeURI…()` of a value it cannot write.
 
 # Lists and loops: FV08xx
 
@@ -1148,7 +1188,7 @@ Route entry of an unsupported shape.
 
 ## FV1234
 
-`typeof` of anything but a query value.
+`typeof` of anything but a query value. Retired in 0.9.0: the compiler no longer raises it.
 
 ## FV1235
 

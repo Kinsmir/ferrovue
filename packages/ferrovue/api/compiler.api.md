@@ -449,6 +449,17 @@ export const ERRORS: {
     readonly FV0630: {
         readonly title: "`??` between a list an optional chain computes and another list";
     };
+    readonly FV0631: {
+        readonly title: "`in` or `instanceof`";
+        readonly detail: "`in` and `instanceof` read an object's keys and prototype as the page renders, which the server's typed values do not carry. Test a record's key with `Object.keys(r).includes(key)`.";
+    };
+    readonly FV0632: {
+        readonly title: "Bitwise or shift operator";
+    };
+    readonly FV0633: {
+        readonly title: "Part of JavaScript's own globals the server does not translate";
+        readonly detail: "`JSON`, `Math`, `Number`, `String` and the other globals a template may name are translated only in part: `JSON.stringify(x)` of one value, `String(x)`, `Number(x)` and the `Number.is…()` tests, the `Math` methods and constants the [`numbers`](crate::guide::numbers) page lists, `encodeURI` and `encodeURIComponent`. The message names what the server translates of the one used.";
+    };
     readonly FV0701: {
         readonly title: "`Number()` of an unsupported value";
     };
@@ -465,14 +476,14 @@ export const ERRORS: {
         readonly title: "`.toFixed()` without a literal number of digits from 0 to 100";
     };
     readonly FV0706: {
-        readonly title: "String that may hold half of a surrogate pair compared, searched or joined";
-        readonly detail: "`slice`, `substring`, `at`, `charAt` and `split(\"\")` can cut a surrogate pair in half. JavaScript keeps the half where ferrovue holds U+FFFD, so two such strings may compare, search or join differently. See [`strings`](crate::guide::strings#halves-of-surrogate-pairs).";
+        readonly title: "String that may hold half of a surrogate pair compared, searched, joined or encoded";
+        readonly detail: "`slice`, `substring`, `substr`, `at`, `charAt` and `split(\"\")` can cut a surrogate pair in half. JavaScript keeps the half where ferrovue holds U+FFFD, so two such strings may compare, search or join differently, `charCodeAt` and `codePointAt` would read U+FFFD's code, and `encodeURI` and `encodeURIComponent`, which throw a `URIError` on a half, would encode U+FFFD. See [`strings`](crate::guide::strings#halves-of-surrogate-pairs).";
     };
     readonly FV0707: {
         readonly title: "`JSON.stringify()` of an unsupported value";
     };
     readonly FV0708: {
-        readonly title: "Template literal of values that are not present strings, numbers or booleans";
+        readonly title: "Template literal of a value it cannot write";
     };
     readonly FV0709: {
         readonly title: "String method with the wrong number of arguments";
@@ -504,6 +515,23 @@ export const ERRORS: {
     readonly FV0718: {
         readonly title: "`isNaN()`, `isFinite()` or a `Number.is…()` test of a value that is not a number";
         readonly detail: "`Number.isNaN()`, `Number.isFinite()`, `Number.isInteger()` and `Number.isSafeInteger()` take a number, present or optional, and are `false` for any other value, which they do not convert; the global `isNaN()` and `isFinite()` convert theirs as `Number()` does and take a present number. Test a date with `Number.isNaN(d.getTime())`, and a string with `Number.isNaN(Number(s))`.";
+    };
+    readonly FV0719: {
+        readonly title: "`Math` function engines round differently";
+        readonly detail: "`Math.cbrt`, `Math.hypot`, `Math.exp`, `Math.log`, the trigonometric functions and their kin are computed by each JavaScript engine's own routine, which the specification leaves free to round differently, and Rust's do not promise V8's digits either. Compute the value in Rust and pass it as a prop.";
+    };
+    readonly FV0720: {
+        readonly title: "`**` or `Math.pow()` other than an exact integer power known when compiling";
+        readonly detail: "Engines compute powers by different routines: Node 22's V8 writes `10 ** -20` as `1.0000000000000001e-20`, Node 24's and Firefox's as `1e-20`, and above 2⁵³ they round in their own ways. The compiler works out `a ** b` and `Math.pow(a, b)` when both are known, `a` an integer and `b` a whole number from 0, with a result within ±2⁵³, which every engine gives exactly.";
+    };
+    readonly FV0721: {
+        readonly title: "Value that may be `null` or `undefined` written as a string";
+    };
+    readonly FV0722: {
+        readonly title: "`typeof` the compiler cannot work out";
+    };
+    readonly FV0723: {
+        readonly title: "`String()`, `.concat()` or `encodeURI…()` of a value it cannot write";
     };
     readonly FV0801: {
         readonly title: "`.includes()` of a value of another type than the list's";
@@ -872,6 +900,7 @@ export const ERRORS: {
     };
     readonly FV1234: {
         readonly title: "`typeof` of anything but a query value";
+        readonly retired: "0.9.0";
     };
     readonly FV1235: {
         readonly title: "`??` after a query value with a fallback that is not a string";

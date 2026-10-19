@@ -194,6 +194,15 @@ export const ERRORS = {
   FV0628: { title: "`as` or `satisfies` stating a type the value does not have" },
   FV0629: { title: "Optional call `?.()`" },
   FV0630: { title: "`??` between a list an optional chain computes and another list" },
+  FV0631: {
+    title: "`in` or `instanceof`",
+    detail: "`in` and `instanceof` read an object's keys and prototype as the page renders, which the server's typed values do not carry. Test a record's key with `Object.keys(r).includes(key)`.",
+  },
+  FV0632: { title: "Bitwise or shift operator" },
+  FV0633: {
+    title: "Part of JavaScript's own globals the server does not translate",
+    detail: "`JSON`, `Math`, `Number`, `String` and the other globals a template may name are translated only in part: `JSON.stringify(x)` of one value, `String(x)`, `Number(x)` and the `Number.is…()` tests, the `Math` methods and constants the [`numbers`](crate::guide::numbers) page lists, `encodeURI` and `encodeURIComponent`. The message names what the server translates of the one used.",
+  },
 
   FV0701: { title: "`Number()` of an unsupported value" },
   FV0702: { title: "`parseInt()` or `parseFloat()` of a value that is not a string" },
@@ -201,11 +210,11 @@ export const ERRORS = {
   FV0704: { title: "Unsupported `Math` method" },
   FV0705: { title: "`.toFixed()` without a literal number of digits from 0 to 100" },
   FV0706: {
-    title: "String that may hold half of a surrogate pair compared, searched or joined",
-    detail: "`slice`, `substring`, `at`, `charAt` and `split(\"\")` can cut a surrogate pair in half. JavaScript keeps the half where ferrovue holds U+FFFD, so two such strings may compare, search or join differently. See [`strings`](crate::guide::strings#halves-of-surrogate-pairs).",
+    title: "String that may hold half of a surrogate pair compared, searched, joined or encoded",
+    detail: "`slice`, `substring`, `substr`, `at`, `charAt` and `split(\"\")` can cut a surrogate pair in half. JavaScript keeps the half where ferrovue holds U+FFFD, so two such strings may compare, search or join differently, `charCodeAt` and `codePointAt` would read U+FFFD's code, and `encodeURI` and `encodeURIComponent`, which throw a `URIError` on a half, would encode U+FFFD. See [`strings`](crate::guide::strings#halves-of-surrogate-pairs).",
   },
   FV0707: { title: "`JSON.stringify()` of an unsupported value" },
-  FV0708: { title: "Template literal of values that are not present strings, numbers or booleans" },
+  FV0708: { title: "Template literal of a value it cannot write" },
   FV0709: { title: "String method with the wrong number of arguments" },
   FV0710: { title: "Regular expression given to a string method" },
   FV0711: { title: "String method given a value that is not a present string" },
@@ -219,6 +228,17 @@ export const ERRORS = {
     title: "`isNaN()`, `isFinite()` or a `Number.is…()` test of a value that is not a number",
     detail: "`Number.isNaN()`, `Number.isFinite()`, `Number.isInteger()` and `Number.isSafeInteger()` take a number, present or optional, and are `false` for any other value, which they do not convert; the global `isNaN()` and `isFinite()` convert theirs as `Number()` does and take a present number. Test a date with `Number.isNaN(d.getTime())`, and a string with `Number.isNaN(Number(s))`.",
   },
+  FV0719: {
+    title: "`Math` function engines round differently",
+    detail: "`Math.cbrt`, `Math.hypot`, `Math.exp`, `Math.log`, the trigonometric functions and their kin are computed by each JavaScript engine's own routine, which the specification leaves free to round differently, and Rust's do not promise V8's digits either. Compute the value in Rust and pass it as a prop.",
+  },
+  FV0720: {
+    title: "`**` or `Math.pow()` other than an exact integer power known when compiling",
+    detail: "Engines compute powers by different routines: Node 22's V8 writes `10 ** -20` as `1.0000000000000001e-20`, Node 24's and Firefox's as `1e-20`, and above 2⁵³ they round in their own ways. The compiler works out `a ** b` and `Math.pow(a, b)` when both are known, `a` an integer and `b` a whole number from 0, with a result within ±2⁵³, which every engine gives exactly.",
+  },
+  FV0721: { title: "Value that may be `null` or `undefined` written as a string" },
+  FV0722: { title: "`typeof` the compiler cannot work out" },
+  FV0723: { title: "`String()`, `.concat()` or `encodeURI…()` of a value it cannot write" },
 
   FV0801: { title: "`.includes()` of a value of another type than the list's" },
   FV0802: { title: "`.join()` with a separator that is not a string" },
@@ -367,7 +387,7 @@ export const ERRORS = {
   FV1231: { title: "Route field not available on the server" },
   FV1232: { title: "Routes file that is not an array" },
   FV1233: { title: "Route entry of an unsupported shape" },
-  FV1234: { title: "`typeof` of anything but a query value" },
+  FV1234: { title: "`typeof` of anything but a query value", retired: "0.9.0" },
   FV1235: { title: "`??` after a query value with a fallback that is not a string" },
   FV1236: { title: "`<RouterView>` in a component with `<style scoped>`" },
   FV1237: { title: "`<RouterView>` in a child component" },

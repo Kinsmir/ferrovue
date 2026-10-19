@@ -1226,7 +1226,8 @@ class Gen {
       [2, () => {
         const s = this.str(d - 1);
         const sep = r.pick([",", " ", "", "a", "🦀", ", "]);
-        return { of: { k: "str" }, kids: [s], fmt: (k, at) => `${recv(k[at])}.split(${quoted(sep)})`, lone: !!s.lone || sep === "" };
+        const limit = r.chance(0.3) ? `, ${r.pick(["0", "1", "2", "3", "-1", "4294967297", "1.5"])}` : "";
+        return { of: { k: "str" }, kids: [s], fmt: (k, at) => `${recv(k[at])}.split(${quoted(sep)}${limit})`, lone: !!s.lone || sep === "" };
       }],
     ])();
     for (let ops = r.weighted([[3, 0], [4, 1], [2, 2]]); ops > 0; ops--) {
@@ -1557,10 +1558,26 @@ class Gen {
       [
         4,
         () => {
-          const m = r.pick(["trim", "trimStart", "trimEnd", "toUpperCase", "toLowerCase"]);
+          const m = r.pick(["trim", "trimStart", "trimEnd", "trimLeft", "trimRight", "toUpperCase", "toLowerCase"]);
           return str([this.str(d - 1)], ([a]) => `${recv(a)}.${m}()`, undefined, true);
         },
       ],
+      [2, () => {
+        const m = r.pick(["encodeURIComponent", "encodeURIComponent", "encodeURI"]);
+        const v = r.weighted<() => Expr>([[4, () => this.str(d - 1)], [1, () => this.num(d - 1)], [1, () => this.shown(d - 1) ?? this.str(d - 1)]])();
+        return v.lone ? leaf() : node("str", [v], ([a]) => `${m}(${a})`, 0, true);
+      }],
+      [3, () => this.shown(d) ?? leaf()],
+      [1, () => {
+        const s = this.str(d - 1);
+        const kids = r.chance(0.6) ? [s, this.small(), this.small()] : [s, this.small()];
+        return { ...node("str", kids, ([a, i, j]) => `${recv(a)}.substr(${i}${j === undefined ? "" : `, ${j}`})`, 0, true), lone: true };
+      }],
+      [1, () => {
+        const parts = [this.str(d - 1), this.str(d - 1), ...(r.chance(0.5) ? [this.str(d - 1)] : [])];
+        const kept = parts.map((p, i) => (i > 0 && p.lone && parts.slice(0, i).some((q) => q.lone) ? strLit(r.pick(["a", "-", "x y"])) : p));
+        return str(kept, ([a, ...rest]) => `${recv(a)}.concat(${rest.join(", ")})`, kept, true);
+      }],
       [3, () => {
         const m = r.pick(["slice", "slice", "substring"]);
         const s = this.str(d - 1);
@@ -1638,6 +1655,25 @@ class Gen {
     return r.weighted(options)();
   }
 
+  shown(d: number): Expr | null {
+    const r = this.r;
+    const opts = this.scope.vars.filter((v) => v.opt);
+    const optLists = this.scope.lists.filter((l) => (l.of.k === "opt" || l.of.k === "nul") && specTy(l.of.of) !== null);
+    const wrap = (e: Expr, inner: (a: string) => string): Expr => ({ ...node("str", [e], ([a]) => inner(a!), 0, true), ...(e.lone ? { lone: true } : {}) });
+    const [called, before, after] = [r.chance(0.5), r.pick(TPL_TEXT), r.pick(TPL_TEXT)];
+    const around = (a: string): string => (called ? `String(${a})` : "`" + before + "${" + a + "}" + after + "`");
+    return r.weighted<() => Expr | null>([
+      [opts.length ? 4 : 0, () => wrap(this.varRef(r.pick(opts)), around)],
+      [optLists.length ? 1 : 0, () => wrap(atom("str", r.pick(optLists).name), around)],
+      [3, () => {
+        const l = this.listExpr(d);
+        if (!l || l.of.k === "obj") return null;
+        const lone = l.lone && l.of.k === "str";
+        return { ...node("str", l.kids, (k) => around(l.fmt(k, 0)), 0, true), ...(lone ? { lone: true } : {}) };
+      }],
+    ])();
+  }
+
   translated(d: number): Expr {
     const r = this.r;
     const t = r.pick(this.tNames);
@@ -1671,11 +1707,18 @@ class Gen {
   template(d: number): Expr {
     const r = this.r;
     const parts: Expr[] = [];
+    const opts = this.scope.vars.filter((v) => v.opt);
     for (let n = r.int(1, 3); n > 0; n--) {
-      parts.push(r.weighted<() => Expr>([[4, () => this.str(d - 1)], [3, () => this.num(d - 1)], [1, () => this.bool(d - 1)]])());
+      parts.push(r.weighted<() => Expr>([[4, () => this.str(d - 1)], [3, () => this.num(d - 1)], [1, () => this.bool(d - 1)], [opts.length ? 1 : 0, () => this.varRef(r.pick(opts))]])());
     }
     const texts = [r.pick(TPL_TEXT), ...parts.map(() => r.pick(TPL_TEXT))];
-    for (let i = 1; i < parts.length; i++) if (parts[i - 1]!.lone && parts[i]!.lone && !texts[i]) texts[i] = " ";
+    let open = false;
+    for (let i = 0; i < parts.length; i++) {
+      if (i > 0 && texts[i]) open = false;
+      if (parts[i]!.lone && open && !texts[i]) texts[i] = " ";
+      if (parts[i]!.lone) open = true;
+      else if (parts[i]!.ty !== "str") open = false;
+    }
     return {
       ty: "str",
       bound: 0,
@@ -1713,6 +1756,22 @@ class Gen {
       [1, () => { const a = this.int(d - 1, max); return node("int", [a], ([x]) => `Math.abs(${x})`, a.bound, true); }],
       [2, () => { const a = this.int(d - 1, max), b = this.int(d - 1, max); return node("int", [this.test(d - 1), a, b], ([c, x, y]) => `${c} ? ${x} : ${y}`, Math.max(a.bound, b.bound)); }],
       [max > 2 ** 31 ? 2 : 0, () => { const m = r.pick(["indexOf", "lastIndexOf"]); const lit = r.pick(STR_LITS); return node("int", [this.str(d - 1)], ([a]) => `${recv(a)}.${m}('${lit}')`, 2 ** 31, true); }],
+      [max > 2 ** 31 ? 1 : 0, () => {
+        const m = r.pick(["indexOf", "lastIndexOf"]);
+        const lit = r.pick(STR_LITS);
+        return node("int", [this.str(d - 1), this.small()], ([a, i]) => `${recv(a)}.${m}('${lit}', ${i})`, 2 ** 31, true);
+      }],
+      [max > 2 ** 21 ? 1 : 0, () => {
+        const s = this.str(d - 1);
+        return s.lone ? leaf() : node("int", [s, this.small()], ([a, i]) => `${recv(a)}.codePointAt(${i}) ?? ${r.int(-1, 3)}`, 0x110000);
+      }],
+      [1, () => { const a = this.int(d - 1, max); return node("int", [a], ([x]) => `Math.sign(${x})`, 2, true); }],
+      [1, () => {
+        const [b, e] = [r.int(-12, 12), r.int(0, 12)];
+        const p = Number(BigInt(b) ** BigInt(e));
+        if (Math.abs(p) >= max) return leaf();
+        return r.chance(0.5) ? node("int", [], () => `${b < 0 ? `(${b})` : b} ** ${e}`, Math.abs(p) + 1) : node("int", [], () => `Math.pow(${b}, ${e})`, Math.abs(p) + 1, true);
+      }],
       [max > 2 ** 31 ? 2 : 0, () => this.intFromList(d) ?? leaf()],
       [max > 2 ** 31 ? 1 : 0, () => { const e = this.optChain(true); return e?.ty === "int" ? e : leaf(); }],
     ];
@@ -1744,6 +1803,13 @@ class Gen {
       [this.vars("int").length ? 1 : 0, () => node("float", [this.int(d - 1), this.varRef(r.pick(this.vars("int")))], ([x, y]) => `${x} % ${y}`)],
       [1, () => node("float", [this.float(d - 1)], ([x]) => `-${x}`)],
       [2, () => { const f = r.pick(["round", "floor", "ceil", "trunc", "abs"]); return node("float", [this.float(d - 1)], ([x]) => `Math.${f}(${x})`, 0, true); }],
+      [2, () => { const f = r.pick(["sqrt", "sqrt", "sign"]); return node("float", [r.chance(0.5) ? this.float(d - 1) : this.num(d - 1)], ([x]) => `Math.${f}(${x})`, 0, true); }],
+      [1, () => atom("float", `Math.${r.pick(["PI", "E", "LN2", "LN10", "LOG2E", "LOG10E", "SQRT2", "SQRT1_2"])}`)],
+      [1, () => atom("float", `Number.${r.pick(["EPSILON", "MAX_VALUE", "MIN_VALUE", "NaN", "POSITIVE_INFINITY", "NEGATIVE_INFINITY"])}`)],
+      [1, () => {
+        const s = this.str(d - 1);
+        return s.lone ? leaf() : node("float", [s, this.small()], ([a, i]) => `${recv(a)}.charCodeAt(${i})`, 0, true);
+      }],
       [1, () => { const f = r.pick(["max", "min"]); return node("float", [this.float(d - 1), this.num(d - 1)], ([x, y]) => `Math.${f}(${x}, ${y})`, 0, true); }],
       [1, () => node("float", [this.test(d - 1), this.float(d - 1), this.float(d - 1)], ([c, x, y]) => `${c} ? ${x} : ${y}`)],
       [2, () => this.spreadExtreme(d) ?? leaf()],
@@ -1787,6 +1853,12 @@ class Gen {
         const needle = this.str(d - 1);
         return node("bool", [this.str(d - 1), needle.lone ? strLit(r.pick(STR_LITS)) : needle], ([a, b]) => `${recv(a)}.${m}(${b})`, 0, true);
       }],
+      [1, () => {
+        const m = r.pick(["includes", "startsWith", "endsWith"]);
+        const needle = this.str(d - 1);
+        return node("bool", [this.str(d - 1), needle.lone ? strLit(r.pick(STR_LITS)) : needle, this.small()], ([a, b, i]) => `${recv(a)}.${m}(${b}, ${i})`, 0, true);
+      }],
+      [2, () => this.typeofTest(d)],
       [2, () => this.boolFromList(d) ?? leaf()],
       [1, () => { const op = r.pick(["===", "!=="]); return node("bool", [this.bool(d - 1), this.bool(d - 1)], ([a, b]) => `${a} ${op} ${b}`); }],
       [2, () => node("bool", [this.bool(d - 1)], ([a]) => `!${a}`)],
@@ -1798,6 +1870,19 @@ class Gen {
       [3, () => this.numberTest(d)],
     ];
     return r.weighted(options)();
+  }
+
+  typeofTest(d: number): Expr {
+    const r = this.r;
+    const name = r.pick(["string", "number", "boolean", "undefined", "object"]);
+    const op = r.pick(["===", "!==", "===", "==", "!="]);
+    const target = r.weighted<() => Expr>([
+      [this.scope.vars.length ? 4 : 0, () => this.varRef(r.pick(this.scope.vars))],
+      [this.scope.lists.length ? 1 : 0, () => atom("int", r.pick(this.scope.lists).name)],
+      [2, () => r.pick([() => this.str(d - 1), () => this.num(d - 1), () => this.bool(d - 1)])()],
+    ])();
+    const flipped = r.chance(0.2);
+    return node("bool", [target], ([a]) => (flipped ? `'${name}' ${op} typeof ${recv(a)}` : `typeof ${recv(a)} ${op} '${name}'`));
   }
 
   numberTest(d: number): Expr {
@@ -2125,8 +2210,10 @@ class Gen {
       const narrowable = this.scope.vars.filter((v) => v.opt);
       if (narrowable.length && r.chance(0.3)) {
         const v = r.pick(narrowable);
+        const kind = { str: "string", int: "number", float: "number", bool: "boolean", html: "string", date: "object" }[v.ty];
+        const typed = r.chance(0.5) ? `typeof ${v.name} === '${kind}'` : `typeof ${v.name} !== '${v.nul ? "object" : "undefined"}'`;
         const test = r.chance(0.3) ? `!= ${r.pick(["null", "undefined"])}` : `!== ${v.nul ? "null" : "undefined"}`;
-        const cond: Expr = { ...(r.chance(0.6) ? this.varRef(v) : node("bool", [this.varRef(v)], ([a]) => `${a} ${test}`)), fixed: true };
+        const cond: Expr = { ...r.weighted<() => Expr>([[6, () => this.varRef(v)], [3, () => node("bool", [this.varRef(v)], ([a]) => `${a} ${test}`)], [2, () => atom("bool", typed)]])(), fixed: true };
         const el = this.withScope(() => {
           this.scope.vars = this.scope.vars.map((x) => (x === v ? { ...x, opt: false } : x));
           return this.carrier(depth, ctx);

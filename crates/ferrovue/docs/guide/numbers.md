@@ -87,6 +87,10 @@ from JavaScript's:
 | `x.toPrecision(p)` | [`js_to_precision`](crate::js_to_precision) | The same ties, and JavaScript's choice of an exponent (`1.2e+5`) below 10⁻⁶ and from 10ᵖ up; `x.toPrecision()` is `String(x)` |
 | `x.toExponential(f)`, `x.toExponential()` | [`js_to_exponential`](crate::js_to_exponential) | The same ties, and JavaScript's exponent, `e+5` where Rust writes `e5`; without an argument, the digits `String(x)` writes |
 | `Math.floor`, `Math.ceil`, `Math.trunc`, `Math.abs` | `f64::floor`, `ceil`, `trunc`, `abs` | They agree |
+| `Math.sqrt(x)` | `f64::sqrt` | They agree: IEEE 754 rounds a square root correctly, in every engine and in Rust |
+| `Math.sign(x)` | [`js_sign`](crate::js_sign) | `0`, `-0` and `NaN` are their own sign, where `f64::signum` gives 1 for `0` |
+| `Math.PI`, `Math.E`, `Math.LN2`, `Math.LN10`, `Math.LOG2E`, `Math.LOG10E`, `Math.SQRT2`, `Math.SQRT1_2`, and `Number.EPSILON`, `MAX_SAFE_INTEGER`, `MIN_SAFE_INTEGER`, `MAX_VALUE`, `MIN_VALUE`, `POSITIVE_INFINITY`, `NEGATIVE_INFINITY`, `NaN` | the same doubles, as literals | They are constants |
+| `a ** b`, `Math.pow(a, b)` | worked out when compiling | See below |
 | `s.length` | `js_length` | UTF-16 code units, as JavaScript counts them. See [`strings`](crate::guide::strings) |
 | `Number(s)`, `parseInt(s)`, `parseFloat(s)` | `js_number`, `js_parse_int`, `js_parse_float` | JavaScript's grammar for numbers, which differs from Rust's `parse`. See [`strings`](crate::guide::strings) |
 | `Number.isNaN(x)`, `isNaN(x)` | `f64::is_nan` | They agree |
@@ -108,6 +112,7 @@ boolean or a `Date` each is always `false`, which is refused as a mistake
 assert_eq!(ferrovue::js_round(-2.5), -2.0);
 assert_eq!(1.0 / ferrovue::js_round(-0.4), f64::NEG_INFINITY); // Math.round(-0.4) is -0
 assert!(ferrovue::js_max(1.0, f64::NAN).is_nan());
+assert!(ferrovue::js_sign(-0.0).is_sign_negative()); // Math.sign(-0) is -0
 assert_eq!(ferrovue::js_to_fixed(1.005, 2), "1.00"); // 1.005 is 1.00499999999999989… as a double
 assert_eq!(ferrovue::js_to_fixed(2.5, 0), "3");      // a true tie: away from zero
 assert_eq!(ferrovue::js_to_precision(0.125, 2), "0.13");
@@ -120,6 +125,20 @@ Their argument is a number literal, or none: from 0 to 100 digits for `toFixed` 
 truncates it (`toPrecision(2.9)` is `toPrecision(2)`). Any other argument, which JavaScript may
 answer with a `RangeError`, is refused when the component is compiled (`FV0705`, `FV0716`,
 `FV0717`).
+
+`Math.sqrt`, `Math.sign` and the constants are held to `math.json`, recorded from Node and computed
+alike by Chromium and Firefox. The other functions of `Math`, `Math.cbrt`, `Math.hypot`,
+`Math.exp`, `Math.log`, the trigonometric functions and their kin, are computed by each engine's
+own routine, which the specification leaves free to round in its own way, so the page could show
+digits the browser's render does not: they are refused
+([FV0719](crate::guide::error_codes#fv0719)). Compute such a value in Rust and pass it as a prop.
+
+Powers are worked out when compiling, of an integer and a whole exponent from 0 that are both
+known, whose result is within ±2⁵³: `2 ** 10`, `Math.pow(-3, 3)`, `n * 2 ** 8`. Every engine gives
+those exactly, as `math.json`'s 776 powers recorded from Node, Chromium and Firefox show. Any other
+power is refused ([FV0720](crate::guide::error_codes#fv0720)): engines compute them by different
+routines, and Node 22's V8 writes `10 ** -20` as `1.0000000000000001e-20` where Node 24 and Firefox
+write `1e-20`.
 
 # Keeping islands exact
 

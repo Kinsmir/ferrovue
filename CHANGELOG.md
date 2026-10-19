@@ -107,6 +107,48 @@ released together and share version numbers.
   does: `-Infinity` and `Infinity` for no items, `NaN` when any is, and `-0` below `0`. Generated
   code calls the new `#[doc(hidden)]` `js_reduce`, `js_sorted`, `js_sorted_by_string` and
   `js_order`, part of version 3.
+- `encodeURIComponent()` and `encodeURI()` of a string, or of anything `String()` writes, encoded
+  as JavaScript encodes them: each byte of a character's UTF-8 as `%XX` in upper case, except the
+  ASCII letters and digits, `-_.!~*'()` and, for `encodeURI()`, `;/?:@&=+$,#`. `ferrovue-core`
+  gains `js_encode_uri_component` and `js_encode_uri`, re-exported by `ferrovue`, held to the new
+  `uri.json`: every ASCII character, hand-written edges and 450 strings drawn at random, 1,202
+  vectors recorded from Node. A string that may hold half of a surrogate pair, on which JavaScript
+  throws a `URIError`, is refused with FV0706.
+- `String()`, template literals and `.concat()` of a value that may be absent, which JavaScript
+  writes as `undefined`, or `null` for a nullable one, and of a list of strings, numbers, booleans
+  or nullable items, written as its items joined by `,` with an absent item as nothing. `{{ x }}`
+  keeps Vue's own rule, nothing for an absent value. A value that may be either `null` or
+  `undefined` is refused with FV0721, and one `String()` cannot write, such as an object, with
+  FV0723. Generated code calls the new `#[doc(hidden)]` `JsOr` for an optional number or boolean.
+- Positions and limits in string methods, counted in UTF-16 code units and clamped as JavaScript
+  clamps them: `.includes(x, i)`, `.startsWith(x, i)`, `.endsWith(x, i)`, `.indexOf(x, i)` and
+  `.lastIndexOf(x, i)`, a position inside a surrogate pair included, and `.split(x, n)` with the
+  limit taken as `ToUint32` takes it; a position or a limit that is `undefined` or an absent
+  optional number is JavaScript's default. Also `.substr()`, `.trimLeft()`, `.trimRight()`,
+  `.concat()` of strings, `.charCodeAt()` and `.codePointAt()`, the last two refused with FV0706 of
+  a string that may hold half of a pair. Generated code calls the new `#[doc(hidden)]`
+  `js_includes_from`, `js_starts_with_at`, `js_ends_with_at`, `js_index_of_from`,
+  `js_last_index_of_from`, `js_split_limit`, `js_substr`, `js_char_code_at` and
+  `js_code_point_at`, held to 8,208 new vectors in `strings.json`.
+- `Math.sqrt()`, `Math.sign()` (`ferrovue-core`'s new `js_sign`, re-exported by `ferrovue`: `0`,
+  `-0` and `NaN` are their own sign), the eight constants of `Math` and those of `Number`, and the
+  globals `Infinity` and `NaN`. `**` and `Math.pow()` are worked out when compiling, of an integer
+  and a whole exponent from 0 that are both known, with a result within ±2⁵³, which every engine
+  gives exactly. `math.json` gains 1,458 vectors recorded from Node: `Math.sqrt` and `Math.sign` of
+  hand-written edges and drawn doubles, the constants, and 776 such powers; the browser tests check
+  that each browser computes `math.json` and `uri.json` as Node recorded them.
+- `typeof`, worked out from each value's type: `"string"`, `"number"`, `"boolean"`, `"object"` for
+  objects, lists, records, dates and `null`, and of an optional value its type when present and
+  `"undefined"` (or `"object"` for a nullable one) when absent, so that `typeof x === "string"` and
+  `typeof x !== "undefined"` narrow it in `v-if`, `&&` and `?:`. FV0722 refuses a comparison that
+  depends on whether a value that may be `null` or `undefined` is which, and `typeof` of a value of
+  a plugin's own type.
+- FV0719, for `Math.cbrt()`, `Math.hypot()`, `Math.exp()`, `Math.log()`, the trigonometric
+  functions and their kin, which engines round by their own routines; FV0720, for any other `**`
+  or `Math.pow()` (Node 22 writes `10 ** -20` as `1.0000000000000001e-20`); FV0631, for `in` and
+  `instanceof`; FV0632, for the bitwise and shift operators; FV0633, for a part of `JSON`, `Math`,
+  `Number`, `String`, `Array` and JavaScript's other globals that the server does not translate,
+  naming what it translates of the one used.
 
 ### Changed
 
@@ -114,8 +156,16 @@ released together and share version numbers.
   `#[doc(hidden)]` `js_time_of` and `js_date_prop` and the serde helpers `date_prop` and `opt_date_prop`, which the
   0.8 crate lacks. The crate still builds modules of version 2, which call nothing that changed.
 - The API reports gain `reviveDates` (`ferrovue`, `ferrovue/client`) and `Config.dateType` and
-  FV0629, FV0630, FV0716, FV0717, FV0718, FV0824 to FV0833 and FV1806 to FV1809, FV0604's title
-  names a value that may be absent, and FV0610's names a hole alone (`ferrovue/compiler`).
+  FV0629 to FV0633, FV0716 to FV0723, FV0824 to FV0833 and FV1806 to FV1809, FV0604's title names
+  a value that may be absent, FV0610's names a hole alone, FV0706's and FV0708's titles name what
+  they now cover, and FV1234 is retired (`ferrovue/compiler`).
+- `in`, `instanceof`, `**` and the bitwise operators are refused with FV0631, FV0720 and FV0632,
+  whose messages say what each does, where FV0619 named `==`; FV0619 is now raised for `==` and
+  `!=` alone. A part of `JSON`, `Math`, `Number`, `String` or another global that the server does
+  not translate (`JSON.stringify(x, null, 2)`, `JSON.parse()`, `String.fromCharCode()`,
+  `decodeURIComponent()`) is refused with FV0633, naming what it translates, where FV0601 said the
+  whole global was not available. `typeof` of anything but a query value, which the router refused
+  with FV1234, is the core's now, and FV1234 is retired.
 - Generated code of version 3 also calls the `#[doc(hidden)]` `js_to_utc_string`, `js_to_json`,
   `js_json_date` and `js_date_utc`. FV0609 names two dates beside two numbers and two strings, and
   `==` or `!=` with a date is refused with FV1809 where it was FV0619.
@@ -152,6 +202,14 @@ released together and share version numbers.
   `Number.isInteger()` and `Number.isSafeInteger()` of integers, fractions and optional numbers,
   `isNaN()` and `isFinite()` of numbers, wherever a boolean goes, tests a date's validity with them
   as well as with `d.getTime() === d.getTime()`, and chooses dates with `||`.
+- Tests only: the differential fuzzer generates `encodeURIComponent()` and `encodeURI()`,
+  `String()` and template literals of optional and nullable values and of lists, `.substr()`,
+  `.concat()`, `.trimLeft()`, `.trimRight()`, `.charCodeAt()`, `.codePointAt()`, positions in
+  `.includes()`, `.startsWith()`, `.endsWith()`, `.indexOf()` and `.lastIndexOf()`, limits in
+  `.split()`, `Math.sqrt()`, `Math.sign()`, the constants of `Math` and `Number`, `**` and
+  `Math.pow()` of literals, and `typeof` compared with each type's name and narrowing in `v-if`;
+  the conformance suite gains `UriParts`, `StringOf`, `StringSearch`, `MathMore` and `TypeofTests`,
+  23 fixtures recorded from Vue.
 - Tests only: the differential fuzzer generates list items by index (`[i]` with literal, negative and computed indices, and `.at()`) read with
   `??`, with a method after `?.` and by a field of an object; `.indexOf()`, `.lastIndexOf()`,
   `.findLast()`, `.findLastIndex()` and `.concat()`; and optional chains from optional and nullable
@@ -174,6 +232,10 @@ released together and share version numbers.
   compared each item with itself, and was `true` for every list that was not empty.
 - FV0604 for `.length` or another field of an optional value says that it may be absent, and to
   narrow it with `v-if` or read it with `?.`. It said the value was not an object.
+- A template literal that joined two strings that may each hold half of a surrogate pair with only
+  a string that may be empty between them (`` `${a.charAt(0)}${b}${a.slice(1)}` ``) was accepted,
+  and wrote two U+FFFD where JavaScript, given an empty `b`, joins the halves into one character;
+  it is refused with FV0706, as two such strings side by side are.
 
 ## [0.8.0] - 2026-10-18
 

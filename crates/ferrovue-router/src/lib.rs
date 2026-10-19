@@ -1014,10 +1014,9 @@ fn encode_param(text: &str) -> String {
 }
 
 fn encode_url(text: &str, part: Part) -> String {
-    use std::fmt::Write;
     let mut out = String::with_capacity(text.len());
     for c in text.chars() {
-        let uri = c.is_ascii_alphanumeric() || ";,/?:@&=+$-_.!~*'()#|[]".contains(c);
+        let uri = ferrovue_core::kept_by_encode_uri(c) || matches!(c, '|' | '[' | ']');
         let keep = match (part, c) {
             (Part::Param, '#' | '?' | '/') => false,
             (Part::QueryValue | Part::QueryKey, '+' | '#' | '&') => false,
@@ -1033,10 +1032,7 @@ fn encode_url(text: &str, part: Part) -> String {
         if keep {
             out.push(c);
         } else {
-            let mut buf = [0; 4];
-            for b in c.encode_utf8(&mut buf).bytes() {
-                let _ = write!(out, "%{b:02X}");
-            }
+            ferrovue_core::percent_encode_into(&mut out, c);
         }
     }
     out
