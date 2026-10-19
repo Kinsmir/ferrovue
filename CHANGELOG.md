@@ -47,6 +47,16 @@ released together and share version numbers.
   sections were covered by their guide pages already. The repository layout and the benchmark
   commands moved into CONTRIBUTING.md. The quick start names the 0.8.0 schema, and the guide's
   `Cargo.toml` lines version 0.8.
+- Tests only, with no change to the crates or the npm package: the differential fuzzer generates
+  dates. Components get required, optional and nullable `Date` props, read with `.getTime()`,
+  `.valueOf()` and the `.getUTC…()` methods in text, attributes, conditions and loops, narrowed in
+  `v-if`, chosen with `?:` and `??`, held in a `computed` and handed to a child's `Date` prop that
+  hands it on to its own child; `new Date()` of an ISO literal, of a number and of another date,
+  and `Date.parse()` of an ISO literal, in any component. `.toISOString()` is read from a date the
+  template has tested with `d.getTime() === d.getTime()`, directly or through a `computed` the
+  render reads only under that test. Each fixture's dates come from `test/date-inputs.ts`, the
+  strings and time values `dates.json` records: ISO strings across the range of years, expanded
+  years and both edges, numbers with fractions, and invalid dates.
 
 ## [0.8.0] - 2026-10-18
 

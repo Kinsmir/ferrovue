@@ -10,7 +10,8 @@ export const DATE_METHODS = [
   "getUTCMilliseconds",
 ] as const;
 
-const HAND_STRINGS = [
+/** The strings for `Date.parse` written by hand: the edges of the format and of the range of dates. */
+export const HAND_STRINGS = [
   "",
   " ",
   "2024",
@@ -238,7 +239,8 @@ function mutated(s: string, rand: () => number): string {
   return rand() < 0.5 ? ` ${s}` : `${s} `;
 }
 
-const HAND_TIMES = [
+/** The time values written by hand: fractions, both edges of the range and beyond, `NaN` and the infinities. */
+export const HAND_TIMES = [
   0, -0, 1, -1, 0.5, -0.5, 1.9, -1.9, 999, 1000, -999, -1000, 86_399_999, 86_400_000, -86_400_000, -86_400_001,
   MAX, -MAX, MAX + 1, -MAX - 1, MAX - 0.5, 9e15, -9e15, 2 ** 53, -(2 ** 53), 1e300, -1e300, 5e-324, NaN, Infinity, -Infinity,
   -62_198_755_200_000, -62_198_755_200_001, -62_167_219_200_000, -62_167_219_200_001, 253_402_300_799_999, 253_402_300_800_000,
