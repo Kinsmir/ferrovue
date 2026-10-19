@@ -46,6 +46,7 @@ export function pathOf(n: N): string | null {
   if (base === null) return null;
   if (!n.computed && n.property.type === "Identifier") return `${base}.${n.property.name}`;
   if (n.computed && n.property.type === "StringLiteral") return `${base}.${n.property.value}`;
+  if (n.computed && n.property.type === "NumericLiteral") return `${base}[${n.property.value}]`;
   return null;
 }
 

@@ -67,10 +67,10 @@ pub use slots::{is_comment, scoped_slot_into, scoped_slot_into_slotted, slot_int
 pub use state::state_script_into;
 #[doc(hidden)]
 pub use strings::{
-    js_at, js_char_at, js_cmp, js_index_of, js_json_number, js_json_string, js_last_index_of,
-    js_length, js_number, js_pad_end, js_pad_start, js_parse_float, js_parse_int, js_repeat,
-    js_replace, js_replace_all, js_slice, js_slice_items, js_slice_range, js_split, js_substring,
-    js_trim, js_trim_end, js_trim_start,
+    js_at, js_char_at, js_cmp, js_index_of, js_item_at, js_json_number, js_json_string,
+    js_last_index_of, js_length, js_number, js_pad_end, js_pad_start, js_parse_float, js_parse_int,
+    js_repeat, js_replace, js_replace_all, js_slice, js_slice_items, js_slice_range, js_split,
+    js_substring, js_trim, js_trim_end, js_trim_start,
 };
 pub use teleport::Teleports;
 #[doc(hidden)]

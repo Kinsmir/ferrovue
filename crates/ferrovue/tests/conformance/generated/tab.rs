@@ -30,9 +30,9 @@ impl<'a> Props<'a> {
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) {
     out.reserve(98 + props.name.len() + props.title.len());
-    if fv_provides.tabs_key.map(|v| &*v.active) == Some(&*props.name) {
+    if fv_provides.tabs_key.map(|fv_o2| &*fv_o2.active) == Some(&*props.name) {
         out.push_str("<section class=\"tab active\"");
-        if let Some(v) = fv_provides.tabs_key.map(|v| v.count) {
+        if let Some(v) = fv_provides.tabs_key.map(|fv_o3| fv_o3.count) {
             out.push_str(" data-of=\"");
             fv::push_int(out, v);
             out.push('"');

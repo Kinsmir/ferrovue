@@ -126,6 +126,29 @@ pub fn js_slice_items<T>(
     all.into_iter()
 }
 
+/// `Array.prototype.at(index)` of a list's items: the item there, counted from the end when
+/// negative, or `None` (JavaScript's `undefined`) outside the list.
+///
+/// # Example
+///
+/// ```
+/// assert_eq!(ferrovue::js_item_at([1, 2, 3].into_iter(), -1.0), Some(3));
+/// assert_eq!(ferrovue::js_item_at([1, 2, 3].into_iter(), 3.0), None);
+/// assert_eq!(ferrovue::js_item_at([1, 2, 3].into_iter(), f64::NAN), Some(1));
+/// ```
+#[must_use]
+pub fn js_item_at<T>(items: impl Iterator<Item = T>, index: f64) -> Option<T> {
+    let mut all: Vec<T> = items.collect();
+    let len = all.len() as f64;
+    let n = to_integer(index);
+    let k = if n < 0.0 { len + n } else { n };
+    if 0.0 <= k && k < len {
+        Some(all.swap_remove(k as usize))
+    } else {
+        None
+    }
+}
+
 fn boundary(s: &str, i: usize) -> (usize, bool) {
     let mut unit = 0;
     for (byte, c) in s.char_indices() {

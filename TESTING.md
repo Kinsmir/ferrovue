@@ -138,6 +138,8 @@ A fixture is a JSON object of props plus three optional keys:
 | `Strings` | String methods in UTF-16 code units (astral characters, `$` replacement patterns, padding, `split("")`), ordering by code unit, kept by `computed` |
 | `Arrays`, `Chips` | `filter`, `map`, `some`, `every`, `find`, `findIndex`, `slice` with arrow functions, chained and nested, with an index and destructuring, in `v-for`, `computed`, `?:` and a child's props; `JSON.stringify` |
 | `Truthy` | `Boolean` as the function of `filter`, `map`, `some`, `every`, `find`, `findIndex`: empty strings, `0`, `-0` and `false` dropped; `.filter(Boolean)` of `T \| null` list items (strings, numbers, objects) and of an array literal holding optional fields, a `?:` with an `undefined` branch and `null`, in `computed`, `v-for` with an index and `.join()`; `Boolean(x)` |
+| `ListAccess` | Items by index: `list[i]` with literal, variable and negative indices, `.at()` with integers, fractions and negative indices, beyond either end and of empty lists, over lists of strings, numbers, objects and nullable items, computed lists and array literals, narrowed by `v-if`, through `?.` and `??` and in `computed`; `.indexOf()` and `.lastIndexOf()` with `===` (`NaN` never found, `-0` found as `0`, a fraction in a list of integers), `.findLast()` and `.findLastIndex()` with an index, destructuring and `Boolean`, `.concat()` of props, array literals, `[]` and computed lists; `.includes()` and `.lastIndexOf()` of a `v-for` item named `v` |
+| `OptionalChains` | Optional chains that go on past `?.`: string methods and `.length` (`s?.trim().length`, `s?.toUpperCase()`, `s?.split(",").length`), list methods and indices (`tags?.[1]`, `tags?.at(-1)?.toUpperCase()`, `tags?.filter(…).length`, `tags?.map(…).join()`), fields of fields and of optional fields (`user?.profile?.site?.length`), numbers (`count?.toFixed(2)`), dates (`when?.getTime()`, `when?.toUTCString()`, `seen?.toJSON()`, `seen?.toUTCString().length`, valid, invalid and at the edges of the range), over optional and nullable values that are present, absent and empty; in `computed`, `v-if`, `??` and `v-for` |
 | `NumberIncludes` | `.includes()` across `number` and `Float`: a fraction in a list of integers, an integer in a list of fractions and in a list mapped to fractions, `-0` found as `0`, integers beyond 2⁵³ |
 | `Records` | `Record<string, T>` and `{ [key: string]: T }` in JavaScript's order of keys (array indices first, a key given twice), `Object.keys` / `values` / `entries`, a record handed to a child |
 | `Nullable`, `NullChild`, `Session` | `T \| null` props, interface fields, list items, slot props and Pinia state: `null` written and narrowed (`!== null`, `=== null`, `!= null`, `== null`, truthiness), `??`, `?.` over a nullable object and field, interpolations and attributes of `null`, `null` as a `?:` branch and a child's prop, `ref<T \| null>(null)` in setup |
@@ -185,11 +187,11 @@ when it names a component that is not in `components/` with fixtures of its own.
 | Props | `Defaults`, `Destructured`, `PropsObject`, `Model`, `ModelParent`, `Picker`, `Glyph`, `Divider` |
 | Setup | `Setup`, `SetupValues`, `Lifecycle`, `Pending`, `EmptyBranch`, `Unread`, `UnreadVar` |
 | Provide and inject | `TabsPage`, `Tabs`, `Tab`, `ThemedButton`, `ThemeScope`, `Swatch`, `SwatchShelf`, `ThemedShelf`, `ThemedList`, `ThemedChoice` |
-| Text | `Text`, `Exprs`, `Numbers`, `Precision`, `Meter`, `Parsing`, `NumberTests`, `Regressions` |
+| Text | `Text`, `Exprs`, `Numbers`, `Precision`, `Meter`, `Parsing`, `NumberTests`, `Regressions`, `OptionalChains` |
 | Strings | `Strings`, `Exprs`, `Text` |
 | Dates | `Dates`, `Prices`, `DatePost`, `DateStamp`, `DateFormats`, `DateGuards` |
 | Conditions | `Branches`, `Narrowing`, `Nullable` |
-| Lists | `Lists`, `Arrays`, `Chips`, `Truthy`, `NumberIncludes`, `NarrowedRows`, `Exprs` |
+| Lists | `Lists`, `Arrays`, `Chips`, `Truthy`, `NumberIncludes`, `NarrowedRows`, `Exprs`, `ListAccess` |
 | Dictionaries | `Records`, `Chips` |
 | Attributes | `Attrs`, `BoundObject`, `Keywords` |
 | `class` | `Attrs`, `BoundObject`, `VnodeClass`, `AsyncClass` |
@@ -320,9 +322,17 @@ What it generates, with random nesting:
   `Number.isFinite()`, `Number.isInteger()` and `Number.isSafeInteger()` of integers, fractions
   (`NaN` and the infinities among them, from `/`, `%`, parsing and invalid dates) and optional
   numbers, and `isNaN()` and `isFinite()` of numbers, wherever a boolean goes;
-- lists computed from lists, `Object.keys` / `Object.values` and `split`, by `filter`, `map` and
-  `slice` with arrow functions (an index too), chained, read by `.join()`, `.length`, `.includes()`,
-  `some`, `every`, `find`, `findIndex` and `JSON.stringify`;
+- lists computed from lists, `Object.keys` / `Object.values` and `split`, by `filter`, `map`,
+  `slice` and `concat` (of a list of the same items, an array literal or `[]`) with arrow functions
+  (an index too), chained, read by `.join()`, `.length`, `.includes()`, `.indexOf()`,
+  `.lastIndexOf()`, `some`, `every`, `find`, `findIndex`, `findLast`, `findLastIndex`,
+  `JSON.stringify`, and an item by its index (`[i]` with a literal, negative ones too, or an integer,
+  and `.at()` with any number), read with `??`, through a method after `?.`, or by a field of an
+  item of a list of objects;
+- optional chains from an optional or nullable string or number that go on past `?.`: string
+  methods, `.length`, `.indexOf()`, `.at()` and `.split()` followed by list reads, `.toFixed()` and
+  `.toString()`, with `?.` again after each value that may be absent, read with `??` or as a
+  condition;
 - `<script setup>` beyond the props: `const props = defineProps(…)` read as `props.x` in the
   template and in script, `computed`, `ref` and plain constants computed from the props, a
   `generic="T extends Row"` parameter typing a list prop, `defineAsyncComponent` for a child;

@@ -1247,6 +1247,16 @@ class Gen {
           const kids = b ? [a, b] : [a];
           return { ...prev, kids: [...prev.kids, ...kids], fmt: (k, at) => `${prev.fmt(k, at)}.slice(${k[at + width]}${b ? `, ${k[at + width + 1]}` : ""})` };
         }],
+        [1, () => {
+          const same = this.scope.lists.filter((v) => JSON.stringify(v.of) === JSON.stringify(prev.of));
+          const lit = prev.of.k === "str" ? `['${r.pick(STR_LITS)}']` : prev.of.k === "int" ? `[${r.int(-3, 9)}, ${r.int(0, 9)}]` : null;
+          const other = r.weighted<() => string>([
+            [same.length ? 3 : 0, () => r.pick(same).name],
+            [lit ? 2 : 0, () => lit!],
+            [1, () => "[]"],
+          ])();
+          return { ...prev, fmt: (k, at) => `${prev.fmt(k, at)}.concat(${other})` };
+        }],
       ])();
     }
     return l;
@@ -1264,8 +1274,9 @@ class Gen {
   fromList(d: number): Expr | null {
     const r = this.r;
     const l = this.listExpr(d);
-    if (!l || l.of.k === "obj") return l && l.of.k === "obj" ? this.objListLength(l) : null;
+    if (!l || l.of.k === "obj") return l && l.of.k === "obj" ? this.fromObjList(l, d) : null;
     const str = l.of.k === "str";
+    const lone = l.lone ? { lone: true as const } : {};
     return r.weighted<() => Expr>([
       [4, () => {
         const sep = r.pick(str && l.lone ? ["', '", "'-'", "' & '"] : [null, "', '", "'-'", "''", "' & '"]);
@@ -1277,11 +1288,91 @@ class Gen {
         const fallback = r.pick(STR_LITS);
         return { ty: "str", bound: 0, kids: [...l.kids, fn.body], atom: false, fmt: (k) => `${l.fmt(k, 0)}.find(${fn.params} => ${k[l.kids.length]}) ?? '${fallback}'`, ...(l.lone ? { lone: true } : {}) };
       }],
+      [str ? 3 : 0, () => {
+        const at = r.chance(0.5);
+        const i = at ? this.small() : this.index();
+        const then = r.pick(["", "", "?.trim()", "?.toUpperCase()", "?.padEnd(3, '.')"]);
+        const fallback = r.pick(STR_LITS);
+        const read = (list: string, x: string) => (at ? `${list}.at(${x})` : `${list}[${x}]`);
+        return { ty: "str", bound: 0, kids: [...l.kids, i], atom: false, fmt: (k) => `${read(l.fmt(k, 0), k[l.kids.length]!)}${then} ?? '${fallback}'`, ...lone };
+      }],
+      [str ? 1 : 0, () => {
+        const fn = this.arrow(l.of, l.lone, () => this.test(d - 1));
+        const fallback = r.pick(STR_LITS);
+        return { ty: "str", bound: 0, kids: [...l.kids, fn.body], atom: false, fmt: (k) => `${l.fmt(k, 0)}.findLast(${fn.params} => ${k[l.kids.length]}) ?? '${fallback}'`, ...lone };
+      }],
     ])();
   }
 
-  objListLength(l: ListExpr): Expr {
-    return { ty: "str", bound: 0, kids: l.kids, atom: true, fmt: (k) => `String(${l.fmt(k, 0)}.length)` };
+  index(): Expr {
+    const r = this.r;
+    return r.weighted<() => Expr>([
+      [3, () => numLit(r.int(-2, 6), "int")],
+      [2, () => this.int(1, BOUND_SMALL)],
+    ])();
+  }
+
+  fromObjList(l: ListExpr, d: number): Expr {
+    const r = this.r;
+    const iface = l.of.k === "obj" ? this.ifaces.get(l.of.iface) : undefined;
+    const fields = iface?.fields.filter((f) => f.spec.k === "str") ?? [];
+    if (!fields.length || r.chance(0.4)) return { ty: "str", bound: 0, kids: l.kids, atom: true, fmt: (k) => `String(${l.fmt(k, 0)}.length)` };
+    const field = r.pick(fields).name;
+    const fallback = r.pick(STR_LITS);
+    return r.weighted<() => Expr>([
+      [3, () => {
+        const at = r.chance(0.5);
+        const i = at ? this.small() : this.index();
+        const read = (list: string, x: string) => (at ? `${list}.at(${x})` : `${list}[${x}]`);
+        return { ty: "str", bound: 0, kids: [...l.kids, i], atom: false, fmt: (k) => `${read(l.fmt(k, 0), k[l.kids.length]!)}?.${field} ?? '${fallback}'` };
+      }],
+      [2, () => {
+        const fn = this.arrow(l.of, false, () => this.test(d - 1));
+        return { ty: "str", bound: 0, kids: [...l.kids, fn.body], atom: false, fmt: (k) => `${l.fmt(k, 0)}.findLast(${fn.params} => ${k[l.kids.length]})?.${field} ?? '${fallback}'` };
+      }],
+    ])();
+  }
+
+  optChain(fallback: boolean): Expr | null {
+    const r = this.r;
+    const opts = this.scope.vars.filter((v) => v.opt && (v.ty === "str" || v.ty === "int" || v.ty === "float"));
+    if (!opts.length) return null;
+    const v = r.pick(opts);
+    type Link = "str" | "num" | "list" | "int";
+    type Step = { text: string; to: Link; maybe?: true; lone?: true };
+    const steps: Record<Exclude<Link, "int">, [number, () => Step][]> = {
+      str: [
+        [3, () => ({ text: r.pick(["trim()", "toUpperCase()", "toLowerCase()", "trimEnd()"]), to: "str" })],
+        [1, () => ({ text: `slice(${r.int(-3, 3)})`, to: "str", lone: true })],
+        [1, () => ({ text: `padStart(${r.int(0, 6)}, '*')`, to: "str" })],
+        [1, () => ({ text: "replace('a', '$&$&')", to: "str" })],
+        [1, () => ({ text: `at(${r.int(-2, 2)})`, to: "str", maybe: true, lone: true })],
+        [1, () => ({ text: "split(',')", to: "list" })],
+        [2, () => ({ text: r.pick(["length", "indexOf('a')"]), to: "int" })],
+      ],
+      list: [
+        [2, () => ({ text: "join('-')", to: "str" })],
+        [1, () => ({ text: r.pick(["length", "indexOf('a')"]), to: "int" })],
+        [2, () => ({ text: r.chance(0.5) ? `at(${r.int(-2, 2)})` : `[${r.int(0, 2)}]`, to: "str", maybe: true })],
+        [1, () => ({ text: "concat(['x'])", to: "list" })],
+      ],
+      num: [[1, () => ({ text: v.ty === "float" ? `toFixed(${r.int(0, 3)})` : "toString()", to: "str" })]],
+    };
+    let text = v.name;
+    let ty: Link = v.ty === "str" ? "str" : "num";
+    let lone = !!v.lone;
+    let maybe = true;
+    for (let n = r.int(1, 3); n > 0 && ty !== "int"; n--) {
+      const step = r.weighted(steps[ty])();
+      text += step.text.startsWith("[") ? `${maybe ? "?." : ""}${step.text}` : `${maybe ? "?." : "."}${step.text}`;
+      ty = step.to;
+      maybe = !!step.maybe;
+      lone ||= !!step.lone;
+    }
+    if (ty === "list" || ty === "num") text += `${maybe ? "?." : "."}${ty === "list" ? "join('|')" : "toString()"}`;
+    const isInt = ty === "int";
+    const tail = fallback ? (isInt ? ` ?? ${r.int(0, 3)}` : ` ?? '${r.pick(STR_LITS)}'`) : "";
+    return { ty: isInt ? "int" : "str", bound: isInt ? 2 ** 31 : 0, kids: [], atom: !fallback, fmt: () => `${text}${tail}`, ...(lone ? { lone: true } : {}) };
   }
 
   intFromList(d: number): Expr | null {
@@ -1297,6 +1388,25 @@ class Gen {
       [l.of.k === "int" ? 1 : 0, () => {
         const fn = this.arrow(l.of, l.lone, () => this.test(d - 1));
         return { ty: "int", bound: BOUND_SMALL, kids: [...l.kids, fn.body], atom: false, fmt: (k) => `${l.fmt(k, 0)}.find(${fn.params} => ${k[l.kids.length]}) ?? 0` };
+      }],
+      [1, () => {
+        const fn = this.arrow(l.of, l.lone, () => this.test(d - 1));
+        return { ty: "int", bound: 2 ** 31, kids: [...l.kids, fn.body], atom: true, fmt: (k) => `${l.fmt(k, 0)}.findLastIndex(${fn.params} => ${k[l.kids.length]})` };
+      }],
+      [l.of.k === "obj" ? 0 : 2, () => {
+        const m = r.pick(["indexOf", "lastIndexOf"]);
+        const x = l.of.k === "str" ? `'${r.pick(STR_LITS)}'` : String(r.pick([0, 1, 2, -1, 7]));
+        return { ty: "int", bound: 2 ** 31, kids: l.kids, atom: true, fmt: (k) => `${l.fmt(k, 0)}.${m}(${x})` };
+      }],
+      [l.of.k === "int" ? 3 : 0, () => {
+        const at = r.chance(0.5);
+        const i = at ? this.small() : this.index();
+        const read = (list: string, x: string) => (at ? `${list}.at(${x})` : `${list}[${x}]`);
+        return { ty: "int", bound: BOUND_SMALL, kids: [...l.kids, i], atom: false, fmt: (k) => `${read(l.fmt(k, 0), k[l.kids.length]!)} ?? ${r.int(0, 3)}` };
+      }],
+      [l.of.k === "int" ? 1 : 0, () => {
+        const fn = this.arrow(l.of, l.lone, () => this.test(d - 1));
+        return { ty: "int", bound: BOUND_SMALL, kids: [...l.kids, fn.body], atom: false, fmt: (k) => `${l.fmt(k, 0)}.findLast(${fn.params} => ${k[l.kids.length]}) ?? 0` };
       }],
     ])();
   }
@@ -1396,6 +1506,7 @@ class Gen {
         return v.lone ? leaf() : node("str", [v], ([a]) => `JSON.stringify(${a})`, 0, true);
       }],
       [3, () => this.fromList(d) ?? leaf()],
+      [2, () => { const e = this.optChain(true); return e?.ty === "str" ? e : leaf(); }],
       [this.dateWeight(2), () => this.isoString(d)],
       [this.dateWeight(2), () => this.dateText(d)],
       [1, () => node("str", [this.num(d - 1)], ([a]) => `String(${a})`, 0, true)],
@@ -1509,6 +1620,7 @@ class Gen {
       [2, () => { const a = this.int(d - 1, max), b = this.int(d - 1, max); return node("int", [this.test(d - 1), a, b], ([c, x, y]) => `${c} ? ${x} : ${y}`, Math.max(a.bound, b.bound)); }],
       [max > 2 ** 31 ? 2 : 0, () => { const m = r.pick(["indexOf", "lastIndexOf"]); const lit = r.pick(STR_LITS); return node("int", [this.str(d - 1)], ([a]) => `${recv(a)}.${m}('${lit}')`, 2 ** 31, true); }],
       [max > 2 ** 31 ? 2 : 0, () => this.intFromList(d) ?? leaf()],
+      [max > 2 ** 31 ? 1 : 0, () => { const e = this.optChain(true); return e?.ty === "int" ? e : leaf(); }],
     ];
     const e = r.weighted(options)();
     return e.bound < max ? e : leaf();
@@ -1613,6 +1725,7 @@ class Gen {
       [2, () => this.int(d - 1)],
       [1, () => this.float(d - 1)],
       [optVars.length ? 2 : 0, () => this.varRef(r.pick(optVars))],
+      [optVars.length ? 1 : 0, () => this.optChain(false) ?? this.bool(d)],
       [this.scope.lists.length ? 1 : 0, () => atom("int", `${r.pick(this.scope.lists).name}.length`, 2 ** 31)],
     ])();
   }

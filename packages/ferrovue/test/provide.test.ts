@@ -93,7 +93,7 @@ describe("provide and inject", () => {
     const tab = sfc("const tabs = inject(TabsKey);\nconst pick = inject(PickKey, () => {});", '<b v-if="tabs?.active === label" @click="pick(label)">{{ tabs?.count }}</b>');
     const out = project({ X: tabs, Tab: tab });
     expect(out.get("x.rs")).toContain("let fv_provided_tabs_key = super::types::TabsState { active: std::borrow::Cow::Borrowed(s_active), count: 2i64 };");
-    expect(out.get("tab.rs")).toContain("fv_provides.tabs_key.map(|v| &*v.active) == Some(&*props.label)");
+    expect(out.get("tab.rs")).toMatch(/fv_provides\.tabs_key\.map\(\|(fv_o\d+)\| &\*\1\.active\) == Some\(&\*props\.label\)/);
     expect(out.get("provides.rs")).not.toContain("pick");
   });
 

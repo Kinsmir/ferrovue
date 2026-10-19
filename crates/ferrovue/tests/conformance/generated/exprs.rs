@@ -147,15 +147,15 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push('|');
     out.push_str(if props.nums.contains(&2i64) { "true" } else { "false" });
     out.push_str("</p><p>");
-    if let Some(v) = props.author.as_ref().map(|v| &*v.name) {
+    if let Some(v) = props.author.as_ref().map(|fv_o1| &*fv_o1.name) {
         fv::escape_into(out, v);
     }
     out.push('|');
-    if let Some(v) = props.author.as_ref().and_then(|v| v.site.as_deref()) {
+    if let Some(v) = props.author.as_ref().and_then(|fv_o2| fv_o2.site.as_deref()) {
         fv::escape_into(out, v);
     }
     out.push('|');
-    fv::escape_into(out, props.author.as_ref().and_then(|v| v.site.as_deref()).unwrap_or("no site"));
+    fv::escape_into(out, props.author.as_ref().and_then(|fv_o3| fv_o3.site.as_deref()).unwrap_or("no site"));
     if props.pick.as_deref() == Some("a") {
         out.push_str("<i>picked a</i>");
     } else {
@@ -189,15 +189,15 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         out.push_str("</li>");
     }
     out.push_str("<!--]--><!--[-->");
-    for (i, fv_item2_ref) in props.rows.iter().enumerate() {
-        let fv_item2 = fv_item2_ref;
+    for (i, fv_item5_ref) in props.rows.iter().enumerate() {
+        let fv_item5 = fv_item5_ref;
         let i = i as i64;
         out.push_str("<li data-id=\"");
-        fv::push_int(out, fv_item2.id);
+        fv::push_int(out, fv_item5.id);
         out.push_str("\">");
         fv::push_int(out, i);
         out.push(':');
-        fv::escape_into(out, &fv_item2.label);
+        fv::escape_into(out, &fv_item5.label);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul>");

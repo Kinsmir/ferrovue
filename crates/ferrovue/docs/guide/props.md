@@ -67,6 +67,16 @@ nullable (use `== null`). A parent passes a nullable prop always, `null` for non
 an optional value to it, or a nullable one to an optional prop, without `?? null` or
 `?? undefined`.
 
+# Optional chains and list items
+
+`a?.b` is `undefined` when `a` is absent, and so is a chain that goes on past it as a whole
+(`a?.b.c`, `s?.trim().length`, `tags?.at(-1)?.toUpperCase()`): the generated code maps the rest of
+the chain over the `Option`, and every property and method the value has when present may follow.
+A list's item, `list[i]` with an integer `i` or `list.at(i)`, which counts from the end when `i` is
+negative, is an optional value too, `undefined` outside the list: `v-if="rows[0]"` narrows it, and
+`??`, `?.` and `{{ }}` take it as they take an optional prop. An index that is a `Float`, which may
+hold a fraction, a string or a value that may be absent is refused.
+
 # Building props
 
 `Props::new` takes the required props, in the order they are declared; each optional prop has a
