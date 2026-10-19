@@ -104,7 +104,9 @@ and [`Args`](crate::i18n::Args) with struct literals, and these types are `#[non
 0.8 on, so version 2 builds them with their `const` constructors and `with_` methods. Version 3
 adds `Date` props, which generated code reads through [`JsTime`](crate::JsTime), hands to a child
 and writes into `data-props` with helpers the 0.8 crate lacks; the crate after 0.8 supports
-versions 2 and 3, since a module of version 2 calls nothing it changed.
+versions 2 and 3, since a module of version 2 calls nothing it changed. The upgrade pages,
+[`upgrading_to_0_9`](crate::guide::upgrading_to_0_9) and
+[`upgrading_to_0_8`](crate::guide::upgrading_to_0_8), give the steps for each release.
 
 `__compat!` itself is `#[doc(hidden)]` and may change form in any release; the check at the top of
 `mod.rs` stays.

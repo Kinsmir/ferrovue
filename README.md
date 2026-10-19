@@ -19,8 +19,11 @@ HTML with no JavaScript runtime, and the browser hydrates that HTML with the sam
   file, line and construct. A component that compiles renders as Vue renders it.
 
 ferrovue is at 0.8, before 1.0: a minor release may change the configuration, the generated code or
-the crates' API, and the [CHANGELOG](https://github.com/Kinsmir/ferrovue/blob/main/CHANGELOG.md)
-says what changed and how to move.
+the crates' API. The [CHANGELOG](https://github.com/Kinsmir/ferrovue/blob/main/CHANGELOG.md) says
+what changed, and the guide's upgrade pages
+([0.8 to 0.9](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_9/index.html),
+[0.7 to 0.8](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_8/index.html)) say how
+to move a project.
 
 ```text
  Button.vue ──(ferrovue compiler, Node)──▶ button.rs ──(your Rust server)──▶ HTML ──▶ Vue hydrates it
@@ -291,6 +294,8 @@ The crate's guide, `ferrovue::guide` on docs.rs, covers each topic in depth:
 - [Errors and limits](https://docs.rs/ferrovue/latest/ferrovue/guide/errors_and_limits/index.html),
   with helpers, `<ClientOnly>` and Rust twins, and every
   [error code](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html)
+- Upgrading a project [from 0.8 to 0.9](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_9/index.html)
+  and [from 0.7 to 0.8](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_8/index.html)
 
 [`examples/fullstack`](https://github.com/Kinsmir/ferrovue/blob/main/examples/fullstack/README.md)
 is a complete app to copy: an axum server, a Vite client, islands, Pinia, vue-router and streaming,

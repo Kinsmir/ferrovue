@@ -37,6 +37,11 @@
     feature = "dioxus",
     doc = "23. [`dioxus`]: islands in a page that Dioxus renders, with the `dioxus` feature."
 )]
+//!
+//! Upgrading a project from an earlier release, newest first:
+//!
+//! - [`upgrading_to_0_9`]: from 0.8 to 0.9.
+//! - [`upgrading_to_0_8`]: from 0.7 to 0.8.
 
 #[doc = include_str!("../docs/guide/quick_start.md")]
 pub mod quick_start {}
@@ -112,3 +117,9 @@ pub mod error_codes {}
 #[cfg_attr(docsrs, doc(cfg(feature = "dioxus")))]
 #[doc = include_str!("../docs/guide/dioxus.md")]
 pub mod dioxus {}
+
+#[doc = include_str!("../docs/guide/upgrading_to_0_9.md")]
+pub mod upgrading_to_0_9 {}
+
+#[doc = include_str!("../docs/guide/upgrading_to_0_8.md")]
+pub mod upgrading_to_0_8 {}
