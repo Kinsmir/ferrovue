@@ -232,6 +232,8 @@ released together and share version numbers.
   `Math.max(...xs)` and `Math.min(...xs)`. A name the template reads only after `...` is now
   declared in the component's script, as any other name it reads is. The conformance suite gains
   `ListBuilding`, seven fixtures recorded from Vue.
+- Tests only: the CLI's `--watch` test writes a component again until the watcher reports it, since
+  macOS can miss a change made just after a watch starts.
 - FV0610's title and message name a hole in an array literal alone: a spread compiles now, or is
   refused with FV0833.
 

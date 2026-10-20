@@ -114,18 +114,23 @@ it("--watch regenerates on a change, and reports an error without stopping", asy
     for (let i = 0; i < 400 && !out.includes(text); i++) await new Promise((r) => setTimeout(r, 50));
     expect(out).toContain(text);
   };
+  const writeUntil = async (source: string, text: string): Promise<void> => {
+    for (let i = 0; i < 20 && !out.includes(text); i++) {
+      writeFileSync(join(root, "components", "Hello.vue"), source);
+      for (let j = 0; j < 20 && !out.includes(text); j++) await new Promise((r) => setTimeout(r, 50));
+    }
+    expect(out).toContain(text);
+  };
   try {
     await waitFor("watching for changes");
-    writeFileSync(join(root, "components", "Hello.vue"), `<script setup lang="ts">
+    await writeUntil(`<script setup lang="ts">
 defineProps<{ name: string }>();
 </script>
-<template><p>{{ name / 2 }}</p></template>`);
-    await waitFor("error[FV0609]: components/Hello.vue");
-    writeFileSync(join(root, "components", "Hello.vue"), `<script setup lang="ts">
+<template><p>{{ name / 2 }}</p></template>`, "error[FV0609]: components/Hello.vue");
+    await writeUntil(`<script setup lang="ts">
 defineProps<{ name: string }>();
 </script>
-<template><p>Bye, {{ name }}</p></template>`);
-    await waitFor("1 changed");
+<template><p>Bye, {{ name }}</p></template>`, "1 changed");
   } finally {
     await stop(child);
   }
