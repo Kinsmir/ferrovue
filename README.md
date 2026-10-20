@@ -349,8 +349,9 @@ before it reaches you; a ferrovue patch follows when one does.
 
 ### Upgrading
 
-Until 1.0, versions are 0.x.y: a minor release raises x and may change the configuration, the
-generated code and the crates' API, and a patch release raises y and breaks none of them. The npm
+Until 1.0, versions are 0.MINOR.PATCH: raising MINOR (0.9.2 to 0.10.0) may change the
+configuration, the generated code and the crates' API, and raising PATCH (0.10.0 to 0.10.1) breaks
+none of them. The npm
 package and the crates share one version, so upgrade them together and generate your components
 again. The
 [CHANGELOG](https://github.com/Kinsmir/ferrovue/blob/main/CHANGELOG.md) lists what each release
