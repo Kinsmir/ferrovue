@@ -219,11 +219,14 @@ export interface Consts {
   rank: number;
 }
 
+export type Step = { k: "const"; name: string; e: Expr } | { k: "if"; test: Expr; e: Expr };
+
 export interface Binding {
   name: string;
   kind: "computed" | "const" | "ref";
   e: Expr;
   lazy?: string;
+  steps?: Step[];
 }
 
 export interface HeadValue {
@@ -501,11 +504,20 @@ function printHead(call: HeadCall): string {
   return `useHead({ ${parts.join(", ")} });`;
 }
 
+function stepLine(st: Step): string {
+  return st.k === "const" ? `  const ${st.name} = ${printExpr(st.e)};` : `  if (${printExpr(st.test)}) return ${printExpr(st.e)};`;
+}
+
+function bindingText(b: Binding): string {
+  return [...(b.steps ?? []).flatMap((st) => (st.k === "const" ? [st.e] : [st.test, st.e])), b.e].map(printExpr).join("\n");
+}
+
 function scriptLines(c: Component): string[] {
   const lines: string[] = [];
   for (const b of c.bindings) {
     const e = printExpr(b.e);
-    lines.push(b.kind === "computed" ? `const ${b.name} = computed(() => ${e});` : b.kind === "ref" ? `const ${b.name} = ref(${e});` : `const ${b.name} = ${e};`);
+    if (b.steps?.length) lines.push(`const ${b.name} = computed(() => {`, ...b.steps.map(stepLine), `  return ${e};`, "});");
+    else lines.push(b.kind === "computed" ? `const ${b.name} = computed(() => ${e});` : b.kind === "ref" ? `const ${b.name} = ref(${e});` : `const ${b.name} = ${e};`);
   }
   for (const p of c.provides) lines.push(`provide(${p.key === "str" ? '"fz-s"' : p.key === "num" ? "FzNum" : "FzLive"}, ${printExpr(p.e)});`);
   for (const h of c.head) lines.push(printHead(h));
@@ -2424,6 +2436,24 @@ function scriptExpr(g: Gen, ty: Ty, d: number): Expr {
   return g.bool(d);
 }
 
+function bodySteps(g: Gen, ty: Ty, at: number): Step[] {
+  const steps: Step[] = [];
+  for (let k = g.r.int(1, 3); k > 0; k--) {
+    if (g.r.chance(0.5)) {
+      const name = `l${at}_${steps.length}`;
+      const e = scriptExpr(g, g.r.pick<Ty>(["str", "int", "float", "bool"]), g.r.int(1, 2));
+      steps.push({ k: "const", name, e });
+      g.scope.vars.push(bindingVar({ name, kind: "const", e }));
+    } else steps.push({ k: "if", test: g.bool(g.r.int(1, 2)), e: scriptExpr(g, ty, g.r.int(1, 2)) });
+  }
+  return steps;
+}
+
+function joined(e: Expr, steps: Step[]): Expr {
+  const returns = [e, ...steps.flatMap((st) => (st.k === "if" ? [st.e] : []))];
+  return { ...e, bound: Math.max(...returns.map((x) => x.bound)), ...(returns.some((x) => x.lone) ? { lone: true } : {}) };
+}
+
 const bindingVar = (b: Binding): Var => ({ name: b.name, ty: b.e.ty, opt: false, bound: b.e.ty === "int" ? Math.max(b.e.bound, 1) : 0, ...(b.e.lone ? { lone: true } : {}) });
 
 const whole = (e: Expr): Expr => (e.lone ? strLit("whole") : e);
@@ -2687,8 +2717,10 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
     for (let n = r.weighted([[2, 0], [3, 1], [2, 2], [1, 3]]); n > 0; n--) {
       const kind = r.weighted<Binding["kind"]>([[3, "computed"], [2, "const"], [1, "ref"]]);
       const ty = r.pick<Ty>(["str", "str", "int", "float", "bool"]);
+      const steps = kind === "computed" && r.chance(0.4) ? bodySteps(g, ty, bindings.length) : undefined;
       const e = kind === "ref" ? literalOf(r, ty) : scriptExpr(g, ty, r.int(1, 2));
-      const binding = { name: `${kind === "computed" ? "cmp" : kind === "const" ? "cst" : "ref"}${bindings.length}`, kind, e };
+      if (steps) g.scope.vars = g.scope.vars.filter((v) => !steps.some((st) => st.k === "const" && st.name === v.name));
+      const binding = { name: `${kind === "computed" ? "cmp" : kind === "const" ? "cst" : "ref"}${bindings.length}`, kind, e: steps ? joined(e, steps) : e, ...(steps ? { steps } : {}) };
       bindings.push(binding);
       if (kind === "const") g.scope.vars.push(bindingVar(binding));
     }
@@ -2776,7 +2808,7 @@ export function prune(c: Component): Component {
     for (const b of c.bindings) {
       if (kept.has(b) || !mentions(text, b.name)) continue;
       kept.add(b);
-      text += `\n${printExpr(b.e)}`;
+      text += `\n${bindingText(b)}`;
       grew = true;
     }
   }
@@ -2841,7 +2873,7 @@ function* exprSlots(nodes: Node[]): Generator<{ get: () => Expr; set: (e: Expr) 
 
 function* allSlots(c: Component): Generator<{ get: () => Expr; set: (e: Expr) => void }> {
   for (const st of c.stores) for (const g of st.getters) yield { get: () => g.e, set: (e) => (g.e = e) };
-  for (const b of c.bindings) if (b.kind !== "ref") yield { get: () => b.e, set: (e) => (b.e = e) };
+  for (const b of c.bindings) if (b.kind !== "ref") yield { get: () => b.e, set: (e) => (b.e = b.steps ? joined(e, b.steps) : e) };
   for (const p of c.provides) if (!p.e.fixed) yield { get: () => p.e, set: (e) => (p.e = whole(e)) };
   for (const h of c.head) for (const en of h.entries) yield { get: () => en.v.e, set: (e) => (en.v.e = whole(e)) };
   yield* exprSlots(c.template);

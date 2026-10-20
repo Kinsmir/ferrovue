@@ -982,7 +982,7 @@ List method given anything but an arrow function or `Boolean`.
 
 ## FV0806
 
-Arrow function with a block body.
+Arrow function with a block body. Retired in 0.10.0: the compiler no longer raises it.
 
 The compiler translates an arrow function whose body is one expression. A block body with statements, even a single `{ return … }`, is refused. Write the body as an expression (`x => x.price * 2`), with `?:` for a choice.
 
@@ -2311,3 +2311,31 @@ V8 computes a year beyond ±1,000,000, a month beyond ±10,000,000 and a year be
 `===`, `!==`, `==` or `!=` with a `Date`.
 
 Two `Date`s are equal in JavaScript only when they are one object, so two dates of the same time are unequal, and `==` with a string compares the date's `.toString()`, in the time zone of the machine running it. Compare time values: `a.getTime() === b.getTime()`. `<`, `<=`, `>` and `>=` between two dates compare their time values, and are false when either is invalid. See [`dates_and_prices`](crate::guide::dates_and_prices).
+
+# Statements and functions: FV19xx
+
+See [`script_logic`](crate::guide::script_logic).
+
+## FV1901
+
+Statement a function's body may not hold.
+
+A `computed`, a list method's callback and a function the server calls may hold `const` declarations (and `let` that is never assigned again), `if` / `else`, blocks, `switch` and `return`. Loops, `try`, `throw`, `var`, expression statements, labels, `continue` and functions or classes declared inside the body are refused: compute a list with `.map()`, `.filter()` or `.reduce()`, and pass anything else in as a prop. See [`script_logic`](crate::guide::script_logic).
+
+## FV1902
+
+Assignment in a function's body.
+
+A value in a function's body is computed once: an assignment (`=`, `+=`, `++` and the like) would change one, which the server does not translate. Give each value a `const` of its own.
+
+## FV1903
+
+Function that can end without returning a value.
+
+JavaScript returns `undefined` from a function that reaches its end, or a bare `return;`. The compiler refuses both, so that every path says what it gives: add a `return` (or an `else`, or a `default:` to a `switch`) on the path the message points at, and write `return undefined` where that is meant.
+
+## FV1904
+
+`switch` or code after `return` the compiler does not translate.
+
+A `case` ends in `return` or `break`, or is empty and shares the next case's statements; a declaration directly in a `case` belongs to the whole `switch`, so wrap the case's statements in `{ … }`; code after `return` or `break` never runs.

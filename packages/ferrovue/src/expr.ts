@@ -10,15 +10,13 @@ import { boolOf, checkNullTest, choice, known, narrowing, narrowTo, nullTest, pa
 import { BUILTINS, builtin, call, isObjectCall } from "./calls.ts";
 import { constOf, constVal } from "./constants.ts";
 import { localeRefusal } from "./plugins/dates.ts";
+import { letIn, split, splits } from "./blocks.ts";
 
 const MATH_CONSTANTS = new Map(["E", "LN10", "LN2", "LOG10E", "LOG2E", "PI", "SQRT1_2", "SQRT2"].map((k) => [k, Math[k as "PI"]]));
 
 const NUMBER_CONSTANTS = new Map(
   ["EPSILON", "MAX_SAFE_INTEGER", "MAX_VALUE", "MIN_SAFE_INTEGER", "MIN_VALUE", "NaN", "NEGATIVE_INFINITY", "POSITIVE_INFINITY"].map((k) => [k, Number[k as "NaN"]]),
 );
-
-/** Why a `computed` whose body is a block of statements is left to the client. */
-export const MANY_STATEMENTS = "it is a `computed` whose body is a block of statements: the server evaluates a body that is one expression or a single `return`";
 
 const COMPUTE_IN_RUST = "compute the value in Rust and pass it as a prop";
 
@@ -38,9 +36,7 @@ export function refuseClientOnly(s: Scope, name: string, n: N, called = false): 
     throw e;
   }
   const why = s.clientOnly.get(name)!;
-  const help = why === MANY_STATEMENTS
-    ? `write the body as one expression, as \`computed(() => (a ? b : c))\`, or as a single \`return\`, or ${COMPUTE_IN_RUST}`
-    : called || why.startsWith("it is a function") ? twinHelp(name) : `${COMPUTE_IN_RUST}, or read it only from an event handler`;
+  const help = called || why.startsWith("it is a function") ? twinHelp(name) : `${COMPUTE_IN_RUST}, or read it only from an event handler`;
   return fail(s.comp, "FV0613", `\`${name}\` is set up in a way the server cannot evaluate: ${why}`, n, help);
 }
 
@@ -174,6 +170,8 @@ export function typedBy(n: N, t: N): N {
       return { ...n, consequent: typedBy(n.consequent, t), alternate: typedBy(n.alternate, t) };
     case "LogicalExpression":
       return n.operator === "&&" ? n : { ...n, right: typedBy(n.right, t) };
+    case "FvLet":
+      return { ...n, body: typedBy(n.body, t) };
     default:
       return n;
   }
@@ -616,6 +614,7 @@ export function expr(s: Scope, n: N): Val {
       return boolOf(n.operator === "===" ? eq : not(eq));
     }
     case "ConditionalExpression": {
+      if (n.fvIf && splits(s, n.test)) return expr(s, split(n));
       const t = expr(s, n.test);
       const k = known(t);
       if (k !== undefined) {
@@ -637,6 +636,8 @@ export function expr(s: Scope, n: N): Val {
       let a = expr(p && !p.negated ? narrowTo(s, p, name) : s, n.consequent);
       let b = expr(p && p.negated ? narrowTo(s, p, name) : s, n.alternate);
       if (sameTy(a.ty, b.ty) && a.code === b.code && (!name || !occurrences(a.code, name))) return a;
+      const placed = (v: Val): Val => (["struct", "child", "record"].includes(v.ty.k) && /^\w+(?:\.[\w#]+)+$/.test(v.code) ? { ...v, code: `&${v.code}` } : v);
+      [a, b] = [placed(a), placed(b)];
       const [emptyA, emptyB] = [untypedEmpty(a), untypedEmpty(b)];
       if (emptyA && b.ty.k === "list") a = { ...a, ty: b.ty };
       if (emptyB && a.ty.k === "list") b = { ...b, ty: a.ty };
@@ -684,6 +685,8 @@ export function expr(s: Scope, n: N): Val {
     case "TSAsExpression":
     case "TSSatisfiesExpression":
       return stated(s, n);
+    case "FvLet":
+      return letIn(s, n);
     case "NewExpression": {
       const own = claim((p) => p.construct?.(s, n));
       if (own) return own;

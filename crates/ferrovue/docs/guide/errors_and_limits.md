@@ -81,9 +81,11 @@ What is refused today, each with an error that names it:
   literal. See [`strings`](crate::guide::strings);
 - two strings that may each hold half of a surrogate pair compared, searched or joined. See
   [`strings`](crate::guide::strings#halves-of-surrogate-pairs);
-- array methods given anything but `Boolean` or an arrow function whose body is an expression
-  (`.map(String)`, `x => { return … }`), `.map()` to optional values, methods other than
-  `.filter(Boolean)` over a list of optional values, and a computed list as a slot prop;
+- array methods given anything but `Boolean` or an arrow function (`.map(String)`), `.map()` to
+  optional values, methods other than `.filter(Boolean)` over a list of optional values, and a
+  computed list as a slot prop;
+- in a `computed`'s body or a callback's: loops, assignments, `try`, `throw`, `var`, and a path
+  that ends without `return`. See [`script_logic`](crate::guide::script_logic#what-is-refused);
 - a dictionary's field read by name (`r.key`, `r[key]`), which may be absent although TypeScript
   says it is not; `Object.entries()` anywhere but as a `v-for`'s source; dictionaries of optional
   values. See [`props`](crate::guide::props#dictionaries);

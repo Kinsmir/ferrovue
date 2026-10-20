@@ -266,7 +266,7 @@ function pickOf(s: Scope, raw: N, seen: Set<string> = new Set()): Pick {
     const found = component(s, name);
     if (found) return { k: "one", choice: found };
     const d = seen.has(name) ? null : declared(s, name);
-    const source = d?.init ? setupSource(d.init) : null;
+    const source = d?.init ? setupSource(s.comp, d.init) : null;
     if (source) return pickOf(s, source, new Set(seen).add(name));
     if (tableOf(s, n)) fail(s.comp, "FV0418", `${OPEN}; \`${name}\` is an object: read one of its components by key, as \`${name}[key]\``, raw);
   }

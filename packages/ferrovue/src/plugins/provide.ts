@@ -288,7 +288,7 @@ function structLiteral(s: Scope, key: Key, obj: N, reactive: boolean, what: stri
       if (f.ty.k !== "opt") fail(s.comp, "FV1612", `\`${st!.name}\` requires \`${f.js}\``, obj);
       return `${f.rust}: None`;
     }
-    const v = expr(s, setupSource(node) ?? node);
+    const v = expr(s, setupSource(s.comp, node) ?? node);
     return fieldInit(f.rust, ownInto(s.comp, { ...v, ty: markHome(v.ty, s.comp.name) }, f.ty, node));
   });
   return `${path}${st!.name} { ${inits.join(", ")} }`;
@@ -328,7 +328,7 @@ function provide(s: Scope, call: N): void {
     provideObject(s, site, inner, reactive);
     return;
   }
-  const node = setupSource(inner) ?? inner;
+  const node = setupSource(s.comp, inner) ?? inner;
   const v = expr(s, node);
   if (nothing(v.ty) || absence(v.ty) !== null) {
     fail(s.comp, "FV1609", `the value provided under ${key.label} may be ${describeTy(v.ty).replace(/^an optional .*/, "`undefined`")}, which \`inject\` hands on as it is where its default would apply without a provider: fall back with \`??\` before providing it`, call.arguments[1]);
@@ -370,7 +370,7 @@ function inject(s: Scope, d: N, init: N, asserted: boolean, lets: string[]): voi
   let defaultRef: boolean | null = null;
   if (fallback !== null) {
     defaultRef = calls(fallback, REF_CALLS);
-    if (defaultRef) fallback = setupSource(fallback) ?? fallback;
+    if (defaultRef) fallback = setupSource(s.comp, fallback) ?? fallback;
   }
   const keyRef = refOf(key);
   if (keyRef !== null && defaultRef !== null && keyRef !== defaultRef) {

@@ -29,6 +29,7 @@ export const AREAS: Record<string, { name: string; guide?: string }> = {
   "16": { name: "Provide and inject", guide: "provide_inject" },
   "17": { name: "Page head", guide: "head" },
   "18": { name: "Dates and locale formatting", guide: "dates_and_prices" },
+  "19": { name: "Statements and functions", guide: "script_logic" },
 };
 
 /** Every code the compiler raises. A code is never reused: one the compiler stops raising is marked
@@ -475,7 +476,7 @@ export const ERRORS = {
   },
   FV0613: {
     title: "Value set up in a way the server cannot evaluate",
-    detail: "The template reads a name setup binds, and the server cannot compute its value: a function declared in setup, a `computed` whose body is a block of statements, a value destructured from something the server does not have, a `let` with no initial value, or an expression the compiler refuses (the message gives the reason). The server evaluates `ref(…)`, `computed(() => …)` with a body that is one expression or a single `return`, and plain expressions. Such a name may be used freely from event handlers, which the server drops. Write the value as one expression, move a function into the helpers module with a Rust twin under `helpers.functions`, or compute the value in Rust and pass it as a prop.",
+    detail: "The template reads a name setup binds, and the server cannot compute its value: a function declared in setup, a `computed` whose body holds a statement outside the subset of [`script_logic`](crate::guide::script_logic) (the message names it and its line), a value destructured from something the server does not have, a `let` with no initial value, or an expression the compiler refuses (the message gives the reason). The server evaluates `ref(…)`, `computed(() => …)` with a body that is one expression or a block of `const`, `if`, `switch` and `return`, and plain expressions. Such a name may be used freely from event handlers, which the server drops. Write the value as one expression, move a function into the helpers module with a Rust twin under `helpers.functions`, or compute the value in Rust and pass it as a prop.",
   },
   FV0614: {
     title: "Logical operator between values that are not booleans",
@@ -668,10 +669,7 @@ export const ERRORS = {
     title: "List method given anything but an arrow function or `Boolean`",
     detail: "`.filter()`, `.map()`, `.some()`, `.every()`, `.find()` and their kin take an arrow function of the item and of its index (`x => …` or `(x, i) => …`), which the compiler translates to a Rust closure, or `Boolean`. A function name, an `async` arrow or one that reads the list as a third parameter is something the server cannot inline. Write the condition as an arrow function, or move a named function to the helpers module with a Rust twin under `helpers.functions` and call it inside one (`x => isActive(x)`).",
   },
-  FV0806: {
-    title: "Arrow function with a block body",
-    detail: "The compiler translates an arrow function whose body is one expression. A block body with statements, even a single `{ return … }`, is refused. Write the body as an expression (`x => x.price * 2`), with `?:` for a choice.",
-  },
+  FV0806: { title: "Arrow function with a block body", retired: "0.10.0" },
   FV0807: {
     title: "Arrow function index that is not a plain name",
     detail: "The second parameter of an arrow function given to a list method is the item's index, a number, which the compiler binds to a Rust variable. A pattern or a default there has nothing to destructure. Name it (`(x, i) => …`).",
@@ -1535,6 +1533,22 @@ export const ERRORS = {
   FV1809: {
     title: "`===`, `!==`, `==` or `!=` with a `Date`",
     detail: "Two `Date`s are equal in JavaScript only when they are one object, so two dates of the same time are unequal, and `==` with a string compares the date's `.toString()`, in the time zone of the machine running it. Compare time values: `a.getTime() === b.getTime()`. `<`, `<=`, `>` and `>=` between two dates compare their time values, and are false when either is invalid. See [`dates_and_prices`](crate::guide::dates_and_prices).",
+  },
+  FV1901: {
+    title: "Statement a function's body may not hold",
+    detail: "A `computed`, a list method's callback and a function the server calls may hold `const` declarations (and `let` that is never assigned again), `if` / `else`, blocks, `switch` and `return`. Loops, `try`, `throw`, `var`, expression statements, labels, `continue` and functions or classes declared inside the body are refused: compute a list with `.map()`, `.filter()` or `.reduce()`, and pass anything else in as a prop. See [`script_logic`](crate::guide::script_logic).",
+  },
+  FV1902: {
+    title: "Assignment in a function's body",
+    detail: "A value in a function's body is computed once: an assignment (`=`, `+=`, `++` and the like) would change one, which the server does not translate. Give each value a `const` of its own.",
+  },
+  FV1903: {
+    title: "Function that can end without returning a value",
+    detail: "JavaScript returns `undefined` from a function that reaches its end, or a bare `return;`. The compiler refuses both, so that every path says what it gives: add a `return` (or an `else`, or a `default:` to a `switch`) on the path the message points at, and write `return undefined` where that is meant.",
+  },
+  FV1904: {
+    title: "`switch` or code after `return` the compiler does not translate",
+    detail: "A `case` ends in `return` or `break`, or is empty and shares the next case's statements; a declaration directly in a `case` belongs to the whole `switch`, so wrap the case's statements in `{ … }`; code after `return` or `break` never runs.",
   },
 } as const satisfies Record<`FV${number}`, ErrorDoc>;
 

@@ -88,8 +88,8 @@ import { fmt } from "./util";
 const props = defineProps<{ n: number; pair: [number, number] }>();
 function twice(x: number) { return x * 2; }
 const big = computed(() => {
-  const m = props.n * 2;
-  return m;
+  for (const m of [props.n]) return m;
+  return 0;
 });
 </script>
 <template>
@@ -117,8 +117,8 @@ const big = computed(() => {
         ["FV0613", "`twice` is set up in a way the server cannot evaluate: it is a function, which only an event handler may call", twin("twice")],
         [
           "FV0613",
-          "`big` is set up in a way the server cannot evaluate: it is a `computed` whose body is a block of statements: the server evaluates a body that is one expression or a single `return`",
-          "write the body as one expression, as `computed(() => (a ? b : c))`, or as a single `return`, or compute the value in Rust and pass it as a prop",
+          "`big` is set up in a way the server cannot evaluate: a function's body may not hold a `for…of` loop: it holds `const` (and `let` never assigned again), `if` / `else`, `switch` and `return`; compute a list with `.map()`, `.filter()` or `.reduce()` (line 7)",
+          "compute the value in Rust and pass it as a prop, or read it only from an event handler",
         ],
         ["FV0601", "`nowhere()` is not available when rendering on the server", "a template calls JavaScript's built-ins and the helpers with Rust twins under `helpers.functions` in ferrovue.config.json; compute the value in Rust and pass it as a prop"],
         ["FV0625", "an object literal is not supported in a template", null],
@@ -516,7 +516,7 @@ ${setup}
 
     it("collects a computed list chosen against an empty one", () => {
       const out = tree("const a = computed(() => (props.flag ? props.others.map((o) => o.label) : []));", `<i>{{ a.join() }}</i>`);
-      expect(out).toMatch(/\(if props\.flag \{ props\.others\.iter\(\)\.map\(.*\.collect::<Vec<_>>\(\) \} else \{ Vec::new\(\) \}\)/);
+      expect(out).toMatch(/let s_a = if props\.flag \{ props\.others\.iter\(\)\.map\(.*\.collect::<Vec<_>>\(\) \} else \{ Vec::new\(\) \};/);
     });
 
     it("reads an object field through `?.` by reference", () => {
@@ -2920,12 +2920,146 @@ const props = defineProps<{ n: number }>();
       /`parseInt\(\)` takes a string/,
     ],
     [
-      "an arrow function with a block body",
+      "a loop in a callback's body",
       `<script setup lang="ts">
-const props = defineProps<{ tags: string[] }>();
+const props = defineProps<{ tags: string[]; n: number }>();
 </script>
-<template><i>{{ tags.filter((t) => { return t.length > 1; }).length }}</i></template>`,
-      /`\.filter\(\)` takes an arrow function whose body is an expression/,
+<template><i>{{ tags.map((t) => { for (const c of t) { if (c) return c; } return t; }).join() }}</i></template>`,
+      /X\.vue:4:\d+: a function's body may not hold a `for…of` loop: it holds `const`.*compute a list with `\.map\(\)`/,
+    ],
+    [
+      "a while loop in a callback's body",
+      `<script setup lang="ts">
+const props = defineProps<{ tags: string[]; n: number }>();
+</script>
+<template><i>{{ tags.map((t) => { while (t) { return t; } return t; }).join() }}</i></template>`,
+      /a function's body may not hold a `while` loop/,
+    ],
+    [
+      "try in a callback's body",
+      `<script setup lang="ts">
+const props = defineProps<{ tags: string[]; n: number }>();
+</script>
+<template><i>{{ tags.map((t) => { try { return t.trim(); } catch { return t; } }).join() }}</i></template>`,
+      /a function's body may not hold `try`, which only catches what the body throws/,
+    ],
+    [
+      "throw in a callback's body",
+      `<script setup lang="ts">
+const props = defineProps<{ tags: string[]; n: number }>();
+</script>
+<template><i>{{ tags.map((t) => { if (!t) throw new Error(); return t; }).join() }}</i></template>`,
+      /a function's body may not hold `throw`, which ends the render with an error/,
+    ],
+    [
+      "var in a callback's body",
+      `<script setup lang="ts">
+const props = defineProps<{ tags: string[]; n: number }>();
+</script>
+<template><i>{{ tags.map((t) => { var u = t.trim(); return u; }).join() }}</i></template>`,
+      /a function's body may not hold `var`: declare the value with `const`/
+    ],
+    [
+      "an expression statement in a callback's body",
+      `<script setup lang="ts">
+const props = defineProps<{ tags: string[]; n: number }>();
+</script>
+<template><i>{{ tags.map((t) => { t.trim(); return t; }).join() }}</i></template>`,
+      /an expression statement \(`CallExpression`\), whose value is dropped/,
+    ],
+    [
+      "a let assigned again in a callback's body",
+      `<script setup lang="ts">
+const props = defineProps<{ tags: string[]; n: number }>();
+</script>
+<template><i>{{ tags.map((t) => { let u = t; u += "!"; return u; }).join() }}</i></template>`,
+      /`let u` is assigned again with `\+=`/,
+    ],
+    [
+      "an assignment in a callback's body",
+      `<script setup lang="ts">
+const props = defineProps<{ tags: string[]; n: number }>();
+</script>
+<template><i>{{ tags.map((t) => { return (props.n = 2) > 1 ? t : ""; }).join() }}</i></template>`,
+      /an assignment \(`=`\) changes a value/,
+    ],
+    [
+      "a callback that can end without a return",
+      `<script setup lang="ts">
+const props = defineProps<{ tags: string[]; n: number }>();
+</script>
+<template><i>{{ tags.map((t) => { if (t.length > 1) return t; }).join() }}</i></template>`,
+      /X\.vue:4:\d+: the function can reach its end here without a `return`, and JavaScript then returns `undefined`/,
+    ],
+    [
+      "a return without a value in a callback",
+      `<script setup lang="ts">
+const props = defineProps<{ tags: string[]; n: number }>();
+</script>
+<template><i>{{ tags.map((t) => { if (!t) return; return t; }).join() }}</i></template>`,
+      /`return` without a value returns `undefined`/,
+    ],
+    [
+      "a const read before its declaration",
+      `<script setup lang="ts">
+const props = defineProps<{ tags: string[]; n: number }>();
+</script>
+<template><i>{{ tags.map((t) => { const a = b; const b = t; return a; }).join() }}</i></template>`,
+      /`b` is read before its declaration, where JavaScript throws a `ReferenceError`/,
+    ],
+    [
+      "code after a return",
+      `<script setup lang="ts">
+const props = defineProps<{ tags: string[]; n: number }>();
+</script>
+<template><i>{{ tags.map((t) => { return t; const u = t; }).join() }}</i></template>`,
+      /code after `return`, which never runs/,
+    ],
+    [
+      "a case that falls through into the next",
+      `<script setup lang="ts">
+const props = defineProps<{ tags: string[]; n: number }>();
+</script>
+<template><i>{{ tags.map((t) => { switch (t) { case "a": if (props.n) return "1"; case "b": return "2"; default: return t; } }).join() }}</i></template>`,
+      /this case falls through into the next one/,
+    ],
+    [
+      "a declaration directly in a case",
+      `<script setup lang="ts">
+const props = defineProps<{ tags: string[]; n: number }>();
+</script>
+<template><i>{{ tags.map((t) => { switch (t) { case "a": const u = t; return u; default: return t; } }).join() }}</i></template>`,
+      /a declaration directly in a `case`, which the whole `switch` shares: wrap the case's statements in `\{ … \}`/,
+    ],
+    [
+      "a switch with no case for some values and nothing after it",
+      `<script setup lang="ts">
+const props = defineProps<{ tags: string[]; n: number }>();
+</script>
+<template><i>{{ tags.map((t) => { switch (t) { case "a": return "1"; } }).join() }}</i></template>`,
+      /the function can reach its end here without a `return`/,
+    ],
+    [
+      "a function declared in a callback's body",
+      `<script setup lang="ts">
+const props = defineProps<{ tags: string[]; n: number }>();
+</script>
+<template><i>{{ tags.map((t) => { function f() { return t; } return t; }).join() }}</i></template>`,
+      /a function's body may not hold a function declared inside it/,
+    ],
+    [
+      "a computed with a loop read by the template",
+      `<script setup lang="ts">
+const props = defineProps<{ tags: string[]; n: number }>();
+import { computed } from "vue";
+const total = computed(() => {
+  let sum = 0;
+  for (const t of props.tags) sum += t.length;
+  return sum;
+});
+</script>
+<template><i>{{ total }}</i></template>`,
+      /`total` is set up in a way the server cannot evaluate: `let sum` is assigned again with `\+=`.*\(line 6\)/,
     ],
     [
       "a function other than Boolean passed to map by name",
@@ -4247,7 +4381,23 @@ defineProps<{ onSale?: boolean }>();
     "a negative number of digits for toExponential": "FV0717",
     "a number of digits for toExponential that is not a literal": "FV0717",
     "replace with a regular expression": "FV0710",
-    "an arrow function with a block body": "FV0806",
+    "a loop in a callback's body": "FV1901",
+    "a while loop in a callback's body": "FV1901",
+    "try in a callback's body": "FV1901",
+    "throw in a callback's body": "FV1901",
+    "var in a callback's body": "FV1901",
+    "an expression statement in a callback's body": "FV1901",
+    "a let assigned again in a callback's body": "FV1902",
+    "an assignment in a callback's body": "FV1902",
+    "a callback that can end without a return": "FV1903",
+    "a return without a value in a callback": "FV1903",
+    "a const read before its declaration": "FV1901",
+    "code after a return": "FV1904",
+    "a case that falls through into the next": "FV1904",
+    "a declaration directly in a case": "FV1904",
+    "a switch with no case for some values and nothing after it": "FV1903",
+    "a function declared in a callback's body": "FV1901",
+    "a computed with a loop read by the template": "FV0613",
     "Object.entries outside a v-for": "FV0816",
     "a computed list as a slot prop": "FV0910",
     "a component written with the Options API": "FV0003",

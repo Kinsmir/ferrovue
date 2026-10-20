@@ -7,35 +7,37 @@
 //!    component's API: `Props`, `render`, `html`, `island`.
 //! 3. [`props`]: how each TypeScript prop type becomes a Rust type, and how to build props;
 //!    dictionaries, with [`Record`](crate::Record).
-//! 4. [`slots`]: slot content from Rust, named and scoped slots, fallbacks.
-//! 5. [`scoped_styles`]: `<style scoped>` ids, matching `@vitejs/plugin-vue`, and `:slotted()`;
+//! 4. [`script_logic`]: statements in a `computed` and in a list method's callback, as the
+//!    server evaluates them.
+//! 5. [`slots`]: slot content from Rust, named and scoped slots, fallbacks.
+//! 6. [`scoped_styles`]: `<style scoped>` ids, matching `@vitejs/plugin-vue`, and `:slotted()`;
 //!    `v-bind()` in `<style>`; CSS modules.
-//! 6. [`routing`]: `<RouterLink>`, `<RouterView>` and `useRoute()`, with [`Router`](crate::Router)
+//! 7. [`routing`]: `<RouterLink>`, `<RouterView>` and `useRoute()`, with [`Router`](crate::Router)
 //!    and [`Route`](crate::Route); routes from a folder of pages.
-//! 7. [`i18n`]: vue-i18n's `$t`, with [`I18n`](crate::I18n).
-//! 8. [`teleports`]: `<Teleport>`, with [`Teleports`](crate::Teleports).
-//! 9. [`pinia`]: Pinia state on the server, and handing it to the client.
-//! 10. [`provide_inject`]: `provide` and `inject`, resolved through the component tree.
-//! 11. [`head`]: the page head from `useHead` and `useSeoMeta`, with [`Head`](crate::Head).
-//! 12. [`islands_and_hydration`]: what the browser does with the page, and when each island
+//! 8. [`i18n`]: vue-i18n's `$t`, with [`I18n`](crate::I18n).
+//! 9. [`teleports`]: `<Teleport>`, with [`Teleports`](crate::Teleports).
+//! 10. [`pinia`]: Pinia state on the server, and handing it to the client.
+//! 11. [`provide_inject`]: `provide` and `inject`, resolved through the component tree.
+//! 12. [`head`]: the page head from `useHead` and `useSeoMeta`, with [`Head`](crate::Head).
+//! 13. [`islands_and_hydration`]: what the browser does with the page, and when each island
 //!     hydrates.
-//! 13. [`streaming`]: holes, for sending a page in the order its parts are ready.
-//! 14. [`web_frameworks`]: responding with a component or a streamed page from axum or
+//! 14. [`streaming`]: holes, for sending a page in the order its parts are ready.
+//! 15. [`web_frameworks`]: responding with a component or a streamed page from axum or
 //!     actix-web.
-//! 15. [`numbers`]: JavaScript's number semantics in Rust.
-//! 16. [`strings`]: JavaScript's strings in Rust: UTF-16 indices, halves of pairs, ordering,
+//! 16. [`numbers`]: JavaScript's number semantics in Rust.
+//! 17. [`strings`]: JavaScript's strings in Rust: UTF-16 indices, halves of pairs, ordering,
 //!     conversions to and from numbers.
-//! 17. [`dates_and_prices`]: dates from ISO strings and numbers, read in UTC, and prices and
+//! 18. [`dates_and_prices`]: dates from ISO strings and numbers, read in UTC, and prices and
 //!     formatted dates written in Rust or translated, since `Intl` differs between browsers.
-//! 18. [`escaping`]: what is escaped, where, and the one way to write raw HTML.
-//! 19. [`security`]: the threat model: every place data from readers is written, the guarantee
+//! 19. [`escaping`]: what is escaped, where, and the one way to write raw HTML.
+//! 20. [`security`]: the threat model: every place data from readers is written, the guarantee
 //!     there, and what is inherited from Vue.
-//! 20. [`testing`]: holding your own components to Vue, with fixtures and two calls.
-//! 21. [`errors_and_limits`]: what the compiler refuses, and what can still go wrong at run time.
-//! 22. [`error_codes`]: every error code the compiler raises.
+//! 21. [`testing`]: holding your own components to Vue, with fixtures and two calls.
+//! 22. [`errors_and_limits`]: what the compiler refuses, and what can still go wrong at run time.
+//! 23. [`error_codes`]: every error code the compiler raises.
 #![cfg_attr(
     feature = "dioxus",
-    doc = "23. [`dioxus`]: islands in a page that Dioxus renders, with the `dioxus` feature."
+    doc = "24. [`dioxus`]: islands in a page that Dioxus renders, with the `dioxus` feature."
 )]
 //!
 //! Moving an existing app, and what is supported:
@@ -58,6 +60,9 @@ pub mod generated_code {}
 
 #[doc = include_str!("../docs/guide/props.md")]
 pub mod props {}
+
+#[doc = include_str!("../docs/guide/script_logic.md")]
+pub mod script_logic {}
 
 #[doc = include_str!("../docs/guide/slots.md")]
 pub mod slots {}

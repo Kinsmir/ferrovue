@@ -12,3 +12,9 @@ it("prints a generated component the same way every time", () => {
     }
   }
 });
+
+it("generates computeds whose bodies hold statements", () => {
+  const printed = Array.from({ length: 300 }, (_, i) => printComponent(generateCase(1, i).component));
+  expect(printed.some((p) => /computed\(\(\) => \{\n {2}const l\d+_\d+ = /.test(p))).toBe(true);
+  expect(printed.some((p) => /\n {2}if \(.*\) return .*;\n/.test(p))).toBe(true);
+});

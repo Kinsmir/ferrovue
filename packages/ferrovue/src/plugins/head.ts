@@ -2,6 +2,7 @@ import { type Component, type N, type Scope, type Val, absence, fail, rustStr } 
 import { describeTy, expr } from "../expr.ts";
 import { arrow, items } from "../lists.ts";
 import { bare, strArg } from "../parens.ts";
+import { expressionBodied } from "../blocks.ts";
 import { type Plugin, runOf, scopeOf } from "../plugin.ts";
 
 type Composable = "head" | "seo" | "safe";
@@ -232,7 +233,7 @@ function tagList(s: Scope, tag: string, raw: N): string {
   if (mapped) {
     const list = expr(s, mapped.callee.object);
     if (list.ty.k !== "list") fail(s.comp, "FV1706", `\`${tag}\` maps a list`, mapped.callee.object);
-    const fn = mapped.arguments[0];
+    const fn = expressionBodied(s.comp, mapped.arguments[0]);
     const { closure, enumerate } = arrow(s, fn, list, list.ty.of, false, "map", (inner) => tagObject(inner, tag, fn.body));
     return `fv::HeadValue::Array(${items(list)}${enumerate ? ".enumerate()" : ""}.map(${closure}).collect())`;
   }
