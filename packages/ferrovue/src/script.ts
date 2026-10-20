@@ -306,7 +306,6 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
       } catch (e) {
         if (!(e instanceof GenError)) throw e;
         scope.clientOnly.set(local, e.what);
-        scope.refusedBy.set(local, e);
         continue;
       }
       if (nothing(v.ty) || (v.ty.k === "str" && known(v) !== undefined)) {

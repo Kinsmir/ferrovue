@@ -126,7 +126,7 @@ const big = computed(() => {
       ]);
     });
 
-    it("refuses a template's read of a constant the compiler cannot evaluate with the constant's own code and place", () => {
+    it("refuses a template's read of a constant the compiler cannot evaluate with the constant's own code and place, and a setup binding where it is read", () => {
       const project = island(`<script setup lang="ts">
 import { LIMIT } from "./consts";
 const local = (1).toLocaleString();
@@ -137,8 +137,7 @@ const local = (1).toLocaleString();
       expect(constant).toMatchObject({ code: "FV0207", at: { file: "components/consts.ts", line: 1, column: 22 }, readAt: { file: "components/X.vue", line: 5, column: 17 } });
       expect(constant!.what).toMatch(/\(the template reads it as `LIMIT` at components\/X\.vue:5:17\)$/);
       expect(constant!.message).toMatch(/^components\/consts\.ts:1:22: .*\n 1 \| export const LIMIT = Math\.random\(\);/);
-      expect(local).toMatchObject({ code: "FV1805", at: { file: "components/X.vue", line: 3 }, readAt: null });
-      expect(local!.what).toMatch(/\(the template reads it as `local` at components\/X\.vue:5:35\)$/);
+      expect(local).toMatchObject({ code: "FV0613", at: { file: "components/X.vue", line: 5, column: 35 }, readAt: null });
     });
 
     it("raises a `GenErrors` for a single refusal too", () => {
@@ -2184,7 +2183,7 @@ import { ROWS } from "./consts";
       );
     });
 
-    it("refuses a constant it cannot evaluate where it is used, naming the file it comes from", () => {
+    it("refuses a constant it cannot evaluate with its own code and place, naming where it is used", () => {
       const project = withFile(
         island(`<script setup lang="ts">
 import { NOW } from "./consts";
@@ -2194,7 +2193,7 @@ import { NOW } from "./consts";
         `export const NOW = Date.now();\n`,
       );
       expect(() => compile(project)).toThrow(
-        /X\.vue:4:17: `NOW` is set up in a way the server cannot evaluate: it is imported from components\/consts\.ts, where it is not a constant the compiler evaluates: components\/consts\.ts:1:20: a constant the compiler evaluates is a literal/,
+        /^components\/consts\.ts:1:20: a constant the compiler evaluates is a literal.* \(the template reads it as `NOW` at components\/X\.vue:4:17\)\n/,
       );
     });
 
@@ -2402,7 +2401,7 @@ defineProps<{ k: string }>();
 enum Size { Small = "s".length }
 </script>
 <template><i>{{ Size.Small }}</i></template>`,
-      /`Size` is set up in a way the server cannot evaluate: it is not an enum the compiler evaluates: components\/X\.vue:2:21: a constant the compiler evaluates is a literal/,
+      /X\.vue:2:21: a constant the compiler evaluates is a literal.* \(the template reads it as `Size` at components\/X\.vue:4:17\)/,
     ],
     [
       "a value read from `$attrs`, which has no type",
