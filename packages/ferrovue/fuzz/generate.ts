@@ -1712,7 +1712,7 @@ class Gen {
     const parts: Expr[] = [];
     const opts = this.scope.vars.filter((v) => v.opt);
     for (let n = r.int(1, 3); n > 0; n--) {
-      parts.push(r.weighted<() => Expr>([[4, () => this.str(d - 1)], [3, () => this.num(d - 1)], [1, () => this.bool(d - 1)], [opts.length ? 1 : 0, () => this.varRef(r.pick(opts))]])());
+      parts.push(r.weighted<() => Expr>([[4, () => this.str(d - 1)], [3, () => this.num(d - 1)], [1, () => this.bool(d - 1)], [opts.length ? 1 : 0, () => this.varRef(r.pick(opts))], [d > 1 ? 1 : 0, () => this.mixed(d - 1)]])());
     }
     const texts = [r.pick(TPL_TEXT), ...parts.map(() => r.pick(TPL_TEXT))];
     let open = false;
@@ -1945,7 +1945,17 @@ class Gen {
       [opts.length ? 2 : 0, () => this.varRef(r.pick(opts))],
       [this.dateWeight(1), () => node("str", [this.date(d - 1)], ([a]) => `${a}.toJSON()`, 0, true)],
       [0.1, () => atom("int", r.pick(["1e21", "1e20", "2e3", "9007199254740993"]), LIMIT)],
+      [d > 0 ? 2 : 0, () => this.mixed(d)],
     ])();
+  }
+
+  mixed(d: number): Expr {
+    const r = this.r;
+    const opts = this.scope.vars.filter((v) => v.opt);
+    const branch = (): Expr =>
+      r.weighted<() => Expr>([[3, () => this.str(d - 1)], [3, () => this.int(d - 1)], [2, () => this.float(d - 1)], [2, () => this.bool(d - 1)], [opts.length ? 2 : 0, () => this.varRef(r.pick(opts))]])();
+    const [a, b] = [branch(), branch()];
+    return { ...node("str", [this.test(d - 1), a, b], ([c, x, y]) => `(${c} ? ${x} : ${y})`, 0, true), ...(a.lone || b.lone ? { lone: true } : {}) };
   }
 
   classBind(): ClassBind {

@@ -7,6 +7,17 @@ released together and share version numbers.
 
 ### Added
 
+- `?:` whose branches differ in type where the value is only written out: in `{{ }}`, in a
+  string-valued attribute (on an element, a component's root, a `<RouterLink>`, or falling through
+  to a child) and in a template literal. Each branch is written as JavaScript writes it there:
+  `{{ n > 0 ? n : "none" }}` writes the number by JavaScript's rules, an absent branch writes
+  nothing in `{{ }}` and leaves an attribute out, and a template literal writes `undefined`,
+  `null` and a list joined by `,`. Where the value is used otherwise (a child's prop, a
+  comparison, a method, a boolean attribute, `:class`) the branches still have to be of one type
+  (FV0623), and so do a list and a string in `{{ }}`, which Vue writes as JSON. The conformance
+  component `MixedTernary` holds fixtures recorded from Vue, and the fuzzer writes such `?:` in
+  text, attributes and template literals.
+
 - The guide pages [`porting`](https://docs.rs/ferrovue/latest/ferrovue/guide/porting/index.html)
   and [`support`](https://docs.rs/ferrovue/latest/ferrovue/guide/support/index.html). `porting`
   moves an existing Vue 3 server-rendered app to ferrovue: what is replaced and what stays, the

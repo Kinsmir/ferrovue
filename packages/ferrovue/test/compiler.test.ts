@@ -2902,11 +2902,57 @@ defineProps<{ m: Record<string, string> }>();
       /`\.title` of a record, which has no field `title`/,
     ],
     [
-      "a ternary whose branches differ in type",
+      "a ternary whose branches differ in type, compared",
       `<script setup lang="ts">
-const props = defineProps<{ n: number }>();
+import Y from "./Y.vue";
+defineProps<{ n: number; tags: string[] }>();
 </script>
-<template><i>{{ n ? n : "none" }}</i></template>`,
+<template><i v-if="(n ? n : 'none') === 'none'">x</i></template>`,
+      /the two branches of `\?:` differ in type/,
+    ],
+    [
+      "a ternary whose branches differ in type, given to a child's prop",
+      `<script setup lang="ts">
+import Y from "./Y.vue";
+defineProps<{ n: number; tags: string[] }>();
+</script>
+<template><Y :b="n ? n : 'none'" /></template>`,
+      /the two branches of `\?:` differ in type/,
+    ],
+    [
+      "a ternary whose branches differ in type, read by a method",
+      `<script setup lang="ts">
+import Y from "./Y.vue";
+defineProps<{ n: number; tags: string[] }>();
+</script>
+<template><i>{{ (n ? n : "none").length }}</i></template>`,
+      /the two branches of `\?:` differ in type/,
+    ],
+    [
+      "a ternary whose branches differ in type, bound to a boolean attribute",
+      `<script setup lang="ts">
+import Y from "./Y.vue";
+defineProps<{ n: number; tags: string[] }>();
+</script>
+<template><input :disabled="n ? n : ''" /></template>`,
+      /the two branches of `\?:` differ in type/,
+    ],
+    [
+      "a ternary whose branches differ in type, bound as a class",
+      `<script setup lang="ts">
+import Y from "./Y.vue";
+defineProps<{ n: number; tags: string[] }>();
+</script>
+<template><i :class="n ? n : 'none'"></i></template>`,
+      /the two branches of `\?:` differ in type/,
+    ],
+    [
+      "a ternary between a list and a string in text, which Vue writes as JSON",
+      `<script setup lang="ts">
+import Y from "./Y.vue";
+defineProps<{ n: number; tags: string[] }>();
+</script>
+<template><i>{{ n ? tags : "none" }}</i></template>`,
       /the two branches of `\?:` differ in type/,
     ],
     [
@@ -4030,6 +4076,12 @@ defineProps<{ onSale?: boolean }>();
     "listeners from an object given to a child with a prop named like a listener": "FV0514",
     "an enum read whole": "FV0208",
     "an enum read by a key chosen at run time": "FV0222",
+    "a ternary whose branches differ in type, compared": "FV0623",
+    "a ternary whose branches differ in type, given to a child's prop": "FV0623",
+    "a ternary whose branches differ in type, read by a method": "FV0623",
+    "a ternary whose branches differ in type, bound to a boolean attribute": "FV0623",
+    "a ternary whose branches differ in type, bound as a class": "FV0623",
+    "a ternary between a list and a string in text, which Vue writes as JSON": "FV0623",
     "a value read from `$attrs`, which has no type": "FV0415",
     "an attribute name Vue's server renderer skips as unsafe": "FV0404",
     "an attribute name chosen at run time": "FV0408",
@@ -4207,6 +4259,31 @@ defineProps<{ onSale?: boolean }>();
       expect(e.code).toBe(codes[what] ?? e.code);
     });
   }
+});
+
+describe("a `?:` whose branches differ in type, where it is shown as text", () => {
+  const render = (props: string, template: string): string => {
+    const out = compile(island(`<script setup lang="ts">\nimport type { Float } from "ferrovue/types";\ndefineProps<{ ${props} }>();\n</script>\n<template>${template}</template>`)).get("x.rs")!;
+    return out.slice(out.indexOf("pub fn render"), out.indexOf("/// The component's markup"));
+  };
+
+  it("writes each branch as `{{ }}` writes it, a number by JavaScript's rules and an absent one as nothing", () => {
+    const out = render("n: number; o?: Float; on: boolean", '<i>{{ n > 0 ? n : "none" }}</i><b>{{ on ? o : "absent" }}</b><s>{{ on ? true : "off" }}</s>');
+    expect(out).toContain('fv::escape_into(out, &(if props.n as f64 > 0.0 { std::borrow::Cow::<str>::Owned(format!("{}", fv::Js(props.n))) } else { std::borrow::Cow::<str>::Borrowed("none") }));');
+    expect(out).toMatch(/if let Some\(v\) = \(if props\.on \{ props\.o\.map\(\|(n\d+)\| std::borrow::Cow::<str>::Owned\(format!\("\{\}", fv::Js\(\1\)\)\)\) \} else \{ Some\(std::borrow::Cow::<str>::Borrowed\("absent"\)\) \}\)\.as_deref\(\) \{/);
+  });
+
+  it("writes each branch of an attribute's value as text, leaving the attribute out where a branch is absent", () => {
+    const out = render("n: number; o?: number", `<div><i :title="n > 0 ? n : 'none'" :aria-label="o === undefined ? 'unset' : o"></i></div>`);
+    expect(out).toContain('out.push_str("<div><i title=\\"");');
+    expect(out).toMatch(/aria-label=\\""\);\n {4}fv::escape_into\(out, &\(if let Some\((n\d+)\) = props\.o \{ std::borrow::Cow::<str>::Owned\(format!\("\{\}", fv::Js\(\1\)\)\) \} else \{ std::borrow::Cow::<str>::Borrowed\("unset"\) \}\)\);/);
+  });
+
+  it("writes each branch in a template literal as `String()` does, `null` and `undefined` too", () => {
+    const out = render("n: number; on: boolean; tags: string[]; o?: number", "<i>{{ `${on ? n : 'none'}|${on ? tags : n}|${on ? o : false}` }}</i>");
+    expect(out).toContain('fv::JsOr(props.o.map(fv::Js), "undefined")');
+    expect(out).toContain('.collect::<Vec<_>>().join(",")');
+  });
 });
 
 describe("`v-bind()` in `<style>`", () => {

@@ -224,6 +224,46 @@ function optionalChain(s: Scope, n: N): Val {
   return { code: over(place ? `&${inner.code}` : inner.code, false), ty: opt(inner.ty), ...lone };
 }
 
+/** How a value is turned into text where it is shown: `{{ }}` and attribute values leave out
+ * `null` and `undefined`, and a template literal writes them. */
+export type Shown = "text" | "attr" | "template";
+
+function asText(s: Scope, n: N, how: Shown): N {
+  let inner = n;
+  while (inner.type === "ParenthesizedExpression") inner = inner.expression;
+  if (inner.type === "ConditionalExpression") return { ...inner, consequent: asText(s, inner.consequent, how), alternate: asText(s, inner.alternate, how) };
+  let v: Val;
+  try {
+    v = expr(s, n);
+  } catch (e) {
+    if (e instanceof GenError) return n;
+    throw e;
+  }
+  const at = { loc: n.loc, __fv: n.__fv, start: n.start, end: n.end };
+  const quasi = { type: "TemplateElement", value: { raw: "", cooked: "" }, ...at };
+  const written: N = { type: "TemplateLiteral", quasis: [quasi, { ...quasi, tail: true }], expressions: [n], ...at };
+  if (how === "template") return ["int", "float", "bool", "list", "opt", "undef", "null"].includes(v.ty.k) ? written : n;
+  const of = v.ty.k === "opt" ? v.ty.of : v.ty;
+  if (nothing(v.ty) || !["int", "float", "bool"].includes(of.k)) return n;
+  if (v.ty.k !== "opt") return written;
+  const test = { type: "BinaryExpression", operator: "==", left: n, right: { type: "NullLiteral", ...at }, ...at };
+  return { type: "ConditionalExpression", test, consequent: { type: "Identifier", name: "undefined", ...at }, alternate: written, ...at };
+}
+
+/** A value where it is shown as text: a \`?:\` whose branches differ in type is written as JavaScript
+ * writes each branch, as \`how\` shows it. */
+export function shown(s: Scope, n: N, how: Shown): Val {
+  try {
+    return expr(s, n);
+  } catch (e) {
+    if (!(e instanceof GenError) || e.code !== "FV0623") throw e;
+    let inner = n;
+    while (inner.type === "ParenthesizedExpression") inner = inner.expression;
+    if (inner.type !== "ConditionalExpression") throw e;
+    return expr(s, asText(s, inner, how));
+  }
+}
+
 export function expr(s: Scope, n: N): Val {
   const comp = s.comp;
   const path = pathOf(n);
@@ -303,7 +343,7 @@ export function expr(s: Scope, n: N): Val {
       const parts: (string | Val)[] = [];
       n.quasis.forEach((q: N, i: number) => {
         parts.push(q.value.cooked as string);
-        if (i < n.expressions.length) parts.push(expr(s, n.expressions[i]));
+        if (i < n.expressions.length) parts.push(shown(s, n.expressions[i], "template"));
       });
       return formatted(comp, parts, n, "a template literal");
     }

@@ -5,7 +5,7 @@ import { expr } from "../expr.ts";
 import { lonely } from "../strings.ts";
 import { bare, condition, strArg } from "../parens.ts";
 import { Emitter } from "../emitter.ts";
-import { attrOf, dollarAttrs, IGNORED_PROPS, isAttrs, mergedParts, mergeProps, renderDynamicAttr } from "../attrs.ts";
+import { attrOf, attrShown, dollarAttrs, IGNORED_PROPS, isAttrs, mergedParts, mergeProps, renderDynamicAttr } from "../attrs.ts";
 import { renderStyle } from "../styles.ts";
 import { classItems } from "../classes.ts";
 import { statements } from "../template.ts";
@@ -201,7 +201,7 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
       e.lit(`"`);
       continue;
     }
-    renderDynamicAttr(s, e, key, expr(s, p.value), p);
+    renderDynamicAttr(s, e, key, attrShown(s, key, p.value), p);
   }
   if (base === null && slotted === null) {
     if (scopeId !== null) e.lit(` ${scopeId}`);

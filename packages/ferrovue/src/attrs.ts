@@ -1,7 +1,7 @@
 import { escapeHtml, hyphenate, isBooleanAttr, isSSRSafeAttrName, isSVGTag, propsToAttrMap } from "@vue/shared";
 import { type N, type Scope, type Ty, type Val, fail, nothing, GenError, rustStr } from "./model.ts";
 import { CONFIG_FILE, ctx } from "./context.ts";
-import { describeTy, expr } from "./expr.ts";
+import { describeTy, expr, shown } from "./expr.ts";
 import { known, truthy } from "./narrowing.ts";
 import { asCow, isTemporary, unquote } from "./strings.ts";
 import { atom, bare, condition, receiver, strArg } from "./parens.ts";
@@ -74,8 +74,18 @@ export function keepsAttrCase(tag: string): boolean {
   return tag.indexOf("-") > 0 || isSVGTag(tag);
 }
 
+function attrName(key: string, tag: string | null): string {
+  return tag !== null && keepsAttrCase(tag) ? key : (propsToAttrMap[key] ?? key.toLowerCase());
+}
+
+/** The value bound to the attribute \`key\`, shown as text unless the attribute is a boolean one. */
+export function attrShown(s: Scope, key: string, n: N, tag: string | null = null): Val {
+  const name = attrName(key, tag);
+  return isBooleanAttr(name) || name === "hidden" ? expr(s, n) : shown(s, n, "attr");
+}
+
 export function renderDynamicAttr(s: Scope, e: Emitter, key: string, v: Val, n: N, tag: string | null = null): void {
-  const name = tag !== null && keepsAttrCase(tag) ? key : (propsToAttrMap[key] ?? key.toLowerCase());
+  const name = attrName(key, tag);
   if (!isSSRSafeAttrName(name)) fail(s.comp, "FV0404", `unsafe attribute name \`${name}\``, n);
   renderable(s, key, v, n);
   if (nothing(v.ty)) return;
@@ -236,7 +246,7 @@ function objectAttrs(s: Scope, e: Emitter, n: N, merged: boolean): void {
       else renderStyle(s, e, p.value);
       e.lit(`"`);
     } else {
-      renderDynamicAttr(s, e, key, expr(s, p.value), p);
+      renderDynamicAttr(s, e, key, attrShown(s, key, p.value), p);
     }
   }
 }
@@ -283,7 +293,7 @@ export function attrOf(s: Scope, key: string, n: N, side: "vnode" | "own"): stri
   if (key === "class") return classAttr(s, n, side);
   if (key === "style") return styleAttr(s, n);
   if (n.type === "NullLiteral") return "fv::Attr::Undefined";
-  return valueAttr(s, expr(s, n), n);
+  return valueAttr(s, attrShown(s, key, n), n);
 }
 
 export function valueAttr(s: Scope, v: Val, n: N): string {

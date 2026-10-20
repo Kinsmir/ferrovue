@@ -100,6 +100,7 @@ pub mod markup;
 pub mod math_more;
 pub mod menu;
 pub mod meter;
+pub mod mixed_ternary;
 pub mod modal;
 pub mod model;
 pub mod model_parent;
@@ -695,6 +696,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Meter" => {
             let props: meter::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             meter::render(&mut out, &props);
+        }
+        "MixedTernary" => {
+            let props: mixed_ternary::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            mixed_ternary::render(&mut out, &props);
         }
         "Modal" => {
             let props: modal::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
