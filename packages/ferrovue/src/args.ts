@@ -80,7 +80,7 @@ export function parseArgs(argv: readonly string[], flags: readonly Flag[] = FLAG
       return { error: `option '${name}' takes no value` };
     }
     if (flag.deprecated) {
-      args.warnings.push(new GenError("FV1118", `'${name}' is deprecated since ${flag.deprecated.since}, and goes in the next major release: use ${flag.deprecated.use}`));
+      args.warnings.push(new GenError("FV1118", `'${name}' is deprecated since ${flag.deprecated.since}, and goes in a later minor release: use ${flag.deprecated.use}`));
     }
     args.options.set(longName(flag), value);
     args.spelt.set(longName(flag), name);

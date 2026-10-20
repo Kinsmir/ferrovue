@@ -362,8 +362,8 @@ changes, and the [guides](#guides) have an upgrade page for each MINOR release.
 
 ### Deprecations
 
-What ferrovue stops supporting is deprecated for at least one minor release and removed in the next
-major release. A deprecated crate item carries `#[deprecated]`; a deprecated configuration key warns
+What ferrovue stops supporting is deprecated for at least one minor release before it is removed:
+in a later minor release before 1.0, and only in a major release from 1.0. A deprecated crate item carries `#[deprecated]`; a deprecated configuration key warns
 with `warning[FV1117]` and a command-line option with `warning[FV1118]`, naming the replacement, and the JSON Schema marks a deprecated key for editors.
 Each release's CHANGELOG lists what it deprecates under "Deprecated".
 

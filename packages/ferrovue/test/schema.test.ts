@@ -102,7 +102,7 @@ function described(source: string, root: string, schema: Schema): { json: Json; 
     }
     if (node.deprecated) {
       out.deprecated = true;
-      out.deprecationMessage = `Deprecated since ${node.deprecated.since}, and goes in the next major release: use ${node.deprecated.use}.`;
+      out.deprecationMessage = `Deprecated since ${node.deprecated.since}, and goes in a later minor release: use ${node.deprecated.use}.`;
     }
     return out;
   };
@@ -327,9 +327,9 @@ describe("a deprecated configuration key", () => {
     const [top, ...rest] = warnings({ components: "c", out: "o", folder: "pages" });
     expect(rest).toEqual([]);
     expect(top).toMatchObject({ code: "FV1117", at: { file: "ferrovue.config.json" } });
-    expect(top!.message).toBe("`folder` in ferrovue.config.json is deprecated since 0.7.0, and goes in the next major release: use `pages`");
+    expect(top!.message).toBe("`folder` in ferrovue.config.json is deprecated since 0.7.0, and goes in a later minor release: use `pages`");
     expect(warnings({ components: "c", out: "o", nested: { old: "x" } }).map((w) => w.message)).toEqual([
-      "`nested.old` in ferrovue.config.json is deprecated since 0.8.0, and goes in the next major release: use `nested.new`",
+      "`nested.old` in ferrovue.config.json is deprecated since 0.8.0, and goes in a later minor release: use `nested.new`",
     ]);
     expect(warnings({ components: "c", out: "o", pages: "p" })).toEqual([]);
   });
@@ -361,7 +361,7 @@ interface Config {
     const { json, problems } = described(source, "Config", schema);
     expect(problems).toEqual([]);
     const props = json.properties as Record<string, Json>;
-    expect(props.folder).toMatchObject({ description: "Pages, by their old name.", deprecated: true, deprecationMessage: "Deprecated since 0.7.0, and goes in the next major release: use `pages`." });
+    expect(props.folder).toMatchObject({ description: "Pages, by their old name.", deprecated: true, deprecationMessage: "Deprecated since 0.7.0, and goes in a later minor release: use `pages`." });
     expect(props.pages).not.toHaveProperty("deprecated");
     expect(described(source.replace("@deprecated Use `pages`.", ""), "Config", schema).problems).toEqual(["folder: `@deprecated` in TSDoc and `deprecated` in the schema differ"]);
   });

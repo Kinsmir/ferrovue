@@ -24,6 +24,10 @@ released together and share version numbers.
 - The README's note on upgrading moves from its introduction to the Versions section, without
   naming a release: what a minor and a patch release may change, and where the CHANGELOG and the
   upgrade guides are.
+- The deprecation warnings FV1117 and FV1118 say a deprecated key or option goes in a later minor
+  release, and their entries in the error index, the README and CONTRIBUTING.md say it goes in a
+  later minor release before 1.0 and only in a major release from 1.0, as RELEASING.md says. They
+  said "the next major release".
 
 ## [0.9.0] - 2026-10-20
 

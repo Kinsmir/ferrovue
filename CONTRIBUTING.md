@@ -232,8 +232,8 @@ changes it shows the change:
 
 ### Deprecating
 
-Something users rely on is removed only in a major release, after at least one minor release in
-which it still works and warns:
+Something users rely on is removed in a later minor release before 1.0, and only in a major release
+from 1.0, after at least one minor release in which it still works and warns:
 
 - **A crate item** gets `#[deprecated(since = "0.7.0", note = "use `Other` instead")]`.
 - **A configuration key** gets `deprecated: { since: "0.7.0", use: "`newKey`" }` in

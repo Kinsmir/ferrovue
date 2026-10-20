@@ -298,7 +298,7 @@ export function checkConfig(raw: unknown, file: string, warn: (warning: GenError
       const at = path ? `${path}.${k}` : k;
       const prop = node.properties?.[k] ?? (node.additionalProperties || undefined);
       if (!prop) continue;
-      if (prop.deprecated) warn(new GenError("FV1117", `\`${at}\` in ${file} is deprecated since ${prop.deprecated.since}, and goes in the next major release: use ${prop.deprecated.use}`, { file }));
+      if (prop.deprecated) warn(new GenError("FV1117", `\`${at}\` in ${file} is deprecated since ${prop.deprecated.since}, and goes in a later minor release: use ${prop.deprecated.use}`, { file }));
       deprecated(v, prop, at);
     }
   };

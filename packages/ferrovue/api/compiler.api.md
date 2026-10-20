@@ -793,11 +793,11 @@ export const ERRORS: {
     };
     readonly FV1117: {
         readonly title: "Deprecated configuration key";
-        readonly detail: "A warning: ferrovue still reads the key, and stops reading it in the next major release. The message names what to write instead. A key is deprecated for at least one minor release before it is removed.";
+        readonly detail: "A warning: ferrovue still reads the key, and stops reading it in a later minor release before 1.0, and only in a major release from 1.0. The message names what to write instead. A key is deprecated for at least one minor release before it is removed.";
     };
     readonly FV1118: {
         readonly title: "Deprecated command-line option";
-        readonly detail: "A warning: the option still works, and is removed in the next major release. The message names what to use instead. An option is deprecated for at least one minor release before it is removed.";
+        readonly detail: "A warning: the option still works, and is removed in a later minor release before 1.0, and only in a major release from 1.0. The message names what to use instead. An option is deprecated for at least one minor release before it is removed.";
     };
     readonly FV1201: {
         readonly title: "Route parameter that is not a present string or number";
