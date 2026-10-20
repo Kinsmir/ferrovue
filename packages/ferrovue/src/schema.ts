@@ -1,4 +1,4 @@
-/** A key or option that still works and goes in the next major release. */
+/** A key or option that still works and goes in a later release. */
 export interface Deprecation {
   /** The version that deprecated it. */
   since: string;

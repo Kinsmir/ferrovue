@@ -262,7 +262,7 @@ it("warns of a deprecated option, naming what replaces it, and still reads it", 
   const parsed = parseArgs(["--verify", "--format=json"], flags);
   if ("error" in parsed) throw new Error(parsed.error);
   expect(parsed.options).toEqual(new Map<string, string | true>([["--verify", true], ["--format", "json"]]));
-  expect(parsed.warnings).toEqual([expect.objectContaining({ code: "FV1118", message: "'--verify' is deprecated since 0.7.0, and goes in the next major release: use '--check'" })]);
+  expect(parsed.warnings).toEqual([expect.objectContaining({ code: "FV1118", message: "'--verify' is deprecated since 0.7.0, and goes in a later minor release: use '--check'" })]);
   expect(helpText(flags)).toContain("      --verify             check (deprecated: use '--check')");
   const current = parseArgs(["--check", "-d"]);
   expect("error" in current ? current.error : current.warnings).toEqual([]);

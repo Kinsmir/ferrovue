@@ -1042,13 +1042,13 @@ Directory the configuration names that cannot be read.
 
 Deprecated configuration key.
 
-A warning: ferrovue still reads the key, and stops reading it in the next major release. The message names what to write instead. A key is deprecated for at least one minor release before it is removed.
+A warning: ferrovue still reads the key, and stops reading it in a later minor release before 1.0, and only in a major release from 1.0. The message names what to write instead. A key is deprecated for at least one minor release before it is removed.
 
 ## FV1118
 
 Deprecated command-line option.
 
-A warning: the option still works, and is removed in the next major release. The message names what to use instead. An option is deprecated for at least one minor release before it is removed.
+A warning: the option still works, and is removed in a later minor release before 1.0, and only in a major release from 1.0. The message names what to use instead. An option is deprecated for at least one minor release before it is removed.
 
 # Router: FV12xx
 
