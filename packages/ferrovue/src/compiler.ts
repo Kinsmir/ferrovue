@@ -45,6 +45,7 @@ function generateAll(root: string, config: Config, sources: ReadonlyMap<string, 
   ctx.typeReached = new Set();
   ctx.typeRead = new Set();
   ctx.constDecls = new Map();
+  ctx.tsModules = new Map();
   ctx.typeConsts = new Map();
   ctx.plugins = PLUGINS;
   ctx.runs = new Map();

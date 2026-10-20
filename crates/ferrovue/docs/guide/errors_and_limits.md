@@ -120,7 +120,8 @@ What is refused today, each with an error that names it:
 - any method call without a Rust twin.
 
 Client-only code is allowed where the server never runs it: lifecycle hooks, `watch` (without
-`immediate`), `defineEmits`, `defineExpose`, template refs, functions and what is injected under a
+`immediate`), `defineEmits`, `defineExpose`, template refs, functions the server cannot evaluate
+(see [`script_logic`](crate::guide::script_logic#functions)) and what is injected under a
 key holding a function may be named from event handlers, which the server drops. The repository
 README's "What a component may use" table lists everything that is supported.
 
@@ -132,8 +133,10 @@ shell, and put the islands or the app inside it.
 
 # Helpers
 
-A template may call functions of your own if each has a Rust twin. Name them in
-`ferrovue.config.json`:
+A template may call functions of your own. One declared in `<script setup>`, or exported from a
+`.ts` file the component imports, is translated by the compiler when its body is in the subset
+[`script_logic`](crate::guide::script_logic#functions) describes. Any other function needs a Rust
+twin, named in `ferrovue.config.json`:
 
 ```json
 {

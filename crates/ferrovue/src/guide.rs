@@ -7,8 +7,8 @@
 //!    component's API: `Props`, `render`, `html`, `island`.
 //! 3. [`props`]: how each TypeScript prop type becomes a Rust type, and how to build props;
 //!    dictionaries, with [`Record`](crate::Record).
-//! 4. [`script_logic`]: statements in a `computed` and in a list method's callback, as the
-//!    server evaluates them.
+//! 4. [`script_logic`]: statements in a `computed`, a list method's callback and the functions
+//!    a template calls, as the server evaluates them.
 //! 5. [`slots`]: slot content from Rust, named and scoped slots, fallbacks.
 //! 6. [`scoped_styles`]: `<style scoped>` ids, matching `@vitejs/plugin-vue`, and `:slotted()`;
 //!    `v-bind()` in `<style>`; CSS modules.

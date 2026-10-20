@@ -69,6 +69,7 @@ pub mod fall_switch;
 pub mod fall_use;
 pub mod fallthrough;
 pub mod form;
+pub mod formatters;
 pub mod forward;
 pub mod frame;
 pub mod glyph;
@@ -95,6 +96,7 @@ pub mod listen_sale;
 pub mod listened;
 pub mod listeners;
 pub mod lists;
+pub mod local_functions;
 pub mod mapped_choice;
 pub mod markup;
 pub mod math_more;
@@ -132,6 +134,7 @@ pub mod quiet_leaf;
 pub mod rated;
 pub mod records;
 pub mod regressions;
+pub mod relative_time;
 pub mod route_info;
 pub mod row_chip;
 pub mod scoped_card;
@@ -536,6 +539,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: form::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             form::render(&mut out, &props);
         }
+        "Formatters" => {
+            let props: formatters::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            formatters::render(&mut out, &props);
+        }
         "Forward" => {
             let props: forward::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -673,6 +680,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Lists" => {
             let props: lists::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             lists::render(&mut out, &props);
+        }
+        "LocalFunctions" => {
+            let props: local_functions::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            local_functions::render(&mut out, &props);
         }
         "MappedChoice" => {
             let props: mapped_choice::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -845,6 +856,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Regressions" => {
             let props: regressions::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             regressions::render(&mut out, &props);
+        }
+        "RelativeTime" => {
+            let props: relative_time::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            relative_time::render(&mut out, &props);
         }
         "RouteInfo" => {
             let props: route_info::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

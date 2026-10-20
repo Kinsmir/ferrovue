@@ -1554,6 +1554,14 @@ export const ERRORS = {
     title: "Body with too many paths after its `if`s and `switch`es",
     detail: "A statement that can fall off its end, an `if` without `return` or a `case` that ends in `break`, continues with the statements after it, and the compiler translates them once for each path that reaches them. Sequential `switch`es of `break`ing cases multiply those paths: the body is refused past 4096 of them, before translating it would take seconds or exhaust memory. End the cases in `return` rather than `break`, or split the body into several `computed`s that each read the one before.",
   },
+  FV1906: {
+    title: "Function that calls itself",
+    detail: "The server translates a function where it is called, with the arguments it is given there. A function that calls itself, directly or through others, would be translated without end: compute the value in Rust and pass it as a prop.",
+  },
+  FV1907: {
+    title: "Function or call of a shape the server does not translate",
+    detail: "A function the server calls takes named parameters, optional ones (`x?: T`) and ones with defaults (`x = 1`) included, and object or array patterns of names; it is called with at most as many arguments as it names, none of them spread. `...rest` parameters, `async` functions and generators are refused, and so is a default for a parameter given a value that may be `null` or `undefined`, which the server cannot tell apart.",
+  },
 } as const satisfies Record<`FV${number}`, ErrorDoc>;
 
 /** A stable error code, as `FV0604`. */

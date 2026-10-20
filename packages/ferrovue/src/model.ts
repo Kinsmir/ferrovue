@@ -359,6 +359,15 @@ export function blankComponent(name: string, module: string, file: string, struc
   };
 }
 
+/** A function the server may call: declared in `<script setup>`, or exported from a `.ts` file
+ * (`file`), whose body is translated where it is called. */
+export interface Fn {
+  name: string;
+  node: N;
+  home: Component;
+  file: string | null;
+}
+
 export interface Scope {
   comp: Component;
   components: Map<string, Component>;
@@ -383,6 +392,7 @@ export interface Scope {
   attrsBindings: Set<string>;
   slotsBindings: Set<string>;
   consts: Map<string, Const>;
+  functions: Map<string, Fn>;
   sid: string | null;
   opaque: string | null;
   loop?: { item: string; over: string } | undefined;

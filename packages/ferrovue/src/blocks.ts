@@ -12,8 +12,8 @@ const COW = "std::borrow::Cow::<str>";
 /** Runtime calls that panic where JavaScript throws, or user code that may. */
 export const PANICS = /\bfv::js_(?:repeat|pad_start|pad_end|date_parse|date_utc|to_iso_string)\(|\bfv_i18n\.t\(/;
 
-export function panicky(s: Scope, code: string): boolean {
-  return PANICS.test(code) || [...s.helpers.values()].some((h) => code.includes(`${ctx.helpers[h]!.rust}(`));
+export function panicky(code: string): boolean {
+  return PANICS.test(code) || Object.values(ctx.helpers).some((h) => code.includes(`${h.rust}(`));
 }
 
 /** How a value is held in a Rust `let`: what the `let` is given, how the name reads back, and
@@ -287,7 +287,7 @@ class Desugar {
     return this.pattern(d.id, init, body, d);
   }
 
-  private pattern(p: N, value: N, body: N, d: N): N {
+  pattern(p: N, value: N, body: N, d: N): N {
     switch (p.type) {
       case "Identifier":
         return { type: "FvLet", name: p.name, js: p.fvName ?? p.name, init: value, body, ...spot(d) };
@@ -374,6 +374,11 @@ export function bodyExpr(comp: Component, fn: N): N {
   return out;
 }
 
+/** `p` (a name, or an object or array pattern of names) bound to `value` around `body`. */
+export function destructured(comp: Component, p: N, value: N, body: N): N {
+  return new Desugar(comp).pattern(p, value, body, p);
+}
+
 /** `fn` with an expression for its body, where it is an arrow or function expression with a block. */
 export function expressionBodied(comp: Component, fn: N): N {
   if ((fn?.type !== "ArrowFunctionExpression" && fn?.type !== "FunctionExpression") || fn.body.type !== "BlockStatement") return fn;
@@ -399,15 +404,19 @@ function ownedCow(v: Val): string {
 /** `const name = init` around `body`: the value `body` computes with `name` bound once, as a Rust
  * `let` in a block that hands out nothing borrowed from it. */
 export function letIn(s: Scope, n: N): Val {
-  const v = expr(s, n.init);
-  if (simple(v)) return expr({ ...s, locals: new Map(s.locals).set(n.name, v) }, n.body);
+  return bound(s, n.name, expr(s, n.init), (inner) => expr(inner, n.body));
+}
+
+/** `v` bound once to `name` for `body`, which is given the scope that reads it. */
+export function bound(s: Scope, local: string, v: Val, then: (inner: Scope) => Val): Val {
+  if (simple(v)) return then({ ...s, locals: new Map(s.locals).set(local, v) });
   const name = `fv_c${++ctx.narrowCount}`;
   const { init, read, owned } = bindingOf(v);
-  const local = read(name);
-  const body = expr({ ...s, locals: new Map(s.locals).set(n.name, local) }, n.body);
-  if (reps(body).join("\0") === reps(local).join("\0")) return v;
+  const held = read(name);
+  const body = then({ ...s, locals: new Map(s.locals).set(local, held) });
+  if (reps(body).join("\0") === reps(held).join("\0")) return v;
   const uses = reps(body).some((r) => occurrences(r, name) > 0);
-  if (!uses && !panicky(s, init)) return body;
+  if (!uses && !panicky(init)) return body;
   const lead = `let ${uses ? name : "_"} = ${init};`;
   const block = (code: string): string => `{ ${lead} ${bare(code)} }`;
   const lone = body.lone ? { lone: true as const } : {};
@@ -428,8 +437,8 @@ export function letIn(s: Scope, n: N): Val {
     }
     case "opt":
       if (body.ty.of.k === "str" && (owned || body.held !== undefined)) {
-        const held = block(owned ? `${atom(body.code)}.map(|v| ${COW}::Owned(v.to_owned()))` : body.held!);
-        return { code: `${held}.as_deref()`, ty: body.ty, held, ...lone };
+        const kept = block(owned ? `${atom(body.code)}.map(|v| ${COW}::Owned(v.to_owned()))` : body.held!);
+        return { code: `${kept}.as_deref()`, ty: body.ty, held: kept, ...lone };
       }
       return { code: block(body.code), ty: body.ty, ...lone };
     default: {

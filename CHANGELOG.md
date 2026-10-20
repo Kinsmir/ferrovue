@@ -67,6 +67,17 @@ released together and share version numbers.
   [`script_logic`](https://docs.rs/ferrovue/latest/ferrovue/guide/script_logic/index.html) guide
   describes what a body may hold. Generated code stays at `__compat!(3)`. `ERRORS` in the
   `ferrovue/compiler` API report gains the five codes and marks FV0806 retired.
+- Functions the template or a `computed` calls: declared in `<script setup>` (`function f(…) {}`,
+  `const f = (…) => …`) or exported from a `.ts` file the component imports, whose bodies hold what
+  a `computed`'s may and read props, refs, `computed`s, constants and other such functions. A call
+  is translated where it is written, its arguments evaluated once and in order with the types they
+  have there; parameters may be optional, have defaults, or be object patterns. A function from a
+  `.ts` file thus needs no `helpers` entry. A function whose body the server cannot evaluate is
+  refused where it is called, with FV0613 or FV0601 as before, the message naming the statement or
+  expression and its line; recursion (FV1906) and `...rest`, `async`, generators, spread arguments
+  or too many of them (FV1907) are refused. A function only an event handler calls stays
+  client-only. `ERRORS` in the `ferrovue/compiler` API report gains the two codes. The fuzzer
+  generates local functions and calls them from templates and `computed`s.
 
 ### Changed
 

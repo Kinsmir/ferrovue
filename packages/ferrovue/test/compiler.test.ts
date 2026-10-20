@@ -2920,6 +2920,108 @@ const props = defineProps<{ n: number }>();
       /`parseInt\(\)` takes a string/,
     ],
     [
+      "a function that calls itself",
+      `<script setup lang="ts">
+const props = defineProps<{ tags: string[]; n: number; note?: string; other: string | null }>();
+function down(k: number): number {
+  return k > 0 ? down(k - 1) : 0;
+}
+</script>
+<template><i>{{ down(n) }}</i></template>`,
+      /X\.vue:4:\d+: `down\(\)` calls itself, which the server would inline without end/,
+    ],
+    [
+      "functions that call each other",
+      `<script setup lang="ts">
+const props = defineProps<{ tags: string[]; n: number; note?: string; other: string | null }>();
+function even(k: number): boolean {
+  return k === 0 ? true : odd(k - 1);
+}
+function odd(k: number): boolean {
+  return k === 0 ? false : even(k - 1);
+}
+</script>
+<template><i>{{ even(n) }}</i></template>`,
+      /`even\(\)` calls itself, through `odd\(\)`/,
+    ],
+    [
+      "a function with a rest parameter",
+      `<script setup lang="ts">
+const props = defineProps<{ tags: string[]; n: number; note?: string; other: string | null }>();
+function all(...xs: string[]): string {
+  return xs.join();
+}
+</script>
+<template><i>{{ all('a') }}</i></template>`,
+      /`all\(\)` takes `\.\.\.rest` parameters/,
+    ],
+    [
+      "a function given more arguments than it names",
+      `<script setup lang="ts">
+const props = defineProps<{ tags: string[]; n: number; note?: string; other: string | null }>();
+const twice = (k: number): number => k * 2;
+</script>
+<template><i>{{ twice(n, 1) }}</i></template>`,
+      /`twice\(\)` takes 1 argument, and is given 2/,
+    ],
+    [
+      "an async function called by the template",
+      `<script setup lang="ts">
+const props = defineProps<{ tags: string[]; n: number; note?: string; other: string | null }>();
+async function load(): Promise<string> {
+  return 'x';
+}
+</script>
+<template><i>{{ load() }}</i></template>`,
+      /`load\(\)` is `async`, and returns a promise/,
+    ],
+    [
+      "a function given spread arguments",
+      `<script setup lang="ts">
+const props = defineProps<{ tags: string[]; n: number; note?: string; other: string | null }>();
+function pair(a: string, b: string): string {
+  return a + b;
+}
+</script>
+<template><i>{{ pair(...tags) }}</i></template>`,
+      /`pair\(\)` given `\.\.\.` arguments/,
+    ],
+    [
+      "a default for a parameter given null or undefined",
+      `<script setup lang="ts">
+const props = defineProps<{ tags: string[]; n: number; note?: string; other: string | null }>();
+function or(v: string | null | undefined = 'x'): string {
+  return v ?? '-';
+}
+</script>
+<template><i>{{ or(n > 0 ? note : other) }}</i></template>`,
+      /a default for a parameter given a value that may be `null` or `undefined`/,
+    ],
+    [
+      "a function with a loop called by the template",
+      `<script setup lang="ts">
+const props = defineProps<{ tags: string[]; n: number; note?: string; other: string | null }>();
+function total(xs: string[]): number {
+  let sum = 0;
+  for (const x of xs) sum = sum + x.length;
+  return sum;
+}
+</script>
+<template><i>{{ total(tags) }}</i></template>`,
+      /X\.vue:9:\d+: `total` is set up in a way the server cannot evaluate: `let sum` is assigned again with `=`.*\(components\/X\.vue:5, FV1902\)/,
+    ],
+    [
+      "a function read as a value",
+      `<script setup lang="ts">
+const props = defineProps<{ tags: string[]; n: number; note?: string; other: string | null }>();
+function shout(t: string): string {
+  return t.toUpperCase();
+}
+</script>
+<template><i :title="String(shout)">x</i></template>`,
+      /`shout` is set up in a way the server cannot evaluate: it is a function, which the template and a `computed` may call/,
+    ],
+    [
       "a loop in a callback's body",
       `<script setup lang="ts">
 const props = defineProps<{ tags: string[]; n: number }>();
@@ -4389,6 +4491,15 @@ defineProps<{ onSale?: boolean }>();
     "a negative number of digits for toExponential": "FV0717",
     "a number of digits for toExponential that is not a literal": "FV0717",
     "replace with a regular expression": "FV0710",
+    "a function that calls itself": "FV1906",
+    "functions that call each other": "FV1906",
+    "a function with a rest parameter": "FV1907",
+    "a function given more arguments than it names": "FV1907",
+    "an async function called by the template": "FV1907",
+    "a function given spread arguments": "FV1907",
+    "a default for a parameter given null or undefined": "FV1907",
+    "a function with a loop called by the template": "FV0613",
+    "a function read as a value": "FV0613",
     "a loop in a callback's body": "FV1901",
     "a while loop in a callback's body": "FV1901",
     "try in a callback's body": "FV1901",
@@ -4559,6 +4670,80 @@ describe("a `?:` whose branches differ in type, where it is shown as text", () =
     const out = render("n: number; on: boolean; tags: string[]; o?: number", "<i>{{ `${on ? n : 'none'}|${on ? tags : n}|${on ? o : false}` }}</i>");
     expect(out).toContain('fv::JsOr(props.o.map(fv::Js), "undefined")');
     expect(out).toContain('.collect::<Vec<_>>().join(",")');
+  });
+});
+
+describe("functions the server calls", () => {
+  const project = (source: string, files: Record<string, string>): string => {
+    const root = island(source);
+    for (const [name, text] of Object.entries(files)) writeFileSync(join(root, "components", name), text);
+    return root;
+  };
+  const caller = (call: string, imports: string) => `<script setup lang="ts">
+import { ${imports} } from "./text";
+const props = defineProps<{ word: string; n: number }>();
+</script>
+<template><i>{{ ${call} }}</i></template>`;
+
+  it("inlines a function imported from a .ts file, which may call the file's own functions and read its constants", () => {
+    const out = compile(project(caller("shout(word)", "shout"), { "text.ts": `const MARK = "!";
+function loud(t: string): string {
+  return t.toUpperCase();
+}
+export function shout(t: string): string {
+  const l = loud(t.trim());
+  if (l === "") return "-";
+  return l + MARK;
+}
+` })).get("x.rs")!;
+    expect(out).toMatch(/fv::js_trim\(&props\.word\)/);
+    expect(out).toMatch(/format!\("\{\}!", /);
+  });
+
+  it("inlines a function a .ts file exports as its default", () => {
+    const out = compile(project(`<script setup lang="ts">
+import initial from "./text";
+defineProps<{ word: string }>();
+</script>
+<template><i>{{ initial(word) }}</i></template>`, { "text.ts": "export default function (t: string): string {\n  return t.slice(0, 1).toUpperCase();\n}\n" })).get("x.rs")!;
+    expect(out).toMatch(/fv::js_slice\(&props\.word, 0\.0f64, Some\(1\.0f64\)\)/);
+  });
+
+  it("refuses an imported function whose body holds a loop, naming the statement", () => {
+    const e = (() => {
+      try {
+        compile(project(caller("sum(n)", "sum"), { "text.ts": "export function sum(k: number): number {\n  let t = 0;\n  while (t < k) t = t + 1;\n  return t;\n}\n" }));
+      } catch (err) {
+        return err as GenError;
+      }
+      throw new Error("compiled");
+    })();
+    expect(e.code).toBe("FV0601");
+    expect(e.message).toMatch(/^components\/X\.vue:5:\d+: `sum\(\)` is not available when rendering on the server: its body .*\(components\/text\.ts:3, FV1902\)/);
+  });
+
+  it("leaves a function only an event handler calls client-only, whatever its body holds", () => {
+    const out = compile(island(`<script setup lang="ts">
+import { ref } from "vue";
+const count = ref(0);
+function bump() {
+  for (let i = 0; i < 3; i++) count.value++;
+}
+</script>
+<template><button @click="bump">{{ count }}</button></template>`)).get("x.rs")!;
+    expect(out).toContain("fv::push_int(out, s_count)");
+  });
+
+  it("binds each argument once, in order, and gives a missing one its default", () => {
+    const out = compile(island(`<script setup lang="ts">
+const props = defineProps<{ word: string; n: number }>();
+function pad(t: string, width = 3, fill?: string): string {
+  return t.padStart(width, fill ?? ".") + t;
+}
+</script>
+<template><i>{{ pad(word.toUpperCase()) }}</i></template>`)).get("x.rs")!;
+    expect(out).toMatch(/let (fv_c\d+) = props\.word\.to_uppercase\(\);.*fv::js_pad_start\(&\1, 3\.0f64, "\."\), \1\)/);
+    expect(out.match(/to_uppercase/g)).toHaveLength(1);
   });
 });
 
