@@ -53,6 +53,7 @@ export interface Val {
   held?: string;
   slice?: boolean;
   num?: number;
+  pick?: true;
   format?: { text: string; args: string[] };
 }
 
@@ -558,4 +559,30 @@ function canonical(_key: string, value: unknown): unknown {
 
 export function sameTy(a: Ty, b: Ty): boolean {
   return JSON.stringify(a, canonical) === JSON.stringify(b, canonical);
+}
+
+const LITERALS = new WeakMap<Ty, readonly (string | number)[]>();
+
+/** A string or integer type whose values are known to be among `values`, as a union of literals declares. */
+export function literalTy(k: "str" | "int", values: readonly (string | number)[]): Ty {
+  const ty: Ty = { k };
+  LITERALS.set(ty, values);
+  return ty;
+}
+
+/** The literals a string or integer type's values are known to be among, if it has them. */
+export function literalsOf(ty: Ty): readonly (string | number)[] | undefined {
+  return LITERALS.get(ty);
+}
+
+/** The type of a value that is one of two, `a` with the literals known of it kept only where both have them. */
+export function joinTy(a: Ty, b: Ty): Ty {
+  if (a.k === "opt" || a.k === "list" || a.k === "record") {
+    const of = joinTy(a.of, b.k === a.k ? (b as { of: Ty }).of : b);
+    return of === a.of ? a : { ...a, of };
+  }
+  const mine = LITERALS.get(a);
+  if (mine === undefined || (a.k !== "str" && a.k !== "int")) return a;
+  const theirs = LITERALS.get(b.k === "opt" ? b.of : b);
+  return theirs === undefined ? { k: a.k } : literalTy(a.k, [...new Set([...mine, ...theirs])]);
 }

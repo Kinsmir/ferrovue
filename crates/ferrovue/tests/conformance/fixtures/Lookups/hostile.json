@@ -1,0 +1,1 @@
+{"size": "sm", "tone": "warn", "level": 2, "badges": [{"tone": "info", "text": "<script>\"x\" & 'y'</script>"}], "loud": true, "kind": "tip"}

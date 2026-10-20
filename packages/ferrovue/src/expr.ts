@@ -1,4 +1,4 @@
-import { type Component, type N, type Scope, type Ty, type Val, absence, BOOL, fail, FLOAT, GenError, INT, joinAbsence, nodeName, nothing, NULL, opt, placeOf, rustStr, sameTy, snake, STR, UNDEF, withAbsence } from "./model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, absence, BOOL, fail, FLOAT, GenError, INT, joinAbsence, joinTy, literalTy, nodeName, nothing, NULL, opt, placeOf, rustStr, sameTy, snake, STR, UNDEF, withAbsence } from "./model.ts";
 import { CONFIG_FILE, ctx } from "./context.ts";
 import { lookupStruct, markHome, tyOfTs } from "./typescript.ts";
 import { claim } from "./plugin.ts";
@@ -6,9 +6,9 @@ import { atom, bare, binary, enclosed, logical, negate, not, occurrences, receiv
 import { collected, picked, sliced, spreadLiteral, typedEmpty, untypedEmpty } from "./lists.ts";
 import { asCow, formatted, isTemporary, loneOf, meet, stringsEqual } from "./strings.ts";
 import { arithmetic, asF64, compare, intFromF64, isNumber, negatedOrder, numberVal, power } from "./numbers.ts";
-import { boolOf, checkNullTest, choice, known, narrowing, narrowTo, nullTest, pathOf, presence, truthy, typeofCompare, typeofTest, typeofVal } from "./narrowing.ts";
+import { boolOf, checkNullTest, choice, known, narrowing, narrowTo, nullTest, pathOf, presence, truthTested, truthy, typeofCompare, typeofTest, typeofVal } from "./narrowing.ts";
 import { BUILTINS, builtin, call, isObjectCall } from "./calls.ts";
-import { constOf, constVal } from "./constants.ts";
+import { constOf, namedVal } from "./constants.ts";
 import { localeRefusal } from "./plugins/dates.ts";
 
 const MATH_CONSTANTS = new Map(["E", "LN10", "LN2", "LOG10E", "LOG2E", "PI", "SQRT1_2", "SQRT2"].map((k) => [k, Math[k as "PI"]]));
@@ -105,13 +105,13 @@ export function fieldVal(comp: Component, base: string, ty: Ty, js: string, node
   const place = `${base}.${f.rust}`;
   if (f.dflt !== undefined && f.ty.k === "opt") {
     const of = f.ty.of;
-    if (of.k === "str") return { code: `${place}.as_deref().unwrap_or(${f.dflt})`, ty: STR };
+    if (of.k === "str") return { code: `${place}.as_deref().unwrap_or(${f.dflt})`, ty: of };
     if (of.k === "list") return { code: `${place}.as_deref().unwrap_or(${f.dflt})`, ty: of, slice: true };
     return { code: `${place}.unwrap_or(${f.dflt})`, ty: of };
   }
   switch (f.ty.k) {
     case "str":
-      return { code: `&*${place}`, ty: STR };
+      return { code: `&*${place}`, ty: f.ty };
     case "html":
     case "child":
       return { code: `&${place}`, ty: f.ty };
@@ -320,10 +320,10 @@ export function expr(s: Scope, n: N): Val {
   const path = pathOf(n);
   if (path !== null) {
     const narrowed = s.narrowed.get(path);
-    if (narrowed) return narrowed;
+    if (narrowed && !narrowed.pick) return narrowed;
   }
   const named = constOf(s, n);
-  if (named) return constVal(named.c, { comp, node: n, what: named.what });
+  if (named) return namedVal(named, { comp, node: n });
   if (n.type === "MemberExpression" && !n.computed && n.property.type === "Identifier" && n.property.name === "length") {
     if (isObjectCall(n.object, "entries") && n.object.arguments.length === 1) {
       const r = expr(s, n.object.arguments[0]);
@@ -405,7 +405,7 @@ export function expr(s: Scope, n: N): Val {
         if (!el) fail(comp, "FV0610", "an array literal holds plain values, without holes", n);
         return expr(s, el);
       });
-      const of = values[0]!.ty;
+      const of = values.map((v: Val) => v.ty).reduce(joinTy);
       if (!(of.k === "str" || of.k === "int" || of.k === "float" || of.k === "bool") || values.some((v: Val) => !sameTy(v.ty, of))) {
         fail(comp, "FV0611", "an array literal holds strings, numbers or booleans, all of one type", n);
       }
@@ -415,7 +415,7 @@ export function expr(s: Scope, n: N): Val {
     case "OptionalCallExpression":
       return optionalChain(s, n);
     case "StringLiteral":
-      return { code: rustStr(n.value), ty: STR };
+      return { code: rustStr(n.value), ty: literalTy("str", [n.value]) };
     case "NumericLiteral":
       return numberVal(n.value, Number.isSafeInteger(n.value));
     case "BooleanLiteral":
@@ -514,8 +514,8 @@ export function expr(s: Scope, n: N): Val {
         if (a.ty.of.k === "str" && b.ty.k === "str" && isTemporary(b)) {
           return { code: `&*${atom(a.code)}.map(std::borrow::Cow::<str>::Borrowed).unwrap_or(${asCow(b)})`, ty: STR, ...loneOf(a, b) };
         }
-        if (sameTy(a.ty.of, b.ty)) return { code: `${atom(a.code)}.unwrap_or(${bare(b.code)})`, ty: b.ty, ...loneOf(a, b) };
-        if (b.ty.k === "opt" && sameTy(a.ty.of, b.ty.of)) return { code: `${atom(a.code)}.or(${bare(b.code)})`, ty: b.ty, ...loneOf(a, b) };
+        if (sameTy(a.ty.of, b.ty)) return { code: `${atom(a.code)}.unwrap_or(${bare(b.code)})`, ty: joinTy(b.ty, a.ty.of), ...loneOf(a, b) };
+        if (b.ty.k === "opt" && sameTy(a.ty.of, b.ty.of)) return { code: `${atom(a.code)}.or(${bare(b.code)})`, ty: joinTy(b.ty, a.ty), ...loneOf(a, b) };
         if (a.ty.of.k === "float" && b.ty.k === "int") return { code: `${atom(a.code)}.unwrap_or(${bare(asF64(b))})`, ty: FLOAT };
         if (a.ty.of.k === "int" && b.ty.k === "float") return { code: `${atom(a.code)}.map(|v| v as f64).unwrap_or(${bare(b.code)})`, ty: FLOAT };
         return n.operator === "??" ? fail(comp, "FV0616", "`??` between different types", n) : fail(comp, "FV0617", "`||` between these types", n);
@@ -535,7 +535,7 @@ export function expr(s: Scope, n: N): Val {
           const k = known(a);
           if (k !== undefined) return k ? a : b;
           const otherwise = a.ty.k === "str" ? strArg(b.code) : bare(b.code);
-          return { code: `{ let a = ${bare(a.code)}; if ${truthy({ code: "a", ty: a.ty })} { a } else { ${otherwise} } }`, ty: a.ty, ...loneOf(a, b) };
+          return { code: `{ let a = ${bare(a.code)}; if ${truthy({ code: "a", ty: a.ty })} { a } else { ${otherwise} } }`, ty: joinTy(a.ty, b.ty), ...loneOf(a, b) };
         }
         return fail(comp, "FV0617", "`||` between these types", n);
       }
@@ -544,7 +544,7 @@ export function expr(s: Scope, n: N): Val {
     }
     case "UnaryExpression":
       if (n.operator === "!") {
-        return negatedOrder(s, n.argument) ?? boolOf(not(truthy(expr(s, n.argument))));
+        return negatedOrder(s, n.argument) ?? boolOf(not(truthy(truthTested(s, n.argument))));
       }
       if (n.operator === "-") {
         const a = expr(s, n.argument);
@@ -616,7 +616,7 @@ export function expr(s: Scope, n: N): Val {
       return boolOf(n.operator === "===" ? eq : not(eq));
     }
     case "ConditionalExpression": {
-      const t = expr(s, n.test);
+      const t = truthTested(s, n.test);
       const k = known(t);
       if (k !== undefined) {
         const chosen = expr(s, k ? n.consequent : n.alternate);
@@ -658,16 +658,16 @@ export function expr(s: Scope, n: N): Val {
         const owned = (v: Val, empty: boolean): boolean => !empty && (v.iter !== undefined || v.code.startsWith("["));
         if (owned(a, emptyA) || owned(b, emptyB)) {
           const both = `(${choose(emptyA ? "Vec::new()" : collected(a), emptyB ? "Vec::new()" : collected(b))})`;
-          return { code: both, ty: a.ty, iter: `${both}.into_iter()`, ...lone };
+          return { code: both, ty: joinTy(a.ty, b.ty), iter: `${both}.into_iter()`, ...lone };
         }
-        return { code: choose(emptyA ? "&[]" : sliced(a), emptyB ? "&[]" : sliced(b)), ty: a.ty, slice: true, ...lone };
+        return { code: choose(emptyA ? "&[]" : sliced(a), emptyB ? "&[]" : sliced(b)), ty: joinTy(a.ty, b.ty), slice: true, ...lone };
       }
       const optStr = (v: Val) => nothing(v.ty) || (v.ty.k === "opt" && v.ty.of.k === "str") || v.ty.k === "str";
-      if (sameTy(a.ty, b.ty) && a.ty.k !== "opt") return { code: choose(a.code, b.code), ty: a.ty, ...lone };
+      if (sameTy(a.ty, b.ty) && a.ty.k !== "opt") return { code: choose(a.code, b.code), ty: joinTy(a.ty, b.ty), ...lone };
       if (isNumber(a.ty) && isNumber(b.ty)) return { code: choose(asF64(a), asF64(b)), ty: FLOAT };
       const base = (ty: Ty): Ty | null => (ty.k === "opt" ? ty.of : nothing(ty) ? null : ty);
       const [baseA, baseB] = [base(a.ty), base(b.ty)];
-      const of = baseA ?? baseB;
+      const of = baseA !== null && baseB !== null ? joinTy(baseA, baseB) : (baseA ?? baseB);
       if (of !== null && (baseA === null || baseB === null || sameTy(baseA, baseB))) {
         const ty = withAbsence(of, joinAbsence(absence(a.ty), absence(b.ty)));
         if (optStr(a) && optStr(b) && (isTemporary(a) || isTemporary(b) || a.held !== undefined || b.held !== undefined)) {
@@ -676,7 +676,7 @@ export function expr(s: Scope, n: N): Val {
           const both = atom(choose(held(a), held(b)));
           return { code: `${both}.as_deref()`, ty, held: both, ...lone };
         }
-        if (sameTy(a.ty, b.ty)) return { code: choose(a.code, b.code), ty: a.ty, ...lone };
+        if (sameTy(a.ty, b.ty)) return { code: choose(a.code, b.code), ty: joinTy(a.ty, b.ty), ...lone };
         return { code: choose(coerce(comp, a, ty, n), coerce(comp, b, ty, n)), ty, ...lone };
       }
       return fail(comp, "FV0623", "the two branches of `?:` differ in type", n);

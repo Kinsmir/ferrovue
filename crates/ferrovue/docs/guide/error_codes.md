@@ -236,7 +236,25 @@ Constant list's object type named as a Rust type. Retired in 0.10.0: the compile
 
 ## FV0222
 
-Constant object read by a key chosen at run time.
+Constant object read by a key that is not a union of literals.
+
+A plain object has fields of its prototype besides its own (`toString`, `constructor`, `__proto__`), so a key that may be any string can name one of them, which the server does not have. A key typed as a union of string or integer literals, or an `enum` of them, is a closed set: the read compiles to a `match` over it.
+
+## FV0223
+
+Constant object read by a key that may be absent.
+
+## FV0224
+
+Field read of a constant that may be `undefined`.
+
+## FV0225
+
+Constant read by a key whose values differ in type.
+
+## FV0226
+
+Constant object without a key that names a field of every object.
 
 A constant object or enum read by a key chosen at run time (`LABELS[key]`, `Tone[props.tone]`) has no Rust value to index: each field is written where the template reads it, and the key may name none of them, which JavaScript gives as `undefined`. Write the choices out with `v-if`, or pass the value as a prop. See [`props`](crate::guide::props#constants).
 

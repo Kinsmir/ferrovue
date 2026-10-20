@@ -2,7 +2,7 @@ import { parse as parseJs } from "@babel/parser";
 import { readFileSync, statSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { relativePath } from "./paths.ts";
-import { type Absence, type Component, type Field, type N, type Struct, type Ty, absence, blankComponent, BOOL, fail, FLOAT, GenError, INT, joinAbsence, nodeName, opt, RUST_PRELUDE, rustStr, sameTy, snake, STR, tagAst, withAbsence } from "./model.ts";
+import { type Absence, type Component, type Field, type N, type Struct, type Ty, absence, blankComponent, BOOL, fail, FLOAT, GenError, INT, joinAbsence, joinTy, literalTy, nodeName, opt, RUST_PRELUDE, rustStr, sameTy, snake, STR, tagAst, withAbsence } from "./model.ts";
 import { CONFIG_FILE, ctx, INLINE_HTML, TYPES_MODULE } from "./context.ts";
 import { childOf } from "./expr.ts";
 import { claim } from "./plugin.ts";
@@ -55,8 +55,9 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
       if (t.operator === "readonly") return tyOfTs(comp, t.typeAnnotation, structs, seen, dates);
       break;
     case "TSLiteralType":
-      if (t.literal.type === "StringLiteral" || t.literal.type === "TemplateLiteral") return STR;
-      if (t.literal.type === "NumericLiteral") return Number.isInteger(t.literal.value) ? INT : FLOAT;
+      if (t.literal.type === "StringLiteral") return literalTy("str", [t.literal.value]);
+      if (t.literal.type === "TemplateLiteral") return t.literal.expressions.length ? STR : literalTy("str", [t.literal.quasis[0].value.cooked]);
+      if (t.literal.type === "NumericLiteral") return Number.isSafeInteger(t.literal.value) ? literalTy("int", [t.literal.value]) : Number.isInteger(t.literal.value) ? INT : FLOAT;
       if (t.literal.type === "BooleanLiteral") return BOOL;
       break;
     case "TSUnionType": {
@@ -75,7 +76,7 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
       if (none === "either") return fail(comp, "FV0311", NULL_OR_UNDEFINED, t);
       const first = tys[0];
       if (!first || tys.some((x) => !sameTy(x, first))) return fail(comp, "FV0312", "a union of different types has no Rust type", t);
-      return withAbsence(first, none);
+      return withAbsence(tys.reduce(joinTy), none);
     }
     case "TSTypeReference": {
       const name: string | undefined = t.typeName.type === "Identifier" ? t.typeName.name : undefined;

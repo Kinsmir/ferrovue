@@ -1,7 +1,7 @@
-import { type Component, type N, type Scope, type Ty, type Val, BOOL, fail, FLOAT, INT, opt, sameTy, STR, UNDEF } from "./model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, BOOL, fail, FLOAT, INT, joinTy, opt, sameTy, STR, UNDEF } from "./model.ts";
 import { ctx } from "./context.ts";
 import { describeTy, expr, fieldVal } from "./expr.ts";
-import { cond } from "./narrowing.ts";
+import { cond, unbound } from "./narrowing.ts";
 import { localTy } from "./rust.ts";
 import { asF64, isNumber } from "./numbers.ts";
 import { asCow, isTemporary, lonely, meet, yieldsCow } from "./strings.ts";
@@ -88,7 +88,7 @@ export function arrow(s: Scope, fn: N, list: Val, of: Ty, byRef: boolean, method
     locals.set(index.name, { code: i, ty: INT });
     bound.push(index.name);
   }
-  const narrowed = new Map([...s.narrowed].filter(([path]) => !bound.some((b) => path === b || path.startsWith(`${b}.`) || path.startsWith(`${b}[`))));
+  const narrowed = unbound(s.narrowed, bound);
   const code = body({ ...s, locals, narrowed });
   const reads = (name: string) => new RegExp(`\\b${name}\\b`).test(code);
   const pName = reads(p) ? p : "_";
@@ -171,7 +171,8 @@ export function presentLiteral(s: Scope, n: N): Val | null {
   });
   if (!values.some((v: Val) => v.ty.k === "opt" || v.ty.k === "null" || v.ty.k === "undef")) return null;
   const kept = values.filter((v: Val) => v.ty.k !== "null" && v.ty.k !== "undef");
-  const of = kept.map((v: Val) => (v.ty.k === "opt" ? v.ty.of : v.ty))[0];
+  const bases: Ty[] = kept.map((v: Val) => (v.ty.k === "opt" ? v.ty.of : v.ty));
+  const of = bases.length ? bases.reduce(joinTy) : undefined;
   if (of === undefined) return computed("std::iter::empty::<bool>()", BOOL);
   if (!["str", "int", "float", "bool"].includes(of.k) || kept.some((v: Val) => !sameTy(v.ty.k === "opt" ? v.ty.of : v.ty, of))) {
     fail(comp, "FV0611", "an array literal holds strings, numbers or booleans, all of one type, each of which may be absent", n);
@@ -246,7 +247,7 @@ function reduced(s: Scope, target: Val, method: string, args: N[], n: N): Val {
   let accTy: Ty = init.ty.k === "int" && init.f64 !== undefined && RISKS_NEGATIVE_ZERO.test(init.f64) ? FLOAT : init.ty;
   let lone = !!init.lone;
   const item = { ...fn, params: fn.params.slice(1) };
-  const narrowed = new Map([...s.narrowed].filter(([path]) => path !== accName && !path.startsWith(`${accName}.`) && !path.startsWith(`${accName}[`)));
+  const narrowed = unbound(s.narrowed, [accName]);
   for (;;) {
     const acc = `fv_acc${++ctx.narrowCount}`;
     const accVal: Val = accTy.k === "str" ? { code: `&*${acc}`, ty: STR, ...(lone ? { lone } : {}) } : { code: acc, ty: accTy };
@@ -374,7 +375,7 @@ function sortedBy(s: Scope, target: Val, of: Ty, fn: N): Val {
   const [pa, pb] = [`fv_l${k}`, `fv_r${k}`];
   const locals = new Map(s.locals).set(fn.params[0].name, itemVal(of, pa, true, target.lone)).set(fn.params[1].name, itemVal(of, pb, true, target.lone));
   const bound: string[] = fn.params.map((p: N) => p.name as string);
-  const narrowed = new Map([...s.narrowed].filter(([path]) => !bound.some((b) => path === b || path.startsWith(`${b}.`) || path.startsWith(`${b}[`))));
+  const narrowed = unbound(s.narrowed, bound);
   const inner: Scope = { ...s, locals, narrowed };
   const shape = comparatorShape(fn);
   if (shape === null) {
@@ -443,7 +444,7 @@ export function spreadLiteral(s: Scope, n: N): Val {
     const bad = parts.find((_: unknown, i: number) => !sameTy(tys[i]!, own)) ?? parts[0];
     fail(comp, "FV0833", "an array literal spreads lists of one item type, strings, numbers, booleans or objects, and holds plain values of that type beside them (numbers whether `number` or `Float`)", bad.node);
   }
-  const of = numbers && tys.some((t) => t.k === "float") ? FLOAT : own;
+  const of = numbers && tys.some((t) => t.k === "float") ? FLOAT : tys.reduce(joinTy);
   const pieces: string[] = [];
   let plain: string[] = [];
   const flush = () => {
@@ -523,7 +524,7 @@ export function listMethod(s: Scope, target: Val, method: string, args: N[], n: 
       }
       return part;
     }).filter((p) => !untypedEmpty(p));
-    const of = [target, ...parts].some((p) => p.ty.k === "list" && p.ty.of.k === "float") ? FLOAT : own;
+    const of = [target, ...parts].some((p) => p.ty.k === "list" && p.ty.of.k === "float") ? FLOAT : parts.reduce((t, p) => joinTy(t, (p.ty as { of: Ty }).of), own);
     const each = (p: Val): string => (of.k === "float" && p.ty.k === "list" && p.ty.of.k === "int" ? `${items(p)}.map(|v| v as f64)` : items(p));
     const joined = parts.reduce((acc, p) => `${acc}.chain(${each(p)})`, each(target));
     return computed(joined, of, [target, ...parts].some((p) => p.lone));

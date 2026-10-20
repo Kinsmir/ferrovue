@@ -2393,7 +2393,73 @@ enum Tone { Calm = "calm" }
 defineProps<{ k: string }>();
 </script>
 <template><i>{{ Tone[k] }}</i></template>`,
-      /`Tone` read by a key chosen at run time/,
+      /`Tone` read by a key that is a `string`, which may name a field every object has, as `toString` or `constructor`: type the key as a union of string literals/,
+    ],
+    [
+      "a constant object read by a key that is a string",
+      `<script setup lang="ts">
+defineProps<{ k: string }>();
+const PAD = { sm: "p-1", md: "p-2" };
+</script>
+<template><i>{{ PAD[k] }}</i></template>`,
+      /`PAD` read by a key that is a `string`, which may name a field every object has, as `toString` or `constructor`: type the key as a union of string literals/,
+    ],
+    [
+      "a constant object read by a key that may be absent",
+      `<script setup lang="ts">
+defineProps<{ k?: "sm" | "md" }>();
+const PAD = { sm: "p-1", md: "p-2" };
+</script>
+<template><i>{{ PAD[k] }}</i></template>`,
+      /`PAD` read by a key that may be absent, where JavaScript reads the field `undefined`: narrow the key with `v-if` first, or give it a default/,
+    ],
+    [
+      "a field of a constant object read by a key it may not have",
+      `<script setup lang="ts">
+defineProps<{ k: "sm" | "lg" }>();
+const PAD = { sm: "p-1", md: "p-2" };
+const T = { sm: { label: "S" } };
+</script>
+<template><i>{{ T[k].label }}</i></template>`,
+      /`T\[k\]` may be `undefined`, as it is for the key `lg`, and reading `\.label` of it fails: read it with `\?\.label`/,
+    ],
+    [
+      "a constant object whose values differ in type for the keys of its key",
+      `<script setup lang="ts">
+defineProps<{ k: "a" | "b" }>();
+const PAD = { sm: "p-1", md: "p-2" };
+const M = { a: "x", b: 1 };
+</script>
+<template><i>{{ M[k] }}</i></template>`,
+      /`M\[k\]` is a string for some keys and a number for others/,
+    ],
+    [
+      "a constant object without a key that names a field of every object",
+      `<script setup lang="ts">
+defineProps<{ k: "sm" | "toString" }>();
+const PAD = { sm: "p-1", md: "p-2" };
+</script>
+<template><i>{{ PAD[k] ?? 'x' }}</i></template>`,
+      /`PAD` has no field `toString` for the key `toString`, where JavaScript reads `Object\.prototype\.toString`/,
+    ],
+    [
+      "a constant object read by a key that is a union of literals and a string",
+      `<script setup lang="ts">
+defineProps<{ k: "sm" | "md"; s: string; on: boolean }>();
+const PAD = { sm: "p-1", md: "p-2" };
+</script>
+<template><i>{{ PAD[on ? k : s] }}</i></template>`,
+      /`PAD` read by a key that is a `string`/,
+    ],
+    [
+      "a constant object literal that sets its prototype",
+      `<script setup lang="ts">
+defineProps<{ k: "sm" }>();
+const PAD = { sm: "p-1", md: "p-2" };
+const P = { __proto__: { sm: "a" } };
+</script>
+<template><i>{{ P[k] }}</i></template>`,
+      /`__proto__:` in an object literal sets its prototype/,
     ],
     [
       "an enum member that is not a literal",
@@ -4199,6 +4265,13 @@ defineProps<{ onSale?: boolean }>();
     "a ternary whose branches differ in type, bound to a boolean attribute": "FV0623",
     "a ternary whose branches differ in type, bound as a class": "FV0623",
     "a ternary between a list and a string in text, which Vue writes as JSON": "FV0623",
+    "a constant object read by a key that is a string": "FV0222",
+    "a constant object read by a key that may be absent": "FV0223",
+    "a field of a constant object read by a key it may not have": "FV0224",
+    "a constant object whose values differ in type for the keys of its key": "FV0225",
+    "a constant object without a key that names a field of every object": "FV0226",
+    "a constant object read by a key that is a union of literals and a string": "FV0222",
+    "a constant object literal that sets its prototype": "FV0613",
     "a value read from `$attrs`, which has no type": "FV0415",
     "an attribute name Vue's server renderer skips as unsafe": "FV0404",
     "an attribute name chosen at run time": "FV0408",
@@ -4400,6 +4473,61 @@ describe("a `?:` whose branches differ in type, where it is shown as text", () =
     const out = render("n: number; on: boolean; tags: string[]; o?: number", "<i>{{ `${on ? n : 'none'}|${on ? tags : n}|${on ? o : false}` }}</i>");
     expect(out).toContain('fv::JsOr(props.o.map(fv::Js), "undefined")');
     expect(out).toContain('.collect::<Vec<_>>().join(",")');
+  });
+});
+
+describe("constant lookups", () => {
+  const render = (script: string, template: string, files: Record<string, string> = {}): string => {
+    const project = island(`<script setup lang="ts">\n${script}\n</script>\n<template>${template}</template>`);
+    for (const [name, text] of Object.entries(files)) writeFileSync(join(project, "components", name), text);
+    const out = compile(project).get("x.rs")!;
+    return out.slice(out.indexOf("pub fn render"), out.indexOf("/// The component's markup"));
+  };
+
+  it("reads a constant object by a prop typed as a union of string literals with a `match`", () => {
+    const out = render(
+      'type Size = "sm" | "md" | "lg";\ndefineProps<{ size: Size }>();\nconst PAD = { sm: "p-1", md: "p-2", lg: "p-4" } as const;',
+      '<i :class="PAD[size]">{{ PAD[size] }}</i>',
+    );
+    expect(out).toContain('fv::class_into(out, false, &[match &*props.size { "sm" => "p-1", "md" => "p-2", _ => "p-4" }]);');
+    expect(out).toContain('fv::escape_into(out, match &*props.size { "sm" => "p-1", "md" => "p-2", _ => "p-4" });');
+  });
+
+  it("reads a constant a `.ts` file exports, keyed by its enum's members, by a prop of the enum and a `v-for` item's field", () => {
+    const out = render(
+      'import { THEME, Tone } from "./theme";\ninterface Badge { tone: Tone }\ndefineProps<{ tone: Tone; badges: Badge[] }>();',
+      '<i :style="{ color: THEME[tone].fg }">{{ THEME[Tone.Warn].fg }}</i><b v-for="b in badges">{{ THEME[b.tone].weight }}</b>',
+      { "theme.ts": 'export enum Tone { Info = "info", Warn = "warn" }\nexport const THEME: Record<Tone, { fg: string; weight: number }> = { [Tone.Info]: { fg: "navy", weight: 400 }, [Tone.Warn]: { fg: "red", weight: 700.5 } };\n' },
+    );
+    expect(out).toContain('fv::escape_into(out, match &*props.tone { "info" => "navy", _ => "red" });');
+    expect(out).toContain("red</i>");
+    expect(out).toContain('fv::push_number(out, match &*b.tone { "info" => 400.0f64, _ => 700.5f64 });');
+  });
+
+  it("reads by integer literal keys, and keeps the literals of a `?:` and a `computed`", () => {
+    const out = render(
+      'import { computed } from "vue";\nconst props = defineProps<{ level: 1 | 2; on: boolean }>();\nconst NAMES = { 1: "one", 2: "two", x: "ex" };\nconst PAD = { a: "p-1", b: "p-2" };\nconst pick = computed(() => (props.on ? "a" : "b"));',
+      "<i>{{ NAMES[level] }} {{ PAD[on ? 'b' : 'a'] }} {{ PAD[pick] }}</i>",
+    );
+    expect(out).toContain('fv::escape_into(out, match props.level { 1 => "one", _ => "two" });');
+    expect(out).toContain('fv::escape_into(out, match if props.on { "b" } else { "a" } { "b" => "p-2", _ => "p-1" });');
+    expect(out).toContain('fv::escape_into(out, match s_pick { "a" => "p-1", _ => "p-2" });');
+  });
+
+  it("reads `undefined` for the keys an object lacks, narrowed with `??`, `?.` and `v-if`", () => {
+    const out = render(
+      'defineProps<{ kind: "a" | "b" | "c" }>();\nconst T = { a: "A", b: "B" };\nconst I = { a: { label: "x" } };',
+      '<i>{{ T[kind] ?? "-" }} {{ I[kind]?.label }}</i><b v-if="I[kind]">{{ I[kind].label }}</b><s v-if="T[kind]">{{ T[kind] }}</s>',
+    );
+    expect(out).toContain('fv::escape_into(out, (match &*props.kind { "a" => Some("A"), "b" => Some("B"), _ => None }).unwrap_or("-"));');
+    expect(out).toContain('if let Some(v) = match &*props.kind { "a" => Some("x"), _ => None } {');
+    expect(out).toContain('if matches!(&*props.kind, "a") {\n        out.push_str("<b>x</b>");');
+    expect(out).toMatch(/if let Some\((n\d+)\) = \(match &\*props\.kind \{ "a" => Some\("A"\), "b" => Some\("B"\), _ => None \}\)\.filter\(\|v\| !v\.is_empty\(\)\) \{\n {8}out\.push_str\("<s>"\);\n {8}fv::escape_into\(out, \1\);/);
+  });
+
+  it("forgets the literals of a list item or a `??` that another value may be", () => {
+    expect(() => render('defineProps<{ k: "sm"; s: string }>();\nconst PAD = { sm: "p-1" };', '<i v-for="x in [k, s]">{{ PAD[x] }}</i>')).toThrow(expect.objectContaining({ code: "FV0222" }));
+    expect(() => render('defineProps<{ k?: "sm"; s: string }>();\nconst PAD = { sm: "p-1" };', "<i>{{ PAD[k ?? s] }}</i>")).toThrow(expect.objectContaining({ code: "FV0222" }));
   });
 });
 
