@@ -31,7 +31,7 @@ function inside(offset: number, block: Block): boolean {
 }
 
 function errorFor(r: Located, start: number, end: number, links: boolean, where = ""): Errors[number] {
-  const text = `ferrovue: ${r.message}${where}${links ? "" : `\n${r.docs}`}`;
+  const text = `ferrovue: ${r.message}${where}${r.help ? `\nhelp: ${r.help}` : ""}${links ? "" : `\n${r.docs}`}`;
   const error = Object.assign(new SyntaxError(text), {
     code: links ? { value: r.code, target: r.docs } : r.code,
     loc: { start: { offset: start, line: 0, column: 0 }, end: { offset: end, line: 0, column: 0 }, source: "" },

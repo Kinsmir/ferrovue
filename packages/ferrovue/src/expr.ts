@@ -534,12 +534,15 @@ export function expr(s: Scope, n: N): Val {
       if (k !== undefined) {
         const chosen = expr(s, k ? n.consequent : n.alternate);
         if (!untypedEmpty(chosen)) return chosen;
+        ctx.trying++;
         try {
           const other = expr(s, k ? n.alternate : n.consequent);
           return other.ty.k === "list" && other.ty.of.k !== "undef" ? typedEmpty(comp, other.ty.of) : chosen;
         } catch (e) {
           if (!(e instanceof GenError)) throw e;
           return chosen;
+        } finally {
+          ctx.trying--;
         }
       }
       const p = presence(s, n.test);

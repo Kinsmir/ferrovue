@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { compileTemplate, parse as parseSfc } from "@vue/compiler-sfc";
-import { GenError, generate, loadConfig } from "../src/compiler.ts";
+import { GenError, GenErrors, generate, loadConfig } from "../src/compiler.ts";
 import { type Code, ERRORS } from "../src/errors.ts";
 import { GENERATED_VERSION } from "../src/rust.ts";
 
@@ -37,6 +37,54 @@ const props = defineProps<{ label: string }>();
 <template><b :title="label">{{ label }}</b></template>`),
     );
     expect(out.get("x.rs")).toContain("pub fn render");
+  });
+
+  describe("every refusal of a run", () => {
+    const refusals = (project: string): GenErrors => {
+      try {
+        compile(project);
+      } catch (e) {
+        if (e instanceof GenErrors) return e;
+        throw e;
+      }
+      throw new Error("compiled without an error");
+    };
+    const where = (e: GenErrors): string[] => e.errors.map((one) => (one instanceof GenError ? `${one.code} ${one.at?.file}:${one.at?.line}` : "syntax"));
+
+    it("reports each refused statement of a template, and of every component, in the order of files and lines", () => {
+      const e = refusals(
+        island(
+          `<script setup lang="ts">
+defineProps<{ n: number; on: boolean }>();
+</script>
+<template>
+  <p>{{ n.toLocaleString() }}</p>
+  <p v-if="on">{{ n.toFixed(200) }}</p>
+  <i>{{ n }}</i>
+</template>`,
+          { A: `<script setup lang="ts">\nimport { watchEffect } from "vue";\nwatchEffect(() => {});\n</script>\n<template><i></i></template>` },
+        ),
+      );
+      expect(where(e)).toEqual(["FV0103 components/A.vue:3", "FV1805 components/X.vue:5", expect.stringMatching(/^FV\d{4} components\/X\.vue:6$/)]);
+      expect(e).toBeInstanceOf(GenError);
+      expect(e.code).toBe("FV0103");
+      expect(e.unchecked).toEqual([]);
+    });
+
+    it("leaves a component that uses a refused one unchecked, and checks the rest", () => {
+      const bad = `<script setup lang="ts">\ndefineProps<{ n: number }>();\n</script>\n<template><p>{{ n.toLocaleString() }}</p></template>`;
+      const e = refusals(
+        island(`<script setup lang="ts">\nimport B from "./B.vue";\n</script>\n<template><B :n="1" /><p>{{ (1).toLocaleString() }}</p></template>`, { B: bad, C: bad }),
+      );
+      expect(where(e)).toEqual(["FV1805 components/B.vue:4", "FV1805 components/C.vue:4"]);
+      expect(e.unchecked).toEqual(["components/X.vue"]);
+    });
+
+    it("raises a `GenErrors` for a single refusal too", () => {
+      const e = refusals(island(`<template><p>{{ (1).toLocaleString() }}</p></template>`));
+      expect(e.errors).toHaveLength(1);
+      expect(e.message).toBe(e.errors[0]!.message);
+    });
   });
 
   it("writes a component named after a Rust keyword to the file its raw module name reads", () => {

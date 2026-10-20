@@ -404,6 +404,19 @@ it("gives an error its code and where the code is documented", () => {
   expect(r.stderr).toContain(`\n = docs: ${DOCS}#fv1805\n`);
 });
 
+it("reports every refusal of a run, then counts them, and writes nothing", () => {
+  writeFileSync(join(root, "components", "Bad.vue"), BAD);
+  writeFileSync(join(root, "components", "Worse.vue"), BAD.replace("<p>", "<p>{{ n.toLocaleString() }}</p><p v-if=\"n\">"));
+  const r = run();
+  expect(r.status).toBe(1);
+  expect(r.stderr.match(/^error\[FV1805\]: /gm)).toHaveLength(3);
+  expect(r.stderr).toMatch(/^error\[FV1805\]: components\/Bad\.vue:4:17: [\s\S]*^error\[FV1805\]: components\/Worse\.vue:4:/m);
+  expect(r.stderr.trimEnd().split("\n").at(-1)).toBe("3 errors in 2 components");
+  expect(existsSync(join(root, "src", "generated", "hello.rs"))).toBe(false);
+  const json = JSON.parse(run("--format", "json").stdout);
+  expect(json.diagnostics.map((d: { file: string }) => d.file)).toEqual(["components/Bad.vue", "components/Worse.vue", "components/Worse.vue"]);
+});
+
 it("--format json writes a refusal as a diagnostic, and fails as without it", () => {
   writeFileSync(join(root, "components", "Bad.vue"), BAD);
   for (const args of [["--format", "json"], ["--check", "--format=json"]]) {
@@ -422,6 +435,7 @@ it("--format json writes a refusal as a diagnostic, and fails as without it", ()
           severity: "error",
           title: "Locale formatting with `Intl`, `.toLocaleString()`, `.localeCompare()`, `$d` or `$n`",
           message: "`.toLocaleString()` formats by locale with `Intl`, whose output differs between Node, Chromium, Firefox and Safari: format the value in Rust and pass a string, or translate it with `$t` (see the `dates_and_prices` guide)",
+          help: null,
           docs: `${DOCS}#fv1805`,
         },
       ],

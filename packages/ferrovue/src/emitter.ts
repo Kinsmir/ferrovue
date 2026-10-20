@@ -43,6 +43,19 @@ export class Emitter {
     this.lines[index] = this.lines[index]!.replace(from, () => to);
   }
 
+  mark(): () => void {
+    const { pending, depth, literalBytes } = this;
+    const lines = this.lines.length;
+    const perItem = this.perItem.length;
+    return () => {
+      this.lines.length = lines;
+      this.perItem.length = perItem;
+      this.pending = pending;
+      this.depth = depth;
+      this.literalBytes = literalBytes;
+    };
+  }
+
   flush(): void {
     if (!this.pending) return;
     const text = this.pending;

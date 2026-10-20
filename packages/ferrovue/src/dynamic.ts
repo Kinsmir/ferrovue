@@ -528,12 +528,15 @@ export function prepareDynamic(read: { comp: Component; ast: N[]; ssr: string; s
       }
       const d = dynamicOf(n);
       if (d) {
+        ctx.trying++;
         try {
           const choices = choicesOf(pickOf(r.scope, d.is));
           for (const c of choices) if (!("tag" in c)) r.comp.imports.add(c.child);
           picks.set(n, choices);
         } catch (e) {
           if (!(e instanceof GenError)) throw e;
+        } finally {
+          ctx.trying--;
         }
       }
       for (const [key, v] of Object.entries(n)) if (key !== "loc" && key !== "__fv") visit(v);

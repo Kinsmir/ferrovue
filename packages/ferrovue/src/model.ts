@@ -158,18 +158,38 @@ export class GenError extends Error {
   readonly code: Code;
   readonly at: Location | null;
   readonly what: string;
+  /** A short way around the refusal, where one is known. */
+  readonly help: string | null;
 
-  constructor(code: Code, message: string, at: Location | null = null, what: string = message) {
+  constructor(code: Code, message: string, at: Location | null = null, what: string = message, help: string | null = null) {
     super(message);
     this.code = code;
     this.at = at;
     this.what = what;
+    this.help = help;
+  }
+}
+
+/** Every refusal of a run, raised once the compiler has checked all it can. It carries the first
+ * refusal's code, location and message, so code that handles one `GenError` still works. */
+export class GenErrors extends GenError {
+  /** The refusals, in the order of the components and of their lines. */
+  readonly errors: readonly (GenError | SyntaxError)[];
+  /** The components left unchecked because they use a refused one. */
+  readonly unchecked: readonly string[];
+
+  constructor(errors: readonly (GenError | SyntaxError)[], unchecked: readonly string[] = []) {
+    const first = errors[0]!;
+    if (first instanceof GenError) super(first.code, first.message, first.at, first.what, first.help);
+    else super("FV0001", first.message);
+    this.errors = errors;
+    this.unchecked = unchecked;
   }
 }
 
 /** Refuse something in a file that has no source to quote, as a locale or routes file. */
-export function failIn(file: string, code: Code, what: string): never {
-  throw new GenError(code, `${file}: ${what}`, { file }, what);
+export function failIn(file: string, code: Code, what: string, help: string | null = null): never {
+  throw new GenError(code, `${file}: ${what}`, { file }, what, help);
 }
 
 export interface Component {
@@ -410,11 +430,11 @@ function locateEnd(node: N): { endLine: number; endColumn: number } | null {
   return end ? { endLine: end.line, endColumn: end.column + 1 } : null;
 }
 
-export function fail(comp: Component, code: Code, what: string, node?: N): never {
+export function fail(comp: Component, code: Code, what: string, node?: N, help: string | null = null): never {
   const at = locate(comp, node);
-  if (!at) throw new GenError(code, `${comp.file}: ${what}`, { file: comp.file }, what);
+  if (!at) throw new GenError(code, `${comp.file}: ${what}`, { file: comp.file }, what, help);
   const where = { file: comp.file, line: at.line, column: at.column + 1, ...locateEnd(node) };
-  throw new GenError(code, `${comp.file}:${at.line}:${at.column + 1}: ${what}${snippet(comp, at)}`, where, what);
+  throw new GenError(code, `${comp.file}:${at.line}:${at.column + 1}: ${what}${snippet(comp, at)}`, where, what, help);
 }
 
 function canonical(_key: string, value: unknown): unknown {
