@@ -63,7 +63,8 @@ released together and share version numbers.
   `return` and a path that ends without `return` are refused with the new codes FV1901 to FV1904,
   each naming the statement; FV0806, an arrow function with a block body, is retired. The crate's
   new [`script_logic`](https://docs.rs/ferrovue/latest/ferrovue/guide/script_logic/index.html)
-  guide describes what a body may hold. Generated code stays at `__compat!(3)`.
+  guide describes what a body may hold. Generated code stays at `__compat!(3)`. `ERRORS` in the
+  `ferrovue/compiler` API report gains the four codes and marks FV0806 retired.
 
 ### Changed
 
