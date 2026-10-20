@@ -5,6 +5,7 @@ use ferrovue::{
     js_to_iso_string, js_trim, js_utc_date, js_utc_full_year, js_utc_hours, js_utc_milliseconds,
     js_utc_minutes, js_utc_month, js_utc_seconds, slot_into, split_holes, state_script_into,
 };
+use ferrovue::{Load, LoadKey, load, load_key};
 use proptest::prelude::*;
 
 fn unescape(s: &str) -> String {
@@ -146,6 +147,16 @@ fn check_html(html: &str, tags: &[&str]) -> Result<(), String> {
     }
 }
 
+struct Echo(String, String);
+
+impl Load for Echo {
+    const NAME: &'static str = "echo";
+    type Output = String;
+    fn args(&self, key: &mut LoadKey) {
+        key.str(&self.0);
+    }
+}
+
 proptest! {
     #[test]
     fn escaped_text_holds_no_markup_and_reads_back_whole(s in any::<String>()) {
@@ -218,6 +229,30 @@ proptest! {
         let unsafe_chars = ['<', '>', '&', '\u{2028}', '\u{2029}'];
         prop_assert!(!body.contains(unsafe_chars));
         prop_assert_eq!(serde_json::from_str::<serde_json::Value>(body).unwrap(), state);
+    }
+
+    #[test]
+    fn the_loads_script_is_one_element_whose_body_reads_back(arg in any::<String>(), value in any::<String>()) {
+        let key = load_key(&Echo(arg.clone(), value.clone()));
+        prop_assert_eq!(serde_json::from_str::<serde_json::Value>(&key).unwrap(), serde_json::json!(["echo", arg]));
+        let page = load(
+            |loads| {
+                loads.get(Echo(arg.clone(), value.clone()));
+                let mut out = String::new();
+                loads.script_into(&mut out);
+                out
+            },
+            |call| call.run(|c: Echo| async move { Ok::<_, std::convert::Infallible>(c.1) }),
+        );
+        let out = tokio::runtime::Builder::new_current_thread().build().unwrap().block_on(page).unwrap();
+        let body = out
+            .strip_prefix(r#"<script type="application/json" data-fv-loads>"#)
+            .and_then(|b| b.strip_suffix("</script>"));
+        prop_assert!(body.is_some());
+        let body = body.unwrap();
+        let unsafe_chars = ['<', '>', '&', '\u{2028}', '\u{2029}'];
+        prop_assert!(!body.contains(unsafe_chars));
+        prop_assert_eq!(serde_json::from_str::<serde_json::Value>(body).unwrap(), serde_json::json!({ key: value }));
     }
 
     #[test]
