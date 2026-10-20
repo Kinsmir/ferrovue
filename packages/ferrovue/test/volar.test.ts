@@ -113,6 +113,13 @@ it("leaves a refusal in another component to that component, and still shows thi
   expect((await check(CLEAN.replace("{{ n }}", "{{ n.toLocaleString('nl') }}"))).map((d) => d.code)).toEqual([expect.objectContaining({ value: "FV1805" })]);
 });
 
+it("shows a refused constant of a `.ts` file where the component reads it", async () => {
+  const check = editor({}, { "consts.ts": "export const LIMIT = Math.random();\n" });
+  const found = await check(CLEAN.replace("defineProps", 'import { LIMIT } from "./consts";\ndefineProps').replace("{{ n }}", "{{ LIMIT }}"));
+  expect(found.map((d) => [d.code, d.range.start.line])).toEqual([[expect.objectContaining({ value: "FV0207" }), 6]]);
+  expect(found[0]?.message).toContain("the template reads it as `LIMIT`");
+});
+
 it("gives the code as plain text and the link in the message with codeLinks off", async () => {
   const text = CLEAN.replace("{{ n }}", "{{ n.toLocaleString('nl') }}");
   const [found] = await editor({ codeLinks: false })(text);

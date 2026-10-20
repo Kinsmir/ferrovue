@@ -220,6 +220,11 @@ const NODE_NAMES: Record<string, string> = {
   TSTypeOperator: "a type operator (`keyof`, `readonly`, `unique`)",
   TSTypePredicate: "a type predicate",
   TSTypeQuery: "a `typeof` type",
+  TSBooleanKeyword: "`boolean`",
+  TSNullKeyword: "`null`",
+  TSNumberKeyword: "`number`",
+  TSStringKeyword: "`string`",
+  TSUndefinedKeyword: "`undefined`",
   TSUnknownKeyword: "`unknown`",
   TSVoidKeyword: "`void`",
   UnaryExpression: "a unary operator",
@@ -258,6 +263,8 @@ export class GenError extends Error {
   readonly what: string;
   /** A short way around the refusal, where one is known. */
   readonly help: string | null;
+  /** Where a component reads what is refused, when that is in another file. */
+  readAt: Location | null = null;
 
   constructor(code: Code, message: string, at: Location | null = null, what: string = message, help: string | null = null) {
     super(message);
@@ -280,6 +287,7 @@ export class GenErrors extends GenError {
     const first = errors[0]!;
     if (first instanceof GenError) super(first.code, first.message, first.at, first.what, first.help);
     else super("FV0001", first.message);
+    if (first instanceof GenError) this.readAt = first.readAt;
     this.errors = errors;
     this.unchecked = unchecked;
   }
@@ -363,6 +371,7 @@ export interface Scope {
   refs: Set<string>;
   clientOnly: Map<string, string>;
   imported: Map<string, string>;
+  refusedBy: Map<string, GenError>;
   narrowed: Map<string, Val>;
   selfAlias: { name: string | null };
   helperBytes: { n: number };
@@ -527,6 +536,12 @@ function snippet(comp: Component, at: { line: number; column: number }): string 
 function locateEnd(node: N): { endLine: number; endColumn: number } | null {
   const end = node?.__fv === "source" ? node.loc?.end : null;
   return end ? { endLine: end.line, endColumn: end.column + 1 } : null;
+}
+
+/** Where `node` is in the component. */
+export function placeOf(comp: Component, node: N): Location {
+  const at = locate(comp, node);
+  return at ? { file: comp.file, line: at.line, column: at.column + 1 } : { file: comp.file };
 }
 
 export function fail(comp: Component, code: Code, what: string, node?: N, help: string | null = null): never {

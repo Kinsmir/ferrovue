@@ -1,4 +1,4 @@
-import { type Component, type N, type Scope, type Ty, type Val, absence, BOOL, fail, FLOAT, GenError, INT, joinAbsence, nodeName, nothing, NULL, opt, rustStr, sameTy, snake, STR, UNDEF, withAbsence } from "./model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, absence, BOOL, fail, FLOAT, GenError, INT, joinAbsence, nodeName, nothing, NULL, opt, placeOf, rustStr, sameTy, snake, STR, UNDEF, withAbsence } from "./model.ts";
 import { CONFIG_FILE, ctx } from "./context.ts";
 import { lookupStruct, markHome, tyOfTs } from "./typescript.ts";
 import { claim } from "./plugin.ts";
@@ -29,6 +29,14 @@ function twinHelp(name: string): string {
 
 /** Refuse a name the template reads that setup binds in a way the server cannot evaluate. */
 export function refuseClientOnly(s: Scope, name: string, n: N, called = false): never {
+  const cause = s.refusedBy.get(name);
+  if (cause) {
+    const at = placeOf(s.comp, n);
+    const what = `${cause.what} (the template reads it as \`${name}\` at ${[at.file, at.line, at.column].filter((p) => p !== undefined).join(":")})`;
+    const e = new GenError(cause.code, cause.message.replace(cause.what, () => what), cause.at, what, cause.help);
+    if (cause.at?.file !== s.comp.file) e.readAt = at;
+    throw e;
+  }
   const why = s.clientOnly.get(name)!;
   const help = why === MANY_STATEMENTS
     ? `write the body as one expression, as \`computed(() => (a ? b : c))\`, or as a single \`return\`, or ${COMPUTE_IN_RUST}`
@@ -199,7 +207,17 @@ function stated(s: Scope, n: N): Val {
 function indexed(s: Scope, list: Val, key: N, n: N): Val {
   const i = expr(s, key);
   if (i.ty.k !== "int") {
-    const is = i.ty.k === "float" ? "a `Float`, which may hold a fraction" : describeTy(i.ty);
+    const getter = key.type === "CallExpression" && key.callee.type === "MemberExpression" && !key.callee.computed ? (key.callee.property.name as string) : "";
+    if (i.ty.k === "float" && /^getUTC[A-Z]|^getTime$|^valueOf$/.test(getter)) {
+      return fail(
+        s.comp,
+        "FV0824",
+        `\`[…]\` reads a list's item by an integer index, and \`.${getter}()\` of a date is a \`Float\`: it is \`NaN\` for an invalid date, where \`[…]\` reads \`undefined\``,
+        key,
+        `\`.at(…)\` reads the item for any number, the first one for \`NaN\`; or pick the item in Rust and pass it as a prop`,
+      );
+    }
+    const is = i.ty.k === "float" ? "a `Float`, which may hold a fraction or be `NaN`" : describeTy(i.ty);
     return fail(s.comp, "FV0824", `\`[…]\` reads a list's item by an integer index, a \`number\` that is present, and this index is ${is}: \`.at()\` takes any number`, key);
   }
   if (i.num !== undefined && i.num >= 0 && list.iter === undefined) return picked(s, list, n, (l) => (i.num === 0 ? `${l}.first()` : `${l}.get(${i.num})`), (it) => it);

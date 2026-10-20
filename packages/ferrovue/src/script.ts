@@ -162,6 +162,7 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
     refs: new Set(),
     clientOnly: new Map(),
     imported: new Map(),
+    refusedBy: new Map(),
     narrowed: new Map(),
     selfAlias: { name: null },
     helperBytes: { n: 0 },
@@ -184,6 +185,7 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
     } catch (e) {
       if (!(e instanceof GenError)) throw e;
       scope.clientOnly.set(local, `${why}: ${e.message.split("\n")[0]!}`);
+      scope.refusedBy.set(local, e);
     }
   };
   const locals = declareConsts(comp, ast);
@@ -304,6 +306,7 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
       } catch (e) {
         if (!(e instanceof GenError)) throw e;
         scope.clientOnly.set(local, e.what);
+        scope.refusedBy.set(local, e);
         continue;
       }
       if (nothing(v.ty) || (v.ty.k === "str" && known(v) !== undefined)) {

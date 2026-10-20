@@ -126,6 +126,21 @@ const big = computed(() => {
       ]);
     });
 
+    it("refuses a template's read of a constant the compiler cannot evaluate with the constant's own code and place", () => {
+      const project = island(`<script setup lang="ts">
+import { LIMIT } from "./consts";
+const local = (1).toLocaleString();
+</script>
+<template><i>{{ LIMIT }}</i><b>{{ local }}</b></template>`);
+      writeFileSync(join(project, "components", "consts.ts"), "export const LIMIT = Math.random();\n");
+      const [constant, local] = refusals(project).errors as GenError[];
+      expect(constant).toMatchObject({ code: "FV0207", at: { file: "components/consts.ts", line: 1, column: 22 }, readAt: { file: "components/X.vue", line: 5, column: 17 } });
+      expect(constant!.what).toMatch(/\(the template reads it as `LIMIT` at components\/X\.vue:5:17\)$/);
+      expect(constant!.message).toMatch(/^components\/consts\.ts:1:22: .*\n 1 \| export const LIMIT = Math\.random\(\);/);
+      expect(local).toMatchObject({ code: "FV1805", at: { file: "components/X.vue", line: 3 }, readAt: null });
+      expect(local!.what).toMatch(/\(the template reads it as `local` at components\/X\.vue:5:35\)$/);
+    });
+
     it("raises a `GenErrors` for a single refusal too", () => {
       const e = refusals(island(`<template><p>{{ (1).toLocaleString() }}</p></template>`));
       expect(e.errors).toHaveLength(1);
@@ -3510,6 +3525,15 @@ defineProps<{ names: string[]; f: Float }>();
 </script>
 <template><i>{{ names[f] }}</i></template>`,
       /reads a list's item by an integer index, .*a `Float`, which may hold a fraction/,
+    ],
+    [
+      "a list item read by a date's month",
+      `<script setup lang="ts">
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+defineProps<{ d: Date }>();
+</script>
+<template><i>{{ MONTHS[d.getUTCMonth()] }}</i></template>`,
+      /reads a list's item by an integer index, and `\.getUTCMonth\(\)` of a date is a `Float`: it is `NaN` for an invalid date, where `\[…\]` reads `undefined`/,
     ],
     [
       "a list item read by a string index",

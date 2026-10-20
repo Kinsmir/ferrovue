@@ -1,7 +1,8 @@
 import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { CONFIG_FILE, generate, loadConfig } from "./compiler.ts";
-import { type Diagnostic, diagnoseAll, isRefusal } from "./diagnostics.ts";
+import { type Diagnostic, diagnose, isRefusal, refusalsOf } from "./diagnostics.ts";
+import { GenError } from "./model.ts";
 
 /** A refusal in the file an editor holds, with its range as offsets into the text it was given. The
  * end is exclusive, and `null` where the compiler does not know it. */
@@ -47,7 +48,10 @@ function check(file: string, text: string, options: EditorOptions): Located[] {
       console.error(e);
       return [];
     }
-    return diagnoseAll(e).flatMap((d) => {
+    return refusalsOf(e).flatMap((one) => {
+      const found = diagnose(one);
+      const readAt = one instanceof GenError ? one.readAt : null;
+      const d = readAt && found.file !== null && resolve(root, found.file) !== file ? { ...found, file: readAt.file, line: readAt.line ?? null, column: readAt.column ?? null, endLine: null, endColumn: null } : found;
       if (d.file === null || resolve(root, d.file) !== file) return [];
       const start = d.line === null ? 0 : offsetOf(text, d.line, d.column ?? 1);
       const end = d.endLine === null ? null : offsetOf(text, d.endLine, d.endColumn ?? 1);
