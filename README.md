@@ -18,13 +18,6 @@ HTML with no JavaScript runtime, and the browser hydrates that HTML with the sam
 - **Exact or refused.** What ferrovue cannot reproduce exactly is a compile error that names the
   file, line and construct. A component that compiles renders as Vue renders it.
 
-ferrovue is at 0.8, before 1.0: a minor release may change the configuration, the generated code or
-the crates' API. The [CHANGELOG](https://github.com/Kinsmir/ferrovue/blob/main/CHANGELOG.md) says
-what changed, and the guide's upgrade pages
-([0.8 to 0.9](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_9/index.html),
-[0.7 to 0.8](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_8/index.html)) say how
-to move a project.
-
 ```text
  Button.vue ──(ferrovue compiler, Node)──▶ button.rs ──(your Rust server)──▶ HTML ──▶ Vue hydrates it
 ```
@@ -353,6 +346,14 @@ A new minor of any of them (Vue 3.6, vue-router 5.5, …) needs a ferrovue relea
 the fixtures from it. A weekly CI job re-records them from the newest patch each range allows and
 hydrates the committed HTML with it, so a patch that changes what Vue writes or hydrates is caught
 before it reaches you; a ferrovue patch follows when one does.
+
+### Upgrading
+
+Until 1.0, a minor release (0.8 to 0.9) may change the configuration, the generated code and the
+crates' API, and a patch release (0.9.0 to 0.9.1) breaks none of them. The npm package and the crates
+share one version, so upgrade them together and generate your components again. The
+[CHANGELOG](https://github.com/Kinsmir/ferrovue/blob/main/CHANGELOG.md) lists what each release
+changes, and the [guides](#guides) have an upgrade page for each minor release.
 
 ### Deprecations
 

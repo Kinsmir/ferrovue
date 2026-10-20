@@ -5,6 +5,12 @@ released together and share version numbers.
 
 ## [Unreleased]
 
+### Changed
+
+- The README's note on upgrading moves from its introduction to the Versions section, without
+  naming a release: what a minor and a patch release may change, and where the CHANGELOG and the
+  upgrade guides are.
+
 ## [0.9.0] - 2026-10-20
 
 ### Added
