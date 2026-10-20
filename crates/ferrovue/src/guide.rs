@@ -38,6 +38,13 @@
     doc = "23. [`dioxus`]: islands in a page that Dioxus renders, with the `dioxus` feature."
 )]
 //!
+//! Moving an existing app, and what is supported:
+//!
+//! - [`porting`]: moving a Vue 3 server-rendered app to ferrovue, from configuration to checking
+//!   the output against Vue.
+//! - [`support`]: the versions of Vue, Node and Rust supported, which releases receive fixes,
+//!   deprecations, and where to report a problem.
+//!
 //! Upgrading a project from an earlier release, newest first:
 //!
 //! - [`upgrading_to_0_9`]: from 0.8 to 0.9.
@@ -117,6 +124,12 @@ pub mod error_codes {}
 #[cfg_attr(docsrs, doc(cfg(feature = "dioxus")))]
 #[doc = include_str!("../docs/guide/dioxus.md")]
 pub mod dioxus {}
+
+#[doc = include_str!("../docs/guide/porting.md")]
+pub mod porting {}
+
+#[doc = include_str!("../docs/guide/support.md")]
+pub mod support {}
 
 #[doc = include_str!("../docs/guide/upgrading_to_0_9.md")]
 pub mod upgrading_to_0_9 {}
