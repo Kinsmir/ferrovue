@@ -246,6 +246,11 @@ released together and share version numbers.
   a string that may be empty between them (`` `${a.charAt(0)}${b}${a.slice(1)}` ``) was accepted,
   and wrote two U+FFFD where JavaScript, given an empty `b`, joins the halves into one character;
   it is refused with FV0706, as two such strings side by side are.
+- Tests only: the differential fuzzer drew a list to spread beside another (`[...a, ...b]`), and
+  the fallbacks of `.at()`, `.codePointAt()` and list reads and the count of `.repeat()`, each time
+  it printed the component rather than once, so the props it pruned as unread could differ from
+  those the printed template read. The nightly run of 2026-10-20 failed on such a component,
+  refused for reading `l0` after `l0` was pruned.
 
 ## [0.8.0] - 2026-10-18
 
