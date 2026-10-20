@@ -287,6 +287,10 @@ The crate's guide, `ferrovue::guide` on docs.rs, covers each topic in depth:
 - [Errors and limits](https://docs.rs/ferrovue/latest/ferrovue/guide/errors_and_limits/index.html),
   with helpers, `<ClientOnly>` and Rust twins, and every
   [error code](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html)
+- [Porting an existing app](https://docs.rs/ferrovue/latest/ferrovue/guide/porting/index.html)
+  from a Node server that renders with Vue, and the
+  [support policy](https://docs.rs/ferrovue/latest/ferrovue/guide/support/index.html): supported
+  versions, fixes, deprecations and where to report a problem
 - Upgrading a project [from 0.8 to 0.9](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_9/index.html)
   and [from 0.7 to 0.8](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_8/index.html)
 

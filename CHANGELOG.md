@@ -5,6 +5,18 @@ released together and share version numbers.
 
 ## [Unreleased]
 
+### Added
+
+- The guide pages [`porting`](https://docs.rs/ferrovue/latest/ferrovue/guide/porting/index.html)
+  and [`support`](https://docs.rs/ferrovue/latest/ferrovue/guide/support/index.html). `porting`
+  moves an existing Vue 3 server-rendered app to ferrovue: what is replaced and what stays, the
+  configuration, the generated Rust, the server's data loading, routing, state and translations,
+  how the client hydrates, the ways around a refusal, and a checklist for holding the output to
+  Vue. `support` states the policy: one version line on npm and crates.io, fixes in a patch of the
+  newest minor, the supported Vue, Node and Rust versions, deprecations, security reports, and how
+  to report a bug or ask for a construct. The guide's index and the README's list of guides link
+  to both.
+
 ### Changed
 
 - The README's note on upgrading moves from its introduction to the Versions section, without
