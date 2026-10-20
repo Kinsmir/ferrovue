@@ -1277,8 +1277,9 @@ class Gen {
         [1, () => {
           const same = this.scope.lists.filter((v) => JSON.stringify(v.of) === JSON.stringify(prev.of));
           const lit = prev.of.k === "str" ? `'${r.pick(STR_LITS)}'` : prev.of.k === "int" ? String(r.int(-3, 9)) : null;
+          const other = same.length ? r.pick(same).name : null;
           const shape = r.weighted<(list: string) => string>([
-            [same.length ? 3 : 0, (list) => `[...${list}, ...${r.pick(same).name}]`],
+            [other ? 3 : 0, (list) => `[...${list}, ...${other}]`],
             [lit ? 2 : 0, (list) => `[${lit}, ...${list}]`],
             [lit ? 2 : 0, (list) => `[...${list}, ${lit}, ...${list}]`],
             [1, (list) => `[...${list}]`],
@@ -1496,7 +1497,8 @@ class Gen {
         const at = r.chance(0.5);
         const i = at ? this.small() : this.index();
         const read = (list: string, x: string) => (at ? `${list}.at(${x})` : `${list}[${x}]`);
-        return { ty: "int", bound: BOUND_SMALL, kids: [...l.kids, i], atom: false, fmt: (k) => `${read(l.fmt(k, 0), k[l.kids.length]!)} ?? ${r.int(0, 3)}` };
+        const fallback = r.int(0, 3);
+        return { ty: "int", bound: BOUND_SMALL, kids: [...l.kids, i], atom: false, fmt: (k) => `${read(l.fmt(k, 0), k[l.kids.length]!)} ?? ${fallback}` };
       }],
       [l.of.k === "int" ? 1 : 0, () => {
         const fn = this.arrow(l.of, l.lone, () => this.test(d - 1));
@@ -1586,9 +1588,9 @@ class Gen {
       }],
       [2, () => {
         const s = this.str(d - 1);
-        return r.chance(0.5)
-          ? { ...node("str", [s, this.small()], ([a, i]) => `${recv(a)}.charAt(${i})`, 0, true), lone: true }
-          : { ...node("str", [s, this.small()], ([a, i]) => `${recv(a)}.at(${i}) ?? '${r.pick(STR_LITS)}'`), lone: true };
+        if (r.chance(0.5)) return { ...node("str", [s, this.small()], ([a, i]) => `${recv(a)}.charAt(${i})`, 0, true), lone: true };
+        const fallback = r.pick(STR_LITS);
+        return { ...node("str", [s, this.small()], ([a, i]) => `${recv(a)}.at(${i}) ?? '${fallback}'`), lone: true };
       }],
       [2, () => {
         const m = r.pick(["replace", "replaceAll"]);
@@ -1610,7 +1612,8 @@ class Gen {
       [1, () => {
         const s = this.str(d - 1);
         if (s.lone) return leaf();
-        return node("str", [s], ([a]) => `${recv(a)}.repeat(${r.int(0, 3)})`, 0, true);
+        const times = r.int(0, 3);
+        return node("str", [s], ([a]) => `${recv(a)}.repeat(${times})`, 0, true);
       }],
       [1, () => {
         const v = r.weighted<() => Expr>([[3, () => this.str(d - 1)], [2, () => this.num(d - 1)], [1, () => this.bool(d - 1)]])();
@@ -1763,7 +1766,9 @@ class Gen {
       }],
       [max > 2 ** 21 ? 1 : 0, () => {
         const s = this.str(d - 1);
-        return s.lone ? leaf() : node("int", [s, this.small()], ([a, i]) => `${recv(a)}.codePointAt(${i}) ?? ${r.int(-1, 3)}`, 0x110000);
+        if (s.lone) return leaf();
+        const fallback = r.int(-1, 3);
+        return node("int", [s, this.small()], ([a, i]) => `${recv(a)}.codePointAt(${i}) ?? ${fallback}`, 0x110000);
       }],
       [1, () => { const a = this.int(d - 1, max); return node("int", [a], ([x]) => `Math.sign(${x})`, 2, true); }],
       [1, () => {
