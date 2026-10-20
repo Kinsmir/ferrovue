@@ -7,6 +7,8 @@ released together and share version numbers.
 
 ### Changed
 
+- Tests only: the CLI's three `--watch` tests share one helper that repeats each change until the
+  watcher reports it, since macOS can miss a change made just after a watch starts.
 - The README's note on upgrading moves from its introduction to the Versions section, without
   naming a release: what a minor and a patch release may change, and where the CHANGELOG and the
   upgrade guides are.
