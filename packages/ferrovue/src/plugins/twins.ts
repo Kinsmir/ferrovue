@@ -84,7 +84,7 @@ function rustTy(ty: Ty): string {
     case "opt":
       return `Option<${rustTy(ty.of)}>`;
     default:
-      throw new GenError("FV1509", `no Rust type for a twin's prop of type ${JSON.stringify(ty)}`);
+      throw new Error(`no Rust type for a twin's prop of type ${JSON.stringify(ty)}`);
   }
 }
 

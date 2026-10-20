@@ -81,7 +81,7 @@ export const ERRORS = {
   FV0218: { title: "Field `null` in some objects and absent in others" },
   FV0219: { title: "Field of different types across a constant list's objects" },
   FV0220: { title: "Constant list's object type declared twice" },
-  FV0221: { title: "Constant list's object type named as a Rust type" },
+  FV0221: { title: "Constant list's object type named as a Rust type", retired: "0.10.0" },
   FV0222: { title: "Constant object read by a key chosen at run time" },
 
   FV0301: { title: "`generic` that is not a list of type parameters" },
@@ -242,7 +242,7 @@ export const ERRORS = {
 
   FV0801: { title: "`.includes()` of a value of another type than the list's" },
   FV0802: { title: "`.join()` with a separator that is not a string" },
-  FV0803: { title: "List method on a value that is not a list" },
+  FV0803: { title: "List method on a value that is not a list", retired: "0.10.0" },
   FV0804: { title: "List method over a list of unsupported items" },
   FV0805: { title: "List method given anything but an arrow function or `Boolean`" },
   FV0806: { title: "Arrow function with a block body" },
@@ -456,7 +456,7 @@ export const ERRORS = {
   FV1506: { title: "Slot props taken from `<ClientOnly>`'s `#fallback`" },
   FV1507: { title: "`<Teleport>` in slot content whose emptiness is decided at run time" },
   FV1508: { title: "`<Teleport>` target that is not a string" },
-  FV1509: { title: "Twin prop of a type with no Rust type" },
+  FV1509: { title: "Twin prop of a type with no Rust type", retired: "0.10.0" },
   FV1510: { title: "Twin for a component ferrovue compiles" },
   FV1511: {
     title: "`<ClientOnly>` with a `#fallback` in content rendered from virtual nodes",

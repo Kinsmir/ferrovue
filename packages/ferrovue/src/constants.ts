@@ -1,4 +1,4 @@
-import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, blankComponent, BOOL, fail, FLOAT, INT, NULL, RUST_PRELUDE, rustStr, sameTy, snake, STR, UNDEF, withAbsence } from "./model.ts";
+import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, blankComponent, BOOL, fail, FLOAT, INT, NULL, rustStr, sameTy, snake, STR, UNDEF, withAbsence } from "./model.ts";
 import { ONE_NOTHING, reachType } from "./typescript.ts";
 import { ctx } from "./context.ts";
 import { numberVal } from "./numbers.ts";
@@ -234,7 +234,6 @@ function itemStruct(c: Const & { k: "list" }, objects: (Const & { k: "object" })
   });
   const existing = ctx.typeStructs.get(name);
   if (existing && ctx.typeFiles.get(name) !== c.home.file) fail(c.home, "FV0220", `\`${name}\`, the type of this list's objects, is declared by ${ctx.typeFiles.get(name)} too`, c.node);
-  if (RUST_PRELUDE.has(name)) fail(c.home, "FV0221", `\`${name}\`, the type of this list's objects, would hide Rust's own; rename the constant`, c.node);
   const st: Struct = { name, fields };
   ctx.typeStructs.set(name, st);
   ctx.typeFiles.set(name, c.home.file);

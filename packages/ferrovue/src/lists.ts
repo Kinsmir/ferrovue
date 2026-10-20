@@ -10,7 +10,7 @@ import { atom, bare, binary, enclosed, operand, strArg, UNARY } from "./parens.t
 const COW = "std::borrow::Cow::<str>";
 
 function itemsTy(s: Scope, v: Val, n: N): Ty {
-  if (v.ty.k !== "list") return fail(s.comp, "FV0803", "not a list", n);
+  if (v.ty.k !== "list") throw new Error("a list method on a value that is not a list");
   const of = v.ty.of;
   if (!["str", "int", "float", "bool", "struct", "child"].includes(of.k)) {
     fail(s.comp, "FV0804", "this method takes a list of strings, numbers, booleans or objects", n);
