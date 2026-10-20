@@ -105,71 +105,75 @@ defineProps<{ n: number }>();
   expect(r.stderr).not.toContain("    at ");
 });
 
-it("--watch regenerates on a change, and reports an error without stopping", async () => {
+/** Start `--watch` in the project, and wait for it to report that it watches. `until` repeats a
+ * change until the output shows `text`: macOS can miss a change made just after a watch starts. */
+async function watchProject() {
   const child = spawn(process.execPath, [CLI, "--watch"], { cwd: root });
   let out = "";
   child.stdout.on("data", (d) => (out += d));
   child.stderr.on("data", (d) => (out += d));
+  const settle = async (text: string, polls: number): Promise<void> => {
+    for (let i = 0; i < polls && !out.includes(text); i++) await new Promise((r) => setTimeout(r, 50));
+  };
   const waitFor = async (text: string): Promise<void> => {
-    for (let i = 0; i < 400 && !out.includes(text); i++) await new Promise((r) => setTimeout(r, 50));
+    await settle(text, 400);
     expect(out).toContain(text);
   };
-  const writeUntil = async (source: string, text: string): Promise<void> => {
+  const until = async (change: () => void, text: string): Promise<void> => {
     for (let i = 0; i < 20 && !out.includes(text); i++) {
-      writeFileSync(join(root, "components", "Hello.vue"), source);
-      for (let j = 0; j < 20 && !out.includes(text); j++) await new Promise((r) => setTimeout(r, 50));
+      change();
+      await settle(text, 20);
     }
     expect(out).toContain(text);
   };
   try {
     await waitFor("watching for changes");
-    await writeUntil(`<script setup lang="ts">
-defineProps<{ name: string }>();
-</script>
-<template><p>{{ name / 2 }}</p></template>`, "error[FV0609]: components/Hello.vue");
-    await writeUntil(`<script setup lang="ts">
-defineProps<{ name: string }>();
-</script>
-<template><p>Bye, {{ name }}</p></template>`, "1 changed");
-  } finally {
+  } catch (e) {
     await stop(child);
+    throw e;
+  }
+  return { child, out: () => out, until };
+}
+
+it("--watch regenerates on a change, and reports an error without stopping", async () => {
+  const watch = await watchProject();
+  const hello = join(root, "components", "Hello.vue");
+  try {
+    await watch.until(() => writeFileSync(hello, `<script setup lang="ts">
+defineProps<{ name: string }>();
+</script>
+<template><p>{{ name / 2 }}</p></template>`), "error[FV0609]: components/Hello.vue");
+    await watch.until(() => writeFileSync(hello, `<script setup lang="ts">
+defineProps<{ name: string }>();
+</script>
+<template><p>Bye, {{ name }}</p></template>`), "1 changed");
+    expect(watch.child.exitCode).toBeNull();
+  } finally {
+    await stop(watch.child);
   }
 }, 70_000);
 
 it("--watch reports an error that is not a refusal without stopping", async () => {
-  const child = spawn(process.execPath, [CLI, "--watch"], { cwd: root });
-  let out = "";
-  child.stdout.on("data", (d) => (out += d));
-  child.stderr.on("data", (d) => (out += d));
-  const waitFor = async (text: string): Promise<void> => {
-    for (let i = 0; i < 400 && !out.includes(text); i++) await new Promise((r) => setTimeout(r, 50));
-    expect(out).toContain(text);
-  };
+  const watch = await watchProject();
+  const broken = join(root, "components", "Broken.vue");
+  const hello = join(root, "components", "Hello.vue");
   try {
-    await waitFor("watching for changes");
-    mkdirSync(join(root, "components", "Broken.vue"));
-    await waitFor("EISDIR");
-    rmSync(join(root, "components", "Broken.vue"), { recursive: true });
-    await waitFor("nothing changed");
-    expect(child.exitCode).toBeNull();
+    await watch.until(() => mkdirSync(broken, { recursive: true }), "EISDIR");
+    await watch.until(() => {
+      rmSync(broken, { recursive: true, force: true });
+      writeFileSync(hello, readFileSync(hello));
+    }, "nothing changed");
+    expect(watch.child.exitCode).toBeNull();
   } finally {
-    await stop(child);
+    await stop(watch.child);
   }
 }, 70_000);
 
 it("--watch regenerates on its inputs only, with `out` written as a relative path", async () => {
   writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify({ components: "./components", out: "./src/generated" }));
-  const child = spawn(process.execPath, [CLI, "--watch"], { cwd: root });
-  let out = "";
-  child.stdout.on("data", (d) => (out += d));
-  child.stderr.on("data", (d) => (out += d));
-  const runs = () => out.split("\n").filter((l) => l.startsWith("./src/generated: ")).length;
-  const waitFor = async (text: string): Promise<void> => {
-    for (let i = 0; i < 400 && !out.includes(text); i++) await new Promise((r) => setTimeout(r, 50));
-    expect(out).toContain(text);
-  };
+  const watch = await watchProject();
+  const runs = () => watch.out().split("\n").filter((l) => l.startsWith("./src/generated: ")).length;
   try {
-    await waitFor("watching for changes");
     expect(runs()).toBe(1);
     writeFileSync(join(root, "vite.config.ts"), "export default {};\n");
     writeFileSync(join(root, "package.json"), "{}\n");
@@ -179,11 +183,13 @@ it("--watch regenerates on its inputs only, with `out` written as a relative pat
     writeFileSync(join(root, "src", "generated", "extra.json"), "{}\n");
     await new Promise((r) => setTimeout(r, 500));
     expect(runs()).toBe(1);
-    writeFileSync(join(root, "components", "Card.vue"), "<template><p>card</p></template>");
-    await waitFor("3 files, 2 changed");
+    await watch.until(
+      () => writeFileSync(join(root, "components", "Card.vue"), "<template><p>card</p></template>"),
+      "3 files, 2 changed",
+    );
     expect(runs()).toBe(2);
   } finally {
-    await stop(child);
+    await stop(watch.child);
   }
 }, 70_000);
 
