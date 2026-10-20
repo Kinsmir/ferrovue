@@ -1,4 +1,4 @@
-import { type N, type Scope, type Val, fail, GenError } from "./model.ts";
+import { type N, type Scope, type Val, fail, GenError, nodeName } from "./model.ts";
 import { ctx } from "./context.ts";
 import { expr } from "./expr.ts";
 import { type Presence, boolOf, cond, known, narrowTo, presence, truthy } from "./narrowing.ts";
@@ -199,7 +199,7 @@ function pushed(s: Scope, e: Emitter, n: N): void {
   if (n.type === "TemplateLiteral") {
     n.quasis.forEach((q: N, i: number) => {
       e.lit(literal(q.value.cooked));
-      if (i < n.expressions.length) slot(s, e, n.expressions[i]);
+      if (i < n.expressions.length) recover(s, e, () => slot(s, e, n.expressions[i]));
     });
     return;
   }
@@ -211,23 +211,22 @@ function pushed(s: Scope, e: Emitter, n: N): void {
 }
 
 export function statements(s: Scope, e: Emitter, body: N[]): void {
-  for (const st of body) {
-    if (!ctx.recovered || ctx.trying) {
-      statement(s, e, st);
-      continue;
-    }
-    const locals = [...s.locals];
-    const narrowed = [...s.narrowed];
-    const rewind = e.mark();
-    try {
-      statement(s, e, st);
-    } catch (err) {
-      if (!(err instanceof GenError)) throw err;
-      ctx.recovered.push(err);
-      restore(s.locals, locals);
-      restore(s.narrowed, narrowed);
-      rewind();
-    }
+  for (const st of body) recover(s, e, () => statement(s, e, st));
+}
+
+function recover(s: Scope, e: Emitter, f: () => void): void {
+  if (!ctx.recovered || ctx.trying) return f();
+  const locals = [...s.locals];
+  const narrowed = [...s.narrowed];
+  const rewind = e.mark();
+  try {
+    f();
+  } catch (err) {
+    if (!(err instanceof GenError)) throw err;
+    ctx.recovered.push(err);
+    restore(s.locals, locals);
+    restore(s.narrowed, narrowed);
+    rewind();
   }
 }
 
@@ -366,5 +365,5 @@ function statement(s: Scope, e: Emitter, st: N): void {
     e.close();
     return;
   }
-  fail(s.comp, "FV0006", `\`${st.type}\` in the compiled template`, st);
+  fail(s.comp, "FV0006", `${nodeName(st)} in the compiled template`, st);
 }

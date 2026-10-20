@@ -80,6 +80,52 @@ defineProps<{ n: number; on: boolean }>();
       expect(e.unchecked).toEqual(["components/X.vue"]);
     });
 
+    it("names what the template wrote, says how to get around it, and names syntax in words", () => {
+      const project = island(
+        `<script setup lang="ts">
+import { computed } from "vue";
+import { fmt } from "./util";
+const props = defineProps<{ n: number; pair: [number, number] }>();
+function twice(x: number) { return x * 2; }
+const big = computed(() => {
+  const m = props.n * 2;
+  return m;
+});
+</script>
+<template>
+  <p>{{ fmt(n) }}</p>
+  <p>{{ fmt }}</p>
+  <p>{{ twice(n) }}</p>
+  <p>{{ big }}</p>
+  <p>{{ nowhere(n) }}</p>
+  <p>{{ ({ a: n }) }}</p>
+  <p :title="() => n">x</p>
+</template>`,
+      );
+      writeFileSync(join(project, "components", "util.ts"), "export function fmt(n: number): string { return String(n); }\n");
+      const e = refusals(project);
+      const said = e.errors.map((one) => [(one as GenError).code, (one as GenError).what, (one as GenError).help]);
+      expect(said).toEqual([
+        ["FV0316", "a tuple type is not supported as a prop type", null],
+      ]);
+      writeFileSync(join(project, "components", "X.vue"), readFileSync(join(project, "components", "X.vue"), "utf8").replace("; pair: [number, number]", ""));
+      const again = refusals(project).errors.map((one) => [(one as GenError).code, (one as GenError).what, (one as GenError).help]);
+      const twin = (name: string) => `put \`${name}\` in the module \`helpers.module\` names with a Rust twin under \`helpers.functions\` in ferrovue.config.json, or compute the value in Rust and pass it as a prop`;
+      expect(again).toEqual([
+        ["FV0601", "`fmt()` calls a function imported from `./util`, a module the server does not run", twin("fmt")],
+        ["FV0601", "`fmt` is imported from `./util`, a module the server does not run", "export it from `./util` as a constant the compiler evaluates (`export const fmt = …`), or compute the value in Rust and pass it as a prop"],
+        ["FV0613", "`twice` is set up in a way the server cannot evaluate: it is a function, which only an event handler may call", twin("twice")],
+        [
+          "FV0613",
+          "`big` is set up in a way the server cannot evaluate: it is a `computed` whose body is a block of statements: the server evaluates a body that is one expression or a single `return`",
+          "write the body as one expression, as `computed(() => (a ? b : c))`, or as a single `return`, or compute the value in Rust and pass it as a prop",
+        ],
+        ["FV0601", "`nowhere()` is not available when rendering on the server", "a template calls JavaScript's built-ins and the helpers with Rust twins under `helpers.functions` in ferrovue.config.json; compute the value in Rust and pass it as a prop"],
+        ["FV0625", "an object literal is not supported in a template", null],
+        ["FV0625", "an arrow function is not supported in a template", null],
+      ]);
+    });
+
     it("raises a `GenErrors` for a single refusal too", () => {
       const e = refusals(island(`<template><p>{{ (1).toLocaleString() }}</p></template>`));
       expect(e.errors).toHaveLength(1);
