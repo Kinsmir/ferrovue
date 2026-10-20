@@ -5,6 +5,8 @@ released together and share version numbers.
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-20
+
 ### Added
 
 - `Date` props: a prop the component types `Date`, optional (`edited?: Date`) or nullable
@@ -1442,7 +1444,8 @@ released together and share version numbers.
 - Slot content made only of comments (a `v-if` not taken, for example) was kept when the slot had
   no fallback. Vue drops it, so the bytes differed.
 
-[Unreleased]: https://github.com/Kinsmir/ferrovue/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/Kinsmir/ferrovue/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/Kinsmir/ferrovue/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/Kinsmir/ferrovue/compare/v0.7.2...v0.8.0
 [0.7.2]: https://github.com/Kinsmir/ferrovue/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/Kinsmir/ferrovue/compare/v0.7.0...v0.7.1
