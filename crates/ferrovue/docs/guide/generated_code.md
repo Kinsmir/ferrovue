@@ -104,8 +104,11 @@ The 0.8 crate supports version 2 alone: modules of version 1, from 0.7, build
 and [`Args`](crate::i18n::Args) with struct literals, and these types are `#[non_exhaustive]` from
 0.8 on, so version 2 builds them with their `const` constructors and `with_` methods. Version 3
 adds `Date` props, which generated code reads through [`JsTime`](crate::JsTime), hands to a child
-and writes into `data-props` with helpers the 0.8 crate lacks; the crate after 0.8 supports
-versions 2 and 3, since a module of version 2 calls nothing it changed. The upgrade pages,
+and writes into `data-props` with helpers the 0.8 crate lacks; the 0.9 crate supports versions 2
+and 3, since a module of version 2 calls nothing it changed. Version 4 adds
+[loaders](crate::guide::loaders): a component that awaits one takes a [`Loads`](crate::Loads),
+and the generated `loaders` module calls what the 0.9 crate lacks; the 0.10 crate supports
+versions 2 to 4. The upgrade pages, [`upgrading_to_0_10`](crate::guide::upgrading_to_0_10),
 [`upgrading_to_0_9`](crate::guide::upgrading_to_0_9) and
 [`upgrading_to_0_8`](crate::guide::upgrading_to_0_8), give the steps for each release.
 

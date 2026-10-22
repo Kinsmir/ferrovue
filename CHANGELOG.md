@@ -5,63 +5,10 @@ released together and share version numbers.
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-10-22
+
 ### Added
 
-- AGENTS.md, the instructions for coding agents working on ferrovue: the layout of the repository,
-  and the rules for comments, prose, generated files, checks, pull requests and releases.
-- `?:` whose branches differ in type where the value is only written out: in `{{ }}`, in a
-  string-valued attribute (on an element, a component's root, a `<RouterLink>`, or falling through
-  to a child) and in a template literal. Each branch is written as JavaScript writes it there:
-  `{{ n > 0 ? n : "none" }}` writes the number by JavaScript's rules, an absent branch writes
-  nothing in `{{ }}` and leaves an attribute out, and a template literal writes `undefined`,
-  `null` and a list joined by `,`. Where the value is used otherwise (a child's prop, a
-  comparison, a method, a boolean attribute, `:class`) the branches still have to be of one type
-  (FV0623), and so do a list and a string in `{{ }}`, which Vue writes as JSON. The conformance
-  component `MixedTernary` holds fixtures recorded from Vue, and the fuzzer writes such `?:` in
-  text, attributes and template literals.
-- Lookup tables: an object constant, imported from a `.ts` file or declared with `const` in
-  `<script setup>`, read by a key whose type is a closed set (a union of string or integer
-  literals, or an `enum` of them), as `PAD[size]` with `size: "sm" | "md" | "lg"`. The object may
-  be `as const`, typed `Record<Size, T>` or `Partial<Record<Size, T>>`, or untyped, with keys
-  computed from enum members (`[Tone.Warn]: …`); the key may be a prop, a `computed`, a `v-for`
-  item's field, or a `?:` or `??` of such values and literals. The read compiles to a `match` over
-  the members, in text, attributes, `:class` and `:style`, and reads on by field
-  (`THEME[tone].fg`). A member the object lacks reads `undefined`, as in JavaScript, narrowed with
-  `??`, `?.` and `v-if` (`v-if="ICONS[kind]"`, then `ICONS[kind].label`). A key typed `string` or
-  `number` stays refused (FV0222), now with a message that names the prototype fields such a key
-  could reach and suggests a union type; a key that may be absent (FV0223), a field read without
-  `?.` of a member that may be `undefined` (FV0224), members whose values differ in type (FV0225)
-  and a missing member named like a field every object has, as `toString` (FV0226) are refused.
-  `v-if` now also narrows a value read by a computed key, `list[i]` and `PAD[size]` alike. The
-  conformance component `Lookups` holds fixtures recorded from Vue, and the fuzzer writes lookup
-  tables keyed by its enum.
-- Imports through aliases. A component may import constants and types from a `.ts` file through an
-  alias the project declares: the `compilerOptions.paths` and `baseUrl` of the tsconfig.json
-  nearest it, after its `extends` (Nuxt's generated `.nuxt/tsconfig.json` included) and through
-  the projects it `references` (create-vue's `tsconfig.app.json`), and, with the Vite plugin, the
-  build's `resolve.alias`. `import { LABEL } from "@/lib/format"` used to be refused with a
-  misleading FV0601 ("not available when rendering on the server"), where the same import by a
-  relative path compiled. `--watch` and the Vite plugin regenerate on a change to those tsconfig
-  files. See the crate's
-  [`props`](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#imports-through-aliases)
-  guide.
-- FV0110: a name the server reads that is imported from a module no relative path or alias leads
-  to a `.ts` file of the project (a package, a missing file, an alias the project does not
-  declare). The message names the specifier and where it was looked for; FV0601 or FV0315 refused
-  such a name without saying the import could not be resolved.
-- `generate` and `write` of `ferrovue/compiler` take a last, optional argument, `{ aliases }`: the
-  aliases tried before tsconfig's `paths`, as Vite's `resolve.alias` lists them (the types
-  `ResolveOptions` and `Alias`), which the Vite plugin passes.
-
-- The guide pages [`porting`](https://docs.rs/ferrovue/latest/ferrovue/guide/porting/index.html)
-  and [`support`](https://docs.rs/ferrovue/latest/ferrovue/guide/support/index.html). `porting`
-  moves an existing Vue 3 server-rendered app to ferrovue: what is replaced and what stays, the
-  configuration, the generated Rust, the server's data loading, routing, state and translations,
-  how the client hydrates, the ways around a refusal, and a checklist for holding the output to
-  Vue. `support` states the policy: one version line on npm and crates.io, fixes in a patch of the
-  newest minor, the supported Vue, Node and Rust versions, deprecations, security reports, and how
-  to report a bug or ask for a construct. The guide's index and the README's list of guides link
-  to both.
 - The crate's side of loaders, for components that load their own data with a top-level
   `await` (the compiler's side is below): `ferrovue::load` renders, starts each call the render
   asks for, and renders again once calls have finished, until a render has every result; each
@@ -96,24 +43,30 @@ released together and share version numbers.
   `LoadedComments` hold fixtures recorded from Vue, rendered by both and hydrated. The crate's new
   [`loaders`](https://docs.rs/ferrovue/latest/ferrovue/guide/loaders/index.html) guide describes
   both sides.
-- The guide page [`upgrading_to_0_10`](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_10/index.html):
-  the steps from 0.9 (both halves bumped together, every component generated again for version 4),
-  the error codes that changed for the same source, what behaves differently (every refusal at
-  once, `GenErrors`, `readPage`'s `loads`), and what a component may now use.
-
-- A run reports every refusal it finds. Each component is checked on its own, and within a template
-  each statement of the compiled render and each interpolation in it, so the CLI, `--check`,
-  `--format json`, the Vite plugin and the `ferrovue/volar` plugin show all of a run's errors at
-  once. The text output ends with a line that counts them (`3 errors in 2 components`). A component
-  that uses a refused one is checked once that one compiles, and the count line says how many were
-  left unchecked. Nothing is written while any error remains, and the exit status is unchanged.
-  `generate` raises the new `GenErrors`, a `GenError` that carries the first refusal's code,
-  location and message and holds every refusal in `errors`.
-- A `= help:` line after a refusal's quoted line gives the way around it where one is short, for
-  the template's calls of functions the server cannot run (FV0601, FV0613) and a list read by a
-  date's month. `GenError` has the new `help`, and
-  each diagnostic of `--format json` the new field `help` (`null` where there is none).
-- Every code in the error index has a detail: what is refused, why, and the ways around it.
+- The full-stack example awaits loaders. On the staff picks page, `StockLevel` awaits `loadStock`
+  for the featured book and `Shipping` awaits `loadWarehouse` for the warehouse that result names,
+  so the server renders the page in two rounds. The axum app implements `Loaders` from its
+  catalogue, renders the page with `loaders::load`, writes `Loads::script_into` after the app, and
+  answers the browser's loaders at `/api/stock/{id}` and `/api/warehouses/{code}`. Its tests
+  hydrate the page in happy-dom, Chromium, Firefox and WebKit with no request to those routes, and
+  follow a link to another pick, which renders from the results in the document it fetches. With
+  it, `Loads` is covariant in its lifetime, so a component's `html()` takes the `&Loads` that
+  `load` hands its closure; the client reads each `<script data-fv-loads>` once, one put into the
+  document after an earlier read included; and `renderRecordedPage` compares a page inside a
+  `<Suspense>` as the `<Suspense>` resolves, where `<ClientOnly>` still shows its fallback.
+- Functions the template or a `computed` calls: declared in `<script setup>` (`function f(…) {}`,
+  `const f = (…) => …`) or exported from a `.ts` file the component imports, whose bodies hold what
+  a `computed`'s may and read props, refs, `computed`s, constants and other such functions. A call
+  is translated where it is written, its arguments evaluated once and in order with the types they
+  have there; parameters may be optional, have defaults, or be object patterns. A function from a
+  `.ts` file thus needs no `helpers` entry. A function whose body the server cannot evaluate is
+  refused where it is called, with FV0613 or FV0601 as before, the message naming the statement or
+  expression and its line; recursion (FV1906) and `...rest`, `async`, generators, spread arguments
+  or too many of them (FV1907) are refused, and so is a function declared with `const` that setup
+  calls above its declaration, where JavaScript throws a `ReferenceError` (FV1908). A function only
+  an event handler calls stays client-only. `ERRORS` in the `ferrovue/compiler` API report gains
+  the three codes. The fuzzer generates local functions and calls them from templates and
+  `computed`s.
 - Statements in a `computed`'s body and in a list method's callback (`.map()`, `.filter()`,
   `.find()`, `.some()`, `.reduce()`, a `.toSorted()` comparator and the others): `const`, and
   `let` never assigned again, of any value the template may compute, destructured too; `if` /
@@ -129,20 +82,32 @@ released together and share version numbers.
   [`script_logic`](https://docs.rs/ferrovue/latest/ferrovue/guide/script_logic/index.html) guide
   describes what a body may hold. It needs no new version of generated code. `ERRORS` in the
   `ferrovue/compiler` API report gains the five codes and marks FV0806 retired.
-- Functions the template or a `computed` calls: declared in `<script setup>` (`function f(…) {}`,
-  `const f = (…) => …`) or exported from a `.ts` file the component imports, whose bodies hold what
-  a `computed`'s may and read props, refs, `computed`s, constants and other such functions. A call
-  is translated where it is written, its arguments evaluated once and in order with the types they
-  have there; parameters may be optional, have defaults, or be object patterns. A function from a
-  `.ts` file thus needs no `helpers` entry. A function whose body the server cannot evaluate is
-  refused where it is called, with FV0613 or FV0601 as before, the message naming the statement or
-  expression and its line; recursion (FV1906) and `...rest`, `async`, generators, spread arguments
-  or too many of them (FV1907) are refused, and so is a function declared with `const` that setup
-  calls above its declaration, where JavaScript throws a `ReferenceError` (FV1908). A function only
-  an event handler calls stays client-only. `ERRORS` in the `ferrovue/compiler` API report gains
-  the three codes. The fuzzer generates local functions and calls them from templates and
-  `computed`s.
-
+- Lookup tables: an object constant, imported from a `.ts` file or declared with `const` in
+  `<script setup>`, read by a key whose type is a closed set (a union of string or integer
+  literals, or an `enum` of them), as `PAD[size]` with `size: "sm" | "md" | "lg"`. The object may
+  be `as const`, typed `Record<Size, T>` or `Partial<Record<Size, T>>`, or untyped, with keys
+  computed from enum members (`[Tone.Warn]: …`); the key may be a prop, a `computed`, a `v-for`
+  item's field, or a `?:` or `??` of such values and literals. The read compiles to a `match` over
+  the members, in text, attributes, `:class` and `:style`, and reads on by field
+  (`THEME[tone].fg`). A member the object lacks reads `undefined`, as in JavaScript, narrowed with
+  `??`, `?.` and `v-if` (`v-if="ICONS[kind]"`, then `ICONS[kind].label`). A key typed `string` or
+  `number` stays refused (FV0222), now with a message that names the prototype fields such a key
+  could reach and suggests a union type; a key that may be absent (FV0223), a field read without
+  `?.` of a member that may be `undefined` (FV0224), members whose values differ in type (FV0225)
+  and a missing member named like a field every object has, as `toString` (FV0226) are refused.
+  `v-if` now also narrows a value read by a computed key, `list[i]` and `PAD[size]` alike. The
+  conformance component `Lookups` holds fixtures recorded from Vue, and the fuzzer writes lookup
+  tables keyed by its enum.
+- `?:` whose branches differ in type where the value is only written out: in `{{ }}`, in a
+  string-valued attribute (on an element, a component's root, a `<RouterLink>`, or falling through
+  to a child) and in a template literal. Each branch is written as JavaScript writes it there:
+  `{{ n > 0 ? n : "none" }}` writes the number by JavaScript's rules, an absent branch writes
+  nothing in `{{ }}` and leaves an attribute out, and a template literal writes `undefined`,
+  `null` and a list joined by `,`. Where the value is used otherwise (a child's prop, a
+  comparison, a method, a boolean attribute, `:class`) the branches still have to be of one type
+  (FV0623), and so do a list and a string in `{{ }}`, which Vue writes as JSON. The conformance
+  component `MixedTernary` holds fixtures recorded from Vue, and the fuzzer writes such `?:` in
+  text, attributes and template literals.
 - `Object.entries(r)` outside a `v-for`: the list methods read its `[key, value]` pairs, in the
   record's order, with arrow functions that destructure each pair (`([key, value]) => …`,
   `([, value]) => …`, `([key, { id }]) => …`) or read its parts (`pair[0]`, `pair[1]`,
@@ -161,28 +126,63 @@ released together and share version numbers.
   conformance components `Pairs` and `Flattened` hold fixtures recorded from Vue, and the fuzzer
   writes `Object.entries()` read by `.filter()` and `.map()`, and `.flatMap()`. They need no
   new version of generated code: both are Rust iterator adaptors.
-- The full-stack example awaits loaders. On the staff picks page, `StockLevel` awaits `loadStock`
-  for the featured book and `Shipping` awaits `loadWarehouse` for the warehouse that result names,
-  so the server renders the page in two rounds. The axum app implements `Loaders` from its
-  catalogue, renders the page with `loaders::load`, writes `Loads::script_into` after the app, and
-  answers the browser's loaders at `/api/stock/{id}` and `/api/warehouses/{code}`. Its tests
-  hydrate the page in happy-dom, Chromium, Firefox and WebKit with no request to those routes, and
-  follow a link to another pick, which renders from the results in the document it fetches. With
-  it, `Loads` is covariant in its lifetime, so a component's `html()` takes the `&Loads` that
-  `load` hands its closure; the client reads each `<script data-fv-loads>` once, one put into the
-  document after an earlier read included; and `renderRecordedPage` compares a page inside a
-  `<Suspense>` as the `<Suspense>` resolves, where `<ClientOnly>` still shows its fallback.
+- Imports through aliases. A component may import constants and types from a `.ts` file through an
+  alias the project declares: the `compilerOptions.paths` and `baseUrl` of the tsconfig.json
+  nearest it, after its `extends` (Nuxt's generated `.nuxt/tsconfig.json` included) and through
+  the projects it `references` (create-vue's `tsconfig.app.json`), and, with the Vite plugin, the
+  build's `resolve.alias`. `import { LABEL } from "@/lib/format"` used to be refused with a
+  misleading FV0601 ("not available when rendering on the server"), where the same import by a
+  relative path compiled. `--watch` and the Vite plugin regenerate on a change to those tsconfig
+  files. See the crate's
+  [`props`](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#imports-through-aliases)
+  guide.
+- FV0110: a name the server reads that is imported from a module no relative path or alias leads
+  to a `.ts` file of the project (a package, a missing file, an alias the project does not
+  declare). The message names the specifier and where it was looked for; FV0601 or FV0315 refused
+  such a name without saying the import could not be resolved.
+- `generate` and `write` of `ferrovue/compiler` take a last, optional argument, `{ aliases }`: the
+  aliases tried before tsconfig's `paths`, as Vite's `resolve.alias` lists them (the types
+  `ResolveOptions` and `Alias`), which the Vite plugin passes.
+- A run reports every refusal it finds. Each component is checked on its own, and within a template
+  each statement of the compiled render and each interpolation in it, so the CLI, `--check`,
+  `--format json`, the Vite plugin and the `ferrovue/volar` plugin show all of a run's errors at
+  once. The text output ends with a line that counts them (`3 errors in 2 components`). A component
+  that uses a refused one is checked once that one compiles, and the count line says how many were
+  left unchecked. Nothing is written while any error remains, and the exit status is unchanged.
+  `generate` raises the new `GenErrors`, a `GenError` that carries the first refusal's code,
+  location and message and holds every refusal in `errors`.
+- A `= help:` line after a refusal's quoted line gives the way around it where one is short, for
+  the template's calls of functions the server cannot run (FV0601, FV0613) and a list read by a
+  date's month. `GenError` has the new `help`, and
+  each diagnostic of `--format json` the new field `help` (`null` where there is none).
+- Every code in the error index has a detail: what is refused, why, and the ways around it.
+- The guide page [`upgrading_to_0_10`](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_10/index.html):
+  the steps from 0.9 (both halves bumped together, every component generated again for version 4),
+  the error codes that changed for the same source, what behaves differently (every refusal at
+  once, `GenErrors`, `readPage`'s `loads`), and what a component may now use.
+- The guide pages [`porting`](https://docs.rs/ferrovue/latest/ferrovue/guide/porting/index.html)
+  and [`support`](https://docs.rs/ferrovue/latest/ferrovue/guide/support/index.html). `porting`
+  moves an existing Vue 3 server-rendered app to ferrovue: what is replaced and what stays, the
+  configuration, the generated Rust, the server's data loading, routing, state and translations,
+  how the client hydrates, the ways around a refusal, and a checklist for holding the output to
+  Vue. `support` states the policy: one version line on npm and crates.io, fixes in a patch of the
+  newest minor, the supported Vue, Node and Rust versions, deprecations, security reports, and how
+  to report a bug or ask for a construct. The guide's index and the README's list of guides link
+  to both.
+- AGENTS.md, the instructions for coding agents working on ferrovue: the layout of the repository,
+  and the rules for comments, prose, generated files, checks, pull requests and releases.
 
 ### Changed
 
-- CI only: the browser job's system libraries install in up to three attempts of six minutes each,
-  so a package mirror that stalls fails one attempt and the job tries again.
-- Tests only: a TypeScript test may take 30 seconds, where vitest's default is 5, so a test that
-  runs the CLI as a child process passes on a slow Windows runner.
-- Messages say what to do: FV1107 lists the types a helper or twin
-  takes, FV1511 says `<ClientOnly>` leaves out the fallback there, FV1905 says to end the cases in
-  `return`, and `release.ts members` says to use `version.workspace = true`. The guides and the
-  code lose the comments that said what the code does.
+- Generated code is version 4 (`ferrovue::__compat!(4)`), for loaders. The 0.10 crate builds
+  versions 2 to 4, and the 0.9 crate stops the build of a version 4 module with a message that
+  says what to do. Generate every component again after upgrading; the
+  [`upgrading_to_0_10`](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_10/index.html)
+  guide gives the steps.
+- Messages say what to do: FV1107 lists the types a helper or twin takes, FV1511 says
+  `<ClientOnly>` leaves out the fallback there, FV1905 says to end the cases in `return`, and
+  `release.ts members` says to use `version.workspace = true`. The guides and the code lose the
+  comments that said what the code does.
 - FV0601 names what the template wrote, and says where it comes from: `` `fmt()` calls a function
   imported from `./util`, a module the server does not run ``, where it named Vue's internal
   `$setup`.
@@ -197,19 +197,15 @@ released together and share version numbers.
 - The `errors_and_limits` guide says where a `<script>` element in a template is allowed: Vue's
   server keeps it, its client compiler drops it, so a component that writes the document with its
   `<script type="module">` renders on the server only and never hydrates.
-- `?:` between two objects read from props hands out a reference to the one chosen, where it
-  moved it out of the props and did not build; a computed list chosen by `?:` is collected once.
-- An object constant written with `__proto__:` is refused (FV0206): the key sets the object's
-  prototype, whose fields JavaScript reads as the object's own.
-- Tests only: the CLI's three `--watch` tests share one helper that repeats each change until the
-  watcher reports it, since macOS can miss a change made just after a watch starts.
-- The README's note on upgrading moves from its introduction to the Versions section, without
-  naming a release: what a minor and a patch release may change, and where the CHANGELOG and the
-  upgrade guides are.
 - The deprecation warnings FV1117 and FV1118 say a deprecated key or option goes in a later minor
   release, and their entries in the error index, the README and CONTRIBUTING.md say it goes in a
   later minor release before 1.0 and only in a major release from 1.0, as RELEASING.md says. They
   said "the next major release".
+- The README's note on upgrading moves from its introduction to the Versions section, without
+  naming a release: what a minor and a patch release may change, and where the CHANGELOG and the
+  upgrade guides are.
+- Tests only: the CLI's three `--watch` tests share one helper that repeats each change until the
+  watcher reports it, since macOS can miss a change made just after a watch starts.
 - Tests only: the differential fuzzer generates loaders. A case may have a `fz-loaders.ts` of
   `defineLoader` declarations over string, number, `Float` and boolean parameters (plain,
   optional, `| undefined` and `| null`) returning any type a prop may have, awaited at the top of
@@ -218,9 +214,17 @@ released together and share version numbers.
   read in `computed`s and the template. A child awaits loaders of its own and may render a child
   that does too. Each fixture's `$loads` has a result for each call the render makes, keyed with
   `loadKey`, and the shrinker shrinks the awaits, their arguments and the results.
+- Tests only: a TypeScript test may take 30 seconds, where vitest's default is 5, so a test that
+  runs the CLI as a child process passes on a slow Windows runner.
+- CI only: the browser job's system libraries install in up to three attempts of six minutes each,
+  so a package mirror that stalls fails one attempt and the job tries again.
 
 ### Fixed
 
+- `?:` between two objects read from props hands out a reference to the one chosen, where it
+  moved it out of the props and did not build; a computed list chosen by `?:` is collected once.
+- An object constant written with `__proto__:` is refused (FV0206): the key sets the object's
+  prototype, whose fields JavaScript reads as the object's own.
 - A child's prop typed `n?: number`, `n?: Float` or `n: number | null` (and `b: boolean | null`)
   may be given a value of the same optional or nullable type, such as a loader result's optional
   field: it was refused with FV0511. FV0511 names both types in words.
@@ -1673,7 +1677,8 @@ released together and share version numbers.
 - Slot content made only of comments (a `v-if` not taken, for example) was kept when the slot had
   no fallback. Vue drops it, so the bytes differed.
 
-[Unreleased]: https://github.com/Kinsmir/ferrovue/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/Kinsmir/ferrovue/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/Kinsmir/ferrovue/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/Kinsmir/ferrovue/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/Kinsmir/ferrovue/compare/v0.7.2...v0.8.0
 [0.7.2]: https://github.com/Kinsmir/ferrovue/compare/v0.7.1...v0.7.2
