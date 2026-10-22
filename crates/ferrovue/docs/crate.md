@@ -212,6 +212,8 @@ and these, to assemble a page:
   idle, on interaction or when a media query matches;
 - [`Head::render`]: the tags and attributes of the page's `<head>`, `<html>` and `<body>`;
 - [`state_script_into`]: the stores' state for the client to hydrate from;
+- [`load`] and [`Loads`]: render components that await loaders, each loader started when Vue's
+  server would start it, and [`Loads::script_into`] the results for the client to hydrate from;
 - [`hole`] and [`split_holes`]: render a layout once and stream its parts;
 - `HtmlStream` (the `stream` feature): a page with holes as an HTTP body, each hole's content
   sent as soon as it is ready;

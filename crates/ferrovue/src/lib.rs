@@ -19,6 +19,7 @@ mod html;
 mod hydrate;
 mod js_date;
 mod json;
+mod load;
 mod page;
 mod record;
 #[cfg(feature = "ammonia")]
@@ -56,6 +57,9 @@ pub use js_date::DateOutOfRange;
 pub use js_date::{JsDate, JsTime};
 #[doc(hidden)]
 pub use js_date::{date_prop, js_date_prop, js_time_of, opt_date_prop};
+#[doc(hidden)]
+pub use load::{Load, LoadArg, LoadCall, LoadFuture, LoadKey, load_key};
+pub use load::{LoadError, Loads, load};
 pub use page::{Page, PageHole, PageRecord, PageScript, PageSlot, Part};
 pub use record::Record;
 #[cfg(feature = "ammonia")]

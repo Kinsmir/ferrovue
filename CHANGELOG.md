@@ -16,6 +16,17 @@ released together and share version numbers.
   newest minor, the supported Vue, Node and Rust versions, deprecations, security reports, and how
   to report a bug or ask for a construct. The guide's index and the README's list of guides link
   to both.
+- The crate's side of loaders, for components that load their own data with a top-level
+  `await` (the compiler's side follows): `ferrovue::load` renders, starts each call the render
+  asks for, and renders again once calls have finished, until a render has every result; each
+  loader starts when Vue's server would start it (siblings together, a component's children after
+  its own loads, the awaits of one component in order), every call finished by a render is taken
+  by it, so a render follows at most once per finished call, and a call is made once per key. The
+  first loader to fail drops the others and returns a `LoadError`. `Loads::script_into` writes the
+  results the render read as `<script type="application/json" data-fv-loads>`, escaped as the
+  state script is, each under its key as the client's `JSON.stringify([name, ...args])` writes it.
+  What only generated code calls (`Load`, `Loads::get`, `LoadKey`, `LoadArg`, `load_key`,
+  `LoadCall`, `LoadFuture`) is hidden from the documentation.
 
 ### Changed
 
