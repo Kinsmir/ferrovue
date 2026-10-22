@@ -253,8 +253,8 @@ pub struct Loads<'c> {
     done: &'c HashMap<String, Done>,
     running: &'c HashSet<String>,
     calls: RefCell<Vec<LoadCall>>,
-    used: RefCell<Vec<&'c str>>,
-    seen: RefCell<HashSet<&'c str>>,
+    used: RefCell<Vec<String>>,
+    seen: RefCell<HashSet<String>>,
     blocked: Cell<bool>,
 }
 
@@ -289,8 +289,8 @@ impl<'c> Loads<'c> {
     #[doc(hidden)]
     pub fn get<L: Load>(&self, call: L) -> Option<&'c L::Output> {
         let key = load_key(&call);
-        if let Some((key, done)) = self.done.get_key_value(&key) {
-            if self.seen.borrow_mut().insert(key) {
+        if let Some(done) = self.done.get(&key) {
+            if self.seen.borrow_mut().insert(key.clone()) {
                 self.used.borrow_mut().push(key);
             }
             let Some(value) = done.value.downcast_ref::<L::Output>() else {
@@ -324,7 +324,7 @@ impl<'c> Loads<'c> {
             }
             payload.push_str(&json_string(key));
             payload.push(':');
-            payload.push_str(&self.done[*key].json);
+            payload.push_str(&self.done[key].json);
         }
         payload.push('}');
         out.push_str("<script type=\"application/json\" data-fv-loads>");

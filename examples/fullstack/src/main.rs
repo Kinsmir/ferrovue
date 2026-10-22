@@ -9,17 +9,17 @@ mod catalogue;
 mod pages;
 mod ui;
 
-ferrovue::conformance!("fixtures", generated::render_json, at_least = 24);
+ferrovue::conformance!("fixtures", generated::render_json, at_least = 30);
 
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-use axum::Router;
 use axum::extract::{Path, State};
 use axum::http::{StatusCode, Uri};
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
+use axum::{Json, Router};
 use ferrovue::HtmlStream;
 use tower_http::services::ServeDir;
 
@@ -59,6 +59,8 @@ async fn serve(dist: PathBuf) {
     let app = Router::new()
         .nest_service("/assets", ServeDir::new(dist.join("assets")))
         .route("/books/{id}/reviews", get(reviews))
+        .route("/api/stock/{id}", get(stock))
+        .route("/api/warehouses/{code}", get(warehouse))
         .fallback(page)
         .with_state(site);
     let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_owned());
@@ -83,7 +85,9 @@ async fn page(State(site): State<Arc<Site>>, uri: Uri) -> Response {
         status,
         html,
         holes,
-    } = site.page(uri.path_and_query().map_or(uri.path(), |p| p.as_str()));
+    } = site
+        .page(uri.path_and_query().map_or(uri.path(), |p| p.as_str()))
+        .await;
     let body = HtmlStream::new(html).holes(holes.into_iter().map(|hole| {
         let site = Arc::clone(&site);
         async move { site.fill(hole).await }
@@ -94,6 +98,14 @@ async fn page(State(site): State<Arc<Site>>, uri: Uri) -> Response {
 
 async fn reviews(State(site): State<Arc<Site>>, Path(id): Path<String>) -> impl IntoResponse {
     site.reviews(&id).await
+}
+
+async fn stock(Path(id): Path<String>) -> Json<generated::types::Stock<'static>> {
+    Json(catalogue::stock(&id))
+}
+
+async fn warehouse(Path(code): Path<String>) -> Json<Option<generated::types::Warehouse<'static>>> {
+    Json(catalogue::warehouse(&code))
 }
 
 #[cfg(test)]
@@ -165,7 +177,7 @@ mod tests {
     #[tokio::test]
     async fn a_book_page_reads_its_route_and_streams_its_reviews() {
         let site = site();
-        let page = site.page("/books/dune");
+        let page = site.page("/books/dune").await;
         assert!(
             matches!(&page.holes[..], [Hole::Reviews(id)] if id == "dune"),
             "{:?}",
@@ -246,14 +258,26 @@ mod tests {
             "{html}"
         );
         assert!(html.contains("Too much sand &lt;for me&gt;."), "{html}");
+        assert!(
+            html.contains(concat!(
+                r#"<div class="stock" data-copies="3"><p>3 copies in stock</p>"#,
+                r#"<p class="shipping">Ships from Leeds in 2 days</p></div>"#,
+            )),
+            "{html}"
+        );
         let record = html
-            .split_once(r#"</div><script type="application/json" id="__fv_page">"#)
+            .split_once(concat!(
+                r#"</div><script type="application/json" data-fv-loads>"#,
+                r#"{"[\"loadStock\",\"dune\"]":{"copies":3,"warehouse":"leeds"},"#,
+                r#""[\"loadWarehouse\",\"leeds\"]":{"city":"Leeds","days":2}}</script>"#,
+                r#"<script type="application/json" id="__fv_page">"#,
+            ))
             .and_then(|(_, rest)| rest.split_once("</script>"))
             .map(|(record, _)| record)
-            .expect("the record after the app");
+            .expect("the loaders' results and the record after the app");
         assert!(
             record.starts_with(
-                r#"{"props":{"shop":"Ferrovue Books","featured":"Dune","books":[{"id":"dune","#
+                r#"{"props":{"shop":"Ferrovue Books","featured":{"id":"dune","title":"Dune","#
             ),
             "{record}"
         );
@@ -285,6 +309,12 @@ mod tests {
         );
         assert!(
             html.contains(
+                r#"<p>1 copy in stock</p><p class="shipping">Ships from Porto in 1 day</p>"#
+            ),
+            "{html}"
+        );
+        assert!(
+            html.contains(
                 r#"href="/picks?featured=left-hand" class="active">The Left Hand of Darkness</a>"#
             ),
             "{html}"
@@ -311,6 +341,24 @@ mod tests {
             .expect("a body");
         let hole = Hole::Reviews("dune".to_owned());
         assert_eq!(body, site.fill(hole).await);
+    }
+
+    #[tokio::test]
+    async fn the_loaders_answer_the_browser_as_json() {
+        let body = |response: Response| async {
+            assert_eq!(response.headers()["content-type"], "application/json");
+            axum::body::to_bytes(response.into_body(), usize::MAX)
+                .await
+                .expect("a body")
+        };
+        let dune = stock(Path("dune".to_owned())).await.into_response();
+        assert_eq!(body(dune).await, r#"{"copies":3,"warehouse":"leeds"}"#);
+        let unknown = stock(Path("nowhere".to_owned())).await.into_response();
+        assert_eq!(body(unknown).await, r#"{"copies":0,"warehouse":""}"#);
+        let porto = warehouse(Path("porto".to_owned())).await.into_response();
+        assert_eq!(body(porto).await, r#"{"city":"Porto","days":1}"#);
+        let none = warehouse(Path("nowhere".to_owned())).await.into_response();
+        assert_eq!(body(none).await, "null");
     }
 
     #[tokio::test]

@@ -10,3 +10,13 @@ export interface Review {
   stars: number;
   text: string;
 }
+
+export interface Stock {
+  copies: number;
+  warehouse: string;
+}
+
+export interface Warehouse {
+  city: string;
+  days: number;
+}

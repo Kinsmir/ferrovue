@@ -4,7 +4,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { defineComponent, h, nextTick, type Component } from "vue";
 import { renderToString } from "vue/server-renderer";
 import { createMemoryHistory, createRouter, RouterLink, useRoute } from "vue-router";
-import { createPageApp, mountPage, renderPage, type PageRecord } from "../src/client.ts";
+import { ClientOnly, createPageApp, mountPage, renderPage, type PageRecord } from "../src/client.ts";
+import { clearLoads, defineLoader } from "../src/loads.ts";
 import { hydrateRecordedPage, renderRecordedPage } from "../src/hydration.ts";
 import { linkRouter } from "../src/link-router.ts";
 import { attachSsrRender } from "../src/testing.ts";
@@ -199,6 +200,28 @@ it("refuses a next page whose container is missing or whose components are not a
   await expect(renderPage(Shelf, { Item: failing }, next, { previous })).rejects.toThrow(/Item did not load: offline/);
   expect(document.getElementById("app")!.innerHTML).toBe(shelfHtml);
   expect(previous.unmount).not.toHaveBeenCalled();
+});
+
+it("compares a page that awaits a loader as its `<Suspense>` resolves, where `<ClientOnly>` shows its fallback", async () => {
+  clearLoads();
+  const loadLabel = defineLoader("loadLabel", async (id: number): Promise<string> => `fetched ${id}`);
+  const Labelled = defineComponent({
+    props: { id: { type: Number, required: true } },
+    async setup(props) {
+      const label = await loadLabel(props.id);
+      return () => h("section", [h("h1", label), h(ClientOnly, null, { default: () => h("a", "live"), fallback: () => h("span", "later") })]);
+    },
+  });
+  const record: PageRecord = { props: { id: 5 }, slots: {} };
+  const html = `<div id="app"><section><h1>label 5</h1><span>later</span></section></div><script type="application/json" data-fv-loads>{"[\\"loadLabel\\",5]":"label 5"}</script>`;
+  const app = await renderRecordedPage({ html, record }, Labelled, {});
+  await nextTick();
+  expect(document.getElementById("app")!.innerHTML).toBe("<section><h1>label 5</h1><a>live</a></section>");
+  app.unmount();
+  await expect(renderRecordedPage({ html: html.replace("<span>later</span>", "<a>live</a>"), record }, Labelled, {})).rejects.toThrow(
+    "the client renders it differently:\n  server: <section><h1>label 5</h1><a>live</a></section>\n  client: <section><h1>label 5</h1><span>later</span></section>",
+  );
+  clearLoads();
 });
 
 it("fails a recorded page whose record the client renders differently", async () => {

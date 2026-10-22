@@ -77,6 +77,7 @@ describe.each(BROWSERS)("%s", (name) => {
   let page: Page;
   let messages: Promise<string>[] = [];
   let scripts: string[] = [];
+  let apis: string[] = [];
   beforeAll(async () => {
     try {
       browser = await LAUNCHERS[name].launch();
@@ -91,7 +92,9 @@ describe.each(BROWSERS)("%s", (name) => {
     });
     page.on("pageerror", (e) => void messages.push(Promise.resolve(`uncaught: ${e.message}`)));
     page.on("request", (r) => {
-      if (r.resourceType() === "script") scripts.push(new URL(r.url()).pathname);
+      const path = new URL(r.url()).pathname;
+      if (r.resourceType() === "script") scripts.push(path);
+      if (path.startsWith("/api/")) apis.push(path);
     });
     await page.route(`${origin}/**`, async (route) => {
       if (route.request().resourceType() !== "document") return route.continue();
@@ -107,6 +110,7 @@ describe.each(BROWSERS)("%s", (name) => {
   async function open(path: string): Promise<void> {
     messages = [];
     scripts = [];
+    apis = [];
     await page.goto(`${origin}${path}`);
     await page.waitForFunction(() =>
       [...document.querySelectorAll("[data-island]:not([data-hydrate]), #basket, #app")].every((el) => (el as { _vnode?: unknown })._vnode),
@@ -217,6 +221,8 @@ describe.each(BROWSERS)("%s", (name) => {
     expect(now.replace(share, "")).toBe(parsed.replace(share, ""));
     const chunks = scripts.map((s) => /^\/assets\/(\w+)-/.exec(s)?.[1]).filter((c) => c && c !== "main");
     expect(chunks).toEqual(expect.arrayContaining(["picks", "Pick", "Reviews"]));
+    expect(await page.locator(".stock p").allTextContents()).toEqual(["3 copies in stock", "Ships from Leeds in 2 days"]);
+    expect(apis, "the loaders were answered from the page").toEqual([]);
 
     const add = page.locator('.pick[data-id="dune"] button.add');
     await add.click();
@@ -248,6 +254,7 @@ describe.each(BROWSERS)("%s", (name) => {
     expect(await page.evaluate(() => (window as { stayed?: boolean }).stayed), "the page did not reload").toBe(true);
     expect(documents).toEqual([]);
     expect(await page.locator(".review-list q").allTextContents()).toEqual(["Winter, and what it does to people."]);
+    expect(await page.locator(".stock p").allTextContents()).toEqual(["1 copy in stock", "Ships from Porto in 1 day"]);
     expect(await page.locator(".review-list a.share").getAttribute("href")).toMatch(/featured%3Dleft-hand$/);
     expect(await page.title()).toBe("Staff picks · Ferrovue Books");
     expect(await add.textContent(), "the next page starts from the state its document carries").toBe("Add to basket");
@@ -266,6 +273,7 @@ describe.each(BROWSERS)("%s", (name) => {
     expect(page.url()).toBe(`${origin}/picks?featured=left-hand`);
     expect(await page.evaluate(() => (window as { stayed?: boolean }).stayed)).toBe(true);
     expect(await page.locator("#app").count()).toBe(1);
+    expect(apis, "each page's loaders were answered from the document it fetched").toEqual([]);
     expect(await Promise.all(messages)).toEqual([]);
   });
 });

@@ -3,10 +3,10 @@ use std::time::Duration;
 use ferrovue::{Head, Hydrate, PageHole, PageScript, Part, Route, Router, Slot};
 
 use crate::assets::Assets;
-use crate::catalogue;
+use crate::catalogue::{self, Catalogue};
 use crate::generated::stores::{BasketState, Stores};
 use crate::generated::{
-    add_to_basket, books_id, index, layout, missing, pick, picks, reviews, route_table,
+    add_to_basket, books_id, index, layout, loaders, missing, pick, picks, reviews, route_table,
 };
 
 const SHOP: &str = "Ferrovue Books";
@@ -50,12 +50,12 @@ impl Site {
     }
 
     /// The page at `location` (a path), rendered up to its holes.
-    pub fn page(&self, location: &str) -> Page {
+    pub async fn page(&self, location: &str) -> Page {
         let route = self.router.at(location);
         let stores = Stores::new(BasketState::new("guest", ["solaris"]));
         match (route.name(), route.param("id")) {
             (Some("/"), _) => self.home(&route, &stores),
-            (Some("/picks"), _) => self.picks(&route, &stores),
+            (Some("/picks"), _) => self.picks(&route, &stores).await,
             (Some("/books/[id]"), Some(id)) => match catalogue::book(id) {
                 Some(book) => self.book(&route, &stores, book),
                 None => self.not_found(&route, &stores, location),
@@ -93,7 +93,7 @@ impl Site {
             status,
             html,
             holes,
-        } = self.page(location);
+        } = self.page(location).await;
         let mut out = String::new();
         let mut holes = holes.into_iter();
         for piece in ferrovue::split_holes(&html) {
@@ -148,7 +148,7 @@ impl Site {
         self.finish(200, &head, &body, stores, &islands, holes)
     }
 
-    fn picks(&self, route: &Route<'_>, stores: &Stores<'_>) -> Page {
+    async fn picks(&self, route: &Route<'_>, stores: &Stores<'_>) -> Page {
         let notes = [
             ("dune", "The desert planet, and the politics of water."),
             (
@@ -165,28 +165,34 @@ impl Site {
             .iter()
             .find(|pick| Some(&*pick.book.id) == asked)
             .map_or(&picks[0].book, |pick| &pick.book);
-        let mut page = ferrovue::Page::new();
-        let parts = page.slot(
-            "default",
-            picks
-                .iter()
-                .map(|props| Part::new(pick::NAME, pick::html(props))),
-        );
-        let reviews = page.hole("reviews");
         let books = picks
             .iter()
             .map(|pick| pick.book.clone())
             .collect::<Vec<_>>();
-        let props = picks::Props::new(SHOP, featured.title.clone(), books);
-        let head = Head::new();
-        let mut body = String::from("<div id=\"app\">");
-        let slots = picks::Slots {
-            default: Some(parts.slot()),
-            reviews: Some(reviews.slot()),
-        };
-        let record = page.render_to(&mut body, picks::html(&props, slots, route, &head));
-        body.push_str("</div>");
-        ferrovue::hole().render_to(&mut body);
+        let props = picks::Props::new(SHOP, featured.clone(), books);
+        let rendered = loaders::load(&Catalogue, |loads| {
+            let mut page = ferrovue::Page::new();
+            let parts = page.slot(
+                "default",
+                picks
+                    .iter()
+                    .map(|props| Part::new(pick::NAME, pick::html(props))),
+            );
+            let reviews = page.hole("reviews");
+            let head = Head::new();
+            let mut body = String::from("<div id=\"app\">");
+            let slots = picks::Slots {
+                default: Some(parts.slot()),
+                reviews: Some(reviews.slot()),
+            };
+            let record = page.render_to(&mut body, picks::html(&props, slots, route, &head, loads));
+            body.push_str("</div>");
+            loads.script_into(&mut body);
+            ferrovue::hole().render_to(&mut body);
+            (head, body, record, reviews)
+        })
+        .await;
+        let Ok((head, body, record, reviews)) = rendered;
         let mut islands = record.island_names();
         islands.push(reviews::NAME);
         let holes = vec![
