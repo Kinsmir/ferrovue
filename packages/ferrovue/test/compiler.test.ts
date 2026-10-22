@@ -3301,12 +3301,85 @@ defineProps<{ m: Record<string, string | undefined> }>();
       /a `Record`'s values are strings, numbers, booleans, objects or lists of those/,
     ],
     [
-      "Object.entries outside a v-for",
+      "Object.entries pairs mapped to themselves",
       `<script setup lang="ts">
 defineProps<{ m: Record<string, string> }>();
 </script>
 <template><i>{{ Object.entries(m).map((e) => e).length }}</i></template>`,
-      /`Object\.entries\(\)` is supported as the source of a `v-for`/,
+      /`\.map\(\)` to the `\[key, value\]` pairs of `Object\.entries\(\)` makes a list of pairs/,
+    ],
+    [
+      "Object.entries pairs joined",
+      `<script setup lang="ts">
+defineProps<{ m: Record<string, string> }>();
+</script>
+<template><i>{{ Object.entries(m).join() }}</i></template>`,
+      /`\.join\(\)` of the `\[key, value\]` pairs of `Object\.entries\(\)`, which writes each pair as its key and value joined by `,`/,
+    ],
+    [
+      "Object.entries pairs sorted without a comparator",
+      `<script setup lang="ts">
+defineProps<{ m: Record<string, number> }>();
+</script>
+<template><i>{{ Object.entries(m).toSorted().length }}</i></template>`,
+      /orders the `\[key, value\]` pairs of `Object\.entries\(\)` by `String\(pair\)`/,
+    ],
+    [
+      "a pair destructured with a default",
+      `<script setup lang="ts">
+defineProps<{ m: Record<string, number> }>();
+</script>
+<template><i>{{ Object.entries(m).map(([k = "x"]) => k).join() }}</i></template>`,
+      /a `\[key, value\]` pair is destructured to plain names/,
+    ],
+    [
+      "a pair read by a computed index",
+      `<script setup lang="ts">
+defineProps<{ m: Record<string, number>; i: number }>();
+</script>
+<template><i>{{ Object.entries(m).map((p) => p[i]).join() }}</i></template>`,
+      /reads a part of a `\[key, value\]` pair by a literal index/,
+    ],
+    [
+      "a v-for over pairs with a nested array pattern",
+      `<script setup lang="ts">
+defineProps<{ m: Record<string, number> }>();
+</script>
+<template><i v-for="[k, [v]] in Object.entries(m).filter(([, n]) => n > 0)">{{ k }}</i></template>`,
+      /a `\[key, value\]` pair is destructured to plain names/,
+    ],
+    [
+      ".flat() with a depth that is not a literal",
+      `<script setup lang="ts">
+defineProps<{ m: number[][]; d: number }>();
+</script>
+<template><i>{{ m.flat(d).length }}</i></template>`,
+      /`\.flat\(\)` takes its depth as a literal number, or `Infinity`/,
+    ],
+    [
+      ".flat() of a list of optional lists",
+      `<script setup lang="ts">
+defineProps<{ m: (number[] | undefined)[] }>();
+</script>
+<template><i>{{ m.flat().length }}</i></template>`,
+      /`\.flat\(\)` makes a list of strings, numbers, booleans or objects, or of lists of them, and this one's items are optional lists/,
+    ],
+    [
+      ".flatMap() whose function gives only []",
+      `<script setup lang="ts">
+defineProps<{ m: number[] }>();
+</script>
+<template><i>{{ m.flatMap((x) => []).length }}</i></template>`,
+      /gives only `\[\]`, whose items have no type/,
+    ],
+    [
+      ".flatMap() to lists of lists",
+      `<script setup lang="ts">
+interface Row { grid: number[][] }
+defineProps<{ rows: Row[] }>();
+</script>
+<template><i>{{ rows.flatMap((r) => r.grid).length }}</i></template>`,
+      /`\.flatMap\(\)` makes a list of strings, numbers, booleans or objects, and its function gives a list of lists/,
     ],
     [
       "Object.keys of an object that is not a record",
@@ -4598,7 +4671,16 @@ defineProps<{ onSale?: boolean }>();
     "a switch with no case for some values and nothing after it": "FV1903",
     "a function declared in a callback's body": "FV1901",
     "a computed with a loop read by the template": "FV0613",
-    "Object.entries outside a v-for": "FV0816",
+    "Object.entries pairs mapped to themselves": "FV0816",
+    "Object.entries pairs joined": "FV0816",
+    "Object.entries pairs sorted without a comparator": "FV0816",
+    "a pair destructured with a default": "FV0808",
+    "a pair read by a computed index": "FV0612",
+    "a v-for over pairs with a nested array pattern": "FV0818",
+    ".flat() with a depth that is not a literal": "FV0834",
+    ".flat() of a list of optional lists": "FV0834",
+    ".flatMap() whose function gives only []": "FV0834",
+    ".flatMap() to lists of lists": "FV0834",
     "a computed list as a slot prop": "FV0910",
     "a component written with the Options API": "FV0003",
     "a constructor called in the template": "FV0624",

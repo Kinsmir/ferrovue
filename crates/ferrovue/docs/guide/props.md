@@ -370,8 +370,16 @@ assert_eq!(serde_json::to_string(&props).unwrap(), r#"{"scores":{"10":1,"ada":3,
 ```
 
 A field read by name, `r.key` or `r[key]`, is refused, since it may be absent although TypeScript
-says it is not; so are `Object.entries()` anywhere but as a `v-for`'s source, and dictionaries of
-optional values.
+says it is not; so are dictionaries of optional values.
+
+`Object.entries(r)` is the record's `[key, value]` pairs, in that order, which a `v-for` walks
+(`([key, value], i) in Object.entries(r)`) and the list methods read: their arrow functions
+destructure a pair (`([key, value]) => …`, `([, value]) => …`, and `([key, { id }]) => …` for an
+object value) or read its parts, `pair[0]` and `pair[1]`. Each pair is a `(&str, &T)` borrowed from
+the record, so `Object.entries(r).filter(([, n]) => n > 0).map(([key]) => key)` copies nothing.
+A method that writes or compares whole pairs is refused (FV0816): `.join()`, `.includes()`,
+`.toSorted()` without a comparator, and `.map()` to the pairs themselves. `Object.values(r)` of a
+record of lists is a list of lists, which `.flat()` joins.
 
 # Shared types
 

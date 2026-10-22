@@ -1282,6 +1282,24 @@ class Gen {
         const v = r.pick(records);
         return r.chance(0.5) ? { of: { k: "str" }, kids: [], fmt: () => `Object.keys(${v.name})`, lone: false } : { of: v.of, kids: [], fmt: () => `Object.values(${v.name})`, lone: false };
       }],
+      [records.length ? 2 : 0, () => {
+        // The pairs of `Object.entries()`, kept by a test of either part and mapped to a value made of them.
+        const v = r.pick(records);
+        const n = this.arrows++;
+        const [key, value] = [`k${n}`, `v${n}`];
+        const pair = r.weighted<[string, boolean, boolean]>([[3, [`[${key}, ${value}]`, true, true]], [1, [`[${key}]`, true, false]], [1, [`[, ${value}]`, false, true]]]);
+        const bindPair = () => {
+          if (pair[1]) this.bind(key, { k: "str" });
+          if (pair[2]) this.bind(value, v.of);
+        };
+        const test = r.chance(0.4) ? this.withScope(() => (bindPair(), this.test(d - 1))) : null;
+        let out: Expr | undefined;
+        const body = this.withScope(() => (bindPair(), (out = r.chance(0.6) ? this.str(d - 1) : this.int(d - 1, BOUND_SMALL))));
+        const of: Spec = out!.ty === "str" ? { k: "str" } : { k: "int", wide: false };
+        const kids = test ? [{ ...test, scoped: true }, { ...body, scoped: true }] : [{ ...body, scoped: true }];
+        const filter = (k: string[]) => (test ? `.filter((${pair[0]}) => ${k[0]})` : "");
+        return { of, kids, fmt: (k, at) => `Object.entries(${v.name})${filter(k.slice(at))}.map((${pair[0]}) => ${k[at + kids.length - 1]})`, lone: !!out!.lone, ...(of.k === "int" ? { mapped: true } : {}) };
+      }],
       [2, () => {
         const s = this.str(d - 1);
         const sep = r.pick([",", " ", "", "a", "🦀", ", "]);
@@ -1302,6 +1320,23 @@ class Gen {
           const fn = this.arrow(prev.of, prev.lone, () => (out = r.chance(0.6) ? this.str(d - 1) : this.int(d - 1, BOUND_SMALL)));
           const of: Spec = out!.ty === "str" ? { k: "str" } : { k: "int", wide: false };
           return { of, kids: [...prev.kids, fn.body], fmt: (k, at) => `${prev.fmt(k, at)}.map(${fn.params} => ${k[at + width]})`, lone: !!out!.lone, ...(of.k === "int" ? { mapped: true } : {}) };
+        }],
+        [1, () => {
+          // `.flatMap()` to an array literal of two values of one type, or to a string split.
+          const split = r.chance(0.4);
+          const sep = r.pick([",", "", "a", " "]);
+          let pair: Expr | undefined;
+          const fn = this.arrow(prev.of, prev.lone, () => {
+            const str = split || r.chance(0.6);
+            const one = () => (str ? this.str(d - 1) : this.int(d - 1, BOUND_SMALL));
+            const [a, b] = [one(), one()];
+            pair = split ? a : node(a.ty, [a, b], ([x, y]) => `[${x}, ${y}]`, 0, true);
+            return pair;
+          });
+          const of: Spec = pair!.ty === "str" ? { k: "str" } : { k: "int", wide: false };
+          const lone = !!pair!.lone || pair!.kids.some((x) => x.lone) || (split && sep === "");
+          const each = (x: string) => (split ? `${recv(x)}.split(${quoted(sep)})` : x);
+          return { of, kids: [...prev.kids, fn.body], fmt: (k, at) => `${prev.fmt(k, at)}.flatMap(${fn.params} => ${each(k[at + width]!)})`, lone, ...(of.k === "int" ? { mapped: true } : {}) };
         }],
         [2, () => {
           const a = this.small();

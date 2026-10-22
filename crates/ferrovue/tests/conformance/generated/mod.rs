@@ -68,6 +68,7 @@ pub mod fall_root;
 pub mod fall_switch;
 pub mod fall_use;
 pub mod fallthrough;
+pub mod flattened;
 pub mod form;
 pub mod formatters;
 pub mod forward;
@@ -119,6 +120,7 @@ pub mod number_tests;
 pub mod numbers;
 pub mod optional_chains;
 pub mod page;
+pub mod pairs;
 pub mod panel;
 pub mod parsing;
 pub mod pending;
@@ -536,6 +538,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let route = router.at(&fixture.route);
             fallthrough::render(&mut out, &props, &route);
         }
+        "Flattened" => {
+            let props: flattened::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            flattened::render(&mut out, &props);
+        }
         "Form" => {
             let props: form::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             form::render(&mut out, &props);
@@ -785,6 +791,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Page" => {
             let props: page::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             page::render(&mut out, &props);
+        }
+        "Pairs" => {
+            let props: pairs::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            pairs::render(&mut out, &props);
         }
         "Panel" => {
             let props: panel::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

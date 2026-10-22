@@ -1064,15 +1064,13 @@ List method given more than one function.
 
 ## FV0815
 
-`Object.values()` of a record of lists.
-
-`Object.values(r)` of a `Record<string, T[]>` gives a list of lists, which the server's list methods cannot walk. Walk the record with `v-for="(items, key) in r"` and the inner lists inside it, or flatten the values in Rust and pass them as a prop.
+`Object.values()` of a record of lists. Retired in 0.10.0: the compiler no longer raises it.
 
 ## FV0816
 
-`Object.entries()` outside a `v-for`.
+`[key, value]` pairs of `Object.entries()` kept or compared.
 
-`Object.entries(r)` gives a list of `[key, value]` pairs, which the server holds only as the source of a `v-for`: `v-for="([key, value], i) in Object.entries(r)"`. Elsewhere, use `Object.keys(r)` or `Object.values(r)`, or walk the record itself with `v-for="(value, key) in r"`.
+`Object.entries(r)` gives a list of `[key, value]` pairs, which the server walks: in a `v-for` (`([key, value], i) in Object.entries(r)`) and through list methods whose functions destructure each pair or read its parts (`Object.entries(r).filter(([, n]) => n > 0).map(([k]) => k)`, `pair[0]`, `pair[1]`). A method that writes or compares whole pairs is refused: `.join()`, which writes each pair as its key and value joined by `,`; `.includes()`, which compares pairs as objects and finds none; `.toSorted()` without a comparator, which orders them by that text; and `.map()` to the pairs themselves, which would keep a list of pairs as a value. Map the pairs to their keys, their values or values made of them first, and give `.toSorted()` a comparator.
 
 ## FV0817
 
@@ -1175,6 +1173,12 @@ With a comparator, `.toSorted()` sorts in the order JavaScript gives only for sh
 Array spread of anything but lists of the same item type.
 
 A spread in an array literal chains lists of one item type, strings, numbers, booleans or objects, with plain values of that type beside them (numbers whether `number` or `Float`). Spreading a value that is not a list (a string, a record, an optional list) or mixing item types would make a list the server cannot hold. Give an optional list a fallback with `?? []`, and keep each part to one item type.
+
+## FV0834
+
+`.flat()` or `.flatMap()` of a list it cannot flatten.
+
+`.flat()` joins the inner lists of a list of lists, to the depth it is given (1 when none), and `.flatMap(f)` the lists `f` gives, keeping a value that is not a list as `.map()` would. The depth is a literal number or `Infinity`, since the server's type of the result depends on it. The flattened items are strings, numbers, booleans or objects: lists of optional values, of records or of pairs (as items, or inside the inner lists), and a function that gives only `[]`, whose items have no type, are refused. Give a literal depth, map the inner values to one of those types, or write `[] as T[]`.
 
 # Slots: FV09xx
 

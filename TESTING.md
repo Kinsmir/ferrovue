@@ -149,6 +149,8 @@ A fixture is a JSON object of props plus three optional keys:
 | `Truthy` | `Boolean` as the function of `filter`, `map`, `some`, `every`, `find`, `findIndex`: empty strings, `0`, `-0` and `false` dropped; `.filter(Boolean)` of `T \| null` list items (strings, numbers, objects) and of an array literal holding optional fields, a `?:` with an `undefined` branch and `null`, in `computed`, `v-for` with an index and `.join()`; `Boolean(x)` |
 | `ListAccess` | Items by index: `list[i]` with literal, variable and negative indices, `.at()` with integers, fractions and negative indices, beyond either end and of empty lists, over lists of strings, numbers, objects and nullable items, computed lists and array literals, narrowed by `v-if`, through `?.` and `??` and in `computed`; `.indexOf()` and `.lastIndexOf()` with `===` (`NaN` never found, `-0` found as `0`, a fraction in a list of integers), `.findLast()` and `.findLastIndex()` with an index, destructuring and `Boolean`, `.concat()` of props, array literals, `[]` and computed lists; `.includes()` and `.lastIndexOf()` of a `v-for` item named `v` |
 | `ListBuilding` | `.reduce()` and `.reduceRight()` into integers, `Float`s (an integer start widened by a fractional or `-0` body, `-0` as the start), strings (astral characters, the index joined) and booleans; `.toReversed()`; `.toSorted()` without a comparator over integers (`[10, 9, 1]`), `Float`s (`NaN`, `-0` and `0`, `1e21`, the subnormals), strings by UTF-16 code unit and booleans, and with `a - b`, `b - a`, `a.k - b.k` and `?:` comparators, ties kept in their order; `[...list].sort()` and `[...list].reverse()`; spread in array literals of strings, of integers and `Float`s widened, of `[]` and of objects in `v-for`; `Math.max(...xs)` and `Math.min(...xs)` of empty lists, `NaN` and `-0`; in text, `computed` and `v-for`: empty lists, single items, ties |
+| `Pairs` | `Object.entries()` read by list methods: `.map()`, `.filter()`, `.reduce()`, `.some()`, `.every()`, `.find()`, `.findLast()`, `.findIndex()`, `.slice()`, `.at()` and `.toReversed()` with pairs destructured (`[k, v]`, `[k]`, `[, v]`, an object value's fields) or read as `pair[0]`, `pair[1]` and `pair.length`; `?.[1]` of a pair that may be absent; `.toSorted()` by either part, in a `computed` and a `v-for` that destructures the pairs; keys that are array indices first, the largest index (`4294967294`) among them and the next one (`4294967295`) and `01` not; records of strings, numbers, objects and lists, empty records, markup in keys and values |
+| `Flattened` | `.flat()` of lists of lists of strings, integers and `Float`s (`-0`, `1e21`), to the default depth, `0`, `2` and `Infinity`, and of a list that holds no lists; `.flatMap()` to a field's list, an array literal with spread, a list mapped with the item's index, a string's `split("")`, `[]` for some items, and to values that are not lists; `Object.values()` of a record of lists, flattened and walked by `v-for`; in a `computed`, `.reduce()`, `.filter()` and `v-for`; empty lists |
 | `OptionalChains` | Optional chains that go on past `?.`: string methods and `.length` (`s?.trim().length`, `s?.toUpperCase()`, `s?.split(",").length`), list methods and indices (`tags?.[1]`, `tags?.at(-1)?.toUpperCase()`, `tags?.filter(…).length`, `tags?.map(…).join()`), fields of fields and of optional fields (`user?.profile?.site?.length`), numbers (`count?.toFixed(2)`), dates (`when?.getTime()`, `when?.toUTCString()`, `seen?.toJSON()`, `seen?.toUTCString().length`, valid, invalid and at the edges of the range), over optional and nullable values that are present, absent and empty; in `computed`, `v-if`, `??` and `v-for` |
 | `NumberIncludes` | `.includes()` across `number` and `Float`: a fraction in a list of integers, an integer in a list of fractions and in a list mapped to fractions, `-0` found as `0`, integers beyond 2⁵³ |
 | `Records` | `Record<string, T>` and `{ [key: string]: T }` in JavaScript's order of keys (array indices first, a key given twice), `Object.keys` / `values` / `entries`, a record handed to a child |
@@ -204,8 +206,8 @@ when it names a component that is not in `components/` with fixtures of its own.
 | Strings | `Strings`, `Exprs`, `Text`, `StringSearch`, `StringOf` |
 | Dates | `Dates`, `Prices`, `DatePost`, `DateStamp`, `DateFormats`, `DateGuards` |
 | Conditions | `Branches`, `Narrowing`, `Nullable`, `TypeofTests` |
-| Lists | `Lists`, `Arrays`, `Chips`, `Truthy`, `NumberIncludes`, `NarrowedRows`, `Exprs`, `ListAccess`, `ListBuilding` |
-| Dictionaries | `Records`, `Chips` |
+| Lists | `Lists`, `Arrays`, `Chips`, `Truthy`, `NumberIncludes`, `NarrowedRows`, `Exprs`, `ListAccess`, `ListBuilding`, `Flattened` |
+| Dictionaries | `Records`, `Chips`, `Pairs` |
 | Attributes | `Attrs`, `BoundObject`, `Keywords`, `MixedTernary` |
 | `class` | `Attrs`, `BoundObject`, `VnodeClass`, `AsyncClass` |
 | `style` | `Styles`, `Shown`, `BoundObject` |
@@ -347,7 +349,9 @@ What it generates, with random nesting:
   `Number.isFinite()`, `Number.isInteger()` and `Number.isSafeInteger()` of integers, fractions
   (`NaN` and the infinities among them, from `/`, `%`, parsing and invalid dates) and optional
   numbers, and `isNaN()` and `isFinite()` of numbers, wherever a boolean goes;
-- lists computed from lists, `Object.keys` / `Object.values` and `split`, by `filter`, `map`,
+- lists computed from lists, `Object.keys` / `Object.values` and `split`, and from the pairs of
+  `Object.entries` (kept by a test of either part, destructured as `[k, v]`, `[k]` or `[, v]`), by
+  `filter`, `map`, `flatMap` (to a pair of values or a string's `split`),
   `slice` and `concat` (of a list of the same items, an array literal or `[]`) with arrow functions
   (an index too), chained, read by `.join()`, `.length`, `.includes()`, `.indexOf()`,
   `.lastIndexOf()`, `some`, `every`, `find`, `findIndex`, `findLast`, `findLastIndex`,

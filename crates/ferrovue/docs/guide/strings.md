@@ -274,6 +274,12 @@ keys, the comparator is inconsistent and each engine orders the items its own wa
 `[...list].sort(…)` and `[...list].reverse()` are the same as `.toSorted(…)` and `.toReversed()`;
 `.sort()` and `.reverse()` of a prop or state would change it in place, and are refused.
 
+`.flat()` joins the inner lists of a list of lists, one level deep or to the depth it is given,
+which is a literal number or `Infinity` since the type of the result depends on it, and
+`.flatMap(f)` joins the lists `f` gives, keeping a value that is not a list as `.map()` keeps it.
+Both become Rust's `flat_map`; nothing they flatten is skipped, as JavaScript skips only the holes
+of a sparse array, which a prop or an array literal the compiler accepts never has.
+
 `Math.max(...xs)` and `Math.min(...xs)` fold the items with `js_max` and `js_min` from `-Infinity`
 and `Infinity`, which they give for an empty list, `NaN` when any item is, and `0` above `-0`.
 

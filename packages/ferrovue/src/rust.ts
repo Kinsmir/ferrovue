@@ -17,6 +17,7 @@ export function needsLifetime(ty: Ty, comp: Component, seen: Set<string> = new S
   switch (ty.k) {
     case "str":
     case "record":
+    case "entry":
       return true;
     case "opt":
     case "list":
@@ -64,6 +65,8 @@ export function rustTy(ty: Ty, comp: Component): string {
       return `Vec<${rustTy(ty.of, comp)}>`;
     case "record":
       return `ferrovue::Record<'a, ${rustTy(ty.of, comp)}>`;
+    case "entry":
+      return `(&'a str, &'a ${rustTy(ty.of, comp)})`;
     case "struct": {
       const { st, owner, path } = lookupStruct(comp, ty);
       if (!st) throw new GenError("FV0308", `no type \`${ty.name}\``);

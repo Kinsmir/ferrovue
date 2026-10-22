@@ -16,6 +16,7 @@ export type Ty =
   | { k: "opt"; of: Ty; none?: "null" | "either" }
   | { k: "list"; of: Ty }
   | { k: "record"; of: Ty }
+  | { k: "entry"; of: Ty }
   | StructTy
   | { k: "html"; inline?: true }
   | { k: "child"; name: string }
@@ -596,7 +597,7 @@ export function literalsOf(ty: Ty): readonly (string | number)[] | undefined {
 
 /** The type of a value that is one of two, `a` with the literals known of it kept only where both have them. */
 export function joinTy(a: Ty, b: Ty): Ty {
-  if (a.k === "opt" || a.k === "list" || a.k === "record") {
+  if (a.k === "opt" || a.k === "list" || a.k === "record" || a.k === "entry") {
     const of = joinTy(a.of, b.k === a.k ? (b as { of: Ty }).of : b);
     return of === a.of ? a : { ...a, of };
   }

@@ -3,7 +3,7 @@ import { CONFIG_FILE, ctx } from "./context.ts";
 import { lookupStruct, markHome, tyOfTs } from "./typescript.ts";
 import { claim } from "./plugin.ts";
 import { atom, bare, binary, enclosed, logical, negate, not, occurrences, receiver, strArg } from "./parens.ts";
-import { collected, picked, sliced, spreadLiteral, typedEmpty, untypedEmpty } from "./lists.ts";
+import { collected, entryPart, picked, sliced, spreadLiteral, typedEmpty, untypedEmpty } from "./lists.ts";
 import { asCow, formatted, isTemporary, loneOf, meet, stringsEqual } from "./strings.ts";
 import { arithmetic, asF64, compare, intFromF64, isNumber, negatedOrder, numberVal, power } from "./numbers.ts";
 import { boolOf, checkNullTest, choice, known, narrowing, narrowTo, nullTest, pathOf, presence, truthTested, truthy, typeofCompare, typeofTest, typeofVal } from "./narrowing.ts";
@@ -72,6 +72,8 @@ export function describeTy(ty: Ty): string {
       return "a list";
     case "record":
       return "a record";
+    case "entry":
+      return "a `[key, value]` pair";
     case "struct":
     case "child":
       return "an object";
@@ -332,6 +334,7 @@ export function expr(s: Scope, n: N): Val {
       if (r.ty.k === "record") return { code: `${atom(r.code)}.len() as i64`, ty: INT };
     }
     const base = expr(s, n.object);
+    if (base.ty.k === "entry") return numberVal(2, true);
     if (base.ty.k === "list" && base.iter !== undefined) {
       const vec = /^(.*)\.into_iter\(\)$/s.exec(base.iter)?.[1];
       if (vec === undefined) {
@@ -449,6 +452,12 @@ export function expr(s: Scope, n: N): Val {
           if (own) return own;
         }
         if (base.ty.k === "list") return indexed(s, base, n.property, n);
+        if (base.ty.k === "entry") {
+          if (n.property.type !== "NumericLiteral" || !Number.isInteger(n.property.value) || n.property.value < 0) {
+            fail(comp, "FV0612", "`[…]` reads a part of a `[key, value]` pair by a literal index: `pair[0]` is its key and `pair[1]` its value", n);
+          }
+          return entryPart(base, n.property.value);
+        }
         return fail(comp, "FV0612", `computed member access of ${describeTy(base.ty)}: \`[…]\` reads an item of a list, by an integer index`, n);
       }
       const prop = n.property.name as string;

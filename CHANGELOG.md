@@ -114,6 +114,25 @@ released together and share version numbers.
   the three codes. The fuzzer generates local functions and calls them from templates and
   `computed`s.
 
+- `Object.entries(r)` outside a `v-for`: the list methods read its `[key, value]` pairs, in the
+  record's order, with arrow functions that destructure each pair (`([key, value]) => …`,
+  `([, value]) => …`, `([key, { id }]) => …`) or read its parts (`pair[0]`, `pair[1]`,
+  `pair.length`): `.map()`, `.filter()`, `.reduce()`, `.some()`, `.find()` and the others, `.at()`,
+  `.slice()`, `.toReversed()` and `.toSorted()` with a comparator of either part
+  (`(a, b) => b[1] - a[1]`, `([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)`). A `computed` may keep the
+  pairs and a `v-for` walk them (`[key, value] in Object.entries(r).filter(…)`), and `?.[1]` reads a
+  pair `.find()` may not find. Each pair borrows from the record. A method that writes or compares
+  whole pairs, `.join()`, `.includes()`, `.toSorted()` without a comparator and `.map()` to the
+  pairs, is refused with FV0816, retitled for it.
+- `.flat()` and `.flatMap()`. `.flat()` joins a list of lists to the depth it is given, a literal
+  number or `Infinity` (1 when none); `.flatMap(f)` joins the lists `f` gives and keeps any other
+  value as `.map()` would. `Object.values(r)` of a record of lists, which FV0815 refused, is now a
+  list of lists, which `.flat()` joins and `v-for` walks; FV0815 is retired. A depth that is not a
+  literal, and items that are optional, records or pairs, are refused with the new FV0834. The
+  conformance components `Pairs` and `Flattened` hold fixtures recorded from Vue, and the fuzzer
+  writes `Object.entries()` read by `.filter()` and `.map()`, and `.flatMap()`. Generated code
+  stays at `__compat!(3)`: both are Rust iterator adaptors.
+
 ### Changed
 
 - FV0601 names what the template wrote, and says where it comes from: `` `fmt()` calls a function
