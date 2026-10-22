@@ -152,6 +152,7 @@ A fixture is a JSON object of props plus optional keys:
 | `ListBuilding` | `.reduce()` and `.reduceRight()` into integers, `Float`s (an integer start widened by a fractional or `-0` body, `-0` as the start), strings (astral characters, the index joined) and booleans; `.toReversed()`; `.toSorted()` without a comparator over integers (`[10, 9, 1]`), `Float`s (`NaN`, `-0` and `0`, `1e21`, the subnormals), strings by UTF-16 code unit and booleans, and with `a - b`, `b - a`, `a.k - b.k` and `?:` comparators, ties kept in their order; `[...list].sort()` and `[...list].reverse()`; spread in array literals of strings, of integers and `Float`s widened, of `[]` and of objects in `v-for`; `Math.max(...xs)` and `Math.min(...xs)` of empty lists, `NaN` and `-0`; in text, `computed` and `v-for`: empty lists, single items, ties |
 | `Pairs` | `Object.entries()` read by list methods: `.map()`, `.filter()`, `.reduce()`, `.some()`, `.every()`, `.find()`, `.findLast()`, `.findIndex()`, `.slice()`, `.at()` and `.toReversed()` with pairs destructured (`[k, v]`, `[k]`, `[, v]`, an object value's fields) or read as `pair[0]`, `pair[1]` and `pair.length`; `?.[1]` of a pair that may be absent; `.toSorted()` by either part, in a `computed` and a `v-for` that destructures the pairs; keys that are array indices first, the largest index (`4294967294`) among them and the next one (`4294967295`) and `01` not; records of strings, numbers, objects and lists, empty records, markup in keys and values |
 | `Loaded`, `LoadedComments` | Top-level `await` of loaders declared with `defineLoader` in `loaders.ts`: two awaits of one call, a result destructured with a rename, a loader without arguments, results read by a `computed`, `v-if` and `v-for`; a child awaiting with arguments from its props and from a result awaited before (`loadNote(comments.length)`), rendered twice by its parent; an optional argument left out of the key, a `null` one written, a nullable result; markup and line separators in results and arguments |
+| `LoadedRanks`, `RankLine` | A loader's result holding a `Record<string, number>` whose fixture gives array-index keys out of order and a key twice, read by `v-for` in JavaScript's order; a result's optional and nullable numbers handed to a child's `best?: number`, `worst: number \| null` and `open: boolean \| null`; a `<Teleport>` and `useHead` in a component whose render waits for a child's loads, written once |
 | `Flattened` | `.flat()` of lists of lists of strings, integers and `Float`s (`-0`, `1e21`), to the default depth, `0`, `2` and `Infinity`, and of a list that holds no lists; `.flatMap()` to a field's list, an array literal with spread, a list mapped with the item's index, a string's `split("")`, `[]` for some items, and to values that are not lists; `Object.values()` of a record of lists, flattened and walked by `v-for`; in a `computed`, `.reduce()`, `.filter()` and `v-for`; empty lists |
 | `OptionalChains` | Optional chains that go on past `?.`: string methods and `.length` (`s?.trim().length`, `s?.toUpperCase()`, `s?.split(",").length`), list methods and indices (`tags?.[1]`, `tags?.at(-1)?.toUpperCase()`, `tags?.filter(…).length`, `tags?.map(…).join()`), fields of fields and of optional fields (`user?.profile?.site?.length`), numbers (`count?.toFixed(2)`), dates (`when?.getTime()`, `when?.toUTCString()`, `seen?.toJSON()`, `seen?.toUTCString().length`, valid, invalid and at the edges of the range), over optional and nullable values that are present, absent and empty; in `computed`, `v-if`, `??` and `v-for` |
 | `NumberIncludes` | `.includes()` across `number` and `Float`: a fraction in a list of integers, an integer in a list of fractions and in a list mapped to fractions, `-0` found as `0`, integers beyond 2⁵³ |
@@ -203,7 +204,7 @@ when it names a component that is not in `components/` with fixtures of its own.
 | Setup | `Setup`, `SetupValues`, `Lifecycle`, `Pending`, `EmptyBranch`, `Unread`, `UnreadVar` |
 | Statements | `Statements`, `UnreadSteps` |
 | Functions | `Formatters`, `RelativeTime`, `LocalFunctions` |
-| Loaders | `Loaded`, `LoadedComments` |
+| Loaders | `Loaded`, `LoadedComments`, `LoadedRanks` |
 | Provide and inject | `TabsPage`, `Tabs`, `Tab`, `ThemedButton`, `ThemeScope`, `Swatch`, `SwatchShelf`, `ThemedShelf`, `ThemedList`, `ThemedChoice` |
 | Text | `Text`, `MixedTernary`, `Exprs`, `Numbers`, `Precision`, `Meter`, `Parsing`, `NumberTests`, `Regressions`, `OptionalChains`, `StringOf`, `MathMore`, `UriParts`, `TypeofTests` |
 | Strings | `Strings`, `Exprs`, `Text`, `StringSearch`, `StringOf` |
@@ -409,6 +410,20 @@ What it generates, with random nesting:
     `|`, read with `$t` and `t` from `useI18n()` (named values, a list, a plural number, a `count`
     or `n`, a missing key) inside any string expression, and `locale`; each fixture's `$locale` is
     `en`, `nl`, `fr` (no messages, so every key falls back) or none;
+- loaders: a `fz-loaders.ts` beside the component with `defineLoader` declarations whose
+  parameters are strings, numbers, `Float`s and booleans, plain, optional (`p?: T`, at the end),
+  `T | undefined` and `T | null`, and whose results are of any type a prop may have (nullable
+  values, lists, objects of interfaces the file declares, dictionaries). The component awaits them
+  at the top of `<script setup>`, after its local functions and before its `computed`s, with
+  arguments read from props, literals (`-0`, `5e-324`, `1e21` and ±(2⁵³ − 1) among them), `null`,
+  `undefined`, arguments left out at the end, and earlier results (a field, `.length`), so that
+  one await depends on another; sometimes the same call twice, a result destructured into names
+  or aliases, or an await that binds nothing. The results are read in `computed`s and the template
+  as props are. A child `FzLd0`, given props from the component's props and results and rendered
+  once or twice side by side, awaits loaders of its own, and may render a `FzLd1` that awaits too,
+  so the render waits for results in rounds. A fixture's `$loads` holds a result for each call the
+  render makes and no other: the generator computes each key with `loadKey` from the fixture's
+  props and the results before it, and settles the keys again after each shrink;
 - prop values meant to break things: markup and quotes, `</script>`, combining marks, emoji, RTL
   and bidi controls, JavaScript-only whitespace, case mappings that change length, empty strings,
   numbers written as strings, integers at ±(2⁵³ − 1), fractions such as `0.1`, `1e-7`, `1e21`,
@@ -446,7 +461,9 @@ How a run works:
    `attachSsrRender`, `fixtureApp` and `fixtureOptions` as the conformance suite, so a real
    vue-router, Pinia and vue-i18n) renders every fixture with Vue.
 3. One `cargo test` of a throwaway crate, `target/fuzz/harness/`, which includes every component's
-   generated modules, renders every fixture through `render_json`. Its target directory,
+   generated modules, renders every fixture through `render_json` (a component that awaits
+   loaders through `ferrovue::load`, each call answered by the generated
+   `loaders::from_fixture` from `$loads`, as in the conformance suite). Its target directory,
    `target/fuzz-target/`, is shared between runs, so the runtime crate is built once.
 4. Each pair is compared. The summary counts components, fixtures, matches, mismatches, Rust
    errors (a panic, or a fixture the props do not read), components whose generated Rust does not
@@ -454,7 +471,9 @@ How a run works:
 5. Each failure is **shrunk**: nodes, `v-if` and `v-for` directives, attributes, class and style
    entries removed, sub-expressions replaced by smaller ones, prop values made shorter or left out,
    routes, link targets, messages, a locale, stores, getters and state fields removed, the
-   location set to `/`, for as long as the failure stays. The candidates of each round are checked
+   location set to `/`, awaits removed or bound to nothing, their arguments made literals or left
+   out, a loading child's nodes, props and awaits removed, loaders' results made smaller or
+   `null`, for as long as the failure stays. The candidates of each round are checked
    in one batch. The smallest case is saved in `fuzz/failures/<seed>-<case>/`: the component,
    `fixture.json`, Vue's `vue.html`, ferrovue's `ferrovue.html` (or the compile error), and
    `about.txt`; a case with routes, stores or locales is saved as a project, its components in

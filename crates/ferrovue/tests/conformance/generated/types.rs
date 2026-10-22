@@ -129,6 +129,46 @@ impl<'a> Article<'a> {
 }
 
 
+/// `Ranking` in `components/loaders.ts`.
+#[derive(Debug, Clone, serde::Serialize)]
+#[cfg_attr(test, derive(serde::Deserialize))]
+pub struct Ranking<'a> {
+    #[serde(rename = "scores")]
+    pub scores: ferrovue::Record<'a, i64>,
+    #[serde(rename = "best", default, skip_serializing_if = "Option::is_none")]
+    pub best: Option<i64>,
+    #[serde(rename = "worst")]
+    pub worst: Option<i64>,
+    #[serde(rename = "open")]
+    pub open: Option<bool>,
+}
+
+impl<'a> Ranking<'a> {
+    /// Ranking with its required fields, every optional one absent and every nullable one `null`.
+    pub fn new(scores: ferrovue::Record<'a, i64>) -> Self {
+        Ranking { scores, best: None, worst: None, open: None }
+    }
+
+    /// Set `best`, which is absent otherwise.
+    pub fn best(mut self, best: i64) -> Self {
+        self.best = Some(best);
+        self
+    }
+
+    /// Set `worst`, which is `null` otherwise.
+    pub fn worst(mut self, worst: i64) -> Self {
+        self.worst = Some(worst);
+        self
+    }
+
+    /// Set `open`, which is `null` otherwise.
+    pub fn open(mut self, open: bool) -> Self {
+        self.open = Some(open);
+        self
+    }
+}
+
+
 /// `Role` in `types/models.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]

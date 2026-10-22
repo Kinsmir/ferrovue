@@ -210,6 +210,27 @@ released together and share version numbers.
   release, and their entries in the error index, the README and CONTRIBUTING.md say it goes in a
   later minor release before 1.0 and only in a major release from 1.0, as RELEASING.md says. They
   said "the next major release".
+- Tests only: the differential fuzzer generates loaders. A case may have a `fz-loaders.ts` of
+  `defineLoader` declarations over string, number, `Float` and boolean parameters (plain,
+  optional, `| undefined` and `| null`) returning any type a prop may have, awaited at the top of
+  `<script setup>` with arguments read from props, literals, `null`, `undefined`, arguments left
+  out and earlier results, sometimes the same call twice, destructured or bound to nothing, and
+  read in `computed`s and the template. A child awaits loaders of its own and may render a child
+  that does too. Each fixture's `$loads` has a result for each call the render makes, keyed with
+  `loadKey`, and the shrinker shrinks the awaits, their arguments and the results.
+
+### Fixed
+
+- A child's prop typed `n?: number`, `n?: Float` or `n: number | null` (and `b: boolean | null`)
+  may be given a value of the same optional or nullable type, such as a loader result's optional
+  field: it was refused with FV0511. FV0511 names both types in words.
+- In the generated `render_json`, which renders a component that awaits loaders once per round of
+  `ferrovue::load`, each round collects its own teleports and head, so a `<Teleport>` or `useHead`
+  is written once; they were written once per round. The generated `loaders::from_fixture` reads
+  each result from the fixture's own JSON text, so a `Record` in a result keeps JavaScript's order
+  of keys; it went through `serde_json::Value`, which sorts them. The `ferrovue` crate enables
+  `serde_json`'s `raw_value` feature, which `from_fixture` uses. The conformance components
+  `LoadedRanks` and `RankLine` hold fixtures recorded from Vue, found by the fuzzer.
 
 ## [0.9.0] - 2026-10-20
 

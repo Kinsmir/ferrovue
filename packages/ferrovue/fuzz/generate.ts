@@ -1,5 +1,6 @@
 import type { Config } from "../src/compiler.ts";
 import { portableTime } from "../src/plugins/dates.ts";
+import { loadKey } from "../src/loads.ts";
 import { DATE_METHODS, HAND_STRINGS, HAND_TIMES, dateCases } from "../test/date-inputs.ts";
 
 export class Rng {
@@ -109,7 +110,8 @@ export type Node =
   | { k: "client"; kids: Node[]; fallback: Node[] | null }
   | { k: "teleport"; to: string; disabled: Expr | null; kids: Node[] }
   | { k: "link"; to: LinkTo; attrs: Attr[]; kids: Node[]; active: string | null; exact: string | null }
-  | { k: "read"; text: string };
+  | { k: "read"; text: string }
+  | { k: "load"; kid: string; args: { name: string; arg: LoadArg }[] };
 
 export type LinkTo =
   | { k: "lit"; path: string }
@@ -282,6 +284,44 @@ export interface Messages {
   locales: Record<string, Record<string, string>>;
 }
 
+export type ArgTy = "str" | "int" | "float" | "bool";
+
+export interface LoaderParam {
+  name: string;
+  ty: ArgTy;
+  mode: "plain" | "opt" | "undef" | "nul";
+}
+
+export interface LoaderDef {
+  name: string;
+  params: LoaderParam[];
+  out: Spec;
+}
+
+export type LoadArg = { k: "lit"; text: string; value: unknown } | { k: "ref"; path: string[]; len?: boolean };
+
+export type LoadBind = { k: "name"; name: string } | { k: "fields"; fields: { field: string; as: string | null }[] } | { k: "none" };
+
+export interface Await {
+  loader: string;
+  args: LoadArg[];
+  bind: LoadBind;
+}
+
+export interface LoadKid {
+  name: string;
+  props: { name: string; spec: Spec }[];
+  awaits: Await[];
+  template: Node[];
+}
+
+export interface Loads {
+  ifaces: Iface[];
+  loaders: LoaderDef[];
+  awaits: Await[];
+  kids: LoadKid[];
+}
+
 export interface Component {
   name: string;
   ifaces: Iface[];
@@ -301,6 +341,7 @@ export interface Component {
   router: AppRouter | null;
   stores: StoreDef[];
   i18n: Messages | null;
+  loads: Loads | null;
 }
 
 export interface Case {
@@ -406,6 +447,8 @@ function printNode(n: Node, indent: string, extra: string[] = []): string {
     }
     case "read":
       return `{{ ${n.text} }}`;
+    case "load":
+      return `<${n.kid}${n.args.map((a) => ` :${a.name}="${argText(a.arg)}"`).join("")} />`;
     case "link": {
       const attrs = [`${n.to.k === "lit" ? "to" : ":to"}="${printTo(n.to)}"`, ...(n.active ? [`active-class="${n.active}"`] : []), ...(n.exact ? [`exact-active-class="${n.exact}"`] : []), ...n.attrs.map(printAttr)];
       return `<RouterLink ${attrs.join(" ")}>${n.kids.map((k) => printNode(k, indent + "  ")).join("")}</RouterLink>`;
@@ -540,6 +583,94 @@ function bindingText(b: Binding): string {
   return [...(b.steps ?? []).flatMap((st) => (st.k === "const" ? [st.e] : [st.test, st.e])), b.e].map(printExpr).join("\n");
 }
 
+function argText(a: LoadArg): string {
+  return a.k === "lit" ? a.text : `${a.path.join(".")}${a.len ? ".length" : ""}`;
+}
+
+const boundNames = (a: Await): string[] => (a.bind.k === "name" ? [a.bind.name] : a.bind.k === "fields" ? a.bind.fields.map((f) => f.as ?? f.field) : []);
+
+function awaitLine(a: Await): string {
+  const call = `await ${a.loader}(${a.args.map(argText).join(", ")})`;
+  if (a.bind.k === "none") return `${call};`;
+  if (a.bind.k === "name") return `const ${a.bind.name} = ${call};`;
+  return `const { ${a.bind.fields.map((f) => (f.as === null ? f.field : `${f.field}: ${f.as}`)).join(", ")} } = ${call};`;
+}
+
+const PARAM_TS: Record<ArgTy, string> = { str: "string", int: "number", float: "Float", bool: "boolean" };
+
+function paramText(p: LoaderParam): string {
+  const t = PARAM_TS[p.ty];
+  if (p.mode === "opt") return `${p.name}?: ${t}`;
+  return `${p.name}: ${t}${p.mode === "undef" ? " | undefined" : p.mode === "nul" ? " | null" : ""}`;
+}
+
+const loadNodes = (template: Node[]): (Node & { k: "load" })[] => template.filter((n): n is Node & { k: "load" } => n.k === "load");
+
+function kidsUsed(c: Component): LoadKid[] {
+  const seen: LoadKid[] = [];
+  const walk = (template: Node[]): void => {
+    for (const n of loadNodes(template)) {
+      const kid = c.loads?.kids.find((k) => k.name === n.kid);
+      if (!kid || seen.includes(kid)) continue;
+      seen.push(kid);
+      walk(kid.template);
+    }
+  };
+  walk(c.template);
+  return seen;
+}
+
+function loadersUsed(c: Component): LoaderDef[] {
+  const names = new Set([...(c.loads?.awaits ?? []), ...kidsUsed(c).flatMap((k) => k.awaits)].map((a) => a.loader));
+  return (c.loads?.loaders ?? []).filter((l) => names.has(l.name));
+}
+
+const ifaceOf = (s: Spec): string | null => (s.k === "obj" ? s.iface : s.k === "list" || s.k === "nul" ? ifaceOf(s.of) : null);
+
+const ifaceLines = (i: Iface, exported: boolean): string[] => [
+  `${exported ? "export " : ""}interface ${i.name} {`,
+  ...i.fields.map((f) => `  ${f.name}${f.spec.k === "opt" ? "?" : ""}: ${tsType(f.spec)};`),
+  "}",
+];
+
+function loadersFile(c: Component): string {
+  const used = loadersUsed(c);
+  const ifaces = c.loads!.ifaces.filter((i) => used.some((l) => ifaceOf(l.out) === i.name));
+  const float = used.some((l) => l.params.some((p) => p.ty === "float") || usesFloat(l.out)) || ifaces.some((i) => i.fields.some((f) => usesFloat(f.spec)));
+  const lines = ['import { defineLoader } from "ferrovue/client";'];
+  if (float) lines.push('import type { Float } from "ferrovue/types";');
+  lines.push("");
+  for (const i of ifaces) lines.push(...ifaceLines(i, true), "");
+  lines.push("function missing(name: string): never {", "  throw new Error(`the fixture gives no result for ${name}`);", "}", "");
+  for (const l of used) {
+    lines.push(`export const ${l.name} = defineLoader(${JSON.stringify(l.name)}, async (${l.params.map(paramText).join(", ")}): Promise<${tsType(l.out)}> => missing(${JSON.stringify(l.name)}));`);
+  }
+  lines.push("");
+  return lines.join("\n");
+}
+
+const definePropsLine = (props: { name: string; spec: Spec }[], named: boolean): string => {
+  const define = props.length ? `defineProps<{ ${props.map((p) => `${p.name}${p.spec.k === "opt" ? "?" : ""}: ${tsType(p.spec)}`).join("; ")} }>();` : "defineProps<{}>();";
+  return named ? `const props = ${define}` : define;
+};
+
+function kidText(kid: LoadKid): string {
+  return [...kid.awaits.map(awaitLine), ...kid.template.map((n) => printNode(n, ""))].join("\n");
+}
+
+function printKid(kid: LoadKid): string {
+  const loaders = [...new Set(kid.awaits.map((a) => a.loader))].toSorted();
+  const kids = [...new Set(loadNodes(kid.template).map((n) => n.kid))].toSorted();
+  const lines = ['<script setup lang="ts">'];
+  if (loaders.length) lines.push(`import { ${loaders.join(", ")} } from "./fz-loaders";`);
+  for (const k of kids) lines.push(`import ${k} from "./${k}.vue";`);
+  if (kid.props.some((p) => usesFloat(p.spec))) lines.push('import type { Float } from "ferrovue/types";');
+  lines.push("", definePropsLine(kid.props, new RegExp(`${FREE}props\\.`).test(kidText(kid))), ...kid.awaits.map(awaitLine), "</script>", "", "<template>");
+  for (const n of kid.template) lines.push("  " + printNode(n, "  "));
+  lines.push("</template>", "");
+  return lines.join("\n");
+}
+
 const TS_TYPES: Partial<Record<Ty, string>> = { str: "string", int: "number", bool: "boolean" };
 
 function scriptLines(c: Component): string[] {
@@ -547,6 +678,7 @@ function scriptLines(c: Component): string[] {
   for (const f of c.fns) {
     lines.push(`function ${f.name}(${f.params.map((p) => `${p.name}: ${TS_TYPES[p.ty]!}`).join(", ")}): ${TS_TYPES[f.ret]!} {`, ...f.steps.map(stepLine), `  return ${printExpr(f.e)};`, "}");
   }
+  for (const a of c.loads?.awaits ?? []) lines.push(awaitLine(a));
   for (const b of c.bindings) {
     const e = printExpr(b.e);
     if (b.steps?.length) lines.push(`const ${b.name} = computed(() => {`, ...b.steps.map(stepLine), `  return ${e};`, "});");
@@ -726,6 +858,8 @@ export function helperFiles(c: Component): [string, string][] {
   if (c.router) files.push(["../routes.json", JSON.stringify(routesJson(c.router.routes), null, 2) + "\n"]);
   for (const st of c.stores) files.push([`../stores/${st.id}.ts`, storeFile(st)]);
   if (c.i18n) for (const [locale, messages] of Object.entries(c.i18n.locales)) files.push([`../locales/${locale}.json`, localeJson(messages)]);
+  if (loadersUsed(c).length) files.push(["fz-loaders.ts", loadersFile(c)]);
+  for (const kid of kidsUsed(c)) files.push([`${kid.name}.vue`, printKid(kid)]);
   return files;
 }
 
@@ -753,6 +887,9 @@ export function printComponent(c: Component): string {
   if (unhead.length) lines.push(`import { ${unhead.join(", ")} } from "@unhead/vue";`);
   if (tpl.includes("<ClientOnly>")) lines.push('import { ClientOnly } from "ferrovue/client";');
   for (const name of helpers) if (!asyncs.includes(name)) lines.push(`import ${name} from "./${name}.vue";`);
+  const loaders = [...new Set((c.loads?.awaits ?? []).map((a) => a.loader))].toSorted();
+  if (loaders.length) lines.push(`import { ${loaders.join(", ")} } from "./fz-loaders";`);
+  for (const kid of [...new Set(loadNodes(c.template).map((n) => n.kid))].toSorted()) lines.push(`import ${kid} from "./${kid}.vue";`);
   const local = (n: string): boolean => c.localEnums && (n === "Tone" || n === "Rank" || LOOKUPS.has(n));
   const consts = constsUsed(c);
   if (consts.some((n) => !local(n))) lines.push(`import { ${consts.filter((n) => !local(n)).toSorted().join(", ")} } from "./fz-consts";`);
@@ -1121,6 +1258,7 @@ class Gen {
   nodes = 0;
   arrows = 0;
   hollow = false;
+  plain = false;
   readonly r: Rng;
   readonly ifaces: Map<string, Iface>;
   constructor(r: Rng, ifaces: Map<string, Iface>) {
@@ -2203,9 +2341,9 @@ class Gen {
       [depth < 5 ? 4 : 0, () => this.element(depth, ctx)],
       [depth < 5 ? 2 : 0, () => this.ifNode(depth, ctx)],
       [depth < 5 ? 2 : 0, () => this.forNode(depth, ctx)],
-      [depth < 4 && ctx === "block" ? 3 : 0, () => this.child(depth)],
-      [depth < 4 && ctx === "block" ? 0.6 : 0, () => this.clientOnly(depth)],
-      [depth < 4 && ctx === "block" && !this.slotted ? 0.4 : 0, () => this.teleport(depth)],
+      [depth < 4 && ctx === "block" && !this.plain ? 3 : 0, () => this.child(depth)],
+      [depth < 4 && ctx === "block" && !this.plain ? 0.6 : 0, () => this.clientOnly(depth)],
+      [depth < 4 && ctx === "block" && !this.slotted && !this.plain ? 0.4 : 0, () => this.teleport(depth)],
       [depth < 5 && this.routes.length && !this.slotted ? 2 : 0, () => this.link(depth)],
       [this.reads.length ? 1 : 0, () => ({ k: "read", text: r.pick(this.reads) })],
     ])();
@@ -2303,7 +2441,7 @@ class Gen {
       [deep ? 0 : 3, () => this.forNode(depth, ctx)],
       [deep ? 0 : 3, () => this.ifNode(depth, ctx)],
       [deep ? 0 : 1, () => this.element(depth, ctx)],
-      [deep || ctx !== "block" ? 0 : 1, () => this.child(depth)],
+      [deep || ctx !== "block" || this.plain ? 0 : 1, () => this.child(depth)],
     ])();
   }
 
@@ -2773,6 +2911,278 @@ function bindRoute(g: Gen, router: AppRouter, template: boolean): void {
   g.reads = template ? ["route.name", "route.query.q", "$route.query.tab", ...names.flatMap((n) => [`route.params.${n}`, `$route.params.${n}`])] : [];
 }
 
+const specPrefix = (s: Spec): string =>
+  s.k === "opt" ? "o" + specPrefix(s.of) : s.k === "nul" ? "z" + specPrefix(s.of) : s.k === "list" ? "l" : s.k === "record" ? "d" : { str: "s", int: "n", count: "c", float: "f", bool: "b", obj: "r", enum: "t", html: "h", date: "m" }[s.k];
+
+interface Source {
+  path: string[];
+  ty: ArgTy;
+  absence: "undefined" | "null" | null;
+  len?: boolean;
+}
+
+const argTy = (s: Spec): ArgTy | null => (s.k === "str" ? "str" : s.k === "int" || s.k === "count" ? "int" : s.k === "float" ? "float" : s.k === "bool" ? "bool" : null);
+
+function sourcesOf(path: string[], spec: Spec, ifaces: Map<string, Iface>, prop: boolean): Source[] {
+  const ty = argTy(spec);
+  if (ty) return [{ path, ty, absence: null }];
+  if (spec.k === "opt" || spec.k === "nul") {
+    const of = argTy(spec.of);
+    if (!of) return [];
+    if (spec.k === "opt" && prop && of === "bool") return [{ path, ty: of, absence: null }];
+    return [{ path, ty: of, absence: spec.k === "opt" ? "undefined" : "null" }];
+  }
+  if (spec.k === "list") return [{ path, ty: "int", absence: null, len: true }];
+  if (spec.k === "obj") return ifaces.get(spec.iface)!.fields.flatMap((f) => sourcesOf([...path, f.name], f.spec, ifaces, false));
+  return [];
+}
+
+const ARG_STRS = ["", "a", "x y", "<i>", "é", "🦀", " pad ", "Σ", "ß", "-", "it's", "1e21", "\\"];
+const ARG_INTS = [0, 1, -1, 7, 42, 100, MAX, -MAX];
+const ARG_FLOATS = [0.5, -0, 0.1, 1.5, -2.5, 123.456, 1e-7, 1e21, 5e-324, 1.7976931348623157e308, 0.30000000000000004, 3];
+
+function argLit(r: Rng, ty: ArgTy): LoadArg {
+  if (ty === "str") {
+    const s = r.pick(ARG_STRS);
+    return { k: "lit", text: quoted(s), value: s };
+  }
+  if (ty === "bool") {
+    const b = r.chance(0.5);
+    return { k: "lit", text: String(b), value: b };
+  }
+  const x = r.pick(ty === "int" ? ARG_INTS : ARG_FLOATS);
+  return { k: "lit", text: numText(x), value: x };
+}
+
+interface ArgSlot {
+  ty: ArgTy;
+  nul: boolean;
+  undef: boolean;
+  undefLit: boolean;
+}
+
+function drawArg(r: Rng, slot: ArgSlot, sources: Source[]): LoadArg {
+  const fits = sources.filter(
+    (s) => (s.ty === slot.ty || (slot.ty === "float" && s.ty === "int" && s.absence === null)) && (s.absence === null || (s.absence === "null" ? slot.nul : slot.undef)),
+  );
+  return r.weighted<() => LoadArg>([
+    [fits.length ? 6 : 0, () => {
+      const s = r.pick(fits);
+      return { k: "ref", path: s.path, ...(s.len ? { len: true } : {}) };
+    }],
+    [3, () => argLit(r, slot.ty)],
+    [slot.nul ? 2 : 0, () => ({ k: "lit", text: "null", value: null })],
+    [slot.undefLit ? 1 : 0, () => ({ k: "lit", text: "undefined", value: undefined })],
+  ])();
+}
+
+function boundSpecs(a: Await, loaders: LoaderDef[], ifaces: Map<string, Iface>): { name: string; spec: Spec }[] {
+  const out = loaders.find((l) => l.name === a.loader)!.out;
+  if (a.bind.k === "name") return [{ name: a.bind.name, spec: out }];
+  if (a.bind.k === "none" || out.k !== "obj") return [];
+  const fields = ifaces.get(out.iface)!.fields;
+  return a.bind.fields.map((f) => ({ name: f.as ?? f.field, spec: fields.find((x) => x.name === f.field)!.spec }));
+}
+
+function randomAwaits(r: Rng, loaders: LoaderDef[], ifaces: Map<string, Iface>, given: Source[], count: number): { awaits: Await[]; sources: Source[] } {
+  const awaits: Await[] = [];
+  const results: Source[] = [];
+  const bare = new Set<string>();
+  let alias = 0;
+  for (let i = 0; i < count; i++) {
+    const again = awaits.length && r.chance(0.15) ? r.pick(awaits) : null;
+    const l = again ? loaders.find((x) => x.name === again.loader)! : r.pick(loaders);
+    let args: LoadArg[];
+    if (again) args = clone(again.args);
+    else {
+      const optional = l.params.filter((p) => p.mode === "opt").length;
+      const passed = l.params.slice(0, l.params.length - r.int(0, optional));
+      args = passed.map((p) => {
+        const loose = p.mode === "opt" || p.mode === "undef";
+        return drawArg(r, { ty: p.ty, nul: p.mode === "nul", undef: loose, undefLit: loose }, [...given, ...results]);
+      });
+    }
+    const fields = l.out.k === "obj" ? ifaces.get(l.out.iface)!.fields : [];
+    const bind = r.weighted<() => LoadBind>([
+      [6, () => ({ k: "name", name: `ld${i}` })],
+      [fields.length ? 3 : 0, () => {
+        const take = fields.filter(() => r.chance(0.6));
+        if (!take.length) take.push(r.pick(fields));
+        return {
+          k: "fields",
+          fields: take.map((f) => {
+            const plain = argTy(f.spec) !== null || ((f.spec.k === "opt" || f.spec.k === "nul") && argTy(f.spec.of) !== null);
+            if (plain && !bare.has(f.name) && r.chance(0.5)) {
+              bare.add(f.name);
+              return { field: f.name, as: null };
+            }
+            return { field: f.name, as: `dz${alias++}` };
+          }),
+        };
+      }],
+      [1, () => ({ k: "none" })],
+    ])();
+    const a: Await = { loader: l.name, args, bind };
+    awaits.push(a);
+    for (const b of boundSpecs(a, loaders, ifaces)) results.push(...sourcesOf([b.name], b.spec, ifaces, false));
+  }
+  return { awaits, sources: results };
+}
+
+function loadSpec(r: Rng, ifaces: Iface[]): Spec {
+  const prim = (): Spec => r.pick<Spec>([{ k: "str" }, { k: "int", wide: false }, { k: "float" }, { k: "bool" }]);
+  return r.weighted<() => Spec>([
+    [3, () => ({ k: "str" })],
+    [2, () => ({ k: "int", wide: r.chance(0.2) })],
+    [1, () => ({ k: "float" })],
+    [1, () => ({ k: "bool" })],
+    [3, () => ({ k: "nul", of: prim() })],
+    [2, () => ({ k: "list", of: r.pick<Spec>([{ k: "str" }, { k: "int", wide: false }]) })],
+    [ifaces.length ? 2 : 0, () => ({ k: "list", of: { k: "obj", iface: r.pick(ifaces).name } })],
+    [ifaces.length ? 4 : 0, () => ({ k: "obj", iface: r.pick(ifaces).name })],
+    [1, () => ({ k: "record", of: r.pick<Spec>([{ k: "str" }, { k: "int", wide: false }, { k: "bool" }]), dict: r.chance(0.3) })],
+  ])();
+}
+
+function randomLoaders(r: Rng, ifaceMap: Map<string, Iface>): { ifaces: Iface[]; loaders: LoaderDef[] } {
+  const ifaces: Iface[] = [];
+  for (let i = r.weighted([[1, 0], [2, 1], [2, 2]]); i > 0; i--) {
+    const n = ifaces.length;
+    const fields = Array.from({ length: r.int(1, 4) }, (_, j) => ({ name: `g${n}_${j}`, spec: randomSpec(r, [], 1) }));
+    ifaces.push({ name: `Got${n}`, fields });
+  }
+  for (const i of ifaces) ifaceMap.set(i.name, i);
+  const loaders: LoaderDef[] = [];
+  for (let i = r.int(1, 3); i > 0; i--) {
+    const params: LoaderParam[] = [];
+    const ty = (): ArgTy => r.pick<ArgTy>(["str", "str", "int", "float", "bool"]);
+    for (let n = r.weighted([[2, 0], [3, 1], [3, 2], [1, 3]]); n > 0; n--) {
+      params.push({ name: `p${params.length}`, ty: ty(), mode: r.weighted<LoaderParam["mode"]>([[5, "plain"], [2, "nul"], [1, "undef"]]) });
+    }
+    for (let n = r.weighted([[3, 0], [2, 1], [1, 2]]); n > 0; n--) params.push({ name: `p${params.length}`, ty: ty(), mode: "opt" });
+    loaders.push({ name: `fzLoad${loaders.length}`, params, out: loadSpec(r, ifaces) });
+  }
+  return { ifaces, loaders };
+}
+
+function loadNode(r: Rng, kid: LoadKid, sources: Source[]): Node {
+  const args: { name: string; arg: LoadArg }[] = [];
+  for (const p of kid.props) {
+    if (p.spec.k === "opt" && r.chance(0.3)) continue;
+    const of = p.spec.k === "opt" || p.spec.k === "nul" ? p.spec.of : p.spec;
+    const ty = argTy(of)!;
+    args.push({ name: p.name, arg: drawArg(r, { ty, nul: p.spec.k === "nul", undef: p.spec.k === "opt" && ty !== "bool", undefLit: false }, sources) });
+  }
+  return { k: "load", kid: kid.name, args };
+}
+
+function kidSpec(r: Rng): Spec {
+  const prim = (): Spec => r.pick<Spec>([{ k: "str" }, { k: "int", wide: false }, { k: "float" }, { k: "bool" }]);
+  return r.weighted<() => Spec>([
+    [3, () => ({ k: "str" })],
+    [2, () => ({ k: "int", wide: false })],
+    [1, () => ({ k: "float" })],
+    [1, () => ({ k: "bool" })],
+    [2, () => ({ k: "opt", of: prim() })],
+    [2, () => ({ k: "nul", of: prim() })],
+  ])();
+}
+
+function randomKid(g: Gen, loads: Loads, depth: number): LoadKid {
+  const r = g.r;
+  const props: { name: string; spec: Spec }[] = [];
+  for (let n = r.int(0, 3); n > 0; n--) {
+    const spec = kidSpec(r);
+    props.push({ name: `${specPrefix(spec)}${props.length}`, spec });
+  }
+  const own = props.flatMap((p) => sourcesOf(["props", p.name], p.spec, g.ifaces, true));
+  const { awaits, sources } = randomAwaits(r, loads.loaders, g.ifaces, own, r.weighted([[3, 1], [3, 2], [1, 3]]));
+  const kid: LoadKid = { name: `FzLd${loads.kids.length}`, props, awaits, template: [] };
+  loads.kids.push(kid);
+  const saved = { scope: g.scope, fns: g.fns, tKeys: g.tKeys, tNames: g.tNames, routes: g.routes, reads: g.reads, lazies: g.lazies, plain: g.plain };
+  g.scope = { vars: [], lists: [], records: [], htmls: [], dates: [] };
+  Object.assign(g, { fns: [], tKeys: [], tNames: [], routes: [], reads: [], lazies: [], plain: true });
+  try {
+    for (const p of props) g.bind(p.name, p.spec, true);
+    for (const a of awaits) for (const b of boundSpecs(a, loads.loaders, g.ifaces)) g.bind(b.name, b.spec);
+    for (let n = r.int(1, 2); n > 0; n--) kid.template.push(g.node(0, "block"));
+  } finally {
+    Object.assign(g, saved);
+  }
+  if (depth > 0 && r.chance(0.4)) {
+    const next = randomKid(g, loads, depth - 1);
+    const here = [...props.flatMap((p) => sourcesOf([p.name], p.spec, g.ifaces, true)), ...sources];
+    for (let n = r.weighted([[3, 1], [1, 2]]); n > 0; n--) kid.template.splice(r.int(0, kid.template.length), 0, loadNode(r, next, here));
+  }
+  return kid;
+}
+
+function evalArg(a: LoadArg, env: Record<string, unknown>): unknown {
+  if (a.k === "lit") return a.value;
+  let v: unknown = env;
+  for (const p of a.path) v = v === null || v === undefined ? undefined : (v as Record<string, unknown>)[p];
+  return a.len ? (v as unknown[] | undefined)?.length : v;
+}
+
+function propsEnv(props: { name: string; spec: Spec }[], values: Record<string, unknown>): Record<string, unknown> {
+  const own: Record<string, unknown> = {};
+  for (const p of props) own[p.name] = values[p.name] === undefined && p.spec.k === "opt" && p.spec.of.k === "bool" ? false : values[p.name];
+  return { ...own, props: own };
+}
+
+function walkLoads(c: Component, fixture: Record<string, unknown>, get: (key: string, spec: Spec) => unknown): void {
+  const loads = c.loads;
+  if (!loads) return;
+  const run = (awaits: Await[], env: Record<string, unknown>, template: Node[]): void => {
+    for (const a of awaits) {
+      const l = loads.loaders.find((x) => x.name === a.loader)!;
+      const value = get(loadKey(l.name, a.args.map((x) => evalArg(x, env))), l.out);
+      if (a.bind.k === "name") env[a.bind.name] = value;
+      else if (a.bind.k === "fields") for (const f of a.bind.fields) env[f.as ?? f.field] = (value as Record<string, unknown> | undefined)?.[f.field];
+    }
+    for (const n of loadNodes(template)) {
+      const kid = loads.kids.find((k) => k.name === n.kid)!;
+      const given: Record<string, unknown> = {};
+      for (const a of n.args) given[a.name] = evalArg(a.arg, env);
+      run(kid.awaits, propsEnv(kid.props, given), kid.template);
+    }
+  };
+  run(loads.awaits, propsEnv(c.props, fixture), c.template);
+}
+
+function keyHash(key: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < key.length; i++) h = Math.imul(h ^ key.charCodeAt(i), 0x01000193);
+  return h >>> 0;
+}
+
+const valueIfaces = (c: Component): Map<string, Iface> => new Map([...c.ifaces, FZ_ITEM, ...(c.loads?.ifaces ?? [])].map((i) => [i.name, i]));
+
+/** The fixture with `$loads` holding a result for each call the render makes, and no other: the
+ * results it has for those keys, and new ones from `fresh` for the rest. */
+export function withLoads(c: Component, fixture: Record<string, unknown>, fresh?: (spec: Spec) => unknown): Record<string, unknown> {
+  const { $loads, ...rest } = fixture;
+  if (!c.loads) return rest;
+  const old = ($loads ?? {}) as Record<string, unknown>;
+  const ifaces = valueIfaces(c);
+  const out: Record<string, unknown> = {};
+  walkLoads(c, rest, (key, spec) => {
+    if (!(key in out)) out[key] = key in old ? old[key] : fresh ? fresh(spec) : randomValue(new Rng(keyHash(key)), spec, ifaces, false);
+    return out[key];
+  });
+  return Object.keys(out).length ? { ...rest, $loads: out } : rest;
+}
+
+function loadSpecs(c: Component, fixture: Record<string, unknown>): Map<string, Spec> {
+  const specs = new Map<string, Spec>();
+  const loads = (fixture.$loads ?? {}) as Record<string, unknown>;
+  walkLoads(c, fixture, (key, spec) => {
+    specs.set(key, spec);
+    return loads[key];
+  });
+  return specs;
+}
+
 export function generateCase(seed: number, index: number, fixtures = 4): Case {
   const r = new Rng(seed, index);
   const name = `C${String(index).padStart(4, "0")}`;
@@ -2784,8 +3194,7 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
     ifaces.push({ name: `Row${ifaces.length}`, fields });
   }
   const props: { name: string; spec: Spec }[] = [];
-  const prefix = (s: Spec): string =>
-    s.k === "opt" ? "o" + prefix(s.of) : s.k === "nul" ? "z" + prefix(s.of) : s.k === "list" ? "l" : s.k === "record" ? "d" : { str: "s", int: "n", count: "c", float: "f", bool: "b", obj: "r", enum: "t", html: "h", date: "m" }[s.k];
+  const prefix = specPrefix;
   for (let i = r.int(1, 7); i > 0; i--) {
     const spec = randomSpec(r, ifaces, 0);
     props.push({ name: `${prefix(spec)}${props.length}`, spec });
@@ -2814,6 +3223,10 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
   const router = r.chance(0.3) ? randomRouter(r) : null;
   const stores = r.chance(0.3) ? randomStores(r, g) : [];
   const i18n = r.chance(0.3) ? randomMessages(r) : null;
+  const plan = r.chance(0.3) ? randomLoaders(r, g.ifaces) : null;
+  const root = plan ? randomAwaits(r, plan.loaders, g.ifaces, props.flatMap((p) => sourcesOf(["props", p.name], p.spec, g.ifaces, true)), r.weighted([[1, 0], [3, 1], [3, 2], [2, 3], [1, 4]])) : null;
+  const loads: Loads | null = plan && root ? { ...plan, awaits: root.awaits, kids: [] } : null;
+  const results = loads ? loads.awaits.flatMap((a) => boundSpecs(a, loads.loaders, g.ifaces)) : [];
   g.dateLits = r.chance(0.25) ? 1 : 0;
   const useT = r.chance(0.5);
   const scoped = r.chance(0.35);
@@ -2834,6 +3247,7 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
       g.tNames = ["t"];
     }
     for (let n = r.chance(0.35) ? r.int(1, 2) : 0; n > 0; n--) fns.push(localFn(g, fns.length));
+    for (const b of results) g.bind(b.name, b.spec);
     for (let n = r.weighted([[2, 0], [3, 1], [2, 2], [1, 3]]); n > 0; n--) {
       const kind = r.weighted<Binding["kind"]>([[3, "computed"], [2, "const"], [1, "ref"]]);
       const ty = r.pick<Ty>(["str", "str", "int", "float", "bool"]);
@@ -2865,6 +3279,7 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
 
   g.scope = fresh();
   for (const p of props) g.bind(propsVar && r.chance(0.4) ? `props.${p.name}` : p.name, p.spec, true);
+  for (const b of results) g.bind(b.name, b.spec);
   if (consts) bindConsts(g, consts, 0.35);
   if (consts) bindLookups(g, consts, enumKeys(props, ""), 0.5);
   for (const b of bindings) {
@@ -2882,6 +3297,11 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
   }
   const template: Node[] = [];
   for (let n = r.weighted([[6, 1], [1, 2], [1, 3]]); n > 0; n--) template.push(g.node(0, "block"));
+  if (loads && (!loads.awaits.length || r.chance(0.6))) {
+    const kid = randomKid(g, loads, 1);
+    const here = [...props.flatMap((p) => sourcesOf([p.name], p.spec, g.ifaces, true)), ...root!.sources];
+    for (let n = r.weighted([[3, 1], [1, 2]]); n > 0; n--) template.splice(r.int(0, template.length), 0, loadNode(r, kid, here));
+  }
 
   const helpers = Object.fromEntries(
     (Object.keys(HELPERS) as HelperName[]).map((h) => [h, { scoped: r.chance(0.5), slotted: r.chance(0.5) }]),
@@ -2906,9 +3326,10 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
     router,
     stores,
     i18n: i18n?.messages ?? null,
+    loads,
   });
   const fx: Record<string, unknown>[] = [];
-  for (let i = 0; i < fixtures; i++) fx.push(randomFixture(r, component, i === 0));
+  for (let i = 0; i < fixtures; i++) fx.push(withLoads(component, randomFixture(r, component, i === 0), (spec) => randomValue(r, spec, valueIfaces(component), i === 0)));
   return { component, fixtures: fx };
 }
 
@@ -3171,6 +3592,7 @@ export function componentShrinks(c: Component): Component[] {
     if (c.helpers[h].scoped) edit((x) => ((x.helpers[h].scoped = false), true));
     if (c.helpers[h].scoped && c.helpers[h].slotted && HELPERS[h].slot) edit((x) => ((x.helpers[h].slotted = false), true));
   }
+  if (c.loads) loadShrinks(c, edit);
   const slots = [...allSlots(c)];
   slots.forEach((s, si) => {
     let i = 0;
@@ -3185,6 +3607,71 @@ export function componentShrinks(c: Component): Component[] {
     }
   });
   return out;
+}
+
+const SIMPLE_LITS: Record<ArgTy, LoadArg> = {
+  str: { k: "lit", text: "'a'", value: "a" },
+  int: { k: "lit", text: "1", value: 1 },
+  float: { k: "lit", text: "0.5", value: 0.5 },
+  bool: { k: "lit", text: "true", value: true },
+};
+
+function simpler(p: LoaderParam): LoadArg {
+  if (p.mode === "nul") return { k: "lit", text: "null", value: null };
+  if (p.mode === "opt" || p.mode === "undef") return { k: "lit", text: "undefined", value: undefined };
+  return SIMPLE_LITS[p.ty];
+}
+
+function loadShrinks(c: Component, edit: (f: (copy: Component) => boolean) => void): void {
+  const loads = c.loads!;
+  const kidOf = (x: Component, name: string): LoadKid => x.loads!.kids.find((k) => k.name === name)!;
+  const awaitShrinks = (awaits: Await[], at: (x: Component) => Await[], text: (x: Component) => string): void => {
+    awaits.forEach((a, i) => {
+      const unread = (x: Component): boolean => !boundNames(a).some((n) => mentions(text(x), n));
+      edit((x) => (at(x).splice(i, 1), unread(x)));
+      if (a.bind.k !== "none") edit((x) => ((at(x)[i]!.bind = { k: "none" }), unread(x)));
+      const l = loads.loaders.find((y) => y.name === a.loader)!;
+      a.args.forEach((arg, j) => {
+        const lit = simpler(l.params[j]!);
+        if (argText(arg) !== argText(lit)) edit((x) => ((at(x)[i]!.args[j] = lit), true));
+      });
+      if (a.args.length && l.params[a.args.length - 1]!.mode === "opt") edit((x) => (at(x)[i]!.args.pop(), true));
+    });
+  };
+  awaitShrinks(loads.awaits, (x) => x.loads!.awaits, printComponent);
+  const nodeShrinks = (template: Node[], at: (x: Component) => Node[], remove: boolean): void => {
+    template.forEach((n, i) => {
+      if (remove && template.length > 1) edit((x) => (at(x).splice(i, 1), true));
+      if (n.k !== "load") return;
+      const kid = loads.kids.find((k) => k.name === n.kid)!;
+      n.args.forEach((a, j) => {
+        const spec = kid.props.find((p) => p.name === a.name)!.spec;
+        const node = (x: Component): Node & { k: "load" } => at(x)[i] as Node & { k: "load" };
+        if (spec.k === "opt") edit((x) => (node(x).args.splice(j, 1), true));
+        if (a.arg.k === "ref") {
+          const base = spec.k === "opt" || spec.k === "nul" ? spec.of : spec;
+          edit((x) => ((node(x).args[j]!.arg = spec.k === "nul" ? { k: "lit", text: "null", value: null } : SIMPLE_LITS[argTy(base)!]), true));
+        }
+      });
+    });
+  };
+  for (const kid of kidsUsed(c)) {
+    awaitShrinks(kid.awaits, (x) => kidOf(x, kid.name).awaits, (x) => kidText(kidOf(x, kid.name)));
+    nodeShrinks(kid.template, (x) => kidOf(x, kid.name).template, true);
+    kid.props.forEach((p, i) => {
+      edit((x) => {
+        const k = kidOf(x, kid.name);
+        k.props.splice(i, 1);
+        const walk = (template: Node[]): void => {
+          for (const n of loadNodes(template)) if (n.kid === kid.name) n.args = n.args.filter((a) => a.name !== p.name);
+        };
+        walk(x.template);
+        x.loads!.kids.forEach((y) => walk(y.template));
+        return !mentions(kidText(k), p.name);
+      });
+    });
+  }
+  nodeShrinks(c.template, (x) => x.template, false);
 }
 
 function* valueShrinks(v: unknown): Generator {
@@ -3272,8 +3759,17 @@ export function fixtureShrinks(c: Component, fixture: Record<string, unknown>): 
   if (fixture.$stores && typeof fixture.$stores === "object") {
     for (const s of valueShrinks(fixture.$stores)) out.push({ ...fixture, $stores: s });
   }
+  const loads = fixture.$loads as Record<string, unknown> | undefined;
+  if (loads) {
+    for (const [key, spec] of loadSpecs(c, fixture)) {
+      const v = loads[key];
+      if (spec.k === "nul" && v !== null) out.push({ ...fixture, $loads: { ...loads, [key]: null } });
+      const integer = spec.k === "int" || (spec.k === "nul" && spec.of.k === "int");
+      for (const s of valueShrinks(v)) if (!(integer && Object.is(s, -0))) out.push({ ...fixture, $loads: { ...loads, [key]: s } });
+    }
+  }
   const keep = (f: Record<string, unknown>): Record<string, unknown> =>
-    Object.fromEntries(Object.entries(f).filter(([k]) => k.startsWith("$") || c.props.some((p) => p.name === k)));
+    withLoads(c, Object.fromEntries(Object.entries(f).filter(([k]) => k.startsWith("$") || c.props.some((p) => p.name === k))));
   return out.map(keep);
 }
 

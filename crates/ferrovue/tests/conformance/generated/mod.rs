@@ -99,6 +99,7 @@ pub mod listeners;
 pub mod lists;
 pub mod loaded;
 pub mod loaded_comments;
+pub mod loaded_ranks;
 pub mod local_functions;
 pub mod lookups;
 pub mod mapped_choice;
@@ -136,6 +137,7 @@ pub mod prices;
 pub mod props_object;
 pub mod prose;
 pub mod quiet_leaf;
+pub mod rank_line;
 pub mod rated;
 pub mod records;
 pub mod regressions;
@@ -219,7 +221,7 @@ struct Fixture {
     #[serde(rename = "$locale", default)]
     locale: Option<String>,
     #[serde(rename = "$loads", default)]
-    loads: serde_json::Map<String, serde_json::Value>,
+    loads: std::collections::HashMap<String, Box<serde_json::value::RawValue>>,
 }
 
 #[cfg(test)]
@@ -725,6 +727,26 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
                 std::task::Poll::Pending => return Err(String::from("a fixture's loader is still running")),
             }
         }
+        "LoadedRanks" => {
+            let props: loaded_ranks::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let loading = ferrovue::load(
+                |fv_loads| {
+                    out.clear();
+                    let teleports = ferrovue::Teleports::new();
+                    let head = ferrovue::Head::without_defaults();
+                    loaded_ranks::render(&mut out, &props, &teleports, &head, fv_loads);
+                    teleports_into(&mut out, teleports);
+                    head_into(&mut out, &head);
+                },
+                loaders::from_fixture(&fixture.loads),
+            );
+            let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
+            match std::future::Future::poll(std::pin::pin!(loading), &mut cx) {
+                std::task::Poll::Ready(done) => done.map_err(|e| e.to_string())?,
+                std::task::Poll::Pending => return Err(String::from("a fixture's loader is still running")),
+            }
+        }
         "LocalFunctions" => {
             let props: local_functions::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             local_functions::render(&mut out, &props);
@@ -896,6 +918,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "QuietLeaf" => {
             let props: quiet_leaf::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             quiet_leaf::render(&mut out, &props);
+        }
+        "RankLine" => {
+            let props: rank_line::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            rank_line::render(&mut out, &props);
         }
         "Rated" => {
             let props: rated::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

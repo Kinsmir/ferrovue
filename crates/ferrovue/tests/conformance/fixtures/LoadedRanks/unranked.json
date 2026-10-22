@@ -1,0 +1,12 @@
+{
+  "board": "<go & \"stones\">",
+  "$loads": {
+    "[\"loadRanking\",\"<go & \\\"stones\\\">\"]": {
+      "scores": {},
+      "worst": null,
+      "open": null
+    },
+    "[\"loadComments\",\"<go & \\\"stones\\\">\",1,null]": [],
+    "[\"loadNote\",0]": "</p><b>none</b>"
+  }
+}

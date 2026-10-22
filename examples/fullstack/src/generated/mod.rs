@@ -41,7 +41,7 @@ struct Fixture {
     #[serde(rename = "$locale", default)]
     locale: Option<String>,
     #[serde(rename = "$loads", default)]
-    loads: serde_json::Map<String, serde_json::Value>,
+    loads: std::collections::HashMap<String, Box<serde_json::value::RawValue>>,
 }
 
 #[cfg(test)]
@@ -185,11 +185,12 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let s_reviews = |out: &mut String| out.push_str(fixture.slot("reviews").unwrap_or_default());
             let router = route_table::router();
             let route = router.at(&fixture.route);
-            let head = ferrovue::Head::without_defaults();
             let loading = ferrovue::load(
                 |fv_loads| {
                     out.clear();
+                    let head = ferrovue::Head::without_defaults();
                     picks::render(&mut out, &props, picks::Slots { default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)), reviews: fixture.slot("reviews").map(|_| ferrovue::Slot::new(&s_reviews)) }, &route, &head, fv_loads);
+                    head_into(&mut out, &head);
                 },
                 loaders::from_fixture(&fixture.loads),
             );
@@ -198,7 +199,6 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
                 std::task::Poll::Ready(done) => done.map_err(|e| e.to_string())?,
                 std::task::Poll::Pending => return Err(String::from("a fixture's loader is still running")),
             }
-            head_into(&mut out, &head);
         }
         other => return Err(format!("no component called {other}")),
     }

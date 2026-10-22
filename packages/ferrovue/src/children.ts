@@ -1,8 +1,8 @@
 import { isSSRSafeAttrName, propsToAttrMap } from "@vue/shared";
-import { type Component, type Field, type N, type Scope, type Ty, type Val, camelize, declares, fail, nothing, rustStr, sameTy, snake, takesAttrs } from "./model.ts";
+import { type Component, type Field, type N, type Scope, type Ty, type Val, absence, camelize, declares, fail, nothing, rustStr, sameTy, snake, takesAttrs } from "./model.ts";
 import { ctx } from "./context.ts";
 import { markHome } from "./typescript.ts";
-import { expr, fieldVal, holdsNothing } from "./expr.ts";
+import { describeTy, expr, fieldVal, holdsNothing } from "./expr.ts";
 import { asF64 } from "./numbers.ts";
 import { atom, bare } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
@@ -309,6 +309,11 @@ export function ownInto(comp: Component, v: Val, want: Ty, node: N): string {
   if (want.k === "opt" && sameTy(v.ty, want.of) && (v.ty.k === "int" || v.ty.k === "float" || v.ty.k === "bool")) return `Some(${bare(v.code)})`;
   if (want.k === "float" && v.ty.k === "int") return asF64(v);
   if (want.k === "opt" && want.of.k === "float" && v.ty.k === "int") return `Some(${asF64(v)})`;
+  if (want.k === "opt" && v.ty.k === "opt" && absence(v.ty) === absence(want)) {
+    const of = want.of.k;
+    if (v.ty.of.k === of && (of === "int" || of === "float" || (of === "bool" && absence(want) === "null"))) return v.code;
+    if (of === "float" && v.ty.of.k === "int") return `${atom(v.code)}.map(|n| n as f64)`;
+  }
   if (v.iter !== undefined && v.ty.k === "list" && want.k === "list" && sameTy(v.ty.of, want.of)) {
     return want.of.k === "struct" || want.of.k === "child" ? `${v.iter}.cloned().collect()` : `${v.iter}.collect()`;
   }
@@ -324,5 +329,5 @@ export function ownInto(comp: Component, v: Val, want: Ty, node: N): string {
     if (want.of.k === "str") return `${atom(v.code)}.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect()`;
     if (want.of.k === "int" || want.of.k === "float" || want.of.k === "bool") return `${atom(v.code)}.to_vec()`;
   }
-  return fail(comp, "FV0511", `a ${JSON.stringify(v.ty)} into a ${JSON.stringify(want)} prop`, node);
+  return fail(comp, "FV0511", `the prop is ${describeTy(want)}, and the value given is ${describeTy(v.ty)}`, node);
 }

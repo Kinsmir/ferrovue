@@ -28,7 +28,7 @@ struct Fixture {
     #[serde(rename = "$locale", default)]
     locale: Option<String>,
     #[serde(rename = "$loads", default)]
-    loads: serde_json::Map<String, serde_json::Value>,
+    loads: std::collections::HashMap<String, Box<serde_json::value::RawValue>>,
 }
 
 #[cfg(test)]

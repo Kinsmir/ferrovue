@@ -10,7 +10,7 @@ import { statements } from "./template.ts";
 import { cssVarsReads, inlineCssVars } from "./styles.ts";
 import { slotFieldBorrows, slotFieldTy, slotTypeName } from "./slots.ts";
 import { extraParams, fieldInit, takesSlots } from "./children.ts";
-import { paramsOf, renderParams, slotContextOf, slotFieldsOf } from "./plugin.ts";
+import { paramsOf, type RenderParam, renderParams, slotContextOf, slotFieldsOf } from "./plugin.ts";
 import { scopeFor } from "./script.ts";
 
 export function needsLifetime(ty: Ty, comp: Component, seen: Set<string> = new Set()): boolean {
@@ -410,13 +410,19 @@ export function modSource(comps: Component[], modules: string[]): string {
         for (const f of slotFieldsOf(c)) fields.push(`${f.rust}: ferrovue::Slot::new(&s_${snake(f.js).replace(/^r#/, "")})`);
         args += `, ${c.module}::Slots { ${fields.join(", ")} }`;
       }
+      const around = paramsOf(c).flatMap((p) => (p.test.around ? [p.test.around] : []));
+      const perRender = (p: RenderParam): boolean => around.length > 0 && p.test.after !== undefined;
       for (const p of paramsOf(c)) {
-        lines.push(...p.test.lines);
+        if (!perRender(p)) lines.push(...p.test.lines);
         args += `, ${p.test.arg}`;
       }
-      const around = paramsOf(c).flatMap((p) => (p.test.around ? [p.test.around] : []));
-      lines.push(...around.reduce((render, wrap) => wrap(render.join("\n")), [`${c.module}::render(&mut out, &props${args});`]));
-      for (const p of paramsOf(c)) lines.push(...(p.test.after ?? []));
+      const body = [
+        ...paramsOf(c).flatMap((p) => (perRender(p) ? p.test.lines : [])),
+        `${c.module}::render(&mut out, &props${args});`,
+        ...paramsOf(c).flatMap((p) => (perRender(p) ? (p.test.after ?? []) : [])),
+      ];
+      lines.push(...around.reduce((render, wrap) => wrap(render.join("\n")), body));
+      for (const p of paramsOf(c)) if (!perRender(p)) lines.push(...(p.test.after ?? []));
       return `        ${rustStr(c.name)} => {\n${lines.map((l) => "            " + l).join("\n")}\n        }`;
     })
     .join("\n");

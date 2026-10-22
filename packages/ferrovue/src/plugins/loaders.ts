@@ -224,8 +224,8 @@ function loadersSource(): string {
   const fixtures = all
     .map(
       (l) => `        <${l.struct} as fv::Load>::NAME => call.run(|c: ${l.struct}| {
-            let found = results.get(&fv::load_key(&c)).cloned().ok_or_else(|| format!("the fixture has no result for {}", fv::load_key(&c)));
-            async move { serde_json::from_value::<<${l.struct} as fv::Load>::Output>(found?).map_err(|e| e.to_string()) }
+            let found = results.get(&fv::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::load_key(&c))).and_then(|raw| serde_json::from_str::<<${l.struct} as fv::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
+            async move { found }
         }),`,
     )
     .join("\n");
@@ -261,7 +261,7 @@ pub async fn load<L: Loaders, T>(loaders: &L, render: impl FnMut(&fv::Loads<'_>)
 
 /// Each call answered from a fixture's \`$loads\`, by its key.
 #[cfg(test)]
-pub fn from_fixture(results: &serde_json::Map<String, serde_json::Value>) -> impl FnMut(fv::LoadCall) -> fv::LoadFuture<'static, String> + '_ {
+pub fn from_fixture(results: &std::collections::HashMap<String, Box<serde_json::value::RawValue>>) -> impl FnMut(fv::LoadCall) -> fv::LoadFuture<'static, String> + '_ {
     move |call| match call.name() {
 ${fixtures}
         name => unreachable!("no loader is called \`{name}\`"),
@@ -356,7 +356,7 @@ export const loaders: Plugin<LoadersRun, LoadersScope> = {
           "}",
         ],
       },
-      fixtureField: '    #[serde(rename = "$loads", default)]\n    loads: serde_json::Map<String, serde_json::Value>,',
+      fixtureField: '    #[serde(rename = "$loads", default)]\n    loads: std::collections::HashMap<String, Box<serde_json::value::RawValue>>,',
     },
   ],
   modules: () => (runOf(loaders).loaders.size ? [["loaders.rs", loadersSource()]] : []),
