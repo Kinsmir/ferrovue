@@ -17,6 +17,39 @@ released together and share version numbers.
   (FV0623), and so do a list and a string in `{{ }}`, which Vue writes as JSON. The conformance
   component `MixedTernary` holds fixtures recorded from Vue, and the fuzzer writes such `?:` in
   text, attributes and template literals.
+- Lookup tables: an object constant, imported from a `.ts` file or declared with `const` in
+  `<script setup>`, read by a key whose type is a closed set (a union of string or integer
+  literals, or an `enum` of them), as `PAD[size]` with `size: "sm" | "md" | "lg"`. The object may
+  be `as const`, typed `Record<Size, T>` or `Partial<Record<Size, T>>`, or untyped, with keys
+  computed from enum members (`[Tone.Warn]: …`); the key may be a prop, a `computed`, a `v-for`
+  item's field, or a `?:` or `??` of such values and literals. The read compiles to a `match` over
+  the members, in text, attributes, `:class` and `:style`, and reads on by field
+  (`THEME[tone].fg`). A member the object lacks reads `undefined`, as in JavaScript, narrowed with
+  `??`, `?.` and `v-if` (`v-if="ICONS[kind]"`, then `ICONS[kind].label`). A key typed `string` or
+  `number` stays refused (FV0222), now with a message that names the prototype fields such a key
+  could reach and suggests a union type; a key that may be absent (FV0223), a field read without
+  `?.` of a member that may be `undefined` (FV0224), members whose values differ in type (FV0225)
+  and a missing member named like a field every object has, as `toString` (FV0226) are refused.
+  `v-if` now also narrows a value read by a computed key, `list[i]` and `PAD[size]` alike. The
+  conformance component `Lookups` holds fixtures recorded from Vue, and the fuzzer writes lookup
+  tables keyed by its enum.
+- Imports through aliases. A component may import constants and types from a `.ts` file through an
+  alias the project declares: the `compilerOptions.paths` and `baseUrl` of the tsconfig.json
+  nearest it, after its `extends` (Nuxt's generated `.nuxt/tsconfig.json` included) and through
+  the projects it `references` (create-vue's `tsconfig.app.json`), and, with the Vite plugin, the
+  build's `resolve.alias`. `import { LABEL } from "@/lib/format"` used to be refused with a
+  misleading FV0601 ("not available when rendering on the server"), where the same import by a
+  relative path compiled. `--watch` and the Vite plugin regenerate on a change to those tsconfig
+  files. See the crate's
+  [`props`](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#imports-through-aliases)
+  guide.
+- FV0110: a name the server reads that is imported from a module no relative path or alias leads
+  to a `.ts` file of the project (a package, a missing file, an alias the project does not
+  declare). The message names the specifier and where it was looked for; FV0601 or FV0315 refused
+  such a name without saying the import could not be resolved.
+- `generate` and `write` of `ferrovue/compiler` take a last, optional argument, `{ aliases }`: the
+  aliases tried before tsconfig's `paths`, as Vite's `resolve.alias` lists them (the types
+  `ResolveOptions` and `Alias`), which the Vite plugin passes.
 
 - The guide pages [`porting`](https://docs.rs/ferrovue/latest/ferrovue/guide/porting/index.html)
   and [`support`](https://docs.rs/ferrovue/latest/ferrovue/guide/support/index.html). `porting`
@@ -97,9 +130,10 @@ released together and share version numbers.
 - The `errors_and_limits` guide says where a `<script>` element in a template is allowed: Vue's
   server keeps it, its client compiler drops it, so a component that writes the document with its
   `<script type="module">` renders on the server only and never hydrates.
-
 - `?:` between two objects read from props hands out a reference to the one chosen, where it
   moved it out of the props and did not build; a computed list chosen by `?:` is collected once.
+- An object constant written with `__proto__:` is refused (FV0206): the key sets the object's
+  prototype, whose fields JavaScript reads as the object's own.
 - Tests only: the CLI's three `--watch` tests share one helper that repeats each change until the
   watcher reports it, since macOS can miss a change made just after a watch starts.
 - The README's note on upgrading moves from its introduction to the Versions section, without

@@ -1,14 +1,15 @@
 import { parse as parseJs } from "@babel/parser";
-import { readFileSync, statSync } from "node:fs";
-import { basename, dirname, join, resolve } from "node:path";
+import { readFileSync } from "node:fs";
+import { basename } from "node:path";
 import { relativePath } from "./paths.ts";
-import { type Absence, type Component, type Field, type N, type Struct, type Ty, absence, blankComponent, BOOL, fail, FLOAT, GenError, INT, joinAbsence, nodeName, opt, RUST_PRELUDE, rustStr, sameTy, snake, STR, tagAst, withAbsence } from "./model.ts";
+import { type Absence, type Component, type Field, type N, type Struct, type Ty, absence, blankComponent, BOOL, fail, FLOAT, GenError, INT, joinAbsence, joinTy, literalTy, nodeName, opt, RUST_PRELUDE, rustStr, sameTy, snake, STR, tagAst, withAbsence } from "./model.ts";
 import { CONFIG_FILE, ctx, INLINE_HTML, TYPES_MODULE } from "./context.ts";
 import { childOf } from "./expr.ts";
 import { claim } from "./plugin.ts";
 import { declareConsts, enumType } from "./constants.ts";
 import { parseTs } from "./files.ts";
 import { declareFunctions } from "./functions.ts";
+import { refuseUnresolved } from "./resolve.ts";
 
 export function typesImports(comp: Component, body: N[]): void {
   for (const s of body) {
@@ -56,8 +57,9 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
       if (t.operator === "readonly") return tyOfTs(comp, t.typeAnnotation, structs, seen, dates);
       break;
     case "TSLiteralType":
-      if (t.literal.type === "StringLiteral" || t.literal.type === "TemplateLiteral") return STR;
-      if (t.literal.type === "NumericLiteral") return Number.isInteger(t.literal.value) ? INT : FLOAT;
+      if (t.literal.type === "StringLiteral") return literalTy("str", [t.literal.value]);
+      if (t.literal.type === "TemplateLiteral") return t.literal.expressions.length ? STR : literalTy("str", [t.literal.quasis[0].value.cooked]);
+      if (t.literal.type === "NumericLiteral") return Number.isSafeInteger(t.literal.value) ? literalTy("int", [t.literal.value]) : Number.isInteger(t.literal.value) ? INT : FLOAT;
       if (t.literal.type === "BooleanLiteral") return BOOL;
       break;
     case "TSUnionType": {
@@ -76,7 +78,7 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
       if (none === "either") return fail(comp, "FV0311", NULL_OR_UNDEFINED, t);
       const first = tys[0];
       if (!first || tys.some((x) => !sameTy(x, first))) return fail(comp, "FV0312", "a union of different types has no Rust type", t);
-      return withAbsence(first, none);
+      return withAbsence(tys.reduce(joinTy), none);
     }
     case "TSTypeReference": {
       const name: string | undefined = t.typeName.type === "Identifier" ? t.typeName.name : undefined;
@@ -117,6 +119,7 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
         if (seen.has(name)) fail(comp, "FV0314", `type \`${name}\` refers to itself through an alias`, t);
         return tyOfTs(comp, alias, structs, new Set(seen).add(name), dates);
       }
+      refuseUnresolved(comp, name, t);
       return fail(comp, "FV0315", `unsupported prop type \`${name}\`: declare it as an interface in the component, or import it from a \`.ts\` file`, t);
     }
   }
@@ -155,18 +158,6 @@ export function refusePrelude(comp: Component, d: N): void {
   if (RUST_PRELUDE.has(d.name)) {
     fail(comp, "FV0318", `an interface called \`${d.name}\` would hide Rust's own \`${d.name}\` in the generated code; rename it`, d.node);
   }
-}
-
-export function resolveImport(fromFile: string, spec: string): string | null {
-  if (!spec.startsWith(".")) return null;
-  const base = resolve(ctx.rootDir, dirname(fromFile), spec);
-  for (const candidate of [base, `${base}.ts`, join(base, "index.ts"), base.replace(/\.js$/, ".ts")]) {
-    try {
-      if (statSync(candidate).isFile() && candidate.endsWith(".ts")) return candidate;
-    } catch {
-    }
-  }
-  return null;
 }
 
 export function readTypeFile(file: string): void {

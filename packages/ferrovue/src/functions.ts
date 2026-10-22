@@ -4,7 +4,8 @@ import { constOfDecl } from "./constants.ts";
 import { ctx } from "./context.ts";
 import { expr, typedBy } from "./expr.ts";
 import { bodyExpr, bound, destructured } from "./blocks.ts";
-import { readTypeFile, resolveImport } from "./typescript.ts";
+import { readTypeFile } from "./typescript.ts";
+import { resolveImport } from "./resolve.ts";
 
 const FUNCTION_INITS = new Set(["ArrowFunctionExpression", "FunctionExpression"]);
 

@@ -4,8 +4,8 @@ import { pagesFolder } from "./file-routes.ts";
 
 /** What a run reads, as absolute paths: what `ferrovue --watch` and the Vite plugin regenerate on. */
 export interface Inputs {
-  /** The configuration file, the routes file, and every `.ts` file the last run read types or
-   * constants from. */
+  /** The configuration file, the routes file, every `.ts` file the last run read types or
+   * constants from, and the tsconfig files it resolved imports by. */
   files: Set<string>;
   /** The directories whose files of one kind are read: components, stores, locale messages, and
    * the pages, nested folders included. */
@@ -28,7 +28,7 @@ export function inputsOf(root: string, configFile: string, config: Config | null
   if (pages !== null) inputs.dirs.push({ dir: at(pages), ext: ".vue", deep: true });
   const routes = config.router?.routes ?? config.routes;
   if (typeof routes === "string") inputs.files.add(at(routes));
-  if (ctx.rootDir === root) for (const file of ctx.typeRead) inputs.files.add(file);
+  if (ctx.rootDir === root) for (const file of [...ctx.typeRead, ...ctx.tsconfigs]) inputs.files.add(file);
   return inputs;
 }
 

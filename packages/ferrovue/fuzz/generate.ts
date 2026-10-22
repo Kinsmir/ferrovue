@@ -217,6 +217,9 @@ export interface Consts {
   rows: { title: string; qty: number; memo: string | null }[];
   tone: [string, string][];
   rank: number;
+  toneText: string[];
+  toneNote: (string | null)[];
+  toneInfo: { label: string; n: number }[];
 }
 
 export type Step = { k: "const"; name: string; e: Expr } | { k: "if"; test: Expr; e: Expr };
@@ -456,7 +459,9 @@ function helpersUsed(template: Node[]): HelperName[] {
   return [...used].toSorted();
 }
 
-const CONST_NAMES = ["LABELS", "LABEL", "LIMIT", "RATIO", "SHOWN", "WORDS", "NUMS", "ROWS", "Tone", "Rank"] as const;
+const CONST_NAMES = ["LABELS", "LABEL", "LIMIT", "RATIO", "SHOWN", "WORDS", "NUMS", "ROWS", "Tone", "Rank", "TONE_TEXT", "TONE_NOTE", "TONE_INFO"] as const;
+
+const LOOKUPS = new Set(["TONE_TEXT", "TONE_NOTE", "TONE_INFO"]);
 
 const numText = (x: number): string => (Object.is(x, -0) ? "-0" : String(x));
 
@@ -464,6 +469,18 @@ function enumLines(k: Consts, exported: boolean): string[] {
   const e = exported ? "export " : "";
   const literal = (v: string): string => (exported ? JSON.stringify(v) : JSON.stringify(v).replaceAll("</", "<\\/"));
   return [`${e}enum Tone {`, ...k.tone.map(([m, v]) => `  ${m} = ${literal(v)},`), "}", "", `${e}enum Rank {`, "  Low,", `  Mid = ${k.rank},`, "  High,", "}"];
+}
+
+function lookupLines(k: Consts, exported: boolean): string[] {
+  const e = exported ? "export " : "";
+  const literal = (v: string): string => (exported ? JSON.stringify(v) : JSON.stringify(v).replaceAll("</", "<\\/"));
+  const entries = <T>(values: (T | null)[], show: (v: T) => string): string =>
+    k.tone.flatMap(([m], i) => (values[i] === null ? [] : [`[Tone.${m}]: ${show(values[i]!)}`])).join(", ");
+  return [
+    `${e}const TONE_TEXT = { ${entries(k.toneText, literal)} };`,
+    `${e}const TONE_NOTE: Partial<Record<Tone, string>> = { ${entries(k.toneNote, literal)} };`,
+    `${e}const TONE_INFO = { ${entries(k.toneInfo, (v) => `{ label: ${literal(v.label)}, n: ${numText(v.n)} }`)} } as const;`,
+  ];
 }
 
 function constsFile(k: Consts): string {
@@ -487,6 +504,8 @@ function constsFile(k: Consts): string {
     "];",
     "",
     ...enumLines(k, true),
+    "",
+    ...lookupLines(k, true),
     "",
   ].join("\n");
 }
@@ -547,7 +566,7 @@ function constsUsed(c: Component): string[] {
   if (!c.consts) return [];
   const text = `${templateText(c)}\n${scriptLines(c).join("\n")}`;
   const used: string[] = CONST_NAMES.filter((n) => mentions(text, n));
-  if (c.props.some((p) => usesEnum(p.spec)) && !used.includes("Tone")) used.push("Tone");
+  if ((c.props.some((p) => usesEnum(p.spec)) || used.some((n) => LOOKUPS.has(n))) && !used.includes("Tone")) used.push("Tone");
   return used;
 }
 
@@ -734,7 +753,7 @@ export function printComponent(c: Component): string {
   if (unhead.length) lines.push(`import { ${unhead.join(", ")} } from "@unhead/vue";`);
   if (tpl.includes("<ClientOnly>")) lines.push('import { ClientOnly } from "ferrovue/client";');
   for (const name of helpers) if (!asyncs.includes(name)) lines.push(`import ${name} from "./${name}.vue";`);
-  const local = (n: string): boolean => c.localEnums && (n === "Tone" || n === "Rank");
+  const local = (n: string): boolean => c.localEnums && (n === "Tone" || n === "Rank" || LOOKUPS.has(n));
   const consts = constsUsed(c);
   if (consts.some((n) => !local(n))) lines.push(`import { ${consts.filter((n) => !local(n)).toSorted().join(", ")} } from "./fz-consts";`);
   const keys = [...new Set(c.provides.filter((p) => p.key !== "str").map((p) => (p.key === "num" ? "FzNum" : "FzLive")))].toSorted();
@@ -747,6 +766,7 @@ export function printComponent(c: Component): string {
   for (const name of asyncs) lines.push(`const ${name} = defineAsyncComponent(() => import("./${name}.vue"));`);
   if (asyncs.length) lines.push("");
   if (c.consts && consts.some(local)) lines.push(...enumLines(c.consts, false), "");
+  if (c.consts && consts.some((n) => LOOKUPS.has(n) && local(n))) lines.push(...lookupLines(c.consts, false), "");
   for (const i of c.ifaces) {
     lines.push(`interface ${i.name} {`);
     for (const f of i.fields) lines.push(`  ${f.name}${f.spec.k === "opt" ? "?" : ""}: ${tsType(f.spec)};`);
@@ -976,6 +996,9 @@ function randomConsts(r: Rng): Consts {
     rows: Array.from({ length: r.int(1, 3) }, () => ({ title: text(), qty: r.int(-5, 50), memo: r.chance(0.4) ? null : text() })),
     tone: [["Loud", tone[0]!], ["Quiet", tone[1]!], ["Plain", tone[2]!]],
     rank: r.int(1, 9),
+    toneText: tone.map(text),
+    toneNote: tone.map(() => (r.chance(0.4) ? null : text())),
+    toneInfo: tone.map(() => ({ label: text(), n: r.int(-50, 50) })),
   };
 }
 
@@ -2430,6 +2453,10 @@ const ROW_IFACE: Iface = {
   ],
 };
 
+function enumKeys(props: { name: string; spec: Spec }[], prefix: string): { name: string; opt: boolean }[] {
+  return props.filter((p) => usesEnum(p.spec)).map((p) => ({ name: `${prefix}${p.name}`, opt: p.spec.k === "opt" }));
+}
+
 function bindConsts(g: Gen, k: Consts, p: number): void {
   const r = g.r;
   const vars: Var[] = [
@@ -2448,6 +2475,21 @@ function bindConsts(g: Gen, k: Consts, p: number): void {
   if (r.chance(p)) g.bind("WORDS", { k: "list", of: { k: "str" } });
   if (r.chance(p)) g.bind("NUMS", { k: "list", of: { k: "int", wide: false } });
   if (r.chance(p)) g.bind("ROWS", { k: "list", of: { k: "obj", iface: ROW_IFACE.name } });
+}
+
+function bindLookups(g: Gen, k: Consts, keys: { name: string; opt: boolean }[], p: number): void {
+  const r = g.r;
+  const bound = Math.max(...k.toneInfo.map((i) => Math.abs(i.n))) + 1;
+  for (const key of keys) {
+    const at = key.opt ? `${key.name} ?? Tone.${r.pick(k.tone)[0]}` : key.name;
+    const vars: Var[] = [
+      { name: `TONE_TEXT[${at}]`, ty: "str", opt: false, bound: 0 },
+      { name: `TONE_INFO[${at}].label`, ty: "str", opt: false, bound: 0 },
+      { name: `TONE_INFO[${at}].n`, ty: "int", opt: false, bound },
+      ...(key.opt ? [] : [{ name: `TONE_NOTE[${at}]`, ty: "str" as const, opt: !k.toneNote.every((v) => v !== null), bound: 0 }]),
+    ];
+    for (const v of vars) if (r.chance(p)) g.scope.vars.push(v);
+  }
 }
 
 function literalOf(r: Rng, ty: Ty): Expr {
@@ -2751,6 +2793,7 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
     g.scope = fresh();
     for (const p of props) g.bind(`props.${p.name}`, p.spec, true);
     if (consts) bindConsts(g, consts, 0.5);
+    if (consts) bindLookups(g, consts, enumKeys(props, "props."), 0.5);
     bindStores(g, stores, false);
     if (router) bindRoute(g, router, false);
     if (i18n && useT) {
@@ -2790,6 +2833,7 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
   g.scope = fresh();
   for (const p of props) g.bind(propsVar && r.chance(0.4) ? `props.${p.name}` : p.name, p.spec, true);
   if (consts) bindConsts(g, consts, 0.35);
+  if (consts) bindLookups(g, consts, enumKeys(props, ""), 0.5);
   for (const b of bindings) {
     if (b.e.ty === "date") g.scope.dates.push({ name: b.name, key: b.name, opt: false, ...(b.e.valid ? { valid: true } : {}) });
     else if (b.lazy !== undefined) g.lazies.push({ dep: b.lazy, v: bindingVar(b) });

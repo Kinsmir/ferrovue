@@ -97,6 +97,7 @@ pub mod listened;
 pub mod listeners;
 pub mod lists;
 pub mod local_functions;
+pub mod lookups;
 pub mod mapped_choice;
 pub mod markup;
 pub mod math_more;
@@ -684,6 +685,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "LocalFunctions" => {
             let props: local_functions::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             local_functions::render(&mut out, &props);
+        }
+        "Lookups" => {
+            let props: lookups::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            lookups::render(&mut out, &props);
         }
         "MappedChoice" => {
             let props: mapped_choice::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

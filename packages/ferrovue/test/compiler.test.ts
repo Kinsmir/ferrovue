@@ -946,7 +946,7 @@ const props = defineProps<{ body: TrustedHtml }>();
 </script>
 <template><div v-html="body"></div></template>`;
       expect(() => generate(island(source), { ...CONFIG, trustedHtml: "crate::sanitize::SafeHtml" })).toThrow(
-        /unsupported prop type `TrustedHtml`/,
+        /`TrustedHtml` is imported from `\.\/somewhere-else`, which the compiler cannot resolve to a `\.ts` file of the project/,
       );
     });
 
@@ -2342,6 +2342,14 @@ defineProps<{ cats: Cat[] }>();
 
   const refused: [string, string, RegExp][] = [
     [
+      "a value imported from a module that resolves to no `.ts` file of the project",
+      `<script setup lang="ts">
+import { LABEL } from "@/lib/format";
+</script>
+<template><p>{{ LABEL }}</p></template>`,
+      /X\.vue:4:\d+: `LABEL` is imported from `@\/lib\/format`, which the compiler cannot resolve to a `\.ts` file of the project: it is a package, or an alias declared neither/,
+    ],
+    [
       "a listener of a name chosen at run time given to a child with a prop named like a listener",
       `<script setup lang="ts">
 import W from "./W.vue";
@@ -2393,7 +2401,73 @@ enum Tone { Calm = "calm" }
 defineProps<{ k: string }>();
 </script>
 <template><i>{{ Tone[k] }}</i></template>`,
-      /`Tone` read by a key chosen at run time/,
+      /`Tone` read by a key that is a `string`, which may name a field every object has, as `toString` or `constructor`: type the key as a union of string literals/,
+    ],
+    [
+      "a constant object read by a key that is a string",
+      `<script setup lang="ts">
+defineProps<{ k: string }>();
+const PAD = { sm: "p-1", md: "p-2" };
+</script>
+<template><i>{{ PAD[k] }}</i></template>`,
+      /`PAD` read by a key that is a `string`, which may name a field every object has, as `toString` or `constructor`: type the key as a union of string literals/,
+    ],
+    [
+      "a constant object read by a key that may be absent",
+      `<script setup lang="ts">
+defineProps<{ k?: "sm" | "md" }>();
+const PAD = { sm: "p-1", md: "p-2" };
+</script>
+<template><i>{{ PAD[k] }}</i></template>`,
+      /`PAD` read by a key that may be absent, where JavaScript reads the field `undefined`: narrow the key with `v-if` first, or give it a default/,
+    ],
+    [
+      "a field of a constant object read by a key it may not have",
+      `<script setup lang="ts">
+defineProps<{ k: "sm" | "lg" }>();
+const PAD = { sm: "p-1", md: "p-2" };
+const T = { sm: { label: "S" } };
+</script>
+<template><i>{{ T[k].label }}</i></template>`,
+      /`T\[k\]` may be `undefined`, as it is for the key `lg`, and reading `\.label` of it fails: read it with `\?\.label`/,
+    ],
+    [
+      "a constant object whose values differ in type for the keys of its key",
+      `<script setup lang="ts">
+defineProps<{ k: "a" | "b" }>();
+const PAD = { sm: "p-1", md: "p-2" };
+const M = { a: "x", b: 1 };
+</script>
+<template><i>{{ M[k] }}</i></template>`,
+      /`M\[k\]` is a string for some keys and a number for others/,
+    ],
+    [
+      "a constant object without a key that names a field of every object",
+      `<script setup lang="ts">
+defineProps<{ k: "sm" | "toString" }>();
+const PAD = { sm: "p-1", md: "p-2" };
+</script>
+<template><i>{{ PAD[k] ?? 'x' }}</i></template>`,
+      /`PAD` has no field `toString` for the key `toString`, where JavaScript reads `Object\.prototype\.toString`/,
+    ],
+    [
+      "a constant object read by a key that is a union of literals and a string",
+      `<script setup lang="ts">
+defineProps<{ k: "sm" | "md"; s: string; on: boolean }>();
+const PAD = { sm: "p-1", md: "p-2" };
+</script>
+<template><i>{{ PAD[on ? k : s] }}</i></template>`,
+      /`PAD` read by a key that is a `string`/,
+    ],
+    [
+      "a constant object literal that sets its prototype",
+      `<script setup lang="ts">
+defineProps<{ k: "sm" }>();
+const PAD = { sm: "p-1", md: "p-2" };
+const P = { __proto__: { sm: "a" } };
+</script>
+<template><i>{{ P[k] }}</i></template>`,
+      /`__proto__:` in an object literal sets its prototype/,
     ],
     [
       "an enum member that is not a literal",
@@ -4432,6 +4506,7 @@ defineProps<{ onSale?: boolean }>();
   };
 
   const codes: Record<string, Code> = {
+    "a value imported from a module that resolves to no `.ts` file of the project": "FV0110",
     "a type parameter without a constraint": "FV0302",
     "a listener of a name chosen at run time given to a child with a prop named like a listener": "FV0514",
     "listeners from an object given to a child with a prop named like a listener": "FV0514",
@@ -4443,6 +4518,13 @@ defineProps<{ onSale?: boolean }>();
     "a ternary whose branches differ in type, bound to a boolean attribute": "FV0623",
     "a ternary whose branches differ in type, bound as a class": "FV0623",
     "a ternary between a list and a string in text, which Vue writes as JSON": "FV0623",
+    "a constant object read by a key that is a string": "FV0222",
+    "a constant object read by a key that may be absent": "FV0223",
+    "a field of a constant object read by a key it may not have": "FV0224",
+    "a constant object whose values differ in type for the keys of its key": "FV0225",
+    "a constant object without a key that names a field of every object": "FV0226",
+    "a constant object read by a key that is a union of literals and a string": "FV0222",
+    "a constant object literal that sets its prototype": "FV0206",
     "a value read from `$attrs`, which has no type": "FV0415",
     "an attribute name Vue's server renderer skips as unsafe": "FV0404",
     "an attribute name chosen at run time": "FV0408",
@@ -4648,6 +4730,122 @@ defineProps<{ onSale?: boolean }>();
   }
 });
 
+describe("imports through aliases", () => {
+  const component = (from: string) => `<script setup lang="ts">
+import { LABEL } from "${from}";
+import type { Row } from "${from}";
+defineProps<{ row: Row }>();
+</script>
+<template><p>{{ LABEL }} {{ row.name }}</p></template>`;
+  const lib = 'export const LABEL = "Label";\nexport interface Row { name: string }\n';
+  const project = (files: Record<string, string>): string => {
+    const made = mkdtempSync(join(tmpdir(), "ferrovue-"));
+    roots.push(made);
+    for (const [file, text] of Object.entries(files)) {
+      mkdirSync(join(made, file, ".."), { recursive: true });
+      writeFileSync(join(made, file), text);
+    }
+    return made;
+  };
+  const SRC = { components: "src/components", out: "out" };
+  /** Whether the component read both the constant and the type through the import. */
+  const resolves = (root: string, options: Parameters<typeof generate>[3] = {}): boolean => {
+    const out = generate(root, SRC, new Map(), options);
+    return out.get("x.rs")!.includes('out.push_str("<p>Label ");') && out.get("types.rs")!.includes("pub struct Row");
+  };
+
+  it("resolves the `paths` of the tsconfig.json nearest the component, written with comments and trailing commas", () => {
+    const tsconfig = `{
+  // as create-vue writes it
+  "compilerOptions": {
+    "paths": { "@/*": ["./src/*",], /* the root */ "~/*": ["./*"] },
+  },
+}
+`;
+    expect(resolves(project({ "tsconfig.json": tsconfig, "src/lib/format.ts": lib, "src/components/X.vue": component("@/lib/format") }))).toBe(true);
+    expect(resolves(project({ "tsconfig.json": tsconfig, "src/lib/format/index.ts": lib, "src/components/X.vue": component("~/src/lib/format") }))).toBe(true);
+  });
+
+  it("resolves `paths` against `baseUrl`, and a bare path against `baseUrl` alone", () => {
+    const tsconfig = JSON.stringify({ compilerOptions: { baseUrl: "src", paths: { "#lib/*": ["lib/*"] } } });
+    expect(resolves(project({ "tsconfig.json": tsconfig, "src/lib/format.ts": lib, "src/components/X.vue": component("#lib/format") }))).toBe(true);
+    expect(resolves(project({ "tsconfig.json": tsconfig, "src/lib/format.ts": lib, "src/components/X.vue": component("lib/format") }))).toBe(true);
+  });
+
+  it("takes the pattern with the longest prefix, and an exact one first", () => {
+    const tsconfig = JSON.stringify({ compilerOptions: { paths: { "@/*": ["./wrong/*"], "@/lib/*": ["./src/lib/*"], "@/format": ["./src/lib/format.ts"] } } });
+    expect(resolves(project({ "tsconfig.json": tsconfig, "src/lib/format.ts": lib, "src/components/X.vue": component("@/lib/format") }))).toBe(true);
+    expect(resolves(project({ "tsconfig.json": tsconfig, "src/lib/format.ts": lib, "src/components/X.vue": component("@/format") }))).toBe(true);
+  });
+
+  it("follows `extends`, relative to the file that declares `paths`, as Nuxt's generated tsconfig.json is", () => {
+    expect(resolves(
+      project({
+        "tsconfig.json": JSON.stringify({ extends: "./.nuxt/tsconfig.json" }),
+        ".nuxt/tsconfig.json": JSON.stringify({ compilerOptions: { paths: { "~/*": ["../*"], "@/*": ["../*"] } } }),
+        "lib/format.ts": lib,
+        "src/components/X.vue": component("@/lib/format"),
+      }),
+    )).toBe(true);
+  });
+
+  it("follows the projects a solution-style tsconfig.json references, as create-vue's is", () => {
+    expect(resolves(
+      project({
+        "tsconfig.json": JSON.stringify({ files: [], references: [{ path: "./tsconfig.node.json" }, { path: "./tsconfig.app.json" }] }),
+        "tsconfig.node.json": JSON.stringify({ compilerOptions: { types: ["node"] } }),
+        "tsconfig.app.json": JSON.stringify({ extends: ["./tsconfig.base.json"], include: ["src/**/*"] }),
+        "tsconfig.base.json": JSON.stringify({ compilerOptions: { paths: { "@/*": ["./src/*"] } } }),
+        "src/lib/format.ts": lib,
+        "src/components/X.vue": component("@/lib/format"),
+      }),
+    )).toBe(true);
+  });
+
+  it("tries the aliases it is given first, as Vite's `resolve.alias` lists them", () => {
+    const root = project({ "tsconfig.json": JSON.stringify({ compilerOptions: { paths: { "@/*": ["./wrong/*"] } } }), "src/lib/format.ts": lib, "src/components/X.vue": component("@/lib/format") });
+    expect(resolves(root, { aliases: [{ find: "@", replacement: join(root, "src") }] })).toBe(true);
+    expect(resolves(root, { aliases: [{ find: /^@\/(.*)$/, replacement: join(root, "src", "$1") }] })).toBe(true);
+    expect(resolves(root, { aliases: [{ find: "@", replacement: "../" }] })).toBe(true);
+  });
+
+  it("refuses a name imported from a module it cannot resolve, naming the specifier and where it looked", () => {
+    const refused = (files: Record<string, string>, from: string, options: Parameters<typeof generate>[3] = {}): string => {
+      try {
+        generate(project({ ...files, "src/components/X.vue": component(from) }), SRC, new Map(), options);
+      } catch (e) {
+        if (!(e instanceof GenError)) throw e;
+        return `${e.code}: ${e.message.split("\n")[0]!}`;
+      }
+      throw new Error("compiled without an error");
+    };
+    const paths = { "tsconfig.json": JSON.stringify({ compilerOptions: { paths: { "@/*": ["./src/*"] } } }) };
+    expect(refused(paths, "@/lib/missing")).toBe(
+      "FV0110: src/components/X.vue:4:20: `Row` is imported from `@/lib/missing`, which the compiler cannot resolve to a `.ts` file of the project: `@/*` in tsconfig.json's `paths` maps it to src/lib/missing, where there is no `.ts` file",
+    );
+    expect(refused(paths, "date-fns")).toMatch(
+      /^FV0110: .*`Row` is imported from `date-fns`, which .*: it is a package, or an alias declared neither in the `compilerOptions.paths` of tsconfig.json nor in Vite's `resolve.alias` \(read only by the Vite plugin\)$/,
+    );
+    expect(refused({}, "@/lib/format")).toMatch(/^FV0110: .*it is a package, or an alias declared neither in a tsconfig.json's `compilerOptions.paths` \(there is none\) nor in Vite's `resolve.alias` \(read only by the Vite plugin\)$/);
+    expect(refused({ "tsconfig.json": "{ not json" }, "@/lib/format")).toMatch(/^FV0110: .*the `compilerOptions.paths` of tsconfig.json \(tsconfig.json is not valid JSON: .*\) nor/);
+    expect(refused({}, "./nope")).toMatch(/^FV0110: .*`Row` is imported from `\.\/nope`, which .*: there is no `\.ts` file at src\/components\/nope$/);
+    expect(refused({}, "~/lib/format", { aliases: [{ find: "~", replacement: "some-package" }] })).toMatch(/^FV0110: .*: Vite's alias `~` maps it to a package$/);
+  });
+
+  it("refuses a value imported from a package where the server reads it, and leaves one the client alone uses", () => {
+    const root = project({
+      "src/components/X.vue": `<script setup lang="ts">
+import { format } from "date-fns";
+import { useQuery } from "@tanstack/vue-query";
+</script>
+<template><p @click="useQuery">{{ format(1) }}</p></template>`,
+    });
+    expect(() => generate(root, SRC)).toThrow(/^src\/components\/X\.vue:5:\d+: `format` is imported from `date-fns`, which the compiler cannot resolve/);
+    writeFileSync(join(root, "src", "components", "X.vue"), readFileSync(join(root, "src", "components", "X.vue"), "utf8").replace("{{ format(1) }}", "x"));
+    expect(generate(root, SRC).get("x.rs")).toContain('out.push_str("<p>x</p>");');
+  });
+});
+
 describe("a `?:` whose branches differ in type, where it is shown as text", () => {
   const render = (props: string, template: string): string => {
     const out = compile(island(`<script setup lang="ts">\nimport type { Float } from "ferrovue/types";\ndefineProps<{ ${props} }>();\n</script>\n<template>${template}</template>`)).get("x.rs")!;
@@ -4760,6 +4958,64 @@ function pad(t: string, width = 3, fill?: string): string {
 <template><i>{{ pad(word.toUpperCase()) }}</i></template>`)).get("x.rs")!;
     expect(out).toMatch(/let (fv_c\d+) = props\.word\.to_uppercase\(\);.*fv::js_pad_start\(&\1, 3\.0f64, "\."\), \1\)/);
     expect(out.match(/to_uppercase/g)).toHaveLength(1);
+  });
+});
+
+describe("constant lookups", () => {
+  const render = (script: string, template: string, files: Record<string, string> = {}): string => {
+    const project = island(`<script setup lang="ts">\n${script}\n</script>\n<template>${template}</template>`);
+    for (const [name, text] of Object.entries(files)) writeFileSync(join(project, "components", name), text);
+    const out = compile(project).get("x.rs")!;
+    return out.slice(out.indexOf("pub fn render"), out.indexOf("/// The component's markup"));
+  };
+
+  it("reads a constant object by a prop typed as a union of string literals with a `match`", () => {
+    const out = render(
+      'type Size = "sm" | "md" | "lg";\ndefineProps<{ size: Size }>();\nconst PAD = { sm: "p-1", md: "p-2", lg: "p-4" } as const;',
+      '<i :class="PAD[size]">{{ PAD[size] }}</i>',
+    );
+    expect(out).toContain('fv::class_into(out, false, &[match &*props.size { "sm" => "p-1", "md" => "p-2", _ => "p-4" }]);');
+    expect(out).toContain('fv::escape_into(out, match &*props.size { "sm" => "p-1", "md" => "p-2", _ => "p-4" });');
+  });
+
+  it("reads a constant a `.ts` file exports, keyed by its enum's members, by a prop of the enum and a `v-for` item's field", () => {
+    const out = render(
+      'import { THEME, Tone } from "./theme";\ninterface Badge { tone: Tone }\ndefineProps<{ tone: Tone; badges: Badge[] }>();',
+      '<i :style="{ color: THEME[tone].fg }">{{ THEME[Tone.Warn].fg }}</i><b v-for="b in badges">{{ THEME[b.tone].weight }}</b>',
+      { "theme.ts": 'export enum Tone { Info = "info", Warn = "warn" }\nexport const THEME: Record<Tone, { fg: string; weight: number }> = { [Tone.Info]: { fg: "navy", weight: 400 }, [Tone.Warn]: { fg: "red", weight: 700.5 } };\n' },
+    );
+    expect(out).toContain('fv::escape_into(out, match &*props.tone { "info" => "navy", _ => "red" });');
+    expect(out).toContain("red</i>");
+    expect(out).toContain('fv::push_number(out, match &*b.tone { "info" => 400.0f64, _ => 700.5f64 });');
+  });
+
+  it("reads by integer literal keys, and keeps the literals of a `?:` and a `computed`", () => {
+    const out = render(
+      'import { computed } from "vue";\nconst props = defineProps<{ level: 1 | 2; on: boolean }>();\nconst NAMES = { 1: "one", 2: "two", x: "ex" };\nconst PAD = { a: "p-1", b: "p-2" };\nconst pick = computed(() => (props.on ? "a" : "b"));',
+      "<i>{{ NAMES[level] }} {{ PAD[on ? 'b' : 'a'] }} {{ PAD[pick] }}</i>",
+    );
+    expect(out).toContain('fv::escape_into(out, match props.level { 1 => "one", _ => "two" });');
+    expect(out).toContain('fv::escape_into(out, match if props.on { "b" } else { "a" } { "b" => "p-2", _ => "p-1" });');
+    expect(out).toContain('fv::escape_into(out, match s_pick { "a" => "p-1", _ => "p-2" });');
+  });
+
+  it("reads `undefined` for the keys an object lacks, narrowed with `??`, `?.` and `v-if`", () => {
+    const out = render(
+      'defineProps<{ kind: "a" | "b" | "c" }>();\nconst T = { a: "A", b: "B" };\nconst I = { a: { label: "x" } };',
+      '<i>{{ T[kind] ?? "-" }} {{ I[kind]?.label }}</i><b v-if="I[kind]">{{ I[kind].label }}</b><s v-if="T[kind]">{{ T[kind] }}</s>',
+    );
+    expect(out).toContain('fv::escape_into(out, (match &*props.kind { "a" => Some("A"), "b" => Some("B"), _ => None }).unwrap_or("-"));');
+    expect(out).toContain('if let Some(v) = match &*props.kind { "a" => Some("x"), _ => None } {');
+    expect(out).toContain('if matches!(&*props.kind, "a") {\n        out.push_str("<b>x</b>");');
+    expect(out).toMatch(/if let Some\((n\d+)\) = \(match &\*props\.kind \{ "a" => Some\("A"\), "b" => Some\("B"\), _ => None \}\)\.filter\(\|v\| !v\.is_empty\(\)\) \{\n {8}out\.push_str\("<s>"\);\n {8}fv::escape_into\(out, \1\);/);
+  });
+
+  it("forgets the literals of a list item or a `??` that another value may be", () => {
+    expect(() => render('defineProps<{ k: "sm"; s: string }>();\nconst PAD = { sm: "p-1" };', '<i v-for="x in [k, s]">{{ PAD[x] }}</i>')).toThrow(expect.objectContaining({ code: "FV0222" }));
+    expect(() => render('defineProps<{ k?: "sm"; s: string }>();\nconst PAD = { sm: "p-1" };', "<i>{{ PAD[k ?? s] }}</i>")).toThrow(expect.objectContaining({ code: "FV0222" }));
+    expect(() => render('defineProps<{ ks?: "sm"[]; ss: string[] }>();\nconst PAD = { sm: "p-1" };', '<i v-for="x in (ks ?? ss)">{{ PAD[x] }}</i>')).toThrow(expect.objectContaining({ code: "FV0222" }));
+    expect(() => render('defineProps<{ ns: number[] }>();\nconst START = 0;\nconst N: Record<number, string> = { 0: "a", 1: "b" };', "<i>{{ N[ns.reduce((a, n) => a + n, START)] }}</i>")).toThrow(expect.objectContaining({ code: "FV0222" }));
+    expect(render('defineProps<{ ks?: "sm"[] }>();\nconst PAD = { sm: "p-1" };', '<i v-for="x in (ks ?? [])">{{ PAD[x] }}</i>')).toContain('out.push_str("<i>p-1</i>");');
   });
 });
 
