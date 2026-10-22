@@ -222,9 +222,10 @@ export interface Consts {
   toneText: string[];
   toneNote: (string | null)[];
   toneInfo: { label: string; n: number }[];
+  fold: boolean;
 }
 
-export type Step = { k: "const"; name: string; e: Expr } | { k: "if"; test: Expr; e: Expr };
+export type Step = { k: "const"; name: string; e: Expr } | { k: "if"; test: Expr; e: Expr } | { k: "arrow"; fn: LocalFn };
 
 export interface LocalFn {
   name: string;
@@ -527,10 +528,17 @@ function lookupLines(k: Consts, exported: boolean): string[] {
 }
 
 function constsFile(k: Consts): string {
+  const cut = Math.floor([...k.label].length / 2);
+  const [head, tail] = [[...k.label].slice(0, cut).join(""), [...k.label].slice(cut).join("")];
+  const folded = [
+    "const STEP = 3;",
+    `const HEAD = ${JSON.stringify(head)};`,
+    `export const LABEL = HEAD + ${JSON.stringify(tail)};`,
+    `export const LIMIT = ${numText(k.limit - 6)} + 2 * STEP;`,
+    `export const RATIO = ${numText(k.ratio)} * 1;`,
+  ];
   return [
-    `export const LABEL = ${JSON.stringify(k.label)};`,
-    `export const LIMIT = ${numText(k.limit)};`,
-    `export const RATIO = ${numText(k.ratio)};`,
+    ...(k.fold ? folded : [`export const LABEL = ${JSON.stringify(k.label)};`, `export const LIMIT = ${numText(k.limit)};`, `export const RATIO = ${numText(k.ratio)};`]),
     `export const SHOWN = ${k.shown};`,
     `export const WORDS = [${k.words.map((w) => JSON.stringify(w)).join(", ")}];`,
     `export const NUMS = [${k.nums.map(numText).join(", ")}];`,
@@ -576,11 +584,12 @@ function printHead(call: HeadCall): string {
 }
 
 function stepLine(st: Step): string {
+  if (st.k === "arrow") return `  const ${st.fn.name} = (${st.fn.params.map((p) => `${p.name}: ${TS_TYPES[p.ty]!}`).join(", ")}): ${TS_TYPES[st.fn.ret]!} => ${printExpr(st.fn.e)};`;
   return st.k === "const" ? `  const ${st.name} = ${printExpr(st.e)};` : `  if (${printExpr(st.test)}) return ${printExpr(st.e)};`;
 }
 
 function bindingText(b: Binding): string {
-  return [...(b.steps ?? []).flatMap((st) => (st.k === "const" ? [st.e] : [st.test, st.e])), b.e].map(printExpr).join("\n");
+  return [...(b.steps ?? []).flatMap((st) => (st.k === "const" ? [st.e] : st.k === "arrow" ? [st.fn.e] : [st.test, st.e])), b.e].map(printExpr).join("\n");
 }
 
 function argText(a: LoadArg): string {
@@ -1136,6 +1145,7 @@ function randomConsts(r: Rng): Consts {
     toneText: tone.map(text),
     toneNote: tone.map(() => (r.chance(0.4) ? null : text())),
     toneInfo: tone.map(() => ({ label: text(), n: r.int(-50, 50) })),
+    fold: r.chance(0.5),
   };
 }
 
@@ -1785,6 +1795,12 @@ class Gen {
       [2, () => str([this.str(d - 1), this.num(d - 1)], ([a, b]) => `${a} + ${b}`)],
       [1, () => str([this.num(d - 1), this.str(d - 1)], ([a, b]) => `${a} + ${b}`)],
       [3, () => this.template(d)],
+      [1, () => {
+        const sep = r.pick(["", ",", " "]);
+        const shape = r.int(0, 2);
+        return node("str", [this.num(d - 1), numLit(r.int(-2, 12), "int")], ([a, i]) =>
+          shape === 0 ? `String(${a}).split('').join('${sep}')` : shape === 1 ? `((String(${a})[${i}] ?? '?') + String(${a}).length)` : `String(${a}).split('').reduce((acc, ch, i) => (i > 0 && i % 3 === 0 ? acc + '${sep}' + ch : acc + ch), '')`, 0, true);
+      }],
       [2, () => { const t = this.test(d - 1); const [a, b] = [this.str(d - 1), this.str(d - 1)]; return str([t, a, b], ([c, x, y]) => `${c} ? ${x} : ${y}`, [a, b]); }],
       [1, () => str([this.str(d - 1), this.str(d - 1)], ([a, b]) => `${a} || ${b}`)],
       [opts.length ? 2 : 0, () => str([this.varRef(r.pick(opts)), this.str(d - 1)], ([a, b]) => `${a} ?? ${b}`)],
@@ -2107,8 +2123,22 @@ class Gen {
       [strLists.length ? 1 : 0, () => atom("bool", `${r.pick(strLists).name}.includes('${r.pick(STR_LITS)}')`)],
       [this.dateWeight(2), () => this.dateOrder(d)],
       [3, () => this.numberTest(d)],
+      [this.scope.vars.some((v) => v.opt && !/[([]/.test(v.name)) ? 2 : 0, () => this.andChain(d)],
     ];
     return r.weighted(options)();
+  }
+
+  andChain(d: number): Expr {
+    const r = this.r;
+    const v = r.pick(this.scope.vars.filter((x) => x.opt && !/[([]/.test(x.name)));
+    const negated = r.chance(0.35);
+    const test = negated ? r.pick(["== null", `=== ${v.nul ? "null" : "undefined"}`]) : r.pick(["!= null", `!== ${v.nul ? "null" : "undefined"}`]);
+    const rest = this.withScope(() => {
+      this.scope.vars = this.scope.vars.map((x) => (x === v ? { ...x, opt: false } : x));
+      return [this.bool(d - 1), this.bool(d - 1)];
+    });
+    const op = negated ? "||" : "&&";
+    return node("bool", [this.varRef(v), ...rest], ([x, a, b]) => `${x} ${test} ${op} (${a}) ${op} (${b})`);
   }
 
   typeofTest(d: number): Expr {
@@ -2643,6 +2673,12 @@ function bindConsts(g: Gen, k: Consts, p: number): void {
     { name: `Rank[${k.rank}]`, ty: "str", opt: false, bound: 0 },
   ];
   for (const v of vars) if (r.chance(p)) g.scope.vars.push(v);
+  const keys = g.scope.vars.filter((v) => v.ty === "str" && !v.opt && v.name.startsWith("props."));
+  if (keys.length && r.chance(p)) {
+    const key = r.pick(keys).name;
+    g.scope.vars.push({ name: `Object.hasOwn(LABELS, ${key})`, ty: "bool", opt: false, bound: 0 });
+    g.scope.vars.push({ name: `(Object.hasOwn(LABELS, ${key}) ? LABELS[${key}] : '-')`, ty: "str", opt: false, bound: 0 });
+  }
   if (r.chance(p)) g.bind("WORDS", { k: "list", of: { k: "str" } });
   if (r.chance(p)) g.bind("NUMS", { k: "list", of: { k: "int", wide: false } });
   if (r.chance(p)) g.bind("ROWS", { k: "list", of: { k: "obj", iface: ROW_IFACE.name } });
@@ -2658,6 +2694,7 @@ function bindLookups(g: Gen, k: Consts, keys: { name: string; opt: boolean }[], 
       { name: `TONE_INFO[${at}].label`, ty: "str", opt: false, bound: 0 },
       { name: `TONE_INFO[${at}].n`, ty: "int", opt: false, bound },
       ...(key.opt ? [] : [{ name: `TONE_NOTE[${at}]`, ty: "str" as const, opt: !k.toneNote.every((v) => v !== null), bound: 0 }]),
+      ...(key.opt && k.tone.every(([, v]) => v !== "") ? [{ name: `((${key.name} && TONE_TEXT[${key.name}]) ?? '-')`, ty: "str" as const, opt: false, bound: 0 }] : []),
     ];
     for (const v of vars) if (r.chance(p)) g.scope.vars.push(v);
   }
@@ -2685,6 +2722,17 @@ function bodySteps(g: Gen, ty: Ty, at: number): Step[] {
       const e = scriptExpr(g, g.r.pick<Ty>(["str", "int", "float", "bool"]), g.r.int(1, 2));
       steps.push({ k: "const", name, e });
       g.scope.vars.push(bindingVar({ name, kind: "const", e }));
+    } else if (g.r.chance(0.3)) {
+      const at2 = `${at}_${steps.length}`;
+      const ret = g.r.pick<Ty>(["str", "int", "bool"]);
+      const params = [{ name: `b${at2}`, ty: g.r.pick<Ty>(["str", "int", "bool"]) }];
+      const vars: Var[] = params.map((p) => ({ name: p.name, ty: p.ty, opt: false, bound: p.ty === "int" ? BOUND_SMALL : 0 }));
+      g.scope.vars.push(...vars);
+      const e = scriptExpr(g, ret, g.r.int(1, 2));
+      g.scope.vars = g.scope.vars.filter((v) => !vars.includes(v));
+      const fn: LocalFn = { name: `in${at2}`, params, ret, steps: [], e };
+      g.fns.push(fn);
+      steps.push({ k: "arrow", fn });
     } else steps.push({ k: "if", test: g.bool(g.r.int(1, 2)), e: scriptExpr(g, ty, g.r.int(1, 2)) });
   }
   return steps;
@@ -2697,11 +2745,17 @@ function localFn(g: Gen, k: number): LocalFn {
   g.scope.vars.push(...vars);
   const steps = g.r.chance(0.6) ? bodySteps(g, ret, 100 + k) : [];
   const e = scriptExpr(g, ret, g.r.int(1, 2));
+  dropArrows(g, steps);
   const local = new Set([...vars.map((v) => v.name), ...steps.flatMap((st) => (st.k === "const" ? [st.name] : []))]);
   g.scope.vars = g.scope.vars.filter((v) => !local.has(v.name));
   const f = { name: `fn${k}`, params, ret, steps, e: joined(e, steps) };
   g.fns.push(f);
   return f;
+}
+
+function dropArrows(g: Gen, steps: Step[]): void {
+  const inner = new Set(steps.flatMap((st) => (st.k === "arrow" ? [st.fn] : [])));
+  g.fns = g.fns.filter((f) => !inner.has(f));
 }
 
 function joined(e: Expr, steps: Step[]): Expr {
@@ -3253,6 +3307,7 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
       const ty = r.pick<Ty>(["str", "str", "int", "float", "bool"]);
       const steps = kind === "computed" && r.chance(0.4) ? bodySteps(g, ty, bindings.length) : undefined;
       const e = kind === "ref" ? literalOf(r, ty) : scriptExpr(g, ty, r.int(1, 2));
+      if (steps) dropArrows(g, steps);
       if (steps) g.scope.vars = g.scope.vars.filter((v) => !steps.some((st) => st.k === "const" && st.name === v.name));
       const binding = { name: `${kind === "computed" ? "cmp" : kind === "const" ? "cst" : "ref"}${bindings.length}`, kind, e: steps ? joined(e, steps) : e, ...(steps ? { steps } : {}) };
       bindings.push(binding);
