@@ -8,6 +8,7 @@ import { formatted, lonely, loneOf, meet, stringMethod, stringOf, stringsEqual }
 import { asF64, intFromF64, isNumber, numberVal, power } from "./numbers.ts";
 import { boolOf, truthy } from "./narrowing.ts";
 import { coerce, describeTy, expr } from "./expr.ts";
+import { refuseUnresolved } from "./resolve.ts";
 
 const DIGITS = new Map<string, [Code, number, string]>([
   ["toFixed", ["FV0705", 0, "number of digits"]],
@@ -81,6 +82,7 @@ export function call(s: Scope, n: N): Val {
     }
     if ((callee.name === "isNaN" || callee.name === "isFinite") && global) return numberTest(s, callee.name, args, n, true);
     if (global && BUILTINS.has(callee.name)) return builtin(s, `${callee.name}()`, n);
+    refuseUnresolved(comp, callee.name, n);
     return fail(comp, "FV0601", `\`${callee.name}()\` is not available when rendering on the server`, n);
   }
   if (callee.type === "MemberExpression" && !callee.computed) {
@@ -108,6 +110,7 @@ export function call(s: Scope, n: N): Val {
       const helper = s.helpers.get(method);
       if (helper) return helperCall(s, helper, args, n);
       if (s.clientOnly.has(method)) return fail(comp, "FV0613", `\`${method}\` is set up in a way the server cannot evaluate: ${s.clientOnly.get(method)}`, n);
+      if (!s.setup.has(method)) refuseUnresolved(comp, method, n);
     }
     if (callee.object.type === "Identifier" && callee.object.name === "Math") {
       if ((method === "max" || method === "min") && args.some((a) => a?.type === "SpreadElement")) return spreadExtreme(s, method, args);

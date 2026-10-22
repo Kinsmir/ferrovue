@@ -82,6 +82,12 @@ Unsupported statement in setup.
 
 Destructured prop that is not a plain name.
 
+## FV0110
+
+Name imported from a module the compiler cannot resolve to a `.ts` file of the project.
+
+The compiler reads constants and types from the project's own `.ts` files, which a component imports by a relative path or through an alias: the `compilerOptions.paths` (and `baseUrl`) of the tsconfig.json nearest the component, and of the projects it references, and, when the Vite plugin runs, Vite's `resolve.alias`. The message names the specifier and where it was looked for. A name imported from a package is available only on the client: in an event handler, or computed in Rust and passed as a prop.
+
 # Constants and enums: FV02xx
 
 ## FV0201

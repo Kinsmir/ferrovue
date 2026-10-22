@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join, posix, resolve, sep } from "node:path";
 import type { Plugin, ResolvedConfig, ViteDevServer } from "vite";
-import { type Config, CONFIG_FILE, type GenError, loadConfig, write, type Written } from "./compiler.ts";
+import { type Alias, type Config, CONFIG_FILE, type GenError, loadConfig, write, type Written } from "./compiler.ts";
 import { formatRefusal, formatWarning, isRefusal } from "./diagnostics.ts";
 import { allPages, type FileRoute, fileRoutes, pagesFolder } from "./file-routes.ts";
 import { affects, type Inputs, inputsOf, watched } from "./inputs.ts";
@@ -177,7 +177,7 @@ export default function ferrovue(options: FerrovueOptions = {}): Plugin {
     let config: Config | null = null;
     try {
       config = loadConfig(root, configFile, warn);
-      const written = write(root, config);
+      const written = write(root, config, { aliases });
       islands = written.islands;
       return written;
     } finally {
@@ -190,6 +190,7 @@ export default function ferrovue(options: FerrovueOptions = {}): Plugin {
     return routesModule(root, fileRoutes(root, pages));
   };
   let vue: ReturnType<typeof vueScopeIds> = null;
+  let aliases: readonly Alias[] = [];
   let css: ResolvedConfig["css"] | undefined;
   let building = true;
   return {
@@ -210,6 +211,7 @@ export default function ferrovue(options: FerrovueOptions = {}): Plugin {
     },
     configResolved(config) {
       vue = vueScopeIds(config);
+      aliases = config.resolve.alias;
       css = config.css;
       building = config.command === "build";
     },

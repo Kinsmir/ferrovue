@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import type { Plugin } from "./plugin.ts";
 import type { Declared } from "./constants.ts";
+import type { Alias, TsProject } from "./resolve.ts";
 import { type Component, type N, type Struct, type Ty, BOOL, FLOAT, GenError, INT, opt, STR } from "./model.ts";
 import type { Code } from "./errors.ts";
 import { formatWarning } from "./diagnostics.ts";
@@ -359,6 +360,9 @@ export const ctx = {
   componentsDir: "",
   vnodeTag: null as string | null,
   sources: new Map<string, string>(),
+  aliases: [] as readonly Alias[],
+  tsProjects: new Map<string, TsProject | null>(),
+  tsconfigs: new Set<string>(),
 };
 
 /** A component's text: what the run was given for its path, as an editor's unsaved buffer, or the

@@ -73,7 +73,7 @@ it("fails a build whose `<style scoped>` ids plugin-vue computes otherwise, and 
   const configured = (command: "build" | "serve", features: Record<string, unknown> = {}) => {
     const plugin = ferrovue({ root });
     const vue = { name: "vite:vue", api: { options: { features } } };
-    (plugin.configResolved as (c: unknown) => void)({ plugins: [vue], root, isProduction: command === "build", command, build: { manifest: false, ssr: false } });
+    (plugin.configResolved as (c: unknown) => void)({ plugins: [vue], root, isProduction: command === "build", command, build: { manifest: false, ssr: false }, resolve: { alias: [] } });
     return plugin;
   };
   const warned: string[] = [];
@@ -97,7 +97,7 @@ it("fails a build whose `<style scoped>` ids plugin-vue computes otherwise, and 
 
 function started(plugin: ReturnType<typeof ferrovue>, config: Record<string, unknown>): string[] {
   const warned: string[] = [];
-  (plugin.configResolved as (c: unknown) => void)({ build: { manifest: false, ssr: false }, ...config });
+  (plugin.configResolved as (c: unknown) => void)({ build: { manifest: false, ssr: false }, resolve: { alias: [] }, ...config });
   const hook = plugin.buildStart as (this: { error(m: string): never; warn(m: string): void }) => void;
   hook.call({
     error(m: string): never {
@@ -173,6 +173,14 @@ it("regenerates on the configuration, components, stores, messages, pages, route
   expect(affects(inputsOf(root, "ferrovue.config.json", loadConfig(root)), join(root, "routes.json"))).toBe(true);
   expect(affects(inputsOf(root, "custom.json", null), join(root, "custom.json"))).toBe(true);
   expect(affects(inputsOf(root, "custom.json", null), join(root, "components", "Hello.vue"))).toBe(false);
+
+  writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify(config));
+  writeFileSync(join(root, "tsconfig.json"), JSON.stringify({ extends: "./tsconfig.base.json" }));
+  writeFileSync(join(root, "tsconfig.base.json"), JSON.stringify({ compilerOptions: { paths: { "@/*": ["./*"] } } }));
+  writeFileSync(join(root, "components", "Hello.vue"), readFileSync(join(root, "components", "Hello.vue"), "utf8").replace('"../types"', '"@/types"'));
+  write(root, loadConfig(root));
+  const aliased = inputsOf(root, "ferrovue.config.json", loadConfig(root));
+  for (const file of ["tsconfig.json", "tsconfig.base.json", "types.ts"]) expect(affects(aliased, join(root, file)), file).toBe(true);
 });
 
 it("does not regenerate on the dev server's change to a file that is not an input", () => {
@@ -281,6 +289,25 @@ it("splits each island into a chunk of its own in a build", async () => {
   const entry = chunks.find((c) => c.isEntry)!;
   expect(entry.dynamicImports).toHaveLength(2);
   expect(entry.code).not.toContain("Hello, ");
+});
+
+it("resolves a component's imports through the build's `resolve.alias`", async () => {
+  mkdirSync(join(root, "lib"));
+  writeFileSync(join(root, "lib", "format.ts"), 'export const GREETING = "Howdy";\n');
+  writeFileSync(join(root, "components", "Hello.vue"), good.replace("<script setup lang=\"ts\">", '<script setup lang="ts">\nimport { GREETING } from "~lib/format";').replace("Hello, ", "{{ GREETING }}, "));
+  writeFileSync(join(root, "main.ts"), 'import islands from "ferrovue/islands";\nObject.assign(globalThis, { islands });\n');
+  const built = (alias: Record<string, string>) =>
+    build({
+      root,
+      configFile: false,
+      logLevel: "silent",
+      resolve: { alias },
+      plugins: [vuePlugin(), ferrovue({ root })],
+      build: { write: false, rolldownOptions: { input: join(root, "main.ts"), external: ["vue"] } },
+    });
+  await built({ "~lib": join(root, "lib") });
+  expect(readFileSync(join(root, "gen", "hello.rs"), "utf8")).toContain('out.push_str("<p>Howdy, ");');
+  await expect(built({ "~lib": join(root, "elsewhere") })).rejects.toThrow(/FV0110.*`GREETING` is imported from `~lib\/format`.*Vite's alias `~lib` maps it to elsewhere\/format, where there is no `\.ts` file/s);
 });
 
 it("writes beside the manifest the chunk that holds each island, its own or one it shares", async () => {

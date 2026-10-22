@@ -10,6 +10,7 @@ import { boolOf, checkNullTest, choice, known, narrowing, narrowTo, nullTest, pa
 import { BUILTINS, builtin, call, isObjectCall } from "./calls.ts";
 import { constOf, constVal } from "./constants.ts";
 import { localeRefusal } from "./plugins/dates.ts";
+import { refuseUnresolved } from "./resolve.ts";
 
 const MATH_CONSTANTS = new Map(["E", "LN10", "LN2", "LOG10E", "LOG2E", "PI", "SQRT1_2", "SQRT2"].map((k) => [k, Math[k as "PI"]]));
 
@@ -342,6 +343,7 @@ export function expr(s: Scope, n: N): Val {
       if (n.name === "Infinity" || n.name === "NaN") return numberVal(Number(n.name), false);
       if (n.name === "Intl") return localeRefusal(s, "`Intl`", n);
       if (BUILTINS.has(n.name)) return builtin(s, n.name, n);
+      refuseUnresolved(comp, n.name, n);
       return fail(comp, "FV0601", `\`${n.name}\` is not available when rendering on the server`, n);
     }
     case "MemberExpression": {
@@ -391,6 +393,7 @@ export function expr(s: Scope, n: N): Val {
             if (n.object.name === "_ctx" && comp.props.fields.some((f) => f.js === prop)) {
               return fieldVal(comp, "props", { k: "struct", name: "Props" }, prop, n);
             }
+            refuseUnresolved(comp, prop, n);
             return fail(comp, "FV0601", `\`${prop}\` is not available when rendering on the server`, n);
           }
         }

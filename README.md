@@ -107,9 +107,10 @@ pnpm ferrovue --watch   # regenerates when components or configs change
 ```
 
 `-c, --config <path>` reads another configuration file. `--watch` regenerates on a change to what a
-run reads (the configuration, the components, stores, locale messages, pages or routes file, and
-the `.ts` files components import types from). A Vite project can use the plugin instead, which
-does the same in its dev server and before a build:
+run reads (the configuration, the components, stores, locale messages, pages or routes file, the
+`.ts` files components import types from, and the tsconfig files their aliases come from). A Vite
+project can use the plugin instead, which does the same in its dev server and before a build, and
+also resolves imports through the build's `resolve.alias`:
 
 ```ts
 // vite.config.ts
@@ -215,7 +216,7 @@ ferrovue compiles `<script setup lang="ts">` components, and components with no 
 | Area | Supported |
 |---|---|
 | Prop types | `string`, `number` (integers, `i64`, written and computed as JavaScript does, exact within ±2⁵³), `Float` from `ferrovue/types` (fractions, `f64`), `boolean`, string-literal unions (`"sm" \| "md"`), `T \| undefined`, `T \| null` (an `Option` written as `null`), arrays (`T[]`, `Array<T>`, `readonly T[]`), interfaces and object type aliases (recursive ones too), dictionaries (`Record<string, T>`, `{ [key: string]: T }`, `ferrovue::Record` in Rust, which keeps JavaScript's order of keys), another component's exported `Props`, `TrustedHtml`, `InlineHtml`, `Date` (a component's own prop, optional or nullable too: `ferrovue::JsDate`, or `chrono::DateTime<Utc>` with the `chrono` feature) |
-| Shared types | Interfaces and type aliases imported from `.ts` files (generated once, into `types.rs`), from a store's file, or from another component's `.vue` file; objects of a shared type can be passed between components. A TypeScript `enum` whose members are literals is the type of its values: a string, or a number |
+| Shared types | Interfaces and type aliases imported from `.ts` files (generated once, into `types.rs`; imported by a relative path or through an alias the project declares, in its tsconfig.json's `compilerOptions.paths` or, with the Vite plugin, Vite's `resolve.alias`: `@/lib/format`), from a store's file, or from another component's `.vue` file; objects of a shared type can be passed between components. A TypeScript `enum` whose members are literals is the type of its values: a string, or a number |
 | Constants | Constants imported from `.ts` files and `enum`s (imported, or declared in the component), evaluated when the component is compiled: strings, numbers, booleans, `null`, lists of them, objects of them read field by field (`LABELS.save`, `Tone.Loud`, `Rank[5]`), and lists of objects of them, which become a `const` in `types.rs` (`{ value, label }` items get a type named after the constant, `OptionsItem`, unless the constant is typed with an interface: `OPTIONS: Option[]`; a field that is `null` in some items is `T | null`). See the crate's [`props`](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#constants) guide |
 | Props | `withDefaults`, destructured props with defaults (`const { size = "md" } = defineProps<…>()`), the props object (`const props = defineProps<…>()`, then `props.label` in the template or in script code), optional booleans (Vue casts an absent one to `false`), `defineModel` (named, required, with defaults), components with no props. A generic component (`<script setup generic="T extends Item">`) renders each type parameter as its constraint, which is all the template can rely on |
 | Setup | `ref`/`shallowRef`, `computed` (an expression or a single `return`; one that may throw, through `.repeat()`, `.padStart()`, a date, `$t` or a helper, is evaluated where the render first reads it, once, as Vue does), refs that start empty, typed by their type argument (`ref<Row[]>([])`, `ref<Row>()`, `ref<string \| undefined>(undefined)`), plain `const`/`let`, `.value` in script code, helpers with Rust twins, a plain `<script>` block beside setup. Lifecycle hooks, `watch` (not `immediate`), `defineEmits`, `defineSlots`, `defineOptions`, `defineExpose`, template refs (`ref(null)`, `useTemplateRef`) and functions are client-only. The template may name them only from event handlers, which the server drops |
