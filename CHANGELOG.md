@@ -28,8 +28,38 @@ released together and share version numbers.
   What only generated code calls (`Load`, `Loads::get`, `LoadKey`, `LoadArg`, `load_key`,
   `LoadCall`, `LoadFuture`) is hidden from the documentation.
 
+- A run reports every refusal it finds. Each component is checked on its own, and within a template
+  each statement of the compiled render and each interpolation in it, so the CLI, `--check`,
+  `--format json`, the Vite plugin and the `ferrovue/volar` plugin show all of a run's errors at
+  once. The text output ends with a line that counts them (`3 errors in 2 components`). A component
+  that uses a refused one is checked once that one compiles, and the count line says how many were
+  left unchecked. Nothing is written while any error remains, and the exit status is unchanged.
+  `generate` raises the new `GenErrors`, a `GenError` that carries the first refusal's code,
+  location and message and holds every refusal in `errors`.
+- A `= help:` line after a refusal's quoted line gives the way around it where one is short, for
+  the template's calls of functions the server cannot run (FV0601, FV0613), a `computed` whose body
+  is a block of statements, and a list read by a date's month. `GenError` has the new `help`, and
+  each diagnostic of `--format json` the new field `help` (`null` where there is none).
+- Every code in the error index has a detail: what is refused, why, and the ways around it.
+
 ### Changed
 
+- FV0601 names what the template wrote, and says where it comes from: `` `fmt()` calls a function
+  imported from `./util`, a module the server does not run ``, where it named Vue's internal
+  `$setup`.
+- A `computed` whose body is a block of statements is refused with the reason: the server evaluates
+  a body that is one expression or a single `return`.
+- Messages name syntax in words: "an arrow function", "an object literal", "a tuple type", where
+  they gave Babel's node types (`ArrowFunctionExpression`).
+- A template's read of a constant the compiler cannot evaluate, from the component or a `.ts` file,
+  is refused with the constant's own code (FV0201 to FV0222) at the constant, and names where the
+  template reads it; `ferrovue/volar` shows it at the read. It was FV0613 at the read.
+- FV0824 for a list read by `[d.getUTCMonth()]` says the index is `NaN` for an invalid date.
+- FV0221, FV0803 and FV1509 are retired: no input could raise them. FV1001's title is "Spread or
+  method in a class object", and FV0908's covers a provided value too.
+- The `errors_and_limits` guide says where a `<script>` element in a template is allowed: Vue's
+  server keeps it, its client compiler drops it, so a component that writes the document with its
+  `<script type="module">` renders on the server only and never hydrates.
 - Tests only: the CLI's three `--watch` tests share one helper that repeats each change until the
   watcher reports it, since macOS can miss a change made just after a watch starts.
 - The README's note on upgrading moves from its introduction to the Versions section, without

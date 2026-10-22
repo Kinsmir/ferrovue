@@ -7,7 +7,7 @@ import { computedListMethod, isBoolean, items, listMethod, objectCall, presentLi
 import { formatted, lonely, loneOf, meet, stringMethod, stringOf, stringsEqual } from "./strings.ts";
 import { asF64, intFromF64, isNumber, numberVal, power } from "./numbers.ts";
 import { boolOf, truthy } from "./narrowing.ts";
-import { coerce, describeTy, expr } from "./expr.ts";
+import { coerce, describeTy, expr, refuseClientOnly, refuseUnavailable } from "./expr.ts";
 
 const DIGITS = new Map<string, [Code, number, string]>([
   ["toFixed", ["FV0705", 0, "number of digits"]],
@@ -81,7 +81,7 @@ export function call(s: Scope, n: N): Val {
     }
     if ((callee.name === "isNaN" || callee.name === "isFinite") && global) return numberTest(s, callee.name, args, n, true);
     if (global && BUILTINS.has(callee.name)) return builtin(s, `${callee.name}()`, n);
-    return fail(comp, "FV0601", `\`${callee.name}()\` is not available when rendering on the server`, n);
+    return refuseUnavailable(s, callee.name, n, true);
   }
   if (callee.type === "MemberExpression" && !callee.computed) {
     const method = callee.property.name as string;
@@ -107,7 +107,8 @@ export function call(s: Scope, n: N): Val {
     if (callee.object.type === "Identifier" && (callee.object.name === "$setup" || callee.object.name === "_ctx")) {
       const helper = s.helpers.get(method);
       if (helper) return helperCall(s, helper, args, n);
-      if (s.clientOnly.has(method)) return fail(comp, "FV0613", `\`${method}\` is set up in a way the server cannot evaluate: ${s.clientOnly.get(method)}`, n);
+      if (s.clientOnly.has(method)) return refuseClientOnly(s, method, n, true);
+      if (!s.setup.has(method) && !(callee.object.name === "_ctx" && comp.props.fields.some((f) => f.js === method))) return refuseUnavailable(s, method, n, true);
     }
     if (callee.object.type === "Identifier" && callee.object.name === "Math") {
       if ((method === "max" || method === "min") && args.some((a) => a?.type === "SpreadElement")) return spreadExtreme(s, method, args);

@@ -41,7 +41,7 @@ it("regenerates when a build starts", () => {
 
 it("fails a build on a refused construct, naming the line in the .vue file", () => {
   writeFileSync(join(root, "components", "Hello.vue"), bad);
-  expect(() => buildStart(ferrovue({ root }))).toThrow(/^error\[FV0609\]: components\/Hello\.vue:4:24: `\/` is supported between two numbers that are present: the other is a string[\s\S]*\n = docs: https:\/\/docs\.rs\/ferrovue\/latest\/ferrovue\/guide\/error_codes\/index\.html#fv0609$/);
+  expect(() => buildStart(ferrovue({ root }))).toThrow(/^error\[FV0609\]: components\/Hello\.vue:4:24: `\/` is supported between two numbers that are present: the other is a string[\s\S]*\n = docs: https:\/\/docs\.rs\/ferrovue\/latest\/ferrovue\/guide\/error_codes\/index\.html#fv0609\n\n1 error in 1 component$/);
 });
 
 it("regenerates on the dev server's changes, and shows a refusal in the error overlay", () => {

@@ -129,8 +129,8 @@ the usual causes of a mismatch.
 
 # 6. Work through what the compiler refuses
 
-The first run on an existing app usually reports errors. Each names the file, line and column, and
-has a stable code:
+The first run on an existing app usually reports errors, all of them at once, then a line that counts
+them. Each names the file, line and column, and has a stable code:
 
 ```text
 error[FV1805]: components/Card.vue:4:17: `.toLocaleString()` formats by locale with `Intl`, whose output differs between Node, Chromium, Firefox and Safari: format the value in Rust and pass a string, or translate it with `$t` (see the `dates_and_prices` guide)

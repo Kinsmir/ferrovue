@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { compileTemplate, parse as parseSfc } from "@vue/compiler-sfc";
-import { GenError, generate, loadConfig } from "../src/compiler.ts";
+import { GenError, GenErrors, generate, loadConfig } from "../src/compiler.ts";
 import { type Code, ERRORS } from "../src/errors.ts";
 import { GENERATED_VERSION } from "../src/rust.ts";
 
@@ -37,6 +37,114 @@ const props = defineProps<{ label: string }>();
 <template><b :title="label">{{ label }}</b></template>`),
     );
     expect(out.get("x.rs")).toContain("pub fn render");
+  });
+
+  describe("every refusal of a run", () => {
+    const refusals = (project: string): GenErrors => {
+      try {
+        compile(project);
+      } catch (e) {
+        if (e instanceof GenErrors) return e;
+        throw e;
+      }
+      throw new Error("compiled without an error");
+    };
+    const where = (e: GenErrors): string[] => e.errors.map((one) => (one instanceof GenError ? `${one.code} ${one.at?.file}:${one.at?.line}` : "syntax"));
+
+    it("reports each refused statement of a template, and of every component, in the order of files and lines", () => {
+      const e = refusals(
+        island(
+          `<script setup lang="ts">
+defineProps<{ n: number; on: boolean }>();
+</script>
+<template>
+  <p>{{ n.toLocaleString() }}</p>
+  <p v-if="on">{{ n.toFixed(200) }}</p>
+  <i>{{ n }}</i>
+</template>`,
+          { A: `<script setup lang="ts">\nimport { watchEffect } from "vue";\nwatchEffect(() => {});\n</script>\n<template><i></i></template>` },
+        ),
+      );
+      expect(where(e)).toEqual(["FV0103 components/A.vue:3", "FV1805 components/X.vue:5", expect.stringMatching(/^FV\d{4} components\/X\.vue:6$/)]);
+      expect(e).toBeInstanceOf(GenError);
+      expect(e.code).toBe("FV0103");
+      expect(e.unchecked).toEqual([]);
+    });
+
+    it("leaves a component that uses a refused one unchecked, and checks the rest", () => {
+      const bad = `<script setup lang="ts">\ndefineProps<{ n: number }>();\n</script>\n<template><p>{{ n.toLocaleString() }}</p></template>`;
+      const e = refusals(
+        island(`<script setup lang="ts">\nimport B from "./B.vue";\n</script>\n<template><B :n="1" /><p>{{ (1).toLocaleString() }}</p></template>`, { B: bad, C: bad }),
+      );
+      expect(where(e)).toEqual(["FV1805 components/B.vue:4", "FV1805 components/C.vue:4"]);
+      expect(e.unchecked).toEqual(["components/X.vue"]);
+    });
+
+    it("names what the template wrote, says how to get around it, and names syntax in words", () => {
+      const project = island(
+        `<script setup lang="ts">
+import { computed } from "vue";
+import { fmt } from "./util";
+const props = defineProps<{ n: number; pair: [number, number] }>();
+function twice(x: number) { return x * 2; }
+const big = computed(() => {
+  const m = props.n * 2;
+  return m;
+});
+</script>
+<template>
+  <p>{{ fmt(n) }}</p>
+  <p>{{ fmt }}</p>
+  <p>{{ twice(n) }}</p>
+  <p>{{ big }}</p>
+  <p>{{ nowhere(n) }}</p>
+  <p>{{ ({ a: n }) }}</p>
+  <p :title="() => n">x</p>
+</template>`,
+      );
+      writeFileSync(join(project, "components", "util.ts"), "export function fmt(n: number): string { return String(n); }\n");
+      const e = refusals(project);
+      const said = e.errors.map((one) => [(one as GenError).code, (one as GenError).what, (one as GenError).help]);
+      expect(said).toEqual([
+        ["FV0316", "a tuple type is not supported as a prop type", null],
+      ]);
+      writeFileSync(join(project, "components", "X.vue"), readFileSync(join(project, "components", "X.vue"), "utf8").replace("; pair: [number, number]", ""));
+      const again = refusals(project).errors.map((one) => [(one as GenError).code, (one as GenError).what, (one as GenError).help]);
+      const twin = (name: string) => `put \`${name}\` in the module \`helpers.module\` names with a Rust twin under \`helpers.functions\` in ferrovue.config.json, or compute the value in Rust and pass it as a prop`;
+      expect(again).toEqual([
+        ["FV0601", "`fmt()` calls a function imported from `./util`, a module the server does not run", twin("fmt")],
+        ["FV0601", "`fmt` is imported from `./util`, a module the server does not run", "export it from `./util` as a constant the compiler evaluates (`export const fmt = …`), or compute the value in Rust and pass it as a prop"],
+        ["FV0613", "`twice` is set up in a way the server cannot evaluate: it is a function, which only an event handler may call", twin("twice")],
+        [
+          "FV0613",
+          "`big` is set up in a way the server cannot evaluate: it is a `computed` whose body is a block of statements: the server evaluates a body that is one expression or a single `return`",
+          "write the body as one expression, as `computed(() => (a ? b : c))`, or as a single `return`, or compute the value in Rust and pass it as a prop",
+        ],
+        ["FV0601", "`nowhere()` is not available when rendering on the server", "a template calls JavaScript's built-ins and the helpers with Rust twins under `helpers.functions` in ferrovue.config.json; compute the value in Rust and pass it as a prop"],
+        ["FV0625", "an object literal is not supported in a template", null],
+        ["FV0625", "an arrow function is not supported in a template", null],
+      ]);
+    });
+
+    it("refuses a template's read of a constant the compiler cannot evaluate with the constant's own code and place, and a setup binding where it is read", () => {
+      const project = island(`<script setup lang="ts">
+import { LIMIT } from "./consts";
+const local = (1).toLocaleString();
+</script>
+<template><i>{{ LIMIT }}</i><b>{{ local }}</b></template>`);
+      writeFileSync(join(project, "components", "consts.ts"), "export const LIMIT = Math.random();\n");
+      const [constant, local] = refusals(project).errors as GenError[];
+      expect(constant).toMatchObject({ code: "FV0207", at: { file: "components/consts.ts", line: 1, column: 22 }, readAt: { file: "components/X.vue", line: 5, column: 17 } });
+      expect(constant!.what).toMatch(/\(the template reads it as `LIMIT` at components\/X\.vue:5:17\)$/);
+      expect(constant!.message).toMatch(/^components\/consts\.ts:1:22: .*\n 1 \| export const LIMIT = Math\.random\(\);/);
+      expect(local).toMatchObject({ code: "FV0613", at: { file: "components/X.vue", line: 5, column: 35 }, readAt: null });
+    });
+
+    it("raises a `GenErrors` for a single refusal too", () => {
+      const e = refusals(island(`<template><p>{{ (1).toLocaleString() }}</p></template>`));
+      expect(e.errors).toHaveLength(1);
+      expect(e.message).toBe(e.errors[0]!.message);
+    });
   });
 
   it("writes a component named after a Rust keyword to the file its raw module name reads", () => {
@@ -2075,7 +2183,7 @@ import { ROWS } from "./consts";
       );
     });
 
-    it("refuses a constant it cannot evaluate where it is used, naming the file it comes from", () => {
+    it("refuses a constant it cannot evaluate with its own code and place, naming where it is used", () => {
       const project = withFile(
         island(`<script setup lang="ts">
 import { NOW } from "./consts";
@@ -2085,7 +2193,7 @@ import { NOW } from "./consts";
         `export const NOW = Date.now();\n`,
       );
       expect(() => compile(project)).toThrow(
-        /X\.vue:4:17: `NOW` is set up in a way the server cannot evaluate: it is imported from components\/consts\.ts, where it is not a constant the compiler evaluates: components\/consts\.ts:1:20: a constant the compiler evaluates is a literal/,
+        /^components\/consts\.ts:1:20: a constant the compiler evaluates is a literal.* \(the template reads it as `NOW` at components\/X\.vue:4:17\)\n/,
       );
     });
 
@@ -2293,7 +2401,7 @@ defineProps<{ k: string }>();
 enum Size { Small = "s".length }
 </script>
 <template><i>{{ Size.Small }}</i></template>`,
-      /`Size` is set up in a way the server cannot evaluate: it is not an enum the compiler evaluates: components\/X\.vue:2:21: a constant the compiler evaluates is a literal/,
+      /X\.vue:2:21: a constant the compiler evaluates is a literal.* \(the template reads it as `Size` at components\/X\.vue:4:17\)/,
     ],
     [
       "a value read from `$attrs`, which has no type",
@@ -3416,6 +3524,15 @@ defineProps<{ names: string[]; f: Float }>();
 </script>
 <template><i>{{ names[f] }}</i></template>`,
       /reads a list's item by an integer index, .*a `Float`, which may hold a fraction/,
+    ],
+    [
+      "a list item read by a date's month",
+      `<script setup lang="ts">
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+defineProps<{ d: Date }>();
+</script>
+<template><i>{{ MONTHS[d.getUTCMonth()] }}</i></template>`,
+      /reads a list's item by an integer index, and `\.getUTCMonth\(\)` of a date is a `Float`: it is `NaN` for an invalid date, where `\[…\]` reads `undefined`/,
     ],
     [
       "a list item read by a string index",

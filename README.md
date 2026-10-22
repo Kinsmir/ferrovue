@@ -124,7 +124,9 @@ by default).
 
 Every error carries a stable code, as `error[FV1805]: components/Card.vue:4:17: …`, documented in
 the [`error_codes`](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html) guide.
-`--format json` writes the same errors as JSON with the exit status unchanged; the
+A run reports every error it finds, each with a `= help:` line where the way around it is short,
+then a line that counts them, and writes nothing while any remains. `--format json` writes the same
+errors as JSON with the exit status unchanged; the
 [quick start](https://docs.rs/ferrovue/latest/ferrovue/guide/quick_start/index.html#editor-and-ci-diagnostics)
 has a VS Code problem matcher that puts them in the Problems panel.
 

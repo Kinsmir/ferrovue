@@ -5,7 +5,7 @@ import { relativePath } from "./paths.ts";
 import { type Config, CONFIG_FILE, type GenError, generate, isGenerated, loadConfig, VERSION, write } from "./compiler.ts";
 import { helpText, parseArgs } from "./args.ts";
 import { unifiedDiff } from "./diff.ts";
-import { type Diagnostic, diagnose, formatRefusal, formatWarning, isRefusal } from "./diagnostics.ts";
+import { type Diagnostic, diagnose, diagnoseAll, formatRefusal, formatWarning, isRefusal } from "./diagnostics.ts";
 import { affects, type Inputs, inputsOf } from "./inputs.ts";
 
 const root = process.cwd();
@@ -30,7 +30,7 @@ const load = (configPath?: string): Config => loadConfig(root, configPath, warn)
 
 function report(e: unknown): void {
   if (!isRefusal(e)) throw e;
-  if (json) emit({ diagnostics: [diagnose(e)] });
+  if (json) emit({ diagnostics: diagnoseAll(e) });
   else console.error(formatRefusal(e));
 }
 

@@ -359,6 +359,8 @@ export const ctx = {
   componentsDir: "",
   vnodeTag: null as string | null,
   sources: new Map<string, string>(),
+  recovered: null as GenError[] | null,
+  trying: 0,
 };
 
 /** A component's text: what the run was given for its path, as an editor's unsaved buffer, or the
