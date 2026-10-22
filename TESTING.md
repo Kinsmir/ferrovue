@@ -110,6 +110,7 @@ A fixture is a JSON object of props plus optional keys:
 | `Unread`, `UnreadFold`, `UnreadVar` | `computed`s that throw in JavaScript (`.repeat()` of a negative count, `.toISOString()` of an invalid date, `.padStart()` beyond the longest string) evaluated where the render first reads them, once: never read, read under a `v-if` that is false, read by another `computed`, in a `v-for`, in slot content a child does not render, as a child's prop; a `v-bind()` in `<style>`, which Vue evaluates as its render starts |
 | `Statements` | Statements in `computed` bodies and list callbacks: `const` (destructured too) and `let` never assigned again, `if` / `else if` / `else`, early `return` narrowing what follows (`!x`, `x === undefined`, `!a \|\| !a.title`, `a && a.posts > 0`), `switch` over a string-literal union and a number with stacked cases, `default` and `break`, values that borrow a `const` (a computed string, list or optional string) returned owned, an object returned from a body |
 | `Formatters`, `RelativeTime`, `LocalFunctions` | Functions the template and `computed`s call, exported from a `.ts` file (`components/text.ts`: a compact-number formatter with `toFixed`, a pluraliser with a default built from an earlier parameter, truncation with an ellipsis, an `href` built with `encodeURIComponent`, relative time from two `Date` props through a `switch`) or declared in `<script setup>` (`function` and `const` arrow functions reading props, refs and constants, calling each other, a default and an optional parameter, a destructured one, `switch (true)`, called in a `v-for` and from a list's `.map()`); one function given an integer and a `Float`; an invalid `Date`; a function only an event handler calls |
+| `DigitGroups` | Constants of `components/digits.ts` and of `<script setup>` folded when compiling (`24 * HOUR`, `2 ** 40 - 1`, `-(7 % 4) + +2.5`, `` `${BASE}/new?days=${DAY / HOUR}` ``, `"#" + 1.5`), an object constant built of them; a thousands separator through `String(n).split("").reduce(…)`, indexing the string (`d[i - 1]`) and its `.length`, and through slices of `toFixed(0)`; arrow functions a function's and a `computed`'s body declare, reading the body's names (`pad`, `tag`, `first`); `s[i]` of a string that may hold any character; `.toReversed()` of the characters of a number |
 | `UnreadSteps` | A `computed` whose statements stop at an early `return` before a `const` that would throw, and one whose `const` throws only where the render reads it |
 | `Constants` | Setup bindings that start as a string literal, and `computed`s of them, written into the page and tested as constants; strings compared with the empty one in `===`, `v-if` and `v-model` on `<select>` and radio inputs |
 | `Defaults`, `Destructured` | `withDefaults`, the boolean cast, destructured props with defaults and new names, class objects |
@@ -171,6 +172,8 @@ A fixture is a JSON object of props plus optional keys:
 | `EmptyBranch` | Empty array literals typed by the list beside them: `?:` between a prop's list and `[]`, a typed empty constant and `[] as T[]` seeding `shallowRef`, `ref<T[]>`, `computed` and the template's `v-for`; `?.` and `??` falling back to `[]` and to another list; a `?:` between two lists, nested; a computed list and an array literal chosen against `[]` |
 | `Picker` | A generic component (`generic="T extends Choice, K extends string"`), rendered with each type parameter as its constraint |
 | `Lookups` | Object constants read by a key known only when rendering: declared in `<script setup>` (`as const`, `Record<Size, number>`, untyped, `Partial<Record<1 \| 2 \| 3, string>>`) and imported from `types/lookups.ts` (keyed by enum members); keys that are a union-typed prop, one with a default, an `enum` prop, a `computed`, a `?:` of literals, an integer union and a `v-for` item's field; strings, numbers, lists and `null`, read in text, `:title`, `:class` and `:style` and through a `computed`; nested fields (`THEME[tone].fg`); members the object lacks, read with `??`, `?.` and `v-if` |
+| `OwnKeys` | `Object.hasOwn()` of an object constant typed `Record<string, string>` by a free-text prop (keys named like `Object.prototype`'s fields, `__proto__`, an integer key and markup included), narrowing the key for `ROLE[role]` in a `?:`, a `computed`, a `v-if` and an `\|\|` chain; `Object.keys()` of the constant; `Object.hasOwn()` of a record prop; constant `Map`s of string and integer keys (a key given twice) read with `.get()` and `.has()` |
+| `AndChains` | Narrowing carried through `&&` and `\|\|` chains in text, a `computed`, a function with an early `return`, a `?:` whose test is a chain, `v-if` / `v-else-if` and on a nullable prop; `tone && TONE[tone]` in a root's `class` (left out where `tone` is absent) and `title`, with `??` and in a class array; `badge && badge.label` of an optional object |
 | `Catalog` | Constants imported from `types/catalog.ts`, evaluated at build time: an object read by field and nested field, a list of strings, a list of numbers, lists of objects (one typed by an interface) in `types.rs`; enums imported and declared in the component, string and numeric, as a prop's type and read by member and by number |
 | `ShapePicker`, `ShapeRoot`, `ShapeCircle`, `ShapeSquare` | `<component :is>` over components: a `computed`, an object declared in setup and one imported from `types/shapes.ts`, read by a literal-union prop, an imported component, a `?:` between a component and an element, inside `<KeepAlive>` and `<Transition>`, as a component's root given fallthrough attributes and slot content, with slots only some choices take and a `:slotted()` id on a chosen element |
 | `ThemedChoice` | `<component :is>` with provide/inject: a chosen provider or injector given the parent's context, slot content injecting inside a chosen component, a chosen element and a slot inside one |
@@ -200,19 +203,19 @@ when it names a component that is not in `components/` with fixtures of its own.
 |---|---|
 | Prop types | `Text`, `Attrs`, `Numbers`, `Narrowing`, `Nullable`, `UserCard`, `UserList`, `Tree`, `Records`, `Rated`, `Prose`, `InlineProse`, `Dashboard`, `DatePost` |
 | Shared types | `UserCard`, `UserList`, `DataTable`, `RowChip`, `Dashboard`, `Cart`, `Catalog` |
-| Constants | `Catalog`, `Constants`, `Lookups` |
+| Constants | `Catalog`, `Constants`, `Lookups`, `OwnKeys`, `DigitGroups` |
 | Props | `Defaults`, `Destructured`, `PropsObject`, `Model`, `ModelParent`, `Picker`, `Glyph`, `Divider` |
 | Setup | `Setup`, `SetupValues`, `Lifecycle`, `Pending`, `EmptyBranch`, `Unread`, `UnreadVar` |
 | Statements | `Statements`, `UnreadSteps` |
-| Functions | `Formatters`, `RelativeTime`, `LocalFunctions` |
+| Functions | `Formatters`, `RelativeTime`, `LocalFunctions`, `DigitGroups` |
 | Loaders | `Loaded`, `LoadedComments`, `LoadedRanks` |
 | Provide and inject | `TabsPage`, `Tabs`, `Tab`, `ThemedButton`, `ThemeScope`, `Swatch`, `SwatchShelf`, `ThemedShelf`, `ThemedList`, `ThemedChoice` |
 | Text | `Text`, `MixedTernary`, `Exprs`, `Numbers`, `Precision`, `Meter`, `Parsing`, `NumberTests`, `Regressions`, `OptionalChains`, `StringOf`, `MathMore`, `UriParts`, `TypeofTests` |
-| Strings | `Strings`, `Exprs`, `Text`, `StringSearch`, `StringOf` |
+| Strings | `Strings`, `Exprs`, `Text`, `StringSearch`, `StringOf`, `DigitGroups` |
 | Dates | `Dates`, `Prices`, `DatePost`, `DateStamp`, `DateFormats`, `DateGuards` |
-| Conditions | `Branches`, `Narrowing`, `Nullable`, `TypeofTests` |
+| Conditions | `Branches`, `Narrowing`, `Nullable`, `TypeofTests`, `AndChains` |
 | Lists | `Lists`, `Arrays`, `Chips`, `Truthy`, `NumberIncludes`, `NarrowedRows`, `Exprs`, `ListAccess`, `ListBuilding`, `Flattened` |
-| Dictionaries | `Records`, `Chips`, `Pairs` |
+| Dictionaries | `Records`, `Chips`, `Pairs`, `OwnKeys` |
 | Attributes | `Attrs`, `BoundObject`, `Keywords`, `MixedTernary` |
 | `class` | `Attrs`, `BoundObject`, `VnodeClass`, `AsyncClass` |
 | `style` | `Styles`, `Shown`, `BoundObject` |

@@ -470,10 +470,27 @@ pub const SORTS: &[SortsItem<'static>] = &[
 # assert_eq!(SORTS[1].label, "By price");
 ```
 
-A constant is a literal, a list, an object, or another constant of the same file. One that is
-anything else (`Date.now()`, a function) is refused where the template reads it, naming the file
-and line it is declared on. So are an object constant read whole, and `new` of anything but `Date`
-(`new Map()`).
+A constant is a literal, a list, an object, a constant `Map`, or another constant of the same file,
+and arithmetic and strings of them are worked out when compiling, as JavaScript works them out:
+`+`, `-`, `*`, `/` and `%` of numbers, giving the same double every engine gives, `**` where the
+result is an exact integer within ±2⁵³ (engines round other powers in their own ways), unary `-`
+and `+`, strings joined with `+` (a number written as `String()` writes it) and template literals.
+
+```ts
+// components/units.ts
+const MINUTE = 60;
+const HOUR = 60 * MINUTE;
+const BASE = "/feed";
+export const NEWEST = `${BASE}/new?hours=${24 * HOUR / HOUR}`;
+export function hours(seconds: number): number {
+  return Math.floor(seconds / HOUR);
+}
+```
+
+Here `hours(s)` is `(s as f64 / 3600.0).floor()` and `NEWEST` the string `"/feed/new?hours=24"`.
+A constant that is anything else (`Date.now()`, a function, an operator of a list) is refused
+where the template reads it, with the code of what stops it, at the place it is declared. So are an
+object constant read whole, and `new` of anything but `Date` and `Map`.
 
 ## Lookup tables
 
@@ -509,8 +526,35 @@ key for reads `undefined`, as in JavaScript, so the value may be absent: `ICONS[
 A field read without `?.` of a value that may be `undefined` is refused, naming the members that
 lack it.
 
+A key whose value may be absent reads the object once it is narrowed: `kind && ICONS[kind]` is
+`undefined` where `kind` is, and `ICONS[kind]` where it is not, when every member of `kind` is
+truthy (no `""` or `0`).
+
 The key's type is trusted, as it is for `<component :is>`: a value outside it, which a TypeScript
 caller cannot pass, reads the last member's value. A key typed `string` or `number` is refused: a
 plain object holds the fields of its prototype too (`toString`, `constructor`, `__proto__`), which
 a key could name. For the same reason a member that names one of them must be a key of the object,
 and an object literal may not set its prototype with `__proto__:`.
+
+A free-text key is read once `Object.hasOwn()` has tested it against the object's own keys, which
+the compiler knows, and which narrows the key to them where the test holds, in a `?:`, after `&&`
+or `||`, and inside a `v-if`:
+
+```ts
+const ROLE: Record<string, string> = { mod: "is-mod", admin: "is-admin" };
+const props = defineProps<{ role: string }>();
+```
+
+```html
+<b :class="Object.hasOwn(ROLE, role) ? ROLE[role] : ''">{{ role }}</b>
+```
+
+```rust
+# let role = "toString";
+let class = if let Some(k) = matches!(role, "mod" | "admin").then_some(role) { match k { "mod" => "is-mod", _ => "is-admin" } } else { "" };
+# assert_eq!(class, "");
+```
+
+`Object.keys(ROLE)` is the list of those keys, in JavaScript's order. A constant
+`new Map([[key, value], …])`, its keys strings or integers, is read the same way, with
+`.get(key)`, `undefined` for a key the map lacks, and `.has(key)`, by any string or integer.

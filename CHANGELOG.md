@@ -5,8 +5,43 @@ released together and share version numbers.
 
 ## [Unreleased]
 
+### Added
+
+- Constants are worked out when the component is compiled, as JavaScript works them out: `+`, `-`,
+  `*`, `/` and `%` of numbers, unary `-` and `+`, `**` where it gives an exact integer within
+  ±2⁵³ (FV0720 for another power, which engines round in their own ways), strings joined with `+`
+  and template literals of constants (`const HOUR = 60 * MINUTE`, `` `${BASE}/feed` ``), in a
+  `.ts` file and in `<script setup>`.
+- A function's or a `computed`'s body may declare arrow functions of its own
+  (`const pad = (k: number) => …`), which read the body's names and are translated where it calls
+  them.
+- A string known to hold ASCII alone (the string of a number, `toFixed()`, an ASCII literal, and
+  what slicing, trimming, padding, case mapping, joining and `split` make of them) may be cut into
+  characters and joined again without FV0706, so a thousands separator can be written with
+  `String(n).split("").reduce(…)` or slices; `s[i]` reads a string's code unit, `undefined`
+  outside it.
+- `Object.hasOwn(CONST, key)` of an object constant by a free-text string or integer key, compiled
+  to a test of the constant's own keys, which narrows the key for `CONST[key]` in a `?:`, after
+  `&&` and `||` and inside a `v-if`; `Object.hasOwn(record, key)` of a `Record` prop;
+  `Object.keys()` of an object constant.
+- Constant `Map`s (`new Map([["sm", 12], ["md", 16]])`, keys strings or integers), read with
+  `.get(key)`, `undefined` for a key the map lacks, and `.has(key)`. FV0227, a new entry of `ERRORS` in
+  `ferrovue/compiler`, refuses a constant `Map` read in another way.
+
 ### Changed
 
+- A refusal inside a `computed`, a setup expression or a function the template calls carries that
+  refusal's own code and place (FV0710 for a regular expression, FV1902 for an assignment, FV0625
+  for an object literal), with where the template reads the value or calls the function; it was
+  FV0613 or FV0601, with the inner code in parentheses. Messages say where the construct is ("in a
+  `computed`", "in a function", "in setup"), `await` inside an expression suggests awaiting a
+  loader as a statement of its own, a bare regular expression is FV0710, and a refusal is reported
+  once per place and code, however often the template reads it.
+- FV0513 names the tag the template resolves by name; FV0316 suggests an interface for a tuple
+  prop type; FV0814 says what `Object.keys()`, `Object.values()`, `Object.entries()` and
+  `Object.hasOwn()` were given; FV0614 says why `&&` after a value that may be falsy while present
+  is refused; FV1901 suggests `const f = (…) => …` for a `function` declared inside a body. The
+  detail of FV0613 no longer lists a function declared in setup, which compiles.
 - CI only: a retry of the browser job's system libraries first stops the `apt-get` the timed-out
   attempt left running and waits for the package lock, which that `apt-get` held so the next
   attempts failed at once.
@@ -20,6 +55,13 @@ released together and share version numbers.
   table of booleans read `false`, and `v-if` of a table that lacks some members read its member
   absent, where the last member's is `true` and present. A new Rust test renders components that
   read closed unions in each of these ways with values outside the union.
+- A test that narrows a value holds in every operand after it in a chain of `&&` or `||`:
+  `n != null && n > 1 && n < 9` and `n == null || n < 1 || n > 9` compiled with FV0609, as did a
+  `?:` whose test is such a chain. `a && b` of an `a` whose present values are all truthy gives
+  `undefined` where `a` is absent (`kind && ICONS[kind]`, which was FV0223), and `b` where `a`
+  cannot be absent, in text, attributes and `:class`.
+- A component's root `:class="a && b"` left out the attribute where `a` is `undefined`, as
+  `mergeProps` does, where it wrote `class=""`.
 
 ## [0.10.0] - 2026-10-22
 
