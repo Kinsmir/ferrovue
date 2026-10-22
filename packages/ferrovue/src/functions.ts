@@ -1,4 +1,4 @@
-import { type Component, type Fn, type N, type Scope, type Val, fail, GenError } from "./model.ts";
+import { type Component, type Fn, type N, type Scope, type Val, fail, GenError, placeOf } from "./model.ts";
 import type { Const } from "./constants.ts";
 import { constOfDecl } from "./constants.ts";
 import { ctx } from "./context.ts";
@@ -40,6 +40,7 @@ interface Module {
   consts: Map<string, Const>;
   functions: Map<string, Fn>;
   clientOnly: Map<string, string>;
+  refusedBy: Map<string, GenError>;
 }
 
 const modules = new WeakMap<object, Module>();
@@ -48,7 +49,7 @@ function moduleOf(file: string): Module {
   const read = ctx.tsModules.get(file)!;
   const done = modules.get(read);
   if (done) return done;
-  const m: Module = { home: read.home, consts: new Map(), functions: new Map(), clientOnly: new Map() };
+  const m: Module = { home: read.home, consts: new Map(), functions: new Map(), clientOnly: new Map(), refusedBy: new Map() };
   modules.set(read, m);
   const constant = (local: string, d: Parameters<typeof constOfDecl>[0], where: string): void => {
     try {
@@ -56,6 +57,7 @@ function moduleOf(file: string): Module {
     } catch (e) {
       if (!(e instanceof GenError)) throw e;
       m.clientOnly.set(local, `${where}, where it is not a constant the compiler evaluates: ${e.message.split("\n")[0]!}`);
+      m.refusedBy.set(local, e);
     }
   };
   for (const [name, { fn }] of read.functions) {
@@ -83,7 +85,8 @@ function moduleOf(file: string): Module {
 
 /** What a function's body sees: its own module's names, and none of the call site's. */
 function calleeScope(s: Scope, fn: Fn): Scope {
-  if (fn.file === null) return { ...s, locals: new Map(), narrowed: new Map() };
+  if (fn.captured) return fn.captured;
+  if (fn.file === null) return { ...s, locals: new Map(), narrowed: new Map(), within: "function" };
   const m = moduleOf(fn.file);
   return {
     ...s,
@@ -94,6 +97,8 @@ function calleeScope(s: Scope, fn: Fn): Scope {
     settingUpAt: undefined,
     helpers: new Map(),
     clientOnly: m.clientOnly,
+    refusedBy: m.refusedBy,
+    within: "function",
     propsIdent: null,
     refs: new Set(),
     consts: m.consts,
@@ -146,10 +151,11 @@ export function callFunction(s: Scope, name: string, fn: Fn, args: N[], n: N): V
     return run(0, cs);
   } catch (e) {
     if (!(e instanceof GenError) || e.code === "FV1906" || e.code === "FV1907" || e.code === "FV1908") throw e;
-    const at = e.at?.line !== undefined ? ` (${e.at.file}:${e.at.line}, ${e.code})` : ` (${e.code})`;
-    const why = `${e.what}${at}`;
-    if (fn.file === null) return fail(comp, "FV0613", `\`${name}\` is set up in a way the server cannot evaluate: ${why}`, n);
-    return fail(comp, "FV0601", `${what} is not available when rendering on the server: its body ${why}`, n);
+    const at = placeOf(comp, n);
+    const said = `${e.what} (in ${what}, called at ${[at.file, at.line, at.column].filter((p) => p !== undefined).join(":")})`;
+    const inner = new GenError(e.code, e.message.replace(e.what, () => said), e.at, said, e.help);
+    inner.readAt = e.readAt ?? (e.at?.file !== comp.file ? at : null);
+    throw inner;
   } finally {
     active.pop();
   }

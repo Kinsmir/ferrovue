@@ -281,7 +281,7 @@ function statement(s: Scope, e: Emitter, st: N): void {
       s.directives.set(d.id.name, init.arguments[0].value);
       return;
     }
-    fail(s.comp, "FV0513", "a component the template resolves by name must be imported, or be this one", st);
+    fail(s.comp, "FV0513", `${named !== null ? `\`<${named}>\` is ` : ""}a component the template resolves by name, which must be imported, or be this one`, st);
   }
   if (st.type === "IfStatement") {
     const branch = (b: N): N[] => (b.type === "BlockStatement" ? b.body : [b]);

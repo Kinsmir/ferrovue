@@ -1,7 +1,7 @@
 import { type Absence, type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, absence, blankComponent, BOOL, fail, FLOAT, INT, joinAbsence, joinTy, literalsOf, literalTy, nothing, NULL, rustStr, sameTy, snake, STR, UNDEF, withAbsence } from "./model.ts";
 import { ONE_NOTHING, reachType } from "./typescript.ts";
 import { ctx } from "./context.ts";
-import { asF64, numberVal } from "./numbers.ts";
+import { asF64, exactPower, numberVal } from "./numbers.ts";
 import { describeTy, expr } from "./expr.ts";
 import { pathOf } from "./narrowing.ts";
 import { atom, bare } from "./parens.ts";
@@ -10,7 +10,8 @@ import { structLifetime } from "./rust.ts";
 export type Const =
   | { k: "scalar"; js: Scalar }
   | { k: "list"; items: Const[]; node: N; home: Component; path: string; typed: string | null }
-  | { k: "object"; fields: Map<string, Const>; node: N; home: Component; name: string };
+  | { k: "object"; fields: Map<string, Const>; node: N; home: Component; name: string }
+  | { k: "map"; entries: Map<string | number, Const>; node: N; home: Component };
 
 type Scalar = string | number | boolean | null;
 
@@ -110,10 +111,16 @@ function evaluate(home: Component, n: N, path: string, typed: string | null): Co
     case "NullLiteral":
       return { k: "scalar", js: null };
     case "TemplateLiteral":
-      if (n.expressions.length === 0) return { k: "scalar", js: n.quasis[0].value.cooked };
-      break;
+      return { k: "scalar", js: n.quasis.map((q: N, i: number) => `${q.value.cooked as string}${i < n.expressions.length ? String(scalarOf(home, n.expressions[i], path)) : ""}`).join("") };
     case "UnaryExpression":
-      if (n.operator === "-" && n.argument.type === "NumericLiteral") return { k: "scalar", js: -n.argument.value };
+      if (n.operator === "-" || n.operator === "+") {
+        const v = scalarOf(home, n.argument, path);
+        if (typeof v === "number") return { k: "scalar", js: n.operator === "-" ? -v : v };
+        return fail(home, "FV0207", `unary \`${n.operator}\` in a constant takes a number`, n);
+      }
+      break;
+    case "BinaryExpression":
+      if (["+", "-", "*", "/", "%", "**"].includes(n.operator)) return { k: "scalar", js: folded(home, n, path) };
       break;
     case "Identifier": {
       const d = files.get(home)?.get(n.name);
@@ -139,6 +146,9 @@ function evaluate(home: Component, n: N, path: string, typed: string | null): Co
         path,
         typed,
       };
+    case "NewExpression":
+      if (n.callee.type === "Identifier" && n.callee.name === "Map" && !files.get(home)?.has("Map")) return mapConst(home, n, path);
+      break;
     case "ObjectExpression": {
       const fields = new Map<string, Const>();
       for (const p of n.properties) {
@@ -150,7 +160,46 @@ function evaluate(home: Component, n: N, path: string, typed: string | null): Co
       return { k: "object", fields, node: n, home, name: path };
     }
   }
-  return fail(home, "FV0207", "a constant the compiler evaluates is a literal, a list or an object of literals, or another such constant of the same file", n);
+  return fail(home, "FV0207", "a constant the compiler evaluates is a literal, `+`, `-`, `*`, `/`, `%`, `**` or a template literal of such values, a list or an object of them, or another such constant of the same file", n);
+}
+
+function mapConst(home: Component, n: N, path: string): Const {
+  const entries = new Map<string | number, Const>();
+  const [given, ...more] = n.arguments as N[];
+  if (more.length) fail(home, "FV0207", "a constant `Map` is built from one array literal of `[key, value]` pairs", more[0]);
+  if (given && given.type !== "ArrayExpression") fail(home, "FV0207", "a constant `Map` is built from an array literal of `[key, value]` pairs, written out", given);
+  for (const pair of given?.elements ?? []) {
+    if (pair?.type !== "ArrayExpression" || pair.elements.length !== 2 || pair.elements.some((e: N) => !e || e.type === "SpreadElement")) {
+      fail(home, "FV0207", "a constant `Map`'s entry is a `[key, value]` pair, written out", pair ?? given);
+    }
+    const key = scalarOf(home, pair.elements[0], path);
+    if (typeof key !== "string" && !(typeof key === "number" && Number.isSafeInteger(key))) fail(home, "FV0207", "a constant `Map`'s key is a string or an integer", pair.elements[0]);
+    entries.set(Object.is(key, -0) ? 0 : key, evaluate(home, pair.elements[1], `${path}_${String(key)}`, null));
+  }
+  return { k: "map", entries, node: n, home };
+}
+
+function scalarOf(home: Component, n: N, path: string): Scalar {
+  const c = evaluate(home, n, path, null);
+  if (c.k === "scalar") return c.js;
+  return fail(home, "FV0207", "arithmetic and template literals in a constant take strings, numbers, booleans and `null`, and this is a list or an object", n);
+}
+
+function folded(home: Component, n: N, path: string): Scalar {
+  const a = scalarOf(home, n.left, path);
+  const b = scalarOf(home, n.right, path);
+  if (n.operator === "+") {
+    if (typeof a === "string" || typeof b === "string") return `${String(a)}${String(b)}`;
+    if (typeof a === "number" && typeof b === "number") return a + b;
+  } else if (typeof a === "number" && typeof b === "number") {
+    if (n.operator === "**") {
+      const r = exactPower(a, b);
+      if (r === null) return fail(home, "FV0720", `\`**\` of ${String(a)} and ${String(b)}, which is not an integer to a whole power from 0 with a result within ±2⁵³: engines round such powers in their own ways`, n);
+      return r;
+    }
+    return n.operator === "-" ? a - b : n.operator === "*" ? a * b : n.operator === "/" ? a / b : a % b;
+  }
+  return fail(home, "FV0207", `\`${n.operator}\` in a constant ${n.operator === "+" ? "joins strings or adds numbers" : "takes two numbers"}, and these are ${typeof a === "object" ? "null" : typeof a} and ${typeof b === "object" ? "null" : typeof b}`, n);
 }
 
 function computedKey(home: Component, key: N, path: string): string {
@@ -176,6 +225,7 @@ function scalarTy(js: Scalar): Ty {
 export function constVal(c: Const, at: { comp: Component; node: N; what: string }): Val {
   if (c.k === "scalar") return scalarVal(c.js);
   if (c.k === "object") return fail(at.comp, "FV0208", `\`${at.what}\` is an object, read one field at a time: \`${at.what}.${[...c.fields.keys()][0] ?? "x"}\``, at.node);
+  if (c.k === "map") return fail(at.comp, "FV0227", `\`${at.what}\` is a constant \`Map\`, which the server reads with \`.get(key)\` and \`.has(key)\``, at.node);
   const done = vals.get(c);
   if (done) return done;
   const val = listVal(c);
@@ -272,6 +322,61 @@ type Sym = { k: "const"; c: Const } | { k: "none"; short: boolean } | { k: "pick
 export interface Named {
   sym: Sym;
   what: string;
+}
+
+/** The test that `key` is among `keys`, the own keys of a constant object or the keys of a constant
+ * `Map`, and the keys it may then be: `null` where `key` is not a string or an integer. */
+export function keyAmong(key: Val, keys: readonly (string | number)[]): { test: string; among: (string | number)[] } | null {
+  if (key.ty.k !== "str" && key.ty.k !== "int") return null;
+  const mine = keys.filter((k) => (key.ty.k === "str" ? typeof k === "string" : typeof k === "number"));
+  const fixed = key.ty.k === "str" && /^"[^"\\]*"$/.test(key.code) ? (JSON.parse(key.code) as string) : key.ty.k === "int" && key.num !== undefined && key.code === `${key.num}i64` ? key.num : undefined;
+  const literals = fixed !== undefined ? [fixed] : literalsOf(key.ty);
+  const among = literals === undefined ? mine : mine.filter((k) => literals.includes(k));
+  if (literals !== undefined && among.length === literals.length) return { test: "true", among };
+  if (among.length === 0) return { test: "false", among };
+  return { test: `matches!(${key.code}, ${pattern(among)})`, among };
+}
+
+/** \`Object.hasOwn(obj, key)\` of a constant object: the key, the test, and the keys it may then
+ * be; \`null\` where \`obj\` is not a constant object. */
+export function ownKeyTest(s: Scope, obj: N, keyNode: N): { key: Val; test: string; among: (string | number)[] } | null {
+  const named = constOf(s, obj);
+  if (named?.sym.k !== "const" || named.sym.c.k !== "object") return null;
+  const key = expr(s, keyNode);
+  const names = ownKeys(named.sym.c);
+  const keys = key.ty.k === "int" ? names.filter((k) => /^(?:0|-?[1-9]\d*)$/.test(k) && Number.isSafeInteger(Number(k))).map(Number) : names;
+  const found = keyAmong(key, keys);
+  if (found === null) {
+    return fail(s.comp, "FV0814", `\`Object.hasOwn()\` of the constant object \`${named.what}\` by a key that is ${describeTy(key.ty)}: it takes a string or an integer that is present`, keyNode);
+  }
+  return { key, ...found };
+}
+
+/** The keys of a constant object, as \`Object.keys()\` gives them: integer keys first, in numeric
+ * order, then the others in the order they were written. */
+export function ownKeys(c: Const & { k: "object" }): string[] {
+  return Object.keys(Object.fromEntries([...c.fields.keys()].map((k) => [k, 0])));
+}
+
+/** \`m.get(key)\` and \`m.has(key)\` of a constant \`Map\`. */
+export function mapCall(s: Scope, named: Named, method: string, args: N[], n: N): Val {
+  const c = (named.sym as { c: Const & { k: "map" } }).c;
+  if ((method !== "get" && method !== "has") || args.length !== 1 || args[0].type === "SpreadElement") {
+    return fail(s.comp, "FV0227", `\`${named.what}.${method}()\` of a constant \`Map\`, which the server reads with \`.get(key)\` and \`.has(key)\``, n);
+  }
+  const key = expr(s, args[0]);
+  const keys = [...c.entries.keys()];
+  const found = keyAmong(key, keys);
+  if (found === null) {
+    return fail(s.comp, "FV0227", `\`${named.what}.${method}()\` by ${describeTy(key.ty)}: a constant \`Map\` is read by a string or an integer that is present`, args[0]);
+  }
+  if (method === "has") return found.test === "true" || found.test === "false" ? { code: found.test, ty: BOOL, konst: found.test === "true" } : { code: found.test, ty: BOOL };
+  const what = `${named.what}.get(…)`;
+  const literals = literalsOf(key.ty);
+  const arms: Sym[] = found.among.map((k) => ({ k: "const", c: c.entries.get(k)! }));
+  if (found.test !== "true" && literals === undefined) return symVal({ k: "pick", on: key, keys: [...found.among, ""], arms: [...arms, { k: "none", short: false }] }, { comp: s.comp, node: n, what });
+  const on = literals ?? found.among;
+  return symVal({ k: "pick", on: key, keys: on, arms: on.map((k) => (c.entries.has(k) ? { k: "const", c: c.entries.get(k)! } : { k: "none", short: false })) }, { comp: s.comp, node: n, what });
 }
 
 function objectLike(sym: Sym): boolean {

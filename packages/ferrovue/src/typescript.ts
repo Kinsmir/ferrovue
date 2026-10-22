@@ -123,7 +123,8 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
       return fail(comp, "FV0315", `unsupported prop type \`${name}\`: declare it as an interface in the component, or import it from a \`.ts\` file`, t);
     }
   }
-  return fail(comp, "FV0316", `${nodeName(t)} is not supported as a prop type`, t);
+  const help = t.type === "TSTupleType" ? "declare an interface with a field for each part (`{ label: string; count: number }`), or a list of such objects for a list of pairs" : null;
+  return fail(comp, "FV0316", `${nodeName(t)} is not supported as a prop type`, t, help);
 }
 
 function recordOf(comp: Component, value: N, structs: Map<string, Struct>, seen: Set<string>): Ty {

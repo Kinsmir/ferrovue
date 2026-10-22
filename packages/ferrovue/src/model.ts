@@ -374,6 +374,9 @@ export interface Fn {
   /** For a function `const` declares in `<script setup>`, where its declaration ends: setup code
    * before it that calls it throws a `ReferenceError`. */
   tdzUntil?: number;
+  /** For a function a body declares (`const f = (…) => …`), the scope it was declared in, whose
+   * names it reads. */
+  captured?: Scope;
 }
 
 export interface Scope {
@@ -404,6 +407,8 @@ export interface Scope {
   /** Where the setup statement being evaluated starts, while setup runs it (not in a `computed`,
    * which runs when the render reads it). */
   settingUpAt?: number | undefined;
+  /** What the code being translated is part of, as a message names it: the template when absent. */
+  within?: "computed" | "function" | "setup" | undefined;
   sid: string | null;
   opaque: string | null;
   loop?: { item: string; over: string } | undefined;
@@ -595,14 +600,45 @@ export function literalsOf(ty: Ty): readonly (string | number)[] | undefined {
   return LITERALS.get(ty);
 }
 
+const ASCII = new WeakSet<Ty>();
+
+/** A string type whose values are known to hold ASCII characters only, as the string of a number
+ * does: each of its UTF-16 code units is a whole character, so cutting it never leaves half of one. */
+export function asciiTy(): Ty {
+  const ty: Ty = { k: "str" };
+  ASCII.add(ty);
+  return ty;
+}
+
+/** Whether a string type's values are known to hold ASCII characters only. */
+export function isAscii(ty: Ty): boolean {
+  if (ty.k !== "str") return false;
+  if (ASCII.has(ty)) return true;
+  const literals = LITERALS.get(ty);
+  return literals !== undefined && literals.every((l) => typeof l === "string" && asciiText(l));
+}
+
+/** Whether every character of `text` is ASCII. */
+export function asciiText(text: string): boolean {
+  for (let i = 0; i < text.length; i++) if (text.charCodeAt(i) > 0x7f) return false;
+  return true;
+}
+
+/** A string type, known to hold ASCII characters only when `ascii` is. */
+export function strTy(ascii: boolean): Ty {
+  return ascii ? asciiTy() : STR;
+}
+
 /** The type of a value that is one of two, `a` with the literals known of it kept only where both have them. */
 export function joinTy(a: Ty, b: Ty): Ty {
   if (a.k === "opt" || a.k === "list" || a.k === "record" || a.k === "entry") {
     const of = joinTy(a.of, b.k === a.k ? (b as { of: Ty }).of : b);
     return of === a.of ? a : { ...a, of };
   }
+  const other = b.k === "opt" ? b.of : b;
+  const ascii = a.k === "str" && isAscii(a) && isAscii(other);
   const mine = LITERALS.get(a);
-  if (mine === undefined || (a.k !== "str" && a.k !== "int")) return a;
-  const theirs = LITERALS.get(b.k === "opt" ? b.of : b);
-  return theirs === undefined ? { k: a.k } : literalTy(a.k, [...new Set([...mine, ...theirs])]);
+  if (mine === undefined || (a.k !== "str" && a.k !== "int")) return a.k === "str" && ASCII.has(a) && !ascii ? STR : a;
+  const theirs = LITERALS.get(other);
+  return theirs === undefined ? (ascii ? asciiTy() : { k: a.k }) : literalTy(a.k, [...new Set([...mine, ...theirs])]);
 }

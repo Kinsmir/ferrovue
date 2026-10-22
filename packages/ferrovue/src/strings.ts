@@ -1,4 +1,4 @@
-import { type Component, type N, type Scope, type Val, BOOL, fail, FLOAT, INT, nothing, opt, rustStr, STR } from "./model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, asciiText, BOOL, fail, FLOAT, INT, isAscii, nothing, opt, rustStr, STR, strTy } from "./model.ts";
 import type { Code } from "./errors.ts";
 import { atom, bare, binary, condition, enclosed, receiver, strArg } from "./parens.ts";
 import { computed, items } from "./lists.ts";
@@ -123,6 +123,14 @@ export function stringOf(comp: Component, v: Val, n: N, what: string, code: Code
   return fail(comp, code, `${what} of ${describeTy(v.ty)}: it writes strings, numbers and booleans, present or optional, and lists of them`, n);
 }
 
+/** Whether every character `ty` may write as text is ASCII: a number, a boolean, an absent value
+ * (`undefined`, `null`), a string known to be ASCII, or a list of them. */
+export function writesAscii(ty: Ty): boolean {
+  if (ty.k === "int" || ty.k === "float" || ty.k === "bool" || nothing(ty)) return true;
+  if (ty.k === "opt" || ty.k === "list") return writesAscii(ty.of);
+  return isAscii(ty);
+}
+
 function mayBeEmpty(v: Val): boolean {
   return v.ty.k === "str" && !nonEmptyLiteral(v);
 }
@@ -133,6 +141,7 @@ export function formatted(comp: Component, given: (string | Val)[], n: N, what: 
   let before: Val | undefined;
   const parts = given.map((p) => (typeof p === "string" ? p : stringOf(comp, p, n, what, "FV0708")));
   const lone = loneOf(...parts.map((p) => (typeof p === "string" ? undefined : p)));
+  const ty = strTy(given.every((p) => (typeof p === "string" ? asciiText(p) : writesAscii(p.ty))));
   for (const part of parts) {
     if (typeof part === "string" || (part.ty.k === "str" && known(part) !== undefined)) {
       const text = typeof part === "string" ? part : unquote(part.code);
@@ -152,11 +161,11 @@ export function formatted(comp: Component, given: (string | Val)[], n: N, what: 
     else args.push(`if ${condition(part.code)} { "true" } else { "false" }`);
     fmt += "{}";
   }
-  if (!args.length) return { code: rustStr(fmt.replace(/\{\{|\}\}/g, (c) => c[0]!)), ty: STR };
+  if (!args.length) return { code: rustStr(fmt.replace(/\{\{|\}\}/g, (c) => c[0]!)), ty };
   const one = parts.filter((p) => (typeof p === "string" ? p !== "" : p.code !== '""'));
   if (fmt === "{}" && one.length === 1 && typeof one[0] !== "string" && one[0]!.ty.k === "str") return one[0]!;
-  if (fmt === "{}" && one.length === 1 && typeof one[0] !== "string" && one[0]!.ty.k === "bool") return { code: args[0]!, ty: STR };
-  return { code: `&*format!(${rustStr(fmt)}, ${args.join(", ")})`, ty: STR, format: { text: fmt, args }, ...lone };
+  if (fmt === "{}" && one.length === 1 && typeof one[0] !== "string" && one[0]!.ty.k === "bool") return { code: args[0]!, ty };
+  return { code: `&*format!(${rustStr(fmt)}, ${args.join(", ")})`, ty, format: { text: fmt, args }, ...lone };
 }
 
 export function stringMethod(s: Scope, target: Val, method: string, args: N[], n: N): Val | null {
@@ -184,7 +193,9 @@ export function stringMethod(s: Scope, target: Val, method: string, args: N[], n
     if (!isNumber(v.ty)) fail(comp, "FV0712", `\`.${method}()\` takes a number, present or optional`, args[i]);
     return asF64(v);
   };
-  const cut = { lone: true };
+  const ascii = isAscii(target.ty);
+  const cut = ascii ? {} : { lone: true };
+  const same = strTy(ascii);
   const noHalves = (): void => {
     if (target.lone) fail(comp, "FV0706", lonely(`\`.${method}()\``), n);
   };
@@ -216,7 +227,7 @@ export function stringMethod(s: Scope, target: Val, method: string, args: N[], n
     case "substr": {
       arity(0, 2);
       const length = num(1, "", "f64::INFINITY");
-      return { code: `&*fv::js_substr(${t}, ${num(0, "0.0", "0.0")}, ${length ? `Some(${bare(length)})` : "None"})`, ty: STR, ...cut };
+      return { code: `&*fv::js_substr(${t}, ${num(0, "0.0", "0.0")}, ${length ? `Some(${bare(length)})` : "None"})`, ty: same, ...cut };
     }
     case "charCodeAt":
       arity(0, 1);
@@ -232,25 +243,25 @@ export function stringMethod(s: Scope, target: Val, method: string, args: N[], n
     case "substring": {
       arity(0, 2);
       const end = num(1, "", "f64::INFINITY");
-      return { code: `&*fv::js_${method}(${t}, ${num(0, "0.0", "0.0")}, ${end ? `Some(${end})` : "None"})`, ty: STR, ...cut };
+      return { code: `&*fv::js_${method}(${t}, ${num(0, "0.0", "0.0")}, ${end ? `Some(${end})` : "None"})`, ty: same, ...cut };
     }
     case "at": {
       arity(1, 1);
       const at = `fv::js_at(${t}, ${num(0, "0.0", "0.0")})`;
-      if (!isTemporary(target)) return { code: at, ty: opt(STR), ...cut };
+      if (!isTemporary(target)) return { code: at, ty: opt(same), ...cut };
       const held = `${at}.map(|v| std::borrow::Cow::<str>::Owned(v.to_owned()))`;
-      return { code: `${atom(held)}.as_deref()`, ty: opt(STR), held, ...cut };
+      return { code: `${atom(held)}.as_deref()`, ty: opt(same), held, ...cut };
     }
     case "charAt":
       arity(0, 1);
-      return { code: `${isTemporary(target) ? "&*" : ""}fv::js_char_at(${t}, ${num(0, "0.0", "0.0")})`, ty: STR, ...cut };
+      return { code: `${isTemporary(target) ? "&*" : ""}fv::js_char_at(${t}, ${num(0, "0.0", "0.0")})`, ty: same, ...cut };
     case "split": {
       arity(1, 2);
       const sep = str(0);
       meet(comp, target, sep, "`.split()`", n, "search");
       const limit = num(1, "", "4_294_967_295.0");
       const pieces = limit ? `fv::js_split_limit(${t}, ${strArg(sep.code)}, ${bare(limit)})` : `fv::js_split(${t}, ${strArg(sep.code)})`;
-      return computed(`${pieces}.into_iter()`, STR, target.lone || !nonEmptyLiteral(sep));
+      return computed(`${pieces}.into_iter()`, same, !ascii && (target.lone || !nonEmptyLiteral(sep)));
     }
     case "replace":
     case "replaceAll": {
@@ -262,15 +273,15 @@ export function stringMethod(s: Scope, target: Val, method: string, args: N[], n
       meet(comp, target, pattern, `\`.${method}()\``, n, "search");
       meet(comp, target, replacement, `\`.${method}()\``, n, "join");
       const lone = target.lone || replacement.lone || (method === "replaceAll" && !nonEmptyLiteral(pattern));
-      return { code: `&*fv::js_${method === "replace" ? "replace" : "replace_all"}(${t}, ${strArg(pattern.code)}, ${strArg(replacement.code)})`, ty: STR, ...(lone ? cut : {}) };
+      return { code: `&*fv::js_${method === "replace" ? "replace" : "replace_all"}(${t}, ${strArg(pattern.code)}, ${strArg(replacement.code)})`, ty: strTy(ascii && isAscii(replacement.ty)), ...(replacement.lone || (lone && !ascii) ? { lone: true } : {}) };
     }
     case "padStart":
     case "padEnd": {
       arity(1, 2);
-      const fill: Val = args.length > 1 ? str(1) : { code: '" "', ty: STR };
+      const fill: Val = args.length > 1 ? str(1) : { code: '" "', ty: strTy(true) };
       const whole = fill.code.startsWith('"') && !/[\u{10000}-\u{10FFFF}]/u.test(fill.code);
       if (fill.lone || (method === "padStart" && target.lone && !whole)) fail(comp, "FV0706", lonely(`\`.${method}()\``), n);
-      return { code: `&*fv::js_${method === "padStart" ? "pad_start" : "pad_end"}(${t}, ${num(0, "0.0", "0.0")}, ${strArg(fill.code)})`, ty: STR, ...(target.lone || !whole ? cut : {}) };
+      return { code: `&*fv::js_${method === "padStart" ? "pad_start" : "pad_end"}(${t}, ${num(0, "0.0", "0.0")}, ${strArg(fill.code)})`, ty: strTy(ascii && isAscii(fill.ty)), ...(target.lone || !whole ? { lone: true } : {}) };
     }
     case "repeat": {
       arity(1, 1);
@@ -279,7 +290,7 @@ export function stringMethod(s: Scope, target: Val, method: string, args: N[], n
         fail(comp, "FV0714", "`.repeat()` with a negative or infinite count, which throws a `RangeError`", c);
       }
       if (target.lone) fail(comp, "FV0706", lonely("`.repeat()`"), n);
-      return { code: `&*fv::js_repeat(${t}, ${num(0, "0.0", "0.0")})`, ty: STR };
+      return { code: `&*fv::js_repeat(${t}, ${num(0, "0.0", "0.0")})`, ty: same };
     }
     case "toLocaleUpperCase":
     case "toLocaleLowerCase":

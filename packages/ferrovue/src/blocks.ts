@@ -1,4 +1,4 @@
-import { type Component, type N, type Scope, type Val, fail, GenError, nothing } from "./model.ts";
+import { type Component, type Fn, type N, type Scope, type Val, fail, GenError, nothing } from "./model.ts";
 import { ctx } from "./context.ts";
 import { expr, typedBy } from "./expr.ts";
 import { collected, heldList } from "./lists.ts";
@@ -84,6 +84,10 @@ class Renamer {
     return sts.map((st) => {
       if (st.type !== "VariableDeclaration") return this.node(st, env);
       const declarations = st.declarations.map((d: N) => {
+        if (d.id.type === "Identifier" && (d.init?.type === "ArrowFunctionExpression" || d.init?.type === "FunctionExpression")) {
+          const id = this.pattern(d.id, env);
+          return { ...d, id, init: this.node(d.init, env) };
+        }
         const init = this.node(d.init, env);
         return { ...d, init, id: this.pattern(d.id, env) };
       });
@@ -175,7 +179,7 @@ const OTHERS: Record<string, string> = {
   ThrowStatement: "`throw`, which ends the render with an error",
   LabeledStatement: "a labelled statement",
   ContinueStatement: "`continue`",
-  FunctionDeclaration: "a function declared inside it",
+  FunctionDeclaration: "a function declared inside it with `function`, which is hoisted: declare it with `const f = (…) => …` before it is called",
   ClassDeclaration: "a class declared inside it",
   DebuggerStatement: "`debugger`",
   WithStatement: "`with`",
@@ -183,7 +187,7 @@ const OTHERS: Record<string, string> = {
 
 const SUBSET = "it holds `const` (and `let` never assigned again), `if` / `else`, `switch` and `return`";
 
-function assignments(comp: Component, body: N[]): void {
+function assignments(comp: Component, body: N[], whose: string): void {
   const lets = new Set<string>();
   const visit = (n: N): void => {
     if (!n || typeof n !== "object") return;
@@ -196,9 +200,9 @@ function assignments(comp: Component, body: N[]): void {
       const target = n.type === "AssignmentExpression" ? n.left : n.argument;
       const shown = `\`${n.operator}\``;
       if (target.type === "Identifier" && lets.has(target.name)) {
-        fail(comp, "FV1902", `\`let ${target.name}\` is assigned again with ${shown}, which a function's body does not translate: give each value a \`const\` of its own`, n);
+        fail(comp, "FV1902", `\`let ${target.name}\` is assigned again with ${shown}, which ${whose} does not translate: give each value a \`const\` of its own`, n);
       }
-      fail(comp, "FV1902", `an assignment (${shown}) changes a value, which a function's body does not translate: give each value a \`const\` of its own`, n);
+      fail(comp, "FV1902", `an assignment (${shown}) changes a value, which ${whose} does not translate: give each value a \`const\` of its own`, n);
     }
     for (const key of Object.keys(n)) if (!SKIP.has(key) && n[key] && typeof n[key] === "object") visit(n[key]);
   };
@@ -212,10 +216,12 @@ export const PATH_BUDGET = 4096;
 
 class Desugar {
   private readonly comp: Component;
+  private readonly whose: string;
   private paths = 0;
 
-  constructor(comp: Component) {
+  constructor(comp: Component, whose = "a function's body") {
     this.comp = comp;
+    this.whose = whose;
   }
 
   run(sts: N[], k: Cont | null, brk: Cont | null | undefined, from: N): N {
@@ -244,16 +250,16 @@ class Desugar {
         case "SwitchStatement":
           return this.switched(st, after);
         case "VariableDeclaration": {
-          if (st.kind !== "const" && st.kind !== "let") fail(this.comp, "FV1901", `a function's body may not hold \`${st.kind}\`: declare the value with \`const\``, st);
+          if (st.kind !== "const" && st.kind !== "let") fail(this.comp, "FV1901", `${this.whose} may not hold \`${st.kind}\`: declare the value with \`const\``, st);
           const body = this.run(rest, k, brk, st);
           return st.declarations.reduceRight((inner: N, d: N) => this.bind(d, inner), body);
         }
         case "ExpressionStatement":
-          return fail(this.comp, "FV1901", `a function's body may not hold an expression statement (\`${st.expression.type}\`), whose value is dropped and which could only change something: ${SUBSET}`, st);
+          return fail(this.comp, "FV1901", `${this.whose} may not hold an expression statement (\`${st.expression.type}\`), whose value is dropped and which could only change something: ${SUBSET}`, st);
         default: {
           const what = LOOPS[st.type] ?? OTHERS[st.type] ?? `\`${st.type}\``;
           const why = LOOPS[st.type] ? `: ${SUBSET}; compute a list with \`.map()\`, \`.filter()\` or \`.reduce()\`` : `: ${SUBSET}`;
-          return fail(this.comp, "FV1901", `a function's body may not hold ${what}${why}`, st);
+          return fail(this.comp, "FV1901", `${this.whose} may not hold ${what}${why}`, st);
         }
       }
     }
@@ -362,14 +368,14 @@ const desugared = new WeakMap<object, object>();
 
 /** The expression a function's body computes: the expression of an arrow function, or a block of
  * statements in the subset ferrovue translates, written as one expression. */
-export function bodyExpr(comp: Component, fn: N): N {
+export function bodyExpr(comp: Component, fn: N, whose = "a function's body"): N {
   if (fn.body.type !== "BlockStatement") return fn.body;
   const done = desugared.get(fn);
   if (done) return done;
-  assignments(comp, fn.body.body);
+  assignments(comp, fn.body.body, whose);
   const shadowed: Env = new Map();
   const renamed = new Renamer(comp).statements(fn.body.body, shadowed);
-  const out = new Desugar(comp).run(renamed, null, undefined, fn.body.body.at(-1) ?? fn);
+  const out = new Desugar(comp, whose).run(renamed, null, undefined, fn.body.body.at(-1) ?? fn);
   desugared.set(fn, out);
   return out;
 }
@@ -404,6 +410,18 @@ function ownedCow(v: Val): string {
 /** `const name = init` around `body`: the value `body` computes with `name` bound once, as a Rust
  * `let` in a block that hands out nothing borrowed from it. */
 export function letIn(s: Scope, n: N): Val {
+  let init: N = n.init;
+  while (init?.type === "ParenthesizedExpression" || init?.type === "TSAsExpression" || init?.type === "TSSatisfiesExpression") init = init.expression;
+  if (init?.type === "ArrowFunctionExpression" || init?.type === "FunctionExpression") {
+    const fn: Fn = { name: n.js, node: init, home: s.comp, file: null };
+    const inner: Scope = {
+      ...s,
+      functions: new Map(s.functions).set(n.name, fn),
+      clientOnly: new Map(s.clientOnly).set(n.name, "it is a function declared in a body, which that body may call, and not use as a value"),
+    };
+    fn.captured = inner;
+    return expr(inner, n.body);
+  }
   return bound(s, n.name, expr(s, n.init), (inner) => expr(inner, n.body));
 }
 

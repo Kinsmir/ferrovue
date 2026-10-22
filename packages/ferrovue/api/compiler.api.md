@@ -159,7 +159,7 @@ export const ERRORS: {
     };
     readonly FV0207: {
         readonly title: "Constant that is not a literal";
-        readonly detail: "A constant is evaluated when the component is compiled, so its value is a string, number or boolean literal, `null`, a template literal without `${}`, a list or object of these, or another such constant of the same file (or a field of one). A call (`Date.now()`), a function, an operator (`1 + 2`) and a constant imported from yet another file are refused where the template reads the constant. Write the value as a literal, or compute it in Rust and pass it as a prop. See [`props`](crate::guide::props#constants).";
+        readonly detail: "A constant is evaluated when the component is compiled, as JavaScript evaluates it: its value is a string, number or boolean literal, `null`, arithmetic of numbers (`60 * MINUTE`, with `+`, `-`, `*`, `/`, `%`, and `**` where it gives an exact integer within ±2⁵³, which every engine agrees on), strings joined with `+` or a template literal (`` `${BASE}/feed` ``), a list or object of these, or another such constant of the same file (or a field of one). A call (`Date.now()`), a function, another operator and a constant imported from yet another file are refused where the template reads the constant. Write the value as a literal, or compute it in Rust and pass it as a prop. See [`props`](crate::guide::props#constants).";
     };
     readonly FV0208: {
         readonly title: "Constant object read whole";
@@ -237,6 +237,10 @@ export const ERRORS: {
         readonly title: "Constant object without a key that names a field of every object";
         readonly detail: "A constant object read by a key whose union has a member the object lacks reads `undefined` for it, except for a member named like a field every object inherits (`toString`, `constructor`, `valueOf`, `hasOwnProperty`): JavaScript reads `Object.prototype`'s function for it, which the server does not have. Add the member to the object.";
     };
+    readonly FV0227: {
+        readonly title: "Constant `Map` read other than by `.get()` or `.has()`";
+        readonly detail: "A constant `new Map([[key, value], …])`, its keys strings or integers, is evaluated when the component is compiled, and the server reads it with `.get(key)`, `undefined` for a key it lacks, and `.has(key)`, by a string or an integer that is present. Its size, its iterators and the map itself as a value are refused: read it by key, or use a constant object.";
+    };
     readonly FV0301: {
         readonly title: "`generic` that is not a list of type parameters";
         readonly detail: "The `generic` attribute of `<script setup>` is read as the type parameters of a TypeScript type, and text that does not parse as such a list is refused. Write it as `<T extends string>` would be written between the angle brackets: `generic=\"T extends string\"`, or several separated by commas.";
@@ -299,7 +303,7 @@ export const ERRORS: {
     };
     readonly FV0316: {
         readonly title: "Unsupported type";
-        readonly detail: "A prop's type is translated from strings, numbers, booleans, lists, `Record`s, `Date`, literals, unions of one type with `null` or `undefined`, and named types. Other TypeScript types, such as tuples, intersections, function types, `any`, `unknown` and `keyof`, have no Rust type; the message names the one met. Write the type as one of those. See [`props`](crate::guide::props).";
+        readonly detail: "A prop's type is translated from strings, numbers, booleans, lists, `Record`s, `Date`, literals, unions of one type with `null` or `undefined`, and named types. Other TypeScript types, such as tuples, intersections, function types, `any`, `unknown` and `keyof`, have no Rust type; the message names the one met. Write the type as one of those: a tuple as an interface with a field for each part, or a list of such objects. See [`props`](crate::guide::props).";
     };
     readonly FV0317: {
         readonly title: "`Record` of unsupported values";
@@ -523,7 +527,7 @@ export const ERRORS: {
     };
     readonly FV0613: {
         readonly title: "Value set up in a way the server cannot evaluate";
-        readonly detail: "The template reads a name setup binds, and the server cannot compute its value: a function declared in setup, a `computed` whose body holds a statement outside the subset of [`script_logic`](crate::guide::script_logic) (the message names it and its line), a value destructured from something the server does not have, a `let` with no initial value, or an expression the compiler refuses (the message gives the reason). The server evaluates `ref(…)`, `computed(() => …)` with a body that is one expression or a block of `const`, `if`, `switch` and `return`, and plain expressions. Such a name may be used freely from event handlers, which the server drops. Write the value as one expression, move a function into the helpers module with a Rust twin under `helpers.functions`, or compute the value in Rust and pass it as a prop.";
+        readonly detail: "The template reads a name setup binds, and the server has no value for it: a function read as a value where it is not called (`{{ format }}`, `:fn=\"format\"`), a value destructured from something the server does not have, a `let` with no initial value, or a binding that is not `ref(…)`, `computed(…)` or a plain expression. A `computed` or setup expression the compiler refuses is reported with the refusal's own code, at the construct refused, and where the template reads it. Such a name may be used freely from event handlers, which the server drops. Call the function where its value is needed, write the value as `ref(…)`, `computed(() => …)` or an expression, or compute it in Rust and pass it as a prop.";
     };
     readonly FV0614: {
         readonly title: "Logical operator between values that are not booleans";
@@ -571,7 +575,7 @@ export const ERRORS: {
     };
     readonly FV0625: {
         readonly title: "Unsupported expression";
-        readonly detail: "The template holds a kind of expression the server does not translate, such as an object literal, an arrow function or an optional chain of a shape it does not follow; the message names it. Event handlers, which the server drops, may hold any expression. Write the value with the expressions the template supports, or compute it in Rust and pass it as a prop.";
+        readonly detail: "The template, a `computed`, a function or a setup expression holds a kind of expression the server does not translate, such as an object literal, an arrow function used as a value, `await` inside an expression or an optional chain of a shape it does not follow; the message names it and where it is. Event handlers, which the server drops, may hold any expression. Write the value with the expressions the template supports, or compute it in Rust and pass it as a prop.";
     };
     readonly FV0626: {
         readonly title: "Strict test of a value that may be `null` or `undefined`";
@@ -642,8 +646,8 @@ export const ERRORS: {
         readonly detail: "Each string method is translated with the number of arguments the message gives: `.includes()`, `.startsWith()`, `.endsWith()`, `.indexOf()` and `.split()` take a value and an optional position or limit, `.replace()` and `.replaceAll()` take two, `.at()` and `.repeat()` take one. JavaScript ignores extra arguments, which here most often means a mistake, and a missing one is read as `undefined`. Pass the arguments the message names.";
     };
     readonly FV0710: {
-        readonly title: "Regular expression given to a string method";
-        readonly detail: "The server does not run regular expressions: JavaScript's syntax and matching differ from Rust's `regex` in flags, lookbehind, Unicode classes and `lastIndex`. `.replace()`, `.split()`, `.includes()` and the other string methods take a string pattern. Use `.replaceAll(\"x\", \"y\")` for a fixed pattern, or do the matching in Rust and pass the result as a prop. See [`strings`](crate::guide::strings).";
+        readonly title: "Regular expression";
+        readonly detail: "The server does not run regular expressions, in a template, a `computed` or a function: JavaScript's syntax and matching differ from Rust's `regex` in flags, lookbehind, Unicode classes and `lastIndex`. `.replace()`, `.split()`, `.includes()` and the other string methods take a string pattern. Use `.replaceAll(\"x\", \"y\")` for a fixed pattern, or do the matching in Rust and pass the result as a prop. See [`strings`](crate::guide::strings).";
     };
     readonly FV0711: {
         readonly title: "String method given a value that is not a present string";

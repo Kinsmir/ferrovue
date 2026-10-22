@@ -1,14 +1,15 @@
-import { type N, type Scope, type Ty, type Val, BOOL, fail, FLOAT, INT, sameTy, STR } from "./model.ts";
+import { type N, type Scope, type Ty, type Val, asciiTy, BOOL, fail, FLOAT, INT, isAscii, sameTy, STR, strTy } from "./model.ts";
 import { ctx } from "./context.ts";
 import type { Code } from "./errors.ts";
 import { claim } from "./plugin.ts";
 import { atom, bare, binary, condition, operand, receiver, strArg, UNARY } from "./parens.ts";
 import { computedListMethod, isBoolean, items, listMethod, objectCall, presentLiteral, spreadExtreme } from "./lists.ts";
-import { formatted, lonely, loneOf, meet, stringMethod, stringOf, stringsEqual } from "./strings.ts";
+import { formatted, lonely, loneOf, meet, stringMethod, stringOf, stringsEqual, writesAscii } from "./strings.ts";
 import { asF64, intFromF64, isNumber, numberVal, power } from "./numbers.ts";
 import { boolOf, truthy } from "./narrowing.ts";
 import { coerce, describeTy, expr, refuseClientOnly, refuseUnavailable } from "./expr.ts";
 import { callFunction } from "./functions.ts";
+import { constOf, mapCall } from "./constants.ts";
 
 const DIGITS = new Map<string, [Code, number, string]>([
   ["toFixed", ["FV0705", 0, "number of digits"]],
@@ -46,15 +47,15 @@ export function call(s: Scope, n: N): Val {
     const helper = s.helpers.get(callee.name);
     if (helper) return helperCall(s, helper, args, n);
     const fn = s.locals.has(callee.name) ? undefined : s.functions.get(callee.name);
-    if (fn) return callFunction(s, callee.name, fn, args, n);
+    if (fn) return callFunction(s, callee.fvName ?? callee.name, fn, args, n);
     if (isBoolean(s, callee) && args.length === 1) return boolOf(truthy(expr(s, args[0])));
     const global = !s.locals.has(callee.name) && !s.setup.has(callee.name);
     if (callee.name === "String" && global) {
       if (args.length !== 1) return fail(comp, "FV0723", "`String()` takes one value", n);
       const a = expr(s, args[0]);
       if (a.ty.k === "str") return a;
-      if (isNumber(a.ty)) return { code: `&*fv::Js(${bare(a.code)}).to_string()`, ty: STR };
-      if (a.ty.k === "bool") return { code: `if ${condition(a.code)} { "true" } else { "false" }`, ty: STR };
+      if (isNumber(a.ty)) return { code: `&*fv::Js(${bare(a.code)}).to_string()`, ty: asciiTy() };
+      if (a.ty.k === "bool") return { code: `if ${condition(a.code)} { "true" } else { "false" }`, ty: asciiTy() };
       return formatted(comp, [stringOf(comp, a, args[0], "`String()`", "FV0723")], n, "`String()`");
     }
     if ((callee.name === "encodeURIComponent" || callee.name === "encodeURI") && global) {
@@ -150,26 +151,29 @@ export function call(s: Scope, n: N): Val {
       const copy = expr(s, callee.object);
       if (copy.ty.k === "list") return listMethod(s, copy, method === "sort" ? "toSorted" : "toReversed", args, n)!;
     }
+    const map = callee.object.type === "Identifier" || callee.object.type === "MemberExpression" ? constOf(s, callee.object) : null;
+    if (map?.sym.k === "const" && map.sym.c.k === "map") return mapCall(s, map, method, args, n);
     const literal = method === "filter" && args.length === 1 && isBoolean(s, args[0]) && callee.object.type === "ArrayExpression";
     const target = (literal ? presentLiteral(s, callee.object) : null) ?? expr(s, callee.object);
     const typed = claim((p) => p.method?.(s, target, method, args, n));
     if (typed) return typed;
     if (target.ty.k === "str") {
       const lone = loneOf(target);
+      const same = strTy(isAscii(target.ty));
       switch (args.length === 0 ? method : "") {
         case "trim":
-          return { code: `fv::js_trim(${strArg(target.code)})`, ty: STR, ...lone };
+          return { code: `fv::js_trim(${strArg(target.code)})`, ty: same, ...lone };
         case "trimStart":
-          return { code: `fv::js_trim_start(${strArg(target.code)})`, ty: STR, ...lone };
+          return { code: `fv::js_trim_start(${strArg(target.code)})`, ty: same, ...lone };
         case "trimEnd":
         case "trimRight":
-          return { code: `fv::js_trim_end(${strArg(target.code)})`, ty: STR, ...lone };
+          return { code: `fv::js_trim_end(${strArg(target.code)})`, ty: same, ...lone };
         case "trimLeft":
-          return { code: `fv::js_trim_start(${strArg(target.code)})`, ty: STR, ...lone };
+          return { code: `fv::js_trim_start(${strArg(target.code)})`, ty: same, ...lone };
         case "toUpperCase":
-          return { code: `&*${receiver(target.code)}.to_uppercase()`, ty: STR, ...lone };
+          return { code: `&*${receiver(target.code)}.to_uppercase()`, ty: same, ...lone };
         case "toLowerCase":
-          return { code: `&*${receiver(target.code)}.to_lowercase()`, ty: STR, ...lone };
+          return { code: `&*${receiver(target.code)}.to_lowercase()`, ty: same, ...lone };
         case "toString":
           return target;
       }
@@ -183,13 +187,13 @@ export function call(s: Scope, n: N): Val {
       const given = a === undefined || (a.type === "Identifier" && a.name === "undefined") ? undefined : a.type === "NumericLiteral" ? Math.trunc(a.value) : NaN;
       if (given !== undefined && !(given >= low && given <= 100)) fail(comp, code, `\`.${method}()\` takes a literal ${what}, from ${low} to 100`, n);
       const x = bare(asF64(target));
-      if (method === "toFixed") return { code: `&*fv::js_to_fixed(${x}, ${given ?? 0})`, ty: STR };
-      if (method === "toExponential") return { code: `&*fv::js_to_exponential(${x}, ${given === undefined ? "None" : `Some(${given})`})`, ty: STR };
-      if (given === undefined) return { code: `&*fv::Js(${bare(target.code)}).to_string()`, ty: STR };
-      return { code: `&*fv::js_to_precision(${x}, ${given})`, ty: STR };
+      if (method === "toFixed") return { code: `&*fv::js_to_fixed(${x}, ${given ?? 0})`, ty: asciiTy() };
+      if (method === "toExponential") return { code: `&*fv::js_to_exponential(${x}, ${given === undefined ? "None" : `Some(${given})`})`, ty: asciiTy() };
+      if (given === undefined) return { code: `&*fv::Js(${bare(target.code)}).to_string()`, ty: asciiTy() };
+      return { code: `&*fv::js_to_precision(${x}, ${given})`, ty: asciiTy() };
     }
     if (isNumber(target.ty) && method === "toString" && args.length === 0) {
-      return { code: `&*fv::Js(${bare(target.code)}).to_string()`, ty: STR };
+      return { code: `&*fv::Js(${bare(target.code)}).to_string()`, ty: asciiTy() };
     }
     if (target.ty.k === "list") {
       const inPlace = target.iter === undefined && !target.lone && (target.ty.of.k === "str" || target.ty.of.k === "int");
@@ -210,7 +214,7 @@ export function call(s: Scope, n: N): Val {
         const sep: Val = args.length ? expr(s, args[0]) : { code: '","', ty: STR };
         if (sep.ty.k !== "str") fail(comp, "FV0802", "`.join()` takes a string", args[0]);
         const each = of.k === "str" ? `${atom(target.code)}.iter().map(|v| &**v)` : `${atom(target.code)}.iter().map(|v| fv::Js(*v).to_string())`;
-        return { code: `&*${each}.collect::<Vec<_>>().join(${strArg(sep.code)})`, ty: STR, ...loneOf(sep) };
+        return { code: `&*${each}.collect::<Vec<_>>().join(${strArg(sep.code)})`, ty: strTy(writesAscii(target.ty) && isAscii(sep.ty)), ...loneOf(sep) };
       }
     }
     return fail(comp, "FV0602", `\`.${method}()\` is not supported`, n);

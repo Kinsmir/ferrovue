@@ -156,7 +156,7 @@ A constant object is evaluated key by key, each a plain name or a string or numb
 
 Constant that is not a literal.
 
-A constant is evaluated when the component is compiled, so its value is a string, number or boolean literal, `null`, a template literal without `${}`, a list or object of these, or another such constant of the same file (or a field of one). A call (`Date.now()`), a function, an operator (`1 + 2`) and a constant imported from yet another file are refused where the template reads the constant. Write the value as a literal, or compute it in Rust and pass it as a prop. See [`props`](crate::guide::props#constants).
+A constant is evaluated when the component is compiled, as JavaScript evaluates it: its value is a string, number or boolean literal, `null`, arithmetic of numbers (`60 * MINUTE`, with `+`, `-`, `*`, `/`, `%`, and `**` where it gives an exact integer within ±2⁵³, which every engine agrees on), strings joined with `+` or a template literal (`` `${BASE}/feed` ``), a list or object of these, or another such constant of the same file (or a field of one). A call (`Date.now()`), a function, another operator and a constant imported from yet another file are refused where the template reads the constant. Write the value as a literal, or compute it in Rust and pass it as a prop. See [`props`](crate::guide::props#constants).
 
 ## FV0208
 
@@ -270,6 +270,12 @@ Constant object without a key that names a field of every object.
 
 A constant object read by a key whose union has a member the object lacks reads `undefined` for it, except for a member named like a field every object inherits (`toString`, `constructor`, `valueOf`, `hasOwnProperty`): JavaScript reads `Object.prototype`'s function for it, which the server does not have. Add the member to the object.
 
+## FV0227
+
+Constant `Map` read other than by `.get()` or `.has()`.
+
+A constant `new Map([[key, value], …])`, its keys strings or integers, is evaluated when the component is compiled, and the server reads it with `.get(key)`, `undefined` for a key it lacks, and `.has(key)`, by a string or an integer that is present. Its size, its iterators and the map itself as a value are refused: read it by key, or use a constant object.
+
 # Props and types: FV03xx
 
 See [`props`](crate::guide::props).
@@ -368,7 +374,7 @@ A type is translated when it is a primitive, a list, a `Record`, `Date`, an inte
 
 Unsupported type.
 
-A prop's type is translated from strings, numbers, booleans, lists, `Record`s, `Date`, literals, unions of one type with `null` or `undefined`, and named types. Other TypeScript types, such as tuples, intersections, function types, `any`, `unknown` and `keyof`, have no Rust type; the message names the one met. Write the type as one of those. See [`props`](crate::guide::props).
+A prop's type is translated from strings, numbers, booleans, lists, `Record`s, `Date`, literals, unions of one type with `null` or `undefined`, and named types. Other TypeScript types, such as tuples, intersections, function types, `any`, `unknown` and `keyof`, have no Rust type; the message names the one met. Write the type as one of those: a tuple as an interface with a field for each part, or a list of such objects. See [`props`](crate::guide::props).
 
 ## FV0317
 
@@ -714,7 +720,7 @@ Computed member access.
 
 Value set up in a way the server cannot evaluate.
 
-The template reads a name setup binds, and the server cannot compute its value: a function declared in setup, a `computed` whose body holds a statement outside the subset of [`script_logic`](crate::guide::script_logic) (the message names it and its line), a value destructured from something the server does not have, a `let` with no initial value, or an expression the compiler refuses (the message gives the reason). The server evaluates `ref(…)`, `computed(() => …)` with a body that is one expression or a block of `const`, `if`, `switch` and `return`, and plain expressions. Such a name may be used freely from event handlers, which the server drops. Write the value as one expression, move a function into the helpers module with a Rust twin under `helpers.functions`, or compute the value in Rust and pass it as a prop.
+The template reads a name setup binds, and the server has no value for it: a function read as a value where it is not called (`{{ format }}`, `:fn="format"`), a value destructured from something the server does not have, a `let` with no initial value, or a binding that is not `ref(…)`, `computed(…)` or a plain expression. A `computed` or setup expression the compiler refuses is reported with the refusal's own code, at the construct refused, and where the template reads it. Such a name may be used freely from event handlers, which the server drops. Call the function where its value is needed, write the value as `ref(…)`, `computed(() => …)` or an expression, or compute it in Rust and pass it as a prop.
 
 ## FV0614
 
@@ -786,7 +792,7 @@ Branches of `?:` of different types.
 
 Unsupported expression.
 
-The template holds a kind of expression the server does not translate, such as an object literal, an arrow function or an optional chain of a shape it does not follow; the message names it. Event handlers, which the server drops, may hold any expression. Write the value with the expressions the template supports, or compute it in Rust and pass it as a prop.
+The template, a `computed`, a function or a setup expression holds a kind of expression the server does not translate, such as an object literal, an arrow function used as a value, `await` inside an expression or an optional chain of a shape it does not follow; the message names it and where it is. Event handlers, which the server drops, may hold any expression. Write the value with the expressions the template supports, or compute it in Rust and pass it as a prop.
 
 ## FV0626
 
@@ -896,9 +902,9 @@ Each string method is translated with the number of arguments the message gives:
 
 ## FV0710
 
-Regular expression given to a string method.
+Regular expression.
 
-The server does not run regular expressions: JavaScript's syntax and matching differ from Rust's `regex` in flags, lookbehind, Unicode classes and `lastIndex`. `.replace()`, `.split()`, `.includes()` and the other string methods take a string pattern. Use `.replaceAll("x", "y")` for a fixed pattern, or do the matching in Rust and pass the result as a prop. See [`strings`](crate::guide::strings).
+The server does not run regular expressions, in a template, a `computed` or a function: JavaScript's syntax and matching differ from Rust's `regex` in flags, lookbehind, Unicode classes and `lastIndex`. `.replace()`, `.split()`, `.includes()` and the other string methods take a string pattern. Use `.replaceAll("x", "y")` for a fixed pattern, or do the matching in Rust and pass the result as a prop. See [`strings`](crate::guide::strings).
 
 ## FV0711
 
