@@ -163,6 +163,7 @@ A fixture is a JSON object of props plus three optional keys:
 | `Pending` | Refs that start empty, typed by their type argument: `ref<Row[]>([])`, `ref<User[]>([])`, `ref<string[]>([])`, `ref<Row \| undefined>()`, `ref<string>()`, `ref<number \| undefined>(undefined)` |
 | `EmptyBranch` | Empty array literals typed by the list beside them: `?:` between a prop's list and `[]`, a typed empty constant and `[] as T[]` seeding `shallowRef`, `ref<T[]>`, `computed` and the template's `v-for`; `?.` and `??` falling back to `[]` and to another list; a `?:` between two lists, nested; a computed list and an array literal chosen against `[]` |
 | `Picker` | A generic component (`generic="T extends Choice, K extends string"`), rendered with each type parameter as its constraint |
+| `Lookups` | Object constants read by a key known only when rendering: declared in `<script setup>` (`as const`, `Record<Size, number>`, untyped, `Partial<Record<1 \| 2 \| 3, string>>`) and imported from `types/lookups.ts` (keyed by enum members); keys that are a union-typed prop, one with a default, an `enum` prop, a `computed`, a `?:` of literals, an integer union and a `v-for` item's field; strings, numbers, lists and `null`, read in text, `:title`, `:class` and `:style` and through a `computed`; nested fields (`THEME[tone].fg`); members the object lacks, read with `??`, `?.` and `v-if` |
 | `Catalog` | Constants imported from `types/catalog.ts`, evaluated at build time: an object read by field and nested field, a list of strings, a list of numbers, lists of objects (one typed by an interface) in `types.rs`; enums imported and declared in the component, string and numeric, as a prop's type and read by member and by number |
 | `ShapePicker`, `ShapeRoot`, `ShapeCircle`, `ShapeSquare` | `<component :is>` over components: a `computed`, an object declared in setup and one imported from `types/shapes.ts`, read by a literal-union prop, an imported component, a `?:` between a component and an element, inside `<KeepAlive>` and `<Transition>`, as a component's root given fallthrough attributes and slot content, with slots only some choices take and a `:slotted()` id on a chosen element |
 | `ThemedChoice` | `<component :is>` with provide/inject: a chosen provider or injector given the parent's context, slot content injecting inside a chosen component, a chosen element and a slot inside one |
@@ -192,7 +193,7 @@ when it names a component that is not in `components/` with fixtures of its own.
 |---|---|
 | Prop types | `Text`, `Attrs`, `Numbers`, `Narrowing`, `Nullable`, `UserCard`, `UserList`, `Tree`, `Records`, `Rated`, `Prose`, `InlineProse`, `Dashboard`, `DatePost` |
 | Shared types | `UserCard`, `UserList`, `DataTable`, `RowChip`, `Dashboard`, `Cart`, `Catalog` |
-| Constants | `Catalog`, `Constants` |
+| Constants | `Catalog`, `Constants`, `Lookups` |
 | Props | `Defaults`, `Destructured`, `PropsObject`, `Model`, `ModelParent`, `Picker`, `Glyph`, `Divider` |
 | Setup | `Setup`, `SetupValues`, `Lifecycle`, `Pending`, `EmptyBranch`, `Unread`, `UnreadVar` |
 | Statements | `Statements`, `UnreadSteps` |
@@ -366,7 +367,10 @@ What it generates, with random nesting:
 - constants and enums from a `.ts` file beside the component (strings, numbers, booleans, lists,
   an object read field by field, a list of objects under an interface, a string `enum` and a
   numeric one read both ways), or the enums declared in the component, and a string enum as a
-  prop type;
+  prop type; lookup tables keyed by the enum's members (`[Tone.Loud]: …`), beside the enum or in
+  the component, read by an enum prop (or an optional one with `?? Tone.Loud`): strings, a table
+  that lacks some members (narrowed with `v-if`, `typeof` and `!==`, or read with `??`), and
+  objects read on by field;
 - `provide` with a string key and with `InjectionKey`s (a plain value, a number and a `computed`),
   a child that injects all three with defaults and a child that provides its own values to its slot
   content; `useHead` (`title`, `titleTemplate`, `htmlAttrs`, `bodyAttrs`, `meta`, `link`, plain

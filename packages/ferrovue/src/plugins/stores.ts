@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
-import { basename, dirname, join, resolve } from "node:path";
+import { basename, join } from "node:path";
 import { relativePath } from "../paths.ts";
 import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, absence, blankComponent, BOOL, fail, failIn, FLOAT, GenError, INT, nodeName, opt, sameTy, snake, STR, tagAst, UNDEF } from "../model.ts";
-import { ctx } from "../context.ts";
 import { listDir, parseTs } from "../files.ts";
+import { resolveImport } from "../resolve.ts";
 import { ONE_NOTHING, structOf, tyOfTs, typesImports } from "../typescript.ts";
 import { patternNames, setupStatement } from "../script.ts";
 import { expr, fieldVal } from "../expr.ts";
@@ -49,9 +49,9 @@ interface StoresScope {
 
 function storeImport(comp: Component, from: string): string | null {
   const { stores } = runOf(piniaStores);
-  if (!from.startsWith(".") || stores.size === 0) return null;
-  const target = resolve(ctx.rootDir, dirname(comp.file), from).replace(/\.ts$/, "");
-  return [...stores.values()].some((s) => s.module === target) ? target : null;
+  if (stores.size === 0) return null;
+  const target = resolveImport(comp.file, from)?.replace(/\.ts$/, "");
+  return target !== undefined && [...stores.values()].some((s) => s.module === target) ? target : null;
 }
 
 function readStores(root: string, dir: string): void {

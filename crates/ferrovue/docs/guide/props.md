@@ -407,6 +407,28 @@ Each generated struct has the same `new` and setters as `Props` (none with `"bui
 helper: props go out to the client as JSON and never come back in. An object prop handed to a child
 component is cloned; its strings are `Cow`s, so borrowed ones cost nothing to copy.
 
+# Imports through aliases
+
+A `.ts` file may be imported by a relative path (`../lib/format`) or through an alias, as
+TypeScript and Vite resolve it:
+
+- the `compilerOptions.paths` of the tsconfig.json nearest the component, after its `extends`
+  (Nuxt's `./.nuxt/tsconfig.json` included), and of the projects it lists in `references` (as
+  create-vue's `tsconfig.app.json`), relative to `baseUrl` when it is set and else to the file that
+  declares them; a bare path relative to `baseUrl` too;
+- with the Vite plugin, the build's own `resolve.alias`, tried before tsconfig's `paths`.
+
+```json
+{ "compilerOptions": { "paths": { "@/*": ["./src/*"] } } }
+```
+
+`import { LABELS } from "@/lib/catalog"` then reads `src/lib/catalog.ts` (or `catalog/index.ts`).
+`ferrovue --check` in CI runs without Vite, so declare in tsconfig.json an alias the CLI should
+know. A name the server reads that is imported from a module no relative path or alias leads to a
+`.ts` file of the project, a package included, is refused with
+[`FV0110`](crate::guide::error_codes#fv0110), naming the specifier and where it was looked for; a
+name only an event handler uses stays the client's.
+
 # Constants
 
 A constant a component imports from a `.ts` file, or an `enum`, imported or declared in the
@@ -442,5 +464,45 @@ pub const SORTS: &[SortsItem<'static>] = &[
 
 A constant is a literal, a list, an object, or another constant of the same file. One that is
 anything else (`Date.now()`, a function) is refused where the template reads it, naming the file
-and line it is declared on. So are an object constant read whole or by a key chosen at run time
-(`LABELS[key]`), and `new` of anything but `Date` (`new Map()`).
+and line it is declared on. So are an object constant read whole, and `new` of anything but `Date`
+(`new Map()`).
+
+## Lookup tables
+
+An object constant, imported from a `.ts` file or declared with `const` in `<script setup>`, may be
+read by a key known only when rendering, when the key's type is a closed set: a union of string
+literals (`size: "sm" | "md" | "lg"`), of integer literals (`level: 1 | 2 | 3`), or an `enum` of
+them. The key may be a prop, a `computed`, a field of a `v-for` item, or a `?:` or `??` of such
+values and literals. The object may be written `as const`, typed `Record<Size, T>` or
+`Partial<Record<Size, T>>`, or left untyped, and its keys may be computed from enum members
+(`[Tone.Warn]: …`). The read becomes a `match` over the key's members:
+
+```ts
+type Size = "sm" | "md" | "lg";
+const props = defineProps<{ size: Size; tone: Tone }>();
+const PAD = { sm: "p-1", md: "p-2", lg: "p-4" } as const;
+```
+
+```html
+<p :class="PAD[size]" :style="{ color: THEME[tone].fg }">{{ LABELS[size] }}</p>
+```
+
+```rust
+# let props_size = "md";
+let class = match props_size { "sm" => "p-1", "md" => "p-2", _ => "p-4" };
+# assert_eq!(class, "p-2");
+```
+
+Each member reads the value the object holds for it: a string, a number, a boolean, `null`, a list
+of them, or an object read on by field (`THEME[tone].fg`, `THEME[tone].weight`). The values of
+every member are of one type, numbers whether integers or fractions. A member the object has no
+key for reads `undefined`, as in JavaScript, so the value may be absent: `ICONS[kind] ?? "none"`,
+`ICONS[kind]?.label`, and `v-if="ICONS[kind]"`, inside which `ICONS[kind].label` reads as present.
+A field read without `?.` of a value that may be `undefined` is refused, naming the members that
+lack it.
+
+The key's type is trusted, as it is for `<component :is>`: a value outside it, which a TypeScript
+caller cannot pass, reads the last member's value. A key typed `string` or `number` is refused: a
+plain object holds the fields of its prototype too (`toString`, `constructor`, `__proto__`), which
+a key could name. For the same reason a member that names one of them must be a key of the object,
+and an object literal may not set its prototype with `__proto__:`.

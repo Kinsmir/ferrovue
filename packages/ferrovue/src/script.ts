@@ -1,7 +1,8 @@
 import { basename } from "node:path";
 import { type Component, type N, type Scope, type Val, fail, GenError, nodeName, nothing, snake, takesAttrs, UNDEF } from "./model.ts";
 import { CONFIG_FILE, ctx } from "./context.ts";
-import { definePropsType, resolveImport, tyOfTs } from "./typescript.ts";
+import { definePropsType, tyOfTs } from "./typescript.ts";
+import { resolveImport } from "./resolve.ts";
 import { constOfDecl, type Declared, declareConsts } from "./constants.ts";
 import { localTy } from "./rust.ts";
 import { expr, fieldVal, typedBy } from "./expr.ts";
@@ -47,6 +48,11 @@ export function setupSource(comp: Component, init: N): N | null {
   }
   if (init.type === "TSAsExpression" || init.type === "TSSatisfiesExpression" || init.type === "TSNonNullExpression") return setupSource(comp, init.expression);
   return init;
+}
+
+function unwrapped(n: N): N {
+  while (n && ["TSAsExpression", "TSSatisfiesExpression", "TSNonNullExpression", "ParenthesizedExpression"].includes(n.type)) n = n.expression;
+  return n;
 }
 
 function statedTy(init: N): N | undefined {
@@ -239,6 +245,11 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
         continue;
       }
       const local: string = d.id.name;
+      const declared = locals.get(local);
+      if (st.kind === "const" && declared !== undefined && declared.node === d && unwrapped(init0)?.type === "ObjectExpression") {
+        evaluable(local, declared, "it is an object the compiler does not evaluate");
+        continue;
+      }
       if (useAttrsName !== null && init0?.type === "CallExpression" && init0.callee.type === "Identifier" && init0.callee.name === useAttrsName) {
         scope.attrsBindings.add(local);
         scope.clientOnly.set(local, "`useAttrs()` is bound whole, with `v-bind`; a value read from it has no type");

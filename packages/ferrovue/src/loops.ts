@@ -5,6 +5,7 @@ import { isObjectCall } from "./calls.ts";
 import { atom, operand, OR } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
 import { statements } from "./template.ts";
+import { unbound } from "./narrowing.ts";
 
 export function list(s: Scope, e: Emitter, c: N): void {
   const fn = c.arguments[1];
@@ -84,7 +85,7 @@ export function list(s: Scope, e: Emitter, c: N): void {
   if (index) inner.set(index.name, { code: idx!, ty: INT });
   const before = e.literalBytes;
   const fromProps = src.ty.k === "list" && src.iter === undefined && /^\(?props\./.test(src.code);
-  statements({ ...s, locals: inner, loop: fromProps ? { item: itemName, over: src.code } : undefined }, e, fn.body.body);
+  statements({ ...s, locals: inner, narrowed: rebound(s, inner), loop: fromProps ? { item: itemName, over: src.code } : undefined }, e, fn.body.body);
   const unusedItem = !e.reads(itemName, bodyFrom);
   const unusedIdx = idx !== null && !e.reads(idx, bodyFrom);
   const head = bodyFrom - 1 - (idx ? 1 : 0) - (itemLet >= 0 ? 1 : 0);
@@ -128,7 +129,7 @@ function recordLoop(s: Scope, e: Emitter, r: Val, fn: N, value: N | undefined, k
   if (key) inner.set(key.name, { code: k, ty: STR });
   if (index) inner.set(index.name, { code: i, ty: INT });
   const before = e.literalBytes;
-  statements({ ...s, locals: inner }, e, fn.body.body);
+  statements({ ...s, locals: inner, narrowed: rebound(s, inner) }, e, fn.body.body);
   const reads = (name: string) => e.reads(name, bodyFrom);
   const [readsV, readsK, readsI] = [reads(v), reads(k), reads(i)];
   if (!readsI) e.lines.splice(head + 2, 1);
@@ -139,4 +140,8 @@ function recordLoop(s: Scope, e: Emitter, r: Val, fn: N, value: N | undefined, k
   const body = e.literalBytes - before;
   e.literalBytes = before;
   if (body > 0 && /^\(?props\./.test(r.code)) e.perItem.push(`${body === 1 ? "" : `${body} * `}${atom(r.code)}.len()`);
+}
+
+function rebound(s: Scope, inner: Map<string, Val>): Map<string, Val> {
+  return unbound(s.narrowed, [...inner.keys()].filter((k) => inner.get(k) !== s.locals.get(k)));
 }

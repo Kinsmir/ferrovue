@@ -1,4 +1,5 @@
-import { type N, type Scope, type Ty, type Val, absence, BOOL, fail, nothing, rustStr, STR } from "./model.ts";
+import { type N, type Scope, type Ty, type Val, absence, BOOL, fail, nothing, rustStr, STR, UNDEF } from "./model.ts";
+import { pickPresent } from "./constants.ts";
 import { ctx } from "./context.ts";
 import { claim } from "./plugin.ts";
 import { atom, bare, binary, condition, ifElse, logical, not, occurrences, receiver } from "./parens.ts";
@@ -47,7 +48,14 @@ export function pathOf(n: N): string | null {
   if (!n.computed && n.property.type === "Identifier") return `${base}.${n.property.name}`;
   if (n.computed && n.property.type === "StringLiteral") return `${base}.${n.property.value}`;
   if (n.computed && n.property.type === "NumericLiteral") return `${base}[${n.property.value}]`;
-  return null;
+  const key = n.computed ? pathOf(n.property) : null;
+  return key === null ? null : `${base}[${key}]`;
+}
+
+/** The narrowed values of `narrowed` whose paths read none of `names`, which a scope binds anew. */
+export function unbound(narrowed: Map<string, Val>, names: Iterable<string>): Map<string, Val> {
+  const bound = [...names].map((b) => new RegExp(`(?:^|\\[)${b.replace(/\$/g, "\\$")}(?=$|[.[\\]])`));
+  return new Map([...narrowed].filter(([path]) => !bound.some((re) => re.test(path))));
 }
 
 export interface NullTest {
@@ -156,6 +164,7 @@ export function typeofTest(s: Scope, t: TypeofCompare, n: N): Val {
 
 export interface Presence {
   path: string;
+  pick?: true;
   pattern: (name: string) => string;
   option: string;
   present: string;
@@ -190,6 +199,12 @@ export function presence(s: Scope, n: N): Presence | null {
   }
   const path = pathOf(target);
   if (path === null) return null;
+  const strictNull = n.type === "BinaryExpression" && nullTest(n)?.strict === true && nullTest(n)?.literal === "null";
+  const picked = typeofCompare(n) || strictNull ? null : pickPresent(s, target);
+  if (picked !== null) {
+    const option = `${atom(picked)}.then_some(())`;
+    return { path, pick: true, of: UNDEF, negated, truthy: byTruth, option, present: picked, pattern: (name) => `let Some(${name}) = ${option}` };
+  }
   const v = expr(s, target);
   if (v.ty.k !== "opt") return null;
   const tested = typeofCompare(n);
@@ -209,7 +224,12 @@ export function presence(s: Scope, n: N): Presence | null {
 }
 
 export function narrowTo(s: Scope, p: Presence, name: string): Scope {
-  return { ...s, narrowed: new Map(s.narrowed).set(p.path, { code: name, ty: p.of }) };
+  return { ...s, narrowed: new Map(s.narrowed).set(p.path, narrowedVal(p, name)) };
+}
+
+/** The value a path `p` tests stands for where the test holds, bound to `name`. */
+export function narrowedVal(p: Presence, name: string): Val {
+  return p.pick ? { code: name, ty: p.of, pick: true } : { code: name, ty: p.of };
 }
 
 export function narrowing(s: Scope, p: Presence, present: (s: Scope) => string, absent: (s: Scope) => string): string {
@@ -237,7 +257,14 @@ export function cond(s: Scope, n: N): string {
     return logical(cond(s, n.left), n.operator, cond(s, n.right));
   }
   if (n.type === "UnaryExpression" && n.operator === "!") return negatedOrder(s, n.argument)?.code ?? not(cond(s, n.argument));
-  return truthy(expr(s, n));
+  return truthy(truthTested(s, n));
+}
+
+/** A value tested for truth: as \`expr\` gives it, or, for a constant object read by a key known
+ * only when rendering, whether it is one. */
+export function truthTested(s: Scope, n: N): Val {
+  const picked = pickPresent(s, n);
+  return picked === null ? expr(s, n) : boolOf(picked);
 }
 
 export function boolOf(code: string): Val {

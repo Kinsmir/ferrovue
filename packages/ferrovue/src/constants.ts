@@ -1,7 +1,10 @@
-import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, blankComponent, BOOL, fail, FLOAT, INT, NULL, rustStr, sameTy, snake, STR, UNDEF, withAbsence } from "./model.ts";
+import { type Absence, type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, absence, blankComponent, BOOL, fail, FLOAT, INT, joinAbsence, joinTy, literalsOf, literalTy, nothing, NULL, rustStr, sameTy, snake, STR, UNDEF, withAbsence } from "./model.ts";
 import { ONE_NOTHING, reachType } from "./typescript.ts";
 import { ctx } from "./context.ts";
-import { numberVal } from "./numbers.ts";
+import { asF64, numberVal } from "./numbers.ts";
+import { describeTy, expr } from "./expr.ts";
+import { pathOf } from "./narrowing.ts";
+import { atom, bare } from "./parens.ts";
 import { structLifetime } from "./rust.ts";
 
 export type Const =
@@ -139,8 +142,9 @@ function evaluate(home: Component, n: N, path: string, typed: string | null): Co
     case "ObjectExpression": {
       const fields = new Map<string, Const>();
       for (const p of n.properties) {
-        if (p.type !== "ObjectProperty" || p.computed) fail(home, "FV0206", "a constant object holds plain keys and values", p);
-        const key = String(p.key.name ?? p.key.value);
+        if (p.type !== "ObjectProperty") fail(home, "FV0206", "a constant object holds plain keys and values", p);
+        const key = p.computed ? computedKey(home, p.key, path) : String(p.key.name ?? p.key.value);
+        if (!p.computed && key === "__proto__") fail(home, "FV0206", "`__proto__:` in an object literal sets its prototype, whose fields the object then reads as its own: write the fields out", p);
         fields.set(key, evaluate(home, p.value, `${path}_${key}`, null));
       }
       return { k: "object", fields, node: n, home, name: path };
@@ -149,10 +153,17 @@ function evaluate(home: Component, n: N, path: string, typed: string | null): Co
   return fail(home, "FV0207", "a constant the compiler evaluates is a literal, a list or an object of literals, or another such constant of the same file", n);
 }
 
+function computedKey(home: Component, key: N, path: string): string {
+  const c = evaluate(home, key, path, null);
+  if (c.k === "scalar" && (typeof c.js === "string" || typeof c.js === "number")) return String(c.js);
+  return fail(home, "FV0206", "a constant object's computed key is a string or a number the compiler evaluates, as an enum member", key);
+}
+
 function scalarVal(js: Scalar, float = false): Val {
   if (js === null) return { code: "None", ty: NULL };
-  if (typeof js === "string") return { code: rustStr(js), ty: STR };
+  if (typeof js === "string") return { code: rustStr(js), ty: literalTy("str", [js]) };
   if (typeof js === "boolean") return { code: String(js), ty: BOOL, konst: js };
+  if (!float && Number.isSafeInteger(js)) return { ...numberVal(js, true), ty: literalTy("int", [js]) };
   return numberVal(js, !float && Number.isSafeInteger(js));
 }
 
@@ -182,7 +193,7 @@ function listVal(c: Const & { k: "list" }): Val {
     const float = numbers && tys.some((t) => t.k === "float");
     if (!numbers && tys.some((t) => !sameTy(t, tys[0]!))) fail(c.home, "FV0210", "a constant list holds strings, numbers or booleans, all of one type", c.node);
     const values = js.map((v) => scalarVal(v, float));
-    return { code: `[${values.map((v) => v.code).join(", ")}]`, ty: { k: "list", of: values[0]!.ty } };
+    return { code: `[${values.map((v) => v.code).join(", ")}]`, ty: { k: "list", of: values.map((v) => v.ty).reduce((a: Ty, b: Ty) => joinTy(a, b)) } };
   }
   if (!c.items.every((i) => i.k === "object")) fail(c.home, "FV0211", "a constant list holds plain values of one kind, or objects", c.node);
   const objects = c.items as (Const & { k: "object" })[];
@@ -255,25 +266,166 @@ function rustConstName(path: string): string {
     .join("_");
 }
 
-/** The constant an expression names: an imported or enum binding, or a field of one. */
-export function constOf(s: Scope, n: N): { c: Const; what: string } | null {
+type Sym = { k: "const"; c: Const } | { k: "none"; short: boolean } | { k: "pick"; on: Val; keys: readonly (string | number)[]; arms: Sym[] };
+
+/** What an expression reading constants stands for: one constant, or one chosen by a key known only when rendering. */
+export interface Named {
+  sym: Sym;
+  what: string;
+}
+
+function objectLike(sym: Sym): boolean {
+  if (sym.k === "const") return sym.c.k === "object";
+  if (sym.k === "none") return true;
+  return sym.arms.every(objectLike) && sym.arms.some((a) => a.k !== "none");
+}
+
+function quoted(keys: readonly (string | number)[]): string {
+  return keys.map((k) => `\`${k}\``).join(", ");
+}
+
+function staticKey(s: Scope, n: N): string | null {
+  if (!n.computed) return n.property.name as string;
+  const p = n.property;
+  if (p.type === "StringLiteral" || p.type === "NumericLiteral") return String(p.value);
+  if (p.type === "TemplateLiteral" && p.expressions.length === 0) return p.quasis[0].value.cooked as string;
+  const named = constOf(s, p);
+  if (named?.sym.k === "const" && named.sym.c.k === "scalar" && (typeof named.sym.c.js === "string" || typeof named.sym.c.js === "number")) return String(named.sym.c.js);
+  return null;
+}
+
+/** The constant an expression names: an imported or declared binding, or a field of one, by a key
+ * known when compiling or by a value of a union of literals. */
+export function constOf(s: Scope, n: N): Named | null {
   if (n.type === "Identifier") {
     const c = !s.locals.has(n.name) && !s.setup.has(n.name) ? s.consts.get(n.name) : undefined;
-    return c ? { c, what: n.name } : null;
+    return c ? { sym: { k: "const", c }, what: n.name } : null;
   }
-  if (n.type !== "MemberExpression") return null;
-  if (n.object.type === "Identifier" && (n.object.name === "$setup" || n.object.name === "_ctx")) {
+  if (n.type !== "MemberExpression" && n.type !== "OptionalMemberExpression") return null;
+  if (n.type === "MemberExpression" && n.object.type === "Identifier" && (n.object.name === "$setup" || n.object.name === "_ctx")) {
     const name: string | undefined = n.computed ? (n.property.type === "StringLiteral" ? n.property.value : undefined) : n.property.name;
     const c = name !== undefined ? s.consts.get(name) : undefined;
-    return c && name !== undefined ? { c, what: name } : null;
+    return c && name !== undefined ? { sym: { k: "const", c }, what: name } : null;
   }
   const base = constOf(s, n.object);
-  if (base?.c.k !== "object") return null;
-  const key = n.computed ? (n.property.type === "StringLiteral" || n.property.type === "NumericLiteral" ? String(n.property.value) : null) : (n.property.name as string);
-  if (key === null) {
-    return fail(s.comp, "FV0222", `\`${base.what}\` read by a key chosen at run time, which may name none of its fields; write the choices out with \`v-if\`, or pass the value as a prop`, n);
+  if (base === null || !objectLike(base.sym)) return null;
+  const chain = n.type === "OptionalMemberExpression";
+  const key = staticKey(s, n);
+  if (key !== null) {
+    const what = n.computed ? `${base.what}[${JSON.stringify(key)}]` : `${base.what}.${key}`;
+    return { sym: step(s, base, key, n, chain, []), what };
   }
-  const f = base.c.fields.get(key);
-  if (!f) return fail(s.comp, "FV0204", `\`${base.what}\` has no field \`${key}\``, n);
-  return { c: f, what: `${base.what}.${key}` };
+  const v = expr(s, n.property);
+  const path = pathOf(n.property);
+  const what = `${base.what}[${path === null ? "…" : path.replace(/^(?:_ctx|\$props|\$setup)\./, "").replace(new RegExp(`^${s.propsIdent ?? "\\$^"}\\.`), "")}]`;
+  const keys = literalsOf(v.ty);
+  const fixed = v.ty.k === "str" && /^"[^"\\]*"$/.test(v.code) ? (JSON.parse(v.code) as string) : v.ty.k === "int" && v.num !== undefined && v.code === `${v.num}i64` ? String(v.num) : null;
+  if (fixed !== null) return { sym: step(s, base, fixed, n, chain, []), what: `${base.what}[${JSON.stringify(fixed)}]` };
+  if (v.ty.k === "opt" || nothing(v.ty)) {
+    return fail(s.comp, "FV0223", `\`${base.what}\` read by a key that may be absent, where JavaScript reads the field \`undefined\`: narrow the key with \`v-if\` first, or give it a default`, n.property);
+  }
+  if (keys === undefined || (v.ty.k !== "str" && v.ty.k !== "int")) {
+    const is = v.ty.k === "str" ? "a `string`, which may name a field every object has, as `toString` or `constructor`" : v.ty.k === "int" ? "a `number`" : describeTy(v.ty);
+    return fail(s.comp, "FV0222", `\`${base.what}\` read by a key that is ${is}: type the key as a union of string literals, as \`"sm" | "md" | "lg"\`, or an \`enum\` of them`, n.property);
+  }
+  const arms = keys.map((k) => step(s, base, String(k), n, chain, [k]));
+  const whole = pathOf(n);
+  if (whole !== null && s.narrowed.get(whole)?.pick && arms.some((a) => a.k !== "none")) {
+    const kept = keys.filter((_, i) => arms[i]!.k !== "none");
+    return { sym: { k: "pick", on: v, keys: kept, arms: arms.filter((a) => a.k !== "none") }, what };
+  }
+  return { sym: { k: "pick", on: v, keys, arms }, what };
+}
+
+/** For a constant object read by a key known only when rendering, which is \`undefined\` for some
+ * keys and an object for the rest, the test that it is an object. */
+export function pickPresent(s: Scope, n: N): string | null {
+  const named = n.type === "MemberExpression" && n.computed ? constOf(s, n) : null;
+  const sym = named?.sym;
+  if (sym?.k !== "pick" || !sym.arms.every((a) => a.k === "none" || (a.k === "const" && a.c.k === "object"))) return null;
+  const yes = sym.keys.filter((_, i) => sym.arms[i]!.k !== "none");
+  if (yes.length === sym.keys.length) return "true";
+  return yes.length === 0 ? "false" : `matches!(${sym.on.code}, ${pattern(yes)})`;
+}
+
+function pattern(keys: readonly (string | number)[]): string {
+  return keys.map((k) => (typeof k === "string" ? rustStr(k) : String(k))).join(" | ");
+}
+
+function step(s: Scope, base: Named, key: string, n: N, chain: boolean, path: readonly (string | number)[]): Sym {
+  const sym = base.sym;
+  if (sym.k === "pick") {
+    return { ...sym, arms: sym.arms.map((a, i) => step(s, { sym: a, what: base.what }, key, n, chain, [...path, sym.keys[i]!])) };
+  }
+  if (sym.k === "none") {
+    if (chain && (n.optional || sym.short)) return { k: "none", short: true };
+    const where = path.length ? `, as it is for the key ${quoted(path)}` : "";
+    return fail(s.comp, "FV0224", `\`${base.what}\` may be \`undefined\`${where}, and reading \`.${key}\` of it fails: read it with \`?.${key}\``, n);
+  }
+  if (sym.c.k !== "object") return fail(s.comp, "FV0204", `\`${base.what}\` has no field \`${key}\``, n);
+  const f = sym.c.fields.get(key);
+  if (f) return { k: "const", c: f };
+  if (path.length === 0) return fail(s.comp, "FV0204", `\`${base.what}\` has no field \`${key}\``, n);
+  if (key in Object.prototype) {
+    return fail(s.comp, "FV0226", `\`${base.what}\` has no field \`${key}\` for the key ${quoted(path)}, where JavaScript reads \`Object.prototype.${key}\`, which the server does not have: add the key to the object`, n);
+  }
+  return { k: "none", short: false };
+}
+
+/** What a constant, or a constant chosen by a key, is as a value in Rust. */
+export function namedVal(named: Named, at: { comp: Component; node: N }): Val {
+  return symVal(named.sym, { ...at, what: named.what });
+}
+
+function symVal(sym: Sym, at: { comp: Component; node: N; what: string }): Val {
+  if (sym.k === "const") return constVal(sym.c, at);
+  if (sym.k === "none") return { code: "None", ty: UNDEF };
+  const arms = sym.arms.map((a) => symVal(a, at));
+  const { ty, codes } = unified(arms, at);
+  const groups: [(string | number)[], string][] = [];
+  sym.keys.forEach((key, i) => {
+    const g = groups.find(([, code]) => code === codes[i]);
+    if (g) g[0].push(key);
+    else groups.push([[key], codes[i]!]);
+  });
+  const slice = ty.k === "list" ? { slice: true } : {};
+  if (groups.length === 1) return { code: groups[0]![1], ty, ...slice };
+  if (ty.k === "bool" && groups.every(([, code]) => code === "true" || code === "false")) {
+    const yes = groups.find(([, code]) => code === "true")![0];
+    return { code: `matches!(${sym.on.code}, ${pattern(yes)})`, ty };
+  }
+  const branches = groups.map(([keys, code], i) => `${i === groups.length - 1 ? "_" : pattern(keys)} => ${code}`);
+  return { code: `match ${sym.on.code} { ${branches.join(", ")} }`, ty, ...slice };
+}
+
+function unified(arms: Val[], at: { comp: Component; node: N; what: string }): { ty: Ty; codes: string[] } {
+  let none: Absence | null = null;
+  for (const a of arms) none = joinAbsence(none, absence(a.ty));
+  const present = arms.filter((a) => !nothing(a.ty));
+  if (present.length === 0) {
+    if (none === "either") fail(at.comp, "FV0225", `\`${at.what}\` is \`null\` for some keys and \`undefined\` for others`, at.node);
+    return { ty: arms[0]!.ty, codes: arms.map(() => "None") };
+  }
+  const bases = present.map((a) => (a.ty.k === "opt" ? a.ty.of : a.ty));
+  const first = bases[0]!;
+  const numbers = bases.every((t) => t.k === "int" || t.k === "float");
+  const float = numbers && bases.some((t) => t.k === "float");
+  const same = bases.every((t) => sameTy(t, first) || (t.k === "list" && first.k === "list" && (t.of.k === "undef" || first.of.k === "undef")));
+  if (!(numbers || (same && ["str", "int", "bool", "list"].includes(first.k)))) {
+    const kinds = [...new Set(bases.map(describeTy))];
+    fail(at.comp, "FV0225", `\`${at.what}\` is ${kinds.length > 1 ? `${kinds.join(" for some keys and ")} for others` : describeTy(first)}, where a value read by a key known only when rendering is a string, a number, a boolean or a list of them, of one type for every key`, at.node);
+  }
+  let of: Ty = float ? FLOAT : bases.reduce((a: Ty, b: Ty) => joinTy(a, b));
+  if (of.k === "list") {
+    const items: Ty[] = bases.map((t) => (t as { of: Ty }).of).filter((t) => t.k !== "undef");
+    of = { k: "list", of: items.length ? items.reduce((a: Ty, b: Ty) => joinTy(a, b)) : UNDEF };
+  }
+  const ty = withAbsence(of, none);
+  const codes = arms.map((a) => {
+    if (nothing(a.ty)) return "None";
+    let code = !float ? a.code : a.ty.k === "int" ? asF64(a) : a.ty.k === "opt" && a.ty.of.k === "int" ? `${atom(a.code)}.map(|v| v as f64)` : a.code;
+    if (of.k === "list") code = code.startsWith("[") ? `&${code}[..]` : code;
+    return none !== null && a.ty.k !== "opt" ? `Some(${bare(code)})` : code;
+  });
+  return { ty, codes };
 }
