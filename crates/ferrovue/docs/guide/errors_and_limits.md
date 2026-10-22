@@ -88,6 +88,10 @@ What is refused today, each with an error that names it:
   computed list as a slot prop;
 - in a `computed`'s body or a callback's: loops, assignments, `try`, `throw`, `var`, and a path
   that ends without `return`. See [`script_logic`](crate::guide::script_logic#what-is-refused);
+- an object literal no type reaches (one typed by an annotation, a return type, a parameter, a
+  child's prop or the list a `.map()` makes is built as its interface's struct), one that does not
+  match its interface, and a list method, an item or `?.` of a value built from literals in place.
+  See [`script_logic`](crate::guide::script_logic#object-literals);
 - a dictionary's field read by name (`r.key`, `r[key]`), which may be absent although TypeScript
   says it is not; the `[key, value]` pairs of `Object.entries()` joined, compared, sorted without a
   comparator or kept as a list of pairs by `.map()`; dictionaries of optional

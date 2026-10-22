@@ -15,7 +15,7 @@ export function tyNode(ty: Ty): N {
   return { type: "FvTy", ty };
 }
 
-/** Where the code that holds an untyped object literal is, as its message says it. */
+/** Refuse an object literal no type reaches, saying where it is and how to give it one. */
 export function untypedObject(s: Scope, n: N): never {
   const fix = s.mapping
     ? "type the callback's return, `.map((x): Row => ({ … }))`, or the list it makes, as `computed<Row[]>(…)` or a prop typed `Row[]`"

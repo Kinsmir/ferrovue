@@ -45,6 +45,8 @@ released together and share version numbers.
   left out, a key given twice, a method, `__proto__`, a computed key the compiler does not know, a
   spread of another type or after other keys). `FV0636`: a list method, an item or an optional
   chain of a value built from object literals in place, which a `computed` of its own holds.
+  `ERRORS` in `ferrovue/compiler` lists the three, and the detail of FV0625 no longer names object
+  literals among its causes.
 
 ### Changed
 
