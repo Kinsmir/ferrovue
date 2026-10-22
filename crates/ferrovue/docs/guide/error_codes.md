@@ -144,7 +144,7 @@ A constant list is evaluated item by item, each written in the list. A spread (`
 
 Computed or spread key in a constant object.
 
-A constant object is evaluated key by key, each a plain name or a string or number literal. A computed key (`{ [KEY]: 1 }`), a spread (`{ ...BASE }`) and a method are refused. Write each key and value out.
+A constant object is evaluated key by key, each a plain name or a string or number literal. A computed key is allowed where the compiler evaluates it to a string or a number, as an enum member (`{ [Tone.Warn]: 1 }`). A computed key it cannot evaluate, a spread (`{ ...BASE }`), a method and `__proto__:` (which sets the object's prototype, whose fields JavaScript then reads as the object's own) are refused. Write each key and value out.
 
 ## FV0207
 
@@ -238,25 +238,31 @@ Constant list's object type named as a Rust type. Retired in 0.10.0: the compile
 
 Constant object read by a key that is not a union of literals.
 
-A plain object has fields of its prototype besides its own (`toString`, `constructor`, `__proto__`), so a key that may be any string can name one of them, which the server does not have. A key typed as a union of string or integer literals, or an `enum` of them, is a closed set: the read compiles to a `match` over it.
+A constant object or enum read by a key chosen at run time (`PAD[size]`, `Tone[props.tone]`) compiles to a `match` over the key's members when the key's type is a closed set: a union of string or integer literals, or an `enum` of them. A plain object has fields of its prototype besides its own (`toString`, `constructor`, `__proto__`), so a key typed `string` could name one of them, which the server does not have, and a key typed `number` has no members to match. Type the key as a union of literals (`"sm" | "md" | "lg"`) or an `enum`, or pass the value as a prop. See [`props`](crate::guide::props#lookup-tables).
 
 ## FV0223
 
 Constant object read by a key that may be absent.
 
+A constant object read by a key that may be `undefined` or `null` (`PAD[size]` with `size?: Size`) reads the field `"undefined"` or `"null"` in JavaScript, a key the object almost never has. Narrow the key with `v-if` first, or give it a default (`withDefaults`, or `PAD[size ?? "md"]`).
+
 ## FV0224
 
 Field read of a constant that may be `undefined`.
+
+A constant object read by a key (`ICONS[kind]`) is `undefined` for the members it lacks, and reading a field of it (`ICONS[kind].label`) then throws in JavaScript. The message names the members that lack the key. Read the field with `?.` (`ICONS[kind]?.label`), or narrow the read with `v-if="ICONS[kind]"` first.
 
 ## FV0225
 
 Constant read by a key whose values differ in type.
 
+A constant object read by a key compiles to one `match`, whose arms have one Rust type. Its values for the key's members must be strings, numbers (integers and fractions together), booleans or lists of one of them, of one type for every member, or objects read on by field. A string for one member and a number for another, or `null` for some and `undefined` for others, are refused. Give every member a value of one type.
+
 ## FV0226
 
 Constant object without a key that names a field of every object.
 
-A constant object or enum read by a key chosen at run time (`LABELS[key]`, `Tone[props.tone]`) has no Rust value to index: each field is written where the template reads it, and the key may name none of them, which JavaScript gives as `undefined`. Write the choices out with `v-if`, or pass the value as a prop. See [`props`](crate::guide::props#constants).
+A constant object read by a key whose union has a member the object lacks reads `undefined` for it, except for a member named like a field every object inherits (`toString`, `constructor`, `valueOf`, `hasOwnProperty`): JavaScript reads `Object.prototype`'s function for it, which the server does not have. Add the member to the object.
 
 # Props and types: FV03xx
 

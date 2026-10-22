@@ -244,7 +244,7 @@ function reduced(s: Scope, target: Val, method: string, args: N[], n: N): Val {
   if (!["str", "int", "float", "bool"].includes(init.ty.k)) {
     fail(comp, "FV0829", `\`.${method}()\` accumulates a string, a number or a boolean that is present, and its initial value is ${describeTy(init.ty)}`, args[1]);
   }
-  let accTy: Ty = init.ty.k === "int" && init.f64 !== undefined && RISKS_NEGATIVE_ZERO.test(init.f64) ? FLOAT : init.ty;
+  let accTy: Ty = init.ty.k === "int" && init.f64 !== undefined && RISKS_NEGATIVE_ZERO.test(init.f64) ? FLOAT : ({ k: init.ty.k } as Ty);
   let lone = !!init.lone;
   const item = { ...fn, params: fn.params.slice(1) };
   const narrowed = unbound(s.narrowed, [accName]);

@@ -4271,7 +4271,7 @@ defineProps<{ onSale?: boolean }>();
     "a constant object whose values differ in type for the keys of its key": "FV0225",
     "a constant object without a key that names a field of every object": "FV0226",
     "a constant object read by a key that is a union of literals and a string": "FV0222",
-    "a constant object literal that sets its prototype": "FV0613",
+    "a constant object literal that sets its prototype": "FV0206",
     "a value read from `$attrs`, which has no type": "FV0415",
     "an attribute name Vue's server renderer skips as unsafe": "FV0404",
     "an attribute name chosen at run time": "FV0408",
@@ -4528,6 +4528,9 @@ describe("constant lookups", () => {
   it("forgets the literals of a list item or a `??` that another value may be", () => {
     expect(() => render('defineProps<{ k: "sm"; s: string }>();\nconst PAD = { sm: "p-1" };', '<i v-for="x in [k, s]">{{ PAD[x] }}</i>')).toThrow(expect.objectContaining({ code: "FV0222" }));
     expect(() => render('defineProps<{ k?: "sm"; s: string }>();\nconst PAD = { sm: "p-1" };', "<i>{{ PAD[k ?? s] }}</i>")).toThrow(expect.objectContaining({ code: "FV0222" }));
+    expect(() => render('defineProps<{ ks?: "sm"[]; ss: string[] }>();\nconst PAD = { sm: "p-1" };', '<i v-for="x in (ks ?? ss)">{{ PAD[x] }}</i>')).toThrow(expect.objectContaining({ code: "FV0222" }));
+    expect(() => render('defineProps<{ ns: number[] }>();\nconst START = 0;\nconst N: Record<number, string> = { 0: "a", 1: "b" };', "<i>{{ N[ns.reduce((a, n) => a + n, START)] }}</i>")).toThrow(expect.objectContaining({ code: "FV0222" }));
+    expect(render('defineProps<{ ks?: "sm"[] }>();\nconst PAD = { sm: "p-1" };', '<i v-for="x in (ks ?? [])">{{ PAD[x] }}</i>')).toContain('out.push_str("<i>p-1</i>");');
   });
 });
 
