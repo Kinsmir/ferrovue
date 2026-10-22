@@ -1,7 +1,8 @@
 import { basename } from "node:path";
 import { type Component, type N, type Scope, type Val, fail, GenError, nodeName, nothing, snake, takesAttrs, UNDEF } from "./model.ts";
 import { CONFIG_FILE, ctx } from "./context.ts";
-import { definePropsType, resolveImport, tyOfTs } from "./typescript.ts";
+import { definePropsType, tyOfTs } from "./typescript.ts";
+import { resolveImport } from "./resolve.ts";
 import { constOfDecl, type Declared, declareConsts } from "./constants.ts";
 import { localTy } from "./rust.ts";
 import { expr, fieldVal, MANY_STATEMENTS, typedBy } from "./expr.ts";

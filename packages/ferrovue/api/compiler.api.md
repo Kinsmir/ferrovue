@@ -5,6 +5,12 @@
 ```ts
 
 // @public
+export interface Alias {
+    find: string | RegExp;
+    replacement: string;
+}
+
+// @public
 export interface Config {
     $schema?: string;
     builders?: boolean;
@@ -122,6 +128,10 @@ export const ERRORS: {
     readonly FV0109: {
         readonly title: "Destructured prop that is not a plain name";
         readonly detail: "A prop destructured from `defineProps` is bound to a plain name: `{ title }`, `{ title: heading }` or `{ size = \"md\" }`. A nested pattern (`{ user: { name } }`, `{ tags: [first] }`) is refused. Bind the prop by name and read its fields in the template (`user.name`).";
+    };
+    readonly FV0110: {
+        readonly title: "Name imported from a module the compiler cannot resolve to a `.ts` file of the project";
+        readonly detail: "The compiler reads constants and types from the project's own `.ts` files, which a component imports by a relative path or through an alias: the `compilerOptions.paths` (and `baseUrl`) of the tsconfig.json nearest the component, and of the projects it references, and, when the Vite plugin runs, Vite's `resolve.alias`. The message names the specifier and where it was looked for. A name imported from a package is available only on the client: in an event handler, or computed in Rust and passed as a prop.";
     };
     readonly FV0201: {
         readonly title: "Constant that refers to itself";
@@ -1574,7 +1584,7 @@ export const ERRORS: {
 };
 
 // @public
-export function generate(root: string, config?: Config, sources?: ReadonlyMap<string, string>): Map<string, string>;
+export function generate(root: string, config?: Config, sources?: ReadonlyMap<string, string>, options?: ResolveOptions): Map<string, string>;
 
 // @public
 export class GenError extends Error {
@@ -1609,6 +1619,11 @@ export function isGenerated(file: string): boolean;
 
 // @public
 export function loadConfig(root: string, configPath?: string, warn?: (warning: GenError) => void): Config;
+
+// @public
+export interface ResolveOptions {
+    aliases?: readonly Alias[];
+}
 
 // @public
 export type RoutesSource = string | {
@@ -1649,7 +1664,7 @@ export const TYPES_MODULE = "ferrovue/types";
 export const VERSION: string;
 
 // @public
-export function write(root: string, config?: Config): Written;
+export function write(root: string, config?: Config, options?: ResolveOptions): Written;
 
 // @public
 export interface Written {

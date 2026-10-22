@@ -1,7 +1,8 @@
 import { type Component, type N, type Scope, type Ty, type Val, absence, blankComponent, camelize, fail, nothing, opt, sameTy, snake } from "../model.ts";
 import { ctx } from "../context.ts";
 import { type Declared } from "../constants.ts";
-import { lookupStruct, markHome, resolveImport, tyOfTs } from "../typescript.ts";
+import { lookupStruct, markHome, tyOfTs } from "../typescript.ts";
+import { resolveImport } from "../resolve.ts";
 import { describeTy, expr } from "../expr.ts";
 import { slotFieldBorrows, slotFieldTy, slotFieldValue } from "../slots.ts";
 import { fieldInit, ownInto } from "../children.ts";

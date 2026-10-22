@@ -33,6 +33,23 @@ released together and share version numbers.
   `v-if` now also narrows a value read by a computed key, `list[i]` and `PAD[size]` alike. The
   conformance component `Lookups` holds fixtures recorded from Vue, and the fuzzer writes lookup
   tables keyed by its enum.
+- Imports through aliases. A component may import constants and types from a `.ts` file through an
+  alias the project declares: the `compilerOptions.paths` and `baseUrl` of the tsconfig.json
+  nearest it, after its `extends` (Nuxt's generated `.nuxt/tsconfig.json` included) and through
+  the projects it `references` (create-vue's `tsconfig.app.json`), and, with the Vite plugin, the
+  build's `resolve.alias`. `import { LABEL } from "@/lib/format"` used to be refused with a
+  misleading FV0601 ("not available when rendering on the server"), where the same import by a
+  relative path compiled. `--watch` and the Vite plugin regenerate on a change to those tsconfig
+  files. See the crate's
+  [`props`](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#imports-through-aliases)
+  guide.
+- FV0110: a name the server reads that is imported from a module no relative path or alias leads
+  to a `.ts` file of the project (a package, a missing file, an alias the project does not
+  declare). The message names the specifier and where it was looked for; FV0601 or FV0315 refused
+  such a name without saying the import could not be resolved.
+- `generate` and `write` of `ferrovue/compiler` take a last, optional argument, `{ aliases }`: the
+  aliases tried before tsconfig's `paths`, as Vite's `resolve.alias` lists them (the types
+  `ResolveOptions` and `Alias`), which the Vite plugin passes.
 
 - The guide pages [`porting`](https://docs.rs/ferrovue/latest/ferrovue/guide/porting/index.html)
   and [`support`](https://docs.rs/ferrovue/latest/ferrovue/guide/support/index.html). `porting`
