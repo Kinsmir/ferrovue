@@ -8,6 +8,54 @@ use ferrovue as fv;
 /// The component's name, as `data-island` carries it.
 pub const NAME: &str = "AndChains";
 
+/// `tone` in `AndChains.vue`: `"info" | "warn"`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub enum AndChainsTone {
+    #[serde(rename = "info")]
+    Info,
+    #[serde(rename = "warn")]
+    Warn,
+}
+
+impl AndChainsTone {
+    /// Every member, in the order the union declares them.
+    pub const ALL: [AndChainsTone; 2] = [AndChainsTone::Info, AndChainsTone::Warn];
+
+    /// The string literal this member stands for.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            AndChainsTone::Info => "info",
+            AndChainsTone::Warn => "warn",
+        }
+    }
+}
+
+impl std::fmt::Display for AndChainsTone {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl std::str::FromStr for AndChainsTone {
+    type Err = ferrovue::ParseUnionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "info" => Ok(AndChainsTone::Info),
+            "warn" => Ok(AndChainsTone::Warn),
+            _ => Err(ferrovue::ParseUnionError::new("AndChainsTone", s, &["info", "warn"])),
+        }
+    }
+}
+
+impl TryFrom<&str> for AndChainsTone {
+    type Error = ferrovue::ParseUnionError;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        s.parse()
+    }
+}
+
 /// `Badge` in `AndChains.vue`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -34,7 +82,7 @@ pub struct Props<'a> {
     #[serde(rename = "m")]
     pub m: Option<i64>,
     #[serde(rename = "tone", default, skip_serializing_if = "Option::is_none")]
-    pub tone: Option<Cow<'a, str>>,
+    pub tone: Option<AndChainsTone>,
     #[serde(rename = "badge", default, skip_serializing_if = "Option::is_none")]
     pub badge: Option<Badge<'a>>,
     #[serde(rename = "word", default, skip_serializing_if = "Option::is_none")]
@@ -60,8 +108,8 @@ impl<'a> Props<'a> {
     }
 
     /// Set `tone`, which is absent otherwise.
-    pub fn tone(mut self, tone: impl Into<Cow<'a, str>>) -> Self {
-        self.tone = Some(tone.into());
+    pub fn tone(mut self, tone: AndChainsTone) -> Self {
+        self.tone = Some(tone);
         self
     }
 
@@ -81,16 +129,16 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(140 + props.tone.as_deref().map_or(0, str::len) + props.badge.as_ref().map_or(0, |v| v.label.len()) + props.word.as_deref().map_or(0, str::len));
+    out.reserve(140 + 4 + props.badge.as_ref().map_or(0, |v| v.label.len()) + props.word.as_deref().map_or(0, str::len));
     let s_in_range = if let Some(n1) = props.n { n1 as f64 > 1.0 && (n1 as f64) < 9.0 } else { false };
-    let s_color = props.tone.as_deref().filter(|v| !v.is_empty()).map(|n2| match n2 { "info" => "blue", _ => "amber" });
+    let s_color = props.tone.map(|n2| match n2 { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" });
     out.push_str("<section");
-    if if props.tone.as_deref().is_some_and(|v| !v.is_empty()) { true } else { props.tone.as_deref().is_some() } {
+    if if props.tone.is_some() { true } else { props.tone.map(AndChainsTone::as_str).is_some() } {
         out.push_str(" class=\"");
-        fv::class_into(out, false, &[if let Some(n4) = props.tone.as_deref().filter(|v| !v.is_empty()) { match n4 { "info" => "blue", _ => "amber" } } else { "" }]);
+        fv::class_into(out, false, &[if let Some(n4) = props.tone { match n4 { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" } } else { "" }]);
         out.push('"');
     }
-    if let Some(v) = props.tone.as_deref().filter(|v| !v.is_empty()).map(|n5| match n5 { "info" => "blue", _ => "amber" }) {
+    if let Some(v) = props.tone.map(|n5| match n5 { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" }) {
         if v.is_empty() {
             out.push_str(" title");
         } else {
@@ -120,13 +168,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push('|');
     fv::escape_into(out, &(if let Some(n14) = props.m { if n14 as f64 >= 0.0 { if n14 as f64 <= 99.0 { std::borrow::Cow::<str>::Owned(format!("{}", fv::Js((n14 as f64 + 1.0) as i64))) } else { std::borrow::Cow::<str>::Borrowed("none") } } else { std::borrow::Cow::<str>::Borrowed("none") } } else { std::borrow::Cow::<str>::Borrowed("none") }));
     out.push_str("</p><p class=\"");
-    fv::class_into(out, false, &[if let Some(n15) = props.tone.as_deref().filter(|v| !v.is_empty()) { match n15 { "info" => "blue", _ => "amber" } } else { "" }, "fixed"]);
+    fv::class_into(out, false, &[if let Some(n15) = props.tone { match n15 { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" } } else { "" }, "fixed"]);
     out.push_str("\">");
-    if let Some(v) = props.tone.as_deref().filter(|v| !v.is_empty()).map(|n16| match n16 { "info" => "blue", _ => "amber" }) {
+    if let Some(v) = props.tone.map(|n16| match n16 { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" }) {
         fv::escape_into(out, v);
     }
     out.push('|');
-    fv::escape_into(out, props.tone.as_deref().filter(|v| !v.is_empty()).map(|n17| match n17 { "info" => "blue", _ => "amber" }).unwrap_or("none"));
+    fv::escape_into(out, props.tone.map(|n17| match n17 { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" }).unwrap_or("none"));
     out.push('|');
     fv::escape_into(out, s_color.unwrap_or("unset"));
     out.push_str("</p><p>");

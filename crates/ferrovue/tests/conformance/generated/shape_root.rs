@@ -13,15 +13,15 @@ pub const NAME: &str = "ShapeRoot";
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
     #[serde(rename = "shape")]
-    pub shape: Cow<'a, str>,
+    pub shape: super::types::Shape,
     #[serde(rename = "label")]
     pub label: Cow<'a, str>,
 }
 
 impl<'a> Props<'a> {
     /// Props with its required fields.
-    pub fn new(shape: impl Into<Cow<'a, str>>, label: impl Into<Cow<'a, str>>) -> Self {
-        Props { shape: shape.into(), label: label.into() }
+    pub fn new(shape: super::types::Shape, label: impl Into<Cow<'a, str>>) -> Self {
+        Props { shape, label: label.into() }
     }
 
 }
@@ -42,9 +42,9 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
 /// [`render`], with the attributes a parent passes beyond the props, and the scope ids it hands the root.
 #[doc(hidden)]
 pub fn render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_attrs: &fv::Attrs<'_>) {
-    out.reserve(props.shape.len() + props.label.len());
-    match &*props.shape {
-        "circle" => {
+    out.reserve(6 + props.label.len());
+    match props.shape {
+        super::types::Shape::Circle => {
             super::shape_circle::render_scoped(out, &super::shape_circle::Props { label: std::borrow::Cow::Borrowed(&*props.label) }, super::shape_circle::Slots {
                 default: Some(fv::Slot::slotted(&|out: &mut String, fv_sid1: &str| -> bool {
                     let mut filled = false;
@@ -53,7 +53,7 @@ pub fn render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, f
                 })),
             }, &fv::Attrs::merged(&[&[("class", fv::Attr::str("root"))], fv_attrs.list()], fv_attrs.ids()));
         }
-        _ => {
+        super::types::Shape::Square => {
             super::shape_square::render_scoped(out, &super::shape_square::Props { label: std::borrow::Cow::Borrowed(&*props.label), size: None }, super::shape_square::Slots {
                 default: Some(fv::Slot::markup(&|out: &mut String| -> bool {
                     let mut filled = false;

@@ -8,6 +8,58 @@ use ferrovue as fv;
 /// The component's name, as `data-island` carries it.
 pub const NAME: &str = "Statements";
 
+/// `size` in `Statements.vue`: `"sm" | "md" | "lg"`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub enum StatementsSize {
+    #[serde(rename = "sm")]
+    Sm,
+    #[serde(rename = "md")]
+    Md,
+    #[serde(rename = "lg")]
+    Lg,
+}
+
+impl StatementsSize {
+    /// Every member, in the order the union declares them.
+    pub const ALL: [StatementsSize; 3] = [StatementsSize::Sm, StatementsSize::Md, StatementsSize::Lg];
+
+    /// The string literal this member stands for.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            StatementsSize::Sm => "sm",
+            StatementsSize::Md => "md",
+            StatementsSize::Lg => "lg",
+        }
+    }
+}
+
+impl std::fmt::Display for StatementsSize {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl std::str::FromStr for StatementsSize {
+    type Err = ferrovue::ParseUnionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "sm" => Ok(StatementsSize::Sm),
+            "md" => Ok(StatementsSize::Md),
+            "lg" => Ok(StatementsSize::Lg),
+            _ => Err(ferrovue::ParseUnionError::new("StatementsSize", s, &["sm", "md", "lg"])),
+        }
+    }
+}
+
+impl TryFrom<&str> for StatementsSize {
+    type Error = ferrovue::ParseUnionError;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        s.parse()
+    }
+}
+
 /// `Author` in `Statements.vue`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -41,7 +93,7 @@ pub struct Props<'a> {
     #[serde(rename = "author", default, skip_serializing_if = "Option::is_none")]
     pub author: Option<Author<'a>>,
     #[serde(rename = "size")]
-    pub size: Cow<'a, str>,
+    pub size: StatementsSize,
     #[serde(rename = "score")]
     pub score: i64,
     #[serde(rename = "ratio", default, skip_serializing_if = "Option::is_none")]
@@ -58,8 +110,8 @@ pub struct Props<'a> {
 
 impl<'a> Props<'a> {
     /// Props with its required fields, every optional one absent.
-    pub fn new(size: impl Into<Cow<'a, str>>, score: i64, words: impl IntoIterator<Item = impl Into<Cow<'a, str>>>, authors: Vec<Author<'a>>, lead: Author<'a>) -> Self {
-        Props { author: None, size: size.into(), score, ratio: None, note: None, words: words.into_iter().map(Into::into).collect(), authors, lead }
+    pub fn new(size: StatementsSize, score: i64, words: impl IntoIterator<Item = impl Into<Cow<'a, str>>>, authors: Vec<Author<'a>>, lead: Author<'a>) -> Self {
+        Props { author: None, size, score, ratio: None, note: None, words: words.into_iter().map(Into::into).collect(), authors, lead }
     }
 
     /// Set `author`, which is absent otherwise.
@@ -84,9 +136,9 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(124 + props.author.as_ref().map_or(0, |v| v.name.len() + v.title.as_deref().map_or(0, str::len)) + props.size.len() + props.note.as_deref().map_or(0, str::len) + props.words.iter().map(|v| v.len()).sum::<usize>() + props.authors.iter().map(|v| v.name.len() + v.title.as_deref().map_or(0, str::len)).sum::<usize>() + props.lead.name.len() + props.lead.title.as_deref().map_or(0, str::len));
+    out.reserve(124 + props.author.as_ref().map_or(0, |v| v.name.len() + v.title.as_deref().map_or(0, str::len)) + 2 + props.note.as_deref().map_or(0, str::len) + props.words.iter().map(|v| v.len()).sum::<usize>() + props.authors.iter().map(|v| v.name.len() + v.title.as_deref().map_or(0, str::len)).sum::<usize>() + props.lead.name.len() + props.lead.title.as_deref().map_or(0, str::len));
     let s_greeting = if let Some(n1) = props.author.as_ref() { { let fv_c2 = fv::js_trim(&n1.name); if fv_c2.is_empty() { std::borrow::Cow::<str>::Borrowed("Unnamed") } else { { let fv_c3 = n1.title.as_deref(); if let Some(n4) = fv_c3.filter(|v| !v.is_empty()) { std::borrow::Cow::<str>::Owned(format!("{} {}", n4, fv_c2)) } else { std::borrow::Cow::<str>::Borrowed(fv_c2) } } } } } else { std::borrow::Cow::<str>::Borrowed("Anonymous") };
-    let s_label = if &*props.size == "sm" { std::borrow::Cow::<str>::Borrowed("small") } else { if &*props.size == "md" || &*props.size == "lg" { { let fv_c5 = props.size.to_uppercase(); std::borrow::Cow::<str>::Owned(format!("large {}", fv_c5)) } } else { std::borrow::Cow::<str>::Borrowed("unknown") } };
+    let s_label = if props.size == StatementsSize::Sm { std::borrow::Cow::<str>::Borrowed("small") } else { if props.size == StatementsSize::Md || props.size == StatementsSize::Lg { { let fv_c5 = props.size.as_str().to_uppercase(); std::borrow::Cow::<str>::Owned(format!("large {}", fv_c5)) } } else { std::borrow::Cow::<str>::Borrowed("unknown") } };
     let s_grade = if props.score as f64 >= 90.0 { "A" } else { if props.score as f64 >= 75.0 { "B" } else { if props.score as f64 >= 50.0 { "C" } else { "F" } } };
     let s_level = if props.score as f64 == 0.0 { if props.score as f64 > 50.0 { "pass" } else { "fail" } } else { if props.score as f64 == 100.0 { "perfect" } else { if props.score as f64 > 50.0 { "pass" } else { "fail" } } };
     let s_titled = if let Some(n6) = props.author.as_ref() { if let Some(n7) = n6.title.as_deref().filter(|v| !v.is_empty()) { std::borrow::Cow::<str>::Owned(n7.to_uppercase()) } else { std::borrow::Cow::<str>::Borrowed("untitled") } } else { std::borrow::Cow::<str>::Borrowed("untitled") };
@@ -104,7 +156,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     let s_busiest = { let fv_c30 = props.authors.iter().filter(|fv_a29| fv_a29.posts as f64 > 0.0).collect::<Vec<_>>(); fv_c30.iter().copied().nth(usize::try_from(0i64).unwrap_or(usize::MAX)) };
     let s_top = { let fv_c32 = props.authors.iter().filter(|fv_a31| fv_a31.posts as f64 > 1.0).collect::<Vec<_>>(); std::borrow::Cow::<str>::Owned(({ let fv_c33 = fv_c32.iter().copied().nth(usize::try_from(0i64).unwrap_or(usize::MAX)); if let Some(n34) = fv_c33 { &*n34.name } else { "nobody" } }).to_owned()) };
     let s_named = { let fv_c35 = props.authors.first(); if let Some(n36) = fv_c35 { Some(n36) } else { props.author.as_ref() } };
-    let s_pick = &({ let fv_c37 = props.size.to_uppercase(); if &*fv_c37 == "SM" { &props.lead } else { props.author.as_ref().unwrap_or(&props.lead) } });
+    let s_pick = &({ let fv_c37 = props.size.as_str().to_uppercase(); if &*fv_c37 == "SM" { &props.lead } else { props.author.as_ref().unwrap_or(&props.lead) } });
     out.push_str("<article class=\"");
     fv::class_into(out, false, &[&*s_label]);
     out.push_str("\"><h2>");

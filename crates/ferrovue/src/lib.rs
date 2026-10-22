@@ -29,6 +29,7 @@ mod state;
 mod strings;
 mod teleport;
 mod trusted;
+mod union;
 #[cfg(feature = "stream")]
 mod web;
 
@@ -85,6 +86,7 @@ pub use teleport::teleport_into;
 pub use trusted::TrustedHtml;
 #[doc(hidden)]
 pub use trusted::trusted_into;
+pub use union::ParseUnionError;
 #[cfg(feature = "stream")]
 #[cfg_attr(docsrs, doc(cfg(feature = "stream")))]
 pub use web::HtmlStream;

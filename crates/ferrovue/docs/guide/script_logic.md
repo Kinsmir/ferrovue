@@ -219,6 +219,12 @@ field takes what a prop of its type takes, with the absence it declares: an opti
 `undefined` or a value that may be `undefined`, a `T | null` field `null` or a value that may be
 `null`.
 
+A field typed as a union of string literals holds the union's enum (see
+[`props`](crate::guide::props#unions-of-string-literals)): a literal of the union is its variant
+(`{ size: "md" }` is `Size::Md`), a value of the same enum is given as it is, and a narrower union
+or a `?:` of members goes through a `match`. A string that may hold another value is refused
+([FV0635](crate::guide::error_codes#fv0635)): give a member, or a value typed as the union.
+
 Nothing the server renders shows the order of an object's keys or tells an absent field from one
 that is `undefined`: `JSON.stringify()`, `Object.keys()`, `v-for` over an object, `{{ }}` and
 `v-bind` of an object are refused, here as for an object prop, and so is an attribute bound to one.
@@ -232,7 +238,7 @@ whole, by a field, by `v-for` and `.length`, and handed to a child. A list metho
 | Written | Code | What to write instead |
 |---|---|---|
 | a literal whose type is not known: no annotation reaches it | FV0634 | an annotation where it goes, as the message says |
-| a key the interface does not declare, a required field left out, a key given twice, a method, `__proto__`, a computed key the compiler does not know, a spread of another type or after other keys | FV0635 | the fields of the interface, the spread first |
+| a key the interface does not declare, a required field left out, a key given twice, a method, `__proto__`, a computed key the compiler does not know, a spread of another type or after other keys, a string that may be outside a field's union | FV0635 | the fields of the interface, the spread first, a member of the union |
 | `undefined` for a required field, `null` for an optional one | FV0606 | `?? null`, `?? undefined`, or the type the field declares |
 | a list method, an item or `?.` of a value built from literals | FV0636 | a `computed` that holds it, or the method called before `.map()` |
 

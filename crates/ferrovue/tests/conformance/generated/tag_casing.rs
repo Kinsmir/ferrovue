@@ -8,12 +8,60 @@ use ferrovue as fv;
 /// The component's name, as `data-island` carries it.
 pub const NAME: &str = "TagCasing";
 
+/// `tag` in `TagCasing.vue`: `"div" | "section"`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub enum TagCasingTag {
+    #[serde(rename = "div")]
+    Div,
+    #[serde(rename = "section")]
+    Section,
+}
+
+impl TagCasingTag {
+    /// Every member, in the order the union declares them.
+    pub const ALL: [TagCasingTag; 2] = [TagCasingTag::Div, TagCasingTag::Section];
+
+    /// The string literal this member stands for.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            TagCasingTag::Div => "div",
+            TagCasingTag::Section => "section",
+        }
+    }
+}
+
+impl std::fmt::Display for TagCasingTag {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl std::str::FromStr for TagCasingTag {
+    type Err = ferrovue::ParseUnionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "div" => Ok(TagCasingTag::Div),
+            "section" => Ok(TagCasingTag::Section),
+            _ => Err(ferrovue::ParseUnionError::new("TagCasingTag", s, &["div", "section"])),
+        }
+    }
+}
+
+impl TryFrom<&str> for TagCasingTag {
+    type Error = ferrovue::ParseUnionError;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        s.parse()
+    }
+}
+
 /// The props `TagCasing.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
     #[serde(rename = "tag")]
-    pub tag: Cow<'a, str>,
+    pub tag: TagCasingTag,
     #[serde(rename = "label")]
     pub label: Cow<'a, str>,
     #[serde(rename = "on")]
@@ -22,8 +70,8 @@ pub struct Props<'a> {
 
 impl<'a> Props<'a> {
     /// Props with its required fields.
-    pub fn new(tag: impl Into<Cow<'a, str>>, label: impl Into<Cow<'a, str>>, on: bool) -> Self {
-        Props { tag: tag.into(), label: label.into(), on }
+    pub fn new(tag: TagCasingTag, label: impl Into<Cow<'a, str>>, on: bool) -> Self {
+        Props { tag, label: label.into(), on }
     }
 
 }
@@ -31,8 +79,8 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(422 + props.tag.len() + props.label.len());
-    let fv_tag1 = match &*props.tag { "div" => "div", _ => "section" };
+    out.reserve(422 + 7 + props.label.len());
+    let fv_tag1 = match props.tag { TagCasingTag::Div => "div", TagCasingTag::Section => "section" };
     out.push('<');
     out.push_str(fv_tag1);
     out.push_str(" datarole=\"casing\"><p datafoo=\"x\" aria-label=\"y\" viewbox=\"0 0 1 1\"");

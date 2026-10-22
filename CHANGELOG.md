@@ -47,6 +47,38 @@ released together and share version numbers.
   chain of a value built from object literals in place, which a `computed` of its own holds.
   `ERRORS` in `ferrovue/compiler` lists the three, and the detail of FV0625 no longer names object
   literals among its causes.
+- A prop or an interface's field typed as a union of two or more string literals is a Rust enum
+  the compiler generates, with a variant per literal: a `type` alias keeps its name (`Size`,
+  written once to `types.rs` for a `.ts` file, so components that import it share it), a union in
+  place is named after its component and prop (`ButtonSize`) or its interface and field, and a
+  string `enum` is one too, its variants named after its members. Each enum derives `Debug`,
+  `Clone`, `Copy`, `PartialEq`, `Eq`, `Hash`, `serde::Serialize` and `serde::Deserialize`, with
+  serde's names the literals, and has `as_str()`, `ALL`, `Display`, `FromStr` and
+  `TryFrom<&str>`. The template writes it through `as_str()`; `===` and `!==`, `switch`, lookup
+  tables and `<component :is>` read it as the enum, the last two as a `match` with no catch-all
+  arm; it reaches a child's prop of its union as itself, of a wider union through a `match`, and
+  of `string` as its literal. See the `props` guide's "Unions of string literals".
+- `ferrovue::ParseUnionError`, what a generated enum's `FromStr` and `TryFrom<&str>` return for
+  a string outside its union, with `union()`, `value()` and `members()`.
+- Refusals with new codes, for what TypeScript refuses too and for unions with no enum: a literal
+  with no letter or digit to name its variant (FV0323), two literals that name one variant, or an
+  `enum` with two members of one value (FV0324), an enum named as another type of its module
+  (FV0325), a value outside a child's union prop or a `string` given to one (FV0515), and a
+  comparison with a literal outside the union (FV0637). A default outside the union is FV0322, and
+  a constant list's field outside it FV0215.
+- The guide page [`upgrading_to_0_11`](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_11/index.html):
+  bumping both halves, generating again for version 5, and building union props from their
+  enums (`Size::Md`, `"md".parse::<Size>()?`).
+- The conformance components `UnionEnums` and `UnionChild`, recorded from Vue, and props of
+  unions of string literals, required, optional and nullable, in the differential fuzzer, which
+  compares them only with their members.
+- An object literal's field typed as a union of string literals holds the union's enum: a literal of
+  the union is its variant (`{ size: "md" }` is `Size::Md`), a value of the same enum is given as it
+  is, and a narrower union or a `?:` of members goes through a `match`. A string that may be outside
+  the union is refused with FV0635. `Object.hasOwn()` of a constant and `.get()` and `.has()` of a
+  constant `Map` by a key of such a union match on its variants. The conformance components
+  `UnionObjects` and `UnionStep` record these from Vue, and the differential fuzzer gives its
+  `FzCardT` literals a union field.
 
 ### Changed
 
@@ -65,6 +97,18 @@ released together and share version numbers.
 - An object literal in the template is refused with `FV0634` where it was `FV0625` ("an object
   literal is not supported in a template"), also in a `computed` or a function. An untyped object
   constant setup cannot evaluate keeps `FV0207`, with a hint to annotate it with an interface.
+- Generated code is version 5 (`ferrovue::__compat!(5)`), which the 0.10 crate refuses; the 0.11
+  crate builds versions 2 to 5.
+- The generated `Props` and shared structs hold an enum for each union of string literals, where
+  0.10 held a `Cow<'a, str>`; a struct with no other borrowed field loses its lifetime. A Rust
+  caller passes `Size::Md` where it passed `"md"`, as `upgrading_to_0_11` shows. Lists and records
+  of such a union, single literals, unions with `string`, integer unions and the fields of a
+  store's own interfaces are unchanged. The `closed_unions` test now checks that every `match`
+  over an enum names each variant, that props holding a string outside a union do not
+  deserialise, and that an integer union still reads a value outside it as its last member. In
+  the conformance suite, `Catalog`'s `enum Tone` is `Volume`, so that it no longer shares a name
+  with `Lookups`'s, its `empty` and `hostile` fixtures give it members of the union, and
+  `FallSwitch`'s `hostile` fixture, a value outside its union, is gone.
 - CI only: a retry of the browser job's system libraries first stops the `apt-get` the timed-out
   attempt left running and waits for the package lock, which that `apt-get` held so the next
   attempts failed at once.

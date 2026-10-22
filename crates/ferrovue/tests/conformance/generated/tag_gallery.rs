@@ -8,26 +8,126 @@ use ferrovue as fv;
 /// The component's name, as `data-island` carries it.
 pub const NAME: &str = "TagGallery";
 
+/// `level` in `TagGallery.vue`: `"h1" | "h2" | "h3"`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub enum TagGalleryLevel {
+    #[serde(rename = "h1")]
+    H1,
+    #[serde(rename = "h2")]
+    H2,
+    #[serde(rename = "h3")]
+    H3,
+}
+
+impl TagGalleryLevel {
+    /// Every member, in the order the union declares them.
+    pub const ALL: [TagGalleryLevel; 3] = [TagGalleryLevel::H1, TagGalleryLevel::H2, TagGalleryLevel::H3];
+
+    /// The string literal this member stands for.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            TagGalleryLevel::H1 => "h1",
+            TagGalleryLevel::H2 => "h2",
+            TagGalleryLevel::H3 => "h3",
+        }
+    }
+}
+
+impl std::fmt::Display for TagGalleryLevel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl std::str::FromStr for TagGalleryLevel {
+    type Err = ferrovue::ParseUnionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "h1" => Ok(TagGalleryLevel::H1),
+            "h2" => Ok(TagGalleryLevel::H2),
+            "h3" => Ok(TagGalleryLevel::H3),
+            _ => Err(ferrovue::ParseUnionError::new("TagGalleryLevel", s, &["h1", "h2", "h3"])),
+        }
+    }
+}
+
+impl TryFrom<&str> for TagGalleryLevel {
+    type Error = ferrovue::ParseUnionError;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        s.parse()
+    }
+}
+
+/// `rule` in `TagGallery.vue`: `"hr" | "br"`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub enum TagGalleryRule {
+    #[serde(rename = "hr")]
+    Hr,
+    #[serde(rename = "br")]
+    Br,
+}
+
+impl TagGalleryRule {
+    /// Every member, in the order the union declares them.
+    pub const ALL: [TagGalleryRule; 2] = [TagGalleryRule::Hr, TagGalleryRule::Br];
+
+    /// The string literal this member stands for.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            TagGalleryRule::Hr => "hr",
+            TagGalleryRule::Br => "br",
+        }
+    }
+}
+
+impl std::fmt::Display for TagGalleryRule {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl std::str::FromStr for TagGalleryRule {
+    type Err = ferrovue::ParseUnionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "hr" => Ok(TagGalleryRule::Hr),
+            "br" => Ok(TagGalleryRule::Br),
+            _ => Err(ferrovue::ParseUnionError::new("TagGalleryRule", s, &["hr", "br"])),
+        }
+    }
+}
+
+impl TryFrom<&str> for TagGalleryRule {
+    type Error = ferrovue::ParseUnionError;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        s.parse()
+    }
+}
+
 /// The props `TagGallery.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
     #[serde(rename = "level")]
-    pub level: Cow<'a, str>,
+    pub level: TagGalleryLevel,
     #[serde(rename = "title")]
     pub title: Cow<'a, str>,
     #[serde(rename = "note", default, skip_serializing_if = "Option::is_none")]
     pub note: Option<Cow<'a, str>>,
     #[serde(rename = "rule")]
-    pub rule: Cow<'a, str>,
+    pub rule: TagGalleryRule,
     #[serde(rename = "ordered")]
     pub ordered: bool,
 }
 
 impl<'a> Props<'a> {
     /// Props with its required fields, every optional one absent.
-    pub fn new(level: impl Into<Cow<'a, str>>, title: impl Into<Cow<'a, str>>, rule: impl Into<Cow<'a, str>>, ordered: bool) -> Self {
-        Props { level: level.into(), title: title.into(), note: None, rule: rule.into(), ordered }
+    pub fn new(level: TagGalleryLevel, title: impl Into<Cow<'a, str>>, rule: TagGalleryRule, ordered: bool) -> Self {
+        Props { level, title: title.into(), note: None, rule, ordered }
     }
 
     /// Set `note`, which is absent otherwise.
@@ -47,9 +147,9 @@ pub struct Slots<'s> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
-    out.reserve(340 + props.level.len() + props.title.len() + props.note.as_deref().map_or(0, str::len) + props.rule.len());
+    out.reserve(340 + 2 + props.title.len() + props.note.as_deref().map_or(0, str::len) + 2);
     out.push_str("<article data-v-71d8588a>");
-    super::tag_heading::render_scoped(out, &super::tag_heading::Props { r#as: Some(std::borrow::Cow::Borrowed(&*props.level)), text: std::borrow::Cow::Borrowed(&*props.title) }, super::tag_heading::Slots {
+    super::tag_heading::render_scoped(out, &super::tag_heading::Props { r#as: Some(match props.level { TagGalleryLevel::H1 => super::tag_heading::TagHeadingAs::H1, TagGalleryLevel::H2 => super::tag_heading::TagHeadingAs::H2, TagGalleryLevel::H3 => super::tag_heading::TagHeadingAs::H3 }), text: std::borrow::Cow::Borrowed(&*props.title) }, super::tag_heading::Slots {
         default: Some(fv::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
             if let Some(n1) = props.note.as_deref().filter(|v| !v.is_empty()) {
@@ -75,11 +175,11 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
     super::tag_heading::render_scoped(out, &super::tag_heading::Props { r#as: None, text: std::borrow::Cow::Borrowed(&*props.title) }, super::tag_heading::Slots {
         default: None,
     }, &fv::Attrs::scoped(" data-v-71d8588a"));
-    match &*props.rule {
-        "hr" => {
+    match props.rule {
+        TagGalleryRule::Hr => {
             out.push_str("<hr class=\"rule\" data-v-71d8588a>");
         }
-        _ => {
+        TagGalleryRule::Br => {
             out.push_str("<br class=\"rule\" data-v-71d8588a>");
         }
     }
@@ -114,7 +214,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
     fv::escape_into(out, &props.title);
     out.push_str("</h4>");
     if let Some(n2) = props.note.as_deref().filter(|v| !v.is_empty()) {
-        let fv_tag3 = match &*props.level { "h1" => "h1", "h2" => "h2", _ => "h3" };
+        let fv_tag3 = match props.level { TagGalleryLevel::H1 => "h1", TagGalleryLevel::H2 => "h2", TagGalleryLevel::H3 => "h3" };
         out.push('<');
         out.push_str(fv_tag3);
         if n2.is_empty() {

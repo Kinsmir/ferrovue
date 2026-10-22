@@ -3,7 +3,7 @@ import { join, resolve } from "node:path";
 import type { Plugin } from "./plugin.ts";
 import type { Declared } from "./constants.ts";
 import type { Alias, TsProject } from "./resolve.ts";
-import { type Component, type Fn, type N, type Struct, type Ty, BOOL, FLOAT, GenError, INT, opt, STR } from "./model.ts";
+import { type Component, type EnumDef, type Fn, type N, type Struct, type Ty, BOOL, FLOAT, GenError, INT, opt, STR } from "./model.ts";
 import type { Code } from "./errors.ts";
 import { formatWarning } from "./diagnostics.ts";
 import { CONFIG_SCHEMA, type Schema, TYPE_NAMES } from "./schema.ts";
@@ -356,6 +356,7 @@ export const ctx = {
   constDecls: new Map<string, Map<string, Declared>>(),
   tsModules: new Map<string, { home: Component; body: N[]; functions: Map<string, { fn: Fn; exported: boolean }> }>(),
   typeConsts: new Map<string, { of: unknown; file: string; text: string }>(),
+  enums: new Map<string, Map<string, EnumDef>>(),
   components: new Map<string, Component>(),
   narrowCount: 0,
   componentsDir: "",

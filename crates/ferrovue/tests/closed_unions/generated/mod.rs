@@ -9,12 +9,13 @@
 // it needs.
 #![allow(dead_code)]
 
-ferrovue::__compat!(4);
+ferrovue::__compat!(5);
 
 pub mod lookups;
 pub mod picked;
 pub mod plain;
 pub mod strong;
+pub mod types;
 
 /// Render one component from its props as JSON, for the conformance suite.
 #[cfg(test)]

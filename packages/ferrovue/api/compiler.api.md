@@ -327,7 +327,19 @@ export const ERRORS: {
     };
     readonly FV0322: {
         readonly title: "Prop default that is not a literal";
-        readonly detail: "A default in `withDefaults` becomes a Rust value written into the generated code, so it must be a literal of the prop's type: a string, a whole number, `true` or `false`, or `() => []` for a list. A computed value, a constant, a float default and an object are refused. Give the prop no default and fall back in the template with `??`, or compute the value in Rust and pass it.";
+        readonly detail: "A default in `withDefaults` becomes a Rust value written into the generated code, so it must be a literal of the prop's type: a string, a whole number, `true` or `false`, or `() => []` for a list, and for a union of string literals one of its members. A computed value, a constant, a float default and an object are refused. Give the prop no default and fall back in the template with `??`, or compute the value in Rust and pass it.";
+    };
+    readonly FV0323: {
+        readonly title: "Literal of a union that gives its enum variant no name";
+        readonly detail: "A union of string literals is a Rust enum with a variant for each literal, named from the literal's letters and digits in PascalCase (`\"x-large\"` is `XLarge`, `\"2xl\"` is `V2xl`, `\"\"` is `Empty`). A literal with no ASCII letter or digit (`\"-\"`, `\"+\"`, `\"é\"`) leaves the variant nameless. Use literals with a letter or a digit, or type the prop `string`.";
+    };
+    readonly FV0324: {
+        readonly title: "Two literals of a union that give their enum one variant name";
+        readonly detail: "Each literal of a union of string literals names a variant of its Rust enum from its letters and digits, so literals that differ only in case or punctuation (`\"md\"` and `\"MD\"`, `\"a-b\"` and `\"a_b\"`) would be one variant, as would two members of an `enum` that hold one value. Make the literals differ in their letters or digits.";
+    };
+    readonly FV0325: {
+        readonly title: "Enum of a union named as another type of its module";
+        readonly detail: "A union of string literals is a Rust enum named after its `type` alias or `enum`, or, written in place, after its component or interface and field (`size` in `Button.vue` is `ButtonSize`). Another type of the module it is written to, a struct, a slot's types, an enum of another union or one of Rust's own types, has that name. Name the union with a `type` alias of its own, or rename the other type.";
     };
     readonly FV0401: {
         readonly title: "Interpolation of a value that is not a string, a number or a boolean";
@@ -477,6 +489,10 @@ export const ERRORS: {
         readonly title: "Listener of unknown name given to a child with a prop named like a listener";
         readonly detail: "Vue hands a listener whose name matches a declared prop (`onSelect` for `@select`) to that prop. With `v-on=\"handlers\"` or `@[event]`, the name is not known when compiling, so the compiler cannot tell whether it fills the child's prop named like a listener. Write the listener with a static name (`@select=\"…\"`).";
     };
+    readonly FV0515: {
+        readonly title: "Prop of a union of string literals given a value outside it";
+        readonly detail: "A child's prop typed as a union of string literals is a Rust enum, which holds its members alone. The value passed must be one of them: a literal of the union, a value of the same union or of one whose members it holds, or a string the compiler knows is among them (a `?:` of members, a `computed` typed as the union). A literal outside the union, or a value typed `string`, is refused, as TypeScript refuses it. Pass a member, or type the value as the union.";
+    };
     readonly FV0601: {
         readonly title: "Name or function not available on the server";
         readonly detail: "The template reads or calls a name the server has no value for: a function or value imported from a `.ts` module, which ferrovue does not run, or a name nothing declares. The server renders only what it can translate to Rust: JavaScript's built-ins, constants the compiler evaluates, and helpers. Give a function a Rust twin under `helpers.functions` in `ferrovue.config.json` and import it from the module `helpers.module` names; export a value as a constant the compiler evaluates (`export const LIMIT = 10`); or compute the value in Rust and pass it as a prop.";
@@ -615,11 +631,15 @@ export const ERRORS: {
     };
     readonly FV0635: {
         readonly title: "Object literal that does not match its interface";
-        readonly detail: "An object literal built as a struct holds the fields of its interface: each key a field, given once, every required field given, and a computed key only where the compiler knows it (a string, a constant, an enum member). A key the interface does not declare, a method or accessor, `__proto__`, a spread of another type, and a spread after other keys, which keeps or writes over them as the object it copies holds them, are refused. Write the fields out, with the spread first. See [`script_logic`](crate::guide::script_logic#object-literals).";
+        readonly detail: "An object literal built as a struct holds the fields of its interface: each key a field, given once, every required field given, and a computed key only where the compiler knows it (a string, a constant, an enum member). A key the interface does not declare, a method or accessor, `__proto__`, a spread of another type, and a spread after other keys, which keeps or writes over them as the object it copies holds them, are refused, and so is a string that may be outside the union of string literals a field is typed with. Write the fields out, with the spread first, and give a union field one of its members or a value typed as the union. See [`script_logic`](crate::guide::script_logic#object-literals).";
     };
     readonly FV0636: {
         readonly title: "Object literal read in place";
         readonly detail: "A value built from object literals (an object, or a list `.map()` makes of them) is held by the expression that builds it, which ends before a list method's result, an item or an optional chain read from it would be used. Give the value a `computed` of its own and call the method on that, or call `.filter()`, `.slice()` and the other methods before `.map()`. See [`script_logic`](crate::guide::script_logic#object-literals).";
+    };
+    readonly FV0637: {
+        readonly title: "Comparison of a union of string literals with a literal outside it";
+        readonly detail: "A value typed as a union of string literals is a Rust enum, and `===` or `!==` with a literal compares it with one of its variants. A literal outside the union is no variant: the comparison would always be `false` (or `true` for `!==`), and TypeScript refuses it as a comparison of types with no overlap. Compare with one of the union's members, or fix the literal's spelling.";
     };
     readonly FV0701: {
         readonly title: "`Number()` of an unsupported value";

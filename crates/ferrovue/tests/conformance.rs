@@ -323,7 +323,7 @@ fn props_are_built_with_constructors_and_setters() {
             ],
         )
         .avatar("/a.png")
-        .size(String::from("sm")),
+        .size(types::Size::Sm),
     )
     .badges(vec![
         types::Badge::new("new").tone("green"),
@@ -345,6 +345,54 @@ fn props_are_built_with_constructors_and_setters() {
 
     let lists = generated::lists::Props::new(["a", "b"], vec![1, 2], vec![]);
     assert_eq!(lists.words.len(), 2);
+}
+
+#[test]
+fn props_of_literal_unions_are_built_from_variants_and_parsed_strings() {
+    use generated::types::{Align, Level, Step, StepState};
+    use generated::union_enums::{
+        Props, UnionEnumsGap, UnionEnumsMark, UnionEnumsMode, UnionEnumsOther, UnionEnumsPicked,
+        UnionEnumsSize, UnionEnumsTag,
+    };
+    let steps = vec![
+        Step::new("Plan", StepState::Done).align(Align::Right),
+        Step::new("Build", "todo".parse().unwrap()),
+    ];
+    let props = Props::new(
+        Align::Center,
+        UnionEnumsMode::B,
+        Level::try_from("high").unwrap(),
+        UnionEnumsMark::AB,
+        UnionEnumsTag::H3,
+        steps,
+        "Ready",
+    )
+    .other(UnionEnumsOther::A)
+    .gap(UnionEnumsGap::Wide)
+    .size(UnionEnumsSize::Sm)
+    .picked(UnionEnumsPicked::B);
+    let mut from_rust = String::new();
+    generated::union_enums::render(&mut from_rust, &props);
+    let fixture = fs::read_to_string(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/conformance/fixtures/UnionEnums/typical.html"
+    ))
+    .unwrap();
+    assert_eq!(from_rust, fixture);
+    assert_eq!(
+        serde_json::to_string(&props).unwrap(),
+        r#"{"align":"center","mode":"b","other":"a","level":"high","gap":"wide","mark":"a&b","tag":"h3","size":"sm","picked":"b","steps":[{"label":"Plan","state":"done","align":"right"},{"label":"Build","state":"todo"}],"note":"Ready"}"#
+    );
+    assert_eq!(
+        UnionEnumsMark::ALL.map(UnionEnumsMark::as_str),
+        ["<b>", "\"q\"", "a&b"]
+    );
+    assert_eq!(UnionEnumsGap::Empty.to_string(), "");
+    let e = "justify".parse::<Align>().unwrap_err();
+    assert_eq!(
+        e.to_string(),
+        "`justify` is not one of the members of `Align`: `left`, `center`, `right`"
+    );
 }
 
 fn render_unread(props: &str) -> String {

@@ -13,7 +13,7 @@ pub const NAME: &str = "Catalog";
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
     #[serde(rename = "tone")]
-    pub tone: Cow<'a, str>,
+    pub tone: super::types::Volume,
     #[serde(rename = "rank", default, skip_serializing_if = "Option::is_none")]
     pub rank: Option<i64>,
     #[serde(rename = "size", default, skip_serializing_if = "Option::is_none")]
@@ -22,8 +22,8 @@ pub struct Props<'a> {
 
 impl<'a> Props<'a> {
     /// Props with its required fields, every optional one absent.
-    pub fn new(tone: impl Into<Cow<'a, str>>) -> Self {
-        Props { tone: tone.into(), rank: None, size: None }
+    pub fn new(tone: super::types::Volume) -> Self {
+        Props { tone, rank: None, size: None }
     }
 
     /// Set `rank`, which is absent otherwise.
@@ -42,14 +42,14 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(214 + props.tone.len() + props.size.as_deref().map_or(0, str::len));
+    out.reserve(214 + 4 + props.size.as_deref().map_or(0, str::len));
     let s_heading = format!("Catalogue <b> ({})", fv::Js(3i64));
     out.push_str("<section class=\"");
-    fv::class_into(out, false, &["round", &*props.tone]);
+    fv::class_into(out, false, &["round", props.tone.as_str()]);
     out.push_str("\"><h2>");
     fv::escape_into(out, &s_heading);
     out.push_str("</h2>");
-    if &*props.tone == "loud" {
+    if props.tone == super::types::Volume::Loud {
         out.push_str("<p>LOUD</p>");
     } else {
         if props.rank == Some(6i64) {

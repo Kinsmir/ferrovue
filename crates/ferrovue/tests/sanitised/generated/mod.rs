@@ -9,7 +9,7 @@
 // it needs.
 #![allow(dead_code)]
 
-ferrovue::__compat!(4);
+ferrovue::__compat!(5);
 
 pub mod review;
 

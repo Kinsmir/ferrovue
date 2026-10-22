@@ -1,4 +1,5 @@
-import { type Component, type N, type Scope, type StructTy, type Ty, type Val, fail, GenError, literalsOf, nothing, sameTy } from "./model.ts";
+import { type Component, type N, type Scope, type StructTy, type Ty, type Val, enumOf, fail, GenError, literalsOf, nothing, sameTy } from "./model.ts";
+import { intoEnum, knownLiteral } from "./enums.ts";
 import { describeTy, expr, holdsNothing, typedBy } from "./expr.ts";
 import { lookupStruct, markHome } from "./typescript.ts";
 import { fieldInit, ownInto } from "./children.ts";
@@ -95,6 +96,19 @@ export function owning(comp: Component, v: Val, want: Ty, node: N): string {
 }
 
 function fieldOwned(comp: Component, v: Val, want: Ty, node: N, what: string): string {
+  const def = enumOf(want);
+  if (def !== undefined) {
+    if (want.k === "opt" && nothing(v.ty)) return "None";
+    const into = (v.ty.k === "opt" ? v.ty.of : v.ty).k === "str" && (v.ty.k !== "opt" || want.k === "opt") ? intoEnum(comp, v, def) : null;
+    if (into === null) {
+      const literal = knownLiteral(v);
+      const inner = v.ty.k === "opt" ? v.ty.of : v.ty;
+      const among = inner.k === "str" ? literalsOf(inner) : undefined;
+      const given = literal !== undefined ? JSON.stringify(literal) : among !== undefined ? `one of ${among.map((l) => JSON.stringify(l)).join(" | ")}` : inner.k === "str" ? `${describeTy(v.ty)} that may be any other` : describeTy(v.ty);
+      return fail(comp, "FV0635", `${what} is one of ${def.literals.map((l) => JSON.stringify(l)).join(" | ")}, the members of \`${def.name}\`, and the value given is ${given}: give one of them, or a value typed as the union`, node);
+    }
+    return want.k === "opt" && v.ty.k !== "opt" ? `Some(${bare(into)})` : into;
+  }
   try {
     return owning(comp, v, want, node);
   } catch (e) {

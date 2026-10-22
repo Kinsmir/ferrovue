@@ -8,6 +8,54 @@ use ferrovue as fv;
 /// The component's name, as `data-island` carries it.
 pub const NAME: &str = "CssVarsTag";
 
+/// `tag` in `CssVarsTag.vue`: `"div" | "section"`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub enum CssVarsTagTag {
+    #[serde(rename = "div")]
+    Div,
+    #[serde(rename = "section")]
+    Section,
+}
+
+impl CssVarsTagTag {
+    /// Every member, in the order the union declares them.
+    pub const ALL: [CssVarsTagTag; 2] = [CssVarsTagTag::Div, CssVarsTagTag::Section];
+
+    /// The string literal this member stands for.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            CssVarsTagTag::Div => "div",
+            CssVarsTagTag::Section => "section",
+        }
+    }
+}
+
+impl std::fmt::Display for CssVarsTagTag {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl std::str::FromStr for CssVarsTagTag {
+    type Err = ferrovue::ParseUnionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "div" => Ok(CssVarsTagTag::Div),
+            "section" => Ok(CssVarsTagTag::Section),
+            _ => Err(ferrovue::ParseUnionError::new("CssVarsTagTag", s, &["div", "section"])),
+        }
+    }
+}
+
+impl TryFrom<&str> for CssVarsTagTag {
+    type Error = ferrovue::ParseUnionError;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        s.parse()
+    }
+}
+
 /// The props `CssVarsTag.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -15,13 +63,13 @@ pub struct Props<'a> {
     #[serde(rename = "tone")]
     pub tone: Cow<'a, str>,
     #[serde(rename = "tag")]
-    pub tag: Cow<'a, str>,
+    pub tag: CssVarsTagTag,
 }
 
 impl<'a> Props<'a> {
     /// Props with its required fields.
-    pub fn new(tone: impl Into<Cow<'a, str>>, tag: impl Into<Cow<'a, str>>) -> Self {
-        Props { tone: tone.into(), tag: tag.into() }
+    pub fn new(tone: impl Into<Cow<'a, str>>, tag: CssVarsTagTag) -> Self {
+        Props { tone: tone.into(), tag }
     }
 
 }
@@ -35,8 +83,8 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// [`render`], with the attributes a parent passes beyond the props, and the scope ids it hands the root.
 #[doc(hidden)]
 pub fn render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::Attrs<'_>) {
-    out.reserve(74 + props.tone.len() + props.tag.len());
-    let fv_tag1 = match &*props.tag { "div" => "div", _ => "section" };
+    out.reserve(74 + props.tone.len() + 7);
+    let fv_tag1 = match props.tag { CssVarsTagTag::Div => "div", CssVarsTagTag::Section => "section" };
     out.push('<');
     out.push_str(fv_tag1);
     if fv_attrs.is_empty() {

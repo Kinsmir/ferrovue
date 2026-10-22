@@ -8,6 +8,54 @@ use ferrovue as fv;
 /// The component's name, as `data-island` carries it.
 pub const NAME: &str = "HeadChoice";
 
+/// `kind` in `HeadChoice.vue`: `"article" | "note"`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub enum HeadChoiceKind {
+    #[serde(rename = "article")]
+    Article,
+    #[serde(rename = "note")]
+    Note,
+}
+
+impl HeadChoiceKind {
+    /// Every member, in the order the union declares them.
+    pub const ALL: [HeadChoiceKind; 2] = [HeadChoiceKind::Article, HeadChoiceKind::Note];
+
+    /// The string literal this member stands for.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            HeadChoiceKind::Article => "article",
+            HeadChoiceKind::Note => "note",
+        }
+    }
+}
+
+impl std::fmt::Display for HeadChoiceKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl std::str::FromStr for HeadChoiceKind {
+    type Err = ferrovue::ParseUnionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "article" => Ok(HeadChoiceKind::Article),
+            "note" => Ok(HeadChoiceKind::Note),
+            _ => Err(ferrovue::ParseUnionError::new("HeadChoiceKind", s, &["article", "note"])),
+        }
+    }
+}
+
+impl TryFrom<&str> for HeadChoiceKind {
+    type Error = ferrovue::ParseUnionError;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        s.parse()
+    }
+}
+
 /// The props `HeadChoice.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -15,7 +63,7 @@ pub struct Props<'a> {
     #[serde(rename = "article")]
     pub article: bool,
     #[serde(rename = "kind")]
-    pub kind: Cow<'a, str>,
+    pub kind: HeadChoiceKind,
     #[serde(rename = "title")]
     pub title: Cow<'a, str>,
     #[serde(rename = "tags")]
@@ -24,8 +72,8 @@ pub struct Props<'a> {
 
 impl<'a> Props<'a> {
     /// Props with its required fields.
-    pub fn new(article: bool, kind: impl Into<Cow<'a, str>>, title: impl Into<Cow<'a, str>>, tags: impl IntoIterator<Item = impl Into<Cow<'a, str>>>) -> Self {
-        Props { article, kind: kind.into(), title: title.into(), tags: tags.into_iter().map(Into::into).collect() }
+    pub fn new(article: bool, kind: HeadChoiceKind, title: impl Into<Cow<'a, str>>, tags: impl IntoIterator<Item = impl Into<Cow<'a, str>>>) -> Self {
+        Props { article, kind, title: title.into(), tags: tags.into_iter().map(Into::into).collect() }
     }
 
 }
@@ -33,7 +81,7 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_head: &fv::Head) {
-    out.reserve(11 + props.kind.len() + props.title.len() + props.tags.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(11 + 7 + props.title.len() + props.tags.iter().map(|v| v.len()).sum::<usize>());
     fv_head.push(fv::HeadValue::object([("titleTemplate", fv::HeadValue::str("%s (chosen)"))]));
     out.push_str("<div>");
     if props.article {
@@ -41,11 +89,11 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_head: &fv::Head) {
     } else {
         super::head_note::render(out, &super::head_note::Props { title: std::borrow::Cow::Borrowed(&*props.title), tags: props.tags.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect() }, fv_head);
     }
-    match &*props.kind {
-        "article" => {
+    match props.kind {
+        HeadChoiceKind::Article => {
             super::head_article::render(out, &super::head_article::Props { title: std::borrow::Cow::Borrowed(&*format!("{} again", props.title)), tags: props.tags.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect() }, fv_head);
         }
-        _ => {
+        HeadChoiceKind::Note => {
             super::head_note::render(out, &super::head_note::Props { title: std::borrow::Cow::Borrowed(&*format!("{} again", props.title)), tags: props.tags.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect() }, fv_head);
         }
     }

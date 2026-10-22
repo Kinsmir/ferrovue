@@ -1,0 +1,1 @@
+{"align": "center", "mode": "b", "other": "a", "level": "high", "gap": "wide", "mark": "a&b", "tag": "h3", "size": "sm", "picked": "b", "steps": [{"label": "Plan", "state": "done", "align": "right"}, {"label": "Build", "state": "todo"}], "note": "Ready"}

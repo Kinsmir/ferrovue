@@ -2,7 +2,8 @@ import { parse as parseJs } from "@babel/parser";
 import { readFileSync } from "node:fs";
 import { basename } from "node:path";
 import { relativePath } from "./paths.ts";
-import { type Absence, type Component, type Field, type N, type Struct, type Ty, absence, blankComponent, BOOL, fail, FLOAT, GenError, INT, joinAbsence, joinTy, literalTy, nodeName, opt, RUST_PRELUDE, rustStr, sameTy, snake, STR, tagAst, withAbsence } from "./model.ts";
+import { type Absence, type Component, type Field, type N, type Struct, type Ty, absence, blankComponent, BOOL, enumOf, fail, FLOAT, GenError, INT, joinAbsence, joinTy, literalTy, nodeName, opt, RUST_PRELUDE, rustStr, sameTy, snake, STR, tagAst, withAbsence } from "./model.ts";
+import { declareAlias, enumField, namedBy } from "./enums.ts";
 import { CONFIG_FILE, ctx, INLINE_HTML, TYPES_MODULE } from "./context.ts";
 import { childOf } from "./expr.ts";
 import { claim } from "./plugin.ts";
@@ -119,7 +120,7 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
       const alias = comp.aliases.get(name);
       if (alias) {
         if (seen.has(name)) fail(comp, "FV0314", `type \`${name}\` refers to itself through an alias`, t);
-        return tyOfTs(comp, alias, structs, new Set(seen).add(name), dates);
+        return namedBy(alias, tyOfTs(comp, alias, structs, new Set(seen).add(name), dates));
       }
       refuseUnresolved(comp, name, t);
       return fail(comp, "FV0315", `unsupported prop type \`${name}\`: declare it as an interface in the component, or import it from a \`.ts\` file`, t);
@@ -144,10 +145,15 @@ export function declareTypes(comp: Component, body: N[], structs: Map<string, St
     else if (d?.type === "TSTypeAliasDeclaration") {
       const dictionary = d.typeAnnotation.members?.some((m: N) => m.type === "TSIndexSignature");
       if (d.typeAnnotation.type === "TSTypeLiteral" && !dictionary) decls.push({ name: d.id.name, members: d.typeAnnotation.members, node: d });
-      else aliases.set(d.id.name, d.typeAnnotation);
+      else {
+        aliases.set(d.id.name, d.typeAnnotation);
+        declareAlias(comp, d.id.name, d.typeAnnotation, d);
+      }
     } else if (d?.type === "TSEnumDeclaration") {
       try {
-        aliases.set(d.id.name, enumType(comp, d));
+        const type = enumType(comp, d);
+        aliases.set(d.id.name, type);
+        declareAlias(comp, d.id.name, type, d, d.members.map((m: N) => (m.id.type === "Identifier" ? m.id.name : m.id.value)));
       } catch (e) {
         if (!(e instanceof GenError)) throw e;
       }
@@ -289,12 +295,12 @@ export function lookupStruct(comp: Component, ty: Ty & { k: "struct" }): { st: S
   return { st: comp.structs.get(ty.name), owner: comp, path: "" };
 }
 
-export function structOf(comp: Component, name: string, members: N[], structs: Map<string, Struct>, lenient = false, dates = false): Struct {
+export function structOf(comp: Component, name: string, members: N[], structs: Map<string, Struct>, lenient = false, dates = false, enums = true): Struct {
   const fields: Field[] = [];
   const refused = new Map<string, GenError>();
   for (const m of members) {
     try {
-      fields.push(fieldOf(comp, name, m, structs, dates));
+      fields.push(fieldOf(comp, name, m, structs, dates, enums));
     } catch (e) {
       if (!lenient || !(e instanceof GenError)) throw e;
       const key = memberKey(m);
@@ -310,7 +316,7 @@ function memberKey(m: N): string {
   return m.key.type === "Identifier" ? m.key.name : m.key.type === "StringLiteral" ? m.key.value : "";
 }
 
-function fieldOf(comp: Component, name: string, m: N, structs: Map<string, Struct>, dates: boolean): Field {
+function fieldOf(comp: Component, name: string, m: N, structs: Map<string, Struct>, dates: boolean, enums: boolean): Field {
   if (m.type !== "TSPropertySignature" || m.key.type !== "Identifier") {
     fail(comp, "FV0320", `\`${name}\` may only hold plain named fields`, m);
   }
@@ -318,7 +324,8 @@ function fieldOf(comp: Component, name: string, m: N, structs: Map<string, Struc
   if (m.optional && absence(base) === "null") {
     fail(comp, "FV0321", `\`${m.key.name}?: T | null\` may be absent, which is \`undefined\`, or \`null\`: ${ONE_NOTHING}; declare it \`${m.key.name}: T | null\` or \`${m.key.name}?: T\``, m);
   }
-  return { js: m.key.name, rust: snake(m.key.name), ty: m.optional && base.k !== "opt" ? opt(base) : base };
+  const ty = m.optional && base.k !== "opt" ? opt(base) : base;
+  return { js: m.key.name, rust: snake(m.key.name), ty: enums ? enumField(comp, name === "Props" ? comp.name : name, m.key.name, m, ty) : ty };
 }
 
 export function definePropsType(call: N): N | null {
@@ -374,6 +381,10 @@ export function runtimeDefaults(comp: Component, content: string): Map<string, N
 
 export function defaultValue(comp: Component, f: Field, node: N, written?: N): string {
   const of = f.ty.k === "opt" ? f.ty.of : f.ty;
+  const def = enumOf(of);
+  if (def !== undefined && node.type === "StringLiteral" && !def.literals.includes(node.value)) {
+    fail(comp, "FV0322", `the default of \`${f.js}\`, ${JSON.stringify(node.value)}, is not one of its members, ${def.literals.map((l) => JSON.stringify(l)).join(" | ")}: give one of them`, written ?? node);
+  }
   if (of.k === "str" && node.type === "StringLiteral") return rustStr(node.value);
   if (of.k === "int" && node.type === "NumericLiteral" && Number.isInteger(node.value)) return `${node.value}i64`;
   if (of.k === "int" && node.type === "UnaryExpression" && node.operator === "-" && node.argument.type === "NumericLiteral" && Number.isInteger(node.argument.value)) {

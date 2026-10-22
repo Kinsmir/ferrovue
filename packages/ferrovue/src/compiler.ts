@@ -59,6 +59,7 @@ function generateAll(root: string, config: Config, sources: ReadonlyMap<string, 
   ctx.constDecls = new Map();
   ctx.tsModules = new Map();
   ctx.typeConsts = new Map();
+  ctx.enums = new Map();
   ctx.plugins = PLUGINS;
   ctx.runs = new Map();
   for (const p of PLUGINS) ctx.runs.set(p, p.configure?.(config, root));

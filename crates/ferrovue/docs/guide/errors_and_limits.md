@@ -339,7 +339,9 @@ record, which the client still reads.
   The same holds for the names of `v-bind()` variables in `<style>`, which follow `isProduction`
   too, and for CSS module classes, which follow `cssModules`. The Vite plugin compares them. See
   [`scoped_styles`](crate::guide::scoped_styles).
-- **String-literal unions** are not checked in Rust: a value outside the union renders as given.
+- **Lists of string-literal unions** (`Size[]`) are lists of strings in Rust: a value outside the
+  union renders as given. A union itself is an enum. See
+  [`props`](crate::guide::props#unions-of-string-literals).
 - **Optional values must be narrowed** before use, as TypeScript requires: `v-if="user"`,
   `user !== undefined`, `??`.
 - **One render per buffer at a time**: a render borrows its `String` mutably; render pages in

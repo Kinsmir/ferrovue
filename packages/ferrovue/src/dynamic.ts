@@ -3,6 +3,7 @@ import { isHTMLTag, isVoidTag } from "@vue/shared";
 import { basename } from "node:path";
 import { type Component, type N, type Scope, camelize, fail, GenError, rustStr, tagAst } from "./model.ts";
 import { ctx } from "./context.ts";
+import { matchOver } from "./enums.ts";
 import { expr } from "./expr.ts";
 import { cond, known } from "./narrowing.ts";
 import { condition } from "./parens.ts";
@@ -373,17 +374,19 @@ function renderPick(s: Scope, e: Emitter, p: Pick, d: Dynamic): void {
     return;
   }
   const tags = groups.map(([, arm]) => (arm.k === "one" && "tag" in arm.choice ? arm.choice.tag : null));
+  const { subject, pattern, last } = matchOver(s.comp, v, p.arms.map(([key]) => key));
+  const head = (keys: string[], i: number): string => (i === groups.length - 1 ? last(keys) : pattern(keys));
   if (tags.every((t) => t !== null && !isVoidTag(t))) {
     const name = `fv_tag${++ctx.narrowCount}`;
-    const arms = groups.map(([keys], i) => `${i === groups.length - 1 ? "_" : keys.map(rustStr).join(" | ")} => ${rustStr(tags[i]!)}`);
-    e.stmt(`let ${name} = match ${v.code} { ${arms.join(", ")} };`);
+    const arms = groups.map(([keys], i) => `${head(keys, i)} => ${rustStr(tags[i]!)}`);
+    e.stmt(`let ${name} = match ${subject} { ${arms.join(", ")} };`);
     e.expect(Math.max(...tags.map((t) => t!.length)) * 2);
     renderElement(s, e, { code: name }, d);
     return;
   }
-  e.open(`match ${v.code}`);
+  e.open(`match ${subject}`);
   groups.forEach(([keys, arm], i) => {
-    e.open(`${i === groups.length - 1 ? "_" : keys.map(rustStr).join(" | ")} =>`);
+    e.open(`${head(keys, i)} =>`);
     renderPick(s, e, arm, d);
     e.close();
   });

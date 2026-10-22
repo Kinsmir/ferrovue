@@ -1,20 +1,20 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { CHOICES, LABELS, LIMITS, Rank, SIZES, SORTS, Tone } from "../types/catalog";
+import { CHOICES, LABELS, LIMITS, Rank, SIZES, SORTS, Volume } from "../types/catalog";
 
 enum Shape {
   Round = "round",
   Square = "square",
 }
 
-const props = defineProps<{ tone: Tone; rank?: Rank; size?: string }>();
+const props = defineProps<{ tone: Volume; rank?: Rank; size?: string }>();
 const heading = computed(() => `${LABELS.title} (${LABELS.counts.max})`);
 </script>
 
 <template>
   <section :class="[Shape.Round, props.tone]">
     <h2>{{ heading }}</h2>
-    <p v-if="tone === Tone.Loud">LOUD</p>
+    <p v-if="tone === Volume.Loud">LOUD</p>
     <p v-else-if="rank === Rank.High">high {{ Rank.High }}</p>
     <p v-else>{{ LABELS.empty }} {{ Rank[5] }} {{ Shape.Square }}</p>
     <select>

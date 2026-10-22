@@ -232,16 +232,17 @@ defineProps<{ c: string | null }>();
         },
       ),
     ).get("x.rs")!;
-    expect(out).toContain("match &*props.kind {");
-    expect(out).toContain('"y" => {');
-    expect(out).toContain('"z" => {');
+    expect(out).toContain("match props.kind {");
+    expect(out).toContain("XKind::Y => {");
+    expect(out).toContain("XKind::Z => {");
     expect(out).toContain("super::z::render(out, &super::z::Props { c: None });");
-    expect(out).toContain("_ => {\n            out.push_str(\"<hr>\");");
-    expect(out).toContain('let fv_tag1 = match &*props.tag { "b" => "b", _ => "i" };');
+    expect(out).toContain("XKind::Rule => {\n            out.push_str(\"<hr>\");");
+    expect(out).toContain('let fv_tag1 = match props.tag { XTag::B => "b", XTag::I => "i" };');
     expect(out).toContain("if props.boxed {");
+    expect(out.slice(out.indexOf("pub fn render"))).not.toContain("_ =>");
   });
 
-  it("renders the union's last choice in the `_` arm of `<component :is>`, however the choices group", () => {
+  it("matches every variant in `<component :is>`, however the choices group", () => {
     const out = compile(
       island(
         `<script setup lang="ts">
@@ -255,9 +256,9 @@ const TAG = { a: "em", b: "strong", c: "em" } as const;
         { Y: "<template><span>y</span></template>", Z: "<template><span>z</span></template>" },
       ),
     ).get("x.rs")!;
-    expect(out).toContain('"b" => {\n            super::z::render(');
-    expect(out).toContain("_ => {\n            super::y::render(");
-    expect(out).toContain('match &*props.k { "b" => "strong", _ => "em" }');
+    expect(out).toContain("XK::B => {\n            super::z::render(");
+    expect(out).toContain("XK::A | XK::C => {\n            super::y::render(");
+    expect(out).toContain('match props.k { XK::B => "strong", XK::A | XK::C => "em" }');
   });
 
   it("reserves a loop's markup per item and the text the props hold", () => {
@@ -4764,9 +4765,154 @@ function rows(): Item[] | undefined { return props.n > 0 ? props.words.map((w) =
 <template><div><V :item="{ label: name }" :items="rows() ?? []" /></div></template>`,
       /`\?:` between a list built from object literals and `undefined` or `null`/,
     ],
+    [
+      "a literal of a union with no letter or digit to name its variant",
+      `<script setup lang="ts">
+defineProps<{ sign: "+" | "minus" }>();
+</script>
+<template><p>{{ sign }}</p></template>`,
+      /the literal "\+" of `XSign` has no letter or digit to name its variant/,
+    ],
+    [
+      "two literals of a union that name one variant",
+      `<script setup lang="ts">
+defineProps<{ size: "md" | "MD" }>();
+</script>
+<template><p>{{ size }}</p></template>`,
+      /the literal "MD" and the literal "md" of `XSize` both name the variant `Md`/,
+    ],
+    [
+      "two members of an enum that hold one value",
+      `<script setup lang="ts">
+enum Tone { Calm = "calm", Quiet = "calm", Loud = "loud" }
+defineProps<{ tone: Tone }>();
+</script>
+<template><p>{{ tone }}</p></template>`,
+      /`Tone` gives two of its members one value/,
+    ],
+    [
+      "a union in place whose enum is named as an interface of the component",
+      `<script setup lang="ts">
+interface XKind { label: string }
+defineProps<{ kind: "a" | "b"; info: XKind }>();
+</script>
+<template><p>{{ kind }} {{ info.label }}</p></template>`,
+      /this union is the Rust enum `XKind`, and the module it is written to has another type of that name/,
+    ],
+    [
+      "a union alias named as a type of Rust's prelude",
+      `<script setup lang="ts">
+type Option = "a" | "b";
+defineProps<{ pick: Option }>();
+</script>
+<template><p>{{ pick }}</p></template>`,
+      /this union is the Rust enum `Option`, which would hide Rust's own `Option`/,
+    ],
+    [
+      "a string given to a child's prop of a union",
+      `<script setup lang="ts">
+import U from "./U.vue";
+defineProps<{ s: string }>();
+</script>
+<template><U :k="s" /></template>`,
+      /the prop is one of "a" \| "b", the members of `UK`, and the value given is a string that may be any other/,
+    ],
+    [
+      "a literal outside a child's prop of a union",
+      `<script setup lang="ts">
+import U from "./U.vue";
+</script>
+<template><U k="z" /></template>`,
+      /the prop is one of "a" \| "b", the members of `UK`, and the value given is "z"/,
+    ],
+    [
+      "a value of a wider union given to a child's prop of a union",
+      `<script setup lang="ts">
+import U from "./U.vue";
+defineProps<{ k: "a" | "b" | "c" }>();
+</script>
+<template><U :o="k" k="a" /></template>`,
+      /the prop is one of "a" \| "b", the members of `UO`, and the value given is a string that may be any other/,
+    ],
+    [
+      "a union compared with a literal outside it",
+      `<script setup lang="ts">
+defineProps<{ k: "a" | "b" }>();
+</script>
+<template><p v-if="k === 'z'">z</p></template>`,
+      /"z" is not one of "a" \| "b", the members of `XK`, so the comparison is always false/,
+    ],
+    [
+      "an optional union compared with a literal outside it",
+      `<script setup lang="ts">
+defineProps<{ k?: "a" | "b" }>();
+</script>
+<template><p v-if="k !== 'z'">z</p></template>`,
+      /"z" is not one of "a" \| "b", the members of `XK`, so the comparison is always true/,
+    ],
+    [
+      "a union compared with a literal outside it in a computed's switch",
+      `<script setup lang="ts">
+import { computed } from "vue";
+const props = defineProps<{ k: "a" | "b" }>();
+const label = computed(() => {
+  switch (props.k) {
+    case "a":
+      return "A";
+    case "c":
+      return "C";
+    default:
+      return "B";
+  }
+});
+</script>
+<template><p>{{ label }}</p></template>`,
+      /"c" is not one of "a" \| "b", the members of `XK`/,
+    ],
+    [
+      "a union's default outside it",
+      `<script setup lang="ts">
+withDefaults(defineProps<{ k?: "a" | "b" }>(), { k: "z" });
+</script>
+<template><p>{{ k }}</p></template>`,
+      /the default of `k`, "z", is not one of its members, "a" \| "b"/,
+    ],
+    [
+      "an object literal giving a free string to a field of a union",
+      `<script setup lang="ts">
+import S from "./S.vue";
+defineProps<{ name: string }>();
+</script>
+<template><S :chip="{ size: name, label: name }" /></template>`,
+      /`size` of `Chip` is one of "sm" \| "md", the members of `ChipSize`, and the value given is a string that may be any other: give one of them, or a value typed as the union/,
+    ],
+    [
+      "an object literal giving a literal outside a field's union",
+      `<script setup lang="ts">
+import S from "./S.vue";
+defineProps<{ name: string }>();
+</script>
+<template><S :chip="{ size: 'lg', label: name }" /></template>`,
+      /`size` of `Chip` is one of "sm" \| "md", the members of `ChipSize`, and the value given is "lg"/,
+    ],
+    [
+      "an object literal in a computed giving a wider union to a field of a union",
+      `<script setup lang="ts">
+import { computed } from "vue";
+import S, { type Chip } from "./S.vue";
+const props = defineProps<{ name: string; size: "sm" | "md" | "lg" }>();
+const chip = computed<Chip>(() => ({ size: props.size, label: props.name }));
+</script>
+<template><S :chip="chip" /></template>`,
+      /`size` of `Chip` is one of "sm" \| "md", the members of `ChipSize`, and the value given is one of "sm" \| "md" \| "lg": .* \(the template reads it as `chip` at components\/X\.vue:7:\d+\)/,
+    ],
   ];
 
   const children = {
+    U: `<script setup lang="ts">
+defineProps<{ k: "a" | "b"; o?: "a" | "b" }>();
+</script>
+<template><b>{{ k }}{{ o }}</b></template>`,
     Y: `<script setup lang="ts">
 defineProps<{ b?: string }>();
 </script>
@@ -4784,6 +4930,11 @@ export interface Item { label: string; n?: number }
 defineProps<{ item: Item; items?: Item[] }>();
 </script>
 <template><b>{{ item.label }}{{ items?.length }}</b></template>`,
+    S: `<script setup lang="ts">
+export interface Chip { size: "sm" | "md"; label: string }
+defineProps<{ chip: Chip }>();
+</script>
+<template><b :class="chip.size">{{ chip.label }}</b></template>`,
   };
 
   const codes: Record<string, Code> = {
@@ -4803,6 +4954,21 @@ defineProps<{ item: Item; items?: Item[] }>();
     "an item of a list `.map()` makes of object literals": "FV0636",
     "an optional chain of an object literal": "FV0636",
     "an optional list of object literals": "FV0636",
+    "a literal of a union with no letter or digit to name its variant": "FV0323",
+    "two literals of a union that name one variant": "FV0324",
+    "two members of an enum that hold one value": "FV0324",
+    "a union in place whose enum is named as an interface of the component": "FV0325",
+    "a union alias named as a type of Rust's prelude": "FV0325",
+    "a string given to a child's prop of a union": "FV0515",
+    "a literal outside a child's prop of a union": "FV0515",
+    "a value of a wider union given to a child's prop of a union": "FV0515",
+    "a union compared with a literal outside it": "FV0637",
+    "an optional union compared with a literal outside it": "FV0637",
+    "a union compared with a literal outside it in a computed's switch": "FV0637",
+    "a union's default outside it": "FV0322",
+    "an object literal giving a free string to a field of a union": "FV0635",
+    "an object literal giving a literal outside a field's union": "FV0635",
+    "an object literal in a computed giving a wider union to a field of a union": "FV0635",
     "a value imported from a module that resolves to no `.ts` file of the project": "FV0110",
     "a type parameter without a constraint": "FV0302",
     "a listener of a name chosen at run time given to a child with a prop named like a listener": "FV0514",
@@ -5416,28 +5582,41 @@ describe("constant lookups", () => {
       'type Size = "sm" | "md" | "lg";\ndefineProps<{ size: Size }>();\nconst PAD = { sm: "p-1", md: "p-2", lg: "p-4" } as const;',
       '<i :class="PAD[size]">{{ PAD[size] }}</i>',
     );
-    expect(out).toContain('fv::class_into(out, false, &[match &*props.size { "sm" => "p-1", "md" => "p-2", _ => "p-4" }]);');
-    expect(out).toContain('fv::escape_into(out, match &*props.size { "sm" => "p-1", "md" => "p-2", _ => "p-4" });');
+    expect(out).toContain("fv::class_into(out, false, &[match props.size { Size::Sm => \"p-1\", Size::Md => \"p-2\", Size::Lg => \"p-4\" }]);");
+    expect(out).toContain('fv::escape_into(out, match props.size { Size::Sm => "p-1", Size::Md => "p-2", Size::Lg => "p-4" });');
   });
 
-  it("reads the union's last member in the `_` arm, whatever the `??` default and however the values group", () => {
+  it("matches every variant of a key's enum, whatever the `??` default and however the values group", () => {
     const out = render(
       'type K = "a" | "b" | "c";\ndefineProps<{ k?: K; j: K }>();\nconst T = { a: "A", b: "B", c: "C" } as const;\nconst U = { a: "A", b: "B", c: "A" } as const;',
       "<i>{{ T[k ?? 'c'] }} {{ T[k ?? 'b'] }} {{ U[j] }}</i>",
     );
-    expect(out.match(/match [^{]*\{ "a" => "A", "b" => "B", _ => "C" \}/g)).toHaveLength(2);
-    expect(out).toContain('match &*props.j { "b" => "B", _ => "A" }');
+    expect(out).toContain('match props.k.unwrap_or(K::C) { K::A => "A", K::B => "B", K::C => "C" }');
+    expect(out).toContain('match props.k.unwrap_or(K::B) { K::A => "A", K::B => "B", K::C => "C" }');
+    expect(out).toContain('match props.j { K::B => "B", K::A | K::C => "A" }');
   });
 
-  it("reads a value outside the union as the last member in a table of booleans and in `v-if` of a table that lacks members", () => {
+  it("reads the union's last member in the `_` arm of a key held as a string, whatever the `??` default and however the values group", () => {
+    const out = render(
+      'import { computed } from "vue";\nconst props = defineProps<{ on: boolean; off: boolean }>();\nconst T = { a: "A", b: "B", c: "C" } as const;\nconst U = { a: "A", b: "B", c: "A" } as const;\nconst k = computed((): "a" | "b" | "c" => (props.on ? "b" : "c"));\nconst x = computed((): "a" | "c" | undefined => (props.off ? undefined : props.on ? "a" : "c"));',
+      "<i>{{ U[k] }} {{ T[x ?? 'c'] }} {{ T[x ?? 'a'] }}</i>",
+    );
+    expect(out).toContain('match s_k { "b" => "B", _ => "A" }');
+    expect(out).toContain('match s_x.unwrap_or("c") { "a" => "A", _ => "C" }');
+    expect(out).toContain('match s_x.unwrap_or("a") { "a" => "A", _ => "C" }');
+  });
+
+  it("tests an enum key in a table of booleans and in `v-if` of a table that lacks members, with every arm of a `match` inside it named", () => {
     const out = render(
       'type K = "a" | "b" | "c";\ndefineProps<{ k: K }>();\nconst LAST = { a: false, b: false, c: true };\nconst FIRST = { a: true, b: false, c: false };\nconst ICON: Partial<Record<K, { label: string }>> = { a: { label: "ia" }, c: { label: "ic" } };\nconst NONE_LAST: Partial<Record<K, { label: string }>> = { a: { label: "ia" }, b: { label: "ib" } };',
       '<i v-if="LAST[k]">l</i><i v-if="FIRST[k]">f</i><b v-if="ICON[k]">{{ ICON[k].label }}</b><b v-if="NONE_LAST[k]">{{ NONE_LAST[k].label }}</b>',
     );
-    expect(out).toContain('if !matches!(&*props.k, "a" | "b") {');
-    expect(out).toContain('if matches!(&*props.k, "a") {');
-    expect(out).toContain('if !matches!(&*props.k, "b") {');
-    expect(out).toContain('if matches!(&*props.k, "a" | "b") {');
+    expect(out).toContain("if !matches!(props.k, K::A | K::B) {");
+    expect(out).toContain("if matches!(props.k, K::A) {");
+    expect(out).toContain("if !matches!(props.k, K::B) {");
+    expect(out).toContain("if matches!(props.k, K::A | K::B) {");
+    expect(out).toContain('match props.k { K::A => "ia", K::C | K::B => "ic" }');
+    expect(out).not.toContain("_ =>");
   });
 
   it("reads a constant a `.ts` file exports, keyed by its enum's members, by a prop of the enum and a `v-for` item's field", () => {
@@ -5446,9 +5625,9 @@ describe("constant lookups", () => {
       '<i :style="{ color: THEME[tone].fg }">{{ THEME[Tone.Warn].fg }}</i><b v-for="b in badges">{{ THEME[b.tone].weight }}</b>',
       { "theme.ts": 'export enum Tone { Info = "info", Warn = "warn" }\nexport const THEME: Record<Tone, { fg: string; weight: number }> = { [Tone.Info]: { fg: "navy", weight: 400 }, [Tone.Warn]: { fg: "red", weight: 700.5 } };\n' },
     );
-    expect(out).toContain('fv::escape_into(out, match &*props.tone { "info" => "navy", _ => "red" });');
+    expect(out).toContain('fv::escape_into(out, match props.tone { super::types::Tone::Info => "navy", super::types::Tone::Warn => "red" });');
     expect(out).toContain("red</i>");
-    expect(out).toContain('fv::push_number(out, match &*b.tone { "info" => 400.0f64, _ => 700.5f64 });');
+    expect(out).toContain('fv::push_number(out, match b.tone { super::types::Tone::Info => 400.0f64, super::types::Tone::Warn => 700.5f64 });');
   });
 
   it("reads by integer literal keys, and keeps the literals of a `?:` and a `computed`", () => {
@@ -5466,10 +5645,10 @@ describe("constant lookups", () => {
       'defineProps<{ kind: "a" | "b" | "c" }>();\nconst T = { a: "A", b: "B" };\nconst I = { a: { label: "x" } };',
       '<i>{{ T[kind] ?? "-" }} {{ I[kind]?.label }}</i><b v-if="I[kind]">{{ I[kind].label }}</b><s v-if="T[kind]">{{ T[kind] }}</s>',
     );
-    expect(out).toContain('fv::escape_into(out, (match &*props.kind { "a" => Some("A"), "b" => Some("B"), _ => None }).unwrap_or("-"));');
-    expect(out).toContain('if let Some(v) = match &*props.kind { "a" => Some("x"), _ => None } {');
-    expect(out).toContain('if matches!(&*props.kind, "a") {\n        out.push_str("<b>x</b>");');
-    expect(out).toMatch(/if let Some\((n\d+)\) = \(match &\*props\.kind \{ "a" => Some\("A"\), "b" => Some\("B"\), _ => None \}\)\.filter\(\|v\| !v\.is_empty\(\)\) \{\n {8}out\.push_str\("<s>"\);\n {8}fv::escape_into\(out, \1\);/);
+    expect(out).toContain('fv::escape_into(out, (match props.kind { XKind::A => Some("A"), XKind::B => Some("B"), XKind::C => None }).unwrap_or("-"));');
+    expect(out).toContain('if let Some(v) = match props.kind { XKind::A => Some("x"), XKind::B | XKind::C => None } {');
+    expect(out).toContain('if matches!(props.kind, XKind::A) {\n        out.push_str("<b>x</b>");');
+    expect(out).toMatch(/if let Some\((n\d+)\) = \(match props\.kind \{ XKind::A => Some\("A"\), XKind::B => Some\("B"\), XKind::C => None \}\)\.filter\(\|v\| !v\.is_empty\(\)\) \{\n {8}out\.push_str\("<s>"\);\n {8}fv::escape_into\(out, \1\);/);
   });
 
   it("forgets the literals of a list item or a `??` that another value may be", () => {
@@ -5746,7 +5925,7 @@ function outside(x?: number): boolean {
   it("reads a lookup by a key `&&` tested, as `undefined` where the key is absent", () => {
     const out = render('const TONE = { info: "blue", warn: "amber" } as const;\ndefineProps<{ tone?: "info" | "warn" }>();', '<b :class="tone && TONE[tone]" :title="tone && TONE[tone]">{{ (tone && TONE[tone]) ?? "none" }}</b>');
     expect(out).toContain('match n');
-    expect(out).toContain('"info" => "blue"');
+    expect(out).toContain('XTone::Info => "blue", XTone::Warn => "amber"');
     expect(out).not.toContain("FV0223");
   });
 
@@ -5988,5 +6167,311 @@ function pair(t: string): string {
     expect(tuple).toMatchObject({ code: "FV0316", help: expect.stringMatching(/declare an interface with a field for each part/) });
     const [tag] = refusals(`<template><rss><item>x</item></rss></template>`);
     expect(tag).toMatchObject({ code: "FV0513", what: expect.stringMatching(/^`<rss>` is a component the template resolves by name, which must be imported/) });
+  });
+});
+
+describe("unions of string literals", () => {
+  const project = (source: string, files: Record<string, string> = {}): string => {
+    const root = island(source);
+    for (const [name, text] of Object.entries(files)) {
+      mkdirSync(join(root, name, ".."), { recursive: true });
+      writeFileSync(join(root, name), text);
+    }
+    return root;
+  };
+  const rendered = (out: string): string => out.slice(out.indexOf("pub fn render"));
+  const failure = (run: () => unknown): GenError => {
+    try {
+      run();
+    } catch (e) {
+      if (e instanceof GenError) return e;
+      throw e;
+    }
+    throw new Error("compiled without an error");
+  };
+
+  it("names each variant after its literal's letters and digits in PascalCase", () => {
+    const out = compile(
+      island(`<script setup lang="ts">
+defineProps<{ a: "sm" | "x-large" | "2xl" | "" | "_self" | "fooBar" | "XL" | "h1" }>();
+</script>
+<template><p>{{ a }}</p></template>`),
+    ).get("x.rs")!;
+    for (const [literal, variant] of [["sm", "Sm"], ["x-large", "XLarge"], ["2xl", "V2xl"], ["", "Empty"], ["_self", "Self_"], ["fooBar", "FooBar"], ["XL", "Xl"], ["h1", "H1"]]) {
+      expect(out).toContain(`    #[serde(rename = ${JSON.stringify(literal)})]\n    ${variant},`);
+      expect(out).toContain(`            XA::${variant} => ${JSON.stringify(literal)},`);
+    }
+    expect(out).toContain("/// `a` in `X.vue`: `\"sm\" | \"x-large\" | \"2xl\" | \"\" | \"_self\" | \"fooBar\" | \"XL\" | \"h1\"`.");
+    expect(out).toContain("#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]\npub enum XA {");
+    expect(out).toContain("    pub const ALL: [XA; 8] = [XA::Sm, XA::XLarge, XA::V2xl, XA::Empty, XA::Self_, XA::FooBar, XA::Xl, XA::H1];");
+    expect(out).toContain("    pub const fn as_str(self) -> &'static str {");
+    expect(out).toContain("impl std::fmt::Display for XA {");
+    expect(out).toContain('            _ => Err(ferrovue::ParseUnionError::new("XA", s, &["sm", "x-large", "2xl", "", "_self", "fooBar", "XL", "h1"])),');
+    expect(out).toContain("impl TryFrom<&str> for XA {");
+    expect(out).toContain("pub struct Props {\n    #[serde(rename = \"a\")]\n    pub a: XA,\n}");
+    expect(out).toContain("pub fn new(a: XA) -> Self {");
+  });
+
+  it("names a union in place after its component and prop, or its interface and field, and an alias or an enum after itself", () => {
+    const out = compile(
+      island(`<script setup lang="ts">
+type Tone = "calm" | "loud";
+enum Rank { Low = "low", HighEnd = "high" }
+interface Row { kind: "note" | "tip"; tone?: Tone }
+defineProps<{ size: "sm" | "md"; rows: Row[]; tone: Tone; rank: Rank | null }>();
+</script>
+<template><p v-for="r in rows">{{ size }}{{ r.kind }}{{ r.tone }}{{ tone }}{{ rank }}</p></template>`),
+    ).get("x.rs")!;
+    expect(out).toContain("pub enum XSize {");
+    expect(out).toContain("pub enum RowKind {");
+    expect(out).toContain("pub enum Tone {");
+    expect(out).toContain('pub enum Rank {\n    #[serde(rename = "low")]\n    Low,\n    #[serde(rename = "high")]\n    HighEnd,\n}');
+    expect(out).toContain("    pub kind: RowKind,\n    #[serde(rename = \"tone\", default, skip_serializing_if = \"Option::is_none\")]\n    pub tone: Option<Tone>,");
+    expect(out).toContain("    pub rank: Option<Rank>,");
+    expect(out.match(/pub enum Tone \{/g)).toHaveLength(1);
+  });
+
+  it("makes a `defineModel` of a union an enum, compared by variant and written through `as_str()`", () => {
+    const out = compile(
+      island(`<script setup lang="ts">
+const model = defineModel<"x" | "y">({ required: true });
+const other = defineModel<"x" | "y">("other");
+</script>
+<template><select v-model="model"><option value="x">X</option></select><b v-if="model === 'y'">{{ other }}</b></template>`),
+    ).get("x.rs")!;
+    expect(out).toContain("pub model_value: XModelValue,");
+    expect(out).toContain("pub other: Option<XOther>,");
+    expect(out).toContain('if props.model_value.as_str() == "x" {');
+    expect(out).toContain("if props.model_value == XModelValue::Y {");
+  });
+
+  it("keeps a single literal, a union with `string`, integer literals and lists of literals as they were", () => {
+    const out = compile(
+      island(`<script setup lang="ts">
+defineProps<{ one: "a"; open: "a" | string; level: 1 | 2; tags: ("p" | "q")[] }>();
+</script>
+<template><p>{{ one }}{{ open }}{{ level }}{{ tags.length }}</p></template>`),
+    ).get("x.rs")!;
+    expect(out).not.toContain("pub enum");
+    expect(out).toContain("pub one: Cow<'a, str>,");
+    expect(out).toContain("pub open: Cow<'a, str>,");
+    expect(out).toContain("pub level: i64,");
+    expect(out).toContain("pub tags: Vec<Cow<'a, str>>,");
+  });
+
+  it("writes a union a `.ts` file declares once, to `types.rs`, for every component that uses it", () => {
+    const root = project(
+      `<script setup lang="ts">
+import type { Size } from "../types/ui";
+import Child from "./Child.vue";
+defineProps<{ size: Size }>();
+</script>
+<template><Child :size="size" /></template>`,
+      {
+        "components/Child.vue": `<script setup lang="ts">
+import type { Size as S } from "../types/ui";
+defineProps<{ size: S }>();
+</script>
+<template><b>{{ size }}</b></template>`,
+        "types/ui.ts": 'export type Size = "sm" | "md";\n',
+        "types/other.ts": 'export type Size = "sm" | "md";\n',
+      },
+    );
+    const out = compile(root);
+    expect(out.get("types.rs")).toContain("/// `Size` in `types/ui.ts`: `\"sm\" | \"md\"`.\n#[derive(");
+    expect(out.get("types.rs")!.match(/pub enum Size \{/g)).toHaveLength(1);
+    expect(out.get("x.rs")).toContain("pub size: super::types::Size,");
+    expect(out.get("x.rs")).toContain("super::child::render(out, &super::child::Props { size: props.size });");
+    expect(out.get("child.rs")).toContain("pub size: super::types::Size,");
+  });
+
+  it("shares the enum of two `.ts` files that declare one union by one name, and refuses two different ones", () => {
+    const using = (other: string): string =>
+      project(
+        `<script setup lang="ts">
+import type { Size } from "../types/ui";
+import type { Size as Other } from "../types/other";
+defineProps<{ a: Size; b: Other }>();
+</script>
+<template><p>{{ a }}{{ b }}</p></template>`,
+        { "types/ui.ts": 'export type Size = "sm" | "md";\n', "types/other.ts": other },
+      );
+    expect(compile(using('export type Size = "sm" | "md";\n')).get("x.rs")).toContain("pub b: super::types::Size,");
+    const e = failure(() => compile(using('export type Size = "sm" | "lg";\n')));
+    expect(e.code).toBe("FV0325");
+    expect(e.message).toMatch(/^types\/other\.ts:1:8: this union is the Rust enum `Size`, and types\/ui\.ts declares another union of that name for the same module/);
+  });
+
+  it("refuses an enum of a `.ts` file named as one of its interfaces", () => {
+    const e = failure(() =>
+      compile(
+        project(
+          `<script setup lang="ts">
+import type { Row } from "../types/rows";
+defineProps<{ row: Row }>();
+</script>
+<template><p>{{ row.kind }}</p></template>`,
+          { "types/rows.ts": 'export interface RowKind { a: string }\nexport interface Row { kind: "a" | "b"; other: RowKind }\n' },
+        ),
+      ),
+    );
+    expect(e.code).toBe("FV0325");
+    expect(e.message).toMatch(/^types\/rows\.ts:2:24: this union is the Rust enum `RowKind`, and the module it is written to has another type of that name/);
+  });
+
+  it("allows clippy's `enum_variant_names` only where every variant shares a word", () => {
+    const out = compile(
+      island(`<script setup lang="ts">
+defineProps<{ a: "primary-button" | "link-button" | "icon-button"; b: "a-x" | "b-x" }>();
+</script>
+<template><p>{{ a }}{{ b }}</p></template>`),
+    ).get("x.rs")!;
+    expect(out).toContain('#[allow(clippy::enum_variant_names, reason = "the variants are named after the union\'s literals")]\npub enum XA {');
+    expect(out).toContain("serde::Deserialize)]\npub enum XB {");
+  });
+
+  it("writes an enum through `as_str()` and compares it by variant", () => {
+    const out = rendered(
+      compile(
+        island(`<script setup lang="ts">
+type K = "a" | "b";
+withDefaults(defineProps<{ k: K; m?: K; n?: K; j: K }>(), { n: "b" });
+</script>
+<template><p :class="k" :title="\`\${k}!\`">{{ k }} {{ m }} {{ n }} {{ k.toUpperCase() }} {{ k.length }}</p><b v-if="k === 'a'">a</b><b v-if="m !== 'b'">b</b><b v-if="k === j">j</b><b v-if="m">{{ m }}</b></template>`),
+      ).get("x.rs")!,
+    );
+    expect(out).toContain("fv::class_into(out, false, &[props.k.as_str()]);");
+    expect(out).toContain('fv::escape_into(out, &format!("{}!", props.k.as_str()));');
+    expect(out).toContain("if let Some(v) = props.m.map(K::as_str) {");
+    expect(out).toContain("fv::escape_into(out, props.n.unwrap_or(K::B).as_str());");
+    expect(out).toContain("fv::escape_into(out, &props.k.as_str().to_uppercase());");
+    expect(out).toContain("if props.k == K::A {");
+    expect(out).toContain("if props.m != Some(K::B) {");
+    expect(out).toContain("if props.k == props.j {");
+    expect(out).toMatch(/if let Some\((n\d+)\) = props\.m \{\n {8}out\.push_str\("<b>"\);\n {8}fv::escape_into\(out, \1\.as_str\(\)\);/);
+  });
+
+  it("compiles a `switch` over an enum in a `computed` to variant comparisons", () => {
+    const out = rendered(
+      compile(
+        island(`<script setup lang="ts">
+import { computed } from "vue";
+const props = defineProps<{ k: "a" | "b" | "c" }>();
+const key = computed(() => props.k);
+const label = computed(() => {
+  switch (props.k) {
+    case "a":
+      return "first";
+    case "b":
+      return "second";
+    default:
+      return "other";
+  }
+});
+const T = { a: "A", b: "B", c: "C" } as const;
+</script>
+<template><p>{{ label }} {{ T[key] }}</p></template>`),
+      ).get("x.rs")!,
+    );
+    expect(out).toContain('let s_label = if props.k == XK::A { "first" } else { if props.k == XK::B { "second" } else { "other" } };');
+    expect(out).toContain("let s_key = props.k;");
+    expect(out).toContain('match s_key { XK::A => "A", XK::B => "B", XK::C => "C" }');
+  });
+
+  it("hands a child's prop of a union the enum, a conversion of another enum or of known strings, or the string", () => {
+    const out = rendered(
+      compile(
+        island(
+          `<script setup lang="ts">
+import { computed } from "vue";
+import Y from "./Y.vue";
+type K = "a" | "b" | "c";
+const props = defineProps<{ k: K; m?: K; on: boolean }>();
+const pick = computed((): K => (props.on ? "b" : "c"));
+</script>
+<template><Y :k="k" :o="m" :s="k" :q="pick" :r="on ? 'a' : 'b'" lit="c" /></template>`,
+          {
+            Y: `<script setup lang="ts">
+defineProps<{ k: "a" | "b" | "c"; o?: "a" | "b" | "c" | "d"; s: string; q: "a" | "b" | "c"; r: "a" | "b"; lit: "c" | "d" }>();
+</script>
+<template><i>{{ k }}{{ o }}{{ s }}{{ q }}{{ r }}{{ lit }}</i></template>`,
+          },
+        ),
+      ).get("x.rs")!,
+    );
+    expect(out).toContain("k: match props.k { K::A => super::y::YK::A, K::B => super::y::YK::B, K::C => super::y::YK::C }");
+    expect(out).toContain("o: props.m.map(|v| match v { K::A => super::y::YO::A, K::B => super::y::YO::B, K::C => super::y::YO::C })");
+    expect(out).toContain("s: std::borrow::Cow::Borrowed(props.k.as_str())");
+    expect(out).toContain('q: match s_pick { "b" => super::y::YQ::B, _ => super::y::YQ::C }');
+    expect(out).toContain('r: match if props.on { "a" } else { "b" } { "a" => super::y::YR::A, _ => super::y::YR::B }');
+    expect(out).toContain("lit: super::y::YLit::C");
+  });
+
+  it("writes a constant list's field of a union as its variant, and refuses a value outside it", () => {
+    const using = (value: string): string =>
+      project(
+        `<script setup lang="ts">
+import { SORTS } from "../types/sorts";
+</script>
+<template><p v-for="s in SORTS">{{ s.dir }}</p></template>`,
+        { "types/sorts.ts": `export interface Sort { dir: "asc" | "desc" }\nexport const SORTS: Sort[] = [{ dir: "asc" }, { dir: ${JSON.stringify(value)} }];\n` },
+      );
+    expect(compile(using("desc")).get("types.rs")).toContain("pub const SORTS: &[Sort] = &[\n    Sort { dir: SortDir::Asc },\n    Sort { dir: SortDir::Desc },\n];");
+    const e = failure(() => compile(using("up")));
+    expect(e.code).toBe("FV0215");
+    expect(e.message).toMatch(/`dir` in a constant list's object is one of "asc" \| "desc", and "up" is not/);
+  });
+
+  it("keeps a store's own interfaces' unions as strings", () => {
+    const root = island(`<script setup lang="ts">
+import { usePrefs } from "../stores/prefs";
+const prefs = usePrefs();
+</script>
+<template><p>{{ prefs.density }}</p></template>`);
+    mkdirSync(join(root, "stores"), { recursive: true });
+    writeFileSync(join(root, "stores", "prefs.ts"), 'import { defineStore } from "pinia";\nexport interface PrefsState { density: "compact" | "classic" }\nexport const usePrefs = defineStore("prefs", { state: (): PrefsState => ({ density: "classic" }) });\n');
+    const out = generate(root, { ...CONFIG, stores: "stores" });
+    expect(out.get("stores.rs")).toContain("pub density: Cow<'a, str>,");
+  });
+
+  it("builds an object literal's union field as the enum's variant from a literal, a folded constant, the same enum and a narrower union", () => {
+    const out = compile(
+      project(
+        `<script setup lang="ts">
+import { computed } from "vue";
+import Chip from "./Chip.vue";
+import { type Card, type Size, MID } from "../types/ui";
+const props = defineProps<{ name: string; size: Size; small: "sm" | "md"; big: boolean; other?: Size }>();
+const card = computed<Card>(() => ({ size: props.big ? "lg" : "sm", label: props.name, other: props.other }));
+</script>
+<template><Chip :card="{ size: 'md', label: name }" /><Chip :card="{ size: MID, label: name }" /><Chip :card="{ size, label: name }" /><Chip :card="{ size: small, label: name }" /><Chip :card="card" /></template>`,
+        {
+          "types/ui.ts": 'export type Size = "sm" | "md" | "lg";\nexport interface Card { size: Size; label: string; other?: Size }\nconst M = "m";\nexport const MID = `${M}d` as const;\n',
+          "components/Chip.vue": '<script setup lang="ts">\nimport type { Card } from "../types/ui";\ndefineProps<{ card: Card }>();\n</script>\n<template><b :class="card.size">{{ card.label }}</b></template>',
+        },
+      ),
+    ).get("x.rs")!;
+    const body = rendered(out);
+    expect(body.match(/card: super::types::Card \{ size: super::types::Size::Md, /g)).toHaveLength(2);
+    expect(body).toContain("card: super::types::Card { size: props.size, ");
+    expect(body).toContain("size: match props.small { XSmall::Sm => super::types::Size::Sm, XSmall::Md => super::types::Size::Md }");
+    expect(body).toContain('size: match if props.big { "lg" } else { "sm" } { "lg" => super::types::Size::Lg, _ => super::types::Size::Sm }');
+    expect(body).toContain("other: props.other }");
+  });
+
+  it("tests a key of a union against a constant's own keys and a constant Map's keys by its variants", () => {
+    const out = compile(
+      island(`<script setup lang="ts">
+const ROLE: Record<string, string> = { sm: "small", lg: "large", toString: "x" };
+const PX = new Map([["sm", 12], ["md", 16]]);
+const props = defineProps<{ k: "sm" | "md" | "lg" }>();
+</script>
+<template><p :title="Object.hasOwn(ROLE, k) ? ROLE[k] : 'none'">{{ PX.get(k) ?? 0 }}|{{ PX.has(k) }}|{{ Object.hasOwn(ROLE, k) }}</p></template>`),
+    ).get("x.rs")!;
+    const body = rendered(out);
+    expect(body).toContain("matches!(props.k, XK::Sm | XK::Lg)");
+    expect(body).toContain("match props.k { XK::Sm => Some(12i64), XK::Md => Some(16i64), XK::Lg => None }");
+    expect(body).toContain("matches!(props.k, XK::Sm | XK::Md)");
+    expect(body).not.toContain('"toString"');
   });
 });

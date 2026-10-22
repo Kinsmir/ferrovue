@@ -34,17 +34,17 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(42 + props.users.iter().map(|v| v.name.len() + v.avatar.as_deref().map_or(0, str::len) + v.roles.iter().map(|v| v.name.len()).sum::<usize>() + v.size.as_deref().map_or(0, str::len)).sum::<usize>() + props.featured.as_ref().map_or(0, |v| v.name.len() + v.avatar.as_deref().map_or(0, str::len) + v.roles.iter().map(|v| v.name.len()).sum::<usize>() + v.size.as_deref().map_or(0, str::len)) + props.items.iter().map(|v| v.name.len()).sum::<usize>());
+    out.reserve(42 + props.users.iter().map(|v| v.name.len() + v.avatar.as_deref().map_or(0, str::len) + v.roles.iter().map(|v| v.name.len()).sum::<usize>() + 2).sum::<usize>() + props.featured.as_ref().map_or(0, |v| v.name.len() + v.avatar.as_deref().map_or(0, str::len) + v.roles.iter().map(|v| v.name.len()).sum::<usize>() + 2) + props.items.iter().map(|v| v.name.len()).sum::<usize>());
     out.push_str("<section>");
     if let Some(n1) = props.featured.as_ref() {
-        super::user_card::render(out, &super::user_card::Props { user: n1.to_owned(), size: Some(std::borrow::Cow::Borrowed("lg")), badges: Some(Vec::new()), note: Some(std::borrow::Cow::Borrowed("featured")) });
+        super::user_card::render(out, &super::user_card::Props { user: n1.to_owned(), size: Some(super::types::Size::Lg), badges: Some(Vec::new()), note: Some(std::borrow::Cow::Borrowed("featured")) });
     } else {
         out.push_str("<!---->");
     }
     out.push_str("<!--[-->");
     for u_ref in props.users.iter() {
         let u = u_ref;
-        super::user_card::render(out, &super::user_card::Props { user: u.to_owned(), size: u.size.as_deref().map(std::borrow::Cow::Borrowed), badges: None, note: None });
+        super::user_card::render(out, &super::user_card::Props { user: u.to_owned(), size: u.size, badges: None, note: None });
     }
     out.push_str("<!--]-->");
     super::lifecycle::render(out, &super::lifecycle::Props { items: props.items.to_owned(), query: std::borrow::Cow::Borrowed("all") });

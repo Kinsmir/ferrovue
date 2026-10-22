@@ -13,15 +13,15 @@ pub const NAME: &str = "Lookups";
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Badge<'a> {
     #[serde(rename = "tone")]
-    pub tone: Cow<'a, str>,
+    pub tone: super::types::Tone,
     #[serde(rename = "text")]
     pub text: Cow<'a, str>,
 }
 
 impl<'a> Badge<'a> {
     /// Badge with its required fields.
-    pub fn new(tone: impl Into<Cow<'a, str>>, text: impl Into<Cow<'a, str>>) -> Self {
-        Badge { tone: tone.into(), text: text.into() }
+    pub fn new(tone: super::types::Tone, text: impl Into<Cow<'a, str>>) -> Self {
+        Badge { tone, text: text.into() }
     }
 
 }
@@ -32,9 +32,9 @@ impl<'a> Badge<'a> {
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
     #[serde(rename = "size")]
-    pub size: Cow<'a, str>,
+    pub size: super::types::Size,
     #[serde(rename = "tone")]
-    pub tone: Cow<'a, str>,
+    pub tone: super::types::Tone,
     #[serde(rename = "level")]
     pub level: i64,
     #[serde(rename = "badges")]
@@ -42,18 +42,18 @@ pub struct Props<'a> {
     #[serde(rename = "loud")]
     pub loud: bool,
     #[serde(rename = "kind", default, skip_serializing_if = "Option::is_none")]
-    pub kind: Option<Cow<'a, str>>,
+    pub kind: Option<super::types::Kind>,
 }
 
 impl<'a> Props<'a> {
     /// Props with its required fields, every optional one absent.
-    pub fn new(size: impl Into<Cow<'a, str>>, tone: impl Into<Cow<'a, str>>, level: i64, badges: Vec<Badge<'a>>, loud: bool) -> Self {
-        Props { size: size.into(), tone: tone.into(), level, badges, loud, kind: None }
+    pub fn new(size: super::types::Size, tone: super::types::Tone, level: i64, badges: Vec<Badge<'a>>, loud: bool) -> Self {
+        Props { size, tone, level, badges, loud, kind: None }
     }
 
     /// Set `kind`, which is absent otherwise.
-    pub fn kind(mut self, kind: impl Into<Cow<'a, str>>) -> Self {
-        self.kind = Some(kind.into());
+    pub fn kind(mut self, kind: super::types::Kind) -> Self {
+        self.kind = Some(kind);
         self
     }
 }
@@ -61,20 +61,20 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(226 + 48 * props.badges.len() + props.size.len() + props.tone.len() + props.badges.iter().map(|v| v.tone.len() + v.text.len()).sum::<usize>() + props.kind.as_deref().map_or(0, str::len));
-    let s_padding = match &*props.size { "sm" => "p-1", "md" => "p-2", _ => "p-4" };
+    out.reserve(226 + 48 * props.badges.len() + 2 + 6 + props.badges.iter().map(|v| 6 + v.text.len()).sum::<usize>() + 5);
+    let s_padding = match props.size { super::types::Size::Sm => "p-1", super::types::Size::Md => "p-2", super::types::Size::Lg => "p-4" };
     let s_shout = if props.loud { "lg" } else { "sm" };
-    let s_heading = format!("{} / {}", (match s_shout { "lg" => "Large \"L\"", _ => "Small" }), fv::Js(match &*props.tone { "info" => 400.0f64, "warn" => 600.0f64, _ => 700.5f64 }));
+    let s_heading = format!("{} / {}", (match s_shout { "lg" => "Large \"L\"", _ => "Small" }), fv::Js(match props.tone { super::types::Tone::Info => 400.0f64, super::types::Tone::Warn => 600.0f64, super::types::Tone::Danger => 700.5f64 }));
     out.push_str("<section class=\"");
-    fv::class_into(out, false, &[match &*props.size { "sm" => "p-1", "md" => "p-2", _ => "p-4" }, if !matches!(&*props.tone, "info" | "warn") { "dark" } else { "light" }]);
+    fv::class_into(out, false, &[match props.size { super::types::Size::Sm => "p-1", super::types::Size::Md => "p-2", super::types::Size::Lg => "p-4" }, if !matches!(props.tone, super::types::Tone::Info | super::types::Tone::Warn) { "dark" } else { "light" }]);
     out.push_str("\" style=\"color:");
-    fv::escape_into(out, match &*props.tone { "info" => "navy", "warn" => "<b>\"&amp;'", _ => "white" });
+    fv::escape_into(out, match props.tone { super::types::Tone::Info => "navy", super::types::Tone::Warn => "<b>\"&amp;'", super::types::Tone::Danger => "white" });
     out.push_str(";background:");
-    fv::escape_into(out, match &*props.tone { "info" => "#eef", "warn" => "#ffd", _ => "#a00" });
+    fv::escape_into(out, match props.tone { super::types::Tone::Info => "#eef", super::types::Tone::Warn => "#ffd", super::types::Tone::Danger => "#a00" });
     out.push_str(";width:");
-    fv::escape_into(out, &format!("{}px", fv::Js(match &*props.size { "sm" => 8.0f64, "md" => 12.5f64, _ => 16.0f64 })));
+    fv::escape_into(out, &format!("{}px", fv::Js(match props.size { super::types::Size::Sm => 8.0f64, super::types::Size::Md => 12.5f64, super::types::Size::Lg => 16.0f64 })));
     out.push_str(";\"><h2 title=\"");
-    fv::escape_into(out, match &*props.size { "sm" => "Small", "md" => "Medium & <more>", _ => "Large \"L\"" });
+    fv::escape_into(out, match props.size { super::types::Size::Sm => "Small", super::types::Size::Md => "Medium & <more>", super::types::Size::Lg => "Large \"L\"" });
     out.push_str("\">");
     fv::escape_into(out, &s_heading);
     out.push(' ');
@@ -82,27 +82,27 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push(' ');
     fv::escape_into(out, match if props.loud { "lg" } else { "md" } { "lg" => "p-4", _ => "p-2" });
     out.push_str("</h2><p>");
-    fv::push_number(out, match &*props.tone { "info" => 400.0f64, "warn" => 600.0f64, _ => 700.5f64 });
+    fv::push_number(out, match props.tone { super::types::Tone::Info => 400.0f64, super::types::Tone::Warn => 600.0f64, super::types::Tone::Danger => 700.5f64 });
     out.push(' ');
-    fv::push_number(out, match &*props.size { "sm" => 8.0f64, "md" => 12.5f64, _ => 16.0f64 });
+    fv::push_number(out, match props.size { super::types::Size::Sm => 8.0f64, super::types::Size::Md => 12.5f64, super::types::Size::Lg => 16.0f64 });
     out.push_str(" &lt;b&gt;&quot;&amp;amp;&#39; ");
-    fv::escape_into(out, &(match &*props.size { "sm" => &["a"][..], "md" => &[][..], _ => &["x", "<y>"][..] }).iter().map(|v| &**v).collect::<Vec<_>>().join("+"));
+    fv::escape_into(out, &(match props.size { super::types::Size::Sm => &["a"][..], super::types::Size::Md => &[][..], super::types::Size::Lg => &["x", "<y>"][..] }).iter().map(|v| &**v).collect::<Vec<_>>().join("+"));
     out.push(' ');
-    fv::push_int(out, (match &*props.size { "sm" => &["a"][..], "md" => &[][..], _ => &["x", "<y>"][..] }).len() as i64);
+    fv::push_int(out, (match props.size { super::types::Size::Sm => &["a"][..], super::types::Size::Md => &[][..], super::types::Size::Lg => &["x", "<y>"][..] }).len() as i64);
     out.push_str("</p><p>");
-    fv::escape_into(out, (match props.kind.as_deref().unwrap_or("note") { "note" => Some("Note"), "tip" => Some("Tip <!>"), _ => None }).unwrap_or("none"));
+    fv::escape_into(out, (match props.kind.unwrap_or(super::types::Kind::Note) { super::types::Kind::Note => Some("Note"), super::types::Kind::Tip => Some("Tip <!>"), super::types::Kind::Alert => None }).unwrap_or("none"));
     out.push(' ');
-    if let Some(v) = match props.kind.as_deref().unwrap_or("note") { "note" => Some("ℹ"), "tip" => Some("★"), _ => None } {
+    if let Some(v) = match props.kind.unwrap_or(super::types::Kind::Note) { super::types::Kind::Note => Some("ℹ"), super::types::Kind::Tip => Some("★"), super::types::Kind::Alert => None } {
         fv::escape_into(out, v);
     }
     out.push(' ');
-    fv::escape_into(out, (match &*props.size { "sm" => None, "md" => Some("medium note"), _ => Some("large note") }).unwrap_or("no note"));
+    fv::escape_into(out, (match props.size { super::types::Size::Sm => None, super::types::Size::Md => Some("medium note"), super::types::Size::Lg => Some("large note") }).unwrap_or("no note"));
     out.push_str("</p>");
-    if matches!(props.kind.as_deref().unwrap_or("note"), "note" | "tip") {
+    if matches!(props.kind.unwrap_or(super::types::Kind::Note), super::types::Kind::Note | super::types::Kind::Tip) {
         out.push_str("<p class=\"");
-        fv::class_into(out, false, &[props.kind.as_deref().unwrap_or("note")]);
+        fv::class_into(out, false, &[props.kind.unwrap_or(super::types::Kind::Note).as_str()]);
         out.push_str("\">");
-        fv::escape_into(out, match props.kind.as_deref().unwrap_or("note") { "note" => "ℹ", _ => "★" });
+        fv::escape_into(out, match props.kind.unwrap_or(super::types::Kind::Note) { super::types::Kind::Note => "ℹ", super::types::Kind::Tip | super::types::Kind::Alert => "★" });
         out.push_str("</p>");
     } else {
         out.push_str("<p>no icon</p>");
@@ -120,11 +120,11 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     for b_ref in props.badges.iter() {
         let b = b_ref;
         out.push_str("<li class=\"");
-        fv::class_into(out, false, &[if !matches!(&*b.tone, "info" | "warn") { "dark" } else { "" }]);
+        fv::class_into(out, false, &[if !matches!(b.tone, super::types::Tone::Info | super::types::Tone::Warn) { "dark" } else { "" }]);
         out.push_str("\" style=\"font-weight:");
-        fv::push_number(out, match &*b.tone { "info" => 400.0f64, "warn" => 600.0f64, _ => 700.5f64 });
+        fv::push_number(out, match b.tone { super::types::Tone::Info => 400.0f64, super::types::Tone::Warn => 600.0f64, super::types::Tone::Danger => 700.5f64 });
         out.push_str(";\">");
-        fv::escape_into(out, match &*props.size { "sm" => "Small", "md" => "Medium & <more>", _ => "Large \"L\"" });
+        fv::escape_into(out, match props.size { super::types::Size::Sm => "Small", super::types::Size::Md => "Medium & <more>", super::types::Size::Lg => "Large \"L\"" });
         out.push_str(": ");
         fv::escape_into(out, &b.text);
         out.push_str("</li>");

@@ -1,4 +1,7 @@
-import { type Absence, type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, absence, blankComponent, BOOL, fail, FLOAT, INT, joinAbsence, joinTy, literalsOf, literalTy, nothing, NULL, rustStr, sameTy, snake, STR, UNDEF, withAbsence } from "./model.ts";
+import { type Absence, type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, absence, blankComponent, BOOL, enumOf, fail, FLOAT, INT, joinAbsence, joinTy, literalsOf, literalTy, nothing, NULL, rustStr, sameTy, snake, STR, UNDEF, variantPath, withAbsence } from "./model.ts";
+import { matchOver } from "./enums.ts";
+
+const TYPES_HOME = blankComponent("types", "types", "types");
 import { ONE_NOTHING, reachType } from "./typescript.ts";
 import { ctx } from "./context.ts";
 import { asF64, exactPower, numberVal } from "./numbers.ts";
@@ -269,7 +272,11 @@ function fieldLiteral(c: Const & { k: "list" }, f: Field, v: Const | undefined, 
   if (v.k === "scalar" && v.js === null) return none === "null" || none === "either" ? "None" : fail(c.home, "FV0214", `\`${f.js}\` in a constant list's object is not \`null\``, node);
   const plain = v.k === "scalar" && (scalarTy(v.js).k === want.k || (want.k === "float" && typeof v.js === "number"));
   if (!plain || v.k !== "scalar") return fail(c.home, "FV0215", `\`${f.js}\` in a constant list's object is ${describe(want)}`, node);
-  const code = typeof v.js === "string" ? `Cow::Borrowed(${rustStr(v.js)})` : typeof v.js === "number" ? numberVal(v.js, want.k === "int").code.replace(/i64$/, "") : String(v.js);
+  const def = enumOf(want);
+  if (def !== undefined && !def.literals.includes(v.js as string)) {
+    return fail(c.home, "FV0215", `\`${f.js}\` in a constant list's object is one of ${def.literals.map((l) => JSON.stringify(l)).join(" | ")}, and ${JSON.stringify(v.js)} is not`, node);
+  }
+  const code = def !== undefined ? variantPath(TYPES_HOME, def, v.js as string) : typeof v.js === "string" ? `Cow::Borrowed(${rustStr(v.js)})` : typeof v.js === "number" ? numberVal(v.js, want.k === "int").code.replace(/i64$/, "") : String(v.js);
   return f.ty.k === "opt" ? `Some(${code})` : code;
 }
 
@@ -326,7 +333,7 @@ export interface Named {
 
 /** The test that `key` is among `keys`, the own keys of a constant object or the keys of a constant
  * `Map`, and the keys it may then be: `null` where `key` is not a string or an integer. */
-export function keyAmong(key: Val, keys: readonly (string | number)[]): { test: string; among: (string | number)[] } | null {
+export function keyAmong(comp: Component, key: Val, keys: readonly (string | number)[]): { test: string; among: (string | number)[] } | null {
   if (key.ty.k !== "str" && key.ty.k !== "int") return null;
   const mine = keys.filter((k) => (key.ty.k === "str" ? typeof k === "string" : typeof k === "number"));
   const fixed = key.ty.k === "str" && /^"[^"\\]*"$/.test(key.code) ? (JSON.parse(key.code) as string) : key.ty.k === "int" && key.num !== undefined && key.code === `${key.num}i64` ? key.num : undefined;
@@ -334,7 +341,8 @@ export function keyAmong(key: Val, keys: readonly (string | number)[]): { test: 
   const among = literals === undefined ? mine : mine.filter((k) => literals.includes(k));
   if (literals !== undefined && among.length === literals.length) return { test: "true", among };
   if (among.length === 0) return { test: "false", among };
-  return { test: `matches!(${key.code}, ${pattern(among)})`, among };
+  const { subject, pattern } = matchOver(comp, key, among);
+  return { test: `matches!(${subject}, ${pattern(among)})`, among };
 }
 
 /** \`Object.hasOwn(obj, key)\` of a constant object: the key, the test, and the keys it may then
@@ -345,7 +353,7 @@ export function ownKeyTest(s: Scope, obj: N, keyNode: N): { key: Val; test: stri
   const key = expr(s, keyNode);
   const names = ownKeys(named.sym.c);
   const keys = key.ty.k === "int" ? names.filter((k) => /^(?:0|-?[1-9]\d*)$/.test(k) && Number.isSafeInteger(Number(k))).map(Number) : names;
-  const found = keyAmong(key, keys);
+  const found = keyAmong(s.comp, key, keys);
   if (found === null) {
     return fail(s.comp, "FV0814", `\`Object.hasOwn()\` of the constant object \`${named.what}\` by a key that is ${describeTy(key.ty)}: it takes a string or an integer that is present`, keyNode);
   }
@@ -366,7 +374,7 @@ export function mapCall(s: Scope, named: Named, method: string, args: N[], n: N)
   }
   const key = expr(s, args[0]);
   const keys = [...c.entries.keys()];
-  const found = keyAmong(key, keys);
+  const found = keyAmong(s.comp, key, keys);
   if (found === null) {
     return fail(s.comp, "FV0227", `\`${named.what}.${method}()\` by ${describeTy(key.ty)}: a constant \`Map\` is read by a string or an integer that is present`, args[0]);
   }
@@ -452,11 +460,8 @@ export function pickPresent(s: Scope, n: N): string | null {
   if (yes.length === sym.keys.length) return "true";
   if (yes.length === 0) return "false";
   const no = sym.keys.filter((_, i) => sym.arms[i]!.k === "none");
-  return sym.arms.at(-1)!.k === "none" ? `matches!(${sym.on.code}, ${pattern(yes)})` : `!matches!(${sym.on.code}, ${pattern(no)})`;
-}
-
-function pattern(keys: readonly (string | number)[]): string {
-  return keys.map((k) => (typeof k === "string" ? rustStr(k) : String(k))).join(" | ");
+  const { subject, pattern } = matchOver(s.comp, sym.on, sym.keys);
+  return sym.arms.at(-1)!.k === "none" ? `matches!(${subject}, ${pattern(yes)})` : `!matches!(${subject}, ${pattern(no)})`;
 }
 
 function step(s: Scope, base: Named, key: string, n: N, chain: boolean, path: readonly (string | number)[]): Sym {
@@ -497,15 +502,16 @@ function symVal(sym: Sym, at: { comp: Component; node: N; what: string }): Val {
   });
   const slice = ty.k === "list" ? { slice: true } : {};
   if (groups.length === 1) return { code: groups[0]![1], ty, ...slice };
+  const { subject, pattern, last: lastArm } = matchOver(at.comp, sym.on, sym.keys);
   if (ty.k === "bool" && groups.every(([, code]) => code === "true" || code === "false")) {
     const yes = groups.find(([, code]) => code === "true")![0];
     const no = groups.find(([, code]) => code === "false")![0];
-    return { code: codes.at(-1) === "true" ? `!matches!(${sym.on.code}, ${pattern(no)})` : `matches!(${sym.on.code}, ${pattern(yes)})`, ty };
+    return { code: codes.at(-1) === "true" ? `!matches!(${subject}, ${pattern(no)})` : `matches!(${subject}, ${pattern(yes)})`, ty };
   }
   const last = groups.findIndex(([, code]) => code === codes[codes.length - 1]);
   groups.push(...groups.splice(last, 1));
-  const branches = groups.map(([keys, code], i) => `${i === groups.length - 1 ? "_" : pattern(keys)} => ${code}`);
-  return { code: `match ${sym.on.code} { ${branches.join(", ")} }`, ty, ...slice };
+  const branches = groups.map(([keys, code], i) => `${i === groups.length - 1 ? lastArm(keys) : pattern(keys)} => ${code}`);
+  return { code: `match ${subject} { ${branches.join(", ")} }`, ty, ...slice };
 }
 
 function unified(arms: Val[], at: { comp: Component; node: N; what: string }): { ty: Ty; codes: string[] } {
