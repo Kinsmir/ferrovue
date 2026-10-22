@@ -87,10 +87,13 @@ What the Node server did per request moves into a Rust handler:
 - **Responding.** The `axum` and `actix-web` features make a render a response:
   [`web_frameworks`](crate::guide::web_frameworks). [`streaming`](crate::guide::streaming) sends a
   page in the order its parts are ready.
-- **Loading data.** Data a component fetched on the server (in `onServerPrefetch`, a top-level
-  `await` in `<script setup>`, or a loader before `renderToString`) is loaded by the handler and
-  passed in as props. The compiler refuses `onServerPrefetch` and top-level `await`; the client
-  receives the same values through the island's props, the page record or the Pinia state.
+- **Loading data.** Data a component awaits at the top of `<script setup>` becomes a loader:
+  declare the function with `defineLoader`, implement the generated `Loaders` trait in Rust, and
+  render through `loaders::load`, which writes the results for the client to hydrate from
+  ([`loaders`](crate::guide::loaders)). Data fetched in `onServerPrefetch`, or before
+  `renderToString`, is loaded by the handler and passed in as props; the compiler refuses
+  `onServerPrefetch` and any other top-level `await`, and the client receives the same values
+  through the island's props, the page record or the Pinia state.
 - **Routing.** Build the router once from the generated `route_table::router()`, resolve each
   request with `router.at(path)`, and choose the page from the route's name and parameters. A
   layout with `<RouterView>` takes the page as its `router_view` slot:

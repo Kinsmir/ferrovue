@@ -1,27 +1,32 @@
-import { createApp, createSSRApp, createStaticVNode, createTextVNode, defineComponent, h, type App, type Component, type Plugin } from "vue";
+import { createApp, createSSRApp, createStaticVNode, createTextVNode, defineComponent, h, Suspense, type App, type Component, type Plugin } from "vue";
 import { routeRecords, type RouteEntry } from "./routes.ts";
 import { reviveDates } from "./client.ts";
+import { clearLoads, provideLoads } from "./loads.ts";
 
 export { routeRecords, type RouteEntry } from "./routes.ts";
 
-/** A conformance fixture: the props, and `$slots`, `$route`, `$stores` and `$locale`. */
+/** A conformance fixture: the props, and `$slots`, `$route`, `$stores`, `$loads` and `$locale`. */
 export interface Fixture {
   props: Record<string, unknown>;
   slots: Record<string, string>;
   route: string;
   stores: Record<string, unknown>;
+  /** `$loads`: each loader's result by the key of its call (`loadKey`), `null` when the fixture
+   * gives none. */
+  loads?: Record<string, unknown> | null;
   /** `$locale`: the locale the fixture renders in, when the project translates. */
   locale?: string | null;
 }
 
 /** A fixture's JSON, split into the props and the rest. */
 export function readFixture(json: Record<string, unknown>): Fixture {
-  const { $slots, $route, $stores, $locale, ...props } = json;
+  const { $slots, $route, $stores, $loads, $locale, ...props } = json;
   return {
     props,
     slots: ($slots ?? {}) as Record<string, string>,
     route: ($route as string | undefined) ?? "/",
     stores: ($stores ?? {}) as Record<string, unknown>,
+    loads: ($loads as Record<string, unknown> | undefined) ?? null,
     locale: ($locale as string | undefined) ?? null,
   };
 }
@@ -115,7 +120,11 @@ export async function fixtureApp(
       .filter(([name]) => name !== "routerView")
       .map(([name, html]) => [name, () => [staticNode(html)]]),
   );
-  const app = (options.client ? createApp : createSSRApp)({ render: () => h(component, reviveDates(component, fixture.props), slots) });
+  clearLoads();
+  const loads = fixture.loads ?? null;
+  if (loads) provideLoads(loads);
+  const root = () => h(component, reviveDates(component, fixture.props), slots);
+  const app = (options.client ? createApp : createSSRApp)({ render: loads ? () => h(Suspense, null, { default: root }) : root });
   const head = await optionalHead(options.hydrate ?? false);
   if (head) app.use(head);
   const pinia = options.pinia ?? (await optionalPinia(fixture.stores));

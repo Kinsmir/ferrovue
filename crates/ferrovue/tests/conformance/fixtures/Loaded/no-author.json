@@ -1,0 +1,14 @@
+{
+  "slug": "solo",
+  "$loads": {
+    "[\"loadArticle\",\"solo\"]": {
+      "title": "Alone",
+      "tags": [],
+      "author": null
+    },
+    "[\"loadViews\"]": 0,
+    "[\"loadComments\",\"solo\",1,null]": [],
+    "[\"loadNote\",0]": null,
+    "[\"loadComments\",\"solo\",2,null]": []
+  }
+}

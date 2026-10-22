@@ -30,6 +30,7 @@ export const AREAS: Record<string, { name: string; guide?: string }> = {
   "17": { name: "Page head", guide: "head" },
   "18": { name: "Dates and locale formatting", guide: "dates_and_prices" },
   "19": { name: "Statements and functions", guide: "script_logic" },
+  "20": { name: "Loaders", guide: "loaders" },
 };
 
 /** Every code the compiler raises. A code is never reused: one the compiler stops raising is marked
@@ -1586,6 +1587,34 @@ export const ERRORS = {
   FV1908: {
     title: "Function declared with `const`, called while setup runs before its declaration",
     detail: "A function declared with `const` (`const f = (…) => …`) exists only once its declaration has run. Setup code above it that calls it, directly or through a `function` declaration, which is hoisted, throws a `ReferenceError` in JavaScript, and Vue's server renders nothing. A `computed` may call it, since a `computed` runs when the render reads it. Move the declaration above the call, or declare the function with `function`.",
+  },
+  FV2001: {
+    title: "`await` of a value that is not a loader's result",
+    detail: "A component's top-level `await` stops its render until the promise settles, on the server as in the browser. The server has the results only of loaders, functions declared with `defineLoader` that the Rust app implements; any other promise is the browser's alone. Declare the function as a loader, or fetch the value in Rust and pass it as a prop.",
+  },
+  FV2002: {
+    title: "Loader declaration the compiler cannot read",
+    detail: "A loader is declared as `export const loadPost = defineLoader(\"loadPost\", async (id: number): Promise<Post> => …)`, with `defineLoader` imported from `ferrovue`: the name as a string literal that is a JavaScript name, and an `async` function the compiler reads the parameters and result type from.",
+  },
+  FV2003: {
+    title: "Loader parameter that is not a plain typed string, number or boolean",
+    detail: "A call's arguments are its key, `JSON.stringify([name, ...args])`, which the Rust app computes from the same values. Each parameter is a plain name with a type: a string, a number (`Float` for a fractional one) or a boolean, which may be optional (`lang?: string`) or `null` (`lang: string | null`). Defaults, `...rest`, destructuring and object parameters are refused: pass the values one by one.",
+  },
+  FV2004: {
+    title: "Loader result the payload cannot carry",
+    detail: "A loader declares what it returns, `Promise<T>`, which is the Rust app's `Output` for it and travels to the client as JSON in the page's payload. `undefined` is dropped by `JSON.stringify` and a `Date` arrives as a string, so the client would hydrate from another value: return `null` for none and a date as its ISO string.",
+  },
+  FV2005: {
+    title: "Two loaders with one name",
+    detail: "A loader's name is its key in the page's payload and its method in the generated `Loaders` trait, so it is unique in the project: two `defineLoader` calls with one name, or names that are one Rust name (`loadPost` and `load_post`), are refused. Rename one.",
+  },
+  FV2006: {
+    title: "Loader call whose arguments do not match its parameters",
+    detail: "Each argument has the type of its parameter, every parameter that is neither optional nor `undefined` is given, no extra argument is given, and none is spread from a list. A value that may be `null` goes only to a parameter that may be `null`, and one that may be `undefined` only to an optional parameter, since the key writes the two differently.",
+  },
+  FV2007: {
+    title: "Loader result bound to a pattern",
+    detail: "`const post = await loadPost(id)` binds the result to a name; `const { title, tags } = await loadPost(id)` destructures the object it returns into plain names. Nested patterns, defaults, `...rest` and array patterns are refused: bind the result and read its fields.",
   },
 } as const satisfies Record<`FV${number}`, ErrorDoc>;
 

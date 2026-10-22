@@ -1,0 +1,363 @@
+import { type Component, type N, type Scope, type Ty, type Val, absence, fail, GenError, nothing, rustStr, snake } from "../model.ts";
+import { ctx } from "../context.ts";
+import { type Declared } from "../constants.ts";
+import { resolveImport } from "../resolve.ts";
+import { markHome, readTypeFile, tyOfTs } from "../typescript.ts";
+import { coerce, describeTy, expr, fieldVal } from "../expr.ts";
+import { atom, bare } from "../parens.ts";
+import { header, rustTy } from "../rust.ts";
+import { type Plugin, runOf, scopeOf } from "../plugin.ts";
+
+interface LoaderParam {
+  js: string;
+  rust: string;
+  ty: Ty;
+  /** The argument may be left out, or given as `undefined`: `loadKey` leaves it out of the key
+   * when no argument after it is given. */
+  undefined: boolean;
+}
+
+interface Loader {
+  name: string;
+  file: string;
+  struct: string;
+  method: string;
+  params: LoaderParam[];
+  out: Ty;
+  node: N;
+  home: Component;
+}
+
+interface LoadersRun {
+  loaders: Map<string, Loader>;
+  readers: Set<Component>;
+}
+
+interface LoadersScope {
+  /** Each name a loader is imported as: its declaration, read when the component awaits it. */
+  locals: Map<string, { d: Declared; file: string }>;
+  count: number;
+}
+
+const CLIENT_MODULES = new Set(["ferrovue", "ferrovue/client"]);
+const ARG_TYS = new Set(["str", "int", "float", "bool"]);
+const SHAPE = "a loader is `export const loadPost = defineLoader(\"loadPost\", async (id: number): Promise<Post> => …)`";
+
+function pascal(name: string): string {
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+/** The local name `file` imports `defineLoader` by, if it does. */
+function defineLoaderName(body: N[]): string | null {
+  for (const st of body) {
+    if (st.type !== "ImportDeclaration" || !CLIENT_MODULES.has(st.source.value) || st.importKind === "type") continue;
+    for (const sp of st.specifiers) {
+      if (sp.type === "ImportSpecifier" && (sp.imported.name ?? sp.imported.value) === "defineLoader" && sp.importKind !== "type") return sp.local.name;
+    }
+  }
+  return null;
+}
+
+function isLoader(d: Declared, file: string): boolean {
+  const local = defineLoaderName(ctx.tsModules.get(file)?.body ?? []);
+  const init = d.node.type === "VariableDeclarator" ? d.node.init : null;
+  return local !== null && init?.type === "CallExpression" && init.callee.type === "Identifier" && init.callee.name === local;
+}
+
+function loaderOf(d: Declared, file: string): Loader {
+  const init = d.node.init;
+  const home = d.home;
+  const known = runOf(loaders).loaders;
+  const cached = [...known.values()].find((l) => l.node === d.node);
+  if (cached) return cached;
+  const [id, fn] = init.arguments;
+  if (id?.type !== "StringLiteral" || !/^[A-Za-z_$][\w$]*$/.test(id.value) || init.arguments.length !== 2) {
+    fail(home, "FV2002", `${SHAPE}: its name is a string literal that is a JavaScript name, and it takes the function as the only other argument`, init);
+  }
+  if ((fn?.type !== "ArrowFunctionExpression" && fn?.type !== "FunctionExpression") || !fn.async) fail(home, "FV2002", `${SHAPE}: the loader is an \`async\` function`, fn ?? init);
+  const ret = fn.returnType?.typeAnnotation;
+  const inner = ret?.type === "TSTypeReference" && ret.typeName.type === "Identifier" && ret.typeName.name === "Promise" ? ret.typeParameters?.params?.[0] : null;
+  if (!inner) fail(home, "FV2004", `loader \`${id.value}\` declares what it returns: \`async (…): Promise<T> => …\``, fn);
+  const out = markHome(tyOfTs(home, inner, ctx.typeStructs), "types");
+  if (nothing(out)) fail(home, "FV2004", `loader \`${id.value}\` returns ${describeTy(out)}, which the payload cannot carry: return a value, or \`null\` for none`, inner);
+  if (absence(out) === "undefined" || absence(out) === "either") {
+    fail(home, "FV2004", `loader \`${id.value}\` may return \`undefined\`, which \`JSON.stringify\` drops from the payload: return \`null\` for none`, inner);
+  }
+  const params = (fn.params as N[]).map((p): LoaderParam => {
+    const t = p.type === "Identifier" ? p.typeAnnotation?.typeAnnotation : null;
+    if (!t) fail(home, "FV2003", `loader \`${id.value}\` takes plain, typed parameters, \`(id: number, lang?: string)\`: no defaults, \`...rest\` or destructuring`, p);
+    const refuse = (what: string): never =>
+      fail(home, "FV2003", `parameter \`${p.name}\` of loader \`${id.value}\` is ${what}: a loader takes strings, numbers and booleans, which may be optional or \`null\`, as its key is the arguments as JSON`, p);
+    let ty: Ty;
+    try {
+      ty = tyOfTs(home, t, ctx.typeStructs);
+    } catch (e) {
+      if (!(e instanceof GenError)) throw e;
+      return refuse("a type the compiler does not translate");
+    }
+    if (p.optional && ty.k !== "opt") ty = { k: "opt", of: ty };
+    const of = ty.k === "opt" ? ty.of : ty;
+    if (!ARG_TYS.has(of.k) || absence(ty) === "either") refuse(describeTy(ty));
+    return { js: p.name, rust: snake(p.name), ty, undefined: p.optional === true || absence(ty) === "undefined" };
+  });
+  const loader: Loader = { name: id.value, file, struct: pascal(id.value), method: snake(id.value), params, out, node: d.node, home };
+  const clash = known.get(id.value);
+  if (clash) fail(home, "FV2005", `two loaders are called \`${id.value}\`: this one and the one in ${clash.home.file}; a loader's name is its key in the payload, so rename one`, init);
+  const sameStruct = [...known.values()].find((l) => l.struct === loader.struct || l.method === loader.method);
+  if (sameStruct) {
+    const both = sameStruct.method === loader.method ? `the method \`${loader.method}\`` : `the struct \`${loader.struct}\``;
+    fail(home, "FV2005", `loaders \`${id.value}\` and \`${sameStruct.name}\` would both be ${both} in the generated \`loaders\` module; rename one`, init);
+  }
+  known.set(id.value, loader);
+  return loader;
+}
+
+function callOf(s: Scope, n: N): { loader: Loader; args: N[] } | null {
+  const own = scopeOf(loaders, s);
+  const call = n?.type === "AwaitExpression" ? n.argument : null;
+  if (call?.type !== "CallExpression" || call.callee.type !== "Identifier") return null;
+  const found = own.locals.get(call.callee.name);
+  return found ? { loader: loaderOf(found.d, found.file), args: call.arguments } : null;
+}
+
+function argCode(s: Scope, loader: Loader, p: LoaderParam, n: N | undefined, at: number, call: N): string {
+  if (n === undefined) {
+    if (p.undefined) return "None";
+    fail(s.comp, "FV2006", `\`${loader.name}\` takes \`${p.js}\`, which the call does not give`, call);
+  }
+  if (n.type === "SpreadElement") fail(s.comp, "FV2006", `an argument of \`${loader.name}\` spread from a list, whose length the compiler does not know: give each argument`, n);
+  const v: Val = expr({ ...s, settingUpAt: at }, n);
+  const want = p.ty;
+  const wrong = (): never => fail(s.comp, "FV2006", `\`${p.js}\` of \`${loader.name}\` is ${describeTy(want)}, and the call gives ${describeTy(v.ty)}`, n);
+  if (want.k === "opt" && nothing(v.ty)) {
+    if (absence(v.ty) !== absence(want) && absence(v.ty) !== null) {
+      fail(s.comp, "FV2006", `\`${p.js}\` of \`${loader.name}\` is ${describeTy(want)}, and the call gives ${describeTy(v.ty)}, which the key would write as another argument`, n);
+    }
+    return "None";
+  }
+  if (want.k === "str") return v.ty.k === "str" ? `String::from(${bare(v.code)})` : wrong();
+  if (want.k === "opt" && want.of.k === "str") {
+    if (v.ty.k === "str") return `Some(String::from(${bare(v.code)}))`;
+    if (v.ty.k === "opt" && v.ty.of.k === "str" && absence(v.ty) === absence(want)) return `${atom(v.code)}.map(String::from)`;
+    return wrong();
+  }
+  if (v.ty.k === "opt" && absence(v.ty) !== absence(want)) wrong();
+  try {
+    return coerce(s.comp, v, want, n);
+  } catch (e) {
+    if (e instanceof GenError) wrong();
+    throw e;
+  }
+}
+
+/** `let Some(s_x) = fv_loads.get(…) else { return; };`: the component stops where Vue's server
+ * awaits, until `load` has the result. */
+function awaitLet(s: Scope, loader: Loader, args: N[], at: number, call: N, lets: string[]): string {
+  if (args.length > loader.params.length) fail(s.comp, "FV2006", `\`${loader.name}\` takes ${loader.params.length} argument${loader.params.length === 1 ? "" : "s"}, and the call gives ${args.length}`, call);
+  const fields = loader.params.map((p, i) => {
+    const code = argCode(s, loader, p, args[i], at, call);
+    return code === p.rust ? p.rust : `${p.rust}: ${code}`;
+  });
+  const own = scopeOf(loaders, s);
+  const name = `l_${own.count++}`;
+  runOf(loaders).readers.add(s.comp);
+  const value = `super::loaders::${loader.struct}${fields.length ? ` { ${fields.join(", ")} }` : ""}`;
+  lets.push(`let Some(${name}) = fv_loads.get(${value}) else { return; };`);
+  return name;
+}
+
+/** The result `name` holds, `&Output`, as the value the template reads. */
+function resultVal(name: string, ty: Ty): Val {
+  if (ty.k === "str") return { code: `&**${name}`, ty };
+  if (ty.k === "int" || ty.k === "float" || ty.k === "bool") return { code: `*${name}`, ty };
+  if (ty.k === "opt" && ty.of.k === "str") return { code: `${name}.as_deref()`, ty };
+  if (ty.k === "opt" && (ty.of.k === "int" || ty.of.k === "float" || ty.of.k === "bool")) return { code: `*${name}`, ty };
+  if (ty.k === "opt") return { code: `${name}.as_ref()`, ty };
+  return { code: name, ty };
+}
+
+function staticTy(ty: Ty, home: Component): string {
+  return rustTy(ty, home).replace(/\bCow<'a, /g, "std::borrow::Cow<'static, ").replace(/'a\b/g, "'static");
+}
+
+function argTy(ty: Ty): string {
+  const of = ty.k === "opt" ? ty.of : ty;
+  const one = of.k === "str" ? "String" : of.k === "int" ? "i64" : of.k === "float" ? "f64" : "bool";
+  return ty.k === "opt" ? `Option<${one}>` : one;
+}
+
+function loaderSource(l: Loader, home: Component): string {
+  const fields = l.params.map((p) => `    pub ${p.rust}: ${argTy(p.ty)},`).join("\n");
+  const firstOptional = l.params.findIndex((_, i) => l.params.slice(i).every((q) => q.undefined));
+  const args = l.params
+    .map((p, i) => {
+      const push = `key.arg(&self.${p.rust});`;
+      if (firstOptional < 0 || i < firstOptional) return `        ${push}`;
+      const given = l.params.slice(i).map((q) => `self.${q.rust}.is_some()`).join(" || ");
+      return `        if ${given} {\n            ${push}\n        }`;
+    })
+    .join("\n");
+  return `/// A call of \`${l.name}\`, in ${l.home.file}: its arguments.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ${l.struct}${fields ? ` {\n${fields}\n}` : ";"}
+
+impl fv::Load for ${l.struct} {
+    const NAME: &'static str = ${rustStr(l.name)};
+    type Output = ${staticTy(l.out, home)};
+    fn args(&self, ${args ? `key: &mut fv::LoadKey) {\n${args}\n    }` : "_key: &mut fv::LoadKey) {}"}
+}
+`;
+}
+
+function loadersSource(): string {
+  const all = [...runOf(loaders).loaders.values()].toSorted((a, b) => a.name.localeCompare(b.name));
+  const home = { ...all[0]!.home, module: "loaders" };
+  const files = [...new Set(all.map((l) => l.home.file))].toSorted();
+  const structs = all.map((l) => loaderSource(l, home)).join("\n");
+  const methods = all
+    .map(
+      (l) => `    /// \`${l.name}\`, in ${l.home.file}.
+    fn ${l.method}(&self, call: ${l.struct}) -> impl std::future::Future<Output = Result<<${l.struct} as fv::Load>::Output, Self::Error>> + Send;`,
+    )
+    .join("\n\n");
+  const arms = all.map((l) => `        <${l.struct} as fv::Load>::NAME => call.run(|c: ${l.struct}| loaders.${l.method}(c)),`).join("\n");
+  const fixtures = all
+    .map(
+      (l) => `        <${l.struct} as fv::Load>::NAME => call.run(|c: ${l.struct}| {
+            let found = results.get(&fv::load_key(&c)).cloned().ok_or_else(|| format!("the fixture has no result for {}", fv::load_key(&c)));
+            async move { serde_json::from_value::<<${l.struct} as fv::Load>::Output>(found?).map_err(|e| e.to_string()) }
+        }),`,
+    )
+    .join("\n");
+  return `${header(files.join(", "), "the loaders")}
+//! The loaders components await in \`<script setup>\`: a struct for each one's call, and the
+//! [\`Loaders\`] trait the app implements to run them.
+
+use ferrovue as fv;
+
+${structs}
+/// The app's loaders: one method for each \`defineLoader\`, given its call, returning what the
+/// client's loader returns. A method that fails fails the render, with [\`fv::LoadError\`].
+pub trait Loaders: Sync {
+    /// What a loader fails with.
+    type Error;
+
+${methods}
+}
+
+/// Run \`call\` with the loader of its name.
+pub fn dispatch<'a, L: Loaders>(loaders: &'a L, call: fv::LoadCall) -> fv::LoadFuture<'a, L::Error> {
+    match call.name() {
+${arms}
+        name => unreachable!("no loader is called \`{name}\`"),
+    }
+}
+
+/// Render with \`loaders\`: [\`fv::load\`], each call run by its method of [\`Loaders\`]. Write the
+/// payload with [\`fv::Loads::script_into\`] after the components, for the client to hydrate from.
+pub async fn load<L: Loaders, T>(loaders: &L, render: impl FnMut(&fv::Loads<'_>) -> T) -> Result<T, fv::LoadError<L::Error>> {
+    fv::load(render, |call| dispatch(loaders, call)).await
+}
+
+/// Each call answered from a fixture's \`$loads\`, by its key.
+#[cfg(test)]
+pub fn from_fixture(results: &serde_json::Map<String, serde_json::Value>) -> impl FnMut(fv::LoadCall) -> fv::LoadFuture<'static, String> + '_ {
+    move |call| match call.name() {
+${fixtures}
+        name => unreachable!("no loader is called \`{name}\`"),
+    }
+}
+`;
+}
+
+export const loaders: Plugin<LoadersRun, LoadersScope> = {
+  name: "loaders",
+  configure: () => ({ loaders: new Map(), readers: new Set() }),
+  scope: () => ({ locals: new Map(), count: 0 }),
+  scriptImport(s, st, from) {
+    if (st.importKind === "type" || from.endsWith(".vue")) return false;
+    const file = resolveImport(s.comp.file, from);
+    if (file === null) return false;
+    readTypeFile(file);
+    const decls = ctx.constDecls.get(file);
+    for (const sp of st.specifiers) {
+      if (sp.type !== "ImportSpecifier" || sp.importKind === "type") continue;
+      const d = decls?.get(sp.imported.name ?? sp.imported.value);
+      if (d?.exported && isLoader(d, file)) scopeOf(loaders, s).locals.set(sp.local.name, { d, file });
+    }
+    return false;
+  },
+  scriptBinding(s, d, lets) {
+    const init = d.init;
+    const call = callOf(s, init);
+    if (!call) {
+      if (init?.type !== "AwaitExpression") return false;
+      let err: GenError | null = null;
+      try {
+        fail(s.comp, "FV2001", "only a loader's result is awaited on the server: declare the function with `defineLoader`", init);
+      } catch (e) {
+        if (!(e instanceof GenError)) throw e;
+        err = e;
+      }
+      const what = "it awaits a value that is not a loader's result, which the server does not have: declare the function with `defineLoader`";
+      for (const name of d.id.type === "Identifier" ? [d.id.name] : []) {
+        s.clientOnly.set(name, what);
+        s.refusedBy.set(name, err);
+      }
+      return d.id.type === "Identifier";
+    }
+    const { loader, args } = call;
+    const name = awaitLet(s, loader, args, d.start, init.argument, lets);
+    const result = resultVal(name, loader.out);
+    if (d.id.type === "Identifier") {
+      s.setup.set(d.id.name, result);
+      return true;
+    }
+    if (d.id.type !== "ObjectPattern" || loader.out.k !== "struct") {
+      fail(s.comp, "FV2007", `the result of \`${loader.name}\` is bound to a name, or destructured into the fields of the object it returns: \`const { title } = await ${loader.name}(…)\``, d.id);
+    }
+    for (const p of d.id.properties) {
+      if (p.type !== "ObjectProperty" || p.computed || p.value.type !== "Identifier") {
+        fail(s.comp, "FV2007", `the result of \`${loader.name}\` is destructured into plain names: \`{ title, tags: labels }\`, with no defaults, \`...rest\` or nesting`, p);
+      }
+      const key: string = p.key.type === "Identifier" ? p.key.name : p.key.value;
+      s.setup.set(p.value.name, fieldVal(s.comp, result.code, loader.out, key, p));
+    }
+    return true;
+  },
+  scriptStatement(s, st, lets) {
+    const call = callOf(s, st.expression);
+    if (!call) return false;
+    awaitLet(s, call.loader, call.args, st.start, st.expression.argument, lets);
+    return true;
+  },
+  params: [
+    {
+      name: "fv_loads",
+      ty: "&fv::Loads<'_>",
+      pageTy: "&'p fv::Loads<'p>",
+      reads: (c) => runOf(loaders).readers.has(c),
+      test: {
+        lines: [],
+        arg: "fv_loads",
+        fixture: true,
+        around: (render) => [
+          "let loading = ferrovue::load(",
+          "    |fv_loads| {",
+          "        out.clear();",
+          ...render.split("\n").map((l) => `        ${l}`),
+          "    },",
+          "    loaders::from_fixture(&fixture.loads),",
+          ");",
+          "let mut cx = std::task::Context::from_waker(std::task::Waker::noop());",
+          "match std::future::Future::poll(std::pin::pin!(loading), &mut cx) {",
+          "    std::task::Poll::Ready(done) => done.map_err(|e| e.to_string())?,",
+          '    std::task::Poll::Pending => return Err(String::from("a fixture\'s loader is still running")),',
+          "}",
+        ],
+      },
+      fixtureField: '    #[serde(rename = "$loads", default)]\n    loads: serde_json::Map<String, serde_json::Value>,',
+    },
+  ],
+  modules: () => (runOf(loaders).loaders.size ? [["loaders.rs", loadersSource()]] : []),
+};

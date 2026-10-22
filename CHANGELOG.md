@@ -61,7 +61,7 @@ released together and share version numbers.
   to report a bug or ask for a construct. The guide's index and the README's list of guides link
   to both.
 - The crate's side of loaders, for components that load their own data with a top-level
-  `await` (the compiler's side follows): `ferrovue::load` renders, starts each call the render
+  `await` (the compiler's side is below): `ferrovue::load` renders, starts each call the render
   asks for, and renders again once calls have finished, until a render has every result; each
   loader starts when Vue's server would start it (siblings together, a component's children after
   its own loads, the awaits of one component in order), every call finished by a render is taken
@@ -71,6 +71,29 @@ released together and share version numbers.
   state script is, each under its key as the client's `JSON.stringify([name, ...args])` writes it.
   What only generated code calls (`Load`, `Loads::get`, `LoadKey`, `LoadArg`, `load_key`,
   `LoadCall`, `LoadFuture`) is hidden from the documentation.
+- The compiler's side of loaders: a component may `await` a loader at the top of its
+  `<script setup>` (`const post = await loadPost(props.slug)`, or destructured into plain names),
+  where a loader is declared in a `.ts` file with `defineLoader("loadPost", async (slug: string,
+  lang?: string): Promise<Post> => …)`, the new export of `ferrovue` and `ferrovue/client`. Its
+  arguments are strings, numbers and booleans, optional or `null`, and its result any type a prop
+  may have. The generated `loaders.rs` has a struct per loader's call, the `Loaders` trait the app
+  implements with a method per loader, `dispatch` and `load`, which renders with
+  `ferrovue::load`; each component that awaits a loader, or renders one that does, takes a
+  `&Loads` after its other parameters, and is not an island. The render stops where the
+  component awaits a result it does not have yet. In the browser, `defineLoader` answers a call
+  from the page's `<script data-fv-loads>` by its key (`loadKey`), so the component hydrates from
+  what the server read, and runs the loader otherwise; `createPageApp`, `mountPage` and
+  `renderPage` wrap the layout in a `<Suspense>` when the page carries results (the new
+  `suspense` option says otherwise), `readPage` gives a page's payloads as `loads`, which
+  `renderPage` takes, and `provideLoads` and `clearLoads` add and forget results. A fixture gives
+  results under `$loads`. Refusals have the new area FV20: an `await` of anything but a loader
+  (FV2001), a declaration the compiler cannot read (FV2002), a parameter or result it cannot
+  carry (FV2003, FV2004), two loaders with one name (FV2005), a call whose arguments do not match
+  (FV2006) and a result bound to another pattern (FV2007). Generated code is version 4
+  (`ferrovue::__compat!(4)`), which a 0.9 crate refuses. The conformance components `Loaded` and
+  `LoadedComments` hold fixtures recorded from Vue, rendered by both and hydrated. The crate's new
+  [`loaders`](https://docs.rs/ferrovue/latest/ferrovue/guide/loaders/index.html) guide describes
+  both sides.
 
 - A run reports every refusal it finds. Each component is checked on its own, and within a template
   each statement of the compiled render and each interpolation in it, so the CLI, `--check`,
@@ -98,7 +121,7 @@ released together and share version numbers.
   than 4096 paths (a run of such `switch`es) with FV1905, before translating it would take
   seconds; FV0806, an arrow function with a block body, is retired. The crate's new
   [`script_logic`](https://docs.rs/ferrovue/latest/ferrovue/guide/script_logic/index.html) guide
-  describes what a body may hold. Generated code stays at `__compat!(3)`. `ERRORS` in the
+  describes what a body may hold. It needs no new version of generated code. `ERRORS` in the
   `ferrovue/compiler` API report gains the five codes and marks FV0806 retired.
 - Functions the template or a `computed` calls: declared in `<script setup>` (`function f(…) {}`,
   `const f = (…) => …`) or exported from a `.ts` file the component imports, whose bodies hold what
@@ -130,8 +153,8 @@ released together and share version numbers.
   list of lists, which `.flat()` joins and `v-for` walks; FV0815 is retired. A depth that is not a
   literal, and items that are optional, records or pairs, are refused with the new FV0834. The
   conformance components `Pairs` and `Flattened` hold fixtures recorded from Vue, and the fuzzer
-  writes `Object.entries()` read by `.filter()` and `.map()`, and `.flatMap()`. Generated code
-  stays at `__compat!(3)`: both are Rust iterator adaptors.
+  writes `Object.entries()` read by `.filter()` and `.map()`, and `.flatMap()`. They need no
+  new version of generated code: both are Rust iterator adaptors.
 
 ### Changed
 

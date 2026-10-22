@@ -4,6 +4,7 @@ import {
   createTextVNode,
   defineComponent,
   h,
+  Suspense,
   hydrateOnIdle,
   hydrateOnMediaQuery,
   hydrateOnVisible,
@@ -16,18 +17,10 @@ import {
 } from "vue";
 import type { Pinia } from "pinia";
 import type { Router } from "vue-router";
+import { carriesLoads, LOADS_ATTRIBUTE, provideLoads } from "./loads.ts";
+import { parseJson } from "./page-json.ts";
 
-const BARE = /"(?:[^"\\]|\\.)*"|-?Infinity|NaN/g;
-const NON_FINITE: Record<string, number> = { NaN: Number.NaN, Infinity: Number.POSITIVE_INFINITY, "-Infinity": Number.NEGATIVE_INFINITY };
-
-function parseJson(text: string): unknown {
-  if (!/NaN|Infinity/.test(text)) return JSON.parse(text);
-  let escaped = "\\u0000";
-  while (text.includes(escaped)) escaped += "\\u0000";
-  const tag = JSON.parse(`"${escaped}"`) as string;
-  const quoted = text.replace(BARE, (match) => (match.startsWith('"') ? match : `"${escaped}${match}"`));
-  return JSON.parse(quoted, (_key, value: unknown) => (typeof value === "string" && value.startsWith(tag) ? NON_FINITE[value.slice(tag.length)] : value));
-}
+export { clearLoads, defineLoader, loadKey, provideLoads } from "./loads.ts";
 
 function declaresDate(declared: unknown): boolean {
   const type = declared !== null && typeof declared === "object" && "type" in declared ? declared.type : declared;
@@ -175,13 +168,20 @@ function commentEnd(html: string, from: number): number {
 }
 
 function scriptText(html: string, id: string): string | undefined {
+  return scriptTexts(html, (attrs) => attrs.get("id") === id, true)[0];
+}
+
+// The text of each `<script>` whose attributes `match`, outside a `<template>`, as the HTML parser
+// reads them; only the first when `first`.
+function scriptTexts(html: string, match: (attrs: Map<string, string>) => boolean, first: boolean): string[] {
+  const found: string[] = [];
   const lower = html.toLowerCase();
   let template = 0;
   let foreign = 0;
   let i = 0;
   for (;;) {
     const lt = html.indexOf("<", i);
-    if (lt < 0) return undefined;
+    if (lt < 0) return found;
     i = lt + 1;
     if (html.startsWith("<!--", lt)) {
       i = commentEnd(html, lt + 4);
@@ -202,7 +202,7 @@ function scriptText(html: string, id: string): string | undefined {
       continue;
     }
     const tag = readTag(html, at);
-    if (!tag) return undefined;
+    if (!tag) return found;
     i = tag.end;
     if (FOREIGN.has(tag.name)) {
       if (closing) foreign = Math.max(0, foreign - 1);
@@ -218,14 +218,17 @@ function scriptText(html: string, id: string): string | undefined {
       continue;
     }
     if (closing || !RAW_TEXT.has(tag.name)) {
-      if (tag.name === "plaintext") return undefined;
+      if (tag.name === "plaintext") return found;
       continue;
     }
     const end = rawTextEnd(lower, i, tag.name);
-    if (tag.name === "script" && template === 0 && tag.attrs.get("id") === id) return html.slice(i, end < 0 ? html.length : end);
-    if (end < 0) return undefined;
+    if (tag.name === "script" && template === 0 && match(tag.attrs)) {
+      found.push(html.slice(i, end < 0 ? html.length : end));
+      if (first) return found;
+    }
+    if (end < 0) return found;
     const close = readTag(html, end + 2);
-    if (!close) return undefined;
+    if (!close) return found;
     i = close.end;
   }
 }
@@ -245,6 +248,9 @@ export interface ReadPage {
   /** The text of the state's script, for `hydrateState(pinia, { text: state })`: `undefined` when
    * the page carries no state. */
   state: string | undefined;
+  /** The text of each script of loaders' results `Loads::script_into` wrote, in document order,
+   * for `renderPage(…, { loads })`: empty when the page awaited no loader. */
+  loads: string[];
 }
 
 /** Read the record and the state of a page out of the HTML of its document, as a navigation that
@@ -258,7 +264,11 @@ export function readPage(html: string, options: ReadPageOptions = {}): ReadPage 
   const id = options.record ?? "__fv_page";
   const text = scriptText(html, id);
   if (!text) throw new Error(`[ferrovue] the page has no record: no <script id="${id}">`);
-  return { record: parseJson(text) as PageRecord, state: scriptText(html, options.state ?? "__pinia") || undefined };
+  return {
+    record: parseJson(text) as PageRecord,
+    state: scriptText(html, options.state ?? "__pinia") || undefined,
+    loads: scriptTexts(html, (attrs) => attrs.has(LOADS_ATTRIBUTE), false),
+  };
 }
 
 export interface MountOptions {
@@ -514,6 +524,11 @@ export interface PageAppOptions extends Pick<MountOptions, "pinia" | "router" | 
   /** `false` for an app that renders the page from its record into an empty container, as
    * `renderPage` does, in place of hydrating the server's markup. */
   hydrate?: boolean;
+  /** Render the layout inside a `<Suspense>`, which a component that awaits a loader needs on the
+   * client: by default when the page carries results for loaders (`<script data-fv-loads>`, or
+   * results given to `provideLoads`). A `<Suspense>` writes no markup of its own, so the server's
+   * page hydrates the same. */
+  suspense?: boolean;
 }
 
 /** The app of a page: its root renders `layout` with the record's props, and each slot as the
@@ -528,7 +543,9 @@ export function createPageApp(layout: Component, record: PageRecord, components:
       () => (parts.length ? parts.map((part) => h(components[part.c]!, reviveDates(components[part.c]!, part.p))) : [createTextVNode("")]),
     ]),
   );
-  const app = (options.hydrate === false ? createApp : createSSRApp)({ name: "FerrovuePage", render: () => h(layout, reviveDates(layout, record.props), slots) });
+  const root = () => h(layout, reviveDates(layout, record.props), slots);
+  const suspense = options.suspense ?? carriesLoads();
+  const app = (options.hydrate === false ? createApp : createSSRApp)({ name: "FerrovuePage", render: suspense ? () => h(Suspense, null, { default: root }) : root });
   if (options.pinia) app.use(options.pinia);
   if (options.router) app.use(options.router);
   for (const plugin of options.plugins ?? []) app.use(plugin);
@@ -570,6 +587,9 @@ export async function mountPage(layout: IslandComponent, components: Record<stri
 }
 
 export interface RenderPageOptions extends Pick<MountOptions, "pinia" | "router" | "plugins"> {
+  /** The next page's results for loaders, as `readPage` read them: given to `provideLoads` before
+   * the page renders. */
+  loads?: string[];
   /** The element holding the page shown now, or a selector for it: `#app` by default. */
   container?: Element | string;
   /** What shows the page now: the app `mountPage` or `renderPage` returned, or the islands
@@ -589,6 +609,7 @@ export interface RenderPageOptions extends Pick<MountOptions, "pinia" | "router"
  * load. */
 export async function renderPage(layout: IslandComponent, components: Record<string, IslandComponent>, record: PageRecord, options: RenderPageOptions = {}): Promise<App> {
   const container = containerOf(options);
+  for (const text of options.loads ?? []) provideLoads(text);
   const [root, parts] = await loadPage("renderPage", layout, record, components);
   const app = createPageApp(root, record, parts, { ...options, hydrate: false });
   await options.router?.isReady();

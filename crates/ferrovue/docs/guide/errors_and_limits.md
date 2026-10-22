@@ -66,8 +66,9 @@ What is refused today, each with an error that names it:
 - `<RouterLink custom>`, slot props that are array literals, defaults in destructured slot props,
   and outlets of one slot that pass different props;
 - custom directives not listed in `clientDirectives`;
-- `watchEffect`, `watch` with `immediate`, `onServerPrefetch`, top-level `await`, and statements in
-  setup that change state;
+- `watchEffect`, `watch` with `immediate`, `onServerPrefetch`, a top-level `await` of anything but
+  a loader (see [`loaders`](crate::guide::loaders#what-is-refused)), and statements in setup that
+  change state;
 - `route.meta` and `route.matched`;
 - in a folder of pages: a parameter beside text in one part of a path (`prefix-[id].vue`),
   repeatable and optional catch-all parameters, parameter parsers (`[id=int]`), named views
