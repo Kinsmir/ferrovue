@@ -6,6 +6,7 @@ import { localTy } from "./rust.ts";
 import { asF64, isNumber } from "./numbers.ts";
 import { asCow, isTemporary, lonely, meet, yieldsCow } from "./strings.ts";
 import { atom, bare, binary, enclosed, operand, strArg, UNARY } from "./parens.ts";
+import { expressionBodied } from "./blocks.ts";
 
 const COW = "std::borrow::Cow::<str>";
 
@@ -31,6 +32,8 @@ export function computed(iter: string, of: Ty, lone?: boolean): Val {
 }
 
 export function collected(v: Val): string {
+  const vec = v.iter !== undefined ? /^(.*)\.into_iter\(\)$/s.exec(v.iter)?.[1] : undefined;
+  if (vec !== undefined && /^[({]/.test(vec) && enclosed(vec)) return bare(vec);
   const of = v.ty.k === "list" ? v.ty.of : v.ty;
   return `${items(v)}${of.k === "str" ? `.map(|v| ${COW}::Owned(v.into_owned()))` : ""}.collect::<Vec<_>>()`;
 }
@@ -63,7 +66,6 @@ export function arrow(s: Scope, fn: N, list: Val, of: Ty, byRef: boolean, method
   if (fn?.type !== "ArrowFunctionExpression" || fn.async || fn.params.length > 2) {
     fail(comp, "FV0805", `\`.${method}()\` takes an arrow function of the item, and of its index: \`x => …\`, \`(x, i) => …\`, or \`Boolean\``, fn);
   }
-  if (fn.body.type === "BlockStatement") fail(comp, "FV0806", `\`.${method}()\` takes an arrow function whose body is an expression, without \`{ return … }\``, fn);
   const [item, index] = fn.params as N[];
   if (index && index.type !== "Identifier") fail(comp, "FV0807", "an arrow function's index is a plain name", index);
   const n = ++ctx.narrowCount;
@@ -484,8 +486,9 @@ export function spreadExtreme(s: Scope, method: "max" | "min", args: N[]): Val {
   return { code: `${all}.fold(${start}, fv::js_${method})`, ty: FLOAT };
 }
 
-export function listMethod(s: Scope, target: Val, method: string, args: N[], n: N): Val | null {
+export function listMethod(s: Scope, target: Val, method: string, given: N[], n: N): Val | null {
   const comp = s.comp;
+  const args = given.map((a) => expressionBodied(comp, a));
   if (method === "reduce" || method === "reduceRight") return reduced(s, target, method, args, n);
   if (method === "toReversed") {
     if (args.length !== 0) fail(comp, "FV0602", "`.toReversed()` takes no arguments", n);

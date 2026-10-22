@@ -222,11 +222,22 @@ export interface Consts {
   toneInfo: { label: string; n: number }[];
 }
 
+export type Step = { k: "const"; name: string; e: Expr } | { k: "if"; test: Expr; e: Expr };
+
+export interface LocalFn {
+  name: string;
+  params: { name: string; ty: Ty }[];
+  ret: Ty;
+  steps: Step[];
+  e: Expr;
+}
+
 export interface Binding {
   name: string;
   kind: "computed" | "const" | "ref";
   e: Expr;
   lazy?: string;
+  steps?: Step[];
 }
 
 export interface HeadValue {
@@ -280,6 +291,7 @@ export interface Component {
   helpers: Record<HelperName, { scoped: boolean; slotted: boolean }>;
   propsVar: boolean;
   bindings: Binding[];
+  fns: LocalFn[];
   provides: Provide[];
   head: HeadCall[];
   consts: Consts | null;
@@ -520,11 +532,25 @@ function printHead(call: HeadCall): string {
   return `useHead({ ${parts.join(", ")} });`;
 }
 
+function stepLine(st: Step): string {
+  return st.k === "const" ? `  const ${st.name} = ${printExpr(st.e)};` : `  if (${printExpr(st.test)}) return ${printExpr(st.e)};`;
+}
+
+function bindingText(b: Binding): string {
+  return [...(b.steps ?? []).flatMap((st) => (st.k === "const" ? [st.e] : [st.test, st.e])), b.e].map(printExpr).join("\n");
+}
+
+const TS_TYPES: Partial<Record<Ty, string>> = { str: "string", int: "number", bool: "boolean" };
+
 function scriptLines(c: Component): string[] {
   const lines: string[] = [];
+  for (const f of c.fns) {
+    lines.push(`function ${f.name}(${f.params.map((p) => `${p.name}: ${TS_TYPES[p.ty]!}`).join(", ")}): ${TS_TYPES[f.ret]!} {`, ...f.steps.map(stepLine), `  return ${printExpr(f.e)};`, "}");
+  }
   for (const b of c.bindings) {
     const e = printExpr(b.e);
-    lines.push(b.kind === "computed" ? `const ${b.name} = computed(() => ${e});` : b.kind === "ref" ? `const ${b.name} = ref(${e});` : `const ${b.name} = ${e};`);
+    if (b.steps?.length) lines.push(`const ${b.name} = computed(() => {`, ...b.steps.map(stepLine), `  return ${e};`, "});");
+    else lines.push(b.kind === "computed" ? `const ${b.name} = computed(() => ${e});` : b.kind === "ref" ? `const ${b.name} = ref(${e});` : `const ${b.name} = ${e};`);
   }
   for (const p of c.provides) lines.push(`provide(${p.key === "str" ? '"fz-s"' : p.key === "num" ? "FzNum" : "FzLive"}, ${printExpr(p.e)});`);
   for (const h of c.head) lines.push(printHead(h));
@@ -1080,6 +1106,7 @@ const specBound = (s: Spec): number => (s.k === "int" ? (s.wide ? LIMIT : BOUND_
 class Gen {
   scope: Scope = { vars: [], lists: [], records: [], htmls: [], dates: [] };
   lazies: { dep: string; v: Var }[] = [];
+  fns: LocalFn[] = [];
   dateLits = 0;
   favour: HelperName[] = [];
   vnode = false;
@@ -1136,6 +1163,15 @@ class Gen {
 
   vars(ty: Ty, maxBound = Infinity, opt = false): Var[] {
     return this.scope.vars.filter((v) => v.ty === ty && v.opt === opt && (ty !== "int" || v.bound <= maxBound));
+  }
+
+  fnsOf(ty: Ty, maxBound = Infinity): LocalFn[] {
+    return this.fns.filter((f) => f.ret === ty && (ty !== "int" || f.e.bound <= maxBound));
+  }
+
+  call(f: LocalFn, d: number): Expr {
+    const args = f.params.map((p) => (p.ty === "str" ? whole(this.str(d - 1)) : p.ty === "int" ? this.int(d - 1, BOUND_SMALL) : this.bool(d - 1)));
+    return { ...node(f.ret, args, (k) => `${f.name}(${k.join(", ")})`, f.e.bound, true), ...(f.e.lone ? { lone: true } : {}) };
   }
 
   varRef(v: Var): Expr {
@@ -1558,6 +1594,7 @@ class Gen {
         [2, () => strLit(r.pick(STR_LITS))],
         [opts.length ? 2 : 0, () => node("str", [this.varRef(r.pick(opts)), strLit(r.pick(STR_LITS))], ([a, b]) => `${a} ?? ${b}`)],
         [this.tKeys.length && this.tNames.length ? 2 : 0, () => this.translated(d)],
+        [this.fnsOf("str").length ? 2 : 0, () => this.call(r.pick(this.fnsOf("str")), d)],
       ])();
     };
     if (d <= 0 || r.chance(0.3)) return leaf();
@@ -1767,6 +1804,7 @@ class Gen {
         [strs.length && max > 2 ** 31 ? 2 : 0, () => node("int", [this.varRef(r.pick(strs))], ([a]) => `${a}.length`, 2 ** 31, true)],
         [this.scope.lists.length && max > 2 ** 31 ? 1 : 0, () => atom("int", `${r.pick(this.scope.lists).name}.length`, 2 ** 31)],
         [opts.length ? 2 : 0, () => { const v = r.pick(opts); return node("int", [this.varRef(v), numLit(r.int(0, 9), "int")], ([a, b]) => `${a} ?? ${b}`, Math.max(v.bound, 10)); }],
+        [this.fnsOf("int", max).length ? 2 : 0, () => this.call(r.pick(this.fnsOf("int", max)), d)],
       ])();
     };
     if (d <= 0 || r.chance(0.3)) return leaf();
@@ -1855,6 +1893,8 @@ class Gen {
     const r = this.r;
     const leaf = (): Expr => {
       const vs = this.vars("bool");
+      const fns = this.fnsOf("bool");
+      if (fns.length && r.chance(0.2)) return this.call(r.pick(fns), d);
       return vs.length && r.chance(0.85) ? this.varRef(r.pick(vs)) : atom("bool", r.pick(["true", "false"]));
     };
     if (d <= 0 || r.chance(0.25)) return leaf();
@@ -2466,6 +2506,38 @@ function scriptExpr(g: Gen, ty: Ty, d: number): Expr {
   return g.bool(d);
 }
 
+function bodySteps(g: Gen, ty: Ty, at: number): Step[] {
+  const steps: Step[] = [];
+  for (let k = g.r.int(1, 3); k > 0; k--) {
+    if (g.r.chance(0.5)) {
+      const name = `l${at}_${steps.length}`;
+      const e = scriptExpr(g, g.r.pick<Ty>(["str", "int", "float", "bool"]), g.r.int(1, 2));
+      steps.push({ k: "const", name, e });
+      g.scope.vars.push(bindingVar({ name, kind: "const", e }));
+    } else steps.push({ k: "if", test: g.bool(g.r.int(1, 2)), e: scriptExpr(g, ty, g.r.int(1, 2)) });
+  }
+  return steps;
+}
+
+function localFn(g: Gen, k: number): LocalFn {
+  const ret = g.r.pick<Ty>(["str", "str", "int", "bool"]);
+  const params = Array.from({ length: g.r.int(1, 2) }, (_, i) => ({ name: `a${k}_${i}`, ty: g.r.pick<Ty>(["str", "int", "bool"]) }));
+  const vars: Var[] = params.map((p) => ({ name: p.name, ty: p.ty, opt: false, bound: p.ty === "int" ? BOUND_SMALL : 0 }));
+  g.scope.vars.push(...vars);
+  const steps = g.r.chance(0.6) ? bodySteps(g, ret, 100 + k) : [];
+  const e = scriptExpr(g, ret, g.r.int(1, 2));
+  const local = new Set([...vars.map((v) => v.name), ...steps.flatMap((st) => (st.k === "const" ? [st.name] : []))]);
+  g.scope.vars = g.scope.vars.filter((v) => !local.has(v.name));
+  const f = { name: `fn${k}`, params, ret, steps, e: joined(e, steps) };
+  g.fns.push(f);
+  return f;
+}
+
+function joined(e: Expr, steps: Step[]): Expr {
+  const returns = [e, ...steps.flatMap((st) => (st.k === "if" ? [st.e] : []))];
+  return { ...e, bound: Math.max(...returns.map((x) => x.bound)), ...(returns.some((x) => x.lone) ? { lone: true } : {}) };
+}
+
 const bindingVar = (b: Binding): Var => ({ name: b.name, ty: b.e.ty, opt: false, bound: b.e.ty === "int" ? Math.max(b.e.bound, 1) : 0, ...(b.e.lone ? { lone: true } : {}) });
 
 const whole = (e: Expr): Expr => (e.lone ? strLit("whole") : e);
@@ -2714,6 +2786,7 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
   const scoped = r.chance(0.35);
   const propsVar = r.chance(0.3);
   const bindings: Binding[] = [];
+  const fns: LocalFn[] = [];
   const provides: Provide[] = [];
   const head: HeadCall[] = [];
   if (r.chance(0.45)) {
@@ -2727,11 +2800,14 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
       g.tKeys = i18n.keys;
       g.tNames = ["t"];
     }
+    for (let n = r.chance(0.35) ? r.int(1, 2) : 0; n > 0; n--) fns.push(localFn(g, fns.length));
     for (let n = r.weighted([[2, 0], [3, 1], [2, 2], [1, 3]]); n > 0; n--) {
       const kind = r.weighted<Binding["kind"]>([[3, "computed"], [2, "const"], [1, "ref"]]);
       const ty = r.pick<Ty>(["str", "str", "int", "float", "bool"]);
+      const steps = kind === "computed" && r.chance(0.4) ? bodySteps(g, ty, bindings.length) : undefined;
       const e = kind === "ref" ? literalOf(r, ty) : scriptExpr(g, ty, r.int(1, 2));
-      const binding = { name: `${kind === "computed" ? "cmp" : kind === "const" ? "cst" : "ref"}${bindings.length}`, kind, e };
+      if (steps) g.scope.vars = g.scope.vars.filter((v) => !steps.some((st) => st.k === "const" && st.name === v.name));
+      const binding = { name: `${kind === "computed" ? "cmp" : kind === "const" ? "cst" : "ref"}${bindings.length}`, kind, e: steps ? joined(e, steps) : e, ...(steps ? { steps } : {}) };
       bindings.push(binding);
       if (kind === "const") g.scope.vars.push(bindingVar(binding));
     }
@@ -2787,6 +2863,7 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
     helpers,
     propsVar,
     bindings,
+    fns,
     provides,
     head,
     consts,
@@ -2820,7 +2897,7 @@ export function prune(c: Component): Component {
     for (const b of c.bindings) {
       if (kept.has(b) || !mentions(text, b.name)) continue;
       kept.add(b);
-      text += `\n${printExpr(b.e)}`;
+      text += `\n${bindingText(b)}`;
       grew = true;
     }
   }
@@ -2885,7 +2962,7 @@ function* exprSlots(nodes: Node[]): Generator<{ get: () => Expr; set: (e: Expr) 
 
 function* allSlots(c: Component): Generator<{ get: () => Expr; set: (e: Expr) => void }> {
   for (const st of c.stores) for (const g of st.getters) yield { get: () => g.e, set: (e) => (g.e = e) };
-  for (const b of c.bindings) if (b.kind !== "ref") yield { get: () => b.e, set: (e) => (b.e = e) };
+  for (const b of c.bindings) if (b.kind !== "ref") yield { get: () => b.e, set: (e) => (b.e = b.steps ? joined(e, b.steps) : e) };
   for (const p of c.provides) if (!p.e.fixed) yield { get: () => p.e, set: (e) => (p.e = whole(e)) };
   for (const h of c.head) for (const en of h.entries) yield { get: () => en.v.e, set: (e) => (en.v.e = whole(e)) };
   yield* exprSlots(c.template);

@@ -74,7 +74,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     let s_chained = props.item.as_ref().map(|fv_o5| &fv_o5.children).map(|v| &v[..]).unwrap_or(&[]);
     let s_tags = props.item.as_ref().and_then(|fv_o6| fv_o6.tags.as_ref()).map(|v| &v[..]).unwrap_or(&[]);
     let s_nested = if props.flag { &props.others[..] } else { if let Some(n7) = props.item.as_ref() { &n7.children[..] } else { &[] } };
-    let s_labels = (if props.flag { props.others.iter().map(|fv_a8| std::borrow::Cow::<str>::Borrowed(&fv_a8.label)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { Vec::new() }).into_iter().map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
+    let s_labels = if props.flag { props.others.iter().map(|fv_a8| std::borrow::Cow::<str>::Borrowed(&fv_a8.label)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { Vec::new() };
     out.push_str("<section><h2>");
     fv::escape_into(out, &props.label);
     out.push_str("</h2><ul><!--[-->");

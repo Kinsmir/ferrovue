@@ -69,6 +69,7 @@ pub mod fall_switch;
 pub mod fall_use;
 pub mod fallthrough;
 pub mod form;
+pub mod formatters;
 pub mod forward;
 pub mod frame;
 pub mod glyph;
@@ -95,6 +96,7 @@ pub mod listen_sale;
 pub mod listened;
 pub mod listeners;
 pub mod lists;
+pub mod local_functions;
 pub mod lookups;
 pub mod mapped_choice;
 pub mod markup;
@@ -133,6 +135,7 @@ pub mod quiet_leaf;
 pub mod rated;
 pub mod records;
 pub mod regressions;
+pub mod relative_time;
 pub mod route_info;
 pub mod row_chip;
 pub mod scoped_card;
@@ -157,6 +160,7 @@ pub mod shape_root;
 pub mod shape_square;
 pub mod shown;
 pub mod slot_probe;
+pub mod statements;
 pub mod string_of;
 pub mod string_search;
 pub mod strings;
@@ -182,6 +186,7 @@ pub mod truthy;
 pub mod typeof_tests;
 pub mod unread;
 pub mod unread_fold;
+pub mod unread_steps;
 pub mod unread_var;
 pub mod unsanitised;
 pub mod unsanitised_leaf;
@@ -535,6 +540,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: form::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             form::render(&mut out, &props);
         }
+        "Formatters" => {
+            let props: formatters::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            formatters::render(&mut out, &props);
+        }
         "Forward" => {
             let props: forward::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -672,6 +681,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Lists" => {
             let props: lists::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             lists::render(&mut out, &props);
+        }
+        "LocalFunctions" => {
+            let props: local_functions::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            local_functions::render(&mut out, &props);
         }
         "Lookups" => {
             let props: lookups::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -849,6 +862,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: regressions::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             regressions::render(&mut out, &props);
         }
+        "RelativeTime" => {
+            let props: relative_time::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            relative_time::render(&mut out, &props);
+        }
         "RouteInfo" => {
             let props: route_info::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -982,6 +999,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let s_footer = |out: &mut String| out.push_str(fixture.slot("footer").unwrap_or_default());
             slot_probe::render(&mut out, &props, slot_probe::Slots { header: fixture.slot("header").map(|_| ferrovue::Slot::new(&s_header)), default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)), footer: fixture.slot("footer").map(|_| ferrovue::Slot::new(&s_footer)) });
         }
+        "Statements" => {
+            let props: statements::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            statements::render(&mut out, &props);
+        }
         "StringOf" => {
             let props: string_of::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             string_of::render(&mut out, &props);
@@ -1098,6 +1119,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
             unread_fold::render(&mut out, &props, unread_fold::Slots { default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)) });
+        }
+        "UnreadSteps" => {
+            let props: unread_steps::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            unread_steps::render(&mut out, &props);
         }
         "UnreadVar" => {
             let props: unread_var::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

@@ -69,7 +69,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     let s_cheap = props.items.iter().filter(|fv_a1| fv_a1.price < 10.0).collect::<Vec<_>>();
     let s_labels = props.items.iter().map(|fv_a2| std::borrow::Cow::<str>::Owned(fv_a2.label.to_uppercase())).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
     let s_found = props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).find(|fv_s3| fv::js_length(fv_s3) as f64 > 3.0).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned()));
-    let s_shown = (if props.min as f64 > 2.0 { props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_s4| fv::js_length(fv_s4) as f64 > 1.0).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() }).into_iter().map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
+    let s_shown = if props.min as f64 > 2.0 { props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_s4| fv::js_length(fv_s4) as f64 > 1.0).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() };
     out.push_str("<section><ul><!--[-->");
     for (i, item) in props.items.iter().filter(|fv_a5| fv_a5.id as f64 >= props.min as f64).enumerate() {
         let i = i as i64;

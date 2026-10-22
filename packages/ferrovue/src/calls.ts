@@ -8,6 +8,7 @@ import { formatted, lonely, loneOf, meet, stringMethod, stringOf, stringsEqual }
 import { asF64, intFromF64, isNumber, numberVal, power } from "./numbers.ts";
 import { boolOf, truthy } from "./narrowing.ts";
 import { coerce, describeTy, expr, refuseClientOnly, refuseUnavailable } from "./expr.ts";
+import { callFunction } from "./functions.ts";
 
 const DIGITS = new Map<string, [Code, number, string]>([
   ["toFixed", ["FV0705", 0, "number of digits"]],
@@ -44,6 +45,8 @@ export function call(s: Scope, n: N): Val {
     if (own) return own;
     const helper = s.helpers.get(callee.name);
     if (helper) return helperCall(s, helper, args, n);
+    const fn = s.locals.has(callee.name) ? undefined : s.functions.get(callee.name);
+    if (fn) return callFunction(s, callee.name, fn, args, n);
     if (isBoolean(s, callee) && args.length === 1) return boolOf(truthy(expr(s, args[0])));
     const global = !s.locals.has(callee.name) && !s.setup.has(callee.name);
     if (callee.name === "String" && global) {
@@ -107,6 +110,8 @@ export function call(s: Scope, n: N): Val {
     if (callee.object.type === "Identifier" && (callee.object.name === "$setup" || callee.object.name === "_ctx")) {
       const helper = s.helpers.get(method);
       if (helper) return helperCall(s, helper, args, n);
+      const fn = s.functions.get(method);
+      if (fn) return callFunction(s, method, fn, args, n);
       if (s.clientOnly.has(method)) return refuseClientOnly(s, method, n, true);
       if (!s.setup.has(method) && !(callee.object.name === "_ctx" && comp.props.fields.some((f) => f.js === method))) return refuseUnavailable(s, method, n, true);
     }

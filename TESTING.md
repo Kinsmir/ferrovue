@@ -106,6 +106,9 @@ A fixture is a JSON object of props plus three optional keys:
 | `Markup` | Entities, void elements, SVG attributes, `<pre>` whitespace, whitespace condensing |
 | `Setup`, `Lifecycle` | `ref`, `computed`, plain constants, helpers; hooks, `watch`, emits, template refs, `defineOptions`/`defineSlots`/`defineExpose`, a plain `<script>` block, an interface with fields the server never reads (an `HTMLElement`, a method) behind a `shallowRef` |
 | `Unread`, `UnreadFold`, `UnreadVar` | `computed`s that throw in JavaScript (`.repeat()` of a negative count, `.toISOString()` of an invalid date, `.padStart()` beyond the longest string) evaluated where the render first reads them, once: never read, read under a `v-if` that is false, read by another `computed`, in a `v-for`, in slot content a child does not render, as a child's prop; a `v-bind()` in `<style>`, which Vue evaluates as its render starts |
+| `Statements` | Statements in `computed` bodies and list callbacks: `const` (destructured too) and `let` never assigned again, `if` / `else if` / `else`, early `return` narrowing what follows (`!x`, `x === undefined`, `!a \|\| !a.title`, `a && a.posts > 0`), `switch` over a string-literal union and a number with stacked cases, `default` and `break`, values that borrow a `const` (a computed string, list or optional string) returned owned, an object returned from a body |
+| `Formatters`, `RelativeTime`, `LocalFunctions` | Functions the template and `computed`s call, exported from a `.ts` file (`components/text.ts`: a compact-number formatter with `toFixed`, a pluraliser with a default built from an earlier parameter, truncation with an ellipsis, an `href` built with `encodeURIComponent`, relative time from two `Date` props through a `switch`) or declared in `<script setup>` (`function` and `const` arrow functions reading props, refs and constants, calling each other, a default and an optional parameter, a destructured one, `switch (true)`, called in a `v-for` and from a list's `.map()`); one function given an integer and a `Float`; an invalid `Date`; a function only an event handler calls |
+| `UnreadSteps` | A `computed` whose statements stop at an early `return` before a `const` that would throw, and one whose `const` throws only where the render reads it |
 | `Constants` | Setup bindings that start as a string literal, and `computed`s of them, written into the page and tested as constants; strings compared with the empty one in `===`, `v-if` and `v-model` on `<select>` and radio inputs |
 | `Defaults`, `Destructured` | `withDefaults`, the boolean cast, destructured props with defaults and new names, class objects |
 | `Model`, `ModelParent` | `defineModel` (named, required, default) and `v-model` on a component |
@@ -194,6 +197,8 @@ when it names a component that is not in `components/` with fixtures of its own.
 | Constants | `Catalog`, `Constants`, `Lookups` |
 | Props | `Defaults`, `Destructured`, `PropsObject`, `Model`, `ModelParent`, `Picker`, `Glyph`, `Divider` |
 | Setup | `Setup`, `SetupValues`, `Lifecycle`, `Pending`, `EmptyBranch`, `Unread`, `UnreadVar` |
+| Statements | `Statements`, `UnreadSteps` |
+| Functions | `Formatters`, `RelativeTime`, `LocalFunctions` |
 | Provide and inject | `TabsPage`, `Tabs`, `Tab`, `ThemedButton`, `ThemeScope`, `Swatch`, `SwatchShelf`, `ThemedShelf`, `ThemedList`, `ThemedChoice` |
 | Text | `Text`, `MixedTernary`, `Exprs`, `Numbers`, `Precision`, `Meter`, `Parsing`, `NumberTests`, `Regressions`, `OptionalChains`, `StringOf`, `MathMore`, `UriParts`, `TypeofTests` |
 | Strings | `Strings`, `Exprs`, `Text`, `StringSearch`, `StringOf` |

@@ -523,7 +523,7 @@ export const ERRORS: {
     };
     readonly FV0613: {
         readonly title: "Value set up in a way the server cannot evaluate";
-        readonly detail: "The template reads a name setup binds, and the server cannot compute its value: a function declared in setup, a `computed` whose body is a block of statements, a value destructured from something the server does not have, a `let` with no initial value, or an expression the compiler refuses (the message gives the reason). The server evaluates `ref(…)`, `computed(() => …)` with a body that is one expression or a single `return`, and plain expressions. Such a name may be used freely from event handlers, which the server drops. Write the value as one expression, move a function into the helpers module with a Rust twin under `helpers.functions`, or compute the value in Rust and pass it as a prop.";
+        readonly detail: "The template reads a name setup binds, and the server cannot compute its value: a function declared in setup, a `computed` whose body holds a statement outside the subset of [`script_logic`](crate::guide::script_logic) (the message names it and its line), a value destructured from something the server does not have, a `let` with no initial value, or an expression the compiler refuses (the message gives the reason). The server evaluates `ref(…)`, `computed(() => …)` with a body that is one expression or a block of `const`, `if`, `switch` and `return`, and plain expressions. Such a name may be used freely from event handlers, which the server drops. Write the value as one expression, move a function into the helpers module with a Rust twin under `helpers.functions`, or compute the value in Rust and pass it as a prop.";
     };
     readonly FV0614: {
         readonly title: "Logical operator between values that are not booleans";
@@ -719,7 +719,7 @@ export const ERRORS: {
     };
     readonly FV0806: {
         readonly title: "Arrow function with a block body";
-        readonly detail: "The compiler translates an arrow function whose body is one expression. A block body with statements, even a single `{ return … }`, is refused. Write the body as an expression (`x => x.price * 2`), with `?:` for a choice.";
+        readonly retired: "0.10.0";
     };
     readonly FV0807: {
         readonly title: "Arrow function index that is not a plain name";
@@ -1580,6 +1580,38 @@ export const ERRORS: {
     readonly FV1809: {
         readonly title: "`===`, `!==`, `==` or `!=` with a `Date`";
         readonly detail: "Two `Date`s are equal in JavaScript only when they are one object, so two dates of the same time are unequal, and `==` with a string compares the date's `.toString()`, in the time zone of the machine running it. Compare time values: `a.getTime() === b.getTime()`. `<`, `<=`, `>` and `>=` between two dates compare their time values, and are false when either is invalid. See [`dates_and_prices`](crate::guide::dates_and_prices).";
+    };
+    readonly FV1901: {
+        readonly title: "Statement a function's body may not hold";
+        readonly detail: "A `computed`, a list method's callback and a function the server calls may hold `const` declarations (and `let` that is never assigned again), `if` / `else`, blocks, `switch` and `return`. Loops, `try`, `throw`, `var`, expression statements, labels, `continue` and functions or classes declared inside the body are refused: compute a list with `.map()`, `.filter()` or `.reduce()`, and pass anything else in as a prop. See [`script_logic`](crate::guide::script_logic).";
+    };
+    readonly FV1902: {
+        readonly title: "Assignment in a function's body";
+        readonly detail: "A value in a function's body is computed once: an assignment (`=`, `+=`, `++` and the like) would change one, which the server does not translate. Give each value a `const` of its own.";
+    };
+    readonly FV1903: {
+        readonly title: "Function that can end without returning a value";
+        readonly detail: "JavaScript returns `undefined` from a function that reaches its end, or a bare `return;`. The compiler refuses both, so that every path says what it gives: add a `return` (or an `else`, or a `default:` to a `switch`) on the path the message points at, and write `return undefined` where that is meant.";
+    };
+    readonly FV1904: {
+        readonly title: "`switch` or code after `return` the compiler does not translate";
+        readonly detail: "A `case` ends in `return` or `break`, or is empty and shares the next case's statements; a declaration directly in a `case` belongs to the whole `switch`, so wrap the case's statements in `{ … }`; code after `return` or `break` never runs.";
+    };
+    readonly FV1905: {
+        readonly title: "Body with too many paths after its `if`s and `switch`es";
+        readonly detail: "A statement that can fall off its end, an `if` without `return` or a `case` that ends in `break`, continues with the statements after it, and the compiler translates them once for each path that reaches them. Sequential `switch`es of `break`ing cases multiply those paths: the body is refused past 4096 of them, before translating it would take seconds or exhaust memory. End the cases in `return` rather than `break`, or split the body into several `computed`s that each read the one before.";
+    };
+    readonly FV1906: {
+        readonly title: "Function that calls itself";
+        readonly detail: "The server translates a function where it is called, with the arguments it is given there. A function that calls itself, directly or through others, would be translated without end: compute the value in Rust and pass it as a prop.";
+    };
+    readonly FV1907: {
+        readonly title: "Function or call of a shape the server does not translate";
+        readonly detail: "A function the server calls takes named parameters, optional ones (`x?: T`) and ones with defaults (`x = 1`) included, and object or array patterns of names; it is called with at most as many arguments as it names, none of them spread. `...rest` parameters, `async` functions and generators are refused, and so is a default for a parameter given a value that may be `null` or `undefined`, which the server cannot tell apart.";
+    };
+    readonly FV1908: {
+        readonly title: "Function declared with `const`, called while setup runs before its declaration";
+        readonly detail: "A function declared with `const` (`const f = (…) => …`) exists only once its declaration has run. Setup code above it that calls it, directly or through a `function` declaration, which is hoisted, throws a `ReferenceError` in JavaScript, and Vue's server renders nothing. A `computed` may call it, since a `computed` runs when the render reads it. Move the declaration above the call, or declare the function with `function`.";
     };
 };
 

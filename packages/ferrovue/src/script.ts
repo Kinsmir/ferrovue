@@ -1,16 +1,15 @@
 import { basename } from "node:path";
 import { type Component, type N, type Scope, type Val, fail, GenError, nodeName, nothing, snake, takesAttrs, UNDEF } from "./model.ts";
 import { CONFIG_FILE, ctx } from "./context.ts";
-import { definePropsType, tyOfTs } from "./typescript.ts";
+import { definePropsType, readTypeFile, tyOfTs } from "./typescript.ts";
 import { resolveImport } from "./resolve.ts";
 import { constOfDecl, type Declared, declareConsts } from "./constants.ts";
 import { localTy } from "./rust.ts";
-import { expr, fieldVal, MANY_STATEMENTS, typedBy } from "./expr.ts";
-import { collected, heldList } from "./lists.ts";
-import { bare, occurrences, operand, UNARY } from "./parens.ts";
+import { expr, fieldVal, typedBy } from "./expr.ts";
+import { occurrences } from "./parens.ts";
 import { known } from "./narrowing.ts";
-import { heldStr, isTemporary } from "./strings.ts";
-import { intFromF64 } from "./numbers.ts";
+import { bindingOf, bodyExpr, panicky } from "./blocks.ts";
+import { functionOf } from "./functions.ts";
 
 export const CLIENT_HOOKS = new Set([
   "onMounted", "onBeforeMount", "onUnmounted", "onBeforeUnmount", "onUpdated", "onBeforeUpdate",
@@ -38,19 +37,17 @@ export function setupStatement(comp: Component, st: N): void {
   fail(comp, "FV0105", `${st.expression?.type === "CallExpression" ? (name === null ? "a call" : `\`${name}()\``) : nodeName(st.expression)} in setup could change what renders, and is not translated`, st);
 }
 
-export function setupSource(init: N): N | null {
+export function setupSource(comp: Component, init: N): N | null {
   if (init.type === "CallExpression" && init.callee.type === "Identifier") {
     const name = init.callee.name;
     if ((name === "ref" || name === "shallowRef") && init.arguments.length === 1) return init.arguments[0];
     if (name === "computed") {
       const fn = init.arguments[0];
       if (fn?.type !== "ArrowFunctionExpression" && fn?.type !== "FunctionExpression") return null;
-      if (fn.body.type !== "BlockStatement") return fn.body;
-      const only = fn.body.body.length === 1 ? fn.body.body[0] : null;
-      return only?.type === "ReturnStatement" && only.argument ? only.argument : null;
+      return bodyExpr(comp, fn);
     }
   }
-  if (init.type === "TSAsExpression" || init.type === "TSSatisfiesExpression" || init.type === "TSNonNullExpression") return setupSource(init.expression);
+  if (init.type === "TSAsExpression" || init.type === "TSSatisfiesExpression" || init.type === "TSNonNullExpression") return setupSource(comp, init.expression);
   return init;
 }
 
@@ -128,31 +125,9 @@ export function asyncChildren(comp: Component, ast: N[]): Map<string, string> {
   return found;
 }
 
-const PANICS = /\bfv::js_(?:repeat|pad_start|pad_end|date_parse|date_utc|to_iso_string)\(|\bfv_i18n\.t\(/;
-
-function mayPanic(scope: Scope, lazies: Map<string, string>, init: string): boolean {
-  if (PANICS.test(init)) return true;
-  if ([...scope.helpers.values()].some((h) => init.includes(`${ctx.helpers[h]!.rust}(`))) return true;
+function mayPanic(lazies: Map<string, string>, init: string): boolean {
+  if (panicky(init)) return true;
   return [...lazies.values()].some((name) => occurrences(init, name) > 0);
-}
-
-function binding(v: Val): { init: string; read: (at: string) => Val } {
-  const lone = v.lone ? { lone: true } : {};
-  if (v.slice) return { init: bare(v.code), read: (at) => ({ code: at, ty: v.ty, slice: true, ...lone }) };
-  if (v.ty.k === "list" && v.iter !== undefined) return { init: collected(v), read: (at) => heldList(at, v.ty.k === "list" ? v.ty.of : v.ty, v.lone) };
-  if (v.held !== undefined) return { init: v.held, read: (at) => ({ code: `${at}.as_deref()`, ty: v.ty, ...lone }) };
-  if (v.ty.k === "int" && v.f64 !== undefined && (v.code.endsWith(" as i64") || Object.is(v.num, -0))) {
-    return {
-      init: bare(v.f64),
-      read: (at) => ({ ...intFromF64(at), ...lone, ...(v.num !== undefined ? { num: v.num } : {}), ...(v.konst !== undefined ? { konst: v.konst } : {}) }),
-    };
-  }
-  if (isTemporary(v)) return { init: heldStr(v), read: (at) => ({ code: `&*${at}`, ty: v.ty, ...lone }) };
-  const place = v.ty.k === "list" || v.ty.k === "record" || v.ty.k === "struct" || v.ty.k === "child";
-  return {
-    init: place ? `&${operand(v.code, UNARY)}` : bare(v.code),
-    read: (at) => ({ code: at, ty: v.ty, ...lone, ...(v.konst !== undefined ? { konst: v.konst } : {}) }),
-  };
 }
 
 export function scopeFor(comp: Component, ast: N[], components: Map<string, Component>): { scope: Scope; lets: string[]; lazies: Map<string, string> } {
@@ -180,6 +155,7 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
     attrsBindings: new Set(),
     slotsBindings: new Set(),
     consts: new Map(),
+    functions: new Map(),
     sid: null,
     opaque: null,
     plugins: new Map(),
@@ -200,6 +176,17 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
   const asyncs = asyncChildren(comp, ast);
   let useAttrsName: string | null = null;
   let useSlotsName: string | null = null;
+  const declared = (f: { name: string; node: N }, tdzUntil?: number): void => {
+    scope.functions.set(f.name, { name: f.name, node: f.node, home: comp, file: null, ...(tdzUntil !== undefined ? { tdzUntil } : {}) });
+    scope.clientOnly.set(f.name, "it is a function, which the template and a `computed` may call, and only an event handler may name without calling it");
+  };
+  for (const st of ast) {
+    const decls: N[] = st.type === "VariableDeclaration" && st.kind === "const" ? st.declarations : [st];
+    for (const d of decls) {
+      const f = functionOf(d);
+      if (f) declared(f, st.type === "VariableDeclaration" ? st.end : undefined);
+    }
+  }
   for (const st of ast) {
     if (st.type === "ImportDeclaration") {
       const from: string = st.source.value;
@@ -224,18 +211,24 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
       } else {
         for (const sp of st.importKind === "type" ? [] : st.specifiers) if (sp.importKind !== "type") scope.imported.set(sp.local.name, from);
         const file = resolveImport(comp.file, from);
+        if (file !== null && st.importKind !== "type" && st.specifiers.some((sp: N) => sp.type === "ImportDefaultSpecifier")) readTypeFile(file);
         const decls = file !== null ? ctx.constDecls.get(file) : undefined;
+        const fns = file !== null ? ctx.tsModules.get(file)?.functions : undefined;
         for (const sp of decls && st.importKind !== "type" ? st.specifiers : []) {
-          const d = sp.type === "ImportSpecifier" && sp.importKind !== "type" ? decls!.get(sp.imported.name ?? sp.imported.value) : undefined;
+          const key: string | undefined = sp.type === "ImportSpecifier" && sp.importKind !== "type" ? (sp.imported.name ?? sp.imported.value) : sp.type === "ImportDefaultSpecifier" ? "default" : undefined;
+          const f = key !== undefined ? fns?.get(key) : undefined;
+          if (f?.exported) {
+            scope.functions.set(sp.local.name, f.fn);
+            scope.clientOnly.set(sp.local.name, `it is a function imported from ${f.fn.home.file}, which the template and a \`computed\` may call, and only an event handler may name without calling it`);
+            continue;
+          }
+          const d = key !== undefined ? decls!.get(key) : undefined;
           if (d?.exported) evaluable(sp.local.name, d, `it is imported from ${d.home.file}, where it is not a constant the compiler evaluates`);
         }
       }
       continue;
     }
-    if (st.type === "FunctionDeclaration") {
-      if (st.id) scope.clientOnly.set(st.id.name, "it is a function, which only an event handler may call");
-      continue;
-    }
+    if (st.type === "FunctionDeclaration") continue;
     const decl = st.type === "ExportNamedDeclaration" ? st.declaration : st;
     if (decl?.type === "TSInterfaceDeclaration" || decl?.type === "TSTypeAliasDeclaration") continue;
     if (decl?.type === "TSEnumDeclaration") {
@@ -271,9 +264,10 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
         continue;
       }
       const local: string = d.id.name;
-      const declared = locals.get(local);
-      if (st.kind === "const" && declared !== undefined && declared.node === d && unwrapped(init0)?.type === "ObjectExpression") {
-        evaluable(local, declared, "it is an object the compiler does not evaluate");
+      if (scope.functions.get(local)?.node === init0) continue;
+      const objectDecl = locals.get(local);
+      if (st.kind === "const" && objectDecl !== undefined && objectDecl.node === d && unwrapped(init0)?.type === "ObjectExpression") {
+        evaluable(local, objectDecl, "it is an object the compiler does not evaluate");
         continue;
       }
       if (useAttrsName !== null && init0?.type === "CallExpression" && init0.callee.type === "Identifier" && init0.callee.name === useAttrsName) {
@@ -303,20 +297,19 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
       if (isRef) scope.refs.add(local);
       const isComputed = isRef && init0.callee.name === "computed";
       const typed = isRef ? init0.typeParameters?.params?.[0] : (d.id.typeAnnotation?.typeAnnotation ?? statedTy(init0));
-      const untyped = setupSource(init0);
-      const source = untyped && typed ? typedBy(untyped, typed) : untyped;
       let v: Val;
       try {
+        const untyped = setupSource(comp, init0);
+        const source = untyped && typed ? typedBy(untyped, typed) : untyped;
         const empty = emptyRef(comp, init0);
         if (!empty && !source) {
-          const steps = isComputed && init0.arguments[0]?.body?.type === "BlockStatement";
-          scope.clientOnly.set(local, steps ? MANY_STATEMENTS : "it is not a value the server computes: only `ref(…)`, `computed(() => …)` and plain expressions are");
+          scope.clientOnly.set(local, "it is not a value the server computes: only `ref(…)`, `computed(() => …)` and plain expressions are");
           continue;
         }
-        v = empty ?? expr(scope, source);
+        v = empty ?? expr(isComputed ? scope : { ...scope, settingUpAt: st.start }, source);
       } catch (e) {
-        if (!(e instanceof GenError)) throw e;
-        scope.clientOnly.set(local, e.what);
+        if (!(e instanceof GenError) || e.code === "FV1908") throw e;
+        scope.clientOnly.set(local, e.code.startsWith("FV19") && e.at?.line !== undefined ? `${e.what} (line ${e.at.line})` : e.what);
         continue;
       }
       if (nothing(v.ty) || (v.ty.k === "str" && known(v) !== undefined)) {
@@ -324,8 +317,8 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
         continue;
       }
       const name = `s_${snake(local).replace(/^r#/, "")}`;
-      const { init, read } = binding(v);
-      const lazy = isComputed && mayPanic(scope, lazies, init);
+      const { init, read } = bindingOf(v);
+      const lazy = isComputed && mayPanic(lazies, init);
       lets.push(lazy ? `let ${name} = std::cell::LazyCell::new(|| ${init});` : `let ${name} = ${init};`);
       scope.setup.set(local, read(lazy ? `(*${name})` : name));
       if (lazy) lazies.set(local, name);

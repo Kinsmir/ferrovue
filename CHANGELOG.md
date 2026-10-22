@@ -81,18 +81,44 @@ released together and share version numbers.
   `generate` raises the new `GenErrors`, a `GenError` that carries the first refusal's code,
   location and message and holds every refusal in `errors`.
 - A `= help:` line after a refusal's quoted line gives the way around it where one is short, for
-  the template's calls of functions the server cannot run (FV0601, FV0613), a `computed` whose body
-  is a block of statements, and a list read by a date's month. `GenError` has the new `help`, and
+  the template's calls of functions the server cannot run (FV0601, FV0613) and a list read by a
+  date's month. `GenError` has the new `help`, and
   each diagnostic of `--format json` the new field `help` (`null` where there is none).
 - Every code in the error index has a detail: what is refused, why, and the ways around it.
+- Statements in a `computed`'s body and in a list method's callback (`.map()`, `.filter()`,
+  `.find()`, `.some()`, `.reduce()`, a `.toSorted()` comparator and the others): `const`, and
+  `let` never assigned again, of any value the template may compute, destructured too; `if` /
+  `else if` / `else` and early `return`, which narrow what follows as TypeScript narrows it (`if
+  (!user) return ""; return user.name`); `switch` over a string or a number, with stacked `case`s,
+  `default` and `break`. Each `const` is a Rust `let`, evaluated once where JavaScript evaluates
+  it and only on the path that reaches it, and a `computed` that may throw is still evaluated
+  where the render first reads it. Loops, assignments, `try`, `throw`, `var`, code after `return`
+  and a path that ends without `return` are refused with the new codes FV1901 to FV1904, each
+  naming the statement, and a body whose `if`s and `break`ing `case`s continue after them on more
+  than 4096 paths (a run of such `switch`es) with FV1905, before translating it would take
+  seconds; FV0806, an arrow function with a block body, is retired. The crate's new
+  [`script_logic`](https://docs.rs/ferrovue/latest/ferrovue/guide/script_logic/index.html) guide
+  describes what a body may hold. Generated code stays at `__compat!(3)`. `ERRORS` in the
+  `ferrovue/compiler` API report gains the five codes and marks FV0806 retired.
+- Functions the template or a `computed` calls: declared in `<script setup>` (`function f(…) {}`,
+  `const f = (…) => …`) or exported from a `.ts` file the component imports, whose bodies hold what
+  a `computed`'s may and read props, refs, `computed`s, constants and other such functions. A call
+  is translated where it is written, its arguments evaluated once and in order with the types they
+  have there; parameters may be optional, have defaults, or be object patterns. A function from a
+  `.ts` file thus needs no `helpers` entry. A function whose body the server cannot evaluate is
+  refused where it is called, with FV0613 or FV0601 as before, the message naming the statement or
+  expression and its line; recursion (FV1906) and `...rest`, `async`, generators, spread arguments
+  or too many of them (FV1907) are refused, and so is a function declared with `const` that setup
+  calls above its declaration, where JavaScript throws a `ReferenceError` (FV1908). A function only
+  an event handler calls stays client-only. `ERRORS` in the `ferrovue/compiler` API report gains
+  the three codes. The fuzzer generates local functions and calls them from templates and
+  `computed`s.
 
 ### Changed
 
 - FV0601 names what the template wrote, and says where it comes from: `` `fmt()` calls a function
   imported from `./util`, a module the server does not run ``, where it named Vue's internal
   `$setup`.
-- A `computed` whose body is a block of statements is refused with the reason: the server evaluates
-  a body that is one expression or a single `return`.
 - Messages name syntax in words: "an arrow function", "an object literal", "a tuple type", where
   they gave Babel's node types (`ArrowFunctionExpression`).
 - A template's read of a constant the compiler cannot evaluate, from the component or a `.ts` file,
@@ -104,6 +130,8 @@ released together and share version numbers.
 - The `errors_and_limits` guide says where a `<script>` element in a template is allowed: Vue's
   server keeps it, its client compiler drops it, so a component that writes the document with its
   `<script type="module">` renders on the server only and never hydrates.
+- `?:` between two objects read from props hands out a reference to the one chosen, where it
+  moved it out of the props and did not build; a computed list chosen by `?:` is collected once.
 - An object constant written with `__proto__:` is refused (FV0206): the key sets the object's
   prototype, whose fields JavaScript reads as the object's own.
 - Tests only: the CLI's three `--watch` tests share one helper that repeats each change until the

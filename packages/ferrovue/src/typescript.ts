@@ -8,6 +8,7 @@ import { childOf } from "./expr.ts";
 import { claim } from "./plugin.ts";
 import { declareConsts, enumType } from "./constants.ts";
 import { parseTs } from "./files.ts";
+import { declareFunctions } from "./functions.ts";
 import { refuseUnresolved } from "./resolve.ts";
 
 export function typesImports(comp: Component, body: N[]): void {
@@ -170,6 +171,7 @@ export function readTypeFile(file: string): void {
   tagAst(body, "source");
   typesImports(home, body);
   ctx.constDecls.set(file, declareConsts(home, body));
+  ctx.tsModules.set(file, { home, body, functions: declareFunctions(home, body, file) });
   for (const d of declareTypes(home, body, new Map(), ctx.typeAliases)) {
     const known = ctx.typeDecls.get(d.name);
     if (known === undefined && ctx.typeStructs.has(d.name)) fail(home, "FV0319", `\`${d.name}\` is declared by ${ctx.typeFiles.get(d.name)} too`, d.node);

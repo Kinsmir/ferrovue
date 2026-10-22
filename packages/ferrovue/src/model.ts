@@ -363,6 +363,18 @@ export function blankComponent(name: string, module: string, file: string, struc
   };
 }
 
+/** A function the server may call: declared in `<script setup>`, or exported from a `.ts` file
+ * (`file`), whose body is translated where it is called. */
+export interface Fn {
+  name: string;
+  node: N;
+  home: Component;
+  file: string | null;
+  /** For a function `const` declares in `<script setup>`, where its declaration ends: setup code
+   * before it that calls it throws a `ReferenceError`. */
+  tdzUntil?: number;
+}
+
 export interface Scope {
   comp: Component;
   components: Map<string, Component>;
@@ -387,6 +399,10 @@ export interface Scope {
   attrsBindings: Set<string>;
   slotsBindings: Set<string>;
   consts: Map<string, Const>;
+  functions: Map<string, Fn>;
+  /** Where the setup statement being evaluated starts, while setup runs it (not in a `computed`,
+   * which runs when the render reads it). */
+  settingUpAt?: number | undefined;
   sid: string | null;
   opaque: string | null;
   loop?: { item: string; over: string } | undefined;

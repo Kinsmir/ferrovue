@@ -368,6 +368,19 @@ fn a_computed_the_render_reads_panics_where_javascript_throws() {
 }
 
 #[test]
+fn a_computed_s_statements_run_in_order_and_only_as_far_as_it_returns() {
+    let html =
+        generated::render_json("UnreadSteps", r#"{"show":false,"count":-1,"word":"ab"}"#).unwrap();
+    assert!(html.contains("<p>-</p><p>hidden</p>"), "{html}");
+}
+
+#[test]
+#[should_panic(expected = "RangeError: Invalid count value: -1")]
+fn a_const_in_a_computed_the_render_reads_panics_where_javascript_throws() {
+    let _ = generated::render_json("UnreadSteps", r#"{"show":true,"count":-1,"word":"ab"}"#);
+}
+
+#[test]
 #[should_panic(expected = "RangeError: Invalid time value")]
 fn an_invalid_date_the_render_reads_panics_where_to_iso_string_throws() {
     render_unread(
