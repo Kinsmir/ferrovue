@@ -407,6 +407,28 @@ Each generated struct has the same `new` and setters as `Props` (none with `"bui
 helper: props go out to the client as JSON and never come back in. An object prop handed to a child
 component is cloned; its strings are `Cow`s, so borrowed ones cost nothing to copy.
 
+# Imports through aliases
+
+A `.ts` file may be imported by a relative path (`../lib/format`) or through an alias, as
+TypeScript and Vite resolve it:
+
+- the `compilerOptions.paths` of the tsconfig.json nearest the component, after its `extends`
+  (Nuxt's `./.nuxt/tsconfig.json` included), and of the projects it lists in `references` (as
+  create-vue's `tsconfig.app.json`), relative to `baseUrl` when it is set and else to the file that
+  declares them; a bare path relative to `baseUrl` too;
+- with the Vite plugin, the build's own `resolve.alias`, tried before tsconfig's `paths`.
+
+```json
+{ "compilerOptions": { "paths": { "@/*": ["./src/*"] } } }
+```
+
+`import { LABELS } from "@/lib/catalog"` then reads `src/lib/catalog.ts` (or `catalog/index.ts`).
+`ferrovue --check` in CI runs without Vite, so declare in tsconfig.json an alias the CLI should
+know. A name the server reads that is imported from a module no relative path or alias leads to a
+`.ts` file of the project, a package included, is refused with
+[`FV0110`](crate::guide::error_codes#fv0110), naming the specifier and where it was looked for; a
+name only an event handler uses stays the client's.
+
 # Constants
 
 A constant a component imports from a `.ts` file, or an `enum`, imported or declared in the

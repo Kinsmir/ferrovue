@@ -13,23 +13,35 @@ import { componentSource, GENERATED, isIsland, modSource } from "./rust.ts";
 import { refuseNestedDates, requireWhole } from "./typescript.ts";
 import { renderParams } from "./plugin.ts";
 import { PLUGINS } from "./plugins/index.ts";
+import type { Alias } from "./resolve.ts";
+
+/** How a run resolves the imports of components beyond relative paths and the `paths` of the
+ * project's tsconfig files. */
+export interface ResolveOptions {
+  /** Aliases tried before tsconfig's `paths`, as Vite's `resolve.alias` lists them: the Vite plugin
+   * passes its build's own. */
+  aliases?: readonly Alias[];
+}
 
 /** Every generated file, keyed by its name in the output directory. `sources` holds the text of
  * components by path, read in place of their files, as an editor's unsaved buffers. A run that
  * refuses anything raises a `GenErrors` holding every refusal it found, and generates nothing. */
-export function generate(root: string, config: Config = loadConfig(root), sources: ReadonlyMap<string, string> = new Map()): Map<string, string> {
+export function generate(root: string, config: Config = loadConfig(root), sources: ReadonlyMap<string, string> = new Map(), options: ResolveOptions = {}): Map<string, string> {
   try {
-    return generateAll(root, config, sources);
+    return generateAll(root, config, sources, options);
   } catch (e) {
     if (isRefusal(e) && !(e instanceof GenErrors)) throw new GenErrors([e]);
     throw e;
   }
 }
 
-function generateAll(root: string, config: Config, sources: ReadonlyMap<string, string>): Map<string, string> {
+function generateAll(root: string, config: Config, sources: ReadonlyMap<string, string>, options: ResolveOptions): Map<string, string> {
   ctx.recovered = null;
   ctx.trying = 0;
   ctx.sources = new Map([...sources].map(([file, text]) => [resolve(root, file), text]));
+  ctx.aliases = options.aliases ?? [];
+  ctx.tsProjects = new Map();
+  ctx.tsconfigs = new Set();
   ctx.componentsDir = config.components.replace(/\/?$/, "/");
   ctx.helperModule = config.helpers?.module ?? null;
   ctx.trustedHtml = config.trustedHtml ?? null;
@@ -290,8 +302,8 @@ export interface Written {
 /** Write what \`generate\` produces to the configured directory: only the files whose text changed,
  * so a Rust build that watches them rebuilds no more than it must, and removing what no component
  * produces any more. */
-export function write(root: string, config: Config = loadConfig(root)): Written {
-  const files = generate(root, config);
+export function write(root: string, config: Config = loadConfig(root), options: ResolveOptions = {}): Written {
+  const files = generate(root, config, new Map(), options);
   const target = join(root, config.out);
   mkdirSync(target, { recursive: true });
   const changed: string[] = [];
@@ -314,6 +326,7 @@ export function write(root: string, config: Config = loadConfig(root)): Written 
 
 export { CONFIG_FILE, loadConfig, TYPES_MODULE, type Config, type HelperSpec, type RoutesSource, type ScopeIdMode, type TwinSpec, type TypeName } from "./context.ts";
 export { GenError, GenErrors, type Location as SourceLocation } from "./model.ts";
+export type { Alias } from "./resolve.ts";
 export { docsUrl, ERRORS, type Code as ErrorCode, type ErrorDoc } from "./errors.ts";
 
 export const VERSION: string = (() => {

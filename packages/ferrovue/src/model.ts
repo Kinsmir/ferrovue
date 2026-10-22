@@ -323,6 +323,8 @@ export interface Component {
   models: Map<string, string>;
   aliases: Map<string, N>;
   importedTypes: Map<string, Ty>;
+  /** Names imported from a module that resolves to no `.ts` file of the project, with its specifier. */
+  unresolved: Map<string, string>;
   slotShapes: Map<string, Struct>;
   inheritAttrs: boolean;
   inherits: boolean;
@@ -350,6 +352,7 @@ export function blankComponent(name: string, module: string, file: string, struc
     models: new Map(),
     aliases: new Map(),
     importedTypes: new Map(),
+    unresolved: new Map(),
     slotShapes: new Map(),
     inheritAttrs: true,
     inherits: false,

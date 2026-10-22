@@ -5,9 +5,10 @@ import { basename } from "node:path";
 import { relativePath } from "./paths.ts";
 import { type Component, type N, absence, blankComponent, fail, GenError, opt, snake, sourceAt, tagAst } from "./model.ts";
 import { ctx, readSource } from "./context.ts";
-import { typesImports, declareTypes, defaultValue, definePropsType, ONE_NOTHING, reachLocal, readTypeFile, resolveImport, runtimeDefaults, structOf, tyOfTs } from "./typescript.ts";
+import { typesImports, declareTypes, defaultValue, definePropsType, ONE_NOTHING, reachLocal, readTypeFile, runtimeDefaults, structOf, tyOfTs } from "./typescript.ts";
 import { claim } from "./plugin.ts";
 import { asyncChildren } from "./script.ts";
+import { resolveImport } from "./resolve.ts";
 
 function vueErrorNode(err: unknown, within?: { line: number; column: number }): N {
   const loc = (err as { loc?: { start: { line: number; column: number } } }).loc;
@@ -158,7 +159,10 @@ export function readComponent(file: string, root: string, name = basename(file, 
     if (st.type !== "ImportDeclaration") continue;
     const from: string = st.source.value;
     for (const sp of st.specifiers) {
-      if (sp.type !== "ImportSpecifier") continue;
+      if (sp.type !== "ImportSpecifier") {
+        if (!from.endsWith(".vue") && resolveImport(comp.file, from) === null) comp.unresolved.set(sp.local.name, from);
+        continue;
+      }
       const typeName: string = sp.imported.name ?? sp.imported.value;
       if (from.endsWith(".vue")) {
         if (typeName !== "Props") comp.importedTypes.set(sp.local.name, { k: "struct", name: typeName, home: basename(from, ".vue") });
@@ -166,7 +170,10 @@ export function readComponent(file: string, root: string, name = basename(file, 
       }
       const isType = st.importKind === "type" || sp.importKind === "type";
       const typeFile = resolveImport(comp.file, from);
-      if (!typeFile) continue;
+      if (!typeFile) {
+        comp.unresolved.set(sp.local.name, from);
+        continue;
+      }
       if (ctx.plugins.some((p) => p.importedType?.(comp, typeFile, typeName, sp.local.name))) continue;
       if (ctx.helperModule !== null && from === ctx.helperModule && !isType) continue;
       readTypeFile(typeFile);

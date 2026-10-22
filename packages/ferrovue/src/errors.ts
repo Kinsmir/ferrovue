@@ -99,6 +99,10 @@ export const ERRORS = {
     title: "Destructured prop that is not a plain name",
     detail: "A prop destructured from `defineProps` is bound to a plain name: `{ title }`, `{ title: heading }` or `{ size = \"md\" }`. A nested pattern (`{ user: { name } }`, `{ tags: [first] }`) is refused. Bind the prop by name and read its fields in the template (`user.name`).",
   },
+  FV0110: {
+    title: "Name imported from a module the compiler cannot resolve to a `.ts` file of the project",
+    detail: "The compiler reads constants and types from the project's own `.ts` files, which a component imports by a relative path or through an alias: the `compilerOptions.paths` (and `baseUrl`) of the tsconfig.json nearest the component, and of the projects it references, and, when the Vite plugin runs, Vite's `resolve.alias`. The message names the specifier and where it was looked for. A name imported from a package is available only on the client: in an event handler, or computed in Rust and passed as a prop.",
+  },
 
   FV0201: {
     title: "Constant that refers to itself",

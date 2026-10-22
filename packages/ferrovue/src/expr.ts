@@ -10,6 +10,7 @@ import { boolOf, checkNullTest, choice, known, narrowing, narrowTo, nullTest, pa
 import { BUILTINS, builtin, call, isObjectCall } from "./calls.ts";
 import { constOf, constVal } from "./constants.ts";
 import { localeRefusal } from "./plugins/dates.ts";
+import { refuseUnresolved } from "./resolve.ts";
 
 const MATH_CONSTANTS = new Map(["E", "LN10", "LN2", "LOG10E", "LOG2E", "PI", "SQRT1_2", "SQRT2"].map((k) => [k, Math[k as "PI"]]));
 
@@ -47,6 +48,7 @@ export function refuseClientOnly(s: Scope, name: string, n: N, called = false): 
 /** Refuse a name the template reads that the server has no value for: one imported from a module
  * it does not run, or one nothing declares. */
 export function refuseUnavailable(s: Scope, name: string, n: N, called = false): never {
+  refuseUnresolved(s.comp, name, n);
   const from = s.imported.get(name);
   const what = called ? `\`${name}()\`` : `\`${name}\``;
   if (from !== undefined) {

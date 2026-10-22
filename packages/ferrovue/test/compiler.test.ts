@@ -946,7 +946,7 @@ const props = defineProps<{ body: TrustedHtml }>();
 </script>
 <template><div v-html="body"></div></template>`;
       expect(() => generate(island(source), { ...CONFIG, trustedHtml: "crate::sanitize::SafeHtml" })).toThrow(
-        /unsupported prop type `TrustedHtml`/,
+        /`TrustedHtml` is imported from `\.\/somewhere-else`, which the compiler cannot resolve to a `\.ts` file of the project/,
       );
     });
 
@@ -2341,6 +2341,14 @@ defineProps<{ cats: Cat[] }>();
   });
 
   const refused: [string, string, RegExp][] = [
+    [
+      "a value imported from a module that resolves to no `.ts` file of the project",
+      `<script setup lang="ts">
+import { LABEL } from "@/lib/format";
+</script>
+<template><p>{{ LABEL }}</p></template>`,
+      /X\.vue:4:\d+: `LABEL` is imported from `@\/lib\/format`, which the compiler cannot resolve to a `\.ts` file of the project: it is a package, or an alias declared neither/,
+    ],
     [
       "a listener of a name chosen at run time given to a child with a prop named like a listener",
       `<script setup lang="ts">
@@ -4188,6 +4196,7 @@ defineProps<{ onSale?: boolean }>();
   };
 
   const codes: Record<string, Code> = {
+    "a value imported from a module that resolves to no `.ts` file of the project": "FV0110",
     "a type parameter without a constraint": "FV0302",
     "a listener of a name chosen at run time given to a child with a prop named like a listener": "FV0514",
     "listeners from an object given to a child with a prop named like a listener": "FV0514",
@@ -4376,6 +4385,122 @@ defineProps<{ onSale?: boolean }>();
       expect(e.code).toBe(codes[what] ?? e.code);
     });
   }
+});
+
+describe("imports through aliases", () => {
+  const component = (from: string) => `<script setup lang="ts">
+import { LABEL } from "${from}";
+import type { Row } from "${from}";
+defineProps<{ row: Row }>();
+</script>
+<template><p>{{ LABEL }} {{ row.name }}</p></template>`;
+  const lib = 'export const LABEL = "Label";\nexport interface Row { name: string }\n';
+  const project = (files: Record<string, string>): string => {
+    const made = mkdtempSync(join(tmpdir(), "ferrovue-"));
+    roots.push(made);
+    for (const [file, text] of Object.entries(files)) {
+      mkdirSync(join(made, file, ".."), { recursive: true });
+      writeFileSync(join(made, file), text);
+    }
+    return made;
+  };
+  const SRC = { components: "src/components", out: "out" };
+  /** Whether the component read both the constant and the type through the import. */
+  const resolves = (root: string, options: Parameters<typeof generate>[3] = {}): boolean => {
+    const out = generate(root, SRC, new Map(), options);
+    return out.get("x.rs")!.includes('out.push_str("<p>Label ");') && out.get("types.rs")!.includes("pub struct Row");
+  };
+
+  it("resolves the `paths` of the tsconfig.json nearest the component, written with comments and trailing commas", () => {
+    const tsconfig = `{
+  // as create-vue writes it
+  "compilerOptions": {
+    "paths": { "@/*": ["./src/*",], /* the root */ "~/*": ["./*"] },
+  },
+}
+`;
+    expect(resolves(project({ "tsconfig.json": tsconfig, "src/lib/format.ts": lib, "src/components/X.vue": component("@/lib/format") }))).toBe(true);
+    expect(resolves(project({ "tsconfig.json": tsconfig, "src/lib/format/index.ts": lib, "src/components/X.vue": component("~/src/lib/format") }))).toBe(true);
+  });
+
+  it("resolves `paths` against `baseUrl`, and a bare path against `baseUrl` alone", () => {
+    const tsconfig = JSON.stringify({ compilerOptions: { baseUrl: "src", paths: { "#lib/*": ["lib/*"] } } });
+    expect(resolves(project({ "tsconfig.json": tsconfig, "src/lib/format.ts": lib, "src/components/X.vue": component("#lib/format") }))).toBe(true);
+    expect(resolves(project({ "tsconfig.json": tsconfig, "src/lib/format.ts": lib, "src/components/X.vue": component("lib/format") }))).toBe(true);
+  });
+
+  it("takes the pattern with the longest prefix, and an exact one first", () => {
+    const tsconfig = JSON.stringify({ compilerOptions: { paths: { "@/*": ["./wrong/*"], "@/lib/*": ["./src/lib/*"], "@/format": ["./src/lib/format.ts"] } } });
+    expect(resolves(project({ "tsconfig.json": tsconfig, "src/lib/format.ts": lib, "src/components/X.vue": component("@/lib/format") }))).toBe(true);
+    expect(resolves(project({ "tsconfig.json": tsconfig, "src/lib/format.ts": lib, "src/components/X.vue": component("@/format") }))).toBe(true);
+  });
+
+  it("follows `extends`, relative to the file that declares `paths`, as Nuxt's generated tsconfig.json is", () => {
+    expect(resolves(
+      project({
+        "tsconfig.json": JSON.stringify({ extends: "./.nuxt/tsconfig.json" }),
+        ".nuxt/tsconfig.json": JSON.stringify({ compilerOptions: { paths: { "~/*": ["../*"], "@/*": ["../*"] } } }),
+        "lib/format.ts": lib,
+        "src/components/X.vue": component("@/lib/format"),
+      }),
+    )).toBe(true);
+  });
+
+  it("follows the projects a solution-style tsconfig.json references, as create-vue's is", () => {
+    expect(resolves(
+      project({
+        "tsconfig.json": JSON.stringify({ files: [], references: [{ path: "./tsconfig.node.json" }, { path: "./tsconfig.app.json" }] }),
+        "tsconfig.node.json": JSON.stringify({ compilerOptions: { types: ["node"] } }),
+        "tsconfig.app.json": JSON.stringify({ extends: ["./tsconfig.base.json"], include: ["src/**/*"] }),
+        "tsconfig.base.json": JSON.stringify({ compilerOptions: { paths: { "@/*": ["./src/*"] } } }),
+        "src/lib/format.ts": lib,
+        "src/components/X.vue": component("@/lib/format"),
+      }),
+    )).toBe(true);
+  });
+
+  it("tries the aliases it is given first, as Vite's `resolve.alias` lists them", () => {
+    const root = project({ "tsconfig.json": JSON.stringify({ compilerOptions: { paths: { "@/*": ["./wrong/*"] } } }), "src/lib/format.ts": lib, "src/components/X.vue": component("@/lib/format") });
+    expect(resolves(root, { aliases: [{ find: "@", replacement: join(root, "src") }] })).toBe(true);
+    expect(resolves(root, { aliases: [{ find: /^@\/(.*)$/, replacement: join(root, "src", "$1") }] })).toBe(true);
+    expect(resolves(root, { aliases: [{ find: "@", replacement: "../" }] })).toBe(true);
+  });
+
+  it("refuses a name imported from a module it cannot resolve, naming the specifier and where it looked", () => {
+    const refused = (files: Record<string, string>, from: string, options: Parameters<typeof generate>[3] = {}): string => {
+      try {
+        generate(project({ ...files, "src/components/X.vue": component(from) }), SRC, new Map(), options);
+      } catch (e) {
+        if (!(e instanceof GenError)) throw e;
+        return `${e.code}: ${e.message.split("\n")[0]!}`;
+      }
+      throw new Error("compiled without an error");
+    };
+    const paths = { "tsconfig.json": JSON.stringify({ compilerOptions: { paths: { "@/*": ["./src/*"] } } }) };
+    expect(refused(paths, "@/lib/missing")).toBe(
+      "FV0110: src/components/X.vue:4:20: `Row` is imported from `@/lib/missing`, which the compiler cannot resolve to a `.ts` file of the project: `@/*` in tsconfig.json's `paths` maps it to src/lib/missing, where there is no `.ts` file",
+    );
+    expect(refused(paths, "date-fns")).toMatch(
+      /^FV0110: .*`Row` is imported from `date-fns`, which .*: it is a package, or an alias declared neither in the `compilerOptions.paths` of tsconfig.json nor in Vite's `resolve.alias` \(read only by the Vite plugin\)$/,
+    );
+    expect(refused({}, "@/lib/format")).toMatch(/^FV0110: .*it is a package, or an alias declared neither in a tsconfig.json's `compilerOptions.paths` \(there is none\) nor in Vite's `resolve.alias` \(read only by the Vite plugin\)$/);
+    expect(refused({ "tsconfig.json": "{ not json" }, "@/lib/format")).toMatch(/^FV0110: .*the `compilerOptions.paths` of tsconfig.json \(tsconfig.json is not valid JSON: .*\) nor/);
+    expect(refused({}, "./nope")).toMatch(/^FV0110: .*`Row` is imported from `\.\/nope`, which .*: there is no `\.ts` file at src\/components\/nope$/);
+    expect(refused({}, "~/lib/format", { aliases: [{ find: "~", replacement: "some-package" }] })).toMatch(/^FV0110: .*: Vite's alias `~` maps it to a package$/);
+  });
+
+  it("refuses a value imported from a package where the server reads it, and leaves one the client alone uses", () => {
+    const root = project({
+      "src/components/X.vue": `<script setup lang="ts">
+import { format } from "date-fns";
+import { useQuery } from "@tanstack/vue-query";
+</script>
+<template><p @click="useQuery">{{ format(1) }}</p></template>`,
+    });
+    expect(() => generate(root, SRC)).toThrow(/^src\/components\/X\.vue:5:\d+: `format` is imported from `date-fns`, which the compiler cannot resolve/);
+    writeFileSync(join(root, "src", "components", "X.vue"), readFileSync(join(root, "src", "components", "X.vue"), "utf8").replace("{{ format(1) }}", "x"));
+    expect(generate(root, SRC).get("x.rs")).toContain('out.push_str("<p>x</p>");');
+  });
 });
 
 describe("a `?:` whose branches differ in type, where it is shown as text", () => {

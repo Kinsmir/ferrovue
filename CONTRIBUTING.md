@@ -87,6 +87,8 @@ packages/ferrovue/           the compiler (npm package)
   src/inputs.ts              what a run reads, which `--watch` and the Vite plugin regenerate on
   src/files.ts, paths.ts     reading the directories and files the configuration names, and paths
                              written with `/` on every platform
+  src/resolve.ts             the `.ts` file an import leads to: a relative path, tsconfig's `paths`
+                             and `baseUrl`, Vite's `resolve.alias`
   src/errors.ts, diagnostics.ts
                              every error code with its title, and errors as the CLI, JSON and Vite show them
   src/volar.ts, editor.ts    `ferrovue/volar`: errors in the editor, from a plugin for Vue's language tools
