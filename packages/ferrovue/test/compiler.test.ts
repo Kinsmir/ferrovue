@@ -84,7 +84,7 @@ defineProps<{ n: number; on: boolean }>();
       const project = island(
         `<script setup lang="ts">
 import { computed } from "vue";
-import { fmt } from "number-format";
+import { fmt } from "./util";
 const props = defineProps<{ n: number; pair: [number, number] }>();
 function twice(x: number) { return x * 2; }
 const big = computed(() => {
@@ -110,10 +110,8 @@ const big = computed(() => {
       ]);
       writeFileSync(join(project, "components", "X.vue"), readFileSync(join(project, "components", "X.vue"), "utf8").replace("; pair: [number, number]", ""));
       const again = refusals(project).errors.map((one) => [(one as GenError).code, (one as GenError).what, (one as GenError).help]);
-      const twin = (name: string) => `put \`${name}\` in the module \`helpers.module\` names with a Rust twin under \`helpers.functions\` in ferrovue.config.json, or compute the value in Rust and pass it as a prop`;
       expect(again).toEqual([
-        ["FV0601", "`fmt()` calls a function imported from `number-format`, a module the server does not run", twin("fmt")],
-        ["FV0601", "`fmt` is imported from `number-format`, a module the server does not run", "export it from `number-format` as a constant the compiler evaluates (`export const fmt = …`), or compute the value in Rust and pass it as a prop"],
+        ["FV0613", "`fmt` is set up in a way the server cannot evaluate: it is a function imported from components/util.ts, which the template and a `computed` may call, and only an event handler may name without calling it", "call it, as `fmt(…)`, which the server translates, or name it only in an event handler"],
         ["FV0613", "`twice` is set up in a way the server cannot evaluate: it is a function, which the template and a `computed` may call, and only an event handler may name without calling it", "call it, as `twice(…)`, which the server translates, or name it only in an event handler"],
         [
           "FV0613",

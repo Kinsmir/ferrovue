@@ -265,9 +265,9 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
       }
       const local: string = d.id.name;
       if (scope.functions.get(local)?.node === init0) continue;
-      const declared = locals.get(local);
-      if (st.kind === "const" && declared !== undefined && declared.node === d && unwrapped(init0)?.type === "ObjectExpression") {
-        evaluable(local, declared, "it is an object the compiler does not evaluate");
+      const objectDecl = locals.get(local);
+      if (st.kind === "const" && objectDecl !== undefined && objectDecl.node === d && unwrapped(init0)?.type === "ObjectExpression") {
+        evaluable(local, objectDecl, "it is an object the compiler does not evaluate");
         continue;
       }
       if (useAttrsName !== null && init0?.type === "CallExpression" && init0.callee.type === "Identifier" && init0.callee.name === useAttrsName) {
