@@ -3258,6 +3258,22 @@ const props = defineProps<{ tags: string[]; n: number }>();
       /a function's body may not hold a function declared inside it/,
     ],
     [
+      "a constant `Map` read by its size",
+      `<script setup lang="ts">
+const WIDTH = new Map([["sm", 12], ["md", 16]]);
+</script>
+<template><i>{{ WIDTH.size }}</i></template>`,
+      /X\.vue:4:\d+: `WIDTH` is a constant `Map`, which the server reads with `\.get\(key\)` and `\.has\(key\)`/,
+    ],
+    [
+      "`&&` after an optional string, which may be empty",
+      `<script setup lang="ts">
+defineProps<{ s?: string }>();
+</script>
+<template><i>{{ s && s.length }}</i></template>`,
+      /X\.vue:4:\d+: `&&` gives its left side where that is falsy, and this one, an optional string, may be falsy where it is present/,
+    ],
+    [
       "a computed with a loop read by the template",
       `<script setup lang="ts">
 const props = defineProps<{ tags: string[]; n: number }>();
@@ -4699,6 +4715,8 @@ defineProps<{ onSale?: boolean }>();
     "a switch with no case for some values and nothing after it": "FV1903",
     "a function declared in a callback's body": "FV1901",
     "a computed with a loop read by the template": "FV1902",
+    "a constant `Map` read by its size": "FV0227",
+    "`&&` after an optional string, which may be empty": "FV0614",
     "Object.entries pairs mapped to themselves": "FV0816",
     "Object.entries pairs joined": "FV0816",
     "Object.entries pairs sorted without a comparator": "FV0816",
