@@ -525,8 +525,8 @@ export function expr(s: Scope, n: N): Val {
         if (a.ty.of.k === "str" && b.ty.k === "str" && isTemporary(b)) {
           return { code: `&*${atom(a.code)}.map(std::borrow::Cow::<str>::Borrowed).unwrap_or(${asCow(b)})`, ty: STR, ...loneOf(a, b) };
         }
-        if (sameTy(a.ty.of, b.ty)) return { code: `${atom(a.code)}.unwrap_or(${bare(b.code)})`, ty: joinTy(b.ty, a.ty.of), ...loneOf(a, b) };
-        if (b.ty.k === "opt" && sameTy(a.ty.of, b.ty.of)) return { code: `${atom(a.code)}.or(${bare(b.code)})`, ty: joinTy(b.ty, a.ty), ...loneOf(a, b) };
+        if (sameTy(a.ty.of, b.ty)) return { code: `${atom(a.code)}.unwrap_or(${bare(b.code)})`, ty: joinTy(a.ty.of, b.ty), ...loneOf(a, b) };
+        if (b.ty.k === "opt" && sameTy(a.ty.of, b.ty.of)) return { code: `${atom(a.code)}.or(${bare(b.code)})`, ty: joinTy(a.ty, b.ty), ...loneOf(a, b) };
         if (a.ty.of.k === "float" && b.ty.k === "int") return { code: `${atom(a.code)}.unwrap_or(${bare(asF64(b))})`, ty: FLOAT };
         if (a.ty.of.k === "int" && b.ty.k === "float") return { code: `${atom(a.code)}.map(|v| v as f64).unwrap_or(${bare(b.code)})`, ty: FLOAT };
         return n.operator === "??" ? fail(comp, "FV0616", "`??` between different types", n) : fail(comp, "FV0617", "`||` between these types", n);

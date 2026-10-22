@@ -66,7 +66,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     let s_shout = if props.loud { "lg" } else { "sm" };
     let s_heading = format!("{} / {}", (match s_shout { "lg" => "Large \"L\"", _ => "Small" }), fv::Js(match &*props.tone { "info" => 400.0f64, "warn" => 600.0f64, _ => 700.5f64 }));
     out.push_str("<section class=\"");
-    fv::class_into(out, false, &[match &*props.size { "sm" => "p-1", "md" => "p-2", _ => "p-4" }, if matches!(&*props.tone, "danger") { "dark" } else { "light" }]);
+    fv::class_into(out, false, &[match &*props.size { "sm" => "p-1", "md" => "p-2", _ => "p-4" }, if !matches!(&*props.tone, "info" | "warn") { "dark" } else { "light" }]);
     out.push_str("\" style=\"color:");
     fv::escape_into(out, match &*props.tone { "info" => "navy", "warn" => "<b>\"&amp;'", _ => "white" });
     out.push_str(";background:");
@@ -120,7 +120,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     for b_ref in props.badges.iter() {
         let b = b_ref;
         out.push_str("<li class=\"");
-        fv::class_into(out, false, &[if matches!(&*b.tone, "danger") { "dark" } else { "" }]);
+        fv::class_into(out, false, &[if !matches!(&*b.tone, "info" | "warn") { "dark" } else { "" }]);
         out.push_str("\" style=\"font-weight:");
         fv::push_number(out, match &*b.tone { "info" => 400.0f64, "warn" => 600.0f64, _ => 700.5f64 });
         out.push_str(";\">");

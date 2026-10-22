@@ -345,7 +345,9 @@ export function pickPresent(s: Scope, n: N): string | null {
   if (sym?.k !== "pick" || !sym.arms.every((a) => a.k === "none" || (a.k === "const" && a.c.k === "object"))) return null;
   const yes = sym.keys.filter((_, i) => sym.arms[i]!.k !== "none");
   if (yes.length === sym.keys.length) return "true";
-  return yes.length === 0 ? "false" : `matches!(${sym.on.code}, ${pattern(yes)})`;
+  if (yes.length === 0) return "false";
+  const no = sym.keys.filter((_, i) => sym.arms[i]!.k === "none");
+  return sym.arms.at(-1)!.k === "none" ? `matches!(${sym.on.code}, ${pattern(yes)})` : `!matches!(${sym.on.code}, ${pattern(no)})`;
 }
 
 function pattern(keys: readonly (string | number)[]): string {
@@ -392,8 +394,11 @@ function symVal(sym: Sym, at: { comp: Component; node: N; what: string }): Val {
   if (groups.length === 1) return { code: groups[0]![1], ty, ...slice };
   if (ty.k === "bool" && groups.every(([, code]) => code === "true" || code === "false")) {
     const yes = groups.find(([, code]) => code === "true")![0];
-    return { code: `matches!(${sym.on.code}, ${pattern(yes)})`, ty };
+    const no = groups.find(([, code]) => code === "false")![0];
+    return { code: codes.at(-1) === "true" ? `!matches!(${sym.on.code}, ${pattern(no)})` : `matches!(${sym.on.code}, ${pattern(yes)})`, ty };
   }
+  const last = groups.findIndex(([, code]) => code === codes[codes.length - 1]);
+  groups.push(...groups.splice(last, 1));
   const branches = groups.map(([keys, code], i) => `${i === groups.length - 1 ? "_" : pattern(keys)} => ${code}`);
   return { code: `match ${sym.on.code} { ${branches.join(", ")} }`, ty, ...slice };
 }

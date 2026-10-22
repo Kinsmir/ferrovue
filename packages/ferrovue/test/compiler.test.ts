@@ -240,6 +240,25 @@ defineProps<{ c: string | null }>();
     expect(out).toContain("if props.boxed {");
   });
 
+  it("renders the union's last choice in the `_` arm of `<component :is>`, however the choices group", () => {
+    const out = compile(
+      island(
+        `<script setup lang="ts">
+import Y from "./Y.vue";
+import Z from "./Z.vue";
+defineProps<{ k: "a" | "b" | "c" }>();
+const PICK = { a: Y, b: Z, c: Y } as const;
+const TAG = { a: "em", b: "strong", c: "em" } as const;
+</script>
+<template><div><component :is="PICK[k]" /><component :is="TAG[k]">t</component></div></template>`,
+        { Y: "<template><span>y</span></template>", Z: "<template><span>z</span></template>" },
+      ),
+    ).get("x.rs")!;
+    expect(out).toContain('"b" => {\n            super::z::render(');
+    expect(out).toContain("_ => {\n            super::y::render(");
+    expect(out).toContain('match &*props.k { "b" => "strong", _ => "em" }');
+  });
+
   it("reserves a loop's markup per item and the text the props hold", () => {
     const out = compile(
       island(`<script setup lang="ts">
@@ -345,6 +364,14 @@ defineProps<{ note?: string }>();
       expect([...out.keys()].toSorted()).toEqual(readdirSync(join(root, config.out)).toSorted());
       for (const [name, text] of out) expect(readFileSync(join(root, config.out, name), "utf8"), name).toBe(text);
     });
+  });
+
+  it("is what the Rust test of values outside a closed union compiles", () => {
+    const root = join(import.meta.dirname, "../../../crates/ferrovue/tests/closed_unions");
+    const config = loadConfig(root);
+    const out = generate(root, config);
+    expect([...out.keys()].toSorted()).toEqual(readdirSync(join(root, config.out)).toSorted());
+    for (const [name, text] of out) expect(readFileSync(join(root, config.out, name), "utf8"), name).toBe(text);
   });
 
   describe("the version of generated code", () => {
@@ -5056,6 +5083,26 @@ describe("constant lookups", () => {
     );
     expect(out).toContain('fv::class_into(out, false, &[match &*props.size { "sm" => "p-1", "md" => "p-2", _ => "p-4" }]);');
     expect(out).toContain('fv::escape_into(out, match &*props.size { "sm" => "p-1", "md" => "p-2", _ => "p-4" });');
+  });
+
+  it("reads the union's last member in the `_` arm, whatever the `??` default and however the values group", () => {
+    const out = render(
+      'type K = "a" | "b" | "c";\ndefineProps<{ k?: K; j: K }>();\nconst T = { a: "A", b: "B", c: "C" } as const;\nconst U = { a: "A", b: "B", c: "A" } as const;',
+      "<i>{{ T[k ?? 'c'] }} {{ T[k ?? 'b'] }} {{ U[j] }}</i>",
+    );
+    expect(out.match(/match [^{]*\{ "a" => "A", "b" => "B", _ => "C" \}/g)).toHaveLength(2);
+    expect(out).toContain('match &*props.j { "b" => "B", _ => "A" }');
+  });
+
+  it("reads a value outside the union as the last member in a table of booleans and in `v-if` of a table that lacks members", () => {
+    const out = render(
+      'type K = "a" | "b" | "c";\ndefineProps<{ k: K }>();\nconst LAST = { a: false, b: false, c: true };\nconst FIRST = { a: true, b: false, c: false };\nconst ICON: Partial<Record<K, { label: string }>> = { a: { label: "ia" }, c: { label: "ic" } };\nconst NONE_LAST: Partial<Record<K, { label: string }>> = { a: { label: "ia" }, b: { label: "ib" } };',
+      '<i v-if="LAST[k]">l</i><i v-if="FIRST[k]">f</i><b v-if="ICON[k]">{{ ICON[k].label }}</b><b v-if="NONE_LAST[k]">{{ NONE_LAST[k].label }}</b>',
+    );
+    expect(out).toContain('if !matches!(&*props.k, "a" | "b") {');
+    expect(out).toContain('if matches!(&*props.k, "a") {');
+    expect(out).toContain('if !matches!(&*props.k, "b") {');
+    expect(out).toContain('if matches!(&*props.k, "a" | "b") {');
   });
 
   it("reads a constant a `.ts` file exports, keyed by its enum's members, by a prop of the enum and a `v-for` item's field", () => {
