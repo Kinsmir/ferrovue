@@ -44,7 +44,9 @@ export function setupSource(comp: Component, init: N): N | null {
     if (name === "computed") {
       const fn = init.arguments[0];
       if (fn?.type !== "ArrowFunctionExpression" && fn?.type !== "FunctionExpression") return null;
-      return bodyExpr(comp, fn, "a `computed`'s body");
+      const body = bodyExpr(comp, fn, "a `computed`'s body");
+      const returns = fn.returnType?.typeAnnotation;
+      return returns ? typedBy(body, returns) : body;
     }
   }
   if (init.type === "TSAsExpression" || init.type === "TSSatisfiesExpression" || init.type === "TSNonNullExpression") return setupSource(comp, init.expression);
@@ -54,6 +56,21 @@ export function setupSource(comp: Component, init: N): N | null {
 function unwrapped(n: N): N {
   while (n && ["TSAsExpression", "TSSatisfiesExpression", "TSNonNullExpression", "ParenthesizedExpression"].includes(n.type)) n = n.expression;
   return n;
+}
+
+function constant(d: Declared): boolean {
+  try {
+    constOfDecl(d);
+    return true;
+  } catch (e) {
+    if (e instanceof GenError) return false;
+    throw e;
+  }
+}
+
+function refOf(t: N): N | undefined {
+  const name = t?.type === "TSTypeReference" && t.typeName.type === "Identifier" ? t.typeName.name : null;
+  return (name === "ComputedRef" || name === "Ref" || name === "ShallowRef") && t.typeParameters?.params?.length === 1 ? t.typeParameters.params[0] : undefined;
 }
 
 function statedTy(init: N): N | undefined {
@@ -161,13 +178,13 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
     plugins: new Map(),
   };
   for (const p of ctx.plugins) if (p.scope) scope.plugins.set(p, p.scope(scope));
-  const evaluable = (local: string, d: Declared, why: string): void => {
+  const evaluable = (local: string, d: Declared, why: string, help: string | null = null): void => {
     try {
       scope.consts.set(local, constOfDecl(d));
     } catch (e) {
       if (!(e instanceof GenError)) throw e;
       scope.clientOnly.set(local, `${why}: ${e.message.split("\n")[0]!}`);
-      scope.refusedBy.set(local, e);
+      scope.refusedBy.set(local, help === null || e.help !== null ? e : Object.assign(new GenError(e.code, e.message, e.at, e.what, help), { readAt: e.readAt }));
     }
   };
   const locals = declareConsts(comp, ast);
@@ -267,8 +284,10 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
       if (scope.functions.get(local)?.node === init0) continue;
       const objectDecl = locals.get(local);
       if (st.kind === "const" && objectDecl !== undefined && objectDecl.node === d && unwrapped(init0)?.type === "ObjectExpression") {
-        evaluable(local, objectDecl, "it is an object the compiler does not evaluate");
-        continue;
+        if (!(d.id.typeAnnotation || statedTy(init0)) || constant(objectDecl)) {
+          evaluable(local, objectDecl, "it is an object the compiler does not evaluate", `annotate it with an interface, \`const ${local}: Card = { … }\`, to build it as the Rust struct of that interface`);
+          continue;
+        }
       }
       const made = unwrapped(init0);
       if (st.kind === "const" && objectDecl !== undefined && objectDecl.node === d && made?.type === "NewExpression" && made.callee.type === "Identifier" && made.callee.name === "Map" && !locals.has("Map")) {
@@ -301,7 +320,7 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
       const isRef = init0.type === "CallExpression" && init0.callee.type === "Identifier" && ["ref", "shallowRef", "computed"].includes(init0.callee.name);
       if (isRef) scope.refs.add(local);
       const isComputed = isRef && init0.callee.name === "computed";
-      const typed = isRef ? init0.typeParameters?.params?.[0] : (d.id.typeAnnotation?.typeAnnotation ?? statedTy(init0));
+      const typed = isRef ? (init0.typeParameters?.params?.[0] ?? refOf(d.id.typeAnnotation?.typeAnnotation)) : (d.id.typeAnnotation?.typeAnnotation ?? statedTy(init0));
       let v: Val;
       try {
         const untyped = setupSource(comp, init0);
@@ -326,7 +345,7 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
       const { init, read } = bindingOf(v);
       const lazy = isComputed && mayPanic(lazies, init);
       lets.push(lazy ? `let ${name} = std::cell::LazyCell::new(|| ${init});` : `let ${name} = ${init};`);
-      scope.setup.set(local, read(lazy ? `(*${name})` : name));
+      scope.setup.set(local, read(lazy && !v.owned ? `(*${name})` : name));
       if (lazy) lazies.set(local, name);
     }
   }

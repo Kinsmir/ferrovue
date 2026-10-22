@@ -10,6 +10,7 @@ import { boolOf, truthy } from "./narrowing.ts";
 import { coerce, describeTy, expr, refuseClientOnly, refuseUnavailable } from "./expr.ts";
 import { callFunction } from "./functions.ts";
 import { constOf, mapCall } from "./constants.ts";
+import { refuseInPlace } from "./objects.ts";
 
 const DIGITS = new Map<string, [Code, number, string]>([
   ["toFixed", ["FV0705", 0, "number of digits"]],
@@ -195,6 +196,7 @@ export function call(s: Scope, n: N): Val {
     if (isNumber(target.ty) && method === "toString" && args.length === 0) {
       return { code: `&*fv::Js(${bare(target.code)}).to_string()`, ty: asciiTy() };
     }
+    if (target.owned) refuseInPlace(comp, `\`.${method}()\``, n);
     if (target.ty.k === "list") {
       const inPlace = target.iter === undefined && !target.lone && (target.ty.of.k === "str" || target.ty.of.k === "int");
       const listed = listMethod(s, target, method, args, n) ?? (inPlace ? null : computedListMethod(s, target, method, args, n));

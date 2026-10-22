@@ -35,6 +35,8 @@ export const DATE_PROPS_ONLY =
  * which may be optional or nullable too. */
 export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen: Set<string> = new Set(), dates = false): Ty {
   switch (t.type) {
+    case "FvTy":
+      return t.ty;
     case "TSStringKeyword":
       return STR;
     case "TSNumberKeyword":

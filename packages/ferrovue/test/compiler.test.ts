@@ -119,7 +119,7 @@ const big = computed(() => {
         ["FV0613", "`fmt` is set up in a way the server cannot evaluate: it is a function imported from components/util.ts, which the template and a `computed` may call, and only an event handler may name without calling it", "call it, as `fmt(…)`, which the server translates, or name it only in an event handler"],
         ["FV0613", "`twice` is set up in a way the server cannot evaluate: it is a function, which the template and a `computed` may call, and only an event handler may name without calling it", "call it, as `twice(…)`, which the server translates, or name it only in an event handler"],
         ["FV0601", "`nowhere()` is not available when rendering on the server", "a template calls JavaScript's built-ins and the helpers with Rust twins under `helpers.functions` in ferrovue.config.json; compute the value in Rust and pass it as a prop"],
-        ["FV0625", "an object literal is not supported in a template", null],
+        ["FV0634", "an object literal in the template whose type is not known, which the server builds as the Rust struct of an interface: pass it to a prop typed with an interface, or build it in a `computed` typed with one", null],
         ["FV0625", "an arrow function is not supported in a template", null],
       ]);
     });
@@ -4603,6 +4603,167 @@ defineProps<{ words: string[]; nums: number[]; prices: Float[]; rows: Row[]; wor
 <template><p>{{ Math.max(...words) }}</p></template>`,
       /`Math\.max\(\.\.\.xs\)` spreads a list of numbers, and this is a list of other values/,
     ],
+    [
+      "an object literal with a key its interface does not declare",
+      `<script setup lang="ts">
+import V, { type Item } from "./V.vue";
+const props = defineProps<{ name: string; n: number; words: string[]; note?: string }>();
+
+</script>
+<template><div><V :item="{ label: name, extra: 1 }" /></div></template>`,
+      /`extra` is not a field of `Item`, which an object literal of that type holds only the fields of/,
+    ],
+    [
+      "an object literal that leaves out a required field",
+      `<script setup lang="ts">
+import V, { type Item } from "./V.vue";
+const props = defineProps<{ name: string; n: number; words: string[]; note?: string }>();
+
+</script>
+<template><div><V :item="{ n }" /></div></template>`,
+      /an object literal of type `Item` leaves out `label`, which `Item` requires/,
+    ],
+    [
+      "an object literal that gives a key twice",
+      `<script setup lang="ts">
+import V, { type Item } from "./V.vue";
+const props = defineProps<{ name: string; n: number; words: string[]; note?: string }>();
+
+</script>
+<template><div><V :item="{ label: name, label: 'b' }" /></div></template>`,
+      /`label` given twice in an object literal of type `Item`/,
+    ],
+    [
+      "an object literal with a computed key the compiler does not know",
+      `<script setup lang="ts">
+import V, { type Item } from "./V.vue";
+const props = defineProps<{ name: string; n: number; words: string[]; note?: string }>();
+
+</script>
+<template><div><V :item="{ [name]: name, label: name }" /></div></template>`,
+      /an object literal's computed key is a string or a number the compiler knows/,
+    ],
+    [
+      "an object literal with a method",
+      `<script setup lang="ts">
+import V, { type Item } from "./V.vue";
+const props = defineProps<{ name: string; n: number; words: string[]; note?: string }>();
+
+</script>
+<template><div><V :item="{ label: name, get n() { return 1; } }" /></div></template>`,
+      /a method or an accessor in an object literal of type `Item`/,
+    ],
+    [
+      "an object literal that sets `__proto__`",
+      `<script setup lang="ts">
+import V, { type Item } from "./V.vue";
+const props = defineProps<{ name: string; n: number; words: string[]; note?: string }>();
+
+</script>
+<template><div><V :item="{ label: name, __proto__: null }" /></div></template>`,
+      /`__proto__` in an object literal, which sets the object's prototype/,
+    ],
+    [
+      "an object literal spreading after its own keys",
+      `<script setup lang="ts">
+import V, { type Item } from "./V.vue";
+const props = defineProps<{ name: string; n: number; words: string[]; note?: string }>();
+function base(): Item { return { label: "b" }; }
+</script>
+<template><div><V :item="{ label: name, ...base() }" /></div></template>`,
+      /a spread `\.\.\.` after other keys of an object literal of type `Item`.*put the spread first/,
+    ],
+    [
+      "an object literal spreading an object of another type",
+      `<script setup lang="ts">
+import V, { type Item } from "./V.vue";
+const props = defineProps<{ name: string; n: number; words: string[]; note?: string }>();
+interface Other { label: string }
+function other(): Other { return { label: "o" }; }
+</script>
+<template><div><V :item="{ ...other() }" /></div></template>`,
+      /`\.\.\.` of an object in an object literal of type `Item`: a spread copies an object of the same type/,
+    ],
+    [
+      "an object literal whose field is given a value of another type",
+      `<script setup lang="ts">
+import V, { type Item } from "./V.vue";
+const props = defineProps<{ name: string; n: number; words: string[]; note?: string }>();
+
+</script>
+<template><div><V :item="{ label: n }" /></div></template>`,
+      /`label` of `Item` is a string, and the value given is a number/,
+    ],
+    [
+      "an object literal giving `null` to an optional field",
+      `<script setup lang="ts">
+import V, { type Item } from "./V.vue";
+const props = defineProps<{ name: string; n: number; words: string[]; note?: string }>();
+
+</script>
+<template><div><V :item="{ label: name, n: null }" /></div></template>`,
+      /a value that may be `null` where `n` of `Item` takes an optional number.*write `\?\? undefined` after it/,
+    ],
+    [
+      "an object literal giving an optional value to a required field",
+      `<script setup lang="ts">
+import V, { type Item } from "./V.vue";
+const props = defineProps<{ name: string; n: number; words: string[]; note?: string }>();
+
+</script>
+<template><div><V :item="{ label: note }" /></div></template>`,
+      /a value that may be `undefined` where `label` of `Item` takes a string.*narrow it with `v-if` first/,
+    ],
+    [
+      "an object literal in the template with no type",
+      `<script setup lang="ts">
+import V, { type Item } from "./V.vue";
+const props = defineProps<{ name: string; n: number; words: string[]; note?: string }>();
+
+</script>
+<template><div><p>{{ ({ a: n }).a }}</p></div></template>`,
+      /an object literal in the template whose type is not known, which the server builds as the Rust struct of an interface/,
+    ],
+    [
+      "a list method of a list `.map()` makes of object literals",
+      `<script setup lang="ts">
+import V, { type Item } from "./V.vue";
+const props = defineProps<{ name: string; n: number; words: string[]; note?: string }>();
+function rows(): Item[] { return props.words.map((w) => ({ label: w })); }
+</script>
+<template><div><p>{{ rows().filter((r) => r.label !== '').length }}</p></div></template>`,
+      /`\.filter\(\)` of a value built from object literals in place.*give it a `computed` of its own and read that/,
+    ],
+    [
+      "an item of a list `.map()` makes of object literals",
+      `<script setup lang="ts">
+import V, { type Item } from "./V.vue";
+const props = defineProps<{ name: string; n: number; words: string[]; note?: string }>();
+function rows(): Item[] { return props.words.map((w) => ({ label: w })); }
+</script>
+<template><div><p>{{ rows()[0]?.label }}</p></div></template>`,
+      /`\[…\]` of a value built from object literals in place/,
+    ],
+    [
+      "an optional chain of an object literal",
+      `<script setup lang="ts">
+import V, { type Item } from "./V.vue";
+const props = defineProps<{ name: string; n: number; words: string[]; note?: string }>();
+function one(): Item | undefined { return props.n > 0 ? { label: props.name } : undefined; }
+</script>
+<template><div><p>{{ one()?.label }}</p></div></template>`,
+      /`\?\.` of a value built from object literals in place/,
+    ],
+    [
+      "an optional list of object literals",
+      `<script setup lang="ts">
+import V, { type Item } from "./V.vue";
+const props = defineProps<{ name: string; n: number; words: string[]; note?: string }>();
+function rows(): Item[] | undefined { return props.n > 0 ? props.words.map((w) => ({ label: w })) : undefined; }
+</script>
+<template><div><V :item="{ label: name }" :items="rows() ?? []" /></div></template>`,
+      /`\?:` between a list built from object literals and `undefined` or `null`/,
+    ],
   ];
 
   const children = {
@@ -4618,9 +4779,30 @@ defineProps<{ c: string | null }>();
 defineProps<{ onSale?: boolean }>();
 </script>
 <template><b v-if="onSale">!</b></template>`,
+    V: `<script setup lang="ts">
+export interface Item { label: string; n?: number }
+defineProps<{ item: Item; items?: Item[] }>();
+</script>
+<template><b>{{ item.label }}{{ items?.length }}</b></template>`,
   };
 
   const codes: Record<string, Code> = {
+    "an object literal with a key its interface does not declare": "FV0635",
+    "an object literal that leaves out a required field": "FV0635",
+    "an object literal that gives a key twice": "FV0635",
+    "an object literal with a computed key the compiler does not know": "FV0635",
+    "an object literal with a method": "FV0635",
+    "an object literal that sets `__proto__`": "FV0635",
+    "an object literal spreading after its own keys": "FV0635",
+    "an object literal spreading an object of another type": "FV0635",
+    "an object literal whose field is given a value of another type": "FV0635",
+    "an object literal giving `null` to an optional field": "FV0606",
+    "an object literal giving an optional value to a required field": "FV0606",
+    "an object literal in the template with no type": "FV0634",
+    "a list method of a list `.map()` makes of object literals": "FV0636",
+    "an item of a list `.map()` makes of object literals": "FV0636",
+    "an optional chain of an object literal": "FV0636",
+    "an optional list of object literals": "FV0636",
     "a value imported from a module that resolves to no `.ts` file of the project": "FV0110",
     "a type parameter without a constraint": "FV0302",
     "a listener of a name chosen at run time given to a child with a prop named like a listener": "FV0514",
@@ -5085,6 +5267,139 @@ function pad(t: string, width = 3, fill?: string): string {
 <template><i>{{ pad(word.toUpperCase()) }}</i></template>`)).get("x.rs")!;
     expect(out).toMatch(/let (fv_c\d+) = props\.word\.to_uppercase\(\);.*fv::js_pad_start\(&\1, 3\.0f64, "\."\), \1\)/);
     expect(out.match(/to_uppercase/g)).toHaveLength(1);
+  });
+});
+
+describe("object literals", () => {
+  const head = `<script setup lang="ts">
+import { computed, type ComputedRef } from "vue";
+import V from "./V.vue";
+interface Card { title: string; count: number; note?: string; owner: string | null; tags: string[] }
+interface Pair { left: Card; right?: Card }
+const props = defineProps<{ name: string; n: number; words: string[]; card: Card; maybe?: Card; note?: string }>();
+`;
+  const child = `<script setup lang="ts">
+export interface Item { label: string; n?: number }
+defineProps<{ item: Item; items: Item[] }>();
+</script>
+<template><b>{{ item.label }}{{ items.length }}</b></template>`;
+  const x = (setup: string, template: string, files: Record<string, string> = {}): string => {
+    const root = island(`${head}${setup}\n</script>\n<template><div>${template}</div></template>`, { V: child });
+    for (const [name, text] of Object.entries(files)) writeFileSync(join(root, "components", name), text);
+    return compile(root).get("x.rs")!;
+  };
+  const refusal = (setup: string, template: string, files: Record<string, string> = {}): GenError => {
+    try {
+      x(setup, template, files);
+    } catch (e) {
+      if (e instanceof GenErrors) return e.errors[0] as GenError;
+      if (e instanceof GenError) return e;
+      throw e;
+    }
+    throw new Error("compiled without an error");
+  };
+
+  it("builds a computed's literal as the struct of its return type, in the order the keys are written, an optional field left out absent", () => {
+    const out = x(`const c = computed((): Card => (props.n > 0 ? { count: props.n, title: props.name, owner: null, tags: [] } : { title: "none", count: 0, owner: props.name, tags: props.words, note: props.note }));`, "{{ c.title }}");
+    expect(out).toContain(
+      'let s_c = if props.n as f64 > 0.0 { Card { count: props.n, title: std::borrow::Cow::<str>::Borrowed(&*props.name), owner: None, tags: Vec::new(), note: None } } else { Card { title: std::borrow::Cow::<str>::Borrowed("none"), count: 0i64, owner: Some(std::borrow::Cow::<str>::Borrowed(&*props.name)), tags: props.words.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect(), note: props.note.as_deref().map(std::borrow::Cow::<str>::Borrowed) } };',
+    );
+    expect(out).toContain("fv::escape_into(out, &s_c.title);");
+  });
+
+  it.each([
+    ["`computed<T>`", "const c = computed<Card>(() => ({ title: props.name, count: 1, owner: null, tags: [] }));"],
+    ["`ComputedRef<T>`", "const c: ComputedRef<Card> = computed(() => ({ title: props.name, count: 1, owner: null, tags: [] }));"],
+    ["`satisfies`", "const c = computed(() => ({ title: props.name, count: 1, owner: null, tags: [] }) satisfies Card);"],
+    ["an annotated `const`", "const c: Card = { title: props.name, count: 1, owner: null, tags: [] };"],
+  ])("takes the type from %s", (_, setup) => {
+    expect(x(setup, "{{ c.title }}")).toContain("let s_c = Card { title: std::borrow::Cow::<str>::Borrowed(&*props.name), count: 1i64, owner: None, tags: Vec::new(), note: None };");
+  });
+
+  it("copies an optional boolean field of another struct as it is", () => {
+    const out = x(
+      `interface Flag { on?: boolean; label: string }
+const src = computed((): Flag => ({ on: props.n > 0, label: props.name }));
+const copy = computed((): Flag => ({ on: src.value.on, label: "x" }));`,
+      "{{ copy.on }}",
+    );
+    expect(out).toContain('let s_copy = Flag { on: s_src.on, label: std::borrow::Cow::<str>::Borrowed("x") };');
+  });
+
+  it("writes shorthand keys, constant computed keys, an explicit `undefined`, a nested literal and a spread of the same type", () => {
+    const out = x(
+      `const KEY = "title";
+const title = computed(() => props.name.trim());
+const p = computed((): Pair => ({ left: { [KEY]: "l", count: 1, owner: null, tags: [], note: undefined }, right: { ...props.card, title: title.value } }));`,
+      "{{ p.left.title }}{{ p.right?.title }}",
+    );
+    expect(out).toContain('left: Card { title: std::borrow::Cow::<str>::Borrowed("l"), count: 1i64, owner: None, tags: Vec::new(), note: None }');
+    expect(out).toContain("right: Some(Card { title: std::borrow::Cow::<str>::Borrowed(s_title), ..props.card.clone() })");
+  });
+
+  it("builds a `.map()` callback's literal as the item type of the list it makes, owning what it reads from the callback's own values", () => {
+    const typed = x("const rows = computed<Card[]>(() => props.words.map((w, i) => ({ title: w.toUpperCase(), count: i, owner: w, tags: [] })));", '<p v-for="r in rows">{{ r.title }}</p>');
+    expect(typed).toContain("Card { title: std::borrow::Cow::<str>::Owned(fv_s1.to_uppercase()), count: fv_i1, owner: Some(std::borrow::Cow::<str>::Owned(str::to_owned(&*fv_s1))), tags: Vec::new(), note: None } }).collect::<Vec<_>>();");
+    expect(typed).toContain("for r_ref in s_rows.iter() {");
+    const returned = x("const rows = computed(() => props.words.map((w): Card => ({ title: w, count: 0, owner: null, tags: [] })));", "{{ rows.length }}");
+    expect(returned).toContain(".collect::<Vec<_>>();");
+    expect(returned).toContain("s_rows.len() as i64");
+  });
+
+  it("builds a child's prop from a literal, and from `.map()` to literals, as the child's own struct", () => {
+    const out = x("", `<V :item="{ label: name }" :items="words.map((w) => ({ label: w, n: 1 }))" /><V v-bind="{ item: { label: 'b', n }, items: [] }" />`);
+    expect(out).toContain("super::v::render(out, &super::v::Props { item: super::v::Item { label: std::borrow::Cow::<str>::Borrowed(&*props.name), n: None }, items: props.words.iter()");
+    expect(out).toContain("super::v::Item { label: std::borrow::Cow::<str>::Owned(str::to_owned(&*fv_s1)), n: Some(1i64) }).collect::<Vec<_>>() });");
+    expect(out).toContain('super::v::Props { item: super::v::Item { label: std::borrow::Cow::<str>::Borrowed("b"), n: Some(props.n) }, items: Vec::new() }');
+  });
+
+  it("builds the literal a function returns, one of a .ts file as the struct in types.rs, which its caller need not import", () => {
+    const out = x(
+      `import { cardOf } from "./cards";
+function local(on: boolean): Card {
+  if (on) return { title: "on", count: 1, owner: null, tags: [] };
+  return props.card;
+}`,
+      "{{ cardOf(name).title }}{{ local(n > 1).title }}",
+      { "cards.ts": "export interface Made { title: string; size: number }\nexport function cardOf(title: string): Made {\n  return { title: title.trim(), size: title.length };\n}\n" },
+    );
+    expect(out).toContain('fv::escape_into(out, &((super::types::Made { title: std::borrow::Cow::<str>::Borrowed(fv::js_trim(&props.name)), size: fv::js_length(&props.name) }).title));');
+    expect(out).toContain('{ Card { title: std::borrow::Cow::<str>::Borrowed("on"), count: 1i64, owner: None, tags: Vec::new(), note: None } } else { props.card.clone() }');
+  });
+
+  it("builds an array literal of objects as a list of the struct, and falls back to a literal from an optional object", () => {
+    const out = x(`const list = computed((): Card[] => [{ title: "a", count: 1, owner: null, tags: [] }, props.maybe ?? { title: "b", count: 2, owner: null, tags: [] }]);`, "{{ list.length }}");
+    expect(out).toContain('let s_list = Vec::from([Card { title: std::borrow::Cow::<str>::Borrowed("a"), count: 1i64, owner: None, tags: Vec::new(), note: None }, props.maybe.as_ref().cloned().unwrap_or(Card {');
+  });
+
+  it("evaluates a literal whose fields may throw where the render first reads it", () => {
+    expect(x(`const c = computed((): Card => ({ title: "-".repeat(props.n), count: 1, owner: null, tags: [] }));`, "{{ c.title }}")).toContain("let s_c = std::cell::LazyCell::new(|| Card { title: ");
+  });
+
+  it.each([
+    ["the template", "", "<p>{{ ({ a: n }).a }}</p>", /^an object literal in the template whose type is not known.*: pass it to a prop typed with an interface/],
+    ["a computed", "const c = computed(() => ({ a: props.n }));", "{{ c.a }}", /an object literal in a `computed` whose type is not known.*: annotate the `computed`, as `computed<Card>\(\(\) => …\)`/],
+    ["a `.map()` callback", "const c = computed(() => props.words.map((w) => ({ w })));", "{{ c.length }}", /an object literal in a `\.map\(\)` callback whose type is not known.*: type the callback's return, `\.map\(\(x\): Row => \(\{ … \}\)\)`/],
+    ["a function", "function f() { return { a: props.n }; }", "{{ f().a }}", /an object literal in a function whose type is not known.*: give the function a return type/],
+  ])("refuses an untyped literal in %s, saying how to type it", (_, setup, template, message) => {
+    const e = refusal(setup, template);
+    expect(e.code === "FV0634" || e.code === "FV0613").toBe(true);
+    expect(e.what).toMatch(new RegExp(message.source.replace(/^\^/, "")));
+  });
+
+  it("refuses an untyped object constant setup cannot evaluate, saying it may be annotated", () => {
+    const e = refusal("const o = { a: props.n };", "{{ o.a }}");
+    expect(e.code).toBe("FV0207");
+    expect(e.help).toMatch(/annotate it with an interface, `const o: Card = \{ … \}`/);
+  });
+
+  it("keeps a value built from literals out of JSON, `Object.keys`, `v-for`, `{{ }}` and `v-bind`, where the order of its keys would show", () => {
+    const setup = "const c = computed((): Card => ({ count: 1, title: props.name, owner: null, tags: [] }));";
+    expect(refusal(setup, "{{ JSON.stringify(c) }}").code).toBe("FV0707");
+    expect(refusal(setup, "{{ Object.keys(c).join() }}").code).toBe("FV0814");
+    expect(refusal(setup, '<p v-for="(v, k) in c">{{ k }}</p>').code).toBe("FV0820");
+    expect(refusal(setup, "{{ c }}").code).toBe("FV0401");
+    expect(refusal(setup, '<p v-bind="c">x</p>').code).toBe("FV0407");
   });
 });
 
@@ -5559,6 +5874,36 @@ const tagged = computed(() => {
     expect(out).toContain('format!("#{}", props.a)');
   });
 
+  it("builds an object literal an arrow function a body declares returns as the struct of its return type", () => {
+    const out = compiled(
+      `import { computed } from "vue";
+interface Card { title: string; size: number }
+const props = defineProps<{ a: string; b: string }>();
+function pick(): Card {
+  const card = (title: string): Card => ({ title, size: title.length });
+  return props.b.length > 0 ? card(props.b) : card(props.a);
+}
+const first = computed((): Card => {
+  const make = (title: string): Card => ({ title, size: 1 });
+  return make(props.a);
+});`,
+      "<i>{{ pick().title }}|{{ first.size }}</i>",
+    );
+    expect(out).toMatch(/Card \{/);
+    const untyped = refusal(
+      `import { computed } from "vue";
+interface Card { title: string }
+const props = defineProps<{ a: string }>();
+const first = computed((): Card => {
+  const make = (title: string) => ({ title });
+  return make(props.a);
+});`,
+      "<i>{{ first.title }}</i>",
+    );
+    expect(untyped.code).toBe("FV0634");
+    expect(untyped.message).toMatch(/an object literal in a function whose type is not known, .*give the function a return type/);
+  });
+
   it("refuses such a function that calls itself, or that is read as a value, by its own name", () => {
     const loop = refusal("defineProps<{ n: number }>();\nfunction f(n: number): number {\n  const g = (k: number): number => (k > 0 ? g(k - 1) : 0);\n  return g(n);\n}", "<i>{{ f(n) }}</i>");
     expect(loop.code).toBe("FV1906");
@@ -5632,8 +5977,8 @@ function pair(t: string): string {
     expect(rest).toEqual([]);
     expect(regex).toMatchObject({ code: "FV0710", at: { file: "components/X.vue", line: 4 } });
     expect(regex!.what).toMatch(/\(the template reads it as `clean` at components\/X\.vue:10:\d+\)$/);
-    expect(literal).toMatchObject({ code: "FV0625", at: { file: "components/X.vue", line: 5 } });
-    expect(literal!.what).toMatch(/^an object literal is not supported in a `computed` \(the template reads it as `shape` at /);
+    expect(literal).toMatchObject({ code: "FV0634", at: { file: "components/X.vue", line: 5 } });
+    expect(literal!.what).toMatch(/^an object literal in a `computed` whose type is not known, .* \(the template reads it as `shape` at /);
     expect(called).toMatchObject({ code: "FV0611", at: { file: "components/X.vue", line: 7 } });
     expect(called!.what).toMatch(/\(in `pair\(\)`, called at components\/X\.vue:10:\d+\)$/);
   });

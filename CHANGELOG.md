@@ -27,11 +27,29 @@ released together and share version numbers.
 - Constant `Map`s (`new Map([["sm", 12], ["md", 16]])`, keys strings or integers), read with
   `.get(key)`, `undefined` for a key the map lacks, and `.has(key)`. FV0227, a new entry of `ERRORS` in
   `ferrovue/compiler`, refuses a constant `Map` read in another way.
+- Object literals as values where their type is known, each built as the Rust struct of its
+  interface (the component's own, or the shared one in `types.rs`): the result of a `computed`
+  annotated with it (`computed<Card>(…)`, `computed((): Card => …)`, `ComputedRef<Card>`), of a
+  function's return type or given to a parameter's, in `<script setup>` or a `.ts` file; the items
+  of a `.map()` whose callback states its return type or whose list type is known
+  (`computed<Row[]>`, a function returning `Row[]`, a child's `Row[]` prop); a child's prop typed
+  with an interface (`:item="{ id, label }"`, `v-bind="{ item: { … } }"`); an annotated `const` in
+  setup, and `satisfies`. Shorthand keys, computed keys the compiler knows, nested literals, array
+  literals of objects and a spread of the same type before the other keys are supported; an
+  optional field left out or given `undefined` is `None`, a nullable field takes `null`. The
+  conformance components `ObjectLiterals` and `ObjectShapes` record them from Vue and hydrate them in
+  the browsers.
+- `FV0634`: an object literal whose type is not known, with a message that says where it is (the
+  template, a `computed`, a function, setup, a `.map()` callback) and how to type it. `FV0635`: an
+  object literal that does not match its interface (a key it does not declare, a required field
+  left out, a key given twice, a method, `__proto__`, a computed key the compiler does not know, a
+  spread of another type or after other keys). `FV0636`: a list method, an item or an optional
+  chain of a value built from object literals in place, which a `computed` of its own holds.
 
 ### Changed
 
 - A refusal inside a `computed`, a setup expression or a function the template calls carries that
-  refusal's own code and place (FV0710 for a regular expression, FV1902 for an assignment, FV0625
+  refusal's own code and place (FV0710 for a regular expression, FV1902 for an assignment, FV0634
   for an object literal), with where the template reads the value or calls the function; it was
   FV0613 or FV0601, with the inner code in parentheses. Messages say where the construct is ("in a
   `computed`", "in a function", "in setup"), `await` inside an expression suggests awaiting a
@@ -42,6 +60,9 @@ released together and share version numbers.
   `Object.hasOwn()` were given; FV0614 says why `&&` after a value that may be falsy while present
   is refused; FV1901 suggests `const f = (…) => …` for a `function` declared inside a body. The
   detail of FV0613 no longer lists a function declared in setup, which compiles.
+- An object literal in the template is refused with `FV0634` where it was `FV0625` ("an object
+  literal is not supported in a template"), also in a `computed` or a function. An untyped object
+  constant setup cannot evaluate keeps `FV0207`, with a hint to annotate it with an interface.
 - CI only: a retry of the browser job's system libraries first stops the `apt-get` the timed-out
   attempt left running and waits for the package lock, which that `apt-get` held so the next
   attempts failed at once.

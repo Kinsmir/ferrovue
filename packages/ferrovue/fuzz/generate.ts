@@ -136,7 +136,8 @@ export type HelperName =
   | "FzHead"
   | "FzSlots"
   | "FzDate"
-  | "FzStamp";
+  | "FzStamp"
+  | "FzCard";
 
 const HELPERS: Record<HelperName, { template: string; imports: HelperName[]; slot: boolean; script?: string[]; props?: string }> = {
   FzLeaf: { template: `<b class="leaf">leaf</b>`, imports: [], slot: false },
@@ -200,6 +201,24 @@ const HELPERS: Record<HelperName, { template: string; imports: HelperName[]; slo
     slot: false,
     props: "defineProps<{ at: Date; was?: Date }>();",
   },
+  FzCard: {
+    template: `<p class="card">{{ card.title }}|{{ card.n }}|{{ card.tag ?? "-" }}|<b v-if="card.on === null">null</b><b v-else-if="card.on">yes</b><b v-else>no</b>|{{ card.words.join(",") }}<i v-for="(c, i) in cards" :key="i" :title="c.tag">{{ c.title }}/{{ c.n }}</i></p>`,
+    imports: [],
+    slot: false,
+    script: ["export interface FzCardT {", "  title: string;", "  n: number;", "  tag?: string;", "  on: boolean | null;", "  words: string[];", "}"],
+    props: "defineProps<{ card: FzCardT; cards: FzCardT[] }>();",
+  },
+};
+
+const FZ_CARD: Iface = {
+  name: "FzCardT",
+  fields: [
+    { name: "title", spec: { k: "str" } },
+    { name: "n", spec: { k: "int", wide: false } },
+    { name: "tag", spec: { k: "opt", of: { k: "str" } } },
+    { name: "on", spec: { k: "nul", of: { k: "bool" } } },
+    { name: "words", spec: { k: "list", of: { k: "str" } } },
+  ],
 };
 
 const KEYS_FILE = `import type { InjectionKey, Ref } from "vue";
@@ -241,6 +260,7 @@ export interface Binding {
   e: Expr;
   lazy?: string;
   steps?: Step[];
+  obj?: { iface: string; list: boolean; how: "ret" | "param" };
 }
 
 export interface HeadValue {
@@ -690,6 +710,11 @@ function scriptLines(c: Component): string[] {
   for (const a of c.loads?.awaits ?? []) lines.push(awaitLine(a));
   for (const b of c.bindings) {
     const e = printExpr(b.e);
+    if (b.obj) {
+      const t = b.obj.list ? `${b.obj.iface}[]` : b.obj.iface;
+      lines.push(b.obj.how === "ret" ? `const ${b.name} = computed((): ${t} => ${e});` : `const ${b.name} = computed<${t}>(() => ${e});`);
+      continue;
+    }
     if (b.steps?.length) lines.push(`const ${b.name} = computed(() => {`, ...b.steps.map(stepLine), `  return ${e};`, "});");
     else lines.push(b.kind === "computed" ? `const ${b.name} = computed(() => ${e});` : b.kind === "ref" ? `const ${b.name} = ref(${e});` : `const ${b.name} = ${e};`);
   }
@@ -2439,6 +2464,7 @@ class Gen {
   child(depth: number): Node {
     const r = this.r;
     if (r.chance(this.dateWeight(0.25))) return this.dateChild();
+    if (r.chance(0.12)) return this.cardChild();
     this.nodes++;
     const names: HelperName[] = ["FzLeaf", "FzBox", "FzFwd", "FzPair", "FzRoot", "FzOwn", "FzBind", "FzUse", "FzPlain", "FzBare", "FzInj", "FzProv", "FzHead", "FzSlots"];
     const name = this.favour.length && r.chance(0.5) ? r.pick(this.favour) : r.pick(names);
@@ -2533,6 +2559,71 @@ class Gen {
       return carried;
     });
     return { cond: { ...atom("bool", text), fixed: true }, node: el };
+  }
+
+  fieldValue(spec: Spec, d: number): Expr | null {
+    const r = this.r;
+    const prim = (s: Spec): Expr => {
+      const ty = specTy(s)!;
+      return ty === "str" ? whole(this.str(d)) : ty === "int" ? this.int(d, BOUND_SMALL) : ty === "float" ? this.float(d) : this.bool(d);
+    };
+    if (spec.k === "opt" || spec.k === "nul") {
+      const ty = specTy(spec.of)!;
+      const held = this.vars(ty, BOUND_SMALL, true).filter((v) => !!v.nul === (spec.k === "nul") && !v.lone);
+      return r.weighted<() => Expr | null>([
+        [spec.k === "opt" ? 2 : 0, () => null],
+        [1, () => atom(ty, spec.k === "opt" ? "undefined" : "null")],
+        [3, () => prim(spec.of)],
+        [held.length ? 2 : 0, () => this.varRef(r.pick(held))],
+      ])();
+    }
+    if (spec.k === "list") {
+      const lists = this.scope.lists.filter((l) => l.of.k === spec.of.k && (l.of.k === "str" || l.of.k === "int"));
+      return r.weighted<() => Expr>([
+        [1, () => atom("str", "[]")],
+        [lists.length ? 2 : 0, () => atom("str", r.pick(lists).name)],
+        [spec.of.k === "str" || spec.of.k === "int" ? 2 : 0, () => {
+          const items = [prim(spec.of)];
+          if (r.chance(0.5)) items.push(prim(spec.of));
+          return node("str", items, (k) => `[${k.join(", ")}]`, 0, true);
+        }],
+      ])();
+    }
+    return prim(spec);
+  }
+
+  objectLiteral(fields: { name: string; spec: Spec }[], d: number): Expr {
+    const keys: string[] = [];
+    const values: Expr[] = [];
+    for (const f of this.r.chance(0.3) ? fields.toReversed() : fields) {
+      const v = this.fieldValue(f.spec, d);
+      if (v === null) continue;
+      keys.push(f.name);
+      values.push(v);
+    }
+    return { ...node("str", values, (k) => `({ ${keys.map((key, i) => `${key}: ${k[i]}`).join(", ")} })`, 0, true), fixed: true };
+  }
+
+  mappedLiterals(fields: { name: string; spec: Spec }[], d: number, returns: string | null): Expr | null {
+    const lists = this.scope.lists.filter((l) => l.of.k === "str" || l.of.k === "int" || l.of.k === "obj");
+    if (!lists.length) return null;
+    const l = this.r.pick(lists);
+    const { params, body } = this.arrow(l.of, false, () => this.objectLiteral(fields, d));
+    const typed = returns !== null && this.r.chance(0.5) ? `: ${returns}` : "";
+    return { ...node("str", [body], (k) => `${l.name}.map(${params}${typed} => ${k[0]})`, 0, true), fixed: true };
+  }
+
+  cardChild(): Node {
+    const r = this.r;
+    this.nodes++;
+    const card = this.objectLiteral(FZ_CARD.fields, r.int(0, 2));
+    const cards = r.weighted<() => Expr>([
+      [1, () => ({ ...atom("str", "[]"), fixed: true })],
+      [3, () => this.mappedLiterals(FZ_CARD.fields, r.int(0, 1), null) ?? { ...atom("str", "[]"), fixed: true }],
+      [1, () => ({ ...node("str", [this.objectLiteral(FZ_CARD.fields, 1)], (k) => `[${k[0]}]`, 0, true), fixed: true })],
+    ])();
+    const attrs: Attr[] = r.chance(0.5) ? [{ k: "bind", name: "card", e: card }, { k: "bind", name: "cards", e: cards }] : [{ k: "bind", name: "cards", e: cards }, { k: "bind", name: "card", e: card }];
+    return { k: "child", name: "FzCard", attrs, kids: [] };
   }
 
   dateChild(): Node {
@@ -3314,10 +3405,15 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
       if (kind === "const") g.scope.vars.push(bindingVar(binding));
     }
     for (let n = g.dateWeight(1) ? r.weighted([[2, 0], [3, 1], [1, 2]]) : 0; n > 0; n--) bindings.push({ name: `cmp${bindings.length}`, kind: "computed", e: g.date(r.int(1, 2)) });
+    for (let n = ifaces.length && r.chance(0.4) ? r.int(1, 2) : 0; n > 0; n--) {
+      const iface = r.pick(ifaces);
+      const list = r.chance(0.4) ? g.mappedLiterals(iface.fields, r.int(0, 2), iface.name) : null;
+      bindings.push({ name: `obj${bindings.length}`, kind: "computed", e: list ?? g.objectLiteral(iface.fields, r.int(0, 2)), obj: { iface: iface.name, list: list !== null, how: r.chance(0.5) ? "ret" : "param" } });
+    }
     if (r.chance(0.35)) {
       if (r.chance(0.7)) provides.push({ key: "str", e: whole(g.str(r.int(0, 2))) });
       if (r.chance(0.5)) provides.push({ key: "num", e: g.int(r.int(0, 2), BOUND_SMALL) });
-      const live = bindings.filter((b) => b.kind !== "const" && b.e.ty === "str" && b.lazy === undefined);
+      const live = bindings.filter((b) => b.kind !== "const" && b.e.ty === "str" && b.lazy === undefined && !b.obj);
       if (live.length && r.chance(0.6)) provides.push({ key: "live", e: { ...atom("str", r.pick(live).name), fixed: true } });
     }
     if (r.chance(0.3)) head.push(headCall(g, "useHead"));
@@ -3338,7 +3434,8 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
   if (consts) bindConsts(g, consts, 0.35);
   if (consts) bindLookups(g, consts, enumKeys(props, ""), 0.5);
   for (const b of bindings) {
-    if (b.e.ty === "date") g.scope.dates.push({ name: b.name, key: b.name, opt: false, ...(b.e.valid ? { valid: true } : {}) });
+    if (b.obj) g.bind(b.name, b.obj.list ? { k: "list", of: { k: "obj", iface: b.obj.iface } } : { k: "obj", iface: b.obj.iface });
+    else if (b.e.ty === "date") g.scope.dates.push({ name: b.name, key: b.name, opt: false, ...(b.e.valid ? { valid: true } : {}) });
     else if (b.lazy !== undefined) g.lazies.push({ dep: b.lazy, v: bindingVar(b) });
     else g.scope.vars.push(bindingVar(b));
   }
@@ -3422,6 +3519,7 @@ export function prune(c: Component): Component {
     }
   };
   props.forEach((p) => visit(p.spec));
+  for (const b of bindings) if (b.obj) visit({ k: "obj", iface: b.obj.iface });
   const full = `${text}\n${scriptLines({ ...c, bindings }).join("\n")}`;
   const routed = /<RouterLink|\$route\./.test(full) || READS_ROUTE.test(full);
   const translated = /\$t\(/.test(full) || CALLS_T.test(full) || mentions(full, "locale");
@@ -3455,7 +3553,7 @@ function* exprSlots(nodes: Node[]): Generator<{ get: () => Expr; set: (e: Expr) 
         yield { get: () => is.test, set: (e) => (is.test = e) };
       }
       for (const a of n.attrs) {
-        if (a.k === "bind") yield { get: () => a.e, set: (e) => (a.e = e) };
+        if (a.k === "bind" && !a.e.fixed) yield { get: () => a.e, set: (e) => (a.e = e) };
         else if (a.k === "style") for (const en of a.entries) yield { get: () => en.e, set: (e) => (en.e = e) };
         else if (a.k === "class") {
           const v = a.v;
@@ -3471,7 +3569,7 @@ function* exprSlots(nodes: Node[]): Generator<{ get: () => Expr; set: (e: Expr) 
 
 function* allSlots(c: Component): Generator<{ get: () => Expr; set: (e: Expr) => void }> {
   for (const st of c.stores) for (const g of st.getters) yield { get: () => g.e, set: (e) => (g.e = e) };
-  for (const b of c.bindings) if (b.kind !== "ref") yield { get: () => b.e, set: (e) => (b.e = b.steps ? joined(e, b.steps) : e) };
+  for (const b of c.bindings) if (b.kind !== "ref" && !b.obj) yield { get: () => b.e, set: (e) => (b.e = b.steps ? joined(e, b.steps) : e) };
   for (const p of c.provides) if (!p.e.fixed) yield { get: () => p.e, set: (e) => (p.e = whole(e)) };
   for (const h of c.head) for (const en of h.entries) yield { get: () => en.v.e, set: (e) => (en.v.e = whole(e)) };
   yield* exprSlots(c.template);

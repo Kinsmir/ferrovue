@@ -389,6 +389,11 @@ a value to one another agree on its type: `UserCard.vue` and `UserList.vue` impo
 file is that component's struct (`super::data_list::Row<'a>`), and one imported from a store's file
 is the struct in `stores.rs`.
 
+A parent may build an object prop from an object literal, `:user="{ id, name, roles: [] }"`, or a
+list of them from `.map()`, `:rows="items.map((x) => ({ id: x.id, label: x.name }))"`: each literal
+is built as the struct of the prop's interface, its optional fields left out `None`. See
+[object literals](crate::guide::script_logic#object-literals).
+
 A component's own interfaces and object type aliases, and those of the `.ts` files it imports, are
 translated when the server render reaches them: through a component's props and `defineModel` (a
 type parameter's constraint included), a provided or injected value, a `ref` or other binding the

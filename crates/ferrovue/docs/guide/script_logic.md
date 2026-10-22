@@ -1,5 +1,5 @@
 The logic of `<script setup>` on the server: statements in a `computed` and in a list method's
-callback, and the functions a template calls.
+callback, the functions a template calls, and the object literals they build.
 
 A `computed` may be written as a body of statements, as may the arrow function given to `.map()`,
 `.filter()`, `.find()`, `.some()`, `.every()`, `.findIndex()`, `.reduce()`, a `.toSorted()`
@@ -153,6 +153,88 @@ and may hold anything. One the template or a `computed` calls, whose body the se
 evaluate, is refused with the code of the statement or expression that stops it, at its place in
 the function's file, the message naming the function and the call: `` (in `total()`, called at
 components/Cart.vue:9:12) ``.
+
+# Object literals
+
+An object literal is built as the Rust struct of the interface it is typed with, a struct of the
+component's module or of `types.rs`. Its type comes from where it goes:
+
+- a `computed` annotated with it: `computed<Card>(() => …)`, `computed((): Card => …)`, or
+  `const card: ComputedRef<Card> = computed(…)`;
+- a function's return type (`function card(…): Card`), or a parameter's (`badge({ label })` for
+  `function badge(b: Badge)`), in `<script setup>` or in a `.ts` file;
+- a `.map()` callback's return type (`.map((x): Row => ({ … }))`), or the list type its result is
+  given: a `computed<Row[]>`, a function returning `Row[]`, a child's prop typed `Row[]`;
+- a child's prop typed with an interface, `:item="{ id, label }"`, and the same in `v-bind="{ … }"`;
+- an annotated `const` in setup, `const card: Card = { title: props.title, … }`, or `satisfies`;
+- the field of another literal, or an item of an array literal, typed by the field or the list.
+
+```vue
+<script setup lang="ts">
+import { computed } from "vue";
+import Crumbs from "./Crumbs.vue";
+
+interface Message {
+  title: string;
+  body: string;
+  code?: number;
+}
+
+const props = defineProps<{ code: number; parts: string[] }>();
+
+const message = computed((): Message =>
+  props.code === 404 ? { title: "Missing", body: "Gone." } : { title: "Error", body: "Retry.", code: props.code },
+);
+</script>
+
+<template>
+  <h1>{{ message.title }}</h1>
+  <!-- Crumbs: defineProps<{ crumbs: Crumb[] }>(), with interface Crumb { label: string; href: string } -->
+  <Crumbs :crumbs="parts.map((label, i) => ({ label, href: `/${parts.slice(0, i + 1).join('/')}` }))" />
+</template>
+```
+
+The literal's keys are evaluated in the order they are written, and the optional fields it leaves
+out are `None`, as an explicit `undefined` is. This is the generated code of `message`:
+
+```rust
+# use std::borrow::Cow;
+# struct Message<'a> { title: Cow<'a, str>, body: Cow<'a, str>, code: Option<i64> }
+# struct Props { code: i64 }
+# let props = Props { code: 500 };
+let s_message = if props.code as f64 == 404.0 { Message { title: std::borrow::Cow::<str>::Borrowed("Missing"), body: std::borrow::Cow::<str>::Borrowed("Gone."), code: None } } else { Message { title: std::borrow::Cow::<str>::Borrowed("Error"), body: std::borrow::Cow::<str>::Borrowed("Retry."), code: Some(props.code) } };
+# assert_eq!(s_message.title, "Error");
+# assert_eq!(s_message.body, "Retry.");
+# assert_eq!(s_message.code, Some(500));
+```
+
+A string the literal reads from the props stays borrowed; one it computes, or reads from a value a
+function or a `.map()` callback holds for itself, is owned. The template, a `computed` and a child
+read the struct's fields as they read a prop's.
+
+A key is a name, a string, a shorthand (`{ title }`), or a computed key the compiler knows (a
+string literal, a constant, an enum member: `{ [KEY]: "x" }`). A spread copies an object of the same
+interface and comes first, the keys after it writing over its fields: `{ ...card, title }`. Each
+field takes what a prop of its type takes, with the absence it declares: an optional field takes
+`undefined` or a value that may be `undefined`, a `T | null` field `null` or a value that may be
+`null`.
+
+Nothing the server renders shows the order of an object's keys or tells an absent field from one
+that is `undefined`: `JSON.stringify()`, `Object.keys()`, `v-for` over an object, `{{ }}` and
+`v-bind` of an object are refused, here as for an object prop, and so is an attribute bound to one.
+
+A value built from object literals is held while the expression that builds it runs. It is read
+whole, by a field, by `v-for` and `.length`, and handed to a child. A list method, an item
+(`list[0]`) or an optional chain of it is refused
+([FV0636](crate::guide::error_codes#fv0636)): give it a `computed` of its own and read that, or call
+`.filter()` before `.map()`.
+
+| Written | Code | What to write instead |
+|---|---|---|
+| a literal whose type is not known: no annotation reaches it | FV0634 | an annotation where it goes, as the message says |
+| a key the interface does not declare, a required field left out, a key given twice, a method, `__proto__`, a computed key the compiler does not know, a spread of another type or after other keys | FV0635 | the fields of the interface, the spread first |
+| `undefined` for a required field, `null` for an optional one | FV0606 | `?? null`, `?? undefined`, or the type the field declares |
+| a list method, an item or `?.` of a value built from literals | FV0636 | a `computed` that holds it, or the method called before `.map()` |
 
 # What is refused
 

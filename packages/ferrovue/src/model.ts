@@ -56,6 +56,7 @@ export interface Val {
   num?: number;
   pick?: true;
   format?: { text: string; args: string[] };
+  owned?: true;
 }
 
 export const STR: Ty = { k: "str" };
@@ -413,6 +414,8 @@ export interface Scope {
   opaque: string | null;
   loop?: { item: string; over: string } | undefined;
   plugins: Map<Plugin, unknown>;
+  mapping?: true | undefined;
+  typesFrom?: Component;
 }
 
 export type Origin = "source" | "template";

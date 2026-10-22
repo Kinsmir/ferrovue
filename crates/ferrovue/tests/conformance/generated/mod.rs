@@ -123,6 +123,8 @@ pub mod nullable;
 pub mod number_includes;
 pub mod number_tests;
 pub mod numbers;
+pub mod object_literals;
+pub mod object_shapes;
 pub mod optional_chains;
 pub mod own_keys;
 pub mod page;
@@ -189,6 +191,8 @@ pub mod themed_button;
 pub mod themed_choice;
 pub mod themed_list;
 pub mod themed_shelf;
+pub mod tile_card;
+pub mod tile_rows;
 pub mod translated;
 pub mod tree;
 pub mod truthy;
@@ -854,6 +858,14 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: numbers::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             numbers::render(&mut out, &props);
         }
+        "ObjectLiterals" => {
+            let props: object_literals::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            object_literals::render(&mut out, &props);
+        }
+        "ObjectShapes" => {
+            let props: object_shapes::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            object_shapes::render(&mut out, &props);
+        }
         "OptionalChains" => {
             let props: optional_chains::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             optional_chains::render(&mut out, &props);
@@ -1179,6 +1191,14 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "ThemedShelf" => {
             let props: themed_shelf::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             themed_shelf::render(&mut out, &props, provides::Provides::default());
+        }
+        "TileCard" => {
+            let props: tile_card::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            tile_card::render(&mut out, &props);
+        }
+        "TileRows" => {
+            let props: tile_rows::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            tile_rows::render(&mut out, &props);
         }
         "Translated" => {
             let props: translated::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

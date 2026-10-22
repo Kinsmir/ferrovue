@@ -154,6 +154,10 @@ around a refusal, from the least work:
 
 - **Rewrite the expression** as the message suggests: narrow an optional value before use, join a
   list before binding it to an attribute, compare values of one type.
+- **Type an object literal** with the interface it builds: a `computed` returning an object
+  (`computed((): Card => …)`), a function's return type, a `.map((x): Row => ({ … }))` callback. The
+  compiler builds the literal as that interface's Rust struct, where an untyped one is refused
+  (FV0634): [object literals](crate::guide::script_logic#object-literals).
 - **Compute the value in Rust and pass it as a prop.** Locale formatting, the current time and
   anything else the server cannot reproduce exactly is worked out by the handler and passed as a
   `string` or `number` prop, which the client receives unchanged:
