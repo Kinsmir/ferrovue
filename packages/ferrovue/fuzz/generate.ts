@@ -1283,7 +1283,6 @@ class Gen {
         return r.chance(0.5) ? { of: { k: "str" }, kids: [], fmt: () => `Object.keys(${v.name})`, lone: false } : { of: v.of, kids: [], fmt: () => `Object.values(${v.name})`, lone: false };
       }],
       [records.length ? 2 : 0, () => {
-        // The pairs of `Object.entries()`, kept by a test of either part and mapped to a value made of them.
         const v = r.pick(records);
         const n = this.arrows++;
         const [key, value] = [`k${n}`, `v${n}`];
@@ -1322,7 +1321,6 @@ class Gen {
           return { of, kids: [...prev.kids, fn.body], fmt: (k, at) => `${prev.fmt(k, at)}.map(${fn.params} => ${k[at + width]})`, lone: !!out!.lone, ...(of.k === "int" ? { mapped: true } : {}) };
         }],
         [1, () => {
-          // `.flatMap()` to an array literal of two values of one type, or to a string split.
           const split = r.chance(0.4);
           const sep = r.pick([",", "", "a", " "]);
           let pair: Expr | undefined;

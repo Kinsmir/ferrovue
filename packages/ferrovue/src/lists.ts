@@ -410,8 +410,6 @@ function comparatorShape(fn: N): Shape | null {
   return { path: path ?? "", ascending: less < 0, subtracted: false };
 }
 
-// A comparator of `[key, value]` pairs that destructures them, `([a], [b]) => …`, as one that
-// reads their parts, `(p, q) => …p[0]…`.
 function pairsRead(fn: N): N {
   const parts = new Map<string, N>();
   const params = fn.params.map((p: N, i: number) => {
@@ -562,7 +560,6 @@ export function spreadExtreme(s: Scope, method: "max" | "min", args: N[]): Val {
 
 const FLAT_ITEMS = new Set(["str", "int", "float", "bool", "struct", "child"]);
 
-// The items of a list whose items are lists, each a `&Vec` the iterator hands out.
 function nested(v: Val): string {
   return v.iter ?? `${atom(v.code)}.iter()`;
 }

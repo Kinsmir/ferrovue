@@ -171,8 +171,6 @@ function scriptText(html: string, id: string): string | undefined {
   return scriptTexts(html, (attrs) => attrs.get("id") === id, true)[0];
 }
 
-// The text of each `<script>` whose attributes `match`, outside a `<template>`, as the HTML parser
-// reads them; only the first when `first`.
 function scriptTexts(html: string, match: (attrs: Map<string, string>) => boolean, first: boolean): string[] {
   const found: string[] = [];
   const lower = html.toLowerCase();

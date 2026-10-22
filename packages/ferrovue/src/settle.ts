@@ -12,8 +12,6 @@ function loading(vnode: VNode | null | undefined, found: Promise<unknown>[]): vo
   if (type.__asyncLoader && !type.__asyncResolved) found.push(type.__asyncLoader());
   const suspense = vnode.suspense;
   if (suspense) {
-    // A `<Suspense>` waiting on an `async setup` (a loader's `await`): its branch resolves after
-    // the promises it awaits, a task later at most when they have settled.
     if (suspense.pendingBranch) found.push(new Promise((done) => setTimeout(done, 0)));
     loading(suspense.pendingBranch ?? suspense.activeBranch, found);
   }

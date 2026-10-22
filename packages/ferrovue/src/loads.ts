@@ -8,7 +8,6 @@ interface LoadStore {
   running: Set<Promise<unknown>>;
 }
 
-// One store for every copy of this module a page or a test loads, as the payload is the page's.
 const LOADS = Symbol.for("ferrovue.loads");
 
 function loadStore(): LoadStore {

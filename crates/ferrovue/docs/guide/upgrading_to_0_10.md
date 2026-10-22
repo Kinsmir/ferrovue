@@ -58,7 +58,7 @@ schema (`https://cdn.jsdelivr.net/npm/ferrovue@0.10.0/schema.json`).
 
 ## 4. Error codes your CI matches
 
-A run now reports every refusal it finds, not only the first: each component is checked on its
+A run now reports every refusal it finds: each component is checked on its
 own, and so is each statement and interpolation of a template. The text output ends with a line
 that counts them (`3 errors in 2 components`), and `--format json` gives every diagnostic, each
 with the new field `help` (`null` where there is none). The exit status is unchanged. A script
