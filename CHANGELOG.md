@@ -175,6 +175,10 @@ released together and share version numbers.
 
 ### Changed
 
+- CI only: the browser job's system libraries install in up to three attempts of six minutes each,
+  so a package mirror that stalls fails one attempt and the job tries again.
+- Tests only: a TypeScript test may take 30 seconds, where vitest's default is 5, so a test that
+  runs the CLI as a child process passes on a slow Windows runner.
 - Messages say what to do: FV1107 lists the types a helper or twin
   takes, FV1511 says `<ClientOnly>` leaves out the fallback there, FV1905 says to end the cases in
   `return`, and `release.ts members` says to use `version.workspace = true`. The guides and the
