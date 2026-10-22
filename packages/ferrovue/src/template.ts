@@ -1,10 +1,10 @@
 import { type N, type Scope, type Val, fail, GenError, nodeName } from "./model.ts";
 import { ctx } from "./context.ts";
-import { expr } from "./expr.ts";
+import { expr, shown } from "./expr.ts";
 import { type Presence, boolOf, cond, known, narrowTo, presence, truthy } from "./narrowing.ts";
 import { CMP, condition, occurrences, operand } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
-import { interpolate, keepsAttrCase, renderAttr, renderAttrs, renderDynamicAttr } from "./attrs.ts";
+import { attrShown, interpolate, keepsAttrCase, renderAttr, renderAttrs, renderDynamicAttr } from "./attrs.ts";
 import { renderStyle } from "./styles.ts";
 import { renderClass, vnodeClass } from "./classes.ts";
 import { renderChild } from "./children.ts";
@@ -39,16 +39,16 @@ export function slot(s: Scope, e: Emitter, n: N): void {
     const a: N[] = n.arguments;
     switch (n.callee.name) {
       case "_ssrInterpolate":
-        interpolate(s, e, expr(s, a[0]), a[0]);
+        interpolate(s, e, shown(s, a[0], "text"), a[0]);
         return;
       case "_ssrRenderAttr":
         if (a[0].type !== "StringLiteral") fail(s.comp, "FV0417", "attribute names are literal", n);
-        if (s.vnode) renderDynamicAttr(s, e, a[0].value, expr(s, a[1]), a[1], ctx.vnodeTag);
-        else renderAttr(s, e, a[0].value, expr(s, a[1]), a[1]);
+        if (s.vnode) renderDynamicAttr(s, e, a[0].value, attrShown(s, a[0].value, a[1], ctx.vnodeTag), a[1], ctx.vnodeTag);
+        else renderAttr(s, e, a[0].value, shown(s, a[1], "attr"), a[1]);
         return;
       case "_ssrRenderDynamicAttr":
         if (a[0].type !== "StringLiteral") fail(s.comp, "FV0417", "attribute names are literal", n);
-        renderDynamicAttr(s, e, a[0].value, expr(s, a[1]), n);
+        renderDynamicAttr(s, e, a[0].value, attrShown(s, a[0].value, a[1]), n);
         return;
       case "_ssrRenderAttrs":
         if (a.length > 1) fail(s.comp, "FV0006", "`ssrRenderAttrs` with a tag argument", n);

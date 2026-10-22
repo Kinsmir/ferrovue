@@ -137,6 +137,7 @@ A fixture is a JSON object of props plus three optional keys:
 | `Fallthrough` and its children, `ScopedFallthrough` | Attributes a child does not declare as props: onto a root with a class, a style, `v-show` and attributes of its own (`FallLeaf`: classes joined, once when equal, styles merged, the rest replaced where they stand, `undefined` too), with `inheritAttrs: false` onto elements that bind `$attrs` before and after their own (`FallInner`), dropped by two roots (`FallPair`), on through a root that is a component (`FallRoot`), and unmerged through one given nothing to `$attrs` bound alone (`FallBare`), through `useAttrs()` to an element and a component (`FallUse`), onto a `<RouterLink>` root (`FallLink`), onto a root chosen by `v-if` (`FallSwitch`), through a `<Transition>` root (`FallFade`), onto a root whose own class may be absent and whose style is text (`FallBinds`); with a scoped parent's ids after them |
 | `Strings` | String methods in UTF-16 code units (astral characters, `$` replacement patterns, padding, `split("")`), ordering by code unit, kept by `computed` |
 | `StringSearch` | `.includes()`, `.startsWith()`, `.endsWith()`, `.indexOf()` and `.lastIndexOf()` from a position (literal, a prop, negative, `NaN`, `Infinity`, an optional number that is absent, inside a surrogate pair), `.split()` with a limit (`0`, `-1`, 2³² + 1, a prop), `.substr()`, `.trimLeft()`, `.trimRight()`, `.concat()`, `.charCodeAt()` and `.codePointAt()` inside and beyond the string, in a `computed`, attributes and `v-for` |
+| `MixedTernary` | `?:` whose branches differ in type, written out: integers, `Float`s, booleans, strings, an optional number and `T \| null`, nested, in `{{ }}` (an absent branch writes nothing), in attributes on the root and on an inner element (an absent branch leaves the attribute out, an empty string writes it bare) and in a template literal (`undefined`, `null` and a list joined by `,`) |
 | `StringOf` | `String()`, template literals and `.concat()` of optional and nullable strings, numbers, `Float`s and booleans that are present, absent and empty (`undefined` and `null` as JavaScript writes them), of lists of strings, numbers, `Float`s, booleans and nullable items (joined by `,`, absent items as nothing), of computed lists and `[]`, beside `{{ }}` of the same values, which writes nothing for them |
 | `UriParts` | `encodeURIComponent()` and `encodeURI()` of strings, numbers, booleans, an optional string, lists and template literals, in text, attributes, a `computed` and `v-for`: reserved characters, `%`, astral characters, control characters, U+FFFD and U+2028 |
 | `MathMore` | `Math.sqrt()` and `Math.sign()` of `Float`s and integers (`-0`, `NaN`, the largest double, 2⁵³ − 1), `1 / Math.sign(-Math.abs(x))` showing `-0`, the eight `Math` constants and those of `Number`, `**` and `Math.pow()` of literals and a constant worked out when compiling, in text, attributes, `:style`, `v-if` and a `computed` |
@@ -193,13 +194,13 @@ when it names a component that is not in `components/` with fixtures of its own.
 | Props | `Defaults`, `Destructured`, `PropsObject`, `Model`, `ModelParent`, `Picker`, `Glyph`, `Divider` |
 | Setup | `Setup`, `SetupValues`, `Lifecycle`, `Pending`, `EmptyBranch`, `Unread`, `UnreadVar` |
 | Provide and inject | `TabsPage`, `Tabs`, `Tab`, `ThemedButton`, `ThemeScope`, `Swatch`, `SwatchShelf`, `ThemedShelf`, `ThemedList`, `ThemedChoice` |
-| Text | `Text`, `Exprs`, `Numbers`, `Precision`, `Meter`, `Parsing`, `NumberTests`, `Regressions`, `OptionalChains`, `StringOf`, `MathMore`, `UriParts`, `TypeofTests` |
+| Text | `Text`, `MixedTernary`, `Exprs`, `Numbers`, `Precision`, `Meter`, `Parsing`, `NumberTests`, `Regressions`, `OptionalChains`, `StringOf`, `MathMore`, `UriParts`, `TypeofTests` |
 | Strings | `Strings`, `Exprs`, `Text`, `StringSearch`, `StringOf` |
 | Dates | `Dates`, `Prices`, `DatePost`, `DateStamp`, `DateFormats`, `DateGuards` |
 | Conditions | `Branches`, `Narrowing`, `Nullable`, `TypeofTests` |
 | Lists | `Lists`, `Arrays`, `Chips`, `Truthy`, `NumberIncludes`, `NarrowedRows`, `Exprs`, `ListAccess`, `ListBuilding` |
 | Dictionaries | `Records`, `Chips` |
-| Attributes | `Attrs`, `BoundObject`, `Keywords` |
+| Attributes | `Attrs`, `BoundObject`, `Keywords`, `MixedTernary` |
 | `class` | `Attrs`, `BoundObject`, `VnodeClass`, `AsyncClass` |
 | `style` | `Styles`, `Shown`, `BoundObject` |
 | Scoped styles | `ScopedPage`, `ScopedLeaf`, `ScopedRoot`, `ScopedPair`, `ScopedCard`, `ScopedShelf`, `ScopedRack`, `ScopedFade`, `ScopedTree`, `ScopedNav`, `ScopedLink`, `ScopedQuirks` |
@@ -288,7 +289,8 @@ What it generates, with random nesting:
   optional versions, lists of strings and of integers, lists of objects of local interfaces, and
   dictionaries (`Record<string, T>`, `{ [key: string]: T }`) whose JSON gives array-index keys out
   of order and a key twice;
-- `{{ }}` of all of them; `v-if` / `v-else-if` / `v-else` (with `!`, `&&`, `||`, `===`, `!==`, `<`,
+- `{{ }}` of all of them, and of `?:` whose branches differ in type (strings, integers, fractions,
+  booleans, optional values), there, in bound attributes and in template literals; `v-if` / `v-else-if` / `v-else` (with `!`, `&&`, `||`, `===`, `!==`, `<`,
   `>`, presence tests and narrowing); `v-for` over lists, objects (destructured too), array literals,
   number ranges, computed lists and dictionaries (`(value, key, i) in r`, `Object.entries`), with an
   index;
