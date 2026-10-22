@@ -8,7 +8,7 @@
 // `into_` forms and `NAME`) and an app calls only what it needs.
 #![allow(dead_code)]
 
-ferrovue::__compat!(3);
+ferrovue::__compat!(4);
 
 pub mod badge;
 pub mod card;
@@ -28,6 +28,8 @@ struct Fixture {
     stores: serde_json::Value,
     #[serde(rename = "$locale", default)]
     locale: Option<String>,
+    #[serde(rename = "$loads", default)]
+    loads: serde_json::Map<String, serde_json::Value>,
 }
 
 #[cfg(test)]

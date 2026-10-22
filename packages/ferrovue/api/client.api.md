@@ -11,10 +11,16 @@ import { Plugin as Plugin_2 } from 'vue';
 import type { Router } from 'vue-router';
 
 // @public
+export function clearLoads(): void;
+
+// @public
 export const ClientOnly: Component;
 
 // @public
 export function createPageApp(layout: Component, record: PageRecord, components: Record<string, Component>, options?: PageAppOptions): App;
+
+// @public
+export function defineLoader<A extends unknown[], T>(name: string, loader: (...args: A) => Promise<T>): (...args: A) => Promise<T>;
 
 // @public
 export function hydrateState(pinia: Pinia, from?: string | StateText, doc?: Document): void;
@@ -29,6 +35,9 @@ export interface Islands {
     apps: App[];
     unmount(): void;
 }
+
+// @public
+export function loadKey(name: string, args: readonly unknown[]): string;
 
 // @public
 export function mountIslands(components: Record<string, IslandComponent>, options?: MountOptions): Promise<Islands>;
@@ -48,6 +57,7 @@ export function mountPage(layout: IslandComponent, components: Record<string, Is
 // @public (undocumented)
 export interface PageAppOptions extends Pick<MountOptions, "pinia" | "router" | "plugins"> {
     hydrate?: boolean;
+    suspense?: boolean;
 }
 
 // @public (undocumented)
@@ -72,7 +82,11 @@ export interface PageRecord {
 }
 
 // @public
+export function provideLoads(results: string | Record<string, unknown>): void;
+
+// @public
 export interface ReadPage {
+    loads: string[];
     record: PageRecord;
     state: string | undefined;
 }
@@ -93,6 +107,7 @@ export function renderPage(layout: IslandComponent, components: Record<string, I
 export interface RenderPageOptions extends Pick<MountOptions, "pinia" | "router" | "plugins"> {
     container?: Element | string;
     doc?: Document;
+    loads?: string[];
     previous?: {
         unmount(): void;
     } | undefined;

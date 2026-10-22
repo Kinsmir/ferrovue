@@ -34,6 +34,7 @@ export function conformanceSuite(options: ConformanceOptions): Promise<void>;
 
 // @public
 export interface Fixture {
+    loads?: Record<string, unknown> | null;
     locale?: string | null;
     // (undocumented)
     props: Record<string, unknown>;
@@ -101,6 +102,7 @@ export interface RecordedPage {
 export interface RenderPageOptions extends Pick<MountOptions, "pinia" | "router" | "plugins"> {
     container?: Element | string;
     doc?: Document;
+    loads?: string[];
     previous?: {
         unmount(): void;
     } | undefined;

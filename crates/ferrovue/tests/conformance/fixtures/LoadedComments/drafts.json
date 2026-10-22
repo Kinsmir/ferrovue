@@ -1,0 +1,11 @@
+{
+  "article": "x",
+  "page": 3,
+  "drafts": true,
+  "$loads": {
+    "[\"loadComments\",\"x\",3,true]": [
+      "one"
+    ],
+    "[\"loadNote\",1]": "only one"
+  }
+}

@@ -66,8 +66,9 @@ What is refused today, each with an error that names it:
 - `<RouterLink custom>`, slot props that are array literals, defaults in destructured slot props,
   and outlets of one slot that pass different props;
 - custom directives not listed in `clientDirectives`;
-- `watchEffect`, `watch` with `immediate`, `onServerPrefetch`, top-level `await`, and statements in
-  setup that change state;
+- `watchEffect`, `watch` with `immediate`, `onServerPrefetch`, a top-level `await` of anything but
+  a loader (see [`loaders`](crate::guide::loaders#what-is-refused)), and statements in setup that
+  change state;
 - `route.meta` and `route.matched`;
 - in a folder of pages: a parameter beside text in one part of a path (`prefix-[id].vue`),
   repeatable and optional catch-all parameters, parameter parsers (`[id=int]`), named views
@@ -88,7 +89,8 @@ What is refused today, each with an error that names it:
 - in a `computed`'s body or a callback's: loops, assignments, `try`, `throw`, `var`, and a path
   that ends without `return`. See [`script_logic`](crate::guide::script_logic#what-is-refused);
 - a dictionary's field read by name (`r.key`, `r[key]`), which may be absent although TypeScript
-  says it is not; `Object.entries()` anywhere but as a `v-for`'s source; dictionaries of optional
+  says it is not; the `[key, value]` pairs of `Object.entries()` joined, compared, sorted without a
+  comparator or kept as a list of pairs by `.map()`; dictionaries of optional
   values. See [`props`](crate::guide::props#dictionaries);
 - a type that is both `null` and `undefined` (`T | null | undefined`, `x?: T | null`), a default
   for a nullable prop, and `=== null` or `=== undefined` of a value that may be either. See

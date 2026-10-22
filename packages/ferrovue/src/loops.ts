@@ -6,6 +6,7 @@ import { atom, operand, OR } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
 import { statements } from "./template.ts";
 import { unbound } from "./narrowing.ts";
+import { bindEntry } from "./lists.ts";
 
 export function list(s: Scope, e: Emitter, c: N): void {
   const fn = c.arguments[1];
@@ -81,7 +82,8 @@ export function list(s: Scope, e: Emitter, c: N): void {
       }
       inner.set(p.value.name, fieldVal(s.comp, itemName, of, p.key.name ?? p.key.value, p));
     }
-  } else fail(s.comp, "FV0822", "a `v-for` item is a name or an object pattern", item);
+  } else if (item.type === "ArrayPattern" && of.k === "entry") bindEntry(s.comp, item, { code: itemName, ty: of, ...(src.lone ? { lone: true } : {}) }, inner, [], "FV0818");
+  else fail(s.comp, "FV0822", `a \`v-for\` item is a name or ${of.k === "entry" ? "an array pattern of a `[key, value]` pair" : "an object pattern"}`, item);
   if (index) inner.set(index.name, { code: idx!, ty: INT });
   const before = e.literalBytes;
   const fromProps = src.ty.k === "list" && src.iter === undefined && /^\(?props\./.test(src.code);

@@ -13,10 +13,44 @@ const COW = "std::borrow::Cow::<str>";
 function itemsTy(s: Scope, v: Val, n: N): Ty {
   if (v.ty.k !== "list") throw new Error("a list method on a value that is not a list");
   const of = v.ty.of;
-  if (!["str", "int", "float", "bool", "struct", "child"].includes(of.k)) {
+  if (!["str", "int", "float", "bool", "struct", "child", "entry"].includes(of.k)) {
     fail(s.comp, "FV0804", "this method takes a list of strings, numbers, booleans or objects", n);
   }
   return of;
+}
+
+/** Part `i` of a `[key, value]` pair of `Object.entries()`: the key, the value, or `undefined`. */
+export function entryPart(v: Val, i: number): Val {
+  if (v.ty.k !== "entry") throw new Error("a pair's part read from a value that is not a pair");
+  const lone = v.lone ? { lone: true as const } : {};
+  if (i === 0) return { code: `${atom(v.code)}.0`, ty: STR, ...lone };
+  if (i !== 1) return { code: "None", ty: UNDEF };
+  const of = v.ty.of;
+  const place = `${atom(v.code)}.1`;
+  if (of.k === "str") return { code: `&**${place}`, ty: of, ...lone };
+  if (of.k === "int" || of.k === "float" || of.k === "bool") return { code: `*${place}`, ty: of };
+  return { code: place, ty: of, ...lone };
+}
+
+/** Binds the names of `pattern`, an array pattern of a `[key, value]` pair, to its parts. */
+export function bindEntry(comp: Component, pattern: N, v: Val, locals: Map<string, Val>, bound: string[], code: "FV0808" | "FV0818"): void {
+  const refuse = (at: N) => fail(comp, code, "a `[key, value]` pair is destructured to plain names, and an object value to an object pattern of plain names, without defaults or a rest element: `[key, value]`, `[key]`, `[, value]` or `[key, { id, name }]`", at);
+  if (pattern.elements.length > 2) refuse(pattern);
+  pattern.elements.forEach((x: N, i: number) => {
+    if (!x) return;
+    const part = entryPart(v, i);
+    if (x.type === "Identifier") {
+      locals.set(x.name, part);
+      bound.push(x.name);
+      return;
+    }
+    if (x.type !== "ObjectPattern" || i !== 1 || (part.ty.k !== "struct" && part.ty.k !== "child")) refuse(x);
+    for (const prop of x.properties) {
+      if (prop.type !== "ObjectProperty" || prop.computed || prop.value.type !== "Identifier") refuse(prop);
+      locals.set(prop.value.name, fieldVal(comp, part.code, part.ty, prop.key.name ?? prop.key.value, prop));
+      bound.push(prop.value.name);
+    }
+  });
 }
 
 export function items(v: Val): string {
@@ -85,7 +119,8 @@ export function arrow(s: Scope, fn: N, list: Val, of: Ty, byRef: boolean, method
       locals.set(prop.value.name, fieldVal(comp, v.code, of, prop.key.name ?? prop.key.value, prop));
       bound.push(prop.value.name);
     }
-  } else if (item) fail(comp, "FV0809", "an arrow function's item is a name, or an object pattern of an object", item);
+  } else if (item?.type === "ArrayPattern" && of.k === "entry") bindEntry(comp, item, v, locals, bound, "FV0808");
+  else if (item) fail(comp, "FV0809", `an arrow function's item is a name, or ${of.k === "entry" ? "an array pattern of a `[key, value]` pair" : "an object pattern of an object"}`, item);
   if (index) {
     locals.set(index.name, { code: i, ty: INT });
     bound.push(index.name);
@@ -120,6 +155,8 @@ function mapped(s: Scope, v: Val, n: N): string {
     case "struct":
     case "child":
       return `&${operand(v.code, UNARY)}`;
+    case "entry":
+      return fail(s.comp, "FV0816", "`.map()` to the `[key, value]` pairs of `Object.entries()` makes a list of pairs, which the server walks but does not keep: map each pair to its key, its value or a value made of them", n);
     default:
       return fail(s.comp, "FV0810", `\`.map()\` makes a list of strings, numbers, booleans or objects, not ${v.ty.k === "opt" ? "optional values" : "these"}`, n);
   }
@@ -198,7 +235,7 @@ export function picked(s: Scope, target: Val, n: N, fromList: (list: string) => 
   if (target.iter !== undefined) {
     const got = fromIter(target.iter);
     if (of.k === "str") return { code: `${atom(got)}.as_deref()`, ty: opt(STR), held: `${got}.map(|v| ${COW}::Owned(v.into_owned()))`, ...lone };
-    if (["int", "float", "bool", "struct", "child"].includes(of.k)) return { code: got, ty: opt(of) };
+    if (["int", "float", "bool", "struct", "child", "entry"].includes(of.k)) return { code: got, ty: opt(of), ...lone };
   } else {
     const got = fromList(atom(target.code));
     const inner = of.k === "opt" ? of.of : of;
@@ -210,6 +247,8 @@ export function picked(s: Scope, target: Val, n: N, fromList: (list: string) => 
       case "float":
       case "bool":
         return { code: flat ? `${got}.and_then(|v| *v)` : `${got}.copied()`, ty: opt(of) };
+      case "entry":
+        return { code: `${got}.copied()`, ty: opt(of), ...lone };
       case "struct":
       case "child":
         return { code: flat ? `${got}.and_then(|v| v.as_ref())` : got, ty: opt(of) };
@@ -300,6 +339,10 @@ function keyPath(node: N, param: string): string | null {
     const base = keyPath(node.object, param);
     return base === null ? null : `${base}.${node.property.name}`;
   }
+  if (node?.type === "MemberExpression" && node.computed && node.property.type === "NumericLiteral" && (node.property.value === 0 || node.property.value === 1)) {
+    const base = keyPath(node.object, param);
+    return base === null ? null : `${base}.[${node.property.value}]`;
+  }
   return null;
 }
 
@@ -367,8 +410,31 @@ function comparatorShape(fn: N): Shape | null {
   return { path: path ?? "", ascending: less < 0, subtracted: false };
 }
 
-function sortedBy(s: Scope, target: Val, of: Ty, fn: N): Val {
+function pairsRead(fn: N): N {
+  const parts = new Map<string, N>();
+  const params = fn.params.map((p: N, i: number) => {
+    if (p?.type !== "ArrayPattern" || p.elements.length > 2 || p.elements.some((x: N) => x !== null && x.type !== "Identifier")) return p;
+    const name = `fv$pair${i}`;
+    p.elements.forEach((x: N, j: number) => {
+      if (x) parts.set(x.name, { ...x, type: "MemberExpression", computed: true, object: { ...x, type: "Identifier", name }, property: { ...x, type: "NumericLiteral", value: j } });
+    });
+    return { ...p, type: "Identifier", name };
+  });
+  if (parts.size === 0) return fn;
+  const swap = (node: N): N => {
+    if (Array.isArray(node)) return node.map(swap);
+    if (!node || typeof node !== "object") return node;
+    if (node.type === "Identifier") return parts.get(node.name) ?? node;
+    const out: N = {};
+    for (const [key, v] of Object.entries(node)) out[key] = key === "loc" || key === "__fv" ? v : node.type === "MemberExpression" && key === "property" && !node.computed ? v : swap(v);
+    return out;
+  };
+  return { ...fn, params, body: swap(fn.body) };
+}
+
+function sortedBy(s: Scope, target: Val, of: Ty, given: N): Val {
   const comp = s.comp;
+  const fn = of.k === "entry" && given?.type === "ArrowFunctionExpression" ? pairsRead(given) : given;
   const shapes = "`(a, b) => a - b`, `(a, b) => a.k - b.k` over integers, or `?:` over `<` and `>` of integers or strings giving -1, 0 and 1";
   if (fn?.type !== "ArrowFunctionExpression" || fn.async || fn.params.length !== 2 || fn.params.some((p: N) => p.type !== "Identifier") || fn.body.type === "BlockStatement") {
     fail(comp, "FV0830", `\`.toSorted()\` takes a comparator of a shape the server orders by, as JavaScript does: ${shapes}`, fn);
@@ -387,7 +453,11 @@ function sortedBy(s: Scope, target: Val, of: Ty, fn: N): Val {
   if (shape.ascending === null) return computed(items(target), of, target.lone);
   const key = (name: string): Val => {
     let node: N = { type: "Identifier", name, loc: fn.body.loc, start: fn.body.start, end: fn.body.end };
-    for (const field of shape.path.split(".").slice(1)) node = { type: "MemberExpression", computed: false, object: node, property: { type: "Identifier", name: field }, loc: fn.body.loc, start: fn.body.start, end: fn.body.end };
+    for (const field of shape.path.split(".").slice(1)) {
+      const index = /^\[(\d)\]$/.exec(field)?.[1];
+      const property = index === undefined ? { type: "Identifier", name: field } : { type: "NumericLiteral", value: Number(index) };
+      node = { type: "MemberExpression", computed: index !== undefined, object: node, property, loc: fn.body.loc, start: fn.body.start, end: fn.body.end };
+    }
     return expr(inner, node);
   };
   const [ka, kb] = [key(fn.params[0].name), key(fn.params[1].name)];
@@ -421,6 +491,8 @@ function sorted(s: Scope, target: Val, args: N[], n: N): Val {
       return computed(`fv::js_sorted_by_string(${it}, |v| fv::Js(*v).to_string())`, of);
     case "bool":
       return computed(`fv::js_sorted(${it}, bool::cmp)`, of);
+    case "entry":
+      return fail(comp, "FV0816", "`.toSorted()` without a comparator orders the `[key, value]` pairs of `Object.entries()` by `String(pair)`, the key and the value joined by `,`, which the server does not write for each pair: give it a comparator, `([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)` or `(a, b) => a[1] - b[1]`", n);
     default:
       return fail(comp, "FV0831", "`.toSorted()` without a comparator orders objects by `String(x)`, which is `[object Object]` for each: give it a comparator, `(a, b) => a.k - b.k`", n);
   }
@@ -486,14 +558,68 @@ export function spreadExtreme(s: Scope, method: "max" | "min", args: N[]): Val {
   return { code: `${all}.fold(${start}, fv::js_${method})`, ty: FLOAT };
 }
 
+const FLAT_ITEMS = new Set(["str", "int", "float", "bool", "struct", "child"]);
+
+function nested(v: Val): string {
+  return v.iter ?? `${atom(v.code)}.iter()`;
+}
+
+function flattened(s: Scope, target: Val, args: N[], n: N): Val {
+  const comp = s.comp;
+  if (args.length > 1) fail(comp, "FV0834", "`.flat()` takes a depth, or none", n);
+  const given = args[0];
+  let depth = 1;
+  if (given !== undefined && !(given.type === "Identifier" && given.name === "undefined")) {
+    depth = given.type === "NumericLiteral" ? Math.trunc(given.value) : given.type === "Identifier" && given.name === "Infinity" && !s.locals.has("Infinity") ? Infinity : NaN;
+    if (Number.isNaN(depth)) fail(comp, "FV0834", "`.flat()` takes its depth as a literal number, or `Infinity`", given);
+  }
+  let of = (target.ty as { of: Ty }).of;
+  let it = of.k === "list" ? nested(target) : items(target);
+  for (let level = 0; level < depth && of.k === "list"; level++) {
+    const inner: Ty = of.of;
+    it = `${it}.flat_map(|v| ${inner.k === "list" ? "v.iter()" : items({ code: "v", ty: of })})`;
+    of = inner;
+  }
+  let innermost = of;
+  while (innermost.k === "list") innermost = innermost.of;
+  if (!FLAT_ITEMS.has(innermost.k)) {
+    fail(comp, "FV0834", `\`.flat()\` makes a list of strings, numbers, booleans or objects, or of lists of them, and this one's items are ${describeTy(innermost).replace(/^an? /, "")}s`, n);
+  }
+  return computed(it, of, target.lone);
+}
+
+function flatMapped(s: Scope, target: Val, args: N[], n: N): Val {
+  const comp = s.comp;
+  if (args.length !== 1) fail(comp, "FV0813", "`.flatMap()` takes one arrow function", n);
+  const of = itemsTy(s, target, n);
+  const fn = args[0];
+  let out: Val | undefined;
+  const { closure, enumerate } = arrow(s, fn, target, of, false, "flatMap", (inner) => {
+    out = expr(inner, fn.body);
+    if (out.ty.k !== "list") {
+      if (out.ty.k === "int" && out.f64 !== undefined && RISKS_NEGATIVE_ZERO.test(out.f64)) out = { ...out, code: out.f64, ty: FLOAT };
+      return mapped(inner, out, fn.body);
+    }
+    if (!FLAT_ITEMS.has(out.ty.of.k)) {
+      fail(comp, "FV0834", `\`.flatMap()\` makes a list of strings, numbers, booleans or objects, and its function gives ${untypedEmpty(out) ? "only `[]`, whose items have no type: give it a typed list, `[] as string[]`" : `a list of ${describeTy(out.ty.of).replace(/^an? /, "")}s`}`, fn.body);
+    }
+    return collected(out);
+  });
+  const each = `${items(target)}${enumerate ? ".enumerate()" : ""}`;
+  if (out!.ty.k === "list") return computed(`${each}.flat_map(${closure})`, out!.ty.of, out!.lone);
+  return computed(`${each}.map(${closure})`, out!.ty, out!.lone);
+}
+
 export function listMethod(s: Scope, target: Val, method: string, given: N[], n: N): Val | null {
   const comp = s.comp;
   const args = given.map((a) => expressionBodied(comp, a));
   if (method === "reduce" || method === "reduceRight") return reduced(s, target, method, args, n);
+  if (method === "flat") return flattened(s, target, args, n);
+  if (method === "flatMap") return flatMapped(s, target, args, n);
   if (method === "toReversed") {
     if (args.length !== 0) fail(comp, "FV0602", "`.toReversed()` takes no arguments", n);
     const of = itemsTy(s, target, n);
-    const held = target.iter !== undefined && /^[\w.]+\.iter\(\)(?:\.copied\(\)|\.map\(\|v\| std::borrow::Cow::<str>::Borrowed\(&\*\*v\)\))?$/.test(target.iter);
+    const held = target.iter !== undefined && of.k !== "entry" && /^[\w.]+\.iter\(\)(?:\.copied\(\)|\.map\(\|v\| std::borrow::Cow::<str>::Borrowed\(&\*\*v\)\))?$/.test(target.iter);
     return computed(`${held ? target.iter : backwards(target)}.rev()`, of, target.lone);
   }
   if (method === "toSorted") return sorted(s, target, args, n);
@@ -603,11 +729,10 @@ export function objectCall(s: Scope, method: string, args: N[], n: N): Val {
   const of = r.ty.of;
   if (method === "keys") return computed(`${atom(r.code)}.keys().map(${COW}::Borrowed)`, STR);
   if (method === "values") {
-    if (of.k === "list") fail(comp, "FV0815", "`Object.values()` of a record of lists, which these methods cannot walk", n);
-    const values = of.k === "str" ? `.values().map(|v| ${COW}::Borrowed(&**v))` : of.k === "struct" || of.k === "child" ? ".values()" : ".values().copied()";
+    const values = of.k === "str" ? `.values().map(|v| ${COW}::Borrowed(&**v))` : ["struct", "child", "list", "record"].includes(of.k) ? ".values()" : ".values().copied()";
     return computed(`${atom(r.code)}${values}`, of);
   }
-  if (method === "entries") return fail(comp, "FV0816", "`Object.entries()` is supported as the source of a `v-for`: `([key, value], i) in Object.entries(r)`", n);
+  if (method === "entries") return computed(`${atom(r.code)}.iter()`, { k: "entry", of }, r.lone);
   return fail(comp, "FV0817", `\`Object.${method}()\` is not supported: \`keys\`, \`values\` and \`entries\` of a record are`, n);
 }
 
@@ -626,6 +751,9 @@ function sameItem(s: Scope, target: Val, of: Ty, x: Val, v: string, code: "FV080
 export function computedListMethod(s: Scope, target: Val, method: string, args: N[], n: N): Val | null {
   if (target.ty.k !== "list") return null;
   const of = target.ty.of;
+  if (of.k === "entry" && (method === "includes" || method === "join")) {
+    fail(s.comp, "FV0816", `\`.${method}()\` of the \`[key, value]\` pairs of \`Object.entries()\`, which ${method === "join" ? "writes each pair as its key and value joined by `,`" : "compares pairs as objects, and finds none"}: map the pairs to their keys or values first`, n);
+  }
   if (method === "includes" && args.length === 1) {
     const x = expr(s, args[0]);
     const v = `fv_x${++ctx.narrowCount}`;

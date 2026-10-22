@@ -1,4 +1,5 @@
 export { ClientOnly, hydrateState, mountIslands, reviveDates, type IslandComponent, type Islands, type MountOptions, type StateText } from "./client.ts";
+export { defineLoader, loadKey, provideLoads } from "./client.ts";
 export {
   createPageApp,
   mountPage,

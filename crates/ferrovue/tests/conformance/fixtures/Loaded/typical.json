@@ -1,0 +1,24 @@
+{
+  "slug": "intro",
+  "$loads": {
+    "[\"loadArticle\",\"intro\"]": {
+      "title": "Getting started",
+      "tags": [
+        "rust",
+        "vue"
+      ],
+      "author": {
+        "name": "Ada",
+        "bio": "Writes compilers"
+      }
+    },
+    "[\"loadViews\"]": 42,
+    "[\"loadComments\",\"intro\",1,null]": [
+      "First!",
+      "Thanks for this"
+    ],
+    "[\"loadNote\",2]": "Two comments so far",
+    "[\"loadComments\",\"intro\",2,true]": [],
+    "[\"loadNote\",0]": null
+  }
+}

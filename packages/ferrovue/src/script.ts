@@ -236,7 +236,7 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
       continue;
     }
     if (st.type === "ExpressionStatement") {
-      if (!ctx.plugins.some((p) => p.scriptStatement?.(scope, st))) setupStatement(comp, st);
+      if (!ctx.plugins.some((p) => p.scriptStatement?.(scope, st, lets))) setupStatement(comp, st);
       continue;
     }
     if (st.type !== "VariableDeclaration") fail(comp, "FV0107", `${nodeName(st)} in setup is not supported`, st);

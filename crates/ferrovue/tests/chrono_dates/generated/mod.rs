@@ -9,7 +9,7 @@
 // it needs.
 #![allow(dead_code)]
 
-ferrovue::__compat!(3);
+ferrovue::__compat!(4);
 
 pub mod date_post;
 pub mod date_stamp;

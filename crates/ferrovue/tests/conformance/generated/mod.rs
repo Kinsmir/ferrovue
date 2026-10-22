@@ -9,7 +9,7 @@
 // it needs.
 #![allow(dead_code)]
 
-ferrovue::__compat!(3);
+ferrovue::__compat!(4);
 
 pub mod account_nav;
 pub mod app;
@@ -68,6 +68,7 @@ pub mod fall_root;
 pub mod fall_switch;
 pub mod fall_use;
 pub mod fallthrough;
+pub mod flattened;
 pub mod form;
 pub mod formatters;
 pub mod forward;
@@ -96,6 +97,8 @@ pub mod listen_sale;
 pub mod listened;
 pub mod listeners;
 pub mod lists;
+pub mod loaded;
+pub mod loaded_comments;
 pub mod local_functions;
 pub mod lookups;
 pub mod mapped_choice;
@@ -119,6 +122,7 @@ pub mod number_tests;
 pub mod numbers;
 pub mod optional_chains;
 pub mod page;
+pub mod pairs;
 pub mod panel;
 pub mod parsing;
 pub mod pending;
@@ -200,6 +204,7 @@ pub mod types;
 pub mod i18n;
 pub mod twins;
 pub mod provides;
+pub mod loaders;
 
 /// What a fixture holds besides the props: each slot's content, and the location it renders at.
 #[cfg(test)]
@@ -213,6 +218,8 @@ struct Fixture {
     stores: serde_json::Value,
     #[serde(rename = "$locale", default)]
     locale: Option<String>,
+    #[serde(rename = "$loads", default)]
+    loads: serde_json::Map<String, serde_json::Value>,
 }
 
 #[cfg(test)]
@@ -536,6 +543,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let route = router.at(&fixture.route);
             fallthrough::render(&mut out, &props, &route);
         }
+        "Flattened" => {
+            let props: flattened::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            flattened::render(&mut out, &props);
+        }
         "Form" => {
             let props: form::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             form::render(&mut out, &props);
@@ -682,6 +693,38 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: lists::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             lists::render(&mut out, &props);
         }
+        "Loaded" => {
+            let props: loaded::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let loading = ferrovue::load(
+                |fv_loads| {
+                    out.clear();
+                    loaded::render(&mut out, &props, fv_loads);
+                },
+                loaders::from_fixture(&fixture.loads),
+            );
+            let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
+            match std::future::Future::poll(std::pin::pin!(loading), &mut cx) {
+                std::task::Poll::Ready(done) => done.map_err(|e| e.to_string())?,
+                std::task::Poll::Pending => return Err(String::from("a fixture's loader is still running")),
+            }
+        }
+        "LoadedComments" => {
+            let props: loaded_comments::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let loading = ferrovue::load(
+                |fv_loads| {
+                    out.clear();
+                    loaded_comments::render(&mut out, &props, fv_loads);
+                },
+                loaders::from_fixture(&fixture.loads),
+            );
+            let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
+            match std::future::Future::poll(std::pin::pin!(loading), &mut cx) {
+                std::task::Poll::Ready(done) => done.map_err(|e| e.to_string())?,
+                std::task::Poll::Pending => return Err(String::from("a fixture's loader is still running")),
+            }
+        }
         "LocalFunctions" => {
             let props: local_functions::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             local_functions::render(&mut out, &props);
@@ -785,6 +828,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Page" => {
             let props: page::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             page::render(&mut out, &props);
+        }
+        "Pairs" => {
+            let props: pairs::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            pairs::render(&mut out, &props);
         }
         "Panel" => {
             let props: panel::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

@@ -1,0 +1,13 @@
+{
+  "posts": [
+    { "title": "First", "tags": ["rust", "vue"], "scores": [1, 2] },
+    { "title": "Second", "tags": [], "scores": [3] },
+    { "title": "Third", "tags": ["ssr"], "scores": [] }
+  ],
+  "matrix": [[1, 2], [3], []],
+  "deep": [[[1], [2, 3]], [[4]], []],
+  "prices": [[0.5, 1.25], [-2], []],
+  "words": ["ab", "c", "de"],
+  "groups": { "g": ["1", "2"], "10": ["0"], "e": [] },
+  "sep": "c"
+}

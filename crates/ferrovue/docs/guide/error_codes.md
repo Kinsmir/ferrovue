@@ -1064,15 +1064,13 @@ List method given more than one function.
 
 ## FV0815
 
-`Object.values()` of a record of lists.
-
-`Object.values(r)` of a `Record<string, T[]>` gives a list of lists, which the server's list methods cannot walk. Walk the record with `v-for="(items, key) in r"` and the inner lists inside it, or flatten the values in Rust and pass them as a prop.
+`Object.values()` of a record of lists. Retired in 0.10.0: the compiler no longer raises it.
 
 ## FV0816
 
-`Object.entries()` outside a `v-for`.
+`[key, value]` pairs of `Object.entries()` kept or compared.
 
-`Object.entries(r)` gives a list of `[key, value]` pairs, which the server holds only as the source of a `v-for`: `v-for="([key, value], i) in Object.entries(r)"`. Elsewhere, use `Object.keys(r)` or `Object.values(r)`, or walk the record itself with `v-for="(value, key) in r"`.
+`Object.entries(r)` gives a list of `[key, value]` pairs, which the server walks: in a `v-for` (`([key, value], i) in Object.entries(r)`) and through list methods whose functions destructure each pair or read its parts (`Object.entries(r).filter(([, n]) => n > 0).map(([k]) => k)`, `pair[0]`, `pair[1]`). A method that writes or compares whole pairs is refused: `.join()`, which writes each pair as its key and value joined by `,`; `.includes()`, which compares pairs as objects and finds none; `.toSorted()` without a comparator, which orders them by that text; and `.map()` to the pairs themselves, which would keep a list of pairs as a value. Map the pairs to their keys, their values or values made of them first, and give `.toSorted()` a comparator.
 
 ## FV0817
 
@@ -1175,6 +1173,12 @@ With a comparator, `.toSorted()` sorts in the order JavaScript gives only for sh
 Array spread of anything but lists of the same item type.
 
 A spread in an array literal chains lists of one item type, strings, numbers, booleans or objects, with plain values of that type beside them (numbers whether `number` or `Float`). Spreading a value that is not a list (a string, a record, an optional list) or mixing item types would make a list the server cannot hold. Give an optional list a fallback with `?? []`, and keep each part to one item type.
+
+## FV0834
+
+`.flat()` or `.flatMap()` of a list it cannot flatten.
+
+`.flat()` joins the inner lists of a list of lists, to the depth it is given (1 when none), and `.flatMap(f)` the lists `f` gives, keeping a value that is not a list as `.map()` would. The depth is a literal number or `Infinity`, since the server's type of the result depends on it. The flattened items are strings, numbers, booleans or objects: lists of optional values, of records or of pairs (as items, or inside the inner lists), and a function that gives only `[]`, whose items have no type, are refused. Give a literal depth, map the inner values to one of those types, or write `[] as T[]`.
 
 # Slots: FV09xx
 
@@ -2391,3 +2395,49 @@ A function the server calls takes named parameters, optional ones (`x?: T`) and 
 Function declared with `const`, called while setup runs before its declaration.
 
 A function declared with `const` (`const f = (…) => …`) exists only once its declaration has run. Setup code above it that calls it, directly or through a `function` declaration, which is hoisted, throws a `ReferenceError` in JavaScript, and Vue's server renders nothing. A `computed` may call it, since a `computed` runs when the render reads it. Move the declaration above the call, or declare the function with `function`.
+
+# Loaders: FV20xx
+
+See [`loaders`](crate::guide::loaders).
+
+## FV2001
+
+`await` of a value that is not a loader's result.
+
+A component's top-level `await` stops its render until the promise settles, on the server as in the browser. The server has the results only of loaders, functions declared with `defineLoader` that the Rust app implements; any other promise is the browser's alone. Declare the function as a loader, or fetch the value in Rust and pass it as a prop.
+
+## FV2002
+
+Loader declaration the compiler cannot read.
+
+A loader is declared as `export const loadPost = defineLoader("loadPost", async (id: number): Promise<Post> => …)`, with `defineLoader` imported from `ferrovue`: the name as a string literal that is a JavaScript name, and an `async` function the compiler reads the parameters and result type from.
+
+## FV2003
+
+Loader parameter that is not a plain typed string, number or boolean.
+
+A call's arguments are its key, `JSON.stringify([name, ...args])`, which the Rust app computes from the same values. Each parameter is a plain name with a type: a string, a number (`Float` for a fractional one) or a boolean, which may be optional (`lang?: string`) or `null` (`lang: string | null`). Defaults, `...rest`, destructuring and object parameters are refused: pass the values one by one.
+
+## FV2004
+
+Loader result the payload cannot carry.
+
+A loader declares what it returns, `Promise<T>`, which is the Rust app's `Output` for it and travels to the client as JSON in the page's payload. `undefined` is dropped by `JSON.stringify` and a `Date` arrives as a string, so the client would hydrate from another value: return `null` for none and a date as its ISO string.
+
+## FV2005
+
+Two loaders with one name.
+
+A loader's name is its key in the page's payload and its method in the generated `Loaders` trait, so it is unique in the project: two `defineLoader` calls with one name, or names that are one Rust name (`loadPost` and `load_post`), are refused. Rename one.
+
+## FV2006
+
+Loader call whose arguments do not match its parameters.
+
+Each argument has the type of its parameter, every parameter that is neither optional nor `undefined` is given, no extra argument is given, and none is spread from a list. A value that may be `null` goes only to a parameter that may be `null`, and one that may be `undefined` only to an optional parameter, since the key writes the two differently.
+
+## FV2007
+
+Loader result bound to a pattern.
+
+`const post = await loadPost(id)` binds the result to a name; `const { title, tags } = await loadPost(id)` destructures the object it returns into plain names. Nested patterns, defaults, `...rest` and array patterns are refused: bind the result and read its fields.

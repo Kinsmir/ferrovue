@@ -9,7 +9,7 @@ export interface RenderParam {
   ty: string;
   pageTy: string;
   reads(comp: Component): boolean;
-  test: { lines: string[]; arg: string; fixture?: boolean; after?: string[] };
+  test: { lines: string[]; arg: string; fixture?: boolean; after?: string[]; around?: (render: string) => string[] };
   fixtureField?: string;
   fixtureDefault?: string;
   testSupport?: string;
@@ -59,7 +59,7 @@ export interface Plugin<Run = unknown, Local = unknown> {
   scope?(s: Scope): Local;
   scriptImport?(s: Scope, st: N, from: string): boolean;
   scriptBinding?(s: Scope, d: N, lets: string[]): boolean;
-  scriptStatement?(s: Scope, st: N): boolean;
+  scriptStatement?(s: Scope, st: N, lets: string[]): boolean;
   prelude?(s: Scope): { before: string[]; after: string[] };
 
   global?(s: Scope, name: string, n: N): Val | null;

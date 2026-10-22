@@ -1,0 +1,25 @@
+{
+  "slug": "<script>&\" ",
+  "lang": "en-GB",
+  "$loads": {
+    "[\"loadArticle\",\"<script>&\\\" \",\"en-GB\"]": {
+      "title": "</h1><b>bold</b> & \"q\"",
+      "tags": [
+        "<i>"
+      ],
+      "author": {
+        "name": "{{ x }}"
+      }
+    },
+    "[\"loadViews\"]": -7,
+    "[\"loadComments\",\"<script>&\\\" \",1,null]": [
+      "<!-- c -->",
+      "a b"
+    ],
+    "[\"loadNote\",2]": "",
+    "[\"loadComments\",\"<script>&\\\" \",2,null]": [
+      "</script>"
+    ],
+    "[\"loadNote\",1]": "<script>alert(1)</script>"
+  }
+}

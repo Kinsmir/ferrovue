@@ -1,4 +1,5 @@
 import { nextTick, type App, type VNode } from "vue";
+import { loadsSettled } from "./loads.ts";
 
 interface AsyncWrapper {
   __asyncLoader?: () => Promise<unknown>;
@@ -9,6 +10,11 @@ function loading(vnode: VNode | null | undefined, found: Promise<unknown>[]): vo
   if (!vnode || typeof vnode !== "object") return;
   const type = vnode.type as AsyncWrapper;
   if (type.__asyncLoader && !type.__asyncResolved) found.push(type.__asyncLoader());
+  const suspense = vnode.suspense;
+  if (suspense) {
+    if (suspense.pendingBranch) found.push(new Promise((done) => setTimeout(done, 0)));
+    loading(suspense.pendingBranch ?? suspense.activeBranch, found);
+  }
   if (vnode.component) loading(vnode.component.subTree, found);
   if (Array.isArray(vnode.children)) for (const child of vnode.children) loading(child as VNode, found);
 }
@@ -28,6 +34,7 @@ export function stillLoading(app: App): boolean {
  * update this caused has been flushed. */
 export async function settled(app: App): Promise<void> {
   for (let round = 0; round < 20; round++) {
+    await loadsSettled();
     const found = loaders(app);
     await Promise.all(found);
     await nextTick();

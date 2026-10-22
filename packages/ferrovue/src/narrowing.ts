@@ -121,6 +121,7 @@ function typeName(s: Scope, ty: Ty, n: N): string {
     case "null":
     case "list":
     case "record":
+    case "entry":
     case "struct":
     case "child":
     case "date":

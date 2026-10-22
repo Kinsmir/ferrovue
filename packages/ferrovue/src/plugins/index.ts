@@ -11,5 +11,6 @@ import { provideInject } from "./provide.ts";
 import { head } from "./head.ts";
 import { cssModules } from "./css-modules.ts";
 import { dates } from "./dates.ts";
+import { loaders } from "./loaders.ts";
 
-export const PLUGINS: readonly Plugin[] = [router, piniaStores, sharedTypes, i18n, teleport, scoped, clientOnly, twinsPlugin, provideInject, head, cssModules, dates];
+export const PLUGINS: readonly Plugin[] = [router, piniaStores, sharedTypes, i18n, teleport, scoped, clientOnly, twinsPlugin, provideInject, head, cssModules, dates, loaders];

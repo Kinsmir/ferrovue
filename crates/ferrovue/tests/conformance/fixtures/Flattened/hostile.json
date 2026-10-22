@@ -1,0 +1,9 @@
+{
+  "posts": [{ "title": "<script>alert(1)</script>", "tags": ["</li><li>", "&amp;", "🦀"], "scores": [-1, 0] }],
+  "matrix": [[-4, 9007199254740991]],
+  "deep": [[[-5]]],
+  "prices": [[1e21, 1e-7, -0.1]],
+  "words": ["<b>", "\"", "é&"],
+  "groups": { "<i>": ["</p>", "'"] },
+  "sep": "</p>"
+}

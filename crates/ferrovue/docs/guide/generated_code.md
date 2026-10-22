@@ -47,6 +47,7 @@ Everything in the configured `out` directory is replaced on each run.
 | `stores.rs` | `stores` is configured | A struct per store's state, named for its id (`cart` has `CartState`), the types it uses, and `Stores`, with a field per store. See [`pinia`](crate::guide::pinia) |
 | `i18n.rs` | `i18n` is configured | `LOCALE`, `FALLBACK`, every locale's messages in `LOCALES`, and `i18n(locale)`. See [`i18n`](crate::guide::i18n) |
 | `provides.rs` | a component calls `provide` or `inject` | `Provides`, what the components' ancestors provide, with a field per key. See [`provide_inject`](crate::guide::provide_inject) |
+| `loaders.rs` | a component awaits a loader | A struct per loader's call, the `Loaders` trait the app implements, `dispatch` and `load`. See [`loaders`](crate::guide::loaders) |
 | `twins.rs` | `twins` is configured | Each twin's `…Props` and `…Slots`, and `…Render`, the signature its function must have. See [`errors_and_limits`](crate::guide::errors_and_limits#rust-twins) |
 
 Include the directory as one module. `#[rustfmt::skip]` keeps rustfmt from rewriting it:
@@ -81,7 +82,7 @@ Generated code calls the `ferrovue` crate, so the two must come from compatible 
 the `allow`, `mod.rs` names the version of generated code its compiler writes:
 
 ```rust
-ferrovue::__compat!(3);
+ferrovue::__compat!(4);
 ```
 
 The version is a number that changes only when generated code changes in a way the crate must
@@ -90,10 +91,10 @@ supporting something older generated code calls. Each crate accepts the versions
 stops the build at this line for any other, before the compiler reports anything else:
 
 ```text
-error: this module was generated as version 3 of ferrovue's generated code, and this `ferrovue` crate supports version 2: use the `ferrovue` npm package and the `ferrovue` crate of one release, and run `ferrovue` to generate the module again
+error: this module was generated as version 4 of ferrovue's generated code, and this `ferrovue` crate supports versions 2 to 3: use the `ferrovue` npm package and the `ferrovue` crate of one release, and run `ferrovue` to generate the module again
  --> src/generated/mod.rs:12:1
    |
-12 | ferrovue::__compat!(3);
+12 | ferrovue::__compat!(4);
    | ^^^^^^^^^^^^^^^^^^^^^^
 ```
 

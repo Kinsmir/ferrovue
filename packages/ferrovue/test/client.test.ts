@@ -2,7 +2,7 @@ import { expect, it } from "vitest";
 import { createPinia } from "pinia";
 import { type Component, createApp, defineComponent, h, nextTick, type PropType } from "vue";
 import { renderToString } from "vue/server-renderer";
-import { ClientOnly, createPageApp, hydrateState, readPage, reviveDates, type PageRecord } from "../src/client.ts";
+import { clearLoads, ClientOnly, createPageApp, defineLoader, hydrateState, loadKey, provideLoads, readPage, reviveDates, type PageRecord } from "../src/client.ts";
 
 it("hands Pinia the state the server escaped into the page", () => {
   document.body.innerHTML =
@@ -74,7 +74,7 @@ it("reads the record and the state as the server writes them, reversing their es
 
 it("reads scripts by the ids given, and no state where the page has none", () => {
   const html = script("next", json(RECORD)) + script("stores", "{}");
-  expect(readPage(html, { record: "next", state: "stores" })).toEqual({ record: RECORD, state: "{}" });
+  expect(readPage(html, { record: "next", state: "stores" })).toEqual({ record: RECORD, state: "{}", loads: [] });
   expect(readPage(script("__fv_page", json(RECORD))).state).toBeUndefined();
   expect(() => readPage(page("").replace('<script type="application/json" id="__fv_page">', '<script type="application/json" id="other">'))).toThrow('[ferrovue] the page has no record: no <script id="__fv_page">');
   expect(() => readPage(script("__fv_page", ""))).toThrow(/no record/);
@@ -165,4 +165,60 @@ it("renders a page whose layout and parts take Dates from the record's JSON", as
   });
   const html = await renderToString(createPageApp(Layout, record, { Dated }, { hydrate: false }));
   expect(html).toBe("<main><p>1|NaN|undefined|undefined|undefined</p><!--[--><p>-1|0|86400000|undefined|undefined</p><!--]--></main>");
+});
+
+it("keys a loader's call as the server does, leaving out the arguments not given at the end", () => {
+  expect(loadKey("loadPost", [7])).toBe('["loadPost",7]');
+  expect(loadKey("loadPost", [7, undefined])).toBe('["loadPost",7]');
+  expect(loadKey("loadPost", [7, undefined, "en"])).toBe('["loadPost",7,null,"en"]');
+  expect(loadKey("loadPost", [7, null])).toBe('["loadPost",7,null]');
+  expect(loadKey("loadViews", [])).toBe('["loadViews"]');
+});
+
+it("answers a loader from the page's results, and runs it for a call the page does not carry", async () => {
+  clearLoads();
+  document.body.innerHTML = '<script type="application/json" data-fv-loads>{"[\\"loadName\\",1]":"\\u003cAda\\u003e"}</script>';
+  const ran: number[] = [];
+  const loadName = defineLoader("loadName", async (id: number): Promise<string> => {
+    ran.push(id);
+    return `user ${id}`;
+  });
+  expect(await loadName(1)).toBe("<Ada>");
+  expect(await loadName(2)).toBe("user 2");
+  expect(ran).toEqual([2]);
+  provideLoads({ '["loadName",2]': "Grace" });
+  expect(await loadName(2)).toBe("Grace");
+  const read = readPage(`${script("__fv_page", json(RECORD))}<script data-fv-loads type="application/json">{"[\\"loadName\\",3]":"Lin"}</script>`);
+  expect(read.loads).toEqual(['{"[\\"loadName\\",3]":"Lin"}']);
+  provideLoads(read.loads[0]!);
+  expect(await loadName(3)).toBe("Lin");
+  clearLoads();
+  document.body.innerHTML = "";
+  expect(await loadName(1)).toBe("user 1");
+  clearLoads();
+});
+
+it("hydrates a page whose components await loaders inside a `<Suspense>`, from the results it carries", async () => {
+  clearLoads();
+  const loadTitle = defineLoader("loadTitle", async (id: number): Promise<string> => `server ${id}`);
+  const Title = defineComponent({
+    props: { id: { type: Number, required: true } },
+    async setup(props) {
+      const title = await loadTitle(props.id);
+      return () => h("h1", title);
+    },
+  });
+  const record: PageRecord = { props: { id: 4 }, slots: {} };
+  const html = await renderToString(createPageApp(Title, record, {}, { hydrate: false, suspense: true }));
+  expect(html).toBe("<h1>server 4</h1>");
+  document.body.innerHTML = `<div id="app">${html}</div><script type="application/json" data-fv-loads>{"[\\"loadTitle\\",4]":"server 4"}</script>`;
+  const warnings: string[] = [];
+  const app = createPageApp(Title, record, {});
+  app.config.warnHandler = (msg) => warnings.push(msg);
+  app.mount("#app");
+  await new Promise((done) => setTimeout(done, 0));
+  expect(document.querySelector("#app")!.innerHTML).toBe("<h1>server 4</h1>");
+  expect(warnings).toEqual([]);
+  app.unmount();
+  clearLoads();
 });
