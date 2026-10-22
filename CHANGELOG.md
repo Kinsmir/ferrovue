@@ -5,6 +5,12 @@ released together and share version numbers.
 
 ## [Unreleased]
 
+### Changed
+
+- CI only: a retry of the browser job's system libraries first stops the `apt-get` the timed-out
+  attempt left running and waits for the package lock, which that `apt-get` held so the next
+  attempts failed at once.
+
 ## [0.10.0] - 2026-10-22
 
 ### Added

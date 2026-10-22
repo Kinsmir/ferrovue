@@ -322,6 +322,8 @@ jobs:
         run: |
           for attempt in 1 2 3; do
             timeout 6m pnpm --filter ferrovue exec playwright install --with-deps chromium firefox webkit && exit 0
+            sudo pkill -x apt-get || true
+            while sudo fuser /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock >/dev/null 2>&1; do sleep 2; done
             sudo dpkg --configure -a || true
           done
           exit 1
@@ -335,6 +337,8 @@ jobs:
         run: |
           for attempt in 1 2 3; do
             timeout 6m pnpm --filter ferrovue exec playwright install-deps chromium firefox webkit && exit 0
+            sudo pkill -x apt-get || true
+            while sudo fuser /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock >/dev/null 2>&1; do sleep 2; done
             sudo dpkg --configure -a || true
           done
           exit 1
