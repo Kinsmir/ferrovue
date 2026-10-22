@@ -275,7 +275,7 @@ class Desugar {
     }
     if (k.falls) fail(this.comp, "FV1904", "this case falls through into the next one, which runs its statements too: end it with `return` or `break`", k.falls);
     if (k.sts.length && ++this.paths > PATH_BUDGET) {
-      fail(this.comp, "FV1905", `the body's \`if\`s and \`switch\`es continue with the statements after them on more than ${PATH_BUDGET} paths, each translated on its own: end the cases in \`return\` rather than \`break\`, or split the body into \`computed\`s`, from);
+      fail(this.comp, "FV1905", `the body's \`if\`s and \`switch\`es continue with the statements after them on more than ${PATH_BUDGET} paths, each translated on its own: end the cases in \`return\`, or split the body into \`computed\`s`, from);
     }
     return this.run(k.sts, k.next, k.brk, from);
   }

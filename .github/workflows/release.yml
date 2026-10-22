@@ -93,8 +93,6 @@ jobs:
       contents: read
       id-token: write
     steps:
-      # No checkout and no install: the job that can mint an OIDC token runs nothing but npm, on the
-      # tarball the pack job made.
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24

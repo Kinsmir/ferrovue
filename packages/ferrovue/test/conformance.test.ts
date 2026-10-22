@@ -50,7 +50,7 @@ describe("Vue renders each fixture to its recorded HTML", () => {
       const app = await fixtureApp(components.get(c.component)!, readFixture(c.json), ROUTES, OPTIONS);
       const html = await renderFixture(app);
       if (WRITE) writeFileSync(`${c.base}.html`, html);
-      // oxlint-disable-next-line vitest/no-conditional-expect -- a recording run writes instead of comparing
+      // oxlint-disable-next-line vitest/no-conditional-expect -- a recording run writes the fixtures
       else expect(html).toBe(c.html);
     });
   }

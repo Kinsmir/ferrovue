@@ -40,8 +40,6 @@ fn or<T: Serialize + ?Sized>(value: &T, refused_as: &str) -> String {
 }
 
 fn refused(e: &serde_json::Error) {
-    // A debug build stops here, so props that cannot be written are found where they are
-    // rendered; this crate's own tests check what a release build writes instead.
     if cfg!(all(debug_assertions, not(test))) {
         panic!("serde_json cannot write these props as JSON: {e}");
     }
@@ -50,7 +48,6 @@ fn refused(e: &serde_json::Error) {
 fn try_to_string<T: Serialize + ?Sized>(value: &T) -> serde_json::Result<String> {
     let mut out = Vec::with_capacity(128);
     write(&mut out, value)?;
-    // serde_json writes nothing but UTF-8.
     Ok(String::from_utf8(out).unwrap_or_default())
 }
 

@@ -460,7 +460,6 @@ fn plural_index(choice: f64, cases: usize) -> Option<usize> {
     if cases == 2 {
         Some(usize::from(choice != 1.0))
     } else {
-        // `Math.min(NaN, 2)` is `NaN`, where `f64::min` would give 2.
         let index = choice.min(2.0);
         (!choice.is_nan() && index.fract() == 0.0).then_some(index as usize)
     }

@@ -17,7 +17,6 @@ function gnu(before: string, after: string): string {
   }
 }
 
-// GNU diff, the reference, is not on the PATH of every Windows machine.
 const hasDiff = spawnSync("diff", ["--version"]).status === 0;
 
 const lines = (n: number, f: (i: number) => string = (i) => `line ${i}`): string => Array.from({ length: n }, (_, i) => f(i + 1)).join("\n") + "\n";

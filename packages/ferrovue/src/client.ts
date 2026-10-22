@@ -388,8 +388,6 @@ export async function mountIslands(components: Record<string, IslandComponent>, 
       report(el, `the props of ${name} are not JSON`);
       return;
     }
-    // One island that throws as it mounts (its setup, a plugin) is reported, and leaves the others
-    // to hydrate.
     try {
       const app = createSSRApp(component, reviveDates(component, props));
       if (options.pinia) app.use(options.pinia);

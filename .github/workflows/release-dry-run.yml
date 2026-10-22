@@ -1,12 +1,5 @@
 name: Release dry run
 
-# What a release does short of publishing, for a throwaway pre-release of the current version
-# (`0.6.0-dryrun.<run>`): the changelog and manifests agree, the notes render, the packages pack
-# through the release's own pack workflow, and npm would stage the tarball. It runs when the
-# release's workflows or script change, weekly to catch npm or an action changing under them, and
-# by hand. Not covered: the signed-tag check, cargo-semver-checks, crates.io's publish, the
-# provenance attestation and creating the GitHub release, which need a tag or write access.
-
 on:
   pull_request:
     paths:
@@ -65,7 +58,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      # As the release's npm job, with the same npm, but no OIDC token: no provenance, and --dry-run.
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24

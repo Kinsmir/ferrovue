@@ -1,6 +1,3 @@
-# The toolchain for working on ferrovue. CI's Rust jobs choose theirs (stable, the MSRV from
-# Cargo.toml's rust-version, nightly for the docs.rs build) with a directory override, which wins
-# over this file.
 [toolchain]
 channel = "stable"
 components = ["clippy", "rustfmt"]

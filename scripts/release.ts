@@ -131,7 +131,7 @@ export function checkRelease(tag: string, files: ReleaseFiles): string[] {
   if (files.crates) {
     for (const [dir, manifest] of Object.entries(files.crates)) {
       if (/^publish\s*=\s*false$/m.test(manifest)) continue;
-      if (!/^version\.workspace\s*=\s*true$/m.test(manifest)) problems.push(`crates/${dir}/Cargo.toml has a version of its own, not the workspace's`);
+      if (!/^version\.workspace\s*=\s*true$/m.test(manifest)) problems.push(`crates/${dir}/Cargo.toml has a version of its own: use \`version.workspace = true\``);
       if (!CRATES.includes(dir)) problems.push(`crates/${dir} is not in release.ts's CRATES, so no release would publish it`);
     }
     for (const name of CRATES) if (!(name in files.crates)) problems.push(`CRATES names ${name}, which crates/ does not hold`);
@@ -157,7 +157,7 @@ export function workspaceMembers(text: string, kind: "cargo" | "pnpm"): string[]
 export function checkMembers(file: string, members: string[], dirs: string[]): string[] {
   const problems: string[] = [];
   for (const m of members) {
-    if (/[*?[]/.test(m)) problems.push(`${file} lists "${m}": list each member by its path, not by a wildcard`);
+    if (/[*?[]/.test(m)) problems.push(`${file} lists "${m}": list each member by its path`);
     else if (!dirs.includes(m)) problems.push(`${file} lists ${m}, which holds no manifest`);
   }
   for (const d of dirs) if (!members.includes(d)) problems.push(`${d} is not listed in ${file}`);
@@ -291,7 +291,6 @@ function main(argv: string[]): number {
       console.log(cargoVersion(read().cargo));
       return 0;
     case "set-version": {
-      // For the release dry run, which packs and stages a version nobody publishes.
       if (!arg || !isVersion(arg)) {
         console.error("usage: release.ts set-version <version>");
         return 2;

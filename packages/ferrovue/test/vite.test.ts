@@ -17,7 +17,6 @@ defineProps<{ name: string }>();
 const bad = good.replace("{{ name }}", "{{ name / 2 }}");
 
 beforeEach(() => {
-  // The real path: macOS's temporary directory is reached through a symlink, which Vite resolves.
   root = realpathSync(mkdtempSync(join(tmpdir(), "ferrovue-vite-")));
   mkdirSync(join(root, "components"));
   writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify({ components: "components", out: "gen" }));

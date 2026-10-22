@@ -2,9 +2,6 @@ packages:
   - packages/ferrovue
   - examples/fullstack
 
-# One version for what more than one package.json uses; `pnpm pack` writes it in place of
-# `catalog:`. The peer ranges in packages/ferrovue/package.json stay written out: they are what
-# users install against.
 catalog:
   vue: "3.5.44"
   "@vue/compiler-sfc": "3.5.44"

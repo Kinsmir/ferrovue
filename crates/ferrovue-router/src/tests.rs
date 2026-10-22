@@ -343,7 +343,7 @@ fn a_static_segment_outranks_a_parameter_whatever_the_order_given() {
     assert!(at_latest.link("/blog/latest").active);
     assert!(
         !at_latest.link("/blog/other").active,
-        "`latest` matched the static route, not the parameter"
+        "`latest` matches the static route, so the parameter route is inactive"
     );
 }
 

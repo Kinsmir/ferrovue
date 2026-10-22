@@ -1389,7 +1389,6 @@ fn replace_close_tag_into(out: &mut String, content: &str, tag: &str) {
     let mut at = 0;
     for (i, _) in content.match_indices("</") {
         let name = content.as_bytes()[i + 2..].get(..tag.len());
-        // What `content.toLowerCase()` would hold there: `tag` itself is not lowercased.
         let closes = name.is_some_and(|name| {
             name.iter()
                 .zip(tag.as_bytes())
