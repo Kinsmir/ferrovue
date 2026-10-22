@@ -11,6 +11,16 @@ released together and share version numbers.
   attempt left running and waits for the package lock, which that `apt-get` held so the next
   attempts failed at once.
 
+### Fixed
+
+- A value outside a closed union renders as the union's last member wherever a lookup table or
+  `<component :is>` reads it, as the `props` guide says. A lookup table defaulted by `??` (`T[k ??
+  "c"]`) put the default first and read another member; a lookup table and `<component :is>` whose
+  last member shared its value with an earlier one read the value of the group that came last; a
+  table of booleans read `false`, and `v-if` of a table that lacks some members read its member
+  absent, where the last member's is `true` and present. A new Rust test renders components that
+  read closed unions in each of these ways with values outside the union.
+
 ## [0.10.0] - 2026-10-22
 
 ### Added

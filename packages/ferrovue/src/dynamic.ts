@@ -366,6 +366,8 @@ function renderPick(s: Scope, e: Emitter, p: Pick, d: Dynamic): void {
     if (g) g[0].push(key);
     else groups.push([[key], arm]);
   }
+  const lastArm = p.arms.at(-1)![0];
+  groups.push(...groups.splice(groups.findIndex(([keys]) => keys.includes(lastArm)), 1));
   if (groups.length === 1) {
     renderPick(s, e, groups[0]![1], d);
     return;
