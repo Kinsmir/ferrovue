@@ -7,6 +7,16 @@ released together and share version numbers.
 
 ### Added
 
+- `?:` whose branches differ in type where the value is only written out: in `{{ }}`, in a
+  string-valued attribute (on an element, a component's root, a `<RouterLink>`, or falling through
+  to a child) and in a template literal. Each branch is written as JavaScript writes it there:
+  `{{ n > 0 ? n : "none" }}` writes the number by JavaScript's rules, an absent branch writes
+  nothing in `{{ }}` and leaves an attribute out, and a template literal writes `undefined`,
+  `null` and a list joined by `,`. Where the value is used otherwise (a child's prop, a
+  comparison, a method, a boolean attribute, `:class`) the branches still have to be of one type
+  (FV0623), and so do a list and a string in `{{ }}`, which Vue writes as JSON. The conformance
+  component `MixedTernary` holds fixtures recorded from Vue, and the fuzzer writes such `?:` in
+  text, attributes and template literals.
 - Imports through aliases. A component may import constants and types from a `.ts` file through an
   alias the project declares: the `compilerOptions.paths` and `baseUrl` of the tsconfig.json
   nearest it, after its `extends` (Nuxt's generated `.nuxt/tsconfig.json` included) and through
@@ -19,8 +29,8 @@ released together and share version numbers.
   guide.
 - FV0110: a name the server reads that is imported from a module no relative path or alias leads
   to a `.ts` file of the project (a package, a missing file, an alias the project does not
-  declare). The message names the specifier and where it was looked for, where FV0601 or FV0315
-  named only the name.
+  declare). The message names the specifier and where it was looked for; FV0601 or FV0315 refused
+  such a name without saying the import could not be resolved.
 - `generate` and `write` of `ferrovue/compiler` take a last, optional argument, `{ aliases }`: the
   aliases tried before tsconfig's `paths`, as Vite's `resolve.alias` lists them (the types
   `ResolveOptions` and `Alias`), which the Vite plugin passes.
@@ -34,9 +44,50 @@ released together and share version numbers.
   newest minor, the supported Vue, Node and Rust versions, deprecations, security reports, and how
   to report a bug or ask for a construct. The guide's index and the README's list of guides link
   to both.
+- The crate's side of loaders, for components that load their own data with a top-level
+  `await` (the compiler's side follows): `ferrovue::load` renders, starts each call the render
+  asks for, and renders again once calls have finished, until a render has every result; each
+  loader starts when Vue's server would start it (siblings together, a component's children after
+  its own loads, the awaits of one component in order), every call finished by a render is taken
+  by it, so a render follows at most once per finished call, and a call is made once per key. The
+  first loader to fail drops the others and returns a `LoadError`. `Loads::script_into` writes the
+  results the render read as `<script type="application/json" data-fv-loads>`, escaped as the
+  state script is, each under its key as the client's `JSON.stringify([name, ...args])` writes it.
+  What only generated code calls (`Load`, `Loads::get`, `LoadKey`, `LoadArg`, `load_key`,
+  `LoadCall`, `LoadFuture`) is hidden from the documentation.
+
+- A run reports every refusal it finds. Each component is checked on its own, and within a template
+  each statement of the compiled render and each interpolation in it, so the CLI, `--check`,
+  `--format json`, the Vite plugin and the `ferrovue/volar` plugin show all of a run's errors at
+  once. The text output ends with a line that counts them (`3 errors in 2 components`). A component
+  that uses a refused one is checked once that one compiles, and the count line says how many were
+  left unchecked. Nothing is written while any error remains, and the exit status is unchanged.
+  `generate` raises the new `GenErrors`, a `GenError` that carries the first refusal's code,
+  location and message and holds every refusal in `errors`.
+- A `= help:` line after a refusal's quoted line gives the way around it where one is short, for
+  the template's calls of functions the server cannot run (FV0601, FV0613), a `computed` whose body
+  is a block of statements, and a list read by a date's month. `GenError` has the new `help`, and
+  each diagnostic of `--format json` the new field `help` (`null` where there is none).
+- Every code in the error index has a detail: what is refused, why, and the ways around it.
 
 ### Changed
 
+- FV0601 names what the template wrote, and says where it comes from: `` `fmt()` calls a function
+  imported from `./util`, a module the server does not run ``, where it named Vue's internal
+  `$setup`.
+- A `computed` whose body is a block of statements is refused with the reason: the server evaluates
+  a body that is one expression or a single `return`.
+- Messages name syntax in words: "an arrow function", "an object literal", "a tuple type", where
+  they gave Babel's node types (`ArrowFunctionExpression`).
+- A template's read of a constant the compiler cannot evaluate, from the component or a `.ts` file,
+  is refused with the constant's own code (FV0201 to FV0222) at the constant, and names where the
+  template reads it; `ferrovue/volar` shows it at the read. It was FV0613 at the read.
+- FV0824 for a list read by `[d.getUTCMonth()]` says the index is `NaN` for an invalid date.
+- FV0221, FV0803 and FV1509 are retired: no input could raise them. FV1001's title is "Spread or
+  method in a class object", and FV0908's covers a provided value too.
+- The `errors_and_limits` guide says where a `<script>` element in a template is allowed: Vue's
+  server keeps it, its client compiler drops it, so a component that writes the document with its
+  `<script type="module">` renders on the server only and never hydrates.
 - Tests only: the CLI's three `--watch` tests share one helper that repeats each change until the
   watcher reports it, since macOS can miss a change made just after a watch starts.
 - The README's note on upgrading moves from its introduction to the Versions section, without

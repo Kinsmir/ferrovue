@@ -1,10 +1,10 @@
-import { type N, type Scope, type Val, fail } from "./model.ts";
+import { type N, type Scope, type Val, fail, GenError, nodeName } from "./model.ts";
 import { ctx } from "./context.ts";
-import { expr } from "./expr.ts";
+import { expr, shown } from "./expr.ts";
 import { type Presence, boolOf, cond, known, narrowTo, presence, truthy } from "./narrowing.ts";
 import { CMP, condition, occurrences, operand } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
-import { interpolate, keepsAttrCase, renderAttr, renderAttrs, renderDynamicAttr } from "./attrs.ts";
+import { attrShown, interpolate, keepsAttrCase, renderAttr, renderAttrs, renderDynamicAttr } from "./attrs.ts";
 import { renderStyle } from "./styles.ts";
 import { renderClass, vnodeClass } from "./classes.ts";
 import { renderChild } from "./children.ts";
@@ -39,16 +39,16 @@ export function slot(s: Scope, e: Emitter, n: N): void {
     const a: N[] = n.arguments;
     switch (n.callee.name) {
       case "_ssrInterpolate":
-        interpolate(s, e, expr(s, a[0]), a[0]);
+        interpolate(s, e, shown(s, a[0], "text"), a[0]);
         return;
       case "_ssrRenderAttr":
         if (a[0].type !== "StringLiteral") fail(s.comp, "FV0417", "attribute names are literal", n);
-        if (s.vnode) renderDynamicAttr(s, e, a[0].value, expr(s, a[1]), a[1], ctx.vnodeTag);
-        else renderAttr(s, e, a[0].value, expr(s, a[1]), a[1]);
+        if (s.vnode) renderDynamicAttr(s, e, a[0].value, attrShown(s, a[0].value, a[1], ctx.vnodeTag), a[1], ctx.vnodeTag);
+        else renderAttr(s, e, a[0].value, shown(s, a[1], "attr"), a[1]);
         return;
       case "_ssrRenderDynamicAttr":
         if (a[0].type !== "StringLiteral") fail(s.comp, "FV0417", "attribute names are literal", n);
-        renderDynamicAttr(s, e, a[0].value, expr(s, a[1]), n);
+        renderDynamicAttr(s, e, a[0].value, attrShown(s, a[0].value, a[1]), n);
         return;
       case "_ssrRenderAttrs":
         if (a.length > 1) fail(s.comp, "FV0006", "`ssrRenderAttrs` with a tag argument", n);
@@ -199,7 +199,7 @@ function pushed(s: Scope, e: Emitter, n: N): void {
   if (n.type === "TemplateLiteral") {
     n.quasis.forEach((q: N, i: number) => {
       e.lit(literal(q.value.cooked));
-      if (i < n.expressions.length) slot(s, e, n.expressions[i]);
+      if (i < n.expressions.length) recover(s, e, () => slot(s, e, n.expressions[i]));
     });
     return;
   }
@@ -211,136 +211,159 @@ function pushed(s: Scope, e: Emitter, n: N): void {
 }
 
 export function statements(s: Scope, e: Emitter, body: N[]): void {
-  for (const st of body) {
-    if (st.type === "ExpressionStatement" && st.expression.type === "CallExpression") {
-      const c = st.expression;
-      const callee = c.callee.type === "Identifier" ? c.callee.name : null;
-      if (callee === "_push") {
-        push(s, e, c.arguments[0]);
-        continue;
-      }
-      if (callee === "_ssrRenderList") {
-        list(s, e, c);
-        continue;
-      }
-      if (callee === "_ssrRenderSlot") {
-        slotOutlet(s, e, c);
-        continue;
-      }
-      if (callee === "_ssrRenderSuspense") {
-        const def = c.arguments[1]?.properties?.find((p: N) => (p.key?.name ?? p.key?.value) === "default");
-        if (!def) e.lit("<!---->");
-        else if (def.value.type === "ArrowFunctionExpression" && def.value.body.type === "BlockStatement") statements(s, e, def.value.body.body);
-        else fail(s.comp, "FV0006", "unexpected `<Suspense>` content", c);
-        continue;
-      }
-      if (ctx.plugins.some((p) => p.statement?.(s, e, c, st))) continue;
-      if (dynamicComponent(s, e, st)) continue;
-      if (callee === "_ssrRenderVNode") fail(s.comp, "FV0418", "`<component :is>` renders a closed set of choices", st);
+  for (const st of body) recover(s, e, () => statement(s, e, st));
+}
+
+function recover(s: Scope, e: Emitter, f: () => void): void {
+  if (!ctx.recovered || ctx.trying) return f();
+  const locals = [...s.locals];
+  const narrowed = [...s.narrowed];
+  const rewind = e.mark();
+  try {
+    f();
+  } catch (err) {
+    if (!(err instanceof GenError)) throw err;
+    ctx.recovered.push(err);
+    restore(s.locals, locals);
+    restore(s.narrowed, narrowed);
+    rewind();
+  }
+}
+
+function restore<K, V>(map: Map<K, V>, entries: [K, V][]): void {
+  map.clear();
+  for (const [k, v] of entries) map.set(k, v);
+}
+
+function statement(s: Scope, e: Emitter, st: N): void {
+  if (st.type === "ExpressionStatement" && st.expression.type === "CallExpression") {
+    const c = st.expression;
+    const callee = c.callee.type === "Identifier" ? c.callee.name : null;
+    if (callee === "_push") {
+      push(s, e, c.arguments[0]);
+      return;
     }
-    if (st.type === "VariableDeclaration" && st.declarations.length === 1) {
-      const d = st.declarations[0];
-      const init = d.init;
-      if (
-        init?.type === "CallExpression" && init.callee.type === "Identifier" &&
-        init.callee.name === "_resolveComponent" && init.arguments[0]?.type === "StringLiteral" &&
-        init.arguments[0].value === s.comp.name && init.arguments[1]?.type === "BooleanLiteral"
-      ) {
-        s.selfAlias.name = d.id.name;
-        continue;
-      }
-      const named = init?.type === "CallExpression" && init.callee.type === "Identifier" &&
-        init.callee.name === "_resolveComponent" && init.arguments.length === 1 &&
-        init.arguments[0]?.type === "StringLiteral" ? init.arguments[0].value : null;
-      if (named !== null && ctx.plugins.some((p) => p.resolveComponent?.(s, d.id.name, named))) continue;
-      if (init?.type === "CallExpression" && init.callee.type === "Identifier" && init.callee.name === "_resolveDirective" && init.arguments[0]?.type === "StringLiteral") {
-        s.directives.set(d.id.name, init.arguments[0].value);
-        continue;
-      }
-      fail(s.comp, "FV0513", "a component the template resolves by name must be imported, or be this one", st);
+    if (callee === "_ssrRenderList") {
+      list(s, e, c);
+      return;
     }
-    if (st.type === "IfStatement") {
-      const branch = (b: N): N[] => (b.type === "BlockStatement" ? b.body : [b]);
-      if (st.test.type === "LogicalExpression" && st.test.operator === "&&") {
-        const operands: N[] = [];
-        const flatten = (n: N): void => {
-          if (n.type === "LogicalExpression" && n.operator === "&&") {
-            flatten(n.left);
-            flatten(n.right);
-          } else operands.push(n);
-        };
-        flatten(st.test);
-        const narrowed = new Map(s.narrowed);
-        const bound = new Map<string, Presence>();
-        const parts: string[] = [];
-        for (const op of operands) {
-          const inner = { ...s, narrowed };
-          const p = presence(inner, op);
-          if (p && !p.negated) {
-            const name = `n${++ctx.narrowCount}`;
-            parts.push(p.pattern(name));
-            narrowed.set(p.path, { code: name, ty: p.of });
-            bound.set(name, p);
-          } else {
-            parts.push(operand(cond(inner, op), CMP));
-          }
-        }
-        if (parts.includes("false")) {
-          if (st.alternate) statements(s, e, branch(st.alternate));
-          continue;
-        }
-        if (parts.includes("true")) parts.splice(0, parts.length, ...parts.filter((p) => p !== "true"));
-        if (narrowed.size > s.narrowed.size) {
-          e.open(`if ${parts.join(" && ")}`);
-          const at = e.lines.length - 1;
-          statements({ ...s, narrowed }, e, branch(st.consequent));
-          for (const [name, p] of bound) {
-            const inHead = occurrences(e.lines[at]!, name) > 1;
-            if (!inHead && !e.reads(name, at + 1)) e.replace(at, p.pattern(name), operand(p.present, CMP));
-          }
-          if (st.alternate) {
-            e.close(" else {");
-            statements(s, e, branch(st.alternate));
-          }
-          e.close();
-          continue;
+    if (callee === "_ssrRenderSlot") {
+      slotOutlet(s, e, c);
+      return;
+    }
+    if (callee === "_ssrRenderSuspense") {
+      const def = c.arguments[1]?.properties?.find((p: N) => (p.key?.name ?? p.key?.value) === "default");
+      if (!def) e.lit("<!---->");
+      else if (def.value.type === "ArrowFunctionExpression" && def.value.body.type === "BlockStatement") statements(s, e, def.value.body.body);
+      else fail(s.comp, "FV0006", "unexpected `<Suspense>` content", c);
+      return;
+    }
+    if (ctx.plugins.some((p) => p.statement?.(s, e, c, st))) return;
+    if (dynamicComponent(s, e, st)) return;
+    if (callee === "_ssrRenderVNode") fail(s.comp, "FV0418", "`<component :is>` renders a closed set of choices", st);
+  }
+  if (st.type === "VariableDeclaration" && st.declarations.length === 1) {
+    const d = st.declarations[0];
+    const init = d.init;
+    if (
+      init?.type === "CallExpression" && init.callee.type === "Identifier" &&
+      init.callee.name === "_resolveComponent" && init.arguments[0]?.type === "StringLiteral" &&
+      init.arguments[0].value === s.comp.name && init.arguments[1]?.type === "BooleanLiteral"
+    ) {
+      s.selfAlias.name = d.id.name;
+      return;
+    }
+    const named = init?.type === "CallExpression" && init.callee.type === "Identifier" &&
+      init.callee.name === "_resolveComponent" && init.arguments.length === 1 &&
+      init.arguments[0]?.type === "StringLiteral" ? init.arguments[0].value : null;
+    if (named !== null && ctx.plugins.some((p) => p.resolveComponent?.(s, d.id.name, named))) return;
+    if (init?.type === "CallExpression" && init.callee.type === "Identifier" && init.callee.name === "_resolveDirective" && init.arguments[0]?.type === "StringLiteral") {
+      s.directives.set(d.id.name, init.arguments[0].value);
+      return;
+    }
+    fail(s.comp, "FV0513", "a component the template resolves by name must be imported, or be this one", st);
+  }
+  if (st.type === "IfStatement") {
+    const branch = (b: N): N[] => (b.type === "BlockStatement" ? b.body : [b]);
+    if (st.test.type === "LogicalExpression" && st.test.operator === "&&") {
+      const operands: N[] = [];
+      const flatten = (n: N): void => {
+        if (n.type === "LogicalExpression" && n.operator === "&&") {
+          flatten(n.left);
+          flatten(n.right);
+        } else operands.push(n);
+      };
+      flatten(st.test);
+      const narrowed = new Map(s.narrowed);
+      const bound = new Map<string, Presence>();
+      const parts: string[] = [];
+      for (const op of operands) {
+        const inner = { ...s, narrowed };
+        const p = presence(inner, op);
+        if (p && !p.negated) {
+          const name = `n${++ctx.narrowCount}`;
+          parts.push(p.pattern(name));
+          narrowed.set(p.path, { code: name, ty: p.of });
+          bound.set(name, p);
+        } else {
+          parts.push(operand(cond(inner, op), CMP));
         }
       }
-      const compound =
-        (st.test.type === "LogicalExpression" && st.test.operator !== "??") ||
-        (st.test.type === "UnaryExpression" && st.test.operator === "!");
-      const t: Val = compound ? boolOf(cond(s, st.test)) : expr(s, st.test);
-      const k = known(t);
-      if (k !== undefined) {
-        const taken = k ? st.consequent : st.alternate;
-        if (taken) statements(s, e, branch(taken));
-        continue;
+      if (parts.includes("false")) {
+        if (st.alternate) statements(s, e, branch(st.alternate));
+        return;
       }
-      const p = presence(s, st.test);
-      if (p && (!p.negated || st.alternate)) {
-        const name = `n${++ctx.narrowCount}`;
-        e.open(`if ${p.pattern(name)}`);
+      if (parts.includes("true")) parts.splice(0, parts.length, ...parts.filter((p) => p !== "true"));
+      if (narrowed.size > s.narrowed.size) {
+        e.open(`if ${parts.join(" && ")}`);
         const at = e.lines.length - 1;
-        const [present, absent] = p.negated ? [st.alternate, st.consequent] : [st.consequent, st.alternate];
-        statements(narrowTo(s, p, name), e, branch(present));
-        if (!e.reads(name, at + 1)) e.replace(at, p.pattern(name), condition(p.present));
-        if (absent) {
+        statements({ ...s, narrowed }, e, branch(st.consequent));
+        for (const [name, p] of bound) {
+          const inHead = occurrences(e.lines[at]!, name) > 1;
+          if (!inHead && !e.reads(name, at + 1)) e.replace(at, p.pattern(name), operand(p.present, CMP));
+        }
+        if (st.alternate) {
           e.close(" else {");
-          statements(s, e, branch(absent));
+          statements(s, e, branch(st.alternate));
         }
         e.close();
-        continue;
-      } else {
-        e.open(`if ${condition(cond(s, st.test))}`);
-        statements(s, e, branch(st.consequent));
+        return;
       }
-      if (st.alternate) {
+    }
+    const compound =
+      (st.test.type === "LogicalExpression" && st.test.operator !== "??") ||
+      (st.test.type === "UnaryExpression" && st.test.operator === "!");
+    const t: Val = compound ? boolOf(cond(s, st.test)) : expr(s, st.test);
+    const k = known(t);
+    if (k !== undefined) {
+      const taken = k ? st.consequent : st.alternate;
+      if (taken) statements(s, e, branch(taken));
+      return;
+    }
+    const p = presence(s, st.test);
+    if (p && (!p.negated || st.alternate)) {
+      const name = `n${++ctx.narrowCount}`;
+      e.open(`if ${p.pattern(name)}`);
+      const at = e.lines.length - 1;
+      const [present, absent] = p.negated ? [st.alternate, st.consequent] : [st.consequent, st.alternate];
+      statements(narrowTo(s, p, name), e, branch(present));
+      if (!e.reads(name, at + 1)) e.replace(at, p.pattern(name), condition(p.present));
+      if (absent) {
         e.close(" else {");
-        statements(s, e, branch(st.alternate));
+        statements(s, e, branch(absent));
       }
       e.close();
-      continue;
+      return;
+    } else {
+      e.open(`if ${condition(cond(s, st.test))}`);
+      statements(s, e, branch(st.consequent));
     }
-    fail(s.comp, "FV0006", `\`${st.type}\` in the compiled template`, st);
+    if (st.alternate) {
+      e.close(" else {");
+      statements(s, e, branch(st.alternate));
+    }
+    e.close();
+    return;
   }
+  fail(s.comp, "FV0006", `${nodeName(st)} in the compiled template`, st);
 }

@@ -2,7 +2,8 @@ import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "nod
 import { basename, join, resolve } from "node:path";
 import { relativePath } from "./paths.ts";
 import { type Config, ctx, JS_DATE, loadConfig, tyOfName } from "./context.ts";
-import { failIn, snake } from "./model.ts";
+import { type Component, failIn, GenError, GenErrors, snake } from "./model.ts";
+import { isRefusal } from "./diagnostics.ts";
 import { readComponent, refuseOptionsApi } from "./component.ts";
 import { listDir } from "./files.ts";
 import { scopeFor } from "./script.ts";
@@ -23,8 +24,20 @@ export interface ResolveOptions {
 }
 
 /** Every generated file, keyed by its name in the output directory. `sources` holds the text of
- * components by path, read in place of their files, as an editor's unsaved buffers. */
+ * components by path, read in place of their files, as an editor's unsaved buffers. A run that
+ * refuses anything raises a `GenErrors` holding every refusal it found, and generates nothing. */
 export function generate(root: string, config: Config = loadConfig(root), sources: ReadonlyMap<string, string> = new Map(), options: ResolveOptions = {}): Map<string, string> {
+  try {
+    return generateAll(root, config, sources, options);
+  } catch (e) {
+    if (isRefusal(e) && !(e instanceof GenErrors)) throw new GenErrors([e]);
+    throw e;
+  }
+}
+
+function generateAll(root: string, config: Config, sources: ReadonlyMap<string, string>, options: ResolveOptions): Map<string, string> {
+  ctx.recovered = null;
+  ctx.trying = 0;
   ctx.sources = new Map([...sources].map(([file, text]) => [resolve(root, file), text]));
   ctx.aliases = options.aliases ?? [];
   ctx.tsProjects = new Map();
@@ -64,30 +77,51 @@ export function generate(root: string, config: Config = loadConfig(root), source
     ...PLUGINS.flatMap((p) => p.components?.() ?? []).map((c) => ({ file: join(root, c.file), name: c.name })),
   ];
   const modulesOf = new Map<string, string>();
-  for (const f of files) {
+  const run = new Run(files.map((f) => relativePath(root, f.file)));
+  const named = files.filter((f) => {
     const rel = relativePath(root, f.file);
-    if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(f.name)) {
-      failIn(rel, "FV0007", `the component is called \`${f.name}\` after its file, which is not a Rust name: name the file in PascalCase, letters and digits (\`UserCard.vue\`)`);
-    }
-    const file = moduleFile(snake(f.name));
-    if (file === "mod.rs") failIn(rel, "FV0007", `the component's module would be \`mod.rs\`, which holds the generated modules: rename the file`);
-    const taken = modulesOf.get(file);
-    if (taken) failIn(rel, "FV0007", `the component's module would be \`${file}\`, as ${taken}'s is: rename one of them`);
-    modulesOf.set(file, rel);
-  }
-  const read = files.map((f) => readComponent(f.file, root, f.name));
+    return run.attempt(rel, () => {
+      if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(f.name)) {
+        failIn(rel, "FV0007", `the component is called \`${f.name}\` after its file, which is not a Rust name: name the file in PascalCase, letters and digits (\`UserCard.vue\`)`);
+      }
+      const file = moduleFile(snake(f.name));
+      if (file === "mod.rs") failIn(rel, "FV0007", `the component's module would be \`mod.rs\`, which holds the generated modules: rename the file`);
+      const taken = modulesOf.get(file);
+      if (taken) failIn(rel, "FV0007", `the component's module would be \`${file}\`, as ${taken}'s is: rename one of them`);
+      modulesOf.set(file, rel);
+      return true;
+    });
+  });
+  const names = new Map(named.map((f) => [relativePath(root, f.file), f.name]));
+  for (const f of files) if (!names.has(relativePath(root, f.file))) run.refusedNames.add(f.name);
+  let read = named.flatMap((f) => {
+    const rel = relativePath(root, f.file);
+    const r = run.attempt(rel, () => readComponent(f.file, root, f.name), f.name);
+    return r ? [r] : [];
+  });
   const children = new Set(read.flatMap((r) => [...r.comp.imports, ...r.comp.childProps.values()].filter((c) => c !== r.comp.name)));
-  for (const r of read) if (r.optionsApi) refuseOptionsApi(r.comp, r.optionsApi, children.has(r.comp.name));
-  const byName = new Map(read.map((r) => [r.comp.name, r]));
+  read = run.each(read, (r) => {
+    if (r.optionsApi) refuseOptionsApi(r.comp, r.optionsApi, children.has(r.comp.name));
+  });
+  read = run.prune(read);
   const components = new Map(read.map((r) => [r.comp.name, r.comp]));
   ctx.components = components;
-  for (const c of components.values()) for (const f of c.props.fields) requireWhole(c, f.ty);
-  for (const c of components.values()) refuseNestedDates(c, c.props.fields, c.propsAt);
-  const scopes = read.map((r) => scopeFor(r.comp, r.ast, components).scope);
-  const analysed = prepareDynamic(read.map((r, i) => ({ ...r, scope: scopes[i]! })));
-  const all = read.map((r, i) => ({ comp: r.comp, ssr: analysed[i]!, children: scopes[i]!.children, attrsBindings: scopes[i]!.attrsBindings }));
-  for (const p of PLUGINS) p.analyse?.(all);
-  attrsFlow(all);
+  read = run.each(read, (r) => {
+    for (const f of r.comp.props.fields) requireWhole(r.comp, f.ty);
+    refuseNestedDates(r.comp, r.comp.props.fields, r.comp.propsAt);
+  });
+  const scoped = run.prune(read).flatMap((r) => {
+    const scope = run.attempt(r.comp.file, () => scopeFor(r.comp, r.ast, components).scope, r.comp.name);
+    return scope ? [{ ...r, scope }] : [];
+  });
+  const all = run.whole(scoped, (rs) => {
+    const analysed = prepareDynamic(rs);
+    const each = rs.map((r, i) => ({ ...r, compiled: r.ssr, ssr: analysed[i]!, children: r.scope.children, attrsBindings: r.scope.attrsBindings }));
+    for (const p of PLUGINS) p.analyse?.(each);
+    attrsFlow(each);
+    return each;
+  });
+  for (const c of components.values()) if (!all.some((r) => r.comp === c)) components.delete(c.name);
   for (const c of components.values()) c.takes = new Set(renderParams().filter((p) => p.reads(c)).map((p) => p.name));
   for (let changed = true; changed; ) {
     changed = false;
@@ -101,9 +135,10 @@ export function generate(root: string, config: Config = loadConfig(root), source
     }
   }
   const out = new Map<string, string>();
-  const ordered: typeof read = [];
+  const ordered: typeof all = [];
   const placed = new Set<string>();
-  const place = (r: (typeof read)[number]): void => {
+  const byName = new Map(all.map((r) => [r.comp.name, r]));
+  const place = (r: (typeof all)[number]): void => {
     if (placed.has(r.comp.name)) return;
     placed.add(r.comp.name);
     for (const i of r.comp.imports) {
@@ -112,13 +147,17 @@ export function generate(root: string, config: Config = loadConfig(root), source
     }
     ordered.push(r);
   };
-  read.forEach(place);
-  const built = ordered.map((r) => {
+  all.forEach(place);
+  const built: { file: string; source: () => string }[] = [];
+  for (const r of ordered) {
+    if (run.prune([r]).length === 0) continue;
     ctx.narrowCount = 0;
     const file = moduleFile(r.comp.module);
     out.set(file, "");
-    return { file, source: componentSource(r.comp, r.ast, r.ssr, components) };
-  });
+    const source = run.attempt(r.comp.file, () => run.recovering(() => componentSource(r.comp, r.ast, r.compiled, components)), r.comp.name);
+    if (source) built.push({ file, source });
+  }
+  run.done();
   const reached = (): number => ctx.typeReached.size + [...components.values()].reduce((n, c) => n + c.reached.size, 0);
   let modules: [string, string][] = [];
   for (let before = -1; before !== reached(); ) {
@@ -133,6 +172,104 @@ export function generate(root: string, config: Config = loadConfig(root), source
     out.set(file, text);
   }
   return out;
+}
+
+type Refusal = GenError | SyntaxError;
+
+/** The refusals of one run of the compiler, collected component by component. */
+class Run {
+  readonly refused: { e: Refusal; file: string | null }[] = [];
+  readonly refusedNames = new Set<string>();
+  readonly unchecked: string[] = [];
+  private readonly order: Map<string, number>;
+
+  constructor(files: string[]) {
+    this.order = new Map(files.map((f, i) => [f, i]));
+  }
+
+  attempt<T>(file: string, f: () => T, name?: string): T | undefined {
+    try {
+      return f();
+    } catch (e) {
+      if (!isRefusal(e)) throw e;
+      for (const one of e instanceof GenErrors ? e.errors : [e]) this.refused.push({ e: one, file });
+      if (name !== undefined) this.refusedNames.add(name);
+      return undefined;
+    }
+  }
+
+  each<R extends { comp: Component }>(rs: R[], f: (r: R) => void): R[] {
+    return rs.filter((r) => this.attempt(r.comp.file, () => {
+      f(r);
+      return true;
+    }, r.comp.name));
+  }
+
+  recovering<T>(f: () => T): T {
+    const recovered: GenError[] = [];
+    ctx.recovered = recovered;
+    let value: T;
+    try {
+      value = f();
+    } catch (e) {
+      if (isRefusal(e)) throw new GenErrors([...recovered, e]);
+      throw e;
+    } finally {
+      ctx.recovered = null;
+    }
+    if (recovered.length) throw new GenErrors(recovered);
+    return value;
+  }
+
+  /** The components left once those that use a refused one are set aside, unchecked. */
+  prune<R extends { comp: Component }>(rs: R[]): R[] {
+    const uses = (r: R): string[] => [...r.comp.imports, ...r.comp.childProps.values()].filter((c) => c !== r.comp.name);
+    let left = rs.filter((r) => !this.refusedNames.has(r.comp.name));
+    for (let dropped = true; dropped; ) {
+      dropped = false;
+      left = left.filter((r) => {
+        if (!uses(r).some((c) => this.refusedNames.has(c))) return true;
+        this.refusedNames.add(r.comp.name);
+        this.unchecked.push(r.comp.file);
+        dropped = true;
+        return false;
+      });
+    }
+    return left;
+  }
+
+  whole<R extends { comp: Component }, T>(rs: R[], f: (rs: R[]) => T): T {
+    for (let left = rs; ; left = this.prune(left)) {
+      try {
+        return f(left);
+      } catch (e) {
+        if (!isRefusal(e)) throw e;
+        const file = e instanceof GenError ? e.at?.file : undefined;
+        const culprit = left.find((r) => r.comp.file === file);
+        this.refused.push({ e, file: file ?? null });
+        if (!culprit) this.done();
+        this.refusedNames.add(culprit!.comp.name);
+      }
+    }
+  }
+
+  /** Raise every refusal so far, if there is one. */
+  done(): void {
+    if (!this.refused.length) return;
+    const rank = (r: { e: Refusal; file: string | null }): number => this.order.get(r.file ?? "") ?? this.order.size;
+    const at = (e: Refusal): [number, number] => (e instanceof GenError ? [e.at?.line ?? 0, e.at?.column ?? 0] : [0, 0]);
+    const seen = new Set<string>();
+    const errors = this.refused
+      .toSorted((a, b) => rank(a) - rank(b) || at(a.e)[0] - at(b.e)[0] || at(a.e)[1] - at(b.e)[1])
+      .map((r) => r.e)
+      .filter((e) => {
+        const key = `${e instanceof GenError ? e.code : ""}\n${e.message}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    throw new GenErrors(errors, this.unchecked.toSorted());
+  }
 }
 
 /** Whether a file starts with the header ferrovue writes, so `write` removes only what an earlier
@@ -188,7 +325,7 @@ export function write(root: string, config: Config = loadConfig(root), options: 
 }
 
 export { CONFIG_FILE, loadConfig, TYPES_MODULE, type Config, type HelperSpec, type RoutesSource, type ScopeIdMode, type TwinSpec, type TypeName } from "./context.ts";
-export { GenError, type Location as SourceLocation } from "./model.ts";
+export { GenError, GenErrors, type Location as SourceLocation } from "./model.ts";
 export type { Alias } from "./resolve.ts";
 export { docsUrl, ERRORS, type Code as ErrorCode, type ErrorDoc } from "./errors.ts";
 

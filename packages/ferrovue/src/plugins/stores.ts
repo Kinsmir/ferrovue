@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { relativePath } from "../paths.ts";
-import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, absence, blankComponent, BOOL, fail, failIn, FLOAT, GenError, INT, opt, sameTy, snake, STR, tagAst, UNDEF } from "../model.ts";
+import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, absence, blankComponent, BOOL, fail, failIn, FLOAT, GenError, INT, nodeName, opt, sameTy, snake, STR, tagAst, UNDEF } from "../model.ts";
 import { listDir, parseTs } from "../files.ts";
 import { resolveImport } from "../resolve.ts";
 import { ONE_NOTHING, structOf, tyOfTs, typesImports } from "../typescript.ts";
@@ -144,7 +144,7 @@ function setupStore(comp: Component, hook: string, id: string, fn: N, path: stri
       setupStatement(comp, st);
       continue;
     }
-    if (st.type !== "VariableDeclaration") fail(comp, "FV1308", `\`${st.type}\` in a setup store is not supported`, st);
+    if (st.type !== "VariableDeclaration") fail(comp, "FV1308", `${nodeName(st)} in a setup store is not supported`, st);
     for (const d of st.declarations) {
       if (d.id.type !== "Identifier") {
         for (const name of patternNames(d.id)) others.add(name);

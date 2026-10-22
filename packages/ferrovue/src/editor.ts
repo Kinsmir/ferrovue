@@ -1,7 +1,8 @@
 import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { CONFIG_FILE, generate, loadConfig } from "./compiler.ts";
-import { type Diagnostic, diagnose, isRefusal } from "./diagnostics.ts";
+import { type Diagnostic, diagnose, isRefusal, refusalsOf } from "./diagnostics.ts";
+import { GenError } from "./model.ts";
 
 /** A refusal in the file an editor holds, with its range as offsets into the text it was given. The
  * end is exclusive, and `null` where the compiler does not know it. */
@@ -47,18 +48,22 @@ function check(file: string, text: string, options: EditorOptions): Located[] {
       console.error(e);
       return [];
     }
-    const d = diagnose(e);
-    if (d.file === null || resolve(root, d.file) !== file) return [];
-    const start = d.line === null ? 0 : offsetOf(text, d.line, d.column ?? 1);
-    const end = d.endLine === null ? null : offsetOf(text, d.endLine, d.endColumn ?? 1);
-    return [{ ...d, start, end }];
+    return refusalsOf(e).flatMap((one) => {
+      const found = diagnose(one);
+      const readAt = one instanceof GenError ? one.readAt : null;
+      const d = readAt && found.file !== null && resolve(root, found.file) !== file ? { ...found, file: readAt.file, line: readAt.line ?? null, column: readAt.column ?? null, endLine: null, endColumn: null } : found;
+      if (d.file === null || resolve(root, d.file) !== file) return [];
+      const start = d.line === null ? 0 : offsetOf(text, d.line, d.column ?? 1);
+      const end = d.endLine === null ? null : offsetOf(text, d.endLine, d.endColumn ?? 1);
+      return [{ ...d, start, end }];
+    });
   }
 }
 
 /** The refusals in a component of a ferrovue project, compiling the project with `text` in place of
  * the file. A project is the nearest directory above the file holding the configuration; a file in
- * none has no refusals. The compiler stops at the first refusal, so a refusal in another file hides
- * those in this one. */
+ * none has no refusals. A component that uses a refused one is checked once that one compiles, and
+ * a refusal of the project's configuration hides those of every component. */
 export function refusalsIn(file: string, text: string, options: EditorOptions = {}): Located[] {
   const path = resolve(file);
   const hit = recent.get(path);

@@ -98,10 +98,10 @@ escaped too and stays code: see below.
 
 | | |
 |---|---|
-| Written | [`state_script_into`](crate::state_script_into) (Pinia state) and [`PageRecord::script_into`](crate::PageRecord::script_into) (the layout's props and every page part's component and props): `<script type="application/json" id="…">…</script>` |
+| Written | [`state_script_into`](crate::state_script_into) (Pinia state) and [`PageRecord::script_into`](crate::PageRecord::script_into) (the layout's props and every page part's component and props): `<script type="application/json" id="…">…</script>`; [`Loads::script_into`](crate::Loads::script_into) (each loader's key and result): `<script type="application/json" data-fv-loads>…</script>` |
 | Guarantee | The JSON has `<`, `>`, `&`, U+2028 and U+2029 written as `\u` escapes, so no value can end the element, open a comment or be read as markup inside it, and the body reads back as the JSON given. The `id` is escaped. The type is `application/json`, which no browser runs, so the page needs no nonce for it. A value serde_json refuses is `null` in the record, which stays readable |
-| Code | `json_script_into` and `json_escaped_into` in `crates/ferrovue/src/state.rs`; `Recorded::to_json` in `crates/ferrovue/src/page.rs`; `state_script` in `dioxus.rs` |
-| Tests | `crates/ferrovue/src/state/tests.rs`; `the_record_cannot_be_closed_by_a_prop_and_reads_back_whole` (`crates/ferrovue/src/page/tests.rs`); `the_state_script_is_one_element_whose_body_reads_back` (`properties.rs`); `pages/hostile.json` in the conformance suite |
+| Code | `json_script_into` and `json_escaped_into` in `crates/ferrovue/src/state.rs`; `Recorded::to_json` in `crates/ferrovue/src/page.rs`; `Loads::script_into` in `crates/ferrovue/src/load.rs`; `state_script` in `dioxus.rs` |
+| Tests | `crates/ferrovue/src/state/tests.rs`; `the_record_cannot_be_closed_by_a_prop_and_reads_back_whole` (`crates/ferrovue/src/page/tests.rs`); `the_state_script_is_one_element_whose_body_reads_back` and `the_loads_script_is_one_element_whose_body_reads_back` (`properties.rs`); `the_payload_holds_each_result_read_once_in_order_and_cannot_close_its_script` (`crates/ferrovue/src/load/tests.rs`); `pages/hostile.json` in the conformance suite |
 
 ## The page head
 

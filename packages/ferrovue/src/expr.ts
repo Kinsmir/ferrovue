@@ -1,5 +1,5 @@
-import { type Component, type N, type Scope, type Ty, type Val, absence, BOOL, fail, FLOAT, GenError, INT, joinAbsence, nothing, NULL, opt, rustStr, sameTy, snake, STR, UNDEF, withAbsence } from "./model.ts";
-import { ctx } from "./context.ts";
+import { type Component, type N, type Scope, type Ty, type Val, absence, BOOL, fail, FLOAT, GenError, INT, joinAbsence, nodeName, nothing, NULL, opt, placeOf, rustStr, sameTy, snake, STR, UNDEF, withAbsence } from "./model.ts";
+import { CONFIG_FILE, ctx } from "./context.ts";
 import { lookupStruct, markHome, tyOfTs } from "./typescript.ts";
 import { claim } from "./plugin.ts";
 import { atom, bare, binary, enclosed, logical, negate, not, occurrences, receiver, strArg } from "./parens.ts";
@@ -17,6 +17,48 @@ const MATH_CONSTANTS = new Map(["E", "LN10", "LN2", "LOG10E", "LOG2E", "PI", "SQ
 const NUMBER_CONSTANTS = new Map(
   ["EPSILON", "MAX_SAFE_INTEGER", "MAX_VALUE", "MIN_SAFE_INTEGER", "MIN_VALUE", "NaN", "NEGATIVE_INFINITY", "POSITIVE_INFINITY"].map((k) => [k, Number[k as "NaN"]]),
 );
+
+/** Why a `computed` whose body is a block of statements is left to the client. */
+export const MANY_STATEMENTS = "it is a `computed` whose body is a block of statements: the server evaluates a body that is one expression or a single `return`";
+
+const COMPUTE_IN_RUST = "compute the value in Rust and pass it as a prop";
+
+function twinHelp(name: string): string {
+  const module = ctx.helperModule === null ? "the module `helpers.module` names" : `\`${ctx.helperModule}\``;
+  return `put \`${name}\` in ${module} with a Rust twin under \`helpers.functions\` in ${CONFIG_FILE}, or ${COMPUTE_IN_RUST}`;
+}
+
+/** Refuse a name the template reads that setup binds in a way the server cannot evaluate. */
+export function refuseClientOnly(s: Scope, name: string, n: N, called = false): never {
+  const cause = s.refusedBy.get(name);
+  if (cause) {
+    const at = placeOf(s.comp, n);
+    const what = `${cause.what} (the template reads it as \`${name}\` at ${[at.file, at.line, at.column].filter((p) => p !== undefined).join(":")})`;
+    const e = new GenError(cause.code, cause.message.replace(cause.what, () => what), cause.at, what, cause.help);
+    if (cause.at?.file !== s.comp.file) e.readAt = at;
+    throw e;
+  }
+  const why = s.clientOnly.get(name)!;
+  const help = why === MANY_STATEMENTS
+    ? `write the body as one expression, as \`computed(() => (a ? b : c))\`, or as a single \`return\`, or ${COMPUTE_IN_RUST}`
+    : called || why.startsWith("it is a function") ? twinHelp(name) : `${COMPUTE_IN_RUST}, or read it only from an event handler`;
+  return fail(s.comp, "FV0613", `\`${name}\` is set up in a way the server cannot evaluate: ${why}`, n, help);
+}
+
+/** Refuse a name the template reads that the server has no value for: one imported from a module
+ * it does not run, or one nothing declares. */
+export function refuseUnavailable(s: Scope, name: string, n: N, called = false): never {
+  refuseUnresolved(s.comp, name, n);
+  const from = s.imported.get(name);
+  const what = called ? `\`${name}()\`` : `\`${name}\``;
+  if (from !== undefined) {
+    const help = called ? twinHelp(name) : `export it from \`${from}\` as a constant the compiler evaluates (\`export const ${name} = …\`), or ${COMPUTE_IN_RUST}`;
+    const said = called ? `${what} calls a function imported from \`${from}\`` : `${what} is imported from \`${from}\``;
+    return fail(s.comp, "FV0601", `${said}, a module the server does not run`, n, help);
+  }
+  const help = called ? `a template calls JavaScript's built-ins and the helpers with Rust twins under \`helpers.functions\` in ${CONFIG_FILE}; ${COMPUTE_IN_RUST}` : null;
+  return fail(s.comp, "FV0601", `${what} is not available when rendering on the server`, n, help);
+}
 
 export function describeTy(ty: Ty): string {
   switch (ty.k) {
@@ -167,7 +209,17 @@ function stated(s: Scope, n: N): Val {
 function indexed(s: Scope, list: Val, key: N, n: N): Val {
   const i = expr(s, key);
   if (i.ty.k !== "int") {
-    const is = i.ty.k === "float" ? "a `Float`, which may hold a fraction" : describeTy(i.ty);
+    const getter = key.type === "CallExpression" && key.callee.type === "MemberExpression" && !key.callee.computed ? (key.callee.property.name as string) : "";
+    if (i.ty.k === "float" && /^getUTC[A-Z]|^getTime$|^valueOf$/.test(getter)) {
+      return fail(
+        s.comp,
+        "FV0824",
+        `\`[…]\` reads a list's item by an integer index, and \`.${getter}()\` of a date is a \`Float\`: it is \`NaN\` for an invalid date, where \`[…]\` reads \`undefined\``,
+        key,
+        `\`.at(…)\` reads the item for any number, the first one for \`NaN\`; or pick the item in Rust and pass it as a prop`,
+      );
+    }
+    const is = i.ty.k === "float" ? "a `Float`, which may hold a fraction or be `NaN`" : describeTy(i.ty);
     return fail(s.comp, "FV0824", `\`[…]\` reads a list's item by an integer index, a \`number\` that is present, and this index is ${is}: \`.at()\` takes any number`, key);
   }
   if (i.num !== undefined && i.num >= 0 && list.iter === undefined) return picked(s, list, n, (l) => (i.num === 0 ? `${l}.first()` : `${l}.get(${i.num})`), (it) => it);
@@ -223,6 +275,46 @@ function optionalChain(s: Scope, n: N): Val {
   if (inner.ty.k === "str" && (isTemporary(inner) || base.held !== undefined)) return heldBy(over(ownedCow(inner), false), opt(STR));
   const place = ["list", "record", "struct"].includes(inner.ty.k) && new RegExp(`^${name}(?:\\.[\\w#]+)+$`).test(inner.code);
   return { code: over(place ? `&${inner.code}` : inner.code, false), ty: opt(inner.ty), ...lone };
+}
+
+/** How a value is turned into text where it is shown: `{{ }}` and attribute values leave out
+ * `null` and `undefined`, and a template literal writes them. */
+export type Shown = "text" | "attr" | "template";
+
+function asText(s: Scope, n: N, how: Shown): N {
+  let inner = n;
+  while (inner.type === "ParenthesizedExpression") inner = inner.expression;
+  if (inner.type === "ConditionalExpression") return { ...inner, consequent: asText(s, inner.consequent, how), alternate: asText(s, inner.alternate, how) };
+  let v: Val;
+  try {
+    v = expr(s, n);
+  } catch (e) {
+    if (e instanceof GenError) return n;
+    throw e;
+  }
+  const at = { loc: n.loc, __fv: n.__fv, start: n.start, end: n.end };
+  const quasi = { type: "TemplateElement", value: { raw: "", cooked: "" }, ...at };
+  const written: N = { type: "TemplateLiteral", quasis: [quasi, { ...quasi, tail: true }], expressions: [n], ...at };
+  if (how === "template") return ["int", "float", "bool", "list", "opt", "undef", "null"].includes(v.ty.k) ? written : n;
+  const of = v.ty.k === "opt" ? v.ty.of : v.ty;
+  if (nothing(v.ty) || !["int", "float", "bool"].includes(of.k)) return n;
+  if (v.ty.k !== "opt") return written;
+  const test = { type: "BinaryExpression", operator: "==", left: n, right: { type: "NullLiteral", ...at }, ...at };
+  return { type: "ConditionalExpression", test, consequent: { type: "Identifier", name: "undefined", ...at }, alternate: written, ...at };
+}
+
+/** A value where it is shown as text: a \`?:\` whose branches differ in type is written as JavaScript
+ * writes each branch, as \`how\` shows it. */
+export function shown(s: Scope, n: N, how: Shown): Val {
+  try {
+    return expr(s, n);
+  } catch (e) {
+    if (!(e instanceof GenError) || e.code !== "FV0623") throw e;
+    let inner = n;
+    while (inner.type === "ParenthesizedExpression") inner = inner.expression;
+    if (inner.type !== "ConditionalExpression") throw e;
+    return expr(s, asText(s, inner, how));
+  }
 }
 
 export function expr(s: Scope, n: N): Val {
@@ -304,7 +396,7 @@ export function expr(s: Scope, n: N): Val {
       const parts: (string | Val)[] = [];
       n.quasis.forEach((q: N, i: number) => {
         parts.push(q.value.cooked as string);
-        if (i < n.expressions.length) parts.push(expr(s, n.expressions[i]));
+        if (i < n.expressions.length) parts.push(shown(s, n.expressions[i], "template"));
       });
       return formatted(comp, parts, n, "a template literal");
     }
@@ -336,15 +428,12 @@ export function expr(s: Scope, n: N): Val {
       if (n.name === "undefined") return { code: "None", ty: UNDEF };
       const local = s.locals.get(n.name) ?? s.setup.get(n.name);
       if (local) return local;
-      if (s.clientOnly.has(n.name)) {
-        return fail(comp, "FV0613", `\`${n.name}\` is set up in a way the server cannot evaluate: ${s.clientOnly.get(n.name)}`, n);
-      }
+      if (s.clientOnly.has(n.name)) return refuseClientOnly(s, n.name, n);
       if (n.name === s.propsIdent) return { code: "props", ty: { k: "struct", name: "Props" } };
       if (n.name === "Infinity" || n.name === "NaN") return numberVal(Number(n.name), false);
       if (n.name === "Intl") return localeRefusal(s, "`Intl`", n);
       if (BUILTINS.has(n.name)) return builtin(s, n.name, n);
-      refuseUnresolved(comp, n.name, n);
-      return fail(comp, "FV0601", `\`${n.name}\` is not available when rendering on the server`, n);
+      return refuseUnavailable(s, n.name, n);
     }
     case "MemberExpression": {
       if (!n.computed && n.property.name === "value" && n.object.type === "Identifier" && s.refs.has(n.object.name) && !s.locals.has(n.object.name)) {
@@ -387,14 +476,11 @@ export function expr(s: Scope, n: N): Val {
             const v = s.setup.get(prop);
             if (v) return v;
             if (prop === s.propsIdent) return { code: "props", ty: { k: "struct", name: "Props" } };
-            if (s.clientOnly.has(prop)) {
-              return fail(comp, "FV0613", `\`${prop}\` is set up in a way the server cannot evaluate: ${s.clientOnly.get(prop)}`, n);
-            }
+            if (s.clientOnly.has(prop)) return refuseClientOnly(s, prop, n);
             if (n.object.name === "_ctx" && comp.props.fields.some((f) => f.js === prop)) {
               return fieldVal(comp, "props", { k: "struct", name: "Props" }, prop, n);
             }
-            refuseUnresolved(comp, prop, n);
-            return fail(comp, "FV0601", `\`${prop}\` is not available when rendering on the server`, n);
+            return refuseUnavailable(s, prop, n);
           }
         }
       }
@@ -537,12 +623,15 @@ export function expr(s: Scope, n: N): Val {
       if (k !== undefined) {
         const chosen = expr(s, k ? n.consequent : n.alternate);
         if (!untypedEmpty(chosen)) return chosen;
+        ctx.trying++;
         try {
           const other = expr(s, k ? n.alternate : n.consequent);
           return other.ty.k === "list" && other.ty.of.k !== "undef" ? typedEmpty(comp, other.ty.of) : chosen;
         } catch (e) {
           if (!(e instanceof GenError)) throw e;
           return chosen;
+        } finally {
+          ctx.trying--;
         }
       }
       const p = presence(s, n.test);
@@ -604,6 +693,6 @@ export function expr(s: Scope, n: N): Val {
       return fail(comp, "FV0624", `\`new ${made}(…)\` builds an object the server has no twin for: compute the value in Rust and pass it as a prop`, n);
     }
     default:
-      return fail(comp, "FV0625", `\`${n.type}\` is not supported in a template`, n);
+      return fail(comp, "FV0625", `${nodeName(n)} is not supported in a template`, n);
   }
 }

@@ -5,14 +5,30 @@ What the compiler refuses, and what can still go wrong at run time.
 The compiler translates a closed set of constructs, each proven against Vue by the conformance
 suite. Anything else is an error, never an approximation, because an approximation would be a
 hydration mismatch in the browser. Errors carry a stable code and point into the `.vue` file, with
-the line quoted and a caret under the construct. For example:
+the line quoted and a caret under the construct. Where the way around a refusal is short, a
+`= help:` line gives it. For example:
 
 ```text
 error[FV0609]: components/Card.vue:7:14: `<` is supported between two numbers, two strings or two dates that are present: the other is a string
  7 |     <p v-if="label < limit">{{ label }}</p>
    |              ^
  = docs: https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#fv0609
+
+error[FV0601]: components/Price.vue:9:9: `formatPrice()` calls a function imported from `./format`, a module the server does not run
+ 9 |   <p>{{ formatPrice(cents) }}</p>
+   |         ^
+ = help: put `formatPrice` in the module `helpers.module` names with a Rust twin under `helpers.functions` in ferrovue.config.json, or compute the value in Rust and pass it as a prop
+ = docs: https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#fv0601
+
+2 errors in 2 components
 ```
+
+A run reports every refusal it finds, then a line that counts them, and writes nothing while any
+remains. Each component is checked on its own, and within a template each statement of the
+compiled render and each interpolation in it, so independent refusals in one component are all
+reported. A component that uses a refused one (as a child, or by importing its `Props`) is checked
+once that one compiles; the count line says how many were left unchecked. A refusal in the
+configuration, a routes file or a locale file stops the run where it is found.
 
 [`error_codes`](crate::guide::error_codes) lists every code. `ferrovue --format json` writes the
 same errors for an editor or a CI annotation, and a VS Code problem matcher puts them in the
@@ -105,6 +121,12 @@ Client-only code is allowed where the server never runs it: lifecycle hooks, `wa
 `immediate`), `defineEmits`, `defineExpose`, template refs, functions and what is injected under a
 key holding a function may be named from event handlers, which the server drops. The repository
 README's "What a component may use" table lists everything that is supported.
+
+A `<script>` element in a template is kept by Vue's server renderer, so a component that writes the
+whole document (`<html>`, `<head>`, `<body>` and a `<script type="module">` that loads the client)
+compiles, and the server writes the element as it is. Vue's client compiler drops a `<script>` from
+a template, so such a component must never hydrate: render it on the server only, as the page's
+shell, and put the islands or the app inside it.
 
 # Helpers
 

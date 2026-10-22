@@ -1,11 +1,11 @@
 import { basename } from "node:path";
-import { type Component, type N, type Scope, type Val, fail, nothing, GenError, snake, takesAttrs, UNDEF } from "./model.ts";
+import { type Component, type N, type Scope, type Val, fail, GenError, nodeName, nothing, snake, takesAttrs, UNDEF } from "./model.ts";
 import { CONFIG_FILE, ctx } from "./context.ts";
 import { definePropsType, tyOfTs } from "./typescript.ts";
 import { resolveImport } from "./resolve.ts";
 import { constOfDecl, type Declared, declareConsts } from "./constants.ts";
 import { localTy } from "./rust.ts";
-import { expr, fieldVal, typedBy } from "./expr.ts";
+import { expr, fieldVal, MANY_STATEMENTS, typedBy } from "./expr.ts";
 import { collected, heldList } from "./lists.ts";
 import { bare, occurrences, operand, UNARY } from "./parens.ts";
 import { known } from "./narrowing.ts";
@@ -35,7 +35,7 @@ export function setupStatement(comp: Component, st: N): void {
     fail(comp, "FV0103", `\`${name}\` runs once on the server, where its effect is not translated; use \`watch\` or \`onMounted\``, st);
   }
   if (name === "onServerPrefetch") fail(comp, "FV0104", "`onServerPrefetch` fetches on the server; pass the data in as props instead", st);
-  fail(comp, "FV0105", `\`${st.expression?.type === "CallExpression" ? `${name ?? "a call"}()` : st.expression?.type}\` in setup could change what renders, and is not translated`, st);
+  fail(comp, "FV0105", `${st.expression?.type === "CallExpression" ? (name === null ? "a call" : `\`${name}()\``) : nodeName(st.expression)} in setup could change what renders, and is not translated`, st);
 }
 
 export function setupSource(init: N): N | null {
@@ -162,6 +162,8 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
     propsIdent: null,
     refs: new Set(),
     clientOnly: new Map(),
+    imported: new Map(),
+    refusedBy: new Map(),
     narrowed: new Map(),
     selfAlias: { name: null },
     helperBytes: { n: 0 },
@@ -184,6 +186,7 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
     } catch (e) {
       if (!(e instanceof GenError)) throw e;
       scope.clientOnly.set(local, `${why}: ${e.message.split("\n")[0]!}`);
+      scope.refusedBy.set(local, e);
     }
   };
   const locals = declareConsts(comp, ast);
@@ -214,6 +217,7 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
           scope.helpers.set(sp.local.name, sp.imported.name);
         }
       } else {
+        for (const sp of st.importKind === "type" ? [] : st.specifiers) if (sp.importKind !== "type") scope.imported.set(sp.local.name, from);
         const file = resolveImport(comp.file, from);
         const decls = file !== null ? ctx.constDecls.get(file) : undefined;
         for (const sp of decls && st.importKind !== "type" ? st.specifiers : []) {
@@ -237,7 +241,7 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
       if (!ctx.plugins.some((p) => p.scriptStatement?.(scope, st))) setupStatement(comp, st);
       continue;
     }
-    if (st.type !== "VariableDeclaration") fail(comp, "FV0107", `\`${st.type}\` in setup is not supported`, st);
+    if (st.type !== "VariableDeclaration") fail(comp, "FV0107", `${nodeName(st)} in setup is not supported`, st);
     for (const d of st.declarations) {
       const init0 = d.init;
       if (d.id.type === "ObjectPattern" && definePropsType(init0)) {
@@ -295,7 +299,8 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
       try {
         const empty = emptyRef(comp, init0);
         if (!empty && !source) {
-          scope.clientOnly.set(local, "it is not a value the server computes: only `ref(…)`, `computed(() => …)` and plain expressions are");
+          const steps = isComputed && init0.arguments[0]?.body?.type === "BlockStatement";
+          scope.clientOnly.set(local, steps ? MANY_STATEMENTS : "it is not a value the server computes: only `ref(…)`, `computed(() => …)` and plain expressions are");
           continue;
         }
         v = empty ?? expr(scope, source);

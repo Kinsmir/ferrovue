@@ -2,7 +2,7 @@ import { parse as parseJs } from "@babel/parser";
 import { readFileSync } from "node:fs";
 import { basename } from "node:path";
 import { relativePath } from "./paths.ts";
-import { type Absence, type Component, type Field, type N, type Struct, type Ty, absence, blankComponent, BOOL, fail, FLOAT, GenError, INT, joinAbsence, opt, RUST_PRELUDE, rustStr, sameTy, snake, STR, tagAst, withAbsence } from "./model.ts";
+import { type Absence, type Component, type Field, type N, type Struct, type Ty, absence, blankComponent, BOOL, fail, FLOAT, GenError, INT, joinAbsence, nodeName, opt, RUST_PRELUDE, rustStr, sameTy, snake, STR, tagAst, withAbsence } from "./model.ts";
 import { CONFIG_FILE, ctx, INLINE_HTML, TYPES_MODULE } from "./context.ts";
 import { childOf } from "./expr.ts";
 import { claim } from "./plugin.ts";
@@ -121,7 +121,7 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
       return fail(comp, "FV0315", `unsupported prop type \`${name}\`: declare it as an interface in the component, or import it from a \`.ts\` file`, t);
     }
   }
-  return fail(comp, "FV0316", `unsupported prop type \`${t.type}\``, t);
+  return fail(comp, "FV0316", `${nodeName(t)} is not supported as a prop type`, t);
 }
 
 function recordOf(comp: Component, value: N, structs: Map<string, Struct>, seen: Set<string>): Ty {

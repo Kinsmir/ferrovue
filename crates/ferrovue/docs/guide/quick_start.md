@@ -292,14 +292,20 @@ assert_eq!(
 
 Every error has a stable code, `FV` and four digits, listed in
 [`error_codes`](crate::guide::error_codes). The CLI writes it first, then the file, line and column,
-the message, the line quoted with a caret, and where the code is documented:
+the message, the line quoted with a caret, a `= help:` line where the way around it is short, and
+where the code is documented. It reports every error of a run, then a line that counts them:
 
 ```text
 error[FV1805]: components/Card.vue:4:17: `.toLocaleString()` formats by locale with `Intl`, whose output differs between Node, Chromium, Firefox and Safari: format the value in Rust and pass a string, or translate it with `$t` (see the `dates_and_prices` guide)
  4 | <template><p>{{ n.toLocaleString() }}</p></template>
    |                 ^
  = docs: https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#fv1805
+
+1 error in 1 component
 ```
+
+A component that uses a refused one is checked once that one compiles, and the count line says how
+many were left unchecked. Nothing is written while any error remains.
 
 `--format json` writes one JSON object per run to standard output instead, for an editor, a CI
 annotation or a script; the exit status is the same as without it:
@@ -322,6 +328,7 @@ pnpm ferrovue --format json
       "severity": "error",
       "title": "Locale formatting with `Intl`, `.toLocaleString()`, `.localeCompare()`, `$d` or `$n`",
       "message": "`.toLocaleString()` formats by locale with `Intl`, whose output differs between Node, Chromium, Firefox and Safari: format the value in Rust and pass a string, or translate it with `$t` (see the `dates_and_prices` guide)",
+      "help": null,
       "docs": "https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#fv1805"
     }
   ]
@@ -331,8 +338,9 @@ pnpm ferrovue --format json
 Lines and columns count from 1, and the end is exclusive. A field the compiler does not know is
 `null`: the end is known for a construct in `<script setup>`, the line and column for most errors
 in a `.vue` file, and only the file for a configuration, locale or routes file. A file that does not
-parse has the code `FV0001` and the parser's message. The compiler stops at the
-first error, so `diagnostics` holds one error at most today. A warning, such as one for a deprecated
+parse has the code `FV0001` and the parser's message. `help` is the way around the error where one
+is short and known, and `null` otherwise. `diagnostics` holds every error of the run, in the order
+of the files and their lines. A warning, such as one for a deprecated
 configuration key (`FV1117`) or command-line option (`FV1118`), is a diagnostic with the
 `severity` `"warning"`, listed before the error, and does not change the exit status; without
 `--format json` it is written to standard error as `warning[FV1117]: …`. A run that succeeds adds `out`, `files`,
@@ -426,8 +434,9 @@ where `FV1805` opens the error's documentation.
   `ferrovue.config.json`. A configuration file of another name or place is named with `config`,
   relative to the project root, as `--config` takes it:
   `"plugins": [{ "name": "ferrovue/volar", "config": "config/ferrovue.json" }]`.
-- The compiler stops at the first error in the project, so while one component has an error, the
-  others show none. A component is checked again each time its text changes: after an edit to a
+- Each component shows its own errors, whatever errors other components have. A component that
+  uses one with an error (as a child, or by importing its `Props`) shows none until that one
+  compiles, and an error in the configuration hides those of every component. A component is checked again each time its text changes: after an edit to a
   store, a shared type or another component, the open component shows the result on its next edit.
 - The error's code carries its link in the form VS Code reads. For an editor that shows that form
   wrongly, `"codeLinks": false` gives the code as text and puts the link at the end of the message.

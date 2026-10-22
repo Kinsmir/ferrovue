@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { compileTemplate, parse as parseSfc } from "@vue/compiler-sfc";
-import { GenError, generate, loadConfig } from "../src/compiler.ts";
+import { GenError, GenErrors, generate, loadConfig } from "../src/compiler.ts";
 import { type Code, ERRORS } from "../src/errors.ts";
 import { GENERATED_VERSION } from "../src/rust.ts";
 
@@ -37,6 +37,114 @@ const props = defineProps<{ label: string }>();
 <template><b :title="label">{{ label }}</b></template>`),
     );
     expect(out.get("x.rs")).toContain("pub fn render");
+  });
+
+  describe("every refusal of a run", () => {
+    const refusals = (project: string): GenErrors => {
+      try {
+        compile(project);
+      } catch (e) {
+        if (e instanceof GenErrors) return e;
+        throw e;
+      }
+      throw new Error("compiled without an error");
+    };
+    const where = (e: GenErrors): string[] => e.errors.map((one) => (one instanceof GenError ? `${one.code} ${one.at?.file}:${one.at?.line}` : "syntax"));
+
+    it("reports each refused statement of a template, and of every component, in the order of files and lines", () => {
+      const e = refusals(
+        island(
+          `<script setup lang="ts">
+defineProps<{ n: number; on: boolean }>();
+</script>
+<template>
+  <p>{{ n.toLocaleString() }}</p>
+  <p v-if="on">{{ n.toFixed(200) }}</p>
+  <i>{{ n }}</i>
+</template>`,
+          { A: `<script setup lang="ts">\nimport { watchEffect } from "vue";\nwatchEffect(() => {});\n</script>\n<template><i></i></template>` },
+        ),
+      );
+      expect(where(e)).toEqual(["FV0103 components/A.vue:3", "FV1805 components/X.vue:5", expect.stringMatching(/^FV\d{4} components\/X\.vue:6$/)]);
+      expect(e).toBeInstanceOf(GenError);
+      expect(e.code).toBe("FV0103");
+      expect(e.unchecked).toEqual([]);
+    });
+
+    it("leaves a component that uses a refused one unchecked, and checks the rest", () => {
+      const bad = `<script setup lang="ts">\ndefineProps<{ n: number }>();\n</script>\n<template><p>{{ n.toLocaleString() }}</p></template>`;
+      const e = refusals(
+        island(`<script setup lang="ts">\nimport B from "./B.vue";\n</script>\n<template><B :n="1" /><p>{{ (1).toLocaleString() }}</p></template>`, { B: bad, C: bad }),
+      );
+      expect(where(e)).toEqual(["FV1805 components/B.vue:4", "FV1805 components/C.vue:4"]);
+      expect(e.unchecked).toEqual(["components/X.vue"]);
+    });
+
+    it("names what the template wrote, says how to get around it, and names syntax in words", () => {
+      const project = island(
+        `<script setup lang="ts">
+import { computed } from "vue";
+import { fmt } from "./util";
+const props = defineProps<{ n: number; pair: [number, number] }>();
+function twice(x: number) { return x * 2; }
+const big = computed(() => {
+  const m = props.n * 2;
+  return m;
+});
+</script>
+<template>
+  <p>{{ fmt(n) }}</p>
+  <p>{{ fmt }}</p>
+  <p>{{ twice(n) }}</p>
+  <p>{{ big }}</p>
+  <p>{{ nowhere(n) }}</p>
+  <p>{{ ({ a: n }) }}</p>
+  <p :title="() => n">x</p>
+</template>`,
+      );
+      writeFileSync(join(project, "components", "util.ts"), "export function fmt(n: number): string { return String(n); }\n");
+      const e = refusals(project);
+      const said = e.errors.map((one) => [(one as GenError).code, (one as GenError).what, (one as GenError).help]);
+      expect(said).toEqual([
+        ["FV0316", "a tuple type is not supported as a prop type", null],
+      ]);
+      writeFileSync(join(project, "components", "X.vue"), readFileSync(join(project, "components", "X.vue"), "utf8").replace("; pair: [number, number]", ""));
+      const again = refusals(project).errors.map((one) => [(one as GenError).code, (one as GenError).what, (one as GenError).help]);
+      const twin = (name: string) => `put \`${name}\` in the module \`helpers.module\` names with a Rust twin under \`helpers.functions\` in ferrovue.config.json, or compute the value in Rust and pass it as a prop`;
+      expect(again).toEqual([
+        ["FV0601", "`fmt()` calls a function imported from `./util`, a module the server does not run", twin("fmt")],
+        ["FV0601", "`fmt` is imported from `./util`, a module the server does not run", "export it from `./util` as a constant the compiler evaluates (`export const fmt = …`), or compute the value in Rust and pass it as a prop"],
+        ["FV0613", "`twice` is set up in a way the server cannot evaluate: it is a function, which only an event handler may call", twin("twice")],
+        [
+          "FV0613",
+          "`big` is set up in a way the server cannot evaluate: it is a `computed` whose body is a block of statements: the server evaluates a body that is one expression or a single `return`",
+          "write the body as one expression, as `computed(() => (a ? b : c))`, or as a single `return`, or compute the value in Rust and pass it as a prop",
+        ],
+        ["FV0601", "`nowhere()` is not available when rendering on the server", "a template calls JavaScript's built-ins and the helpers with Rust twins under `helpers.functions` in ferrovue.config.json; compute the value in Rust and pass it as a prop"],
+        ["FV0625", "an object literal is not supported in a template", null],
+        ["FV0625", "an arrow function is not supported in a template", null],
+      ]);
+    });
+
+    it("refuses a template's read of a constant the compiler cannot evaluate with the constant's own code and place, and a setup binding where it is read", () => {
+      const project = island(`<script setup lang="ts">
+import { LIMIT } from "./consts";
+const local = (1).toLocaleString();
+</script>
+<template><i>{{ LIMIT }}</i><b>{{ local }}</b></template>`);
+      writeFileSync(join(project, "components", "consts.ts"), "export const LIMIT = Math.random();\n");
+      const [constant, local] = refusals(project).errors as GenError[];
+      expect(constant).toMatchObject({ code: "FV0207", at: { file: "components/consts.ts", line: 1, column: 22 }, readAt: { file: "components/X.vue", line: 5, column: 17 } });
+      expect(constant!.what).toMatch(/\(the template reads it as `LIMIT` at components\/X\.vue:5:17\)$/);
+      expect(constant!.message).toMatch(/^components\/consts\.ts:1:22: .*\n 1 \| export const LIMIT = Math\.random\(\);/);
+      expect(local).toMatchObject({ code: "FV0613", at: { file: "components/X.vue", line: 5, column: 35 }, readAt: null });
+    });
+
+    it("raises a `GenErrors` for a single refusal too", () => {
+      const e = refusals(island(`<template><p>{{ (1).toLocaleString() }}</p></template>`));
+      expect(e.errors).toHaveLength(1);
+      expect(e.message).toBe(e.errors[0]!.message);
+    });
   });
 
   it("writes a component named after a Rust keyword to the file its raw module name reads", () => {
@@ -2075,7 +2183,7 @@ import { ROWS } from "./consts";
       );
     });
 
-    it("refuses a constant it cannot evaluate where it is used, naming the file it comes from", () => {
+    it("refuses a constant it cannot evaluate with its own code and place, naming where it is used", () => {
       const project = withFile(
         island(`<script setup lang="ts">
 import { NOW } from "./consts";
@@ -2085,7 +2193,7 @@ import { NOW } from "./consts";
         `export const NOW = Date.now();\n`,
       );
       expect(() => compile(project)).toThrow(
-        /X\.vue:4:17: `NOW` is set up in a way the server cannot evaluate: it is imported from components\/consts\.ts, where it is not a constant the compiler evaluates: components\/consts\.ts:1:20: a constant the compiler evaluates is a literal/,
+        /^components\/consts\.ts:1:20: a constant the compiler evaluates is a literal.* \(the template reads it as `NOW` at components\/X\.vue:4:17\)\n/,
       );
     });
 
@@ -2301,7 +2409,7 @@ defineProps<{ k: string }>();
 enum Size { Small = "s".length }
 </script>
 <template><i>{{ Size.Small }}</i></template>`,
-      /`Size` is set up in a way the server cannot evaluate: it is not an enum the compiler evaluates: components\/X\.vue:2:21: a constant the compiler evaluates is a literal/,
+      /X\.vue:2:21: a constant the compiler evaluates is a literal.* \(the template reads it as `Size` at components\/X\.vue:4:17\)/,
     ],
     [
       "a value read from `$attrs`, which has no type",
@@ -2910,11 +3018,57 @@ defineProps<{ m: Record<string, string> }>();
       /`\.title` of a record, which has no field `title`/,
     ],
     [
-      "a ternary whose branches differ in type",
+      "a ternary whose branches differ in type, compared",
       `<script setup lang="ts">
-const props = defineProps<{ n: number }>();
+import Y from "./Y.vue";
+defineProps<{ n: number; tags: string[] }>();
 </script>
-<template><i>{{ n ? n : "none" }}</i></template>`,
+<template><i v-if="(n ? n : 'none') === 'none'">x</i></template>`,
+      /the two branches of `\?:` differ in type/,
+    ],
+    [
+      "a ternary whose branches differ in type, given to a child's prop",
+      `<script setup lang="ts">
+import Y from "./Y.vue";
+defineProps<{ n: number; tags: string[] }>();
+</script>
+<template><Y :b="n ? n : 'none'" /></template>`,
+      /the two branches of `\?:` differ in type/,
+    ],
+    [
+      "a ternary whose branches differ in type, read by a method",
+      `<script setup lang="ts">
+import Y from "./Y.vue";
+defineProps<{ n: number; tags: string[] }>();
+</script>
+<template><i>{{ (n ? n : "none").length }}</i></template>`,
+      /the two branches of `\?:` differ in type/,
+    ],
+    [
+      "a ternary whose branches differ in type, bound to a boolean attribute",
+      `<script setup lang="ts">
+import Y from "./Y.vue";
+defineProps<{ n: number; tags: string[] }>();
+</script>
+<template><input :disabled="n ? n : ''" /></template>`,
+      /the two branches of `\?:` differ in type/,
+    ],
+    [
+      "a ternary whose branches differ in type, bound as a class",
+      `<script setup lang="ts">
+import Y from "./Y.vue";
+defineProps<{ n: number; tags: string[] }>();
+</script>
+<template><i :class="n ? n : 'none'"></i></template>`,
+      /the two branches of `\?:` differ in type/,
+    ],
+    [
+      "a ternary between a list and a string in text, which Vue writes as JSON",
+      `<script setup lang="ts">
+import Y from "./Y.vue";
+defineProps<{ n: number; tags: string[] }>();
+</script>
+<template><i>{{ n ? tags : "none" }}</i></template>`,
       /the two branches of `\?:` differ in type/,
     ],
     [
@@ -3424,6 +3578,15 @@ defineProps<{ names: string[]; f: Float }>();
 </script>
 <template><i>{{ names[f] }}</i></template>`,
       /reads a list's item by an integer index, .*a `Float`, which may hold a fraction/,
+    ],
+    [
+      "a list item read by a date's month",
+      `<script setup lang="ts">
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+defineProps<{ d: Date }>();
+</script>
+<template><i>{{ MONTHS[d.getUTCMonth()] }}</i></template>`,
+      /reads a list's item by an integer index, and `\.getUTCMonth\(\)` of a date is a `Float`: it is `NaN` for an invalid date, where `\[…\]` reads `undefined`/,
     ],
     [
       "a list item read by a string index",
@@ -4039,6 +4202,12 @@ defineProps<{ onSale?: boolean }>();
     "listeners from an object given to a child with a prop named like a listener": "FV0514",
     "an enum read whole": "FV0208",
     "an enum read by a key chosen at run time": "FV0222",
+    "a ternary whose branches differ in type, compared": "FV0623",
+    "a ternary whose branches differ in type, given to a child's prop": "FV0623",
+    "a ternary whose branches differ in type, read by a method": "FV0623",
+    "a ternary whose branches differ in type, bound to a boolean attribute": "FV0623",
+    "a ternary whose branches differ in type, bound as a class": "FV0623",
+    "a ternary between a list and a string in text, which Vue writes as JSON": "FV0623",
     "a value read from `$attrs`, which has no type": "FV0415",
     "an attribute name Vue's server renderer skips as unsafe": "FV0404",
     "an attribute name chosen at run time": "FV0408",
@@ -4331,6 +4500,31 @@ import { useQuery } from "@tanstack/vue-query";
     expect(() => generate(root, SRC)).toThrow(/^src\/components\/X\.vue:5:\d+: `format` is imported from `date-fns`, which the compiler cannot resolve/);
     writeFileSync(join(root, "src", "components", "X.vue"), readFileSync(join(root, "src", "components", "X.vue"), "utf8").replace("{{ format(1) }}", "x"));
     expect(generate(root, SRC).get("x.rs")).toContain('out.push_str("<p>x</p>");');
+  });
+});
+
+describe("a `?:` whose branches differ in type, where it is shown as text", () => {
+  const render = (props: string, template: string): string => {
+    const out = compile(island(`<script setup lang="ts">\nimport type { Float } from "ferrovue/types";\ndefineProps<{ ${props} }>();\n</script>\n<template>${template}</template>`)).get("x.rs")!;
+    return out.slice(out.indexOf("pub fn render"), out.indexOf("/// The component's markup"));
+  };
+
+  it("writes each branch as `{{ }}` writes it, a number by JavaScript's rules and an absent one as nothing", () => {
+    const out = render("n: number; o?: Float; on: boolean", '<i>{{ n > 0 ? n : "none" }}</i><b>{{ on ? o : "absent" }}</b><s>{{ on ? true : "off" }}</s>');
+    expect(out).toContain('fv::escape_into(out, &(if props.n as f64 > 0.0 { std::borrow::Cow::<str>::Owned(format!("{}", fv::Js(props.n))) } else { std::borrow::Cow::<str>::Borrowed("none") }));');
+    expect(out).toMatch(/if let Some\(v\) = \(if props\.on \{ props\.o\.map\(\|(n\d+)\| std::borrow::Cow::<str>::Owned\(format!\("\{\}", fv::Js\(\1\)\)\)\) \} else \{ Some\(std::borrow::Cow::<str>::Borrowed\("absent"\)\) \}\)\.as_deref\(\) \{/);
+  });
+
+  it("writes each branch of an attribute's value as text, leaving the attribute out where a branch is absent", () => {
+    const out = render("n: number; o?: number", `<div><i :title="n > 0 ? n : 'none'" :aria-label="o === undefined ? 'unset' : o"></i></div>`);
+    expect(out).toContain('out.push_str("<div><i title=\\"");');
+    expect(out).toMatch(/aria-label=\\""\);\n {4}fv::escape_into\(out, &\(if let Some\((n\d+)\) = props\.o \{ std::borrow::Cow::<str>::Owned\(format!\("\{\}", fv::Js\(\1\)\)\) \} else \{ std::borrow::Cow::<str>::Borrowed\("unset"\) \}\)\);/);
+  });
+
+  it("writes each branch in a template literal as `String()` does, `null` and `undefined` too", () => {
+    const out = render("n: number; on: boolean; tags: string[]; o?: number", "<i>{{ `${on ? n : 'none'}|${on ? tags : n}|${on ? o : false}` }}</i>");
+    expect(out).toContain('fv::JsOr(props.o.map(fv::Js), "undefined")');
+    expect(out).toContain('.collect::<Vec<_>>().join(",")');
   });
 });
 

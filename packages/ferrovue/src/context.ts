@@ -363,6 +363,8 @@ export const ctx = {
   aliases: [] as readonly Alias[],
   tsProjects: new Map<string, TsProject | null>(),
   tsconfigs: new Set<string>(),
+  recovered: null as GenError[] | null,
+  trying: 0,
 };
 
 /** A component's text: what the run was given for its path, as an editor's unsaved buffer, or the
