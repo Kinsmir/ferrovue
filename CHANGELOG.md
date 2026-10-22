@@ -7,6 +7,8 @@ released together and share version numbers.
 
 ### Added
 
+- AGENTS.md, the instructions for coding agents working on ferrovue: the layout of the repository,
+  and the rules for comments, prose, generated files, checks, pull requests and releases.
 - `?:` whose branches differ in type where the value is only written out: in `{{ }}`, in a
   string-valued attribute (on an element, a component's root, a `<RouterLink>`, or falling through
   to a child) and in a template literal. Each branch is written as JavaScript writes it there:
