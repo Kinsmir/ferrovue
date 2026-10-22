@@ -205,8 +205,14 @@ function assignments(comp: Component, body: N[]): void {
   visit(body);
 }
 
+/** How many times a body's statements may be translated again after an `if` or a `case` that
+ * falls off its end: each such path continues with the statements after it, translated on its own,
+ * so sequential `switch`es of `break`ing cases multiply them. */
+export const PATH_BUDGET = 4096;
+
 class Desugar {
   private readonly comp: Component;
+  private paths = 0;
 
   constructor(comp: Component) {
     this.comp = comp;
@@ -268,6 +274,9 @@ class Desugar {
       return fail(this.comp, "FV1903", "the function can reach its end here without a `return`, and JavaScript then returns `undefined`: return a value on every path", from);
     }
     if (k.falls) fail(this.comp, "FV1904", "this case falls through into the next one, which runs its statements too: end it with `return` or `break`", k.falls);
+    if (k.sts.length && ++this.paths > PATH_BUDGET) {
+      fail(this.comp, "FV1905", `the body's \`if\`s and \`switch\`es continue with the statements after them on more than ${PATH_BUDGET} paths, each translated on its own: end the cases in \`return\` rather than \`break\`, or split the body into \`computed\`s`, from);
+    }
     return this.run(k.sts, k.next, k.brk, from);
   }
 

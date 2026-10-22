@@ -3024,6 +3024,14 @@ const props = defineProps<{ tags: string[]; n: number }>();
       /this case falls through into the next one/,
     ],
     [
+      "a body whose switches continue after them on too many paths",
+      `<script setup lang="ts">
+const props = defineProps<{ tags: string[]; n: number }>();
+</script>
+<template><i>{{ tags.map((t) => { ${"switch (t) { case \"1\": break; case \"2\": break; case \"3\": break; default: break; } ".repeat(6)}return t; }).join() }}</i></template>`,
+      /continue with the statements after them on more than 4096 paths/,
+    ],
+    [
       "a declaration directly in a case",
       `<script setup lang="ts">
 const props = defineProps<{ tags: string[]; n: number }>();
@@ -4395,6 +4403,7 @@ defineProps<{ onSale?: boolean }>();
     "code after a return": "FV1904",
     "a case that falls through into the next": "FV1904",
     "a declaration directly in a case": "FV1904",
+    "a body whose switches continue after them on too many paths": "FV1905",
     "a switch with no case for some values and nothing after it": "FV1903",
     "a function declared in a callback's body": "FV1901",
     "a computed with a loop read by the template": "FV0613",

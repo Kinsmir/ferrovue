@@ -684,7 +684,7 @@ Computed member access.
 
 Value set up in a way the server cannot evaluate.
 
-The template reads a name setup binds, and the server cannot compute its value: a function declared in setup, a `computed` whose body is a block of statements, a value destructured from something the server does not have, a `let` with no initial value, or an expression the compiler refuses (the message gives the reason). The server evaluates `ref(…)`, `computed(() => …)` with a body that is one expression or a single `return`, and plain expressions. Such a name may be used freely from event handlers, which the server drops. Write the value as one expression, move a function into the helpers module with a Rust twin under `helpers.functions`, or compute the value in Rust and pass it as a prop.
+The template reads a name setup binds, and the server cannot compute its value: a function declared in setup, a `computed` whose body holds a statement outside the subset of [`script_logic`](crate::guide::script_logic) (the message names it and its line), a value destructured from something the server does not have, a `let` with no initial value, or an expression the compiler refuses (the message gives the reason). The server evaluates `ref(…)`, `computed(() => …)` with a body that is one expression or a block of `const`, `if`, `switch` and `return`, and plain expressions. Such a name may be used freely from event handlers, which the server drops. Write the value as one expression, move a function into the helpers module with a Rust twin under `helpers.functions`, or compute the value in Rust and pass it as a prop.
 
 ## FV0614
 
@@ -983,8 +983,6 @@ List method given anything but an arrow function or `Boolean`.
 ## FV0806
 
 Arrow function with a block body. Retired in 0.10.0: the compiler no longer raises it.
-
-The compiler translates an arrow function whose body is one expression. A block body with statements, even a single `{ return … }`, is refused. Write the body as an expression (`x => x.price * 2`), with `?:` for a choice.
 
 ## FV0807
 
@@ -2339,3 +2337,9 @@ JavaScript returns `undefined` from a function that reaches its end, or a bare `
 `switch` or code after `return` the compiler does not translate.
 
 A `case` ends in `return` or `break`, or is empty and shares the next case's statements; a declaration directly in a `case` belongs to the whole `switch`, so wrap the case's statements in `{ … }`; code after `return` or `break` never runs.
+
+## FV1905
+
+Body with too many paths after its `if`s and `switch`es.
+
+A statement that can fall off its end, an `if` without `return` or a `case` that ends in `break`, continues with the statements after it, and the compiler translates them once for each path that reaches them. Sequential `switch`es of `break`ing cases multiply those paths: the body is refused past 4096 of them, before translating it would take seconds or exhaust memory. End the cases in `return` rather than `break`, or split the body into several `computed`s that each read the one before.

@@ -53,18 +53,20 @@ released together and share version numbers.
   each diagnostic of `--format json` the new field `help` (`null` where there is none).
 - Every code in the error index has a detail: what is refused, why, and the ways around it.
 - Statements in a `computed`'s body and in a list method's callback (`.map()`, `.filter()`,
-  `.find()`, `.some()`, `.reduce()`, a `.toSorted()` comparator and the others): `const`, and `let`
-  never assigned again, of any value the template may compute, destructured too; `if` /
-  `else if` / `else` and early `return`, which narrow what follows as TypeScript narrows it
-  (`if (!user) return ""; return user.name`); `switch` over a string or a number, with stacked
-  `case`s, `default` and `break`. Each `const` is a Rust `let`, evaluated once where JavaScript
-  evaluates it and only on the path that reaches it, and a `computed` that may throw is still
-  evaluated where the render first reads it. Loops, assignments, `try`, `throw`, `var`, code after
-  `return` and a path that ends without `return` are refused with the new codes FV1901 to FV1904,
-  each naming the statement; FV0806, an arrow function with a block body, is retired. The crate's
-  new [`script_logic`](https://docs.rs/ferrovue/latest/ferrovue/guide/script_logic/index.html)
-  guide describes what a body may hold. Generated code stays at `__compat!(3)`. `ERRORS` in the
-  `ferrovue/compiler` API report gains the four codes and marks FV0806 retired.
+  `.find()`, `.some()`, `.reduce()`, a `.toSorted()` comparator and the others): `const`, and
+  `let` never assigned again, of any value the template may compute, destructured too; `if` /
+  `else if` / `else` and early `return`, which narrow what follows as TypeScript narrows it (`if
+  (!user) return ""; return user.name`); `switch` over a string or a number, with stacked `case`s,
+  `default` and `break`. Each `const` is a Rust `let`, evaluated once where JavaScript evaluates
+  it and only on the path that reaches it, and a `computed` that may throw is still evaluated
+  where the render first reads it. Loops, assignments, `try`, `throw`, `var`, code after `return`
+  and a path that ends without `return` are refused with the new codes FV1901 to FV1904, each
+  naming the statement, and a body whose `if`s and `break`ing `case`s continue after them on more
+  than 4096 paths (a run of such `switch`es) with FV1905, before translating it would take
+  seconds; FV0806, an arrow function with a block body, is retired. The crate's new
+  [`script_logic`](https://docs.rs/ferrovue/latest/ferrovue/guide/script_logic/index.html) guide
+  describes what a body may hold. Generated code stays at `__compat!(3)`. `ERRORS` in the
+  `ferrovue/compiler` API report gains the five codes and marks FV0806 retired.
 
 ### Changed
 

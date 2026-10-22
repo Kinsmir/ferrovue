@@ -96,6 +96,7 @@ Everything else a body could hold is refused where it is written, with the state
 | `x = …`, `x += …`, `x++`, a `let` assigned again | FV1902 | a `const` for each value |
 | a path that reaches the end of the body, or `return;` | FV1903 | a `return` on every path; `return undefined` where that is meant |
 | a case falling through into the next case's statements, a declaration directly in a `case`, code after `return` | FV1904 | `return` or `break` at the end of each case, `{ … }` around a case's declarations |
+| more than 4096 paths that fall off an `if` or `break` out of a `case` and continue after it, as in a run of `switch`es of `break`ing cases | FV1905 | `return` at the end of each case, or the body split into several `computed`s |
 
 A `computed` the server cannot evaluate stays client-only until the template reads it, which is
 then refused with FV0613, the message naming the statement and its line.

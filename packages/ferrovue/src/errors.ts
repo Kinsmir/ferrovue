@@ -1550,6 +1550,10 @@ export const ERRORS = {
     title: "`switch` or code after `return` the compiler does not translate",
     detail: "A `case` ends in `return` or `break`, or is empty and shares the next case's statements; a declaration directly in a `case` belongs to the whole `switch`, so wrap the case's statements in `{ … }`; code after `return` or `break` never runs.",
   },
+  FV1905: {
+    title: "Body with too many paths after its `if`s and `switch`es",
+    detail: "A statement that can fall off its end, an `if` without `return` or a `case` that ends in `break`, continues with the statements after it, and the compiler translates them once for each path that reaches them. Sequential `switch`es of `break`ing cases multiply those paths: the body is refused past 4096 of them, before translating it would take seconds or exhaust memory. End the cases in `return` rather than `break`, or split the body into several `computed`s that each read the one before.",
+  },
 } as const satisfies Record<`FV${number}`, ErrorDoc>;
 
 /** A stable error code, as `FV0604`. */
