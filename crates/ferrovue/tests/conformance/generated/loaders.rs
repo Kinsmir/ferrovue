@@ -56,6 +56,20 @@ impl fv::Load for LoadNote {
     }
 }
 
+/// A call of `loadRanking`, in components/loaders.ts: its arguments.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LoadRanking {
+    pub board: String,
+}
+
+impl fv::Load for LoadRanking {
+    const NAME: &'static str = "loadRanking";
+    type Output = super::types::Ranking<'static>;
+    fn args(&self, key: &mut fv::LoadKey) {
+        key.arg(&self.board);
+    }
+}
+
 /// A call of `loadViews`, in components/loaders.ts: its arguments.
 #[derive(Debug, Clone, PartialEq)]
 pub struct LoadViews;
@@ -81,6 +95,9 @@ pub trait Loaders: Sync {
     /// `loadNote`, in components/loaders.ts.
     fn load_note(&self, call: LoadNote) -> impl std::future::Future<Output = Result<<LoadNote as fv::Load>::Output, Self::Error>> + Send;
 
+    /// `loadRanking`, in components/loaders.ts.
+    fn load_ranking(&self, call: LoadRanking) -> impl std::future::Future<Output = Result<<LoadRanking as fv::Load>::Output, Self::Error>> + Send;
+
     /// `loadViews`, in components/loaders.ts.
     fn load_views(&self, call: LoadViews) -> impl std::future::Future<Output = Result<<LoadViews as fv::Load>::Output, Self::Error>> + Send;
 }
@@ -91,6 +108,7 @@ pub fn dispatch<'a, L: Loaders>(loaders: &'a L, call: fv::LoadCall) -> fv::LoadF
         <LoadArticle as fv::Load>::NAME => call.run(|c: LoadArticle| loaders.load_article(c)),
         <LoadComments as fv::Load>::NAME => call.run(|c: LoadComments| loaders.load_comments(c)),
         <LoadNote as fv::Load>::NAME => call.run(|c: LoadNote| loaders.load_note(c)),
+        <LoadRanking as fv::Load>::NAME => call.run(|c: LoadRanking| loaders.load_ranking(c)),
         <LoadViews as fv::Load>::NAME => call.run(|c: LoadViews| loaders.load_views(c)),
         name => unreachable!("no loader is called `{name}`"),
     }
@@ -104,23 +122,27 @@ pub async fn load<L: Loaders, T>(loaders: &L, render: impl FnMut(&fv::Loads<'_>)
 
 /// Each call answered from a fixture's `$loads`, by its key.
 #[cfg(test)]
-pub fn from_fixture(results: &serde_json::Map<String, serde_json::Value>) -> impl FnMut(fv::LoadCall) -> fv::LoadFuture<'static, String> + '_ {
+pub fn from_fixture(results: &std::collections::HashMap<String, Box<serde_json::value::RawValue>>) -> impl FnMut(fv::LoadCall) -> fv::LoadFuture<'static, String> + '_ {
     move |call| match call.name() {
         <LoadArticle as fv::Load>::NAME => call.run(|c: LoadArticle| {
-            let found = results.get(&fv::load_key(&c)).cloned().ok_or_else(|| format!("the fixture has no result for {}", fv::load_key(&c)));
-            async move { serde_json::from_value::<<LoadArticle as fv::Load>::Output>(found?).map_err(|e| e.to_string()) }
+            let found = results.get(&fv::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadArticle as fv::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
+            async move { found }
         }),
         <LoadComments as fv::Load>::NAME => call.run(|c: LoadComments| {
-            let found = results.get(&fv::load_key(&c)).cloned().ok_or_else(|| format!("the fixture has no result for {}", fv::load_key(&c)));
-            async move { serde_json::from_value::<<LoadComments as fv::Load>::Output>(found?).map_err(|e| e.to_string()) }
+            let found = results.get(&fv::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadComments as fv::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
+            async move { found }
         }),
         <LoadNote as fv::Load>::NAME => call.run(|c: LoadNote| {
-            let found = results.get(&fv::load_key(&c)).cloned().ok_or_else(|| format!("the fixture has no result for {}", fv::load_key(&c)));
-            async move { serde_json::from_value::<<LoadNote as fv::Load>::Output>(found?).map_err(|e| e.to_string()) }
+            let found = results.get(&fv::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadNote as fv::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
+            async move { found }
+        }),
+        <LoadRanking as fv::Load>::NAME => call.run(|c: LoadRanking| {
+            let found = results.get(&fv::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadRanking as fv::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
+            async move { found }
         }),
         <LoadViews as fv::Load>::NAME => call.run(|c: LoadViews| {
-            let found = results.get(&fv::load_key(&c)).cloned().ok_or_else(|| format!("the fixture has no result for {}", fv::load_key(&c)));
-            async move { serde_json::from_value::<<LoadViews as fv::Load>::Output>(found?).map_err(|e| e.to_string()) }
+            let found = results.get(&fv::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadViews as fv::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
+            async move { found }
         }),
         name => unreachable!("no loader is called `{name}`"),
     }

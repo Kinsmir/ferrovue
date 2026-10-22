@@ -11,6 +11,13 @@ export interface Article {
   author: Author | null;
 }
 
+export interface Ranking {
+  scores: Record<string, number>;
+  best?: number;
+  worst: number | null;
+  open: boolean | null;
+}
+
 function missing(name: string): never {
   throw new Error(`the fixture gives no result for ${name}`);
 }
@@ -24,3 +31,5 @@ export const loadComments = defineLoader("loadComments", async (article: string,
 );
 
 export const loadNote = defineLoader("loadNote", async (page: number): Promise<string | null> => missing(`note ${page}`));
+
+export const loadRanking = defineLoader("loadRanking", async (board: string): Promise<Ranking> => missing(`ranking ${board}`));

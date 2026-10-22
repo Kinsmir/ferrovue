@@ -184,15 +184,15 @@ assert_eq!(
 #
 # /// Each call answered from a fixture's `$loads`, by its key.
 # #[cfg(test)]
-# pub fn from_fixture(results: &serde_json::Map<String, serde_json::Value>) -> impl FnMut(fv::LoadCall) -> fv::LoadFuture<'static, String> + '_ {
+# pub fn from_fixture(results: &std::collections::HashMap<String, Box<serde_json::value::RawValue>>) -> impl FnMut(fv::LoadCall) -> fv::LoadFuture<'static, String> + '_ {
 #     move |call| match call.name() {
 #         <LoadPost as fv::Load>::NAME => call.run(|c: LoadPost| {
-#             let found = results.get(&fv::load_key(&c)).cloned().ok_or_else(|| format!("the fixture has no result for {}", fv::load_key(&c)));
-#             async move { serde_json::from_value::<<LoadPost as fv::Load>::Output>(found?).map_err(|e| e.to_string()) }
+#             let found = results.get(&fv::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadPost as fv::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
+#             async move { found }
 #         }),
 #         <LoadViews as fv::Load>::NAME => call.run(|c: LoadViews| {
-#             let found = results.get(&fv::load_key(&c)).cloned().ok_or_else(|| format!("the fixture has no result for {}", fv::load_key(&c)));
-#             async move { serde_json::from_value::<<LoadViews as fv::Load>::Output>(found?).map_err(|e| e.to_string()) }
+#             let found = results.get(&fv::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadViews as fv::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
+#             async move { found }
 #         }),
 #         name => unreachable!("no loader is called `{name}`"),
 #     }
@@ -340,6 +340,10 @@ and the awaits of one component in order. Every call finished by the time of a r
 by it, so a page renders a few times at most, and a call is made once per key. The first loader to
 fail ends the render with a [`LoadError`](crate::LoadError) naming it and its key, as a rejected
 `async setup` rejects Vue's `renderToString`; the calls still running are dropped.
+
+Since the closure runs once per render, it starts each one afresh: it makes its own `String`, and
+its own [`Teleports`](crate::Teleports) and [`Head`](crate::Head) when the page has them, so that
+what an earlier render collected is not written twice.
 
 The generated module also has `dispatch`, which runs one call a render asks for with the app's
 method for it, for an app that drives [`load`](crate::load) itself.

@@ -1833,7 +1833,7 @@ const props = ${script || "defineProps<{ at: Date; maybe?: Date; label: string }
       expect(() => compile(island(props("{{ maybe }}"), { Stamp: stamp }))).toThrow(/`\{\{ \}\}` of a `Date`/);
       expect(() => compile(island(props("", "withDefaults(defineProps<{ at: Date; maybe?: Date }>(), { maybe: () => new Date(0) })"), { Stamp: stamp }))).toThrow(/the default of `maybe` must be a literal of its type/);
       const wrong = props("").replace(':made="at"', ':made="label"');
-      expect(() => compile(island(wrong, { Stamp: stamp }))).toThrow(/FV0511|into a/);
+      expect(() => compile(island(wrong, { Stamp: stamp }))).toThrow(/the prop is a `Date`, and the value given is a string/);
     });
 
     it("refuses where a setup binding reads the current time or formats by locale", () => {

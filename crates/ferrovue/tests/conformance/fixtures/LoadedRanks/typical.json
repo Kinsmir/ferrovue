@@ -1,0 +1,21 @@
+{
+  "board": "chess",
+  "$loads": {
+    "[\"loadRanking\",\"chess\"]": {
+      "scores": {
+        "zoe": 3,
+        "ann": 7,
+        "10": 1,
+        "2": 5,
+        "ann": 9
+      },
+      "best": 9,
+      "worst": 1,
+      "open": false
+    },
+    "[\"loadComments\",\"chess\",1,null]": [
+      "first move"
+    ],
+    "[\"loadNote\",1]": null
+  }
+}

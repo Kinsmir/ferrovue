@@ -64,15 +64,15 @@ pub async fn load<L: Loaders, T>(loaders: &L, render: impl FnMut(&fv::Loads<'_>)
 
 /// Each call answered from a fixture's `$loads`, by its key.
 #[cfg(test)]
-pub fn from_fixture(results: &serde_json::Map<String, serde_json::Value>) -> impl FnMut(fv::LoadCall) -> fv::LoadFuture<'static, String> + '_ {
+pub fn from_fixture(results: &std::collections::HashMap<String, Box<serde_json::value::RawValue>>) -> impl FnMut(fv::LoadCall) -> fv::LoadFuture<'static, String> + '_ {
     move |call| match call.name() {
         <LoadStock as fv::Load>::NAME => call.run(|c: LoadStock| {
-            let found = results.get(&fv::load_key(&c)).cloned().ok_or_else(|| format!("the fixture has no result for {}", fv::load_key(&c)));
-            async move { serde_json::from_value::<<LoadStock as fv::Load>::Output>(found?).map_err(|e| e.to_string()) }
+            let found = results.get(&fv::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadStock as fv::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
+            async move { found }
         }),
         <LoadWarehouse as fv::Load>::NAME => call.run(|c: LoadWarehouse| {
-            let found = results.get(&fv::load_key(&c)).cloned().ok_or_else(|| format!("the fixture has no result for {}", fv::load_key(&c)));
-            async move { serde_json::from_value::<<LoadWarehouse as fv::Load>::Output>(found?).map_err(|e| e.to_string()) }
+            let found = results.get(&fv::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadWarehouse as fv::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
+            async move { found }
         }),
         name => unreachable!("no loader is called `{name}`"),
     }

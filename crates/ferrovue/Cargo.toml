@@ -38,7 +38,7 @@ futures-core = { workspace = true, optional = true }
 http = { workspace = true, optional = true }
 maud = { workspace = true, optional = true }
 serde.workspace = true
-serde_json.workspace = true
+serde_json = { workspace = true, features = ["raw_value"] }
 
 [dev-dependencies]
 axum.workspace = true

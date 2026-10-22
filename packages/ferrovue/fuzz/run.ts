@@ -13,6 +13,7 @@ import {
   generateCase,
   helperFiles,
   printComponent,
+  withLoads,
 } from "./generate.ts";
 
 const REPO = resolve(import.meta.dirname, "../../..");
@@ -223,7 +224,7 @@ interface Failure {
 }
 
 const fit = (c: Component, f: Record<string, unknown>): Record<string, unknown> =>
-  Object.fromEntries(Object.entries(f).filter(([k]) => k.startsWith("$") || c.props.some((p) => p.name === k)));
+  withLoads(c, Object.fromEntries(Object.entries(f).filter(([k]) => k.startsWith("$") || c.props.some((p) => p.name === k))));
 
 function write(file: string, text: string): void {
   mkdirSync(dirname(file), { recursive: true });
