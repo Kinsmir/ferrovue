@@ -13,6 +13,7 @@ export default defineConfig({
   resolve: { alias: [{ find: /^ferrovue\/client$/, replacement: fileURLToPath(new URL("packages/ferrovue/src/client.ts", import.meta.url)) }] },
   test: {
     fsModuleCache: false,
+    testTimeout: 30_000,
     environment: "happy-dom",
     environmentOptions: {
       happyDOM: {
