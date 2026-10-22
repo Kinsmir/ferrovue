@@ -170,15 +170,15 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
   const asyncs = asyncChildren(comp, ast);
   let useAttrsName: string | null = null;
   let useSlotsName: string | null = null;
-  const declared = (f: { name: string; node: N }): void => {
-    scope.functions.set(f.name, { name: f.name, node: f.node, home: comp, file: null });
+  const declared = (f: { name: string; node: N }, tdzUntil?: number): void => {
+    scope.functions.set(f.name, { name: f.name, node: f.node, home: comp, file: null, ...(tdzUntil !== undefined ? { tdzUntil } : {}) });
     scope.clientOnly.set(f.name, "it is a function, which the template and a `computed` may call, and only an event handler may name without calling it");
   };
   for (const st of ast) {
     const decls: N[] = st.type === "VariableDeclaration" && st.kind === "const" ? st.declarations : [st];
     for (const d of decls) {
       const f = functionOf(d);
-      if (f) declared(f);
+      if (f) declared(f, st.type === "VariableDeclaration" ? st.end : undefined);
     }
   }
   for (const st of ast) {
@@ -295,9 +295,9 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
           scope.clientOnly.set(local, "it is not a value the server computes: only `ref(…)`, `computed(() => …)` and plain expressions are");
           continue;
         }
-        v = empty ?? expr(scope, source);
+        v = empty ?? expr(isComputed ? scope : { ...scope, settingUpAt: st.start }, source);
       } catch (e) {
-        if (!(e instanceof GenError)) throw e;
+        if (!(e instanceof GenError) || e.code === "FV1908") throw e;
         scope.clientOnly.set(local, e.code.startsWith("FV19") && e.at?.line !== undefined ? `${e.what} (line ${e.at.line})` : e.what);
         continue;
       }

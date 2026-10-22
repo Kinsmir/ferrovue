@@ -75,9 +75,11 @@ released together and share version numbers.
   `.ts` file thus needs no `helpers` entry. A function whose body the server cannot evaluate is
   refused where it is called, with FV0613 or FV0601 as before, the message naming the statement or
   expression and its line; recursion (FV1906) and `...rest`, `async`, generators, spread arguments
-  or too many of them (FV1907) are refused. A function only an event handler calls stays
-  client-only. `ERRORS` in the `ferrovue/compiler` API report gains the two codes. The fuzzer
-  generates local functions and calls them from templates and `computed`s.
+  or too many of them (FV1907) are refused, and so is a function declared with `const` that setup
+  calls above its declaration, where JavaScript throws a `ReferenceError` (FV1908). A function only
+  an event handler calls stays client-only. `ERRORS` in the `ferrovue/compiler` API report gains
+  the three codes. The fuzzer generates local functions and calls them from templates and
+  `computed`s.
 
 ### Changed
 

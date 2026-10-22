@@ -36,7 +36,9 @@ export function refuseClientOnly(s: Scope, name: string, n: N, called = false): 
     throw e;
   }
   const why = s.clientOnly.get(name)!;
-  const help = called || why.startsWith("it is a function") ? twinHelp(name) : `${COMPUTE_IN_RUST}, or read it only from an event handler`;
+  const help = !called && s.functions.has(name)
+    ? `call it, as \`${name}(…)\`, which the server translates, or name it only in an event handler`
+    : called || why.startsWith("it is a function") ? twinHelp(name) : `${COMPUTE_IN_RUST}, or read it only from an event handler`;
   return fail(s.comp, "FV0613", `\`${name}\` is set up in a way the server cannot evaluate: ${why}`, n, help);
 }
 

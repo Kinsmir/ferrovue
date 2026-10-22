@@ -1562,6 +1562,10 @@ export const ERRORS = {
     title: "Function or call of a shape the server does not translate",
     detail: "A function the server calls takes named parameters, optional ones (`x?: T`) and ones with defaults (`x = 1`) included, and object or array patterns of names; it is called with at most as many arguments as it names, none of them spread. `...rest` parameters, `async` functions and generators are refused, and so is a default for a parameter given a value that may be `null` or `undefined`, which the server cannot tell apart.",
   },
+  FV1908: {
+    title: "Function declared with `const`, called while setup runs before its declaration",
+    detail: "A function declared with `const` (`const f = (…) => …`) exists only once its declaration has run. Setup code above it that calls it, directly or through a `function` declaration, which is hoisted, throws a `ReferenceError` in JavaScript, and Vue's server renders nothing. A `computed` may call it, since a `computed` runs when the render reads it. Move the declaration above the call, or declare the function with `function`.",
+  },
 } as const satisfies Record<`FV${number}`, ErrorDoc>;
 
 /** A stable error code, as `FV0604`. */

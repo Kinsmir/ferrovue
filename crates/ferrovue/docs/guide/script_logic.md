@@ -156,6 +156,7 @@ Everything else a body could hold is refused, with the statement named:
 | a case falling through into the next case's statements, a declaration directly in a `case`, code after `return` | FV1904 | `return` or `break` at the end of each case, `{ … }` around a case's declarations |
 | more than 4096 paths that fall off an `if` or `break` out of a `case` and continue after it, as in a run of `switch`es of `break`ing cases | FV1905 | `return` at the end of each case, or the body split into several `computed`s |
 | a function that calls itself, directly or through others | FV1906 | the value computed in Rust and passed as a prop |
+| a function declared with `const`, called by setup code above its declaration, where JavaScript throws a `ReferenceError` | FV1908 | the declaration moved above the call, or the function declared with `function` |
 | `...rest` parameters, `async` functions, generators, `...` arguments, more arguments than the function names, a default for a parameter given a value that may be `null` or `undefined` | FV1907 | named parameters; `??` where the value is passed |
 
 A `computed` the server cannot evaluate stays client-only until the template reads it, which is

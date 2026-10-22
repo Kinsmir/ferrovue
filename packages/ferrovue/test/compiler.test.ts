@@ -84,7 +84,7 @@ defineProps<{ n: number; on: boolean }>();
       const project = island(
         `<script setup lang="ts">
 import { computed } from "vue";
-import { fmt } from "./util";
+import { fmt } from "number-format";
 const props = defineProps<{ n: number; pair: [number, number] }>();
 function twice(x: number) { return x * 2; }
 const big = computed(() => {
@@ -95,7 +95,7 @@ const big = computed(() => {
 <template>
   <p>{{ fmt(n) }}</p>
   <p>{{ fmt }}</p>
-  <p>{{ twice(n) }}</p>
+  <p>{{ twice }}</p>
   <p>{{ big }}</p>
   <p>{{ nowhere(n) }}</p>
   <p>{{ ({ a: n }) }}</p>
@@ -112,9 +112,9 @@ const big = computed(() => {
       const again = refusals(project).errors.map((one) => [(one as GenError).code, (one as GenError).what, (one as GenError).help]);
       const twin = (name: string) => `put \`${name}\` in the module \`helpers.module\` names with a Rust twin under \`helpers.functions\` in ferrovue.config.json, or compute the value in Rust and pass it as a prop`;
       expect(again).toEqual([
-        ["FV0601", "`fmt()` calls a function imported from `./util`, a module the server does not run", twin("fmt")],
-        ["FV0601", "`fmt` is imported from `./util`, a module the server does not run", "export it from `./util` as a constant the compiler evaluates (`export const fmt = …`), or compute the value in Rust and pass it as a prop"],
-        ["FV0613", "`twice` is set up in a way the server cannot evaluate: it is a function, which only an event handler may call", twin("twice")],
+        ["FV0601", "`fmt()` calls a function imported from `number-format`, a module the server does not run", twin("fmt")],
+        ["FV0601", "`fmt` is imported from `number-format`, a module the server does not run", "export it from `number-format` as a constant the compiler evaluates (`export const fmt = …`), or compute the value in Rust and pass it as a prop"],
+        ["FV0613", "`twice` is set up in a way the server cannot evaluate: it is a function, which the template and a `computed` may call, and only an event handler may name without calling it", "call it, as `twice(…)`, which the server translates, or name it only in an event handler"],
         [
           "FV0613",
           "`big` is set up in a way the server cannot evaluate: a function's body may not hold a `for…of` loop: it holds `const` (and `let` never assigned again), `if` / `else`, `switch` and `return`; compute a list with `.map()`, `.filter()` or `.reduce()` (line 7)",
@@ -4720,6 +4720,22 @@ defineProps<{ word: string }>();
     })();
     expect(e.code).toBe("FV0601");
     expect(e.message).toMatch(/^components\/X\.vue:5:\d+: `sum\(\)` is not available when rendering on the server: its body .*\(components\/text\.ts:3, FV1902\)/);
+  });
+
+  it("refuses a const function setup calls above its declaration, and lets a computed or later code call it", () => {
+    const refused = (script: string): string | undefined => {
+      try {
+        compile(island(`<script setup lang="ts">\nimport { computed } from "vue";\nconst props = defineProps<{ n: number }>();\n${script}\n</script>\n<template><i>{{ props.n }}</i></template>`));
+      } catch (err) {
+        return (err as GenError).code;
+      }
+      return undefined;
+    };
+    expect(refused("const label = fmt(props.n);\nconst fmt = (x: number) => `#${x}`;")).toBe("FV1908");
+    expect(refused("const label = wrap(props.n);\nfunction wrap(x: number) { return fmt(x); }\nconst fmt = (x: number) => `#${x}`;")).toBe("FV1908");
+    expect(refused("const label = computed(() => fmt(props.n));\nconst fmt = (x: number) => `#${x}`;")).toBeUndefined();
+    expect(refused("const fmt = (x: number) => `#${x}`;\nconst label = fmt(props.n);")).toBeUndefined();
+    expect(refused("const label = wrap(props.n);\nfunction wrap(x: number) { return `#${x}`; }")).toBeUndefined();
   });
 
   it("leaves a function only an event handler calls client-only, whatever its body holds", () => {

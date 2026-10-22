@@ -90,6 +90,7 @@ function calleeScope(s: Scope, fn: Fn): Scope {
     setup: new Map(),
     locals: new Map(),
     narrowed: new Map(),
+    settingUpAt: undefined,
     helpers: new Map(),
     clientOnly: m.clientOnly,
     propsIdent: null,
@@ -121,6 +122,9 @@ export function callFunction(s: Scope, name: string, fn: Fn, args: N[], n: N): V
   const spread = args.find((a) => a.type === "SpreadElement");
   if (spread) fail(comp, "FV1907", `${what} given \`...\` arguments, which the server does not spread: pass each argument by itself`, spread);
   if (args.length > params.length) fail(comp, "FV1907", `${what} takes ${params.length} argument${params.length === 1 ? "" : "s"}, and is given ${args.length}`, n);
+  if (fn.tdzUntil !== undefined && s.settingUpAt !== undefined && s.settingUpAt < fn.tdzUntil) {
+    fail(comp, "FV1908", `${what} is called while setup runs, before \`const ${fn.name}\` is declared, where JavaScript throws a \`ReferenceError\`: declare it above, or with \`function\`, which is hoisted`, n);
+  }
   if (active.includes(fn)) {
     const via = active.slice(active.indexOf(fn) + 1).map((f) => `\`${f.name}()\``);
     fail(comp, "FV1906", `${what} calls itself${via.length ? `, through ${via.join(", ")}` : ""}, which the server would inline without end: compute the value in Rust and pass it as a prop`, n);
@@ -140,7 +144,7 @@ export function callFunction(s: Scope, name: string, fn: Fn, args: N[], n: N): V
     const run = (i: number, inner: Scope): Val => (i === given.length ? expr(inner, body) : bound(inner, names[i]!, given[i]!, (next) => run(i + 1, next)));
     return run(0, cs);
   } catch (e) {
-    if (!(e instanceof GenError) || e.code === "FV1906" || e.code === "FV1907") throw e;
+    if (!(e instanceof GenError) || e.code === "FV1906" || e.code === "FV1907" || e.code === "FV1908") throw e;
     const at = e.at?.line !== undefined ? ` (${e.at.file}:${e.at.line}, ${e.code})` : ` (${e.code})`;
     const why = `${e.what}${at}`;
     if (fn.file === null) return fail(comp, "FV0613", `\`${name}\` is set up in a way the server cannot evaluate: ${why}`, n);

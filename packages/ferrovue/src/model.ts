@@ -366,6 +366,9 @@ export interface Fn {
   node: N;
   home: Component;
   file: string | null;
+  /** For a function `const` declares in `<script setup>`, where its declaration ends: setup code
+   * before it that calls it throws a `ReferenceError`. */
+  tdzUntil?: number;
 }
 
 export interface Scope {
@@ -393,6 +396,9 @@ export interface Scope {
   slotsBindings: Set<string>;
   consts: Map<string, Const>;
   functions: Map<string, Fn>;
+  /** Where the setup statement being evaluated starts, while setup runs it (not in a `computed`,
+   * which runs when the render reads it). */
+  settingUpAt?: number | undefined;
   sid: string | null;
   opaque: string | null;
   loop?: { item: string; over: string } | undefined;
