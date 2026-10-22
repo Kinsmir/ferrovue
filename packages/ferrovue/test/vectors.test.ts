@@ -1,6 +1,3 @@
-/* The string routines the Rust crates reimplement, held to JavaScript's own: each vector file in
- * `crates/ferrovue/tests/vectors/` and `crates/ferrovue-core/tests/vectors/` (escaping, numbers and URIs)
- * is read by that crate's unit tests too, so both sides agree with the same answers. */
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { escapeHtml, normalizeClass } from "@vue/shared";
@@ -107,9 +104,6 @@ describe("vectors shared with the Rust crate", () => {
     for (const [input, want] of (read("trim.json") as [string, string][])) expect(input.trim(), JSON.stringify(input)).toBe(want);
   });
 
-  // `[chunk, expected]`: whether `ssrRenderSlot` reads slot content that pushed `chunk` alone as
-  // nothing and shows the fallback, recorded from Vue with `FERROVUE_VECTORS_WRITE=1`. The compiler's
-  // own `isComment`, which decides what it can at compile time, is held to the same answers.
   it("comment.json is ssrRenderSlot's isComment", () => {
     const vectors = (read("comment.json") as [string, boolean][]);
     const recorded = vectors.map(([chunk]) => {
@@ -131,8 +125,6 @@ describe("vectors shared with the Rust crate", () => {
     for (const [input, want] of (read("escape.json", CORE) as [string, string][])) expect(escapeHtml(input), JSON.stringify(input)).toBe(want);
   });
 
-  // Recorded from JavaScript with `FERROVUE_VECTORS_WRITE=1`: the inputs are decimal strings, which
-  // both sides parse to the same double, and the expected text is `String(Number(input))`.
   it("numbers.json is Number.prototype.toString", () => {
     const vectors = (read("numbers.json", CORE) as [string, string][]);
     const recorded = vectors.map(([input]) => [input, String(Number(input))]);
@@ -143,9 +135,6 @@ describe("vectors shared with the Rust crate", () => {
     expect(vectors).toEqual(recorded);
   });
 
-  // `[op, x, arg, expected]`, the expected text recorded from JavaScript with `FERROVUE_VECTORS_WRITE=1`.
-  // A number is written as `String` writes it, but `-0` as "-0": `String` hides the sign, which
-  // `1 / x` shows.
   it("math.json is Math.round, Math.max, Math.min, Math.sqrt, Math.sign, Math's constants, ** and toFixed", () => {
     const vectors = (read("math.json", CORE) as [string, string, string, string][]);
     const text = (n: number): string => (Object.is(n, -0) ? "-0" : String(n));
@@ -189,7 +178,6 @@ describe("vectors shared with the Rust crate", () => {
     for (const [, x, arg, want] of powers) expect([x, arg, exactPower(Number(x), Number(arg))]).toEqual([x, arg, Number(want)]);
   });
 
-  // `[op, input, expected]`, recorded from JavaScript with `FERROVUE_VECTORS_WRITE=1`.
   it("uri.json is encodeURIComponent and encodeURI", () => {
     const recorded = uriCases().map(([op, input]) => [op, input, op === "encodeURI" ? encodeURI(input) : encodeURIComponent(input)]);
     if (process.env.FERROVUE_VECTORS_WRITE === "1") return writeVectors("uri.json", recorded, CORE);
@@ -207,9 +195,6 @@ describe("vectors shared with the Rust crate", () => {
     expect(read("precision.json", CORE)).toEqual(recorded);
   });
 
-  // `[entries, expected]`: a class object as `[name, condition]` pairs in source order, which
-  // JavaScript makes an object of (a repeated name keeps its first place and its last condition,
-  // array indices first), and Vue's `normalizeClass` of it, recorded with `FERROVUE_VECTORS_WRITE=1`.
   it("class.json is normalizeClass of an object", () => {
     const vectors = (read("class.json") as [[string, boolean][], string][]);
     const recorded = vectors.map(([entries]) => {
@@ -224,10 +209,6 @@ describe("vectors shared with the Rust crate", () => {
     expect(vectors).toEqual(recorded);
   });
 
-  // `[sources, expected]`: attribute lists as `[name, value]` pairs, merged in order by Vue's
-  // `mergeProps` and written by `ssrRenderAttrs`, recorded with `FERROVUE_VECTORS_WRITE=1`. A value
-  // is a string, a number or a boolean as it is, `null` for `undefined`, `{ "style": [[k, v], …] }`
-  // for a style object and `{ "names": "…" }` for a class bound to an array, which equals nothing.
   it("attrs.json is ssrRenderAttrs of mergeProps", () => {
     type Value = string | number | boolean | null | { style: [string, Value][] } | { names: string };
     const vectors = read("attrs.json") as [[string, Value][][], string][];
@@ -241,10 +222,6 @@ describe("vectors shared with the Rust crate", () => {
     expect(vectors).toEqual(recorded);
   });
 
-  // `[op, input, args, expected]`: numeric arguments are decimal strings both sides read with
-  // `Number`; a string result is written as a server writes it, a lone surrogate as U+FFFD
-  // (`toWellFormed`) and one longer than a million code units as `{ length }`; `null` is
-  // `undefined`, and `{ throws }` the error JavaScript throws.
   it("strings.json is JavaScript's string methods", () => {
     const vectors = read("strings.json") as [string, string, string[], unknown][];
     const recorded = vectors.map(([op, input, args]) => [op, input, args, stringOp(op, input, args)]);
@@ -252,7 +229,6 @@ describe("vectors shared with the Rust crate", () => {
     expect(vectors).toEqual(recorded);
   });
 
-  // `[a, b, expected]`: -1, 0 or 1 as JavaScript's `<` and `>` order the two strings.
   it("compare.json is JavaScript's ordering of strings", () => {
     const vectors = read("compare.json") as [string, string, number][];
     const recorded = vectors.map(([a, b]) => [a, b, a < b ? -1 : a > b ? 1 : 0]);
@@ -260,7 +236,6 @@ describe("vectors shared with the Rust crate", () => {
     expect(vectors).toEqual(recorded);
   });
 
-  // `[op, input, expected]`: the number written as `String` writes it, with `-0` told apart.
   it("parse.json is Number, parseInt and parseFloat of strings", () => {
     const vectors = read("parse.json") as [string, string, string][];
     const shown = (x: number): string => (Object.is(x, -0) ? "-0" : String(x));
@@ -289,7 +264,6 @@ describe("vectors shared with the Rust crate", () => {
     expect(vectors).toEqual(recorded);
   });
 
-  // `[json, keys]`: the order `Object.keys` gives an object `JSON.parse` read.
   it("keys.json is the order of an object's keys", () => {
     const vectors = read("keys.json") as [string, string[]][];
     const recorded = vectors.map(([json]) => [json, Object.keys(JSON.parse(json) as object)]);
@@ -304,11 +278,6 @@ describe("vectors shared with the Rust crate", () => {
     expect(vectors).toEqual(recorded);
   });
 
-  // `[op, input, expected]`: `Date.parse` of a string, `null` where ferrovue refuses it as outside the
-  // format every engine reads alike; `new Date(Number(input))` and a method read from it or
-  // `JSON.stringify` of it, a number written as `String` writes it with `-0` told apart, and
-  // `{ throws }` the error thrown; and `Date.UTC` of the parts joined in `input`, `null` where
-  // ferrovue refuses them as computed differently by each engine.
   it("dates.json is Date.parse, new Date, Date.UTC, the UTC methods and JSON.stringify", () => {
     const shown = (x: number): string => (Object.is(x, -0) ? "-0" : String(x));
     const run = (op: string, input: string): unknown => {
@@ -338,9 +307,6 @@ describe("vectors shared with the Rust crate", () => {
     for (const [input, want] of (read("length.json") as [string, number][])) expect(input.length, JSON.stringify(input)).toBe(want);
   });
 
-  // `{ defaults, calls, expected }`: each call `{ head }` as `Head::push` takes it, or `{ seo }` as
-  // the compiler writes `useSeoMeta` (its title and template, then each key's attribute and name),
-  // and what unhead's server head renders, recorded with `FERROVUE_VECTORS_WRITE=1`.
   it("head.json is unhead's server head", () => {
     const recorded = headCases().map(({ defaults, calls }) => {
       const head = createHead(defaults ? {} : { disableDefaults: true });

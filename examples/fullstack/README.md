@@ -3,7 +3,7 @@
 An [axum](https://docs.rs/axum) server renders every page with Rust that ferrovue generated from
 Vue components, and a [Vite](https://vite.dev) build of the same components hydrates the parts of
 the page that need to run in the browser. Copy this directory to start an app of your own: outside
-this repository, depend on `ferrovue` from crates.io and npm instead of the workspace paths, and
+this repository, depend on `ferrovue` from crates.io and npm, and
 replace the `*.workspace = true` keys in `Cargo.toml` with your own.
 
 ```text

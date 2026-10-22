@@ -53,10 +53,6 @@ fn a_fraction_that_chooses_no_case_fails_a_debug_render() {
 
 #[test]
 fn the_plural_case_is_the_one_vue_i18n_chooses() {
-    // vue-i18n 11.4's `pluralDefault`, as `t` gives it each number: the absolute value, which of
-    // two cases is the first only when it is 1, and of three `Math.min(choice, 2)`, an index no
-    // case has for a fraction below 2 (where vue-i18n throws) or `NaN`. A `count` that is not a
-    // finite number is passed over for `n`, then the plural number, then -1.
     let cases = [
         (0.0, Some(1), Some(0)),
         (-0.0, Some(1), Some(0)),

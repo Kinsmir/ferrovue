@@ -1,9 +1,5 @@
 name: Pack
 
-# The release's packages, packed once: the crates and the npm package that npm stages and the
-# GitHub release attaches. The release calls it for the tag's version, and the release dry run for
-# a throwaway pre-release of the current one, so the dry run packs what a release would.
-
 on:
   workflow_call:
     inputs:
@@ -41,8 +37,6 @@ jobs:
         if: inputs.set-version
         env:
           VERSION: ${{ inputs.version }}
-        # set-version's `cargo update --offline` resolves from the registry cache, which an
-        # uncached runner fills from Cargo.lock first.
         run: |
           cargo fetch --locked
           node scripts/release.ts set-version "$VERSION"

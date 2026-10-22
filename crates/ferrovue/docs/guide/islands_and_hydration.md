@@ -2,7 +2,7 @@ What the browser does with a page ferrovue rendered.
 
 The server's HTML is complete and readable with no JavaScript. Where the page should be
 interactive, the client's Vue hydrates the markup: it builds the same components from the same
-`.vue` files, finds that the DOM already matches, and attaches to it instead of re-rendering. That
+`.vue` files, finds that the DOM already matches, and attaches to it as it is. That
 works only if the server wrote exactly the bytes Vue would have written for the same input, which
 is what ferrovue guarantees; the rest of this page is about giving the client the same input.
 

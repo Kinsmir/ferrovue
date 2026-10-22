@@ -25,7 +25,7 @@ export interface ConformanceOptions extends Pick<RouterOptions, "pinia" | "vueRo
   /** The fixtures, one directory per component holding `<case>.json` and `<case>.html`:
    * `fixtures` beside the configuration when not given. */
   fixtures?: string;
-  /** Write each fixture's `.html` from Vue's render instead of comparing it: when
+  /** Write each fixture's `.html` from Vue's render, with no comparison: when
    * `FERROVUE_FIXTURES_WRITE=1` is set, if not given. */
   record?: boolean | undefined;
   /** Check that a fresh client render of each fixture shows its recorded HTML, which an

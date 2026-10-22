@@ -84,8 +84,7 @@ becomes public until a maintainer approves it, once on each registry.
      jobs' summaries; otherwise `npm stage list ferrovue` shows the id.
    - **crates.io:** open the workflow run on GitHub and approve the waiting `release` deployment.
 
-A tag with a pre-release suffix (`v0.2.0-rc.1`) stages to npm under the `next` tag instead of
-`latest`, and the GitHub release is marked as a pre-release.
+A tag with a pre-release suffix (`v0.2.0-rc.1`) stages to npm under the `next` tag, and the GitHub release is marked as a pre-release.
 
 Every publishing step skips a version its registry already has, crate by crate, so a run that failed
 halfway can simply be re-run.

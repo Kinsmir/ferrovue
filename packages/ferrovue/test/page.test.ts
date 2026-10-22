@@ -56,7 +56,7 @@ describe("Vue renders each page to its recorded HTML", () => {
     it(`pages/${page.name}`, async () => {
       const html = await renderToString(createPageApp(components[page.layout]!, page.record, components));
       if (WRITE) writeFileSync(`${page.base}.html`, html);
-      // oxlint-disable-next-line vitest/no-conditional-expect -- a recording run writes instead of comparing
+      // oxlint-disable-next-line vitest/no-conditional-expect -- a recording run writes the fixtures
       else expect(html).toBe(page.html);
     });
   }

@@ -137,8 +137,6 @@ function watchProject(configPath?: string): void {
       config = load(configPath);
       once(config);
     } catch (e) {
-      // A refusal is reported as one; anything else (a folder renamed away, a file read as it is
-      // written) is shown too, and the watch carries on for the change that puts it right.
       if (isRefusal(e)) report(e);
       else console.error(`error: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
@@ -147,8 +145,6 @@ function watchProject(configPath?: string): void {
   };
   run();
   let timer: ReturnType<typeof setTimeout> | null = null;
-  // One recursive watch of the root, filtered to the inputs: watching each input directory instead
-  // would miss one created later, and the type files may be anywhere.
   const watcher = watch(root, { recursive: true }, (_event, name) => {
     if (!name || !affects(inputs, join(root, name))) return;
     if (timer) clearTimeout(timer);

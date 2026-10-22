@@ -2078,7 +2078,7 @@ A name under `twins` in `ferrovue.config.json` is also a `.vue` file ferrovue co
 
 `<ClientOnly>` with a `#fallback` in content rendered from virtual nodes.
 
-Inside an element `<component :is>` chooses, inside a `<RouterLink>` or a twin's slot, and in the slot content they render, Vue's server renders from virtual nodes, and `<ClientOnly>` writes an empty fragment there instead of its fallback, which the client then renders and reports as a mismatch. Leave out the `#fallback`, or move the `<ClientOnly>` outside that content.
+Inside an element `<component :is>` chooses, inside a `<RouterLink>` or a twin's slot, and in the slot content they render, Vue's server renders from virtual nodes, and `<ClientOnly>` writes an empty fragment there and leaves out its fallback, which the client then renders and reports as a mismatch. Leave out the `#fallback`, or move the `<ClientOnly>` outside that content.
 
 ## FV1512
 
@@ -2376,7 +2376,7 @@ A `case` ends in `return` or `break`, or is empty and shares the next case's sta
 
 Body with too many paths after its `if`s and `switch`es.
 
-A statement that can fall off its end, an `if` without `return` or a `case` that ends in `break`, continues with the statements after it, and the compiler translates them once for each path that reaches them. Sequential `switch`es of `break`ing cases multiply those paths: the body is refused past 4096 of them, before translating it would take seconds or exhaust memory. End the cases in `return` rather than `break`, or split the body into several `computed`s that each read the one before.
+A statement that can fall off its end, an `if` without `return` or a `case` that ends in `break`, continues with the statements after it, and the compiler translates them once for each path that reaches them. Sequential `switch`es of `break`ing cases multiply those paths: the body is refused past 4096 of them, before translating it would take seconds or exhaust memory. End the cases in `return`, or split the body into several `computed`s that each read the one before.
 
 ## FV1906
 

@@ -167,16 +167,12 @@ export function isBoolean(s: Scope, n: N): boolean {
   return n?.type === "Identifier" && n.name === "Boolean" && ![s.locals, s.setup, s.helpers, s.clientOnly].some((names) => names.has(n.name));
 }
 
-// JavaScript calls `Boolean` with the item alone, and it returns the item's truthiness: it is
-// `x => x` where a condition is wanted, and `x => !!x` for `.map()`.
 function booleanArrow(n: N, method: string): N {
   const item = { ...n, name: "fv$item" };
   const not = (argument: N): N => ({ ...n, type: "UnaryExpression", operator: "!", prefix: true, argument });
   return { ...n, type: "ArrowFunctionExpression", async: false, params: [item], body: method === "map" ? not(not(item)) : item };
 }
 
-// The items of a list of optional values that are present, as a list of the values: what
-// `.filter(Boolean)` keeps of it, before it drops the falsy ones.
 function present(target: Val): Val | null {
   if (target.ty.k !== "list" || target.ty.of.k !== "opt" || target.iter !== undefined) return null;
   const of = target.ty.of.of;

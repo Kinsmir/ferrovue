@@ -32,7 +32,7 @@ it in `ferrovue.config.json`:
 Each route is a path, or `{ "path", "name", "children" }`. Paths use the syntax ferrovue accepts:
 static segments, `:name` parameters, optional `:name?` parameters, and a final `:name(.*)`. To match
 options passed to
-`createRouter` and `createWebHistory`, use `router` instead of `routes`:
+`createRouter` and `createWebHistory`, use `router` in place of `routes`:
 
 ```json
 { "router": { "routes": "client/routes.json", "base": "/app/", "linkActiveClass": "active", "linkExactActiveClass": "active" } }
@@ -42,7 +42,7 @@ The class names are written into the generated components; the base goes into `r
 
 # File-based routes
 
-`routes` can name a folder of pages instead of a routes file. ferrovue then builds the routes from
+`routes` can also name a folder of pages. ferrovue then builds the routes from
 the files' paths as vue-router's file-based routing builds them (the plugin that was
 unplugin-vue-router, now `vue-router/vite`), and compiles every page as a component:
 

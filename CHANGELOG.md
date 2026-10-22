@@ -162,6 +162,10 @@ released together and share version numbers.
 
 ### Changed
 
+- Messages say what to do in place of what to avoid: FV1107 lists the types a helper or twin
+  takes, FV1511 says `<ClientOnly>` leaves out the fallback there, FV1905 says to end the cases in
+  `return`, and `release.ts members` says to use `version.workspace = true`. The guides and the
+  code lose the comments that said what the code does.
 - FV0601 names what the template wrote, and says where it comes from: `` `fmt()` calls a function
   imported from `./util`, a module the server does not run ``, where it named Vue's internal
   `$setup`.

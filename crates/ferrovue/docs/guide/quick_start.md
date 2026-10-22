@@ -79,7 +79,7 @@ pnpm ferrovue --watch   # write them, then again on every change
 pnpm ferrovue --check --format json  # errors as JSON, for an editor or CI
 ```
 
-A Vite project can use the plugin in `ferrovue/vite` instead of `--watch`: it regenerates on change
+In a Vite project, the plugin in `ferrovue/vite` does the work of `--watch`: it regenerates on change
 and shows a refused construct in Vite's error overlay. Each error has a stable code; [Editor and CI
 diagnostics](#editor-and-ci-diagnostics) describes the JSON output and a VS Code problem matcher.
 

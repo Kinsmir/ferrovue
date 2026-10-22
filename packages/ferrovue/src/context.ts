@@ -211,7 +211,7 @@ export function checkConfig(raw: unknown, file: string, warn: (warning: GenError
   };
   const typeName = (v: unknown, path: string): void => {
     if (typeof v !== "string" || !TYPE_NAMES.includes(v)) {
-      refuse("FV1107", `\`${path}\` in ${file} is ${JSON.stringify(v) ?? "missing"}, not a type a helper or twin takes: ${TYPE_NAMES.map((t) => `"${t}"`).join(", ")}`);
+      refuse("FV1107", `\`${path}\` in ${file} is ${JSON.stringify(v) ?? "missing"}: a helper or twin takes one of ${TYPE_NAMES.map((t) => `"${t}"`).join(", ")}`);
     }
   };
   const routesSource = (v: unknown, path: string): void => {

@@ -153,7 +153,7 @@ describe("release chores", () => {
       "ferrovue-extra": `[package]\nname = "ferrovue-extra"\nversion.workspace = true\n`,
     };
     expect(checkRelease("v0.1.0", { cargo: CARGO, pkg: PKG, changelog: CHANGELOG, crates })).toEqual([
-      "crates/ferrovue/Cargo.toml has a version of its own, not the workspace's",
+      "crates/ferrovue/Cargo.toml has a version of its own: use `version.workspace = true`",
       "crates/ferrovue-extra is not in release.ts's CRATES, so no release would publish it",
       "CRATES names ferrovue-i18n, which crates/ does not hold",
     ]);
@@ -181,7 +181,7 @@ describe("workspace members", () => {
   it("refuses a wildcard, a member that is not there, and a directory left out", () => {
     expect(checkMembers("Cargo.toml", ["crates/a", "crates/b"], ["crates/a", "crates/b"])).toEqual([]);
     expect(checkMembers("Cargo.toml", ["crates/*"], ["crates/a"])).toEqual([
-      'Cargo.toml lists "crates/*": list each member by its path, not by a wildcard',
+      'Cargo.toml lists "crates/*": list each member by its path',
       "crates/a is not listed in Cargo.toml",
     ]);
     expect(checkMembers("pnpm-workspace.yaml", ["packages/gone"], ["packages/ferrovue"])).toEqual([

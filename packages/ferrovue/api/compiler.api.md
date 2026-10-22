@@ -1415,7 +1415,7 @@ export const ERRORS: {
     };
     readonly FV1511: {
         readonly title: "`<ClientOnly>` with a `#fallback` in content rendered from virtual nodes";
-        readonly detail: "Inside an element `<component :is>` chooses, inside a `<RouterLink>` or a twin's slot, and in the slot content they render, Vue's server renders from virtual nodes, and `<ClientOnly>` writes an empty fragment there instead of its fallback, which the client then renders and reports as a mismatch. Leave out the `#fallback`, or move the `<ClientOnly>` outside that content.";
+        readonly detail: "Inside an element `<component :is>` chooses, inside a `<RouterLink>` or a twin's slot, and in the slot content they render, Vue's server renders from virtual nodes, and `<ClientOnly>` writes an empty fragment there and leaves out its fallback, which the client then renders and reports as a mismatch. Leave out the `#fallback`, or move the `<ClientOnly>` outside that content.";
     };
     readonly FV1512: {
         readonly title: "`v-html` on an element whose content the browser rebuilds";
@@ -1603,7 +1603,7 @@ export const ERRORS: {
     };
     readonly FV1905: {
         readonly title: "Body with too many paths after its `if`s and `switch`es";
-        readonly detail: "A statement that can fall off its end, an `if` without `return` or a `case` that ends in `break`, continues with the statements after it, and the compiler translates them once for each path that reaches them. Sequential `switch`es of `break`ing cases multiply those paths: the body is refused past 4096 of them, before translating it would take seconds or exhaust memory. End the cases in `return` rather than `break`, or split the body into several `computed`s that each read the one before.";
+        readonly detail: "A statement that can fall off its end, an `if` without `return` or a `case` that ends in `break`, continues with the statements after it, and the compiler translates them once for each path that reaches them. Sequential `switch`es of `break`ing cases multiply those paths: the body is refused past 4096 of them, before translating it would take seconds or exhaust memory. End the cases in `return`, or split the body into several `computed`s that each read the one before.";
     };
     readonly FV1906: {
         readonly title: "Function that calls itself";

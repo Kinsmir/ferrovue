@@ -2134,7 +2134,7 @@ defineProps<{ label: string }>();
       expect(out.get("rule.rs")).toContain("out.push_str(\"<hr>\");");
     });
 
-    it("says a child, not an island, needs `<script setup>`", () => {
+    it("says a child needs `<script setup>`", () => {
       const project = island(
         `<script setup lang="ts">
 import Old from "./Old.vue";
@@ -3792,7 +3792,7 @@ defineProps<{ on: boolean }>();
       /the place of style property `color` would depend on a condition/,
     ],
     [
-      "a component resolved by name rather than imported",
+      "a component resolved by name with no import",
       `<script setup lang="ts">
 defineProps<{ a: string }>();
 </script>
@@ -5223,7 +5223,7 @@ describe("the configuration", () => {
     ["a misspelt key in `cssModules`", { ...CONFIG, cssModules: { generateScopedName: "[local]", hashPrefx: "" } }, "FV1114", /did you mean `hashPrefix`\?/],
     ["a helper without `params`", helper({ rust: "crate::plural", returns: "string" }), "FV1115", /`helpers\.functions\.plural\.params` in ferrovue\.config\.json is the list of types/],
     ["a helper without `rust`", helper({ params: [], returns: "string" }), "FV1115", /`helpers\.functions\.plural\.rust` in ferrovue\.config\.json is a string/],
-    ["a helper type ferrovue does not know", helper({ rust: "crate::plural", params: ["number"], returns: "string" }), "FV1107", /`helpers\.functions\.plural\.params\[0\]` in ferrovue\.config\.json is "number", not a type a helper or twin takes/],
+    ["a helper type ferrovue does not know", helper({ rust: "crate::plural", params: ["number"], returns: "string" }), "FV1107", /`helpers\.functions\.plural\.params\[0\]` in ferrovue\.config\.json is "number": a helper or twin takes one of/],
     ["a helper without `returns`", helper({ rust: "crate::plural", params: [] }), "FV1107", /`helpers\.functions\.plural\.returns` in ferrovue\.config\.json is missing/],
     ["a negative `maxLen`", helper({ rust: "crate::plural", params: [], returns: "string", maxLen: -1 }), "FV1115", /`helpers\.functions\.plural\.maxLen`/],
     ["helpers without `functions`", { ...CONFIG, helpers: { module: "./helpers" } }, "FV1115", /`helpers\.functions`/],
