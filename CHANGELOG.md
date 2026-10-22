@@ -94,6 +94,10 @@ released together and share version numbers.
   `LoadedComments` hold fixtures recorded from Vue, rendered by both and hydrated. The crate's new
   [`loaders`](https://docs.rs/ferrovue/latest/ferrovue/guide/loaders/index.html) guide describes
   both sides.
+- The guide page [`upgrading_to_0_10`](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_10/index.html):
+  the steps from 0.9 (both halves bumped together, every component generated again for version 4),
+  the error codes that changed for the same source, what behaves differently (every refusal at
+  once, `GenErrors`, `readPage`'s `loads`), and what a component may now use.
 
 - A run reports every refusal it finds. Each component is checked on its own, and within a template
   each statement of the compiled render and each interpolation in it, so the CLI, `--check`,

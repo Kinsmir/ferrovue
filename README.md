@@ -298,7 +298,8 @@ The crate's guide, `ferrovue::guide` on docs.rs, covers each topic in depth:
   from a Node server that renders with Vue, and the
   [support policy](https://docs.rs/ferrovue/latest/ferrovue/guide/support/index.html): supported
   versions, fixes, deprecations and where to report a problem
-- Upgrading a project [from 0.8 to 0.9](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_9/index.html)
+- Upgrading a project [from 0.9 to 0.10](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_10/index.html),
+  [from 0.8 to 0.9](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_9/index.html)
   and [from 0.7 to 0.8](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_8/index.html)
 
 [`examples/fullstack`](https://github.com/Kinsmir/ferrovue/blob/main/examples/fullstack/README.md)
