@@ -54,6 +54,11 @@ export function setupSource(init: N): N | null {
   return init;
 }
 
+function unwrapped(n: N): N {
+  while (n && ["TSAsExpression", "TSSatisfiesExpression", "TSNonNullExpression", "ParenthesizedExpression"].includes(n.type)) n = n.expression;
+  return n;
+}
+
 function statedTy(init: N): N | undefined {
   return init.type === "TSAsExpression" || init.type === "TSSatisfiesExpression" ? init.typeAnnotation : undefined;
 }
@@ -266,6 +271,11 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
         continue;
       }
       const local: string = d.id.name;
+      const declared = locals.get(local);
+      if (st.kind === "const" && declared !== undefined && declared.node === d && unwrapped(init0)?.type === "ObjectExpression") {
+        evaluable(local, declared, "it is an object the compiler does not evaluate");
+        continue;
+      }
       if (useAttrsName !== null && init0?.type === "CallExpression" && init0.callee.type === "Identifier" && init0.callee.name === useAttrsName) {
         scope.attrsBindings.add(local);
         scope.clientOnly.set(local, "`useAttrs()` is bound whole, with `v-bind`; a value read from it has no type");

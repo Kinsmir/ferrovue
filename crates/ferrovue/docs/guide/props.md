@@ -464,5 +464,45 @@ pub const SORTS: &[SortsItem<'static>] = &[
 
 A constant is a literal, a list, an object, or another constant of the same file. One that is
 anything else (`Date.now()`, a function) is refused where the template reads it, naming the file
-and line it is declared on. So are an object constant read whole or by a key chosen at run time
-(`LABELS[key]`), and `new` of anything but `Date` (`new Map()`).
+and line it is declared on. So are an object constant read whole, and `new` of anything but `Date`
+(`new Map()`).
+
+## Lookup tables
+
+An object constant, imported from a `.ts` file or declared with `const` in `<script setup>`, may be
+read by a key known only when rendering, when the key's type is a closed set: a union of string
+literals (`size: "sm" | "md" | "lg"`), of integer literals (`level: 1 | 2 | 3`), or an `enum` of
+them. The key may be a prop, a `computed`, a field of a `v-for` item, or a `?:` or `??` of such
+values and literals. The object may be written `as const`, typed `Record<Size, T>` or
+`Partial<Record<Size, T>>`, or left untyped, and its keys may be computed from enum members
+(`[Tone.Warn]: …`). The read becomes a `match` over the key's members:
+
+```ts
+type Size = "sm" | "md" | "lg";
+const props = defineProps<{ size: Size; tone: Tone }>();
+const PAD = { sm: "p-1", md: "p-2", lg: "p-4" } as const;
+```
+
+```html
+<p :class="PAD[size]" :style="{ color: THEME[tone].fg }">{{ LABELS[size] }}</p>
+```
+
+```rust
+# let props_size = "md";
+let class = match props_size { "sm" => "p-1", "md" => "p-2", _ => "p-4" };
+# assert_eq!(class, "p-2");
+```
+
+Each member reads the value the object holds for it: a string, a number, a boolean, `null`, a list
+of them, or an object read on by field (`THEME[tone].fg`, `THEME[tone].weight`). The values of
+every member are of one type, numbers whether integers or fractions. A member the object has no
+key for reads `undefined`, as in JavaScript, so the value may be absent: `ICONS[kind] ?? "none"`,
+`ICONS[kind]?.label`, and `v-if="ICONS[kind]"`, inside which `ICONS[kind].label` reads as present.
+A field read without `?.` of a value that may be `undefined` is refused, naming the members that
+lack it.
+
+The key's type is trusted, as it is for `<component :is>`: a value outside it, which a TypeScript
+caller cannot pass, reads the last member's value. A key typed `string` or `number` is refused: a
+plain object holds the fields of its prototype too (`toString`, `constructor`, `__proto__`), which
+a key could name. For the same reason a member that names one of them must be a key of the object,
+and an object literal may not set its prototype with `__proto__:`.

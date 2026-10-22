@@ -1,7 +1,7 @@
 import { type N, type Scope, type Val, fail, GenError, nodeName } from "./model.ts";
 import { ctx } from "./context.ts";
 import { expr, shown } from "./expr.ts";
-import { type Presence, boolOf, cond, known, narrowTo, presence, truthy } from "./narrowing.ts";
+import { type Presence, boolOf, cond, known, narrowedVal, narrowTo, presence, truthTested, truthy } from "./narrowing.ts";
 import { CMP, condition, occurrences, operand } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
 import { attrShown, interpolate, keepsAttrCase, renderAttr, renderAttrs, renderDynamicAttr } from "./attrs.ts";
@@ -303,7 +303,7 @@ function statement(s: Scope, e: Emitter, st: N): void {
         if (p && !p.negated) {
           const name = `n${++ctx.narrowCount}`;
           parts.push(p.pattern(name));
-          narrowed.set(p.path, { code: name, ty: p.of });
+          narrowed.set(p.path, narrowedVal(p, name));
           bound.set(name, p);
         } else {
           parts.push(operand(cond(inner, op), CMP));
@@ -333,7 +333,7 @@ function statement(s: Scope, e: Emitter, st: N): void {
     const compound =
       (st.test.type === "LogicalExpression" && st.test.operator !== "??") ||
       (st.test.type === "UnaryExpression" && st.test.operator === "!");
-    const t: Val = compound ? boolOf(cond(s, st.test)) : expr(s, st.test);
+    const t: Val = compound ? boolOf(cond(s, st.test)) : truthTested(s, st.test);
     const k = known(t);
     if (k !== undefined) {
       const taken = k ? st.consequent : st.alternate;
