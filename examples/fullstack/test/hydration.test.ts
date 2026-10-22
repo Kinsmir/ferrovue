@@ -6,6 +6,7 @@ import { nextTick, type Component } from "vue";
 import { createMemoryHistory } from "vue-router";
 import { createPinia } from "pinia";
 import { createHead } from "@unhead/vue/client";
+import { clearLoads } from "ferrovue/client";
 import islandLoaders from "ferrovue/islands";
 import { hydrateRecordedPage, renderRecordedPage } from "ferrovue/testing";
 import { createAppRouter, hydrate, type Hydrated } from "../client/app.ts";
@@ -45,6 +46,7 @@ afterEach(() => {
   app = undefined;
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+  clearLoads();
   document.body.innerHTML = "";
   document.head.innerHTML = "";
 });
@@ -160,9 +162,18 @@ it("hydrates the staff picks as one app: the layout, and each part its record na
   expect(document.title).toBe("Staff picks · Ferrovue Books");
   const container = document.getElementById("app")!;
   const first = container.firstChild;
+  const stock = document.querySelector(".stock");
+  const fetched: string[] = [];
+  vi.stubGlobal("fetch", async (href: string) => {
+    fetched.push(href);
+    return Response.error();
+  });
   const { page, islands, pinia } = await hydrateAt("/picks");
   await headRendered();
   expect(warnings).toEqual([]);
+  expect(fetched, "the loaders were answered from the page").toEqual([]);
+  expect(document.querySelector(".stock")).toBe(stock);
+  expect(stock!.textContent).toBe("3 copies in stockShips from Leeds in 2 days");
   expect(document.head.innerHTML, "unhead's client took over the head the server wrote").toBe(head);
   expect(page).toBeDefined();
   expect(islands.apps).toHaveLength(0);
@@ -199,6 +210,7 @@ it("shows the next staff picks from the record of the page it fetches, in place 
   expect(old.innerHTML, "the hydrated page was unmounted").toBe("");
   expect(document.querySelector(".reviews h2")!.textContent).toBe("Readers on The Left Hand of Darkness");
   expect(document.querySelector(".review-list q")!.textContent).toBe("Winter, and what it does to people.");
+  expect(document.querySelector(".stock")!.textContent).toBe("1 copy in stockShips from Porto in 1 day");
   expect(document.title).toBe("Staff picks · Ferrovue Books");
 
   const add = document.querySelector<HTMLButtonElement>('.pick[data-id="dune"] button.add')!;
@@ -218,6 +230,7 @@ it("renders the staff picks from their record as the server wrote them, with the
   await router.replace("/picks?featured=left-hand");
   const page = await renderRecordedPage({ html: bodyOf("/picks?featured=left-hand") }, Picks, islandLoaders, { pinia: createPinia(), router, plugins: [createHead()] });
   expect(document.querySelector(".reviews h2")!.textContent).toBe("Readers on The Left Hand of Darkness");
+  expect(document.querySelector(".stock p")!.textContent).toBe("1 copy in stock");
   page.unmount();
 });
 

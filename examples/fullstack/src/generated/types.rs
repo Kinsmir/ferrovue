@@ -49,3 +49,41 @@ impl<'a> Review<'a> {
 
 }
 
+
+/// `Stock` in `client/components/types.ts`.
+#[derive(Debug, Clone, serde::Serialize)]
+#[cfg_attr(test, derive(serde::Deserialize))]
+pub struct Stock<'a> {
+    #[serde(rename = "copies")]
+    pub copies: i64,
+    #[serde(rename = "warehouse")]
+    pub warehouse: Cow<'a, str>,
+}
+
+impl<'a> Stock<'a> {
+    /// Stock with its required fields.
+    pub fn new(copies: i64, warehouse: impl Into<Cow<'a, str>>) -> Self {
+        Stock { copies, warehouse: warehouse.into() }
+    }
+
+}
+
+
+/// `Warehouse` in `client/components/types.ts`.
+#[derive(Debug, Clone, serde::Serialize)]
+#[cfg_attr(test, derive(serde::Deserialize))]
+pub struct Warehouse<'a> {
+    #[serde(rename = "city")]
+    pub city: Cow<'a, str>,
+    #[serde(rename = "days")]
+    pub days: i64,
+}
+
+impl<'a> Warehouse<'a> {
+    /// Warehouse with its required fields.
+    pub fn new(city: impl Into<Cow<'a, str>>, days: i64) -> Self {
+        Warehouse { city: city.into(), days }
+    }
+
+}
+

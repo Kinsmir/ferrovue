@@ -16,6 +16,8 @@ pub mod basket_summary;
 pub mod layout;
 pub mod pick;
 pub mod reviews;
+pub mod shipping;
+pub mod stock_level;
 pub mod index;
 pub mod missing;
 pub mod books_id;
@@ -24,6 +26,7 @@ pub mod route_table;
 pub mod stores;
 pub mod types;
 pub mod twins;
+pub mod loaders;
 
 /// What a fixture holds besides the props: each slot's content, and the location it renders at.
 #[cfg(test)]
@@ -113,6 +116,38 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: reviews::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             reviews::render(&mut out, &props);
         }
+        "Shipping" => {
+            let props: shipping::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let loading = ferrovue::load(
+                |fv_loads| {
+                    out.clear();
+                    shipping::render(&mut out, &props, fv_loads);
+                },
+                loaders::from_fixture(&fixture.loads),
+            );
+            let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
+            match std::future::Future::poll(std::pin::pin!(loading), &mut cx) {
+                std::task::Poll::Ready(done) => done.map_err(|e| e.to_string())?,
+                std::task::Poll::Pending => return Err(String::from("a fixture's loader is still running")),
+            }
+        }
+        "StockLevel" => {
+            let props: stock_level::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let loading = ferrovue::load(
+                |fv_loads| {
+                    out.clear();
+                    stock_level::render(&mut out, &props, fv_loads);
+                },
+                loaders::from_fixture(&fixture.loads),
+            );
+            let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
+            match std::future::Future::poll(std::pin::pin!(loading), &mut cx) {
+                std::task::Poll::Ready(done) => done.map_err(|e| e.to_string())?,
+                std::task::Poll::Pending => return Err(String::from("a fixture's loader is still running")),
+            }
+        }
         "Index" => {
             let props: index::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -151,7 +186,18 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let router = route_table::router();
             let route = router.at(&fixture.route);
             let head = ferrovue::Head::without_defaults();
-            picks::render(&mut out, &props, picks::Slots { default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)), reviews: fixture.slot("reviews").map(|_| ferrovue::Slot::new(&s_reviews)) }, &route, &head);
+            let loading = ferrovue::load(
+                |fv_loads| {
+                    out.clear();
+                    picks::render(&mut out, &props, picks::Slots { default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)), reviews: fixture.slot("reviews").map(|_| ferrovue::Slot::new(&s_reviews)) }, &route, &head, fv_loads);
+                },
+                loaders::from_fixture(&fixture.loads),
+            );
+            let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
+            match std::future::Future::poll(std::pin::pin!(loading), &mut cx) {
+                std::task::Poll::Ready(done) => done.map_err(|e| e.to_string())?,
+                std::task::Poll::Pending => return Err(String::from("a fixture's loader is still running")),
+            }
             head_into(&mut out, &head);
         }
         other => return Err(format!("no component called {other}")),

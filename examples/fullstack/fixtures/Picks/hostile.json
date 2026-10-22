@@ -1,1 +1,1 @@
-{"shop":"<b>Shop</b>","featured":"\"Dune\" & <Solaris>","books":[{"id":"a b&c=d","title":"</a><script>alert(1)</script>","author":"","year":0}],"$route":"/"}
+{"shop":"<b>Shop</b>","featured":{"id":"a b&c=d","title":"\"Dune\" & <Solaris>","author":"</p>","year":0},"books":[{"id":"a b&c=d","title":"</a><script>alert(1)</script>","author":"","year":0}],"$route":"/","$loads":{"[\"loadStock\",\"a b&c=d\"]":{"copies":1,"warehouse":"\"><w>"},"[\"loadWarehouse\",\"\\\"><w>\"]":{"city":"</p><script>alert(1)</script>","days":1}}}

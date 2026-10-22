@@ -4,7 +4,7 @@ export const LOADS_ATTRIBUTE = "data-fv-loads";
 
 interface LoadStore {
   results: Map<string, unknown>;
-  scanned: Document | null;
+  scanned: WeakSet<Element>;
   running: Set<Promise<unknown>>;
 }
 
@@ -12,13 +12,16 @@ const LOADS = Symbol.for("ferrovue.loads");
 
 function loadStore(): LoadStore {
   const global = globalThis as { [LOADS]?: LoadStore };
-  return (global[LOADS] ??= { results: new Map(), scanned: null, running: new Set() });
+  return (global[LOADS] ??= { results: new Map(), scanned: new WeakSet(), running: new Set() });
 }
 
 function scanLoads(store: LoadStore): void {
-  if (typeof document === "undefined" || store.scanned === document) return;
-  store.scanned = document;
-  for (const el of document.querySelectorAll(`script[${LOADS_ATTRIBUTE}]`)) if (el.textContent) provideLoads(el.textContent);
+  if (typeof document === "undefined") return;
+  for (const el of document.querySelectorAll(`script[${LOADS_ATTRIBUTE}]`)) {
+    if (store.scanned.has(el)) continue;
+    store.scanned.add(el);
+    if (el.textContent) provideLoads(el.textContent);
+  }
 }
 
 /** The key of a loader's call, which the server writes each result under: `JSON.stringify` of the
@@ -34,7 +37,7 @@ export function loadKey(name: string, args: readonly unknown[]): string {
 /** A function a component awaits in `<script setup>` for its data (`const post = await
  * loadPost(props.id)`), which the server renders from what the Rust app's loader of the same name
  * returns. In the browser, a call whose key (`loadKey`) is among the results the page carries
- * (`Loads::script_into`, read once from the document's `<script data-fv-loads>`, or given to
+ * (`Loads::script_into`, each of the document's `<script data-fv-loads>` read once, or given to
  * `provideLoads`) resolves to that result, so that the component hydrates from what the server
  * rendered; any other call runs `loader`. `name` is the Rust app's name for it, unique in the project:
  * the compiler reads the declaration, `export const loadPost = defineLoader("loadPost", async (id:
@@ -67,7 +70,7 @@ export function provideLoads(results: string | Record<string, unknown>): void {
 export function clearLoads(): void {
   const store = loadStore();
   store.results.clear();
-  store.scanned = null;
+  store.scanned = new WeakSet();
 }
 
 /** Whether the page carries results for loaders, so that its components await them and hydrate

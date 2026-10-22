@@ -15,15 +15,15 @@ pub struct Props<'a> {
     #[serde(rename = "shop")]
     pub shop: Cow<'a, str>,
     #[serde(rename = "featured")]
-    pub featured: Cow<'a, str>,
+    pub featured: super::types::Book<'a>,
     #[serde(rename = "books")]
     pub books: Vec<super::types::Book<'a>>,
 }
 
 impl<'a> Props<'a> {
     /// Props with its required fields.
-    pub fn new(shop: impl Into<Cow<'a, str>>, featured: impl Into<Cow<'a, str>>, books: Vec<super::types::Book<'a>>) -> Self {
-        Props { shop: shop.into(), featured: featured.into(), books }
+    pub fn new(shop: impl Into<Cow<'a, str>>, featured: super::types::Book<'a>, books: Vec<super::types::Book<'a>>) -> Self {
+        Props { shop: shop.into(), featured, books }
     }
 
 }
@@ -39,9 +39,9 @@ pub struct Slots<'s> {
 }
 
 /// Write the component's server render into `out`.
-pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::Route<'_>, fv_head: &fv::Head) {
-    out.reserve(393 + 44 * props.books.len() + props.shop.len() + props.featured.len() + props.books.iter().map(|v| v.id.len() + v.title.len() + v.author.len()).sum::<usize>());
-    fv_head.push(fv::HeadValue::object([("title", fv::HeadValue::str(&format!("Staff picks · {}", props.shop))), ("meta", fv::HeadValue::array([fv::HeadValue::object([("name", fv::HeadValue::str("description")), ("content", fv::HeadValue::str(&format!("{} and the rest of this week's staff picks", props.featured)))])])), ("htmlAttrs", fv::HeadValue::object([("class", fv::HeadValue::str("picks-page"))]))]));
+pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::Route<'_>, fv_head: &fv::Head, fv_loads: &fv::Loads<'_>) {
+    out.reserve(393 + 44 * props.books.len() + props.shop.len() + props.featured.id.len() + props.featured.title.len() + props.featured.author.len() + props.books.iter().map(|v| v.id.len() + v.title.len() + v.author.len()).sum::<usize>());
+    fv_head.push(fv::HeadValue::object([("title", fv::HeadValue::str(&format!("Staff picks · {}", props.shop))), ("meta", fv::HeadValue::array([fv::HeadValue::object([("name", fv::HeadValue::str("description")), ("content", fv::HeadValue::str(&format!("{} and the rest of this week's staff picks", props.featured.title)))])])), ("htmlAttrs", fv::HeadValue::object([("class", fv::HeadValue::str("picks-page"))]))]));
     out.push_str("<div class=\"layout picks\"><header>");
     {
         let fv_link = {
@@ -77,8 +77,9 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route
     out.push_str("</nav></header><main>");
     fv::slot_into(out, fv_slots.default, None);
     out.push_str("</main><aside class=\"reviews\"><h2>Readers on ");
-    fv::escape_into(out, &props.featured);
+    fv::escape_into(out, &props.featured.title);
     out.push_str("</h2>");
+    super::stock_level::render(out, &super::stock_level::Props { id: std::borrow::Cow::Borrowed(&*props.featured.id) }, fv_loads);
     fv::slot_into(out, fv_slots.reviews, Some(&mut |out: &mut String| {
         out.push_str("<p>Loading reviews…</p>");
     }));
@@ -108,6 +109,6 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>, fv_route: &'p fv::Route<'p>, fv_head: &'p fv::Head) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_slots, fv_route, fv_head))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>, fv_route: &'p fv::Route<'p>, fv_head: &'p fv::Head, fv_loads: &'p fv::Loads<'p>) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
+    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_slots, fv_route, fv_head, fv_loads))
 }

@@ -69,7 +69,13 @@ export async function hydrate(history?: RouterHistory): Promise<Hydrated> {
     hydrateState(nextPinia, { text: next.state });
     const nextRouter = pageRouter({ location: href });
     if (push) window.history.pushState(null, "", href);
-    hydrated.page = await renderPage(Picks, islands, next.record, { pinia: nextPinia, router: nextRouter, plugins: [head], previous: hydrated.page });
+    hydrated.page = await renderPage(Picks, islands, next.record, {
+      pinia: nextPinia,
+      router: nextRouter,
+      plugins: [head],
+      loads: next.loads,
+      previous: hydrated.page,
+    });
     hydrated.pinia = nextPinia;
     hydrated.router = nextRouter;
   }

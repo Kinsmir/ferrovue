@@ -1,5 +1,5 @@
 import { normalizeCssVarValue } from "@vue/shared";
-import { type App, Fragment, type Plugin, Static } from "vue";
+import { type App, type ComponentPublicInstance, Fragment, type Plugin, Static } from "vue";
 import { settled, stillLoading } from "./settle.ts";
 
 const escapeText = (text: string): string => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -91,19 +91,29 @@ export function parsedShape(container: Element): string {
   return nodes(container.childNodes, container.ownerDocument.createElement("div"), true);
 }
 
-/** A plugin that takes what the app is mounted on, and its `renderedShape` as `mount` returns,
- * before any update an `onMounted` hook scheduled has run. */
-export function shapeAtMount(): { plugin: Plugin; container: () => Element | undefined; shape: () => string | undefined } {
+/** A plugin that takes what the app is mounted on, and its `renderedShape` once the root
+ * component's child is mounted: as `mount` returns, or, inside a `<Suspense>`, once it resolves,
+ * before any update an `onMounted` hook scheduled has run. `shape` resolves to it. */
+export function shapeAtMount(): { plugin: Plugin; container: () => Element | undefined; shape: () => Promise<string> } {
   let container: Element | undefined;
-  let shape: string | undefined;
+  let taken: (shape: string) => void;
+  const shape = new Promise<string>((done) => (taken = done));
   const plugin: Plugin = {
     install(app: App) {
+      app.mixin({
+        mounted(this: ComponentPublicInstance) {
+          if (!this.$parent || this.$parent.$parent) return;
+          const parent = (this.$el as Node | null)?.parentNode;
+          if (parent?.nodeType === 1) taken(renderedShape(parent as Element));
+        },
+      });
       const mount = app.mount.bind(app);
       app.mount = (...args: Parameters<App["mount"]>) => {
         const root = mount(...args);
         const [target] = args;
         container = (typeof target === "string" ? document.querySelector(target) : target) as Element;
-        shape = renderedShape(container);
+        const pending = (root.$.subTree as { suspense?: { pendingBranch: unknown } | null }).suspense?.pendingBranch;
+        if (!pending) taken(renderedShape(container));
         return root;
       };
     },

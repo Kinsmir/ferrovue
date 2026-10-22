@@ -198,6 +198,23 @@ it("answers a loader from the page's results, and runs it for a call the page do
   clearLoads();
 });
 
+it("reads a script of results put into the document after an earlier one was read", async () => {
+  clearLoads();
+  document.body.innerHTML = '<script type="application/json" data-fv-loads>{"[\\"loadShelf\\",1]":"first"}</script>';
+  const ran: number[] = [];
+  const loadShelf = defineLoader("loadShelf", async (id: number): Promise<string> => {
+    ran.push(id);
+    return `shelf ${id}`;
+  });
+  expect(await loadShelf(1)).toBe("first");
+  document.body.innerHTML = '<script type="application/json" data-fv-loads>{"[\\"loadShelf\\",2]":"second"}</script>';
+  expect(await loadShelf(2)).toBe("second");
+  expect(await loadShelf(1)).toBe("first");
+  expect(ran).toEqual([]);
+  document.body.innerHTML = "";
+  clearLoads();
+});
+
 it("hydrates a page whose components await loaders inside a `<Suspense>`, from the results it carries", async () => {
   clearLoads();
   const loadTitle = defineLoader("loadTitle", async (id: number): Promise<string> => `server ${id}`);

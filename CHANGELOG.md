@@ -161,10 +161,21 @@ released together and share version numbers.
   conformance components `Pairs` and `Flattened` hold fixtures recorded from Vue, and the fuzzer
   writes `Object.entries()` read by `.filter()` and `.map()`, and `.flatMap()`. They need no
   new version of generated code: both are Rust iterator adaptors.
+- The full-stack example awaits loaders. On the staff picks page, `StockLevel` awaits `loadStock`
+  for the featured book and `Shipping` awaits `loadWarehouse` for the warehouse that result names,
+  so the server renders the page in two rounds. The axum app implements `Loaders` from its
+  catalogue, renders the page with `loaders::load`, writes `Loads::script_into` after the app, and
+  answers the browser's loaders at `/api/stock/{id}` and `/api/warehouses/{code}`. Its tests
+  hydrate the page in happy-dom, Chromium, Firefox and WebKit with no request to those routes, and
+  follow a link to another pick, which renders from the results in the document it fetches. With
+  it, `Loads` is covariant in its lifetime, so a component's `html()` takes the `&Loads` that
+  `load` hands its closure; the client reads each `<script data-fv-loads>` once, one put into the
+  document after an earlier read included; and `renderRecordedPage` compares a page inside a
+  `<Suspense>` as the `<Suspense>` resolves, where `<ClientOnly>` still shows its fallback.
 
 ### Changed
 
-- Messages say what to do in place of what to avoid: FV1107 lists the types a helper or twin
+- Messages say what to do: FV1107 lists the types a helper or twin
   takes, FV1511 says `<ClientOnly>` leaves out the fallback there, FV1905 says to end the cases in
   `return`, and `release.ts members` says to use `version.workspace = true`. The guides and the
   code lose the comments that said what the code does.

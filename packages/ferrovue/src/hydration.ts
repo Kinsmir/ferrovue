@@ -123,7 +123,7 @@ export async function renderRecordedPage(
   let app: App;
   try {
     app = await renderPage(layout, components, record, { ...options, doc, container, plugins: [...(options.plugins ?? []), watch, mounted.plugin] });
-    const difference = await renderDifference(app, mounted.container() ?? container, mounted.shape() ?? "", expected);
+    const difference = await renderDifference(app, mounted.container() ?? container, await Promise.race([mounted.shape(), settled(app).then(mounted.shape)]), expected);
     if (difference) problems.push(difference);
   } finally {
     console.warn = warn;

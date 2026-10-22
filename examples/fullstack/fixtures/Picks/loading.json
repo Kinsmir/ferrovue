@@ -1,1 +1,1 @@
-{"shop":"Bookshop","featured":"Dune","books":[],"$route":"/picks"}
+{"shop":"Bookshop","featured":{"id":"dune","title":"Dune","author":"Frank Herbert","year":1965},"books":[],"$route":"/picks","$loads":{"[\"loadStock\",\"dune\"]":{"copies":0,"warehouse":""}}}

@@ -431,3 +431,29 @@ fn the_driver_is_send_when_its_closures_are() {
     );
     send(&page);
 }
+
+#[tokio::test(start_paused = true)]
+async fn a_components_html_takes_the_loads_of_a_render() {
+    fn html<'p>(
+        props: &'p String,
+        loads: &'p Loads<'p>,
+    ) -> crate::Html<'p, String, impl Fn(&mut String, &String) + 'p> {
+        crate::Html::markup(props, move |out: &mut String, props: &String| {
+            out.push_str(props);
+            section(out, loads, "A", 5, |_| {});
+        })
+    }
+    let app = App::default();
+    let props = String::from("<hr>");
+    let html = load(
+        |loads| {
+            let mut out = String::new();
+            html(&props, loads).render_to(&mut out);
+            out
+        },
+        app.dispatch(Instant::now()),
+    )
+    .await
+    .unwrap();
+    assert_eq!(html, "<hr><section><b>A:5</b></section>");
+}
