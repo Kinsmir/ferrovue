@@ -143,6 +143,8 @@ released together and share version numbers.
 
 ### Changed
 
+- Development only: the workspace runs pnpm 12.15.0, where it ran 12.5.1; CI takes the version from
+  `packageManager`.
 - CI only: the workflows reach their own actions and reusable workflows as `$/.github/…`, which
   GitHub resolves from the repository at the workflow's commit, where `./.github/…` loaded them from
   the working copy. zizmor fails CI on a finding of any severity; `.github/zizmor.yml` ignores the
