@@ -110,6 +110,8 @@ pub mod loaded;
 pub mod loaded_comments;
 pub mod loaded_dates;
 pub mod loaded_ranks;
+pub mod loaded_stamp;
+pub mod loaded_stamps;
 pub mod local_functions;
 pub mod lookups;
 pub mod loop_edges;
@@ -817,6 +819,38 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
                     teleports_into(&mut out, teleports);
                     head_into(&mut out, &head);
                     rendered
+                },
+                loaders::from_fixture(&fixture.loads),
+            );
+            let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
+            match std::future::Future::poll(std::pin::pin!(loading), &mut cx) {
+                std::task::Poll::Ready(done) => done.map_err(|e| e.to_string())?.map_err(|e| e.to_string())?,
+                std::task::Poll::Pending => return Err(String::from("a fixture's loader is still running")),
+            }
+        }
+        "LoadedStamp" => {
+            let props: loaded_stamp::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let loading = ferrovue::load(
+                |fv_loads| {
+                    out.clear();
+                    loaded_stamp::try_render(&mut out, &props, fv_loads)
+                },
+                loaders::from_fixture(&fixture.loads),
+            );
+            let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
+            match std::future::Future::poll(std::pin::pin!(loading), &mut cx) {
+                std::task::Poll::Ready(done) => done.map_err(|e| e.to_string())?.map_err(|e| e.to_string())?,
+                std::task::Poll::Pending => return Err(String::from("a fixture's loader is still running")),
+            }
+        }
+        "LoadedStamps" => {
+            let props: loaded_stamps::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let loading = ferrovue::load(
+                |fv_loads| {
+                    out.clear();
+                    loaded_stamps::try_render(&mut out, &props, fv_loads)
                 },
                 loaders::from_fixture(&fixture.loads),
             );

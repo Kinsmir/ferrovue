@@ -134,7 +134,9 @@ released together and share version numbers.
   FV1811 (`.toISOString()` of an invalid date) and FV1812 (a date a child's `Date` prop cannot
   hold). The guide's `errors_and_limits` page shows a handler answering one, and the full-stack
   example's `/delivery` route renders a date and a number from the query string with `try_render`
-  and answers a refusal with `400`.
+  and answers a refusal with `400`. The conformance component `LoadedStamps` records `Date.UTC()` of
+  a loader's result in a child from Vue, and a Rust test checks that its refusal reaches the page's
+  render.
 - The differential fuzzer counts a render that returns a refusal as refused at render, apart from
   Rust errors and mismatches, and lists each refusal's code and message; it renders a child
   `FzWide` whose `number` prop is a product of integers, beyond ±2⁶³ for wide props.

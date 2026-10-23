@@ -520,6 +520,25 @@ fn a_computed_in_a_style_variable_is_evaluated_as_the_render_starts() {
 }
 
 #[test]
+fn a_refusal_in_a_child_that_awaits_a_loader_is_returned_by_the_render() {
+    let refused = generated::render_json(
+        "LoadedStamps",
+        r#"{"year":2000000,"$loads":{"[\"loadViews\"]":-24000000}}"#,
+    )
+    .unwrap_err();
+    assert!(
+        refused.starts_with("error[FV1808]: components/LoadedStamp.vue:9:"),
+        "{refused}"
+    );
+    let html = generated::render_json(
+        "LoadedStamps",
+        r#"{"year":2024,"$loads":{"[\"loadViews\"]":3}}"#,
+    )
+    .unwrap();
+    assert!(html.contains(">1711929600000</time>"), "{html}");
+}
+
+#[test]
 fn render_panics_with_the_refusal_try_render_returns() {
     let props: generated::unread::Props = serde_json::from_str(
         r#"{"when":"2024-03-10T08:05:09.007Z","show":true,"count":-1,"word":"ab","width":3,"tags":["x"]}"#,
