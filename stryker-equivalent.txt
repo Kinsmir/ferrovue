@@ -273,7 +273,6 @@ packages/ferrovue/src/template.ts: LogicalOperator: !ctx.recovered || ctx.trying
 packages/ferrovue/src/template.ts: ConditionalExpression: !(err instanceof GenError) => false in if (!(err instanceof GenError)) throw err;
 packages/ferrovue/src/template.ts: CallExpression: restore(s.locals, locals); => ; in restore(s.locals, locals);
 packages/ferrovue/src/template.ts: CallExpression: restore(s.narrowed, narrowed); => ; in restore(s.narrowed, narrowed);
-packages/ferrovue/src/template.ts: CallExpression: rewind(); => ; in rewind();
 packages/ferrovue/src/template.ts: BlockStatement: { map.clear(); for (const [k, v] of entries) map.set(k, v); } => {} in function restore<K, V>(map: Map<K, V>, entries: [K, V][]): void {
 packages/ferrovue/src/template.ts: CallExpression: map.clear(); => ; in map.clear();
 
