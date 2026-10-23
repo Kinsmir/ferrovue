@@ -161,7 +161,7 @@ export function arrow(s: Scope, fn: N, list: Val, of: Ty, byRef: boolean, method
 function mapped(s: Scope, v: Val, n: N): string {
   switch (v.ty.k) {
     case "str":
-      if (v.code.startsWith("&*fv::") && yieldsCow(v.code.slice(2))) return `${COW}::Owned(${v.code.slice(2)}.into_owned())`;
+      if ((v.code.startsWith("&*fv::") || v.code.startsWith("&*fv_refusals.")) && yieldsCow(v.code.slice(2))) return `${COW}::Owned(${v.code.slice(2)}.into_owned())`;
       const item = /^&\**(fv_s\d+)$/.exec(v.code)?.[1];
       if (item !== undefined) return `${COW}::Owned(${item}.to_string())`;
       if (isTemporary(v)) return /\bfv_s\d+\b/.test(v.code) ? `${COW}::Owned(${atom(asCow(v))}.into_owned())` : asCow(v);

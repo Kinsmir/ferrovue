@@ -33,11 +33,25 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::Loads<'_>) {
+    fv::rendered(try_render(out, props, fv_loads));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::Loads<'_>) -> Result<(), fv::Refused> {
     out.reserve(92 + props.slug.len() + props.lang.as_deref().map_or(0, str::len));
-    let Some(l_0) = fv_loads.get(super::loaders::LoadArticle { slug: String::from(&*props.slug), lang: props.lang.as_deref().map(String::from) }) else { return; };
-    let Some(l_1) = fv_loads.get(super::loaders::LoadArticle { slug: String::from(&*props.slug), lang: props.lang.as_deref().map(String::from) }) else { return; };
-    let Some(l_2) = fv_loads.get(super::loaders::LoadViews) else { return; };
+    let Some(l_0) = fv_loads.get(super::loaders::LoadArticle { slug: String::from(&*props.slug), lang: props.lang.as_deref().map(String::from) }) else { return Ok(()); };
+    let Some(l_1) = fv_loads.get(super::loaders::LoadArticle { slug: String::from(&*props.slug), lang: props.lang.as_deref().map(String::from) }) else { return Ok(()); };
+    let Some(l_2) = fv_loads.get(super::loaders::LoadViews) else { return Ok(()); };
     let s_heading = format!("{} ({} views)", l_1.title, fv::Js(*l_2));
     out.push_str("<article><h1>");
     fv::escape_into(out, &s_heading);
@@ -64,12 +78,13 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::Loads<'_>) {
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul>");
-    super::loaded_comments::render(out, &super::loaded_comments::Props { article: std::borrow::Cow::Borrowed(&*props.slug), page: 1i64, drafts: None }, fv_loads);
-    super::loaded_comments::render(out, &super::loaded_comments::Props { article: std::borrow::Cow::Borrowed(&*props.slug), page: 2i64, drafts: Some(l_0.tags.len() as i64 as f64 > 1.0) }, fv_loads);
+    super::loaded_comments::try_render(out, &super::loaded_comments::Props { article: std::borrow::Cow::Borrowed(&*props.slug), page: 1i64, drafts: None }, fv_loads)?;
+    super::loaded_comments::try_render(out, &super::loaded_comments::Props { article: std::borrow::Cow::Borrowed(&*props.slug), page: 2i64, drafts: Some(l_0.tags.len() as i64 as f64 > 1.0) }, fv_loads)?;
     out.push_str("</article>");
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_loads: &'p fv::Loads<'p>) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_loads))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_loads: &'p fv::Loads<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
+    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_loads)))
 }

@@ -7,6 +7,13 @@ export class Emitter {
   perItem: string[] = [];
   private pending = "";
   private depth = 1;
+  private closures: boolean[] = [];
+
+  /** Whether the statements written now are in a closure, slot content or a fallback, where a
+   * refusal is held for the render to return. */
+  get inClosure(): boolean {
+    return this.closures.includes(true);
+  }
 
   lit(s: string): void {
     this.pending += s;
@@ -25,13 +32,18 @@ export class Emitter {
   open(code: string): void {
     this.stmt(code ? code + " {" : "{");
     this.depth++;
+    this.closures.push(/\|out: &mut String\b/.test(code));
   }
 
   close(tail = ""): void {
     this.flush();
     this.depth--;
     this.lines.push("    ".repeat(this.depth) + "}" + tail);
-    if (tail.endsWith("{")) this.depth++;
+    const closure = this.closures.pop() ?? false;
+    if (tail.endsWith("{")) {
+      this.depth++;
+      this.closures.push(closure);
+    }
   }
 
   reads(name: string, from: number): boolean {
@@ -47,12 +59,14 @@ export class Emitter {
     const { pending, depth, literalBytes } = this;
     const lines = this.lines.length;
     const perItem = this.perItem.length;
+    const closures = [...this.closures];
     return () => {
       this.lines.length = lines;
       this.perItem.length = perItem;
       this.pending = pending;
       this.depth = depth;
       this.literalBytes = literalBytes;
+      this.closures = closures;
     };
   }
 

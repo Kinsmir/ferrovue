@@ -38,8 +38,23 @@ pub struct Slots<'s> {
 }
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 #[allow(clippy::too_many_arguments)]
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::Route<'_>, fv_stores: &super::stores::Stores<'_>, fv_i18n: &fv::I18n, fv_teleports: &fv::Teleports, fv_provides: super::provides::Provides<'_>, fv_head: &fv::Head) {
+    fv::rendered(try_render(out, props, fv_slots, fv_route, fv_stores, fv_i18n, fv_teleports, fv_provides, fv_head));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+#[allow(clippy::too_many_arguments)]
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::Route<'_>, fv_stores: &super::stores::Stores<'_>, fv_i18n: &fv::I18n, fv_teleports: &fv::Teleports, fv_provides: super::provides::Provides<'_>, fv_head: &fv::Head) -> Result<(), fv::Refused> {
     out.reserve(97 + props.title.len());
     out.push_str("<div class=\"shell\"><nav>");
     {
@@ -55,20 +70,21 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route
         out.push_str("\">Home</a>");
     }
     out.push_str("</nav>");
-    super::cart_badge::render(out, &super::cart_badge::Props {  }, fv_stores);
-    super::translated::render(out, &super::translated::Props { name: std::borrow::Cow::Borrowed(&*props.title) }, fv_i18n);
-    super::modal::render(out, &super::modal::Props { title: std::borrow::Cow::Borrowed(&*props.title) }, fv_teleports);
-    super::themed_button::render(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed(&*props.title) }, fv_provides);
-    super::head_note::render(out, &super::head_note::Props { title: std::borrow::Cow::Borrowed(&*props.title) }, fv_head);
+    super::cart_badge::try_render(out, &super::cart_badge::Props {  }, fv_stores)?;
+    super::translated::try_render(out, &super::translated::Props { name: std::borrow::Cow::Borrowed(&*props.title) }, fv_i18n)?;
+    super::modal::try_render(out, &super::modal::Props { title: std::borrow::Cow::Borrowed(&*props.title) }, fv_teleports)?;
+    super::themed_button::try_render(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed(&*props.title) }, fv_provides)?;
+    super::head_note::try_render(out, &super::head_note::Props { title: std::borrow::Cow::Borrowed(&*props.title) }, fv_head)?;
     out.push_str("<main>");
     fv_slots.router_view.render_to(out);
     out.push_str("</main>");
     fv::scoped_slot_into(out, fv_slots.default.map(|f| move |out: &mut String, _: &()| f(out, fv_provides)).as_ref(), &(), None);
     out.push_str("</div>");
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
 #[allow(clippy::too_many_arguments)]
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>, fv_route: &'p fv::Route<'p>, fv_stores: &'p super::stores::Stores<'p>, fv_i18n: &'p fv::I18n, fv_teleports: &'p fv::Teleports, fv_provides: super::provides::Provides<'p>, fv_head: &'p fv::Head) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_slots, fv_route, fv_stores, fv_i18n, fv_teleports, fv_provides, fv_head))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>, fv_route: &'p fv::Route<'p>, fv_stores: &'p super::stores::Stores<'p>, fv_i18n: &'p fv::I18n, fv_teleports: &'p fv::Teleports, fv_provides: super::provides::Provides<'p>, fv_head: &'p fv::Head) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
+    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_slots, fv_route, fv_stores, fv_i18n, fv_teleports, fv_provides, fv_head)))
 }

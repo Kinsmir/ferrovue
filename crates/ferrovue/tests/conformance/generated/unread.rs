@@ -43,16 +43,31 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
+    fv::rendered(try_render(out, props));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(134 + props.when.len() + props.word.len() + props.tags.iter().map(|v| v.len()).sum::<usize>() + props.note.as_deref().map_or(0, str::len));
+    let fv_refusals = fv::Refusals::new(NAME, "components/Unread.vue");
     let s_upper = props.word.to_uppercase();
-    let s_padded = std::cell::LazyCell::new(|| fv::js_pad_start(&props.word, props.width as f64, ".").into_owned());
-    let s_iso = std::cell::LazyCell::new(|| fv::js_to_iso_string(fv::js_date_parse(&props.when)));
+    let s_padded = std::cell::LazyCell::new(|| fv_refusals.keep(fv::try_pad_start(&props.word, props.width as f64, "."), 7, 31).into_owned());
+    let s_iso = std::cell::LazyCell::new(|| fv_refusals.keep(fv::try_to_iso_string(fv_refusals.keep(fv::try_date_parse(&props.when), 9, 28)), 9, 28));
     let s_stamp = std::cell::LazyCell::new(|| format!("{} ({})", (*s_iso), props.word));
-    let s_day = std::cell::LazyCell::new(|| fv::js_utc_date(fv::js_date_parse(&props.when)));
-    let s_size = std::cell::LazyCell::new(|| fv::js_length(&fv::js_repeat(&props.word, props.count as f64)));
-    let s_copies = std::cell::LazyCell::new(|| props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_s1| std::borrow::Cow::<str>::Owned(std::borrow::Cow::<str>::Owned(fv::js_repeat(&fv_s1, props.count as f64)).into_owned())).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>());
-    let s_echoed = std::cell::LazyCell::new(|| props.note.as_deref().filter(|v| !v.is_empty()).map(|n2| std::borrow::Cow::<str>::Owned(fv::js_repeat(n2, props.count as f64))));
+    let s_day = std::cell::LazyCell::new(|| fv::js_utc_date(fv_refusals.keep(fv::try_date_parse(&props.when), 11, 28)));
+    let s_size = std::cell::LazyCell::new(|| fv::js_length(&fv_refusals.keep(fv::try_repeat(&props.word, props.count as f64), 12, 29)));
+    let s_copies = std::cell::LazyCell::new(|| props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_s1| std::borrow::Cow::<str>::Owned(std::borrow::Cow::<str>::Owned(fv_refusals.keep(fv::try_repeat(&fv_s1, props.count as f64), 13, 53)).into_owned())).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>());
+    let s_echoed = std::cell::LazyCell::new(|| props.note.as_deref().filter(|v| !v.is_empty()).map(|n2| std::borrow::Cow::<str>::Owned(fv_refusals.keep(fv::try_repeat(n2, props.count as f64), 14, 45))));
     out.push_str("<section><p>");
     fv::escape_into(out, &s_upper);
     out.push('|');
@@ -79,39 +94,40 @@ pub fn render(out: &mut String, props: &Props<'_>) {
             out.push_str("</li>");
         }
         out.push_str("<!--]--></ul>");
-        super::unread_fold::render(out, &super::unread_fold::Props { open: None, label: Some(std::borrow::Cow::Borrowed(&*(*s_stamp))) }, super::unread_fold::Slots {
+        fv_refusals.check(super::unread_fold::try_render(out, &super::unread_fold::Props { open: None, label: Some(std::borrow::Cow::Borrowed(&*(*s_stamp))) }, super::unread_fold::Slots {
             default: None,
-        });
+        }))?;
         out.push_str("<!--]-->");
     } else {
         out.push_str("<p>hidden</p>");
     }
-    super::unread_fold::render(out, &super::unread_fold::Props { open: Some(props.show), label: None }, super::unread_fold::Slots {
+    fv_refusals.check(super::unread_fold::try_render(out, &super::unread_fold::Props { open: Some(props.show), label: None }, super::unread_fold::Slots {
         default: Some(fv::Slot::new(&|out: &mut String| {
             out.push_str("<i>");
             fv::escape_into(out, &s_iso);
             out.push_str("</i>");
         })),
-    });
+    }))?;
     out.push_str("</section>");
+    fv_refusals.check(Ok(()))
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
 pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup(props, render)
+    fv::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
 pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island(NAME, props, render)
+    fv::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
 pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned(props, render)
+    fv::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
 pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned(NAME, props, render)
+    fv::Html::island_owned_fallible(NAME, props, render, try_render)
 }

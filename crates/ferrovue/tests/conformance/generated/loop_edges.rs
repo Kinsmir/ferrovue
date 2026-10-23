@@ -88,10 +88,25 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
+    fv::rendered(try_render(out, props));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(108 + props.tags.iter().map(|v| v.len()).sum::<usize>() + props.counts.iter().map(|(k, _)| k.len()).sum::<usize>() + props.text.len() + 4);
+    let fv_refusals = fv::Refusals::new(NAME, "components/LoopEdges.vue");
     let s_kept = props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_s1| !fv::js_trim(fv_s1).is_empty()).map(|fv_s2| std::borrow::Cow::<str>::Owned(fv::js_trim(&fv_s2).to_owned())).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
-    let s_lengths = props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_s3| { let mut fv_m4: f64 = 0.0f64; for fv_s6 in fv_s3.split_inclusive(|_: char| true) { if fv_s6 != " " { fv_m4 += 1.0; } } fv_m4 as i64 }).collect::<Vec<_>>();
+    let s_lengths = std::cell::LazyCell::new(|| props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_s3| { let mut fv_m4: f64 = 0.0f64; for fv_s6 in fv_s3.split_inclusive(|_: char| true) { if fv_s6 != " " { fv_m4 += 1.0; } } fv_refusals.keep(fv::try_int(fv_m4), 138, 5) }).collect::<Vec<_>>());
     out.push_str("<!--[--><ul><!--[-->");
     for t_cow in s_kept.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)) {
         let t: &str = &t_cow;
@@ -110,40 +125,41 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push_str("</p><p data-grid=\"");
     fv::escape_into(out, &{ let fv_c79 = if props.n as f64 > 4.0 { 4i64 } else { props.n }; { let mut fv_m124: String = String::new(); let mut fv_m125: f64 = 0.0f64; while fv_m125 < fv_c79 as f64 { let mut fv_m135: String = String::from(&*fv_m124); let mut fv_m136: f64 = 0.0f64; while fv_m136 <= fv_m125 { if fv_m136 == 2.0 { fv_m136 += 1.0; } else { { use std::fmt::Write as _; let _ = write!(fv_m135, "{}", (if fv_m136 == fv_m125 { std::borrow::Cow::<str>::Owned(format!("{}/", fv::Js(fv_m136))) } else { std::borrow::Cow::<str>::Owned(format!("{}", fv::Js(fv_m136))) })); } fv_m136 += 1.0; } } { fv_m124 = String::from(&*fv_m135); fv_m125 += 1.0; } } std::borrow::Cow::<str>::Owned(fv_m124) } });
     out.push_str("\">");
-    fv::push_int(out, { let mut fv_m154: f64 = 0.0f64; let mut fv_m155: f64 = 10.0f64; let mut fv_r156: Option<f64> = None; while fv_m155 > 0.0 { if fv_m155 <= props.n as f64 { fv_r156 = Some(fv_m155); break; } else { fv_m154 += fv_m155; fv_m155 -= 3.0; } } if fv_r156.is_some() { fv_r156.unwrap_or_default() as i64 } else { fv_m154 as i64 } });
+    fv::push_number(out, { let mut fv_m154: f64 = 0.0f64; let mut fv_m155: f64 = 10.0f64; let mut fv_r156: Option<f64> = None; while fv_m155 > 0.0 { if fv_m155 <= props.n as f64 { fv_r156 = Some(fv_m155); break; } else { fv_m154 += fv_m155; fv_m155 -= 3.0; } } if fv_r156.is_some() { fv_r156.unwrap_or_default() } else { fv_m154 } });
     out.push('|');
     fv::escape_into(out, &{ let mut fv_m160: f64 = 0.0f64; let mut fv_m161: bool = true; for fv_s163 in props.text.split_inclusive(|_: char| true) { if fv::js_length(fv_s163) as f64 > 1.0 { fv_m160 += 1.0; } else { if fv::js_cmp(fv_s163, "~").is_gt() { fv_m161 = false; } } } std::borrow::Cow::<str>::Owned(format!("{}/{}", if fv_m161 { "true" } else { "false" }, fv::Js(fv_m160))) });
     out.push('|');
-    fv::escape_into(out, &s_lengths.iter().copied().map(|v| fv::Js(v).to_string()).collect::<Vec<_>>().join("-"));
+    fv::escape_into(out, &(*s_lengths).iter().copied().map(|v| fv::Js(v).to_string()).collect::<Vec<_>>().join("-"));
     out.push_str("</p><p>");
     fv::escape_into(out, &{ let mut fv_m173: Option<String> = None; for fv_s175 in props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)) { if let Some(n176) = fv_m173.as_deref() { if fv::js_length(n176) as f64 >= fv::js_length(&fv_s175) as f64 {} else { fv_m173 = Some(format!("{}>{}", fv_s175, n176)); } } else { fv_m173 = Some(String::from(&*(if let Some(n178) = fv_m173.as_deref() { std::borrow::Cow::<str>::Owned(format!("{}>{}", fv_s175, n178)) } else { std::borrow::Cow::<str>::Borrowed(&*fv_s175) }))); } } std::borrow::Cow::<str>::Owned(fv_m173.as_deref().unwrap_or("-").to_owned()) });
     out.push('|');
-    fv::push_int(out, { let mut fv_m181: f64 = 1.0f64; for fv_s183 in props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)) { fv_m181 += props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_s184| (fv::js_length(fv_s184) as f64) < fv_m181 + fv::js_length(&fv_s183) as f64).count() as i64 as f64; } fv_m181 as i64 });
+    fv::push_number(out, { let mut fv_m181: f64 = 1.0f64; for fv_s183 in props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)) { fv_m181 += props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_s184| (fv::js_length(fv_s184) as f64) < fv_m181 + fv::js_length(&fv_s183) as f64).count() as i64 as f64; } fv_m181 });
     out.push('|');
-    fv::push_int(out, { let mut fv_m211: f64 = 0.0f64; let mut fv_r212: Option<f64> = None; for fv_s213 in props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)) { let mut fv_m228: f64 = fv_m211; let mut fv_m229: f64 = 0.0f64; let mut fv_r230: Option<f64> = None; while fv_m229 <= props.n as f64 { let fv_c231 = fv_m228 + fv_m229; if fv::js_length(&fv_s213) as f64 == fv_m229 { fv_r230 = Some(fv_c231 * 10.0 + fv_m229); break; } else { fv_m228 = fv_c231; fv_m229 += 2.0; } } if fv_r230.is_some() { fv_r212 = Some(fv_r230.unwrap_or_default()); break; } else { fv_m211 = fv_m228; } } if fv_r212.is_some() { fv_r212.unwrap_or_default() as i64 } else { -fv_m211 as i64 } });
+    fv::push_number(out, { let mut fv_m211: f64 = 0.0f64; let mut fv_r212: Option<f64> = None; for fv_s213 in props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)) { let mut fv_m228: f64 = fv_m211; let mut fv_m229: f64 = 0.0f64; let mut fv_r230: Option<f64> = None; while fv_m229 <= props.n as f64 { let fv_c231 = fv_m228 + fv_m229; if fv::js_length(&fv_s213) as f64 == fv_m229 { fv_r230 = Some(fv_c231 * 10.0 + fv_m229); break; } else { fv_m228 = fv_c231; fv_m229 += 2.0; } } if fv_r230.is_some() { fv_r212 = Some(fv_r230.unwrap_or_default()); break; } else { fv_m211 = fv_m228; } } if fv_r212.is_some() { fv_r212.unwrap_or_default() } else { -fv_m211 } });
     out.push('|');
     fv::escape_into(out, &{ let fv_c237 = fv::Js(props.n).to_string(); std::borrow::Cow::<str>::Owned(({ let mut fv_m242: String = String::from(&*fv_c237); for fv_s244 in props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)) { use std::fmt::Write as _; let _ = write!(fv_m242, "{}", fv_s244); } std::borrow::Cow::<str>::Owned(({ let mut fv_m246: f64 = 0.0f64; for _ in fv::js_split(&fv_m242, "").into_iter() { fv_m246 += 1.0; } std::borrow::Cow::<str>::Owned(format!("{}|{}", fv_m242, fv::Js(fv_m246))) }).into_owned()) }).into_owned()) });
     out.push('|');
     fv::escape_into(out, &{ let mut fv_m254: String = String::new(); for fv_a256 in props.counts.iter() { use std::fmt::Write as _; let _ = write!(fv_m254, "{}", fv_a256.0); } std::borrow::Cow::<str>::Owned(({ let mut fv_m258: f64 = 0.0f64; for fv_s260 in props.counts.keys().map(std::borrow::Cow::<str>::Borrowed) { let fv_c261 = fv::js_length(&fv_s260); if fv_c261 as f64 % 2.0 == 1.0 { fv_m258 += 1.0; } } std::borrow::Cow::<str>::Owned(format!("{}|{}", fv_m254, fv::Js(fv_m258))) }).into_owned()) });
     out.push_str("</p><!--]-->");
+    fv_refusals.check(Ok(()))
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
 pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup(props, render)
+    fv::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
 pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island(NAME, props, render)
+    fv::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
 pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned(props, render)
+    fv::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
 pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned(NAME, props, render)
+    fv::Html::island_owned_fallible(NAME, props, render, try_render)
 }

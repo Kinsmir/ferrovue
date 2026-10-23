@@ -54,17 +54,17 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
     match component {
         "Badge" => {
             let props: badge::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            badge::render(&mut out, &props);
+            badge::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "Card" => {
             let props: card::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            card::render(&mut out, &props);
+            card::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "Tally" => {
             let props: tally::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let state: stores::Stores = serde_json::from_value(fixture.stores.clone()).map_err(|e| e.to_string())?;
-            tally::render(&mut out, &props, &state);
+            tally::try_render(&mut out, &props, &state).map_err(|e| e.to_string())?;
         }
         other => return Err(format!("no component called {other}")),
     }

@@ -92,7 +92,21 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
+    fv::rendered(try_render(out, props));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(84 + 7 * props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_s4| Line { text: std::borrow::Cow::<str>::Owned(fv_s4.to_uppercase()), size: fv::js_length(&fv_s4), tag: (if fv_s4.is_empty() { None } else { Some(&*fv_s4) }).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned())), mark: (if fv::js_length(&fv_s4) as f64 > 3.0 { Some("long") } else { None }).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned())) }).collect::<Vec<_>>().len() + props.title.len() + props.words.iter().map(|v| v.len()).sum::<usize>() + props.spare.as_ref().map_or(0, |v| v.title.len() + v.note.as_deref().map_or(0, str::len) + v.owner.as_deref().map_or(0, str::len) + v.tags.iter().map(|v| v.len()).sum::<usize>() + v.badge.as_ref().map_or(0, |v| v.label.len() + v.tone.len())));
     let s_fallback = Line { text: std::borrow::Cow::<str>::Borrowed(&*props.title), size: props.size, tag: None, mark: None };
     let s_sheet = Sheet { head: Line { text: std::borrow::Cow::<str>::Owned(props.title.to_uppercase()), size: fv::js_length(&props.title), tag: (if props.title.is_empty() { None } else { Some(&*props.title) }).map(std::borrow::Cow::<str>::Borrowed), mark: (if fv::js_length(&props.title) as f64 > 3.0 { Some("long") } else { None }).map(std::borrow::Cow::<str>::Borrowed) }, lines: props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_s1| Line { text: std::borrow::Cow::<str>::Owned(fv_s1.to_uppercase()), size: fv::js_length(&fv_s1), tag: (if fv_s1.is_empty() { None } else { Some(&*fv_s1) }).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned())), mark: (if fv::js_length(&fv_s1) as f64 > 3.0 { Some("long") } else { None }).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned())) }).collect::<Vec<_>>(), names: props.words.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect() };
@@ -145,26 +159,27 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push('|');
     fv::escape_into(out, &{ let fv_c5 = if props.size as f64 > 0.0 { Some(Line { text: std::borrow::Cow::<str>::Owned(props.title.to_uppercase()), size: fv::js_length(&props.title), tag: (if props.title.is_empty() { None } else { Some(&*props.title) }).map(std::borrow::Cow::<str>::Borrowed), mark: (if fv::js_length(&props.title) as f64 > 3.0 { Some("long") } else { None }).map(std::borrow::Cow::<str>::Borrowed) }) } else { None }; std::borrow::Cow::<str>::Owned((if let Some(n6) = fv_c5.as_ref() { n6.mark.as_deref().unwrap_or(&*n6.text) } else { "none" }).to_owned()) });
     out.push_str("</p>");
-    super::tile_card::render(out, &super::tile_card::Props { tile: s_kept.to_owned() });
+    super::tile_card::try_render(out, &super::tile_card::Props { tile: s_kept.to_owned() })?;
     out.push_str("</section>");
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
 pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup(props, render)
+    fv::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
 pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island(NAME, props, render)
+    fv::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
 pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned(props, render)
+    fv::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
 pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned(NAME, props, render)
+    fv::Html::island_owned_fallible(NAME, props, render, try_render)
 }

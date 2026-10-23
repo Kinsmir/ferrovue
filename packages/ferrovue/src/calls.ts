@@ -1,4 +1,4 @@
-import { type N, type Scope, type Ty, type Val, asciiTy, BOOL, fail, FLOAT, INT, isAscii, sameTy, STR, strTy } from "./model.ts";
+import { type N, type Scope, type Ty, type Val, asciiTy, BOOL, fail, FLOAT, INT, isAscii, refusalAt, sameTy, STR, strTy } from "./model.ts";
 import { ctx } from "./context.ts";
 import type { Code } from "./errors.ts";
 import { claim } from "./plugin.ts";
@@ -132,14 +132,14 @@ export function call(s: Scope, n: N): Val {
         }
         if (vals.length === 1) {
           const x = vals[0]!;
-          if (method === "abs") return ints ? intFromF64(`${receiver(asF64(x))}.abs()`) : { code: `${receiver(x.code)}.abs()`, ty: FLOAT };
+          if (method === "abs") return ints ? intFromF64(`${receiver(asF64(x))}.abs()`, refusalAt(comp, n)) : { code: `${receiver(x.code)}.abs()`, ty: FLOAT };
           if (method === "round") return { code: `fv::js_round(${bare(asF64(x))})`, ty: FLOAT };
           if (method === "floor" || method === "ceil" || method === "trunc") return { code: `${receiver(asF64(x))}.${method}()`, ty: FLOAT };
           if (method === "sqrt") return x.num !== undefined ? numberVal(Math.sqrt(x.num), false) : { code: `${receiver(asF64(x))}.sqrt()`, ty: FLOAT };
           if (method === "sign") {
             if (x.num !== undefined) return numberVal(Math.sign(x.num), ints);
             const sign = `fv::js_sign(${bare(asF64(x))})`;
-            return ints ? intFromF64(sign) : { code: sign, ty: FLOAT };
+            return ints ? intFromF64(sign, null) : { code: sign, ty: FLOAT };
           }
         }
       }

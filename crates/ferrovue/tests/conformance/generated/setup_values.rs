@@ -28,7 +28,21 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) {
+    fv::rendered(try_render(out, props, fv_provides));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::Refused> {
     out.reserve(91 + props.label.len());
     let fv_inherited = fv_provides;
     let s_flipped = -(props.n as f64);
@@ -45,11 +59,12 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides:
     out.push(' ');
     fv::escape_into(out, &s_padded);
     out.push_str("</p><p>\u{202e}a\u{202e}b\u{2066}c</p>");
-    super::themed_button::render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed(&*s_padded) }, fv_provides, "");
+    super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed(&*s_padded) }, fv_provides, "")?;
     out.push_str("<!--]-->");
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_provides: super::provides::Provides<'p>) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_provides))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_provides: super::provides::Provides<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
+    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_provides)))
 }

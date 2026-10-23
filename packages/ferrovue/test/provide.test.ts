@@ -68,7 +68,7 @@ describe("provide and inject", () => {
     expect(out).toContain("let fv_inherited = fv_provides;");
     expect(out).toContain("let fv_provides = super::provides::Provides { theme_key: Some(&props.label), size: Some(3i64) };");
     expect(out).toContain('fv::escape_into(out, fv_inherited.theme_key.unwrap_or("light"));');
-    expect(out).toContain("super::button::render(out, &super::button::Props { label: std::borrow::Cow::Borrowed(\"in\") }, fv_provides);");
+    expect(out).toContain("super::button::try_render(out, &super::button::Props { label: std::borrow::Cow::Borrowed(\"in\") }, fv_provides)?;");
     expect(out).toContain("pub type DefaultSlot<'s> = dyn Fn(&mut String, super::provides::Provides<'_>) -> bool + 's;");
     expect(out).toContain("fv::scoped_slot_into(out, fv_slots.default.map(|f| move |out: &mut String, _: &()| f(out, fv_provides)).as_ref(), &(), None);");
   });
@@ -170,6 +170,6 @@ describe("provide and inject", () => {
     const e = refusal({ X: page("Sized"), Sized: sized }, twins);
     expect(e.code).toBe("FV1617");
     expect(e.message).toMatch(/Sized injects `"size"`, in the slot of VCard, a Rust twin/);
-    expect(project({ X: page("Button"), Button: button }, twins).get("x.rs")).toContain("super::button::render(out");
+    expect(project({ X: page("Button"), Button: button }, twins).get("x.rs")).toContain("super::button::try_render(out");
   });
 });

@@ -26,8 +26,23 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
+    fv::rendered(try_render(out, props));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(25 + 134 * props.replies.len() + props.replies.iter().map(|v| v.author.len()).sum::<usize>());
+    let fv_refusals = fv::Refusals::new(NAME, "components/DateReplies.vue");
     out.push_str("<ul><!--[-->");
     for reply_ref in props.replies.iter() {
         let reply = reply_ref;
@@ -36,7 +51,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         out.push_str("</b>");
         if !fv::js_time_of(&reply.at).is_nan() {
             out.push_str("<time datetime=\"");
-            fv::escape_into(out, &fv::js_to_iso_string(fv::js_time_of(&reply.at)));
+            fv::escape_into(out, &fv_refusals.keep(fv::try_to_iso_string(fv::js_time_of(&reply.at)), 11, 73));
             out.push_str("\">");
             fv::push_number(out, fv::js_utc_date(fv::js_time_of(&reply.at)));
             out.push_str("</time>");
@@ -60,35 +75,36 @@ pub fn render(out: &mut String, props: &Props<'_>) {
             out.push_str("<!---->");
         }
         if (props.depth as f64) < 2.0 && reply.replies.len() as i64 != 0 {
-            super::date_replies::render(out, &super::date_replies::Props { replies: reply.replies.to_owned(), depth: (props.depth as f64 + 1.0) as i64 });
+            fv_refusals.check(super::date_replies::try_render(out, &super::date_replies::Props { replies: reply.replies.to_owned(), depth: fv_refusals.keep(fv::try_int(props.depth as f64 + 1.0), 15, 94) }))?;
         } else {
             out.push_str("<!---->");
         }
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul>");
+    fv_refusals.check(Ok(()))
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
 pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    let html: fv::Html<'p, Props<'a>> = fv::Html::markup(props, render);
+    let html: fv::Html<'p, Props<'a>> = fv::Html::markup_fallible(props, render, try_render);
     html.dates("[{\"replies\":[\"Reply\"]},{\"Reply\":{\"at\":1,\"edited\":1,\"removed\":1,\"replies\":[\"Reply\"]}}]")
 }
 
 /// The component as an island the client hydrates.
 pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    let html: fv::Html<'p, Props<'a>> = fv::Html::island(NAME, props, render);
+    let html: fv::Html<'p, Props<'a>> = fv::Html::island_fallible(NAME, props, render, try_render);
     html.dates("[{\"replies\":[\"Reply\"]},{\"Reply\":{\"at\":1,\"edited\":1,\"removed\":1,\"replies\":[\"Reply\"]}}]")
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
 pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    let html: fv::Html<'a, Props<'a>> = fv::Html::markup_owned(props, render);
+    let html: fv::Html<'a, Props<'a>> = fv::Html::markup_owned_fallible(props, render, try_render);
     html.dates("[{\"replies\":[\"Reply\"]},{\"Reply\":{\"at\":1,\"edited\":1,\"removed\":1,\"replies\":[\"Reply\"]}}]")
 }
 
 /// [`island`], holding the props.
 pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    let html: fv::Html<'a, Props<'a>> = fv::Html::island_owned(NAME, props, render);
+    let html: fv::Html<'a, Props<'a>> = fv::Html::island_owned_fallible(NAME, props, render, try_render);
     html.dates("[{\"replies\":[\"Reply\"]},{\"Reply\":{\"at\":1,\"edited\":1,\"removed\":1,\"replies\":[\"Reply\"]}}]")
 }

@@ -185,9 +185,14 @@ older `ferrovue` leaves such an island as the server rendered it and reports tha
 are not JSON, so it never hydrates with a wrong value. Upgrade the npm package with the crate.
 
 Integers beyond the range of `i64` itself cannot be held in an `i64`: a prop cannot carry one, and
-a result of integer arithmetic given to a child's `number` prop or used as an index is cast to
-`i64`, which stops at ±2⁶³. Keep integer props and the results that go there within ±2⁵³, where
-both sides agree exactly.
+a result of integer arithmetic the template needs as an integer, given to a child's `number` prop,
+used as an index or as the count of a `v-for` over a range, cannot either. Such a result beyond
+±2⁶³ is refused as the component renders ([FV0724](crate::guide::error_codes#fv0724)): the
+generated `try_render` returns a [`Refused`](crate::Refused), so a server can answer the request
+with an error, and `render` panics with its message
+([`errors_and_limits`](crate::guide::errors_and_limits#refused-at-render-time)). Keep integer props
+and the results that go there within ±2⁵³, where both sides agree exactly, or type the child's
+prop `Float`.
 
 A number that reaches the client exactly can still be one the DOM refuses: a `<meter>` or
 `<progress>` whose `:value` is `NaN` does not hydrate, because the browser throws when Vue sets that

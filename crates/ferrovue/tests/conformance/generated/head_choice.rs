@@ -80,27 +80,42 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_head: &fv::Head) {
+    fv::rendered(try_render(out, props, fv_head));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_head: &fv::Head) -> Result<(), fv::Refused> {
     out.reserve(11 + 7 + props.title.len() + props.tags.iter().map(|v| v.len()).sum::<usize>());
     fv_head.push(fv::HeadValue::object([("titleTemplate", fv::HeadValue::str("%s (chosen)"))]));
     out.push_str("<div>");
     if props.article {
-        super::head_article::render(out, &super::head_article::Props { title: std::borrow::Cow::Borrowed(&*props.title), tags: props.tags.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect() }, fv_head);
+        super::head_article::try_render(out, &super::head_article::Props { title: std::borrow::Cow::Borrowed(&*props.title), tags: props.tags.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect() }, fv_head)?;
     } else {
-        super::head_note::render(out, &super::head_note::Props { title: std::borrow::Cow::Borrowed(&*props.title), tags: props.tags.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect() }, fv_head);
+        super::head_note::try_render(out, &super::head_note::Props { title: std::borrow::Cow::Borrowed(&*props.title), tags: props.tags.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect() }, fv_head)?;
     }
     match props.kind {
         HeadChoiceKind::Article => {
-            super::head_article::render(out, &super::head_article::Props { title: std::borrow::Cow::Borrowed(&*format!("{} again", props.title)), tags: props.tags.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect() }, fv_head);
+            super::head_article::try_render(out, &super::head_article::Props { title: std::borrow::Cow::Borrowed(&*format!("{} again", props.title)), tags: props.tags.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect() }, fv_head)?;
         }
         HeadChoiceKind::Note => {
-            super::head_note::render(out, &super::head_note::Props { title: std::borrow::Cow::Borrowed(&*format!("{} again", props.title)), tags: props.tags.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect() }, fv_head);
+            super::head_note::try_render(out, &super::head_note::Props { title: std::borrow::Cow::Borrowed(&*format!("{} again", props.title)), tags: props.tags.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect() }, fv_head)?;
         }
     }
     out.push_str("</div>");
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_head: &'p fv::Head) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_head))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_head: &'p fv::Head) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
+    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_head)))
 }

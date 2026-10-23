@@ -49,9 +49,24 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
+    fv::rendered(try_render(out, props));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(234 + 19 * props.times.len() + props.published.len() + props.label.len());
-    let s_made = std::cell::LazyCell::new(|| fv::js_time_clip(fv::js_date_utc(props.year as f64, props.month as f64, props.day, 0.0f64, 0.0f64, 0.0f64, 0.0f64)));
+    let fv_refusals = fv::Refusals::new(NAME, "components/DateFormats.vue");
+    let s_made = std::cell::LazyCell::new(|| fv::js_time_clip(fv_refusals.keep(fv::try_date_utc(props.year as f64, props.month as f64, props.day, 0.0f64, 0.0f64, 0.0f64, 0.0f64), 6, 38)));
     let s_json = fv::js_to_json(fv::js_time_of(&props.posted)).map(std::borrow::Cow::<str>::Owned);
     let s_early = fv::js_time_of(&props.posted) < fv::js_time_of(&props.due);
     out.push_str("<article><h2>");
@@ -78,7 +93,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push('|');
     fv::escape_into(out, &fv::js_json_date(fv::js_time_of(&props.posted)));
     out.push('|');
-    fv::escape_into(out, &fv::js_json_date(fv::js_date_parse(&props.published)));
+    fv::escape_into(out, &fv::js_json_date(fv_refusals.keep(fv::try_date_parse(&props.published), 15, 97)));
     out.push('|');
     fv::escape_into(out, &format!("[{}]", [&*props.label].iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| fv::js_json_string(&v)).collect::<Vec<_>>().join(",")));
     out.push_str("</p>");
@@ -90,11 +105,11 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         out.push_str("</p>");
     }
     out.push_str("<p>");
-    fv::push_number(out, fv::js_date_utc(props.year as f64, 0.0f64, 1.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64));
+    fv::push_number(out, fv_refusals.keep(fv::try_date_utc(props.year as f64, 0.0f64, 1.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64), 18, 11));
     out.push('|');
-    fv::push_number(out, fv::js_date_utc(props.year as f64, props.month as f64, 1.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64));
+    fv::push_number(out, fv_refusals.keep(fv::try_date_utc(props.year as f64, props.month as f64, 1.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64), 18, 32));
     out.push('|');
-    fv::push_number(out, fv::js_date_utc(props.year as f64, props.month as f64, props.day, 25.0f64, -1.0f64, 61.0f64, 999.9f64));
+    fv::push_number(out, fv_refusals.keep(fv::try_date_utc(props.year as f64, props.month as f64, props.day, 25.0f64, -1.0f64, 61.0f64, 999.9f64), 18, 60));
     out.push_str("|915148800000|-62167305600000|");
     fv::escape_into(out, &fv::js_to_utc_string(*s_made));
     out.push('|');
@@ -110,7 +125,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push('|');
     out.push_str(if !fv::js_time_of(&props.posted).is_nan() { "true" } else { "false" });
     out.push('|');
-    out.push_str(if fv::js_date_parse(&props.published) < fv::js_time_of(&props.posted) { "true" } else { "false" });
+    out.push_str(if fv_refusals.keep(fv::try_date_parse(&props.published), 19, 105) < fv::js_time_of(&props.posted) { "true" } else { "false" });
     out.push_str("</p>");
     if let Some(n1) = props.edited.as_ref().map(fv::js_time_of) && n1 > fv::js_time_of(&props.posted) {
         out.push_str("<p>edited later, ");
@@ -131,24 +146,25 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul></article>");
+    fv_refusals.check(Ok(()))
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
 pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup(props, render)
+    fv::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
 pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island(NAME, props, render)
+    fv::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
 pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned(props, render)
+    fv::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
 pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned(NAME, props, render)
+    fv::Html::island_owned_fallible(NAME, props, render, try_render)
 }

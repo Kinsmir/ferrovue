@@ -5,14 +5,20 @@ import { collected, heldList } from "./lists.ts";
 import { atom, bare, occurrences, operand, UNARY } from "./parens.ts";
 import { presence } from "./narrowing.ts";
 import { asCow, heldStr, isTemporary } from "./strings.ts";
-import { intFromF64 } from "./numbers.ts";
+import { intFromF64, isCast } from "./numbers.ts";
 import { ownedStruct, ownedStructs } from "./objects.ts";
 import { mutableLet } from "./statements.ts";
 
 const COW = "std::borrow::Cow::<str>";
 
-/** Runtime calls that panic where JavaScript throws, or user code that may. */
-export const PANICS = /\bfv::js_(?:repeat|pad_start|pad_end|date_parse|date_utc|to_iso_string)\(|\bfv_i18n\.t\(/;
+/** Runtime calls that refuse where JavaScript throws or a value cannot be held, or user code that
+ * may panic. */
+export const PANICS = /\bfv_refusals\.(?:keep|date)\(|\bfv_i18n\.t\(/;
+
+/** Whether `code` calls a runtime routine that may refuse the render. */
+export function refuses(code: string): boolean {
+  return /\bfv_refusals\.(?:keep|date)\(/.test(code);
+}
 
 export function panicky(code: string): boolean {
   return PANICS.test(code) || Object.values(ctx.helpers).some((h) => code.includes(`${h.rust}(`));
@@ -30,10 +36,10 @@ export function bindingOf(v: Val): { init: string; read: (at: string) => Val; ow
   if (v.slice) return { init: bare(v.code), read: (at) => ({ code: at, ty: v.ty, slice: true, ...lone }), owned: false };
   if (v.ty.k === "list" && v.iter !== undefined) return { init: collected(v), read: (at) => heldList(at, v.ty.k === "list" ? v.ty.of : v.ty, v.lone), owned: true };
   if (v.held !== undefined) return { init: v.held, read: (at) => ({ code: `${at}.as_deref()`, ty: v.ty, ...lone }), owned: true };
-  if (v.ty.k === "int" && v.f64 !== undefined && (v.code.endsWith(" as i64") || Object.is(v.num, -0))) {
+  if (isCast(v) || (v.ty.k === "int" && v.f64 !== undefined && Object.is(v.num, -0))) {
     return {
-      init: bare(v.f64),
-      read: (at) => ({ ...intFromF64(at), ...lone, ...(v.num !== undefined ? { num: v.num } : {}), ...(v.konst !== undefined ? { konst: v.konst } : {}) }),
+      init: bare(v.f64!),
+      read: (at) => ({ ...intFromF64(at, v.at ?? null), ...lone, ...(v.num !== undefined ? { num: v.num } : {}), ...(v.konst !== undefined ? { konst: v.konst } : {}) }),
       owned: false,
     };
   }
@@ -682,7 +688,7 @@ export function around(lead: string, body: Val, owned: boolean, ownedUses = fals
     case "bool":
     case "undef":
     case "null":
-      return { code: block(body.code), ty: body.ty, ...lone, ...(body.f64 !== undefined ? { f64: block(body.f64) } : {}) };
+      return { code: block(body.code), ty: body.ty, ...lone, ...(body.f64 !== undefined ? { f64: block(body.f64) } : {}), ...(body.at !== undefined ? { at: body.at } : {}) };
     case "str":
       if (!owned && !isTemporary(body)) return { code: block(body.code), ty: body.ty, ...lone };
       return { code: `&*${block(owned ? ownedCow(body) : asCow(body))}`, ty: body.ty, ...lone };

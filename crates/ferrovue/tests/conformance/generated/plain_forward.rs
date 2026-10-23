@@ -30,15 +30,29 @@ pub struct Slots<'s> {
 }
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props, fv_slots: Slots<'_>) {
-    render_scoped(out, props, fv_slots, "");
+    fv::rendered(try_render_scoped(out, props, fv_slots, ""));
 }
 
-/// [`render`], with the scope ids a parent hands the root: ` data-v-…` each.
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props, fv_slots: Slots<'_>) -> Result<(), fv::Refused> {
+    try_render_scoped(out, props, fv_slots, "")
+}
+
+/// [`try_render`], with the scope ids a parent hands the root: ` data-v-…` each.
 #[doc(hidden)]
-pub fn render_scoped(out: &mut String, _props: &Props, fv_slots: Slots<'_>, fv_attrs: &str) {
+pub fn try_render_scoped(out: &mut String, _props: &Props, fv_slots: Slots<'_>, fv_attrs: &str) -> Result<(), fv::Refused> {
     out.reserve(0);
-    super::scoped_card::render_scoped(out, &super::scoped_card::Props { tone: Some(std::borrow::Cow::Borrowed("forwarded")) }, super::scoped_card::Slots {
+    super::scoped_card::try_render_scoped(out, &super::scoped_card::Props { tone: Some(std::borrow::Cow::Borrowed("forwarded")) }, super::scoped_card::Slots {
         title: None,
         default: Some(fv::Slot::slotted(&|out: &mut String, fv_sid1: &str| -> bool {
             let mut filled = false;
@@ -46,10 +60,11 @@ pub fn render_scoped(out: &mut String, _props: &Props, fv_slots: Slots<'_>, fv_a
             filled
         })),
         footer: None,
-    }, fv_attrs);
+    }, fv_attrs)?;
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p>(props: &'p Props, fv_slots: Slots<'p>) -> fv::Html<'p, Props, impl Fn(&mut String, &Props) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props| render(out, props, fv_slots))
+pub fn html<'p>(props: &'p Props, fv_slots: Slots<'p>) -> fv::Html<'p, Props, impl fv::Renderer<Props> + 'p> {
+    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props| try_render(out, props, fv_slots)))
 }

@@ -7,8 +7,8 @@ use std::borrow::Cow;
 use serde::de::{self, Deserialize, DeserializeOwned, Deserializer, Visitor};
 use serde::ser::{Serialize, Serializer};
 
-use crate::Record;
 use crate::dates::{iso_time, js_time_clip, js_to_iso_string};
+use crate::{Record, Refused};
 
 /// A JavaScript `Date`: its time value, the milliseconds since 1970-01-01T00:00:00Z, a whole number
 /// within ±8.64 × 10¹⁵, or `NaN` for an invalid date. It is the Rust type of a prop the component
@@ -245,12 +245,20 @@ pub fn js_time_of<T: JsTime>(date: &T) -> f64 {
 #[doc(hidden)]
 #[must_use]
 pub fn js_date_prop<T: JsTime>(t: f64) -> T {
-    T::from_time_value(t).unwrap_or_else(|| {
-        panic!(
-            "ferrovue: the date {:?} is passed to a `Date` prop whose Rust type cannot hold it",
+    T::from_time_value(t).unwrap_or_else(|| panic!("{}", date_refused(t)))
+}
+
+#[cold]
+pub(crate) fn date_refused(t: f64) -> Refused {
+    Refused::new(
+        "FV1812",
+        format!(
+            "the date {:?} is passed to a `Date` prop whose Rust type cannot hold it: check the \
+             date before rendering, or name a `dateType` that holds every date, such as \
+             `ferrovue::JsDate`",
             JsDate::from_millis(t)
-        )
-    })
+        ),
+    )
 }
 
 /// How a `Date` prop is written into an island's `data-props` and read back from a fixture,

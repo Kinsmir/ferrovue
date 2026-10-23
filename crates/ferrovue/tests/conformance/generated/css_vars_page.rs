@@ -49,11 +49,25 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
+    fv::rendered(try_render(out, props));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(187 + 7 * props.items.len() + props.color.len() + props.label.as_deref().map_or(0, str::len) + props.font.len() + props.tone.as_deref().map_or(0, str::len) + props.items.iter().map(|v| v.len()).sum::<usize>());
     out.push_str("<!--[-->");
-    super::css_vars::render_scoped(out, &super::css_vars::Props { color: std::borrow::Cow::Borrowed(&*props.color), size: props.size, ratio: props.ratio, label: props.label.as_deref().map(std::borrow::Cow::Borrowed), font: std::borrow::Cow::Borrowed(&*props.font), gap: None }, &fv::Attrs::merged(&[&[("class", fv::Attr::str("given")), ("style", fv::Attr::styles([fv::Attr::style([("top", fv::Attr::str("0")), ("--own", fv::Attr::str("2"))]), fv::Attr::style([("color", props.tone.as_deref().map_or(fv::Attr::Undefined, fv::Attr::str))])]))], &[("style", fv::Attr::style([("--d9e366c1-tone", match props.tone.as_deref() { Some(v) => if v.is_empty() { fv::Attr::str(" ") } else { fv::Attr::str(v) }, None => fv::Attr::str("initial") }), ("--d9e366c1-size", fv::Attr::Int(props.size))]))]], ""));
-    super::css_vars_root::render_scoped(out, &super::css_vars_root::Props { tint: std::borrow::Cow::Borrowed(&*props.color), shade: std::borrow::Cow::Borrowed(&*props.font) }, &fv::Attrs::merged(&[&[("style", fv::Attr::style([("left", fv::Attr::str("1px"))]))], &[("style", fv::Attr::style([("--d9e366c1-tone", match props.tone.as_deref() { Some(v) => if v.is_empty() { fv::Attr::str(" ") } else { fv::Attr::str(v) }, None => fv::Attr::str("initial") }), ("--d9e366c1-size", fv::Attr::Int(props.size))]))]], ""));
+    super::css_vars::try_render_scoped(out, &super::css_vars::Props { color: std::borrow::Cow::Borrowed(&*props.color), size: props.size, ratio: props.ratio, label: props.label.as_deref().map(std::borrow::Cow::Borrowed), font: std::borrow::Cow::Borrowed(&*props.font), gap: None }, &fv::Attrs::merged(&[&[("class", fv::Attr::str("given")), ("style", fv::Attr::styles([fv::Attr::style([("top", fv::Attr::str("0")), ("--own", fv::Attr::str("2"))]), fv::Attr::style([("color", props.tone.as_deref().map_or(fv::Attr::Undefined, fv::Attr::str))])]))], &[("style", fv::Attr::style([("--d9e366c1-tone", match props.tone.as_deref() { Some(v) => if v.is_empty() { fv::Attr::str(" ") } else { fv::Attr::str(v) }, None => fv::Attr::str("initial") }), ("--d9e366c1-size", fv::Attr::Int(props.size))]))]], ""))?;
+    super::css_vars_root::try_render_scoped(out, &super::css_vars_root::Props { tint: std::borrow::Cow::Borrowed(&*props.color), shade: std::borrow::Cow::Borrowed(&*props.font) }, &fv::Attrs::merged(&[&[("style", fv::Attr::style([("left", fv::Attr::str("1px"))]))], &[("style", fv::Attr::style([("--d9e366c1-tone", match props.tone.as_deref() { Some(v) => if v.is_empty() { fv::Attr::str(" ") } else { fv::Attr::str(v) }, None => fv::Attr::str("initial") }), ("--d9e366c1-size", fv::Attr::Int(props.size))]))]], ""))?;
     if let Some(n1) = props.tone.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<p style=\"color:");
         fv::escape_into(out, n1);
@@ -93,24 +107,25 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         out.push_str("</i>");
     }
     out.push_str("<!--]--><!--]-->");
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
 pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup(props, render)
+    fv::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
 pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island(NAME, props, render)
+    fv::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
 pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned(props, render)
+    fv::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
 pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned(NAME, props, render)
+    fv::Html::island_owned_fallible(NAME, props, render, try_render)
 }

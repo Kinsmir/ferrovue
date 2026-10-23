@@ -28,7 +28,21 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::I18n) {
+    fv::rendered(try_render(out, props, fv_i18n));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::I18n) -> Result<(), fv::Refused> {
     out.reserve(22 + props.words.len());
     out.push_str("<p");
     if fv::js_split(&props.words, " ").into_iter().map(|fv_s1| std::borrow::Cow::<str>::Owned((if props.on { std::borrow::Cow::<str>::Owned(fv_s1.to_uppercase()) } else { std::borrow::Cow::<str>::Borrowed(&*fv_s1) }).into_owned())).collect::<Vec<_>>().join("-").is_empty() {
@@ -41,9 +55,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::I18n) {
     out.push('>');
     fv::escape_into(out, &fv::js_split(&props.words, " ").into_iter().map(|fv_s2| std::borrow::Cow::<str>::Owned((if props.on { std::borrow::Cow::<str>::Owned(fv_i18n.t("common.app", &fv::i18n::Args::new())) } else { std::borrow::Cow::<str>::Borrowed(&*fv_s2) }).into_owned())).collect::<Vec<_>>().join("|"));
     out.push_str("</p>");
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_i18n: &'p fv::I18n) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_i18n))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_i18n: &'p fv::I18n) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
+    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_i18n)))
 }

@@ -341,6 +341,13 @@ by it, so a page renders a few times at most, and a call is made once per key. T
 fail ends the render with a [`LoadError`](crate::LoadError) naming it and its key, as a rejected
 `async setup` rejects Vue's `renderToString`; the calls still running are dropped.
 
+A page whose props or results the render may refuse (a date string browsers read differently, see
+[`errors_and_limits`](crate::guide::errors_and_limits#refused-at-render-time)) renders with
+`try_render` in the closure, which returns `Result<String, Refused>`: `try_render(…)?` before
+`loads.script_into(&mut out)`, and `Ok(out)` after. `load` then gives a `Result` of that
+`Result`, the loader's error outside and the [`Refused`](crate::Refused) inside, once the render
+that read every result is done.
+
 Since the closure runs once per render, it starts each one afresh: it makes its own `String`, and
 its own [`Teleports`](crate::Teleports) and [`Head`](crate::Head) when the page has them, so that
 what an earlier render collected is not written twice.

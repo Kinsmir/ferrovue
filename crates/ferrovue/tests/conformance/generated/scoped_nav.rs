@@ -28,8 +28,23 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
+    fv::rendered(try_render(out, props, fv_route));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) -> Result<(), fv::Refused> {
     out.reserve(252 + props.href.len() + props.label.len());
+    let fv_refusals = fv::Refusals::new(NAME, "components/ScopedNav.vue");
     out.push_str("<nav class=\"nav\" data-v-f60bf031>");
     {
         let fv_link = fv_route.link("/blog/intro");
@@ -66,11 +81,11 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
         out.push_str(" <i data-v-f60bf031>");
         fv::escape_into(out, &props.href);
         out.push_str("</i>");
-        super::scoped_leaf::render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed(&*props.label)) }, " data-v-f60bf031");
+        fv_refusals.check(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed(&*props.label)) }, " data-v-f60bf031"))?;
         out.push_str("</a>");
     }
-    super::scoped_link::render_scoped(out, &super::scoped_link::Props { to: std::borrow::Cow::Borrowed(&*props.href) }, fv_route, " data-v-f60bf031");
-    super::scoped_card::render_scoped(out, &super::scoped_card::Props { tone: None }, super::scoped_card::Slots {
+    fv_refusals.check(super::scoped_link::try_render_scoped(out, &super::scoped_link::Props { to: std::borrow::Cow::Borrowed(&*props.href) }, fv_route, " data-v-f60bf031"))?;
+    fv_refusals.check(super::scoped_card::try_render_scoped(out, &super::scoped_card::Props { tone: None }, super::scoped_card::Slots {
         title: None,
         default: Some(fv::Slot::slotted(&|out: &mut String, fv_sid1: &str| -> bool {
             {
@@ -89,15 +104,16 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
                 fv::escape_into(out, &props.label);
                 out.push_str("</a>");
             }
-            super::scoped_leaf::render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed("carded")) }, &fv::scope_attrs("", "data-v-f60bf031", fv_sid1));
+            fv_refusals.join(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed("carded")) }, &fv::scope_attrs("", "data-v-f60bf031", fv_sid1)));
             true
         })),
         footer: None,
-    }, " data-v-f60bf031");
+    }, " data-v-f60bf031"))?;
     out.push_str("</nav>");
+    fv_refusals.check(Ok(()))
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_route: &'p fv::Route<'p>) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_route))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_route: &'p fv::Route<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
+    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_route)))
 }

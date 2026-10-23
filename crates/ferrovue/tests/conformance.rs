@@ -460,10 +460,17 @@ fn a_computed_that_would_throw_is_not_evaluated_until_the_render_reads_it() {
 }
 
 #[test]
-#[should_panic(expected = "RangeError: Invalid count value: -1")]
-fn a_computed_the_render_reads_panics_where_javascript_throws() {
-    render_unread(
+fn a_computed_the_render_reads_is_refused_where_javascript_throws() {
+    let refused = generated::render_json(
+        "Unread",
         r#"{"when":"2024-03-10T08:05:09.007Z","show":true,"count":-1,"word":"ab","width":3,"tags":["x"]}"#,
+    )
+    .unwrap_err();
+    assert!(
+        refused.starts_with(
+            "error[FV0714]: components/Unread.vue:12:29: `.repeat()` by a count of -1, "
+        ),
+        "{refused}"
     );
 }
 
@@ -475,25 +482,97 @@ fn a_computed_s_statements_run_in_order_and_only_as_far_as_it_returns() {
 }
 
 #[test]
-#[should_panic(expected = "RangeError: Invalid count value: -1")]
-fn a_const_in_a_computed_the_render_reads_panics_where_javascript_throws() {
-    let _ = generated::render_json("UnreadSteps", r#"{"show":true,"count":-1,"word":"ab"}"#);
-}
-
-#[test]
-#[should_panic(expected = "RangeError: Invalid time value")]
-fn an_invalid_date_the_render_reads_panics_where_to_iso_string_throws() {
-    render_unread(
-        r#"{"when":"+275760-09-13T00:00:00.001Z","show":true,"count":1,"word":"ab","width":3,"tags":[]}"#,
+fn a_const_in_a_computed_the_render_reads_is_refused_where_javascript_throws() {
+    let refused = generated::render_json("UnreadSteps", r#"{"show":true,"count":-1,"word":"ab"}"#)
+        .unwrap_err();
+    assert!(
+        refused.starts_with("error[FV0714]: components/UnreadSteps.vue:14:18: "),
+        "{refused}"
     );
 }
 
 #[test]
-#[should_panic(expected = "RangeError: Invalid string length")]
+fn an_invalid_date_the_render_reads_is_refused_where_to_iso_string_throws() {
+    let refused = generated::render_json(
+        "Unread",
+        r#"{"when":"+275760-09-13T00:00:00.001Z","show":true,"count":1,"word":"ab","width":3,"tags":[]}"#,
+    )
+    .unwrap_err();
+    assert!(
+        refused.starts_with(
+            "error[FV1811]: components/Unread.vue:9:28: `.toISOString()` of an invalid date"
+        ),
+        "{refused}"
+    );
+}
+
+#[test]
 fn a_computed_in_a_style_variable_is_evaluated_as_the_render_starts() {
-    let _ = generated::render_json(
+    let refused = generated::render_json(
         "UnreadVar",
         r#"{"show":false,"word":"ab","width":1000000000}"#,
+    )
+    .unwrap_err();
+    assert!(
+        refused.starts_with("error[FV0725]: components/UnreadVar.vue:5:"),
+        "{refused}"
+    );
+}
+
+#[test]
+fn a_refusal_in_a_child_that_awaits_a_loader_is_returned_by_the_render() {
+    let refused = generated::render_json(
+        "LoadedStamps",
+        r#"{"year":2000000,"$loads":{"[\"loadViews\"]":-24000000}}"#,
+    )
+    .unwrap_err();
+    assert!(
+        refused.starts_with("error[FV1808]: components/LoadedStamp.vue:9:"),
+        "{refused}"
+    );
+    let html = generated::render_json(
+        "LoadedStamps",
+        r#"{"year":2024,"$loads":{"[\"loadViews\"]":3}}"#,
+    )
+    .unwrap();
+    assert!(html.contains(">1711929600000</time>"), "{html}");
+}
+
+#[test]
+fn render_panics_with_the_refusal_try_render_returns() {
+    let props: generated::unread::Props = serde_json::from_str(
+        r#"{"when":"2024-03-10T08:05:09.007Z","show":true,"count":-1,"word":"ab","width":3,"tags":["x"]}"#,
+    )
+    .unwrap();
+    let refused = generated::unread::try_render(&mut String::new(), &props).unwrap_err();
+    assert_eq!(refused.code(), "FV0714");
+    assert_eq!(refused.component(), Some("Unread"));
+    assert_eq!(refused.file(), Some("components/Unread.vue"));
+    let hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(|_| {}));
+    let panicked =
+        std::panic::catch_unwind(|| generated::unread::render(&mut String::new(), &props));
+    std::panic::set_hook(hook);
+    let message = panicked.unwrap_err().downcast::<String>().unwrap();
+    assert_eq!(*message, refused.to_string());
+}
+
+#[test]
+fn an_html_that_refuses_writes_nothing_and_returns_the_refusal() {
+    let props: generated::unread::Props = serde_json::from_str(
+        r#"{"when":"May 1","show":true,"count":1,"word":"ab","width":3,"tags":[]}"#,
+    )
+    .unwrap();
+    let mut page = String::from("<main>");
+    let refused = generated::unread::island(&props)
+        .try_render_to(&mut page)
+        .unwrap_err();
+    assert_eq!(refused.code(), "FV1803");
+    assert_eq!(page, "<main>");
+    assert!(
+        generated::unread::into_html(props)
+            .try_into_string()
+            .is_err()
     );
 }
 

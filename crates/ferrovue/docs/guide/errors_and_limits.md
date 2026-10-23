@@ -293,10 +293,98 @@ virtual nodes: an absent `v-if` is `<!--v-if-->`. Fragment markers around a slot
 the twin's to write, as they are the component's. The repository's `examples/fullstack` has a twin
 (`src/ui.rs`) and its fixtures (`fixtures/`).
 
+# Refused at render time
+
+Some props can only be found wrong as the component renders, because they come from a request: a
+date string outside ECMAScript's date time string format, which browsers read each in their own
+way, or an integer the template multiplies beyond ±2⁶³ and hands to a child's `number` prop.
+Writing anything for them would break the promise that the page is Vue's, so the render is
+refused, with a code from the same list as the compiler's refusals:
+
+| Code | What the props asked for |
+|---|---|
+| [FV1803](crate::guide::error_codes#fv1803) | `new Date(s)` or `Date.parse(s)` of a string outside the format every browser reads alike |
+| [FV1808](crate::guide::error_codes#fv1808) | `Date.UTC()` of parts engines compute differently |
+| [FV1811](crate::guide::error_codes#fv1811) | `.toISOString()` of an invalid date, where JavaScript throws |
+| [FV1812](crate::guide::error_codes#fv1812) | a date a child's `Date` prop cannot hold, with a `dateType` such as chrono's |
+| [FV0714](crate::guide::error_codes#fv0714) | `.repeat()` by a negative or infinite count, where JavaScript throws |
+| [FV0725](crate::guide::error_codes#fv0725) | `.repeat()`, `.padStart()` or `.padEnd()` beyond the longest string V8 makes |
+| [FV0724](crate::guide::error_codes#fv0724) | an integer beyond the range of `i64` where the template needs one: a child's `number` prop, an index, the count of a `v-for` |
+
+Every component has a `try_render` beside its `render`, with the same parameters, which returns
+`Result<(), Refused>`. A [`Refused`](crate::Refused) carries the code, the component, the line and
+column of the expression in its file, and a message saying what to do; its `Display` is the
+compiler's own form, `error[FV1803]: components/Published.vue:3:9: the date …`. A refusal in a
+child, in slot content or in a loader's component is returned by the page's `try_render` as it is,
+and the first one the render met is the one returned. `render` calls `try_render` and panics with
+the message, so code that calls it behaves as it did. A handler that renders props from a request
+calls `try_render` and answers a refusal with `400 Bad Request`:
+
+```rust
+# mod published {
+# use std::borrow::Cow;
+# use ferrovue as fv;
+# pub const NAME: &str = "Published";
+# pub struct Props<'a> { pub on: Cow<'a, str> }
+# impl<'a> Props<'a> {
+#     pub fn new(on: impl Into<Cow<'a, str>>) -> Self {
+#         Props { on: on.into() }
+#     }
+# }
+# pub fn render(out: &mut String, props: &Props<'_>) {
+#     fv::rendered(try_render(out, props));
+# }
+# pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+#     let fv_refusals = fv::Refusals::new(NAME, "components/Published.vue");
+#     out.push_str("<time>");
+#     fv::escape_into(out, &fv_refusals.keep(fv::try_to_iso_string(fv_refusals.keep(fv::try_date_parse(&props.on), 3, 9)), 3, 9));
+#     out.push_str("</time>");
+#     fv_refusals.check(Ok(()))
+# }
+# }
+# #[cfg(feature = "axum")]
+# fn main() {
+use axum::extract::Path;
+use axum::http::StatusCode;
+use axum::response::{Html, IntoResponse, Response};
+
+// Published.vue: <time>{{ new Date(on).toISOString() }}</time>
+async fn published(Path(on): Path<String>) -> Response {
+    let mut html = String::new();
+    match published::try_render(&mut html, &published::Props::new(on)) {
+        Ok(()) => Html(html).into_response(),
+        Err(refused) => (StatusCode::BAD_REQUEST, refused.message().to_owned()).into_response(),
+    }
+}
+# let runtime = tokio::runtime::Builder::new_current_thread().build().unwrap();
+# let ok = runtime.block_on(published(Path("2024-05-01".to_owned())));
+# assert_eq!(ok.status(), StatusCode::OK);
+# let refused = runtime.block_on(published(Path("May 1".to_owned())));
+# assert_eq!(refused.status(), StatusCode::BAD_REQUEST);
+# }
+# #[cfg(not(feature = "axum"))]
+# fn main() {}
+```
+
+The full-stack example's `/delivery` route does this with a date and a number from the query
+string. The other ways a component is rendered have a twin that returns the refusal too:
+[`Html::try_render_to`](crate::Html::try_render_to) and
+[`Html::try_into_string`](crate::Html::try_into_string) for a generated `html()` or `island()`,
+[`Page::try_render_to`](crate::Page::try_render_to) for a page, its parts included, and
+[`PageHole::try_fill`](crate::PageHole::try_fill) for a streamed hole; each leaves the buffer as it
+was. With loaders, the closure [`load`](crate::load) renders with returns the `Result` of
+`try_render`, which `load` hands back once the render is done. Slot content written by a Rust
+closure is plain Rust: render a component there with `try_render` into a `String` beforehand, and
+push the string from the closure.
+
+The message is written for the developer and names the value that was refused. Answer the client
+with it, as above, or with a message of the application's own, and log the
+[`Refused`](crate::Refused) itself.
+
 # At run time
 
-Generated code does not return errors: a render writes into a `String` and cannot fail. The few
-panics are programming errors, found the first time the code runs:
+Beside the refusals above, generated code returns no errors, and the few panics are programming
+errors, found the first time the code runs:
 
 - [`Router::tree`](crate::Router::tree), [`Router::named`](crate::Router::named) and
   [`Router::new`](crate::Router::new) panic on a route path outside the supported syntax, or two
@@ -307,18 +395,13 @@ panics are programming errors, found the first time the code runs:
 - [`I18n::t`](crate::I18n::t) panics in a debug build when a fractional plural number chooses none
   of a message's cases (`1.5` with three cases), where vue-i18n throws. A release build writes
   nothing for the message.
-- `js_repeat`, `js_pad_start` and
-  `js_pad_end` panic where JavaScript throws a `RangeError`: a negative or
-  infinite `.repeat()` count, or a result longer than V8's longest string. See
-  [`strings`](crate::guide::strings#panics).
-- `js_date_parse` panics on a string outside ECMAScript's date time
-  string format, or a date and time without a `Z` or offset, which browsers may each read
-  differently; `js_to_iso_string` panics on an invalid date, where
-  JavaScript throws a `RangeError`. See [`dates_and_prices`](crate::guide::dates_and_prices).
+- `render`, and the [`Html`](crate::Html) and [`Page`](crate::Page) methods without `try_`, panic
+  with the message of a refusal at render time.
 
-A `computed` whose expression calls one of these, `t()` or a helper, or reads such a `computed`, is
-worked out where the render first reads it, once, as Vue works it out: one the template reads only
-under a `v-if` that is false, or in slot content a child does not render, does not panic. One that
+A `computed` whose expression may be refused, calls `t()` or a helper, or reads such a `computed`,
+is worked out where the render first reads it, once, as Vue works it out: one the template reads
+only under a `v-if` that is false, or in slot content a child does not render, is neither refused
+nor panics. One that
 a `v-bind()` in `<style>` reads is worked out as the render starts, where Vue's server works out
 the component's style variables.
 

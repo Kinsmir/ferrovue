@@ -1,12 +1,12 @@
 import { parse as parseJs } from "@babel/parser";
 import { basename } from "node:path";
-import { type Component, type Field, type N, type Struct, type Ty, blankComponent, enumOf, enumPath, fail, GenError, rustStr, snake, tagAst, takesAttrs } from "./model.ts";
+import { type Component, type Field, type N, type Struct, type Ty, blankComponent, enumOf, enumPath, fail, GenError, REFUSALS, rustStr, snake, tagAst, takesAttrs } from "./model.ts";
 import { enumsSource } from "./enums.ts";
 import { ctx, INLINE_HTML } from "./context.ts";
 import { bareDates, datePlan, holdsDate, lookupStruct, typeWritten } from "./typescript.ts";
 import { childOf } from "./expr.ts";
 import { Emitter } from "./emitter.ts";
-import { occurrences } from "./parens.ts";
+import { closing, occurrences } from "./parens.ts";
 import { statements } from "./template.ts";
 import { cssVarsReads, inlineCssVars } from "./styles.ts";
 import { slotFieldBorrows, slotFieldTy, slotTypeName } from "./slots.ts";
@@ -221,28 +221,56 @@ function renderParamCount(comp: Component): number {
   return (takesSlots(comp) ? 1 : 0) + paramsOf(comp).length;
 }
 
+const RENDER_DOC = "/// Write the component's server render into `out`.\n///\n/// # Panics\n///\n/// With the message of the refusal [`try_render`] returns.\n";
+
+const TRY_DOC = "/// [`render`], returning the refusal of a render that cannot write what Vue writes for these\n/// props, such as a date string browsers read differently: a server answers it with an error.\n///\n/// # Errors\n///\n/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.\n";
+
 function renderSource(comp: Component, life: string, args: string, e: Emitter): string {
-  const doc = `/// Write the component's server render into \`out\`.\n${manyArgs(2 + renderParamCount(comp))}`;
+  const count = renderParamCount(comp);
   const props = e.reads("props", 0) ? "props" : "_props";
   const unread = (name: string): boolean => {
     const shadow = e.lines.findIndex((l) => l.trimStart().startsWith(`let ${name} = `));
     const before = shadow < 0 ? e.lines : [...e.lines.slice(0, shadow), e.lines[shadow]!.replace(`let ${name} = `, "")];
     return occurrences(before.join("\n"), name) === 0;
   };
-  if (!comp.inherits && !takesAttrs(comp)) return `${doc}pub fn render(out: &mut String, ${props}: &Props${life}${extraParams(comp, unread)}) {\n${e.lines.join("\n")}\n}`;
+  const params = `out: &mut String, props: &Props${life}${extraParams(comp)}`;
+  const body = e.lines.join("\n");
+  const result = "Result<(), fv::Refused>";
+  if (!comp.inherits && !takesAttrs(comp)) {
+    return `${RENDER_DOC}${manyArgs(2 + count)}pub fn render(${params}) {
+    fv::rendered(try_render(out, props${args}));
+}
+
+${TRY_DOC}${manyArgs(2 + count)}pub fn try_render(out: &mut String, ${props}: &Props${life}${extraParams(comp, unread)}) -> ${result} {
+${body}
+}`;
+  }
   const attrs = e.reads("fv_attrs", 0) ? "fv_attrs" : "_fv_attrs";
   const [none, ty, what] = takesAttrs(comp)
     ? ["&fv::Attrs::NONE", "&fv::Attrs<'_>", "the attributes a parent passes beyond the props, and the scope ids it hands the root"]
     : ['""', "&str", "the scope ids a parent hands the root: ` data-v-…` each"];
-  return `${doc}pub fn render(out: &mut String, props: &Props${life}${extraParams(comp)}) {
-    render_scoped(out, props${args}, ${none});
+  return `${RENDER_DOC}${manyArgs(2 + count)}pub fn render(${params}) {
+    fv::rendered(try_render_scoped(out, props${args}, ${none}));
 }
 
-/// [\`render\`], with ${what}.
+${TRY_DOC}${manyArgs(2 + count)}pub fn try_render(${params}) -> ${result} {
+    try_render_scoped(out, props${args}, ${none})
+}
+
+/// [\`try_render\`], with ${what}.
 #[doc(hidden)]
-${manyArgs(3 + renderParamCount(comp))}pub fn render_scoped(out: &mut String, ${props}: &Props${life}${extraParams(comp, unread)}, ${attrs}: ${ty}) {
-${e.lines.join("\n")}
+${manyArgs(3 + count)}pub fn try_render_scoped(out: &mut String, ${props}: &Props${life}${extraParams(comp, unread)}, ${attrs}: ${ty}) -> ${result} {
+${body}
 }`;
+}
+
+function unchecked(text: string): string {
+  const opener = `${REFUSALS}.check(`;
+  for (let at = text.indexOf(opener); at >= 0; at = text.indexOf(opener, at)) {
+    const close = closing(text, at + opener.length - 1);
+    text = text.slice(0, at) + text.slice(at + opener.length, close) + text.slice(close + 1);
+  }
+  return text;
 }
 
 export function isIsland(comp: Component): boolean {
@@ -269,18 +297,22 @@ export function componentSource(comp: Component, ast: N[], ssr: string, componen
   for (const l of opening) e.stmt(l);
   statements(scope, e, inlineCssVars(comp, fn.body.body));
   for (let i = opening.length - 1; i >= 0; i--) {
-    const awaited = /^let Some\((\w+)\) = (.*) else \{ return; \};$/.exec(opening[i]!);
+    const awaited = /^let Some\((\w+)\) = (.*) else \{ return Ok\(\(\)\); \};$/.exec(opening[i]!);
     if (awaited) {
-      if (!e.reads(awaited[1]!, i + 1)) e.lines[i] = `    if ${awaited[2]!}.is_none() {\n        return;\n    }`;
+      if (!e.reads(awaited[1]!, i + 1)) e.lines[i] = `    if ${awaited[2]!}.is_none() {\n        return Ok(());\n    }`;
       continue;
     }
     const name = /^let (\w+)/.exec(opening[i]!)?.[1];
     if (name !== undefined && !e.reads(name, i + 1)) e.lines.splice(i, 1);
   }
   e.flush();
+  const refuses = e.lines.some((l) => new RegExp(`\\b${REFUSALS}\\.(?!check\\()`).test(l));
+  if (!refuses) e.lines = unchecked(e.lines.join("\n")).split("\n");
+  e.lines.push(refuses ? `    ${REFUSALS}.check(Ok(()))` : "    Ok(())");
   const text = textLen(comp, "props", { k: "struct", name: "Props" });
   const fixed = e.literalBytes + scope.helperBytes.n;
   const reserve = [...(fixed || !(e.perItem.length + text.length) ? [String(fixed)] : []), ...e.perItem, ...text];
+  if (refuses) e.lines.unshift(`    let ${REFUSALS} = fv::Refusals::new(NAME, ${rustStr(comp.file)});`);
   e.lines.unshift(`    out.reserve(${reserve.join(" + ")});`);
 
   const life = structLifetime(comp.props, comp) ? "<'_>" : "";
@@ -346,27 +378,27 @@ ${slotFields.join("\n")}
   const wrappers = plain
     ? `/// The component's markup, for a maud page that shows it without hydrating it.
 pub fn html${gen}(props: &'p Props${named}) -> fv::Html<'p, Props${named}> {
-${dated("fv::Html::markup(props, render)", `fv::Html<'p, Props${named}>`)}
+${dated("fv::Html::markup_fallible(props, render, try_render)", `fv::Html<'p, Props${named}>`)}
 }
 
 /// The component as an island the client hydrates.
 pub fn island${gen}(props: &'p Props${named}) -> fv::Html<'p, Props${named}> {
-${dated("fv::Html::island(NAME, props, render)", `fv::Html<'p, Props${named}>`)}
+${dated("fv::Html::island_fallible(NAME, props, render, try_render)", `fv::Html<'p, Props${named}>`)}
 }
 
 /// [\`html\`], holding the props: a handler that builds them can return it.
 pub fn into_html${owned}(props: Props${named}) -> fv::Html<${ownedLife}, Props${named}> {
-${dated("fv::Html::markup_owned(props, render)", `fv::Html<${ownedLife}, Props${named}>`)}
+${dated("fv::Html::markup_owned_fallible(props, render, try_render)", `fv::Html<${ownedLife}, Props${named}>`)}
 }
 
 /// [\`island\`], holding the props.
 pub fn into_island${owned}(props: Props${named}) -> fv::Html<${ownedLife}, Props${named}> {
-${dated("fv::Html::island_owned(NAME, props, render)", `fv::Html<${ownedLife}, Props${named}>`)}
+${dated("fv::Html::island_owned_fallible(NAME, props, render, try_render)", `fv::Html<${ownedLife}, Props${named}>`)}
 }
 `
     : `/// The component's markup, for a maud page that shows it.
-${manyArgs(1 + renderParamCount(comp))}pub fn html${gen}(props: &'p Props${named}${params}) -> fv::Html<'p, Props${named}, impl Fn(&mut String, &Props${named}) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props${named}| render(out, props${args}))${plan === null ? "" : `.dates(${rustStr(plan)})`}
+${manyArgs(1 + renderParamCount(comp))}pub fn html${gen}(props: &'p Props${named}${params}) -> fv::Html<'p, Props${named}, impl fv::Renderer<Props${named}> + 'p> {
+    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props${named}| try_render(out, props${args})))${plan === null ? "" : `.dates(${rustStr(plan)})`}
 }
 `;
   const render = renderSource(comp, life, args, e);
@@ -428,11 +460,10 @@ export function modSource(comps: Component[], modules: string[]): string {
         if (!perRender(p)) lines.push(...p.test.lines);
         args += `, ${p.test.arg}`;
       }
-      const body = [
-        ...paramsOf(c).flatMap((p) => (perRender(p) ? p.test.lines : [])),
-        `${c.module}::render(&mut out, &props${args});`,
-        ...paramsOf(c).flatMap((p) => (perRender(p) ? (p.test.after ?? []) : [])),
-      ];
+      const call = `${c.module}::try_render(&mut out, &props${args})`;
+      const after = paramsOf(c).flatMap((p) => (perRender(p) ? (p.test.after ?? []) : []));
+      const ending = !around.length ? [`${call}.map_err(|e| e.to_string())?;`, ...after] : after.length ? [`let rendered = ${call};`, ...after, "rendered"] : [call];
+      const body = [...paramsOf(c).flatMap((p) => (perRender(p) ? p.test.lines : [])), ...ending];
       lines.push(...around.reduce((render, wrap) => wrap(render.join("\n")), body));
       for (const p of paramsOf(c)) if (!perRender(p)) lines.push(...(p.test.after ?? []));
       return `        ${rustStr(c.name)} => {\n${lines.map((l) => "            " + l).join("\n")}\n        }`;

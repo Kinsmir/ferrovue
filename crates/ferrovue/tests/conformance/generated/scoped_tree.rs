@@ -28,13 +28,27 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    render_scoped(out, props, "");
+    fv::rendered(try_render_scoped(out, props, ""));
 }
 
-/// [`render`], with the scope ids a parent hands the root: ` data-v-…` each.
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+    try_render_scoped(out, props, "")
+}
+
+/// [`try_render`], with the scope ids a parent hands the root: ` data-v-…` each.
 #[doc(hidden)]
-pub fn render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) {
+pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) -> Result<(), fv::Refused> {
     out.reserve(86 + props.label.len());
     out.push_str("<li class=\"node\"");
     out.push_str(fv_attrs);
@@ -44,31 +58,32 @@ pub fn render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) {
         out.push_str("<ul data-v-c34199e4><!--[-->");
         for c_ref in props.children.iter() {
             let c = c_ref;
-            super::scoped_tree::render_scoped(out, c, " data-v-c34199e4");
+            super::scoped_tree::try_render_scoped(out, c, " data-v-c34199e4")?;
         }
         out.push_str("<!--]--></ul>");
     } else {
         out.push_str("<!---->");
     }
     out.push_str("</li>");
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
 pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup(props, render)
+    fv::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
 pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island(NAME, props, render)
+    fv::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
 pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned(props, render)
+    fv::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
 pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned(NAME, props, render)
+    fv::Html::island_owned_fallible(NAME, props, render, try_render)
 }

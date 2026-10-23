@@ -48,7 +48,10 @@ type Outcome =
   | { k: "match"; html: string }
   | { k: "mismatch"; vue: string; rust: string }
   | { k: "vue-error"; err: string }
-  | { k: "rust-error"; err: string; vue: string };
+  | { k: "rust-error"; err: string; vue: string }
+  | { k: "refused-at-render"; err: string; vue: string };
+
+const REFUSED_AT_RENDER = /^error\[FV\d{4}\]: /;
 
 interface Evaluated {
   refused: string | null;
@@ -205,6 +208,7 @@ function evaluate(batch: string, items: Item[]): Map<string, Evaluated> {
       const v = vue[`${item.id}/${i}`];
       const r = rust[`${item.id}/${i}`];
       if (!v || v.err !== undefined) return { k: "vue-error", err: v?.err ?? "not rendered" };
+      if (r?.err !== undefined && REFUSED_AT_RENDER.test(r.err)) return { k: "refused-at-render", err: r.err, vue: v.ok! };
       if (!r || r.err !== undefined) return { k: "rust-error", err: r?.err ?? "not rendered", vue: v.ok! };
       return v.ok === r.ok ? { k: "match", html: v.ok! } : { k: "mismatch", vue: v.ok!, rust: r.ok! };
     });
@@ -322,8 +326,9 @@ const cases = new Map<number, Case>(indices.map((i) => [i, generateCase(seed, i,
 const items: Item[] = indices.map((i) => ({ id: `k${i}`, component: cases.get(i)!.component, fixtures: cases.get(i)!.fixtures }));
 const results = evaluate(join(WORK, "cases"), items);
 
-const tally = { components: items.length, fixtures: 0, matches: 0, mismatches: 0, refused: 0, compileErrors: 0, vueErrors: 0, rustErrors: 0 };
+const tally = { components: items.length, fixtures: 0, matches: 0, mismatches: 0, refused: 0, compileErrors: 0, vueErrors: 0, rustErrors: 0, refusedAtRender: 0 };
 const refusals = new Map<string, number[]>();
+const renderRefusals = new Map<string, number[]>();
 const vueErrors = new Map<string, number[]>();
 const compileErrors = new Map<string, number[]>();
 const failures: Failure[] = [];
@@ -347,7 +352,12 @@ for (const i of indices) {
   let first = true;
   ev.outcomes.forEach((o, fi) => {
     if (o.k === "match") tally.matches++;
-    else if (o.k === "vue-error") {
+    else if (o.k === "refused-at-render") {
+      tally.refusedAtRender++;
+      const [, code = "", rest = ""] = /^error\[(FV\d{4})\]: (?:\S+?:\d+:\d+: )?(.*)$/s.exec(o.err) ?? [];
+      const key = `${code} ${rest.split("\n")[0]!.replace(/(?<![\w±])-?\d[\d.e+]*/g, "N")}`;
+      renderRefusals.set(key, [...(renderRefusals.get(key) ?? []), i]);
+    } else if (o.k === "vue-error") {
       tally.vueErrors++;
       const key = o.err.split("\n")[0]!;
       vueErrors.set(key, [...(vueErrors.get(key) ?? []), i]);
@@ -361,8 +371,9 @@ for (const i of indices) {
 }
 
 log("");
-log(`components ${tally.components}, fixtures ${tally.fixtures}: ${tally.matches} match, ${tally.mismatches} mismatch, ${tally.rustErrors} Rust errors; ${tally.refused} components refused, ${tally.compileErrors} not compiling, ${tally.vueErrors} fixtures Vue could not render`);
+log(`components ${tally.components}, fixtures ${tally.fixtures}: ${tally.matches} match, ${tally.mismatches} mismatch, ${tally.rustErrors} Rust errors, ${tally.refusedAtRender} refused at render; ${tally.refused} components refused, ${tally.compileErrors} not compiling, ${tally.vueErrors} fixtures Vue could not render`);
 for (const [msg, at] of refusals) log(`  refused ×${at.length} (cases ${at.slice(0, 8).join(", ")}${at.length > 8 ? ", …" : ""}): ${msg}`);
+for (const [msg, at] of renderRefusals) log(`  refused at render ×${at.length} (cases ${at.slice(0, 8).join(", ")}${at.length > 8 ? ", …" : ""}): ${msg}`);
 for (const [msg, at] of compileErrors) log(`  not compiling ×${at.length} (cases ${at.slice(0, 8).join(", ")}${at.length > 8 ? ", …" : ""}): ${msg}`);
 for (const [msg, at] of vueErrors) log(`  Vue error ×${at.length} (cases ${at.slice(0, 8).join(", ")}): ${msg}`);
 
@@ -404,7 +415,7 @@ if (failures.length) {
 }
 
 if (!keep) rmSync(join(WORK, "shrink"), { recursive: true, force: true });
-log(`\ndone in ${((Date.now() - started) / 1000).toFixed(0)} s. Summary: seed ${seed}, components ${tally.components}, fixtures ${tally.fixtures}, matches ${tally.matches}, mismatches ${tally.mismatches}, rust-errors ${tally.rustErrors}, not-compiling ${tally.compileErrors}, refusals ${tally.refused}, vue-errors ${tally.vueErrors}`);
+log(`\ndone in ${((Date.now() - started) / 1000).toFixed(0)} s. Summary: seed ${seed}, components ${tally.components}, fixtures ${tally.fixtures}, matches ${tally.matches}, mismatches ${tally.mismatches}, rust-errors ${tally.rustErrors}, refused-at-render ${tally.refusedAtRender}, not-compiling ${tally.compileErrors}, refusals ${tally.refused}, vue-errors ${tally.vueErrors}`);
 const compared = dry || tally.matches + tally.mismatches > 0;
 if (!compared) log("no fixture was compared");
 process.exitCode = tally.mismatches + tally.rustErrors + tally.compileErrors + tally.refused + tally.vueErrors > 0 || !compared ? 1 : 0;

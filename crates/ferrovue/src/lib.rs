@@ -22,6 +22,7 @@ mod json;
 mod load;
 mod page;
 mod record;
+mod refused;
 #[cfg(feature = "ammonia")]
 mod sanitised;
 mod slots;
@@ -45,12 +46,14 @@ pub use conformance::check_fixtures;
 pub use dates::{
     js_date_parse, js_date_utc, js_json_date, js_time_clip, js_to_iso_string, js_to_json,
     js_to_utc_string, js_utc_date, js_utc_day, js_utc_full_year, js_utc_hours, js_utc_milliseconds,
-    js_utc_minutes, js_utc_month, js_utc_seconds,
+    js_utc_minutes, js_utc_month, js_utc_seconds, try_date_parse, try_date_utc, try_to_iso_string,
 };
 #[doc(hidden)]
 pub use head::HeadDeferral;
 pub use head::{Head, HeadHtml, HeadValue};
 pub use html::Html;
+#[doc(hidden)]
+pub use html::{Fallible, Renderer};
 pub use hydrate::Hydrate;
 #[cfg(feature = "chrono")]
 #[cfg_attr(docsrs, doc(cfg(feature = "chrono")))]
@@ -63,6 +66,9 @@ pub use load::{Load, LoadArg, LoadCall, LoadFuture, LoadKey, load_key};
 pub use load::{LoadError, Loads, load};
 pub use page::{Page, PageHole, PageRecord, PageScript, PageSlot, Part};
 pub use record::Record;
+pub use refused::Refused;
+#[doc(hidden)]
+pub use refused::{Refusals, rendered, try_int};
 #[cfg(feature = "ammonia")]
 #[cfg_attr(docsrs, doc(cfg(feature = "ammonia")))]
 pub use sanitised::Sanitised;
@@ -78,7 +84,7 @@ pub use strings::{
     js_pad_start, js_parse_float, js_parse_int, js_reduce, js_repeat, js_replace, js_replace_all,
     js_slice, js_slice_items, js_slice_range, js_sorted, js_sorted_by_string, js_split,
     js_split_limit, js_starts_with_at, js_substr, js_substring, js_trim, js_trim_end,
-    js_trim_start,
+    js_trim_start, try_pad_end, try_pad_start, try_repeat,
 };
 pub use teleport::Teleports;
 #[doc(hidden)]

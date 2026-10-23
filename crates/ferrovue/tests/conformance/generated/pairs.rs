@@ -53,8 +53,23 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
+    fv::rendered(try_render(out, props));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(158 + props.scores.iter().map(|(k, _)| k.len()).sum::<usize>() + props.labels.iter().map(|(k, v)| k.len() + v.len()).sum::<usize>() + props.seats.iter().map(|(k, v)| k.len() + v.row.len()).sum::<usize>() + props.tags.iter().map(|(k, v)| k.len() + v.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>() + props.word.len());
+    let fv_refusals = fv::Refusals::new(NAME, "components/Pairs.vue");
     let s_ranked = fv::js_sorted(props.scores.iter(), |fv_l1, fv_r1| fv::js_order(*fv_r1.1 as f64, *fv_l1.1 as f64)).collect::<Vec<_>>();
     let s_named = props.labels.iter().filter(|fv_a2| fv_a2.0 != &*props.word && !fv_a2.1.is_empty()).collect::<Vec<_>>();
     let s_best = { let fv_c3 = fv::js_item_at(s_ranked.iter().copied(), 0.0f64); if let Some(n4) = fv_c3 { std::borrow::Cow::<str>::Owned(format!("{}:{}", n4.0, fv::Js(*n4.1))) } else { std::borrow::Cow::<str>::Borrowed("none") } };
@@ -65,7 +80,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push('|');
     fv::push_int(out, props.scores.iter().filter(|fv_a6| *fv_a6.1 as f64 > 1.0).count() as i64);
     out.push('|');
-    fv::push_int(out, fv::js_reduce(props.scores.iter(), 0i64, |fv_acc7, fv_a8| (fv_acc7 as f64 + *fv_a8.1 as f64) as i64));
+    fv::push_int(out, fv::js_reduce(props.scores.iter(), 0i64, |fv_acc7, fv_a8| fv_refusals.keep(fv::try_int(fv_acc7 as f64 + *fv_a8.1 as f64), 21, 220)));
     out.push('|');
     out.push_str(if props.scores.iter().any(|fv_a9| fv_a9.0 == &*props.word) { "true" } else { "false" });
     out.push('|');
@@ -128,24 +143,25 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         out.push_str(")</li>");
     }
     out.push_str("<!--]--></ul><!--]-->");
+    fv_refusals.check(Ok(()))
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
 pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup(props, render)
+    fv::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
 pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island(NAME, props, render)
+    fv::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
 pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned(props, render)
+    fv::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
 pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned(NAME, props, render)
+    fv::Html::island_owned_fallible(NAME, props, render, try_render)
 }

@@ -43,9 +43,9 @@ push is written as it is. Use [`escape_into`](crate::escape_into) for any text t
 
 The `data-v-` attributes of [`<style scoped>`](crate::guide::scoped_styles) are written as they are,
 unescaped: they are ids the compiler computed, ` data-v-` followed by hex digits. The same goes for
-the ids that reach a component at run time, in `render_scoped`'s `fv_attrs` and in the slot scope id
-a scoped slot's closure is given: generated code builds them from those ids alone. `render_scoped`
-is hidden from the documentation because only generated code should call it; a closure that writes
+the ids that reach a component at run time, in `try_render_scoped`'s `fv_attrs` and in the slot
+scope id a scoped slot's closure is given: generated code builds them from those ids alone.
+`try_render_scoped` is hidden from the documentation because only generated code should call it; a closure that writes
 the slot scope id it is given writes one of those ids, and nothing a request supplied.
 
 # `v-html` and `TrustedHtml`

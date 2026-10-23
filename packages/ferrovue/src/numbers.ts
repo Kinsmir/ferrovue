@@ -1,5 +1,5 @@
-import { type N, type Scope, type Ty, type Val, BOOL, fail, FLOAT, INT } from "./model.ts";
-import { AS, atom, binary, FLIPPED, operand, UNARY } from "./parens.ts";
+import { type N, type Scope, type Ty, type Val, BOOL, fail, FLOAT, INT, kept, REFUSALS } from "./model.ts";
+import { AS, atom, bare, binary, FLIPPED, operand, UNARY } from "./parens.ts";
 import { expr } from "./expr.ts";
 
 export function isNumber(ty: Ty): boolean {
@@ -11,13 +11,21 @@ export function asF64(v: Val): string {
   return v.ty.k === "float" ? v.code : `${operand(v.code, AS)} as f64`;
 }
 
-export function intFromF64(f64: string): Val {
-  return { code: `${operand(f64, AS)} as i64`, ty: INT, f64 };
+/** An integer computed as an `f64`, held as the `i64` an integer is: refused at render time where
+ * it is beyond the range of `i64`, unless `at` is `null`, for a result that cannot be. */
+export function intFromF64(f64: string, at: string | null): Val {
+  if (at === null) return { code: `${operand(f64, AS)} as i64`, ty: INT, f64 };
+  return { code: kept(`fv::try_int(${bare(f64)})`, at), ty: INT, f64, at };
+}
+
+/** Whether `v` is an integer computed as an `f64` and held as an `i64`. */
+export function isCast(v: Val): boolean {
+  return v.ty.k === "int" && v.f64 !== undefined && (v.num === undefined || v.code.endsWith(" as i64") || v.code.startsWith(`${REFUSALS}.keep(fv::try_int(`));
 }
 
 /** The value as JavaScript writes it: an integer computed as an `f64` is written from the `f64`. */
 export function asWritten(v: Val): Val {
-  return v.ty.k === "int" && v.f64 !== undefined && v.code.endsWith(" as i64") ? { ...v, code: v.f64, ty: FLOAT } : v;
+  return isCast(v) ? { ...v, code: v.f64!, ty: FLOAT } : v;
 }
 
 function floatLiteral(x: number): string {
@@ -51,11 +59,11 @@ const RUST_CONSTANTS = new Map(
   }).map(([name, digits]) => [Number(digits), `std::f64::consts::${name}`]),
 );
 
-export function numberVal(x: number, int: boolean): Val {
+export function numberVal(x: number, int: boolean, at: string | null = null): Val {
   const constant = int ? undefined : RUST_CONSTANTS.get(Math.abs(x));
   if (constant !== undefined) return { code: x < 0 ? `-${constant}` : constant, ty: FLOAT, num: x };
   if (!int) return { code: floatLiteral(x), ty: FLOAT, num: x };
-  if (!Number.isSafeInteger(x)) return { ...intFromF64(floatLiteral(x)), num: x };
+  if (!Number.isSafeInteger(x)) return { ...intFromF64(floatLiteral(x), Math.abs(x) < 2 ** 63 ? null : (at ?? "0, 0")), num: x };
   return { code: `${x === 0 ? 0 : x}i64`, ty: INT, f64: floatLiteral(x), num: x };
 }
 
@@ -84,11 +92,11 @@ function fold(a: number, op: string, b: number): number | boolean {
   }
 }
 
-export function arithmetic(a: Val, op: string, b: Val, int: boolean): Val {
-  if (a.num !== undefined && b.num !== undefined) return numberVal(fold(a.num, op, b.num) as number, int);
+export function arithmetic(a: Val, op: string, b: Val, int: boolean, at: string): Val {
+  if (a.num !== undefined && b.num !== undefined) return numberVal(fold(a.num, op, b.num) as number, int, at);
   const negated = op === "*" ? (b.num === -1 ? a : a.num === -1 ? b : null) : null;
   const f64 = negated ? `-${operand(asF64(negated), UNARY)}` : binary(asF64(a), op, asF64(b));
-  return int ? intFromF64(f64) : { code: f64, ty: FLOAT };
+  return int ? intFromF64(f64, at) : { code: f64, ty: FLOAT };
 }
 
 export function compare(a: Val, op: string, b: Val): Val {

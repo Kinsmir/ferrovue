@@ -28,13 +28,28 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::Loads<'_>) {
+    fv::rendered(try_render(out, props, fv_loads));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::Loads<'_>) -> Result<(), fv::Refused> {
     out.reserve(168 + props.name.len());
-    let Some(l_0) = fv_loads.get(super::loaders::LoadOpened { name: String::from(&*props.name) }) else { return; };
-    let Some(l_1) = fv_loads.get(super::loaders::LoadThread { id: props.id }) else { return; };
-    let Some(l_2) = fv_loads.get(super::loaders::LoadThread { id: props.id }) else { return; };
-    let Some(l_3) = fv_loads.get(super::loaders::LoadDays) else { return; };
-    let Some(l_4) = fv_loads.get(super::loaders::LoadClosed { name: String::from(&*props.name) }) else { return; };
+    let fv_refusals = fv::Refusals::new(NAME, "components/LoadedDates.vue");
+    let Some(l_0) = fv_loads.get(super::loaders::LoadOpened { name: String::from(&*props.name) }) else { return Ok(()); };
+    let Some(l_1) = fv_loads.get(super::loaders::LoadThread { id: props.id }) else { return Ok(()); };
+    let Some(l_2) = fv_loads.get(super::loaders::LoadThread { id: props.id }) else { return Ok(()); };
+    let Some(l_3) = fv_loads.get(super::loaders::LoadDays) else { return Ok(()); };
+    let Some(l_4) = fv_loads.get(super::loaders::LoadClosed { name: String::from(&*props.name) }) else { return Ok(()); };
     out.push_str("<section><h2>");
     fv::escape_into(out, &l_1.title);
     out.push_str(" by ");
@@ -42,7 +57,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::Loads<'_>) {
     out.push_str("</h2>");
     if !fv::js_time_of(l_0).is_nan() {
         out.push_str("<time datetime=\"");
-        fv::escape_into(out, &fv::js_to_iso_string(fv::js_time_of(l_0)));
+        fv::escape_into(out, &fv_refusals.keep(fv::try_to_iso_string(fv::js_time_of(l_0)), 16, 67));
         out.push_str("\">");
         fv::push_number(out, fv::js_utc_full_year(fv::js_time_of(l_0)));
         out.push_str("</time>");
@@ -81,11 +96,12 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::Loads<'_>) {
         out.push_str("</u>");
     }
     out.push_str("<!--]-->");
-    super::date_replies::render(out, &super::date_replies::Props { replies: l_1.replies.to_owned(), depth: 0i64 });
+    fv_refusals.check(super::date_replies::try_render(out, &super::date_replies::Props { replies: l_1.replies.to_owned(), depth: 0i64 }))?;
     out.push_str("</section>");
+    fv_refusals.check(Ok(()))
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_loads: &'p fv::Loads<'p>) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_loads))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_loads: &'p fv::Loads<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
+    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_loads)))
 }

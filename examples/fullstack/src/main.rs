@@ -15,15 +15,16 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::http::{StatusCode, Uri};
-use axum::response::{IntoResponse, Response};
+use axum::response::{Html, IntoResponse, Response};
 use axum::routing::get;
 use axum::{Json, Router};
 use ferrovue::HtmlStream;
 use tower_http::services::ServeDir;
 
 use assets::Assets;
+use generated::delivery;
 use pages::{Page, Site};
 
 const REVIEW_DELAY: Duration = Duration::from_millis(800);
@@ -59,6 +60,7 @@ async fn serve(dist: PathBuf) {
     let app = Router::new()
         .nest_service("/assets", ServeDir::new(dist.join("assets")))
         .route("/books/{id}/reviews", get(reviews))
+        .route("/delivery", get(delivery))
         .route("/api/stock/{id}", get(stock))
         .route("/api/warehouses/{code}", get(warehouse))
         .fallback(page)
@@ -98,6 +100,21 @@ async fn page(State(site): State<Arc<Site>>, uri: Uri) -> Response {
 
 async fn reviews(State(site): State<Arc<Site>>, Path(id): Path<String>) -> impl IntoResponse {
     site.reviews(&id).await
+}
+
+#[derive(serde::Deserialize)]
+struct DeliveryQuery {
+    ordered: String,
+    days: i64,
+}
+
+async fn delivery(Query(query): Query<DeliveryQuery>) -> Response {
+    let props = delivery::Props::new(query.ordered, query.days);
+    let mut html = String::new();
+    match delivery::try_render(&mut html, &props) {
+        Ok(()) => Html(html).into_response(),
+        Err(refused) => (StatusCode::BAD_REQUEST, refused.message().to_owned()).into_response(),
+    }
 }
 
 async fn stock(Path(id): Path<String>) -> Json<generated::types::Stock<'static>> {
@@ -348,6 +365,42 @@ mod tests {
             .expect("a body");
         let hole = Hole::Reviews("dune".to_owned());
         assert_eq!(body, site.fill(hole).await);
+    }
+
+    #[tokio::test]
+    async fn a_date_from_the_query_string_renders_or_is_answered_with_400() {
+        let answer = |ordered: &str, days: i64| {
+            delivery(Query(DeliveryQuery {
+                ordered: ordered.to_owned(),
+                days,
+            }))
+        };
+        let text = |response: Response| async {
+            let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+                .await
+                .expect("a body");
+            String::from_utf8(body.to_vec()).expect("UTF-8")
+        };
+        let ok = answer("2024-05-01", 3).await;
+        assert_eq!(ok.status(), 200);
+        assert_eq!(ok.headers()["content-type"], "text/html; charset=utf-8");
+        let html = text(ok).await;
+        assert!(
+            html.contains(r#"<time datetime="2024-05-04T00:00:00.000Z">Sat, 04 May 2024</time>"#),
+            "{html}"
+        );
+        let unread = answer("May 1, 2024", 3).await;
+        assert_eq!(unread.status(), 400);
+        assert!(text(unread).await.starts_with(
+            r#"the date "May 1, 2024" is not in ECMAScript's date time string format"#
+        ));
+        let invalid = answer("2024-05-01", 1 << 40).await;
+        assert_eq!(invalid.status(), 400);
+        assert!(
+            text(invalid)
+                .await
+                .starts_with("`.toISOString()` of an invalid date")
+        );
     }
 
     #[tokio::test]

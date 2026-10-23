@@ -67,9 +67,24 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
+    fv::rendered(try_render(out, props));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(499 + 31 * props.entries.len() + 18 * props.tags.len() + props.label.as_deref().map_or(0, str::len) + props.entry.as_ref().map_or(0, |v| v.title.len() + v.deleted_at.as_deref().map_or(0, str::len) + v.note.as_deref().map_or(0, str::len)) + props.entries.iter().map(|v| v.title.len() + v.deleted_at.as_deref().map_or(0, str::len) + v.note.as_deref().map_or(0, str::len)).sum::<usize>() + props.tags.iter().map(|v| v.as_deref().map_or(0, str::len)).sum::<usize>());
-    let s_scaled = props.count.map(|n1| (n1 as f64 * 10.0) as i64);
+    let fv_refusals = fv::Refusals::new(NAME, "components/Nullable.vue");
+    let s_scaled = std::cell::LazyCell::new(|| props.count.map(|n1| fv_refusals.keep(fv::try_int(n1 as f64 * 10.0), 16, 55)));
     let s_fallback = props.label.as_deref();
     out.push_str("<section><p>");
     if let Some(v) = props.label.as_deref() {
@@ -88,7 +103,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         out.push_str(if v { "true" } else { "false" });
     }
     out.push('|');
-    if let Some(v) = s_scaled {
+    if let Some(v) = *s_scaled {
         fv::push_int(out, v);
     }
     out.push('|');
@@ -182,7 +197,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     } else {
         out.push_str("<p>falsy</p>");
     }
-    if let Some(n8) = s_scaled && n8 as f64 > 20.0 {
+    if let Some(n8) = (*s_scaled) && n8 as f64 > 20.0 {
         out.push_str("<p>big</p>");
     } else {
         out.push_str("<!---->");
@@ -274,7 +289,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         fv::escape_into(out, v);
     }
     out.push_str("</p><p>unpicked|true|</p>");
-    super::null_child::render(out, &super::null_child::Props { value: props.label.as_deref().map(std::borrow::Cow::Borrowed), entry: props.entry.as_ref().cloned() }, super::null_child::Slots {
+    fv_refusals.check(super::null_child::try_render(out, &super::null_child::Props { value: props.label.as_deref().map(std::borrow::Cow::Borrowed), entry: props.entry.as_ref().cloned() }, super::null_child::Slots {
         default: Some(&|out: &mut String, fv_sp21: &super::null_child::DefaultSlotProps<'_>| -> bool {
             let mut filled = false;
             let fv_chunk = out.len();
@@ -283,32 +298,33 @@ pub fn render(out: &mut String, props: &Props<'_>) {
             filled |= !fv::is_comment(&out[fv_chunk..]);
             filled
         }),
-    });
-    super::null_child::render(out, &super::null_child::Props { value: None, entry: None }, super::null_child::Slots {
+    }))?;
+    fv_refusals.check(super::null_child::try_render(out, &super::null_child::Props { value: None, entry: None }, super::null_child::Slots {
         default: None,
-    });
-    super::null_child::render(out, &super::null_child::Props { value: props.entry.as_ref().and_then(|fv_o24| fv_o24.deleted_at.as_deref()).map(std::borrow::Cow::Borrowed), entry: props.entries.iter().find(|fv_a25| fv_a25.deleted_at.as_deref().is_none()).cloned() }, super::null_child::Slots {
+    }))?;
+    fv_refusals.check(super::null_child::try_render(out, &super::null_child::Props { value: props.entry.as_ref().and_then(|fv_o24| fv_o24.deleted_at.as_deref()).map(std::borrow::Cow::Borrowed), entry: props.entries.iter().find(|fv_a25| fv_a25.deleted_at.as_deref().is_none()).cloned() }, super::null_child::Slots {
         default: None,
-    });
+    }))?;
     out.push_str("</section>");
+    fv_refusals.check(Ok(()))
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
 pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup(props, render)
+    fv::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
 pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island(NAME, props, render)
+    fv::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
 pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned(props, render)
+    fv::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
 pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned(NAME, props, render)
+    fv::Html::island_owned_fallible(NAME, props, render, try_render)
 }

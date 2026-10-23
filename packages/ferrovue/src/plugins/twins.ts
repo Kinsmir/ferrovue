@@ -66,7 +66,7 @@ function callOf(twin: Twin): TwinCall {
     init: (s, f, node, n) => init(s, f, node, n, name),
     call(s, e, inits, slots, attrs) {
       const props = `&super::twins::${name}Props { ${inits.join(", ")} }`.replace("{  }", "{}");
-      callWith(s, e, twin.comp, "super::twins", `${twin.spec.rust}(out, ${props}`, `super::twins::${name}Slots`, `, ${attrs}`, slots, true);
+      callWith(s, e, twin.comp, "super::twins", `${twin.spec.rust}(out, ${props}`, `super::twins::${name}Slots`, `, ${attrs}`, slots, true, false);
     },
   };
 }

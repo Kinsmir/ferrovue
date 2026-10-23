@@ -28,7 +28,21 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::I18n) {
+    fv::rendered(try_render(out, props, fv_i18n));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::I18n) -> Result<(), fv::Refused> {
     out.reserve(90 + props.name.len());
     let s_title = std::cell::LazyCell::new(|| fv_i18n.t("greeting", &fv::i18n::Args::new().with_named(&[("name", fv::i18n::Value::Str(&props.name))])));
     out.push_str("<section");
@@ -81,9 +95,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::I18n) {
     out.push('|');
     fv::escape_into(out, &fv_i18n.t("html", &fv::i18n::Args::new().with_named(&[("name", fv::i18n::Value::Str(&props.name))])));
     out.push_str("</p></section>");
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_i18n: &'p fv::I18n) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_i18n))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_i18n: &'p fv::I18n) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
+    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_i18n)))
 }

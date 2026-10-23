@@ -33,7 +33,21 @@ impl Props {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props) {
+    fv::rendered(try_render(out, props));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::Refused> {
     out.reserve(47);
     out.push_str("<p><time>");
     fv::escape_into(out, &{ let fv_c1 = fv::js_time_of(&props.now); { let fv_c2 = fv::js_time_of(&props.then); { let fv_c3 = fv::js_round((fv_c1 - fv_c2) / 1000.0); if fv_c3.is_nan() { std::borrow::Cow::<str>::Borrowed("at an unknown time") } else { if fv_c3 < 0.0 { std::borrow::Cow::<str>::Borrowed("in the future") } else { if fv_c3 < 45.0 { std::borrow::Cow::<str>::Borrowed("just now") } else { { let fv_c4 = fv::js_round(fv_c3 / 60.0); if fv_c4 < 60.0 { std::borrow::Cow::<str>::Owned(format!("{} {} ago", fv::Js(fv_c4), (if fv_c4 == 1.0 { "minute" } else { "minutes" }))) } else { { let fv_c5 = fv::js_round(fv_c4 / 60.0); if fv_c5 < 24.0 { std::borrow::Cow::<str>::Owned(format!("{} {} ago", fv::Js(fv_c5), (if fv_c5 == 1.0 { "hour" } else { "hours" }))) } else { { let fv_c6 = fv::js_round(fv_c5 / 24.0); if fv_c6 == 1.0 { std::borrow::Cow::<str>::Borrowed("yesterday") } else { if fv_c6 == 7.0 { std::borrow::Cow::<str>::Borrowed("a week ago") } else { std::borrow::Cow::<str>::Owned(format!("{} {} ago", fv::Js(fv_c6), (if fv_c6 == 1.0 { "day" } else { "days" }))) } } } } } } } } } } } } });
@@ -46,24 +60,25 @@ pub fn render(out: &mut String, props: &Props) {
         out.push_str("<!---->");
     }
     out.push_str("</p>");
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
 pub fn html<'p>(props: &'p Props) -> fv::Html<'p, Props> {
-    fv::Html::markup(props, render)
+    fv::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
 pub fn island<'p>(props: &'p Props) -> fv::Html<'p, Props> {
-    fv::Html::island(NAME, props, render)
+    fv::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
 pub fn into_html(props: Props) -> fv::Html<'static, Props> {
-    fv::Html::markup_owned(props, render)
+    fv::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
 pub fn into_island(props: Props) -> fv::Html<'static, Props> {
-    fv::Html::island_owned(NAME, props, render)
+    fv::Html::island_owned_fallible(NAME, props, render, try_render)
 }

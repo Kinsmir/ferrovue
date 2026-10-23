@@ -23,10 +23,12 @@ pub mod posted;
 pub mod rated;
 pub mod shell;
 pub mod sized;
+pub mod stamped;
 pub mod theme_scope;
 pub mod themed_button;
 pub mod timeline;
 pub mod translated;
+pub mod wrap;
 pub mod index;
 pub mod books_id;
 pub mod route_table;
@@ -113,17 +115,17 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
     match component {
         "Blank" => {
             let props: blank::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            blank::render(&mut out, &props);
+            blank::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "CartBadge" => {
             let props: cart_badge::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let state: stores::Stores = serde_json::from_value(fixture.stores.clone()).map_err(|e| e.to_string())?;
-            cart_badge::render(&mut out, &props, &state);
+            cart_badge::try_render(&mut out, &props, &state).map_err(|e| e.to_string())?;
         }
         "Counter" => {
             let props: counter::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            counter::render(&mut out, &props);
+            counter::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "DataList" => {
             let props: data_list::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -131,35 +133,35 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let s_row = |out: &mut String, _: &data_list::RowSlotProps<'_>| -> bool { out.push_str(fixture.slot("row").unwrap_or_default()); true };
             let s_count = |out: &mut String, _: &data_list::CountSlotProps| -> bool { out.push_str(fixture.slot("count").unwrap_or_default()); true };
             let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
-            data_list::render(&mut out, &props, data_list::Slots { row: fixture.slot("row").map(|_| &s_row as &data_list::RowSlot), count: fixture.slot("count").map(|_| &s_count as &data_list::CountSlot), default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)) });
+            data_list::try_render(&mut out, &props, data_list::Slots { row: fixture.slot("row").map(|_| &s_row as &data_list::RowSlot), count: fixture.slot("count").map(|_| &s_count as &data_list::CountSlot), default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)) }).map_err(|e| e.to_string())?;
         }
         "Greeting" => {
             let props: greeting::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            greeting::render(&mut out, &props);
+            greeting::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "HeadNote" => {
             let props: head_note::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let head = ferrovue::Head::without_defaults();
-            head_note::render(&mut out, &props, &head);
+            head_note::try_render(&mut out, &props, &head).map_err(|e| e.to_string())?;
             head_into(&mut out, &head);
         }
         "Modal" => {
             let props: modal::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let teleports = ferrovue::Teleports::new();
-            modal::render(&mut out, &props, &teleports);
+            modal::try_render(&mut out, &props, &teleports).map_err(|e| e.to_string())?;
             teleports_into(&mut out, teleports);
         }
         "Picker" => {
             let props: picker::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            picker::render(&mut out, &props);
+            picker::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "Posted" => {
             let props: posted::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            posted::render(&mut out, &props);
+            posted::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "Rated" => {
             let props: rated::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            rated::render(&mut out, &props);
+            rated::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "Shell" => {
             let props: shell::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -172,41 +174,51 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let i18n = i18n::i18n(fixture.locale.as_deref().unwrap_or(i18n::LOCALE));
             let teleports = ferrovue::Teleports::new();
             let head = ferrovue::Head::without_defaults();
-            shell::render(&mut out, &props, shell::Slots { default: fixture.slot("default").map(|_| s_default), router_view: ferrovue::Slot::new(&s_router_view) }, &route, &state, &i18n, &teleports, provides::Provides::default(), &head);
+            shell::try_render(&mut out, &props, shell::Slots { default: fixture.slot("default").map(|_| s_default), router_view: ferrovue::Slot::new(&s_router_view) }, &route, &state, &i18n, &teleports, provides::Provides::default(), &head).map_err(|e| e.to_string())?;
             teleports_into(&mut out, teleports);
             head_into(&mut out, &head);
         }
         "Sized" => {
             let props: sized::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            sized::render(&mut out, &props);
+            sized::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "Stamped" => {
+            let props: stamped::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            stamped::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "ThemeScope" => {
             let props: theme_scope::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let s_default: &theme_scope::DefaultSlot = &|out: &mut String, _: provides::Provides<'_>| -> bool { out.push_str(fixture.slot("default").unwrap_or_default()); true };
-            theme_scope::render(&mut out, &props, theme_scope::Slots { default: fixture.slot("default").map(|_| s_default) }, provides::Provides::default());
+            theme_scope::try_render(&mut out, &props, theme_scope::Slots { default: fixture.slot("default").map(|_| s_default) }, provides::Provides::default()).map_err(|e| e.to_string())?;
         }
         "ThemedButton" => {
             let props: themed_button::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            themed_button::render(&mut out, &props, provides::Provides::default());
+            themed_button::try_render(&mut out, &props, provides::Provides::default()).map_err(|e| e.to_string())?;
         }
         "Timeline" => {
             let props: timeline::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            timeline::render(&mut out, &props);
+            timeline::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "Translated" => {
             let props: translated::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let i18n = i18n::i18n(fixture.locale.as_deref().unwrap_or(i18n::LOCALE));
-            translated::render(&mut out, &props, &i18n);
+            translated::try_render(&mut out, &props, &i18n).map_err(|e| e.to_string())?;
+        }
+        "Wrap" => {
+            let props: wrap::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
+            wrap::try_render(&mut out, &props, wrap::Slots { default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)) }).map_err(|e| e.to_string())?;
         }
         "Index" => {
             let props: index::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            index::render(&mut out, &props);
+            index::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "BooksId" => {
             let props: books_id::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            books_id::render(&mut out, &props);
+            books_id::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         other => return Err(format!("no component called {other}")),
     }

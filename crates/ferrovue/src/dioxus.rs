@@ -73,7 +73,7 @@ fn element(template: Template, attrs: Vec<Attribute>) -> Element {
     ))
 }
 
-impl<P: Serialize, F: Fn(&mut String, &P)> Html<'_, P, F> {
+impl<P: Serialize, F: crate::Renderer<P>> Html<'_, P, F> {
     /// The component as a Dioxus element.
     ///
     /// # Example
@@ -105,9 +105,13 @@ impl<P: Serialize, F: Fn(&mut String, &P)> Html<'_, P, F> {
     /// let markup = dioxus_ssr::render_element(hello::html(&props).to_element());
     /// assert_eq!(markup, "<div><p>Hello, &lt;Ada&gt;!</p></div>");
     /// ```
+    ///
+    /// # Panics
+    ///
+    /// With the message of the refusal [`Html::try_render_to`] returns.
     pub fn to_element(&self) -> Element {
         let mut markup = String::new();
-        (self.render)(&mut markup, self.props.get());
+        crate::rendered(self.run(&mut markup));
         let mut attrs = Vec::with_capacity(4);
         if let Some(name) = self.island {
             attrs.push(Attribute::new("data-island", name, None, false));
@@ -123,7 +127,7 @@ impl<P: Serialize, F: Fn(&mut String, &P)> Html<'_, P, F> {
     }
 }
 
-impl<P: Serialize, F: Fn(&mut String, &P)> IntoDynNode for Html<'_, P, F> {
+impl<P: Serialize, F: crate::Renderer<P>> IntoDynNode for Html<'_, P, F> {
     fn into_dyn_node(self) -> DynamicNode {
         self.to_element().into_dyn_node()
     }

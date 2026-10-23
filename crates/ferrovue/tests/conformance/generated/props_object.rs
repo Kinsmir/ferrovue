@@ -57,7 +57,21 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
+    fv::rendered(try_render(out, props));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(125 + 9 * props.tags.as_deref().unwrap_or(&[]).len() + props.label.len() + props.tone.as_deref().map_or(0, str::len) + props.note.as_deref().map_or(0, str::len));
     let s_loud = props.label.to_uppercase();
     out.push_str("<article");
@@ -74,7 +88,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         out.push('"');
     }
     out.push('>');
-    super::glyph::render_scoped(out, &super::glyph::Props {  }, &fv::Attrs::new(&[("class", fv::Attr::str("mark"))], ""));
+    super::glyph::try_render_scoped(out, &super::glyph::Props {  }, &fv::Attrs::new(&[("class", fv::Attr::str("mark"))], ""))?;
     out.push_str("<h3>");
     fv::escape_into(out, &props.label);
     out.push_str(" (");
@@ -82,7 +96,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push_str(") ");
     fv::escape_into(out, &s_loud);
     out.push_str("</h3>");
-    super::divider::render_scoped(out, &super::divider::Props {  }, &fv::Attrs::NONE);
+    super::divider::try_render_scoped(out, &super::divider::Props {  }, &fv::Attrs::NONE)?;
     if props.tags.as_deref().unwrap_or(&[]).len() as i64 != 0 {
         out.push_str("<ul><!--[-->");
         for t_ref in props.tags.as_deref().unwrap_or(&[]).iter() {
@@ -107,24 +121,25 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push_str("<small>");
     fv::escape_into(out, props.note.as_deref().unwrap_or("no note"));
     out.push_str("</small></article>");
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
 pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup(props, render)
+    fv::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
 pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island(NAME, props, render)
+    fv::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
 pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned(props, render)
+    fv::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
 pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned(NAME, props, render)
+    fv::Html::island_owned_fallible(NAME, props, render, try_render)
 }

@@ -1,11 +1,13 @@
 use std::borrow::Cow;
 
-use ferrovue::{Head, Html, I18n, JsDate, Page, ParseUnionError, Part, Route, Slot, Teleports};
+use ferrovue::{
+    Head, Html, I18n, JsDate, Page, ParseUnionError, Part, Refused, Route, Slot, Teleports,
+};
 
 use crate::generated::{
     blank, books_id, cart_badge, counter, data_list, greeting, head_note, i18n, index, modal,
-    picker, posted, provides, rated, render_json, route_table, shell, sized, stores, theme_scope,
-    themed_button, timeline, translated, twins, types,
+    picker, posted, provides, rated, render_json, route_table, shell, sized, stamped, stores,
+    theme_scope, themed_button, timeline, translated, twins, types,
 };
 
 const _: fn(&mut String, &sized::Props) = sized::render;
@@ -38,6 +40,11 @@ const _: fn(
     &Head,
 ) = shell::render;
 const _: twins::StarRatingRender = crate::twins::star_rating;
+const _: fn(&mut String, &stamped::Props<'_>) = stamped::render;
+const _: fn(&mut String, &stamped::Props<'_>) -> Result<(), Refused> = stamped::try_render;
+const _: fn(&mut String, &greeting::Props<'_>) -> Result<(), Refused> = greeting::try_render;
+const _: fn(&mut String, &data_list::Props<'_>, data_list::Slots<'_>) -> Result<(), Refused> =
+    data_list::try_render;
 
 #[allow(dead_code)]
 struct Owned {
@@ -440,4 +447,128 @@ fn render_json_renders_a_component_from_a_fixture() {
     assert!(shell.contains("Hallo, T!"), "{shell}");
     assert!(shell.contains("<main><p>v</p></main>"), "{shell}");
     assert!(render_json("Nothing", "{}").is_err());
+}
+
+fn stamped(on: &str, year: i64, count: i64) -> stamped::Props<'_> {
+    stamped::Props::new(on, year, count, "ab")
+}
+
+#[test]
+fn a_render_that_can_write_what_vue_writes_returns_ok() {
+    let props = stamped("2024-05-01", 2024, 3);
+    let mut out = String::new();
+    stamped::try_render(&mut out, &props).unwrap();
+    assert_eq!(out, render(|out| stamped::render(out, &props)));
+    assert!(
+        out.starts_with("<!--[--><p>1714521600000|1711929600000|-ab|ab |ababab</p>"),
+        "{out}"
+    );
+    assert!(
+        out.contains(r#"<div class="wrap framed"><!--[--><span class="stars">4048/5"#),
+        "{out}"
+    );
+    assert_eq!(stamped::html(&props).try_into_string().unwrap(), out);
+}
+
+#[test]
+fn a_render_refused_at_render_time_returns_the_code_and_the_place() {
+    let cases = [
+        (stamped("May 1, 2024", 2024, 3), "FV1803", 10, 9),
+        (
+            stamped("2024-05-01", 2_000_000, -24_000_000),
+            "FV1808",
+            10,
+            38,
+        ),
+        (stamped("2024-05-01", 2024, 1 << 40), "FV0725", 10, 66),
+        (stamped("2024-05-01", 2024, -1), "FV0714", 10, 123),
+        (stamped("2024-05-01", 1 << 62, 3), "FV0724", 12, 39),
+    ];
+    for (props, code, line, column) in cases {
+        let refused = stamped::try_render(&mut String::new(), &props).unwrap_err();
+        assert_eq!(refused.code(), code, "{refused}");
+        assert_eq!(refused.component(), Some("Stamped"));
+        assert_eq!(refused.file(), Some("components/Stamped.vue"));
+        assert_eq!(
+            (refused.line(), refused.column()),
+            (Some(line), Some(column))
+        );
+        assert!(
+            refused.to_string().starts_with(&format!(
+                "error[{code}]: components/Stamped.vue:{line}:{column}: "
+            )),
+            "{refused}"
+        );
+        let error: &dyn std::error::Error = &refused;
+        assert!(error.source().is_none());
+    }
+}
+
+#[test]
+fn an_integer_beyond_i64_in_slot_content_is_refused_where_the_parent_computes_it() {
+    let refused =
+        stamped::try_render(&mut String::new(), &stamped("2024-05-01", 1 << 62, 3)).unwrap_err();
+    assert!(
+        refused
+            .message()
+            .starts_with("the number 9223372036854776000 is beyond the range of i64"),
+        "{refused}"
+    );
+    let within = stamped("2024-05-01", 1 << 61, 3);
+    let out = render(|out| stamped::render(out, &within));
+    assert!(out.contains("4611686018427388000/5"), "{out}");
+}
+
+#[test]
+fn render_panics_with_the_message_try_render_returns() {
+    let props = stamped("May 1, 2024", 2024, 3);
+    let refused = stamped::try_render(&mut String::new(), &props).unwrap_err();
+    let hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(|_| {}));
+    let panicked = std::panic::catch_unwind(|| render(|out| stamped::render(out, &props)));
+    std::panic::set_hook(hook);
+    assert_eq!(
+        *panicked.unwrap_err().downcast::<String>().unwrap(),
+        refused.to_string()
+    );
+}
+
+#[test]
+fn html_and_a_page_return_the_refusal_and_write_nothing() {
+    let props = stamped("May 1, 2024", 2024, 3);
+    let mut out = String::from("<main>");
+    let refused = stamped::html(&props).try_render_to(&mut out).unwrap_err();
+    assert_eq!(refused.code(), "FV1803");
+    assert_eq!(out, "<main>");
+    assert!(
+        stamped::into_island(stamped("May 1", 1, 1))
+            .try_into_string()
+            .is_err()
+    );
+
+    let refusing = posted::Props::new(JsDate::INVALID);
+    let mut page = Page::new();
+    let parts = page.slot(
+        "default",
+        [Part::new(posted::NAME, posted::html(&refusing))],
+    );
+    let list = data_list::Props::new("Shelf", Vec::new(), types::Owner::new("Ada"));
+    let slots = data_list::Slots {
+        default: Some(parts.slot()),
+        ..data_list::Slots::default()
+    };
+    let mut out = String::new();
+    let refused = page
+        .try_render_to(&mut out, data_list::html(&list, slots))
+        .unwrap_err();
+    assert_eq!(refused.code(), "FV1811");
+    assert_eq!(refused.component(), Some("Posted"));
+    assert!(out.is_empty(), "{out}");
+
+    let mut page = Page::new();
+    let hole = page.hole("default");
+    let refused = hole
+        .try_fill([Part::new(posted::NAME, posted::html(&refusing))])
+        .unwrap_err();
+    assert_eq!(refused.code(), "FV1811");
 }

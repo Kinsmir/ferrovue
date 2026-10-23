@@ -30,8 +30,23 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::I18n) {
+    fv::rendered(try_render(out, props, fv_i18n));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::I18n) -> Result<(), fv::Refused> {
     out.reserve(98 + props.total.len() + props.posted.len());
+    let fv_refusals = fv::Refusals::new(NAME, "components/Prices.vue");
     let s_fixed = fv::js_to_fixed(props.cents as f64 / 100.0, 2);
     let s_amount = if fv_i18n.locale() == "nl" { std::borrow::Cow::<str>::Owned(fv::js_replace(&s_fixed, ".", ",").into_owned()) } else { std::borrow::Cow::<str>::Borrowed(&*s_fixed) };
     out.push_str("<section");
@@ -47,19 +62,20 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::I18n) {
     out.push_str("</p><p>");
     fv::escape_into(out, &props.total);
     out.push_str("</p><p>");
-    fv::escape_into(out, &fv_i18n.t("posted", &fv::i18n::Args::new().with_named(&[("date", fv::i18n::Value::Str(&fv::js_slice(&fv::js_to_iso_string(fv::js_date_parse(&props.posted)), 0.0f64, Some(10.0f64))))])));
+    fv::escape_into(out, &fv_i18n.t("posted", &fv::i18n::Args::new().with_named(&[("date", fv::i18n::Value::Str(&fv::js_slice(&fv_refusals.keep(fv::try_to_iso_string(fv_refusals.keep(fv::try_date_parse(&props.posted), 15, 13)), 15, 13), 0.0f64, Some(10.0f64))))])));
     out.push_str("</p><time datetime=\"");
-    fv::escape_into(out, &fv::js_to_iso_string(fv::js_date_parse(&props.posted)));
+    fv::escape_into(out, &fv_refusals.keep(fv::try_to_iso_string(fv_refusals.keep(fv::try_date_parse(&props.posted), 16, 20)), 16, 20));
     out.push_str("\">");
-    fv::push_number(out, fv::js_utc_date(fv::js_date_parse(&props.posted)));
+    fv::push_number(out, fv::js_utc_date(fv_refusals.keep(fv::try_date_parse(&props.posted), 16, 57)));
     out.push('-');
-    fv::push_number(out, fv::js_utc_month(fv::js_date_parse(&props.posted)) + 1.0);
+    fv::push_number(out, fv::js_utc_month(fv_refusals.keep(fv::try_date_parse(&props.posted), 16, 93)) + 1.0);
     out.push('-');
-    fv::push_number(out, fv::js_utc_full_year(fv::js_date_parse(&props.posted)));
+    fv::push_number(out, fv::js_utc_full_year(fv_refusals.keep(fv::try_date_parse(&props.posted), 16, 134)));
     out.push_str("</time></section>");
+    fv_refusals.check(Ok(()))
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_i18n: &'p fv::I18n) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_i18n))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_i18n: &'p fv::I18n) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
+    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_i18n)))
 }

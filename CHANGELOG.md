@@ -117,6 +117,29 @@ released together and share version numbers.
   interfaces, lists, dictionaries, object literals and loaders' results, and the full-stack
   example's reviews carry the date they were posted and its stock the date it was counted, from a
   loader.
+- Render-time refusals: props that ask for what cannot be written as Vue writes it, known only as
+  the component renders, refuse the render with a value it returns, so a server can answer
+  `400 Bad Request`. Every generated component has a `try_render` beside its `render`, with the
+  same parameters, returning `Result<(), ferrovue::Refused>`. `ferrovue::Refused` is a
+  `#[non_exhaustive]` error, `Display` and `std::error::Error`, whose `code()`, `message()`,
+  `component()`, `file()`, `line()` and `column()` give the code, the message saying what to do, and
+  the component and the place of the expression in its file. A refusal in a child, in slot content
+  or in a loader's component reaches the page's `try_render`, and the first the render met is the
+  one returned. `Html::try_render_to`, `Html::try_into_string`, `Page::try_render_to` and
+  `PageHole::try_fill` return it as well, leaving the buffer as it was. The refusals are FV1803 (a
+  date string outside the format browsers read alike), FV1808 (`Date.UTC()` parts engines compute
+  differently), FV0714 (a `.repeat()` count JavaScript throws on), and four new entries of
+  `ERRORS` in `ferrovue/compiler`: FV0724 (an integer beyond ±2⁶³ where the template needs an
+  `i64`), FV0725 (a `.repeat()`, `.padStart()` or `.padEnd()` beyond the longest string V8 makes),
+  FV1811 (`.toISOString()` of an invalid date) and FV1812 (a date a child's `Date` prop cannot
+  hold). The guide's `errors_and_limits` page shows a handler answering one, and the full-stack
+  example's `/delivery` route renders a date and a number from the query string with `try_render`
+  and answers a refusal with `400`. The conformance component `LoadedStamps` records `Date.UTC()` of
+  a loader's result in a child from Vue, and a Rust test checks that its refusal reaches the page's
+  render.
+- The differential fuzzer counts a render that returns a refusal as refused at render, apart from
+  Rust errors and mismatches, and lists each refusal's code and message; it renders a child
+  `FzWide` whose `number` prop is a product of integers, beyond ±2⁶³ for wide props.
 
 ### Changed
 
@@ -152,6 +175,14 @@ released together and share version numbers.
   constant setup cannot evaluate keeps `FV0207`, with a hint to annotate it with an interface.
 - Generated code is version 5 (`ferrovue::__compat!(5)`), which the 0.10 crate refuses; the 0.11
   crate builds versions 2 to 5.
+- `render`, `Html::render_to`, `Html::into_string`, `Page::render_to` and `PageHole::fill` panic with
+  the message of a refusal at render time, `error[FV1803]: components/X.vue:3:9: …`, where a date
+  string, `Date.UTC()`, `.toISOString()`, `.repeat()`, `.padStart()`, `.padEnd()` or a chrono
+  `Date` prop panicked with a message of its own. Generated components call `try_render` and
+  `try_render_scoped`, which replaces the hidden `render_scoped`; the generated `html()` of a
+  component with slots or render parameters returns `Html<'p, Props, impl ferrovue::Renderer<Props>>`,
+  which renders as before. `Html`'s methods, `Page::render_to` and `Part::new` take a renderer
+  through the hidden `ferrovue::Renderer` trait, which every `Fn(&mut String, &P)` implements.
 - The generated `Props` and shared structs hold an enum for each union of string literals, where
   0.10 held a `Cow<'a, str>`; a struct with no other borrowed field loses its lifetime. A Rust
   caller passes `Size::Md` where it passed `"md"`, as `upgrading_to_0_11` shows. Lists and records
@@ -198,6 +229,11 @@ released together and share version numbers.
 - Integer arithmetic whose result is beyond ±2⁶³ (`n * n` of a large `n`) is written into the page
   as JavaScript writes it (`16000000000000000000`, `8.112963841460666e+31`). The result was cast to
   `i64`, which stopped at `9223372036854775807`.
+- Such a result chosen by `??`, `?:` or `||` is written from its double too, as one held in a
+  `computed` or returned by a function is (the conformance component `WideChoices`). Where the
+  template needs it as an integer, given to a child's `number` prop or used as an index or as the
+  count of a `v-for`, it is refused at render time with FV0724, where it was cast to `i64` and
+  rendered as `9223372036854775807`, which Vue does not write.
 - A component may render itself by any name Vue resolves to it: its kebab-case or camelCase name
   (`<tree-node>` or `<treeNode>` in `TreeNode.vue`), which was refused with FV0513.
 - A value outside a closed union renders as the union's last member wherever a lookup table or

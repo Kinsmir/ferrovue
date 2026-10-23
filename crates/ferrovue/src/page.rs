@@ -5,9 +5,10 @@ use std::task::{Context, Poll, Waker};
 
 use serde::Serialize;
 
-use crate::html::Html;
+use crate::html::{Html, Renderer};
+use crate::refused::first;
 use crate::slots::{HOLE, Slot};
-use crate::{json, state};
+use crate::{Refused, json, state};
 
 /// A page the client hydrates as one app: a layout whose slots hold components rendered from their
 /// props. Each part goes into a slot as a [`Part`], made from the same [`Html`] value that writes
@@ -89,7 +90,7 @@ pub struct Part<'p> {
     name: &'static str,
     props: String,
     dates: &'static str,
-    render: Box<dyn Fn(&mut String) + 'p>,
+    render: Box<PartRender<'p>>,
 }
 
 /// The parts of one slot of a [`Page`], ready to be given to the layout with [`slot`](Self::slot).
@@ -126,6 +127,8 @@ type Shared = Arc<Mutex<Recorded>>;
 
 type SlotContent<'p> = dyn Fn(&mut String, &str) -> bool + 'p;
 
+type PartRender<'p> = dyn Fn(&mut String) -> Result<(), Refused> + 'p;
+
 #[derive(Debug, Default)]
 struct Recorded {
     props: String,
@@ -134,6 +137,7 @@ struct Recorded {
     slots: Vec<(String, Option<String>)>,
     open: usize,
     waker: Option<Waker>,
+    refused: Option<Refused>,
 }
 
 fn lock(record: &Shared) -> MutexGuard<'_, Recorded> {
@@ -161,11 +165,14 @@ impl Page {
         let parts: Vec<Part<'p>> = parts.into_iter().collect();
         self.add(slot, Some(parts_json(&parts)));
         lock(&self.record).name(&parts);
+        let record = Arc::clone(&self.record);
         PageSlot {
             render: Box::new(move |out, slot_scope_id| {
                 refuse_slotted(slot_scope_id);
                 for part in &parts {
-                    (part.render)(out);
+                    if let Err(refused) = (part.render)(out) {
+                        lock(&record).hold(refused);
+                    }
                 }
                 true
             }),
@@ -189,19 +196,45 @@ impl Page {
 
     /// Write the layout, recording the props it was rendered from: the root of the app the client
     /// hydrates, so `out` should be where that app is mounted, with nothing else in it.
-    pub fn render_to<P: Serialize, F: Fn(&mut String, &P)>(
+    ///
+    /// # Panics
+    ///
+    /// With the message of the refusal [`try_render_to`](Self::try_render_to) returns.
+    pub fn render_to<P: Serialize, F: Renderer<P>>(
         self,
         out: &mut String,
         layout: Html<'_, P, F>,
     ) -> PageRecord {
-        let props = layout.props.get();
+        self.try_render_to(out, layout)
+            .unwrap_or_else(|refused| panic!("{refused}"))
+    }
+
+    /// [`render_to`](Self::render_to), returning the refusal of a render, the layout's or a
+    /// part's, that cannot write what Vue writes for its props. `out` is then left as it was.
+    ///
+    /// # Errors
+    ///
+    /// The first [`Refused`] the render met.
+    pub fn try_render_to<P: Serialize, F: Renderer<P>>(
+        self,
+        out: &mut String,
+        layout: Html<'_, P, F>,
+    ) -> Result<PageRecord, Refused> {
+        let start = out.len();
         let mut record = lock(&self.record);
-        record.props = json::to_string_or_null(props);
+        record.props = json::to_string_or_null(layout.props.get());
         record.dates = layout.dates;
         drop(record);
-        (layout.render)(out, props);
-        PageRecord {
-            record: self.record,
+        let wrote = layout.run(out);
+        let held = lock(&self.record).refused.take();
+        match first(held, wrote) {
+            Ok(()) => Ok(PageRecord {
+                record: self.record,
+            }),
+            Err(refused) => {
+                out.truncate(start);
+                Err(refused)
+            }
         }
     }
 
@@ -219,7 +252,7 @@ impl Page {
 impl<'p> Part<'p> {
     /// The component called `name`, as `html` writes it.
     #[must_use]
-    pub fn new<P: Serialize + 'p, F: Fn(&mut String, &P) + 'p>(
+    pub fn new<P: Serialize + 'p, F: Renderer<P> + 'p>(
         name: &'static str,
         html: Html<'p, P, F>,
     ) -> Self {
@@ -228,7 +261,7 @@ impl<'p> Part<'p> {
             name,
             props,
             dates: html.dates,
-            render: Box::new(move |out| (html.render)(out, html.props.get())),
+            render: Box::new(move |out| html.run(out)),
         }
     }
 
@@ -261,16 +294,34 @@ impl PageHole {
     }
 
     /// Record the parts and return their markup: the content of this hole.
+    ///
+    /// # Panics
+    ///
+    /// With the message of the refusal [`try_fill`](Self::try_fill) returns.
     #[must_use]
-    pub fn fill<'p>(mut self, parts: impl IntoIterator<Item = Part<'p>>) -> String {
+    pub fn fill<'p>(self, parts: impl IntoIterator<Item = Part<'p>>) -> String {
+        self.try_fill(parts)
+            .unwrap_or_else(|refused| panic!("{refused}"))
+    }
+
+    /// [`fill`](Self::fill), returning the refusal of a part's render that cannot write what Vue
+    /// writes for its props. The hole is then recorded as empty, as one dropped is.
+    ///
+    /// # Errors
+    ///
+    /// The first [`Refused`] a part's render met.
+    pub fn try_fill<'p>(
+        mut self,
+        parts: impl IntoIterator<Item = Part<'p>>,
+    ) -> Result<String, Refused> {
         let parts: Vec<Part<'p>> = parts.into_iter().collect();
         let mut out = String::new();
         for part in &parts {
-            (part.render)(&mut out);
+            (part.render)(&mut out)?;
         }
         lock(&self.record).name(&parts);
         self.close(parts_json(&parts));
-        out
+        Ok(out)
     }
 
     fn close(&mut self, parts: String) {
@@ -349,6 +400,11 @@ impl Future for PageScript {
 }
 
 impl Recorded {
+    fn hold(&mut self, refused: Refused) {
+        let held = self.refused.take();
+        self.refused = first(held, Err(refused)).err();
+    }
+
     fn name(&mut self, parts: &[Part<'_>]) {
         for part in parts {
             if !self.names.contains(&part.name) {

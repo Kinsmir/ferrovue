@@ -33,40 +33,55 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
+    fv::rendered(try_render(out, props));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(42 + props.users.iter().map(|v| v.name.len() + v.avatar.as_deref().map_or(0, str::len) + v.roles.iter().map(|v| v.name.len()).sum::<usize>() + 2).sum::<usize>() + props.featured.as_ref().map_or(0, |v| v.name.len() + v.avatar.as_deref().map_or(0, str::len) + v.roles.iter().map(|v| v.name.len()).sum::<usize>() + 2) + props.items.iter().map(|v| v.name.len()).sum::<usize>());
     out.push_str("<section>");
     if let Some(n1) = props.featured.as_ref() {
-        super::user_card::render(out, &super::user_card::Props { user: n1.to_owned(), size: Some(super::types::Size::Lg), badges: Some(Vec::new()), note: Some(std::borrow::Cow::Borrowed("featured")) });
+        super::user_card::try_render(out, &super::user_card::Props { user: n1.to_owned(), size: Some(super::types::Size::Lg), badges: Some(Vec::new()), note: Some(std::borrow::Cow::Borrowed("featured")) })?;
     } else {
         out.push_str("<!---->");
     }
     out.push_str("<!--[-->");
     for u_ref in props.users.iter() {
         let u = u_ref;
-        super::user_card::render(out, &super::user_card::Props { user: u.to_owned(), size: u.size, badges: None, note: None });
+        super::user_card::try_render(out, &super::user_card::Props { user: u.to_owned(), size: u.size, badges: None, note: None })?;
     }
     out.push_str("<!--]-->");
-    super::lifecycle::render(out, &super::lifecycle::Props { items: props.items.to_owned(), query: std::borrow::Cow::Borrowed("all") });
+    super::lifecycle::try_render(out, &super::lifecycle::Props { items: props.items.to_owned(), query: std::borrow::Cow::Borrowed("all") })?;
     out.push_str("</section>");
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
 pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup(props, render)
+    fv::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
 pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island(NAME, props, render)
+    fv::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
 pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned(props, render)
+    fv::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
 pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned(NAME, props, render)
+    fv::Html::island_owned_fallible(NAME, props, render, try_render)
 }

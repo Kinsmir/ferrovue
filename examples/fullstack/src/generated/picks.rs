@@ -39,7 +39,21 @@ pub struct Slots<'s> {
 }
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::Route<'_>, fv_head: &fv::Head, fv_loads: &fv::Loads<'_>) {
+    fv::rendered(try_render(out, props, fv_slots, fv_route, fv_head, fv_loads));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::Route<'_>, fv_head: &fv::Head, fv_loads: &fv::Loads<'_>) -> Result<(), fv::Refused> {
     out.reserve(393 + 44 * props.books.len() + props.shop.len() + props.featured.id.len() + props.featured.title.len() + props.featured.author.len() + props.books.iter().map(|v| v.id.len() + v.title.len() + v.author.len()).sum::<usize>());
     fv_head.push(fv::HeadValue::object([("title", fv::HeadValue::str(&format!("Staff picks · {}", props.shop))), ("meta", fv::HeadValue::array([fv::HeadValue::object([("name", fv::HeadValue::str("description")), ("content", fv::HeadValue::str(&format!("{} and the rest of this week's staff picks", props.featured.title)))])])), ("htmlAttrs", fv::HeadValue::object([("class", fv::HeadValue::str("picks-page"))]))]));
     out.push_str("<div class=\"layout picks\"><header>");
@@ -79,7 +93,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route
     out.push_str("</main><aside class=\"reviews\"><h2>Readers on ");
     fv::escape_into(out, &props.featured.title);
     out.push_str("</h2>");
-    super::stock_level::render(out, &super::stock_level::Props { id: std::borrow::Cow::Borrowed(&*props.featured.id) }, fv_loads);
+    super::stock_level::try_render(out, &super::stock_level::Props { id: std::borrow::Cow::Borrowed(&*props.featured.id) }, fv_loads)?;
     fv::slot_into(out, fv_slots.reviews, Some(&mut |out: &mut String| {
         out.push_str("<p>Loading reviews…</p>");
     }));
@@ -106,9 +120,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route
         }
     }
     out.push_str("<!--]--></nav></aside><footer>One app: the layout and every part in it, hydrated from the record the server wrote.</footer></div>");
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>, fv_route: &'p fv::Route<'p>, fv_head: &'p fv::Head, fv_loads: &'p fv::Loads<'p>) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_slots, fv_route, fv_head, fv_loads))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>, fv_route: &'p fv::Route<'p>, fv_head: &'p fv::Head, fv_loads: &'p fv::Loads<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
+    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_slots, fv_route, fv_head, fv_loads)))
 }

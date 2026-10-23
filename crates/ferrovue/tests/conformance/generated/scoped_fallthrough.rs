@@ -33,17 +33,32 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
+    fv::rendered(try_render(out, props, fv_route));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) -> Result<(), fv::Refused> {
     out.reserve(42 + props.label.len() + props.tone.as_deref().map_or(0, str::len));
     out.push_str("<div class=\"scoped\" data-v-29a5eea9>");
-    super::fall_leaf::render_scoped(out, &super::fall_leaf::Props { label: std::borrow::Cow::Borrowed(&*props.label), shown: None, note: None }, &fv::Attrs::new(&[("class", fv::Attr::str("s")), ("data-tone", props.tone.as_deref().map_or(fv::Attr::Undefined, fv::Attr::str)), ("title", fv::Attr::str(&props.label))], " data-v-29a5eea9"));
-    super::fall_root::render_scoped(out, &super::fall_root::Props { text: Some(std::borrow::Cow::Borrowed(&*props.label)) }, &fv::Attrs::new(&[("class", props.tone.as_deref().map_or(fv::Attr::Undefined, fv::Attr::str)), ("data-k", fv::Attr::str("k"))], " data-v-29a5eea9"));
-    super::fall_inner::render_scoped(out, &super::fall_inner::Props { label: std::borrow::Cow::Borrowed(&*props.label) }, &fv::Attrs::new(&[("data-tone", props.tone.as_deref().map_or(fv::Attr::Undefined, fv::Attr::str))], " data-v-29a5eea9"));
-    super::fall_link::render_scoped(out, &super::fall_link::Props { to: std::borrow::Cow::Borrowed("/") }, fv_route, &fv::Attrs::new(&[("title", props.tone.as_deref().map_or(fv::Attr::Undefined, fv::Attr::str))], " data-v-29a5eea9"));
+    super::fall_leaf::try_render_scoped(out, &super::fall_leaf::Props { label: std::borrow::Cow::Borrowed(&*props.label), shown: None, note: None }, &fv::Attrs::new(&[("class", fv::Attr::str("s")), ("data-tone", props.tone.as_deref().map_or(fv::Attr::Undefined, fv::Attr::str)), ("title", fv::Attr::str(&props.label))], " data-v-29a5eea9"))?;
+    super::fall_root::try_render_scoped(out, &super::fall_root::Props { text: Some(std::borrow::Cow::Borrowed(&*props.label)) }, &fv::Attrs::new(&[("class", props.tone.as_deref().map_or(fv::Attr::Undefined, fv::Attr::str)), ("data-k", fv::Attr::str("k"))], " data-v-29a5eea9"))?;
+    super::fall_inner::try_render_scoped(out, &super::fall_inner::Props { label: std::borrow::Cow::Borrowed(&*props.label) }, &fv::Attrs::new(&[("data-tone", props.tone.as_deref().map_or(fv::Attr::Undefined, fv::Attr::str))], " data-v-29a5eea9"))?;
+    super::fall_link::try_render_scoped(out, &super::fall_link::Props { to: std::borrow::Cow::Borrowed("/") }, fv_route, &fv::Attrs::new(&[("title", props.tone.as_deref().map_or(fv::Attr::Undefined, fv::Attr::str))], " data-v-29a5eea9"))?;
     out.push_str("</div>");
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_route: &'p fv::Route<'p>) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_route))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_route: &'p fv::Route<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
+    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_route)))
 }

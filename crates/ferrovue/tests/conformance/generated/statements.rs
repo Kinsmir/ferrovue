@@ -135,8 +135,23 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
+    fv::rendered(try_render(out, props));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(124 + props.author.as_ref().map_or(0, |v| v.name.len() + v.title.as_deref().map_or(0, str::len)) + 2 + props.note.as_deref().map_or(0, str::len) + props.words.iter().map(|v| v.len()).sum::<usize>() + props.authors.iter().map(|v| v.name.len() + v.title.as_deref().map_or(0, str::len)).sum::<usize>() + props.lead.name.len() + props.lead.title.as_deref().map_or(0, str::len));
+    let fv_refusals = fv::Refusals::new(NAME, "components/Statements.vue");
     let s_greeting = if let Some(n1) = props.author.as_ref() { { let fv_c2 = fv::js_trim(&n1.name); if fv_c2.is_empty() { std::borrow::Cow::<str>::Borrowed("Unnamed") } else { { let fv_c3 = n1.title.as_deref(); if let Some(n4) = fv_c3.filter(|v| !v.is_empty()) { std::borrow::Cow::<str>::Owned(format!("{} {}", n4, fv_c2)) } else { std::borrow::Cow::<str>::Borrowed(fv_c2) } } } } } else { std::borrow::Cow::<str>::Borrowed("Anonymous") };
     let s_label = if props.size == StatementsSize::Sm { std::borrow::Cow::<str>::Borrowed("small") } else { if props.size == StatementsSize::Md || props.size == StatementsSize::Lg { { let fv_c5 = props.size.as_str().to_uppercase(); std::borrow::Cow::<str>::Owned(format!("large {}", fv_c5)) } } else { std::borrow::Cow::<str>::Borrowed("unknown") } };
     let s_grade = if props.score as f64 >= 90.0 { "A" } else { if props.score as f64 >= 75.0 { "B" } else { if props.score as f64 >= 50.0 { "C" } else { "F" } } };
@@ -151,7 +166,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     let s_first_long = { let fv_c20 = props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_s19| fv::js_length(fv_s19) as f64 > 4.0).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>(); fv_c20.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).nth(usize::try_from(0i64).unwrap_or(usize::MAX)).as_deref().map(|v| std::borrow::Cow::<str>::Owned(v.to_owned())) };
     let s_shouted = props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_s21| std::borrow::Cow::<str>::Owned(({ let fv_c22 = fv::js_trim(&fv_s21); if fv::js_length(fv_c22) as f64 == 0.0 { std::borrow::Cow::<str>::Borrowed("-") } else { std::borrow::Cow::<str>::Owned(fv_c22.to_uppercase()) } }).into_owned())).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
     let s_kept = props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_s23| { let fv_c24 = fv::js_length(fv_s23); fv_c24 as f64 > 2.0 && (fv_c24 as f64) < 10.0 }).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
-    let s_letters = fv::js_reduce(props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), 0i64, |fv_acc25, fv_s26| { let fv_c27 = fv::js_length(&fv_s26); if fv_c27 as f64 > 3.0 { (fv_acc25 as f64 + fv_c27 as f64) as i64 } else { fv_acc25 } });
+    let s_letters = std::cell::LazyCell::new(|| fv::js_reduce(props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), 0i64, |fv_acc25, fv_s26| { let fv_c27 = fv::js_length(&fv_s26); fv_refusals.keep(fv::try_int(if fv_c27 as f64 > 3.0 { fv_acc25 as f64 + fv_c27 as f64 } else { fv_acc25 as f64 }), 119, 23) }));
     let s_by_length = fv::js_sorted(props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), |fv_l28, fv_r28| fv::js_order(fv::js_length(fv_l28) as f64, fv::js_length(fv_r28) as f64)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
     let s_busiest = { let fv_c30 = props.authors.iter().filter(|fv_a29| fv_a29.posts as f64 > 0.0).collect::<Vec<_>>(); fv_c30.iter().copied().nth(usize::try_from(0i64).unwrap_or(usize::MAX)) };
     let s_top = { let fv_c32 = props.authors.iter().filter(|fv_a31| fv_a31.posts as f64 > 1.0).collect::<Vec<_>>(); std::borrow::Cow::<str>::Owned(({ let fv_c33 = fv_c32.iter().copied().nth(usize::try_from(0i64).unwrap_or(usize::MAX)); if let Some(n34) = fv_c33 { &*n34.name } else { "nobody" } }).to_owned()) };
@@ -184,7 +199,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push('|');
     fv::escape_into(out, s_first_long.as_deref().unwrap_or("none"));
     out.push('|');
-    fv::push_int(out, s_letters);
+    fv::push_int(out, *s_letters);
     out.push_str("</p><ul><!--[-->");
     for w_cow in s_shouted.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)) {
         let w: &str = &w_cow;
@@ -205,24 +220,25 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push('|');
     fv::escape_into(out, &s_pick.name);
     out.push_str("</p></article>");
+    fv_refusals.check(Ok(()))
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
 pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup(props, render)
+    fv::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
 pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island(NAME, props, render)
+    fv::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
 pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned(props, render)
+    fv::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
 pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned(NAME, props, render)
+    fv::Html::island_owned_fallible(NAME, props, render, try_render)
 }

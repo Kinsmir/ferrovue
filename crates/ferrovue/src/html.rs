@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use crate::{Hydrate, escape_into, json};
+use crate::{Hydrate, Refused, escape_into, json, rendered};
 
 /// A component applied to its props, ready to be written: what a generated `html()` or `island()`
 /// returns, borrowing the props, and `into_html()` or `into_island()`, holding them.
@@ -55,12 +55,111 @@ use crate::{Hydrate, escape_into, json};
 pub struct Html<'p, P, F = fn(&mut String, &P)> {
     pub(crate) props: Given<'p, P>,
     pub(crate) render: F,
+    pub(crate) fallible: Option<TryRender<P>>,
     pub(crate) island: Option<&'static str>,
     pub(crate) hydrate: Option<Hydrate>,
     pub(crate) dates: &'static str,
 }
 
-impl<'p, P: Serialize, F: Fn(&mut String, &P)> Html<'p, P, F> {
+type TryRender<P> = fn(&mut String, &P) -> Result<(), Refused>;
+
+/// What writes a component's markup into an [`Html`]: a generated `render`, or a generated
+/// `try_render` wrapped in [`Fallible`]. For generated code.
+#[doc(hidden)]
+pub trait Renderer<P: ?Sized> {
+    /// Write the markup of `props` into `out`, or return the refusal.
+    ///
+    /// # Errors
+    ///
+    /// The refusal of a render that cannot write what Vue writes.
+    fn try_render(&self, out: &mut String, props: &P) -> Result<(), Refused>;
+}
+
+impl<P: ?Sized, F: Fn(&mut String, &P)> Renderer<P> for F {
+    #[inline]
+    fn try_render(&self, out: &mut String, props: &P) -> Result<(), Refused> {
+        self(out, props);
+        Ok(())
+    }
+}
+
+/// A renderer that returns its refusals, as a generated `try_render` does. For generated code.
+#[doc(hidden)]
+#[derive(Debug, Clone, Copy)]
+pub struct Fallible<F>(pub F);
+
+impl<P: ?Sized, F: Fn(&mut String, &P) -> Result<(), Refused>> Renderer<P> for Fallible<F> {
+    #[inline]
+    fn try_render(&self, out: &mut String, props: &P) -> Result<(), Refused> {
+        (self.0)(out, props)
+    }
+}
+
+impl<'p, P: Serialize> Html<'p, P> {
+    /// [`Html::markup`] of a component whose `try_render` returns its refusals. For generated
+    /// code, as [`Html::markup`] is.
+    #[doc(hidden)]
+    #[must_use]
+    pub fn markup_fallible(
+        props: &'p P,
+        render: fn(&mut String, &P),
+        try_render: TryRender<P>,
+    ) -> Self {
+        Html {
+            fallible: Some(try_render),
+            ..Html::markup(props, render)
+        }
+    }
+
+    /// [`Html::island`] of a component whose `try_render` returns its refusals. For generated
+    /// code, as [`Html::markup`] is.
+    #[doc(hidden)]
+    #[must_use]
+    pub fn island_fallible(
+        name: &'static str,
+        props: &'p P,
+        render: fn(&mut String, &P),
+        try_render: TryRender<P>,
+    ) -> Self {
+        Html {
+            fallible: Some(try_render),
+            ..Html::island(name, props, render)
+        }
+    }
+
+    /// [`Html::markup_owned`] of a component whose `try_render` returns its refusals. For
+    /// generated code, as [`Html::markup`] is.
+    #[doc(hidden)]
+    #[must_use]
+    pub fn markup_owned_fallible(
+        props: P,
+        render: fn(&mut String, &P),
+        try_render: TryRender<P>,
+    ) -> Self {
+        Html {
+            fallible: Some(try_render),
+            ..Html::markup_owned(props, render)
+        }
+    }
+
+    /// [`Html::island_owned`] of a component whose `try_render` returns its refusals. For
+    /// generated code, as [`Html::markup`] is.
+    #[doc(hidden)]
+    #[must_use]
+    pub fn island_owned_fallible(
+        name: &'static str,
+        props: P,
+        render: fn(&mut String, &P),
+        try_render: TryRender<P>,
+    ) -> Self {
+        Html {
+            fallible: Some(try_render),
+            ..Html::island_owned(name, props, render)
+        }
+    }
+}
+
+impl<'p, P: Serialize, F: Renderer<P>> Html<'p, P, F> {
     /// The component's markup, which the client never hydrates.
     ///
     /// `render` is trusted to escape what it writes, which only a generated renderer does.
@@ -70,6 +169,7 @@ impl<'p, P: Serialize, F: Fn(&mut String, &P)> Html<'p, P, F> {
         Html {
             props: Given::Borrowed(props),
             render,
+            fallible: None,
             island: None,
             hydrate: None,
             dates: "",
@@ -83,6 +183,7 @@ impl<'p, P: Serialize, F: Fn(&mut String, &P)> Html<'p, P, F> {
         Html {
             props: Given::Borrowed(props),
             render,
+            fallible: None,
             island: Some(name),
             hydrate: None,
             dates: "",
@@ -97,6 +198,7 @@ impl<'p, P: Serialize, F: Fn(&mut String, &P)> Html<'p, P, F> {
         Html {
             props: Given::Owned(props),
             render,
+            fallible: None,
             island: None,
             hydrate: None,
             dates: "",
@@ -110,6 +212,7 @@ impl<'p, P: Serialize, F: Fn(&mut String, &P)> Html<'p, P, F> {
         Html {
             props: Given::Owned(props),
             render,
+            fallible: None,
             island: Some(name),
             hydrate: None,
             dates: "",
@@ -184,22 +287,66 @@ impl<'p, P: Serialize, F: Fn(&mut String, &P)> Html<'p, P, F> {
     /// page.push_str("</main>");
     /// assert_eq!(page, "<main><p>Hello, Ada!</p></main>");
     /// ```
+    ///
+    /// # Panics
+    ///
+    /// With the message of the refusal [`try_render_to`](Self::try_render_to) returns.
     pub fn render_to(&self, buf: &mut String) {
+        rendered(self.write(buf));
+    }
+
+    /// [`render_to`](Self::render_to), returning the refusal of a render that cannot write what
+    /// Vue writes for these props, such as a date string browsers read differently. `buf` is then
+    /// left as it was.
+    ///
+    /// # Errors
+    ///
+    /// The first [`Refused`] the render met.
+    pub fn try_render_to(&self, buf: &mut String) -> Result<(), Refused> {
+        let start = buf.len();
+        self.write(buf).inspect_err(|_| buf.truncate(start))
+    }
+
+    /// [`into_string`](Self::into_string), returning the refusal of a render that cannot write
+    /// what Vue writes for these props.
+    ///
+    /// # Errors
+    ///
+    /// The first [`Refused`] the render met.
+    pub fn try_into_string(self) -> Result<String, Refused> {
+        let mut out = String::new();
+        self.write(&mut out)?;
+        Ok(out)
+    }
+
+    #[inline]
+    pub(crate) fn run(&self, out: &mut String) -> Result<(), Refused> {
         let props = self.props.get();
+        match self.fallible {
+            Some(try_render) => try_render(out, props),
+            None => self.render.try_render(out, props),
+        }
+    }
+
+    fn write(&self, buf: &mut String) -> Result<(), Refused> {
         match self.island {
-            None => (self.render)(buf, props),
+            None => self.run(buf),
             Some(name) => island_into(
                 buf,
                 name,
                 self.hydrate.as_ref(),
                 self.dates,
-                props,
-                &self.render,
+                self.props.get(),
+                |out| self.run(out),
             ),
         }
     }
 
     /// The markup as a string of its own.
+    ///
+    /// # Panics
+    ///
+    /// With the message of the refusal [`try_into_string`](Self::try_into_string) returns.
     ///
     /// # Example
     ///
@@ -308,7 +455,7 @@ impl<P: std::fmt::Debug, F> std::fmt::Debug for Html<'_, P, F> {
 /// ```
 #[cfg(feature = "maud")]
 #[cfg_attr(docsrs, doc(cfg(feature = "maud")))]
-impl<P: Serialize, F: Fn(&mut String, &P)> maud::Render for Html<'_, P, F> {
+impl<P: Serialize, F: Renderer<P>> maud::Render for Html<'_, P, F> {
     fn render_to(&self, buf: &mut String) {
         Html::render_to(self, buf);
     }
@@ -320,8 +467,8 @@ fn island_into<P: Serialize>(
     hydrate: Option<&Hydrate>,
     dates: &str,
     props: &P,
-    render: &impl Fn(&mut String, &P),
-) {
+    render: impl FnOnce(&mut String) -> Result<(), Refused>,
+) -> Result<(), Refused> {
     out.push_str("<div data-island=\"");
     escape_into(out, name);
     out.push_str("\" data-props=\"");
@@ -335,8 +482,9 @@ fn island_into<P: Serialize>(
         escape_into(out, dates);
     }
     out.push_str("\">");
-    render(out, props);
+    render(out)?;
     out.push_str("</div>");
+    Ok(())
 }
 
 #[cfg(test)]

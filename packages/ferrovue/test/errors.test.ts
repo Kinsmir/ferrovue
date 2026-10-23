@@ -4,17 +4,19 @@ import { describe, expect, it } from "vitest";
 import { AREAS, type ErrorDoc, ERRORS } from "../src/errors.ts";
 
 const SRC = join(import.meta.dirname, "../src");
+const RUNTIME = join(import.meta.dirname, "../../../crates/ferrovue/src");
 const INDEX = join(import.meta.dirname, "../../../crates/ferrovue/docs/guide/error_codes.md");
 const REGISTRY = join(SRC, "errors.ts");
 
 const documented = Object.entries(ERRORS as Record<string, ErrorDoc>);
 
-function sources(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? sources(join(dir, e.name)) : e.name.endsWith(".ts") ? [join(dir, e.name)] : []));
+function sources(dir: string, ext = ".ts"): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? sources(join(dir, e.name), ext) : e.name.endsWith(ext) ? [join(dir, e.name)] : []));
 }
 
 function used(): Set<string> {
-  const files = sources(SRC).filter((f) => f !== REGISTRY);
+  const refusedAtRender = sources(RUNTIME, ".rs").filter((f) => !f.endsWith("tests.rs"));
+  const files = [...sources(SRC).filter((f) => f !== REGISTRY), ...refusedAtRender];
   return new Set(files.flatMap((file) => [...readFileSync(file, "utf8").matchAll(/"(FV\d{4})"/g)].map((m) => m[1]!)));
 }
 
@@ -33,7 +35,9 @@ field of \`ferrovue --format json\`. A code names one kind of refusal and is nev
 one the compiler stops raising stays listed here, marked retired. The first two digits are the
 area. [\`errors_and_limits\`](crate::guide::errors_and_limits) explains what the compiler refuses
 and why. A warning, such as one for a deprecated configuration key, has a code of its own, shown as
-\`warning[FV1117]\` and with the \`severity\` \`"warning"\` in JSON.
+\`warning[FV1117]\` and with the \`severity\` \`"warning"\` in JSON. A refusal at render time, which a
+generated \`try_render\` returns as a [\`Refused\`](crate::Refused), has a code of this list too, which
+[\`Refused::code\`](crate::Refused::code) gives.
 
 This page is generated from the compiler's list in \`packages/ferrovue/src/errors.ts\` by
 \`pnpm errors:generate\`; \`pnpm test\` fails when the two differ.

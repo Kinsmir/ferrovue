@@ -81,7 +81,8 @@ mod generated;
 ```
 
 Each component's module has a `Props` struct, built with `new` and a setter per optional prop, and
-three ways to render:
+three ways to render, each with a twin that returns a [`Refused`] for props the render cannot write
+as Vue writes them:
 
 ```rust
 # mod generated { pub mod greeting {
@@ -123,6 +124,11 @@ three ways to render:
 #
 # /// Write the component's server render into `out`.
 # pub fn render(out: &mut String, props: &Props<'_>) {
+#     fv::rendered(try_render(out, props));
+# }
+#
+# /// [`render`], returning the refusal of a render that cannot write what Vue writes.
+# pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
 #     out.reserve(70 + props.name.len() + props.note.as_deref().map_or(0, str::len));
 #     out.push_str("<p class=\"greeting\">Hello, ");
 #     fv::escape_into(out, &props.name);
@@ -142,16 +148,17 @@ three ways to render:
 #         out.push_str("<!---->");
 #     }
 #     out.push_str("</p>");
+#     Ok(())
 # }
 #
 # /// The component's markup, for a maud page that shows it without hydrating it.
 # pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-#     fv::Html::markup(props, render)
+#     fv::Html::markup_fallible(props, render, try_render)
 # }
 #
 # /// The component as an island the client hydrates.
 # pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-#     fv::Html::island(NAME, props, render)
+#     fv::Html::island_fallible(NAME, props, render, try_render)
 # }
 # } }
 use generated::greeting::{self, Props};
@@ -170,6 +177,10 @@ assert!(island.starts_with(r#"<div data-island="Greeting" data-props="{&quot;nam
 // Or straight into a buffer you already hold: no allocation of its own.
 let mut page = String::from("<!doctype html><body>");
 greeting::render(&mut page, &props);
+
+// With props from a request, `try_render` returns what `render` would panic on, such as a date
+// string browsers read differently, for the server to answer `400 Bad Request`.
+greeting::try_render(&mut page, &props).expect("Greeting.vue renders any props");
 
 // Every interpolated value is escaped.
 let hostile = greeting::html(&Props::new("<script>", 0)).into_string();

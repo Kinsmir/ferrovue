@@ -1,8 +1,8 @@
-import { type Cell, type LoopFrame, type LoopState, type N, type Scope, type Ty, type Val, absence, BOOL, fail, FLOAT, INT, isAscii, nothing, rustChar, rustStr, sameTy, STEP, strTy, withAbsence } from "./model.ts";
+import { type Cell, type LoopFrame, type LoopState, type N, type Scope, type Ty, type Val, absence, BOOL, fail, FLOAT, INT, isAscii, nothing, refusalAt, rustChar, rustStr, sameTy, STEP, strTy, withAbsence } from "./model.ts";
 import { ctx } from "./context.ts";
 import { describeTy, expr, statedTy, typedBy } from "./expr.ts";
 import { around, bound, panicky, reps } from "./blocks.ts";
-import { asF64, intFromF64, isNumber } from "./numbers.ts";
+import { asF64, intFromF64, isCast, isNumber } from "./numbers.ts";
 import { truthTested, truthy, unbound } from "./narrowing.ts";
 import { items, itemVal, ownedString } from "./lists.ts";
 import { atom, bare, closing, condition, enclosed, literalEnd, occurrences, outermost, receiver } from "./parens.ts";
@@ -123,7 +123,7 @@ export function assignedLet(s: Scope, n: N): Val {
     fail(comp, "FV1912", `\`${n.js}\` is declared as ${describeTy(declared.ty)}, and assigned ${describeTy(v.ty)} here: give the other value a \`let\` of its own`, n);
   }
   const after: Scope = { ...s, narrowed: unbound(s.narrowed, [n.name]) };
-  if (!reps(v).some(panicky) && readsAtMost(n.body, n.name, s.frame?.states.some((st) => st.name === n.name) ? 0 : 1)) return expr({ ...after, locals: new Map(s.locals).set(n.name, v) }, n.body);
+  if (!(isCast(v) ? [v.f64!] : reps(v)).some(panicky) && readsAtMost(n.body, n.name, s.frame?.states.some((st) => st.name === n.name) ? 0 : 1)) return expr({ ...after, locals: new Map(s.locals).set(n.name, v) }, n.body);
   return bound(after, n.name, v, (inner) => expr(inner, n.body));
 }
 
@@ -146,18 +146,18 @@ function plainTy(c: Cell): Ty {
   return c.kind === "str" ? strTy(c.ascii) : c.kind === "bool" ? BOOL : c.int ? INT : FLOAT;
 }
 
-function readOf(c: Cell, rust: string): Val {
+function readOf(c: Cell, rust: string, at: string): Val {
   const lone = c.lone ? { lone: true as const } : {};
   if (c.none !== null) return { code: c.kind === "str" ? `${rust}.as_deref()` : rust, ty: withAbsence(plainTy(c), c.none), ...lone };
   if (c.kind === "str") return { code: `&*${rust}`, ty: plainTy(c), ...lone };
-  if (c.kind === "num") return c.int ? intFromF64(rust) : { code: rust, ty: FLOAT };
+  if (c.kind === "num") return c.int ? intFromF64(rust, at) : { code: rust, ty: FLOAT };
   return { code: rust, ty: BOOL };
 }
 
-function slotRead(c: Cell, rust: string): Val {
+function slotRead(c: Cell, rust: string, at: string): Val {
   const lone = c.lone ? { lone: true as const } : {};
   if (c.kind === "str") return { code: `${rust}.as_deref().unwrap_or_default()`, ty: plainTy(c), ...lone };
-  if (c.kind === "num" && c.int) return intFromF64(`${rust}.unwrap_or_default()`);
+  if (c.kind === "num" && c.int) return intFromF64(`${rust}.unwrap_or_default()`, at);
   return { code: `${rust}.unwrap_or_default()`, ty: plainTy(c) };
 }
 
@@ -290,7 +290,7 @@ function attempt(s: Scope, n: N, cells: Map<string, Cell | null>, breaks: Map<st
   for (const [name, cell] of cells) {
     if (!cell) continue;
     const rust = `fv_m${++ctx.narrowCount}`;
-    states.push({ name, rust, cell, read: readOf(cell, rust), liveBreak: breaks.get(name)!, assigned: 0 });
+    states.push({ name, rust, cell, read: readOf(cell, rust, refusalAt(comp, n)), liveBreak: breaks.get(name)!, assigned: 0 });
   }
   const frame: LoopFrame = { states, slot: box.slot, slotName: `fv_r${++ctx.narrowCount}`, retry: false, nexts: 0, once: box.once };
   const locals = new Map(s.locals);
@@ -363,7 +363,7 @@ function attempt(s: Scope, n: N, cells: Map<string, Cell | null>, breaks: Map<st
     const at = { loc: n.loc, start: n.start, end: n.end, __fv: n.__fv };
     const id = (name: string): N => ({ type: "Identifier", name, ...at });
     afterLocals.set(`fv$has${k}`, { code: `${frame.slotName}.is_some()`, ty: BOOL });
-    afterLocals.set(`fv$ret${k}`, slotRead(frame.slot, frame.slotName));
+    afterLocals.set(`fv$ret${k}`, slotRead(frame.slot, frame.slotName, refusalAt(comp, n)));
     const ret = id(`fv$ret${k}`);
     afterAst = { type: "ConditionalExpression", test: id(`fv$has${k}`), consequent: n.nested ? { type: "FvStep", kind: "return", argument: ret, ...at } : ret, alternate: n.after, ...at };
   }

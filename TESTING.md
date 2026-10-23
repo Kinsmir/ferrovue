@@ -103,6 +103,7 @@ A fixture is a JSON object of props plus optional keys:
 | `Text` | Interpolation of every scalar, absent values, `.trim()`, `.length` (UTF-16), `+`, `??`, `\|\|`, `?:` |
 | `Precision` | `.toPrecision()` and `.toExponential()` of a `Float` and an integer, without an argument, with `undefined`, from 0 or 1 digits to 100 and with fractional literals, in text, attributes, a `computed` and template literals: ties, carries into a new digit, `-0`, the subnormals, the largest double, 10²¹, `NaN` and the infinities; `.toFixed()` of fractional literals and `undefined` |
 | `WideProducts` | Integer arithmetic beyond ±2⁶³ (`n * n`, `n * m`, sums, a sixth power) written as JavaScript writes it in text, an attribute, a style, a `computed`, template literals, `String()`, `.toString()`, `JSON.stringify()` and `Math.floor()`, and compared |
+| `WideChoices` | Integer arithmetic beyond ±2⁶³ chosen by `??`, `?:` and `\|\|`, held in a `computed` and returned by a function, written as JavaScript writes it in text, attributes and a template literal |
 | `Exprs` | `-`, `*`, `%`, comparisons, unary `-`, `Math`, template literals, `?.`, string and list methods (Unicode case mapping included), array literals, ranges, destructured `v-for` items |
 | `Branches` | `v-if` / `v-else-if` / `v-else`, `!`, `&&` / `\|\|`, `===` / `!==`, `undefined`, narrowing, `<template v-if>` |
 | `Lists` | `v-for` over strings, numbers and objects, index, nesting, `<template v-for>`, empty lists |
@@ -166,6 +167,7 @@ A fixture is a JSON object of props plus optional keys:
 | `Loaded`, `LoadedComments` | Top-level `await` of loaders declared with `defineLoader` in `loaders.ts`: two awaits of one call, a result destructured with a rename, a loader without arguments, results read by a `computed`, `v-if` and `v-for`; a child awaiting with arguments from its props and from a result awaited before (`loadNote(comments.length)`), rendered twice by its parent; an optional argument left out of the key, a `null` one written, a nullable result; markup and line separators in results and arguments |
 | `LoadedDates` | Loaders whose results are a `Date`, a `Date \| null`, a `Date[]` and an interface from `types/dated.ts` holding dates in fields, lists, a dictionary and recursive replies, awaited twice and destructured, read by `v-if`, `v-for` and comparisons and handed to `DateReplies`: typical dates, invalid ones given as numbers beyond the range, the edges of the range, markup in the results and arguments |
 | `LoadedRanks`, `RankLine` | A loader's result holding a `Record<string, number>` whose fixture gives array-index keys out of order and a key twice, read by `v-for` in JavaScript's order; a result's optional and nullable numbers handed to a child's `best?: number`, `worst: number \| null` and `open: boolean \| null`; a `<Teleport>` and `useHead` in a component whose render waits for a child's loads, written once |
+| `LoadedStamps`, `LoadedStamp` | `Date.UTC()` of a prop and a loader's result in a child that awaits it, rendered twice, `.toISOString()` of the date; at the edge of the range of dates. A Rust test renders it with parts engines compute differently and checks the refusal reaches the page's render |
 | `Flattened` | `.flat()` of lists of lists of strings, integers and `Float`s (`-0`, `1e21`), to the default depth, `0`, `2` and `Infinity`, and of a list that holds no lists; `.flatMap()` to a field's list, an array literal with spread, a list mapped with the item's index, a string's `split("")`, `[]` for some items, and to values that are not lists; `Object.values()` of a record of lists, flattened and walked by `v-for`; in a `computed`, `.reduce()`, `.filter()` and `v-for`; empty lists |
 | `OptionalChains` | Optional chains that go on past `?.`: string methods and `.length` (`s?.trim().length`, `s?.toUpperCase()`, `s?.split(",").length`), list methods and indices (`tags?.[1]`, `tags?.at(-1)?.toUpperCase()`, `tags?.filter(…).length`, `tags?.map(…).join()`), fields of fields and of optional fields (`user?.profile?.site?.length`), numbers (`count?.toFixed(2)`), dates (`when?.getTime()`, `when?.toUTCString()`, `seen?.toJSON()`, `seen?.toUTCString().length`, valid, invalid and at the edges of the range), over optional and nullable values that are present, absent and empty; in `computed`, `v-if`, `??` and `v-for` |
 | `NumberIncludes` | `.includes()` across `number` and `Float`: a fraction in a list of integers, an integer in a list of fractions and in a list mapped to fractions, `-0` found as `0`, integers beyond 2⁵³ |
@@ -222,9 +224,9 @@ when it names a component that is not in `components/` with fixtures of its own.
 | Statements | `Statements`, `UnreadSteps`, `Loops`, `LoopEdges` |
 | Functions | `Formatters`, `RelativeTime`, `LocalFunctions`, `DigitGroups` |
 | Object literals | `ObjectLiterals`, `ObjectShapes`, `UnionObjects` |
-| Loaders | `Loaded`, `LoadedComments`, `LoadedRanks`, `LoadedDates` |
+| Loaders | `Loaded`, `LoadedComments`, `LoadedRanks`, `LoadedDates`, `LoadedStamps` |
 | Provide and inject | `TabsPage`, `Tabs`, `Tab`, `ThemedButton`, `ThemeScope`, `Swatch`, `SwatchShelf`, `ThemedShelf`, `ThemedList`, `ThemedChoice` |
-| Text | `Text`, `MixedTernary`, `Exprs`, `Numbers`, `Precision`, `WideProducts`, `Meter`, `Parsing`, `NumberTests`, `Regressions`, `OptionalChains`, `StringOf`, `MathMore`, `UriParts`, `TypeofTests` |
+| Text | `Text`, `MixedTernary`, `Exprs`, `Numbers`, `Precision`, `WideProducts`, `WideChoices`, `Meter`, `Parsing`, `NumberTests`, `Regressions`, `OptionalChains`, `StringOf`, `MathMore`, `UriParts`, `TypeofTests` |
 | Strings | `Strings`, `Exprs`, `Text`, `StringSearch`, `StringOf`, `DigitGroups` |
 | Dates | `Dates`, `Prices`, `DatePost`, `DateStamp`, `DateFormats`, `DateGuards`, `DateRows`, `DateDays`, `DateReplies`, `DateThread`, `LoadedDates` |
 | Conditions | `Branches`, `Narrowing`, `Nullable`, `TypeofTests`, `AndChains` |
@@ -402,6 +404,9 @@ What it generates, with random nesting:
   an array literal of one) for its interface props: optional fields left out, `undefined`, an
   expression or an optional value, nullable fields `null`, an expression or a nullable value,
   lists `[]`, a list prop or an array literal, the keys in the interface's order or reversed;
+- a child `FzWide` whose `number` prop is the product of two or three integers, props or literals
+  up to ±(2⁵³ − 1), so that it lies beyond ±2⁶³ when the props are wide, where the render is
+  refused (FV0724);
 - `<script setup>` beyond the props: `const props = defineProps(…)` read as `props.x` in the
   template and in script, `computed`, `ref` and plain constants computed from the props, a
   `generic="T extends Row"` parameter typing a list prop, `defineAsyncComponent` for a child;
@@ -461,7 +466,7 @@ What it generates, with random nesting:
 
 Only what ferrovue promises to accept is generated: expressions are typed as TypeScript and
 ferrovue type them, optional values are read only where they may be, integer arithmetic never
-leaves ±2⁵³, two strings that may each hold half of a surrogate pair never meet, and a date is read
+leaves ±2⁵³ (but for `FzWide`'s prop), two strings that may each hold half of a surrogate pair never meet, and a date is read
 only through its methods, `.toISOString()` only where it is known valid. Two strings that may each
 hold half of a pair are not joined across one that may be empty either, and `encodeURIComponent()`,
 `encodeURI()`, `.charCodeAt()` and `.codePointAt()` read only strings that hold no half. So a component
@@ -496,8 +501,9 @@ How a run works:
    `loaders::from_fixture` from `$loads`, as in the conformance suite). Its target directory,
    `target/fuzz-target/`, is shared between runs, so the runtime crate is built once.
 4. Each pair is compared. The summary counts components, fixtures, matches, mismatches, Rust
-   errors (a panic, or a fixture the props do not read), components whose generated Rust does not
-   compile, and refusals, with the message of each.
+   errors (a panic, or a fixture the props do not read), renders refused at render time (a
+   `ferrovue::Refused` the render returns, listed by code and message, which is not a failure),
+   components whose generated Rust does not compile, and refusals, with the message of each.
 5. Each failure is **shrunk**: nodes, `v-if` and `v-for` directives, attributes, class and style
    entries removed, sub-expressions replaced by smaller ones, prop values made shorter or left out,
    routes, link targets, messages, a locale, stores, getters and state fields removed, the

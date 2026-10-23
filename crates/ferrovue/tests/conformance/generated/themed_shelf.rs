@@ -30,27 +30,43 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) {
+    fv::rendered(try_render(out, props, fv_provides));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::Refused> {
     out.reserve(32 + props.items.iter().map(|v| v.len()).sum::<usize>() + props.theme.len());
+    let fv_refusals = fv::Refusals::new(NAME, "components/ThemedShelf.vue");
     let fv_inherited = fv_provides;
     let fv_provides = super::provides::Provides { tags: Some(&props.items), ratio: Some(props.ratio), ..fv_inherited };
     out.push_str("<section data-wide=\"");
     out.push_str(if fv_inherited.wide.unwrap_or(false) { "true" } else { "false" });
     out.push_str("\">");
-    super::themed_list::render(out, &super::themed_list::Props { items: props.items.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect(), theme: std::borrow::Cow::Borrowed(&*props.theme), wide: props.items.len() as i64 as f64 > 1.0 }, super::themed_list::Slots {
+    fv_refusals.check(super::themed_list::try_render(out, &super::themed_list::Props { items: props.items.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect(), theme: std::borrow::Cow::Borrowed(&*props.theme), wide: props.items.len() as i64 as f64 > 1.0 }, super::themed_list::Slots {
         row: Some(&|out: &mut String, fv_sp2: &super::themed_list::RowSlotProps<'_>, fv_sid1: &str, fv_provides: super::provides::Provides<'_>| -> bool {
-            super::themed_button::render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed(&*format!("{}: {}", fv::Js(fv_sp2.index), fv_sp2.item)) }, fv_provides, &fv::scope_attrs("", "", fv_sid1));
+            fv_refusals.join(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed(&*format!("{}: {}", fv::Js(fv_sp2.index), fv_sp2.item)) }, fv_provides, &fv::scope_attrs("", "", fv_sid1)));
             true
         }),
         default: Some(&|out: &mut String, fv_sid3: &str, fv_provides: super::provides::Provides<'_>| -> bool {
-            super::themed_button::render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed("after") }, fv_provides, &fv::scope_attrs("", "", fv_sid3));
+            fv_refusals.join(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed("after") }, fv_provides, &fv::scope_attrs("", "", fv_sid3)));
             true
         }),
-    }, fv_provides);
+    }, fv_provides))?;
     out.push_str("</section>");
+    fv_refusals.check(Ok(()))
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_provides: super::provides::Provides<'p>) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_provides))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_provides: super::provides::Provides<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
+    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_provides)))
 }

@@ -23,19 +23,19 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
     match component {
         "DateDays" => {
             let props: date_days::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            date_days::render(&mut out, &props);
+            date_days::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "DatePost" => {
             let props: date_post::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            date_post::render(&mut out, &props);
+            date_post::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "DateRows" => {
             let props: date_rows::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            date_rows::render(&mut out, &props);
+            date_rows::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "DateStamp" => {
             let props: date_stamp::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            date_stamp::render(&mut out, &props);
+            date_stamp::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         other => return Err(format!("no component called {other}")),
     }

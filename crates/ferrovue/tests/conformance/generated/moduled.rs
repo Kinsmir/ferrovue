@@ -35,7 +35,21 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
+    fv::rendered(try_render(out, props));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(582 + props.text.len() + props.tone.as_deref().map_or(0, str::len));
     let s_picked = if props.on { "Moduled-vue-vue-type-style-index-1-lang-module__big___ydGGn" } else { "Moduled-vue-vue-type-style-index-1-lang-module__small___20ewv" };
     out.push_str("<section class=\"");
@@ -67,26 +81,27 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push_str("\" data-v-46bce602>Moduled-vue-vue-type-style-index-1-lang-module__small___20ewv</span><i class=\"");
     fv::class_into(out, false, &["Moduled-vue-vue-type-style-index-2-scoped-46bce602-lang-module__dot___hS8nn"]);
     out.push_str("\" data-v-46bce602></i>");
-    super::moduled_chip::render_scoped(out, &super::moduled_chip::Props { label: std::borrow::Cow::Borrowed(&*props.text) }, &fv::Attrs::new(&[("class", fv::Attr::str("Moduled-vue-vue-type-style-index-0-lang-module__boxed___oVrp3"))], " data-v-46bce602"));
+    super::moduled_chip::try_render_scoped(out, &super::moduled_chip::Props { label: std::borrow::Cow::Borrowed(&*props.text) }, &fv::Attrs::new(&[("class", fv::Attr::str("Moduled-vue-vue-type-style-index-0-lang-module__boxed___oVrp3"))], " data-v-46bce602"))?;
     out.push_str("</section>");
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
 pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup(props, render)
+    fv::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
 pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island(NAME, props, render)
+    fv::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
 pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned(props, render)
+    fv::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
 pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned(NAME, props, render)
+    fv::Html::island_owned_fallible(NAME, props, render, try_render)
 }

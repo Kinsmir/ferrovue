@@ -50,8 +50,23 @@ pub struct Slots<'s> {
 }
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_teleports: &fv::Teleports) {
+    fv::rendered(try_render(out, props, fv_slots, fv_teleports));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_teleports: &fv::Teleports) -> Result<(), fv::Refused> {
     out.reserve(581 + 25 * props.items.len() + props.title.as_deref().map_or(0, str::len) + props.items.iter().map(|v| v.len()).sum::<usize>() + props.tone.as_deref().map_or(0, str::len));
+    let fv_refusals = fv::Refusals::new(NAME, "components/ScopedPage.vue");
     out.push_str("<main class=\"page\"");
     if let Some(v) = props.tone.as_deref() {
         if v.is_empty() {
@@ -82,18 +97,18 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_telep
     } else {
         out.push_str("<!---->");
     }
-    super::scoped_leaf::render_scoped(out, &super::scoped_leaf::Props { label: props.title.as_deref().map(std::borrow::Cow::Borrowed) }, " data-v-56da6d99");
-    super::scoped_root::render_scoped(out, &super::scoped_root::Props { label: Some(std::borrow::Cow::Borrowed(props.title.as_deref().unwrap_or("untitled"))) }, " data-v-56da6d99");
+    fv_refusals.check(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: props.title.as_deref().map(std::borrow::Cow::Borrowed) }, " data-v-56da6d99"))?;
+    fv_refusals.check(super::scoped_root::try_render_scoped(out, &super::scoped_root::Props { label: Some(std::borrow::Cow::Borrowed(props.title.as_deref().unwrap_or("untitled"))) }, " data-v-56da6d99"))?;
     out.push_str("<dl data-v-56da6d99>");
-    super::scoped_pair::render_scoped(out, &super::scoped_pair::Props { term: std::borrow::Cow::Borrowed("tone"), text: std::borrow::Cow::Borrowed(props.tone.as_deref().unwrap_or("plain")) }, " data-v-56da6d99");
+    fv_refusals.check(super::scoped_pair::try_render_scoped(out, &super::scoped_pair::Props { term: std::borrow::Cow::Borrowed("tone"), text: std::borrow::Cow::Borrowed(props.tone.as_deref().unwrap_or("plain")) }, " data-v-56da6d99"))?;
     out.push_str("</dl>");
-    super::plain_box::render_scoped(out, &super::plain_box::Props { text: std::borrow::Cow::Borrowed(props.title.as_deref().unwrap_or("untitled")) }, super::plain_box::Slots {
+    fv_refusals.check(super::plain_box::try_render_scoped(out, &super::plain_box::Props { text: std::borrow::Cow::Borrowed(props.title.as_deref().unwrap_or("untitled")) }, super::plain_box::Slots {
         default: Some(fv::Slot::new(&|out: &mut String| {
             out.push_str("<i data-v-56da6d99>in a plain box</i>");
-            super::scoped_leaf::render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed("nested")) }, " data-v-56da6d99");
+            fv_refusals.join(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed("nested")) }, " data-v-56da6d99"));
         })),
-    }, " data-v-56da6d99");
-    super::scoped_card::render_scoped(out, &super::scoped_card::Props { tone: props.tone.as_deref().map(std::borrow::Cow::Borrowed) }, super::scoped_card::Slots {
+    }, " data-v-56da6d99"))?;
+    fv_refusals.check(super::scoped_card::try_render_scoped(out, &super::scoped_card::Props { tone: props.tone.as_deref().map(std::borrow::Cow::Borrowed) }, super::scoped_card::Slots {
         title: Some(fv::Slot::slotted(&|out: &mut String, fv_sid2: &str| -> bool {
             out.push_str("<b data-v-56da6d99");
             out.push_str(fv_sid2);
@@ -108,12 +123,12 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_telep
             out.push_str("<p data-v-56da6d99");
             out.push_str(fv_sid3);
             out.push_str(">body</p>");
-            super::scoped_leaf::render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed("slotted")) }, &fv::scope_attrs("", "data-v-56da6d99", fv_sid3));
-            super::plain_box::render_scoped(out, &super::plain_box::Props { text: std::borrow::Cow::Borrowed("boxed") }, super::plain_box::Slots {
+            fv_refusals.join(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed("slotted")) }, &fv::scope_attrs("", "data-v-56da6d99", fv_sid3)));
+            fv_refusals.join(super::plain_box::try_render_scoped(out, &super::plain_box::Props { text: std::borrow::Cow::Borrowed("boxed") }, super::plain_box::Slots {
                 default: Some(fv::Slot::new(&|out: &mut String| {
                     out.push_str("<u data-v-56da6d99>deeper</u>");
                 })),
-            }, &fv::scope_attrs("", "data-v-56da6d99", fv_sid3));
+            }, &fv::scope_attrs("", "data-v-56da6d99", fv_sid3)));
             true
         })),
         footer: Some(&|out: &mut String, fv_sp5: &super::scoped_card::FooterSlotProps, fv_sid4: &str| -> bool {
@@ -122,68 +137,69 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_telep
             out.push('>');
             fv::push_int(out, fv_sp5.count);
             out.push_str(" items</span>");
-            super::scoped_leaf::render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed(&*fv::Js(fv_sp5.count).to_string())) }, &fv::scope_attrs("", "data-v-56da6d99", fv_sid4));
+            fv_refusals.join(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed(&*fv::Js(fv_sp5.count).to_string())) }, &fv::scope_attrs("", "data-v-56da6d99", fv_sid4)));
             true
         }),
-    }, " data-v-56da6d99");
-    super::plain_forward::render_scoped(out, &super::plain_forward::Props {  }, super::plain_forward::Slots {
+    }, " data-v-56da6d99"))?;
+    fv_refusals.check(super::plain_forward::try_render_scoped(out, &super::plain_forward::Props {  }, super::plain_forward::Slots {
         default: Some(fv::Slot::slotted(&|out: &mut String, fv_sid6: &str| -> bool {
             out.push_str("<em data-v-56da6d99");
             out.push_str(fv_sid6);
             out.push_str(">forwarded</em>");
-            super::scoped_leaf::render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed("forwarded")) }, &fv::scope_attrs("", "data-v-56da6d99", fv_sid6));
-            super::plain_forward::render_scoped(out, &super::plain_forward::Props {  }, super::plain_forward::Slots {
+            fv_refusals.join(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed("forwarded")) }, &fv::scope_attrs("", "data-v-56da6d99", fv_sid6)));
+            fv_refusals.join(super::plain_forward::try_render_scoped(out, &super::plain_forward::Props {  }, super::plain_forward::Slots {
                 default: Some(fv::Slot::slotted(&|out: &mut String, fv_sid7: &str| -> bool {
                     out.push_str("<s data-v-56da6d99");
                     out.push_str(fv_sid7);
                     out.push_str(">twice</s>");
-                    super::scoped_leaf::render_scoped(out, &super::scoped_leaf::Props { label: None }, &fv::scope_attrs("", "data-v-56da6d99", fv_sid7));
+                    fv_refusals.join(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: None }, &fv::scope_attrs("", "data-v-56da6d99", fv_sid7)));
                     true
                 })),
-            }, &fv::scope_attrs("", "data-v-56da6d99", fv_sid6));
+            }, &fv::scope_attrs("", "data-v-56da6d99", fv_sid6)));
             true
         })),
-    }, " data-v-56da6d99");
-    super::scoped_shelf::render_scoped(out, &super::scoped_shelf::Props {  }, super::scoped_shelf::Slots {
+    }, " data-v-56da6d99"))?;
+    fv_refusals.check(super::scoped_shelf::try_render_scoped(out, &super::scoped_shelf::Props {  }, super::scoped_shelf::Slots {
         default: Some(fv::Slot::slotted(&|out: &mut String, fv_sid8: &str| -> bool {
             out.push_str("<mark data-v-56da6d99");
             out.push_str(fv_sid8);
             out.push_str(">shelved</mark>");
-            super::scoped_leaf::render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed("shelved")) }, &fv::scope_attrs("", "data-v-56da6d99", fv_sid8));
+            fv_refusals.join(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed("shelved")) }, &fv::scope_attrs("", "data-v-56da6d99", fv_sid8)));
             true
         })),
-    }, " data-v-56da6d99");
-    super::scoped_rack::render_scoped(out, &super::scoped_rack::Props {  }, super::scoped_rack::Slots {
+    }, " data-v-56da6d99"))?;
+    fv_refusals.check(super::scoped_rack::try_render_scoped(out, &super::scoped_rack::Props {  }, super::scoped_rack::Slots {
         default: Some(fv::Slot::slotted(&|out: &mut String, fv_sid9: &str| -> bool {
             out.push_str("<b data-v-56da6d99");
             out.push_str(fv_sid9);
             out.push_str(">racked</b>");
-            super::scoped_leaf::render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed("racked")) }, &fv::scope_attrs("", "data-v-56da6d99", fv_sid9));
+            fv_refusals.join(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed("racked")) }, &fv::scope_attrs("", "data-v-56da6d99", fv_sid9)));
             true
         })),
-    }, " data-v-56da6d99");
-    super::scoped_fade::render_scoped(out, &super::scoped_fade::Props { open: props.show }, " data-v-56da6d99");
+    }, " data-v-56da6d99"))?;
+    fv_refusals.check(super::scoped_fade::try_render_scoped(out, &super::scoped_fade::Props { open: props.show }, " data-v-56da6d99"))?;
     if props.show {
         out.push_str("<p class=\"note\" data-v-56da6d99>fading</p>");
     } else {
         out.push_str("<!---->");
     }
-    super::scoped_leaf::render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed("kept")) }, " data-v-56da6d99");
+    fv_refusals.check(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed("kept")) }, " data-v-56da6d99"))?;
     fv::teleport_into(out, fv_teleports, "#modals", false, &|out: &mut String| {
         out.push_str("<div class=\"modal\" data-v-56da6d99>");
         if let Some(v) = props.title.as_deref() {
             fv::escape_into(out, v);
         }
-        super::scoped_leaf::render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed("teleported")) }, " data-v-56da6d99");
+        fv_refusals.join(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed("teleported")) }, " data-v-56da6d99"));
         out.push_str("</div>");
     });
     fv::slot_into(out, fv_slots.extra, Some(&mut |out: &mut String| {
         out.push_str("fallback <b data-v-56da6d99>extra</b>");
     }));
     out.push_str("</main>");
+    fv_refusals.check(Ok(()))
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>, fv_teleports: &'p fv::Teleports) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_slots, fv_teleports))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>, fv_teleports: &'p fv::Teleports) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
+    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_slots, fv_teleports)))
 }

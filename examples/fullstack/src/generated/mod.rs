@@ -13,6 +13,7 @@ ferrovue::__compat!(5);
 
 pub mod add_to_basket;
 pub mod basket_summary;
+pub mod delivery;
 pub mod layout;
 pub mod pick;
 pub mod reviews;
@@ -89,13 +90,17 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
     match component {
         "AddToBasket" => {
             let props: add_to_basket::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            add_to_basket::render(&mut out, &props);
+            add_to_basket::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "BasketSummary" => {
             let props: basket_summary::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let state: stores::Stores = serde_json::from_value(fixture.stores.clone()).map_err(|e| e.to_string())?;
-            basket_summary::render(&mut out, &props, &state);
+            basket_summary::try_render(&mut out, &props, &state).map_err(|e| e.to_string())?;
+        }
+        "Delivery" => {
+            let props: delivery::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            delivery::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "Layout" => {
             let props: layout::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -105,16 +110,16 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let route = router.at(&fixture.route);
             let state: stores::Stores = serde_json::from_value(fixture.stores.clone()).map_err(|e| e.to_string())?;
             let head = ferrovue::Head::without_defaults();
-            layout::render(&mut out, &props, layout::Slots { router_view: ferrovue::Slot::new(&s_router_view) }, &route, &state, &head);
+            layout::try_render(&mut out, &props, layout::Slots { router_view: ferrovue::Slot::new(&s_router_view) }, &route, &state, &head).map_err(|e| e.to_string())?;
             head_into(&mut out, &head);
         }
         "Pick" => {
             let props: pick::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            pick::render(&mut out, &props);
+            pick::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "Reviews" => {
             let props: reviews::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            reviews::render(&mut out, &props);
+            reviews::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "Shipping" => {
             let props: shipping::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -122,13 +127,13 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let loading = ferrovue::load(
                 |fv_loads| {
                     out.clear();
-                    shipping::render(&mut out, &props, fv_loads);
+                    shipping::try_render(&mut out, &props, fv_loads)
                 },
                 loaders::from_fixture(&fixture.loads),
             );
             let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
             match std::future::Future::poll(std::pin::pin!(loading), &mut cx) {
-                std::task::Poll::Ready(done) => done.map_err(|e| e.to_string())?,
+                std::task::Poll::Ready(done) => done.map_err(|e| e.to_string())?.map_err(|e| e.to_string())?,
                 std::task::Poll::Pending => return Err(String::from("a fixture's loader is still running")),
             }
         }
@@ -138,13 +143,13 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let loading = ferrovue::load(
                 |fv_loads| {
                     out.clear();
-                    stock_level::render(&mut out, &props, fv_loads);
+                    stock_level::try_render(&mut out, &props, fv_loads)
                 },
                 loaders::from_fixture(&fixture.loads),
             );
             let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
             match std::future::Future::poll(std::pin::pin!(loading), &mut cx) {
-                std::task::Poll::Ready(done) => done.map_err(|e| e.to_string())?,
+                std::task::Poll::Ready(done) => done.map_err(|e| e.to_string())?.map_err(|e| e.to_string())?,
                 std::task::Poll::Pending => return Err(String::from("a fixture's loader is still running")),
             }
         }
@@ -155,7 +160,7 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let router = route_table::router();
             let route = router.at(&fixture.route);
             let head = ferrovue::Head::without_defaults();
-            index::render(&mut out, &props, index::Slots { actions: fixture.slot("actions").map(|_| &s_actions as &index::ActionsSlot) }, &route, &head);
+            index::try_render(&mut out, &props, index::Slots { actions: fixture.slot("actions").map(|_| &s_actions as &index::ActionsSlot) }, &route, &head).map_err(|e| e.to_string())?;
             head_into(&mut out, &head);
         }
         "Missing" => {
@@ -164,7 +169,7 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let router = route_table::router();
             let route = router.at(&fixture.route);
             let head = ferrovue::Head::without_defaults();
-            missing::render(&mut out, &props, &route, &head);
+            missing::try_render(&mut out, &props, &route, &head).map_err(|e| e.to_string())?;
             head_into(&mut out, &head);
         }
         "BooksId" => {
@@ -175,7 +180,7 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let router = route_table::router();
             let route = router.at(&fixture.route);
             let head = ferrovue::Head::without_defaults();
-            books_id::render(&mut out, &props, books_id::Slots { actions: fixture.slot("actions").map(|_| ferrovue::Slot::new(&s_actions)), reviews: fixture.slot("reviews").map(|_| ferrovue::Slot::new(&s_reviews)) }, &route, &head);
+            books_id::try_render(&mut out, &props, books_id::Slots { actions: fixture.slot("actions").map(|_| ferrovue::Slot::new(&s_actions)), reviews: fixture.slot("reviews").map(|_| ferrovue::Slot::new(&s_reviews)) }, &route, &head).map_err(|e| e.to_string())?;
             head_into(&mut out, &head);
         }
         "Picks" => {
@@ -189,14 +194,15 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
                 |fv_loads| {
                     out.clear();
                     let head = ferrovue::Head::without_defaults();
-                    picks::render(&mut out, &props, picks::Slots { default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)), reviews: fixture.slot("reviews").map(|_| ferrovue::Slot::new(&s_reviews)) }, &route, &head, fv_loads);
+                    let rendered = picks::try_render(&mut out, &props, picks::Slots { default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)), reviews: fixture.slot("reviews").map(|_| ferrovue::Slot::new(&s_reviews)) }, &route, &head, fv_loads);
                     head_into(&mut out, &head);
+                    rendered
                 },
                 loaders::from_fixture(&fixture.loads),
             );
             let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
             match std::future::Future::poll(std::pin::pin!(loading), &mut cx) {
-                std::task::Poll::Ready(done) => done.map_err(|e| e.to_string())?,
+                std::task::Poll::Ready(done) => done.map_err(|e| e.to_string())?.map_err(|e| e.to_string())?,
                 std::task::Poll::Pending => return Err(String::from("a fixture's loader is still running")),
             }
         }
