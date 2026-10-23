@@ -141,7 +141,7 @@ pnpm test:browser
 
 `pnpm test:browser` is for changes that can affect hydration; Chromium and Firefox must pass, and
 WebKit skips where it cannot launch. A timing test may time out under heavy load; rerun it alone
-before treating it as a failure. CI runs Node 22.18, 22, 24 and 26, stable Rust and the MSRV, and
+before treating it as a failure. CI runs Node 22.23.4, 22, 24 and 26, stable Rust and the MSRV, and
 its **CI passed** job fails when any other job does.
 
 Mutation testing runs weekly in the Mutants workflow, outside the per-PR checks: `cargo mutants` on

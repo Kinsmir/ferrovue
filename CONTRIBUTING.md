@@ -6,7 +6,7 @@ with an error naming the construct. Every change is judged against that.
 
 ## Setting up
 
-You need Node 22.18 or newer with pnpm, and the latest stable Rust.
+You need Node 22.23.4 or newer on 22, 24.22.1 or newer on 24, or 26.12.1 or newer, with pnpm, and the latest stable Rust.
 
 ```sh
 pnpm install
@@ -257,7 +257,7 @@ CHANGELOG's `### Deprecated` subsection, and what it removes under `### Removed`
 - Keep a pull request to one change; the template's checklist covers what CI cannot.
 - Commit messages are short and say what changed (`compiler: support v-show on the root`), with
   detail in the body when the why is not obvious.
-- CI must be green: tests on Node 22.18, 22, 24 and 26 and on stable Rust and the declared minimum,
+- CI must be green: tests on Node 22.23.4, 22, 24 and 26 and on stable Rust and the declared minimum,
   `pnpm lint`, clippy and rustfmt, docs, the example, hydration in real browsers
   (`pnpm test:browser`), both packages packing cleanly, `cargo deny` on the dependencies' licences,
   bans and sources, and zizmor on the workflows (any finding fails it, and `.github/zizmor.yml` lists

@@ -6,7 +6,7 @@ The compiler is an npm package, run at build time; this crate is what its output
 Use the same version of both.
 
 ```sh
-pnpm add -D ferrovue                          # or npm / yarn; Node 22.18 or newer
+pnpm add -D ferrovue                          # or npm / yarn; Node 22.23.4, 24.22.1 or 26.12.1 or newer
 cargo add ferrovue serde --features serde/derive
 cargo add --dev serde_json
 ```
