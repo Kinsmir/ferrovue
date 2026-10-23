@@ -18,6 +18,8 @@ export const CountKey: InjectionKey<Ref<number>> = Symbol("count");
 export const TabsKey = Symbol("tabs") as InjectionKey<TabsState>;
 export const PickKey: InjectionKey<(name: string) => void> = Symbol("pick");
 export const Bare = Symbol("bare");
+export interface Day { at: Date }
+export const DaysKey: InjectionKey<Day[]> = Symbol("days");
 `;
 
 function project(components: Record<string, string>, extra: Partial<Config> = {}): Map<string, string> {
@@ -116,6 +118,8 @@ describe("provide and inject", () => {
   });
 
   const refused: [string, Code, Record<string, string>, RegExp][] = [
+    ["a key provided with dates", "FV1806", { X: sfc("const days = inject(DaysKey, []);", "<b>{{ days.length }}</b>", 'import { DaysKey } from "../types/keys";\ndefineProps<{ label: string }>();') }, /types\/keys\.ts:\d+:\d+: what `DaysKey` provides holds a `Date`/],
+    ["an inject typed with a date", "FV1806", { X: sfc('const at = inject<Date>("at");', "<b>{{ at?.getTime() }}</b>") }, /what `inject` reads holds a `Date`/],
     ["a key held in a local", "FV1601", { X: sfc('const key = "theme";\nconst theme = inject(key, "x");', "<b>{{ theme }}</b>") }, /an injection key is a string literal, or a `Symbol` exported/],
     ["a key a package exports", "FV1601", { X: sfc('const theme = inject(routerKey, "x");', "<b>{{ theme }}</b>", 'import { routerKey } from "vue-router";\ndefineProps<{ label: string }>();') }, /an injection key is a string literal/],
     ["a symbol without `InjectionKey<T>`", "FV1602", { X: sfc('const bare = inject(Bare, "x");', "<b>{{ bare }}</b>") }, /types\/keys\.ts:7:\d+: `Bare` names the type of what it is provided with/],

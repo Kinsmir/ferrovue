@@ -2,9 +2,12 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use serde::de::{self, Deserialize, Deserializer, Visitor};
+use std::borrow::Cow;
+
+use serde::de::{self, Deserialize, DeserializeOwned, Deserializer, Visitor};
 use serde::ser::{Serialize, Serializer};
 
+use crate::Record;
 use crate::dates::{iso_time, js_time_clip, js_to_iso_string};
 
 /// A JavaScript `Date`: its time value, the milliseconds since 1970-01-01T00:00:00Z, a whole number
@@ -317,6 +320,118 @@ pub mod opt_date_prop {
         Option::<JsDate>::deserialize(deserializer)?
             .map(date_prop::held)
             .transpose()
+    }
+}
+
+/// A value that holds dates in lists, dictionaries and optionals, written and read as
+/// [`date_prop`] writes and reads one date: a field typed `Date[]`, `Record<string, Date>` or
+/// `(Date | null)[]`.
+#[doc(hidden)]
+pub trait DateShape: Sized {
+    /// The value with each date a [`JsDate`].
+    type Js: Serialize + DeserializeOwned;
+
+    /// The value with each date a [`JsDate`].
+    fn to_js(&self) -> Self::Js;
+
+    /// The value `js` holds.
+    ///
+    /// # Errors
+    ///
+    /// The first date the type cannot hold.
+    fn from_js(js: Self::Js) -> Result<Self, JsDate>;
+}
+
+impl<T: JsTime> DateShape for T {
+    type Js = JsDate;
+
+    fn to_js(&self) -> JsDate {
+        JsDate::from_millis(self.time_value())
+    }
+
+    fn from_js(js: JsDate) -> Result<T, JsDate> {
+        T::from_time_value(js.time_value()).ok_or(js)
+    }
+}
+
+impl<S: DateShape> DateShape for Option<S> {
+    type Js = Option<S::Js>;
+
+    fn to_js(&self) -> Option<S::Js> {
+        self.as_ref().map(S::to_js)
+    }
+
+    fn from_js(js: Option<S::Js>) -> Result<Option<S>, JsDate> {
+        js.map(S::from_js).transpose()
+    }
+}
+
+impl<S: DateShape> DateShape for Vec<S> {
+    type Js = Vec<S::Js>;
+
+    fn to_js(&self) -> Vec<S::Js> {
+        self.iter().map(S::to_js).collect()
+    }
+
+    fn from_js(js: Vec<S::Js>) -> Result<Vec<S>, JsDate> {
+        js.into_iter().map(S::from_js).collect()
+    }
+}
+
+impl<S: DateShape> DateShape for Record<'_, S> {
+    type Js = Record<'static, S::Js>;
+
+    fn to_js(&self) -> Record<'static, S::Js> {
+        Record::from_entries(
+            self.iter()
+                .map(|(k, v)| (Cow::Owned(k.to_owned()), v.to_js()))
+                .collect(),
+        )
+    }
+
+    fn from_js(js: Record<'static, S::Js>) -> Result<Self, JsDate> {
+        let entries = js
+            .into_entries()
+            .into_iter()
+            .map(|(k, v)| S::from_js(v).map(|v| (k, v)))
+            .collect::<Result<Vec<_>, JsDate>>()?;
+        Ok(Record::from_entries(entries))
+    }
+}
+
+/// How a field holding dates in lists, dictionaries and optionals is written into an island's
+/// `data-props` and read back from a fixture, whatever the dates' Rust type: each date as
+/// [`JsDate`] writes and reads it.
+#[doc(hidden)]
+pub mod dates_in {
+    use super::{DateShape, de};
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    /// The value with each date as [`JsDate`](super::JsDate) writes it.
+    ///
+    /// # Errors
+    ///
+    /// What the serializer refuses.
+    pub fn serialize<T: DateShape, S: Serializer>(
+        value: &T,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        value.to_js().serialize(serializer)
+    }
+
+    /// The value with each date as [`JsDate`](super::JsDate) reads it.
+    ///
+    /// # Errors
+    ///
+    /// A string outside ECMAScript's date time string format, or a date the type cannot hold.
+    pub fn deserialize<'de, T: DateShape, D: Deserializer<'de>>(
+        deserializer: D,
+    ) -> Result<T, D::Error> {
+        T::from_js(T::Js::deserialize(deserializer)?).map_err(|date| {
+            <D::Error as de::Error>::custom(format_args!(
+                "the date {date:?} is beyond what the prop's Rust type holds"
+            ))
+        })
     }
 }
 

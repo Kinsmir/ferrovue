@@ -57,6 +57,7 @@ pub struct Html<'p, P, F = fn(&mut String, &P)> {
     pub(crate) render: F,
     pub(crate) island: Option<&'static str>,
     pub(crate) hydrate: Option<Hydrate>,
+    pub(crate) dates: &'static str,
 }
 
 impl<'p, P: Serialize, F: Fn(&mut String, &P)> Html<'p, P, F> {
@@ -71,6 +72,7 @@ impl<'p, P: Serialize, F: Fn(&mut String, &P)> Html<'p, P, F> {
             render,
             island: None,
             hydrate: None,
+            dates: "",
         }
     }
 
@@ -83,6 +85,7 @@ impl<'p, P: Serialize, F: Fn(&mut String, &P)> Html<'p, P, F> {
             render,
             island: Some(name),
             hydrate: None,
+            dates: "",
         }
     }
 
@@ -96,6 +99,7 @@ impl<'p, P: Serialize, F: Fn(&mut String, &P)> Html<'p, P, F> {
             render,
             island: None,
             hydrate: None,
+            dates: "",
         }
     }
 
@@ -108,6 +112,7 @@ impl<'p, P: Serialize, F: Fn(&mut String, &P)> Html<'p, P, F> {
             render,
             island: Some(name),
             hydrate: None,
+            dates: "",
         }
     }
 
@@ -146,6 +151,16 @@ impl<'p, P: Serialize, F: Fn(&mut String, &P)> Html<'p, P, F> {
         self
     }
 
+    /// Where the props hold dates inside lists, dictionaries and objects, as the compiler wrote
+    /// it: an island carries it in `data-dates`, and a page's record beside the props, for the
+    /// client to turn each one back into a `Date`. For generated code, as [`Html::markup`] is.
+    #[doc(hidden)]
+    #[must_use]
+    pub fn dates(mut self, plan: &'static str) -> Self {
+        self.dates = plan;
+        self
+    }
+
     /// Write the markup onto the end of `buf`, leaving what `buf` already holds as it is: how a
     /// component goes into a page being written in one buffer, or into a slot.
     ///
@@ -173,7 +188,14 @@ impl<'p, P: Serialize, F: Fn(&mut String, &P)> Html<'p, P, F> {
         let props = self.props.get();
         match self.island {
             None => (self.render)(buf, props),
-            Some(name) => island_into(buf, name, self.hydrate.as_ref(), props, &self.render),
+            Some(name) => island_into(
+                buf,
+                name,
+                self.hydrate.as_ref(),
+                self.dates,
+                props,
+                &self.render,
+            ),
         }
     }
 
@@ -296,6 +318,7 @@ fn island_into<P: Serialize>(
     out: &mut String,
     name: &str,
     hydrate: Option<&Hydrate>,
+    dates: &str,
     props: &P,
     render: &impl Fn(&mut String, &P),
 ) {
@@ -306,6 +329,10 @@ fn island_into<P: Serialize>(
     if let Some(hydrate) = hydrate {
         out.push_str("\" data-hydrate=\"");
         escape_into(out, &hydrate.attribute());
+    }
+    if !dates.is_empty() {
+        out.push_str("\" data-dates=\"");
+        escape_into(out, dates);
     }
     out.push_str("\">");
     render(out, props);

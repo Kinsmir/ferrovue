@@ -196,3 +196,20 @@ fn html_shows_when_its_island_hydrates_in_debug() {
         r#"Html { island: Some("Gauge"), hydrate: Media("print"), props: Gauge { level: 1.5, marks: [], top: None }, .. }"#
     );
 }
+
+#[test]
+fn an_island_writes_where_its_props_hold_dates_beside_them() {
+    let props = Gauge {
+        level: 1.0,
+        marks: Vec::new(),
+        top: None,
+    };
+    assert_eq!(
+        Html::island("Gauge", &props, gauge)
+            .dates(r#"[{"at":"<&'>"}]"#)
+            .hydrate(Hydrate::Idle)
+            .into_string(),
+        r#"<div data-island="Gauge" data-props="{&quot;level&quot;:1.0,&quot;marks&quot;:[],&quot;top&quot;:null}" data-hydrate="idle" data-dates="[{&quot;at&quot;:&quot;&lt;&amp;&#39;&gt;&quot;}]">1</div>"#
+    );
+    assert_eq!(Html::markup(&props, gauge).dates("[1]").into_string(), "1");
+}

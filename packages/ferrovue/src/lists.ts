@@ -15,8 +15,8 @@ const COW = "std::borrow::Cow::<str>";
 function itemsTy(s: Scope, v: Val, n: N): Ty {
   if (v.ty.k !== "list") throw new Error("a list method on a value that is not a list");
   const of = v.ty.of;
-  if (!["str", "int", "float", "bool", "struct", "child", "entry"].includes(of.k)) {
-    fail(s.comp, "FV0804", "this method takes a list of strings, numbers, booleans or objects", n);
+  if (!["str", "int", "float", "bool", "date", "struct", "child", "entry"].includes(of.k)) {
+    fail(s.comp, "FV0804", "this method takes a list of strings, numbers, booleans, dates or objects", n);
   }
   return of;
 }
@@ -31,6 +31,7 @@ export function entryPart(v: Val, i: number): Val {
   const place = `${atom(v.code)}.1`;
   if (of.k === "str") return { code: `&**${place}`, ty: of, ...lone };
   if (of.k === "int" || of.k === "float" || of.k === "bool") return { code: `*${place}`, ty: of };
+  if (of.k === "date") return { code: `fv::js_time_of(${place})`, ty: of };
   return { code: place, ty: of, ...lone };
 }
 
@@ -83,7 +84,20 @@ export function untypedEmpty(v: Val): boolean {
 }
 
 export function typedEmpty(comp: Component, of: Ty): Val {
-  return { code: `<&[${localTy(of, comp)}]>::default()`, ty: { k: "list", of }, slice: true };
+  const held = of.k === "date" ? "f64" : of.k === "opt" && of.of.k === "date" ? "Option<f64>" : localTy(of, comp);
+  return { code: `<&[${held}]>::default()`, ty: { k: "list", of }, slice: true };
+}
+
+/** A date, or a list of dates, that the server holds at `place` (a reference to one when `byRef`),
+ * as an expression reads it: each date its time value. `null` for a value held as it is. */
+export function heldDates(place: string, ty: Ty, byRef: boolean): Val | null {
+  if (ty.k === "date") return { code: `fv::js_time_of(${byRef ? place : `&${place}`})`, ty };
+  if (ty.k === "list" && ty.of.k === "date") return computed(`${atom(place)}.iter().map(fv::js_time_of)`, ty.of);
+  if (ty.k === "list" && ty.of.k === "opt" && ty.of.of.k === "date") return computed(`${atom(place)}.iter().map(|v| v.as_ref().map(fv::js_time_of))`, ty.of);
+  if (ty.k !== "opt") return null;
+  if (ty.of.k === "date") return { code: `${atom(place)}.as_ref().map(fv::js_time_of)`, ty };
+  const inner = heldDates("v", ty.of, true);
+  return inner === null ? null : { code: `${atom(place)}.as_ref().map(|v| ${inner.code})`, ty };
 }
 
 export function heldList(name: string, of: Ty, lone?: boolean): Val {
@@ -92,7 +106,7 @@ export function heldList(name: string, of: Ty, lone?: boolean): Val {
 }
 
 function itemVal(of: Ty, param: string, byRef: boolean, lone?: boolean): Val {
-  const scalar = of.k === "int" || of.k === "float" || of.k === "bool";
+  const scalar = of.k === "int" || of.k === "float" || of.k === "bool" || of.k === "date";
   const code = of.k === "str" ? (byRef ? `&**${param}` : `&*${param}`) : byRef && scalar ? `*${param}` : param;
   return { code, ty: of, ...(lone ? { lone } : {}) };
 }
@@ -131,6 +145,8 @@ export function arrow(s: Scope, fn: N, list: Val, of: Ty, byRef: boolean, method
   const code = body({ ...s, locals, narrowed });
   const reads = (name: string) => new RegExp(`\\b${name}\\b`).test(code);
   const pName = reads(p) ? p : "_";
+  const called = new RegExp(`^(fv::\\w+)\\(${p}\\)$`).exec(code)?.[1];
+  if (!index && called !== undefined && !byRef) return { closure: called, enumerate: false };
   if (!index) return { closure: `|${pName}| ${code}`, enumerate: false };
   const lets = (reads(i) ? `let ${i} = ${i} as i64; ` : "");
   if (byRef) {
@@ -233,7 +249,7 @@ export function picked(s: Scope, target: Val, n: N, fromList: (list: string) => 
   if (target.iter !== undefined) {
     const got = fromIter(target.iter);
     if (of.k === "str") return { code: `${atom(got)}.as_deref()`, ty: opt(STR), held: `${got}.map(|v| ${COW}::Owned(v.into_owned()))`, ...lone };
-    if (["int", "float", "bool", "struct", "child", "entry"].includes(of.k)) return { code: got, ty: opt(of), ...lone };
+    if (["int", "float", "bool", "date", "struct", "child", "entry"].includes(of.k)) return { code: got, ty: opt(of), ...lone };
   } else {
     const got = fromList(atom(target.code));
     const inner = of.k === "opt" ? of.of : of;
@@ -244,6 +260,7 @@ export function picked(s: Scope, target: Val, n: N, fromList: (list: string) => 
       case "int":
       case "float":
       case "bool":
+      case "date":
         return { code: flat ? `${got}.and_then(|v| *v)` : `${got}.copied()`, ty: opt(of) };
       case "entry":
         return { code: `${got}.copied()`, ty: opt(of), ...lone };
@@ -494,6 +511,8 @@ function sorted(s: Scope, target: Val, args: N[], n: N): Val {
       return computed(`fv::js_sorted_by_string(${it}, |v| fv::Js(*v).to_string())`, of);
     case "bool":
       return computed(`fv::js_sorted(${it}, bool::cmp)`, of);
+    case "date":
+      return fail(comp, "FV1804", "`.toSorted()` without a comparator orders dates by `String(x)`, which writes each in the time zone of the machine running it: sort the dates in Rust and pass them sorted (see the `dates_and_prices` guide)", n);
     case "entry":
       return fail(comp, "FV0816", "`.toSorted()` without a comparator orders the `[key, value]` pairs of `Object.entries()` by `String(pair)`, the key and the value joined by `,`, which the server does not write for each pair: give it a comparator, `([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)` or `(a, b) => a[1] - b[1]`", n);
     default:
@@ -714,7 +733,7 @@ export function listMethod(s: Scope, target: Val, method: string, given: N[], n:
         if (out.ty.k === "int" && out.f64 !== undefined && /-[\w(]|\s[*%]\s/.test(out.f64)) out = { ...out, code: out.f64, ty: FLOAT };
         return mapped(inner, out, fn.body);
       });
-      const each = `${it}${enumerate ? ".enumerate()" : ""}.map(${closure})`;
+      const each = !enumerate && /^\|(\w+)\| \1$/.test(closure) ? it : `${it}${enumerate ? ".enumerate()" : ""}.map(${closure})`;
       if (out!.owned) return { code: `${each}.collect::<Vec<_>>()`, ty: { k: "list", of: out!.ty }, owned: true, ...(out!.lone ? { lone: true } : {}) };
       return computed(each, out!.ty, out!.lone);
     }
@@ -770,7 +789,7 @@ export function objectCall(s: Scope, method: string, args: N[], n: N): Val {
   const of = r.ty.of;
   if (method === "keys") return computed(`${atom(r.code)}.keys().map(${COW}::Borrowed)`, STR);
   if (method === "values") {
-    const values = of.k === "str" ? `.values().map(|v| ${COW}::Borrowed(&**v))` : ["struct", "child", "list", "record"].includes(of.k) ? ".values()" : ".values().copied()";
+    const values = of.k === "str" ? `.values().map(|v| ${COW}::Borrowed(&**v))` : of.k === "date" ? ".values().map(fv::js_time_of)" : ["struct", "child", "list", "record"].includes(of.k) ? ".values()" : ".values().copied()";
     return computed(`${atom(r.code)}${values}`, of);
   }
   if (method === "entries") return computed(`${atom(r.code)}.iter()`, { k: "entry", of }, r.lone);

@@ -14,7 +14,7 @@ const all = ref(false);
     <ol v-if="reviews.length">
       <li v-for="(r, i) in reviews" v-show="all || i < 2" :key="i">
         <StarRating :value="r.stars" />
-        <q>{{ r.text }}</q> — {{ r.reader }}
+        <q>{{ r.text }}</q> — {{ r.reader }}<time v-if="r.posted" :datetime="r.posted.toISOString()">, {{ r.posted.getUTCFullYear() }}</time>
       </li>
     </ol>
     <p v-else>No reviews yet.</p>

@@ -62,7 +62,7 @@ export function list(s: Scope, e: Emitter, c: N): void {
     if (of.k === "str") e.stmt(`let ${itemName}: &str = ${itemCode};`);
     else if (of.k === "struct" || of.k === "child") e.stmt(`let ${itemName} = ${itemCode};`);
     else if (of.k === "opt" && of.of.k === "str") e.stmt(`let ${itemName} = ${itemCode}.as_deref();`);
-    else if (of.k === "opt" && !["int", "float", "bool"].includes(of.of.k)) e.stmt(`let ${itemName} = ${itemCode}.as_ref();`);
+    else if (of.k === "opt" && !["int", "float", "bool", "date"].includes(of.of.k)) e.stmt(`let ${itemName} = ${itemCode}.as_ref();`);
     else e.stmt(`let ${itemName} = *${itemName}_ref;`);
     itemLet = e.lines.length - 1;
   } else {
@@ -116,7 +116,7 @@ function recordLoop(s: Scope, e: Emitter, r: Val, fn: N, value: N | undefined, k
   const head = e.lines.length - 1;
   const indent = /^ */.exec(e.lines[head]!)![0];
   const inner = new Map(s.locals);
-  e.stmt(of.k === "str" ? `let ${v}: &str = ${v}_ref;` : of.k === "int" || of.k === "float" || of.k === "bool" ? `let ${v} = *${v}_ref;` : `let ${v} = ${v}_ref;`);
+  e.stmt(of.k === "str" ? `let ${v}: &str = ${v}_ref;` : of.k === "int" || of.k === "float" || of.k === "bool" ? `let ${v} = *${v}_ref;` : of.k === "date" ? `let ${v} = fv::js_time_of(${v}_ref);` : `let ${v} = ${v}_ref;`);
   e.stmt(`let ${i} = ${i} as i64;`);
   const bodyFrom = e.lines.length;
   if (value?.type === "Identifier") inner.set(value.name, { code: v, ty: of });

@@ -6,6 +6,8 @@
 
 use std::borrow::Cow;
 
+use ferrovue as fv;
+
 /// `Size` in `types/models.ts`: `"sm" | "md" | "lg"`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum Size {
@@ -96,6 +98,27 @@ impl<'a> Choice<'a> {
     /// Choice with its required fields.
     pub fn new(id: i64, label: impl Into<Cow<'a, str>>) -> Self {
         Choice { id, label: label.into() }
+    }
+
+}
+
+
+/// `Moment` in `types/models.ts`.
+#[derive(Debug, Clone, serde::Serialize)]
+#[cfg_attr(test, derive(serde::Deserialize))]
+pub struct Moment<'a> {
+    #[serde(rename = "label")]
+    pub label: Cow<'a, str>,
+    #[serde(rename = "at", with = "fv::date_prop")]
+    pub at: ferrovue::JsDate,
+    #[serde(rename = "seen", with = "fv::dates_in")]
+    pub seen: Vec<Option<ferrovue::JsDate>>,
+}
+
+impl<'a> Moment<'a> {
+    /// Moment with its required fields.
+    pub fn new(label: impl Into<Cow<'a, str>>, at: ferrovue::JsDate, seen: Vec<Option<ferrovue::JsDate>>) -> Self {
+        Moment { label: label.into(), at, seen }
     }
 
 }

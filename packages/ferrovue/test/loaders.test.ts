@@ -18,6 +18,10 @@ export const loadCount = defineLoader("loadCount", async (): Promise<number> => 
 export const loadName = defineLoader("loadName", async (id: number, nick: string | null): Promise<string | null> => nick ?? String(id));
 export const loadMaybe = defineLoader("loadMaybe", async (): Promise<string | undefined> => undefined);
 export const loadWhen = defineLoader("loadWhen", async (): Promise<Date> => new Date());
+export interface Stamp { at: Date; seen: (Date | null)[]; by: Record<string, Date> }
+export const loadStamps = defineLoader("loadStamps", async (): Promise<Stamp[]> => []);
+export const loadDays = defineLoader("loadDays", async (): Promise<Date[] | null> => null);
+export const loadSince = defineLoader("loadSince", async (since: Date): Promise<number> => since.getTime());
 export const loadUntyped = defineLoader("loadUntyped", async (id: number) => id);
 export const loadNamed = defineLoader(String("x"), async (): Promise<number> => 1);
 export const loadSync = defineLoader("loadSync", (id: number): Promise<number> => Promise.resolve(id));
@@ -88,6 +92,23 @@ describe("loaders", () => {
     expect(out.get("page.rs")).toContain('super::x::render(out, &super::x::Props { id: 2i64, lang: None, nick: Some(std::borrow::Cow::Borrowed("n")) }, fv_loads);');
   });
 
+  it("awaits a loader whose result holds dates, written as JsDates with a plan of where they are", () => {
+    const template = '<b>{{ when.getTime() }}</b><i v-for="s in stamps">{{ s.at.toISOString() }}{{ s.seen.length }}</i><u v-if="days" v-for="d in days">{{ d.getUTCDate() }}</u>';
+    const out = project({ X: sfc("const when = await loadWhen();\nconst stamps = await loadStamps();\nconst days = await loadDays();", template, "loadWhen, loadStamps, loadDays") });
+    const loaders = out.get("loaders.rs")!;
+    expect(loaders).toContain('    type Output = fv::JsDate;\n    const DATES: &\'static str = "[1]";');
+    expect(loaders).toContain('    type Output = Vec<super::types::Stamp<\'static>>;\n    const DATES: &\'static str = "[[{\\"at\\":1,\\"seen\\":[1],\\"by\\":{\\"*\\":1}}]]";');
+    expect(loaders).toContain('    type Output = Option<Vec<fv::JsDate>>;\n    const DATES: &\'static str = "[[1]]";');
+    const types = out.get("types.rs")!;
+    expect(types).toContain('    #[serde(rename = "at", with = "fv::date_prop")]\n    pub at: ferrovue::JsDate,');
+    expect(types).toContain('    #[serde(rename = "seen", with = "fv::dates_in")]\n    pub seen: Vec<Option<ferrovue::JsDate>>,');
+    expect(types).toContain('    #[serde(rename = "by", with = "fv::dates_in")]\n    pub by: ferrovue::Record<\'a, ferrovue::JsDate>,');
+    const x = out.get("x.rs")!;
+    expect(x).toContain("fv::push_number(out, fv::js_time_of(l_0));");
+    expect(x).toContain("fv::js_to_iso_string(fv::js_time_of(&s.at))");
+    expect(x).toContain("l_2.as_ref().map(|v| v.iter().map(fv::js_time_of).collect::<Vec<_>>())");
+  });
+
   it("keeps an await whose result the template does not read", () => {
     const x = project({ X: sfc("await loadCount();\nconst post = await loadPost(1);", "<b>{{ id }}</b>") }).get("x.rs")!;
     expect(x).toContain("if fv_loads.get(super::loaders::LoadCount).is_none() {");
@@ -102,7 +123,7 @@ describe("loaders", () => {
     ["a loader parameter that is an object", "FV2003", sfc("const n = await loadObject({ id: 1 });", "<b>{{ n }}</b>", "loadObject"), /parameter `q` of loader `loadObject`/],
     ["a loader without a result type", "FV2004", sfc("const n = await loadUntyped(1);", "<b>{{ n }}</b>", "loadUntyped"), /declares what it returns/],
     ["a loader that may return undefined", "FV2004", sfc("const n = await loadMaybe();", "<b>{{ n }}</b>", "loadMaybe"), /may return `undefined`/],
-    ["a loader that returns a date", "FV1806", sfc("const n = await loadWhen();", "<b>{{ n }}</b>", "loadWhen"), /a `Date` here/],
+    ["a loader parameter that is a date", "FV2003", sfc("const n = await loadSince(new Date(0));", "<b>{{ n }}</b>", "loadSince"), /parameter `since` of loader `loadSince` is a `Date`/],
     ["two loaders with one name", "FV2005", sfc("const a = await loadPost(1);\nconst b = await loadAgain();", "<b>{{ a.title }}{{ b }}</b>", "loadPost, loadAgain"), /two loaders are called `loadPost`/],
     ["two loaders with one Rust name", "FV2005", sfc("const a = await loadCount();\nconst b = await loadSnake();", "<b>{{ a }}{{ b }}</b>", "loadCount, loadSnake"), /would both be the method `load_count`/],
     ["a loader call without a required argument", "FV2006", sfc("const post = await loadPost();", "<b>{{ post.title }}</b>"), /takes `id`, which the call does not give/],

@@ -11,7 +11,9 @@
 
 ferrovue::__compat!(5);
 
+pub mod date_days;
 pub mod date_post;
+pub mod date_rows;
 pub mod date_stamp;
 
 /// Render one component from its props as JSON, for the conformance suite.
@@ -19,9 +21,17 @@ pub mod date_stamp;
 pub fn render_json(component: &str, json: &str) -> Result<String, String> {
     let mut out = String::new();
     match component {
+        "DateDays" => {
+            let props: date_days::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            date_days::render(&mut out, &props);
+        }
         "DatePost" => {
             let props: date_post::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             date_post::render(&mut out, &props);
+        }
+        "DateRows" => {
+            let props: date_rows::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            date_rows::render(&mut out, &props);
         }
         "DateStamp" => {
             let props: date_stamp::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

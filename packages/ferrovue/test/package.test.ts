@@ -31,7 +31,7 @@ function graph(entry: string): { files: Set<string>; packages: Set<string> } {
 it("keeps the package root to the browser API, reaching only Vue", () => {
   const { files, packages } = graph("src/index.ts");
   expect([...packages].toSorted()).toEqual(["vue"]);
-  expect([...files].map((f) => relativePath(ROOT, f)).toSorted()).toEqual(["src/client.ts", "src/index.ts", "src/loads.ts", "src/page-json.ts", "src/types.ts"]);
+  expect([...files].map((f) => relativePath(ROOT, f)).toSorted()).toEqual(["src/client.ts", "src/index.ts", "src/loads.ts", "src/page-json.ts", "src/revive.ts", "src/types.ts"]);
 });
 
 it("keeps ferrovue/link-router to vue-router and the routes it is given", () => {

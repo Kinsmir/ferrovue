@@ -348,6 +348,24 @@ what an earlier render collected is not written twice.
 The generated module also has `dispatch`, which runs one call a render asks for with the app's
 method for it, for an app that drives [`load`](crate::load) itself.
 
+# Dates
+
+A loader's result may hold dates as a prop does: `Promise<Date>`, `Promise<Date | null>`,
+`Promise<Date[]>`, or an interface with date fields, lists and dictionaries of them. A date that
+is the result itself, or in a list, a dictionary or an optional of it, is a
+[`JsDate`](crate::JsDate) in `Output`; a date in an interface's field is the type `dateType`
+names. The payload writes each as its ISO string, an invalid one as `NaN`, and under `dates` where
+each loader's results hold dates:
+
+```text
+{"[\"loadStock\",\"dune\"]":{"copies":3,"counted":"2024-06-01T00:00:00.000Z"},"dates":{"loadStock":[{"counted":1}]}}
+```
+
+`provideLoads` turns those back into `Date`s, so a component that awaits the loader in the browser
+hydrates from the dates the server rendered. A call the payload does not carry runs the loader in
+the browser, whose own code builds its dates, as `new Date(json.counted)` does from what an API
+returns.
+
 # Keys
 
 A call's key is `JSON.stringify([name, ...args])`, which the client computes from the same call:
@@ -409,7 +427,7 @@ A call the fixture gives no result for fails the render on both sides.
   `async`, a parameter with a default, `...rest`, a pattern or a type other than a string, number
   or boolean, a result type not declared as `Promise<T>` or one that may be `undefined`
   ([FV2002](crate::guide::error_codes#fv2002) to [FV2004](crate::guide::error_codes#fv2004)).
-  Return `null` for none, and a date as its ISO string.
+  Return `null` for none.
 - Two loaders with one name, or names that are one Rust name
   ([FV2005](crate::guide::error_codes#fv2005)).
 - A call whose arguments do not match the parameters, or are spread

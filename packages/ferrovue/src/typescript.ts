@@ -29,12 +29,24 @@ export const ONE_NOTHING = "its Rust type is an `Option`, whose `None` cannot be
 
 const NULL_OR_UNDEFINED = `a type that is both \`null\` and \`undefined\`: ${ONE_NOTHING}; keep one of them`;
 
-export const DATE_PROPS_ONLY =
-  "only a component's own prop may be a `Date`, which the client turns back into one from the prop's declared type: pass an ISO string or a number of milliseconds and build the date with `new Date()` (see the `dates_and_prices` guide)";
+export const DATES_REVIVED =
+  "a `Date` reaches the browser as a `Date` from a prop or a loader's result, where the compiler tells the client which values are dates; Pinia state, `provide`, `inject`, a `ref` and a `defineModel` reach it as JSON the client cannot tell from a string: pass an ISO string or a number of milliseconds and build the date with `new Date()` (see the `dates_and_prices` guide)";
 
-/** A TypeScript type's type, where `dates` says whether it may be a `Date`: a component's own prop,
- * which may be optional or nullable too. */
-export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen: Set<string> = new Set(), dates = false): Ty {
+/** Whether a value of the type holds a `Date` itself, or in a list or a dictionary, outside any object. */
+export function bareDates(ty: Ty): boolean {
+  if (ty.k === "date") return true;
+  return (ty.k === "opt" || ty.k === "list" || ty.k === "record") && bareDates(ty.of);
+}
+
+function listOf(comp: Component, of: Ty, t: N): Ty {
+  if ((of.k === "list" || of.k === "record" || (of.k === "opt" && (of.of.k === "list" || of.of.k === "record"))) && bareDates(of)) {
+    fail(comp, "FV1810", "a list of lists or dictionaries of `Date`s: hold each inner list in an object, as `{ at: Date[] }[]`", t);
+  }
+  return { k: "list", of };
+}
+
+/** A TypeScript type's type. */
+export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen: Set<string> = new Set()): Ty {
   switch (t.type) {
     case "FvTy":
       return t.ty;
@@ -45,9 +57,9 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
     case "TSBooleanKeyword":
       return BOOL;
     case "TSArrayType":
-      return { k: "list", of: tyOfTs(comp, t.elementType, structs, seen) };
+      return listOf(comp, tyOfTs(comp, t.elementType, structs, seen), t);
     case "TSParenthesizedType":
-      return tyOfTs(comp, t.typeAnnotation, structs, seen, dates);
+      return tyOfTs(comp, t.typeAnnotation, structs, seen);
     case "TSTypeLiteral": {
       const [sig] = t.members;
       const key = sig?.parameters?.[0]?.typeAnnotation?.typeAnnotation;
@@ -57,7 +69,7 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
       return fail(comp, "FV0310", "an object type in place: declare it as an interface, or as `{ [key: string]: T }` for a dictionary", t);
     }
     case "TSTypeOperator":
-      if (t.operator === "readonly") return tyOfTs(comp, t.typeAnnotation, structs, seen, dates);
+      if (t.operator === "readonly") return tyOfTs(comp, t.typeAnnotation, structs, seen);
       break;
     case "TSLiteralType":
       if (t.literal.type === "StringLiteral") return literalTy("str", [t.literal.value]);
@@ -73,7 +85,7 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
         if (u.type === "TSUndefinedKeyword") none = joinAbsence(none, "undefined");
         else if (isNull(u)) none = joinAbsence(none, "null");
         else {
-          const ty = tyOfTs(comp, u, structs, seen, dates);
+          const ty = tyOfTs(comp, u, structs, seen);
           none = joinAbsence(none, absence(ty));
           tys.push(ty.k === "opt" ? ty.of : ty);
         }
@@ -87,7 +99,7 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
       const name: string | undefined = t.typeName.type === "Identifier" ? t.typeName.name : undefined;
       if (name === undefined) break;
       if ((name === "Array" || name === "ReadonlyArray") && t.typeParameters?.params?.length === 1) {
-        return { k: "list", of: tyOfTs(comp, t.typeParameters.params[0], structs, seen) };
+        return listOf(comp, tyOfTs(comp, t.typeParameters.params[0], structs, seen), t);
       }
       if (name === "Record" && t.typeParameters?.params?.length === 2) {
         const [key, value] = t.typeParameters.params;
@@ -100,10 +112,7 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
         return { k: "struct", name };
       }
       if (comp.childProps.has(name)) return { k: "child", name: comp.childProps.get(name)! };
-      if (name === "Date" && !comp.aliases.has(name) && !comp.importedTypes.has(name)) {
-        if (!dates) fail(comp, "FV1806", `a \`Date\` here: ${DATE_PROPS_ONLY}`, t);
-        return { k: "date" };
-      }
+      if (name === "Date" && !comp.aliases.has(name) && !comp.importedTypes.has(name)) return { k: "date" };
       if (comp.floatName !== null && name === comp.floatName) return FLOAT;
       if (comp.inlineName !== null && name === comp.inlineName) return { k: "html", inline: true };
       if (comp.trustedName !== null && name === comp.trustedName) {
@@ -120,7 +129,7 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
       const alias = comp.aliases.get(name);
       if (alias) {
         if (seen.has(name)) fail(comp, "FV0314", `type \`${name}\` refers to itself through an alias`, t);
-        return namedBy(alias, tyOfTs(comp, alias, structs, new Set(seen).add(name), dates));
+        return namedBy(alias, tyOfTs(comp, alias, structs, new Set(seen).add(name)));
       }
       refuseUnresolved(comp, name, t);
       return fail(comp, "FV0315", `unsupported prop type \`${name}\`: declare it as an interface in the component, or import it from a \`.ts\` file`, t);
@@ -133,7 +142,7 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
 function recordOf(comp: Component, value: N, structs: Map<string, Struct>, seen: Set<string>): Ty {
   const of = tyOfTs(comp, value, structs, seen);
   const plain = (t: Ty): boolean => ["str", "int", "float", "bool", "struct", "child"].includes(t.k) || (t.k === "list" && plain(t.of));
-  if (!plain(of)) fail(comp, "FV0317", "a `Record`'s values are strings, numbers, booleans, objects or lists of those", value);
+  if (!plain(of) && of.k !== "date") fail(comp, "FV0317", "a `Record`'s values are strings, numbers, booleans, dates, objects or lists of those other than dates", value);
   return { k: "record", of };
 }
 
@@ -215,14 +224,14 @@ export function reachType(name: string): void {
 }
 
 /** Translate an interface a component declares, the first time something the server renders
- * reaches it; `dates` when it is the component's props. */
-export function reachLocal(comp: Component, name: string, dates = false): void {
+ * reaches it. */
+export function reachLocal(comp: Component, name: string): void {
   const decl = comp.typeDecls.get(name);
   if (decl === undefined || comp.reached.has(name)) return;
   comp.reached.add(name);
   try {
     refusePrelude(comp, { name, node: decl.node });
-    comp.structs.set(name, structOf(comp, name, decl.members, comp.structs, true, dates));
+    comp.structs.set(name, structOf(comp, name, decl.members, comp.structs, true));
   } catch (e) {
     comp.reached.delete(name);
     throw e;
@@ -242,7 +251,7 @@ export function requireWhole(comp: Component, ty: Ty, seen: Set<Struct> = new Se
   for (const f of st.fields) requireWhole(owner, f.ty, seen);
 }
 
-/** Whether a value of the type holds a `Date` inside a list, a dictionary or an object. */
+/** Whether a value of the type holds a `Date`, itself or inside a list, a dictionary or an object. */
 export function holdsDate(comp: Component, ty: Ty, seen: Set<Struct | Component> = new Set()): boolean {
   if (ty.k === "date") return true;
   if (ty.k === "opt" || ty.k === "list" || ty.k === "record") return holdsDate(comp, ty.of, seen);
@@ -259,12 +268,57 @@ export function holdsDate(comp: Component, ty: Ty, seen: Set<Struct | Component>
   return st.fields.some((f) => holdsDate(owner, f.ty, seen));
 }
 
-/** Refuse a prop that holds a `Date` anywhere but as itself, optional or nullable. */
-export function refuseNestedDates(comp: Component, fields: Field[], node: N): void {
-  for (const f of fields) {
-    const of = f.ty.k === "opt" ? f.ty.of : f.ty;
-    if (of.k !== "date" && holdsDate(comp, of)) fail(comp, "FV1806", `\`${f.js}\` holds a \`Date\` inside a list or an object: ${DATE_PROPS_ONLY}`, node);
-  }
+type Plan = 1 | string | Plan[] | { [key: string]: Plan };
+
+/** Where a value of the type holds dates, for the client to turn each one back into a `Date`, as
+ * the JSON `[plan]`, or `[plan, types]` where a type holds itself: a plan is `1` for a date, `[p]`
+ * for a list, `{ "*": p }` for a dictionary, an object of the fields that hold dates for an
+ * interface, and the name of one of `types` for a type that holds itself. `null` where it holds
+ * none. */
+export function datePlan(comp: Component, ty: Ty): string | null {
+  if (!holdsDate(comp, ty)) return null;
+  const names = new Map<Struct | Component, string>();
+  const open = new Set<Struct | Component>();
+  const types: Record<string, Plan> = {};
+  const named = (key: Struct | Component, name: string): string => {
+    let given = names.get(key);
+    if (given === undefined) {
+      given = name;
+      for (let i = 2; [...names.values()].includes(given); i++) given = `${name}${i}`;
+      names.set(key, given);
+    }
+    return given;
+  };
+  const fields = (owner: Component, key: Struct | Component, name: string, list: Field[]): Plan => {
+    if (open.has(key)) return named(key, name);
+    open.add(key);
+    const plan: Record<string, Plan> = {};
+    for (const f of list) if (holdsDate(owner, f.ty)) plan[f.js] = of(owner, f.ty);
+    open.delete(key);
+    if (!names.has(key)) return plan;
+    types[names.get(key)!] = plan;
+    return names.get(key)!;
+  };
+  const of = (owner: Component, t: Ty): Plan => {
+    if (t.k === "date") return 1;
+    if (t.k === "opt") return of(owner, t.of);
+    if (t.k === "list") return [of(owner, t.of)];
+    if (t.k === "record") return { "*": of(owner, t.of) };
+    if (t.k === "child") {
+      const child = childOf(t.name);
+      return fields(child, child, t.name, child.props.fields);
+    }
+    if (t.k !== "struct") throw new Error(`a date plan of ${t.k}`);
+    const { st, owner: home } = lookupStruct(owner, t);
+    return fields(home, st!, t.name, st!.fields);
+  };
+  const root = of(comp, ty);
+  return JSON.stringify(Object.keys(types).length ? [root, types] : [root]);
+}
+
+/** Refuse a type that holds a `Date` where `what` reaches the browser as plain JSON. */
+export function refuseDates(comp: Component, ty: Ty, what: string, node: N): void {
+  if (holdsDate(comp, ty)) fail(comp, "FV1806", `${what} holds a \`Date\`: ${DATES_REVIVED}`, node);
 }
 
 /** Whether `types.rs` holds the type: one built from a constant list, or a declared one something reached. */
@@ -295,12 +349,12 @@ export function lookupStruct(comp: Component, ty: Ty & { k: "struct" }): { st: S
   return { st: comp.structs.get(ty.name), owner: comp, path: "" };
 }
 
-export function structOf(comp: Component, name: string, members: N[], structs: Map<string, Struct>, lenient = false, dates = false, enums = true): Struct {
+export function structOf(comp: Component, name: string, members: N[], structs: Map<string, Struct>, lenient = false, enums = true): Struct {
   const fields: Field[] = [];
   const refused = new Map<string, GenError>();
   for (const m of members) {
     try {
-      fields.push(fieldOf(comp, name, m, structs, dates, enums));
+      fields.push(fieldOf(comp, name, m, structs, enums));
     } catch (e) {
       if (!lenient || !(e instanceof GenError)) throw e;
       const key = memberKey(m);
@@ -316,11 +370,11 @@ function memberKey(m: N): string {
   return m.key.type === "Identifier" ? m.key.name : m.key.type === "StringLiteral" ? m.key.value : "";
 }
 
-function fieldOf(comp: Component, name: string, m: N, structs: Map<string, Struct>, dates: boolean, enums: boolean): Field {
+function fieldOf(comp: Component, name: string, m: N, structs: Map<string, Struct>, enums: boolean): Field {
   if (m.type !== "TSPropertySignature" || m.key.type !== "Identifier") {
     fail(comp, "FV0320", `\`${name}\` may only hold plain named fields`, m);
   }
-  const base = tyOfTs(comp, m.typeAnnotation.typeAnnotation, structs, new Set(), dates);
+  const base = tyOfTs(comp, m.typeAnnotation.typeAnnotation, structs, new Set());
   if (m.optional && absence(base) === "null") {
     fail(comp, "FV0321", `\`${m.key.name}?: T | null\` may be absent, which is \`undefined\`, or \`null\`: ${ONE_NOTHING}; declare it \`${m.key.name}: T | null\` or \`${m.key.name}?: T\``, m);
   }

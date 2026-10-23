@@ -20,7 +20,7 @@ a public field per prop, and a struct for every interface or object type alias t
 | `Record<string, T>`, `{ [key: string]: T }` | [`ferrovue::Record<'a, T>`](crate::Record) | the `Record`, collected from pairs. See [Dictionaries](#dictionaries) |
 | `Props` imported from another component | `super::child::Props<'a>` | the struct |
 | `TrustedHtml` (from `ferrovue/types`) | the type configured as `trustedHtml` | that type. See [`escaping`](crate::guide::escaping) |
-| `Date`, a component's own prop | [`ferrovue::JsDate`](crate::JsDate), or the type configured as `dateType` | that type. See [`dates_and_prices`](crate::guide::dates_and_prices#date-props) |
+| `Date`, as a prop or inside a list, a dictionary or an interface | [`ferrovue::JsDate`](crate::JsDate), or the type configured as `dateType` | that type. See [`dates_and_prices`](crate::guide::dates_and_prices#date-props) |
 | `x?: T`, `x: T \| undefined` | `Option<T>` | a setter, `.x(value)` |
 | `x: T \| null` | `Option<T>`, written as `null` | a setter, `.x(value)` |
 | `T`, of `<script setup generic="T extends Row">` | the type of its constraint, `Row<'a>` | as the constraint |

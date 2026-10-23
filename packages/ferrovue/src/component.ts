@@ -5,7 +5,7 @@ import { basename } from "node:path";
 import { relativePath } from "./paths.ts";
 import { type Component, type N, absence, blankComponent, fail, GenError, opt, snake, sourceAt, tagAst } from "./model.ts";
 import { ctx, readSource } from "./context.ts";
-import { typesImports, declareTypes, defaultValue, definePropsType, ONE_NOTHING, reachLocal, readTypeFile, runtimeDefaults, structOf, tyOfTs } from "./typescript.ts";
+import { typesImports, declareTypes, defaultValue, definePropsType, ONE_NOTHING, reachLocal, readTypeFile, refuseDates, runtimeDefaults, structOf, tyOfTs } from "./typescript.ts";
 import { enumField } from "./enums.ts";
 import { claim } from "./plugin.ts";
 import { asyncChildren } from "./script.ts";
@@ -198,9 +198,9 @@ export function readComponent(file: string, root: string, name = basename(file, 
   }
   if (!propsTy) {
   } else if (propsTy.type === "TSTypeLiteral") {
-    comp.props = structOf(comp, "Props", propsTy.members, comp.structs, false, true);
+    comp.props = structOf(comp, "Props", propsTy.members, comp.structs);
   } else if (propsTy.type === "TSTypeReference" && comp.structs.has(propsTy.typeName.name)) {
-    reachLocal(comp, propsTy.typeName.name, true);
+    reachLocal(comp, propsTy.typeName.name);
     const st = comp.structs.get(propsTy.typeName.name)!;
     const refused = st.refused?.values().next().value;
     if (refused !== undefined) throw refused;
@@ -222,6 +222,7 @@ export function readComponent(file: string, root: string, name = basename(file, 
         (p: N) => p.type === "ObjectProperty" && (p.key.name ?? p.key.value) === "required" && p.value.type === "BooleanLiteral" && p.value.value,
       );
       const base = tyOfTs(comp, t, comp.structs);
+      refuseDates(comp, base, "a `defineModel`", t);
       if (!required && absence(base) === "null") fail(comp, "FV0306", `a \`defineModel\` of \`T | null\` that is not \`required\` may be absent, which is \`undefined\`, or \`null\`: ${ONE_NOTHING}`, call);
       comp.props.fields.push({ js: named, rust: snake(named), ty: enumField(comp, comp.name, named, call, required ? base : opt(base)) });
       comp.models.set(d.id.name, named);

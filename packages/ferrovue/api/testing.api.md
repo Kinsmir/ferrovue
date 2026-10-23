@@ -77,11 +77,13 @@ export interface PageOptions extends Pick<MountOptions, "pinia" | "router" | "pl
 export interface PagePart {
     // (undocumented)
     c: string;
+    d?: unknown;
     p: Record<string, unknown> | null;
 }
 
 // @public
 export interface PageRecord {
+    dates?: unknown;
     props: Record<string, unknown> | null;
     // (undocumented)
     slots: Record<string, PagePart[]>;

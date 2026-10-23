@@ -1,0 +1,1 @@
+{"id":"dune","$loads":{"[\"loadStock\",\"dune\"]":{"copies":3,"warehouse":"leeds","counted":"2024-06-01T00:00:00.000Z"},"[\"loadWarehouse\",\"leeds\"]":{"city":"Leeds","days":2}}}

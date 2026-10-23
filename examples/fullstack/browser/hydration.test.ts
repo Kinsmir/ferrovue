@@ -222,6 +222,8 @@ describe.each(BROWSERS)("%s", (name) => {
     const chunks = scripts.map((s) => /^\/assets\/(\w+)-/.exec(s)?.[1]).filter((c) => c && c !== "main");
     expect(chunks).toEqual(expect.arrayContaining(["picks", "Pick", "Reviews"]));
     expect(await page.locator(".stock p").allTextContents()).toEqual(["3 copies in stock", "Ships from Leeds in 2 days"]);
+    expect(await page.locator(".stock .counted time").textContent()).toBe("2024-06-01");
+    expect(await page.locator(".review-list time").allTextContents()).toEqual([", 2024", ", 2024", ", 1999"]);
     expect(apis, "the loaders were answered from the page").toEqual([]);
 
     const add = page.locator('.pick[data-id="dune"] button.add');
@@ -255,6 +257,8 @@ describe.each(BROWSERS)("%s", (name) => {
     expect(documents).toEqual([]);
     expect(await page.locator(".review-list q").allTextContents()).toEqual(["Winter, and what it does to people."]);
     expect(await page.locator(".stock p").allTextContents()).toEqual(["1 copy in stock", "Ships from Porto in 1 day"]);
+    expect(await page.locator(".stock .counted time").textContent()).toBe("2024-05-01");
+    expect(await page.locator(".review-list time").allTextContents()).toEqual([", 2020"]);
     expect(await page.locator(".review-list a.share").getAttribute("href")).toMatch(/featured%3Dleft-hand$/);
     expect(await page.title()).toBe("Staff picks · Ferrovue Books");
     expect(await add.textContent(), "the next page starts from the state its document carries").toBe("Add to basket");

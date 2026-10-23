@@ -138,6 +138,58 @@ fn an_island_carries_its_dates_as_iso_strings_and_an_invalid_one_as_nan() {
 }
 
 #[test]
+fn an_island_carries_dates_inside_lists_and_objects_and_where_they_are() {
+    use ferrovue::{JsDate, Record};
+    use generated::date_rows;
+    let date = |iso: &str| JsDate::parse(iso).expect(iso);
+    let stamps: Record<'_, JsDate> = [
+        ("b", date("2024-05-01T09:30+02:00")),
+        ("nan", JsDate::INVALID),
+    ]
+    .into_iter()
+    .collect();
+    let row = date_rows::Row::new(
+        "<Spring>",
+        date("2024-03-10T08:05:09.007Z"),
+        vec![date("+010000-01-01"), JsDate::INVALID],
+        vec![None, Some(JsDate::from_millis(-1.0)), Some(JsDate::INVALID)],
+        [("ada", date("2024-01-01"))].into_iter().collect(),
+    )
+    .edited(JsDate::INVALID);
+    let invalid = date_rows::Row::new("", JsDate::INVALID, Vec::new(), Vec::new(), Record::new())
+        .deleted(date("-271821-04-20"));
+    let rows = [
+        date_rows::Props::new(
+            vec![row.clone(), invalid],
+            vec![date("2024-02-29"), JsDate::INVALID],
+            stamps,
+        )
+        .maybe(vec![JsDate::INVALID])
+        .lead(row),
+        date_rows::Props::new(Vec::new(), Vec::new(), Record::new()),
+    ];
+    let mut page = String::new();
+    for props in &rows {
+        date_rows::island(props).render_to(&mut page);
+    }
+    page.push('\n');
+    assert_eq!(page, include_str!("conformance/nested-date-islands.html"));
+    assert!(page.contains(
+        r#"&quot;marks&quot;:[&quot;+010000-01-01T00:00:00.000Z&quot;,NaN],&quot;seen&quot;:[null,&quot;1969-12-31T23:59:59.999Z&quot;,NaN]"#
+    ));
+    assert!(page.contains(
+        r#"data-dates="[{&quot;rows&quot;:[{&quot;at&quot;:1,&quot;edited&quot;:1,&quot;deleted&quot;:1,&quot;marks&quot;:[1],"#
+    ));
+    let read: date_rows::Props<'_> = serde_json::from_str(
+        r#"{"rows":[],"days":["2024-02-29",0],"maybe":null,"stamps":{"a":-1}}"#,
+    )
+    .unwrap();
+    assert_eq!(read.days, [date("2024-02-29"), JsDate::UNIX_EPOCH]);
+    assert_eq!(read.stamps.get("a"), Some(&JsDate::from_millis(-1.0)));
+    assert!(read.maybe.is_none());
+}
+
+#[test]
 fn a_component_with_slots_renders_through_html() {
     let props: generated::frame::Props = serde_json::from_str(r#"{"title":"t"}"#).unwrap();
     let body = |out: &mut String| out.push_str("<p>hi</p>");

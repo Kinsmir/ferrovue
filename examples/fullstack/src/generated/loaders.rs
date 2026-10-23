@@ -15,6 +15,7 @@ pub struct LoadStock {
 impl fv::Load for LoadStock {
     const NAME: &'static str = "loadStock";
     type Output = super::types::Stock<'static>;
+    const DATES: &'static str = "[{\"counted\":1}]";
     fn args(&self, key: &mut fv::LoadKey) {
         key.arg(&self.id);
     }

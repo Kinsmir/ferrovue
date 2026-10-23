@@ -173,7 +173,7 @@ it("hydrates the staff picks as one app: the layout, and each part its record na
   expect(warnings).toEqual([]);
   expect(fetched, "the loaders were answered from the page").toEqual([]);
   expect(document.querySelector(".stock")).toBe(stock);
-  expect(stock!.textContent).toBe("3 copies in stockShips from Leeds in 2 days");
+  expect(stock!.textContent).toBe("3 copies in stockShips from Leeds in 2 dayscounted 2024-06-01");
   expect(document.head.innerHTML, "unhead's client took over the head the server wrote").toBe(head);
   expect(page).toBeDefined();
   expect(islands.apps).toHaveLength(0);
@@ -210,7 +210,7 @@ it("shows the next staff picks from the record of the page it fetches, in place 
   expect(old.innerHTML, "the hydrated page was unmounted").toBe("");
   expect(document.querySelector(".reviews h2")!.textContent).toBe("Readers on The Left Hand of Darkness");
   expect(document.querySelector(".review-list q")!.textContent).toBe("Winter, and what it does to people.");
-  expect(document.querySelector(".stock")!.textContent).toBe("1 copy in stockShips from Porto in 1 day");
+  expect(document.querySelector(".stock")!.textContent).toBe("1 copy in stockShips from Porto in 1 daycounted 2024-05-01");
   expect(document.title).toBe("Staff picks · Ferrovue Books");
 
   const add = document.querySelector<HTMLButtonElement>('.pick[data-id="dune"] button.add')!;

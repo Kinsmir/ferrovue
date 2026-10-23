@@ -3,8 +3,8 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Component } from "vue";
 import { generate } from "../src/compiler.ts";
-import { attachSsrRender, fixtureApp, readFixture } from "../src/testing.ts";
-import { cases, CLIENT_ONLY, clientRenderDifference, HEAD, headRendered, hydrationBody, OPTIONS, placeHead, recordedHead, renderFixture, ROOT, ROUTES, TELEPORTS, UNHEAD_REWRITES, VUE_DISAGREES } from "./conformance-cases.ts";
+import { attachSsrRender, fixtureApp } from "../src/testing.ts";
+import { cases, CLIENT_ONLY, clientRenderDifference, fixtureOf, HEAD, headRendered, hydrationBody, OPTIONS, placeHead, recordedHead, renderFixture, ROOT, ROUTES, TELEPORTS, UNHEAD_REWRITES, VUE_DISAGREES } from "./conformance-cases.ts";
 import { settled, stillLoading } from "../src/settle.ts";
 
 const WRITE = process.env.FERROVUE_FIXTURES_WRITE === "1";
@@ -47,7 +47,7 @@ it("gives each `<style scoped>` component the id `@vitejs/plugin-vue` gave its c
 describe("Vue renders each fixture to its recorded HTML", () => {
   for (const c of cases) {
     it(`${c.component}/${c.name}`, async () => {
-      const app = await fixtureApp(components.get(c.component)!, readFixture(c.json), ROUTES, OPTIONS);
+      const app = await fixtureApp(components.get(c.component)!, fixtureOf(c), ROUTES, OPTIONS);
       const html = await renderFixture(app);
       if (WRITE) writeFileSync(`${c.base}.html`, html);
       // oxlint-disable-next-line vitest/no-conditional-expect -- a recording run writes the fixtures
@@ -75,7 +75,7 @@ describe.skipIf(WRITE)("the recorded HTML hydrates without a mismatch", () => {
       document.body.innerHTML = hydrationBody(c.html);
       const head = document.head.innerHTML;
       const before = document.getElementById("root")!.firstChild;
-      const app = await fixtureApp(components.get(c.component)!, readFixture(c.json), ROUTES, { ...OPTIONS, hydrate: true });
+      const app = await fixtureApp(components.get(c.component)!, fixtureOf(c), ROUTES, { ...OPTIONS, hydrate: true });
       app.mount("#root");
       await settled(app);
       await headRendered();
@@ -99,7 +99,7 @@ describe.skipIf(WRITE)("the recorded HTML hydrates without a mismatch", () => {
 describe.skipIf(WRITE)("a fresh client render shows the recorded HTML", () => {
   for (const c of cases) {
     it(`${c.component}/${c.name}`, async () => {
-      const difference = await clientRenderDifference(await fixtureApp(components.get(c.component)!, readFixture(c.json), ROUTES, { ...OPTIONS, client: true }), c.html);
+      const difference = await clientRenderDifference(await fixtureApp(components.get(c.component)!, fixtureOf(c), ROUTES, { ...OPTIONS, client: true }), c.html);
       const differs = CLIENT_RENDER_DIFFERS.has(`${c.component}/${c.name}`);
       expect(differs ? null : difference).toBeNull();
       expect(difference !== null, "a fixture's client render differs exactly when it is in CLIENT_RENDER_DIFFERS").toBe(differs);
@@ -146,7 +146,7 @@ describe.skipIf(WRITE)("the recorded HTML carries the scope ids the client rende
       const [main, teleported] = c.html.split(HEAD)[0]!.split(TELEPORTS);
       const targets = Object.keys(JSON.parse(teleported ?? "{}") as Record<string, string>);
       document.body.innerHTML = `<div id="root"></div>${targets.map((t) => `<div id="${t.replace(/^#/, "")}"></div>`).join("")}`;
-      const app = await fixtureApp(components.get(c.component)!, readFixture(c.json), ROUTES, { ...OPTIONS, client: true });
+      const app = await fixtureApp(components.get(c.component)!, fixtureOf(c), ROUTES, { ...OPTIONS, client: true });
       app.mount("#root");
       if (stillLoading(app)) await settled(app);
       const recorded = document.createElement("template");

@@ -1,4 +1,5 @@
 import { defineLoader } from "ferrovue/client";
+import type { Thread } from "../types/dated.ts";
 
 export interface Author {
   name: string;
@@ -33,3 +34,11 @@ export const loadComments = defineLoader("loadComments", async (article: string,
 export const loadNote = defineLoader("loadNote", async (page: number): Promise<string | null> => missing(`note ${page}`));
 
 export const loadRanking = defineLoader("loadRanking", async (board: string): Promise<Ranking> => missing(`ranking ${board}`));
+
+export const loadOpened = defineLoader("loadOpened", async (name: string): Promise<Date> => missing(`opened ${name}`));
+
+export const loadClosed = defineLoader("loadClosed", async (name: string): Promise<Date | null> => missing(`closed ${name}`));
+
+export const loadDays = defineLoader("loadDays", async (): Promise<Date[]> => missing("days"));
+
+export const loadThread = defineLoader("loadThread", async (id: number): Promise<Thread> => missing(`thread ${id}`));

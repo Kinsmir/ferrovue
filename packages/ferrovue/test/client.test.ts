@@ -3,6 +3,7 @@ import { createPinia } from "pinia";
 import { type Component, createApp, defineComponent, h, nextTick, type PropType } from "vue";
 import { renderToString } from "vue/server-renderer";
 import { clearLoads, ClientOnly, createPageApp, defineLoader, hydrateState, loadKey, provideLoads, readPage, reviveDates, type PageRecord } from "../src/client.ts";
+import { reviveByPlan } from "../src/revive.ts";
 
 it("hands Pinia the state the server escaped into the page", () => {
   document.body.innerHTML =
@@ -165,6 +166,70 @@ it("renders a page whose layout and parts take Dates from the record's JSON", as
   });
   const html = await renderToString(createPageApp(Layout, record, { Dated }, { hydrate: false }));
   expect(html).toBe("<main><p>1|NaN|undefined|undefined|undefined</p><!--[--><p>-1|0|86400000|undefined|undefined</p><!--]--></main>");
+});
+
+it("turns the dates a plan names inside lists, dictionaries and objects back into Dates, leaving the rest as they are", () => {
+  const plan = [{ rows: ["Row"], days: [1], by: { "*": 1 }, lead: { at: 1 } }, { Row: { at: 1, seen: [1], replies: ["Row"] } }];
+  const given = {
+    rows: [{ at: "2024-01-01", seen: [null, 0, Number.NaN], replies: [{ at: -1, seen: [], replies: [] }], title: "2024-01-01" }],
+    days: ["+275760-09-13", Number.NaN],
+    by: JSON.parse('{"b":"1970-01-01T00:00:00.001Z","__proto__":2,"a":null}') as Record<string, unknown>,
+    lead: null,
+    label: "2024-01-01",
+  };
+  const revived = reviveByPlan(given, plan);
+  const rows = revived.rows as unknown as { at: Date; seen: (Date | null)[]; replies: { at: Date }[]; title: string }[];
+  expect(rows[0]!.at).toEqual(new Date("2024-01-01"));
+  expect(rows[0]!.seen.map((d) => d?.getTime())).toEqual([undefined, 0, Number.NaN]);
+  expect(rows[0]!.seen[2]).toBeInstanceOf(Date);
+  expect(rows[0]!.replies[0]!.at).toEqual(new Date(-1));
+  expect(rows[0]!.title).toBe("2024-01-01");
+  expect((revived.days as unknown as Date[]).map((d) => d.getTime())).toEqual([8.64e15, Number.NaN]);
+  const by = revived.by as unknown as Record<string, Date | null>;
+  expect(Object.keys(by)).toEqual(["b", "__proto__", "a"]);
+  expect([by.b, Object.getOwnPropertyDescriptor(by, "__proto__")!.value, by.a]).toEqual([new Date(1), new Date(2), null]);
+  expect(Object.getPrototypeOf(by)).toBe(Object.prototype);
+  expect(revived.lead).toBeNull();
+  expect(revived.label).toBe("2024-01-01");
+  expect(given.days[0]).toBe("+275760-09-13");
+  for (const bad of [undefined, null, 1, [], [1, 2, 3], "x", [{ at: 1 }, null]]) expect(reviveByPlan({ at: "2024-01-01" }, bad)).toEqual(bad === undefined || !Array.isArray(bad) || bad.length === 0 || bad.length > 2 ? { at: "2024-01-01" } : { at: new Date("2024-01-01") });
+  expect(reviveByPlan({ a: { a: "x" } }, [{ a: "A" }, { A: "A" }])).toEqual({ a: { a: "x" } });
+  expect(reviveByPlan({ at: "2024-01-01", rows: "x", days: { 0: "y" } }, [{ at: "Missing", rows: [1], days: [1] }])).toEqual({ at: "2024-01-01", rows: "x", days: { 0: "y" } });
+});
+
+it("revives an island's props by the plan in its data-dates, and a page's parts and layout by theirs", async () => {
+  const LIST = { days: { type: Array as PropType<Date[]>, required: true as const }, at: Date };
+  const List = defineComponent({
+    props: LIST,
+    render() {
+      return h("p", [...this.days.map((d) => d.getTime()), this.at?.getTime()].join("|"));
+    },
+  });
+  expect(reviveDates(List, { days: ["1970-01-01", 1], at: 2 }, "[{\"days\":[1]}]")).toEqual({ days: [new Date(0), new Date(1)], at: new Date(2) });
+  expect(reviveDates(List, { days: ["1970-01-01"] }, "{not json")).toEqual({ days: ["1970-01-01"] });
+  const record: PageRecord = { props: { days: [3], at: 4 }, dates: [{ days: [1] }], slots: { default: [{ c: "List", p: { days: ["1970-01-01T00:00:00.005Z"] }, d: [{ days: [1] }] }] } };
+  const Layout = defineComponent({
+    props: LIST,
+    setup(props, { slots }) {
+      return () => h("main", [h(List as Component, { days: props.days, at: props.at }), slots.default?.()]);
+    },
+  });
+  expect(await renderToString(createPageApp(Layout, record, { List }, { hydrate: false }))).toBe("<main><p>3|4</p><!--[--><p>5|</p><!--]--></main>");
+});
+
+it("revives a loader's results by the plan the payload carries under `dates`", async () => {
+  clearLoads();
+  const loadDays = defineLoader("loadDays", async (): Promise<Date[]> => []);
+  const loadRow = defineLoader("loadRow", async (id: number): Promise<{ at: Date; seen: (Date | null)[] }> => ({ at: new Date(id), seen: [] }));
+  const loadPlain = defineLoader("loadPlain", async (): Promise<string> => "");
+  provideLoads('{"[\\"loadDays\\"]":["1970-01-01",NaN],"[\\"loadRow\\",1]":{"at":-1,"seen":[null,"1970-01-02"]},"[\\"loadPlain\\"]":"1970-01-01","dates":{"loadDays":[[1]],"loadRow":[{"at":1,"seen":[1]}]}}');
+  expect((await loadDays()).map((d) => d.getTime())).toEqual([0, Number.NaN]);
+  expect(await loadRow(1)).toEqual({ at: new Date(-1), seen: [null, new Date(86400000)] });
+  expect(await loadPlain()).toBe("1970-01-01");
+  expect(await loadRow(2)).toEqual({ at: new Date(2), seen: [] });
+  provideLoads({ '["loadDays"]': [5], dates: { loadDays: [[1]] } });
+  expect(await loadDays()).toEqual([new Date(5)]);
+  clearLoads();
 });
 
 it("keys a loader's call as the server does, leaving out the arguments not given at the end", () => {

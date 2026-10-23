@@ -1,0 +1,13 @@
+{
+  "thread": {
+    "title": "Spring",
+    "opened": "2024-03-01T12:00:00+01:00",
+    "replies": [
+      { "author": "grace", "at": "2024-03-02T10:00:00Z", "edited": "2024-03-02T10:05:00Z", "removed": null, "replies": [{ "author": "ada", "at": 1709374500000, "removed": "2024-03-03", "replies": [{ "author": "deep", "at": 0, "removed": null, "replies": [] }] }] },
+      { "author": "ada", "at": "2024-03-02T09:00:00Z", "edited": "2024-03-02T08:00:00Z", "removed": "2024-03-04", "replies": [] }
+    ],
+    "pinned": { "grace": "2024-03-02T23:00:00-02:00", "1": 0 },
+    "seen": [null, "2024-03-06"]
+  },
+  "shift": 86400000.5
+}

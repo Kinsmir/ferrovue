@@ -455,3 +455,40 @@ async fn a_streamed_page_writes_its_record_after_its_holes() {
         )
     );
 }
+
+#[test]
+fn the_record_carries_where_the_layout_and_each_part_hold_dates() {
+    let words = [
+        WordProps {
+            text: "a",
+            ratio: 1.0,
+        },
+        WordProps {
+            text: "b",
+            ratio: 2.0,
+        },
+    ];
+    let mut page = Page::new();
+    let parts = page.slot(
+        "default",
+        [
+            Part::new("Word", Html::markup(&words[0], word).dates(r#"[{"at":1}]"#)),
+            part(&words[1]),
+        ],
+    );
+    let props = LayoutProps { title: "t" };
+    let mut out = String::new();
+    let slots = Slots {
+        head: None,
+        default: Some(parts.slot()),
+    };
+    let record = page.render_to(&mut out, layout(&props, slots, "").dates("[[1]]"));
+    record.script_into(&mut out, "r");
+    assert_eq!(
+        script_body(&out, "r"),
+        concat!(
+            r#"{"props":{"title":"t"},"slots":{"default":[{"c":"Word","p":{"text":"a","ratio":1.0},"d":[{"at":1}]},"#,
+            r#"{"c":"Word","p":{"text":"b","ratio":2.0}}]},"dates":[[1]]}"#
+        )
+    );
+}

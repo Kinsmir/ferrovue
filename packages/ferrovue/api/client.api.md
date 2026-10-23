@@ -71,11 +71,13 @@ export interface PageOptions extends Pick<MountOptions, "pinia" | "router" | "pl
 export interface PagePart {
     // (undocumented)
     c: string;
+    d?: unknown;
     p: Record<string, unknown> | null;
 }
 
 // @public
 export interface PageRecord {
+    dates?: unknown;
     props: Record<string, unknown> | null;
     // (undocumented)
     slots: Record<string, PagePart[]>;
@@ -114,7 +116,7 @@ export interface RenderPageOptions extends Pick<MountOptions, "pinia" | "router"
 }
 
 // @public
-export function reviveDates<P extends Record<string, unknown> | null>(component: Component, props: P): P;
+export function reviveDates<P extends Record<string, unknown> | null>(component: Component, given: P, dates?: string): P;
 
 // @public
 export interface StateText {

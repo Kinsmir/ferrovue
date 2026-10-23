@@ -4,7 +4,7 @@ import { relativePath } from "../paths.ts";
 import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, absence, blankComponent, BOOL, fail, failIn, FLOAT, GenError, INT, nodeName, opt, sameTy, snake, STR, tagAst, UNDEF } from "../model.ts";
 import { listDir, parseTs } from "../files.ts";
 import { resolveImport } from "../resolve.ts";
-import { ONE_NOTHING, structOf, tyOfTs, typesImports } from "../typescript.ts";
+import { ONE_NOTHING, refuseDates, structOf, tyOfTs, typesImports } from "../typescript.ts";
 import { patternNames, setupStatement } from "../script.ts";
 import { expr, fieldVal } from "../expr.ts";
 import { type Plugin, runOf, scopeOf } from "../plugin.ts";
@@ -72,9 +72,12 @@ function readStores(root: string, dir: string): void {
       run.files.set(d.id.name, comp.file);
     }
     for (const d of interfaces) {
-      const st = structOf(comp, d.id.name, d.body.body, run.structs, false, false, false);
+      const st = structOf(comp, d.id.name, d.body.body, run.structs, false, false);
       for (const field of st.fields) field.ty = markStore(field.ty);
       run.structs.set(d.id.name, st);
+    }
+    for (const d of interfaces) {
+      run.structs.get(d.id.name)!.fields.forEach((field, i) => refuseDates(comp, field.ty, `\`${field.js}\` of a store's state`, d.body.body[i]));
     }
     for (const d of decls) {
       if (d.type !== "VariableDeclaration") continue;
@@ -189,6 +192,7 @@ function refType(comp: Component, init: N): Ty {
   const value = init.arguments[0];
   if (typed) {
     const ty = tyOfTs(comp, typed, run.structs);
+    refuseDates(comp, ty, "a setup store's ref", typed);
     if (!value && absence(ty) === "null") fail(comp, "FV1313", `a \`ref<T | null>()\` with no value starts \`undefined\`, and may be set to \`null\`: ${ONE_NOTHING}; start it at \`null\``, init);
     return value ? ty : opt(ty);
   }

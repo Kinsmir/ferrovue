@@ -1,0 +1,13 @@
+{
+  "thread": {
+    "title": "</h2><script>alert(1)</script>&amp;",
+    "opened": "+275760-09-13T00:00:00.000Z",
+    "replies": [
+      { "author": "<b>\" onclick=\"x", "at": "+275760-09-13T00:00:00.000Z", "edited": "-271821-04-20T00:00:00.000Z", "removed": 8640000000000001, "replies": [] },
+      { "author": "ı'\"<>&", "at": 8640000000000001, "removed": null, "replies": [] }
+    ],
+    "pinned": { "</p><i>": "-271821-04-20", " &lt;": 8640000000000001 },
+    "seen": [8640000000000001, null]
+  },
+  "shift": -1.5
+}

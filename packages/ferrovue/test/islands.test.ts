@@ -143,6 +143,50 @@ it("hydrates a Date prop from the ISO string or NaN the server wrote, as a Date"
   expect(warnings.filter((w) => /Invalid prop|hydrat|mismatch/i.test(w))).not.toEqual([]);
 });
 
+it("hydrates dates inside lists, dictionaries and objects from the plan the server wrote beside the props", async () => {
+  const page = readFileSync(join(ROOT, "nested-date-islands.html"), "utf8").trim();
+  for (const name of ["DateRows", "DateDays", "DateStamp"]) attachSsrRender(join(ROOT, "components", `${name}.vue`), name, components[name]!);
+  const islands = [...page.matchAll(/<div data-island="DateRows" data-props="([^"]*)" data-dates="([^"]*)">(.*?)<\/div>(?=<div data-island|$)/g)];
+  expect(islands).toHaveLength(2);
+  const at = (iso: string): Date => new Date(iso);
+  const row = { marks: [at("+010000-01-01"), new Date(Number.NaN)], seen: [null, new Date(-1), new Date(Number.NaN)], byName: { ada: at("2024-01-01") }, at: at("2024-03-10T08:05:09.007Z"), edited: new Date(Number.NaN), deleted: null };
+  const dates = [
+    { rows: [row, { at: new Date(Number.NaN), deleted: at("-271821-04-20"), marks: [], seen: [], byName: {} }], days: [at("2024-02-29"), new Date(Number.NaN)], maybe: [new Date(Number.NaN)], stamps: { b: at("2024-05-01T07:30Z"), nan: new Date(Number.NaN) }, lead: row },
+    {},
+  ];
+  for (const [i, [, attr, , html]] of islands.entries()) {
+    const props = JSON.parse(attr!.replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&").replace(/NaN/g, "null")) as Record<string, unknown>;
+    const merged = { ...props, ...dates[i] } as { rows: Record<string, unknown>[]; lead: Record<string, unknown> | null };
+    if (i === 0) {
+      merged.rows = merged.rows.map((_, j) => ({ ...(props.rows as Record<string, unknown>[])[j], ...dates[0]!.rows![j] }));
+      merged.lead = { ...(props.lead as Record<string, unknown>), ...row };
+    }
+    expect(await renderToString(createSSRApp(components.DateRows!, merged))).toBe(html);
+  }
+
+  document.body.innerHTML = page;
+  const mounted = await mountIslands(components);
+  expect(mounted.apps).toHaveLength(2);
+  expect(warnings).toEqual([]);
+  const given = (mounted.apps[0]!._instance?.props ?? {}) as { rows: { at: Date; edited: Date; deleted: Date | null; marks: Date[]; seen: (Date | null)[]; byName: Record<string, Date> }[]; days: Date[]; maybe: Date[]; stamps: Record<string, Date>; lead: { title: string; seen: (Date | null)[] } };
+  const time = (d: Date | null | undefined): number | null => (d === null || d === undefined ? null : d instanceof Date ? d.getTime() : Number.POSITIVE_INFINITY);
+  expect(given.rows.map((r) => [time(r.at), time(r.edited), time(r.deleted), r.marks.map(time), r.seen.map(time), Object.entries(r.byName).map(([k, d]) => [k, time(d)])])).toEqual([
+    [1710057909007, Number.NaN, null, [253402300800000, Number.NaN], [null, -1, Number.NaN], [["ada", 1704067200000]]],
+    [Number.NaN, null, -8.64e15, [], [], []],
+  ]);
+  expect([given.days.map(time), given.maybe.map(time), Object.entries(given.stamps).map(([k, d]) => [k, time(d)])]).toEqual([
+    [1709164800000, Number.NaN],
+    [Number.NaN],
+    [["b", 1714548600000], ["nan", Number.NaN]],
+  ]);
+  expect([given.lead.title, given.lead.seen.map(time)]).toEqual(["<Spring>", [null, -1, Number.NaN]]);
+  mounted.unmount();
+
+  document.body.innerHTML = page.replace(/ data-dates="[^"]*"/g, "");
+  (await mountIslands(components)).unmount();
+  expect(warnings.filter((w) => /getTime|hydrat|mismatch|did not mount/i.test(w))).not.toEqual([]);
+});
+
 it("leaves an island it cannot hydrate as the server rendered it, and says why", async () => {
   const text = fixture("Text", "full");
   document.body.innerHTML = `${island("Missing", {}, "<p>kept</p>")}<div data-island="Text" data-props="{not json">${text.html}</div>${island("Text", text.props, text.html)}`;

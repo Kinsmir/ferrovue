@@ -3,7 +3,8 @@ import { type Component, type Field, type N, type Scope, type Ty, type Val, abse
 import { ctx } from "./context.ts";
 import { known } from "./narrowing.ts";
 import { intoEnum, knownLiteral } from "./enums.ts";
-import { markHome } from "./typescript.ts";
+import { bareDates, markHome } from "./typescript.ts";
+import { items } from "./lists.ts";
 import { describeTy, expr, fieldVal, holdsNothing, typedBy } from "./expr.ts";
 import { tyNode } from "./objects.ts";
 import { asF64 } from "./numbers.ts";
@@ -368,6 +369,10 @@ export function callWith(s: Scope, e: Emitter, child: Component, m: string, head
   e.close(`${trailing});`);
 }
 
+function datesInto(of: Ty): string {
+  return of.k === "date" ? ".map(fv::js_date_prop)" : ".map(|v| v.map(fv::js_date_prop))";
+}
+
 export function ownInto(comp: Component, v: Val, want: Ty, node: N): string {
   holdsNothing(comp, v, want, node, "the prop");
   if (v.owned && sameTy(v.ty, want)) return v.code;
@@ -404,6 +409,10 @@ export function ownInto(comp: Component, v: Val, want: Ty, node: N): string {
     const of = want.of.k;
     if (v.ty.of.k === of && (of === "int" || of === "float" || (of === "bool" && absence(want) === "null"))) return v.code;
     if (of === "float" && v.ty.of.k === "int") return `${atom(v.code)}.map(|n| n as f64)`;
+  }
+  if (want.k === "list" && v.ty.k === "list" && sameTy(v.ty.of, want.of) && bareDates(want)) return `${items(v)}${datesInto(want.of)}.collect()`;
+  if (want.k === "opt" && want.of.k === "list" && v.ty.k === "opt" && v.ty.of.k === "list" && sameTy(v.ty.of.of, want.of.of) && bareDates(want.of) && absence(v.ty) === absence(want)) {
+    return `${atom(v.code)}.as_ref().map(|v| v.iter().copied()${datesInto(want.of.of)}.collect())`;
   }
   if (v.iter !== undefined && v.ty.k === "list" && want.k === "list" && sameTy(v.ty.of, want.of)) {
     return want.of.k === "struct" || want.of.k === "child" ? `${v.iter}.cloned().collect()` : `${v.iter}.collect()`;

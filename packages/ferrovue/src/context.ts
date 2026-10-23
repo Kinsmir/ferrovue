@@ -367,6 +367,7 @@ export const ctx = {
   tsconfigs: new Set<string>(),
   recovered: null as GenError[] | null,
   trying: 0,
+  datePlans: { components: new Map<string, string>(), loaders: new Map<string, string>() },
 };
 
 /** A component's text: what the run was given for its path, as an editor's unsaved buffer, or the

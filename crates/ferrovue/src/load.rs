@@ -21,6 +21,10 @@ pub trait Load: Send + 'static {
     const NAME: &'static str;
     /// What the loader returns, which the component renders from and the payload carries.
     type Output: Serialize + Send + 'static;
+    /// Where the result holds dates, as the compiler wrote it: the payload carries it for the
+    /// client to turn each one back into a `Date`. Empty for a result that holds none.
+    #[doc(hidden)]
+    const DATES: &'static str = "";
     /// Write each argument into `key`, in order.
     fn args(&self, key: &mut LoadKey);
 }
@@ -183,6 +187,8 @@ pub fn load_key<L: Load>(call: &L) -> String {
 struct Done {
     value: Box<dyn Any + Send>,
     json: String,
+    name: &'static str,
+    dates: &'static str,
 }
 
 /// A call a render asked for whose result the driver does not have yet, for the generated
@@ -233,6 +239,8 @@ impl LoadCall {
             Ok(Done {
                 json: json::to_string_or_null(&value),
                 value: Box::new(value),
+                name: L::NAME,
+                dates: L::DATES,
             })
         }))
     }
@@ -312,7 +320,8 @@ impl<'c> Loads<'c> {
 
     /// Write the results this render has read as the payload the client hydrates from: a
     /// `<script type="application/json" data-fv-loads>` holding an object from each key to its
-    /// result, in the order the render first read them. `<`, `>`, `&` and the two line separators
+    /// result, in the order the render first read them, and under `dates` where the results of
+    /// each loader hold dates, for the client to read them back as such. `<`, `>`, `&` and the two line separators
     /// are written as JSON escapes, as [`state_script_into`](crate::state_script_into) writes them.
     ///
     /// Write it after the components, so that it holds what they read.
@@ -325,6 +334,22 @@ impl<'c> Loads<'c> {
             payload.push_str(&json_string(key));
             payload.push(':');
             payload.push_str(&self.done[key].json);
+        }
+        let mut dated: Vec<&Done> = Vec::new();
+        for key in self.used.borrow().iter() {
+            let done = &self.done[key];
+            if !done.dates.is_empty() && dated.iter().all(|d| d.name != done.name) {
+                dated.push(done);
+            }
+        }
+        for (i, done) in dated.iter().enumerate() {
+            payload.push_str(if i == 0 { ",\"dates\":{" } else { "," });
+            payload.push_str(&json_string(done.name));
+            payload.push(':');
+            payload.push_str(done.dates);
+        }
+        if !dated.is_empty() {
+            payload.push('}');
         }
         payload.push('}');
         out.push_str("<script type=\"application/json\" data-fv-loads>");

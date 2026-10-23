@@ -284,3 +284,87 @@ mod chrono_dates {
         assert!(panics(|| js_date_prop::<DateTime<Utc>>(8.64e15)));
     }
 }
+
+#[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+struct Nested {
+    #[serde(with = "dates_in")]
+    days: Vec<JsDate>,
+    #[serde(with = "dates_in")]
+    seen: Vec<Option<JsDate>>,
+    #[serde(with = "dates_in")]
+    by: crate::Record<'static, JsDate>,
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "dates_in")]
+    maybe: Option<Vec<JsDate>>,
+}
+
+#[test]
+fn dates_inside_lists_dictionaries_and_optionals_are_written_and_read_as_one_date_is() {
+    let nested = Nested {
+        days: vec![JsDate::UNIX_EPOCH, JsDate::from_millis(8.64e15)],
+        seen: vec![None, Some(JsDate::from_millis(-1.0))],
+        by: [("b", JsDate::from_millis(1.0)), ("2", JsDate::UNIX_EPOCH)]
+            .into_iter()
+            .collect(),
+        maybe: None,
+    };
+    let json = serde_json::to_string(&nested).unwrap();
+    assert_eq!(
+        json,
+        concat!(
+            r#"{"days":["1970-01-01T00:00:00.000Z","+275760-09-13T00:00:00.000Z"],"#,
+            r#""seen":[null,"1969-12-31T23:59:59.999Z"],"by":{"2":"1970-01-01T00:00:00.000Z","b":"1970-01-01T00:00:00.001Z"}}"#
+        )
+    );
+    assert_eq!(serde_json::from_str::<Nested>(&json).unwrap(), nested);
+    let read: Nested = serde_json::from_str(
+        r#"{"days":[0,"2024-05-01T09:30+02:00"],"seen":[],"by":{},"maybe":["+275761-01-01"]}"#,
+    )
+    .unwrap();
+    assert_eq!(read.days[1], JsDate::parse("2024-05-01T07:30Z").unwrap());
+    assert_eq!(read.maybe, Some(vec![JsDate::INVALID]));
+    let wrong = serde_json::from_str::<Nested>(r#"{"days":["May 1"],"seen":[],"by":{}}"#);
+    assert!(
+        wrong
+            .unwrap_err()
+            .to_string()
+            .contains("is not in ECMAScript's date time string format")
+    );
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct Whole(i64);
+
+impl JsTime for Whole {
+    fn time_value(&self) -> f64 {
+        self.0 as f64
+    }
+
+    fn from_time_value(t: f64) -> Option<Whole> {
+        (t.is_finite() && t >= 0.0).then_some(Whole(t as i64))
+    }
+}
+
+#[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+struct Owned {
+    #[serde(with = "dates_in")]
+    days: Vec<Option<Whole>>,
+}
+
+#[test]
+fn a_date_type_of_its_own_is_written_as_a_jsdate_and_refused_where_it_cannot_hold_the_date() {
+    let owned = Owned {
+        days: vec![Some(Whole(1)), None],
+    };
+    assert_eq!(
+        serde_json::to_string(&owned).unwrap(),
+        r#"{"days":["1970-01-01T00:00:00.001Z",null]}"#
+    );
+    assert_eq!(
+        serde_json::from_str::<Owned>(r#"{"days":[1,null]}"#).unwrap(),
+        owned
+    );
+    let refused = serde_json::from_str::<Owned>(r#"{"days":[-1]}"#).unwrap_err();
+    assert!(refused.to_string().contains(
+        "the date JsDate(1969-12-31T23:59:59.999Z) is beyond what the prop's Rust type holds"
+    ));
+}

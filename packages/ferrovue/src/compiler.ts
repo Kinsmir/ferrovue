@@ -10,7 +10,7 @@ import { scopeFor } from "./script.ts";
 import { attrsFlow } from "./fallthrough.ts";
 import { prepareDynamic } from "./dynamic.ts";
 import { componentSource, GENERATED, isIsland, modSource } from "./rust.ts";
-import { refuseNestedDates, requireWhole } from "./typescript.ts";
+import { requireWhole } from "./typescript.ts";
 import { renderParams } from "./plugin.ts";
 import { PLUGINS } from "./plugins/index.ts";
 import type { Alias } from "./resolve.ts";
@@ -38,6 +38,7 @@ export function generate(root: string, config: Config = loadConfig(root), source
 function generateAll(root: string, config: Config, sources: ReadonlyMap<string, string>, options: ResolveOptions): Map<string, string> {
   ctx.recovered = null;
   ctx.trying = 0;
+  ctx.datePlans = { components: new Map(), loaders: new Map() };
   ctx.sources = new Map([...sources].map(([file, text]) => [resolve(root, file), text]));
   ctx.aliases = options.aliases ?? [];
   ctx.tsProjects = new Map();
@@ -110,7 +111,6 @@ function generateAll(root: string, config: Config, sources: ReadonlyMap<string, 
   ctx.components = components;
   read = run.each(read, (r) => {
     for (const f of r.comp.props.fields) requireWhole(r.comp, f.ty);
-    refuseNestedDates(r.comp, r.comp.props.fields, r.comp.propsAt);
   });
   const scoped = run.prune(read).flatMap((r) => {
     const scope = run.attempt(r.comp.file, () => scopeFor(r.comp, r.ast, components).scope, r.comp.name);

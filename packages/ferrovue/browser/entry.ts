@@ -1,5 +1,5 @@
 import { type Component } from "vue";
-import { fixtureApp, readFixture, type RouteEntry, type RouterOptions } from "../src/fixture.ts";
+import { type DatePlans, fixtureApp, readFixture, type RouteEntry, type RouterOptions, withDatePlans } from "../src/fixture.ts";
 import { headRendered, settled } from "../src/settle.ts";
 
 const modules = import.meta.glob<{ default: Component }>("../../../crates/ferrovue/tests/conformance/components/*.vue", {
@@ -14,6 +14,7 @@ export interface PageData {
   fixture: Record<string, unknown>;
   routes: RouteEntry[];
   options: RouterOptions;
+  plans: DatePlans;
 }
 
 export interface Hydration {
@@ -38,7 +39,7 @@ async function hydrate(): Promise<Hydration> {
   const first = root.firstChild;
   const before = document.body.innerHTML;
   const head = document.head.innerHTML;
-  const app = await fixtureApp(component, readFixture(data.fixture), data.routes, { ...data.options, hydrate: true });
+  const app = await fixtureApp(component, withDatePlans(readFixture(data.fixture), data.component, data.plans), data.routes, { ...data.options, hydrate: true });
   app.mount(root);
   const after = document.body.innerHTML;
   const kept = root.firstChild === first;

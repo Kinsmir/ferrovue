@@ -1,0 +1,16 @@
+{
+  "id": 0,
+  "name": "",
+  "$loads": {
+    "[\"loadOpened\",\"\"]": 8640000000000001,
+    "[\"loadThread\",0]": {
+      "title": "",
+      "opened": -8640000000000001,
+      "replies": [],
+      "pinned": {},
+      "seen": []
+    },
+    "[\"loadDays\"]": [],
+    "[\"loadClosed\",\"\"]": null
+  }
+}
