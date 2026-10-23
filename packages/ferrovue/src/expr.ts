@@ -6,7 +6,7 @@ import { claim } from "./plugin.ts";
 import { atom, bare, binary, enclosed, logical, negate, not, occurrences, receiver, strArg } from "./parens.ts";
 import { collected, entryPart, heldDates, picked, sliced, spreadLiteral, typedEmpty, untypedEmpty } from "./lists.ts";
 import { asCow, formatted, isTemporary, loneOf, meet, stringsEqual } from "./strings.ts";
-import { arithmetic, asF64, compare, intFromF64, isNumber, negatedOrder, numberVal, power } from "./numbers.ts";
+import { arithmetic, asF64, compare, intFromF64, isCast, isNumber, negatedOrder, numberVal, power } from "./numbers.ts";
 import { boolOf, checkNullTest, choice, known, narrowing, narrowTo, nullTest, pathOf, type Presence, presence, reassociated, truthTested, truthy, typeofCompare, typeofTest, typeofVal } from "./narrowing.ts";
 import { BUILTINS, builtin, call, isObjectCall } from "./calls.ts";
 import { constOf, namedVal } from "./constants.ts";
@@ -634,6 +634,7 @@ export function expr(s: Scope, n: N): Val {
         if (a.ty.of.k === "str" && b.ty.k === "str" && isTemporary(b)) {
           return { code: `&*${or(`${atom(a.code)}.map(std::borrow::Cow::<str>::Borrowed)`, "unwrap_or", asCow(b))}`, ty: STR, ...loneOf(a, b) };
         }
+        if (a.ty.of.k === "int" && b.ty.k === "int" && isCast(b)) return intFromF64(`${atom(a.code)}.map(|v| v as f64).unwrap_or(${bare(asF64(b))})`, b.at ?? refusalAt(comp, n));
         if (sameTy(a.ty.of, b.ty)) return { code: or(atom(a.code), "unwrap_or", bare(b.code)), ty: joinTy(a.ty.of, b.ty), ...loneOf(a, b) };
         if (b.ty.k === "opt" && sameTy(a.ty.of, b.ty.of)) return { code: or(atom(a.code), "or", bare(b.code)), ty: joinTy(a.ty, b.ty), ...loneOf(a, b) };
         if (a.ty.of.k === "float" && b.ty.k === "int") return { code: or(atom(a.code), "unwrap_or", bare(asF64(b))), ty: FLOAT };
@@ -654,6 +655,7 @@ export function expr(s: Scope, n: N): Val {
         if (sameTy(a.ty, b.ty) && (a.ty.k === "str" || isNumber(a.ty))) {
           const k = known(a);
           if (k !== undefined) return k ? a : b;
+          if (a.ty.k === "int" && (isCast(a) || isCast(b))) return intFromF64(`{ let a = ${bare(asF64(a))}; if a != 0.0 { a } else { ${bare(asF64(b))} } }`, a.at ?? b.at ?? refusalAt(comp, n));
           const otherwise = a.ty.k === "str" ? strArg(b.code) : bare(b.code);
           return { code: `{ let a = ${bare(a.code)}; if ${truthy({ code: "a", ty: a.ty })} { a } else { ${otherwise} } }`, ty: joinTy(a.ty, b.ty), ...loneOf(a, b) };
         }
@@ -793,6 +795,7 @@ export function expr(s: Scope, n: N): Val {
         return { code: choose(emptyA ? "&[]" : sliced(a), emptyB ? "&[]" : sliced(b)), ty: joinTy(a.ty, b.ty), slice: true, ...lone };
       }
       const optStr = (v: Val) => nothing(v.ty) || (v.ty.k === "opt" && v.ty.of.k === "str") || v.ty.k === "str";
+      if (a.ty.k === "int" && b.ty.k === "int" && (isCast(a) || isCast(b))) return intFromF64(choose(asF64(a), asF64(b)), a.at ?? b.at ?? refusalAt(comp, n));
       if (sameTy(a.ty, b.ty) && a.ty.k !== "opt") return { code: choose(a.code, b.code), ty: joinTy(a.ty, b.ty), ...lone };
       if (isNumber(a.ty) && isNumber(b.ty)) return { code: choose(asF64(a), asF64(b)), ty: FLOAT };
       const base = (ty: Ty): Ty | null => (ty.k === "opt" ? ty.of : nothing(ty) ? null : ty);

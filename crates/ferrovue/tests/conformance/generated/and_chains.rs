@@ -144,7 +144,6 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(140 + 4 + props.badge.as_ref().map_or(0, |v| v.label.len()) + props.word.as_deref().map_or(0, str::len));
-    let fv_refusals = fv::Refusals::new(NAME, "components/AndChains.vue");
     let s_in_range = if let Some(n1) = props.n { n1 as f64 > 1.0 && (n1 as f64) < 9.0 } else { false };
     let s_color = props.tone.map(|n2| match n2 { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" });
     out.push_str("<section");
@@ -171,7 +170,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push('|');
     out.push_str(if if let Some(n8) = props.n { (n8 as f64) < 1.0 || n8 as f64 > 9.0 } else { true } { "true" } else { "false" });
     out.push_str("</p><p>");
-    fv::push_int(out, if let Some(n9) = props.n { if n9 as f64 > 1.0 { fv_refusals.keep(fv::try_int(n9 as f64 * 2.0), 28, 32) } else { 0i64 } } else { 0i64 });
+    fv::push_number(out, if let Some(n9) = props.n { if n9 as f64 > 1.0 { n9 as f64 * 2.0 } else { 0.0f64 } } else { 0.0f64 });
     out.push('|');
     fv::escape_into(out, &(if let Some(n10) = props.n { if (n10 as f64) < 0.0 { std::borrow::Cow::<str>::Borrowed("bad") } else { std::borrow::Cow::<str>::Owned(fv::js_to_fixed(n10 as f64, 1)) } } else { std::borrow::Cow::<str>::Borrowed("bad") }));
     out.push('|');
@@ -215,7 +214,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         }
     }
     out.push_str("</section>");
-    fv_refusals.check(Ok(()))
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.

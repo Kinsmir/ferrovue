@@ -227,6 +227,7 @@ pub mod uri_parts;
 pub mod user_card;
 pub mod user_list;
 pub mod vnode_class;
+pub mod wide_choices;
 pub mod wide_products;
 pub mod route_table;
 pub mod stores;
@@ -1397,6 +1398,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "VnodeClass" => {
             let props: vnode_class::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             vnode_class::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "WideChoices" => {
+            let props: wide_choices::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            wide_choices::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "WideProducts" => {
             let props: wide_products::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

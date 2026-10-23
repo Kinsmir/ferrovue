@@ -1899,9 +1899,9 @@ defineProps<{ days: Date[]; maybe?: (Date | null)[]; byName: Record<string, Date
       expect(x).toContain('    #[serde(rename = "byName", with = "fv::dates_in")]\n    pub by_name: ferrovue::Record<\'a, ferrovue::JsDate>,');
       expect(x).toContain('    #[serde(rename = "seen", default, skip_serializing_if = "Option::is_none", with = "fv::opt_date_prop")]\n    pub seen: Option<ferrovue::JsDate>,');
       expect(x).toContain("for d in props.days.iter().map(fv::js_time_of) {");
-      expect(x).toContain("fv::js_to_iso_string(fv::js_time_of(&r.at))");
+      expect(x).toContain("fv_refusals.keep(fv::try_to_iso_string(fv::js_time_of(&r.at)), 6, 77)");
       const plan = '[{"days":[1],"maybe":[1],"byName":{"*":1},"rows":["Row"],"cards":[{"at":1}]},{"Row":{"at":1,"seen":1,"marks":[1],"by":{"*":1},"next":"Row"}}]';
-      expect(x).toContain(`    let html: fv::Html<'p, Props<'a>> = fv::Html::island(NAME, props, render);\n    html.dates(${JSON.stringify(plan)})`);
+      expect(x).toContain(`    let html: fv::Html<'p, Props<'a>> = fv::Html::island_fallible(NAME, props, render, try_render);\n    html.dates(${JSON.stringify(plan)})`);
       expect(out.get("card.rs")).not.toContain(".dates(");
     });
 
@@ -2012,7 +2012,22 @@ const props = defineProps<{ note?: string; word: string; n: number; count?: numb
 </script>
 <template><p>{{ note ?? word.repeat(n) }}|{{ count ?? n * n }}</p></template>`)).get("x.rs")!;
       expect(out).toContain('props.note.as_deref().map(std::borrow::Cow::<str>::Borrowed).unwrap_or_else(|| std::borrow::Cow::<str>::Owned(fv_refusals.keep(fv::try_repeat(&props.word, props.n as f64), 4, 25)))');
-      expect(out).toContain("fv::push_int(out, props.count.unwrap_or_else(|| fv_refusals.keep(fv::try_int(props.n as f64 * props.n as f64), 4, 55)));");
+      expect(out).toContain("fv::push_number(out, props.count.map(|v| v as f64).unwrap_or(props.n as f64 * props.n as f64));");
+    });
+
+    it("writes integer arithmetic chosen by `??`, `?:`, `||`, a computed or a function from its double, with no check of the range of i64", () => {
+      const out = compile(island(`<script setup lang="ts">
+import { computed } from "vue";
+const props = defineProps<{ n: number; m: number; count?: number; on: boolean }>();
+const chosen = computed(() => (props.on ? props.n * props.n : props.m));
+function product(a: number, b: number): number {
+  return a * b;
+}
+</script>
+<template><p :title="count ?? n * n" :data-or="m || n * n">{{ on ? n * n : m }} {{ chosen }} {{ product(n, m) }} {{ \`\${count ?? n * m}\` }}</p></template>`)).get("x.rs")!;
+      expect(out).not.toContain("try_int");
+      expect(out).not.toContain("fv_refusals");
+      expect(out).toContain("fv::push_number(out, if props.on { props.n as f64 * props.n as f64 } else { props.m as f64 });");
     });
 
     it("refuses at render time an integer beyond the range of i64 handed to a child, and writes one into the page from its double", () => {

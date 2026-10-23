@@ -96,9 +96,8 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(210 + props.label.as_deref().map_or(0, str::len) + props.nick.as_deref().map_or(0, str::len) + props.tags.iter().map(|v| v.len()).sum::<usize>() + props.owner.as_ref().map_or(0, |v| v.name.len()));
-    let fv_refusals = fv::Refusals::new(NAME, "components/TypeofTests.vue");
     let s_kind = if props.label.as_deref().is_some() { "string" } else { "undefined" };
-    let s_sized = std::cell::LazyCell::new(|| if let Some(n1) = props.size { fv_refusals.keep(fv::try_int(n1 as f64 * 2.0), 11, 64) } else { -1i64 });
+    let s_sized = if let Some(n1) = props.size { n1 as f64 * 2.0 } else { -1.0f64 };
     out.push_str("<section");
     if (if props.label.as_deref().is_some() { "string" } else { "undefined" }).is_empty() {
         out.push_str(" data-kind");
@@ -118,7 +117,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push('|');
     fv::escape_into(out, s_kind);
     out.push('|');
-    fv::push_int(out, *s_sized);
+    fv::push_number(out, s_sized);
     out.push_str("</p><p>");
     out.push_str(if props.label.as_deref().is_some() { "true" } else { "false" });
     out.push('|');
@@ -162,9 +161,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         out.push_str("<!---->");
     }
     out.push_str("<b>");
-    fv::push_int(out, if let Some(n5) = props.size { fv_refusals.keep(fv::try_int(n5 as f64 + 1.0), 23, 46) } else { -1i64 });
+    fv::push_number(out, if let Some(n5) = props.size { n5 as f64 + 1.0 } else { -1.0f64 });
     out.push_str("</b></section>");
-    fv_refusals.check(Ok(()))
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.

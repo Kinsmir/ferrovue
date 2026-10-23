@@ -7,8 +7,8 @@ use std::borrow::Cow;
 use serde::de::{self, Deserialize, DeserializeOwned, Deserializer, Visitor};
 use serde::ser::{Serialize, Serializer};
 
-use crate::{Record, Refused};
 use crate::dates::{iso_time, js_time_clip, js_to_iso_string};
+use crate::{Record, Refused};
 
 /// A JavaScript `Date`: its time value, the milliseconds since 1970-01-01T00:00:00Z, a whole number
 /// within ±8.64 × 10¹⁵, or `NaN` for an invalid date. It is the Rust type of a prop the component
