@@ -84,7 +84,7 @@ it("links the client build's stylesheets, scoped to the ids the server writes, t
 });
 
 it("loads every island by the name the server writes, and only those", async () => {
-  expect(Object.keys(islandLoaders)).toEqual(["AddToBasket", "Pick", "Reviews"]);
+  expect(Object.keys(islandLoaders)).toEqual(["AddToBasket", "Delivery", "Pick", "Reviews"]);
   expect((await islandLoaders.Reviews!()).default).toBe(Reviews);
 });
 
