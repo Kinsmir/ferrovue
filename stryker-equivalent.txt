@@ -1,0 +1,335 @@
+# Mutants of the compiler that survive because they cannot change the Rust it writes or what it
+# refuses (TESTING.md, "Mutation testing"). One per line, as scripts/stryker-survivors.ts names it:
+# the file, the mutator, the text before and after, and the line the mutant starts on, without its
+# number. `pnpm mutants:ts` fails on a survivor not listed here. Every entry says why.
+
+# attrs.ts, `display`: only number values carry `num` and only boolean values carry `konst`, so the
+# type test before each is implied by the other half of the condition.
+packages/ferrovue/src/attrs.ts: ConditionalExpression: v.ty.k === "int" || v.ty.k === "float" => true in else if ((v.ty.k === "int" || v.ty.k === "float") && v.num !== undefined) e.lit(String(v.num));
+packages/ferrovue/src/attrs.ts: ConditionalExpression: v.ty.k === "bool" => true in else if (v.ty.k === "bool" && v.konst !== undefined) e.lit(String(v.konst));
+
+# attrs.ts, `attrValue`: every caller has passed the value through `renderable`, which refuses each
+# type `display` cannot write, so the throw is never reached.
+packages/ferrovue/src/attrs.ts: StringLiteral: "FV0402" => "" in if (!display(e, v)) throw new GenError("FV0402", "an attribute value must be a string, a number or a boolean");
+packages/ferrovue/src/attrs.ts: StringLiteral: "an attribute value must be a string, a number or a boolean" => "" in if (!display(e, v)) throw new GenError("FV0402", "an attribute value must be a string, a number or a boolean");
+
+# attrs.ts, `renderable`: every plugin with `values` hooks (CSS modules, dates, the router) defines
+# `unbindable`.
+packages/ferrovue/src/attrs.ts: OptionalChaining: p.values?.unbindable?.(ty) => p.values?.unbindable(ty) in const own = claim((p) => p.values?.unbindable?.(ty));
+
+# attrs.ts, `keepsAttrCase`: the tag is that of an element Vue renders from virtual nodes. Vue's
+# compiler, which ferrovue runs without `isCustomElement`, compiles a tag with a dash to a
+# component, ferrovue refuses one that is not imported (FV0501) and `<component :is>` naming one
+# (FV0419), and the SVG tags with a dash keep their case through `isSVGTag`. No tag starts with a
+# dash, so `>= 0` and `> 0` agree.
+packages/ferrovue/src/attrs.ts: ConditionalExpression: tag.indexOf("-") > 0 => false in return tag.indexOf("-") > 0 || isSVGTag(tag);
+packages/ferrovue/src/attrs.ts: EqualityOperator: tag.indexOf("-") > 0 => tag.indexOf("-") >= 0 in return tag.indexOf("-") > 0 || isSVGTag(tag);
+packages/ferrovue/src/attrs.ts: StringLiteral: "-" => "" in return tag.indexOf("-") > 0 || isSVGTag(tag);
+
+# attrs.ts, `attrShown`: `shown` compares its mode only with "template", so "attr" and "" write the
+# same text.
+packages/ferrovue/src/attrs.ts: StringLiteral: "attr" => "" in return isBooleanAttr(name) || name === "hidden" ? expr(s, n) : shown(s, n, "attr");
+
+# attrs.ts, `directiveProps`: it is called with a node of Vue's code each time, a callee that is not
+# a name has no `name` to equal `_ssrGetDirectiveProps`, and Vue passes the directive as the second
+# argument, as a member of `_ctx` or `$setup` or as the name `_resolveDirective` bound.
+packages/ferrovue/src/attrs.ts: OptionalChaining: n?.type => n.type in if (n?.type !== "CallExpression" || n.callee.type !== "Ide … | n.callee.name !== "_ssrGetDirectiveProps") return false;
+packages/ferrovue/src/attrs.ts: ConditionalExpression: n.callee.type !== "Identifier" => false in if (n?.type !== "CallExpression" || n.callee.type !== "Ide … | n.callee.name !== "_ssrGetDirectiveProps") return false;
+packages/ferrovue/src/attrs.ts: OptionalChaining: dir?.type => dir.type in if (dir?.type === "MemberExpression") {
+packages/ferrovue/src/attrs.ts: ConditionalExpression: dir?.type === "Identifier" => true in } else if (dir?.type === "Identifier") name = s.directives.get(dir.name) ?? null;
+packages/ferrovue/src/attrs.ts: OptionalChaining: dir?.type => dir.type in } else if (dir?.type === "Identifier") name = s.directives.get(dir.name) ?? null;
+
+# attrs.ts, `directiveProps`: a directive `<script setup>` declares is named `vName`, so the first
+# `v` before a capital is the first letter; `hyphenate` puts no dash before a first capital, so
+# `/^-/` never matches and its replacement is never written.
+packages/ferrovue/src/attrs.ts: Regex: /^v(?=[A-Z])/ => /v(?=[A-Z])/ in name = hyphenate(local.replace(/^v(?=[A-Z])/, "")).replace(/^-/, "");
+packages/ferrovue/src/attrs.ts: StringLiteral: "" => "Stryker was here!" in name = hyphenate(local.replace(/^v(?=[A-Z])/, "")).replace(/^-/, "");
+
+# attrs.ts, `directiveProps`: `clientDirectives` holds strings, so it has no `null` and the second
+# test refuses a `null` name too. The name is `null` only for a directive argument that is neither a
+# member nor a name `_resolveDirective` bound, which Vue never writes, so "?" is never written.
+packages/ferrovue/src/attrs.ts: ConditionalExpression: name === null => false in if (name === null || !ctx.clientDirectives.has(name)) {
+packages/ferrovue/src/attrs.ts: StringLiteral: "?" => "" in fail(s.comp, "FV0405", `custom directive \`v-${name ?? "?" …  ?? "?"}\` in \`clientDirectives\` in ${CONFIG_FILE}`, n);
+packages/ferrovue/src/attrs.ts: StringLiteral: "?" => "" in fail(s.comp, "FV0405", `custom directive \`v-${name ?? "?" …  ?? "?"}\` in \`clientDirectives\` in ${CONFIG_FILE}`, n);
+
+# attrs.ts, `isAttrs` and `mergedParts`: they are called with a node of Vue's code each time, and
+# only a name has a `name` (`_attrs`) and only a call whose callee is a name has a callee `name`
+# (`_mergeProps`).
+packages/ferrovue/src/attrs.ts: ConditionalExpression: n?.type === "Identifier" => true in return n?.type === "Identifier" && n.name === "_attrs";
+packages/ferrovue/src/attrs.ts: OptionalChaining: n?.type => n.type in return n?.type === "Identifier" && n.name === "_attrs";
+packages/ferrovue/src/attrs.ts: ConditionalExpression: n.callee.type === "Identifier" => true in return n?.type === "CallExpression" && n.callee.type === " … r" && n.callee.name === "_mergeProps" ? n.arguments : [n];
+packages/ferrovue/src/attrs.ts: OptionalChaining: n?.type => n.type in return n?.type === "CallExpression" && n.callee.type === " … r" && n.callee.name === "_mergeProps" ? n.arguments : [n];
+
+# attrs.ts, `renderAttrs`: `parts` is `[n]` for a node other than `_mergeProps`, and Vue's
+# `_mergeProps` has two arguments or more, so `parts.length === 1` and `parts[0] === n` hold
+# together or not at all.
+packages/ferrovue/src/attrs.ts: LogicalOperator: parts.length === 1 && parts[0] === n => parts.length === 1 || parts[0] === n in if (parts.length === 1 && parts[0] === n) {
+packages/ferrovue/src/attrs.ts: ConditionalExpression: parts.length === 1 => true in if (parts.length === 1 && parts[0] === n) {
+packages/ferrovue/src/attrs.ts: ConditionalExpression: parts[0] === n => true in if (parts.length === 1 && parts[0] === n) {
+
+# attrs.ts, `renderAttrs`: `staticAttrs` has already read the same `_mergeProps` through
+# `mergeProps`, which refuses an argument that is not an object literal (FV0410) and a computed key
+# or a spread (FV0408), so every part left is an object of plain keys. `attrEntries` compares its
+# side only with "vnode".
+packages/ferrovue/src/attrs.ts: ConditionalExpression: p.type === "ObjectExpression" => true in else if (p.type === "ObjectExpression") sources.push(`&[${attrEntries(s, p, "own").join(", ")}]`);
+packages/ferrovue/src/attrs.ts: StringLiteral: "own" => "" in else if (p.type === "ObjectExpression") sources.push(`&[${attrEntries(s, p, "own").join(", ")}]`);
+packages/ferrovue/src/attrs.ts: StringLiteral: "FV0407" => "" in else fail(s.comp, "FV0407", "attributes must be an object literal", p);
+packages/ferrovue/src/attrs.ts: StringLiteral: "attributes must be an object literal" => "" in else fail(s.comp, "FV0407", "attributes must be an object literal", p);
+packages/ferrovue/src/attrs.ts: ConditionalExpression: p.type !== "ObjectProperty" || p.computed => false in if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "FV0408", "attribute objects hold plain keys", p);
+packages/ferrovue/src/attrs.ts: LogicalOperator: p.type !== "ObjectProperty" || p.computed => p.type !== "ObjectProperty" && p.computed in if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "FV0408", "attribute objects hold plain keys", p);
+packages/ferrovue/src/attrs.ts: ConditionalExpression: p.type !== "ObjectProperty" => false in if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "FV0408", "attribute objects hold plain keys", p);
+packages/ferrovue/src/attrs.ts: StringLiteral: "FV0408" => "" in if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "FV0408", "attribute objects hold plain keys", p);
+packages/ferrovue/src/attrs.ts: StringLiteral: "attribute objects hold plain keys" => "" in if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "FV0408", "attribute objects hold plain keys", p);
+
+# attrs.ts, `staticAttrs`: a callee that is not a name has no `name` to equal `_mergeProps`.
+packages/ferrovue/src/attrs.ts: ConditionalExpression: n.callee.type === "Identifier" => true in if (n.type === "CallExpression" && n.callee.type === "Identifier" && n.callee.name === "_mergeProps") {
+
+# attrs.ts, `staticAttrs`: Vue puts `_attrs` after every object of attributes in `_mergeProps`; only
+# `_ssrGetDirectiveProps` may follow it, and `mergeProps` takes no keys from it, so the keys after
+# `_attrs` are none and `part(false)` is empty.
+packages/ferrovue/src/attrs.ts: MethodExpression: n.arguments.slice(0, at) => n.arguments in const before = new Set(mergeProps(s, { ...n, arguments: n. … ) }).properties.map((p: N) => p.key.name ?? p.key.value));
+packages/ferrovue/src/attrs.ts: BooleanLiteral: true => false in objectAttrs(s, e, part(false), true);
+
+# attrs.ts, `mergeProps`: two different literal classes merged. `classPresent` finds a literal
+# present with the mark or without it, and `literalClass` and `maybeEqual` read the mark only on a
+# third class, which no element has: Vue merges an element's own class with one `v-bind` object's.
+packages/ferrovue/src/attrs.ts: BooleanLiteral: true => false in if (before !== p.value.value) merged.set(key, { ...p, valu … ion", elements: [had.value, p.value], fvMerged: true } });
+
+# attrs.ts, `attrOf`: `valueAttr` gives a value of type `null` the same `fv::Attr::Undefined`.
+packages/ferrovue/src/attrs.ts: ConditionalExpression: n.type === "NullLiteral" => false in if (n.type === "NullLiteral") return "fv::Attr::Undefined";
+packages/ferrovue/src/attrs.ts: StringLiteral: "NullLiteral" => "" in if (n.type === "NullLiteral") return "fv::Attr::Undefined";
+
+# attrs.ts, `valueAttr`: `default` is the last clause of the switch, so its `break` ends it either way.
+packages/ferrovue/src/attrs.ts: ConditionalExpression: default: break; => default: in default:
+
+# template.ts, `selectsByModel` reads the test of a `?:` Vue writes for an attribute in content rendered from
+# virtual nodes. A callee that is not an identifier has no `name`, which the pattern reads as
+# "undefined" and does not match; the bare callees Vue writes are its own helpers and JavaScript's
+# globals, of which only `_ssrLooseEqual` and `_ssrLooseContain` start with `_ssrLoose` or end in
+# either name; and every node it is given is present, a call's arguments and a `?:`'s three parts
+# being required.
+packages/ferrovue/src/template.ts: ConditionalExpression: n.callee.type === "Identifier" => true in if (n?.type === "CallExpression" && n.callee.type === "Ide … Loose(?:Equal|Contain)$/.test(n.callee.name)) return true;
+packages/ferrovue/src/template.ts: Regex: /^_ssrLoose(?:Equal|Contain)$/ => /^_ssrLoose(?:Equal|Contain)/ in if (n?.type === "CallExpression" && n.callee.type === "Ide … Loose(?:Equal|Contain)$/.test(n.callee.name)) return true;
+packages/ferrovue/src/template.ts: Regex: /^_ssrLoose(?:Equal|Contain)$/ => /_ssrLoose(?:Equal|Contain)$/ in if (n?.type === "CallExpression" && n.callee.type === "Ide … Loose(?:Equal|Contain)$/.test(n.callee.name)) return true;
+packages/ferrovue/src/template.ts: OptionalChaining: n?.type => n.type in if (n?.type === "CallExpression" && n.callee.type === "Ide … Loose(?:Equal|Contain)$/.test(n.callee.name)) return true;
+packages/ferrovue/src/template.ts: OptionalChaining: n?.type => n.type in if (n?.type === "CallExpression") return n.arguments.some(selectsByModel);
+packages/ferrovue/src/template.ts: OptionalChaining: n?.type => n.type in return n?.type === "ConditionalExpression" && [n.test, n.consequent, n.alternate].some(selectsByModel);
+
+# The expressions of a pushed template literal are calls, `?:`s, `??`s and `_scopeId`: the only bare
+# identifier Vue writes there is `_scopeId`, and only identifiers have a `name`.
+packages/ferrovue/src/template.ts: ConditionalExpression: n.name === "_scopeId" => true in if (n.type === "Identifier" && n.name === "_scopeId") {
+packages/ferrovue/src/template.ts: ConditionalExpression: n.type === "Identifier" => true in if (n.type === "Identifier" && n.name === "_scopeId") {
+packages/ferrovue/src/template.ts: LogicalOperator: n.type === "Identifier" && n.name === "_scopeId" => n.type === "Identifier" || n.name === "_scopeId" in if (n.type === "Identifier" && n.name === "_scopeId") {
+
+# A call whose callee is not an identifier has no `name`, which matches no case of the switch.
+packages/ferrovue/src/template.ts: ConditionalExpression: n.callee.type === "Identifier" => true in if (n.type === "CallExpression" && n.callee.type === "Identifier") {
+
+# `shown` passes `how` to `asText`, which tells only "template" apart: "text", "attr" and "" take
+# the same path.
+packages/ferrovue/src/template.ts: StringLiteral: "text" => "" in interpolate(s, e, shown(s, a[0], "text"), a[0]);
+packages/ferrovue/src/template.ts: StringLiteral: "attr" => "" in else renderAttr(s, e, a[0].value, shown(s, a[1], "attr"), a[1]);
+
+# Vue writes `_ssrRenderAttr` with a literal attribute name, and `_ssrRenderDynamicAttr` with a
+# non-literal one only for a directive transform that returns a computed key: its own transforms
+# return literal keys, and a `v-bind` with a dynamic argument or a custom directive goes through
+# `_ssrRenderAttrs(_mergeProps(…))`. The refusal is never reached.
+packages/ferrovue/src/template.ts: ConditionalExpression: a[0].type !== "StringLiteral" => false in if (a[0].type !== "StringLiteral") fail(s.comp, "FV0417", "attribute names are literal", n);
+packages/ferrovue/src/template.ts: StringLiteral: "FV0417" => "" in if (a[0].type !== "StringLiteral") fail(s.comp, "FV0417", "attribute names are literal", n);
+packages/ferrovue/src/template.ts: StringLiteral: "attribute names are literal" => "" in if (a[0].type !== "StringLiteral") fail(s.comp, "FV0417", "attribute names are literal", n);
+packages/ferrovue/src/template.ts: ConditionalExpression: a[0].type !== "StringLiteral" => false in if (a[0].type !== "StringLiteral") fail(s.comp, "FV0417", "attribute names are literal", n);
+packages/ferrovue/src/template.ts: StringLiteral: "FV0417" => "" in if (a[0].type !== "StringLiteral") fail(s.comp, "FV0417", "attribute names are literal", n);
+packages/ferrovue/src/template.ts: StringLiteral: "attribute names are literal" => "" in if (a[0].type !== "StringLiteral") fail(s.comp, "FV0417", "attribute names are literal", n);
+
+# Vue writes `??` directly in a pushed template literal only for `v-html`, as `(value) ?? ''`; no
+# other logical expression stands there, and only a logical expression has the operator `??`.
+packages/ferrovue/src/template.ts: ConditionalExpression: n.right.value === "" => true in if (n.type === "LogicalExpression" && n.operator === "??" && n.right.type === "StringLiteral" && n.right.value === "") {
+packages/ferrovue/src/template.ts: ConditionalExpression: n.operator === "??" => true in if (n.type === "LogicalExpression" && n.operator === "??" && n.right.type === "StringLiteral" && n.right.value === "") {
+packages/ferrovue/src/template.ts: ConditionalExpression: n.right.type === "StringLiteral" => true in if (n.type === "LogicalExpression" && n.operator === "??" && n.right.type === "StringLiteral" && n.right.value === "") {
+packages/ferrovue/src/template.ts: ConditionalExpression: n.type === "LogicalExpression" => true in if (n.type === "LogicalExpression" && n.operator === "??" && n.right.type === "StringLiteral" && n.right.value === "") {
+packages/ferrovue/src/template.ts: LogicalOperator: n.type === "LogicalExpression" && n.operator === "??" => n.type === "LogicalExpression" || n.operator === "??" in if (n.type === "LogicalExpression" && n.operator === "??" && n.right.type === "StringLiteral" && n.right.value === "") {
+
+# The `?:`s Vue writes directly in a pushed template literal have two string branches (a boolean
+# attribute, `selected`, `checked`) or two other branches (`textContent` of a bound object), never
+# one of each.
+packages/ferrovue/src/template.ts: ConditionalExpression: n.consequent.type === "StringLiteral" => true in if (n.type === "ConditionalExpression" && n.consequent.typ … "StringLiteral" && n.alternate.type === "StringLiteral") {
+packages/ferrovue/src/template.ts: ConditionalExpression: n.alternate.type === "StringLiteral" => true in if (n.type === "ConditionalExpression" && n.consequent.typ … "StringLiteral" && n.alternate.type === "StringLiteral") {
+
+# Every string `?:` Vue writes in a pushed template literal is `test ? " attr" : ""`, whose
+# alternate is empty.
+packages/ferrovue/src/template.ts: BlockStatement: { e.close(" else {"); e.lit(n.alternate.value); } => {} in if (n.alternate.value) {
+packages/ferrovue/src/template.ts: ConditionalExpression: n.alternate.value => false in if (n.alternate.value) {
+packages/ferrovue/src/template.ts: StringLiteral: " else {" => "" in e.close(" else {");
+packages/ferrovue/src/template.ts: CallExpression: e.lit(n.alternate.value); => ; in e.lit(n.alternate.value);
+
+# A string of at most eight characters that matches `<!--…-->` is one whole comment, which the
+# second test finds too.
+packages/ferrovue/src/template.ts: ConditionalExpression: text.length <= 8 => false in return text.length <= 8 || !text.replace(/<!--[^]*?-->/gm, "").trim();
+packages/ferrovue/src/template.ts: EqualityOperator: text.length <= 8 => text.length < 8 in return text.length <= 8 || !text.replace(/<!--[^]*?-->/gm, "").trim();
+
+# Vue pushes template literals and `_ssrRenderComponent(…)` calls, and so does the `_push` ferrovue
+# writes for a dynamic component; it never pushes a string literal, so the branches for one are
+# never taken, and a push that is not a template literal is always a component.
+packages/ferrovue/src/template.ts: StringLiteral: "StringLiteral" => "" in if (n.type === "StringLiteral") return !isComment(n.value);
+packages/ferrovue/src/template.ts: BooleanLiteral: !isComment(n.value) => isComment(n.value) in if (n.type === "StringLiteral") return !isComment(n.value);
+packages/ferrovue/src/template.ts: ConditionalExpression: n.type === "StringLiteral" => false in if (n.type === "StringLiteral") return !isComment(n.value);
+packages/ferrovue/src/template.ts: StringLiteral: "StringLiteral" => "" in if (n.type === "StringLiteral") return outside(n.value);
+packages/ferrovue/src/template.ts: ConditionalExpression: n.type === "StringLiteral" => false in if (n.type === "StringLiteral") return outside(n.value);
+packages/ferrovue/src/template.ts: ConditionalExpression: n.type === "StringLiteral" => false in const text = n.type === "StringLiteral" ? n.value : n.type … & !n.expressions.length ? n.quasis[0].value.cooked : null;
+packages/ferrovue/src/template.ts: StringLiteral: "StringLiteral" => "" in const text = n.type === "StringLiteral" ? n.value : n.type … & !n.expressions.length ? n.quasis[0].value.cooked : null;
+packages/ferrovue/src/template.ts: StringLiteral: "StringLiteral" => "" in if (n.type === "StringLiteral") {
+packages/ferrovue/src/template.ts: BlockStatement: { e.lit(literal(n.value)); return; } => {} in if (n.type === "StringLiteral") {
+packages/ferrovue/src/template.ts: ConditionalExpression: n.type === "StringLiteral" => false in if (n.type === "StringLiteral") {
+packages/ferrovue/src/template.ts: CallExpression: e.lit(literal(n.value)); => ; in e.lit(literal(n.value));
+packages/ferrovue/src/template.ts: ConditionalExpression: n.callee.type === "Identifier" => true in if (n.type === "CallExpression" && n.callee.type === "Identifier" && n.callee.name === "_ssrRenderComponent") {
+packages/ferrovue/src/template.ts: ConditionalExpression: n.callee.name === "_ssrRenderComponent" => true in if (n.type === "CallExpression" && n.callee.type === "Identifier" && n.callee.name === "_ssrRenderComponent") {
+packages/ferrovue/src/template.ts: ConditionalExpression: n.type === "CallExpression" && n.callee.type === "Identifier" && n.callee.name === "_ssrRenderComponent" => true in if (n.type === "CallExpression" && n.callee.type === "Identifier" && n.callee.name === "_ssrRenderComponent") {
+packages/ferrovue/src/template.ts: ConditionalExpression: n.type === "CallExpression" && n.callee.type === "Identifier" => true in if (n.type === "CallExpression" && n.callee.type === "Identifier" && n.callee.name === "_ssrRenderComponent") {
+packages/ferrovue/src/template.ts: ConditionalExpression: n.type === "CallExpression" => true in if (n.type === "CallExpression" && n.callee.type === "Identifier" && n.callee.name === "_ssrRenderComponent") {
+packages/ferrovue/src/template.ts: LogicalOperator: n.type === "CallExpression" && n.callee.type === "Identifier" && n.callee.name === "_ssrRenderComponent" => n.type === "CallExpression" && n.callee.type === "Identifier" || n.callee.name === "_ssrRenderComponent" in if (n.type === "CallExpression" && n.callee.type === "Identifier" && n.callee.name === "_ssrRenderComponent") {
+packages/ferrovue/src/template.ts: LogicalOperator: n.type === "CallExpression" && n.callee.type === "Identifier" => n.type === "CallExpression" || n.callee.type === "Identifier" in if (n.type === "CallExpression" && n.callee.type === "Identifier" && n.callee.name === "_ssrRenderComponent") {
+packages/ferrovue/src/template.ts: StringLiteral: "FV0006" => "" in fail(s.comp, "FV0006", "this cannot be pushed", n);
+packages/ferrovue/src/template.ts: StringLiteral: "this cannot be pushed" => "" in fail(s.comp, "FV0006", "this cannot be pushed", n);
+
+# The first quasi of a literal that reaches this test is empty or starts with `<!--`: a strict
+# prefix of `<!--` would put an expression inside a tag name or a comment, which Vue never writes,
+# so `"".startsWith(first)` and `"<!--".startsWith(first)` agree.
+packages/ferrovue/src/template.ts: StringLiteral: "<!--" => "" in if (!"<!--".startsWith(first) && !first.startsWith("<!--")) return true;
+
+# In slot content Vue writes `${_scopeId}` before the `>` of every start tag. An expression that is
+# neither a call nor `_scopeId` is a boolean attribute's `?:`, inside a start tag, or `v-html`'s
+# `??`, inside an element; either way a later quasi starts with `>`, so `split` holds and the
+# literal is tested at run time whatever `raw` is.
+packages/ferrovue/src/template.ts: ConditionalExpression: x.name === "_scopeId" => true in const raw = n.expressions.some((x: N) => x.type !== "CallE … " && !(x.type === "Identifier" && x.name === "_scopeId"));
+packages/ferrovue/src/template.ts: EqualityOperator: x.name === "_scopeId" => x.name !== "_scopeId" in const raw = n.expressions.some((x: N) => x.type !== "CallE … " && !(x.type === "Identifier" && x.name === "_scopeId"));
+packages/ferrovue/src/template.ts: StringLiteral: "_scopeId" => "" in const raw = n.expressions.some((x: N) => x.type !== "CallE … " && !(x.type === "Identifier" && x.name === "_scopeId"));
+packages/ferrovue/src/template.ts: MethodExpression: n.expressions.some((x: N) => x.type !== "CallExpression" && !(x.type === "Identifier" && x.name === "_scopeId")) => n.expressions.every((x: N) => x.type !== "CallExpression" && !(x.type === "Identifier" && x.name === "_scopeId")) in const raw = n.expressions.some((x: N) => x.type !== "CallE … " && !(x.type === "Identifier" && x.name === "_scopeId"));
+packages/ferrovue/src/template.ts: ArrowFunction: (x: N) => x.type !== "CallExpression" && !(x.type === "Identifier" && x.name === "_scopeId") => () => undefined in const raw = n.expressions.some((x: N) => x.type !== "CallE … " && !(x.type === "Identifier" && x.name === "_scopeId"));
+packages/ferrovue/src/template.ts: ConditionalExpression: x.type !== "CallExpression" && !(x.type === "Identifier" && x.name === "_scopeId") => false in const raw = n.expressions.some((x: N) => x.type !== "CallE … " && !(x.type === "Identifier" && x.name === "_scopeId"));
+packages/ferrovue/src/template.ts: BooleanLiteral: !(x.type === "Identifier" && x.name === "_scopeId") => x.type === "Identifier" && x.name === "_scopeId" in const raw = n.expressions.some((x: N) => x.type !== "CallE … " && !(x.type === "Identifier" && x.name === "_scopeId"));
+packages/ferrovue/src/template.ts: ConditionalExpression: x.type === "Identifier" => true in const raw = n.expressions.some((x: N) => x.type !== "CallE … " && !(x.type === "Identifier" && x.name === "_scopeId"));
+packages/ferrovue/src/template.ts: ConditionalExpression: x.type === "Identifier" && x.name === "_scopeId" => true in const raw = n.expressions.some((x: N) => x.type !== "CallE … " && !(x.type === "Identifier" && x.name === "_scopeId"));
+packages/ferrovue/src/template.ts: ConditionalExpression: x.type === "Identifier" && x.name === "_scopeId" => false in const raw = n.expressions.some((x: N) => x.type !== "CallE … " && !(x.type === "Identifier" && x.name === "_scopeId"));
+packages/ferrovue/src/template.ts: EqualityOperator: x.type === "Identifier" => x.type !== "Identifier" in const raw = n.expressions.some((x: N) => x.type !== "CallE … " && !(x.type === "Identifier" && x.name === "_scopeId"));
+packages/ferrovue/src/template.ts: LogicalOperator: x.type === "Identifier" && x.name === "_scopeId" => x.type === "Identifier" || x.name === "_scopeId" in const raw = n.expressions.some((x: N) => x.type !== "CallE … " && !(x.type === "Identifier" && x.name === "_scopeId"));
+packages/ferrovue/src/template.ts: StringLiteral: "Identifier" => "" in const raw = n.expressions.some((x: N) => x.type !== "CallE … " && !(x.type === "Identifier" && x.name === "_scopeId"));
+
+# At index 0 the quasi is empty or starts with `<!--` (see the test above), which the pattern for
+# the end of a split comment does not match; and the last quasi is empty or ends with `>`, which the
+# pattern for the start of one does not match.
+packages/ferrovue/src/template.ts: ConditionalExpression: i > 0 => true in const split = quasis.some((q, i) => (i > 0 && /^(?:-|--|!- …  (i < quasis.length - 1 && /(?:<|<!|<!-|-|--)$/.test(q)));
+packages/ferrovue/src/template.ts: EqualityOperator: i > 0 => i >= 0 in const split = quasis.some((q, i) => (i > 0 && /^(?:-|--|!- …  (i < quasis.length - 1 && /(?:<|<!|<!-|-|--)$/.test(q)));
+packages/ferrovue/src/template.ts: ConditionalExpression: i < quasis.length - 1 => true in const split = quasis.some((q, i) => (i > 0 && /^(?:-|--|!- …  (i < quasis.length - 1 && /(?:<|<!|<!-|-|--)$/.test(q)));
+packages/ferrovue/src/template.ts: EqualityOperator: i < quasis.length - 1 => i <= quasis.length - 1 in const split = quasis.some((q, i) => (i > 0 && /^(?:-|--|!- …  (i < quasis.length - 1 && /(?:<|<!|<!-|-|--)$/.test(q)));
+packages/ferrovue/src/template.ts: ArithmeticOperator: quasis.length - 1 => quasis.length + 1 in const split = quasis.some((q, i) => (i > 0 && /^(?:-|--|!- …  (i < quasis.length - 1 && /(?:<|<!|<!-|-|--)$/.test(q)));
+
+# When no comment is split by an expression, no `<!--` or `-->` is formed across a quasi's edge, so
+# joining with `\0` or with nothing removes the same comments, and the `\0`s are removed before the
+# test.
+packages/ferrovue/src/template.ts: StringLiteral: "\0" => "" in if (!raw && !split && /\S/.test(quasis.join("\0").replace(/<!--[^]*?-->/g, "").replaceAll("\0", ""))) return true;
+
+# A `_scopeId` stands inside a start tag, so a literal that holds one holds the tag's text outside
+# any comment and pushes content whether or not `_scopeId` counts; every other expression is a call
+# or a `?:`, which counts under each of these changes. Joining the quasis with another string
+# matters only for a literal whose expressions are all `_scopeId`, whose tag text is outside
+# comments either way.
+packages/ferrovue/src/template.ts: StringLiteral: "" => "Stryker was here!" in return n.expressions.some((x: N) => !(x.type === "Identifi …  outside(n.quasis.map((q: N) => q.value.cooked).join(""));
+packages/ferrovue/src/template.ts: ConditionalExpression: x.type === "Identifier" => true in return n.expressions.some((x: N) => !(x.type === "Identifi …  outside(n.quasis.map((q: N) => q.value.cooked).join(""));
+packages/ferrovue/src/template.ts: ConditionalExpression: x.type === "Identifier" && x.name === "_scopeId" => false in return n.expressions.some((x: N) => !(x.type === "Identifi …  outside(n.quasis.map((q: N) => q.value.cooked).join(""));
+packages/ferrovue/src/template.ts: EqualityOperator: x.type === "Identifier" => x.type !== "Identifier" in return n.expressions.some((x: N) => !(x.type === "Identifi …  outside(n.quasis.map((q: N) => q.value.cooked).join(""));
+packages/ferrovue/src/template.ts: LogicalOperator: x.type === "Identifier" && x.name === "_scopeId" => x.type === "Identifier" || x.name === "_scopeId" in return n.expressions.some((x: N) => !(x.type === "Identifi …  outside(n.quasis.map((q: N) => q.value.cooked).join(""));
+packages/ferrovue/src/template.ts: StringLiteral: "Identifier" => "" in return n.expressions.some((x: N) => !(x.type === "Identifi …  outside(n.quasis.map((q: N) => q.value.cooked).join(""));
+packages/ferrovue/src/template.ts: ConditionalExpression: x.name === "_scopeId" => true in return n.expressions.some((x: N) => !(x.type === "Identifi …  outside(n.quasis.map((q: N) => q.value.cooked).join(""));
+packages/ferrovue/src/template.ts: EqualityOperator: x.name === "_scopeId" => x.name !== "_scopeId" in return n.expressions.some((x: N) => !(x.type === "Identifi …  outside(n.quasis.map((q: N) => q.value.cooked).join(""));
+packages/ferrovue/src/template.ts: StringLiteral: "_scopeId" => "" in return n.expressions.some((x: N) => !(x.type === "Identifi …  outside(n.quasis.map((q: N) => q.value.cooked).join(""));
+
+# Vue writes one space before each attribute of a start tag.
+packages/ferrovue/src/template.ts: Regex: /^(\s+)([^\s"'<>/=]+)(?:="([^"]*)")?/ => /^(\s)([^\s"'<>/=]+)(?:="([^"]*)")?/ in const ATTRIBUTE = /^(\s+)([^\s"'<>/=]+)(?:="([^"]*)")?/;
+
+# Vue writes each comment whole within one quasi, so its end is found at a positive index. From `end
+# - 3` the loop reads the comment's last three characters and its `-->` again as text: a start tag
+# that begins in them reaches the `>` of `-->` before any attribute, so they are written as they
+# are.
+packages/ferrovue/src/template.ts: ConditionalExpression: end < 0 => false in at = end < 0 ? text.length : end + 3;
+packages/ferrovue/src/template.ts: EqualityOperator: end < 0 => end <= 0 in at = end < 0 ? text.length : end + 3;
+packages/ferrovue/src/template.ts: ArithmeticOperator: end + 3 => end - 3 in at = end < 0 ? text.length : end + 3;
+
+# Vue writes a static `style`, empty or not, through `_ssrRenderStyle`, so no quasi holds
+# `style=""`.
+packages/ferrovue/src/template.ts: ConditionalExpression: name !== "style" => true in out += value === "" && name !== "class" && name !== "style … space}${name}${all.slice(space.length + written.length)}`;
+packages/ferrovue/src/template.ts: StringLiteral: "style" => "" in out += value === "" && name !== "class" && name !== "style … space}${name}${all.slice(space.length + written.length)}`;
+
+# Between a start tag's name and its `>`, Vue writes only attributes that the pattern reads whole,
+# so every other character met there is the `>`.
+packages/ferrovue/src/template.ts: ConditionalExpression: text[at] === ">" => true in if (text[at] === ">") ctx.vnodeTag = null;
+
+# Every template is rendered under `recovering`, which sets `ctx.recovered`, and never inside the
+# speculative attempts that raise `ctx.trying`, which translate expressions only. Statements change
+# `s.locals` and `s.narrowed` only by copying them, so putting their entries back changes nothing.
+# The statements of a template throw only `GenError`s; the other errors in the compiler are for
+# states its checks rule out. Once a statement is refused the component's Rust is never written, so
+# the lines it left are never read.
+packages/ferrovue/src/template.ts: ConditionalExpression: !ctx.recovered || ctx.trying => false in if (!ctx.recovered || ctx.trying) return f();
+packages/ferrovue/src/template.ts: LogicalOperator: !ctx.recovered || ctx.trying => !ctx.recovered && ctx.trying in if (!ctx.recovered || ctx.trying) return f();
+packages/ferrovue/src/template.ts: ConditionalExpression: !(err instanceof GenError) => false in if (!(err instanceof GenError)) throw err;
+packages/ferrovue/src/template.ts: CallExpression: restore(s.locals, locals); => ; in restore(s.locals, locals);
+packages/ferrovue/src/template.ts: CallExpression: restore(s.narrowed, narrowed); => ; in restore(s.narrowed, narrowed);
+packages/ferrovue/src/template.ts: CallExpression: rewind(); => ; in rewind();
+packages/ferrovue/src/template.ts: BlockStatement: { map.clear(); for (const [k, v] of entries) map.set(k, v); } => {} in function restore<K, V>(map: Map<K, V>, entries: [K, V][]): void {
+packages/ferrovue/src/template.ts: CallExpression: map.clear(); => ; in map.clear();
+
+# Every expression statement Vue writes in a render function is a call, and the calls it writes as
+# statements have identifier callees; a callee that is not one reads `undefined`, which no branch
+# matches.
+packages/ferrovue/src/template.ts: ConditionalExpression: st.expression.type === "CallExpression" => true in if (st.type === "ExpressionStatement" && st.expression.type === "CallExpression") {
+packages/ferrovue/src/template.ts: ConditionalExpression: c.callee.type === "Identifier" => true in const callee = c.callee.type === "Identifier" ? c.callee.name : null;
+
+# Vue writes `<Suspense>` with an object of slots whose properties all have keys, each slot an arrow
+# function with a block body.
+packages/ferrovue/src/template.ts: OptionalChaining: c.arguments[1]?.properties => c.arguments[1].properties in const def = c.arguments[1]?.properties?.find((p: N) => (p.key?.name ?? p.key?.value) === "default");
+packages/ferrovue/src/template.ts: OptionalChaining: c.arguments[1]?.properties?.find => c.arguments[1]?.properties.find in const def = c.arguments[1]?.properties?.find((p: N) => (p.key?.name ?? p.key?.value) === "default");
+packages/ferrovue/src/template.ts: OptionalChaining: p.key?.name => p.key.name in const def = c.arguments[1]?.properties?.find((p: N) => (p.key?.name ?? p.key?.value) === "default");
+packages/ferrovue/src/template.ts: OptionalChaining: p.key?.value => p.key.value in const def = c.arguments[1]?.properties?.find((p: N) => (p.key?.name ?? p.key?.value) === "default");
+packages/ferrovue/src/template.ts: ConditionalExpression: def.value.type === "ArrowFunctionExpression" && def.value.body.type === "BlockStatement" => true in else if (def.value.type === "ArrowFunctionExpression" && d … = "BlockStatement") statements(s, e, def.value.body.body);
+packages/ferrovue/src/template.ts: ConditionalExpression: def.value.type === "ArrowFunctionExpression" => true in else if (def.value.type === "ArrowFunctionExpression" && d … = "BlockStatement") statements(s, e, def.value.body.body);
+packages/ferrovue/src/template.ts: LogicalOperator: def.value.type === "ArrowFunctionExpression" && def.value.body.type === "BlockStatement" => def.value.type === "ArrowFunctionExpression" || def.value.body.type === "BlockStatement" in else if (def.value.type === "ArrowFunctionExpression" && d … = "BlockStatement") statements(s, e, def.value.body.body);
+packages/ferrovue/src/template.ts: ConditionalExpression: def.value.body.type === "BlockStatement" => true in else if (def.value.type === "ArrowFunctionExpression" && d … = "BlockStatement") statements(s, e, def.value.body.body);
+packages/ferrovue/src/template.ts: StringLiteral: "FV0006" => "" in else fail(s.comp, "FV0006", "unexpected `<Suspense>` content", c);
+packages/ferrovue/src/template.ts: StringLiteral: "unexpected `<Suspense>` content" => "" in else fail(s.comp, "FV0006", "unexpected `<Suspense>` content", c);
+
+# Vue writes `_ssrRenderVNode` only for `<component :is>`, of
+# `_createVNode(_resolveDynamicComponent(…))`, which `dynamicComponent` handles before this line.
+packages/ferrovue/src/template.ts: StringLiteral: "_ssrRenderVNode" => "" in if (callee === "_ssrRenderVNode") fail(s.comp, "FV0418", "`<component :is>` renders a closed set of choices", st);
+packages/ferrovue/src/template.ts: StringLiteral: "FV0418" => "" in if (callee === "_ssrRenderVNode") fail(s.comp, "FV0418", "`<component :is>` renders a closed set of choices", st);
+packages/ferrovue/src/template.ts: StringLiteral: "`<component :is>` renders a closed set of choices" => "" in if (callee === "_ssrRenderVNode") fail(s.comp, "FV0418", "`<component :is>` renders a closed set of choices", st);
+packages/ferrovue/src/template.ts: ConditionalExpression: callee === "_ssrRenderVNode" => false in if (callee === "_ssrRenderVNode") fail(s.comp, "FV0418", "`<component :is>` renders a closed set of choices", st);
+
+# The declarations Vue writes have one declarator each, and initialise it with
+# `_resolveComponent("name")`, `_resolveComponent("name", true)` for this component's own name,
+# `_resolveDirective("name")`, or nothing (`let _temp0`). Their callees are identifiers and their
+# first arguments string literals; `_resolveDirective` takes one argument. Vue adds `true` exactly
+# for a name `namesSelf` accepts, so the branch before takes every `_resolveComponent` of two
+# arguments.
+packages/ferrovue/src/template.ts: ConditionalExpression: st.declarations.length === 1 => true in if (st.type === "VariableDeclaration" && st.declarations.length === 1) {
+packages/ferrovue/src/template.ts: ConditionalExpression: init.callee.type === "Identifier" => true in init?.type === "CallExpression" && init.callee.type === "Identifier" &&
+packages/ferrovue/src/template.ts: ConditionalExpression: init.arguments[0]?.type === "StringLiteral" => true in init.callee.name === "_resolveComponent" && init.arguments[0]?.type === "StringLiteral" &&
+packages/ferrovue/src/template.ts: OptionalChaining: init.arguments[0]?.type => init.arguments[0].type in init.callee.name === "_resolveComponent" && init.arguments[0]?.type === "StringLiteral" &&
+packages/ferrovue/src/template.ts: ConditionalExpression: init.callee.name === "_resolveComponent" => true in init.callee.name === "_resolveComponent" && init.arguments[0]?.type === "StringLiteral" &&
+packages/ferrovue/src/template.ts: ConditionalExpression: init.arguments[1]?.type === "BooleanLiteral" => true in namesSelf(s.comp, init.arguments[0].value) && init.arguments[1]?.type === "BooleanLiteral"
+packages/ferrovue/src/template.ts: OptionalChaining: init.arguments[1]?.type => init.arguments[1].type in namesSelf(s.comp, init.arguments[0].value) && init.arguments[1]?.type === "BooleanLiteral"
+packages/ferrovue/src/template.ts: ConditionalExpression: init.arguments.length === 1 => true in init.callee.name === "_resolveComponent" && init.arguments.length === 1 &&
+packages/ferrovue/src/template.ts: ConditionalExpression: init.callee.type === "Identifier" => true in const named = init?.type === "CallExpression" && init.callee.type === "Identifier" &&
+packages/ferrovue/src/template.ts: ConditionalExpression: init.arguments[0]?.type === "StringLiteral" => true in init.arguments[0]?.type === "StringLiteral" ? init.arguments[0].value : null;
+packages/ferrovue/src/template.ts: OptionalChaining: init.arguments[0]?.type => init.arguments[0].type in init.arguments[0]?.type === "StringLiteral" ? init.arguments[0].value : null;
+packages/ferrovue/src/template.ts: ConditionalExpression: init.arguments[0]?.type === "StringLiteral" => true in if (init?.type === "CallExpression" && init.callee.type == … rective" && init.arguments[0]?.type === "StringLiteral") {
+packages/ferrovue/src/template.ts: OptionalChaining: init.arguments[0]?.type => init.arguments[0].type in if (init?.type === "CallExpression" && init.callee.type == … rective" && init.arguments[0]?.type === "StringLiteral") {
+packages/ferrovue/src/template.ts: ConditionalExpression: init.callee.type === "Identifier" => true in if (init?.type === "CallExpression" && init.callee.type == … rective" && init.arguments[0]?.type === "StringLiteral") {
+
+# Only a logical expression has the operator `&&`, so a test of another type never takes the branch.
+packages/ferrovue/src/template.ts: ConditionalExpression: st.test.type === "LogicalExpression" => true in if (st.test.type === "LogicalExpression" && st.test.operator === "&&") {
+packages/ferrovue/src/template.ts: ConditionalExpression: n.type === "LogicalExpression" => true in if (n.type === "LogicalExpression" && n.operator === "&&") {
+
+# Filtering out `"true"` from parts that hold none leaves them as they are.
+packages/ferrovue/src/template.ts: ConditionalExpression: parts.includes("true") => true in if (parts.includes("true")) parts.splice(0, parts.length, ...parts.filter((p) => p !== "true"));
+
+# Only a unary expression has the operator `!`.
+packages/ferrovue/src/template.ts: ConditionalExpression: st.test.type === "UnaryExpression" => true in (st.test.type === "UnaryExpression" && st.test.operator === "!");

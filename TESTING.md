@@ -30,7 +30,7 @@ pnpm test:browser          # the same fixtures, and the full-stack example, hydr
 | **Differential fuzzing** | `packages/ferrovue/fuzz/` | Random components and props, within the grammar ferrovue accepts, render identically in Vue and in the generated Rust; each difference is shrunk to a small case (`pnpm fuzz`, nightly in CI, not part of `pnpm test`) | `@vue/server-renderer` |
 | **Runtime fuzzing** | `fuzz/` | `escape_into`, an island's `data-props`, the state script and the attribute writers hold their invariants on any input libFuzzer finds: escaped text reads back whole and holds no markup, JSON reads back as the value it was written from and holds nothing that ends its attribute or its `<script>` (`cargo +nightly fuzz run <target>`, nightly in CI) | References written in the fuzz crate, serde_json |
 | **Vue canary** | `.github/workflows/canary.yml` | The newest Vue 3.5, vue-router, Pinia, vue-i18n and `@unhead/vue` patches the peer ranges allow record the same fixtures and vectors as are committed, and hydrate the committed HTML (weekly in CI; an issue is opened on a difference) | `@vue/server-renderer`, Vue's hydration |
-| **Mutation testing** | `.cargo/mutants.toml` | The tests above notice a small change to the runtime's source; every change they miss is listed, with the reason, as one that cannot alter the output (`cargo mutants`, weekly in CI) | cargo-mutants |
+| **Mutation testing** | `.cargo/mutants.toml`, `stryker.config.json` | The tests above notice a small change to the runtime's source and to the compiler's hot modules; every change they miss is listed, with the reason, as one that cannot alter the output (`cargo mutants` and `pnpm mutants:ts`, weekly in CI) | cargo-mutants, Stryker |
 | **Performance budgets** | `crates/ferrovue/benches/instructions.rs`, `scripts/build-budget.ts` | The generated renderers run no more than 5% more instructions than the committed baseline; ferrovue and `cargo build` handle a 500-component project within their time budgets | Callgrind (gungraun), wall-clock |
 | **Example** | `examples/greeting/` | Generated code compiles in an ordinary (non-test) consumer crate | `cargo build` |
 | **Generated-code contract** | `crates/ferrovue-contract/` | Components that generate every item `generated_code.md` documents as stable compile, and hand-written Rust uses each as an application would (`render`'s parameters pinned as function pointers, props built with builders and as literals, `html`, `island`, the owned forms, slots, a recorded page, `render_json`); a `mod.rs` naming the version of generated code before this one builds, and one naming a version the crate does not accept, older or newer, stops the build with the message `tests/compat/previous.stderr` and `tests/compat/newer.stderr` hold (trybuild); CI checks the generated Rust is current with `ferrovue --check` | Hand-written, trybuild |
@@ -594,6 +594,45 @@ shards, and fails on any survivor that is not in the list and on any entry of th
 shard missed, which a test now catches and the list no longer needs. It is too slow for every pull
 request;
 run it locally on the functions a change touches (`-F`, or `--in-diff` with a diff file).
+
+### The compiler
+
+[Stryker](https://stryker-mutator.io) does the same for the compiler's TypeScript, configured in
+`stryker.config.json`: it mutates the modules listed under `mutate` (`attrs.ts` and `template.ts`
+for now; `expr.ts`, `constants.ts` and `dynamic.ts` come next) and runs the vitest suite against
+each mutant, compiler tests and the Vue half of conformance included. The conformance check that `generated/` is what the compiler writes now
+catches any mutant that changes the Rust of a conformance component, so a fixture there kills
+more than its HTML.
+
+```sh
+pnpm mutants:ts                                                    # every listed module, in full, then the check below
+pnpm exec stryker run -m packages/ferrovue/src/attrs.ts            # one module, reusing earlier results
+pnpm exec stryker run -m "packages/ferrovue/src/attrs.ts:120-140"  # the mutants on some lines
+node scripts/stryker-survivors.ts                                  # hold the last report to the list
+```
+
+Per-test coverage runs each mutant against only the tests that reach it. A full run of both
+modules takes 15 to 18 minutes on twelve cores; the reports are `target/stryker/mutation.html` and
+`mutation.json`. Incremental mode (`target/stryker/incremental.json`) reuses the result of a mutant
+whose code and covering tests are unchanged, so a run after a small change takes a minute or two.
+It also reuses a survivor that a new conformance fixture or component now kills, since those are
+data the tests read, and a static mutant (one in a module-level constant), which no test covers
+alone: pass `--force` before trusting a survivor it reports. `pnpm mutants:ts` always passes it.
+
+A survivor is closed by a test or listed in `stryker-equivalent.txt`, under a comment saying why
+it cannot change what the compiler writes or refuses. An entry names the file, the mutator, the
+source text before and after and the line the mutant starts on, on one line and without the line's
+number, as `scripts/stryker-survivors.ts` prints it; a mutant that survives twice with the same
+text is listed twice. `pnpm mutants:ts` fails on a survivor the list does not explain and on an
+entry no survivor of the modules in the report uses. A listed mutant that times out uses its entry:
+under load, a mutant whose tests all pass can still run past the timeout. The **Mutants** workflow
+runs it every Monday beside cargo-mutants and uploads the HTML report.
+
+The vitest runner is patched (`patches/`): Stryker 10 names a test by its describe blocks and
+title joined with spaces, and vitest 5 matches `--testNamePattern` against the names joined with
+` > `, so without the patch a mutant covered only by nested tests ran none of them and survived.
+TypeScript 7 has no JavaScript API, so `tsconfigFile` points Stryker's tsconfig rewriting at a
+file that does not exist, and the TypeScript checker is off: vitest strips the types anyway.
 
 ## Performance budgets
 

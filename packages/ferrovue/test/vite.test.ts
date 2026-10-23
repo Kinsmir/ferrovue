@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync,
 import { tmpdir } from "node:os";
 import { join, sep } from "node:path";
 import vuePlugin from "@vitejs/plugin-vue";
-import { afterEach, beforeEach, expect, it } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { build, createBuilder, type Rolldown, type ViteDevServer } from "vite";
 import { loadConfig, write } from "../src/compiler.ts";
 import { affects, inputsOf } from "../src/inputs.ts";
@@ -130,10 +130,9 @@ it("fails a build whose CSS modules Vite names otherwise than the configuration"
   const pattern = "[local]_[hash:base64:5]";
   writeFileSync(join(root, "components", "Hello.vue"), `<template><p :class="$style.hi">hi</p></template>\n<style module>.hi { color: red }</style>`);
   writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify({ components: "components", out: "gen", cssModules: { generateScopedName: pattern } }));
-  const cwd = process.cwd();
   const vite = (css: Record<string, unknown>) => ({ plugins: [], root, isProduction: true, command: "build", css });
+  const cwd = vi.spyOn(process, "cwd").mockReturnValue(root);
   try {
-    process.chdir(root);
     expect(started(ferrovue({ root }), vite({ modules: { generateScopedName: pattern } }))).toEqual([]);
     expect(() => started(ferrovue({ root }), vite({}))).toThrow(/Vite's `css\.modules\.generateScopedName` is unset, ferrovue\.config\.json's `cssModules\.generateScopedName` "\[local\]_\[hash:base64:5\]"/);
     expect(() => started(ferrovue({ root }), vite({ modules: { generateScopedName: () => "x" } }))).toThrow(/is a function/);
@@ -142,12 +141,12 @@ it("fails a build whose CSS modules Vite names otherwise than the configuration"
     expect(() => started(ferrovue({ root }), vite({ modules: { generateScopedName: pattern, scopeBehaviour: "global" } }))).toThrow(/scopeBehaviour/);
     expect(() => started(ferrovue({ root }), vite({ transformer: "lightningcss", modules: { generateScopedName: pattern } }))).toThrow(/lightningcss/);
     expect(() => started(ferrovue({ root }), vite({ modules: false }))).toThrow(/`css\.modules` is `false`/);
-    process.chdir(join(root, "components"));
+    cwd.mockReturnValue(join(root, "components"));
     expect(() => started(ferrovue({ root }), vite({ modules: { generateScopedName: pattern } }))).toThrow(/Vite runs in .*components, from which it hashes a module's path/);
     writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify({ components: "components", out: "gen", cssModules: { generateScopedName: "[local]" } }));
     expect(started(ferrovue({ root }), vite({ modules: { generateScopedName: "[local]" } }))).toEqual([]);
   } finally {
-    process.chdir(cwd);
+    cwd.mockRestore();
   }
 });
 

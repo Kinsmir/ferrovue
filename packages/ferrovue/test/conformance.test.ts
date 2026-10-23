@@ -123,9 +123,10 @@ const ASYNC_AND_CLIENT_ONLY = ["EscapedIdioms/empty.json", "EscapedIdioms/hostil
 const STYLE_THE_CLIENT_DROPS = ["Unsanitised/hostile.json", "CssVars/hostile.json"];
 const CSS_VARS_ONLY_THE_CLIENT_SETS = ["CssVarsBranch/on.json", "CssVarsShapes/on.json", "CssVarsShapes/hostile.json", "CssVarsPage/full.json", "CssVarsPage/hostile.json"];
 const HAPPY_DOM_SELECTS_THE_SECOND_OPTION = ["Catalog/high.json"];
+const KEYS_THE_CLIENT_SETS_OTHERWISE = ["AttrQuirks/absent.json", "AttrQuirks/empty.json", "AttrQuirks/full.json", "AttrQuirks/hostile.json"];
 const HOLLOW_SLOTS = [...VUE_DISAGREES].filter((k) => k.startsWith("Hollow/"));
 const LISTENER_NAMES_ONLY_THE_SERVER_MERGES = [...VUE_DISAGREES].filter((k) => k.startsWith("OnPropsRoot/"));
-const CLIENT_RENDER_DIFFERS = new Set([...CLIENT_DIFFERS, ...HOLLOW_SLOTS, ...LISTENER_NAMES_ONLY_THE_SERVER_MERGES, ...SELECT_MATCHES_NO_OPTION, ...ATTRIBUTE_ON_NO_PROPERTY, ...ASYNC_AND_CLIENT_ONLY, ...STYLE_THE_CLIENT_DROPS, ...CSS_VARS_ONLY_THE_CLIENT_SETS, ...HAPPY_DOM_SELECTS_THE_SECOND_OPTION]);
+const CLIENT_RENDER_DIFFERS = new Set([...CLIENT_DIFFERS, ...HOLLOW_SLOTS, ...LISTENER_NAMES_ONLY_THE_SERVER_MERGES, ...SELECT_MATCHES_NO_OPTION, ...ATTRIBUTE_ON_NO_PROPERTY, ...ASYNC_AND_CLIENT_ONLY, ...STYLE_THE_CLIENT_DROPS, ...CSS_VARS_ONLY_THE_CLIENT_SETS, ...HAPPY_DOM_SELECTS_THE_SECOND_OPTION, ...KEYS_THE_CLIENT_SETS_OTHERWISE]);
 
 it("lists only fixtures that exist, and with scope ids in CLIENT_DIFFERS", () => {
   const scoped = new Set(cases.filter((c) => c.html.includes(" data-v-")).map((c) => `${c.component}/${c.name}`));
