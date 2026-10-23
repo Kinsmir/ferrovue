@@ -109,6 +109,9 @@ released together and share version numbers.
   the conformance suite, `Catalog`'s `enum Tone` is `Volume`, so that it no longer shares a name
   with `Lookups`'s, its `empty` and `hostile` fixtures give it members of the union, and
   `FallSwitch`'s `hostile` fixture, a value outside its union, is gone.
+- CI only: the jobs that run one Node.js, the release, the canary and the release dry run among them,
+  run Node 26, the active LTS from 2026-10-28, where they ran Node 24. The test matrix still runs
+  Node 22.18, 22, 24 and 26.
 - CI only: a retry of the browser job's system libraries first stops the `apt-get` the timed-out
   attempt left running and waits for the package lock, which that `apt-get` held so the next
   attempts failed at once.

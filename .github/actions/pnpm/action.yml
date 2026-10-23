@@ -3,7 +3,7 @@ description: Installs pnpm, Node.js and the workspace's packages from the cached
 inputs:
   node-version:
     description: The Node.js version to install
-    default: "24"
+    default: "26"
   registry-url:
     description: The npm registry to write an .npmrc for
     default: ""
