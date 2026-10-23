@@ -270,7 +270,8 @@ FERROVUE_BROWSERS=chromium pnpm test:browser                             # one b
   the server's first node, or if hydrating changed the document as the browser parsed it.
   Vue rewrites some attributes on purpose as it hydrates (it sets every dynamic prop again, and
   `useCssVars` sets the `v-bind()` variables on roots its server leaves without them: a root
-  `v-for`'s elements, a `<Transition>` root); those are listed, by fixture, in `PATCHED`, and the
+  `v-for`'s elements, a `<Transition>` root; a `.value` key in a `v-bind` object on an element
+  without that property becomes a `value` attribute); those are listed, by fixture, in `PATCHED`, and the
   test fails if one stops happening. A
   fixture in `VUE_DISAGREES` must mismatch instead, and the head of one in `UNHEAD_REWRITES` must
   be rewritten, as in happy-dom.

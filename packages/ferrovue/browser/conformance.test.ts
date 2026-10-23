@@ -32,6 +32,10 @@ const PATCHED: Record<string, { browsers?: string[]; server: string; hydrated: s
       hydrated: '<i style="--d9e366c1-tone: maroon; --d9e366c1-size: 2;">a</i><i style="--d9e366c1-tone: maroon; --d9e366c1-size: 2;">b</i>',
     },
   ],
+  "AttrQuirks/absent.json": [{ server: `a^="x">keys`, hydrated: `a^="x" value="x">keys` }],
+  "AttrQuirks/empty.json": [{ server: `a^="">keys`, hydrated: `a^="" value="">keys` }],
+  "AttrQuirks/full.json": [{ server: `a^="Go">keys`, hydrated: `a^="Go" value="Go">keys` }],
+  "AttrQuirks/hostile.json": [{ server: `a^="&lt;&quot;&amp;'&gt;">keys`, hydrated: `a^="&lt;&quot;&amp;'&gt;" value="&lt;&quot;&amp;'&gt;">keys` }],
   "Numbers/tiny-and-huge.json": [{ browsers: ["firefox"], server: 'max="9007199254740992"', hydrated: 'max="9007199254740990"' }],
 };
 
