@@ -7,6 +7,7 @@ import { presence } from "./narrowing.ts";
 import { asCow, heldStr, isTemporary } from "./strings.ts";
 import { intFromF64 } from "./numbers.ts";
 import { ownedStruct, ownedStructs } from "./objects.ts";
+import { mutableLet } from "./statements.ts";
 
 const COW = "std::borrow::Cow::<str>";
 
@@ -154,6 +155,22 @@ class Renamer {
         return { ...n, body: this.statements(n.body, env) };
       case "SwitchStatement":
         return { ...n, discriminant: this.node(n.discriminant, env), cases: n.cases.map((c: N) => ({ ...c, test: this.node(c.test, env), consequent: this.statements(c.consequent, env) })) };
+      case "ForOfStatement":
+      case "ForInStatement": {
+        const right = this.node(n.right, env);
+        const inner: Env = new Map(env);
+        const left = n.left.type === "VariableDeclaration" ? { ...n.left, declarations: n.left.declarations.map((d: N) => ({ ...d, id: this.pattern(d.id, inner) })) } : this.node(n.left, env);
+        return { ...n, left, right, body: this.node(n.body, inner) };
+      }
+      case "ForStatement": {
+        const inner: Env = new Map(env);
+        let init: N = n.init;
+        if (init?.type === "VariableDeclaration") {
+          for (const name of declared(init)) inner.set(name, null);
+          init = { ...init, declarations: init.declarations.map((d: N) => ({ ...d, init: this.node(d.init, inner), id: this.pattern(d.id, inner) })) };
+        } else init = this.node(init, inner);
+        return { ...n, init, test: this.node(n.test, inner), update: this.node(n.update, inner), body: this.node(n.body, inner) };
+      }
     }
     const copy: N = { ...n };
     for (const key of Object.keys(n)) {
@@ -170,49 +187,135 @@ interface Cont {
   next: Cont | null;
   brk: Cont | null | undefined;
   falls?: N;
+  leaf?: N;
 }
 
+const COUNT = "count with `for (let i = start; i < end; i++)` to an integer bound, or iterate with `for (const x of list)`";
+
 const LOOPS: Record<string, string> = {
-  ForStatement: "a `for` loop",
-  ForOfStatement: "a `for…of` loop",
-  ForInStatement: "a `for…in` loop",
-  WhileStatement: "a `while` loop",
-  DoWhileStatement: "a `do…while` loop",
+  ForInStatement: "a `for…in` loop, which walks an object's keys: iterate `Object.keys(…)` with `for (const key of …)`",
+  WhileStatement: `a \`while\` loop, which the compiler cannot bound: ${COUNT}`,
+  DoWhileStatement: `a \`do…while\` loop, which the compiler cannot bound: ${COUNT}`,
 };
 
 const OTHERS: Record<string, string> = {
   TryStatement: "`try`, which only catches what the body throws",
   ThrowStatement: "`throw`, which ends the render with an error",
   LabeledStatement: "a labelled statement",
-  ContinueStatement: "`continue`",
   FunctionDeclaration: "a function declared inside it with `function`, which is hoisted: declare it with `const f = (…) => …` before it is called",
   ClassDeclaration: "a class declared inside it",
   DebuggerStatement: "`debugger`",
   WithStatement: "`with`",
 };
 
-const SUBSET = "it holds `const` (and `let` never assigned again), `if` / `else`, `switch` and `return`";
+const SUBSET = "it holds `const` and `let`, assignments to its `let`s, `if` / `else`, `switch`, `for…of` and counting `for` loops, and `return`";
 
-function assignments(comp: Component, body: N[], whose: string): void {
+const FUNCTIONS = new Set(["ArrowFunctionExpression", "FunctionExpression", "FunctionDeclaration", "ObjectMethod", "ClassMethod", "ClassPrivateMethod"]);
+
+function walk(n: N, visit: (n: N, parent: N) => boolean, parent: N = null): void {
+  if (!n || typeof n !== "object") return;
+  if (Array.isArray(n)) {
+    for (const x of n) walk(x, visit, parent);
+    return;
+  }
+  if (!visit(n, parent)) return;
+  for (const key of Object.keys(n)) if (!SKIP.has(key) && n[key] && typeof n[key] === "object") walk(n[key], visit, n);
+}
+
+function ownNames(body: N): { lets: Set<string>; consts: Set<string> } {
   const lets = new Set<string>();
-  const visit = (n: N): void => {
-    if (!n || typeof n !== "object") return;
-    if (Array.isArray(n)) {
-      n.forEach(visit);
-      return;
+  const consts = new Set<string>();
+  walk(body, (n) => {
+    if (FUNCTIONS.has(n.type)) return false;
+    if (n.type === "VariableDeclaration") for (const d of n.declarations) for (const name of patternNames(d.id)) (n.kind === "let" ? lets : consts).add(name);
+    return true;
+  });
+  return { lets, consts };
+}
+
+function targetOf(n: N): N {
+  return n.type === "UpdateExpression" ? n.argument : n.left;
+}
+
+function assignedIn(n: N): Set<string> {
+  const names = new Set<string>();
+  walk(n, (x) => {
+    if (FUNCTIONS.has(x.type)) return false;
+    if ((x.type === "AssignmentExpression" || x.type === "UpdateExpression") && targetOf(x).type === "Identifier") names.add(targetOf(x).name);
+    return true;
+  });
+  return names;
+}
+
+function reads(n: N, names: Set<string>): N | null {
+  let found: N | null = null;
+  walk(n, (x) => {
+    if (found) return false;
+    if (x.type === "Identifier" && names.has(x.name)) found = x;
+    return true;
+  });
+  return found;
+}
+
+/** The `let`s of a body that it assigns again, each assignment checked: a statement of its own that
+ * assigns a `let` the body itself declares. */
+function assignments(comp: Component, body: N[], whose: string): Set<string> {
+  const top = ownNames(body);
+  const assigned = new Set<string>();
+  const check = (n: N, parent: N, own: { lets: Set<string>; consts: Set<string> }, outer: Set<string>, nested: boolean): void => {
+    const target = targetOf(n);
+    const op = `\`${n.operator}\``;
+    if (target.type !== "Identifier") {
+      const what = target.type === "MemberExpression" || target.type === "OptionalMemberExpression" ? "a field or an item" : "a pattern";
+      fail(comp, "FV1902", `an assignment (${op}) to ${what}, which changes an object or a list in place, and ${whose} does not translate that: build the new value and give it a \`const\``, n);
     }
-    if (n.type === "VariableDeclaration" && n.kind === "let") for (const d of n.declarations) for (const name of patternNames(d.id)) lets.add(name);
-    if (n.type === "AssignmentExpression" || n.type === "UpdateExpression") {
-      const target = n.type === "AssignmentExpression" ? n.left : n.argument;
-      const shown = `\`${n.operator}\``;
-      if (target.type === "Identifier" && lets.has(target.name)) {
-        fail(comp, "FV1902", `\`let ${target.name}\` is assigned again with ${shown}, which ${whose} does not translate: give each value a \`const\` of its own`, n);
+    const name = target.fvName ?? target.name;
+    if (!own.lets.has(target.name)) {
+      if (own.consts.has(target.name)) fail(comp, "FV1902", `\`${name}\` is a \`const\`, which JavaScript does not let a body assign: declare it with \`let\``, n);
+      if (nested && outer.has(target.name)) {
+        fail(comp, "FV1902", `\`${name}\` is a \`let\` of the body around this function, which a function inside it may not assign (${op}): return the value from the function, and assign it in the body`, n);
       }
-      fail(comp, "FV1902", `an assignment (${shown}) changes a value, which ${whose} does not translate: give each value a \`const\` of its own`, n);
+      fail(comp, "FV1902", `\`${name}\` is assigned (${op}), and it is no \`let\` of this body: ${whose} assigns only the \`let\`s it declares, and leaves a prop, a ref, a \`computed\`, a parameter and a name from outside it as they are; copy the value into a \`let\` of the body`, n);
     }
-    for (const key of Object.keys(n)) if (!SKIP.has(key) && n[key] && typeof n[key] === "object") visit(n[key]);
+    const statement = (parent?.type === "ExpressionStatement" && parent.expression === n) || (parent?.type === "ForStatement" && parent.update === n);
+    if (!statement) fail(comp, "FV1902", `an assignment (${op}) inside an expression, whose value JavaScript then reads: write the assignment as a statement of its own`, n);
   };
-  visit(body);
+  const scan = (from: N, own: { lets: Set<string>; consts: Set<string> }, outer: Set<string>, nested: boolean): void => {
+    walk(from, (n, parent) => {
+      if (FUNCTIONS.has(n.type)) {
+        const mine = n.body?.type === "BlockStatement" ? ownNames(n.body.body) : { lets: new Set<string>(), consts: new Set<string>() };
+        scan(n.body, mine, new Set([...outer, ...own.lets]), true);
+        return false;
+      }
+      if (n.type === "AssignmentExpression" || n.type === "UpdateExpression") {
+        check(n, parent, own, outer, nested);
+        if (!nested) assigned.add(targetOf(n).name);
+      }
+      return true;
+    });
+  };
+  scan(body, top, new Set(), false);
+  if (assigned.size) {
+    walk(body, (n) => {
+      if (FUNCTIONS.has(n.type)) return false;
+      if (n.type !== "VariableDeclarator" || !FUNCTIONS.has(n.init?.type)) return true;
+      const read = reads(n.init, assigned);
+      if (read) {
+        const fn = n.id.fvName ?? n.id.name;
+        fail(comp, "FV1902", `\`${fn}\` reads \`${read.fvName ?? read.name}\`, a \`let\` the body assigns again: the server gives a function the values the body holds where the function is declared, and JavaScript reads them where it is called; pass the value to \`${fn}\` as a parameter`, read);
+      }
+      return false;
+    });
+  }
+  return assigned;
+}
+
+function stepOf(update: N, name: string): number {
+  if (update?.type === "UpdateExpression" && update.argument.type === "Identifier" && update.argument.name === name) return update.operator === "++" ? 1 : -1;
+  if (update?.type !== "AssignmentExpression" || update.left.type !== "Identifier" || update.left.name !== name) return 0;
+  const by = update.right;
+  if (by.type !== "NumericLiteral" || !Number.isSafeInteger(by.value) || by.value <= 0) return 0;
+  return update.operator === "+=" ? by.value : update.operator === "-=" ? -by.value : 0;
 }
 
 /** How many times a body's statements may be translated again after an `if` or a `case` that
@@ -223,11 +326,14 @@ export const PATH_BUDGET = 4096;
 class Desugar {
   private readonly comp: Component;
   private readonly whose: string;
+  private readonly assigned: Set<string>;
+  private readonly loops: Cont[] = [];
   private paths = 0;
 
-  constructor(comp: Component, whose = "a function's body") {
+  constructor(comp: Component, whose = "a function's body", assigned: Set<string> = new Set()) {
     this.comp = comp;
     this.whose = whose;
+    this.assigned = assigned;
   }
 
   run(sts: N[], k: Cont | null, brk: Cont | null | undefined, from: N): N {
@@ -241,11 +347,17 @@ class Desugar {
         case "ReturnStatement":
           if (!st.argument) fail(this.comp, "FV1903", "`return` without a value returns `undefined`: return the value the function gives on this path", st);
           this.dead(rest, "`return`");
-          return st.argument;
+          return this.loops.length ? { type: "FvStep", kind: "return", argument: st.argument, ...spot(st) } : st.argument;
         case "BreakStatement":
-          if (st.label || brk === undefined) fail(this.comp, "FV1901", "`break` outside a `switch`'s case, which only a loop could take", st);
           this.dead(rest, "`break`");
-          return this.go(brk, st);
+          return this.go(brk as Cont | null, st);
+        case "ContinueStatement":
+          this.dead(rest, "`continue`");
+          return this.go(this.loops.at(-1)!, st);
+        case "ForOfStatement":
+          return this.forOf(st, after);
+        case "ForStatement":
+          return this.forCount(st, after);
         case "BlockStatement":
           return this.run(st.body, after, brk, st);
         case "IfStatement": {
@@ -261,15 +373,111 @@ class Desugar {
           return st.declarations.reduceRight((inner: N, d: N) => this.bind(d, inner), body);
         }
         case "ExpressionStatement":
+          if (st.expression.type === "AssignmentExpression" || st.expression.type === "UpdateExpression") return this.assign(st.expression, this.run(rest, k, brk, st));
           return fail(this.comp, "FV1901", `${this.whose} may not hold an expression statement (\`${st.expression.type}\`), whose value is dropped and which could only change something: ${SUBSET}`, st);
         default: {
-          const what = LOOPS[st.type] ?? OTHERS[st.type] ?? `\`${st.type}\``;
-          const why = LOOPS[st.type] ? `: ${SUBSET}; compute a list with \`.map()\`, \`.filter()\` or \`.reduce()\`` : `: ${SUBSET}`;
-          return fail(this.comp, "FV1901", `${this.whose} may not hold ${what}${why}`, st);
+          if (LOOPS[st.type]) return fail(this.comp, "FV1901", `${this.whose} may not hold ${LOOPS[st.type]}`, st);
+          return fail(this.comp, "FV1901", `${this.whose} may not hold ${OTHERS[st.type] ?? `\`${st.type}\``}: ${SUBSET}`, st);
         }
       }
     }
     return this.go(k, from);
+  }
+
+  private assign(e: N, body: N): N {
+    const target = targetOf(e);
+    const at = spot(e);
+    let value: N;
+    if (e.type === "UpdateExpression") {
+      value = { type: "BinaryExpression", operator: e.operator[0], left: { ...target }, right: { type: "NumericLiteral", value: 1, ...at }, ...at };
+    } else if (e.operator === "=") {
+      value = e.right;
+    } else {
+      const op: string = e.operator.slice(0, -1);
+      value = { type: op === "&&" || op === "||" || op === "??" ? "LogicalExpression" : "BinaryExpression", operator: op, left: { ...target }, right: e.right, ...at };
+    }
+    return { type: "FvSet", name: target.name, js: target.fvName ?? target.name, value, count: e.type === "UpdateExpression" ? e.operator : undefined, body, ...at };
+  }
+
+  private loopBody(sts: N[], update: N | null, from: N): N {
+    const next: Cont = { sts: [], next: null, brk: undefined, leaf: { type: "FvStep", kind: "next" } };
+    const cont: Cont = update ? { sts: [{ type: "ExpressionStatement", expression: update, ...spot(update) }], next, brk: undefined } : next;
+    const brk: Cont = { sts: [], next: null, brk: undefined, leaf: { type: "FvStep", kind: "break" } };
+    this.loops.push(cont);
+    try {
+      return this.run(sts, cont, brk, from);
+    } finally {
+      this.loops.pop();
+    }
+  }
+
+  private carried(st: N, head: string[]): string[] {
+    const local = new Set<string>(head);
+    walk(st.body, (n) => {
+      if (FUNCTIONS.has(n.type)) return false;
+      if (n.type === "VariableDeclaration") for (const d of n.declarations) for (const name of patternNames(d.id)) local.add(name);
+      return true;
+    });
+    const assigned = assignedIn(st.body);
+    if (st.update) for (const name of assignedIn(st.update)) assigned.add(name);
+    return [...assigned].filter((name) => !local.has(name));
+  }
+
+  private forOf(st: N, after: Cont | null): N {
+    if (st.await) fail(this.comp, "FV1909", "`for await`, which waits on promises a render cannot wait on: iterate the values themselves", st);
+    const decl = st.left;
+    const d = decl.type === "VariableDeclaration" && (decl.kind === "const" || decl.kind === "let") && decl.declarations.length === 1 ? decl.declarations[0] : null;
+    if (!d || d.init) fail(this.comp, "FV1909", "a `for…of` loop declares its item in its head, as `for (const x of list)`", decl);
+    const id = d.id;
+    const right = st.right;
+    const entries =
+      id.type === "ArrayPattern" &&
+      right.type === "CallExpression" &&
+      right.arguments.length === 0 &&
+      right.callee.type === "MemberExpression" &&
+      !right.callee.computed &&
+      right.callee.property.name === "entries";
+    let index: string | null = null;
+    let pattern: N | null = id;
+    if (entries) {
+      const [i, x] = id.elements as N[];
+      if (id.elements.length > 2 || (i && i.type !== "Identifier") || x?.type === "RestElement") {
+        fail(this.comp, "FV1909", "`for (const [i, x] of list.entries())` names the index and the item: `[i, x]`, `[i]` or `[, x]`", id);
+      }
+      index = i?.name ?? null;
+      pattern = x ?? null;
+    }
+    const item = `item#${++renames}`;
+    const states = this.carried(st, patternNames(id));
+    const nested = this.loops.length > 0;
+    const inner = this.loopBody(this.branch(st.body), null, st);
+    const body = pattern ? this.pattern(pattern, { type: "Identifier", name: item, ...spot(right) }, inner, d) : inner;
+    const over = entries ? right.callee.object : right;
+    return { type: "FvLoop", kind: "of", over, entries, item, index, body, after: this.go(after, st), states, nested, ...spot(st) };
+  }
+
+  private forCount(st: N, after: Cont | null): N {
+    const init = st.init;
+    const d = init?.type === "VariableDeclaration" && init.kind === "let" && init.declarations.length === 1 ? init.declarations[0] : null;
+    const counter: N = d?.id.type === "Identifier" && d.init ? d.id : null;
+    const by = counter ? stepOf(st.update, counter.name) : 0;
+    const test = st.test;
+    const order = test?.type === "BinaryExpression" && test.left.type === "Identifier" && test.left.name === counter?.name ? (test.operator as string) : "";
+    const rising = order === "<" || order === "<=";
+    const falling = order === ">" || order === ">=";
+    if (!counter || !((rising && by > 0) || (falling && by < 0))) {
+      fail(this.comp, "FV1909", `a \`for\` loop that is no counting loop, which the compiler cannot bound: ${COUNT}`, st);
+    }
+    const name = counter.fvName ?? counter.name;
+    if (assignedIn(st.body).has(counter.name)) fail(this.comp, "FV1909", `the body of a counting loop assigns \`${name}\`, which the loop's head alone counts: ${COUNT}`, st.body);
+    const states = this.carried(st, []);
+    const limit = test.right;
+    const changed = reads(limit, new Set(states));
+    if (changed) fail(this.comp, "FV1909", `the bound of a counting loop reads \`${changed.fvName ?? changed.name}\`, which the loop changes, so the compiler cannot bound it: ${COUNT}`, changed);
+    const nested = this.loops.length > 0;
+    const body = this.loopBody(this.branch(st.body), st.update, st);
+    const loop = { type: "FvLoop", kind: "count", counter: counter.name, test, bound: limit, body, after: this.go(after, st), states, nested, ...spot(st) };
+    return this.pattern(counter, d.init, loop, d);
   }
 
   private branch(st: N): N[] {
@@ -285,6 +493,7 @@ class Desugar {
     if (k === null) {
       return fail(this.comp, "FV1903", "the function can reach its end here without a `return`, and JavaScript then returns `undefined`: return a value on every path", from);
     }
+    if (k.leaf) return { ...k.leaf, ...spot(from) };
     if (k.falls) fail(this.comp, "FV1904", "this case falls through into the next one, which runs its statements too: end it with `return` or `break`", k.falls);
     if (k.sts.length && ++this.paths > PATH_BUDGET) {
       fail(this.comp, "FV1905", `the body's \`if\`s and \`switch\`es continue with the statements after them on more than ${PATH_BUDGET} paths, each translated on its own: end the cases in \`return\`, or split the body into \`computed\`s`, from);
@@ -293,7 +502,11 @@ class Desugar {
   }
 
   private bind(d: N, body: N): N {
-    if (!d.init) fail(this.comp, "FV1901", `\`${d.id.fvName ?? d.id.name ?? "a pattern"}\` is declared without a value: give it one where it is declared`, d);
+    if (!d.init) {
+      const name: string = d.id.fvName ?? d.id.name ?? "a pattern";
+      const none = this.assigned.has(d.id.name) ? `, and JavaScript gives it \`undefined\` until it is assigned: give it a value where it is declared, \`let ${name}: T | undefined = undefined\` for none` : ": give it one where it is declared";
+      fail(this.comp, "FV1901", `\`${name}\` is declared without a value${none}`, d);
+    }
     const typed = d.id.typeAnnotation?.typeAnnotation;
     const init = typed ? typedBy(d.init, typed) : d.init;
     return this.pattern(d.id, init, body, d);
@@ -302,6 +515,7 @@ class Desugar {
   pattern(p: N, value: N, body: N, d: N): N {
     switch (p.type) {
       case "Identifier":
+        if (this.assigned.has(p.name)) return { type: "FvLet", name: p.name, js: p.fvName ?? p.name, init: value, body, mutable: true, declared: p.typeAnnotation?.typeAnnotation, ...spot(d) };
         return { type: "FvLet", name: p.name, js: p.fvName ?? p.name, init: value, body, ...spot(d) };
       case "ObjectPattern":
       case "ArrayPattern": {
@@ -378,10 +592,10 @@ export function bodyExpr(comp: Component, fn: N, whose = "a function's body"): N
   if (fn.body.type !== "BlockStatement") return fn.body;
   const done = desugared.get(fn);
   if (done) return done;
-  assignments(comp, fn.body.body, whose);
   const shadowed: Env = new Map();
   const renamed = new Renamer(comp).statements(fn.body.body, shadowed);
-  const out = new Desugar(comp, whose).run(renamed, null, undefined, fn.body.body.at(-1) ?? fn);
+  const assigned = assignments(comp, renamed, whose);
+  const out = new Desugar(comp, whose, assigned).run(renamed, null, undefined, fn.body.body.at(-1) ?? fn);
   desugared.set(fn, out);
   return out;
 }
@@ -404,11 +618,12 @@ function simple(v: Val): boolean {
   return /^(?:&\*?|\*)?[A-Za-z_]\w*(?:\.\w+)*$/.test(v.code) || /^"(?:[^"\\]|\\.)*"$/.test(v.code) || /^-?\d[\w.]*$/.test(v.code);
 }
 
-function reps(v: Val): string[] {
+export function reps(v: Val): string[] {
   return [v.code, v.iter, v.held, v.f64, ...(v.format?.args ?? [])].filter((r): r is string => r !== undefined);
 }
 
 function ownedCow(v: Val): string {
+  if (/^&\*fv_m\d+$/.test(v.code)) return `${COW}::Owned(${v.code.slice(2)})`;
   if (!isTemporary(v)) return /^&\*\w+(?:\.[\w#]+)+$/.test(v.code) ? `${COW}::Owned(str::to_owned(${v.code}))` : `${COW}::Owned(${atom(v.code).replace(/^&\*?/, "")}.to_owned())`;
   const cow = asCow(v);
   return cow.startsWith(`${COW}::Owned(`) ? cow : `${COW}::Owned(${atom(cow)}.into_owned())`;
@@ -419,6 +634,7 @@ function ownedCow(v: Val): string {
 export function letIn(s: Scope, n: N): Val {
   let init: N = n.init;
   while (init?.type === "ParenthesizedExpression" || init?.type === "TSAsExpression" || init?.type === "TSSatisfiesExpression") init = init.expression;
+  if (n.mutable) return mutableLet(s, n, init);
   if (init?.type === "ArrowFunctionExpression" || init?.type === "FunctionExpression") {
     const fn: Fn = { name: n.js, node: init, home: s.comp, file: null };
     const inner: Scope = {
@@ -442,11 +658,18 @@ export function bound(s: Scope, local: string, v: Val, then: (inner: Scope) => V
   if (reps(body).join("\0") === reps(held).join("\0")) return v;
   const uses = reps(body).some((r) => occurrences(r, name) > 0);
   if (!uses && !panicky(init)) return body;
-  const lead = `let ${uses ? name : "_"} = ${init};`;
+  return around(`let ${uses ? name : "_"} = ${init};`, body, owned, !!v.owned && uses);
+}
+
+/** `body` after the Rust statements `lead`, as a block that hands out nothing borrowed from what
+ * they declare: `owned` when a statement owns what `body` may borrow (a `String`, a `Cow`, a
+ * `Vec`), `ownedUses` when it holds a struct or a list `body` reads. */
+export function around(lead: string, body: Val, owned: boolean, ownedUses = false): Val {
   const block = (code: string): string => `{ ${lead} ${bare(code)} }`;
   const lone = body.lone ? { lone: true as const } : {};
+  if (body.ty.k === "step") return { code: body.code === "{}" ? `{ ${lead} }` : block(body.code), ty: body.ty };
   if (body.owned) return { code: `(${block(body.code)})`, ty: body.ty, owned: true, ...lone };
-  if (v.owned && uses) {
+  if (ownedUses) {
     const of = body.ty.k === "opt" || body.ty.k === "list" ? body.ty.of : body.ty;
     if (of.k === "struct" && body.ty.k === "struct") return { code: `(${block(ownedStruct(body))})`, ty: body.ty, owned: true, ...lone };
     if (of.k === "struct" && body.ty.k === "opt") return { code: `(${block(`${atom(body.code)}.cloned()`)})`, ty: body.ty, owned: true, ...lone };

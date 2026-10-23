@@ -8,9 +8,11 @@ one Rust expression that computes what JavaScript computes, step for step.
 
 # What a body may hold
 
-- `const`, and `let` that is never assigned again, of any value the template may compute,
-  destructured too: `const { name, posts: count } = author`, `const [first] = rows`. A type
-  annotation types an empty array as it does in setup (`const tags: string[] = []`).
+- `const` and `let` of any value the template may compute, destructured too:
+  `const { name, posts: count } = author`, `const [first] = rows`. A type annotation types an
+  empty array as it does in setup (`const tags: string[] = []`).
+- assignments to the body's `let`s, and `for…of` and counting `for` loops (see
+  [Loops and assignments](#loops-and-assignments)).
 - `if` / `else if` / `else`, and blocks.
 - `return` of a value, at the end of the body or early.
 - `switch` over a string (a string-literal union included) or a number: `case`s stacked to share
@@ -84,6 +86,99 @@ negative count, `.toISOString()` of an invalid date, a helper) is evaluated wher
 reads it, as Vue evaluates it, and a `const` after an early `return` is never evaluated on the
 path that returns. A string, a list or an optional string computed from a `const` is handed out as
 its own value, since the `let` it borrows from ends with the body.
+
+# Loops and assignments
+
+A body may assign the `let`s it declares and loop over lists and strings:
+
+- `x = …`, `x += …`, `x -= …`, `x *= …`, `x /= …`, `x %= …`, `x ??= …`, `x ||= …`, `x &&= …`,
+  `x++` and `x--`, each a statement of its own, anywhere in the body: in its `if`s, its `switch`es
+  and its loops.
+- `for (const x of list)` over a list of strings, numbers, booleans or objects: a prop, a
+  `computed`, the result of a list method, an array literal, `Object.keys()`, `Object.values()` or
+  `Object.entries()`. The item is a name or a pattern (`for (const { name, score } of rows)`,
+  `for (const [key, value] of Object.entries(counts))`), and `list.entries()` gives the index too:
+  `for (const [i, x] of list.entries())`.
+- `for (const ch of text)` over a string, by its characters as JavaScript iterates it: a character
+  beyond U+FFFF, such as 🦀, is one item of two UTF-16 code units, and half of a surrogate pair
+  (from `slice` and the like) is one item of one, held as U+FFFD as
+  [`strings`](crate::guide::strings#halves-of-surrogate-pairs) describes.
+- `for (let i = start; i < end; i++)`, a counting loop: from an integer, with `<`, `<=`, `>` or
+  `>=` against an integer bound, and `i++`, `i--`, `i += k` or `i -= k` of a whole `k` towards it.
+  The bound is read again before each item, as JavaScript reads it, and may not read a `let` the
+  loop changes; the body leaves `i` to the loop's head.
+- `break` and `continue`, loops inside loops, and `return` inside a loop.
+
+```vue
+<script setup lang="ts">
+import { computed } from "vue";
+
+interface Row {
+  name: string;
+  score: number;
+}
+
+const props = defineProps<{ rows: Row[]; amount: number }>();
+
+const leader = computed(() => {
+  let best = -1;
+  let name = "nobody";
+  for (const r of props.rows) {
+    if (r.score <= best) continue;
+    best = r.score;
+    name = r.name;
+  }
+  return `${name} (${best})`;
+});
+
+function thousands(n: number): string {
+  const digits = String(Math.abs(n));
+  let out = n < 0 ? "-" : "";
+  for (const [i, ch] of digits.split("").entries()) {
+    if (i > 0 && (digits.length - i) % 3 === 0) out += ",";
+    out += ch;
+  }
+  return out;
+}
+</script>
+
+<template>
+  <p>{{ leader }}: {{ thousands(amount) }}</p>
+</template>
+```
+
+An assignment gives the `let` its new value for the statements after it, so a `let` that no loop
+assigns costs what a `const` costs, and has the type TypeScript narrows it to: after `found = w`,
+a `let found: string | undefined` is a string. A loop carries the `let`s it assigns from one item
+to the next in Rust variables: a string in a `String`, a boolean in a `bool`, and a number in an
+`f64`, which holds every value a JavaScript number holds, `-0` and integers beyond 2⁵³ included, and
+computes them as JavaScript does; one the loop only gives integers is read back as an integer. Each
+may be `undefined` or `null`, in an `Option`. Strings are appended to in place. This is the
+generated code of `leader`:
+
+```rust
+# use ferrovue as fv;
+# struct Row<'a> { name: std::borrow::Cow<'a, str>, score: i64 }
+# struct Props<'a> { rows: Vec<Row<'a>> }
+# let props = Props { rows: vec![Row { name: "Ann".into(), score: 7 }, Row { name: "Bo".into(), score: 9 }] };
+let s_leader = { let mut fv_m7: f64 = -1.0f64; let mut fv_m8: String = String::from("nobody"); for fv_a10 in props.rows.iter() { if fv_a10.score as f64 <= fv_m7 {} else { fv_m7 = fv_a10.score as f64; fv_m8 = String::from(&*fv_a10.name); } } std::borrow::Cow::<str>::Owned(format!("{} ({})", fv_m8, fv::Js(fv_m7))) };
+# assert_eq!(s_leader, "Bo (9)");
+```
+
+A `return` inside a loop ends it, and the body returns that value once the loop is left; it gives a
+string, a number or a boolean. A body whose every path ends in `break` or `return` runs on the first
+item alone, as JavaScript runs it. Each value is computed once, where JavaScript computes it, and a
+`let` nothing reads after the loop is assigned only where something does.
+
+The loops the compiler cannot bound are refused, `while`, `do…while` and `for…in` among them, and so
+is a `for` loop that does not count as above: iterate a list or a string with `for…of`, or count to
+an integer bound. A `let` keeps one type, the one it is declared with or the type of its first value,
+and a `let` that starts as `undefined` or `null` states its type: `let found: string | undefined =
+undefined`. A body assigns its own `let`s: an assignment to a `const`, a parameter, a prop, a ref,
+a `computed`, a field or an item of an object or a list is refused, and so is one from a function
+inside the body to a `let` of the body. So is a function declared in the body that reads a `let` the
+body assigns again: the server gives it the value the `let` holds where the function is declared,
+and JavaScript the value it holds where the function is called.
 
 # Functions
 
@@ -248,9 +343,13 @@ Everything else a body could hold is refused, with the statement named:
 
 | Written | Code | What to write instead |
 |---|---|---|
-| a loop (`for`, `for…of`, `for…in`, `while`, `do…while`) | FV1901 | `.map()`, `.filter()`, `.reduce()` |
-| `try`, `throw`, `var`, a label, `continue`, an expression statement, a `function` or class declared inside the body | FV1901 | the value itself, a prop computed in Rust, or `const f = (…) => …` for a function |
-| `x = …`, `x += …`, `x++`, a `let` assigned again | FV1902 | a `const` for each value |
+| a `while`, `do…while` or `for…in` loop | FV1901 | `for…of`, a counting `for` loop, `.map()`, `.filter()`, `.reduce()` |
+| `try`, `throw`, `var`, a label, an expression statement other than an assignment, a `function` or class declared inside the body | FV1901 | the value itself, a prop computed in Rust, or `const f = (…) => …` for a function |
+| an assignment inside an expression (`f(i++)`), to a `const`, a parameter, a prop, a ref, a `computed`, a field or an item, or from a function inside the body to a `let` of the body; a function declared in the body reading a `let` the body assigns again | FV1902 | a statement of its own assigning a `let` of the body; a parameter for the function |
+| a `for` loop that does not count from an integer to an integer bound the loop leaves alone, `for await`, a `for…of` loop without a declaration in its head | FV1909 | `for (let i = start; i < end; i++)`, `for (const x of list)` |
+| `for…of` over a value that is not a list of strings, numbers, booleans or objects, or a string | FV1910 | `.filter(Boolean)` for a list of optional values, `x ?? []` for an optional list |
+| a loop assigning a `let` that holds a list, an object, or a value that may be both `null` and `undefined`; a `return` inside a loop of a list, an object or a value that may be absent | FV1911 | `.map()`, `.filter()`, `.find()`, or a `return` after the loop |
+| a `let` assigned a value of another type, `++` of a string, a `let` starting as `undefined` with no type, a `let` holding a function | FV1912 | a `let` of its own for the other value, `let x: T \| undefined = undefined` |
 | a path that reaches the end of the body, or `return;` | FV1903 | a `return` on every path; `return undefined` where that is meant |
 | a case falling through into the next case's statements, a declaration directly in a `case`, code after `return` | FV1904 | `return` or `break` at the end of each case, `{ … }` around a case's declarations |
 | more than 4096 paths that fall off an `if` or `break` out of a `case` and continue after it, as in a run of `switch`es of `break`ing cases | FV1905 | `return` at the end of each case, or the body split into several `computed`s |

@@ -17,7 +17,7 @@ const BINARY: [RegExp, number][] = [
   [/^ as /, AS],
 ];
 
-function literalEnd(code: string, i: number): number {
+export function literalEnd(code: string, i: number): number {
   if (code[i] === "'") {
     if (code[i + 1] === "\\") return code.indexOf("'", i + 3);
     return code[i + 2] === "'" ? i + 2 : i;
@@ -30,7 +30,7 @@ function literalEnd(code: string, i: number): number {
   return code.length;
 }
 
-function closing(code: string, i: number): number {
+export function closing(code: string, i: number): number {
   let depth = 0;
   for (let j = i; j < code.length; j++) {
     const ch = code[j]!;
@@ -66,6 +66,15 @@ function topLevel(code: string): { at: number; op: string; p: number }[] | null 
     }
   }
   return ops;
+}
+
+/** The two operands of the operator `code` applies last, where that is a binary operator. */
+export function outermost(code: string): { left: string; op: string; right: string } | null {
+  const ops = topLevel(code);
+  if (!ops?.length) return null;
+  const p = Math.min(...ops.map((o) => o.p));
+  const last = ops.findLast((o) => o.p === p)!;
+  return { left: code.slice(0, last.at), op: last.op, right: code.slice(last.at + last.op.length + 2) };
 }
 
 export function binding(code: string): number {

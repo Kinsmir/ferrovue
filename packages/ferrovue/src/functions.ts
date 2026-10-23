@@ -85,8 +85,8 @@ function moduleOf(file: string): Module {
 
 /** What a function's body sees: its own module's names, and none of the call site's. */
 function calleeScope(s: Scope, fn: Fn): Scope {
-  if (fn.captured) return { ...fn.captured, within: "function", mapping: undefined };
-  if (fn.file === null) return { ...s, locals: new Map(), narrowed: new Map(), within: "function", mapping: undefined };
+  if (fn.captured) return { ...fn.captured, within: "function", mapping: undefined, frame: undefined };
+  if (fn.file === null) return { ...s, locals: new Map(), narrowed: new Map(), within: "function", mapping: undefined, lets: undefined, frame: undefined };
   const m = moduleOf(fn.file);
   return {
     ...s,
@@ -97,6 +97,8 @@ function calleeScope(s: Scope, fn: Fn): Scope {
     settingUpAt: undefined,
     within: "function",
     mapping: undefined,
+    lets: undefined,
+    frame: undefined,
     typesFrom: m.home,
     helpers: new Map(),
     clientOnly: m.clientOnly,

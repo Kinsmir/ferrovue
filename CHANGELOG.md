@@ -7,6 +7,23 @@ released together and share version numbers.
 
 ### Added
 
+- Loops and `let`s assigned again in a function's or a `computed`'s body and in a list method's
+  callback: `for (const x of list)` over a list, `list.entries()`, `Object.keys()`,
+  `Object.values()` or `Object.entries()`; `for (const ch of text)` over a string by its
+  characters, a character beyond U+FFFF one item; counting loops `for (let i = 0; i < n; i++)` to
+  an integer bound, read again before each item; `break`, `continue`, nested loops and `return`
+  inside a loop. A body assigns the `let`s it declares with `=`, `+=`, `-=`, `*=`, `/=`, `%=`,
+  `??=`, `||=`, `&&=`, `++` and `--`, each a statement of its own, and a `let` has the type
+  TypeScript gives it. A loop carries strings, numbers and booleans, present or optional, from one
+  item to the next in Rust variables, numbers as `f64` computed as JavaScript computes them. Sums,
+  the largest of a list, thousands separators and strings built character by character compile.
+  FV1909 (a loop of another shape, such as a `for` loop that does not count), FV1910 (`for…of` over
+  a value that is not a list or a string), FV1911 (a loop carrying or returning a list or an object)
+  and FV1912 (a `let` assigned a value of another type, or starting as `undefined` with no type)
+  are new entries of `ERRORS` in `ferrovue/compiler`. `while`, `do…while` and `for…in` loops stay
+  refused with FV1901. The conformance components `Loops` and `LoopEdges` record them from Vue, and
+  the fuzzer generates loops and `let` accumulators.
+
 - Constants are worked out when the component is compiled, as JavaScript works them out: `+`, `-`,
   `*`, `/` and `%` of numbers, unary `-` and `+`, `**` where it gives an exact integer within
   ±2⁵³ (FV0720 for another power, which engines round in their own ways), strings joined with `+`
@@ -114,7 +131,10 @@ released together and share version numbers.
   `Html::dates`, `Load::DATES`, `DateShape` and `dates_in`. `Html` writes `data-dates` on an island
   and into a page's record, and `Loads::script_into` writes `dates` into the payload, when
   generated code gives them a plan.
-
+- FV1902 is titled "Assignment the server does not translate", and refuses an assignment inside an
+  expression, to a `const`, a parameter, a prop, a ref, a `computed`, a field or an item, from a
+  function inside the body to a `let` of the body, and a function declared in the body that reads
+  a `let` the body assigns again, each message saying which. FV1901 names a `while`, `do…while` or `for…in` loop with what to write instead.
 - A refusal inside a `computed`, a setup expression or a function the template calls carries that
   refusal's own code and place (FV0710 for a regular expression, FV1902 for an assignment, FV0634
   for an object literal), with where the template reads the value or calls the function; it was

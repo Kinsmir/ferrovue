@@ -1635,11 +1635,11 @@ export const ERRORS: {
     };
     readonly FV1901: {
         readonly title: "Statement a function's body may not hold";
-        readonly detail: "A `computed`, a list method's callback and a function the server calls may hold `const` declarations (and `let` that is never assigned again), `if` / `else`, blocks, `switch` and `return`. Loops, `try`, `throw`, `var`, expression statements, labels, `continue` and functions or classes declared inside the body are refused: compute a list with `.map()`, `.filter()` or `.reduce()`, and pass anything else in as a prop. See [`script_logic`](crate::guide::script_logic).";
+        readonly detail: "A `computed`, a list method's callback and a function the server calls may hold `const` and `let` declarations, assignments to the body's `let`s, `if` / `else`, blocks, `switch`, `for…of` and counting `for` loops with `break` and `continue`, and `return`. `while`, `do…while` and `for…in` loops, `try`, `throw`, `var`, other expression statements, labels, and functions or classes declared inside the body are refused: iterate with `for…of`, and pass anything else in as a prop. See [`script_logic`](crate::guide::script_logic).";
     };
     readonly FV1902: {
-        readonly title: "Assignment in a function's body";
-        readonly detail: "A value in a function's body is computed once: an assignment (`=`, `+=`, `++` and the like) would change one, which the server does not translate. Give each value a `const` of its own.";
+        readonly title: "Assignment the server does not translate";
+        readonly detail: "A body assigns only the `let`s it declares itself, each assignment (`=`, `+=`, `++` and the like) a statement of its own. An assignment inside an expression, to a field or an item of an object or a list, to a `const`, a parameter, a prop, a ref or a `computed`, or from a function inside the body to a `let` of the body around it is refused, and so is a function declared in the body that reads a `let` the body assigns again, since the server gives it the value the `let` holds where the function is declared. See [`script_logic`](crate::guide::script_logic#loops-and-assignments).";
     };
     readonly FV1903: {
         readonly title: "Function that can end without returning a value";
@@ -1664,6 +1664,22 @@ export const ERRORS: {
     readonly FV1908: {
         readonly title: "Function declared with `const`, called while setup runs before its declaration";
         readonly detail: "A function declared with `const` (`const f = (…) => …`) exists only once its declaration has run. Setup code above it that calls it, directly or through a `function` declaration, which is hoisted, throws a `ReferenceError` in JavaScript, and Vue's server renders nothing. A `computed` may call it, since a `computed` runs when the render reads it. Move the declaration above the call, or declare the function with `function`.";
+    };
+    readonly FV1909: {
+        readonly title: "Loop of a shape the compiler does not translate";
+        readonly detail: "A `for…of` loop declares its item in its head, `for (const x of list)`, or its index and item, `for (const [i, x] of list.entries())`. A `for` loop counts: `for (let i = start; i < end; i++)`, with `<`, `<=`, `>` or `>=` and `i++`, `i--`, `i += k` or `i -= k` of a whole `k`, from an integer to an integer bound the body does not change, and a body that leaves `i` to the head. Any other loop may run without end, and is refused. See [`script_logic`](crate::guide::script_logic#loops-and-assignments).";
+    };
+    readonly FV1910: {
+        readonly title: "`for…of` over a value that is not a list or a string";
+        readonly detail: "`for…of` iterates a list of strings, numbers, booleans or objects (a prop, a `computed`, the result of a list method, an array literal, `Object.keys()` or `Object.entries()`), or a string by its characters as JavaScript does: a character beyond U+FFFF is one item. A value that may be absent is narrowed first, or iterated as `x ?? []`, and a list of optional values keeps the ones present with `.filter(Boolean)`. See [`script_logic`](crate::guide::script_logic#loops-and-assignments).";
+    };
+    readonly FV1911: {
+        readonly title: "Value a loop carries or returns that is not a string, a number or a boolean";
+        readonly detail: "A `let` a loop assigns is carried from one item to the next in a Rust variable, and a `return` inside a loop keeps its value for after the loop: each holds a string, a number or a boolean, which a `let` may hold as `T | undefined` or `T | null`. Build a list with `.map()` or `.filter()`, pick an item with `.find()`, or return after the loop. See [`script_logic`](crate::guide::script_logic#loops-and-assignments).";
+    };
+    readonly FV1912: {
+        readonly title: "`let` assigned a value of another type";
+        readonly detail: "A `let` keeps the type TypeScript gives it: the one it is declared with (`let label: string | undefined = undefined`), or the type of its first value. Assigning it a value of another type, `++` or `--` of a value that is not a number, a `let` that starts as `undefined` or `null` with no type, and a `let` holding a function are refused: give the other value a `let` of its own, or state the type. See [`script_logic`](crate::guide::script_logic#loops-and-assignments).";
     };
     readonly FV2001: {
         readonly title: "`await` of a value that is not a loader's result";
