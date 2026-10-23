@@ -57,14 +57,28 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
+    fv::rendered(try_render(out, props));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(102 + props.words.iter().map(|v| v.len()).sum::<usize>() + props.s.len() + props.rows.iter().map(|v| v.name.len()).sum::<usize>() + props.target.len());
-    let s_total = { let mut fv_m1: f64 = 0.0f64; for fv_a3 in props.rows.iter() { fv_m1 += fv_a3.score as f64; } fv_m1 as i64 };
+    let s_total = { let mut fv_m1: f64 = 0.0f64; for fv_a3 in props.rows.iter() { fv_m1 += fv_a3.score as f64; } fv_m1 };
     let s_mean = { let mut fv_m11: f64 = 0.0f64; let mut fv_m12: f64 = 0.0f64; for fv_a14 in props.rows.iter() { fv_m11 += fv_a14.score as f64 * props.ratio; fv_m12 += 1.0; } if fv_m12 == 0.0 { std::borrow::Cow::<str>::Borrowed("none") } else { std::borrow::Cow::<str>::Owned(fv::js_to_fixed(fv_m11 / fv_m12, 2)) } };
     let s_best = { let fv_c17 = f64::NEG_INFINITY; { let fv_c18 = f64::INFINITY; { let mut fv_m30: f64 = fv_c17; let mut fv_m31: String = String::new(); let mut fv_m32: f64 = fv_c18; for fv_a34 in props.rows.iter() { if fv_a34.score as f64 > fv_m30 { if (fv_a34.score as f64) < fv_m32 { fv_m30 = fv_a34.score as f64; fv_m31 = String::from(&*fv_a34.name); fv_m32 = fv_a34.score as f64; } else { fv_m30 = fv_a34.score as f64; fv_m31 = String::from(&*fv_a34.name); } } else { if (fv_a34.score as f64) < fv_m32 { fv_m32 = fv_a34.score as f64; } } } std::borrow::Cow::<str>::Owned(format!("{}:{}/{}", fv_m31, fv::Js(fv_m30), fv::Js(fv_m32))) } } };
     let s_product = { let mut fv_m41: f64 = 1.0f64; let mut fv_m42: f64 = 1.0f64; for fv_a44 in props.nums.iter().copied() { fv_m41 *= fv_a44 as f64; fv_m42 = -fv_m42; } { let fv_c47 = 0.0 * fv_m42; std::borrow::Cow::<str>::Owned(format!("{}|{}", fv::Js(fv_m41), fv::Js(1.0 / fv_c47))) } };
     let s_flags = { let mut fv_m48: bool = true; let mut fv_m49: bool = false; for fv_a51 in props.nums.iter().copied() { if fv_a51 as f64 <= 0.0 { fv_m48 = false; } else { fv_m49 = true; } } std::borrow::Cow::<str>::Owned(format!("{}/{}", if fv_m48 { "true" } else { "false" }, if fv_m49 { "true" } else { "false" })) };
-    let s_pairs = { let mut fv_m54: f64 = 0.0f64; for fv_s56 in props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)) { let mut fv_m57: f64 = fv_m54; for fv_a59 in props.rows.iter() { if *fv_a59.name == *fv_s56 { fv_m57 += 1.0; } } { fv_m54 = fv_m57; } } fv_m54 as i64 };
+    let s_pairs = { let mut fv_m54: f64 = 0.0f64; for fv_s56 in props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)) { let mut fv_m57: f64 = fv_m54; for fv_a59 in props.rows.iter() { if *fv_a59.name == *fv_s56 { fv_m57 += 1.0; } } { fv_m54 = fv_m57; } } fv_m54 };
     let s_backwards = props.rows.iter().map(|fv_a62| std::borrow::Cow::<str>::Owned(({ let mut fv_m67: String = String::new(); for fv_s69 in fv_a62.name.split_inclusive(|_: char| true) { fv_m67 = format!("{}{}", fv_s69, fv_m67); } std::borrow::Cow::<str>::Owned(fv_m67) }).into_owned())).collect::<Vec<_>>().join(",");
     out.push_str("<section><p>");
     fv::escape_into(out, &{ let mut fv_m87: String = String::new(); for fv_s89 in props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)) { let mut fv_m94: String = String::from(&*fv_m87); for fv_s96 in fv_s89.split_inclusive(|_: char| true).take(1) { use std::fmt::Write as _; let _ = write!(fv_m94, "{}", fv_s96); } { fv_m87 = String::from(&*fv_m94); } } std::borrow::Cow::<str>::Owned(fv_m87) });
@@ -75,13 +89,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push('|');
     fv::escape_into(out, &{ let mut fv_m138: String = String::new(); let mut fv_m139: f64 = 0.0f64; while fv_m139 < props.n.min(5i64) as f64 { fv_m138.push('★'); fv_m139 += 1.0; } std::borrow::Cow::<str>::Owned(({ let fv_c143 = props.n.max(0i64); { let mut fv_m149: String = String::from(&*fv_m138); let mut fv_m150: f64 = fv_c143 as f64; while fv_m150 < 5.0 { fv_m149.push('☆'); fv_m150 += 1.0; } std::borrow::Cow::<str>::Owned(fv_m149) } }).into_owned()) });
     out.push_str("</p><p>");
-    fv::push_int(out, s_total);
+    fv::push_number(out, s_total);
     out.push('|');
     fv::escape_into(out, &s_mean);
     out.push('|');
     fv::escape_into(out, &s_best);
     out.push('|');
-    fv::push_int(out, s_pairs);
+    fv::push_number(out, s_pairs);
     out.push_str("</p><p title=\"");
     fv::escape_into(out, &{ let mut fv_m167: f64 = 0.0f64; let mut fv_m168: f64 = 0.0f64; let mut fv_m169: String = String::new(); for fv_s171 in props.s.split_inclusive(|_: char| true) { if fv_s171 == " " { fv_m167 += 1.0; fv_m168 += fv::js_length(fv_s171) as f64; fv_m169.push('_'); } else { if fv_s171 == "!" { fv_m167 += 1.0; fv_m168 += fv::js_length(fv_s171) as f64; break; } else { fv_m167 += 1.0; fv_m168 += fv::js_length(fv_s171) as f64; use std::fmt::Write as _; let _ = write!(fv_m169, "[{}]", fv_s171); } } } std::borrow::Cow::<str>::Owned(format!("{}|{}/{}", fv_m169, fv::Js(fv_m167), fv::Js(fv_m168))) });
     out.push_str("\">");
@@ -91,7 +105,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push('|');
     fv::escape_into(out, &{ let mut fv_m236: String = String::new(); for fv_s238 in props.s.split_inclusive(|_: char| true) { fv_m236 = format!("{}{}", fv_s238, fv_m236); } std::borrow::Cow::<str>::Owned(fv_m236) });
     out.push_str("</p><p>");
-    fv::push_int(out, { let mut fv_r242: Option<f64> = None; for (fv_i243, fv_s243) in props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).enumerate() { let fv_i243 = fv_i243 as i64; if *fv_s243 == *props.target { fv_r242 = Some(fv_i243 as f64); break; } } if fv_r242.is_some() { fv_r242.unwrap_or_default() as i64 } else { -1i64 } });
+    fv::push_number(out, { let mut fv_r242: Option<f64> = None; for (fv_i243, fv_s243) in props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).enumerate() { let fv_i243 = fv_i243 as i64; if *fv_s243 == *props.target { fv_r242 = Some(fv_i243 as f64); break; } } if fv_r242.is_some() { fv_r242.unwrap_or_default() } else { -1.0f64 } });
     out.push('|');
     fv::escape_into(out, &{ let mut fv_m249: Option<String> = None; for fv_s251 in props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)) { if fv::js_length(&fv_s251) as f64 > 3.0 { fv_m249 = Some(String::from(&*fv_s251)); break; } } std::borrow::Cow::<str>::Owned(fv_m249.as_deref().unwrap_or("-").to_owned()) });
     out.push('|');
@@ -109,24 +123,25 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push_str("</p><p>");
     fv::escape_into(out, &s_backwards);
     out.push_str("</p></section>");
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
 pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup(props, render)
+    fv::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
 pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island(NAME, props, render)
+    fv::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
 pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned(props, render)
+    fv::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
 pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned(NAME, props, render)
+    fv::Html::island_owned_fallible(NAME, props, render, try_render)
 }

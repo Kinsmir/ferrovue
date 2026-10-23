@@ -871,11 +871,11 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         }
         "LoopEdges" => {
             let props: loop_edges::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            loop_edges::render(&mut out, &props);
+            loop_edges::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "Loops" => {
             let props: loops::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            loops::render(&mut out, &props);
+            loops::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "MappedChoice" => {
             let props: mapped_choice::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

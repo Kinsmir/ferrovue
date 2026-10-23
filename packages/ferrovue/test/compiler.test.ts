@@ -7073,9 +7073,11 @@ ${script}
     return out.slice(out.indexOf("pub fn render"));
   };
 
-  it("carries a sum in an f64 the loop adds to, read back as an integer", () => {
+  it("carries a sum in an f64 the loop adds to, and writes it as JavaScript writes the number", () => {
     const body = render("const total = computed(() => {\n  let sum = 0;\n  for (const r of props.rows) sum += r.n;\n  return sum;\n});", "{{ total }}");
-    expect(body).toMatch(/let mut (fv_m\d+): f64 = 0\.0f64; for (fv_a\d+) in props\.rows\.iter\(\) \{ \1 \+= \2\.n as f64; \} \1 as i64/);
+    expect(body).toMatch(/let mut (fv_m\d+): f64 = 0\.0f64; for (fv_a\d+) in props\.rows\.iter\(\) \{ \1 \+= \2\.n as f64; \} \1 \}/);
+    expect(body).toContain("fv::push_number(out, s_total);");
+    expect(body).not.toContain("try_int");
   });
 
   it("carries a Float once a value the loop gives may be one", () => {

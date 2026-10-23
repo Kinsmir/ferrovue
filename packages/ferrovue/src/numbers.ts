@@ -20,7 +20,7 @@ export function intFromF64(f64: string, at: string | null): Val {
 
 /** Whether `v` is an integer computed as an `f64` and held as an `i64`. */
 export function isCast(v: Val): boolean {
-  return v.ty.k === "int" && v.f64 !== undefined && (v.code.endsWith(" as i64") || v.code.startsWith(`${REFUSALS}.keep(fv::try_int(`));
+  return v.ty.k === "int" && v.f64 !== undefined && (v.num === undefined || v.code.endsWith(" as i64") || v.code.startsWith(`${REFUSALS}.keep(fv::try_int(`));
 }
 
 /** The value as JavaScript writes it: an integer computed as an `f64` is written from the `f64`. */

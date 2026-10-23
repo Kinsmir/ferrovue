@@ -688,7 +688,7 @@ export function around(lead: string, body: Val, owned: boolean, ownedUses = fals
     case "bool":
     case "undef":
     case "null":
-      return { code: block(body.code), ty: body.ty, ...lone, ...(body.f64 !== undefined ? { f64: block(body.f64) } : {}) };
+      return { code: block(body.code), ty: body.ty, ...lone, ...(body.f64 !== undefined ? { f64: block(body.f64) } : {}), ...(body.at !== undefined ? { at: body.at } : {}) };
     case "str":
       if (!owned && !isTemporary(body)) return { code: block(body.code), ty: body.ty, ...lone };
       return { code: `&*${block(owned ? ownedCow(body) : asCow(body))}`, ty: body.ty, ...lone };
