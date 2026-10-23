@@ -50,6 +50,13 @@ error: this module was generated as version 5 of ferrovue's generated code, and 
 A CI job that runs `pnpm ferrovue --check` reports each module as stale until it is generated
 again with 0.11 and committed. See [the version check](crate::guide::generated_code#the-version-check).
 
+Every generated file changes once, also where the component did not: 0.11 names the locals of a
+render after the JavaScript names they hold (`let sum` is `fv_sum`, `for (const r of rows)` binds
+`fv_r`), where 0.10 numbered them (`fv_m1`, `fv_a3`). Only Rust identifiers change, and every render
+writes what it wrote. Commit the regenerated files as one change; from then on an edit to one
+component leaves the names of the others alone. See
+[the locals of a render](crate::guide::generated_code#the-locals-of-a-render).
+
 ## 3. Build union props from their enums
 
 A prop, or a field of an interface, typed as a union of two or more string literals is now a Rust
@@ -169,6 +176,30 @@ And these unions have no enum to be:
 | two literals that name one variant (`"md" \| "MD"`), or an `enum` with two members of one value | FV0324 |
 | an enum named as another type of its module (`interface ButtonSize` beside `size: "sm" \| "md"` in `Button.vue`), two `.ts` files declaring different unions of one name, or a union called `Option` | FV0325 |
 
+Props named like a listener (`on1`, `onSale`), where Vue joins a child's props with `mergeProps`
+(the child is a component's root, or is given `v-bind` or `v-on` of an object beside other props):
+
+| Source | 0.11 |
+|---|---|
+| such a prop given twice in the joined props, which Vue joins into a list | FV0516 |
+| a required one that may be falsy there, which the child reads as `undefined` | FV0517 |
+| such a name passed to a component beyond its props and handed on to a child that declares it | FV0502 |
+
+Refusals that keep their meaning under another code:
+
+| Source | 0.10 | 0.11 |
+|---|---|---|
+| a refusal inside a `computed`, a setup expression or a function the template calls | FV0613 or FV0601, the inner code in parentheses | the inner refusal's own code (FV0710, FV1902, FV0634, …) |
+| an object literal whose type is not known, in the template, a `computed` or a function | FV0625 | FV0634 |
+| a loop that is neither `for…of` nor a counting `for` | FV1901 | FV1909 (`while`, `do…while` and `for…in` keep FV1901) |
+| `for…of` over a value that is neither a list nor a string | FV1901 | FV1910 |
+| a loop that carries or returns a list or an object | FV1901 | FV1911 |
+| a `let` assigned a value of another type, or starting as `undefined` with no type | FV1902 | FV1912 |
+
+FV0634, FV0635 and FV0636 refuse object literals the compiler cannot build (an untyped one, one
+that does not match its interface, a list method of one built in place), and FV0227 a constant
+`Map` read other than with `.get()` and `.has()`.
+
 # Behaviour that changed
 
 ## Refusals at render time
@@ -201,6 +232,29 @@ compiled with 0.10 stops compiling, and nothing that rendered renders differentl
   `Html<'p, Props, impl ferrovue::Renderer<Props>>` where it returned `impl Fn(&mut String,
   &Props)`. Code that renders it, or hands it to a [`Page`](crate::Page) or a
   [`Part`](crate::Part), is unchanged.
+
+## Integers beyond ±2⁶³
+
+Integer arithmetic whose result is beyond ±2⁶³ (`n * n` of a large `n`) is written into the page as
+JavaScript writes it (`16000000000000000000`, `8.112963841460666e+31`), in text, attributes, styles,
+template literals and `String()`, also when `??`, `?:` or `||` chooses it or a `computed` holds it.
+0.10 cast it to `i64` and wrote `9223372036854775807`. Where the template needs it as an integer, it
+is refused at render time (FV0724, above).
+
+## `-0` in `Math.max()` and `Math.min()`
+
+`Math.max()` and `Math.min()` of integers keep a `-0` that integer arithmetic gives, so
+`1 / Math.max(n * 0, -1)` of a negative `n` is `-Infinity`, as in Vue. 0.10 compared them as `i64`
+and wrote `Infinity`.
+
+## Props named like a listener
+
+A child's prop named like a listener (`on1`, `onSale`) whose value is falsy (`0`, `""`, `false`,
+`NaN`) is left out where Vue joins the child's props with `mergeProps`, as Vue leaves out a
+listener, so the child takes the prop's default. 0.10 passed the value on: `<Kid :on1="n" />` at a
+component's root wrote `0` where Vue writes the default. Where props are not joined, the value is
+passed on as before. Vue's client keeps the value at a root where its server leaves it out, so such
+a page mismatches as it hydrates in an app Vue renders alone too; rename the prop.
 
 ## Lookups and `<component :is>` over a union
 
@@ -236,3 +290,22 @@ the props and in a loader's result, read in the template as a prop's date is and
 a `type` alias, a union in place, optional or nullable, and a string `enum`, generated once per
 module, handed between components as the enum, converted to another union that holds its members,
 and written in the page as its literal.
+
+**Object literals** ([`script_logic`](crate::guide::script_logic#object-literals)) where their type
+is known: a `computed` or a function annotated with an interface, a `.map()` whose items have a
+known type, a child's prop typed with an interface (`:item="{ id, label }"`), an annotated `const`
+and `satisfies`, each built as the interface's Rust struct.
+
+**Loops and assignments** ([`script_logic`](crate::guide::script_logic#loops-and-assignments)) in a
+function's or a `computed`'s body and in a list method's callback: `for…of` over a list, its
+`.entries()`, `Object.keys()`, `Object.values()`, `Object.entries()` or a string, counting `for`
+loops, `break`, `continue` and `return`, and `let`s assigned again with `=`, `+=`, `++` and the
+others.
+
+**Constants and lookups:** arithmetic and template literals of constants worked out when compiling
+(`const HOUR = 60 * MINUTE`), in a `.ts` file too; arrow functions declared inside a body; strings
+known to hold ASCII cut into characters and joined again; `Object.hasOwn()` of an object constant
+by a free-text key; constant `Map`s read with `.get()` and `.has()`.
+
+**A component that renders itself** by its kebab-case or camelCase name (`<tree-node>` or
+`<treeNode>` in `TreeNode.vue`), which 0.10 refused with FV0513.

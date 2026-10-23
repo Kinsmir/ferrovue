@@ -84,8 +84,10 @@ released together and share version numbers.
   comparison with a literal outside the union (FV0637). A default outside the union is FV0322, and
   a constant list's field outside it FV0215.
 - The guide page [`upgrading_to_0_11`](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_11/index.html):
-  bumping both halves, generating again for version 5, and building union props from their
-  enums (`Size::Md`, `"md".parse::<Size>()?`).
+  bumping both halves (and the Node it needs), generating again for version 5 with every local
+  renamed once, building union props from their enums (`Size::Md`, `"md".parse::<Size>()?`), the
+  codes a CI may match that are new or changed, what renders differently, and what compiles that
+  0.10 refused.
 - The conformance components `UnionEnums` and `UnionChild`, recorded from Vue, and props of
   unions of string literals, required, optional and nullable, in the differential fuzzer, which
   compares them only with their members.
