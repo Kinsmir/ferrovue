@@ -31,16 +31,31 @@ pub struct Slots<'s> {
 }
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::Route<'_>) {
+    fv::rendered(try_render(out, props, fv_slots, fv_route));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::Route<'_>) -> Result<(), fv::Refused> {
     out.reserve(33);
     out.push_str("<div id=\"app\">");
-    super::nav::render(out, &props.nav, fv_route);
+    super::nav::try_render(out, &props.nav, fv_route)?;
     out.push_str("<main>");
     fv_slots.router_view.render_to(out);
     out.push_str("</main></div>");
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>, fv_route: &'p fv::Route<'p>) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_slots, fv_route))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>, fv_route: &'p fv::Route<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
+    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_slots, fv_route)))
 }

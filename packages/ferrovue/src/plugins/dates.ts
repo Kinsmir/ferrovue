@@ -1,4 +1,4 @@
-import { type N, type Scope, type Ty, type Val, fail, FLOAT, nothing, STR } from "../model.ts";
+import { type N, type Scope, type Ty, type Val, fail, FLOAT, kept, nothing, refusalAt, STR } from "../model.ts";
 import { type Plugin } from "../plugin.ts";
 import { bare, strArg } from "../parens.ts";
 import { asF64, compare, numberVal } from "../numbers.ts";
@@ -90,7 +90,7 @@ function fromParts(s: Scope, n: N): Val {
     return numberVal(Date.UTC(...(parts as [number])), false);
   }
   const code = [...vals.map((v) => bare(asF64(v))), ...UTC_DEFAULTS.slice(vals.length - 1)].join(", ");
-  return { code: `fv::js_date_utc(${code})`, ty: FLOAT };
+  return { code: kept(`fv::try_date_utc(${code})`, refusalAt(s.comp, n)), ty: FLOAT };
 }
 
 const LOCAL_GETTERS = new Map([
@@ -139,7 +139,7 @@ export function localeRefusal(s: Scope, what: string, n: N): never {
   );
 }
 
-function parsed(s: Scope, arg: N, what: string): Val {
+function parsed(s: Scope, arg: N, what: string, n: N): Val {
   if (arg.type === "StringLiteral") {
     const t = portableTime(arg.value);
     if (t === undefined) {
@@ -149,7 +149,7 @@ function parsed(s: Scope, arg: N, what: string): Val {
   }
   const v = expr(s, arg);
   if (v.ty.k !== "str") return fail(s.comp, "FV1802", `${what} takes a string that is present`, arg);
-  return { code: `fv::js_date_parse(${strArg(v.code)})`, ty: FLOAT };
+  return { code: kept(`fv::try_date_parse(${strArg(v.code)})`, refusalAt(s.comp, n)), ty: FLOAT };
 }
 
 function constructed(s: Scope, n: N): Val {
@@ -158,10 +158,10 @@ function constructed(s: Scope, n: N): Val {
   if (args.length > 1) {
     return fail(s.comp, "FV1802", `\`new Date(year, month, …)\` reads its parts in the time zone of the machine running it: pass an ISO string with a \`Z\` or an offset, or a number of milliseconds (${GUIDE})`, n);
   }
-  if (args[0].type === "StringLiteral") return { code: parsed(s, args[0], "`new Date()`").code, ty: DATE };
+  if (args[0].type === "StringLiteral") return { code: parsed(s, args[0], "`new Date()`", n).code, ty: DATE };
   const v = expr(s, args[0]);
   if (v.ty.k === "date") return v;
-  if (v.ty.k === "str") return { code: `fv::js_date_parse(${strArg(v.code)})`, ty: DATE };
+  if (v.ty.k === "str") return { code: kept(`fv::try_date_parse(${strArg(v.code)})`, refusalAt(s.comp, n)), ty: DATE };
   if (v.ty.k === "int" || v.ty.k === "float") return { code: `fv::js_time_clip(${bare(asF64(v))})`, ty: DATE };
   return fail(s.comp, "FV1802", `\`new Date()\` takes one string or one number that is present (${GUIDE})`, args[0]);
 }
@@ -182,7 +182,7 @@ export const dates: Plugin = {
     if (!own && LOCALE_METHODS.has(method)) return localeRefusal(s, `\`.${method}()\``, n);
     if (!global(s, object, "Date")) return null;
     if (method === "now") return fail(s.comp, "FV1801", `\`Date.now()\` is the time it runs, which differs between the server's render and the browser's hydration: pass the time as a prop (${GUIDE})`, n);
-    if (method === "parse" && n.arguments.length === 1) return parsed(s, n.arguments[0], "`Date.parse()`");
+    if (method === "parse" && n.arguments.length === 1) return parsed(s, n.arguments[0], "`Date.parse()`", n);
     if (method === "UTC") return fromParts(s, n);
     return fail(s.comp, "FV1804", `\`Date.${method}()\` is not supported: build a date with \`new Date()\` of an ISO string or a number of milliseconds, or with \`Date.UTC()\` of its parts (${GUIDE})`, n);
   },
@@ -190,7 +190,10 @@ export const dates: Plugin = {
     if (target.ty.k !== "date") return null;
     const t = bare(target.code);
     const plain = args.length === 0;
-    if (plain && method === "toISOString") return { code: `&*fv::js_to_iso_string(${t})`, ty: STR };
+    if (plain && method === "toISOString") {
+      const valid = target.num !== undefined && Number.isFinite(target.num);
+      return { code: valid ? `&*fv::js_to_iso_string(${t})` : `&*${kept(`fv::try_to_iso_string(${t})`, refusalAt(s.comp, n))}`, ty: STR };
+    }
     if (plain && method === "toUTCString") return { code: `&*fv::js_to_utc_string(${t})`, ty: STR };
     if (plain && method === "toJSON") return { code: `fv::js_to_json(${t}).as_deref()`, ty: { k: "opt", of: STR, none: "null" }, held: `fv::js_to_json(${t}).map(std::borrow::Cow::<str>::Owned)` };
     if (plain && (method === "getTime" || method === "valueOf")) return { code: target.code, ty: FLOAT };

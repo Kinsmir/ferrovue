@@ -43,7 +43,21 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
+    fv::rendered(try_render(out, props));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(113 + 9 * props.items.len() + props.title.len() + props.base.len() + props.path.iter().map(|v| v.len()).sum::<usize>() + props.query.as_deref().map_or(0, str::len) + props.items.iter().map(|v| v.len()).sum::<usize>());
     let s_summary = format!("{} {}", (&*{ let fv_c1 = (props.count as f64).abs(); if fv_c1 >= 1000000000.0 { std::borrow::Cow::<str>::Owned(format!("{}B", (&*{ let fv_c2 = fv::js_to_fixed(props.count as f64 / 1000000000.0, 1); std::borrow::Cow::<str>::Owned((if fv_c2.ends_with(".0") { std::borrow::Cow::<str>::Owned(fv::js_slice(&fv_c2, 0.0f64, Some(-2.0f64)).into_owned()) } else { std::borrow::Cow::<str>::Borrowed(&*fv_c2) }).into_owned()) }))) } else { if fv_c1 >= 1000000.0 { std::borrow::Cow::<str>::Owned(format!("{}M", (&*{ let fv_c3 = fv::js_to_fixed(props.count as f64 / 1000000.0, 1); std::borrow::Cow::<str>::Owned((if fv_c3.ends_with(".0") { std::borrow::Cow::<str>::Owned(fv::js_slice(&fv_c3, 0.0f64, Some(-2.0f64)).into_owned()) } else { std::borrow::Cow::<str>::Borrowed(&*fv_c3) }).into_owned()) }))) } else { if fv_c1 >= 1000.0 { std::borrow::Cow::<str>::Owned(format!("{}k", (&*{ let fv_c4 = fv::js_to_fixed(props.count as f64 / 1000.0, 1); std::borrow::Cow::<str>::Owned((if fv_c4.ends_with(".0") { std::borrow::Cow::<str>::Owned(fv::js_slice(&fv_c4, 0.0f64, Some(-2.0f64)).into_owned()) } else { std::borrow::Cow::<str>::Borrowed(&*fv_c4) }).into_owned()) }))) } else { std::borrow::Cow::<str>::Owned(fv::Js(props.count).to_string()) } } } }), (if props.count as f64 == 1.0 { "view" } else { "views" }));
     let s_link = { let fv_c5 = props.query.as_deref(); { let fv_c7 = props.path.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_s6| std::borrow::Cow::<str>::Owned(std::borrow::Cow::<str>::Owned(fv::js_encode_uri_component(&fv_s6)).into_owned())).collect::<Vec<_>>().join("/"); std::borrow::Cow::<str>::Owned((if let Some(n8) = fv_c5 { if n8.is_empty() { std::borrow::Cow::<str>::Owned(format!("{}/{}", props.base, fv_c7)) } else { std::borrow::Cow::<str>::Owned(format!("{}/{}?q={}", props.base, fv_c7, fv::js_encode_uri_component(n8))) } } else { std::borrow::Cow::<str>::Owned(format!("{}/{}", props.base, fv_c7)) }).into_owned()) } };
@@ -77,24 +91,25 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul></section>");
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
 pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup(props, render)
+    fv::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
 pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island(NAME, props, render)
+    fv::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
 pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned(props, render)
+    fv::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
 pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned(NAME, props, render)
+    fv::Html::island_owned_fallible(NAME, props, render, try_render)
 }

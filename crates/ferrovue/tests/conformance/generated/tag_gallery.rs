@@ -146,10 +146,24 @@ pub struct Slots<'s> {
 }
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
+    fv::rendered(try_render(out, props, fv_slots));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::Refused> {
     out.reserve(340 + 2 + props.title.len() + props.note.as_deref().map_or(0, str::len) + 2);
     out.push_str("<article data-v-71d8588a>");
-    super::tag_heading::render_scoped(out, &super::tag_heading::Props { r#as: Some(match props.level { TagGalleryLevel::H1 => super::tag_heading::TagHeadingAs::H1, TagGalleryLevel::H2 => super::tag_heading::TagHeadingAs::H2, TagGalleryLevel::H3 => super::tag_heading::TagHeadingAs::H3 }), text: std::borrow::Cow::Borrowed(&*props.title) }, super::tag_heading::Slots {
+    super::tag_heading::try_render_scoped(out, &super::tag_heading::Props { r#as: Some(match props.level { TagGalleryLevel::H1 => super::tag_heading::TagHeadingAs::H1, TagGalleryLevel::H2 => super::tag_heading::TagHeadingAs::H2, TagGalleryLevel::H3 => super::tag_heading::TagHeadingAs::H3 }), text: std::borrow::Cow::Borrowed(&*props.title) }, super::tag_heading::Slots {
         default: Some(fv::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
             if let Some(n1) = props.note.as_deref().filter(|v| !v.is_empty()) {
@@ -171,10 +185,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
             out.push_str("<!--]-->");
             filled
         })),
-    }, &fv::Attrs::new(&[("data-role", fv::Attr::str("title"))], " data-v-71d8588a"));
-    super::tag_heading::render_scoped(out, &super::tag_heading::Props { r#as: None, text: std::borrow::Cow::Borrowed(&*props.title) }, super::tag_heading::Slots {
+    }, &fv::Attrs::new(&[("data-role", fv::Attr::str("title"))], " data-v-71d8588a"))?;
+    super::tag_heading::try_render_scoped(out, &super::tag_heading::Props { r#as: None, text: std::borrow::Cow::Borrowed(&*props.title) }, super::tag_heading::Slots {
         default: None,
-    }, &fv::Attrs::scoped(" data-v-71d8588a"));
+    }, &fv::Attrs::scoped(" data-v-71d8588a"))?;
     match props.rule {
         TagGalleryRule::Hr => {
             out.push_str("<hr class=\"rule\" data-v-71d8588a>");
@@ -233,9 +247,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
         out.push_str("<!---->");
     }
     out.push_str("</article>");
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_slots))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
+    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_slots)))
 }

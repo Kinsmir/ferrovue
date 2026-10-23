@@ -91,7 +91,21 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
+    fv::rendered(try_render(out, props));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(115 + props.label.len() + 6 + 7 + 6 + props.words.iter().map(|v| v.len()).sum::<usize>());
     let s_first = super::types::Step { label: std::borrow::Cow::<str>::Borrowed(&*props.label), state: super::types::StepState::Done, align: Some(props.align) };
     let s_chosen = super::types::Step { label: std::borrow::Cow::<str>::Owned(format!("{}!", props.label)), state: match if props.state == UnionObjectsState::Todo { "skipped" } else { props.state.as_str() } { "skipped" => super::types::StepState::Skipped, "todo" => super::types::StepState::Todo, _ => super::types::StepState::Done }, align: props.side };
@@ -111,14 +125,14 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         out.push('"');
     }
     out.push_str("><ol>");
-    super::union_step::render(out, &super::union_step::Props { step: s_first.to_owned() });
-    super::union_step::render(out, &super::union_step::Props { step: s_chosen.to_owned() });
-    super::union_step::render(out, &super::union_step::Props { step: super::types::Step { label: std::borrow::Cow::<str>::Borrowed(&*props.label), state: match props.state { UnionObjectsState::Todo => super::types::StepState::Todo, UnionObjectsState::Done => super::types::StepState::Done, UnionObjectsState::Skipped => super::types::StepState::Skipped }, align: props.side } });
-    super::union_step::render(out, &super::union_step::Props { step: super::types::Step { label: std::borrow::Cow::<str>::Borrowed("fixed"), state: super::types::StepState::Skipped, align: None } });
+    super::union_step::try_render(out, &super::union_step::Props { step: s_first.to_owned() })?;
+    super::union_step::try_render(out, &super::union_step::Props { step: s_chosen.to_owned() })?;
+    super::union_step::try_render(out, &super::union_step::Props { step: super::types::Step { label: std::borrow::Cow::<str>::Borrowed(&*props.label), state: match props.state { UnionObjectsState::Todo => super::types::StepState::Todo, UnionObjectsState::Done => super::types::StepState::Done, UnionObjectsState::Skipped => super::types::StepState::Skipped }, align: props.side } })?;
+    super::union_step::try_render(out, &super::union_step::Props { step: super::types::Step { label: std::borrow::Cow::<str>::Borrowed("fixed"), state: super::types::StepState::Skipped, align: None } })?;
     out.push_str("<!--[-->");
     for s_ref in s_steps.iter() {
         let s = s_ref;
-        super::union_step::render(out, &super::union_step::Props { step: s.to_owned() });
+        super::union_step::try_render(out, &super::union_step::Props { step: s.to_owned() })?;
     }
     out.push_str("<!--]--></ol><p>");
     fv::push_int(out, (match props.align { super::types::Align::Left => Some(10i64), super::types::Align::Center => Some(20i64), super::types::Align::Right => None }).unwrap_or(0i64));
@@ -141,24 +155,25 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push('|');
     out.push_str(if props.state == UnionObjectsState::Todo || props.align == super::types::Align::Left { "true" } else { "false" });
     out.push_str("</p></section>");
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
 pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup(props, render)
+    fv::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
 pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island(NAME, props, render)
+    fv::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
 pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned(props, render)
+    fv::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
 pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned(NAME, props, render)
+    fv::Html::island_owned_fallible(NAME, props, render, try_render)
 }

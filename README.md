@@ -16,7 +16,9 @@ HTML with no JavaScript runtime, and the browser hydrates that HTML with the sam
   writes for the same props, so Vue hydrates the page without a mismatch. Every supported construct
   is held to fixtures recorded from Vue.
 - **Exact or refused.** What ferrovue cannot reproduce exactly is a compile error that names the
-  file, line and construct. A component that compiles renders as Vue renders it.
+  file, line and construct. A component that compiles renders as Vue renders it, and props it
+  cannot render exactly, such as a date string from a query that browsers read differently, are
+  refused as it renders: `try_render` returns the refusal, so a server answers `400`.
 
 ```text
  Button.vue ──(ferrovue compiler, Node)──▶ button.rs ──(your Rust server)──▶ HTML ──▶ Vue hydrates it
@@ -255,7 +257,9 @@ ferrovue compiles `<script setup lang="ts">` components, and components with no 
 Anything else is refused at compile time, with an error that names the file, line and column,
 quotes the line and puts a caret under the construct. The
 [`errors_and_limits`](https://docs.rs/ferrovue/latest/ferrovue/guide/errors_and_limits/index.html#refused-at-compile-time)
-guide lists what is refused and why, and
+guide lists what is refused and why, and what a render refuses as it runs, where only the props
+show the value cannot be written exactly (a date string outside the format above, an integer beyond
+±2⁶³ handed to a child's `number` prop), and
 [`error_codes`](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html) every code.
 
 ## Guides

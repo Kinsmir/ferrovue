@@ -69,7 +69,21 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
+    fv::rendered(try_render(out, props));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(70 + props.members.iter().map(|v| v.name.len() + v.title.as_deref().map_or(0, str::len)).sum::<usize>() + props.lead.as_ref().map_or(0, |v| v.name.len() + v.title.as_deref().map_or(0, str::len)) + props.unit.as_deref().map_or(0, str::len));
     let s_shown = 3i64;
     let s_visible = fv::js_slice_items(props.members.iter(), 0.0f64, Some(s_shown as f64)).map(|fv_a1| { let fv_c2 = props.unit.as_deref(); { let fv_c5 = &[&*(if let Some(n3) = fv_a1.title.as_deref().filter(|v| !v.is_empty()) { std::borrow::Cow::<str>::Owned(format!("{} {}", n3, fv_a1.name)) } else { std::borrow::Cow::<str>::Borrowed(&*fv_a1.name) }), &*{ let fv_c4 = fv_c2.unwrap_or("pts"); if fv_a1.score as f64 >= props.limit as f64 { std::borrow::Cow::<str>::Owned(format!("{} {}!", fv::Js(fv_a1.score), fv_c4)) } else { std::borrow::Cow::<str>::Owned(format!("{} {}", fv::Js(fv_a1.score), fv_c4)) } }, if fv_a1.score as f64 >= 90.0 { "A" } else { if fv_a1.score as f64 >= 50.0 { "B" } else { "C" } }]; std::borrow::Cow::<str>::Owned(fv_c5.iter().map(|v| &**v).collect::<Vec<_>>().join(" · ")) } }).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
@@ -93,24 +107,25 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push_str("<!--]--></ul><p>");
     fv::escape_into(out, &props.members.iter().map(|fv_a8| std::borrow::Cow::<str>::Borrowed(if fv_a8.score as f64 >= 90.0 { "A" } else { if fv_a8.score as f64 >= 50.0 { "B" } else { "C" } })).collect::<Vec<_>>().join(""));
     out.push_str("</p></section>");
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
 pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup(props, render)
+    fv::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
 pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island(NAME, props, render)
+    fv::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
 pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned(props, render)
+    fv::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
 pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned(NAME, props, render)
+    fv::Html::island_owned_fallible(NAME, props, render, try_render)
 }

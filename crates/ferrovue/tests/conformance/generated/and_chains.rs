@@ -128,8 +128,23 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
+    fv::rendered(try_render(out, props));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(140 + 4 + props.badge.as_ref().map_or(0, |v| v.label.len()) + props.word.as_deref().map_or(0, str::len));
+    let fv_refusals = fv::Refusals::new(NAME, "components/AndChains.vue");
     let s_in_range = if let Some(n1) = props.n { n1 as f64 > 1.0 && (n1 as f64) < 9.0 } else { false };
     let s_color = props.tone.map(|n2| match n2 { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" });
     out.push_str("<section");
@@ -156,7 +171,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push('|');
     out.push_str(if if let Some(n8) = props.n { (n8 as f64) < 1.0 || n8 as f64 > 9.0 } else { true } { "true" } else { "false" });
     out.push_str("</p><p>");
-    fv::push_int(out, if let Some(n9) = props.n { if n9 as f64 > 1.0 { (n9 as f64 * 2.0) as i64 } else { 0i64 } } else { 0i64 });
+    fv::push_int(out, if let Some(n9) = props.n { if n9 as f64 > 1.0 { fv_refusals.keep(fv::try_int(n9 as f64 * 2.0), 28, 32) } else { 0i64 } } else { 0i64 });
     out.push('|');
     fv::escape_into(out, &(if let Some(n10) = props.n { if (n10 as f64) < 0.0 { std::borrow::Cow::<str>::Borrowed("bad") } else { std::borrow::Cow::<str>::Owned(fv::js_to_fixed(n10 as f64, 1)) } } else { std::borrow::Cow::<str>::Borrowed("bad") }));
     out.push('|');
@@ -200,24 +215,25 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         }
     }
     out.push_str("</section>");
+    fv_refusals.check(Ok(()))
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
 pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup(props, render)
+    fv::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
 pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island(NAME, props, render)
+    fv::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
 pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned(props, render)
+    fv::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
 pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned(NAME, props, render)
+    fv::Html::island_owned_fallible(NAME, props, render, try_render)
 }

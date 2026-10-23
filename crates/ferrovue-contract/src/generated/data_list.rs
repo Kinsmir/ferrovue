@@ -82,7 +82,21 @@ pub struct Slots<'s> {
 }
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
+    fv::rendered(try_render(out, props, fv_slots));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::Refused> {
     out.reserve(68 + 9 * props.rows.len() + props.title.len() + props.rows.iter().map(|v| v.label.len() + v.hint.as_deref().map_or(0, str::len)).sum::<usize>() + props.owner.name.len() + props.owner.email.as_deref().map_or(0, str::len));
     out.push_str("<section><h2>");
     fv::escape_into(out, &props.title);
@@ -102,9 +116,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
     out.push_str("<small>");
     fv::escape_into(out, &props.owner.name);
     out.push_str("</small></section>");
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_slots))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
+    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_slots)))
 }

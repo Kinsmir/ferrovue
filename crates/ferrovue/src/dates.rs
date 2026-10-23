@@ -1,3 +1,5 @@
+use crate::Refused;
+
 const MS_PER_DAY: i64 = 86_400_000;
 const MAX_TIME: f64 = 8.64e15;
 
@@ -42,10 +44,24 @@ pub fn js_time_clip(x: f64) -> f64 {
 /// ```
 #[must_use]
 pub fn js_date_parse(s: &str) -> f64 {
-    iso_time(s.as_bytes()).unwrap_or_else(|| {
-        panic!(
-            "ferrovue: the date {s:?} is not in ECMAScript's date time string format with a time \
-             zone, which every browser reads alike (see ferrovue::guide::dates_and_prices)"
+    try_date_parse(s).unwrap_or_else(|refused| panic!("{refused}"))
+}
+
+/// [`js_date_parse`], returning the refusal where it panics.
+///
+/// # Errors
+///
+/// FV1803 where [`js_date_parse`] panics.
+#[doc(hidden)]
+pub fn try_date_parse(s: &str) -> Result<f64, Refused> {
+    iso_time(s.as_bytes()).ok_or_else(|| {
+        Refused::new(
+            "FV1803",
+            format!(
+                "the date {s:?} is not in ECMAScript's date time string format with a time zone, \
+                 which every browser reads alike: check it before rendering, and pass a date such \
+                 as \"2024-05-01\" or \"2024-05-01T09:30Z\" (see ferrovue::guide::dates_and_prices)"
+            ),
         )
     })
 }
@@ -66,8 +82,23 @@ pub fn js_date_parse(s: &str) -> f64 {
 /// ```
 #[must_use]
 pub fn js_to_iso_string(t: f64) -> String {
+    try_to_iso_string(t).unwrap_or_else(|refused| panic!("{refused}"))
+}
+
+/// [`js_to_iso_string`], returning the refusal where it panics.
+///
+/// # Errors
+///
+/// FV1811 for an invalid date.
+#[doc(hidden)]
+pub fn try_to_iso_string(t: f64) -> Result<String, Refused> {
     let Some(t) = time(t) else {
-        panic!("RangeError: Invalid time value");
+        return Err(Refused::new(
+            "FV1811",
+            "`.toISOString()` of an invalid date, where JavaScript throws a RangeError (Invalid \
+             time value) and Vue's render fails too: test the date in the template first \
+             (`v-if=\"!Number.isNaN(d.getTime())\"`), or check the props before rendering",
+        ));
     };
     let (year, month, day) = civil(t.div_euclid(MS_PER_DAY));
     let ms = t.rem_euclid(MS_PER_DAY);
@@ -76,13 +107,13 @@ pub fn js_to_iso_string(t: f64) -> String {
     } else {
         format!("{}{:06}", if year < 0 { '-' } else { '+' }, year.abs())
     };
-    format!(
+    Ok(format!(
         "{year}-{month:02}-{day:02}T{:02}:{:02}:{:02}.{:03}Z",
         ms / 3_600_000,
         ms / 60_000 % 60,
         ms / 1000 % 60,
         ms % 1000
-    )
+    ))
 }
 
 /// `Date.prototype.getUTCFullYear` of a time value; `NaN` for an invalid date.
@@ -231,7 +262,7 @@ pub fn js_to_utc_string(t: f64) -> String {
 /// ```
 #[must_use]
 pub fn js_to_json(t: f64) -> Option<String> {
-    time(t).map(|_| js_to_iso_string(t))
+    try_to_iso_string(t).ok()
 }
 
 /// `JSON.stringify(d)` of a date of this time value: its ISO string quoted, or `null` for an
@@ -310,9 +341,28 @@ pub fn js_date_utc(
     seconds: f64,
     ms: f64,
 ) -> f64 {
+    try_date_utc(year, month, date, hours, minutes, seconds, ms)
+        .unwrap_or_else(|refused| panic!("{refused}"))
+}
+
+/// [`js_date_utc`], returning the refusal where it panics.
+///
+/// # Errors
+///
+/// FV1808 where [`js_date_utc`] panics.
+#[doc(hidden)]
+pub fn try_date_utc(
+    year: f64,
+    month: f64,
+    date: f64,
+    hours: f64,
+    minutes: f64,
+    seconds: f64,
+    ms: f64,
+) -> Result<f64, Refused> {
     let parts = [year, month, date, hours, minutes, seconds, ms];
     if !parts.iter().all(|x| x.is_finite()) {
-        return f64::NAN;
+        return Ok(f64::NAN);
     }
     let mut year = year;
     let whole = integer(year);
@@ -326,35 +376,40 @@ pub fn js_date_utc(
     ];
     let time = terms[0] + terms[1] + terms[2] + integer(ms);
     if !time.is_finite() {
-        return f64::NAN;
+        return Ok(f64::NAN);
     }
     let carried = integer(year) + (integer(month) / 12.0).floor();
     let agreed =
         (-1e6..=1e6).contains(&year) && (-1e7..=1e7).contains(&month) && carried >= -399_999.0;
-    let differs = || -> ! {
-        panic!(
-            "ferrovue: Date.UTC({}, {}, {}, {hours}, {minutes}, {seconds}, {ms}) is a date \
-             engines compute differently (see ferrovue::guide::dates_and_prices)",
-            parts[0], parts[1], parts[2]
+    let differs = || {
+        Refused::new(
+            "FV1808",
+            format!(
+                "Date.UTC({}, {}, {}, {hours}, {minutes}, {seconds}, {ms}) is a date engines \
+                 compute differently: check the parts before rendering, and keep the year within \
+                 ±1,000,000 and each part within the range of dates (see \
+                 ferrovue::guide::dates_and_prices)",
+                parts[0], parts[1], parts[2]
+            ),
         )
     };
     if !agreed {
         if carried.abs() >= 399_999.0 && integer(date).abs() <= 1e7 && time.abs() <= 1e15 {
-            return f64::NAN;
+            return Ok(f64::NAN);
         }
-        differs();
+        return Err(differs());
     }
     let days = v8_day(year, month, date) * MS_PER_DAY as f64;
     let t = days + time;
     let largest = terms.iter().fold(days.abs(), |m, x| m.max(x.abs()));
     if t.is_finite() && largest > EXACT && t.abs() <= MAX_TIME + largest * 2f64.powi(-50) {
-        differs();
+        return Err(differs());
     }
-    if t.is_finite() && t.abs() <= MAX_TIME {
+    Ok(if t.is_finite() && t.abs() <= MAX_TIME {
         integer(t)
     } else {
         f64::NAN
-    }
+    })
 }
 
 fn time(t: f64) -> Option<i64> {

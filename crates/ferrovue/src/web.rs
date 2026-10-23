@@ -255,7 +255,7 @@ impl Stream for HtmlStream {
 /// ```
 #[cfg(feature = "axum")]
 #[cfg_attr(docsrs, doc(cfg(feature = "axum")))]
-impl<P: serde::Serialize, F: Fn(&mut String, &P)> axum_core::response::IntoResponse
+impl<P: serde::Serialize, F: crate::Renderer<P>> axum_core::response::IntoResponse
     for Html<'_, P, F>
 {
     fn into_response(self) -> axum_core::response::Response {
@@ -365,7 +365,7 @@ fn html_response(body: axum_core::body::Body) -> axum_core::response::Response {
 /// ```
 #[cfg(feature = "actix-web")]
 #[cfg_attr(docsrs, doc(cfg(feature = "actix-web")))]
-impl<P: serde::Serialize, F: Fn(&mut String, &P)> actix_web::Responder for Html<'_, P, F> {
+impl<P: serde::Serialize, F: crate::Renderer<P>> actix_web::Responder for Html<'_, P, F> {
     type Body = actix_web::body::BoxBody;
 
     fn respond_to(self, _: &actix_web::HttpRequest) -> actix_web::HttpResponse {
@@ -375,7 +375,7 @@ impl<P: serde::Serialize, F: Fn(&mut String, &P)> actix_web::Responder for Html<
 
 #[cfg(feature = "actix-web")]
 #[cfg_attr(docsrs, doc(cfg(feature = "actix-web")))]
-impl<P: serde::Serialize, F: Fn(&mut String, &P)> From<Html<'_, P, F>> for actix_web::HttpResponse {
+impl<P: serde::Serialize, F: crate::Renderer<P>> From<Html<'_, P, F>> for actix_web::HttpResponse {
     fn from(html: Html<'_, P, F>) -> Self {
         actix_web::HttpResponse::Ok()
             .content_type(TEXT_HTML)

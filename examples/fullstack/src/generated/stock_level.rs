@@ -26,9 +26,24 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::Loads<'_>) {
+    fv::rendered(try_render(out, props, fv_loads));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::Loads<'_>) -> Result<(), fv::Refused> {
     out.reserve(166 + props.id.len());
-    let Some(l_0) = fv_loads.get(super::loaders::LoadStock { id: String::from(&*props.id) }) else { return; };
+    let fv_refusals = fv::Refusals::new(NAME, "client/components/StockLevel.vue");
+    let Some(l_0) = fv_loads.get(super::loaders::LoadStock { id: String::from(&*props.id) }) else { return Ok(()); };
     out.push_str("<div class=\"stock\" data-copies=\"");
     fv::push_int(out, l_0.copies);
     out.push_str("\">");
@@ -42,23 +57,24 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::Loads<'_>) {
         out.push_str("<p>Out of stock</p>");
     }
     if l_0.copies != 0 {
-        super::shipping::render(out, &super::shipping::Props { warehouse: std::borrow::Cow::Borrowed(&*l_0.warehouse) }, fv_loads);
+        fv_refusals.check(super::shipping::try_render(out, &super::shipping::Props { warehouse: std::borrow::Cow::Borrowed(&*l_0.warehouse) }, fv_loads))?;
     } else {
         out.push_str("<!---->");
     }
     if let Some(n1) = l_0.counted.as_ref().map(fv::js_time_of) {
         out.push_str("<small class=\"counted\">counted <time datetime=\"");
-        fv::escape_into(out, &fv::js_to_iso_string(n1));
+        fv::escape_into(out, &fv_refusals.keep(fv::try_to_iso_string(n1), 14, 74));
         out.push_str("\">");
-        fv::escape_into(out, &fv::js_slice(&fv::js_to_iso_string(n1), 0.0f64, Some(10.0f64)));
+        fv::escape_into(out, &fv::js_slice(&fv_refusals.keep(fv::try_to_iso_string(n1), 14, 106), 0.0f64, Some(10.0f64)));
         out.push_str("</time></small>");
     } else {
         out.push_str("<!---->");
     }
     out.push_str("</div>");
+    fv_refusals.check(Ok(()))
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_loads: &'p fv::Loads<'p>) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_loads))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_loads: &'p fv::Loads<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
+    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_loads)))
 }

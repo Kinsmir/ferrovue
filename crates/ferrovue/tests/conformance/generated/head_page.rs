@@ -65,7 +65,21 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_head: &fv::Head) {
+    fv::rendered(try_render(out, props, fv_head));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_head: &fv::Head) -> Result<(), fv::Refused> {
     out.reserve(29 + props.title.len() + props.site.len() + props.description.as_deref().map_or(0, str::len) + props.lang.len() + props.canonical.len() + props.tags.iter().map(|v| v.len()).sum::<usize>() + props.author.as_deref().map_or(0, str::len));
     let s_heading = format!("{} ({})", props.title, fv::Js(props.views));
     fv_head.push(fv::HeadValue::object([("titleTemplate", fv::HeadValue::str(&format!("%s · {}", props.site))), ("title", fv::HeadValue::str(&props.title)), ("htmlAttrs", fv::HeadValue::object([("lang", fv::HeadValue::str(&props.lang)), ("class", fv::HeadValue::object([("dark", fv::HeadValue::bool(props.dark)), ("page", fv::HeadValue::bool(true))])), ("data-views", fv::HeadValue::int(props.views))])), ("bodyAttrs", fv::HeadValue::object([("class", fv::HeadValue::array([fv::HeadValue::str("body"), fv::HeadValue::str(&props.lang)])), ("style", fv::HeadValue::object([("color", fv::HeadValue::str("red")), ("background-color", fv::HeadValue::str(if props.dark { "black" } else { "white" }))]))])), ("meta", fv::HeadValue::array([fv::HeadValue::object([("name", fv::HeadValue::str("description")), ("content", if let Some(v) = props.description.as_deref() { fv::HeadValue::str(v) } else { fv::HeadValue::Undefined })]), fv::HeadValue::object([("property", fv::HeadValue::str("og:title")), ("content", fv::HeadValue::str(&s_heading))]), fv::HeadValue::object([("property", fv::HeadValue::str("og:image")), ("content", fv::HeadValue::Array(props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| fv::HeadValue::str(&v)).collect()))]), fv::HeadValue::object([("name", fv::HeadValue::str("keywords")), ("content", fv::HeadValue::str(&props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(",")))]), fv::HeadValue::object([("name", fv::HeadValue::str("rating")), ("content", if let Some(v) = props.rating { fv::HeadValue::int(v) } else { fv::HeadValue::Undefined })]), fv::HeadValue::object([("name", fv::HeadValue::str("author")), ("content", if let Some(v) = props.author.as_deref() { fv::HeadValue::str(v) } else { fv::HeadValue::Null })]), fv::HeadValue::object([("name", fv::HeadValue::str("robots")), ("content", fv::HeadValue::str("index, follow")), ("key", fv::HeadValue::str("robots"))]), fv::HeadValue::object([("http-equiv", fv::HeadValue::str("x-ua-compatible")), ("content", fv::HeadValue::str("IE=edge"))])])), ("link", fv::HeadValue::array([fv::HeadValue::object([("rel", fv::HeadValue::str("canonical")), ("href", fv::HeadValue::str(&props.canonical))]), fv::HeadValue::object([("rel", fv::HeadValue::str("stylesheet")), ("href", fv::HeadValue::str(&format!("/{}.css", props.lang)))]), fv::HeadValue::object([("rel", fv::HeadValue::str("preconnect")), ("href", fv::HeadValue::str("https://cdn.example"))]), fv::HeadValue::object([("rel", fv::HeadValue::str("alternate")), ("hreflang", fv::HeadValue::str(&props.lang)), ("href", fv::HeadValue::str(&props.canonical))])])), ("script", fv::HeadValue::array([fv::HeadValue::object([("type", fv::HeadValue::str("application/ld+json")), ("innerHTML", fv::HeadValue::object([("@type", fv::HeadValue::str("Article")), ("headline", fv::HeadValue::str(&props.title)), ("views", fv::HeadValue::int(props.views)), ("tags", fv::HeadValue::Array(props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| fv::HeadValue::str(&v)).collect()))]))]), fv::HeadValue::object([("src", fv::HeadValue::str("/late.js")), ("tagPosition", fv::HeadValue::str("bodyClose")), ("defer", fv::HeadValue::bool(true))]), fv::HeadValue::object([("innerHTML", fv::HeadValue::str(&format!("window.site = {}", fv::js_json_string(&props.site)))), ("tagPosition", fv::HeadValue::str("bodyOpen")), ("key", fv::HeadValue::str("inline"))])])), ("style", fv::HeadValue::array([fv::HeadValue::object([("textContent", fv::HeadValue::str(&format!("h1::before {{ content: \"{}\" }}", props.site)))])])), ("noscript", fv::HeadValue::array([fv::HeadValue::object([("textContent", fv::HeadValue::str(&props.title))])]))]));
@@ -73,15 +87,16 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_head: &fv::Head) {
     fv::escape_into(out, &s_heading);
     out.push_str("</h1>");
     if props.show_article {
-        super::head_article::render(out, &super::head_article::Props { title: std::borrow::Cow::Borrowed(&*props.title), tags: props.tags.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect() }, fv_head);
+        super::head_article::try_render(out, &super::head_article::Props { title: std::borrow::Cow::Borrowed(&*props.title), tags: props.tags.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect() }, fv_head)?;
     } else {
         out.push_str("<!---->");
     }
-    super::head_seo::render(out, &super::head_seo::Props { title: std::borrow::Cow::Borrowed(&*props.title), description: props.description.as_deref().map(std::borrow::Cow::Borrowed), views: props.views }, fv_head);
+    super::head_seo::try_render(out, &super::head_seo::Props { title: std::borrow::Cow::Borrowed(&*props.title), description: props.description.as_deref().map(std::borrow::Cow::Borrowed), views: props.views }, fv_head)?;
     out.push_str("</main>");
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_head: &'p fv::Head) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_head))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_head: &'p fv::Head) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
+    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_head)))
 }

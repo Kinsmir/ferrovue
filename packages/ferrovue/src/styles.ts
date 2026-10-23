@@ -2,7 +2,7 @@ import { escapeHtml, hyphenate, parseStringStyle } from "@vue/shared";
 import { type Component, type N, type Scope, type Val, fail, nothing, rustStr } from "./model.ts";
 import { describeTy, expr } from "./expr.ts";
 import { cond, known } from "./narrowing.ts";
-import { condition, logical, not, receiver, strArg } from "./parens.ts";
+import { condition, logical, not, receiver, scrutinee, strArg } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
 import { display, valueAttr } from "./attrs.ts";
 import { isTemporary } from "./strings.ts";
@@ -96,7 +96,7 @@ function writeCssVar(s: Scope, e: Emitter, css: string, n: N): void {
       return;
     }
     if (v.ty.k === "opt") {
-      e.open(`if let Some(v) = ${v.code}`);
+      e.open(`if let Some(v) = ${scrutinee(v.code)}`);
       one({ code: "v", ty: v.ty.of });
       e.close(" else {");
       e.lit(`${escapeHtml(css)}:initial;`);
@@ -143,7 +143,7 @@ export function mergedStyle(s: Scope, e: Emitter, n: N): void {
   const v = expr(s, n);
   if (v.ty.k === "str") e.stmt(`fv::style_text_into(out, ${strArg(v.code)});`);
   else if (v.ty.k === "opt" && v.ty.of.k === "str") {
-    e.open(`if let Some(v) = ${v.code}`);
+    e.open(`if let Some(v) = ${scrutinee(v.code)}`);
     e.stmt("fv::style_text_into(out, v);");
     e.close();
   } else if (!nothing(v.ty)) fail(s.comp, "FV1007", "a style binding is a string, an object or an array", n);
@@ -223,7 +223,7 @@ export function renderStyle(s: Scope, e: Emitter, n: N): void {
     const v = expr(s, n);
     if (v.ty.k === "str") e.stmt(`fv::escape_into(out, ${strArg(v.code)});`);
     else if (v.ty.k === "opt" && v.ty.of.k === "str") {
-      e.open(`if let Some(v) = ${v.code}`);
+      e.open(`if let Some(v) = ${scrutinee(v.code)}`);
       e.stmt("fv::escape_into(out, v);");
       e.close();
     } else if (!nothing(v.ty)) fail(s.comp, "FV1007", "a style binding is a string, an object or an array", n);
@@ -257,7 +257,7 @@ export function renderStyle(s: Scope, e: Emitter, n: N): void {
         display(e, w);
         e.lit(";");
       } else if (w.ty.k === "opt") {
-        e.open(`if let Some(v) = ${w.code}`);
+        e.open(`if let Some(v) = ${scrutinee(w.code)}`);
         one({ code: "v", ty: w.ty.of });
         e.close();
       }

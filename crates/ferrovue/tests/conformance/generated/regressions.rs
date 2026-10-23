@@ -51,7 +51,21 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
+    fv::rendered(try_render(out, props));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(600 + props.s1.len() + props.os1.as_deref().map_or(0, str::len) + props.l2.iter().map(|v| v.len()).sum::<usize>());
     out.push_str("<div><p>1e+21|100000000000000000000|9007199254740992</p><i alt=\"100000000000000000000\" id=\"1e+21\"></i><b placeholder=\"");
     fv::escape_into(out, &(if props.s1.starts_with("Σ") { std::borrow::Cow::<str>::Borrowed(&*props.s1) } else { std::borrow::Cow::<str>::Owned(fv::js_to_fixed(1.0f64, 0)) }));
@@ -149,8 +163,8 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push('|');
     fv::escape_into(out, &(if props.b0 { std::borrow::Cow::<str>::Borrowed("a") } else { std::borrow::Cow::<str>::Owned(fv::js_char_at(&"é".to_uppercase(), 0.0f64).to_owned()) }));
     out.push_str("</p>");
-    super::fall_leaf::render_scoped(out, &super::fall_leaf::Props { label: std::borrow::Cow::Borrowed("x"), shown: None, note: None }, &fv::Attrs::new(&[("class", if props.b0 { fv::Attr::str("a") } else { fv::Attr::Str(std::borrow::Cow::<str>::Owned(fv::Js(props.f2).to_string())) }), ("title", fv::Attr::Str(if props.b0 { std::borrow::Cow::<str>::Owned(fv::Js(props.n3).to_string()) } else { std::borrow::Cow::<str>::Borrowed("b") }))], ""));
-    super::fall_pair::render_scoped(out, &super::fall_pair::Props { first: std::borrow::Cow::Borrowed("y") }, &fv::Attrs::new(&[("class", if true { fv::Attr::Str(std::borrow::Cow::<str>::Owned(fv::Js(0.5f64).to_string())) } else { fv::Attr::str(", ") })], ""));
+    super::fall_leaf::try_render_scoped(out, &super::fall_leaf::Props { label: std::borrow::Cow::Borrowed("x"), shown: None, note: None }, &fv::Attrs::new(&[("class", if props.b0 { fv::Attr::str("a") } else { fv::Attr::Str(std::borrow::Cow::<str>::Owned(fv::Js(props.f2).to_string())) }), ("title", fv::Attr::Str(if props.b0 { std::borrow::Cow::<str>::Owned(fv::Js(props.n3).to_string()) } else { std::borrow::Cow::<str>::Borrowed("b") }))], ""))?;
+    super::fall_pair::try_render_scoped(out, &super::fall_pair::Props { first: std::borrow::Cow::Borrowed("y") }, &fv::Attrs::new(&[("class", if true { fv::Attr::Str(std::borrow::Cow::<str>::Owned(fv::Js(0.5f64).to_string())) } else { fv::Attr::str(", ") })], ""))?;
     out.push_str("<!--[-->");
     for x_cow in fv::js_split(&props.s1, " ").into_iter().filter(|_| !props.b0) {
         let x: &str = &x_cow;
@@ -159,24 +173,25 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         out.push_str("</b>");
     }
     out.push_str("<!--]--></div>");
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
 pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup(props, render)
+    fv::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
 pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island(NAME, props, render)
+    fv::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
 pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned(props, render)
+    fv::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
 pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned(NAME, props, render)
+    fv::Html::island_owned_fallible(NAME, props, render, try_render)
 }

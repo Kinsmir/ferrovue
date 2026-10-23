@@ -2,7 +2,7 @@ import { type N, type Scope, type Val, fail, GenError, namesSelf, nodeName } fro
 import { ctx } from "./context.ts";
 import { expr, shown } from "./expr.ts";
 import { type Presence, boolOf, cond, known, narrowedVal, narrowTo, presence, truthTested, truthy } from "./narrowing.ts";
-import { CMP, condition, occurrences, operand } from "./parens.ts";
+import { CMP, condition, occurrences, operand, scrutinee } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
 import { attrShown, interpolate, keepsAttrCase, renderAttr, renderAttrs, renderDynamicAttr } from "./attrs.ts";
 import { renderStyle } from "./styles.ts";
@@ -72,7 +72,7 @@ export function slot(s: Scope, e: Emitter, n: N): void {
       return;
     }
     if (v.ty.k === "opt" && v.ty.of.k === "html") {
-      e.open(`if let Some(html) = ${v.code}`);
+      e.open(`if let Some(html) = ${scrutinee(v.code)}`);
       e.stmt("fv::trusted_into(out, html);");
       e.close();
       return;

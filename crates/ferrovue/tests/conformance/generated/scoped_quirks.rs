@@ -31,40 +31,55 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
+    fv::rendered(try_render(out, props));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(42 + props.note.as_deref().map_or(0, str::len));
     out.push_str("<div class=\"quirks\" data-v-a3eec79a>");
-    super::scoped_root::render_scoped(out, &super::scoped_root::Props { label: props.note.as_deref().map(std::borrow::Cow::Borrowed) }, " data-v-a3eec79a");
-    super::scoped_card::render_scoped(out, &super::scoped_card::Props { tone: None }, super::scoped_card::Slots {
+    super::scoped_root::try_render_scoped(out, &super::scoped_root::Props { label: props.note.as_deref().map(std::borrow::Cow::Borrowed) }, " data-v-a3eec79a")?;
+    super::scoped_card::try_render_scoped(out, &super::scoped_card::Props { tone: None }, super::scoped_card::Slots {
         title: None,
         default: None,
         footer: None,
-    }, " data-v-a3eec79a");
-    super::scoped_shelf::render_scoped(out, &super::scoped_shelf::Props {  }, super::scoped_shelf::Slots {
+    }, " data-v-a3eec79a")?;
+    super::scoped_shelf::try_render_scoped(out, &super::scoped_shelf::Props {  }, super::scoped_shelf::Slots {
         default: None,
-    }, " data-v-a3eec79a");
-    super::plain_forward::render_scoped(out, &super::plain_forward::Props {  }, super::plain_forward::Slots {
+    }, " data-v-a3eec79a")?;
+    super::plain_forward::try_render_scoped(out, &super::plain_forward::Props {  }, super::plain_forward::Slots {
         default: None,
-    }, " data-v-a3eec79a");
+    }, " data-v-a3eec79a")?;
     out.push_str("</div>");
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
 pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup(props, render)
+    fv::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
 pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island(NAME, props, render)
+    fv::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
 pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned(props, render)
+    fv::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
 pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned(NAME, props, render)
+    fv::Html::island_owned_fallible(NAME, props, render, try_render)
 }

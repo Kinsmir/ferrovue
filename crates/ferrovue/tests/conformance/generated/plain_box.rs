@@ -33,13 +33,27 @@ pub struct Slots<'s> {
 }
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
-    render_scoped(out, props, fv_slots, "");
+    fv::rendered(try_render_scoped(out, props, fv_slots, ""));
 }
 
-/// [`render`], with the scope ids a parent hands the root: ` data-v-…` each.
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::Refused> {
+    try_render_scoped(out, props, fv_slots, "")
+}
+
+/// [`try_render`], with the scope ids a parent hands the root: ` data-v-…` each.
 #[doc(hidden)]
-pub fn render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_attrs: &str) {
+pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_attrs: &str) -> Result<(), fv::Refused> {
     out.reserve(32 + props.text.len());
     out.push_str("<div class=\"plain\"");
     out.push_str(fv_attrs);
@@ -48,9 +62,10 @@ pub fn render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, f
     out.push_str("</p>");
     fv::slot_into(out, fv_slots.default, None);
     out.push_str("</div>");
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_slots))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
+    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_slots)))
 }

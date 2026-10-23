@@ -55,7 +55,21 @@ pub struct Slots<'s> {
 }
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
+    fv::rendered(try_render(out, props, fv_slots));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::Refused> {
     out.reserve(37 + props.value.as_deref().map_or(0, str::len) + props.entry.as_ref().map_or(0, |v| v.title.len() + v.deleted_at.as_deref().map_or(0, str::len) + v.note.as_deref().map_or(0, str::len)));
     out.push_str("<span");
     if let Some(v) = props.value.as_deref() {
@@ -74,9 +88,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
     fv::escape_into(out, &(if let Some(n1) = props.entry.as_ref() { std::borrow::Cow::<str>::Owned(format!(":{}", n1.title)) } else { std::borrow::Cow::<str>::Borrowed("") }));
     fv::scoped_slot_into(out, fv_slots.default, &DefaultSlotProps { v: props.value.as_deref(), e: props.entry.as_ref() }, None);
     out.push_str("</span>");
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_slots))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
+    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_slots)))
 }

@@ -1,4 +1,4 @@
-import { type Component, type N, type Scope, type Ty, type Val, asciiText, BOOL, fail, FLOAT, INT, isAscii, nothing, opt, rustStr, STR, strTy } from "./model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, asciiText, BOOL, fail, FLOAT, INT, isAscii, kept, nothing, opt, refusalAt, REFUSALS, rustStr, STR, strTy } from "./model.ts";
 import type { Code } from "./errors.ts";
 import { atom, bare, binary, condition, enclosed, receiver, strArg } from "./parens.ts";
 import { computed, items } from "./lists.ts";
@@ -42,7 +42,7 @@ export function asCow(v: Val): string {
   const built = /^&\*(.*)$/s.exec(v.code)?.[1];
   if (built === undefined) return `std::borrow::Cow::<str>::Owned(${atom(v.code)}.to_owned())`;
   if (enclosed(built)) return bare(built);
-  if (yieldsCow(built)) return built.startsWith("fv::") ? `std::borrow::Cow::<str>::Owned(${built}.into_owned())` : bare(built);
+  if (yieldsCow(built)) return built.startsWith("fv::") || built.startsWith(`${REFUSALS}.`) ? `std::borrow::Cow::<str>::Owned(${built}.into_owned())` : bare(built);
   if (/^fv::js_(?:char_at|trim|trim_start|trim_end)\(/.test(built)) return `std::borrow::Cow::<str>::Owned(${built}.to_owned())`;
   return `std::borrow::Cow::<str>::Owned(${built})`;
 }
@@ -55,15 +55,18 @@ export function heldStr(v: Val): string {
   return owned !== undefined && enclosed(`(${owned})`) ? owned : cow;
 }
 
+const MAX_STRING_LENGTH = 2 ** 29 - 24;
+
 export function yieldsCow(code: string): boolean {
-  const routine = /^fv::js_(?:slice|substring|substr|replace|replace_all|pad_start|pad_end)(?=\()/.exec(code);
+  const routine = /^fv::js_(?:slice|substring|substr|replace|replace_all|pad_start|pad_end)(?=\()/.exec(code) ?? /^fv_refusals\.keep(?=\(fv::try_pad_(?:start|end)\()/.exec(code);
   if (routine !== null) return enclosed(code.slice(routine[0].length));
-  const marker = ".unwrap_or(";
-  for (let at = code.lastIndexOf(marker); at >= 0; at = code.lastIndexOf(marker, at - 1)) {
-    const rest = code.slice(at + ".unwrap_or".length);
-    if (!enclosed(rest)) continue;
-    const fallback = rest.slice(1, -1);
-    return fallback.startsWith("std::borrow::Cow::<str>::") || yieldsCow(fallback);
+  for (const method of [".unwrap_or", ".unwrap_or_else"]) {
+    for (let at = code.lastIndexOf(`${method}(`); at >= 0; at = code.lastIndexOf(`${method}(`, at - 1)) {
+      const rest = code.slice(at + method.length);
+      if (!enclosed(rest)) continue;
+      const fallback = rest.slice(1, -1).replace(/^\|\| /, "");
+      return fallback.startsWith("std::borrow::Cow::<str>::") || yieldsCow(fallback);
+    }
   }
   return false;
 }
@@ -281,7 +284,10 @@ export function stringMethod(s: Scope, target: Val, method: string, args: N[], n
       const fill: Val = args.length > 1 ? str(1) : { code: '" "', ty: strTy(true) };
       const whole = fill.code.startsWith('"') && !/[\u{10000}-\u{10FFFF}]/u.test(fill.code);
       if (fill.lone || (method === "padStart" && target.lone && !whole)) fail(comp, "FV0706", lonely(`\`.${method}()\``), n);
-      return { code: `&*fv::js_${method === "padStart" ? "pad_start" : "pad_end"}(${t}, ${num(0, "0.0", "0.0")}, ${strArg(fill.code)})`, ty: strTy(ascii && isAscii(fill.ty)), ...(target.lone || !whole ? { lone: true } : {}) };
+      const routine = method === "padStart" ? "pad_start" : "pad_end";
+      const padArgs = `${t}, ${num(0, "0.0", "0.0")}, ${strArg(fill.code)}`;
+      const short = args[0]?.type === "NumericLiteral" && args[0].value <= MAX_STRING_LENGTH;
+      return { code: short ? `&*fv::js_${routine}(${padArgs})` : `&*${kept(`fv::try_${routine}(${padArgs})`, refusalAt(comp, n))}`, ty: strTy(ascii && isAscii(fill.ty)), ...(target.lone || !whole ? { lone: true } : {}) };
     }
     case "repeat": {
       arity(1, 1);
@@ -290,7 +296,7 @@ export function stringMethod(s: Scope, target: Val, method: string, args: N[], n
         fail(comp, "FV0714", "`.repeat()` with a negative or infinite count, which throws a `RangeError`", c);
       }
       if (target.lone) fail(comp, "FV0706", lonely("`.repeat()`"), n);
-      return { code: `&*fv::js_repeat(${t}, ${num(0, "0.0", "0.0")})`, ty: same };
+      return { code: `&*${kept(`fv::try_repeat(${t}, ${num(0, "0.0", "0.0")})`, refusalAt(comp, n))}`, ty: same };
     }
     case "toLocaleUpperCase":
     case "toLocaleLowerCase":

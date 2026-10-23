@@ -5,7 +5,7 @@ import { CONFIG_FILE, ctx } from "./context.ts";
 import { describeTy, expr, shown } from "./expr.ts";
 import { known, truthy } from "./narrowing.ts";
 import { asCow, isTemporary, unquote } from "./strings.ts";
-import { atom, bare, condition, receiver, strArg } from "./parens.ts";
+import { atom, bare, condition, receiver, scrutinee, strArg } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
 import { isDollarAttrs } from "./fallthrough.ts";
 import { claim } from "./plugin.ts";
@@ -35,7 +35,7 @@ export function interpolate(s: Scope, e: Emitter, v: Val, n: N): void {
     case "null":
       return;
     case "opt":
-      e.open(`if let Some(v) = ${v.code}`);
+      e.open(`if let Some(v) = ${scrutinee(v.code)}`);
       interpolate(s, e, { code: "v", ty: v.ty.of }, n);
       e.close();
       return;
@@ -62,7 +62,7 @@ export function renderAttr(s: Scope, e: Emitter, key: string, v: Val, n: N): voi
   renderable(s, key, v, n);
   if (nothing(v.ty)) return;
   if (v.ty.k === "opt") {
-    e.open(`if let Some(v) = ${v.code}`);
+    e.open(`if let Some(v) = ${scrutinee(v.code)}`);
     renderAttr(s, e, key, { code: "v", ty: v.ty.of }, n);
     e.close();
     return;
@@ -99,7 +99,7 @@ export function renderDynamicAttr(s: Scope, e: Emitter, key: string, v: Val, n: 
     return;
   }
   if (v.ty.k === "opt") {
-    e.open(`if let Some(v) = ${v.code}`);
+    e.open(`if let Some(v) = ${scrutinee(v.code)}`);
     renderDynamicAttr(s, e, key, { code: "v", ty: v.ty.of }, n, tag);
     e.close();
     return;

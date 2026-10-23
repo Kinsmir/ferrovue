@@ -26,7 +26,21 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::Stores<'_>) {
+    fv::rendered(try_render(out, props, fv_stores));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::Stores<'_>) -> Result<(), fv::Refused> {
     out.reserve(93 + props.heading.len());
     let s_summary = format!("{} line(s), {} doubled", fv::Js(fv_stores.cart.lines.len() as i64), fv::Js(fv_stores.prefs.count as f64 * 2.0));
     out.push_str("<aside class=\"");
@@ -59,9 +73,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::St
         fv::escape_into(out, v);
     }
     out.push_str("</p></aside>");
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_stores: &'p super::stores::Stores<'p>) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_stores))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_stores: &'p super::stores::Stores<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
+    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_stores)))
 }

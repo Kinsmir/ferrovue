@@ -43,10 +43,25 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
+    fv::rendered(try_render(out, props));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(231 + 7 * props.tags.len() + 39 * props.tags.len() + props.note.as_deref().map_or(0, str::len) + props.pad.as_deref().map_or(0, str::len) + props.tags.iter().map(|v| v.len()).sum::<usize>());
+    let fv_refusals = fv::Refusals::new(NAME, "components/Hollow.vue");
     out.push_str("<div>");
-    super::frame::render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed("lead") }, super::frame::Slots {
+    fv_refusals.check(super::frame::try_render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed("lead") }, super::frame::Slots {
         head: None,
         default: Some(fv::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
@@ -66,8 +81,8 @@ pub fn render(out: &mut String, props: &Props<'_>) {
             out.push_str("<!--]-->");
             filled
         })),
-    });
-    super::frame::render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed("trail") }, super::frame::Slots {
+    }))?;
+    fv_refusals.check(super::frame::try_render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed("trail") }, super::frame::Slots {
         head: None,
         default: Some(fv::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
@@ -87,8 +102,8 @@ pub fn render(out: &mut String, props: &Props<'_>) {
             filled |= !fv::is_comment(&out[fv_chunk..]);
             filled
         })),
-    });
-    super::frame::render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed("alone") }, super::frame::Slots {
+    }))?;
+    fv_refusals.check(super::frame::try_render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed("alone") }, super::frame::Slots {
         head: None,
         default: Some(fv::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
@@ -99,8 +114,8 @@ pub fn render(out: &mut String, props: &Props<'_>) {
             filled |= !fv::is_comment(&out[fv_chunk..]);
             filled
         })),
-    });
-    super::frame::render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed("branch") }, super::frame::Slots {
+    }))?;
+    fv_refusals.check(super::frame::try_render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed("branch") }, super::frame::Slots {
         head: None,
         default: Some(fv::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
@@ -120,8 +135,8 @@ pub fn render(out: &mut String, props: &Props<'_>) {
             }
             filled
         })),
-    });
-    super::frame::render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed("nested") }, super::frame::Slots {
+    }))?;
+    fv_refusals.check(super::frame::try_render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed("nested") }, super::frame::Slots {
         head: None,
         default: Some(fv::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
@@ -149,8 +164,8 @@ pub fn render(out: &mut String, props: &Props<'_>) {
             out.push_str("<!--]-->");
             filled
         })),
-    });
-    super::frame::render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed("spaced") }, super::frame::Slots {
+    }))?;
+    fv_refusals.check(super::frame::try_render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed("spaced") }, super::frame::Slots {
         head: None,
         default: Some(fv::Slot::new(&|out: &mut String| {
             if props.on {
@@ -169,14 +184,14 @@ pub fn render(out: &mut String, props: &Props<'_>) {
                 out.push_str("<!---->");
             }
         })),
-    });
-    super::frame::render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed("blank") }, super::frame::Slots {
+    }))?;
+    fv_refusals.check(super::frame::try_render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed("blank") }, super::frame::Slots {
         head: None,
         default: Some(fv::Slot::new(&|out: &mut String| {
-            super::blank::render(out, &super::blank::Props { show: props.on });
+            fv_refusals.join(super::blank::try_render(out, &super::blank::Props { show: props.on }));
         })),
-    });
-    super::frame::render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed("named") }, super::frame::Slots {
+    }))?;
+    fv_refusals.check(super::frame::try_render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed("named") }, super::frame::Slots {
         head: Some(fv::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
             let fv_chunk = out.len();
@@ -215,8 +230,8 @@ pub fn render(out: &mut String, props: &Props<'_>) {
             }
             filled
         })),
-    });
-    super::data_list::render(out, &super::data_list::Props { rows: Vec::new(), title: std::borrow::Cow::Borrowed("scoped"), note: props.note.as_deref().map(std::borrow::Cow::Borrowed) }, super::data_list::Slots {
+    }))?;
+    fv_refusals.check(super::data_list::try_render(out, &super::data_list::Props { rows: Vec::new(), title: std::borrow::Cow::Borrowed("scoped"), note: props.note.as_deref().map(std::borrow::Cow::Borrowed) }, super::data_list::Slots {
         header: Some(&|out: &mut String, fv_sp3: &super::data_list::HeaderSlotProps<'_>| -> bool {
             let mut filled = false;
             if props.on {
@@ -247,8 +262,8 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         row: None,
         empty: None,
         default: None,
-    });
-    super::forward::render(out, &super::forward::Props { title: std::borrow::Cow::Borrowed("forwarded") }, super::forward::Slots {
+    }))?;
+    fv_refusals.check(super::forward::try_render(out, &super::forward::Props { title: std::borrow::Cow::Borrowed("forwarded") }, super::forward::Slots {
         default: Some(fv::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
             let fv_chunk = out.len();
@@ -267,8 +282,8 @@ pub fn render(out: &mut String, props: &Props<'_>) {
             out.push_str("<!--]-->");
             filled
         })),
-    });
-    super::forward::render(out, &super::forward::Props { title: std::borrow::Cow::Borrowed("forwarded-branch") }, super::forward::Slots {
+    }))?;
+    fv_refusals.check(super::forward::try_render(out, &super::forward::Props { title: std::borrow::Cow::Borrowed("forwarded-branch") }, super::forward::Slots {
         default: Some(fv::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
             if props.on {
@@ -287,26 +302,27 @@ pub fn render(out: &mut String, props: &Props<'_>) {
             }
             filled
         })),
-    });
+    }))?;
     out.push_str("</div>");
+    fv_refusals.check(Ok(()))
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
 pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup(props, render)
+    fv::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
 pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island(NAME, props, render)
+    fv::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
 pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned(props, render)
+    fv::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
 pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned(NAME, props, render)
+    fv::Html::island_owned_fallible(NAME, props, render, try_render)
 }

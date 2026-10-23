@@ -315,8 +315,12 @@ assert!([0.0, -0.0].into_iter().fold(f64::INFINITY, ferrovue::js_min).is_sign_ne
 
 # Panics
 
-Where JavaScript throws, the generated code panics, as Vue's render fails: a negative or infinite
-`.repeat()` count, and a `.repeat()`, `.padStart()` or `.padEnd()` longer than the longest string V8
-makes, 2²⁹ − 24 code units. A `.repeat()` by a negative literal is refused at compile time. A
-`computed` that calls one of them is worked out where the render first reads it, once, as Vue
-works it out, so it panics only when the render reads it.
+Where JavaScript throws, Vue's render fails, and the generated code refuses the render: a negative
+or infinite `.repeat()` count ([FV0714](crate::guide::error_codes#fv0714)), and a `.repeat()`,
+`.padStart()` or `.padEnd()` longer than the longest string V8 makes, 2²⁹ − 24 code units
+([FV0725](crate::guide::error_codes#fv0725)). The generated `try_render` returns the refusal, and
+`render` panics with its message (see
+[`errors_and_limits`](crate::guide::errors_and_limits#refused-at-render-time)). A `.repeat()` by a
+negative literal is refused at compile time. A `computed` that calls one of them is worked out
+where the render first reads it, once, as Vue works it out, so it is refused only when the render
+reads it.

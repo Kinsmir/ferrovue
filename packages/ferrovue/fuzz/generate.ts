@@ -138,7 +138,8 @@ export type HelperName =
   | "FzSlots"
   | "FzDate"
   | "FzStamp"
-  | "FzCard";
+  | "FzCard"
+  | "FzWide";
 
 const HELPERS: Record<HelperName, { template: string; imports: HelperName[]; slot: boolean; script?: string[]; props?: string }> = {
   FzLeaf: { template: `<b class="leaf">leaf</b>`, imports: [], slot: false },
@@ -208,6 +209,12 @@ const HELPERS: Record<HelperName, { template: string; imports: HelperName[]; slo
     slot: false,
     script: ["export interface FzCardT {", "  title: string;", "  n: number;", "  tag?: string;", "  on: boolean | null;", "  words: string[];", '  size: "sm" | "md" | "lg";', "}"],
     props: "defineProps<{ card: FzCardT; cards: FzCardT[] }>();",
+  },
+  FzWide: {
+    template: `<i class="wide">{{ n }}|{{ n + 1 }}|{{ n > 0 }}</i>`,
+    imports: [],
+    slot: false,
+    props: "defineProps<{ n: number }>();",
   },
 };
 
@@ -2508,6 +2515,7 @@ class Gen {
     const r = this.r;
     if (r.chance(this.dateWeight(0.25))) return this.dateChild();
     if (r.chance(0.12)) return this.cardChild();
+    if (r.chance(0.06)) return this.wideChild();
     this.nodes++;
     const names: HelperName[] = ["FzLeaf", "FzBox", "FzFwd", "FzPair", "FzRoot", "FzOwn", "FzBind", "FzUse", "FzPlain", "FzBare", "FzInj", "FzProv", "FzHead", "FzSlots"];
     const name = this.favour.length && r.chance(0.5) ? r.pick(this.favour) : r.pick(names);
@@ -2689,6 +2697,15 @@ class Gen {
     ])();
     const attrs: Attr[] = r.chance(0.5) ? [{ k: "bind", name: "card", e: card }, { k: "bind", name: "cards", e: cards }] : [{ k: "bind", name: "cards", e: cards }, { k: "bind", name: "card", e: card }];
     return { k: "child", name: "FzCard", attrs, kids: [] };
+  }
+
+  wideChild(): Node {
+    const r = this.r;
+    this.nodes++;
+    const ints = this.scope.vars.filter((v) => v.ty === "int" && !v.opt);
+    const factor = (): Expr => (ints.length && r.chance(0.7) ? this.varRef(r.pick(ints)) : numLit(r.pick([3, 1000003, 2 ** 31, 2 ** 53 - 1, -(2 ** 53 - 1)]), "int"));
+    const factors = Array.from({ length: r.int(2, 3) }, factor);
+    return { k: "child", name: "FzWide", attrs: [{ k: "bind", name: "n", e: node("int", factors, (k) => k.join(" * "), LIMIT) }], kids: [] };
   }
 
   dateChild(): Node {

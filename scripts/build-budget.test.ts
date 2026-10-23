@@ -17,6 +17,6 @@ describe("the synthetic project", () => {
     writeProject(dir, 10);
     const files = generate(dir);
     expect([...files.keys()].toSorted()).toEqual([...Array.from({ length: 10 }, (_, i) => `comp00${i}.rs`), "mod.rs"]);
-    expect(files.get("comp008.rs")).toContain("super::comp005::render");
+    expect(files.get("comp008.rs")).toContain("super::comp005::try_render");
   });
 });

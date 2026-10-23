@@ -39,14 +39,29 @@ impl Props {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props) {
+    fv::rendered(try_render(out, props));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::Refused> {
     out.reserve(80);
+    let fv_refusals = fv::Refusals::new(NAME, "components/Posted.vue");
     out.push_str("<time");
-    if fv::js_to_iso_string(fv::js_time_of(&props.at)).is_empty() {
+    if fv_refusals.keep(fv::try_to_iso_string(fv::js_time_of(&props.at)), 6, 20).is_empty() {
         out.push_str(" datetime");
     } else {
         out.push_str(" datetime=\"");
-        fv::escape_into(out, &fv::js_to_iso_string(fv::js_time_of(&props.at)));
+        fv::escape_into(out, &fv_refusals.keep(fv::try_to_iso_string(fv::js_time_of(&props.at)), 6, 20));
         out.push('"');
     }
     out.push('>');
@@ -66,24 +81,25 @@ pub fn render(out: &mut String, props: &Props) {
         out.push_str("<!---->");
     }
     out.push_str("</time>");
+    fv_refusals.check(Ok(()))
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
 pub fn html<'p>(props: &'p Props) -> fv::Html<'p, Props> {
-    fv::Html::markup(props, render)
+    fv::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
 pub fn island<'p>(props: &'p Props) -> fv::Html<'p, Props> {
-    fv::Html::island(NAME, props, render)
+    fv::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
 pub fn into_html(props: Props) -> fv::Html<'static, Props> {
-    fv::Html::markup_owned(props, render)
+    fv::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
 pub fn into_island(props: Props) -> fv::Html<'static, Props> {
-    fv::Html::island_owned(NAME, props, render)
+    fv::Html::island_owned_fallible(NAME, props, render, try_render)
 }

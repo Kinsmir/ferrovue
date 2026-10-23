@@ -421,7 +421,21 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
+    fv::rendered(try_render(out, props));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(290 + 21 * props.steps.len() + 6 + 1 + 1 + 4 + 4 + 3 + 2 + 2 + 1 + props.steps.iter().map(|v| v.label.len() + 7 + 6).sum::<usize>() + props.note.len());
     let s_label = if props.mode == UnionEnumsMode::A { "first" } else { if props.mode == UnionEnumsMode::B { "second" } else { "third" } };
     let s_chosen = if props.level == super::types::Level::High { "a" } else { props.mode.as_str() };
@@ -524,33 +538,34 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ol>");
-    super::union_child::render(out, &super::union_child::Props { align: props.align, text: std::borrow::Cow::Borrowed(props.mode.as_str()), wide: Some(match props.align { super::types::Align::Left => super::union_child::UnionChildWide::Left, super::types::Align::Center => super::union_child::UnionChildWide::Center, super::types::Align::Right => super::union_child::UnionChildWide::Right }), pick: match s_chosen { "a" => super::union_child::UnionChildPick::A, "b" => super::union_child::UnionChildPick::B, _ => super::union_child::UnionChildPick::C }, fixed: super::union_child::UnionChildFixed::Y });
+    super::union_child::try_render(out, &super::union_child::Props { align: props.align, text: std::borrow::Cow::Borrowed(props.mode.as_str()), wide: Some(match props.align { super::types::Align::Left => super::union_child::UnionChildWide::Left, super::types::Align::Center => super::union_child::UnionChildWide::Center, super::types::Align::Right => super::union_child::UnionChildWide::Right }), pick: match s_chosen { "a" => super::union_child::UnionChildPick::A, "b" => super::union_child::UnionChildPick::B, _ => super::union_child::UnionChildPick::C }, fixed: super::union_child::UnionChildFixed::Y })?;
     out.push_str("<!--[-->");
     for s_ref in props.steps.iter() {
         let s = s_ref;
-        super::union_child::render(out, &super::union_child::Props { align: s.align.unwrap_or(super::types::Align::Center), text: std::borrow::Cow::Borrowed(&*s.label), wide: None, pick: match props.other.unwrap_or(UnionEnumsOther::B) { UnionEnumsOther::A => super::union_child::UnionChildPick::A, UnionEnumsOther::B => super::union_child::UnionChildPick::B, UnionEnumsOther::C => super::union_child::UnionChildPick::C }, fixed: super::union_child::UnionChildFixed::X });
+        super::union_child::try_render(out, &super::union_child::Props { align: s.align.unwrap_or(super::types::Align::Center), text: std::borrow::Cow::Borrowed(&*s.label), wide: None, pick: match props.other.unwrap_or(UnionEnumsOther::B) { UnionEnumsOther::A => super::union_child::UnionChildPick::A, UnionEnumsOther::B => super::union_child::UnionChildPick::B, UnionEnumsOther::C => super::union_child::UnionChildPick::C }, fixed: super::union_child::UnionChildFixed::X })?;
     }
     out.push_str("<!--]--><p>");
     fv::escape_into(out, &props.note);
     out.push_str("</p></section>");
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
 pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup(props, render)
+    fv::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
 pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island(NAME, props, render)
+    fv::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
 pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned(props, render)
+    fv::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
 pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned(NAME, props, render)
+    fv::Html::island_owned_fallible(NAME, props, render, try_render)
 }

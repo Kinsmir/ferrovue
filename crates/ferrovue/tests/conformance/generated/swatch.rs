@@ -33,7 +33,21 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) {
+    fv::rendered(try_render(out, props, fv_provides));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::Refused> {
     out.reserve(86 + props.label.len() + props.size.as_deref().map_or(0, str::len));
     let fv_default_look = super::types::Look { size: std::borrow::Cow::Borrowed(props.size.as_deref().unwrap_or("md")), tone: std::borrow::Cow::Borrowed("plain"), note: None, count: 0i64 };
     let fv_default_made = super::types::Look { size: std::borrow::Cow::Borrowed("lg"), tone: std::borrow::Cow::Borrowed(&*props.label), note: Some(std::borrow::Cow::Borrowed("made")), count: 1i64 };
@@ -75,9 +89,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides:
     out.push(' ');
     fv::push_number(out, fv_provides.look_key.unwrap_or(&fv_default_look).count as f64 + fv_provides.look_key.unwrap_or(&fv_default_made).count as f64);
     out.push_str("</span>");
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_provides: super::provides::Provides<'p>) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_provides))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_provides: super::provides::Provides<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
+    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_provides)))
 }

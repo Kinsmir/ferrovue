@@ -64,8 +64,23 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
+    fv::rendered(try_render(out, props));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(201 + props.items.iter().map(|v| v.label.len() + v.note.as_deref().map_or(0, str::len) + v.tags.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>() + props.words.iter().map(|v| v.len()).sum::<usize>() + props.query.len());
+    let fv_refusals = fv::Refusals::new(NAME, "components/Arrays.vue");
     let s_cheap = props.items.iter().filter(|fv_a1| fv_a1.price < 10.0).collect::<Vec<_>>();
     let s_labels = props.items.iter().map(|fv_a2| std::borrow::Cow::<str>::Owned(fv_a2.label.to_uppercase())).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
     let s_found = props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).find(|fv_s3| fv::js_length(fv_s3) as f64 > 3.0).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned()));
@@ -158,30 +173,31 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push_str("<!--]-->|");
     fv::escape_into(out, &(if !props.query.is_empty() { props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).find(|fv_s33| fv_s33.contains(&*props.query)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())) } else { None }).unwrap_or(std::borrow::Cow::<str>::Borrowed("?")));
     out.push_str("</p>");
-    super::chips::render(out, &super::chips::Props { chips: props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_s34| **fv_s34 != *props.query).collect(), counts: Some(props.nums.iter().copied().map(|fv_a35| (fv_a35 as f64 + 1.0) as i64).collect()), marks: None });
+    fv_refusals.check(super::chips::try_render(out, &super::chips::Props { chips: props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_s34| **fv_s34 != *props.query).collect(), counts: Some(props.nums.iter().copied().map(|fv_a35| fv_refusals.keep(fv::try_int(fv_a35 as f64 + 1.0), 33, 79)).collect()), marks: None }))?;
     out.push_str("<!--[-->");
     for item in props.items.iter().filter(|fv_a36| fv_a36.tags.len() as i64 as f64 > 1.0) {
-        super::chips::render(out, &super::chips::Props { chips: fv::js_slice_items(item.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), 1.0f64, None).collect(), counts: None, marks: None });
+        fv_refusals.check(super::chips::try_render(out, &super::chips::Props { chips: fv::js_slice_items(item.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), 1.0f64, None).collect(), counts: None, marks: None }))?;
     }
     out.push_str("<!--]--></section>");
+    fv_refusals.check(Ok(()))
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
 pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup(props, render)
+    fv::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
 pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island(NAME, props, render)
+    fv::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
 pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned(props, render)
+    fv::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
 pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned(NAME, props, render)
+    fv::Html::island_owned_fallible(NAME, props, render, try_render)
 }

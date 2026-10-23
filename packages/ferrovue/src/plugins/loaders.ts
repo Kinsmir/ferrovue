@@ -151,7 +151,7 @@ function argCode(s: Scope, loader: Loader, p: LoaderParam, n: N | undefined, at:
   }
 }
 
-/** `let Some(s_x) = fv_loads.get(…) else { return; };`: the component stops where Vue's server
+/** `let Some(s_x) = fv_loads.get(…) else { return Ok(()); };`: the component stops where Vue's server
  * awaits, until `load` has the result. */
 function awaitLet(s: Scope, loader: Loader, args: N[], at: number, call: N, lets: string[]): string {
   if (args.length > loader.params.length) fail(s.comp, "FV2006", `\`${loader.name}\` takes ${loader.params.length} argument${loader.params.length === 1 ? "" : "s"}, and the call gives ${args.length}`, call);
@@ -163,7 +163,7 @@ function awaitLet(s: Scope, loader: Loader, args: N[], at: number, call: N, lets
   const name = `l_${own.count++}`;
   runOf(loaders).readers.add(s.comp);
   const value = `super::loaders::${loader.struct}${fields.length ? ` { ${fields.join(", ")} }` : ""}`;
-  lets.push(`let Some(${name}) = fv_loads.get(${value}) else { return; };`);
+  lets.push(`let Some(${name}) = fv_loads.get(${value}) else { return Ok(()); };`);
   return name;
 }
 
@@ -363,7 +363,7 @@ export const loaders: Plugin<LoadersRun, LoadersScope> = {
           ");",
           "let mut cx = std::task::Context::from_waker(std::task::Waker::noop());",
           "match std::future::Future::poll(std::pin::pin!(loading), &mut cx) {",
-          "    std::task::Poll::Ready(done) => done.map_err(|e| e.to_string())?,",
+          "    std::task::Poll::Ready(done) => done.map_err(|e| e.to_string())?.map_err(|e| e.to_string())?,",
           '    std::task::Poll::Pending => return Err(String::from("a fixture\'s loader is still running")),',
           "}",
         ],

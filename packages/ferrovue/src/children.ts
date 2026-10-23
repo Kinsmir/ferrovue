@@ -1,5 +1,5 @@
 import { isSSRSafeAttrName, propsToAttrMap } from "@vue/shared";
-import { type Component, type Field, type N, type Scope, type Ty, type Val, absence, camelize, declares, enumOf, fail, nothing, rustStr, sameTy, snake, takesAttrs, variantPath } from "./model.ts";
+import { type Component, type Field, type N, type Scope, type Ty, type Val, absence, camelize, declares, enumOf, fail, nothing, REFUSALS, refusalAt, rustStr, sameTy, snake, takesAttrs, variantPath } from "./model.ts";
 import { ctx } from "./context.ts";
 import { known } from "./narrowing.ts";
 import { intoEnum, knownLiteral } from "./enums.ts";
@@ -259,7 +259,7 @@ export function callChild(s: Scope, e: Emitter, child: Component, propsCode: str
   const m = `super::${child.module}`;
   const scoped = child.inherits || takesAttrs(child);
   const trailing = paramsOf(child).map((p) => `, ${p.name}`).join("") + (scoped ? `, ${attrs ?? (takesAttrs(child) ? "&fv::Attrs::NONE" : '""')}` : "");
-  const render = scoped ? "render_scoped" : "render";
+  const render = scoped ? "try_render_scoped" : "try_render";
   const around = later ? ctx.plugins.flatMap((p) => p.loadedLater?.(child) ?? []) : [];
   if (around.length) {
     e.open("");
@@ -269,7 +269,8 @@ export function callChild(s: Scope, e: Emitter, child: Component, propsCode: str
   if (around.length) e.close();
 }
 
-export function callWith(s: Scope, e: Emitter, child: Component, m: string, head: string, slotsTy: string, trailing: string, slots: N, vnode = false): void {
+export function callWith(s: Scope, e: Emitter, child: Component, m: string, head: string, slotsTy: string, trailing: string, slots: N, vnode = false, fallible = true): void {
+  const [pre, post] = !fallible ? ["", ""] : e.inClosure ? [`${REFUSALS}.join(`, ")"] : [`${REFUSALS}.check(`, ")?"];
   const given = new Map<string, N>();
   if (slots && slots.type !== "NullLiteral") {
     if (slots.type !== "ObjectExpression") fail(s.comp, "FV0901", "slots must be an object literal", slots);
@@ -282,10 +283,10 @@ export function callWith(s: Scope, e: Emitter, child: Component, m: string, head
     }
   }
   if (!takesSlots(child)) {
-    e.stmt(`${head}${trailing});`);
+    e.stmt(`${pre}${head}${trailing})${post};`);
     return;
   }
-  e.open(`${head}, ${slotsTy}`);
+  e.open(`${pre}${head}, ${slotsTy}`);
   const context = slotContextOf(child);
   const contextParams = context.map((p) => `, ${p.name}: ${p.ty}`).join("");
   const opaque = vnode ? child.name : s.opaque;
@@ -366,11 +367,12 @@ export function callWith(s: Scope, e: Emitter, child: Component, m: string, head
       e.close(")),");
     }
   }
-  e.close(`${trailing});`);
+  e.close(`${trailing})${post};`);
 }
 
-function datesInto(of: Ty): string {
-  return of.k === "date" ? ".map(fv::js_date_prop)" : ".map(|v| v.map(fv::js_date_prop))";
+function datesInto(of: Ty, at: string): string {
+  const date = `|fv_t| ${REFUSALS}.date(fv_t, ${at})`;
+  return of.k === "date" ? `.map(${date})` : `.map(|v| v.map(${date}))`;
 }
 
 export function ownInto(comp: Component, v: Val, want: Ty, node: N): string {
@@ -396,10 +398,10 @@ export function ownInto(comp: Component, v: Val, want: Ty, node: N): string {
     if (v.ty.k === "str") return `Some(std::borrow::Cow::Borrowed(${bare(v.code)}))`;
     if (v.ty.k === "opt" && v.ty.of.k === "str") return `${atom(v.code)}.map(std::borrow::Cow::Borrowed)`;
   }
-  if (want.k === "date" && v.ty.k === "date") return `fv::js_date_prop(${bare(v.code)})`;
+  if (want.k === "date" && v.ty.k === "date") return `${REFUSALS}.date(${bare(v.code)}, ${refusalAt(comp, node)})`;
   if (want.k === "opt" && want.of.k === "date") {
-    if (v.ty.k === "date") return `Some(fv::js_date_prop(${bare(v.code)}))`;
-    if (v.ty.k === "opt" && v.ty.of.k === "date") return `${atom(v.code)}.map(fv::js_date_prop)`;
+    if (v.ty.k === "date") return `Some(${REFUSALS}.date(${bare(v.code)}, ${refusalAt(comp, node)}))`;
+    if (v.ty.k === "opt" && v.ty.of.k === "date") return `${atom(v.code)}.map(|fv_t| ${REFUSALS}.date(fv_t, ${refusalAt(comp, node)}))`;
   }
   if (sameTy(v.ty, want) && (want.k === "int" || want.k === "float" || want.k === "bool")) return v.code;
   if (want.k === "opt" && sameTy(v.ty, want.of) && (v.ty.k === "int" || v.ty.k === "float" || v.ty.k === "bool")) return `Some(${bare(v.code)})`;
@@ -410,9 +412,9 @@ export function ownInto(comp: Component, v: Val, want: Ty, node: N): string {
     if (v.ty.of.k === of && (of === "int" || of === "float" || (of === "bool" && absence(want) === "null"))) return v.code;
     if (of === "float" && v.ty.of.k === "int") return `${atom(v.code)}.map(|n| n as f64)`;
   }
-  if (want.k === "list" && v.ty.k === "list" && sameTy(v.ty.of, want.of) && bareDates(want)) return `${items(v)}${datesInto(want.of)}.collect()`;
+  if (want.k === "list" && v.ty.k === "list" && sameTy(v.ty.of, want.of) && bareDates(want)) return `${items(v)}${datesInto(want.of, refusalAt(comp, node))}.collect()`;
   if (want.k === "opt" && want.of.k === "list" && v.ty.k === "opt" && v.ty.of.k === "list" && sameTy(v.ty.of.of, want.of.of) && bareDates(want.of) && absence(v.ty) === absence(want)) {
-    return `${atom(v.code)}.as_ref().map(|v| v.iter().copied()${datesInto(want.of.of)}.collect())`;
+    return `${atom(v.code)}.as_ref().map(|v| v.iter().copied()${datesInto(want.of.of, refusalAt(comp, node))}.collect())`;
   }
   if (v.iter !== undefined && v.ty.k === "list" && want.k === "list" && sameTy(v.ty.of, want.of)) {
     return want.of.k === "struct" || want.of.k === "child" ? `${v.iter}.cloned().collect()` : `${v.iter}.collect()`;

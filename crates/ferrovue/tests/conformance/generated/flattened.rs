@@ -59,8 +59,23 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
+    fv::rendered(try_render(out, props));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(154 + props.posts.iter().map(|v| v.title.len() + v.tags.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>() + props.words.iter().map(|v| v.len()).sum::<usize>() + props.groups.iter().map(|(k, v)| k.len() + v.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>() + props.sep.len());
+    let fv_refusals = fv::Refusals::new(NAME, "components/Flattened.vue");
     let s_tags = props.posts.iter().flat_map(|fv_a1| fv_a1.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>()).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
     let s_cells = props.deep.iter().flat_map(|v| v.iter()).collect::<Vec<_>>();
     out.push_str("<!--[--><p>");
@@ -74,7 +89,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push('|');
     fv::escape_into(out, &props.deep.iter().flat_map(|v| v.iter()).flat_map(|v| v.iter().copied()).map(|v| fv::Js(v).to_string()).collect::<Vec<_>>().join(","));
     out.push('|');
-    fv::push_int(out, fv::js_reduce(props.deep.iter().flat_map(|v| v.iter()).flat_map(|v| v.iter().copied()), 0i64, |fv_acc2, fv_a3| (fv_acc2 as f64 + fv_a3 as f64) as i64));
+    fv::push_int(out, fv::js_reduce(props.deep.iter().flat_map(|v| v.iter()).flat_map(|v| v.iter().copied()), 0i64, |fv_acc2, fv_a3| fv_refusals.keep(fv::try_int(fv_acc2 as f64 + fv_a3 as f64), 18, 182)));
     out.push('|');
     fv::escape_into(out, &props.prices.iter().flat_map(|v| v.iter().copied()).map(|fv_a4| 1.0 / fv_a4).map(|v| fv::Js(v).to_string()).collect::<Vec<_>>().join(","));
     out.push('|');
@@ -121,24 +136,25 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul><!--]-->");
+    fv_refusals.check(Ok(()))
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
 pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup(props, render)
+    fv::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
 pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island(NAME, props, render)
+    fv::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
 pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned(props, render)
+    fv::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
 pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned(NAME, props, render)
+    fv::Html::island_owned_fallible(NAME, props, render, try_render)
 }

@@ -15,9 +15,9 @@ an application writes against them keeps compiling. That is:
 - in each component module: `NAME`; `Props`, its public fields and, with `builders` on (the
   default), its `new` and its setters; the structs of local types, with the same; the enums of its
   unions of string literals, with their names, variants, `ALL`, `as_str`, `Display`, `FromStr` and
-  `TryFrom<&str>`; `Slots`, each `…SlotProps` and each `…Slot`; `render`, with its parameters in the
-  order [below](#render-and-its-parameters); `html`; and, for a component that renders from its
-  props alone, `island`, `into_html` and `into_island`;
+  `TryFrom<&str>`; `Slots`, each `…SlotProps` and each `…Slot`; `render` and `try_render`, with
+  their parameters in the order [below](#render-and-its-parameters); `html`; and, for a component
+  that renders from its props alone, `island`, `into_html` and `into_island`;
 - `types.rs`'s structs, enums and constants, `route_table.rs`'s `ROUTES`, `PATHS`, `BASE` and `router()`,
   `stores.rs`'s state structs and `Stores`, `i18n.rs`'s `LOCALE`, `FALLBACK`, `LOCALES` and
   `i18n(locale)`, `provides.rs`'s `Provides`, and `twins.rs`'s `…Props`, `…Slots` and `…Render`;
@@ -25,7 +25,7 @@ an application writes against them keeps compiling. That is:
   what it builds;
 - `render_json`, under `#[cfg(test)]`, and the fixture keys it reads.
 
-Outside the contract, and free to change in any release: `render_scoped` and every other
+Outside the contract, and free to change in any release: `try_render_scoped` and every other
 `#[doc(hidden)]` item; the bodies of functions, and the order of what they reserve, write and
 call; the names of `render`'s parameters (an unread one is named with a leading `_`); private
 items, such as the fixture plumbing in `mod.rs`; comments; and the order of the `pub mod` lines.
@@ -74,7 +74,8 @@ crate that denies warnings. `mod.rs` allows one lint for all of them, at its top
 
 The only other allows are `clippy::too_many_arguments`, on a function that takes more than seven
 arguments: a props constructor with more than seven required props, which takes one argument per
-required field, and a `render`, `render_scoped` or `html` that takes most of the parameters
+required field, and a `render`, `try_render`, `try_render_scoped` or `html` that takes most of
+the parameters
 [below](#render-and-its-parameters); and `clippy::enum_variant_names`, on the enum of a union of
 string literals whose variants all share a word, as `"primary-button" | "link-button"` do.
 
@@ -134,9 +135,10 @@ Every component module has, in this order:
 | `Props<'a>` | The props, one public field per prop, deriving `Debug`, `Clone` and `serde::Serialize`, and `Default` when every prop is optional. With `builders` on, `Props::new` takes the required props in declaration order and each optional prop other than one named `new` has a setter of its name. See [`props`](crate::guide::props) |
 | `…SlotProps<'v>` and `…Slot<'s>` | For each scoped slot: what its outlet passes (with `<'v>` only when it borrows), and the closure type a parent supplies. A component that takes `fv_provides` has a `…Slot<'s>` for each of its slots, scoped or not, whose closure is also given the `Provides` its content renders with. See [`slots`](crate::guide::slots) |
 | `Slots<'s>` | When the component renders a `<slot>` or `<RouterView>`: what a parent puts in each, an `Option` per `<slot>` and the page as `router_view`. It derives `Clone` and `Copy`, and `Default` when it has no `router_view` |
-| `render` | Write the component into a buffer |
-| `render_scoped` | Only for a component a parent may hand `<style scoped>` ids to, or pass attributes it does not declare as props: `render` with those last. Generated parents call it; it is `#[doc(hidden)]` and outside the contract. See [`scoped_styles`](crate::guide::scoped_styles) and [fallthrough attributes](#fallthrough-attributes) |
-| `html` | The same render as an [`Html`](crate::Html) value |
+| `render` | Write the component into a buffer. It panics with the message of a refusal at render time, which `try_render` returns |
+| `try_render` | `render`, returning `Result<(), fv::Refused>`: the [`Refused`](crate::Refused) of props that ask for what cannot be written as Vue writes it, such as a date string browsers read differently. See [`errors_and_limits`](crate::guide::errors_and_limits#refused-at-render-time) |
+| `try_render_scoped` | Only for a component a parent may hand `<style scoped>` ids to, or pass attributes it does not declare as props: `try_render` with those last. Generated parents call it; it is `#[doc(hidden)]` and outside the contract. See [`scoped_styles`](crate::guide::scoped_styles) and [fallthrough attributes](#fallthrough-attributes) |
+| `html` | The same render as an [`Html`](crate::Html) value, whose `try_render_to` and `try_into_string` return the refusal |
 | `island` | Only for a component that renders from its props alone: the render wrapped as a hydratable island |
 | `into_html` and `into_island` | Beside `island`: `html` and `island` taking the props by value, so the `Html` holds them |
 
@@ -146,7 +148,7 @@ and booleans has a plain `Props`), and a component with no props has an empty `P
 # `render` and its parameters
 
 `render` always takes the buffer first and the props second. After them come only the parameters
-the component needs, always in this order:
+the component needs, always in this order, and `try_render` takes the same:
 
 ```rust
 # #[cfg(all(feature = "router", feature = "i18n"))]
@@ -175,8 +177,8 @@ pub fn render(
 
 A component needs a parameter when it uses the feature itself **or renders a child that does**: a
 `Card` whose child `Badge` reads a store takes the stores too, and passes them on. Generated parents
-call their children's `render` directly, so a page renders in one pass with no intermediate
-strings. The `fv_` prefix keeps these names apart from anything a template names.
+call their children's `try_render` directly and return a child's refusal with `?`, so a page
+renders in one pass with no intermediate strings. The `fv_` prefix keeps these names apart from anything a template names.
 
 So, from the repository's own test components:
 
@@ -215,20 +217,27 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_teleports: &fv::Teleports)
 ```
 
 A component that a parent may hand scope ids to (see [`scoped_styles`](crate::guide::scoped_styles))
-also has a `render_scoped`, which takes the parameters of `render` and then `fv_attrs: &str`, the
-ids its root carries besides its own. Its `render` calls it with `""`:
+also has a `try_render_scoped`, which takes the parameters of `try_render` and then
+`fv_attrs: &str`, the ids its root carries besides its own. Its `render` and `try_render` call it
+with `""`:
 
 ```rust
 # mod tag {
+# use ferrovue as fv;
 # pub struct Props<'a>(pub &'a str);
 pub fn render(out: &mut String, props: &Props<'_>) {
-    render_scoped(out, props, "");
+    fv::rendered(try_render_scoped(out, props, ""));
 }
 
-/// [`render`], with the scope ids a parent hands the root: ` data-v-…` each.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+    try_render_scoped(out, props, "")
+}
+
+/// [`try_render`], with the scope ids a parent hands the root: ` data-v-…` each.
 #[doc(hidden)]
-pub fn render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) {
+pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) -> Result<(), fv::Refused> {
     // …
+#   Ok(())
 }
 # }
 ```
@@ -236,7 +245,7 @@ pub fn render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) {
 A component that a parent passes attributes it does not declare as props takes them, with the ids,
 as one [`Attrs`](crate::Attrs) instead: see [fallthrough attributes](#fallthrough-attributes).
 
-A `render` or `render_scoped` that never reads its props, such as a component's that only passes
+A `try_render` or `try_render_scoped` that never reads its props, such as a component's that only passes
 its slot on, names the parameter `_props`, so that the module compiles without warnings; it is
 still the second parameter.
 
@@ -257,7 +266,7 @@ attributes it gives it. Listeners are dropped, as Vue's server drops them.
 
 The parent knows at compile time which attributes it passes, but the child is generated once for
 every parent, so the two meet at run time. A child that some parent passes attributes to takes
-`fv_attrs: &fv::Attrs<'_>` in its `render_scoped`, the attributes in order followed by the scope
+`fv_attrs: &fv::Attrs<'_>` in its `try_render_scoped`, the attributes in order followed by the scope
 ids, and the parent builds them from its template:
 
 ```rust
@@ -266,21 +275,23 @@ ids, and the parent builds them from its template:
 #     use std::borrow::Cow;
 #     use ferrovue as fv;
 #     pub struct Props<'a> { pub label: Cow<'a, str> }
-#     pub fn render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::Attrs<'_>) {
+#     pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::Attrs<'_>) -> Result<(), fv::Refused> {
 #         super::badge_root::write(out, fv_attrs);
 #         out.push('>');
 #         fv::escape_into(out, &props.label);
 #         out.push_str("</b>");
+#         Ok(())
 #     }
 # }
 # pub mod parent {
 #     use std::borrow::Cow;
 #     use ferrovue as fv;
 #     pub struct Props<'a> { pub name: Cow<'a, str>, pub note: Option<Cow<'a, str>> }
-#     pub fn render(out: &mut String, props: &Props<'_>) {
+#     pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
 // <Badge :label="name" class="wide" :title="note" /> in a parent's template:
-super::badge::render_scoped(out, &super::badge::Props { label: Cow::Borrowed(&props.name) },
-    &fv::Attrs::new(&[("class", fv::Attr::str("wide")), ("title", props.note.as_deref().map_or(fv::Attr::Undefined, fv::Attr::str))], ""));
+super::badge::try_render_scoped(out, &super::badge::Props { label: Cow::Borrowed(&props.name) },
+    &fv::Attrs::new(&[("class", fv::Attr::str("wide")), ("title", props.note.as_deref().map_or(fv::Attr::Undefined, fv::Attr::str))], ""))?;
+#         Ok(())
 #     }
 # }
 # pub mod badge_root {
@@ -300,13 +311,13 @@ if fv_attrs.is_empty() {
 # }
 # use generated::{badge, parent};
 # let mut out = String::new();
-# parent::render(&mut out, &parent::Props { name: "Ada".into(), note: Some("hi".into()) });
+# parent::try_render(&mut out, &parent::Props { name: "Ada".into(), note: Some("hi".into()) }).unwrap();
 # assert_eq!(out, r#"<b class="badge wide" title="hi">Ada</b>"#);
 # out.clear();
-# parent::render(&mut out, &parent::Props { name: "Ada".into(), note: None });
+# parent::try_render(&mut out, &parent::Props { name: "Ada".into(), note: None }).unwrap();
 # assert_eq!(out, r#"<b class="badge wide">Ada</b>"#);
 # out.clear();
-# badge::render_scoped(&mut out, &badge::Props { label: "Ada".into() }, &ferrovue::Attrs::NONE);
+# badge::try_render_scoped(&mut out, &badge::Props { label: "Ada".into() }, &ferrovue::Attrs::NONE).unwrap();
 # assert_eq!(out, r#"<b class="badge">Ada</b>"#);
 ```
 

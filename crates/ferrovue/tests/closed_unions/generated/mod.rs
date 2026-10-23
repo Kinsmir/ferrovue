@@ -24,19 +24,19 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
     match component {
         "Lookups" => {
             let props: lookups::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            lookups::render(&mut out, &props);
+            lookups::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "Picked" => {
             let props: picked::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            picked::render(&mut out, &props);
+            picked::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "Plain" => {
             let props: plain::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            plain::render(&mut out, &props);
+            plain::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "Strong" => {
             let props: strong::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            strong::render(&mut out, &props);
+            strong::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         other => return Err(format!("no component called {other}")),
     }

@@ -41,8 +41,23 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
+    fv::rendered(try_render(out, props));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(213 + props.text.len() + props.other.len() + props.sep.len() + props.fill.as_deref().map_or(0, str::len));
+    let fv_refusals = fv::Refusals::new(NAME, "components/Strings.vue");
     let s_initial = fv::js_char_at(&props.text, 0.0f64).to_uppercase().to_owned();
     let s_words = fv::js_split(&props.text, " ").into_iter().map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
     let s_short = fv::js_slice(&props.text, 0.0f64, Some(3.0f64)).into_owned();
@@ -112,15 +127,15 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push('|');
     fv::escape_into(out, &fv::js_replace(&props.text, "a", "$1"));
     out.push_str("</p><p title=\"");
-    fv::escape_into(out, &fv::js_pad_start(&fv::Js(props.n).to_string(), props.width as f64, "0"));
+    fv::escape_into(out, &fv_refusals.keep(fv::try_pad_start(&fv::Js(props.n).to_string(), props.width as f64, "0"), 19, 16));
     out.push_str("\">");
-    fv::escape_into(out, &fv::js_pad_start(&props.text, props.width as f64, props.fill.as_deref().unwrap_or(".")));
+    fv::escape_into(out, &fv_refusals.keep(fv::try_pad_start(&props.text, props.width as f64, props.fill.as_deref().unwrap_or(".")), 19, 51));
     out.push('|');
-    fv::escape_into(out, &fv::js_pad_end(&props.text, props.width as f64, " "));
+    fv::escape_into(out, &fv_refusals.keep(fv::try_pad_end(&props.text, props.width as f64, " "), 19, 91));
     out.push('|');
-    fv::escape_into(out, &fv::js_repeat("ab", props.n as f64));
+    fv::escape_into(out, &fv_refusals.keep(fv::try_repeat("ab", props.n as f64), 19, 116));
     out.push('|');
-    fv::escape_into(out, &fv::js_repeat(&props.text, 2.0f64));
+    fv::escape_into(out, &fv_refusals.keep(fv::try_repeat(&props.text, 2.0f64), 19, 137));
     out.push_str("</p><p>");
     out.push_str(if fv::js_cmp(&props.text, &props.other).is_lt() { "true" } else { "false" });
     out.push('|');
@@ -156,24 +171,25 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push('|');
     fv::escape_into(out, &{ let a = std::borrow::Cow::<str>::Owned(format!("{}a", fv::js_split(&props.text, " ").into_iter().find(|fv_s2| **fv_s2 == *props.sep).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).unwrap_or(std::borrow::Cow::<str>::Borrowed("ß")))); if !a.is_empty() { a } else { std::borrow::Cow::<str>::Borrowed("-") } });
     out.push_str("</p></section>");
+    fv_refusals.check(Ok(()))
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
 pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup(props, render)
+    fv::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
 pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island(NAME, props, render)
+    fv::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
 pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned(props, render)
+    fv::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
 pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned(NAME, props, render)
+    fv::Html::island_owned_fallible(NAME, props, render, try_render)
 }

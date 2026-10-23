@@ -51,7 +51,21 @@ pub struct Slots<'s> {
 }
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_provides: super::provides::Provides<'_>) {
+    fv::rendered(try_render(out, props, fv_slots, fv_provides));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::Refused> {
     out.reserve(131 + 25 * props.items.len() + props.items.iter().map(|v| v.len()).sum::<usize>() + props.theme.len());
     let fv_inherited = fv_provides;
     let fv_provides = super::provides::Provides { theme_key: Some(&props.theme), wide: Some(props.wide), ..fv_inherited };
@@ -75,9 +89,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_provi
     }
     fv::scoped_slot_into_slotted(out, fv_slots.default.map(|f| move |out: &mut String, _: &(), fv_sid: &str| f(out, fv_sid, fv_provides)).as_ref(), &(), "data-v-c4d7ae83-s", None);
     out.push_str("</div>");
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>, fv_provides: super::provides::Provides<'p>) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_slots, fv_provides))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>, fv_provides: super::provides::Provides<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
+    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_slots, fv_provides)))
 }

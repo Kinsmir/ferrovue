@@ -62,15 +62,30 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
+    fv::rendered(try_render(out, props));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(328 + props.words.iter().map(|v| v.len()).sum::<usize>() + props.rows.iter().map(|v| v.name.len() + v.tag.as_deref().map_or(0, str::len)).sum::<usize>() + props.word.len());
-    let s_total = fv::js_reduce(props.rows.iter(), 0i64, |fv_acc1, fv_a2| (fv_acc1 as f64 + fv_a2.n as f64) as i64);
+    let fv_refusals = fv::Refusals::new(NAME, "components/ListBuilding.vue");
+    let s_total = std::cell::LazyCell::new(|| fv::js_reduce(props.rows.iter(), 0i64, |fv_acc1, fv_a2| fv_refusals.keep(fv::try_int(fv_acc1 as f64 + fv_a2.n as f64), 13, 58)));
     let s_by_name = fv::js_sorted(props.rows.iter(), |fv_l3, fv_r3| fv::js_cmp(&fv_l3.name, &fv_r3.name)).collect::<Vec<_>>();
     let s_everything = props.nums.iter().copied().map(|v| v as f64).chain(props.prices.iter().copied()).collect::<Vec<_>>();
     let s_top = props.nums.iter().copied().map(|v| v as f64).fold(f64::NEG_INFINITY, fv::js_max);
     let s_flipped = props.prices.iter().copied().map(|fv_a4| -fv_a4).collect::<Vec<_>>();
     out.push_str("<!--[--><p>");
-    fv::push_int(out, fv::js_reduce(props.nums.iter().copied(), 0i64, |fv_acc5, fv_a6| (fv_acc5 as f64 + fv_a6 as f64) as i64));
+    fv::push_int(out, fv::js_reduce(props.nums.iter().copied(), 0i64, |fv_acc5, fv_a6| fv_refusals.keep(fv::try_int(fv_acc5 as f64 + fv_a6 as f64), 21, 31)));
     out.push('|');
     fv::push_number(out, fv::js_reduce(props.prices.iter().copied(), 0.0f64, |fv_acc9, fv_a10| fv_acc9 + fv_a10));
     out.push('|');
@@ -84,7 +99,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push('|');
     fv::push_int(out, fv::js_reduce(props.nums.iter().copied(), 0i64, |fv_acc25, fv_a26| if fv_a26 as f64 > fv_acc25 as f64 { fv_a26 } else { fv_acc25 }));
     out.push('|');
-    fv::push_int(out, s_total);
+    fv::push_int(out, *s_total);
     out.push_str("</p><p>");
     fv::escape_into(out, &fv::js_reduce(props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), String::new(), |fv_acc27, fv_s28| format!("{}{}", fv_acc27, fv_s28)));
     out.push('|');
@@ -94,7 +109,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push('|');
     fv::escape_into(out, &fv::js_reduce(props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), String::from(&*props.word), |fv_acc33, fv_s34| format!("{}{}", fv_s34, fv_acc33)));
     out.push('|');
-    fv::push_int(out, fv::js_reduce(props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), 0i64, |fv_acc35, fv_s36| (fv_acc35 as f64 + fv::js_length(&fv_s36) as f64) as i64));
+    fv::push_int(out, fv::js_reduce(props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), 0i64, |fv_acc35, fv_s36| fv_refusals.keep(fv::try_int(fv_acc35 as f64 + fv::js_length(&fv_s36) as f64), 22, 229)));
     out.push('|');
     fv::escape_into(out, &fv::js_reduce(props.nums.iter().copied().enumerate().rev(), String::new(), |fv_acc37, (fv_i38, fv_a38)| { let fv_i38 = fv_i38 as i64; format!("{}{}@{};", fv_acc37, fv::Js(fv_a38), fv::Js(fv_i38)) }));
     out.push('|');
@@ -210,24 +225,25 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul><!--]-->");
+    fv_refusals.check(Ok(()))
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
 pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup(props, render)
+    fv::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
 pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island(NAME, props, render)
+    fv::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
 pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned(props, render)
+    fv::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
 pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned(NAME, props, render)
+    fv::Html::island_owned_fallible(NAME, props, render, try_render)
 }

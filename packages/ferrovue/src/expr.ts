@@ -1,4 +1,4 @@
-import { type Component, type N, type Scope, type Ty, type Val, absence, BOOL, enumOf, enumPath, fail, FLOAT, GenError, INT, isAscii, joinAbsence, joinTy, literalsOf, literalTy, nodeName, nothing, NULL, opt, placeOf, rustStr, sameTy, snake, STR, strTy, UNDEF, variantPath, withAbsence } from "./model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, absence, BOOL, enumOf, enumPath, fail, FLOAT, GenError, INT, isAscii, joinAbsence, joinTy, literalsOf, literalTy, nodeName, nothing, NULL, opt, placeOf, refusalAt, rustStr, sameTy, snake, STR, strTy, UNDEF, variantPath, withAbsence } from "./model.ts";
 import { enumEquality, knownLiteral, refuseOutside } from "./enums.ts";
 import { CONFIG_FILE, ctx } from "./context.ts";
 import { lookupStruct, markHome, tyOfTs } from "./typescript.ts";
@@ -12,7 +12,7 @@ import { BUILTINS, builtin, call, isObjectCall } from "./calls.ts";
 import { constOf, namedVal } from "./constants.ts";
 import { localeRefusal } from "./plugins/dates.ts";
 import { objectLiteral, ownedStruct, ownedStructs, refuseInPlace, structList, untypedObject } from "./objects.ts";
-import { letIn, panicky, split, splits } from "./blocks.ts";
+import { letIn, panicky, refuses, split, splits } from "./blocks.ts";
 import { assignedLet, loopIn, loopStep } from "./statements.ts";
 import { refuseUnresolved } from "./resolve.ts";
 
@@ -440,7 +440,7 @@ export function expr(s: Scope, n: N): Val {
       meet(comp, a, b, "`+`", n, "join");
       return formatted(comp, [a, b], n, "`+`");
     }
-    if (isNumber(a.ty) && isNumber(b.ty)) return arithmetic(a, "+", b, a.ty.k === "int" && b.ty.k === "int");
+    if (isNumber(a.ty) && isNumber(b.ty)) return arithmetic(a, "+", b, a.ty.k === "int" && b.ty.k === "int", refusalAt(comp, n));
     return fail(comp, "FV0608", "`+` joins a string to a string or a number, or adds two numbers", n);
   }
   if (n.type === "BinaryExpression" && n.operator === "**") return power(s, n.left, n.right, n, "`**`");
@@ -476,7 +476,7 @@ export function expr(s: Scope, n: N): Val {
     if (["<", ">", "<=", ">="].includes(n.operator)) return compare(a, n.operator, b);
     const intDivisor = n.right.type === "NumericLiteral" && Number.isInteger(n.right.value) && n.right.value !== 0;
     const int = a.ty.k === "int" && b.ty.k === "int" && n.operator !== "/" && (n.operator !== "%" || intDivisor);
-    return arithmetic(a, n.operator, b, int);
+    return arithmetic(a, n.operator, b, int, refusalAt(comp, n));
   }
   switch (n.type) {
     case "TemplateLiteral": {
@@ -629,14 +629,15 @@ export function expr(s: Scope, n: N): Val {
           const variant = `${atom(a.variant!)}.unwrap_or(${variantPath(comp, def, fallback)})`;
           return { code: `${variant}.as_str()`, ty: a.ty.of, variant, ...loneOf(a, b) };
         }
-        if (a.held !== undefined && b.ty.k === "str") return { code: `&*${atom(a.held)}.unwrap_or(${asCow(b)})`, ty: STR, ...loneOf(a, b) };
+        const or = (some: string, method: "unwrap_or" | "or", other: string): string => (refuses(other) ? `${some}.${method}_else(|| ${other})` : `${some}.${method}(${other})`);
+        if (a.held !== undefined && b.ty.k === "str") return { code: `&*${or(atom(a.held), "unwrap_or", asCow(b))}`, ty: STR, ...loneOf(a, b) };
         if (a.ty.of.k === "str" && b.ty.k === "str" && isTemporary(b)) {
-          return { code: `&*${atom(a.code)}.map(std::borrow::Cow::<str>::Borrowed).unwrap_or(${asCow(b)})`, ty: STR, ...loneOf(a, b) };
+          return { code: `&*${or(`${atom(a.code)}.map(std::borrow::Cow::<str>::Borrowed)`, "unwrap_or", asCow(b))}`, ty: STR, ...loneOf(a, b) };
         }
-        if (sameTy(a.ty.of, b.ty)) return { code: `${atom(a.code)}.unwrap_or(${bare(b.code)})`, ty: joinTy(a.ty.of, b.ty), ...loneOf(a, b) };
-        if (b.ty.k === "opt" && sameTy(a.ty.of, b.ty.of)) return { code: `${atom(a.code)}.or(${bare(b.code)})`, ty: joinTy(a.ty, b.ty), ...loneOf(a, b) };
-        if (a.ty.of.k === "float" && b.ty.k === "int") return { code: `${atom(a.code)}.unwrap_or(${bare(asF64(b))})`, ty: FLOAT };
-        if (a.ty.of.k === "int" && b.ty.k === "float") return { code: `${atom(a.code)}.map(|v| v as f64).unwrap_or(${bare(b.code)})`, ty: FLOAT };
+        if (sameTy(a.ty.of, b.ty)) return { code: or(atom(a.code), "unwrap_or", bare(b.code)), ty: joinTy(a.ty.of, b.ty), ...loneOf(a, b) };
+        if (b.ty.k === "opt" && sameTy(a.ty.of, b.ty.of)) return { code: or(atom(a.code), "or", bare(b.code)), ty: joinTy(a.ty, b.ty), ...loneOf(a, b) };
+        if (a.ty.of.k === "float" && b.ty.k === "int") return { code: or(atom(a.code), "unwrap_or", bare(asF64(b))), ty: FLOAT };
+        if (a.ty.of.k === "int" && b.ty.k === "float") return { code: or(`${atom(a.code)}.map(|v| v as f64)`, "unwrap_or", bare(b.code)), ty: FLOAT };
         return n.operator === "??" ? fail(comp, "FV0616", "`??` between different types", n) : fail(comp, "FV0617", "`||` between these types", n);
       }
       if (n.operator === "||") {
@@ -668,7 +669,7 @@ export function expr(s: Scope, n: N): Val {
       if (n.operator === "-") {
         const a = expr(s, n.argument);
         if (isNumber(a.ty) && a.num !== undefined) return numberVal(-a.num, a.ty.k === "int");
-        if (a.ty.k === "int") return intFromF64(negate(asF64(a)));
+        if (a.ty.k === "int") return intFromF64(negate(asF64(a)), refusalAt(comp, n));
         if (a.ty.k === "float") return { code: negate(a.code), ty: FLOAT };
       }
       if (n.operator === "typeof") return typeofVal(s, n);

@@ -4,7 +4,7 @@ import { asWritten } from "../numbers.ts";
 import { CONFIG_FILE } from "../context.ts";
 import { expr } from "../expr.ts";
 import { lonely } from "../strings.ts";
-import { bare, condition, strArg } from "../parens.ts";
+import { bare, condition, scrutinee, strArg } from "../parens.ts";
 import { Emitter } from "../emitter.ts";
 import { attrOf, attrShown, dollarAttrs, IGNORED_PROPS, isAttrs, mergedParts, mergeProps, renderDynamicAttr } from "../attrs.ts";
 import { renderStyle } from "../styles.ts";
@@ -70,7 +70,7 @@ export function resolveLink(s: Scope, e: Emitter, to: N): void {
       }
       if (v.ty.k === "undef") continue;
       if (v.ty.k === "opt") {
-        e.open(`if let Some(v) = ${v.code}`);
+        e.open(`if let Some(v) = ${scrutinee(v.code)}`);
         e.stmt(`fv::query_into(&mut fv_search, ${rustStr(key)}, ${strArg(urlText(s, { code: "v", ty: v.ty.of }, p.value))});`);
         e.close();
       } else e.stmt(`fv::query_into(&mut fv_search, ${rustStr(key)}, ${strArg(urlText(s, v, p.value))});`);

@@ -47,13 +47,28 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
+    fv::rendered(try_render(out, props));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(285 + props.stamp.len() + props.title.len());
+    let fv_refusals = fv::Refusals::new(NAME, "components/DateGuards.vue");
     let s_valid = !fv::js_time_of(&props.at).is_nan();
     let s_shown = props.edited.as_ref().map(fv::js_time_of).unwrap_or(fv::js_time_of(&props.at));
     let s_either = props.deleted.as_ref().map(fv::js_time_of).or(props.edited.as_ref().map(fv::js_time_of));
-    let s_parsed = std::cell::LazyCell::new(|| fv::js_date_parse(&props.stamp));
-    let s_iso = std::cell::LazyCell::new(|| fv::js_to_iso_string(*s_parsed));
+    let s_parsed = std::cell::LazyCell::new(|| fv_refusals.keep(fv::try_date_parse(&props.stamp), 8, 31));
+    let s_iso = std::cell::LazyCell::new(|| fv_refusals.keep(fv::try_to_iso_string(*s_parsed), 9, 28));
     out.push_str("<article");
     if props.title.is_empty() {
         out.push_str(" title");
@@ -67,7 +82,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push_str("</h2>");
     if !fv::js_time_of(&props.at).is_nan() {
         out.push_str("<p><time datetime=\"");
-        fv::escape_into(out, &fv::js_to_iso_string(fv::js_time_of(&props.at)));
+        fv::escape_into(out, &fv_refusals.keep(fv::try_to_iso_string(fv::js_time_of(&props.at)), 15, 60));
         out.push_str("\">");
         fv::push_number(out, fv::js_utc_full_year(fv::js_time_of(&props.at)));
         out.push_str("</time></p>");
@@ -120,7 +135,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     }
     if let Some(n2) = props.edited.as_ref().map(fv::js_time_of) && !n2.is_nan() {
         out.push_str("<p>");
-        fv::escape_into(out, &fv::js_to_iso_string(n2));
+        fv::escape_into(out, &fv_refusals.keep(fv::try_to_iso_string(n2), 22, 60));
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");
@@ -142,24 +157,25 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         out.push_str("</p>");
     }
     out.push_str("</article>");
+    fv_refusals.check(Ok(()))
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
 pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup(props, render)
+    fv::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
 pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island(NAME, props, render)
+    fv::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
 pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned(props, render)
+    fv::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
 pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned(NAME, props, render)
+    fv::Html::island_owned_fallible(NAME, props, render, try_render)
 }

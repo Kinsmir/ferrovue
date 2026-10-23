@@ -61,6 +61,9 @@ export interface Val {
   /** For a value of a generated enum, the Rust expression of the enum (an `Option` of it when the
    * value is optional), where `code` is its string. */
   variant?: string;
+  /** For an integer computed as an `f64`, where the template computes it, as `fv::Refusals::keep`
+   * takes it. */
+  at?: string;
 }
 
 export const STR: Ty = { k: "str" };
@@ -497,6 +500,22 @@ function locate(comp: Component, node: N): { line: number; column: number } | nu
     return o.line === 1 ? { line: t.line, column: t.column - 1 + o.column } : { line: t.line + o.line - 1, column: o.column };
   }
   return null;
+}
+
+/** The local of a render that holds its refusals, a `fv::Refusals`. */
+export const REFUSALS = "fv_refusals";
+
+/** Where `node` starts in the component's file, as `fv::Refusals::keep` takes it: `line, column`,
+ * from 1, or `0, 0` where it is not known. */
+export function refusalAt(comp: Component, node: N | undefined): string {
+  const at = node ? locate(comp, node) : null;
+  return at ? `${at.line}, ${at.column + 1}` : "0, 0";
+}
+
+/** `call`, a runtime call that returns a `Result` with a `fv::Refused`, as a value: the render
+ * holds the refusal and goes on with a placeholder, and returns it once it is done. */
+export function kept(call: string, at: string): string {
+  return `${REFUSALS}.keep(${call}, ${at})`;
 }
 
 function locateWithin(comp: Component, node: N): { line: number; column: number } | null {

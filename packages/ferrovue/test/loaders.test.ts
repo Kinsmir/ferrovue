@@ -62,9 +62,9 @@ describe("loaders", () => {
   it("stops the render where the component awaits a loader, until the result is in", () => {
     const out = project({ X: sfc("const post = await loadPost(props.id, props.lang);\nconst n = await loadCount();", "<h1>{{ post.title }} {{ n }}</h1>") });
     const x = out.get("x.rs")!;
-    expect(x).toContain("pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::Loads<'_>) {");
-    expect(x).toContain("let Some(l_0) = fv_loads.get(super::loaders::LoadPost { id: props.id, lang: props.lang.as_deref().map(String::from) }) else { return; };");
-    expect(x).toContain("let Some(l_1) = fv_loads.get(super::loaders::LoadCount) else { return; };");
+    expect(x).toContain("pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::Loads<'_>) -> Result<(), fv::Refused> {");
+    expect(x).toContain("let Some(l_0) = fv_loads.get(super::loaders::LoadPost { id: props.id, lang: props.lang.as_deref().map(String::from) }) else { return Ok(()); };");
+    expect(x).toContain("let Some(l_1) = fv_loads.get(super::loaders::LoadCount) else { return Ok(()); };");
     expect(x).not.toContain("pub fn island");
     const loaders = out.get("loaders.rs")!;
     expect(loaders).toContain("pub struct LoadPost {\n    pub id: i64,\n    pub lang: Option<String>,\n}");
@@ -88,8 +88,8 @@ describe("loaders", () => {
     const page = '<script setup lang="ts">\nimport X from "./X.vue";\n</script>\n<template><main><X :id="1" :nick="null" /><X :id="2" nick="n" /></main></template>';
     const out = project({ X: child, Page: page });
     expect(out.get("x.rs")).toContain("fv::escape_into(out, &l_0.title);");
-    expect(out.get("page.rs")).toContain("pub fn render(out: &mut String, _props: &Props, fv_loads: &fv::Loads<'_>) {");
-    expect(out.get("page.rs")).toContain('super::x::render(out, &super::x::Props { id: 2i64, lang: None, nick: Some(std::borrow::Cow::Borrowed("n")) }, fv_loads);');
+    expect(out.get("page.rs")).toContain("pub fn try_render(out: &mut String, _props: &Props, fv_loads: &fv::Loads<'_>) -> Result<(), fv::Refused> {");
+    expect(out.get("page.rs")).toContain('super::x::try_render(out, &super::x::Props { id: 2i64, lang: None, nick: Some(std::borrow::Cow::Borrowed("n")) }, fv_loads)?;');
   });
 
   it("awaits a loader whose result holds dates, written as JsDates with a plan of where they are", () => {

@@ -194,3 +194,9 @@ export function receiver(code: string): string {
   const m = /^[&*]+(.*)$/s.exec(code);
   return m && binding(m[1]!) === ATOM ? m[1]! : atom(code);
 }
+
+/** `code` as the scrutinee of an `if let`, where the parentheses around a lazy value's read are
+ * redundant. */
+export function scrutinee(code: string): string {
+  return code.replace(/^\(\*(\w+)\)$/, "*$1");
+}

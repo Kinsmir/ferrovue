@@ -183,8 +183,8 @@ defineProps<{ label: string }>();
 <template><b>{{ label }}</b></template>`),
     ).get("x.rs")!;
     expect(borrowing).toContain("pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {");
-    expect(borrowing).toContain("pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {\n    fv::Html::markup_owned(props, render)");
-    expect(borrowing).toContain("pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {\n    fv::Html::island_owned(NAME, props, render)");
+    expect(borrowing).toContain("pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {\n    fv::Html::markup_owned_fallible(props, render, try_render)");
+    expect(borrowing).toContain("pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {\n    fv::Html::island_owned_fallible(NAME, props, render, try_render)");
     const counting = compile(
       island(`<script setup lang="ts">
 defineProps<{ count: number }>();
@@ -235,7 +235,7 @@ defineProps<{ c: string | null }>();
     expect(out).toContain("match props.kind {");
     expect(out).toContain("XKind::Y => {");
     expect(out).toContain("XKind::Z => {");
-    expect(out).toContain("super::z::render(out, &super::z::Props { c: None });");
+    expect(out).toContain("super::z::try_render(out, &super::z::Props { c: None })?;");
     expect(out).toContain("XKind::Rule => {\n            out.push_str(\"<hr>\");");
     expect(out).toContain('let fv_tag1 = match props.tag { XTag::B => "b", XTag::I => "i" };');
     expect(out).toContain("if props.boxed {");
@@ -256,8 +256,8 @@ const TAG = { a: "em", b: "strong", c: "em" } as const;
         { Y: "<template><span>y</span></template>", Z: "<template><span>z</span></template>" },
       ),
     ).get("x.rs")!;
-    expect(out).toContain("XK::B => {\n            super::z::render(");
-    expect(out).toContain("XK::A | XK::C => {\n            super::y::render(");
+    expect(out).toContain("XK::B => {\n            super::z::try_render(");
+    expect(out).toContain("XK::A | XK::C => {\n            super::y::try_render(");
     expect(out).toContain('match props.k { XK::B => "strong", XK::A | XK::C => "em" }');
   });
 
@@ -594,7 +594,7 @@ import Bare from "./Bare.vue";
 defineProps<{ a: string }>();
 </script>
 <template><div><Bare /><span>{{ a }}</span></div></template>`;
-      expect(compile(island(parent, { Bare: bare })).get("x.rs")).toContain("super::bare::render(out, &super::bare::Props { note: None });");
+      expect(compile(island(parent, { Bare: bare })).get("x.rs")).toContain("super::bare::try_render(out, &super::bare::Props { note: None })?;");
     });
 
     it("writes an exported `interface Props` once, as the props struct", () => {
@@ -611,7 +611,7 @@ const props = defineProps<{ inner?: ChildProps }>();
 <template><div><Child v-if="inner" v-bind="inner" /></div></template>`;
       const out = compile(island(parent, { Child: child })).get("x.rs")!;
       expect(out).toContain("pub inner: Option<super::child::Props<'a>>,");
-      expect(out).toMatch(/if let Some\((n\d+)\) = props\.inner\.as_ref\(\) \{\s*super::child::render\(out, \1\);/);
+      expect(out).toMatch(/if let Some\((n\d+)\) = props\.inner\.as_ref\(\) \{\s*super::child::try_render\(out, \1\)\?;/);
     });
 
     it("borrows each item of a list of the child's Props", () => {
@@ -623,7 +623,7 @@ const props = defineProps<{ items: ChildProps[] }>();
 <template><ul><Child v-for="item in items" v-bind="item" /></ul></template>`;
       const out = compile(island(parent, { Child: child })).get("x.rs")!;
       expect(out).toContain("let item = item_ref;");
-      expect(out).toContain("super::child::render(out, item);");
+      expect(out).toContain("super::child::try_render(out, item)?;");
       expect(out).not.toContain("use std::borrow::Cow;");
     });
 
@@ -638,7 +638,7 @@ function take(row: Props, more: Props[]) {
 </script>
 <template><div>{{ label }}<X v-for="r in rows" :key="r.id" v-bind="r" @loaded="(more) => take(r, more)" /></div></template>`;
       const out = compile(island(row)).get("x.rs")!;
-      expect(out).toContain("super::x::render(out, r);");
+      expect(out).toContain("super::x::try_render(out, r)?;");
     });
 
     it("skips listeners beside a v-bind of the child's Props, in every form", () => {
@@ -656,7 +656,7 @@ const handlers = { click: note, Picked: note };
   <Child label="x" title="t" @[ev]="note" @click="note" />
 </ul></template>`;
       const out = compile(island(parent, { Child: child })).get("x.rs")!;
-      expect(out.match(/super::child::render(_scoped)?\(out, item(, &fv::Attrs::NONE)?\);/g)).toHaveLength(3);
+      expect(out.match(/super::child::try_render(_scoped)?\(out, item(, &fv::Attrs::NONE)?\)\?;/g)).toHaveLength(3);
       expect(out).toContain(`("title", fv::Attr::str("t"))`);
       expect(out).not.toMatch(/"on[A-Z]/);
     });
@@ -681,7 +681,7 @@ defineProps<{ a: string }>();
 <template><div><Child :label="a" :colour="a" @click="() => {}" /></div></template>`;
       const out = compile(island(parent, { Child: child }));
       expect(out.get("x.rs")).toContain(`&fv::Attrs::new(&[("colour", fv::Attr::str(&props.a))], "")`);
-      expect(out.get("child.rs")).toContain("pub fn render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::Attrs<'_>)");
+      expect(out.get("child.rs")).toContain("pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::Attrs<'_>) -> Result<(), fv::Refused>");
       expect(out.get("child.rs")).toContain(`fv::passed_attrs_into(out, fv_attrs.list(), "");`);
     });
 
@@ -703,7 +703,7 @@ import Child from "./Child.vue";
 <template><div><Child label="x" /></div></template>`;
       const out = compile(island(parent, { Child: child }));
       expect(out.get("child.rs")).not.toContain("render_scoped");
-      expect(out.get("x.rs")).toContain("super::child::render(out, ");
+      expect(out.get("x.rs")).toContain("super::child::try_render(out, ");
     });
 
     it("refuses an attribute that would reach a prop of the component a root passes it on to", () => {
@@ -1283,11 +1283,11 @@ import Middle from "./Middle.vue";
 <template><section><Middle /></section></template>
 <style scoped>section { color: green }</style>`;
       const out = generate(island(top, { Middle: middle, Leaf: leaf }), { ...CONFIG, scopeId: "filepath" });
-      expect(out.get("leaf.rs")).toContain("pub fn render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str)");
-      expect(out.get("leaf.rs")).toContain('render_scoped(out, props, "");');
+      expect(out.get("leaf.rs")).toContain("pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) -> Result<(), fv::Refused>");
+      expect(out.get("leaf.rs")).toContain('try_render_scoped(out, props, "")');
       expect(out.get("leaf.rs")).toContain("out.push_str(fv_attrs);");
-      expect(out.get("x.rs")).toContain(`super::middle::render_scoped(out, &super::middle::Props {  }, " data-v-${hash("components/X.vue")}");`);
-      expect(out.get("middle.rs")).toContain(`super::leaf::render_scoped(out, &super::leaf::Props { label: std::borrow::Cow::Borrowed("x") }, &fv::scope_attrs(fv_attrs, "data-v-${hash("components/Middle.vue")}", ""));`);
+      expect(out.get("x.rs")).toContain(`super::middle::try_render_scoped(out, &super::middle::Props {  }, " data-v-${hash("components/X.vue")}")?;`);
+      expect(out.get("middle.rs")).toContain(`super::leaf::try_render_scoped(out, &super::leaf::Props { label: std::borrow::Cow::Borrowed("x") }, &fv::scope_attrs(fv_attrs, "data-v-${hash("components/Middle.vue")}", ""))?;`);
     });
 
     it("gives slot content the slot scope id of a component with `:slotted()` styles", () => {
@@ -1343,7 +1343,7 @@ defineProps<{ href: string }>();
       const out = withRoutes(island(parent, { Nav: nav }));
       expect(out.get("nav.rs")).toContain("let fv_link = fv_route.link(&props.href);");
       expect(out.get("x.rs")).toContain("pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>)");
-      expect(out.get("x.rs")).toContain(", fv_route);");
+      expect(out.get("x.rs")).toContain(", fv_route)?;");
       expect(out.get("route_table.rs")).toContain('"/users/:id",');
     });
 
@@ -1796,11 +1796,11 @@ ${script}
       const out = compile(
         island(dated("const d = computed(() => new Date(props.at));", '{{ d.toISOString() }}|{{ d.getUTCFullYear() }}|{{ new Date(ms).getTime() }}|{{ Date.parse(at) }}|{{ new Date("2024-01-15T10:00Z").valueOf() }}|{{ d.getTime() === d.getTime() }}')),
       ).get("x.rs")!;
-      expect(out).toContain("let s_d = std::cell::LazyCell::new(|| fv::js_date_parse(&props.at));");
-      expect(out).toContain("fv::escape_into(out, &fv::js_to_iso_string(*s_d));");
+      expect(out).toContain("let s_d = std::cell::LazyCell::new(|| fv_refusals.keep(fv::try_date_parse(&props.at), 4, 26));");
+      expect(out).toContain("fv::escape_into(out, &fv_refusals.keep(fv::try_to_iso_string(*s_d), 6, 17));");
       expect(out).toContain("fv::push_number(out, fv::js_utc_full_year(*s_d));");
       expect(out).toContain("fv::push_number(out, fv::js_time_clip(props.ms as f64));");
-      expect(out).toContain("fv::push_number(out, fv::js_date_parse(&props.at));");
+      expect(out).toContain("fv::push_number(out, fv_refusals.keep(fv::try_date_parse(&props.at), 6, 93));");
       expect(out).toContain("fv::push_number(out, 1705312800000.0f64);");
       expect(out).toContain("if !(*s_d).is_nan() {");
     });
@@ -1813,7 +1813,7 @@ ${script}
       expect(out).toContain("fv::escape_into(out, &fv::js_to_utc_string(*s_d));");
       expect(out).toContain('fv::escape_into(out, (*s_j).as_deref().unwrap_or("none"));');
       expect(out).toContain("fv::escape_into(out, &fv::js_json_date(*s_d));");
-      expect(out).toContain("fv::push_number(out, fv::js_date_utc(props.ms as f64, 0.0f64, 1.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64));");
+      expect(out).toContain("fv::push_number(out, fv_refusals.keep(fv::try_date_utc(props.ms as f64, 0.0f64, 1.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64), 7, 81));");
       expect(out).toContain('out.push_str("|946684799999|");');
       expect(out).toContain('out.push_str(if (*s_d) < fv::js_time_clip(props.ms as f64) { "true" } else { "false" });');
       expect(out).toContain('out.push_str(if !(*s_d).is_nan() { "true" } else { "false" });');
@@ -1863,10 +1863,10 @@ defineProps<{ at: Date; maybe: Date | null; later?: Date; made: Date }>();
       expect(x).toContain("pub fn new(posted: ferrovue::JsDate) -> Self {");
       expect(x).toContain("pub fn edited(mut self, edited: ferrovue::JsDate) -> Self {");
       expect(x).toContain("let s_year = fv::js_utc_full_year(fv::js_time_of(&props.posted));");
-      expect(x).toContain("fv::escape_into(out, &fv::js_to_iso_string(fv::js_time_of(&props.posted)));");
+      expect(x).toContain("fv::escape_into(out, &fv_refusals.keep(fv::try_to_iso_string(fv::js_time_of(&props.posted)), 7, 31));");
       expect(x).toContain("if let Some(n1) = props.edited.as_ref().map(fv::js_time_of) {");
       expect(x).toContain(
-        "&super::stamp::Props { at: fv::js_date_prop(fv::js_time_of(&props.posted)), maybe: props.deleted.as_ref().map(fv::js_time_of).map(fv::js_date_prop), later: props.edited.as_ref().map(fv::js_time_of).map(fv::js_date_prop), made: fv::js_date_prop(fv::js_time_clip(s_year)) }",
+        "&super::stamp::Props { at: fv_refusals.date(fv::js_time_of(&props.posted), 7, 125), maybe: props.deleted.as_ref().map(fv::js_time_of).map(|fv_t| fv_refusals.date(fv_t, 7, 141)), later: props.edited.as_ref().map(fv::js_time_of).map(|fv_t| fv_refusals.date(fv_t, 7, 158)), made: fv_refusals.date(fv::js_time_clip(s_year), 7, 171) }",
       );
       const chrono = generate(island(posted, { Stamp: stamp }), { ...CONFIG, dateType: "chrono::DateTime<chrono::Utc>" });
       expect(chrono.get("x.rs")).toContain('    #[serde(rename = "posted", with = "fv::date_prop")]\n    pub posted: chrono::DateTime<chrono::Utc>,');
@@ -1955,7 +1955,7 @@ ${script}
 <template><section>${template}</section></template>${style}`;
     const render = (script: string, template: string, style = ""): string => {
       const out = compile(island(setup(script, template, style))).get("x.rs")!;
-      const at = out.indexOf("pub fn render");
+      const at = out.indexOf("pub fn try_render");
       return out.slice(at, out.indexOf("\n}\n", at));
     };
 
@@ -1971,10 +1971,10 @@ ${script}
         "const many = computed(() => props.word.repeat(props.n));\nconst wide = computed(() => props.word.padEnd(props.n));\nconst iso = computed(() => new Date(props.at).toISOString());\nconst ms = computed(() => Date.parse(props.at));",
         '<p v-if="on">{{ many }}|{{ wide }}|{{ iso }}|{{ ms }}</p>',
       );
-      expect(out).toContain("let s_many = std::cell::LazyCell::new(|| fv::js_repeat(&props.word, props.n as f64));");
-      expect(out).toMatch(/let s_wide = std::cell::LazyCell::new\(\|\| fv::js_pad_end\(/);
-      expect(out).toContain("let s_iso = std::cell::LazyCell::new(|| fv::js_to_iso_string(fv::js_date_parse(&props.at)));");
-      expect(out).toContain("let s_ms = std::cell::LazyCell::new(|| fv::js_date_parse(&props.at));");
+      expect(out).toContain("let s_many = std::cell::LazyCell::new(|| fv_refusals.keep(fv::try_repeat(&props.word, props.n as f64), 4, 29));");
+      expect(out).toMatch(/let s_wide = std::cell::LazyCell::new\(\|\| fv_refusals\.keep\(fv::try_pad_end\(/);
+      expect(out).toContain("let s_iso = std::cell::LazyCell::new(|| fv_refusals.keep(fv::try_to_iso_string(fv_refusals.keep(fv::try_date_parse(&props.at), 6, 28)), 6, 28));");
+      expect(out).toContain("let s_ms = std::cell::LazyCell::new(|| fv_refusals.keep(fv::try_date_parse(&props.at), 7, 27));");
       expect(out).toMatch(/if props\.on \{\n\s+out\.push_str\("<p>"\);\n\s+fv::escape_into\(out, &s_many\);/);
       expect(out).toContain("fv::push_number(out, *s_ms);");
     });
@@ -2004,6 +2004,27 @@ ${script}
     it("evaluates a lazy computed a `v-bind()` in `<style>` reads as the render starts, as Vue's server does", () => {
       const out = render("const wide = computed(() => props.word.padStart(props.n));", '<p v-if="on">x</p>', "\n<style>p { width: v-bind(wide); }</style>");
       expect(out).toMatch(/let s_wide = std::cell::LazyCell::new\(.*\);\n\s+std::cell::LazyCell::force\(&s_wide\);/);
+    });
+
+    it("falls back to a value the render may refuse only where the left side of `??` is absent", () => {
+      const out = compile(island(`<script setup lang="ts">
+const props = defineProps<{ note?: string; word: string; n: number; count?: number }>();
+</script>
+<template><p>{{ note ?? word.repeat(n) }}|{{ count ?? n * n }}</p></template>`)).get("x.rs")!;
+      expect(out).toContain('props.note.as_deref().map(std::borrow::Cow::<str>::Borrowed).unwrap_or_else(|| std::borrow::Cow::<str>::Owned(fv_refusals.keep(fv::try_repeat(&props.word, props.n as f64), 4, 25)))');
+      expect(out).toContain("fv::push_int(out, props.count.unwrap_or_else(|| fv_refusals.keep(fv::try_int(props.n as f64 * props.n as f64), 4, 55)));");
+    });
+
+    it("refuses at render time an integer beyond the range of i64 handed to a child, and writes one into the page from its double", () => {
+      const out = compile(
+        island(`<script setup lang="ts">
+import Kid from "./Kid.vue";
+defineProps<{ n: number }>();
+</script>
+<template><p>{{ n * n }}</p><Kid :k="n * n" /></template>`, { Kid: '<script setup lang="ts">\ndefineProps<{ k: number }>();\n</script>\n<template><i>{{ k }}</i></template>' }),
+      ).get("x.rs")!;
+      expect(out).toContain("fv::push_number(out, props.n as f64 * props.n as f64);");
+      expect(out).toContain("&super::kid::Props { k: fv_refusals.keep(fv::try_int(props.n as f64 * props.n as f64), 5, 38) }");
     });
   });
 
@@ -2125,7 +2146,7 @@ defineProps<{ label: string }>();
     it("renders the component it loads as a child", () => {
       for (const declared of ['lazy(() => import("./Y.vue"))', 'lazy({ loader: () => import("./Y.vue"), delay: 200 })']) {
         const out = compile(island(parent(declared), { Y: child })).get("x.rs")!;
-        expect(out, declared).toContain("super::y::render(out, &super::y::Props { text: std::borrow::Cow::Borrowed(&*props.label) });");
+        expect(out, declared).toContain("super::y::try_render(out, &super::y::Props { text: std::borrow::Cow::Borrowed(&*props.label) })?;");
       }
     });
 
@@ -5977,7 +5998,7 @@ function pad(t: string, width = 3, fill?: string): string {
 }
 </script>
 <template><i>{{ pad(word.toUpperCase()) }}</i></template>`)).get("x.rs")!;
-    expect(out).toMatch(/let (fv_c\d+) = props\.word\.to_uppercase\(\);.*fv::js_pad_start\(&\1, 3\.0f64, "\."\), \1\)/);
+    expect(out).toMatch(/let (fv_c\d+) = props\.word\.to_uppercase\(\);.*fv_refusals\.keep\(fv::try_pad_start\(&\1, 3\.0f64, "\."\), 4, 10\), \1\)/);
     expect(out.match(/to_uppercase/g)).toHaveLength(1);
   });
 });
@@ -6060,8 +6081,8 @@ const p = computed((): Pair => ({ left: { [KEY]: "l", count: 1, owner: null, tag
 
   it("builds a child's prop from a literal, and from `.map()` to literals, as the child's own struct", () => {
     const out = x("", `<V :item="{ label: name }" :items="words.map((w) => ({ label: w, n: 1 }))" /><V v-bind="{ item: { label: 'b', n }, items: [] }" />`);
-    expect(out).toContain("super::v::render(out, &super::v::Props { item: super::v::Item { label: std::borrow::Cow::<str>::Borrowed(&*props.name), n: None }, items: props.words.iter()");
-    expect(out).toContain("super::v::Item { label: std::borrow::Cow::<str>::Owned(str::to_owned(&*fv_s1)), n: Some(1i64) }).collect::<Vec<_>>() });");
+    expect(out).toContain("super::v::try_render(out, &super::v::Props { item: super::v::Item { label: std::borrow::Cow::<str>::Borrowed(&*props.name), n: None }, items: props.words.iter()");
+    expect(out).toContain("super::v::Item { label: std::borrow::Cow::<str>::Owned(str::to_owned(&*fv_s1)), n: Some(1i64) }).collect::<Vec<_>>() })?;");
     expect(out).toContain('super::v::Props { item: super::v::Item { label: std::borrow::Cow::<str>::Borrowed("b"), n: Some(props.n) }, items: Vec::new() }');
   });
 
@@ -6827,7 +6848,7 @@ defineProps<{ size: S }>();
     expect(out.get("types.rs")).toContain("/// `Size` in `types/ui.ts`: `\"sm\" | \"md\"`.\n#[derive(");
     expect(out.get("types.rs")!.match(/pub enum Size \{/g)).toHaveLength(1);
     expect(out.get("x.rs")).toContain("pub size: super::types::Size,");
-    expect(out.get("x.rs")).toContain("super::child::render(out, &super::child::Props { size: props.size });");
+    expect(out.get("x.rs")).toContain("super::child::try_render(out, &super::child::Props { size: props.size })?;");
     expect(out.get("child.rs")).toContain("pub size: super::types::Size,");
   });
 

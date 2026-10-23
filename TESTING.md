@@ -402,6 +402,9 @@ What it generates, with random nesting:
   an array literal of one) for its interface props: optional fields left out, `undefined`, an
   expression or an optional value, nullable fields `null`, an expression or a nullable value,
   lists `[]`, a list prop or an array literal, the keys in the interface's order or reversed;
+- a child `FzWide` whose `number` prop is the product of two or three integers, props or literals
+  up to ±(2⁵³ − 1), so that it lies beyond ±2⁶³ when the props are wide, where the render is
+  refused (FV0724);
 - `<script setup>` beyond the props: `const props = defineProps(…)` read as `props.x` in the
   template and in script, `computed`, `ref` and plain constants computed from the props, a
   `generic="T extends Row"` parameter typing a list prop, `defineAsyncComponent` for a child;
@@ -461,7 +464,7 @@ What it generates, with random nesting:
 
 Only what ferrovue promises to accept is generated: expressions are typed as TypeScript and
 ferrovue type them, optional values are read only where they may be, integer arithmetic never
-leaves ±2⁵³, two strings that may each hold half of a surrogate pair never meet, and a date is read
+leaves ±2⁵³ (but for `FzWide`'s prop), two strings that may each hold half of a surrogate pair never meet, and a date is read
 only through its methods, `.toISOString()` only where it is known valid. Two strings that may each
 hold half of a pair are not joined across one that may be empty either, and `encodeURIComponent()`,
 `encodeURI()`, `.charCodeAt()` and `.codePointAt()` read only strings that hold no half. So a component
@@ -496,8 +499,9 @@ How a run works:
    `loaders::from_fixture` from `$loads`, as in the conformance suite). Its target directory,
    `target/fuzz-target/`, is shared between runs, so the runtime crate is built once.
 4. Each pair is compared. The summary counts components, fixtures, matches, mismatches, Rust
-   errors (a panic, or a fixture the props do not read), components whose generated Rust does not
-   compile, and refusals, with the message of each.
+   errors (a panic, or a fixture the props do not read), renders refused at render time (a
+   `ferrovue::Refused` the render returns, listed by code and message, which is not a failure),
+   components whose generated Rust does not compile, and refusals, with the message of each.
 5. Each failure is **shrunk**: nodes, `v-if` and `v-for` directives, attributes, class and style
    entries removed, sub-expressions replaced by smaller ones, prop values made shorter or left out,
    routes, link targets, messages, a locale, stores, getters and state fields removed, the

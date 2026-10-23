@@ -26,13 +26,27 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
-    render_scoped(out, props, fv_route, "");
+    fv::rendered(try_render_scoped(out, props, fv_route, ""));
 }
 
-/// [`render`], with the scope ids a parent hands the root: ` data-v-…` each.
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) -> Result<(), fv::Refused> {
+    try_render_scoped(out, props, fv_route, "")
+}
+
+/// [`try_render`], with the scope ids a parent hands the root: ` data-v-…` each.
 #[doc(hidden)]
-pub fn render_scoped(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>, fv_attrs: &str) {
+pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>, fv_attrs: &str) -> Result<(), fv::Refused> {
     out.reserve(75 + props.to.len());
     {
         let fv_link = fv_route.link(&props.to);
@@ -48,9 +62,10 @@ pub fn render_scoped(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'
         out.push_str(&fv::scope_attrs(fv_attrs, "data-v-667124f1", ""));
         out.push_str(">go <b data-v-667124f1>there</b></a>");
     }
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_route: &'p fv::Route<'p>) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_route))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_route: &'p fv::Route<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
+    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_route)))
 }

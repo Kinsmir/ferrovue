@@ -34,7 +34,8 @@
 //! 21. [`security`]: the threat model: every place data from readers is written, the guarantee
 //!     there, and what is inherited from Vue.
 //! 22. [`testing`]: holding your own components to Vue, with fixtures and two calls.
-//! 23. [`errors_and_limits`]: what the compiler refuses, and what can still go wrong at run time.
+//! 23. [`errors_and_limits`]: what the compiler refuses, what a render refuses as it runs, and
+//!     what can still go wrong at run time.
 //! 24. [`error_codes`]: every error code the compiler raises.
 #![cfg_attr(
     feature = "dioxus",

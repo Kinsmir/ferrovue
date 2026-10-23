@@ -35,15 +35,30 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_head: &fv::Head) {
+    fv::rendered(try_render(out, props, fv_head));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_head: &fv::Head) -> Result<(), fv::Refused> {
     out.reserve(21 + props.title.len() + props.description.as_deref().map_or(0, str::len));
     fv_head.push_seo_meta(fv::HeadValue::Object(Vec::new()), vec![("name", "description", if let Some(v) = props.description.as_deref() { fv::HeadValue::str(v) } else { fv::HeadValue::Undefined }), ("property", "og:title", fv::HeadValue::str(&props.title)), ("property", "og:site_name", fv::HeadValue::str("Books")), ("name", "twitter:card", fv::HeadValue::str("summary")), ("name", "twitter:title", fv::HeadValue::str(&props.title)), ("property", "og:image", fv::HeadValue::str(&format!("/covers/{}.png", props.title))), ("http-equiv", "content-type", fv::HeadValue::str("text/html")), ("property", "article:published_time", fv::HeadValue::str(if props.views as f64 > 1.0 { "2024-01-01" } else { "" })), ("name", "robots", if let Some(v) = if props.views as f64 == 0.0 { None } else { Some("index") } { fv::HeadValue::str(v) } else { fv::HeadValue::Null })]);
     out.push_str("<aside>");
     fv::push_int(out, props.views);
     out.push_str("</aside>");
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_head: &'p fv::Head) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_head))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_head: &'p fv::Head) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
+    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_head)))
 }

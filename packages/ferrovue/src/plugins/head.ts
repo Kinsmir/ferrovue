@@ -1,7 +1,7 @@
 import { type Component, type N, type Scope, type Val, absence, fail, rustStr } from "../model.ts";
 import { describeTy, expr } from "../expr.ts";
 import { arrow, items } from "../lists.ts";
-import { bare, strArg } from "../parens.ts";
+import { bare, scrutinee, strArg } from "../parens.ts";
 import { expressionBodied } from "../blocks.ts";
 import { type Plugin, runOf, scopeOf } from "../plugin.ts";
 
@@ -112,7 +112,7 @@ function scalar(s: Scope, v: Val, n: N, where: string): string {
     case "opt": {
       const none = absence(v.ty);
       if (none === "either") fail(s.comp, "FV1706", `${where} may be \`undefined\` or \`null\`, which unhead treats apart and its Rust type cannot tell apart`, n);
-      return `if let Some(v) = ${v.code} { ${scalar(s, { code: "v", ty: v.ty.of }, n, where)} } else { fv::HeadValue::${none === "null" ? "Null" : "Undefined"} }`;
+      return `if let Some(v) = ${scrutinee(v.code)} { ${scalar(s, { code: "v", ty: v.ty.of }, n, where)} } else { fv::HeadValue::${none === "null" ? "Null" : "Undefined"} }`;
     }
     default:
       return fail(s.comp, "FV1706", `${where} is ${describeTy(v.ty)}: a head value here is a string, a number or a boolean`, n);

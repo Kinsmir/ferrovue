@@ -53,7 +53,7 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
     match component {
         "Greeting" => {
             let props: greeting::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            greeting::render(&mut out, &props);
+            greeting::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "Layout" => {
             let props: layout::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -61,7 +61,7 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let s_router_view = |out: &mut String| out.push_str(fixture.slot("routerView").unwrap_or_default());
             let router = route_table::router();
             let route = router.at(&fixture.route);
-            layout::render(&mut out, &props, layout::Slots { router_view: ferrovue::Slot::new(&s_router_view) }, &route);
+            layout::try_render(&mut out, &props, layout::Slots { router_view: ferrovue::Slot::new(&s_router_view) }, &route).map_err(|e| e.to_string())?;
         }
         other => return Err(format!("no component called {other}")),
     }

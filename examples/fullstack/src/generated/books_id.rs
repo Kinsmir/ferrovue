@@ -33,7 +33,21 @@ pub struct Slots<'s> {
 }
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::Route<'_>, fv_head: &fv::Head) {
+    fv::rendered(try_render(out, props, fv_slots, fv_route, fv_head));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::Route<'_>, fv_head: &fv::Head) -> Result<(), fv::Refused> {
     out.reserve(211 + props.book.id.len() + props.book.title.len() + props.book.author.len());
     let s_permalink = format!("/books/{}", fv_route.param("id").unwrap_or(""));
     let s_summary = format!("{}, by {} ({})", props.book.title, props.book.author, fv::Js(props.book.year));
@@ -64,9 +78,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route
         out.push_str("<p>Loading reviews…</p>");
     }));
     out.push_str("</section></article>");
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>, fv_route: &'p fv::Route<'p>, fv_head: &'p fv::Head) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_slots, fv_route, fv_head))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>, fv_route: &'p fv::Route<'p>, fv_head: &'p fv::Head) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
+    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_slots, fv_route, fv_head)))
 }

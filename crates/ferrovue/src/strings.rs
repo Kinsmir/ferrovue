@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::cmp::Ordering;
 
-use crate::push_number;
+use crate::{Refused, push_number};
 
 /// `String.prototype.length`: UTF-16 code units, which is what a template's `.length` counts.
 /// `str::len` counts UTF-8 bytes and `chars().count()` scalar values, and either can differ from it.
@@ -764,21 +764,40 @@ fn filler(fill: &str, n: usize) -> String {
     String::from_utf16_lossy(&units)
 }
 
-fn pad<'s>(s: &'s str, max_length: f64, fill: &str, at_start: bool) -> Cow<'s, str> {
+fn pad<'s>(
+    s: &'s str,
+    max_length: f64,
+    fill: &str,
+    at_start: bool,
+) -> Result<Cow<'s, str>, Refused> {
     let len = length(s);
     let target = to_integer(max_length).clamp(0.0, 9_007_199_254_740_991.0);
     if target <= len as f64 || fill.is_empty() {
-        return Cow::Borrowed(s);
+        return Ok(Cow::Borrowed(s));
     }
     if target > MAX_STRING_LENGTH {
-        panic!("RangeError: Invalid string length (padding to {target} code units)");
+        return Err(too_long(target, "padding"));
     }
     let pad = filler(fill, target as usize - len);
-    Cow::Owned(if at_start {
+    Ok(Cow::Owned(if at_start {
         pad + s
     } else {
         format!("{s}{pad}")
-    })
+    }))
+}
+
+#[cold]
+fn too_long(units: f64, how: &str) -> Refused {
+    let mut shown = String::new();
+    push_number(&mut shown, units);
+    Refused::new(
+        "FV0725",
+        format!(
+            "{how} makes a string of {shown} code units, beyond the longest string V8 makes \
+             (2²⁹ − 24), where JavaScript throws a RangeError (Invalid string length) and Vue's \
+             render fails too: limit the length or the count, or check the props before rendering"
+        ),
+    )
 }
 
 /// `String.prototype.padStart(maxLength, fill)`: `fill` (a space, unless given) repeated before `s`
@@ -787,7 +806,7 @@ fn pad<'s>(s: &'s str, max_length: f64, fill: &str, at_start: bool) -> Cow<'s, s
 /// # Panics
 ///
 /// Where JavaScript throws a `RangeError`: a `maxLength` beyond the longest string V8 makes,
-/// 2²⁹ − 24 code units.
+/// 2²⁹ − 24 code units. [`try_pad_start`] returns the refusal.
 ///
 /// # Example
 ///
@@ -797,6 +816,16 @@ fn pad<'s>(s: &'s str, max_length: f64, fill: &str, at_start: bool) -> Cow<'s, s
 /// ```
 #[must_use]
 pub fn js_pad_start<'s>(s: &'s str, max_length: f64, fill: &str) -> Cow<'s, str> {
+    pad(s, max_length, fill, true).unwrap_or_else(|refused| panic!("{refused}"))
+}
+
+/// [`js_pad_start`], returning the refusal where it panics.
+///
+/// # Errors
+///
+/// FV0725 where [`js_pad_start`] panics.
+#[doc(hidden)]
+pub fn try_pad_start<'s>(s: &'s str, max_length: f64, fill: &str) -> Result<Cow<'s, str>, Refused> {
     pad(s, max_length, fill, true)
 }
 
@@ -815,6 +844,16 @@ pub fn js_pad_start<'s>(s: &'s str, max_length: f64, fill: &str) -> Cow<'s, str>
 /// ```
 #[must_use]
 pub fn js_pad_end<'s>(s: &'s str, max_length: f64, fill: &str) -> Cow<'s, str> {
+    pad(s, max_length, fill, false).unwrap_or_else(|refused| panic!("{refused}"))
+}
+
+/// [`js_pad_end`], returning the refusal where it panics.
+///
+/// # Errors
+///
+/// FV0725 where [`js_pad_end`] panics.
+#[doc(hidden)]
+pub fn try_pad_end<'s>(s: &'s str, max_length: f64, fill: &str) -> Result<Cow<'s, str>, Refused> {
     pad(s, max_length, fill, false)
 }
 
@@ -823,7 +862,7 @@ pub fn js_pad_end<'s>(s: &'s str, max_length: f64, fill: &str) -> Cow<'s, str> {
 /// # Panics
 ///
 /// Where JavaScript throws a `RangeError`: a negative or infinite count, or a result longer than
-/// the longest string V8 makes, 2²⁹ − 24 code units.
+/// the longest string V8 makes, 2²⁹ − 24 code units. [`try_repeat`] returns the refusal.
 ///
 /// # Example
 ///
@@ -834,19 +873,37 @@ pub fn js_pad_end<'s>(s: &'s str, max_length: f64, fill: &str) -> Cow<'s, str> {
 /// ```
 #[must_use]
 pub fn js_repeat(s: &str, count: f64) -> String {
+    try_repeat(s, count).unwrap_or_else(|refused| panic!("{refused}"))
+}
+
+/// [`js_repeat`], returning the refusal where it panics.
+///
+/// # Errors
+///
+/// FV0714 for a negative or infinite count, FV0725 for a result longer than V8's longest string.
+#[doc(hidden)]
+pub fn try_repeat(s: &str, count: f64) -> Result<String, Refused> {
     let n = to_integer(count);
     if n < 0.0 || n == f64::INFINITY {
         let mut shown = String::new();
         push_number(&mut shown, count);
-        panic!("RangeError: Invalid count value: {shown}");
+        return Err(Refused::new(
+            "FV0714",
+            format!(
+                "`.repeat()` by a count of {shown}, where JavaScript throws a RangeError (Invalid \
+                 count value) and Vue's render fails too: clamp the count (`Math.max(0, n)`), or \
+                 check the props before rendering"
+            ),
+        ));
     }
     if n == 0.0 || s.is_empty() {
-        return String::new();
+        return Ok(String::new());
     }
-    if length(s) as f64 * n > MAX_STRING_LENGTH {
-        panic!("RangeError: Invalid string length (repeating {n} times)");
+    let units = length(s) as f64 * n;
+    if units > MAX_STRING_LENGTH {
+        return Err(too_long(units, "`.repeat()`"));
     }
-    s.repeat(n as usize)
+    Ok(s.repeat(n as usize))
 }
 
 /// How JavaScript orders two strings with `<`: by UTF-16 code unit, which is not the order of the

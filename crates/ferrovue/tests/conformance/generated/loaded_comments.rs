@@ -35,10 +35,24 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::Loads<'_>) {
+    fv::rendered(try_render(out, props, fv_loads));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::Loads<'_>) -> Result<(), fv::Refused> {
     out.reserve(141 + props.article.len());
-    let Some(l_0) = fv_loads.get(super::loaders::LoadComments { article: String::from(&*props.article), page: props.page, drafts: if props.drafts.unwrap_or(false) { Some(true) } else { None } }) else { return; };
-    let Some(l_1) = fv_loads.get(super::loaders::LoadNote { page: l_0.len() as i64 }) else { return; };
+    let Some(l_0) = fv_loads.get(super::loaders::LoadComments { article: String::from(&*props.article), page: props.page, drafts: if props.drafts.unwrap_or(false) { Some(true) } else { None } }) else { return Ok(()); };
+    let Some(l_1) = fv_loads.get(super::loaders::LoadNote { page: l_0.len() as i64 }) else { return Ok(()); };
     out.push_str("<section>");
     if let Some(n1) = l_1.as_deref() {
         out.push_str("<p class=\"note\">");
@@ -74,9 +88,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::Loads<'_>) {
         out.push_str("<!---->");
     }
     out.push_str("</section>");
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_loads: &'p fv::Loads<'p>) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_loads))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_loads: &'p fv::Loads<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
+    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_loads)))
 }

@@ -128,56 +128,72 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) {
+    fv::rendered(try_render(out, props, fv_provides));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::Refused> {
     out.reserve(68 + 6 + 5 + props.label.len() + props.theme.len());
+    let fv_refusals = fv::Refusals::new(NAME, "components/ThemedChoice.vue");
     let fv_inherited = fv_provides;
     let fv_provides = super::provides::Provides { theme_key: Some(&props.theme), ..fv_inherited };
     out.push_str("<section>");
     if props.kind == ThemedChoiceKind::Scope {
-        super::theme_scope::render_scoped(out, &super::theme_scope::Props { theme: None }, super::theme_scope::Slots {
+        fv_refusals.check(super::theme_scope::try_render_scoped(out, &super::theme_scope::Props { theme: None }, super::theme_scope::Slots {
             default: Some(&|out: &mut String, fv_provides: super::provides::Provides<'_>| -> bool {
-                super::themed_button::render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed(&*format!("{} in scope", props.label)) }, fv_provides, "");
+                fv_refusals.join(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed(&*format!("{} in scope", props.label)) }, fv_provides, ""));
                 true
             }),
-        }, fv_provides, &fv::Attrs::new(&[("label", fv::Attr::str(&props.label))], ""));
+        }, fv_provides, &fv::Attrs::new(&[("label", fv::Attr::str(&props.label))], "")))?;
     } else {
-        super::themed_button::render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed(&*props.label) }, fv_provides, "");
+        fv_refusals.check(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed(&*props.label) }, fv_provides, ""))?;
     }
     if props.kind == ThemedChoiceKind::Scope {
-        super::theme_scope::render_scoped(out, &super::theme_scope::Props { theme: Some(std::borrow::Cow::Borrowed("dark")) }, super::theme_scope::Slots {
+        fv_refusals.check(super::theme_scope::try_render_scoped(out, &super::theme_scope::Props { theme: Some(std::borrow::Cow::Borrowed("dark")) }, super::theme_scope::Slots {
             default: Some(&|out: &mut String, fv_provides: super::provides::Provides<'_>| -> bool {
-                super::themed_button::render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed("slotted") }, fv_provides, "");
+                fv_refusals.join(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed("slotted") }, fv_provides, ""));
                 true
             }),
-        }, fv_provides, &fv::Attrs::NONE);
+        }, fv_provides, &fv::Attrs::NONE))?;
     } else {
         out.push_str("<p theme=\"dark\">");
-        super::themed_button::render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed("slotted") }, fv_provides, "");
+        fv_refusals.check(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed("slotted") }, fv_provides, ""))?;
         out.push_str("</p>");
     }
     let fv_tag1 = match props.tag { ThemedChoiceTag::Div => "div", ThemedChoiceTag::Aside => "aside" };
     out.push('<');
     out.push_str(fv_tag1);
     out.push_str(" class=\"frame\">");
-    super::themed_button::render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed(&*props.label) }, fv_provides, "");
-    super::theme_scope::render_scoped(out, &super::theme_scope::Props { theme: None }, super::theme_scope::Slots {
+    fv_refusals.check(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed(&*props.label) }, fv_provides, ""))?;
+    fv_refusals.check(super::theme_scope::try_render_scoped(out, &super::theme_scope::Props { theme: None }, super::theme_scope::Slots {
         default: Some(&|out: &mut String, fv_provides: super::provides::Provides<'_>| -> bool {
-            super::themed_button::render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed("deep") }, fv_provides, "");
+            fv_refusals.join(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed("deep") }, fv_provides, ""));
             true
         }),
-    }, fv_provides, &fv::Attrs::NONE);
+    }, fv_provides, &fv::Attrs::NONE))?;
     out.push_str("</");
     out.push_str(fv_tag1);
     out.push('>');
-    super::tag_heading::render_scoped(out, &super::tag_heading::Props { r#as: Some(super::tag_heading::TagHeadingAs::H3), text: std::borrow::Cow::Borrowed(&*props.label) }, super::tag_heading::Slots {
+    fv_refusals.check(super::tag_heading::try_render_scoped(out, &super::tag_heading::Props { r#as: Some(super::tag_heading::TagHeadingAs::H3), text: std::borrow::Cow::Borrowed(&*props.label) }, super::tag_heading::Slots {
         default: Some(fv::Slot::new(&|out: &mut String| {
-            super::themed_button::render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed("heading") }, fv_provides, "");
+            fv_refusals.join(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed("heading") }, fv_provides, ""));
         })),
-    }, &fv::Attrs::NONE);
+    }, &fv::Attrs::NONE))?;
     out.push_str("</section>");
+    fv_refusals.check(Ok(()))
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_provides: super::provides::Provides<'p>) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_provides))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_provides: super::provides::Provides<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
+    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_provides)))
 }

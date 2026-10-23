@@ -83,9 +83,11 @@ Engines do not agree on every part. V8 computes a year beyond ±1,000,000, a mon
 ±10,000,000 and a year before −399,999 by rules of its own, so a day or hours that bring such a
 date back within the range give another date in Firefox and Safari; and a part worth more than 2⁵³
 ms that the others bring back within the range is rounded by Node otherwise than by the browsers.
-Literals like these are refused ([FV1808](crate::guide::error_codes#fv1808)), and `js_date_utc`
-panics on parts from the props like these. Every other date, and every date invalid in all of
-them, is computed as JavaScript computes it.
+Literals like these are refused ([FV1808](crate::guide::error_codes#fv1808)) when the component is
+compiled, and parts from the props like these as it renders: the generated `try_render` returns the
+refusal, and `render` panics with its message (see
+[`errors_and_limits`](crate::guide::errors_and_limits#refused-at-render-time)). Every other date,
+and every date invalid in all of them, is computed as JavaScript computes it.
 
 ## The strings a date is built from
 
@@ -111,8 +113,10 @@ and time at the edge of the range whose offset brings it inside (`+275760-09-13T
 which Safari reads as invalid and the other engines as the last valid moment). A string
 literal in the template is checked when the component is compiled
 ([FV1803](crate::guide::error_codes#fv1803)). A string from the props is checked as it renders, and
-`js_date_parse` panics on one outside the format, since the server cannot
-know what the reader's browser would make of it. Hand components strings the format holds:
+one outside the format is refused there, since the server cannot know what the reader's browser
+would make of it: `try_render` returns the refusal, FV1803, so a handler that takes the string from
+a request answers it with an error, and `render` panics with its message. Hand components strings
+the format holds:
 
 ```rust
 // The ISO string of a number of milliseconds, as JavaScript's `toISOString()` writes it.
@@ -128,9 +132,11 @@ string at all.
 
 A date beyond ±8.64 × 10¹⁵ ms from 1970 (about 275,000 years) is invalid, as in JavaScript:
 `.getTime()` and every `.getUTC…()` method give `NaN`, and `.toISOString()` throws a `RangeError`,
-on which the generated code panics. Test a date that may be invalid before writing it, with
+which fails Vue's render: the generated code refuses it as it renders
+([FV1811](crate::guide::error_codes#fv1811)), `try_render` returning the refusal and `render`
+panicking with its message. Test a date that may be invalid before writing it, with
 `!Number.isNaN(d.getTime())`, or with `d.getTime() === d.getTime()` (false only for `NaN`), which
-says the same. A `computed` that may panic is worked out
+says the same. A `computed` that may be refused is worked out
 where the render first reads it, once, as Vue works it out, so a `computed` of `.toISOString()`
 renders when the template reads it only under the `v-if` that tests the date:
 
@@ -401,8 +407,10 @@ assert!(DateTime::<Utc>::try_from(JsDate::INVALID).is_err());
 ```
 
 A fixture or JSON whose date chrono cannot hold is an error as the props are read. A child's `Date`
-prop that is a chrono date panics as it renders when the parent hands it a date it computed beyond
-chrono's range, or an invalid one; one the parent's own props hold always fits.
+prop that is a chrono date is refused as it renders ([FV1812](crate::guide::error_codes#fv1812))
+when the parent hands it a date it computed beyond chrono's range, or an invalid one: `try_render`
+returns the refusal, and `render` panics with its message. One the parent's own props hold always
+fits.
 
 # Prices and formatted dates
 

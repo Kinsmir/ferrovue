@@ -187,7 +187,12 @@ content of holes: they are plain Rust, and what they push is written as it is.
 ## Panics
 
 Generated code and the runtime are written not to panic on props in a release build, and
-[SECURITY.md] counts one that does as a vulnerability. A debug build panics
+[SECURITY.md] counts one that does as a vulnerability. Props that ask for what cannot be written as
+Vue writes it, such as a date string browsers read differently or an integer beyond ±2⁶³ where the
+template needs one, are refused at render time: the generated `try_render` returns the refusal, so
+a handler that renders props from a request answers with an error, and `render` panics with its
+message ([`errors_and_limits`](crate::guide::errors_and_limits#refused-at-render-time)). A debug
+build panics
 where Vue would throw or where data cannot be written exactly, so a mistake is found where it is
 made: props serde_json refuses, a required route parameter that is missing or empty, a plural
 number that chooses none of a message's cases. [`Page`](crate::Page) panics on a slot given twice

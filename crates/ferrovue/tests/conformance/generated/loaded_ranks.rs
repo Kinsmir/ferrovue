@@ -26,9 +26,23 @@ impl<'a> Props<'a> {
 
 
 /// Write the component's server render into `out`.
+///
+/// # Panics
+///
+/// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_teleports: &fv::Teleports, fv_head: &fv::Head, fv_loads: &fv::Loads<'_>) {
+    fv::rendered(try_render(out, props, fv_teleports, fv_head, fv_loads));
+}
+
+/// [`render`], returning the refusal of a render that cannot write what Vue writes for these
+/// props, such as a date string browsers read differently: a server answers it with an error.
+///
+/// # Errors
+///
+/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_teleports: &fv::Teleports, fv_head: &fv::Head, fv_loads: &fv::Loads<'_>) -> Result<(), fv::Refused> {
     out.reserve(62 + props.board.len());
-    let Some(l_0) = fv_loads.get(super::loaders::LoadRanking { board: String::from(&*props.board) }) else { return; };
+    let Some(l_0) = fv_loads.get(super::loaders::LoadRanking { board: String::from(&*props.board) }) else { return Ok(()); };
     fv_head.push(fv::HeadValue::object([("meta", fv::HeadValue::array([fv::HeadValue::object([("name", fv::HeadValue::str("description")), ("content", fv::HeadValue::str(&format!("ranks of {}", props.board)))])]))]));
     out.push_str("<!--[--><ol><!--[-->");
     for (name, score_ref) in l_0.scores.iter() {
@@ -40,17 +54,18 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_teleports: &fv::Teleports,
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ol>");
-    super::rank_line::render(out, &super::rank_line::Props { best: l_0.best, worst: l_0.worst, open: l_0.open });
+    super::rank_line::try_render(out, &super::rank_line::Props { best: l_0.best, worst: l_0.worst, open: l_0.open })?;
     fv::teleport_into(out, fv_teleports, "#ranks", false, &|out: &mut String| {
         out.push_str("<p class=\"board\">");
         fv::escape_into(out, &props.board);
         out.push_str("</p>");
     });
-    super::loaded_comments::render(out, &super::loaded_comments::Props { article: std::borrow::Cow::Borrowed(&*props.board), page: 1i64, drafts: None }, fv_loads);
+    super::loaded_comments::try_render(out, &super::loaded_comments::Props { article: std::borrow::Cow::Borrowed(&*props.board), page: 1i64, drafts: None }, fv_loads)?;
     out.push_str("<!--]-->");
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_teleports: &'p fv::Teleports, fv_head: &'p fv::Head, fv_loads: &'p fv::Loads<'p>) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_teleports, fv_head, fv_loads))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_teleports: &'p fv::Teleports, fv_head: &'p fv::Head, fv_loads: &'p fv::Loads<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
+    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_teleports, fv_head, fv_loads)))
 }

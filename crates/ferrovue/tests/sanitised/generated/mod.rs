@@ -20,7 +20,7 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
     match component {
         "Review" => {
             let props: review::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            review::render(&mut out, &props);
+            review::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         other => return Err(format!("no component called {other}")),
     }
