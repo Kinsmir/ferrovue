@@ -5,7 +5,7 @@ import { claim } from "./plugin.ts";
 import { atom, bare, binary, condition, operand, receiver, strArg, UNARY } from "./parens.ts";
 import { computedListMethod, isBoolean, items, listMethod, objectCall, presentLiteral, spreadExtreme } from "./lists.ts";
 import { formatted, lonely, loneOf, meet, stringMethod, stringOf, stringsEqual, writesAscii } from "./strings.ts";
-import { asF64, asWritten, intFromF64, isNumber, numberVal, power } from "./numbers.ts";
+import { asF64, asWritten, intFromF64, isCast, isNumber, numberVal, power } from "./numbers.ts";
 import { boolOf, truthy } from "./narrowing.ts";
 import { coerce, describeTy, expr, refuseClientOnly, refuseUnavailable } from "./expr.ts";
 import { callFunction } from "./functions.ts";
@@ -127,8 +127,10 @@ export function call(s: Scope, n: N): Val {
       if (vals.length && vals.every((v) => isNumber(v.ty))) {
         const ints = vals.every((v) => v.ty.k === "int");
         if ((method === "max" || method === "min") && vals.length >= 2) {
-          if (ints) return { code: vals.slice(1).reduce((acc, v) => `${atom(acc)}.${method}(${bare(v.code)})`, vals[0]!.code), ty: INT };
-          return { code: vals.slice(1).reduce((acc, v) => `fv::js_${method}(${bare(acc)}, ${bare(asF64(v))})`, asF64(vals[0]!)), ty: FLOAT };
+          if (ints && !vals.some(isCast)) return { code: vals.slice(1).reduce((acc, v) => `${atom(acc)}.${method}(${bare(v.code)})`, vals[0]!.code), ty: INT };
+          const extreme = vals.slice(1).reduce((acc, v) => `fv::js_${method}(${bare(acc)}, ${bare(asF64(v))})`, asF64(vals[0]!));
+          if (ints) return intFromF64(extreme, vals.find(isCast)?.at ?? refusalAt(comp, n));
+          return { code: extreme, ty: FLOAT };
         }
         if (vals.length === 1) {
           const x = vals[0]!;
