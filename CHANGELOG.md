@@ -143,6 +143,12 @@ released together and share version numbers.
 
 ### Changed
 
+- CI only: the browser job and the instruction-count job take `azure.archive.ubuntu.com` out of the
+  runner's APT mirror list before installing packages, so APT downloads from
+  `https://archive.ubuntu.com`, which the list already holds. The Azure mirror can serve packages so
+  slowly that APT's timeout never fires (actions/runner-images#14823), which spent whole attempts of
+  the browser job's install. Where the list is missing or holds no such archive, the step leaves it
+  as it is and warns.
 - FV1806 refuses a `Date` only in Pinia state, `provide`, `inject`, a typed `ref` and a
   `defineModel`, which reach the browser with no plan of where their dates are; a `Date` inside the
   props or a loader's result compiles. FV0317 accepts a dictionary of dates, FV2004 no longer
