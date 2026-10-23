@@ -57,9 +57,10 @@ the package's `package.json` gives their ranges.
 # Node.js
 
 Node runs only at build time: the compiler, the Vite plugin and the tests. The server that renders
-needs none. The npm package's `engines` field names the oldest Node it supports, `>=22.18`, and CI
-tests the package on Node 22.18, the newest 22, 24 and 26, and on Windows and macOS. Releases are
-built and published on Node 26, the active LTS from 2026-10-28.
+needs none. The npm package's `engines` field names the oldest release of each line it supports,
+`>=22.23.4 <23 || >=24.22.1 <25 || >=26.12.1`, and CI tests the package on Node 22.23.4, the newest
+22, 24 and 26, and on Windows and macOS. Releases are built and published on Node 26, the active
+LTS from 2026-10-28.
 
 # Rust
 

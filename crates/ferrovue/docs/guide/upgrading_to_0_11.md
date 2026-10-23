@@ -26,6 +26,8 @@ ferrovue = "0.11"
 version, so an application that names only `ferrovue` gets the other three with it. One that names
 any of them itself bumps it to 0.11 as well.
 
+The npm package needs Node 22.23.4 or newer on 22, 24.22.1 or newer on 24, or 26.12.1 or newer.
+
 ## 2. Generate every component again
 
 ```sh

@@ -143,6 +143,9 @@ released together and share version numbers.
 
 ### Changed
 
+- The npm package supports Node 22.23.4 or newer on 22, 24.22.1 or newer on 24, and 26.12.1 or
+  newer (`engines`: `>=22.23.4 <23 || >=24.22.1 <25 || >=26.12.1`), where it supported 22.18 or
+  newer. CI's oldest Node is 22.23.4.
 - The npm package depends on postcss 8.5.31 and @intlify/message-compiler 11.4.16. Development
   only: Vite 8.3.5, happy-dom 21.0.4, vue-i18n 11.4.16, fallow 3.35.0 and oxlint 1.89.0, each the
   newest release at least a day old. Every newer release of the crates' dependencies is younger
@@ -245,8 +248,6 @@ released together and share version numbers.
   JavaScript. They compared the integers as `i64`, which has no `-0`.
 - A refusal of an attribute bound both alone and in a `v-bind` object, whose later value Vue
   renders, no longer points at the earlier binding.
-
-### Fixed
 
 - A child's prop named like a listener (`on1`, `onSale`, `:on-sale`) in props Vue joins with
   `mergeProps` (the child is a component's root, or is given `v-bind` of an object or `v-on` of an
