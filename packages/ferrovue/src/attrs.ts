@@ -271,8 +271,6 @@ export function mergeProps(s: Scope, n: N): N {
         if (before !== p.value.value) merged.set(key, { ...p, value: { type: "ArrayExpression", elements: [had.value, p.value], fvMerged: true } });
       } else if (had && (key === "class" || key === "style")) {
         merged.set(key, { ...p, value: { type: "ArrayExpression", elements: [had.value, p.value], fvMerged: true } });
-      } else if (had) {
-        merged.set(key, { ...had, value: p.value });
       } else merged.set(key, p);
     }
   }

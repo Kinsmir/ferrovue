@@ -1,0 +1,21 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "packageManager": "pnpm",
+  "testRunner": "vitest",
+  "plugins": ["@stryker-mutator/vitest-runner"],
+  "vitest": { "configFile": "vitest.config.ts", "related": true },
+  "coverageAnalysis": "perTest",
+  "checkers": [],
+  "disableTypeChecks": false,
+  "tsconfigFile": "target/stryker/tsconfig.json",
+  "mutate": ["packages/ferrovue/src/attrs.ts", "packages/ferrovue/src/template.ts"],
+  "ignorePatterns": ["/target", "/fuzz", "/mutants.out*", "/examples/*/dist", "/packages/*/dist"],
+  "tempDirName": "target/stryker/tmp",
+  "incremental": true,
+  "incrementalFile": "target/stryker/incremental.json",
+  "concurrency": 4,
+  "reporters": ["clear-text", "progress", "json", "html"],
+  "jsonReporter": { "fileName": "target/stryker/mutation.json" },
+  "htmlReporter": { "fileName": "target/stryker/mutation.html" },
+  "clearTextReporter": { "allowColor": false, "logTests": false, "reportTests": false }
+}

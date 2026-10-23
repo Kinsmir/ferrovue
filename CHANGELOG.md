@@ -112,6 +112,19 @@ released together and share version numbers.
 - CI only: a retry of the browser job's system libraries first stops the `apt-get` the timed-out
   attempt left running and waits for the package lock, which that `apt-get` held so the next
   attempts failed at once.
+- Tests only: Stryker mutation-tests the compiler. `pnpm mutants:ts` mutates `attrs.ts` and
+  `template.ts` (`stryker.config.json`), runs the vitest suite against each mutant with per-test
+  coverage, and fails on a survivor `stryker-equivalent.txt` does not list with its reason, and on
+  an entry no survivor uses (`scripts/stryker-survivors.ts`). The Mutants workflow runs it every
+  Monday beside cargo-mutants and uploads the HTML report. The vitest runner is patched to name a
+  nested test as vitest 5 matches it. New compiler tests (`attrs.test.ts`) and conformance
+  components (`AttrObjects`, `AttrQuirks`) kill the survivors in both modules; `vite.test.ts`
+  replaces `process.chdir` with a mocked `process.cwd`, which also runs in worker threads.
+
+### Fixed
+
+- A refusal of an attribute bound both alone and in a `v-bind` object, whose later value Vue
+  renders, no longer points at the earlier binding.
 
 ### Fixed
 

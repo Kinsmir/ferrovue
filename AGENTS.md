@@ -96,7 +96,7 @@ No comments that say what code does or why, in code, tests, config or CI files. 
 - short rustdoc and TSDoc on public items
 - lint-allow reasons (`// oxlint-disable-next-line rule -- reason`, `#[allow(..., reason = "...")]`)
 - `@generated` headers, and the comments the compiler writes into generated code
-- the reasons in `.cargo/mutants-equivalent.txt`
+- the reasons in `.cargo/mutants-equivalent.txt` and `stryker-equivalent.txt`
 - the recipe descriptions in `justfile`, which `just --list` shows
 
 ## Prose
@@ -143,6 +143,12 @@ pnpm test:browser
 WebKit skips where it cannot launch. A timing test may time out under heavy load; rerun it alone
 before treating it as a failure. CI runs Node 22.18, 22, 24 and 26, stable Rust and the MSRV, and
 its **CI passed** job fails when any other job does.
+
+Mutation testing runs weekly in the Mutants workflow, outside the per-PR checks: `cargo mutants` on
+the runtime and `pnpm mutants:ts` (Stryker) on the compiler modules `stryker.config.json` lists.
+After changing one of those modules, run `pnpm exec stryker run -m <file>` and
+`node scripts/stryker-survivors.ts`, and close each new survivor with a test or an entry in
+`stryker-equivalent.txt` with its reason.
 
 ## Git and pull requests
 
