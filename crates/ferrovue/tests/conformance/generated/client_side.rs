@@ -54,9 +54,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push_str("<section class=\"client-side\" data-v-2da87e5e><h2 data-v-2da87e5e>");
     fv::escape_into(out, &props.title);
     out.push_str("</h2><!--[-->");
-    if let Some(n1) = props.note.as_deref().filter(|v| !v.is_empty()) {
+    if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<p class=\"loading\" data-v-2da87e5e>");
-        fv::escape_into(out, n1);
+        fv::escape_into(out, fv_note);
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");

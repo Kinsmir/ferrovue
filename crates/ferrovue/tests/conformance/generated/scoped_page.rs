@@ -78,19 +78,19 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_t
         }
     }
     out.push_str(" data-v-56da6d99>");
-    if let Some(n1) = props.title.as_deref().filter(|v| !v.is_empty()) {
+    if let Some(fv_title) = props.title.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<h1 data-v-56da6d99>");
-        fv::escape_into(out, n1);
+        fv::escape_into(out, fv_title);
         out.push_str("</h1>");
     } else {
         out.push_str("<!---->");
     }
     if props.items.len() as i64 != 0 {
         out.push_str("<ul data-v-56da6d99><!--[-->");
-        for i_ref in props.items.iter() {
-            let i: &str = i_ref;
+        for fv_i_ref in props.items.iter() {
+            let fv_i: &str = fv_i_ref;
             out.push_str("<li data-v-56da6d99>");
-            fv::escape_into(out, i);
+            fv::escape_into(out, fv_i);
             out.push_str("</li>");
         }
         out.push_str("<!--]--></ul>");
@@ -109,9 +109,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_t
         })),
     }, " data-v-56da6d99"))?;
     fv_refusals.check(super::scoped_card::try_render_scoped(out, &super::scoped_card::Props { tone: props.tone.as_deref().map(std::borrow::Cow::Borrowed) }, super::scoped_card::Slots {
-        title: Some(fv::Slot::slotted(&|out: &mut String, fv_sid2: &str| -> bool {
+        title: Some(fv::Slot::slotted(&|out: &mut String, fv_slot_id: &str| -> bool {
             out.push_str("<b data-v-56da6d99");
-            out.push_str(fv_sid2);
+            out.push_str(fv_slot_id);
             out.push('>');
             if let Some(v) = props.title.as_deref() {
                 fv::escape_into(out, v);
@@ -119,61 +119,61 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_t
             out.push_str("</b>");
             true
         })),
-        default: Some(fv::Slot::slotted(&|out: &mut String, fv_sid3: &str| -> bool {
+        default: Some(fv::Slot::slotted(&|out: &mut String, fv_slot_id_2: &str| -> bool {
             out.push_str("<p data-v-56da6d99");
-            out.push_str(fv_sid3);
+            out.push_str(fv_slot_id_2);
             out.push_str(">body</p>");
-            fv_refusals.join(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed("slotted")) }, &fv::scope_attrs("", "data-v-56da6d99", fv_sid3)));
+            fv_refusals.join(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed("slotted")) }, &fv::scope_attrs("", "data-v-56da6d99", fv_slot_id_2)));
             fv_refusals.join(super::plain_box::try_render_scoped(out, &super::plain_box::Props { text: std::borrow::Cow::Borrowed("boxed") }, super::plain_box::Slots {
                 default: Some(fv::Slot::new(&|out: &mut String| {
                     out.push_str("<u data-v-56da6d99>deeper</u>");
                 })),
-            }, &fv::scope_attrs("", "data-v-56da6d99", fv_sid3)));
+            }, &fv::scope_attrs("", "data-v-56da6d99", fv_slot_id_2)));
             true
         })),
-        footer: Some(&|out: &mut String, fv_sp5: &super::scoped_card::FooterSlotProps, fv_sid4: &str| -> bool {
+        footer: Some(&|out: &mut String, fv_slot_props: &super::scoped_card::FooterSlotProps, fv_slot_id_3: &str| -> bool {
             out.push_str("<span data-v-56da6d99");
-            out.push_str(fv_sid4);
+            out.push_str(fv_slot_id_3);
             out.push('>');
-            fv::push_int(out, fv_sp5.count);
+            fv::push_int(out, fv_slot_props.count);
             out.push_str(" items</span>");
-            fv_refusals.join(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed(&*fv::Js(fv_sp5.count).to_string())) }, &fv::scope_attrs("", "data-v-56da6d99", fv_sid4)));
+            fv_refusals.join(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed(&*fv::Js(fv_slot_props.count).to_string())) }, &fv::scope_attrs("", "data-v-56da6d99", fv_slot_id_3)));
             true
         }),
     }, " data-v-56da6d99"))?;
     fv_refusals.check(super::plain_forward::try_render_scoped(out, &super::plain_forward::Props {  }, super::plain_forward::Slots {
-        default: Some(fv::Slot::slotted(&|out: &mut String, fv_sid6: &str| -> bool {
+        default: Some(fv::Slot::slotted(&|out: &mut String, fv_slot_id_4: &str| -> bool {
             out.push_str("<em data-v-56da6d99");
-            out.push_str(fv_sid6);
+            out.push_str(fv_slot_id_4);
             out.push_str(">forwarded</em>");
-            fv_refusals.join(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed("forwarded")) }, &fv::scope_attrs("", "data-v-56da6d99", fv_sid6)));
+            fv_refusals.join(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed("forwarded")) }, &fv::scope_attrs("", "data-v-56da6d99", fv_slot_id_4)));
             fv_refusals.join(super::plain_forward::try_render_scoped(out, &super::plain_forward::Props {  }, super::plain_forward::Slots {
-                default: Some(fv::Slot::slotted(&|out: &mut String, fv_sid7: &str| -> bool {
+                default: Some(fv::Slot::slotted(&|out: &mut String, fv_slot_id_5: &str| -> bool {
                     out.push_str("<s data-v-56da6d99");
-                    out.push_str(fv_sid7);
+                    out.push_str(fv_slot_id_5);
                     out.push_str(">twice</s>");
-                    fv_refusals.join(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: None }, &fv::scope_attrs("", "data-v-56da6d99", fv_sid7)));
+                    fv_refusals.join(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: None }, &fv::scope_attrs("", "data-v-56da6d99", fv_slot_id_5)));
                     true
                 })),
-            }, &fv::scope_attrs("", "data-v-56da6d99", fv_sid6)));
+            }, &fv::scope_attrs("", "data-v-56da6d99", fv_slot_id_4)));
             true
         })),
     }, " data-v-56da6d99"))?;
     fv_refusals.check(super::scoped_shelf::try_render_scoped(out, &super::scoped_shelf::Props {  }, super::scoped_shelf::Slots {
-        default: Some(fv::Slot::slotted(&|out: &mut String, fv_sid8: &str| -> bool {
+        default: Some(fv::Slot::slotted(&|out: &mut String, fv_slot_id_6: &str| -> bool {
             out.push_str("<mark data-v-56da6d99");
-            out.push_str(fv_sid8);
+            out.push_str(fv_slot_id_6);
             out.push_str(">shelved</mark>");
-            fv_refusals.join(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed("shelved")) }, &fv::scope_attrs("", "data-v-56da6d99", fv_sid8)));
+            fv_refusals.join(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed("shelved")) }, &fv::scope_attrs("", "data-v-56da6d99", fv_slot_id_6)));
             true
         })),
     }, " data-v-56da6d99"))?;
     fv_refusals.check(super::scoped_rack::try_render_scoped(out, &super::scoped_rack::Props {  }, super::scoped_rack::Slots {
-        default: Some(fv::Slot::slotted(&|out: &mut String, fv_sid9: &str| -> bool {
+        default: Some(fv::Slot::slotted(&|out: &mut String, fv_slot_id_7: &str| -> bool {
             out.push_str("<b data-v-56da6d99");
-            out.push_str(fv_sid9);
+            out.push_str(fv_slot_id_7);
             out.push_str(">racked</b>");
-            fv_refusals.join(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed("racked")) }, &fv::scope_attrs("", "data-v-56da6d99", fv_sid9)));
+            fv_refusals.join(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed("racked")) }, &fv::scope_attrs("", "data-v-56da6d99", fv_slot_id_7)));
             true
         })),
     }, " data-v-56da6d99"))?;

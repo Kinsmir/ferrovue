@@ -87,7 +87,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>)
     fv_refusals.check(super::scoped_link::try_render_scoped(out, &super::scoped_link::Props { to: std::borrow::Cow::Borrowed(&*props.href) }, fv_route, " data-v-f60bf031"))?;
     fv_refusals.check(super::scoped_card::try_render_scoped(out, &super::scoped_card::Props { tone: None }, super::scoped_card::Slots {
         title: None,
-        default: Some(fv::Slot::slotted(&|out: &mut String, fv_sid1: &str| -> bool {
+        default: Some(fv::Slot::slotted(&|out: &mut String, fv_slot_id: &str| -> bool {
             {
                 let fv_link = fv_route.link("/");
                 out.push_str("<a");
@@ -99,12 +99,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>)
                 out.push_str("\" class=\"");
                 fv::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
                 out.push('"');
-                out.push_str(&fv::scope_attrs("", "data-v-f60bf031", fv_sid1));
+                out.push_str(&fv::scope_attrs("", "data-v-f60bf031", fv_slot_id));
                 out.push_str(">home ");
                 fv::escape_into(out, &props.label);
                 out.push_str("</a>");
             }
-            fv_refusals.join(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed("carded")) }, &fv::scope_attrs("", "data-v-f60bf031", fv_sid1)));
+            fv_refusals.join(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed("carded")) }, &fv::scope_attrs("", "data-v-f60bf031", fv_slot_id)));
             true
         })),
         footer: None,

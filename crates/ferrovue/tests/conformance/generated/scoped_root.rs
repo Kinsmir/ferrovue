@@ -53,8 +53,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
 #[doc(hidden)]
 pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) -> Result<(), fv::Refused> {
     out.reserve(props.label.as_deref().map_or(0, str::len));
-    if let Some(n1) = props.label.as_deref().filter(|v| !v.is_empty()) {
-        super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed(n1)) }, &fv::scope_attrs(fv_attrs, "data-v-0f2ffa15", ""))?;
+    if let Some(fv_label) = props.label.as_deref().filter(|v| !v.is_empty()) {
+        super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed(fv_label)) }, &fv::scope_attrs(fv_attrs, "data-v-0f2ffa15", ""))?;
     } else {
         super::quiet_leaf::try_render_scoped(out, &super::quiet_leaf::Props { note: std::borrow::Cow::Borrowed("quiet") }, " data-v-0f2ffa15")?;
     }

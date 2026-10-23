@@ -71,23 +71,23 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
-    out.reserve(107 + 9 * props.words.len() + 64 * props.numbers.len() + 37 * props.groups.iter().map(|g| g.members.len()).sum::<usize>() + 73 * props.groups.len() + props.words.iter().map(|v| v.len()).sum::<usize>() + props.groups.iter().map(|v| v.name.len() + v.members.iter().map(|v| v.len()).sum::<usize>() + v.lead.as_deref().map_or(0, str::len)).sum::<usize>());
+    out.reserve(107 + 9 * props.words.len() + 64 * props.numbers.len() + 37 * props.groups.iter().map(|fv_g| fv_g.members.len()).sum::<usize>() + 73 * props.groups.len() + props.words.iter().map(|v| v.len()).sum::<usize>() + props.groups.iter().map(|v| v.name.len() + v.members.iter().map(|v| v.len()).sum::<usize>() + v.lead.as_deref().map_or(0, str::len)).sum::<usize>());
     out.push_str("<section><ul><!--[-->");
-    for w_ref in props.words.iter() {
-        let w: &str = w_ref;
+    for fv_w_ref in props.words.iter() {
+        let fv_w: &str = fv_w_ref;
         out.push_str("<li>");
-        fv::escape_into(out, w);
+        fv::escape_into(out, fv_w);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul><ol><!--[-->");
-    for (i, n_ref) in props.numbers.iter().enumerate() {
-        let n = *n_ref;
-        let i = i as i64;
+    for (fv_i, fv_n_ref) in props.numbers.iter().enumerate() {
+        let fv_n = *fv_n_ref;
+        let fv_i = fv_i as i64;
         out.push_str("<li data-index=\"");
-        fv::push_int(out, i);
+        fv::push_int(out, fv_i);
         out.push_str("\">");
-        fv::push_int(out, n);
-        if i as f64 == 0.0 {
+        fv::push_int(out, fv_n);
+        if fv_i as f64 == 0.0 {
             out.push_str("<!--[--> first<!--]-->");
         } else {
             out.push_str("<!---->");
@@ -95,28 +95,28 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ol><!--[-->");
-    for g_ref in props.groups.iter() {
-        let g = g_ref;
+    for fv_g_ref in props.groups.iter() {
+        let fv_g = fv_g_ref;
         out.push_str("<div class=\"group\"><h3>");
-        fv::escape_into(out, &g.name);
+        fv::escape_into(out, &fv_g.name);
         out.push_str(" (");
-        fv::push_int(out, g.members.len() as i64);
+        fv::push_int(out, fv_g.members.len() as i64);
         out.push_str(")</h3>");
-        if let Some(n1) = g.lead.as_deref().filter(|v| !v.is_empty()) {
+        if let Some(fv_lead) = fv_g.lead.as_deref().filter(|v| !v.is_empty()) {
             out.push_str("<b>");
-            fv::escape_into(out, n1);
+            fv::escape_into(out, fv_lead);
             out.push_str("</b>");
         } else {
             out.push_str("<!---->");
         }
         out.push_str("<!--[-->");
-        for (j, m_ref) in g.members.iter().enumerate() {
-            let m: &str = m_ref;
-            let j = j as i64;
+        for (fv_j, fv_m_ref) in fv_g.members.iter().enumerate() {
+            let fv_m: &str = fv_m_ref;
+            let fv_j = fv_j as i64;
             out.push_str("<!--[--><span>");
-            fv::push_int(out, j);
+            fv::push_int(out, fv_j);
             out.push(':');
-            fv::escape_into(out, m);
+            fv::escape_into(out, fv_m);
             out.push_str("</span>,<!--]-->");
         }
         out.push_str("<!--]--></div>");

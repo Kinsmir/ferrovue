@@ -68,17 +68,17 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push_str("<section><h2>");
     fv::escape_into(out, &props.title);
     out.push_str("</h2><ul><!--[-->");
-    for r_ref in s_rows.iter() {
-        let r = r_ref;
+    for fv_r_ref in s_rows.iter() {
+        let fv_r = fv_r_ref;
         out.push_str("<li>");
-        fv::escape_into(out, &r.name);
+        fv::escape_into(out, &fv_r.name);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul><!--[-->");
-    for u_ref in s_users.iter() {
-        let u = u_ref;
+    for fv_u_ref in s_users.iter() {
+        let fv_u = fv_u_ref;
         out.push_str("<p>");
-        fv::escape_into(out, &u.name);
+        fv::escape_into(out, &fv_u.name);
         out.push_str("</p>");
     }
     out.push_str("<!--]--><p>nothing picked 0 ");

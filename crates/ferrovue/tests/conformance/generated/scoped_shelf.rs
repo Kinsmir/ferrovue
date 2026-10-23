@@ -57,12 +57,12 @@ pub fn try_render_scoped(out: &mut String, _props: &Props, fv_slots: Slots<'_>, 
     out.push_str(" data-v-0ecc5987>");
     super::scoped_card::try_render_scoped(out, &super::scoped_card::Props { tone: None }, super::scoped_card::Slots {
         title: None,
-        default: Some(fv::Slot::slotted(&|out: &mut String, fv_sid1: &str| -> bool {
+        default: Some(fv::Slot::slotted(&|out: &mut String, fv_slot_id: &str| -> bool {
             let mut filled = false;
-            if fv::slot_into_slotted(out, fv_slots.default, &["data-v-0ecc5987-s", fv_sid1].concat(), Some(&mut |out: &mut String| {
+            if fv::slot_into_slotted(out, fv_slots.default, &["data-v-0ecc5987-s", fv_slot_id].concat(), Some(&mut |out: &mut String| {
                 filled = true;
                 out.push_str("shelf fallback <i data-v-0ecc5987");
-                out.push_str(fv_sid1);
+                out.push_str(fv_slot_id);
                 out.push_str(">here</i>");
             })) { filled = true; }
             filled

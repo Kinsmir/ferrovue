@@ -43,13 +43,13 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::Loads<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::Loads<'_>) -> Result<(), fv::Refused> {
     out.reserve(94 + props.warehouse.len());
     let Some(l_0) = fv_loads.get(super::loaders::LoadWarehouse { code: String::from(&*props.warehouse) }) else { return Ok(()); };
-    if let Some(n1) = l_0.as_ref() {
+    if let Some(fv_from) = l_0.as_ref() {
         out.push_str("<p class=\"shipping\">Ships from ");
-        fv::escape_into(out, &n1.city);
+        fv::escape_into(out, &fv_from.city);
         out.push_str(" in ");
-        fv::push_int(out, n1.days);
+        fv::push_int(out, fv_from.days);
         out.push(' ');
-        fv::escape_into(out, if n1.days as f64 == 1.0 { "day" } else { "days" });
+        fv::escape_into(out, if fv_from.days as f64 == 1.0 { "day" } else { "days" });
         out.push_str("</p>");
     } else {
         out.push_str("<p class=\"shipping\">Ships once it reaches us</p>");

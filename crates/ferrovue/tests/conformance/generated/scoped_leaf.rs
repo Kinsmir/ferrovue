@@ -53,18 +53,18 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
 #[doc(hidden)]
 pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) -> Result<(), fv::Refused> {
     out.reserve(89 + props.label.as_deref().map_or(0, str::len));
-    if let Some(n1) = props.label.as_deref().filter(|v| !v.is_empty()) {
+    if let Some(fv_label) = props.label.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<span class=\"leaf\"");
-        if n1.is_empty() {
+        if fv_label.is_empty() {
             out.push_str(" title");
         } else {
             out.push_str(" title=\"");
-            fv::escape_into(out, n1);
+            fv::escape_into(out, fv_label);
             out.push('"');
         }
         out.push_str(fv_attrs);
         out.push_str(" data-v-f1fc277f>");
-        fv::escape_into(out, n1);
+        fv::escape_into(out, fv_label);
         out.push_str("</span>");
     } else {
         out.push_str("<em");

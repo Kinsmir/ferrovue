@@ -53,12 +53,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provi
     out.push_str(if fv_inherited.wide.unwrap_or(false) { "true" } else { "false" });
     out.push_str("\">");
     fv_refusals.check(super::themed_list::try_render(out, &super::themed_list::Props { items: props.items.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect(), theme: std::borrow::Cow::Borrowed(&*props.theme), wide: props.items.len() as i64 as f64 > 1.0 }, super::themed_list::Slots {
-        row: Some(&|out: &mut String, fv_sp2: &super::themed_list::RowSlotProps<'_>, fv_sid1: &str, fv_provides: super::provides::Provides<'_>| -> bool {
-            fv_refusals.join(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed(&*format!("{}: {}", fv::Js(fv_sp2.index), fv_sp2.item)) }, fv_provides, &fv::scope_attrs("", "", fv_sid1)));
+        row: Some(&|out: &mut String, fv_slot_props: &super::themed_list::RowSlotProps<'_>, fv_slot_id: &str, fv_provides: super::provides::Provides<'_>| -> bool {
+            fv_refusals.join(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed(&*format!("{}: {}", fv::Js(fv_slot_props.index), fv_slot_props.item)) }, fv_provides, &fv::scope_attrs("", "", fv_slot_id)));
             true
         }),
-        default: Some(&|out: &mut String, fv_sid3: &str, fv_provides: super::provides::Provides<'_>| -> bool {
-            fv_refusals.join(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed("after") }, fv_provides, &fv::scope_attrs("", "", fv_sid3)));
+        default: Some(&|out: &mut String, fv_slot_id_2: &str, fv_provides: super::provides::Provides<'_>| -> bool {
+            fv_refusals.join(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed("after") }, fv_provides, &fv::scope_attrs("", "", fv_slot_id_2)));
             true
         }),
     }, fv_provides))?;

@@ -127,22 +127,22 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push('|');
     out.push_str(if fv_refusals.keep(fv::try_date_parse(&props.published), 19, 105) < fv::js_time_of(&props.posted) { "true" } else { "false" });
     out.push_str("</p>");
-    if let Some(n1) = props.edited.as_ref().map(fv::js_time_of) && n1 > fv::js_time_of(&props.posted) {
+    if let Some(fv_edited) = props.edited.as_ref().map(fv::js_time_of) && fv_edited > fv::js_time_of(&props.posted) {
         out.push_str("<p>edited later, ");
-        fv::escape_into(out, &fv::js_to_utc_string(n1));
+        fv::escape_into(out, &fv::js_to_utc_string(fv_edited));
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");
     }
     out.push_str("<ul><!--[-->");
-    for t_ref in props.times.iter() {
-        let t = *t_ref;
+    for fv_t_ref in props.times.iter() {
+        let fv_t = *fv_t_ref;
         out.push_str("<li class=\"");
-        fv::class_into(out, false, &[if fv::js_time_clip(t as f64) > fv::js_time_of(&props.due) { "late" } else { "" }]);
+        fv::class_into(out, false, &[if fv::js_time_clip(fv_t as f64) > fv::js_time_of(&props.due) { "late" } else { "" }]);
         out.push_str("\">");
-        fv::escape_into(out, &fv::js_to_utc_string(fv::js_time_clip(t as f64)));
+        fv::escape_into(out, &fv::js_to_utc_string(fv::js_time_clip(fv_t as f64)));
         out.push('|');
-        fv::escape_into(out, &fv::js_to_json(fv::js_time_clip(t as f64)).map(std::borrow::Cow::<str>::Owned).unwrap_or(std::borrow::Cow::<str>::Borrowed("invalid")));
+        fv::escape_into(out, &fv::js_to_json(fv::js_time_clip(fv_t as f64)).map(std::borrow::Cow::<str>::Owned).unwrap_or(std::borrow::Cow::<str>::Borrowed("invalid")));
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul></article>");

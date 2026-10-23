@@ -111,10 +111,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push('|');
     fv::push_int(out, props.tags.as_deref().unwrap_or(&[]).len() as i64);
     out.push_str("<!--[-->");
-    for t_ref in props.tags.as_deref().unwrap_or(&[]).iter() {
-        let t: &str = t_ref;
+    for fv_t_ref in props.tags.as_deref().unwrap_or(&[]).iter() {
+        let fv_t: &str = fv_t_ref;
         out.push_str("<b>");
-        fv::escape_into(out, t);
+        fv::escape_into(out, fv_t);
         out.push_str("</b>");
     }
     out.push_str("<!--]--></p>");

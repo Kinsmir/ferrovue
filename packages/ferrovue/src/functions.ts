@@ -119,6 +119,11 @@ const annotation = (p: N): N => (p?.type === "AssignmentPattern" ? p.left : p)?.
 
 let temps = 0;
 
+function paramHint(p: N | undefined): string {
+  const id = p?.type === "AssignmentPattern" ? p.left : p;
+  return id?.type === "Identifier" ? id.name : "arg";
+}
+
 /** A call of a function the server translates: its arguments evaluated in order at the call, each
  * bound once, then its body, with JavaScript's defaults for what is not passed. */
 export function callFunction(s: Scope, name: string, fn: Fn, args: N[], n: N): Val {
@@ -152,7 +157,7 @@ export function callFunction(s: Scope, name: string, fn: Fn, args: N[], n: N): V
     const body0 = bodyExpr(fn.home, node);
     let body: N = t ? typedBy(body0, t, true, home) : body0;
     for (let i = params.length - 1; i >= 0; i--) body = param(fn.home, params[i], i < given.length ? { v: given[i]!, name: names[i]! } : null, body);
-    const run = (i: number, inner: Scope): Val => (i === given.length ? expr(inner, body) : bound(inner, names[i]!, given[i]!, (next) => run(i + 1, next)));
+    const run = (i: number, inner: Scope): Val => (i === given.length ? expr(inner, body) : bound(inner, names[i]!, given[i]!, (next) => run(i + 1, next), paramHint(params[i])));
     return run(0, cs);
   } catch (e) {
     if (!(e instanceof GenError) || e.code === "FV1906" || e.code === "FV1907" || e.code === "FV1908") throw e;

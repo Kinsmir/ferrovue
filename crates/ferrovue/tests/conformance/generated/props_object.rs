@@ -99,10 +99,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     super::divider::try_render_scoped(out, &super::divider::Props {  }, &fv::Attrs::NONE)?;
     if props.tags.as_deref().unwrap_or(&[]).len() as i64 != 0 {
         out.push_str("<ul><!--[-->");
-        for t_ref in props.tags.as_deref().unwrap_or(&[]).iter() {
-            let t: &str = t_ref;
+        for fv_t_ref in props.tags.as_deref().unwrap_or(&[]).iter() {
+            let fv_t: &str = fv_t_ref;
             out.push_str("<li>");
-            fv::escape_into(out, t);
+            fv::escape_into(out, fv_t);
             out.push_str("</li>");
         }
         out.push_str("<!--]--></ul>");
@@ -111,9 +111,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         fv::escape_into(out, props.tone.as_deref().unwrap_or("plain"));
         out.push_str("</p>");
     }
-    if let Some(n1) = props.note.as_deref() {
+    if let Some(fv_note) = props.note.as_deref() {
         out.push_str("<em>");
-        fv::escape_into(out, n1);
+        fv::escape_into(out, fv_note);
         out.push_str("</em>");
     } else {
         out.push_str("<!---->");

@@ -166,20 +166,20 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> R
     super::tag_heading::try_render_scoped(out, &super::tag_heading::Props { r#as: Some(match props.level { TagGalleryLevel::H1 => super::tag_heading::TagHeadingAs::H1, TagGalleryLevel::H2 => super::tag_heading::TagHeadingAs::H2, TagGalleryLevel::H3 => super::tag_heading::TagHeadingAs::H3 }), text: std::borrow::Cow::Borrowed(&*props.title) }, super::tag_heading::Slots {
         default: Some(fv::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
-            if let Some(n1) = props.note.as_deref().filter(|v| !v.is_empty()) {
+            if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {
                 filled = true;
                 out.push_str("<em data-v-71d8588a>");
-                fv::escape_into(out, n1);
+                fv::escape_into(out, fv_note);
                 out.push_str("</em>");
             } else {
                 out.push_str("<!--v-if-->");
             }
             out.push_str("<!--[-->");
-            for w_cow in fv::js_split(&props.title, " ").into_iter() {
-                let w: &str = &w_cow;
+            for fv_w_cow in fv::js_split(&props.title, " ").into_iter() {
+                let fv_w: &str = &fv_w_cow;
                 filled = true;
                 out.push_str("<!--[-->");
-                fv::escape_into(out, w);
+                fv::escape_into(out, fv_w);
                 out.push_str("<!--]-->");
             }
             out.push_str("<!--]-->");
@@ -201,10 +201,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> R
         out.push_str("<ol class=\"");
         fv::class_into(out, false, &[if props.ordered { "ordered" } else { "" }]);
         out.push_str("\" data-v-71d8588a><!--[-->");
-        for w_cow in fv::js_split(&props.title, " ").into_iter() {
-            let w: &str = &w_cow;
+        for fv_w_cow_2 in fv::js_split(&props.title, " ").into_iter() {
+            let fv_w_2: &str = &fv_w_cow_2;
             out.push_str("<li data-v-71d8588a>");
-            fv::escape_into(out, w);
+            fv::escape_into(out, fv_w_2);
             out.push_str("</li>");
         }
         out.push_str("<!--]-->");
@@ -214,10 +214,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> R
         out.push_str("<ul class=\"");
         fv::class_into(out, false, &[if props.ordered { "ordered" } else { "" }]);
         out.push_str("\" data-v-71d8588a><!--[-->");
-        for w_cow in fv::js_split(&props.title, " ").into_iter() {
-            let w: &str = &w_cow;
+        for fv_w_cow_3 in fv::js_split(&props.title, " ").into_iter() {
+            let fv_w_3: &str = &fv_w_cow_3;
             out.push_str("<li data-v-71d8588a>");
-            fv::escape_into(out, w);
+            fv::escape_into(out, fv_w_3);
             out.push_str("</li>");
         }
         out.push_str("<!--]-->");
@@ -227,21 +227,21 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> R
     out.push_str("<h4 data-v-71d8588a>static ");
     fv::escape_into(out, &props.title);
     out.push_str("</h4>");
-    if let Some(n2) = props.note.as_deref().filter(|v| !v.is_empty()) {
-        let fv_tag3 = match props.level { TagGalleryLevel::H1 => "h1", TagGalleryLevel::H2 => "h2", TagGalleryLevel::H3 => "h3" };
+    if let Some(fv_note_2) = props.note.as_deref().filter(|v| !v.is_empty()) {
+        let fv_tag = match props.level { TagGalleryLevel::H1 => "h1", TagGalleryLevel::H2 => "h2", TagGalleryLevel::H3 => "h3" };
         out.push('<');
-        out.push_str(fv_tag3);
-        if n2.is_empty() {
+        out.push_str(fv_tag);
+        if fv_note_2.is_empty() {
             out.push_str(" data-note");
         } else {
             out.push_str(" data-note=\"");
-            fv::escape_into(out, n2);
+            fv::escape_into(out, fv_note_2);
             out.push('"');
         }
         out.push_str(" data-v-71d8588a>");
-        fv::escape_into(out, n2);
+        fv::escape_into(out, fv_note_2);
         out.push_str("</");
-        out.push_str(fv_tag3);
+        out.push_str(fv_tag);
         out.push('>');
     } else {
         out.push_str("<!---->");

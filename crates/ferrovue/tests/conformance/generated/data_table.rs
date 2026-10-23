@@ -48,30 +48,30 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.reserve(69 + props.rows.iter().map(|v| v.label.len() + v.tags.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>() + props.heading.len());
     let fv_refusals = fv::Refusals::new(NAME, "components/DataTable.vue");
     fv_refusals.check(super::data_list::try_render(out, &super::data_list::Props { rows: props.rows.to_owned(), title: std::borrow::Cow::Borrowed(&*props.heading), note: None }, super::data_list::Slots {
-        header: Some(&|out: &mut String, fv_sp1: &super::data_list::HeaderSlotProps<'_>| -> bool {
+        header: Some(&|out: &mut String, fv_slot_props: &super::data_list::HeaderSlotProps<'_>| -> bool {
             out.push_str("<h2");
-            if let Some(v) = fv_sp1.note {
+            if let Some(v) = fv_slot_props.note {
                 out.push_str(" title=\"");
                 fv::escape_into(out, v);
                 out.push('"');
             }
             out.push('>');
-            fv::escape_into(out, &fv_sp1.title.to_uppercase());
+            fv::escape_into(out, &fv_slot_props.title.to_uppercase());
             out.push_str("</h2>");
             true
         }),
-        row: Some(&|out: &mut String, fv_sp2: &super::data_list::RowSlotProps<'_>| -> bool {
+        row: Some(&|out: &mut String, fv_slot_props_2: &super::data_list::RowSlotProps<'_>| -> bool {
             let mut filled = false;
             if !props.compact {
                 filled = true;
-                fv_refusals.join(super::row_chip::try_render(out, &super::row_chip::Props { row: fv_sp2.row.to_owned(), first: fv_sp2.first }));
+                fv_refusals.join(super::row_chip::try_render(out, &super::row_chip::Props { row: fv_slot_props_2.row.to_owned(), first: fv_slot_props_2.first }));
             } else {
-                if fv_sp2.tags.len() as i64 != 0 {
+                if fv_slot_props_2.tags.len() as i64 != 0 {
                     filled = true;
                     out.push_str("<b data-index=\"");
-                    fv::push_int(out, fv_sp2.index);
+                    fv::push_int(out, fv_slot_props_2.index);
                     out.push_str("\">");
-                    fv::escape_into(out, &fv_sp2.row.label);
+                    fv::escape_into(out, &fv_slot_props_2.row.label);
                     out.push_str("</b>");
                 } else {
                     out.push_str("<!---->");
@@ -80,10 +80,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
             filled
         }),
         empty: None,
-        default: Some(&|out: &mut String, fv_sp3: &super::data_list::DefaultSlotProps<'_>| -> bool {
-            fv::push_int(out, fv_sp3.count);
+        default: Some(&|out: &mut String, fv_summary: &super::data_list::DefaultSlotProps<'_>| -> bool {
+            fv::push_int(out, fv_summary.count);
             out.push_str(" row(s) in ");
-            fv::escape_into(out, fv_sp3.title);
+            fv::escape_into(out, fv_summary.title);
             true
         }),
     }))?;

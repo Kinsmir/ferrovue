@@ -58,28 +58,28 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(80 + 7 * props.chips.len() + props.chips.iter().map(|v| v.len()).sum::<usize>());
     out.push_str("<span class=\"chips\"><!--[-->");
-    for c_ref in props.chips.iter() {
-        let c: &str = c_ref;
+    for fv_c_ref in props.chips.iter() {
+        let fv_c: &str = fv_c_ref;
         out.push_str("<b>");
-        fv::escape_into(out, c);
+        fv::escape_into(out, fv_c);
         out.push_str("</b>");
     }
     out.push_str("<!--]-->");
-    if let Some(n1) = props.counts.as_ref() {
+    if let Some(fv_counts) = props.counts.as_ref() {
         out.push_str("<i>");
-        fv::escape_into(out, &n1.iter().map(|v| fv::Js(*v).to_string()).collect::<Vec<_>>().join("+"));
+        fv::escape_into(out, &fv_counts.iter().map(|v| fv::Js(*v).to_string()).collect::<Vec<_>>().join("+"));
         out.push_str("</i>");
     } else {
         out.push_str("<!---->");
     }
-    if let Some(n2) = props.marks.as_ref() {
+    if let Some(fv_marks) = props.marks.as_ref() {
         out.push_str("<!--[-->");
-        for (k, m_ref) in n2.iter() {
-            let m = *m_ref;
+        for (fv_k, fv_m_ref) in fv_marks.iter() {
+            let fv_m = *fv_m_ref;
             out.push_str("<u title=\"");
-            fv::escape_into(out, k);
+            fv::escape_into(out, fv_k);
             out.push_str("\">");
-            fv::push_int(out, m);
+            fv::push_int(out, fv_m);
             out.push_str("</u>");
         }
         out.push_str("<!--]-->");

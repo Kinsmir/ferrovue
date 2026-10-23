@@ -56,9 +56,9 @@ describe("content Vue renders from virtual nodes", () => {
   it("keeps a bound style that hides by a test of its own", () => {
     expect(render(sfc(`tag: "b" | "i"; on: boolean; a: string`, `<component :is="tag"><span :style="on ? { color: a } : { display: 'none' }">x</span></component>`))).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(50 + 1 + props.a.len());
-    let fv_tag1 = match props.tag { XTag::B => "b", XTag::I => "i" };
+    let fv_tag = match props.tag { XTag::B => "b", XTag::I => "i" };
     out.push('<');
-    out.push_str(fv_tag1);
+    out.push_str(fv_tag);
     out.push_str("><span style=\\"");
     if props.on {
         out.push_str("color:");
@@ -69,7 +69,7 @@ describe("content Vue renders from virtual nodes", () => {
         out.push_str("display:none;");
     }
     out.push_str("\\">x</span></");
-    out.push_str(fv_tag1);
+    out.push_str(fv_tag);
     out.push('>');
     Ok(())
 }
@@ -79,9 +79,9 @@ describe("content Vue renders from virtual nodes", () => {
   it("keeps a bound style whose hidden branch holds more than display", () => {
     expect(render(sfc(`tag: "b" | "i"; on: boolean; a: string`, `<component :is="tag"><span :style="on ? null : { display: 'none', color: a }">x</span></component>`))).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(50 + 1 + props.a.len());
-    let fv_tag1 = match props.tag { XTag::B => "b", XTag::I => "i" };
+    let fv_tag = match props.tag { XTag::B => "b", XTag::I => "i" };
     out.push('<');
-    out.push_str(fv_tag1);
+    out.push_str(fv_tag);
     out.push_str("><span style=\\"");
     if !props.on {
         out.push_str("display:none;");
@@ -92,7 +92,7 @@ describe("content Vue renders from virtual nodes", () => {
         out.push(';');
     }
     out.push_str("\\">x</span></");
-    out.push_str(fv_tag1);
+    out.push_str(fv_tag);
     out.push('>');
     Ok(())
 }
@@ -102,15 +102,15 @@ describe("content Vue renders from virtual nodes", () => {
   it("keeps a bound style whose hidden branch sets another property to none", () => {
     expect(render(sfc(`tag: "b" | "i"; on: boolean; a: string`, `<component :is="tag"><span :style="on ? null : { color: 'none' }">x</span></component>`))).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(41 + 1 + props.a.len());
-    let fv_tag1 = match props.tag { XTag::B => "b", XTag::I => "i" };
+    let fv_tag = match props.tag { XTag::B => "b", XTag::I => "i" };
     out.push('<');
-    out.push_str(fv_tag1);
+    out.push_str(fv_tag);
     out.push_str("><span style=\\"");
     if !props.on {
         out.push_str("color:none;");
     }
     out.push_str("\\">x</span></");
-    out.push_str(fv_tag1);
+    out.push_str(fv_tag);
     out.push('>');
     Ok(())
 }
@@ -120,15 +120,15 @@ describe("content Vue renders from virtual nodes", () => {
   it("keeps a bound style whose hidden branch shows the element otherwise", () => {
     expect(render(sfc(`tag: "b" | "i"; on: boolean; a: string`, `<component :is="tag"><span :style="on ? null : { display: 'block' }">x</span></component>`))).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(44 + 1 + props.a.len());
-    let fv_tag1 = match props.tag { XTag::B => "b", XTag::I => "i" };
+    let fv_tag = match props.tag { XTag::B => "b", XTag::I => "i" };
     out.push('<');
-    out.push_str(fv_tag1);
+    out.push_str(fv_tag);
     out.push_str("><span style=\\"");
     if !props.on {
         out.push_str("display:block;");
     }
     out.push_str("\\">x</span></");
-    out.push_str(fv_tag1);
+    out.push_str(fv_tag);
     out.push('>');
     Ok(())
 }
@@ -163,11 +163,11 @@ describe("content Vue renders from virtual nodes", () => {
   it("keeps a selected option bound to a call with no arguments", () => {
     expect(render(sfc(`tag: "b" | "i"; label: string`, `<component :is="tag"><select><option :selected="label.trim()">x</option></select></component>`))).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(51 + 1 + props.label.len());
-    let fv_tag1 = match props.tag { XTag::B => "b", XTag::I => "i" };
+    let fv_tag = match props.tag { XTag::B => "b", XTag::I => "i" };
     out.push('<');
-    out.push_str(fv_tag1);
+    out.push_str(fv_tag);
     out.push_str("><select><option selected>x</option></select></");
-    out.push_str(fv_tag1);
+    out.push_str(fv_tag);
     out.push('>');
     Ok(())
 }
@@ -179,11 +179,11 @@ describe("content Vue renders from virtual nodes", () => {
 const on = ref(false);
 `))).toBe(`pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::Refused> {
     out.reserve(30 + 1);
-    let fv_tag1 = match props.tag { XTag::B => "b", XTag::I => "i" };
+    let fv_tag = match props.tag { XTag::B => "b", XTag::I => "i" };
     out.push('<');
-    out.push_str(fv_tag1);
+    out.push_str(fv_tag);
     out.push_str("><input type=\\"checkbox\\"></");
-    out.push_str(fv_tag1);
+    out.push_str(fv_tag);
     out.push('>');
     Ok(())
 }
@@ -193,11 +193,11 @@ const on = ref(false);
   it("lowercases the names of static attributes, keeps their values, and writes an empty value as the bare name, except for class", () => {
     expect(render(sfc(`tag: "b" | "i"`, `<component :is="tag"><i title="a B" data-Q class="" DATA-y="" id="">x</i></component>`))).toBe(`pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::Refused> {
     out.reserve(53 + 1);
-    let fv_tag1 = match props.tag { XTag::B => "b", XTag::I => "i" };
+    let fv_tag = match props.tag { XTag::B => "b", XTag::I => "i" };
     out.push('<');
-    out.push_str(fv_tag1);
+    out.push_str(fv_tag);
     out.push_str("><i title=\\"a B\\" data-q class=\\"\\" data-y id>x</i></");
-    out.push_str(fv_tag1);
+    out.push_str(fv_tag);
     out.push('>');
     Ok(())
 }
@@ -207,11 +207,11 @@ const on = ref(false);
   it("keeps markup inside comments as it is", () => {
     expect(render(sfc(`tag: "b" | "i"`, `<component :is="tag"><i>x<!-- a <i X=""> --><!-- b --><!-- <b Z=""> --></i></component>`))).toBe(`pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::Refused> {
     out.reserve(61 + 1);
-    let fv_tag1 = match props.tag { XTag::B => "b", XTag::I => "i" };
+    let fv_tag = match props.tag { XTag::B => "b", XTag::I => "i" };
     out.push('<');
-    out.push_str(fv_tag1);
+    out.push_str(fv_tag);
     out.push_str("><i>x<!-- a <i X=\\"\\"> --><!-- b --><!-- <b Z=\\"\\"> --></i></");
-    out.push_str(fv_tag1);
+    out.push_str(fv_tag);
     out.push('>');
     Ok(())
 }
@@ -640,17 +640,17 @@ describe("v-if", () => {
     if props.on {
         out.push_str("<li>x</li>");
     }
-    if let Some(n1) = props.a.as_deref().filter(|v| !v.is_empty()) {
+    if let Some(fv_a) = props.a.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<li>");
-        fv::escape_into(out, n1);
+        fv::escape_into(out, fv_a);
         out.push_str("</li>");
     }
     if !props.a.as_deref().is_some_and(|v| !v.is_empty()) {
         out.push_str("<li>no</li>");
     }
-    if let Some(n2) = props.a.as_deref().filter(|v| !v.is_empty()) && props.on {
+    if let Some(fv_a_2) = props.a.as_deref().filter(|v| !v.is_empty()) && props.on {
         out.push_str("<li>");
-        fv::escape_into(out, n2);
+        fv::escape_into(out, fv_a_2);
         out.push_str("</li>");
     }
     out.push_str("</ul>");
@@ -703,9 +703,9 @@ describe("v-if", () => {
     expect(render(sfc("a?: string", `<div><p v-if="a && true">{{ a }}</p></div>`))).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(25 + props.a.as_deref().map_or(0, str::len));
     out.push_str("<div>");
-    if let Some(n1) = props.a.as_deref().filter(|v| !v.is_empty()) {
+    if let Some(fv_a) = props.a.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<p>");
-        fv::escape_into(out, n1);
+        fv::escape_into(out, fv_a);
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");
@@ -720,17 +720,17 @@ describe("v-if", () => {
     expect(render(sfc("on: boolean; a?: string", `<div><p v-if="on && (a ? a.length : 0) > 1">y</p><p v-if="(a ? a.length : 0) > 1 || on">z</p><p v-if="a && (on || a.length > 2)">w</p></div>`))).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(56 + props.a.as_deref().map_or(0, str::len));
     out.push_str("<div>");
-    if props.on && (if let Some(n3) = props.a.as_deref().filter(|v| !v.is_empty()) { fv::js_length(n3) } else { 0i64 }) as f64 > 1.0 {
+    if props.on && (if let Some(fv_a) = props.a.as_deref().filter(|v| !v.is_empty()) { fv::js_length(fv_a) } else { 0i64 }) as f64 > 1.0 {
         out.push_str("<p>y</p>");
     } else {
         out.push_str("<!---->");
     }
-    if (if let Some(n5) = props.a.as_deref().filter(|v| !v.is_empty()) { fv::js_length(n5) } else { 0i64 }) as f64 > 1.0 || props.on {
+    if (if let Some(fv_a_2) = props.a.as_deref().filter(|v| !v.is_empty()) { fv::js_length(fv_a_2) } else { 0i64 }) as f64 > 1.0 || props.on {
         out.push_str("<p>z</p>");
     } else {
         out.push_str("<!---->");
     }
-    if let Some(n6) = props.a.as_deref().filter(|v| !v.is_empty()) && (props.on || fv::js_length(n6) as f64 > 2.0) {
+    if let Some(fv_a_3) = props.a.as_deref().filter(|v| !v.is_empty()) && (props.on || fv::js_length(fv_a_3) as f64 > 2.0) {
         out.push_str("<p>w</p>");
     } else {
         out.push_str("<!---->");

@@ -73,11 +73,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push('|');
     fv::push_number(out, fv::js_round(fv::js_parse_float(&props.input)));
     out.push_str("</p><p>");
-    fv::escape_into(out, &props.inputs.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_s1| fv::js_number(&fv_s1)).filter(|fv_a2| *fv_a2 > 0.0).map(|v| fv::Js(v).to_string()).collect::<Vec<_>>().join(", "));
+    fv::escape_into(out, &props.inputs.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_s| fv::js_number(&fv_s)).filter(|fv_x| *fv_x > 0.0).map(|v| fv::Js(v).to_string()).collect::<Vec<_>>().join(", "));
     out.push('|');
-    fv::escape_into(out, &props.inputs.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_s3| fv::js_parse_int(&fv_s3, 10)).map(|v| fv::Js(v).to_string()).collect::<Vec<_>>().join(","));
+    fv::escape_into(out, &props.inputs.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_s_2| fv::js_parse_int(&fv_s_2, 10)).map(|v| fv::Js(v).to_string()).collect::<Vec<_>>().join(","));
     out.push('|');
-    fv::escape_into(out, &props.inputs.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_s4| fv::js_parse_float(&fv_s4)).map(|v| fv::Js(v).to_string()).collect::<Vec<_>>().join(" "));
+    fv::escape_into(out, &props.inputs.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_s_3| fv::js_parse_float(&fv_s_3)).map(|v| fv::Js(v).to_string()).collect::<Vec<_>>().join(" "));
     out.push_str("</p><p>");
     fv::escape_into(out, &format!("[{}]", props.inputs.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| fv::js_json_string(&v)).collect::<Vec<_>>().join(",")));
     out.push('|');

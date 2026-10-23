@@ -98,12 +98,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_r
         out.push_str("<p>Loading reviews…</p>");
     }));
     out.push_str("<nav class=\"featured\"><!--[-->");
-    for book_ref in props.books.iter() {
-        let book = book_ref;
+    for fv_book_ref in props.books.iter() {
+        let fv_book = fv_book_ref;
         {
             let fv_link = {
                 let mut fv_search = String::new();
-                fv::query_into(&mut fv_search, "featured", &book.id);
+                fv::query_into(&mut fv_search, "featured", &fv_book.id);
                 fv_route.link_named("/picks", &[], &fv_search, "")
             };
             out.push_str("<a");
@@ -115,7 +115,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_r
             out.push_str("\" class=\"");
             fv::class_into(out, false, &[if fv_link.exact { "active" } else { "" }]);
             out.push_str("\">");
-            fv::escape_into(out, &book.title);
+            fv::escape_into(out, &fv_book.title);
             out.push_str("</a>");
         }
     }

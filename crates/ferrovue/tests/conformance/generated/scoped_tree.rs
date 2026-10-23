@@ -56,9 +56,9 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) ->
     fv::escape_into(out, &props.label);
     if props.children.len() as i64 != 0 {
         out.push_str("<ul data-v-c34199e4><!--[-->");
-        for c_ref in props.children.iter() {
-            let c = c_ref;
-            super::scoped_tree::try_render_scoped(out, c, " data-v-c34199e4")?;
+        for fv_c_ref in props.children.iter() {
+            let fv_c = fv_c_ref;
+            super::scoped_tree::try_render_scoped(out, fv_c, " data-v-c34199e4")?;
         }
         out.push_str("<!--]--></ul>");
     } else {

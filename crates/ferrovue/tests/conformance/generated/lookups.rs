@@ -121,9 +121,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     } else {
         out.push_str("<p>no icon</p>");
     }
-    if let Some(n2) = (match props.level { 1 => Some("first"), 2 => Some("second"), _ => None }).filter(|v| !v.is_empty()) {
+    if let Some(fv_steps) = (match props.level { 1 => Some("first"), 2 => Some("second"), _ => None }).filter(|v| !v.is_empty()) {
         out.push_str("<b>");
-        fv::escape_into(out, n2);
+        fv::escape_into(out, fv_steps);
         out.push_str("</b>");
     } else {
         out.push_str("<!---->");
@@ -131,16 +131,16 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push_str("<i>");
     fv::escape_into(out, (match props.level { 1 => Some("first"), 2 => Some("second"), _ => None }).unwrap_or("later"));
     out.push_str("</i><ul><!--[-->");
-    for b_ref in props.badges.iter() {
-        let b = b_ref;
+    for fv_b_ref in props.badges.iter() {
+        let fv_b = fv_b_ref;
         out.push_str("<li class=\"");
-        fv::class_into(out, false, &[if !matches!(b.tone, super::types::Tone::Info | super::types::Tone::Warn) { "dark" } else { "" }]);
+        fv::class_into(out, false, &[if !matches!(fv_b.tone, super::types::Tone::Info | super::types::Tone::Warn) { "dark" } else { "" }]);
         out.push_str("\" style=\"font-weight:");
-        fv::push_number(out, match b.tone { super::types::Tone::Info => 400.0f64, super::types::Tone::Warn => 600.0f64, super::types::Tone::Danger => 700.5f64 });
+        fv::push_number(out, match fv_b.tone { super::types::Tone::Info => 400.0f64, super::types::Tone::Warn => 600.0f64, super::types::Tone::Danger => 700.5f64 });
         out.push_str(";\">");
         fv::escape_into(out, match props.size { super::types::Size::Sm => "Small", super::types::Size::Md => "Medium & <more>", super::types::Size::Lg => "Large \"L\"" });
         out.push_str(": ");
-        fv::escape_into(out, &b.text);
+        fv::escape_into(out, &fv_b.text);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul></section>");

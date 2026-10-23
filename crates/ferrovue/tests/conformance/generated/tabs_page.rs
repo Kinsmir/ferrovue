@@ -59,9 +59,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provi
     fv_refusals.check(super::tabs::try_render(out, &super::tabs::Props { active: std::borrow::Cow::Borrowed(&*props.active), count: props.names.len() as i64, title: std::borrow::Cow::Borrowed("outer") }, super::tabs::Slots {
         default: Some(&|out: &mut String, fv_provides: super::provides::Provides<'_>| -> bool {
             out.push_str("<!--[-->");
-            for n_ref in props.names.iter() {
-                let n: &str = n_ref;
-                fv_refusals.join(super::tab::try_render(out, &super::tab::Props { name: std::borrow::Cow::Borrowed(n), title: std::borrow::Cow::Borrowed(n) }, fv_provides));
+            for fv_n_ref in props.names.iter() {
+                let fv_n: &str = fv_n_ref;
+                fv_refusals.join(super::tab::try_render(out, &super::tab::Props { name: std::borrow::Cow::Borrowed(fv_n), title: std::borrow::Cow::Borrowed(fv_n) }, fv_provides));
             }
             out.push_str("<!--]-->");
             fv_refusals.join(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed("in a slot") }, fv_provides, ""));

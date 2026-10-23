@@ -1,5 +1,6 @@
 import { type Component, type Fn, type N, type Scope, type Val, fail, GenError, nothing } from "./model.ts";
 import { ctx } from "./context.ts";
+import { fresh, jsHint } from "./names.ts";
 import { expr, typedBy } from "./expr.ts";
 import { collected, heldList } from "./lists.ts";
 import { atom, bare, occurrences, operand, UNARY } from "./parens.ts";
@@ -8,6 +9,8 @@ import { asCow, heldStr, isTemporary } from "./strings.ts";
 import { intFromF64, isCast } from "./numbers.ts";
 import { ownedStruct, ownedStructs } from "./objects.ts";
 import { mutableLet } from "./statements.ts";
+
+const DESTRUCTURED = "the destructured value";
 
 const COW = "std::borrow::Cow::<str>";
 
@@ -459,7 +462,8 @@ class Desugar {
     const inner = this.loopBody(this.branch(st.body), null, st);
     const body = pattern ? this.pattern(pattern, { type: "Identifier", name: item, ...spot(right) }, inner, d) : inner;
     const over = entries ? right.callee.object : right;
-    return { type: "FvLoop", kind: "of", over, entries, item, index, body, after: this.go(after, st), states, nested, ...spot(st) };
+    const itemHint = pattern?.type === "Identifier" ? (pattern.fvName ?? pattern.name) : "item";
+    return { type: "FvLoop", kind: "of", over, entries, item, itemHint, index, body, after: this.go(after, st), states, nested, ...spot(st) };
   }
 
   private forCount(st: N, after: Cont | null): N {
@@ -543,7 +547,7 @@ class Desugar {
         }
         for (const [q] of parts) if (q.type === "AssignmentPattern") fail(this.comp, "FV1901", "a default in a destructuring pattern, which applies to `undefined` alone: write `?? fallback` where it is read", q);
         const inner = parts.reduceRight((acc: N, [q, v]) => this.pattern(q, v, acc, d), body);
-        return { type: "FvLet", name: tmp, js: "the destructured value", init: value, body: inner, ...spot(d) };
+        return { type: "FvLet", name: tmp, js: DESTRUCTURED, init: value, body: inner, ...spot(d) };
       }
       default:
         return fail(this.comp, "FV1901", "a declaration binds a name, or an object or array pattern of names", p);
@@ -651,13 +655,13 @@ export function letIn(s: Scope, n: N): Val {
     fn.captured = inner;
     return expr(inner, n.body);
   }
-  return bound(s, n.name, expr(s, n.init), (inner) => expr(inner, n.body));
+  return bound(s, n.name, expr(s, n.init), (inner) => expr(inner, n.body), n.js === DESTRUCTURED ? "destructured" : jsHint(n.js));
 }
 
 /** `v` bound once to `name` for `body`, which is given the scope that reads it. */
-export function bound(s: Scope, local: string, v: Val, then: (inner: Scope) => Val): Val {
+export function bound(s: Scope, local: string, v: Val, then: (inner: Scope) => Val, hint: string = jsHint(local)): Val {
   if (simple(v)) return then({ ...s, locals: new Map(s.locals).set(local, v) });
-  const name = `fv_c${++ctx.narrowCount}`;
+  const name = fresh("c", hint);
   const { init, read, owned } = bindingOf(v);
   const held = read(name);
   const body = then({ ...s, locals: new Map(s.locals).set(local, held) });

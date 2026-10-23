@@ -68,10 +68,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         })),
         footer: Some(fv::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
-            if let Some(n1) = props.footer.as_deref().filter(|v| !v.is_empty()) {
+            if let Some(fv_footer) = props.footer.as_deref().filter(|v| !v.is_empty()) {
                 filled = true;
                 out.push_str("<span>");
-                fv::escape_into(out, n1);
+                fv::escape_into(out, fv_footer);
                 out.push_str("</span>");
             } else {
                 out.push_str("<!---->");
@@ -80,9 +80,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         })),
     }))?;
     out.push_str("<!--[-->");
-    for p_ref in props.panels.iter() {
-        let p = p_ref;
-        fv_refusals.check(super::panel::try_render(out, p, super::panel::Slots {
+    for fv_p_ref in props.panels.iter() {
+        let fv_p = fv_p_ref;
+        fv_refusals.check(super::panel::try_render(out, fv_p, super::panel::Slots {
             title: None,
             default: Some(fv::Slot::new(&|out: &mut String| {
                 fv_refusals.join(super::frame::try_render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed(&*props.heading) }, super::frame::Slots {
@@ -90,11 +90,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
                     default: Some(fv::Slot::markup(&|out: &mut String| -> bool {
                         let mut filled = false;
                         out.push_str("<!--[-->");
-                        for w_ref in props.words.iter() {
-                            let w: &str = w_ref;
+                        for fv_w_ref in props.words.iter() {
+                            let fv_w: &str = fv_w_ref;
                             filled = true;
                             out.push_str("<i>");
-                            fv::escape_into(out, w);
+                            fv::escape_into(out, fv_w);
                             out.push_str("</i>");
                         }
                         out.push_str("<!--]-->");
@@ -112,11 +112,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
             let mut filled = false;
             if props.words.len() as i64 != 0 {
                 out.push_str("<!--[-->");
-                for w_ref in props.words.iter() {
-                    let w: &str = w_ref;
+                for fv_w_ref_2 in props.words.iter() {
+                    let fv_w_2: &str = fv_w_ref_2;
                     filled = true;
                     out.push_str("<b>");
-                    fv::escape_into(out, w);
+                    fv::escape_into(out, fv_w_2);
                     out.push_str("</b>");
                 }
                 out.push_str("<!--]-->");

@@ -105,7 +105,7 @@ describe("loaders", () => {
     expect(types).toContain('    #[serde(rename = "by", with = "fv::dates_in")]\n    pub by: ferrovue::Record<\'a, ferrovue::JsDate>,');
     const x = out.get("x.rs")!;
     expect(x).toContain("fv::push_number(out, fv::js_time_of(l_0));");
-    expect(x).toContain("fv_refusals.keep(fv::try_to_iso_string(fv::js_time_of(&s.at)), 8, 64)");
+    expect(x).toContain("fv_refusals.keep(fv::try_to_iso_string(fv::js_time_of(&fv_s.at)), 8, 64)");
     expect(x).toContain("l_2.as_ref().map(|v| v.iter().map(fv::js_time_of).collect::<Vec<_>>())");
   });
 

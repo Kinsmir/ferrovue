@@ -13,6 +13,7 @@ import { slotFieldBorrows, slotFieldTy, slotTypeName } from "./slots.ts";
 import { extraParams, fieldInit, takesSlots } from "./children.ts";
 import { paramsOf, type RenderParam, renderParams, slotContextOf, slotFieldsOf } from "./plugin.ts";
 import { scopeFor } from "./script.ts";
+import { readable } from "./names.ts";
 
 export function needsLifetime(ty: Ty, comp: Component, seen: Set<string> = new Set()): boolean {
   switch (ty.k) {
@@ -234,7 +235,7 @@ function renderSource(comp: Component, life: string, args: string, e: Emitter): 
     return occurrences(before.join("\n"), name) === 0;
   };
   const params = `out: &mut String, props: &Props${life}${extraParams(comp)}`;
-  const body = e.lines.join("\n");
+  const body = readable(e.lines.join("\n"));
   const result = "Result<(), fv::Refused>";
   if (!comp.inherits && !takesAttrs(comp)) {
     return `${RENDER_DOC}${manyArgs(2 + count)}pub fn render(${params}) {

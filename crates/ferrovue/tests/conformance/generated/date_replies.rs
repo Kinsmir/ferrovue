@@ -44,38 +44,38 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.reserve(25 + 134 * props.replies.len() + props.replies.iter().map(|v| v.author.len()).sum::<usize>());
     let fv_refusals = fv::Refusals::new(NAME, "components/DateReplies.vue");
     out.push_str("<ul><!--[-->");
-    for reply_ref in props.replies.iter() {
-        let reply = reply_ref;
+    for fv_reply_ref in props.replies.iter() {
+        let fv_reply = fv_reply_ref;
         out.push_str("<li><b>");
-        fv::escape_into(out, &reply.author);
+        fv::escape_into(out, &fv_reply.author);
         out.push_str("</b>");
-        if !fv::js_time_of(&reply.at).is_nan() {
+        if !fv::js_time_of(&fv_reply.at).is_nan() {
             out.push_str("<time datetime=\"");
-            fv::escape_into(out, &fv_refusals.keep(fv::try_to_iso_string(fv::js_time_of(&reply.at)), 11, 73));
+            fv::escape_into(out, &fv_refusals.keep(fv::try_to_iso_string(fv::js_time_of(&fv_reply.at)), 11, 73));
             out.push_str("\">");
-            fv::push_number(out, fv::js_utc_date(fv::js_time_of(&reply.at)));
+            fv::push_number(out, fv::js_utc_date(fv::js_time_of(&fv_reply.at)));
             out.push_str("</time>");
         } else {
             out.push_str("<i>");
-            fv::push_number(out, fv::js_time_of(&reply.at));
+            fv::push_number(out, fv::js_time_of(&fv_reply.at));
             out.push_str("</i>");
         }
-        if let Some(n1) = reply.edited.as_ref().map(fv::js_time_of) && n1 > fv::js_time_of(&reply.at) {
+        if let Some(fv_edited) = fv_reply.edited.as_ref().map(fv::js_time_of) && fv_edited > fv::js_time_of(&fv_reply.at) {
             out.push_str("<span>edited ");
-            fv::push_number(out, fv::js_utc_minutes(n1));
+            fv::push_number(out, fv::js_utc_minutes(fv_edited));
             out.push_str("</span>");
         } else {
             out.push_str("<!---->");
         }
-        if let Some(n2) = reply.removed.as_ref().map(fv::js_time_of) {
+        if let Some(fv_removed) = fv_reply.removed.as_ref().map(fv::js_time_of) {
             out.push_str("<span>removed ");
-            fv::push_number(out, fv::js_utc_full_year(n2));
+            fv::push_number(out, fv::js_utc_full_year(fv_removed));
             out.push_str("</span>");
         } else {
             out.push_str("<!---->");
         }
-        if (props.depth as f64) < 2.0 && reply.replies.len() as i64 != 0 {
-            fv_refusals.check(super::date_replies::try_render(out, &super::date_replies::Props { replies: reply.replies.to_owned(), depth: fv_refusals.keep(fv::try_int(props.depth as f64 + 1.0), 15, 94) }))?;
+        if (props.depth as f64) < 2.0 && fv_reply.replies.len() as i64 != 0 {
+            fv_refusals.check(super::date_replies::try_render(out, &super::date_replies::Props { replies: fv_reply.replies.to_owned(), depth: fv_refusals.keep(fv::try_int(props.depth as f64 + 1.0), 15, 94) }))?;
         } else {
             out.push_str("<!---->");
         }

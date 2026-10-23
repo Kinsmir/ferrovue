@@ -15,6 +15,7 @@ import { resolveImport } from "./resolve.ts";
 import { setupSource } from "./script.ts";
 import { slotBody } from "./slots.ts";
 import { push, statements } from "./template.ts";
+import { fresh } from "./names.ts";
 
 type Choice = { tag: string } | { local: string; child: string };
 
@@ -377,7 +378,7 @@ function renderPick(s: Scope, e: Emitter, p: Pick, d: Dynamic): void {
   const { subject, pattern, last } = matchOver(s.comp, v, p.arms.map(([key]) => key));
   const head = (keys: string[], i: number): string => (i === groups.length - 1 ? last(keys) : pattern(keys));
   if (tags.every((t) => t !== null && !isVoidTag(t))) {
-    const name = `fv_tag${++ctx.narrowCount}`;
+    const name = fresh("tag", "tag");
     const arms = groups.map(([keys], i) => `${head(keys, i)} => ${rustStr(tags[i]!)}`);
     e.stmt(`let ${name} = match ${subject} { ${arms.join(", ")} };`);
     e.expect(Math.max(...tags.map((t) => t!.length)) * 2);

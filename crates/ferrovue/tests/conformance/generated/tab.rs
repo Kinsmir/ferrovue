@@ -44,9 +44,9 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides:
 /// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::Refused> {
     out.reserve(98 + props.name.len() + props.title.len());
-    if fv_provides.tabs_key.map(|fv_o2| &*fv_o2.active) == Some(&*props.name) {
+    if fv_provides.tabs_key.map(|fv_tabs| &*fv_tabs.active) == Some(&*props.name) {
         out.push_str("<section class=\"tab active\"");
-        if let Some(v) = fv_provides.tabs_key.map(|fv_o3| fv_o3.count) {
+        if let Some(v) = fv_provides.tabs_key.map(|fv_tabs_2| fv_tabs_2.count) {
             out.push_str(" data-of=\"");
             fv::push_int(out, v);
             out.push('"');

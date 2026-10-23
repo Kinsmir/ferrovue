@@ -93,10 +93,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push_str(")</p>");
     if s_panels.len() as i64 != 0 {
         out.push_str("<p><!--[-->");
-        for panel_ref in s_panels.iter() {
-            let panel = panel_ref;
+        for fv_panel_ref in s_panels.iter() {
+            let fv_panel = fv_panel_ref;
             out.push_str("<b>");
-            fv::escape_into(out, &panel.title);
+            fv::escape_into(out, &fv_panel.title);
             out.push_str("</b>");
         }
         out.push_str("<!--]--></p>");
@@ -104,12 +104,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         out.push_str("<!---->");
     }
     out.push_str("<ul><!--[-->");
-    for item_ref in props.items.iter() {
-        let item = item_ref;
+    for fv_item_ref in props.items.iter() {
+        let fv_item = fv_item_ref;
         out.push_str("<li>#");
-        fv::push_int(out, item.id);
+        fv::push_int(out, fv_item.id);
         out.push(' ');
-        fv::escape_into(out, &item.name);
+        fv::escape_into(out, &fv_item.name);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul></section>");

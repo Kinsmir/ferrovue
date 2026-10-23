@@ -66,16 +66,16 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::Refused> {
     }
     out.push('>');
     fv::push_number(out, fv::js_utc_full_year(fv::js_time_of(&props.at)));
-    if let Some(n1) = props.edited.as_ref().map(fv::js_time_of) {
+    if let Some(fv_edited) = props.edited.as_ref().map(fv::js_time_of) {
         out.push_str("<b>");
-        fv::push_number(out, n1);
+        fv::push_number(out, fv_edited);
         out.push_str("</b>");
     } else {
         out.push_str("<!---->");
     }
-    if let Some(n2) = props.deleted.as_ref().map(fv::js_time_of) {
+    if let Some(fv_deleted) = props.deleted.as_ref().map(fv::js_time_of) {
         out.push_str("<i>");
-        fv::push_number(out, fv::js_utc_date(n2));
+        fv::push_number(out, fv::js_utc_date(fv_deleted));
         out.push_str("</i>");
     } else {
         out.push_str("<!---->");

@@ -61,9 +61,9 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(254 + 37 * props.inputs.len() + props.inputs.iter().map(|v| v.len()).sum::<usize>());
-    let s_parsed = props.inputs.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_s1| fv::js_number(&fv_s1)).collect::<Vec<_>>();
+    let s_parsed = props.inputs.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_s| fv::js_number(&fv_s)).collect::<Vec<_>>();
     let s_finite = (props.x / props.n as f64).is_finite();
-    let s_kept = s_parsed.iter().copied().filter(|fv_a2| !fv_a2.is_nan() && fv_a2.is_finite()).collect::<Vec<_>>();
+    let s_kept = s_parsed.iter().copied().filter(|fv_v| !fv_v.is_nan() && fv_v.is_finite()).collect::<Vec<_>>();
     out.push_str("<section><p>false|true|true|");
     out.push_str(if (-9_007_199_254_740_991..=9_007_199_254_740_991).contains(&props.n) { "true" } else { "false" });
     out.push_str("|false|true</p><p>");
@@ -115,38 +115,38 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         }
     }
     out.push_str("<ul><!--[-->");
-    for s_ref in props.inputs.iter() {
-        let s: &str = s_ref;
+    for fv_s_ref in props.inputs.iter() {
+        let fv_s_2: &str = fv_s_ref;
         out.push_str("<li class=\"");
-        fv::class_into(out, false, &[if fv::js_number(s).is_nan() { "nan" } else { "" }, if fv::js_number(s).fract() == 0.0 { "whole" } else { "" }]);
+        fv::class_into(out, false, &[if fv::js_number(fv_s_2).is_nan() { "nan" } else { "" }, if fv::js_number(fv_s_2).fract() == 0.0 { "whole" } else { "" }]);
         out.push_str("\">");
-        fv::escape_into(out, s);
+        fv::escape_into(out, fv_s_2);
         out.push_str(" is ");
-        fv::push_number(out, fv::js_number(s));
+        fv::push_number(out, fv::js_number(fv_s_2));
         out.push_str(": ");
-        out.push_str(if fv::js_number(s).is_nan() { "true" } else { "false" });
+        out.push_str(if fv::js_number(fv_s_2).is_nan() { "true" } else { "false" });
         out.push('|');
-        out.push_str(if fv::js_number(s).is_finite() { "true" } else { "false" });
+        out.push_str(if fv::js_number(fv_s_2).is_finite() { "true" } else { "false" });
         out.push('|');
-        out.push_str(if fv::js_number(s).fract() == 0.0 { "true" } else { "false" });
+        out.push_str(if fv::js_number(fv_s_2).fract() == 0.0 { "true" } else { "false" });
         out.push('|');
-        out.push_str(if matches!(fv::js_number(s), v if v.fract() == 0.0 && v.abs() <= 9_007_199_254_740_991.0) { "true" } else { "false" });
+        out.push_str(if matches!(fv::js_number(fv_s_2), v if v.fract() == 0.0 && v.abs() <= 9_007_199_254_740_991.0) { "true" } else { "false" });
         out.push('|');
-        out.push_str(if fv::js_number(s).is_nan() { "true" } else { "false" });
+        out.push_str(if fv::js_number(fv_s_2).is_nan() { "true" } else { "false" });
         out.push('|');
-        out.push_str(if fv::js_parse_float(s).is_finite() { "true" } else { "false" });
+        out.push_str(if fv::js_parse_float(fv_s_2).is_finite() { "true" } else { "false" });
         out.push('|');
-        out.push_str(if !fv::js_number(s).is_nan() && fv::js_number(s) > 0.0 { "true" } else { "false" });
+        out.push_str(if !fv::js_number(fv_s_2).is_nan() && fv::js_number(fv_s_2) > 0.0 { "true" } else { "false" });
         out.push('|');
-        out.push_str(if fv::js_number(s).is_finite() || fv::js_number(s).is_nan() { "true" } else { "false" });
+        out.push_str(if fv::js_number(fv_s_2).is_finite() || fv::js_number(fv_s_2).is_nan() { "true" } else { "false" });
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul><p>");
     fv::escape_into(out, &s_kept.iter().copied().map(|v| fv::Js(v).to_string()).collect::<Vec<_>>().join(", "));
     out.push('|');
-    out.push_str(if s_parsed.iter().copied().any(|fv_a3| fv_a3.is_nan()) { "true" } else { "false" });
+    out.push_str(if s_parsed.iter().copied().any(|fv_v_2| fv_v_2.is_nan()) { "true" } else { "false" });
     out.push('|');
-    fv::push_int(out, s_parsed.iter().copied().filter(|fv_a4| matches!(*fv_a4, v if v.fract() == 0.0 && v.abs() <= 9_007_199_254_740_991.0)).count() as i64);
+    fv::push_int(out, s_parsed.iter().copied().filter(|fv_v_3| matches!(*fv_v_3, v if v.fract() == 0.0 && v.abs() <= 9_007_199_254_740_991.0)).count() as i64);
     out.push_str("</p></section>");
     Ok(())
 }

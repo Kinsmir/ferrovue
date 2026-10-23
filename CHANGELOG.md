@@ -204,6 +204,14 @@ released together and share version numbers.
   the conformance suite, `Catalog`'s `enum Tone` is `Volume`, so that it no longer shares a name
   with `Lookups`'s, its `empty` and `hostile` fixtures give it members of the union, and
   `FallSwitch`'s `hostile` fixture, a value outside its union, is gone.
+- Generated code names its locals after the JavaScript names they hold: `let sum` is `fv_sum`,
+  `for (const r of rows)` binds `fv_r` and `v-for="item in items"` binds `fv_item`, where a counter
+  numbered them before (`fv_m1`, `fv_a3`, `n2`, and a bare `item` for a `v-for` item). A value the
+  compiler makes for itself is named by its role (`fv_returned`, `fv_next_a`, `fv_tag`,
+  `fv_slot_props`), and a name a function holds already takes `_2`, `_3`, …, counted per function,
+  so an edit to one component or one part of a template keeps the names of the locals it leaves
+  alone. Only Rust identifiers change: every render writes what it wrote, and generated code calls
+  no new crate item. The guide's page on generated code describes the scheme.
 - CI only: the jobs that run one Node.js, the release, the canary and the release dry run among them,
   run Node 26, the active LTS from 2026-10-28, where they ran Node 24. The test matrix still runs
   Node 22.18, 22, 24 and 26.

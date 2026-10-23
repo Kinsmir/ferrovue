@@ -37,9 +37,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.reserve(47 + props.label.as_deref().map_or(0, str::len));
     out.push_str("<span class=\"badge\">");
     fv::escape_into(out, props.label.as_deref().unwrap_or("new"));
-    if let Some(n1) = props.count.filter(|v| *v != 0) {
+    if let Some(fv_count) = props.count.filter(|v| *v != 0) {
         out.push_str("<b>");
-        fv::push_int(out, n1);
+        fv::push_int(out, fv_count);
         out.push_str("</b>");
     } else {
         out.push_str("<!---->");

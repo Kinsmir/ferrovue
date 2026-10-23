@@ -63,9 +63,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> R
     out.push_str("<section class=\"panel\"><header>");
     fv::slot_into(out, fv_slots.title, Some(&mut |out: &mut String| {
         fv::escape_into(out, &props.title);
-        if let Some(n1) = props.count {
+        if let Some(fv_count) = props.count {
             out.push_str("<small> (");
-            fv::push_int(out, n1);
+            fv::push_int(out, fv_count);
             out.push_str(")</small>");
         } else {
             out.push_str("<!---->");

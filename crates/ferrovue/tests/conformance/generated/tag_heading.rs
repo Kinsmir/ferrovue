@@ -114,9 +114,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> R
 #[doc(hidden)]
 pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_attrs: &fv::Attrs<'_>) -> Result<(), fv::Refused> {
     out.reserve(40 + 2 + props.text.len());
-    let fv_tag1 = match props.r#as.unwrap_or(TagHeadingAs::H2) { TagHeadingAs::H1 => "h1", TagHeadingAs::H2 => "h2", TagHeadingAs::H3 => "h3" };
+    let fv_tag = match props.r#as.unwrap_or(TagHeadingAs::H2) { TagHeadingAs::H1 => "h1", TagHeadingAs::H2 => "h2", TagHeadingAs::H3 => "h3" };
     out.push('<');
-    out.push_str(fv_tag1);
+    out.push_str(fv_tag);
     if fv_attrs.is_empty() {
         out.push_str(" class=\"heading\"");
         if props.text.is_empty() {
@@ -134,7 +134,7 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_
     fv::slot_into(out, fv_slots.default, None);
     fv::escape_into(out, &props.text);
     out.push_str("</");
-    out.push_str(fv_tag1);
+    out.push_str(fv_tag);
     out.push('>');
     Ok(())
 }

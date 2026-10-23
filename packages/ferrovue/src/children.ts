@@ -16,6 +16,7 @@ import { claim, paramsOf, slotContextOf, slotFieldsOf } from "./plugin.ts";
 import { statements } from "./template.ts";
 import { slotContent, slotFieldBorrows, staticallyFilled } from "./slots.ts";
 import { slotAsVnodes } from "./dynamic.ts";
+import { fresh, jsHint } from "./names.ts";
 
 /** A component the project renders with a Rust function of its own, in place of a compiled one. */
 export interface TwinCall {
@@ -301,7 +302,7 @@ export function callWith(s: Scope, e: Emitter, child: Component, m: string, head
     const asVnodes = vnode || s.vnode || slotAsVnodes(child, name);
     const shape = child.slotShapes.get(name);
     const takesNone = param?.type === "Identifier" && param.name === "_";
-    const sid = child.passesSlotIds ? `fv_sid${++ctx.narrowCount}` : null;
+    const sid = child.passesSlotIds ? fresh("sid", "slot_id") : null;
     const sidParam = sid === null ? "" : `, ${sid}: &str`;
     const content = (inner: Scope): void => {
       if (staticallyFilled(body)) {
@@ -317,7 +318,7 @@ export function callWith(s: Scope, e: Emitter, child: Component, m: string, head
       if (binding !== null && !e.reads(binding, opened + 1)) e.replace(opened, `${binding}:`, `_${binding}:`);
     };
     if (shape) {
-      const sp = `fv_sp${++ctx.narrowCount}`;
+      const sp = fresh("sp", param?.type === "Identifier" && !takesNone ? jsHint(param.name) : "slot_props");
       const ty: Ty = { k: "struct", name: shape.name, home: child.name };
       const locals = new Map(s.locals);
       if (param?.type === "ObjectPattern") {

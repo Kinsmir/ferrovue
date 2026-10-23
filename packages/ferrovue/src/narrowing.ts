@@ -6,6 +6,7 @@ import { claim } from "./plugin.ts";
 import { atom, bare, binary, condition, ifElse, logical, not, occurrences, receiver } from "./parens.ts";
 import { isNumber, negatedOrder } from "./numbers.ts";
 import { describeTy, expr } from "./expr.ts";
+import { fresh, jsHint } from "./names.ts";
 
 export function known(v: Val): boolean | undefined {
   if (v.konst !== undefined) return v.konst;
@@ -252,7 +253,7 @@ export function narrowedVal(p: Presence, name: string): Val {
 }
 
 export function narrowing(s: Scope, p: Presence, present: (s: Scope) => string, absent: (s: Scope) => string): string {
-  const name = `n${++ctx.narrowCount}`;
+  const name = fresh("n", jsHint(p.path));
   const then = bare(present(narrowTo(s, p, name)));
   const otherwise = bare(absent(s));
   if (occurrences(then, name)) return `if ${p.pattern(name)} { ${then} } else { ${otherwise} }`;

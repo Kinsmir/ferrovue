@@ -119,9 +119,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push('|');
     fv::push_number(out, fv::js_utc_date(props.deleted.as_ref().map(fv::js_time_of).or(props.edited.as_ref().map(fv::js_time_of)).unwrap_or(fv::js_time_of(&props.at))));
     out.push_str("</p>");
-    if let Some(n1) = s_either {
+    if let Some(fv_either) = s_either {
         out.push_str("<p>");
-        fv::push_number(out, n1);
+        fv::push_number(out, fv_either);
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");
@@ -133,9 +133,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     } else {
         out.push_str("<!---->");
     }
-    if let Some(n2) = props.edited.as_ref().map(fv::js_time_of) && !n2.is_nan() {
+    if let Some(fv_edited) = props.edited.as_ref().map(fv::js_time_of) && !fv_edited.is_nan() {
         out.push_str("<p>");
-        fv::escape_into(out, &fv_refusals.keep(fv::try_to_iso_string(n2), 22, 60));
+        fv::escape_into(out, &fv_refusals.keep(fv::try_to_iso_string(fv_edited), 22, 60));
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");

@@ -56,11 +56,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_head: &fv::Head) -> Re
     }, fv_head))?;
     fv_refusals.check(super::head_nest::try_render(out, &super::head_nest::Props { name: std::borrow::Cow::Borrowed("n") }, fv_head))?;
     out.push_str("<!--[-->");
-    for n_ref in props.names.iter() {
-        let n: &str = n_ref;
+    for fv_n_ref in props.names.iter() {
+        let fv_n: &str = fv_n_ref;
         {
             let _fv_later = fv_head.deferred();
-            fv_refusals.check(super::head_leaf::try_render(out, &super::head_leaf::Props { name: std::borrow::Cow::Borrowed(n) }, super::head_leaf::Slots {
+            fv_refusals.check(super::head_leaf::try_render(out, &super::head_leaf::Props { name: std::borrow::Cow::Borrowed(fv_n) }, super::head_leaf::Slots {
                 default: None,
             }, fv_head))?;
         }

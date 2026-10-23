@@ -49,7 +49,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push_str("<div class=\"picker\" data-v-93b28aa1>");
     if props.shape == super::types::Shape::Circle {
         super::shape_circle::try_render_scoped(out, &super::shape_circle::Props { label: std::borrow::Cow::Borrowed(&*props.label) }, super::shape_circle::Slots {
-            default: Some(fv::Slot::slotted(&|out: &mut String, _fv_sid1: &str| -> bool {
+            default: Some(fv::Slot::slotted(&|out: &mut String, _fv_slot_id: &str| -> bool {
                 let mut filled = false;
                 let fv_chunk = out.len();
                 fv::escape_into(out, &props.label);
@@ -149,16 +149,16 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         }
     }
     super::shape_circle::try_render_scoped(out, &super::shape_circle::Props { label: std::borrow::Cow::Borrowed(&*props.label) }, super::shape_circle::Slots {
-        default: Some(fv::Slot::slotted(&|out: &mut String, fv_sid2: &str| -> bool {
+        default: Some(fv::Slot::slotted(&|out: &mut String, fv_slot_id_2: &str| -> bool {
             if props.boxed {
                 out.push_str("<i");
-                out.push_str(&fv::scope_attrs("", "data-v-93b28aa1", fv_sid2));
+                out.push_str(&fv::scope_attrs("", "data-v-93b28aa1", fv_slot_id_2));
                 out.push('>');
                 fv::escape_into(out, &props.label);
                 out.push_str("</i>");
             } else {
                 out.push_str("<u");
-                out.push_str(&fv::scope_attrs("", "data-v-93b28aa1", fv_sid2));
+                out.push_str(&fv::scope_attrs("", "data-v-93b28aa1", fv_slot_id_2));
                 out.push('>');
                 fv::escape_into(out, &props.label);
                 out.push_str("</u>");
@@ -167,27 +167,27 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         })),
     }, &fv::Attrs::scoped(" data-v-93b28aa1"))?;
     super::shape_root::try_render_scoped(out, &super::shape_root::Props { shape: props.shape, label: std::borrow::Cow::Borrowed(&*props.label) }, super::shape_root::Slots {
-        default: Some(fv::Slot::slotted(&|out: &mut String, fv_sid3: &str| -> bool {
+        default: Some(fv::Slot::slotted(&|out: &mut String, fv_slot_id_3: &str| -> bool {
             if props.boxed {
                 out.push_str("<i data-v-93b28aa1");
-                out.push_str(fv_sid3);
+                out.push_str(fv_slot_id_3);
                 out.push_str(">in</i>");
             } else {
                 out.push_str("<!---->");
             }
             if props.boxed {
                 out.push_str("<i");
-                out.push_str(&fv::scope_attrs("", "data-v-93b28aa1", fv_sid3));
+                out.push_str(&fv::scope_attrs("", "data-v-93b28aa1", fv_slot_id_3));
                 out.push_str("><b data-v-93b28aa1");
-                out.push_str(&fv::scope_attrs("", "", fv_sid3));
+                out.push_str(&fv::scope_attrs("", "", fv_slot_id_3));
                 out.push('>');
                 fv::escape_into(out, &props.label);
                 out.push_str("</b></i>");
             } else {
                 out.push_str("<u");
-                out.push_str(&fv::scope_attrs("", "data-v-93b28aa1", fv_sid3));
+                out.push_str(&fv::scope_attrs("", "data-v-93b28aa1", fv_slot_id_3));
                 out.push_str("><b data-v-93b28aa1");
-                out.push_str(&fv::scope_attrs("", "", fv_sid3));
+                out.push_str(&fv::scope_attrs("", "", fv_slot_id_3));
                 out.push('>');
                 fv::escape_into(out, &props.label);
                 out.push_str("</b></u>");

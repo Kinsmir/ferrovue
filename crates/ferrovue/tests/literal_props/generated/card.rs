@@ -43,32 +43,32 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     fv::escape_into(out, &props.title);
     out.push_str("</h2><p>");
     fv::escape_into(out, &props.owner.name);
-    if let Some(n1) = props.owner.email.as_deref().filter(|v| !v.is_empty()) {
+    if let Some(fv_email) = props.owner.email.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<a href=\"");
-        fv::escape_into(out, &format!("mailto:{}", n1));
+        fv::escape_into(out, &format!("mailto:{}", fv_email));
         out.push_str("\">");
-        fv::escape_into(out, n1);
+        fv::escape_into(out, fv_email);
         out.push_str("</a>");
     } else {
         out.push_str("<!---->");
     }
     out.push_str("</p><ul><!--[-->");
-    for tag_ref in props.tags.iter() {
-        let tag = tag_ref;
+    for fv_tag_ref in props.tags.iter() {
+        let fv_tag = fv_tag_ref;
         out.push_str("<li");
-        if let Some(v) = tag.hint.as_deref() {
+        if let Some(v) = fv_tag.hint.as_deref() {
             out.push_str(" title=\"");
             fv::escape_into(out, v);
             out.push('"');
         }
         out.push('>');
-        fv::escape_into(out, &tag.label);
+        fv::escape_into(out, &fv_tag.label);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul>");
-    if let Some(n2) = props.note.as_deref().filter(|v| !v.is_empty()) {
+    if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<i>");
-        fv::escape_into(out, n2);
+        fv::escape_into(out, fv_note);
         out.push_str("</i>");
     } else {
         out.push_str("<!---->");

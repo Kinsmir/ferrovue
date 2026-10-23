@@ -144,15 +144,15 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(140 + 4 + props.badge.as_ref().map_or(0, |v| v.label.len()) + props.word.as_deref().map_or(0, str::len));
-    let s_in_range = if let Some(n1) = props.n { n1 as f64 > 1.0 && (n1 as f64) < 9.0 } else { false };
-    let s_color = props.tone.map(|n2| match n2 { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" });
+    let s_in_range = if let Some(fv_n) = props.n { fv_n as f64 > 1.0 && (fv_n as f64) < 9.0 } else { false };
+    let s_color = props.tone.map(|fv_tone| match fv_tone { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" });
     out.push_str("<section");
     if if props.tone.is_some() { true } else { props.tone.map(AndChainsTone::as_str).is_some() } {
         out.push_str(" class=\"");
-        fv::class_into(out, false, &[if let Some(n4) = props.tone { match n4 { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" } } else { "" }]);
+        fv::class_into(out, false, &[if let Some(fv_tone_2) = props.tone { match fv_tone_2 { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" } } else { "" }]);
         out.push('"');
     }
-    if let Some(v) = props.tone.map(|n5| match n5 { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" }) {
+    if let Some(v) = props.tone.map(|fv_tone_3| match fv_tone_3 { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" }) {
         if v.is_empty() {
             out.push_str(" title");
         } else {
@@ -162,52 +162,52 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         }
     }
     out.push_str("><p>");
-    out.push_str(if if let Some(n6) = props.n { n6 as f64 > 1.0 && (n6 as f64) < 9.0 } else { false } { "true" } else { "false" });
+    out.push_str(if if let Some(fv_n_2) = props.n { fv_n_2 as f64 > 1.0 && (fv_n_2 as f64) < 9.0 } else { false } { "true" } else { "false" });
     out.push('|');
     out.push_str(if s_in_range { "true" } else { "false" });
     out.push('|');
-    out.push_str(if if let Some(n7) = props.n { n7 as f64 > 1.0 && (n7 as f64) < 9.0 } else { false } { "true" } else { "false" });
+    out.push_str(if if let Some(fv_x) = props.n { fv_x as f64 > 1.0 && (fv_x as f64) < 9.0 } else { false } { "true" } else { "false" });
     out.push('|');
-    out.push_str(if if let Some(n8) = props.n { (n8 as f64) < 1.0 || n8 as f64 > 9.0 } else { true } { "true" } else { "false" });
+    out.push_str(if if let Some(fv_n_3) = props.n { (fv_n_3 as f64) < 1.0 || fv_n_3 as f64 > 9.0 } else { true } { "true" } else { "false" });
     out.push_str("</p><p>");
-    fv::push_number(out, if let Some(n9) = props.n { if n9 as f64 > 1.0 { n9 as f64 * 2.0 } else { 0.0f64 } } else { 0.0f64 });
+    fv::push_number(out, if let Some(fv_n_4) = props.n { if fv_n_4 as f64 > 1.0 { fv_n_4 as f64 * 2.0 } else { 0.0f64 } } else { 0.0f64 });
     out.push('|');
-    fv::escape_into(out, &(if let Some(n10) = props.n { if (n10 as f64) < 0.0 { std::borrow::Cow::<str>::Borrowed("bad") } else { std::borrow::Cow::<str>::Owned(fv::js_to_fixed(n10 as f64, 1)) } } else { std::borrow::Cow::<str>::Borrowed("bad") }));
+    fv::escape_into(out, &(if let Some(fv_n_5) = props.n { if (fv_n_5 as f64) < 0.0 { std::borrow::Cow::<str>::Borrowed("bad") } else { std::borrow::Cow::<str>::Owned(fv::js_to_fixed(fv_n_5 as f64, 1)) } } else { std::borrow::Cow::<str>::Borrowed("bad") }));
     out.push('|');
-    out.push_str(if (if let Some(n11) = props.n { n11 as f64 > 0.0 && (n11 as f64) < 5.0 } else { false }) || props.n == Some(0i64) { "true" } else { "false" });
+    out.push_str(if (if let Some(fv_n_6) = props.n { fv_n_6 as f64 > 0.0 && (fv_n_6 as f64) < 5.0 } else { false }) || props.n == Some(0i64) { "true" } else { "false" });
     out.push_str("</p><p>");
-    out.push_str(if if let Some(n12) = props.m { n12 as f64 > 0.0 && (n12 as f64) < 5.0 } else { false } { "true" } else { "false" });
+    out.push_str(if if let Some(fv_m) = props.m { fv_m as f64 > 0.0 && (fv_m as f64) < 5.0 } else { false } { "true" } else { "false" });
     out.push('|');
-    out.push_str(if if let Some(n13) = props.m { if (n13 as f64) < 0.0 { true } else { n13 as f64 > 99.0 } } else { true } { "true" } else { "false" });
+    out.push_str(if if let Some(fv_x_2) = props.m { if (fv_x_2 as f64) < 0.0 { true } else { fv_x_2 as f64 > 99.0 } } else { true } { "true" } else { "false" });
     out.push('|');
-    fv::escape_into(out, &(if let Some(n14) = props.m { if n14 as f64 >= 0.0 { if n14 as f64 <= 99.0 { std::borrow::Cow::<str>::Owned(format!("{}", fv::Js(n14 as f64 + 1.0))) } else { std::borrow::Cow::<str>::Borrowed("none") } } else { std::borrow::Cow::<str>::Borrowed("none") } } else { std::borrow::Cow::<str>::Borrowed("none") }));
+    fv::escape_into(out, &(if let Some(fv_m_2) = props.m { if fv_m_2 as f64 >= 0.0 { if fv_m_2 as f64 <= 99.0 { std::borrow::Cow::<str>::Owned(format!("{}", fv::Js(fv_m_2 as f64 + 1.0))) } else { std::borrow::Cow::<str>::Borrowed("none") } } else { std::borrow::Cow::<str>::Borrowed("none") } } else { std::borrow::Cow::<str>::Borrowed("none") }));
     out.push_str("</p><p class=\"");
-    fv::class_into(out, false, &[if let Some(n15) = props.tone { match n15 { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" } } else { "" }, "fixed"]);
+    fv::class_into(out, false, &[if let Some(fv_tone_4) = props.tone { match fv_tone_4 { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" } } else { "" }, "fixed"]);
     out.push_str("\">");
-    if let Some(v) = props.tone.map(|n16| match n16 { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" }) {
+    if let Some(v) = props.tone.map(|fv_tone_5| match fv_tone_5 { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" }) {
         fv::escape_into(out, v);
     }
     out.push('|');
-    fv::escape_into(out, props.tone.map(|n17| match n17 { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" }).unwrap_or("none"));
+    fv::escape_into(out, props.tone.map(|fv_tone_6| match fv_tone_6 { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" }).unwrap_or("none"));
     out.push('|');
     fv::escape_into(out, s_color.unwrap_or("unset"));
     out.push_str("</p><p>");
-    if let Some(v) = props.badge.as_ref().map(|n18| &*n18.label) {
+    if let Some(v) = props.badge.as_ref().map(|fv_badge| &*fv_badge.label) {
         fv::escape_into(out, v);
     }
     out.push('|');
-    out.push_str(if if let Some(n19) = props.badge.as_ref() { fv::js_length(&n19.label) as f64 > 2.0 && &*n19.label != "none" } else { false } { "true" } else { "false" });
+    out.push_str(if if let Some(fv_badge_2) = props.badge.as_ref() { fv::js_length(&fv_badge_2.label) as f64 > 2.0 && &*fv_badge_2.label != "none" } else { false } { "true" } else { "false" });
     out.push('|');
-    out.push_str(if if let Some(n20) = props.word.as_deref() { !n20.is_empty() && (fv::js_length(n20) as f64) < 6.0 } else { false } { "true" } else { "false" });
+    out.push_str(if if let Some(fv_word) = props.word.as_deref() { !fv_word.is_empty() && (fv::js_length(fv_word) as f64) < 6.0 } else { false } { "true" } else { "false" });
     out.push_str("</p>");
-    if let Some(n21) = props.n && n21 as f64 > 1.0 && (n21 as f64) < 9.0 {
+    if let Some(fv_n_7) = props.n && fv_n_7 as f64 > 1.0 && (fv_n_7 as f64) < 9.0 {
         out.push_str("<i>");
-        fv::push_number(out, n21 as f64 * 3.0);
+        fv::push_number(out, fv_n_7 as f64 * 3.0);
         out.push_str("</i>");
     } else {
-        if let Some(n22) = props.n && n22 as f64 >= 9.0 && (n22 as f64) < 100.0 {
+        if let Some(fv_n_8) = props.n && fv_n_8 as f64 >= 9.0 && (fv_n_8 as f64) < 100.0 {
             out.push_str("<i>");
-            fv::push_number(out, n22 as f64 - 9.0);
+            fv::push_number(out, fv_n_8 as f64 - 9.0);
             out.push_str("</i>");
         } else {
             out.push_str("<i>out</i>");

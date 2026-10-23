@@ -92,16 +92,16 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push_str("></video><p>");
     fv::escape_into(out, &props.crate_);
     out.push_str("</p>");
-    if let Some(n1) = props.r#match.as_deref().filter(|v| !v.is_empty()) {
+    if let Some(fv_match) = props.r#match.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<i>");
-        fv::escape_into(out, n1);
+        fv::escape_into(out, fv_match);
         out.push_str("</i>");
     } else {
         out.push_str("<!---->");
     }
-    if let Some(n2) = props.self_ {
+    if let Some(fv_self) = props.self_ {
         out.push_str("<b>");
-        fv::push_int(out, n2);
+        fv::push_int(out, fv_self);
         out.push_str("</b>");
     } else {
         out.push_str("<!---->");
@@ -111,9 +111,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     } else {
         out.push_str("<!---->");
     }
-    if let Some(n3) = props.r#async.as_deref().filter(|v| !v.is_empty()) {
+    if let Some(fv_async) = props.r#async.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<u>");
-        fv::escape_into(out, n3);
+        fv::escape_into(out, fv_async);
         out.push_str("</u>");
     } else {
         out.push_str("<!---->");

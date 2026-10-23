@@ -56,16 +56,16 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route
 /// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::Route<'_>, fv_head: &fv::Head) -> Result<(), fv::Refused> {
     out.reserve(105 + 89 * props.books.len() + props.books.iter().map(|v| v.id.len() + v.title.len() + v.author.len()).sum::<usize>());
-    fv_head.push(fv::HeadValue::object([("title", fv::HeadValue::str("All books")), ("meta", fv::HeadValue::array([fv::HeadValue::object([("name", fv::HeadValue::str("description")), ("content", fv::HeadValue::str(&format!("{} books, from {}", fv::Js(props.books.len() as i64), props.books.iter().map(|fv_a1| std::borrow::Cow::<str>::Borrowed(&fv_a1.title)).collect::<Vec<_>>().join(", "))))])]))]));
+    fv_head.push(fv::HeadValue::object([("title", fv::HeadValue::str("All books")), ("meta", fv::HeadValue::array([fv::HeadValue::object([("name", fv::HeadValue::str("description")), ("content", fv::HeadValue::str(&format!("{} books, from {}", fv::Js(props.books.len() as i64), props.books.iter().map(|fv_b| std::borrow::Cow::<str>::Borrowed(&fv_b.title)).collect::<Vec<_>>().join(", "))))])]))]));
     out.push_str("<section class=\"books\"><h1>All books</h1>");
     if props.books.len() as i64 != 0 {
         out.push_str("<ul><!--[-->");
-        for book_ref in props.books.iter() {
-            let book = book_ref;
+        for fv_book_ref in props.books.iter() {
+            let fv_book = fv_book_ref;
             out.push_str("<li>");
             {
                 let fv_link = {
-                    fv_route.link_named("/books/[id]", &[("id", &*book.id)], "", "")
+                    fv_route.link_named("/books/[id]", &[("id", &*fv_book.id)], "", "")
                 };
                 out.push_str("<a");
                 if fv_link.exact {
@@ -76,15 +76,15 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_r
                 out.push_str("\" class=\"");
                 fv::class_into(out, false, &[if fv_link.exact { "active" } else { "" }]);
                 out.push_str("\">");
-                fv::escape_into(out, &book.title);
+                fv::escape_into(out, &fv_book.title);
                 out.push_str("</a>");
             }
             out.push_str("<span class=\"by\">by ");
-            fv::escape_into(out, &book.author);
+            fv::escape_into(out, &fv_book.author);
             out.push_str(" (");
-            fv::push_int(out, book.year);
+            fv::push_int(out, fv_book.year);
             out.push_str(")</span>");
-            fv::scoped_slot_into(out, fv_slots.actions, &ActionsSlotProps { id: &book.id, title: &book.title }, None);
+            fv::scoped_slot_into(out, fv_slots.actions, &ActionsSlotProps { id: &fv_book.id, title: &fv_book.title }, None);
             out.push_str("</li>");
         }
         out.push_str("<!--]--></ul>");

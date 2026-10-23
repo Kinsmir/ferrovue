@@ -61,28 +61,28 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.reserve(76 + 41 * props.items.len() + props.items.iter().map(|v| v.label.len() + v.hint.as_deref().map_or(0, str::len)).sum::<usize>() + props.heading.len() + props.selected.as_deref().map_or(0, str::len) + props.mark.as_deref().map_or(0, str::len));
     out.push_str("<fieldset><legend>");
     fv::escape_into(out, &props.heading);
-    if let Some(n1) = props.mark.as_deref() {
+    if let Some(fv_mark) = props.mark.as_deref() {
         out.push_str("<small>");
-        fv::escape_into(out, n1);
+        fv::escape_into(out, fv_mark);
         out.push_str("</small>");
     } else {
         out.push_str("<!---->");
     }
     out.push_str("</legend><!--[-->");
-    for item_ref in props.items.iter() {
-        let item = item_ref;
+    for fv_item_ref in props.items.iter() {
+        let fv_item = fv_item_ref;
         out.push_str("<label class=\"");
-        fv::class_into(out, false, &[if Some(&*item.label) == props.selected.as_deref() { "on" } else { "" }]);
+        fv::class_into(out, false, &[if Some(&*fv_item.label) == props.selected.as_deref() { "on" } else { "" }]);
         out.push('"');
-        if let Some(v) = item.hint.as_deref() {
+        if let Some(v) = fv_item.hint.as_deref() {
             out.push_str(" title=\"");
             fv::escape_into(out, v);
             out.push('"');
         }
         out.push('>');
-        fv::escape_into(out, &item.label);
+        fv::escape_into(out, &fv_item.label);
         out.push_str(" #");
-        fv::push_int(out, item.id);
+        fv::push_int(out, fv_item.id);
         out.push_str("</label>");
     }
     out.push_str("<!--]--></fieldset>");

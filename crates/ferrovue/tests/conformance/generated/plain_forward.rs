@@ -54,9 +54,9 @@ pub fn try_render_scoped(out: &mut String, _props: &Props, fv_slots: Slots<'_>, 
     out.reserve(0);
     super::scoped_card::try_render_scoped(out, &super::scoped_card::Props { tone: Some(std::borrow::Cow::Borrowed("forwarded")) }, super::scoped_card::Slots {
         title: None,
-        default: Some(fv::Slot::slotted(&|out: &mut String, fv_sid1: &str| -> bool {
+        default: Some(fv::Slot::slotted(&|out: &mut String, fv_slot_id: &str| -> bool {
             let mut filled = false;
-            if fv::slot_into_slotted(out, fv_slots.default, fv_sid1, None) { filled = true; }
+            if fv::slot_into_slotted(out, fv_slots.default, fv_slot_id, None) { filled = true; }
             filled
         })),
         footer: None,

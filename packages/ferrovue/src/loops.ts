@@ -1,5 +1,5 @@
-import { type N, type Scope, type Ty, type Val, fail, INT, snake, STR } from "./model.ts";
-import { ctx } from "./context.ts";
+import { type N, type Scope, type Ty, type Val, fail, INT, STR } from "./model.ts";
+import { fresh, jsHint } from "./names.ts";
 import { expr, fieldVal } from "./expr.ts";
 import { isObjectCall } from "./calls.ts";
 import { atom, operand, OR } from "./parens.ts";
@@ -30,8 +30,9 @@ export function list(s: Scope, e: Emitter, c: N): void {
     return;
   }
   const [item, index] = fn.params as N[];
-  const idx = index ? snake(index.name) : null;
-  const itemName = item.type === "Identifier" ? snake(item.name) : `fv_item${++ctx.narrowCount}`;
+  const idx = index ? fresh("i", jsHint(index.name)) : null;
+  const itemHint = item.type === "Identifier" ? jsHint(item.name) : "item";
+  const itemName = item.type === "Identifier" ? fresh("a", itemHint) : fresh("item", itemHint);
   const inner = new Map(s.locals);
   let of: Ty;
   let walk: string;
@@ -41,7 +42,7 @@ export function list(s: Scope, e: Emitter, c: N): void {
   if (src.ty.k === "list" && src.iter !== undefined) {
     of = src.ty.of;
     walk = src.iter;
-    bound = of.k === "str" ? `${itemName}_cow` : itemName;
+    bound = of.k === "str" ? fresh("a", `${itemHint}_cow`) : itemName;
     e.open(loop(bound, idx));
     if (of.k === "str") {
       e.stmt(`let ${itemName}: &str = &${bound};`);
@@ -55,7 +56,7 @@ export function list(s: Scope, e: Emitter, c: N): void {
   } else if (src.ty.k === "list") {
     of = src.ty.of;
     if (of.k === "undef") fail(s.comp, "FV0819", "`v-for` over an empty array literal", c);
-    const itemCode = `${itemName}_ref`;
+    const itemCode = fresh("a", `${itemHint}_ref`);
     walk = `${atom(src.code)}.iter()`;
     bound = itemCode;
     e.open(loop(bound, idx));
@@ -63,7 +64,7 @@ export function list(s: Scope, e: Emitter, c: N): void {
     else if (of.k === "struct" || of.k === "child") e.stmt(`let ${itemName} = ${itemCode};`);
     else if (of.k === "opt" && of.of.k === "str") e.stmt(`let ${itemName} = ${itemCode}.as_deref();`);
     else if (of.k === "opt" && !["int", "float", "bool", "date"].includes(of.of.k)) e.stmt(`let ${itemName} = ${itemCode}.as_ref();`);
-    else e.stmt(`let ${itemName} = *${itemName}_ref;`);
+    else e.stmt(`let ${itemName} = *${itemCode};`);
     itemLet = e.lines.length - 1;
   } else {
     return fail(s.comp, "FV0820", "`v-for` walks an array, or counts to a number", c);
@@ -108,15 +109,16 @@ function recordLoop(s: Scope, e: Emitter, r: Val, fn: N, value: N | undefined, k
   if (r.ty.k !== "record") return;
   const of = r.ty.of;
   for (const p of [key, index]) if (p && p.type !== "Identifier") fail(s.comp, "FV0823", "a record's key and index in `v-for` are plain names", p);
-  const n = ++ctx.narrowCount;
-  const v = value?.type === "Identifier" ? snake(value.name) : `fv_value${n}`;
-  const k = key ? snake(key.name) : `fv_key${n}`;
-  const i = index ? snake(index.name) : `fv_index${n}`;
-  e.open(`for (${i}, (${k}, ${v}_ref)) in ${atom(r.code)}.iter().enumerate()`);
+  const vHint = value?.type === "Identifier" ? jsHint(value.name) : "value";
+  const v = fresh(value?.type === "Identifier" ? "a" : "value", vHint);
+  const vRef = fresh("a", `${vHint}_ref`);
+  const k = key ? fresh("a", jsHint(key.name)) : fresh("key", "key");
+  const i = index ? fresh("i", jsHint(index.name)) : fresh("index", "index");
+  e.open(`for (${i}, (${k}, ${vRef})) in ${atom(r.code)}.iter().enumerate()`);
   const head = e.lines.length - 1;
   const indent = /^ */.exec(e.lines[head]!)![0];
   const inner = new Map(s.locals);
-  e.stmt(of.k === "str" ? `let ${v}: &str = ${v}_ref;` : of.k === "int" || of.k === "float" || of.k === "bool" ? `let ${v} = *${v}_ref;` : of.k === "date" ? `let ${v} = fv::js_time_of(${v}_ref);` : `let ${v} = ${v}_ref;`);
+  e.stmt(of.k === "str" ? `let ${v}: &str = ${vRef};` : of.k === "int" || of.k === "float" || of.k === "bool" ? `let ${v} = *${vRef};` : of.k === "date" ? `let ${v} = fv::js_time_of(${vRef});` : `let ${v} = ${vRef};`);
   e.stmt(`let ${i} = ${i} as i64;`);
   const bodyFrom = e.lines.length;
   if (value?.type === "Identifier") inner.set(value.name, { code: v, ty: of });
@@ -136,7 +138,7 @@ function recordLoop(s: Scope, e: Emitter, r: Val, fn: N, value: N | undefined, k
   const [readsV, readsK, readsI] = [reads(v), reads(k), reads(i)];
   if (!readsI) e.lines.splice(head + 2, 1);
   if (!readsV) e.lines.splice(head + 1, 1);
-  const pair = `(${readsK ? k : "_"}, ${readsV ? `${v}_ref` : "_"})`;
+  const pair = `(${readsK ? k : "_"}, ${readsV ? vRef : "_"})`;
   e.lines[head] = `${indent}for ${readsI ? `(${i}, ${pair}) in ${atom(r.code)}.iter().enumerate()` : `${pair} in ${atom(r.code)}.iter()`} {`;
   e.close();
   const body = e.literalBytes - before;

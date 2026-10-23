@@ -56,9 +56,9 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) ->
     fv::escape_into(out, &props.label);
     if props.children.len() as i64 != 0 {
         out.push_str("<ul data-v-189d3616><!--[-->");
-        for c_ref in props.children.iter() {
-            let c = c_ref;
-            super::kebab_tree::try_render_scoped(out, c, " data-v-189d3616")?;
+        for fv_c_ref in props.children.iter() {
+            let fv_c = fv_c_ref;
+            super::kebab_tree::try_render_scoped(out, fv_c, " data-v-189d3616")?;
         }
         out.push_str("<!--]--></ul>");
     } else {

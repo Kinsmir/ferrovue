@@ -3,11 +3,11 @@ import { type N, type Scope, type Val, directiveOwner, fail, nothing, rustStr, S
 import { expr } from "./expr.ts";
 import { choice, cond, known, narrowing, narrowTo, presence, truthy } from "./narrowing.ts";
 import { pickPresent } from "./constants.ts";
-import { ctx } from "./context.ts";
 import { meet } from "./strings.ts";
 import { atom, bare, condition, logical, not, occurrences, strArg } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
 import { valueAttr } from "./attrs.ts";
+import { fresh, jsHint } from "./names.ts";
 
 export type ClassItem = { lit: string } | { code: string };
 
@@ -78,7 +78,7 @@ export function classItems(s: Scope, n: N): ClassItem[] {
 function guarded(s: Scope, test: N, when: boolean, items: (inner: Scope) => ClassItem[]): ClassItem[] {
   const p = presence(s, test);
   if (!p || p.negated === when) return conditional(when ? cond(s, test) : not(cond(s, test)), items(s));
-  const name = `n${++ctx.narrowCount}`;
+  const name = fresh("n", jsHint(p.path));
   return items(narrowTo(s, p, name)).flatMap((it) => {
     const code = "lit" in it ? rustStr(it.lit) : bare(it.code);
     return occurrences(code, name) ? [{ code: `if ${p.pattern(name)} { ${code} } else { "" }` }] : conditional(p.present, [it]);

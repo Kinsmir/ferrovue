@@ -63,9 +63,9 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::Refused> {
     out.reserve(45 + props.label.as_deref().map_or(0, str::len));
     out.push_str("<div class=\"fold\">");
-    if let Some(n1) = props.label.as_deref().filter(|v| !v.is_empty()) {
+    if let Some(fv_label) = props.label.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<b>");
-        fv::escape_into(out, n1);
+        fv::escape_into(out, fv_label);
         out.push_str("</b>");
     } else {
         out.push_str("<!---->");

@@ -55,9 +55,9 @@ pub fn try_render(out: &mut String, _props: &Props, fv_stores: &super::stores::S
         out.push('"');
     }
     out.push('>');
-    if let Some(n1) = fv_stores.session.user.as_deref() {
+    if let Some(fv_user) = fv_stores.session.user.as_deref() {
         out.push_str("<p>");
-        fv::escape_into(out, n1);
+        fv::escape_into(out, fv_user);
         out.push_str(" (");
         fv::push_int(out, fv_stores.session.visits.unwrap_or(0i64));
         out.push_str(")</p>");

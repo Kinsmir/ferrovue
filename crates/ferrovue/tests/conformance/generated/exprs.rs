@@ -161,15 +161,15 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push('|');
     out.push_str(if props.nums.contains(&2i64) { "true" } else { "false" });
     out.push_str("</p><p>");
-    if let Some(v) = props.author.as_ref().map(|fv_o1| &*fv_o1.name) {
+    if let Some(v) = props.author.as_ref().map(|fv_author| &*fv_author.name) {
         fv::escape_into(out, v);
     }
     out.push('|');
-    if let Some(v) = props.author.as_ref().and_then(|fv_o2| fv_o2.site.as_deref()) {
+    if let Some(v) = props.author.as_ref().and_then(|fv_author_2| fv_author_2.site.as_deref()) {
         fv::escape_into(out, v);
     }
     out.push('|');
-    fv::escape_into(out, props.author.as_ref().and_then(|fv_o3| fv_o3.site.as_deref()).unwrap_or("no site"));
+    fv::escape_into(out, props.author.as_ref().and_then(|fv_author_3| fv_author_3.site.as_deref()).unwrap_or("no site"));
     if props.pick.as_deref() == Some("a") {
         out.push_str("<i>picked a</i>");
     } else {
@@ -181,37 +181,37 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         out.push_str("<!---->");
     }
     out.push_str("</p><ol><!--[-->");
-    for i in 1..=3i64 {
+    for fv_i in 1..=3i64 {
         out.push_str("<li>");
-        fv::push_int(out, i);
+        fv::push_int(out, fv_i);
         out.push_str("</li>");
     }
     out.push_str("<!--]--><!--[-->");
-    for (k, i) in (1..=props.m).enumerate() {
-        let k = k as i64;
+    for (fv_k, fv_i_2) in (1..=props.m).enumerate() {
+        let fv_k = fv_k as i64;
         out.push_str("<li data-k=\"");
-        fv::push_int(out, k);
+        fv::push_int(out, fv_k);
         out.push_str("\">");
-        fv::push_int(out, i);
+        fv::push_int(out, fv_i_2);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ol><ul><!--[-->");
-    for w_ref in ["one", &*props.name, "three"].iter() {
-        let w: &str = w_ref;
+    for fv_w_ref in ["one", &*props.name, "three"].iter() {
+        let fv_w: &str = fv_w_ref;
         out.push_str("<li>");
-        fv::escape_into(out, w);
+        fv::escape_into(out, fv_w);
         out.push_str("</li>");
     }
     out.push_str("<!--]--><!--[-->");
-    for (i, fv_item5_ref) in props.rows.iter().enumerate() {
-        let fv_item5 = fv_item5_ref;
-        let i = i as i64;
+    for (fv_i_3, fv_item_ref) in props.rows.iter().enumerate() {
+        let fv_item = fv_item_ref;
+        let fv_i_3 = fv_i_3 as i64;
         out.push_str("<li data-id=\"");
-        fv::push_int(out, fv_item5.id);
+        fv::push_int(out, fv_item.id);
         out.push_str("\">");
-        fv::push_int(out, i);
+        fv::push_int(out, fv_i_3);
         out.push(':');
-        fv::escape_into(out, &fv_item5.label);
+        fv::escape_into(out, &fv_item.label);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul>");

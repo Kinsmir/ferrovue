@@ -206,24 +206,24 @@ assert_eq!(
 #     fv::escape_into(out, &props.title);
 #     out.push(' ');
 #     fv::push_int(out, fv_stores.prefs.count);
-#     if let Some(n1) = fv_stores.prefs.label.as_deref().filter(|v| !v.is_empty()) {
+#     if let Some(fv_label) = fv_stores.prefs.label.as_deref().filter(|v| !v.is_empty()) {
 #         out.push_str("<b>");
-#         fv::escape_into(out, n1);
+#         fv::escape_into(out, fv_label);
 #         out.push_str("</b>");
 #     } else {
 #         out.push_str("<!---->");
 #     }
 #     out.push_str("<!--[-->");
-#     for t_ref in fv_stores.prefs.tags.iter() {
-#         let t = t_ref;
+#     for fv_t_ref in fv_stores.prefs.tags.iter() {
+#         let fv_t = fv_t_ref;
 #         out.push_str("<i");
-#         if let Some(v) = t.color.as_deref() {
+#         if let Some(v) = fv_t.color.as_deref() {
 #             out.push_str(" title=\"");
 #             fv::escape_into(out, v);
 #             out.push('"');
 #         }
 #         out.push('>');
-#         fv::escape_into(out, &t.name);
+#         fv::escape_into(out, &fv_t.name);
 #         out.push_str("</i>");
 #     }
 #     out.push_str("<!--]--></span>");

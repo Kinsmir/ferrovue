@@ -58,9 +58,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores
     fv::push_number(out, fv_stores.counter.step);
     out.push('|');
     fv::push_int(out, fv_stores.counter.history.len() as i64);
-    if let Some(n1) = fv_stores.counter.owner.as_deref().filter(|v| !v.is_empty()) {
+    if let Some(fv_owner) = fv_stores.counter.owner.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<b>");
-        fv::escape_into(out, n1);
+        fv::escape_into(out, fv_owner);
         out.push_str("</b>");
     } else {
         out.push_str("<!---->");

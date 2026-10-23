@@ -241,10 +241,10 @@ assert_eq!(
 #     out.push_str("<article><h1>");
 #     fv::escape_into(out, &l_0.title);
 #     out.push_str("</h1><ul><!--[-->");
-#     for tag_ref in l_0.tags.iter() {
-#         let tag: &str = tag_ref;
+#     for fv_tag_ref in l_0.tags.iter() {
+#         let fv_tag: &str = fv_tag_ref;
 #         out.push_str("<li>");
-#         fv::escape_into(out, tag);
+#         fv::escape_into(out, fv_tag);
 #         out.push_str("</li>");
 #     }
 #     out.push_str("<!--]--></ul>");

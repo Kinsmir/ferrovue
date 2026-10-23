@@ -66,8 +66,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     let s_stamp = std::cell::LazyCell::new(|| format!("{} ({})", (*s_iso), props.word));
     let s_day = std::cell::LazyCell::new(|| fv::js_utc_date(fv_refusals.keep(fv::try_date_parse(&props.when), 11, 28)));
     let s_size = std::cell::LazyCell::new(|| fv::js_length(&fv_refusals.keep(fv::try_repeat(&props.word, props.count as f64), 12, 29)));
-    let s_copies = std::cell::LazyCell::new(|| props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_s1| std::borrow::Cow::<str>::Owned(std::borrow::Cow::<str>::Owned(fv_refusals.keep(fv::try_repeat(&fv_s1, props.count as f64), 13, 53)).into_owned())).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>());
-    let s_echoed = std::cell::LazyCell::new(|| props.note.as_deref().filter(|v| !v.is_empty()).map(|n2| std::borrow::Cow::<str>::Owned(fv_refusals.keep(fv::try_repeat(n2, props.count as f64), 14, 45))));
+    let s_copies = std::cell::LazyCell::new(|| props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_t| std::borrow::Cow::<str>::Owned(std::borrow::Cow::<str>::Owned(fv_refusals.keep(fv::try_repeat(&fv_t, props.count as f64), 13, 53)).into_owned())).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>());
+    let s_echoed = std::cell::LazyCell::new(|| props.note.as_deref().filter(|v| !v.is_empty()).map(|fv_note| std::borrow::Cow::<str>::Owned(fv_refusals.keep(fv::try_repeat(fv_note, props.count as f64), 14, 45))));
     out.push_str("<section><p>");
     fv::escape_into(out, &s_upper);
     out.push('|');
@@ -85,10 +85,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         out.push('|');
         fv::escape_into(out, (*s_echoed).as_deref().unwrap_or("-"));
         out.push_str("</p><ul><!--[-->");
-        for c_cow in (*s_copies).iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)) {
-            let c: &str = &c_cow;
+        for fv_c_cow in (*s_copies).iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)) {
+            let fv_c: &str = &fv_c_cow;
             out.push_str("<li>");
-            fv::escape_into(out, c);
+            fv::escape_into(out, fv_c);
             out.push('|');
             fv::push_int(out, fv::js_length(&s_stamp));
             out.push_str("</li>");

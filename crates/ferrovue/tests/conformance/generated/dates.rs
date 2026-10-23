@@ -79,9 +79,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push_str("</p><p>");
     fv::escape_into(out, &format!("{}:{}:{}.{}", fv::Js(fv::js_utc_hours(*s_date)), fv::js_pad_start(&fv::Js(fv::js_utc_minutes(*s_date)).to_string(), 2.0f64, "0"), fv::js_pad_start(&fv::Js(fv::js_utc_seconds(*s_date)).to_string(), 2.0f64, "0"), fv::Js(fv::js_utc_milliseconds(*s_date))));
     out.push_str("</p>");
-    if let Some(n1) = props.updated.as_deref().filter(|v| !v.is_empty()) {
+    if let Some(fv_updated) = props.updated.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<p>");
-        fv::escape_into(out, &fv_refusals.keep(fv::try_to_iso_string(fv_refusals.keep(fv::try_date_parse(n1), 17, 26)), 17, 26));
+        fv::escape_into(out, &fv_refusals.keep(fv::try_to_iso_string(fv_refusals.keep(fv::try_date_parse(fv_updated), 17, 26)), 17, 26));
         out.push_str("</p>");
     } else {
         out.push_str("<p>never updated</p>");
@@ -120,12 +120,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push('|');
     fv::push_number(out, *s_date);
     out.push_str("</p><ul><!--[-->");
-    for day_ref in props.days.iter() {
-        let day: &str = day_ref;
+    for fv_day_ref in props.days.iter() {
+        let fv_day: &str = fv_day_ref;
         out.push_str("<li>");
-        fv::escape_into(out, &fv::js_slice(&fv_refusals.keep(fv::try_to_iso_string(fv_refusals.keep(fv::try_date_parse(day), 23, 45)), 23, 45), 0.0f64, Some(10.0f64)));
+        fv::escape_into(out, &fv::js_slice(&fv_refusals.keep(fv::try_to_iso_string(fv_refusals.keep(fv::try_date_parse(fv_day), 23, 45)), 23, 45), 0.0f64, Some(10.0f64)));
         out.push_str(" is day ");
-        fv::push_number(out, fv::js_utc_day(fv_refusals.keep(fv::try_date_parse(day), 23, 99)));
+        fv::push_number(out, fv::js_utc_day(fv_refusals.keep(fv::try_date_parse(fv_day), 23, 99)));
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul></article>");

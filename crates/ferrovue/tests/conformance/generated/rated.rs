@@ -65,10 +65,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     crate::vendor::star_rating(out, &super::twins::StarRatingProps { value: props.stars, max: Some(5i64), label: props.label.as_deref(), readonly: false }, super::twins::StarRatingSlots {
         default: Some(fv::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
-            if let Some(n1) = props.votes.filter(|v| *v != 0) {
+            if let Some(fv_votes) = props.votes.filter(|v| *v != 0) {
                 filled = true;
                 out.push_str("<small>");
-                fv::push_int(out, n1);
+                fv::push_int(out, fv_votes);
                 out.push_str(" votes</small>");
             } else {
                 out.push_str("<!--v-if-->");

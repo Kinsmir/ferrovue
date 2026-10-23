@@ -94,12 +94,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push('|');
     fv::escape_into(out, &fv::js_encode_uri_component(if props.page as f64 > 2.0 { "true" } else { "false" }));
     out.push_str("</p><ul><!--[-->");
-    for t_ref in props.tags.iter() {
-        let t: &str = t_ref;
+    for fv_t_ref in props.tags.iter() {
+        let fv_t: &str = fv_t_ref;
         out.push_str("<li><a href=\"");
-        fv::escape_into(out, &format!("/tags/{}", fv::js_encode_uri_component(t)));
+        fv::escape_into(out, &format!("/tags/{}", fv::js_encode_uri_component(fv_t)));
         out.push_str("\">");
-        fv::push_int(out, fv::js_length(&fv::js_encode_uri_component(t)));
+        fv::push_int(out, fv::js_length(&fv::js_encode_uri_component(fv_t)));
         out.push_str("</a></li>");
     }
     out.push_str("<!--]--></ul></nav>");

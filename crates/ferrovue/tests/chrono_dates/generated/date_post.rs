@@ -89,34 +89,34 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         fv::push_number(out, fv::js_utc_day(fv::js_time_of(&props.posted)));
         out.push_str("</p>");
     }
-    if let Some(n1) = props.edited.as_ref().map(fv::js_time_of) {
+    if let Some(fv_edited) = props.edited.as_ref().map(fv::js_time_of) {
         out.push_str("<p>edited ");
-        fv::push_number(out, n1);
+        fv::push_number(out, fv_edited);
         out.push_str(" on day ");
-        fv::push_number(out, fv::js_utc_day(n1));
+        fv::push_number(out, fv::js_utc_day(fv_edited));
         out.push_str("</p>");
     } else {
         out.push_str("<p>never edited</p>");
     }
-    if let Some(n2) = props.deleted.as_ref().map(fv::js_time_of) {
+    if let Some(fv_deleted) = props.deleted.as_ref().map(fv::js_time_of) {
         out.push_str("<p>deleted at ");
-        fv::push_number(out, fv::js_utc_hours(n2));
+        fv::push_number(out, fv::js_utc_hours(fv_deleted));
         out.push(':');
-        fv::push_number(out, fv::js_utc_minutes(n2));
+        fv::push_number(out, fv::js_utc_minutes(fv_deleted));
         out.push(':');
-        fv::push_number(out, fv::js_utc_seconds(n2));
+        fv::push_number(out, fv::js_utc_seconds(fv_deleted));
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");
     }
     out.push_str("<ul><!--[-->");
-    for (i, tag_ref) in props.tags.iter().enumerate() {
-        let tag: &str = tag_ref;
-        let i = i as i64;
+    for (fv_i, fv_tag_ref) in props.tags.iter().enumerate() {
+        let fv_tag: &str = fv_tag_ref;
+        let fv_i = fv_i as i64;
         out.push_str("<li>");
-        fv::escape_into(out, tag);
+        fv::escape_into(out, fv_tag);
         out.push(' ');
-        fv::push_number(out, fv::js_utc_milliseconds(fv::js_time_of(&props.posted)) + i as f64);
+        fv::push_number(out, fv::js_utc_milliseconds(fv::js_time_of(&props.posted)) + fv_i as f64);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul>");

@@ -254,9 +254,9 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push('/');
     fv::push_number(out, fv::js_utc_full_year(fv::js_time_of(&props.posted)));
     out.push_str("</p>");
-    if let Some(n1) = props.edited.as_ref().map(fv::js_time_of) {
+    if let Some(fv_edited) = props.edited.as_ref().map(fv::js_time_of) {
         out.push_str("<p>edited ");
-        fv::escape_into(out, &fv::js_slice(&fv::js_to_iso_string(n1), 0.0f64, Some(10.0f64)));
+        fv::escape_into(out, &fv::js_slice(&fv::js_to_iso_string(fv_edited), 0.0f64, Some(10.0f64)));
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");

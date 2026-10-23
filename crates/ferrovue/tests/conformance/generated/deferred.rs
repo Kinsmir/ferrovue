@@ -53,10 +53,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     super::plain_box::try_render_scoped(out, &super::plain_box::Props { text: std::borrow::Cow::Borrowed(&*props.title) }, super::plain_box::Slots {
         default: Some(fv::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
-            if let Some(n1) = props.note.as_deref().filter(|v| !v.is_empty()) {
+            if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {
                 filled = true;
                 out.push_str("<em data-v-d4eff95c>");
-                fv::escape_into(out, n1);
+                fv::escape_into(out, fv_note);
                 out.push_str("</em>");
             } else {
                 out.push_str("<!---->");

@@ -76,9 +76,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     fv::class_into(out, false, &[if props.wide.unwrap_or(false) { "wide" } else { "" }]);
     out.push_str("\">");
     fv::escape_into(out, &s_heading);
-    if let Some(n1) = props.extra.as_deref().filter(|v| !v.is_empty()) {
+    if let Some(fv_extra) = props.extra.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<small>");
-        fv::escape_into(out, n1);
+        fv::escape_into(out, fv_extra);
         out.push_str("</small>");
     } else {
         out.push_str("<!---->");

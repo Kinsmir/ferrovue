@@ -51,11 +51,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push('|');
     fv::escape_into(out, &props.tile.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(","));
     out.push_str("</p>");
-    if let Some(n2) = props.tile.badge.as_ref() {
+    if let Some(fv_badge) = props.tile.badge.as_ref() {
         out.push_str("<b class=\"");
-        fv::class_into(out, false, &[&*n2.tone]);
+        fv::class_into(out, false, &[&*fv_badge.tone]);
         out.push_str("\">");
-        fv::escape_into(out, &n2.label);
+        fv::escape_into(out, &fv_badge.label);
         out.push_str("</b>");
     } else {
         out.push_str("<!---->");
