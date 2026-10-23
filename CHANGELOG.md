@@ -236,6 +236,9 @@ released together and share version numbers.
 
 ### Fixed
 
+- `Math.max()` and `Math.min()` of integers keep a `-0` that integer arithmetic gives
+  (`Math.max(n * 0, -1)` of a negative `n`), so `1 / Math.max(n * 0, -1)` is `-Infinity`, as in
+  JavaScript. They compared the integers as `i64`, which has no `-0`.
 - A refusal of an attribute bound both alone and in a `v-bind` object, whose later value Vue
   renders, no longer points at the earlier binding.
 

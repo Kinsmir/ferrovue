@@ -186,6 +186,7 @@ pub mod shape_picker;
 pub mod shape_root;
 pub mod shape_square;
 pub mod shown;
+pub mod signed_zeros;
 pub mod slot_probe;
 pub mod statements;
 pub mod string_of;
@@ -1213,6 +1214,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Shown" => {
             let props: shown::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             shown::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "SignedZeros" => {
+            let props: signed_zeros::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            signed_zeros::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "SlotProbe" => {
             let props: slot_probe::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

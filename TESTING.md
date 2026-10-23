@@ -103,6 +103,7 @@ A fixture is a JSON object of props plus optional keys:
 | `Text` | Interpolation of every scalar, absent values, `.trim()`, `.length` (UTF-16), `+`, `??`, `\|\|`, `?:` |
 | `Precision` | `.toPrecision()` and `.toExponential()` of a `Float` and an integer, without an argument, with `undefined`, from 0 or 1 digits to 100 and with fractional literals, in text, attributes, a `computed` and template literals: ties, carries into a new digit, `-0`, the subnormals, the largest double, 10²¹, `NaN` and the infinities; `.toFixed()` of fractional literals and `undefined` |
 | `WideProducts` | Integer arithmetic beyond ±2⁶³ (`n * n`, `n * m`, sums, a sixth power) written as JavaScript writes it in text, an attribute, a style, a `computed`, template literals, `String()`, `.toString()`, `JSON.stringify()` and `Math.floor()`, and compared |
+| `SignedZeros` | `Math.max()` and `Math.min()` of integer arithmetic that gives `-0` (`n * 0` of a negative `n`), against `-1`, `0`, `1` and another `-0`, read through `1 / …`, and of two and three integers |
 | `WideChoices` | Integer arithmetic beyond ±2⁶³ chosen by `??`, `?:` and `\|\|`, held in a `computed` and returned by a function, written as JavaScript writes it in text, attributes and a template literal |
 | `Exprs` | `-`, `*`, `%`, comparisons, unary `-`, `Math`, template literals, `?.`, string and list methods (Unicode case mapping included), array literals, ranges, destructured `v-for` items |
 | `Branches` | `v-if` / `v-else-if` / `v-else`, `!`, `&&` / `\|\|`, `===` / `!==`, `undefined`, narrowing, `<template v-if>` |
@@ -226,7 +227,7 @@ when it names a component that is not in `components/` with fixtures of its own.
 | Object literals | `ObjectLiterals`, `ObjectShapes`, `UnionObjects` |
 | Loaders | `Loaded`, `LoadedComments`, `LoadedRanks`, `LoadedDates`, `LoadedStamps` |
 | Provide and inject | `TabsPage`, `Tabs`, `Tab`, `ThemedButton`, `ThemeScope`, `Swatch`, `SwatchShelf`, `ThemedShelf`, `ThemedList`, `ThemedChoice` |
-| Text | `Text`, `MixedTernary`, `Exprs`, `Numbers`, `Precision`, `WideProducts`, `WideChoices`, `Meter`, `Parsing`, `NumberTests`, `Regressions`, `OptionalChains`, `StringOf`, `MathMore`, `UriParts`, `TypeofTests` |
+| Text | `Text`, `MixedTernary`, `Exprs`, `Numbers`, `Precision`, `WideProducts`, `WideChoices`, `SignedZeros`, `Meter`, `Parsing`, `NumberTests`, `Regressions`, `OptionalChains`, `StringOf`, `MathMore`, `UriParts`, `TypeofTests` |
 | Strings | `Strings`, `Exprs`, `Text`, `StringSearch`, `StringOf`, `DigitGroups` |
 | Dates | `Dates`, `Prices`, `DatePost`, `DateStamp`, `DateFormats`, `DateGuards`, `DateRows`, `DateDays`, `DateReplies`, `DateThread`, `LoadedDates` |
 | Conditions | `Branches`, `Narrowing`, `Nullable`, `TypeofTests`, `AndChains` |
