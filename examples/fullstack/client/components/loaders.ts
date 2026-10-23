@@ -8,8 +8,8 @@ async function json<T>(href: string): Promise<T> {
 }
 
 export const loadStock = defineLoader("loadStock", async (id: string): Promise<Stock> => {
-  const stock = await json<Omit<Stock, "counted"> & { counted?: string }>(`/api/stock/${encodeURIComponent(id)}`);
-  return { ...stock, counted: stock.counted === undefined ? undefined : new Date(stock.counted) };
+  const { counted, ...stock } = await json<Omit<Stock, "counted"> & { counted?: string }>(`/api/stock/${encodeURIComponent(id)}`);
+  return counted === undefined ? stock : { ...stock, counted: new Date(counted) };
 });
 
 export const loadWarehouse = defineLoader("loadWarehouse", async (code: string): Promise<Warehouse | null> =>
