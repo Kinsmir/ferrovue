@@ -46,7 +46,7 @@ jobs:
   pack:
     name: Pack
     needs: version
-    uses: ./.github/workflows/pack.yml
+    uses: $/.github/workflows/pack.yml
     with:
       version: ${{ needs.version.outputs.version }}
       set-version: true

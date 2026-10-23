@@ -47,7 +47,7 @@ jobs:
             exit 1
           fi
           echo "$GITHUB_REF_NAME is signed by $(jq -r .tagger.name <<<"$tag"), verified by GitHub"
-      - uses: ./.github/actions/rust
+      - uses: $/.github/actions/rust
         with:
           cache: "false"
           cache-key: release
@@ -73,12 +73,12 @@ jobs:
 
   ci:
     name: CI
-    uses: ./.github/workflows/ci.yml
+    uses: $/.github/workflows/ci.yml
 
   pack:
     name: Pack
     needs: verify
-    uses: ./.github/workflows/pack.yml
+    uses: $/.github/workflows/pack.yml
     with:
       version: ${{ needs.verify.outputs.version }}
 
@@ -151,7 +151,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: ./.github/actions/rust
+      - uses: $/.github/actions/rust
         with:
           cache: "false"
           cache-key: release
