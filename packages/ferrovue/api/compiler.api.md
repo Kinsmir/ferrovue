@@ -493,6 +493,14 @@ export const ERRORS: {
         readonly title: "Prop of a union of string literals given a value outside it";
         readonly detail: "A child's prop typed as a union of string literals is a Rust enum, which holds its members alone. The value passed must be one of them: a literal of the union, a value of the same union or of one whose members it holds, or a string the compiler knows is among them (a `?:` of members, a `computed` typed as the union). A literal outside the union, or a value typed `string`, is refused, as TypeScript refuses it. Pass a member, or type the value as the union.";
     };
+    readonly FV0516: {
+        readonly title: "Prop named like a listener given twice in merged props";
+        readonly detail: "Vue joins a child's props with `mergeProps` when the child is a component's root, or is given `v-bind` of an object or `v-on` of an object beside other props. `mergeProps` treats a key that starts with `on` and a character other than a lowercase letter (`on1`, `onSale`, `on-sale`) as a listener, and puts two values given under it into a list, which the child's typed prop cannot hold. Give the prop once.";
+    };
+    readonly FV0517: {
+        readonly title: "Prop named like a listener that merged props may leave out";
+        readonly detail: "Vue joins a child's props with `mergeProps` when the child is a component's root, or is given `v-bind` of an object or `v-on` of an object beside other props. `mergeProps` treats a key that starts with `on` and a character other than a lowercase letter (`on1`, `onSale`, `on-sale`) as a listener, and leaves it out when its value is falsy (`0`, `NaN`, `\"\"`, `false`), so the child takes the prop's default. ferrovue does the same for an optional prop. A required prop left out is `undefined` in the child, which its Rust type cannot hold, and the falsy value of a Rust twin's prop or of `TrustedHtml` is not known when compiling. Give a required prop a value that is never falsy, make it optional, or give the prop a name that does not start with `on`.";
+    };
     readonly FV0601: {
         readonly title: "Name or function not available on the server";
         readonly detail: "The template reads or calls a name the server has no value for: a function or value imported from a `.ts` module, which ferrovue does not run, or a name nothing declares. The server renders only what it can translate to Rust: JavaScript's built-ins, constants the compiler evaluates, and helpers. Give a function a Rust twin under `helpers.functions` in `ferrovue.config.json` and import it from the module `helpers.module` names; export a value as a constant the compiler evaluates (`export const LIMIT = 10`); or compute the value in Rust and pass it as a prop.";

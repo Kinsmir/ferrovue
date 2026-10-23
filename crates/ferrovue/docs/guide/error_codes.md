@@ -666,6 +666,18 @@ Prop of a union of string literals given a value outside it.
 
 A child's prop typed as a union of string literals is a Rust enum, which holds its members alone. The value passed must be one of them: a literal of the union, a value of the same union or of one whose members it holds, or a string the compiler knows is among them (a `?:` of members, a `computed` typed as the union). A literal outside the union, or a value typed `string`, is refused, as TypeScript refuses it. Pass a member, or type the value as the union.
 
+## FV0516
+
+Prop named like a listener given twice in merged props.
+
+Vue joins a child's props with `mergeProps` when the child is a component's root, or is given `v-bind` of an object or `v-on` of an object beside other props. `mergeProps` treats a key that starts with `on` and a character other than a lowercase letter (`on1`, `onSale`, `on-sale`) as a listener, and puts two values given under it into a list, which the child's typed prop cannot hold. Give the prop once.
+
+## FV0517
+
+Prop named like a listener that merged props may leave out.
+
+Vue joins a child's props with `mergeProps` when the child is a component's root, or is given `v-bind` of an object or `v-on` of an object beside other props. `mergeProps` treats a key that starts with `on` and a character other than a lowercase letter (`on1`, `onSale`, `on-sale`) as a listener, and leaves it out when its value is falsy (`0`, `NaN`, `""`, `false`), so the child takes the prop's default. ferrovue does the same for an optional prop. A required prop left out is `undefined` in the child, which its Rust type cannot hold, and the falsy value of a Rust twin's prop or of `TrustedHtml` is not known when compiling. Give a required prop a value that is never falsy, make it optional, or give the prop a name that does not start with `on`.
+
 # Expressions: FV06xx
 
 ## FV0601

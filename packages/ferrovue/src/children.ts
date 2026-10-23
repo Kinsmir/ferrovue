@@ -1,6 +1,7 @@
 import { isSSRSafeAttrName, propsToAttrMap } from "@vue/shared";
-import { type Component, type Field, type N, type Scope, type Ty, type Val, absence, camelize, declares, enumOf, fail, nothing, rustStr, sameTy, snake, takesAttrs } from "./model.ts";
+import { type Component, type Field, type N, type Scope, type Ty, type Val, absence, camelize, declares, enumOf, fail, nothing, rustStr, sameTy, snake, takesAttrs, variantPath } from "./model.ts";
 import { ctx } from "./context.ts";
+import { known } from "./narrowing.ts";
 import { intoEnum, knownLiteral } from "./enums.ts";
 import { markHome } from "./typescript.ts";
 import { describeTy, expr, fieldVal, holdsNothing, typedBy } from "./expr.ts";
@@ -9,7 +10,7 @@ import { asF64 } from "./numbers.ts";
 import { atom, bare } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
 import { attrOf, dollarAttrs, isAttrs, mergedParts } from "./attrs.ts";
-import { isListener, passedKey } from "./fallthrough.ts";
+import { isDollarAttrs, isListener, passedKey } from "./fallthrough.ts";
 import { claim, paramsOf, slotContextOf, slotFieldsOf } from "./plugin.ts";
 import { statements } from "./template.ts";
 import { slotContent, slotFieldBorrows, staticallyFilled } from "./slots.ts";
@@ -49,6 +50,14 @@ export function renderChild(s: Scope, e: Emitter, n: N, twin?: TwinCall): void {
   const marker = (p: N): boolean =>
     handlers(p) || (p.type === "ObjectExpression" && p.properties.length > 0 && p.properties.every((q: N) => silent(q) || handlers(q)));
   const objects = parts.filter((p) => !isAttrs(p) && !dollarAttrs(s, p) && !marker(p));
+  if (parts.some((p) => (isAttrs(p) && s.comp.inheritAttrs) || isDollarAttrs(p, s.attrsBindings))) {
+    for (const name of s.comp.listenerAttrs) {
+      const field = child.props.fields.find((f) => (name === "" ? isListener(f.js) : camelize(f.js) === camelize(name)));
+      if (field === undefined) continue;
+      const what = name === "" ? "a listener whose name is not known before rendering" : `\`${name}\`, named like a listener`;
+      fail(s.comp, "FV0502", `${what}, which ${s.comp.name} may be passed, would reach ${child.name} as its prop \`${field.js}\`, which an attribute has no type for`, n);
+    }
+  }
   if (parts.some(passed)) {
     for (const name of s.comp.attrNames) {
       if (declares(child, name)) {
@@ -62,7 +71,7 @@ export function renderChild(s: Scope, e: Emitter, n: N, twin?: TwinCall): void {
     const v = expr(s, objects[0]);
     const own = child.name === s.comp.name && v.ty.k === "struct" && v.ty.name === "Props";
     if (own || (v.ty.k === "child" && v.ty.name === child.name)) {
-      callChild(s, e, child, v.code, slots, childAttrsArg(s, child, parts, merges, null, ids, n), later);
+      callChild(s, e, child, merges ? mergedWhole(s, child, v.code, objects[0]) : v.code, slots, childAttrsArg(s, child, parts, merges, null, ids, n), later);
       return;
     }
     fail(s.comp, "FV0503", `child props must be an object literal, or \`v-bind\` of ${child.name}'s own \`Props\``, n);
@@ -72,6 +81,7 @@ export function renderChild(s: Scope, e: Emitter, n: N, twin?: TwinCall): void {
   }
 
   const given = new Map<string, N>();
+  const heard = new Set<string>();
   const fallthrough = new Map<N, N>();
   const loaded = !merges && local !== null && s.loadedLater.has(local);
   for (const obj of objects) {
@@ -82,6 +92,11 @@ export function renderChild(s: Scope, e: Emitter, n: N, twin?: TwinCall): void {
       if (!passedKey(child, key)) continue;
       const field = child.props.fields.find((f) => camelize(f.js) === camelize(key));
       if (field) {
+        if (merges && isListener(key)) {
+          if (given.has(field.js)) fail(s.comp, "FV0516", `\`${key}\` is given to ${child.name} twice in props Vue joins with \`mergeProps\`, which makes a list of two values of a name like a listener's: give it once`, p);
+          if (twin) fail(s.comp, "FV0517", `\`${key}\`, a prop of ${child.name}, a Rust twin, is named like a listener, which Vue's \`mergeProps\` leaves out when it is falsy: rename the prop`, p);
+          heard.add(field.js);
+        }
         given.set(field.js, p.value);
         continue;
       }
@@ -105,9 +120,70 @@ export function renderChild(s: Scope, e: Emitter, n: N, twin?: TwinCall): void {
     }
     const want = markHome(f.ty, child.name);
     const v = expr(s, typedBy(node, tyNode(want), false));
-    return fieldInit(f.rust, ownInto(s.comp, { ...v, ty: markHome(v.ty, s.comp.name) }, want, node));
+    const code = ownInto(s.comp, { ...v, ty: markHome(v.ty, s.comp.name) }, want, node);
+    return fieldInit(f.rust, heard.has(f.js) ? mergedListener(s, child, f, want, v, code, node) : code);
   });
   callChild(s, e, child, `&super::${child.module}::Props { ${inits.join(", ")} }`, slots, childAttrsArg(s, child, parts, merges, fallthrough, ids, n), later);
+}
+
+/** What `v`, a reference to a value of the prop `f` of type `ty`, passes when it is truthy: null when
+ * every value of the type is. */
+function truthTest(s: Scope, child: Component, f: Field, ty: Ty, n: N): string | null {
+  const def = enumOf(ty);
+  if (def !== undefined) return def.literals.includes("") ? `*v != ${variantPath(s.comp, def, "")}` : null;
+  switch (ty.k) {
+    case "str":
+      return "!v.is_empty()";
+    case "int":
+      return "*v != 0";
+    case "float":
+      return "*v != 0.0 && !v.is_nan()";
+    case "bool":
+      return "*v";
+    case "list":
+    case "record":
+    case "struct":
+    case "child":
+    case "date":
+      return null;
+    default:
+      return fail(s.comp, "FV0517", `\`${f.js}\`, a prop of ${child.name} named like a listener, is ${describeTy(ty)}, which Vue's \`mergeProps\` leaves out when it is falsy: rename the prop`, n);
+  }
+}
+
+/** The value of `f`, a prop named like a listener in props Vue joins with `mergeProps`, which
+ * leaves a falsy value out so that the child takes its default. */
+function mergedListener(s: Scope, child: Component, f: Field, want: Ty, v: Val, code: string, n: N): string {
+  const truth = known(v);
+  if (truth === true) return code;
+  const optional = want.k === "opt" && want.none === undefined;
+  const of = want.k === "opt" ? want.of : want;
+  if (of.k === "bool" && !optional) return code;
+  const test = truthTest(s, child, f, of, n);
+  if (test === null) return code;
+  if (!optional) {
+    if (nothing(v.ty)) return code;
+    fail(s.comp, "FV0517", `\`${f.js}\`, a required prop of ${child.name} named like a listener, is given a value that may be falsy, which Vue's \`mergeProps\` leaves out and the child reads as \`undefined\`: pass a value that is never falsy, or make the prop optional`, n);
+  }
+  return truth === false ? "None" : `${atom(code)}.filter(|v| ${test})`;
+}
+
+/** `v-bind` of a child's own `Props` that Vue joins with `mergeProps`, which leaves out each prop
+ * named like a listener whose value is falsy. */
+function mergedWhole(s: Scope, child: Component, code: string, n: N): string {
+  const steps: string[] = [];
+  for (const f of child.props.fields) {
+    if (!isListener(f.js)) continue;
+    const optional = f.ty.k === "opt" && f.ty.none === undefined;
+    const of = f.ty.k === "opt" ? f.ty.of : f.ty;
+    if (of.k === "bool" && !optional) continue;
+    const test = truthTest(s, child, f, of, n);
+    if (test === null) continue;
+    if (!optional) fail(s.comp, "FV0517", `\`${f.js}\`, a required prop of ${child.name} named like a listener, may be falsy, which Vue's \`mergeProps\` leaves out and the child reads as \`undefined\`: bind its props one by one, or make the prop optional`, n);
+    steps.push(`fv_merged.${f.rust} = fv_merged.${f.rust}.filter(|v| ${test});`);
+  }
+  if (!steps.length) return code;
+  return `&{ let mut fv_merged = ${atom(code.startsWith("&") ? code.slice(1) : code)}.clone(); ${steps.join(" ")} fv_merged }`;
 }
 
 function isCall(n: N, callee: string): boolean {

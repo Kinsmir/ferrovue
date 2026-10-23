@@ -6,6 +6,7 @@ interface AttrsCall {
   keys: string[];
   passesAttrs: boolean;
   passesDollar: boolean;
+  unheard: boolean;
 }
 
 export function isDollarAttrs(n: N, bindings: Set<string>): boolean {
@@ -19,6 +20,10 @@ export function passedKey(child: Component, key: string): boolean {
   if (["", "key", "ref", "ref_for", "ref_key", "innerHTML", "textContent"].includes(key)) return false;
   if (isListener(key)) return declares(child, key);
   return !(key.endsWith("Modifiers") && declares(child, key === "modelModifiers" ? "modelValue" : key.slice(0, -"Modifiers".length)));
+}
+
+function isCallOf(n: N, callee: string): boolean {
+  return n?.type === "CallExpression" && n.callee.type === "Identifier" && n.callee.name === callee;
 }
 
 export function isListener(key: string): boolean {
@@ -58,6 +63,7 @@ export function attrsFlow(read: { comp: Component; ssr: string; children: Map<st
             ],
             passesAttrs: parts.some((p) => p.type === "Identifier" && p.name === "_attrs"),
             passesDollar: parts.some((p) => isDollarAttrs(p, r.attrsBindings)),
+            unheard: parts.some((p) => isCallOf(p, "_toHandlers") || (p.type === "ObjectExpression" && p.properties.some((q: N) => q.computed && isCallOf(q.key, "_toHandlerKey")))),
           });
         }
       }
@@ -80,6 +86,14 @@ export function attrsFlow(read: { comp: Component; ssr: string; children: Map<st
           changed = true;
         }
         if (c.passesAttrs && f.comp.inherits && !child.idsInAttrs) child.idsInAttrs = changed = true;
+        const heard = c.keys.filter((k) => isListener(k) && !declares(child, k));
+        if (c.unheard) heard.push("");
+        if ((c.passesAttrs && f.comp.inheritAttrs) || c.passesDollar) heard.push(...[...f.comp.listenerAttrs].filter((k) => k === "" || !declares(child, k)));
+        for (const name of heard) {
+          if (child.listenerAttrs.has(name)) continue;
+          child.listenerAttrs.add(name);
+          changed = true;
+        }
       }
     }
   }
