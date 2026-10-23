@@ -1,7 +1,7 @@
 import { type Component, type N, type Scope, type Ty, type Val, absence, blankComponent, camelize, fail, nothing, opt, sameTy, snake } from "../model.ts";
 import { ctx } from "../context.ts";
 import { type Declared } from "../constants.ts";
-import { lookupStruct, markHome, tyOfTs } from "../typescript.ts";
+import { lookupStruct, markHome, refuseDates, tyOfTs } from "../typescript.ts";
 import { resolveImport } from "../resolve.ts";
 import { describeTy, expr } from "../expr.ts";
 import { slotFieldBorrows, slotFieldTy, slotFieldValue } from "../slots.ts";
@@ -108,7 +108,9 @@ function declaredOf(d: Declared): { ty: Ty | null; ref: boolean } {
   if (!arg) fail(d.home, "FV1602", `\`${d.node.id.name}\` names the type of what it is provided with: \`InjectionKey<T>\``, d.node);
   if (arg.type === "TSFunctionType") return { ty: null, ref: false };
   const inner = refInner(arg);
-  return { ty: markHome(tyOfTs(d.home, inner ?? arg, ctx.typeStructs), "types"), ref: inner !== null };
+  const ty = markHome(tyOfTs(d.home, inner ?? arg, ctx.typeStructs), "types");
+  refuseDates(d.home, ty, `what \`${d.node.id.name}\` provides`, arg);
+  return { ty, ref: inner !== null };
 }
 
 function fieldName(name: string): string {
@@ -378,7 +380,11 @@ function inject(s: Scope, d: N, init: N, asserted: boolean, lets: string[]): voi
     fail(s.comp, "FV1613", `${key.label} is provided ${keyRef ? "as a ref" : "as a plain value"}, and this default is ${defaultRef ? "a ref" : "not one"}: \`.value\` would read differently with a provider and without one; make the default ${keyRef ? "`ref(…)` or `computed(…)`" : "a plain value"}`, dflt);
   }
   const typeArg = init.typeParameters?.params?.[0];
-  if (typeArg) settle(key, markHome(tyOfTs(s.comp, refInner(typeArg) ?? typeArg, s.comp.structs), s.comp.name), s.comp, typeArg);
+  if (typeArg) {
+    const ty = markHome(tyOfTs(s.comp, refInner(typeArg) ?? typeArg, s.comp.structs), s.comp.name);
+    refuseDates(s.comp, ty, "what `inject` reads", typeArg);
+    settle(key, ty, s.comp, typeArg);
+  }
   const object = fallback !== null ? unwrapped(fallback, REACTIVE) : null;
   if (object?.type === "ObjectExpression") {
     const literal = structLiteral(s, key, object, defaultRef === true || calls(fallback, REACTIVE), "given as a default");

@@ -3,7 +3,7 @@ import { basename } from "node:path";
 import { type Component, type Field, type N, type Struct, type Ty, blankComponent, enumOf, enumPath, fail, GenError, rustStr, snake, tagAst, takesAttrs } from "./model.ts";
 import { enumsSource } from "./enums.ts";
 import { ctx, INLINE_HTML } from "./context.ts";
-import { lookupStruct, typeWritten } from "./typescript.ts";
+import { bareDates, datePlan, holdsDate, lookupStruct, typeWritten } from "./typescript.ts";
 import { childOf } from "./expr.ts";
 import { Emitter } from "./emitter.ts";
 import { occurrences } from "./parens.ts";
@@ -80,16 +80,15 @@ export function rustTy(ty: Ty, comp: Component): string {
       const child = childOf(ty.name);
       return `super::${child.module}::Props${structLifetime(child.props, child) ? "<'a>" : ""}`;
     }
+    case "date":
+      return ctx.dateType;
     default:
       throw new GenError("FV0309", "no Rust type for `undefined`");
   }
 }
 
-/** The Rust type of a struct's field: a prop's own `Date` is the type `dateType` names, and a union
- * of string literals its generated enum. */
+/** The Rust type of a struct's field: a union of string literals is its generated enum. */
 function fieldTy(ty: Ty, comp: Component): string {
-  if (ty.k === "date") return ctx.dateType;
-  if (ty.k === "opt" && ty.of.k === "date") return `Option<${ctx.dateType}>`;
   const def = enumOf(ty);
   if (def !== undefined) return ty.k === "opt" ? `Option<${enumPath(comp, def)}>` : enumPath(comp, def);
   return rustTy(ty, comp);
@@ -106,7 +105,8 @@ function param(ty: Ty, comp: Component, arg: string): { ty: string; value: strin
 
 function serdeAttrs(f: Field): string {
   const absent = f.ty.k === "opt" && f.ty.none === undefined;
-  const date = f.ty.k === "date" ? ', with = "fv::date_prop"' : f.ty.k === "opt" && f.ty.of.k === "date" ? `${absent ? "" : ", default"}, with = "fv::opt_date_prop"` : "";
+  const dated = f.ty.k === "opt" && f.ty.of.k === "date" ? `${absent ? "" : ", default"}, with = "fv::opt_date_prop"` : `${f.ty.k === "opt" && !absent ? ", default" : ""}, with = "fv::dates_in"`;
+  const date = f.ty.k === "date" ? ', with = "fv::date_prop"' : bareDates(f.ty) ? dated : "";
   return `    #[serde(rename = ${rustStr(f.js)}${absent ? ', default, skip_serializing_if = "Option::is_none"' : ""}${date})]`;
 }
 
@@ -337,32 +337,36 @@ ${slotFields.join("\n")}
 
 `
     : "";
+  const nested = comp.props.fields.some((f) => holdsDate(comp, f.ty) && f.ty.k !== "date" && !(f.ty.k === "opt" && f.ty.of.k === "date"));
+  const plan = nested ? datePlan(comp, { k: "struct", name: "Props" }) : null;
+  const dated = (made: string, ty: string): string => (plan === null ? `    ${made}` : `    let html: ${ty} = ${made};\n    html.dates(${rustStr(plan)})`);
+  if (plan !== null) ctx.datePlans.components.set(comp.name, plan);
   const args = (takesSlots(comp) ? ", fv_slots" : "") + paramsOf(comp).map((p) => `, ${p.name}`).join("");
   const params = (takesSlots(comp) ? ", fv_slots: Slots<'p>" : "") + paramsOf(comp).map((p) => `, ${p.name}: ${p.pageTy}`).join("");
   const wrappers = plain
     ? `/// The component's markup, for a maud page that shows it without hydrating it.
 pub fn html${gen}(props: &'p Props${named}) -> fv::Html<'p, Props${named}> {
-    fv::Html::markup(props, render)
+${dated("fv::Html::markup(props, render)", `fv::Html<'p, Props${named}>`)}
 }
 
 /// The component as an island the client hydrates.
 pub fn island${gen}(props: &'p Props${named}) -> fv::Html<'p, Props${named}> {
-    fv::Html::island(NAME, props, render)
+${dated("fv::Html::island(NAME, props, render)", `fv::Html<'p, Props${named}>`)}
 }
 
 /// [\`html\`], holding the props: a handler that builds them can return it.
 pub fn into_html${owned}(props: Props${named}) -> fv::Html<${ownedLife}, Props${named}> {
-    fv::Html::markup_owned(props, render)
+${dated("fv::Html::markup_owned(props, render)", `fv::Html<${ownedLife}, Props${named}>`)}
 }
 
 /// [\`island\`], holding the props.
 pub fn into_island${owned}(props: Props${named}) -> fv::Html<${ownedLife}, Props${named}> {
-    fv::Html::island_owned(NAME, props, render)
+${dated("fv::Html::island_owned(NAME, props, render)", `fv::Html<${ownedLife}, Props${named}>`)}
 }
 `
     : `/// The component's markup, for a maud page that shows it.
 ${manyArgs(1 + renderParamCount(comp))}pub fn html${gen}(props: &'p Props${named}${params}) -> fv::Html<'p, Props${named}, impl Fn(&mut String, &Props${named}) + 'p> {
-    fv::Html::markup(props, move |out: &mut String, props: &Props${named}| render(out, props${args}))
+    fv::Html::markup(props, move |out: &mut String, props: &Props${named}| render(out, props${args}))${plan === null ? "" : `.dates(${rustStr(plan)})`}
 }
 `;
   const render = renderSource(comp, life, args, e);
@@ -497,5 +501,5 @@ export function typesSource(): string {
 //! The types components import from shared \`.ts\` files, written once so that components passing
 //! them to one another agree on them.
 
-${/Cow</.test(structs) ? "use std::borrow::Cow;\n\n" : ""}${enums ? enums + "\n" : ""}${structs}${consts}`;
+${/Cow</.test(structs) ? "use std::borrow::Cow;\n\n" : ""}${/"fv::/.test(structs) ? "use ferrovue as fv;\n\n" : ""}${enums ? enums + "\n" : ""}${structs}${consts}`;
 }

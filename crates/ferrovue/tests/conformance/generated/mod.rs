@@ -47,10 +47,14 @@ pub mod css_vars_wait;
 pub mod dashboard;
 pub mod data_list;
 pub mod data_table;
+pub mod date_days;
 pub mod date_formats;
 pub mod date_guards;
 pub mod date_post;
+pub mod date_replies;
+pub mod date_rows;
 pub mod date_stamp;
+pub mod date_thread;
 pub mod dates;
 pub mod defaults;
 pub mod deferred;
@@ -104,6 +108,7 @@ pub mod listeners;
 pub mod lists;
 pub mod loaded;
 pub mod loaded_comments;
+pub mod loaded_dates;
 pub mod loaded_ranks;
 pub mod local_functions;
 pub mod lookups;
@@ -474,6 +479,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: data_table::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             data_table::render(&mut out, &props);
         }
+        "DateDays" => {
+            let props: date_days::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            date_days::render(&mut out, &props);
+        }
         "DateFormats" => {
             let props: date_formats::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             date_formats::render(&mut out, &props);
@@ -486,9 +495,21 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: date_post::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             date_post::render(&mut out, &props);
         }
+        "DateReplies" => {
+            let props: date_replies::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            date_replies::render(&mut out, &props);
+        }
+        "DateRows" => {
+            let props: date_rows::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            date_rows::render(&mut out, &props);
+        }
         "DateStamp" => {
             let props: date_stamp::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             date_stamp::render(&mut out, &props);
+        }
+        "DateThread" => {
+            let props: date_thread::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            date_thread::render(&mut out, &props);
         }
         "Dates" => {
             let props: dates::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -757,6 +778,22 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
                 |fv_loads| {
                     out.clear();
                     loaded_comments::render(&mut out, &props, fv_loads);
+                },
+                loaders::from_fixture(&fixture.loads),
+            );
+            let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
+            match std::future::Future::poll(std::pin::pin!(loading), &mut cx) {
+                std::task::Poll::Ready(done) => done.map_err(|e| e.to_string())?,
+                std::task::Poll::Pending => return Err(String::from("a fixture's loader is still running")),
+            }
+        }
+        "LoadedDates" => {
+            let props: loaded_dates::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let loading = ferrovue::load(
+                |fv_loads| {
+                    out.clear();
+                    loaded_dates::render(&mut out, &props, fv_loads);
                 },
                 loaders::from_fixture(&fixture.loads),
             );

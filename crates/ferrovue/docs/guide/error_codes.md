@@ -380,7 +380,7 @@ A prop's type is translated from strings, numbers, booleans, lists, `Record`s, `
 
 `Record` of unsupported values.
 
-A `Record`'s values must be strings, numbers, booleans, objects with a declared interface, or lists of those. Values that may be absent or `null`, `Date`s, HTML and nested `Record`s are refused. Wrap the value in an interface, or compute the map in Rust and pass a plainer one as a prop.
+A `Record`'s values must be strings, numbers, booleans, `Date`s, objects with a declared interface, or lists of those other than `Date`s. Values that may be absent or `null`, lists of `Date`s, HTML and nested `Record`s are refused. Wrap the value in an interface, or compute the map in Rust and pass a plainer one as a prop.
 
 ## FV0318
 
@@ -2388,9 +2388,9 @@ Locale formatting with `Intl`, `.toLocaleString()`, `.localeCompare()`, `$d` or 
 
 ## FV1806
 
-`Date` anywhere but a component's own prop.
+`Date` in Pinia state, `provide`, `inject`, a `ref` or a `defineModel`.
 
-A prop typed `Date` (optional or nullable too) is a `ferrovue::JsDate`, or the type `dateType` names, and an island's `data-props` carries it as its ISO string, which the client turns back into a `Date` because the prop's declared type says it is one. A `Date` inside a list, a dictionary or an object prop, and one in an interface the props do not declare, in Pinia state, `inject`, `ref` or `defineModel`, have no declared type the client could read, so they would reach the browser as strings. Pass the ISO string or the number of milliseconds and build the date with `new Date()`. See [`dates_and_prices`](crate::guide::dates_and_prices).
+A `Date` in a prop, itself or inside a list, a dictionary or an object, is a `ferrovue::JsDate`, or the type `dateType` names, and so is one in a loader's result. An island's `data-props` and the page's payload carry it as its ISO string, with a plan the compiler writes of where the dates are, from which the client turns each back into a `Date`. Pinia state, a value given to `provide` or read by `inject`, a typed `ref` and a `defineModel` reach the browser with no such plan, so a date in them would arrive as a string. Pass the ISO string or the number of milliseconds and build the date with `new Date()`. See [`dates_and_prices`](crate::guide::dates_and_prices).
 
 ## FV1807
 
@@ -2409,6 +2409,12 @@ V8 computes a year beyond ±1,000,000, a month beyond ±10,000,000 and a year be
 `===`, `!==`, `==` or `!=` with a `Date`.
 
 Two `Date`s are equal in JavaScript only when they are one object, so two dates of the same time are unequal, and `==` with a string compares the date's `.toString()`, in the time zone of the machine running it. Compare time values: `a.getTime() === b.getTime()`. `<`, `<=`, `>` and `>=` between two dates compare their time values, and are false when either is invalid. See [`dates_and_prices`](crate::guide::dates_and_prices).
+
+## FV1810
+
+List of lists or dictionaries of `Date`s.
+
+A list of `Date`s, `(Date | null)[]` and `Record<string, Date>` are each read as their dates' time values, and a list of them, as `Date[][]`, is refused. Hold each inner list in an object, `{ at: Date[] }[]`, whose field the template reads. See [`dates_and_prices`](crate::guide::dates_and_prices).
 
 # Statements and functions: FV19xx
 
@@ -2488,7 +2494,7 @@ A call's arguments are its key, `JSON.stringify([name, ...args])`, which the Rus
 
 Loader result the payload cannot carry.
 
-A loader declares what it returns, `Promise<T>`, which is the Rust app's `Output` for it and travels to the client as JSON in the page's payload. `undefined` is dropped by `JSON.stringify` and a `Date` arrives as a string, so the client would hydrate from another value: return `null` for none and a date as its ISO string.
+A loader declares what it returns, `Promise<T>`, which is the Rust app's `Output` for it and travels to the client as JSON in the page's payload. `undefined` is dropped by `JSON.stringify`, so the client would hydrate from another value: return `null` for none. A `Date` in the result, itself or inside a list, a dictionary or an object, travels as its ISO string with a plan of where the dates are, and the client turns each back into a `Date`.
 
 ## FV2005
 

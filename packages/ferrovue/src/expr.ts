@@ -4,7 +4,7 @@ import { CONFIG_FILE, ctx } from "./context.ts";
 import { lookupStruct, markHome, tyOfTs } from "./typescript.ts";
 import { claim } from "./plugin.ts";
 import { atom, bare, binary, enclosed, logical, negate, not, occurrences, receiver, strArg } from "./parens.ts";
-import { collected, entryPart, picked, sliced, spreadLiteral, typedEmpty, untypedEmpty } from "./lists.ts";
+import { collected, entryPart, heldDates, picked, sliced, spreadLiteral, typedEmpty, untypedEmpty } from "./lists.ts";
 import { asCow, formatted, isTemporary, loneOf, meet, stringsEqual } from "./strings.ts";
 import { arithmetic, asF64, compare, intFromF64, isNumber, negatedOrder, numberVal, power } from "./numbers.ts";
 import { boolOf, checkNullTest, choice, known, narrowing, narrowTo, nullTest, pathOf, type Presence, presence, reassociated, truthTested, truthy, typeofCompare, typeofTest, typeofVal } from "./narrowing.ts";
@@ -130,16 +130,15 @@ export function fieldVal(comp: Component, base: string, ty: Ty, js: string, node
     if (of.k === "list") return { code: `${place}.as_deref().unwrap_or(${f.dflt})`, ty: of, slice: true };
     return { code: `${place}.unwrap_or(${f.dflt})`, ty: of };
   }
+  const dated = heldDates(place, f.ty, false);
+  if (dated !== null) return dated;
   switch (f.ty.k) {
     case "str":
       return { code: `&*${place}`, ty: f.ty };
     case "html":
     case "child":
       return { code: `&${place}`, ty: f.ty };
-    case "date":
-      return { code: `fv::js_time_of(&${place})`, ty: f.ty };
     case "opt":
-      if (f.ty.of.k === "date") return { code: `${place}.as_ref().map(fv::js_time_of)`, ty: f.ty };
       if (f.ty.of.k === "html") return { code: `${place}.as_ref()`, ty: f.ty };
       if (f.ty.of.k === "str") return { code: `${place}.as_deref()`, ty: f.ty };
       if (f.ty.of.k === "int" || f.ty.of.k === "float" || f.ty.of.k === "bool") return { code: place, ty: f.ty };
@@ -418,8 +417,9 @@ export function expr(s: Scope, n: N): Val {
     if (base.ty.k === "list" && base.iter !== undefined) {
       const vec = /^(.*)\.into_iter\(\)$/s.exec(base.iter)?.[1];
       if (vec === undefined) {
-        const at = base.iter.lastIndexOf(".map(");
-        const mapped = at > 0 && enclosed(base.iter.slice(at + 4)) ? base.iter.slice(0, at) : base.iter;
+        let at = base.iter.indexOf(".map(");
+        while (at > 0 && !enclosed(base.iter.slice(at + 4))) at = base.iter.indexOf(".map(", at + 1);
+        const mapped = at > 0 ? base.iter.slice(0, at) : base.iter;
         const held = /^(.*)\.iter\(\)$/s.exec(mapped)?.[1];
         return { code: held !== undefined ? `${atom(held)}.len() as i64` : `${atom(mapped)}.count() as i64`, ty: INT };
       }

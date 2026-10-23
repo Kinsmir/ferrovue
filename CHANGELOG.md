@@ -79,8 +79,41 @@ released together and share version numbers.
   constant `Map` by a key of such a union match on its variants. The conformance components
   `UnionObjects` and `UnionStep` record these from Vue, and the differential fuzzer gives its
   `FzCardT` literals a union field.
+- Dates inside lists, dictionaries and interfaces: a prop or a loader's result may hold `Date`
+  fields (required, optional and nullable), `Date[]`, `(Date | null)[]`, `Record<string, Date>` and
+  interfaces of them, shared and recursive ones included, each date the Rust type `dateType` names
+  (a date that is a loader's result itself, or in its list, dictionary or optional, is a
+  `ferrovue::JsDate`). The template reads such a date as it reads a `Date` prop, walks a list of
+  dates with `v-for`, `[i]`, `.at()`, `.filter()`, `.find()`, `.findIndex()`, `.some()`, `.every()`,
+  `.map()`, `.slice()`, `.concat()`, `.toReversed()` and `.reduce()`, a dictionary of them with
+  `v-for` and `Object.keys()`, `.values()` and `.entries()`, hands them whole to a child's prop of the
+  same type, and builds them in object literals and in lists a `.map()` makes. The compiler writes
+  a plan of where the dates are: an island writes it in `data-dates` beside `data-props`, a page's
+  record beside each part's props (`d`) and the layout's (`dates`), and the payload of loaders'
+  results under `dates`, by loader. `mountIslands`, `mountPage`, `renderPage`, `provideLoads` and
+  `ferrovue/testing`'s conformance suite turn the dates the plan names back into `Date`s, an invalid
+  one written as `NaN` included, and leave every other string as it is. FV1810, a new entry of
+  `ERRORS` in `ferrovue/compiler`, refuses a list of lists or dictionaries of dates. The conformance
+  components `DateRows`, `DateDays`, `DateReplies`, `DateThread` and `LoadedDates` record them from
+  Vue and hydrate them in Chromium, Firefox and WebKit in three time zones, `DateRows` and
+  `DateDays` render with chrono's `DateTime<Utc>` too, the differential fuzzer generates dates in
+  interfaces, lists, dictionaries, object literals and loaders' results, and the full-stack
+  example's reviews carry the date they were posted and its stock the date it was counted, from a
+  loader.
 
 ### Changed
+
+- FV1806 refuses a `Date` only in Pinia state, `provide`, `inject`, a typed `ref` and a
+  `defineModel`, which reach the browser with no plan of where their dates are; a `Date` inside the
+  props or a loader's result compiles. FV0317 accepts a dictionary of dates, FV2004 no longer
+  refuses a result that holds dates, and `.toSorted()` of a list of dates without a comparator is
+  FV1804. The public API changes: `reviveDates(component, props, dates?)` takes an island's
+  `data-dates`, `PagePart` gains `d` and `PageRecord` gains `dates` (`ferrovue`,
+  `ferrovue/client`, `ferrovue/testing`).
+- The `ferrovue` crate gains the hidden items generated code calls for dates inside the props:
+  `Html::dates`, `Load::DATES`, `DateShape` and `dates_in`. `Html` writes `data-dates` on an island
+  and into a page's record, and `Loads::script_into` writes `dates` into the payload, when
+  generated code gives them a plan.
 
 - A refusal inside a `computed`, a setup expression or a function the template calls carries that
   refusal's own code and place (FV0710 for a regular expression, FV1902 for an assignment, FV0634

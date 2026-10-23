@@ -19,6 +19,7 @@ import type { Pinia } from "pinia";
 import type { Router } from "vue-router";
 import { carriesLoads, LOADS_ATTRIBUTE, provideLoads } from "./loads.ts";
 import { parseJson } from "./page-json.ts";
+import { planOf, reviveByPlan } from "./revive.ts";
 
 export { clearLoads, defineLoader, loadKey, provideLoads } from "./loads.ts";
 
@@ -30,10 +31,12 @@ function declaresDate(declared: unknown): boolean {
 /** The props a component is given, with each prop it declares a `Date` turned from what JSON
  * carries, the ISO string `toISOString()` writes or a number of milliseconds (`NaN` for an invalid
  * date), back into a `Date`, as the server rendered it. Vue's compiler declares a prop typed `Date`
- * as `{ type: Date }`, and one typed `Date | null` as `{ type: [Date, null] }`. `mountIslands`,
- * `mountPage` and `renderPage` call it; an app that hands a component props it read from JSON
- * itself calls it too. */
-export function reviveDates<P extends Record<string, unknown> | null>(component: Component, props: P): P {
+ * as `{ type: Date }`, and one typed `Date | null` as `{ type: [Date, null] }`. A date inside a
+ * list, a dictionary or an object is turned back by `dates`, the island's `data-dates`, which the
+ * server writes where the props hold one. `mountIslands`, `mountPage` and `renderPage` call it; an
+ * app that hands a component props it read from JSON itself calls it too. */
+export function reviveDates<P extends Record<string, unknown> | null>(component: Component, given: P, dates?: string): P {
+  const props = dates === undefined ? given : reviveByPlan(given, planOf(dates));
   const declared = (component as { props?: unknown }).props;
   if (!props || !declared || typeof declared !== "object" || Array.isArray(declared)) return props;
   let revived: Record<string, unknown> | null = null;
@@ -389,7 +392,7 @@ export async function mountIslands(components: Record<string, IslandComponent>, 
       return;
     }
     try {
-      const app = createSSRApp(component, reviveDates(component, props));
+      const app = createSSRApp(component, reviveDates(component, props, el.dataset.dates));
       if (options.pinia) app.use(options.pinia);
       if (options.router) app.use(options.router);
       for (const plugin of options.plugins ?? []) app.use(plugin);
@@ -498,6 +501,9 @@ export interface PagePart {
   c: string;
   /** `null` where serde_json refused the props, which the part then renders without. */
   p: Record<string, unknown> | null;
+  /** Where the props hold dates inside lists, dictionaries and objects, for the client to turn
+   * each back into a `Date`: absent where they hold none. */
+  d?: unknown;
 }
 
 /** What `ferrovue::PageRecord` writes: the layout's props, and each slot's parts in order. */
@@ -505,6 +511,9 @@ export interface PageRecord {
   /** `null` where serde_json refused the props, which the layout then renders without. */
   props: Record<string, unknown> | null;
   slots: Record<string, PagePart[]>;
+  /** Where the layout's props hold dates inside lists, dictionaries and objects: absent where
+   * they hold none. */
+  dates?: unknown;
 }
 
 export interface PageOptions extends Pick<MountOptions, "pinia" | "router" | "plugins"> {
@@ -536,10 +545,10 @@ export function createPageApp(layout: Component, record: PageRecord, components:
   const slots = Object.fromEntries(
     Object.entries(record.slots).map(([name, parts]) => [
       name,
-      () => (parts.length ? parts.map((part) => h(components[part.c]!, reviveDates(components[part.c]!, part.p))) : [createTextVNode("")]),
+      () => (parts.length ? parts.map((part) => h(components[part.c]!, reviveDates(components[part.c]!, reviveByPlan(part.p, part.d)))) : [createTextVNode("")]),
     ]),
   );
-  const root = () => h(layout, reviveDates(layout, record.props), slots);
+  const root = () => h(layout, reviveDates(layout, reviveByPlan(record.props, record.dates)), slots);
   const suspense = options.suspense ?? carriesLoads();
   const app = (options.hydrate === false ? createApp : createSSRApp)({ name: "FerrovuePage", render: suspense ? () => h(Suspense, null, { default: root }) : root });
   if (options.pinia) app.use(options.pinia);

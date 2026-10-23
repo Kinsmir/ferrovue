@@ -304,10 +304,58 @@ Generated code reads a `Date` prop through [`JsTime::time_value`](crate::JsTime:
 clips the value as `new Date(value)` does, so a type of your own that returns a fraction or a value
 beyond the range renders, and travels in `data-props`, as the date JavaScript would make of it.
 
-Only a component's own props are dates the client can find. A `Date` inside a list, a dictionary
-or an object prop, and one in Pinia state, an `inject`, a `ref` or a `defineModel`, would reach
-the browser as a string, so it is refused ([FV1806](crate::guide::error_codes#fv1806)): pass the
-ISO string and build the date with `new Date()` there.
+## Dates inside lists and objects
+
+A `Date` may sit anywhere in the props: a field of an interface, required, optional or nullable,
+a list of dates (`Date[]`, `(Date | null)[]`), a dictionary of them (`Record<string, Date>`), and
+an interface or a list of interfaces holding any of these, in the component or in a shared `.ts`
+file, recursive ones too. Each date's Rust type is the one `dateType` names, as a prop's is:
+
+```vue
+<script setup lang="ts">
+interface Comment { author: string; at: Date; edited?: Date; replies: Comment[] }
+defineProps<{ comments: Comment[]; days: Date[]; seen: Record<string, Date> }>();
+</script>
+
+<template>
+  <article v-for="c in comments">
+    <time :datetime="c.at.toISOString()">{{ c.at.getUTCDate() }}</time>
+    <small v-if="c.edited && c.edited > c.at">edited</small>
+  </article>
+  <i v-for="day in days">{{ day.getUTCDay() }}</i>
+  <b v-for="(at, who) in seen">{{ who }} {{ at.getTime() }}</b>
+</template>
+```
+
+```text
+pub struct Comment<'a> {
+    pub author: Cow<'a, str>,
+    pub at: ferrovue::JsDate,
+    pub edited: Option<ferrovue::JsDate>,
+    pub replies: Vec<Comment<'a>>,
+}
+pub struct Props<'a> {
+    pub comments: Vec<Comment<'a>>,
+    pub days: Vec<ferrovue::JsDate>,
+    pub seen: ferrovue::Record<'a, ferrovue::JsDate>,
+}
+```
+
+The template reads such a date as it reads a prop: its methods, comparisons between two dates and
+a child's `Date` prop work the same. A list of dates is walked with `v-for`, read with `[i]`,
+`.at()`, `.length`, `.filter()`, `.find()`, `.findIndex()`, `.some()`, `.every()`, `.map()` to
+another type, `.slice()`, `.concat()`, `.toReversed()` and `.reduce()`, and handed whole to a
+child's prop of the same type; a dictionary of dates is walked with `v-for`, `Object.keys()`,
+`Object.values()` and `Object.entries()`. An object literal typed with an interface may give a
+date field any date, and a `.map()` may build a list of them.
+
+An island's `data-props` carries each date as a prop's is, an invalid one as `NaN`, and the server
+writes beside it, in `data-dates`, where the props hold dates. The compiler writes that plan from
+the props' types, and the client turns the dates it names back into `Date`s before Vue hydrates,
+and nothing else: a string that only looks like a date stays a string. A page's record carries the
+plan of its layout and of each part, and the payload of loaders' results the plan of each loader's
+result (see [`loaders`](crate::guide::loaders#dates)). An app that reads an island's props itself
+passes the island's `data-dates` to `reviveDates(component, props, dates)`.
 
 ## JsDate
 
@@ -557,7 +605,15 @@ server wrote, and the rest it computes as the server did.
 - [FV1804](crate::guide::error_codes#fv1804): the local getters (`.getFullYear()`, `.getHours()`)
   with the UTC one to use instead, `.getTimezoneOffset()`, `.toString()`, `.toUTCString()`,
   `.toJSON()`, the setters, and `Date.UTC()`;
-- [FV1806](crate::guide::error_codes#fv1806): a `Date` anywhere but a component's own prop;
+- [FV1806](crate::guide::error_codes#fv1806): a `Date` in Pinia state, `provide`, `inject`, a typed
+  `ref` or a `defineModel`, which reach the browser with no plan of where their dates are;
+- [FV1810](crate::guide::error_codes#fv1810): a list of lists or dictionaries of dates, as
+  `Date[][]`: hold each inner list in an object;
+- `.includes()` and `.indexOf()` of a list of dates, which compare dates as objects
+  ([FV0801](crate::guide::error_codes#fv0801), [FV0826](crate::guide::error_codes#fv0826)),
+  `.join()` of one, which writes each date in local time
+  ([FV0602](crate::guide::error_codes#fv0602)), and `.toSorted()` of one without a comparator,
+  which orders them by their local `String()` ([FV1804](crate::guide::error_codes#fv1804));
 - [FV1805](crate::guide::error_codes#fv1805), permanently: `Intl` in any form,
   `.toLocaleString()`, `.toLocaleDateString()`, `.toLocaleTimeString()`, `.localeCompare()`, and
   vue-i18n's `$d` and `$n` (`d` and `n` from `useI18n()`). `.toLocaleUpperCase()` and

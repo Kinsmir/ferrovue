@@ -1,7 +1,7 @@
 import { basename } from "node:path";
 import { type Component, type N, type Scope, type Val, fail, GenError, nodeName, nothing, snake, takesAttrs, UNDEF } from "./model.ts";
 import { CONFIG_FILE, ctx } from "./context.ts";
-import { definePropsType, readTypeFile, tyOfTs } from "./typescript.ts";
+import { definePropsType, readTypeFile, refuseDates, tyOfTs } from "./typescript.ts";
 import { resolveImport } from "./resolve.ts";
 import { constOfDecl, type Declared, declareConsts } from "./constants.ts";
 import { localTy } from "./rust.ts";
@@ -85,6 +85,7 @@ function emptyRef(comp: Component, init: N): Val | null {
   if (!value || (value.type === "Identifier" && value.name === "undefined")) return { code: "None", ty: UNDEF };
   if (!typed || value.type !== "ArrayExpression" || value.elements.length > 0) return null;
   const ty = tyOfTs(comp, typed, comp.structs);
+  refuseDates(comp, ty, "a `ref`", typed);
   return ty.k === "list" ? { code: `Vec::<${localTy(ty.of, comp)}>::new()`, ty } : null;
 }
 

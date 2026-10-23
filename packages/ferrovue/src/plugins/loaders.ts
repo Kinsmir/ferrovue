@@ -2,8 +2,9 @@ import { type Component, type N, type Scope, type Ty, type Val, absence, fail, G
 import { ctx } from "../context.ts";
 import { type Declared } from "../constants.ts";
 import { resolveImport } from "../resolve.ts";
-import { markHome, readTypeFile, tyOfTs } from "../typescript.ts";
+import { bareDates, datePlan, markHome, readTypeFile, tyOfTs } from "../typescript.ts";
 import { coerce, describeTy, expr, fieldVal } from "../expr.ts";
+import { heldDates } from "../lists.ts";
 import { atom, bare } from "../parens.ts";
 import { header, rustTy } from "../rust.ts";
 import { type Plugin, runOf, scopeOf } from "../plugin.ts";
@@ -168,6 +169,8 @@ function awaitLet(s: Scope, loader: Loader, args: N[], at: number, call: N, lets
 
 /** The result `name` holds, `&Output`, as the value the template reads. */
 function resultVal(name: string, ty: Ty): Val {
+  const dated = heldDates(name, ty, true);
+  if (dated !== null) return dated;
   if (ty.k === "str") return { code: `&**${name}`, ty };
   if (ty.k === "int" || ty.k === "float" || ty.k === "bool") return { code: `*${name}`, ty };
   if (ty.k === "opt" && ty.of.k === "str") return { code: `${name}.as_deref()`, ty };
@@ -177,6 +180,12 @@ function resultVal(name: string, ty: Ty): Val {
 }
 
 function staticTy(ty: Ty, home: Component): string {
+  if (bareDates(ty)) {
+    if (ty.k === "date") return "fv::JsDate";
+    if (ty.k === "opt") return `Option<${staticTy(ty.of, home)}>`;
+    if (ty.k === "list") return `Vec<${staticTy(ty.of, home)}>`;
+    if (ty.k === "record") return `fv::Record<'static, ${staticTy(ty.of, home)}>`;
+  }
   return rustTy(ty, home).replace(/\bCow<'a, /g, "std::borrow::Cow<'static, ").replace(/'a\b/g, "'static");
 }
 
@@ -197,13 +206,16 @@ function loaderSource(l: Loader, home: Component): string {
       return `        if ${given} {\n            ${push}\n        }`;
     })
     .join("\n");
+  const plan = datePlan(home, l.out);
+  const dates = plan === null ? "" : `\n    const DATES: &'static str = ${rustStr(plan)};`;
+  if (plan !== null) ctx.datePlans.loaders.set(l.name, plan);
   return `/// A call of \`${l.name}\`, in ${l.home.file}: its arguments.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ${l.struct}${fields ? ` {\n${fields}\n}` : ";"}
 
 impl fv::Load for ${l.struct} {
     const NAME: &'static str = ${rustStr(l.name)};
-    type Output = ${staticTy(l.out, home)};
+    type Output = ${staticTy(l.out, home)};${dates}
     fn args(&self, ${args ? `key: &mut fv::LoadKey) {\n${args}\n    }` : "_key: &mut fv::LoadKey) {}"}
 }
 `;

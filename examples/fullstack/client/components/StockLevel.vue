@@ -11,5 +11,6 @@ const stock = await loadStock(props.id);
     <p v-if="stock.copies">{{ stock.copies }} {{ stock.copies === 1 ? "copy" : "copies" }} in stock</p>
     <p v-else>Out of stock</p>
     <Shipping v-if="stock.copies" :warehouse="stock.warehouse" />
+    <small v-if="stock.counted" class="counted">counted <time :datetime="stock.counted.toISOString()">{{ stock.counted.toISOString().slice(0, 10) }}</time></small>
   </div>
 </template>

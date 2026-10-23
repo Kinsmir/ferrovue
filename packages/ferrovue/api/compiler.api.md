@@ -307,7 +307,7 @@ export const ERRORS: {
     };
     readonly FV0317: {
         readonly title: "`Record` of unsupported values";
-        readonly detail: "A `Record`'s values must be strings, numbers, booleans, objects with a declared interface, or lists of those. Values that may be absent or `null`, `Date`s, HTML and nested `Record`s are refused. Wrap the value in an interface, or compute the map in Rust and pass a plainer one as a prop.";
+        readonly detail: "A `Record`'s values must be strings, numbers, booleans, `Date`s, objects with a declared interface, or lists of those other than `Date`s. Values that may be absent or `null`, lists of `Date`s, HTML and nested `Record`s are refused. Wrap the value in an interface, or compute the map in Rust and pass a plainer one as a prop.";
     };
     readonly FV0318: {
         readonly title: "Interface named as a Rust type";
@@ -1614,8 +1614,8 @@ export const ERRORS: {
         readonly detail: "`Intl` formats from locale data each JavaScript engine ships, and Node, Chromium, Firefox and Safari write some dates, times and numbers differently (spaces, separators, abbreviations), so no server can write what every reader's browser writes. This refusal is permanent. Format the value in Rust and pass it as a string prop, or write it with `.toFixed()` and `.toISOString()` into a message `$t` translates. See [`dates_and_prices`](crate::guide::dates_and_prices).";
     };
     readonly FV1806: {
-        readonly title: "`Date` anywhere but a component's own prop";
-        readonly detail: "A prop typed `Date` (optional or nullable too) is a `ferrovue::JsDate`, or the type `dateType` names, and an island's `data-props` carries it as its ISO string, which the client turns back into a `Date` because the prop's declared type says it is one. A `Date` inside a list, a dictionary or an object prop, and one in an interface the props do not declare, in Pinia state, `inject`, `ref` or `defineModel`, have no declared type the client could read, so they would reach the browser as strings. Pass the ISO string or the number of milliseconds and build the date with `new Date()`. See [`dates_and_prices`](crate::guide::dates_and_prices).";
+        readonly title: "`Date` in Pinia state, `provide`, `inject`, a `ref` or a `defineModel`";
+        readonly detail: "A `Date` in a prop, itself or inside a list, a dictionary or an object, is a `ferrovue::JsDate`, or the type `dateType` names, and so is one in a loader's result. An island's `data-props` and the page's payload carry it as its ISO string, with a plan the compiler writes of where the dates are, from which the client turns each back into a `Date`. Pinia state, a value given to `provide` or read by `inject`, a typed `ref` and a `defineModel` reach the browser with no such plan, so a date in them would arrive as a string. Pass the ISO string or the number of milliseconds and build the date with `new Date()`. See [`dates_and_prices`](crate::guide::dates_and_prices).";
     };
     readonly FV1807: {
         readonly title: "`Date.UTC()` of anything but one to seven numbers that are present";
@@ -1628,6 +1628,10 @@ export const ERRORS: {
     readonly FV1809: {
         readonly title: "`===`, `!==`, `==` or `!=` with a `Date`";
         readonly detail: "Two `Date`s are equal in JavaScript only when they are one object, so two dates of the same time are unequal, and `==` with a string compares the date's `.toString()`, in the time zone of the machine running it. Compare time values: `a.getTime() === b.getTime()`. `<`, `<=`, `>` and `>=` between two dates compare their time values, and are false when either is invalid. See [`dates_and_prices`](crate::guide::dates_and_prices).";
+    };
+    readonly FV1810: {
+        readonly title: "List of lists or dictionaries of `Date`s";
+        readonly detail: "A list of `Date`s, `(Date | null)[]` and `Record<string, Date>` are each read as their dates' time values, and a list of them, as `Date[][]`, is refused. Hold each inner list in an object, `{ at: Date[] }[]`, whose field the template reads. See [`dates_and_prices`](crate::guide::dates_and_prices).";
     };
     readonly FV1901: {
         readonly title: "Statement a function's body may not hold";
@@ -1675,7 +1679,7 @@ export const ERRORS: {
     };
     readonly FV2004: {
         readonly title: "Loader result the payload cannot carry";
-        readonly detail: "A loader declares what it returns, `Promise<T>`, which is the Rust app's `Output` for it and travels to the client as JSON in the page's payload. `undefined` is dropped by `JSON.stringify` and a `Date` arrives as a string, so the client would hydrate from another value: return `null` for none and a date as its ISO string.";
+        readonly detail: "A loader declares what it returns, `Promise<T>`, which is the Rust app's `Output` for it and travels to the client as JSON in the page's payload. `undefined` is dropped by `JSON.stringify`, so the client would hydrate from another value: return `null` for none. A `Date` in the result, itself or inside a list, a dictionary or an object, travels as its ISO string with a plan of where the dates are, and the client turns each back into a `Date`.";
     };
     readonly FV2005: {
         readonly title: "Two loaders with one name";

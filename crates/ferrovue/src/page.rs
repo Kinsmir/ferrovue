@@ -88,6 +88,7 @@ pub struct Page {
 pub struct Part<'p> {
     name: &'static str,
     props: String,
+    dates: &'static str,
     render: Box<dyn Fn(&mut String) + 'p>,
 }
 
@@ -128,6 +129,7 @@ type SlotContent<'p> = dyn Fn(&mut String, &str) -> bool + 'p;
 #[derive(Debug, Default)]
 struct Recorded {
     props: String,
+    dates: &'static str,
     names: Vec<&'static str>,
     slots: Vec<(String, Option<String>)>,
     open: usize,
@@ -193,7 +195,10 @@ impl Page {
         layout: Html<'_, P, F>,
     ) -> PageRecord {
         let props = layout.props.get();
-        lock(&self.record).props = json::to_string_or_null(props);
+        let mut record = lock(&self.record);
+        record.props = json::to_string_or_null(props);
+        record.dates = layout.dates;
+        drop(record);
         (layout.render)(out, props);
         PageRecord {
             record: self.record,
@@ -222,6 +227,7 @@ impl<'p> Part<'p> {
         Part {
             name,
             props,
+            dates: html.dates,
             render: Box::new(move |out| (html.render)(out, html.props.get())),
         }
     }
@@ -363,7 +369,12 @@ impl Recorded {
             out.push(':');
             out.push_str(parts.as_deref().unwrap_or("[]"));
         }
-        out.push_str("}}");
+        out.push('}');
+        if !self.dates.is_empty() {
+            out.push_str(",\"dates\":");
+            out.push_str(self.dates);
+        }
+        out.push('}');
         out
     }
 }
@@ -378,6 +389,10 @@ fn parts_json(parts: &[Part<'_>]) -> String {
         out.push_str(&json::to_string(part.name));
         out.push_str(",\"p\":");
         out.push_str(&part.props);
+        if !part.dates.is_empty() {
+            out.push_str(",\"d\":");
+            out.push_str(part.dates);
+        }
         out.push('}');
     }
     out.push(']');

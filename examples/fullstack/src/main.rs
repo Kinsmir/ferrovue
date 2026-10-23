@@ -207,7 +207,7 @@ mod tests {
             "{reviews}"
         );
         assert!(
-            reviews.contains(r#"}]}" data-hydrate="visible"><div class="review-list""#),
+            reviews.contains(r#"}]}" data-hydrate="visible" data-dates="[{&quot;reviews&quot;:[{&quot;posted&quot;:1}]}]"><div class="review-list""#),
             "{reviews}"
         );
         assert!(
@@ -261,15 +261,16 @@ mod tests {
         assert!(
             html.contains(concat!(
                 r#"<div class="stock" data-copies="3"><p>3 copies in stock</p>"#,
-                r#"<p class="shipping">Ships from Leeds in 2 days</p></div>"#,
+                r#"<p class="shipping">Ships from Leeds in 2 days</p>"#,
+                r#"<small class="counted">counted <time datetime="2024-06-01T00:00:00.000Z">2024-06-01</time></small></div>"#,
             )),
             "{html}"
         );
         let record = html
             .split_once(concat!(
                 r#"</div><script type="application/json" data-fv-loads>"#,
-                r#"{"[\"loadStock\",\"dune\"]":{"copies":3,"warehouse":"leeds"},"#,
-                r#""[\"loadWarehouse\",\"leeds\"]":{"city":"Leeds","days":2}}</script>"#,
+                r#"{"[\"loadStock\",\"dune\"]":{"copies":3,"warehouse":"leeds","counted":"2024-06-01T00:00:00.000Z"},"#,
+                r#""[\"loadWarehouse\",\"leeds\"]":{"city":"Leeds","days":2},"dates":{"loadStock":[{"counted":1}]}}</script>"#,
                 r#"<script type="application/json" id="__fv_page">"#,
             ))
             .and_then(|(_, rest)| rest.split_once("</script>"))
@@ -287,6 +288,12 @@ mod tests {
         );
         assert!(
             record.contains(r#""reviews":[{"c":"Reviews","p":{"reviews":[{"reader":"Ada","#),
+            "{record}"
+        );
+        assert!(
+            record.contains(
+                r#""posted":"1999-01-01T00:00:00.000Z"}]},"d":[{"reviews":[{"posted":1}]}]}]}}"#
+            ),
             "{record}"
         );
         assert!(
@@ -352,7 +359,10 @@ mod tests {
                 .expect("a body")
         };
         let dune = stock(Path("dune".to_owned())).await.into_response();
-        assert_eq!(body(dune).await, r#"{"copies":3,"warehouse":"leeds"}"#);
+        assert_eq!(
+            body(dune).await,
+            r#"{"copies":3,"warehouse":"leeds","counted":"2024-06-01T00:00:00.000Z"}"#
+        );
         let unknown = stock(Path("nowhere".to_owned())).await.into_response();
         assert_eq!(body(unknown).await, r#"{"copies":0,"warehouse":""}"#);
         let porto = warehouse(Path("porto".to_owned())).await.into_response();

@@ -9,11 +9,13 @@ export interface Review {
   reader: string;
   stars: number;
   text: string;
+  posted?: Date;
 }
 
 export interface Stock {
   copies: number;
   warehouse: string;
+  counted?: Date;
 }
 
 export interface Warehouse {

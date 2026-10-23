@@ -3,7 +3,7 @@ import vue from "@vitejs/plugin-vue";
 import { chromium, firefox, webkit, type Browser, type ConsoleMessage, type Page } from "playwright";
 import { build, type Rolldown } from "vite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { cases, CLIENT_ONLY, CSS_MODULES, hydrationBody, OPTIONS, recordedHead, ROUTES, UNHEAD_REWRITES, VUE_DISAGREES } from "../test/conformance-cases.ts";
+import { cases, CLIENT_ONLY, CSS_MODULES, hydrationBody, OPTIONS, PLANS, recordedHead, ROUTES, UNHEAD_REWRITES, VUE_DISAGREES } from "../test/conformance-cases.ts";
 import type { PageData } from "./entry.ts";
 
 const ORIGIN = "http://conformance.test";
@@ -59,7 +59,7 @@ beforeAll(async () => {
 });
 
 function pageFor(c: (typeof cases)[number]): string {
-  const data: PageData = { component: c.component, fixture: c.json, routes: ROUTES, options: OPTIONS };
+  const data: PageData = { component: c.component, fixture: c.json, routes: ROUTES, options: OPTIONS, plans: PLANS };
   const json = JSON.stringify(data).replace(/</g, "\\u003c");
   const head = recordedHead(c.html);
   return (
@@ -82,7 +82,7 @@ async function describeMessage(m: ConsoleMessage): Promise<string> {
 const pages = new Map(cases.map((c) => [`/${c.component}/${c.name}`, pageFor(c)]));
 
 const ZONES = ["Pacific/Kiritimati", "America/St_Johns", "Asia/Kathmandu"];
-const DATED = cases.filter((c) => c.component === "DatePost" || c.component === "DateStamp");
+const DATED = cases.filter((c) => ["DatePost", "DateStamp", "DateRows", "DateDays", "DateReplies", "DateThread", "LoadedDates"].includes(c.component));
 
 async function serve(page: Page, logged: (message: Promise<string>) => void): Promise<void> {
   page.on("console", (m) => {
@@ -145,9 +145,9 @@ describe.each(BROWSERS)("%s", (name) => {
   }
 
   for (const zone of ZONES) {
-    it(`hydrates every fixture with a Date prop in ${zone} as it was recorded`, async ({ skip }) => {
+    it(`hydrates every fixture with a Date prop, or dates inside its props or its loaders' results, in ${zone} as it was recorded`, async ({ skip }) => {
       if (!browser) skip();
-      expect(DATED.length).toBeGreaterThanOrEqual(9);
+      expect(DATED.length).toBeGreaterThanOrEqual(27);
       const context = await browser!.newContext({ timezoneId: zone });
       const zoned = await context.newPage();
       const logged: Promise<string>[] = [];
@@ -164,6 +164,6 @@ describe.each(BROWSERS)("%s", (name) => {
       } finally {
         await context.close();
       }
-    });
+    }, 60_000);
   }
 });

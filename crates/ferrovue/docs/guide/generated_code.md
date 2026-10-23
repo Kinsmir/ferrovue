@@ -112,8 +112,9 @@ and 3, since a module of version 2 calls nothing it changed. Version 4 adds
 and the generated `loaders` module calls what the 0.9 crate lacks; the 0.10 crate supports
 versions 2 to 4. Version 5 adds the [enums of unions of string
 literals](crate::guide::props#unions-of-string-literals), whose `FromStr` fails with
-[`ParseUnionError`](crate::ParseUnionError), which the 0.10 crate lacks; the 0.11 crate supports
-versions 2 to 5. The upgrade pages, [`upgrading_to_0_11`](crate::guide::upgrading_to_0_11),
+[`ParseUnionError`](crate::ParseUnionError), which the 0.10 crate lacks, and dates inside lists,
+dictionaries and interfaces, which it writes with helpers the 0.10 crate lacks; the 0.11 crate
+supports versions 2 to 5. The upgrade pages, [`upgrading_to_0_11`](crate::guide::upgrading_to_0_11),
 [`upgrading_to_0_10`](crate::guide::upgrading_to_0_10),
 [`upgrading_to_0_9`](crate::guide::upgrading_to_0_9) and
 [`upgrading_to_0_8`](crate::guide::upgrading_to_0_8), give the steps for each release.

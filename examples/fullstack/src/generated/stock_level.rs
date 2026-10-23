@@ -27,7 +27,7 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::Loads<'_>) {
-    out.reserve(95 + props.id.len());
+    out.reserve(166 + props.id.len());
     let Some(l_0) = fv_loads.get(super::loaders::LoadStock { id: String::from(&*props.id) }) else { return; };
     out.push_str("<div class=\"stock\" data-copies=\"");
     fv::push_int(out, l_0.copies);
@@ -43,6 +43,15 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::Loads<'_>) {
     }
     if l_0.copies != 0 {
         super::shipping::render(out, &super::shipping::Props { warehouse: std::borrow::Cow::Borrowed(&*l_0.warehouse) }, fv_loads);
+    } else {
+        out.push_str("<!---->");
+    }
+    if let Some(n1) = l_0.counted.as_ref().map(fv::js_time_of) {
+        out.push_str("<small class=\"counted\">counted <time datetime=\"");
+        fv::escape_into(out, &fv::js_to_iso_string(n1));
+        out.push_str("\">");
+        fv::escape_into(out, &fv::js_slice(&fv::js_to_iso_string(n1), 0.0f64, Some(10.0f64)));
+        out.push_str("</time></small>");
     } else {
         out.push_str("<!---->");
     }

@@ -25,7 +25,7 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(294 + 75 * props.reviews.len() + props.reviews.iter().map(|v| v.reader.len() + v.text.len()).sum::<usize>());
+    out.reserve(294 + 131 * props.reviews.len() + props.reviews.iter().map(|v| v.reader.len() + v.text.len()).sum::<usize>());
     out.push_str("<div class=\"review-list\" data-v-458b887c>");
     if props.reviews.len() as i64 != 0 {
         out.push_str("<ol data-v-458b887c><!--[-->");
@@ -42,6 +42,15 @@ pub fn render(out: &mut String, props: &Props<'_>) {
             fv::escape_into(out, &r.text);
             out.push_str("</q> — ");
             fv::escape_into(out, &r.reader);
+            if let Some(n1) = r.posted.as_ref().map(fv::js_time_of) {
+                out.push_str("<time datetime=\"");
+                fv::escape_into(out, &fv::js_to_iso_string(n1));
+                out.push_str("\" data-v-458b887c>, ");
+                fv::push_number(out, fv::js_utc_full_year(n1));
+                out.push_str("</time>");
+            } else {
+                out.push_str("<!---->");
+            }
             out.push_str("</li>");
         }
         out.push_str("<!--]--></ol>");
@@ -60,20 +69,24 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 
 /// The component's markup, for a maud page that shows it without hydrating it.
 pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup(props, render)
+    let html: fv::Html<'p, Props<'a>> = fv::Html::markup(props, render);
+    html.dates("[{\"reviews\":[{\"posted\":1}]}]")
 }
 
 /// The component as an island the client hydrates.
 pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island(NAME, props, render)
+    let html: fv::Html<'p, Props<'a>> = fv::Html::island(NAME, props, render);
+    html.dates("[{\"reviews\":[{\"posted\":1}]}]")
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
 pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned(props, render)
+    let html: fv::Html<'a, Props<'a>> = fv::Html::markup_owned(props, render);
+    html.dates("[{\"reviews\":[{\"posted\":1}]}]")
 }
 
 /// [`island`], holding the props.
 pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned(NAME, props, render)
+    let html: fv::Html<'a, Props<'a>> = fv::Html::island_owned(NAME, props, render);
+    html.dates("[{\"reviews\":[{\"posted\":1}]}]")
 }

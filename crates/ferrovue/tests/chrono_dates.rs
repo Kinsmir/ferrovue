@@ -1,5 +1,6 @@
-//! The conformance suite's `Date` components compiled with `"dateType":
-//! "chrono::DateTime<chrono::Utc>"`, rendering the fixtures Vue recorded.
+//! The conformance suite's `Date` components, and those holding dates in lists and objects,
+//! compiled with `"dateType": "chrono::DateTime<chrono::Utc>"`, rendering the fixtures Vue
+//! recorded.
 
 #[rustfmt::skip]
 #[path = "chrono_dates/generated/mod.rs"]
@@ -17,7 +18,7 @@ use generated::{date_post, date_stamp};
 fn every_fixture_chrono_holds_renders_as_vue_rendered_it_and_the_others_are_refused() {
     let mut rendered = Vec::new();
     let mut refused = Vec::new();
-    for component in ["DatePost", "DateStamp"] {
+    for component in ["DatePost", "DateStamp", "DateRows", "DateDays"] {
         let dir = Path::new("tests/conformance/fixtures").join(component);
         let mut names: Vec<_> = fs::read_dir(&dir)
             .unwrap()
@@ -53,7 +54,13 @@ fn every_fixture_chrono_holds_renders_as_vue_rendered_it_and_the_others_are_refu
             "DatePost/hostile",
             "DatePost/typical",
             "DateStamp/absent",
-            "DateStamp/typical"
+            "DateStamp/typical",
+            "DateRows/empty",
+            "DateRows/hostile",
+            "DateRows/typical",
+            "DateDays/empty",
+            "DateDays/hostile",
+            "DateDays/typical"
         ]
     );
     assert_eq!(
@@ -62,7 +69,11 @@ fn every_fixture_chrono_holds_renders_as_vue_rendered_it_and_the_others_are_refu
             "DatePost/expanded-years",
             "DatePost/invalid",
             "DatePost/range-edges",
-            "DateStamp/invalid"
+            "DateStamp/invalid",
+            "DateRows/invalid",
+            "DateRows/range-edges",
+            "DateDays/invalid",
+            "DateDays/range-edges"
         ]
     );
 }

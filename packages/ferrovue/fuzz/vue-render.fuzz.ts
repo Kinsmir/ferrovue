@@ -3,7 +3,8 @@ import { basename, dirname, join } from "node:path";
 import { it } from "vitest";
 import type { Component } from "vue";
 import type { Config } from "../src/compiler.ts";
-import { fixtureOptions, renderFixture } from "../src/conformance.ts";
+import { datePlansOf, fixtureOptions, renderFixture } from "../src/conformance.ts";
+import { type DatePlans, withDatePlans } from "../src/fixture.ts";
 import { attachSsrRender, fixtureApp, readFixture } from "../src/testing.ts";
 
 interface VueCase {
@@ -36,13 +37,20 @@ it("renders every fixture", async () => {
     }
     return p;
   };
+  const plans = new Map<string, DatePlans>();
+  const plansOf = (c: VueCase): DatePlans => {
+    let p = plans.get(c.root);
+    if (!p) plans.set(c.root, (p = datePlansOf(c.root, c.config)));
+    return p;
+  };
   const warn = console.warn;
   console.warn = () => {};
   try {
     for (const c of cases) {
       try {
         const { routes, options } = fixtureOptions(c.root, c.config);
-        const app = await fixtureApp(await load(c), readFixture(JSON.parse(c.json) as Record<string, unknown>), routes, options);
+        const fixture = withDatePlans(readFixture(JSON.parse(c.json) as Record<string, unknown>), c.name, plansOf(c));
+        const app = await fixtureApp(await load(c), fixture, routes, options);
         results[c.key] = { ok: (await renderFixture(app)).toWellFormed().replace(/\\u[dD][89a-fA-F][0-9a-fA-F]{2}/g, "�") };
       } catch (e) {
         results[c.key] = { err: String((e as Error).stack ?? e).split("\n").slice(0, 4).join("\n") };

@@ -1560,6 +1560,19 @@ defineProps<{ title: string }>();
       expect(out.get("stores.rs")).toContain("pub prefs: PrefsState<'a>,");
     });
 
+    it("refuses a Date in a store's state, which hydrateState reads back as a string", () => {
+      const dated = store.replace("wide: boolean }", "wide: boolean; seen: Date[] }").replace("wide: false }", "wide: false, seen: [] }");
+      expect(() => withStore(island(reader), dated)).toThrow(/prefs\.ts:2:\d+: `seen` of a store's state holds a `Date`/);
+      const setup = `import { defineStore } from "pinia";
+import { ref } from "vue";
+export const usePrefs = defineStore("prefs", () => {
+  const at = ref<Date | null>(null);
+  return { at };
+});
+`;
+      expect(() => withStore(island(reader), setup)).toThrow(/prefs\.ts:4:\d+: a setup store's ref holds a `Date`/);
+    });
+
     it("refuses a store whose state has no declared type", () => {
       const untyped = store.replace("(): PrefsState =>", "() =>");
       expect(() => withStore(island(reader), untyped)).toThrow(/declares its return type/);
@@ -1871,35 +1884,43 @@ const props = defineProps<Props>();
       expect(out).toContain("fv::push_number(out, fv::js_utc_date(fv::js_time_of(&props.posted)));");
     });
 
-    it("refuses a Date anywhere but a component's own prop, which the client could not revive", () => {
-      const refusal = /FV1806|only a component's own prop may be a `Date`, which the client turns back into one from the prop's declared type/;
-      const props = (decl: string, extra = "") => `<script setup lang="ts">
-${extra}
-const props = defineProps<${decl}>();
+    it("gives a Date inside lists, dictionaries and objects of the props the date type, with a plan of where the dates are", () => {
+      const source = `<script setup lang="ts">
+import type { Props as CardProps } from "./Card.vue";
+interface Row { at: Date; seen?: Date; marks: Date[]; by: Record<string, Date>; next?: Row }
+defineProps<{ days: Date[]; maybe?: (Date | null)[]; byName: Record<string, Date>; rows: Row[]; cards: CardProps[] }>();
 </script>
-<template><i></i></template>`;
-      for (const source of [
-        props("{ days: Date[] }"),
-        props("{ days: Array<Date | null> }"),
-        props("{ byName: Record<string, Date> }"),
-        props("{ row: Row }", "interface Row { at: Date }"),
-        props("{ self: Props; at: Date }", "interface Props { at: Date; self?: Props }"),
-      ]) {
-        expect(() => compile(island(source)), source).toThrow(refusal);
-      }
-      const nested = island(props("{ cards: CardProps[] }", 'import type { Props as CardProps } from "./Card.vue";'), { Card: stamp });
-      expect(() => compile(nested)).toThrow(/`cards` holds a `Date` inside a list or an object: only a component's own prop may be a `Date`/);
+<template><i v-for="d in days">{{ d.getTime() }}</i><b v-for="r in rows">{{ r.at.toISOString() }}{{ r.marks.length }}</b></template>`;
+      const card = `<script setup lang="ts">\ndefineProps<{ at: Date }>();\n</script>\n<template><i>{{ at.getTime() }}</i></template>`;
+      const out = compile(island(source, { Card: card }));
+      const x = out.get("x.rs")!;
+      expect(x).toContain('    #[serde(rename = "days", with = "fv::dates_in")]\n    pub days: Vec<ferrovue::JsDate>,');
+      expect(x).toContain('    #[serde(rename = "maybe", default, skip_serializing_if = "Option::is_none", with = "fv::dates_in")]\n    pub maybe: Option<Vec<Option<ferrovue::JsDate>>>,');
+      expect(x).toContain('    #[serde(rename = "byName", with = "fv::dates_in")]\n    pub by_name: ferrovue::Record<\'a, ferrovue::JsDate>,');
+      expect(x).toContain('    #[serde(rename = "seen", default, skip_serializing_if = "Option::is_none", with = "fv::opt_date_prop")]\n    pub seen: Option<ferrovue::JsDate>,');
+      expect(x).toContain("for d in props.days.iter().map(fv::js_time_of) {");
+      expect(x).toContain("fv::js_to_iso_string(fv::js_time_of(&r.at))");
+      const plan = '[{"days":[1],"maybe":[1],"byName":{"*":1},"rows":["Row"],"cards":[{"at":1}]},{"Row":{"at":1,"seen":1,"marks":[1],"by":{"*":1},"next":"Row"}}]';
+      expect(x).toContain(`    let html: fv::Html<'p, Props<'a>> = fv::Html::island(NAME, props, render);\n    html.dates(${JSON.stringify(plan)})`);
+      expect(out.get("card.rs")).not.toContain(".dates(");
+    });
+
+    it("refuses a Date in a ref, a defineModel, a list of lists, or the values of a dictionary of lists", () => {
       const typed = `<script setup lang="ts">
 import { ref } from "vue";
 const at = ref<Date[]>([]);
 </script>
 <template><i>{{ at.length }}</i></template>`;
-      expect(() => compile(island(typed))).toThrow(refusal);
+      expect(() => compile(island(typed))).toThrow(/a `ref` holds a `Date`: a `Date` reaches the browser as a `Date` from a prop or a loader's result/);
       const model = `<script setup lang="ts">
 const at = defineModel<Date>({ required: true });
 </script>
 <template><i>{{ at.getTime() }}</i></template>`;
-      expect(() => compile(island(model))).toThrow(refusal);
+      expect(() => compile(island(model))).toThrow(/a `defineModel` holds a `Date`/);
+      const props = (decl: string) => `<script setup lang="ts">\ndefineProps<${decl}>();\n</script>\n<template><i></i></template>`;
+      expect(() => compile(island(props("{ days: Date[][] }")))).toThrow(/a list of lists or dictionaries of `Date`s/);
+      expect(() => compile(island(props("{ days: Array<Record<string, Date>> }")))).toThrow(/a list of lists or dictionaries of `Date`s/);
+      expect(() => compile(island(props("{ days: Record<string, Date[]> }")))).toThrow(/other than dates/);
     });
 
     it("refuses a Date prop interpolated, bound to an attribute, given a default or handed to a prop of another type", () => {
@@ -3390,7 +3411,7 @@ const props = defineProps<{ nums: number[] }>();
 const props = defineProps<{ tags: (string | null)[] }>();
 </script>
 <template><i>{{ tags.every(Boolean) }}</i></template>`,
-      /this method takes a list of strings, numbers, booleans or objects/,
+      /this method takes a list of strings, numbers, booleans, dates or objects/,
     ],
     [
       "an array literal filtered by Boolean whose items are of different types",
@@ -3431,7 +3452,7 @@ defineProps<{ m: Record<number, string> }>();
 defineProps<{ m: Record<string, string | undefined> }>();
 </script>
 <template><i></i></template>`,
-      /a `Record`'s values are strings, numbers, booleans, objects or lists of those/,
+      /a `Record`'s values are strings, numbers, booleans, dates, objects or lists of those other than dates/,
     ],
     [
       "Object.entries pairs mapped to themselves",
@@ -3771,6 +3792,30 @@ defineProps<{ a: Date; b: Date }>();
 </script>
 <template><p v-if="a === b">same</p></template>`,
       /`===` between a `Date` and a `Date` is true only when the two are one object, so two dates of the same time are unequal: compare time values, `a\.getTime\(\) === b\.getTime\(\)`/,
+    ],
+    [
+      "a list of lists of dates",
+      `<script setup lang="ts">
+defineProps<{ weeks: Date[][] }>();
+</script>
+<template><p>{{ weeks.length }}</p></template>`,
+      /a list of lists or dictionaries of `Date`s: hold each inner list in an object, as `\{ at: Date\[\] \}\[\]`/,
+    ],
+    [
+      "a list of dates sorted without a comparator",
+      `<script setup lang="ts">
+defineProps<{ days: Date[] }>();
+</script>
+<template><p v-for="d in days.toSorted()">{{ d.getTime() }}</p></template>`,
+      /`\.toSorted\(\)` without a comparator orders dates by `String\(x\)`, which writes each in the time zone of the machine running it/,
+    ],
+    [
+      "a date looked for in a list of dates",
+      `<script setup lang="ts">
+defineProps<{ days: Date[]; at: Date }>();
+</script>
+<template><p>{{ days.includes(at) }}</p></template>`,
+      /`\.includes\(\)` looks for a value of the list's own type, in a list of strings, numbers or booleans/,
     ],
     [
       "a date compared with a string by ==",
@@ -5230,6 +5275,9 @@ defineProps<{ chip: Chip }>();
     "Date.UTC of a year engines compute differently": "FV1808",
     "two dates compared with ===": "FV1809",
     "a date compared with a string by ==": "FV1809",
+    "a list of lists of dates": "FV1810",
+    "a list of dates sorted without a comparator": "FV1804",
+    "a date looked for in a list of dates": "FV0801",
     "a date ordered against a number": "FV0609",
     "JSON.stringify of a date that may be absent": "FV0707",
     "a number formatted by locale": "FV1805",

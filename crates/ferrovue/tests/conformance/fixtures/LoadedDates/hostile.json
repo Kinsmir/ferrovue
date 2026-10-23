@@ -1,0 +1,18 @@
+{
+  "id": -1,
+  "name": "</h2><script>alert(1)</script>",
+  "$loads": {
+    "[\"loadOpened\",\"</h2><script>alert(1)</script>\"]": "+275760-09-13T00:00:00.000Z",
+    "[\"loadThread\",-1]": {
+      "title": "\"><img src=x onerror=alert(1)>&amp;",
+      "opened": "-271821-04-20T00:00:00.000Z",
+      "replies": [
+        { "author": "<b>\" onclick=\"x", "at": 8640000000000001, "edited": -8640000000000000, "removed": 8640000000000001, "replies": [] }
+      ],
+      "pinned": { "</u>&lt;": "-000001-12-31T23:59:59.999Z", " ": 8640000000000001 },
+      "seen": [8640000000000001, null, "+010000-01-01"]
+    },
+    "[\"loadDays\"]": ["+275760-09-13", "-271821-04-20T00:00Z", 8640000000000001],
+    "[\"loadClosed\",\"</h2><script>alert(1)</script>\"]": -8640000000000000
+  }
+}

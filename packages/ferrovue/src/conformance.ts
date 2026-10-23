@@ -6,7 +6,8 @@ import { renderToString } from "vue/server-renderer";
 import { generate, loadConfig, type Config } from "./compiler.ts";
 import { unifiedDiff } from "./diff.ts";
 import { allPages, fileRoutes, pagesFolder, routeEntries } from "./file-routes.ts";
-import { fixtureApp, peer, readFixture, type RouteEntry, type RouterOptions } from "./fixture.ts";
+import { type DatePlans, fixtureApp, peer, readFixture, type RouteEntry, type RouterOptions, withDatePlans } from "./fixture.ts";
+import { ctx } from "./context.ts";
 import { headRendered, settled } from "./settle.ts";
 import { attachSsrRender } from "./ssr.ts";
 import { applyCssVars, parsedShape, renderDifference, renderedShape } from "./client-render.ts";
@@ -121,6 +122,18 @@ export function firstDifference(recorded: string, rendered: string): string {
   const lines = recorded.slice(0, at).split("\n");
   const around = (text: string): string => JSON.stringify(text.slice(Math.max(0, at - 40), at + 40));
   return `first difference at character ${at} (line ${lines.length}, column ${lines.at(-1)!.length + 1}):\n  recorded: ${around(recorded)}\n  rendered: ${around(rendered)}`;
+}
+
+/** The date plans of a project, as the compiler writes them for its configuration; none where it
+ * refuses anything, which the suite's check of the generated Rust reports. */
+export function datePlansOf(root: string, config: Config): DatePlans {
+  try {
+    generate(root, config);
+  } catch {
+    return { components: {}, loaders: {} };
+  }
+  const parsed = (plans: Map<string, string>) => Object.fromEntries([...plans].map(([name, plan]) => [name, JSON.parse(plan) as unknown]));
+  return { components: parsed(ctx.datePlans.components), loaders: parsed(ctx.datePlans.loaders) };
 }
 
 interface PageFile {
@@ -306,11 +319,12 @@ export function registerConformance(api: TestApi, options: ConformanceOptions): 
   const cases = casesIn(fixtures);
   const { routes, options: configured } = fixtureOptions(root, config);
   const appOptions: RouterOptions = { ...configured, pinia: options.pinia, vueRouter: options.vueRouter, vueI18n: options.vueI18n };
+  const plans = datePlansOf(root, config);
   const app = async (c: Case, mode: Pick<RouterOptions, "hydrate" | "client"> = {}): Promise<App> => {
     const component = given.get(c.component);
     if (!component) throw new Error(`the fixtures in ${c.component}/ name no component in \`components\``);
     const json = JSON.parse(readFileSync(`${c.base}.json`, "utf8")) as Record<string, unknown>;
-    return fixtureApp(component, readFixture(json), routes, { ...appOptions, ...mode });
+    return fixtureApp(component, withDatePlans(readFixture(json), c.component, plans), routes, { ...appOptions, ...mode });
   };
 
   api.describe("conformance", () => {

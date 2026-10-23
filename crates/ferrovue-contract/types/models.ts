@@ -14,3 +14,9 @@ export const CHOICES: Choice[] = [
   { id: 1, label: "One" },
   { id: 2, label: "Two" },
 ];
+
+export interface Moment {
+  label: string;
+  at: Date;
+  seen: (Date | null)[];
+}

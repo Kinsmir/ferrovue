@@ -6,6 +6,8 @@
 
 use std::borrow::Cow;
 
+use ferrovue as fv;
+
 /// `Book` in `client/components/types.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -39,14 +41,21 @@ pub struct Review<'a> {
     pub stars: i64,
     #[serde(rename = "text")]
     pub text: Cow<'a, str>,
+    #[serde(rename = "posted", default, skip_serializing_if = "Option::is_none", with = "fv::opt_date_prop")]
+    pub posted: Option<ferrovue::JsDate>,
 }
 
 impl<'a> Review<'a> {
-    /// Review with its required fields.
+    /// Review with its required fields, every optional one absent.
     pub fn new(reader: impl Into<Cow<'a, str>>, stars: i64, text: impl Into<Cow<'a, str>>) -> Self {
-        Review { reader: reader.into(), stars, text: text.into() }
+        Review { reader: reader.into(), stars, text: text.into(), posted: None }
     }
 
+    /// Set `posted`, which is absent otherwise.
+    pub fn posted(mut self, posted: ferrovue::JsDate) -> Self {
+        self.posted = Some(posted);
+        self
+    }
 }
 
 
@@ -58,14 +67,21 @@ pub struct Stock<'a> {
     pub copies: i64,
     #[serde(rename = "warehouse")]
     pub warehouse: Cow<'a, str>,
+    #[serde(rename = "counted", default, skip_serializing_if = "Option::is_none", with = "fv::opt_date_prop")]
+    pub counted: Option<ferrovue::JsDate>,
 }
 
 impl<'a> Stock<'a> {
-    /// Stock with its required fields.
+    /// Stock with its required fields, every optional one absent.
     pub fn new(copies: i64, warehouse: impl Into<Cow<'a, str>>) -> Self {
-        Stock { copies, warehouse: warehouse.into() }
+        Stock { copies, warehouse: warehouse.into(), counted: None }
     }
 
+    /// Set `counted`, which is absent otherwise.
+    pub fn counted(mut self, counted: ferrovue::JsDate) -> Self {
+        self.counted = Some(counted);
+        self
+    }
 }
 
 

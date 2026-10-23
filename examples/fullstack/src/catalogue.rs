@@ -1,6 +1,8 @@
 use std::convert::Infallible;
 use std::time::Duration;
 
+use ferrovue::JsDate;
+
 use crate::generated::loaders::{LoadStock, LoadWarehouse, Loaders};
 use crate::generated::types::{Book, Review, Stock, Warehouse};
 
@@ -16,24 +18,43 @@ const BOOKS: &[(&str, &str, &str, i64)] = &[
     ("ficciones", "Ficciones", "Jorge Luis Borges", 1944),
 ];
 
-const REVIEWS: &[(&str, &str, i64, &str)] = &[
-    ("dune", "Ada", 5, "The spice must flow."),
-    ("dune", "Grace", 4, "Long, & worth every page."),
-    ("dune", "Linus", 3, "Too much sand <for me>."),
-    ("solaris", "Alan", 5, "An ocean that thinks back."),
+const REVIEWS: &[(&str, &str, i64, &str, &str)] = &[
+    (
+        "dune",
+        "Ada",
+        5,
+        "The spice must flow.",
+        "2024-03-10T08:05:09Z",
+    ),
+    (
+        "dune",
+        "Grace",
+        4,
+        "Long, & worth every page.",
+        "2023-12-31T23:30-01:00",
+    ),
+    ("dune", "Linus", 3, "Too much sand <for me>.", "1999-01-01"),
+    (
+        "solaris",
+        "Alan",
+        5,
+        "An ocean that thinks back.",
+        "2024-02-29",
+    ),
     (
         "left-hand",
         "Barbara",
         5,
         "Winter, and what it does to people.",
+        "2020-06-01T12:00:00+02:00",
     ),
 ];
 
-const STOCK: &[(&str, i64, &str)] = &[
-    ("dune", 3, "leeds"),
-    ("solaris", 0, "leeds"),
-    ("left-hand", 1, "porto"),
-    ("ficciones", 2, "porto"),
+const STOCK: &[(&str, i64, &str, f64)] = &[
+    ("dune", 3, "leeds", 1_717_200_000_000.0),
+    ("solaris", 0, "leeds", 1_717_200_000_000.0),
+    ("left-hand", 1, "porto", 1_714_521_600_000.0),
+    ("ficciones", 2, "porto", 1_714_521_600_000.0),
 ];
 
 const WAREHOUSES: &[(&str, &str, i64)] = &[("leeds", "Leeds", 2), ("porto", "Porto", 1)];
@@ -62,19 +83,21 @@ pub async fn reviews(id: &str, delay: Duration) -> Vec<Review<'static>> {
     REVIEWS
         .iter()
         .filter(|r| r.0 == id)
-        .map(|&(_, reader, stars, text)| Review::new(reader, stars, text))
+        .map(|&(_, reader, stars, text, posted)| {
+            Review::new(reader, stars, text).posted(JsDate::parse(posted).expect("an ISO date"))
+        })
         .collect()
 }
 
 /// How many copies of a book the shop holds, and the warehouse they ship from: none of a book it
 /// does not stock.
 pub fn stock(id: &str) -> Stock<'static> {
-    STOCK
-        .iter()
-        .find(|s| s.0 == id)
-        .map_or(Stock::new(0, ""), |&(_, copies, warehouse)| {
-            Stock::new(copies, warehouse)
-        })
+    STOCK.iter().find(|s| s.0 == id).map_or(
+        Stock::new(0, ""),
+        |&(_, copies, warehouse, counted)| {
+            Stock::new(copies, warehouse).counted(JsDate::from_millis(counted))
+        },
+    )
 }
 
 /// The warehouse with this code, if there is one.

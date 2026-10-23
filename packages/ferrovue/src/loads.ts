@@ -1,4 +1,5 @@
 import { parseJson } from "./page-json.ts";
+import { reviveByPlan } from "./revive.ts";
 
 export const LOADS_ATTRIBUTE = "data-fv-loads";
 
@@ -56,13 +57,28 @@ export function defineLoader<A extends unknown[], T>(name: string, loader: (...a
   };
 }
 
+function loaderName(key: string): unknown {
+  try {
+    const call = JSON.parse(key) as unknown;
+    return Array.isArray(call) ? call[0] : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Add results for loaders to answer from: the text of a `<script data-fv-loads>`, as `readPage`
- * gives it for the next page of a navigation, or an object of keys and results. A key given again
- * takes its newer result. */
+ * gives it for the next page of a navigation, or an object of keys and results. Under `dates`, the
+ * payload says where each loader's results hold dates, which are turned back into `Date`s. A key
+ * given again takes its newer result. */
 export function provideLoads(results: string | Record<string, unknown>): void {
   const store = loadStore();
   const given = typeof results === "string" ? (parseJson(results) as Record<string, unknown>) : results;
-  for (const [key, value] of Object.entries(given)) store.results.set(key, value);
+  const dates = Object.hasOwn(given, "dates") && given.dates !== null && typeof given.dates === "object" ? (given.dates as Record<string, unknown>) : {};
+  for (const [key, value] of Object.entries(given)) {
+    if (key === "dates") continue;
+    const name = loaderName(key);
+    store.results.set(key, typeof name === "string" && Object.hasOwn(dates, name) ? reviveByPlan(value, dates[name]) : value);
+  }
 }
 
 /** Forget every result given so far, and read the document's scripts again on the next call: a

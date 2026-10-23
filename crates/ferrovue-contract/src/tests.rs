@@ -5,7 +5,7 @@ use ferrovue::{Head, Html, I18n, JsDate, Page, ParseUnionError, Part, Route, Slo
 use crate::generated::{
     blank, books_id, cart_badge, counter, data_list, greeting, head_note, i18n, index, modal,
     picker, posted, provides, rated, render_json, route_table, shell, sized, stores, theme_scope,
-    themed_button, translated, twins, types,
+    themed_button, timeline, translated, twins, types,
 };
 
 const _: fn(&mut String, &sized::Props) = sized::render;
@@ -22,6 +22,7 @@ const _: fn(&mut String, &theme_scope::Props<'_>, theme_scope::Slots<'_>, provid
 const _: fn(&mut String, &head_note::Props<'_>, &Head) = head_note::render;
 const _: fn(&mut String, &rated::Props) = rated::render;
 const _: fn(&mut String, &posted::Props) = posted::render;
+const _: fn(&mut String, &timeline::Props<'_>) = timeline::render;
 const _: fn(&mut String, &index::Props<'_>) = index::render;
 const _: fn(&mut String, &books_id::Props<'_>) = books_id::render;
 #[allow(clippy::type_complexity)]
@@ -163,6 +164,32 @@ fn a_date_prop_is_a_js_date_the_island_carries_as_its_iso_string() {
     let read: posted::Props =
         serde_json::from_str(r#"{"at":"2024-05-01T07:30:00.000Z","deleted":null}"#).unwrap();
     assert_eq!(read.at, at);
+}
+
+#[test]
+fn dates_inside_lists_dictionaries_and_objects_are_js_dates_the_island_says_are_dates() {
+    let at = JsDate::parse("2024-05-01T09:30+02:00").unwrap();
+    let moments = vec![types::Moment::new(
+        "<a>",
+        at,
+        vec![None, Some(JsDate::INVALID)],
+    )];
+    let by: ferrovue::Record<'_, JsDate> = [("x", JsDate::UNIX_EPOCH)].into_iter().collect();
+    let props = timeline::Props::new(moments, vec![at], by);
+    let island = timeline::island(&props).into_string();
+    assert!(island.starts_with(concat!(
+        r#"<div data-island="Timeline" data-props="{&quot;moments&quot;:[{&quot;label&quot;:&quot;&lt;a&gt;&quot;,&quot;at&quot;:&quot;2024-05-01T07:30:00.000Z&quot;,&quot;seen&quot;:[null,NaN]}],"#,
+        r#"&quot;days&quot;:[&quot;2024-05-01T07:30:00.000Z&quot;],&quot;by&quot;:{&quot;x&quot;:&quot;1970-01-01T00:00:00.000Z&quot;}}" "#,
+        r#"data-dates="[{&quot;moments&quot;:[{&quot;at&quot;:1,&quot;seen&quot;:[1]}],&quot;days&quot;:[1],&quot;by&quot;:{&quot;*&quot;:1}}]"><ol>"#
+    )), "{island}");
+    assert_eq!(
+        timeline::html(&props).into_string(),
+        render(|out| timeline::render(out, &props))
+    );
+    let read: timeline::Props<'_> =
+        serde_json::from_str(r#"{"moments":[],"days":[0],"by":{"y":"2024-05-01"}}"#).unwrap();
+    assert_eq!(read.days, [JsDate::UNIX_EPOCH]);
+    assert_eq!(read.by.get("y"), JsDate::parse("2024-05-01").as_ref());
 }
 
 #[test]

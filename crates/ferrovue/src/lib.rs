@@ -55,9 +55,9 @@ pub use hydrate::Hydrate;
 #[cfg(feature = "chrono")]
 #[cfg_attr(docsrs, doc(cfg(feature = "chrono")))]
 pub use js_date::DateOutOfRange;
-pub use js_date::{JsDate, JsTime};
 #[doc(hidden)]
-pub use js_date::{date_prop, js_date_prop, js_time_of, opt_date_prop};
+pub use js_date::{DateShape, date_prop, dates_in, js_date_prop, js_time_of, opt_date_prop};
+pub use js_date::{JsDate, JsTime};
 #[doc(hidden)]
 pub use load::{Load, LoadArg, LoadCall, LoadFuture, LoadKey, load_key};
 pub use load::{LoadError, Loads, load};

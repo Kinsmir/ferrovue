@@ -132,5 +132,15 @@ impl<'de, V: Deserialize<'de>> Deserialize<'de> for Record<'_, V> {
     }
 }
 
+impl<'a, V> Record<'a, V> {
+    pub(crate) fn from_entries(entries: Vec<(Cow<'a, str>, V)>) -> Self {
+        Record { entries }
+    }
+
+    pub(crate) fn into_entries(self) -> Vec<(Cow<'a, str>, V)> {
+        self.entries
+    }
+}
+
 #[cfg(test)]
 mod tests;

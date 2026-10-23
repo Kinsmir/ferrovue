@@ -457,3 +457,50 @@ async fn a_components_html_takes_the_loads_of_a_render() {
     .unwrap();
     assert_eq!(html, "<hr><section><b>A:5</b></section>");
 }
+
+#[tokio::test]
+async fn the_payload_carries_where_each_loader_s_results_hold_dates() {
+    struct Days(i64);
+    impl Load for Days {
+        const NAME: &'static str = "days";
+        type Output = Vec<crate::JsDate>;
+        const DATES: &'static str = "[[1]]";
+        fn args(&self, key: &mut LoadKey) {
+            key.int(self.0);
+        }
+    }
+    struct Plain;
+    impl Load for Plain {
+        const NAME: &'static str = "plain";
+        type Output = String;
+        fn args(&self, _: &mut LoadKey) {}
+    }
+    let html = load(
+        |loads| {
+            let mut out = String::new();
+            loads.get(Days(1));
+            loads.get(Plain);
+            loads.get(Days(2));
+            loads.script_into(&mut out);
+            out
+        },
+        |call| match call.name() {
+            "days" => call.run(|d: Days| async move {
+                Ok::<_, Infallible>(vec![
+                    crate::JsDate::from_millis(d.0 as f64),
+                    crate::JsDate::INVALID,
+                ])
+            }),
+            _ => call.run(|_: Plain| async { Ok::<_, Infallible>(String::from("<p>")) }),
+        },
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        html,
+        concat!(
+            r#"<script type="application/json" data-fv-loads>{"[\"days\",1]":["1970-01-01T00:00:00.001Z",NaN],"[\"plain\"]":"\u003cp\u003e","#,
+            r#""[\"days\",2]":["1970-01-01T00:00:00.002Z",NaN],"dates":{"days":[[1]]}}</script>"#
+        )
+    );
+}

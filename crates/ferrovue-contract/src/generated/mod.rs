@@ -25,6 +25,7 @@ pub mod shell;
 pub mod sized;
 pub mod theme_scope;
 pub mod themed_button;
+pub mod timeline;
 pub mod translated;
 pub mod index;
 pub mod books_id;
@@ -188,6 +189,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "ThemedButton" => {
             let props: themed_button::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             themed_button::render(&mut out, &props, provides::Provides::default());
+        }
+        "Timeline" => {
+            let props: timeline::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            timeline::render(&mut out, &props);
         }
         "Translated" => {
             let props: translated::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

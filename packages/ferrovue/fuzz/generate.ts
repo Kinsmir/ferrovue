@@ -392,7 +392,7 @@ function tsType(spec: Spec): string {
     case "nul":
       return `${tsType(spec.of)} | null`;
     case "list":
-      return `${tsType(spec.of)}[]`;
+      return spec.of.k === "nul" ? `(${tsType(spec.of)})[]` : `${tsType(spec.of)}[]`;
     case "obj":
       return spec.iface;
     case "record":
@@ -2581,6 +2581,21 @@ class Gen {
 
   fieldValue(spec: Spec, d: number): Expr | null {
     const r = this.r;
+    if (spec.k === "date") return this.date(d);
+    if ((spec.k === "opt" || spec.k === "nul") && spec.of.k === "date") {
+      return r.weighted<() => Expr | null>([
+        [spec.k === "opt" ? 2 : 0, () => null],
+        [1, () => atom("date", spec.k === "opt" ? "undefined" : "null")],
+        [3, () => this.date(d)],
+      ])();
+    }
+    if (spec.k === "list" && (spec.of.k === "date" || spec.of.k === "nul")) {
+      const lists = this.scope.lists.filter((l) => JSON.stringify(l.of) === JSON.stringify(spec.of));
+      return r.weighted<() => Expr>([
+        [1, () => atom("str", "[]")],
+        [lists.length ? 3 : 0, () => atom("str", r.pick(lists).name)],
+      ])();
+    }
     const prim = (s: Spec): Expr => {
       const ty = specTy(s)!;
       return ty === "str" ? whole(this.str(d)) : ty === "int" ? this.int(d, BOUND_SMALL) : ty === "float" ? this.float(d) : this.bool(d);
@@ -2758,6 +2773,9 @@ function randomSpec(r: Rng, ifaces: Iface[], depth: number): Spec {
     [depth === 0 ? 2 : 1, () => ({ k: "list", of: r.pick<Spec>([{ k: "str" }, { k: "str" }, { k: "int", wide: false }]) })],
     [depth === 0 && ifaces.length ? 2 : 0, () => ({ k: "list", of: { k: "obj", iface: r.pick(ifaces).name } })],
     [depth === 0 ? 1 : 0, () => ({ k: "record", of: r.pick<Spec>([{ k: "str" }, { k: "int", wide: false }, { k: "bool" }]), dict: r.chance(0.3) })],
+    [depth === 0 ? 0 : 4, () => r.pick<Spec>([{ k: "date" }, { k: "date" }, { k: "opt", of: { k: "date" } }, { k: "nul", of: { k: "date" } }])],
+    [2, () => ({ k: "list", of: r.chance(0.7) ? { k: "date" } : { k: "nul", of: { k: "date" } } })],
+    [depth === 0 ? 1 : 0, () => ({ k: "record", of: { k: "date" }, dict: r.chance(0.3) })],
   ])();
 }
 
@@ -3211,6 +3229,7 @@ function loadSpec(r: Rng, ifaces: Iface[]): Spec {
     [ifaces.length ? 2 : 0, () => ({ k: "list", of: { k: "obj", iface: r.pick(ifaces).name } })],
     [ifaces.length ? 4 : 0, () => ({ k: "obj", iface: r.pick(ifaces).name })],
     [1, () => ({ k: "record", of: r.pick<Spec>([{ k: "str" }, { k: "int", wide: false }, { k: "bool" }]), dict: r.chance(0.3) })],
+    [2, () => r.pick<Spec>([{ k: "date" }, { k: "nul", of: { k: "date" } }, { k: "list", of: { k: "date" } }, { k: "record", of: { k: "date" }, dict: false }])],
   ])();
 }
 
