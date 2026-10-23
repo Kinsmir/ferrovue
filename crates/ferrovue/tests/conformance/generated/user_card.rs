@@ -68,9 +68,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push_str("<div class=\"card");
     fv::class_into(out, true, &[&*format!("card-{}", props.size.unwrap_or(super::types::Size::Md).as_str())]);
     out.push_str("\">");
-    if let Some(n1) = props.user.avatar.as_deref().filter(|v| !v.is_empty()) {
+    if let Some(fv_avatar) = props.user.avatar.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<img src=\"");
-        fv::escape_into(out, n1);
+        fv::escape_into(out, fv_avatar);
         out.push_str("\" alt=\"");
         fv::escape_into(out, &props.user.name);
         out.push_str("\">");
@@ -82,27 +82,27 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push_str("</b> <small>#");
     fv::push_int(out, props.user.id);
     out.push_str("</small><!--[-->");
-    for r_ref in props.user.roles.iter() {
-        let r = r_ref;
+    for fv_r_ref in props.user.roles.iter() {
+        let fv_r = fv_r_ref;
         out.push_str("<i class=\"");
-        fv::class_into(out, false, &[if r.admin { "admin" } else { "" }]);
+        fv::class_into(out, false, &[if fv_r.admin { "admin" } else { "" }]);
         out.push_str("\">");
-        fv::escape_into(out, &r.name);
+        fv::escape_into(out, &fv_r.name);
         out.push_str("</i>");
     }
     out.push_str("<!--]--><!--[-->");
-    for b_ref in props.badges.as_deref().unwrap_or(&[]).iter() {
-        let b = b_ref;
+    for fv_b_ref in props.badges.as_deref().unwrap_or(&[]).iter() {
+        let fv_b = fv_b_ref;
         out.push_str("<span class=\"");
-        fv::class_into(out, false, &[b.tone.as_deref().unwrap_or("")]);
+        fv::class_into(out, false, &[fv_b.tone.as_deref().unwrap_or("")]);
         out.push_str("\">");
-        fv::escape_into(out, &b.label);
+        fv::escape_into(out, &fv_b.label);
         out.push_str("</span>");
     }
     out.push_str("<!--]-->");
-    if let Some(n2) = props.note.as_deref().filter(|v| !v.is_empty()) {
+    if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<em>");
-        fv::escape_into(out, n2);
+        fv::escape_into(out, fv_note);
         out.push_str("</em>");
     } else {
         out.push_str("<!---->");

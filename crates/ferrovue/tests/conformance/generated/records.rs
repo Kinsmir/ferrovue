@@ -75,85 +75,85 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(186 + 38 * props.counts.len() + 34 * props.labels.len() + 23 * props.scores.len() + 18 * props.groups.len() + 23 * props.counts.len() + props.counts.iter().map(|(k, _)| k.len()).sum::<usize>() + props.labels.iter().map(|(k, v)| k.len() + v.len()).sum::<usize>() + props.scores.iter().map(|(k, v)| k.len() + v.by.len()).sum::<usize>() + props.groups.iter().map(|(k, v)| k.len() + v.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>());
     out.push_str("<section><ul><!--[-->");
-    for (i, (name, count_ref)) in props.counts.iter().enumerate() {
-        let count = *count_ref;
-        let i = i as i64;
+    for (fv_i, (fv_name, fv_count_ref)) in props.counts.iter().enumerate() {
+        let fv_count = *fv_count_ref;
+        let fv_i = fv_i as i64;
         out.push_str("<li data-name=\"");
-        fv::escape_into(out, name);
+        fv::escape_into(out, fv_name);
         out.push_str("\">");
-        fv::push_int(out, i);
+        fv::push_int(out, fv_i);
         out.push_str(". ");
-        fv::escape_into(out, name);
+        fv::escape_into(out, fv_name);
         out.push_str(": ");
-        fv::push_int(out, count);
+        fv::push_int(out, fv_count);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul><dl><!--[-->");
-    for (key, text_ref) in props.labels.iter() {
-        let text: &str = text_ref;
+    for (fv_key, fv_text_ref) in props.labels.iter() {
+        let fv_text: &str = fv_text_ref;
         out.push_str("<!--[--><dt>");
-        fv::escape_into(out, key);
+        fv::escape_into(out, fv_key);
         out.push_str("</dt><dd>");
-        fv::escape_into(out, text);
+        fv::escape_into(out, fv_text);
         out.push_str("</dd><!--]-->");
     }
     out.push_str("<!--]--></dl><!--[-->");
-    for (id, fv_value3_ref) in props.scores.iter() {
-        let fv_value3 = fv_value3_ref;
+    for (fv_id, fv_value_ref) in props.scores.iter() {
+        let fv_value = fv_value_ref;
         out.push_str("<p id=\"");
-        fv::escape_into(out, &format!("s-{}", id));
+        fv::escape_into(out, &format!("s-{}", fv_id));
         out.push_str("\">");
-        fv::push_int(out, fv_value3.points);
+        fv::push_int(out, fv_value.points);
         out.push_str(" by ");
-        fv::escape_into(out, &fv_value3.by);
+        fv::escape_into(out, &fv_value.by);
         out.push_str("</p>");
     }
     out.push_str("<!--]--><!--[-->");
-    for (group, members_ref) in props.groups.iter() {
-        let members = members_ref;
+    for (fv_group, fv_members_ref) in props.groups.iter() {
+        let fv_members = fv_members_ref;
         out.push_str("<p>");
-        fv::escape_into(out, group);
+        fv::escape_into(out, fv_group);
         out.push_str(": ");
-        fv::escape_into(out, &members.iter().map(|v| &**v).collect::<Vec<_>>().join(", "));
+        fv::escape_into(out, &fv_members.iter().map(|v| &**v).collect::<Vec<_>>().join(", "));
         out.push_str(" (");
-        fv::push_int(out, members.len() as i64);
+        fv::push_int(out, fv_members.len() as i64);
         out.push_str(")</p>");
     }
     out.push_str("<!--]--><p>");
     fv::escape_into(out, &props.counts.keys().map(std::borrow::Cow::<str>::Borrowed).collect::<Vec<_>>().join(","));
     out.push('|');
-    fv::push_int(out, props.counts.values().copied().filter(|fv_a5| *fv_a5 as f64 > 1.0).count() as i64);
+    fv::push_int(out, props.counts.values().copied().filter(|fv_c| *fv_c as f64 > 1.0).count() as i64);
     out.push('|');
     fv::escape_into(out, &props.labels.values().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(" "));
     out.push('|');
     fv::push_int(out, props.scores.keys().count() as i64);
     out.push_str("</p><ol><!--[-->");
-    for (i, (key, value_ref)) in props.counts.iter().enumerate() {
-        let value = *value_ref;
-        let i = i as i64;
+    for (fv_i_2, (fv_key_2, fv_value_ref_2)) in props.counts.iter().enumerate() {
+        let fv_value_2 = *fv_value_ref_2;
+        let fv_i_2 = fv_i_2 as i64;
         out.push_str("<li>");
-        fv::push_int(out, i);
+        fv::push_int(out, fv_i_2);
         out.push('=');
-        fv::escape_into(out, key);
+        fv::escape_into(out, fv_key_2);
         out.push(':');
-        fv::push_int(out, value);
+        fv::push_int(out, fv_value_2);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ol><p>");
     fv::push_int(out, props.labels.len() as i64);
     out.push('|');
-    fv::escape_into(out, &props.scores.values().map(|fv_a7| std::borrow::Cow::<str>::Borrowed(&fv_a7.by)).collect::<Vec<_>>().join("/"));
+    fv::escape_into(out, &props.scores.values().map(|fv_s| std::borrow::Cow::<str>::Borrowed(&fv_s.by)).collect::<Vec<_>>().join("/"));
     out.push('|');
-    out.push_str(if props.labels.keys().map(std::borrow::Cow::<str>::Borrowed).any(|fv_x8| *fv_x8 == *"a") { "true" } else { "false" });
+    out.push_str(if props.labels.keys().map(std::borrow::Cow::<str>::Borrowed).any(|fv_item| *fv_item == *"a") { "true" } else { "false" });
     out.push_str("</p>");
-    if let Some(n9) = props.extra.as_ref() {
+    if let Some(fv_extra) = props.extra.as_ref() {
         out.push_str("<!--[-->");
-        for (flag, on_ref) in n9.iter() {
-            let on = *on_ref;
+        for (fv_flag, fv_on_ref) in fv_extra.iter() {
+            let fv_on = *fv_on_ref;
             out.push_str("<i data-on=\"");
-            out.push_str(if on { "true" } else { "false" });
+            out.push_str(if fv_on { "true" } else { "false" });
             out.push_str("\">");
-            fv::escape_into(out, flag);
+            fv::escape_into(out, fv_flag);
             out.push_str("</i>");
         }
         out.push_str("<!--]-->");

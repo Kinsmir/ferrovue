@@ -86,9 +86,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>)
         out.push_str("</a>");
     }
     out.push(' ');
-    if let Some(n1) = props.tab.as_deref().filter(|v| !v.is_empty()) {
+    if let Some(fv_tab) = props.tab.as_deref().filter(|v| !v.is_empty()) {
         {
-            let fv_link = fv_route.link(&format!("/blog/{}/{}", props.user, n1));
+            let fv_link = fv_route.link(&format!("/blog/{}/{}", props.user, fv_tab));
             out.push_str("<a");
             if fv_link.exact {
                 out.push_str(" aria-current=\"page\"");
@@ -98,15 +98,15 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>)
             out.push_str("\" class=\"");
             fv::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
             out.push('"');
-            if n1.is_empty() {
+            if fv_tab.is_empty() {
                 out.push_str(" title");
             } else {
                 out.push_str(" title=\"");
-                fv::escape_into(out, n1);
+                fv::escape_into(out, fv_tab);
                 out.push('"');
             }
             out.push('>');
-            fv::escape_into(out, n1);
+            fv::escape_into(out, fv_tab);
             out.push_str("</a>");
         }
     } else {

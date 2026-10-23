@@ -42,9 +42,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores
     out.push_str(" (");
     fv::push_number(out, fv_stores.tally.count as f64 * 2.0);
     out.push_str(") ");
-    if let Some(n1) = fv_stores.tally.best {
+    if let Some(fv_best) = fv_stores.tally.best {
         out.push_str("<b>");
-        fv::push_int(out, n1);
+        fv::push_int(out, fv_best);
         out.push_str("</b>");
     } else {
         out.push_str("<!---->");

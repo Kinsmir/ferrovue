@@ -85,7 +85,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> R
     fv::class_into(out, false, &[if props.value.as_deref().is_none() { "none" } else { "" }]);
     out.push_str("\">");
     fv::escape_into(out, props.value.as_deref().unwrap_or("(none)"));
-    fv::escape_into(out, &(if let Some(n1) = props.entry.as_ref() { std::borrow::Cow::<str>::Owned(format!(":{}", n1.title)) } else { std::borrow::Cow::<str>::Borrowed("") }));
+    fv::escape_into(out, &(if let Some(fv_entry) = props.entry.as_ref() { std::borrow::Cow::<str>::Owned(format!(":{}", fv_entry.title)) } else { std::borrow::Cow::<str>::Borrowed("") }));
     fv::scoped_slot_into(out, fv_slots.default, &DefaultSlotProps { v: props.value.as_deref(), e: props.entry.as_ref() }, None);
     out.push_str("</span>");
     Ok(())

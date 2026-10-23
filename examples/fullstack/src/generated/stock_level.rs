@@ -61,11 +61,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::Loads<'_>)
     } else {
         out.push_str("<!---->");
     }
-    if let Some(n1) = l_0.counted.as_ref().map(fv::js_time_of) {
+    if let Some(fv_counted) = l_0.counted.as_ref().map(fv::js_time_of) {
         out.push_str("<small class=\"counted\">counted <time datetime=\"");
-        fv::escape_into(out, &fv_refusals.keep(fv::try_to_iso_string(n1), 14, 74));
+        fv::escape_into(out, &fv_refusals.keep(fv::try_to_iso_string(fv_counted), 14, 74));
         out.push_str("\">");
-        fv::escape_into(out, &fv::js_slice(&fv_refusals.keep(fv::try_to_iso_string(n1), 14, 106), 0.0f64, Some(10.0f64)));
+        fv::escape_into(out, &fv::js_slice(&fv_refusals.keep(fv::try_to_iso_string(fv_counted), 14, 106), 0.0f64, Some(10.0f64)));
         out.push_str("</time></small>");
     } else {
         out.push_str("<!---->");

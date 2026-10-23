@@ -284,9 +284,9 @@ defineProps<{ user: string }>();
 #     } else {
 #         out.push_str("<!---->");
 #     }
-#     if let Some(n1) = props.note.as_deref().filter(|v| !v.is_empty()) {
+#     if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {
 #         out.push_str("<i>");
-#         fv::escape_into(out, n1);
+#         fv::escape_into(out, fv_note);
 #         out.push_str("</i>");
 #     } else {
 #         out.push_str("<!---->");

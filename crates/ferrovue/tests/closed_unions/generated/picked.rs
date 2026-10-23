@@ -155,17 +155,17 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::Refused> {
             super::plain::try_render(out, &super::plain::Props {  })?;
         }
     }
-    let fv_tag1 = match props.k { K::B => "strong", K::A | K::C => "em" };
+    let fv_tag = match props.k { K::B => "strong", K::A | K::C => "em" };
     out.push('<');
-    out.push_str(fv_tag1);
+    out.push_str(fv_tag);
     out.push_str(">t</");
-    out.push_str(fv_tag1);
+    out.push_str(fv_tag);
     out.push('>');
-    let fv_tag2 = match props.tag { PickedTag::B => "b", PickedTag::I => "i", PickedTag::U => "u" };
+    let fv_tag_2 = match props.tag { PickedTag::B => "b", PickedTag::I => "i", PickedTag::U => "u" };
     out.push('<');
-    out.push_str(fv_tag2);
+    out.push_str(fv_tag_2);
     out.push_str(">u</");
-    out.push_str(fv_tag2);
+    out.push_str(fv_tag_2);
     out.push_str("></div>");
     Ok(())
 }

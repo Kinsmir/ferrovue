@@ -98,9 +98,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
 #[doc(hidden)]
 pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::Attrs<'_>) -> Result<(), fv::Refused> {
     out.reserve(74 + props.tone.len() + 7);
-    let fv_tag1 = match props.tag { CssVarsTagTag::Div => "div", CssVarsTagTag::Section => "section" };
+    let fv_tag = match props.tag { CssVarsTagTag::Div => "div", CssVarsTagTag::Section => "section" };
     out.push('<');
-    out.push_str(fv_tag1);
+    out.push_str(fv_tag);
     if fv_attrs.is_empty() {
         out.push_str(" class=\"tag\" style=\"--9b79108a-tone:");
         if props.tone.is_empty() {
@@ -115,7 +115,7 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::Att
     out.push_str(" data-v-9b79108a>");
     fv::escape_into(out, &props.tone);
     out.push_str("</");
-    out.push_str(fv_tag1);
+    out.push_str(fv_tag);
     out.push('>');
     Ok(())
 }

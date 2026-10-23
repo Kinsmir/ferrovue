@@ -62,23 +62,23 @@ pub fn render(out: &mut String, props: &Props) {
 pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::Refused> {
     out.reserve(87);
     out.push_str("<p class=\"ranks\">");
-    if let Some(n1) = props.best {
+    if let Some(fv_best) = props.best {
         out.push_str("<b>");
-        fv::push_int(out, n1);
+        fv::push_int(out, fv_best);
         out.push_str("</b>");
     } else {
         out.push_str("<i>none</i>");
     }
-    if let Some(n2) = props.worst {
+    if let Some(fv_worst) = props.worst {
         out.push_str("<s>");
-        fv::push_int(out, n2);
+        fv::push_int(out, fv_worst);
         out.push_str("</s>");
     } else {
         out.push_str("<i>no worst</i>");
     }
-    if let Some(n3) = props.open {
+    if let Some(fv_open) = props.open {
         out.push_str("<u>");
-        out.push_str(if n3 { "true" } else { "false" });
+        out.push_str(if fv_open { "true" } else { "false" });
         out.push_str("</u>");
     } else {
         out.push_str("<!---->");

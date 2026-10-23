@@ -60,9 +60,9 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_
     match props.shape {
         super::types::Shape::Circle => {
             super::shape_circle::try_render_scoped(out, &super::shape_circle::Props { label: std::borrow::Cow::Borrowed(&*props.label) }, super::shape_circle::Slots {
-                default: Some(fv::Slot::slotted(&|out: &mut String, fv_sid1: &str| -> bool {
+                default: Some(fv::Slot::slotted(&|out: &mut String, fv_slot_id: &str| -> bool {
                     let mut filled = false;
-                    if fv::slot_into_slotted(out, fv_slots.default, fv_sid1, None) { filled = true; }
+                    if fv::slot_into_slotted(out, fv_slots.default, fv_slot_id, None) { filled = true; }
                     filled
                 })),
             }, &fv::Attrs::merged(&[&[("class", fv::Attr::str("root"))], fv_attrs.list()], fv_attrs.ids()))?;

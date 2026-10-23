@@ -96,9 +96,9 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(313 + 7 * props.items.len() + 7 * props.items.len() + props.items.len() + 9 * props.items.len() + 4 + props.items.iter().map(|v| v.len()).sum::<usize>() + props.label.len());
-    let fv_tag1 = match props.tag { TagContentTag::Div => "div", TagContentTag::Form => "form" };
+    let fv_tag = match props.tag { TagContentTag::Div => "div", TagContentTag::Form => "form" };
     out.push('<');
-    out.push_str(fv_tag1);
+    out.push_str(fv_tag);
     out.push_str(" class=\"x");
     fv::class_into(out, true, &[if props.on { "on" } else { "" }]);
     out.push_str("\" style=\"");
@@ -129,10 +129,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
             out.push('"');
         }
         out.push_str("><!--[-->");
-        for i_ref in props.items.iter() {
-            let i: &str = i_ref;
+        for fv_i_ref in props.items.iter() {
+            let fv_i: &str = fv_i_ref;
             out.push_str("<u>");
-            fv::escape_into(out, i);
+            fv::escape_into(out, fv_i);
             out.push_str("</u>");
         }
         out.push_str("<!--]--></b>");
@@ -146,30 +146,30 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
             out.push('"');
         }
         out.push_str("><!--[-->");
-        for i_ref in props.items.iter() {
-            let i: &str = i_ref;
+        for fv_i_ref_2 in props.items.iter() {
+            let fv_i_2: &str = fv_i_ref_2;
             out.push_str("<u>");
-            fv::escape_into(out, i);
+            fv::escape_into(out, fv_i_2);
             out.push_str("</u>");
         }
         out.push_str("<!--]--></i>");
     }
     out.push_str("<!--[-->");
-    for i_ref in props.items.iter() {
-        let i: &str = i_ref;
-        super::shape_square::try_render_scoped(out, &super::shape_square::Props { label: std::borrow::Cow::Borrowed(i), size: None }, super::shape_square::Slots {
+    for fv_i_ref_3 in props.items.iter() {
+        let fv_i_3: &str = fv_i_ref_3;
+        super::shape_square::try_render_scoped(out, &super::shape_square::Props { label: std::borrow::Cow::Borrowed(fv_i_3), size: None }, super::shape_square::Slots {
             default: None,
             corner: Some(fv::Slot::new(&|out: &mut String| {
                 out.push('c');
-                fv::escape_into(out, i);
+                fv::escape_into(out, fv_i_3);
             })),
         }, &fv::Attrs::NONE)?;
     }
     out.push_str("<!--]--><ul>");
-    for i_ref in props.items.iter() {
-        let i: &str = i_ref;
+    for fv_i_ref_4 in props.items.iter() {
+        let fv_i_4: &str = fv_i_ref_4;
         out.push_str("<li>");
-        fv::escape_into(out, i);
+        fv::escape_into(out, fv_i_4);
         out.push_str("</li>");
     }
     out.push_str("</ul>");
@@ -199,7 +199,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push_str(" &lt; ");
     fv::escape_into(out, fv::js_trim(&props.label));
     out.push_str("</");
-    out.push_str(fv_tag1);
+    out.push_str(fv_tag);
     out.push('>');
     Ok(())
 }

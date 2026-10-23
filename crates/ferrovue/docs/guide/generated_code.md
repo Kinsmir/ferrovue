@@ -400,13 +400,13 @@ match props.name {
 #     pub fn render(out: &mut String, props: &Props, fv_slots: Slots<'_>) {
 
 // <component :is="as" class="heading"><slot /></component>, where as: "h1" | "h2":
-let fv_tag1 = match props.r#as { HeadingAs::H1 => "h1", HeadingAs::H2 => "h2" };
+let fv_tag = match props.r#as { HeadingAs::H1 => "h1", HeadingAs::H2 => "h2" };
 out.push('<');
-out.push_str(fv_tag1);
+out.push_str(fv_tag);
 out.push_str(" class=\"heading\">");
 fv::slot_into(out, fv_slots.default, None);
 out.push_str("</");
-out.push_str(fv_tag1);
+out.push_str(fv_tag);
 out.push('>');
 #     }
 # }
@@ -534,6 +534,36 @@ fn greet(name: String) -> ferrovue::Html<'static, greeting::Props<'static>> {
 | a store with id `cart` | `stores::CartState`, `Stores::cart` |
 | the twin `StarRating` | `twins::StarRatingProps`, `StarRatingSlots`, `StarRatingRender` |
 | `provide(ThemeKey, …)`, `provide("tone", …)` | `Provides::theme_key`, `Provides::tone` |
+
+# The locals of a render
+
+The locals a render declares are named after what they hold, so its Rust reads like the
+component. They belong to the bodies of functions, outside the contract:
+
+- a local that holds a JavaScript name is `fv_` and that name in snake case: `let sum` is
+  `fv_sum`, `for (const r of rows)` binds `fv_r`, `rowCount` is `fv_row_count`,
+  `v-for="item in items"` binds `fv_item`, and the value a `v-if="note"` finds present is
+  `fv_note`. A name a Rust identifier cannot spell, with a `$` or an accented letter, keeps its
+  ASCII letters and digits;
+- a value the compiler makes for itself is named by its role: `fv_returned` for what a `return`
+  inside a loop gives, `fv_next_a` for the next value of `a` when a loop swaps it, `fv_index`,
+  `fv_entry`, `fv_tag` for the tag `<component :is>` picks, and `fv_slot_props` and `fv_slot_id` in
+  slot content;
+- `fv_` keeps every local apart from `props`, `out`, the `fv` alias of this crate, the `s_` names of
+  `<script setup>` bindings, helper functions and Rust keywords;
+- a name the function holds already takes `_2`, `_3`, … in the order the locals first appear in
+  it: a function inlined twice binds `fv_word`, then `fv_word_2`. The count is per function, so an
+  edit to one component leaves the names of every other as they were, and an edit to one part of a
+  template renames only a local whose name it takes first.
+
+```rust
+# struct Row { n: i64 }
+# struct Props { rows: Vec<Row> }
+# let props = Props { rows: vec![Row { n: 2 }, Row { n: 3 }] };
+// const total = computed(() => { let sum = 0; for (const r of props.rows) sum += r.n; return sum; });
+let s_total = { let mut fv_sum: f64 = 0.0f64; for fv_r in props.rows.iter() { fv_sum += fv_r.n as f64; } fv_sum };
+# assert_eq!(s_total, 5.0);
+```
 
 # `render_json`, for your own conformance tests
 

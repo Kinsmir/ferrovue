@@ -90,43 +90,43 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(121 + props.person.name.len() + props.person.title.as_deref().map_or(0, str::len) + props.person.city.as_deref().map_or(0, str::len) + props.tags.iter().map(|v| v.as_deref().map_or(0, str::len)).sum::<usize>() + props.people.iter().map(|v| v.as_ref().map_or(0, |v| v.name.len() + v.title.as_deref().map_or(0, str::len) + v.city.as_deref().map_or(0, str::len))).sum::<usize>() + props.words.iter().map(|v| v.len()).sum::<usize>());
-    let s_byline = [Some(&*props.person.name), props.person.title.as_deref(), props.person.city.as_deref()].into_iter().flatten().map(std::borrow::Cow::<str>::Borrowed).filter(|fv_s1| !fv_s1.is_empty()).collect::<Vec<_>>().join(" · ");
+    let s_byline = [Some(&*props.person.name), props.person.title.as_deref(), props.person.city.as_deref()].into_iter().flatten().map(std::borrow::Cow::<str>::Borrowed).filter(|fv_item| !fv_item.is_empty()).collect::<Vec<_>>().join(" · ");
     out.push_str("<article><h1>");
     fv::escape_into(out, &s_byline);
     out.push_str("</h1><p>");
-    fv::escape_into(out, &[props.person.title.as_deref(), if props.urgent { Some("urgent") } else { None }, Some("draft")].into_iter().flatten().map(std::borrow::Cow::<str>::Borrowed).filter(|fv_s2| !fv_s2.is_empty()).collect::<Vec<_>>().join(", "));
+    fv::escape_into(out, &[props.person.title.as_deref(), if props.urgent { Some("urgent") } else { None }, Some("draft")].into_iter().flatten().map(std::borrow::Cow::<str>::Borrowed).filter(|fv_item_2| !fv_item_2.is_empty()).collect::<Vec<_>>().join(", "));
     out.push_str("</p><ul><!--[-->");
-    for (i, t_cow) in props.tags.iter().filter_map(|v| v.as_deref()).map(std::borrow::Cow::<str>::Borrowed).filter(|fv_s3| !fv_s3.is_empty()).enumerate() {
-        let t: &str = &t_cow;
-        let i = i as i64;
+    for (fv_i, fv_t_cow) in props.tags.iter().filter_map(|v| v.as_deref()).map(std::borrow::Cow::<str>::Borrowed).filter(|fv_item_3| !fv_item_3.is_empty()).enumerate() {
+        let fv_t: &str = &fv_t_cow;
+        let fv_i = fv_i as i64;
         out.push_str("<li data-i=\"");
-        fv::push_int(out, i);
+        fv::push_int(out, fv_i);
         out.push_str("\">");
-        fv::escape_into(out, t);
+        fv::escape_into(out, fv_t);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul><p>");
-    fv::escape_into(out, &props.counts.iter().filter_map(|v| *v).filter(|fv_a4| *fv_a4 != 0).map(|v| fv::Js(v).to_string()).collect::<Vec<_>>().join("+"));
+    fv::escape_into(out, &props.counts.iter().filter_map(|v| *v).filter(|fv_item_4| *fv_item_4 != 0).map(|v| fv::Js(v).to_string()).collect::<Vec<_>>().join("+"));
     out.push('|');
-    fv::escape_into(out, &props.ratios.iter().copied().filter(|fv_a5| *fv_a5 != 0.0 && !fv_a5.is_nan()).map(|v| fv::Js(v).to_string()).collect::<Vec<_>>().join(" "));
+    fv::escape_into(out, &props.ratios.iter().copied().filter(|fv_item_5| *fv_item_5 != 0.0 && !fv_item_5.is_nan()).map(|v| fv::Js(v).to_string()).collect::<Vec<_>>().join(" "));
     out.push('|');
     fv::push_int(out, props.people.iter().filter_map(|v| v.as_ref()).count() as i64);
     out.push_str("</p><p>");
-    fv::push_int(out, props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_s6| !fv_s6.is_empty()).count() as i64);
+    fv::push_int(out, props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_item_6| !fv_item_6.is_empty()).count() as i64);
     out.push('|');
-    out.push_str(if props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).any(|fv_s7| !fv_s7.is_empty()) { "true" } else { "false" });
+    out.push_str(if props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).any(|fv_item_7| !fv_item_7.is_empty()) { "true" } else { "false" });
     out.push('|');
-    out.push_str(if props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).all(|fv_s8| !fv_s8.is_empty()) { "true" } else { "false" });
+    out.push_str(if props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).all(|fv_item_8| !fv_item_8.is_empty()) { "true" } else { "false" });
     out.push('|');
-    fv::push_int(out, props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).position(|fv_s9| !fv_s9.is_empty()).map_or(-1, |i| i as i64));
+    fv::push_int(out, props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).position(|fv_item_9| !fv_item_9.is_empty()).map_or(-1, |i| i as i64));
     out.push('|');
-    fv::escape_into(out, &props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).find(|fv_s10| !fv_s10.is_empty()).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).unwrap_or(std::borrow::Cow::<str>::Borrowed("none")));
+    fv::escape_into(out, &props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).find(|fv_item_10| !fv_item_10.is_empty()).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).unwrap_or(std::borrow::Cow::<str>::Borrowed("none")));
     out.push_str("</p><p>");
-    fv::push_int(out, props.flags.iter().copied().filter(|fv_a11| *fv_a11).count() as i64);
+    fv::push_int(out, props.flags.iter().copied().filter(|fv_item_11| *fv_item_11).count() as i64);
     out.push('/');
     fv::push_int(out, props.flags.len() as i64);
     out.push('|');
-    fv::escape_into(out, &props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_s12| !fv_s12.is_empty()).map(|v| if v { "true" } else { "false" }).collect::<Vec<_>>().join(","));
+    fv::escape_into(out, &props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_item_12| !fv_item_12.is_empty()).map(|v| if v { "true" } else { "false" }).collect::<Vec<_>>().join(","));
     out.push('|');
     out.push_str(if props.person.title.as_deref().is_some_and(|v| !v.is_empty()) { "true" } else { "false" });
     out.push('|');

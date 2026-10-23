@@ -100,7 +100,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(140 + props.label.as_deref().map_or(0, str::len) + props.nick.as_deref().map_or(0, str::len) + props.tags.iter().map(|v| v.len()).sum::<usize>() + props.names.iter().map(|v| v.as_deref().map_or(0, str::len)).sum::<usize>());
     let s_line = format!("{}/{}/{}/{}", props.label.as_deref().unwrap_or("undefined"), fv::JsOr(props.count.map(fv::Js), "undefined"), props.nick.as_deref().unwrap_or("null"), props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(","));
-    let s_kept = props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_s1| fv::js_length(fv_s1) as f64 > 1.0).collect::<Vec<_>>().join(",");
+    let s_kept = props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_t| fv::js_length(fv_t) as f64 > 1.0).collect::<Vec<_>>().join(",");
     out.push_str("<section");
     if props.label.as_deref().unwrap_or("undefined").is_empty() {
         out.push_str(" title");
@@ -155,9 +155,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push('|');
     fv::escape_into(out, &props.marks.iter().map(|v| v.map_or_else(String::new, |v| fv::Js(v).to_string())).collect::<Vec<_>>().join(","));
     out.push_str("|</p><p>");
-    fv::escape_into(out, &props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_s2| std::borrow::Cow::<str>::Owned(std::borrow::Cow::<str>::Owned(fv_s2.to_uppercase()).into_owned())).collect::<Vec<_>>().join(","));
+    fv::escape_into(out, &props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_t_2| std::borrow::Cow::<str>::Owned(std::borrow::Cow::<str>::Owned(fv_t_2.to_uppercase()).into_owned())).collect::<Vec<_>>().join(","));
     out.push('|');
-    fv::escape_into(out, &props.nums.iter().copied().map(|fv_a3| fv_a3 as f64 / 2.0).map(|v| fv::Js(v).to_string()).collect::<Vec<_>>().join(","));
+    fv::escape_into(out, &props.nums.iter().copied().map(|fv_n| fv_n as f64 / 2.0).map(|v| fv::Js(v).to_string()).collect::<Vec<_>>().join(","));
     out.push('|');
     fv::escape_into(out, &format!("({})", fv::js_slice_items(props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), 1.0f64, None).collect::<Vec<_>>().join(",")));
     out.push('|');

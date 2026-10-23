@@ -206,8 +206,8 @@ defineProps<{ gone: string | null; note?: string }>();
     expect(out).toContain('    #[serde(rename = "note", default, skip_serializing_if = "Option::is_none")]');
     expect(out).toContain("/// Set `gone`, which is `null` otherwise.");
     expect(out).toContain("/// Props with nothing set, every optional one absent and every nullable one `null`.");
-    expect(out).toContain("if let Some(n1) = props.gone.as_deref() {");
-    expect(out).toContain("if let Some(n2) = props.note.as_deref() {");
+    expect(out).toContain("if let Some(fv_gone) = props.gone.as_deref() {");
+    expect(out).toContain("if let Some(fv_note) = props.note.as_deref() {");
   });
 
   it("compiles `<component :is>` over a closed set to a match over its choices", () => {
@@ -237,7 +237,7 @@ defineProps<{ c: string | null }>();
     expect(out).toContain("XKind::Z => {");
     expect(out).toContain("super::z::try_render(out, &super::z::Props { c: None })?;");
     expect(out).toContain("XKind::Rule => {\n            out.push_str(\"<hr>\");");
-    expect(out).toContain('let fv_tag1 = match props.tag { XTag::B => "b", XTag::I => "i" };');
+    expect(out).toContain('let fv_tag = match props.tag { XTag::B => "b", XTag::I => "i" };');
     expect(out).toContain("if props.boxed {");
     expect(out.slice(out.indexOf("pub fn render"))).not.toContain("_ =>");
   });
@@ -448,8 +448,8 @@ defineProps<{ counts: Record<string, number>; labels: { [key: string]: string } 
       ).get("x.rs")!;
       expect(out).toContain("pub counts: ferrovue::Record<'a, i64>,");
       expect(out).toContain("pub labels: ferrovue::Record<'a, Cow<'a, str>>,");
-      expect(out).toContain("for (k, n_ref) in props.counts.iter() {");
-      expect(out).toContain("for (_, t_ref) in props.labels.iter() {");
+      expect(out).toContain("for (fv_k, fv_n_ref) in props.counts.iter() {");
+      expect(out).toContain("for (_, fv_t_ref) in props.labels.iter() {");
     });
 
     it("takes Boolean as a list method's function, and keeps the present items of optional ones", () => {
@@ -460,9 +460,9 @@ const props = defineProps<{ tags: (string | null)[]; rows: (Row | null)[]; words
 </script>
 <template><i>{{ tags.filter(Boolean).join() }}{{ rows.filter(Boolean).length }}{{ words.some(Boolean) }}{{ [name, title, null].filter(Boolean).join(" ") }}{{ Boolean(title) }}</i></template>`),
       ).get("x.rs")!;
-      expect(out).toContain("props.tags.iter().filter_map(|v| v.as_deref()).map(std::borrow::Cow::<str>::Borrowed).filter(|fv_s1| !fv_s1.is_empty())");
+      expect(out).toContain("props.tags.iter().filter_map(|v| v.as_deref()).map(std::borrow::Cow::<str>::Borrowed).filter(|fv_item| !fv_item.is_empty())");
       expect(out).toContain("props.rows.iter().filter_map(|v| v.as_ref()).count()");
-      expect(out).toMatch(/\.any\(\|fv_s\d+\| !fv_s\d+\.is_empty\(\)\)/);
+      expect(out).toContain(".any(|fv_item_2| !fv_item_2.is_empty())");
       expect(out).toContain("[Some(&*props.name), props.title.as_deref()].into_iter().flatten()");
       expect(out).toContain("props.title.as_deref().is_some_and(|v| !v.is_empty())");
     });
@@ -483,7 +483,7 @@ defineProps<{ tags: string[]; nums: number[] }>();
 </script>
 <template><i>{{ tags.filter((t, i) => i > 0).map((t) => t.trim()).join(", ") }}{{ nums.some((n) => true) }}</i></template>`),
       ).get("x.rs")!;
-      expect(out).toMatch(/\.enumerate\(\)\.filter\(\|fv_e\d+\| \{ let fv_i\d+ = fv_e\d+\.0 as i64; /);
+      expect(out).toContain(".enumerate().filter(|fv_entry| { let fv_i = fv_entry.0 as i64; fv_i as f64 > 0.0 }).map(|(_, v)| v).map(|fv_t| ");
       expect(out).toContain(".any(|_| true)");
       expect(out).not.toContain("collect::<Vec<_>>().len()");
     });
@@ -512,33 +512,33 @@ ${setup}
       ["is a computed", "const a = computed(() => (props.item ? props.item.children : []));"],
     ])("takes its element type from the other branch of `?:` where it %s, borrowing the prop's list", (_, setup) => {
       const out = tree(setup);
-      expect(out).toMatch(/let s_a = if let Some\(n\d+\) = props\.item\.as_ref\(\) \{ &n\d+\.children\[\.\.\] \} else \{ (?:&\[\]|s_none|<&\[Props<'_>\]>::default\(\)) \};/);
-      expect(out).toContain("for x_ref in s_a.iter() {");
+      expect(out).toMatch(/let s_a = if let Some\(fv_item\) = props\.item\.as_ref\(\) \{ &fv_item\.children\[\.\.\] \} else \{ (?:&\[\]|s_none|<&\[Props<'_>\]>::default\(\)) \};/);
+      expect(out).toContain("for fv_x_ref in s_a.iter() {");
       expect(out).not.toContain(".collect::<Vec<_>>()");
     });
 
     it("walks a `?:` between a list and an empty one in the template", () => {
       const out = tree("", `<i v-for="x in (flag ? others : [])">{{ x.label }}</i><b>{{ (item ? item.children : []).length }}</b>`);
-      expect(out).toContain("for x_ref in (if props.flag { &props.others[..] } else { &[] }).iter() {");
-      expect(out).toMatch(/\(if let Some\(n\d+\) = props\.item\.as_ref\(\) \{ &n\d+\.children\[\.\.\] \} else \{ &\[\] \}\)\.len\(\) as i64/);
+      expect(out).toContain("for fv_x_ref in (if props.flag { &props.others[..] } else { &[] }).iter() {");
+      expect(out).toMatch(/\(if let Some\(fv_item\) = props\.item\.as_ref\(\) \{ &fv_item\.children\[\.\.\] \} else \{ &\[\] \}\)\.len\(\) as i64/);
     });
 
     it("types the empty array literal a `?:` with a constant test chooses by the branch it leaves", () => {
       const out = tree("", `<i v-for="x in (false ? others : [])">{{ x.label }}</i><b>{{ (true ? [] : item?.tags ?? []).length }}</b>`);
-      expect(out).toContain("for x_ref in <&[Props<'_>]>::default().iter() {");
+      expect(out).toContain("for fv_x_ref in <&[Props<'_>]>::default().iter() {");
       expect(out).toContain("<&[std::borrow::Cow<str>]>::default().len() as i64");
     });
 
     it("borrows both lists of a `?:` between two", () => {
       const out = tree("", `<i v-for="x in (flag ? others : item ? item.children : [])">{{ x.label }}</i>`);
-      expect(out).toMatch(/if props\.flag \{ &props\.others\[\.\.\] \} else \{ if let Some\(n\d+\) = props\.item\.as_ref\(\) \{ &n\d+\.children\[\.\.\] \} else \{ &\[\] \} \}/);
+      expect(out).toMatch(/if props\.flag \{ &props\.others\[\.\.\] \} else \{ if let Some\(fv_item\) = props\.item\.as_ref\(\) \{ &fv_item\.children\[\.\.\] \} else \{ &\[\] \} \}/);
     });
 
     it("falls back to an empty list, or another list, with `??` after `?.`", () => {
       const out = tree("const a = computed(() => props.item?.children ?? []);", `<i v-for="x in a">{{ x.label }}</i>{{ (item?.tags ?? []).join() }}{{ (item?.children ?? others).length }}`);
-      expect(out).toMatch(/let s_a = props\.item\.as_ref\(\)\.map\(\|(fv_o\d+)\| &\1\.children\)\.map\(\|v\| &v\[\.\.\]\)\.unwrap_or\(&\[\]\);/);
-      expect(out).toMatch(/props\.item\.as_ref\(\)\.and_then\(\|(fv_o\d+)\| \1\.tags\.as_ref\(\)\)\.map\(\|v\| &v\[\.\.\]\)\.unwrap_or\(&\[\]\)/);
-      expect(out).toMatch(/props\.item\.as_ref\(\)\.map\(\|(fv_o\d+)\| &\1\.children\)\.map\(\|v\| &v\[\.\.\]\)\.unwrap_or\(&props\.others\[\.\.\]\)\.len\(\)/);
+      expect(out).toMatch(/let s_a = props\.item\.as_ref\(\)\.map\(\|(fv_item)\| &\1\.children\)\.map\(\|v\| &v\[\.\.\]\)\.unwrap_or\(&\[\]\);/);
+      expect(out).toMatch(/props\.item\.as_ref\(\)\.and_then\(\|(fv_item_2)\| \1\.tags\.as_ref\(\)\)\.map\(\|v\| &v\[\.\.\]\)\.unwrap_or\(&\[\]\)/);
+      expect(out).toMatch(/props\.item\.as_ref\(\)\.map\(\|(fv_item_3)\| &\1\.children\)\.map\(\|v\| &v\[\.\.\]\)\.unwrap_or\(&props\.others\[\.\.\]\)\.len\(\)/);
     });
 
     it("collects a computed list chosen against an empty one", () => {
@@ -555,7 +555,7 @@ defineProps<{ outer?: Outer }>();
 </script>
 <template><i>{{ outer?.inner?.n }}</i></template>`),
       ).get("x.rs")!;
-      expect(out).toMatch(/props\.outer\.as_ref\(\)\.map\(\|(fv_o\d+)\| &\1\.inner\)/);
+      expect(out).toMatch(/props\.outer\.as_ref\(\)\.map\(\|(fv_outer)\| &\1\.inner\)\.map\(\|(fv_inner)\| \2\.n\)/);
     });
 
     it.each([
@@ -611,7 +611,7 @@ const props = defineProps<{ inner?: ChildProps }>();
 <template><div><Child v-if="inner" v-bind="inner" /></div></template>`;
       const out = compile(island(parent, { Child: child })).get("x.rs")!;
       expect(out).toContain("pub inner: Option<super::child::Props<'a>>,");
-      expect(out).toMatch(/if let Some\((n\d+)\) = props\.inner\.as_ref\(\) \{\s*super::child::try_render\(out, \1\)\?;/);
+      expect(out).toMatch(/if let Some\((fv_inner)\) = props\.inner\.as_ref\(\) \{\s*super::child::try_render\(out, \1\)\?;/);
     });
 
     it("borrows each item of a list of the child's Props", () => {
@@ -622,8 +622,8 @@ const props = defineProps<{ items: ChildProps[] }>();
 </script>
 <template><ul><Child v-for="item in items" v-bind="item" /></ul></template>`;
       const out = compile(island(parent, { Child: child })).get("x.rs")!;
-      expect(out).toContain("let item = item_ref;");
-      expect(out).toContain("super::child::try_render(out, item)?;");
+      expect(out).toContain("let fv_item = fv_item_ref;");
+      expect(out).toContain("super::child::try_render(out, fv_item)?;");
       expect(out).not.toContain("use std::borrow::Cow;");
     });
 
@@ -638,7 +638,7 @@ function take(row: Props, more: Props[]) {
 </script>
 <template><div>{{ label }}<X v-for="r in rows" :key="r.id" v-bind="r" @loaded="(more) => take(r, more)" /></div></template>`;
       const out = compile(island(row)).get("x.rs")!;
-      expect(out).toContain("super::x::try_render(out, r)?;");
+      expect(out).toContain("super::x::try_render(out, fv_r)?;");
     });
 
     it("skips listeners beside a v-bind of the child's Props, in every form", () => {
@@ -656,7 +656,7 @@ const handlers = { click: note, Picked: note };
   <Child label="x" title="t" @[ev]="note" @click="note" />
 </ul></template>`;
       const out = compile(island(parent, { Child: child })).get("x.rs")!;
-      expect(out.match(/super::child::try_render(_scoped)?\(out, item(, &fv::Attrs::NONE)?\)\?;/g)).toHaveLength(3);
+      expect(out.match(/super::child::try_render(_scoped)?\(out, fv_item(_\d)?(, &fv::Attrs::NONE)?\)\?;/g)).toHaveLength(3);
       expect(out).toContain(`("title", fv::Attr::str("t"))`);
       expect(out).not.toMatch(/"on[A-Z]/);
     });
@@ -931,7 +931,7 @@ const props = defineProps<{ embed?: Embed }>();
 </script>
 <template><p v-if="embed">{{ embed.provider }}</p></template>`),
       ).get("x.rs")!;
-      expect(out).toMatch(/if let Some\((n\d+)\) = props\.embed\.as_ref\(\) \{[\s\S]*fv::escape_into\(out, &\1\.provider\)/);
+      expect(out).toMatch(/if let Some\((fv_embed)\) = props\.embed\.as_ref\(\) \{[\s\S]*fv::escape_into\(out, &\1\.provider\)/);
     });
 
     it("keeps JavaScript's truthiness for an optional string: empty is not taken", () => {
@@ -1193,7 +1193,7 @@ defineProps<{ items: string[] }>();
       expect(out).toContain("pub struct ItemSlotProps<'v> {\n    pub text: &'v str,\n    pub index: i64,\n}");
       expect(out).toContain("pub type ItemSlot<'s> = dyn for<'v> Fn(&mut String, &ItemSlotProps<'v>) -> bool + 's;");
       expect(out).toContain("pub item: Option<&'s ItemSlot<'s>>,");
-      expect(out).toContain("fv::scoped_slot_into(out, fv_slots.item, &ItemSlotProps { text: it, index: i }, Some(");
+      expect(out).toContain("fv::scoped_slot_into(out, fv_slots.item, &ItemSlotProps { text: fv_it, index: fv_i }, Some(");
     });
 
     it("binds the props a parent destructures, whatever order it generates in", () => {
@@ -1203,8 +1203,8 @@ defineProps<{ items: string[] }>();
 </script>
 <template><Lister :items="items"><template #item="{ text, index: n }"><b :data-n="n">{{ text }}</b></template></Lister></template>`;
       const out = compile(island(lister, { A: parent, Lister: lister })).get("a.rs")!;
-      expect(out).toMatch(/item: Some\(&\|out: &mut String, (fv_sp\d+): &super::lister::ItemSlotProps<'_>\| -> bool \{/);
-      expect(out).toMatch(/fv::escape_into\(out, fv_sp\d+\.text\);/);
+      expect(out).toMatch(/item: Some\(&\|out: &mut String, (fv_slot_props): &super::lister::ItemSlotProps<'_>\| -> bool \{/);
+      expect(out).toMatch(/fv::escape_into\(out, fv_slot_props\.text\);/);
     });
 
     it("refuses outlets of one slot that pass different props", () => {
@@ -1302,7 +1302,7 @@ import Card from "./Card.vue";
 <template><Card><p>x</p></Card></template>`;
       const out = generate(island(parent, { Card: card }), { ...CONFIG, scopeId: "filepath" });
       expect(out.get("card.rs")).toContain(`fv::slot_into_slotted(out, fv_slots.default, "data-v-${hash("components/Card.vue")}-s", None);`);
-      expect(out.get("x.rs")).toContain("default: Some(fv::Slot::slotted(&|out: &mut String, fv_sid1: &str| -> bool {");
+      expect(out.get("x.rs")).toContain("default: Some(fv::Slot::slotted(&|out: &mut String, fv_slot_id: &str| -> bool {");
     });
   });
 
@@ -1864,7 +1864,7 @@ defineProps<{ at: Date; maybe: Date | null; later?: Date; made: Date }>();
       expect(x).toContain("pub fn edited(mut self, edited: ferrovue::JsDate) -> Self {");
       expect(x).toContain("let s_year = fv::js_utc_full_year(fv::js_time_of(&props.posted));");
       expect(x).toContain("fv::escape_into(out, &fv_refusals.keep(fv::try_to_iso_string(fv::js_time_of(&props.posted)), 7, 31));");
-      expect(x).toContain("if let Some(n1) = props.edited.as_ref().map(fv::js_time_of) {");
+      expect(x).toContain("if let Some(fv_edited) = props.edited.as_ref().map(fv::js_time_of) {");
       expect(x).toContain(
         "&super::stamp::Props { at: fv_refusals.date(fv::js_time_of(&props.posted), 7, 125), maybe: props.deleted.as_ref().map(fv::js_time_of).map(|fv_t| fv_refusals.date(fv_t, 7, 141)), later: props.edited.as_ref().map(fv::js_time_of).map(|fv_t| fv_refusals.date(fv_t, 7, 158)), made: fv_refusals.date(fv::js_time_clip(s_year), 7, 171) }",
       );
@@ -1898,8 +1898,8 @@ defineProps<{ days: Date[]; maybe?: (Date | null)[]; byName: Record<string, Date
       expect(x).toContain('    #[serde(rename = "maybe", default, skip_serializing_if = "Option::is_none", with = "fv::dates_in")]\n    pub maybe: Option<Vec<Option<ferrovue::JsDate>>>,');
       expect(x).toContain('    #[serde(rename = "byName", with = "fv::dates_in")]\n    pub by_name: ferrovue::Record<\'a, ferrovue::JsDate>,');
       expect(x).toContain('    #[serde(rename = "seen", default, skip_serializing_if = "Option::is_none", with = "fv::opt_date_prop")]\n    pub seen: Option<ferrovue::JsDate>,');
-      expect(x).toContain("for d in props.days.iter().map(fv::js_time_of) {");
-      expect(x).toContain("fv_refusals.keep(fv::try_to_iso_string(fv::js_time_of(&r.at)), 6, 77)");
+      expect(x).toContain("for fv_d in props.days.iter().map(fv::js_time_of) {");
+      expect(x).toContain("fv_refusals.keep(fv::try_to_iso_string(fv::js_time_of(&fv_r.at)), 6, 77)");
       const plan = '[{"days":[1],"maybe":[1],"byName":{"*":1},"rows":["Row"],"cards":[{"at":1}]},{"Row":{"at":1,"seen":1,"marks":[1],"by":{"*":1},"next":"Row"}}]';
       expect(x).toContain(`    let html: fv::Html<'p, Props<'a>> = fv::Html::island_fallible(NAME, props, render, try_render);\n    html.dates(${JSON.stringify(plan)})`);
       expect(out.get("card.rs")).not.toContain(".dates(");
@@ -1997,7 +1997,7 @@ ${script}
       );
       expect(out).not.toContain("s_unused");
       expect(out).toMatch(/let s_copies = std::cell::LazyCell::new\(\|\| props\.tags\.iter\(\).*\.collect::<Vec<_>>\(\)\);/);
-      expect(out).toContain("for c_cow in (*s_copies).iter()");
+      expect(out).toContain("for fv_c_cow in (*s_copies).iter()");
       expect(out).toContain('fv::escape_into(out, (*s_echoed).as_deref().unwrap_or("-"));');
     });
 
@@ -2302,7 +2302,7 @@ export enum Tone { Calm = "calm", Loud = "loud" }
     OptionsItem { label: Cow::Borrowed("b"), price: 1.5f64, sale: Some(true) },
 ];`,
       );
-      expect(out.get("x.rs")).toContain("for o_ref in super::types::OPTIONS.iter()");
+      expect(out.get("x.rs")).toContain("for fv_o_ref in super::types::OPTIONS.iter()");
       expect(out.get("x.rs")).toContain('out.push_str("<!--]-->loud</p>");');
     });
 
@@ -5911,13 +5911,13 @@ describe("a `?:` whose branches differ in type, where it is shown as text", () =
   it("writes each branch as `{{ }}` writes it, a number by JavaScript's rules and an absent one as nothing", () => {
     const out = render("n: number; o?: Float; on: boolean", '<i>{{ n > 0 ? n : "none" }}</i><b>{{ on ? o : "absent" }}</b><s>{{ on ? true : "off" }}</s>');
     expect(out).toContain('fv::escape_into(out, &(if props.n as f64 > 0.0 { std::borrow::Cow::<str>::Owned(format!("{}", fv::Js(props.n))) } else { std::borrow::Cow::<str>::Borrowed("none") }));');
-    expect(out).toMatch(/if let Some\(v\) = \(if props\.on \{ props\.o\.map\(\|(n\d+)\| std::borrow::Cow::<str>::Owned\(format!\("\{\}", fv::Js\(\1\)\)\)\) \} else \{ Some\(std::borrow::Cow::<str>::Borrowed\("absent"\)\) \}\)\.as_deref\(\) \{/);
+    expect(out).toMatch(/if let Some\(v\) = \(if props\.on \{ props\.o\.map\(\|(fv_o)\| std::borrow::Cow::<str>::Owned\(format!\("\{\}", fv::Js\(\1\)\)\)\) \} else \{ Some\(std::borrow::Cow::<str>::Borrowed\("absent"\)\) \}\)\.as_deref\(\) \{/);
   });
 
   it("writes each branch of an attribute's value as text, leaving the attribute out where a branch is absent", () => {
     const out = render("n: number; o?: number", `<div><i :title="n > 0 ? n : 'none'" :aria-label="o === undefined ? 'unset' : o"></i></div>`);
     expect(out).toContain('out.push_str("<div><i title=\\"");');
-    expect(out).toMatch(/aria-label=\\""\);\n {4}fv::escape_into\(out, &\(if let Some\((n\d+)\) = props\.o \{ std::borrow::Cow::<str>::Owned\(format!\("\{\}", fv::Js\(\1\)\)\) \} else \{ std::borrow::Cow::<str>::Borrowed\("unset"\) \}\)\);/);
+    expect(out).toMatch(/aria-label=\\""\);\n {4}fv::escape_into\(out, &\(if let Some\((fv_o)\) = props\.o \{ std::borrow::Cow::<str>::Owned\(format!\("\{\}", fv::Js\(\1\)\)\) \} else \{ std::borrow::Cow::<str>::Borrowed\("unset"\) \}\)\);/);
   });
 
   it("writes each branch in a template literal as `String()` does, `null` and `undefined` too", () => {
@@ -6013,7 +6013,7 @@ function pad(t: string, width = 3, fill?: string): string {
 }
 </script>
 <template><i>{{ pad(word.toUpperCase()) }}</i></template>`)).get("x.rs")!;
-    expect(out).toMatch(/let (fv_c\d+) = props\.word\.to_uppercase\(\);.*fv_refusals\.keep\(fv::try_pad_start\(&\1, 3\.0f64, "\."\), 4, 10\), \1\)/);
+    expect(out).toMatch(/let (fv_t) = props\.word\.to_uppercase\(\);.*fv_refusals\.keep\(fv::try_pad_start\(&\1, 3\.0f64, "\."\), 4, 10\), \1\)/);
     expect(out.match(/to_uppercase/g)).toHaveLength(1);
   });
 });
@@ -6087,8 +6087,8 @@ const p = computed((): Pair => ({ left: { [KEY]: "l", count: 1, owner: null, tag
 
   it("builds a `.map()` callback's literal as the item type of the list it makes, owning what it reads from the callback's own values", () => {
     const typed = x("const rows = computed<Card[]>(() => props.words.map((w, i) => ({ title: w.toUpperCase(), count: i, owner: w, tags: [] })));", '<p v-for="r in rows">{{ r.title }}</p>');
-    expect(typed).toContain("Card { title: std::borrow::Cow::<str>::Owned(fv_s1.to_uppercase()), count: fv_i1, owner: Some(std::borrow::Cow::<str>::Owned(str::to_owned(&*fv_s1))), tags: Vec::new(), note: None } }).collect::<Vec<_>>();");
-    expect(typed).toContain("for r_ref in s_rows.iter() {");
+    expect(typed).toContain("Card { title: std::borrow::Cow::<str>::Owned(fv_w.to_uppercase()), count: fv_i, owner: Some(std::borrow::Cow::<str>::Owned(str::to_owned(&*fv_w))), tags: Vec::new(), note: None } }).collect::<Vec<_>>();");
+    expect(typed).toContain("for fv_r_ref in s_rows.iter() {");
     const returned = x("const rows = computed(() => props.words.map((w): Card => ({ title: w, count: 0, owner: null, tags: [] })));", "{{ rows.length }}");
     expect(returned).toContain(".collect::<Vec<_>>();");
     expect(returned).toContain("s_rows.len() as i64");
@@ -6097,7 +6097,7 @@ const p = computed((): Pair => ({ left: { [KEY]: "l", count: 1, owner: null, tag
   it("builds a child's prop from a literal, and from `.map()` to literals, as the child's own struct", () => {
     const out = x("", `<V :item="{ label: name }" :items="words.map((w) => ({ label: w, n: 1 }))" /><V v-bind="{ item: { label: 'b', n }, items: [] }" />`);
     expect(out).toContain("super::v::try_render(out, &super::v::Props { item: super::v::Item { label: std::borrow::Cow::<str>::Borrowed(&*props.name), n: None }, items: props.words.iter()");
-    expect(out).toContain("super::v::Item { label: std::borrow::Cow::<str>::Owned(str::to_owned(&*fv_s1)), n: Some(1i64) }).collect::<Vec<_>>() })?;");
+    expect(out).toContain("super::v::Item { label: std::borrow::Cow::<str>::Owned(str::to_owned(&*fv_w)), n: Some(1i64) }).collect::<Vec<_>>() })?;");
     expect(out).toContain('super::v::Props { item: super::v::Item { label: std::borrow::Cow::<str>::Borrowed("b"), n: Some(props.n) }, items: Vec::new() }');
   });
 
@@ -6209,7 +6209,7 @@ describe("constant lookups", () => {
     );
     expect(out).toContain('fv::escape_into(out, match props.tone { super::types::Tone::Info => "navy", super::types::Tone::Warn => "red" });');
     expect(out).toContain("red</i>");
-    expect(out).toContain('fv::push_number(out, match b.tone { super::types::Tone::Info => 400.0f64, super::types::Tone::Warn => 700.5f64 });');
+    expect(out).toContain('fv::push_number(out, match fv_b.tone { super::types::Tone::Info => 400.0f64, super::types::Tone::Warn => 700.5f64 });');
   });
 
   it("reads by integer literal keys, and keeps the literals of a `?:` and a `computed`", () => {
@@ -6230,7 +6230,7 @@ describe("constant lookups", () => {
     expect(out).toContain('fv::escape_into(out, (match props.kind { XKind::A => Some("A"), XKind::B => Some("B"), XKind::C => None }).unwrap_or("-"));');
     expect(out).toContain('if let Some(v) = match props.kind { XKind::A => Some("x"), XKind::B | XKind::C => None } {');
     expect(out).toContain('if matches!(props.kind, XKind::A) {\n        out.push_str("<b>x</b>");');
-    expect(out).toMatch(/if let Some\((n\d+)\) = \(match props\.kind \{ XKind::A => Some\("A"\), XKind::B => Some\("B"\), XKind::C => None \}\)\.filter\(\|v\| !v\.is_empty\(\)\) \{\n {8}out\.push_str\("<s>"\);\n {8}fv::escape_into\(out, \1\);/);
+    expect(out).toMatch(/if let Some\((fv_t)\) = \(match props\.kind \{ XKind::A => Some\("A"\), XKind::B => Some\("B"\), XKind::C => None \}\)\.filter\(\|v\| !v\.is_empty\(\)\) \{\n {8}out\.push_str\("<s>"\);\n {8}fv::escape_into\(out, \1\);/);
   });
 
   it("forgets the literals of a list item or a `??` that another value may be", () => {
@@ -6493,20 +6493,20 @@ function outside(x?: number): boolean {
 }`,
       "<i>{{ n != null && n > 1 && n < 9 }}|{{ inside }}|{{ outside(n) }}</i>",
     );
-    expect(out).toContain("let s_inside = if let Some(n1) = props.n { n1 as f64 > 1.0 && (n1 as f64) < 9.0 } else { false };");
-    expect(out).toContain("if let Some(n2) = props.n { n2 as f64 > 1.0 && (n2 as f64) < 9.0 } else { false }");
-    expect(out).toContain("if let Some(n3) = props.n { (n3 as f64) < 1.0 || n3 as f64 > 9.0 } else { true }");
+    expect(out).toContain("let s_inside = if let Some(fv_n) = props.n { fv_n as f64 > 1.0 && (fv_n as f64) < 9.0 } else { false };");
+    expect(out).toContain("if let Some(fv_n_2) = props.n { fv_n_2 as f64 > 1.0 && (fv_n_2 as f64) < 9.0 } else { false }");
+    expect(out).toContain("if let Some(fv_x) = props.n { (fv_x as f64) < 1.0 || fv_x as f64 > 9.0 } else { true }");
   });
 
   it("narrows the branches of a `?:` whose test is a chain, and a `v-if` of one", () => {
     const out = render("defineProps<{ n?: number }>();", '<i v-if="n != null && n > 1 && n < 9">{{ n * 2 }}</i><b>{{ n != null && n > 1 ? n * 2 : 0 }}|{{ n == null || n < 0 ? "bad" : n.toFixed(1) }}</b>');
-    expect(out).toMatch(/if let Some\(n\d+\) = props\.n && n\d+ as f64 > 1\.0 && \(n\d+ as f64\) < 9\.0 \{/);
-    expect(out).toMatch(/fv::js_to_fixed\(n\d+ as f64, 1\)/);
+    expect(out).toMatch(/if let Some\(fv_n\) = props\.n && fv_n as f64 > 1\.0 && \(fv_n as f64\) < 9\.0 \{/);
+    expect(out).toMatch(/fv::js_to_fixed\(fv_n_3 as f64, 1\)/);
   });
 
   it("reads a lookup by a key `&&` tested, as `undefined` where the key is absent", () => {
     const out = render('const TONE = { info: "blue", warn: "amber" } as const;\ndefineProps<{ tone?: "info" | "warn" }>();', '<b :class="tone && TONE[tone]" :title="tone && TONE[tone]">{{ (tone && TONE[tone]) ?? "none" }}</b>');
-    expect(out).toContain('match n');
+    expect(out).toContain("if let Some(fv_tone) = props.tone { match fv_tone {");
     expect(out).toContain('XTone::Info => "blue", XTone::Warn => "amber"');
     expect(out).not.toContain("FV0223");
   });
@@ -6691,7 +6691,7 @@ describe("own keys of constant objects and `Map`s", () => {
 
   it("tests a free-text key against a constant object's own keys, and reads the object by the key it narrows", () => {
     const out = render('const ROLE: Record<string, string> = { mod: "is-mod", admin: "is-admin" };\ndefineProps<{ role: string; scores: Record<string, number> }>();', `<b :class="Object.hasOwn(ROLE, role) ? ROLE[role] : ''">{{ Object.hasOwn(scores, role) }}|{{ Object.keys(ROLE).join(",") }}</b>`);
-    expect(out).toMatch(/if let Some\((n\d+)\) = matches!\(&\*props\.role, "mod" \| "admin"\)\.then_some\(&\*props\.role\) \{ match \1 \{ "mod" => "is-mod", _ => "is-admin" \} \} else \{ "" \}/);
+    expect(out).toMatch(/if let Some\((fv_role)\) = matches!\(&\*props\.role, "mod" \| "admin"\)\.then_some\(&\*props\.role\) \{ match \1 \{ "mod" => "is-mod", _ => "is-admin" \} \} else \{ "" \}/);
     expect(out).toContain("props.scores.get(&props.role).is_some()");
     expect(out).toContain('["mod", "admin"]');
   });
@@ -6930,7 +6930,7 @@ withDefaults(defineProps<{ k: K; m?: K; n?: K; j: K }>(), { n: "b" });
     expect(out).toContain("if props.k == K::A {");
     expect(out).toContain("if props.m != Some(K::B) {");
     expect(out).toContain("if props.k == props.j {");
-    expect(out).toMatch(/if let Some\((n\d+)\) = props\.m \{\n {8}out\.push_str\("<b>"\);\n {8}fv::escape_into\(out, \1\.as_str\(\)\);/);
+    expect(out).toMatch(/if let Some\((fv_m)\) = props\.m \{\n {8}out\.push_str\("<b>"\);\n {8}fv::escape_into\(out, \1\.as_str\(\)\);/);
   });
 
   it("compiles a `switch` over an enum in a `computed` to variant comparisons", () => {
@@ -7075,48 +7075,47 @@ ${script}
 
   it("carries a sum in an f64 the loop adds to, and writes it as JavaScript writes the number", () => {
     const body = render("const total = computed(() => {\n  let sum = 0;\n  for (const r of props.rows) sum += r.n;\n  return sum;\n});", "{{ total }}");
-    expect(body).toMatch(/let mut (fv_m\d+): f64 = 0\.0f64; for (fv_a\d+) in props\.rows\.iter\(\) \{ \1 \+= \2\.n as f64; \} \1 \}/);
+    expect(body).toContain("let s_total = { let mut fv_sum: f64 = 0.0f64; for fv_r in props.rows.iter() { fv_sum += fv_r.n as f64; } fv_sum };");
     expect(body).toContain("fv::push_number(out, s_total);");
     expect(body).not.toContain("try_int");
   });
 
   it("carries a Float once a value the loop gives may be one", () => {
     const body = render("const total = computed(() => {\n  let sum = 0;\n  for (const r of props.rows) sum += r.n * props.f;\n  return sum;\n});", "{{ total }}");
-    expect(body).toMatch(/let mut (fv_m\d+): f64 = 0\.0f64; for (fv_a\d+) in props\.rows\.iter\(\) \{ \1 \+= \2\.n as f64 \* props\.f; \} \1 \}/);
+    expect(body).toContain("let mut fv_sum: f64 = 0.0f64; for fv_r in props.rows.iter() { fv_sum += fv_r.n as f64 * props.f; } fv_sum }");
   });
 
   it("appends to a string the loop builds, and iterates a string by its characters", () => {
     const body = render('function spaced(s: string): string {\n  let out = "";\n  for (const ch of s) out += `${ch} `;\n  return out;\n}', "{{ spaced(s) }}");
-    expect(body).toMatch(/let mut (fv_m\d+): String = String::new\(\); for (fv_s\d+) in props\.s\.split_inclusive\(\|_: char\| true\) \{ use std::fmt::Write as _; let _ = write!\(\1, "\{\} ", \2\); \}/);
-    expect(body).toContain("std::borrow::Cow::<str>::Owned(fv_m");
+    expect(body).toContain('let mut fv_out: String = String::new(); for fv_ch in props.s.split_inclusive(|_: char| true) { use std::fmt::Write as _; let _ = write!(fv_out, "{} ", fv_ch); } std::borrow::Cow::<str>::Owned(fv_out)');
   });
 
   it("counts with a while loop over an f64, the bound read on every item as JavaScript reads it", () => {
     const body = render('function stars(n: number): string {\n  let out = "";\n  for (let i = 0; i < Math.min(n, 5); i++) out += "*";\n  return out;\n}', "{{ stars(n) }}");
-    expect(body).toMatch(/let mut (fv_m\d+): String = String::new\(\); let mut (fv_m\d+): f64 = 0\.0f64; while \2 < props\.n\.min\(5i64\) as f64 \{ \1\.push\('\*'\); \2 \+= 1\.0; \}/);
+    expect(body).toContain("let mut fv_out: String = String::new(); let mut fv_i: f64 = 0.0f64; while fv_i < props.n.min(5i64) as f64 { fv_out.push('*'); fv_i += 1.0; }");
   });
 
   it("keeps a return inside a loop for after it, and breaks out", () => {
     const body = render('function first(words: string[]): string {\n  for (const w of words) if (w.length > 2) return w;\n  return "none";\n}', "{{ first(words) }}");
-    expect(body).toMatch(/let mut (fv_r\d+): Option<String> = None; for (fv_s\d+) in .*\{ if fv::js_length\(&\2\) as f64 > 2\.0 \{ \1 = Some\(String::from\(&\*\2\)\); break; \} \}/);
-    expect(body).toMatch(/if (fv_r\d+)\.is_some\(\) \{ \1\.as_deref\(\)\.unwrap_or_default\(\) \} else \{ "none" \}/);
+    expect(body).toContain("let mut fv_returned: Option<String> = None; for fv_w in props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)) { if fv::js_length(&fv_w) as f64 > 2.0 { fv_returned = Some(String::from(&*fv_w)); break; } }");
+    expect(body).toContain('if fv_returned.is_some() { fv_returned.as_deref().unwrap_or_default() } else { "none" }');
   });
 
   it("numbers the items of `.entries()` as integers", () => {
     const body = render("function at(words: string[], s: string): number {\n  for (const [i, w] of words.entries()) if (w === s) return i;\n  return -1;\n}", "{{ at(words, s) }}");
-    expect(body).toMatch(/for \((fv_i\d+), (fv_s\d+)\) in .*\.enumerate\(\) \{ let \1 = \1 as i64; /);
+    expect(body).toMatch(/for \(fv_i, fv_w\) in .*\.enumerate\(\) \{ let fv_i = fv_i as i64; /);
   });
 
   it("runs a body that never reaches its next item on the first item alone, with no break", () => {
     const body = render('function initial(s: string): string {\n  let out = "";\n  for (const ch of s) {\n    out = ch;\n    break;\n  }\n  return out;\n}', "{{ initial(s) }}");
-    expect(body).toMatch(/for (fv_s\d+) in props\.s\.split_inclusive\(\|_: char\| true\)\.take\(1\) \{ fv_m\d+ = String::from\(\1\); \}/);
+    expect(body).toContain("for fv_ch in props.s.split_inclusive(|_: char| true).take(1) { fv_out = String::from(fv_ch); }");
     expect(body).not.toContain("break");
   });
 
   it("drops a let the loop assigns and nothing reads, and assigns at a break only what is read after the loop", () => {
     const body = render('function f(words: string[]): string {\n  let last = "";\n  let seen = 0;\n  let count = 0;\n  for (const w of words) {\n    last = w;\n    if (seen > 2) break;\n    seen += 1;\n    count += 1;\n  }\n  return `${count}`;\n}', "{{ f(words) }}");
     expect(body).not.toContain("String::new()");
-    expect(body).toMatch(/for _ in props\.words\.iter\(\) \{ if (fv_m\d+) > 2\.0 \{ break; \} else \{ \1 \+= 1\.0; (fv_m\d+) \+= 1\.0; \} \}/);
+    expect(body).toContain("for _ in props.words.iter() { if fv_seen > 2.0 { break; } else { fv_seen += 1.0; fv_count += 1.0; } }");
   });
 
   it("binds a let assigned again outside loops anew, with the type TypeScript narrows it to", () => {
@@ -7132,6 +7131,50 @@ ${script}
 
   it("swaps two lets through temporaries", () => {
     const body = render('function swapped(n: number): string {\n  let a = "a";\n  let b = "b";\n  for (let i = 0; i < n; i++) {\n    const t = a;\n    a = b;\n    b = t;\n  }\n  return a + b;\n}', "{{ swapped(n) }}");
-    expect(body).toMatch(/let (fv_t\d+) = String::from\(&\*(fv_m\d+)\); let (fv_t\d+) = String::from\(&\*(fv_m\d+)\); let (fv_t\d+) = (fv_m\d+) \+ 1\.0; \4 = \1; \2 = \3; \6 = \5;/);
+    expect(body).toContain("let fv_next_a = String::from(&*fv_b); let fv_next_b = String::from(&*fv_a); let fv_next_i = fv_i + 1.0; fv_a = fv_next_a; fv_b = fv_next_b; fv_i = fv_next_i;");
+  });
+});
+
+describe("the names of generated locals", () => {
+  const script = `<script setup lang="ts">
+import { computed } from "vue";
+interface Row { name: string; n: number }
+const props = defineProps<{ rows: Row[]; title?: string; tags: (string | null)[]; label: string }>();
+function shout(word: string): string {
+  return word + word;
+}
+const total = computed(() => {
+  let rowCount = 0;
+  for (const $row of props.rows) rowCount += $row.n;
+  return rowCount;
+});
+</script>`;
+  const body = `{{ total }}<b v-if="title">{{ title }}</b><p v-for="(item, i) in rows">{{ i }}{{ item.name }}{{ tags.filter(Boolean).join() }}</p>{{ shout(label.trim()) }}{{ shout(label.toUpperCase()) }}<s v-for="größe in tags">{{ größe }}</s>`;
+  const other = (text: string): string => `<script setup lang="ts">\ndefineProps<{ note?: string }>();\n</script>\n<template><em v-if="note">${text}{{ note }}</em></template>`;
+  const x = (before = ""): string => `${script}\n<template><i>${before}${body}</i></template>`;
+
+  it("names a local fv_ and its JavaScript name in snake case, a value the compiler makes by its role, and a name the function holds already with _2", () => {
+    const out = compile(island(x(), { Y: other("") })).get("x.rs")!;
+    expect(out).toContain("let s_total = { let mut fv_row_count: f64 = 0.0f64; for fv_row in props.rows.iter() { fv_row_count += fv_row.n as f64; } fv_row_count };");
+    expect(out).toContain("if let Some(fv_title) = props.title.as_deref().filter(|v| !v.is_empty()) {");
+    expect(out).toContain("for (fv_i, fv_item_ref) in props.rows.iter().enumerate() {\n        let fv_item = fv_item_ref;\n        let fv_i = fv_i as i64;");
+    expect(out).toContain(".filter(|fv_item_2| !fv_item_2.is_empty())");
+    expect(out).toContain("let fv_word = fv::js_trim(&props.label);");
+    expect(out).toContain("let fv_word_2 = props.label.to_uppercase();");
+    expect(out).toContain("for fv_gro_e_ref in props.tags.iter() {\n        let fv_gro_e = fv_gro_e_ref.as_deref();");
+  });
+
+  it("gives the same names to the same component, and keeps the names of code an edit elsewhere leaves alone", () => {
+    const first = compile(island(x(), { Y: other("") }));
+    const again = compile(island(x(), { Y: other("") }));
+    expect(again.get("x.rs")).toBe(first.get("x.rs"));
+    expect(again.get("y.rs")).toBe(first.get("y.rs"));
+    const edited = compile(island(x(`<u v-for="tag in tags">{{ tag }}</u><hr :title="String(rows.some((r) => r.n > 1))">`), { Y: other("<b>new</b>") }));
+    const kept = first.get("x.rs")!.split("\n").filter((line) => /\bfv_[a-z]/.test(line) && !line.includes("reserve("));
+    expect(kept.length).toBeGreaterThan(10);
+    for (const line of kept) expect(edited.get("x.rs")).toContain(line);
+    expect(edited.get("y.rs")).toContain("if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {");
+    expect(edited.get("x.rs")).toContain("for fv_tag_ref in props.tags.iter() {");
+    expect(edited.get("x.rs")).toContain(".any(|fv_r| fv_r.n as f64 > 1.0)");
   });
 });

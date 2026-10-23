@@ -101,9 +101,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>)
     } else {
         out.push_str("<!---->");
     }
-    if let Some(n3) = fv_route.query("q").attr_value() {
+    if let Some(fv_q) = fv_route.query("q").attr_value() {
         out.push_str("<dd data-one=\"");
-        fv::escape_into(out, n3);
+        fv::escape_into(out, fv_q);
         out.push_str("\">one</dd>");
     } else {
         out.push_str("<!---->");

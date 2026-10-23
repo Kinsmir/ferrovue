@@ -38,6 +38,8 @@ export function generate(root: string, config: Config = loadConfig(root), source
 function generateAll(root: string, config: Config, sources: ReadonlyMap<string, string>, options: ResolveOptions): Map<string, string> {
   ctx.recovered = null;
   ctx.trying = 0;
+  ctx.narrowCount = 0;
+  ctx.hints = new Map();
   ctx.datePlans = { components: new Map(), loaders: new Map() };
   ctx.sources = new Map([...sources].map(([file, text]) => [resolve(root, file), text]));
   ctx.aliases = options.aliases ?? [];
@@ -153,7 +155,6 @@ function generateAll(root: string, config: Config, sources: ReadonlyMap<string, 
   const built: { file: string; source: () => string }[] = [];
   for (const r of ordered) {
     if (run.prune([r]).length === 0) continue;
-    ctx.narrowCount = 0;
     const file = moduleFile(r.comp.module);
     out.set(file, "");
     const source = run.attempt(r.comp.file, () => run.recovering(() => componentSource(r.comp, r.ast, r.compiled, components)), r.comp.name);

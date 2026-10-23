@@ -45,15 +45,15 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::I18n) {
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::I18n) -> Result<(), fv::Refused> {
     out.reserve(22 + props.words.len());
     out.push_str("<p");
-    if fv::js_split(&props.words, " ").into_iter().map(|fv_s1| std::borrow::Cow::<str>::Owned((if props.on { std::borrow::Cow::<str>::Owned(fv_s1.to_uppercase()) } else { std::borrow::Cow::<str>::Borrowed(&*fv_s1) }).into_owned())).collect::<Vec<_>>().join("-").is_empty() {
+    if fv::js_split(&props.words, " ").into_iter().map(|fv_w| std::borrow::Cow::<str>::Owned((if props.on { std::borrow::Cow::<str>::Owned(fv_w.to_uppercase()) } else { std::borrow::Cow::<str>::Borrowed(&*fv_w) }).into_owned())).collect::<Vec<_>>().join("-").is_empty() {
         out.push_str(" title");
     } else {
         out.push_str(" title=\"");
-        fv::escape_into(out, &fv::js_split(&props.words, " ").into_iter().map(|fv_s1| std::borrow::Cow::<str>::Owned((if props.on { std::borrow::Cow::<str>::Owned(fv_s1.to_uppercase()) } else { std::borrow::Cow::<str>::Borrowed(&*fv_s1) }).into_owned())).collect::<Vec<_>>().join("-"));
+        fv::escape_into(out, &fv::js_split(&props.words, " ").into_iter().map(|fv_w| std::borrow::Cow::<str>::Owned((if props.on { std::borrow::Cow::<str>::Owned(fv_w.to_uppercase()) } else { std::borrow::Cow::<str>::Borrowed(&*fv_w) }).into_owned())).collect::<Vec<_>>().join("-"));
         out.push('"');
     }
     out.push('>');
-    fv::escape_into(out, &fv::js_split(&props.words, " ").into_iter().map(|fv_s2| std::borrow::Cow::<str>::Owned((if props.on { std::borrow::Cow::<str>::Owned(fv_i18n.t("common.app", &fv::i18n::Args::new())) } else { std::borrow::Cow::<str>::Borrowed(&*fv_s2) }).into_owned())).collect::<Vec<_>>().join("|"));
+    fv::escape_into(out, &fv::js_split(&props.words, " ").into_iter().map(|fv_w_2| std::borrow::Cow::<str>::Owned((if props.on { std::borrow::Cow::<str>::Owned(fv_i18n.t("common.app", &fv::i18n::Args::new())) } else { std::borrow::Cow::<str>::Borrowed(&*fv_w_2) }).into_owned())).collect::<Vec<_>>().join("|"));
     out.push_str("</p>");
     Ok(())
 }

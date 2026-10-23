@@ -80,71 +80,71 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(267 + props.label.as_deref().map_or(0, str::len) + props.user.as_ref().map_or(0, |v| v.name.len() + v.avatar.as_deref().map_or(0, str::len) + v.roles.iter().map(|v| v.name.len()).sum::<usize>() + 2));
     out.push_str("<section>");
-    if let Some(n1) = props.label.as_deref() {
+    if let Some(fv_label) = props.label.as_deref() {
         out.push_str("<p>");
-        fv::push_int(out, fv::js_length(n1));
+        fv::push_int(out, fv::js_length(fv_label));
         out.push(':');
-        fv::escape_into(out, &n1.to_uppercase());
+        fv::escape_into(out, &fv_label.to_uppercase());
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");
     }
-    if let Some(n2) = props.count {
+    if let Some(fv_count) = props.count {
         out.push_str("<p>");
-        fv::push_number(out, n2 as f64 * 2.0);
+        fv::push_number(out, fv_count as f64 * 2.0);
         out.push('|');
-        fv::push_number(out, n2 as f64 + 1.0);
+        fv::push_number(out, fv_count as f64 + 1.0);
         out.push('|');
-        fv::push_number(out, n2 as f64 % 3.0);
+        fv::push_number(out, fv_count as f64 % 3.0);
         out.push('|');
-        fv::escape_into(out, &format!("#{}", fv::Js(n2)));
+        fv::escape_into(out, &format!("#{}", fv::Js(fv_count)));
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");
     }
-    if let Some(n3) = props.label.as_deref() {
+    if let Some(fv_label_2) = props.label.as_deref() {
         out.push_str("<p>");
-        fv::escape_into(out, { let a = fv::js_trim(n3); if !a.is_empty() { a } else { "blank" } });
+        fv::escape_into(out, { let a = fv::js_trim(fv_label_2); if !a.is_empty() { a } else { "blank" } });
         out.push_str("</p>");
     } else {
         out.push_str("<p>no label</p>");
     }
-    if let Some(n4) = props.user.as_ref() {
+    if let Some(fv_user) = props.user.as_ref() {
         out.push_str("<p>");
-        fv::escape_into(out, &n4.name);
-        fv::escape_into(out, &(if let Some(n5) = n4.avatar.as_deref() { std::borrow::Cow::<str>::Owned(format!(" ({})", fv::Js(fv::js_length(n5)))) } else { std::borrow::Cow::<str>::Borrowed("") }));
+        fv::escape_into(out, &fv_user.name);
+        fv::escape_into(out, &(if let Some(fv_avatar) = fv_user.avatar.as_deref() { std::borrow::Cow::<str>::Owned(format!(" ({})", fv::Js(fv::js_length(fv_avatar)))) } else { std::borrow::Cow::<str>::Borrowed("") }));
         out.push_str("</p>");
     } else {
         out.push_str("<p>no user</p>");
     }
-    if let Some(n6) = props.ratio && n6 > 0.5 {
+    if let Some(fv_ratio) = props.ratio && fv_ratio > 0.5 {
         out.push_str("<p>");
-        fv::push_number(out, fv::js_round(n6 * 10.0));
+        fv::push_number(out, fv::js_round(fv_ratio * 10.0));
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");
     }
-    if let Some(n7) = props.user.as_ref() && let Some(n8) = n7.avatar.as_deref() {
+    if let Some(fv_user_2) = props.user.as_ref() && let Some(fv_avatar_2) = fv_user_2.avatar.as_deref() {
         out.push_str("<p>");
-        fv::escape_into(out, fv::js_trim(n8));
+        fv::escape_into(out, fv::js_trim(fv_avatar_2));
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");
     }
     out.push_str("<p>");
-    fv::push_number(out, if let Some(n9) = props.count { n9 as f64 / 4.0 } else { -1.0f64 });
+    fv::push_number(out, if let Some(fv_count_2) = props.count { fv_count_2 as f64 / 4.0 } else { -1.0f64 });
     out.push('|');
-    fv::escape_into(out, &(if let Some(n10) = props.count { std::borrow::Cow::<str>::Owned(fv::Js(n10 as f64 - 1.0).to_string()) } else { std::borrow::Cow::<str>::Borrowed("none") }));
+    fv::escape_into(out, &(if let Some(fv_count_3) = props.count { std::borrow::Cow::<str>::Owned(fv::Js(fv_count_3 as f64 - 1.0).to_string()) } else { std::borrow::Cow::<str>::Borrowed("none") }));
     out.push_str("</p><p>");
-    fv::push_int(out, if let Some(n11) = props.label.as_deref().filter(|v| !v.is_empty()) { fv::js_length(n11) } else { 0i64 });
+    fv::push_int(out, if let Some(fv_label_3) = props.label.as_deref().filter(|v| !v.is_empty()) { fv::js_length(fv_label_3) } else { 0i64 });
     out.push('|');
     fv::escape_into(out, props.label.as_deref().filter(|v| !v.is_empty()).unwrap_or("empty"));
     out.push_str("</p><p>");
-    out.push_str(if if let Some(n13) = props.label.as_deref() { fv::js_length(n13) as f64 > 2.0 } else { false } { "true" } else { "false" });
+    out.push_str(if if let Some(fv_label_4) = props.label.as_deref() { fv::js_length(fv_label_4) as f64 > 2.0 } else { false } { "true" } else { "false" });
     out.push('|');
-    out.push_str(if if let Some(n14) = props.label.as_deref() { fv::js_length(n14) as f64 == 0.0 } else { true } { "true" } else { "false" });
+    out.push_str(if if let Some(fv_label_5) = props.label.as_deref() { fv::js_length(fv_label_5) as f64 == 0.0 } else { true } { "true" } else { "false" });
     out.push('|');
-    out.push_str(if if let Some(n15) = props.count.filter(|v| *v != 0) { n15 as f64 > 3.0 } else { true } { "true" } else { "false" });
+    out.push_str(if if let Some(fv_count_4) = props.count.filter(|v| *v != 0) { fv_count_4 as f64 > 3.0 } else { true } { "true" } else { "false" });
     out.push_str("</p><p>");
     fv::push_number(out, props.ratio.unwrap_or(0.0f64));
     out.push('|');
@@ -152,7 +152,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push('|');
     out.push_str(if props.on.unwrap_or(false) { "true" } else { "false" });
     out.push_str("</p><p");
-    if let Some(v) = props.label.as_deref().map(|n16| std::borrow::Cow::<str>::Owned(format!("{}!", n16))).as_deref() {
+    if let Some(v) = props.label.as_deref().map(|fv_label_6| std::borrow::Cow::<str>::Owned(format!("{}!", fv_label_6))).as_deref() {
         out.push_str(" title=\"");
         fv::escape_into(out, v);
         out.push('"');

@@ -72,17 +72,17 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_p
     out.push_str("<div class=\"list\" data-ratio=\"");
     fv::push_number(out, fv_inherited.ratio.unwrap_or(1.5f64));
     out.push_str("\" data-v-c4d7ae83><ul data-v-c4d7ae83><!--[-->");
-    for (i, item_ref) in props.items.iter().enumerate() {
-        let item: &str = item_ref;
-        let i = i as i64;
+    for (fv_i, fv_item_ref) in props.items.iter().enumerate() {
+        let fv_item: &str = fv_item_ref;
+        let fv_i = fv_i as i64;
         out.push_str("<li data-v-c4d7ae83>");
-        fv::scoped_slot_into_slotted(out, fv_slots.row.map(|f| move |out: &mut String, fv_sp: &RowSlotProps<'_>, fv_sid: &str| f(out, fv_sp, fv_sid, fv_provides)).as_ref(), &RowSlotProps { item, index: i }, "data-v-c4d7ae83-s", None);
+        fv::scoped_slot_into_slotted(out, fv_slots.row.map(|f| move |out: &mut String, fv_sp: &RowSlotProps<'_>, fv_sid: &str| f(out, fv_sp, fv_sid, fv_provides)).as_ref(), &RowSlotProps { item: fv_item, index: fv_i }, "data-v-c4d7ae83-s", None);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul>");
-    if let Some(n1) = fv_inherited.tags {
+    if let Some(fv_tags) = fv_inherited.tags {
         out.push_str("<p data-v-c4d7ae83>");
-        fv::escape_into(out, &n1.iter().map(|v| &**v).collect::<Vec<_>>().join(", "));
+        fv::escape_into(out, &fv_tags.iter().map(|v| &**v).collect::<Vec<_>>().join(", "));
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");

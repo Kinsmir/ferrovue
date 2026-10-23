@@ -66,33 +66,33 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::Loads<'_>)
         fv::push_number(out, fv::js_time_of(l_0));
         out.push_str("</p>");
     }
-    if let Some(n1) = l_4.as_ref().map(fv::js_time_of) {
+    if let Some(fv_closed) = l_4.as_ref().map(fv::js_time_of) {
         out.push_str("<p>closed ");
-        fv::push_number(out, n1);
-        fv::escape_into(out, if n1 > fv::js_time_of(l_0) { " later" } else { "" });
+        fv::push_number(out, fv_closed);
+        fv::escape_into(out, if fv_closed > fv::js_time_of(l_0) { " later" } else { "" });
         out.push_str("</p>");
     } else {
         out.push_str("<p>open</p>");
     }
     out.push_str("<!--[-->");
-    for day in l_3.iter().map(fv::js_time_of) {
+    for fv_day in l_3.iter().map(fv::js_time_of) {
         out.push_str("<i>");
-        fv::push_number(out, fv::js_utc_date(day));
+        fv::push_number(out, fv::js_utc_date(fv_day));
         out.push_str("</i>");
     }
     out.push_str("<!--]--><!--[-->");
-    for at in l_2.seen.iter().map(|v| v.as_ref().map(fv::js_time_of)) {
+    for fv_at in l_2.seen.iter().map(|v| v.as_ref().map(fv::js_time_of)) {
         out.push_str("<b>");
-        fv::push_number(out, at.unwrap_or(-1.0f64));
+        fv::push_number(out, fv_at.unwrap_or(-1.0f64));
         out.push_str("</b>");
     }
     out.push_str("<!--]--><!--[-->");
-    for (who, at_ref) in l_2.pinned.iter() {
-        let at = fv::js_time_of(at_ref);
+    for (fv_who, fv_at_ref) in l_2.pinned.iter() {
+        let fv_at_2 = fv::js_time_of(fv_at_ref);
         out.push_str("<u>");
-        fv::escape_into(out, who);
+        fv::escape_into(out, fv_who);
         out.push(' ');
-        fv::push_number(out, fv::js_utc_month(at));
+        fv::push_number(out, fv::js_utc_month(fv_at_2));
         out.push_str("</u>");
     }
     out.push_str("<!--]-->");

@@ -9,7 +9,7 @@ import { atom, bare, receiver } from "./parens.ts";
 
 const COW = "std::borrow::Cow::<str>";
 
-const LOCAL = /\b(?:fv_(?!a\d|i\d)[a-z]+\d+|n\d+)\b/;
+const LOCAL = /\bfv_(?!a\d|i\d)[a-z]+\d+\b/;
 
 /** A type as a syntax node, for `typedBy` to give a value whose type is known only as a `Ty`. */
 export function tyNode(ty: Ty): N {

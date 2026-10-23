@@ -68,9 +68,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push('>');
     fv::escape_into(out, props.note.as_deref().unwrap_or("no note"));
     out.push_str("</i>");
-    if let Some(n1) = props.stars {
+    if let Some(fv_stars) = props.stars {
         out.push_str("<b>");
-        fv::push_int(out, n1);
+        fv::push_int(out, fv_stars);
         out.push_str("</b>");
     } else {
         out.push_str("<!---->");

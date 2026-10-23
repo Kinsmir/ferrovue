@@ -56,12 +56,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::Loads<'_>)
     out.push_str("<article><h1>");
     fv::escape_into(out, &s_heading);
     out.push_str("</h1>");
-    if let Some(n1) = l_1.author.as_ref() {
+    if let Some(fv_writer) = l_1.author.as_ref() {
         out.push_str("<p>");
-        fv::escape_into(out, &n1.name);
-        if let Some(n2) = n1.bio.as_deref().filter(|v| !v.is_empty()) {
+        fv::escape_into(out, &fv_writer.name);
+        if let Some(fv_bio) = fv_writer.bio.as_deref().filter(|v| !v.is_empty()) {
             out.push_str("<span> — ");
-            fv::escape_into(out, n2);
+            fv::escape_into(out, fv_bio);
             out.push_str("</span>");
         } else {
             out.push_str("<!---->");
@@ -71,10 +71,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::Loads<'_>)
         out.push_str("<!---->");
     }
     out.push_str("<ul><!--[-->");
-    for tag_ref in l_0.tags.iter() {
-        let tag: &str = tag_ref;
+    for fv_tag_ref in l_0.tags.iter() {
+        let fv_tag: &str = fv_tag_ref;
         out.push_str("<li>");
-        fv::escape_into(out, tag);
+        fv::escape_into(out, fv_tag);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul>");

@@ -130,14 +130,14 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> R
     out.push_str("</header>");
     if props.rows.len() as i64 != 0 {
         out.push_str("<ul><!--[-->");
-        for (i, r_ref) in props.rows.iter().enumerate() {
-            let r = r_ref;
-            let i = i as i64;
+        for (fv_i, fv_r_ref) in props.rows.iter().enumerate() {
+            let fv_r = fv_r_ref;
+            let fv_i = fv_i as i64;
             out.push_str("<li>");
-            fv::scoped_slot_into(out, fv_slots.row, &RowSlotProps { row: r, index: i, label: &r.label, tags: &r.tags, first: i as f64 == 0.0 }, Some(&mut |out: &mut String| {
-                fv::push_int(out, i);
+            fv::scoped_slot_into(out, fv_slots.row, &RowSlotProps { row: fv_r, index: fv_i, label: &fv_r.label, tags: &fv_r.tags, first: fv_i as f64 == 0.0 }, Some(&mut |out: &mut String| {
+                fv::push_int(out, fv_i);
                 out.push_str(". ");
-                fv::escape_into(out, &r.label);
+                fv::escape_into(out, &fv_r.label);
             }));
             out.push_str("</li>");
         }

@@ -1,6 +1,7 @@
 import { type Component, type N, type Scope, type Ty, type Val, BOOL, fail, FLOAT, GenError, INT, isAscii, joinTy, literalTy, opt, rustStr, sameTy, STR, strTy, UNDEF } from "./model.ts";
 import { constOf, ownKeys, ownKeyTest } from "./constants.ts";
 import { ctx } from "./context.ts";
+import { fresh, jsHint } from "./names.ts";
 import { describeTy, expr, fieldVal, statedTy, typedBy } from "./expr.ts";
 import { tyNode } from "./objects.ts";
 import { cond, unbound } from "./narrowing.ts";
@@ -118,9 +119,8 @@ export function arrow(s: Scope, fn: N, list: Val, of: Ty, byRef: boolean, method
   }
   const [item, index] = fn.params as N[];
   if (index && index.type !== "Identifier") fail(comp, "FV0807", "an arrow function's index is a plain name", index);
-  const n = ++ctx.narrowCount;
-  const p = of.k === "str" ? `fv_s${n}` : `fv_a${n}`;
-  const i = `fv_i${n}`;
+  const p = fresh(of.k === "str" ? "s" : "a", item?.type === "Identifier" ? jsHint(item.name) : "item");
+  const i = fresh("i", index ? jsHint(index.name) : "index");
   const v = itemVal(of, p, byRef, list.lone);
   const locals = new Map(s.locals);
   const bound: string[] = [];
@@ -150,7 +150,7 @@ export function arrow(s: Scope, fn: N, list: Val, of: Ty, byRef: boolean, method
   if (!index) return { closure: `|${pName}| ${code}`, enumerate: false };
   const lets = (reads(i) ? `let ${i} = ${i} as i64; ` : "");
   if (byRef) {
-    const e = `fv_e${n}`;
+    const e = fresh("e", "entry");
     const itemLet = reads(p) ? `let ${p} = &${e}.1; ` : "";
     const indexLet = reads(i) ? `let ${i} = ${e}.0 as i64; ` : "";
     return { closure: `|${itemLet || indexLet ? e : "_"}| { ${itemLet}${indexLet}${code} }`, enumerate: true };
@@ -307,7 +307,7 @@ function reduced(s: Scope, target: Val, method: string, args: N[], n: N): Val {
   const narrowed = unbound(s.narrowed, [accName]);
   for (;;) {
     const mark = ctx.narrowCount;
-    const acc = `fv_acc${++ctx.narrowCount}`;
+    const acc = fresh("acc", jsHint(accName));
     const accVal: Val = accTy.k === "str" ? { code: `&*${acc}`, ty: strTy(ascii), ...(lone ? { lone } : {}) } : { code: acc, ty: accTy };
     const outer: Scope = { ...s, locals: new Map(s.locals).set(accName, accVal), narrowed };
     const seen = { wider: false, loner: false, wide: false };
@@ -459,8 +459,7 @@ function sortedBy(s: Scope, target: Val, of: Ty, given: N): Val {
   if (fn?.type !== "ArrowFunctionExpression" || fn.async || fn.params.length !== 2 || fn.params.some((p: N) => p.type !== "Identifier") || fn.body.type === "BlockStatement") {
     fail(comp, "FV0830", `\`.toSorted()\` takes a comparator of a shape the server orders by, as JavaScript does: ${shapes}`, fn);
   }
-  const k = ++ctx.narrowCount;
-  const [pa, pb] = [`fv_l${k}`, `fv_r${k}`];
+  const [pa, pb] = [fresh("l", jsHint(fn.params[0].name)), fresh("r", jsHint(fn.params[1].name))];
   const locals = new Map(s.locals).set(fn.params[0].name, itemVal(of, pa, true, target.lone)).set(fn.params[1].name, itemVal(of, pb, true, target.lone));
   const bound: string[] = fn.params.map((p: N) => p.name as string);
   const narrowed = unbound(s.narrowed, bound);
@@ -671,7 +670,7 @@ export function listMethod(s: Scope, target: Val, method: string, given: N[], n:
     if (args.length !== 1) fail(comp, "FV0826", `\`.${method}()\` takes one value to look for, without a position to start from`, n);
     const of = target.ty.k === "list" ? target.ty.of : target.ty;
     const x = expr(s, args[0]);
-    const v = `fv_x${++ctx.narrowCount}`;
+    const v = fresh("x", "item");
     const test = sameItem(s, target, of, x, v, "FV0826", method, args[0]);
     const it = items(target);
     const found = method === "indexOf" ? `${it}.position(|${v}| ${test})` : `${backwards(target)}.rposition(|${v}| ${test})`;
@@ -816,7 +815,7 @@ export function computedListMethod(s: Scope, target: Val, method: string, args: 
   }
   if (method === "includes" && args.length === 1) {
     const x = expr(s, args[0]);
-    const v = `fv_x${++ctx.narrowCount}`;
+    const v = fresh("x", "item");
     const test = sameItem(s, target, of, x, v, "FV0801", "includes", args[0]);
     const nan = of.k === "float" && x.ty.k === "float" ? ` || (${v}.is_nan() && ${atom(x.code)}.is_nan())` : "";
     return { code: `${items(target)}.any(|${v}| ${test}${nan})`, ty: BOOL };

@@ -44,24 +44,24 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push_str("<div class=\"review-list\" data-v-458b887c>");
     if props.reviews.len() as i64 != 0 {
         out.push_str("<ol data-v-458b887c><!--[-->");
-        for (i, r_ref) in props.reviews.iter().enumerate() {
-            let r = r_ref;
-            let i = i as i64;
+        for (fv_i, fv_r_ref) in props.reviews.iter().enumerate() {
+            let fv_r = fv_r_ref;
+            let fv_i = fv_i as i64;
             out.push_str("<li style=\"");
-            if (i as f64) >= 2.0 || (i as f64).is_nan() {
+            if (fv_i as f64) >= 2.0 || (fv_i as f64).is_nan() {
                 out.push_str("display:none;");
             }
             out.push_str("\" data-v-458b887c>");
-            crate::ui::star_rating(out, &super::twins::StarRatingProps { value: r.stars, max: None }, &fv::Attrs::scoped(" data-v-458b887c"));
+            crate::ui::star_rating(out, &super::twins::StarRatingProps { value: fv_r.stars, max: None }, &fv::Attrs::scoped(" data-v-458b887c"));
             out.push_str("<q data-v-458b887c>");
-            fv::escape_into(out, &r.text);
+            fv::escape_into(out, &fv_r.text);
             out.push_str("</q> — ");
-            fv::escape_into(out, &r.reader);
-            if let Some(n1) = r.posted.as_ref().map(fv::js_time_of) {
+            fv::escape_into(out, &fv_r.reader);
+            if let Some(fv_posted) = fv_r.posted.as_ref().map(fv::js_time_of) {
                 out.push_str("<time datetime=\"");
-                fv::escape_into(out, &fv_refusals.keep(fv::try_to_iso_string(n1), 17, 78));
+                fv::escape_into(out, &fv_refusals.keep(fv::try_to_iso_string(fv_posted), 17, 78));
                 out.push_str("\" data-v-458b887c>, ");
-                fv::push_number(out, fv::js_utc_full_year(n1));
+                fv::push_number(out, fv::js_utc_full_year(fv_posted));
                 out.push_str("</time>");
             } else {
                 out.push_str("<!---->");

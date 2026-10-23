@@ -12,6 +12,7 @@ import { slotOutlet } from "./slots.ts";
 import { list } from "./loops.ts";
 import { checkVHtmlPlacement } from "./vhtml.ts";
 import { dynamicComponent } from "./dynamic.ts";
+import { fresh, jsHint } from "./names.ts";
 
 const FROM_VNODES = "in content Vue renders from virtual nodes (in an element `<component :is>` chooses, a `<RouterLink>` or a twin's slot, or in slot content they render)";
 
@@ -301,7 +302,7 @@ function statement(s: Scope, e: Emitter, st: N): void {
         const inner = { ...s, narrowed };
         const p = presence(inner, op);
         if (p && !p.negated) {
-          const name = `n${++ctx.narrowCount}`;
+          const name = fresh("n", jsHint(p.path));
           parts.push(p.pattern(name));
           narrowed.set(p.path, narrowedVal(p, name));
           bound.set(name, p);
@@ -342,7 +343,7 @@ function statement(s: Scope, e: Emitter, st: N): void {
     }
     const p = presence(s, st.test);
     if (p && (!p.negated || st.alternate)) {
-      const name = `n${++ctx.narrowCount}`;
+      const name = fresh("n", jsHint(p.path));
       e.open(`if ${p.pattern(name)}`);
       const at = e.lines.length - 1;
       const [present, absent] = p.negated ? [st.alternate, st.consequent] : [st.consequent, st.alternate];

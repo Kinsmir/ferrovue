@@ -45,12 +45,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_teleports: &fv::Telepo
     let Some(l_0) = fv_loads.get(super::loaders::LoadRanking { board: String::from(&*props.board) }) else { return Ok(()); };
     fv_head.push(fv::HeadValue::object([("meta", fv::HeadValue::array([fv::HeadValue::object([("name", fv::HeadValue::str("description")), ("content", fv::HeadValue::str(&format!("ranks of {}", props.board)))])]))]));
     out.push_str("<!--[--><ol><!--[-->");
-    for (name, score_ref) in l_0.scores.iter() {
-        let score = *score_ref;
+    for (fv_name, fv_score_ref) in l_0.scores.iter() {
+        let fv_score = *fv_score_ref;
         out.push_str("<li>");
-        fv::escape_into(out, name);
+        fv::escape_into(out, fv_name);
         out.push_str(": ");
-        fv::push_int(out, score);
+        fv::push_int(out, fv_score);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ol>");

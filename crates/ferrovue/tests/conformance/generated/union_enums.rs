@@ -460,9 +460,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         out.push('"');
     }
     out.push('>');
-    let fv_tag1 = match props.tag { UnionEnumsTag::H2 => "h2", UnionEnumsTag::H3 => "h3" };
+    let fv_tag = match props.tag { UnionEnumsTag::H2 => "h2", UnionEnumsTag::H3 => "h3" };
     out.push('<');
-    out.push_str(fv_tag1);
+    out.push_str(fv_tag);
     out.push('>');
     fv::escape_into(out, props.mark.as_str());
     out.push(' ');
@@ -472,7 +472,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push(' ');
     fv::push_int(out, fv::js_length(props.align.as_str()));
     out.push_str("</");
-    out.push_str(fv_tag1);
+    out.push_str(fv_tag);
     out.push_str("><p>");
     fv::escape_into(out, match props.align { super::types::Align::Left => "L", super::types::Align::Center => "C", super::types::Align::Right => "R" });
     out.push(' ');
@@ -495,18 +495,18 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
             out.push_str("<b>c</b>");
         }
     }
-    if let Some(n2) = props.other {
+    if let Some(fv_other) = props.other {
         out.push_str("<i>");
-        fv::push_number(out, match n2 { UnionEnumsOther::A => 1.0f64, UnionEnumsOther::B => 2.5f64, UnionEnumsOther::C => -3.0f64 });
+        fv::push_number(out, match fv_other { UnionEnumsOther::A => 1.0f64, UnionEnumsOther::B => 2.5f64, UnionEnumsOther::C => -3.0f64 });
         out.push(' ');
-        fv::escape_into(out, n2.as_str());
+        fv::escape_into(out, fv_other.as_str());
         out.push_str("</i>");
     } else {
         out.push_str("<i>no other</i>");
     }
-    if let Some(n3) = props.gap.filter(|v| !v.as_str().is_empty()) {
+    if let Some(fv_gap) = props.gap.filter(|v| !v.as_str().is_empty()) {
         out.push_str("<i>gap ");
-        fv::escape_into(out, n3.as_str());
+        fv::escape_into(out, fv_gap.as_str());
         out.push_str("</i>");
     } else {
         out.push_str("<i>no gap</i>");
@@ -519,30 +519,30 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push_str("<s>");
     fv::escape_into(out, props.picked.map(UnionEnumsPicked::as_str).unwrap_or("none"));
     out.push(' ');
-    fv::escape_into(out, if let Some(n4) = props.picked { n4.as_str() } else { "null" });
+    fv::escape_into(out, if let Some(fv_picked) = props.picked { fv_picked.as_str() } else { "null" });
     out.push(' ');
     out.push_str(if props.picked.map(UnionEnumsPicked::as_str) == Some(props.mode.as_str()) { "true" } else { "false" });
     out.push_str("</s><ol><!--[-->");
-    for s_ref in props.steps.iter() {
-        let s = s_ref;
+    for fv_s_ref in props.steps.iter() {
+        let fv_s = fv_s_ref;
         out.push_str("<li class=\"");
-        fv::class_into(out, false, &[s.state.as_str()]);
+        fv::class_into(out, false, &[fv_s.state.as_str()]);
         out.push_str("\">");
-        fv::escape_into(out, match s.state { super::types::StepState::Todo => "To do", super::types::StepState::Done => "Done & <dusted>", super::types::StepState::Skipped => "Skipped" });
+        fv::escape_into(out, match fv_s.state { super::types::StepState::Todo => "To do", super::types::StepState::Done => "Done & <dusted>", super::types::StepState::Skipped => "Skipped" });
         out.push(' ');
-        fv::escape_into(out, if s.state == super::types::StepState::Done { "yes" } else { "no" });
+        fv::escape_into(out, if fv_s.state == super::types::StepState::Done { "yes" } else { "no" });
         out.push(' ');
-        fv::escape_into(out, s.align.unwrap_or(super::types::Align::Left).as_str());
+        fv::escape_into(out, fv_s.align.unwrap_or(super::types::Align::Left).as_str());
         out.push(' ');
-        fv::escape_into(out, &s.label);
+        fv::escape_into(out, &fv_s.label);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ol>");
     super::union_child::try_render(out, &super::union_child::Props { align: props.align, text: std::borrow::Cow::Borrowed(props.mode.as_str()), wide: Some(match props.align { super::types::Align::Left => super::union_child::UnionChildWide::Left, super::types::Align::Center => super::union_child::UnionChildWide::Center, super::types::Align::Right => super::union_child::UnionChildWide::Right }), pick: match s_chosen { "a" => super::union_child::UnionChildPick::A, "b" => super::union_child::UnionChildPick::B, _ => super::union_child::UnionChildPick::C }, fixed: super::union_child::UnionChildFixed::Y })?;
     out.push_str("<!--[-->");
-    for s_ref in props.steps.iter() {
-        let s = s_ref;
-        super::union_child::try_render(out, &super::union_child::Props { align: s.align.unwrap_or(super::types::Align::Center), text: std::borrow::Cow::Borrowed(&*s.label), wide: None, pick: match props.other.unwrap_or(UnionEnumsOther::B) { UnionEnumsOther::A => super::union_child::UnionChildPick::A, UnionEnumsOther::B => super::union_child::UnionChildPick::B, UnionEnumsOther::C => super::union_child::UnionChildPick::C }, fixed: super::union_child::UnionChildFixed::X })?;
+    for fv_s_ref_2 in props.steps.iter() {
+        let fv_s_2 = fv_s_ref_2;
+        super::union_child::try_render(out, &super::union_child::Props { align: fv_s_2.align.unwrap_or(super::types::Align::Center), text: std::borrow::Cow::Borrowed(&*fv_s_2.label), wide: None, pick: match props.other.unwrap_or(UnionEnumsOther::B) { UnionEnumsOther::A => super::union_child::UnionChildPick::A, UnionEnumsOther::B => super::union_child::UnionChildPick::B, UnionEnumsOther::C => super::union_child::UnionChildPick::C }, fixed: super::union_child::UnionChildFixed::X })?;
     }
     out.push_str("<!--]--><p>");
     fv::escape_into(out, &props.note);

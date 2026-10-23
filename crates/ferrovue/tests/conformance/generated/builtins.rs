@@ -53,17 +53,17 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         out.push_str("<!---->");
     }
     out.push_str("<ul name=\"list\">");
-    for i_ref in props.items.iter() {
-        let i: &str = i_ref;
+    for fv_i_ref in props.items.iter() {
+        let fv_i: &str = fv_i_ref;
         out.push_str("<li>");
-        fv::escape_into(out, i);
+        fv::escape_into(out, fv_i);
         out.push_str("</li>");
     }
     out.push_str("</ul><!--[-->");
-    for i_ref in props.items.iter() {
-        let i: &str = i_ref;
+    for fv_i_ref_2 in props.items.iter() {
+        let fv_i_2: &str = fv_i_ref_2;
         out.push_str("<b>");
-        fv::escape_into(out, i);
+        fv::escape_into(out, fv_i_2);
         out.push_str("</b>");
     }
     out.push_str("<!--]--><span>kept</span><em>");

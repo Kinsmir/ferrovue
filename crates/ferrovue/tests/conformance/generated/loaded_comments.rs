@@ -54,18 +54,18 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::Loads<'_>)
     let Some(l_0) = fv_loads.get(super::loaders::LoadComments { article: String::from(&*props.article), page: props.page, drafts: if props.drafts.unwrap_or(false) { Some(true) } else { None } }) else { return Ok(()); };
     let Some(l_1) = fv_loads.get(super::loaders::LoadNote { page: l_0.len() as i64 }) else { return Ok(()); };
     out.push_str("<section>");
-    if let Some(n1) = l_1.as_deref() {
+    if let Some(fv_note) = l_1.as_deref() {
         out.push_str("<p class=\"note\">");
-        fv::escape_into(out, n1);
+        fv::escape_into(out, fv_note);
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");
     }
     out.push_str("<!--[-->");
-    for comment_ref in l_0.iter() {
-        let comment: &str = comment_ref;
+    for fv_comment_ref in l_0.iter() {
+        let fv_comment: &str = fv_comment_ref;
         out.push_str("<p>");
-        fv::escape_into(out, comment);
+        fv::escape_into(out, fv_comment);
         out.push_str("</p>");
     }
     out.push_str("<!--]--><footer title=\"");
@@ -75,12 +75,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::Loads<'_>)
     out.push_str(" on page ");
     fv::push_int(out, props.page);
     out.push_str("</footer>");
-    if l_0.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).any(|fv_s3| fv::js_length(&fv_s3) as f64 > 6.0) {
+    if l_0.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).any(|fv_c| fv::js_length(&fv_c) as f64 > 6.0) {
         out.push_str("<ol><!--[-->");
-        for c_cow in fv::js_sorted(l_0.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_s4| fv::js_length(fv_s4) as f64 > 6.0), |a, b| fv::js_cmp(a, b)) {
-            let c: &str = &c_cow;
+        for fv_c_cow in fv::js_sorted(l_0.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_c_2| fv::js_length(fv_c_2) as f64 > 6.0), |a, b| fv::js_cmp(a, b)) {
+            let fv_c_3: &str = &fv_c_cow;
             out.push_str("<li>");
-            fv::escape_into(out, c);
+            fv::escape_into(out, fv_c_3);
             out.push_str("</li>");
         }
         out.push_str("<!--]--></ol>");

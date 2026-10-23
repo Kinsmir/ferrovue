@@ -51,12 +51,12 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(144 + props.by.iter().map(|(k, _)| k.len()).sum::<usize>());
-    let s_valid = props.days.iter().map(fv::js_time_of).filter(|fv_a1| !(*fv_a1).is_nan()).collect::<Vec<_>>();
-    let s_sum = fv::js_reduce(props.days.iter().map(fv::js_time_of), 0.0f64, |fv_acc4, fv_a5| fv_acc4 + fv::js_utc_date(fv_a5));
+    let s_valid = props.days.iter().map(fv::js_time_of).filter(|fv_d| !(*fv_d).is_nan()).collect::<Vec<_>>();
+    let s_sum = fv::js_reduce(props.days.iter().map(fv::js_time_of), 0.0f64, |fv_total, fv_d_2| fv_total + fv::js_utc_date(fv_d_2));
     out.push_str("<div><!--[-->");
-    for day in props.days.iter().map(fv::js_time_of) {
+    for fv_day in props.days.iter().map(fv::js_time_of) {
         out.push_str("<span>");
-        fv::push_number(out, day);
+        fv::push_number(out, fv_day);
         out.push_str("</span>");
     }
     out.push_str("<!--]--><p>");
@@ -72,15 +72,15 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         fv::push_number(out, v);
     }
     out.push_str(", ");
-    fv::escape_into(out, if props.days.iter().map(fv::js_time_of).any(|fv_a8| fv::js_utc_day(fv_a8) == 0.0) { "a Sunday" } else { "no Sunday" });
+    fv::escape_into(out, if props.days.iter().map(fv::js_time_of).any(|fv_d_3| fv::js_utc_day(fv_d_3) == 0.0) { "a Sunday" } else { "no Sunday" });
     out.push_str(", ");
-    fv::push_int(out, props.days.iter().map(fv::js_time_of).position(|fv_a9| fv::js_utc_month(fv_a9) == 1.0).map_or(-1, |i| i as i64));
+    fv::push_int(out, props.days.iter().map(fv::js_time_of).position(|fv_d_4| fv::js_utc_month(fv_d_4) == 1.0).map_or(-1, |i| i as i64));
     out.push_str("</p>");
-    if let Some(n10) = props.maybe.as_ref().map(|v| v.iter().map(fv::js_time_of).collect::<Vec<_>>()) {
+    if let Some(fv_maybe) = props.maybe.as_ref().map(|v| v.iter().map(fv::js_time_of).collect::<Vec<_>>()) {
         out.push_str("<p>");
-        fv::push_int(out, n10.len() as i64);
+        fv::push_int(out, fv_maybe.len() as i64);
         out.push_str(" maybe: ");
-        fv::escape_into(out, &n10.iter().copied().map(|v| fv::Js(v).to_string()).collect::<Vec<_>>().join(","));
+        fv::escape_into(out, &fv_maybe.iter().copied().map(|v| fv::Js(v).to_string()).collect::<Vec<_>>().join(","));
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");
@@ -92,9 +92,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push(' ');
     fv::escape_into(out, &format!("[{}]", s_valid.iter().copied().map(fv::js_json_date).collect::<Vec<_>>().join(",")));
     out.push_str("</p><!--[-->");
-    for at in props.seen.iter().map(|v| v.as_ref().map(fv::js_time_of)) {
+    for fv_at in props.seen.iter().map(|v| v.as_ref().map(fv::js_time_of)) {
         out.push_str("<b>");
-        fv::push_number(out, if let Some(n13) = at { fv::js_utc_minutes(n13) } else { -1.0f64 });
+        fv::push_number(out, if let Some(fv_at_2) = fv_at { fv::js_utc_minutes(fv_at_2) } else { -1.0f64 });
         out.push_str("</b>");
     }
     out.push_str("<!--]--></div>");

@@ -97,7 +97,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(210 + props.label.as_deref().map_or(0, str::len) + props.nick.as_deref().map_or(0, str::len) + props.tags.iter().map(|v| v.len()).sum::<usize>() + props.owner.as_ref().map_or(0, |v| v.name.len()));
     let s_kind = if props.label.as_deref().is_some() { "string" } else { "undefined" };
-    let s_sized = if let Some(n1) = props.size { n1 as f64 * 2.0 } else { -1.0f64 };
+    let s_sized = if let Some(fv_size) = props.size { fv_size as f64 * 2.0 } else { -1.0f64 };
     out.push_str("<section");
     if (if props.label.as_deref().is_some() { "string" } else { "undefined" }).is_empty() {
         out.push_str(" data-kind");
@@ -137,31 +137,31 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push_str("|false|");
     out.push_str(if (if props.label.as_deref().is_some() { "string" } else { "undefined" }) == (if props.nick.as_deref().is_some() { "string" } else { "object" }) { "true" } else { "false" });
     out.push_str("</p>");
-    if let Some(n2) = props.label.as_deref() {
+    if let Some(fv_label) = props.label.as_deref() {
         out.push_str("<p>");
-        fv::push_int(out, fv::js_length(n2));
+        fv::push_int(out, fv::js_length(fv_label));
         out.push(':');
-        fv::escape_into(out, &n2.to_uppercase());
+        fv::escape_into(out, &fv_label.to_uppercase());
         out.push_str("</p>");
     } else {
         out.push_str("<p>no label</p>");
     }
-    if let Some(n3) = props.owner.as_ref() {
+    if let Some(fv_owner) = props.owner.as_ref() {
         out.push_str("<p>");
-        fv::escape_into(out, &n3.name);
+        fv::escape_into(out, &fv_owner.name);
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");
     }
-    if let Some(n4) = props.nick.as_deref() && fv::js_length(n4) as f64 > 2.0 {
+    if let Some(fv_nick) = props.nick.as_deref() && fv::js_length(fv_nick) as f64 > 2.0 {
         out.push_str("<i>");
-        fv::escape_into(out, n4);
+        fv::escape_into(out, fv_nick);
         out.push_str("</i>");
     } else {
         out.push_str("<!---->");
     }
     out.push_str("<b>");
-    fv::push_number(out, if let Some(n5) = props.size { n5 as f64 + 1.0 } else { -1.0f64 });
+    fv::push_number(out, if let Some(fv_size_2) = props.size { fv_size_2 as f64 + 1.0 } else { -1.0f64 });
     out.push_str("</b></section>");
     Ok(())
 }

@@ -54,12 +54,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores
         out.push_str("<p>nothing yet</p>");
     } else {
         out.push_str("<ul><!--[-->");
-        for l_ref in fv_stores.cart.lines.iter() {
-            let l = l_ref;
+        for fv_l_ref in fv_stores.cart.lines.iter() {
+            let fv_l = fv_l_ref;
             out.push_str("<li>");
-            fv::escape_into(out, &l.sku);
+            fv::escape_into(out, &fv_l.sku);
             out.push_str(" × ");
-            fv::push_int(out, l.qty);
+            fv::push_int(out, fv_l.qty);
             out.push_str("</li>");
         }
         out.push_str("<!--]--></ul>");

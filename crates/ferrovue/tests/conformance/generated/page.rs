@@ -69,18 +69,18 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         default: Some(fv::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
             out.push_str("<!--[-->");
-            for i_ref in props.items.iter() {
-                let i: &str = i_ref;
+            for fv_i_ref in props.items.iter() {
+                let fv_i: &str = fv_i_ref;
                 filled = true;
                 out.push_str("<p>");
-                fv::escape_into(out, i);
+                fv::escape_into(out, fv_i);
                 out.push_str("</p>");
             }
             out.push_str("<!--]-->");
-            if let Some(n1) = props.note.as_deref().filter(|v| !v.is_empty()) {
+            if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {
                 filled = true;
                 out.push_str("<em>");
-                fv::escape_into(out, n1);
+                fv::escape_into(out, fv_note);
                 out.push_str("</em>");
             } else {
                 out.push_str("<!---->");

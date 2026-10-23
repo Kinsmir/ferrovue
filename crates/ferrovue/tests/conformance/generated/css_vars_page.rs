@@ -68,19 +68,19 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push_str("<!--[-->");
     super::css_vars::try_render_scoped(out, &super::css_vars::Props { color: std::borrow::Cow::Borrowed(&*props.color), size: props.size, ratio: props.ratio, label: props.label.as_deref().map(std::borrow::Cow::Borrowed), font: std::borrow::Cow::Borrowed(&*props.font), gap: None }, &fv::Attrs::merged(&[&[("class", fv::Attr::str("given")), ("style", fv::Attr::styles([fv::Attr::style([("top", fv::Attr::str("0")), ("--own", fv::Attr::str("2"))]), fv::Attr::style([("color", props.tone.as_deref().map_or(fv::Attr::Undefined, fv::Attr::str))])]))], &[("style", fv::Attr::style([("--d9e366c1-tone", match props.tone.as_deref() { Some(v) => if v.is_empty() { fv::Attr::str(" ") } else { fv::Attr::str(v) }, None => fv::Attr::str("initial") }), ("--d9e366c1-size", fv::Attr::Int(props.size))]))]], ""))?;
     super::css_vars_root::try_render_scoped(out, &super::css_vars_root::Props { tint: std::borrow::Cow::Borrowed(&*props.color), shade: std::borrow::Cow::Borrowed(&*props.font) }, &fv::Attrs::merged(&[&[("style", fv::Attr::style([("left", fv::Attr::str("1px"))]))], &[("style", fv::Attr::style([("--d9e366c1-tone", match props.tone.as_deref() { Some(v) => if v.is_empty() { fv::Attr::str(" ") } else { fv::Attr::str(v) }, None => fv::Attr::str("initial") }), ("--d9e366c1-size", fv::Attr::Int(props.size))]))]], ""))?;
-    if let Some(n1) = props.tone.as_deref().filter(|v| !v.is_empty()) {
+    if let Some(fv_tone) = props.tone.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<p style=\"color:");
-        fv::escape_into(out, n1);
+        fv::escape_into(out, fv_tone);
         out.push_str(";--d9e366c1-tone:");
-        if n1.is_empty() {
+        if fv_tone.is_empty() {
             out.push(' ');
         } else {
-            fv::escape_into(out, n1);
+            fv::escape_into(out, fv_tone);
         }
         out.push_str(";--d9e366c1-size:");
         fv::push_int(out, props.size);
         out.push_str(";\">");
-        fv::escape_into(out, n1);
+        fv::escape_into(out, fv_tone);
         out.push_str("</p>");
     } else {
         out.push_str("<span style=\"");
@@ -100,10 +100,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         out.push_str(";\">none</span>");
     }
     out.push_str("<!--[-->");
-    for item_ref in props.items.iter() {
-        let item: &str = item_ref;
+    for fv_item_ref in props.items.iter() {
+        let fv_item: &str = fv_item_ref;
         out.push_str("<i>");
-        fv::escape_into(out, item);
+        fv::escape_into(out, fv_item);
         out.push_str("</i>");
     }
     out.push_str("<!--]--><!--]-->");

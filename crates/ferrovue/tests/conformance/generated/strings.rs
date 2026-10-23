@@ -99,13 +99,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push('|');
     fv::escape_into(out, &fv::js_slice(&props.text, fv::js_index_of(&props.text, " ") as f64 + 1.0, None));
     out.push_str("</p><ul><!--[-->");
-    for (i, w_cow) in fv::js_split(&props.text, &props.sep).into_iter().enumerate() {
-        let w: &str = &w_cow;
-        let i = i as i64;
+    for (fv_i, fv_w_cow) in fv::js_split(&props.text, &props.sep).into_iter().enumerate() {
+        let fv_w: &str = &fv_w_cow;
+        let fv_i = fv_i as i64;
         out.push_str("<li data-i=\"");
-        fv::push_int(out, i);
+        fv::push_int(out, fv_i);
         out.push_str("\">");
-        fv::escape_into(out, w);
+        fv::escape_into(out, fv_w);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul><p>");
@@ -113,7 +113,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push('|');
     fv::escape_into(out, &fv::js_split(&props.text, ",").into_iter().collect::<Vec<_>>().join(" / "));
     out.push('|');
-    fv::escape_into(out, &s_words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_s1| fv::js_length(fv_s1) as f64 > 2.0).collect::<Vec<_>>().join("+"));
+    fv::escape_into(out, &s_words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_w_2| fv::js_length(fv_w_2) as f64 > 2.0).collect::<Vec<_>>().join("+"));
     out.push('|');
     fv::push_int(out, fv::js_split(&props.text, &props.sep).len() as i64);
     out.push_str("</p><p>");
@@ -169,7 +169,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push('|');
     fv::escape_into(out, &{ let a = std::borrow::Cow::<str>::Owned(fv::js_replace(&props.other, "a", "b").to_uppercase()); if !a.is_empty() { a } else { std::borrow::Cow::<str>::Borrowed(&*props.sep) } });
     out.push('|');
-    fv::escape_into(out, &{ let a = std::borrow::Cow::<str>::Owned(format!("{}a", fv::js_split(&props.text, " ").into_iter().find(|fv_s2| **fv_s2 == *props.sep).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).unwrap_or(std::borrow::Cow::<str>::Borrowed("ß")))); if !a.is_empty() { a } else { std::borrow::Cow::<str>::Borrowed("-") } });
+    fv::escape_into(out, &{ let a = std::borrow::Cow::<str>::Owned(format!("{}a", fv::js_split(&props.text, " ").into_iter().find(|fv_w_3| **fv_w_3 == *props.sep).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).unwrap_or(std::borrow::Cow::<str>::Borrowed("ß")))); if !a.is_empty() { a } else { std::borrow::Cow::<str>::Borrowed("-") } });
     out.push_str("</p></section>");
     fv_refusals.check(Ok(()))
 }

@@ -67,15 +67,15 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(35 + 46 * props.shelves.len() + props.shelves.iter().map(|v| v.tags.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>() + props.note.as_deref().map_or(0, str::len));
     out.push_str("<section><!--[-->");
-    for shelf_ref in props.shelves.iter() {
-        let shelf = shelf_ref;
+    for fv_shelf_ref in props.shelves.iter() {
+        let fv_shelf = fv_shelf_ref;
         out.push_str("<!--[-->");
-        if let Some(n1) = props.note.as_deref().filter(|v| !v.is_empty()) {
+        if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {
             out.push_str("<p><!--[-->");
-            for tag_cow in shelf.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_s2| !fv_s2.is_empty()).map(|fv_s3| std::borrow::Cow::<str>::Owned(std::borrow::Cow::<str>::Owned(format!("{}{}", n1, fv_s3)).into_owned())) {
-                let tag: &str = &tag_cow;
+            for fv_tag_cow in fv_shelf.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_t| !fv_t.is_empty()).map(|fv_t_2| std::borrow::Cow::<str>::Owned(std::borrow::Cow::<str>::Owned(format!("{}{}", fv_note, fv_t_2)).into_owned())) {
+                let fv_tag: &str = &fv_tag_cow;
                 out.push_str("<b>");
-                fv::escape_into(out, tag);
+                fv::escape_into(out, fv_tag);
                 out.push_str("</b>");
             }
             out.push_str("<!--]--></p>");

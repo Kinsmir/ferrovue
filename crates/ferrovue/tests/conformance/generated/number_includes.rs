@@ -49,17 +49,17 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::Refused> {
     out.push_str("<p>");
     out.push_str(if props.nums.iter().any(|v| *v as f64 == props.ratio) { "true" } else { "false" });
     out.push('|');
-    out.push_str(if fv::js_slice_items(props.nums.iter().copied(), 1.0f64, None).any(|fv_x1| fv_x1 as f64 == props.ratio) { "true" } else { "false" });
+    out.push_str(if fv::js_slice_items(props.nums.iter().copied(), 1.0f64, None).any(|fv_item| fv_item as f64 == props.ratio) { "true" } else { "false" });
     out.push('|');
-    out.push_str(if props.prices.iter().copied().any(|fv_x2| fv_x2 == props.qty as f64) { "true" } else { "false" });
+    out.push_str(if props.prices.iter().copied().any(|fv_item_2| fv_item_2 == props.qty as f64) { "true" } else { "false" });
     out.push('|');
-    out.push_str(if props.prices.iter().copied().filter(|fv_a3| *fv_a3 != 0.5).any(|fv_x4| fv_x4 == props.qty as f64) { "true" } else { "false" });
+    out.push_str(if props.prices.iter().copied().filter(|fv_p| *fv_p != 0.5).any(|fv_item_3| fv_item_3 == props.qty as f64) { "true" } else { "false" });
     out.push('|');
-    out.push_str(if props.nums.iter().copied().map(|fv_a5| -(fv_a5 as f64)).any(|fv_x6| fv_x6 == 0.0) { "true" } else { "false" });
+    out.push_str(if props.nums.iter().copied().map(|fv_v| -(fv_v as f64)).any(|fv_item_4| fv_item_4 == 0.0) { "true" } else { "false" });
     out.push('|');
-    out.push_str(if props.nums.iter().copied().map(|fv_a7| -(fv_a7 as f64)).any(|fv_x8| fv_x8 == props.qty as f64) { "true" } else { "false" });
+    out.push_str(if props.nums.iter().copied().map(|fv_v_2| -(fv_v_2 as f64)).any(|fv_item_5| fv_item_5 == props.qty as f64) { "true" } else { "false" });
     out.push('|');
-    out.push_str(if props.nums.iter().copied().map(|fv_a9| fv_a9 as f64 * 2.0).any(|fv_x10| fv_x10 == 4.0) { "true" } else { "false" });
+    out.push_str(if props.nums.iter().copied().map(|fv_v_3| fv_v_3 as f64 * 2.0).any(|fv_item_6| fv_item_6 == 4.0) { "true" } else { "false" });
     out.push_str("</p>");
     Ok(())
 }

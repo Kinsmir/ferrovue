@@ -170,9 +170,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provi
         fv_refusals.check(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed("slotted") }, fv_provides, ""))?;
         out.push_str("</p>");
     }
-    let fv_tag1 = match props.tag { ThemedChoiceTag::Div => "div", ThemedChoiceTag::Aside => "aside" };
+    let fv_tag = match props.tag { ThemedChoiceTag::Div => "div", ThemedChoiceTag::Aside => "aside" };
     out.push('<');
-    out.push_str(fv_tag1);
+    out.push_str(fv_tag);
     out.push_str(" class=\"frame\">");
     fv_refusals.check(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed(&*props.label) }, fv_provides, ""))?;
     fv_refusals.check(super::theme_scope::try_render_scoped(out, &super::theme_scope::Props { theme: None }, super::theme_scope::Slots {
@@ -182,7 +182,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provi
         }),
     }, fv_provides, &fv::Attrs::NONE))?;
     out.push_str("</");
-    out.push_str(fv_tag1);
+    out.push_str(fv_tag);
     out.push('>');
     fv_refusals.check(super::tag_heading::try_render_scoped(out, &super::tag_heading::Props { r#as: Some(super::tag_heading::TagHeadingAs::H3), text: std::borrow::Cow::Borrowed(&*props.label) }, super::tag_heading::Slots {
         default: Some(fv::Slot::new(&|out: &mut String| {

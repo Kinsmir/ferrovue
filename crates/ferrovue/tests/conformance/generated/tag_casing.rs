@@ -94,9 +94,9 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(422 + 7 + props.label.len());
-    let fv_tag1 = match props.tag { TagCasingTag::Div => "div", TagCasingTag::Section => "section" };
+    let fv_tag = match props.tag { TagCasingTag::Div => "div", TagCasingTag::Section => "section" };
     out.push('<');
-    out.push_str(fv_tag1);
+    out.push_str(fv_tag);
     out.push_str(" datarole=\"casing\"><p datafoo=\"x\" aria-label=\"y\" viewbox=\"0 0 1 1\"");
     if props.label.is_empty() {
         out.push_str(" databar");
@@ -148,7 +148,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         })),
     }, "")?;
     out.push_str("<!----></");
-    out.push_str(fv_tag1);
+    out.push_str(fv_tag);
     out.push('>');
     Ok(())
 }

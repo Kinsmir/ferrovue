@@ -1,5 +1,6 @@
 import { type Cell, type LoopFrame, type LoopState, type N, type Scope, type Ty, type Val, absence, BOOL, fail, FLOAT, INT, isAscii, nothing, refusalAt, rustChar, rustStr, sameTy, STEP, strTy, withAbsence } from "./model.ts";
 import { ctx } from "./context.ts";
+import { fresh, jsHint } from "./names.ts";
 import { describeTy, expr, statedTy, typedBy } from "./expr.ts";
 import { around, bound, panicky, reps } from "./blocks.ts";
 import { asF64, intFromF64, isCast, isNumber } from "./numbers.ts";
@@ -107,7 +108,7 @@ export function mutableLet(s: Scope, n: N, init: N): Val {
   }
   const ty = n.declared ? statedTy(s, n.declared) : v.ty;
   const lets = new Map(s.lets ?? []).set(n.name, { ty, js: n.js, ...(n.declared ? { node: n.declared } : {}) });
-  return bound({ ...s, lets }, n.name, v, (inner) => expr(inner, n.body));
+  return bound({ ...s, lets }, n.name, v, (inner) => expr(inner, n.body), jsHint(n.js));
 }
 
 /** An assignment to a `let` of the body: the new value bound to its name for the statements after it. */
@@ -124,7 +125,7 @@ export function assignedLet(s: Scope, n: N): Val {
   }
   const after: Scope = { ...s, narrowed: unbound(s.narrowed, [n.name]) };
   if (!(isCast(v) ? [v.f64!] : reps(v)).some(panicky) && readsAtMost(n.body, n.name, s.frame?.states.some((st) => st.name === n.name) ? 0 : 1)) return expr({ ...after, locals: new Map(s.locals).set(n.name, v) }, n.body);
-  return bound(after, n.name, v, (inner) => expr(inner, n.body));
+  return bound(after, n.name, v, (inner) => expr(inner, n.body), jsHint(n.js));
 }
 
 function cellOf(s: Scope, declared: { ty: Ty; js: string }, cur: Val, n: N): Cell {
@@ -254,7 +255,7 @@ export function loopStep(s: Scope, n: N): Val {
     writes.push({ st, ...write(f, st, v) });
   }
   const clash = writes.some((w, j) => writes.slice(0, j).some((x) => occurrences(w.code, x.st.rust) > 0));
-  const temps = writes.map(() => `fv_t${++ctx.narrowCount}`);
+  const temps = writes.map((w) => fresh("t", `next_${jsHint(w.st.name)}`));
   const stmts = clash
     ? [...writes.map((w, j) => marked(`let ${temps[j]!} = ${w.value};`, w.st.rust)), ...writes.map((w, j) => marked(`${w.st.rust} = ${temps[j]!};`, w.st.rust))]
     : writes.map((w) => marked(w.code, w.st.rust));
@@ -289,10 +290,10 @@ function attempt(s: Scope, n: N, cells: Map<string, Cell | null>, breaks: Map<st
   const states: LoopState[] = [];
   for (const [name, cell] of cells) {
     if (!cell) continue;
-    const rust = `fv_m${++ctx.narrowCount}`;
+    const rust = fresh("m", jsHint(name));
     states.push({ name, rust, cell, read: readOf(cell, rust, refusalAt(comp, n)), liveBreak: breaks.get(name)!, assigned: 0 });
   }
-  const frame: LoopFrame = { states, slot: box.slot, slotName: `fv_r${++ctx.narrowCount}`, retry: false, nexts: 0, once: box.once };
+  const frame: LoopFrame = { states, slot: box.slot, slotName: fresh("r", "returned"), retry: false, nexts: 0, once: box.once };
   const locals = new Map(s.locals);
   for (const st of states) locals.set(st.name, st.read);
   const narrowed = unbound(s.narrowed, n.states);
@@ -304,14 +305,14 @@ function attempt(s: Scope, n: N, cells: Map<string, Cell | null>, breaks: Map<st
   const once = box.once ? ".take(1)" : "";
   if (n.kind === "of") {
     const v = expr(s, n.over);
-    const k = ++ctx.narrowCount;
+    const itemHint = n.itemHint ?? "item";
     if (v.ty.k === "list" && ITEMS.has(v.ty.of.k)) {
       const of = v.ty.of;
-      const p = `fv_${of.k === "str" ? "s" : "a"}${k}`;
+      const p = fresh(of.k === "str" ? "s" : "a", itemHint);
       bodyLocals.set(n.item, itemVal(of, p, false, v.lone));
       const iter = items(v);
       if (n.entries) {
-        const i = `fv_i${k}`;
+        const i = fresh("i", n.index ? jsHint(String(n.index)) : "index");
         if (n.index) {
           bodyLocals.set(n.index, { code: i, ty: INT });
           lets.set(n.index, { ty: INT, js: String(n.index).replace(/#\d+$/, "") });
@@ -320,7 +321,7 @@ function attempt(s: Scope, n: N, cells: Map<string, Cell | null>, breaks: Map<st
         prelude = (uses) => (uses(i) ? `let ${i} = ${i} as i64; ` : "");
       } else head = (uses) => (uses(p) ? `for ${p} in ${iter}${once}` : `for _ in ${iter.replace(UNREAD, "")}${once}`);
     } else if (v.ty.k === "str" && !n.entries) {
-      const p = `fv_s${k}`;
+      const p = fresh("s", itemHint);
       bodyLocals.set(n.item, { code: p, ty: strTy(isAscii(v.ty)), ...(v.lone ? { lone: true } : {}) });
       head = (uses) => `for ${uses(p) ? p : "_"} in ${receiver(v.code)}.split_inclusive(|_: char| true)${once}`;
     } else {

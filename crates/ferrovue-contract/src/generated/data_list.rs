@@ -101,12 +101,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> R
     out.push_str("<section><h2>");
     fv::escape_into(out, &props.title);
     out.push_str("</h2><ul><!--[-->");
-    for (index, row_ref) in props.rows.iter().enumerate() {
-        let row = row_ref;
-        let index = index as i64;
+    for (fv_index, fv_row_ref) in props.rows.iter().enumerate() {
+        let fv_row = fv_row_ref;
+        let fv_index = fv_index as i64;
         out.push_str("<li>");
-        fv::scoped_slot_into(out, fv_slots.row, &RowSlotProps { row, index }, Some(&mut |out: &mut String| {
-            fv::escape_into(out, &row.label);
+        fv::scoped_slot_into(out, fv_slots.row, &RowSlotProps { row: fv_row, index: fv_index }, Some(&mut |out: &mut String| {
+            fv::escape_into(out, &fv_row.label);
         }));
         out.push_str("</li>");
     }

@@ -134,26 +134,26 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     } else {
         out.push_str("<i>no note</i>");
     }
-    if let Some(n2) = props.score {
+    if let Some(fv_score) = props.score {
         out.push_str("<i>scored ");
-        fv::push_int(out, n2);
+        fv::push_int(out, fv_score);
         out.push_str("</i>");
     } else {
         out.push_str("<!---->");
     }
-    if let Some(n3) = props.score.filter(|v| *v != 0) {
+    if let Some(fv_score_2) = props.score.filter(|v| *v != 0) {
         out.push_str("<i>truthy score ");
-        fv::push_int(out, n3);
+        fv::push_int(out, fv_score_2);
         out.push_str("</i>");
     } else {
         out.push_str("<!---->");
     }
-    if let Some(n4) = props.author.as_ref() {
+    if let Some(fv_author) = props.author.as_ref() {
         out.push_str("<span>by ");
-        fv::escape_into(out, &n4.name);
-        if let Some(n5) = n4.url.as_deref().filter(|v| !v.is_empty()) {
+        fv::escape_into(out, &fv_author.name);
+        if let Some(fv_url) = fv_author.url.as_deref().filter(|v| !v.is_empty()) {
             out.push_str("<a href=\"");
-            fv::escape_into(out, n5);
+            fv::escape_into(out, fv_url);
             out.push_str("\">link</a>");
         } else {
             out.push_str("<!---->");
@@ -162,9 +162,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     } else {
         out.push_str("<span>anonymous</span>");
     }
-    if let Some(n6) = props.author.as_ref() && let Some(n7) = n6.url.as_deref().filter(|v| !v.is_empty()) {
+    if let Some(fv_author_2) = props.author.as_ref() && let Some(fv_url_2) = fv_author_2.url.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<em>");
-        fv::escape_into(out, n7);
+        fv::escape_into(out, fv_url_2);
         out.push_str("</em>");
     } else {
         out.push_str("<!---->");

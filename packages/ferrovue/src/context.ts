@@ -359,6 +359,7 @@ export const ctx = {
   enums: new Map<string, Map<string, EnumDef>>(),
   components: new Map<string, Component>(),
   narrowCount: 0,
+  hints: new Map<string, string>(),
   componentsDir: "",
   vnodeTag: null as string | null,
   sources: new Map<string, string>(),

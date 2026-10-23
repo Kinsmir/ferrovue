@@ -45,29 +45,29 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(57 + 23 * props.moments.len() + 16 * props.by.len() + props.moments.iter().map(|v| v.label.len()).sum::<usize>() + props.by.iter().map(|(k, _)| k.len()).sum::<usize>());
     out.push_str("<ol><!--[-->");
-    for m_ref in props.moments.iter() {
-        let m = m_ref;
+    for fv_m_ref in props.moments.iter() {
+        let fv_m = fv_m_ref;
         out.push_str("<li>");
-        fv::escape_into(out, &m.label);
+        fv::escape_into(out, &fv_m.label);
         out.push(' ');
-        fv::push_number(out, fv::js_time_of(&m.at));
+        fv::push_number(out, fv::js_time_of(&fv_m.at));
         out.push(' ');
-        fv::push_int(out, m.seen.len() as i64);
+        fv::push_int(out, fv_m.seen.len() as i64);
         out.push_str("</li>");
     }
     out.push_str("<!--]--><!--[-->");
-    for d in props.days.iter().map(fv::js_time_of) {
+    for fv_d in props.days.iter().map(fv::js_time_of) {
         out.push_str("<li>");
-        fv::push_number(out, fv::js_utc_date(d));
+        fv::push_number(out, fv::js_utc_date(fv_d));
         out.push_str("</li>");
     }
     out.push_str("<!--]--><!--[-->");
-    for (k, d_ref) in props.by.iter() {
-        let d = fv::js_time_of(d_ref);
+    for (fv_k, fv_d_ref) in props.by.iter() {
+        let fv_d_2 = fv::js_time_of(fv_d_ref);
         out.push_str("<li>");
-        fv::escape_into(out, k);
+        fv::escape_into(out, fv_k);
         out.push('=');
-        fv::push_number(out, fv::js_utc_full_year(d));
+        fv::push_number(out, fv::js_utc_full_year(fv_d_2));
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ol>");

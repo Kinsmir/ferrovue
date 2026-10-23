@@ -102,86 +102,86 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(205 + 258 * props.rows.len() + 21 * props.stamps.len() + props.rows.iter().map(|v| v.title.len() + v.by_name.iter().map(|(k, _)| k.len()).sum::<usize>()).sum::<usize>() + props.stamps.iter().map(|(k, _)| k.len()).sum::<usize>() + props.lead.as_ref().map_or(0, |v| v.title.len() + v.by_name.iter().map(|(k, _)| k.len()).sum::<usize>()));
     let fv_refusals = fv::Refusals::new(NAME, "components/DateRows.vue");
-    let s_edits = props.rows.iter().filter(|fv_a1| fv_a1.edited.as_ref().map(fv::js_time_of).is_some()).count() as i64;
+    let s_edits = props.rows.iter().filter(|fv_r| fv_r.edited.as_ref().map(fv::js_time_of).is_some()).count() as i64;
     let s_first = fv::js_item_at(props.days.iter().map(fv::js_time_of), 0.0f64);
     out.push_str("<section><!--[-->");
-    for row_ref in props.rows.iter() {
-        let row = row_ref;
+    for fv_row_ref in props.rows.iter() {
+        let fv_row = fv_row_ref;
         out.push_str("<article><h3>");
-        fv::escape_into(out, &row.title);
+        fv::escape_into(out, &fv_row.title);
         out.push_str("</h3>");
-        if !fv::js_time_of(&row.at).is_nan() {
+        if !fv::js_time_of(&fv_row.at).is_nan() {
             out.push_str("<time datetime=\"");
-            fv::escape_into(out, &fv_refusals.keep(fv::try_to_iso_string(fv::js_time_of(&row.at)), 25, 69));
+            fv::escape_into(out, &fv_refusals.keep(fv::try_to_iso_string(fv::js_time_of(&fv_row.at)), 25, 69));
             out.push_str("\">");
-            fv::push_number(out, fv::js_utc_full_year(fv::js_time_of(&row.at)));
+            fv::push_number(out, fv::js_utc_full_year(fv::js_time_of(&fv_row.at)));
             out.push('-');
-            fv::push_number(out, fv::js_utc_month(fv::js_time_of(&row.at)) + 1.0);
+            fv::push_number(out, fv::js_utc_month(fv::js_time_of(&fv_row.at)) + 1.0);
             out.push('-');
-            fv::push_number(out, fv::js_utc_date(fv::js_time_of(&row.at)));
+            fv::push_number(out, fv::js_utc_date(fv::js_time_of(&fv_row.at)));
             out.push(' ');
-            fv::push_number(out, fv::js_utc_hours(fv::js_time_of(&row.at)));
+            fv::push_number(out, fv::js_utc_hours(fv::js_time_of(&fv_row.at)));
             out.push(':');
-            fv::push_number(out, fv::js_utc_minutes(fv::js_time_of(&row.at)));
+            fv::push_number(out, fv::js_utc_minutes(fv::js_time_of(&fv_row.at)));
             out.push(':');
-            fv::push_number(out, fv::js_utc_seconds(fv::js_time_of(&row.at)));
+            fv::push_number(out, fv::js_utc_seconds(fv::js_time_of(&fv_row.at)));
             out.push('.');
-            fv::push_number(out, fv::js_utc_milliseconds(fv::js_time_of(&row.at)));
+            fv::push_number(out, fv::js_utc_milliseconds(fv::js_time_of(&fv_row.at)));
             out.push_str(" day ");
-            fv::push_number(out, fv::js_utc_day(fv::js_time_of(&row.at)));
+            fv::push_number(out, fv::js_utc_day(fv::js_time_of(&fv_row.at)));
             out.push_str("</time>");
         } else {
             out.push_str("<p>invalid ");
-            fv::push_number(out, fv::js_time_of(&row.at));
+            fv::push_number(out, fv::js_time_of(&fv_row.at));
             out.push(' ');
-            fv::escape_into(out, &fv::js_to_utc_string(fv::js_time_of(&row.at)));
+            fv::escape_into(out, &fv::js_to_utc_string(fv::js_time_of(&fv_row.at)));
             out.push_str("</p>");
         }
-        if let Some(n2) = row.edited.as_ref().map(fv::js_time_of) {
+        if let Some(fv_edited) = fv_row.edited.as_ref().map(fv::js_time_of) {
             out.push_str("<p>edited ");
-            fv::push_number(out, n2);
-            fv::escape_into(out, if n2 > fv::js_time_of(&row.at) { " after" } else { "" });
-            fv::escape_into(out, if n2 <= fv::js_time_of(&row.at) { " not after" } else { "" });
+            fv::push_number(out, fv_edited);
+            fv::escape_into(out, if fv_edited > fv::js_time_of(&fv_row.at) { " after" } else { "" });
+            fv::escape_into(out, if fv_edited <= fv::js_time_of(&fv_row.at) { " not after" } else { "" });
             out.push_str("</p>");
         } else {
             out.push_str("<!---->");
         }
-        if let Some(n3) = row.deleted.as_ref().map(fv::js_time_of) {
+        if let Some(fv_deleted) = fv_row.deleted.as_ref().map(fv::js_time_of) {
             out.push_str("<p>deleted ");
-            fv::escape_into(out, &fv::js_to_utc_string(n3));
+            fv::escape_into(out, &fv::js_to_utc_string(fv_deleted));
             out.push_str("</p>");
         } else {
             out.push_str("<!---->");
         }
         out.push_str("<ul><!--[-->");
-        for (j, mark) in row.marks.iter().map(fv::js_time_of).enumerate() {
-            let j = j as i64;
+        for (fv_j, fv_mark) in fv_row.marks.iter().map(fv::js_time_of).enumerate() {
+            let fv_j = fv_j as i64;
             out.push_str("<li>");
-            fv::push_int(out, j);
+            fv::push_int(out, fv_j);
             out.push_str(": ");
-            fv::push_number(out, mark);
+            fv::push_number(out, fv_mark);
             out.push(' ');
-            fv::escape_into(out, if mark >= fv::js_time_of(&row.at) { "on or after" } else { "before or invalid" });
+            fv::escape_into(out, if fv_mark >= fv::js_time_of(&fv_row.at) { "on or after" } else { "before or invalid" });
             out.push_str("</li>");
         }
         out.push_str("<!--]--></ul><ol><!--[-->");
-        for seen in row.seen.iter().map(|v| v.as_ref().map(fv::js_time_of)) {
+        for fv_seen in fv_row.seen.iter().map(|v| v.as_ref().map(fv::js_time_of)) {
             out.push_str("<li>");
-            fv::escape_into(out, &(if let Some(n4) = seen { std::borrow::Cow::<str>::Owned(fv::Js(fv::js_utc_full_year(n4)).to_string()) } else { std::borrow::Cow::<str>::Borrowed("unseen") }));
+            fv::escape_into(out, &(if let Some(fv_seen_2) = fv_seen { std::borrow::Cow::<str>::Owned(fv::Js(fv::js_utc_full_year(fv_seen_2)).to_string()) } else { std::borrow::Cow::<str>::Borrowed("unseen") }));
             out.push_str("</li>");
         }
         out.push_str("<!--]--></ol><dl><!--[-->");
-        for (name, stamp_ref) in row.by_name.iter() {
-            let stamp = fv::js_time_of(stamp_ref);
+        for (fv_name, fv_stamp_ref) in fv_row.by_name.iter() {
+            let fv_stamp = fv::js_time_of(fv_stamp_ref);
             out.push_str("<!--[--><dt>");
-            fv::escape_into(out, name);
+            fv::escape_into(out, fv_name);
             out.push_str("</dt><dd>");
-            fv::push_number(out, stamp);
+            fv::push_number(out, fv_stamp);
             out.push_str("</dd><!--]-->");
         }
         out.push_str("<!--]--></dl>");
-        fv_refusals.check(super::date_days::try_render(out, &super::date_days::Props { days: row.marks.iter().map(fv::js_time_of).map(|fv_t| fv_refusals.date(fv_t, 43, 24)).collect(), maybe: None, by: row.by_name.to_owned(), seen: row.seen.iter().map(|v| v.as_ref().map(fv::js_time_of)).map(|v| v.map(|fv_t| fv_refusals.date(fv_t, 43, 59))).collect() }))?;
-        fv_refusals.check(super::date_stamp::try_render(out, &super::date_stamp::Props { at: fv_refusals.date(fv::js_time_of(&row.at), 44, 23), edited: row.edited.as_ref().map(fv::js_time_of).map(|fv_t| fv_refusals.date(fv_t, 44, 40)), deleted: row.deleted.as_ref().map(fv::js_time_of).map(|fv_t| fv_refusals.date(fv_t, 44, 62)), shown: fv_refusals.date(fv::js_item_at(row.marks.iter().map(fv::js_time_of), -1.0f64).unwrap_or(fv::js_time_of(&row.at)), 44, 83) }))?;
+        fv_refusals.check(super::date_days::try_render(out, &super::date_days::Props { days: fv_row.marks.iter().map(fv::js_time_of).map(|fv_t| fv_refusals.date(fv_t, 43, 24)).collect(), maybe: None, by: fv_row.by_name.to_owned(), seen: fv_row.seen.iter().map(|v| v.as_ref().map(fv::js_time_of)).map(|v| v.map(|fv_t| fv_refusals.date(fv_t, 43, 59))).collect() }))?;
+        fv_refusals.check(super::date_stamp::try_render(out, &super::date_stamp::Props { at: fv_refusals.date(fv::js_time_of(&fv_row.at), 44, 23), edited: fv_row.edited.as_ref().map(fv::js_time_of).map(|fv_t| fv_refusals.date(fv_t, 44, 40)), deleted: fv_row.deleted.as_ref().map(fv::js_time_of).map(|fv_t| fv_refusals.date(fv_t, 44, 62)), shown: fv_refusals.date(fv::js_item_at(fv_row.marks.iter().map(fv::js_time_of), -1.0f64).unwrap_or(fv::js_time_of(&fv_row.at)), 44, 83) }))?;
         out.push_str("</article>");
     }
     out.push_str("<!--]--><p>");
@@ -191,29 +191,29 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push_str(" edited, ");
     fv::push_int(out, props.days.len() as i64);
     out.push_str(" days");
-    fv::escape_into(out, &(if let Some(n6) = props.maybe.as_ref().map(|v| v.iter().map(fv::js_time_of).collect::<Vec<_>>()) { std::borrow::Cow::<str>::Owned(format!(", {} maybe", fv::Js(n6.len() as i64))) } else { std::borrow::Cow::<str>::Borrowed("") }));
+    fv::escape_into(out, &(if let Some(fv_maybe) = props.maybe.as_ref().map(|v| v.iter().map(fv::js_time_of).collect::<Vec<_>>()) { std::borrow::Cow::<str>::Owned(format!(", {} maybe", fv::Js(fv_maybe.len() as i64))) } else { std::borrow::Cow::<str>::Borrowed("") }));
     out.push_str("</p><!--[-->");
-    for day in props.days.iter().map(fv::js_time_of) {
+    for fv_day in props.days.iter().map(fv::js_time_of) {
         out.push_str("<i>");
-        fv::push_number(out, fv::js_utc_date(day));
+        fv::push_number(out, fv::js_utc_date(fv_day));
         out.push('/');
-        fv::push_number(out, fv::js_utc_month(day) + 1.0);
+        fv::push_number(out, fv::js_utc_month(fv_day) + 1.0);
         out.push_str("</i>");
     }
     out.push_str("<!--]-->");
-    if let Some(n7) = s_first {
+    if let Some(fv_first) = s_first {
         out.push_str("<b>");
-        fv::push_number(out, n7);
+        fv::push_number(out, fv_first);
         out.push_str("</b>");
     } else {
         out.push_str("<!---->");
     }
-    if let Some(n8) = props.maybe.as_ref().map(|v| v.iter().map(fv::js_time_of).collect::<Vec<_>>()) {
+    if let Some(fv_maybe_2) = props.maybe.as_ref().map(|v| v.iter().map(fv::js_time_of).collect::<Vec<_>>()) {
         out.push_str("<!--[-->");
-        for day_ref in n8.iter() {
-            let day = *day_ref;
+        for fv_day_ref in fv_maybe_2.iter() {
+            let fv_day_2 = *fv_day_ref;
             out.push_str("<s>");
-            fv::push_number(out, day);
+            fv::push_number(out, fv_day_2);
             out.push_str("</s>");
         }
         out.push_str("<!--]-->");
@@ -221,32 +221,32 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         out.push_str("<!---->");
     }
     out.push_str("<!--[-->");
-    for (k, (name, stamp_ref)) in props.stamps.iter().enumerate() {
-        let stamp = fv::js_time_of(stamp_ref);
-        let k = k as i64;
+    for (fv_k, (fv_name_2, fv_stamp_ref_2)) in props.stamps.iter().enumerate() {
+        let fv_stamp_2 = fv::js_time_of(fv_stamp_ref_2);
+        let fv_k = fv_k as i64;
         out.push_str("<u>");
-        fv::push_int(out, k);
+        fv::push_int(out, fv_k);
         out.push(' ');
-        fv::escape_into(out, name);
+        fv::escape_into(out, fv_name_2);
         out.push('=');
-        fv::push_number(out, stamp);
+        fv::push_number(out, fv_stamp_2);
         out.push_str("</u>");
     }
     out.push_str("<!--]--><!--[-->");
-    for stamp in props.stamps.values().map(fv::js_time_of) {
+    for fv_stamp_3 in props.stamps.values().map(fv::js_time_of) {
         out.push_str("<em>");
-        fv::push_number(out, fv::js_utc_hours(stamp));
+        fv::push_number(out, fv::js_utc_hours(fv_stamp_3));
         out.push_str("</em>");
     }
     out.push_str("<!--]-->");
-    fv_refusals.check(super::date_days::try_render(out, &super::date_days::Props { days: props.days.iter().map(fv::js_time_of).filter(|fv_a10| !(*fv_a10).is_nan()).map(|fv_t| fv_refusals.date(fv_t, 54, 22)).collect(), maybe: props.maybe.as_ref().map(|v| v.iter().map(fv::js_time_of).collect::<Vec<_>>()).as_ref().map(|v| v.iter().copied().map(|fv_t| fv_refusals.date(fv_t, 54, 79)).collect()), by: props.stamps.to_owned(), seen: Vec::new() }))?;
-    if let Some(n11) = props.lead.as_ref() {
+    fv_refusals.check(super::date_days::try_render(out, &super::date_days::Props { days: props.days.iter().map(fv::js_time_of).filter(|fv_d| !(*fv_d).is_nan()).map(|fv_t| fv_refusals.date(fv_t, 54, 22)).collect(), maybe: props.maybe.as_ref().map(|v| v.iter().map(fv::js_time_of).collect::<Vec<_>>()).as_ref().map(|v| v.iter().copied().map(|fv_t| fv_refusals.date(fv_t, 54, 79)).collect()), by: props.stamps.to_owned(), seen: Vec::new() }))?;
+    if let Some(fv_lead) = props.lead.as_ref() {
         out.push_str("<p>lead ");
-        fv::escape_into(out, &n11.title);
+        fv::escape_into(out, &fv_lead.title);
         out.push(' ');
-        fv::push_number(out, fv::js_time_of(&n11.at));
+        fv::push_number(out, fv::js_time_of(&fv_lead.at));
         out.push(' ');
-        fv::push_int(out, n11.marks.len() as i64);
+        fv::push_int(out, fv_lead.marks.len() as i64);
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");

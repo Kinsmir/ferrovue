@@ -155,12 +155,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push('|');
     fv::escape_into(out, &s_codes.iter().copied().map(|v| fv::Js(v).to_string()).collect::<Vec<_>>().join(","));
     out.push_str("</p><ul><!--[-->");
-    for w_cow in fv::js_split_limit(&props.text, " ", props.limit as f64).into_iter() {
-        let w: &str = &w_cow;
+    for fv_w_cow in fv::js_split_limit(&props.text, " ", props.limit as f64).into_iter() {
+        let fv_w: &str = &fv_w_cow;
         out.push_str("<li>");
-        fv::push_number(out, fv::js_char_code_at(w, 0.0f64));
+        fv::push_number(out, fv::js_char_code_at(fv_w, 0.0f64));
         out.push(':');
-        if let Some(v) = fv::js_code_point_at(w, 0.0f64) {
+        if let Some(v) = fv::js_code_point_at(fv_w, 0.0f64) {
             fv::push_int(out, v);
         }
         out.push_str("</li>");

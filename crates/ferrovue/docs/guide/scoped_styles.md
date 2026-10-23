@@ -173,10 +173,10 @@ compiler writes, for `TagList`:
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(54 + 25 * props.tags.len() + props.tags.iter().map(|v| v.len()).sum::<usize>());
     out.push_str("<ul class=\"tags\" data-v-2f4cdd4e><!--[-->");
-    for t_ref in props.tags.iter() {
-        let t: &str = t_ref;
+    for fv_t_ref in props.tags.iter() {
+        let fv_t: &str = fv_t_ref;
         out.push_str("<li data-v-2f4cdd4e>");
-        super::tag::render_scoped(out, &super::tag::Props { label: std::borrow::Cow::Borrowed(t) }, " data-v-2f4cdd4e");
+        super::tag::render_scoped(out, &super::tag::Props { label: std::borrow::Cow::Borrowed(fv_t) }, " data-v-2f4cdd4e");
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul>");
@@ -356,19 +356,19 @@ more</small></template></Note>`:
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(33 + props.text.len());
     super::note::render(out, &super::note::Props { count: 2i64 }, super::note::Slots {
-        default: Some(fv::Slot::slotted(&|out: &mut String, fv_sid1: &str| -> bool {
+        default: Some(fv::Slot::slotted(&|out: &mut String, fv_slot_id: &str| -> bool {
             out.push_str("<p");
-            out.push_str(fv_sid1);
+            out.push_str(fv_slot_id);
             out.push('>');
             fv::escape_into(out, &props.text);
             out.push_str("</p>");
             true
         })),
-        footer: Some(&|out: &mut String, fv_sp3: &super::note::FooterSlotProps, fv_sid2: &str| -> bool {
+        footer: Some(&|out: &mut String, fv_slot_props: &super::note::FooterSlotProps, fv_slot_id_2: &str| -> bool {
             out.push_str("<small");
-            out.push_str(fv_sid2);
+            out.push_str(fv_slot_id_2);
             out.push('>');
-            fv::push_int(out, fv_sp3.count);
+            fv::push_int(out, fv_slot_props.count);
             out.push_str(" more</small>");
             true
         }),

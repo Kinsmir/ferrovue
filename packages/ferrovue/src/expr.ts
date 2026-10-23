@@ -15,6 +15,7 @@ import { objectLiteral, ownedStruct, ownedStructs, refuseInPlace, structList, un
 import { letIn, panicky, refuses, split, splits } from "./blocks.ts";
 import { assignedLet, loopIn, loopStep } from "./statements.ts";
 import { refuseUnresolved } from "./resolve.ts";
+import { fresh, jsHint } from "./names.ts";
 
 const MATH_CONSTANTS = new Map(["E", "LN10", "LN2", "LOG10E", "LOG2E", "PI", "SQRT1_2", "SQRT2"].map((k) => [k, Math[k as "PI"]]));
 
@@ -323,6 +324,12 @@ function ownedCow(v: Val): string {
   return cow.startsWith("std::borrow::Cow::<str>::Owned(") ? cow : `std::borrow::Cow::<str>::Owned(${atom(cow)}.into_owned())`;
 }
 
+function chainHint(n: N): string {
+  if (n.type === "Identifier") return jsHint(n.name);
+  if (!n.computed && n.property?.type === "Identifier") return n.property.name;
+  return "value";
+}
+
 function optionalChain(s: Scope, n: N): Val {
   const comp = s.comp;
   let link: N = n;
@@ -341,7 +348,7 @@ function optionalChain(s: Scope, n: N): Val {
   const rest = plainChain(n, link, hole);
   const within = (v: Val): Scope => ({ ...s, locals: new Map(s.locals).set(hole.name, v) });
   if (base.ty.k !== "opt") return expr(within(base), rest);
-  const name = `fv_o${k}`;
+  const name = fresh("o", chainHint(link.object));
   const inner = expr(within({ code: name, ty: base.ty.of, ...loneOf(base) }), rest);
   if (nothing(inner.ty)) return { code: "None", ty: UNDEF };
   const lone = loneOf(base, inner);
@@ -759,7 +766,7 @@ export function expr(s: Scope, n: N): Val {
         }
       }
       const p = presence(s, n.test);
-      const name = p ? `n${++ctx.narrowCount}` : "";
+      const name = p ? fresh("n", jsHint(p.path)) : "";
       let a = expr(p && !p.negated ? narrowTo(s, p, name) : s, n.consequent);
       let b = expr(p && p.negated ? narrowTo(s, p, name) : s, n.alternate);
       if (sameTy(a.ty, b.ty) && a.code === b.code && (!name || !occurrences(a.code, name))) return a;

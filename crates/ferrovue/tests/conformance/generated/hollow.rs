@@ -71,11 +71,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
             }
             out.push_str("<!--[-->");
             filled |= !fv::is_comment(&out[fv_chunk..]);
-            for t_cow in props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|_| props.note.as_deref().is_some_and(|v| !v.is_empty())) {
-                let t: &str = &t_cow;
+            for fv_t_cow in props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|_| props.note.as_deref().is_some_and(|v| !v.is_empty())) {
+                let fv_t: &str = &fv_t_cow;
                 filled = true;
                 out.push_str("<footer>");
-                fv::escape_into(out, t);
+                fv::escape_into(out, fv_t);
                 out.push_str("</footer>");
             }
             out.push_str("<!--]-->");
@@ -87,11 +87,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         default: Some(fv::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
             out.push_str("<!--[-->");
-            for t_ref in props.tags.iter() {
-                let t: &str = t_ref;
+            for fv_t_ref in props.tags.iter() {
+                let fv_t_2: &str = fv_t_ref;
                 filled = true;
                 out.push_str("<i>");
-                fv::escape_into(out, t);
+                fv::escape_into(out, fv_t_2);
                 out.push_str("</i>");
             }
             let fv_chunk = out.len();
@@ -200,11 +200,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
             }
             out.push_str("<!--[-->");
             filled |= !fv::is_comment(&out[fv_chunk..]);
-            for t_cow in props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|_| props.on) {
-                let t: &str = &t_cow;
+            for fv_t_cow_2 in props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|_| props.on) {
+                let fv_t_3: &str = &fv_t_cow_2;
                 filled = true;
                 out.push_str("<em>");
-                fv::escape_into(out, t);
+                fv::escape_into(out, fv_t_3);
                 out.push_str("</em>");
             }
             out.push_str("<!--]-->");
@@ -232,12 +232,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         })),
     }))?;
     fv_refusals.check(super::data_list::try_render(out, &super::data_list::Props { rows: Vec::new(), title: std::borrow::Cow::Borrowed("scoped"), note: props.note.as_deref().map(std::borrow::Cow::Borrowed) }, super::data_list::Slots {
-        header: Some(&|out: &mut String, fv_sp3: &super::data_list::HeaderSlotProps<'_>| -> bool {
+        header: Some(&|out: &mut String, fv_slot_props: &super::data_list::HeaderSlotProps<'_>| -> bool {
             let mut filled = false;
             if props.on {
                 let fv_chunk = out.len();
                 out.push_str("<!--[-->");
-                if let Some(v) = fv_sp3.note {
+                if let Some(v) = fv_slot_props.note {
                     fv::escape_into(out, v);
                 }
                 if let Some(v) = props.pad.as_deref() {
@@ -249,11 +249,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
                 out.push_str("<!---->");
             }
             out.push_str("<!--[-->");
-            for t_cow in props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|_| fv_sp3.note.is_some_and(|v| !v.is_empty())) {
-                let t: &str = &t_cow;
+            for fv_t_cow_3 in props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|_| fv_slot_props.note.is_some_and(|v| !v.is_empty())) {
+                let fv_t_4: &str = &fv_t_cow_3;
                 filled = true;
                 out.push_str("<s>");
-                fv::escape_into(out, t);
+                fv::escape_into(out, fv_t_4);
                 out.push_str("</s>");
             }
             out.push_str("<!--]-->");
@@ -272,11 +272,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
             }
             out.push_str("<!--[-->");
             filled |= !fv::is_comment(&out[fv_chunk..]);
-            for t_cow in props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|_| props.note.as_deref().is_some_and(|v| !v.is_empty())) {
-                let t: &str = &t_cow;
+            for fv_t_cow_4 in props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|_| props.note.as_deref().is_some_and(|v| !v.is_empty())) {
+                let fv_t_5: &str = &fv_t_cow_4;
                 filled = true;
                 out.push_str("<u>");
-                fv::escape_into(out, t);
+                fv::escape_into(out, fv_t_5);
                 out.push_str("</u>");
             }
             out.push_str("<!--]-->");

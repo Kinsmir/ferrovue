@@ -73,45 +73,45 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         }
     }
     out.push_str("<select><!--[-->");
-    for s_ref in ["sm", "md", "lg"].iter() {
-        let s: &str = s_ref;
+    for fv_s_ref in ["sm", "md", "lg"].iter() {
+        let fv_s: &str = fv_s_ref;
         out.push_str("<option value=\"");
-        fv::escape_into(out, s);
+        fv::escape_into(out, fv_s);
         out.push('"');
-        if Some(s) == props.size.as_deref() {
+        if Some(fv_s) == props.size.as_deref() {
             out.push_str(" selected");
         }
         out.push('>');
-        fv::escape_into(out, s);
+        fv::escape_into(out, fv_s);
         out.push_str("</option>");
     }
     out.push_str("<!--]--></select><ul><!--[-->");
-    for c_ref in super::types::CHOICES.iter() {
-        let c = c_ref;
+    for fv_c_ref in super::types::CHOICES.iter() {
+        let fv_c = fv_c_ref;
         out.push_str("<li");
-        if let Some(v) = c.hint.as_deref() {
+        if let Some(v) = fv_c.hint.as_deref() {
             out.push_str(" title=\"");
             fv::escape_into(out, v);
             out.push('"');
         }
         out.push('>');
-        fv::push_int(out, c.id);
+        fv::push_int(out, fv_c.id);
         out.push_str(": ");
-        fv::escape_into(out, &c.label);
+        fv::escape_into(out, &fv_c.label);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul><ol><!--[-->");
-    for (i, s_ref) in super::types::SORTS.iter().enumerate() {
-        let s = s_ref;
-        let i = i as i64;
+    for (fv_i, fv_s_ref_2) in super::types::SORTS.iter().enumerate() {
+        let fv_s_2 = fv_s_ref_2;
+        let fv_i = fv_i as i64;
         out.push_str("<li>");
-        fv::push_int(out, i);
+        fv::push_int(out, fv_i);
         out.push(' ');
-        fv::escape_into(out, &s.label);
-        fv::escape_into(out, if s.desc { " (desc)" } else { "" });
+        fv::escape_into(out, &fv_s_2.label);
+        fv::escape_into(out, if fv_s_2.desc { " (desc)" } else { "" });
         out.push(' ');
-        fv::escape_into(out, s.badge.as_deref().unwrap_or("-"));
-        if s.badge.as_deref().is_some() {
+        fv::escape_into(out, fv_s_2.badge.as_deref().unwrap_or("-"));
+        if fv_s_2.badge.as_deref().is_some() {
             out.push_str("<!---->");
         } else {
             out.push_str("<b>plain</b>");

@@ -57,9 +57,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push('>');
     fv::escape_into(out, &props.label);
     out.push_str("<!--[-->");
-    for r_ref in props.rows.iter() {
-        let r = r_ref;
-        super::listened::try_render(out, r)?;
+    for fv_r_ref in props.rows.iter() {
+        let fv_r = fv_r_ref;
+        super::listened::try_render(out, fv_r)?;
     }
     out.push_str("<!--]--></div>");
     Ok(())

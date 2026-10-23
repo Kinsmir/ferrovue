@@ -48,9 +48,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     fv::escape_into(out, &props.label);
     if props.children.len() as i64 != 0 {
         out.push_str("<ul><!--[-->");
-        for c_ref in props.children.iter() {
-            let c = c_ref;
-            super::tree::try_render(out, c)?;
+        for fv_c_ref in props.children.iter() {
+            let fv_c = fv_c_ref;
+            super::tree::try_render(out, fv_c)?;
         }
         out.push_str("<!--]--></ul>");
     } else {
