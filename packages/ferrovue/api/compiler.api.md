@@ -575,7 +575,7 @@ export const ERRORS: {
     };
     readonly FV0625: {
         readonly title: "Unsupported expression";
-        readonly detail: "The template, a `computed`, a function or a setup expression holds a kind of expression the server does not translate, such as an object literal, an arrow function used as a value, `await` inside an expression or an optional chain of a shape it does not follow; the message names it and where it is. Event handlers, which the server drops, may hold any expression. Write the value with the expressions the template supports, or compute it in Rust and pass it as a prop.";
+        readonly detail: "The template, a `computed`, a function or a setup expression holds a kind of expression the server does not translate, such as an arrow function used as a value, `await` inside an expression or an optional chain of a shape it does not follow; the message names it and where it is. Event handlers, which the server drops, may hold any expression. Write the value with the expressions the template supports, or compute it in Rust and pass it as a prop.";
     };
     readonly FV0626: {
         readonly title: "Strict test of a value that may be `null` or `undefined`";
@@ -608,6 +608,18 @@ export const ERRORS: {
     readonly FV0633: {
         readonly title: "Part of JavaScript's own globals the server does not translate";
         readonly detail: "`JSON`, `Math`, `Number`, `String` and the other globals a template may name are translated only in part: `JSON.stringify(x)` of one value, `String(x)`, `Number(x)` and the `Number.is…()` tests, the `Math` methods and constants the [`numbers`](crate::guide::numbers) page lists, `encodeURI` and `encodeURIComponent`. The message names what the server translates of the one used.";
+    };
+    readonly FV0634: {
+        readonly title: "Object literal whose type is not known";
+        readonly detail: "The server builds an object literal as the Rust struct of the interface it is typed with, so its type comes from where it goes: a prop typed with an interface, an annotated `computed` (`computed<Card>(…)`, `computed((): Card => …)`), a function's return type or parameter, a `.map()` callback's return type or the list type it makes, an annotated `const`, or `as Card`. A literal none of these types has no struct to be built as, and one typed as a `Record` would be a dictionary the server reads from Rust. The message names where the literal is and how to give it its type. See [`script_logic`](crate::guide::script_logic#object-literals).";
+    };
+    readonly FV0635: {
+        readonly title: "Object literal that does not match its interface";
+        readonly detail: "An object literal built as a struct holds the fields of its interface: each key a field, given once, every required field given, and a computed key only where the compiler knows it (a string, a constant, an enum member). A key the interface does not declare, a method or accessor, `__proto__`, a spread of another type, and a spread after other keys, which keeps or writes over them as the object it copies holds them, are refused. Write the fields out, with the spread first. See [`script_logic`](crate::guide::script_logic#object-literals).";
+    };
+    readonly FV0636: {
+        readonly title: "Object literal read in place";
+        readonly detail: "A value built from object literals (an object, or a list `.map()` makes of them) is held by the expression that builds it, which ends before a list method's result, an item or an optional chain read from it would be used. Give the value a `computed` of its own and call the method on that, or call `.filter()`, `.slice()` and the other methods before `.map()`. See [`script_logic`](crate::guide::script_logic#object-literals).";
     };
     readonly FV0701: {
         readonly title: "`Number()` of an unsupported value";

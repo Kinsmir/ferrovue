@@ -2,7 +2,8 @@ import { isSSRSafeAttrName, propsToAttrMap } from "@vue/shared";
 import { type Component, type Field, type N, type Scope, type Ty, type Val, absence, camelize, declares, fail, nothing, rustStr, sameTy, snake, takesAttrs } from "./model.ts";
 import { ctx } from "./context.ts";
 import { markHome } from "./typescript.ts";
-import { describeTy, expr, fieldVal, holdsNothing } from "./expr.ts";
+import { describeTy, expr, fieldVal, holdsNothing, typedBy } from "./expr.ts";
+import { tyNode } from "./objects.ts";
 import { asF64 } from "./numbers.ts";
 import { atom, bare } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
@@ -101,8 +102,9 @@ export function renderChild(s: Scope, e: Emitter, n: N, twin?: TwinCall): void {
       if (f.ty.none !== undefined) fail(s.comp, "FV0507", `${child.name} requires \`${f.js}\`, which is \`T | null\`: Vue would hand it \`undefined\`; pass \`null\` for none`, n);
       return `${f.rust}: None`;
     }
-    const v = expr(s, node);
-    return fieldInit(f.rust, ownInto(s.comp, { ...v, ty: markHome(v.ty, s.comp.name) }, markHome(f.ty, child.name), node));
+    const want = markHome(f.ty, child.name);
+    const v = expr(s, typedBy(node, tyNode(want), false));
+    return fieldInit(f.rust, ownInto(s.comp, { ...v, ty: markHome(v.ty, s.comp.name) }, want, node));
   });
   callChild(s, e, child, `&super::${child.module}::Props { ${inits.join(", ")} }`, slots, childAttrsArg(s, child, parts, merges, fallthrough, ids, n), later);
 }
@@ -291,6 +293,8 @@ export function callWith(s: Scope, e: Emitter, child: Component, m: string, head
 
 export function ownInto(comp: Component, v: Val, want: Ty, node: N): string {
   holdsNothing(comp, v, want, node, "the prop");
+  if (v.owned && sameTy(v.ty, want)) return v.code;
+  if (v.owned && want.k === "opt" && sameTy(v.ty, want.of)) return `Some(${bare(v.code)})`;
   if (want.k === "opt" && nothing(v.ty)) return "None";
   if (want.k === "str") {
     if (v.ty.k !== "str") fail(comp, "FV0509", "a string prop needs a string", node);

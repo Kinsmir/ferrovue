@@ -109,6 +109,7 @@ A fixture is a JSON object of props plus optional keys:
 | `Setup`, `Lifecycle` | `ref`, `computed`, plain constants, helpers; hooks, `watch`, emits, template refs, `defineOptions`/`defineSlots`/`defineExpose`, a plain `<script>` block, an interface with fields the server never reads (an `HTMLElement`, a method) behind a `shallowRef` |
 | `Unread`, `UnreadFold`, `UnreadVar` | `computed`s that throw in JavaScript (`.repeat()` of a negative count, `.toISOString()` of an invalid date, `.padStart()` beyond the longest string) evaluated where the render first reads them, once: never read, read under a `v-if` that is false, read by another `computed`, in a `v-for`, in slot content a child does not render, as a child's prop; a `v-bind()` in `<style>`, which Vue evaluates as its render starts |
 | `Statements` | Statements in `computed` bodies and list callbacks: `const` (destructured too) and `let` never assigned again, `if` / `else if` / `else`, early `return` narrowing what follows (`!x`, `x === undefined`, `!a \|\| !a.title`, `a && a.posts > 0`), `switch` over a string-literal union and a number with stacked cases, `default` and `break`, values that borrow a `const` (a computed string, list or optional string) returned owned, an object returned from a body |
+| `ObjectLiterals`, `ObjectShapes`, `TileCard`, `TileRows` | Object literals built as the struct of their interface (`types/tiles.ts` and the component's own): a `computed` with a return type, `computed<T>` and `ComputedRef<T[]>`, a `?:` of literals, a constant computed key, an optional field left out, given `undefined` and given a prop that may be absent, `null` for a nullable field, a nested literal under `?:` with `undefined`, a spread of a `computed` before a key; a child's interface prop given a literal, a `v-bind` object holding one, the result of a `.ts` function and of a setup function that return literals (a spread, an empty list, strings it trims or formats), and a list `.map()` makes of literals, in a `computed` and in the template; an annotated `const` in setup, an array literal of objects, `??` falling back to a literal, a destructured literal, a function's optional literal narrowed by an early `return`, an optional attribute read from a literal |
 | `Formatters`, `RelativeTime`, `LocalFunctions` | Functions the template and `computed`s call, exported from a `.ts` file (`components/text.ts`: a compact-number formatter with `toFixed`, a pluraliser with a default built from an earlier parameter, truncation with an ellipsis, an `href` built with `encodeURIComponent`, relative time from two `Date` props through a `switch`) or declared in `<script setup>` (`function` and `const` arrow functions reading props, refs and constants, calling each other, a default and an optional parameter, a destructured one, `switch (true)`, called in a `v-for` and from a list's `.map()`); one function given an integer and a `Float`; an invalid `Date`; a function only an event handler calls |
 | `DigitGroups` | Constants of `components/digits.ts` and of `<script setup>` folded when compiling (`24 * HOUR`, `2 ** 40 - 1`, `-(7 % 4) + +2.5`, `` `${BASE}/new?days=${DAY / HOUR}` ``, `"#" + 1.5`), an object constant built of them; a thousands separator through `String(n).split("").reduce(…)`, indexing the string (`d[i - 1]`) and its `.length`, and through slices of `toFixed(0)`; arrow functions a function's and a `computed`'s body declare, reading the body's names (`pad`, `tag`, `first`); `s[i]` of a string that may hold any character; `.toReversed()` of the characters of a number |
 | `UnreadSteps` | A `computed` whose statements stop at an early `return` before a `const` that would throw, and one whose `const` throws only where the render reads it |
@@ -209,6 +210,7 @@ when it names a component that is not in `components/` with fixtures of its own.
 | Setup | `Setup`, `SetupValues`, `Lifecycle`, `Pending`, `EmptyBranch`, `Unread`, `UnreadVar` |
 | Statements | `Statements`, `UnreadSteps` |
 | Functions | `Formatters`, `RelativeTime`, `LocalFunctions`, `DigitGroups` |
+| Object literals | `ObjectLiterals`, `ObjectShapes` |
 | Loaders | `Loaded`, `LoadedComments`, `LoadedRanks` |
 | Provide and inject | `TabsPage`, `Tabs`, `Tab`, `ThemedButton`, `ThemeScope`, `Swatch`, `SwatchShelf`, `ThemedShelf`, `ThemedList`, `ThemedChoice` |
 | Text | `Text`, `MixedTernary`, `Exprs`, `Numbers`, `Precision`, `Meter`, `Parsing`, `NumberTests`, `Regressions`, `OptionalChains`, `StringOf`, `MathMore`, `UriParts`, `TypeofTests` |
@@ -377,6 +379,13 @@ What it generates, with random nesting:
   methods, `.length`, `.indexOf()`, `.at()` and `.split()` followed by list reads, `.toFixed()` and
   `.toString()`, with `?.` again after each value that may be absent, read with `??` or as a
   condition;
+- object literals of the component's interfaces, in a `computed` typed by its return type or its
+  type argument (`computed((): Row0 => ({ … }))`, `computed<Row0[]>(…)`) and in a list `.map()`
+  makes of them (the callback's return type stated or not), read in the template like a prop of
+  that type, and a child `FzCard` given an object literal and a `.map()` of literals (or `[]`, or
+  an array literal of one) for its interface props: optional fields left out, `undefined`, an
+  expression or an optional value, nullable fields `null`, an expression or a nullable value,
+  lists `[]`, a list prop or an array literal, the keys in the interface's order or reversed;
 - `<script setup>` beyond the props: `const props = defineProps(…)` read as `props.x` in the
   template and in script, `computed`, `ref` and plain constants computed from the props, a
   `generic="T extends Row"` parameter typing a list prop, `defineAsyncComponent` for a child;

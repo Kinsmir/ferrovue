@@ -6,6 +6,7 @@ import { atom, bare, occurrences, operand, UNARY } from "./parens.ts";
 import { presence } from "./narrowing.ts";
 import { asCow, heldStr, isTemporary } from "./strings.ts";
 import { intFromF64 } from "./numbers.ts";
+import { ownedStruct, ownedStructs } from "./objects.ts";
 
 const COW = "std::borrow::Cow::<str>";
 
@@ -20,6 +21,7 @@ export function panicky(code: string): boolean {
  * whether the `let` owns what a read borrows (a `String`, a `Cow`, a `Vec`). */
 export function bindingOf(v: Val): { init: string; read: (at: string) => Val; owned: boolean } {
   const lone = v.lone ? { lone: true } : {};
+  if (v.owned) return { init: bare(v.code), read: (at) => ({ code: v.ty.k === "opt" ? `${at}.as_ref()` : at, ty: v.ty, ...lone }), owned: true };
   if (v.slice) return { init: bare(v.code), read: (at) => ({ code: at, ty: v.ty, slice: true, ...lone }), owned: false };
   if (v.ty.k === "list" && v.iter !== undefined) return { init: collected(v), read: (at) => heldList(at, v.ty.k === "list" ? v.ty.of : v.ty, v.lone), owned: true };
   if (v.held !== undefined) return { init: v.held, read: (at) => ({ code: `${at}.as_deref()`, ty: v.ty, ...lone }), owned: true };
@@ -402,7 +404,7 @@ function reps(v: Val): string[] {
 }
 
 function ownedCow(v: Val): string {
-  if (!isTemporary(v)) return `${COW}::Owned(${atom(v.code).replace(/^&\*?/, "")}.to_owned())`;
+  if (!isTemporary(v)) return /^&\*\w+(?:\.[\w#]+)+$/.test(v.code) ? `${COW}::Owned(str::to_owned(${v.code}))` : `${COW}::Owned(${atom(v.code).replace(/^&\*?/, "")}.to_owned())`;
   const cow = asCow(v);
   return cow.startsWith(`${COW}::Owned(`) ? cow : `${COW}::Owned(${atom(cow)}.into_owned())`;
 }
@@ -438,6 +440,14 @@ export function bound(s: Scope, local: string, v: Val, then: (inner: Scope) => V
   const lead = `let ${uses ? name : "_"} = ${init};`;
   const block = (code: string): string => `{ ${lead} ${bare(code)} }`;
   const lone = body.lone ? { lone: true as const } : {};
+  if (body.owned) return { code: `(${block(body.code)})`, ty: body.ty, owned: true, ...lone };
+  if (v.owned && uses) {
+    const of = body.ty.k === "opt" || body.ty.k === "list" ? body.ty.of : body.ty;
+    if (of.k === "struct" && body.ty.k === "struct") return { code: `(${block(ownedStruct(body))})`, ty: body.ty, owned: true, ...lone };
+    if (of.k === "struct" && body.ty.k === "opt") return { code: `(${block(`${atom(body.code)}.cloned()`)})`, ty: body.ty, owned: true, ...lone };
+    if (of.k === "struct" && body.ty.k === "list") return { code: `(${block(ownedStructs(body))})`, ty: body.ty, owned: true, ...lone };
+    if (body.ty.k === "list" && body.iter === undefined) return { code: `(${block(`${atom(body.code)}.to_vec()`)})`, ty: body.ty, owned: true, ...lone };
+  }
   switch (body.ty.k) {
     case "int":
     case "float":

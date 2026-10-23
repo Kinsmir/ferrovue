@@ -209,7 +209,7 @@ export function presence(s: Scope, n: N): Presence | null {
     return { path, pick: true, of: UNDEF, negated, truthy: byTruth, option, present: picked, pattern: (name) => `let Some(${name}) = ${option}` };
   }
   const v = expr(s, target);
-  if (v.ty.k !== "opt") return null;
+  if (v.ty.k !== "opt" || v.owned) return null;
   const tested = typeofCompare(n);
   if (tested) {
     const { present, absent } = typeNames(s, v, target);

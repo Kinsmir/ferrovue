@@ -85,8 +85,8 @@ function moduleOf(file: string): Module {
 
 /** What a function's body sees: its own module's names, and none of the call site's. */
 function calleeScope(s: Scope, fn: Fn): Scope {
-  if (fn.captured) return fn.captured;
-  if (fn.file === null) return { ...s, locals: new Map(), narrowed: new Map(), within: "function" };
+  if (fn.captured) return { ...fn.captured, within: "function", mapping: undefined };
+  if (fn.file === null) return { ...s, locals: new Map(), narrowed: new Map(), within: "function", mapping: undefined };
   const m = moduleOf(fn.file);
   return {
     ...s,
@@ -95,10 +95,12 @@ function calleeScope(s: Scope, fn: Fn): Scope {
     locals: new Map(),
     narrowed: new Map(),
     settingUpAt: undefined,
+    within: "function",
+    mapping: undefined,
+    typesFrom: m.home,
     helpers: new Map(),
     clientOnly: m.clientOnly,
     refusedBy: m.refusedBy,
-    within: "function",
     propsIdent: null,
     refs: new Set(),
     consts: m.consts,
@@ -135,9 +137,10 @@ export function callFunction(s: Scope, name: string, fn: Fn, args: N[], n: N): V
     const via = active.slice(active.indexOf(fn) + 1).map((f) => `\`${f.name}()\``);
     fail(comp, "FV1906", `${what} calls itself${via.length ? `, through ${via.join(", ")}` : ""}, which the server would inline without end: compute the value in Rust and pass it as a prop`, n);
   }
+  const home = fn.file === null ? undefined : fn.home;
   const given = args.map((a, i) => {
     const t = annotation(params[i]);
-    return expr(s, t ? typedBy(a, t) : a);
+    return expr(s, t ? typedBy(a, t, true, home) : a);
   });
   const names = given.map(() => `arg#${++temps}`);
   const cs = calleeScope(s, fn);
@@ -145,7 +148,7 @@ export function callFunction(s: Scope, name: string, fn: Fn, args: N[], n: N): V
   try {
     const t = node.returnType?.typeAnnotation;
     const body0 = bodyExpr(fn.home, node);
-    let body: N = t ? typedBy(body0, t) : body0;
+    let body: N = t ? typedBy(body0, t, true, home) : body0;
     for (let i = params.length - 1; i >= 0; i--) body = param(fn.home, params[i], i < given.length ? { v: given[i]!, name: names[i]! } : null, body);
     const run = (i: number, inner: Scope): Val => (i === given.length ? expr(inner, body) : bound(inner, names[i]!, given[i]!, (next) => run(i + 1, next)));
     return run(0, cs);

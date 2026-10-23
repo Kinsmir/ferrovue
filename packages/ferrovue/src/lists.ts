@@ -1,7 +1,8 @@
-import { type Component, type N, type Scope, type Ty, type Val, BOOL, fail, FLOAT, INT, isAscii, joinTy, literalTy, opt, rustStr, sameTy, STR, strTy, UNDEF } from "./model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, BOOL, fail, FLOAT, GenError, INT, isAscii, joinTy, literalTy, opt, rustStr, sameTy, STR, strTy, UNDEF } from "./model.ts";
 import { constOf, ownKeys, ownKeyTest } from "./constants.ts";
 import { ctx } from "./context.ts";
-import { describeTy, expr, fieldVal } from "./expr.ts";
+import { describeTy, expr, fieldVal, statedTy, typedBy } from "./expr.ts";
+import { tyNode } from "./objects.ts";
 import { cond, unbound } from "./narrowing.ts";
 import { localTy } from "./rust.ts";
 import { asF64, isNumber } from "./numbers.ts";
@@ -155,7 +156,7 @@ function mapped(s: Scope, v: Val, n: N): string {
       return v.code;
     case "struct":
     case "child":
-      return `&${operand(v.code, UNARY)}`;
+      return v.owned ? bare(v.code) : `&${operand(v.code, UNARY)}`;
     case "entry":
       return fail(s.comp, "FV0816", "`.map()` to the `[key, value]` pairs of `Object.entries()` makes a list of pairs, which the server walks but does not keep: map each pair to its key, its value or a value made of them", n);
     default:
@@ -612,6 +613,18 @@ function flatMapped(s: Scope, target: Val, args: N[], n: N): Val {
   return computed(`${each}.map(${closure})`, out!.ty, out!.lone);
 }
 
+function itemsOf(s: Scope, n: N): N | undefined {
+  if (n.fvTyped === undefined) return undefined;
+  try {
+    const ty = statedTy(s, n.fvTyped, n.fvFrom);
+    const list = ty.k === "opt" ? ty.of : ty;
+    return list.k === "list" ? tyNode(list.of) : undefined;
+  } catch (e) {
+    if (e instanceof GenError) return undefined;
+    throw e;
+  }
+}
+
 export function listMethod(s: Scope, target: Val, method: string, given: N[], n: N): Val | null {
   const comp = s.comp;
   const args = given.map((a) => expressionBodied(comp, a));
@@ -694,12 +707,16 @@ export function listMethod(s: Scope, target: Val, method: string, given: N[], n:
     }
     case "map": {
       let out: Val | undefined;
+      const returns = fn.returnType?.typeAnnotation ?? itemsOf(s, n);
+      const body = returns && fn.body ? typedBy(fn.body, returns) : fn.body;
       const { closure, enumerate } = arrow(s, fn, target, of, false, method, (inner) => {
-        out = expr(inner, fn.body);
+        out = expr({ ...inner, mapping: true }, body);
         if (out.ty.k === "int" && out.f64 !== undefined && /-[\w(]|\s[*%]\s/.test(out.f64)) out = { ...out, code: out.f64, ty: FLOAT };
         return mapped(inner, out, fn.body);
       });
-      return computed(`${it}${enumerate ? ".enumerate()" : ""}.map(${closure})`, out!.ty, out!.lone);
+      const each = `${it}${enumerate ? ".enumerate()" : ""}.map(${closure})`;
+      if (out!.owned) return { code: `${each}.collect::<Vec<_>>()`, ty: { k: "list", of: out!.ty }, owned: true, ...(out!.lone ? { lone: true } : {}) };
+      return computed(each, out!.ty, out!.lone);
     }
     case "some":
     case "every": {
