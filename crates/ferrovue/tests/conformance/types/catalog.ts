@@ -20,7 +20,7 @@ export const SORTS = [
   { key: "price", label: "By price & more", desc: true, badge: "<new>" },
 ] as const;
 
-export enum Tone {
+export enum Volume {
   Calm = "calm",
   Loud = "loud",
 }

@@ -1,6 +1,7 @@
 import { isSSRSafeAttrName, propsToAttrMap } from "@vue/shared";
-import { type Component, type Field, type N, type Scope, type Ty, type Val, absence, camelize, declares, fail, nothing, rustStr, sameTy, snake, takesAttrs } from "./model.ts";
+import { type Component, type Field, type N, type Scope, type Ty, type Val, absence, camelize, declares, enumOf, fail, nothing, rustStr, sameTy, snake, takesAttrs } from "./model.ts";
 import { ctx } from "./context.ts";
+import { intoEnum, knownLiteral } from "./enums.ts";
 import { markHome } from "./typescript.ts";
 import { describeTy, expr, fieldVal, holdsNothing, typedBy } from "./expr.ts";
 import { tyNode } from "./objects.ts";
@@ -296,6 +297,16 @@ export function ownInto(comp: Component, v: Val, want: Ty, node: N): string {
   if (v.owned && sameTy(v.ty, want)) return v.code;
   if (v.owned && want.k === "opt" && sameTy(v.ty, want.of)) return `Some(${bare(v.code)})`;
   if (want.k === "opt" && nothing(v.ty)) return "None";
+  const def = enumOf(want);
+  if (def !== undefined) {
+    const into = (v.ty.k === "opt" ? v.ty.of : v.ty).k === "str" ? intoEnum(comp, v, def) : null;
+    if (into === null) {
+      const literal = knownLiteral(v);
+      const given = literal !== undefined ? `is ${JSON.stringify(literal)}` : (v.ty.k === "opt" ? v.ty.of : v.ty).k === "str" ? "is a string that may be any other" : `is ${describeTy(v.ty)}`;
+      fail(comp, "FV0515", `the prop is one of ${def.literals.map((l) => JSON.stringify(l)).join(" | ")}, the members of \`${def.name}\`, and the value given ${given}: pass one of them, or a value typed as the union`, node);
+    }
+    return want.k === "opt" && v.ty.k !== "opt" ? `Some(${bare(into)})` : into;
+  }
   if (want.k === "str") {
     if (v.ty.k !== "str") fail(comp, "FV0509", "a string prop needs a string", node);
     return `std::borrow::Cow::Borrowed(${bare(v.code)})`;

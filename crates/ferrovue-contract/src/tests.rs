@@ -1,13 +1,14 @@
 use std::borrow::Cow;
 
-use ferrovue::{Head, Html, I18n, JsDate, Page, Part, Route, Slot, Teleports};
+use ferrovue::{Head, Html, I18n, JsDate, Page, ParseUnionError, Part, Route, Slot, Teleports};
 
 use crate::generated::{
     blank, books_id, cart_badge, counter, data_list, greeting, head_note, i18n, index, modal,
-    picker, posted, provides, rated, render_json, route_table, shell, stores, theme_scope,
+    picker, posted, provides, rated, render_json, route_table, shell, sized, stores, theme_scope,
     themed_button, translated, twins, types,
 };
 
+const _: fn(&mut String, &sized::Props) = sized::render;
 const _: fn(&mut String, &greeting::Props<'_>) = greeting::render;
 const _: fn(&mut String, &counter::Props) = counter::render;
 const _: fn(&mut String, &blank::Props) = blank::render;
@@ -47,6 +48,7 @@ struct Owned {
     cart_badge: cart_badge::Props,
     count: data_list::CountSlotProps,
     star: twins::StarRatingProps,
+    sized: sized::Props,
 }
 
 fn render(f: impl FnOnce(&mut String)) -> String {
@@ -100,6 +102,48 @@ fn props_are_built_with_new_and_setters_or_as_literals() {
         render(|out| blank::render(out, &blank::Props::new())),
         render(|out| blank::render(out, &blank::Props::default()))
     );
+}
+
+#[test]
+fn a_union_of_string_literals_is_an_enum_built_from_a_variant_or_parsed() {
+    let built = sized::Props::new(types::Size::Md).tone(sized::SizedTone::Loud);
+    let literal = sized::Props {
+        size: "md".parse().unwrap(),
+        tone: Some(sized::SizedTone::try_from("loud").unwrap()),
+    };
+    let expected = r#"<b class="md loud">md</b>"#;
+    assert_eq!(render(|out| sized::render(out, &built)), expected);
+    assert_eq!(sized::html(&literal).into_string(), expected);
+    let island = sized::island(&built).into_string();
+    assert!(
+        island.starts_with(r#"<div data-island="Sized" data-props="{&quot;size&quot;:&quot;md&quot;,&quot;tone&quot;:&quot;loud&quot;}">"#),
+        "{island}"
+    );
+
+    assert_eq!(
+        types::Size::ALL,
+        [types::Size::Sm, types::Size::Md, types::Size::Lg]
+    );
+    assert_eq!(types::Size::Lg.as_str(), "lg");
+    assert_eq!(types::Size::Sm.to_string(), "sm");
+    let size: types::Size = serde_json::from_str(r#""lg""#).unwrap();
+    assert_eq!(size, types::Size::Lg);
+    assert_eq!(serde_json::to_string(&size).unwrap(), r#""lg""#);
+    assert!(serde_json::from_str::<types::Size>(r#""xl""#).is_err());
+    let set: std::collections::HashSet<types::Size> = types::Size::ALL.into_iter().collect();
+    assert_eq!(set.len(), 3);
+
+    let e: ParseUnionError = "xl".parse::<types::Size>().unwrap_err();
+    assert_eq!(e.union(), "Size");
+    assert_eq!(e.value(), "xl");
+    assert_eq!(e.members(), ["sm", "md", "lg"]);
+    assert_eq!(
+        e.to_string(),
+        "`xl` is not one of the members of `Size`: `sm`, `md`, `lg`"
+    );
+    let boxed: Box<dyn std::error::Error> = Box::new(e.clone());
+    assert_eq!(boxed.to_string(), e.to_string());
+    assert_eq!(types::Size::try_from("xl"), Err(e));
 }
 
 #[test]

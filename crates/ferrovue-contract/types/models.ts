@@ -1,3 +1,5 @@
+export type Size = "sm" | "md" | "lg";
+
 export interface Owner {
   name: string;
   email?: string;

@@ -8,12 +8,60 @@ use ferrovue as fv;
 /// The component's name, as `data-island` carries it.
 pub const NAME: &str = "TagContent";
 
+/// `tag` in `TagContent.vue`: `"div" | "form"`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub enum TagContentTag {
+    #[serde(rename = "div")]
+    Div,
+    #[serde(rename = "form")]
+    Form,
+}
+
+impl TagContentTag {
+    /// Every member, in the order the union declares them.
+    pub const ALL: [TagContentTag; 2] = [TagContentTag::Div, TagContentTag::Form];
+
+    /// The string literal this member stands for.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            TagContentTag::Div => "div",
+            TagContentTag::Form => "form",
+        }
+    }
+}
+
+impl std::fmt::Display for TagContentTag {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl std::str::FromStr for TagContentTag {
+    type Err = ferrovue::ParseUnionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "div" => Ok(TagContentTag::Div),
+            "form" => Ok(TagContentTag::Form),
+            _ => Err(ferrovue::ParseUnionError::new("TagContentTag", s, &["div", "form"])),
+        }
+    }
+}
+
+impl TryFrom<&str> for TagContentTag {
+    type Error = ferrovue::ParseUnionError;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        s.parse()
+    }
+}
+
 /// The props `TagContent.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
     #[serde(rename = "tag")]
-    pub tag: Cow<'a, str>,
+    pub tag: TagContentTag,
     #[serde(rename = "items")]
     pub items: Vec<Cow<'a, str>>,
     #[serde(rename = "on")]
@@ -24,8 +72,8 @@ pub struct Props<'a> {
 
 impl<'a> Props<'a> {
     /// Props with its required fields.
-    pub fn new(tag: impl Into<Cow<'a, str>>, items: impl IntoIterator<Item = impl Into<Cow<'a, str>>>, on: bool, label: impl Into<Cow<'a, str>>) -> Self {
-        Props { tag: tag.into(), items: items.into_iter().map(Into::into).collect(), on, label: label.into() }
+    pub fn new(tag: TagContentTag, items: impl IntoIterator<Item = impl Into<Cow<'a, str>>>, on: bool, label: impl Into<Cow<'a, str>>) -> Self {
+        Props { tag, items: items.into_iter().map(Into::into).collect(), on, label: label.into() }
     }
 
 }
@@ -33,8 +81,8 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(313 + 7 * props.items.len() + 7 * props.items.len() + props.items.len() + 9 * props.items.len() + props.tag.len() + props.items.iter().map(|v| v.len()).sum::<usize>() + props.label.len());
-    let fv_tag1 = match &*props.tag { "div" => "div", _ => "form" };
+    out.reserve(313 + 7 * props.items.len() + 7 * props.items.len() + props.items.len() + 9 * props.items.len() + 4 + props.items.iter().map(|v| v.len()).sum::<usize>() + props.label.len());
+    let fv_tag1 = match props.tag { TagContentTag::Div => "div", TagContentTag::Form => "form" };
     out.push('<');
     out.push_str(fv_tag1);
     out.push_str(" class=\"x");

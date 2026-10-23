@@ -6,6 +6,7 @@ import { relativePath } from "./paths.ts";
 import { type Component, type N, absence, blankComponent, fail, GenError, opt, snake, sourceAt, tagAst } from "./model.ts";
 import { ctx, readSource } from "./context.ts";
 import { typesImports, declareTypes, defaultValue, definePropsType, ONE_NOTHING, reachLocal, readTypeFile, runtimeDefaults, structOf, tyOfTs } from "./typescript.ts";
+import { enumField } from "./enums.ts";
 import { claim } from "./plugin.ts";
 import { asyncChildren } from "./script.ts";
 import { resolveImport } from "./resolve.ts";
@@ -222,7 +223,7 @@ export function readComponent(file: string, root: string, name = basename(file, 
       );
       const base = tyOfTs(comp, t, comp.structs);
       if (!required && absence(base) === "null") fail(comp, "FV0306", `a \`defineModel\` of \`T | null\` that is not \`required\` may be absent, which is \`undefined\`, or \`null\`: ${ONE_NOTHING}`, call);
-      comp.props.fields.push({ js: named, rust: snake(named), ty: required ? base : opt(base) });
+      comp.props.fields.push({ js: named, rust: snake(named), ty: enumField(comp, comp.name, named, call, required ? base : opt(base)) });
       comp.models.set(d.id.name, named);
     }
   }

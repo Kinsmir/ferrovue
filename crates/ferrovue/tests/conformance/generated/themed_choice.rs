@@ -8,14 +8,110 @@ use ferrovue as fv;
 /// The component's name, as `data-island` carries it.
 pub const NAME: &str = "ThemedChoice";
 
+/// `kind` in `ThemedChoice.vue`: `"scope" | "button"`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub enum ThemedChoiceKind {
+    #[serde(rename = "scope")]
+    Scope,
+    #[serde(rename = "button")]
+    Button,
+}
+
+impl ThemedChoiceKind {
+    /// Every member, in the order the union declares them.
+    pub const ALL: [ThemedChoiceKind; 2] = [ThemedChoiceKind::Scope, ThemedChoiceKind::Button];
+
+    /// The string literal this member stands for.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            ThemedChoiceKind::Scope => "scope",
+            ThemedChoiceKind::Button => "button",
+        }
+    }
+}
+
+impl std::fmt::Display for ThemedChoiceKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl std::str::FromStr for ThemedChoiceKind {
+    type Err = ferrovue::ParseUnionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "scope" => Ok(ThemedChoiceKind::Scope),
+            "button" => Ok(ThemedChoiceKind::Button),
+            _ => Err(ferrovue::ParseUnionError::new("ThemedChoiceKind", s, &["scope", "button"])),
+        }
+    }
+}
+
+impl TryFrom<&str> for ThemedChoiceKind {
+    type Error = ferrovue::ParseUnionError;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        s.parse()
+    }
+}
+
+/// `tag` in `ThemedChoice.vue`: `"div" | "aside"`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub enum ThemedChoiceTag {
+    #[serde(rename = "div")]
+    Div,
+    #[serde(rename = "aside")]
+    Aside,
+}
+
+impl ThemedChoiceTag {
+    /// Every member, in the order the union declares them.
+    pub const ALL: [ThemedChoiceTag; 2] = [ThemedChoiceTag::Div, ThemedChoiceTag::Aside];
+
+    /// The string literal this member stands for.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            ThemedChoiceTag::Div => "div",
+            ThemedChoiceTag::Aside => "aside",
+        }
+    }
+}
+
+impl std::fmt::Display for ThemedChoiceTag {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl std::str::FromStr for ThemedChoiceTag {
+    type Err = ferrovue::ParseUnionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "div" => Ok(ThemedChoiceTag::Div),
+            "aside" => Ok(ThemedChoiceTag::Aside),
+            _ => Err(ferrovue::ParseUnionError::new("ThemedChoiceTag", s, &["div", "aside"])),
+        }
+    }
+}
+
+impl TryFrom<&str> for ThemedChoiceTag {
+    type Error = ferrovue::ParseUnionError;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        s.parse()
+    }
+}
+
 /// The props `ThemedChoice.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
     #[serde(rename = "kind")]
-    pub kind: Cow<'a, str>,
+    pub kind: ThemedChoiceKind,
     #[serde(rename = "tag")]
-    pub tag: Cow<'a, str>,
+    pub tag: ThemedChoiceTag,
     #[serde(rename = "label")]
     pub label: Cow<'a, str>,
     #[serde(rename = "theme")]
@@ -24,8 +120,8 @@ pub struct Props<'a> {
 
 impl<'a> Props<'a> {
     /// Props with its required fields.
-    pub fn new(kind: impl Into<Cow<'a, str>>, tag: impl Into<Cow<'a, str>>, label: impl Into<Cow<'a, str>>, theme: impl Into<Cow<'a, str>>) -> Self {
-        Props { kind: kind.into(), tag: tag.into(), label: label.into(), theme: theme.into() }
+    pub fn new(kind: ThemedChoiceKind, tag: ThemedChoiceTag, label: impl Into<Cow<'a, str>>, theme: impl Into<Cow<'a, str>>) -> Self {
+        Props { kind, tag, label: label.into(), theme: theme.into() }
     }
 
 }
@@ -33,11 +129,11 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) {
-    out.reserve(68 + props.kind.len() + props.tag.len() + props.label.len() + props.theme.len());
+    out.reserve(68 + 6 + 5 + props.label.len() + props.theme.len());
     let fv_inherited = fv_provides;
     let fv_provides = super::provides::Provides { theme_key: Some(&props.theme), ..fv_inherited };
     out.push_str("<section>");
-    if &*props.kind == "scope" {
+    if props.kind == ThemedChoiceKind::Scope {
         super::theme_scope::render_scoped(out, &super::theme_scope::Props { theme: None }, super::theme_scope::Slots {
             default: Some(&|out: &mut String, fv_provides: super::provides::Provides<'_>| -> bool {
                 super::themed_button::render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed(&*format!("{} in scope", props.label)) }, fv_provides, "");
@@ -47,7 +143,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides:
     } else {
         super::themed_button::render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed(&*props.label) }, fv_provides, "");
     }
-    if &*props.kind == "scope" {
+    if props.kind == ThemedChoiceKind::Scope {
         super::theme_scope::render_scoped(out, &super::theme_scope::Props { theme: Some(std::borrow::Cow::Borrowed("dark")) }, super::theme_scope::Slots {
             default: Some(&|out: &mut String, fv_provides: super::provides::Provides<'_>| -> bool {
                 super::themed_button::render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed("slotted") }, fv_provides, "");
@@ -59,7 +155,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides:
         super::themed_button::render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed("slotted") }, fv_provides, "");
         out.push_str("</p>");
     }
-    let fv_tag1 = match &*props.tag { "div" => "div", _ => "aside" };
+    let fv_tag1 = match props.tag { ThemedChoiceTag::Div => "div", ThemedChoiceTag::Aside => "aside" };
     out.push('<');
     out.push_str(fv_tag1);
     out.push_str(" class=\"frame\">");
@@ -73,7 +169,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides:
     out.push_str("</");
     out.push_str(fv_tag1);
     out.push('>');
-    super::tag_heading::render_scoped(out, &super::tag_heading::Props { r#as: Some(std::borrow::Cow::Borrowed("h3")), text: std::borrow::Cow::Borrowed(&*props.label) }, super::tag_heading::Slots {
+    super::tag_heading::render_scoped(out, &super::tag_heading::Props { r#as: Some(super::tag_heading::TagHeadingAs::H3), text: std::borrow::Cow::Borrowed(&*props.label) }, super::tag_heading::Slots {
         default: Some(fv::Slot::new(&|out: &mut String| {
             super::themed_button::render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed("heading") }, fv_provides, "");
         })),

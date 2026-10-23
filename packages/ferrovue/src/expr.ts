@@ -1,4 +1,5 @@
-import { type Component, type N, type Scope, type Ty, type Val, absence, BOOL, fail, FLOAT, GenError, INT, isAscii, joinAbsence, joinTy, literalsOf, literalTy, nodeName, nothing, NULL, opt, placeOf, rustStr, sameTy, snake, STR, strTy, UNDEF, withAbsence } from "./model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, absence, BOOL, enumOf, enumPath, fail, FLOAT, GenError, INT, isAscii, joinAbsence, joinTy, literalsOf, literalTy, nodeName, nothing, NULL, opt, placeOf, rustStr, sameTy, snake, STR, strTy, UNDEF, variantPath, withAbsence } from "./model.ts";
+import { enumEquality, knownLiteral, refuseOutside } from "./enums.ts";
 import { CONFIG_FILE, ctx } from "./context.ts";
 import { lookupStruct, markHome, tyOfTs } from "./typescript.ts";
 import { claim } from "./plugin.ts";
@@ -116,6 +117,13 @@ export function fieldVal(comp: Component, base: string, ty: Ty, js: string, node
   const f = owner === comp ? found : { ...found, ty: markHome(found.ty, owner.name) };
   if (st!.slot) return { code: `${base}.${f.rust}`, ty: f.ty };
   const place = `${base}.${f.rust}`;
+  const def = enumOf(f.ty);
+  if (def !== undefined) {
+    const literal = f.dflt === undefined ? undefined : def.literals.find((l) => rustStr(l) === f.dflt);
+    const variant = f.ty.k !== "opt" ? place : literal !== undefined ? `${place}.unwrap_or(${variantPath(comp, def, literal)})` : place;
+    const read = f.ty.k === "opt" && literal !== undefined ? f.ty.of : f.ty;
+    return { code: read.k === "opt" ? `${place}.map(${enumPath(comp, def)}::as_str)` : `${atom(variant)}.as_str()`, ty: read, variant };
+  }
   if (f.dflt !== undefined && f.ty.k === "opt") {
     const of = f.ty.of;
     if (of.k === "str") return { code: `${place}.as_deref().unwrap_or(${f.dflt})`, ty: of };
@@ -611,6 +619,12 @@ export function expr(s: Scope, n: N): Val {
         if (a.ty.of.k === "list" && b.ty.k === "list" && (untypedEmpty(b) || (sameTy(a.ty.of, b.ty) && !b.code.startsWith("[")))) {
           return { code: `${atom(a.code)}${a.held !== undefined ? "" : ".map(|v| &v[..])"}.unwrap_or(${untypedEmpty(b) ? "&[]" : sliced(b)})`, ty: untypedEmpty(b) ? a.ty.of : joinTy(a.ty.of, b.ty), slice: true, ...loneOf(a, b) };
         }
+        const def = a.variant !== undefined ? enumOf(a.ty) : undefined;
+        const fallback = def === undefined ? undefined : knownLiteral(b);
+        if (def !== undefined && fallback !== undefined && def.literals.includes(fallback)) {
+          const variant = `${atom(a.variant!)}.unwrap_or(${variantPath(comp, def, fallback)})`;
+          return { code: `${variant}.as_str()`, ty: a.ty.of, variant, ...loneOf(a, b) };
+        }
         if (a.held !== undefined && b.ty.k === "str") return { code: `&*${atom(a.held)}.unwrap_or(${asCow(b)})`, ty: STR, ...loneOf(a, b) };
         if (a.ty.of.k === "str" && b.ty.k === "str" && isTemporary(b)) {
           return { code: `&*${atom(a.code)}.map(std::borrow::Cow::<str>::Borrowed).unwrap_or(${asCow(b)})`, ty: STR, ...loneOf(a, b) };
@@ -690,8 +704,11 @@ export function expr(s: Scope, n: N): Val {
       const strish = (t: Ty) => t.k === "str" || (t.k === "opt" && t.of.k === "str");
       if (strish(a.ty) && strish(b.ty)) meet(comp, a, b, `\`${n.operator}\``, n, "equal");
       claim((p) => p.values?.refuseEquality?.(s, a, b, n));
+      refuseOutside(comp, a, b, n);
       const own = claim((p) => p.values?.equals?.(a, b));
+      const byEnum = enumEquality(comp, a, b);
       if (own !== undefined) eq = own;
+      else if (byEnum !== null) eq = byEnum;
       else if ((nothing(b.ty) && a.ty.k === "opt") || (nothing(a.ty) && b.ty.k === "opt")) {
         const [v, literal] = a.ty.k === "opt" ? [a, b] : [b, a];
         checkNullTest(s, { target: n, literal: literal.ty.k === "null" ? "null" : "undefined", strict: true, is: n.operator === "===" }, v);

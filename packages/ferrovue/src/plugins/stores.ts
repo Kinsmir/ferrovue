@@ -72,7 +72,7 @@ function readStores(root: string, dir: string): void {
       run.files.set(d.id.name, comp.file);
     }
     for (const d of interfaces) {
-      const st = structOf(comp, d.id.name, d.body.body, run.structs);
+      const st = structOf(comp, d.id.name, d.body.body, run.structs, false, false, false);
       for (const field of st.fields) field.ty = markStore(field.ty);
       run.structs.set(d.id.name, st);
     }

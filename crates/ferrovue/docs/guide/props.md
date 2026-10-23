@@ -12,8 +12,8 @@ a public field per prop, and a struct for every interface or object type alias t
 | `number` | `i64` | `i64` |
 | `Float` (from `ferrovue/types`) | `f64` | `f64` |
 | `boolean` | `bool` | `bool` |
-| `"sm" \| "md" \| "lg"` | `Cow<'a, str>` | as `string` |
-| `enum Tone { Calm = "calm" }`, `enum Rank { Low, High }` | `Cow<'a, str>`, `i64`: the type of its members' values | as `string`, as `number` |
+| `"sm" \| "md" \| "lg"`, `type Size = "sm" \| "md" \| "lg"` | an enum generated for the union: `Size`, or `ButtonSize` for `size` of `Button.vue` written in place. See [Unions of string literals](#unions-of-string-literals) | the enum, `Size::Md` |
+| `enum Tone { Calm = "calm" }`, `enum Rank { Low, High }` | an enum `Tone` with the variant `Calm`, as a union of its values; `i64` for numbers | the enum, as `number` |
 | `string[]`, `Array<string>`, `readonly string[]` | `Vec<Cow<'a, str>>` | `impl IntoIterator<Item = impl Into<Cow<'a, str>>>` |
 | `number[]`, `Row[]`, … | `Vec<i64>`, `Vec<Row<'a>>`, … | the `Vec` |
 | `interface Row { … }`, `type Row = { … }` | a struct `Row<'a>` beside `Props`, or in `types.rs` when imported from a `.ts` file | the struct |
@@ -29,8 +29,7 @@ A `number` is an integer on the server, which is what most props are: counts, id
 a prop that may hold a fraction as `Float`. [`numbers`](crate::guide::numbers) explains how both are
 computed and written.
 
-A string-literal union is a plain string in Rust: the TypeScript compiler checks the client's
-values, but nothing checks what Rust passes. A value outside the union renders as given.
+A union of string literals is an enum, so Rust holds the values TypeScript allows and no other.
 
 Strings are `Cow`s so that props can borrow from what the request already holds, and so that a
 parent handing an object to a child copies only pointers.
@@ -46,6 +45,159 @@ An optional prop is an `Option`, `None` unless its setter is called. A default f
 or a destructured default (`const { size = "md" } = defineProps<…>()`) is applied while rendering, so
 the field stays `None` and the island's JSON leaves it out, as Vue's would. An optional `boolean`
 that is absent renders as `false`, which is the cast Vue applies.
+
+# Unions of string literals
+
+A prop, a `defineModel` or a field of an interface typed as a union of two or more string literals
+is a Rust enum the compiler generates, with a variant for each literal: `size: "sm" | "md" | "lg"`
+is `Option<ButtonSize>` for an optional `size` of `Button.vue`, and `Size` for `size: Size` with
+`type Size = "sm" | "md" | "lg"`. A string `enum` is one too, its variants named after its members.
+A Rust caller can then build only the values TypeScript allows.
+
+| The union is | The enum is named | and written to |
+|---|---|---|
+| a `type` alias, or a string `enum` | the alias or the `enum`: `Size` | the module of the file that declares it: `types.rs` for a `.ts` file, so components that import it share one enum; the component's module for a component's own |
+| written in place in `defineProps<{ … }>()` | the component and the prop in PascalCase: `ButtonSize` | the component's module |
+| written in place in an interface's field | the interface and the field: `RowKind` | where the interface is written |
+
+Each variant is the literal's letters and digits in PascalCase: a word starts at each character
+that is not one, and at a lower-case letter followed by an upper-case one; each word is its first
+letter upper-cased and the rest lower-cased. `"sm"` is `Sm`, `"x-large"` is `XLarge`, `"XL"` is
+`Xl`, `"fooBar"` is `FooBar`, `"2xl"` is `V2xl` (a name starts with a letter), `"_self"` is `Self_`
+(`Self` is a keyword), and `""` is `Empty`. A literal with no letter or digit (`"+"`) is refused
+([FV0323](crate::guide::error_codes#fv0323)), and so are two that give one name (`"md"` and `"MD"`,
+[FV0324](crate::guide::error_codes#fv0324)). An enum named as another type of its module, a struct,
+another union of another file or a Rust prelude type, is refused too
+([FV0325](crate::guide::error_codes#fv0325)): name the union with a `type` alias of its own. Two
+`.ts` files that declare one union by one name, with the same literals in the same order, share its
+enum.
+
+```rust
+# mod button {
+# /// `size` in `Button.vue`: `"sm" | "md" | "lg"`.
+# #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+# pub enum ButtonSize {
+#     #[serde(rename = "sm")]
+#     Sm,
+#     #[serde(rename = "md")]
+#     Md,
+#     #[serde(rename = "lg")]
+#     Lg,
+# }
+#
+# impl ButtonSize {
+#     /// Every member, in the order the union declares them.
+#     pub const ALL: [ButtonSize; 3] = [ButtonSize::Sm, ButtonSize::Md, ButtonSize::Lg];
+#
+#     /// The string literal this member stands for.
+#     pub const fn as_str(self) -> &'static str {
+#         match self {
+#             ButtonSize::Sm => "sm",
+#             ButtonSize::Md => "md",
+#             ButtonSize::Lg => "lg",
+#         }
+#     }
+# }
+#
+# impl std::fmt::Display for ButtonSize {
+#     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+#         f.write_str(self.as_str())
+#     }
+# }
+#
+# impl std::str::FromStr for ButtonSize {
+#     type Err = ferrovue::ParseUnionError;
+#
+#     fn from_str(s: &str) -> Result<Self, Self::Err> {
+#         match s {
+#             "sm" => Ok(ButtonSize::Sm),
+#             "md" => Ok(ButtonSize::Md),
+#             "lg" => Ok(ButtonSize::Lg),
+#             _ => Err(ferrovue::ParseUnionError::new("ButtonSize", s, &["sm", "md", "lg"])),
+#         }
+#     }
+# }
+#
+# impl TryFrom<&str> for ButtonSize {
+#     type Error = ferrovue::ParseUnionError;
+#
+#     fn try_from(s: &str) -> Result<Self, Self::Error> {
+#         s.parse()
+#     }
+# }
+#
+# /// The props `Button.vue` declares.
+# #[derive(Debug, Clone, Default, serde::Serialize)]
+# pub struct Props {
+#     #[serde(rename = "size", default, skip_serializing_if = "Option::is_none")]
+#     pub size: Option<ButtonSize>,
+# }
+#
+# impl Props {
+#     /// Props with nothing set, every optional one absent.
+#     pub fn new() -> Self {
+#         Props { size: None }
+#     }
+#
+#     /// Set `size`, which is absent otherwise.
+#     pub fn size(mut self, size: ButtonSize) -> Self {
+#         self.size = Some(size);
+#         self
+#     }
+# }
+# }
+// Button.vue:
+//   defineProps<{ size?: "sm" | "md" | "lg" }>();
+use button::{ButtonSize, Props};
+
+let props = Props::new().size(ButtonSize::Md);
+assert_eq!(serde_json::to_string(&props).unwrap(), r#"{"size":"md"}"#);
+
+// A string from a request, a database or a form, checked once where it enters.
+let size: ButtonSize = "lg".parse()?;
+assert_eq!(size.as_str(), "lg");
+assert_eq!(size.to_string(), "lg");
+assert_eq!(ButtonSize::ALL, [ButtonSize::Sm, ButtonSize::Md, ButtonSize::Lg]);
+
+let e = ButtonSize::try_from("xl").unwrap_err();
+assert_eq!(e.to_string(), "`xl` is not one of the members of `ButtonSize`: `sm`, `md`, `lg`");
+assert_eq!(e.members(), ["sm", "md", "lg"]);
+# Ok::<(), ferrovue::ParseUnionError>(())
+```
+
+Each enum derives `Debug`, `Clone`, `Copy`, `PartialEq`, `Eq`, `Hash`, `serde::Serialize` and
+`serde::Deserialize` (always, so a handler may read one from a query or a JSON body), and serde
+names each variant by its literal: the island's JSON, `data-props` and the state a page sends hold
+the literal, and JSON that holds a string outside the union does not deserialise ("unknown variant
+`xl`, expected one of `sm`, `md`, `lg`"), fixtures included. `as_str()` gives the literal, `ALL`
+every variant in the order the union declares them, `Display` writes the literal, and `FromStr` and
+`TryFrom<&str>` parse one, failing with [`ParseUnionError`](crate::ParseUnionError). An enum whose
+variants all share a word gets `#[allow(clippy::enum_variant_names)]`.
+
+The template reads such a value as the string it stands for: `{{ size }}`, an attribute, `:class`,
+`:style`, a template literal and every string method go through `as_str()`. Where an enum translates
+it better, the compiler uses the enum:
+
+- `size === 'md'` and `!==` compare variants (`props.size == Some(ButtonSize::Md)`), as do a
+  `switch` over it and `v-if` / `v-else-if` chains; a literal outside the union is refused
+  ([FV0637](crate::guide::error_codes#fv0637)), as TypeScript refuses it;
+- a [lookup table](#lookup-tables) and `<component :is>` read by it are a `match` over its
+  variants, each named, with no catch-all arm;
+- `size ?? 'md'` and a default from `withDefaults` are `props.size.unwrap_or(ButtonSize::Md)`, still
+  the enum, and a default outside the union is refused
+  ([FV0322](crate::guide::error_codes#fv0322)); `v-if="size"` narrows it to the variant;
+- a `computed` that returns the value as it is (`computed(() => props.size)`) holds the enum;
+- handed to a child's prop of the same union, the enum is copied; to one of another union that holds
+  all its members, a `match` maps one to the other; to a `string` prop, it is `as_str()`. A literal of
+  the union, a `?:` of members and a `computed` typed as the union reach a union prop as its variant.
+  A literal outside it, and a value typed `string`, are refused
+  ([FV0515](crate::guide::error_codes#fv0515)).
+
+A single literal (`kind: "note"`), a union with `string` (`"sm" | string`, which TypeScript widens
+to `string`) and integer literals (`1 | 2 | 3`, an `i64`) stay as they were. So do lists and records
+of a union (`Size[]` is `Vec<Cow<'a, str>>`), and the fields of a store's own interfaces in its
+`stores` file, whose state derives `Default` under `cfg(test)`; a shared type a store holds has its
+enums.
 
 # Nullable props
 
@@ -387,7 +539,9 @@ An interface imported from a `.ts` file is written once, to `types.rs`, so that 
 a value to one another agree on its type: `UserCard.vue` and `UserList.vue` importing `User` from
 `types/models.ts` both use `super::types::User<'a>`. A type imported from another component's `.vue`
 file is that component's struct (`super::data_list::Row<'a>`), and one imported from a store's file
-is the struct in `stores.rs`.
+is the struct in `stores.rs`. A union of string literals a `.ts` file declares as a `type` alias or
+an `enum` is written once to `types.rs` too, as its [enum](#unions-of-string-literals)
+(`super::types::Size`), so a parent hands its value to a child as it is.
 
 A parent may build an object prop from an object literal, `:user="{ id, name, roles: [] }"`, or a
 list of them from `.map()`, `:rows="items.map((x) => ({ id: x.id, label: x.name }))"`: each literal
@@ -518,10 +672,17 @@ const PAD = { sm: "p-1", md: "p-2", lg: "p-4" } as const;
 ```
 
 ```rust
-# let props_size = "md";
-let class = match props_size { "sm" => "p-1", "md" => "p-2", _ => "p-4" };
+# #[derive(Clone, Copy)]
+# enum Size { Sm, Md, Lg }
+# struct Props { size: Size }
+# let props = Props { size: Size::Md };
+let class = match props.size { Size::Sm => "p-1", Size::Md => "p-2", Size::Lg => "p-4" };
 # assert_eq!(class, "p-2");
 ```
+
+A key of a union of string literals is its enum, so the `match` names every variant. A key the
+compiler holds as a string (a `computed` that builds it, a `?:` of literals) is matched as a string,
+and so is an integer union.
 
 Each member reads the value the object holds for it: a string, a number, a boolean, `null`, a list
 of them, or an object read on by field (`THEME[tone].fg`, `THEME[tone].weight`). The values of
@@ -535,8 +696,9 @@ A key whose value may be absent reads the object once it is narrowed: `kind && I
 `undefined` where `kind` is, and `ICONS[kind]` where it is not, when every member of `kind` is
 truthy (no `""` or `0`).
 
-The key's type is trusted, as it is for `<component :is>`: a value outside it, which a TypeScript
-caller cannot pass, reads the last member's value. A key typed `string` or `number` is refused: a
+The key's type is trusted, as it is for `<component :is>`. An enum holds its members alone; an
+integer key outside its union, which a TypeScript caller cannot pass, reads the last member's
+value, and so does a string key the compiler holds as a string. A key typed `string` or `number` is refused: a
 plain object holds the fields of its prototype too (`toString`, `constructor`, `__proto__`), which
 a key could name. For the same reason a member that names one of them must be a key of the object,
 and an object literal may not set its prototype with `__proto__:`.

@@ -9,7 +9,7 @@
 // it needs.
 #![allow(dead_code)]
 
-ferrovue::__compat!(4);
+ferrovue::__compat!(5);
 
 pub mod blank;
 pub mod cart_badge;
@@ -22,6 +22,7 @@ pub mod picker;
 pub mod posted;
 pub mod rated;
 pub mod shell;
+pub mod sized;
 pub mod theme_scope;
 pub mod themed_button;
 pub mod translated;
@@ -173,6 +174,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             shell::render(&mut out, &props, shell::Slots { default: fixture.slot("default").map(|_| s_default), router_view: ferrovue::Slot::new(&s_router_view) }, &route, &state, &i18n, &teleports, provides::Provides::default(), &head);
             teleports_into(&mut out, teleports);
             head_into(&mut out, &head);
+        }
+        "Sized" => {
+            let props: sized::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            sized::render(&mut out, &props);
         }
         "ThemeScope" => {
             let props: theme_scope::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

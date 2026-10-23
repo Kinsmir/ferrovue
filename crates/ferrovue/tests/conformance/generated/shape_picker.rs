@@ -13,7 +13,7 @@ pub const NAME: &str = "ShapePicker";
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
     #[serde(rename = "shape")]
-    pub shape: Cow<'a, str>,
+    pub shape: super::types::Shape,
     #[serde(rename = "label")]
     pub label: Cow<'a, str>,
     #[serde(rename = "boxed")]
@@ -22,8 +22,8 @@ pub struct Props<'a> {
 
 impl<'a> Props<'a> {
     /// Props with its required fields.
-    pub fn new(shape: impl Into<Cow<'a, str>>, label: impl Into<Cow<'a, str>>, boxed: bool) -> Self {
-        Props { shape: shape.into(), label: label.into(), boxed }
+    pub fn new(shape: super::types::Shape, label: impl Into<Cow<'a, str>>, boxed: bool) -> Self {
+        Props { shape, label: label.into(), boxed }
     }
 
 }
@@ -31,9 +31,9 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(207 + props.shape.len() + props.label.len());
+    out.reserve(207 + 6 + props.label.len());
     out.push_str("<div class=\"picker\" data-v-93b28aa1>");
-    if &*props.shape == "circle" {
+    if props.shape == super::types::Shape::Circle {
         super::shape_circle::render_scoped(out, &super::shape_circle::Props { label: std::borrow::Cow::Borrowed(&*props.label) }, super::shape_circle::Slots {
             default: Some(fv::Slot::slotted(&|out: &mut String, _fv_sid1: &str| -> bool {
                 let mut filled = false;
@@ -55,26 +55,26 @@ pub fn render(out: &mut String, props: &Props<'_>) {
             corner: None,
         }, &fv::Attrs::new(&[("class", fv::Attr::str("picked")), ("data-form", fv::Attr::str("computed"))], " data-v-93b28aa1"));
     }
-    match &*props.shape {
-        "circle" => {
+    match props.shape {
+        super::types::Shape::Circle => {
             super::shape_circle::render_scoped(out, &super::shape_circle::Props { label: std::borrow::Cow::Borrowed(&*props.label) }, super::shape_circle::Slots {
                 default: None,
             }, &fv::Attrs::new(&[("data-form", fv::Attr::str("local"))], " data-v-93b28aa1"));
         }
-        _ => {
+        super::types::Shape::Square => {
             super::shape_square::render_scoped(out, &super::shape_square::Props { label: std::borrow::Cow::Borrowed(&*props.label), size: None }, super::shape_square::Slots {
                 default: None,
                 corner: None,
             }, &fv::Attrs::new(&[("data-form", fv::Attr::str("local"))], " data-v-93b28aa1"));
         }
     }
-    match &*props.shape {
-        "circle" => {
+    match props.shape {
+        super::types::Shape::Circle => {
             super::shape_circle::render_scoped(out, &super::shape_circle::Props { label: std::borrow::Cow::Borrowed(&*props.label) }, super::shape_circle::Slots {
                 default: None,
             }, &fv::Attrs::new(&[("size", fv::Attr::Int(3i64)), ("data-form", fv::Attr::str("imported"))], " data-v-93b28aa1"));
         }
-        _ => {
+        super::types::Shape::Square => {
             super::shape_square::render_scoped(out, &super::shape_square::Props { label: std::borrow::Cow::Borrowed(&*props.label), size: Some(3i64) }, super::shape_square::Slots {
                 default: None,
                 corner: Some(fv::Slot::new(&|out: &mut String| {
@@ -111,7 +111,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         fv::escape_into(out, &props.label);
         out.push_str("</em>");
     }
-    if &*props.shape == "circle" {
+    if props.shape == super::types::Shape::Circle {
         super::shape_circle::render_scoped(out, &super::shape_circle::Props { label: std::borrow::Cow::Borrowed(&*props.label) }, super::shape_circle::Slots {
             default: None,
         }, &fv::Attrs::scoped(" data-v-93b28aa1"));
@@ -121,13 +121,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
             corner: None,
         }, &fv::Attrs::scoped(" data-v-93b28aa1"));
     }
-    match &*props.shape {
-        "circle" => {
+    match props.shape {
+        super::types::Shape::Circle => {
             super::shape_circle::render_scoped(out, &super::shape_circle::Props { label: std::borrow::Cow::Borrowed(&*props.label) }, super::shape_circle::Slots {
                 default: None,
             }, &fv::Attrs::scoped(" data-v-93b28aa1"));
         }
-        _ => {
+        super::types::Shape::Square => {
             super::shape_square::render_scoped(out, &super::shape_square::Props { label: std::borrow::Cow::Borrowed(&*props.label), size: None }, super::shape_square::Slots {
                 default: None,
                 corner: None,
@@ -152,7 +152,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
             true
         })),
     }, &fv::Attrs::scoped(" data-v-93b28aa1"));
-    super::shape_root::render_scoped(out, &super::shape_root::Props { shape: std::borrow::Cow::Borrowed(&*props.shape), label: std::borrow::Cow::Borrowed(&*props.label) }, super::shape_root::Slots {
+    super::shape_root::render_scoped(out, &super::shape_root::Props { shape: props.shape, label: std::borrow::Cow::Borrowed(&*props.label) }, super::shape_root::Slots {
         default: Some(fv::Slot::slotted(&|out: &mut String, fv_sid3: &str| -> bool {
             if props.boxed {
                 out.push_str("<i data-v-93b28aa1");

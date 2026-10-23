@@ -21,6 +21,10 @@ export function panicky(code: string): boolean {
  * whether the `let` owns what a read borrows (a `String`, a `Cow`, a `Vec`). */
 export function bindingOf(v: Val): { init: string; read: (at: string) => Val; owned: boolean } {
   const lone = v.lone ? { lone: true } : {};
+  if (v.variant !== undefined) {
+    const optional = v.ty.k === "opt";
+    return { init: bare(v.variant), read: (at) => ({ code: optional ? `${at}.map(|v| v.as_str())` : `${at}.as_str()`, ty: v.ty, variant: at, ...lone }), owned: false };
+  }
   if (v.owned) return { init: bare(v.code), read: (at) => ({ code: v.ty.k === "opt" ? `${at}.as_ref()` : at, ty: v.ty, ...lone }), owned: true };
   if (v.slice) return { init: bare(v.code), read: (at) => ({ code: at, ty: v.ty, slice: true, ...lone }), owned: false };
   if (v.ty.k === "list" && v.iter !== undefined) return { init: collected(v), read: (at) => heldList(at, v.ty.k === "list" ? v.ty.of : v.ty, v.lone), owned: true };
@@ -396,6 +400,7 @@ export function expressionBodied(comp: Component, fn: N): N {
 function simple(v: Val): boolean {
   if (v.iter !== undefined || v.held !== undefined || v.format !== undefined) return false;
   if (nothing(v.ty)) return true;
+  if (v.variant !== undefined) return /^[A-Za-z_]\w*(?:\.\w+)*$/.test(v.variant);
   return /^(?:&\*?|\*)?[A-Za-z_]\w*(?:\.\w+)*$/.test(v.code) || /^"(?:[^"\\]|\\.)*"$/.test(v.code) || /^-?\d[\w.]*$/.test(v.code);
 }
 

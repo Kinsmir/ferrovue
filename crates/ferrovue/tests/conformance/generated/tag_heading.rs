@@ -8,12 +8,64 @@ use ferrovue as fv;
 /// The component's name, as `data-island` carries it.
 pub const NAME: &str = "TagHeading";
 
+/// `as` in `TagHeading.vue`: `"h1" | "h2" | "h3"`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub enum TagHeadingAs {
+    #[serde(rename = "h1")]
+    H1,
+    #[serde(rename = "h2")]
+    H2,
+    #[serde(rename = "h3")]
+    H3,
+}
+
+impl TagHeadingAs {
+    /// Every member, in the order the union declares them.
+    pub const ALL: [TagHeadingAs; 3] = [TagHeadingAs::H1, TagHeadingAs::H2, TagHeadingAs::H3];
+
+    /// The string literal this member stands for.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            TagHeadingAs::H1 => "h1",
+            TagHeadingAs::H2 => "h2",
+            TagHeadingAs::H3 => "h3",
+        }
+    }
+}
+
+impl std::fmt::Display for TagHeadingAs {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl std::str::FromStr for TagHeadingAs {
+    type Err = ferrovue::ParseUnionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "h1" => Ok(TagHeadingAs::H1),
+            "h2" => Ok(TagHeadingAs::H2),
+            "h3" => Ok(TagHeadingAs::H3),
+            _ => Err(ferrovue::ParseUnionError::new("TagHeadingAs", s, &["h1", "h2", "h3"])),
+        }
+    }
+}
+
+impl TryFrom<&str> for TagHeadingAs {
+    type Error = ferrovue::ParseUnionError;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        s.parse()
+    }
+}
+
 /// The props `TagHeading.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
     #[serde(rename = "as", default, skip_serializing_if = "Option::is_none")]
-    pub r#as: Option<Cow<'a, str>>,
+    pub r#as: Option<TagHeadingAs>,
     #[serde(rename = "text")]
     pub text: Cow<'a, str>,
 }
@@ -25,8 +77,8 @@ impl<'a> Props<'a> {
     }
 
     /// Set `as`, which is absent otherwise.
-    pub fn r#as(mut self, r#as: impl Into<Cow<'a, str>>) -> Self {
-        self.r#as = Some(r#as.into());
+    pub fn r#as(mut self, r#as: TagHeadingAs) -> Self {
+        self.r#as = Some(r#as);
         self
     }
 }
@@ -47,8 +99,8 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
 /// [`render`], with the attributes a parent passes beyond the props, and the scope ids it hands the root.
 #[doc(hidden)]
 pub fn render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_attrs: &fv::Attrs<'_>) {
-    out.reserve(40 + props.r#as.as_deref().map_or(0, str::len) + props.text.len());
-    let fv_tag1 = match props.r#as.as_deref().unwrap_or("h2") { "h1" => "h1", "h2" => "h2", _ => "h3" };
+    out.reserve(40 + 2 + props.text.len());
+    let fv_tag1 = match props.r#as.unwrap_or(TagHeadingAs::H2) { TagHeadingAs::H1 => "h1", TagHeadingAs::H2 => "h2", TagHeadingAs::H3 => "h3" };
     out.push('<');
     out.push_str(fv_tag1);
     if fv_attrs.is_empty() {

@@ -6,6 +6,58 @@
 
 use std::borrow::Cow;
 
+/// `Size` in `types/models.ts`: `"sm" | "md" | "lg"`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub enum Size {
+    #[serde(rename = "sm")]
+    Sm,
+    #[serde(rename = "md")]
+    Md,
+    #[serde(rename = "lg")]
+    Lg,
+}
+
+impl Size {
+    /// Every member, in the order the union declares them.
+    pub const ALL: [Size; 3] = [Size::Sm, Size::Md, Size::Lg];
+
+    /// The string literal this member stands for.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Size::Sm => "sm",
+            Size::Md => "md",
+            Size::Lg => "lg",
+        }
+    }
+}
+
+impl std::fmt::Display for Size {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl std::str::FromStr for Size {
+    type Err = ferrovue::ParseUnionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "sm" => Ok(Size::Sm),
+            "md" => Ok(Size::Md),
+            "lg" => Ok(Size::Lg),
+            _ => Err(ferrovue::ParseUnionError::new("Size", s, &["sm", "md", "lg"])),
+        }
+    }
+}
+
+impl TryFrom<&str> for Size {
+    type Error = ferrovue::ParseUnionError;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        s.parse()
+    }
+}
+
 /// `Owner` in `types/models.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]

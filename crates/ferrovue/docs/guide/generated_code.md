@@ -13,11 +13,12 @@ an application writes against them keeps compiling. That is:
 - the files of the output directory and the module names they give (`DataList.vue` is
   `data_list`, `pages/books/[id].vue` is `books_id`), and the version check at the top of `mod.rs`;
 - in each component module: `NAME`; `Props`, its public fields and, with `builders` on (the
-  default), its `new` and its setters; the structs of local types, with the same; `Slots`, each
-  `…SlotProps` and each `…Slot`; `render`, with its parameters in the order
-  [below](#render-and-its-parameters); `html`; and, for a component that renders from its props
-  alone, `island`, `into_html` and `into_island`;
-- `types.rs`'s structs and constants, `route_table.rs`'s `ROUTES`, `PATHS`, `BASE` and `router()`,
+  default), its `new` and its setters; the structs of local types, with the same; the enums of its
+  unions of string literals, with their names, variants, `ALL`, `as_str`, `Display`, `FromStr` and
+  `TryFrom<&str>`; `Slots`, each `…SlotProps` and each `…Slot`; `render`, with its parameters in the
+  order [below](#render-and-its-parameters); `html`; and, for a component that renders from its
+  props alone, `island`, `into_html` and `into_island`;
+- `types.rs`'s structs, enums and constants, `route_table.rs`'s `ROUTES`, `PATHS`, `BASE` and `router()`,
   `stores.rs`'s state structs and `Stores`, `i18n.rs`'s `LOCALE`, `FALLBACK`, `LOCALES` and
   `i18n(locale)`, `provides.rs`'s `Provides`, and `twins.rs`'s `…Props`, `…Slots` and `…Render`;
 - the derives the tables below list, which an application relies on to copy, print and serialise
@@ -42,7 +43,7 @@ Everything in the configured `out` directory is replaced on each run.
 |---|---|---|
 | `mod.rs` | always | The [version check](#the-version-check), one `pub mod` per file below, and a `#[cfg(test)]` `render_json` for a project's conformance tests |
 | `<component>.rs` | one per `.vue` file, pages included | The component's types and renderers: `DataList.vue` becomes `data_list.rs`, and the page `books/[id].vue` becomes `books_id.rs` |
-| `types.rs` | the server render reaches a type or a constant exported from a `.ts` file | The shared types the render reaches (the types of props and of their fields, of provided and injected values, of store state and of twins' props), in the order their files declare them and written once so components passing them to one another agree on them, and each constant a template reads, as a `const`. See [shared types](crate::guide::props#shared-types) |
+| `types.rs` | the server render reaches a type or a constant exported from a `.ts` file | The shared types the render reaches (the types of props and of their fields, of provided and injected values, of store state and of twins' props, and the enums of the unions of string literals they hold), in the order their files declare them and written once so components passing them to one another agree on them, and each constant a template reads, as a `const`. See [shared types](crate::guide::props#shared-types) |
 | `route_table.rs` | `routes` or `router` is configured | `ROUTES`, `PATHS`, `BASE` and `router()`. See [`routing`](crate::guide::routing) |
 | `stores.rs` | `stores` is configured | A struct per store's state, named for its id (`cart` has `CartState`), the types it uses, and `Stores`, with a field per store. See [`pinia`](crate::guide::pinia) |
 | `i18n.rs` | `i18n` is configured | `LOCALE`, `FALLBACK`, every locale's messages in `LOCALES`, and `i18n(locale)`. See [`i18n`](crate::guide::i18n) |
@@ -71,10 +72,11 @@ crate that denies warnings. `mod.rs` allows one lint for all of them, at its top
 #![allow(dead_code)]
 ```
 
-The only other allow is `clippy::too_many_arguments`, on a function that takes more than seven
+The only other allows are `clippy::too_many_arguments`, on a function that takes more than seven
 arguments: a props constructor with more than seven required props, which takes one argument per
 required field, and a `render`, `render_scoped` or `html` that takes most of the parameters
-[below](#render-and-its-parameters).
+[below](#render-and-its-parameters); and `clippy::enum_variant_names`, on the enum of a union of
+string literals whose variants all share a word, as `"primary-button" | "link-button"` do.
 
 # The version check
 
@@ -82,7 +84,7 @@ Generated code calls the `ferrovue` crate, so the two must come from compatible 
 the `allow`, `mod.rs` names the version of generated code its compiler writes:
 
 ```rust
-ferrovue::__compat!(4);
+ferrovue::__compat!(5);
 ```
 
 The version is a number that changes only when generated code changes in a way the crate must
@@ -91,10 +93,10 @@ supporting something older generated code calls. Each crate accepts the versions
 stops the build at this line for any other, before the compiler reports anything else:
 
 ```text
-error: this module was generated as version 4 of ferrovue's generated code, and this `ferrovue` crate supports versions 2 to 3: use the `ferrovue` npm package and the `ferrovue` crate of one release, and run `ferrovue` to generate the module again
+error: this module was generated as version 5 of ferrovue's generated code, and this `ferrovue` crate supports versions 2 to 4: use the `ferrovue` npm package and the `ferrovue` crate of one release, and run `ferrovue` to generate the module again
  --> src/generated/mod.rs:12:1
    |
-12 | ferrovue::__compat!(4);
+12 | ferrovue::__compat!(5);
    | ^^^^^^^^^^^^^^^^^^^^^^
 ```
 
@@ -108,7 +110,11 @@ and writes into `data-props` with helpers the 0.8 crate lacks; the 0.9 crate sup
 and 3, since a module of version 2 calls nothing it changed. Version 4 adds
 [loaders](crate::guide::loaders): a component that awaits one takes a [`Loads`](crate::Loads),
 and the generated `loaders` module calls what the 0.9 crate lacks; the 0.10 crate supports
-versions 2 to 4. The upgrade pages, [`upgrading_to_0_10`](crate::guide::upgrading_to_0_10),
+versions 2 to 4. Version 5 adds the [enums of unions of string
+literals](crate::guide::props#unions-of-string-literals), whose `FromStr` fails with
+[`ParseUnionError`](crate::ParseUnionError), which the 0.10 crate lacks; the 0.11 crate supports
+versions 2 to 5. The upgrade pages, [`upgrading_to_0_11`](crate::guide::upgrading_to_0_11),
+[`upgrading_to_0_10`](crate::guide::upgrading_to_0_10),
 [`upgrading_to_0_9`](crate::guide::upgrading_to_0_9) and
 [`upgrading_to_0_8`](crate::guide::upgrading_to_0_8), give the steps for each release.
 
@@ -122,6 +128,7 @@ Every component module has, in this order:
 | Item | What it is |
 |---|---|
 | `NAME` | The component's name, `"DataList"`: what `data-island` carries, and what a [`Part`](crate::Part) of a [`Page`](crate::Page) records |
+| One enum per union of string literals its props and local types hold | `Size` for `type Size = "sm" \| "md"`, `ButtonSize` for `size: "sm" \| "md"` in `Button.vue`'s props: a variant per literal, `ALL`, `as_str()`, `Display`, `FromStr` and `TryFrom<&str>`, deriving `Debug`, `Clone`, `Copy`, `PartialEq`, `Eq`, `Hash`, `serde::Serialize` and `serde::Deserialize`. One that a `.ts` file declares is in `types.rs`. See [`props`](crate::guide::props#unions-of-string-literals) |
 | One struct per local `interface` or object `type` | `Row` for `export interface Row { … }`, with the same derives and builder as `Props` |
 | `Props<'a>` | The props, one public field per prop, deriving `Debug`, `Clone` and `serde::Serialize`, and `Default` when every prop is optional. With `builders` on, `Props::new` takes the required props in declaration order and each optional prop other than one named `new` has a setter of its name. See [`props`](crate::guide::props) |
 | `…SlotProps<'v>` and `…Slot<'s>` | For each scoped slot: what its outlet passes (with `<'v>` only when it borrows), and the closure type a parent supplies. A component that takes `fv_provides` has a `…Slot<'s>` for each of its slots, scoped or not, whose closure is also given the `Provides` its content renders with. See [`slots`](crate::guide::slots) |
@@ -356,28 +363,32 @@ writes the tag from the `match`:
 # }
 # pub mod icon {
 #     use std::borrow::Cow;
-#     pub struct Props<'a> { pub name: Cow<'a, str>, pub label: Cow<'a, str> }
+#     #[derive(Clone, Copy)]
+#     pub enum IconName { Star, Moon }
+#     pub struct Props<'a> { pub name: IconName, pub label: Cow<'a, str> }
 #     pub fn render(out: &mut String, props: &Props<'_>) {
-// <component :is="ICONS[name]" :label="label" />, where ICONS = { star: Star, moon: Moon }:
-match &*props.name {
-    "star" => {
+// <component :is="ICONS[name]" :label="label" />, where ICONS = { star: Star, moon: Moon }
+// and name: "star" | "moon":
+match props.name {
+    IconName::Star => {
         super::star::render(out, &super::star::Props { label: Cow::Borrowed(&props.label) });
     }
-    _ => {
+    IconName::Moon => {
         super::moon::render(out, &super::moon::Props { label: Cow::Borrowed(&props.label) });
     }
 }
 #     }
 # }
 # pub mod heading {
-#     use std::borrow::Cow;
 #     use ferrovue as fv;
-#     pub struct Props<'a> { pub r#as: Cow<'a, str> }
+#     #[derive(Clone, Copy)]
+#     pub enum HeadingAs { H1, H2 }
+#     pub struct Props { pub r#as: HeadingAs }
 #     pub struct Slots<'s> { pub default: Option<fv::Slot<'s>> }
-#     pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
+#     pub fn render(out: &mut String, props: &Props, fv_slots: Slots<'_>) {
 
 // <component :is="as" class="heading"><slot /></component>, where as: "h1" | "h2":
-let fv_tag1 = match &*props.r#as { "h1" => "h1", _ => "h2" };
+let fv_tag1 = match props.r#as { HeadingAs::H1 => "h1", HeadingAs::H2 => "h2" };
 out.push('<');
 out.push_str(fv_tag1);
 out.push_str(" class=\"heading\">");
@@ -390,16 +401,16 @@ out.push('>');
 # }
 # use generated::{heading, icon};
 # let mut out = String::new();
-# icon::render(&mut out, &icon::Props { name: "star".into(), label: "Night".into() });
-# icon::render(&mut out, &icon::Props { name: "sun".into(), label: "Day".into() });
+# icon::render(&mut out, &icon::Props { name: icon::IconName::Star, label: "Night".into() });
+# icon::render(&mut out, &icon::Props { name: icon::IconName::Moon, label: "Day".into() });
 # assert_eq!(out, r#"<i class="star">Night</i><i class="moon">Day</i>"#);
 # out.clear();
-# heading::render(&mut out, &heading::Props { r#as: "h1".into() }, heading::Slots { default: Some(ferrovue::Slot::new(&|out: &mut String| out.push_str("Hi"))) });
+# heading::render(&mut out, &heading::Props { r#as: heading::HeadingAs::H1 }, heading::Slots { default: Some(ferrovue::Slot::new(&|out: &mut String| out.push_str("Hi"))) });
 # assert_eq!(out, r#"<h1 class="heading"><!--[-->Hi<!--]--></h1>"#);
 ```
 
-The last choice is the `match`'s `_` arm: a prop's Rust type is a `&str`, so a value outside the
-union TypeScript declares renders as the last choice. Inside `<KeepAlive>` and `<Transition>` the
+A union of string literals is an [enum](crate::guide::props#unions-of-string-literals), so the
+`match` names each of its variants and holds no catch-all arm. Inside `<KeepAlive>` and `<Transition>` the
 choice renders as it does elsewhere, as on Vue's server.
 
 Vue's server renders an element `<component :is>` chooses from virtual nodes, by rules that differ

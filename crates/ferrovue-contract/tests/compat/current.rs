@@ -1,3 +1,3 @@
-ferrovue::__compat!(4);
+ferrovue::__compat!(5);
 
 fn main() {}

@@ -57,6 +57,9 @@ export interface Val {
   pick?: true;
   format?: { text: string; args: string[] };
   owned?: true;
+  /** For a value of a generated enum, the Rust expression of the enum (an `Option` of it when the
+   * value is optional), where `code` is its string. */
+  variant?: string;
 }
 
 export const STR: Ty = { k: "str" };
@@ -649,4 +652,41 @@ export function joinTy(a: Ty, b: Ty): Ty {
   if (mine === undefined || (a.k !== "str" && a.k !== "int")) return a.k === "str" && ASCII.has(a) && !ascii ? STR : a;
   const theirs = LITERALS.get(other);
   return theirs === undefined ? (ascii ? asciiTy() : { k: a.k }) : literalTy(a.k, [...new Set([...mine, ...theirs])]);
+}
+
+/** A Rust enum generated for a union of string literals. */
+export interface EnumDef {
+  name: string;
+  module: string;
+  literals: readonly string[];
+  variants: readonly string[];
+  home: Component;
+  node: N;
+  key: object;
+  /** What the source calls the union: its alias, or the field it is written in place for. */
+  what: string;
+}
+
+const ENUMS = new WeakMap<Ty, EnumDef>();
+
+/** The string type of a field whose Rust type is the generated enum `def`. */
+export function enumTy(def: EnumDef): Ty {
+  const ty = literalTy("str", def.literals);
+  ENUMS.set(ty, def);
+  return ty;
+}
+
+/** The generated enum a field's type is, or makes optional. */
+export function enumOf(ty: Ty): EnumDef | undefined {
+  return ENUMS.get(ty.k === "opt" ? ty.of : ty);
+}
+
+/** The path of a generated enum, from the module of `comp`. */
+export function enumPath(comp: Component, def: EnumDef): string {
+  return `${comp.module === def.module ? "" : `super::${def.module}::`}${def.name}`;
+}
+
+/** The path of the variant of `def` that stands for `literal`. */
+export function variantPath(comp: Component, def: EnumDef, literal: string): string {
+  return `${enumPath(comp, def)}::${def.variants[def.literals.indexOf(literal)]!}`;
 }

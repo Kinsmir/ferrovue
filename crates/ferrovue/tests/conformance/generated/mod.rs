@@ -9,7 +9,7 @@
 // it needs.
 #![allow(dead_code)]
 
-ferrovue::__compat!(4);
+ferrovue::__compat!(5);
 
 pub mod account_nav;
 pub mod and_chains;
@@ -198,6 +198,10 @@ pub mod translated;
 pub mod tree;
 pub mod truthy;
 pub mod typeof_tests;
+pub mod union_child;
+pub mod union_enums;
+pub mod union_objects;
+pub mod union_step;
 pub mod unread;
 pub mod unread_fold;
 pub mod unread_steps;
@@ -1222,6 +1226,22 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "TypeofTests" => {
             let props: typeof_tests::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             typeof_tests::render(&mut out, &props);
+        }
+        "UnionChild" => {
+            let props: union_child::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            union_child::render(&mut out, &props);
+        }
+        "UnionEnums" => {
+            let props: union_enums::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            union_enums::render(&mut out, &props);
+        }
+        "UnionObjects" => {
+            let props: union_objects::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            union_objects::render(&mut out, &props);
+        }
+        "UnionStep" => {
+            let props: union_step::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            union_step::render(&mut out, &props);
         }
         "Unread" => {
             let props: unread::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

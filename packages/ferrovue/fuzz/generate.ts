@@ -67,6 +67,7 @@ export interface Expr {
   and?: boolean;
   lone?: boolean;
   scoped?: boolean;
+  members?: string[];
 }
 
 export type Spec =
@@ -80,7 +81,7 @@ export type Spec =
   | { k: "list"; of: Spec }
   | { k: "obj"; iface: string }
   | { k: "record"; of: Spec; dict: boolean }
-  | { k: "enum"; values: string[] }
+  | { k: "enum"; values: string[]; union?: true }
   | { k: "html"; inline: boolean }
   | { k: "date" };
 
@@ -202,10 +203,10 @@ const HELPERS: Record<HelperName, { template: string; imports: HelperName[]; slo
     props: "defineProps<{ at: Date; was?: Date }>();",
   },
   FzCard: {
-    template: `<p class="card">{{ card.title }}|{{ card.n }}|{{ card.tag ?? "-" }}|<b v-if="card.on === null">null</b><b v-else-if="card.on">yes</b><b v-else>no</b>|{{ card.words.join(",") }}<i v-for="(c, i) in cards" :key="i" :title="c.tag">{{ c.title }}/{{ c.n }}</i></p>`,
+    template: `<p class="card" :data-size="card.size">{{ card.title }}|{{ card.n }}|{{ card.tag ?? "-" }}|<b v-if="card.on === null">null</b><b v-else-if="card.on">yes</b><b v-else>no</b>|{{ card.words.join(",") }}<i v-for="(c, i) in cards" :key="i" :title="c.tag" :class="c.size">{{ c.title }}/{{ c.n }}</i></p>`,
     imports: [],
     slot: false,
-    script: ["export interface FzCardT {", "  title: string;", "  n: number;", "  tag?: string;", "  on: boolean | null;", "  words: string[];", "}"],
+    script: ["export interface FzCardT {", "  title: string;", "  n: number;", "  tag?: string;", "  on: boolean | null;", "  words: string[];", '  size: "sm" | "md" | "lg";', "}"],
     props: "defineProps<{ card: FzCardT; cards: FzCardT[] }>();",
   },
 };
@@ -218,6 +219,7 @@ const FZ_CARD: Iface = {
     { name: "tag", spec: { k: "opt", of: { k: "str" } } },
     { name: "on", spec: { k: "nul", of: { k: "bool" } } },
     { name: "words", spec: { k: "list", of: { k: "str" } } },
+    { name: "size", spec: { k: "enum", values: ["sm", "md", "lg"], union: true } },
   ],
 };
 
@@ -396,7 +398,7 @@ function tsType(spec: Spec): string {
     case "record":
       return spec.dict ? `{ [key: string]: ${tsType(spec.of)} }` : `Record<string, ${tsType(spec.of)}>`;
     case "enum":
-      return "Tone";
+      return spec.union ? spec.values.map((v) => JSON.stringify(v)).join(" | ") : "Tone";
     case "html":
       return spec.inline ? "InlineHtml" : "TrustedHtml";
     case "date":
@@ -405,7 +407,7 @@ function tsType(spec: Spec): string {
 }
 
 const usesHtml = (spec: Spec, inline: boolean): boolean => (spec.k === "html" && spec.inline === inline) || (spec.k === "opt" && usesHtml(spec.of, inline));
-const usesEnum = (spec: Spec): boolean => spec.k === "enum" || (spec.k === "opt" && usesEnum(spec.of));
+const usesEnum = (spec: Spec): boolean => (spec.k === "enum" && !spec.union) || (spec.k === "opt" && usesEnum(spec.of));
 
 const usesFloat = (spec: Spec): boolean =>
   spec.k === "float" || ((spec.k === "opt" || spec.k === "nul" || spec.k === "list" || spec.k === "record") && usesFloat(spec.of));
@@ -1214,6 +1216,8 @@ const node = (ty: Ty, kids: Expr[], fmt: (k: string[]) => string, bound = 0, isA
 });
 
 const STR_LITS = ["", "a", "x y", "<i>", "a&b", "&amp;", "→", "é", "🦀", " pad ", "px", "-", ", ", "Σ", "ß"];
+const plainLit = (s: string): boolean => /^[\w <>&,.-]*$/.test(s);
+const UNION_LITS = ["sm", "md", "lg", "x-large", "2xl", "", "<i>", "a&b", "x y", "→a", "Mixed", "Σx"];
 const strLit = (s: string): Expr => atom("str", `'${s}'`);
 const TPL_TEXT = ["", " ", "n=", " & ", "<", "é", "/", "px", "🦀"];
 
@@ -1230,6 +1234,7 @@ interface Var {
   bound: number;
   lone?: boolean;
   inline?: boolean;
+  members?: string[];
 }
 interface ListVar {
   name: string;
@@ -1315,13 +1320,13 @@ class Gen {
     else if (spec.k === "obj") for (const f of this.ifaces.get(spec.iface)!.fields) this.bind(`${name}.${f.name}`, f.spec);
     else if (spec.k === "opt") {
       const ty = specTy(spec.of);
-      if (ty) this.scope.vars.push({ name, ty, opt: !(prop && ty === "bool"), bound: specBound(spec.of) });
+      if (ty) this.scope.vars.push({ name, ty, opt: !(prop && ty === "bool"), bound: specBound(spec.of), ...(spec.of.k === "enum" ? { members: spec.of.values } : {}) });
     } else if (spec.k === "nul") {
       const ty = specTy(spec.of);
-      if (ty) this.scope.vars.push({ name, ty, opt: true, nul: true, bound: specBound(spec.of) });
+      if (ty) this.scope.vars.push({ name, ty, opt: true, nul: true, bound: specBound(spec.of), ...(spec.of.k === "enum" ? { members: spec.of.values } : {}) });
     } else {
       const ty = specTy(spec)!;
-      this.scope.vars.push({ name, ty, opt: false, bound: specBound(spec), ...(lone && ty === "str" ? { lone } : {}) });
+      this.scope.vars.push({ name, ty, opt: false, bound: specBound(spec), ...(lone && ty === "str" ? { lone } : {}), ...(spec.k === "enum" ? { members: spec.values } : {}) });
     }
   }
 
@@ -1348,7 +1353,7 @@ class Gen {
   }
 
   varRef(v: Var): Expr {
-    return { ...atom(v.ty, v.name, v.bound), ref: v.name, ...(v.lone ? { lone: true } : {}) };
+    return { ...atom(v.ty, v.name, v.bound), ref: v.name, ...(v.lone ? { lone: true } : {}), ...(v.members ? { members: v.members } : {}) };
   }
 
   dateRef(v: DateVar): Expr {
@@ -1798,7 +1803,13 @@ class Gen {
       return r.weighted<() => Expr>([
         [vs.length ? 6 : 0, () => this.varRef(r.pick(vs))],
         [2, () => strLit(r.pick(STR_LITS))],
-        [opts.length ? 2 : 0, () => node("str", [this.varRef(r.pick(opts)), strLit(r.pick(STR_LITS))], ([a, b]) => `${a} ?? ${b}`)],
+        [opts.length ? 2 : 0, () => {
+          const v = r.pick(opts);
+          const safe = v.members?.filter(plainLit) ?? [];
+          const member = safe.length && r.chance(0.6) ? r.pick(safe) : null;
+          const e = node("str", [this.varRef(v), strLit(member ?? r.pick(STR_LITS))], ([a, b]) => `${a} ?? ${b}`);
+          return v.members !== undefined && (member !== null || v.members.includes(printExpr(e.kids[1]!).slice(1, -1))) ? { ...e, members: v.members } : e;
+        }],
         [this.tKeys.length && this.tNames.length ? 2 : 0, () => this.translated(d)],
         [this.fnsOf("str").length ? 2 : 0, () => this.call(r.pick(this.fnsOf("str")), d)],
       ])();
@@ -1826,7 +1837,7 @@ class Gen {
         return node("str", [this.num(d - 1), numLit(r.int(-2, 12), "int")], ([a, i]) =>
           shape === 0 ? `String(${a}).split('').join('${sep}')` : shape === 1 ? `((String(${a})[${i}] ?? '?') + String(${a}).length)` : `String(${a}).split('').reduce((acc, ch, i) => (i > 0 && i % 3 === 0 ? acc + '${sep}' + ch : acc + ch), '')`, 0, true);
       }],
-      [2, () => { const t = this.test(d - 1); const [a, b] = [this.str(d - 1), this.str(d - 1)]; return str([t, a, b], ([c, x, y]) => `${c} ? ${x} : ${y}`, [a, b]); }],
+      [2, () => { const t = this.test(d - 1); const [a, b] = [this.str(d - 1), this.str(d - 1)]; const e = str([t, a, b], ([c, x, y]) => `${c} ? ${x} : ${y}`, [a, b]); return a.members !== undefined && b.members !== undefined ? { ...e, members: [...new Set([...a.members, ...b.members])] } : e; }],
       [1, () => str([this.str(d - 1), this.str(d - 1)], ([a, b]) => `${a} || ${b}`)],
       [opts.length ? 2 : 0, () => str([this.varRef(r.pick(opts)), this.str(d - 1)], ([a, b]) => `${a} ?? ${b}`)],
       [
@@ -2117,6 +2128,13 @@ class Gen {
         const op = r.pick(["===", "!=="]);
         const a = this.str(d - 1);
         const b = r.chance(0.6) ? strLit(r.pick(STR_LITS)) : this.str(d - 1);
+        const e = a.members !== undefined ? a : b;
+        if (e.members !== undefined) {
+          const safe = e.members.filter(plainLit);
+          if (!safe.length) return node("bool", [e], ([x]) => `${recv(x)}.length ${op} 0`);
+          const member = strLit(r.pick(safe));
+          return node("bool", e === a ? [e, member] : [member, e], ([x, y]) => `${x} ${op} ${y}`);
+        }
         return node("bool", [a, a.lone && b.lone ? strLit(r.pick(STR_LITS)) : b], ([x, y]) => `${x} ${op} ${y}`);
       }],
       [2, () => {
@@ -2567,6 +2585,13 @@ class Gen {
       const ty = specTy(s)!;
       return ty === "str" ? whole(this.str(d)) : ty === "int" ? this.int(d, BOUND_SMALL) : ty === "float" ? this.float(d) : this.bool(d);
     };
+    if (spec.k === "enum" && spec.union) {
+      const lit = (): Expr => atom("str", `'${r.pick(spec.values)}'`);
+      return r.weighted<() => Expr>([
+        [3, lit],
+        [1, () => node("str", [this.bool(d), lit(), lit()], ([c, a, b]) => `(${c} ? ${a} : ${b})`)],
+      ])();
+    }
     if (spec.k === "opt" || spec.k === "nul") {
       const ty = specTy(spec.of)!;
       const held = this.vars(ty, BOUND_SMALL, true).filter((v) => !!v.nul === (spec.k === "nul") && !v.lone);
@@ -3351,6 +3376,20 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
     const spec: Spec = r.chance(0.75) ? { k: "enum", values } : { k: "opt", of: { k: "enum", values } };
     props.push({ name: `${prefix(spec)}${props.length}`, spec });
   }
+  if (r.chance(0.3)) {
+    const values: string[] = [];
+    for (let n = r.int(2, 4); values.length < n; ) {
+      const v = r.pick(UNION_LITS);
+      if (!values.includes(v)) values.push(v);
+    }
+    const union: Spec = { k: "enum", values, union: true };
+    const spec = r.weighted<() => Spec>([
+      [5, () => union],
+      [3, () => ({ k: "opt", of: union })],
+      [2, () => ({ k: "nul", of: union })],
+    ])();
+    props.push({ name: `${prefix(spec)}${props.length}`, spec });
+  }
   if (r.chance(0.12)) {
     const html: Spec = { k: "html", inline: r.chance(0.4) };
     const spec: Spec = r.chance(0.7) ? html : { k: "opt", of: html };
@@ -3884,7 +3923,7 @@ export function fixtureShrinks(c: Component, fixture: Record<string, unknown>): 
         }
       });
     }
-    const base = p.spec.k === "opt" ? p.spec.of : p.spec;
+    const base = p.spec.k === "opt" || (p.spec.k === "nul" && p.spec.of.k === "enum") ? p.spec.of : p.spec;
     if (base.k === "enum") {
       if (fixture[p.name] !== base.values[0]) out.push({ ...fixture, [p.name]: base.values[0] });
       continue;

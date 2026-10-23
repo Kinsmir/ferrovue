@@ -15,7 +15,7 @@ pub struct Props<'a> {
     #[serde(rename = "user")]
     pub user: super::types::User<'a>,
     #[serde(rename = "size", default, skip_serializing_if = "Option::is_none")]
-    pub size: Option<Cow<'a, str>>,
+    pub size: Option<super::types::Size>,
     #[serde(rename = "badges", default, skip_serializing_if = "Option::is_none")]
     pub badges: Option<Vec<super::types::Badge<'a>>>,
     #[serde(rename = "note", default, skip_serializing_if = "Option::is_none")]
@@ -29,8 +29,8 @@ impl<'a> Props<'a> {
     }
 
     /// Set `size`, which is absent otherwise.
-    pub fn size(mut self, size: impl Into<Cow<'a, str>>) -> Self {
-        self.size = Some(size.into());
+    pub fn size(mut self, size: super::types::Size) -> Self {
+        self.size = Some(size);
         self
     }
 
@@ -50,9 +50,9 @@ impl<'a> Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(128 + 16 * props.user.roles.len() + 22 * props.badges.as_deref().unwrap_or(&[]).len() + props.user.name.len() + props.user.avatar.as_deref().map_or(0, str::len) + props.user.roles.iter().map(|v| v.name.len()).sum::<usize>() + props.user.size.as_deref().map_or(0, str::len) + props.size.as_deref().map_or(0, str::len) + props.note.as_deref().map_or(0, str::len));
+    out.reserve(128 + 16 * props.user.roles.len() + 22 * props.badges.as_deref().unwrap_or(&[]).len() + props.user.name.len() + props.user.avatar.as_deref().map_or(0, str::len) + props.user.roles.iter().map(|v| v.name.len()).sum::<usize>() + 2 + 2 + props.note.as_deref().map_or(0, str::len));
     out.push_str("<div class=\"card");
-    fv::class_into(out, true, &[&*format!("card-{}", props.size.as_deref().unwrap_or("md"))]);
+    fv::class_into(out, true, &[&*format!("card-{}", props.size.unwrap_or(super::types::Size::Md).as_str())]);
     out.push_str("\">");
     if let Some(n1) = props.user.avatar.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<img src=\"");
