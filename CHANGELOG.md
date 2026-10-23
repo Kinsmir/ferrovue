@@ -143,6 +143,10 @@ released together and share version numbers.
 
 ### Changed
 
+- The npm package depends on postcss 8.5.31 and @intlify/message-compiler 11.4.16. Development
+  only: Vite 8.3.5, happy-dom 21.0.4, vue-i18n 11.4.16, fallow 3.35.0 and oxlint 1.89.0, each the
+  newest release at least a day old. Every newer release of the crates' dependencies is younger
+  than Dependabot's seven-day cooldown, so `Cargo.lock` is unchanged.
 - Tests only: the fuzzer gives a string a loop builds a value to append that does not read the
   string itself, so a generated loop no longer doubles it on every item (`acc += acc`), which ran
   seed 4242 out of memory. A `?:` of a union value and a string literal keeps the members of both,
