@@ -89,6 +89,7 @@ pub mod head_theme;
 pub mod head_theme_page;
 pub mod hollow;
 pub mod inline_prose;
+pub mod kebab_tree;
 pub mod keywords;
 pub mod lifecycle;
 pub mod links;
@@ -662,6 +663,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "InlineProse" => {
             let props: inline_prose::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             inline_prose::render(&mut out, &props);
+        }
+        "KebabTree" => {
+            let props: kebab_tree::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            kebab_tree::render(&mut out, &props);
         }
         "Keywords" => {
             let props: keywords::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

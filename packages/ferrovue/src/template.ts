@@ -1,4 +1,4 @@
-import { type N, type Scope, type Val, fail, GenError, nodeName } from "./model.ts";
+import { type N, type Scope, type Val, fail, GenError, namesSelf, nodeName } from "./model.ts";
 import { ctx } from "./context.ts";
 import { expr, shown } from "./expr.ts";
 import { type Presence, boolOf, cond, known, narrowedVal, narrowTo, presence, truthTested, truthy } from "./narrowing.ts";
@@ -268,9 +268,9 @@ function statement(s: Scope, e: Emitter, st: N): void {
     if (
       init?.type === "CallExpression" && init.callee.type === "Identifier" &&
       init.callee.name === "_resolveComponent" && init.arguments[0]?.type === "StringLiteral" &&
-      init.arguments[0].value === s.comp.name && init.arguments[1]?.type === "BooleanLiteral"
+      namesSelf(s.comp, init.arguments[0].value) && init.arguments[1]?.type === "BooleanLiteral"
     ) {
-      s.selfAlias.name = d.id.name;
+      s.selfAliases.add(d.id.name);
       return;
     }
     const named = init?.type === "CallExpression" && init.callee.type === "Identifier" &&

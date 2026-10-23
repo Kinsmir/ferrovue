@@ -48,6 +48,8 @@ released together and share version numbers.
 
 ### Fixed
 
+- A component may render itself by any name Vue resolves to it: its kebab-case or camelCase name
+  (`<tree-node>` or `<treeNode>` in `TreeNode.vue`), which was refused with FV0513.
 - A value outside a closed union renders as the union's last member wherever a lookup table or
   `<component :is>` reads it, as the `props` guide says. A lookup table defaulted by `??` (`T[k ??
   "c"]`) put the default first and read another member; a lookup table and `<component :is>` whose

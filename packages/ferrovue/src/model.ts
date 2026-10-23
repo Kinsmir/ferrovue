@@ -115,6 +115,11 @@ export function camelize(key: string): string {
   return key.replace(/-(\w)/g, (_, c: string) => c.toUpperCase());
 }
 
+export function namesSelf(comp: Component, tag: string): boolean {
+  const camel = camelize(tag);
+  return camel.charAt(0).toUpperCase() + camel.slice(1) === comp.name;
+}
+
 export function declares(comp: Component, key: string): boolean {
   const camel = camelize(key);
   return comp.props.fields.some((f) => camelize(f.js) === camel);
@@ -393,7 +398,7 @@ export interface Scope {
   imported: Map<string, string>;
   refusedBy: Map<string, GenError>;
   narrowed: Map<string, Val>;
-  selfAlias: { name: string | null };
+  selfAliases: Set<string>;
   helperBytes: { n: number };
   directives: Map<string, string>;
   fill: boolean;

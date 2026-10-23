@@ -145,7 +145,7 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
     imported: new Map(),
     refusedBy: new Map(),
     narrowed: new Map(),
-    selfAlias: { name: null },
+    selfAliases: new Set(),
     helperBytes: { n: 0 },
     directives: new Map(),
     fill: false,
