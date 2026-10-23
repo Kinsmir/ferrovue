@@ -143,6 +143,11 @@ released together and share version numbers.
 
 ### Changed
 
+- CI only: the workflows reach their own actions and reusable workflows as `$/.github/…`, which
+  GitHub resolves from the repository at the workflow's commit, where `./.github/…` loaded them from
+  the working copy. zizmor fails CI on a finding of any severity; `.github/zizmor.yml` ignores the
+  three npm installs no lockfile can describe (the package job installing the packed tarball as a
+  user does, and the release's pinned npm), each with its reason.
 - CI only: the browser job and the instruction-count job take `azure.archive.ubuntu.com` out of the
   runner's APT mirror list before installing packages, so APT downloads from
   `https://archive.ubuntu.com`, which the list already holds. The Azure mirror can serve packages so

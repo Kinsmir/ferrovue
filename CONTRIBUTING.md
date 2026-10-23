@@ -260,8 +260,9 @@ CHANGELOG's `### Deprecated` subsection, and what it removes under `### Removed`
 - CI must be green: tests on Node 22.18, 22, 24 and 26 and on stable Rust and the declared minimum,
   `pnpm lint`, clippy and rustfmt, docs, the example, hydration in real browsers
   (`pnpm test:browser`), both packages packing cleanly, `cargo deny` on the dependencies' licences,
-  bans and sources, and zizmor on the workflows (a finding of medium severity or above fails it). A
-  new RustSec advisory shows in the run without failing a pull request; it does fail a release.
+  bans and sources, and zizmor on the workflows (any finding fails it, and `.github/zizmor.yml` lists
+  the ones ignored with their reasons). A new RustSec advisory shows in the run without failing a
+  pull request; it does fail a release.
   `pnpm audit` follows the same rule for an advisory that reaches the npm package's dependencies or
   peers, and lists one in development tooling only as a warning; the job's summary lists every
   advisory with its paths. An advisory the maintainer has judged harmless goes under

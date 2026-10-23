@@ -2,3 +2,10 @@ rules:
   ref-version-mismatch:
     ignore:
       - action.yml:23
+  adhoc-packages:
+    ignore:
+      # The package job installs the packed tarball with npm, as a user does, which no lockfile describes.
+      - ci.yml:382
+      # The release pins the npm it publishes with to an exact version.
+      - release-dry-run.yml:66
+      - release.yml:101

@@ -28,11 +28,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: ./.github/actions/rust
+      - uses: $/.github/actions/rust
         with:
           cache: "false"
           cache-key: release
-      - uses: ./.github/actions/pnpm
+      - uses: $/.github/actions/pnpm
       - name: Set the manifests to the version
         if: inputs.set-version
         env:

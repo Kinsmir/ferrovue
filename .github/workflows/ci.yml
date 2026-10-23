@@ -30,7 +30,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: ./.github/actions/pnpm
+      - uses: $/.github/actions/pnpm
         with:
           node-version: ${{ matrix.node }}
       - run: pnpm typecheck
@@ -59,7 +59,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: ./.github/actions/pnpm
+      - uses: $/.github/actions/pnpm
       - run: pnpm test
       - name: The conformance suite's generated Rust is current
         run: pnpm conformance:check
@@ -78,7 +78,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: ./.github/actions/pnpm
+      - uses: $/.github/actions/pnpm
         with:
           save: ${{ github.ref == 'refs/heads/main' }}
       - run: pnpm lint
@@ -178,7 +178,7 @@ jobs:
       - uses: zizmorcore/zizmor-action@85b2b9fb8e3325e7a23d7d0a9d7ba5ae0f999e3e # v0.7.1
         with:
           version: 1.30.1
-          min-severity: medium
+          min-severity: low
           advanced-security: false
           annotations: true
 
@@ -202,7 +202,7 @@ jobs:
           if [[ -z "$version" ]]; then echo "::error title=No rust-version::Cargo.toml has no rust-version = \"x.y\" line"; exit 1; fi
           echo "rust-version $version"
           echo "version=$version" >> "$GITHUB_OUTPUT"
-      - uses: ./.github/actions/rust
+      - uses: $/.github/actions/rust
         with:
           toolchain: ${{ steps.msrv.outputs.version || matrix.toolchain }}
           components: clippy, rustfmt
@@ -234,7 +234,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: ./.github/actions/rust
+      - uses: $/.github/actions/rust
         with:
           toolchain: nightly
           cache-key: docs-rs
@@ -252,7 +252,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: ./.github/actions/rust
+      - uses: $/.github/actions/rust
         with:
           cache-key: examples
       - name: The example builds outside a test build, and renders its page
@@ -268,10 +268,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: ./.github/actions/rust
+      - uses: $/.github/actions/rust
         with:
           cache-key: fullstack
-      - uses: ./.github/actions/pnpm
+      - uses: $/.github/actions/pnpm
       - name: Build ferrovue, which the example imports as a package (ferrovue/vite, ferrovue/client)
         run: pnpm --filter ferrovue build
       - name: The example's generated Rust is current
@@ -304,10 +304,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: ./.github/actions/rust
+      - uses: $/.github/actions/rust
         with:
           cache-key: browser
-      - uses: ./.github/actions/pnpm
+      - uses: $/.github/actions/pnpm
       - name: The Playwright version, whose browsers to fetch
         id: playwright
         working-directory: packages/ferrovue
@@ -317,7 +317,7 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
-      - uses: ./.github/actions/apt-mirror
+      - uses: $/.github/actions/apt-mirror
       - name: Chromium, Firefox and WebKit, with the system libraries they need
         if: steps.browsers.outputs.cache-hit != 'true'
         run: |
@@ -354,10 +354,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: ./.github/actions/rust
+      - uses: $/.github/actions/rust
         with:
           cache-key: package
-      - uses: ./.github/actions/pnpm
+      - uses: $/.github/actions/pnpm
       - name: The crates package and build from their own tarballs
         run: cargo package -p ferrovue-core -p ferrovue-router -p ferrovue-i18n -p ferrovue --locked
       - name: The npm package packs, with its build, README and licences
@@ -391,10 +391,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: ./.github/actions/rust
+      - uses: $/.github/actions/rust
         with:
           cache-key: bench
-      - uses: ./.github/actions/pnpm
+      - uses: $/.github/actions/pnpm
       - name: ferrovue's generated renderers (criterion)
         run: cargo bench -p ferrovue --bench render --locked -- --warm-up-time 1 --measurement-time 2
       - name: Vue's renderToString (tinybench)
@@ -419,11 +419,11 @@ jobs:
         run: |
           echo "toolchain=$(node scripts/instructions.ts --print toolchain)" >> "$GITHUB_OUTPUT"
           echo "runner=$(node scripts/instructions.ts --print runner-version)" >> "$GITHUB_OUTPUT"
-      - uses: ./.github/actions/rust
+      - uses: $/.github/actions/rust
         with:
           toolchain: ${{ steps.baseline.outputs.toolchain }}
           cache-key: instructions
-      - uses: ./.github/actions/apt-mirror
+      - uses: $/.github/actions/apt-mirror
       - name: Valgrind, the musl target and gungraun-runner
         env:
           TOOLCHAIN: ${{ steps.baseline.outputs.toolchain }}
@@ -450,10 +450,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: ./.github/actions/rust
+      - uses: $/.github/actions/rust
         with:
           cache-key: build-budget
-      - uses: ./.github/actions/pnpm
+      - uses: $/.github/actions/pnpm
       - name: The compiler and cargo build of the generated modules within their budgets
         run: node scripts/build-budget.ts
 

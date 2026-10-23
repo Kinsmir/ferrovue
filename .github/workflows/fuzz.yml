@@ -31,10 +31,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: ./.github/actions/rust
+      - uses: $/.github/actions/rust
         with:
           cache-key: fuzz
-      - uses: ./.github/actions/pnpm
+      - uses: $/.github/actions/pnpm
       - name: The harness catches a planted bug
         run: |
           if FERROVUE_FUZZ_PLANT=1 FERROVUE_FUZZ_SEED=3 FERROVUE_FUZZ_COUNT=30 FERROVUE_FUZZ_SHRINK_MAX=1 pnpm fuzz > "$RUNNER_TEMP/planted.log" 2>&1; then
@@ -71,7 +71,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: ./.github/actions/rust
+      - uses: $/.github/actions/rust
         with:
           toolchain: nightly
           cache-key: cargo-fuzz
