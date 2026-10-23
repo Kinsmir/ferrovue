@@ -143,6 +143,11 @@ released together and share version numbers.
 
 ### Changed
 
+- Tests only: the fuzzer gives a string a loop builds a value to append that does not read the
+  string itself, so a generated loop no longer doubles it on every item (`acc += acc`), which ran
+  seed 4242 out of memory. A `?:` of a union value and a string literal keeps the members of both,
+  and a `?:` whose test is `true` or `false` the members of the branch it takes, so a comparison of
+  it is with one of them.
 - Development only: the workspace runs pnpm 12.15.0, where it ran 12.5.1; CI takes the version from
   `packageManager`.
 - CI only: the workflows reach their own actions and reusable workflows as `$/.github/…`, which
