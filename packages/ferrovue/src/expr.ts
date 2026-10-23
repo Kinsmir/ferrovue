@@ -1,4 +1,4 @@
-import { type Component, type N, type Scope, type Ty, type Val, absence, BOOL, fail, FLOAT, GenError, INT, joinAbsence, joinTy, literalTy, nodeName, nothing, NULL, opt, placeOf, rustStr, sameTy, snake, STR, UNDEF, withAbsence } from "./model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, absence, BOOL, fail, FLOAT, GenError, INT, isAscii, joinAbsence, joinTy, literalsOf, literalTy, nodeName, nothing, NULL, opt, placeOf, rustStr, sameTy, snake, STR, strTy, UNDEF, withAbsence } from "./model.ts";
 import { CONFIG_FILE, ctx } from "./context.ts";
 import { lookupStruct, markHome, tyOfTs } from "./typescript.ts";
 import { claim } from "./plugin.ts";
@@ -6,7 +6,7 @@ import { atom, bare, binary, enclosed, logical, negate, not, occurrences, receiv
 import { collected, entryPart, picked, sliced, spreadLiteral, typedEmpty, untypedEmpty } from "./lists.ts";
 import { asCow, formatted, isTemporary, loneOf, meet, stringsEqual } from "./strings.ts";
 import { arithmetic, asF64, compare, intFromF64, isNumber, negatedOrder, numberVal, power } from "./numbers.ts";
-import { boolOf, checkNullTest, choice, known, narrowing, narrowTo, nullTest, pathOf, presence, truthTested, truthy, typeofCompare, typeofTest, typeofVal } from "./narrowing.ts";
+import { boolOf, checkNullTest, choice, known, narrowing, narrowTo, nullTest, pathOf, type Presence, presence, reassociated, truthTested, truthy, typeofCompare, typeofTest, typeofVal } from "./narrowing.ts";
 import { BUILTINS, builtin, call, isObjectCall } from "./calls.ts";
 import { constOf, namedVal } from "./constants.ts";
 import { localeRefusal } from "./plugins/dates.ts";
@@ -26,18 +26,28 @@ function twinHelp(name: string): string {
   return `put \`${name}\` in ${module} with a Rust twin under \`helpers.functions\` in ${CONFIG_FILE}, or ${COMPUTE_IN_RUST}`;
 }
 
+/** Where the code a scope translates is, as a message says it: "in a template", "in a `computed`". */
+export function placeIn(s: Scope): string {
+  return s.within === "computed" ? "in a `computed`" : s.within === "function" ? "in a function" : s.within === "setup" ? "in setup" : "in a template";
+}
+
+function reader(s: Scope): string {
+  return s.within === "computed" ? "a `computed` reads it" : s.within === "function" ? "a function reads it" : s.within === "setup" ? "setup reads it" : "the template reads it";
+}
+
 /** Refuse a name the template reads that setup binds in a way the server cannot evaluate. */
-export function refuseClientOnly(s: Scope, name: string, n: N, called = false): never {
-  const cause = s.refusedBy.get(name);
+export function refuseClientOnly(s: Scope, local: string, n: N, called = false): never {
+  const name: string = n?.type === "Identifier" && n.name === local ? (n.fvName ?? local) : local;
+  const cause = s.refusedBy.get(local);
   if (cause) {
     const at = placeOf(s.comp, n);
-    const what = `${cause.what} (the template reads it as \`${name}\` at ${[at.file, at.line, at.column].filter((p) => p !== undefined).join(":")})`;
+    const what = `${cause.what} (${reader(s)} as \`${name}\` at ${[at.file, at.line, at.column].filter((p) => p !== undefined).join(":")})`;
     const e = new GenError(cause.code, cause.message.replace(cause.what, () => what), cause.at, what, cause.help);
     if (cause.at?.file !== s.comp.file) e.readAt = at;
     throw e;
   }
-  const why = s.clientOnly.get(name)!;
-  const help = !called && s.functions.has(name)
+  const why = s.clientOnly.get(local)!;
+  const help = !called && s.functions.has(local)
     ? `call it, as \`${name}(…)\`, which the server translates, or name it only in an event handler`
     : called || why.startsWith("it is a function") ? twinHelp(name) : `${COMPUTE_IN_RUST}, or read it only from an event handler`;
   return fail(s.comp, "FV0613", `\`${name}\` is set up in a way the server cannot evaluate: ${why}`, n, help);
@@ -208,6 +218,25 @@ function stated(s: Scope, n: N): Val {
   return fail(comp, "FV0628", `\`${keyword}\` states ${describeTy(want)} of ${describeTy(v.ty)}, which the server keeps as it is: write the value with the type it has`, n);
 }
 
+function alwaysTruthy(ty: Ty): boolean {
+  if (ty.k === "html") return false;
+  const literals = literalsOf(ty);
+  if (literals !== undefined && literals.length > 0) return literals.every((l) => l !== "" && l !== 0);
+  return truthy({ code: "v", ty }) === "true";
+}
+
+/** What `a && b` gives where `a` is absent, for an `a` whose present values are all truthy: `b`
+ * when it is present, and `a` itself, `undefined` or `null`, when it is not. */
+function whenAbsent(s: Scope, p: Presence, left: N): N | null {
+  if (!p.truthy) return null;
+  const at = { loc: left.loc, __fv: left.__fv, start: left.start, end: left.end };
+  if (p.pick) return { type: "Identifier", name: "undefined", ...at };
+  if (!alwaysTruthy(p.of)) return null;
+  const none = absence(expr(s, left).ty);
+  if (none === "undefined") return { type: "Identifier", name: "undefined", ...at };
+  return none === "null" ? { type: "NullLiteral", ...at } : null;
+}
+
 function indexed(s: Scope, list: Val, key: N, n: N): Val {
   const i = expr(s, key);
   if (i.ty.k !== "int") {
@@ -229,6 +258,19 @@ function indexed(s: Scope, list: Val, key: N, n: N): Val {
   return picked(s, list, n, (l) => `${l}.get(${at})`, (it) => `${atom(it)}.nth(${at})`);
 }
 
+function unitAt(s: Scope, str: Val, key: N): Val {
+  const i = expr(s, key);
+  if (i.ty.k !== "int") {
+    return fail(s.comp, "FV0612", `\`[…]\` reads a string's character by an integer index, a \`number\` that is present, and this index is ${i.ty.k === "float" ? "a `Float`, which may hold a fraction or be `NaN`" : describeTy(i.ty)}: \`.at()\` and \`.charAt()\` take any number`, key);
+  }
+  const ascii = isAscii(str.ty);
+  const cut = ascii ? {} : { lone: true as const };
+  const at = `Some(fv::js_char_at(${strArg(str.code)}, ${bare(asF64(i))})).filter(|c| !c.is_empty())`;
+  if (!isTemporary(str)) return { code: at, ty: opt(strTy(ascii)), ...cut };
+  const held = `${at}.map(|v| std::borrow::Cow::<str>::Owned(v.to_owned()))`;
+  return { code: `${atom(held)}.as_deref()`, ty: opt(strTy(ascii)), held, ...cut };
+}
+
 function plainChain(n: N, link: N, hole: N): N {
   if (n === link) return { ...n, type: "MemberExpression", optional: undefined, object: hole };
   if (n.type === "OptionalCallExpression") return { ...n, type: "CallExpression", optional: undefined, callee: plainChain(n.callee, link, hole) };
@@ -246,7 +288,7 @@ function optionalChain(s: Scope, n: N): Val {
   let link: N = n;
   while (!link.optional) {
     link = link.type === "OptionalCallExpression" ? link.callee : link.object;
-    if (link?.type !== "OptionalMemberExpression" && link?.type !== "OptionalCallExpression") return fail(comp, "FV0625", "this optional chain is not supported in a template", n);
+    if (link?.type !== "OptionalMemberExpression" && link?.type !== "OptionalCallExpression") return fail(comp, "FV0625", `this optional chain is not supported ${placeIn(s)}`, n);
   }
   if (link.type === "OptionalCallExpression") {
     return fail(comp, "FV0629", "`?.()` calls a function that may be absent, and a template's functions are always present: write the call without `?.`", link);
@@ -452,6 +494,7 @@ export function expr(s: Scope, n: N): Val {
           if (own) return own;
         }
         if (base.ty.k === "list") return indexed(s, base, n.property, n);
+        if (base.ty.k === "str") return unitAt(s, base, n.property);
         if (base.ty.k === "entry") {
           if (n.property.type !== "NumericLiteral" || !Number.isInteger(n.property.value) || n.property.value < 0) {
             fail(comp, "FV0612", "`[…]` reads a part of a `[key, value]` pair by a literal index: `pair[0]` is its key and `pair[1]` its value", n);
@@ -499,6 +542,8 @@ export function expr(s: Scope, n: N): Val {
     case "CallExpression":
       return call(s, n);
     case "LogicalExpression": {
+      const chained = reassociated(s, n);
+      if (chained !== n) return expr(s, chained);
       if (n.operator === "&&" || n.operator === "||") {
         const p = presence(s, n.left);
         if (p && p.negated === (n.operator === "||") && (p.negated || !p.truthy)) {
@@ -507,8 +552,14 @@ export function expr(s: Scope, n: N): Val {
           if (right?.ty.k === "bool") return { code, ty: BOOL };
           return fail(comp, "FV0614", `\`${n.operator}\` is supported between booleans only`, n);
         }
+        const absent = p && n.operator === "&&" && !p.negated ? whenAbsent(s, p, n.left) : null;
+        if (absent !== null) return expr(s, { ...n, type: "ConditionalExpression", test: n.left, consequent: n.right, alternate: absent });
+        if (p && n.operator === "&&" && !p.negated && p.truthy) {
+          return fail(comp, "FV0614", `\`&&\` gives its left side where that is falsy, and this one, ${describeTy(expr(s, n.left).ty)}, may be falsy where it is present (\`""\`, \`0\`, \`false\`), which the value on the right cannot stand for`, n, "test it with `!= null` for a boolean, or write `?:` with the value each side gives");
+        }
       }
       const a = expr(s, n.left);
+      if (n.operator !== "??" && a.ty.k !== "opt" && !nothing(a.ty) && a.ty.k !== "bool" && alwaysTruthy(a.ty)) return n.operator === "&&" ? expr(s, n.right) : a;
       const b = expr(s, n.right);
       if (n.operator === "??" || (n.operator === "||" && (a.ty.k === "opt" ? a.ty.of : a.ty).k === "date")) {
         const own = claim((p) => p.values?.nullish?.(s, a, b, n));
@@ -627,7 +678,7 @@ export function expr(s: Scope, n: N): Val {
       return boolOf(n.operator === "===" ? eq : not(eq));
     }
     case "ConditionalExpression": {
-      if (n.fvIf && splits(s, n.test)) return expr(s, split(n));
+      if (splits(s, n.test)) return expr(s, split(n));
       const t = truthTested(s, n.test);
       const k = known(t);
       if (k !== undefined) {
@@ -707,6 +758,10 @@ export function expr(s: Scope, n: N): Val {
       return fail(comp, "FV0624", `\`new ${made}(…)\` builds an object the server has no twin for: compute the value in Rust and pass it as a prop`, n);
     }
     default:
-      return fail(comp, "FV0625", `${nodeName(n)} is not supported in a template`, n);
+      if (n.type === "RegExpLiteral") return fail(comp, "FV0710", `a regular expression ${placeIn(s)}, which the server does not run`, n);
+      if (n.type === "AwaitExpression" && s.within !== undefined) {
+        return fail(comp, "FV0625", `\`await\` inside an expression is not supported ${placeIn(s)}`, n, "await a loader as a statement of its own, `const x = await loadX(…)`, and read `x`");
+      }
+      return fail(comp, "FV0625", `${nodeName(n)} is not supported ${placeIn(s)}`, n);
   }
 }

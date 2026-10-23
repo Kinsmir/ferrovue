@@ -1,5 +1,6 @@
-import { type N, type Scope, type Ty, type Val, absence, BOOL, fail, nothing, rustStr, STR, UNDEF } from "./model.ts";
-import { pickPresent } from "./constants.ts";
+import { type N, type Scope, type Ty, type Val, absence, BOOL, fail, GenError, literalTy, nothing, rustStr, STR, UNDEF } from "./model.ts";
+import { ownKeyTest, pickPresent } from "./constants.ts";
+import { isObjectCall } from "./calls.ts";
 import { ctx } from "./context.ts";
 import { claim } from "./plugin.ts";
 import { atom, bare, binary, condition, ifElse, logical, not, occurrences, receiver } from "./parens.ts";
@@ -198,6 +199,7 @@ export function presence(s: Scope, n: N): Presence | null {
       byTruth = false;
     }
   }
+  if (isObjectCall(target, "hasOwn") && target.arguments.length === 2) return ownKeyPresence(s, target, negated);
   const path = pathOf(target);
   if (path === null) return null;
   const strictNull = n.type === "BinaryExpression" && nullTest(n)?.strict === true && nullTest(n)?.literal === "null";
@@ -222,6 +224,15 @@ export function presence(s: Scope, n: N): Presence | null {
   const option = filtered ? `${atom(v.code)}.filter(|v| ${truthy({ code: "*v", ty: of })})` : v.code;
   const present = filtered ? truthy(v) : `${atom(v.code)}.is_some()`;
   return { path, of, negated, truthy: byTruth, option, present, pattern: (name) => `let Some(${name}) = ${option}` };
+}
+
+function ownKeyPresence(s: Scope, call: N, negated: boolean): Presence | null {
+  const path = pathOf(call.arguments[1]);
+  const found = path === null ? null : ownKeyTest(s, call.arguments[0], call.arguments[1]);
+  if (path === null || found === null || found.test === "true" || found.test === "false") return null;
+  const of = literalTy(found.key.ty.k === "int" ? "int" : "str", found.among);
+  const option = `${found.test}.then_some(${bare(found.key.code)})`;
+  return { path, of, negated, truthy: false, option, present: found.test, pattern: (name) => `let Some(${name}) = ${option}` };
 }
 
 export function narrowTo(s: Scope, p: Presence, name: string): Scope {
@@ -249,8 +260,36 @@ export function choice(test: string, yes: string, no: string): string {
   return `if ${condition(test)} { ${yes} } else { ${no} }`;
 }
 
+function unparenthesized(n: N): N {
+  while (n?.type === "ParenthesizedExpression") n = n.expression;
+  return n;
+}
+
+function narrowsFor(s: Scope, side: N, negated: boolean): boolean {
+  const inner = unparenthesized(side);
+  if (inner.type === "LogicalExpression" && inner.operator === (negated ? "||" : "&&")) return narrowsFor(s, inner.left, negated) || narrowsFor(s, inner.right, negated);
+  try {
+    return presence(s, inner)?.negated === negated;
+  } catch (e) {
+    if (e instanceof GenError) return false;
+    throw e;
+  }
+}
+
+/** `(a && b) && c` as `a && (b && c)`, and the same of `||`, where `a` or `b` narrows a value, so
+ * that the narrowing holds in `c`, as TypeScript narrows it. JavaScript gives the same value either
+ * way round. */
+export function reassociated(s: Scope, n: N): N {
+  if (n.type !== "LogicalExpression" || (n.operator !== "&&" && n.operator !== "||")) return n;
+  const left = unparenthesized(n.left);
+  if (left.type !== "LogicalExpression" || left.operator !== n.operator || !narrowsFor(s, left, n.operator === "||")) return n;
+  return reassociated(s, { ...n, left: left.left, right: { ...left, left: left.right, right: n.right } });
+}
+
 export function cond(s: Scope, n: N): string {
   if (n.type === "LogicalExpression" && (n.operator === "||" || n.operator === "&&")) {
+    const chained = reassociated(s, n);
+    if (chained !== n) return cond(s, chained);
     const p = presence(s, n.left);
     if (p && p.negated === (n.operator === "||")) {
       return narrowing(s, p, (inner) => cond(inner, n.right), () => String(n.operator === "||"));

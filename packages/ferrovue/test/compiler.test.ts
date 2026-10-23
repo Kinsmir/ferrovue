@@ -106,25 +106,25 @@ const big = computed(() => {
       const e = refusals(project);
       const said = e.errors.map((one) => [(one as GenError).code, (one as GenError).what, (one as GenError).help]);
       expect(said).toEqual([
-        ["FV0316", "a tuple type is not supported as a prop type", null],
+        ["FV0316", "a tuple type is not supported as a prop type", "declare an interface with a field for each part (`{ label: string; count: number }`), or a list of such objects for a list of pairs"],
       ]);
       writeFileSync(join(project, "components", "X.vue"), readFileSync(join(project, "components", "X.vue"), "utf8").replace("; pair: [number, number]", ""));
       const again = refusals(project).errors.map((one) => [(one as GenError).code, (one as GenError).what, (one as GenError).help]);
       expect(again).toEqual([
+        [
+          "FV1901",
+          "a `computed`'s body may not hold a `for…of` loop: it holds `const` (and `let` never assigned again), `if` / `else`, `switch` and `return`; compute a list with `.map()`, `.filter()` or `.reduce()` (the template reads it as `big` at components/X.vue:15:9)",
+          null,
+        ],
         ["FV0613", "`fmt` is set up in a way the server cannot evaluate: it is a function imported from components/util.ts, which the template and a `computed` may call, and only an event handler may name without calling it", "call it, as `fmt(…)`, which the server translates, or name it only in an event handler"],
         ["FV0613", "`twice` is set up in a way the server cannot evaluate: it is a function, which the template and a `computed` may call, and only an event handler may name without calling it", "call it, as `twice(…)`, which the server translates, or name it only in an event handler"],
-        [
-          "FV0613",
-          "`big` is set up in a way the server cannot evaluate: a function's body may not hold a `for…of` loop: it holds `const` (and `let` never assigned again), `if` / `else`, `switch` and `return`; compute a list with `.map()`, `.filter()` or `.reduce()` (line 7)",
-          "compute the value in Rust and pass it as a prop, or read it only from an event handler",
-        ],
         ["FV0601", "`nowhere()` is not available when rendering on the server", "a template calls JavaScript's built-ins and the helpers with Rust twins under `helpers.functions` in ferrovue.config.json; compute the value in Rust and pass it as a prop"],
         ["FV0625", "an object literal is not supported in a template", null],
         ["FV0625", "an arrow function is not supported in a template", null],
       ]);
     });
 
-    it("refuses a template's read of a constant the compiler cannot evaluate with the constant's own code and place, and a setup binding where it is read", () => {
+    it("refuses a template's read of a constant or a setup binding the compiler cannot evaluate with the refusal's own code and place, and where the template reads it", () => {
       const project = island(`<script setup lang="ts">
 import { LIMIT } from "./consts";
 const local = (1).toLocaleString();
@@ -135,7 +135,8 @@ const local = (1).toLocaleString();
       expect(constant).toMatchObject({ code: "FV0207", at: { file: "components/consts.ts", line: 1, column: 22 }, readAt: { file: "components/X.vue", line: 5, column: 17 } });
       expect(constant!.what).toMatch(/\(the template reads it as `LIMIT` at components\/X\.vue:5:17\)$/);
       expect(constant!.message).toMatch(/^components\/consts\.ts:1:22: .*\n 1 \| export const LIMIT = Math\.random\(\);/);
-      expect(local).toMatchObject({ code: "FV0613", at: { file: "components/X.vue", line: 5, column: 35 }, readAt: null });
+      expect(local).toMatchObject({ code: "FV1805", at: { file: "components/X.vue", line: 3, column: 15 }, readAt: null });
+      expect(local!.what).toMatch(/\(the template reads it as `local` at components\/X\.vue:5:35\)$/);
     });
 
     it("raises a `GenErrors` for a single refusal too", () => {
@@ -567,7 +568,7 @@ defineProps<{ outer?: Outer }>();
       ["a string `as` a number", "const a = computed(() => props.label as number);", /`as` states a number of a string/],
       ["an empty array literal `as` a string", "const a = computed(() => [] as string);", /`as` gives an empty array literal a string/],
     ])("refuses %s, which the server would hold as it is", (_, setup, message) => {
-      expect(() => tree(setup, "<i>{{ a }}</i>")).toThrow(expect.objectContaining({ code: "FV0613", message: expect.stringMatching(message) }));
+      expect(() => tree(setup, "<i>{{ a }}</i>")).toThrow(expect.objectContaining({ code: "FV0628", message: expect.stringMatching(message) }));
     });
 
     it("leaves a `?:` between two empty array literals untyped", () => {
@@ -1864,9 +1865,9 @@ const props = ${script || "defineProps<{ at: Date; maybe?: Date; label: string }
     });
 
     it("refuses where a setup binding reads the current time or formats by locale", () => {
-      expect(() => compile(island(dated("const now = new Date();", "{{ now.toISOString() }}")))).toThrow(/`now` is set up in a way the server cannot evaluate: .*`new Date\(\)` is the time it runs/);
+      expect(() => compile(island(dated("const now = new Date();", "{{ now.toISOString() }}")))).toThrow(/`new Date\(\)` is the time it runs.*\(the template reads it as `now` at /);
       const formatter = dated('const money = new Intl.NumberFormat("en", { style: "currency", currency: "EUR" });', "{{ money.format(ms) }}");
-      expect(() => compile(island(formatter))).toThrow(/`money` is set up in a way the server cannot evaluate: .*`Intl` formats by locale/);
+      expect(() => compile(island(formatter))).toThrow(/`Intl` formats by locale.*\(the template reads it as `money` at /);
       const i18n = dated('import { useI18n } from "vue-i18n";\nconst { d } = useI18n();', "{{ d(ms) }}");
       expect(() => compile(island(i18n))).toThrow(/`d` from `useI18n\(\)` formats by locale with `Intl`.*`dates_and_prices`/);
     });
@@ -2026,7 +2027,7 @@ defineProps<{ label: string }>();
 
     it("still refuses a component resolved by name outside it", () => {
       const source = page(`<v-tooltip /></ClientOnly><v-tooltip /><ClientOnly>`);
-      expect(() => compile(island(source))).toThrow(/a component the template resolves by name must be imported/);
+      expect(() => compile(island(source))).toThrow(/`<v-tooltip>` is a component the template resolves by name, which must be imported/);
     });
 
     it("refuses attributes, slots other than the default and `#fallback`, and fallback props", () => {
@@ -2590,7 +2591,7 @@ const props = defineProps<{ label: string }>();
 const label = props.label.normalize();
 </script>
 <template><i>{{ label }}</i></template>`,
-      /`label` is set up in a way the server cannot evaluate/,
+      /`\.normalize\(\)`.*\(the template reads it as `label` at components\/X\.vue:5:17\)/,
     ],
     [
       "a setup binding it cannot evaluate, located once, where the template reads it",
@@ -2599,7 +2600,7 @@ const props = defineProps<{ label: string }>();
 const label = props.label.normalize();
 </script>
 <template><i>{{ label }}</i></template>`,
-      /^components\/X\.vue:5:17: `label` is set up in a way the server cannot evaluate: (?!.*X\.vue:\d)/,
+      /^components\/X\.vue:3:15: `\.normalize\(\)`[^\n]*\(the template reads it as `label` at components\/X\.vue:5:17\)\n 3 \| const label/,
     ],
     [
       "an interface whose name the generated Rust already uses",
@@ -3107,7 +3108,7 @@ function total(xs: string[]): number {
 }
 </script>
 <template><i>{{ total(tags) }}</i></template>`,
-      /X\.vue:9:\d+: `total` is set up in a way the server cannot evaluate: `let sum` is assigned again with `=`.*\(components\/X\.vue:5, FV1902\)/,
+      /X\.vue:5:\d+: `let sum` is assigned again with `=`, which a function's body does not translate.*\(in `total\(\)`, called at components\/X\.vue:9:\d+\)/,
     ],
     [
       "a function read as a value",
@@ -3257,6 +3258,22 @@ const props = defineProps<{ tags: string[]; n: number }>();
       /a function's body may not hold a function declared inside it/,
     ],
     [
+      "a constant `Map` read by its size",
+      `<script setup lang="ts">
+const WIDTH = new Map([["sm", 12], ["md", 16]]);
+</script>
+<template><i>{{ WIDTH.size }}</i></template>`,
+      /X\.vue:4:\d+: `WIDTH` is a constant `Map`, which the server reads with `\.get\(key\)` and `\.has\(key\)`/,
+    ],
+    [
+      "`&&` after an optional string, which may be empty",
+      `<script setup lang="ts">
+defineProps<{ s?: string }>();
+</script>
+<template><i>{{ s && s.length }}</i></template>`,
+      /X\.vue:4:\d+: `&&` gives its left side where that is falsy, and this one, an optional string, may be falsy where it is present/,
+    ],
+    [
       "a computed with a loop read by the template",
       `<script setup lang="ts">
 const props = defineProps<{ tags: string[]; n: number }>();
@@ -3268,7 +3285,7 @@ const total = computed(() => {
 });
 </script>
 <template><i>{{ total }}</i></template>`,
-      /`total` is set up in a way the server cannot evaluate: `let sum` is assigned again with `\+=`.*\(line 6\)/,
+      /X\.vue:6:\d+: `let sum` is assigned again with `\+=`, which a `computed`'s body does not translate.*\(the template reads it as `total` at components\/X\.vue:10:\d+\)/,
     ],
     [
       "a function other than Boolean passed to map by name",
@@ -4678,7 +4695,7 @@ defineProps<{ onSale?: boolean }>();
     "an async function called by the template": "FV1907",
     "a function given spread arguments": "FV1907",
     "a default for a parameter given null or undefined": "FV1907",
-    "a function with a loop called by the template": "FV0613",
+    "a function with a loop called by the template": "FV1902",
     "a function read as a value": "FV0613",
     "a loop in a callback's body": "FV1901",
     "a while loop in a callback's body": "FV1901",
@@ -4697,7 +4714,9 @@ defineProps<{ onSale?: boolean }>();
     "a body whose switches continue after them on too many paths": "FV1905",
     "a switch with no case for some values and nothing after it": "FV1903",
     "a function declared in a callback's body": "FV1901",
-    "a computed with a loop read by the template": "FV0613",
+    "a computed with a loop read by the template": "FV1902",
+    "a constant `Map` read by its size": "FV0227",
+    "`&&` after an optional string, which may be empty": "FV0614",
     "Object.entries pairs mapped to themselves": "FV0816",
     "Object.entries pairs joined": "FV0816",
     "Object.entries pairs sorted without a comparator": "FV0816",
@@ -5023,8 +5042,9 @@ defineProps<{ word: string }>();
       }
       throw new Error("compiled");
     })();
-    expect(e.code).toBe("FV0601");
-    expect(e.message).toMatch(/^components\/X\.vue:5:\d+: `sum\(\)` is not available when rendering on the server: its body .*\(components\/text\.ts:3, FV1902\)/);
+    expect(e.code).toBe("FV1902");
+    expect(e.message).toMatch(/^components\/text\.ts:3:\d+: `let t` .*\(in `sum\(\)`, called at components\/X\.vue:5:\d+\)/);
+    expect(e.readAt).toMatchObject({ file: "components/X.vue", line: 5 });
   });
 
   it("refuses a const function setup calls above its declaration, and lets a computed or later code call it", () => {
@@ -5369,5 +5389,259 @@ defineProps<{ item: Item }>();
     const store = failure(() => generate(root, { ...CONFIG, stores: "stores" }));
     expect(store.code).toBe("FV0001");
     expect(store.at).toMatchObject({ file: "stores/prefs.ts", line: 3, column: 1 });
+  });
+});
+
+describe("narrowing through `&&` and `||` chains", () => {
+  const render = (script: string, template: string): string => {
+    const out = compile(island(`<script setup lang="ts">\n${script}\n</script>\n<template>${template}</template>`)).get("x.rs")!;
+    return out.slice(out.indexOf("pub fn render"), out.indexOf("/// The component's markup"));
+  };
+  const refused = (script: string, template: string): GenError => {
+    try {
+      compile(island(`<script setup lang="ts">\n${script}\n</script>\n<template>${template}</template>`));
+    } catch (e) {
+      if (e instanceof GenErrors) return e.errors[0] as GenError;
+      throw e;
+    }
+    throw new Error("compiled without an error");
+  };
+
+  it("keeps a test's narrowing in every operand after it, in a template, a computed and a function", () => {
+    const out = render(
+      `import { computed } from "vue";
+const props = defineProps<{ n?: number }>();
+const inside = computed(() => props.n != null && props.n > 1 && props.n < 9);
+function outside(x?: number): boolean {
+  return x === undefined || x < 1 || x > 9;
+}`,
+      "<i>{{ n != null && n > 1 && n < 9 }}|{{ inside }}|{{ outside(n) }}</i>",
+    );
+    expect(out).toContain("let s_inside = if let Some(n1) = props.n { n1 as f64 > 1.0 && (n1 as f64) < 9.0 } else { false };");
+    expect(out).toContain("if let Some(n2) = props.n { n2 as f64 > 1.0 && (n2 as f64) < 9.0 } else { false }");
+    expect(out).toContain("if let Some(n3) = props.n { (n3 as f64) < 1.0 || n3 as f64 > 9.0 } else { true }");
+  });
+
+  it("narrows the branches of a `?:` whose test is a chain, and a `v-if` of one", () => {
+    const out = render("defineProps<{ n?: number }>();", '<i v-if="n != null && n > 1 && n < 9">{{ n * 2 }}</i><b>{{ n != null && n > 1 ? n * 2 : 0 }}|{{ n == null || n < 0 ? "bad" : n.toFixed(1) }}</b>');
+    expect(out).toMatch(/if let Some\(n\d+\) = props\.n && n\d+ as f64 > 1\.0 && \(n\d+ as f64\) < 9\.0 \{/);
+    expect(out).toMatch(/fv::js_to_fixed\(n\d+ as f64, 1\)/);
+  });
+
+  it("reads a lookup by a key `&&` tested, as `undefined` where the key is absent", () => {
+    const out = render('const TONE = { info: "blue", warn: "amber" } as const;\ndefineProps<{ tone?: "info" | "warn" }>();', '<b :class="tone && TONE[tone]" :title="tone && TONE[tone]">{{ (tone && TONE[tone]) ?? "none" }}</b>');
+    expect(out).toContain('match n');
+    expect(out).toContain('"info" => "blue"');
+    expect(out).not.toContain("FV0223");
+  });
+
+  it("refuses `&&` after a value that may be falsy while present, saying why", () => {
+    const e = refused("defineProps<{ s?: string }>();", "<i>{{ s && s.length }}</i>");
+    expect(e.code).toBe("FV0614");
+    expect(e.message).toMatch(/`&&` gives its left side where that is falsy, and this one, an optional string, may be falsy where it is present/);
+  });
+});
+
+describe("constants evaluated when compiling", () => {
+  const project = (script: string, template: string, files: Record<string, string>): string => {
+    const root = island(`<script setup lang="ts">\n${script}\n</script>\n<template>${template}</template>`);
+    for (const [name, text] of Object.entries(files)) writeFileSync(join(root, "components", name), text);
+    return root;
+  };
+  const failure = (root: string): GenError => {
+    try {
+      compile(root);
+    } catch (e) {
+      if (e instanceof GenErrors) return e.errors[0] as GenError;
+      throw e;
+    }
+    throw new Error("compiled without an error");
+  };
+
+  it("folds arithmetic, `+` of strings and template literals of constants as JavaScript evaluates them", () => {
+    const units = `const MINUTE = 60;
+const HOUR = 60 * MINUTE;
+export const THIRD = 1 / 3;
+export const NEG = -(7 % 4) + +2.5;
+export const BIG = 2 ** 40 - 1;
+const BASE = "/feed";
+export const NEWEST = \`\${BASE}/new?h=\${HOUR / MINUTE}\`;
+export const MARK = "#" + 1.5 + "/" + THIRD;
+export function hours(s: number): number {
+  return Math.floor(s / HOUR);
+}
+`;
+    const out = compile(project('import { BIG, MARK, NEG, NEWEST, THIRD, hours } from "./units";\ndefineProps<{ s: number }>();', "<i>{{ hours(s) }}|{{ THIRD }}|{{ NEG }}|{{ BIG }}|{{ NEWEST }}|{{ MARK }}</i>", { "units.ts": units })).get("x.rs")!;
+    expect(out).toContain("(props.s as f64 / 3600.0).floor()");
+    expect(out).toContain("|0.3333333333333333|-0.5|1099511627775|/feed/new?h=60|#1.5/0.3333333333333333</i>");
+  });
+
+  it("folds a constant of setup that an object constant reads", () => {
+    const out = compile(project("const GAP = 2 * 4;\nconst SPACE = { sm: GAP, lg: GAP * 2 + 0.5, unit: `${GAP}px` };", "<i>{{ SPACE.sm }}|{{ SPACE.lg }}|{{ SPACE.unit }}</i>", {})).get("x.rs")!;
+    expect(out).toContain("<i>8|16.5|8px</i>");
+  });
+
+  it("refuses a power engines round in their own ways, and an operator of a list, with the constant's code", () => {
+    const power = failure(project('import { HUGE } from "./units";', "<i>{{ HUGE }}</i>", { "units.ts": "export const HUGE = 3 ** 40;\n" }));
+    expect(power.code).toBe("FV0720");
+    expect(power.at).toMatchObject({ file: "components/units.ts", line: 1 });
+    const list = failure(project('import { TWICE } from "./units";', "<i>{{ TWICE }}</i>", { "units.ts": "const XS = [1];\nexport const TWICE = XS * 2;\n" }));
+    expect(list.code).toBe("FV0207");
+    expect(list.message).toMatch(/arithmetic and template literals in a constant take strings, numbers, booleans and `null`/);
+    const mixed = failure(project('import { ODD } from "./units";', "<i>{{ ODD }}</i>", { "units.ts": "export const ODD = true - 1;\n" }));
+    expect(mixed.message).toMatch(/`-` in a constant takes two numbers, and these are boolean and number/);
+  });
+});
+
+describe("strings known to be ASCII", () => {
+  const render = (script: string, template: string): string => {
+    const out = compile(island(`<script setup lang="ts">\n${script}\n</script>\n<template>${template}</template>`)).get("x.rs")!;
+    return out.slice(out.indexOf("pub fn render"), out.indexOf("/// The component's markup"));
+  };
+
+  it("cuts the string of a number into whole characters, which may be joined, indexed and counted", () => {
+    const out = render(
+      `defineProps<{ n: number }>();
+function group(n: number): string {
+  const d = String(n);
+  return d.split("").reduce((acc, ch, i) => (i > 0 && (d.length - i) % 3 === 0 ? \`\${acc},\${ch}\` : \`\${acc}\${ch}\`), "");
+}`,
+      "<i>{{ group(n) }}|{{ String(n).split('').join('') }}|{{ String(n)[0] ?? '?' }}|{{ n.toFixed(2).slice(-3) }}</i>",
+    );
+    expect(out).toContain("fv::js_reduce(fv::js_split(&");
+    expect(out).toContain('Some(fv::js_char_at(');
+  });
+
+  it("still refuses joining the halves of a string that may hold any character", () => {
+    const e = (() => {
+      try {
+        compile(island(`<script setup lang="ts">\ndefineProps<{ s: string }>();\n</script>\n<template><i>{{ s.split("").join("") }}</i></template>`));
+      } catch (err) {
+        return (err as GenErrors).errors[0] as GenError;
+      }
+      throw new Error("compiled");
+    })();
+    expect(e.code).toBe("FV0706");
+  });
+});
+
+describe("functions a body declares", () => {
+  const compiled = (script: string, template: string): string => {
+    const out = compile(island(`<script setup lang="ts">\n${script}\n</script>\n<template>${template}</template>`)).get("x.rs")!;
+    return out.slice(out.indexOf("pub fn render"), out.indexOf("/// The component's markup"));
+  };
+  const refusal = (script: string, template: string): GenError => {
+    try {
+      compile(island(`<script setup lang="ts">\n${script}\n</script>\n<template>${template}</template>`));
+    } catch (e) {
+      if (e instanceof GenErrors) return e.errors[0] as GenError;
+      throw e;
+    }
+    throw new Error("compiled without an error");
+  };
+
+  it("inlines an arrow function a function's or a computed's body declares, which reads the body's own names", () => {
+    const out = compiled(
+      `import { computed } from "vue";
+const props = defineProps<{ a: string; b: string }>();
+function both(a: string, b: string): string {
+  const sep = a.length > 2 ? "; " : ", ";
+  const shout = (x: string) => \`\${x.toUpperCase()}\${sep}\`;
+  return \`\${shout(a)}\${shout(b)}\`;
+}
+const tagged = computed(() => {
+  const tag = (x: string): string => \`#\${x}\`;
+  return tag(props.a);
+});`,
+      "<i>{{ both(a, b) }}|{{ tagged }}</i>",
+    );
+    expect(out).toContain("to_uppercase()");
+    expect(out).toContain('format!("#{}", props.a)');
+  });
+
+  it("refuses such a function that calls itself, or that is read as a value, by its own name", () => {
+    const loop = refusal("defineProps<{ n: number }>();\nfunction f(n: number): number {\n  const g = (k: number): number => (k > 0 ? g(k - 1) : 0);\n  return g(n);\n}", "<i>{{ f(n) }}</i>");
+    expect(loop.code).toBe("FV1906");
+    expect(loop.message).toMatch(/`g\(\)` calls itself/);
+    const value = refusal("defineProps<{ xs: string[] }>();\nfunction f(xs: string[]): string[] {\n  const up = (x: string) => x.toUpperCase();\n  return xs.map(up);\n}", "<i>{{ f(xs) }}</i>");
+    expect(value.code).toBe("FV0805");
+  });
+});
+
+describe("own keys of constant objects and `Map`s", () => {
+  const render = (script: string, template: string): string => {
+    const out = compile(island(`<script setup lang="ts">\n${script}\n</script>\n<template>${template}</template>`)).get("x.rs")!;
+    return out.slice(out.indexOf("pub fn render"), out.indexOf("/// The component's markup"));
+  };
+  const refusal = (script: string, template: string): GenError => {
+    try {
+      compile(island(`<script setup lang="ts">\n${script}\n</script>\n<template>${template}</template>`));
+    } catch (e) {
+      if (e instanceof GenErrors) return e.errors[0] as GenError;
+      throw e;
+    }
+    throw new Error("compiled without an error");
+  };
+
+  it("tests a free-text key against a constant object's own keys, and reads the object by the key it narrows", () => {
+    const out = render('const ROLE: Record<string, string> = { mod: "is-mod", admin: "is-admin" };\ndefineProps<{ role: string; scores: Record<string, number> }>();', `<b :class="Object.hasOwn(ROLE, role) ? ROLE[role] : ''">{{ Object.hasOwn(scores, role) }}|{{ Object.keys(ROLE).join(",") }}</b>`);
+    expect(out).toMatch(/if let Some\((n\d+)\) = matches!\(&\*props\.role, "mod" \| "admin"\)\.then_some\(&\*props\.role\) \{ match \1 \{ "mod" => "is-mod", _ => "is-admin" \} \} else \{ "" \}/);
+    expect(out).toContain("props.scores.get(&props.role).is_some()");
+    expect(out).toContain('["mod", "admin"]');
+  });
+
+  it("reads a constant `Map` by `.get()` and `.has()`, `undefined` for a key it lacks", () => {
+    const out = render('const WIDTH = new Map([["sm", 12], ["md", 16]]);\ndefineProps<{ size: string }>();', "<i>{{ WIDTH.get(size) ?? 10 }}|{{ WIDTH.has(size) }}</i>");
+    expect(out).toContain('match &*props.size { "sm" => Some(12i64), "md" => Some(16i64), _ => None }');
+    expect(out).toContain('matches!(&*props.size, "sm" | "md")');
+  });
+
+  it("refuses a `Map` read whole or by its size, and `Object.values()` of a constant object, saying what is read", () => {
+    expect(refusal('const WIDTH = new Map([["sm", 12]]);', "<i>{{ WIDTH.size }}</i>").code).toBe("FV0227");
+    expect(refusal('const WIDTH = new Map([["sm", 12]]);\ndefineProps<{ k?: string }>();', "<i>{{ WIDTH.get(k) }}</i>").message).toMatch(/a constant `Map` is read by a string or an integer that is present/);
+    const values = refusal('const ROLE = { mod: "is-mod" };', "<i>{{ Object.values(ROLE).join() }}</i>");
+    expect(values.code).toBe("FV0814");
+    expect(values.message).toMatch(/`Object\.values\(\)` of `ROLE`, a constant object, whose fields the server reads one by one/);
+  });
+});
+
+describe("refusals inside a computed or a function", () => {
+  const refusals = (source: string, files: Record<string, string> = {}): GenError[] => {
+    const root = island(source);
+    for (const [name, text] of Object.entries(files)) writeFileSync(join(root, "components", name), text);
+    try {
+      compile(root);
+    } catch (e) {
+      if (e instanceof GenErrors) return e.errors as GenError[];
+      throw e;
+    }
+    throw new Error("compiled without an error");
+  };
+
+  it("carry the inner refusal's own code and place, said where it is, once however often the template reads it", () => {
+    const [regex, literal, called, ...rest] = refusals(`<script setup lang="ts">
+import { computed } from "vue";
+const props = defineProps<{ s: string }>();
+const clean = computed(() => props.s.replace(/x/g, ""));
+const shape = computed(() => ({ a: props.s }));
+function pair(t: string): string {
+  return [t, 1].join();
+}
+</script>
+<template><i>{{ clean }}|{{ shape.a }}|{{ shape.a }}|{{ pair(s) }}</i></template>`);
+    expect(rest).toEqual([]);
+    expect(regex).toMatchObject({ code: "FV0710", at: { file: "components/X.vue", line: 4 } });
+    expect(regex!.what).toMatch(/\(the template reads it as `clean` at components\/X\.vue:10:\d+\)$/);
+    expect(literal).toMatchObject({ code: "FV0625", at: { file: "components/X.vue", line: 5 } });
+    expect(literal!.what).toMatch(/^an object literal is not supported in a `computed` \(the template reads it as `shape` at /);
+    expect(called).toMatchObject({ code: "FV0611", at: { file: "components/X.vue", line: 7 } });
+    expect(called!.what).toMatch(/\(in `pair\(\)`, called at components\/X\.vue:10:\d+\)$/);
+  });
+
+  it("names the tag resolved by name, and suggests an interface for a tuple prop", () => {
+    const [tuple] = refusals(`<script setup lang="ts">\ndefineProps<{ at: [number, number] }>();\n</script>\n<template><i>{{ at }}</i></template>`);
+    expect(tuple).toMatchObject({ code: "FV0316", help: expect.stringMatching(/declare an interface with a field for each part/) });
+    const [tag] = refusals(`<template><rss><item>x</item></rss></template>`);
+    expect(tag).toMatchObject({ code: "FV0513", what: expect.stringMatching(/^`<rss>` is a component the template resolves by name, which must be imported/) });
   });
 });

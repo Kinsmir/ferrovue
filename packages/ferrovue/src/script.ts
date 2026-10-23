@@ -44,7 +44,7 @@ export function setupSource(comp: Component, init: N): N | null {
     if (name === "computed") {
       const fn = init.arguments[0];
       if (fn?.type !== "ArrowFunctionExpression" && fn?.type !== "FunctionExpression") return null;
-      return bodyExpr(comp, fn);
+      return bodyExpr(comp, fn, "a `computed`'s body");
     }
   }
   if (init.type === "TSAsExpression" || init.type === "TSSatisfiesExpression" || init.type === "TSNonNullExpression") return setupSource(comp, init.expression);
@@ -270,6 +270,11 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
         evaluable(local, objectDecl, "it is an object the compiler does not evaluate");
         continue;
       }
+      const made = unwrapped(init0);
+      if (st.kind === "const" && objectDecl !== undefined && objectDecl.node === d && made?.type === "NewExpression" && made.callee.type === "Identifier" && made.callee.name === "Map" && !locals.has("Map")) {
+        evaluable(local, objectDecl, "it is a `Map` the compiler does not evaluate");
+        continue;
+      }
       if (useAttrsName !== null && init0?.type === "CallExpression" && init0.callee.type === "Identifier" && init0.callee.name === useAttrsName) {
         scope.attrsBindings.add(local);
         scope.clientOnly.set(local, "`useAttrs()` is bound whole, with `v-bind`; a value read from it has no type");
@@ -306,10 +311,11 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
           scope.clientOnly.set(local, "it is not a value the server computes: only `ref(…)`, `computed(() => …)` and plain expressions are");
           continue;
         }
-        v = empty ?? expr(isComputed ? scope : { ...scope, settingUpAt: st.start }, source);
+        v = empty ?? expr(isComputed ? { ...scope, within: "computed" } : { ...scope, settingUpAt: st.start, within: "setup" }, source);
       } catch (e) {
         if (!(e instanceof GenError) || e.code === "FV1908") throw e;
-        scope.clientOnly.set(local, e.code.startsWith("FV19") && e.at?.line !== undefined ? `${e.what} (line ${e.at.line})` : e.what);
+        scope.clientOnly.set(local, e.what);
+        scope.refusedBy.set(local, e);
         continue;
       }
       if (nothing(v.ty) || (v.ty.k === "str" && known(v) !== undefined)) {

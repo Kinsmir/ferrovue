@@ -12,6 +12,7 @@
 ferrovue::__compat!(4);
 
 pub mod account_nav;
+pub mod and_chains;
 pub mod app;
 pub mod arrays;
 pub mod async_class;
@@ -52,6 +53,7 @@ pub mod dates;
 pub mod defaults;
 pub mod deferred;
 pub mod destructured;
+pub mod digit_groups;
 pub mod divider;
 pub mod empty_branch;
 pub mod escaped_idioms;
@@ -122,6 +124,7 @@ pub mod number_includes;
 pub mod number_tests;
 pub mod numbers;
 pub mod optional_chains;
+pub mod own_keys;
 pub mod page;
 pub mod pairs;
 pub mod panel;
@@ -289,6 +292,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let router = route_table::router();
             let route = router.at(&fixture.route);
             account_nav::render(&mut out, &props, &route);
+        }
+        "AndChains" => {
+            let props: and_chains::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            and_chains::render(&mut out, &props);
         }
         "App" => {
             let props: app::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -474,6 +481,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Destructured" => {
             let props: destructured::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             destructured::render(&mut out, &props);
+        }
+        "DigitGroups" => {
+            let props: digit_groups::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            digit_groups::render(&mut out, &props);
         }
         "Divider" => {
             let props: divider::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -846,6 +857,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "OptionalChains" => {
             let props: optional_chains::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             optional_chains::render(&mut out, &props);
+        }
+        "OwnKeys" => {
+            let props: own_keys::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            own_keys::render(&mut out, &props);
         }
         "Page" => {
             let props: page::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

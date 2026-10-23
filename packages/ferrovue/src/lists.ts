@@ -1,10 +1,11 @@
-import { type Component, type N, type Scope, type Ty, type Val, BOOL, fail, FLOAT, INT, joinTy, opt, sameTy, STR, UNDEF } from "./model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, BOOL, fail, FLOAT, INT, isAscii, joinTy, literalTy, opt, rustStr, sameTy, STR, strTy, UNDEF } from "./model.ts";
+import { constOf, ownKeys, ownKeyTest } from "./constants.ts";
 import { ctx } from "./context.ts";
 import { describeTy, expr, fieldVal } from "./expr.ts";
 import { cond, unbound } from "./narrowing.ts";
 import { localTy } from "./rust.ts";
 import { asF64, isNumber } from "./numbers.ts";
-import { asCow, isTemporary, lonely, meet, yieldsCow } from "./strings.ts";
+import { asCow, isTemporary, lonely, meet, writesAscii, yieldsCow } from "./strings.ts";
 import { atom, bare, binary, enclosed, operand, strArg, UNARY } from "./parens.ts";
 import { expressionBodied } from "./blocks.ts";
 
@@ -283,13 +284,15 @@ function reduced(s: Scope, target: Val, method: string, args: N[], n: N): Val {
   }
   let accTy: Ty = init.ty.k === "int" && init.f64 !== undefined && RISKS_NEGATIVE_ZERO.test(init.f64) ? FLOAT : ({ k: init.ty.k } as Ty);
   let lone = !!init.lone;
+  let ascii = isAscii(init.ty);
   const item = { ...fn, params: fn.params.slice(1) };
   const narrowed = unbound(s.narrowed, [accName]);
   for (;;) {
+    const mark = ctx.narrowCount;
     const acc = `fv_acc${++ctx.narrowCount}`;
-    const accVal: Val = accTy.k === "str" ? { code: `&*${acc}`, ty: STR, ...(lone ? { lone } : {}) } : { code: acc, ty: accTy };
+    const accVal: Val = accTy.k === "str" ? { code: `&*${acc}`, ty: strTy(ascii), ...(lone ? { lone } : {}) } : { code: acc, ty: accTy };
     const outer: Scope = { ...s, locals: new Map(s.locals).set(accName, accVal), narrowed };
-    const seen = { wider: false, loner: false };
+    const seen = { wider: false, loner: false, wide: false };
     const { closure, enumerate } = arrow(outer, item, target, of, false, method, (inner) => {
       const out = expr(inner, fn.body);
       const changes = `the function gives ${describeTy(out.ty)} where the accumulator, from its initial value, is ${describeTy(accTy)}`;
@@ -297,6 +300,7 @@ function reduced(s: Scope, target: Val, method: string, args: N[], n: N): Val {
         case "str":
           if (out.ty.k !== "str") fail(comp, "FV0829", `\`.${method}()\` keeps one type of accumulator, and ${changes}`, fn.body);
           if (out.lone && !lone) seen.loner = true;
+          if (ascii && !isAscii(out.ty)) seen.wide = true;
           return ownedString(out, acc);
         case "int":
           if (out.ty.k === "float" || (out.ty.k === "int" && out.f64 !== undefined && RISKS_NEGATIVE_ZERO.test(out.f64))) seen.wider = true;
@@ -314,8 +318,10 @@ function reduced(s: Scope, target: Val, method: string, args: N[], n: N): Val {
       accTy = FLOAT;
       continue;
     }
-    if (seen.loner) {
-      lone = true;
+    if (seen.loner || seen.wide) {
+      if (!seen.loner) ctx.narrowCount = mark;
+      lone ||= seen.loner;
+      ascii &&= !seen.wide;
       continue;
     }
     const start = accTy.k === "str" ? ownedString(init, "") : accTy.k === "float" ? bare(asF64(init)) : bare(init.code);
@@ -323,7 +329,7 @@ function reduced(s: Scope, target: Val, method: string, args: N[], n: N): Val {
     const step = closure.replace(/^\|/, `|${reads ? acc : "_"}, `);
     const from = method === "reduce" ? `${items(target)}${enumerate ? ".enumerate()" : ""}` : `${backwards(target)}${enumerate ? ".enumerate()" : ""}.rev()`;
     const folded = `fv::js_reduce(${from}, ${start}, ${step})`;
-    if (accTy.k === "str") return { code: `&*${folded}`, ty: STR, ...(lone ? { lone } : {}) };
+    if (accTy.k === "str") return { code: `&*${folded}`, ty: strTy(ascii), ...(lone ? { lone } : {}) };
     return { code: folded, ty: accTy };
   }
 }
@@ -718,10 +724,32 @@ export function listMethod(s: Scope, target: Val, method: string, given: N[], n:
   }
 }
 
+function hasOwn(s: Scope, args: N[], n: N): Val {
+  if (args.length !== 2 || args.some((a) => a.type === "SpreadElement")) return fail(s.comp, "FV0814", "`Object.hasOwn()` takes an object and a key", n);
+  const own = ownKeyTest(s, args[0], args[1]);
+  if (own) return own.test === "true" || own.test === "false" ? { code: own.test, ty: BOOL, konst: own.test === "true" } : { code: own.test, ty: BOOL };
+  const r = expr(s, args[0]);
+  const key = expr(s, args[1]);
+  if (r.ty.k === "record" && key.ty.k === "str") return { code: `${atom(r.code)}.get(${strArg(key.code)}).is_some()`, ty: BOOL };
+  const of = r.ty.k === "record" ? `the key is ${describeTy(key.ty)}, where it takes a string that is present` : `the object is ${describeTy(r.ty)}, where it takes a constant object or a \`Record<string, T>\` prop`;
+  return fail(s.comp, "FV0814", `\`Object.hasOwn()\` tests a constant object's or a record's own keys, and ${of}`, n);
+}
+
 export function objectCall(s: Scope, method: string, args: N[], n: N): Val {
   const comp = s.comp;
+  if (method === "hasOwn") return hasOwn(s, args, n);
+  const named = args.length === 1 ? constOf(s, args[0]) : null;
+  if (named?.sym.k === "const" && named.sym.c.k === "object") {
+    if (method === "keys") {
+      const keys = ownKeys(named.sym.c);
+      return keys.length ? { code: `[${keys.map(rustStr).join(", ")}]`, ty: { k: "list", of: literalTy("str", keys) } } : { code: "[]", ty: { k: "list", of: UNDEF } };
+    }
+    if (method === "values" || method === "entries") {
+      return fail(comp, "FV0814", `\`Object.${method}()\` of \`${named.what}\`, a constant object, whose fields the server reads one by one: list its keys with \`Object.keys()\` and read each field by its key`, n);
+    }
+  }
   const r = args.length === 1 ? expr(s, args[0]) : null;
-  if (r?.ty.k !== "record") return fail(comp, "FV0814", `\`Object.${method}()\` takes a \`Record<string, T>\``, n);
+  if (r?.ty.k !== "record") return fail(comp, "FV0814", `\`Object.${method}()\` takes a \`Record<string, T>\` prop${r ? `, and this is ${describeTy(r.ty)}` : ""}`, n);
   const of = r.ty.of;
   if (method === "keys") return computed(`${atom(r.code)}.keys().map(${COW}::Borrowed)`, STR);
   if (method === "values") {
@@ -764,7 +792,7 @@ export function computedListMethod(s: Scope, target: Val, method: string, args: 
     const parted = /^"[^"]/.test(sep.code);
     if (of.k === "str" && target.lone && (!parted || sep.lone)) fail(s.comp, "FV0706", lonely("`.join()` with no literal separator"), n);
     const each = of.k === "str" ? "" : of.k === "bool" ? `.map(|v| if v { "true" } else { "false" })` : ".map(|v| fv::Js(v).to_string())";
-    return { code: `&*${items(target)}${each}.collect::<Vec<_>>().join(${strArg(sep.code)})`, ty: STR, ...(target.lone || sep.lone ? { lone: true } : {}) };
+    return { code: `&*${items(target)}${each}.collect::<Vec<_>>().join(${strArg(sep.code)})`, ty: strTy(writesAscii(target.ty) && isAscii(sep.ty)), ...(target.lone || sep.lone ? { lone: true } : {}) };
   }
   return null;
 }

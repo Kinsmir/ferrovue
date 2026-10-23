@@ -138,10 +138,21 @@ Parameters are plain names, optional (`x?: T`, `undefined` when not given), with
 (`x = 1`, which may read an earlier parameter, applied when the argument is missing or
 `undefined`), and object or array patterns of names (`function grade({ score }: Member)`).
 
+A body may declare arrow functions of its own, which read its names and are translated where the
+body calls them, as the functions above are:
+
+```ts
+export function clock(seconds: number): string {
+  const pad = (k: number) => String(k).padStart(2, "0");
+  return `${pad(Math.floor(seconds / 60))}:${pad(seconds % 60)}`;
+}
+```
+
 A function the template names only from an event handler (`@click="toggle"`) is never translated,
 and may hold anything. One the template or a `computed` calls, whose body the server cannot
-evaluate, is refused where it is called: FV0613 for a function of the component, FV0601 for an
-imported one, the message naming the statement or expression that stops it and its line.
+evaluate, is refused with the code of the statement or expression that stops it, at its place in
+the function's file, the message naming the function and the call: `` (in `total()`, called at
+components/Cart.vue:9:12) ``.
 
 # What is refused
 
@@ -150,7 +161,7 @@ Everything else a body could hold is refused, with the statement named:
 | Written | Code | What to write instead |
 |---|---|---|
 | a loop (`for`, `for…of`, `for…in`, `while`, `do…while`) | FV1901 | `.map()`, `.filter()`, `.reduce()` |
-| `try`, `throw`, `var`, a label, `continue`, an expression statement, a function or class declared inside the body | FV1901 | the value itself, or a prop computed in Rust |
+| `try`, `throw`, `var`, a label, `continue`, an expression statement, a `function` or class declared inside the body | FV1901 | the value itself, a prop computed in Rust, or `const f = (…) => …` for a function |
 | `x = …`, `x += …`, `x++`, a `let` assigned again | FV1902 | a `const` for each value |
 | a path that reaches the end of the body, or `return;` | FV1903 | a `return` on every path; `return undefined` where that is meant |
 | a case falling through into the next case's statements, a declaration directly in a `case`, code after `return` | FV1904 | `return` or `break` at the end of each case, `{ … }` around a case's declarations |
@@ -160,4 +171,6 @@ Everything else a body could hold is refused, with the statement named:
 | `...rest` parameters, `async` functions, generators, `...` arguments, more arguments than the function names, a default for a parameter given a value that may be `null` or `undefined` | FV1907 | named parameters; `??` where the value is passed |
 
 A `computed` the server cannot evaluate stays client-only until the template reads it, which is
-then refused with FV0613, the message naming the statement and its line.
+then refused with the code of the statement that stops it, at its place in the `computed`, the
+message naming where the template reads it. A refusal is reported once, however often the template
+reads the `computed`.

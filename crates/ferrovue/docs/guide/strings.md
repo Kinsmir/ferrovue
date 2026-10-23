@@ -154,6 +154,18 @@ assert_eq!(ferrovue::js_char_at("🦀", 0.0), "\u{FFFD}");
 assert_eq!(ferrovue::js_split("🦀", ""), ["\u{FFFD}", "\u{FFFD}"]);
 ```
 
+A string known to hold ASCII alone has no pairs to cut: the string of a number (`String(n)`,
+`n.toFixed(2)`, `` `${n}` ``), an ASCII literal, and what slicing, trimming, padding, case mapping,
+joining or `split` make of them. Its pieces are whole characters, which may be joined, compared and
+counted as any string is, so a thousands separator can be written in the template:
+
+```ts
+function grouped(n: number): string {
+  const d = String(n);
+  return d.split("").reduce((acc, ch, i) => (i > 0 && (d.length - i) % 3 === 0 ? `${acc},${ch}` : `${acc}${ch}`), "");
+}
+```
+
 Where the half itself would decide the result, the compiler refuses: two strings that may each hold
 a half compared or ordered, side by side (`a.slice(0, 1) + b.slice(1)`, a `.join("")`, a class
 object's names), one searched for in another (`.includes(a.charAt(0))`), repeated or padded where

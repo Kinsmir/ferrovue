@@ -264,7 +264,8 @@ class Run {
       .toSorted((a, b) => rank(a) - rank(b) || at(a.e)[0] - at(b.e)[0] || at(a.e)[1] - at(b.e)[1])
       .map((r) => r.e)
       .filter((e) => {
-        const key = `${e instanceof GenError ? e.code : ""}\n${e.message}`;
+        const placed = e instanceof GenError && e.at?.line !== undefined ? `${e.at.file}:${e.at.line}:${e.at.column ?? 0}` : null;
+        const key = `${e instanceof GenError ? e.code : ""}\n${placed ?? e.message}`;
         if (seen.has(key)) return false;
         seen.add(key);
         return true;

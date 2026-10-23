@@ -1,9 +1,11 @@
 import { escapeHtml } from "@vue/shared";
 import { type N, type Scope, type Val, directiveOwner, fail, nothing, rustStr, STR } from "./model.ts";
 import { expr } from "./expr.ts";
-import { cond, known, truthy } from "./narrowing.ts";
+import { choice, cond, known, narrowing, narrowTo, presence, truthy } from "./narrowing.ts";
+import { pickPresent } from "./constants.ts";
+import { ctx } from "./context.ts";
 import { meet } from "./strings.ts";
-import { atom, bare, condition, logical, not, strArg } from "./parens.ts";
+import { atom, bare, condition, logical, not, occurrences, strArg } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
 import { valueAttr } from "./attrs.ts";
 
@@ -57,15 +59,12 @@ export function classItems(s: Scope, n: N): ClassItem[] {
         return [{ code: `if ${condition(truthy(v))} { ${bare(text)} } else { "" }` }];
       });
     case "LogicalExpression":
-      if (n.operator === "&&") {
-        return conditional(cond(s, n.left), classItems(s, n.right));
-      }
+      if (n.operator === "&&") return guarded(s, n.left, true, (inner) => classItems(inner, n.right));
       break;
     case "ConditionalExpression":
       if (n.consequent.type === "NullLiteral" || n.alternate.type === "NullLiteral") {
         const branch = n.consequent.type === "NullLiteral" ? n.alternate : n.consequent;
-        const test = cond(s, n.test);
-        return conditional(n.consequent.type === "NullLiteral" ? not(test) : test, classItems(s, branch));
+        return guarded(s, n.test, n.consequent.type !== "NullLiteral", (inner) => classItems(inner, branch));
       }
       break;
   }
@@ -74,6 +73,22 @@ export function classItems(s: Scope, n: N): ClassItem[] {
   if (v.ty.k === "opt" && v.ty.of.k === "str") return [{ code: `${atom(v.code)}.unwrap_or("")` }];
   if (nothing(v.ty)) return [];
   return fail(s.comp, "FV1004", "a class is a string, an array, or an object of conditions", n);
+}
+
+function guarded(s: Scope, test: N, when: boolean, items: (inner: Scope) => ClassItem[]): ClassItem[] {
+  const p = presence(s, test);
+  if (!p || p.negated === when) return conditional(when ? cond(s, test) : not(cond(s, test)), items(s));
+  const name = `n${++ctx.narrowCount}`;
+  return items(narrowTo(s, p, name)).flatMap((it) => {
+    const code = "lit" in it ? rustStr(it.lit) : bare(it.code);
+    return occurrences(code, name) ? [{ code: `if ${p.pattern(name)} { ${code} } else { "" }` }] : conditional(p.present, [it]);
+  });
+}
+
+function narrowed(s: Scope, test: N, when: boolean, taken: (inner: Scope) => string, other: (inner: Scope) => string): string | null {
+  const p = presence(s, test);
+  if (!p || p.negated === when) return null;
+  return narrowing(s, p, taken, other);
 }
 
 function conditional(test: string, items: ClassItem[]): ClassItem[] {
@@ -127,17 +142,31 @@ export function classPresent(s: Scope, n: N): string {
     case "ObjectExpression":
       return "true";
     case "LogicalExpression":
-      if (n.operator === "&&") return logical(not(cond(s, n.left)), "||", classPresent(s, n.right));
+      if (n.operator === "&&") {
+        const defined = definedWhenFalsy(s, n.left);
+        return narrowed(s, n.left, true, (inner) => classPresent(inner, n.right), () => defined) ?? choice(cond(s, n.left), classPresent(s, n.right), defined);
+      }
       break;
     case "ConditionalExpression":
-      if (n.consequent.type === "NullLiteral") return logical(cond(s, n.test), "||", classPresent(s, n.alternate));
-      if (n.alternate.type === "NullLiteral") return logical(not(cond(s, n.test)), "||", classPresent(s, n.consequent));
+      if (n.consequent.type === "NullLiteral") return narrowed(s, n.test, false, (inner) => classPresent(inner, n.alternate), () => "true") ?? logical(cond(s, n.test), "||", classPresent(s, n.alternate));
+      if (n.alternate.type === "NullLiteral") return narrowed(s, n.test, true, (inner) => classPresent(inner, n.consequent), () => "true") ?? logical(not(cond(s, n.test)), "||", classPresent(s, n.consequent));
       break;
   }
   const v = expr(s, n);
   if (nothing(v.ty)) return "false";
   if (v.ty.k === "opt") return `${atom(v.code)}.is_some()`;
   return "true";
+}
+
+/** Where `a` in `a && b` is falsy, whether the value it gives, `a` itself, is other than
+ * `undefined`, which `mergeProps` leaves out. */
+function definedWhenFalsy(s: Scope, n: N): string {
+  if (pickPresent(s, n) !== null) return "false";
+  const v = expr(s, n);
+  if (v.ty.k === "undef") return "false";
+  if (v.ty.k !== "opt" || v.ty.none === "null") return "true";
+  if (v.ty.none === "either") return fail(s.comp, "FV1004", "a class `a && b` whose `a` may be `null` or `undefined`, which its Rust `Option` cannot tell apart, though `mergeProps` keeps a `null` class and leaves an `undefined` one out: give it a fallback with `??`", n);
+  return `${atom(v.code)}.is_some()`;
 }
 
 export function maybeEqual(s: Scope, n: N): boolean {
@@ -171,10 +200,16 @@ export function classAttr(s: Scope, n: N, side: "vnode" | "own"): string {
       return `fv::Attr::Names(${literal ? `std::borrow::Cow::Borrowed(${names})` : `${names}.into()`})`;
     }
     case "LogicalExpression":
-      if (n.operator === "&&") return `if ${condition(cond(s, n.left))} { ${classAttr(s, n.right, side)} } else { fv::Attr::str("") }`;
+      if (n.operator === "&&") {
+        return narrowed(s, n.left, true, (inner) => classAttr(inner, n.right, side), () => 'fv::Attr::str("")') ?? `if ${condition(cond(s, n.left))} { ${classAttr(s, n.right, side)} } else { fv::Attr::str("") }`;
+      }
       break;
     case "ConditionalExpression":
-      return `if ${condition(cond(s, n.test))} { ${classAttr(s, n.consequent, side)} } else { ${classAttr(s, n.alternate, side)} }`;
+      return (
+        narrowed(s, n.test, true, (inner) => classAttr(inner, n.consequent, side), () => classAttr(s, n.alternate, side)) ??
+        narrowed(s, n.test, false, (inner) => classAttr(inner, n.alternate, side), () => classAttr(s, n.consequent, side)) ??
+        `if ${condition(cond(s, n.test))} { ${classAttr(s, n.consequent, side)} } else { ${classAttr(s, n.alternate, side)} }`
+      );
   }
   const v = expr(s, n);
   if (v.ty.k === "str" || nothing(v.ty) || (v.ty.k === "opt" && v.ty.of.k === "str")) return valueAttr(s, v, n);
