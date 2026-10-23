@@ -1,0 +1,23 @@
+name: APT mirror
+description: Takes the Azure Ubuntu mirror out of the runner's APT mirror list when the HTTPS Ubuntu archive is listed with it, so APT downloads from the archive
+inputs:
+  list:
+    description: The APT mirror list
+    default: /etc/apt/apt-mirrors.txt
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        LIST: ${{ inputs.list }}
+      run: |
+        if [[ ! -f $LIST || -L $LIST ]]; then
+          echo "::warning::$LIST is not a regular file, so APT keeps the runner's mirrors"
+          exit 0
+        fi
+        if ! awk '{ sub(/\/$/, "", $1) } $1 == "https://archive.ubuntu.com/ubuntu" { found = 1 } END { exit !found }' "$LIST"; then
+          echo "::warning::$LIST lists no https://archive.ubuntu.com/ubuntu, so APT keeps the runner's mirrors"
+          exit 0
+        fi
+        sudo sed -i -E '/^https?:\/\/azure\.archive\.ubuntu\.com\/ubuntu\/?([[:space:]]|$)/d' "$LIST"
+        cat "$LIST"
