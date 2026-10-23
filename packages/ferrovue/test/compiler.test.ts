@@ -88,7 +88,7 @@ import { fmt } from "./util";
 const props = defineProps<{ n: number; pair: [number, number] }>();
 function twice(x: number) { return x * 2; }
 const big = computed(() => {
-  for (const m of [props.n]) return m;
+  while (props.n > 0) return props.n;
   return 0;
 });
 </script>
@@ -113,7 +113,7 @@ const big = computed(() => {
       expect(again).toEqual([
         [
           "FV1901",
-          "a `computed`'s body may not hold a `for…of` loop: it holds `const` (and `let` never assigned again), `if` / `else`, `switch` and `return`; compute a list with `.map()`, `.filter()` or `.reduce()` (the template reads it as `big` at components/X.vue:15:9)",
+          "a `computed`'s body may not hold a `while` loop, which the compiler cannot bound: count with `for (let i = start; i < end; i++)` to an integer bound, or iterate with `for (const x of list)` (the template reads it as `big` at components/X.vue:15:9)",
           null,
         ],
         ["FV0613", "`fmt` is set up in a way the server cannot evaluate: it is a function imported from components/util.ts, which the template and a `computed` may call, and only an event handler may name without calling it", "call it, as `fmt(…)`, which the server translates, or name it only in an event handler"],
@@ -3208,17 +3208,17 @@ function or(v: string | null | undefined = 'x'): string {
       /a default for a parameter given a value that may be `null` or `undefined`/,
     ],
     [
-      "a function with a loop called by the template",
+      "a function with a while loop called by the template",
       `<script setup lang="ts">
 const props = defineProps<{ tags: string[]; n: number; note?: string; other: string | null }>();
 function total(xs: string[]): number {
   let sum = 0;
-  for (const x of xs) sum = sum + x.length;
+  while (sum < xs.length) sum = sum + 1;
   return sum;
 }
 </script>
 <template><i>{{ total(tags) }}</i></template>`,
-      /X\.vue:5:\d+: `let sum` is assigned again with `=`, which a function's body does not translate.*\(in `total\(\)`, called at components\/X\.vue:9:\d+\)/,
+      /X\.vue:5:\d+: a function's body may not hold a `while` loop, which the compiler cannot bound.*\(in `total\(\)`, called at components\/X\.vue:9:\d+\)/,
     ],
     [
       "a function read as a value",
@@ -3232,12 +3232,12 @@ function shout(t: string): string {
       /`shout` is set up in a way the server cannot evaluate: it is a function, which the template and a `computed` may call/,
     ],
     [
-      "a loop in a callback's body",
+      "a for…in loop in a callback's body",
       `<script setup lang="ts">
 const props = defineProps<{ tags: string[]; n: number }>();
 </script>
-<template><i>{{ tags.map((t) => { for (const c of t) { if (c) return c; } return t; }).join() }}</i></template>`,
-      /X\.vue:4:\d+: a function's body may not hold a `for…of` loop: it holds `const`.*compute a list with `\.map\(\)`/,
+<template><i>{{ tags.map((t) => { for (const c in t) { if (c) return c; } return t; }).join() }}</i></template>`,
+      /X\.vue:4:\d+: a function's body may not hold a `for…in` loop, which walks an object's keys: iterate `Object\.keys\(…\)` with `for \(const key of …\)`/,
     ],
     [
       "a while loop in a callback's body",
@@ -3280,12 +3280,17 @@ const props = defineProps<{ tags: string[]; n: number }>();
       /an expression statement \(`CallExpression`\), whose value is dropped/,
     ],
     [
-      "a let assigned again in a callback's body",
+      "a let of a body assigned from a callback inside it",
       `<script setup lang="ts">
 const props = defineProps<{ tags: string[]; n: number }>();
+function joined(tags: string[]): string {
+  let count = 0;
+  const names = tags.map((t) => { count += 1; return t; });
+  return names.join() + count;
+}
 </script>
-<template><i>{{ tags.map((t) => { let u = t; u += "!"; return u; }).join() }}</i></template>`,
-      /`let u` is assigned again with `\+=`/,
+<template><i>{{ joined(tags) }}</i></template>`,
+      /X\.vue:5:\d+: `count` is a `let` of the body around this function, which a function inside it may not assign \(`\+=`\): return the value from the function, and assign it in the body/,
     ],
     [
       "an assignment in a callback's body",
@@ -3293,7 +3298,7 @@ const props = defineProps<{ tags: string[]; n: number }>();
 const props = defineProps<{ tags: string[]; n: number }>();
 </script>
 <template><i>{{ tags.map((t) => { return (props.n = 2) > 1 ? t : ""; }).join() }}</i></template>`,
-      /an assignment \(`=`\) changes a value/,
+      /an assignment \(`=`\) to a field or an item, which changes an object or a list in place/,
     ],
     [
       "a callback that can end without a return",
@@ -3384,18 +3389,18 @@ defineProps<{ s?: string }>();
       /X\.vue:4:\d+: `&&` gives its left side where that is falsy, and this one, an optional string, may be falsy where it is present/,
     ],
     [
-      "a computed with a loop read by the template",
+      "a computed that assigns a prop, read by the template",
       `<script setup lang="ts">
 const props = defineProps<{ tags: string[]; n: number }>();
 import { computed } from "vue";
 const total = computed(() => {
   let sum = 0;
-  for (const t of props.tags) sum += t.length;
+  for (const t of props.tags) props.n += t.length;
   return sum;
 });
 </script>
 <template><i>{{ total }}</i></template>`,
-      /X\.vue:6:\d+: `let sum` is assigned again with `\+=`, which a `computed`'s body does not translate.*\(the template reads it as `total` at components\/X\.vue:10:\d+\)/,
+      /X\.vue:6:\d+: an assignment \(`\+=`\) to a field or an item.*\(the template reads it as `total` at components\/X\.vue:10:\d+\)/,
     ],
     [
       "a function other than Boolean passed to map by name",
@@ -5039,6 +5044,375 @@ const chip = computed<Chip>(() => ({ size: props.size, label: props.name }));
 <template><S :chip="chip" /></template>`,
       /`size` of `Chip` is one of "sm" \| "md", the members of `ChipSize`, and the value given is one of "sm" \| "md" \| "lg": .* \(the template reads it as `chip` at components\/X\.vue:7:\d+\)/,
     ],
+    [
+      "a for loop that does not count",
+      `<script setup lang="ts">
+const props = defineProps<{ words: string[]; n: number; maybe?: string[] }>();
+function f(words: string[], n: number, maybe?: string[]): string {
+  let out = "";
+  for (let i = 0; out.length < n; i++) out += "x";
+  return out;
+}
+</script>
+<template><i>{{ f(words, n, maybe) }}</i></template>`,
+      /a `for` loop that is no counting loop, which the compiler cannot bound: count with `for \(let i = start; i < end; i\+\+\)` to an integer bound/,
+    ],
+    [
+      "a counting loop whose step is not a whole number",
+      `<script setup lang="ts">
+const props = defineProps<{ words: string[]; n: number; maybe?: string[] }>();
+function f(words: string[], n: number, maybe?: string[]): string {
+  let out = "";
+  for (let i = 0; i < n; i += 0.5) out += "x";
+  return out;
+}
+</script>
+<template><i>{{ f(words, n, maybe) }}</i></template>`,
+      /a `for` loop that is no counting loop/,
+    ],
+    [
+      "a counting loop that counts away from its bound",
+      `<script setup lang="ts">
+const props = defineProps<{ words: string[]; n: number; maybe?: string[] }>();
+function f(words: string[], n: number, maybe?: string[]): string {
+  let out = "";
+  for (let i = 0; i < n; i--) out += "x";
+  return out;
+}
+</script>
+<template><i>{{ f(words, n, maybe) }}</i></template>`,
+      /a `for` loop that is no counting loop/,
+    ],
+    [
+      "a counting loop whose body assigns its counter",
+      `<script setup lang="ts">
+const props = defineProps<{ words: string[]; n: number; maybe?: string[] }>();
+function f(words: string[], n: number, maybe?: string[]): string {
+  let out = "";
+  for (let i = 0; i < n; i++) {
+    out += "x";
+    i += 1;
+  }
+  return out;
+}
+</script>
+<template><i>{{ f(words, n, maybe) }}</i></template>`,
+      /the body of a counting loop assigns `i`, which the loop's head alone counts/,
+    ],
+    [
+      "a counting loop whose bound the body changes",
+      `<script setup lang="ts">
+const props = defineProps<{ words: string[]; n: number; maybe?: string[] }>();
+function f(words: string[], n: number, maybe?: string[]): string {
+  let end = n;
+  let out = "";
+  for (let i = 0; i < end; i++) {
+    out += "x";
+    end -= 1;
+  }
+  return out;
+}
+</script>
+<template><i>{{ f(words, n, maybe) }}</i></template>`,
+      /the bound of a counting loop reads `end`, which the loop changes/,
+    ],
+    [
+      "a counting loop to a Float bound",
+      `<script setup lang="ts">
+const props = defineProps<{ words: string[]; n: number; maybe?: string[] }>();
+function f(words: string[], n: number, maybe?: string[]): string {
+  let out = "";
+  for (let i = 0; i < n / 2; i++) out += "x";
+  return out;
+}
+</script>
+<template><i>{{ f(words, n, maybe) }}</i></template>`,
+      /a counting loop runs to an integer bound, and this one is a `Float`, which may hold a fraction or be `NaN`: round it with `Math\.floor\(\)`/,
+    ],
+    [
+      "a counting loop from a fraction",
+      `<script setup lang="ts">
+const props = defineProps<{ words: string[]; n: number; maybe?: string[] }>();
+function f(words: string[], n: number, maybe?: string[]): string {
+  let out = "";
+  for (let i = 0.5; i < n; i++) out += "x";
+  return out;
+}
+</script>
+<template><i>{{ f(words, n, maybe) }}</i></template>`,
+      /a counting loop counts from an integer/,
+    ],
+    [
+      "for await",
+      `<script setup lang="ts">
+import { computed } from "vue";
+const props = defineProps<{ words: string[] }>();
+const joined = computed(async () => {
+  let out = "";
+  for await (const w of props.words) out += w;
+  return out;
+});
+</script>
+<template><i>{{ joined }}</i></template>`,
+      /`for await`, which waits on promises a render cannot wait on/,
+    ],
+    [
+      "a for…of loop over a name declared before it",
+      `<script setup lang="ts">
+const props = defineProps<{ words: string[]; n: number; maybe?: string[] }>();
+function f(words: string[], n: number, maybe?: string[]): string {
+  let out = "";
+  let w = "";
+  for (w of words) out += w;
+  return out;
+}
+</script>
+<template><i>{{ f(words, n, maybe) }}</i></template>`,
+      /a `for…of` loop declares its item in its head, as `for \(const x of list\)`/,
+    ],
+    [
+      "a for…of loop over a number",
+      `<script setup lang="ts">
+const props = defineProps<{ words: string[]; n: number; maybe?: string[] }>();
+function f(words: string[], n: number, maybe?: string[]): string {
+  let out = "";
+  for (const w of n) out += w;
+  return out;
+}
+</script>
+<template><i>{{ f(words, n, maybe) }}</i></template>`,
+      /`for…of` iterates a list of strings, numbers, booleans or objects, or a string by its characters, and this is a number/,
+    ],
+    [
+      "a for…of loop over an optional list",
+      `<script setup lang="ts">
+const props = defineProps<{ words: string[]; n: number; maybe?: string[] }>();
+function f(words: string[], n: number, maybe?: string[]): string {
+  let out = "";
+  for (const w of maybe) out += w;
+  return out;
+}
+</script>
+<template><i>{{ f(words, n, maybe) }}</i></template>`,
+      /`for…of` iterates a list of strings, numbers, booleans or objects, or a string by its characters, and this is an optional list: narrow it first, or iterate `x \?\? \[\]`/,
+    ],
+    [
+      "a loop that carries a list",
+      `<script setup lang="ts">
+const props = defineProps<{ words: string[]; n: number; maybe?: string[] }>();
+function f(words: string[], n: number, maybe?: string[]): string {
+  let kept = words;
+  for (const w of words) kept = kept.filter((k) => k !== w);
+  return kept.join();
+}
+</script>
+<template><i>{{ f(words, n, maybe) }}</i></template>`,
+      /the loop assigns `kept`, which holds a list: a loop carries a string, a number or a boolean from one item to the next/,
+    ],
+    [
+      "a return of a list from inside a loop",
+      `<script setup lang="ts">
+const props = defineProps<{ words: string[]; n: number; maybe?: string[] }>();
+function f(words: string[], n: number, maybe?: string[]): string {
+  for (const w of words) {
+    if (w) return words;
+  }
+  return [];
+}
+</script>
+<template><i>{{ f(words, n, maybe) }}</i></template>`,
+      /`return` inside a loop gives a list: a `return` inside a loop gives a string, a number or a boolean that is present/,
+    ],
+    [
+      "returns of two types from inside a loop",
+      `<script setup lang="ts">
+const props = defineProps<{ words: string[]; n: number; maybe?: string[] }>();
+function f(words: string[], n: number, maybe?: string[]): string {
+  for (const w of words) {
+    if (w) return w;
+    return w.length;
+  }
+  return "";
+}
+</script>
+<template><i>{{ f(words, n, maybe) }}</i></template>`,
+      /the loop's `return`s give a string and a number/,
+    ],
+    [
+      "a let assigned a value of another type",
+      `<script setup lang="ts">
+const props = defineProps<{ words: string[]; n: number; maybe?: string[] }>();
+function f(words: string[], n: number, maybe?: string[]): string {
+  let label = "";
+  if (n > 1) label = n;
+  return String(label);
+}
+</script>
+<template><i>{{ f(words, n, maybe) }}</i></template>`,
+      /`label` is declared as a string, and assigned a number here/,
+    ],
+    [
+      "++ of a string",
+      `<script setup lang="ts">
+const props = defineProps<{ words: string[]; n: number; maybe?: string[] }>();
+function f(words: string[], n: number, maybe?: string[]): string {
+  let label = "a";
+  label++;
+  return label;
+}
+</script>
+<template><i>{{ f(words, n, maybe) }}</i></template>`,
+      /`\+\+` counts a number, and `label` holds a string/,
+    ],
+    [
+      "a let that starts as undefined without a type",
+      `<script setup lang="ts">
+const props = defineProps<{ words: string[]; n: number; maybe?: string[] }>();
+function f(words: string[], n: number, maybe?: string[]): string {
+  let label = undefined;
+  if (n > 1) label = "big";
+  return label ?? "";
+}
+</script>
+<template><i>{{ f(words, n, maybe) }}</i></template>`,
+      /`let label` starts as `undefined` with no type, which TypeScript leaves open: state the type it holds/,
+    ],
+    [
+      "a let holding a function assigned again",
+      `<script setup lang="ts">
+const props = defineProps<{ words: string[]; n: number; maybe?: string[] }>();
+function f(words: string[], n: number, maybe?: string[]): string {
+  let f = (x: number) => x;
+  if (n > 1) f = (x: number) => x * 2;
+  return String(f(n));
+}
+</script>
+<template><i>{{ f(words, n, maybe) }}</i></template>`,
+      /`let f` holds a function and is assigned again/,
+    ],
+    [
+      "a const assigned again",
+      `<script setup lang="ts">
+const props = defineProps<{ words: string[]; n: number; maybe?: string[] }>();
+function f(words: string[], n: number, maybe?: string[]): string {
+  const label = "";
+  label = "x";
+  return label;
+}
+</script>
+<template><i>{{ f(words, n, maybe) }}</i></template>`,
+      /`label` is a `const`, which JavaScript does not let a body assign/,
+    ],
+    [
+      "a parameter assigned",
+      `<script setup lang="ts">
+const props = defineProps<{ words: string[]; n: number; maybe?: string[] }>();
+function f(words: string[], n: number, maybe?: string[]): string {
+  n = n + 1;
+  return String(n);
+}
+</script>
+<template><i>{{ f(words, n, maybe) }}</i></template>`,
+      /`n` is assigned \(`=`\), and it is no `let` of this body/,
+    ],
+    [
+      "an assignment inside an expression",
+      `<script setup lang="ts">
+const props = defineProps<{ words: string[]; n: number; maybe?: string[] }>();
+function f(words: string[], n: number, maybe?: string[]): string {
+  let k = 0;
+  return String((k += 1) + k);
+}
+</script>
+<template><i>{{ f(words, n, maybe) }}</i></template>`,
+      /an assignment \(`\+=`\) inside an expression, whose value JavaScript then reads: write the assignment as a statement of its own/,
+    ],
+    [
+      "an increment inside a call",
+      `<script setup lang="ts">
+const props = defineProps<{ words: string[]; n: number; maybe?: string[] }>();
+function f(words: string[], n: number, maybe?: string[]): string {
+  let k = 0;
+  const s = String(k++);
+  return s + k;
+}
+</script>
+<template><i>{{ f(words, n, maybe) }}</i></template>`,
+      /an assignment \(`\+\+`\) inside an expression/,
+    ],
+    [
+      "a destructuring assignment",
+      `<script setup lang="ts">
+const props = defineProps<{ words: string[]; n: number; maybe?: string[] }>();
+function f(words: string[], n: number, maybe?: string[]): string {
+  let a = 1;
+  let b = 2;
+  [a, b] = [b, a];
+  return \`\${a}\${b}\`;
+}
+</script>
+<template><i>{{ f(words, n, maybe) }}</i></template>`,
+      /an assignment \(`=`\) to a pattern/,
+    ],
+    [
+      "a function of a body reading a let the body assigns",
+      `<script setup lang="ts">
+const props = defineProps<{ words: string[]; n: number; maybe?: string[] }>();
+function f(words: string[], n: number, maybe?: string[]): string {
+  let k = 1;
+  const times = (x: number) => x * k;
+  k = 2;
+  return String(times(n));
+}
+</script>
+<template><i>{{ f(words, n, maybe) }}</i></template>`,
+      /`times` reads `k`, a `let` the body assigns again: the server gives a function the values the body holds where the function is declared/,
+    ],
+    [
+      "a labelled break",
+      `<script setup lang="ts">
+const props = defineProps<{ words: string[]; n: number; maybe?: string[] }>();
+function f(words: string[], n: number, maybe?: string[]): string {
+  let out = "";
+  outer: for (const w of words) {
+    for (const c of w) {
+      if (c === "x") break outer;
+      out += c;
+    }
+  }
+  return out;
+}
+</script>
+<template><i>{{ f(words, n, maybe) }}</i></template>`,
+      /a function's body may not hold a labelled statement/,
+    ],
+    [
+      "a let assigned again declared without a value",
+      `<script setup lang="ts">
+const props = defineProps<{ words: string[]; n: number; maybe?: string[] }>();
+function f(words: string[], n: number, maybe?: string[]): string {
+  let label: string;
+  if (n > 1) label = "big";
+  else label = "small";
+  return label;
+}
+</script>
+<template><i>{{ f(words, n, maybe) }}</i></template>`,
+      /`label` is declared without a value, and JavaScript gives it `undefined` until it is assigned: give it a value where it is declared/,
+    ],
+    [
+      "a do…while loop",
+      `<script setup lang="ts">
+const props = defineProps<{ words: string[]; n: number; maybe?: string[] }>();
+function f(words: string[], n: number, maybe?: string[]): string {
+  let k = 0;
+  do k += 1; while (k < n);
+  return String(k);
+}
+</script>
+<template><i>{{ f(words, n, maybe) }}</i></template>`,
+      /a function's body may not hold a `do…while` loop, which the compiler cannot bound/,
+    ],
   ];
 
   const children = {
@@ -5076,6 +5450,33 @@ defineProps<{ chip: Chip }>();
   };
 
   const codes: Record<string, Code> = {
+    "a for loop that does not count": "FV1909",
+    "a counting loop whose step is not a whole number": "FV1909",
+    "a counting loop that counts away from its bound": "FV1909",
+    "a counting loop whose body assigns its counter": "FV1909",
+    "a counting loop whose bound the body changes": "FV1909",
+    "a counting loop to a Float bound": "FV1909",
+    "a counting loop from a fraction": "FV1909",
+    "for await": "FV1909",
+    "a for…of loop over a name declared before it": "FV1909",
+    "a for…of loop over a number": "FV1910",
+    "a for…of loop over an optional list": "FV1910",
+    "a loop that carries a list": "FV1911",
+    "a return of a list from inside a loop": "FV1911",
+    "returns of two types from inside a loop": "FV1911",
+    "a let assigned a value of another type": "FV1912",
+    "++ of a string": "FV1912",
+    "a let that starts as undefined without a type": "FV1912",
+    "a let holding a function assigned again": "FV1912",
+    "a const assigned again": "FV1902",
+    "a parameter assigned": "FV1902",
+    "an assignment inside an expression": "FV1902",
+    "an increment inside a call": "FV1902",
+    "a destructuring assignment": "FV1902",
+    "a function of a body reading a let the body assigns": "FV1902",
+    "a labelled break": "FV1901",
+    "a let assigned again declared without a value": "FV1901",
+    "a do…while loop": "FV1901",
     "an object literal with a key its interface does not declare": "FV0635",
     "an object literal that leaves out a required field": "FV0635",
     "an object literal that gives a key twice": "FV0635",
@@ -5185,15 +5586,15 @@ defineProps<{ chip: Chip }>();
     "an async function called by the template": "FV1907",
     "a function given spread arguments": "FV1907",
     "a default for a parameter given null or undefined": "FV1907",
-    "a function with a loop called by the template": "FV1902",
+    "a function with a while loop called by the template": "FV1901",
     "a function read as a value": "FV0613",
-    "a loop in a callback's body": "FV1901",
+    "a for…in loop in a callback's body": "FV1901",
     "a while loop in a callback's body": "FV1901",
     "try in a callback's body": "FV1901",
     "throw in a callback's body": "FV1901",
     "var in a callback's body": "FV1901",
     "an expression statement in a callback's body": "FV1901",
-    "a let assigned again in a callback's body": "FV1902",
+    "a let of a body assigned from a callback inside it": "FV1902",
     "an assignment in a callback's body": "FV1902",
     "a callback that can end without a return": "FV1903",
     "a return without a value in a callback": "FV1903",
@@ -5204,7 +5605,7 @@ defineProps<{ chip: Chip }>();
     "a body whose switches continue after them on too many paths": "FV1905",
     "a switch with no case for some values and nothing after it": "FV1903",
     "a function declared in a callback's body": "FV1901",
-    "a computed with a loop read by the template": "FV1902",
+    "a computed that assigns a prop, read by the template": "FV1902",
     "a constant `Map` read by its size": "FV0227",
     "`&&` after an optional string, which may be empty": "FV0614",
     "Object.entries pairs mapped to themselves": "FV0816",
@@ -5535,8 +5936,8 @@ defineProps<{ word: string }>();
       }
       throw new Error("compiled");
     })();
-    expect(e.code).toBe("FV1902");
-    expect(e.message).toMatch(/^components\/text\.ts:3:\d+: `let t` .*\(in `sum\(\)`, called at components\/X\.vue:5:\d+\)/);
+    expect(e.code).toBe("FV1901");
+    expect(e.message).toMatch(/^components\/text\.ts:3:\d+: a function's body may not hold a `while` loop.*\(in `sum\(\)`, called at components\/X\.vue:5:\d+\)/);
     expect(e.readAt).toMatchObject({ file: "components/X.vue", line: 5 });
   });
 
@@ -6618,5 +7019,81 @@ const props = defineProps<{ k: "sm" | "md" | "lg" }>();
     expect(body).toContain("match props.k { XK::Sm => Some(12i64), XK::Md => Some(16i64), XK::Lg => None }");
     expect(body).toContain("matches!(props.k, XK::Sm | XK::Md)");
     expect(body).not.toContain('"toString"');
+  });
+});
+
+describe("loops and assignments", () => {
+  const render = (script: string, template: string): string => {
+    const out = compile(
+      island(`<script setup lang="ts">
+import { computed } from "vue";
+import type { Float } from "ferrovue/types";
+interface Row { name: string; n: number }
+const props = defineProps<{ rows: Row[]; words: string[]; s: string; n: number; f: Float }>();
+${script}
+</script>
+<template><i>${template}</i></template>`),
+    ).get("x.rs")!;
+    return out.slice(out.indexOf("pub fn render"));
+  };
+
+  it("carries a sum in an f64 the loop adds to, read back as an integer", () => {
+    const body = render("const total = computed(() => {\n  let sum = 0;\n  for (const r of props.rows) sum += r.n;\n  return sum;\n});", "{{ total }}");
+    expect(body).toMatch(/let mut (fv_m\d+): f64 = 0\.0f64; for (fv_a\d+) in props\.rows\.iter\(\) \{ \1 \+= \2\.n as f64; \} \1 as i64/);
+  });
+
+  it("carries a Float once a value the loop gives may be one", () => {
+    const body = render("const total = computed(() => {\n  let sum = 0;\n  for (const r of props.rows) sum += r.n * props.f;\n  return sum;\n});", "{{ total }}");
+    expect(body).toMatch(/let mut (fv_m\d+): f64 = 0\.0f64; for (fv_a\d+) in props\.rows\.iter\(\) \{ \1 \+= \2\.n as f64 \* props\.f; \} \1 \}/);
+  });
+
+  it("appends to a string the loop builds, and iterates a string by its characters", () => {
+    const body = render('function spaced(s: string): string {\n  let out = "";\n  for (const ch of s) out += `${ch} `;\n  return out;\n}', "{{ spaced(s) }}");
+    expect(body).toMatch(/let mut (fv_m\d+): String = String::new\(\); for (fv_s\d+) in props\.s\.split_inclusive\(\|_: char\| true\) \{ use std::fmt::Write as _; let _ = write!\(\1, "\{\} ", \2\); \}/);
+    expect(body).toContain("std::borrow::Cow::<str>::Owned(fv_m");
+  });
+
+  it("counts with a while loop over an f64, the bound read on every item as JavaScript reads it", () => {
+    const body = render('function stars(n: number): string {\n  let out = "";\n  for (let i = 0; i < Math.min(n, 5); i++) out += "*";\n  return out;\n}', "{{ stars(n) }}");
+    expect(body).toMatch(/let mut (fv_m\d+): String = String::new\(\); let mut (fv_m\d+): f64 = 0\.0f64; while \2 < props\.n\.min\(5i64\) as f64 \{ \1\.push\('\*'\); \2 \+= 1\.0; \}/);
+  });
+
+  it("keeps a return inside a loop for after it, and breaks out", () => {
+    const body = render('function first(words: string[]): string {\n  for (const w of words) if (w.length > 2) return w;\n  return "none";\n}', "{{ first(words) }}");
+    expect(body).toMatch(/let mut (fv_r\d+): Option<String> = None; for (fv_s\d+) in .*\{ if fv::js_length\(&\2\) as f64 > 2\.0 \{ \1 = Some\(String::from\(&\*\2\)\); break; \} \}/);
+    expect(body).toMatch(/if (fv_r\d+)\.is_some\(\) \{ \1\.as_deref\(\)\.unwrap_or_default\(\) \} else \{ "none" \}/);
+  });
+
+  it("numbers the items of `.entries()` as integers", () => {
+    const body = render("function at(words: string[], s: string): number {\n  for (const [i, w] of words.entries()) if (w === s) return i;\n  return -1;\n}", "{{ at(words, s) }}");
+    expect(body).toMatch(/for \((fv_i\d+), (fv_s\d+)\) in .*\.enumerate\(\) \{ let \1 = \1 as i64; /);
+  });
+
+  it("runs a body that never reaches its next item on the first item alone, with no break", () => {
+    const body = render('function initial(s: string): string {\n  let out = "";\n  for (const ch of s) {\n    out = ch;\n    break;\n  }\n  return out;\n}', "{{ initial(s) }}");
+    expect(body).toMatch(/for (fv_s\d+) in props\.s\.split_inclusive\(\|_: char\| true\)\.take\(1\) \{ fv_m\d+ = String::from\(\1\); \}/);
+    expect(body).not.toContain("break");
+  });
+
+  it("drops a let the loop assigns and nothing reads, and assigns at a break only what is read after the loop", () => {
+    const body = render('function f(words: string[]): string {\n  let last = "";\n  let seen = 0;\n  let count = 0;\n  for (const w of words) {\n    last = w;\n    if (seen > 2) break;\n    seen += 1;\n    count += 1;\n  }\n  return `${count}`;\n}', "{{ f(words) }}");
+    expect(body).not.toContain("String::new()");
+    expect(body).toMatch(/for _ in props\.words\.iter\(\) \{ if (fv_m\d+) > 2\.0 \{ break; \} else \{ \1 \+= 1\.0; (fv_m\d+) \+= 1\.0; \} \}/);
+  });
+
+  it("binds a let assigned again outside loops anew, with the type TypeScript narrows it to", () => {
+    const body = render('function size(n: number): number {\n  let label: string | undefined = undefined;\n  if (n > 1) label = "many";\n  else label = "one";\n  return label.length;\n}', "{{ size(n) }}");
+    expect(body).not.toContain("let mut");
+    expect(body).toMatch(/if props\.n as f64 > 1\.0 \{ fv::js_length\("many"\) \} else \{ fv::js_length\("one"\) \}/);
+  });
+
+  it("evaluates a value the body reads twice once, in a let", () => {
+    const body = render('function twice(s: string): string {\n  let t = s;\n  t = t.trim();\n  return t + t;\n}', "{{ twice(s) }}");
+    expect(body.match(/fv::js_trim/g)).toHaveLength(1);
+  });
+
+  it("swaps two lets through temporaries", () => {
+    const body = render('function swapped(n: number): string {\n  let a = "a";\n  let b = "b";\n  for (let i = 0; i < n; i++) {\n    const t = a;\n    a = b;\n    b = t;\n  }\n  return a + b;\n}', "{{ swapped(n) }}");
+    expect(body).toMatch(/let (fv_t\d+) = String::from\(&\*(fv_m\d+)\); let (fv_t\d+) = String::from\(&\*(fv_m\d+)\); let (fv_t\d+) = (fv_m\d+) \+ 1\.0; \4 = \1; \2 = \3; \6 = \5;/);
   });
 });

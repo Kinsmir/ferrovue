@@ -13,6 +13,7 @@ import { constOf, namedVal } from "./constants.ts";
 import { localeRefusal } from "./plugins/dates.ts";
 import { objectLiteral, ownedStruct, ownedStructs, refuseInPlace, structList, untypedObject } from "./objects.ts";
 import { letIn, panicky, split, splits } from "./blocks.ts";
+import { assignedLet, loopIn, loopStep } from "./statements.ts";
 import { refuseUnresolved } from "./resolve.ts";
 
 const MATH_CONSTANTS = new Map(["E", "LN10", "LN2", "LOG10E", "LOG2E", "PI", "SQRT1_2", "SQRT2"].map((k) => [k, Math[k as "PI"]]));
@@ -203,7 +204,10 @@ export function typedBy(n: N, t: N, arrays = true, from?: Component): N {
     case "LogicalExpression":
       return n.operator === "&&" ? n : { ...n, right: typedBy(n.right, t, arrays, from) };
     case "FvLet":
+    case "FvSet":
       return { ...n, body: typedBy(n.body, t, arrays, from) };
+    case "FvLoop":
+      return { ...n, after: typedBy(n.after, t, arrays, from) };
     default:
       return n;
   }
@@ -811,6 +815,12 @@ export function expr(s: Scope, n: N): Val {
       return stated(s, n);
     case "FvLet":
       return letIn(s, n);
+    case "FvSet":
+      return assignedLet(s, n);
+    case "FvLoop":
+      return loopIn(s, n);
+    case "FvStep":
+      return loopStep(s, n);
     case "NewExpression": {
       const own = claim((p) => p.construct?.(s, n));
       if (own) return own;

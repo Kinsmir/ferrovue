@@ -20,6 +20,7 @@ export type Ty =
   | StructTy
   | { k: "html"; inline?: true }
   | { k: "child"; name: string }
+  | { k: "step" }
   | PluginTys[keyof PluginTys];
 
 export interface StructTy {
@@ -72,6 +73,9 @@ export const BOOL: Ty = { k: "bool" };
 export const UNDEF: Ty = { k: "undef" };
 
 export const NULL: Ty = { k: "null" };
+
+/** What the statements of a loop's body give: Rust statements that end the item. */
+export const STEP: Ty = { k: "step" };
 
 export type Absence = "undefined" | "null" | "either";
 
@@ -425,9 +429,44 @@ export interface Scope {
   sid: string | null;
   opaque: string | null;
   loop?: { item: string; over: string } | undefined;
+  /** The type each `let` a body assigns again was declared with, by its name in the body. */
+  lets?: Map<string, { ty: Ty; node?: N; js: string }> | undefined;
+  /** The `for` loop whose body is being translated, which its `break`, `continue` and `return` end. */
+  frame?: LoopFrame | undefined;
   plugins: Map<Plugin, unknown>;
   mapping?: true | undefined;
   typesFrom?: Component;
+}
+
+/** What a `let` a loop carries from one item to the next holds, or what its `return`s give: a
+ * string, a number or a boolean, which may be absent. */
+export interface Cell {
+  kind: "str" | "num" | "bool";
+  none: Absence | null;
+  int: boolean;
+  ascii: boolean;
+  lone: boolean;
+}
+
+/** A `let` a loop carries: its Rust variable, how the body reads it, and where its ends assign it. */
+export interface LoopState {
+  name: string;
+  rust: string;
+  cell: Cell;
+  read: Val;
+  liveBreak: boolean;
+  assigned: number;
+}
+
+/** A loop being translated: the `let`s it carries, and what its body's ends found, which may have
+ * it translated again. */
+export interface LoopFrame {
+  states: LoopState[];
+  slot: Cell | null;
+  slotName: string;
+  retry: boolean;
+  nexts: number;
+  once: boolean;
 }
 
 export type Origin = "source" | "template";

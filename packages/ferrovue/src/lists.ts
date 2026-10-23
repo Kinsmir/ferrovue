@@ -105,7 +105,7 @@ export function heldList(name: string, of: Ty, lone?: boolean): Val {
   return { code: name, ty: { k: "list", of }, iter, ...(lone ? { lone } : {}) };
 }
 
-function itemVal(of: Ty, param: string, byRef: boolean, lone?: boolean): Val {
+export function itemVal(of: Ty, param: string, byRef: boolean, lone?: boolean): Val {
   const scalar = of.k === "int" || of.k === "float" || of.k === "bool" || of.k === "date";
   const code = of.k === "str" ? (byRef ? `&**${param}` : `&*${param}`) : byRef && scalar ? `*${param}` : param;
   return { code, ty: of, ...(lone ? { lone } : {}) };
@@ -276,7 +276,7 @@ export function picked(s: Scope, target: Val, n: N, fromList: (list: string) => 
 
 const RISKS_NEGATIVE_ZERO = /-[\w(]|\s[*%]\s/;
 
-function ownedString(v: Val, acc: string): string {
+export function ownedString(v: Val, acc: string): string {
   if (v.code === `&*${acc}`) return acc;
   if (v.code === '""') return "String::new()";
   const built = /^&\*(format!\(.*\))$/s.exec(v.code)?.[1];

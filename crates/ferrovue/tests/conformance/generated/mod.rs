@@ -112,6 +112,8 @@ pub mod loaded_dates;
 pub mod loaded_ranks;
 pub mod local_functions;
 pub mod lookups;
+pub mod loop_edges;
+pub mod loops;
 pub mod mapped_choice;
 pub mod markup;
 pub mod math_more;
@@ -830,6 +832,14 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Lookups" => {
             let props: lookups::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             lookups::render(&mut out, &props);
+        }
+        "LoopEdges" => {
+            let props: loop_edges::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            loop_edges::render(&mut out, &props);
+        }
+        "Loops" => {
+            let props: loops::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            loops::render(&mut out, &props);
         }
         "MappedChoice" => {
             let props: mapped_choice::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

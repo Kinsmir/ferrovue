@@ -246,7 +246,19 @@ export interface Consts {
   fold: boolean;
 }
 
-export type Step = { k: "const"; name: string; e: Expr } | { k: "if"; test: Expr; e: Expr } | { k: "arrow"; fn: LocalFn };
+export type Step = { k: "const"; name: string; e: Expr } | { k: "if"; test: Expr; e: Expr } | { k: "arrow"; fn: LocalFn } | LoopStep;
+
+export interface LoopStep {
+  k: "loop";
+  name: string;
+  init: Expr;
+  over: { list: ListExpr } | { str: Expr } | { count: Expr };
+  item: string;
+  skip: Expr | null;
+  op: string;
+  add: Expr;
+  stop: Expr | null;
+}
 
 export interface LocalFn {
   name: string;
@@ -606,12 +618,25 @@ function printHead(call: HeadCall): string {
 }
 
 function stepLine(st: Step): string {
+  if (st.k === "loop") {
+    const head =
+      "count" in st.over ? `let ${st.item} = 0; ${st.item} < ${st.over.count.atom ? printExpr(st.over.count) : `(${printExpr(st.over.count)})`}; ${st.item}++`
+      : `const ${st.item} of ${"list" in st.over ? st.over.list.fmt(st.over.list.kids.map(printExpr), 0) : printExpr(st.over.str)}`;
+    return [
+      `  let ${st.name} = ${printExpr(st.init)};`,
+      `  for (${head}) {`,
+      ...(st.skip ? [`    if (${printExpr(st.skip)}) continue;`] : []),
+      `    ${st.name} ${st.op} ${printExpr(st.add)};`,
+      ...(st.stop ? [`    if (${printExpr(st.stop)}) break;`] : []),
+      "  }",
+    ].join("\n");
+  }
   if (st.k === "arrow") return `  const ${st.fn.name} = (${st.fn.params.map((p) => `${p.name}: ${TS_TYPES[p.ty]!}`).join(", ")}): ${TS_TYPES[st.fn.ret]!} => ${printExpr(st.fn.e)};`;
   return st.k === "const" ? `  const ${st.name} = ${printExpr(st.e)};` : `  if (${printExpr(st.test)}) return ${printExpr(st.e)};`;
 }
 
 function bindingText(b: Binding): string {
-  return [...(b.steps ?? []).flatMap((st) => (st.k === "const" ? [st.e] : st.k === "arrow" ? [st.fn.e] : [st.test, st.e])), b.e].map(printExpr).join("\n");
+  return [...(b.steps ?? []).map((st) => (st.k === "loop" ? stepLine(st) : (st.k === "const" ? [st.e] : st.k === "arrow" ? [st.fn.e] : [st.test, st.e]).map(printExpr).join("\n"))), printExpr(b.e)].join("\n");
 }
 
 function argText(a: LoadArg): string {
@@ -1481,7 +1506,7 @@ class Gen {
         const s = this.str(d - 1);
         const sep = r.pick([",", " ", "", "a", "🦀", ", "]);
         const limit = r.chance(0.3) ? `, ${r.pick(["0", "1", "2", "3", "-1", "4294967297", "1.5"])}` : "";
-        return { of: { k: "str" }, kids: [s], fmt: (k, at) => `${recv(k[at])}.split(${quoted(sep)}${limit})`, lone: !!s.lone || sep === "" };
+        return { of: { k: "str" }, kids: [s], fmt: (k, at) => `${s.atom ? recv(k[at]) : `(${k[at]})`}.split(${quoted(sep)}${limit})`, lone: !!s.lone || sep === "" };
       }],
     ])();
     for (let ops = r.weighted([[3, 0], [4, 1], [2, 2]]); ops > 0; ops--) {
@@ -1511,7 +1536,7 @@ class Gen {
           });
           const of: Spec = pair!.ty === "str" ? { k: "str" } : { k: "int", wide: false };
           const lone = !!pair!.lone || pair!.kids.some((x) => x.lone) || (split && sep === "");
-          const each = (x: string) => (split ? `${recv(x)}.split(${quoted(sep)})` : x);
+          const each = (x: string) => (split ? `${pair!.atom ? recv(x) : `(${x})`}.split(${quoted(sep)})` : x);
           return { of, kids: [...prev.kids, fn.body], fmt: (k, at) => `${prev.fmt(k, at)}.flatMap(${fn.params} => ${each(k[at + width]!)})`, lone, ...(of.k === "int" ? { mapped: true } : {}) };
         }],
         [2, () => {
@@ -2851,7 +2876,11 @@ function scriptExpr(g: Gen, ty: Ty, d: number): Expr {
 function bodySteps(g: Gen, ty: Ty, at: number): Step[] {
   const steps: Step[] = [];
   for (let k = g.r.int(1, 3); k > 0; k--) {
-    if (g.r.chance(0.5)) {
+    if (g.r.chance(0.35)) {
+      const step = loopStep(g, `${at}_${steps.length}`);
+      steps.push(step);
+      g.scope.vars.push(loopVar(step));
+    } else if (g.r.chance(0.5)) {
       const name = `l${at}_${steps.length}`;
       const e = scriptExpr(g, g.r.pick<Ty>(["str", "int", "float", "bool"]), g.r.int(1, 2));
       steps.push({ k: "const", name, e });
@@ -2861,9 +2890,10 @@ function bodySteps(g: Gen, ty: Ty, at: number): Step[] {
       const ret = g.r.pick<Ty>(["str", "int", "bool"]);
       const params = [{ name: `b${at2}`, ty: g.r.pick<Ty>(["str", "int", "bool"]) }];
       const vars: Var[] = params.map((p) => ({ name: p.name, ty: p.ty, opt: false, bound: p.ty === "int" ? BOUND_SMALL : 0 }));
-      g.scope.vars.push(...vars);
+      const carried = g.scope.vars.filter((v) => steps.some((st) => st.k === "loop" && st.name === v.name));
+      g.scope.vars = [...g.scope.vars.filter((v) => !carried.includes(v)), ...vars];
       const e = scriptExpr(g, ret, g.r.int(1, 2));
-      g.scope.vars = g.scope.vars.filter((v) => !vars.includes(v));
+      g.scope.vars = [...g.scope.vars.filter((v) => !vars.includes(v)), ...carried];
       const fn: LocalFn = { name: `in${at2}`, params, ret, steps: [], e };
       g.fns.push(fn);
       steps.push({ k: "arrow", fn });
@@ -2872,15 +2902,49 @@ function bodySteps(g: Gen, ty: Ty, at: number): Step[] {
   return steps;
 }
 
+function carriedOut(g: Gen, steps: Step[], ty: Ty, e: Expr): Expr {
+  const loops = steps.filter((st): st is LoopStep => st.k === "loop" && st.init.ty === ty);
+  return loops.length && g.r.chance(0.6) ? g.varRef(loopVar(g.r.pick(loops))) : e;
+}
+
+function loopVar(st: LoopStep): Var {
+  const ty = st.init.ty;
+  return { name: st.name, ty, opt: false, bound: ty === "int" ? 2 ** 53 : 0 };
+}
+
+function loopStep(g: Gen, at: string): LoopStep {
+  const r = g.r;
+  const ty = r.pick<Ty>(["str", "str", "int", "int", "bool"]);
+  const name = `acc${at}`;
+  const item = `it${at}`;
+  const init = ty === "str" ? whole(g.str(1)) : ty === "int" ? g.int(1, BOUND_SMALL) : g.bool(1);
+  const count = r.chance(0.2) ? g.int(1, 40) : null;
+  const list = count || r.chance(0.4) ? null : g.listExpr(2);
+  const text = list || count ? null : g.str(2);
+  const over = count ? { count } : list ? { list } : { str: text! };
+  return g.withScope(() => {
+    if (count) g.scope.vars.push({ name: item, ty: "int", opt: false, bound: 40 });
+    else if (list) g.bind(item, list.of, false, list.lone);
+    else g.bind(item, { k: "str" }, false, !!text!.lone);
+    g.scope.vars.push({ name, ty, opt: false, bound: ty === "int" ? 2 ** 53 : 0 });
+    const skip = r.chance(0.3) ? g.bool(1) : null;
+    const items = g.scope.vars.filter((v) => (v.name === item || v.name.startsWith(`${item}.`)) && v.ty === ty && !v.opt && !v.lone && v.bound <= BOUND_SMALL);
+    const add = items.length && r.chance(0.6) ? g.varRef(r.pick(items)) : ty === "str" ? whole(g.str(2)) : ty === "int" ? g.int(2, BOUND_SMALL) : g.bool(2);
+    const op = ty === "str" ? r.pick(["+=", "+=", "="]) : ty === "int" ? r.pick(["+=", "-=", "=", "*="]) : r.pick(["=", "||=", "&&="]);
+    const stop = r.chance(0.3) ? g.bool(1) : null;
+    return { k: "loop", name, init, over, item, skip, op, add: op === "*=" ? g.int(1, 3) : add, stop };
+  });
+}
+
 function localFn(g: Gen, k: number): LocalFn {
   const ret = g.r.pick<Ty>(["str", "str", "int", "bool"]);
   const params = Array.from({ length: g.r.int(1, 2) }, (_, i) => ({ name: `a${k}_${i}`, ty: g.r.pick<Ty>(["str", "int", "bool"]) }));
   const vars: Var[] = params.map((p) => ({ name: p.name, ty: p.ty, opt: false, bound: p.ty === "int" ? BOUND_SMALL : 0 }));
   g.scope.vars.push(...vars);
   const steps = g.r.chance(0.6) ? bodySteps(g, ret, 100 + k) : [];
-  const e = scriptExpr(g, ret, g.r.int(1, 2));
+  const e = carriedOut(g, steps, ret, scriptExpr(g, ret, g.r.int(1, 2)));
   dropArrows(g, steps);
-  const local = new Set([...vars.map((v) => v.name), ...steps.flatMap((st) => (st.k === "const" ? [st.name] : []))]);
+  const local = new Set([...vars.map((v) => v.name), ...steps.flatMap((st) => (st.k === "const" || st.k === "loop" ? [st.name] : []))]);
   g.scope.vars = g.scope.vars.filter((v) => !local.has(v.name));
   const f = { name: `fn${k}`, params, ret, steps, e: joined(e, steps) };
   g.fns.push(f);
@@ -3455,9 +3519,9 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
       const kind = r.weighted<Binding["kind"]>([[3, "computed"], [2, "const"], [1, "ref"]]);
       const ty = r.pick<Ty>(["str", "str", "int", "float", "bool"]);
       const steps = kind === "computed" && r.chance(0.4) ? bodySteps(g, ty, bindings.length) : undefined;
-      const e = kind === "ref" ? literalOf(r, ty) : scriptExpr(g, ty, r.int(1, 2));
+      const e = kind === "ref" ? literalOf(r, ty) : carriedOut(g, steps ?? [], ty, scriptExpr(g, ty, r.int(1, 2)));
       if (steps) dropArrows(g, steps);
-      if (steps) g.scope.vars = g.scope.vars.filter((v) => !steps.some((st) => st.k === "const" && st.name === v.name));
+      if (steps) g.scope.vars = g.scope.vars.filter((v) => !steps.some((st) => (st.k === "const" || st.k === "loop") && st.name === v.name));
       const binding = { name: `${kind === "computed" ? "cmp" : kind === "const" ? "cst" : "ref"}${bindings.length}`, kind, e: steps ? joined(e, steps) : e, ...(steps ? { steps } : {}) };
       bindings.push(binding);
       if (kind === "const") g.scope.vars.push(bindingVar(binding));
