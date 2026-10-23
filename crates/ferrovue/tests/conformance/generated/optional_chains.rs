@@ -268,7 +268,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         fv::escape_into(out, v);
     }
     out.push('|');
-    fv::push_int(out, (props.count.unwrap_or(0i64) as f64 + 1.0) as i64);
+    fv::push_number(out, props.count.unwrap_or(0i64) as f64 + 1.0);
     out.push('|');
     if let Some(v) = s_loud.as_deref() {
         fv::escape_into(out, v);

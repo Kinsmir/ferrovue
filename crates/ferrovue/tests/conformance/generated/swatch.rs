@@ -73,7 +73,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides:
     out.push(' ');
     fv::escape_into(out, &fv_provides.look.unwrap_or(&fv_default_named).size);
     out.push(' ');
-    fv::push_int(out, (fv_provides.look_key.unwrap_or(&fv_default_look).count as f64 + fv_provides.look_key.unwrap_or(&fv_default_made).count as f64) as i64);
+    fv::push_number(out, fv_provides.look_key.unwrap_or(&fv_default_look).count as f64 + fv_provides.look_key.unwrap_or(&fv_default_made).count as f64);
     out.push_str("</span>");
 }
 

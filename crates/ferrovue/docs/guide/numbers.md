@@ -49,8 +49,10 @@ assert_eq!(format!("{} × {}", Js(3_i64), Js(2.5_f64)), "3 × 2.5");
 # How numbers are computed
 
 Every operation is done on doubles, as JavaScript does it. Arithmetic between two integers casts
-both to `f64`, operates, and casts the result back, so a result within ±2⁵³ is exact and matches
-JavaScript's. This is from the generated code of a component reading `counter.doubled`, a Pinia
+both to `f64` and operates. Where the result is written into the page (text, an attribute, a style,
+a template literal, `String()`, `JSON.stringify()`), it is written from the `f64` as JavaScript
+writes it, so `n * n` of a large `n` reads `16000000000000000000` or `8.112963841460666e+31`, as
+Vue's does. This is from the generated code of a component reading `counter.doubled`, a Pinia
 getter that is `count * 2`:
 
 ```rust
@@ -60,7 +62,7 @@ getter that is `count * 2`:
 # let fv_stores = Stores { counter: CounterState { count: 21 } };
 # let mut buf = String::new();
 # let out = &mut buf;
-fv::push_int(out, (fv_stores.counter.count as f64 * 2.0) as i64);
+fv::push_number(out, fv_stores.counter.count as f64 * 2.0);
 # assert_eq!(buf, "42");
 ```
 
@@ -182,8 +184,10 @@ The tokens are not JSON, so code that reads the props with plain `JSON.parse` re
 older `ferrovue` leaves such an island as the server rendered it and reports that its props
 are not JSON, so it never hydrates with a wrong value. Upgrade the npm package with the crate.
 
-Integers beyond the range of `i64` itself cannot be represented at all; keep integer props and the
-results of integer arithmetic within ±2⁵³, where both sides agree exactly.
+Integers beyond the range of `i64` itself cannot be held in an `i64`: a prop cannot carry one, and
+a result of integer arithmetic given to a child's `number` prop or used as an index is cast to
+`i64`, which stops at ±2⁶³. Keep integer props and the results that go there within ±2⁵³, where
+both sides agree exactly.
 
 A number that reaches the client exactly can still be one the DOM refuses: a `<meter>` or
 `<progress>` whose `:value` is `NaN` does not hydrate, because the browser throws when Vue sets that

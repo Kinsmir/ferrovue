@@ -15,6 +15,11 @@ export function intFromF64(f64: string): Val {
   return { code: `${operand(f64, AS)} as i64`, ty: INT, f64 };
 }
 
+/** The value as JavaScript writes it: an integer computed as an `f64` is written from the `f64`. */
+export function asWritten(v: Val): Val {
+  return v.ty.k === "int" && v.f64 !== undefined && v.code.endsWith(" as i64") ? { ...v, code: v.f64, ty: FLOAT } : v;
+}
+
 function floatLiteral(x: number): string {
   if (Number.isNaN(x)) return "f64::NAN";
   if (!Number.isFinite(x)) return x > 0 ? "f64::INFINITY" : "f64::NEG_INFINITY";

@@ -70,7 +70,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push('|');
     fv::escape_into(out, &format!("#{}", fv::Js(props.count)));
     out.push('|');
-    fv::push_int(out, (props.count as f64 + 1.0) as i64);
+    fv::push_number(out, props.count as f64 + 1.0);
     out.push('|');
     fv::escape_into(out, &format!("{}!", props.title));
     out.push('|');

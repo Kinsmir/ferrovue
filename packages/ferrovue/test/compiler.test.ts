@@ -911,7 +911,7 @@ const props = defineProps<{ n: number; m: number }>();
 </script>
 <template><b :title="n + m"></b></template>`),
     ).get("x.rs")!;
-    expect(sum).toContain("(props.n as f64 + props.m as f64) as i64");
+    expect(sum).toContain("fv::push_number(out, props.n as f64 + props.m as f64);");
     expect(() =>
       compile(
         island(`<script setup lang="ts">
@@ -1694,7 +1694,7 @@ defineProps<{ price: Float; qty: number; rate?: Float }>();
       expect(out).toContain("fv::push_number(out, props.qty as f64 / 4.0);");
       expect(out).toContain("fv::js_round(props.price)");
       expect(out).toContain("props.rate.unwrap_or(0.5f64)");
-      expect(out).toContain("fv::push_int(out, (props.qty as f64 % 3.0) as i64);");
+      expect(out).toContain("fv::push_number(out, props.qty as f64 % 3.0);");
     });
 
     it("writes toPrecision and toExponential with the runtime's twins, a fractional argument truncated as for toFixed", () => {

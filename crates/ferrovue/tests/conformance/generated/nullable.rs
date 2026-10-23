@@ -158,7 +158,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     }
     if let Some(n4) = props.count {
         out.push_str("<p>");
-        fv::push_int(out, (n4 as f64 * 2.0) as i64);
+        fv::push_number(out, n4 as f64 * 2.0);
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");

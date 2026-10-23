@@ -1,5 +1,6 @@
 import { escapeHtml } from "@vue/shared";
 import { type N, type Scope, type Val, camelize, fail, rustStr } from "../model.ts";
+import { asWritten } from "../numbers.ts";
 import { CONFIG_FILE } from "../context.ts";
 import { expr } from "../expr.ts";
 import { lonely } from "../strings.ts";
@@ -33,7 +34,7 @@ function noHalves(s: Scope, v: Val, n: N): void {
 export function urlText(s: Scope, v: Val, n: N): string {
   noHalves(s, v, n);
   if (v.ty.k === "str") return v.code;
-  if (v.ty.k === "int" || v.ty.k === "float") return `&*fv::Js(${bare(v.code)}).to_string()`;
+  if (v.ty.k === "int" || v.ty.k === "float") return `&*fv::Js(${bare(asWritten(v).code)}).to_string()`;
   if (v.ty.k === "bool") return `if ${condition(v.code)} { "true" } else { "false" }`;
   return fail(s.comp, "FV1201", "a route parameter is a string or a number that is present", n);
 }

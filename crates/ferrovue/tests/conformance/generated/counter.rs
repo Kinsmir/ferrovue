@@ -37,9 +37,9 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::St
     out.push_str("</h4><p>");
     fv::push_int(out, fv_stores.counter.count);
     out.push('|');
-    fv::push_int(out, (fv_stores.counter.count as f64 * 2.0) as i64);
+    fv::push_number(out, fv_stores.counter.count as f64 * 2.0);
     out.push('|');
-    fv::escape_into(out, &format!("{} {}", fv::Js((fv_stores.counter.count as f64 * 2.0) as i64), fv_stores.counter.label));
+    fv::escape_into(out, &format!("{} {}", fv::Js(fv_stores.counter.count as f64 * 2.0), fv_stores.counter.label));
     out.push('|');
     fv::push_number(out, fv_stores.counter.step);
     out.push('|');

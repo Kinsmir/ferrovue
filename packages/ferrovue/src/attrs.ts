@@ -1,5 +1,6 @@
 import { escapeHtml, hyphenate, isBooleanAttr, isSSRSafeAttrName, isSVGTag, propsToAttrMap } from "@vue/shared";
 import { type N, type Scope, type Ty, type Val, fail, nothing, GenError, rustStr } from "./model.ts";
+import { asWritten } from "./numbers.ts";
 import { CONFIG_FILE, ctx } from "./context.ts";
 import { describeTy, expr, shown } from "./expr.ts";
 import { known, truthy } from "./narrowing.ts";
@@ -19,7 +20,8 @@ export function display(e: Emitter, v: Val): boolean {
   else if (v.ty.k === "bool" && v.konst !== undefined) e.lit(String(v.konst));
   else if (v.ty.k === "str") e.stmt(`fv::escape_into(out, ${strArg(v.code)});`);
   else if (v.ty.k === "int" || v.ty.k === "float") {
-    e.stmt(`fv::${v.ty.k === "int" ? "push_int" : "push_number"}(out, ${bare(v.code)});`);
+    const w = asWritten(v);
+    e.stmt(`fv::${w.ty.k === "int" ? "push_int" : "push_number"}(out, ${bare(w.code)});`);
     e.expect(NUMBER_BYTES);
   } else if (v.ty.k === "bool") e.stmt(`out.push_str(if ${condition(v.code)} { "true" } else { "false" });`);
   else return false;

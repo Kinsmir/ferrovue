@@ -97,13 +97,13 @@ impl<'a> Props<'a> {
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(275 + 33 * props.rows.len() + props.name.len() + props.tags.iter().map(|v| v.len()).sum::<usize>() + props.author.as_ref().map_or(0, |v| v.name.len() + v.site.as_deref().map_or(0, str::len)) + props.rows.iter().map(|v| v.label.len()).sum::<usize>() + props.pick.as_deref().map_or(0, str::len));
     out.push_str("<div><p>");
-    fv::push_int(out, (props.n as f64 - props.m as f64) as i64);
+    fv::push_number(out, props.n as f64 - props.m as f64);
     out.push('|');
-    fv::push_int(out, (props.n as f64 * props.m as f64) as i64);
+    fv::push_number(out, props.n as f64 * props.m as f64);
     out.push('|');
-    fv::push_int(out, (props.n as f64 % 2.0) as i64);
+    fv::push_number(out, props.n as f64 % 2.0);
     out.push('|');
-    fv::push_int(out, -(props.n as f64) as i64);
+    fv::push_number(out, -(props.n as f64));
     out.push('|');
     out.push_str(if props.n as f64 > props.m as f64 { "true" } else { "false" });
     out.push('|');
@@ -113,7 +113,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push('|');
     fv::push_int(out, props.n.min(props.m));
     out.push('|');
-    fv::push_int(out, (props.m as f64).abs() as i64);
+    fv::push_number(out, (props.m as f64).abs());
     out.push_str("</p><p title=\"");
     fv::escape_into(out, &format!("{} has {} item{}", props.name, fv::Js(props.n), (if props.n as f64 == 1.0 { "" } else { "s" })));
     out.push_str("\">");

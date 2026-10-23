@@ -47,9 +47,9 @@ pub fn render(out: &mut String, props: &Props) {
     out.push_str("</p><p>");
     fv::push_number(out, fv::js_sign(props.x));
     out.push('|');
-    fv::push_int(out, fv::js_sign(props.n as f64) as i64);
+    fv::push_number(out, fv::js_sign(props.n as f64));
     out.push('|');
-    fv::push_int(out, fv::js_sign(-(props.n as f64)) as i64);
+    fv::push_number(out, fv::js_sign(-(props.n as f64)));
     out.push('|');
     fv::push_number(out, 1.0 / fv::js_sign(-props.x.abs()));
     out.push('|');
@@ -61,7 +61,7 @@ pub fn render(out: &mut String, props: &Props) {
     out.push_str("</p><p>");
     fv::push_int(out, s_kilo);
     out.push_str("|9007199254740992|-27|1000000000000000|1|1|");
-    fv::push_int(out, (props.n as f64 * 256.0) as i64);
+    fv::push_number(out, props.n as f64 * 256.0);
     out.push_str("|-9007199254740992</p><p>9007199254740991|-9007199254740991|2.220446049250313e-16|1.7976931348623157e+308|5e-324|Infinity|-Infinity|NaN</p>");
     if fv::js_sign(props.x) < 0.0 {
         out.push_str("<b>negative</b>");

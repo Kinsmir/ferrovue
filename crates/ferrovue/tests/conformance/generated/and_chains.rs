@@ -166,7 +166,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push('|');
     out.push_str(if if let Some(n13) = props.m { if (n13 as f64) < 0.0 { true } else { n13 as f64 > 99.0 } } else { true } { "true" } else { "false" });
     out.push('|');
-    fv::escape_into(out, &(if let Some(n14) = props.m { if n14 as f64 >= 0.0 { if n14 as f64 <= 99.0 { std::borrow::Cow::<str>::Owned(format!("{}", fv::Js((n14 as f64 + 1.0) as i64))) } else { std::borrow::Cow::<str>::Borrowed("none") } } else { std::borrow::Cow::<str>::Borrowed("none") } } else { std::borrow::Cow::<str>::Borrowed("none") }));
+    fv::escape_into(out, &(if let Some(n14) = props.m { if n14 as f64 >= 0.0 { if n14 as f64 <= 99.0 { std::borrow::Cow::<str>::Owned(format!("{}", fv::Js(n14 as f64 + 1.0))) } else { std::borrow::Cow::<str>::Borrowed("none") } } else { std::borrow::Cow::<str>::Borrowed("none") } } else { std::borrow::Cow::<str>::Borrowed("none") }));
     out.push_str("</p><p class=\"");
     fv::class_into(out, false, &[if let Some(n15) = props.tone { match n15 { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" } } else { "" }, "fixed"]);
     out.push_str("\">");
@@ -188,12 +188,12 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push_str("</p>");
     if let Some(n21) = props.n && n21 as f64 > 1.0 && (n21 as f64) < 9.0 {
         out.push_str("<i>");
-        fv::push_int(out, (n21 as f64 * 3.0) as i64);
+        fv::push_number(out, n21 as f64 * 3.0);
         out.push_str("</i>");
     } else {
         if let Some(n22) = props.n && n22 as f64 >= 9.0 && (n22 as f64) < 100.0 {
             out.push_str("<i>");
-            fv::push_int(out, (n22 as f64 - 9.0) as i64);
+            fv::push_number(out, n22 as f64 - 9.0);
             out.push_str("</i>");
         } else {
             out.push_str("<i>out</i>");
