@@ -253,7 +253,7 @@ function stated(s: Scope, n: N): Val {
     if (n.fvGiven) return expr(s, n.expression);
     return fail(comp, "FV0628", `\`${keyword}\` gives an empty array literal ${describeTy(want)}, which it is not`, n);
   }
-  const v = expr(s, typedBy(n.expression, t));
+  const v = expr(s, n.fvGiven ? n.expression : typedBy(n.expression, t));
   if (sameTy(v.ty, want) || (isNumber(v.ty) && isNumber(want)) || (want.k === "opt" && sameTy(v.ty, want.of))) return v;
   return fail(comp, "FV0628", `\`${keyword}\` states ${describeTy(want)} of ${describeTy(v.ty)}, which the server keeps as it is: write the value with the type it has`, n);
 }
@@ -629,6 +629,11 @@ export function expr(s: Scope, n: N): Val {
         if (a.held !== undefined && b.ty.k === "list" && !untypedEmpty(b)) fail(comp, "FV0630", "`??` after an optional chain that computes a list, falling back to another list: fall back to `[]`", n);
         if (a.ty.of.k === "list" && b.ty.k === "list" && (untypedEmpty(b) || (sameTy(a.ty.of, b.ty) && !b.code.startsWith("[")))) {
           return { code: `${atom(a.code)}${a.held !== undefined ? "" : ".map(|v| &v[..])"}.unwrap_or(${untypedEmpty(b) ? "&[]" : sliced(b)})`, ty: untypedEmpty(b) ? a.ty.of : joinTy(a.ty.of, b.ty), slice: true, ...loneOf(a, b) };
+        }
+        if (a.ty.of.k === "list" && sameTy(a.ty.of, b.ty)) {
+          const at = { loc: n.loc, __fv: n.__fv, start: n.start, end: n.end };
+          const test = { type: "BinaryExpression", operator: "!=", left: n.left, right: { type: "NullLiteral", ...at }, ...at };
+          return expr(s, { ...n, type: "ConditionalExpression", test, consequent: n.left, alternate: n.right });
         }
         const def = a.variant !== undefined ? enumOf(a.ty) : undefined;
         const fallback = def === undefined ? undefined : knownLiteral(b);

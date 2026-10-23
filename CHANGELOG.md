@@ -243,6 +243,7 @@ released together and share version numbers.
   components (`AttrObjects`, `AttrQuirks`) kill the survivors in both modules; `vite.test.ts`
   replaces `process.chdir` with a mocked `process.cwd`, which also runs in worker threads.
 
+
 ### Fixed
 
 - `Math.max()` and `Math.min()` of integers keep a `-0` that integer arithmetic gives
@@ -250,6 +251,15 @@ released together and share version numbers.
   JavaScript. They compared the integers as `i64`, which has no `-0`.
 - A refusal of an attribute bound both alone and in a `v-bind` object, whose later value Vue
   renders, no longer points at the earlier binding.
+- An array literal of object literals given a list of other values (`[{ label: "x" }] as
+  string[]`, a `computed` or function typed `string[]` that returns one, a child's `string[]` prop
+  bound to one) is refused with FV0634. The compiler gave the list its type again each time it read
+  it, and stopped with a stack overflow.
+- `list ?? [...]`, an optional list falling back to an array literal of the same type, is written
+  as `?:` writes it. The Rust ferrovue wrote passed the array where a reference to the list was
+  taken, and did not compile.
+- A list of numbers, booleans or dates that a `?:` or `??` copies is written as `.to_vec()`. It was
+  written as `.iter().copied().collect()`, which clippy's `iter_cloned_collect` lint rejects.
 
 - A child's prop named like a listener (`on1`, `onSale`, `:on-sale`) in props Vue joins with
   `mergeProps` (the child is a component's root, or is given `v-bind` of an object or `v-on` of an
