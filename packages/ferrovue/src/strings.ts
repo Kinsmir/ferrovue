@@ -4,7 +4,7 @@ import { atom, bare, binary, condition, enclosed, receiver, strArg } from "./par
 import { computed, items } from "./lists.ts";
 import { describeTy, expr } from "./expr.ts";
 import { known } from "./narrowing.ts";
-import { asF64, isNumber } from "./numbers.ts";
+import { asF64, asWritten, isNumber } from "./numbers.ts";
 
 export function lonely(what: string): string {
   return `${what} with a string that may hold half of a surrogate pair (cut by \`slice\`, \`substring\`, \`at\`, \`charAt\`, \`split("")\` and the like): JavaScript keeps the half, which can match, order or join with another where ferrovue holds U+FFFD`;
@@ -157,7 +157,7 @@ export function formatted(comp: Component, given: (string | Val)[], n: N, what: 
       continue;
     }
     if (part.ty.k === "str") args.push(receiver(part.code).replace(/^(fv::Js\(.*\))\.to_string\(\)$/s, "$1"));
-    else if (isNumber(part.ty)) args.push(`fv::Js(${bare(part.code)})`);
+    else if (isNumber(part.ty)) args.push(`fv::Js(${bare(asWritten(part).code)})`);
     else args.push(`if ${condition(part.code)} { "true" } else { "false" }`);
     fmt += "{}";
   }

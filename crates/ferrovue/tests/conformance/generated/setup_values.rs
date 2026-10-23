@@ -41,7 +41,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides:
     out.push(' ');
     fv::push_number(out, 1.0 / s_negated);
     out.push(' ');
-    fv::push_int(out, s_flipped as i64);
+    fv::push_number(out, s_flipped);
     out.push(' ');
     fv::escape_into(out, &s_padded);
     out.push_str("</p><p>\u{202e}a\u{202e}b\u{2066}c</p>");

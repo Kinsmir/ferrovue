@@ -5,7 +5,7 @@ import { claim } from "./plugin.ts";
 import { atom, bare, binary, condition, operand, receiver, strArg, UNARY } from "./parens.ts";
 import { computedListMethod, isBoolean, items, listMethod, objectCall, presentLiteral, spreadExtreme } from "./lists.ts";
 import { formatted, lonely, loneOf, meet, stringMethod, stringOf, stringsEqual, writesAscii } from "./strings.ts";
-import { asF64, intFromF64, isNumber, numberVal, power } from "./numbers.ts";
+import { asF64, asWritten, intFromF64, isNumber, numberVal, power } from "./numbers.ts";
 import { boolOf, truthy } from "./narrowing.ts";
 import { coerce, describeTy, expr, refuseClientOnly, refuseUnavailable } from "./expr.ts";
 import { callFunction } from "./functions.ts";
@@ -55,7 +55,7 @@ export function call(s: Scope, n: N): Val {
       if (args.length !== 1) return fail(comp, "FV0723", "`String()` takes one value", n);
       const a = expr(s, args[0]);
       if (a.ty.k === "str") return a;
-      if (isNumber(a.ty)) return { code: `&*fv::Js(${bare(a.code)}).to_string()`, ty: asciiTy() };
+      if (isNumber(a.ty)) return { code: `&*fv::Js(${bare(asWritten(a).code)}).to_string()`, ty: asciiTy() };
       if (a.ty.k === "bool") return { code: `if ${condition(a.code)} { "true" } else { "false" }`, ty: asciiTy() };
       return formatted(comp, [stringOf(comp, a, args[0], "`String()`", "FV0723")], n, "`String()`");
     }
@@ -190,11 +190,11 @@ export function call(s: Scope, n: N): Val {
       const x = bare(asF64(target));
       if (method === "toFixed") return { code: `&*fv::js_to_fixed(${x}, ${given ?? 0})`, ty: asciiTy() };
       if (method === "toExponential") return { code: `&*fv::js_to_exponential(${x}, ${given === undefined ? "None" : `Some(${given})`})`, ty: asciiTy() };
-      if (given === undefined) return { code: `&*fv::Js(${bare(target.code)}).to_string()`, ty: asciiTy() };
+      if (given === undefined) return { code: `&*fv::Js(${bare(asWritten(target).code)}).to_string()`, ty: asciiTy() };
       return { code: `&*fv::js_to_precision(${x}, ${given})`, ty: asciiTy() };
     }
     if (isNumber(target.ty) && method === "toString" && args.length === 0) {
-      return { code: `&*fv::Js(${bare(target.code)}).to_string()`, ty: asciiTy() };
+      return { code: `&*fv::Js(${bare(asWritten(target).code)}).to_string()`, ty: asciiTy() };
     }
     if (target.owned) refuseInPlace(comp, `\`.${method}()\``, n);
     if (target.ty.k === "list") {
@@ -326,7 +326,8 @@ function json(s: Scope, v: Val, n: N): string {
     const f = /^([\w:]+)\(v\)$/.exec(each)?.[1];
     return `format!("[{}]", ${items(v)}.map(${f ?? `|v| ${each}`}).collect::<Vec<_>>().join(","))`;
   }
-  return one(v.code, v.ty);
+  const w = asWritten(v);
+  return one(w.code, w.ty);
 }
 
 export function helperCall(s: Scope, name: string, args: N[], n: N): Val {

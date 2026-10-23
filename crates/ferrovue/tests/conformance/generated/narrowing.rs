@@ -77,11 +77,11 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     }
     if let Some(n2) = props.count {
         out.push_str("<p>");
-        fv::push_int(out, (n2 as f64 * 2.0) as i64);
+        fv::push_number(out, n2 as f64 * 2.0);
         out.push('|');
-        fv::push_int(out, (n2 as f64 + 1.0) as i64);
+        fv::push_number(out, n2 as f64 + 1.0);
         out.push('|');
-        fv::push_int(out, (n2 as f64 % 3.0) as i64);
+        fv::push_number(out, n2 as f64 % 3.0);
         out.push('|');
         fv::escape_into(out, &format!("#{}", fv::Js(n2)));
         out.push_str("</p>");
@@ -120,7 +120,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.push_str("<p>");
     fv::push_number(out, if let Some(n9) = props.count { n9 as f64 / 4.0 } else { -1.0f64 });
     out.push('|');
-    fv::escape_into(out, &(if let Some(n10) = props.count { std::borrow::Cow::<str>::Owned(fv::Js((n10 as f64 - 1.0) as i64).to_string()) } else { std::borrow::Cow::<str>::Borrowed("none") }));
+    fv::escape_into(out, &(if let Some(n10) = props.count { std::borrow::Cow::<str>::Owned(fv::Js(n10 as f64 - 1.0).to_string()) } else { std::borrow::Cow::<str>::Borrowed("none") }));
     out.push_str("</p><p>");
     fv::push_int(out, if let Some(n11) = props.label.as_deref().filter(|v| !v.is_empty()) { fv::js_length(n11) } else { 0i64 });
     out.push('|');

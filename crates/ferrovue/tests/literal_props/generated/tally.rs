@@ -26,7 +26,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::St
     out.push_str(": ");
     fv::push_int(out, fv_stores.tally.count);
     out.push_str(" (");
-    fv::push_int(out, (fv_stores.tally.count as f64 * 2.0) as i64);
+    fv::push_number(out, fv_stores.tally.count as f64 * 2.0);
     out.push_str(") ");
     if let Some(n1) = fv_stores.tally.best {
         out.push_str("<b>");

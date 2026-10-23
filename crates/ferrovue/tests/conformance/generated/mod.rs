@@ -212,6 +212,7 @@ pub mod uri_parts;
 pub mod user_card;
 pub mod user_list;
 pub mod vnode_class;
+pub mod wide_products;
 pub mod route_table;
 pub mod stores;
 pub mod types;
@@ -1284,6 +1285,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "VnodeClass" => {
             let props: vnode_class::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             vnode_class::render(&mut out, &props);
+        }
+        "WideProducts" => {
+            let props: wide_products::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            wide_products::render(&mut out, &props);
         }
         other => return Err(format!("no component called {other}")),
     }

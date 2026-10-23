@@ -115,6 +115,9 @@ released together and share version numbers.
 
 ### Fixed
 
+- Integer arithmetic whose result is beyond ±2⁶³ (`n * n` of a large `n`) is written into the page
+  as JavaScript writes it (`16000000000000000000`, `8.112963841460666e+31`). The result was cast to
+  `i64`, which stopped at `9223372036854775807`.
 - A component may render itself by any name Vue resolves to it: its kebab-case or camelCase name
   (`<tree-node>` or `<treeNode>` in `TreeNode.vue`), which was refused with FV0513.
 - A value outside a closed union renders as the union's last member wherever a lookup table or
