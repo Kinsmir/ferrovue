@@ -1,7 +1,7 @@
 import { parse as parseJs } from "@babel/parser";
 import { createHash } from "node:crypto";
 import { relative, resolve as resolvePath, sep } from "node:path";
-import { type Component, type N, type Scope, fail, rustStr } from "../model.ts";
+import { type Component, type N, type Scope, fail, namesSelf, rustStr } from "../model.ts";
 import { type ScopeIdMode } from "../context.ts";
 import { type Plugin, runOf } from "../plugin.ts";
 
@@ -64,7 +64,7 @@ function flowOf(comp: Component, ssr: string, children: Map<string, string>): { 
       return;
     }
     if (n.type === "VariableDeclarator" && n.init?.type === "CallExpression" && n.init.callee.name === "_resolveComponent") {
-      if (n.init.arguments[0]?.value === comp.name && n.init.arguments[1]) self.add(n.id.name);
+      if (typeof n.init.arguments[0]?.value === "string" && namesSelf(comp, n.init.arguments[0].value) && n.init.arguments[1]) self.add(n.id.name);
     }
     if (n.type === "CallExpression" && n.callee.type === "Identifier") {
       const a: N[] = n.arguments;

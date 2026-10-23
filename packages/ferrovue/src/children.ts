@@ -26,7 +26,7 @@ export function renderChild(s: Scope, e: Emitter, n: N, twin?: TwinCall): void {
   if (target.type === "MemberExpression" && target.object.name === "$setup") {
     local = target.computed ? target.property.value : target.property.name;
   }
-  const isSelf = target.type === "Identifier" && target.name === s.selfAlias.name;
+  const isSelf = target.type === "Identifier" && s.selfAliases.has(target.name);
   const childName = isSelf ? s.comp.name : local ? s.children.get(local) : undefined;
   const child = twin?.comp ?? (childName ? s.components.get(childName) : undefined);
   if (!child) fail(s.comp, "FV0501", `a child component must be imported from a \`.vue\` file among the components compiled, in ${ctx.componentsDir.replace(/\/$/, "")}`, n);

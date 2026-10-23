@@ -136,6 +136,7 @@ A fixture is a JSON object of props plus optional keys:
 | `Badge`, `Cart` | Pinia state through the store and `storeToRefs`, getters, two stores, store reads in `computed` |
 | `ScopedPage` and its children | `<style scoped>`: the id on every element and what reaches each kind of child: `ScopedLeaf` (a root chosen by `v-if`), `ScopedRoot` (a root that is a component), `ScopedPair` (a fragment), `PlainBox` (no scoped styles), `ScopedCard` (`:slotted()`, a scoped slot, fallbacks), `PlainForward`, `ScopedShelf` and `ScopedRack` (slots forwarded into `:slotted()` ones, slot scope ids with two spaces), `ScopedFade` (a `<Transition>` root), and `<KeepAlive>`, `<Teleport>` |
 | `ScopedTree` | A scoped component rendering itself, whose children's roots carry its id twice |
+| `KebabTree` | A scoped component rendering itself by its kebab-case and camelCase names (`<kebab-tree>`, `<kebabTree>`) |
 | `ScopedNav`, `ScopedLink` | `<RouterLink>` in scoped components: the `<a>` and what it holds, a link that is a scoped component's root, a link in `:slotted()` slot content |
 | `ScopedQuirks`, `QuietLeaf` | Where Vue's server and client renders give different ids: a `:slotted()` component's fallback, `inheritAttrs: false` |
 | `CssVars` and its kin | `v-bind()` in `<style>`: props, constants, `computed`s and quoted expressions with spaces and quotes, strings, numbers, fractions, absent and empty values, merged after the root's own and a parent's `style` (`CssVars`, `CssVarsPage`), on a root that is a component and through it (`CssVarsRoot`, `CssVarsLeaf`), on each root of a fragment, a root `v-if` and none on a root `v-for`; in a scoped and a global `<style>`; on a `v-show` root (`CssVarsShow`), with `inheritAttrs: false` and `$attrs` (`CssVarsBound`), on a `<component :is>` root (`CssVarsTag`), a `<RouterLink>` root (`CssVarsLink`), a `<Suspense>` root (`CssVarsWait`), an async root (`CssVarsLater`), a root `<template v-if>`, `<Transition>` and text (`CssVarsBranch`) |
@@ -219,10 +220,10 @@ when it names a component that is not in `components/` with fixtures of its own.
 | Attributes | `Attrs`, `BoundObject`, `Keywords`, `MixedTernary` |
 | `class` | `Attrs`, `BoundObject`, `VnodeClass`, `AsyncClass` |
 | `style` | `Styles`, `Shown`, `BoundObject` |
-| Scoped styles | `ScopedPage`, `ScopedLeaf`, `ScopedRoot`, `ScopedPair`, `ScopedCard`, `ScopedShelf`, `ScopedRack`, `ScopedFade`, `ScopedTree`, `ScopedNav`, `ScopedLink`, `ScopedQuirks` |
+| Scoped styles | `ScopedPage`, `ScopedLeaf`, `ScopedRoot`, `ScopedPair`, `ScopedCard`, `ScopedShelf`, `ScopedRack`, `ScopedFade`, `ScopedTree`, `KebabTree`, `ScopedNav`, `ScopedLink`, `ScopedQuirks` |
 | `v-bind()` in `<style>` | `CssVars`, `CssVarsPage`, `CssVarsRoot`, `CssVarsLeaf`, `CssVarsShow`, `CssVarsBound`, `CssVarsTag`, `CssVarsLink`, `CssVarsWait`, `CssVarsLater`, `CssVarsBranch`, `CssVarsShapes` |
 | CSS modules | `Moduled`, `ModuledChip` |
-| Components | `UserList`, `Dashboard`, `Listened`, `Listeners`, `ListenLeaf`, `ListenSale`, `ModelParent`, `Tree`, `Deferred`, `AsyncClass` |
+| Components | `UserList`, `Dashboard`, `Listened`, `Listeners`, `ListenLeaf`, `ListenSale`, `ModelParent`, `Tree`, `KebabTree`, `Deferred`, `AsyncClass` |
 | `<component :is>` | `ShapePicker`, `ShapeRoot`, `TagHeading`, `TagGallery`, `TagContent`, `TagCasing`, `ThemedChoice`, `HeadChoice` |
 | Escape hatches | `ClientSide`, `Rated`, `EscapedIdioms`, `EscapedNull` |
 | Fallthrough attributes | `Fallthrough`, `FallLeaf`, `FallInner`, `FallPair`, `FallRoot`, `FallBare`, `FallUse`, `FallLink`, `FallSwitch`, `FallFade`, `FallBinds`, `ScopedFallthrough` |
