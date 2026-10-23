@@ -39,6 +39,14 @@ A parent's template names a child's props as Vue matches them, `camelCase` or `k
 attribute, which falls through to the child's root
 ([`generated_code`](crate::guide::generated_code#fallthrough-attributes)).
 
+A prop whose name starts with `on` and a character other than a lowercase letter (`on1`, `onSale`)
+is named like a listener. Where Vue joins a child's props with `mergeProps` (the child is the
+root of the parent's template, or is given `v-bind` of an object or `v-on` of an object beside
+other props), `mergeProps` leaves such a prop out when its value is falsy (`0`, `NaN`, `""`,
+`false`), and the child takes its default. The generated code does the same for an optional prop.
+A required one that may be falsy there is refused (FV0517), and so is one given twice (FV0516).
+Elsewhere the value is passed on as written.
+
 # Optional props and defaults
 
 An optional prop is an `Option`, `None` unless its setter is called. A default from `withDefaults`

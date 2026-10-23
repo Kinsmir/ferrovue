@@ -24,7 +24,7 @@ const I18N = CONFIG.i18n && {
 };
 export const OPTIONS: RouterOptions = I18N ? { i18n: I18N } : {};
 
-export const VUE_DISAGREES = new Set(["Hollow/absent.json", "Hollow/absent-on.json", "Hollow/whitespace.json", "Hollow/js-whitespace.json", "App/empty-view.json", "CssVars/empty.json", "CssVars/hostile.json", "CssVarsPage/empty.json", "CssVarsPage/hostile.json", "CssVarsWait/typical.json"]);
+export const VUE_DISAGREES = new Set(["Hollow/absent.json", "Hollow/absent-on.json", "Hollow/whitespace.json", "Hollow/js-whitespace.json", "App/empty-view.json", "CssVars/empty.json", "CssVars/hostile.json", "CssVarsPage/empty.json", "CssVarsPage/hostile.json", "CssVarsWait/typical.json", "OnPropsRoot/absent.json", "OnPropsRoot/empty.json", "OnPropsRoot/mixed.json"]);
 
 export const UNHEAD_REWRITES = new Set(["HeadPage/hostile.json", "HeadLater/hostile.json", "HeadNest/hostile.json"]);
 

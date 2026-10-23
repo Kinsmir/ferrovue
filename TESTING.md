@@ -66,6 +66,9 @@ fixtures/X/case.json            Vue hydrates it: no mismatch warnings, same DOM 
    empty, blank or holds a `;` mismatches, and it does not look for the variables the server gives a
    `<Suspense>` root's content. Vue's Node build has no `useCssVars`, so `attachSsrRender` gives
    hydration the variables a browser build would.
+   A prop named like a listener given a falsy value on a component's root (`OnPropsRoot`) also
+   differs: the server joins the root's props with `_attrs` through `mergeProps`, which leaves the
+   value out, and the client hands the props on as written.
 3. For a fixture with scope ids, which hydration does not compare, it renders the fixture afresh on
    the client and holds every element's `data-v-` ids to the recorded ones, except in the fixtures
    in `CLIENT_DIFFERS`, where Vue's own server and client disagree and which must still differ; and
@@ -123,6 +126,7 @@ A fixture is a JSON object of props plus optional keys:
 | `Unsanitised`, `UnsanitisedLeaf` | What Vue escapes and does not sanitise: a `javascript:` URL in `href`, `src` and `formaction`, `srcdoc`, `onclick` bound on an element and falling through to a child's root, CSS in a style object and a style string (the guide's `security` page) |
 | `Tree` | A recursive, self-rendering component |
 | `Listened`, `Listeners`, `ListenLeaf`, `ListenSale` | Listeners on components, skipped by the server: a component rendering itself through `v-bind` of its own `Props` beside `@loaded`; `@x` for emits the child declares and for ones it does not, with modifiers, `@update:x`, `v-on` of an object and `@[name]`, beside an object literal, a fallthrough attribute and a `v-bind` of the child's `Props`; a prop named like a listener (`onSale`) given a value |
+| `OnProps`, `OnPropsKid`, `OnPropsRoot`, `OnPropsBare` | Props named like listeners (`on1`, `onText` bound as `:on-text`): a number, a string, booleans with and without a default, a `Float`, a union with `""`, a required boolean and a required number, passed on unchanged where Vue passes the props as written (`0`, `""`, `false`, `-0`, `NaN`), and left out when falsy where `mergeProps` joins them: on a component's root, beside `v-bind` of an object literal, and `v-bind` of a child's own `Props` beside a listener |
 | `UserCard`, `UserList` | Types imported from a shared `.ts` file and from another component, string-literal unions, objects passed to children |
 | `DataList`, `DataTable`, `RowChip` | Scoped slots in a loop with fallbacks, props destructured and taken whole, empty content giving way to the fallback, a slot's object handed to a child |
 | `Frame`, `Forward`, `Page`, `Card` | Slots, fallbacks, comment-only content, slots forwarded through components |
@@ -228,7 +232,7 @@ when it names a component that is not in `components/` with fixtures of its own.
 | Scoped styles | `ScopedPage`, `ScopedLeaf`, `ScopedRoot`, `ScopedPair`, `ScopedCard`, `ScopedShelf`, `ScopedRack`, `ScopedFade`, `ScopedTree`, `KebabTree`, `ScopedNav`, `ScopedLink`, `ScopedQuirks` |
 | `v-bind()` in `<style>` | `CssVars`, `CssVarsPage`, `CssVarsRoot`, `CssVarsLeaf`, `CssVarsShow`, `CssVarsBound`, `CssVarsTag`, `CssVarsLink`, `CssVarsWait`, `CssVarsLater`, `CssVarsBranch`, `CssVarsShapes` |
 | CSS modules | `Moduled`, `ModuledChip` |
-| Components | `UserList`, `Dashboard`, `Listened`, `Listeners`, `ListenLeaf`, `ListenSale`, `ModelParent`, `Tree`, `KebabTree`, `Deferred`, `AsyncClass` |
+| Components | `UserList`, `Dashboard`, `Listened`, `Listeners`, `ListenLeaf`, `ListenSale`, `OnProps`, `OnPropsKid`, `OnPropsRoot`, `OnPropsBare`, `ModelParent`, `Tree`, `KebabTree`, `Deferred`, `AsyncClass` |
 | `<component :is>` | `ShapePicker`, `ShapeRoot`, `TagHeading`, `TagGallery`, `TagContent`, `TagCasing`, `ThemedChoice`, `HeadChoice`, `UnionEnums` |
 | Escape hatches | `ClientSide`, `Rated`, `EscapedIdioms`, `EscapedNull` |
 | Fallthrough attributes | `Fallthrough`, `FallLeaf`, `FallInner`, `FallPair`, `FallRoot`, `FallBare`, `FallUse`, `FallLink`, `FallSwitch`, `FallFade`, `FallBinds`, `ScopedFallthrough` |

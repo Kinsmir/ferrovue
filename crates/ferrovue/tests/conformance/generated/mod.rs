@@ -126,6 +126,10 @@ pub mod number_tests;
 pub mod numbers;
 pub mod object_literals;
 pub mod object_shapes;
+pub mod on_props;
+pub mod on_props_bare;
+pub mod on_props_kid;
+pub mod on_props_root;
 pub mod optional_chains;
 pub mod own_keys;
 pub mod page;
@@ -875,6 +879,22 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "ObjectShapes" => {
             let props: object_shapes::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             object_shapes::render(&mut out, &props);
+        }
+        "OnProps" => {
+            let props: on_props::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            on_props::render(&mut out, &props);
+        }
+        "OnPropsBare" => {
+            let props: on_props_bare::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            on_props_bare::render(&mut out, &props);
+        }
+        "OnPropsKid" => {
+            let props: on_props_kid::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            on_props_kid::render(&mut out, &props);
+        }
+        "OnPropsRoot" => {
+            let props: on_props_root::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            on_props_root::render(&mut out, &props);
         }
         "OptionalChains" => {
             let props: optional_chains::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

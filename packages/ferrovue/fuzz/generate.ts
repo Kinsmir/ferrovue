@@ -3082,7 +3082,7 @@ function bindRoute(g: Gen, router: AppRouter, template: boolean): void {
 }
 
 const specPrefix = (s: Spec): string =>
-  s.k === "opt" ? "o" + specPrefix(s.of) : s.k === "nul" ? "z" + specPrefix(s.of) : s.k === "list" ? "l" : s.k === "record" ? "d" : { str: "s", int: "n", count: "c", float: "f", bool: "b", obj: "r", enum: "t", html: "h", date: "m" }[s.k];
+  s.k === "opt" ? "u" + specPrefix(s.of) : s.k === "nul" ? "z" + specPrefix(s.of) : s.k === "list" ? "l" : s.k === "record" ? "d" : { str: "s", int: "n", count: "c", float: "f", bool: "b", obj: "r", enum: "t", html: "h", date: "m" }[s.k];
 
 interface Source {
   path: string[];
@@ -3360,7 +3360,7 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
   for (let i = r.weighted([[3, 0], [2, 1], [1, 2]]); i > 0; i--) {
     const fields: { name: string; spec: Spec }[] = [];
     const n = r.int(1, 4);
-    for (let j = 0; j < n; j++) fields.push({ name: `${["label", "n", "on", "tags", "note", "w", "f"][j % 7]}${ifaces.length}${j}`, spec: randomSpec(r, ifaces, 1) });
+    for (let j = 0; j < n; j++) fields.push({ name: `${["label", "n", "is", "tags", "note", "w", "f"][j % 7]}${ifaces.length}${j}`, spec: randomSpec(r, ifaces, 1) });
     ifaces.push({ name: `Row${ifaces.length}`, fields });
   }
   const props: { name: string; spec: Spec }[] = [];

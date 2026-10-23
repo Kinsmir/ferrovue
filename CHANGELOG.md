@@ -115,6 +115,17 @@ released together and share version numbers.
 
 ### Fixed
 
+- A child's prop named like a listener (`on1`, `onSale`, `:on-sale`) in props Vue joins with
+  `mergeProps` (the child is a component's root, or is given `v-bind` of an object or `v-on` of an
+  object beside other props) is left out when its value is falsy (`0`, `-0`, `NaN`, `""`,
+  `false`), as `mergeProps` leaves out a listener, so the child takes the prop's default. ferrovue
+  passed the value on, and `<Kid :on1="n" />` at a root wrote `0` where Vue wrote the default. Two
+  new entries of `ERRORS` in `ferrovue/compiler` refuse what cannot be rendered so: FV0516 a prop
+  named like a listener given twice in merged props, which Vue joins into a list, and FV0517 a
+  required one that may be falsy there, which the child reads as `undefined`. FV0502 also refuses a
+  name like a listener's that a component is passed beyond its props and hands on to a child that
+  declares it, which ferrovue dropped where Vue passes it on as the prop. The conformance
+  components `OnProps`, `OnPropsKid`, `OnPropsRoot` and `OnPropsBare` record both paths from Vue.
 - Integer arithmetic whose result is beyond ±2⁶³ (`n * n` of a large `n`) is written into the page
   as JavaScript writes it (`16000000000000000000`, `8.112963841460666e+31`). The result was cast to
   `i64`, which stopped at `9223372036854775807`.

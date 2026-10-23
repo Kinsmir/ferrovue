@@ -718,6 +718,57 @@ import W from "./W.vue";
       expect(() => compile(island(parent, { W: wrapper, Child: child }))).toThrow(/`count`, an attribute W may be passed, would reach Child as its prop `count`/);
     });
 
+    it("refuses a name like a listener's that would reach a prop of the component a root passes it on to", () => {
+      const named = `<script setup lang="ts">
+defineProps<{ on1?: number; onSale?: boolean }>();
+</script>
+<template><i>{{ on1 }}{{ onSale }}</i></template>`;
+      const root = (attrs: string) => `<script setup lang="ts">
+import N from "./N.vue";
+${attrs}
+</script>
+<template><N /></template>`;
+      const parent = (given: string) => `<script setup lang="ts">
+import W from "./W.vue";
+function note() {}
+const events = { sale: note };
+</script>
+<template><div><W ${given} /></div></template>`;
+      const bound = `<script setup lang="ts">
+import N from "./N.vue";
+defineOptions({ inheritAttrs: false });
+</script>
+<template><p><N v-bind="$attrs" /></p></template>`;
+      const refuses = (given: string, wrapper: string, message: RegExp) => {
+        expect(() => compile(island(parent(given), { W: wrapper, N: named })), given).toThrow(expect.objectContaining({ code: "FV0502", message: expect.stringMatching(message) }));
+      };
+      refuses(`:on1="2"`, root(""), /^components\/W\.vue:5:\d+: `on1`, named like a listener, which W may be passed, would reach N as its prop `on1`/);
+      refuses(`:on-sale="true"`, root(""), /`on-sale`, named like a listener, which W may be passed, would reach N as its prop `onSale`/);
+      refuses(`@sale="note"`, root(""), /`onSale`, named like a listener, which W may be passed, would reach N as its prop `onSale`/);
+      refuses(`title="t" v-on="events"`, root(""), /a listener whose name is not known before rendering, which W may be passed, would reach N as its prop `on1`/);
+      refuses(`:on1="2"`, bound, /`on1`, named like a listener, which W may be passed, would reach N as its prop `on1`/);
+      expect(compile(island(parent(`:on1="2"`), { W: root("defineOptions({ inheritAttrs: false });"), N: named })).get("w.rs")).toContain("on1: None");
+      expect(compile(island(parent(`@picked="note"`), { W: root(""), N: named })).get("w.rs")).toContain("on1: None");
+    });
+
+    it("leaves out a falsy value of a prop named like a listener where Vue merges a child's props", () => {
+      const kid = `<script setup lang="ts">
+withDefaults(defineProps<{ on1?: number; onAt: number; onOk: boolean; onTag?: string }>(), { on1: 4 });
+</script>
+<template><i>{{ on1 }}{{ onAt }}{{ onOk }}{{ onTag }}</i></template>`;
+      const parent = (template: string) => `<script setup lang="ts">
+import K from "./K.vue";
+defineProps<{ n: number; ok: boolean; tag?: string }>();
+</script>
+<template>${template}</template>`;
+      const rust = (template: string) => compile(island(parent(template), { K: kid })).get("x.rs")!;
+      expect(rust(`<K :on1="n" :on-at="3" :on-ok="ok" :on-tag="tag" />`)).toContain(
+        "on1: Some(props.n).filter(|v| *v != 0), on_at: 3i64, on_ok: props.ok, on_tag: props.tag.as_deref().map(std::borrow::Cow::Borrowed).filter(|v| !v.is_empty())",
+      );
+      expect(rust(`<K :on1="0" :on-at="3" :on-ok="false" :on-tag="''" />`)).toContain("on1: None, on_at: 3i64, on_ok: false, on_tag: None");
+      expect(rust(`<p><K :on1="n" :on-at="n" :on-ok="ok" :on-tag="tag" /></p>`)).toContain("on1: Some(props.n), on_at: props.n, on_ok: props.ok, on_tag: props.tag.as_deref().map(std::borrow::Cow::Borrowed) }");
+    });
+
     it("refuses `$attrs` in a component that is the root of one that may be handed scope ids", () => {
       const inner = `<script setup lang="ts">
 defineOptions({ inheritAttrs: false });
@@ -2395,6 +2446,43 @@ const handlers = { sale: note };
 </script>
 <template><W v-on="handlers" /></template>`,
       /a listener whose name is not known before rendering, given to W, which declares `onSale` as a prop/,
+    ],
+    [
+      "a prop named like a listener given twice in props Vue merges",
+      `<script setup lang="ts">
+import Q from "./Q.vue";
+defineProps<{ n: number }>();
+</script>
+<template><p><Q :on1="n" :on-at="1" :on-note="null" v-bind="{ on1: 2 }" /></p></template>`,
+      /X\.vue:5:\d+: `on1` is given to Q twice in props Vue joins with `mergeProps`, which makes a list of two values of a name like a listener's: give it once/,
+    ],
+    [
+      "a required prop named like a listener given a value that may be falsy in props Vue merges",
+      `<script setup lang="ts">
+import Q from "./Q.vue";
+defineProps<{ n: number }>();
+</script>
+<template><Q :on-at="n" :on-note="null" /></template>`,
+      /X\.vue:5:\d+: `onAt`, a required prop of Q named like a listener, is given a value that may be falsy, which Vue's `mergeProps` leaves out and the child reads as `undefined`/,
+    ],
+    [
+      "a required nullable prop named like a listener given a string that may be empty in props Vue merges",
+      `<script setup lang="ts">
+import Q from "./Q.vue";
+defineProps<{ s: string }>();
+</script>
+<template><Q :on-at="1" :on-note="s" /></template>`,
+      /X\.vue:5:\d+: `onNote`, a required prop of Q named like a listener, is given a value that may be falsy/,
+    ],
+    [
+      "a child's own Props with a required prop named like a listener, merged with attributes",
+      `<script setup lang="ts">
+import Q from "./Q.vue";
+import type { Props as QProps } from "./Q.vue";
+defineProps<{ q: QProps }>();
+</script>
+<template><Q v-bind="q" /></template>`,
+      /X\.vue:6:\d+: `onAt`, a required prop of Q named like a listener, may be falsy, .*: bind its props one by one, or make the prop optional/,
     ],
     [
       "a type parameter without a constraint",
@@ -4925,6 +5013,11 @@ defineProps<{ c: string | null }>();
 defineProps<{ onSale?: boolean }>();
 </script>
 <template><b v-if="onSale">!</b></template>`,
+    Q: `<script setup lang="ts">
+export interface Props { on1?: number; onAt: number; onNote: string | null }
+defineProps<Props>();
+</script>
+<template><b>{{ on1 }}{{ onAt }}{{ onNote }}</b></template>`,
     V: `<script setup lang="ts">
 export interface Item { label: string; n?: number }
 defineProps<{ item: Item; items?: Item[] }>();
@@ -4972,6 +5065,10 @@ defineProps<{ chip: Chip }>();
     "a value imported from a module that resolves to no `.ts` file of the project": "FV0110",
     "a type parameter without a constraint": "FV0302",
     "a listener of a name chosen at run time given to a child with a prop named like a listener": "FV0514",
+    "a prop named like a listener given twice in props Vue merges": "FV0516",
+    "a required prop named like a listener given a value that may be falsy in props Vue merges": "FV0517",
+    "a required nullable prop named like a listener given a string that may be empty in props Vue merges": "FV0517",
+    "a child's own Props with a required prop named like a listener, merged with attributes": "FV0517",
     "listeners from an object given to a child with a prop named like a listener": "FV0514",
     "an enum read whole": "FV0208",
     "an enum read by a key chosen at run time": "FV0222",

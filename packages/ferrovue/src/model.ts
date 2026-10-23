@@ -341,6 +341,9 @@ export interface Component {
   inherits: boolean;
   passesSlotIds: boolean;
   attrNames: Set<string>;
+  /** Names like a listener's (`on1`, `onSale`) the component may be passed beyond its props, which
+   * its attributes hold; `""` stands for a name not known when compiling. */
+  listenerAttrs: Set<string>;
   idsInAttrs: boolean;
 }
 
@@ -369,6 +372,7 @@ export function blankComponent(name: string, module: string, file: string, struc
     inherits: false,
     passesSlotIds: false,
     attrNames: new Set(),
+    listenerAttrs: new Set(),
     idsInAttrs: false,
   };
 }
