@@ -1251,6 +1251,7 @@ const STR_LITS = ["", "a", "x y", "<i>", "a&b", "&amp;", "→", "é", "🦀", " 
 const plainLit = (s: string): boolean => /^[\w <>&,.-]*$/.test(s);
 const UNION_LITS = ["sm", "md", "lg", "x-large", "2xl", "", "<i>", "a&b", "x y", "→a", "Mixed", "Σx"];
 const strLit = (s: string): Expr => atom("str", `'${s}'`);
+const literalsOf = (e: Expr): string[] | undefined => e.members ?? (e.kids.length === 0 && /^'[^'\\]*'$/.test(printExpr(e)) ? [printExpr(e).slice(1, -1)] : undefined);
 const TPL_TEXT = ["", " ", "n=", " & ", "<", "é", "/", "px", "🦀"];
 
 function numLit(x: number, ty: Ty): Expr {
@@ -1869,7 +1870,16 @@ class Gen {
         return node("str", [this.num(d - 1), numLit(r.int(-2, 12), "int")], ([a, i]) =>
           shape === 0 ? `String(${a}).split('').join('${sep}')` : shape === 1 ? `((String(${a})[${i}] ?? '?') + String(${a}).length)` : `String(${a}).split('').reduce((acc, ch, i) => (i > 0 && i % 3 === 0 ? acc + '${sep}' + ch : acc + ch), '')`, 0, true);
       }],
-      [2, () => { const t = this.test(d - 1); const [a, b] = [this.str(d - 1), this.str(d - 1)]; const e = str([t, a, b], ([c, x, y]) => `${c} ? ${x} : ${y}`, [a, b]); return a.members !== undefined && b.members !== undefined ? { ...e, members: [...new Set([...a.members, ...b.members])] } : e; }],
+      [2, () => {
+        const t = this.test(d - 1);
+        const [a, b] = [this.str(d - 1), this.str(d - 1)];
+        const e = str([t, a, b], ([c, x, y]) => `${c} ? ${x} : ${y}`, [a, b]);
+        const test = printExpr(t);
+        const ma = literalsOf(a);
+        const mb = literalsOf(b);
+        const members = test === "true" ? ma : test === "false" ? mb : ma !== undefined && mb !== undefined ? [...new Set([...ma, ...mb])] : undefined;
+        return members !== undefined && (a.members !== undefined || b.members !== undefined) ? { ...e, members } : e;
+      }],
       [1, () => str([this.str(d - 1), this.str(d - 1)], ([a, b]) => `${a} || ${b}`)],
       [opts.length ? 2 : 0, () => str([this.varRef(r.pick(opts)), this.str(d - 1)], ([a, b]) => `${a} ?? ${b}`)],
       [
@@ -2943,10 +2953,12 @@ function loopStep(g: Gen, at: string): LoopStep {
     if (count) g.scope.vars.push({ name: item, ty: "int", opt: false, bound: 40 });
     else if (list) g.bind(item, list.of, false, list.lone);
     else g.bind(item, { k: "str" }, false, !!text!.lone);
-    g.scope.vars.push({ name, ty, opt: false, bound: ty === "int" ? 2 ** 53 : 0 });
-    const skip = r.chance(0.3) ? g.bool(1) : null;
+    const acc: Var = { name, ty, opt: false, bound: ty === "int" ? 2 ** 53 : 0 };
+    if (ty !== "str") g.scope.vars.push(acc);
     const items = g.scope.vars.filter((v) => (v.name === item || v.name.startsWith(`${item}.`)) && v.ty === ty && !v.opt && !v.lone && v.bound <= BOUND_SMALL);
     const add = items.length && r.chance(0.6) ? g.varRef(r.pick(items)) : ty === "str" ? whole(g.str(2)) : ty === "int" ? g.int(2, BOUND_SMALL) : g.bool(2);
+    if (ty === "str") g.scope.vars.push(acc);
+    const skip = r.chance(0.3) ? g.bool(1) : null;
     const op = ty === "str" ? r.pick(["+=", "+=", "="]) : ty === "int" ? r.pick(["+=", "-=", "=", "*="]) : r.pick(["=", "||=", "&&="]);
     const stop = r.chance(0.3) ? g.bool(1) : null;
     return { k: "loop", name, init, over, item, skip, op, add: op === "*=" ? g.int(1, 3) : add, stop };
