@@ -716,6 +716,15 @@ describe("v-if", () => {
 `);
   });
 
+  it("renders the content alone where every part of an `&&` test is known true", () => {
+    expect(render(sfc("on: boolean", `<p v-if="true && true">x</p><p v-else>y</p>`))).toBe(`pub fn try_render(out: &mut String, _props: &Props) -> Result<(), fv::Refused> {
+    out.reserve(8);
+    out.push_str("<p>x</p>");
+    Ok(())
+}
+`);
+  });
+
   it("translates each test once", () => {
     expect(render(sfc("on: boolean; a?: string", `<div><p v-if="on && (a ? a.length : 0) > 1">y</p><p v-if="(a ? a.length : 0) > 1 || on">z</p><p v-if="a && (on || a.length > 2)">w</p></div>`))).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(56 + props.a.as_deref().map_or(0, str::len));

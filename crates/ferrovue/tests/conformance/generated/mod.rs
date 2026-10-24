@@ -101,6 +101,7 @@ pub mod lifecycle;
 pub mod links;
 pub mod list_access;
 pub mod list_building;
+pub mod list_fallback;
 pub mod listen_leaf;
 pub mod listen_sale;
 pub mod listened;
@@ -740,6 +741,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "ListBuilding" => {
             let props: list_building::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             list_building::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "ListFallback" => {
+            let props: list_fallback::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            list_fallback::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "ListenLeaf" => {
             let props: listen_leaf::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

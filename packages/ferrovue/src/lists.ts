@@ -73,6 +73,7 @@ export function collected(v: Val): string {
   const vec = v.iter !== undefined ? /^(.*)\.into_iter\(\)$/s.exec(v.iter)?.[1] : undefined;
   if (vec !== undefined && /^[({]/.test(vec) && enclosed(vec)) return bare(vec);
   const of = v.ty.k === "list" ? v.ty.of : v.ty;
+  if (v.iter === undefined && of.k !== "str" && of.k !== "struct" && of.k !== "child") return `${atom(v.code)}.to_vec()`;
   return `${items(v)}${of.k === "str" ? `.map(|v| ${COW}::Owned(v.into_owned()))` : ""}.collect::<Vec<_>>()`;
 }
 

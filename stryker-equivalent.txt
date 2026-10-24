@@ -332,3 +332,927 @@ packages/ferrovue/src/template.ts: ConditionalExpression: parts.includes("true")
 
 # Only a unary expression has the operator `!`.
 packages/ferrovue/src/template.ts: ConditionalExpression: st.test.type === "UnaryExpression" => true in (st.test.type === "UnaryExpression" && st.test.operator === "!");
+
+# template.ts, `statements`: a `||` or `??` test taken into the `&&` branch stays one operand, which
+# `presence` leaves unnarrowed (`pathOf` gives a logical expression no path, and the router's hook
+# reads only `typeof` comparisons), so nothing is narrowed and the statement falls through to the
+# path that writes it today; a part known false takes the `else` branch on both paths. Only a
+# logical expression has the operator `&&`.
+packages/ferrovue/src/template.ts: ConditionalExpression: st.test.operator === "&&" => true in if (st.test.type === "LogicalExpression" && st.test.operator === "&&") {
+packages/ferrovue/src/template.ts: LogicalOperator: st.test.type === "LogicalExpression" && st.test.operator === "&&" => st.test.type === "LogicalExpression" || st.test.operator === "&&" in if (st.test.type === "LogicalExpression" && st.test.operator === "&&") {
+
+# constants.ts, `declareConsts`: a destructuring `const` is stored under the key `undefined`, and
+# every lookup of a declared constant is by an identifier's name; the one loop over a module's
+# declarations (`moduleOf` in functions.ts) evaluates it and keeps the result or the refusal under
+# `undefined`, which no read asks for.
+packages/ferrovue/src/constants.ts: ConditionalExpression: v.id.type === "Identifier" => true in for (const v of d.declarations) if (v.id.type === "Identif … v.init) found.set(v.id.name, { node: v, home, exported });
+
+# constants.ts, `typedAs`: it is given a declarator `declareConsts` kept for having an `init`, and
+# `as` and `satisfies` always have an `expression`, so `n` is never `undefined`. Babel gives every
+# type reference with type arguments a `params` array. A qualified type name has no `name`, and
+# `ctx.typeStructs` has no key `undefined`.
+packages/ferrovue/src/constants.ts: OptionalChaining: n?.type => n.type in for (let n = decl.init; n?.type === "TSAsExpression" || n? … pression"; n = n.expression) names.push(n.typeAnnotation);
+packages/ferrovue/src/constants.ts: OptionalChaining: n?.type => n.type in for (let n = decl.init; n?.type === "TSAsExpression" || n? … pression"; n = n.expression) names.push(n.typeAnnotation);
+packages/ferrovue/src/constants.ts: OptionalChaining: t.typeParameters?.params?.[0] => t.typeParameters?.params[0] in const item = t?.type === "TSArrayType" ? t.elementType : t … s(t.typeName.name) ? t.typeParameters?.params?.[0] : null;
+packages/ferrovue/src/constants.ts: ConditionalExpression: item.typeName.type === "Identifier" => true in if (item?.type === "TSTypeReference" && item.typeName.type … tructs.has(item.typeName.name)) return item.typeName.name;
+
+# constants.ts, `enumType`: `enumConst` returns an object or throws, so `c.k` is always "object".
+packages/ferrovue/src/constants.ts: ArrayDeclaration: [] => ["Stryker was here"] in const members = c.k === "object" ? d.members.map((m: N) => … .id.type === "Identifier" ? m.id.name : m.id.value)) : [];
+packages/ferrovue/src/constants.ts: ConditionalExpression: c.k === "object" => true in const members = c.k === "object" ? d.members.map((m: N) => … .id.type === "Identifier" ? m.id.name : m.id.value)) : [];
+
+# constants.ts, `evaluate`: ferrovue and Vue parse without Babel's `createParenthesizedExpressions`,
+# so no node is a `ParenthesizedExpression`, and no node's type is "". Only a list has the kind
+# "list": every reader tests a constant for "scalar", "object" or "map" and takes the rest as a
+# list. A callee that is not a name has no `name` to equal "Map".
+packages/ferrovue/src/constants.ts: StringLiteral: "ParenthesizedExpression" => "" in case "ParenthesizedExpression":
+packages/ferrovue/src/constants.ts: StringLiteral: "list" => "" in k: "list",
+packages/ferrovue/src/constants.ts: ConditionalExpression: n.callee.type === "Identifier" => true in if (n.callee.type === "Identifier" && n.callee.name === "M … les.get(home)?.has("Map")) return mapConst(home, n, path);
+
+# constants.ts, `mapConst`: `Number.isSafeInteger` is false for every value that is not a number,
+# and a JavaScript `Map` stores the key `-0` as `0`, while the path names it by `String(key)`, "0"
+# for both.
+packages/ferrovue/src/constants.ts: ConditionalExpression: typeof key === "number" => true in if (typeof key !== "string" && !(typeof key === "number" & … `Map`'s key is a string or an integer", pair.elements[0]);
+packages/ferrovue/src/constants.ts: UnaryOperator: -0 => +0 in entries.set(Object.is(key, -0) ? 0 : key, evaluate(home, pair.elements[1], `${path}_${String(key)}`, null));
+
+# constants.ts, `computedKey`: a constant that is not a scalar has no `js`, so the type tests that
+# follow fail for it.
+packages/ferrovue/src/constants.ts: ConditionalExpression: c.k === "scalar" => true in if (c.k === "scalar" && (typeof c.js === "string" || typeof c.js === "number")) return String(c.js);
+
+# constants.ts, `scalarVal`, `symVal` and `unified`: the code of a value typed `null` or `undefined`
+# is never written: every reader of one (text, attributes, `:class`, `:style`, `?:`, `??`, `===`,
+# `String()`, template literals, a `computed`, a child's prop, a `.ts` function's argument) tests
+# `nothing()` and writes `None`, `"null"` or nothing from the type, `unified` writes "None" itself
+# for such an arm, and a symbol `none` reaches `symVal` only as an arm of a choice.
+packages/ferrovue/src/constants.ts: StringLiteral: "None" => "" in if (js === null) return { code: "None", ty: NULL };
+packages/ferrovue/src/constants.ts: StringLiteral: "None" => "" in if (sym.k === "none") return { code: "None", ty: UNDEF };
+packages/ferrovue/src/constants.ts: StringLiteral: "None" => "" in return { ty: arms[0]!.ty, codes: arms.map(() => "None") };
+packages/ferrovue/src/constants.ts: ArrowFunction: () => "None" => () => undefined in return { ty: arms[0]!.ty, codes: arms.map(() => "None") };
+
+# constants.ts, `scalarVal`: line 218 returns for every safe integer that is not a float, so at line
+# 219 the condition is always false.
+packages/ferrovue/src/constants.ts: ConditionalExpression: !float && Number.isSafeInteger(js) => false in return numberVal(js, !float && Number.isSafeInteger(js));
+
+# constants.ts, `scalarTy`: it is never given `null`: `listVal` refuses a list with `null` before it
+# (FV0209), `fieldLiteral` returns for `null` before it, and `itemStruct` leaves `null` out.
+packages/ferrovue/src/constants.ts: ConditionalExpression: js === null => false in if (js === null) return NULL;
+
+# constants.ts, `constVal`: the cache only saves work: `listVal` built again writes the same code
+# and type, `ctx.typeConsts` takes the same text under the same name (the owner is the same list, so
+# FV0212 stays silent), `itemStruct` sets the same struct under the same name and file (so FV0220
+# stays silent), and `reachType` runs once per name. No caller mutates the value, and the only map
+# keyed by a type (`HINTS` in enums.ts) is filled from type aliases.
+packages/ferrovue/src/constants.ts: ConditionalExpression: done => false in if (done) return done;
+packages/ferrovue/src/constants.ts: CallExpression: vals.set(c, val); => ; in vals.set(c, val);
+
+# constants.ts, `listVal`: `reachType` returns at once for a name `ctx.typeDecls` lacks, and it has
+# no `null`. `constVal`'s cache builds each list once, so an owner of the same Rust name already
+# recorded is always another list. `structLifetime` reads the component it is given only to look up
+# structs, and the fields of a list's struct are scalars or structs whose home is "types", which it
+# looks up in `ctx.typeStructs` whatever the component's name, module and file.
+packages/ferrovue/src/constants.ts: ConditionalExpression: c.typed !== null => true in if (c.typed !== null) reachType(c.typed);
+packages/ferrovue/src/constants.ts: ConditionalExpression: owner.of !== c => true in if (owner && owner.of !== c) fail(c.home, "FV0212", `a con … n Rust comes from ${owner.file} too; rename one`, c.node);
+packages/ferrovue/src/constants.ts: StringLiteral: "types" => "" in const life = structLifetime(st, blankComponent("types", "types", "types", ctx.typeStructs)) ? "<'static>" : "";
+packages/ferrovue/src/constants.ts: StringLiteral: "types" => "" in const life = structLifetime(st, blankComponent("types", "types", "types", ctx.typeStructs)) ? "<'static>" : "";
+packages/ferrovue/src/constants.ts: StringLiteral: "types" => "" in const life = structLifetime(st, blankComponent("types", "types", "types", ctx.typeStructs)) ? "<'static>" : "";
+
+# constants.ts, `fieldLiteral`: no field of a struct is absent as both `null` and `undefined`:
+# `tyOfTs` refuses such a union (FV0311), `fieldOf` refuses `?: T | null` (FV0321) and makes
+# optional only a type that is not, and `itemStruct` gives one absence. A constant that is not a
+# scalar has no `js`, so it is not `null`, and `scalarTy` of it is a float: a float field then takes
+# `plain`, and the test `v.k !== "scalar"` refuses it with the same FV0215; each of the two tests is
+# implied by the other.
+packages/ferrovue/src/constants.ts: ConditionalExpression: none === "either" => false in if (v === undefined) return none === "undefined" || none = … (c.home, "FV0213", `this object needs \`${f.js}\``, node);
+packages/ferrovue/src/constants.ts: StringLiteral: "either" => "" in if (v === undefined) return none === "undefined" || none = … (c.home, "FV0213", `this object needs \`${f.js}\``, node);
+packages/ferrovue/src/constants.ts: ConditionalExpression: v.k === "scalar" => true in if (v.k === "scalar" && v.js === null) return none === "nu … js}\` in a constant list's object is not \`null\``, node);
+packages/ferrovue/src/constants.ts: ConditionalExpression: none === "either" => false in if (v.k === "scalar" && v.js === null) return none === "nu … js}\` in a constant list's object is not \`null\``, node);
+packages/ferrovue/src/constants.ts: StringLiteral: "either" => "" in if (v.k === "scalar" && v.js === null) return none === "nu … js}\` in a constant list's object is not \`null\``, node);
+packages/ferrovue/src/constants.ts: ConditionalExpression: v.k === "scalar" => true in const plain = v.k === "scalar" && (scalarTy(v.js).k === want.k || (want.k === "float" && typeof v.js === "number"));
+packages/ferrovue/src/constants.ts: ConditionalExpression: v.k !== "scalar" => false in if (!plain || v.k !== "scalar") return fail(c.home, "FV021 …  in a constant list's object is ${describe(want)}`, node);
+
+# constants.ts, `fieldLiteral`: an integer field's value is a safe integer, which `numberVal` writes
+# as `<digits>i64`, with `i64` once and at the end; a float's code has no `i64`.
+packages/ferrovue/src/constants.ts: Regex: /i64$/ => /i64/ in const code = def !== undefined ? variantPath(TYPES_HOME, d … want.k === "int").code.replace(/i64$/, "") : String(v.js);
+
+# constants.ts, `pascal` and `rustConstName`: an empty word becomes an empty string, so leaving it
+# in joins the same name; `snake` writes `r#` only before a whole keyword.
+packages/ferrovue/src/constants.ts: MethodExpression: path .split(/_|(?=[A-Z][a-z])/) .filter(Boolean) => path.split(/_|(?=[A-Z][a-z])/) in return path
+packages/ferrovue/src/constants.ts: Regex: /^r#/ => /r#/ in .map((w) => (/^[A-Z0-9]+$/.test(w) ? w : snake(w).replace(/^r#/, "").toUpperCase()))
+
+# constants.ts, `keyAmong` and `constOf`: the regular expression accepts only a quoted literal,
+# which only a string value's code is; a string's code that begins with a quoted literal is that
+# literal, since methods of a literal are written `&*"…".to_lowercase()` or as calls of `fv::`
+# helpers and concatenation as `&*format!(…)`. A string value has no `num`, and a value without
+# `num` has no code `undefinedi64`, so with the type or `num` test made true or joined by `||` the
+# comparison of the code still decides.
+packages/ferrovue/src/constants.ts: ConditionalExpression: key.ty.k === "str" => true in const fixed = key.ty.k === "str" && /^"[^"\\]*"$/.test(key … ned && key.code === `${key.num}i64` ? key.num : undefined;
+packages/ferrovue/src/constants.ts: Regex: /^"[^"\\]*"$/ => /^"[^"\\]*"/ in const fixed = key.ty.k === "str" && /^"[^"\\]*"$/.test(key … ned && key.code === `${key.num}i64` ? key.num : undefined;
+packages/ferrovue/src/constants.ts: ConditionalExpression: key.ty.k === "int" && key.num !== undefined => true in const fixed = key.ty.k === "str" && /^"[^"\\]*"$/.test(key … ned && key.code === `${key.num}i64` ? key.num : undefined;
+packages/ferrovue/src/constants.ts: LogicalOperator: key.ty.k === "int" && key.num !== undefined => key.ty.k === "int" || key.num !== undefined in const fixed = key.ty.k === "str" && /^"[^"\\]*"$/.test(key … ned && key.code === `${key.num}i64` ? key.num : undefined;
+packages/ferrovue/src/constants.ts: ConditionalExpression: key.ty.k === "int" => true in const fixed = key.ty.k === "str" && /^"[^"\\]*"$/.test(key … ned && key.code === `${key.num}i64` ? key.num : undefined;
+packages/ferrovue/src/constants.ts: ConditionalExpression: key.num !== undefined => true in const fixed = key.ty.k === "str" && /^"[^"\\]*"$/.test(key … ned && key.code === `${key.num}i64` ? key.num : undefined;
+packages/ferrovue/src/constants.ts: ConditionalExpression: v.ty.k === "str" => true in const fixed = v.ty.k === "str" && /^"[^"\\]*"$/.test(v.cod … efined && v.code === `${v.num}i64` ? String(v.num) : null;
+packages/ferrovue/src/constants.ts: Regex: /^"[^"\\]*"$/ => /^"[^"\\]*"/ in const fixed = v.ty.k === "str" && /^"[^"\\]*"$/.test(v.cod … efined && v.code === `${v.num}i64` ? String(v.num) : null;
+packages/ferrovue/src/constants.ts: ConditionalExpression: v.ty.k === "int" && v.num !== undefined => true in const fixed = v.ty.k === "str" && /^"[^"\\]*"$/.test(v.cod … efined && v.code === `${v.num}i64` ? String(v.num) : null;
+packages/ferrovue/src/constants.ts: LogicalOperator: v.ty.k === "int" && v.num !== undefined => v.ty.k === "int" || v.num !== undefined in const fixed = v.ty.k === "str" && /^"[^"\\]*"$/.test(v.cod … efined && v.code === `${v.num}i64` ? String(v.num) : null;
+packages/ferrovue/src/constants.ts: ConditionalExpression: v.ty.k === "int" => true in const fixed = v.ty.k === "str" && /^"[^"\\]*"$/.test(v.cod … efined && v.code === `${v.num}i64` ? String(v.num) : null;
+packages/ferrovue/src/constants.ts: ConditionalExpression: v.num !== undefined => true in const fixed = v.ty.k === "str" && /^"[^"\\]*"$/.test(v.cod … efined && v.code === `${v.num}i64` ? String(v.num) : null;
+
+# constants.ts, `mapCall`: `symVal` tests a symbol's kind only for "const" and "none" and takes the
+# rest as a choice, `short` is read only by `step`, and the result is a value. The key "" of the
+# absent arm is in the last group of the `match`, the one `matchOver` writes as `_` for a key that
+# is no enum, so the key is never written.
+packages/ferrovue/src/constants.ts: StringLiteral: "pick" => "" in if (found.test !== "true" && literals === undefined) retur … one", short: false }] }, { comp: s.comp, node: n, what });
+packages/ferrovue/src/constants.ts: StringLiteral: "" => "Stryker was here!" in if (found.test !== "true" && literals === undefined) retur … one", short: false }] }, { comp: s.comp, node: n, what });
+packages/ferrovue/src/constants.ts: BooleanLiteral: false => true in if (found.test !== "true" && literals === undefined) retur … one", short: false }] }, { comp: s.comp, node: n, what });
+packages/ferrovue/src/constants.ts: StringLiteral: "pick" => "" in return symVal({ k: "pick", on: key, keys: on, arms: on.map … ne", short: false })) }, { comp: s.comp, node: n, what });
+packages/ferrovue/src/constants.ts: BooleanLiteral: false => true in return symVal({ k: "pick", on: key, keys: on, arms: on.map … ne", short: false })) }, { comp: s.comp, node: n, what });
+
+# constants.ts, `staticKey`: a constant that is not a scalar has no `js`, so the type tests that
+# follow fail for it.
+packages/ferrovue/src/constants.ts: ConditionalExpression: named.sym.c.k === "scalar" => true in if (named?.sym.k === "const" && named.sym.c.k === "scalar" … med.sym.c.js === "number")) return String(named.sym.c.js);
+
+# constants.ts, `constOf`: Vue writes `$setup` and `_ctx` only as the object of a plain member read,
+# `$setup.x` or `_ctx.x`, and a template's own `_ctx` or `$setup` becomes `_ctx._ctx` (refused,
+# FV0601); it writes `$setup["X"]` only in `resolveSetupReference`, for a component tag (`<X>` or
+# the namespace of `<X.Y>`) or a directive `<script setup>` declares, which ferrovue resolves as a
+# component or directive (FV0501, FV0405) without reading a constant. A constant found by name has
+# that name. `pathOf` writes a path that starts with a name, never with a dot. Only string and
+# integer types carry literals (`literalTy`). The narrowed values are keyed by path strings, so
+# `null` finds none.
+packages/ferrovue/src/constants.ts: ConditionalExpression: n.property.type === "StringLiteral" => true in const name: string | undefined = n.computed ? (n.property. … iteral" ? n.property.value : undefined) : n.property.name;
+packages/ferrovue/src/constants.ts: ConditionalExpression: n.property.type === "StringLiteral" => false in const name: string | undefined = n.computed ? (n.property. … iteral" ? n.property.value : undefined) : n.property.name;
+packages/ferrovue/src/constants.ts: EqualityOperator: n.property.type === "StringLiteral" => n.property.type !== "StringLiteral" in const name: string | undefined = n.computed ? (n.property. … iteral" ? n.property.value : undefined) : n.property.name;
+packages/ferrovue/src/constants.ts: StringLiteral: "StringLiteral" => "" in const name: string | undefined = n.computed ? (n.property. … iteral" ? n.property.value : undefined) : n.property.name;
+packages/ferrovue/src/constants.ts: ConditionalExpression: n.type === "MemberExpression" && n.object.type === "Identifier" => true in if (n.type === "MemberExpression" && n.object.type === "Id … n.object.name === "$setup" || n.object.name === "_ctx")) {
+packages/ferrovue/src/constants.ts: LogicalOperator: n.type === "MemberExpression" && n.object.type === "Identifier" => n.type === "MemberExpression" || n.object.type === "Identifier" in if (n.type === "MemberExpression" && n.object.type === "Id … n.object.name === "$setup" || n.object.name === "_ctx")) {
+packages/ferrovue/src/constants.ts: ConditionalExpression: n.type === "MemberExpression" => true in if (n.type === "MemberExpression" && n.object.type === "Id … n.object.name === "$setup" || n.object.name === "_ctx")) {
+packages/ferrovue/src/constants.ts: ConditionalExpression: name !== undefined => true in return c && name !== undefined ? { sym: { k: "const", c }, what: name } : null;
+packages/ferrovue/src/constants.ts: StringLiteral: "\\$^" => "" in const what = `${base.what}[${path === null ? "…" : path.re … place(new RegExp(`^${s.propsIdent ?? "\\$^"}\\.`), "")}]`;
+packages/ferrovue/src/constants.ts: ConditionalExpression: v.ty.k !== "str" && v.ty.k !== "int" => false in if (keys === undefined || (v.ty.k !== "str" && v.ty.k !== "int")) {
+packages/ferrovue/src/constants.ts: ConditionalExpression: whole !== null => true in if (whole !== null && s.narrowed.get(whole)?.pick && arms.some((a) => a.k !== "none")) {
+
+# constants.ts, `step`: `constOf` gives `step` a symbol that `objectLike` accepts, so a constant is
+# an object; a symbol `none` reaches `step` only as the arm of a choice, with the key that chose it
+# in `path`, since no expression stands for `undefined` itself.
+packages/ferrovue/src/constants.ts: StringLiteral: "" => "Stryker was here!" in const where = path.length ? `, as it is for the key ${quoted(path)}` : "";
+packages/ferrovue/src/constants.ts: StringLiteral: "FV0204" => "" in if (sym.c.k !== "object") return fail(s.comp, "FV0204", `\`${base.what}\` has no field \`${key}\``, n);
+packages/ferrovue/src/constants.ts: StringLiteral: `\`${base.what}\` has no field \`${key}\`` => `` in if (sym.c.k !== "object") return fail(s.comp, "FV0204", `\`${base.what}\` has no field \`${key}\``, n);
+packages/ferrovue/src/constants.ts: ConditionalExpression: sym.c.k !== "object" => false in if (sym.c.k !== "object") return fail(s.comp, "FV0204", `\`${base.what}\` has no field \`${key}\``, n);
+
+# constants.ts, `symVal`: `slice` is read by `sliced` and `objects.ts` for lists only and by
+# `bindingOf`, which binds a value marked `slice` with a `let` of its code read by its name, as it
+# binds a match of scalar literals. Only a boolean's code is a bare `true` or `false`; an optional
+# boolean's is `Some(true)` or `None`.
+packages/ferrovue/src/constants.ts: ConditionalExpression: ty.k === "list" => true in const slice = ty.k === "list" ? { slice: true } : {};
+packages/ferrovue/src/constants.ts: ConditionalExpression: ty.k === "bool" => true in if (ty.k === "bool" && groups.every(([, code]) => code === "true" || code === "false")) {
+
+# constants.ts, `unified`: integer arms make `numbers` true before the list of kinds is read. Only a
+# list's code starts with `[`; a string's starts with a quote, and the other codes with a digit,
+# `-`, a name, `Some(`, `None` or `match`.
+packages/ferrovue/src/constants.ts: StringLiteral: "int" => "" in if (!(numbers || (same && ["str", "int", "bool", "list"].includes(first.k)))) {
+packages/ferrovue/src/constants.ts: ConditionalExpression: of.k === "list" => true in if (of.k === "list") code = code.startsWith("[") ? `&${code}[..]` : code;
+
+# expr.ts, `refuseClientOnly`: it is called with `n` the name `local` reads (an `Identifier` named
+# `local`), or a member or a call, which have no `name` equal to `local` and no `fvName`; only a
+# renamed `Identifier` carries `fvName`, and `n` is never absent.
+packages/ferrovue/src/expr.ts: ConditionalExpression: n?.type === "Identifier" && n.name === local => true in const name: string = n?.type === "Identifier" && n.name === local ? (n.fvName ?? local) : local;
+packages/ferrovue/src/expr.ts: LogicalOperator: n?.type === "Identifier" && n.name === local => n?.type === "Identifier" || n.name === local in const name: string = n?.type === "Identifier" && n.name === local ? (n.fvName ?? local) : local;
+packages/ferrovue/src/expr.ts: ConditionalExpression: n?.type === "Identifier" => true in const name: string = n?.type === "Identifier" && n.name === local ? (n.fvName ?? local) : local;
+packages/ferrovue/src/expr.ts: ConditionalExpression: n.name === local => true in const name: string = n?.type === "Identifier" && n.name === local ? (n.fvName ?? local) : local;
+packages/ferrovue/src/expr.ts: OptionalChaining: n?.type => n.type in const name: string = n?.type === "Identifier" && n.name === local ? (n.fvName ?? local) : local;
+
+# expr.ts, `refuseClientOnly`: the place where a refused name is read is a node of Vue's code or
+# of a script, each of which has a line and a column, so no part of the place is `undefined`.
+packages/ferrovue/src/expr.ts: MethodExpression: [at.file, at.line, at.column].filter((p) => p !== undefined) => [at.file, at.line, at.column] in const what = `${cause.what} (${reader(s)} as \`${name}\` a … e, at.column].filter((p) => p !== undefined).join(":")})`;
+packages/ferrovue/src/expr.ts: ConditionalExpression: p !== undefined => true in const what = `${cause.what} (${reader(s)} as \`${name}\` a … e, at.column].filter((p) => p !== undefined).join(":")})`;
+
+# expr.ts, `refuseClientOnly`: every reason in `clientOnly` that starts with "it is a function" is
+# set with the name in `functions` of the same scope (`declared` and the imports in script.ts,
+# `moduleOf`, `letIn`); a call stops before the test, so it is read only for a name outside
+# `functions`, whose reason neither starts nor ends with those words.
+packages/ferrovue/src/expr.ts: MethodExpression: why.startsWith("it is a function") => why.endsWith("it is a function") in : called || why.startsWith("it is a function") ? twinHelp( … {COMPUTE_IN_RUST}, or read it only from an event handler`;
+
+# expr.ts, `describeTy`: `int` falls through to `float`, which returns the same "a number".
+packages/ferrovue/src/expr.ts: ConditionalExpression: case "int": return "a number"; => case "int": in case "int":
+
+# expr.ts, `describeTy`: the description of a type an optional holds starts with "a " or "an ", or
+# is "`undefined`", "`null`" or "the CSS module `name`", none of which holds "a " or "an " after
+# its start, so the first match is at the start.
+packages/ferrovue/src/expr.ts: Regex: /^an? / => /an? / in return `an optional ${describeTy(ty.of).replace(/^an? /, "")}`;
+
+# expr.ts, `describeTy`: every plugin with `values` hooks (CSS modules, dates, the router) defines
+# `describe`.
+packages/ferrovue/src/expr.ts: OptionalChaining: p.values?.describe?.(ty) => p.values?.describe(ty) in return claim((p) => p.values?.describe?.(ty)) ?? "a value of another kind";
+
+# expr.ts, `fieldVal`: `dflt` is set only on optional props (component.ts skips each field that is
+# not `opt`), so a field with a default is optional, a field that is not optional has no literal,
+# and `rustStr` never returns `undefined`.
+packages/ferrovue/src/expr.ts: ConditionalExpression: f.dflt === undefined => false in const literal = f.dflt === undefined ? undefined : def.literals.find((l) => rustStr(l) === f.dflt);
+packages/ferrovue/src/expr.ts: ConditionalExpression: f.ty.k !== "opt" => false in const variant = f.ty.k !== "opt" ? place : literal !== und … e}.unwrap_or(${variantPath(comp, def, literal)})` : place;
+packages/ferrovue/src/expr.ts: ConditionalExpression: f.ty.k === "opt" => true in const read = f.ty.k === "opt" && literal !== undefined ? f.ty.of : f.ty;
+packages/ferrovue/src/expr.ts: ConditionalExpression: f.ty.k === "opt" => true in if (f.dflt !== undefined && f.ty.k === "opt") {
+
+# expr.ts, `fieldVal`: an optional `html` field falls to the last line of the `opt` case, which
+# writes the same `.as_ref()`.
+packages/ferrovue/src/expr.ts: ConditionalExpression: f.ty.of.k === "html" => false in if (f.ty.of.k === "html") return { code: `${place}.as_ref()`, ty: f.ty };
+packages/ferrovue/src/expr.ts: StringLiteral: "html" => "" in if (f.ty.of.k === "html") return { code: `${place}.as_ref()`, ty: f.ty };
+
+# expr.ts, `coerce`: the types `coerce` is handed (helper, twin and loader parameters, and the
+# joined type of a `?:`, which holds the absence of one branch) are strings, numbers, booleans or
+# optionals; `holdsNothing` has refused a value that may be absent where the type is not optional,
+# and a type that is not optional has no `of`, so `sameTy(v.ty, want.of)` is false.
+packages/ferrovue/src/expr.ts: ConditionalExpression: want.k === "opt" => true in if (want.k === "opt" && nothing(v.ty)) return "None";
+packages/ferrovue/src/expr.ts: ConditionalExpression: want.k === "opt" => true in if (want.k === "opt" && v.ty.k === "opt" && sameTy(v.ty.of, want.of)) return v.code;
+packages/ferrovue/src/expr.ts: ConditionalExpression: want.k === "opt" => true in if (want.k === "opt" && sameTy(v.ty, want.of)) return `Some(${bare(v.code)})`;
+
+# expr.ts, `slotsObject`: a member that is not a name has no `name`, so its `owner` is
+# `undefined`, which is neither `_ctx` nor `$setup`.
+packages/ferrovue/src/expr.ts: ConditionalExpression: n.object.type !== "Identifier" => false in if (n.type !== "MemberExpression" || n.computed || n.object.type !== "Identifier") return null;
+
+# expr.ts, `slotsObject`: Vue writes a `<script setup>` binding as `$setup.name`, and `useSlots()`
+# is bound only in `<script setup>`, so a slots binding is never read as `_ctx.name`.
+packages/ferrovue/src/expr.ts: ConditionalExpression: owner === "_ctx" => false in return (owner === "$setup" || owner === "_ctx") && s.slotsBindings.has(name) ? name : null;
+packages/ferrovue/src/expr.ts: StringLiteral: "_ctx" => "" in return (owner === "$setup" || owner === "_ctx") && s.slotsBindings.has(name) ? name : null;
+
+# expr.ts, `typedBy`: only the translation of `.map()` reads `fvTyped` (`itemsOf` in lists.ts),
+# and a call whose callee is computed is not translated as a list method.
+packages/ferrovue/src/expr.ts: ConditionalExpression: n.callee.type === "MemberExpression" && !n.callee.computed && n.callee.property.name === "map" => true in return n.callee.type === "MemberExpression" && !n.callee.c … ...n, fvTyped: t, ...(from ? { fvFrom: from } : {}) } : n;
+packages/ferrovue/src/expr.ts: ConditionalExpression: n.callee.property.name === "map" => true in return n.callee.type === "MemberExpression" && !n.callee.c … ...n, fvTyped: t, ...(from ? { fvFrom: from } : {}) } : n;
+
+# expr.ts, `typedBy`, `objectish`, `stated`, `asText` and `shown`: no parser the compiler or Vue
+# runs is given `createParenthesizedExpressions`, and the compiler builds no
+# `ParenthesizedExpression`, so no node is one.
+packages/ferrovue/src/expr.ts: ConditionalExpression: case "ParenthesizedExpression": return { ...n, expression: typedBy(n.expression, t, arrays, from) }; => case "ParenthesizedExpression": in case "ParenthesizedExpression":
+packages/ferrovue/src/expr.ts: ObjectLiteral: { ...n, expression: typedBy(n.expression, t, arrays, from) } => {} in return { ...n, expression: typedBy(n.expression, t, arrays, from) };
+packages/ferrovue/src/expr.ts: StringLiteral: "ParenthesizedExpression" => "" in case "ParenthesizedExpression":
+packages/ferrovue/src/expr.ts: ConditionalExpression: n?.type === "ParenthesizedExpression" => false in while (n?.type === "ParenthesizedExpression") n = n.expression;
+packages/ferrovue/src/expr.ts: StringLiteral: "ParenthesizedExpression" => "" in while (n?.type === "ParenthesizedExpression") n = n.expression;
+packages/ferrovue/src/expr.ts: ConditionalExpression: inner.type === "ParenthesizedExpression" => false in while (inner.type === "ParenthesizedExpression") inner = inner.expression;
+packages/ferrovue/src/expr.ts: StringLiteral: "ParenthesizedExpression" => "" in while (inner.type === "ParenthesizedExpression") inner = inner.expression;
+packages/ferrovue/src/expr.ts: ConditionalExpression: inner.type === "ParenthesizedExpression" => false in while (inner.type === "ParenthesizedExpression") inner = inner.expression;
+packages/ferrovue/src/expr.ts: StringLiteral: "ParenthesizedExpression" => "" in while (inner.type === "ParenthesizedExpression") inner = inner.expression;
+packages/ferrovue/src/expr.ts: ConditionalExpression: inner.type === "ParenthesizedExpression" => false in while (inner.type === "ParenthesizedExpression") inner = inner.expression;
+packages/ferrovue/src/expr.ts: StringLiteral: "ParenthesizedExpression" => "" in while (inner.type === "ParenthesizedExpression") inner = inner.expression;
+
+# expr.ts, `statedTy`: `home` differs from `s.comp` only where it is `fvFrom` or `typesFrom`, both
+# set only to a `.ts` module's home, whose structs are `ctx.typeStructs`; a component's structs
+# are its own.
+packages/ferrovue/src/expr.ts: LogicalOperator: home.structs === ctx.typeStructs && home !== s.comp => home.structs === ctx.typeStructs || home !== s.comp in return home.structs === ctx.typeStructs && home !== s.comp ? markHome(ty, "types") : ty;
+packages/ferrovue/src/expr.ts: ConditionalExpression: home.structs === ctx.typeStructs => true in return home.structs === ctx.typeStructs && home !== s.comp ? markHome(ty, "types") : ty;
+packages/ferrovue/src/expr.ts: ConditionalExpression: home !== s.comp => true in return home.structs === ctx.typeStructs && home !== s.comp ? markHome(ty, "types") : ty;
+
+# expr.ts, `stated`: a qualified type name (`A.B`) has no `name` to equal "const".
+packages/ferrovue/src/expr.ts: ConditionalExpression: t.typeName.type === "Identifier" => true in if (t.type === "TSTypeReference" && t.typeName.type === "I … const" && !t.typeParameters) return expr(s, n.expression);
+
+# expr.ts, `alwaysTruthy`: a type carries an empty list of literals only where `ownKeyPresence`
+# makes a presence that does not test truth, which `whenAbsent` never reads; every other list of
+# literals has a member.
+packages/ferrovue/src/expr.ts: ConditionalExpression: literals.length > 0 => true in if (literals !== undefined && literals.length > 0) return literals.every((l) => l !== "" && l !== 0);
+packages/ferrovue/src/expr.ts: EqualityOperator: literals.length > 0 => literals.length >= 0 in if (literals !== undefined && literals.length > 0) return literals.every((l) => l !== "" && l !== 0);
+
+# expr.ts, `alwaysTruthy`: `truthy` writes the code it is given into an expression and returns
+# "true" for the same types whatever the code.
+packages/ferrovue/src/expr.ts: StringLiteral: "v" => "" in return truthy({ code: "v", ty }) === "true";
+
+# expr.ts, `whenAbsent`: it is called for an `&&` whose presence is not negated, and the branch
+# before it returns for every such `&&` whose presence does not test truth.
+packages/ferrovue/src/expr.ts: ConditionalExpression: !p.truthy => false in if (!p.truthy) return null;
+
+# expr.ts, `whenAbsent`: the `undefined` or `null` it makes is the alternate of a `?:` that keeps
+# the location of the `&&`; translating it never refuses, and the `?:` is located by its own
+# position.
+packages/ferrovue/src/expr.ts: ObjectLiteral: { loc: left.loc, __fv: left.__fv, start: left.start, end: left.end } => {} in const at = { loc: left.loc, __fv: left.__fv, start: left.start, end: left.end };
+
+# expr.ts, `indexed`: the getter is tested only against names starting with `getUTC`, `getTime` or
+# `valueOf`, which "Stryker was here!" does not.
+packages/ferrovue/src/expr.ts: StringLiteral: "" => "Stryker was here!" in const getter = key.type === "CallExpression" && key.callee … llee.computed ? (key.callee.property.name as string) : "";
+
+# expr.ts, `indexed`: `undefined >= 0` is false, and `picked` calls the function for computed
+# lists only where `list.iter` is set, which the condition excludes.
+packages/ferrovue/src/expr.ts: ConditionalExpression: i.num !== undefined => true in if (i.num !== undefined && i.num >= 0 && list.iter === und … = 0 ? `${l}.first()` : `${l}.get(${i.num})`), (it) => it);
+packages/ferrovue/src/expr.ts: ArrowFunction: (it) => it => () => undefined in if (i.num !== undefined && i.num >= 0 && list.iter === und … = 0 ? `${l}.first()` : `${l}.get(${i.num})`), (it) => it);
+
+# expr.ts, `ownedCow`: the value an optional chain ends in is a member or a call: a field, which
+# is not temporary, or a string method, whose `asCow` is `Owned(…)` (`fv::` routines,
+# `.to_owned()`, `format!`, `.join`). `asCow` gives another form only for a `?:` of temporaries, a
+# field of an owned struct and an `unwrap_or` falling back to a `Cow`, which no link of a chain
+# yields.
+packages/ferrovue/src/expr.ts: StringLiteral: `std::borrow::Cow::<str>::Owned(${atom(cow)}.into_owned())` => `` in return cow.startsWith("std::borrow::Cow::<str>::Owned(") ? … td::borrow::Cow::<str>::Owned(${atom(cow)}.into_owned())`;
+packages/ferrovue/src/expr.ts: StringLiteral: "std::borrow::Cow::<str>::Owned(" => "" in return cow.startsWith("std::borrow::Cow::<str>::Owned(") ? … td::borrow::Cow::<str>::Owned(${atom(cow)}.into_owned())`;
+
+# expr.ts, `chainHint`: `snakeWords` names a local whose hint is empty "value".
+packages/ferrovue/src/expr.ts: StringLiteral: "value" => "" in return "value";
+
+# expr.ts, `optionalChain`: babel parses every link of a chain down to the one marked `optional`
+# as an `OptionalMemberExpression` or an `OptionalCallExpression`, and the compiler builds no
+# chain, so the walk never meets another node or the end.
+packages/ferrovue/src/expr.ts: StringLiteral: "FV0625" => "" in if (link?.type !== "OptionalMemberExpression" && link?.typ …  `this optional chain is not supported ${placeIn(s)}`, n);
+packages/ferrovue/src/expr.ts: StringLiteral: `this optional chain is not supported ${placeIn(s)}` => `` in if (link?.type !== "OptionalMemberExpression" && link?.typ …  `this optional chain is not supported ${placeIn(s)}`, n);
+packages/ferrovue/src/expr.ts: ConditionalExpression: link?.type !== "OptionalMemberExpression" && link?.type !== "OptionalCallExpression" => false in if (link?.type !== "OptionalMemberExpression" && link?.typ …  `this optional chain is not supported ${placeIn(s)}`, n);
+packages/ferrovue/src/expr.ts: OptionalChaining: link?.type => link.type in if (link?.type !== "OptionalMemberExpression" && link?.typ …  `this optional chain is not supported ${placeIn(s)}`, n);
+packages/ferrovue/src/expr.ts: OptionalChaining: link?.type => link.type in if (link?.type !== "OptionalMemberExpression" && link?.typ …  `this optional chain is not supported ${placeIn(s)}`, n);
+
+# expr.ts, `optionalChain`: the hole is bound in a scope of its own for the rest of its chain,
+# which alone reads it, and a chain in that rest binds its own hole in a scope of its own, so the
+# name is never read where another hole has it.
+packages/ferrovue/src/expr.ts: StringLiteral: `fv$o${k}` => `` in const hole: N = { ...link.object, type: "Identifier", name: `fv$o${k}` };
+
+# expr.ts, `optionalChain`: no field type is `undefined` or `null` (FV0316), and no member or
+# method a chain reads gives a type that is only absent, so the rest of a chain is never
+# `nothing`.
+packages/ferrovue/src/expr.ts: ObjectLiteral: { code: "None", ty: UNDEF } => {} in if (nothing(inner.ty)) return { code: "None", ty: UNDEF };
+packages/ferrovue/src/expr.ts: StringLiteral: "None" => "" in if (nothing(inner.ty)) return { code: "None", ty: UNDEF };
+packages/ferrovue/src/expr.ts: ConditionalExpression: nothing(inner.ty) => false in if (nothing(inner.ty)) return { code: "None", ty: UNDEF };
+
+# expr.ts, `optionalChain` and `.length` in `expr`: only list values carry `iter` (`computed`, the
+# blocks of `letIn` and a `?:` of lists).
+packages/ferrovue/src/expr.ts: ConditionalExpression: inner.ty.k === "list" => true in if (inner.ty.k === "list" && inner.iter !== undefined) return heldBy(over(collected(inner), false), opt(inner.ty));
+packages/ferrovue/src/expr.ts: ConditionalExpression: base.ty.k === "list" => true in if (base.ty.k === "list" && base.iter !== undefined) {
+
+# expr.ts, `optionalChain`: a list, record or struct the rest of a chain reads without `iter` is a
+# field of the hole (`fieldVal` writes `name.field…`), which the pattern matches.
+packages/ferrovue/src/expr.ts: StringLiteral: `^${name}(?:\\.[\\w#]+)+$` => `` in const place = ["list", "record", "struct"].includes(inner. … & new RegExp(`^${name}(?:\\.[\\w#]+)+$`).test(inner.code);
+
+# expr.ts, `expr` and `optionalChain`, `null`, `undefined` and an absent base of `?.`: the code of
+# a value typed `null` or `undefined` is never written: each place that takes such a value tests
+# its type with `nothing` and writes its own `None`, `"null"` or `"undefined"`.
+packages/ferrovue/src/expr.ts: StringLiteral: "None" => "" in if (nothing(base.ty)) return { code: "None", ty: UNDEF };
+packages/ferrovue/src/expr.ts: StringLiteral: "None" => "" in return { code: "None", ty: NULL };
+packages/ferrovue/src/expr.ts: StringLiteral: "None" => "" in if (n.name === "undefined") return { code: "None", ty: UNDEF };
+
+# expr.ts, `asText`: `expr` throws only `GenError` for any input; another error is a fault of the
+# compiler.
+packages/ferrovue/src/expr.ts: ConditionalExpression: e instanceof GenError => true in if (e instanceof GenError) return n;
+
+# expr.ts, `asText`: `formatted` reads a quasi's `value.cooked` and no other part of it.
+packages/ferrovue/src/expr.ts: StringLiteral: "TemplateElement" => "" in const quasi = { type: "TemplateElement", value: { raw: "", cooked: "" }, ...at };
+packages/ferrovue/src/expr.ts: StringLiteral: "" => "Stryker was here!" in const quasi = { type: "TemplateElement", value: { raw: "", cooked: "" }, ...at };
+packages/ferrovue/src/expr.ts: BooleanLiteral: true => false in const written: N = { type: "TemplateLiteral", quasis: [quasi, { ...quasi, tail: true }], expressions: [n], ...at };
+
+# expr.ts, `asText`: `== null` of a value that is never absent is false, so the `?:` it builds
+# gives `written` with the same code.
+packages/ferrovue/src/expr.ts: ConditionalExpression: v.ty.k !== "opt" => false in if (v.ty.k !== "opt") return written;
+
+# expr.ts, `shown`: a refusal other than FV0623 comes from the test or a branch, which `asText`
+# keeps as written, so translating the `?:` again raises the same refusal; another error is
+# rethrown by `asText`, and a node that is not a `?:` is rethrown at once.
+packages/ferrovue/src/expr.ts: ConditionalExpression: !(e instanceof GenError) || e.code !== "FV0623" => false in if (!(e instanceof GenError) || e.code !== "FV0623") throw e;
+packages/ferrovue/src/expr.ts: LogicalOperator: !(e instanceof GenError) || e.code !== "FV0623" => !(e instanceof GenError) && e.code !== "FV0623" in if (!(e instanceof GenError) || e.code !== "FV0623") throw e;
+packages/ferrovue/src/expr.ts: ConditionalExpression: e.code !== "FV0623" => false in if (!(e instanceof GenError) || e.code !== "FV0623") throw e;
+
+# expr.ts, `shown`: `asText` of a node that is not a `?:` gives the node itself where translating
+# it fails, so the second translation throws the same refusal.
+packages/ferrovue/src/expr.ts: ConditionalExpression: inner.type !== "ConditionalExpression" => false in if (inner.type !== "ConditionalExpression") throw e;
+
+# expr.ts, `expr`, `.length`: `Object.entries(r)` is `r.iter()` (lists.ts), whose length the
+# general case writes as `r.len()`, as this one does.
+packages/ferrovue/src/expr.ts: ConditionalExpression: isObjectCall(n.object, "entries") && n.object.arguments.length === 1 => false in if (isObjectCall(n.object, "entries") && n.object.arguments.length === 1) {
+packages/ferrovue/src/expr.ts: StringLiteral: "entries" => "" in if (isObjectCall(n.object, "entries") && n.object.arguments.length === 1) {
+packages/ferrovue/src/expr.ts: ConditionalExpression: r.ty.k === "record" => false in if (r.ty.k === "record") return { code: `${atom(r.code)}.len() as i64`, ty: INT };
+packages/ferrovue/src/expr.ts: BlockStatement: { const r = expr(s, n.object.arguments[0]); if (r.ty.k === … eturn { code: `${atom(r.code)}.len() as i64`, ty: INT }; } => {} in if (isObjectCall(n.object, "entries") && n.object.arguments.length === 1) {
+packages/ferrovue/src/expr.ts: StringLiteral: "record" => "" in if (r.ty.k === "record") return { code: `${atom(r.code)}.len() as i64`, ty: INT };
+
+# expr.ts, `expr`, `.length`: `.*` with the `s` flag matches from the start, so the first match
+# starts at 0 with or without `^`.
+packages/ferrovue/src/expr.ts: Regex: /^(.*)\.into_iter\(\)$/s => /(.*)\.into_iter\(\)$/s in const vec = /^(.*)\.into_iter\(\)$/s.exec(base.iter)?.[1];
+packages/ferrovue/src/expr.ts: Regex: /^(.*)\.iter\(\)$/s => /(.*)\.iter\(\)$/s in const held = /^(.*)\.iter\(\)$/s.exec(mapped)?.[1];
+
+# expr.ts, `expr`, `.length`: the items of a computed list start with an expression, never with
+# `.map(`, so `.map(` is never at 0.
+packages/ferrovue/src/expr.ts: EqualityOperator: at > 0 => at >= 0 in while (at > 0 && !enclosed(base.iter.slice(at + 4))) at = base.iter.indexOf(".map(", at + 1);
+packages/ferrovue/src/expr.ts: EqualityOperator: at > 0 => at >= 0 in const mapped = at > 0 ? base.iter.slice(0, at) : base.iter;
+
+# expr.ts, `expr`, `.length`: the line is reached only where `vec` is defined, the other case
+# having returned.
+packages/ferrovue/src/expr.ts: StringLiteral: `${atom(base.iter)}.count() as i64` => `` in return { code: vec !== undefined ? `${atom(vec)}.len() as i64` : `${atom(base.iter)}.count() as i64`, ty: INT };
+packages/ferrovue/src/expr.ts: ConditionalExpression: vec !== undefined => true in return { code: vec !== undefined ? `${atom(vec)}.len() as i64` : `${atom(base.iter)}.count() as i64`, ty: INT };
+
+# expr.ts, `expr`, `+`: `+` hands `formatted` two strings or numbers, which no check there
+# refuses, and `meet` has checked the pair just before, so its name is in no message.
+packages/ferrovue/src/expr.ts: StringLiteral: "`+`" => "" in return formatted(comp, [a, b], n, "`+`");
+
+# expr.ts, `expr`, arithmetic: only a literal has a `value`, and a literal that is not an integer
+# is a float, which makes `int` false.
+packages/ferrovue/src/expr.ts: LogicalOperator: n.right.type === "NumericLiteral" && Number.isInteger(n.right.value) => n.right.type === "NumericLiteral" || Number.isInteger(n.right.value) in const intDivisor = n.right.type === "NumericLiteral" && Number.isInteger(n.right.value) && n.right.value !== 0;
+packages/ferrovue/src/expr.ts: ConditionalExpression: n.right.type === "NumericLiteral" => true in const intDivisor = n.right.type === "NumericLiteral" && Number.isInteger(n.right.value) && n.right.value !== 0;
+
+# expr.ts, `expr`, `.value`: a member that is not a name has no `name`, which `refs` does not
+# hold.
+packages/ferrovue/src/expr.ts: ConditionalExpression: n.object.type === "Identifier" => true in if (!n.computed && n.property.name === "value" && n.object … refs.has(n.object.name) && !s.locals.has(n.object.name)) {
+
+# expr.ts, `expr`, `$setup["name"]`: Vue writes `$setup["name"]` only where it resolves a
+# component or a directive by its name (`resolveSetupReference`), which `renderChild`, the dynamic
+# components and `directiveProps` read without `expr`; a member that is not a name has no `name`.
+packages/ferrovue/src/expr.ts: ConditionalExpression: n.property.type === "StringLiteral" => true in if (n.object.type === "Identifier" && n.object.name === "$setup" && n.property.type === "StringLiteral") {
+packages/ferrovue/src/expr.ts: EqualityOperator: n.property.type === "StringLiteral" => n.property.type !== "StringLiteral" in if (n.object.type === "Identifier" && n.object.name === "$setup" && n.property.type === "StringLiteral") {
+packages/ferrovue/src/expr.ts: StringLiteral: "StringLiteral" => "" in if (n.object.type === "Identifier" && n.object.name === "$setup" && n.property.type === "StringLiteral") {
+packages/ferrovue/src/expr.ts: BlockStatement: { return expr(s, { ...n.property, type: "Identifier", name: n.property.value }); } => {} in if (n.object.type === "Identifier" && n.object.name === "$setup" && n.property.type === "StringLiteral") {
+packages/ferrovue/src/expr.ts: ObjectLiteral: { ...n.property, type: "Identifier", name: n.property.value } => {} in return expr(s, { ...n.property, type: "Identifier", name: n.property.value });
+packages/ferrovue/src/expr.ts: StringLiteral: "Identifier" => "" in return expr(s, { ...n.property, type: "Identifier", name: n.property.value });
+packages/ferrovue/src/expr.ts: ConditionalExpression: n.object.type === "Identifier" && n.object.name === "$setup" && n.property.type === "StringLiteral" => false in if (n.object.type === "Identifier" && n.object.name === "$setup" && n.property.type === "StringLiteral") {
+packages/ferrovue/src/expr.ts: EqualityOperator: n.object.type === "Identifier" => n.object.type !== "Identifier" in if (n.object.type === "Identifier" && n.object.name === "$setup" && n.property.type === "StringLiteral") {
+packages/ferrovue/src/expr.ts: StringLiteral: "Identifier" => "" in if (n.object.type === "Identifier" && n.object.name === "$setup" && n.property.type === "StringLiteral") {
+packages/ferrovue/src/expr.ts: ConditionalExpression: n.object.type === "Identifier" => true in if (n.object.type === "Identifier" && n.object.name === "$setup" && n.property.type === "StringLiteral") {
+packages/ferrovue/src/expr.ts: StringLiteral: "$setup" => "" in if (n.object.type === "Identifier" && n.object.name === "$setup" && n.property.type === "StringLiteral") {
+
+# expr.ts, `expr`, `[…]` of a pair: only a numeric literal has an integer `value`, and babel
+# parses `-1` as a unary expression, so a numeric literal is never negative.
+packages/ferrovue/src/expr.ts: ConditionalExpression: n.property.type !== "NumericLiteral" => false in if (n.property.type !== "NumericLiteral" || !Number.isInteger(n.property.value) || n.property.value < 0) {
+packages/ferrovue/src/expr.ts: ConditionalExpression: n.property.value < 0 => false in if (n.property.type !== "NumericLiteral" || !Number.isInteger(n.property.value) || n.property.value < 0) {
+
+# expr.ts, `expr`, `_ctx.name`: Vue writes `_ctx.name` only for a name no binding declares, and a
+# prop is declared by `defineProps`, which Vue's bindings hold, so it writes `$props.name`; on
+# `$setup` the test stops at the first part.
+packages/ferrovue/src/expr.ts: ConditionalExpression: f.js === prop => true in if (n.object.name === "_ctx" && comp.props.fields.some((f) => f.js === prop)) {
+packages/ferrovue/src/expr.ts: ConditionalExpression: f.js === prop => false in if (n.object.name === "_ctx" && comp.props.fields.some((f) => f.js === prop)) {
+packages/ferrovue/src/expr.ts: EqualityOperator: f.js === prop => f.js !== prop in if (n.object.name === "_ctx" && comp.props.fields.some((f) => f.js === prop)) {
+packages/ferrovue/src/expr.ts: BlockStatement: { return fieldVal(comp, "props", { k: "struct", name: "Props" }, prop, n); } => {} in if (n.object.name === "_ctx" && comp.props.fields.some((f) => f.js === prop)) {
+packages/ferrovue/src/expr.ts: StringLiteral: "props" => "" in return fieldVal(comp, "props", { k: "struct", name: "Props" }, prop, n);
+packages/ferrovue/src/expr.ts: ObjectLiteral: { k: "struct", name: "Props" } => {} in return fieldVal(comp, "props", { k: "struct", name: "Props" }, prop, n);
+packages/ferrovue/src/expr.ts: StringLiteral: "struct" => "" in return fieldVal(comp, "props", { k: "struct", name: "Props" }, prop, n);
+packages/ferrovue/src/expr.ts: StringLiteral: "Props" => "" in return fieldVal(comp, "props", { k: "struct", name: "Props" }, prop, n);
+packages/ferrovue/src/expr.ts: ConditionalExpression: n.object.name === "_ctx" && comp.props.fields.some((f) => f.js === prop) => false in if (n.object.name === "_ctx" && comp.props.fields.some((f) => f.js === prop)) {
+packages/ferrovue/src/expr.ts: ArrowFunction: (f) => f.js === prop => () => undefined in if (n.object.name === "_ctx" && comp.props.fields.some((f) => f.js === prop)) {
+packages/ferrovue/src/expr.ts: StringLiteral: "_ctx" => "" in if (n.object.name === "_ctx" && comp.props.fields.some((f) => f.js === prop)) {
+
+# expr.ts, `expr` (`&&` and `||`): `narrowing` calls the callback that sets `right` before it
+# returns, so `right` is set whenever the test is reached, and an error in the right side leaves
+# before it.
+packages/ferrovue/src/expr.ts: OptionalChaining: right?.ty => right.ty in if (right?.ty.k === "bool") return { code, ty: BOOL };
+
+# expr.ts, `expr` (`&&` and `||`): `alwaysTruthy` is false for an optional and for a boolean type,
+# so the type tests before it decide nothing for them. `truthy` of `v` writes `v.is_some()` or
+# `v.is_some_and(…)` for an optional and `v` for a boolean, and literal sets (`literalTy`) belong
+# to string and integer types only.
+packages/ferrovue/src/expr.ts: ConditionalExpression: a.ty.k !== "opt" => true in if (n.operator !== "??" && a.ty.k !== "opt" && !nothing(a. … (a.ty)) return n.operator === "&&" ? expr(s, n.right) : a;
+packages/ferrovue/src/expr.ts: StringLiteral: "opt" => "" in if (n.operator !== "??" && a.ty.k !== "opt" && !nothing(a. … (a.ty)) return n.operator === "&&" ? expr(s, n.right) : a;
+packages/ferrovue/src/expr.ts: ConditionalExpression: a.ty.k !== "bool" => true in if (n.operator !== "??" && a.ty.k !== "opt" && !nothing(a. … (a.ty)) return n.operator === "&&" ? expr(s, n.right) : a;
+packages/ferrovue/src/expr.ts: StringLiteral: "bool" => "" in if (n.operator !== "??" && a.ty.k !== "opt" && !nothing(a. … (a.ty)) return n.operator === "&&" ? expr(s, n.right) : a;
+
+# expr.ts, `expr` (`??`): `untypedEmpty(b)` holds only of a list, and `sameTy(a.ty.of, b.ty)` with
+# `a.ty.of` a list makes `b` a list, so the rest of the condition implies `b.ty.k === "list"`.
+packages/ferrovue/src/expr.ts: ConditionalExpression: b.ty.k === "list" => true in if (a.ty.of.k === "list" && b.ty.k === "list" && (untypedE …  || (sameTy(a.ty.of, b.ty) && !b.code.startsWith("[")))) {
+
+# expr.ts, `expr` (`??`): the location given to the `!= null` test built for an optional list and
+# an array literal is read by no refusal. `nullTest` and `presence` compile it from its operator
+# and `n.left`, `checkNullTest` returns for `!=`, and `!=` of a list type raises no FV0620 (only
+# dates and query values are described), so every refusal there is located at `n.left`, the
+# branches or `n` itself.
+packages/ferrovue/src/expr.ts: ObjectLiteral: { loc: n.loc, __fv: n.__fv, start: n.start, end: n.end } => {} in const at = { loc: n.loc, __fv: n.__fv, start: n.start, end: n.end };
+
+# expr.ts, `expr` (`??`): `fallback` is undefined whenever `def` is, `knownLiteral` only reads
+# `b`, and an enum's literals are strings, so `def.literals.includes(undefined)` is false: each
+# mutant takes the branch exactly where the original does.
+packages/ferrovue/src/expr.ts: ConditionalExpression: def === undefined => false in const fallback = def === undefined ? undefined : knownLiteral(b);
+packages/ferrovue/src/expr.ts: LogicalOperator: def !== undefined && fallback !== undefined => def !== undefined || fallback !== undefined in if (def !== undefined && fallback !== undefined && def.literals.includes(fallback)) {
+packages/ferrovue/src/expr.ts: ConditionalExpression: def !== undefined => true in if (def !== undefined && fallback !== undefined && def.literals.includes(fallback)) {
+packages/ferrovue/src/expr.ts: ConditionalExpression: fallback !== undefined => true in if (def !== undefined && fallback !== undefined && def.literals.includes(fallback)) {
+
+# expr.ts, `expr` (`??` and `||`): `isTemporary` is false for a type other than a string and
+# `isCast` is false for a type other than an integer, so the type tests they follow are implied
+# (at `||`, `sameTy` makes `a` a float whenever `b` is one).
+packages/ferrovue/src/expr.ts: ConditionalExpression: b.ty.k === "str" => true in if (a.ty.of.k === "str" && b.ty.k === "str" && isTemporary(b)) {
+packages/ferrovue/src/expr.ts: ConditionalExpression: b.ty.k === "int" => true in if (a.ty.of.k === "int" && b.ty.k === "int" && isCast(b))  … nwrap_or(${bare(asF64(b))})`, b.at ?? refusalAt(comp, n));
+packages/ferrovue/src/expr.ts: ConditionalExpression: a.ty.k === "int" => true in if (a.ty.k === "int" && (isCast(a) || isCast(b))) return i … bare(asF64(b))} } }`, a.at ?? b.at ?? refusalAt(comp, n));
+packages/ferrovue/src/expr.ts: ConditionalExpression: a.ty.k === "str" => true in if (sameTy(a.ty, b.ty) && a.ty.k === "str" && (isTemporary(a) || isTemporary(b))) {
+
+# expr.ts, `expr` (`||`): `strArg` and `bare` write the same code for a number. `strArg` changes
+# only code that starts with `&*`, which no number's code does, and keeps parentheses around the
+# whole code where `bare` removes them; no integer or float is written so (the parenthesised
+# forms, `around`'s owned blocks and `ownedField`'s places, are structs, lists and optionals, and
+# an `if` is handled branch by branch by both).
+packages/ferrovue/src/expr.ts: ConditionalExpression: a.ty.k === "str" => true in const otherwise = a.ty.k === "str" ? strArg(b.code) : bare(b.code);
+
+# expr.ts, `expr` (`&&`): the `??` and date block and the `||` block each return, so only `&&`
+# reaches this line.
+packages/ferrovue/src/expr.ts: ConditionalExpression: n.operator === "&&" => true in if (n.operator === "&&" && a.ty.k === "bool" && b.ty.k === "bool") return boolOf(logical(a.code, "&&", b.code));
+
+# expr.ts, `expr` (`===`): reading both sides and asking `refuseEquality` before the null test
+# changes nothing. Reading a node writes the same code each time (local names come from paths),
+# the null literal of a null test reads without error, the dates plugin's `refuseEquality`, the
+# only one, returns where one side is `null` or `undefined` and otherwise raises the FV1809 it
+# raises a few lines later before any other refusal there (`meet` reads strings only, the typeof
+# and router tests return earlier), and the sides are read left to right both times.
+packages/ferrovue/src/expr.ts: ConditionalExpression: n.operator !== "===" && n.operator !== "!==" && !test => true in if (n.operator !== "===" && n.operator !== "!==" && !test) {
+packages/ferrovue/src/expr.ts: ConditionalExpression: n.operator !== "===" && n.operator !== "!==" => true in if (n.operator !== "===" && n.operator !== "!==" && !test) {
+packages/ferrovue/src/expr.ts: LogicalOperator: n.operator !== "===" && n.operator !== "!==" && !test => n.operator !== "===" && n.operator !== "!==" || !test in if (n.operator !== "===" && n.operator !== "!==" && !test) {
+packages/ferrovue/src/expr.ts: LogicalOperator: n.operator !== "===" && n.operator !== "!==" => n.operator !== "===" || n.operator !== "!==" in if (n.operator !== "===" && n.operator !== "!==" && !test) {
+packages/ferrovue/src/expr.ts: ConditionalExpression: n.operator !== "===" => true in if (n.operator !== "===" && n.operator !== "!==" && !test) {
+packages/ferrovue/src/expr.ts: StringLiteral: "===" => "" in if (n.operator !== "===" && n.operator !== "!==" && !test) {
+packages/ferrovue/src/expr.ts: ConditionalExpression: n.operator !== "!==" => true in if (n.operator !== "===" && n.operator !== "!==" && !test) {
+packages/ferrovue/src/expr.ts: StringLiteral: "!==" => "" in if (n.operator !== "===" && n.operator !== "!==" && !test) {
+
+# expr.ts, `expr` (`===`): the router's `equality`, the only plugin with one, answers only `typeof
+# x === "string"`, which `typeofCompare` takes first and returns above, so `whole` is null here.
+packages/ferrovue/src/expr.ts: ArrowFunction: (p) => p.equality?.(s, n) => () => undefined in const whole = claim((p) => p.equality?.(s, n));
+packages/ferrovue/src/expr.ts: ConditionalExpression: whole => false in if (whole) return whole;
+
+# expr.ts, `expr` (`==` and `===`): every plugin with `values` hooks (CSS modules, dates, the
+# router) defines `describe`.
+packages/ferrovue/src/expr.ts: OptionalChaining: p.values?.describe?.(v.ty) => p.values?.describe(v.ty) in if (!test.strict && claim((p) => p.values?.describe?.(v.ty)) === undefined) {
+packages/ferrovue/src/expr.ts: OptionalChaining: p.values?.describe?.(other) => p.values?.describe(other) in const opaque = nothing(other) ? undefined : claim((p) => p.values?.describe?.(other));
+
+# expr.ts, `expr` (`===`): `meet` gives every mode other than `order`, `join` and `search` the
+# rule of `equal`, and its message reads `what` alone.
+packages/ferrovue/src/expr.ts: StringLiteral: "equal" => "" in if (strish(a.ty) && strish(b.ty)) meet(comp, a, b, `\`${n.operator}\``, n, "equal");
+
+# expr.ts, `expr` (`===`): for a type that is not optional `t.of` is undefined, and
+# `sameTy(undefined, t)` compares `JSON.stringify(undefined)`, undefined, with a string, so it is
+# false as the original's type test is.
+packages/ferrovue/src/expr.ts: ConditionalExpression: a.ty.k === "opt" => true in } else if (a.ty.k === "opt" && sameTy(a.ty.of, b.ty) && sc … b.ty)) eq = binary(a.code, "==", `Some(${bare(b.code)})`);
+packages/ferrovue/src/expr.ts: LogicalOperator: b.ty.k === "opt" && sameTy(b.ty.of, a.ty) => b.ty.k === "opt" || sameTy(b.ty.of, a.ty) in else if (b.ty.k === "opt" && sameTy(b.ty.of, a.ty) && scalar(a.ty)) eq = binary(`Some(${bare(a.code)})`, "==", b.code);
+packages/ferrovue/src/expr.ts: ConditionalExpression: b.ty.k === "opt" => true in else if (b.ty.k === "opt" && sameTy(b.ty.of, a.ty) && scalar(a.ty)) eq = binary(`Some(${bare(a.code)})`, "==", b.code);
+
+# expr.ts, `expr` (`?:`): `expr` raises a `GenError` for every refusal; another exception is a
+# defect of the compiler, and the tests that read each expression as the chosen branch would show
+# it.
+packages/ferrovue/src/expr.ts: ConditionalExpression: !(e instanceof GenError) => false in if (!(e instanceof GenError)) throw e;
+
+# expr.ts, `expr` (`?:`): `typedEmpty` of a list of `undefined` asks `localTy` for the Rust type
+# of `undefined`, which raises FV0309, and the `catch` below returns `chosen`, the original's
+# answer.
+packages/ferrovue/src/expr.ts: ConditionalExpression: other.ty.of.k !== "undef" => true in return other.ty.k === "list" && other.ty.of.k !== "undef" ? typedEmpty(comp, other.ty.of) : chosen;
+packages/ferrovue/src/expr.ts: StringLiteral: "undef" => "" in return other.ty.k === "list" && other.ty.of.k !== "undef" ? typedEmpty(comp, other.ty.of) : chosen;
+
+# expr.ts, `expr` (`?:`): without a presence test `name` is read only by `!name || …`, where
+# `occurrences` finds no `Stryker was here!` in Rust code, and by `choose`, which returns before
+# reading it. With a test, only the narrowed branch is compiled in the scope that binds the fresh
+# name, so two branches whose code is equal never hold it.
+packages/ferrovue/src/expr.ts: StringLiteral: "" => "Stryker was here!" in const name = p ? fresh("n", jsHint(p.path)) : "";
+packages/ferrovue/src/expr.ts: ConditionalExpression: !name || !occurrences(a.code, name) => true in if (sameTy(a.ty, b.ty) && a.code === b.code && (!name || !occurrences(a.code, name))) return a;
+
+# expr.ts, `expr` (`?:`): `fieldVal` writes a child's props read from a field as `&place`, and a
+# child's props held otherwise are a name with no field, so no child's code matches the pattern
+# and `placed` leaves it as it is either way.
+packages/ferrovue/src/expr.ts: StringLiteral: "child" => "" in const placed = (v: Val): Val => (["struct", "child", "reco … w#]+)+$/.test(v.code) ? { ...v, code: `&${v.code}` } : v);
+
+# expr.ts, `expr` (`?:`): `present` is a branch's code under `bare`; besides `Some(…)` the
+# compiler writes no value as four characters followed by one bracketed group that closes at its
+# end, so the test passes the same codes.
+packages/ferrovue/src/expr.ts: StringLiteral: "Some(" => "" in if (absent === "None" && present.startsWith("Some(") && en … (p.option)}.map(|${name}| ${bare(present.slice(5, -1))})`;
+
+# expr.ts, `expr` (`?:`): a list of `undefined` is only the empty array literal (each method of it
+# is refused with FV0804, `[...[]]` is `[]`), so two such branches have the same code and `?:`
+# returns the first above.
+packages/ferrovue/src/expr.ts: ConditionalExpression: a.ty.of.k !== "undef" => true in if (sameTy(a.ty, b.ty) && a.ty.k === "list" && a.ty.of.k !== "undef") {
+packages/ferrovue/src/expr.ts: StringLiteral: "undef" => "" in if (sameTy(a.ty, b.ty) && a.ty.k === "list" && a.ty.of.k !== "undef") {
+
+# expr.ts, `expr` (`?:`): the `held` and temporary values are strings or optional strings
+# (`isTemporary` needs a string, `held` is set only on an optional string), and the other branch
+# has the same base or none, so `optStr` holds of both whenever the rest of the condition does.
+packages/ferrovue/src/expr.ts: ConditionalExpression: nothing(v.ty) || (v.ty.k === "opt" && v.ty.of.k === "str") || v.ty.k === "str" => true in const optStr = (v: Val) => nothing(v.ty) || (v.ty.k === "opt" && v.ty.of.k === "str") || v.ty.k === "str";
+packages/ferrovue/src/expr.ts: ConditionalExpression: v.ty.of.k === "str" => true in const optStr = (v: Val) => nothing(v.ty) || (v.ty.k === "opt" && v.ty.of.k === "str") || v.ty.k === "str";
+packages/ferrovue/src/expr.ts: ConditionalExpression: optStr(a) && optStr(b) => true in if (optStr(a) && optStr(b) && (isTemporary(a) || isTemporary(b) || a.held !== undefined || b.held !== undefined)) {
+packages/ferrovue/src/expr.ts: LogicalOperator: optStr(a) && optStr(b) => optStr(a) || optStr(b) in if (optStr(a) && optStr(b) && (isTemporary(a) || isTemporary(b) || a.held !== undefined || b.held !== undefined)) {
+
+# expr.ts, `expr` (`?:`): where the two types are equal they are optional (the line above takes
+# the rest), `ty` is the same option, `coerce` returns each code unchanged, and `joinTy` of the
+# two options is that type.
+packages/ferrovue/src/expr.ts: ConditionalExpression: sameTy(a.ty, b.ty) => false in if (sameTy(a.ty, b.ty)) return { code: choose(a.code, b.code), ty: joinTy(a.ty, b.ty), ...lone };
+
+# expr.ts, `expr` (`await`): a scope without `within` is a template's, where Vue's parser refuses
+# `await` outside an async function (FV0002) and the list methods refuse an async callback by its
+# shape (FV0805, FV0829, FV0830), so `await` reaches this line only inside a `computed`, a
+# function or the setup.
+packages/ferrovue/src/expr.ts: ConditionalExpression: s.within !== undefined => true in if (n.type === "AwaitExpression" && s.within !== undefined) {
+
+# expr.ts, `ownedChoice`: one branch is owned, and an owned value is a struct, a list or an
+# optional struct (`objectLiteral`, `structList`, `around`, `ownedField`, `.map()` of owned items,
+# `??` and `?:` of them), so `of` is never null and `ty` is an optional, a struct or a list; `own`
+# returns for an optional and a struct before the list lines, so `ty.k === "list"` holds where
+# they are read.
+packages/ferrovue/src/expr.ts: ConditionalExpression: of === null => false in if (of === null || (ba !== null && bb !== null && !sameTy(ba, bb))) return null;
+packages/ferrovue/src/expr.ts: ConditionalExpression: ty.k !== "opt" && ty.k !== "struct" && ty.k !== "list" => false in if (ty.k !== "opt" && ty.k !== "struct" && ty.k !== "list") return null;
+packages/ferrovue/src/expr.ts: ConditionalExpression: ty.k === "list" => true in if (ty.k === "list") return v.owned ? v.code : empty(v) ?  … !== undefined ? collected(v) : `${atom(v.code)}.to_vec()`;
+packages/ferrovue/src/expr.ts: ConditionalExpression: ty.k === "list" => true in if (ty.k === "list" && ty.of.k === "struct") return empty(v) ? "Vec::new()" : ownedStructs(v);
+
+# expr.ts, `ownedField`: `fieldVal` raises FV0604 for every type other than a struct with a
+# message of the field and the type, so passing the base's code, `fv` or nothing raises the same
+# refusal, and the code `fieldVal` returns for a struct is discarded.
+packages/ferrovue/src/expr.ts: ConditionalExpression: base.ty.k !== "struct" => false in if (base.ty.k !== "struct") return fieldVal(comp, base.code, base.ty, js, n);
+packages/ferrovue/src/expr.ts: StringLiteral: "fv" => "" in fieldVal(comp, "fv", base.ty, js, n);
+
+# expr.ts, `ownedField`: its one caller marks the field it returns as cut wherever the base is and
+# the field is a string, a struct, a list or an optional, the types this line marks.
+packages/ferrovue/src/expr.ts: ObjectLiteral: { lone: true as const } => {} in const lone = base.lone ? { lone: true as const } : {};
+
+# dynamic.ts, `RESERVED_TAGS`: `isHTMLTag` is false for `slot` and `component`, so `element` refuses
+# them with FV0419 by its first test.
+packages/ferrovue/src/dynamic.ts: StringLiteral: "slot" => "" in const RESERVED_TAGS = new Set(["template", "slot", "component", "textarea"]);
+packages/ferrovue/src/dynamic.ts: StringLiteral: "component" => "" in const RESERVED_TAGS = new Set(["template", "slot", "component", "textarea"]);
+
+# dynamic.ts, `dynamicOf`: Vue's compiler-ssr (`ssrTransformComponent`) writes `_ssrRenderVNode`
+# only for a component `resolveComponentType` resolves to a `resolveDynamicComponent` call, always
+# as `_ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent(is), props, slots), _parent)`,
+# with `_scopeId` after it in a slot, and no expression of a template stands as a statement. Once
+# the statement calls `_ssrRenderVNode`, its second argument is that `_createVNode` call and the
+# first argument of it that `_resolveDynamicComponent` call, so every later test passes.
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: vnode?.type === "CallExpression" && vnode.callee.type === "Identifier" && vnode.callee.name === "_createVNode" => true in const resolved = vnode?.type === "CallExpression" && vnode … allee.name === "_createVNode" ? vnode.arguments[0] : null;
+packages/ferrovue/src/dynamic.ts: LogicalOperator: vnode?.type === "CallExpression" && vnode.callee.type === "Identifier" && vnode.callee.name === "_createVNode" => vnode?.type === "CallExpression" && vnode.callee.type === "Identifier" || vnode.callee.name === "_createVNode" in const resolved = vnode?.type === "CallExpression" && vnode … allee.name === "_createVNode" ? vnode.arguments[0] : null;
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: vnode?.type === "CallExpression" && vnode.callee.type === "Identifier" => true in const resolved = vnode?.type === "CallExpression" && vnode … allee.name === "_createVNode" ? vnode.arguments[0] : null;
+packages/ferrovue/src/dynamic.ts: LogicalOperator: vnode?.type === "CallExpression" && vnode.callee.type === "Identifier" => vnode?.type === "CallExpression" || vnode.callee.type === "Identifier" in const resolved = vnode?.type === "CallExpression" && vnode … allee.name === "_createVNode" ? vnode.arguments[0] : null;
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: vnode?.type === "CallExpression" => true in const resolved = vnode?.type === "CallExpression" && vnode … allee.name === "_createVNode" ? vnode.arguments[0] : null;
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: vnode.callee.type === "Identifier" => true in const resolved = vnode?.type === "CallExpression" && vnode … allee.name === "_createVNode" ? vnode.arguments[0] : null;
+packages/ferrovue/src/dynamic.ts: OptionalChaining: vnode?.type => vnode.type in const resolved = vnode?.type === "CallExpression" && vnode … allee.name === "_createVNode" ? vnode.arguments[0] : null;
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: vnode.callee.name === "_createVNode" => true in const resolved = vnode?.type === "CallExpression" && vnode … allee.name === "_createVNode" ? vnode.arguments[0] : null;
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: resolved?.type !== "CallExpression" || resolved.callee.typ … er" || resolved.callee.name !== "_resolveDynamicComponent" => false in if (resolved?.type !== "CallExpression" || resolved.callee … d.callee.name !== "_resolveDynamicComponent") return null;
+packages/ferrovue/src/dynamic.ts: LogicalOperator: resolved?.type !== "CallExpression" || resolved.callee.typ … er" || resolved.callee.name !== "_resolveDynamicComponent" => (resolved?.type !== "CallExpression" || resolved.callee.ty … r") && resolved.callee.name !== "_resolveDynamicComponent" in if (resolved?.type !== "CallExpression" || resolved.callee … d.callee.name !== "_resolveDynamicComponent") return null;
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: resolved?.type !== "CallExpression" || resolved.callee.type !== "Identifier" => false in if (resolved?.type !== "CallExpression" || resolved.callee … d.callee.name !== "_resolveDynamicComponent") return null;
+packages/ferrovue/src/dynamic.ts: LogicalOperator: resolved?.type !== "CallExpression" || resolved.callee.type !== "Identifier" => resolved?.type !== "CallExpression" && resolved.callee.type !== "Identifier" in if (resolved?.type !== "CallExpression" || resolved.callee … d.callee.name !== "_resolveDynamicComponent") return null;
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: resolved?.type !== "CallExpression" => false in if (resolved?.type !== "CallExpression" || resolved.callee … d.callee.name !== "_resolveDynamicComponent") return null;
+packages/ferrovue/src/dynamic.ts: OptionalChaining: resolved?.type => resolved.type in if (resolved?.type !== "CallExpression" || resolved.callee … d.callee.name !== "_resolveDynamicComponent") return null;
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: resolved.callee.type !== "Identifier" => false in if (resolved?.type !== "CallExpression" || resolved.callee … d.callee.name !== "_resolveDynamicComponent") return null;
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: resolved.callee.name !== "_resolveDynamicComponent" => false in if (resolved?.type !== "CallExpression" || resolved.callee … d.callee.name !== "_resolveDynamicComponent") return null;
+
+# dynamic.ts, `unwrap`: no AST the compiler reads holds a `ParenthesizedExpression`: Vue's
+# compileScript and every Babel parse of the compiler leave `createParenthesizedExpressions` off, so
+# Babel records parentheses in `extra.parenthesized` and the type is never matched.
+packages/ferrovue/src/dynamic.ts: StringLiteral: "ParenthesizedExpression" => "" in while (n && ["TSAsExpression", "TSSatisfiesExpression", "T … enthesizedExpression"].includes(n.type)) n = n.expression;
+
+# dynamic.ts, `declared`, `destructuredProp`, `propType` and `tableOf`: `prepareDynamic` records
+# every component's setup before anything reads it, so the fallback list is never read; a string in
+# it has no `type`, which each loop skips.
+packages/ferrovue/src/dynamic.ts: ArrayDeclaration: [] => ["Stryker was here"] in for (const st of setupAsts.get(s.comp) ?? []) {
+packages/ferrovue/src/dynamic.ts: ArrayDeclaration: [] => ["Stryker was here"] in for (const st of setupAsts.get(s.comp) ?? []) {
+packages/ferrovue/src/dynamic.ts: ArrayDeclaration: [] => ["Stryker was here"] in const ast = setupAsts.get(s.comp) ?? [];
+packages/ferrovue/src/dynamic.ts: ArrayDeclaration: [] => ["Stryker was here"] in for (const st of setupAsts.get(s.comp) ?? []) {
+
+# dynamic.ts, `propType`: the fallback list stands for a props type that is no type literal; a
+# string in it is no `TSPropertySignature`, so `find` passes over it, and a named type replaces the
+# list with its members.
+packages/ferrovue/src/dynamic.ts: ArrayDeclaration: [] => ["Stryker was here"] in let members: N[] = t?.type === "TSTypeLiteral" ? t.members : [];
+
+# dynamic.ts, `setupName`, `propOf` and `pickOf`: the node is the argument of
+# `_resolveDynamicComponent`, a part of it, the value a `ref` or `computed` is given, an object a
+# member is read on or the first argument of `_ssrRenderComponent`. Vue and `setupSource` give each,
+# so it is never undefined.
+packages/ferrovue/src/dynamic.ts: OptionalChaining: n?.type => n.type in if (n?.type === "MemberExpression" && n.object.type === "I … n.object.name === "$setup" || n.object.name === "_ctx")) {
+packages/ferrovue/src/dynamic.ts: OptionalChaining: n?.type => n.type in return n?.type === "Identifier" ? n.name : null;
+packages/ferrovue/src/dynamic.ts: OptionalChaining: n?.type => n.type in if (n?.type === "MemberExpression" && !n.computed && n.property.type === "Identifier") {
+packages/ferrovue/src/dynamic.ts: OptionalChaining: n?.type => n.type in const name = n?.type === "Identifier" && s.locals.has(n.name) ? null : setupName(n);
+packages/ferrovue/src/dynamic.ts: OptionalChaining: n?.type => n.type in if (n?.type === "StringLiteral") return { k: "one", choice: element(s, n.value, n) };
+packages/ferrovue/src/dynamic.ts: OptionalChaining: n?.type => n.type in if (n?.type === "TemplateLiteral" && !n.expressions.length …  "one", choice: element(s, n.quasis[0].value.cooked, n) };
+packages/ferrovue/src/dynamic.ts: OptionalChaining: n?.type => n.type in if (n?.type === "ConditionalExpression") return { k: "if", … , n.consequent, seen), no: pickOf(s, n.alternate, seen) };
+packages/ferrovue/src/dynamic.ts: OptionalChaining: n?.type => n.type in if (n?.type === "MemberExpression" && !(n.object.type ===  … & ["$setup", "_ctx", "$props"].includes(n.object.name))) {
+packages/ferrovue/src/dynamic.ts: OptionalChaining: n?.type => n.type in const name = n?.type === "Identifier" && s.locals.has(n.name) ? null : setupName(n);
+
+# dynamic.ts, `setupName`, `declared`, `destructuredProp`, `propOf`, `literalUnion`, `entry`,
+# `pickOf` and `outletsOf`: only a name has a `name`. Any other node reads `undefined` there, and no
+# `$setup`, `_ctx`, `$props`, prop, local, declaration, child, alias, import or `_ssr…` helper is
+# named `undefined`, so each test fails as the type test before it would. `setupName` returning
+# `undefined` in place of `null` finds no child, declaration, table or destructured prop either, so
+# its callers end in the same refusal.
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: n.object.type === "Identifier" => true in if (n?.type === "MemberExpression" && n.object.type === "I … n.object.name === "$setup" || n.object.name === "_ctx")) {
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: n?.type === "Identifier" => true in return n?.type === "Identifier" ? n.name : null;
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: d.id.type === "Identifier" => true in for (const d of st.declarations) if (d.id.type === "Identifier" && d.id.name === name) return d;
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: target.type === "Identifier" => true in if (target.type === "Identifier" && target.name === local) return p.key.name ?? p.key.value;
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: o.type === "Identifier" => true in if (o.type === "Identifier" && (o.name === "$props" || o.n … t && !s.locals.has(o.name)))) return own(n.property.name);
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: n?.type === "Identifier" => true in const name = n?.type === "Identifier" && s.locals.has(n.name) ? null : setupName(n);
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: t.typeName.type === "Identifier" => true in const name: string | undefined = t.typeName.type === "Identifier" ? t.typeName.name : undefined;
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: value.type === "Identifier" => true in if (value.type === "Identifier") {
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: n.object.type === "Identifier" => true in if (n?.type === "MemberExpression" && !(n.object.type ===  … & ["$setup", "_ctx", "$props"].includes(n.object.name))) {
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: n?.type === "Identifier" => true in const name = n?.type === "Identifier" && s.locals.has(n.name) ? null : setupName(n);
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: n.callee.type === "Identifier" => true in if (n.type === "CallExpression" && n.callee.type === "Identifier" && n.callee.name === "_ssrRenderComponent") {
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: n.callee.type === "Identifier" => true in if (n.type === "CallExpression" && n.callee.type === "Iden … RenderSlot" && n.arguments[1]?.type === "StringLiteral") {
+
+# dynamic.ts, `propOf`, `tableOf`, `entry`, `pickOf` and `outletsOf`: a `null` or `undefined` key
+# finds nothing. No local, declaration, import or destructured prop is named `null`;
+# `ctx.constDecls`, `children` and `byName` hold no such key; `s.components.has(undefined)` is
+# false; and `slotAsVnodes` of no child reads a `WeakMap` that holds no `undefined`. Each function
+# returns what the test returns.
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: name === null => false in return name === null ? null : destructuredProp(s, name);
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: name === null => false in if (name === null || s.locals.has(name)) return null;
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: file === null => false in const d = file === null ? undefined : ctx.constDecls.get(file)?.get(sp.imported.name ?? sp.imported.value);
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: child !== undefined => true in if (child !== undefined && s.components.has(child)) {
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: name !== null => true in if (name !== null) {
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: name === null => false in const file = name === null ? undefined : p.scope.children.get(name);
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: file === undefined => false in return file === undefined ? undefined : byName.get(file);
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: child !== undefined => true in slotsWith(d.slots, (name) => ("tag" in c ? (name === "defa …  child !== undefined && slotAsVnodes(child, name)), walk);
+
+# dynamic.ts, `setupName`: Vue reads a setup binding by a computed key only as `$setup["Name"]`,
+# with a string literal; a template's own `$setup` or `_ctx` is no binding and is read as
+# `_ctx.$setup`.
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: n.property.type === "StringLiteral" => true in return n.computed ? (n.property.type === "StringLiteral" ? n.property.value : null) : n.property.name;
+
+# dynamic.ts, `propOf`: a member read without brackets names its property with an identifier in
+# Vue's code and in a setup's expressions; a private name `#x` is read only inside a class body,
+# which `computed` and `ref` bodies hold no member of.
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: n.property.type === "Identifier" => true in if (n?.type === "MemberExpression" && !n.computed && n.property.type === "Identifier") {
+
+# dynamic.ts, `setupName` and `propOf`: Vue writes `_ctx.` only before a name `<script setup>` does
+# not bind. A prop is read as `$props.x`, and every import, declaration and child is bound and read
+# as `$setup.x`. The names left are those of `declare const`, which has no value, and of type
+# imports, which `tableOf` skips, so reading such a name as a setup name or not ends in the same
+# FV0418.
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: n.object.name === "_ctx" => false in if (n?.type === "MemberExpression" && n.object.type === "I … n.object.name === "$setup" || n.object.name === "_ctx")) {
+packages/ferrovue/src/dynamic.ts: StringLiteral: "_ctx" => "" in if (n?.type === "MemberExpression" && n.object.type === "I … n.object.name === "$setup" || n.object.name === "_ctx")) {
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: o.name === "_ctx" => false in if (o.type === "Identifier" && (o.name === "$props" || o.n … t && !s.locals.has(o.name)))) return own(n.property.name);
+packages/ferrovue/src/dynamic.ts: StringLiteral: "_ctx" => "" in if (o.type === "Identifier" && (o.name === "$props" || o.n … t && !s.locals.has(o.name)))) return own(n.property.name);
+
+# dynamic.ts, `pickOf`: Vue writes `$props.x` only for a prop, which `propOf` reads before `pickOf`
+# looks for a table, and a setup binding named `$props` is read as `$setup.$props`, so `$props` is
+# never the object of a table read.
+packages/ferrovue/src/dynamic.ts: StringLiteral: "$props" => "" in if (n?.type === "MemberExpression" && !(n.object.type ===  … & ["$setup", "_ctx", "$props"].includes(n.object.name))) {
+
+# dynamic.ts, `destructuredProp`: FV0108 refuses a rest element in destructured props when the
+# component is read, so every property of the pattern is an `ObjectProperty`.
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: p.type !== "ObjectProperty" => false in if (p.type !== "ObjectProperty") continue;
+
+# dynamic.ts, `literalUnion`: FV0314 refuses a props type whose alias refers to itself, in the
+# component and in a `.ts` file, when the component is read, so the walk never meets a name it has
+# seen and `seen` changes nothing.
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: name === undefined || seen.has(name) => false in const alias = name === undefined || seen.has(name) ? undefined : comp.aliases.get(name);
+packages/ferrovue/src/dynamic.ts: LogicalOperator: name === undefined || seen.has(name) => name === undefined && seen.has(name) in const alias = name === undefined || seen.has(name) ? undefined : comp.aliases.get(name);
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: name === undefined => false in const alias = name === undefined || seen.has(name) ? undefined : comp.aliases.get(name);
+
+# dynamic.ts, `propType`: FV0107 refuses an export in setup other than `export interface` and
+# `export type` with a declaration, so a statement that exports has a declaration.
+packages/ferrovue/src/dynamic.ts: OptionalChaining: d?.type => d.type in if (d?.type === "TSInterfaceDeclaration" && d.id.name === t.typeName.name) members = d.body.body;
+packages/ferrovue/src/dynamic.ts: OptionalChaining: d?.type => d.type in if (d?.type === "TSTypeAliasDeclaration" && d.id.name ===  … e === "TSTypeLiteral") members = d.typeAnnotation.members;
+
+# dynamic.ts, `propType`: FV0304 refuses `defineProps` of an alias that is no type literal, so the
+# alias `defineProps` names holds a type literal.
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: d.typeAnnotation.type === "TSTypeLiteral" => true in if (d?.type === "TSTypeAliasDeclaration" && d.id.name ===  … e === "TSTypeLiteral") members = d.typeAnnotation.members;
+
+# dynamic.ts, `propType`: a member with no type stops the compile when the props are read, before
+# any template is compiled (today `fieldOf` throws a TypeError on it, reported apart), so the member
+# found has a type.
+packages/ferrovue/src/dynamic.ts: OptionalChaining: members.find((m) => m.type === "TSPropertySignature" && (m …  ?? m.key.value) === name)?.typeAnnotation?.typeAnnotation => members.find(m => m.type === "TSPropertySignature" && (m.k … e ?? m.key.value) === name)?.typeAnnotation.typeAnnotation in return members.find((m) => m.type === "TSPropertySignature … .value) === name)?.typeAnnotation?.typeAnnotation ?? null;
+
+# dynamic.ts, `propType`: FV0320 refuses a props type that holds other than plain named fields, so
+# every member of the type literal or interface `defineProps` names is a `TSPropertySignature`.
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: m.type === "TSPropertySignature" => true in return members.find((m) => m.type === "TSPropertySignature … .value) === name)?.typeAnnotation?.typeAnnotation ?? null;
+
+# dynamic.ts, `propType`: a `VariableDeclaration` holds at least one declarator.
+packages/ferrovue/src/dynamic.ts: OptionalChaining: st.declarations[0]?.init => st.declarations[0].init in const call = st.type === "ExpressionStatement" ? st.expres … = "VariableDeclaration" ? st.declarations[0]?.init : null;
+
+# dynamic.ts, `element`: `isHTMLTag` holds no name with a dash, so `camelize(tag)` is `tag` and each
+# of the first two equalities holds when the other does; `replace` without the `g` flag replaces the
+# first match of `/./` as of `/^./`, the first character.
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: self === tag => false in if (!isHTMLTag(tag) || RESERVED_TAGS.has(tag) || self ===  … === camelize(tag).replace(/^./, (c) => c.toUpperCase())) {
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: self === camelize(tag) => false in if (!isHTMLTag(tag) || RESERVED_TAGS.has(tag) || self ===  … === camelize(tag).replace(/^./, (c) => c.toUpperCase())) {
+packages/ferrovue/src/dynamic.ts: Regex: /^./ => /./ in if (!isHTMLTag(tag) || RESERVED_TAGS.has(tag) || self ===  … === camelize(tag).replace(/^./, (c) => c.toUpperCase())) {
+
+# dynamic.ts, `tableOf`: `ctx.constDecls` holds `const` declarators and `enum` declarations; an
+# `enum` has no `init`, so `objectEntries` finds no object and `tableOf` returns `null` as the test
+# does.
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: d.node.type !== "VariableDeclarator" => false in if (!d?.exported || d.node.type !== "VariableDeclarator") return null;
+
+# dynamic.ts, `tableOf`: `ctx.constDecls` is filled only by `readTypeFile`, which sets `home.source`
+# first.
+packages/ferrovue/src/dynamic.ts: StringLiteral: "" => "Stryker was here!" in const body: N[] = parseJs(d.home.source ?? "", { sourceType: "module", plugins: ["typescript"] }).program.body;
+
+# dynamic.ts, `pickOf`: `renderPick`, `choicesOf` and `same` test a pick for `"one"` and `"if"`
+# alone, and read any other kind as a match.
+packages/ferrovue/src/dynamic.ts: StringLiteral: "match" => "" in return { k: "match", on, arms: keys.map((key) => [key, { k: "one", choice: element(s, key, n) }]) };
+packages/ferrovue/src/dynamic.ts: StringLiteral: "match" => "" in return { k: "match", on, arms: keys.map((k) => [k, { k: "one", choice: entry(s, table, k, n) }]) };
+
+# dynamic.ts, `same` and `renderPick`: `pickOf` builds the arms of a match as `{ k: "one" }` each,
+# so the kind tests always pass.
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: a.k === "one" && b.k === "one" => true in return a.k === "one" && b.k === "one" && JSON.stringify(a.choice) === JSON.stringify(b.choice);
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: a.k === "one" => true in return a.k === "one" && b.k === "one" && JSON.stringify(a.choice) === JSON.stringify(b.choice);
+packages/ferrovue/src/dynamic.ts: LogicalOperator: a.k === "one" && b.k === "one" => a.k === "one" || b.k === "one" in return a.k === "one" && b.k === "one" && JSON.stringify(a.choice) === JSON.stringify(b.choice);
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: b.k === "one" => true in return a.k === "one" && b.k === "one" && JSON.stringify(a.choice) === JSON.stringify(b.choice);
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: arm.k === "one" => true in const tags = groups.map(([, arm]) => (arm.k === "one" && "tag" in arm.choice ? arm.choice.tag : null));
+
+# dynamic.ts, `ownScopeId`: the scoped-styles plugin, always registered, gives template options for
+# every component.
+packages/ferrovue/src/dynamic.ts: OptionalChaining: options?.scoped => options.scoped in return options?.scoped ? options.id : null;
+
+# dynamic.ts, `defaultSlot`, `renderChoice` and `outletsOf`: the slots argument Vue writes for
+# `_createVNode` and `_ssrRenderComponent` is always given (`null` when there are none), and a slots
+# object holds only `ObjectProperty`s with a key: `_createSlots`, the one other form, is a call.
+packages/ferrovue/src/dynamic.ts: OptionalChaining: p.key?.value => p.key.value in ? { ...d.slots, properties: d.slots.properties.filter((p: N) => ["_", ...takes].includes(p.key?.name ?? p.key?.value)) }
+packages/ferrovue/src/dynamic.ts: OptionalChaining: prop.key?.value => prop.key.value in const name = prop.key?.name ?? prop.key?.value;
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: p.type === "ObjectProperty" => true in return slots.properties.find((p: N) => p.type === "ObjectP … (p.key.name ?? p.key.value) === "default")?.value ?? null;
+packages/ferrovue/src/dynamic.ts: OptionalChaining: p.key?.name => p.key.name in ? { ...d.slots, properties: d.slots.properties.filter((p: N) => ["_", ...takes].includes(p.key?.name ?? p.key?.value)) }
+packages/ferrovue/src/dynamic.ts: OptionalChaining: slots?.type => slots.type in if (slots?.type !== "ObjectExpression") return;
+packages/ferrovue/src/dynamic.ts: OptionalChaining: prop.key?.name => prop.key.name in const name = prop.key?.name ?? prop.key?.value;
+
+# dynamic.ts, `renderElement` and `renderChoice`: Vue passes `_scopeId` as the fourth argument of
+# `_ssrRenderVNode` in every slot function and in no other place, and `s.sid` is set only in a
+# slot's content (`renderChild`), so outside a slot it is `null`: a scope id the call does not pass
+# changes no output, and inside one the argument is always `_scopeId`.
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: d.sid?.type === "Identifier" && d.sid.name === "_scopeId" => true in const slotted = d.sid?.type === "Identifier" && d.sid.name === "_scopeId" ? s.sid : null;
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: d.sid.name === "_scopeId" => true in const slotted = d.sid?.type === "Identifier" && d.sid.name === "_scopeId" ? s.sid : null;
+packages/ferrovue/src/dynamic.ts: ArrayDeclaration: [] => ["Stryker was here"] in const args = [target, d.props ?? { type: "NullLiteral", ...at }, slots, d.parent, ...(d.sid ? [d.sid] : [])];
+
+# dynamic.ts, `renderElement`: `isVoidTag` of the `{ code }` of a match is false, and `renderPick`
+# writes a match of tags only when no tag is void.
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: typeof tag === "string" => true in if (typeof tag === "string" && isVoidTag(tag)) return;
+
+# dynamic.ts, `renderChoice`: `renderChild` and the `component` hooks of the router and twins read
+# the target by its object's `name` and its property's `value`, never their types; the client-only
+# hook tests the object's type, for a `<ClientOnly>` local, which a `.vue` import a choice names
+# never is.
+packages/ferrovue/src/dynamic.ts: StringLiteral: "Identifier" => "" in const target = { type: "MemberExpression", computed: true, … e: "StringLiteral", value: choice.local, ...at }, ...at };
+packages/ferrovue/src/dynamic.ts: StringLiteral: "StringLiteral" => "" in const target = { type: "MemberExpression", computed: true, … e: "StringLiteral", value: choice.local, ...at }, ...at };
+
+# dynamic.ts, `renderChoice` and `expanded`: Vue's compiler-ssr writes `_createVNode` with the
+# component, the props and the slots, each `null` when there are none, and `_ssrRenderVNode` with
+# `_parent`, so none of them is undefined.
+packages/ferrovue/src/dynamic.ts: ObjectLiteral: { type: "NullLiteral", ...at } => {} in : (d.slots ?? { type: "NullLiteral", ...at });
+packages/ferrovue/src/dynamic.ts: StringLiteral: "NullLiteral" => "" in : (d.slots ?? { type: "NullLiteral", ...at });
+packages/ferrovue/src/dynamic.ts: ObjectLiteral: { type: "NullLiteral", ...at } => {} in const args = [target, d.props ?? { type: "NullLiteral", ...at }, slots, d.parent, ...(d.sid ? [d.sid] : [])];
+packages/ferrovue/src/dynamic.ts: StringLiteral: "NullLiteral" => "" in const args = [target, d.props ?? { type: "NullLiteral", ...at }, slots, d.parent, ...(d.sid ? [d.sid] : [])];
+packages/ferrovue/src/dynamic.ts: StringLiteral: "null" => "" in const arg = (x: N | undefined): string => (x ? text(x) : "null");
+packages/ferrovue/src/dynamic.ts: OptionalChaining: d.slots?.type => d.slots.type in d.slots?.type === "ObjectExpression" && takes
+
+# dynamic.ts, `renderChoice`: `callWith` skips the `_` key of a slots object, so dropping it changes
+# nothing.
+packages/ferrovue/src/dynamic.ts: StringLiteral: "_" => "" in ? { ...d.slots, properties: d.slots.properties.filter((p: N) => ["_", ...takes].includes(p.key?.name ?? p.key?.value)) }
+
+# dynamic.ts, `renderPick`: the value a match reads is a prop, through `$props.x`, `props.x` or a
+# destructured name, which `expr` reads as a field of `props` (or with `unwrap_or` of its default)
+# and never as a constant or a literal, so `known` gives `undefined` and the branch is never taken.
+packages/ferrovue/src/dynamic.ts: BlockStatement: { const value = JSON.parse(v.code) as string; const arm =  …  ?? p.arms.at(-1)!; renderPick(s, e, arm[1], d); return; } => {} in if (v.ty.k === "str" && k !== undefined) {
+packages/ferrovue/src/dynamic.ts: LogicalOperator: p.arms.find(([key]) => key === value) ?? p.arms.at(-1)! => p.arms.find(([key]) => key === value) && p.arms.at(-1)! in const arm = p.arms.find(([key]) => key === value) ?? p.arms.at(-1)!;
+packages/ferrovue/src/dynamic.ts: ArrowFunction: ([key]) => key === value => () => undefined in const arm = p.arms.find(([key]) => key === value) ?? p.arms.at(-1)!;
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: key === value => true in const arm = p.arms.find(([key]) => key === value) ?? p.arms.at(-1)!;
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: key === value => false in const arm = p.arms.find(([key]) => key === value) ?? p.arms.at(-1)!;
+packages/ferrovue/src/dynamic.ts: EqualityOperator: key === value => key !== value in const arm = p.arms.find(([key]) => key === value) ?? p.arms.at(-1)!;
+packages/ferrovue/src/dynamic.ts: UnaryOperator: -1 => +1 in const arm = p.arms.find(([key]) => key === value) ?? p.arms.at(-1)!;
+packages/ferrovue/src/dynamic.ts: CallExpression: renderPick(s, e, arm[1], d); => ; in renderPick(s, e, arm[1], d);
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: v.ty.k === "str" && k !== undefined => false in if (v.ty.k === "str" && k !== undefined) {
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: v.ty.k === "str" => true in if (v.ty.k === "str" && k !== undefined) {
+packages/ferrovue/src/dynamic.ts: EqualityOperator: v.ty.k === "str" => v.ty.k !== "str" in if (v.ty.k === "str" && k !== undefined) {
+packages/ferrovue/src/dynamic.ts: StringLiteral: "str" => "" in if (v.ty.k === "str" && k !== undefined) {
+
+# dynamic.ts, `renderPick`: the keys of a match are every literal of the prop's type, which are the
+# literals of its enum, so `last` adds no pattern and writes what `pattern` writes; a prop typed by
+# one literal is a string, and its match has one group, which `renderPick` renders with no `match`.
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: i === groups.length - 1 => true in const head = (keys: string[], i: number): string => (i === groups.length - 1 ? last(keys) : pattern(keys));
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: i === groups.length - 1 => false in const head = (keys: string[], i: number): string => (i === groups.length - 1 ? last(keys) : pattern(keys));
+packages/ferrovue/src/dynamic.ts: EqualityOperator: i === groups.length - 1 => i !== groups.length - 1 in const head = (keys: string[], i: number): string => (i === groups.length - 1 ? last(keys) : pattern(keys));
+packages/ferrovue/src/dynamic.ts: ArithmeticOperator: groups.length - 1 => groups.length + 1 in const head = (keys: string[], i: number): string => (i === groups.length - 1 ? last(keys) : pattern(keys));
+
+# dynamic.ts, `refuseContentDirectives`: only an element node has a `tag`, and a component holding a
+# `<component :is>` has a template, which Vue parses into `templateAst`.
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: n.type === 1 => true in if (n.type === 1 && n.tag === "component") {
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: comp.templateAst => true in if (comp.templateAst) visit(comp.templateAst);
+
+# dynamic.ts, `refuseContentDirectives`: `locate` reads a node's `loc` and `__fv`, never its `type`.
+packages/ferrovue/src/dynamic.ts: StringLiteral: "VueTemplate" => "" in const at = { type: "VueTemplate", loc: { start: { line: di … e, column: dir.loc.start.column - 1 } }, __fv: "source" };
+
+# dynamic.ts, `outletsOf`: a string among the outlets has no `vnode` and no `name`, so it adds no
+# slot name and matches no outlet in the checks for FV0919 and FV0920.
+packages/ferrovue/src/dynamic.ts: ArrayDeclaration: [] => ["Stryker was here"] in const outlets: Outlet[] = [];
+
+# dynamic.ts, `outletsOf`: the `_` key of a slots object holds a number (the slots' flags), in which
+# there is no outlet to walk.
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: name === "_" => false in const as = name === "_" ? null : mode(name);
+packages/ferrovue/src/dynamic.ts: StringLiteral: "_" => "" in const as = name === "_" ? null : mode(name);
+
+# dynamic.ts, `outletsOf`: walking an array by `Object.entries` visits its items in order, as the
+# loop does.
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: Array.isArray(n) => false in if (Array.isArray(n)) {
+packages/ferrovue/src/dynamic.ts: BlockStatement: { for (const x of n) walk(x, vnode); return; } => {} in if (Array.isArray(n)) {
+
+# dynamic.ts, `outletsOf`: props are expressions of the template, `_attrs` or `_mergeProps` of them,
+# which never hold `_ssrRenderSlot` or a `<component :is>` statement.
+packages/ferrovue/src/dynamic.ts: CallExpression: walk(d.props, vnode); => ; in walk(d.props, vnode);
+packages/ferrovue/src/dynamic.ts: CallExpression: walk(n.arguments[1], vnode); => ; in walk(n.arguments[1], vnode);
+
+# dynamic.ts, `outletsOf` and `prepareDynamic`: an element choice has no `child`, so
+# `byName.get(undefined)` finds no component and the mode still tests `"tag" in c`; an `undefined`
+# among `imports` names no component, so `prune`, the walk over `takes`, the order of output and
+# `stringInject` pass over it.
+packages/ferrovue/src/dynamic.ts: StringLiteral: "tag" => "" in const child = "tag" in c ? undefined : byName.get(c.child);
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: !("tag" in c) => true in for (const c of choices) if (!("tag" in c)) r.comp.imports.add(c.child);
+packages/ferrovue/src/dynamic.ts: StringLiteral: "tag" => "" in for (const c of choices) if (!("tag" in c)) r.comp.imports.add(c.child);
+
+# dynamic.ts, `outletsOf`: Vue writes `_ssrRenderSlot` with the slots and the slot's name as its
+# first two arguments, so the second is never undefined.
+packages/ferrovue/src/dynamic.ts: OptionalChaining: n.arguments[1]?.type => n.arguments[1].type in if (n.type === "CallExpression" && n.callee.type === "Iden … RenderSlot" && n.arguments[1]?.type === "StringLiteral") {
+
+# dynamic.ts, `outletsOf`: `loc`, `start`, `end` and `__fv` hold positions and an origin, never a
+# node, so walking them finds nothing.
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: key !== "loc" && key !== "start" && key !== "end" && key !== "__fv" => true in for (const [key, v] of Object.entries(n)) if (key !== "loc … start" && key !== "end" && key !== "__fv") walk(v, vnode);
+packages/ferrovue/src/dynamic.ts: LogicalOperator: key !== "loc" && key !== "start" && key !== "end" && key !== "__fv" => key !== "loc" && key !== "start" && key !== "end" || key !== "__fv" in for (const [key, v] of Object.entries(n)) if (key !== "loc … start" && key !== "end" && key !== "__fv") walk(v, vnode);
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: key !== "loc" && key !== "start" && key !== "end" => true in for (const [key, v] of Object.entries(n)) if (key !== "loc … start" && key !== "end" && key !== "__fv") walk(v, vnode);
+packages/ferrovue/src/dynamic.ts: LogicalOperator: key !== "loc" && key !== "start" && key !== "end" => key !== "loc" && key !== "start" || key !== "end" in for (const [key, v] of Object.entries(n)) if (key !== "loc … start" && key !== "end" && key !== "__fv") walk(v, vnode);
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: key !== "loc" && key !== "start" => true in for (const [key, v] of Object.entries(n)) if (key !== "loc … start" && key !== "end" && key !== "__fv") walk(v, vnode);
+packages/ferrovue/src/dynamic.ts: LogicalOperator: key !== "loc" && key !== "start" => key !== "loc" || key !== "start" in for (const [key, v] of Object.entries(n)) if (key !== "loc … start" && key !== "end" && key !== "__fv") walk(v, vnode);
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: key !== "loc" => true in for (const [key, v] of Object.entries(n)) if (key !== "loc … start" && key !== "end" && key !== "__fv") walk(v, vnode);
+packages/ferrovue/src/dynamic.ts: StringLiteral: "loc" => "" in for (const [key, v] of Object.entries(n)) if (key !== "loc … start" && key !== "end" && key !== "__fv") walk(v, vnode);
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: key !== "start" => true in for (const [key, v] of Object.entries(n)) if (key !== "loc … start" && key !== "end" && key !== "__fv") walk(v, vnode);
+packages/ferrovue/src/dynamic.ts: StringLiteral: "start" => "" in for (const [key, v] of Object.entries(n)) if (key !== "loc … start" && key !== "end" && key !== "__fv") walk(v, vnode);
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: key !== "end" => true in for (const [key, v] of Object.entries(n)) if (key !== "loc … start" && key !== "end" && key !== "__fv") walk(v, vnode);
+packages/ferrovue/src/dynamic.ts: StringLiteral: "end" => "" in for (const [key, v] of Object.entries(n)) if (key !== "loc … start" && key !== "end" && key !== "__fv") walk(v, vnode);
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: key !== "__fv" => true in for (const [key, v] of Object.entries(n)) if (key !== "loc … start" && key !== "end" && key !== "__fv") walk(v, vnode);
+packages/ferrovue/src/dynamic.ts: StringLiteral: "__fv" => "" in for (const [key, v] of Object.entries(n)) if (key !== "loc … start" && key !== "end" && key !== "__fv") walk(v, vnode);
+
+# dynamic.ts, `expanded`: the text is parsed again by `flowOf` (scoped ids) and `attrsFlow` alone,
+# which read calls and names and no positions, and the statements parse alike with or without a
+# newline between them.
+packages/ferrovue/src/dynamic.ts: StringLiteral: "\n" => "" in .join("\n");
+
+# dynamic.ts, `expanded`: `find` collects the inner choices in source order, as Babel orders a
+# node's fields, and V8's sort keeps an array's order when the comparator says each later item
+# follows the one before it.
+packages/ferrovue/src/dynamic.ts: ArithmeticOperator: a.start - b.start => a.start + b.start in inner.sort((a, b) => a.start - b.start);
+
+# dynamic.ts, `prepareDynamic`: an error other than a `GenError` swallowed here comes again when the
+# component is generated, where `dynamicComponent` runs the same `pickOf` on the same node.
+packages/ferrovue/src/dynamic.ts: BlockStatement: { if (!(e instanceof GenError)) throw e; } => {} in } catch (e) {
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: !(e instanceof GenError) => false in if (!(e instanceof GenError)) throw e;
