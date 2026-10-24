@@ -142,7 +142,10 @@ pnpm test:browser
 `pnpm test:browser` is for changes that can affect hydration; Chromium and Firefox must pass, and
 WebKit skips where it cannot launch. A timing test may time out under heavy load; rerun it alone
 before treating it as a failure. CI runs Node 22.23.4, 22, 24 and 26, stable Rust and the MSRV, and
-its **CI passed** job fails when any other job does.
+its **CI passed** job fails when any other job does. A pull request runs the jobs its changed paths
+reach, on Node 22.23.4 and 26 (the `changes` job in `ci.yml` decides); a push to `main` runs the
+jobs the merged change reaches on every Node and OS; the release branch, a tag, the weekly run and a
+manual run run everything. A change to `ci.yml` or `.github/actions/` runs every job.
 
 Mutation testing runs weekly in the Mutants workflow, outside the per-PR checks: `cargo mutants` on
 the runtime and `pnpm mutants:ts` (Stryker) on the compiler modules `stryker.config.json` lists.

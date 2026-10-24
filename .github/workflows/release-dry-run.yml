@@ -8,6 +8,8 @@ on:
       - .github/workflows/release-dry-run.yml
       - .github/actions/**
       - scripts/release.ts
+      - Cargo.toml
+      - packages/ferrovue/package.json
   schedule:
     - cron: "41 4 * * 1"
   workflow_dispatch:

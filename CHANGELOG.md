@@ -145,6 +145,13 @@ released together and share version numbers.
 
 ### Changed
 
+- CI only: a pull request runs the jobs the paths it changes reach, on Node 22.23.4 and 26, where it
+  ran every job on every Node; a push to `main` runs the jobs the merged change reaches on every
+  Node and OS; a `release/*` branch, a tag, a manual run and a new weekly run run everything, and so
+  does a change to `ci.yml` or `.github/actions/`. **CI passed** fails when the change detection
+  fails and takes a skipped job as passed. Coverage runs on `main` and weekly, where it ran on every
+  pull request, and the release dry run also runs for a change to `Cargo.toml` or the npm
+  package's manifest.
 - CI only: the fuzz targets' dependencies are checked against `fuzz/deny.toml`, which holds their
   own licence exception, so neither `cargo deny` run warns about an entry the other one needs; CI
   runs cargo-deny 0.20.2, where it ran the newest release; `just deny` checks both workspaces.
