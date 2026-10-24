@@ -50,6 +50,10 @@ error: this module was generated as version 5 of ferrovue's generated code, and 
 A CI job that runs `pnpm ferrovue --check` reports each module as stale until it is generated
 again with 0.11 and committed. See [the version check](crate::guide::generated_code#the-version-check).
 
+A setup binding or an interface's field named with `$` (`const $total = computed(…)`) is a Rust
+name without it (`s_total`, a field `total` that serde still names `$total`), with `_2` where that
+name is taken. 0.10 wrote `s_$total`, which did not build.
+
 Every generated file changes once, also where the component did not: 0.11 names the locals of a
 render after the JavaScript names they hold (`let sum` is `fv_sum`, `for (const r of rows)` binds
 `fv_r`), where 0.10 numbered them (`fv_m1`, `fv_a3`). Only Rust identifiers change, and every render
@@ -184,6 +188,18 @@ Props named like a listener (`on1`, `onSale`), where Vue joins a child's props w
 | such a prop given twice in the joined props, which Vue joins into a list | FV0516 |
 | a required one that may be falsy there, which the child reads as `undefined` | FV0517 |
 | such a name passed to a component beyond its props and handed on to a child that declares it | FV0502 |
+
+Sources that 0.10 compiled to output Vue does not write, or to Rust that does not build, or that
+stopped the compiler with an error of its own, and that 0.11 refuses with a located code:
+
+| Source | 0.10 | 0.11 |
+|---|---|---|
+| `<template lang="pug">`, or any `lang` other than `html` | wrote the template's source into the page | FV0008 |
+| `<template src="./x.html">` | rendered nothing | FV0009 |
+| a prop or an interface's field with no type (`defineProps<{ tag }>()`) | a `TypeError` | FV0326 |
+| `defineProps<P>()` or `defineEmits<E>()` of a type imported from another file | Vue's "No fs option provided to `compileScript`" | FV0327 |
+| a prop named with a leading `$`, which Vue renders as an attribute | Rust that does not build | FV0328 |
+| a `<textarea>` or an `<input v-model>` at a component's root, or given `v-bind` of an object, an attribute named at run time or a custom directive | FV0513, FV0006, FV0631 or FV0407, with no location | FV0424 |
 
 Refusals that keep their meaning under another code:
 

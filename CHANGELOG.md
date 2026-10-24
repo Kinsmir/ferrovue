@@ -86,8 +86,8 @@ released together and share version numbers.
 - The guide page [`upgrading_to_0_11`](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_11/index.html):
   bumping both halves (and the Node it needs), generating again for version 5 with every local
   renamed once, building union props from their enums (`Size::Md`, `"md".parse::<Size>()?`), the
-  codes a CI may match that are new or changed, what renders differently, and what compiles that
-  0.10 refused.
+  codes a CI may match that are new or changed (the refusals of FV0008, FV0009, FV0326, FV0327,
+  FV0328 and FV0424 among them), what renders differently, and what compiles that 0.10 refused.
 - The conformance components `UnionEnums` and `UnionChild`, recorded from Vue, and props of
   unions of string literals, required, optional and nullable, in the differential fuzzer, which
   compares them only with their members.
