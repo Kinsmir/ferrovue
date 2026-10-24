@@ -146,6 +146,11 @@ const local = (1).toLocaleString();
     });
   });
 
+  it.each(['<template lang="html">', '<template lang="">'])("compiles a template written in HTML: %s", (open) => {
+    const out = compile(island(`<script setup lang="ts">\ndefineProps<{ tag: "b" | "i" }>();\n</script>\n${open}<component :is="tag" /></template>\n`));
+    expect(out.get("x.rs")).toContain("pub fn render");
+  });
+
   it("writes a component named after a Rust keyword to the file its raw module name reads", () => {
     const leaf = "<template><p>x</p></template>";
     const out = compile(island(leaf, { Type: leaf, Match: leaf, Self: leaf }));
@@ -5565,6 +5570,31 @@ const value = defineModel<string>("$value", { required: true });
 <template><p>{{ value }}</p></template>`,
       /the prop `\$value` starts with `\$`/,
     ],
+    [
+      "a template written in pug",
+      `<script setup lang="ts">
+defineProps<{ tag: "b" | "i" }>();
+</script>
+<template lang="pug">component(:is="tag")</template>`,
+      /X\.vue:4:1: the `<template>` is written in `pug`: write it in HTML, with no `lang` or `lang="html"`/,
+    ],
+    [
+      "a template in another language than HTML",
+      `<script setup lang="ts">
+defineProps<{ label: string }>();
+</script>
+
+<template lang="HTML"><p>{{ label }}</p></template>`,
+      /X\.vue:5:1: the `<template>` is written in `HTML`: write it in HTML/,
+    ],
+    [
+      "a template read from another file",
+      `<script setup lang="ts">
+defineProps<{ tag: "b" | "i" }>();
+</script>
+<template src="./x.html"></template>`,
+      /X\.vue:4:1: the `<template>` is read from `\.\/x\.html`: write the template inside the `<template>` block of the component/,
+    ],
   ];
 
   const children = {
@@ -5779,6 +5809,9 @@ defineProps<{ chip: Chip }>();
     ".flatMap() to lists of lists": "FV0834",
     "a computed list as a slot prop": "FV0910",
     "a component written with the Options API": "FV0003",
+    "a template written in pug": "FV0008",
+    "a template in another language than HTML": "FV0008",
+    "a template read from another file": "FV0009",
     "a constructor called in the template": "FV0624",
     "Number.isNaN of a string, which it does not convert": "FV0718",
     "Number.isFinite of a date": "FV0718",

@@ -332,6 +332,11 @@ released together and share version numbers.
   declared. A prop whose name starts with `$`, which Vue leaves out of the props and renders as an
   attribute, is refused with FV0328, a new entry of `ERRORS` in `ferrovue/compiler`. The
   conformance component `DollarNames` records names holding `$` from Vue.
+- A `<template>` in another language than HTML (`<template lang="pug">`) is refused with FV0008,
+  and a `<template src="./x.html">` with FV0009, both at the `<template>` tag. ferrovue compiled
+  the pug source as HTML text and wrote it into the page, and rendered nothing for `src`, where
+  Vite renders the template. `<template lang="html">` compiles as before. The two codes are new
+  entries of `ERRORS` in `ferrovue/compiler`.
 
 ## [0.10.0] - 2026-10-22
 

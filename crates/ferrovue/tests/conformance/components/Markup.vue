@@ -2,7 +2,7 @@
 defineProps<{ name: string }>();
 </script>
 
-<template>
+<template lang="html">
   <div>
     <p>a&nbsp;b &amp; c &lt;d&gt; &copy; “{{ name }}”</p>
     <br />
