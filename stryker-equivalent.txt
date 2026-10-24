@@ -1074,9 +1074,8 @@ packages/ferrovue/src/dynamic.ts: OptionalChaining: d?.type => d.type in if (d?.
 # alias `defineProps` names holds a type literal.
 packages/ferrovue/src/dynamic.ts: ConditionalExpression: d.typeAnnotation.type === "TSTypeLiteral" => true in if (d?.type === "TSTypeAliasDeclaration" && d.id.name ===  … e === "TSTypeLiteral") members = d.typeAnnotation.members;
 
-# dynamic.ts, `propType`: a member with no type stops the compile when the props are read, before
-# any template is compiled (today `fieldOf` throws a TypeError on it, reported apart), so the member
-# found has a type.
+# dynamic.ts, `propType`: FV0326 refuses a prop with no type when the props are read, before any
+# template is compiled, so the member found has a type.
 packages/ferrovue/src/dynamic.ts: OptionalChaining: members.find((m) => m.type === "TSPropertySignature" && (m …  ?? m.key.value) === name)?.typeAnnotation?.typeAnnotation => members.find(m => m.type === "TSPropertySignature" && (m.k … e ?? m.key.value) === name)?.typeAnnotation.typeAnnotation in return members.find((m) => m.type === "TSPropertySignature … .value) === name)?.typeAnnotation?.typeAnnotation ?? null;
 
 # dynamic.ts, `propType`: FV0320 refuses a props type that holds other than plain named fields, so

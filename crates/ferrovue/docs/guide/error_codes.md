@@ -432,6 +432,12 @@ Enum of a union named as another type of its module.
 
 A union of string literals is a Rust enum named after its `type` alias or `enum`, or, written in place, after its component or interface and field (`size` in `Button.vue` is `ButtonSize`). Another type of the module it is written to, a struct, a slot's types, an enum of another union or one of Rust's own types, has that name. Name the union with a `type` alias of its own, or rename the other type.
 
+## FV0326
+
+Field with no type.
+
+A prop or a field of an interface becomes a Rust field, whose type is translated from its TypeScript type. A field written with no type (`defineProps<{ tag }>()`, `interface Row { id }`) has no Rust type. Give the field a type, as `tag: string`. See [`props`](crate::guide::props).
+
 # Templates and attributes: FV04xx
 
 See [`generated_code`](crate::guide::generated_code).

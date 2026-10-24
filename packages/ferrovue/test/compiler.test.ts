@@ -2473,6 +2473,29 @@ defineProps<{ cats: Cat[] }>();
       writeFileSync(join(project, "components", "Child.vue"), child);
       expect(() => compile(project)).toThrow(expect.objectContaining({ code: "FV0315", at: expect.objectContaining({ file: "components/X.vue", line: 3, column: 43 }) }));
     });
+
+    it("refuses a prop or a field with no type where it is declared, in the component and in a `.ts` file", () => {
+      const caught = (project: string): unknown => {
+        try {
+          compile(project);
+        } catch (e) {
+          return e;
+        }
+        return undefined;
+      };
+      const untyped = [
+        [cats("", "<component :is=\"tag\" />", "defineProps<{ tag }>();"), { file: "components/X.vue", line: 4, column: 15 }],
+        [cats("interface Cat { id }", "<p>{{ cat.id }}</p>", "defineProps<{ cat: Cat }>();"), { file: "components/X.vue", line: 3, column: 17 }],
+        [withFile(cats(`import type { Cat } from "./cats";`, "<p>{{ cat.id }}</p>", "defineProps<{ cat: Cat }>();"), "cats.ts", "export interface Cat {\n  id\n}\n"), { file: "components/cats.ts", line: 2, column: 3 }],
+      ] as const;
+      for (const [project, at] of untyped) {
+        const e = caught(project);
+        expect(e).toBeInstanceOf(GenError);
+        expect(e).toMatchObject({ code: "FV0326", at });
+      }
+      expect(compile(cats("interface Cat { id: string; note }", `<b v-for="c in cats">{{ c.id }}</b>`)).get("x.rs")).toContain("pub struct Cat<'a>");
+      expect(compile(cats("", "<component :is=\"tag\" />", "defineProps<{ tag: \"h1\" | \"h2\" }>();")).get("x.rs")).toContain("pub fn render");
+    });
   });
 
   const refused: [string, string, RegExp][] = [
@@ -4983,6 +5006,23 @@ defineProps<{ pick: Option }>();
       /this union is the Rust enum `Option`, which would hide Rust's own `Option`/,
     ],
     [
+      "a prop with no type",
+      `<script setup lang="ts">
+defineProps<{ tag }>();
+</script>
+<template><component :is="tag" /></template>`,
+      /X\.vue:2:15: `tag` has no type: give it one, as `tag: string`/,
+    ],
+    [
+      "a field of an interface with no type that a prop reaches",
+      `<script setup lang="ts">
+interface Row { id: string; label }
+defineProps<{ row: Row }>();
+</script>
+<template><p>{{ row.label }}</p></template>`,
+      /X\.vue:2:29: `label` has no type: give it one, as `label: string`/,
+    ],
+    [
       "a string given to a child's prop of a union",
       `<script setup lang="ts">
 import U from "./U.vue";
@@ -5534,6 +5574,8 @@ defineProps<{ chip: Chip }>();
     "two members of an enum that hold one value": "FV0324",
     "a union in place whose enum is named as an interface of the component": "FV0325",
     "a union alias named as a type of Rust's prelude": "FV0325",
+    "a prop with no type": "FV0326",
+    "a field of an interface with no type that a prop reaches": "FV0326",
     "a string given to a child's prop of a union": "FV0515",
     "a literal outside a child's prop of a union": "FV0515",
     "a value of a wider union given to a child's prop of a union": "FV0515",

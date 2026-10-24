@@ -374,6 +374,9 @@ function fieldOf(comp: Component, name: string, m: N, structs: Map<string, Struc
   if (m.type !== "TSPropertySignature" || m.key.type !== "Identifier") {
     fail(comp, "FV0320", `\`${name}\` may only hold plain named fields`, m);
   }
+  if (!m.typeAnnotation) {
+    fail(comp, "FV0326", `\`${m.key.name}\` has no type: give it one, as \`${m.key.name}: string\``, m);
+  }
   const base = tyOfTs(comp, m.typeAnnotation.typeAnnotation, structs, new Set());
   if (m.optional && absence(base) === "null") {
     fail(comp, "FV0321", `\`${m.key.name}?: T | null\` may be absent, which is \`undefined\`, or \`null\`: ${ONE_NOTHING}; declare it \`${m.key.name}: T | null\` or \`${m.key.name}?: T\``, m);
