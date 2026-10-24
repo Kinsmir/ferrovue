@@ -5705,6 +5705,41 @@ defineProps<{ kind: "text" | "checkbox" }>();
 <template><div><textarea v-focus>hi</textarea></div></template>`,
       /X\.vue:6:16: a `<textarea>` given the custom directive `v-focus` renders as its content a `value` among the attributes the directive gives it: put the directive on another element/,
     ],
+    [
+      "a root element with no content given a custom directive",
+      `<script setup lang="ts">
+const vFocus = {};
+</script>
+<template><b v-focus /></template>`,
+      /X\.vue:4:14: an element with no content given a custom directive renders as its content a `textContent` or `innerHTML` among the attributes passed to the component, when it is the root: wrap it in an element, such as a `<div>`, which then takes those attributes/,
+    ],
+    [
+      "an element with no content given a custom directive and v-bind of an object",
+      `<script setup lang="ts">
+const vFocus = {};
+defineProps<{ o: Record<string, string> }>();
+</script>
+<template><div><b v-bind="o" v-focus /></div></template>`,
+      /X\.vue:5:27: an element with no content given a custom directive renders as its content a `textContent` or `innerHTML` among the attributes it merges: bind each attribute by its name, and write the content inside the element/,
+    ],
+    [
+      "an element with no content given a custom directive and a bound textContent",
+      `<script setup lang="ts">
+const vFocus = {};
+defineProps<{ t: string }>();
+</script>
+<template><div><b v-focus :textContent="t" /></div></template>`,
+      /X\.vue:5:28: an element with no content given a custom directive renders as its content a `textContent` or `innerHTML` among the attributes it merges/,
+    ],
+    [
+      "an element with no content given a custom directive and an attribute named at run time",
+      `<script setup lang="ts">
+const vFocus = {};
+defineProps<{ k: string }>();
+</script>
+<template><div><b v-focus :[k]="k" /></div></template>`,
+      /X\.vue:5:28: an element with no content given a custom directive renders as its content a `textContent` or `innerHTML` among the attributes it merges/,
+    ],
   ];
 
   const children = {
@@ -5933,6 +5968,10 @@ defineProps<{ chip: Chip }>();
     "a textarea given v-bind of an object": "FV0424",
     "an input with v-model given an attribute named at run time": "FV0424",
     "a textarea given a custom directive": "FV0424",
+    "a root element with no content given a custom directive": "FV0425",
+    "an element with no content given a custom directive and v-bind of an object": "FV0425",
+    "an element with no content given a custom directive and a bound textContent": "FV0425",
+    "an element with no content given a custom directive and an attribute named at run time": "FV0425",
     "a constructor called in the template": "FV0624",
     "Number.isNaN of a string, which it does not convert": "FV0718",
     "Number.isFinite of a date": "FV0718",

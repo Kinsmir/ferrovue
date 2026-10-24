@@ -606,6 +606,39 @@ describe("components and directives resolved by name", () => {
 `);
   });
 
+  it("takes a client-only directive on an element with no content", () => {
+    expect(render(sfc("", "<div><b v-foo /></div>"), {}, { clientDirectives: ["foo"] })).toBe(`pub fn try_render(out: &mut String, _props: &Props) -> Result<(), fv::Refused> {
+    out.reserve(18);
+    out.push_str("<div><b></b></div>");
+    Ok(())
+}
+`);
+  });
+
+  it("takes a client-only directive on an element with no content in slot content", () => {
+    const box = sfc("", "<section><slot /></section>");
+    expect(render(sfc("n: string", `<div><Box><b v-foo :title="n" /></Box></div>`, `import Box from "./Box.vue";\n`), { Box: box }, { clientDirectives: ["foo"] })).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+    out.reserve(33 + props.n.len());
+    out.push_str("<div>");
+    super::r#box::try_render(out, &super::r#box::Props {  }, super::r#box::Slots {
+        default: Some(fv::Slot::new(&|out: &mut String| {
+            out.push_str("<b");
+            if props.n.is_empty() {
+                out.push_str(" title");
+            } else {
+                out.push_str(" title=\\"");
+                fv::escape_into(out, &props.n);
+                out.push('"');
+            }
+            out.push_str("></b>");
+        })),
+    })?;
+    out.push_str("</div>");
+    Ok(())
+}
+`);
+  });
+
   it("refuses a global directive the configuration does not declare client-only", () => {
     expect(refusals(sfc("", "<div><b v-foo>x</b></div>"))).toEqual([
       "FV0405 custom directive `v-foo` may add attributes on the server; if it has no `getSSRProps`, list `foo` in `clientDirectives` in ferrovue.config.json",

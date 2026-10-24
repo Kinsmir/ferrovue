@@ -457,6 +457,10 @@ export const ERRORS: {
         readonly title: "`<textarea>` or `<input v-model>` at the root, or given merged attributes";
         readonly detail: "Vue's server renderer reads a `<textarea>`'s content, and an `<input v-model>`'s `type` and `value`, from the attributes it merges into the element: those passed to the component, when the element is its root, and those of a `v-bind` of an object, an attribute named at run time or a custom directive. The compiler does not translate that reading. Wrap a root `<textarea>` or `<input v-model>` in an element, such as a `<div>`, which then takes the attributes passed to the component, and bind each attribute of the control by its name.";
     };
+    readonly FV0425: {
+        readonly title: "Element with no content given a custom directive and attributes that may hold its content";
+        readonly detail: "Vue's server renderer writes an element with no content and a custom directive with the `textContent` or `innerHTML` among the attributes it merges into the element: those passed to the component, when the element is its root, those of a `v-bind` of an object or an attribute named at run time, and a bound `textContent` or `innerHTML`. The compiler does not translate that reading. Wrap a root element in another element, such as a `<div>`, which then takes the attributes passed to the component, bind each attribute by its name, and write the content inside the element.";
+    };
     readonly FV0501: {
         readonly title: "Child component that is not among the compiled components";
         readonly detail: "A child component is rendered by calling its generated Rust module, so it must be a `.vue` file in the components directory that ferrovue compiles. A component imported from a library, from `node_modules` or from outside that directory has no module to call. Move the file into the components directory, or render it with a function of your own named under `twins` in `ferrovue.config.json`. See [`errors_and_limits`](crate::guide::errors_and_limits#rust-twins).";

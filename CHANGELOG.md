@@ -383,6 +383,15 @@ released together and share version numbers.
   (`function f(xs: unknown[]) { return xs.length; }` read as `{{ f([]) }}`), is 0, as in
   JavaScript. The Rust ferrovue wrote gave the empty array no item type, and rustc refused it with
   E0282. The conformance component `EmptyArrays` records it from Vue.
+- An element with no content given a custom directive listed in `clientDirectives`
+  (`<b v-focus class="x" :id="id" />`) compiles, and renders its attributes and no content, as
+  Vue does. It was refused with FV0513, with no line and a message about a component resolved by
+  name. Vue's server renderer writes such an element's content from a `textContent` or
+  `innerHTML` among the attributes it merges, so FV0425 refuses one whose merged attributes may
+  hold them, at the attribute: those passed to the component, when the element is its root, a
+  `v-bind` of an object, an attribute named at run time, and a bound `textContent` or
+  `innerHTML`. FV0425 is a new entry of `ERRORS` in `ferrovue/compiler`. The conformance component
+  `DirectedEmpty` records the shapes that compile from Vue.
 
 ## [0.10.0] - 2026-10-22
 

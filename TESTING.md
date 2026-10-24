@@ -128,6 +128,7 @@ A fixture is a JSON object of props plus optional keys:
 | `Form` | `v-model` on input, checkbox, select, radio and textarea |
 | `FormWrapped`, `FormRoot` | A `<textarea>` with content of its own and an `<input v-model>` inside the element that takes the root's attributes; a `<select v-model>` as the root |
 | `Builtins` | `Transition`, `TransitionGroup`, `KeepAlive`, `Suspense`, `v-text`, `v-once`, `v-pre`, `v-memo`, a client-only directive |
+| `DirectedEmpty` | A client-only directive on elements with no content, alone, beside attributes bound by name and in a `v-for` |
 | `Prose` | `v-html` of `TrustedHtml`, required and optional |
 | `Unsanitised`, `UnsanitisedLeaf` | What Vue escapes and does not sanitise: a `javascript:` URL in `href`, `src` and `formaction`, `srcdoc`, `onclick` bound on an element and falling through to a child's root, CSS in a style object and a style string (the guide's `security` page) |
 | `Tree` | A recursive, self-rendering component |
@@ -250,7 +251,7 @@ when it names a component that is not in `components/` with fixtures of its own.
 | Fallthrough attributes | `Fallthrough`, `FallLeaf`, `FallInner`, `FallPair`, `FallRoot`, `FallBare`, `FallUse`, `FallLink`, `FallSwitch`, `FallFade`, `FallBinds`, `ScopedFallthrough` |
 | Slots | `Frame`, `Forward`, `Page`, `Card`, `Panel`, `Dashboard`, `DataList`, `DataTable`, `Hollow`, `Blank`, `SlotProbe` |
 | Forms | `Form`, `Constants`, `Model`, `FormWrapped`, `FormRoot` |
-| Built-ins | `Builtins`, `Modal`, `ScopedPage` |
+| Built-ins | `Builtins`, `Modal`, `ScopedPage`, `DirectedEmpty` |
 | Vue Router | `Nav`, `Links`, `Menu`, `App`, `AccountNav`, `RouteInfo` |
 | Pinia | `Badge`, `Cart`, `Counter`, `Session` |
 | vue-i18n | `Translated`, `Plurals`, `MappedChoice` |

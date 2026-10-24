@@ -610,6 +610,12 @@ Inside an element `<component :is>` chooses, in the slot content such an element
 
 Vue's server renderer reads a `<textarea>`'s content, and an `<input v-model>`'s `type` and `value`, from the attributes it merges into the element: those passed to the component, when the element is its root, and those of a `v-bind` of an object, an attribute named at run time or a custom directive. The compiler does not translate that reading. Wrap a root `<textarea>` or `<input v-model>` in an element, such as a `<div>`, which then takes the attributes passed to the component, and bind each attribute of the control by its name.
 
+## FV0425
+
+Element with no content given a custom directive and attributes that may hold its content.
+
+Vue's server renderer writes an element with no content and a custom directive with the `textContent` or `innerHTML` among the attributes it merges into the element: those passed to the component, when the element is its root, those of a `v-bind` of an object or an attribute named at run time, and a bound `textContent` or `innerHTML`. The compiler does not translate that reading. Wrap a root element in another element, such as a `<div>`, which then takes the attributes passed to the component, bind each attribute by its name, and write the content inside the element.
+
 # Child components: FV05xx
 
 See [`generated_code`](crate::guide::generated_code).
