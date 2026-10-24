@@ -2,7 +2,7 @@ import { parse as parseJs } from "@babel/parser";
 import { readFileSync } from "node:fs";
 import { basename } from "node:path";
 import { relativePath } from "./paths.ts";
-import { type Absence, type Component, type Field, type N, type Struct, type Ty, absence, blankComponent, BOOL, enumOf, fail, FLOAT, GenError, INT, joinAbsence, joinTy, literalTy, nodeName, opt, RUST_PRELUDE, rustStr, sameTy, snake, STR, tagAst, withAbsence } from "./model.ts";
+import { type Absence, type Component, type Field, type N, type Struct, type Ty, absence, blankComponent, BOOL, distinctFields, enumOf, fail, FLOAT, GenError, INT, joinAbsence, joinTy, literalTy, nodeName, opt, RUST_PRELUDE, rustStr, sameTy, snake, STR, tagAst, withAbsence } from "./model.ts";
 import { declareAlias, enumField, namedBy } from "./enums.ts";
 import { CONFIG_FILE, ctx, INLINE_HTML, TYPES_MODULE } from "./context.ts";
 import { childOf } from "./expr.ts";
@@ -361,7 +361,7 @@ export function structOf(comp: Component, name: string, members: N[], structs: M
       if (!refused.has(key)) refused.set(key, e);
     }
   }
-  return refused.size ? { name, fields, refused } : { name, fields };
+  return refused.size ? { name, fields: distinctFields(fields), refused } : { name, fields: distinctFields(fields) };
 }
 
 function memberKey(m: N): string {

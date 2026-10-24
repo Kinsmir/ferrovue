@@ -1,4 +1,4 @@
-import { type Component, type N, type Scope, type Ty, type Val, absence, fail, GenError, nothing, rustStr, snake } from "../model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, absence, distinctFields, fail, GenError, nothing, rustStr, snake } from "../model.ts";
 import { ctx } from "../context.ts";
 import { type Declared } from "../constants.ts";
 import { resolveImport } from "../resolve.ts";
@@ -84,7 +84,7 @@ function loaderOf(d: Declared, file: string): Loader {
   if (absence(out) === "undefined" || absence(out) === "either") {
     fail(home, "FV2004", `loader \`${id.value}\` may return \`undefined\`, which \`JSON.stringify\` drops from the payload: return \`null\` for none`, inner);
   }
-  const params = (fn.params as N[]).map((p): LoaderParam => {
+  const params = distinctFields((fn.params as N[]).map((p): LoaderParam => {
     const t = p.type === "Identifier" ? p.typeAnnotation?.typeAnnotation : null;
     if (!t) fail(home, "FV2003", `loader \`${id.value}\` takes plain, typed parameters, \`(id: number, lang?: string)\`: no defaults, \`...rest\` or destructuring`, p);
     const refuse = (what: string): never =>
@@ -100,7 +100,7 @@ function loaderOf(d: Declared, file: string): Loader {
     const of = ty.k === "opt" ? ty.of : ty;
     if (!ARG_TYS.has(of.k) || absence(ty) === "either") refuse(describeTy(ty));
     return { js: p.name, rust: snake(p.name), ty, undefined: p.optional === true || absence(ty) === "undefined" };
-  });
+  }));
   const loader: Loader = { name: id.value, file, struct: pascal(id.value), method: snake(id.value), params, out, node: d.node, home };
   const clash = known.get(id.value);
   if (clash) fail(home, "FV2005", `two loaders are called \`${id.value}\`: this one and the one in ${clash.home.file}; a loader's name is its key in the payload, so rename one`, init);

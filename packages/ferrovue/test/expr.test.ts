@@ -984,3 +984,46 @@ describe("indexes and strings that may hold half a character", () => {
     expect(render(l, "<p>{{ s.charAt(0) + '�' }}</p>")).toMatch(like('fv::escape_into(out, &format!("{}�", fv::js_char_at(&props.s, 0.0f64)));'));
   });
 });
+
+describe("names holding `$`", () => {
+  const rustOnly = (out: string) => out.replace(/"(?:[^"\\]|\\.)*"/g, "");
+  const flat = (out: string) => out.split("\n").map((l) => l.trim()).join("\n");
+  const whole = (script: string, template: string) => generate(project({ "X.vue": sfc(script, template) }), { components: "components", out: "out" }).get("x.rs")!;
+
+  it("declares a `computed` whose name holds `$` as a Rust local without the `$`", () => {
+    const out = render('import { computed } from "vue";\nconst props = defineProps<{ s: string }>();\nconst $x = computed(() => props.s + "!");', '<p :title="$x">{{ $x }}</p>');
+    expect(rustOnly(out)).not.toContain("$");
+    expect(flat(out)).toContain(['let s_x = format!("{}!", props.s);', 'out.push_str("<p");', "if s_x.is_empty() {"].join("\n"));
+  });
+
+  it("gives a setup name holding `$` the next free suffix where another name takes its Rust name", () => {
+    const out = render('import { computed } from "vue";\nconst props = defineProps<{ s: string }>();\nconst $label = computed(() => props.s + "!");\nconst label = computed(() => props.s + "?");\nconst label$ = computed(() => props.s + "#");', "<p>{{ $label }}{{ label }}{{ label$ }}</p>");
+    expect(flat(out)).toContain(['let s_label_2 = format!("{}!", props.s);', 'let s_label = format!("{}?", props.s);', 'let s_label_3 = format!("{}#", props.s);'].join("\n"));
+  });
+
+  it("writes a prop and fields whose names hold `$` as Rust fields renamed to their JSON keys", () => {
+    const out = whole("interface Meta { $tag: string; tag: string; a$b: number; $type: string }\ndefineProps<{ price$: number; meta: Meta }>();", "<p>{{ price$ }}|{{ meta.$tag }}|{{ meta.tag }}|{{ meta.a$b }}|{{ meta.$type }}</p>");
+    expect(rustOnly(out.replace(/#\[serde\(rename = "[^"]*"\)\]/g, ""))).not.toContain("$");
+    expect(out).toContain('    #[serde(rename = "$tag")]\n    pub tag_2: Cow<\'a, str>,\n    #[serde(rename = "tag")]\n    pub tag: Cow<\'a, str>,\n    #[serde(rename = "a$b")]\n    pub a_b: i64,\n    #[serde(rename = "$type")]\n    pub r#type: Cow<\'a, str>,');
+    expect(out).toContain('    #[serde(rename = "price$")]\n    pub price: i64,');
+    expect(flat(out)).toContain(["fv::push_int(out, props.price);", "out.push('|');", "fv::escape_into(out, &props.meta.tag_2);", "out.push('|');", "fv::escape_into(out, &props.meta.tag);", "out.push('|');", "fv::push_int(out, props.meta.a_b);", "out.push('|');", "fv::escape_into(out, &props.meta.r#type);"].join("\n"));
+  });
+
+  it("writes a field `$slots` of a list's items as a Rust field", () => {
+    const out = render("interface S { a: string }\ninterface I { $slots: S }\ndefineProps<{ l: I[] }>();", '<p v-for="y in l">{{ y.$slots.a }}</p>');
+    expect(rustOnly(out)).not.toContain("$");
+    expect(out).toMatch(like("fv::escape_into(out, &fv_y.slots.a);"));
+  });
+
+  it("names the locals of parameters, `const`s and `v-for` items holding `$` without the `$`", () => {
+    const out = render("interface R { $tag: string }\nconst props = defineProps<{ s: string; rows: R[] }>();\nfunction shout($v: string): string { const $w = $v.toUpperCase() + props.s; return $w; }", '<p>{{ shout(s) }}</p><i v-for="($t, $i) in rows">{{ $t.$tag }}{{ $i }}</i>');
+    expect(rustOnly(out)).not.toContain("$");
+    expect(flat(out)).toContain(["for (fv_i, fv_t_ref) in props.rows.iter().enumerate() {", "let fv_t = fv_t_ref;", "let fv_i = fv_i as i64;"].join("\n"));
+  });
+
+  it("names slot props holding `$` without the `$`", () => {
+    const out = whole("const props = defineProps<{ s: string; v: string }>();", '<slot name="x" :$v="s" :v="v" />');
+    expect(out).toContain("pub struct XSlotProps<'v> {\n    pub v_2: &'v str,\n    pub v: &'v str,\n}");
+    expect(out).toMatch(like("fv::scoped_slot_into(out, fv_slots.x, &XSlotProps { v_2: &props.s, v: &props.v }, None);"));
+  });
+});

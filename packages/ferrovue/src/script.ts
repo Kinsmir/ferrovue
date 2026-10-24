@@ -1,5 +1,5 @@
 import { basename } from "node:path";
-import { type Component, type N, type Scope, type Val, fail, GenError, nodeName, nothing, snake, takesAttrs, UNDEF } from "./model.ts";
+import { type Component, type N, type Scope, type Val, dollarNames, fail, GenError, nodeName, nothing, snake, takesAttrs, UNDEF } from "./model.ts";
 import { CONFIG_FILE, ctx } from "./context.ts";
 import { definePropsType, readTypeFile, refuseDates, tyOfTs } from "./typescript.ts";
 import { resolveImport } from "./resolve.ts";
@@ -205,6 +205,8 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
       if (f) declared(f, st.type === "VariableDeclaration" ? st.end : undefined);
     }
   }
+  const bound = ast.flatMap((st: N) => (st.type === "VariableDeclaration" ? st.declarations.flatMap((d: N) => (d.id.type === "Identifier" ? [d.id.name as string] : [])) : []));
+  const setupNames = dollarNames(bound, (js) => `s_${snake(js).replace(/^r#/, "")}`);
   for (const st of ast) {
     if (st.type === "ImportDeclaration") {
       const from: string = st.source.value;
@@ -342,7 +344,7 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
         scope.setup.set(local, v);
         continue;
       }
-      const name = `s_${snake(local).replace(/^r#/, "")}`;
+      const name = setupNames.get(local)!;
       const { init, read } = bindingOf(v);
       const lazy = isComputed && mayPanic(lazies, init);
       lets.push(lazy ? `let ${name} = std::cell::LazyCell::new(|| ${init});` : `let ${name} = ${init};`);

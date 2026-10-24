@@ -3,7 +3,7 @@ import { compileScript, compileTemplate, parse as parseSfc, type SFCBlock, type 
 import { SourceMapConsumer } from "source-map-js";
 import { basename } from "node:path";
 import { relativePath } from "./paths.ts";
-import { type Component, type N, absence, blankComponent, fail, GenError, opt, snake, sourceAt, tagAst } from "./model.ts";
+import { type Component, type N, absence, blankComponent, distinctFields, fail, GenError, opt, snake, sourceAt, tagAst } from "./model.ts";
 import { ctx, readSource } from "./context.ts";
 import { typesImports, declareTypes, defaultValue, definePropsType, ONE_NOTHING, reachLocal, readTypeFile, refuseDates, runtimeDefaults, structOf, tyOfTs } from "./typescript.ts";
 import { enumField } from "./enums.ts";
@@ -295,10 +295,14 @@ export function readComponent(file: string, root: string, name = basename(file, 
       const base = tyOfTs(comp, t, comp.structs);
       refuseDates(comp, base, "a `defineModel`", t);
       if (!required && absence(base) === "null") fail(comp, "FV0306", `a \`defineModel\` of \`T | null\` that is not \`required\` may be absent, which is \`undefined\`, or \`null\`: ${ONE_NOTHING}`, call);
+      if (named.startsWith("$")) reservedProp(comp, named, call.arguments[0]);
       comp.props.fields.push({ js: named, rust: snake(named), ty: enumField(comp, comp.name, named, call, required ? base : opt(base)) });
       comp.models.set(d.id.name, named);
     }
   }
+  const reserved = comp.props.fields.find((f) => f.js.startsWith("$"));
+  if (reserved !== undefined) reservedProp(comp, reserved.js, propsTy?.members?.find((m: N) => (m.key?.name ?? m.key?.value) === reserved.js) ?? propsTy);
+  comp.props = { ...comp.props, fields: distinctFields(comp.props.fields) };
 
   comp.propsAt = propsTy;
   const defaults = runtimeDefaults(comp, script?.content ?? "");
@@ -338,4 +342,8 @@ export function readComponent(file: string, root: string, name = basename(file, 
   }
   for (const p of ctx.plugins) p.compiled?.(comp, compiled.code, [...plainAst, ...ast]);
   return { comp, ast, ssr: compiled.code };
+}
+
+function reservedProp(comp: Component, name: string, at: N): never {
+  fail(comp, "FV0328", `the prop \`${name}\` starts with \`$\`, which Vue keeps for its own properties: it leaves the prop out and renders it as an attribute; rename it without the \`$\``, at);
 }

@@ -105,6 +105,7 @@ A fixture is a JSON object of props plus optional keys:
 | `WideProducts` | Integer arithmetic beyond ±2⁶³ (`n * n`, `n * m`, sums, a sixth power) written as JavaScript writes it in text, an attribute, a style, a `computed`, template literals, `String()`, `.toString()`, `JSON.stringify()` and `Math.floor()`, and compared |
 | `SignedZeros` | `Math.max()` and `Math.min()` of integer arithmetic that gives `-0` (`n * 0` of a negative `n`), against `-1`, `0`, `1` and another `-0`, read through `1 / …`, and of two and three integers |
 | `WideChoices` | Integer arithmetic beyond ±2⁶³ chosen by `??`, `?:` and `\|\|`, held in a `computed` and returned by a function, written as JavaScript writes it in text, attributes and a template literal |
+| `DollarNames` | Names holding `$`: a `computed` `$label` beside a `computed` `label`, a prop `price$`, interface fields `$meta`, `$tag` beside `tag` and `count$` read from a prop and from `v-for` items, a function's parameter and `const` named with `$`, and `v-for` items and indexes named with `$` |
 | `Exprs` | `-`, `*`, `%`, comparisons, unary `-`, `Math`, template literals, `?.`, string and list methods (Unicode case mapping included), array literals, ranges, destructured `v-for` items |
 | `Branches` | `v-if` / `v-else-if` / `v-else`, `!`, `&&` / `\|\|`, `===` / `!==`, `undefined`, narrowing, `<template v-if>` |
 | `Lists` | `v-for` over strings, numbers and objects, index, nesting, `<template v-for>`, empty lists |
@@ -222,7 +223,7 @@ when it names a component that is not in `components/` with fixtures of its own.
 | Shared types | `UserCard`, `UserList`, `DataTable`, `RowChip`, `Dashboard`, `Cart`, `Catalog`, `UnionEnums` |
 | Constants | `Catalog`, `Constants`, `Lookups`, `OwnKeys`, `DigitGroups`, `UnionEnums`, `UnionObjects` |
 | Props | `Defaults`, `Destructured`, `PropsObject`, `Model`, `ModelParent`, `Picker`, `Glyph`, `Divider` |
-| Setup | `Setup`, `SetupValues`, `Lifecycle`, `Pending`, `EmptyBranch`, `Unread`, `UnreadVar` |
+| Setup | `Setup`, `SetupValues`, `Lifecycle`, `Pending`, `EmptyBranch`, `Unread`, `UnreadVar`, `DollarNames` |
 | Statements | `Statements`, `UnreadSteps`, `Loops`, `LoopEdges` |
 | Functions | `Formatters`, `RelativeTime`, `LocalFunctions`, `DigitGroups` |
 | Object literals | `ObjectLiterals`, `ObjectShapes`, `UnionObjects` |

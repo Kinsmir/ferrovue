@@ -528,6 +528,8 @@ fn greet(name: String) -> ferrovue::Html<'static, greeting::Props<'static>> {
 | a module name that is a Rust keyword, `type` | module `r#type`, in `type.rs`; `self`, `super` and `crate` take a `_`: `self_` |
 | prop `showHead` | field `show_head`, with `#[serde(rename = "showHead")]` so the island's JSON uses Vue's name |
 | prop `type` (a Rust keyword) | field `r#type` |
+| prop `price$`, a field `$meta` of an interface | field `price`, renamed `price$`; field `meta`, renamed `$meta`: a name holding `$` keeps its ASCII letters and digits, and takes `_2`, `_3`, … after a name another field holds (`$tag` beside `tag` is `tag_2`) |
+| `const $label = computed(…)` in `<script setup>` | the local `s_label`, or `s_label_2` beside a binding `label` |
 | `v-model` / `defineModel()` | field `model_value`, renamed `modelValue` |
 | `<slot name="row">` | `Slots::row`, `RowSlotProps`, `RowSlot` |
 | `<RouterView>` | `Slots::router_view` |

@@ -1,4 +1,5 @@
 import { ctx } from "./context.ts";
+import { snakeWords } from "./model.ts";
 
 const TOKEN = /(?<![\w$])(?<![^.]\.)(_?)(fv_[a-z]+\d+)(?![\w$])/g;
 
@@ -23,19 +24,6 @@ export function jsHint(name: string): string {
   let path = name;
   while (/\[[^[\]]*\]/.test(path)) path = path.replace(/\[[^[\]]*\]/g, "");
   return (path.split(".").at(-1) ?? "").replace(/#\d+$/, "");
-}
-
-function snakeWords(hint: string): string {
-  const words = hint
-    .replace(/^r#/, "")
-    .normalize("NFKD")
-    .replace(/\p{M}+/gu, "")
-    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
-    .replace(/([A-Z]+)([A-Z][a-z])/g, "$1_$2")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-  return words || "value";
 }
 
 function segments(code: string): { text: string; code: boolean }[] {

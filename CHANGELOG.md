@@ -322,6 +322,16 @@ released together and share version numbers.
   `compileScript`" error and no FV code. Declare the props in the component, as
   `defineProps<{ row: Row }>()` or an interface of the component, whose fields may have imported
   types.
+- Names holding `$` are written as Rust identifiers: a `<script setup>` binding (`const $label =
+  computed(…)` is the local `s_label`), a prop (`price$` is the field `price`), a field of an
+  interface or a constant list's objects (`$meta` is `meta`), a slot prop, a store's state and a
+  loader's parameters keep their ASCII letters and digits, as the locals of a render do. A name that
+  then comes to a Rust name another one holds takes `_2`, `_3`, …: `$tag` beside `tag` is `tag_2`.
+  Fields keep `#[serde(rename)]` to the JavaScript name, so islands' props are unchanged. The Rust
+  ferrovue wrote kept the `$` and did not compile, and a binding read in the template was not
+  declared. A prop whose name starts with `$`, which Vue leaves out of the props and renders as an
+  attribute, is refused with FV0328, a new entry of `ERRORS` in `ferrovue/compiler`. The
+  conformance component `DollarNames` records names holding `$` from Vue.
 
 ## [0.10.0] - 2026-10-22
 

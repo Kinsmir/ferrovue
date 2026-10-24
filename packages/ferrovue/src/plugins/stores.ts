@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { relativePath } from "../paths.ts";
-import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, absence, blankComponent, BOOL, fail, failIn, FLOAT, GenError, INT, nodeName, opt, sameTy, snake, STR, tagAst, UNDEF } from "../model.ts";
+import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, absence, blankComponent, BOOL, distinctFields, fail, failIn, FLOAT, GenError, INT, nodeName, opt, sameTy, snake, STR, tagAst, UNDEF } from "../model.ts";
 import { listDir, parseTs } from "../files.ts";
 import { resolveImport } from "../resolve.ts";
 import { ONE_NOTHING, refuseDates, structOf, tyOfTs, typesImports } from "../typescript.ts";
@@ -180,6 +180,7 @@ function setupStore(comp: Component, hook: string, id: string, fn: N, path: stri
     else if (!others.has(local)) fail(comp, "FV1311", `\`${local}\` is not declared in the store's function`, p);
   }
   const name = id.split(/[-_]/).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join("") + "State";
+  state.splice(0, state.length, ...distinctFields(state));
   if (run.structs.has(name)) fail(comp, "FV1312", `\`${name}\` names this setup store's state; rename the interface`, fn);
   run.structs.set(name, { name, fields: state });
   run.files.set(name, comp.file);

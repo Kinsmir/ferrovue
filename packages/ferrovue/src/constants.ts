@@ -1,4 +1,4 @@
-import { type Absence, type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, absence, blankComponent, BOOL, enumOf, fail, FLOAT, INT, joinAbsence, joinTy, literalsOf, literalTy, nothing, NULL, rustStr, sameTy, snake, STR, UNDEF, variantPath, withAbsence } from "./model.ts";
+import { type Absence, type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, absence, blankComponent, BOOL, distinctFields, enumOf, fail, FLOAT, INT, joinAbsence, joinTy, literalsOf, literalTy, nothing, NULL, rustStr, sameTy, snake, STR, UNDEF, variantPath, withAbsence } from "./model.ts";
 import { matchOver } from "./enums.ts";
 
 const TYPES_HOME = blankComponent("types", "types", "types");
@@ -287,7 +287,7 @@ function describe(t: Ty): string {
 function itemStruct(c: Const & { k: "list" }, objects: (Const & { k: "object" })[]): Struct {
   const name = `${pascal(c.path)}Item`;
   const keys = [...new Set(objects.flatMap((o) => [...o.fields.keys()]))];
-  const fields: Field[] = keys.map((key) => {
+  const fields: Field[] = distinctFields(keys.map((key): Field => {
     const values = objects.map((o) => o.fields.get(key));
     const present = values.filter((v): v is Const => v !== undefined);
     if (present.some((v) => v.k !== "scalar")) fail(c.home, "FV0216", `\`${key}\` in a constant list's objects is a string, a number or a boolean`, c.node);
@@ -299,7 +299,7 @@ function itemStruct(c: Const & { k: "list" }, objects: (Const & { k: "object" })
     const ty = numbers && tys.some((t) => t.k === "float") ? FLOAT : tys[0]!;
     if (!numbers && tys.some((t) => !sameTy(t, ty))) fail(c.home, "FV0219", `\`${key}\` in a constant list's objects holds values of different types`, c.node);
     return { js: key, rust: snake(key), ty: withAbsence(ty, nulls ? "null" : present.length < values.length ? "undefined" : null) };
-  });
+  }));
   const existing = ctx.typeStructs.get(name);
   if (existing && ctx.typeFiles.get(name) !== c.home.file) fail(c.home, "FV0220", `\`${name}\`, the type of this list's objects, is declared by ${ctx.typeFiles.get(name)} too`, c.node);
   const st: Struct = { name, fields };
