@@ -145,6 +145,11 @@ released together and share version numbers.
 
 ### Changed
 
+- Development only: the source archives (`git archive`, and the source zip and tarball of a GitHub
+  release) leave out the workflows and GitHub templates, the fuzz targets, the mutation-testing
+  configuration, the site and AGENTS.md; the crate and the npm package are packed as before. GitHub
+  marks generated code, recorded fixtures, vectors, the error-code page and the API reports as
+  generated, so a diff collapses them.
 - The npm package supports Node 22.23.4 or newer on 22, 24.22.1 or newer on 24, and 26.12.1 or
   newer (`engines`: `>=22.23.4 <23 || >=24.22.1 <25 || >=26.12.1`), where it supported 22.18 or
   newer. CI's oldest Node is 22.23.4.
