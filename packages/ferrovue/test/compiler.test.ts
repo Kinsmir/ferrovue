@@ -5732,6 +5732,36 @@ defineProps<{ t: string }>();
       /X\.vue:5:28: an element with no content given a custom directive renders as its content a `textContent` or `innerHTML` among the attributes it merges/,
     ],
     [
+      "an element with no content given a custom directive and a bound innerHTML",
+      `<script setup lang="ts">
+const vFocus = {};
+defineProps<{ t: string }>();
+</script>
+<template><div><b v-focus :innerHTML="t" /></div></template>`,
+      /X\.vue:5:28: an element with no content given a custom directive renders as its content a `textContent` or `innerHTML` among the attributes it merges/,
+    ],
+    [
+      "an element with no content given a custom directive and v-bind of an object spread",
+      `<script setup lang="ts">
+const vFocus = {};
+defineProps<{ o: Record<string, string> }>();
+</script>
+<template><div><b v-focus v-bind="{ ...o }" /></div></template>`,
+      /X\.vue:5:\d+: an element with no content given a custom directive renders as its content a `textContent` or `innerHTML` among the attributes it merges/,
+    ],
+    [
+      "an element with no content given a custom directive and v-bind of a call",
+      `<script setup lang="ts">
+const vFocus = {};
+const props = defineProps<{ t: string }>();
+function pick() {
+  return { title: props.t };
+}
+</script>
+<template><div><b v-focus v-bind="pick()" /></div></template>`,
+      /X\.vue:8:\d+: an element with no content given a custom directive renders as its content a `textContent` or `innerHTML` among the attributes it merges/,
+    ],
+    [
       "an element with no content given a custom directive and an attribute named at run time",
       `<script setup lang="ts">
 const vFocus = {};
@@ -5971,6 +6001,9 @@ defineProps<{ chip: Chip }>();
     "a root element with no content given a custom directive": "FV0425",
     "an element with no content given a custom directive and v-bind of an object": "FV0425",
     "an element with no content given a custom directive and a bound textContent": "FV0425",
+    "an element with no content given a custom directive and a bound innerHTML": "FV0425",
+    "an element with no content given a custom directive and v-bind of an object spread": "FV0425",
+    "an element with no content given a custom directive and v-bind of a call": "FV0425",
     "an element with no content given a custom directive and an attribute named at run time": "FV0425",
     "a constructor called in the template": "FV0624",
     "Number.isNaN of a string, which it does not convert": "FV0718",

@@ -302,6 +302,11 @@ packages/ferrovue/src/template.ts: StringLiteral: "FV0418" => "" in if (callee =
 packages/ferrovue/src/template.ts: StringLiteral: "`<component :is>` renders a closed set of choices" => "" in if (callee === "_ssrRenderVNode") fail(s.comp, "FV0418", "`<component :is>` renders a closed set of choices", st);
 packages/ferrovue/src/template.ts: ConditionalExpression: callee === "_ssrRenderVNode" => false in if (callee === "_ssrRenderVNode") fail(s.comp, "FV0418", "`<component :is>` renders a closed set of choices", st);
 
+# template.ts, `statement`: Vue declares its temporaries (`let _temp0, _temp1`) in a declaration of
+# their own with no initialiser, and gives every other declaration it writes an initialiser, so
+# `some` and `every` agree.
+packages/ferrovue/src/template.ts: MethodExpression: st.declarations.every((d: N) => d.init === null) => st.declarations.some((d: N) => d.init === null) in if (st.type === "VariableDeclaration" && st.declarations.every((d: N) => d.init === null)) return;
+
 # The declarations Vue writes have one declarator each, and initialise it with
 # `_resolveComponent("name")`, `_resolveComponent("name", true)` for this component's own name,
 # `_resolveDirective("name")`, or nothing (`let _temp0`, which reaches FV0513; FV0424 refuses the
