@@ -1,6 +1,10 @@
 * text=auto eol=lf
 
-/.github export-ignore
+/.github/ISSUE_TEMPLATE export-ignore
+/.github/CODEOWNERS export-ignore
+/.github/dependabot.yml export-ignore
+/.github/pull_request_template.md export-ignore
+/.github/zizmor.yml export-ignore
 /site export-ignore
 /fuzz export-ignore
 /.cargo/mutants.toml export-ignore
