@@ -513,6 +513,8 @@ describe("`.length`", () => {
     const out = render("function f(xs: unknown[]) { return xs.length; }", "<p>{{ f([]) }}</p>");
     expect(out).toMatch(like('out.push_str("<p>0</p>");'));
     expect(out).not.toMatch(/= &\[\];/);
+    expect(render("const props = defineProps<{ b: boolean }>();", "<p>{{ b ? [].length : 1 }}</p>")).toMatch(like("fv::push_int(out, if props.b { 0i64 } else { 1i64 });"));
+    expect(render("const props = defineProps<{ xs: string[] }>();", "<p>{{ xs[[].length] }}</p>")).toMatch(like("if let Some(v) = props.xs.first().map(|v| &**v) {"));
   });
 
   it("refuses the length of a number, of a list read by `[…]`, and of entries other than a record's", () => {

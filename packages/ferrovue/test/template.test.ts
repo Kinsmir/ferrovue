@@ -798,6 +798,12 @@ describe("refusals", () => {
     ]);
   });
 
+  it("refuses merged attributes on an SVG element whose tag holds a dash", () => {
+    expect(refusals(sfc("", `<div><svg><color-profile v-foo>x</color-profile></svg></div>`), {}, { clientDirectives: ["foo"] })).toEqual([
+      "FV0006 `ssrRenderAttrs` with a tag argument",
+    ]);
+  });
+
   it("refuses a slot inside a TransitionGroup", () => {
     expect(refusals(sfc("", "<div><TransitionGroup><slot /></TransitionGroup></div>"))).toEqual([
       "FV0006 an expression statement in the compiled template",
