@@ -312,6 +312,9 @@ released together and share version numbers.
   cannot be absent, in text, attributes and `:class`.
 - A component's root `:class="a && b"` left out the attribute where `a` is `undefined`, as
   `mergeProps` does, where it wrote `class=""`.
+- A prop or a field of an interface written with no type (`defineProps<{ tag }>()`,
+  `interface Row { id }`, in the component or in a `.ts` file) is refused with FV0326, a new entry
+  of `ERRORS` in `ferrovue/compiler`, located at the field. The compile stopped with a `TypeError`.
 
 ## [0.10.0] - 2026-10-22
 

@@ -341,6 +341,10 @@ export const ERRORS: {
         readonly title: "Enum of a union named as another type of its module";
         readonly detail: "A union of string literals is a Rust enum named after its `type` alias or `enum`, or, written in place, after its component or interface and field (`size` in `Button.vue` is `ButtonSize`). Another type of the module it is written to, a struct, a slot's types, an enum of another union or one of Rust's own types, has that name. Name the union with a `type` alias of its own, or rename the other type.";
     };
+    readonly FV0326: {
+        readonly title: "Field with no type";
+        readonly detail: "A prop or a field of an interface becomes a Rust field, whose type is translated from its TypeScript type. A field written with no type (`defineProps<{ tag }>()`, `interface Row { id }`) has no Rust type. Give the field a type, as `tag: string`. See [`props`](crate::guide::props).";
+    };
     readonly FV0401: {
         readonly title: "Interpolation of a value that is not a string, a number or a boolean";
         readonly detail: "`{{ }}` writes a string, a number or a boolean, as Vue's `toDisplayString` does for those. A list, an object, a `Record` or a `Date` would be written as Vue's JSON or `String()` of it, which the server does not reproduce; the message names the type. Interpolate a field of it, `.join(\", \")` a list, or format a date with `.toISOString()`.";
