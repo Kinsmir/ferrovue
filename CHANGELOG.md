@@ -242,6 +242,14 @@ released together and share version numbers.
   nested test as vitest 5 matches it. New compiler tests (`attrs.test.ts`) and conformance
   components (`AttrObjects`, `AttrQuirks`) kill the survivors in both modules; `vite.test.ts`
   replaces `process.chdir` with a mocked `process.cwd`, which also runs in worker threads.
+- Tests only: Stryker also mutates `constants.ts`, `dynamic.ts` and `expr.ts`. `pnpm mutants:ts`
+  takes the modules to mutate by name (`pnpm mutants:ts expr`), and holds only those to
+  `stryker-equivalent.txt`; the Mutants workflow runs the five modules in three jobs, each within
+  its two hours. New compiler tests (`constants.test.ts`, `dynamic.test.ts`, `expr.test.ts`,
+  `operators.test.ts`) and the conformance component `ListFallback` kill the survivors. The
+  conformance tests compile the components' date plans when a test first reads them, where they
+  compiled them as the test file loaded, which made Stryker run every test against most mutants
+  of the compiler.
 
 ### Fixed
 
@@ -250,6 +258,15 @@ released together and share version numbers.
   JavaScript. They compared the integers as `i64`, which has no `-0`.
 - A refusal of an attribute bound both alone and in a `v-bind` object, whose later value Vue
   renders, no longer points at the earlier binding.
+- An array literal of object literals given a list of other values (`[{ label: "x" }] as
+  string[]`, a `computed` or function typed `string[]` that returns one, a child's `string[]` prop
+  bound to one) is refused with FV0634. The compiler gave the list its type again each time it read
+  it, and stopped with a stack overflow.
+- `list ?? [...]`, an optional list falling back to an array literal of the same type, is written
+  as `?:` writes it. The Rust ferrovue wrote passed the array where a reference to the list was
+  taken, and did not compile.
+- A list of numbers, booleans or dates that a `?:` or `??` copies is written as `.to_vec()`. It was
+  written as `.iter().copied().collect()`, which clippy's `iter_cloned_collect` lint rejects.
 
 - A child's prop named like a listener (`on1`, `onSale`, `:on-sale`) in props Vue joins with
   `mergeProps` (the child is a component's root, or is given `v-bind` of an object or `v-on` of an

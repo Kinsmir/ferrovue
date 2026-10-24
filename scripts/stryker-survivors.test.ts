@@ -1,5 +1,6 @@
 import { expect, it } from "vitest";
-import { compare, entry, listed, type Mutant, original } from "./stryker-survivors.ts";
+import { modules } from "./stryker-run.ts";
+import { compare, entry, listed, type Mutant, original, restricted } from "./stryker-survivors.ts";
 
 const at = (line: number, column: number, endLine: number, endColumn: number): Mutant["location"] => ({ start: { line, column }, end: { line: endLine, column: endColumn } });
 const mutant = (status: string, location: Mutant["location"], mutatorName = "EqualityOperator", replacement = "a <= b"): Mutant => ({ mutatorName, replacement, status, location });
@@ -41,4 +42,18 @@ it("counts a listed mutant that timed out as using its entry, and never as a sur
   const one = "src/a.ts: EqualityOperator: a < b => a <= b in a < b;";
   expect(compare(report, [one])).toEqual({ unexplained: [], stale: [] });
   expect(compare(report, [])).toEqual({ unexplained: [], stale: [] });
+});
+
+it("holds only the modules a run mutated to the list, and every module when none is named", () => {
+  const report = { files: { "src/a.ts": { source: "", mutants: [] }, "src/b.ts": { source: "", mutants: [] } } };
+  expect(Object.keys(restricted(report, ["src/b.ts"]).files)).toEqual(["src/b.ts"]);
+  expect(restricted(report, [])).toBe(report);
+});
+
+it("names the modules to mutate by path, by file name and without `.ts`", () => {
+  const mutate = ["src/attrs.ts", "src/expr.ts"];
+  expect(modules(mutate, [])).toEqual(mutate);
+  expect(modules(mutate, ["expr", "src/attrs.ts"])).toEqual(["src/expr.ts", "src/attrs.ts"]);
+  expect(modules(mutate, ["attrs.ts"])).toEqual(["src/attrs.ts"]);
+  expect(() => modules(mutate, ["dynamic"])).toThrow("`dynamic` is not among the modules stryker.config.json mutates: name one of attrs, expr");
 });

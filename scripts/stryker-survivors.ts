@@ -90,8 +90,14 @@ function table(report: Report, known: string[]): string {
   return ["| File | Mutants | Killed | Equivalent | Unexplained | Score | Without equivalents |", "|---|---:|---:|---:|---:|---:|---:|", ...rows].join("\n");
 }
 
+/** The report with only the files of `only`: every file when `only` is empty. A run of some modules
+ * also reports the others as an earlier run left them. */
+export function restricted(report: Report, only: string[]): Report {
+  return only.length === 0 ? report : { files: Object.fromEntries(Object.entries(report.files).filter(([file]) => only.includes(file))) };
+}
+
 function main(): void {
-  const report = JSON.parse(readFileSync(REPORT, "utf8")) as Report;
+  const report = restricted(JSON.parse(readFileSync(REPORT, "utf8")) as Report, process.argv.slice(2));
   const known = listed(readFileSync(LIST, "utf8"));
   const { unexplained, stale } = compare(report, known);
   const summary = [
