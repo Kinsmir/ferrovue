@@ -62,6 +62,7 @@ pub mod destructured;
 pub mod digit_groups;
 pub mod divider;
 pub mod dollar_names;
+pub mod empty_arrays;
 pub mod empty_branch;
 pub mod escaped_idioms;
 pub mod escaped_null;
@@ -549,6 +550,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "DollarNames" => {
             let props: dollar_names::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             dollar_names::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "EmptyArrays" => {
+            let props: empty_arrays::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            empty_arrays::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "EmptyBranch" => {
             let props: empty_branch::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

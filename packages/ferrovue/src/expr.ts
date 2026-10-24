@@ -452,6 +452,7 @@ export function expr(s: Scope, n: N): Val {
       }
       return { code: vec !== undefined ? `${atom(vec)}.len() as i64` : `${atom(base.iter)}.count() as i64`, ty: INT };
     }
+    if (untypedEmpty(base)) return numberVal(0, true);
     if (base.ty.k === "list") return { code: `${atom(base.code)}.len() as i64`, ty: INT };
     if (base.ty.k === "str") return { code: `fv::js_length(${strArg(base.code)})`, ty: INT };
   }

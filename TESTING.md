@@ -107,6 +107,7 @@ A fixture is a JSON object of props plus optional keys:
 | `WideChoices` | Integer arithmetic beyond ±2⁶³ chosen by `??`, `?:` and `\|\|`, held in a `computed` and returned by a function, written as JavaScript writes it in text, attributes and a template literal |
 | `DollarNames` | Names holding `$`: a `computed` `$label` beside a `computed` `label`, a prop `price$`, interface fields `$meta`, `$tag` beside `tag` and `count$` read from a prop and from `v-for` items, a function's parameter and `const` named with `$`, and `v-for` items and indexes named with `$` |
 | `Exprs` | `-`, `*`, `%`, comparisons, unary `-`, `Math`, template literals, `?.`, string and list methods (Unicode case mapping included), array literals, ranges, destructured `v-for` items |
+| `EmptyArrays` | The length of an empty array literal, in text, an attribute, a `computed`, a `?:` beside a list prop and `===`, and of `[]` handed to a function's `unknown[]` parameter |
 | `Branches` | `v-if` / `v-else-if` / `v-else`, `!`, `&&` / `\|\|`, `===` / `!==`, `undefined`, narrowing, `<template v-if>` |
 | `Lists` | `v-for` over strings, numbers and objects, index, nesting, `<template v-for>`, empty lists |
 | `Attrs` | Boolean attributes, `:hidden`, empty values, numbers, absent optionals, `data-` / `aria-`, all class shapes |
@@ -235,7 +236,7 @@ when it names a component that is not in `components/` with fixtures of its own.
 | Strings | `Strings`, `Exprs`, `Text`, `StringSearch`, `StringOf`, `DigitGroups` |
 | Dates | `Dates`, `Prices`, `DatePost`, `DateStamp`, `DateFormats`, `DateGuards`, `DateRows`, `DateDays`, `DateReplies`, `DateThread`, `LoadedDates` |
 | Conditions | `Branches`, `Narrowing`, `Nullable`, `TypeofTests`, `AndChains` |
-| Lists | `Lists`, `Arrays`, `Chips`, `Truthy`, `NumberIncludes`, `NarrowedRows`, `Exprs`, `ListAccess`, `ListBuilding`, `ListFallback`, `Flattened` |
+| Lists | `Lists`, `Arrays`, `Chips`, `Truthy`, `NumberIncludes`, `NarrowedRows`, `Exprs`, `ListAccess`, `ListBuilding`, `ListFallback`, `Flattened`, `EmptyArrays` |
 | Dictionaries | `Records`, `Chips`, `Pairs`, `OwnKeys` |
 | Attributes | `Attrs`, `BoundObject`, `Keywords`, `MixedTernary` |
 | `class` | `Attrs`, `BoundObject`, `VnodeClass`, `AsyncClass` |
