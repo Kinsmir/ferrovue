@@ -117,7 +117,7 @@ const CLIENT_DIFFERS = new Set([
   "PlainForward/empty.json",
 ]);
 
-const SELECT_MATCHES_NO_OPTION = ["Constants/hostile.json", "Constants/typical.json", "Form/blank.json", "Form/unknown-option.json"];
+const SELECT_MATCHES_NO_OPTION = ["Constants/hostile.json", "Constants/typical.json", "Form/blank.json", "Form/unknown-option.json", "FormRoot/blank.json", "FormRoot/hostile.json"];
 const ATTRIBUTE_ON_NO_PROPERTY = ["Builtins/hostile.json", "Builtins/off.json", "Builtins/on.json", "Fallthrough/full.json", "Fallthrough/hostile.json", "Fallthrough/off.json"];
 const ASYNC_AND_CLIENT_ONLY = ["EscapedIdioms/empty.json", "EscapedIdioms/hostile.json", "EscapedIdioms/typical.json", "EscapedNull/hostile.json", "EscapedNull/null.json", "EscapedNull/present.json"];
 const STYLE_THE_CLIENT_DROPS = ["Unsanitised/hostile.json", "CssVars/hostile.json"];

@@ -304,10 +304,11 @@ packages/ferrovue/src/template.ts: ConditionalExpression: callee === "_ssrRender
 
 # The declarations Vue writes have one declarator each, and initialise it with
 # `_resolveComponent("name")`, `_resolveComponent("name", true)` for this component's own name,
-# `_resolveDirective("name")`, or nothing (`let _temp0`). Their callees are identifiers and their
-# first arguments string literals; `_resolveDirective` takes one argument. Vue adds `true` exactly
-# for a name `namesSelf` accepts, so the branch before takes every `_resolveComponent` of two
-# arguments.
+# `_resolveDirective("name")`, or nothing (`let _temp0`, which reaches FV0513; FV0424 refuses the
+# `<textarea>` and `<input v-model>` that declare one before this runs). Their callees are
+# identifiers and their first arguments string literals; `_resolveDirective` takes one argument.
+# Vue adds `true` exactly for a name `namesSelf` accepts, so the branch before takes every
+# `_resolveComponent` of two arguments.
 packages/ferrovue/src/template.ts: ConditionalExpression: st.declarations.length === 1 => true in if (st.type === "VariableDeclaration" && st.declarations.length === 1) {
 packages/ferrovue/src/template.ts: ConditionalExpression: init.callee.type === "Identifier" => true in init?.type === "CallExpression" && init.callee.type === "Identifier" &&
 packages/ferrovue/src/template.ts: ConditionalExpression: init.arguments[0]?.type === "StringLiteral" => true in init.callee.name === "_resolveComponent" && init.arguments[0]?.type === "StringLiteral" &&

@@ -759,11 +759,9 @@ describe("refusals", () => {
   });
 
   it("refuses an object bound whole on a textarea", () => {
-    expect(refusals(sfc("", `<textarea v-bind="o"></textarea>`, `const o = { id: "a" };
+    expect(refusals(sfc("", `<div><textarea v-bind="o"></textarea></div>`, `const o = { id: "a" };
 `))).toEqual([
-      "FV0513 a component the template resolves by name, which must be imported, or be this one",
-      "FV0631 `in` tests whether an object has a key, which the server does not translate: for a record, write `Object.keys(r).includes(key)`",
-      "FV0006 `ssrRenderAttrs` with a tag argument",
+      "FV0424 a `<textarea>` given `v-bind` of an object renders as its content a `value` among the attributes it merges: bind each attribute by its name",
     ]);
   });
 

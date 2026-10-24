@@ -337,6 +337,15 @@ released together and share version numbers.
   the pug source as HTML text and wrote it into the page, and rendered nothing for `src`, where
   Vite renders the template. `<template lang="html">` compiles as before. The two codes are new
   entries of `ERRORS` in `ferrovue/compiler`.
+- A `<textarea>`, or an `<input>` with `v-model`, at a component's root is refused with FV0424,
+  located at the element, which says to wrap it in an element. It was refused with two or three
+  errors with no line (FV0513, FV0006, FV0631, FV0407) that did not name the cause: Vue's server
+  renderer reads the `<textarea>`'s content, and the `<input>`'s `type` and `value`, from the
+  attributes passed to the component. FV0424 also refuses such a control given `v-bind` of an
+  object, an attribute named at run time or a custom directive, whose attributes Vue reads the
+  same way. The README's Forms row says so. FV0424 is a new entry of `ERRORS` in
+  `ferrovue/compiler`. The conformance components `FormWrapped` and `FormRoot` record the shapes
+  that compile from Vue.
 
 ## [0.10.0] - 2026-10-22
 

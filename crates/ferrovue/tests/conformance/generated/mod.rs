@@ -79,6 +79,8 @@ pub mod fall_use;
 pub mod fallthrough;
 pub mod flattened;
 pub mod form;
+pub mod form_root;
+pub mod form_wrapped;
 pub mod formatters;
 pub mod forward;
 pub mod frame;
@@ -620,6 +622,14 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Form" => {
             let props: form::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             form::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "FormRoot" => {
+            let props: form_root::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            form_root::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "FormWrapped" => {
+            let props: form_wrapped::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            form_wrapped::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "Formatters" => {
             let props: formatters::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

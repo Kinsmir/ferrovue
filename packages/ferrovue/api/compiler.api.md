@@ -453,6 +453,10 @@ export const ERRORS: {
         readonly title: "`v-show`, or `v-model` on `<select>`, in content rendered from virtual nodes";
         readonly detail: "Inside an element `<component :is>` chooses, in the slot content such an element renders, and inside a `<RouterLink>`, Vue's server renders from virtual nodes, where `v-show` writes no `style` while it shows and `v-model` on a `<select>` marks no option `selected`. Bind `:style` or `:selected` yourself.";
     };
+    readonly FV0424: {
+        readonly title: "`<textarea>` or `<input v-model>` at the root, or given merged attributes";
+        readonly detail: "Vue's server renderer reads a `<textarea>`'s content, and an `<input v-model>`'s `type` and `value`, from the attributes it merges into the element: those passed to the component, when the element is its root, and those of a `v-bind` of an object, an attribute named at run time or a custom directive. The compiler does not translate that reading. Wrap a root `<textarea>` or `<input v-model>` in an element, such as a `<div>`, which then takes the attributes passed to the component, and bind each attribute of the control by its name.";
+    };
     readonly FV0501: {
         readonly title: "Child component that is not among the compiled components";
         readonly detail: "A child component is rendered by calling its generated Rust module, so it must be a `.vue` file in the components directory that ferrovue compiles. A component imported from a library, from `node_modules` or from outside that directory has no module to call. Move the file into the components directory, or render it with a function of your own named under `twins` in `ferrovue.config.json`. See [`errors_and_limits`](crate::guide::errors_and_limits#rust-twins).";
