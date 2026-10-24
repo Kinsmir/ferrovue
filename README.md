@@ -6,6 +6,8 @@
 [![CI](https://github.com/Kinsmir/ferrovue/actions/workflows/ci.yml/badge.svg)](https://github.com/Kinsmir/ferrovue/actions/workflows/ci.yml)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#licence)
 
+Documentation: [docs.rs/ferrovue](https://docs.rs/ferrovue) (API and guide) · [kinsmir.github.io/ferrovue](https://kinsmir.github.io/ferrovue/) (guide and overview)
+
 Vue single-file components compiled to Rust render functions. A Rust server renders a component's
 HTML with no JavaScript runtime, and the browser hydrates that HTML with the same `.vue` file.
 

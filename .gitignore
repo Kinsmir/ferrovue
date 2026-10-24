@@ -12,3 +12,8 @@ dist/
 /fuzz/corpus/
 /fuzz/artifacts/
 /fuzz/coverage/
+
+/site/guide/
+/site/changelog.md
+/site/.generated/
+/site/.vitepress/cache/

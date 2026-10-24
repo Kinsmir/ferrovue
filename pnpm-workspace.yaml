@@ -1,6 +1,7 @@
 packages:
   - packages/ferrovue
   - examples/fullstack
+  - site
 
 catalog:
   vue: "3.5.44"

@@ -25,7 +25,7 @@ export default defineConfig({
         },
       },
     },
-    include: ["packages/*/test/**/*.test.ts", "scripts/**/*.test.ts"],
+    include: ["packages/*/test/**/*.test.ts", "scripts/**/*.test.ts", "site/*.test.ts"],
     css: { include: [/&lang\.module\.css$/], modules: { classNameStrategy: "scoped" } },
     globals: false,
     coverage: {

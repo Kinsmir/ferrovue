@@ -124,6 +124,8 @@ scripts/inspect.ts           Vue's SSR code and render of a component beside the
 scripts/release.ts           the release version bump and the members check (see RELEASING.md)
 scripts/api-report.ts        the npm package's API report, written and checked (`pnpm api:report`, `pnpm api:check`)
 scripts/traceability.test.ts the README's "What a component may use" rows, traced to conformance components in TESTING.md
+site/                        the VitePress site at kinsmir.github.io/ferrovue: `guide.ts` turns the guide, the crate's
+                             front page and the changelog into its pages (`pnpm --filter ferrovue-site build`)
 ```
 
 ## Adding support for a Vue construct
