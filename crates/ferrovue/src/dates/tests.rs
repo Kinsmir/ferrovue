@@ -116,6 +116,16 @@ fn dates_are_javascripts() {
 }
 
 #[test]
+fn a_part_beyond_2_53_ms_brought_back_to_the_last_date_is_refused() {
+    let utc = |date: f64, hours: f64| try_date_utc(1970.0, 0.0, date, hours, 0.0, 0.0, 0.0);
+    assert_eq!(utc(100_000_001.0, 0.0).ok(), Some(8.64e15));
+    assert_eq!(
+        utc(-4_249_991.0, 2_501_999_808.0).unwrap_err().code(),
+        "FV1808"
+    );
+}
+
+#[test]
 fn every_date_writes_the_string_it_reads_back_from() {
     for t in [
         -8.64e15,

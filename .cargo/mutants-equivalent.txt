@@ -66,11 +66,26 @@ crates/ferrovue-router/src/lib.rs: replace > with >= in resolve_relative_path
 # `to_integer` gives −0 for `x - 0.0` where `x + 0.0` gives +0, and every caller compares, clamps or casts it, where the two zeros agree.
 crates/ferrovue/src/strings.rs: replace + with - in to_integer
 
+# `integer` in `Date.UTC` gives −0 for a part in (−1, 0] where `x.trunc() + 0.0` gives +0. Each part is compared, made a term of `time`, or added to `(day - 1) as f64`, an integer that is never −0, so `days` and `t = days + time` are never −0, and `integer(t)` of the integer `t` is the same.
+crates/ferrovue/src/dates.rs: replace + with - in integer
+
+# `v8_day` is called only once `agreed` holds, which keeps the year and the month within the same ranges.
+crates/ferrovue/src/dates.rs: replace && with || in v8_day
+
+# `days_before(y) - days_before(1970)`: the terms `365 * (y + DELTA)` and `365 * (y - DELTA)` both leave `365 * (y - 1970)`.
+crates/ferrovue/src/dates.rs: replace + with - in v8_day
+
+# `largest > EXACT` in `Date.UTC`: each term of `largest` is a multiple of 1000 ms, held exactly by a double below 2⁵⁴, and 2⁵³ is no multiple of 1000, so `largest` is never 2⁵³.
+crates/ferrovue/src/dates.rs: replace > with >= in try_date_utc
+
 # `units` at `whole_end == start` pushes `&s[start..start]`, which is empty.
 crates/ferrovue/src/strings.rs: replace > with >= in units
 
-# `js_repeat` with a zero count or an empty string: past the guard, `length(s) * n` is 0 and `s.repeat(n as usize)` is empty.
-crates/ferrovue/src/strings.rs: replace || with && in js_repeat
+# `try_repeat` with a zero count or an empty string: past the guard, `length(s) * n` is 0 and `s.repeat(n as usize)` is empty.
+crates/ferrovue/src/strings.rs: replace || with && in try_repeat
+
+# `lastIndexOf` with a position beyond `len - searched`: a match starts at a code unit no later than `len - searched`, so the larger bound finds the same last match, and `boundary` beyond the end gives the end of the string.
+crates/ferrovue/src/strings.rs: replace - with + in js_last_index_of_from
 
 # `js_cmp` with one string ASCII: the two first differ where one holds an ASCII character, below every other byte and code unit, so both orders agree.
 crates/ferrovue/src/strings.rs: replace || with && in js_cmp

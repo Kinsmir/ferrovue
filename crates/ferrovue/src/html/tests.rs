@@ -12,6 +12,30 @@ fn label(out: &mut String, p: &Label<'_>) {
     out.push_str("</b>");
 }
 
+fn refuse(out: &mut String, _: &Label<'_>) -> Result<(), Refused> {
+    out.push_str("<b>");
+    crate::try_int(1e20).map(drop)
+}
+
+#[test]
+fn a_fallible_component_returns_its_try_render_s_refusal() {
+    let props = Label { label: "x" };
+    let mut out = String::from("kept");
+    for html in [
+        Html::markup_fallible(&props, label, refuse),
+        Html::island_fallible("Label", &props, label, refuse),
+    ] {
+        assert_eq!(html.try_render_to(&mut out).unwrap_err().code(), "FV0724");
+        assert_eq!(out, "kept");
+    }
+    for html in [
+        Html::markup_owned_fallible(Label { label: "x" }, label, refuse),
+        Html::island_owned_fallible("Label", Label { label: "x" }, label, refuse),
+    ] {
+        assert_eq!(html.try_into_string().unwrap_err().code(), "FV0724");
+    }
+}
+
 #[test]
 fn island_props_cannot_leave_their_attribute() {
     let props = Label {
