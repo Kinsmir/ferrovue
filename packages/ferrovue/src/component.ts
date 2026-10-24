@@ -1,5 +1,6 @@
 import { parse as parseJs } from "@babel/parser";
 import { compileScript, compileTemplate, parse as parseSfc, type SFCBlock, type SFCDescriptor, type SFCScriptBlock } from "@vue/compiler-sfc";
+import { isBuiltInDirective } from "@vue/shared";
 import { SourceMapConsumer } from "source-map-js";
 import { basename } from "node:path";
 import { relativePath } from "./paths.ts";
@@ -17,6 +18,27 @@ function vueErrorNode(err: unknown, within?: { line: number; column: number }): 
   const { line, column } = loc.start;
   const at = !within ? { line, column: column - 1 } : line === 1 ? { line: within.line, column: within.column - 1 + column - 1 } : { line: within.line + line - 1, column: column - 1 };
   return { type: "VueError", loc: { start: at }, __fv: "source" };
+}
+
+function mergedControls(found: { node: N; merged: N }[]): (node: N) => void {
+  return (node) => {
+    if (node.type !== 1 || node.tagType !== 0 || found.length) return;
+    if (node.tag !== "textarea" && !(node.tag === "input" && node.props.some((p: N) => p.type === 7 && p.name === "model"))) return;
+    const merged = node.props.find((p: N) => p.type === 7 && ((p.name === "bind" && !p.arg?.isStatic) || !isBuiltInDirective(p.name)));
+    if (merged) found.push({ node, merged });
+  };
+}
+
+function refuseMergedControl(comp: Component, { node, merged }: { node: N; merged: N }): never {
+  const what = node.tag === "textarea" ? "a `<textarea>`" : "an `<input>` with `v-model`";
+  const reads = node.tag === "textarea" ? "renders as its content a `value` among" : "reads its `type` and `value` from";
+  const at = vueErrorNode({ loc: node.loc }, comp.templateStart);
+  if (merged.name === "bind" && !merged.loc.source) {
+    fail(comp, "FV0424", `${what} at the component's root ${reads} the attributes passed to the component: wrap it in an element, such as a \`<div>\`, which then takes those attributes`, at);
+  }
+  if (merged.name !== "bind") fail(comp, "FV0424", `${what} given the custom directive \`v-${merged.name}\` ${reads} the attributes the directive gives it: put the directive on another element`, at);
+  const by = merged.arg ? "an attribute named at run time" : "`v-bind` of an object";
+  return fail(comp, "FV0424", `${what} given ${by} ${reads} the attributes it merges: bind each attribute by its name`, at);
 }
 
 function inheritAttrs(comp: Component, statements: N[]): boolean {
@@ -319,12 +341,13 @@ export function readComponent(file: string, root: string, name = basename(file, 
     else if (f.ty.of.k === "bool") f.dflt = "false";
   }
 
+  const controls: { node: N; merged: N }[] = [];
   const compiled = compileTemplate({
     source: descriptor.template.content,
     filename: file,
     ...(claim((p) => p.templateOptions?.(comp)) ?? { id: name, scoped: false, slotted: false, ssrCssVars: [], isProd: true }),
     ssr: true,
-    compilerOptions: { ...(script ? { bindingMetadata: script.bindings } : {}), sourceMap: true },
+    compilerOptions: { ...(script ? { bindingMetadata: script.bindings } : {}), sourceMap: true, nodeTransforms: [mergedControls(controls)] },
   });
   const kids = (n: N): N[] => n.children.filter((c: N) => c.type !== 3 && !(c.type === 2 && !c.content.trim()));
   const roots = descriptor.template.ast ? kids(descriptor.template.ast) : [];
@@ -339,6 +362,7 @@ export function readComponent(file: string, root: string, name = basename(file, 
   comp.templateStart = { line: start.line, column: start.column };
   if (compiled.map) comp.templateMap = new SourceMapConsumer(compiled.map);
   if (compiled.errors.length) fail(comp, "FV0005", String(compiled.errors[0]), vueErrorNode(compiled.errors[0], comp.templateStart));
+  if (controls[0]) refuseMergedControl(comp, controls[0]);
   for (const m of compiled.code.matchAll(/_ssrRenderSlot\(_ctx\.\$slots, "([^"]+)"/g)) {
     if (!comp.slotNames.includes(m[1]!)) comp.slotNames.push(m[1]!);
   }

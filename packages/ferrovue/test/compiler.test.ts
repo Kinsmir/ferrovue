@@ -5595,6 +5595,116 @@ defineProps<{ tag: "b" | "i" }>();
 <template src="./x.html"></template>`,
       /X\.vue:4:1: the `<template>` is read from `\.\/x\.html`: write the template inside the `<template>` block of the component/,
     ],
+    [
+      "a root textarea",
+      `<script setup lang="ts">
+const text = defineModel<string>({ required: true });
+const on = defineModel<boolean>("on", { required: true });
+defineProps<{ kind: "text" | "checkbox" }>();
+</script>
+<template><textarea>hi</textarea></template>`,
+      /X\.vue:6:11: a `<textarea>` at the component's root renders as its content a `value` among the attributes passed to the component: wrap it in an element, such as a `<div>`, which then takes those attributes/,
+    ],
+    [
+      "a root textarea with v-model",
+      `<script setup lang="ts">
+const text = defineModel<string>({ required: true });
+const on = defineModel<boolean>("on", { required: true });
+defineProps<{ kind: "text" | "checkbox" }>();
+</script>
+<template><textarea v-model="text"></textarea></template>`,
+      /X\.vue:6:11: a `<textarea>` at the component's root/,
+    ],
+    [
+      "a root textarea in a v-if branch",
+      `<script setup lang="ts">
+const text = defineModel<string>({ required: true });
+const on = defineModel<boolean>("on", { required: true });
+defineProps<{ kind: "text" | "checkbox" }>();
+</script>
+<template><textarea v-if="on">hi</textarea><p v-else>none</p></template>`,
+      /X\.vue:6:11: a `<textarea>` at the component's root/,
+    ],
+    [
+      "a textarea in a root Transition",
+      `<script setup lang="ts">
+const text = defineModel<string>({ required: true });
+const on = defineModel<boolean>("on", { required: true });
+defineProps<{ kind: "text" | "checkbox" }>();
+</script>
+<template><Transition><textarea>hi</textarea></Transition></template>`,
+      /X\.vue:6:23: a `<textarea>` at the component's root/,
+    ],
+    [
+      "a root input with v-model",
+      `<script setup lang="ts">
+const text = defineModel<string>({ required: true });
+const on = defineModel<boolean>("on", { required: true });
+defineProps<{ kind: "text" | "checkbox" }>();
+</script>
+<template><input v-model="text"></template>`,
+      /X\.vue:6:11: an `<input>` with `v-model` at the component's root reads its `type` and `value` from the attributes passed to the component: wrap it in an element/,
+    ],
+    [
+      "a root text input with v-model",
+      `<script setup lang="ts">
+const text = defineModel<string>({ required: true });
+const on = defineModel<boolean>("on", { required: true });
+defineProps<{ kind: "text" | "checkbox" }>();
+</script>
+<template><input type="text" v-model="text"></template>`,
+      /X\.vue:6:11: an `<input>` with `v-model` at the component's root/,
+    ],
+    [
+      "a root checkbox with v-model",
+      `<script setup lang="ts">
+const text = defineModel<string>({ required: true });
+const on = defineModel<boolean>("on", { required: true });
+defineProps<{ kind: "text" | "checkbox" }>();
+</script>
+<template><input type="checkbox" v-model="on"></template>`,
+      /X\.vue:6:11: an `<input>` with `v-model` at the component's root/,
+    ],
+    [
+      "a root input of a bound type with v-model",
+      `<script setup lang="ts">
+const text = defineModel<string>({ required: true });
+const on = defineModel<boolean>("on", { required: true });
+defineProps<{ kind: "text" | "checkbox" }>();
+</script>
+<template><input :type="kind" v-model="text"></template>`,
+      /X\.vue:6:11: an `<input>` with `v-model` at the component's root/,
+    ],
+    [
+      "a textarea given v-bind of an object",
+      `<script setup lang="ts">
+const text = defineModel<string>({ required: true });
+const on = defineModel<boolean>("on", { required: true });
+defineProps<{ kind: "text" | "checkbox" }>();
+</script>
+<template><div><textarea v-bind="{ rows: 2 }">hi</textarea></div></template>`,
+      /X\.vue:6:16: a `<textarea>` given `v-bind` of an object renders as its content a `value` among the attributes it merges: bind each attribute by its name/,
+    ],
+    [
+      "an input with v-model given an attribute named at run time",
+      `<script setup lang="ts">
+const text = defineModel<string>({ required: true });
+const on = defineModel<boolean>("on", { required: true });
+defineProps<{ kind: "text" | "checkbox" }>();
+</script>
+<template><div><input :[kind]="text" v-model="text"></div></template>`,
+      /X\.vue:6:16: an `<input>` with `v-model` given an attribute named at run time reads its `type` and `value` from the attributes it merges: bind each attribute by its name/,
+    ],
+    [
+      "a textarea given a custom directive",
+      `<script setup lang="ts">
+const text = defineModel<string>({ required: true });
+const on = defineModel<boolean>("on", { required: true });
+defineProps<{ kind: "text" | "checkbox" }>();
+</script>
+<template><div><textarea v-focus>hi</textarea></div></template>`,
+      /X\.vue:6:16: a `<textarea>` given the custom directive `v-focus` renders as its content a `value` among the attributes the directive gives it: put the directive on another element/,
+    ],
   ];
 
   const children = {
@@ -5812,6 +5922,17 @@ defineProps<{ chip: Chip }>();
     "a template written in pug": "FV0008",
     "a template in another language than HTML": "FV0008",
     "a template read from another file": "FV0009",
+    "a root textarea": "FV0424",
+    "a root textarea with v-model": "FV0424",
+    "a root textarea in a v-if branch": "FV0424",
+    "a textarea in a root Transition": "FV0424",
+    "a root input with v-model": "FV0424",
+    "a root text input with v-model": "FV0424",
+    "a root checkbox with v-model": "FV0424",
+    "a root input of a bound type with v-model": "FV0424",
+    "a textarea given v-bind of an object": "FV0424",
+    "an input with v-model given an attribute named at run time": "FV0424",
+    "a textarea given a custom directive": "FV0424",
     "a constructor called in the template": "FV0624",
     "Number.isNaN of a string, which it does not convert": "FV0718",
     "Number.isFinite of a date": "FV0718",
