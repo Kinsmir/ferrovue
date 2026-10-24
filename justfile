@@ -27,3 +27,4 @@ generated:
 # Licences, advisories, duplicate crates and sources (deny.toml).
 deny:
     cargo deny check
+    cargo deny --manifest-path fuzz/Cargo.toml --config fuzz/deny.toml check

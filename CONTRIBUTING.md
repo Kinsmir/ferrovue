@@ -15,6 +15,7 @@ pnpm typecheck
 pnpm lint                    # oxlint (type-aware, on TypeScript 7), and fallow for unused files, exports and dependencies
 cargo test --workspace --all-features
 cargo deny check             # licences, advisories, duplicate crates and sources (deny.toml)
+cargo deny --manifest-path fuzz/Cargo.toml --config fuzz/deny.toml check   # the same for the fuzz targets
 pnpm audit                   # advisories in the npm dependencies (pnpm-lock.yaml)
 uvx zizmor .                 # security lint of the workflows, composite actions and Dependabot
 ```
