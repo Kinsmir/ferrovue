@@ -5549,6 +5549,22 @@ function f(words: string[], n: number, maybe?: string[]): string {
 <template><i>{{ f(words, n, maybe) }}</i></template>`,
       /a function's body may not hold a `do…while` loop, which the compiler cannot bound/,
     ],
+    [
+      "a prop named with a leading `$`",
+      `<script setup lang="ts">
+defineProps<{ $label: string; text: string }>();
+</script>
+<template><p>{{ text }}</p></template>`,
+      /the prop `\$label` starts with `\$`, which Vue keeps for its own properties: it leaves the prop out and renders it as an attribute; rename it without the `\$`/,
+    ],
+    [
+      "a defineModel named with a leading `$`",
+      `<script setup lang="ts">
+const value = defineModel<string>("$value", { required: true });
+</script>
+<template><p>{{ value }}</p></template>`,
+      /the prop `\$value` starts with `\$`/,
+    ],
   ];
 
   const children = {
@@ -5639,6 +5655,8 @@ defineProps<{ chip: Chip }>();
     "props of a type imported from a component": "FV0327",
     "props of a type imported from a package": "FV0327",
     "events of a type imported from a package": "FV0327",
+    "a prop named with a leading `$`": "FV0328",
+    "a defineModel named with a leading `$`": "FV0328",
     "a string given to a child's prop of a union": "FV0515",
     "a literal outside a child's prop of a union": "FV0515",
     "a value of a wider union given to a child's prop of a union": "FV0515",

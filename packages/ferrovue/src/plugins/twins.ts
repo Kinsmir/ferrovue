@@ -1,4 +1,4 @@
-import { type Component, type Field, type N, type Scope, type Ty, blankComponent, camelize, fail, GenError, snake } from "../model.ts";
+import { type Component, type Field, type N, type Scope, type Ty, blankComponent, camelize, distinctFields, fail, GenError, snake } from "../model.ts";
 import { CONFIG_FILE, type TwinSpec, tyOfName } from "../context.ts";
 import { coerce, expr, holdsNothing } from "../expr.ts";
 import { bare, strArg } from "../parens.ts";
@@ -30,6 +30,7 @@ function readTwins(specs: Record<string, TwinSpec>): TwinsRun {
       if (!/^[A-Za-z_$][\w$]*$/.test(js)) throw new GenError("FV1111", `${where}: the prop \`${js}\` is named in camelCase`, { file: CONFIG_FILE });
       comp.props.fields.push({ js, rust: snake(js), ty: tyOfName(type) });
     }
+    comp.props.fields = distinctFields(comp.props.fields);
     for (const slot of spec.slots ?? []) {
       if (!/^[A-Za-z_][\w-]*$/.test(slot)) throw new GenError("FV1112", `${where}: the slot \`${slot}\` is not a plain name`, { file: CONFIG_FILE });
       comp.slotNames.push(slot);

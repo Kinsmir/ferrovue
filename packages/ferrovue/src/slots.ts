@@ -1,4 +1,4 @@
-import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, fail, nothing, GenError, rustStr, snake } from "./model.ts";
+import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, distinctFields, fail, nothing, GenError, rustStr, snake } from "./model.ts";
 import { expr } from "./expr.ts";
 import { atom, bare, operand, strArg, UNARY } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
@@ -112,16 +112,20 @@ export function slotOutlet(s: Scope, e: Emitter, c: N): void {
   let args = field;
   let passed = "&()";
   if (slotProps.properties.length) {
-    const fields: Field[] = [];
-    const values: string[] = [];
+    const given: Field[] = [];
+    const values: Val[] = [];
+    const nodes: N[] = [];
     for (const p of slotProps.properties) {
       if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "FV0914", "slot props hold plain names", p);
       const key: string = p.key.name ?? p.key.value;
       if (!/^[A-Za-z_$][\w$]*$/.test(key)) fail(s.comp, "FV0915", `slot prop \`${key}\` is not a plain name; write it in camelCase`, p);
       const v = expr(s, p.value);
-      fields.push({ js: key, rust: snake(key), ty: v.ty });
-      values.push(fieldInit(snake(key), slotFieldValue(s, v, p.value)));
+      given.push({ js: key, rust: snake(key), ty: v.ty });
+      values.push(v);
+      nodes.push(p.value);
     }
+    const fields = distinctFields(given);
+    const inits = fields.map((f, i) => fieldInit(f.rust, slotFieldValue(s, values[i]!, nodes[i])));
     const name = slotTypeName(slotName, "SlotProps");
     const shape: Struct = { name, fields, slot: true };
     const had = s.comp.slotShapes.get(slotName);
@@ -134,7 +138,7 @@ export function slotOutlet(s: Scope, e: Emitter, c: N): void {
       s.comp.structs.set(name, shape);
     }
     fn = "fv::scoped_slot_into";
-    passed = `&${name} { ${values.join(", ")} }`;
+    passed = `&${name} { ${inits.join(", ")} }`;
     args = `${field}, ${passed}`;
   } else if (s.comp.slotShapes.has(slotName)) {
     fail(s.comp, "FV0916", `every ${outlet} passes the same props, of the same types`, c);

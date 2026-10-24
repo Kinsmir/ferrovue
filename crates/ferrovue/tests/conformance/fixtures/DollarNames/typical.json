@@ -1,0 +1,1 @@
+{"title":"Shelf","price$":3,"entry":{"$meta":{"$tag":"new","tag":"book","count$":2},"label":" Atlas "},"rows":[{"$meta":{"$tag":"a","tag":"map","count$":1},"label":"North"},{"$meta":{"$tag":"b","tag":"map","count$":4},"label":"South"}]}

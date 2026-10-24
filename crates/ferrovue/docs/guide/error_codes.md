@@ -444,6 +444,12 @@ Props or events of an imported type.
 
 Vue reads the props of `defineProps<P>()` and the events of `defineEmits<E>()` from the type itself, and the compiler resolves that type when the component declares it. A type imported from another file (`import type { P } from "./p"`), an intersection with one or an interface that extends one is refused. Declare the props in the component, as `defineProps<{ label: string }>()` or an interface of the component; their fields may have types imported from a `.ts` file, as `defineProps<{ row: Row }>()`. See [`props`](crate::guide::props).
 
+## FV0328
+
+Prop named with a leading `$`.
+
+Vue keeps the names that start with `$` for its own properties: it warns that a prop named so is invalid, leaves it out of the component's props and renders what a parent gives it as an attribute. Rename the prop without the leading `$`; a prop may hold `$` later in its name (`price$`), and the fields of its interfaces anywhere.
+
 # Templates and attributes: FV04xx
 
 See [`generated_code`](crate::guide::generated_code).
