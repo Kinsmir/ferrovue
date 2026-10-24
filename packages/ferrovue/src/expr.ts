@@ -900,6 +900,8 @@ function ownedField(comp: Component, base: Val, js: string, n: N): Val {
   const ty = owner === comp ? f.ty : markHome(f.ty, owner.name);
   const place = `${atom(base.code)}.${f.rust}`;
   const lone = base.lone ? { lone: true as const } : {};
+  const def = enumOf(ty);
+  if (def !== undefined) return { code: ty.k === "opt" ? `${place}.map(${enumPath(comp, def)}::as_str)` : `${place}.as_str()`, ty, variant: place };
   if (ty.k === "str") return { code: `&*(${place})`, ty, ...lone };
   if (ty.k === "int" || ty.k === "float" || ty.k === "bool") return { code: place, ty };
   if (ty.k === "struct" || ty.k === "list") return { code: `(${place})`, ty, owned: true, ...lone };

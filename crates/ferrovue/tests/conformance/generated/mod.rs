@@ -110,6 +110,7 @@ pub mod listen_sale;
 pub mod listened;
 pub mod listeners;
 pub mod lists;
+pub mod literal_enum_field;
 pub mod loaded;
 pub mod loaded_comments;
 pub mod loaded_dates;
@@ -780,6 +781,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Lists" => {
             let props: lists::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             lists::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "LiteralEnumField" => {
+            let props: literal_enum_field::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            literal_enum_field::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "Loaded" => {
             let props: loaded::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

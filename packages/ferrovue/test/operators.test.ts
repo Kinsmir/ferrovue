@@ -793,6 +793,22 @@ describe("values built from object literals", () => {
     expect(out).toMatch(like(`super::v::try_render(out, &super::v::Props { item: None, sub: Some(if props.b { (${ITEM_BUILT}).sub } else { super::v::Sub { v: std::borrow::Cow::<str>::Borrowed(&*props.s) } }) })?;`));
   });
 
+  it("reads a field typed as a union of string literals through its `as_str()`, and compares its variants", () => {
+    const script = 'interface R { t: string; e: "a" | "b"; o?: "x" | "y" }\nconst props = defineProps<{ s: string; o?: "x" | "y" }>();\nfunction one(): R { return { t: props.s, e: "a", o: props.o }; }';
+    const built = "(R { t: std::borrow::Cow::<str>::Borrowed(&*props.s), e: RE::A, o: props.o.map(|v| match v { XO::X => RO::X, XO::Y => RO::Y }) })";
+    expect(lines('<p>{{ one().e }}|{{ one().e === "a" }}|{{ one().o ?? "none" }}|{{ one().o === "y" }}</p>', script)).toMatch(like([
+      'out.push_str("<p>");',
+      `fv::escape_into(out, ${built}.e.as_str());`,
+      "out.push('|');",
+      `out.push_str(if ${built}.e == RE::A { "true" } else { "false" });`,
+      "out.push('|');",
+      `fv::escape_into(out, ${built}.o.map(RO::as_str).unwrap_or("none"));`,
+      "out.push('|');",
+      `out.push_str(if ${built}.o == Some(RO::Y) { "true" } else { "false" });`,
+      'out.push_str("</p>");',
+    ].join("\n"), true));
+  });
+
   it("refuses a date read from a built value", () => {
     const script = "interface R { t: string; at: Date }\nconst props = defineProps<{ s: string; r: R }>();\nfunction one(): R { return { t: props.s, at: props.r.at }; }";
     expect(refusals(script, "<p>{{ one().at.getTime() }}</p>")).toEqual([
