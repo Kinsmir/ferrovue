@@ -120,6 +120,18 @@ export interface ReleaseFiles {
   fuzzLock?: string;
 }
 
+/** `lock` with each path package named in `names` locked at `version`, the others as they were. */
+export function setLockedVersions(lock: string, names: string[], version: string): string {
+  return lock
+    .split("[[package]]")
+    .map((block, i) => {
+      const name = /^name = "([^"]+)"$/m.exec(block)?.[1];
+      if (i === 0 || !name || !names.includes(name) || /^source = /m.test(block)) return block;
+      return block.replace(/^version = "[^"]+"$/m, `version = "${version}"`);
+    })
+    .join("[[package]]");
+}
+
 /** The version a `Cargo.lock` locks each package at. */
 export function lockedVersions(lock: string): Map<string, string> {
   const versions = new Map<string, string>();
@@ -242,7 +254,7 @@ function setVersion(files: ReleaseFiles, version: string): void {
   writeFileSync(CARGO, setCargoVersion(files.cargo, version));
   writeFileSync(PACKAGE, setPackageVersion(files.pkg, version));
   run("cargo", ["update", "--workspace", "--offline"]);
-  if (existsSync(FUZZ_LOCK)) run("cargo", ["update", "--manifest-path", "fuzz/Cargo.toml", "--workspace", "--offline"]);
+  if (existsSync(FUZZ_LOCK)) writeFileSync(FUZZ_LOCK, setLockedVersions(readFileSync(FUZZ_LOCK, "utf8"), CRATES, version));
 }
 
 function main(argv: string[]): number {
