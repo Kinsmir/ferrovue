@@ -209,7 +209,12 @@ function memberProblems(): string[] {
       .filter((m) => existsSync(join(ROOT, m, "Cargo.toml")))
       .flatMap((m) => checkInheritedDependencies(`${m}/Cargo.toml`, readFileSync(join(ROOT, m, "Cargo.toml"), "utf8"))),
     ...(existsSync(join(ROOT, "fuzz/Cargo.toml")) ? checkInheritedDependencies("fuzz/Cargo.toml", readFileSync(join(ROOT, "fuzz/Cargo.toml"), "utf8")) : []),
-    ...checkMembers("pnpm-workspace.yaml", workspaceMembers(readFileSync(join(ROOT, "pnpm-workspace.yaml"), "utf8"), "pnpm"), withManifest("package.json")),
+    ...checkMembers("pnpm-workspace.yaml", workspaceMembers(readFileSync(join(ROOT, "pnpm-workspace.yaml"), "utf8"), "pnpm"), [
+      ...withManifest("package.json"),
+      ...readdirSync(ROOT, { withFileTypes: true })
+        .filter((d) => d.isDirectory() && d.name !== "node_modules" && existsSync(join(ROOT, d.name, "package.json")))
+        .map((d) => d.name),
+    ]),
   ];
 }
 

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://kinsmir.github.io/ferrovue/sitemap.xml

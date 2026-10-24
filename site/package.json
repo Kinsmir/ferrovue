@@ -1,0 +1,13 @@
+{
+  "name": "ferrovue-site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "node generate.ts",
+    "build": "node generate.ts && vitepress build"
+  },
+  "devDependencies": {
+    "vitepress": "2.0.0-alpha.20",
+    "vue": "catalog:"
+  }
+}

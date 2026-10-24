@@ -270,6 +270,14 @@ released together and share version numbers.
   compiled them as the test file loaded, which made Stryker run every test against most mutants
   of the compiler.
 
+- Documentation: a site at <https://kinsmir.github.io/ferrovue/>, built with VitePress from the
+  private workspace package `site/`: a landing page, the guide and the crate's front page generated
+  at build time from `crates/ferrovue/docs/` in the order `guide.rs` lists them, with rustdoc's
+  hidden doctest lines left out and intra-doc links pointing at the site's pages and at docs.rs for
+  the API, and the changelog. Each page has its title, description, canonical link and Open Graph
+  tags, and the site a sitemap and a robots.txt. The Pages workflow builds it in pull requests that
+  touch it and deploys it from `main`. The README links it after docs.rs.
+
 ### Fixed
 
 - `Math.max()` and `Math.min()` of integers keep a `-0` that integer arithmetic gives
