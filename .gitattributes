@@ -1,1 +1,19 @@
 * text=auto eol=lf
+
+/.github export-ignore
+/site export-ignore
+/fuzz export-ignore
+/.cargo/mutants.toml export-ignore
+/.cargo/mutants-equivalent.txt export-ignore
+/stryker.config.json export-ignore
+/stryker-equivalent.txt export-ignore
+/scripts/stryker-*.ts export-ignore
+/AGENTS.md export-ignore
+
+**/generated/** linguist-generated
+crates/*/tests/vectors/** linguist-generated
+crates/ferrovue/tests/conformance/fixtures/**/*.html linguist-generated
+examples/fullstack/fixtures/**/*.html linguist-generated
+crates/ferrovue/docs/guide/error_codes.md linguist-generated
+packages/ferrovue/api/*.api.md linguist-generated
+packages/ferrovue/schema.json linguist-generated
