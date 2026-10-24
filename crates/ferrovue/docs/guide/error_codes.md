@@ -54,6 +54,18 @@ Component file name that gives no Rust module of its own.
 
 Each component is written to a Rust module named after its file in snake case (`UserCard.vue` is `user_card.rs`). A file name that is not letters, digits and `_` starting with a letter, two names with the same snake case (`FooBar.vue` and `Foo_bar.vue`), `Mod.vue`, and a name a module ferrovue writes for the project already has (`Types.vue`, `Stores.vue`) are refused.
 
+## FV0008
+
+`<template>` in another language than HTML.
+
+The compiler reads the `<template>` as HTML. A `<template lang="pug">`, or any `lang` other than `html`, is refused: Vite runs it through its preprocessor first. Write the template in HTML.
+
+## FV0009
+
+`<template>` read from another file.
+
+The compiler reads the template written inside the component's `<template>` block. A `<template src="./x.html">` is refused: Vite reads the template from that file. Move the file's markup into the `<template>` block.
+
 # Script setup: FV01xx
 
 ## FV0101

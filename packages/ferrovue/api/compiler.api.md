@@ -93,6 +93,14 @@ export const ERRORS: {
         readonly title: "Component file name that gives no Rust module of its own";
         readonly detail: "Each component is written to a Rust module named after its file in snake case (`UserCard.vue` is `user_card.rs`). A file name that is not letters, digits and `_` starting with a letter, two names with the same snake case (`FooBar.vue` and `Foo_bar.vue`), `Mod.vue`, and a name a module ferrovue writes for the project already has (`Types.vue`, `Stores.vue`) are refused.";
     };
+    readonly FV0008: {
+        readonly title: "`<template>` in another language than HTML";
+        readonly detail: "The compiler reads the `<template>` as HTML. A `<template lang=\"pug\">`, or any `lang` other than `html`, is refused: Vite runs it through its preprocessor first. Write the template in HTML.";
+    };
+    readonly FV0009: {
+        readonly title: "`<template>` read from another file";
+        readonly detail: "The compiler reads the template written inside the component's `<template>` block. A `<template src=\"./x.html\">` is refused: Vite reads the template from that file. Move the file's markup into the `<template>` block.";
+    };
     readonly FV0101: {
         readonly title: "`inheritAttrs` that is not `true` or `false`";
         readonly detail: "The compiler decides when compiling whether attributes a parent passes fall through to the root, so `inheritAttrs` in `defineOptions({ … })` or `export default { … }` is the literal `true` or `false`. A value from a variable or an expression is refused.";

@@ -204,6 +204,8 @@ export function readComponent(file: string, root: string, name = basename(file, 
   if (errors.length) fail(comp, "FV0002", String(errors[0]).replaceAll(file, rel), vueErrorNode(errors[0]) ?? sourceAt(source, 0));
   if (descriptor.script && !descriptor.scriptSetup) return { comp, ast: [], ssr: "", optionsApi: blockAt(source, descriptor.script) };
   if (!descriptor.template) fail(comp, "FV0004", "a component needs a `<template>`: a render function is not translated", sourceAt(source, 0));
+  if (descriptor.template.src) fail(comp, "FV0009", `the \`<template>\` is read from \`${descriptor.template.src}\`: write the template inside the \`<template>\` block of the component`, blockAt(source, descriptor.template));
+  if (descriptor.template.lang && descriptor.template.lang !== "html") fail(comp, "FV0008", `the \`<template>\` is written in \`${descriptor.template.lang}\`: write it in HTML, with no \`lang\` or \`lang="html"\``, blockAt(source, descriptor.template));
   comp.cssVarsAt = cssVarsAt(source, descriptor);
   for (const p of ctx.plugins) p.sfc?.(comp, descriptor, file, source);
 
