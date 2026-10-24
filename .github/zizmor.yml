@@ -5,7 +5,7 @@ rules:
   adhoc-packages:
     ignore:
       # The package job installs the packed tarball with npm, as a user does, which no lockfile describes.
-      - ci.yml:382
+      - ci.yml:486
       # The release pins the npm it publishes with to an exact version.
-      - release-dry-run.yml:66
+      - release-dry-run.yml:68
       - release.yml:101

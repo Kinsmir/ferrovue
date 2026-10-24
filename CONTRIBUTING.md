@@ -260,12 +260,14 @@ CHANGELOG's `### Deprecated` subsection, and what it removes under `### Removed`
 - Keep a pull request to one change; the template's checklist covers what CI cannot.
 - Commit messages are short and say what changed (`compiler: support v-show on the root`), with
   detail in the body when the why is not obvious.
-- CI must be green: tests on Node 22.23.4, 22, 24 and 26 and on stable Rust and the declared minimum,
-  `pnpm lint`, clippy and rustfmt, docs, the example, hydration in real browsers
+- CI must be green. A pull request runs the jobs the paths it changes reach (the `changes` job in
+  `ci.yml`), on Node 22.23.4 and 26; `main`, the release branch, tags and the weekly run cover every
+  Node version and OS. In all: tests on Node 22.23.4, 22, 24 and 26 and on stable Rust and the
+  declared minimum, `pnpm lint`, clippy and rustfmt, docs, the example, hydration in real browsers
   (`pnpm test:browser`), both packages packing cleanly, `cargo deny` on the dependencies' licences,
-  bans and sources, and zizmor on the workflows (any finding fails it, and `.github/zizmor.yml` lists
-  the ones ignored with their reasons). A new RustSec advisory shows in the run without failing a
-  pull request; it does fail a release.
+  bans and sources, and zizmor on the workflows (any finding fails it, and `.github/zizmor.yml`
+  lists the ones ignored with their reasons). A new RustSec advisory shows in the run without
+  failing a pull request; it does fail a release.
   `pnpm audit` follows the same rule for an advisory that reaches the npm package's dependencies or
   peers, and lists one in development tooling only as a warning; the job's summary lists every
   advisory with its paths. An advisory the maintainer has judged harmless goes under

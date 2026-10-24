@@ -6,6 +6,8 @@ on:
   pull_request:
   workflow_dispatch:
   workflow_call:
+  schedule:
+    - cron: "7 2 * * 6"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -18,14 +20,96 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  changes:
+    name: Changed paths
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      wide: ${{ steps.paths.outputs.wide }}
+      node: ${{ steps.paths.outputs.node }}
+      ts: ${{ steps.paths.outputs.ts }}
+      rust: ${{ steps.paths.outputs.rust }}
+      lint: ${{ steps.paths.outputs.lint }}
+      package: ${{ steps.paths.outputs.package }}
+      platform: ${{ steps.paths.outputs.platform }}
+      perf: ${{ steps.paths.outputs.perf }}
+      docs: ${{ steps.paths.outputs.docs }}
+      hydration: ${{ steps.paths.outputs.hydration }}
+      deps: ${{ steps.paths.outputs.deps }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - id: paths
+        env:
+          EVENT: ${{ github.event_name }}
+          HEAD_REF: ${{ github.head_ref }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        run: |
+          flags=(ts rust lint package platform perf docs hydration deps)
+          declare -A on=()
+          all() { for flag in "${flags[@]}"; do on[$flag]=1; done; }
+          wide=false
+          base=
+          case "$EVENT" in
+            pull_request) base=$PR_BASE; [[ "$HEAD_REF" == release/* ]] && wide=true && all ;;
+            push) wide=true; base=$PUSH_BEFORE; [[ "$base" =~ ^0+$ ]] && all ;;
+            *) wide=true; all ;;
+          esac
+          if [[ -n "$base" && ${#on[@]} -eq 0 ]]; then
+            while IFS= read -r path; do
+              case "$path" in
+                .github/workflows/ci.yml | .github/actions/*) all ;;
+                .github/* | crates/*/src/* | crates/*/benches/* | fuzz/* | .cargo/* | deny.toml | rust-toolchain.toml) ;;
+                *) on[ts]=1 ;;
+              esac
+              case "$path" in
+                crates/* | examples/* | fuzz/* | Cargo.toml | Cargo.lock | rust-toolchain.toml | .cargo/*) on[rust]=1 ;;
+              esac
+              case "$path" in
+                packages/* | scripts/* | site/* | *.ts | *.json | *.jsonc | pnpm-*.yaml | Cargo.toml | crates/*/Cargo.toml | examples/*/Cargo.toml) on[lint]=1 ;;
+              esac
+              case "$path" in
+                packages/ferrovue/* | crates/*/src/* | crates/*/Cargo.toml | Cargo.toml | Cargo.lock | pnpm-lock.yaml | README.md | LICENSE-*) on[package]=1 ;;
+              esac
+              case "$path" in
+                packages/ferrovue/src/* | packages/ferrovue/package.json | scripts/* | pnpm-lock.yaml | pnpm-workspace.yaml | package.json | .node-version) on[platform]=1 ;;
+              esac
+              case "$path" in
+                packages/ferrovue/src/* | packages/ferrovue/bench/* | crates/*/src/* | crates/ferrovue/benches/* | scripts/instructions.ts | scripts/build-budget.ts | Cargo.lock) on[perf]=1 ;;
+              esac
+              case "$path" in
+                crates/*/src/* | crates/ferrovue/docs/* | crates/*/Cargo.toml | Cargo.toml) on[docs]=1 ;;
+              esac
+              case "$path" in
+                packages/ferrovue/src/* | packages/ferrovue/browser/* | crates/ferrovue/tests/conformance/* | crates/*/src/* | examples/fullstack/* | pnpm-lock.yaml | pnpm-workspace.yaml | packages/ferrovue/package.json) on[hydration]=1 ;;
+              esac
+              case "$path" in
+                */Cargo.toml | Cargo.toml | Cargo.lock | fuzz/Cargo.lock | */package.json | package.json | pnpm-lock.yaml | pnpm-workspace.yaml | patches/* | deny.toml | fuzz/deny.toml) on[deps]=1 ;;
+              esac
+            done < <(git diff --name-only "$base" HEAD)
+          fi
+          if [[ "$wide" == true ]]; then node='["22.23.4", 22, 24, 26]'; else node='["22.23.4", 26]'; fi
+          {
+            echo "wide=$wide"
+            echo "node=$node"
+            for flag in "${flags[@]}"; do
+              if [[ -n "${on[$flag]:-}" ]]; then echo "$flag=true"; else echo "$flag=false"; fi
+            done
+          } | tee -a "$GITHUB_OUTPUT"
+
   typescript:
     name: TypeScript (Node ${{ matrix.node }})
+    needs: changes
+    if: needs.changes.outputs.ts == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        node: ["22.23.4", 22, 24, 26]
+        node: ${{ fromJSON(needs.changes.outputs.node) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -49,6 +133,8 @@ jobs:
 
   typescript-os:
     name: TypeScript (${{ matrix.os }})
+    needs: changes
+    if: needs.changes.outputs.platform == 'true' || (needs.changes.outputs.wide == 'true' && needs.changes.outputs.ts == 'true')
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
@@ -72,6 +158,8 @@ jobs:
 
   lint:
     name: Lint (oxlint, fallow)
+    needs: changes
+    if: needs.changes.outputs.lint == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -87,6 +175,8 @@ jobs:
 
   deny:
     name: Dependencies (cargo-deny ${{ matrix.checks }})
+    needs: changes
+    if: needs.changes.outputs.deps == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -111,6 +201,8 @@ jobs:
 
   audit:
     name: Dependencies (pnpm audit)
+    needs: changes
+    if: needs.changes.outputs.deps == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -184,6 +276,8 @@ jobs:
 
   rust:
     name: Rust (${{ matrix.toolchain }})
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -228,6 +322,8 @@ jobs:
 
   docs-rs:
     name: Docs build as docs.rs builds them (nightly)
+    needs: changes
+    if: needs.changes.outputs.docs == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -246,6 +342,8 @@ jobs:
 
   examples:
     name: Example renders
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -262,6 +360,8 @@ jobs:
 
   fullstack:
     name: Full-stack example hydrates
+    needs: changes
+    if: needs.changes.outputs.hydration == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -298,6 +398,8 @@ jobs:
 
   browser:
     name: Hydrates in real browsers
+    needs: changes
+    if: needs.changes.outputs.hydration == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
@@ -348,6 +450,8 @@ jobs:
 
   package:
     name: Packages publish cleanly
+    needs: changes
+    if: needs.changes.outputs.package == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -385,6 +489,8 @@ jobs:
 
   bench:
     name: Benchmarks run (quick)
+    needs: changes
+    if: needs.changes.outputs.perf == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -404,6 +510,8 @@ jobs:
 
   instructions:
     name: Instruction counts (5% budget)
+    needs: changes
+    if: needs.changes.outputs.perf == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -444,6 +552,8 @@ jobs:
 
   build-budget:
     name: Build-time budgets (500 components)
+    needs: changes
+    if: needs.changes.outputs.perf == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -460,13 +570,15 @@ jobs:
   passed:
     name: CI passed
     if: always()
-    needs: [typescript, typescript-os, lint, deny, audit, zizmor, rust, docs-rs, examples, fullstack, browser, package, bench, instructions, build-budget]
+    needs: [changes, typescript, typescript-os, lint, deny, audit, zizmor, rust, docs-rs, examples, fullstack, browser, package, bench, instructions, build-budget]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Every job passed
         env:
           RESULTS: ${{ join(needs.*.result, ' ') }}
+          CHANGES: ${{ needs.changes.result }}
         run: |
           echo "$RESULTS"
-          for result in $RESULTS; do [[ "$result" == success ]] || exit 1; done
+          [[ "$CHANGES" == success ]] || exit 1
+          for result in $RESULTS; do [[ "$result" == success || "$result" == skipped ]] || exit 1; done
