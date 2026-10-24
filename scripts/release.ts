@@ -8,6 +8,7 @@ const CARGO = join(ROOT, "Cargo.toml");
 const PACKAGE = join(ROOT, "packages/ferrovue/package.json");
 const CHANGELOG = join(ROOT, "CHANGELOG.md");
 const CRATES_DIR = join(ROOT, "crates");
+const FUZZ_LOCK = join(ROOT, "fuzz/Cargo.lock");
 
 export const CRATES = ["ferrovue-core", "ferrovue-router", "ferrovue-i18n", "ferrovue"];
 
@@ -116,6 +117,30 @@ export interface ReleaseFiles {
   pkg: string;
   changelog: string;
   crates?: Record<string, string>;
+  fuzzLock?: string;
+}
+
+/** `lock` with each path package named in `names` locked at `version`, the others as they were. */
+export function setLockedVersions(lock: string, names: string[], version: string): string {
+  return lock
+    .split("[[package]]")
+    .map((block, i) => {
+      const name = /^name = "([^"]+)"$/m.exec(block)?.[1];
+      if (i === 0 || !name || !names.includes(name) || /^source = /m.test(block)) return block;
+      return block.replace(/^version = "[^"]+"$/m, `version = "${version}"`);
+    })
+    .join("[[package]]");
+}
+
+/** The version a `Cargo.lock` locks each package at. */
+export function lockedVersions(lock: string): Map<string, string> {
+  const versions = new Map<string, string>();
+  for (const block of lock.split("[[package]]").slice(1)) {
+    const name = /^name = "([^"]+)"$/m.exec(block)?.[1];
+    const version = /^version = "([^"]+)"$/m.exec(block)?.[1];
+    if (name && version) versions.set(name, version);
+  }
+  return versions;
 }
 
 export function checkRelease(tag: string, files: ReleaseFiles): string[] {
@@ -137,6 +162,13 @@ export function checkRelease(tag: string, files: ReleaseFiles): string[] {
     for (const name of CRATES) if (!(name in files.crates)) problems.push(`CRATES names ${name}, which crates/ does not hold`);
   }
   if (pkg !== version) problems.push(`packages/ferrovue/package.json is at ${pkg}, the tag at ${version}`);
+  if (files.fuzzLock !== undefined) {
+    for (const [name, locked] of lockedVersions(files.fuzzLock)) {
+      if (CRATES.includes(name) && locked !== version) {
+        problems.push(`fuzz/Cargo.lock locks ${name} at ${locked}, the tag at ${version}: \`release.ts bump\` updates it`);
+      }
+    }
+  }
   const notes = changelogNotes(files.changelog, version);
   if (!notes) problems.push(`CHANGELOG.md has no notes for ${version}`);
   else problems.push(...sectionProblems(notes, version));
@@ -227,6 +259,7 @@ function setVersion(files: ReleaseFiles, version: string): void {
   writeFileSync(CARGO, setCargoVersion(files.cargo, version));
   writeFileSync(PACKAGE, setPackageVersion(files.pkg, version));
   run("cargo", ["update", "--workspace", "--offline"]);
+  if (existsSync(FUZZ_LOCK)) writeFileSync(FUZZ_LOCK, setLockedVersions(readFileSync(FUZZ_LOCK, "utf8"), CRATES, version));
 }
 
 function main(argv: string[]): number {
@@ -240,6 +273,7 @@ function main(argv: string[]): number {
         .filter((d) => d.isDirectory())
         .map((d) => [d.name, readFileSync(join(CRATES_DIR, d.name, "Cargo.toml"), "utf8")]),
     ),
+    ...(existsSync(FUZZ_LOCK) ? { fuzzLock: readFileSync(FUZZ_LOCK, "utf8") } : {}),
   });
   switch (command) {
     case "bump": {

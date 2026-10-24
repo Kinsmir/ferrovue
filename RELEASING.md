@@ -49,9 +49,9 @@ becomes public until a maintainer approves it, once on each registry.
 
    This sets the version in `Cargo.toml` (the workspace's version, which every crate takes, and
    the `=0.2.0` the crates require one another at) and `packages/ferrovue/package.json`, updates
-   `Cargo.lock`, moves the changelog notes under `## [0.2.0] - <today>`, points the changelog's
-   `[Unreleased]` link at `v0.2.0...HEAD` and adds a `[0.2.0]` link comparing with the tag before
-   it, and opens a
+   `Cargo.lock` and `fuzz/Cargo.lock`, moves the changelog notes under `## [0.2.0] - <today>`,
+   points the changelog's `[Unreleased]` link at `v0.2.0...HEAD` and adds a `[0.2.0]` link
+   comparing with the tag before it, and opens a
    `release/v0.2.0` pull request. Without `--pr` it only edits the files.
 5. When CI is green, merge it, then tag the merge commit and push the tag:
 

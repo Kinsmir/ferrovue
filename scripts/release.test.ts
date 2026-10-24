@@ -5,6 +5,8 @@ import {
   cargoVersion,
   changelogNotes,
   checkRelease,
+  lockedVersions,
+  setLockedVersions,
   isPrerelease,
   isVersion,
   packageVersion,
@@ -125,6 +127,21 @@ describe("release chores", () => {
     expect(checkRelease("v0.1.0", files)).toEqual([]);
     const unlinked = { ...files, changelog: linked.replace(/^\[0\.1\.0\]: .*\n/m, "") };
     expect(checkRelease("v0.1.0", unlinked).join("\n")).toMatch(/no link for 0\.1\.0/);
+  });
+
+  it("checks the versions fuzz/Cargo.lock locks the crates at", () => {
+    const lock = (v: string): string => `version = 4\n\n[[package]]\nname = "ferrovue"\nversion = "${v}"\n\n[[package]]\nname = "ferrovue-core"\nversion = "${v}"\n\n[[package]]\nname = "serde"\nversion = "1.0.229"\n`;
+    expect(lockedVersions(lock("0.1.0")).get("ferrovue-core")).toBe("0.1.0");
+    const moved = lockedVersions(setLockedVersions(lock("0.1.0"), ["ferrovue", "ferrovue-core"], "0.2.0"));
+    expect([moved.get("ferrovue"), moved.get("ferrovue-core"), moved.get("serde")]).toEqual(["0.2.0", "0.2.0", "1.0.229"]);
+    const registry = `[[package]]\nname = "ferrovue"\nversion = "0.1.0"\nsource = "registry+https://github.com/rust-lang/crates.io-index"\n`;
+    expect(setLockedVersions(registry, ["ferrovue"], "0.2.0")).toBe(registry);
+    const files = { cargo: CARGO, pkg: PKG, changelog: CHANGELOG, crates: CRATE_MANIFESTS };
+    expect(checkRelease("v0.1.0", { ...files, fuzzLock: lock("0.1.0") })).toEqual([]);
+    expect(checkRelease("v0.1.0", { ...files, fuzzLock: lock("0.0.9") })).toEqual([
+      "fuzz/Cargo.lock locks ferrovue at 0.0.9, the tag at 0.1.0: `release.ts bump` updates it",
+      "fuzz/Cargo.lock locks ferrovue-core at 0.0.9, the tag at 0.1.0: `release.ts bump` updates it",
+    ]);
   });
 
   it("checks a tag against every manifest and the changelog", () => {
