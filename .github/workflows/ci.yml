@@ -99,12 +99,12 @@ jobs:
           persist-credentials: false
       - uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8 # v2.87.28
         with:
-          tool: cargo-deny
+          tool: cargo-deny@0.20.2
       - run: cargo deny check $CHECKS
         continue-on-error: ${{ matrix.checks == 'advisories' && !startsWith(github.ref, 'refs/tags/') }}
         env:
           CHECKS: ${{ matrix.checks }}
-      - run: cargo deny --manifest-path fuzz/Cargo.toml --config deny.toml check $CHECKS
+      - run: cargo deny --manifest-path fuzz/Cargo.toml --config fuzz/deny.toml check $CHECKS
         continue-on-error: ${{ matrix.checks == 'advisories' && !startsWith(github.ref, 'refs/tags/') }}
         env:
           CHECKS: ${{ matrix.checks }}

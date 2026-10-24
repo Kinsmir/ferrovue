@@ -145,6 +145,9 @@ released together and share version numbers.
 
 ### Changed
 
+- CI only: the fuzz targets' dependencies are checked against `fuzz/deny.toml`, which holds their
+  own licence exception, so neither `cargo deny` run warns about an entry the other one needs; CI
+  runs cargo-deny 0.20.2, where it ran the newest release; `just deny` checks both workspaces.
 - Development only: the source archives (`git archive`, and the source zip and tarball of a GitHub
   release) leave out the GitHub templates and settings, the fuzz targets, the mutation-testing
   configuration, the site and AGENTS.md. They keep `.github/actions` and `.github/workflows`,
