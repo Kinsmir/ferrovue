@@ -315,6 +315,13 @@ released together and share version numbers.
 - A prop or a field of an interface written with no type (`defineProps<{ tag }>()`,
   `interface Row { id }`, in the component or in a `.ts` file) is refused with FV0326, a new entry
   of `ERRORS` in `ferrovue/compiler`, located at the field. The compile stopped with a `TypeError`.
+- `defineProps<P>()` and `defineEmits<E>()` of a type imported from another file (a `.ts` file, a
+  component or a package), directly, in an intersection, through a local alias or as the base an
+  interface extends, are refused with FV0327, a new entry of `ERRORS` in `ferrovue/compiler`,
+  located where the type is named. The compile stopped with Vue's "No fs option provided to
+  `compileScript`" error and no FV code. Declare the props in the component, as
+  `defineProps<{ row: Row }>()` or an interface of the component, whose fields may have imported
+  types.
 
 ## [0.10.0] - 2026-10-22
 

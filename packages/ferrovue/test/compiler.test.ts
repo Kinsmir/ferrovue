@@ -2496,6 +2496,39 @@ defineProps<{ cats: Cat[] }>();
       expect(compile(cats("interface Cat { id: string; note }", `<b v-for="c in cats">{{ c.id }}</b>`)).get("x.rs")).toContain("pub struct Cat<'a>");
       expect(compile(cats("", "<component :is=\"tag\" />", "defineProps<{ tag: \"h1\" | \"h2\" }>();")).get("x.rs")).toContain("pub fn render");
     });
+
+    it("refuses props or events of a type imported from another file where the macro reads it, and compiles the forms that declare them", () => {
+      const caught = (project: string): unknown => {
+        try {
+          compile(project);
+        } catch (e) {
+          return e;
+        }
+        return undefined;
+      };
+      const lib = "export interface Cat { id: string }\nexport type Pick = { id?: string };\nexport interface Events { (e: \"save\"): void }\n";
+      const imported = (declared: string, setup: string) => withFile(cats(`import type { Cat, Pick, Events } from "./lib";\n${declared}`, "<p>x</p>", setup), "lib.ts", lib);
+      const refusedAt = [
+        ["", "defineProps<Cat>();", 5, 13, "Cat"],
+        ["", 'withDefaults(defineProps<Pick>(), { id: "a" });', 5, 26, "Pick"],
+        ["", "defineProps<Cat & { n: number }>();", 5, 13, "Cat"],
+        ["interface Props extends Cat { n: number }", "defineProps<Props>();", 4, 25, "Cat"],
+        ["type Props = Partial<Cat>;", "defineProps<Props>();", 4, 22, "Cat"],
+        ["", "defineProps<{ n: number }>();\ndefineEmits<Events>();", 6, 13, "Events"],
+      ] as const;
+      for (const [declared, setup, line, column, name] of refusedAt) {
+        const e = caught(imported(declared, setup));
+        expect(e, setup).toBeInstanceOf(GenError);
+        expect(e, setup).toMatchObject({ code: "FV0327", at: { file: "components/X.vue", line, column }, message: expect.stringContaining(`\`${name}\`, imported from \`./lib\``) });
+      }
+      for (const [declared, setup] of [
+        ["", "defineProps<{ cat: Cat; pick?: Pick }>();"],
+        ["interface Props { cat: Cat }", "defineProps<Props>();"],
+        ["", "const cat = defineModel<Cat>({ required: true });"],
+      ]) {
+        expect(compile(imported(declared!, setup!)).get("x.rs"), setup).toContain("pub fn render");
+      }
+    });
   });
 
   const refused: [string, string, RegExp][] = [
@@ -5006,6 +5039,33 @@ defineProps<{ pick: Option }>();
       /this union is the Rust enum `Option`, which would hide Rust's own `Option`/,
     ],
     [
+      "props of a type imported from a component",
+      `<script setup lang="ts">
+import type { Props } from "./Y.vue";
+defineProps<Props>();
+</script>
+<template><p>{{ b }}</p></template>`,
+      /X\.vue:3:13: the props of `defineProps` are read from `Props`, imported from `\.\/Y\.vue`: declare them in the component, as `defineProps<\{ label: string \}>\(\)`/,
+    ],
+    [
+      "props of a type imported from a package",
+      `<script setup lang="ts">
+import type { ButtonProps } from "some-ui";
+defineProps<ButtonProps>();
+</script>
+<template><p>x</p></template>`,
+      /X\.vue:3:13: the props of `defineProps` are read from `ButtonProps`, imported from `some-ui`/,
+    ],
+    [
+      "events of a type imported from a package",
+      `<script setup lang="ts">
+import type { Events } from "some-ui";
+defineEmits<Events>();
+</script>
+<template><p>x</p></template>`,
+      /X\.vue:3:13: the events of `defineEmits` are read from `Events`, imported from `some-ui`: declare them in the component/,
+    ],
+    [
       "a prop with no type",
       `<script setup lang="ts">
 defineProps<{ tag }>();
@@ -5576,6 +5636,9 @@ defineProps<{ chip: Chip }>();
     "a union alias named as a type of Rust's prelude": "FV0325",
     "a prop with no type": "FV0326",
     "a field of an interface with no type that a prop reaches": "FV0326",
+    "props of a type imported from a component": "FV0327",
+    "props of a type imported from a package": "FV0327",
+    "events of a type imported from a package": "FV0327",
     "a string given to a child's prop of a union": "FV0515",
     "a literal outside a child's prop of a union": "FV0515",
     "a value of a wider union given to a child's prop of a union": "FV0515",
