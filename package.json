@@ -31,7 +31,7 @@
     "api:report": "node scripts/api-report.ts",
     "api:check": "node scripts/api-report.ts --check",
     "fuzz": "node packages/ferrovue/fuzz/run.ts",
-    "mutants:ts": "stryker run --force && node scripts/stryker-survivors.ts"
+    "mutants:ts": "node scripts/stryker-run.ts"
   },
   "devDependencies": {
     "@microsoft/api-extractor": "^7.59.4",

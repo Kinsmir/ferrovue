@@ -242,7 +242,14 @@ released together and share version numbers.
   nested test as vitest 5 matches it. New compiler tests (`attrs.test.ts`) and conformance
   components (`AttrObjects`, `AttrQuirks`) kill the survivors in both modules; `vite.test.ts`
   replaces `process.chdir` with a mocked `process.cwd`, which also runs in worker threads.
-
+- Tests only: Stryker also mutates `constants.ts`, `dynamic.ts` and `expr.ts`. `pnpm mutants:ts`
+  takes the modules to mutate by name (`pnpm mutants:ts expr`), and holds only those to
+  `stryker-equivalent.txt`; the Mutants workflow runs the five modules in three jobs, each within
+  its two hours. New compiler tests (`constants.test.ts`, `dynamic.test.ts`, `expr.test.ts`,
+  `operators.test.ts`) and the conformance component `ListFallback` kill the survivors. The
+  conformance tests compile the components' date plans when a test first reads them, where they
+  compiled them as the test file loaded, which made Stryker run every test against most mutants
+  of the compiler.
 
 ### Fixed
 

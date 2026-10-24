@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { loadConfig } from "../src/compiler.ts";
 import { datePlansOf } from "../src/conformance.ts";
-import { type Fixture, readFixture, type RouteEntry, type RouterOptions, withDatePlans } from "../src/fixture.ts";
+import { type DatePlans, type Fixture, readFixture, type RouteEntry, type RouterOptions, withDatePlans } from "../src/fixture.ts";
 
 export { clientRenderDifference, HEAD, hydrationBody, placeHead, recordedHead, renderFixture, TELEPORTS } from "../src/conformance.ts";
 export { headRendered } from "../src/settle.ts";
@@ -15,11 +15,17 @@ const CONFIG = JSON.parse(readFileSync(join(ROOT, "ferrovue.config.json"), "utf8
   cssModules: { generateScopedName: string };
 };
 export const CSS_MODULES = CONFIG.cssModules;
-export const PLANS = datePlansOf(ROOT, loadConfig(ROOT));
+let plans: DatePlans | undefined;
+
+/** The date plans of the conformance components, compiled once, on first use. */
+export function datePlans(): DatePlans {
+  plans ??= datePlansOf(ROOT, loadConfig(ROOT));
+  return plans;
+}
 
 /** A case's fixture as the client reads its page, each date turned back into a `Date`. */
 export function fixtureOf(c: { component: string; json: Record<string, unknown> }): Fixture {
-  return withDatePlans(readFixture(c.json), c.component, PLANS);
+  return withDatePlans(readFixture(c.json), c.component, datePlans());
 }
 const I18N = CONFIG.i18n && {
   messages: Object.fromEntries(

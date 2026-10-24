@@ -615,35 +615,42 @@ run it locally on the functions a change touches (`-F`, or `--in-diff` with a di
 ### The compiler
 
 [Stryker](https://stryker-mutator.io) does the same for the compiler's TypeScript, configured in
-`stryker.config.json`: it mutates the modules listed under `mutate` (`attrs.ts` and `template.ts`
-for now; `expr.ts`, `constants.ts` and `dynamic.ts` come next) and runs the vitest suite against
-each mutant, compiler tests and the Vue half of conformance included. The conformance check that `generated/` is what the compiler writes now
-catches any mutant that changes the Rust of a conformance component, so a fixture there kills
-more than its HTML.
+`stryker.config.json`: it mutates the modules listed under `mutate` (`attrs.ts`, `template.ts`,
+`constants.ts`, `dynamic.ts` and `expr.ts`) and runs the vitest suite against each mutant, compiler
+tests and the Vue half of conformance included. The conformance check that `generated/` is what
+the compiler writes now catches any mutant that changes the Rust of a conformance component, so a
+fixture there kills more than its HTML.
 
 ```sh
 pnpm mutants:ts                                                    # every listed module, in full, then the check below
+pnpm mutants:ts expr                                               # the modules named, by file name, in full, then the check
 pnpm exec stryker run -m packages/ferrovue/src/attrs.ts            # one module, reusing earlier results
 pnpm exec stryker run -m "packages/ferrovue/src/attrs.ts:120-140"  # the mutants on some lines
-node scripts/stryker-survivors.ts                                  # hold the last report to the list
+node scripts/stryker-survivors.ts packages/ferrovue/src/attrs.ts   # hold the last report's modules (or these) to the list
 ```
 
-Per-test coverage runs each mutant against only the tests that reach it. A full run of both
-modules takes 15 to 18 minutes on twelve cores; the reports are `target/stryker/mutation.html` and
-`mutation.json`. Incremental mode (`target/stryker/incremental.json`) reuses the result of a mutant
-whose code and covering tests are unchanged, so a run after a small change takes a minute or two.
-It also reuses a survivor that a new conformance fixture or component now kills, since those are
-data the tests read, and a static mutant (one in a module-level constant), which no test covers
-alone: pass `--force` before trusting a survivor it reports. `pnpm mutants:ts` always passes it.
+Per-test coverage runs each mutant against only the tests that reach it, so no test file may
+compile a component while it loads: what runs then is covered by no test, and Stryker runs the
+whole suite against every mutant it reaches (a static mutant). At four test runners on twelve
+cores, `attrs.ts` and `template.ts` take 15 to 18 minutes, `constants.ts` and `dynamic.ts` about
+40 and `expr.ts` about 45; two runners take about twice as long. The **Mutants** workflow runs the
+modules in those three groups, one job each, within the job's two hours. The reports are
+`target/stryker/mutation.html` and `mutation.json`; a run of some modules also reports the others as
+an earlier run left them, and `pnpm mutants:ts` holds only the modules it ran to the list.
+Incremental mode (`target/stryker/incremental.json`) reuses the result of a mutant whose code and
+covering tests are unchanged, so a run after a small change takes a minute or two. It also reuses
+a survivor that a new conformance fixture or component now kills, since those are data the tests
+read, and a static mutant (one in a module-level constant), which no test covers alone: pass
+`--force` before trusting a survivor it reports. `pnpm mutants:ts` always passes it.
 
 A survivor is closed by a test or listed in `stryker-equivalent.txt`, under a comment saying why
 it cannot change what the compiler writes or refuses. An entry names the file, the mutator, the
 source text before and after and the line the mutant starts on, on one line and without the line's
 number, as `scripts/stryker-survivors.ts` prints it; a mutant that survives twice with the same
 text is listed twice. `pnpm mutants:ts` fails on a survivor the list does not explain and on an
-entry no survivor of the modules in the report uses. A listed mutant that times out uses its entry:
+entry no survivor of the modules it holds uses. A listed mutant that times out uses its entry:
 under load, a mutant whose tests all pass can still run past the timeout. The **Mutants** workflow
-runs it every Monday beside cargo-mutants and uploads the HTML report.
+runs it every Monday beside cargo-mutants and uploads each job's HTML report.
 
 The vitest runner is patched (`patches/`): Stryker 10 names a test by its describe blocks and
 title joined with spaces, and vitest 5 matches `--testNamePattern` against the names joined with
