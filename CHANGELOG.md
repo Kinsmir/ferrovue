@@ -351,6 +351,10 @@ released together and share version numbers.
   `one().e === "a"`), is read through the generated enum's `as_str()` and compared by its variants.
   The Rust ferrovue wrote read the enum as a string and did not compile. The conformance component
   `LiteralEnumField` records it from Vue.
+- `[].length`, and the length of `[]` handed to a parameter whose items have no type
+  (`function f(xs: unknown[]) { return xs.length; }` read as `{{ f([]) }}`), is 0, as in
+  JavaScript. The Rust ferrovue wrote gave the empty array no item type, and rustc refused it with
+  E0282. The conformance component `EmptyArrays` records it from Vue.
 
 ## [0.10.0] - 2026-10-22
 

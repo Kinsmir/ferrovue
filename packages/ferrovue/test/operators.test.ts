@@ -675,9 +675,7 @@ describe("`?:`", () => {
     expect(lines("<p>{{ (false ? is : xs).length }}|{{ (true ? [] : s).length }}</p>")).toMatch(like([
       'out.push_str("<p>");',
       "fv::push_int(out, props.xs.len() as i64);",
-      "out.push('|');",
-      "fv::push_int(out, [].len() as i64);",
-      'out.push_str("</p>");',
+      'out.push_str("|0</p>");',
     ].join("\n"), true));
   });
 

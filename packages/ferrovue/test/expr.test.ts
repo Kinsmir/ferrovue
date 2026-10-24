@@ -505,7 +505,14 @@ describe("`.length`", () => {
     expect(length("l: string[]", "l.slice(1).length")).toMatch(like("fv::push_int(out, fv::js_slice_items(props.l.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), 1.0f64, None).count() as i64);"));
     expect(length("l: string[]", "l.slice(1).map((x) => x).length")).toMatch(like("fv::push_int(out, fv::js_slice_items(props.l.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), 1.0f64, None).count() as i64);"));
     expect(length("s: string", "s.length")).toMatch(like("fv::push_int(out, fv::js_length(&props.s));"));
-    expect(length("s: string", "[].length")).toMatch(like("fv::push_int(out, [].len() as i64);"));
+    expect(length("s: string", "[].length")).toMatch(like('out.push_str("<p>0</p>");'));
+  });
+
+  it("counts an empty array literal, and one handed to a parameter whose items have no type, as 0", () => {
+    expect(render("const props = defineProps<{ xs: string[] }>();", "<p>{{ [].length + xs.length }}</p>")).toMatch(like("fv::push_number(out, 0.0 + props.xs.len() as i64 as f64);"));
+    const out = render("function f(xs: unknown[]) { return xs.length; }", "<p>{{ f([]) }}</p>");
+    expect(out).toMatch(like('out.push_str("<p>0</p>");'));
+    expect(out).not.toMatch(/= &\[\];/);
   });
 
   it("refuses the length of a number, of a list read by `[…]`, and of entries other than a record's", () => {
