@@ -345,6 +345,10 @@ export const ERRORS: {
         readonly title: "Field with no type";
         readonly detail: "A prop or a field of an interface becomes a Rust field, whose type is translated from its TypeScript type. A field written with no type (`defineProps<{ tag }>()`, `interface Row { id }`) has no Rust type. Give the field a type, as `tag: string`. See [`props`](crate::guide::props).";
     };
+    readonly FV0327: {
+        readonly title: "Props or events of an imported type";
+        readonly detail: "Vue reads the props of `defineProps<P>()` and the events of `defineEmits<E>()` from the type itself, and the compiler resolves that type when the component declares it. A type imported from another file (`import type { P } from \"./p\"`), an intersection with one or an interface that extends one is refused. Declare the props in the component, as `defineProps<{ label: string }>()` or an interface of the component; their fields may have types imported from a `.ts` file, as `defineProps<{ row: Row }>()`. See [`props`](crate::guide::props).";
+    };
     readonly FV0401: {
         readonly title: "Interpolation of a value that is not a string, a number or a boolean";
         readonly detail: "`{{ }}` writes a string, a number or a boolean, as Vue's `toDisplayString` does for those. A list, an object, a `Record` or a `Date` would be written as Vue's JSON or `String()` of it, which the server does not reproduce; the message names the type. Interpolate a field of it, `.join(\", \")` a list, or format a date with `.toISOString()`.";

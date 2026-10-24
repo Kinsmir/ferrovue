@@ -107,11 +107,82 @@ function scriptOf(comp: Component, descriptor: SFCDescriptor): SFCScriptBlock {
   try {
     return compileScript(descriptor, { id: comp.name });
   } catch (e) {
-    if (!(e instanceof SyntaxError)) throw e;
+    if (!(e instanceof SyntaxError)) {
+      refuseImportedMacroType(comp, descriptor);
+      throw e;
+    }
     const at = (e as { loc?: { line: number; column: number } }).loc;
     const block = descriptor.scriptSetup!.loc.start;
     const where = !at || descriptor.script ? {} : at.line === 1 ? { line: block.line, column: block.column + at.column } : { line: block.line + at.line - 1, column: at.column + 1 };
     throw new GenError("FV0001", e.message, { file: comp.file, ...where }, e.message.split("\n")[0]);
+  }
+}
+
+type Imported = { name: string; from: string; node: N };
+
+function refuseImportedMacroType(comp: Component, descriptor: SFCDescriptor): void {
+  const blocks = [descriptor.script, descriptor.scriptSetup].flatMap((b) => (b ? [b] : []));
+  const statements: { st: N; offset: number }[] = [];
+  for (const b of blocks) {
+    let body: N[];
+    try {
+      body = parseJs(b.content, { sourceType: "module", plugins: ["typescript"] }).program.body;
+    } catch {
+      return;
+    }
+    for (const st of body) statements.push({ st: st.type === "ExportNamedDeclaration" && st.declaration ? st.declaration : st, offset: b.loc.start.offset });
+  }
+  const imports = new Map<string, string>();
+  for (const { st } of statements) {
+    if (st.type !== "ImportDeclaration") continue;
+    for (const sp of st.specifiers) imports.set(sp.local.name, st.source.value);
+  }
+  const declared = new Map<string, { st: N; offset: number }>();
+  for (const d of statements) {
+    if (d.st.type === "TSInterfaceDeclaration" || d.st.type === "TSTypeAliasDeclaration") declared.set(d.st.id.name, d);
+  }
+  const seen = new Set<string>();
+  const reach = (t: N, offset: number): Imported | null => {
+    if (!t || typeof t !== "object") return null;
+    if (t.type === "TSParenthesizedType") return reach(t.typeAnnotation, offset);
+    if (t.type === "TSUnionType" || t.type === "TSIntersectionType") {
+      for (const part of t.types) {
+        const found = reach(part, offset);
+        if (found) return found;
+      }
+      return null;
+    }
+    if (t.type !== "TSTypeReference" && t.type !== "TSExpressionWithTypeArguments" && t.type !== "TSInterfaceHeritage") return null;
+    let head = t.typeName ?? t.expression;
+    while (head?.type === "TSQualifiedName" || head?.type === "MemberExpression") head = head.left ?? head.object;
+    const name: string | undefined = head?.type === "Identifier" ? head.name : undefined;
+    if (name !== undefined && imports.has(name)) return { name, from: imports.get(name)!, node: sourceAt(comp.source ?? "", offset + t.start) };
+    for (const arg of (t.typeParameters ?? t.typeArguments)?.params ?? []) {
+      const found = reach(arg, offset);
+      if (found) return found;
+    }
+    const local = name === undefined || seen.has(name) ? undefined : declared.get(name);
+    if (local === undefined) return null;
+    seen.add(name!);
+    if (local.st.type === "TSTypeAliasDeclaration") return reach(local.st.typeAnnotation, local.offset);
+    for (const base of local.st.extends ?? []) {
+      const found = reach(base, local.offset);
+      if (found) return found;
+    }
+    return null;
+  };
+  for (const { st, offset } of statements) {
+    const call = st.type === "ExpressionStatement" ? st.expression : st.type === "VariableDeclaration" ? st.declarations[0]?.init : null;
+    const inner = call?.type === "CallExpression" && call.callee.type === "Identifier" && call.callee.name === "withDefaults" ? call.arguments[0] : call;
+    if (inner?.type !== "CallExpression" || inner.callee.type !== "Identifier") continue;
+    const macro: string = inner.callee.name;
+    if (macro !== "defineProps" && macro !== "defineEmits") continue;
+    const arg = inner.typeParameters?.params?.[0];
+    const found = arg ? reach(arg, offset) : null;
+    if (!found) continue;
+    const what = macro === "defineProps" ? "props" : "events";
+    const write = macro === "defineProps" ? "`defineProps<{ label: string }>()` or an interface the component declares, whose fields may have types imported from a `.ts` file" : '`defineEmits<{ (e: "save"): void }>()` or an interface the component declares';
+    fail(comp, "FV0327", `the ${what} of \`${macro}\` are read from \`${found.name}\`, imported from \`${found.from}\`: declare them in the component, as ${write}`, found.node);
   }
 }
 

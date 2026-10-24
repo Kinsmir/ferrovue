@@ -551,6 +551,11 @@ is the struct in `stores.rs`. A union of string literals a `.ts` file declares a
 an `enum` is written once to `types.rs` too, as its [enum](#unions-of-string-literals)
 (`super::types::Size`), so a parent hands its value to a child as it is.
 
+The props themselves are declared in the component, in `defineProps<{ … }>()` or an interface or
+alias of the component, and their fields may have imported types: `defineProps<{ user: User }>()`
+compiles with `User` imported. `defineProps<User>()`, an intersection with `User` or an interface
+that extends it is refused with FV0327, as are the events of `defineEmits<E>()` of an imported type.
+
 A parent may build an object prop from an object literal, `:user="{ id, name, roles: [] }"`, or a
 list of them from `.map()`, `:rows="items.map((x) => ({ id: x.id, label: x.name }))"`: each literal
 is built as the struct of the prop's interface, its optional fields left out `None`. See
