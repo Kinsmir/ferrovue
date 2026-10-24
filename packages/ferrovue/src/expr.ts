@@ -17,11 +17,27 @@ import { assignedLet, loopIn, loopStep } from "./statements.ts";
 import { refuseUnresolved } from "./resolve.ts";
 import { fresh, jsHint } from "./names.ts";
 
-const MATH_CONSTANTS = new Map(["E", "LN10", "LN2", "LOG10E", "LOG2E", "PI", "SQRT1_2", "SQRT2"].map((k) => [k, Math[k as "PI"]]));
+const MATH_CONSTANTS = new Map([
+  ["E", Math.E],
+  ["LN10", Math.LN10],
+  ["LN2", Math.LN2],
+  ["LOG10E", Math.LOG10E],
+  ["LOG2E", Math.LOG2E],
+  ["PI", Math.PI],
+  ["SQRT1_2", Math.SQRT1_2],
+  ["SQRT2", Math.SQRT2],
+]);
 
-const NUMBER_CONSTANTS = new Map(
-  ["EPSILON", "MAX_SAFE_INTEGER", "MAX_VALUE", "MIN_SAFE_INTEGER", "MIN_VALUE", "NaN", "NEGATIVE_INFINITY", "POSITIVE_INFINITY"].map((k) => [k, Number[k as "NaN"]]),
-);
+const NUMBER_CONSTANTS = new Map([
+  ["EPSILON", Number.EPSILON],
+  ["MAX_SAFE_INTEGER", Number.MAX_SAFE_INTEGER],
+  ["MAX_VALUE", Number.MAX_VALUE],
+  ["MIN_SAFE_INTEGER", Number.MIN_SAFE_INTEGER],
+  ["MIN_VALUE", Number.MIN_VALUE],
+  ["NaN", Number.NaN],
+  ["NEGATIVE_INFINITY", Number.NEGATIVE_INFINITY],
+  ["POSITIVE_INFINITY", Number.POSITIVE_INFINITY],
+]);
 
 const COMPUTE_IN_RUST = "compute the value in Rust and pass it as a prop";
 
