@@ -89,12 +89,14 @@ fn arguments_are_written_by_their_type() {
                 .arg(&2.5_f64)
                 .arg(&true)
                 .arg(&Some(4_i64))
-                .arg(&None::<&str>);
+                .arg(&None::<&str>)
+                .arg(&Some("v"))
+                .arg(&&5_i64);
         }
     }
     assert_eq!(
         load_key(&Typed),
-        r#"["typed","s","t","u",3,2.5,true,4,null]"#
+        r#"["typed","s","t","u",3,2.5,true,4,null,"v",5]"#
     );
 }
 
@@ -414,6 +416,51 @@ fn a_call_run_as_another_loader_panics() {
         call: Box::new(Wait { name: "x", ms: 0 }),
     };
     let _ = call.run(|_: Ratio| async { Ok::<_, Infallible>(()) });
+}
+
+#[tokio::test]
+async fn a_call_shows_its_name_and_key() {
+    let seen = Mutex::new(Vec::new());
+    load(
+        |loads| {
+            seen.lock().unwrap().push(format!("{loads:?}"));
+            loads.get(Wait { name: "a", ms: 0 }).is_some()
+        },
+        |call| {
+            let mut seen = seen.lock().unwrap();
+            seen.push(format!("{} {}", call.name(), call.key()));
+            seen.push(format!("{call:?}"));
+            let future = call.run(|c: Wait| async move { Ok::<_, Infallible>(c.name.to_owned()) });
+            seen.push(format!("{future:?}"));
+            future
+        },
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        seen.into_inner().unwrap(),
+        [
+            "Loads { done: 0, running: 0, blocked: false, .. }",
+            r#"wait ["wait","a",0]"#,
+            r#"LoadCall { name: "wait", key: "[\"wait\",\"a\",0]", .. }"#,
+            "LoadFuture",
+            "Loads { done: 1, running: 0, blocked: false, .. }",
+        ]
+    );
+}
+
+#[test]
+fn a_failed_loader_s_error_is_the_source() {
+    use std::error::Error;
+    let failed = LoadError {
+        loader: "wait",
+        key: String::from(r#"["wait"]"#),
+        error: std::fmt::Error,
+    };
+    assert_eq!(
+        failed.source().map(ToString::to_string),
+        Some(std::fmt::Error.to_string())
+    );
 }
 
 #[test]

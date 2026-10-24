@@ -152,6 +152,15 @@ released together and share version numbers.
   only: Vite 8.3.5, happy-dom 21.0.4, vue-i18n 11.4.16, fallow 3.35.0 and oxlint 1.89.0, each the
   newest release at least a day old. Every newer release of the crates' dependencies is younger
   than Dependabot's seven-day cooldown, so `Cargo.lock` is unchanged.
+- Tests only: the Mutants workflow runs cargo-mutants in sixteen shards built without debug
+  information, where eight shards of about 333 mutants each ran up to the 90-minute timeout. New
+  unit tests kill the survivors in the 0.11 runtime: a `Refused`'s column without its line, two
+  copies of one refusal, the `Debug` of `Refused`, `Refusals`, `Loads`, `LoadCall` and
+  `LoadFuture`, `LoadCall::key`, `LoadError::source`, a loader argument given by reference, the
+  `*_fallible` constructors of `Html`, a page part that refuses, `Date.UTC` at the last date with a
+  part beyond 2⁵³ ms, and `lastIndexOf` from inside a surrogate pair.
+  `.cargo/mutants-equivalent.txt` gives the reasons for the survivors in `Date.UTC` and
+  `lastIndexOf` that cannot change a result.
 - Tests only: the fuzzer gives a string a loop builds a value to append that does not read the
   string itself, so a generated loop no longer doubles it on every item (`acc += acc`), which ran
   seed 4242 out of memory. A `?:` of a union value and a string literal keeps the members of both,

@@ -123,3 +123,49 @@ fn a_date_its_type_cannot_hold_is_refused_and_the_epoch_kept() {
     assert_eq!(refused.code(), "FV1812");
     assert_eq!(refused.line(), Some(3));
 }
+
+#[test]
+fn a_column_is_given_only_with_its_line() {
+    let at = |line, column| {
+        let refusals = Refusals::new("Total", "Total.vue");
+        refusals.keep(try_int(1e20), line, column);
+        let refused = refusals.check(Ok(())).unwrap_err();
+        (refused.line(), refused.column())
+    };
+    assert_eq!(at(4, 7), (Some(4), Some(7)));
+    assert_eq!(at(0, 7), (None, None));
+    assert_eq!(at(4, 0), (Some(4), None));
+    assert_eq!(at(0, 0), (None, None));
+}
+
+#[test]
+fn of_two_copies_of_one_refusal_the_one_held_is_returned() {
+    let parent = Refusals::new("Parent", "Parent.vue");
+    let refused = try_int(1e20).unwrap_err();
+    parent.keep(Err::<i64, _>(refused.clone()), 9, 1);
+    let returned = parent
+        .check(Err(refused.located("Child", "Child.vue", 2, 3)))
+        .unwrap_err();
+    assert_eq!(
+        (returned.component(), returned.line()),
+        (Some("Parent"), Some(9))
+    );
+}
+
+#[test]
+fn debug_shows_the_code_message_and_location() {
+    let refusals = Refusals::new("Total", "components/Total.vue");
+    assert_eq!(
+        format!("{refusals:?}"),
+        r#"Refusals { component: "Total", file: "components/Total.vue", .. }"#
+    );
+    refusals.keep(try_int(1.5), 4, 7);
+    let refused = refusals.check(Ok(())).unwrap_err();
+    assert_eq!(
+        format!("{refused:?}"),
+        format!(
+            r#"Refused {{ code: "FV0724", message: {:?}, component: Some("Total"), file: Some("components/Total.vue"), line: Some(4), column: Some(7) }}"#,
+            refused.message()
+        )
+    );
+}

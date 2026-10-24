@@ -210,6 +210,49 @@ fn an_island_is_written_without_its_wrapper() {
 }
 
 #[test]
+fn a_page_returns_the_first_refusal_of_its_slots_parts() {
+    fn refuse(out: &mut String, props: &WordProps<'_>) -> Result<(), Refused> {
+        word(out, props);
+        crate::try_int(props.ratio).map(drop)
+    }
+    let (early, late) = (
+        WordProps {
+            text: "a",
+            ratio: 1e20,
+        },
+        WordProps {
+            text: "b",
+            ratio: 2e20,
+        },
+    );
+    let mut page = Page::new();
+    let body = page.slot(
+        "default",
+        [
+            part(&early),
+            Part::new("Word", Html::markup_fallible(&early, word, refuse)),
+            Part::new("Word", Html::markup_fallible(&late, word, refuse)),
+        ],
+    );
+    let slots = Slots {
+        head: None,
+        default: Some(body.slot()),
+    };
+    let mut out = String::from("kept");
+    let refused = page
+        .try_render_to(&mut out, layout(&LayoutProps { title: "T" }, slots, ""))
+        .unwrap_err();
+    assert_eq!(refused.code(), "FV0724");
+    assert!(
+        refused
+            .message()
+            .starts_with("the number 100000000000000000000 "),
+        "{refused}"
+    );
+    assert_eq!(out, "kept");
+}
+
+#[test]
 fn a_slot_given_no_parts_is_still_content_and_recorded_empty() {
     let mut page = Page::new();
     let body = page.slot("default", []);

@@ -162,6 +162,13 @@ fn slicing_inside_a_pair_keeps_the_rest_whole() {
 }
 
 #[test]
+fn searching_back_from_inside_a_pair_starts_at_the_pair() {
+    assert_eq!(js_last_index_of_from("xxxxxxxx😀ab", "x", 9.0), 7);
+    assert_eq!(js_last_index_of_from("xxxxxxxx😀ab", "x😀", 9.0), 7);
+    assert_eq!(js_last_index_of_from("xxxxxxxx😀ab", "😀", 9.0), 8);
+}
+
+#[test]
 fn padding_beyond_the_longest_string_panics_as_javascript_throws() {
     let long = std::panic::catch_unwind(|| js_pad_start("a", 1e10, "b"));
     assert!(long.is_err());
