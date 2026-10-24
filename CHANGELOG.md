@@ -346,6 +346,11 @@ released together and share version numbers.
   same way. The README's Forms row says so. FV0424 is a new entry of `ERRORS` in
   `ferrovue/compiler`. The conformance components `FormWrapped` and `FormRoot` record the shapes
   that compile from Vue.
+- A field typed as a union of string literals, read from a value built from an object literal
+  (`function one(): R { return { t: props.s, e: "a" }; }` read as `{{ one().e }}` or
+  `one().e === "a"`), is read through the generated enum's `as_str()` and compared by its variants.
+  The Rust ferrovue wrote read the enum as a string and did not compile. The conformance component
+  `LiteralEnumField` records it from Vue.
 
 ## [0.10.0] - 2026-10-22
 
