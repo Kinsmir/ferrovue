@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { generate } from "../src/compiler.ts";
+import { compileFailure } from "./classify.ts";
 import {
   type Case,
   type Component,
@@ -55,6 +56,7 @@ const REFUSED_AT_RENDER = /^error\[FV\d{4}\]: /;
 
 interface Evaluated {
   refused: string | null;
+  crash: string | null;
   compileError: string | null;
   outcomes: Outcome[];
 }
@@ -140,7 +142,7 @@ function evaluate(batch: string, items: Item[]): Map<string, Evaluated> {
     writeFileSync(join(dir, "components", `${item.component.name}.vue`), printComponent(item.component));
     for (const [file, text] of helperFiles(item.component)) write(join(dir, "components", file), text);
     item.fixtures.forEach((f, i) => writeFileSync(join(dir, `fixture${i}.json`), fixtureJson(f)));
-    const ev: Evaluated = { refused: null, compileError: null, outcomes: [] };
+    const ev: Evaluated = { refused: null, crash: null, compileError: null, outcomes: [] };
     results.set(item.id, ev);
     try {
       for (const [file, text] of generate(dir, configOf(item.component, import.meta.dirname))) {
@@ -148,7 +150,9 @@ function evaluate(batch: string, items: Item[]): Map<string, Evaluated> {
       }
       live.push(item);
     } catch (e) {
-      ev.refused = (e as Error).message;
+      const failure = compileFailure(e);
+      if (failure.k === "refused") ev.refused = failure.message;
+      else ev.crash = failure.stack;
     }
   }
   if (!live.length || dry) return results;
@@ -326,8 +330,9 @@ const cases = new Map<number, Case>(indices.map((i) => [i, generateCase(seed, i,
 const items: Item[] = indices.map((i) => ({ id: `k${i}`, component: cases.get(i)!.component, fixtures: cases.get(i)!.fixtures }));
 const results = evaluate(join(WORK, "cases"), items);
 
-const tally = { components: items.length, fixtures: 0, matches: 0, mismatches: 0, refused: 0, compileErrors: 0, vueErrors: 0, rustErrors: 0, refusedAtRender: 0 };
+const tally = { components: items.length, fixtures: 0, matches: 0, mismatches: 0, refused: 0, crashes: 0, compileErrors: 0, vueErrors: 0, rustErrors: 0, refusedAtRender: 0 };
 const refusals = new Map<string, number[]>();
+const crashes = new Map<string, { cases: number[]; stack: string }>();
 const renderRefusals = new Map<string, number[]>();
 const vueErrors = new Map<string, number[]>();
 const compileErrors = new Map<string, number[]>();
@@ -336,6 +341,14 @@ for (const i of indices) {
   const ev = results.get(`k${i}`)!;
   const c = cases.get(i)!;
   tally.fixtures += c.fixtures.length;
+  if (ev.crash !== null) {
+    tally.crashes++;
+    const key = ev.crash.split("\n")[0]!;
+    const seen = crashes.get(key);
+    if (seen) seen.cases.push(i);
+    else crashes.set(key, { cases: [i], stack: ev.crash });
+    continue;
+  }
   if (ev.refused !== null) {
     tally.refused++;
     const key = ev.refused.split("\n")[0]!.replace(/C\d{4}/g, "C…");
@@ -371,7 +384,11 @@ for (const i of indices) {
 }
 
 log("");
-log(`components ${tally.components}, fixtures ${tally.fixtures}: ${tally.matches} match, ${tally.mismatches} mismatch, ${tally.rustErrors} Rust errors, ${tally.refusedAtRender} refused at render; ${tally.refused} components refused, ${tally.compileErrors} not compiling, ${tally.vueErrors} fixtures Vue could not render`);
+log(`components ${tally.components}, fixtures ${tally.fixtures}: ${tally.matches} match, ${tally.mismatches} mismatch, ${tally.rustErrors} Rust errors, ${tally.refusedAtRender} refused at render; ${tally.crashes} compiler crashes, ${tally.refused} components refused, ${tally.compileErrors} not compiling, ${tally.vueErrors} fixtures Vue could not render`);
+for (const { cases: at, stack } of crashes.values()) {
+  log(`  compiler crash ×${at.length} (cases ${at.slice(0, 8).join(", ")}${at.length > 8 ? ", …" : ""}; reproduce with FERROVUE_FUZZ_SEED=${seed} FERROVUE_FUZZ_CASE=${at[0]} pnpm fuzz):`);
+  log(stack.replace(/^/gm, "    "));
+}
 for (const [msg, at] of refusals) log(`  refused ×${at.length} (cases ${at.slice(0, 8).join(", ")}${at.length > 8 ? ", …" : ""}): ${msg}`);
 for (const [msg, at] of renderRefusals) log(`  refused at render ×${at.length} (cases ${at.slice(0, 8).join(", ")}${at.length > 8 ? ", …" : ""}): ${msg}`);
 for (const [msg, at] of compileErrors) log(`  not compiling ×${at.length} (cases ${at.slice(0, 8).join(", ")}${at.length > 8 ? ", …" : ""}): ${msg}`);
@@ -415,7 +432,7 @@ if (failures.length) {
 }
 
 if (!keep) rmSync(join(WORK, "shrink"), { recursive: true, force: true });
-log(`\ndone in ${((Date.now() - started) / 1000).toFixed(0)} s. Summary: seed ${seed}, components ${tally.components}, fixtures ${tally.fixtures}, matches ${tally.matches}, mismatches ${tally.mismatches}, rust-errors ${tally.rustErrors}, refused-at-render ${tally.refusedAtRender}, not-compiling ${tally.compileErrors}, refusals ${tally.refused}, vue-errors ${tally.vueErrors}`);
+log(`\ndone in ${((Date.now() - started) / 1000).toFixed(0)} s. Summary: seed ${seed}, components ${tally.components}, fixtures ${tally.fixtures}, matches ${tally.matches}, mismatches ${tally.mismatches}, rust-errors ${tally.rustErrors}, refused-at-render ${tally.refusedAtRender}, compiler-crashes ${tally.crashes}, not-compiling ${tally.compileErrors}, refusals ${tally.refused}, vue-errors ${tally.vueErrors}`);
 const compared = dry || tally.matches + tally.mismatches > 0;
 if (!compared) log("no fixture was compared");
-process.exitCode = tally.mismatches + tally.rustErrors + tally.compileErrors + tally.refused + tally.vueErrors > 0 || !compared ? 1 : 0;
+process.exitCode = tally.mismatches + tally.rustErrors + tally.crashes + tally.compileErrors + tally.refused + tally.vueErrors > 0 || !compared ? 1 : 0;
