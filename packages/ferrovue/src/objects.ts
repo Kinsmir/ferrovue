@@ -156,7 +156,7 @@ export function objectLiteral(s: Scope, n: N, want: StructTy): Val {
     const ty = owner === comp ? field.ty : markHome(field.ty, owner.name);
     const v = expr(s, typedBy(p.value, tyNode(ty)));
     values.push(v);
-    const strings = ty.k === "list" && ty.of.k === "str" && v.ty.k === "list" && v.ty.of.k === "str" ? literalStrings(s, p.value) : null;
+    const strings = ty.k === "list" && ty.of.k === "str" && enumItems(ty) === undefined && v.ty.k === "list" && v.ty.of.k === "str" ? literalStrings(s, p.value) : null;
     if (strings !== null) {
       inits.push(`${field.rust}: Vec::from([${strings.join(", ")}])`);
       return;

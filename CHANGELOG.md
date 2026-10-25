@@ -38,6 +38,8 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
   0.11.0 refused them with FV0601, FV0418 and FV0612: [Optional props and defaults](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#optional-props-and-defaults).
 - FV0512 names the imported type at its import, FV0614 names the type of the side that is not a
   boolean, and FV0506 points at a `<component :is>`'s element: [`error_codes`](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html).
+- A string chosen by `||` and handed to a child's union prop is bound to a local before its `match`.
+  0.11.0's generated code failed `clippy::blocks_in_conditions` there: [Unions of string literals](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#unions-of-string-literals).
 
 ## [0.11.0] - 2026-10-25
 

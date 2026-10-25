@@ -567,6 +567,13 @@ packages/ferrovue/src/expr.ts: ConditionalExpression: p !== undefined => true in
 # `functions`, whose reason neither starts nor ends with those words.
 packages/ferrovue/src/expr.ts: MethodExpression: why.startsWith("it is a function") => why.endsWith("it is a function") in : called || why.startsWith("it is a function") ? twinHelp( … {COMPUTE_IN_RUST}, or read it only from an event handler`;
 
+# expr.ts, `refuseClientOnly`: every refusal `refusedBy` holds is raised while setup and the
+# project's modules are read, through `fail` and `failIn`, which give it a location with a file,
+# or copied from one with its location (script.ts, functions.ts); the refusals with no location,
+# FV0308 and FV0309 in rust.ts and FV1107 in context.ts, are raised while types are written and the
+# configuration is read. So `cause.at` is never null.
+packages/ferrovue/src/expr.ts: OptionalChaining: cause.at?.file => cause.at.file in if (cause.at?.file !== s.comp.file) e.readAt = at;
+
 # expr.ts, `describeTy`: `int` falls through to `float`, which returns the same "a number".
 packages/ferrovue/src/expr.ts: ConditionalExpression: case "int": return "a number"; => case "int": in case "int":
 
@@ -586,6 +593,7 @@ packages/ferrovue/src/expr.ts: ConditionalExpression: f.dflt === undefined => fa
 packages/ferrovue/src/expr.ts: ConditionalExpression: f.ty.k !== "opt" => false in const variant = f.ty.k !== "opt" ? place : literal !== und … e}.unwrap_or(${variantPath(comp, def, literal)})` : place;
 packages/ferrovue/src/expr.ts: ConditionalExpression: f.ty.k === "opt" => true in const read = f.ty.k === "opt" && literal !== undefined ? f.ty.of : f.ty;
 packages/ferrovue/src/expr.ts: ConditionalExpression: f.ty.k === "opt" => true in if (f.dflt !== undefined && f.ty.k === "opt") {
+packages/ferrovue/src/expr.ts: ConditionalExpression: f.ty.k === "opt" => true in if (f.dflt !== undefined && f.ty.k === "opt") return enumL … {place}.as_deref().unwrap_or(${f.dflt})`, f.ty.of, items);
 
 # expr.ts, `fieldVal`: an optional `html` field falls to the last line of the `opt` case, which
 # writes the same `.as_ref()`.
@@ -599,6 +607,15 @@ packages/ferrovue/src/expr.ts: StringLiteral: "html" => "" in if (f.ty.of.k === 
 packages/ferrovue/src/expr.ts: ConditionalExpression: want.k === "opt" => true in if (want.k === "opt" && nothing(v.ty)) return "None";
 packages/ferrovue/src/expr.ts: ConditionalExpression: want.k === "opt" => true in if (want.k === "opt" && v.ty.k === "opt" && sameTy(v.ty.of, want.of)) return v.code;
 packages/ferrovue/src/expr.ts: ConditionalExpression: want.k === "opt" => true in if (want.k === "opt" && sameTy(v.ty, want.of)) return `Some(${bare(v.code)})`;
+
+# expr.ts, `childOf`: a type a component imports from another `.vue` file reaches other components
+# only through that component's own types (its `Props` and the interfaces it declares), which it
+# writes when it is compiled, so the component that imports the type is refused with FV0512 first
+# and every component that uses it is left unchecked. `from` is then the importer, which the
+# search finds first, and each mutant gives `from` too.
+packages/ferrovue/src/expr.ts: LogicalOperator: [from, ...ctx.components.values()].find((comp) => comp.vueTypeImports.has(key)) ?? from => [from, ...ctx.components.values()].find(comp => comp.vueTypeImports.has(key)) && from in const importer = [from, ...ctx.components.values()].find((comp) => comp.vueTypeImports.has(key)) ?? from;
+packages/ferrovue/src/expr.ts: ArrayDeclaration: [from, ...ctx.components.values()] => [] in const importer = [from, ...ctx.components.values()].find((comp) => comp.vueTypeImports.has(key)) ?? from;
+packages/ferrovue/src/expr.ts: ArrowFunction: (comp) => comp.vueTypeImports.has(key) => () => undefined in const importer = [from, ...ctx.components.values()].find((comp) => comp.vueTypeImports.has(key)) ?? from;
 
 # expr.ts, `slotsObject`: a member that is not a name has no `name`, so its `owner` is
 # `undefined`, which is neither `_ctx` nor `$setup`.
@@ -638,6 +655,12 @@ packages/ferrovue/src/expr.ts: ConditionalExpression: home !== s.comp => true in
 
 # expr.ts, `stated`: a qualified type name (`A.B`) has no `name` to equal "const".
 packages/ferrovue/src/expr.ts: ConditionalExpression: t.typeName.type === "Identifier" => true in if (t.type === "TSTypeReference" && t.typeName.type === "I … const" && !t.typeParameters) return expr(s, n.expression);
+
+# expr.ts, `notBooleans`: both callers pass the type of the right side, which is set wherever they
+# are reached (`right` by the callback of `narrowing`, as for `&&` and `||` below, and `b` by
+# `expr`), so `ty` is never undefined.
+packages/ferrovue/src/expr.ts: StringLiteral: "" => "Stryker was here!" in const what = `\`${n.operator}\` is supported between boole … ty ? `, and its ${side} side is ${describeTy(ty)}` : ""}`;
+packages/ferrovue/src/expr.ts: ConditionalExpression: ty !== undefined => true in const absent = ty !== undefined && (ty.k === "opt" || nothing(ty));
 
 # expr.ts, `alwaysTruthy`: a type carries an empty list of literals only where `ownKeyPresence`
 # makes a presence that does not test truth, which `whenAbsent` never reads; every other list of
@@ -811,22 +834,27 @@ packages/ferrovue/src/expr.ts: ArrowFunction: (f) => f.js === prop => () => unde
 packages/ferrovue/src/expr.ts: StringLiteral: "_ctx" => "" in if (n.object.name === "_ctx" && comp.props.fields.some((f) => f.js === prop)) {
 
 # expr.ts, `expr` (`&&` and `||`): `narrowing` calls the callback that sets `right` before it
-# returns, so `right` is set whenever the test is reached, and an error in the right side leaves
-# before it.
+# returns, so `right` is set whenever the test and the refusal after it are reached, and an error
+# in the right side leaves before them.
 packages/ferrovue/src/expr.ts: OptionalChaining: right?.ty => right.ty in if (right?.ty.k === "bool") return { code, ty: BOOL };
+packages/ferrovue/src/expr.ts: OptionalChaining: right?.ty => right.ty in return notBooleans(comp, n, BOOL, right?.ty);
 
 # expr.ts, `expr` (`&&` and `||`): `alwaysTruthy` is false for an optional and for a boolean type,
 # so the type tests before it decide nothing for them. `truthy` of `v` writes `v.is_some()` or
 # `v.is_some_and(…)` for an optional and `v` for a boolean, and literal sets (`literalTy`) belong
 # to string and integer types only.
-packages/ferrovue/src/expr.ts: ConditionalExpression: a.ty.k !== "opt" => true in if (n.operator !== "??" && a.ty.k !== "opt" && !nothing(a. … (a.ty)) return n.operator === "&&" ? expr(s, n.right) : a;
-packages/ferrovue/src/expr.ts: StringLiteral: "opt" => "" in if (n.operator !== "??" && a.ty.k !== "opt" && !nothing(a. … (a.ty)) return n.operator === "&&" ? expr(s, n.right) : a;
-packages/ferrovue/src/expr.ts: ConditionalExpression: a.ty.k !== "bool" => true in if (n.operator !== "??" && a.ty.k !== "opt" && !nothing(a. … (a.ty)) return n.operator === "&&" ? expr(s, n.right) : a;
-packages/ferrovue/src/expr.ts: StringLiteral: "bool" => "" in if (n.operator !== "??" && a.ty.k !== "opt" && !nothing(a. … (a.ty)) return n.operator === "&&" ? expr(s, n.right) : a;
+packages/ferrovue/src/expr.ts: ConditionalExpression: a.ty.k !== "opt" => true in if (n.operator !== "??" && a.ty.k !== "opt" && !nothing(a. … y)) return n.operator === "&&" ? expr(right, n.right) : a;
+packages/ferrovue/src/expr.ts: StringLiteral: "opt" => "" in if (n.operator !== "??" && a.ty.k !== "opt" && !nothing(a. … y)) return n.operator === "&&" ? expr(right, n.right) : a;
+packages/ferrovue/src/expr.ts: ConditionalExpression: a.ty.k !== "bool" => true in if (n.operator !== "??" && a.ty.k !== "opt" && !nothing(a. … y)) return n.operator === "&&" ? expr(right, n.right) : a;
+packages/ferrovue/src/expr.ts: StringLiteral: "bool" => "" in if (n.operator !== "??" && a.ty.k !== "opt" && !nothing(a. … y)) return n.operator === "&&" ? expr(right, n.right) : a;
 
 # expr.ts, `expr` (`??`): `untypedEmpty(b)` holds only of a list, and `sameTy(a.ty.of, b.ty)` with
 # `a.ty.of` a list makes `b` a list, so the rest of the condition implies `b.ty.k === "list"`.
 packages/ferrovue/src/expr.ts: ConditionalExpression: b.ty.k === "list" => true in if (a.ty.of.k === "list" && b.ty.k === "list" && (untypedE …  || (sameTy(a.ty.of, b.ty) && !b.code.startsWith("[")))) {
+
+# expr.ts, `expr` (`??`): only `enumListVal` gives a value `enums`, with the type of a list or of an
+# optional list, and `a` is optional where this line is reached, so `a.ty.of` is a list.
+packages/ferrovue/src/expr.ts: ConditionalExpression: a.ty.of.k === "list" => true in if (a.enums !== undefined && a.ty.of.k === "list" && untyp … unwrap_or(&[])`, a.ty.of, a.enums.def), ...loneOf(a, b) };
 
 # expr.ts, `expr` (`??`): the location given to the `!= null` test built for an optional list and
 # an array literal is read by no refusal. `nullTest` and `presence` compile it from its operator
@@ -842,6 +870,7 @@ packages/ferrovue/src/expr.ts: ConditionalExpression: def === undefined => false
 packages/ferrovue/src/expr.ts: LogicalOperator: def !== undefined && fallback !== undefined => def !== undefined || fallback !== undefined in if (def !== undefined && fallback !== undefined && def.literals.includes(fallback)) {
 packages/ferrovue/src/expr.ts: ConditionalExpression: def !== undefined => true in if (def !== undefined && fallback !== undefined && def.literals.includes(fallback)) {
 packages/ferrovue/src/expr.ts: ConditionalExpression: fallback !== undefined => true in if (def !== undefined && fallback !== undefined && def.literals.includes(fallback)) {
+packages/ferrovue/src/expr.ts: ConditionalExpression: def === undefined => false in const widened = def === undefined || fallback === undefined ? undefined : (into: EnumDef, node: N): string | null => {
 
 # expr.ts, `expr` (`??` and `||`): `isTemporary` is false for a type other than a string and
 # `isCast` is false for a type other than an integer, so the type tests they follow are implied
@@ -931,6 +960,15 @@ packages/ferrovue/src/expr.ts: StringLiteral: "Some(" => "" in if (absent === "N
 # returns the first above.
 packages/ferrovue/src/expr.ts: ConditionalExpression: a.ty.of.k !== "undef" => true in if (sameTy(a.ty, b.ty) && a.ty.k === "list" && a.ty.of.k !== "undef") {
 packages/ferrovue/src/expr.ts: StringLiteral: "undef" => "" in if (sameTy(a.ty, b.ty) && a.ty.k === "list" && a.ty.of.k !== "undef") {
+
+# expr.ts, `expr` (`?:`): `exactlyEnum` holds only of a string or an optional string: a value with a
+# `variant` has the type of a generated enum, which `enumTy` makes a string, `knownLiteral` needs a
+# string, and `asEnum` is set only on strings and optional strings (`symVal` of string literals,
+# `??` of an enum's value and a literal, and the two `?:` here). Neither branch is optional where
+# `both` is chosen, and where `parts` is, each branch is `undefined` or a string, so `of` is a
+# string.
+packages/ferrovue/src/expr.ts: ConditionalExpression: a.ty.k === "str" => true in const both = a.ty.k === "str" && exactlyEnum(a) && exactlyEnum(b) ? [a, b] : null;
+packages/ferrovue/src/expr.ts: ConditionalExpression: of.k === "str" => true in const parts = of.k === "str" && [a, b].every((v) => nothin …  || (v.ty.k !== "opt" && exactlyEnum(v))) ? [a, b] : null;
 
 # expr.ts, `expr` (`?:`): the `held` and temporary values are strings or optional strings
 # (`isTemporary` needs a string, `held` is set only on an optional string), and the other branch

@@ -1681,6 +1681,11 @@ export const usePrefs = defineStore("prefs", () => ({}));
       expect(out.get("x.rs")).toContain('format!("{}!", fv_stores.prefs.density)');
     });
 
+    it("refuses a getter read by `[…]`", () => {
+      const withGetter = store.replace("});\n", `, getters: { label: (s) => s.density + "!" } });\n`);
+      expect(() => withStore(island(reader.replace("prefs.density", "prefs['label']")), withGetter)).toThrow(expect.objectContaining({ code: "FV0612" }));
+    });
+
     it("refuses a getter that reads `this`, or returns a function", () => {
       const viaThis = store.replace("});\n", `, getters: { label(): string { return this.density; } } });\n`);
       expect(() => withStore(island(reader.replace("prefs.density", "prefs.label")), viaThis)).toThrow(/reads `this`/);
