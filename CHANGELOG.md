@@ -76,6 +76,8 @@ released together and share version numbers.
 - Tests only: the fuzzer writes a `?:` of two optional values in a template literal when both are
   absent as `undefined` or both as `null`. A `?:` of one of each may be either, which a template
   literal writes as `undefined` or `null`, and the compiler refuses it with FV0721.
+- Internal: the repository tracks no build output. `.gitignore` ignores a `target/` directory at
+  any depth, and the Criterion results committed under `crates/ferrovue/target` are removed.
 
 ### Fixed
 
