@@ -114,7 +114,7 @@ export function releaseChangelog(changelog: string, version: string, date: strin
   if (changelogNotes(changelog, version) !== null) throw new Error(`CHANGELOG.md already has ${version}`);
   const unreleased = changelogNotes(changelog, "Unreleased");
   if (unreleased === null) throw new Error("CHANGELOG.md has no [Unreleased] section");
-  if (!unreleased) throw new Error("CHANGELOG.md's [Unreleased] section is empty: write the notes first");
+  if (!unreleased) throw new Error("CHANGELOG.md's [Unreleased] section is empty: a release ships a change users can notice, so add its entry first");
   const problems = sectionProblems(unreleased, "Unreleased");
   if (problems.length) throw new Error(problems.join("\n"));
   return releaseLinks(changelog.replace("## [Unreleased]", `## [Unreleased]\n\n## [${version}] - ${date}`), version);

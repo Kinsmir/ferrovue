@@ -12,7 +12,7 @@
 - [ ] Anything ferrovue refuses has a case in `refused` in `compiler.test.ts` and a stable code in `src/errors.ts`, with the guide's `error_codes` page rewritten by `pnpm errors:generate`
 - [ ] Generated code is regenerated (`pnpm conformance:generate`) and the example is current
 - [ ] A change to the npm package's exports, CLI options or configuration keys is in `packages/ferrovue/api` (`pnpm api:report`) and `schema.json` (`pnpm schema:generate`), and anything it removes was deprecated first
-- [ ] `CHANGELOG.md` has an entry under `[Unreleased]`
+- [ ] `CHANGELOG.md` has an entry under `[Unreleased]`, if users can notice the change
 - [ ] README updated if what a component may use changed, and the crate guide (`crates/ferrovue/docs/`) if generated code or the runtime changed
 
 ## Notes for the reviewer

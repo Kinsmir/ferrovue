@@ -162,7 +162,10 @@ site/                        the VitePress site at kinsmir.github.io/ferrovue: `
    and stays. `pnpm test` fails on a code raised but not listed, listed but not raised, listed
    twice, or an index that differs from the list.
 5. **Document it** in the README's "What a component may use" table and in `CHANGELOG.md` under
-   `[Unreleased]`. If it changes what generated code looks like or adds to the runtime, update the
+   `[Unreleased]` when users can notice the change, following
+   [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/): an entry of at most two lines
+   that links the guide page holding the detail (edit the entry about the same thing when there is
+   one). Tests, CI, lint, the fuzzer and contributor docs get no entry. If it changes what generated code looks like or adds to the runtime, update the
    crate's guide too (`crates/ferrovue/docs/`, published on docs.rs as `ferrovue::guide`): its
    examples copy generated code, and `cargo test --doc -p ferrovue --all-features` compiles and
    runs every one of them, those for optional features included. An example that shows generated

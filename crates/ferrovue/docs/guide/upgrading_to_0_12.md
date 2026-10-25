@@ -3,7 +3,9 @@ Upgrading a project from ferrovue 0.11 to 0.12: the steps to take and what behav
 The [CHANGELOG](https://github.com/Kinsmir/ferrovue/blob/main/CHANGELOG.md) lists every change;
 this page picks out what an application notices. Most of it is one change: every item of the crates
 and of the npm package is named at the module or entry that defines it, and nothing is lifted to a
-root above it. Steps 3 and 4 cover that change, with a table of every path that moved. The other
+root above it. A re-export cannot carry `#[deprecated]`, so every path moves in 0.12, with no
+release that deprecates the old paths first. Steps 3 and 4 cover that change, with a table of every
+path that moved. The other
 changes of 0.12 to unions of string literals have sections of their own, steps 5 and 6 and
 [Behaviour that changed](#behaviour-that-changed). The page for the release before is
 [`upgrading_to_0_11`](crate::guide::upgrading_to_0_11).
