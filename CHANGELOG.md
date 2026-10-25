@@ -5,6 +5,8 @@ released together and share version numbers.
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-25
+
 ### Added
 
 - Loops and `let`s assigned again in a function's or a `computed`'s body and in a list method's
@@ -2065,7 +2067,8 @@ released together and share version numbers.
 - Slot content made only of comments (a `v-if` not taken, for example) was kept when the slot had
   no fallback. Vue drops it, so the bytes differed.
 
-[Unreleased]: https://github.com/Kinsmir/ferrovue/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/Kinsmir/ferrovue/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/Kinsmir/ferrovue/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/Kinsmir/ferrovue/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/Kinsmir/ferrovue/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/Kinsmir/ferrovue/compare/v0.7.2...v0.8.0
