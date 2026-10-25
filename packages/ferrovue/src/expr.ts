@@ -194,10 +194,14 @@ export function coerce(comp: Component, v: Val, want: Ty, node: N): string {
   return fail(comp, "FV0607", `a ${JSON.stringify(v.ty)} where ${JSON.stringify(want)} is expected`, node);
 }
 
-export function childOf(name: string): Component {
+/** The compiled component `name`, whose type `type` the component `from` reads. */
+export function childOf(name: string, type: string, from: Component): Component {
   const c = ctx.components.get(name);
-  if (!c) throw new GenError("FV0512", `\`Props\` is imported from ${name}.vue, which is not among the components compiled`);
-  return c;
+  if (c) return c;
+  const key = `${name} ${type}`;
+  const importer = [from, ...ctx.components.values()].find((comp) => comp.vueTypeImports.has(key)) ?? from;
+  const help = `move ${name}.vue into the components directory, or declare \`${type}\` in a \`.ts\` file and import it from there`;
+  return fail(importer, "FV0512", `\`${type}\` is imported from ${name}.vue, which is not among the components compiled`, importer.vueTypeImports.get(key), help);
 }
 
 function slotsObject(s: Scope, n: N): string | null {
@@ -279,6 +283,14 @@ function stated(s: Scope, n: N): Val {
   const v = expr(s, n.fvGiven ? n.expression : typedBy(n.expression, t));
   if (sameTy(v.ty, want) || (isNumber(v.ty) && isNumber(want)) || (want.k === "opt" && sameTy(v.ty, want.of))) return v;
   return fail(comp, "FV0628", `\`${keyword}\` states ${describeTy(want)} of ${describeTy(v.ty)}, which the server keeps as it is: write the value with the type it has`, n);
+}
+
+function notBooleans(comp: Component, n: N, left: Ty, right: Ty | undefined): never {
+  const [side, ty] = left.k === "bool" ? ["right", right] : ["left", left];
+  const what = `\`${n.operator}\` is supported between booleans only${ty ? `, and its ${side} side is ${describeTy(ty)}` : ""}`;
+  const absent = ty !== undefined && (ty.k === "opt" || nothing(ty));
+  const help = absent ? `test it with \`!= null\` for a boolean, or write \`?:\` with the value each side gives` : "write a comparison for a boolean, or `?:` with the value each side gives";
+  return fail(comp, "FV0614", what, n, help);
 }
 
 function alwaysTruthy(ty: Ty): boolean {
@@ -626,7 +638,7 @@ export function expr(s: Scope, n: N): Val {
           let right: Val | undefined;
           const code = narrowing(s, p, (inner) => (right = expr(inner, n.right)).code, () => String(n.operator === "||"));
           if (right?.ty.k === "bool") return { code, ty: BOOL };
-          return fail(comp, "FV0614", `\`${n.operator}\` is supported between booleans only`, n);
+          return notBooleans(comp, n, BOOL, right?.ty);
         }
         const absent = p && n.operator === "&&" && !p.negated ? whenAbsent(s, p, n.left) : null;
         if (absent !== null) return expr(s, { ...n, type: "ConditionalExpression", test: n.left, consequent: n.right, alternate: absent });
@@ -708,7 +720,7 @@ export function expr(s: Scope, n: N): Val {
         return fail(comp, "FV0617", "`||` between these types", n);
       }
       if (n.operator === "&&" && a.ty.k === "bool" && b.ty.k === "bool") return boolOf(logical(a.code, "&&", b.code));
-      return fail(comp, "FV0614", `\`${n.operator}\` is supported between booleans only`, n);
+      return notBooleans(comp, n, a.ty, b.ty);
     }
     case "UnaryExpression":
       if (n.operator === "!") {

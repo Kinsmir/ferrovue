@@ -130,9 +130,9 @@ describe("`&&` and `||`", () => {
     ["`||` of a number and a string", "<p>{{ n || 'x' }}</p>", "FV0617 `||` between these types"],
     ["`||` of a boolean and a string", "<p>{{ b || s }}</p>", "FV0617 `||` between these types"],
     ["`||` of an optional list and a list", "<p>{{ (ys || xs).length }}</p>", "FV0617 `||` between these types"],
-    ["`&&` of two strings", "<p>{{ s && d }}</p>", "FV0614 `&&` is supported between booleans only"],
-    ["`&&` of a number and a boolean", "<p>{{ n && b }}</p>", "FV0614 `&&` is supported between booleans only"],
-    ["`&&` of a boolean and a string", "<p>{{ b && s }}</p>", "FV0614 `&&` is supported between booleans only"],
+    ["`&&` of two strings", "<p>{{ s && d }}</p>", "FV0614 `&&` is supported between booleans only, and its left side is a string"],
+    ["`&&` of a number and a boolean", "<p>{{ n && b }}</p>", "FV0614 `&&` is supported between booleans only, and its left side is a number"],
+    ["`&&` of a boolean and a string", "<p>{{ b && s }}</p>", "FV0614 `&&` is supported between booleans only, and its right side is a string"],
     ["`||` of a string and a boolean", "<p>{{ s || b }}</p>", "FV0617 `||` between these types"],
     ["`||` of a number and a boolean", "<p>{{ n || b }}</p>", "FV0617 `||` between these types"],
     ["`||` of `undefined` and a string", "<p>{{ undefined || s }}</p>", "FV0617 `||` between these types"],
@@ -143,8 +143,8 @@ describe("`&&` and `||`", () => {
     ["`||` of a number and a computed string", "<p>{{ n || `a${s}` }}</p>", "FV0617 `||` between these types"],
     ["`||` of two optional strings", "<p>{{ os || os }}</p>", "FV0617 `||` between these types"],
     ["`||` of two optional objects", "<p>{{ (q || q)?.t }}</p>", "FV0617 `||` between these types"],
-    ["`&&` of an optional date and a string", "<p>{{ (b ? on : on) && 'x' }}</p>", "FV0614 `&&` is supported between booleans only"],
-    ["`&&` of an optional date and a boolean", "<p>{{ (c ? on : undefined) && b }}</p>", "FV0614 `&&` is supported between booleans only"],
+    ["`&&` of an optional date and a string", "<p>{{ (b ? on : on) && 'x' }}</p>", "FV0614 `&&` is supported between booleans only, and its left side is an optional `Date`"],
+    ["`&&` of an optional date and a boolean", "<p>{{ (c ? on : undefined) && b }}</p>", "FV0614 `&&` is supported between booleans only, and its left side is an optional `Date`"],
   ];
   for (const [what, template, message] of refused) {
     it(`refuses ${what}`, () => {

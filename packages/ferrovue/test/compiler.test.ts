@@ -3560,6 +3560,36 @@ defineProps<{ s?: string }>();
       /X\.vue:4:\d+: `&&` gives its left side where that is falsy, and this one, an optional string, may be falsy where it is present/,
     ],
     [
+      "`&&` after a choice that may be `null` or `undefined`",
+      `<script setup lang="ts">
+defineProps<{ a: string | null; on: boolean }>();
+</script>
+<template><i>{{ (on ? a : undefined) && "x" }}</i></template>`,
+      /^components\/X\.vue:4:17: `&&` is supported between booleans only, and its left side is a string, `null` or `undefined`\n/,
+    ],
+    [
+      "a type imported from a component that is not compiled",
+      `<script setup lang="ts">
+import type { Item } from "./Missing.vue";
+defineProps<{ item: Item }>();
+</script>
+<template><i>{{ item.label }}</i></template>`,
+      /^components\/X\.vue:2:15: `Item` is imported from Missing\.vue, which is not among the components compiled\n/,
+    ],
+    [
+      "`<component :is>` choosing a child whose required prop is left out",
+      `<script setup lang="ts">
+import U from "./U.vue";
+import Y from "./Y.vue";
+defineProps<{ on: boolean }>();
+</script>
+<template>
+<p>
+  <component :is="on ? U : Y" /></p>
+</template>`,
+      /^components\/X\.vue:8:3: U requires `k`\n/,
+    ],
+    [
       "a computed that assigns a prop, read by the template",
       `<script setup lang="ts">
 const props = defineProps<{ tags: string[]; n: number }>();
@@ -6164,6 +6194,9 @@ defineProps<{ chip: Chip }>();
     "a computed that assigns a prop, read by the template": "FV1902",
     "a constant `Map` read by its size": "FV0227",
     "`&&` after an optional string, which may be empty": "FV0614",
+    "`&&` after a choice that may be `null` or `undefined`": "FV0614",
+    "a type imported from a component that is not compiled": "FV0512",
+    "`<component :is>` choosing a child whose required prop is left out": "FV0506",
     "Object.entries pairs mapped to themselves": "FV0816",
     "Object.entries pairs joined": "FV0816",
     "Object.entries pairs sorted without a comparator": "FV0816",
@@ -6329,7 +6362,7 @@ defineProps<{ chip: Chip }>();
       expect(e.message).toMatch(message);
       expect(e.message).toMatch(/^components\/X\.vue:\d+:\d+: /);
       expect(Object.keys(ERRORS)).toContain(e.code);
-      expect(e.at).toMatchObject({ file: "components/X.vue", line: Number(e.message.split(":")[1]) });
+      expect(e.at).toMatchObject({ file: "components/X.vue", line: Number(e.message.split(":")[1]), column: Number(e.message.split(":")[2]) });
       expect(e.code).toBe(codes[what] ?? e.code);
     });
   }

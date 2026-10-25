@@ -712,9 +712,9 @@ The prop's Rust type cannot hold the value, and Vue would hand it to the child a
 
 ## FV0512
 
-`Props` imported from a component that is not compiled.
+Type imported from a component that is not compiled.
 
-`import type { Props } from "./UserCard.vue"` names the Rust `Props` of that component's generated module, which exists only for a component ferrovue compiles. Move the component into the components directory, or declare the type in a `.ts` file and import it from there.
+A type imported from a `.vue` file, as `import type { Props } from "./UserCard.vue"` or an interface the component declares, names a Rust type of that component's generated module, which exists only for a component ferrovue compiles. Move the component into the components directory, or declare the type in a `.ts` file and import it from there.
 
 ## FV0513
 

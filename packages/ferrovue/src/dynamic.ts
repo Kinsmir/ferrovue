@@ -1,7 +1,7 @@
 import { parse as parseJs } from "@babel/parser";
 import { isHTMLTag, isVoidTag } from "@vue/shared";
 import { basename } from "node:path";
-import { type Component, type N, type Scope, camelize, fail, rustStr, templateAst } from "./model.ts";
+import { type Component, type N, type Scope, camelize, directiveOwner, fail, rustStr, templateAst } from "./model.ts";
 import { GenError } from "./errors.ts";
 import { ctx } from "./context.ts";
 import { matchOver } from "./enums.ts";
@@ -317,12 +317,17 @@ function renderElement(s: Scope, e: Emitter, tag: string | { code: string }, d: 
   e.lit(">");
 }
 
+function templateAt(n: N): N {
+  return { type: "VueTemplate", loc: { start: { line: n.loc.start.line, column: n.loc.start.column - 1 } }, __fv: "source" };
+}
+
 function renderChoice(s: Scope, e: Emitter, choice: Choice, d: Dynamic): void {
   if ("tag" in choice) {
     renderElement(s, e, choice.tag, d);
     return;
   }
-  const at = { loc: d.at.loc, __fv: d.at.__fv };
+  const owner = directiveOwner(s.comp, d.is);
+  const at = owner ? { loc: templateAt(owner).loc, __fv: "source" } : { loc: d.at.loc, __fv: d.at.__fv };
   const target = { type: "MemberExpression", computed: true, object: { type: "Identifier", name: "$setup", ...at }, property: { type: "StringLiteral", value: choice.local, ...at }, ...at };
   const takes = s.components.get(choice.child)?.slotNames;
   const slots =
@@ -408,8 +413,7 @@ function refuseContentDirectives(comp: Component): void {
     if (n.type === 1 && n.tag === "component") {
       const dir = n.props.find((p: N) => p.type === 7 && (p.name === "html" || p.name === "text"));
       if (dir) {
-        const at = { type: "VueTemplate", loc: { start: { line: dir.loc.start.line, column: dir.loc.start.column - 1 } }, __fv: "source" };
-        fail(comp, "FV0422", `\`v-${dir.name}\` on \`<component :is>\`: Vue's server renders the element empty, which hydration then fills; put the content inside it`, at);
+        fail(comp, "FV0422", `\`v-${dir.name}\` on \`<component :is>\`: Vue's server renders the element empty, which hydration then fills; put the content inside it`, templateAt(dir));
       }
     }
     for (const c of n.children ?? []) visit(c);

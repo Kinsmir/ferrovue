@@ -476,8 +476,8 @@ export const ERRORS: {
         readonly detail: "The prop's Rust type cannot hold the value, and Vue would hand it to the child as it is, so the child would read another type than it declares. The message names both types. Pass a value of the prop's type, convert it where it is passed, or change the prop's declared type.";
     };
     readonly FV0512: {
-        readonly title: "`Props` imported from a component that is not compiled";
-        readonly detail: "`import type { Props } from \"./UserCard.vue\"` names the Rust `Props` of that component's generated module, which exists only for a component ferrovue compiles. Move the component into the components directory, or declare the type in a `.ts` file and import it from there.";
+        readonly title: "Type imported from a component that is not compiled";
+        readonly detail: "A type imported from a `.vue` file, as `import type { Props } from \"./UserCard.vue\"` or an interface the component declares, names a Rust type of that component's generated module, which exists only for a component ferrovue compiles. Move the component into the components directory, or declare the type in a `.ts` file and import it from there.";
     };
     readonly FV0513: {
         readonly title: "Component resolved by name that is not imported";

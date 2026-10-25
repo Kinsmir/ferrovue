@@ -258,7 +258,7 @@ export function holdsDate(comp: Component, ty: Ty, seen: Set<Struct | Component>
   if (ty.k === "date") return true;
   if (ty.k === "opt" || ty.k === "list" || ty.k === "record") return holdsDate(comp, ty.of, seen);
   if (ty.k === "child") {
-    const child = childOf(ty.name);
+    const child = childOf(ty.name, "Props", comp);
     if (seen.has(child)) return false;
     seen.add(child);
     return child.props.fields.some((f) => holdsDate(child, f.ty, seen));
@@ -307,7 +307,7 @@ export function datePlan(comp: Component, ty: Ty): string | null {
     if (t.k === "list") return [of(owner, t.of)];
     if (t.k === "record") return { "*": of(owner, t.of) };
     if (t.k === "child") {
-      const child = childOf(t.name);
+      const child = childOf(t.name, "Props", owner);
       return fields(child, child, t.name, child.props.fields);
     }
     if (t.k !== "struct") throw new Error(`a date plan of ${t.k}`);
@@ -342,7 +342,7 @@ export function lookupStruct(comp: Component, ty: Ty & { k: "struct" }): { st: S
     return { st: ctx.typeStructs.get(ty.name), owner: comp, path: comp.module === "types" ? "" : "super::types::" };
   }
   if (ty.home !== undefined && ty.home !== comp.name) {
-    const owner = childOf(ty.home);
+    const owner = childOf(ty.home, ty.name, comp);
     reachLocal(owner, ty.name);
     return { st: owner.structs.get(ty.name), owner, path: `super::${owner.module}::` };
   }
