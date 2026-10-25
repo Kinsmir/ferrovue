@@ -730,7 +730,7 @@ export function keptLiterals(ty: Ty, keep: (literal: string | number) => boolean
   const literals = LITERALS.get(ty);
   if (literals === undefined || (ty.k !== "str" && ty.k !== "int")) return ty;
   const left = literals.filter(keep);
-  return left.length === literals.length || left.length === 0 ? ty : literalTy(ty.k, left);
+  return left.length === literals.length || left.length === 0 ? ty : derived([ty], literalTy(ty.k, left));
 }
 
 /** Whether a literal of a union is falsy, as `""` and `0` are. */
@@ -778,7 +778,28 @@ export function joinTy(a: Ty, b: Ty): Ty {
   const mine = LITERALS.get(a);
   if (mine === undefined || (a.k !== "str" && a.k !== "int")) return a.k === "str" && ASCII.has(a) && !ascii ? STR : a;
   const theirs = LITERALS.get(other);
-  return theirs === undefined ? (ascii ? asciiTy() : { k: a.k }) : literalTy(a.k, [...new Set([...mine, ...theirs])]);
+  return theirs === undefined ? (ascii ? asciiTy() : { k: a.k }) : derived([a, other], literalTy(a.k, [...new Set([...mine, ...theirs])]));
+}
+
+const DECLARED = new WeakSet<Ty>();
+
+/** `ty`, with each string type in it that holds literals and is no generated enum marked as
+ * declared for a value the Rust caller holds as a string, which the compiler does not check
+ * against its literals. */
+export function declaredLiterals(ty: Ty): Ty {
+  if (ty.k === "opt" || ty.k === "list" || ty.k === "record") declaredLiterals(ty.of);
+  else if (ty.k === "str" && LITERALS.has(ty) && !ENUMS.has(ty)) DECLARED.add(ty);
+  return ty;
+}
+
+/** Whether a string type's literals are declared for a value the Rust caller holds as a string. */
+export function isDeclared(ty: Ty): boolean {
+  return DECLARED.has(ty);
+}
+
+function derived(from: readonly Ty[], ty: Ty): Ty {
+  if (from.some((t) => DECLARED.has(t))) DECLARED.add(ty);
+  return ty;
 }
 
 /** A Rust enum generated for a union of string literals. */

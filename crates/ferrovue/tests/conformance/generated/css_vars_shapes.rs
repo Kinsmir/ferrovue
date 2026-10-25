@@ -44,16 +44,15 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
 /// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) -> Result<(), fv::Refused> {
     out.reserve(13 + props.tone.len());
-    let fv_refusals = fv::Refusals::new(NAME, "components/CssVarsShapes.vue");
     out.push_str("<main>");
-    fv_refusals.check(super::css_vars_show::try_render_scoped(out, &super::css_vars_show::Props { tone: std::borrow::Cow::Borrowed(&*props.tone), on: props.on }, &fv::Attrs::new(&[("style", fv::Attr::style([("left", fv::Attr::str("0")), ("--own", fv::Attr::str("1"))]))], "")))?;
-    fv_refusals.check(super::css_vars_bound::try_render_scoped(out, &super::css_vars_bound::Props { tone: std::borrow::Cow::Borrowed(&*props.tone) }, &fv::Attrs::new(&[("style", fv::Attr::style([("left", fv::Attr::str("1px"))])), ("title", fv::Attr::str("t"))], "")))?;
-    fv_refusals.check(super::css_vars_tag::try_render_scoped(out, &super::css_vars_tag::Props { tone: std::borrow::Cow::Borrowed(&*props.tone), tag: match (if props.on { "section" } else { "div" }).parse::<super::css_vars_tag::CssVarsTagTag>() { Ok(fv_u) => fv_u, Err(fv_e) => { fv_refusals.keep(Err::<(), _>(fv::Refused::new("FV0518", format!("{fv_e}: the template needs one of them here, and Vue would write the string itself: check the value before rendering"))), 16, 36); super::css_vars_tag::CssVarsTagTag::Div } } }, &fv::Attrs::new(&[("style", fv::Attr::style([("right", fv::Attr::str("0"))]))], "")))?;
-    fv_refusals.check(super::css_vars_link::try_render_scoped(out, &super::css_vars_link::Props { tone: std::borrow::Cow::Borrowed(&*props.tone) }, fv_route, &fv::Attrs::new(&[("style", fv::Attr::style([("bottom", fv::Attr::str("0"))]))], "")))?;
-    fv_refusals.check(super::css_vars_later::try_render_scoped(out, &super::css_vars_later::Props { tone: std::borrow::Cow::Borrowed(&*props.tone) }, &fv::Attrs::new(&[("style", fv::Attr::style([("--later", fv::Attr::str("1"))]))], "")))?;
-    fv_refusals.check(super::css_vars_branch::try_render(out, &super::css_vars_branch::Props { tone: std::borrow::Cow::Borrowed(&*props.tone), on: props.on }))?;
+    super::css_vars_show::try_render_scoped(out, &super::css_vars_show::Props { tone: std::borrow::Cow::Borrowed(&*props.tone), on: props.on }, &fv::Attrs::new(&[("style", fv::Attr::style([("left", fv::Attr::str("0")), ("--own", fv::Attr::str("1"))]))], ""))?;
+    super::css_vars_bound::try_render_scoped(out, &super::css_vars_bound::Props { tone: std::borrow::Cow::Borrowed(&*props.tone) }, &fv::Attrs::new(&[("style", fv::Attr::style([("left", fv::Attr::str("1px"))])), ("title", fv::Attr::str("t"))], ""))?;
+    super::css_vars_tag::try_render_scoped(out, &super::css_vars_tag::Props { tone: std::borrow::Cow::Borrowed(&*props.tone), tag: match if props.on { "section" } else { "div" } { "section" => super::css_vars_tag::CssVarsTagTag::Section, _ => super::css_vars_tag::CssVarsTagTag::Div } }, &fv::Attrs::new(&[("style", fv::Attr::style([("right", fv::Attr::str("0"))]))], ""))?;
+    super::css_vars_link::try_render_scoped(out, &super::css_vars_link::Props { tone: std::borrow::Cow::Borrowed(&*props.tone) }, fv_route, &fv::Attrs::new(&[("style", fv::Attr::style([("bottom", fv::Attr::str("0"))]))], ""))?;
+    super::css_vars_later::try_render_scoped(out, &super::css_vars_later::Props { tone: std::borrow::Cow::Borrowed(&*props.tone) }, &fv::Attrs::new(&[("style", fv::Attr::style([("--later", fv::Attr::str("1"))]))], ""))?;
+    super::css_vars_branch::try_render(out, &super::css_vars_branch::Props { tone: std::borrow::Cow::Borrowed(&*props.tone), on: props.on })?;
     out.push_str("</main>");
-    fv_refusals.check(Ok(()))
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.

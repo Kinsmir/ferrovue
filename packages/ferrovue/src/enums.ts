@@ -1,5 +1,5 @@
 import { basename } from "node:path";
-import { type Component, type EnumDef, type N, type Ty, type Val, asciiTy, enumOf, enumPath, enumTy, fail, isAscii, literalsOf, literalTy, REFUSALS, refusalAt, RUST_PRELUDE, rustStr, variantPath } from "./model.ts";
+import { type Component, type EnumDef, type N, type Ty, type Val, asciiTy, declaredLiterals, enumOf, enumPath, enumTy, fail, isAscii, isDeclared, literalsOf, literalTy, REFUSALS, refusalAt, RUST_PRELUDE, rustStr, variantPath } from "./model.ts";
 import { ctx } from "./context.ts";
 import { atom, binary } from "./parens.ts";
 import { unquote } from "./strings.ts";
@@ -100,9 +100,9 @@ export function enumField(comp: Component, owner: string, field: string, node: N
   }
   if (ty.k === "list") {
     const of = enumScalar(comp, owner, field, node, ty.of);
-    return of === ty.of ? ty : { ...ty, of };
+    return declaredLiterals(of === ty.of ? ty : { ...ty, of });
   }
-  return enumScalar(comp, owner, field, node, ty);
+  return declaredLiterals(enumScalar(comp, owner, field, node, ty));
 }
 
 function enumScalar(comp: Component, owner: string, field: string, node: N, ty: Ty): Ty {
@@ -167,8 +167,13 @@ export function intoEnum(comp: Component, v: Val, def: EnumDef, node: N): string
   if (literal !== undefined) return def.literals.includes(literal) ? variantPath(comp, def, literal) : null;
   const literals = literalsOf(optional ? (v.ty as { of: Ty }).of : v.ty);
   if (literals === undefined || !literals.every((l) => typeof l === "string" && def.literals.includes(l))) return null;
+  const strings = literals as readonly string[];
+  if (!isDeclared(optional ? (v.ty as { of: Ty }).of : v.ty)) {
+    if (strings.length === 1 && !optional) return variantPath(comp, def, strings[0]!);
+    return over(v.code, strings.map((l, i) => `${i === strings.length - 1 ? "_" : rustStr(l)} => ${variantPath(comp, def, l)}`).join(", "));
+  }
   const refused = `${REFUSALS}.keep(Err::<(), _>(fv::Refused::new(${rustStr(OUTSIDE)}, format!("{fv_e}: the template needs one of them here, and Vue would write the string itself: check the value before rendering"))), ${refusalAt(comp, node)})`;
-  const parsed = (on: string): string => `match ${atom(on)}.parse::<${enumPath(comp, def)}>() { Ok(fv_u) => fv_u, Err(fv_e) => { ${refused}; ${variantPath(comp, def, def.literals[0]!)} } }`;
+  const parsed = (on: string): string => `match ${/^&\*+[\w.]+$/.test(on) ? on.replace(/^&\*+/, "") : atom(on)}.parse::<${enumPath(comp, def)}>() { Ok(fv_u) => fv_u, Err(fv_e) => { ${refused}; ${variantPath(comp, def, def.literals[0]!)} } }`;
   return optional ? `${atom(v.code)}.map(|v| ${parsed("v")})` : parsed(v.code);
 }
 

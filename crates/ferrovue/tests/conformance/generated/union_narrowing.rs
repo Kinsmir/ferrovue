@@ -109,19 +109,18 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(50 + 6 + 6 + props.label.len());
-    let fv_refusals = fv::Refusals::new(NAME, "components/UnionNarrowing.vue");
     let s_tone = props.start.map(Tone::as_str).unwrap_or("");
     let s_chosen = props.pick.map(Tone::as_str).unwrap_or("");
     let s_shown = if s_tone.is_empty() { None } else { Some(s_tone) };
     let s_on = !props.label.is_empty();
     out.push_str("<section>");
-    fv_refusals.check(super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: Some(s_tone).filter(|v| !v.is_empty()).map(|v| match v.parse::<super::narrowed_tone::Tone>() { Ok(fv_u) => fv_u, Err(fv_e) => { fv_refusals.keep(Err::<(), _>(fv::Refused::new("FV0518", format!("{fv_e}: the template needs one of them here, and Vue would write the string itself: check the value before rendering"))), 16, 26); super::narrowed_tone::Tone::Calm } }), label: std::borrow::Cow::Borrowed(&*props.label) }))?;
-    fv_refusals.check(super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: (if s_tone.is_empty() { None } else { Some(s_tone) }).map(|v| match v.parse::<super::narrowed_tone::Tone>() { Ok(fv_u) => fv_u, Err(fv_e) => { fv_refusals.keep(Err::<(), _>(fv::Refused::new("FV0518", format!("{fv_e}: the template needs one of them here, and Vue would write the string itself: check the value before rendering"))), 17, 26); super::narrowed_tone::Tone::Calm } }), label: std::borrow::Cow::Borrowed(&*props.label) }))?;
-    fv_refusals.check(super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: (if !s_tone.is_empty() { Some(s_tone) } else { None }).map(|v| match v.parse::<super::narrowed_tone::Tone>() { Ok(fv_u) => fv_u, Err(fv_e) => { fv_refusals.keep(Err::<(), _>(fv::Refused::new("FV0518", format!("{fv_e}: the template needs one of them here, and Vue would write the string itself: check the value before rendering"))), 18, 24); super::narrowed_tone::Tone::Calm } }), label: std::borrow::Cow::Borrowed(&*props.label) }))?;
-    fv_refusals.check(super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: (if !s_chosen.is_empty() { Some(s_chosen) } else { None }).map(|v| match v.parse::<super::narrowed_tone::Tone>() { Ok(fv_u) => fv_u, Err(fv_e) => { fv_refusals.keep(Err::<(), _>(fv::Refused::new("FV0518", format!("{fv_e}: the template needs one of them here, and Vue would write the string itself: check the value before rendering"))), 19, 26); super::narrowed_tone::Tone::Calm } }), label: std::borrow::Cow::Borrowed(&*props.label) }))?;
-    fv_refusals.check(super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: s_shown.map(|v| match v.parse::<super::narrowed_tone::Tone>() { Ok(fv_u) => fv_u, Err(fv_e) => { fv_refusals.keep(Err::<(), _>(fv::Refused::new("FV0518", format!("{fv_e}: the template needs one of them here, and Vue would write the string itself: check the value before rendering"))), 20, 26); super::narrowed_tone::Tone::Calm } }), label: std::borrow::Cow::Borrowed(&*props.label) }))?;
+    super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: Some(s_tone).filter(|v| !v.is_empty()).map(|v| match v { "calm" => super::narrowed_tone::Tone::Calm, "<loud>" => super::narrowed_tone::Tone::Loud, _ => super::narrowed_tone::Tone::AB }), label: std::borrow::Cow::Borrowed(&*props.label) })?;
+    super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: (if s_tone.is_empty() { None } else { Some(s_tone) }).map(|v| match v { "calm" => super::narrowed_tone::Tone::Calm, "<loud>" => super::narrowed_tone::Tone::Loud, _ => super::narrowed_tone::Tone::AB }), label: std::borrow::Cow::Borrowed(&*props.label) })?;
+    super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: (if !s_tone.is_empty() { Some(s_tone) } else { None }).map(|v| match v { "calm" => super::narrowed_tone::Tone::Calm, "<loud>" => super::narrowed_tone::Tone::Loud, _ => super::narrowed_tone::Tone::AB }), label: std::borrow::Cow::Borrowed(&*props.label) })?;
+    super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: (if !s_chosen.is_empty() { Some(s_chosen) } else { None }).map(|v| match v { "calm" => super::narrowed_tone::Tone::Calm, "<loud>" => super::narrowed_tone::Tone::Loud, _ => super::narrowed_tone::Tone::AB }), label: std::borrow::Cow::Borrowed(&*props.label) })?;
+    super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: s_shown.map(|v| match v { "calm" => super::narrowed_tone::Tone::Calm, "<loud>" => super::narrowed_tone::Tone::Loud, _ => super::narrowed_tone::Tone::AB }), label: std::borrow::Cow::Borrowed(&*props.label) })?;
     if !s_chosen.is_empty() {
-        fv_refusals.check(super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: Some(match s_chosen.parse::<super::narrowed_tone::Tone>() { Ok(fv_u) => fv_u, Err(fv_e) => { fv_refusals.keep(Err::<(), _>(fv::Refused::new("FV0518", format!("{fv_e}: the template needs one of them here, and Vue would write the string itself: check the value before rendering"))), 21, 47); super::narrowed_tone::Tone::Calm } }), label: std::borrow::Cow::Borrowed(&*props.label) }))?;
+        super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: Some(match s_chosen { "calm" => super::narrowed_tone::Tone::Calm, "<loud>" => super::narrowed_tone::Tone::Loud, _ => super::narrowed_tone::Tone::AB }), label: std::borrow::Cow::Borrowed(&*props.label) })?;
     } else {
         out.push_str("<i>");
         fv::escape_into(out, &props.label);
@@ -131,18 +130,18 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         out.push_str("<i>empty</i>");
     } else {
         if s_tone == "calm" {
-            fv_refusals.check(super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: Some(match s_tone.parse::<super::narrowed_tone::Tone>() { Ok(fv_u) => fv_u, Err(fv_e) => { fv_refusals.keep(Err::<(), _>(fv::Refused::new("FV0518", format!("{fv_e}: the template needs one of them here, and Vue would write the string itself: check the value before rendering"))), 24, 54); super::narrowed_tone::Tone::Calm } }), label: std::borrow::Cow::Borrowed("calm") }))?;
+            super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: Some(super::narrowed_tone::Tone::Calm), label: std::borrow::Cow::Borrowed("calm") })?;
         } else {
-            fv_refusals.check(super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: Some(match s_tone.parse::<super::narrowed_tone::Tone>() { Ok(fv_u) => fv_u, Err(fv_e) => { fv_refusals.keep(Err::<(), _>(fv::Refused::new("FV0518", format!("{fv_e}: the template needs one of them here, and Vue would write the string itself: check the value before rendering"))), 25, 33); super::narrowed_tone::Tone::Calm } }), label: std::borrow::Cow::Borrowed(&*props.label) }))?;
+            super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: Some(match s_tone { "<loud>" => super::narrowed_tone::Tone::Loud, _ => super::narrowed_tone::Tone::AB }), label: std::borrow::Cow::Borrowed(&*props.label) })?;
         }
     }
     if s_on && s_chosen != "a&b" && !s_chosen.is_empty() {
-        fv_refusals.check(super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: Some(match s_chosen.parse::<super::narrowed_tone::Tone>() { Ok(fv_u) => fv_u, Err(fv_e) => { fv_refusals.keep(Err::<(), _>(fv::Refused::new("FV0518", format!("{fv_e}: the template needs one of them here, and Vue would write the string itself: check the value before rendering"))), 26, 66); super::narrowed_tone::Tone::Calm } }), label: std::borrow::Cow::Borrowed(&*props.label) }))?;
+        super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: Some(match s_chosen { "calm" => super::narrowed_tone::Tone::Calm, _ => super::narrowed_tone::Tone::Loud }), label: std::borrow::Cow::Borrowed(&*props.label) })?;
     } else {
         out.push_str("<!---->");
     }
     out.push_str("</section>");
-    fv_refusals.check(Ok(()))
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.

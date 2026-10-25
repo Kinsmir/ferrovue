@@ -7303,6 +7303,29 @@ defineProps<{ tone?: Tone; wide?: Tone | "hot"; all: Tone[]; some?: Tone[] }>();
     expect(out).not.toContain("parse");
   });
 
+  it("parses a string the Rust caller holds where a child's union prop needs the enum, refusing the render outside the union", () => {
+    const out = rendered(
+      compile(
+        island(
+          `<script setup lang="ts">
+import Y from "./Y.vue";
+defineProps<{ one: "calm"; byName: Record<string, "calm" | "loud"> }>();
+</script>
+<template><Y :tone="one" /><Y v-for="t in byName" :tone="t" /></template>`,
+          {
+            Y: `<script setup lang="ts">
+defineProps<{ tone: "calm" | "loud" }>();
+</script>
+<template><i>{{ tone }}</i></template>`,
+          },
+        ),
+      ).get("x.rs")!,
+    );
+    expect(out).toContain('tone: match props.one.parse::<super::y::YTone>() { Ok(fv_u) => fv_u, Err(fv_e) => { fv_refusals.keep(Err::<(), _>(fv::Refused::new("FV0518", format!("{fv_e}: the template needs one of them here, and Vue would write the string itself: check the value before rendering"))), 5, 21); super::y::YTone::Calm } }');
+    expect(out).toContain("tone: match fv_t.parse::<super::y::YTone>() {");
+    expect(out).not.toContain("_ =>");
+  });
+
   it("refuses a list of strings given to a child's list of a union", () => {
     const e = failure(() =>
       compile(
@@ -7467,8 +7490,8 @@ defineProps<{ k: "a" | "b" | "c"; o?: "a" | "b" | "c" | "d"; s: string; q: "a" |
     expect(out).toContain("k: match props.k { K::A => super::y::YK::A, K::B => super::y::YK::B, K::C => super::y::YK::C }");
     expect(out).toContain("o: props.m.map(|v| match v { K::A => super::y::YO::A, K::B => super::y::YO::B, K::C => super::y::YO::C })");
     expect(out).toContain("s: std::borrow::Cow::Borrowed(props.k.as_str())");
-    expect(out).toContain('q: match s_pick.parse::<super::y::YQ>() { Ok(fv_u) => fv_u, Err(fv_e) => { fv_refusals.keep(Err::<(), _>(fv::Refused::new("FV0518", format!("{fv_e}: the template needs one of them here, and Vue would write the string itself: check the value before rendering"))), 8, 39); super::y::YQ::A } }');
-    expect(out).toContain('r: match (if props.on { "a" } else { "b" }).parse::<super::y::YR>() { Ok(fv_u) => fv_u, Err(fv_e) => { fv_refusals.keep(');
+    expect(out).toContain('q: match s_pick { "b" => super::y::YQ::B, _ => super::y::YQ::C }');
+    expect(out).toContain('r: match if props.on { "a" } else { "b" } { "a" => super::y::YR::A, _ => super::y::YR::B }');
     expect(out).toContain("lit: super::y::YLit::C");
   });
 
@@ -7587,7 +7610,7 @@ const card = computed<Card>(() => ({ size: props.big ? "lg" : "sm", label: props
     expect(body.match(/card: super::types::Card \{ size: super::types::Size::Md, /g)).toHaveLength(2);
     expect(body).toContain("card: super::types::Card { size: props.size, ");
     expect(body).toContain("size: match props.small { XSmall::Sm => super::types::Size::Sm, XSmall::Md => super::types::Size::Md }");
-    expect(body).toContain('size: match (if props.big { "lg" } else { "sm" }).parse::<super::types::Size>() { Ok(fv_u) => fv_u, Err(fv_e) => { fv_refusals.keep(');
+    expect(body).toContain('size: match if props.big { "lg" } else { "sm" } { "lg" => super::types::Size::Lg, _ => super::types::Size::Sm }');
     expect(body).toContain("other: props.other }");
   });
 

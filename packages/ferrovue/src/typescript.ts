@@ -2,7 +2,7 @@ import { parse as parseJs } from "@babel/parser";
 import { readFileSync } from "node:fs";
 import { basename } from "node:path";
 import { relativePath } from "./paths.ts";
-import { type Absence, type Component, type Field, type N, type Struct, type Ty, absence, blankComponent, BOOL, distinctFields, enumOf, fail, FLOAT, GenError, INT, joinAbsence, joinTy, literalTy, nodeName, opt, RUST_PRELUDE, rustStr, sameTy, snake, STR, tagAst, withAbsence } from "./model.ts";
+import { type Absence, type Component, type Field, type N, type Struct, type Ty, absence, blankComponent, BOOL, declaredLiterals, distinctFields, enumOf, fail, FLOAT, GenError, INT, joinAbsence, joinTy, literalTy, nodeName, opt, RUST_PRELUDE, rustStr, sameTy, snake, STR, tagAst, withAbsence } from "./model.ts";
 import { declareAlias, enumField, namedBy } from "./enums.ts";
 import { CONFIG_FILE, ctx, INLINE_HTML, TYPES_MODULE } from "./context.ts";
 import { childOf } from "./expr.ts";
@@ -382,7 +382,7 @@ function fieldOf(comp: Component, name: string, m: N, structs: Map<string, Struc
     fail(comp, "FV0321", `\`${m.key.name}?: T | null\` may be absent, which is \`undefined\`, or \`null\`: ${ONE_NOTHING}; declare it \`${m.key.name}: T | null\` or \`${m.key.name}?: T\``, m);
   }
   const ty = m.optional && base.k !== "opt" ? opt(base) : base;
-  return { js: m.key.name, rust: snake(m.key.name), ty: enums ? enumField(comp, name === "Props" ? comp.name : name, m.key.name, m, ty) : ty };
+  return { js: m.key.name, rust: snake(m.key.name), ty: enums ? enumField(comp, name === "Props" ? comp.name : name, m.key.name, m, ty) : declaredLiterals(ty) };
 }
 
 export function definePropsType(call: N): N | null {

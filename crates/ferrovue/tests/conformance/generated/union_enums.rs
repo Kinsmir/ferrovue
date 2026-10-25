@@ -437,7 +437,6 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(290 + 21 * props.steps.len() + 6 + 1 + 1 + 4 + 4 + 3 + 2 + 2 + 1 + props.steps.iter().map(|v| v.label.len() + 7 + 6).sum::<usize>() + props.note.len());
-    let fv_refusals = fv::Refusals::new(NAME, "components/UnionEnums.vue");
     let s_label = if props.mode == UnionEnumsMode::A { "first" } else { if props.mode == UnionEnumsMode::B { "second" } else { "third" } };
     let s_chosen = if props.level == super::types::Level::High { "a" } else { props.mode.as_str() };
     out.push_str("<section class=\"");
@@ -539,16 +538,16 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ol>");
-    fv_refusals.check(super::union_child::try_render(out, &super::union_child::Props { align: props.align, text: std::borrow::Cow::Borrowed(props.mode.as_str()), wide: Some(match props.align { super::types::Align::Left => super::union_child::UnionChildWide::Left, super::types::Align::Center => super::union_child::UnionChildWide::Center, super::types::Align::Right => super::union_child::UnionChildWide::Right }), pick: match s_chosen.parse::<super::union_child::UnionChildPick>() { Ok(fv_u) => fv_u, Err(fv_e) => { fv_refusals.keep(Err::<(), _>(fv::Refused::new("FV0518", format!("{fv_e}: the template needs one of them here, and Vue would write the string itself: check the value before rendering"))), 56, 66); super::union_child::UnionChildPick::A } }, fixed: super::union_child::UnionChildFixed::Y }))?;
+    super::union_child::try_render(out, &super::union_child::Props { align: props.align, text: std::borrow::Cow::Borrowed(props.mode.as_str()), wide: Some(match props.align { super::types::Align::Left => super::union_child::UnionChildWide::Left, super::types::Align::Center => super::union_child::UnionChildWide::Center, super::types::Align::Right => super::union_child::UnionChildWide::Right }), pick: match s_chosen { "a" => super::union_child::UnionChildPick::A, "b" => super::union_child::UnionChildPick::B, _ => super::union_child::UnionChildPick::C }, fixed: super::union_child::UnionChildFixed::Y })?;
     out.push_str("<!--[-->");
     for fv_s_ref_2 in props.steps.iter() {
         let fv_s_2 = fv_s_ref_2;
-        fv_refusals.check(super::union_child::try_render(out, &super::union_child::Props { align: fv_s_2.align.unwrap_or(super::types::Align::Center), text: std::borrow::Cow::Borrowed(&*fv_s_2.label), wide: None, pick: match props.other.unwrap_or(UnionEnumsOther::B) { UnionEnumsOther::A => super::union_child::UnionChildPick::A, UnionEnumsOther::B => super::union_child::UnionChildPick::B, UnionEnumsOther::C => super::union_child::UnionChildPick::C }, fixed: super::union_child::UnionChildFixed::X }))?;
+        super::union_child::try_render(out, &super::union_child::Props { align: fv_s_2.align.unwrap_or(super::types::Align::Center), text: std::borrow::Cow::Borrowed(&*fv_s_2.label), wide: None, pick: match props.other.unwrap_or(UnionEnumsOther::B) { UnionEnumsOther::A => super::union_child::UnionChildPick::A, UnionEnumsOther::B => super::union_child::UnionChildPick::B, UnionEnumsOther::C => super::union_child::UnionChildPick::C }, fixed: super::union_child::UnionChildFixed::X })?;
     }
     out.push_str("<!--]--><p>");
     fv::escape_into(out, &props.note);
     out.push_str("</p></section>");
-    fv_refusals.check(Ok(()))
+    Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.

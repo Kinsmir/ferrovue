@@ -392,7 +392,7 @@ function enumListInto(comp: Component, v: Val, want: Ty, node: N): string {
     return item === "v" ? `${atom(v.enums.place)}.to_vec()` : `${atom(v.enums.place)}.iter().map(|&v| ${item}).collect()`;
   }
   if (of.k !== "str" && (of.k !== "opt" || of.of.k !== "str")) return refuse();
-  const each: Val = { code: of.k === "opt" && v.iter === undefined ? "v.as_deref()" : "v", ty: of };
+  const each: Val = of.k === "str" ? { code: v.iter !== undefined ? "&*v" : "&**v", ty: of } : { code: v.iter !== undefined ? "v" : "v.as_deref()", ty: of };
   const iter = v.iter ?? `${atom(v.code)}.iter()`;
   return `${iter}.map(|v| ${ownInto(comp, each, want.of, node)}).collect()`;
 }
