@@ -636,6 +636,7 @@ fixture there kills more than its HTML.
 ```sh
 pnpm mutants:ts                                                    # every listed module, in full, then the check below
 pnpm mutants:ts expr                                               # the modules named, by file name, in full, then the check
+pnpm mutants:ts expr --concurrency=2                               # the same, with Stryker options written --name=value
 pnpm exec stryker run -m packages/ferrovue/src/attrs.ts            # one module, reusing earlier results
 pnpm exec stryker run -m "packages/ferrovue/src/attrs.ts:120-140"  # the mutants on some lines
 node scripts/stryker-survivors.ts packages/ferrovue/src/attrs.ts   # hold the last report's modules (or these) to the list
@@ -662,7 +663,10 @@ number, as `scripts/stryker-survivors.ts` prints it; a mutant that survives twic
 text is listed twice. `pnpm mutants:ts` fails on a survivor the list does not explain and on an
 entry no survivor of the modules it holds uses. A listed mutant that times out uses its entry:
 under load, a mutant whose tests all pass can still run past the timeout. The **Mutants** workflow
-runs it every Monday beside cargo-mutants and uploads each job's HTML report.
+runs it every Monday beside cargo-mutants and uploads each job's HTML report. On `main`, each job
+also sends its report to the [Stryker Dashboard](https://dashboard.stryker-mutator.io/reports/github.com/Kinsmir/ferrovue/main),
+as a module named after its modules (`attrs-template`, `constants-dynamic`, `expr`), with the
+`STRYKER_DASHBOARD_API_KEY` of the `stryker-dashboard` environment; a local run sends nothing.
 
 The vitest runner is patched (`patches/`): Stryker 10 names a test by its describe blocks and
 title joined with spaces, and vitest 5 matches `--testNamePattern` against the names joined with

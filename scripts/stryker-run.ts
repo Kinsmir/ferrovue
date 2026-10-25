@@ -16,11 +16,17 @@ export function modules(mutate: string[], names: string[]): string[] {
   });
 }
 
+/** The modules `args` name, as `modules` reads them, and the Stryker options among them, written
+ * `--name=value`, passed on to `stryker run`. */
+export function invocation(mutate: string[], args: string[]): { files: string[]; options: string[] } {
+  return { files: modules(mutate, args.filter((arg) => !arg.startsWith("--"))), options: args.filter((arg) => arg.startsWith("--")) };
+}
+
 function main(): void {
   const { mutate } = JSON.parse(readFileSync(join(ROOT, "stryker.config.json"), "utf8")) as { mutate: string[] };
-  const files = modules(mutate, process.argv.slice(2));
+  const { files, options } = invocation(mutate, process.argv.slice(2));
   const steps: [string, string[]][] = [
-    ["pnpm", ["exec", "stryker", "run", "--force", "--mutate", files.join(",")]],
+    ["pnpm", ["exec", "stryker", "run", "--force", "--mutate", files.join(","), ...options]],
     [process.execPath, [join(ROOT, "scripts/stryker-survivors.ts"), ...files]],
   ];
   for (const [command, args] of steps) {

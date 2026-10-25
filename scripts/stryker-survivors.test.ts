@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { modules } from "./stryker-run.ts";
+import { invocation, modules } from "./stryker-run.ts";
 import { compare, entry, listed, type Mutant, original, restricted } from "./stryker-survivors.ts";
 
 const at = (line: number, column: number, endLine: number, endColumn: number): Mutant["location"] => ({ start: { line, column }, end: { line: endLine, column: endColumn } });
@@ -56,4 +56,11 @@ it("names the modules to mutate by path, by file name and without `.ts`", () => 
   expect(modules(mutate, ["expr", "src/attrs.ts"])).toEqual(["src/expr.ts", "src/attrs.ts"]);
   expect(modules(mutate, ["attrs.ts"])).toEqual(["src/attrs.ts"]);
   expect(() => modules(mutate, ["dynamic"])).toThrow("`dynamic` is not among the modules stryker.config.json mutates: name one of attrs, expr");
+});
+
+it("passes the options written `--name=value` on to Stryker, and reads the rest as modules", () => {
+  const mutate = ["src/attrs.ts", "src/expr.ts"];
+  expect(invocation(mutate, ["expr", "--reporters=json,dashboard", "--dashboard.module=expr"])).toEqual({ files: ["src/expr.ts"], options: ["--reporters=json,dashboard", "--dashboard.module=expr"] });
+  expect(invocation(mutate, ["--reporters=json"])).toEqual({ files: mutate, options: ["--reporters=json"] });
+  expect(invocation(mutate, [])).toEqual({ files: mutate, options: [] });
 });

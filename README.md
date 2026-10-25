@@ -4,6 +4,7 @@
 [![npm](https://img.shields.io/npm/v/ferrovue.svg)](https://www.npmjs.com/package/ferrovue)
 [![docs.rs](https://img.shields.io/docsrs/ferrovue)](https://docs.rs/ferrovue)
 [![CI](https://github.com/Kinsmir/ferrovue/actions/workflows/ci.yml/badge.svg)](https://github.com/Kinsmir/ferrovue/actions/workflows/ci.yml)
+[![Mutation score](https://img.shields.io/endpoint?url=https%3A%2F%2Fbadge-api.stryker-mutator.io%2Fgithub.com%2FKinsmir%2Fferrovue%2Fmain)](https://dashboard.stryker-mutator.io/reports/github.com/Kinsmir/ferrovue/main)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#licence)
 
 Documentation: [docs.rs/ferrovue](https://docs.rs/ferrovue) (API and guide) · [kinsmir.github.io/ferrovue](https://kinsmir.github.io/ferrovue/) (guide and overview)
