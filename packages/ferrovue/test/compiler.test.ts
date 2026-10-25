@@ -2892,6 +2892,14 @@ defineProps<{ on: boolean; a?: string }>();
       /`String\(\)` of a value that may be `null` or `undefined`, which JavaScript writes as `null` or `undefined` and its Rust `Option` cannot tell apart/,
     ],
     [
+      "a template literal of a value that may be null or undefined",
+      `<script setup lang="ts">
+defineProps<{ on: boolean; a?: string; b: string | null }>();
+</script>
+<template><i :title="\`n=\${on ? a : b}\`"></i></template>`,
+      /a template literal of a value that may be `null` or `undefined`, which JavaScript writes as `null` or `undefined` and its Rust `Option` cannot tell apart: give it a fallback with `\?\?`/,
+    ],
+    [
       "a template literal of an object",
       `<script setup lang="ts">
 interface U { n: string }
@@ -6041,6 +6049,7 @@ defineProps<{ chip: Chip }>();
     "encodeURI of an object": "FV0723",
     "String of two values": "FV0723",
     "String of a value that may be null or undefined": "FV0721",
+    "a template literal of a value that may be null or undefined": "FV0721",
     "a template literal of an object": "FV0708",
     ".concat() of an object": "FV0723",
     "charCodeAt of a string that may hold half of a surrogate pair": "FV0706",
@@ -7748,6 +7757,64 @@ const sign = ref<"+" | "-">(props.on ? "+" : "-");
       const setup = `const props = defineProps<{ text: string }>();\nconst tone = ref<Tone>(props.text as Tone);`;
       expect(using(setup, "<p>{{ tone }}</p>")).toContain("let s_tone = &*props.text;");
       expect(() => using(setup, `<Badge :tone="tone" />`)).toThrow(expect.objectContaining({ code: "FV0111", at: expect.objectContaining({ line: 6, column: 24 }) }));
+    });
+
+    describe("a ref annotated as a union wider than the enum it starts from", () => {
+      const wider = (members: string, setup: string, template: string): string =>
+        rendered(
+          compile(
+            project(
+              `<script setup lang="ts">
+import { ref } from "vue";
+import Badge from "./Badge.vue";
+import { Level } from "../types/level";
+${setup}
+</script>
+<template>${template}</template>`,
+              {
+                "types/level.ts": `export enum Level { ${members} }\n`,
+                "components/Badge.vue": `<script setup lang="ts">
+import { Level } from "../types/level";
+defineProps<{ level?: Level }>();
+</script>
+<template><b>{{ level }}</b></template>`,
+              },
+            ),
+          ).get("x.rs")!,
+        );
+      const L = "super::types::Level";
+
+      it("holds a string of the wider union where a literal of it names no variant, and compares it with the literal it adds", () => {
+        const out = wider(
+          `High = "&amp; &lt;", Low = "'!", Mid = "0x1F"`,
+          `const props = defineProps<{ level: Level }>();\nconst picked = ref<Level | "">(props.level);`,
+          `<li :class="{ none: picked === '' }">{{ picked }}</li><Badge v-if="picked !== ''" :level="picked" />`,
+        );
+        expect(out).toContain("let s_picked = fv::Union::as_str(props.level);");
+        expect(out).toContain('fv::class_into(out, false, &[if s_picked.is_empty() { "none" } else { "" }]);');
+        expect(out).toContain(`if !s_picked.is_empty() {\n        super::badge::try_render(out, &super::badge::Props { level: Some(match s_picked { "&amp; &lt;" => ${L}::High, "'!" => ${L}::Low, _ => ${L}::Mid }) })?;`);
+      });
+
+      it("holds a string of the wider union started from an optional value of the enum", () => {
+        const out = wider(
+          `High = "&amp; &lt;", Low = "'!", Mid = "0x1F"`,
+          `const props = defineProps<{ level?: Level }>();\nconst picked = ref<Level | "" | undefined>(props.level);`,
+          `<li :class="{ none: picked === '' }">{{ picked }}</li>`,
+        );
+        expect(out).toContain("let s_picked = props.level.map(fv::Union::as_str);");
+        expect(out).toContain('if s_picked == Some("") { "none" } else { "" }');
+      });
+
+      it("holds the wider union's enum, seeded from a present value where the annotation is optional", () => {
+        const out = wider(
+          `High = "high", Low = "low"`,
+          `const props = defineProps<{ level: Level }>();\nconst picked = ref<Level | "" | undefined>(props.level);`,
+          `<li :class="{ none: picked === '' }">{{ picked }}</li><Badge v-if="picked !== ''" :level="picked" />`,
+        );
+        expect(out).toContain(`let s_picked = match props.level { ${L}::High => XPicked::High, ${L}::Low => XPicked::Low };`);
+        expect(out).toContain('if s_picked == XPicked::Empty { "none" } else { "" }');
+        expect(out).toContain(`level: Some(match s_picked { XPicked::High => ${L}::High, XPicked::Low | XPicked::Empty => ${L}::Low })`);
+      });
     });
   });
 

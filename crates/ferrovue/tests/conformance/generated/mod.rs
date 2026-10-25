@@ -227,12 +227,14 @@ pub mod union_child;
 pub mod union_enums;
 pub mod union_list;
 pub mod union_list_item;
+pub mod union_mark;
 pub mod union_narrowing;
 pub mod union_objects;
 pub mod union_shade;
 pub mod union_step;
 pub mod union_tables;
 pub mod union_types;
+pub mod union_wider_ref;
 pub mod unread;
 pub mod unread_fold;
 pub mod unread_steps;
@@ -1413,6 +1415,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: union_list_item::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             union_list_item::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
+        "UnionMark" => {
+            let props: union_mark::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            union_mark::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
         "UnionNarrowing" => {
             let props: union_narrowing::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             union_narrowing::try_render(&mut out, &props).map_err(|e| e.to_string())?;
@@ -1436,6 +1442,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "UnionTypes" => {
             let props: union_types::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             union_types::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "UnionWiderRef" => {
+            let props: union_wider_ref::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            union_wider_ref::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "Unread" => {
             let props: unread::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

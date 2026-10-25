@@ -39,6 +39,9 @@ released together and share version numbers.
   in `stryker-equivalent.txt`, under the reason of the declarations entry, brought up to date.
   Seven mutants of `constants.ts` and `dynamic.ts` that no test kills, which earlier runs reported
   as timeouts, are listed with their reasons.
+- Tests only: the fuzzer writes a `?:` of two optional values in a template literal when both are
+  absent as `undefined` or both as `null`. A `?:` of one of each may be either, which a template
+  literal writes as `undefined` or `null`, and the compiler refuses it with FV0721.
 
 ### Fixed
 
@@ -79,6 +82,13 @@ released together and share version numbers.
   This changes the generated code of these shapes, and adds the enums to it; the island's JSON is
   the same, and Pinia state is unchanged. Generated code calls no item 0.11.0 lacks, so
   `__compat!` stays at 5.
+- A `ref` annotated as a union wider than the value it starts with holds the members of its
+  annotation. `ref<Tone | "">(props.tone)`, of a union or a string `enum` `Tone`, compares with
+  `""`, narrows by it and reaches a child's prop of `Tone` once narrowed, and
+  `ref<Tone | "" | undefined>(props.tone)` of a required prop holds the enum of `Tone | ""`. It held
+  the starting value's own enum, so `tone === ""` was refused with FV0637 as a comparison that is
+  always false. Where a literal of the wider union names no variant (`"'!"`), the `ref` is a string
+  of its literals. The conformance components `UnionWiderRef` and `UnionMark` record both from Vue.
 - The README and the guide's quick start name the schema of the current release in `$schema`;
   they named 0.8.0's. `release.ts bump` writes the new version into both, and `release.ts check`
   refuses a tag they do not match.
