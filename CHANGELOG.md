@@ -407,7 +407,7 @@ released together and share version numbers.
   no new crate item. The guide's page on generated code describes the scheme.
 - CI only: the jobs that run one Node.js, the release, the canary and the release dry run among them,
   run Node 26, the active LTS from 2026-10-28, where they ran Node 24. The test matrix still runs
-  Node 22.18, 22, 24 and 26.
+  Node 22.23.4, 22, 24 and 26.
 - CI only: a retry of the browser job's system libraries first stops the `apt-get` the timed-out
   attempt left running and waits for the package lock, which that `apt-get` held so the next
   attempts failed at once.
@@ -1155,7 +1155,8 @@ released together and share version numbers.
   `dtolnay/rust-toolchain` pin in `.github/actions/rust/action.yml` name `master`, a branch with no
   release tags, without failing zizmor's `ref-version-mismatch` check each time upstream pushes to
   it.
-- Tests only, with no change to the crates or the npm package: every Vitest config turns off
+- Tests only, with no change to the crates or the npm package: the Vitest configs of the root, the
+  browser tests, the fuzzer, the benchmark and the fullstack example's unit tests turn off
   Vitest 5's `fsModuleCache`, which kept `import.meta.glob` results from an earlier run, so a
   conformance component added since then was left out and a check over all of them passed without
   it.
