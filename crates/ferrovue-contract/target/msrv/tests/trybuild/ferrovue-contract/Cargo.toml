@@ -1,0 +1,46 @@
+[package]
+name = "ferrovue-contract-tests"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dependencies.ferrovue]
+workspace = true
+
+[dependencies.ferrovue-contract]
+path = "/home/brave/Development/ferrovue/.claude/worktrees/agent-a7bd4694d5486da31/crates/ferrovue-contract/"
+default-features = false
+
+[dependencies.serde]
+workspace = true
+
+[dependencies.serde_json]
+workspace = true
+
+[[bin]]
+name = "ferrovue-contract-tests"
+path = "main.rs"
+
+[[bin]]
+name = "trybuild000"
+path = "/home/brave/Development/ferrovue/.claude/worktrees/agent-a7bd4694d5486da31/crates/ferrovue-contract/tests/compat/current.rs"
+
+[[bin]]
+name = "trybuild001"
+path = "/home/brave/Development/ferrovue/.claude/worktrees/agent-a7bd4694d5486da31/crates/ferrovue-contract/tests/compat/previous.rs"
+
+[[bin]]
+name = "trybuild002"
+path = "/home/brave/Development/ferrovue/.claude/worktrees/agent-a7bd4694d5486da31/crates/ferrovue-contract/tests/compat/newer.rs"
+
+[workspace.dependencies.ferrovue]
+version = "=0.11.0"
+path = "/home/brave/Development/ferrovue/.claude/worktrees/agent-a7bd4694d5486da31/crates/ferrovue/"
+
+[workspace.dependencies.serde]
+version = "1.0.229"
+features = ["derive"]
+
+[workspace.dependencies.serde_json]
+version = "1.0.154"
+default-features = true

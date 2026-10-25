@@ -77,6 +77,8 @@ module before and keeps every path below it (`ferrovue::i18n::Args`); `ferrovue:
 [`ferrovue::i18n::I18n`](crate::i18n::I18n).
 
 ```rust
+# #[cfg(feature = "router")]
+# fn main() {
 use ferrovue::core::escape_into;
 use ferrovue::props::Record;
 use ferrovue::router::Router;
@@ -91,6 +93,9 @@ assert_eq!(out, "Tom &amp; Jerry");
 
 let scores: Record<'_, i64> = [("b", 1), ("10", 2)].into_iter().collect();
 assert_eq!(scores.keys().collect::<Vec<_>>(), ["10", "b"]);
+# }
+# #[cfg(not(feature = "router"))]
+# fn main() {}
 ```
 
 The Rust of an application stops compiling at each path that moved, and rustc names the item's

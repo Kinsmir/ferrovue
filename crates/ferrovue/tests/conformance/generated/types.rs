@@ -632,7 +632,7 @@ impl std::fmt::Display for Mark {
 }
 
 impl std::str::FromStr for Mark {
-    type Err = ferrovue::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
@@ -640,20 +640,20 @@ impl std::str::FromStr for Mark {
             "'!" => Ok(Mark::Bang),
             "0x1F" => Ok(Mark::Hex),
             "<i>\"&'" => Ok(Mark::Tag),
-            _ => Err(ferrovue::ParseUnionError::new("Mark", s, &["&amp; &lt;", "'!", "0x1F", "<i>\"&'"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("Mark", s, &["&amp; &lt;", "'!", "0x1F", "<i>\"&'"])),
         }
     }
 }
 
 impl TryFrom<&str> for Mark {
-    type Error = ferrovue::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::Union for Mark {
+impl ferrovue::props::Union for Mark {
     const ALL: &'static [Self] = &Mark::ALL;
 
     fn as_str(self) -> &'static str {
