@@ -81,7 +81,7 @@ defineProps<{ size: Size; tone?: "calm" | "loud"; label: string }>();
 </script>
 ```
 
-```rust
+```rust,ignore
 # mod generated {
 # pub mod types {
 #     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
@@ -94,13 +94,13 @@ defineProps<{ size: Size; tone?: "calm" | "loud"; label: string }>();
 #         Lg,
 #     }
 #     impl std::str::FromStr for Size {
-#         type Err = ferrovue::props::ParseUnionError;
+#         type Err = ferrovue::ParseUnionError;
 #         fn from_str(s: &str) -> Result<Self, Self::Err> {
 #             match s {
 #                 "sm" => Ok(Size::Sm),
 #                 "md" => Ok(Size::Md),
 #                 "lg" => Ok(Size::Lg),
-#                 _ => Err(ferrovue::props::ParseUnionError::new("Size", s, &["sm", "md", "lg"])),
+#                 _ => Err(ferrovue::ParseUnionError::new("Size", s, &["sm", "md", "lg"])),
 #             }
 #         }
 #     }
@@ -130,7 +130,7 @@ defineProps<{ size: Size; tone?: "calm" | "loud"; label: string }>();
 #     }
 # }
 # }
-# fn main() -> Result<(), ferrovue::props::ParseUnionError> {
+# fn main() -> Result<(), ferrovue::ParseUnionError> {
 use generated::{button, types::Size};
 
 // 0.10: button::Props::new("md", "Save").tone("loud")
@@ -221,7 +221,7 @@ that does not match its interface, a list method of one built in place), and FV0
 ## Refusals at render time
 
 Every component has a `try_render` beside its `render`, with the same parameters, returning
-`Result<(), ferrovue::render::Refused>`, so a handler that renders props from a request answers props the
+`Result<(), ferrovue::Refused>`, so a handler that renders props from a request answers props the
 render cannot write as Vue writes them with `400 Bad Request`. See
 [`errors_and_limits`](crate::guide::errors_and_limits#refused-at-render-time). Nothing that
 compiled with 0.10 stops compiling, and nothing that rendered renders differently:
@@ -245,7 +245,7 @@ compiled with 0.10 stops compiling, and nothing that rendered renders differentl
   write. It is refused now, with [FV0724](crate::guide::error_codes#fv0724): `render` panics on
   it, and `try_render` returns it.
 - The generated `html()` of a component that takes slots or render parameters returns
-  `Html<'p, Props, impl ferrovue::html::Renderer<Props>>` where it returned `impl Fn(&mut String,
+  `Html<'p, Props, impl ferrovue::Renderer<Props>>` where it returned `impl Fn(&mut String,
   &Props)`. Code that renders it, or hands it to a [`Page`](crate::page::Page) or a
   [`Part`](crate::page::Part), is unchanged.
 

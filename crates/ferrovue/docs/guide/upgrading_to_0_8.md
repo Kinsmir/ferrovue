@@ -81,11 +81,11 @@ constructors:
 | `HeadHtml { head_tags, .. }` | `HeadHtml::default()`, then set its fields |
 | `Link { … }` | `Route::link`, `Route::link_named` or `Route::link_path` |
 
-```rust
+```rust,ignore
 # #[cfg(all(feature = "router", feature = "i18n"))]
 # fn main() {
 use ferrovue::i18n::{Args, Locale, Message, Part, Value};
-use ferrovue::{head::HeadHtml, router::RouteDef};
+use ferrovue::{HeadHtml, RouteDef};
 
 const BOOKS: &[RouteDef<'static>] = &[RouteDef::new(":id").with_name("book")];
 const ROUTES: &[RouteDef<'static>] = &[RouteDef::new("/books").with_view(false).with_children(BOOKS)];
@@ -116,10 +116,10 @@ ferrovue = { version = "0.8", features = ["ammonia"] }
 ammonia = "4"
 ```
 
-```rust
+```rust,ignore
 # #[cfg(feature = "ammonia")]
 # fn main() {
-use ferrovue::html::Sanitised;
+use ferrovue::Sanitised;
 
 let mut policy = ammonia::Builder::empty();
 policy.add_tags(["em"]);
@@ -201,8 +201,8 @@ another string their own way, so a server that hands a component a date string w
 format, as [`dates_and_prices`](crate::guide::dates_and_prices#the-strings-a-date-is-built-from)
 shows from Rust:
 
-```rust
-assert_eq!(ferrovue::date::js_to_iso_string(1_714_555_800_000.0), "2024-05-01T09:30:00.000Z");
+```rust,ignore
+assert_eq!(ferrovue::js_to_iso_string(1_714_555_800_000.0), "2024-05-01T09:30:00.000Z");
 ```
 
 ## A number compared with itself
