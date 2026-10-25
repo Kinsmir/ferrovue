@@ -125,6 +125,7 @@ A fixture is a JSON object of props plus optional keys:
 | `Loops`, `LoopEdges` | `for…of` over lists of strings, numbers and objects, `list.entries()`, `Object.keys()` of a constant, `Object.entries()` of a record, an array literal and a computed list, and over strings by their characters (astral characters, and the halves of a pair `slice` cuts, counted and carried); counting `for` loops up and down, by steps, to a bound read on every item; `let`s assigned with `=`, `+=`, `-=`, `*=`, `++` and the logical forms, inside and after loops and `if`s: sums, a mean, the largest and smallest by `if`, a product beyond 2⁵³, `-0` from a carried sign, thousands separators of a `.ts` function, a string reversed by characters, booleans, an optional `let` narrowed after the loop; `break`, `continue`, a `switch` inside a loop, nested loops, `return` inside a loop and a nested loop, a loop that never reaches its next item, loops in a `.map()` callback; hostile strings in every prop |
 | `Constants` | Setup bindings that start as a string literal, and `computed`s of them, written into the page and tested as constants; strings compared with the empty one in `===`, `v-if` and `v-model` on `<select>` and radio inputs |
 | `Defaults`, `Destructured` | `withDefaults`, the boolean cast, destructured props with defaults and new names, class objects |
+| `RenamedProps` | Props destructured under new names, which Vue reads as `$props['label']`, in text, attributes, `v-if`, `v-for` and `<component :is>`, one with a default |
 | `Model`, `ModelParent` | `defineModel` (named, required, default) and `v-model` on a component |
 | `Form` | `v-model` on input, checkbox, select, radio and textarea |
 | `FormWrapped`, `FormRoot` | A `<textarea>` with content of its own and an `<input v-model>` inside the element that takes the root's attributes; a `<select v-model>` as the root |
@@ -234,7 +235,7 @@ when it names a component that is not in `components/` with fixtures of its own.
 | Prop types | `Text`, `Attrs`, `Numbers`, `Narrowing`, `Nullable`, `UserCard`, `UserList`, `Tree`, `Records`, `Rated`, `Prose`, `InlineProse`, `Dashboard`, `DatePost`, `DateRows`, `DateThread`, `UnionEnums`, `UnionChild`, `UnionList`, `UnionTypes`, `UnionShade` |
 | Shared types | `UserCard`, `UserList`, `DataTable`, `RowChip`, `Dashboard`, `Cart`, `Catalog`, `UnionEnums` |
 | Constants | `Catalog`, `EnumMembers`, `Constants`, `Lookups`, `OwnKeys`, `DigitGroups`, `UnionEnums`, `UnionObjects`, `UnionTables` |
-| Props | `Defaults`, `Destructured`, `PropsObject`, `Model`, `ModelParent`, `Picker`, `Glyph`, `Divider` |
+| Props | `Defaults`, `Destructured`, `RenamedProps`, `PropsObject`, `Model`, `ModelParent`, `Picker`, `Glyph`, `Divider` |
 | Setup | `Setup`, `SetupValues`, `Lifecycle`, `Pending`, `EmptyBranch`, `Unread`, `UnreadVar`, `DollarNames`, `UnionTables`, `UnionWiderRef`, `UnionReturned` |
 | Statements | `Statements`, `UnreadSteps`, `Loops`, `LoopEdges` |
 | Functions | `Formatters`, `RelativeTime`, `LocalFunctions`, `DigitGroups` |
@@ -254,7 +255,7 @@ when it names a component that is not in `components/` with fixtures of its own.
 | `v-bind()` in `<style>` | `CssVars`, `CssVarsPage`, `CssVarsRoot`, `CssVarsLeaf`, `CssVarsShow`, `CssVarsBound`, `CssVarsTag`, `CssVarsLink`, `CssVarsWait`, `CssVarsLater`, `CssVarsBranch`, `CssVarsShapes` |
 | CSS modules | `Moduled`, `ModuledChip` |
 | Components | `UserList`, `Dashboard`, `Listened`, `Listeners`, `ListenLeaf`, `ListenSale`, `OnProps`, `OnPropsKid`, `OnPropsRoot`, `OnPropsBare`, `ModelParent`, `Tree`, `KebabTree`, `Deferred`, `AsyncClass` |
-| `<component :is>` | `ShapePicker`, `ShapeRoot`, `TagHeading`, `TagGallery`, `TagContent`, `TagCasing`, `ThemedChoice`, `HeadChoice`, `UnionEnums` |
+| `<component :is>` | `ShapePicker`, `ShapeRoot`, `TagHeading`, `TagGallery`, `TagContent`, `TagCasing`, `ThemedChoice`, `HeadChoice`, `UnionEnums`, `RenamedProps` |
 | Escape hatches | `ClientSide`, `Rated`, `EscapedIdioms`, `EscapedNull` |
 | Fallthrough attributes | `Fallthrough`, `FallLeaf`, `FallInner`, `FallPair`, `FallRoot`, `FallBare`, `FallUse`, `FallLink`, `FallSwitch`, `FallFade`, `FallBinds`, `ScopedFallthrough` |
 | Slots | `Frame`, `Forward`, `Page`, `Card`, `Panel`, `Dashboard`, `DataList`, `DataTable`, `Hollow`, `Blank`, `SlotProbe` |

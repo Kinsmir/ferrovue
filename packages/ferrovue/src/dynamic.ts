@@ -1,7 +1,7 @@
 import { parse as parseJs } from "@babel/parser";
 import { isHTMLTag, isVoidTag } from "@vue/shared";
 import { basename } from "node:path";
-import { type Component, type N, type Scope, camelize, fail, rustStr, tagAst } from "./model.ts";
+import { type Component, type N, type Scope, camelize, fail, rustStr, templateAst } from "./model.ts";
 import { GenError } from "./errors.ts";
 import { ctx } from "./context.ts";
 import { matchOver } from "./enums.ts";
@@ -525,8 +525,7 @@ function expanded(p: Prepared): string {
 export function prepareDynamic(read: { comp: Component; ast: N[]; ssr: string; scope: Scope }[]): string[] {
   for (const r of read) setupAsts.set(r.comp, r.ast);
   const prepared: Prepared[] = read.map((r) => {
-    const program = parseJs(r.ssr, { sourceType: "module" }).program;
-    tagAst(program, "template");
+    const program = templateAst(r.ssr);
     const picks = new Map<N, Choice[]>();
     const visit = (n: N): void => {
       if (!n || typeof n !== "object") return;

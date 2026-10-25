@@ -1,6 +1,5 @@
-import { parse as parseJs } from "@babel/parser";
 import { basename } from "node:path";
-import { type Component, type Field, type N, type Struct, type Ty, blankComponent, enumItems, enumOf, enumPath, fail, REFUSALS, rustStr, snake, tagAst, takesAttrs } from "./model.ts";
+import { type Component, type Field, type N, type Struct, type Ty, blankComponent, enumItems, enumOf, enumPath, fail, REFUSALS, rustStr, snake, takesAttrs, templateAst } from "./model.ts";
 import { GenError } from "./errors.ts";
 import { enumsSource, holdsMapped } from "./enums.ts";
 import { ctx, INLINE_HTML } from "./context.ts";
@@ -290,8 +289,7 @@ export function componentSource(comp: Component, ast: N[], ssr: string, componen
     fail(comp, "FV0416", `a root \`<Transition>\` or \`<KeepAlive>\` around a \`v-if\` in ${comp.name}, which a parent passes attributes: Vue's server drops them, where its client puts them on the element; set \`inheritAttrs: false\` and bind \`$attrs\` on the element`, comp.attrsDropped);
   }
   const { scope, lets, lazies } = scopeFor(comp, ast, components);
-  const program = parseJs(ssr, { sourceType: "module" }).program;
-  tagAst(program, "template");
+  const program = templateAst(ssr);
   const fn = (program.body as N[]).find(
     (s: N) => s.type === "ExportNamedDeclaration" && s.declaration?.id?.name === "ssrRender",
   )?.declaration;

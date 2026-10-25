@@ -172,6 +172,7 @@ pub mod rated;
 pub mod records;
 pub mod regressions;
 pub mod relative_time;
+pub mod renamed_props;
 pub mod route_info;
 pub mod row_chip;
 pub mod scoped_card;
@@ -1144,6 +1145,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "RelativeTime" => {
             let props: relative_time::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             relative_time::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "RenamedProps" => {
+            let props: renamed_props::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            renamed_props::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "RouteInfo" => {
             let props: route_info::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

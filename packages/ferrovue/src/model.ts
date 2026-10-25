@@ -1,3 +1,4 @@
+import { parse as parseJs } from "@babel/parser";
 import type { SourceMapConsumer } from "source-map-js";
 import type { Plugin } from "./plugin.ts";
 import type { Const } from "./constants.ts";
@@ -491,6 +492,29 @@ export function tagAst(node: N, origin: Origin, seen: WeakSet<object> = new Weak
     const v = node[key];
     if (v && typeof v === "object") tagAst(v, origin, seen);
   }
+}
+
+/** Vue's compiled template, parsed and tagged, with `$props['x']`, which Vue writes for a renamed
+ * destructured prop, read as `$props.x`. */
+export function templateAst(ssr: string): N {
+  const program = parseJs(ssr, { sourceType: "module" }).program;
+  tagAst(program, "template");
+  propsByName(program);
+  return program;
+}
+
+function propsByName(node: N): void {
+  if (!node || typeof node !== "object") return;
+  if (Array.isArray(node)) {
+    for (const n of node) propsByName(n);
+    return;
+  }
+  const { object, property } = node.type === "MemberExpression" && node.computed ? node : {};
+  if (object?.type === "Identifier" && object.name === "$props" && property.type === "StringLiteral") {
+    node.computed = false;
+    node.property = { type: "Identifier", name: property.value, start: property.start, end: property.end, loc: property.loc, __fv: property.__fv };
+  }
+  for (const key of Object.keys(node)) if (key !== "loc") propsByName(node[key]);
 }
 
 function locate(comp: Component, node: N): { line: number; column: number } | null {

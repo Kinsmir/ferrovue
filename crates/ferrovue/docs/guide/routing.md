@@ -438,7 +438,8 @@ a string or an array:
 | `route.params.slug` | [`Route::param`](crate::router::Route::param) |
 | `route.query.q` | [`Route::query`](crate::router::Route::query) |
 
-`route.meta` and `route.matched` are refused. An optional parameter the location leaves out is
+A field read by a string key is the same field: `route["path"]` is `route.path`, and
+`route.params["slug"]` is `route.params.slug`. `route.meta` and `route.matched` are refused. An optional parameter the location leaves out is
 absent, as in vue-router: `route.params.lang` is `undefined`, and `Route::param` is `None`.
 
 # Links when the application navigates on its own
