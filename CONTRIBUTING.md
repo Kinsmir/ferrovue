@@ -242,13 +242,13 @@ changes it shows the change:
 Something users rely on is removed in a later minor release before 1.0, and only in a major release
 from 1.0, after at least one minor release in which it still works and warns:
 
-- **A crate item** gets `#[deprecated(since = "0.7.0", note = "use `Other` instead")]`.
-- **A configuration key** gets `deprecated: { since: "0.7.0", use: "`newKey`" }` in
+- **A crate item** gets `#[deprecated(since = "X.Y.Z", note = "use `Other` instead")]`.
+- **A configuration key** gets `deprecated: { since: "X.Y.Z", use: "`newKey`" }` in
   `CONFIG_SCHEMA` and a `@deprecated` tag in its TSDoc (the schema test checks the two agree). The
   compiler still reads it, and warns with `warning[FV1117]` naming the replacement; the JSON Schema
   marks it deprecated, so editors strike it through. A misspelt key is never taken for a deprecated
   one.
-- **A command-line option** gets `deprecated: { since: "0.7.0", use: "'--new'" }` in `FLAGS`; it
+- **A command-line option** gets `deprecated: { since: "X.Y.Z", use: "'--new'" }` in `FLAGS`; it
   still works, warns with `warning[FV1118]`, and `--help` marks it.
 
 Either warning goes to standard error, or into `diagnostics` with the `severity` `"warning"` under

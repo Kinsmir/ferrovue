@@ -21,6 +21,10 @@ released together and share version numbers.
 - The README and the guide's quick start name the schema of the current release in `$schema`;
   they named 0.8.0's. `release.ts bump` writes the new version into both, and `release.ts check`
   refuses a tag they do not match.
+- The `ferrovue` dependency in the README and in the guide's `escaping` and `web_frameworks` pages
+  is 0.11, and the bug report's version placeholder 0.11.0. `release.ts bump` and
+  `release.ts check` cover them as they cover the schema URL. RELEASING.md and CONTRIBUTING.md write
+  `X.Y.Z` in their example commands.
 
 ## [0.11.0] - 2026-10-25
 

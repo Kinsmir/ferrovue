@@ -7,8 +7,8 @@ import {
   checkRelease,
   lockedVersions,
   setLockedVersions,
-  schemaVersions,
-  setSchemaVersion,
+  setDocVersions,
+  staleDocVersions,
   isPrerelease,
   isVersion,
   packageVersion,
@@ -146,15 +146,18 @@ describe("release chores", () => {
     ]);
   });
 
-  it("checks the schema URLs the docs name", () => {
-    const doc = (v: string): string => `"$schema": "https://cdn.jsdelivr.net/npm/ferrovue@${v}/schema.json",\n"$schema": "./node_modules/ferrovue/schema.json"\n`;
-    expect(schemaVersions(doc("0.1.0"))).toEqual(["0.1.0"]);
-    expect(setSchemaVersion(doc("0.0.9"), "0.2.0")).toBe(doc("0.2.0"));
-    expect(setSchemaVersion("ferrovue@0.1.0", "0.2.0")).toBe("ferrovue@0.1.0");
+  it("keeps the releases the docs name in step", () => {
+    const doc = (full: string, minor: string): string =>
+      `"$schema": "https://cdn.jsdelivr.net/npm/ferrovue@${full}/schema.json",\n"$schema": "./node_modules/ferrovue/schema.json"\nferrovue = { version = "${minor}", features = ["axum"] }\nplaceholder: ferrovue ${full} / ${full}, vue 3.5.43\n`;
+    expect(staleDocVersions(doc("0.1.0", "0.1"), "0.1.0")).toEqual([]);
+    expect(staleDocVersions(doc("0.0.9", "0.0"), "0.1.0")).toEqual(["0.0.9", "0.0", "0.0.9 / 0.0.9"]);
+    expect(setDocVersions(doc("0.0.9", "0.0"), "0.2.0")).toBe(doc("0.2.0", "0.2"));
+    expect(setDocVersions("ferrovue@0.1.0 and ferrovue 0.1.0", "0.2.0")).toBe("ferrovue@0.1.0 and ferrovue 0.1.0");
     const files = { cargo: CARGO, pkg: PKG, changelog: CHANGELOG, crates: CRATE_MANIFESTS };
-    expect(checkRelease("v0.1.0", { ...files, docs: { "README.md": doc("0.1.0") } })).toEqual([]);
-    expect(checkRelease("v0.1.0", { ...files, docs: { "README.md": doc("0.0.9") + doc("0.0.9") } })).toEqual([
-      "README.md names the schema of 0.0.9, the tag 0.1.0: `release.ts bump` updates it",
+    expect(checkRelease("v0.1.0", { ...files, docs: { "README.md": doc("0.1.0", "0.1") } })).toEqual([]);
+    expect(checkRelease("v0.1.0", { ...files, docs: { "README.md": doc("0.0.9", "0.1") + doc("0.0.9", "0.1") } })).toEqual([
+      "README.md names 0.0.9, the tag 0.1.0: `release.ts bump` updates it",
+      "README.md names 0.0.9 / 0.0.9, the tag 0.1.0: `release.ts bump` updates it",
     ]);
   });
 

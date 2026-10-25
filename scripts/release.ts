@@ -10,7 +10,13 @@ const CHANGELOG = join(ROOT, "CHANGELOG.md");
 const CRATES_DIR = join(ROOT, "crates");
 const FUZZ_LOCK = join(ROOT, "fuzz/Cargo.lock");
 
-export const SCHEMA_DOCS = ["README.md", "crates/ferrovue/docs/guide/quick_start.md"];
+export const VERSIONED_DOCS = [
+  "README.md",
+  "crates/ferrovue/docs/guide/quick_start.md",
+  "crates/ferrovue/docs/guide/escaping.md",
+  "crates/ferrovue/docs/guide/web_frameworks.md",
+  ".github/ISSUE_TEMPLATE/bug_report.yml",
+];
 
 export const CRATES = ["ferrovue-core", "ferrovue-router", "ferrovue-i18n", "ferrovue"];
 
@@ -123,16 +129,23 @@ export interface ReleaseFiles {
   docs?: Record<string, string>;
 }
 
-const SCHEMA_URL = /(https:\/\/cdn\.jsdelivr\.net\/npm\/ferrovue@)([^/\s]+)(\/schema\.json)/g;
+const DOC_VERSIONS: { pattern: RegExp; written: (version: string) => string }[] = [
+  { pattern: /(https:\/\/cdn\.jsdelivr\.net\/npm\/ferrovue@)([^/\s]+)(\/schema\.json)/g, written: (v) => v },
+  { pattern: /(ferrovue = \{ version = ")([^"]+)(")/g, written: (v) => v.split(".").slice(0, 2).join(".") },
+  { pattern: /(placeholder: ferrovue )(\S+ \/ [^,\s]+)(,)/g, written: (v) => `${v} / ${v}` },
+];
 
-/** `text` with each jsDelivr URL of the configuration's schema naming `version`. */
-export function setSchemaVersion(text: string, version: string): string {
-  return text.replace(SCHEMA_URL, `$1${version}$3`);
+/** `text` with the release named in its schema URLs, `ferrovue` dependencies and version placeholder set to `version`. */
+export function setDocVersions(text: string, version: string): string {
+  return DOC_VERSIONS.reduce((t, { pattern, written }) => t.replace(pattern, `$1${written(version)}$3`), text);
 }
 
-/** The versions the jsDelivr URLs of the configuration's schema in `text` name. */
-export function schemaVersions(text: string): string[] {
-  return [...text.matchAll(SCHEMA_URL)].map((m) => m[2]!);
+/** The releases `text` names where `version` belongs, each one that differs from it once. */
+export function staleDocVersions(text: string, version: string): string[] {
+  const stale = DOC_VERSIONS.flatMap(({ pattern, written }) =>
+    [...text.matchAll(pattern)].map((m) => m[2]!).filter((named) => named !== written(version)),
+  );
+  return [...new Set(stale)];
 }
 
 /** `lock` with each path package named in `names` locked at `version`, the others as they were. */
@@ -184,9 +197,11 @@ export function checkRelease(tag: string, files: ReleaseFiles): string[] {
       }
     }
   }
-  for (const [file, text] of Object.entries(files.docs ?? {})) {
-    for (const named of new Set(schemaVersions(text))) {
-      if (named !== version) problems.push(`${file} names the schema of ${named}, the tag ${version}: \`release.ts bump\` updates it`);
+  if (!isPrerelease(version)) {
+    for (const [file, text] of Object.entries(files.docs ?? {})) {
+      for (const named of staleDocVersions(text, version)) {
+        problems.push(`${file} names ${named}, the tag ${version}: \`release.ts bump\` updates it`);
+      }
     }
   }
   const notes = changelogNotes(files.changelog, version);
@@ -280,7 +295,8 @@ function setVersion(files: ReleaseFiles, version: string): void {
   writeFileSync(PACKAGE, setPackageVersion(files.pkg, version));
   run("cargo", ["update", "--workspace", "--offline"]);
   if (existsSync(FUZZ_LOCK)) writeFileSync(FUZZ_LOCK, setLockedVersions(readFileSync(FUZZ_LOCK, "utf8"), CRATES, version));
-  for (const file of SCHEMA_DOCS) writeFileSync(join(ROOT, file), setSchemaVersion(readFileSync(join(ROOT, file), "utf8"), version));
+  if (isPrerelease(version)) return;
+  for (const file of VERSIONED_DOCS) writeFileSync(join(ROOT, file), setDocVersions(readFileSync(join(ROOT, file), "utf8"), version));
 }
 
 function main(argv: string[]): number {
@@ -295,7 +311,7 @@ function main(argv: string[]): number {
         .map((d) => [d.name, readFileSync(join(CRATES_DIR, d.name, "Cargo.toml"), "utf8")]),
     ),
     ...(existsSync(FUZZ_LOCK) ? { fuzzLock: readFileSync(FUZZ_LOCK, "utf8") } : {}),
-    docs: Object.fromEntries(SCHEMA_DOCS.map((file) => [file, readFileSync(join(ROOT, file), "utf8")])),
+    docs: Object.fromEntries(VERSIONED_DOCS.map((file) => [file, readFileSync(join(ROOT, file), "utf8")])),
   });
   switch (command) {
     case "bump": {
