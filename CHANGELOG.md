@@ -35,391 +35,76 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 
 ### Added
 
-- Loops and `let`s assigned again in a function's or a `computed`'s body and in a list method's
-  callback: `for (const x of list)` over a list, `list.entries()`, `Object.keys()`,
-  `Object.values()` or `Object.entries()`; `for (const ch of text)` over a string by its
-  characters, a character beyond U+FFFF one item; counting loops `for (let i = 0; i < n; i++)` to
-  an integer bound, read again before each item; `break`, `continue`, nested loops and `return`
-  inside a loop. A body assigns the `let`s it declares with `=`, `+=`, `-=`, `*=`, `/=`, `%=`,
-  `??=`, `||=`, `&&=`, `++` and `--`, each a statement of its own, and a `let` has the type
-  TypeScript gives it. A loop carries strings, numbers and booleans, present or optional, from one
-  item to the next in Rust variables, numbers as `f64` computed as JavaScript computes them. Sums,
-  the largest of a list, thousands separators and strings built character by character compile.
-  FV1909 (a loop of another shape, such as a `for` loop that does not count), FV1910 (`for…of` over
-  a value that is not a list or a string), FV1911 (a loop carrying or returning a list or an object)
-  and FV1912 (a `let` assigned a value of another type, or starting as `undefined` with no type)
-  are new entries of `ERRORS` in `ferrovue/compiler`. `while`, `do…while` and `for…in` loops stay
-  refused with FV1901. The conformance components `Loops` and `LoopEdges` record them from Vue, and
-  the fuzzer generates loops and `let` accumulators.
-
-- Constants are worked out when the component is compiled, as JavaScript works them out: `+`, `-`,
-  `*`, `/` and `%` of numbers, unary `-` and `+`, `**` where it gives an exact integer within
-  ±2⁵³ (FV0720 for another power, which engines round in their own ways), strings joined with `+`
-  and template literals of constants (`const HOUR = 60 * MINUTE`, `` `${BASE}/feed` ``), in a
-  `.ts` file and in `<script setup>`.
-- A function's or a `computed`'s body may declare arrow functions of its own
-  (`const pad = (k: number) => …`), which read the body's names and are translated where it calls
-  them.
-- A string known to hold ASCII alone (the string of a number, `toFixed()`, an ASCII literal, and
-  what slicing, trimming, padding, case mapping, joining and `split` make of them) may be cut into
-  characters and joined again without FV0706, so a thousands separator can be written with
-  `String(n).split("").reduce(…)` or slices; `s[i]` reads a string's code unit, `undefined`
-  outside it.
-- `Object.hasOwn(CONST, key)` of an object constant by a free-text string or integer key, compiled
-  to a test of the constant's own keys, which narrows the key for `CONST[key]` in a `?:`, after
-  `&&` and `||` and inside a `v-if`; `Object.hasOwn(record, key)` of a `Record` prop;
-  `Object.keys()` of an object constant.
-- Constant `Map`s (`new Map([["sm", 12], ["md", 16]])`, keys strings or integers), read with
-  `.get(key)`, `undefined` for a key the map lacks, and `.has(key)`. FV0227, a new entry of `ERRORS` in
-  `ferrovue/compiler`, refuses a constant `Map` read in another way.
-- Object literals as values where their type is known, each built as the Rust struct of its
-  interface (the component's own, or the shared one in `types.rs`): the result of a `computed`
-  annotated with it (`computed<Card>(…)`, `computed((): Card => …)`, `ComputedRef<Card>`), of a
-  function's return type or given to a parameter's, in `<script setup>` or a `.ts` file; the items
-  of a `.map()` whose callback states its return type or whose list type is known
-  (`computed<Row[]>`, a function returning `Row[]`, a child's `Row[]` prop); a child's prop typed
-  with an interface (`:item="{ id, label }"`, `v-bind="{ item: { … } }"`); an annotated `const` in
-  setup, and `satisfies`. Shorthand keys, computed keys the compiler knows, nested literals, array
-  literals of objects and a spread of the same type before the other keys are supported; an
-  optional field left out or given `undefined` is `None`, a nullable field takes `null`. The
-  conformance components `ObjectLiterals` and `ObjectShapes` record them from Vue and hydrate them in
-  the browsers.
-- `FV0634`: an object literal whose type is not known, with a message that says where it is (the
-  template, a `computed`, a function, setup, a `.map()` callback) and how to type it. `FV0635`: an
-  object literal that does not match its interface (a key it does not declare, a required field
-  left out, a key given twice, a method, `__proto__`, a computed key the compiler does not know, a
-  spread of another type or after other keys). `FV0636`: a list method, an item or an optional
-  chain of a value built from object literals in place, which a `computed` of its own holds.
-  `ERRORS` in `ferrovue/compiler` lists the three, and the detail of FV0625 no longer names object
-  literals among its causes.
-- A prop or an interface's field typed as a union of two or more string literals is a Rust enum
-  the compiler generates, with a variant per literal: a `type` alias keeps its name (`Size`,
-  written once to `types.rs` for a `.ts` file, so components that import it share it), a union in
-  place is named after its component and prop (`ButtonSize`) or its interface and field, and a
-  string `enum` is one too, its variants named after its members. Each enum derives `Debug`,
-  `Clone`, `Copy`, `PartialEq`, `Eq`, `Hash`, `serde::Serialize` and `serde::Deserialize`, with
-  serde's names the literals, and has `as_str()`, `ALL`, `Display`, `FromStr` and
-  `TryFrom<&str>`. The template writes it through `as_str()`; `===` and `!==`, `switch`, lookup
-  tables and `<component :is>` read it as the enum, the last two as a `match` with no catch-all
-  arm; it reaches a child's prop of its union as itself, of a wider union through a `match`, and
-  of `string` as its literal. See the `props` guide's "Unions of string literals".
-- `ferrovue::ParseUnionError`, what a generated enum's `FromStr` and `TryFrom<&str>` return for
-  a string outside its union, with `union()`, `value()` and `members()`.
-- Refusals with new codes, for what TypeScript refuses too and for unions with no enum: a literal
-  with no letter or digit to name its variant (FV0323), two literals that name one variant, or an
-  `enum` with two members of one value (FV0324), an enum named as another type of its module
-  (FV0325), a value outside a child's union prop or a `string` given to one (FV0515), and a
-  comparison with a literal outside the union (FV0637). A default outside the union is FV0322, and
-  a constant list's field outside it FV0215.
-- The guide page [`upgrading_to_0_11`](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_11/index.html):
-  bumping both halves (and the Node it needs), generating again for version 5 with every local
-  renamed once, building union props from their enums (`Size::Md`, `"md".parse::<Size>()?`), the
-  codes a CI may match that are new or changed (the refusals of FV0008, FV0009, FV0326, FV0327,
-  FV0328 and FV0424 among them), what renders differently, and what compiles that 0.10 refused.
-- The conformance components `UnionEnums` and `UnionChild`, recorded from Vue, and props of
-  unions of string literals, required, optional and nullable, in the differential fuzzer, which
-  compares them only with their members.
-- An object literal's field typed as a union of string literals holds the union's enum: a literal of
-  the union is its variant (`{ size: "md" }` is `Size::Md`), a value of the same enum is given as it
-  is, and a narrower union or a `?:` of members goes through a `match`. A string that may be outside
-  the union is refused with FV0635. `Object.hasOwn()` of a constant and `.get()` and `.has()` of a
-  constant `Map` by a key of such a union match on its variants. The conformance components
-  `UnionObjects` and `UnionStep` record these from Vue, and the differential fuzzer gives its
-  `FzCardT` literals a union field.
-- Dates inside lists, dictionaries and interfaces: a prop or a loader's result may hold `Date`
-  fields (required, optional and nullable), `Date[]`, `(Date | null)[]`, `Record<string, Date>` and
-  interfaces of them, shared and recursive ones included, each date the Rust type `dateType` names
-  (a date that is a loader's result itself, or in its list, dictionary or optional, is a
-  `ferrovue::JsDate`). The template reads such a date as it reads a `Date` prop, walks a list of
-  dates with `v-for`, `[i]`, `.at()`, `.filter()`, `.find()`, `.findIndex()`, `.some()`, `.every()`,
-  `.map()`, `.slice()`, `.concat()`, `.toReversed()` and `.reduce()`, a dictionary of them with
-  `v-for` and `Object.keys()`, `.values()` and `.entries()`, hands them whole to a child's prop of the
-  same type, and builds them in object literals and in lists a `.map()` makes. The compiler writes
-  a plan of where the dates are: an island writes it in `data-dates` beside `data-props`, a page's
-  record beside each part's props (`d`) and the layout's (`dates`), and the payload of loaders'
-  results under `dates`, by loader. `mountIslands`, `mountPage`, `renderPage`, `provideLoads` and
-  `ferrovue/testing`'s conformance suite turn the dates the plan names back into `Date`s, an invalid
-  one written as `NaN` included, and leave every other string as it is. FV1810, a new entry of
-  `ERRORS` in `ferrovue/compiler`, refuses a list of lists or dictionaries of dates. The conformance
-  components `DateRows`, `DateDays`, `DateReplies`, `DateThread` and `LoadedDates` record them from
-  Vue and hydrate them in Chromium, Firefox and WebKit in three time zones, `DateRows` and
-  `DateDays` render with chrono's `DateTime<Utc>` too, the differential fuzzer generates dates in
-  interfaces, lists, dictionaries, object literals and loaders' results, and the full-stack
-  example's reviews carry the date they were posted and its stock the date it was counted, from a
-  loader.
-- Render-time refusals: props that ask for what cannot be written as Vue writes it, known only as
-  the component renders, refuse the render with a value it returns, so a server can answer
-  `400 Bad Request`. Every generated component has a `try_render` beside its `render`, with the
-  same parameters, returning `Result<(), ferrovue::Refused>`. `ferrovue::Refused` is a
-  `#[non_exhaustive]` error, `Display` and `std::error::Error`, whose `code()`, `message()`,
-  `component()`, `file()`, `line()` and `column()` give the code, the message saying what to do, and
-  the component and the place of the expression in its file. A refusal in a child, in slot content
-  or in a loader's component reaches the page's `try_render`, and the first the render met is the
-  one returned. `Html::try_render_to`, `Html::try_into_string`, `Page::try_render_to` and
-  `PageHole::try_fill` return it as well, leaving the buffer as it was. The refusals are FV1803 (a
-  date string outside the format browsers read alike), FV1808 (`Date.UTC()` parts engines compute
-  differently), FV0714 (a `.repeat()` count JavaScript throws on), and four new entries of
-  `ERRORS` in `ferrovue/compiler`: FV0724 (an integer beyond ±2⁶³ where the template needs an
-  `i64`), FV0725 (a `.repeat()`, `.padStart()` or `.padEnd()` beyond the longest string V8 makes),
-  FV1811 (`.toISOString()` of an invalid date) and FV1812 (a date a child's `Date` prop cannot
-  hold). The guide's `errors_and_limits` page shows a handler answering one, and the full-stack
-  example's `/delivery` route renders a date and a number from the query string with `try_render`
-  and answers a refusal with `400`. The conformance component `LoadedStamps` records `Date.UTC()` of
-  a loader's result in a child from Vue, and a Rust test checks that its refusal reaches the page's
-  render.
-- The differential fuzzer counts a render that returns a refusal as refused at render, apart from
-  Rust errors and mismatches, and lists each refusal's code and message; it renders a child
-  `FzWide` whose `number` prop is a product of integers, beyond ±2⁶³ for wide props.
+- Loops and `let`s assigned again in a function's or a `computed`'s body: `for…of`, counting `for`
+  loops, `break`, `continue` and `+=`, `++` and the others: [Loops and assignments](https://docs.rs/ferrovue/latest/ferrovue/guide/script_logic/index.html#loops-and-assignments).
+- Constants worked out when compiling (`const HOUR = 60 * MINUTE`, template literals), constant
+  `Map`s, `Object.hasOwn()` and `Object.keys()` of an object constant: [Constants](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#constants).
+- A function's or a `computed`'s body may declare arrow functions of its own: [Functions](https://docs.rs/ferrovue/latest/ferrovue/guide/script_logic/index.html#functions).
+- A string known to hold ASCII alone may be cut into characters and joined again, and `s[i]` reads
+  a string's code unit: [Halves of surrogate pairs](https://docs.rs/ferrovue/latest/ferrovue/guide/strings/index.html#halves-of-surrogate-pairs).
+- Object literals where their type is known, each built as its interface's Rust struct, with
+  FV0634, FV0635 and FV0636 for the rest: [Object literals](https://docs.rs/ferrovue/latest/ferrovue/guide/script_logic/index.html#object-literals).
+- A union of string literals or a string `enum` is a Rust enum the compiler generates, parsed with
+  `FromStr` into it or a `ferrovue::ParseUnionError`: [Unions of string literals](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#unions-of-string-literals).
+- `Date`s inside lists, dictionaries and interfaces of the props and of a loader's result, revived
+  in the browser from a `data-dates` plan: [Dates inside lists and objects](https://docs.rs/ferrovue/latest/ferrovue/guide/dates_and_prices/index.html#dates-inside-lists-and-objects).
+- Every component has a `try_render` that returns a [`Refused`](https://docs.rs/ferrovue/latest/ferrovue/render/struct.Refused.html)
+  for props it cannot write as Vue does, so a server can answer `400`: [Refused at render time](https://docs.rs/ferrovue/latest/ferrovue/guide/errors_and_limits/index.html#refused-at-render-time).
+- An element with no content given a custom directive listed in `clientDirectives` compiles, and
+  FV0425 refuses one whose merged attributes may hold its content: [FV0425](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#fv0425).
+- The guide page [`upgrading_to_0_11`](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_11/index.html).
+- A documentation site at <https://kinsmir.github.io/ferrovue/> with the guide and the changelog,
+  linked from the README.
 
 ### Changed
 
-- CI only: a pull request runs the jobs the paths it changes reach, on Node 22.23.4 and 26, where it
-  ran every job on every Node; a push to `main` runs the jobs the merged change reaches on every
-  Node and OS; a `release/*` branch, a tag, a manual run and a new weekly run run everything, and so
-  does a change to `ci.yml` or `.github/actions/`. **CI passed** fails when the change detection
-  fails and takes a skipped job as passed. Coverage runs on `main` and weekly, where it ran on every
-  pull request, and the release dry run also runs for a change to `Cargo.toml` or the npm
-  package's manifest.
-- CI only: the fuzz targets' dependencies are checked against `fuzz/deny.toml`, which holds their
-  own licence exception, so neither `cargo deny` run warns about an entry the other one needs; CI
-  runs cargo-deny 0.20.2, where it ran the newest release; `just deny` checks both workspaces.
-- Development only: `release.ts bump` also updates `fuzz/Cargo.lock`, which locked `ferrovue` and
-  `ferrovue-core` at 0.7.2, and `release.ts check` refuses a tag whose version `fuzz/Cargo.lock` does
-  not lock the published crates at.
-- Development only: the source archives (`git archive`, and the source zip and tarball of a GitHub
-  release) leave out the GitHub templates and settings, the fuzz targets, the mutation-testing
-  configuration, the site and AGENTS.md. They keep `.github/actions` and `.github/workflows`,
-  which a workflow's `$/` references load from that archive. The crate and the npm package are
-  packed as before. GitHub
-  marks generated code, recorded fixtures, vectors, the error-code page and the API reports as
-  generated, so a diff collapses them.
-- The npm package supports Node 22.23.4 or newer on 22, 24.22.1 or newer on 24, and 26.12.1 or
-  newer (`engines`: `>=22.23.4 <23 || >=24.22.1 <25 || >=26.12.1`), where it supported 22.18 or
-  newer. CI's oldest Node is 22.23.4.
-- The npm package depends on postcss 8.5.31 and @intlify/message-compiler 11.4.16. Development
-  only: Vite 8.3.5, happy-dom 21.0.4, vue-i18n 11.4.16, fallow 3.35.0 and oxlint 1.89.0, each the
-  newest release at least a day old. Every newer release of the crates' dependencies is younger
-  than Dependabot's seven-day cooldown, so `Cargo.lock` is unchanged.
-- Tests only: the Mutants workflow runs cargo-mutants in sixteen shards built without debug
-  information, where eight shards of about 333 mutants each ran up to the 90-minute timeout. New
-  unit tests kill the survivors in the 0.11 runtime: a `Refused`'s column without its line, two
-  copies of one refusal, the `Debug` of `Refused`, `Refusals`, `Loads`, `LoadCall` and
-  `LoadFuture`, `LoadCall::key`, `LoadError::source`, a loader argument given by reference, the
-  `*_fallible` constructors of `Html`, a page part that refuses, `Date.UTC` at the last date with a
-  part beyond 2⁵³ ms, and `lastIndexOf` from inside a surrogate pair.
-  `.cargo/mutants-equivalent.txt` gives the reasons for the survivors in `Date.UTC` and
-  `lastIndexOf` that cannot change a result.
-- Tests only: the fuzzer gives a string a loop builds a value to append that does not read the
-  string itself, so a generated loop no longer doubles it on every item (`acc += acc`), which ran
-  seed 4242 out of memory. A `?:` of a union value and a string literal keeps the members of both,
-  and a `?:` whose test is `true` or `false` the members of the branch it takes, so a comparison of
-  it is with one of them.
-- Development only: the workspace runs pnpm 12.15.0, where it ran 12.5.1; CI takes the version from
-  `packageManager`.
-- CI only: the workflows reach their own actions and reusable workflows as `$/.github/…`, which
-  GitHub resolves from the repository at the workflow's commit, where `./.github/…` loaded them from
-  the working copy. zizmor fails CI on a finding of any severity; `.github/zizmor.yml` ignores the
-  three npm installs no lockfile can describe (the package job installing the packed tarball as a
-  user does, and the release's pinned npm), each with its reason.
-- CI only: the browser job and the instruction-count job take `azure.archive.ubuntu.com` out of the
-  runner's APT mirror list before installing packages, so APT downloads from
-  `https://archive.ubuntu.com`, which the list already holds. The Azure mirror can serve packages so
-  slowly that APT's timeout never fires (actions/runner-images#14823), which spent whole attempts of
-  the browser job's install. Where the list is missing or holds no such archive, the step leaves it
-  as it is and warns.
+- **Breaking:** generated code is version 5, which the 0.10 crate refuses; the 0.11 crate builds
+  versions 2 to 5: [The version check](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#the-version-check).
+- **Breaking:** the generated `Props` and shared structs hold an enum for each union of string
+  literals, where they held a `Cow<'a, str>`: [`upgrading_to_0_11`](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_11/index.html#3-build-union-props-from-their-enums).
+- **Breaking:** a comparison or a child's prop outside a union is refused as TypeScript refuses
+  it (FV0637, FV0515), and so is a union with no enum to be (FV0323 to FV0325): [`upgrading_to_0_11`](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_11/index.html#4-error-codes-your-ci-matches).
+- **Breaking:** the npm package needs Node 22.23.4 or newer on 22, 24.22.1 on 24, or 26.12.1,
+  where it needed 22.18: [Node.js](https://docs.rs/ferrovue/latest/ferrovue/guide/support/index.html#nodejs).
+- `render` and its `Html` and `Page` methods panic with the refusal's message
+  (`error[FV1803]: …`) where they panicked with one of their own: [Refused at render time](https://docs.rs/ferrovue/latest/ferrovue/guide/errors_and_limits/index.html#refused-at-render-time).
 - FV1806 refuses a `Date` only in Pinia state, `provide`, `inject`, a typed `ref` and a
-  `defineModel`, which reach the browser with no plan of where their dates are; a `Date` inside the
-  props or a loader's result compiles. FV0317 accepts a dictionary of dates, FV2004 no longer
-  refuses a result that holds dates, and `.toSorted()` of a list of dates without a comparator is
-  FV1804. The public API changes: `reviveDates(component, props, dates?)` takes an island's
-  `data-dates`, `PagePart` gains `d` and `PageRecord` gains `dates` (`ferrovue`,
-  `ferrovue/client`, `ferrovue/testing`).
-- The `ferrovue` crate gains the hidden items generated code calls for dates inside the props:
-  `Html::dates`, `Load::DATES`, `DateShape` and `dates_in`. `Html` writes `data-dates` on an island
-  and into a page's record, and `Loads::script_into` writes `dates` into the payload, when
-  generated code gives them a plan.
-- FV1902 is titled "Assignment the server does not translate", and refuses an assignment inside an
-  expression, to a `const`, a parameter, a prop, a ref, a `computed`, a field or an item, from a
-  function inside the body to a `let` of the body, and a function declared in the body that reads
-  a `let` the body assigns again, each message saying which. FV1901 names a `while`, `do…while` or `for…in` loop with what to write instead.
-- A refusal inside a `computed`, a setup expression or a function the template calls carries that
-  refusal's own code and place (FV0710 for a regular expression, FV1902 for an assignment, FV0634
-  for an object literal), with where the template reads the value or calls the function; it was
-  FV0613 or FV0601, with the inner code in parentheses. Messages say where the construct is ("in a
-  `computed`", "in a function", "in setup"), `await` inside an expression suggests awaiting a
-  loader as a statement of its own, a bare regular expression is FV0710, and a refusal is reported
-  once per place and code, however often the template reads it.
-- FV0513 names the tag the template resolves by name; FV0316 suggests an interface for a tuple
-  prop type; FV0814 says what `Object.keys()`, `Object.values()`, `Object.entries()` and
-  `Object.hasOwn()` were given; FV0614 says why `&&` after a value that may be falsy while present
-  is refused; FV1901 suggests `const f = (…) => …` for a `function` declared inside a body. The
-  detail of FV0613 no longer lists a function declared in setup, which compiles.
-- An object literal in the template is refused with `FV0634` where it was `FV0625` ("an object
-  literal is not supported in a template"), also in a `computed` or a function. An untyped object
-  constant setup cannot evaluate keeps `FV0207`, with a hint to annotate it with an interface.
-- Generated code is version 5 (`ferrovue::__compat!(5)`), which the 0.10 crate refuses; the 0.11
-  crate builds versions 2 to 5.
-- `render`, `Html::render_to`, `Html::into_string`, `Page::render_to` and `PageHole::fill` panic with
-  the message of a refusal at render time, `error[FV1803]: components/X.vue:3:9: …`, where a date
-  string, `Date.UTC()`, `.toISOString()`, `.repeat()`, `.padStart()`, `.padEnd()` or a chrono
-  `Date` prop panicked with a message of its own. Generated components call `try_render` and
-  `try_render_scoped`, which replaces the hidden `render_scoped`; the generated `html()` of a
-  component with slots or render parameters returns `Html<'p, Props, impl ferrovue::Renderer<Props>>`,
-  which renders as before. `Html`'s methods, `Page::render_to` and `Part::new` take a renderer
-  through the hidden `ferrovue::Renderer` trait, which every `Fn(&mut String, &P)` implements.
-- The generated `Props` and shared structs hold an enum for each union of string literals, where
-  0.10 held a `Cow<'a, str>`; a struct with no other borrowed field loses its lifetime. A Rust
-  caller passes `Size::Md` where it passed `"md"`, as `upgrading_to_0_11` shows. Lists and records
-  of such a union, single literals, unions with `string`, integer unions and the fields of a
-  store's own interfaces are unchanged. The `closed_unions` test now checks that every `match`
-  over an enum names each variant, that props holding a string outside a union do not
-  deserialise, and that an integer union still reads a value outside it as its last member. In
-  the conformance suite, `Catalog`'s `enum Tone` is `Volume`, so that it no longer shares a name
-  with `Lookups`'s, its `empty` and `hostile` fixtures give it members of the union, and
-  `FallSwitch`'s `hostile` fixture, a value outside its union, is gone.
-- Generated code names its locals after the JavaScript names they hold: `let sum` is `fv_sum`,
-  `for (const r of rows)` binds `fv_r` and `v-for="item in items"` binds `fv_item`, where a counter
-  numbered them before (`fv_m1`, `fv_a3`, `n2`, and a bare `item` for a `v-for` item). A value the
-  compiler makes for itself is named by its role (`fv_returned`, `fv_next_a`, `fv_tag`,
-  `fv_slot_props`), and a name a function holds already takes `_2`, `_3`, …, counted per function,
-  so an edit to one component or one part of a template keeps the names of the locals it leaves
-  alone. Only Rust identifiers change: every render writes what it wrote, and generated code calls
-  no new crate item. The guide's page on generated code describes the scheme.
-- CI only: the jobs that run one Node.js, the release, the canary and the release dry run among them,
-  run Node 26, the active LTS from 2026-10-28, where they ran Node 24. The test matrix still runs
-  Node 22.23.4, 22, 24 and 26.
-- CI only: a retry of the browser job's system libraries first stops the `apt-get` the timed-out
-  attempt left running and waits for the package lock, which that `apt-get` held so the next
-  attempts failed at once.
-- Tests only: Stryker mutation-tests the compiler. `pnpm mutants:ts` mutates `attrs.ts` and
-  `template.ts` (`stryker.config.json`), runs the vitest suite against each mutant with per-test
-  coverage, and fails on a survivor `stryker-equivalent.txt` does not list with its reason, and on
-  an entry no survivor uses (`scripts/stryker-survivors.ts`). The Mutants workflow runs it every
-  Monday beside cargo-mutants and uploads the HTML report. The vitest runner is patched to name a
-  nested test as vitest 5 matches it. New compiler tests (`attrs.test.ts`) and conformance
-  components (`AttrObjects`, `AttrQuirks`) kill the survivors in both modules; `vite.test.ts`
-  replaces `process.chdir` with a mocked `process.cwd`, which also runs in worker threads.
-- Tests only: Stryker also mutates `constants.ts`, `dynamic.ts` and `expr.ts`. `pnpm mutants:ts`
-  takes the modules to mutate by name (`pnpm mutants:ts expr`), and holds only those to
-  `stryker-equivalent.txt`; the Mutants workflow runs the five modules in three jobs, each within
-  its two hours. New compiler tests (`constants.test.ts`, `dynamic.test.ts`, `expr.test.ts`,
-  `operators.test.ts`) and the conformance component `ListFallback` kill the survivors. The
-  conformance tests compile the components' date plans when a test first reads them, where they
-  compiled them as the test file loaded, which made Stryker run every test against most mutants
-  of the compiler.
-
-- Documentation: a site at <https://kinsmir.github.io/ferrovue/>, built with VitePress from the
-  private workspace package `site/`: a landing page, the guide and the crate's front page generated
-  at build time from `crates/ferrovue/docs/` in the order `guide.rs` lists them, with rustdoc's
-  hidden doctest lines left out and intra-doc links pointing at the site's pages and at docs.rs for
-  the API, and the changelog. Each page has its title, description, canonical link and Open Graph
-  tags, and the site a sitemap and a robots.txt. The Pages workflow builds it in pull requests that
-  touch it and deploys it from `main`. The README links it after docs.rs.
+  `defineModel`, and `reviveDates` takes an island's `data-dates`: [Dates inside lists and objects](https://docs.rs/ferrovue/latest/ferrovue/guide/dates_and_prices/index.html#dates-inside-lists-and-objects).
+- A refusal inside a `computed`, a setup expression or a function carries its own code and place,
+  where it was FV0613 or FV0601, and loops have FV1909 to FV1912: [`upgrading_to_0_11`](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_11/index.html#4-error-codes-your-ci-matches).
+- An object literal in the template is refused with FV0634 where it was FV0625: [FV0634](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#fv0634).
+- The messages of FV0316, FV0513, FV0614, FV0814, FV1901 and FV1902 say what to write:
+  [Error codes](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html).
+- Generated code names its locals after the JavaScript names they hold (`fv_sum`), so an edit to one
+  component keeps the names in the others: [The locals of a render](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#the-locals-of-a-render).
+- The npm package depends on postcss 8.5.31 and @intlify/message-compiler 11.4.16.
 
 ### Fixed
 
-- `Math.max()` and `Math.min()` of integers keep a `-0` that integer arithmetic gives
-  (`Math.max(n * 0, -1)` of a negative `n`), so `1 / Math.max(n * 0, -1)` is `-Infinity`, as in
-  JavaScript. They compared the integers as `i64`, which has no `-0`.
-- A refusal of an attribute bound both alone and in a `v-bind` object, whose later value Vue
-  renders, no longer points at the earlier binding.
-- An array literal of object literals given a list of other values (`[{ label: "x" }] as
-  string[]`, a `computed` or function typed `string[]` that returns one, a child's `string[]` prop
-  bound to one) is refused with FV0634. The compiler gave the list its type again each time it read
-  it, and stopped with a stack overflow.
-- `list ?? [...]`, an optional list falling back to an array literal of the same type, is written
-  as `?:` writes it. The Rust ferrovue wrote passed the array where a reference to the list was
-  taken, and did not compile.
-- A list of numbers, booleans or dates that a `?:` or `??` copies is written as `.to_vec()`. It was
-  written as `.iter().copied().collect()`, which clippy's `iter_cloned_collect` lint rejects.
-
-- A child's prop named like a listener (`on1`, `onSale`, `:on-sale`) in props Vue joins with
-  `mergeProps` (the child is a component's root, or is given `v-bind` of an object or `v-on` of an
-  object beside other props) is left out when its value is falsy (`0`, `-0`, `NaN`, `""`,
-  `false`), as `mergeProps` leaves out a listener, so the child takes the prop's default. ferrovue
-  passed the value on, and `<Kid :on1="n" />` at a root wrote `0` where Vue wrote the default. Two
-  new entries of `ERRORS` in `ferrovue/compiler` refuse what cannot be rendered so: FV0516 a prop
-  named like a listener given twice in merged props, which Vue joins into a list, and FV0517 a
-  required one that may be falsy there, which the child reads as `undefined`. FV0502 also refuses a
-  name like a listener's that a component is passed beyond its props and hands on to a child that
-  declares it, which ferrovue dropped where Vue passes it on as the prop. The conformance
-  components `OnProps`, `OnPropsKid`, `OnPropsRoot` and `OnPropsBare` record both paths from Vue.
-- Integer arithmetic whose result is beyond ±2⁶³ (`n * n` of a large `n`) is written into the page
-  as JavaScript writes it (`16000000000000000000`, `8.112963841460666e+31`). The result was cast to
-  `i64`, which stopped at `9223372036854775807`.
-- Such a result chosen by `??`, `?:` or `||` is written from its double too, as one held in a
-  `computed` or returned by a function is (the conformance component `WideChoices`). Where the
-  template needs it as an integer, given to a child's `number` prop or used as an index or as the
-  count of a `v-for`, it is refused at render time with FV0724, where it was cast to `i64` and
-  rendered as `9223372036854775807`, which Vue does not write.
-- A component may render itself by any name Vue resolves to it: its kebab-case or camelCase name
-  (`<tree-node>` or `<treeNode>` in `TreeNode.vue`), which was refused with FV0513.
-- A value outside a closed union renders as the union's last member wherever a lookup table or
-  `<component :is>` reads it, as the `props` guide says. A lookup table defaulted by `??` (`T[k ??
-  "c"]`) put the default first and read another member; a lookup table and `<component :is>` whose
-  last member shared its value with an earlier one read the value of the group that came last; a
-  table of booleans read `false`, and `v-if` of a table that lacks some members read its member
-  absent, where the last member's is `true` and present. A new Rust test renders components that
-  read closed unions in each of these ways with values outside the union.
-- A test that narrows a value holds in every operand after it in a chain of `&&` or `||`:
-  `n != null && n > 1 && n < 9` and `n == null || n < 1 || n > 9` compiled with FV0609, as did a
-  `?:` whose test is such a chain. `a && b` of an `a` whose present values are all truthy gives
-  `undefined` where `a` is absent (`kind && ICONS[kind]`, which was FV0223), and `b` where `a`
-  cannot be absent, in text, attributes and `:class`.
-- A component's root `:class="a && b"` left out the attribute where `a` is `undefined`, as
-  `mergeProps` does, where it wrote `class=""`.
-- A prop or a field of an interface written with no type (`defineProps<{ tag }>()`,
-  `interface Row { id }`, in the component or in a `.ts` file) is refused with FV0326, a new entry
-  of `ERRORS` in `ferrovue/compiler`, located at the field. The compile stopped with a `TypeError`.
-- `defineProps<P>()` and `defineEmits<E>()` of a type imported from another file (a `.ts` file, a
-  component or a package), directly, in an intersection, through a local alias or as the base an
-  interface extends, are refused with FV0327, a new entry of `ERRORS` in `ferrovue/compiler`,
-  located where the type is named. The compile stopped with Vue's "No fs option provided to
-  `compileScript`" error and no FV code. Declare the props in the component, as
-  `defineProps<{ row: Row }>()` or an interface of the component, whose fields may have imported
-  types.
-- Names holding `$` are written as Rust identifiers: a `<script setup>` binding (`const $label =
-  computed(…)` is the local `s_label`), a prop (`price$` is the field `price`), a field of an
-  interface or a constant list's objects (`$meta` is `meta`), a slot prop, a store's state and a
-  loader's parameters keep their ASCII letters and digits, as the locals of a render do. A name that
-  then comes to a Rust name another one holds takes `_2`, `_3`, …: `$tag` beside `tag` is `tag_2`.
-  Fields keep `#[serde(rename)]` to the JavaScript name, so islands' props are unchanged. The Rust
-  ferrovue wrote kept the `$` and did not compile, and a binding read in the template was not
-  declared. A prop whose name starts with `$`, which Vue leaves out of the props and renders as an
-  attribute, is refused with FV0328, a new entry of `ERRORS` in `ferrovue/compiler`. The
-  conformance component `DollarNames` records names holding `$` from Vue.
-- A `<template>` in another language than HTML (`<template lang="pug">`) is refused with FV0008,
-  and a `<template src="./x.html">` with FV0009, both at the `<template>` tag. ferrovue compiled
-  the pug source as HTML text and wrote it into the page, and rendered nothing for `src`, where
-  Vite renders the template. `<template lang="html">` compiles as before. The two codes are new
-  entries of `ERRORS` in `ferrovue/compiler`.
-- A `<textarea>`, or an `<input>` with `v-model`, at a component's root is refused with FV0424,
-  located at the element, which says to wrap it in an element. It was refused with two or three
-  errors with no line (FV0513, FV0006, FV0631, FV0407) that did not name the cause: Vue's server
-  renderer reads the `<textarea>`'s content, and the `<input>`'s `type` and `value`, from the
-  attributes passed to the component. FV0424 also refuses such a control given `v-bind` of an
-  object, an attribute named at run time or a custom directive, whose attributes Vue reads the
-  same way. The README's Forms row says so. FV0424 is a new entry of `ERRORS` in
-  `ferrovue/compiler`. The conformance components `FormWrapped` and `FormRoot` record the shapes
-  that compile from Vue.
-- A field typed as a union of string literals, read from a value built from an object literal
-  (`function one(): R { return { t: props.s, e: "a" }; }` read as `{{ one().e }}` or
-  `one().e === "a"`), is read through the generated enum's `as_str()` and compared by its variants.
-  The Rust ferrovue wrote read the enum as a string and did not compile. The conformance component
-  `LiteralEnumField` records it from Vue.
-- `[].length`, and the length of `[]` handed to a parameter whose items have no type
-  (`function f(xs: unknown[]) { return xs.length; }` read as `{{ f([]) }}`), is 0, as in
-  JavaScript. The Rust ferrovue wrote gave the empty array no item type, and rustc refused it with
-  E0282. The conformance component `EmptyArrays` records it from Vue.
-- An element with no content given a custom directive listed in `clientDirectives`
-  (`<b v-focus class="x" :id="id" />`) compiles, and renders its attributes and no content, as
-  Vue does. It was refused with FV0513, with no line and a message about a component resolved by
-  name. Vue's server renderer writes such an element's content from a `textContent` or
-  `innerHTML` among the attributes it merges, so FV0425 refuses one whose merged attributes may
-  hold them, at the attribute: those passed to the component, when the element is its root, a
-  `v-bind` of an object, an attribute named at run time, and a bound `textContent` or
-  `innerHTML`. FV0425 is a new entry of `ERRORS` in `ferrovue/compiler`. The conformance component
-  `DirectedEmpty` records the shapes that compile from Vue.
+- `Math.max()` and `Math.min()` of integers keep a `-0`, so `1 / Math.max(n * 0, -1)` is
+  `-Infinity`: [How numbers are computed](https://docs.rs/ferrovue/latest/ferrovue/guide/numbers/index.html#how-numbers-are-computed).
+- Integer arithmetic beyond ±2⁶³ is written as JavaScript writes it, and refused at render time
+  with FV0724 where the template needs an integer: [How numbers are written](https://docs.rs/ferrovue/latest/ferrovue/guide/numbers/index.html#how-numbers-are-written).
+- A child's prop named like a listener (`on1`, `onSale`) is left out when falsy where Vue joins
+  props with `mergeProps`, with FV0516 and FV0517 for what cannot be: [Types](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#types).
+- A value outside a closed union reads the union's last member in every lookup table and
+  `<component :is>`: [`upgrading_to_0_11`](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_11/index.html#lookups-and-component-is-over-a-union).
+- A test that narrows a value holds through a chain of `&&` or `||`, which was FV0609, and a
+  root's `:class="a && b"` leaves out the attribute where `a` is `undefined`.
+- Names holding `$` are written as Rust identifiers, and a prop starting with `$` is refused with
+  FV0328: [Names](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#names).
+- A prop or field with no type (FV0326) and `defineProps` of an imported type (FV0327) are refused
+  at their place, where the compile stopped with an error of its own.
+- `<template lang="pug">` is refused with FV0008 and `<template src>` with FV0009, where the
+  template was written as HTML or rendered as nothing.
+- A `<textarea>` or an `<input v-model>` at a component's root is refused with FV0424, which says to
+  wrap it, where it gave several errors with no line: [FV0424](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#fv0424).
+- A component may render itself by its kebab-case or camelCase name, which was FV0513.
+- Generated Rust builds for `list ?? [...]`, `[].length` and a union field read from an object
+  literal, and a copied list of numbers passes clippy.
+- An array literal of object literals typed as a list of other values is refused with FV0634,
+  where the compiler overflowed its stack.
+- A refusal of an attribute bound alone and in a `v-bind` object points at the later binding.
 
 ## [0.10.0] - 2026-10-22
 
