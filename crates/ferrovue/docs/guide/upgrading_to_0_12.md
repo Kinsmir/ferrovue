@@ -29,9 +29,9 @@ ferrovue = "0.12"
 
 `ferrovue` depends on `ferrovue-core`, `ferrovue-router` and `ferrovue-i18n` at exactly its own
 version, so an application that names only `ferrovue` gets the other three with it. One that names
-any of them itself bumps it to 0.12 as well. A project that lists `ferrovue` in pnpm's
-`minimumReleaseAgeExclude` bumps that entry to the new version too, or pnpm holds 0.12 back until it
-is older than the minimum release age.
+any of them itself bumps it to 0.12 as well. A project that lists `ferrovue@0.11.0` in pnpm's
+`minimumReleaseAgeExclude` adds `ferrovue@0.12.0` beside it, and removes the 0.11.0 entry once the
+lockfile no longer holds it: pnpm checks the lockfile against the policy before it resolves again.
 
 ## 2. Generate every component again
 
