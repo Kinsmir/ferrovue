@@ -6,7 +6,7 @@ import { compileScript, compileTemplate, parse } from "@vue/compiler-sfc";
 import { type Component, createSSRApp, h } from "vue";
 import { renderToString } from "vue/server-renderer";
 import { generate } from "../packages/ferrovue/src/compiler.ts";
-import { attachSsrRender } from "../packages/ferrovue/src/testing.ts";
+import { attachSsrRender } from "../packages/ferrovue/src/ssr.ts";
 
 const file = resolve(process.argv[2] ?? "");
 const props = JSON.parse(process.argv[3] ?? "{}") as Record<string, unknown>;

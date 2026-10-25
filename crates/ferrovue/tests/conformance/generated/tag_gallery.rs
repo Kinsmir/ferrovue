@@ -40,27 +40,27 @@ impl std::fmt::Display for TagGalleryLevel {
 }
 
 impl std::str::FromStr for TagGalleryLevel {
-    type Err = ferrovue::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "h1" => Ok(TagGalleryLevel::H1),
             "h2" => Ok(TagGalleryLevel::H2),
             "h3" => Ok(TagGalleryLevel::H3),
-            _ => Err(ferrovue::ParseUnionError::new("TagGalleryLevel", s, &["h1", "h2", "h3"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("TagGalleryLevel", s, &["h1", "h2", "h3"])),
         }
     }
 }
 
 impl TryFrom<&str> for TagGalleryLevel {
-    type Error = ferrovue::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::Union for TagGalleryLevel {
+impl ferrovue::props::Union for TagGalleryLevel {
     const ALL: &'static [Self] = &TagGalleryLevel::ALL;
 
     fn as_str(self) -> &'static str {
@@ -97,26 +97,26 @@ impl std::fmt::Display for TagGalleryRule {
 }
 
 impl std::str::FromStr for TagGalleryRule {
-    type Err = ferrovue::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "hr" => Ok(TagGalleryRule::Hr),
             "br" => Ok(TagGalleryRule::Br),
-            _ => Err(ferrovue::ParseUnionError::new("TagGalleryRule", s, &["hr", "br"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("TagGalleryRule", s, &["hr", "br"])),
         }
     }
 }
 
 impl TryFrom<&str> for TagGalleryRule {
-    type Error = ferrovue::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::Union for TagGalleryRule {
+impl ferrovue::props::Union for TagGalleryRule {
     const ALL: &'static [Self] = &TagGalleryRule::ALL;
 
     fn as_str(self) -> &'static str {
@@ -158,7 +158,7 @@ impl<'a> Props<'a> {
 #[derive(Clone, Copy, Default)]
 pub struct Slots<'s> {
     /// `<slot>`
-    pub default: Option<fv::Slot<'s>>,
+    pub default: Option<fv::render::Slot<'s>>,
 }
 
 /// Write the component's server render into `out`.
@@ -167,7 +167,7 @@ pub struct Slots<'s> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
-    fv::rendered(try_render(out, props, fv_slots));
+    fv::render::rendered(try_render(out, props, fv_slots));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -175,36 +175,36 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(340 + 2 + props.title.len() + props.note.as_deref().map_or(0, str::len) + 2);
     out.push_str("<article data-v-71d8588a>");
     super::tag_heading::try_render_scoped(out, &super::tag_heading::Props { r#as: Some(match props.level { TagGalleryLevel::H1 => super::tag_heading::TagHeadingAs::H1, TagGalleryLevel::H2 => super::tag_heading::TagHeadingAs::H2, TagGalleryLevel::H3 => super::tag_heading::TagHeadingAs::H3 }), text: std::borrow::Cow::Borrowed(&*props.title) }, super::tag_heading::Slots {
-        default: Some(fv::Slot::markup(&|out: &mut String| -> bool {
+        default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
             if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {
                 filled = true;
                 out.push_str("<em data-v-71d8588a>");
-                fv::escape_into(out, fv_note);
+                fv::core::escape_into(out, fv_note);
                 out.push_str("</em>");
             } else {
                 out.push_str("<!--v-if-->");
             }
             out.push_str("<!--[-->");
-            for fv_w_cow in fv::js_split(&props.title, " ").into_iter() {
+            for fv_w_cow in fv::strings::js_split(&props.title, " ").into_iter() {
                 let fv_w: &str = &fv_w_cow;
                 filled = true;
                 out.push_str("<!--[-->");
-                fv::escape_into(out, fv_w);
+                fv::core::escape_into(out, fv_w);
                 out.push_str("<!--]-->");
             }
             out.push_str("<!--]-->");
             filled
         })),
-    }, &fv::Attrs::new(&[("data-role", fv::Attr::str("title"))], " data-v-71d8588a"))?;
+    }, &fv::attrs::Attrs::new(&[("data-role", fv::attrs::Attr::str("title"))], " data-v-71d8588a"))?;
     super::tag_heading::try_render_scoped(out, &super::tag_heading::Props { r#as: None, text: std::borrow::Cow::Borrowed(&*props.title) }, super::tag_heading::Slots {
         default: None,
-    }, &fv::Attrs::scoped(" data-v-71d8588a"))?;
+    }, &fv::attrs::Attrs::scoped(" data-v-71d8588a"))?;
     match props.rule {
         TagGalleryRule::Hr => {
             out.push_str("<hr class=\"rule\" data-v-71d8588a>");
@@ -215,33 +215,33 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> R
     }
     if props.ordered {
         out.push_str("<ol class=\"");
-        fv::class_into(out, false, &[if props.ordered { "ordered" } else { "" }]);
+        fv::attrs::class_into(out, false, &[if props.ordered { "ordered" } else { "" }]);
         out.push_str("\" data-v-71d8588a><!--[-->");
-        for fv_w_cow_2 in fv::js_split(&props.title, " ").into_iter() {
+        for fv_w_cow_2 in fv::strings::js_split(&props.title, " ").into_iter() {
             let fv_w_2: &str = &fv_w_cow_2;
             out.push_str("<li data-v-71d8588a>");
-            fv::escape_into(out, fv_w_2);
+            fv::core::escape_into(out, fv_w_2);
             out.push_str("</li>");
         }
         out.push_str("<!--]-->");
-        fv::slot_into(out, fv_slots.default, None);
+        fv::render::slot_into(out, fv_slots.default, None);
         out.push_str("</ol>");
     } else {
         out.push_str("<ul class=\"");
-        fv::class_into(out, false, &[if props.ordered { "ordered" } else { "" }]);
+        fv::attrs::class_into(out, false, &[if props.ordered { "ordered" } else { "" }]);
         out.push_str("\" data-v-71d8588a><!--[-->");
-        for fv_w_cow_3 in fv::js_split(&props.title, " ").into_iter() {
+        for fv_w_cow_3 in fv::strings::js_split(&props.title, " ").into_iter() {
             let fv_w_3: &str = &fv_w_cow_3;
             out.push_str("<li data-v-71d8588a>");
-            fv::escape_into(out, fv_w_3);
+            fv::core::escape_into(out, fv_w_3);
             out.push_str("</li>");
         }
         out.push_str("<!--]-->");
-        fv::slot_into(out, fv_slots.default, None);
+        fv::render::slot_into(out, fv_slots.default, None);
         out.push_str("</ul>");
     }
     out.push_str("<h4 data-v-71d8588a>static ");
-    fv::escape_into(out, &props.title);
+    fv::core::escape_into(out, &props.title);
     out.push_str("</h4>");
     if let Some(fv_note_2) = props.note.as_deref().filter(|v| !v.is_empty()) {
         let fv_tag = match props.level { TagGalleryLevel::H1 => "h1", TagGalleryLevel::H2 => "h2", TagGalleryLevel::H3 => "h3" };
@@ -251,11 +251,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> R
             out.push_str(" data-note");
         } else {
             out.push_str(" data-note=\"");
-            fv::escape_into(out, fv_note_2);
+            fv::core::escape_into(out, fv_note_2);
             out.push('"');
         }
         out.push_str(" data-v-71d8588a>");
-        fv::escape_into(out, fv_note_2);
+        fv::core::escape_into(out, fv_note_2);
         out.push_str("</");
         out.push_str(fv_tag);
         out.push('>');
@@ -267,6 +267,6 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> R
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_slots)))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_slots)))
 }

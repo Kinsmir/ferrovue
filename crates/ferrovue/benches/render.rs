@@ -25,7 +25,7 @@ mod scenarios;
 #[serde(transparent)]
 pub struct Sanitised(String);
 
-impl ferrovue::TrustedHtml for Sanitised {
+impl ferrovue::html::TrustedHtml for Sanitised {
     fn trusted_html(&self) -> &str {
         &self.0
     }

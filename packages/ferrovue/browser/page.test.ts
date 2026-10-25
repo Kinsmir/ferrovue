@@ -34,7 +34,7 @@ beforeAll(async () => {
     root: join(import.meta.dirname, "../../.."),
     logLevel: "warn",
     plugins: [vue()],
-    resolve: { alias: [{ find: /^ferrovue\/client$/, replacement: join(import.meta.dirname, "../src/client.ts") }] },
+    resolve: { alias: [{ find: /^ferrovue$/, replacement: join(import.meta.dirname, "../src/client.ts") }] },
     build: { write: false, minify: false, rolldownOptions: { input: join(import.meta.dirname, "page-entry.ts"), output: { codeSplitting: false } } },
   }).finally(() => {
     process.env.NODE_ENV = nodeEnv;

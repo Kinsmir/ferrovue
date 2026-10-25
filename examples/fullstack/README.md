@@ -76,10 +76,10 @@ cargo run -p ferrovue-example-fullstack -- --render /books/dune
 | `client/vendor/` | Stand-ins for a component library's components, which ferrovue does not compile: `StarRating`, rendered on the server by its Rust twin, and `ShareLink`, rendered only in the browser |
 | `src/ui.rs` | The Rust twin of `StarRating`, listed under `twins` in `ferrovue.config.json` |
 | `fixtures/`, `test/conformance.test.ts`, `ferrovue::conformance!` in `src/main.rs` | The conformance suite, in two calls: every component's fixtures rendered by Vue through `conformanceSuite` from `ferrovue/testing` (`FERROVUE_FIXTURES_WRITE=1` records the `.html`) and by the generated Rust, byte for byte, which proves the twin too; the generated Rust checked to be current, and every recorded `.html` hydrated with no mismatch |
-| `client/app.ts` | A router over `ferrovue/routes` whose every page renders nothing (`routeRecords`), `hydrateState`, `mountPage` on a page that carries a record, then `mountIslands` of `ferrovue/islands`, which the Vite plugin writes: every island by name, each loaded only on a page that holds it, with one Pinia and one router for them all; on the staff picks, a `linkRouter` whose `navigate` shows the next pick with `readPage` and `renderPage` |
-| `src/pages.rs` | Rendering pages from the generated `route_table::router()`, `Props::new(…)`, `Slots`, `ferrovue::state_script_into`, `ferrovue::hole()`, and `reviews::into_island()`, a page holding its props that a handler returns; `ferrovue::Page` for the staff picks, whose record is the last hole, rendered with `loaders::load` and followed by `Loads::script_into`; a `ferrovue::Head` per page, rendered after the body and written into `<head>` |
+| `client/app.ts` | A router over `ferrovue/routes` whose every page renders nothing (`routeRecords` from `ferrovue/route-records`), `hydrateState`, `mountPage` on a page that carries a record, then `mountIslands` of `ferrovue/islands`, which the Vite plugin writes: every island by name, each loaded only on a page that holds it, with one Pinia and one router for them all; on the staff picks, a `linkRouter` whose `navigate` shows the next pick with `readPage` and `renderPage` |
+| `src/pages.rs` | Rendering pages from the generated `route_table::router()`, `Props::new(…)`, `Slots`, `ferrovue::page::state_script_into`, `ferrovue::page::hole()`, and `reviews::into_island()`, a page holding its props that a handler returns; `ferrovue::page::Page` for the staff picks, whose record is the last hole, rendered with `loaders::load` and followed by `Loads::script_into`; a `ferrovue::head::Head` per page, rendered after the body and written into `<head>` |
 | `src/catalogue.rs` | The shop's books, reviews and stock, standing in for a database; the reviews arrive after a delay so the page has something to stream; `Catalogue`, the app's implementation of the generated `Loaders` trait |
-| `src/main.rs` | The axum server: a `ferrovue::HtmlStream` per page, a book's reviews alone at `/books/{id}/reviews`, the loaders' results as JSON at `/api/stock/{id}` and `/api/warehouses/{code}`, `Delivery` at `/delivery?ordered=2024-05-01&days=3` rendered with `try_render`, which answers a date browsers read differently (`?ordered=May 1, 2024`) or a delivery beyond the range of dates with `400 Bad Request` and the refusal's message, `dist/assets` served beside it, and `--render` |
+| `src/main.rs` | The axum server: a `ferrovue::web::HtmlStream` per page, a book's reviews alone at `/books/{id}/reviews`, the loaders' results as JSON at `/api/stock/{id}` and `/api/warehouses/{code}`, `Delivery` at `/delivery?ordered=2024-05-01&days=3` rendered with `try_render`, which answers a date browsers read differently (`?ordered=May 1, 2024`) or a delivery beyond the range of dates with `400 Bad Request` and the refusal's message, `dist/assets` served beside it, and `--render` |
 | `src/assets.rs` | Finding the entry's hashed script and stylesheets in Vite's manifest, the lazily loaded islands' stylesheets included, or loading from the dev server |
 | `test/hydration.test.ts` | The proof: the server's own HTML hydrates with no mismatch, carries the scope ids the client build's stylesheet selects, and a staff picks page fetched from the server renders from its record in place of the one hydrated, its stock from the loaders' results it carries |
 | `adopter/peers.test.ts`, `vitest.adopter.config.ts` | `fixtureApp` loaded from ferrovue's built package with Node, as an application's vitest run loads it, rendering fixtures with stores and a route through the application's own Pinia and vue-router |
@@ -125,8 +125,8 @@ the island hydrates it, and the link replaces it once the island is mounted.
 
 ### Streaming
 
-`books/[id].vue` has a `reviews` slot. The server fills it with `ferrovue::hole()`, renders the whole
-document once, and responds with a `ferrovue::HtmlStream` of the document and a future for the
+`books/[id].vue` has a `reviews` slot. The server fills it with `ferrovue::page::hole()`, renders the whole
+document once, and responds with a `ferrovue::web::HtmlStream` of the document and a future for the
 hole's content (the crate's `axum` feature). The response body is a stream: the part before the
 hole goes out at once (header, book, basket, "Add to basket"), the reviews follow when the slow
 lookup returns, and the rest of the document after them. Watch it with
@@ -135,7 +135,7 @@ lookup returns, and the rest of the document after them. Watch it with
 ### A page hydrated whole
 
 `/picks` is built differently: `picks.vue` is a layout whose default slot holds a `Pick` per book
-and whose `reviews` slot is a hole. `src/pages.rs` gives the slots to a `ferrovue::Page` as
+and whose `reviews` slot is a hole. `src/pages.rs` gives the slots to a `ferrovue::page::Page` as
 `Part`s, made from the same `pick::html(&props)` values that write the markup, renders the layout
 inside `<div id="app">`, and leaves one more hole after it for the record. The response streams the
 picks at once, the reviews when they arrive, and then the record, which `PageRecord::script` writes
@@ -189,7 +189,7 @@ home page, a book page and the staff picks, puts each page's body into happy-dom
 client's own `hydrate()` on it. It fails on any warning Vue logs, which is how Vue reports a
 hydration mismatch. It then checks that Vue kept the server's nodes, that the islands work after
 hydration, and that a click in one island reaches the store the summary shows. The staff picks are
-hydrated a second time with `hydrateRecordedPage` from `ferrovue/testing`, which fails on any
+hydrated a second time with `hydrateRecordedPage` from `ferrovue/testing/browser`, which fails on any
 mismatch and on any change hydrating makes to the markup. While they hydrate, `fetch` is replaced
 with one that records every request, so the test checks that the loaders were answered from the
 page. CI runs it, and also starts the real

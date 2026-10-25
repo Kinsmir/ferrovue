@@ -9,12 +9,12 @@ pub mod generated;
 use std::fs;
 use std::path::Path;
 
-use ferrovue::Union;
+use ferrovue::props::Union;
 use generated::{union_list_item, union_shade, union_types};
 
-/// Enums an application keeps beside its domain, each implementing `ferrovue::Union`.
+/// Enums an application keeps beside its domain, each implementing `ferrovue::props::Union`.
 pub mod domain {
-    use ferrovue::Union;
+    use ferrovue::props::Union;
 
     /// `Align`, its variants in an order of its own.
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

@@ -30,8 +30,8 @@ impl<'a> Props<'a> {
 /// # Panics
 ///
 /// With the message of the refusal [`try_render`] returns.
-pub fn render(out: &mut String, props: &Props<'_>, fv_head: &fv::Head) {
-    fv::rendered(try_render(out, props, fv_head));
+pub fn render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head) {
+    fv::render::rendered(try_render(out, props, fv_head));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -39,17 +39,17 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_head: &fv::Head) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_head: &fv::Head) -> Result<(), fv::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head) -> Result<(), fv::render::Refused> {
     out.reserve(7 + props.title.len());
-    fv_head.push(fv::HeadValue::object([("title", fv::HeadValue::str(&props.title))]));
+    fv_head.push(fv::head::HeadValue::object([("title", fv::head::HeadValue::str(&props.title))]));
     out.push_str("<i>");
-    fv::escape_into(out, &props.title);
+    fv::core::escape_into(out, &props.title);
     out.push_str("</i>");
     Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_head: &'p fv::Head) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_head)))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_head: &'p fv::head::Head) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_head)))
 }

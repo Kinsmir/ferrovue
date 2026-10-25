@@ -31,7 +31,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::Stores<'_>) {
-    fv::rendered(try_render(out, props, fv_stores));
+    fv::render::rendered(try_render(out, props, fv_stores));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -39,20 +39,20 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::St
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::Stores<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::Stores<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(77 + props.title.len());
     out.push_str("<span class=\"badge");
-    fv::class_into(out, true, &[&*fv_stores.prefs.density]);
+    fv::attrs::class_into(out, true, &[&*fv_stores.prefs.density]);
     out.push_str("\" data-wide=\"");
     out.push_str(if fv_stores.prefs.wide { "true" } else { "false" });
     out.push_str("\">");
-    fv::escape_into(out, &props.title);
+    fv::core::escape_into(out, &props.title);
     out.push(' ');
-    fv::push_int(out, fv_stores.prefs.count);
+    fv::core::push_int(out, fv_stores.prefs.count);
     if let Some(fv_label) = fv_stores.prefs.label.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<b>");
-        fv::escape_into(out, fv_label);
+        fv::core::escape_into(out, fv_label);
         out.push_str("</b>");
     } else {
         out.push_str("<!---->");
@@ -63,11 +63,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores
         out.push_str("<i");
         if let Some(v) = fv_t.color.as_deref() {
             out.push_str(" title=\"");
-            fv::escape_into(out, v);
+            fv::core::escape_into(out, v);
             out.push('"');
         }
         out.push('>');
-        fv::escape_into(out, &fv_t.name);
+        fv::core::escape_into(out, &fv_t.name);
         out.push_str("</i>");
     }
     out.push_str("<!--]--></span>");
@@ -75,6 +75,6 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_stores: &'p super::stores::Stores<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_stores)))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_stores: &'p super::stores::Stores<'p>) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_stores)))
 }

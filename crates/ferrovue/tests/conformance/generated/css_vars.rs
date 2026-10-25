@@ -52,7 +52,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render_scoped(out, props, &fv::Attrs::NONE));
+    fv::render::rendered(try_render_scoped(out, props, &fv::attrs::Attrs::NONE));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -60,38 +60,38 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
-    try_render_scoped(out, props, &fv::Attrs::NONE)
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
+    try_render_scoped(out, props, &fv::attrs::Attrs::NONE)
 }
 
 /// [`try_render`], with the attributes a parent passes beyond the props, and the scope ids it hands the root.
 #[doc(hidden)]
-pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::Attrs<'_>) -> Result<(), fv::Refused> {
+pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(372 + props.color.len() + props.label.as_deref().map_or(0, str::len) + props.font.len());
     let s_doubled = props.size as f64 * 2.0;
     let s_theme = props.label.as_deref().unwrap_or("plain");
     out.push_str("<section");
     if fv_attrs.is_empty() {
         out.push_str(" class=\"vars\" style=\"margin:0;--own:1;padding:");
-        fv::escape_into(out, &format!("{}px", fv::Js(props.size)));
+        fv::core::escape_into(out, &format!("{}px", fv::core::Js(props.size)));
         out.push_str(";color:");
-        fv::escape_into(out, &props.color);
+        fv::core::escape_into(out, &props.color);
         out.push_str(";--b3187d50-color:");
         if props.color.is_empty() {
             out.push(' ');
         } else {
-            fv::escape_into(out, &props.color);
+            fv::core::escape_into(out, &props.color);
         }
         out.push_str(";--b3187d50-doubled\\ \\+\\ \\&quot;px\\&quot;:");
-        match AsRef::<str>::as_ref(&format!("{}px", fv::Js(s_doubled))) { "" => out.push(' '), v => fv::escape_into(out, v) }
+        match AsRef::<str>::as_ref(&format!("{}px", fv::core::Js(s_doubled))) { "" => out.push(' '), v => fv::core::escape_into(out, v) }
         out.push_str(";--b3187d50-accent:teal;");
         if let Some(v) = props.label.as_deref() {
             out.push_str("--b3187d50-label:");
             if v.is_empty() {
                 out.push(' ');
             } else {
-                fv::escape_into(out, v);
+                fv::core::escape_into(out, v);
             }
             out.push(';');
         } else {
@@ -101,54 +101,54 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::Att
         if props.font.is_empty() {
             out.push(' ');
         } else {
-            fv::escape_into(out, &props.font);
+            fv::core::escape_into(out, &props.font);
         }
         out.push_str(";--b3187d50-theme:");
         if s_theme.is_empty() {
             out.push(' ');
         } else {
-            fv::escape_into(out, s_theme);
+            fv::core::escape_into(out, s_theme);
         }
         out.push_str(";--b3187d50-ratio:");
-        fv::push_number(out, props.ratio);
+        fv::core::push_number(out, props.ratio);
         out.push(';');
         if let Some(v) = props.gap {
             out.push_str("--b3187d50-gap:");
-            fv::push_int(out, v);
+            fv::core::push_int(out, v);
             out.push(';');
         } else {
             out.push_str("--b3187d50-gap:initial;");
         }
         out.push_str("--b3187d50-size:");
-        fv::push_int(out, props.size);
+        fv::core::push_int(out, props.size);
         out.push_str(";\"");
     } else {
-        fv::attrs_into(out, &[&[("class", fv::Attr::str("vars")), ("style", fv::Attr::styles([fv::Attr::style([("margin", fv::Attr::str("0")), ("--own", fv::Attr::str("1"))]), fv::Attr::style([("padding", fv::Attr::Str(std::borrow::Cow::<str>::Owned(format!("{}px", fv::Js(props.size))))), ("color", fv::Attr::str(&props.color))])]))], fv_attrs.list(), &[("style", fv::Attr::style([("--b3187d50-color", if props.color.is_empty() { fv::Attr::str(" ") } else { fv::Attr::str(&props.color) }), ("--b3187d50-doubled\\ \\+\\ \\\"px\\\"", if format!("{}px", fv::Js(s_doubled)).is_empty() { fv::Attr::str(" ") } else { fv::Attr::Str(std::borrow::Cow::<str>::Owned(format!("{}px", fv::Js(s_doubled)))) }), ("--b3187d50-accent", fv::Attr::str("teal")), ("--b3187d50-label", match props.label.as_deref() { Some(v) => if v.is_empty() { fv::Attr::str(" ") } else { fv::Attr::str(v) }, None => fv::Attr::str("initial") }), ("--b3187d50-font", if props.font.is_empty() { fv::Attr::str(" ") } else { fv::Attr::str(&props.font) }), ("--b3187d50-theme", if s_theme.is_empty() { fv::Attr::str(" ") } else { fv::Attr::str(s_theme) }), ("--b3187d50-ratio", fv::Attr::Float(props.ratio)), ("--b3187d50-gap", match props.gap { Some(v) => fv::Attr::Int(v), None => fv::Attr::str("initial") }), ("--b3187d50-size", fv::Attr::Int(props.size))]))]], 1, "");
+        fv::attrs::attrs_into(out, &[&[("class", fv::attrs::Attr::str("vars")), ("style", fv::attrs::Attr::styles([fv::attrs::Attr::style([("margin", fv::attrs::Attr::str("0")), ("--own", fv::attrs::Attr::str("1"))]), fv::attrs::Attr::style([("padding", fv::attrs::Attr::Str(std::borrow::Cow::<str>::Owned(format!("{}px", fv::core::Js(props.size))))), ("color", fv::attrs::Attr::str(&props.color))])]))], fv_attrs.list(), &[("style", fv::attrs::Attr::style([("--b3187d50-color", if props.color.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(&props.color) }), ("--b3187d50-doubled\\ \\+\\ \\\"px\\\"", if format!("{}px", fv::core::Js(s_doubled)).is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::Str(std::borrow::Cow::<str>::Owned(format!("{}px", fv::core::Js(s_doubled)))) }), ("--b3187d50-accent", fv::attrs::Attr::str("teal")), ("--b3187d50-label", match props.label.as_deref() { Some(v) => if v.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(v) }, None => fv::attrs::Attr::str("initial") }), ("--b3187d50-font", if props.font.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(&props.font) }), ("--b3187d50-theme", if s_theme.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(s_theme) }), ("--b3187d50-ratio", fv::attrs::Attr::Float(props.ratio)), ("--b3187d50-gap", match props.gap { Some(v) => fv::attrs::Attr::Int(v), None => fv::attrs::Attr::str("initial") }), ("--b3187d50-size", fv::attrs::Attr::Int(props.size))]))]], 1, "");
     }
     out.push_str(" data-v-b3187d50><h2 data-v-b3187d50>");
     if let Some(v) = props.label.as_deref() {
-        fv::escape_into(out, v);
+        fv::core::escape_into(out, v);
     }
     out.push_str("</h2></section>");
     Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

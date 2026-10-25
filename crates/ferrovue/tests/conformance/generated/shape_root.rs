@@ -31,7 +31,7 @@ impl<'a> Props<'a> {
 #[derive(Clone, Copy, Default)]
 pub struct Slots<'s> {
     /// `<slot>`
-    pub default: Option<fv::Slot<'s>>,
+    pub default: Option<fv::render::Slot<'s>>,
 }
 
 /// Write the component's server render into `out`.
@@ -40,7 +40,7 @@ pub struct Slots<'s> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
-    fv::rendered(try_render_scoped(out, props, fv_slots, &fv::Attrs::NONE));
+    fv::render::rendered(try_render_scoped(out, props, fv_slots, &fv::attrs::Attrs::NONE));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -48,40 +48,40 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::Refused> {
-    try_render_scoped(out, props, fv_slots, &fv::Attrs::NONE)
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::render::Refused> {
+    try_render_scoped(out, props, fv_slots, &fv::attrs::Attrs::NONE)
 }
 
 /// [`try_render`], with the attributes a parent passes beyond the props, and the scope ids it hands the root.
 #[doc(hidden)]
-pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_attrs: &fv::Attrs<'_>) -> Result<(), fv::Refused> {
+pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(6 + props.label.len());
     match props.shape {
         super::types::Shape::Circle => {
             super::shape_circle::try_render_scoped(out, &super::shape_circle::Props { label: std::borrow::Cow::Borrowed(&*props.label) }, super::shape_circle::Slots {
-                default: Some(fv::Slot::slotted(&|out: &mut String, fv_slot_id: &str| -> bool {
+                default: Some(fv::render::Slot::slotted(&|out: &mut String, fv_slot_id: &str| -> bool {
                     let mut filled = false;
-                    if fv::slot_into_slotted(out, fv_slots.default, fv_slot_id, None) { filled = true; }
+                    if fv::render::slot_into_slotted(out, fv_slots.default, fv_slot_id, None) { filled = true; }
                     filled
                 })),
-            }, &fv::Attrs::merged(&[&[("class", fv::Attr::str("root"))], fv_attrs.list()], fv_attrs.ids()))?;
+            }, &fv::attrs::Attrs::merged(&[&[("class", fv::attrs::Attr::str("root"))], fv_attrs.list()], fv_attrs.ids()))?;
         }
         super::types::Shape::Square => {
             super::shape_square::try_render_scoped(out, &super::shape_square::Props { label: std::borrow::Cow::Borrowed(&*props.label), size: None }, super::shape_square::Slots {
-                default: Some(fv::Slot::markup(&|out: &mut String| -> bool {
+                default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
                     let mut filled = false;
-                    if fv::slot_into_slotted(out, fv_slots.default, "", None) { filled = true; }
+                    if fv::render::slot_into_slotted(out, fv_slots.default, "", None) { filled = true; }
                     filled
                 })),
                 corner: None,
-            }, &fv::Attrs::merged(&[&[("class", fv::Attr::str("root"))], fv_attrs.list()], fv_attrs.ids()))?;
+            }, &fv::attrs::Attrs::merged(&[&[("class", fv::attrs::Attr::str("root"))], fv_attrs.list()], fv_attrs.ids()))?;
         }
     }
     Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_slots)))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_slots)))
 }

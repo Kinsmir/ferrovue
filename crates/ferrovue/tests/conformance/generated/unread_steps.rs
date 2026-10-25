@@ -35,7 +35,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -43,18 +43,18 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(43 + props.word.len());
-    let fv_refusals = fv::Refusals::new(NAME, "components/UnreadSteps.vue");
-    let s_guarded = std::cell::LazyCell::new(|| if (props.count as f64) < 0.0 { std::borrow::Cow::<str>::Borrowed("-") } else { { let fv_copies = fv_refusals.keep(fv::try_repeat(&props.word, props.count as f64), 8, 18); std::borrow::Cow::<str>::Owned((if fv::js_length(&fv_copies) as f64 > 3.0 { &*fv_copies } else { "short" }).to_owned()) } });
-    let s_late = std::cell::LazyCell::new(|| { let fv_copies_2 = fv_refusals.keep(fv::try_repeat(&props.word, props.count as f64), 14, 18); std::borrow::Cow::<str>::Owned((if !props.show { std::borrow::Cow::<str>::Borrowed("hidden") } else { std::borrow::Cow::<str>::Owned(format!("{}!", fv_copies_2)) }).into_owned()) });
+    let fv_refusals = fv::render::Refusals::new(NAME, "components/UnreadSteps.vue");
+    let s_guarded = std::cell::LazyCell::new(|| if (props.count as f64) < 0.0 { std::borrow::Cow::<str>::Borrowed("-") } else { { let fv_copies = fv_refusals.keep(fv::strings::try_repeat(&props.word, props.count as f64), 8, 18); std::borrow::Cow::<str>::Owned((if fv::strings::js_length(&fv_copies) as f64 > 3.0 { &*fv_copies } else { "short" }).to_owned()) } });
+    let s_late = std::cell::LazyCell::new(|| { let fv_copies_2 = fv_refusals.keep(fv::strings::try_repeat(&props.word, props.count as f64), 14, 18); std::borrow::Cow::<str>::Owned((if !props.show { std::borrow::Cow::<str>::Borrowed("hidden") } else { std::borrow::Cow::<str>::Owned(format!("{}!", fv_copies_2)) }).into_owned()) });
     out.push_str("<!--[--><p>");
-    fv::escape_into(out, &s_guarded);
+    fv::core::escape_into(out, &s_guarded);
     out.push_str("</p>");
     if props.show {
         out.push_str("<p>");
-        fv::escape_into(out, &s_late);
+        fv::core::escape_into(out, &s_late);
         out.push_str("</p>");
     } else {
         out.push_str("<p>hidden</p>");
@@ -64,21 +64,21 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

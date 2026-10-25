@@ -29,35 +29,35 @@ function graph(entry: string): { files: Set<string>; packages: Set<string> } {
 }
 
 it("keeps the package root to the browser API, reaching only Vue", () => {
-  const { files, packages } = graph("src/index.ts");
+  const { files, packages } = graph("src/client.ts");
   expect([...packages].toSorted()).toEqual(["vue"]);
-  expect([...files].map((f) => relativePath(ROOT, f)).toSorted()).toEqual(["src/client.ts", "src/index.ts", "src/loads.ts", "src/page-json.ts", "src/revive.ts", "src/types.ts"]);
+  expect([...files].map((f) => relativePath(ROOT, f)).toSorted()).toEqual(["src/client.ts", "src/loads.ts", "src/page-json.ts", "src/revive.ts"]);
 });
 
 it("keeps ferrovue/link-router to vue-router and the routes it is given", () => {
   const { files, packages } = graph("src/link-router.ts");
   expect([...packages].toSorted()).toEqual(["vue-router"]);
-  expect([...files].map((f) => relativePath(ROOT, f)).toSorted()).toEqual(["src/link-router.ts", "src/routes.ts"]);
+  expect([...files].map((f) => relativePath(ROOT, f)).toSorted()).toEqual(["src/link-router.ts", "src/route-records.ts"]);
 });
 
 it("keeps ferrovue/volar to the compiler, naming Vue's language tools only for their types", () => {
   const { files, packages } = graph("src/volar.ts");
   expect(packages.has("@vue/language-core")).toBe(false);
   expect([...files].some((f) => basename(f) === "compiler.ts")).toBe(true);
-  for (const entry of ["src/index.ts", "src/compiler.ts", "src/vite.ts"]) {
+  for (const entry of ["src/client.ts", "src/compiler.ts", "src/vite.ts"]) {
     expect([...graph(entry).files].some((f) => ["volar.ts", "editor.ts"].includes(basename(f))), entry).toBe(false);
   }
 });
 
 it("keeps every browser entry free of the compiler", () => {
-  for (const entry of ["src/client.ts", "src/types.ts", "src/islands.ts", "src/page-routes.ts", "src/link-router.ts"]) {
+  for (const entry of ["src/client.ts", "src/types.ts", "src/islands.ts", "src/page-routes.ts", "src/link-router.ts", "src/route-records.ts", "src/testing-browser.ts"]) {
     const { files } = graph(entry);
     expect([...files].some((f) => basename(f) === "compiler.ts"), entry).toBe(false);
   }
 });
 
 it("exports modules the build emits, with the compiler under ferrovue/compiler, and the configuration's schema", () => {
-  expect(pkg.exports["."]).toMatchObject({ default: "./dist/index.js" });
+  expect(pkg.exports["."]).toMatchObject({ default: "./dist/client.js" });
   expect(pkg.exports["./compiler"]).toMatchObject({ default: "./dist/compiler.js" });
   expect(pkg.exports["./schema.json"]).toBe("./schema.json");
   expect(existsSync(join(ROOT, "schema.json"))).toBe(true);

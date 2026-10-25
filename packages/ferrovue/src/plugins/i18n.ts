@@ -124,8 +124,8 @@ ${locales}
 ];
 
 /// The messages in \`locale\`, with the configured fallbacks: build one per request.
-pub fn i18n(locale: &str) -> ferrovue::I18n {
-    ferrovue::I18n::new(LOCALES, locale, FALLBACK)
+pub fn i18n(locale: &str) -> ferrovue::i18n::I18n {
+    ferrovue::i18n::I18n::new(LOCALES, locale, FALLBACK)
 }
 `;
 }
@@ -224,8 +224,8 @@ export const i18n: Plugin<I18nRun, I18nScope> = {
   params: [
     {
       name: "fv_i18n",
-      ty: "&fv::I18n",
-      pageTy: "&'p fv::I18n",
+      ty: "&fv::i18n::I18n",
+      pageTy: "&'p fv::i18n::I18n",
       reads: (c) => runOf(i18n).readers.has(c),
       test: { lines: ["let i18n = i18n::i18n(fixture.locale.as_deref().unwrap_or(i18n::LOCALE));"], arg: "&i18n", fixture: true },
       fixtureField: '    #[serde(rename = "$locale", default)]\n    locale: Option<String>,',

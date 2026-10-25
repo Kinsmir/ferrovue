@@ -39,7 +39,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) {
-    fv::rendered(try_render(out, props, fv_provides));
+    fv::render::rendered(try_render(out, props, fv_provides));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -47,10 +47,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides:
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(29 + props.theme.len() + props.active.len() + props.inner.len() + props.names.iter().map(|v| v.len()).sum::<usize>());
-    let fv_refusals = fv::Refusals::new(NAME, "components/TabsPage.vue");
+    let fv_refusals = fv::render::Refusals::new(NAME, "components/TabsPage.vue");
     let fv_inherited = fv_provides;
     let fv_provided_accent_key = props.theme.to_uppercase();
     let fv_provides = super::provides::Provides { theme_key: Some(&props.theme), size: Some(props.size), accent_key: Some(&*fv_provided_accent_key), ..fv_inherited };
@@ -79,19 +79,19 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provi
             fv_refusals.join(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed("shadowed") }, fv_provides, ""));
             true
         }),
-    }, fv_provides, &fv::Attrs::NONE))?;
+    }, fv_provides, &fv::attrs::Attrs::NONE))?;
     fv_refusals.check(super::theme_scope::try_render_scoped(out, &super::theme_scope::Props { theme: None }, super::theme_scope::Slots {
         default: Some(&|out: &mut String, fv_provides: super::provides::Provides<'_>| -> bool {
             fv_refusals.join(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed("derived") }, fv_provides, ""));
             true
         }),
-    }, fv_provides, &fv::Attrs::NONE))?;
+    }, fv_provides, &fv::attrs::Attrs::NONE))?;
     fv_refusals.check(super::tab::try_render(out, &super::tab::Props { name: std::borrow::Cow::Borrowed("alone"), title: std::borrow::Cow::Borrowed("no tabs") }, fv_provides))?;
     out.push_str("</main>");
     fv_refusals.check(Ok(()))
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_provides: super::provides::Provides<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_provides)))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_provides: super::provides::Provides<'p>) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_provides)))
 }

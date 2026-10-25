@@ -37,26 +37,26 @@ impl std::fmt::Display for CssVarsTagTag {
 }
 
 impl std::str::FromStr for CssVarsTagTag {
-    type Err = ferrovue::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "div" => Ok(CssVarsTagTag::Div),
             "section" => Ok(CssVarsTagTag::Section),
-            _ => Err(ferrovue::ParseUnionError::new("CssVarsTagTag", s, &["div", "section"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("CssVarsTagTag", s, &["div", "section"])),
         }
     }
 }
 
 impl TryFrom<&str> for CssVarsTagTag {
-    type Error = ferrovue::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::Union for CssVarsTagTag {
+impl ferrovue::props::Union for CssVarsTagTag {
     const ALL: &'static [Self] = &CssVarsTagTag::ALL;
 
     fn as_str(self) -> &'static str {
@@ -89,7 +89,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render_scoped(out, props, &fv::Attrs::NONE));
+    fv::render::rendered(try_render_scoped(out, props, &fv::attrs::Attrs::NONE));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -97,14 +97,14 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
-    try_render_scoped(out, props, &fv::Attrs::NONE)
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
+    try_render_scoped(out, props, &fv::attrs::Attrs::NONE)
 }
 
 /// [`try_render`], with the attributes a parent passes beyond the props, and the scope ids it hands the root.
 #[doc(hidden)]
-pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::Attrs<'_>) -> Result<(), fv::Refused> {
+pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(74 + props.tone.len() + 7);
     let fv_tag = match props.tag { CssVarsTagTag::Div => "div", CssVarsTagTag::Section => "section" };
     out.push('<');
@@ -114,14 +114,14 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::Att
         if props.tone.is_empty() {
             out.push(' ');
         } else {
-            fv::escape_into(out, &props.tone);
+            fv::core::escape_into(out, &props.tone);
         }
         out.push_str(";\"");
     } else {
-        fv::attrs_into(out, &[&[("class", fv::Attr::str("tag"))], fv_attrs.list(), &[("style", fv::Attr::style([("--9b79108a-tone", if props.tone.is_empty() { fv::Attr::str(" ") } else { fv::Attr::str(&props.tone) })]))]], 1, "");
+        fv::attrs::attrs_into(out, &[&[("class", fv::attrs::Attr::str("tag"))], fv_attrs.list(), &[("style", fv::attrs::Attr::style([("--9b79108a-tone", if props.tone.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(&props.tone) })]))]], 1, "");
     }
     out.push_str(" data-v-9b79108a>");
-    fv::escape_into(out, &props.tone);
+    fv::core::escape_into(out, &props.tone);
     out.push_str("</");
     out.push_str(fv_tag);
     out.push('>');
@@ -129,21 +129,21 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::Att
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

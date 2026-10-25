@@ -1,6 +1,6 @@
+use crate::{props, strings::js_trim};
+use ferrovue_core::{escape_into, push_int, push_number};
 use std::borrow::Cow;
-
-use crate::{escape_into, js_trim, push_int, push_number, record};
 
 /// One attribute's value, as Vue holds it once the parent's virtual node is made: `createVNode`
 /// has already normalised a class given as an array or an object, and a style given as an array.
@@ -141,13 +141,13 @@ enum List<'a> {
 /// # Example
 ///
 /// ```
-/// use ferrovue::{Attr, Attrs};
+/// use ferrovue::attrs::{Attr, Attrs};
 ///
 /// let passed = [("class", Attr::str("wide")), ("title", Attr::str("Hi")), ("data-n", Attr::Int(2))];
 /// let attrs = Attrs::new(&passed, " data-v-1");
 /// // The root of the child: `<div class="card" title="own">`.
 /// let mut out = String::from("<div");
-/// ferrovue::attrs_into(&mut out, &[&[("class", Attr::str("card")), ("title", Attr::str("own"))], attrs.list()], 1, attrs.ids());
+/// ferrovue::attrs::attrs_into(&mut out, &[&[("class", Attr::str("card")), ("title", Attr::str("own"))], attrs.list()], 1, attrs.ids());
 /// out.push('>');
 /// assert_eq!(out, r#"<div class="card wide" title="Hi" data-n="2" data-v-1>"#);
 /// ```
@@ -281,15 +281,16 @@ fn join_classes(a: &str, b: &str) -> String {
 /// # Example
 ///
 /// ```
-/// use ferrovue::Attr;
+/// use ferrovue::attrs::Attr;
 ///
-/// let merged = ferrovue::merge_props(&[
+/// let merged = ferrovue::attrs::merge_props(&[
 ///     &[("class", Attr::str("a")), ("id", Attr::str("x"))],
 ///     &[("id", Attr::Undefined), ("class", Attr::str("b"))],
 /// ]);
 /// assert_eq!(merged, [("class", Attr::str("a b")), ("id", Attr::Undefined)]);
 /// ```
 #[must_use]
+#[doc(hidden)]
 pub fn merge_props<'a>(sources: &[&[(&'a str, Attr<'a>)]]) -> Vec<(&'a str, Attr<'a>)> {
     merge(sources)
         .into_iter()
@@ -304,11 +305,11 @@ pub fn merge_props<'a>(sources: &[&[(&'a str, Attr<'a>)]]) -> Vec<(&'a str, Attr
 /// # Example
 ///
 /// ```
-/// use ferrovue::Attr;
+/// use ferrovue::attrs::Attr;
 ///
 /// let mut out = String::new();
 /// // `<p :id="undefined">` given `title` and `id`, then `v-show`'s style.
-/// ferrovue::attrs_into(
+/// ferrovue::attrs::attrs_into(
 ///     &mut out,
 ///     &[
 ///         &[("id", Attr::str("own"))],
@@ -338,10 +339,10 @@ pub fn attrs_into(out: &mut String, sources: &[&[(&str, Attr<'_>)]], ids_at: usi
 /// # Example
 ///
 /// ```
-/// use ferrovue::Attr;
+/// use ferrovue::attrs::Attr;
 ///
 /// let mut out = String::new();
-/// ferrovue::passed_attrs_into(&mut out, &[("class", Attr::Undefined), ("style", Attr::str("color: red"))], " data-v-1");
+/// ferrovue::attrs::passed_attrs_into(&mut out, &[("class", Attr::Undefined), ("style", Attr::str("color: red"))], " data-v-1");
 /// assert_eq!(out, r#" class="" style="color: red" data-v-1"#);
 /// ```
 pub fn passed_attrs_into(out: &mut String, list: &[(&str, Attr<'_>)], ids: &str) {
@@ -487,9 +488,10 @@ fn style_into(out: &mut String, value: &Attr<'_>) {
 ///
 /// ```
 /// let mut out = String::new();
-/// ferrovue::style_text_into(&mut out, "color: red; background: url(a;b) /* note */");
+/// ferrovue::attrs::style_text_into(&mut out, "color: red; background: url(a;b) /* note */");
 /// assert_eq!(out, "color:red;background:url(a;b);");
 /// ```
+#[doc(hidden)]
 pub fn style_text_into(out: &mut String, css: &str) {
     style_into(out, &Attr::styles([Attr::str(css)]));
 }
@@ -532,11 +534,8 @@ fn merge_style_into<'a>(res: &mut Vec<(Cow<'a, str>, Attr<'a>)>, item: Attr<'a>)
 }
 
 fn normal_order<'a>(mut entries: Vec<(Cow<'a, str>, Attr<'a>)>) -> Vec<(Cow<'a, str>, Attr<'a>)> {
-    if entries
-        .iter()
-        .any(|(k, _)| record::array_index(k).is_some())
-    {
-        entries.sort_by_key(|(k, _)| record::array_index(k).map_or((1, 0), |i| (0, i)));
+    if entries.iter().any(|(k, _)| props::array_index(k).is_some()) {
+        entries.sort_by_key(|(k, _)| props::array_index(k).map_or((1, 0), |i| (0, i)));
     }
     entries
 }
@@ -629,14 +628,15 @@ fn split_declarations(text: &str) -> Vec<&str> {
 
 /// `normalizeClass` of a list of names, each one trimmed, the empty ones dropped, the rest joined
 /// with one space: a class bound to an array or an object, as a value among fallthrough attributes.
-/// Unlike [`class_into`](crate::class_into), it is not escaped: it is written later.
+/// Unlike [`class_into`](crate::attrs::class_into), it is not escaped: it is written later.
 ///
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::class_names(&[" a ", "", "b"]), "a b");
+/// assert_eq!(ferrovue::attrs::class_names(&[" a ", "", "b"]), "a b");
 /// ```
 #[must_use]
+#[doc(hidden)]
 pub fn class_names(items: &[&str]) -> String {
     let mut s = String::new();
     for item in items {
@@ -661,10 +661,11 @@ pub fn class_names(items: &[&str]) -> String {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::scope_attrs(" data-v-a", "data-v-b", ""), " data-v-a data-v-b");
-/// assert_eq!(ferrovue::scope_attrs("", "data-v-a", " data-v-a data-v-c-s"), " data-v-a data-v-c-s");
+/// assert_eq!(ferrovue::attrs::scope_attrs(" data-v-a", "data-v-b", ""), " data-v-a data-v-b");
+/// assert_eq!(ferrovue::attrs::scope_attrs("", "data-v-a", " data-v-a data-v-c-s"), " data-v-a data-v-c-s");
 /// ```
 #[must_use]
+#[doc(hidden)]
 pub fn scope_attrs(inherited: &str, own: &str, slotted: &str) -> String {
     let mut keys: Vec<&str> = inherited.split(' ').filter(|k| !k.is_empty()).collect();
     for key in std::iter::once(own).chain(js_trim(slotted).split(' ')) {
@@ -678,6 +679,66 @@ pub fn scope_attrs(inherited: &str, own: &str, slotted: &str) -> String {
         out.push_str(key);
     }
     out
+}
+
+/// `escapeHtml(normalizeClass([...]))` for a list of strings: each one trimmed, the empty ones
+/// dropped, the rest joined with one space. `after` says a class has already been written, so the
+/// first item written here needs a separator too.
+///
+/// # Example
+///
+/// ```
+/// let mut out = String::from("card");
+/// ferrovue::attrs::class_into(&mut out, true, &[" big ", "", "x<y"]);
+/// assert_eq!(out, "card big x&lt;y");
+/// ```
+pub fn class_into(out: &mut String, after: bool, items: &[&str]) {
+    let mut sep = after;
+    for item in items {
+        let item = js_trim(item);
+        if item.is_empty() {
+            continue;
+        }
+        if sep {
+            out.push(' ');
+        }
+        escape_into(out, item);
+        sep = true;
+    }
+}
+
+/// `normalizeClass` of an object: the names whose condition holds, each followed by a space, the
+/// whole trimmed once, so a name's own surrounding spaces survive between its neighbours, as in
+/// Vue. Generated code uses it for an object with computed names, which may hold any text.
+///
+/// # Example
+///
+/// ```
+/// // `{ active: true, [" wide "]: true, hidden: false }`
+/// assert_eq!(ferrovue::attrs::class_object(&[(true, "active"), (true, " wide "), (false, "hidden")]), "active  wide");
+/// ```
+#[must_use]
+pub fn class_object(entries: &[(bool, &str)]) -> String {
+    let mut names: Vec<(&str, bool)> = Vec::new();
+    for (on, name) in entries {
+        match names.iter_mut().find(|(n, _)| n == name) {
+            Some(entry) => entry.1 = *on,
+            None => names.push((name, *on)),
+        }
+    }
+    let mut ordered: Vec<(Option<u32>, &str, bool)> = names
+        .into_iter()
+        .map(|(n, on)| (props::array_index(n), n, on))
+        .collect();
+    ordered.sort_by_key(|(i, _, _)| i.map_or((1, 0), |i| (0, i)));
+    let mut s = String::new();
+    for (_, name, on) in ordered {
+        if on {
+            s.push_str(name);
+            s.push(' ');
+        }
+    }
+    js_trim(&s).to_owned()
 }
 
 #[cfg(test)]

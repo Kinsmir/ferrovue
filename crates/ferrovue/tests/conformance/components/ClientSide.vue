@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ClientOnly } from "ferrovue/client";
+import { ClientOnly } from "ferrovue";
 import Gauge from "../vendor/Gauge";
 import PlainBox from "./PlainBox.vue";
 

@@ -37,26 +37,26 @@ impl std::fmt::Display for LiteralEnumFieldMood {
 }
 
 impl std::str::FromStr for LiteralEnumFieldMood {
-    type Err = ferrovue::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "calm" => Ok(LiteralEnumFieldMood::Calm),
             "wild" => Ok(LiteralEnumFieldMood::Wild),
-            _ => Err(ferrovue::ParseUnionError::new("LiteralEnumFieldMood", s, &["calm", "wild"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("LiteralEnumFieldMood", s, &["calm", "wild"])),
         }
     }
 }
 
 impl TryFrom<&str> for LiteralEnumFieldMood {
-    type Error = ferrovue::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::Union for LiteralEnumFieldMood {
+impl ferrovue::props::Union for LiteralEnumFieldMood {
     const ALL: &'static [Self] = &LiteralEnumFieldMood::ALL;
 
     fn as_str(self) -> &'static str {
@@ -93,26 +93,26 @@ impl std::fmt::Display for RowKind {
 }
 
 impl std::str::FromStr for RowKind {
-    type Err = ferrovue::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "plain" => Ok(RowKind::Plain),
             "loud" => Ok(RowKind::Loud),
-            _ => Err(ferrovue::ParseUnionError::new("RowKind", s, &["plain", "loud"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("RowKind", s, &["plain", "loud"])),
         }
     }
 }
 
 impl TryFrom<&str> for RowKind {
-    type Error = ferrovue::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::Union for RowKind {
+impl ferrovue::props::Union for RowKind {
     const ALL: &'static [Self] = &RowKind::ALL;
 
     fn as_str(self) -> &'static str {
@@ -149,26 +149,26 @@ impl std::fmt::Display for RowMood {
 }
 
 impl std::str::FromStr for RowMood {
-    type Err = ferrovue::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "calm" => Ok(RowMood::Calm),
             "wild" => Ok(RowMood::Wild),
-            _ => Err(ferrovue::ParseUnionError::new("RowMood", s, &["calm", "wild"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("RowMood", s, &["calm", "wild"])),
         }
     }
 }
 
 impl TryFrom<&str> for RowMood {
-    type Error = ferrovue::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::Union for RowMood {
+impl ferrovue::props::Union for RowMood {
     const ALL: &'static [Self] = &RowMood::ALL;
 
     fn as_str(self) -> &'static str {
@@ -234,7 +234,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -242,29 +242,29 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(64 + props.text.len() + 4);
     out.push_str("<!--[--><p data-kind=\"");
-    fv::escape_into(out, fv::Union::as_str((Row { text: std::borrow::Cow::<str>::Borrowed(&*props.text), kind: if props.loud { RowKind::Loud } else { RowKind::Plain }, mood: props.mood.map(|v| match v { LiteralEnumFieldMood::Calm => RowMood::Calm, LiteralEnumFieldMood::Wild => RowMood::Wild }) }).kind));
+    fv::core::escape_into(out, fv::props::Union::as_str((Row { text: std::borrow::Cow::<str>::Borrowed(&*props.text), kind: if props.loud { RowKind::Loud } else { RowKind::Plain }, mood: props.mood.map(|v| match v { LiteralEnumFieldMood::Calm => RowMood::Calm, LiteralEnumFieldMood::Wild => RowMood::Wild }) }).kind));
     out.push_str("\" title=\"");
-    fv::escape_into(out, &((Row { text: std::borrow::Cow::<str>::Borrowed(&*props.text), kind: if props.loud { RowKind::Loud } else { RowKind::Plain }, mood: props.mood.map(|v| match v { LiteralEnumFieldMood::Calm => RowMood::Calm, LiteralEnumFieldMood::Wild => RowMood::Wild }) }).text));
+    fv::core::escape_into(out, &((Row { text: std::borrow::Cow::<str>::Borrowed(&*props.text), kind: if props.loud { RowKind::Loud } else { RowKind::Plain }, mood: props.mood.map(|v| match v { LiteralEnumFieldMood::Calm => RowMood::Calm, LiteralEnumFieldMood::Wild => RowMood::Wild }) }).text));
     out.push_str("\">");
-    fv::escape_into(out, &((Row { text: std::borrow::Cow::<str>::Borrowed(&*props.text), kind: if props.loud { RowKind::Loud } else { RowKind::Plain }, mood: props.mood.map(|v| match v { LiteralEnumFieldMood::Calm => RowMood::Calm, LiteralEnumFieldMood::Wild => RowMood::Wild }) }).text));
+    fv::core::escape_into(out, &((Row { text: std::borrow::Cow::<str>::Borrowed(&*props.text), kind: if props.loud { RowKind::Loud } else { RowKind::Plain }, mood: props.mood.map(|v| match v { LiteralEnumFieldMood::Calm => RowMood::Calm, LiteralEnumFieldMood::Wild => RowMood::Wild }) }).text));
     out.push('|');
-    fv::escape_into(out, fv::Union::as_str((Row { text: std::borrow::Cow::<str>::Borrowed(&*props.text), kind: if props.loud { RowKind::Loud } else { RowKind::Plain }, mood: props.mood.map(|v| match v { LiteralEnumFieldMood::Calm => RowMood::Calm, LiteralEnumFieldMood::Wild => RowMood::Wild }) }).kind));
+    fv::core::escape_into(out, fv::props::Union::as_str((Row { text: std::borrow::Cow::<str>::Borrowed(&*props.text), kind: if props.loud { RowKind::Loud } else { RowKind::Plain }, mood: props.mood.map(|v| match v { LiteralEnumFieldMood::Calm => RowMood::Calm, LiteralEnumFieldMood::Wild => RowMood::Wild }) }).kind));
     out.push('|');
     out.push_str(if (Row { text: std::borrow::Cow::<str>::Borrowed(&*props.text), kind: if props.loud { RowKind::Loud } else { RowKind::Plain }, mood: props.mood.map(|v| match v { LiteralEnumFieldMood::Calm => RowMood::Calm, LiteralEnumFieldMood::Wild => RowMood::Wild }) }).kind == RowKind::Loud { "true" } else { "false" });
     out.push('|');
     out.push_str(if (Row { text: std::borrow::Cow::<str>::Borrowed(&*props.text), kind: if props.loud { RowKind::Loud } else { RowKind::Plain }, mood: props.mood.map(|v| match v { LiteralEnumFieldMood::Calm => RowMood::Calm, LiteralEnumFieldMood::Wild => RowMood::Wild }) }).kind != RowKind::Plain { "true" } else { "false" });
     out.push('|');
-    fv::escape_into(out, (Row { text: std::borrow::Cow::<str>::Borrowed(&*props.text), kind: if props.loud { RowKind::Loud } else { RowKind::Plain }, mood: props.mood.map(|v| match v { LiteralEnumFieldMood::Calm => RowMood::Calm, LiteralEnumFieldMood::Wild => RowMood::Wild }) }).mood.map(fv::Union::as_str).unwrap_or("none"));
+    fv::core::escape_into(out, (Row { text: std::borrow::Cow::<str>::Borrowed(&*props.text), kind: if props.loud { RowKind::Loud } else { RowKind::Plain }, mood: props.mood.map(|v| match v { LiteralEnumFieldMood::Calm => RowMood::Calm, LiteralEnumFieldMood::Wild => RowMood::Wild }) }).mood.map(fv::props::Union::as_str).unwrap_or("none"));
     out.push('|');
     out.push_str(if (Row { text: std::borrow::Cow::<str>::Borrowed(&*props.text), kind: if props.loud { RowKind::Loud } else { RowKind::Plain }, mood: props.mood.map(|v| match v { LiteralEnumFieldMood::Calm => RowMood::Calm, LiteralEnumFieldMood::Wild => RowMood::Wild }) }).mood == Some(RowMood::Wild) { "true" } else { "false" });
     out.push_str("</p>");
     if (Row { text: std::borrow::Cow::<str>::Borrowed(&*props.text), kind: if props.loud { RowKind::Loud } else { RowKind::Plain }, mood: props.mood.map(|v| match v { LiteralEnumFieldMood::Calm => RowMood::Calm, LiteralEnumFieldMood::Wild => RowMood::Wild }) }).kind == RowKind::Loud {
         out.push_str("<b>");
-        fv::escape_into(out, &((Row { text: std::borrow::Cow::<str>::Borrowed(&*props.text), kind: if props.loud { RowKind::Loud } else { RowKind::Plain }, mood: props.mood.map(|v| match v { LiteralEnumFieldMood::Calm => RowMood::Calm, LiteralEnumFieldMood::Wild => RowMood::Wild }) }).text).to_uppercase());
+        fv::core::escape_into(out, &((Row { text: std::borrow::Cow::<str>::Borrowed(&*props.text), kind: if props.loud { RowKind::Loud } else { RowKind::Plain }, mood: props.mood.map(|v| match v { LiteralEnumFieldMood::Calm => RowMood::Calm, LiteralEnumFieldMood::Wild => RowMood::Wild }) }).text).to_uppercase());
         out.push_str("</b>");
     } else {
         out.push_str("<!---->");
@@ -274,21 +274,21 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

@@ -1,7 +1,8 @@
 import { parse as parseJs } from "@babel/parser";
 import { isHTMLTag, isVoidTag } from "@vue/shared";
 import { basename } from "node:path";
-import { type Component, type N, type Scope, camelize, fail, GenError, rustStr, tagAst } from "./model.ts";
+import { type Component, type N, type Scope, camelize, fail, rustStr, tagAst } from "./model.ts";
+import { GenError } from "./errors.ts";
 import { ctx } from "./context.ts";
 import { matchOver } from "./enums.ts";
 import { expr } from "./expr.ts";
@@ -305,7 +306,7 @@ function renderElement(s: Scope, e: Emitter, tag: string | { code: string }, d: 
   if (inherited === null && slotted === null) {
     if (own !== null) e.lit(` ${own}`);
   } else {
-    e.stmt(`out.push_str(&fv::scope_attrs(${inherited ?? '""'}, ${own === null ? '""' : rustStr(own)}, ${slotted ?? '""'}));`);
+    e.stmt(`out.push_str(&fv::attrs::scope_attrs(${inherited ?? '""'}, ${own === null ? '""' : rustStr(own)}, ${slotted ?? '""'}));`);
   }
   e.lit(">");
   if (typeof tag === "string" && isVoidTag(tag)) return;

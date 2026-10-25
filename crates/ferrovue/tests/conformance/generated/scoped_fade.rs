@@ -29,7 +29,7 @@ impl Props {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props) {
-    fv::rendered(try_render_scoped(out, props, ""));
+    fv::render::rendered(try_render_scoped(out, props, ""));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -37,14 +37,14 @@ pub fn render(out: &mut String, props: &Props) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
     try_render_scoped(out, props, "")
 }
 
 /// [`try_render`], with the scope ids a parent hands the root: ` data-v-…` each.
 #[doc(hidden)]
-pub fn try_render_scoped(out: &mut String, props: &Props, fv_attrs: &str) -> Result<(), fv::Refused> {
+pub fn try_render_scoped(out: &mut String, props: &Props, fv_attrs: &str) -> Result<(), fv::render::Refused> {
     out.reserve(52);
     if props.open {
         out.push_str("<div class=\"fade\"");
@@ -57,21 +57,21 @@ pub fn try_render_scoped(out: &mut String, props: &Props, fv_attrs: &str) -> Res
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p>(props: &'p Props) -> fv::Html<'p, Props> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p>(props: &'p Props) -> fv::html::Html<'p, Props> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p>(props: &'p Props) -> fv::Html<'p, Props> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p>(props: &'p Props) -> fv::html::Html<'p, Props> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html(props: Props) -> fv::Html<'static, Props> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html(props: Props) -> fv::html::Html<'static, Props> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island(props: Props) -> fv::Html<'static, Props> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island(props: Props) -> fv::html::Html<'static, Props> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

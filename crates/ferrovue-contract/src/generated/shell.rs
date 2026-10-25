@@ -34,7 +34,7 @@ pub struct Slots<'s> {
     /// `<slot>`
     pub default: Option<&'s DefaultSlot<'s>>,
     /// The page `<RouterView>` shows.
-    pub router_view: fv::Slot<'s>,
+    pub router_view: fv::render::Slot<'s>,
 }
 
 /// Write the component's server render into `out`.
@@ -43,8 +43,8 @@ pub struct Slots<'s> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 #[allow(clippy::too_many_arguments)]
-pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::Route<'_>, fv_stores: &super::stores::Stores<'_>, fv_i18n: &fv::I18n, fv_teleports: &fv::Teleports, fv_provides: super::provides::Provides<'_>, fv_head: &fv::Head) {
-    fv::rendered(try_render(out, props, fv_slots, fv_route, fv_stores, fv_i18n, fv_teleports, fv_provides, fv_head));
+pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::router::Route<'_>, fv_stores: &super::stores::Stores<'_>, fv_i18n: &fv::i18n::I18n, fv_teleports: &fv::page::Teleports, fv_provides: super::provides::Provides<'_>, fv_head: &fv::head::Head) {
+    fv::render::rendered(try_render(out, props, fv_slots, fv_route, fv_stores, fv_i18n, fv_teleports, fv_provides, fv_head));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -52,9 +52,9 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 #[allow(clippy::too_many_arguments)]
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::Route<'_>, fv_stores: &super::stores::Stores<'_>, fv_i18n: &fv::I18n, fv_teleports: &fv::Teleports, fv_provides: super::provides::Provides<'_>, fv_head: &fv::Head) -> Result<(), fv::Refused> {
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::router::Route<'_>, fv_stores: &super::stores::Stores<'_>, fv_i18n: &fv::i18n::I18n, fv_teleports: &fv::page::Teleports, fv_provides: super::provides::Provides<'_>, fv_head: &fv::head::Head) -> Result<(), fv::render::Refused> {
     out.reserve(97 + props.title.len());
     out.push_str("<div class=\"shell\"><nav>");
     {
@@ -64,9 +64,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_r
             out.push_str(" aria-current=\"page\"");
         }
         out.push_str(" href=\"");
-        fv::escape_into(out, &fv_link.href);
+        fv::core::escape_into(out, &fv_link.href);
         out.push_str("\" class=\"");
-        fv::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
+        fv::attrs::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
         out.push_str("\">Home</a>");
     }
     out.push_str("</nav>");
@@ -78,13 +78,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_r
     out.push_str("<main>");
     fv_slots.router_view.render_to(out);
     out.push_str("</main>");
-    fv::scoped_slot_into(out, fv_slots.default.map(|f| move |out: &mut String, _: &()| f(out, fv_provides)).as_ref(), &(), None);
+    fv::render::scoped_slot_into(out, fv_slots.default.map(|f| move |out: &mut String, _: &()| f(out, fv_provides)).as_ref(), &(), None);
     out.push_str("</div>");
     Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
 #[allow(clippy::too_many_arguments)]
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>, fv_route: &'p fv::Route<'p>, fv_stores: &'p super::stores::Stores<'p>, fv_i18n: &'p fv::I18n, fv_teleports: &'p fv::Teleports, fv_provides: super::provides::Provides<'p>, fv_head: &'p fv::Head) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_slots, fv_route, fv_stores, fv_i18n, fv_teleports, fv_provides, fv_head)))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>, fv_route: &'p fv::router::Route<'p>, fv_stores: &'p super::stores::Stores<'p>, fv_i18n: &'p fv::i18n::I18n, fv_teleports: &'p fv::page::Teleports, fv_provides: super::provides::Provides<'p>, fv_head: &'p fv::head::Head) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_slots, fv_route, fv_stores, fv_i18n, fv_teleports, fv_provides, fv_head)))
 }

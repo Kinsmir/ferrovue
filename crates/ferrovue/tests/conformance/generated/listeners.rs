@@ -37,7 +37,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -45,31 +45,31 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(83 + props.title.len() + props.event.len());
     out.push_str("<section>");
-    super::listen_leaf::try_render_scoped(out, &super::listen_leaf::Props { label: std::borrow::Cow::Borrowed(&*props.title), count: None }, &fv::Attrs::NONE)?;
-    super::listen_leaf::try_render_scoped(out, &super::listen_leaf::Props { label: std::borrow::Cow::Borrowed(&*props.title), count: None }, &fv::Attrs::merged(&[&[("title", fv::Attr::str("tip"))]], ""))?;
+    super::listen_leaf::try_render_scoped(out, &super::listen_leaf::Props { label: std::borrow::Cow::Borrowed(&*props.title), count: None }, &fv::attrs::Attrs::NONE)?;
+    super::listen_leaf::try_render_scoped(out, &super::listen_leaf::Props { label: std::borrow::Cow::Borrowed(&*props.title), count: None }, &fv::attrs::Attrs::merged(&[&[("title", fv::attrs::Attr::str("tip"))]], ""))?;
     out.push_str("<!--[-->");
     for fv_l_ref in props.leaves.iter() {
         let fv_l = fv_l_ref;
-        super::listen_leaf::try_render_scoped(out, fv_l, &fv::Attrs::NONE)?;
+        super::listen_leaf::try_render_scoped(out, fv_l, &fv::attrs::Attrs::NONE)?;
     }
     out.push_str("<!--]--><!--[-->");
     for fv_l_ref_2 in props.leaves.iter() {
         let fv_l_2 = fv_l_ref_2;
-        super::listen_leaf::try_render_scoped(out, fv_l_2, &fv::Attrs::NONE)?;
+        super::listen_leaf::try_render_scoped(out, fv_l_2, &fv::attrs::Attrs::NONE)?;
     }
     out.push_str("<!--]--><!--[-->");
     for fv_l_ref_3 in props.leaves.iter() {
         let fv_l_3 = fv_l_ref_3;
-        super::listen_leaf::try_render_scoped(out, fv_l_3, &fv::Attrs::NONE)?;
+        super::listen_leaf::try_render_scoped(out, fv_l_3, &fv::attrs::Attrs::NONE)?;
     }
     out.push_str("<!--]--><!--[-->");
     for fv_l_ref_4 in props.leaves.iter() {
         let fv_l_4 = fv_l_ref_4;
-        super::listen_leaf::try_render_scoped(out, fv_l_4, &fv::Attrs::NONE)?;
+        super::listen_leaf::try_render_scoped(out, fv_l_4, &fv::attrs::Attrs::NONE)?;
     }
     out.push_str("<!--]-->");
     super::listen_sale::try_render(out, &super::listen_sale::Props { label: std::borrow::Cow::Borrowed(&*props.title), on_sale: None })?;
@@ -81,21 +81,21 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

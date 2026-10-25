@@ -46,7 +46,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -54,14 +54,14 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(214 + 4 + props.size.as_deref().map_or(0, str::len));
-    let s_heading = format!("Catalogue <b> ({})", fv::Js(3i64));
+    let s_heading = format!("Catalogue <b> ({})", fv::core::Js(3i64));
     out.push_str("<section class=\"");
-    fv::class_into(out, false, &["round", fv::Union::as_str(props.tone)]);
+    fv::attrs::class_into(out, false, &["round", fv::props::Union::as_str(props.tone)]);
     out.push_str("\"><h2>");
-    fv::escape_into(out, &s_heading);
+    fv::core::escape_into(out, &s_heading);
     out.push_str("</h2>");
     if props.tone == super::types::Volume::Loud {
         out.push_str("<p>LOUD</p>");
@@ -76,13 +76,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     for fv_s_ref in ["sm", "md", "lg"].iter() {
         let fv_s: &str = fv_s_ref;
         out.push_str("<option value=\"");
-        fv::escape_into(out, fv_s);
+        fv::core::escape_into(out, fv_s);
         out.push('"');
         if Some(fv_s) == props.size.as_deref() {
             out.push_str(" selected");
         }
         out.push('>');
-        fv::escape_into(out, fv_s);
+        fv::core::escape_into(out, fv_s);
         out.push_str("</option>");
     }
     out.push_str("<!--]--></select><ul><!--[-->");
@@ -91,13 +91,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         out.push_str("<li");
         if let Some(v) = fv_c.hint.as_deref() {
             out.push_str(" title=\"");
-            fv::escape_into(out, v);
+            fv::core::escape_into(out, v);
             out.push('"');
         }
         out.push('>');
-        fv::push_int(out, fv_c.id);
+        fv::core::push_int(out, fv_c.id);
         out.push_str(": ");
-        fv::escape_into(out, &fv_c.label);
+        fv::core::escape_into(out, &fv_c.label);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul><ol><!--[-->");
@@ -105,12 +105,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         let fv_s_2 = fv_s_ref_2;
         let fv_i = fv_i as i64;
         out.push_str("<li>");
-        fv::push_int(out, fv_i);
+        fv::core::push_int(out, fv_i);
         out.push(' ');
-        fv::escape_into(out, &fv_s_2.label);
-        fv::escape_into(out, if fv_s_2.desc { " (desc)" } else { "" });
+        fv::core::escape_into(out, &fv_s_2.label);
+        fv::core::escape_into(out, if fv_s_2.desc { " (desc)" } else { "" });
         out.push(' ');
-        fv::escape_into(out, fv_s_2.badge.as_deref().unwrap_or("-"));
+        fv::core::escape_into(out, fv_s_2.badge.as_deref().unwrap_or("-"));
         if fv_s_2.badge.as_deref().is_some() {
             out.push_str("<!---->");
         } else {
@@ -119,29 +119,29 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ol><small>");
-    fv::escape_into(out, &[1.0f64, 2.5f64, -3.0f64].iter().copied().map(|v| fv::Js(v).to_string()).collect::<Vec<_>>().join(" / "));
+    fv::core::escape_into(out, &[1.0f64, 2.5f64, -3.0f64].iter().copied().map(|v| fv::core::Js(v).to_string()).collect::<Vec<_>>().join(" / "));
     out.push(' ');
-    fv::push_int(out, ["sm", "md", "lg"].len() as i64);
+    fv::core::push_int(out, ["sm", "md", "lg"].len() as i64);
     out.push_str("</small></section>");
     Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

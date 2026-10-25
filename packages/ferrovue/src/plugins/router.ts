@@ -1,14 +1,16 @@
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
-import { type Component, type N, type Scope, type Val, BOOL, fail, failIn, GenError, opt, rustStr, STR } from "../model.ts";
-import { type Config, CONFIG_FILE } from "../context.ts";
+import { type Component, type N, type Scope, type Val, BOOL, fail, failIn, opt, rustStr, STR } from "../model.ts";
+import { GenError } from "../errors.ts";
+import { type Config, CONFIG_FILE } from "../config.ts";
 import { expr } from "../expr.ts";
 import { boolOf, pathOf } from "../narrowing.ts";
 import { atom, bare, not, strArg } from "../parens.ts";
 import { type Plugin, runOf, scopeOf } from "../plugin.ts";
 import { header } from "../rust.ts";
 import { readJsonFile } from "../files.ts";
-import { allPages, type FileRoute, fileRoutes } from "../file-routes.ts";
+import { allPages, fileRoutes } from "../file-routes.ts";
+import { type FileRoute } from "../vite.ts";
 import { scopeIdOf } from "./scoped.ts";
 import { routerLink } from "./router-link.ts";
 
@@ -143,7 +145,7 @@ function routeDefs(routes: RouteDef[], depth: number): string {
       const name = r.name === undefined ? "" : `.with_name(${rustStr(r.name)})`;
       const view = r.view === false ? ".with_view(false)" : "";
       const children = r.children?.length ? `.with_children(&[\n${routeDefs(r.children, depth + 1)}\n${pad}])` : "";
-      return `${pad}ferrovue::RouteDef::new(${rustStr(r.path)})${name}${view}${children},`;
+      return `${pad}ferrovue::router::RouteDef::new(${rustStr(r.path)})${name}${view}${children},`;
     })
     .join("\n");
 }
@@ -154,7 +156,7 @@ export function routesSource(routes: RouteDef[], file: string, pages: boolean): 
 
 /// Each route: its vue-router path, its name if it has one, whether it shows a component, and the
 /// routes nested in it.
-pub const ROUTES: &[ferrovue::RouteDef<'static>] = &[
+pub const ROUTES: &[ferrovue::router::RouteDef<'static>] = &[
 ${routeDefs(routes, 1)}
 ];
 
@@ -167,9 +169,9 @@ ${allRoutes(routes).map((r) => `    ${rustStr(r.fullPath)},`).join("\n")}
 pub const BASE: &str = ${rustStr(runOf(router).base)};
 
 /// The router these routes make: build it once, and resolve each request's location with
-/// [\`ferrovue::Router::at\`].
-pub fn router() -> ferrovue::Router {
-    ferrovue::Router::tree(ROUTES).with_base(BASE)
+/// [\`ferrovue::router::Router::at\`].
+pub fn router() -> ferrovue::router::Router {
+    ferrovue::router::Router::tree(ROUTES).with_base(BASE)
 }
 `;
 }
@@ -303,8 +305,8 @@ export const router: Plugin<RouterRun, RouterScope> = {
   params: [
     {
       name: "fv_route",
-      ty: "&fv::Route<'_>",
-      pageTy: "&'p fv::Route<'p>",
+      ty: "&fv::router::Route<'_>",
+      pageTy: "&'p fv::router::Route<'p>",
       reads: (c) => runOf(router).readers.has(c),
       test: { lines: ["let router = route_table::router();", "let route = router.at(&fixture.route);"], arg: "&route", fixture: true },
       fixtureField: '    #[serde(rename = "$route", default = "Fixture::root")]\n    route: String,',

@@ -2,7 +2,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { GenError, GenErrors, generate } from "../src/compiler.ts";
+import { GenError, GenErrors } from "../src/errors.ts";
+import { generate } from "../src/compiler.ts";
 import { like } from "./code.ts";
 
 const roots: string[] = [];
@@ -167,7 +168,7 @@ describe("values handed to a function or a prop", () => {
 
   for (const [what, props, call, params, code] of writes) {
     it(`hands ${what}`, () => {
-      expect(render(`${h}defineProps<{ ${props} }>();`, `<p>{{ ${call} }}</p>`, { config: helper(params) })).toMatch(like(`fv::escape_into(out, ${code});`));
+      expect(render(`${h}defineProps<{ ${props} }>();`, `<p>{{ ${call} }}</p>`, { config: helper(params) })).toMatch(like(`fv::core::escape_into(out, ${code});`));
     });
   }
 
@@ -238,7 +239,7 @@ describe("slots read in a template", () => {
     expect(render("", '<p v-if="$slots.default">a</p><slot />')).toMatch(like(given));
     expect(render("import { useSlots } from 'vue';\nconst sl = useSlots();", '<p v-if="sl.default">a</p><slot />')).toMatch(like(given));
     expect(render("import { useSlots, computed } from 'vue';\nconst sl = useSlots();\nconst c = computed(() => !!sl.default);", '<p v-if="c">a</p><slot />')).toMatch(like("let s_c = fv_slots.default.is_some();"));
-    expect(render("import { useSlots } from 'vue';\nconst sl = useSlots();", '<p v-for="sl in [1]">{{ sl }}</p><slot />')).toMatch(like("fv::push_int(out, sl);"));
+    expect(render("import { useSlots } from 'vue';\nconst sl = useSlots();", '<p v-for="sl in [1]">{{ sl }}</p><slot />')).toMatch(like("fv::core::push_int(out, sl);"));
   });
 
   it("refuses a slot the template does not render", () => {
@@ -249,14 +250,14 @@ describe("slots read in a template", () => {
 
 describe("fields of a struct", () => {
   it("reads an enum field, optional, with a default and without", () => {
-    expect(render('interface Item { k: "a" | "b" }\ndefineProps<{ item: Item }>();', "<p>{{ item.k }}</p>")).toMatch(like("fv::escape_into(out, fv::Union::as_str(props.item.k));"));
-    expect(render('interface Item { k?: "a" | "b" }\ndefineProps<{ item: Item }>();', "<p>{{ item.k }}</p>")).toMatch(like("if let Some(v) = props.item.k.map(fv::Union::as_str) {"));
-    expect(render('withDefaults(defineProps<{ k?: "a" | "b" }>(), { k: "b" });', "<p>{{ k }}</p>")).toMatch(like("fv::escape_into(out, fv::Union::as_str(props.k.unwrap_or(XK::B)));"));
+    expect(render('interface Item { k: "a" | "b" }\ndefineProps<{ item: Item }>();', "<p>{{ item.k }}</p>")).toMatch(like("fv::core::escape_into(out, fv::props::Union::as_str(props.item.k));"));
+    expect(render('interface Item { k?: "a" | "b" }\ndefineProps<{ item: Item }>();', "<p>{{ item.k }}</p>")).toMatch(like("if let Some(v) = props.item.k.map(fv::props::Union::as_str) {"));
+    expect(render('withDefaults(defineProps<{ k?: "a" | "b" }>(), { k: "b" });', "<p>{{ k }}</p>")).toMatch(like("fv::core::escape_into(out, fv::props::Union::as_str(props.k.unwrap_or(XK::B)));"));
   });
 
   it("reads each kind of optional prop", () => {
     const out = render("defineProps<{ d?: Date; s?: string; n?: number; b?: boolean; l?: string[] }>();", "<p>{{ d?.getTime() }} {{ s }} {{ n }} {{ b }} {{ l?.length }}</p>");
-    expect(out).toMatch(like("if let Some(v) = props.d.as_ref().map(fv::js_time_of) {"));
+    expect(out).toMatch(like("if let Some(v) = props.d.as_ref().map(fv::date::js_time_of) {"));
     expect(out).toMatch(like("if let Some(v) = props.s.as_deref() {"));
     expect(out).toMatch(like("if let Some(v) = props.n {"));
     expect(out).toMatch(like('out.push_str(if props.b.unwrap_or(false) { "true" } else { "false" });'));
@@ -348,7 +349,7 @@ describe("`&&` after a value that may be absent", () => {
     expect(render("interface C { a: string }\ndefineProps<{ c: C | null }>();", "<p>{{ c && c.a }}</p>")).toMatch(like("if let Some(v) = props.c.as_ref().map(|n1| &*n1.a) {"));
     expect(render('defineProps<{ k?: "a" | "b" }>();', "<p>{{ k && 'x' }}</p>")).toMatch(like('if let Some(v) = props.k.map(|n1| "x") {'));
     expect(render("defineProps<{ l?: string[] }>();", "<p>{{ l && 'x' }}</p>")).toMatch(like('if let Some(v) = props.l.as_ref().map(|n1| "x") {'));
-    expect(render("defineProps<{ d?: Date }>();", "<p>{{ d && 'x' }}</p>")).toMatch(like('if let Some(v) = props.d.as_ref().map(fv::js_time_of).map(|n1| "x") {'));
+    expect(render("defineProps<{ d?: Date }>();", "<p>{{ d && 'x' }}</p>")).toMatch(like('if let Some(v) = props.d.as_ref().map(fv::date::js_time_of).map(|n1| "x") {'));
     expect(render('defineProps<{ k: "a" | "b" }>();\nconst T = { a: { x: "1" } };', "<p>{{ T[k] && T[k].x }}</p>")).toMatch(like('if let Some(v) = matches!(props.k, XK::A).then_some(()).map(|n1| "1") {'));
   });
 
@@ -378,12 +379,12 @@ describe("items read by `[…]`", () => {
   });
 
   it("reads a string's character by an integer index, holding it where the string is computed", () => {
-    expect(render("defineProps<{ s: string; i: number }>();", "<p>{{ s[i] }}</p>")).toMatch(like("if let Some(v) = Some(fv::js_char_at(&props.s, props.i as f64)).filter(|c| !c.is_empty()) {"));
+    expect(render("defineProps<{ s: string; i: number }>();", "<p>{{ s[i] }}</p>")).toMatch(like("if let Some(v) = Some(fv::strings::js_char_at(&props.s, props.i as f64)).filter(|c| !c.is_empty()) {"));
     expect(render("defineProps<{ s: string; i: number }>();", "<p>{{ (s + 'x')[i] }}</p>")).toMatch(like(
-      'if let Some(v) = Some(fv::js_char_at(&format!("{}x", props.s), props.i as f64)).filter(|c| !c.is_empty()).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned())).as_deref() {',
+      'if let Some(v) = Some(fv::strings::js_char_at(&format!("{}x", props.s), props.i as f64)).filter(|c| !c.is_empty()).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned())).as_deref() {',
     ));
     expect(render("defineProps<{ s: string; i: number }>();", "<p>{{ s.toUpperCase()[i] ?? '-' }}</p>")).toMatch(like(
-      'fv::escape_into(out, &Some(fv::js_char_at(&props.s.to_uppercase(), props.i as f64)).filter(|c| !c.is_empty()).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned())).unwrap_or(std::borrow::Cow::<str>::Borrowed("-")));',
+      'fv::core::escape_into(out, &Some(fv::strings::js_char_at(&props.s.to_uppercase(), props.i as f64)).filter(|c| !c.is_empty()).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned())).unwrap_or(std::borrow::Cow::<str>::Borrowed("-")));',
     ));
   });
 
@@ -430,12 +431,12 @@ describe("optional chains", () => {
 
   it("maps the rest of the chain over a value that may be absent", () => {
     expect(struct("c?.a.toUpperCase()")).toMatch(like("if let Some(v) = props.c.as_ref().map(|fv_o1| std::borrow::Cow::<str>::Owned(fv_o1.a.to_uppercase())).as_deref() {"));
-    expect(struct("c?.a?.length")).toMatch(like("if let Some(v) = props.c.as_ref().map(|fv_o1| &*fv_o1.a).map(fv::js_length) {"));
-    expect(struct("c?.a", false)).toMatch(like("fv::escape_into(out, &props.c.a);"));
+    expect(struct("c?.a?.length")).toMatch(like("if let Some(v) = props.c.as_ref().map(|fv_o1| &*fv_o1.a).map(fv::strings::js_length) {"));
+    expect(struct("c?.a", false)).toMatch(like("fv::core::escape_into(out, &props.c.a);"));
     expect(struct("c?.o")).toMatch(like("if let Some(v) = props.c.as_ref().and_then(|fv_o1| fv_o1.o.as_deref()) {"));
     expect(struct("c?.d.b")).toMatch(like("if let Some(v) = props.c.as_ref().map(|fv_o1| &*fv_o1.d.b) {"));
     expect(read("s?: string", "s?.toString()")).toMatch(like("if let Some(v) = props.s.as_deref() {"));
-    expect(read("s?: string", "s?.trim()")).toMatch(like("if let Some(v) = props.s.as_deref().map(fv::js_trim) {"));
+    expect(read("s?: string", "s?.trim()")).toMatch(like("if let Some(v) = props.s.as_deref().map(fv::strings::js_trim) {"));
     expect(read("s: string", "undefined?.a")).toMatch(like('out.push_str("<p></p>");'));
     expect(read("s: string", "null?.a")).toMatch(like('out.push_str("<p></p>");'));
   });
@@ -445,18 +446,18 @@ describe("optional chains", () => {
       "if let Some(v) = props.l.as_ref().and_then(|fv_o1| fv_o1.first().map(|v| &**v)).map(|fv_o2| std::borrow::Cow::<str>::Owned(fv_o2.to_uppercase())).as_deref() {",
     ));
     expect(read("s?: string", "s?.toUpperCase().at(0)")).toMatch(like(
-      "if let Some(v) = props.s.as_deref().and_then(|fv_o1| fv::js_at(&fv_o1.to_uppercase(), 0.0f64).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned()))).as_deref() {",
+      "if let Some(v) = props.s.as_deref().and_then(|fv_o1| fv::strings::js_at(&fv_o1.to_uppercase(), 0.0f64).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned()))).as_deref() {",
     ));
     expect(read("s?: string", "s?.toUpperCase()")).toMatch(like("if let Some(v) = props.s.as_deref().map(|fv_o1| std::borrow::Cow::<str>::Owned(fv_o1.to_uppercase())).as_deref() {"));
     expect(read("l?: string[]", "l?.join('-').toUpperCase()")).toMatch(like(
       'if let Some(v) = props.l.as_ref().map(|fv_o1| std::borrow::Cow::<str>::Owned(fv_o1.iter().map(|v| &**v).collect::<Vec<_>>().join("-").to_uppercase())).as_deref() {',
     ));
     expect(read("s?: string", "s?.toUpperCase()?.trim()")).toMatch(like(
-      "if let Some(v) = props.s.as_deref().map(|fv_o1| std::borrow::Cow::<str>::Owned(fv_o1.to_uppercase())).as_deref().map(|fv_o2| std::borrow::Cow::<str>::Owned(fv::js_trim(fv_o2).to_owned())).as_deref() {",
+      "if let Some(v) = props.s.as_deref().map(|fv_o1| std::borrow::Cow::<str>::Owned(fv_o1.to_uppercase())).as_deref().map(|fv_o2| std::borrow::Cow::<str>::Owned(fv::strings::js_trim(fv_o2).to_owned())).as_deref() {",
     ));
-    expect(read("l?: string[]", "l?.[0]?.at(0)")).toMatch(like("if let Some(v) = props.l.as_ref().and_then(|fv_o1| fv_o1.first().map(|v| &**v)).and_then(|fv_o2| fv::js_at(fv_o2, 0.0f64)) {"));
+    expect(read("l?: string[]", "l?.[0]?.at(0)")).toMatch(like("if let Some(v) = props.l.as_ref().and_then(|fv_o1| fv_o1.first().map(|v| &**v)).and_then(|fv_o2| fv::strings::js_at(fv_o2, 0.0f64)) {"));
     expect(read("s?: string", "s?.toUpperCase()?.at(0)")).toMatch(like(
-      "if let Some(v) = props.s.as_deref().map(|fv_o1| std::borrow::Cow::<str>::Owned(fv_o1.to_uppercase())).as_deref().and_then(|fv_o2| fv::js_at(fv_o2, 0.0f64).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned()))).as_deref() {",
+      "if let Some(v) = props.s.as_deref().map(|fv_o1| std::borrow::Cow::<str>::Owned(fv_o1.to_uppercase())).as_deref().and_then(|fv_o2| fv::strings::js_at(fv_o2, 0.0f64).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned()))).as_deref() {",
     ));
     expect(render("defineProps<{ l?: string[] }>();", '<p v-for="x in l?.filter((y) => !!y) ?? []">{{ x }}</p>')).toMatch(like(
       "for x_ref in props.l.as_ref().map(|fv_o1| fv_o1.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_s2| !fv_s2.is_empty()).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>()).as_deref().unwrap_or(&[]).iter() {",
@@ -467,20 +468,20 @@ describe("optional chains", () => {
 describe("a `?:` shown as text whose branches differ in type", () => {
   it("writes each branch as JavaScript writes it, in text, attributes and template literals", () => {
     const out = render("defineProps<{ on: boolean; n: number; s: string; m?: number }>();", "<p>{{ on ? n : s }}|{{ on ? (n) : s }}|{{ (on ? s : n) }}|{{ on ? m : s }}</p>");
-    const n = "std::borrow::Cow::<str>::Owned(format!(\"{}\", fv::Js(props.n)))";
+    const n = "std::borrow::Cow::<str>::Owned(format!(\"{}\", fv::core::Js(props.n)))";
     const s = "std::borrow::Cow::<str>::Borrowed(&*props.s)";
-    expect(out).toMatch(like(`fv::escape_into(out, &(if props.on { ${n} } else { ${s} }));\n    out.push('|');\n    fv::escape_into(out, &(if props.on { ${n} } else { ${s} }));`));
-    expect(out).toMatch(like(`fv::escape_into(out, &(if props.on { ${s} } else { ${n} }));`));
-    expect(out).toMatch(like(`if let Some(v) = (if props.on { props.m.map(|n1| std::borrow::Cow::<str>::Owned(format!("{}", fv::Js(n1)))) } else { Some(${s}) }).as_deref() {`));
-    expect(render("defineProps<{ on: boolean; off: boolean; n: number; s: string }>();", "<p>{{ on ? (off ? n : s) : s }}</p>")).toMatch(like(`fv::escape_into(out, &(if props.on { if props.off { ${n} } else { ${s} } } else { ${s} }));`));
-    expect(render("defineProps<{ on: boolean; n: number; s: string; m?: number }>();", '<p :id="on ? m : s"></p>')).toMatch(like(`if let Some(v) = (if props.on { props.m.map(|n1| std::borrow::Cow::<str>::Owned(format!("{}", fv::Js(n1)))) } else { Some(${s}) }).as_deref() {`));
+    expect(out).toMatch(like(`fv::core::escape_into(out, &(if props.on { ${n} } else { ${s} }));\n    out.push('|');\n    fv::core::escape_into(out, &(if props.on { ${n} } else { ${s} }));`));
+    expect(out).toMatch(like(`fv::core::escape_into(out, &(if props.on { ${s} } else { ${n} }));`));
+    expect(out).toMatch(like(`if let Some(v) = (if props.on { props.m.map(|n1| std::borrow::Cow::<str>::Owned(format!("{}", fv::core::Js(n1)))) } else { Some(${s}) }).as_deref() {`));
+    expect(render("defineProps<{ on: boolean; off: boolean; n: number; s: string }>();", "<p>{{ on ? (off ? n : s) : s }}</p>")).toMatch(like(`fv::core::escape_into(out, &(if props.on { if props.off { ${n} } else { ${s} } } else { ${s} }));`));
+    expect(render("defineProps<{ on: boolean; n: number; s: string; m?: number }>();", '<p :id="on ? m : s"></p>')).toMatch(like(`if let Some(v) = (if props.on { props.m.map(|n1| std::borrow::Cow::<str>::Owned(format!("{}", fv::core::Js(n1)))) } else { Some(${s}) }).as_deref() {`));
     expect(
       render(
         "defineProps<{ on: boolean; n: number; s: string; b: boolean; l: string[]; m?: number }>();",
         "<p>{{ `${on ? n : s}|${on ? b : s}|${on ? m : s}|${on ? null : s}|${on ? undefined : s}|${on ? l : s}|${on ? 1.5 : s}` }}</p>",
       ),
     ).toMatch(like(
-      `fv::escape_into(out, &format!("{}|{}|{}|{}|{}|{}|{}", (if props.on { ${n} } else { ${s} }), (if props.on { if props.b { "true" } else { "false" } } else { &props.s }), (if props.on { std::borrow::Cow::<str>::Owned(format!("{}", fv::JsOr(props.m.map(fv::Js), "undefined"))) } else { ${s} }), (if props.on { None } else { Some(&*props.s) }).unwrap_or("null"), (if props.on { None } else { Some(&*props.s) }).unwrap_or("undefined"), (if props.on { std::borrow::Cow::<str>::Owned(props.l.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(",")) } else { ${s} }), (if props.on { std::borrow::Cow::<str>::Owned(format!("{}", fv::Js(1.5f64))) } else { ${s} })));`,
+      `fv::core::escape_into(out, &format!("{}|{}|{}|{}|{}|{}|{}", (if props.on { ${n} } else { ${s} }), (if props.on { if props.b { "true" } else { "false" } } else { &props.s }), (if props.on { std::borrow::Cow::<str>::Owned(format!("{}", fv::strings::JsOr(props.m.map(fv::core::Js), "undefined"))) } else { ${s} }), (if props.on { None } else { Some(&*props.s) }).unwrap_or("null"), (if props.on { None } else { Some(&*props.s) }).unwrap_or("undefined"), (if props.on { std::borrow::Cow::<str>::Owned(props.l.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(",")) } else { ${s} }), (if props.on { std::borrow::Cow::<str>::Owned(format!("{}", fv::core::Js(1.5f64))) } else { ${s} })));`,
     ));
   });
 
@@ -495,25 +496,25 @@ describe("`.length`", () => {
   const length = (props: string, read: string) => render(`defineProps<{ ${props} }>();`, `<p>{{ ${read} }}</p>`);
 
   it("counts a record, a list, what a list method computes and a string", () => {
-    expect(length("r: Record<string, number>", "Object.entries(r).length")).toMatch(like("fv::push_int(out, props.r.len() as i64);"));
-    expect(length("r: Record<string, number>", "Object.keys(r).length")).toMatch(like("fv::push_int(out, props.r.keys().count() as i64);"));
-    expect(length("r: Record<string, number>", "Object.keys(r).map((x) => x).length")).toMatch(like("fv::push_int(out, props.r.keys().map(std::borrow::Cow::<str>::Borrowed).count() as i64);"));
+    expect(length("r: Record<string, number>", "Object.entries(r).length")).toMatch(like("fv::core::push_int(out, props.r.len() as i64);"));
+    expect(length("r: Record<string, number>", "Object.keys(r).length")).toMatch(like("fv::core::push_int(out, props.r.keys().count() as i64);"));
+    expect(length("r: Record<string, number>", "Object.keys(r).map((x) => x).length")).toMatch(like("fv::core::push_int(out, props.r.keys().map(std::borrow::Cow::<str>::Borrowed).count() as i64);"));
     expect(length("r: Record<string, number>", "Object.entries(r).map((e) => e.length).join()")).toMatch(like("props.r.iter().map(|_| 2i64)"));
-    expect(length("l: string[]", "[...l].length")).toMatch(like("fv::push_int(out, props.l.len() as i64);"));
-    expect(length("l: string[]", "l.map((x) => x + '!').length")).toMatch(like("fv::push_int(out, props.l.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).count() as i64);"));
-    expect(length("l: string[]", "l.filter((x) => !!x).length")).toMatch(like("fv::push_int(out, props.l.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_s1| !fv_s1.is_empty()).count() as i64);"));
-    expect(length("l: string[]", "l.slice(1).length")).toMatch(like("fv::push_int(out, fv::js_slice_items(props.l.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), 1.0f64, None).count() as i64);"));
-    expect(length("l: string[]", "l.slice(1).map((x) => x).length")).toMatch(like("fv::push_int(out, fv::js_slice_items(props.l.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), 1.0f64, None).count() as i64);"));
-    expect(length("s: string", "s.length")).toMatch(like("fv::push_int(out, fv::js_length(&props.s));"));
+    expect(length("l: string[]", "[...l].length")).toMatch(like("fv::core::push_int(out, props.l.len() as i64);"));
+    expect(length("l: string[]", "l.map((x) => x + '!').length")).toMatch(like("fv::core::push_int(out, props.l.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).count() as i64);"));
+    expect(length("l: string[]", "l.filter((x) => !!x).length")).toMatch(like("fv::core::push_int(out, props.l.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_s1| !fv_s1.is_empty()).count() as i64);"));
+    expect(length("l: string[]", "l.slice(1).length")).toMatch(like("fv::core::push_int(out, fv::strings::js_slice_items(props.l.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), 1.0f64, None).count() as i64);"));
+    expect(length("l: string[]", "l.slice(1).map((x) => x).length")).toMatch(like("fv::core::push_int(out, fv::strings::js_slice_items(props.l.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), 1.0f64, None).count() as i64);"));
+    expect(length("s: string", "s.length")).toMatch(like("fv::core::push_int(out, fv::strings::js_length(&props.s));"));
     expect(length("s: string", "[].length")).toMatch(like('out.push_str("<p>0</p>");'));
   });
 
   it("counts an empty array literal, and one handed to a parameter whose items have no type, as 0", () => {
-    expect(render("const props = defineProps<{ xs: string[] }>();", "<p>{{ [].length + xs.length }}</p>")).toMatch(like("fv::push_number(out, 0.0 + props.xs.len() as i64 as f64);"));
+    expect(render("const props = defineProps<{ xs: string[] }>();", "<p>{{ [].length + xs.length }}</p>")).toMatch(like("fv::core::push_number(out, 0.0 + props.xs.len() as i64 as f64);"));
     const out = render("function f(xs: unknown[]) { return xs.length; }", "<p>{{ f([]) }}</p>");
     expect(out).toMatch(like('out.push_str("<p>0</p>");'));
     expect(out).not.toMatch(/= &\[\];/);
-    expect(render("const props = defineProps<{ b: boolean }>();", "<p>{{ b ? [].length : 1 }}</p>")).toMatch(like("fv::push_int(out, if props.b { 0i64 } else { 1i64 });"));
+    expect(render("const props = defineProps<{ b: boolean }>();", "<p>{{ b ? [].length : 1 }}</p>")).toMatch(like("fv::core::push_int(out, if props.b { 0i64 } else { 1i64 });"));
     expect(render("const props = defineProps<{ xs: string[] }>();", "<p>{{ xs[[].length] }}</p>")).toMatch(like("if let Some(v) = props.xs.first().map(|v| &**v) {"));
   });
 
@@ -530,24 +531,24 @@ describe("`.length`", () => {
 describe("binary operators", () => {
   it("joins strings and adds numbers with `+`", () => {
     const out = render("defineProps<{ s: string; n: number; f: number }>();", "<p>{{ s + n }}|{{ n + s }}|{{ n + 1 }}|{{ n + f / 2 }}|{{ 's' + 't' }}</p>");
-    expect(out).toMatch(like('fv::escape_into(out, &format!("{}{}", props.s, fv::Js(props.n)));'));
-    expect(out).toMatch(like('fv::escape_into(out, &format!("{}{}", fv::Js(props.n), props.s));'));
-    expect(out).toMatch(like("fv::push_number(out, props.n as f64 + 1.0);"));
-    expect(out).toMatch(like("fv::push_number(out, props.n as f64 + props.f as f64 / 2.0);"));
+    expect(out).toMatch(like('fv::core::escape_into(out, &format!("{}{}", props.s, fv::core::Js(props.n)));'));
+    expect(out).toMatch(like('fv::core::escape_into(out, &format!("{}{}", fv::core::Js(props.n), props.s));'));
+    expect(out).toMatch(like("fv::core::push_number(out, props.n as f64 + 1.0);"));
+    expect(out).toMatch(like("fv::core::push_number(out, props.n as f64 + props.f as f64 / 2.0);"));
     expect(out).toMatch(like('out.push_str("|st</p>");'));
   });
 
   it("orders strings", () => {
     const out = render("defineProps<{ s: string; t: string }>();", "<p>{{ s < t }}|{{ s >= t }}|{{ s > t }}|{{ s <= t }}</p>");
-    for (const is of ["lt", "ge", "gt", "le"]) expect(out).toMatch(like(`out.push_str(if fv::js_cmp(&props.s, &props.t).is_${is}() { "true" } else { "false" });`));
+    for (const is of ["lt", "ge", "gt", "le"]) expect(out).toMatch(like(`out.push_str(if fv::strings::js_cmp(&props.s, &props.t).is_${is}() { "true" } else { "false" });`));
   });
 
   it("keeps integers integral through `+`, `-`, `*` and `%` by a nonzero integer literal", () => {
     const out = render("defineProps<{ l: string[]; a: number; b: number }>();", "<p>{{ l[a % 3] }}|{{ l[a - b] }}|{{ l[a * b] }}|{{ l[a + b] }}</p>");
-    expect(out).toMatch(like("props.l.get(usize::try_from(fv_refusals.keep(fv::try_int(props.a as f64 % 3.0), 4, 19)).unwrap_or(usize::MAX))"));
-    expect(out).toMatch(like("props.l.get(usize::try_from(fv_refusals.keep(fv::try_int(props.a as f64 - props.b as f64), 4, 34)).unwrap_or(usize::MAX))"));
-    expect(out).toMatch(like("props.l.get(usize::try_from(fv_refusals.keep(fv::try_int(props.a as f64 * props.b as f64), 4, 49)).unwrap_or(usize::MAX))"));
-    expect(out).toMatch(like("props.l.get(usize::try_from(fv_refusals.keep(fv::try_int(props.a as f64 + props.b as f64), 4, 64)).unwrap_or(usize::MAX))"));
+    expect(out).toMatch(like("props.l.get(usize::try_from(fv_refusals.keep(fv::render::try_int(props.a as f64 % 3.0), 4, 19)).unwrap_or(usize::MAX))"));
+    expect(out).toMatch(like("props.l.get(usize::try_from(fv_refusals.keep(fv::render::try_int(props.a as f64 - props.b as f64), 4, 34)).unwrap_or(usize::MAX))"));
+    expect(out).toMatch(like("props.l.get(usize::try_from(fv_refusals.keep(fv::render::try_int(props.a as f64 * props.b as f64), 4, 49)).unwrap_or(usize::MAX))"));
+    expect(out).toMatch(like("props.l.get(usize::try_from(fv_refusals.keep(fv::render::try_int(props.a as f64 + props.b as f64), 4, 64)).unwrap_or(usize::MAX))"));
     for (const e of ["a % 0", "a % b", "a % 2.5", "a / b", "a % -2", "a / 2", "NaN"]) {
       expect(refusals("defineProps<{ l: string[]; a: number; b: number }>();", `<p>{{ l[${e}] }}</p>`)).toEqual([
         "FV0824 `[…]` reads a list's item by an integer index, a `number` that is present, and this index is a `Float`, which may hold a fraction or be `NaN`: `.at()` takes any number",
@@ -611,12 +612,12 @@ describe("names and members", () => {
     expect(render("", "<p>{{ NaN }}|{{ Infinity }}|{{ -Infinity }}|{{ Number.NaN }}|{{ Math.PI }}|{{ Number.MAX_SAFE_INTEGER }}|{{ Number.EPSILON }}</p>")).toMatch(like(
       'out.push_str("<p>NaN|Infinity|-Infinity|NaN|3.141592653589793|9007199254740991|2.220446049250313e-16</p>");',
     ));
-    expect(render("defineProps<{ n: number }>();", "<p>{{ Math.abs(n) }}|{{ Number.isInteger(n) }}</p>")).toMatch(like("fv::push_number(out, (props.n as f64).abs());"));
+    expect(render("defineProps<{ n: number }>();", "<p>{{ Math.abs(n) }}|{{ Number.isInteger(n) }}</p>")).toMatch(like("fv::core::push_number(out, (props.n as f64).abs());"));
   });
 
   it("reads a ref's `.value` and the props object", () => {
     expect(render("import { ref, computed } from 'vue';\nconst r = ref(1);\nconst c = computed(() => r.value + 1);", "<p>{{ c }}</p>")).toMatch(like("let s_c = s_r as f64 + 1.0;"));
-    expect(render("import { ref, computed } from 'vue';\nconst r = ref('ab');\nconst c = computed(() => r.length);", "<p>{{ c }}</p>")).toMatch(like('let s_c = fv::js_length("ab");'));
+    expect(render("import { ref, computed } from 'vue';\nconst r = ref('ab');\nconst c = computed(() => r.length);", "<p>{{ c }}</p>")).toMatch(like('let s_c = fv::strings::js_length("ab");'));
     expect(render("import { computed } from 'vue';\nconst props = defineProps<{ n: number }>();\nconst c = computed(() => props.n);", "<p>{{ c }}|{{ props.n }}</p>")).toMatch(like("let s_c = props.n;"));
   });
 
@@ -648,9 +649,9 @@ describe("names and members", () => {
 describe("`&&` and `||` that narrow their left side", () => {
   it("reads the right side where the left side narrows it", () => {
     expect(render("defineProps<{ s?: string }>();", '<p v-if="!s || s.length > 2">a</p>')).toMatch(like(
-      "if if let Some(n2) = props.s.as_deref().filter(|v| !v.is_empty()) { fv::js_length(n2) as f64 > 2.0 } else { true } {",
+      "if if let Some(n2) = props.s.as_deref().filter(|v| !v.is_empty()) { fv::strings::js_length(n2) as f64 > 2.0 } else { true } {",
     ));
-    expect(render("defineProps<{ s?: string }>();", '<p v-if="s != null && s.length > 2">a</p>')).toMatch(like("if let Some(n1) = props.s.as_deref() && fv::js_length(n1) as f64 > 2.0 {"));
+    expect(render("defineProps<{ s?: string }>();", '<p v-if="s != null && s.length > 2">a</p>')).toMatch(like("if let Some(n1) = props.s.as_deref() && fv::strings::js_length(n1) as f64 > 2.0 {"));
   });
 
   it("refuses a right side that is no boolean", () => {
@@ -684,10 +685,10 @@ describe("expressions checked a second time", () => {
 
   it("types the object literals a function's return type states through `let` assigned again and loops", () => {
     expect(render(`${card}defineProps<{ on: boolean }>();\nfunction f(): Card { let c = "a"; c = "b"; return { label: c }; }`, "<p>{{ f().label }}</p>")).toMatch(like(
-      'fv::escape_into(out, &((Card { label: std::borrow::Cow::<str>::Borrowed("b") }).label));',
+      'fv::core::escape_into(out, &((Card { label: std::borrow::Cow::<str>::Borrowed("b") }).label));',
     ));
     expect(render(`${card}const props = defineProps<{ xs: string[] }>();\nfunction f(): Card { let c = ""; for (const x of props.xs) { c = c + x; } return { label: c }; }`, "<p>{{ f().label }}</p>")).toMatch(
-      /fv::escape_into\(out, &\(\(\{ let mut \w+: String = String::new\(\); for \w+ in props\.xs\.iter\(\)[^]*Card \{ label: std::borrow::Cow::<str>::Owned\(str::to_owned\(&\*\w+\)\) \} \}\)\.label\)\);/,
+      /fv::core::escape_into\(out, &\(\(\{ let mut \w+: String = String::new\(\); for \w+ in props\.xs\.iter\(\)[^]*Card \{ label: std::borrow::Cow::<str>::Owned\(str::to_owned\(&\*\w+\)\) \} \}\)\.label\)\);/,
     );
   });
 
@@ -702,7 +703,7 @@ describe("expressions checked a second time", () => {
 
   it("reads a type stated in a `.ts` file where the file declares it", () => {
     expect(render('import { one } from "./lib";', "<p>{{ one().label }}</p>", { files: { "lib.ts": 'export interface Card { label: string }\nexport function one(): Card { return { label: "a" } as Card; }\n' } })).toMatch(like(
-      'fv::escape_into(out, &((super::types::Card { label: std::borrow::Cow::<str>::Borrowed("a") }).label));',
+      'fv::core::escape_into(out, &((super::types::Card { label: std::borrow::Cow::<str>::Borrowed("a") }).label));',
     ));
   });
 
@@ -749,12 +750,12 @@ describe("values built from object literals in place", () => {
 
   it("reads each kind of field of one", () => {
     const read = (field: string) => render(rich, `<p>{{ rich().${field} }}</p>`);
-    expect(read("s")).toMatch(/fv::escape_into\(out, &\(\(Rich \{ .* \}\)\.s\)\);/);
-    expect(read("i")).toMatch(/fv::push_int\(out, \(Rich \{ .* \}\)\.i\);/);
-    expect(read("f")).toMatch(/fv::push_number\(out, \(Rich \{ .* \}\)\.f\);/);
+    expect(read("s")).toMatch(/fv::core::escape_into\(out, &\(\(Rich \{ .* \}\)\.s\)\);/);
+    expect(read("i")).toMatch(/fv::core::push_int\(out, \(Rich \{ .* \}\)\.i\);/);
+    expect(read("f")).toMatch(/fv::core::push_number\(out, \(Rich \{ .* \}\)\.f\);/);
     expect(read("b")).toMatch(/out\.push_str\(if \(Rich \{ .* \}\)\.b \{ "true" \} else \{ "false" \}\);/);
-    expect(read("sub.a")).toMatch(/fv::push_int\(out, \(\(Rich \{ .* \}\)\.sub\)\.a\);/);
-    expect(read("l.length")).toMatch(/fv::push_int\(out, \(\(Rich \{ .* \}\)\.l\)\.len\(\) as i64\);/);
+    expect(read("sub.a")).toMatch(/fv::core::push_int\(out, \(\(Rich \{ .* \}\)\.sub\)\.a\);/);
+    expect(read("l.length")).toMatch(/fv::core::push_int\(out, \(\(Rich \{ .* \}\)\.l\)\.len\(\) as i64\);/);
     expect(read("os")).toMatch(/if let Some\(v\) = \(\(Rich \{ .* \}\)\.os\)\.as_deref\(\) \{/);
     expect(read("oi")).toMatch(/if let Some\(v\) = \(\(Rich \{ .* \}\)\.oi\) \{/);
     expect(read("ob")).toMatch(/if let Some\(v\) = \(\(Rich \{ .* \}\)\.ob\) \{/);
@@ -776,10 +777,10 @@ describe("values built from object literals in place", () => {
     expect(loop("on ? cards() : cs")).toMatch(like(`for x_ref in (if props.on { Vec::from([${built("a")}]) } else { props.cs.iter().cloned().collect::<Vec<_>>() }).iter() {`));
     expect(loop("on ? cards() : []")).toMatch(like(`for x_ref in (if props.on { Vec::from([${built("a")}]) } else { Vec::new() }).iter() {`));
     expect(loop("on ? [] : cards()")).toMatch(like(`for x_ref in (if props.on { Vec::new() } else { Vec::from([${built("a")}]) }).iter() {`));
-    expect(render(card, "<p>{{ (on ? one() : c).label }}</p>")).toMatch(like(`fv::escape_into(out, &((if props.on { ${built("b")} } else { props.c.clone() }).label));`));
+    expect(render(card, "<p>{{ (on ? one() : c).label }}</p>")).toMatch(like(`fv::core::escape_into(out, &((if props.on { ${built("b")} } else { props.c.clone() }).label));`));
     const out = render(card, "<p>{{ (maybe() ?? c).label }}|{{ (oc ?? one()).label }}</p>");
-    expect(out).toMatch(like(`fv::escape_into(out, &((if props.on { Some(${built("c")}) } else { None }).unwrap_or(props.c.clone()).label));`));
-    expect(out).toMatch(like(`fv::escape_into(out, &(props.oc.as_ref().cloned().unwrap_or(${built("b")}).label));`));
+    expect(out).toMatch(like(`fv::core::escape_into(out, &((if props.on { Some(${built("c")}) } else { None }).unwrap_or(props.c.clone()).label));`));
+    expect(out).toMatch(like(`fv::core::escape_into(out, &(props.oc.as_ref().cloned().unwrap_or(${built("b")}).label));`));
   });
 
   it("refuses `?.` of one, a list of them or `undefined`, and one or a string", () => {
@@ -808,19 +809,19 @@ describe("`||`, `??` and `?:` of strings, numbers and booleans", () => {
   const P = "const props = defineProps<{ s?: string; t: string; n?: number; m: number; b?: boolean; c: boolean; e?: \"a\" | \"b\"; on: boolean; ns?: number[] }>();\n";
   const cases: [string, string][] = [
     ["b || c", "out.push_str(if props.b.unwrap_or(false) || props.c { \"true\" } else { \"false\" });"],
-    ["t || 'x'", "fv::escape_into(out, { let a = &*props.t; if !a.is_empty() { a } else { \"x\" } });"],
-    ["m || 1", "fv::push_int(out, { let a = props.m; if a != 0 { a } else { 1i64 } });"],
+    ["t || 'x'", "fv::core::escape_into(out, { let a = &*props.t; if !a.is_empty() { a } else { \"x\" } });"],
+    ["m || 1", "fv::core::push_int(out, { let a = props.m; if a != 0 { a } else { 1i64 } });"],
     ["t || undefined", "if let Some(v) = Some(&*props.t).filter(|v| !v.is_empty()) {"],
     ["s || t", "FV0617 `||` between these types"],
     ["s || 'x'", "FV0617 `||` between these types"],
     ["n || m", "FV0617 `||` between these types"],
     ["n || 0", "FV0617 `||` between these types"],
-    ["(ns ?? [1]).length", "fv::push_int(out, (if let Some(n1) = props.ns.as_ref() { n1.to_vec() } else { [1i64].to_vec() }).len() as i64);"],
-    ["e ?? 'z'", "fv::escape_into(out, props.e.map(fv::Union::as_str).unwrap_or(\"z\"));"],
-    ["s ?? t", "fv::escape_into(out, props.s.as_deref().unwrap_or(&*props.t));"],
-    ["s ?? 'x'", "fv::escape_into(out, props.s.as_deref().unwrap_or(\"x\"));"],
-    ["s ?? (on ? 'a' : 'b')", "fv::escape_into(out, props.s.as_deref().unwrap_or(if props.on { \"a\" } else { \"b\" }));"],
-    ["(t + 'a') || 'b'", "fv::escape_into(out, &{ let a = std::borrow::Cow::<str>::Owned(format!(\"{}a\", props.t)); if !a.is_empty() { a } else { std::borrow::Cow::<str>::Borrowed(\"b\") } });"],
+    ["(ns ?? [1]).length", "fv::core::push_int(out, (if let Some(n1) = props.ns.as_ref() { n1.to_vec() } else { [1i64].to_vec() }).len() as i64);"],
+    ["e ?? 'z'", "fv::core::escape_into(out, props.e.map(fv::props::Union::as_str).unwrap_or(\"z\"));"],
+    ["s ?? t", "fv::core::escape_into(out, props.s.as_deref().unwrap_or(&*props.t));"],
+    ["s ?? 'x'", "fv::core::escape_into(out, props.s.as_deref().unwrap_or(\"x\"));"],
+    ["s ?? (on ? 'a' : 'b')", "fv::core::escape_into(out, props.s.as_deref().unwrap_or(if props.on { \"a\" } else { \"b\" }));"],
+    ["(t + 'a') || 'b'", "fv::core::escape_into(out, &{ let a = std::borrow::Cow::<str>::Owned(format!(\"{}a\", props.t)); if !a.is_empty() { a } else { std::borrow::Cow::<str>::Borrowed(\"b\") } });"],
     ["on ? t : s", "if let Some(v) = if props.on { Some(&*props.t) } else { props.s.as_deref() } {"],
     ["on ? s : t", "if let Some(v) = if props.on { props.s.as_deref() } else { Some(&*props.t) } {"],
     ["on ? s : undefined", "if let Some(v) = if props.on { props.s.as_deref() } else { None } {"],
@@ -866,7 +867,7 @@ describe("names that setup and bodies bind", () => {
 
   it("reads a field named like a `useSlots()` binding of a `v-for` item as a field", () => {
     const script = 'import { useSlots } from "vue";\ninterface S { default: string }\ninterface I { slots: S }\ndefineProps<{ l: I[] }>();\nconst slots = useSlots();';
-    expect(render(script, '<p v-for="y in l">{{ y.slots.default }}</p><slot />')).toMatch(like("fv::escape_into(out, &fv_y.slots.default);"));
+    expect(render(script, '<p v-for="y in l">{{ y.slots.default }}</p><slot />')).toMatch(like("fv::core::escape_into(out, &fv_y.slots.default);"));
   });
 
   it("refuses a `useSlots()` binding read whole where a prop has its name", () => {
@@ -875,7 +876,7 @@ describe("names that setup and bodies bind", () => {
 
   it("reads the CSS module setup binds to `$style` where the template names `$style`", () => {
     const x = '<script setup lang="ts">\nimport { useCssModule } from "vue";\nconst $style = useCssModule("other");\n</script>\n<template><p :class="$style.b">x</p></template>\n<style module>\n.a { color: red; }\n</style>\n<style module="other">\n.b { color: blue; }\n</style>\n';
-    expect(render("", "", { files: { "X.vue": x }, config: { cssModules: { generateScopedName: "[local]_x" } } })).toMatch(like('fv::class_into(out, false, &["b_x"]);'));
+    expect(render("", "", { files: { "X.vue": x }, config: { cssModules: { generateScopedName: "[local]_x" } } })).toMatch(like('fv::attrs::class_into(out, false, &["b_x"]);'));
   });
 
   it("refuses `[…]` of a CSS module by a name", () => {
@@ -921,8 +922,8 @@ describe("array literals handed to a typed parameter", () => {
   const f = (param: string) => `defineProps<{ on: boolean }>();\nfunction f(xs: ${param}) { return xs.length; }`;
 
   it("keeps a list of strings, plain and chosen by `?:`, where the parameter takes strings or `null`", () => {
-    expect(render(f("(string | null)[]"), '<p>{{ f(["a"]) }}</p>')).toMatch(like('fv::push_int(out, { let fv_xs = &["a"]; fv_xs.len() as i64 });'));
-    expect(render(f("(string | null)[]"), '<p>{{ f([on ? "a" : "b"]) }}</p>')).toMatch(like('fv::push_int(out, { let fv_xs = &[if props.on { "a" } else { "b" }]; fv_xs.len() as i64 });'));
+    expect(render(f("(string | null)[]"), '<p>{{ f(["a"]) }}</p>')).toMatch(like('fv::core::push_int(out, { let fv_xs = &["a"]; fv_xs.len() as i64 });'));
+    expect(render(f("(string | null)[]"), '<p>{{ f([on ? "a" : "b"]) }}</p>')).toMatch(like('fv::core::push_int(out, { let fv_xs = &[if props.on { "a" } else { "b" }]; fv_xs.len() as i64 });'));
   });
 
   it("refuses a hole in an array literal handed to a typed parameter", () => {
@@ -942,7 +943,7 @@ describe("values that may be absent, read and shown", () => {
   });
 
   it("reads a number from an item an optional chain picks from a computed list", () => {
-    expect(render("defineProps<{ s: string }>();", '<p>{{ s.split(",")[1]?.codePointAt(0) }}</p>')).toMatch(like(".as_deref().and_then(|fv_value| fv::js_code_point_at(fv_value, 0.0f64)) {"));
+    expect(render("defineProps<{ s: string }>();", '<p>{{ s.split(",")[1]?.codePointAt(0) }}</p>')).toMatch(like(".as_deref().and_then(|fv_value| fv::strings::js_code_point_at(fv_value, 0.0f64)) {"));
   });
 
   it("borrows a record an optional chain reads", () => {
@@ -951,9 +952,9 @@ describe("values that may be absent, read and shown", () => {
 
   it("writes `null` and `undefined` in a template literal's `?:` whose branches differ in type", () => {
     const out = render("defineProps<{ on: boolean; off: boolean; n: number; s: string }>();", "<p>{{ `${on ? (off ? null : n) : s}|${on ? (off ? undefined : n) : s}` }}</p>");
-    const n = 'std::borrow::Cow::<str>::Owned(format!("{}", fv::Js(props.n)))';
+    const n = 'std::borrow::Cow::<str>::Owned(format!("{}", fv::core::Js(props.n)))';
     expect(out).toMatch(like(
-      `fv::escape_into(out, &format!("{}|{}", (if props.on { if props.off { std::borrow::Cow::<str>::Borrowed("null") } else { ${n} } } else { std::borrow::Cow::<str>::Borrowed(&*props.s) }), (if props.on { if props.off { std::borrow::Cow::<str>::Borrowed("undefined") } else { ${n} } } else { std::borrow::Cow::<str>::Borrowed(&*props.s) })));`,
+      `fv::core::escape_into(out, &format!("{}|{}", (if props.on { if props.off { std::borrow::Cow::<str>::Borrowed("null") } else { ${n} } } else { std::borrow::Cow::<str>::Borrowed(&*props.s) }), (if props.on { if props.off { std::borrow::Cow::<str>::Borrowed("undefined") } else { ${n} } } else { std::borrow::Cow::<str>::Borrowed(&*props.s) })));`,
     ));
   });
 
@@ -990,7 +991,7 @@ describe("indexes and strings that may hold half a character", () => {
   });
 
   it("joins a character that may be half of a pair to U+FFFD with `+`", () => {
-    expect(render(l, "<p>{{ s.charAt(0) + '�' }}</p>")).toMatch(like('fv::escape_into(out, &format!("{}�", fv::js_char_at(&props.s, 0.0f64)));'));
+    expect(render(l, "<p>{{ s.charAt(0) + '�' }}</p>")).toMatch(like('fv::core::escape_into(out, &format!("{}�", fv::strings::js_char_at(&props.s, 0.0f64)));'));
   });
 });
 
@@ -1015,13 +1016,13 @@ describe("names holding `$`", () => {
     expect(rustOnly(out.replace(/#\[serde\(rename = "[^"]*"\)\]/g, ""))).not.toContain("$");
     expect(out).toContain('    #[serde(rename = "$tag")]\n    pub tag_2: Cow<\'a, str>,\n    #[serde(rename = "tag")]\n    pub tag: Cow<\'a, str>,\n    #[serde(rename = "a$b")]\n    pub a_b: i64,\n    #[serde(rename = "$type")]\n    pub r#type: Cow<\'a, str>,');
     expect(out).toContain('    #[serde(rename = "price$")]\n    pub price: i64,');
-    expect(flat(out)).toContain(["fv::push_int(out, props.price);", "out.push('|');", "fv::escape_into(out, &props.meta.tag_2);", "out.push('|');", "fv::escape_into(out, &props.meta.tag);", "out.push('|');", "fv::push_int(out, props.meta.a_b);", "out.push('|');", "fv::escape_into(out, &props.meta.r#type);"].join("\n"));
+    expect(flat(out)).toContain(["fv::core::push_int(out, props.price);", "out.push('|');", "fv::core::escape_into(out, &props.meta.tag_2);", "out.push('|');", "fv::core::escape_into(out, &props.meta.tag);", "out.push('|');", "fv::core::push_int(out, props.meta.a_b);", "out.push('|');", "fv::core::escape_into(out, &props.meta.r#type);"].join("\n"));
   });
 
   it("writes a field `$slots` of a list's items as a Rust field", () => {
     const out = render("interface S { a: string }\ninterface I { $slots: S }\ndefineProps<{ l: I[] }>();", '<p v-for="y in l">{{ y.$slots.a }}</p>');
     expect(rustOnly(out)).not.toContain("$");
-    expect(out).toMatch(like("fv::escape_into(out, &fv_y.slots.a);"));
+    expect(out).toMatch(like("fv::core::escape_into(out, &fv_y.slots.a);"));
   });
 
   it("names the locals of parameters, `const`s and `v-for` items holding `$` without the `$`", () => {
@@ -1033,6 +1034,6 @@ describe("names holding `$`", () => {
   it("names slot props holding `$` without the `$`", () => {
     const out = whole("const props = defineProps<{ s: string; v: string }>();", '<slot name="x" :$v="s" :v="v" />');
     expect(out).toContain("pub struct XSlotProps<'v> {\n    pub v_2: &'v str,\n    pub v: &'v str,\n}");
-    expect(out).toMatch(like("fv::scoped_slot_into(out, fv_slots.x, &XSlotProps { v_2: &props.s, v: &props.v }, None);"));
+    expect(out).toMatch(like("fv::render::scoped_slot_into(out, fv_slots.x, &XSlotProps { v_2: &props.s, v: &props.v }, None);"));
   });
 });

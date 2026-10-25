@@ -8,8 +8,8 @@ to Rust render functions. ferrovue's compiler parses every message with vue-i18n
 compiler at build time; this crate evaluates them on the server as vue-i18n does: named and list
 interpolation, literals, linked messages and their modifiers, plurals and fallback locales.
 
-You don't need to depend on this crate: `ferrovue` re-exports it as `ferrovue::i18n` (and
-`ferrovue::I18n`) with its `i18n` feature, which is on by default. It is a crate of its own so that
+You don't need to depend on this crate: `ferrovue` holds it whole as its module `ferrovue::i18n`
+(`ferrovue::i18n::I18n`, …) with its `i18n` feature, which is on by default. It is a crate of its own so that
 an application with no translations can turn that feature off and build none of it.
 
 It is released with `ferrovue` and always has the same version. See the

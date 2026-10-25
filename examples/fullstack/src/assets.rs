@@ -15,7 +15,7 @@ pub enum Assets {
         /// own, which the page links up front so the server's markup is styled before it hydrates.
         styles: Vec<String>,
         /// The chunks of the build, for preloading the islands a page renders.
-        chunks: ferrovue::Chunks,
+        chunks: ferrovue::page::Chunks,
     },
     /// Vite's dev server at this origin (`http://localhost:5173`), which serves the sources and
     /// hot-reloads them.
@@ -82,7 +82,7 @@ impl Assets {
         let islands_path = dist.join(".vite/ferrovue-islands.json");
         let islands = std::fs::read_to_string(&islands_path)
             .map_err(|e| format!("{}: {e}", islands_path.display()))?;
-        let chunks = ferrovue::Chunks::from_manifest(&text, &islands)
+        let chunks = ferrovue::page::Chunks::from_manifest(&text, &islands)
             .map_err(|e| format!("{}: {e}", dist.display()))?;
         Ok(Assets::Built {
             script: format!("/{}", entry.file),
@@ -96,7 +96,7 @@ impl Assets {
         if let Assets::Built { styles, .. } = self {
             for href in styles {
                 out.push_str("<link rel=\"stylesheet\" href=\"");
-                ferrovue::escape_into(out, href);
+                ferrovue::core::escape_into(out, href);
                 out.push_str("\">");
             }
         }
@@ -115,7 +115,7 @@ impl Assets {
     pub fn scripts_into(&self, out: &mut String) {
         let mut script = |src: &str| {
             out.push_str("<script type=\"module\" src=\"");
-            ferrovue::escape_into(out, src);
+            ferrovue::core::escape_into(out, src);
             out.push_str("\"></script>");
         };
         match self {

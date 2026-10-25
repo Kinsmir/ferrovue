@@ -43,7 +43,7 @@ impl std::fmt::Display for UnionChildWide {
 }
 
 impl std::str::FromStr for UnionChildWide {
-    type Err = ferrovue::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
@@ -51,20 +51,20 @@ impl std::str::FromStr for UnionChildWide {
             "center" => Ok(UnionChildWide::Center),
             "right" => Ok(UnionChildWide::Right),
             "justify" => Ok(UnionChildWide::Justify),
-            _ => Err(ferrovue::ParseUnionError::new("UnionChildWide", s, &["left", "center", "right", "justify"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("UnionChildWide", s, &["left", "center", "right", "justify"])),
         }
     }
 }
 
 impl TryFrom<&str> for UnionChildWide {
-    type Error = ferrovue::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::Union for UnionChildWide {
+impl ferrovue::props::Union for UnionChildWide {
     const ALL: &'static [Self] = &UnionChildWide::ALL;
 
     fn as_str(self) -> &'static str {
@@ -104,27 +104,27 @@ impl std::fmt::Display for UnionChildPick {
 }
 
 impl std::str::FromStr for UnionChildPick {
-    type Err = ferrovue::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "a" => Ok(UnionChildPick::A),
             "b" => Ok(UnionChildPick::B),
             "c" => Ok(UnionChildPick::C),
-            _ => Err(ferrovue::ParseUnionError::new("UnionChildPick", s, &["a", "b", "c"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("UnionChildPick", s, &["a", "b", "c"])),
         }
     }
 }
 
 impl TryFrom<&str> for UnionChildPick {
-    type Error = ferrovue::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::Union for UnionChildPick {
+impl ferrovue::props::Union for UnionChildPick {
     const ALL: &'static [Self] = &UnionChildPick::ALL;
 
     fn as_str(self) -> &'static str {
@@ -161,26 +161,26 @@ impl std::fmt::Display for UnionChildFixed {
 }
 
 impl std::str::FromStr for UnionChildFixed {
-    type Err = ferrovue::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "x" => Ok(UnionChildFixed::X),
             "y" => Ok(UnionChildFixed::Y),
-            _ => Err(ferrovue::ParseUnionError::new("UnionChildFixed", s, &["x", "y"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("UnionChildFixed", s, &["x", "y"])),
         }
     }
 }
 
 impl TryFrom<&str> for UnionChildFixed {
-    type Error = ferrovue::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::Union for UnionChildFixed {
+impl ferrovue::props::Union for UnionChildFixed {
     const ALL: &'static [Self] = &UnionChildFixed::ALL;
 
     fn as_str(self) -> &'static str {
@@ -224,7 +224,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -232,43 +232,43 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(46 + 6 + props.text.len() + 7 + 1 + 1);
     out.push_str("<span class=\"");
-    fv::class_into(out, false, &[fv::Union::as_str(props.align), props.wide.map(fv::Union::as_str).unwrap_or("")]);
+    fv::attrs::class_into(out, false, &[fv::props::Union::as_str(props.align), props.wide.map(fv::props::Union::as_str).unwrap_or("")]);
     out.push('"');
-    if fv::Union::as_str(props.pick).is_empty() {
+    if fv::props::Union::as_str(props.pick).is_empty() {
         out.push_str(" data-pick");
     } else {
         out.push_str(" data-pick=\"");
-        fv::escape_into(out, fv::Union::as_str(props.pick));
+        fv::core::escape_into(out, fv::props::Union::as_str(props.pick));
         out.push('"');
     }
     out.push('>');
-    fv::escape_into(out, &props.text);
+    fv::core::escape_into(out, &props.text);
     out.push(' ');
-    fv::escape_into(out, fv::Union::as_str(props.fixed));
+    fv::core::escape_into(out, fv::props::Union::as_str(props.fixed));
     out.push_str("</span>");
     Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

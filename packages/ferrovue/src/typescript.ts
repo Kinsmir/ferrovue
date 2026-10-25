@@ -2,9 +2,11 @@ import { parse as parseJs } from "@babel/parser";
 import { readFileSync } from "node:fs";
 import { basename } from "node:path";
 import { relativePath } from "./paths.ts";
-import { type Absence, type Component, type Field, type N, type Struct, type Ty, absence, blankComponent, BOOL, declaredLiterals, distinctFields, enumOf, fail, FLOAT, GenError, INT, joinAbsence, joinTy, literalTy, nodeName, opt, RUST_PRELUDE, rustStr, sameTy, snake, STR, tagAst, withAbsence } from "./model.ts";
+import { type Absence, type Component, type Field, type N, type Struct, type Ty, absence, blankComponent, BOOL, declaredLiterals, distinctFields, enumOf, fail, FLOAT, INT, joinAbsence, joinTy, literalTy, nodeName, opt, RUST_PRELUDE, rustStr, sameTy, snake, STR, tagAst, withAbsence } from "./model.ts";
+import { GenError } from "./errors.ts";
 import { declareAlias, enumField, namedBy } from "./enums.ts";
-import { CONFIG_FILE, ctx, INLINE_HTML, TYPES_MODULE } from "./context.ts";
+import { CONFIG_FILE, TYPES_MODULE } from "./config.ts";
+import { ctx, INLINE_HTML } from "./context.ts";
 import { childOf } from "./expr.ts";
 import { claim } from "./plugin.ts";
 import { declareConsts, enumType } from "./constants.ts";
@@ -117,7 +119,7 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
       if (comp.inlineName !== null && name === comp.inlineName) return { k: "html", inline: true };
       if (comp.trustedName !== null && name === comp.trustedName) {
         if (ctx.trustedHtml === null) {
-          fail(comp, "FV1503", `a \`TrustedHtml\` prop needs \`trustedHtml\` in ${CONFIG_FILE}: the Rust type it is, or type it \`InlineHtml\` (inline tags only, \`ferrovue::InlineHtml\`)`, t);
+          fail(comp, "FV1503", `a \`TrustedHtml\` prop needs \`trustedHtml\` in ${CONFIG_FILE}: the Rust type it is, or type it \`InlineHtml\` (inline tags only, \`ferrovue::html::InlineHtml\`)`, t);
         }
         return ctx.trustedHtml === INLINE_HTML ? { k: "html", inline: true } : { k: "html" };
       }

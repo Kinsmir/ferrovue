@@ -12,11 +12,11 @@ pub const NAME: &str = "DatePost";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "posted", with = "fv::date_prop")]
+    #[serde(rename = "posted", with = "fv::date::date_prop")]
     pub posted: chrono::DateTime<chrono::Utc>,
-    #[serde(rename = "edited", default, skip_serializing_if = "Option::is_none", with = "fv::opt_date_prop")]
+    #[serde(rename = "edited", default, skip_serializing_if = "Option::is_none", with = "fv::date::opt_date_prop")]
     pub edited: Option<chrono::DateTime<chrono::Utc>>,
-    #[serde(rename = "deleted", default, with = "fv::opt_date_prop")]
+    #[serde(rename = "deleted", default, with = "fv::date::opt_date_prop")]
     pub deleted: Option<chrono::DateTime<chrono::Utc>>,
     #[serde(rename = "title")]
     pub title: Cow<'a, str>,
@@ -50,7 +50,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -58,53 +58,53 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(246 + 16 * props.tags.len() + props.title.len() + props.tags.iter().map(|v| v.len()).sum::<usize>());
-    let fv_refusals = fv::Refusals::new(NAME, "components/DatePost.vue");
-    let s_valid = !fv::js_time_of(&props.posted).is_nan();
-    let s_year = fv::js_utc_full_year(fv::js_time_of(&props.posted));
-    let s_shown = props.edited.as_ref().map(fv::js_time_of).unwrap_or(fv::js_time_of(&props.posted));
+    let fv_refusals = fv::render::Refusals::new(NAME, "components/DatePost.vue");
+    let s_valid = !fv::date::js_time_of(&props.posted).is_nan();
+    let s_year = fv::date::js_utc_full_year(fv::date::js_time_of(&props.posted));
+    let s_shown = props.edited.as_ref().map(fv::date::js_time_of).unwrap_or(fv::date::js_time_of(&props.posted));
     out.push_str("<article><h2>");
-    fv::escape_into(out, &props.title);
+    fv::core::escape_into(out, &props.title);
     out.push_str("</h2>");
     if s_valid {
         out.push_str("<p><time datetime=\"");
-        fv::escape_into(out, &fv_refusals.keep(fv::try_to_iso_string(fv::js_time_of(&props.posted)), 14, 38));
+        fv::core::escape_into(out, &fv_refusals.keep(fv::date::try_to_iso_string(fv::date::js_time_of(&props.posted)), 14, 38));
         out.push_str("\">");
-        fv::push_number(out, fv::js_utc_date(fv::js_time_of(&props.posted)));
+        fv::core::push_number(out, fv::date::js_utc_date(fv::date::js_time_of(&props.posted)));
         out.push('/');
-        fv::push_number(out, fv::js_utc_month(fv::js_time_of(&props.posted)) + 1.0);
+        fv::core::push_number(out, fv::date::js_utc_month(fv::date::js_time_of(&props.posted)) + 1.0);
         out.push('/');
-        fv::push_number(out, s_year);
+        fv::core::push_number(out, s_year);
         out.push_str("</time></p>");
     } else {
         out.push_str("<p>invalid: ");
-        fv::push_number(out, fv::js_time_of(&props.posted));
+        fv::core::push_number(out, fv::date::js_time_of(&props.posted));
         out.push('|');
-        fv::push_number(out, s_year);
+        fv::core::push_number(out, s_year);
         out.push('|');
-        fv::push_number(out, fv::js_time_of(&props.posted));
+        fv::core::push_number(out, fv::date::js_time_of(&props.posted));
         out.push('|');
-        fv::push_number(out, fv::js_utc_day(fv::js_time_of(&props.posted)));
+        fv::core::push_number(out, fv::date::js_utc_day(fv::date::js_time_of(&props.posted)));
         out.push_str("</p>");
     }
-    if let Some(fv_edited) = props.edited.as_ref().map(fv::js_time_of) {
+    if let Some(fv_edited) = props.edited.as_ref().map(fv::date::js_time_of) {
         out.push_str("<p>edited ");
-        fv::push_number(out, fv_edited);
+        fv::core::push_number(out, fv_edited);
         out.push_str(" on day ");
-        fv::push_number(out, fv::js_utc_day(fv_edited));
+        fv::core::push_number(out, fv::date::js_utc_day(fv_edited));
         out.push_str("</p>");
     } else {
         out.push_str("<p>never edited</p>");
     }
-    if let Some(fv_deleted) = props.deleted.as_ref().map(fv::js_time_of) {
+    if let Some(fv_deleted) = props.deleted.as_ref().map(fv::date::js_time_of) {
         out.push_str("<p>deleted at ");
-        fv::push_number(out, fv::js_utc_hours(fv_deleted));
+        fv::core::push_number(out, fv::date::js_utc_hours(fv_deleted));
         out.push(':');
-        fv::push_number(out, fv::js_utc_minutes(fv_deleted));
+        fv::core::push_number(out, fv::date::js_utc_minutes(fv_deleted));
         out.push(':');
-        fv::push_number(out, fv::js_utc_seconds(fv_deleted));
+        fv::core::push_number(out, fv::date::js_utc_seconds(fv_deleted));
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");
@@ -114,33 +114,33 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         let fv_tag: &str = fv_tag_ref;
         let fv_i = fv_i as i64;
         out.push_str("<li>");
-        fv::escape_into(out, fv_tag);
+        fv::core::escape_into(out, fv_tag);
         out.push(' ');
-        fv::push_number(out, fv::js_utc_milliseconds(fv::js_time_of(&props.posted)) + fv_i as f64);
+        fv::core::push_number(out, fv::date::js_utc_milliseconds(fv::date::js_time_of(&props.posted)) + fv_i as f64);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul>");
-    fv_refusals.check(super::date_stamp::try_render(out, &super::date_stamp::Props { at: fv_refusals.date(fv::js_time_of(&props.posted), 22, 21), edited: props.edited.as_ref().map(fv::js_time_of).map(|fv_t| fv_refusals.date(fv_t, 22, 38)), deleted: props.deleted.as_ref().map(fv::js_time_of).map(|fv_t| fv_refusals.date(fv_t, 22, 56)), shown: fv_refusals.date(s_shown, 22, 73) }))?;
+    fv_refusals.check(super::date_stamp::try_render(out, &super::date_stamp::Props { at: fv_refusals.date(fv::date::js_time_of(&props.posted), 22, 21), edited: props.edited.as_ref().map(fv::date::js_time_of).map(|fv_t| fv_refusals.date(fv_t, 22, 38)), deleted: props.deleted.as_ref().map(fv::date::js_time_of).map(|fv_t| fv_refusals.date(fv_t, 22, 56)), shown: fv_refusals.date(s_shown, 22, 73) }))?;
     out.push_str("</article>");
     fv_refusals.check(Ok(()))
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

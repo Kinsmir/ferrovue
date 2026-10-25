@@ -1,25 +1,38 @@
+#[cfg(feature = "stream")]
 use std::convert::Infallible;
+#[cfg(feature = "stream")]
 use std::future::Future;
+#[cfg(feature = "stream")]
 use std::ops::Range;
+#[cfg(feature = "stream")]
 use std::pin::Pin;
+#[cfg(feature = "stream")]
 use std::task::{Context, Poll};
 
+#[cfg(feature = "stream")]
 use bytes::Bytes;
+#[cfg(feature = "stream")]
 use futures_core::Stream;
+#[cfg(feature = "maud")]
+use serde::Serialize;
 
-#[cfg(any(feature = "axum", feature = "actix-web"))]
-use crate::Html;
-use crate::slots::HOLE;
+#[cfg(any(feature = "axum", feature = "actix-web", feature = "maud"))]
+use crate::html::Html;
+#[cfg(feature = "maud")]
+use crate::html::Renderer;
+#[cfg(feature = "stream")]
+use crate::page::HOLE;
 
 #[cfg(any(feature = "axum", feature = "actix-web"))]
 const TEXT_HTML: &str = "text/html; charset=utf-8";
 
+#[cfg(feature = "stream")]
 enum Hole {
     Loading(Pin<Box<dyn Future<Output = String> + Send>>),
     Ready(String),
 }
 
-/// A page rendered with [`hole`](crate::hole)s, sent in pieces: the markup up to the first hole at
+/// A page rendered with [`hole`](crate::page::hole)s, sent in pieces: the markup up to the first hole at
 /// once, then each hole's content as soon as it and every hole before it are ready, each followed
 /// by the markup up to the next hole. [`guide::streaming`](crate::guide::streaming) explains holes.
 ///
@@ -33,7 +46,7 @@ enum Hole {
 /// ```
 /// use std::time::Duration;
 ///
-/// use ferrovue::{hole, slot_into, HtmlStream};
+/// use ferrovue::{page::hole, render::slot_into, web::HtmlStream};
 ///
 /// // A page rendered with a hole where the reviews go.
 /// let mut page = String::from("<h1>Dune</h1><section>");
@@ -55,6 +68,7 @@ enum Hole {
 /// assert_eq!(sent, "<h1>Dune</h1><section><!--[--><p>A classic.</p><!--]--></section>");
 /// # });
 /// ```
+#[cfg(feature = "stream")]
 #[cfg_attr(docsrs, doc(cfg(feature = "stream")))]
 pub struct HtmlStream {
     page: Bytes,
@@ -63,6 +77,7 @@ pub struct HtmlStream {
     next: usize,
 }
 
+#[cfg(feature = "stream")]
 impl HtmlStream {
     /// A page to send: a render with holes, or without, as one piece.
     #[must_use]
@@ -87,7 +102,7 @@ impl HtmlStream {
     /// # Example
     ///
     /// ```
-    /// use ferrovue::{hole, slot_into, HtmlStream};
+    /// use ferrovue::{page::hole, render::slot_into, web::HtmlStream};
     ///
     /// let mut page = String::from("<main>");
     /// slot_into(&mut page, Some(hole()), None);
@@ -114,7 +129,7 @@ impl HtmlStream {
     /// # Example
     ///
     /// ```
-    /// use ferrovue::{hole, slot_into, HtmlStream};
+    /// use ferrovue::{page::hole, render::slot_into, web::HtmlStream};
     ///
     /// let mut page = String::from("<ul>");
     /// for _ in 0..3 {
@@ -145,6 +160,7 @@ impl HtmlStream {
     }
 }
 
+#[cfg(feature = "stream")]
 impl std::fmt::Debug for HtmlStream {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let loading = self
@@ -161,6 +177,7 @@ impl std::fmt::Debug for HtmlStream {
     }
 }
 
+#[cfg(feature = "stream")]
 impl Stream for HtmlStream {
     type Item = Result<Bytes, Infallible>;
 
@@ -211,14 +228,14 @@ impl Stream for HtmlStream {
 /// #     }
 /// #     pub fn render(out: &mut String, props: &Props<'_>) {
 /// #         out.push_str("<p>Hello, ");
-/// #         ferrovue::escape_into(out, &props.name);
+/// #         ferrovue::core::escape_into(out, &props.name);
 /// #         out.push_str("!</p>");
 /// #     }
-/// #     pub fn html<'p, 'a>(props: &'p Props<'a>) -> ferrovue::Html<'p, Props<'a>> {
-/// #         ferrovue::Html::markup(props, render)
+/// #     pub fn html<'p, 'a>(props: &'p Props<'a>) -> ferrovue::html::Html<'p, Props<'a>> {
+/// #         ferrovue::html::Html::markup(props, render)
 /// #     }
-/// #     pub fn into_html<'a>(props: Props<'a>) -> ferrovue::Html<'a, Props<'a>> {
-/// #         ferrovue::Html::markup_owned(props, render)
+/// #     pub fn into_html<'a>(props: Props<'a>) -> ferrovue::html::Html<'a, Props<'a>> {
+/// #         ferrovue::html::Html::markup_owned(props, render)
 /// #     }
 /// # }
 /// # #[cfg(feature = "axum")]
@@ -255,7 +272,7 @@ impl Stream for HtmlStream {
 /// ```
 #[cfg(feature = "axum")]
 #[cfg_attr(docsrs, doc(cfg(feature = "axum")))]
-impl<P: serde::Serialize, F: crate::Renderer<P>> axum_core::response::IntoResponse
+impl<P: serde::Serialize, F: crate::html::Renderer<P>> axum_core::response::IntoResponse
     for Html<'_, P, F>
 {
     fn into_response(self) -> axum_core::response::Response {
@@ -273,7 +290,7 @@ impl<P: serde::Serialize, F: crate::Renderer<P>> axum_core::response::IntoRespon
 /// # fn main() {
 /// use axum::http::StatusCode;
 /// use axum::response::{IntoResponse, Response};
-/// use ferrovue::HtmlStream;
+/// use ferrovue::web::HtmlStream;
 ///
 /// async fn not_found() -> Response {
 ///     let page = String::from("<!doctype html><h1>Not found</h1>");
@@ -324,14 +341,14 @@ fn html_response(body: axum_core::body::Body) -> axum_core::response::Response {
 /// #     }
 /// #     pub fn render(out: &mut String, props: &Props<'_>) {
 /// #         out.push_str("<p>Hello, ");
-/// #         ferrovue::escape_into(out, &props.name);
+/// #         ferrovue::core::escape_into(out, &props.name);
 /// #         out.push_str("!</p>");
 /// #     }
-/// #     pub fn html<'p, 'a>(props: &'p Props<'a>) -> ferrovue::Html<'p, Props<'a>> {
-/// #         ferrovue::Html::markup(props, render)
+/// #     pub fn html<'p, 'a>(props: &'p Props<'a>) -> ferrovue::html::Html<'p, Props<'a>> {
+/// #         ferrovue::html::Html::markup(props, render)
 /// #     }
-/// #     pub fn into_html<'a>(props: Props<'a>) -> ferrovue::Html<'a, Props<'a>> {
-/// #         ferrovue::Html::markup_owned(props, render)
+/// #     pub fn into_html<'a>(props: Props<'a>) -> ferrovue::html::Html<'a, Props<'a>> {
+/// #         ferrovue::html::Html::markup_owned(props, render)
 /// #     }
 /// # }
 /// # #[cfg(feature = "actix-web")]
@@ -365,7 +382,7 @@ fn html_response(body: axum_core::body::Body) -> axum_core::response::Response {
 /// ```
 #[cfg(feature = "actix-web")]
 #[cfg_attr(docsrs, doc(cfg(feature = "actix-web")))]
-impl<P: serde::Serialize, F: crate::Renderer<P>> actix_web::Responder for Html<'_, P, F> {
+impl<P: serde::Serialize, F: crate::html::Renderer<P>> actix_web::Responder for Html<'_, P, F> {
     type Body = actix_web::body::BoxBody;
 
     fn respond_to(self, _: &actix_web::HttpRequest) -> actix_web::HttpResponse {
@@ -375,7 +392,9 @@ impl<P: serde::Serialize, F: crate::Renderer<P>> actix_web::Responder for Html<'
 
 #[cfg(feature = "actix-web")]
 #[cfg_attr(docsrs, doc(cfg(feature = "actix-web")))]
-impl<P: serde::Serialize, F: crate::Renderer<P>> From<Html<'_, P, F>> for actix_web::HttpResponse {
+impl<P: serde::Serialize, F: crate::html::Renderer<P>> From<Html<'_, P, F>>
+    for actix_web::HttpResponse
+{
     fn from(html: Html<'_, P, F>) -> Self {
         actix_web::HttpResponse::Ok()
             .content_type(TEXT_HTML)
@@ -393,7 +412,7 @@ impl<P: serde::Serialize, F: crate::Renderer<P>> From<Html<'_, P, F>> for actix_
 /// # fn main() {
 /// use actix_web::Responder;
 /// use actix_web::http::StatusCode;
-/// use ferrovue::HtmlStream;
+/// use ferrovue::web::HtmlStream;
 ///
 /// async fn not_found() -> impl Responder {
 ///     let page = String::from("<!doctype html><h1>Not found</h1>");
@@ -426,13 +445,50 @@ impl From<HtmlStream> for actix_web::HttpResponse {
     }
 }
 
-#[cfg(test)]
+/// A component spliced into a `maud::html!` template, written straight into maud's buffer.
+///
+/// # Example
+///
+/// ```
+/// # mod hello {
+/// #     #[derive(serde::Serialize)]
+/// #     pub struct Props<'a> { pub name: &'a str }
+/// #     pub fn render(out: &mut String, props: &Props<'_>) {
+/// #         out.push_str("<p>Hello, ");
+/// #         ferrovue::core::escape_into(out, props.name);
+/// #         out.push_str("!</p>");
+/// #     }
+/// #     pub fn html<'p, 'a>(props: &'p Props<'a>) -> ferrovue::html::Html<'p, Props<'a>> {
+/// #         ferrovue::html::Html::markup(props, render)
+/// #     }
+/// # }
+/// # #[cfg(feature = "maud")]
+/// # fn main() {
+/// let props = hello::Props { name: "Ada" };
+/// let page = maud::html! {
+///     main { (hello::html(&props)) }
+/// };
+/// assert_eq!(page.into_string(), "<main><p>Hello, Ada!</p></main>");
+/// # }
+/// # #[cfg(not(feature = "maud"))]
+/// # fn main() {}
+/// ```
+#[cfg(feature = "maud")]
+#[cfg_attr(docsrs, doc(cfg(feature = "maud")))]
+impl<P: Serialize, F: Renderer<P>> maud::Render for Html<'_, P, F> {
+    fn render_to(&self, buf: &mut String) {
+        Html::render_to(self, buf);
+    }
+}
+
+#[cfg(all(test, feature = "stream"))]
 mod tests {
     use std::future::poll_fn;
     use std::time::Duration;
 
     use super::*;
-    use crate::{hole, slot_into, split_holes};
+    use crate::page::{hole, split_holes};
+    use crate::render::slot_into;
 
     fn two_holes() -> String {
         let mut page = String::from("<h1>");
@@ -507,7 +563,7 @@ mod tests {
 
     #[tokio::test]
     async fn a_value_in_the_head_cannot_move_a_hole() {
-        use crate::{Head, HeadValue};
+        use crate::head::{Head, HeadValue};
 
         for hostile in [
             String::from("<fv-hole><script>alert(1)</script>"),
@@ -589,7 +645,7 @@ mod tests {
         }
         fn render(out: &mut String, props: &Props<'_>) {
             out.push_str("<b>");
-            crate::escape_into(out, &props.name);
+            ferrovue_core::escape_into(out, &props.name);
             out.push_str("</b>");
         }
         async fn greet(Path(name): Path<String>) -> impl IntoResponse {
@@ -621,7 +677,7 @@ mod tests {
         }
         fn render(out: &mut String, props: &Props<'_>) {
             out.push_str("<b>");
-            crate::escape_into(out, props.name);
+            ferrovue_core::escape_into(out, props.name);
             out.push_str("</b>");
         }
         let request = actix_web::test::TestRequest::default().to_http_request();

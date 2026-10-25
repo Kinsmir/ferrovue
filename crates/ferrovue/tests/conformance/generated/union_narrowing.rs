@@ -40,27 +40,27 @@ impl std::fmt::Display for Tone {
 }
 
 impl std::str::FromStr for Tone {
-    type Err = ferrovue::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "calm" => Ok(Tone::Calm),
             "<loud>" => Ok(Tone::Loud),
             "a&b" => Ok(Tone::AB),
-            _ => Err(ferrovue::ParseUnionError::new("Tone", s, &["calm", "<loud>", "a&b"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("Tone", s, &["calm", "<loud>", "a&b"])),
         }
     }
 }
 
 impl TryFrom<&str> for Tone {
-    type Error = ferrovue::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::Union for Tone {
+impl ferrovue::props::Union for Tone {
     const ALL: &'static [Self] = &Tone::ALL;
 
     fn as_str(self) -> &'static str {
@@ -103,7 +103,7 @@ impl std::fmt::Display for UnionNarrowingTone {
 }
 
 impl std::str::FromStr for UnionNarrowingTone {
-    type Err = ferrovue::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
@@ -111,20 +111,20 @@ impl std::str::FromStr for UnionNarrowingTone {
             "<loud>" => Ok(UnionNarrowingTone::Loud),
             "a&b" => Ok(UnionNarrowingTone::AB),
             "" => Ok(UnionNarrowingTone::Empty),
-            _ => Err(ferrovue::ParseUnionError::new("UnionNarrowingTone", s, &["calm", "<loud>", "a&b", ""])),
+            _ => Err(ferrovue::props::ParseUnionError::new("UnionNarrowingTone", s, &["calm", "<loud>", "a&b", ""])),
         }
     }
 }
 
 impl TryFrom<&str> for UnionNarrowingTone {
-    type Error = ferrovue::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::Union for UnionNarrowingTone {
+impl ferrovue::props::Union for UnionNarrowingTone {
     const ALL: &'static [Self] = &UnionNarrowingTone::ALL;
 
     fn as_str(self) -> &'static str {
@@ -170,7 +170,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -178,15 +178,15 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(50 + 6 + 6 + props.label.len());
     let s_tone = props.start.map(|v| match v { Tone::Calm => UnionNarrowingTone::Calm, Tone::Loud => UnionNarrowingTone::Loud, Tone::AB => UnionNarrowingTone::AB }).unwrap_or(UnionNarrowingTone::Empty);
-    let s_chosen = props.pick.map(fv::Union::as_str).unwrap_or("");
-    let s_shown = if s_tone == UnionNarrowingTone::Empty { None } else { Some(fv::Union::as_str(s_tone)) };
+    let s_chosen = props.pick.map(fv::props::Union::as_str).unwrap_or("");
+    let s_shown = if s_tone == UnionNarrowingTone::Empty { None } else { Some(fv::props::Union::as_str(s_tone)) };
     let s_on = !props.label.is_empty();
     out.push_str("<section>");
-    super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: Some(fv::Union::as_str(s_tone)).filter(|v| !v.is_empty()).map(|v| match v { "calm" => super::narrowed_tone::Tone::Calm, "<loud>" => super::narrowed_tone::Tone::Loud, _ => super::narrowed_tone::Tone::AB }), label: std::borrow::Cow::Borrowed(&*props.label) })?;
+    super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: Some(fv::props::Union::as_str(s_tone)).filter(|v| !v.is_empty()).map(|v| match v { "calm" => super::narrowed_tone::Tone::Calm, "<loud>" => super::narrowed_tone::Tone::Loud, _ => super::narrowed_tone::Tone::AB }), label: std::borrow::Cow::Borrowed(&*props.label) })?;
     super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: if s_tone == UnionNarrowingTone::Empty { None } else { Some(match s_tone { UnionNarrowingTone::Calm => super::narrowed_tone::Tone::Calm, UnionNarrowingTone::Loud => super::narrowed_tone::Tone::Loud, UnionNarrowingTone::AB | UnionNarrowingTone::Empty => super::narrowed_tone::Tone::AB }) }, label: std::borrow::Cow::Borrowed(&*props.label) })?;
     super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: if s_tone != UnionNarrowingTone::Empty { Some(match s_tone { UnionNarrowingTone::Calm => super::narrowed_tone::Tone::Calm, UnionNarrowingTone::Loud => super::narrowed_tone::Tone::Loud, UnionNarrowingTone::AB | UnionNarrowingTone::Empty => super::narrowed_tone::Tone::AB }) } else { None }, label: std::borrow::Cow::Borrowed(&*props.label) })?;
     super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: (if !s_chosen.is_empty() { Some(s_chosen) } else { None }).map(|v| match v { "calm" => super::narrowed_tone::Tone::Calm, "<loud>" => super::narrowed_tone::Tone::Loud, _ => super::narrowed_tone::Tone::AB }), label: std::borrow::Cow::Borrowed(&*props.label) })?;
@@ -195,7 +195,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: Some(match s_chosen { "calm" => super::narrowed_tone::Tone::Calm, "<loud>" => super::narrowed_tone::Tone::Loud, _ => super::narrowed_tone::Tone::AB }), label: std::borrow::Cow::Borrowed(&*props.label) })?;
     } else {
         out.push_str("<i>");
-        fv::escape_into(out, &props.label);
+        fv::core::escape_into(out, &props.label);
         out.push_str(" none</i>");
     }
     if s_tone == UnionNarrowingTone::Empty {
@@ -217,21 +217,21 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

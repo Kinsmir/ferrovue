@@ -1,9 +1,11 @@
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { relativePath } from "./paths.ts";
-import { type Config, CONFIG_FILE, ctx, JS_DATE, loadConfig, tyOfName } from "./context.ts";
+import { type Config, CONFIG_FILE, loadConfig } from "./config.ts";
+import { ctx, JS_DATE, tyOfName } from "./context.ts";
 import { refuseUnusedUnions } from "./enums.ts";
-import { type Component, failIn, GenError, GenErrors, snake } from "./model.ts";
+import { type Component, failIn, snake } from "./model.ts";
+import { GenError, GenErrors } from "./errors.ts";
 import { isRefusal } from "./diagnostics.ts";
 import { readComponent, refuseOptionsApi } from "./component.ts";
 import { listDir } from "./files.ts";
@@ -14,7 +16,17 @@ import { componentSource, GENERATED, isIsland, modSource } from "./rust.ts";
 import { requireWhole } from "./typescript.ts";
 import { renderParams } from "./plugin.ts";
 import { PLUGINS } from "./plugins/index.ts";
-import type { Alias } from "./resolve.ts";
+
+/** An alias a bundler resolves imports through, as Vite's `resolve.alias` lists it: a string
+ * matches the specifier itself and any path below it (`@` matches `@/lib/format`), a regular
+ * expression is replaced in the specifier. `replacement` is an absolute path, or one relative to
+ * the importing file. */
+export interface Alias {
+  /** The specifier, or the start of one before a `/`, or a pattern replaced in it. */
+  find: string | RegExp;
+  /** What it is replaced with: an absolute path, or one relative to the importing file. */
+  replacement: string;
+}
 
 /** How a run resolves the imports of components beyond relative paths and the `paths` of the
  * project's tsconfig files. */
@@ -331,11 +343,6 @@ export function write(root: string, config: Config = loadConfig(root), options: 
   const islands = Object.fromEntries([...ctx.components.values()].filter(isIsland).map((c) => [c.name, c.file]));
   return { files: [...files.keys()], changed, removed, islands };
 }
-
-export { CONFIG_FILE, loadConfig, TYPES_MODULE, type Config, type HelperSpec, type RoutesSource, type ScopeIdMode, type TwinSpec, type TypeName } from "./context.ts";
-export { GenError, GenErrors, type Location as SourceLocation } from "./model.ts";
-export type { Alias } from "./resolve.ts";
-export { docsUrl, ERRORS, type Code as ErrorCode, type ErrorDoc } from "./errors.ts";
 
 export const VERSION: string = (() => {
   try {

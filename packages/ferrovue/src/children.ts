@@ -239,9 +239,9 @@ function childAttrsArg(s: Scope, child: Component, parts: N[], merges: boolean, 
     if (sources.length) fail(s.comp, "FV0508", `${child.name} is passed attributes it does not take`, n);
     return ids;
   }
-  if (!sources.length) return ids === null ? "&fv::Attrs::NONE" : `&fv::Attrs::scoped(${ids})`;
-  if (sources.length === 1 && !merges) return `&fv::Attrs::new(${sources[0]}, ${ids ?? '""'})`;
-  return `&fv::Attrs::merged(&[${sources.join(", ")}], ${ids ?? '""'})`;
+  if (!sources.length) return ids === null ? "&fv::attrs::Attrs::NONE" : `&fv::attrs::Attrs::scoped(${ids})`;
+  if (sources.length === 1 && !merges) return `&fv::attrs::Attrs::new(${sources[0]}, ${ids ?? '""'})`;
+  return `&fv::attrs::Attrs::merged(&[${sources.join(", ")}], ${ids ?? '""'})`;
 }
 
 export function fieldInit(name: string, value: string): string {
@@ -259,7 +259,7 @@ export function extraParams(c: Component, unread: (name: string) => boolean = ()
 export function callChild(s: Scope, e: Emitter, child: Component, propsCode: string, slots: N, attrs: string | null, later = false): void {
   const m = `super::${child.module}`;
   const scoped = child.inherits || takesAttrs(child);
-  const trailing = paramsOf(child).map((p) => `, ${p.name}`).join("") + (scoped ? `, ${attrs ?? (takesAttrs(child) ? "&fv::Attrs::NONE" : '""')}` : "");
+  const trailing = paramsOf(child).map((p) => `, ${p.name}`).join("") + (scoped ? `, ${attrs ?? (takesAttrs(child) ? "&fv::attrs::Attrs::NONE" : '""')}` : "");
   const render = scoped ? "try_render_scoped" : "try_render";
   const around = later ? ctx.plugins.flatMap((p) => p.loadedLater?.(child) ?? []) : [];
   if (around.length) {
@@ -351,17 +351,17 @@ export function callWith(s: Scope, e: Emitter, child: Component, m: string, head
       for (const p of context) unread(opened, p.name);
       e.close("),");
     } else if (sid !== null) {
-      e.open(`${field}: Some(fv::Slot::slotted(&|out: &mut String${sidParam}| -> bool`);
+      e.open(`${field}: Some(fv::render::Slot::slotted(&|out: &mut String${sidParam}| -> bool`);
       const opened = e.lines.length - 1;
       content(inner);
       unread(opened, sid);
       e.close(")),");
     } else if (staticallyFilled(body)) {
-      e.open(`${field}: Some(fv::Slot::new(&|out: &mut String|`);
+      e.open(`${field}: Some(fv::render::Slot::new(&|out: &mut String|`);
       statements({ ...inner, fill: false }, e, body);
       e.close(")),");
     } else {
-      e.open(`${field}: Some(fv::Slot::markup(&|out: &mut String| -> bool`);
+      e.open(`${field}: Some(fv::render::Slot::markup(&|out: &mut String| -> bool`);
       e.stmt("let mut filled = false;");
       statements({ ...inner, fill: true }, e, body);
       e.stmt("filled");

@@ -98,21 +98,21 @@ function getter(s: Scope, n: N): N {
 function scalar(s: Scope, v: Val, n: N, where: string): string {
   switch (v.ty.k) {
     case "str":
-      return `fv::HeadValue::str(${strArg(v.code)})`;
+      return `fv::head::HeadValue::str(${strArg(v.code)})`;
     case "int":
-      return `fv::HeadValue::int(${bare(v.code)})`;
+      return `fv::head::HeadValue::int(${bare(v.code)})`;
     case "float":
-      return `fv::HeadValue::float(${bare(v.code)})`;
+      return `fv::head::HeadValue::float(${bare(v.code)})`;
     case "bool":
-      return `fv::HeadValue::bool(${bare(v.code)})`;
+      return `fv::head::HeadValue::bool(${bare(v.code)})`;
     case "undef":
-      return "fv::HeadValue::Undefined";
+      return "fv::head::HeadValue::Undefined";
     case "null":
-      return "fv::HeadValue::Null";
+      return "fv::head::HeadValue::Null";
     case "opt": {
       const none = absence(v.ty);
       if (none === "either") fail(s.comp, "FV1706", `${where} may be \`undefined\` or \`null\`, which unhead treats apart and its Rust type cannot tell apart`, n);
-      return `if let Some(v) = ${scrutinee(v.code)} { ${scalar(s, { code: "v", ty: v.ty.of }, n, where)} } else { fv::HeadValue::${none === "null" ? "Null" : "Undefined"} }`;
+      return `if let Some(v) = ${scrutinee(v.code)} { ${scalar(s, { code: "v", ty: v.ty.of }, n, where)} } else { fv::head::HeadValue::${none === "null" ? "Null" : "Undefined"} }`;
     }
     default:
       return fail(s.comp, "FV1706", `${where} is ${describeTy(v.ty)}: a head value here is a string, a number or a boolean`, n);
@@ -125,13 +125,13 @@ function value(s: Scope, raw: N, where: string, lists: boolean): string {
   if (v.ty.k === "list" && lists) {
     const of = v.ty.of;
     const each = scalar(s, { code: of.k === "str" ? "&*v" : "v", ty: of }, n, `an item of ${where}`);
-    return `fv::HeadValue::Array(${items(v)}.map(|v| ${each}).collect())`;
+    return `fv::head::HeadValue::Array(${items(v)}.map(|v| ${each}).collect())`;
   }
   return scalar(s, v, n, where);
 }
 
 function objectOf(entries: string[]): string {
-  return entries.length ? `fv::HeadValue::object([${entries.join(", ")}])` : "fv::HeadValue::Object(Vec::new())";
+  return entries.length ? `fv::head::HeadValue::object([${entries.join(", ")}])` : "fv::head::HeadValue::Object(Vec::new())";
 }
 
 function object(s: Scope, raw: N, where: string, field: (key: string, value: N, p: N) => string): string {
@@ -153,13 +153,13 @@ function floatLiteral(x: number): string {
 function literal(s: Scope, n: N, allowed: Set<string> | "number", key: string): string {
   const v = getter(s, n);
   if (allowed === "number") {
-    if (v?.type === "NumericLiteral") return `fv::HeadValue::Number(${floatLiteral(v.value)})`;
-    if (v?.type === "UnaryExpression" && v.operator === "-" && v.argument.type === "NumericLiteral") return `fv::HeadValue::Number(-${floatLiteral(v.argument.value)})`;
-    if (v?.type === "StringLiteral" && PRIORITIES.has(v.value)) return `fv::HeadValue::str(${rustStr(v.value)})`;
+    if (v?.type === "NumericLiteral") return `fv::head::HeadValue::Number(${floatLiteral(v.value)})`;
+    if (v?.type === "UnaryExpression" && v.operator === "-" && v.argument.type === "NumericLiteral") return `fv::head::HeadValue::Number(-${floatLiteral(v.argument.value)})`;
+    if (v?.type === "StringLiteral" && PRIORITIES.has(v.value)) return `fv::head::HeadValue::str(${rustStr(v.value)})`;
     return fail(s.comp, "FV1707", `\`${key}\` is a number literal or one of ${[...PRIORITIES].map((p) => `"${p}"`).join(", ")}`, v ?? n);
   }
   if (v?.type !== "StringLiteral" || !allowed.has(v.value)) fail(s.comp, "FV1707", `\`${key}\` is one of ${[...allowed].map((p) => `"${p}"`).join(", ")}, written as a literal`, v ?? n);
-  return `fv::HeadValue::str(${rustStr(v.value)})`;
+  return `fv::head::HeadValue::str(${rustStr(v.value)})`;
 }
 
 function json(s: Scope, raw: N, where: string): string {
@@ -170,7 +170,7 @@ function json(s: Scope, raw: N, where: string): string {
       if (!el || el.type === "SpreadElement") fail(s.comp, "FV1704", "an array in a head input holds plain values: no hole or spread", n);
       return json(s, el, where);
     });
-    return `fv::HeadValue::array([${parts.join(", ")}])`;
+    return `fv::head::HeadValue::array([${parts.join(", ")}])`;
   }
   return value(s, n, where, true);
 }
@@ -203,11 +203,11 @@ function classOrStyle(s: Scope, key: string, raw: N): string {
       if (!el || el.type === "SpreadElement") fail(s.comp, "FV1704", "an array in a head input holds plain values: no hole or spread", n);
       return strict(s, el, `an item of ${where}`);
     });
-    return `fv::HeadValue::array([${parts.join(", ")}])`;
+    return `fv::head::HeadValue::array([${parts.join(", ")}])`;
   }
   const v = expr(s, n);
   if (absence(v.ty) === "null" || absence(v.ty) === "either") fail(s.comp, "FV1710", `${where} may be \`null\`, on which unhead's renderer throws; write \`?? undefined\``, n);
-  if (v.ty.k === "list" && (v.ty.of.k === "str")) return `fv::HeadValue::Array(${items(v)}.map(|v| fv::HeadValue::str(&*v)).collect())`;
+  if (v.ty.k === "list" && (v.ty.of.k === "str")) return `fv::head::HeadValue::Array(${items(v)}.map(|v| fv::head::HeadValue::str(&*v)).collect())`;
   if (v.ty.k !== "str" && !(v.ty.k === "opt" && v.ty.of.k === "str") && v.ty.k !== "undef") fail(s.comp, "FV1706", `${where} is a string, a list of strings or an object literal`, n);
   return scalar(s, v, n, where);
 }
@@ -227,7 +227,7 @@ function tagList(s: Scope, tag: string, raw: N): string {
       if (!el || el.type === "SpreadElement") fail(s.comp, "FV1704", "an array in a head input holds plain values: no hole or spread", n);
       return tagObject(s, tag, el);
     });
-    return `fv::HeadValue::array([${parts.join(", ")}])`;
+    return `fv::head::HeadValue::array([${parts.join(", ")}])`;
   }
   const mapped = n?.type === "CallExpression" && n.callee.type === "MemberExpression" && !n.callee.computed && n.callee.property.name === "map" && n.arguments.length === 1 ? n : null;
   if (mapped) {
@@ -235,7 +235,7 @@ function tagList(s: Scope, tag: string, raw: N): string {
     if (list.ty.k !== "list") fail(s.comp, "FV1706", `\`${tag}\` maps a list`, mapped.callee.object);
     const fn = expressionBodied(s.comp, mapped.arguments[0]);
     const { closure, enumerate } = arrow(s, fn, list, list.ty.of, false, "map", (inner) => tagObject(inner, tag, fn.body));
-    return `fv::HeadValue::Array(${items(list)}${enumerate ? ".enumerate()" : ""}.map(${closure}).collect())`;
+    return `fv::head::HeadValue::Array(${items(list)}${enumerate ? ".enumerate()" : ""}.map(${closure}).collect())`;
   }
   return fail(s.comp, "FV1706", `\`${tag}\` is an array of object literals, an object literal, or a list's \`.map(x => ({ … }))\``, n ?? raw);
 }
@@ -341,15 +341,15 @@ export const head: Plugin<Set<Component>, HeadScope> = {
   params: [
     {
       name: "fv_head",
-      ty: "&fv::Head",
-      pageTy: "&'p fv::Head",
+      ty: "&fv::head::Head",
+      pageTy: "&'p fv::head::Head",
       reads: (c) => runOf(head).has(c),
-      test: { lines: ["let head = ferrovue::Head::without_defaults();"], arg: "&head", after: ["head_into(&mut out, &head);"] },
+      test: { lines: ["let head = ferrovue::head::Head::without_defaults();"], arg: "&head", after: ["head_into(&mut out, &head);"] },
       testSupport: `/// The head, after a marker, as the conformance suite writes unhead's: \`{"headTags":"…",…}\`.
 #[cfg(test)]
-fn head_into(out: &mut String, head: &ferrovue::Head) {
+fn head_into(out: &mut String, head: &ferrovue::head::Head) {
     let html = head.render();
-    if html == ferrovue::HeadHtml::default() {
+    if html == ferrovue::head::HeadHtml::default() {
         return;
     }
     let fields = [

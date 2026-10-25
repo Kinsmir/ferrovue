@@ -17,7 +17,7 @@ fn main() {
         &mut html,
         &layout::Props::new("ada"),
         layout::Slots {
-            router_view: ferrovue::Slot::new(&page),
+            router_view: ferrovue::render::Slot::new(&page),
         },
         &route,
     );

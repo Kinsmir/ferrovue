@@ -41,8 +41,8 @@ pub struct Review<'a> {
     pub stars: i64,
     #[serde(rename = "text")]
     pub text: Cow<'a, str>,
-    #[serde(rename = "posted", default, skip_serializing_if = "Option::is_none", with = "fv::opt_date_prop")]
-    pub posted: Option<ferrovue::JsDate>,
+    #[serde(rename = "posted", default, skip_serializing_if = "Option::is_none", with = "fv::date::opt_date_prop")]
+    pub posted: Option<ferrovue::date::JsDate>,
 }
 
 impl<'a> Review<'a> {
@@ -52,7 +52,7 @@ impl<'a> Review<'a> {
     }
 
     /// Set `posted`, which is absent otherwise.
-    pub fn posted(mut self, posted: ferrovue::JsDate) -> Self {
+    pub fn posted(mut self, posted: ferrovue::date::JsDate) -> Self {
         self.posted = Some(posted);
         self
     }
@@ -67,8 +67,8 @@ pub struct Stock<'a> {
     pub copies: i64,
     #[serde(rename = "warehouse")]
     pub warehouse: Cow<'a, str>,
-    #[serde(rename = "counted", default, skip_serializing_if = "Option::is_none", with = "fv::opt_date_prop")]
-    pub counted: Option<ferrovue::JsDate>,
+    #[serde(rename = "counted", default, skip_serializing_if = "Option::is_none", with = "fv::date::opt_date_prop")]
+    pub counted: Option<ferrovue::date::JsDate>,
 }
 
 impl<'a> Stock<'a> {
@@ -78,7 +78,7 @@ impl<'a> Stock<'a> {
     }
 
     /// Set `counted`, which is absent otherwise.
-    pub fn counted(mut self, counted: ferrovue::JsDate) -> Self {
+    pub fn counted(mut self, counted: ferrovue::date::JsDate) -> Self {
         self.counted = Some(counted);
         self
     }

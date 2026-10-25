@@ -21,18 +21,18 @@ compiler to use `f64`.
 
 # How numbers are written
 
-- An integer is written by [`push_int`](crate::push_int): its decimal digits, exactly, within
+- An integer is written by [`push_int`](crate::core::push_int): its decimal digits, exactly, within
   ±(2⁵³ − 1). Beyond that, a JavaScript number has already lost precision (the browser rounds the
   value it reads from an island's props), so it is written as JavaScript writes the rounded number.
-- A fraction is written by [`push_number`](crate::push_number), which is
+- A fraction is written by [`push_number`](crate::core::push_number), which is
   `Number.prototype.toString`: the shortest digits that read back as the same double, laid out as
   ECMAScript lays them out: `0.30000000000000004`, `1e+21`, `1.5e-7`, `NaN`, `-Infinity`, and `0`
   for `-0`.
-- In a template literal or a string `+`, a number goes through [`Js`](crate::Js), whose `Display`
+- In a template literal or a string `+`, a number goes through [`Js`](crate::core::Js), whose `Display`
   writes it the same way.
 
 ```rust
-use ferrovue::{Js, push_int, push_number};
+use ferrovue::core::{Js, push_int, push_number};
 
 let mut out = String::new();
 push_int(&mut out, 9_007_199_254_740_993); // 2⁵³ + 1: JavaScript holds 2⁵³
@@ -62,7 +62,7 @@ getter that is `count * 2`:
 # let fv_stores = Stores { counter: CounterState { count: 21 } };
 # let mut buf = String::new();
 # let out = &mut buf;
-fv::push_number(out, fv_stores.counter.count as f64 * 2.0);
+fv::core::push_number(out, fv_stores.counter.count as f64 * 2.0);
 # assert_eq!(buf, "42");
 ```
 
@@ -83,14 +83,14 @@ from JavaScript's:
 
 | JavaScript | Rust | Why not the standard method |
 |---|---|---|
-| `Math.round(x)` | [`js_round`](crate::js_round) | A half rounds toward +∞: `-2.5` to `-2`, where `f64::round` gives `-3`; and from `-0.5` up to zero the result is `-0`, which `1 / Math.round(x)` shows (`-Infinity`) |
-| `Math.max(a, b)`, `Math.min(a, b)` | [`js_max`](crate::js_max), [`js_min`](crate::js_min) | `NaN` if either is, where `f64::max` ignores a `NaN` |
-| `x.toFixed(d)` | [`js_to_fixed`](crate::js_to_fixed) | An exact tie rounds away from zero, where Rust's formatting rounds to even |
-| `x.toPrecision(p)` | [`js_to_precision`](crate::js_to_precision) | The same ties, and JavaScript's choice of an exponent (`1.2e+5`) below 10⁻⁶ and from 10ᵖ up; `x.toPrecision()` is `String(x)` |
-| `x.toExponential(f)`, `x.toExponential()` | [`js_to_exponential`](crate::js_to_exponential) | The same ties, and JavaScript's exponent, `e+5` where Rust writes `e5`; without an argument, the digits `String(x)` writes |
+| `Math.round(x)` | [`js_round`](crate::core::js_round) | A half rounds toward +∞: `-2.5` to `-2`, where `f64::round` gives `-3`; and from `-0.5` up to zero the result is `-0`, which `1 / Math.round(x)` shows (`-Infinity`) |
+| `Math.max(a, b)`, `Math.min(a, b)` | [`js_max`](crate::core::js_max), [`js_min`](crate::core::js_min) | `NaN` if either is, where `f64::max` ignores a `NaN` |
+| `x.toFixed(d)` | [`js_to_fixed`](crate::core::js_to_fixed) | An exact tie rounds away from zero, where Rust's formatting rounds to even |
+| `x.toPrecision(p)` | [`js_to_precision`](crate::core::js_to_precision) | The same ties, and JavaScript's choice of an exponent (`1.2e+5`) below 10⁻⁶ and from 10ᵖ up; `x.toPrecision()` is `String(x)` |
+| `x.toExponential(f)`, `x.toExponential()` | [`js_to_exponential`](crate::core::js_to_exponential) | The same ties, and JavaScript's exponent, `e+5` where Rust writes `e5`; without an argument, the digits `String(x)` writes |
 | `Math.floor`, `Math.ceil`, `Math.trunc`, `Math.abs` | `f64::floor`, `ceil`, `trunc`, `abs` | They agree |
 | `Math.sqrt(x)` | `f64::sqrt` | They agree: IEEE 754 rounds a square root correctly, in every engine and in Rust |
-| `Math.sign(x)` | [`js_sign`](crate::js_sign) | `0`, `-0` and `NaN` are their own sign, where `f64::signum` gives 1 for `0` |
+| `Math.sign(x)` | [`js_sign`](crate::core::js_sign) | `0`, `-0` and `NaN` are their own sign, where `f64::signum` gives 1 for `0` |
 | `Math.PI`, `Math.E`, `Math.LN2`, `Math.LN10`, `Math.LOG2E`, `Math.LOG10E`, `Math.SQRT2`, `Math.SQRT1_2`, and `Number.EPSILON`, `MAX_SAFE_INTEGER`, `MIN_SAFE_INTEGER`, `MAX_VALUE`, `MIN_VALUE`, `POSITIVE_INFINITY`, `NEGATIVE_INFINITY`, `NaN` | the same doubles, as literals | They are constants |
 | `a ** b`, `Math.pow(a, b)` | worked out when compiling | See below |
 | `s.length` | `js_length` | UTF-16 code units, as JavaScript counts them. See [`strings`](crate::guide::strings) |
@@ -111,15 +111,15 @@ boolean or a `Date` each is always `false`, which is refused as a mistake
 `Number.isFinite()`.
 
 ```rust
-assert_eq!(ferrovue::js_round(-2.5), -2.0);
-assert_eq!(1.0 / ferrovue::js_round(-0.4), f64::NEG_INFINITY); // Math.round(-0.4) is -0
-assert!(ferrovue::js_max(1.0, f64::NAN).is_nan());
-assert!(ferrovue::js_sign(-0.0).is_sign_negative()); // Math.sign(-0) is -0
-assert_eq!(ferrovue::js_to_fixed(1.005, 2), "1.00"); // 1.005 is 1.00499999999999989… as a double
-assert_eq!(ferrovue::js_to_fixed(2.5, 0), "3");      // a true tie: away from zero
-assert_eq!(ferrovue::js_to_precision(0.125, 2), "0.13");
-assert_eq!(ferrovue::js_to_precision(123_456.0, 3), "1.23e+5");
-assert_eq!(ferrovue::js_to_exponential(1.5e-7, None), "1.5e-7");
+assert_eq!(ferrovue::core::js_round(-2.5), -2.0);
+assert_eq!(1.0 / ferrovue::core::js_round(-0.4), f64::NEG_INFINITY); // Math.round(-0.4) is -0
+assert!(ferrovue::core::js_max(1.0, f64::NAN).is_nan());
+assert!(ferrovue::core::js_sign(-0.0).is_sign_negative()); // Math.sign(-0) is -0
+assert_eq!(ferrovue::core::js_to_fixed(1.005, 2), "1.00"); // 1.005 is 1.00499999999999989… as a double
+assert_eq!(ferrovue::core::js_to_fixed(2.5, 0), "3");      // a true tie: away from zero
+assert_eq!(ferrovue::core::js_to_precision(0.125, 2), "0.13");
+assert_eq!(ferrovue::core::js_to_precision(123_456.0, 3), "1.23e+5");
+assert_eq!(ferrovue::core::js_to_exponential(1.5e-7, None), "1.5e-7");
 ```
 
 Their argument is a number literal, or none: from 0 to 100 digits for `toFixed` and
@@ -152,7 +152,7 @@ An island's props travel as JSON, which has no words for some numbers JavaScript
   other than what the server did (an empty string for the server's `NaN`) with nothing to say so.
   `mountIslands` from `ferrovue` reads the tokens back as the numbers they stand for, so a
   `Float` prop that is `NaN` hydrates as `NaN`. The stores' state in
-  [`state_script_into`](crate::state_script_into) is written the same way and read back by
+  [`state_script_into`](crate::page::state_script_into) is written the same way and read back by
   `hydrateState`. Everything else is exactly what `serde_json` writes;
 - an `i64` beyond ±2⁵³ is rounded by the browser. The server writes the rounded value too, so the
   page still hydrates, but the client holds the rounded number, as it would with any JavaScript
@@ -168,11 +168,11 @@ An island's props travel as JSON, which has no words for some numbers JavaScript
 #     }
 #     pub fn render(out: &mut String, props: &Props) {
 #         out.push_str("<p>");
-#         fv::push_number(out, props.level);
+#         fv::core::push_number(out, props.level);
 #         out.push_str("</p>");
 #     }
-#     pub fn island(props: &Props) -> fv::Html<'_, Props> {
-#         fv::Html::island("Gauge", props, render)
+#     pub fn island(props: &Props) -> fv::html::Html<'_, Props> {
+#         fv::html::Html::island("Gauge", props, render)
 #     }
 # }
 // Gauge.vue: defineProps<{ level: Float }>(), rendering <p>{{ level }}</p>.
@@ -188,7 +188,7 @@ Integers beyond the range of `i64` itself cannot be held in an `i64`: a prop can
 a result of integer arithmetic the template needs as an integer, given to a child's `number` prop,
 used as an index or as the count of a `v-for` over a range, cannot either. Such a result beyond
 ±2⁶³ is refused as the component renders ([FV0724](crate::guide::error_codes#fv0724)): the
-generated `try_render` returns a [`Refused`](crate::Refused), so a server can answer the request
+generated `try_render` returns a [`Refused`](crate::render::Refused), so a server can answer the request
 with an error, and `render` panics with its message
 ([`errors_and_limits`](crate::guide::errors_and_limits#refused-at-render-time)). Keep integer props
 and the results that go there within ±2⁵³, where both sides agree exactly, or type the child's

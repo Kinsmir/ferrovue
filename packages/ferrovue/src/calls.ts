@@ -1,6 +1,6 @@
 import { type N, type Scope, type Ty, type Val, asciiTy, BOOL, fail, FLOAT, INT, isAscii, refusalAt, sameTy, STR, strTy } from "./model.ts";
 import { ctx } from "./context.ts";
-import type { Code } from "./errors.ts";
+import type { ErrorCode } from "./errors.ts";
 import { claim } from "./plugin.ts";
 import { atom, bare, binary, condition, operand, receiver, strArg, UNARY } from "./parens.ts";
 import { computedListMethod, isBoolean, items, listMethod, objectCall, presentLiteral, spreadExtreme } from "./lists.ts";
@@ -12,7 +12,7 @@ import { callFunction } from "./functions.ts";
 import { constOf, mapCall } from "./constants.ts";
 import { refuseInPlace } from "./objects.ts";
 
-const DIGITS = new Map<string, [Code, number, string]>([
+const DIGITS = new Map<string, [ErrorCode, number, string]>([
   ["toFixed", ["FV0705", 0, "number of digits"]],
   ["toPrecision", ["FV0716", 1, "precision"]],
   ["toExponential", ["FV0717", 0, "number of digits"]],
@@ -55,7 +55,7 @@ export function call(s: Scope, n: N): Val {
       if (args.length !== 1) return fail(comp, "FV0723", "`String()` takes one value", n);
       const a = expr(s, args[0]);
       if (a.ty.k === "str") return a;
-      if (isNumber(a.ty)) return { code: `&*fv::Js(${bare(asWritten(a).code)}).to_string()`, ty: asciiTy() };
+      if (isNumber(a.ty)) return { code: `&*fv::core::Js(${bare(asWritten(a).code)}).to_string()`, ty: asciiTy() };
       if (a.ty.k === "bool") return { code: `if ${condition(a.code)} { "true" } else { "false" }`, ty: asciiTy() };
       return formatted(comp, [stringOf(comp, a, args[0], "`String()`", "FV0723")], n, "`String()`");
     }
@@ -65,11 +65,11 @@ export function call(s: Scope, n: N): Val {
       const a = expr(s, args[0]);
       if (a.lone) fail(comp, "FV0706", `${lonely(name)}; it throws a \`URIError\` on a half`, n);
       const text = a.ty.k === "str" ? a : formatted(comp, [stringOf(comp, a, args[0], name, "FV0723")], n, name);
-      return { code: `&*fv::js_${callee.name === "encodeURI" ? "encode_uri" : "encode_uri_component"}(${strArg(text.code)})`, ty: STR };
+      return { code: `&*fv::core::js_${callee.name === "encodeURI" ? "encode_uri" : "encode_uri_component"}(${strArg(text.code)})`, ty: STR };
     }
     if (callee.name === "Number" && args.length === 1) {
       const a = expr(s, args[0]);
-      if (a.ty.k === "str") return { code: `fv::js_number(${strArg(a.code)})`, ty: FLOAT };
+      if (a.ty.k === "str") return { code: `fv::strings::js_number(${strArg(a.code)})`, ty: FLOAT };
       if (isNumber(a.ty)) return a;
       if (a.ty.k === "bool") return { code: `i64::from(${bare(a.code)})`, ty: INT };
       return fail(comp, "FV0701", "`Number()` takes a string, a number or a boolean that is present", n);
@@ -77,12 +77,12 @@ export function call(s: Scope, n: N): Val {
     if ((callee.name === "parseInt" && (args.length === 1 || args.length === 2)) || (callee.name === "parseFloat" && args.length === 1)) {
       const a = expr(s, args[0]);
       if (a.ty.k !== "str") fail(comp, "FV0702", `\`${callee.name}()\` takes a string`, args[0]);
-      if (callee.name === "parseFloat") return { code: `fv::js_parse_float(${strArg(a.code)})`, ty: FLOAT };
+      if (callee.name === "parseFloat") return { code: `fv::strings::js_parse_float(${strArg(a.code)})`, ty: FLOAT };
       const radix = args[1];
       if (radix && !(radix.type === "NumericLiteral" && (radix.value === 10 || radix.value === 16))) {
         fail(comp, "FV0703", "`parseInt()` takes a radix of 10 or 16, written as a literal", radix);
       }
-      return { code: `fv::js_parse_int(${strArg(a.code)}, ${radix ? radix.value : 0})`, ty: FLOAT };
+      return { code: `fv::strings::js_parse_int(${strArg(a.code)}, ${radix ? radix.value : 0})`, ty: FLOAT };
     }
     if ((callee.name === "isNaN" || callee.name === "isFinite") && global) return numberTest(s, callee.name, args, n, true);
     if (global && BUILTINS.has(callee.name)) return builtin(s, `${callee.name}()`, n);
@@ -128,19 +128,19 @@ export function call(s: Scope, n: N): Val {
         const ints = vals.every((v) => v.ty.k === "int");
         if ((method === "max" || method === "min") && vals.length >= 2) {
           if (ints && !vals.some(isCast)) return { code: vals.slice(1).reduce((acc, v) => `${atom(acc)}.${method}(${bare(v.code)})`, vals[0]!.code), ty: INT };
-          const extreme = vals.slice(1).reduce((acc, v) => `fv::js_${method}(${bare(acc)}, ${bare(asF64(v))})`, asF64(vals[0]!));
+          const extreme = vals.slice(1).reduce((acc, v) => `fv::core::js_${method}(${bare(acc)}, ${bare(asF64(v))})`, asF64(vals[0]!));
           if (ints) return intFromF64(extreme, vals.find(isCast)?.at ?? refusalAt(comp, n));
           return { code: extreme, ty: FLOAT };
         }
         if (vals.length === 1) {
           const x = vals[0]!;
           if (method === "abs") return ints ? intFromF64(`${receiver(asF64(x))}.abs()`, refusalAt(comp, n)) : { code: `${receiver(x.code)}.abs()`, ty: FLOAT };
-          if (method === "round") return { code: `fv::js_round(${bare(asF64(x))})`, ty: FLOAT };
+          if (method === "round") return { code: `fv::core::js_round(${bare(asF64(x))})`, ty: FLOAT };
           if (method === "floor" || method === "ceil" || method === "trunc") return { code: `${receiver(asF64(x))}.${method}()`, ty: FLOAT };
           if (method === "sqrt") return x.num !== undefined ? numberVal(Math.sqrt(x.num), false) : { code: `${receiver(asF64(x))}.sqrt()`, ty: FLOAT };
           if (method === "sign") {
             if (x.num !== undefined) return numberVal(Math.sign(x.num), ints);
-            const sign = `fv::js_sign(${bare(asF64(x))})`;
+            const sign = `fv::core::js_sign(${bare(asF64(x))})`;
             return ints ? intFromF64(sign, null) : { code: sign, ty: FLOAT };
           }
         }
@@ -165,14 +165,14 @@ export function call(s: Scope, n: N): Val {
       const same = strTy(isAscii(target.ty));
       switch (args.length === 0 ? method : "") {
         case "trim":
-          return { code: `fv::js_trim(${strArg(target.code)})`, ty: same, ...lone };
+          return { code: `fv::strings::js_trim(${strArg(target.code)})`, ty: same, ...lone };
         case "trimStart":
-          return { code: `fv::js_trim_start(${strArg(target.code)})`, ty: same, ...lone };
+          return { code: `fv::strings::js_trim_start(${strArg(target.code)})`, ty: same, ...lone };
         case "trimEnd":
         case "trimRight":
-          return { code: `fv::js_trim_end(${strArg(target.code)})`, ty: same, ...lone };
+          return { code: `fv::strings::js_trim_end(${strArg(target.code)})`, ty: same, ...lone };
         case "trimLeft":
-          return { code: `fv::js_trim_start(${strArg(target.code)})`, ty: same, ...lone };
+          return { code: `fv::strings::js_trim_start(${strArg(target.code)})`, ty: same, ...lone };
         case "toUpperCase":
           return { code: `&*${receiver(target.code)}.to_uppercase()`, ty: same, ...lone };
         case "toLowerCase":
@@ -190,13 +190,13 @@ export function call(s: Scope, n: N): Val {
       const given = a === undefined || (a.type === "Identifier" && a.name === "undefined") ? undefined : a.type === "NumericLiteral" ? Math.trunc(a.value) : NaN;
       if (given !== undefined && !(given >= low && given <= 100)) fail(comp, code, `\`.${method}()\` takes a literal ${what}, from ${low} to 100`, n);
       const x = bare(asF64(target));
-      if (method === "toFixed") return { code: `&*fv::js_to_fixed(${x}, ${given ?? 0})`, ty: asciiTy() };
-      if (method === "toExponential") return { code: `&*fv::js_to_exponential(${x}, ${given === undefined ? "None" : `Some(${given})`})`, ty: asciiTy() };
-      if (given === undefined) return { code: `&*fv::Js(${bare(asWritten(target).code)}).to_string()`, ty: asciiTy() };
-      return { code: `&*fv::js_to_precision(${x}, ${given})`, ty: asciiTy() };
+      if (method === "toFixed") return { code: `&*fv::core::js_to_fixed(${x}, ${given ?? 0})`, ty: asciiTy() };
+      if (method === "toExponential") return { code: `&*fv::core::js_to_exponential(${x}, ${given === undefined ? "None" : `Some(${given})`})`, ty: asciiTy() };
+      if (given === undefined) return { code: `&*fv::core::Js(${bare(asWritten(target).code)}).to_string()`, ty: asciiTy() };
+      return { code: `&*fv::core::js_to_precision(${x}, ${given})`, ty: asciiTy() };
     }
     if (isNumber(target.ty) && method === "toString" && args.length === 0) {
-      return { code: `&*fv::Js(${bare(asWritten(target).code)}).to_string()`, ty: asciiTy() };
+      return { code: `&*fv::core::Js(${bare(asWritten(target).code)}).to_string()`, ty: asciiTy() };
     }
     if (target.owned) refuseInPlace(comp, `\`.${method}()\``, n);
     if (target.ty.k === "list") {
@@ -217,7 +217,7 @@ export function call(s: Scope, n: N): Val {
       if (method === "join" && args.length <= 1) {
         const sep: Val = args.length ? expr(s, args[0]) : { code: '","', ty: STR };
         if (sep.ty.k !== "str") fail(comp, "FV0802", "`.join()` takes a string", args[0]);
-        const each = of.k === "str" ? `${atom(target.code)}.iter().map(|v| &**v)` : `${atom(target.code)}.iter().map(|v| fv::Js(*v).to_string())`;
+        const each = of.k === "str" ? `${atom(target.code)}.iter().map(|v| &**v)` : `${atom(target.code)}.iter().map(|v| fv::core::Js(*v).to_string())`;
         return { code: `&*${each}.collect::<Vec<_>>().join(${strArg(sep.code)})`, ty: strTy(writesAscii(target.ty) && isAscii(sep.ty)), ...loneOf(sep) };
       }
     }
@@ -312,11 +312,11 @@ function json(s: Scope, v: Val, n: N): string {
   const one = (code: string, ty: Ty): string => {
     switch (ty.k) {
       case "str":
-        return `fv::js_json_string(${code === "v" ? "&v" : strArg(code)})`;
+        return `fv::strings::js_json_string(${code === "v" ? "&v" : strArg(code)})`;
       case "int":
-        return `fv::Js(${bare(code)}).to_string()`;
+        return `fv::core::Js(${bare(code)}).to_string()`;
       case "float":
-        return `fv::js_json_number(${bare(code)})`;
+        return `fv::strings::js_json_number(${bare(code)})`;
       case "bool":
         return `(if ${condition(code)} { "true" } else { "false" }).to_owned()`;
       default:

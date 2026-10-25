@@ -33,7 +33,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -41,50 +41,50 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(292 + props.tone.len());
     if props.on {
         out.push_str("<section><p class=\"a b");
-        fv::class_into(out, true, &[if props.on { "big" } else { "" }]);
+        fv::attrs::class_into(out, true, &[if props.on { "big" } else { "" }]);
         out.push_str("\" id=\"p\"></p><br title=\"t\" class=\"card");
-        fv::class_into(out, true, &[&*props.tone, "x"]);
+        fv::attrs::class_into(out, true, &[&*props.tone, "x"]);
         out.push_str("\"><i class=\"");
-        fv::class_into(out, false, &[&*props.tone, "z"]);
+        fv::attrs::class_into(out, false, &[&*props.tone, "z"]);
         out.push_str("\"></i>");
         if props.on {
             out.push_str("<b><span class=\"s");
-            fv::class_into(out, true, &[&*props.tone]);
+            fv::attrs::class_into(out, true, &[&*props.tone]);
             out.push_str("\">");
-            fv::escape_into(out, &props.tone);
+            fv::core::escape_into(out, &props.tone);
             out.push_str("</span></b>");
         } else {
             out.push_str("<em><span class=\"s");
-            fv::class_into(out, true, &[&*props.tone]);
+            fv::attrs::class_into(out, true, &[&*props.tone]);
             out.push_str("\">");
-            fv::escape_into(out, &props.tone);
+            fv::core::escape_into(out, &props.tone);
             out.push_str("</span></em>");
         }
         out.push_str("</section>");
     } else {
         out.push_str("<div><p class=\"a b");
-        fv::class_into(out, true, &[if props.on { "big" } else { "" }]);
+        fv::attrs::class_into(out, true, &[if props.on { "big" } else { "" }]);
         out.push_str("\" id=\"p\"></p><br title=\"t\" class=\"card");
-        fv::class_into(out, true, &[&*props.tone, "x"]);
+        fv::attrs::class_into(out, true, &[&*props.tone, "x"]);
         out.push_str("\"><i class=\"");
-        fv::class_into(out, false, &[&*props.tone, "z"]);
+        fv::attrs::class_into(out, false, &[&*props.tone, "z"]);
         out.push_str("\"></i>");
         if props.on {
             out.push_str("<b><span class=\"s");
-            fv::class_into(out, true, &[&*props.tone]);
+            fv::attrs::class_into(out, true, &[&*props.tone]);
             out.push_str("\">");
-            fv::escape_into(out, &props.tone);
+            fv::core::escape_into(out, &props.tone);
             out.push_str("</span></b>");
         } else {
             out.push_str("<em><span class=\"s");
-            fv::class_into(out, true, &[&*props.tone]);
+            fv::attrs::class_into(out, true, &[&*props.tone]);
             out.push_str("\">");
-            fv::escape_into(out, &props.tone);
+            fv::core::escape_into(out, &props.tone);
             out.push_str("</span></em>");
         }
         out.push_str("</div>");
@@ -93,21 +93,21 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

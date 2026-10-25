@@ -1,8 +1,9 @@
 import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { CONFIG_FILE, generate, loadConfig } from "./compiler.ts";
+import { CONFIG_FILE, loadConfig } from "./config.ts";
+import { generate } from "./compiler.ts";
 import { type Diagnostic, diagnose, isRefusal, refusalsOf } from "./diagnostics.ts";
-import { GenError } from "./model.ts";
+import { GenError } from "./errors.ts";
 
 /** A refusal in the file an editor holds, with its range as offsets into the text it was given. The
  * end is exclusive, and `null` where the compiler does not know it. */

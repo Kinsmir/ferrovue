@@ -38,7 +38,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render_scoped(out, props, &fv::Attrs::NONE));
+    fv::render::rendered(try_render_scoped(out, props, &fv::attrs::Attrs::NONE));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -46,48 +46,48 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
-    try_render_scoped(out, props, &fv::Attrs::NONE)
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
+    try_render_scoped(out, props, &fv::attrs::Attrs::NONE)
 }
 
 /// [`try_render`], with the attributes a parent passes beyond the props, and the scope ids it hands the root.
 #[doc(hidden)]
-pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::Attrs<'_>) -> Result<(), fv::Refused> {
+pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(36 + props.cls.as_deref().map_or(0, str::len) + props.css.len());
     out.push_str("<span");
     if fv_attrs.is_empty() {
         if props.cls.as_deref().is_some() {
             out.push_str(" class=\"");
-            fv::class_into(out, false, &[props.cls.as_deref().unwrap_or("")]);
+            fv::attrs::class_into(out, false, &[props.cls.as_deref().unwrap_or("")]);
             out.push('"');
         }
         out.push_str(" style=\"");
-        fv::style_text_into(out, &props.css);
+        fv::attrs::style_text_into(out, &props.css);
         out.push('"');
     } else {
-        fv::attrs_into(out, &[&[("class", props.cls.as_deref().map_or(fv::Attr::Undefined, fv::Attr::str)), ("style", fv::Attr::str(&props.css))], fv_attrs.list()], 1, "");
+        fv::attrs::attrs_into(out, &[&[("class", props.cls.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str)), ("style", fv::attrs::Attr::str(&props.css))], fv_attrs.list()], 1, "");
     }
     out.push_str(">binds</span>");
     Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

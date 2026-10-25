@@ -12,8 +12,8 @@ cargo add ferrovue --features dioxus
 
 # Islands in `rsx!`
 
-[`Html`](crate::Html) is a Dioxus `IntoDynNode`, so a generated `island()` or `html()` goes straight
-into `rsx!` between braces. [`Html::to_element`](crate::Html::to_element) is the same as an
+[`Html`](crate::html::Html) is a Dioxus `IntoDynNode`, so a generated `island()` or `html()` goes straight
+into `rsx!` between braces. [`Html::to_element`](crate::html::Html::to_element) is the same as an
 `Element`. This is the page from the repository's `examples/dioxus` (`src/main.rs`), whose tests
 render it with `dioxus-ssr`:
 
@@ -32,13 +32,13 @@ render it with `dioxus-ssr`:
 #     }
 #     pub fn render(out: &mut String, props: &Props<'_>) {
 #         out.push_str("<button type=\"button\">");
-#         fv::escape_into(out, &props.label);
+#         fv::core::escape_into(out, &props.label);
 #         out.push_str(": ");
-#         fv::push_int(out, props.start);
+#         fv::core::push_int(out, props.start);
 #         out.push_str("</button>");
 #     }
-#     pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-#         fv::Html::island(NAME, props, render)
+#     pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+#         fv::html::Html::island(NAME, props, render)
 #     }
 # }
 # }
@@ -130,20 +130,20 @@ attribute, and Vue mounts on the element's content and leaves the element itself
 #     out.reserve(39 + props.label.len());
 #     let s_count = props.start;
 #     out.push_str("<button type=\"button\">");
-#     fv::escape_into(out, &props.label);
+#     fv::core::escape_into(out, &props.label);
 #     out.push_str(": ");
-#     fv::push_int(out, s_count);
+#     fv::core::push_int(out, s_count);
 #     out.push_str("</button>");
 # }
 #
 # /// The component's markup, for a maud page that shows it without hydrating it.
-# pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-#     fv::Html::markup(props, render)
+# pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+#     fv::html::Html::markup(props, render)
 # }
 #
 # /// The component as an island the client hydrates.
-# pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-#     fv::Html::island(NAME, props, render)
+# pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+#     fv::html::Html::island(NAME, props, render)
 # }
 # }
 // Counter.vue: defineProps<{ label: string; start: number }>(), rendering a <button>.
@@ -176,7 +176,7 @@ as a fullstack server does, and holds the markup inside each one to the HTML Vue
 
 # Every byte as ferrovue writes it
 
-To have an island written exactly as [`Html::into_string`](crate::Html::into_string) writes it,
+To have an island written exactly as [`Html::into_string`](crate::html::Html::into_string) writes it,
 attributes included, give an element of the page's own the whole island as its content:
 
 ```rust
@@ -193,13 +193,13 @@ attributes included, give an element of the page's own the whole island as its c
 #     }
 #     pub fn render(out: &mut String, props: &Props<'_>) {
 #         out.push_str("<button type=\"button\">");
-#         fv::escape_into(out, &props.label);
+#         fv::core::escape_into(out, &props.label);
 #         out.push_str(": ");
-#         fv::push_int(out, props.start);
+#         fv::core::push_int(out, props.start);
 #         out.push_str("</button>");
 #     }
-#     pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-#         fv::Html::island(NAME, props, render)
+#     pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+#         fv::html::Html::island(NAME, props, render)
 #     }
 # }
 # fn main() {
@@ -224,7 +224,7 @@ rsx! {
 
 That is also the way to put the markup of a component that is not an island, from `html()`, into an
 element of the page's own. Such markup has no element of its own, and Dioxus has no node for raw
-HTML outside an element, so [`Html::to_element`](crate::Html::to_element) puts it in a `<div>` with
+HTML outside an element, so [`Html::to_element`](crate::html::Html::to_element) puts it in a `<div>` with
 no attributes. The client never hydrates `html()` markup, so the `<div>` matters only to the page's
 layout and styles.
 
@@ -250,7 +250,7 @@ own whatever changes in it.
 The client starts its stores from the state the server rendered with, read from a
 `<script type="application/json">` before the islands hydrate (see [`pinia`](crate::guide::pinia)).
 [`ferrovue::dioxus::state_script`](crate::dioxus::state_script) is
-[`state_script_into`](crate::state_script_into) as an element: put it in the page's `rsx!`, before
+[`state_script_into`](crate::page::state_script_into) as an element: put it in the page's `rsx!`, before
 the client's script. Its content is the same bytes `state_script_into` writes:
 
 ```rust
@@ -269,6 +269,6 @@ A page whose head or body is a template of the server's own, outside `rsx!`, can
 
 Holes ([`streaming`](crate::guide::streaming)) cut a page that ferrovue renders into pieces sent in
 the order they are ready. A Dioxus element is written whole, so a component rendered as one must not
-be given a [`hole()`](crate::hole): the marker would be written into the page as it is. A Dioxus
+be given a [`hole()`](crate::page::hole): the marker would be written into the page as it is. A Dioxus
 page streams through Dioxus's own suspense boundaries, each ferrovue component inside them rendered
 whole.

@@ -1,4 +1,5 @@
-import { type N, type Scope, type Val, fail, GenError, namesSelf, nodeName } from "./model.ts";
+import { type N, type Scope, type Val, fail, namesSelf, nodeName } from "./model.ts";
+import { GenError } from "./errors.ts";
 import { ctx } from "./context.ts";
 import { expr, shown } from "./expr.ts";
 import { type Presence, boolOf, cond, known, literalNarrowing, narrowedVal, narrowTo, presence, truthTested, truthy } from "./narrowing.ts";
@@ -57,7 +58,7 @@ function selectsByModel(n: N): boolean {
 
 export function slot(s: Scope, e: Emitter, n: N): void {
   if (n.type === "Identifier" && n.name === "_scopeId") {
-    if (s.sid !== null) e.stmt(s.vnode ? `out.push_str(&fv::scope_attrs("", "", ${s.sid}));` : `out.push_str(${s.sid});`);
+    if (s.sid !== null) e.stmt(s.vnode ? `out.push_str(&fv::attrs::scope_attrs("", "", ${s.sid}));` : `out.push_str(${s.sid});`);
     return;
   }
   if (n.type === "CallExpression" && n.callee.type === "Identifier") {
@@ -98,12 +99,12 @@ export function slot(s: Scope, e: Emitter, n: N): void {
     const html = v.ty.k === "opt" ? v.ty.of : v.ty;
     if (html.k === "html") checkVHtmlPlacement(s.comp, n, html.inline === true);
     if (v.ty.k === "html") {
-      e.stmt(`fv::trusted_into(out, ${v.code});`);
+      e.stmt(`fv::html::trusted_into(out, ${v.code});`);
       return;
     }
     if (v.ty.k === "opt" && v.ty.of.k === "html") {
       e.open(`if let Some(html) = ${scrutinee(v.code)}`);
-      e.stmt("fv::trusted_into(out, html);");
+      e.stmt("fv::html::trusted_into(out, html);");
       e.close();
       return;
     }
@@ -170,7 +171,7 @@ export function push(s: Scope, e: Emitter, n: N): void {
   }
   e.stmt("let fv_chunk = out.len();");
   pushed(s, e, n);
-  e.stmt("filled |= !fv::is_comment(&out[fv_chunk..]);");
+  e.stmt("filled |= !fv::render::is_comment(&out[fv_chunk..]);");
 }
 
 const START_TAG = /^<([A-Za-z][^\s/>]*)/;

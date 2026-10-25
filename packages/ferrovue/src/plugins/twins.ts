@@ -1,5 +1,7 @@
-import { type Component, type Field, type N, type Scope, type Ty, blankComponent, camelize, distinctFields, fail, GenError, snake } from "../model.ts";
-import { CONFIG_FILE, type TwinSpec, tyOfName } from "../context.ts";
+import { type Component, type Field, type N, type Scope, type Ty, blankComponent, camelize, distinctFields, fail, snake } from "../model.ts";
+import { GenError } from "../errors.ts";
+import { CONFIG_FILE, type TwinSpec } from "../config.ts";
+import { tyOfName } from "../context.ts";
 import { coerce, expr, holdsNothing } from "../expr.ts";
 import { bare, strArg } from "../parens.ts";
 import { header } from "../rust.ts";
@@ -103,10 +105,10 @@ ${fields}}
 /// What a template puts in \`<${name}>\`'s slots.
 #[derive(Clone, Copy, Default)]
 pub struct ${name}Slots<'s> {
-${comp.slotNames.map((slot) => `    /// \`#${slot}\`\n    pub ${snake(slot)}: Option<fv::Slot<'s>>,\n`).join("")}}
+${comp.slotNames.map((slot) => `    /// \`#${slot}\`\n    pub ${snake(slot)}: Option<fv::render::Slot<'s>>,\n`).join("")}}
 `
     : "";
-  const params = ["&mut String", `&${name}Props${life ? "<'_>" : ""}`, ...(comp.slotNames.length ? [`${name}Slots<'_>`] : []), "&fv::Attrs<'_>"];
+  const params = ["&mut String", `&${name}Props${life ? "<'_>" : ""}`, ...(comp.slotNames.length ? [`${name}Slots<'_>`] : []), "&fv::attrs::Attrs<'_>"];
   return `${props}${slots}
 /// How generated code calls the twin of \`<${name}>\`: with the buffer, the props,
 /// ${comp.slotNames.length ? "the slots, " : ""}and the attributes and scope ids its root takes.

@@ -4,9 +4,9 @@
 //! # Example
 //!
 //! ```
-//! # mod ferrovue { pub use ferrovue_i18n::I18n; pub use ferrovue_i18n as i18n; }
+//! # mod ferrovue { pub use ferrovue_i18n as i18n; }
 //! use ferrovue::i18n::{Args, Locale, Message, Part, Value};
-//! use ferrovue::I18n;
+//! use ferrovue::i18n::I18n;
 //!
 //! // What the compiler writes for `en.json`: `{ "greeting": "Hello {name}!" }`.
 //! static LOCALES: &[Locale] = &[Locale::new(
@@ -94,9 +94,9 @@ impl Locale {
     /// # Example
     ///
     /// ```
-    /// # mod ferrovue { pub use ferrovue_i18n::I18n; pub use ferrovue_i18n as i18n; }
+    /// # mod ferrovue { pub use ferrovue_i18n as i18n; }
     /// use ferrovue::i18n::{Args, Locale, Message, Part};
-    /// use ferrovue::I18n;
+    /// use ferrovue::i18n::I18n;
     ///
     /// static LOCALES: &[Locale] = &[
     ///     Locale::new("en", &[
@@ -165,7 +165,7 @@ impl Value<'_> {
 /// # Example
 ///
 /// ```
-/// # mod ferrovue { pub use ferrovue_i18n::I18n; pub use ferrovue_i18n as i18n; }
+/// # mod ferrovue { pub use ferrovue_i18n as i18n; }
 /// use ferrovue::i18n::{Args, Value};
 ///
 /// // t("greeting", { name: "Ada" }, 3)
@@ -271,9 +271,9 @@ impl I18n {
     /// # Example
     ///
     /// ```
-    /// # mod ferrovue { pub use ferrovue_i18n::I18n; pub use ferrovue_i18n as i18n; }
+    /// # mod ferrovue { pub use ferrovue_i18n as i18n; }
     /// use ferrovue::i18n::{Args, Locale, Message, Part};
-    /// use ferrovue::I18n;
+    /// use ferrovue::i18n::I18n;
     ///
     /// static LOCALES: &[Locale] = &[
     ///     Locale::new("en", &[("hi", Message::new(&[&[Part::Text("hi")]]))]),
@@ -317,9 +317,9 @@ impl I18n {
     /// # Example
     ///
     /// ```
-    /// # mod ferrovue { pub use ferrovue_i18n::I18n; pub use ferrovue_i18n as i18n; }
+    /// # mod ferrovue { pub use ferrovue_i18n as i18n; }
     /// use ferrovue::i18n::{Args, Locale, Message, Part, Value};
-    /// use ferrovue::I18n;
+    /// use ferrovue::i18n::I18n;
     ///
     /// // `{ "apples": "no apples | one apple | {count} apples", "app": "ferrovue",
     /// //    "about": "@.upper:app and {0}" }`

@@ -52,7 +52,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -60,29 +60,29 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(333 + props.label.len() + props.maybe.as_deref().map_or(0, str::len) + props.css.len());
     out.push_str("<div><p");
     if props.label.is_empty() {
         out.push_str(" a.");
     } else {
         out.push_str(" a.=\"");
-        fv::escape_into(out, &props.label);
+        fv::core::escape_into(out, &props.label);
         out.push('"');
     }
     if props.label.is_empty() {
         out.push_str(" data-icon-name");
     } else {
         out.push_str(" data-icon-name=\"");
-        fv::escape_into(out, &props.label);
+        fv::core::escape_into(out, &props.label);
         out.push('"');
     }
     if props.label.is_empty() {
         out.push_str(" onx");
     } else {
         out.push_str(" onx=\"");
-        fv::escape_into(out, &props.label);
+        fv::core::escape_into(out, &props.label);
         out.push('"');
     }
     out.push_str(" title>keys</p><p");
@@ -100,22 +100,22 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push_str(">limit</p><p class=\"a b\">two</p><p class=\"a\">once</p><p");
     if props.maybe.as_deref().is_some() {
         out.push_str(" class=\"");
-        fv::class_into(out, false, &[props.maybe.as_deref().unwrap_or("")]);
+        fv::attrs::class_into(out, false, &[props.maybe.as_deref().unwrap_or("")]);
         out.push('"');
     }
     if props.label.is_empty() {
         out.push_str(" id");
     } else {
         out.push_str(" id=\"");
-        fv::escape_into(out, &props.label);
+        fv::core::escape_into(out, &props.label);
         out.push('"');
     }
     out.push_str(">merged</p><p class=\"");
-    fv::class_into(out, false, &[props.maybe.as_deref().unwrap_or("")]);
+    fv::attrs::class_into(out, false, &[props.maybe.as_deref().unwrap_or("")]);
     out.push_str("\">alone</p><p");
     if props.maybe.as_deref().is_some() {
         out.push_str(" class=\"");
-        fv::class_into(out, false, &[props.maybe.as_deref().unwrap_or("")]);
+        fv::attrs::class_into(out, false, &[props.maybe.as_deref().unwrap_or("")]);
         out.push('"');
     }
     out.push_str(">absent</p><p");
@@ -123,19 +123,19 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         out.push_str(" id");
     } else {
         out.push_str(" id=\"");
-        fv::escape_into(out, &props.label);
+        fv::core::escape_into(out, &props.label);
         out.push('"');
     }
     out.push_str(">none</p><p style=\"");
-    fv::escape_into(out, &props.css);
+    fv::core::escape_into(out, &props.css);
     out.push_str("\">style</p><p style=\"");
-    fv::style_text_into(out, &props.css);
+    fv::attrs::style_text_into(out, &props.css);
     out.push('"');
     if props.label.is_empty() {
         out.push_str(" id");
     } else {
         out.push_str(" id=\"");
-        fv::escape_into(out, &props.label);
+        fv::core::escape_into(out, &props.label);
         out.push('"');
     }
     out.push_str(">merged style</p></div>");
@@ -143,21 +143,21 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

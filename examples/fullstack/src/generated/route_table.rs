@@ -5,13 +5,13 @@
 
 /// Each route: its vue-router path, its name if it has one, whether it shows a component, and the
 /// routes nested in it.
-pub const ROUTES: &[ferrovue::RouteDef<'static>] = &[
-    ferrovue::RouteDef::new("/").with_name("/"),
-    ferrovue::RouteDef::new("/:missing(.*)").with_name("/[...missing]"),
-    ferrovue::RouteDef::new("/books").with_view(false).with_children(&[
-        ferrovue::RouteDef::new(":id").with_name("/books/[id]"),
+pub const ROUTES: &[ferrovue::router::RouteDef<'static>] = &[
+    ferrovue::router::RouteDef::new("/").with_name("/"),
+    ferrovue::router::RouteDef::new("/:missing(.*)").with_name("/[...missing]"),
+    ferrovue::router::RouteDef::new("/books").with_view(false).with_children(&[
+        ferrovue::router::RouteDef::new(":id").with_name("/books/[id]"),
     ]),
-    ferrovue::RouteDef::new("/picks").with_name("/picks"),
+    ferrovue::router::RouteDef::new("/picks").with_name("/picks"),
 ];
 
 /// Every route's full path, nested ones included.
@@ -27,7 +27,7 @@ pub const PATHS: &[&str] = &[
 pub const BASE: &str = "";
 
 /// The router these routes make: build it once, and resolve each request's location with
-/// [`ferrovue::Router::at`].
-pub fn router() -> ferrovue::Router {
-    ferrovue::Router::tree(ROUTES).with_base(BASE)
+/// [`ferrovue::router::Router::at`].
+pub fn router() -> ferrovue::router::Router {
+    ferrovue::router::Router::tree(ROUTES).with_base(BASE)
 }

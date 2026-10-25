@@ -45,9 +45,9 @@ network access, point it at the installed package: `"./node_modules/ferrovue/sch
 | `routes` | no | JSON file listing the app's routes: each a vue-router path, or `{ "path", "name", "children" }`. Needed for `<RouterLink>`, `<RouterView>` and `useRoute()`. See [`routing`](crate::guide::routing) |
 | `router` | no | Instead of `routes`: `{ routes, base?, linkActiveClass?, linkExactActiveClass? }`, matching `createWebHistory(base)` and `createRouter`'s options |
 | `stores` | no | Directory of Pinia stores whose state components may read. See [`pinia`](crate::guide::pinia) |
-| `trustedHtml` | no | Rust path of the type a `TrustedHtml` prop is: `ferrovue::BasicHtml`, `ferrovue::Sanitised` with the `ammonia` feature, or a type of your own such as `crate::html::CleanHtml`. Needed for `v-html`. See [`escaping`](crate::guide::escaping) |
-| `dateType` | no | Rust path of the type a `Date` prop is: `ferrovue::JsDate` (the default), `chrono::DateTime<chrono::Utc>` with the `chrono` feature, or a type of your own that implements [`JsTime`](crate::JsTime). See [`dates_and_prices`](crate::guide::dates_and_prices#date-props) |
-| `unions` | no | Rust paths of enums of your own for unions of string literals, by `type` alias: `{ "Tone": "crate::domain::Tone" }`. Each implements [`Union`](crate::Union) and has the variants ferrovue would generate, generated code uses it, and generates no enum for the union. See [`props`](crate::guide::props#unions-mapped-to-existing-enums) |
+| `trustedHtml` | no | Rust path of the type a `TrustedHtml` prop is: `ferrovue::html::BasicHtml`, `ferrovue::html::Sanitised` with the `ammonia` feature, or a type of your own such as `crate::html::CleanHtml`. Needed for `v-html`. See [`escaping`](crate::guide::escaping) |
+| `dateType` | no | Rust path of the type a `Date` prop is: `ferrovue::date::JsDate` (the default), `chrono::DateTime<chrono::Utc>` with the `chrono` feature, or a type of your own that implements [`JsTime`](crate::date::JsTime). See [`dates_and_prices`](crate::guide::dates_and_prices#date-props) |
+| `unions` | no | Rust paths of enums of your own for unions of string literals, by `type` alias: `{ "Tone": "crate::domain::Tone" }`. Each implements [`Union`](crate::props::Union) and has the variants ferrovue would generate, generated code uses it, and generates no enum for the union. See [`props`](crate::guide::props#unions-mapped-to-existing-enums) |
 | `helpers` | no | `{ module, functions }`: functions a template may call, each mapped to a Rust twin. See [`errors_and_limits`](crate::guide::errors_and_limits#helpers) |
 | `twins` | no | Components ferrovue does not compile, each rendered by a Rust function of yours: `{ "VBtn": { "rust": "crate::ui::v_btn", "props": { "label": "string" }, "slots": ["default"] } }`. See [`errors_and_limits`](crate::guide::errors_and_limits#rust-twins) |
 | `i18n` | no | vue-i18n: `{ messages, locale?, fallbackLocale? }`: the directory of locale files (`en.json`, `nl.json`), the default locale and the fallbacks. See [`i18n`](crate::guide::i18n) |
@@ -130,18 +130,18 @@ impl<'a> Props<'a> {
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(70 + props.name.len() + props.note.as_deref().map_or(0, str::len));
     out.push_str("<p class=\"greeting\">Hello, ");
-    fv::escape_into(out, &props.name);
+    fv::core::escape_into(out, &props.name);
     out.push('!');
     if props.unread != 0 {
         out.push_str("<b>");
-        fv::push_int(out, props.unread);
+        fv::core::push_int(out, props.unread);
         out.push_str(" new</b>");
     } else {
         out.push_str("<!---->");
     }
     if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<i>");
-        fv::escape_into(out, fv_note);
+        fv::core::escape_into(out, fv_note);
         out.push_str("</i>");
     } else {
         out.push_str("<!---->");
@@ -150,30 +150,30 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup(props, render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup(props, render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island(NAME, props, render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island(NAME, props, render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned(props, render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned(props, render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned(NAME, props, render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned(NAME, props, render)
 }
 # }
 ```
 
 Note what the template became: `v-if` is an `if` with Vue's `<!---->` placeholder in the `else`,
-the integer is written with [`push_int`](crate::push_int) as JavaScript writes numbers, and every
-interpolation goes through [`escape_into`](crate::escape_into).
+the integer is written with [`push_int`](crate::core::push_int) as JavaScript writes numbers, and every
+interpolation goes through [`escape_into`](crate::core::escape_into).
 
 # 5. Render
 
@@ -235,18 +235,18 @@ Then build the props and render:
 # pub fn render(out: &mut String, props: &Props<'_>) {
 #     out.reserve(70 + props.name.len() + props.note.as_deref().map_or(0, str::len));
 #     out.push_str("<p class=\"greeting\">Hello, ");
-#     fv::escape_into(out, &props.name);
+#     fv::core::escape_into(out, &props.name);
 #     out.push('!');
 #     if props.unread != 0 {
 #         out.push_str("<b>");
-#         fv::push_int(out, props.unread);
+#         fv::core::push_int(out, props.unread);
 #         out.push_str(" new</b>");
 #     } else {
 #         out.push_str("<!---->");
 #     }
 #     if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {
 #         out.push_str("<i>");
-#         fv::escape_into(out, fv_note);
+#         fv::core::escape_into(out, fv_note);
 #         out.push_str("</i>");
 #     } else {
 #         out.push_str("<!---->");
@@ -255,13 +255,13 @@ Then build the props and render:
 # }
 #
 # /// The component's markup, for a maud page that shows it without hydrating it.
-# pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-#     fv::Html::markup(props, render)
+# pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+#     fv::html::Html::markup(props, render)
 # }
 #
 # /// The component as an island the client hydrates.
-# pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-#     fv::Html::island(NAME, props, render)
+# pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+#     fv::html::Html::island(NAME, props, render)
 # }
 # } }
 # use generated::greeting::{self, Props};

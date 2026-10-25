@@ -11,6 +11,9 @@ import { Plugin as Plugin_2 } from 'vue';
 import type { Router } from 'vue-router';
 
 // @public
+export function clearLoads(): void;
+
+// @public
 export const ClientOnly: Component;
 
 // @public
@@ -20,15 +23,7 @@ export function createPageApp(layout: Component, record: PageRecord, components:
 export function defineLoader<A extends unknown[], T>(name: string, loader: (...args: A) => Promise<T>): (...args: A) => Promise<T>;
 
 // @public
-export type Float = number;
-
-// @public
 export function hydrateState(pinia: Pinia, from?: string | StateText, doc?: Document): void;
-
-// @public
-export type InlineHtml = TrustedHtml & {
-    readonly [inline]: true;
-};
 
 // @public
 export type IslandComponent = Component | (() => Promise<Component | {
@@ -128,11 +123,6 @@ export interface StateText {
     // (undocumented)
     text: string | undefined;
 }
-
-// @public
-export type TrustedHtml = string & {
-    readonly [trusted]: true;
-};
 
 // (No @packageDocumentation comment for this package)
 

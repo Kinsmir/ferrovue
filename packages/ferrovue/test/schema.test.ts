@@ -3,14 +3,16 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { generate, loadConfig } from "../src/compiler.ts";
+import { generate } from "../src/compiler.ts";
+import { loadConfig } from "../src/config.ts";
 import { checkConfig } from "../src/context.ts";
-import { GenError, type N } from "../src/model.ts";
+import { GenError } from "../src/errors.ts";
+import { type N } from "../src/model.ts";
 import { CONFIG_SCHEMA, type Schema } from "../src/schema.ts";
 
 const PACKAGE = join(import.meta.dirname, "..");
 const SCHEMA_FILE = join(PACKAGE, "schema.json");
-const CONTEXT = readFileSync(join(PACKAGE, "src/context.ts"), "utf8");
+const CONFIG = readFileSync(join(PACKAGE, "src/config.ts"), "utf8");
 
 type Json = Record<string, unknown>;
 
@@ -111,7 +113,7 @@ function described(source: string, root: string, schema: Schema): { json: Json; 
   return { json: { $schema: "http://json-schema.org/draft-07/schema#", title: "ferrovue.config.json", description: top.doc!.text, ...body }, problems };
 }
 
-const schemaText = (): string => `${JSON.stringify(described(CONTEXT, "Config", CONFIG_SCHEMA).json, null, 2)}\n`;
+const schemaText = (): string => `${JSON.stringify(described(CONFIG, "Config", CONFIG_SCHEMA).json, null, 2)}\n`;
 
 const FULL = {
   $schema: "https://example.com/schema.json",
@@ -119,8 +121,8 @@ const FULL = {
   out: "out",
   helpers: { module: "./helpers", functions: { plural: { rust: "crate::plural", params: ["int"], returns: "string", maxLen: 1 } } },
   twins: { VBtn: { rust: "crate::v_btn", props: { label: "string" }, slots: ["default"] } },
-  trustedHtml: "ferrovue::InlineHtml",
-  dateType: "ferrovue::JsDate",
+  trustedHtml: "ferrovue::html::InlineHtml",
+  dateType: "ferrovue::date::JsDate",
   unions: { Tone: "crate::domain::Tone" },
   routes: "routes.json",
   router: { routes: { pages: "pages" }, base: "/app", linkActiveClass: "on", linkExactActiveClass: "here" },
@@ -207,7 +209,7 @@ function wrongValues(node: Schema): unknown[] {
 
 describe("the configuration's JSON Schema", () => {
   it("names the keys, types, optional keys and descriptions of `Config`", () => {
-    expect(described(CONTEXT, "Config", CONFIG_SCHEMA).problems).toEqual([]);
+    expect(described(CONFIG, "Config", CONFIG_SCHEMA).problems).toEqual([]);
   });
 
   it("is written to schema.json", () => {

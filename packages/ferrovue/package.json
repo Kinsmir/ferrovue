@@ -30,12 +30,20 @@
   ],
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "types": "./dist/client.d.ts",
+      "default": "./dist/client.js"
     },
     "./compiler": {
       "types": "./dist/compiler.d.ts",
       "default": "./dist/compiler.js"
+    },
+    "./compiler/config": {
+      "types": "./dist/config.d.ts",
+      "default": "./dist/config.js"
+    },
+    "./compiler/errors": {
+      "types": "./dist/errors.d.ts",
+      "default": "./dist/errors.js"
     },
     "./types": {
       "types": "./dist/types.d.ts",
@@ -45,13 +53,21 @@
       "types": "./dist/testing.d.ts",
       "default": "./dist/testing.js"
     },
-    "./client": {
-      "types": "./dist/client.d.ts",
-      "default": "./dist/client.js"
+    "./testing/browser": {
+      "types": "./dist/testing-browser.d.ts",
+      "default": "./dist/testing-browser.js"
+    },
+    "./testing/ssr": {
+      "types": "./dist/ssr.d.ts",
+      "default": "./dist/ssr.js"
     },
     "./link-router": {
       "types": "./dist/link-router.d.ts",
       "default": "./dist/link-router.js"
+    },
+    "./route-records": {
+      "types": "./dist/route-records.d.ts",
+      "default": "./dist/route-records.js"
     },
     "./islands": {
       "types": "./dist/islands.d.ts",

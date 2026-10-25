@@ -16,6 +16,6 @@ pub struct StarRatingProps {
 
 /// How generated code calls the twin of `<StarRating>`: with the buffer, the props,
 /// and the attributes and scope ids its root takes.
-pub type StarRatingRender = fn(&mut String, &StarRatingProps, &fv::Attrs<'_>);
+pub type StarRatingRender = fn(&mut String, &StarRatingProps, &fv::attrs::Attrs<'_>);
 
 const _: StarRatingRender = crate::ui::star_rating;

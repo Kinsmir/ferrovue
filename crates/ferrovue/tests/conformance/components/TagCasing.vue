@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ClientOnly } from "ferrovue/client";
+import { ClientOnly } from "ferrovue";
 import PlainBox from "./PlainBox.vue";
 
 defineProps<{ tag: "div" | "section"; label: string; on: boolean }>();

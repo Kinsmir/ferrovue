@@ -4,7 +4,8 @@ import { createRouter, createWebHistory, type Router, type RouterHistory } from 
 import { createHead } from "@unhead/vue/client";
 import { hydrateState, mountIslands, mountPage, readPage, renderPage, type Islands } from "ferrovue";
 import islands from "ferrovue/islands";
-import { linkRouter, routeRecords } from "ferrovue/link-router";
+import { linkRouter } from "ferrovue/link-router";
+import { routeRecords } from "ferrovue/route-records";
 import pageRoutes from "ferrovue/routes";
 import BasketSummary from "./components/BasketSummary.vue";
 

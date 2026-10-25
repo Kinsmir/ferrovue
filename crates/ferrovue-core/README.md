@@ -9,8 +9,9 @@ them (`String(n)`, `Math.round`, `Math.max`, `Math.min`, `Math.sign`, `toFixed`,
 `toPrecision`, `toExponential`), and URIs encoded as `encodeURIComponent` and `encodeURI` encode
 them, which `ferrovue-router` encodes its links with too.
 
-You don't need to depend on this crate: `ferrovue` re-exports every item at its root
-(`ferrovue::escape_into`, `ferrovue::push_int`, …), which is the path generated code uses.
+You don't need to depend on this crate: `ferrovue` holds it whole as its module `ferrovue::core`
+(`ferrovue::core::escape_into`, `ferrovue::core::push_int`, …), which is the path
+generated code uses.
 It is a crate of its own so that `ferrovue`, [`ferrovue-router`](https://crates.io/crates/ferrovue-router)
 and [`ferrovue-i18n`](https://crates.io/crates/ferrovue-i18n) share one copy.
 

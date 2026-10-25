@@ -1,5 +1,5 @@
 import type { RouteRecordRaw } from "vue-router";
-import type { RouteEntry } from "./routes.ts";
+import type { RouteEntry } from "./route-records.ts";
 
 function unwritten(): never {
   throw new Error("ferrovue/routes is written by the Vite plugin from a folder of pages: add `ferrovue()` from `ferrovue/vite` to the plugins of the Vite config");
@@ -13,6 +13,5 @@ export const routes: RouteRecordRaw[] = unwritten();
  * and `linkRouter` take, for a client whose pages the server renders. */
 const entries: RouteEntry[] = unwritten();
 
-export type { RouteEntry };
 
 export default entries;

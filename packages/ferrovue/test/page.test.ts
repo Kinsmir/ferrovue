@@ -5,10 +5,10 @@ import { defineComponent, h, nextTick, type Component } from "vue";
 import { renderToString } from "vue/server-renderer";
 import { createMemoryHistory, createRouter, RouterLink, useRoute } from "vue-router";
 import { ClientOnly, createPageApp, mountPage, renderPage, type PageRecord } from "../src/client.ts";
-import { clearLoads, defineLoader } from "../src/loads.ts";
-import { hydrateRecordedPage, renderRecordedPage } from "../src/hydration.ts";
+import { clearLoads, defineLoader } from "../src/client.ts";
+import { hydrateRecordedPage, renderRecordedPage } from "../src/testing-browser.ts";
 import { linkRouter } from "../src/link-router.ts";
-import { attachSsrRender } from "../src/testing.ts";
+import { attachSsrRender } from "../src/ssr.ts";
 import { CLIENT_ONLY, ROOT } from "./conformance-cases.ts";
 
 const WRITE = process.env.FERROVUE_FIXTURES_WRITE === "1";

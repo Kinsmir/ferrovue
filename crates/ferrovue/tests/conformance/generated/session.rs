@@ -28,7 +28,7 @@ impl Props {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props, fv_stores: &super::stores::Stores<'_>) {
-    fv::rendered(try_render(out, props, fv_stores));
+    fv::render::rendered(try_render(out, props, fv_stores));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -36,8 +36,8 @@ pub fn render(out: &mut String, props: &Props, fv_stores: &super::stores::Stores
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, _props: &Props, fv_stores: &super::stores::Stores<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, _props: &Props, fv_stores: &super::stores::Stores<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(79);
     out.push_str("<div");
     if let Some(v) = fv_stores.session.user.as_deref() {
@@ -45,25 +45,25 @@ pub fn try_render(out: &mut String, _props: &Props, fv_stores: &super::stores::S
             out.push_str(" data-user");
         } else {
             out.push_str(" data-user=\"");
-            fv::escape_into(out, v);
+            fv::core::escape_into(out, v);
             out.push('"');
         }
     }
     if let Some(v) = fv_stores.session.visits {
         out.push_str(" data-visits=\"");
-        fv::push_int(out, v);
+        fv::core::push_int(out, v);
         out.push('"');
     }
     out.push('>');
     if let Some(fv_user) = fv_stores.session.user.as_deref() {
         out.push_str("<p>");
-        fv::escape_into(out, fv_user);
+        fv::core::escape_into(out, fv_user);
         out.push_str(" (");
-        fv::push_int(out, fv_stores.session.visits.unwrap_or(0i64));
+        fv::core::push_int(out, fv_stores.session.visits.unwrap_or(0i64));
         out.push_str(")</p>");
     } else {
         out.push_str("<p>");
-        fv::escape_into(out, fv_stores.session.user.as_deref().unwrap_or("guest"));
+        fv::core::escape_into(out, fv_stores.session.user.as_deref().unwrap_or("guest"));
         out.push('|');
         out.push_str(if fv_stores.session.visits.is_none() { "true" } else { "false" });
         out.push_str("</p>");
@@ -73,6 +73,6 @@ pub fn try_render(out: &mut String, _props: &Props, fv_stores: &super::stores::S
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p>(props: &'p Props, fv_stores: &'p super::stores::Stores<'p>) -> fv::Html<'p, Props, impl fv::Renderer<Props> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props| try_render(out, props, fv_stores)))
+pub fn html<'p>(props: &'p Props, fv_stores: &'p super::stores::Stores<'p>) -> fv::html::Html<'p, Props, impl fv::html::Renderer<Props> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props| try_render(out, props, fv_stores)))
 }

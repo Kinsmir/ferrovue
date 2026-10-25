@@ -28,8 +28,8 @@ impl Props {
 /// # Panics
 ///
 /// With the message of the refusal [`try_render`] returns.
-pub fn render(out: &mut String, props: &Props, fv_loads: &fv::Loads<'_>) {
-    fv::rendered(try_render(out, props, fv_loads));
+pub fn render(out: &mut String, props: &Props, fv_loads: &fv::loaders::Loads<'_>) {
+    fv::render::rendered(try_render(out, props, fv_loads));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -37,18 +37,18 @@ pub fn render(out: &mut String, props: &Props, fv_loads: &fv::Loads<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props, fv_loads: &fv::Loads<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props, fv_loads: &fv::loaders::Loads<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(19);
-    let fv_refusals = fv::Refusals::new(NAME, "components/LoadedStamps.vue");
+    let fv_refusals = fv::render::Refusals::new(NAME, "components/LoadedStamps.vue");
     out.push_str("<section>");
     fv_refusals.check(super::loaded_stamp::try_render(out, &super::loaded_stamp::Props { year: props.year }, fv_loads))?;
-    fv_refusals.check(super::loaded_stamp::try_render(out, &super::loaded_stamp::Props { year: fv_refusals.keep(fv::try_int(props.year as f64 + 1.0), 8, 60) }, fv_loads))?;
+    fv_refusals.check(super::loaded_stamp::try_render(out, &super::loaded_stamp::Props { year: fv_refusals.keep(fv::render::try_int(props.year as f64 + 1.0), 8, 60) }, fv_loads))?;
     out.push_str("</section>");
     fv_refusals.check(Ok(()))
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p>(props: &'p Props, fv_loads: &'p fv::Loads<'p>) -> fv::Html<'p, Props, impl fv::Renderer<Props> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props| try_render(out, props, fv_loads)))
+pub fn html<'p>(props: &'p Props, fv_loads: &'p fv::loaders::Loads<'p>) -> fv::html::Html<'p, Props, impl fv::html::Renderer<Props> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props| try_render(out, props, fv_loads)))
 }

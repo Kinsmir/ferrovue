@@ -2,7 +2,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { GenError, generate } from "../src/compiler.ts";
+import { GenError } from "../src/errors.ts";
+import { generate } from "../src/compiler.ts";
 
 const roots: string[] = [];
 
@@ -62,7 +63,7 @@ describe("attribute values", () => {
 
   it("refuses `:hidden` bound to a `?:` of a string and a number, whose branches it treats differently", () => {
     expect(refusal(island(component("on: boolean", `<div><p :hidden="on ? 'a' : 1">x</p></div>`))).code).toBe("FV0623");
-    expect(compile(island(component("on: boolean", `<div><p :title="on ? 'a' : 1">x</p></div>`))).get("x.rs")).toContain("fv::Js(1i64)");
+    expect(compile(island(component("on: boolean", `<div><p :title="on ? 'a' : 1">x</p></div>`))).get("x.rs")).toContain("fv::core::Js(1i64)");
   });
 
   it("refuses an attribute that may fall through bound to a list, with its code", () => {
@@ -82,7 +83,7 @@ import Child from "./Child.vue";
 </script>
 <template><div><Child :data-n="null" :data-u="undefined" /></div></template>`;
     expect(compile(island(parent, { Child: component("label?: string", "<div>x</div>") })).get("x.rs")).toContain(
-      `&fv::Attrs::new(&[("data-n", fv::Attr::Undefined), ("data-u", fv::Attr::Undefined)], "")`,
+      `&fv::attrs::Attrs::new(&[("data-n", fv::attrs::Attr::Undefined), ("data-u", fv::attrs::Attr::Undefined)], "")`,
     );
   });
 
@@ -164,7 +165,7 @@ describe("attributes that fall through", () => {
     const out = compile(island(passing, { Child: child })).get("child.rs")!;
     expect(out).toContain(`out.push_str(" a.=\\"x\\" a^=\\"y\\" b=\\"z\\" onx=\\"o\\" data-icon-name=\\"i\\"");`);
     expect(out).toContain(
-      `fv::attrs_into(out, &[&[("title", fv::Attr::str(props.label.as_deref().unwrap_or("")))], &[("a.", fv::Attr::str("x")), ("a^", fv::Attr::str("y")), ("^b", fv::Attr::str("z")), ("onx", fv::Attr::str("o")), ("data-icon-name", fv::Attr::str("i"))], fv_attrs.list()], 2, "");`,
+      `fv::attrs::attrs_into(out, &[&[("title", fv::attrs::Attr::str(props.label.as_deref().unwrap_or("")))], &[("a.", fv::attrs::Attr::str("x")), ("a^", fv::attrs::Attr::str("y")), ("^b", fv::attrs::Attr::str("z")), ("onx", fv::attrs::Attr::str("o")), ("data-icon-name", fv::attrs::Attr::str("i"))], fv_attrs.list()], 2, "");`,
     );
   });
 
@@ -176,23 +177,23 @@ describe("attributes that fall through", () => {
     );
     const parent = passing.replace(`<Child data-x="1" />`, `<Child data-x="1" :b="null" />`);
     expect(compile(island(parent, { Child: child })).get("child.rs")).toContain(
-      `fv::attrs_into(out, &[&[("a", fv::Attr::Undefined), ("u", fv::Attr::Undefined), ("n", fv::Attr::Undefined), ("i", props.i.map_or(fv::Attr::Undefined, fv::Attr::Int)), ("f", props.f.map_or(fv::Attr::Undefined, fv::Attr::Float)), ("b", props.b.map_or(fv::Attr::Undefined, fv::Attr::Bool))], fv_attrs.list()], 1, "");`,
+      `fv::attrs::attrs_into(out, &[&[("a", fv::attrs::Attr::Undefined), ("u", fv::attrs::Attr::Undefined), ("n", fv::attrs::Attr::Undefined), ("i", props.i.map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::Int)), ("f", props.f.map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::Float)), ("b", props.b.map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::Bool))], fv_attrs.list()], 1, "");`,
     );
   });
 
   it("hands the scope ids to a root that holds only the attributes passed", () => {
     const out = compile(island(scopedPassing, { Child: component("label?: string", "<div>x</div>") })).get("child.rs")!;
     expect(out).toContain("out.push_str(fv_attrs.ids());");
-    expect(out).toContain("fv::passed_attrs_into(out, fv_attrs.list(), fv_attrs.ids());");
+    expect(out).toContain("fv::attrs::passed_attrs_into(out, fv_attrs.list(), fv_attrs.ids());");
   });
 
   it("leaves a client directive out of the attributes, where `_attrs` comes first or after the root's own", () => {
     const config = { clientDirectives: ["focus"] };
     const first = compile(island(scopedPassing, { Child: component("label?: string", `<div v-focus>x</div>`, focus) }), config).get("child.rs")!;
     expect(first).toContain("out.push_str(fv_attrs.ids());");
-    expect(first).toContain("fv::attrs_into(out, &[fv_attrs.list()], 0, fv_attrs.ids());");
+    expect(first).toContain("fv::attrs::attrs_into(out, &[fv_attrs.list()], 0, fv_attrs.ids());");
     const after = compile(island(scopedPassing, { Child: component("label?: string", `<div v-focus :title="label ?? ''">x</div>`, focus) }), config).get("child.rs")!;
-    expect(after).toContain(`fv::attrs_into(out, &[&[("title", fv::Attr::str(props.label.as_deref().unwrap_or("")))], fv_attrs.list()], 1, fv_attrs.ids());`);
+    expect(after).toContain(`fv::attrs::attrs_into(out, &[&[("title", fv::attrs::Attr::str(props.label.as_deref().unwrap_or("")))], fv_attrs.list()], 1, fv_attrs.ids());`);
   });
 
   const handedIds = (inner: string): GenError => {

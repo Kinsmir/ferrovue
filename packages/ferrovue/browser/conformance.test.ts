@@ -3,7 +3,8 @@ import vue from "@vitejs/plugin-vue";
 import { chromium, firefox, webkit, type Browser, type ConsoleMessage, type Page } from "playwright";
 import { build, type Rolldown } from "vite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { cases, CLIENT_ONLY, CSS_MODULES, datePlans, hydrationBody, OPTIONS, recordedHead, ROUTES, UNHEAD_REWRITES, VUE_DISAGREES } from "../test/conformance-cases.ts";
+import { cases, CLIENT_ONLY, CSS_MODULES, datePlans, OPTIONS, ROUTES, UNHEAD_REWRITES, VUE_DISAGREES } from "../test/conformance-cases.ts";
+import { hydrationBody, recordedHead } from "../src/conformance.ts";
 import type { PageData } from "./entry.ts";
 
 const ORIGIN = "http://conformance.test";
@@ -49,7 +50,7 @@ beforeAll(async () => {
     logLevel: "warn",
     plugins: [vue()],
     css: { modules: { generateScopedName: CSS_MODULES.generateScopedName } },
-    resolve: { alias: [{ find: /^ferrovue\/client$/, replacement: join(import.meta.dirname, "../src/client.ts") }] },
+    resolve: { alias: [{ find: /^ferrovue$/, replacement: join(import.meta.dirname, "../src/client.ts") }] },
     define: { __VUE_I18N_FULL_INSTALL__: "true", __VUE_I18N_LEGACY_API__: "false", __INTLIFY_PROD_DEVTOOLS__: "false" },
     build: { write: false, minify: false, rolldownOptions: { input: join(import.meta.dirname, "entry.ts"), output: { codeSplitting: false } } },
   }).finally(() => {

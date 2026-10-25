@@ -31,7 +31,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) {
-    fv::rendered(try_render_scoped(out, props, fv_provides, ""));
+    fv::render::rendered(try_render_scoped(out, props, fv_provides, ""));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -39,40 +39,40 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides:
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::render::Refused> {
     try_render_scoped(out, props, fv_provides, "")
 }
 
 /// [`try_render`], with the scope ids a parent hands the root: ` data-v-…` each.
 #[doc(hidden)]
-pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>, fv_attrs: &str) -> Result<(), fv::Refused> {
+pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>, fv_attrs: &str) -> Result<(), fv::render::Refused> {
     out.reserve(92 + props.label.len());
     out.push_str("<button type=\"button\" class=\"btn");
-    fv::class_into(out, true, &[&*format!("btn-{}", fv_provides.theme_key.unwrap_or("light"))]);
+    fv::attrs::class_into(out, true, &[&*format!("btn-{}", fv_provides.theme_key.unwrap_or("light"))]);
     out.push('"');
     if let Some(v) = fv_provides.size {
         out.push_str(" data-size=\"");
-        fv::push_int(out, v);
+        fv::core::push_int(out, v);
         out.push('"');
     }
     if fv_provides.accent_key.unwrap_or("none").is_empty() {
         out.push_str(" data-accent");
     } else {
         out.push_str(" data-accent=\"");
-        fv::escape_into(out, fv_provides.accent_key.unwrap_or("none"));
+        fv::core::escape_into(out, fv_provides.accent_key.unwrap_or("none"));
         out.push('"');
     }
     out.push_str(fv_attrs);
     out.push('>');
-    fv::escape_into(out, &props.label);
+    fv::core::escape_into(out, &props.label);
     out.push_str(" (");
-    fv::escape_into(out, fv_provides.tone.unwrap_or("plain"));
+    fv::core::escape_into(out, fv_provides.tone.unwrap_or("plain"));
     out.push_str(")</button>");
     Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_provides: super::provides::Provides<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_provides)))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_provides: super::provides::Provides<'p>) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_provides)))
 }

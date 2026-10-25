@@ -37,26 +37,26 @@ impl std::fmt::Display for AndChainsTone {
 }
 
 impl std::str::FromStr for AndChainsTone {
-    type Err = ferrovue::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "info" => Ok(AndChainsTone::Info),
             "warn" => Ok(AndChainsTone::Warn),
-            _ => Err(ferrovue::ParseUnionError::new("AndChainsTone", s, &["info", "warn"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("AndChainsTone", s, &["info", "warn"])),
         }
     }
 }
 
 impl TryFrom<&str> for AndChainsTone {
-    type Error = ferrovue::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::Union for AndChainsTone {
+impl ferrovue::props::Union for AndChainsTone {
     const ALL: &'static [Self] = &AndChainsTone::ALL;
 
     fn as_str(self) -> &'static str {
@@ -141,7 +141,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -149,15 +149,15 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(140 + 4 + props.badge.as_ref().map_or(0, |v| v.label.len()) + props.word.as_deref().map_or(0, str::len));
     let s_in_range = if let Some(fv_n) = props.n { fv_n as f64 > 1.0 && (fv_n as f64) < 9.0 } else { false };
     let s_color = props.tone.map(|fv_tone| match fv_tone { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" });
     out.push_str("<section");
-    if if props.tone.is_some() { true } else { props.tone.map(fv::Union::as_str).is_some() } {
+    if if props.tone.is_some() { true } else { props.tone.map(fv::props::Union::as_str).is_some() } {
         out.push_str(" class=\"");
-        fv::class_into(out, false, &[if let Some(fv_tone_2) = props.tone { match fv_tone_2 { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" } } else { "" }]);
+        fv::attrs::class_into(out, false, &[if let Some(fv_tone_2) = props.tone { match fv_tone_2 { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" } } else { "" }]);
         out.push('"');
     }
     if let Some(v) = props.tone.map(|fv_tone_3| match fv_tone_3 { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" }) {
@@ -165,7 +165,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
             out.push_str(" title");
         } else {
             out.push_str(" title=\"");
-            fv::escape_into(out, v);
+            fv::core::escape_into(out, v);
             out.push('"');
         }
     }
@@ -178,9 +178,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push('|');
     out.push_str(if if let Some(fv_n_3) = props.n { (fv_n_3 as f64) < 1.0 || fv_n_3 as f64 > 9.0 } else { true } { "true" } else { "false" });
     out.push_str("</p><p>");
-    fv::push_number(out, if let Some(fv_n_4) = props.n { if fv_n_4 as f64 > 1.0 { fv_n_4 as f64 * 2.0 } else { 0.0f64 } } else { 0.0f64 });
+    fv::core::push_number(out, if let Some(fv_n_4) = props.n { if fv_n_4 as f64 > 1.0 { fv_n_4 as f64 * 2.0 } else { 0.0f64 } } else { 0.0f64 });
     out.push('|');
-    fv::escape_into(out, &(if let Some(fv_n_5) = props.n { if (fv_n_5 as f64) < 0.0 { std::borrow::Cow::<str>::Borrowed("bad") } else { std::borrow::Cow::<str>::Owned(fv::js_to_fixed(fv_n_5 as f64, 1)) } } else { std::borrow::Cow::<str>::Borrowed("bad") }));
+    fv::core::escape_into(out, &(if let Some(fv_n_5) = props.n { if (fv_n_5 as f64) < 0.0 { std::borrow::Cow::<str>::Borrowed("bad") } else { std::borrow::Cow::<str>::Owned(fv::core::js_to_fixed(fv_n_5 as f64, 1)) } } else { std::borrow::Cow::<str>::Borrowed("bad") }));
     out.push('|');
     out.push_str(if (if let Some(fv_n_6) = props.n { fv_n_6 as f64 > 0.0 && (fv_n_6 as f64) < 5.0 } else { false }) || props.n == Some(0i64) { "true" } else { "false" });
     out.push_str("</p><p>");
@@ -188,34 +188,34 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push('|');
     out.push_str(if if let Some(fv_x_2) = props.m { if (fv_x_2 as f64) < 0.0 { true } else { fv_x_2 as f64 > 99.0 } } else { true } { "true" } else { "false" });
     out.push('|');
-    fv::escape_into(out, &(if let Some(fv_m_2) = props.m { if fv_m_2 as f64 >= 0.0 { if fv_m_2 as f64 <= 99.0 { std::borrow::Cow::<str>::Owned(format!("{}", fv::Js(fv_m_2 as f64 + 1.0))) } else { std::borrow::Cow::<str>::Borrowed("none") } } else { std::borrow::Cow::<str>::Borrowed("none") } } else { std::borrow::Cow::<str>::Borrowed("none") }));
+    fv::core::escape_into(out, &(if let Some(fv_m_2) = props.m { if fv_m_2 as f64 >= 0.0 { if fv_m_2 as f64 <= 99.0 { std::borrow::Cow::<str>::Owned(format!("{}", fv::core::Js(fv_m_2 as f64 + 1.0))) } else { std::borrow::Cow::<str>::Borrowed("none") } } else { std::borrow::Cow::<str>::Borrowed("none") } } else { std::borrow::Cow::<str>::Borrowed("none") }));
     out.push_str("</p><p class=\"");
-    fv::class_into(out, false, &[if let Some(fv_tone_4) = props.tone { match fv_tone_4 { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" } } else { "" }, "fixed"]);
+    fv::attrs::class_into(out, false, &[if let Some(fv_tone_4) = props.tone { match fv_tone_4 { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" } } else { "" }, "fixed"]);
     out.push_str("\">");
     if let Some(v) = props.tone.map(|fv_tone_5| match fv_tone_5 { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" }) {
-        fv::escape_into(out, v);
+        fv::core::escape_into(out, v);
     }
     out.push('|');
-    fv::escape_into(out, props.tone.map(|fv_tone_6| match fv_tone_6 { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" }).unwrap_or("none"));
+    fv::core::escape_into(out, props.tone.map(|fv_tone_6| match fv_tone_6 { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" }).unwrap_or("none"));
     out.push('|');
-    fv::escape_into(out, s_color.unwrap_or("unset"));
+    fv::core::escape_into(out, s_color.unwrap_or("unset"));
     out.push_str("</p><p>");
     if let Some(v) = props.badge.as_ref().map(|fv_badge| &*fv_badge.label) {
-        fv::escape_into(out, v);
+        fv::core::escape_into(out, v);
     }
     out.push('|');
-    out.push_str(if if let Some(fv_badge_2) = props.badge.as_ref() { fv::js_length(&fv_badge_2.label) as f64 > 2.0 && &*fv_badge_2.label != "none" } else { false } { "true" } else { "false" });
+    out.push_str(if if let Some(fv_badge_2) = props.badge.as_ref() { fv::strings::js_length(&fv_badge_2.label) as f64 > 2.0 && &*fv_badge_2.label != "none" } else { false } { "true" } else { "false" });
     out.push('|');
-    out.push_str(if if let Some(fv_word) = props.word.as_deref() { !fv_word.is_empty() && (fv::js_length(fv_word) as f64) < 6.0 } else { false } { "true" } else { "false" });
+    out.push_str(if if let Some(fv_word) = props.word.as_deref() { !fv_word.is_empty() && (fv::strings::js_length(fv_word) as f64) < 6.0 } else { false } { "true" } else { "false" });
     out.push_str("</p>");
     if let Some(fv_n_7) = props.n && fv_n_7 as f64 > 1.0 && (fv_n_7 as f64) < 9.0 {
         out.push_str("<i>");
-        fv::push_number(out, fv_n_7 as f64 * 3.0);
+        fv::core::push_number(out, fv_n_7 as f64 * 3.0);
         out.push_str("</i>");
     } else {
         if let Some(fv_n_8) = props.n && fv_n_8 as f64 >= 9.0 && (fv_n_8 as f64) < 100.0 {
             out.push_str("<i>");
-            fv::push_number(out, fv_n_8 as f64 - 9.0);
+            fv::core::push_number(out, fv_n_8 as f64 - 9.0);
             out.push_str("</i>");
         } else {
             out.push_str("<i>out</i>");
@@ -226,21 +226,21 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

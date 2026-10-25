@@ -12,15 +12,15 @@ pub const NAME: &str = "Timeline";
 pub struct Props<'a> {
     #[serde(rename = "moments")]
     pub moments: Vec<super::types::Moment<'a>>,
-    #[serde(rename = "days", with = "fv::dates_in")]
-    pub days: Vec<ferrovue::JsDate>,
-    #[serde(rename = "by", with = "fv::dates_in")]
-    pub by: ferrovue::Record<'a, ferrovue::JsDate>,
+    #[serde(rename = "days", with = "fv::date::dates_in")]
+    pub days: Vec<ferrovue::date::JsDate>,
+    #[serde(rename = "by", with = "fv::date::dates_in")]
+    pub by: ferrovue::props::Record<'a, ferrovue::date::JsDate>,
 }
 
 impl<'a> Props<'a> {
     /// Props with its required fields.
-    pub fn new(moments: Vec<super::types::Moment<'a>>, days: Vec<ferrovue::JsDate>, by: ferrovue::Record<'a, ferrovue::JsDate>) -> Self {
+    pub fn new(moments: Vec<super::types::Moment<'a>>, days: Vec<ferrovue::date::JsDate>, by: ferrovue::props::Record<'a, ferrovue::date::JsDate>) -> Self {
         Props { moments, days, by }
     }
 
@@ -33,7 +33,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -41,33 +41,33 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(57 + 23 * props.moments.len() + 16 * props.by.len() + props.moments.iter().map(|v| v.label.len()).sum::<usize>() + props.by.iter().map(|(k, _)| k.len()).sum::<usize>());
     out.push_str("<ol><!--[-->");
     for fv_m_ref in props.moments.iter() {
         let fv_m = fv_m_ref;
         out.push_str("<li>");
-        fv::escape_into(out, &fv_m.label);
+        fv::core::escape_into(out, &fv_m.label);
         out.push(' ');
-        fv::push_number(out, fv::js_time_of(&fv_m.at));
+        fv::core::push_number(out, fv::date::js_time_of(&fv_m.at));
         out.push(' ');
-        fv::push_int(out, fv_m.seen.len() as i64);
+        fv::core::push_int(out, fv_m.seen.len() as i64);
         out.push_str("</li>");
     }
     out.push_str("<!--]--><!--[-->");
-    for fv_d in props.days.iter().map(fv::js_time_of) {
+    for fv_d in props.days.iter().map(fv::date::js_time_of) {
         out.push_str("<li>");
-        fv::push_number(out, fv::js_utc_date(fv_d));
+        fv::core::push_number(out, fv::date::js_utc_date(fv_d));
         out.push_str("</li>");
     }
     out.push_str("<!--]--><!--[-->");
     for (fv_k, fv_d_ref) in props.by.iter() {
-        let fv_d_2 = fv::js_time_of(fv_d_ref);
+        let fv_d_2 = fv::date::js_time_of(fv_d_ref);
         out.push_str("<li>");
-        fv::escape_into(out, fv_k);
+        fv::core::escape_into(out, fv_k);
         out.push('=');
-        fv::push_number(out, fv::js_utc_full_year(fv_d_2));
+        fv::core::push_number(out, fv::date::js_utc_full_year(fv_d_2));
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ol>");
@@ -75,25 +75,25 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    let html: fv::Html<'p, Props<'a>> = fv::Html::markup_fallible(props, render, try_render);
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    let html: fv::html::Html<'p, Props<'a>> = fv::html::Html::markup_fallible(props, render, try_render);
     html.dates("[{\"moments\":[{\"at\":1,\"seen\":[1]}],\"days\":[1],\"by\":{\"*\":1}}]")
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    let html: fv::Html<'p, Props<'a>> = fv::Html::island_fallible(NAME, props, render, try_render);
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    let html: fv::html::Html<'p, Props<'a>> = fv::html::Html::island_fallible(NAME, props, render, try_render);
     html.dates("[{\"moments\":[{\"at\":1,\"seen\":[1]}],\"days\":[1],\"by\":{\"*\":1}}]")
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    let html: fv::Html<'a, Props<'a>> = fv::Html::markup_owned_fallible(props, render, try_render);
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    let html: fv::html::Html<'a, Props<'a>> = fv::html::Html::markup_owned_fallible(props, render, try_render);
     html.dates("[{\"moments\":[{\"at\":1,\"seen\":[1]}],\"days\":[1],\"by\":{\"*\":1}}]")
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    let html: fv::Html<'a, Props<'a>> = fv::Html::island_owned_fallible(NAME, props, render, try_render);
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    let html: fv::html::Html<'a, Props<'a>> = fv::html::Html::island_owned_fallible(NAME, props, render, try_render);
     html.dates("[{\"moments\":[{\"at\":1,\"seen\":[1]}],\"days\":[1],\"by\":{\"*\":1}}]")
 }

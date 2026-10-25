@@ -32,8 +32,8 @@ impl<'a> Props<'a> {
 /// # Panics
 ///
 /// With the message of the refusal [`try_render`] returns.
-pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::I18n) {
-    fv::rendered(try_render(out, props, fv_i18n));
+pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n) {
+    fv::render::rendered(try_render(out, props, fv_i18n));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -41,24 +41,24 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::I18n) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::I18n) -> Result<(), fv::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n) -> Result<(), fv::render::Refused> {
     out.reserve(22 + props.words.len());
     out.push_str("<p");
-    if fv::js_split(&props.words, " ").into_iter().map(|fv_w| std::borrow::Cow::<str>::Owned((if props.on { std::borrow::Cow::<str>::Owned(fv_w.to_uppercase()) } else { std::borrow::Cow::<str>::Borrowed(&*fv_w) }).into_owned())).collect::<Vec<_>>().join("-").is_empty() {
+    if fv::strings::js_split(&props.words, " ").into_iter().map(|fv_w| std::borrow::Cow::<str>::Owned((if props.on { std::borrow::Cow::<str>::Owned(fv_w.to_uppercase()) } else { std::borrow::Cow::<str>::Borrowed(&*fv_w) }).into_owned())).collect::<Vec<_>>().join("-").is_empty() {
         out.push_str(" title");
     } else {
         out.push_str(" title=\"");
-        fv::escape_into(out, &fv::js_split(&props.words, " ").into_iter().map(|fv_w| std::borrow::Cow::<str>::Owned((if props.on { std::borrow::Cow::<str>::Owned(fv_w.to_uppercase()) } else { std::borrow::Cow::<str>::Borrowed(&*fv_w) }).into_owned())).collect::<Vec<_>>().join("-"));
+        fv::core::escape_into(out, &fv::strings::js_split(&props.words, " ").into_iter().map(|fv_w| std::borrow::Cow::<str>::Owned((if props.on { std::borrow::Cow::<str>::Owned(fv_w.to_uppercase()) } else { std::borrow::Cow::<str>::Borrowed(&*fv_w) }).into_owned())).collect::<Vec<_>>().join("-"));
         out.push('"');
     }
     out.push('>');
-    fv::escape_into(out, &fv::js_split(&props.words, " ").into_iter().map(|fv_w_2| std::borrow::Cow::<str>::Owned((if props.on { std::borrow::Cow::<str>::Owned(fv_i18n.t("common.app", &fv::i18n::Args::new())) } else { std::borrow::Cow::<str>::Borrowed(&*fv_w_2) }).into_owned())).collect::<Vec<_>>().join("|"));
+    fv::core::escape_into(out, &fv::strings::js_split(&props.words, " ").into_iter().map(|fv_w_2| std::borrow::Cow::<str>::Owned((if props.on { std::borrow::Cow::<str>::Owned(fv_i18n.t("common.app", &fv::i18n::Args::new())) } else { std::borrow::Cow::<str>::Borrowed(&*fv_w_2) }).into_owned())).collect::<Vec<_>>().join("|"));
     out.push_str("</p>");
     Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_i18n: &'p fv::I18n) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_i18n)))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_i18n: &'p fv::i18n::I18n) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_i18n)))
 }

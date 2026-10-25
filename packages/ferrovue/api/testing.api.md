@@ -4,18 +4,10 @@
 
 ```ts
 
-import { App } from 'vue';
-import { Component } from 'vue';
-import type { Pinia } from 'pinia';
+import type { Component } from 'vue';
 import { pinia } from 'pinia';
-import { Plugin as Plugin_2 } from 'vue';
-import type { Router } from 'vue-router';
-import type { RouteRecordRaw } from 'vue-router';
 import { vueI18n } from 'vue-i18n';
 import { vueRouter } from 'vue-router';
-
-// @public
-export function attachSsrRender(file: string, name: string, component: Component): void;
 
 // @public
 export interface ConformanceOptions extends Pick<RouterOptions, "pinia" | "vueRouter" | "vueI18n"> {
@@ -31,120 +23,6 @@ export interface ConformanceOptions extends Pick<RouterOptions, "pinia" | "vueRo
 
 // @public
 export function conformanceSuite(options: ConformanceOptions): Promise<void>;
-
-// @public
-export interface Fixture {
-    loads?: Record<string, unknown> | null;
-    locale?: string | null;
-    // (undocumented)
-    props: Record<string, unknown>;
-    // (undocumented)
-    route: string;
-    // (undocumented)
-    slots: Record<string, string>;
-    // (undocumented)
-    stores: Record<string, unknown>;
-}
-
-// @public
-export function fixtureApp(component: Component, fixture: Fixture, routes: RouteEntry[] | null, options?: RouterOptions): Promise<App>;
-
-// @public
-export function hydrateRecordedPage(page: RecordedPage, layout: Component, components: Record<string, IslandComponent>, options?: PageOptions): Promise<App>;
-
-// @public
-export type IslandComponent = Component | (() => Promise<Component | {
-    default: Component;
-}>);
-
-// @public (undocumented)
-export interface MountOptions {
-    onError?: (element: Element, problem: string) => void;
-    pinia?: Pinia;
-    plugins?: Plugin_2[];
-    root?: ParentNode;
-    router?: Router;
-}
-
-// @public (undocumented)
-export interface PageOptions extends Pick<MountOptions, "pinia" | "router" | "plugins"> {
-    container?: Element | string;
-    doc?: Document;
-    record?: string;
-}
-
-// @public
-export interface PagePart {
-    // (undocumented)
-    c: string;
-    d?: unknown;
-    p: Record<string, unknown> | null;
-}
-
-// @public
-export interface PageRecord {
-    dates?: unknown;
-    props: Record<string, unknown> | null;
-    // (undocumented)
-    slots: Record<string, PagePart[]>;
-}
-
-// @public
-export function readFixture(json: Record<string, unknown>): Fixture;
-
-// @public
-export interface RecordedPage {
-    // (undocumented)
-    html: string;
-    // (undocumented)
-    record?: PageRecord;
-}
-
-// @public (undocumented)
-export interface RenderPageOptions extends Pick<MountOptions, "pinia" | "router" | "plugins"> {
-    container?: Element | string;
-    doc?: Document;
-    loads?: string[];
-    previous?: {
-        unmount(): void;
-    } | undefined;
-}
-
-// @public
-export function renderRecordedPage(page: RecordedPage, layout: Component, components: Record<string, IslandComponent>, options?: RenderPageOptions & {
-    record?: string;
-}): Promise<App>;
-
-// @public
-export type RouteEntry = string | {
-    path: string;
-    name?: string;
-    view?: boolean;
-    children?: RouteEntry[];
-};
-
-// @public
-export function routeRecords(routes: RouteEntry[], View: Component): RouteRecordRaw[];
-
-// @public
-export interface RouterOptions {
-    // (undocumented)
-    base?: string;
-    client?: boolean;
-    hydrate?: boolean;
-    i18n?: {
-        messages: Record<string, unknown>;
-        locale: string;
-        fallbackLocale?: string | string[];
-    };
-    // (undocumented)
-    linkActiveClass?: string;
-    // (undocumented)
-    linkExactActiveClass?: string;
-    pinia?: pinia | undefined;
-    vueI18n?: vueI18n | undefined;
-    vueRouter?: vueRouter | undefined;
-}
 
 // (No @packageDocumentation comment for this package)
 

@@ -8,7 +8,7 @@ fuzz_target!(|value: Value| {
         return;
     }
     let json = value.reference_json();
-    let html = ferrovue::Html::island("Fuzz", &value, |out: &mut String, _: &Value| {
+    let html = ferrovue::html::Html::island("Fuzz", &value, |out: &mut String, _: &Value| {
         out.push_str("<i></i>");
     })
     .into_string();

@@ -64,7 +64,7 @@ struct Escaped<'o>(&'o mut String);
 impl io::Write for Escaped<'_> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         let text = std::str::from_utf8(buf).map_err(io::Error::other)?;
-        crate::escape_into(self.0, text);
+        ferrovue_core::escape_into(self.0, text);
         Ok(buf.len())
     }
 
@@ -483,7 +483,7 @@ mod tests {
             (written_escaped(&by_number), to_string(&by_number)),
         ] {
             let mut escaped = String::new();
-            crate::escape_into(&mut escaped, &json);
+            ferrovue_core::escape_into(&mut escaped, &json);
             assert_eq!(written, escaped);
         }
     }

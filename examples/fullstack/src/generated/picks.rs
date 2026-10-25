@@ -33,9 +33,9 @@ impl<'a> Props<'a> {
 #[derive(Clone, Copy, Default)]
 pub struct Slots<'s> {
     /// `<slot>`
-    pub default: Option<fv::Slot<'s>>,
+    pub default: Option<fv::render::Slot<'s>>,
     /// `<slot name="reviews">`
-    pub reviews: Option<fv::Slot<'s>>,
+    pub reviews: Option<fv::render::Slot<'s>>,
 }
 
 /// Write the component's server render into `out`.
@@ -43,8 +43,8 @@ pub struct Slots<'s> {
 /// # Panics
 ///
 /// With the message of the refusal [`try_render`] returns.
-pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::Route<'_>, fv_head: &fv::Head, fv_loads: &fv::Loads<'_>) {
-    fv::rendered(try_render(out, props, fv_slots, fv_route, fv_head, fv_loads));
+pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::router::Route<'_>, fv_head: &fv::head::Head, fv_loads: &fv::loaders::Loads<'_>) {
+    fv::render::rendered(try_render(out, props, fv_slots, fv_route, fv_head, fv_loads));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -52,10 +52,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::Route<'_>, fv_head: &fv::Head, fv_loads: &fv::Loads<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::router::Route<'_>, fv_head: &fv::head::Head, fv_loads: &fv::loaders::Loads<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(393 + 44 * props.books.len() + props.shop.len() + props.featured.id.len() + props.featured.title.len() + props.featured.author.len() + props.books.iter().map(|v| v.id.len() + v.title.len() + v.author.len()).sum::<usize>());
-    fv_head.push(fv::HeadValue::object([("title", fv::HeadValue::str(&format!("Staff picks · {}", props.shop))), ("meta", fv::HeadValue::array([fv::HeadValue::object([("name", fv::HeadValue::str("description")), ("content", fv::HeadValue::str(&format!("{} and the rest of this week's staff picks", props.featured.title)))])])), ("htmlAttrs", fv::HeadValue::object([("class", fv::HeadValue::str("picks-page"))]))]));
+    fv_head.push(fv::head::HeadValue::object([("title", fv::head::HeadValue::str(&format!("Staff picks · {}", props.shop))), ("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([("name", fv::head::HeadValue::str("description")), ("content", fv::head::HeadValue::str(&format!("{} and the rest of this week's staff picks", props.featured.title)))])])), ("htmlAttrs", fv::head::HeadValue::object([("class", fv::head::HeadValue::str("picks-page"))]))]));
     out.push_str("<div class=\"layout picks\"><header>");
     {
         let fv_link = {
@@ -66,11 +66,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_r
             out.push_str(" aria-current=\"page\"");
         }
         out.push_str(" href=\"");
-        fv::escape_into(out, &fv_link.href);
+        fv::core::escape_into(out, &fv_link.href);
         out.push_str("\" class=\"");
-        fv::class_into(out, false, &[if fv_link.exact { "active" } else { "" }, "brand"]);
+        fv::attrs::class_into(out, false, &[if fv_link.exact { "active" } else { "" }, "brand"]);
         out.push_str("\">");
-        fv::escape_into(out, &props.shop);
+        fv::core::escape_into(out, &props.shop);
         out.push_str("</a>");
     }
     out.push_str("<nav>");
@@ -83,18 +83,18 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_r
             out.push_str(" aria-current=\"page\"");
         }
         out.push_str(" href=\"");
-        fv::escape_into(out, &fv_link.href);
+        fv::core::escape_into(out, &fv_link.href);
         out.push_str("\" class=\"");
-        fv::class_into(out, false, &[if fv_link.exact { "active" } else { "" }]);
+        fv::attrs::class_into(out, false, &[if fv_link.exact { "active" } else { "" }]);
         out.push_str("\">Staff picks</a>");
     }
     out.push_str("</nav></header><main>");
-    fv::slot_into(out, fv_slots.default, None);
+    fv::render::slot_into(out, fv_slots.default, None);
     out.push_str("</main><aside class=\"reviews\"><h2>Readers on ");
-    fv::escape_into(out, &props.featured.title);
+    fv::core::escape_into(out, &props.featured.title);
     out.push_str("</h2>");
     super::stock_level::try_render(out, &super::stock_level::Props { id: std::borrow::Cow::Borrowed(&*props.featured.id) }, fv_loads)?;
-    fv::slot_into(out, fv_slots.reviews, Some(&mut |out: &mut String| {
+    fv::render::slot_into(out, fv_slots.reviews, Some(&mut |out: &mut String| {
         out.push_str("<p>Loading reviews…</p>");
     }));
     out.push_str("<nav class=\"featured\"><!--[-->");
@@ -103,7 +103,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_r
         {
             let fv_link = {
                 let mut fv_search = String::new();
-                fv::query_into(&mut fv_search, "featured", &fv_book.id);
+                fv::router::query_into(&mut fv_search, "featured", &fv_book.id);
                 fv_route.link_named("/picks", &[], &fv_search, "")
             };
             out.push_str("<a");
@@ -111,11 +111,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_r
                 out.push_str(" aria-current=\"page\"");
             }
             out.push_str(" href=\"");
-            fv::escape_into(out, &fv_link.href);
+            fv::core::escape_into(out, &fv_link.href);
             out.push_str("\" class=\"");
-            fv::class_into(out, false, &[if fv_link.exact { "active" } else { "" }]);
+            fv::attrs::class_into(out, false, &[if fv_link.exact { "active" } else { "" }]);
             out.push_str("\">");
-            fv::escape_into(out, &fv_book.title);
+            fv::core::escape_into(out, &fv_book.title);
             out.push_str("</a>");
         }
     }
@@ -124,6 +124,6 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_r
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>, fv_route: &'p fv::Route<'p>, fv_head: &'p fv::Head, fv_loads: &'p fv::Loads<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_slots, fv_route, fv_head, fv_loads)))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>, fv_route: &'p fv::router::Route<'p>, fv_head: &'p fv::head::Head, fv_loads: &'p fv::loaders::Loads<'p>) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_slots, fv_route, fv_head, fv_loads)))
 }

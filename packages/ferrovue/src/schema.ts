@@ -62,7 +62,7 @@ export const CONFIG_SCHEMA: Schema = {
       },
     },
     trustedHtml: STRING,
-    dateType: { type: "string", default: "ferrovue::JsDate" },
+    dateType: { type: "string", default: "ferrovue::date::JsDate" },
     unions: { type: "object", additionalProperties: STRING },
     routes: ROUTES,
     router: {

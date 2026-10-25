@@ -1,12 +1,12 @@
-//! A component whose `TrustedHtml` prop is `ferrovue::Sanitised`, compiled with that `trustedHtml`,
-//! and `ferrovue::BasicHtml` and `ferrovue::InlineHtml` read back by an HTML parser.
+//! A component whose `TrustedHtml` prop is `ferrovue::html::Sanitised`, compiled with that `trustedHtml`,
+//! and `ferrovue::html::BasicHtml` and `ferrovue::html::InlineHtml` read back by an HTML parser.
 
 #[rustfmt::skip]
 #[path = "sanitised/generated/mod.rs"]
 #[allow(missing_docs)]
 pub mod generated;
 
-use ferrovue::{BasicHtml, InlineHtml, Sanitised};
+use ferrovue::html::{BasicHtml, InlineHtml, Sanitised};
 use generated::review;
 use proptest::prelude::*;
 

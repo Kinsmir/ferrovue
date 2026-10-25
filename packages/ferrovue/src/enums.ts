@@ -1,5 +1,6 @@
 import { basename } from "node:path";
-import { type Component, type EnumDef, type N, type Ty, type Val, asciiTy, declaredLiterals, enumOf, enumPath, enumTy, fail, GenError, isAscii, isDeclared, literalsOf, literalTy, refusalAt, REFUSALS, RUST_PRELUDE, rustStr, snake, UNION_STR, unionStr, variantPath } from "./model.ts";
+import { type Component, type EnumDef, type N, type Ty, type Val, asciiTy, declaredLiterals, enumOf, enumPath, enumTy, fail, isAscii, isDeclared, literalsOf, literalTy, refusalAt, REFUSALS, RUST_PRELUDE, rustStr, snake, UNION_STR, unionStr, variantPath } from "./model.ts";
+import { GenError } from "./errors.ts";
 import { ctx } from "./context.ts";
 import { atom, binary } from "./parens.ts";
 import { unquote } from "./strings.ts";
@@ -214,7 +215,7 @@ export function intoEnum(comp: Component, v: Val, def: EnumDef, node: N): string
     if (strings.length === 1 && !optional) return variantPath(comp, def, strings[0]!);
     return over(v.code, strings.map((l, i) => `${i === strings.length - 1 ? "_" : rustStr(l)} => ${variantPath(comp, def, l)}`).join(", "));
   }
-  const refused = `${REFUSALS}.keep(Err::<(), _>(fv::Refused::new(${rustStr(OUTSIDE)}, format!("{fv_e}: the template needs one of them here, and Vue would write the string itself: check the value before rendering"))), ${refusalAt(comp, node)})`;
+  const refused = `${REFUSALS}.keep(Err::<(), _>(fv::render::Refused::new(${rustStr(OUTSIDE)}, format!("{fv_e}: the template needs one of them here, and Vue would write the string itself: check the value before rendering"))), ${refusalAt(comp, node)})`;
   const parse = (on: string): string => {
     const subject = /^&\*+[\w.]+$/.test(on) ? on.replace(/^&\*+/, "") : atom(on);
     return def.rust === undefined ? `${subject}.parse::<${enumPath(comp, def)}>()` : `${subject}.parse_union::<${def.rust}>(${rustStr(def.name)}, &[${def.literals.map(rustStr).join(", ")}])`;
@@ -373,25 +374,25 @@ impl std::fmt::Display for ${name} {
 }
 
 impl std::str::FromStr for ${name} {
-    type Err = ferrovue::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
 ${arms((l, v) => `            ${rustStr(l)} => Ok(${name}::${v}),`)}
-            _ => Err(ferrovue::ParseUnionError::new(${rustStr(name)}, s, &[${def.literals.map(rustStr).join(", ")}])),
+            _ => Err(ferrovue::props::ParseUnionError::new(${rustStr(name)}, s, &[${def.literals.map(rustStr).join(", ")}])),
         }
     }
 }
 
 impl TryFrom<&str> for ${name} {
-    type Error = ferrovue::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::Union for ${name} {
+impl ferrovue::props::Union for ${name} {
     const ALL: &'static [Self] = &${name}::ALL;
 
     fn as_str(self) -> &'static str {
@@ -415,7 +416,7 @@ ${def.variants.map((v) => `    ${path}::${v} => {}`).join("\n")}
 #[cfg(test)]
 #[test]
 fn ${snake(def.name)}_gives_each_member_its_literal() {
-    ferrovue::check_union::<${path}>(${rustStr(path)}, &[${def.literals.map((l, i) => `(${path}::${def.variants[i]}, ${rustStr(l)})`).join(", ")}]);
+    ferrovue::props::check_union::<${path}>(${rustStr(path)}, &[${def.literals.map((l, i) => `(${path}::${def.variants[i]}, ${rustStr(l)})`).join(", ")}]);
 }
 `;
 }

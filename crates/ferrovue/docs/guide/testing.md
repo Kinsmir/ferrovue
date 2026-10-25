@@ -102,17 +102,17 @@ ferrovue::conformance!("fixtures", generated::render_json, at_least = 24);
 The path is relative to the crate's manifest. The test fails, listing each fixture, when a render
 differs from its `.html` (with where they first differ), a fixture has no `.html` or names no
 component, or fewer than `at_least` fixtures are found (one when it is not given), so a suite that
-finds nothing does not pass. [`check_fixtures`](crate::check_fixtures) is the same check as a
+finds nothing does not pass. [`check_fixtures`](crate::testing::check_fixtures) is the same check as a
 function, for a test of your own.
 
 # Fixtures in your own vitest tests
 
-`fixtureApp` from `ferrovue/testing` builds the app a fixture describes, for a test of your own:
-it installs Pinia for the fixture's `$stores`, vue-router for its routes and vue-i18n for its
-`i18n` option, importing each itself. A component's `useBasket()`, `useRoute()` or `useI18n()`
+`fixtureApp` from `ferrovue/testing/browser` builds the app a fixture describes, for a test of
+your own: it installs Pinia for the fixture's `$stores`, vue-router for its routes and vue-i18n for
+its `i18n` option, importing each itself. A component's `useBasket()`, `useRoute()` or `useI18n()`
 reads the instance its own import of the package gives it, so the two must be one module instance.
-vitest loads `ferrovue/testing` from `node_modules` with Node, and runs the application's code
-through Vite. Where a peer goes through Vite too (listed in `server.deps.inline`, aliased, linked
+vitest loads `ferrovue/testing/browser` from `node_modules` with Node, and runs the application's
+code through Vite. Where a peer goes through Vite too (listed in `server.deps.inline`, aliased, linked
 from elsewhere, or installed twice), the fixture installs a different instance from the one the
 component reads, and the render fails with Pinia's "there was no active Pinia" or an undefined
 route. Pass the application's own modules in the options:

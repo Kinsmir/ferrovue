@@ -2,7 +2,9 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, watch, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { relativePath } from "./paths.ts";
-import { type Config, CONFIG_FILE, type GenError, generate, isGenerated, loadConfig, VERSION, write } from "./compiler.ts";
+import { type Config, CONFIG_FILE, loadConfig } from "./config.ts";
+import { type GenError } from "./errors.ts";
+import { generate, isGenerated, VERSION, write } from "./compiler.ts";
 import { helpText, parseArgs } from "./args.ts";
 import { unifiedDiff } from "./diff.ts";
 import { type Diagnostic, diagnose, diagnoseAll, formatRefusal, formatWarning, isRefusal } from "./diagnostics.ts";

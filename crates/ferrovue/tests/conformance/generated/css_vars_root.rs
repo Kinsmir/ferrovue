@@ -33,7 +33,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render_scoped(out, props, &fv::Attrs::NONE));
+    fv::render::rendered(try_render_scoped(out, props, &fv::attrs::Attrs::NONE));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -41,43 +41,43 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
-    try_render_scoped(out, props, &fv::Attrs::NONE)
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
+    try_render_scoped(out, props, &fv::attrs::Attrs::NONE)
 }
 
 /// [`try_render`], with the attributes a parent passes beyond the props, and the scope ids it hands the root.
 #[doc(hidden)]
-pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::Attrs<'_>) -> Result<(), fv::Refused> {
+pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(props.tint.len() + props.shade.len());
     super::css_vars_leaf::try_render_scoped(out, &super::css_vars_leaf::Props { tint: std::borrow::Cow::Borrowed(&*props.tint), width: Some(3i64) }, super::css_vars_leaf::Slots {
-        default: Some(fv::Slot::markup(&|out: &mut String| -> bool {
+        default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
             let fv_chunk = out.len();
-            fv::escape_into(out, &props.shade);
-            filled |= !fv::is_comment(&out[fv_chunk..]);
+            fv::core::escape_into(out, &props.shade);
+            filled |= !fv::render::is_comment(&out[fv_chunk..]);
             filled
         })),
-    }, &fv::Attrs::merged(&[fv_attrs.list(), &[("style", fv::Attr::style([("--cbc538d2-shade", if props.shade.is_empty() { fv::Attr::str(" ") } else { fv::Attr::str(&props.shade) })]))]], ""))?;
+    }, &fv::attrs::Attrs::merged(&[fv_attrs.list(), &[("style", fv::attrs::Attr::style([("--cbc538d2-shade", if props.shade.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(&props.shade) })]))]], ""))?;
     Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

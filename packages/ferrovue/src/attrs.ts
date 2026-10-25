@@ -1,7 +1,9 @@
 import { escapeHtml, hyphenate, isBooleanAttr, isSSRSafeAttrName, isSVGTag, propsToAttrMap } from "@vue/shared";
-import { type N, type Scope, type Ty, type Val, fail, nothing, GenError, rustStr } from "./model.ts";
+import { type N, type Scope, type Ty, type Val, fail, nothing, rustStr } from "./model.ts";
+import { GenError } from "./errors.ts";
 import { asWritten } from "./numbers.ts";
-import { CONFIG_FILE, ctx } from "./context.ts";
+import { CONFIG_FILE } from "./config.ts";
+import { ctx } from "./context.ts";
 import { describeTy, expr, shown } from "./expr.ts";
 import { known, truthy } from "./narrowing.ts";
 import { asCow, isTemporary, unquote } from "./strings.ts";
@@ -18,10 +20,10 @@ export function display(e: Emitter, v: Val): boolean {
   if (v.ty.k === "str" && known(v) !== undefined) e.lit(escapeHtml(unquote(v.code)));
   else if ((v.ty.k === "int" || v.ty.k === "float") && v.num !== undefined) e.lit(String(v.num));
   else if (v.ty.k === "bool" && v.konst !== undefined) e.lit(String(v.konst));
-  else if (v.ty.k === "str") e.stmt(`fv::escape_into(out, ${strArg(v.code)});`);
+  else if (v.ty.k === "str") e.stmt(`fv::core::escape_into(out, ${strArg(v.code)});`);
   else if (v.ty.k === "int" || v.ty.k === "float") {
     const w = asWritten(v);
-    e.stmt(`fv::${w.ty.k === "int" ? "push_int" : "push_number"}(out, ${bare(w.code)});`);
+    e.stmt(`fv::core::${w.ty.k === "int" ? "push_int" : "push_number"}(out, ${bare(w.code)});`);
     e.expect(NUMBER_BYTES);
   } else if (v.ty.k === "bool") e.stmt(`out.push_str(if ${condition(v.code)} { "true" } else { "false" });`);
   else return false;
@@ -183,7 +185,7 @@ export function renderAttrs(s: Scope, e: Emitter, n: N): void {
   if (e.lines.length === at) e.replace(at - 1, `if ${s.fallthrough}.is_empty()`, `if !${s.fallthrough}.is_empty()`);
   else e.close(" else {");
   if (parts.length === 1 && parts[0] === n) {
-    e.stmt(`fv::passed_attrs_into(out, ${s.fallthrough}.list(), ${isAttrs(n) && s.attrs !== null ? s.attrs : '""'});`);
+    e.stmt(`fv::attrs::passed_attrs_into(out, ${s.fallthrough}.list(), ${isAttrs(n) && s.attrs !== null ? s.attrs : '""'});`);
     e.close();
     return;
   }
@@ -198,7 +200,7 @@ export function renderAttrs(s: Scope, e: Emitter, n: N): void {
     else fail(s.comp, "FV0407", "attributes must be an object literal", p);
   }
   const ids = idsAt >= 0 && s.attrs !== null ? s.attrs : '""';
-  e.stmt(`fv::attrs_into(out, &[${sources.join(", ")}], ${idsAt >= 0 ? idsAt : sources.length}, ${ids});`);
+  e.stmt(`fv::attrs::attrs_into(out, &[${sources.join(", ")}], ${idsAt >= 0 ? idsAt : sources.length}, ${ids});`);
   e.close();
 }
 
@@ -292,27 +294,27 @@ export function attrOf(s: Scope, key: string, n: N, side: "vnode" | "own"): stri
   if (key === "className") fail(s.comp, "FV0409", "`className` renders by its own rule in Vue; bind `class`", n);
   if (key === "class") return classAttr(s, n, side);
   if (key === "style") return styleAttr(s, n);
-  if (n.type === "NullLiteral") return "fv::Attr::Undefined";
+  if (n.type === "NullLiteral") return "fv::attrs::Attr::Undefined";
   return valueAttr(s, attrShown(s, key, n), n);
 }
 
 export function valueAttr(s: Scope, v: Val, n: N): string {
   switch (v.ty.k) {
     case "str":
-      return isTemporary(v) ? `fv::Attr::Str(${asCow(v)})` : `fv::Attr::str(${strArg(v.code)})`;
+      return isTemporary(v) ? `fv::attrs::Attr::Str(${asCow(v)})` : `fv::attrs::Attr::str(${strArg(v.code)})`;
     case "int":
-      return `fv::Attr::Int(${bare(v.code)})`;
+      return `fv::attrs::Attr::Int(${bare(v.code)})`;
     case "float":
-      return `fv::Attr::Float(${bare(v.code)})`;
+      return `fv::attrs::Attr::Float(${bare(v.code)})`;
     case "bool":
-      return `fv::Attr::Bool(${bare(v.code)})`;
+      return `fv::attrs::Attr::Bool(${bare(v.code)})`;
     case "undef":
     case "null":
-      return "fv::Attr::Undefined";
+      return "fv::attrs::Attr::Undefined";
     case "opt": {
       const of = v.ty.of.k;
-      const make = of === "str" ? "fv::Attr::str" : of === "int" ? "fv::Attr::Int" : of === "float" ? "fv::Attr::Float" : of === "bool" ? "fv::Attr::Bool" : null;
-      if (make !== null) return `${atom(v.code)}.map_or(fv::Attr::Undefined, ${make})`;
+      const make = of === "str" ? "fv::attrs::Attr::str" : of === "int" ? "fv::attrs::Attr::Int" : of === "float" ? "fv::attrs::Attr::Float" : of === "bool" ? "fv::attrs::Attr::Bool" : null;
+      if (make !== null) return `${atom(v.code)}.map_or(fv::attrs::Attr::Undefined, ${make})`;
       break;
     }
     default:

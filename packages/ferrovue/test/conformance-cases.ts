@@ -1,11 +1,11 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { loadConfig } from "../src/compiler.ts";
+import { loadConfig } from "../src/config.ts";
 import { datePlansOf } from "../src/conformance.ts";
-import { type DatePlans, type Fixture, readFixture, type RouteEntry, type RouterOptions, withDatePlans } from "../src/fixture.ts";
+import { type DatePlans, withDatePlans } from "../src/date-plans.ts";
+import { type Fixture, readFixture, type RouterOptions } from "../src/testing-browser.ts";
+import type { RouteEntry } from "../src/route-records.ts";
 
-export { clientRenderDifference, HEAD, hydrationBody, placeHead, recordedHead, renderFixture, TELEPORTS } from "../src/conformance.ts";
-export { headRendered } from "../src/settle.ts";
 
 export const ROOT = join(import.meta.dirname, "../../../crates/ferrovue/tests/conformance");
 const FIXTURES = join(ROOT, "fixtures");

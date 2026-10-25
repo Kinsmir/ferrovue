@@ -8,31 +8,6 @@ export interface ErrorDoc {
   retired?: string;
 }
 
-/** The areas codes are grouped in, by their first two digits, with the guide page that explains each. */
-export const AREAS: Record<string, { name: string; guide?: string }> = {
-  "00": { name: "Components and parsing" },
-  "01": { name: "Script setup" },
-  "02": { name: "Constants and enums" },
-  "03": { name: "Props and types", guide: "props" },
-  "04": { name: "Templates and attributes", guide: "generated_code" },
-  "05": { name: "Child components", guide: "generated_code" },
-  "06": { name: "Expressions" },
-  "07": { name: "Strings and numbers", guide: "strings" },
-  "08": { name: "Lists and loops", guide: "props" },
-  "09": { name: "Slots", guide: "slots" },
-  "10": { name: "Classes, styles and scoped styles", guide: "scoped_styles" },
-  "11": { name: "Configuration and helpers", guide: "quick_start" },
-  "12": { name: "Router", guide: "routing" },
-  "13": { name: "Pinia stores", guide: "pinia" },
-  "14": { name: "vue-i18n", guide: "i18n" },
-  "15": { name: "Raw HTML, client-only content, teleports and Rust twins", guide: "errors_and_limits" },
-  "16": { name: "Provide and inject", guide: "provide_inject" },
-  "17": { name: "Page head", guide: "head" },
-  "18": { name: "Dates and locale formatting", guide: "dates_and_prices" },
-  "19": { name: "Statements and functions", guide: "script_logic" },
-  "20": { name: "Loaders", guide: "loaders" },
-};
-
 /** Every code the compiler raises. A code is never reused: one the compiler stops raising is marked
  * `retired` and stays listed. `pnpm errors:generate` writes the guide's index from this list. */
 export const ERRORS = {
@@ -278,7 +253,7 @@ export const ERRORS = {
   },
   FV0313: {
     title: "`Record` not keyed by `string`",
-    detail: "A `Record` is a `ferrovue::Record` in Rust, keyed by strings, so `Record<number, T>` and a `Record` keyed by a union of literals are refused. Key it by `string`, or declare an interface with the fields.",
+    detail: "A `Record` is a `ferrovue::props::Record` in Rust, keyed by strings, so `Record<number, T>` and a `Record` keyed by a union of literals are refused. Key it by `string`, or declare an interface with the fields.",
   },
   FV0314: {
     title: "Type alias that refers to itself",
@@ -520,7 +495,7 @@ export const ERRORS = {
   },
   FV0518: {
     title: "String outside a union where the render needs the union's enum",
-    detail: "A value typed as a union of string literals that the Rust caller holds as a string, such as a value of a `Record<string, Size>`, a store's state or a prop of a single literal, is handed to a child's prop or an object's field whose Rust type is the union's enum. The string is parsed as the component renders, and one outside the union is refused there, where Vue would write the string itself. A generated `try_render` returns it as a `ferrovue::Refused`, with the component and the line and column of the expression, so a server can answer `400 Bad Request`; `render` panics with its message. See [`errors_and_limits`](crate::guide::errors_and_limits#refused-at-render-time). Check the value before rendering. See [`props`](crate::guide::props#unions-of-string-literals).",
+    detail: "A value typed as a union of string literals that the Rust caller holds as a string, such as a value of a `Record<string, Size>`, a store's state or a prop of a single literal, is handed to a child's prop or an object's field whose Rust type is the union's enum. The string is parsed as the component renders, and one outside the union is refused there, where Vue would write the string itself. A generated `try_render` returns it as a `ferrovue::render::Refused`, with the component and the line and column of the expression, so a server can answer `400 Bad Request`; `render` panics with its message. See [`errors_and_limits`](crate::guide::errors_and_limits#refused-at-render-time). Check the value before rendering. See [`props`](crate::guide::props#unions-of-string-literals).",
   },
 
   FV0601: {
@@ -726,7 +701,7 @@ export const ERRORS = {
   },
   FV0714: {
     title: "`.repeat()` by a negative or infinite count",
-    detail: "`.repeat()` throws a `RangeError` for a negative count and for `Infinity`, which fails the render in Vue as well. A literal such count is refused when compiling; a count from the props that is negative or infinite is refused as the component renders: a generated `try_render` returns it as a `ferrovue::Refused`, with the component and the line and column of the expression, so a server can answer `400 Bad Request`; `render` panics with its message. See [`errors_and_limits`](crate::guide::errors_and_limits#refused-at-render-time). Clamp the count (`Math.max(0, n)`) before repeating.",
+    detail: "`.repeat()` throws a `RangeError` for a negative count and for `Infinity`, which fails the render in Vue as well. A literal such count is refused when compiling; a count from the props that is negative or infinite is refused as the component renders: a generated `try_render` returns it as a `ferrovue::render::Refused`, with the component and the line and column of the expression, so a server can answer `400 Bad Request`; `render` panics with its message. See [`errors_and_limits`](crate::guide::errors_and_limits#refused-at-render-time). Clamp the count (`Math.max(0, n)`) before repeating.",
   },
   FV0715: {
     title: "Case mapping by the server's locale",
@@ -766,11 +741,11 @@ export const ERRORS = {
   },
   FV0724: {
     title: "Integer beyond the range of `i64` where the template needs one, as it renders",
-    detail: "Integer arithmetic is done on doubles, as JavaScript does it, and a result written into the page is written from the double. Where the template needs the result as an integer, as a child's `number` prop, an index or the count of a `v-for` over a range, it is held as an `i64`, which stops at ±2⁶³: a result beyond that is refused as the component renders, where a cast to `i64` would change the number. A generated `try_render` returns it as a `ferrovue::Refused`, with the component and the line and column of the expression, so a server can answer `400 Bad Request`; `render` panics with its message. See [`errors_and_limits`](crate::guide::errors_and_limits#refused-at-render-time). Keep integer props within ±2⁵³, where JavaScript's integers are exact, or type the child's prop `Float`. See [`numbers`](crate::guide::numbers).",
+    detail: "Integer arithmetic is done on doubles, as JavaScript does it, and a result written into the page is written from the double. Where the template needs the result as an integer, as a child's `number` prop, an index or the count of a `v-for` over a range, it is held as an `i64`, which stops at ±2⁶³: a result beyond that is refused as the component renders, where a cast to `i64` would change the number. A generated `try_render` returns it as a `ferrovue::render::Refused`, with the component and the line and column of the expression, so a server can answer `400 Bad Request`; `render` panics with its message. See [`errors_and_limits`](crate::guide::errors_and_limits#refused-at-render-time). Keep integer props within ±2⁵³, where JavaScript's integers are exact, or type the child's prop `Float`. See [`numbers`](crate::guide::numbers).",
   },
   FV0725: {
     title: "String longer than JavaScript allows, as it renders",
-    detail: "`.repeat()`, `.padStart()` and `.padEnd()` throw a `RangeError` for a result longer than the longest string V8 makes, 2²⁹ − 24 code units, which fails the render in Vue as well. A count or length from the props that asks for one is refused as the component renders. A generated `try_render` returns it as a `ferrovue::Refused`, with the component and the line and column of the expression, so a server can answer `400 Bad Request`; `render` panics with its message. See [`errors_and_limits`](crate::guide::errors_and_limits#refused-at-render-time). Limit the count or the length before rendering.",
+    detail: "`.repeat()`, `.padStart()` and `.padEnd()` throw a `RangeError` for a result longer than the longest string V8 makes, 2²⁹ − 24 code units, which fails the render in Vue as well. A count or length from the props that asks for one is refused as the component renders. A generated `try_render` returns it as a `ferrovue::render::Refused`, with the component and the line and column of the expression, so a server can answer `400 Bad Request`; `render` panics with its message. See [`errors_and_limits`](crate::guide::errors_and_limits#refused-at-render-time). Limit the count or the length before rendering.",
   },
 
   FV0801: {
@@ -1242,11 +1217,11 @@ export const ERRORS = {
   },
   FV1230: {
     title: "Route read without `routes` configured",
-    detail: "Reading the route with `useRoute()` or `$route` needs the app's routes, and no `routes` is set in `ferrovue.config.json`. Name a JSON file of routes or a folder of pages there, and pass the request's [`Route`](crate::Route) to `render`. See [`routing`](crate::guide::routing).",
+    detail: "Reading the route with `useRoute()` or `$route` needs the app's routes, and no `routes` is set in `ferrovue.config.json`. Name a JSON file of routes or a folder of pages there, and pass the request's [`Route`](crate::router::Route) to `render`. See [`routing`](crate::guide::routing).",
   },
   FV1231: {
     title: "Route field not available on the server",
-    detail: "The server's [`Route`](crate::Route) has `path`, `fullPath`, `hash`, `name`, `params` and `query`. `meta`, `matched` and `redirectedFrom` come from route records and navigation the server does not have. Compute what the template needs from them in Rust and pass it as a prop.",
+    detail: "The server's [`Route`](crate::router::Route) has `path`, `fullPath`, `hash`, `name`, `params` and `query`. `meta`, `matched` and `redirectedFrom` come from route records and navigation the server does not have. Compute what the template needs from them in Rust and pass it as a prop.",
   },
   FV1232: {
     title: "Routes file that is not an array",
@@ -1462,7 +1437,7 @@ export const ERRORS = {
   },
   FV1503: {
     title: "`TrustedHtml` prop without `trustedHtml` configured",
-    detail: "A prop typed `TrustedHtml` is a field of the Rust type named by `trustedHtml` in `ferrovue.config.json`: `ferrovue::BasicHtml`, `ferrovue::InlineHtml`, `ferrovue::Sanitised` (the `ammonia` feature) or a type of your own that implements `ferrovue::TrustedHtml`. Set it, or type the prop `InlineHtml` (inline tags only), which needs no setting. See [`escaping`](crate::guide::escaping).",
+    detail: "A prop typed `TrustedHtml` is a field of the Rust type named by `trustedHtml` in `ferrovue.config.json`: `ferrovue::html::BasicHtml`, `ferrovue::html::InlineHtml`, `ferrovue::html::Sanitised` (the `ammonia` feature) or a type of your own that implements `ferrovue::html::TrustedHtml`. Set it, or type the prop `InlineHtml` (inline tags only), which needs no setting. See [`escaping`](crate::guide::escaping).",
   },
   FV1504: {
     title: "Attributes on `<ClientOnly>`",
@@ -1499,7 +1474,7 @@ export const ERRORS = {
   },
   FV1513: {
     title: "`v-html` in a `<p>` of HTML that may hold blocks",
-    detail: "A block tag in the HTML (`<p>`, `<ul>`, `<div>`) ends the `<p>` it is written in where the browser reads it. Type the prop `InlineHtml` from `ferrovue/types`, which is `ferrovue::InlineHtml` on the server and keeps only inline tags, or put the HTML in a `<div>`. Slot content placed into a child's `<p>` is not seen at compile time. See [`escaping`](crate::guide::escaping).",
+    detail: "A block tag in the HTML (`<p>`, `<ul>`, `<div>`) ends the `<p>` it is written in where the browser reads it. Type the prop `InlineHtml` from `ferrovue/types`, which is `ferrovue::html::InlineHtml` on the server and keeps only inline tags, or put the HTML in a `<div>`. Slot content placed into a child's `<p>` is not seen at compile time. See [`escaping`](crate::guide::escaping).",
   },
 
   FV1601: {
@@ -1638,7 +1613,7 @@ export const ERRORS = {
   },
   FV1803: {
     title: "Date string that browsers may read differently",
-    detail: "ECMAScript specifies how a date alone (`2024-05-01`, `2024-05`, `2024`) and a date and time with a `Z` or an offset (`2024-05-01T09:30:00.000Z`, `2024-05-01T09:30+02:00`) are read. A date and time with neither is read in the time zone of the machine running it, and every other string by each engine's own rules, as are fields out of range (`2024-02-30`, `T24:00`) and fields beyond the range of dates that an offset brings back within it (`+275760-09-13T01:00+01:00`), which Safari reads as invalid. A literal is checked when the component is compiled; a string from the props is checked as it renders, and one outside the format is refused there: a generated `try_render` returns it as a `ferrovue::Refused`, with the component and the line and column of the expression, so a server can answer `400 Bad Request`; `render` panics with its message. See [`dates_and_prices`](crate::guide::dates_and_prices).",
+    detail: "ECMAScript specifies how a date alone (`2024-05-01`, `2024-05`, `2024`) and a date and time with a `Z` or an offset (`2024-05-01T09:30:00.000Z`, `2024-05-01T09:30+02:00`) are read. A date and time with neither is read in the time zone of the machine running it, and every other string by each engine's own rules, as are fields out of range (`2024-02-30`, `T24:00`) and fields beyond the range of dates that an offset brings back within it (`+275760-09-13T01:00+01:00`), which Safari reads as invalid. A literal is checked when the component is compiled; a string from the props is checked as it renders, and one outside the format is refused there: a generated `try_render` returns it as a `ferrovue::render::Refused`, with the component and the line and column of the expression, so a server can answer `400 Bad Request`; `render` panics with its message. See [`dates_and_prices`](crate::guide::dates_and_prices).",
   },
   FV1804: {
     title: "`Date` method or function ferrovue does not translate",
@@ -1650,7 +1625,7 @@ export const ERRORS = {
   },
   FV1806: {
     title: "`Date` in Pinia state, `provide`, `inject`, a `ref` or a `defineModel`",
-    detail: "A `Date` in a prop, itself or inside a list, a dictionary or an object, is a `ferrovue::JsDate`, or the type `dateType` names, and so is one in a loader's result. An island's `data-props` and the page's payload carry it as its ISO string, with a plan the compiler writes of where the dates are, from which the client turns each back into a `Date`. Pinia state, a value given to `provide` or read by `inject`, a typed `ref` and a `defineModel` reach the browser with no such plan, so a date in them would arrive as a string. Pass the ISO string or the number of milliseconds and build the date with `new Date()`. See [`dates_and_prices`](crate::guide::dates_and_prices).",
+    detail: "A `Date` in a prop, itself or inside a list, a dictionary or an object, is a `ferrovue::date::JsDate`, or the type `dateType` names, and so is one in a loader's result. An island's `data-props` and the page's payload carry it as its ISO string, with a plan the compiler writes of where the dates are, from which the client turns each back into a `Date`. Pinia state, a value given to `provide` or read by `inject`, a typed `ref` and a `defineModel` reach the browser with no such plan, so a date in them would arrive as a string. Pass the ISO string or the number of milliseconds and build the date with `new Date()`. See [`dates_and_prices`](crate::guide::dates_and_prices).",
   },
   FV1807: {
     title: "`Date.UTC()` of anything but one to seven numbers that are present",
@@ -1658,7 +1633,7 @@ export const ERRORS = {
   },
   FV1808: {
     title: "`Date.UTC()` of parts engines compute differently",
-    detail: "V8 computes a year beyond ±1,000,000, a month beyond ±10,000,000 and a year before −399,999 by rules of its own, which Firefox and Safari do not share, so a day or hours that bring the date back within the range give another date in each; and Node rounds a part worth more than 2⁵³ ms that the others bring back within the range otherwise than the browsers. Literal parts are checked when the component is compiled; parts from the props are checked as it renders, and refused there: a generated `try_render` returns it as a `ferrovue::Refused`, with the component and the line and column of the expression, so a server can answer `400 Bad Request`; `render` panics with its message. See [`dates_and_prices`](crate::guide::dates_and_prices).",
+    detail: "V8 computes a year beyond ±1,000,000, a month beyond ±10,000,000 and a year before −399,999 by rules of its own, which Firefox and Safari do not share, so a day or hours that bring the date back within the range give another date in each; and Node rounds a part worth more than 2⁵³ ms that the others bring back within the range otherwise than the browsers. Literal parts are checked when the component is compiled; parts from the props are checked as it renders, and refused there: a generated `try_render` returns it as a `ferrovue::render::Refused`, with the component and the line and column of the expression, so a server can answer `400 Bad Request`; `render` panics with its message. See [`dates_and_prices`](crate::guide::dates_and_prices).",
   },
   FV1809: {
     title: "`===`, `!==`, `==` or `!=` with a `Date`",
@@ -1670,11 +1645,11 @@ export const ERRORS = {
   },
   FV1811: {
     title: "`.toISOString()` of an invalid date, as it renders",
-    detail: "`.toISOString()` throws a `RangeError` for an invalid date, which fails the render in Vue as well. A date from the props that is invalid where the template calls it is refused as the component renders. A generated `try_render` returns it as a `ferrovue::Refused`, with the component and the line and column of the expression, so a server can answer `400 Bad Request`; `render` panics with its message. See [`errors_and_limits`](crate::guide::errors_and_limits#refused-at-render-time). Test the date first (`v-if=\"!Number.isNaN(d.getTime())\"`), or write it with `.toJSON()`, which gives `null` for an invalid date. See [`dates_and_prices`](crate::guide::dates_and_prices).",
+    detail: "`.toISOString()` throws a `RangeError` for an invalid date, which fails the render in Vue as well. A date from the props that is invalid where the template calls it is refused as the component renders. A generated `try_render` returns it as a `ferrovue::render::Refused`, with the component and the line and column of the expression, so a server can answer `400 Bad Request`; `render` panics with its message. See [`errors_and_limits`](crate::guide::errors_and_limits#refused-at-render-time). Test the date first (`v-if=\"!Number.isNaN(d.getTime())\"`), or write it with `.toJSON()`, which gives `null` for an invalid date. See [`dates_and_prices`](crate::guide::dates_and_prices).",
   },
   FV1812: {
     title: "Date a child's `Date` prop cannot hold, as it renders",
-    detail: "A component passes a date it computed to a child's `Date` prop, whose Rust type is the one `dateType` names. A type that holds fewer dates than JavaScript, such as `chrono::DateTime<Utc>`, which holds no invalid date nor one beyond ±262,142 years, cannot hold every date a parent computes. Such a date is refused as the component renders. A generated `try_render` returns it as a `ferrovue::Refused`, with the component and the line and column of the expression, so a server can answer `400 Bad Request`; `render` panics with its message. See [`errors_and_limits`](crate::guide::errors_and_limits#refused-at-render-time). Check the dates before rendering, or name a `dateType` that holds every date, such as `ferrovue::JsDate`. See [`dates_and_prices`](crate::guide::dates_and_prices).",
+    detail: "A component passes a date it computed to a child's `Date` prop, whose Rust type is the one `dateType` names. A type that holds fewer dates than JavaScript, such as `chrono::DateTime<Utc>`, which holds no invalid date nor one beyond ±262,142 years, cannot hold every date a parent computes. Such a date is refused as the component renders. A generated `try_render` returns it as a `ferrovue::render::Refused`, with the component and the line and column of the expression, so a server can answer `400 Bad Request`; `render` panics with its message. See [`errors_and_limits`](crate::guide::errors_and_limits#refused-at-render-time). Check the dates before rendering, or name a `dateType` that holds every date, such as `ferrovue::date::JsDate`. See [`dates_and_prices`](crate::guide::dates_and_prices).",
   },
   FV1901: {
     title: "Statement a function's body may not hold",
@@ -1755,9 +1730,56 @@ export const ERRORS = {
 } as const satisfies Record<`FV${number}`, ErrorDoc>;
 
 /** A stable error code, as `FV0604`. */
-export type Code = keyof typeof ERRORS;
+export type ErrorCode = keyof typeof ERRORS;
 
 /** Where a code is documented. */
 export function docsUrl(code: string): string {
   return `https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#${code.toLowerCase()}`;
+}
+
+/** Where in a file an error is: lines and columns count from 1, and the end is exclusive. */
+export interface SourceLocation {
+  file: string;
+  line?: number;
+  column?: number;
+  endLine?: number;
+  endColumn?: number;
+}
+
+/** A construct the compiler refuses: its stable code, the message as shown, where it is, and what
+ * is refused without the location and the quoted line. */
+export class GenError extends Error {
+  readonly code: ErrorCode;
+  readonly at: SourceLocation | null;
+  readonly what: string;
+  /** A short way around the refusal, where one is known. */
+  readonly help: string | null;
+  /** Where a component reads what is refused, when that is in another file. */
+  readAt: SourceLocation | null = null;
+
+  constructor(code: ErrorCode, message: string, at: SourceLocation | null = null, what: string = message, help: string | null = null) {
+    super(message);
+    this.code = code;
+    this.at = at;
+    this.what = what;
+    this.help = help;
+  }
+}
+
+/** Every refusal of a run, raised once the compiler has checked all it can. It carries the first
+ * refusal's code, location and message, so code that handles one `GenError` still works. */
+export class GenErrors extends GenError {
+  /** The refusals, in the order of the components and of their lines. */
+  readonly errors: readonly (GenError | SyntaxError)[];
+  /** The components left unchecked because they use a refused one. */
+  readonly unchecked: readonly string[];
+
+  constructor(errors: readonly (GenError | SyntaxError)[], unchecked: readonly string[] = []) {
+    const first = errors[0]!;
+    if (first instanceof GenError) super(first.code, first.message, first.at, first.what, first.help);
+    else super("FV0001", first.message);
+    if (first instanceof GenError) this.readAt = first.readAt;
+    this.errors = errors;
+    this.unchecked = unchecked;
+  }
 }

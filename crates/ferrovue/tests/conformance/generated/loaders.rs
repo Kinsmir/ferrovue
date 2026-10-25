@@ -13,10 +13,10 @@ pub struct LoadArticle {
     pub lang: Option<String>,
 }
 
-impl fv::Load for LoadArticle {
+impl fv::loaders::Load for LoadArticle {
     const NAME: &'static str = "loadArticle";
     type Output = super::types::Article<'static>;
-    fn args(&self, key: &mut fv::LoadKey) {
+    fn args(&self, key: &mut fv::loaders::LoadKey) {
         key.arg(&self.slug);
         if self.lang.is_some() {
             key.arg(&self.lang);
@@ -30,11 +30,11 @@ pub struct LoadClosed {
     pub name: String,
 }
 
-impl fv::Load for LoadClosed {
+impl fv::loaders::Load for LoadClosed {
     const NAME: &'static str = "loadClosed";
-    type Output = Option<fv::JsDate>;
+    type Output = Option<fv::date::JsDate>;
     const DATES: &'static str = "[1]";
-    fn args(&self, key: &mut fv::LoadKey) {
+    fn args(&self, key: &mut fv::loaders::LoadKey) {
         key.arg(&self.name);
     }
 }
@@ -47,10 +47,10 @@ pub struct LoadComments {
     pub drafts: Option<bool>,
 }
 
-impl fv::Load for LoadComments {
+impl fv::loaders::Load for LoadComments {
     const NAME: &'static str = "loadComments";
     type Output = Vec<std::borrow::Cow<'static, str>>;
-    fn args(&self, key: &mut fv::LoadKey) {
+    fn args(&self, key: &mut fv::loaders::LoadKey) {
         key.arg(&self.article);
         key.arg(&self.page);
         key.arg(&self.drafts);
@@ -61,11 +61,11 @@ impl fv::Load for LoadComments {
 #[derive(Debug, Clone, PartialEq)]
 pub struct LoadDays;
 
-impl fv::Load for LoadDays {
+impl fv::loaders::Load for LoadDays {
     const NAME: &'static str = "loadDays";
-    type Output = Vec<fv::JsDate>;
+    type Output = Vec<fv::date::JsDate>;
     const DATES: &'static str = "[[1]]";
-    fn args(&self, _key: &mut fv::LoadKey) {}
+    fn args(&self, _key: &mut fv::loaders::LoadKey) {}
 }
 
 /// A call of `loadNote`, in components/loaders.ts: its arguments.
@@ -74,10 +74,10 @@ pub struct LoadNote {
     pub page: i64,
 }
 
-impl fv::Load for LoadNote {
+impl fv::loaders::Load for LoadNote {
     const NAME: &'static str = "loadNote";
     type Output = Option<std::borrow::Cow<'static, str>>;
-    fn args(&self, key: &mut fv::LoadKey) {
+    fn args(&self, key: &mut fv::loaders::LoadKey) {
         key.arg(&self.page);
     }
 }
@@ -88,11 +88,11 @@ pub struct LoadOpened {
     pub name: String,
 }
 
-impl fv::Load for LoadOpened {
+impl fv::loaders::Load for LoadOpened {
     const NAME: &'static str = "loadOpened";
-    type Output = fv::JsDate;
+    type Output = fv::date::JsDate;
     const DATES: &'static str = "[1]";
-    fn args(&self, key: &mut fv::LoadKey) {
+    fn args(&self, key: &mut fv::loaders::LoadKey) {
         key.arg(&self.name);
     }
 }
@@ -103,10 +103,10 @@ pub struct LoadRanking {
     pub board: String,
 }
 
-impl fv::Load for LoadRanking {
+impl fv::loaders::Load for LoadRanking {
     const NAME: &'static str = "loadRanking";
     type Output = super::types::Ranking<'static>;
-    fn args(&self, key: &mut fv::LoadKey) {
+    fn args(&self, key: &mut fv::loaders::LoadKey) {
         key.arg(&self.board);
     }
 }
@@ -117,11 +117,11 @@ pub struct LoadThread {
     pub id: i64,
 }
 
-impl fv::Load for LoadThread {
+impl fv::loaders::Load for LoadThread {
     const NAME: &'static str = "loadThread";
     type Output = super::types::Thread<'static>;
     const DATES: &'static str = "[{\"opened\":1,\"replies\":[\"Reply\"],\"pinned\":{\"*\":1},\"seen\":[1]},{\"Reply\":{\"at\":1,\"edited\":1,\"removed\":1,\"replies\":[\"Reply\"]}}]";
-    fn args(&self, key: &mut fv::LoadKey) {
+    fn args(&self, key: &mut fv::loaders::LoadKey) {
         key.arg(&self.id);
     }
 }
@@ -130,106 +130,106 @@ impl fv::Load for LoadThread {
 #[derive(Debug, Clone, PartialEq)]
 pub struct LoadViews;
 
-impl fv::Load for LoadViews {
+impl fv::loaders::Load for LoadViews {
     const NAME: &'static str = "loadViews";
     type Output = i64;
-    fn args(&self, _key: &mut fv::LoadKey) {}
+    fn args(&self, _key: &mut fv::loaders::LoadKey) {}
 }
 
 /// The app's loaders: one method for each `defineLoader`, given its call, returning what the
-/// client's loader returns. A method that fails fails the render, with [`fv::LoadError`].
+/// client's loader returns. A method that fails fails the render, with [`fv::loaders::LoadError`].
 pub trait Loaders: Sync {
     /// What a loader fails with.
     type Error;
 
     /// `loadArticle`, in components/loaders.ts.
-    fn load_article(&self, call: LoadArticle) -> impl std::future::Future<Output = Result<<LoadArticle as fv::Load>::Output, Self::Error>> + Send;
+    fn load_article(&self, call: LoadArticle) -> impl std::future::Future<Output = Result<<LoadArticle as fv::loaders::Load>::Output, Self::Error>> + Send;
 
     /// `loadClosed`, in components/loaders.ts.
-    fn load_closed(&self, call: LoadClosed) -> impl std::future::Future<Output = Result<<LoadClosed as fv::Load>::Output, Self::Error>> + Send;
+    fn load_closed(&self, call: LoadClosed) -> impl std::future::Future<Output = Result<<LoadClosed as fv::loaders::Load>::Output, Self::Error>> + Send;
 
     /// `loadComments`, in components/loaders.ts.
-    fn load_comments(&self, call: LoadComments) -> impl std::future::Future<Output = Result<<LoadComments as fv::Load>::Output, Self::Error>> + Send;
+    fn load_comments(&self, call: LoadComments) -> impl std::future::Future<Output = Result<<LoadComments as fv::loaders::Load>::Output, Self::Error>> + Send;
 
     /// `loadDays`, in components/loaders.ts.
-    fn load_days(&self, call: LoadDays) -> impl std::future::Future<Output = Result<<LoadDays as fv::Load>::Output, Self::Error>> + Send;
+    fn load_days(&self, call: LoadDays) -> impl std::future::Future<Output = Result<<LoadDays as fv::loaders::Load>::Output, Self::Error>> + Send;
 
     /// `loadNote`, in components/loaders.ts.
-    fn load_note(&self, call: LoadNote) -> impl std::future::Future<Output = Result<<LoadNote as fv::Load>::Output, Self::Error>> + Send;
+    fn load_note(&self, call: LoadNote) -> impl std::future::Future<Output = Result<<LoadNote as fv::loaders::Load>::Output, Self::Error>> + Send;
 
     /// `loadOpened`, in components/loaders.ts.
-    fn load_opened(&self, call: LoadOpened) -> impl std::future::Future<Output = Result<<LoadOpened as fv::Load>::Output, Self::Error>> + Send;
+    fn load_opened(&self, call: LoadOpened) -> impl std::future::Future<Output = Result<<LoadOpened as fv::loaders::Load>::Output, Self::Error>> + Send;
 
     /// `loadRanking`, in components/loaders.ts.
-    fn load_ranking(&self, call: LoadRanking) -> impl std::future::Future<Output = Result<<LoadRanking as fv::Load>::Output, Self::Error>> + Send;
+    fn load_ranking(&self, call: LoadRanking) -> impl std::future::Future<Output = Result<<LoadRanking as fv::loaders::Load>::Output, Self::Error>> + Send;
 
     /// `loadThread`, in components/loaders.ts.
-    fn load_thread(&self, call: LoadThread) -> impl std::future::Future<Output = Result<<LoadThread as fv::Load>::Output, Self::Error>> + Send;
+    fn load_thread(&self, call: LoadThread) -> impl std::future::Future<Output = Result<<LoadThread as fv::loaders::Load>::Output, Self::Error>> + Send;
 
     /// `loadViews`, in components/loaders.ts.
-    fn load_views(&self, call: LoadViews) -> impl std::future::Future<Output = Result<<LoadViews as fv::Load>::Output, Self::Error>> + Send;
+    fn load_views(&self, call: LoadViews) -> impl std::future::Future<Output = Result<<LoadViews as fv::loaders::Load>::Output, Self::Error>> + Send;
 }
 
 /// Run `call` with the loader of its name.
-pub fn dispatch<'a, L: Loaders>(loaders: &'a L, call: fv::LoadCall) -> fv::LoadFuture<'a, L::Error> {
+pub fn dispatch<'a, L: Loaders>(loaders: &'a L, call: fv::loaders::LoadCall) -> fv::loaders::LoadFuture<'a, L::Error> {
     match call.name() {
-        <LoadArticle as fv::Load>::NAME => call.run(|c: LoadArticle| loaders.load_article(c)),
-        <LoadClosed as fv::Load>::NAME => call.run(|c: LoadClosed| loaders.load_closed(c)),
-        <LoadComments as fv::Load>::NAME => call.run(|c: LoadComments| loaders.load_comments(c)),
-        <LoadDays as fv::Load>::NAME => call.run(|c: LoadDays| loaders.load_days(c)),
-        <LoadNote as fv::Load>::NAME => call.run(|c: LoadNote| loaders.load_note(c)),
-        <LoadOpened as fv::Load>::NAME => call.run(|c: LoadOpened| loaders.load_opened(c)),
-        <LoadRanking as fv::Load>::NAME => call.run(|c: LoadRanking| loaders.load_ranking(c)),
-        <LoadThread as fv::Load>::NAME => call.run(|c: LoadThread| loaders.load_thread(c)),
-        <LoadViews as fv::Load>::NAME => call.run(|c: LoadViews| loaders.load_views(c)),
+        <LoadArticle as fv::loaders::Load>::NAME => call.run(|c: LoadArticle| loaders.load_article(c)),
+        <LoadClosed as fv::loaders::Load>::NAME => call.run(|c: LoadClosed| loaders.load_closed(c)),
+        <LoadComments as fv::loaders::Load>::NAME => call.run(|c: LoadComments| loaders.load_comments(c)),
+        <LoadDays as fv::loaders::Load>::NAME => call.run(|c: LoadDays| loaders.load_days(c)),
+        <LoadNote as fv::loaders::Load>::NAME => call.run(|c: LoadNote| loaders.load_note(c)),
+        <LoadOpened as fv::loaders::Load>::NAME => call.run(|c: LoadOpened| loaders.load_opened(c)),
+        <LoadRanking as fv::loaders::Load>::NAME => call.run(|c: LoadRanking| loaders.load_ranking(c)),
+        <LoadThread as fv::loaders::Load>::NAME => call.run(|c: LoadThread| loaders.load_thread(c)),
+        <LoadViews as fv::loaders::Load>::NAME => call.run(|c: LoadViews| loaders.load_views(c)),
         name => unreachable!("no loader is called `{name}`"),
     }
 }
 
-/// Render with `loaders`: [`fv::load`], each call run by its method of [`Loaders`]. Write the
-/// payload with [`fv::Loads::script_into`] after the components, for the client to hydrate from.
-pub async fn load<L: Loaders, T>(loaders: &L, render: impl FnMut(&fv::Loads<'_>) -> T) -> Result<T, fv::LoadError<L::Error>> {
-    fv::load(render, |call| dispatch(loaders, call)).await
+/// Render with `loaders`: [`fv::loaders::load`], each call run by its method of [`Loaders`]. Write the
+/// payload with [`fv::loaders::Loads::script_into`] after the components, for the client to hydrate from.
+pub async fn load<L: Loaders, T>(loaders: &L, render: impl FnMut(&fv::loaders::Loads<'_>) -> T) -> Result<T, fv::loaders::LoadError<L::Error>> {
+    fv::loaders::load(render, |call| dispatch(loaders, call)).await
 }
 
 /// Each call answered from a fixture's `$loads`, by its key.
 #[cfg(test)]
-pub fn from_fixture(results: &std::collections::HashMap<String, Box<serde_json::value::RawValue>>) -> impl FnMut(fv::LoadCall) -> fv::LoadFuture<'static, String> + '_ {
+pub fn from_fixture(results: &std::collections::HashMap<String, Box<serde_json::value::RawValue>>) -> impl FnMut(fv::loaders::LoadCall) -> fv::loaders::LoadFuture<'static, String> + '_ {
     move |call| match call.name() {
-        <LoadArticle as fv::Load>::NAME => call.run(|c: LoadArticle| {
-            let found = results.get(&fv::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadArticle as fv::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
+        <LoadArticle as fv::loaders::Load>::NAME => call.run(|c: LoadArticle| {
+            let found = results.get(&fv::loaders::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::loaders::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadArticle as fv::loaders::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
             async move { found }
         }),
-        <LoadClosed as fv::Load>::NAME => call.run(|c: LoadClosed| {
-            let found = results.get(&fv::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadClosed as fv::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
+        <LoadClosed as fv::loaders::Load>::NAME => call.run(|c: LoadClosed| {
+            let found = results.get(&fv::loaders::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::loaders::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadClosed as fv::loaders::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
             async move { found }
         }),
-        <LoadComments as fv::Load>::NAME => call.run(|c: LoadComments| {
-            let found = results.get(&fv::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadComments as fv::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
+        <LoadComments as fv::loaders::Load>::NAME => call.run(|c: LoadComments| {
+            let found = results.get(&fv::loaders::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::loaders::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadComments as fv::loaders::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
             async move { found }
         }),
-        <LoadDays as fv::Load>::NAME => call.run(|c: LoadDays| {
-            let found = results.get(&fv::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadDays as fv::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
+        <LoadDays as fv::loaders::Load>::NAME => call.run(|c: LoadDays| {
+            let found = results.get(&fv::loaders::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::loaders::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadDays as fv::loaders::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
             async move { found }
         }),
-        <LoadNote as fv::Load>::NAME => call.run(|c: LoadNote| {
-            let found = results.get(&fv::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadNote as fv::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
+        <LoadNote as fv::loaders::Load>::NAME => call.run(|c: LoadNote| {
+            let found = results.get(&fv::loaders::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::loaders::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadNote as fv::loaders::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
             async move { found }
         }),
-        <LoadOpened as fv::Load>::NAME => call.run(|c: LoadOpened| {
-            let found = results.get(&fv::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadOpened as fv::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
+        <LoadOpened as fv::loaders::Load>::NAME => call.run(|c: LoadOpened| {
+            let found = results.get(&fv::loaders::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::loaders::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadOpened as fv::loaders::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
             async move { found }
         }),
-        <LoadRanking as fv::Load>::NAME => call.run(|c: LoadRanking| {
-            let found = results.get(&fv::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadRanking as fv::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
+        <LoadRanking as fv::loaders::Load>::NAME => call.run(|c: LoadRanking| {
+            let found = results.get(&fv::loaders::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::loaders::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadRanking as fv::loaders::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
             async move { found }
         }),
-        <LoadThread as fv::Load>::NAME => call.run(|c: LoadThread| {
-            let found = results.get(&fv::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadThread as fv::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
+        <LoadThread as fv::loaders::Load>::NAME => call.run(|c: LoadThread| {
+            let found = results.get(&fv::loaders::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::loaders::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadThread as fv::loaders::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
             async move { found }
         }),
-        <LoadViews as fv::Load>::NAME => call.run(|c: LoadViews| {
-            let found = results.get(&fv::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadViews as fv::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
+        <LoadViews as fv::loaders::Load>::NAME => call.run(|c: LoadViews| {
+            let found = results.get(&fv::loaders::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::loaders::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadViews as fv::loaders::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
             async move { found }
         }),
         name => unreachable!("no loader is called `{name}`"),

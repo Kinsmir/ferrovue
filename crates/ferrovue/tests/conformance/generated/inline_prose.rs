@@ -13,21 +13,21 @@ pub const NAME: &str = "InlineProse";
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
     #[serde(rename = "lead")]
-    pub lead: ferrovue::InlineHtml,
+    pub lead: ferrovue::html::InlineHtml,
     #[serde(rename = "note", default, skip_serializing_if = "Option::is_none")]
-    pub note: Option<ferrovue::InlineHtml>,
+    pub note: Option<ferrovue::html::InlineHtml>,
     #[serde(rename = "caption")]
     pub caption: Cow<'a, str>,
 }
 
 impl<'a> Props<'a> {
     /// Props with its required fields, every optional one absent.
-    pub fn new(lead: ferrovue::InlineHtml, caption: impl Into<Cow<'a, str>>) -> Self {
+    pub fn new(lead: ferrovue::html::InlineHtml, caption: impl Into<Cow<'a, str>>) -> Self {
         Props { lead, note: None, caption: caption.into() }
     }
 
     /// Set `note`, which is absent otherwise.
-    pub fn note(mut self, note: ferrovue::InlineHtml) -> Self {
+    pub fn note(mut self, note: ferrovue::html::InlineHtml) -> Self {
         self.note = Some(note);
         self
     }
@@ -40,7 +40,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -48,37 +48,37 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
-    out.reserve(68 + fv::TrustedHtml::trusted_html(&props.lead).len() + props.note.as_ref().map_or(0, |v| fv::TrustedHtml::trusted_html(v).len()) + props.caption.len());
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
+    out.reserve(68 + fv::html::TrustedHtml::trusted_html(&props.lead).len() + props.note.as_ref().map_or(0, |v| fv::html::TrustedHtml::trusted_html(v).len()) + props.caption.len());
     out.push_str("<section><p class=\"lead\">");
-    fv::trusted_into(out, &props.lead);
+    fv::html::trusted_into(out, &props.lead);
     out.push_str("</p><p>Note: <span>");
     if let Some(html) = props.note.as_ref() {
-        fv::trusted_into(out, html);
+        fv::html::trusted_into(out, html);
     }
     out.push_str("</span> (");
-    fv::escape_into(out, &props.caption);
+    fv::core::escape_into(out, &props.caption);
     out.push_str(")</p></section>");
     Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

@@ -3,7 +3,8 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse as parseSfc } from "@vue/compiler-sfc";
 import { expect, it } from "vitest";
-import type { CssModulesConfig, ScopeIdMode } from "../src/context.ts";
+import type { CssModulesConfig } from "../src/context.ts";
+import type { ScopeIdMode } from "../src/config.ts";
 import { componentModules, scopedNames } from "../src/plugins/css-modules.ts";
 import { componentId } from "../src/plugins/scoped.ts";
 

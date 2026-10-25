@@ -69,7 +69,7 @@ JavaScript evaluates it and only on the path that reaches it. This is the genera
 # struct Author<'a> { name: std::borrow::Cow<'a, str> }
 # struct Props<'a> { author: Option<Author<'a>> }
 # let props = Props { author: Some(Author { name: " Ann ".into() }) };
-let s_byline = if let Some(fv_author) = props.author.as_ref() { { let fv_name = fv::js_trim(&fv_author.name); if fv_name.is_empty() { "Unnamed" } else { fv_name } } } else { "Anonymous" };
+let s_byline = if let Some(fv_author) = props.author.as_ref() { { let fv_name = fv::strings::js_trim(&fv_author.name); if fv_name.is_empty() { "Unnamed" } else { fv_name } } } else { "Anonymous" };
 # assert_eq!(s_byline, "Ann");
 ```
 
@@ -161,7 +161,7 @@ generated code of `leader`:
 # struct Row<'a> { name: std::borrow::Cow<'a, str>, score: i64 }
 # struct Props<'a> { rows: Vec<Row<'a>> }
 # let props = Props { rows: vec![Row { name: "Ann".into(), score: 7 }, Row { name: "Bo".into(), score: 9 }] };
-let s_leader = { let mut fv_best: f64 = -1.0f64; let mut fv_name: String = String::from("nobody"); for fv_r in props.rows.iter() { if fv_r.score as f64 <= fv_best {} else { fv_best = fv_r.score as f64; fv_name = String::from(&*fv_r.name); } } std::borrow::Cow::<str>::Owned(format!("{} ({})", fv_name, fv::Js(fv_best))) };
+let s_leader = { let mut fv_best: f64 = -1.0f64; let mut fv_name: String = String::from("nobody"); for fv_r in props.rows.iter() { if fv_r.score as f64 <= fv_best {} else { fv_best = fv_r.score as f64; fv_name = String::from(&*fv_r.name); } } std::borrow::Cow::<str>::Owned(format!("{} ({})", fv_name, fv::core::Js(fv_best))) };
 # assert_eq!(s_leader, "Bo (9)");
 ```
 

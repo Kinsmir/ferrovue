@@ -10,19 +10,19 @@ pub const NAME: &str = "DateDays";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "days", with = "fv::dates_in")]
+    #[serde(rename = "days", with = "fv::date::dates_in")]
     pub days: Vec<chrono::DateTime<chrono::Utc>>,
-    #[serde(rename = "maybe", default, skip_serializing_if = "Option::is_none", with = "fv::dates_in")]
+    #[serde(rename = "maybe", default, skip_serializing_if = "Option::is_none", with = "fv::date::dates_in")]
     pub maybe: Option<Vec<chrono::DateTime<chrono::Utc>>>,
-    #[serde(rename = "by", with = "fv::dates_in")]
-    pub by: ferrovue::Record<'a, chrono::DateTime<chrono::Utc>>,
-    #[serde(rename = "seen", with = "fv::dates_in")]
+    #[serde(rename = "by", with = "fv::date::dates_in")]
+    pub by: ferrovue::props::Record<'a, chrono::DateTime<chrono::Utc>>,
+    #[serde(rename = "seen", with = "fv::date::dates_in")]
     pub seen: Vec<Option<chrono::DateTime<chrono::Utc>>>,
 }
 
 impl<'a> Props<'a> {
     /// Props with its required fields, every optional one absent.
-    pub fn new(days: Vec<chrono::DateTime<chrono::Utc>>, by: ferrovue::Record<'a, chrono::DateTime<chrono::Utc>>, seen: Vec<Option<chrono::DateTime<chrono::Utc>>>) -> Self {
+    pub fn new(days: Vec<chrono::DateTime<chrono::Utc>>, by: ferrovue::props::Record<'a, chrono::DateTime<chrono::Utc>>, seen: Vec<Option<chrono::DateTime<chrono::Utc>>>) -> Self {
         Props { days, maybe: None, by, seen }
     }
 
@@ -40,7 +40,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -48,53 +48,53 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(144 + props.by.iter().map(|(k, _)| k.len()).sum::<usize>());
-    let s_valid = props.days.iter().map(fv::js_time_of).filter(|fv_d| !(*fv_d).is_nan()).collect::<Vec<_>>();
-    let s_sum = fv::js_reduce(props.days.iter().map(fv::js_time_of), 0.0f64, |fv_total, fv_d_2| fv_total + fv::js_utc_date(fv_d_2));
+    let s_valid = props.days.iter().map(fv::date::js_time_of).filter(|fv_d| !(*fv_d).is_nan()).collect::<Vec<_>>();
+    let s_sum = fv::strings::js_reduce(props.days.iter().map(fv::date::js_time_of), 0.0f64, |fv_total, fv_d_2| fv_total + fv::date::js_utc_date(fv_d_2));
     out.push_str("<div><!--[-->");
-    for fv_day in props.days.iter().map(fv::js_time_of) {
+    for fv_day in props.days.iter().map(fv::date::js_time_of) {
         out.push_str("<span>");
-        fv::push_number(out, fv_day);
+        fv::core::push_number(out, fv_day);
         out.push_str("</span>");
     }
     out.push_str("<!--]--><p>");
-    fv::push_int(out, s_valid.iter().copied().count() as i64);
+    fv::core::push_int(out, s_valid.iter().copied().count() as i64);
     out.push_str(" valid, ");
-    fv::push_number(out, s_sum);
+    fv::core::push_number(out, s_sum);
     out.push_str(", first ");
-    if let Some(v) = props.days.iter().map(fv::js_time_of).nth(usize::try_from(0i64).unwrap_or(usize::MAX)) {
-        fv::push_number(out, v);
+    if let Some(v) = props.days.iter().map(fv::date::js_time_of).nth(usize::try_from(0i64).unwrap_or(usize::MAX)) {
+        fv::core::push_number(out, v);
     }
     out.push_str(", last ");
-    if let Some(v) = fv::js_item_at(props.days.iter().map(fv::js_time_of), -1.0f64).map(fv::js_utc_full_year) {
-        fv::push_number(out, v);
+    if let Some(v) = fv::strings::js_item_at(props.days.iter().map(fv::date::js_time_of), -1.0f64).map(fv::date::js_utc_full_year) {
+        fv::core::push_number(out, v);
     }
     out.push_str(", ");
-    fv::escape_into(out, if props.days.iter().map(fv::js_time_of).any(|fv_d_3| fv::js_utc_day(fv_d_3) == 0.0) { "a Sunday" } else { "no Sunday" });
+    fv::core::escape_into(out, if props.days.iter().map(fv::date::js_time_of).any(|fv_d_3| fv::date::js_utc_day(fv_d_3) == 0.0) { "a Sunday" } else { "no Sunday" });
     out.push_str(", ");
-    fv::push_int(out, props.days.iter().map(fv::js_time_of).position(|fv_d_4| fv::js_utc_month(fv_d_4) == 1.0).map_or(-1, |i| i as i64));
+    fv::core::push_int(out, props.days.iter().map(fv::date::js_time_of).position(|fv_d_4| fv::date::js_utc_month(fv_d_4) == 1.0).map_or(-1, |i| i as i64));
     out.push_str("</p>");
-    if let Some(fv_maybe) = props.maybe.as_ref().map(|v| v.iter().map(fv::js_time_of).collect::<Vec<_>>()) {
+    if let Some(fv_maybe) = props.maybe.as_ref().map(|v| v.iter().map(fv::date::js_time_of).collect::<Vec<_>>()) {
         out.push_str("<p>");
-        fv::push_int(out, fv_maybe.len() as i64);
+        fv::core::push_int(out, fv_maybe.len() as i64);
         out.push_str(" maybe: ");
-        fv::escape_into(out, &fv_maybe.iter().copied().map(|v| fv::Js(v).to_string()).collect::<Vec<_>>().join(","));
+        fv::core::escape_into(out, &fv_maybe.iter().copied().map(|v| fv::core::Js(v).to_string()).collect::<Vec<_>>().join(","));
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");
     }
     out.push_str("<p>");
-    fv::escape_into(out, &props.by.keys().map(std::borrow::Cow::<str>::Borrowed).collect::<Vec<_>>().join(","));
+    fv::core::escape_into(out, &props.by.keys().map(std::borrow::Cow::<str>::Borrowed).collect::<Vec<_>>().join(","));
     out.push(' ');
-    fv::escape_into(out, &props.by.values().map(fv::js_time_of).map(fv::js_utc_hours).map(|v| fv::Js(v).to_string()).collect::<Vec<_>>().join(","));
+    fv::core::escape_into(out, &props.by.values().map(fv::date::js_time_of).map(fv::date::js_utc_hours).map(|v| fv::core::Js(v).to_string()).collect::<Vec<_>>().join(","));
     out.push(' ');
-    fv::escape_into(out, &format!("[{}]", s_valid.iter().copied().map(fv::js_json_date).collect::<Vec<_>>().join(",")));
+    fv::core::escape_into(out, &format!("[{}]", s_valid.iter().copied().map(fv::date::js_json_date).collect::<Vec<_>>().join(",")));
     out.push_str("</p><!--[-->");
-    for fv_at in props.seen.iter().map(|v| v.as_ref().map(fv::js_time_of)) {
+    for fv_at in props.seen.iter().map(|v| v.as_ref().map(fv::date::js_time_of)) {
         out.push_str("<b>");
-        fv::push_number(out, if let Some(fv_at_2) = fv_at { fv::js_utc_minutes(fv_at_2) } else { -1.0f64 });
+        fv::core::push_number(out, if let Some(fv_at_2) = fv_at { fv::date::js_utc_minutes(fv_at_2) } else { -1.0f64 });
         out.push_str("</b>");
     }
     out.push_str("<!--]--></div>");
@@ -102,25 +102,25 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    let html: fv::Html<'p, Props<'a>> = fv::Html::markup_fallible(props, render, try_render);
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    let html: fv::html::Html<'p, Props<'a>> = fv::html::Html::markup_fallible(props, render, try_render);
     html.dates("[{\"days\":[1],\"maybe\":[1],\"by\":{\"*\":1},\"seen\":[1]}]")
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    let html: fv::Html<'p, Props<'a>> = fv::Html::island_fallible(NAME, props, render, try_render);
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    let html: fv::html::Html<'p, Props<'a>> = fv::html::Html::island_fallible(NAME, props, render, try_render);
     html.dates("[{\"days\":[1],\"maybe\":[1],\"by\":{\"*\":1},\"seen\":[1]}]")
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    let html: fv::Html<'a, Props<'a>> = fv::Html::markup_owned_fallible(props, render, try_render);
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    let html: fv::html::Html<'a, Props<'a>> = fv::html::Html::markup_owned_fallible(props, render, try_render);
     html.dates("[{\"days\":[1],\"maybe\":[1],\"by\":{\"*\":1},\"seen\":[1]}]")
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    let html: fv::Html<'a, Props<'a>> = fv::Html::island_owned_fallible(NAME, props, render, try_render);
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    let html: fv::html::Html<'a, Props<'a>> = fv::html::Html::island_owned_fallible(NAME, props, render, try_render);
     html.dates("[{\"days\":[1],\"maybe\":[1],\"by\":{\"*\":1},\"seen\":[1]}]")
 }

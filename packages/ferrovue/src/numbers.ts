@@ -15,12 +15,12 @@ export function asF64(v: Val): string {
  * it is beyond the range of `i64`, unless `at` is `null`, for a result that cannot be. */
 export function intFromF64(f64: string, at: string | null): Val {
   if (at === null) return { code: `${operand(f64, AS)} as i64`, ty: INT, f64 };
-  return { code: kept(`fv::try_int(${bare(f64)})`, at), ty: INT, f64, at };
+  return { code: kept(`fv::render::try_int(${bare(f64)})`, at), ty: INT, f64, at };
 }
 
 /** Whether `v` is an integer computed as an `f64` and held as an `i64`. */
 export function isCast(v: Val): boolean {
-  return v.ty.k === "int" && v.f64 !== undefined && (v.num === undefined || v.code.endsWith(" as i64") || v.code.startsWith(`${REFUSALS}.keep(fv::try_int(`));
+  return v.ty.k === "int" && v.f64 !== undefined && (v.num === undefined || v.code.endsWith(" as i64") || v.code.startsWith(`${REFUSALS}.keep(fv::render::try_int(`));
 }
 
 /** The value as JavaScript writes it: an integer computed as an `f64` is written from the `f64`. */

@@ -1,4 +1,5 @@
-import { type Component, type N, type Scope, type Ty, type Val, absence, distinctFields, fail, GenError, nothing, rustStr, snake } from "../model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, absence, distinctFields, fail, nothing, rustStr, snake } from "../model.ts";
+import { GenError } from "../errors.ts";
 import { ctx } from "../context.ts";
 import { type Declared } from "../constants.ts";
 import { resolveImport } from "../resolve.ts";
@@ -40,7 +41,7 @@ interface LoadersScope {
   count: number;
 }
 
-const CLIENT_MODULES = new Set(["ferrovue", "ferrovue/client"]);
+const CLIENT_MODULE = "ferrovue";
 const ARG_TYS = new Set(["str", "int", "float", "bool"]);
 const SHAPE = "a loader is `export const loadPost = defineLoader(\"loadPost\", async (id: number): Promise<Post> => …)`";
 
@@ -51,7 +52,7 @@ function pascal(name: string): string {
 /** The local name `file` imports `defineLoader` by, if it does. */
 function defineLoaderName(body: N[]): string | null {
   for (const st of body) {
-    if (st.type !== "ImportDeclaration" || !CLIENT_MODULES.has(st.source.value) || st.importKind === "type") continue;
+    if (st.type !== "ImportDeclaration" || st.source.value !== CLIENT_MODULE || st.importKind === "type") continue;
     for (const sp of st.specifiers) {
       if (sp.type === "ImportSpecifier" && (sp.imported.name ?? sp.imported.value) === "defineLoader" && sp.importKind !== "type") return sp.local.name;
     }
@@ -181,10 +182,10 @@ function resultVal(name: string, ty: Ty): Val {
 
 function staticTy(ty: Ty, home: Component): string {
   if (bareDates(ty)) {
-    if (ty.k === "date") return "fv::JsDate";
+    if (ty.k === "date") return "fv::date::JsDate";
     if (ty.k === "opt") return `Option<${staticTy(ty.of, home)}>`;
     if (ty.k === "list") return `Vec<${staticTy(ty.of, home)}>`;
-    if (ty.k === "record") return `fv::Record<'static, ${staticTy(ty.of, home)}>`;
+    if (ty.k === "record") return `fv::props::Record<'static, ${staticTy(ty.of, home)}>`;
   }
   return rustTy(ty, home).replace(/\bCow<'a, /g, "std::borrow::Cow<'static, ").replace(/'a\b/g, "'static");
 }
@@ -213,10 +214,10 @@ function loaderSource(l: Loader, home: Component): string {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ${l.struct}${fields ? ` {\n${fields}\n}` : ";"}
 
-impl fv::Load for ${l.struct} {
+impl fv::loaders::Load for ${l.struct} {
     const NAME: &'static str = ${rustStr(l.name)};
     type Output = ${staticTy(l.out, home)};${dates}
-    fn args(&self, ${args ? `key: &mut fv::LoadKey) {\n${args}\n    }` : "_key: &mut fv::LoadKey) {}"}
+    fn args(&self, ${args ? `key: &mut fv::loaders::LoadKey) {\n${args}\n    }` : "_key: &mut fv::loaders::LoadKey) {}"}
 }
 `;
 }
@@ -229,14 +230,14 @@ function loadersSource(): string {
   const methods = all
     .map(
       (l) => `    /// \`${l.name}\`, in ${l.home.file}.
-    fn ${l.method}(&self, call: ${l.struct}) -> impl std::future::Future<Output = Result<<${l.struct} as fv::Load>::Output, Self::Error>> + Send;`,
+    fn ${l.method}(&self, call: ${l.struct}) -> impl std::future::Future<Output = Result<<${l.struct} as fv::loaders::Load>::Output, Self::Error>> + Send;`,
     )
     .join("\n\n");
-  const arms = all.map((l) => `        <${l.struct} as fv::Load>::NAME => call.run(|c: ${l.struct}| loaders.${l.method}(c)),`).join("\n");
+  const arms = all.map((l) => `        <${l.struct} as fv::loaders::Load>::NAME => call.run(|c: ${l.struct}| loaders.${l.method}(c)),`).join("\n");
   const fixtures = all
     .map(
-      (l) => `        <${l.struct} as fv::Load>::NAME => call.run(|c: ${l.struct}| {
-            let found = results.get(&fv::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::load_key(&c))).and_then(|raw| serde_json::from_str::<<${l.struct} as fv::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
+      (l) => `        <${l.struct} as fv::loaders::Load>::NAME => call.run(|c: ${l.struct}| {
+            let found = results.get(&fv::loaders::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::loaders::load_key(&c))).and_then(|raw| serde_json::from_str::<<${l.struct} as fv::loaders::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
             async move { found }
         }),`,
     )
@@ -249,7 +250,7 @@ use ferrovue as fv;
 
 ${structs}
 /// The app's loaders: one method for each \`defineLoader\`, given its call, returning what the
-/// client's loader returns. A method that fails fails the render, with [\`fv::LoadError\`].
+/// client's loader returns. A method that fails fails the render, with [\`fv::loaders::LoadError\`].
 pub trait Loaders: Sync {
     /// What a loader fails with.
     type Error;
@@ -258,22 +259,22 @@ ${methods}
 }
 
 /// Run \`call\` with the loader of its name.
-pub fn dispatch<'a, L: Loaders>(loaders: &'a L, call: fv::LoadCall) -> fv::LoadFuture<'a, L::Error> {
+pub fn dispatch<'a, L: Loaders>(loaders: &'a L, call: fv::loaders::LoadCall) -> fv::loaders::LoadFuture<'a, L::Error> {
     match call.name() {
 ${arms}
         name => unreachable!("no loader is called \`{name}\`"),
     }
 }
 
-/// Render with \`loaders\`: [\`fv::load\`], each call run by its method of [\`Loaders\`]. Write the
-/// payload with [\`fv::Loads::script_into\`] after the components, for the client to hydrate from.
-pub async fn load<L: Loaders, T>(loaders: &L, render: impl FnMut(&fv::Loads<'_>) -> T) -> Result<T, fv::LoadError<L::Error>> {
-    fv::load(render, |call| dispatch(loaders, call)).await
+/// Render with \`loaders\`: [\`fv::loaders::load\`], each call run by its method of [\`Loaders\`]. Write the
+/// payload with [\`fv::loaders::Loads::script_into\`] after the components, for the client to hydrate from.
+pub async fn load<L: Loaders, T>(loaders: &L, render: impl FnMut(&fv::loaders::Loads<'_>) -> T) -> Result<T, fv::loaders::LoadError<L::Error>> {
+    fv::loaders::load(render, |call| dispatch(loaders, call)).await
 }
 
 /// Each call answered from a fixture's \`$loads\`, by its key.
 #[cfg(test)]
-pub fn from_fixture(results: &std::collections::HashMap<String, Box<serde_json::value::RawValue>>) -> impl FnMut(fv::LoadCall) -> fv::LoadFuture<'static, String> + '_ {
+pub fn from_fixture(results: &std::collections::HashMap<String, Box<serde_json::value::RawValue>>) -> impl FnMut(fv::loaders::LoadCall) -> fv::loaders::LoadFuture<'static, String> + '_ {
     move |call| match call.name() {
 ${fixtures}
         name => unreachable!("no loader is called \`{name}\`"),
@@ -346,15 +347,15 @@ export const loaders: Plugin<LoadersRun, LoadersScope> = {
   params: [
     {
       name: "fv_loads",
-      ty: "&fv::Loads<'_>",
-      pageTy: "&'p fv::Loads<'p>",
+      ty: "&fv::loaders::Loads<'_>",
+      pageTy: "&'p fv::loaders::Loads<'p>",
       reads: (c) => runOf(loaders).readers.has(c),
       test: {
         lines: [],
         arg: "fv_loads",
         fixture: true,
         around: (render) => [
-          "let loading = ferrovue::load(",
+          "let loading = ferrovue::loaders::load(",
           "    |fv_loads| {",
           "        out.clear();",
           ...render.split("\n").map((l) => `        ${l}`),

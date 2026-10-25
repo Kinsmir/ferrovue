@@ -4,9 +4,9 @@ A render is synchronous: it needs every value before it starts. A page whose par
 different times (the book now, its reviews after a slow lookup) can still be sent as soon as
 possible, with holes.
 
-[`hole()`](crate::hole) is a [`Slot`](crate::Slot) whose content you write later. Render the whole
+[`hole()`](crate::page::hole) is a [`Slot`](crate::render::Slot) whose content you write later. Render the whole
 page once, with a hole in each slow slot, and cut the output with
-[`split_holes`](crate::split_holes): there is one more piece than there were holes. Send the first
+[`split_holes`](crate::page::split_holes): there is one more piece than there were holes. Send the first
 piece at once, then each hole's content when it is ready, each followed by the next piece.
 
 ```rust
@@ -42,33 +42,33 @@ piece at once, then each hole's content when it is ready, each followed by the n
 # #[derive(Clone, Copy, Default)]
 # pub struct Slots<'s> {
 #     /// `<slot name="reviews">`
-#     pub reviews: Option<fv::Slot<'s>>,
+#     pub reviews: Option<fv::render::Slot<'s>>,
 # }
 #
 # /// Write the component's server render into `out`.
 # pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
 #     out.reserve(54 + props.title.len());
 #     out.push_str("<article><h1>");
-#     fv::escape_into(out, &props.title);
+#     fv::core::escape_into(out, &props.title);
 #     out.push_str("</h1><section>");
-#     fv::slot_into(out, fv_slots.reviews, Some(&mut |out: &mut String| {
+#     fv::render::slot_into(out, fv_slots.reviews, Some(&mut |out: &mut String| {
 #         out.push_str("loading");
 #     }));
 #     out.push_str("</section></article>");
 # }
 #
 # /// The component's markup, for a maud page that shows it.
-# pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-#     fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_slots))
+# pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>) -> fv::html::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
+#     fv::html::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_slots))
 # }
 # }
 // BookPage.vue: <article><h1>{{ title }}</h1><section><slot name="reviews">loading</slot></section></article>
 let props = book_page::Props { title: "Dune".into() };
 let mut page = String::from("<!doctype html><body>");
-book_page::render(&mut page, &props, book_page::Slots { reviews: Some(ferrovue::hole()) });
+book_page::render(&mut page, &props, book_page::Slots { reviews: Some(ferrovue::page::hole()) });
 page.push_str("</body>");
 
-let pieces = ferrovue::split_holes(&page);
+let pieces = ferrovue::page::split_holes(&page);
 assert_eq!(
     pieces,
     [
@@ -109,8 +109,8 @@ soon as they are ready, the futures all running at once. This is the handler fro
 # impl Site {
 #     fn page(&self, path: &str) -> Page {
 #         let mut html = String::from("<main>");
-#         ferrovue::escape_into(&mut html, path);
-#         ferrovue::hole().render_to(&mut html);
+#         ferrovue::core::escape_into(&mut html, path);
+#         ferrovue::page::hole().render_to(&mut html);
 #         html.push_str("</main>");
 #         Page { status: 404, html, holes: vec!["Dune".to_owned()] }
 #     }
@@ -119,7 +119,7 @@ soon as they are ready, the futures all running at once. This is the handler fro
 #     }
 # }
 # async fn page(site: Arc<Site>, uri: Uri) -> Response {
-use ferrovue::HtmlStream;
+use ferrovue::web::HtmlStream;
 
 let Page { status, html, holes } = site.page(uri.path());
 let body = HtmlStream::new(html).holes(holes.into_iter().map(|hole| {

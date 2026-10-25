@@ -1,4 +1,5 @@
-import { type Component, type N, type Scope, type StructTy, type Ty, type Val, enumItems, enumOf, fail, GenError, literalsOf, nothing, sameTy } from "./model.ts";
+import { type Component, type N, type Scope, type StructTy, type Ty, type Val, enumItems, enumOf, fail, literalsOf, nothing, sameTy } from "./model.ts";
+import { GenError } from "./errors.ts";
 import { intoEnum, knownLiteral, refuseUnproven } from "./enums.ts";
 import { describeTy, expr, holdsNothing, typedBy } from "./expr.ts";
 import { lookupStruct, markHome } from "./typescript.ts";

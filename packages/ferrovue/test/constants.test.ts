@@ -2,7 +2,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { GenError, GenErrors, generate } from "../src/compiler.ts";
+import { GenError, GenErrors } from "../src/errors.ts";
+import { generate } from "../src/compiler.ts";
 import { like } from "./code.ts";
 
 const roots: string[] = [];
@@ -301,14 +302,14 @@ describe("constant `Map`s", () => {
   it("matches a key of a union of literals, a string and an integer", () => {
     const out = render(`defineProps<{ k: "a" | "z"; j: "a" | "b"; n: 1 | 3; s: string; i: number }>();\n${M}`, "<p>{{ M.get(k) }}|{{ M.get(j) }}|{{ M.has(k) }}|{{ M.has(j) }}|{{ M.get(n) }}|{{ M.get(s) }}|{{ M.has(s) }}|{{ M.get(i) }}|{{ M.has(i) }}|{{ M.get(String(1)) }}</p>");
     expect(out).toMatch(like('if let Some(v) = match props.k { XK::A => Some("A"), XK::Z => None } {'));
-    expect(out).toMatch(like('fv::escape_into(out, match props.j { XJ::A => "A", XJ::B => "B" });'));
+    expect(out).toMatch(like('fv::core::escape_into(out, match props.j { XJ::A => "A", XJ::B => "B" });'));
     expect(out).toMatch(like('out.push_str(if matches!(props.k, XK::A) { "true" } else { "false" });\n    out.push_str("|true|");'));
     expect(out).toMatch(like('if let Some(v) = match props.n { 1 => Some("one"), _ => None } {'));
     expect(out).toMatch(like('if let Some(v) = match &*props.s { "a" => Some("A"), "b" => Some("B"), _ => None } {'));
     expect(out).toMatch(like('out.push_str(if matches!(&*props.s, "a" | "b") { "true" } else { "false" });'));
     expect(out).toMatch(like('if let Some(v) = match props.i { 1 => Some("one"), 2 => Some("two"), _ => None } {'));
     expect(out).toMatch(like('out.push_str(if matches!(props.i, 1 | 2) { "true" } else { "false" });'));
-    expect(out).toMatch(like('if let Some(v) = match &*fv::Js(1i64).to_string() { "a" => Some("A"), "b" => Some("B"), _ => None } {'));
+    expect(out).toMatch(like('if let Some(v) = match &*fv::core::Js(1i64).to_string() { "a" => Some("A"), "b" => Some("B"), _ => None } {'));
   });
 
   it("maps `-0` to the key 0", () => {
@@ -353,7 +354,7 @@ describe("constant objects", () => {
     );
     expect(out).toMatch(like('let s_c = match props.k { XK::A => "ax", XK::B => "bx" };'));
     expect(out).toMatch(like('out.push_str("|ax|bx|two|ax|ax|");'));
-    expect(out).toMatch(like('fv::escape_into(out, match props.s { XS::A => "ax", XS::B => "bx" });'));
+    expect(out).toMatch(like('fv::core::escape_into(out, match props.s { XS::A => "ax", XS::B => "bx" });'));
   });
 
   it("reads a field by a key a `.ts` file's constant holds", () => {
@@ -368,8 +369,8 @@ describe("constant objects", () => {
   });
 
   it("leaves a name a `v-for` or setup binds over a constant", () => {
-    expect(render('const O = { a: 1 };', '<p v-for="O in [1, 2]">{{ O }}</p>')).toMatch(like("fv::push_int(out, o);"));
-    expect(render('import { ref } from "vue";\nconst O = ref(1);', "<p>{{ O }}</p>")).toMatch(like("fv::push_int(out, s_o);"));
+    expect(render('const O = { a: 1 };', '<p v-for="O in [1, 2]">{{ O }}</p>')).toMatch(like("fv::core::push_int(out, o);"));
+    expect(render('import { ref } from "vue";\nconst O = ref(1);', "<p>{{ O }}</p>")).toMatch(like("fv::core::push_int(out, s_o);"));
   });
 
   const refused: [string, string, string, string][] = [
@@ -413,7 +414,7 @@ describe("constants read by a key known only when rendering", () => {
 
   it("reads `undefined` for the keys it lacks, through `?.`", () => {
     expect(read('k: "a" | "c"', '{ a: { x: { y: "Y" } } }', "<p>{{ T[k]?.x.y }}|{{ T[k]?.x?.y }}</p>")).toMatch(like(
-      'if let Some(v) = match props.k { XK::A => Some("Y"), XK::C => None } {\n        fv::escape_into(out, v);\n    }\n    out.push(\'|\');\n    if let Some(v) = match props.k { XK::A => Some("Y"), XK::C => None } {',
+      'if let Some(v) = match props.k { XK::A => Some("Y"), XK::C => None } {\n        fv::core::escape_into(out, v);\n    }\n    out.push(\'|\');\n    if let Some(v) = match props.k { XK::A => Some("Y"), XK::C => None } {',
     ));
     expect(read('k: "a" | "c"', "{ a: { x: 1 }, c: { y: 2 } }", "<p>{{ T[k].x }}</p>")).toMatch(like("if let Some(v) = match props.k { XK::A => Some(1i64), XK::C => None } {"));
   });
@@ -422,10 +423,10 @@ describe("constants read by a key known only when rendering", () => {
     expect(read('k: "a" | "b" | "c"', '{ a: { x: "1" }, c: { x: "2" } }', '<p v-if="T[k]">x</p>')).toMatch(like("if !matches!(props.k, XK::B) {"));
     expect(read('k: "b" | "a"', '{ a: { x: "1" } }', '<p v-if="T[k]">x</p>')).toMatch(like("if !matches!(props.k, XK::B) {"));
     expect(read('k: "a" | "b"', '{ a: { x: "1" } }', '<p v-if="T[k]">x</p>')).toMatch(like("if matches!(props.k, XK::A) {"));
-    expect(read('k: "a" | "c"', '{ a: { x: "1" }, c: { x: "2" } }', '<p v-if="T[k]">{{ T[k].x }}</p>')).toMatch(like(`pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::Refused> {
+    expect(read('k: "a" | "c"', '{ a: { x: "1" }, c: { x: "2" } }', '<p v-if="T[k]">{{ T[k].x }}</p>')).toMatch(like(`pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
     out.reserve(7 + 1);
     out.push_str("<p>");
-    fv::escape_into(out, match props.k { XK::A => "1", XK::C => "2" });
+    fv::core::escape_into(out, match props.k { XK::A => "1", XK::C => "2" });
     out.push_str("</p>");
     Ok(())
 }
@@ -449,19 +450,19 @@ describe("constants read by a key known only when rendering", () => {
     expect(read('k: "a" | "b" | "c"', '{ a: ["x"], b: [] }', '<i v-for="v in T[k] ?? []">{{ v }}</i>')).toMatch(like(
       'for v_ref in (match props.k { XK::A => Some(&["x"][..]), XK::B => Some(&[][..]), XK::C => None }).map(|v| &v[..]).unwrap_or(&[]).iter() {',
     ));
-    expect(read('k: "a" | "b"', '{ a: ["y"], b: ["y"] }', '<b>{{ T[k].length }}</b>')).toMatch(like('fv::push_int(out, (&["y"][..]).len() as i64);'));
-    expect(read('k: "a" | "b"', "{ a: [], b: [2] }", "<i>{{ T[k].length }}</i>")).toMatch(like("fv::push_int(out, (match props.k { XK::A => &[][..], XK::B => &[2i64][..] }).len() as i64);"));
+    expect(read('k: "a" | "b"', '{ a: ["y"], b: ["y"] }', '<b>{{ T[k].length }}</b>')).toMatch(like('fv::core::push_int(out, (&["y"][..]).len() as i64);'));
+    expect(read('k: "a" | "b"', "{ a: [], b: [2] }", "<i>{{ T[k].length }}</i>")).toMatch(like("fv::core::push_int(out, (match props.k { XK::A => &[][..], XK::B => &[2i64][..] }).len() as i64);"));
   });
 
   it("reads numbers by key as floats where one is a fraction", () => {
-    expect(read('k: "a" | "b" | "c"', "{ a: 1, b: 2.5, c: 1 }", "<p>{{ T[k] }}</p>")).toMatch(like("fv::push_number(out, match props.k { XK::B => 2.5f64, XK::A | XK::C => 1.0f64 });"));
+    expect(read('k: "a" | "b" | "c"', "{ a: 1, b: 2.5, c: 1 }", "<p>{{ T[k] }}</p>")).toMatch(like("fv::core::push_number(out, match props.k { XK::B => 2.5f64, XK::A | XK::C => 1.0f64 });"));
     expect(read('k: "a" | "b" | "c"', "{ a: 1, b: 2.5 }", "<p>{{ T[k] }}</p>")).toMatch(like("if let Some(v) = match props.k { XK::A => Some(1.0f64), XK::B => Some(2.5f64), XK::C => None } {"));
-    expect(read('k: "a" | "b" | "c"', "{ a: 1, b: 2 }", "<p>{{ T[k] ?? 0 }}</p>")).toMatch(like("fv::push_int(out, (match props.k { XK::A => Some(1i64), XK::B => Some(2i64), XK::C => None }).unwrap_or(0i64));"));
+    expect(read('k: "a" | "b" | "c"', "{ a: 1, b: 2 }", "<p>{{ T[k] ?? 0 }}</p>")).toMatch(like("fv::core::push_int(out, (match props.k { XK::A => Some(1i64), XK::B => Some(2i64), XK::C => None }).unwrap_or(0i64));"));
     expect(read('k: "a" | "b"; j: "x" | "y"', "{ a: { x: 1.5, y: 1 }, b: { x: 2.5 } }", "<p>{{ T[k][j] ?? 0 }}</p>")).toMatch(like(
-      "fv::push_number(out, (match props.j { XJ::X => Some(match props.k { XK::A => 1.5f64, XK::B => 2.5f64 }), XJ::Y => (match props.k { XK::A => Some(1i64), XK::B => None }).map(|v| v as f64) }).unwrap_or(0.0f64));",
+      "fv::core::push_number(out, (match props.j { XJ::X => Some(match props.k { XK::A => 1.5f64, XK::B => 2.5f64 }), XJ::Y => (match props.k { XK::A => Some(1i64), XK::B => None }).map(|v| v as f64) }).unwrap_or(0.0f64));",
     ));
     expect(read('k: "a" | "b"; j: "x" | "y"', "{ a: { x: 1.5, y: 1 }, b: { x: 2.5, y: 3.5 } }", "<p>{{ T[k][j] }}</p>")).toMatch(like(
-      "fv::push_number(out, match props.j { XJ::X => match props.k { XK::A => 1.5f64, XK::B => 2.5f64 }, XJ::Y => match props.k { XK::A => 1.0f64, XK::B => 3.5f64 } });",
+      "fv::core::push_number(out, match props.j { XJ::X => match props.k { XK::A => 1.5f64, XK::B => 2.5f64 }, XJ::Y => match props.k { XK::A => 1.0f64, XK::B => 3.5f64 } });",
     ));
   });
 
@@ -511,7 +512,7 @@ describe("constants checked a second time", () => {
     expect(refusals("defineProps<{ on: boolean }>();\nconst T = { ab: { x: 1 } };", '<p>{{ T[on ? "ab" : "ab"] }}</p>')).toEqual(['FV0208 `T["ab"]` is an object, read one field at a time: `T["ab"].x`']);
     expect(refusals("defineProps<{ on: boolean }>();\nconst T = { 2: { x: 1 } };", "<p>{{ T[on ? 2 : 2] }}</p>")).toEqual(['FV0208 `T["2"]` is an object, read one field at a time: `T["2"].x`']);
     expect(refusals("defineProps<{ on: boolean }>();\nconst T = { ab: { x: 1 } };", '<p>{{ T[on ? "z" : "z"].x }}</p>')).toEqual(["FV0204 `T` has no field `z`"]);
-    expect(render("defineProps<{ on: boolean }>();\nconst M = new Map([['ab', 1], [2, 3]]);", '<p>{{ M.get(on ? "ab" : "ab") }}|{{ M.get(on ? 2 : 2) }}</p>')).toMatch(like("fv::push_int(out, 1i64);\n    out.push('|');\n    fv::push_int(out, 3i64);"));
+    expect(render("defineProps<{ on: boolean }>();\nconst M = new Map([['ab', 1], [2, 3]]);", '<p>{{ M.get(on ? "ab" : "ab") }}|{{ M.get(on ? 2 : 2) }}</p>')).toMatch(like("fv::core::push_int(out, 1i64);\n    out.push('|');\n    fv::core::push_int(out, 3i64);"));
   });
 
   it("writes booleans by key that are no literal, and groups the keys of each literal", () => {
@@ -529,7 +530,7 @@ describe("constants checked a second time", () => {
 
   it("keeps a float that may be absent as it is", () => {
     expect(render('defineProps<{ k: "a" | "b"; j: "x" | "y" }>();\nconst T = { a: { x: 1.5 }, b: { x: 2.5, y: 3.5 } };', "<p>{{ T[k][j] ?? 0 }}</p>")).toMatch(like(
-      "fv::push_number(out, (match props.j { XJ::X => Some(match props.k { XK::A => 1.5f64, XK::B => 2.5f64 }), XJ::Y => match props.k { XK::A => None, XK::B => Some(3.5f64) } }).unwrap_or(0.0f64));",
+      "fv::core::push_number(out, (match props.j { XJ::X => Some(match props.k { XK::A => 1.5f64, XK::B => 2.5f64 }), XJ::Y => match props.k { XK::A => None, XK::B => Some(3.5f64) } }).unwrap_or(0.0f64));",
     ));
   });
 });
@@ -559,7 +560,7 @@ describe("constants read by keys that hold markup-breaking characters", () => {
 
   it("reads a `Map` by a `.ts` file's constant with a quote", () => {
     expect(render("import { K } from \"./c\";\nconst M = new Map([['a\"b', 1], ['c', 2]]);", "<p>{{ M.get(K) }}|{{ M.has(K) }}</p>", { "c.ts": "export const K = 'a\"b';" })).toMatch(like(
-      "fv::push_int(out, 1i64);\n    out.push_str(\"|true</p>\");",
+      "fv::core::push_int(out, 1i64);\n    out.push_str(\"|true</p>\");",
     ));
   });
 });
@@ -601,7 +602,7 @@ describe("constants read by a key known only when rendering, further", () => {
 describe("constants read by keys the compiler computes", () => {
   it("reads a `Map` and an object by `String()` of a literal", () => {
     expect(render("const M = new Map([['null', 1], ['a\"b', 2]]);\nconst O = { 'a\"b': 'q' };", "<p>{{ M.get(String(null)) }}|{{ M.get(String('a\"b')) }}|{{ O[String('a\"b')] }}</p>")).toMatch(like(
-      'fv::push_int(out, 1i64);\n    out.push(\'|\');\n    fv::push_int(out, 2i64);\n    out.push_str("|q</p>");',
+      'fv::core::push_int(out, 1i64);\n    out.push(\'|\');\n    fv::core::push_int(out, 2i64);\n    out.push_str("|q</p>");',
     ));
   });
 
@@ -617,14 +618,14 @@ describe("constants read by keys the compiler computes", () => {
   it("matches a `Map`'s keys at render time by a `computed` that holds `-0`, and refuses it as an object's key", () => {
     const z = 'import { computed } from "vue";\nconst z = computed(() => -0);\n';
     expect(render(`${z}const M = new Map([[0, "zero"], [1, "one"]]);`, "<p>{{ M.get(z) }}|{{ M.has(z) }}</p>")).toMatch(like(
-      'if let Some(v) = match s_z as i64 { 0 => Some("zero"), 1 => Some("one"), _ => None } {\n        fv::escape_into(out, v);\n    }\n    out.push(\'|\');\n    out.push_str(if matches!(s_z as i64, 0 | 1) { "true" } else { "false" });',
+      'if let Some(v) = match s_z as i64 { 0 => Some("zero"), 1 => Some("one"), _ => None } {\n        fv::core::escape_into(out, v);\n    }\n    out.push(\'|\');\n    out.push_str(if matches!(s_z as i64, 0 | 1) { "true" } else { "false" });',
     ));
     expect(refusals(`${z}const O = { 0: "zero", 1: "one" };`, "<p>{{ O[z] }}</p>")).toEqual(['FV0222 `O` read by a key that is a `number`: type the key as a union of string literals, as `"sm" | "md" | "lg"`, or an `enum` of them']);
   });
 
   it("takes an integer constant as truthy where it is not 0", () => {
     expect(render('import { ONE } from "./c";\ndefineProps<{ s: string }>();', "<p>{{ ONE && s }}|{{ ONE || s }}</p>", { "c.ts": "export const ONE = 1;" })).toMatch(like(
-      'out.push_str("<p>");\n    fv::escape_into(out, &props.s);\n    out.push_str("|1</p>");',
+      'out.push_str("<p>");\n    fv::core::escape_into(out, &props.s);\n    out.push_str("|1</p>");',
     ));
   });
 });

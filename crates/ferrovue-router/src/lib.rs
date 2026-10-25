@@ -4,8 +4,8 @@
 //! # Example
 //!
 //! ```
-//! # use ferrovue_router as ferrovue;
-//! let router = ferrovue::Router::new(&["/", "/blog/:slug"]);
+//! # mod ferrovue { pub use ferrovue_router as router; }
+//! let router = ferrovue::router::Router::new(&["/", "/blog/:slug"]);
 //! let route = router.at("/blog/hello");
 //! let link = route.link("/blog/hello");
 //! assert_eq!((link.href.as_str(), link.active, link.exact), ("/blog/hello", true, true));
@@ -18,8 +18,8 @@
 /// # Example
 ///
 /// ```
-/// # use ferrovue_router as ferrovue;
-/// use ferrovue::Router;
+/// # mod ferrovue { pub use ferrovue_router as router; }
+/// use ferrovue::router::Router;
 ///
 /// let router = Router::new(&["/", "/blog/:slug", "/docs/:path(.*)"]);
 /// let route = router.at("/docs/guide/routing");
@@ -39,8 +39,8 @@ pub struct Router {
 /// # Example
 ///
 /// ```
-/// # use ferrovue_router as ferrovue;
-/// let router = ferrovue::Router::named(&[("/", Some("home")), ("/users/:id", None)]).with_base("/app/");
+/// # mod ferrovue { pub use ferrovue_router as router; }
+/// let router = ferrovue::router::Router::named(&[("/", Some("home")), ("/users/:id", None)]).with_base("/app/");
 /// assert_eq!(
 ///     format!("{router:?}"),
 ///     r#"Router { base: "/app", routes: {"/": Some("home"), "/users/:id": None} }"#
@@ -106,8 +106,8 @@ impl Router {
     /// # Example
     ///
     /// ```
-    /// # use ferrovue_router as ferrovue;
-    /// let router = ferrovue::Router::new(&["/", "/users/:id"]);
+    /// # mod ferrovue { pub use ferrovue_router as router; }
+    /// let router = ferrovue::router::Router::new(&["/", "/users/:id"]);
     /// assert_eq!(router.at("/users/7").param("id"), Some("7"));
     /// assert_eq!(router.at("/nowhere").param("id"), None);
     /// ```
@@ -125,8 +125,8 @@ impl Router {
     /// # Example
     ///
     /// ```
-    /// # use ferrovue_router as ferrovue;
-    /// use ferrovue::Router;
+    /// # mod ferrovue { pub use ferrovue_router as router; }
+    /// use ferrovue::router::Router;
     ///
     /// let router = Router::named(&[("/", Some("home")), ("/users/:id", Some("user"))]).with_base("/app/");
     /// let route = router.at("/users/7?tab=posts#bio");
@@ -160,8 +160,8 @@ impl Router {
     /// # Example
     ///
     /// ```
-    /// # use ferrovue_router as ferrovue;
-    /// use ferrovue::{RouteDef, Router};
+    /// # mod ferrovue { pub use ferrovue_router as router; }
+    /// use ferrovue::router::{RouteDef, Router};
     ///
     /// let router = Router::tree(&[RouteDef::new("/users/:id")
     ///     .with_name("user")
@@ -281,8 +281,8 @@ impl Router {
     /// # Example
     ///
     /// ```
-    /// # use ferrovue_router as ferrovue;
-    /// let router = ferrovue::Router::new(&["/", "/blog/:slug"]).with_base("/app/");
+    /// # mod ferrovue { pub use ferrovue_router as router; }
+    /// let router = ferrovue::router::Router::new(&["/", "/blog/:slug"]).with_base("/app/");
     /// // A request for /app/blog/intro, with the base taken off.
     /// let route = router.at("/blog/intro");
     /// let link = route.link("/blog/intro");
@@ -317,8 +317,8 @@ impl Router {
     /// # Example
     ///
     /// ```
-    /// # use ferrovue_router as ferrovue;
-    /// let router = ferrovue::Router::new(&["/", "/search"]);
+    /// # mod ferrovue { pub use ferrovue_router as router; }
+    /// let router = ferrovue::router::Router::new(&["/", "/search"]);
     /// let route = router.at("/search?q=caf%C3%A9&page=2#results");
     /// assert_eq!(route.path(), "/search");
     /// assert_eq!(route.query("q").attr_value(), Some("café"));
@@ -363,8 +363,8 @@ impl Router {
 /// # Example
 ///
 /// ```
-/// # use ferrovue_router as ferrovue;
-/// use ferrovue::{RouteDef, Router};
+/// # mod ferrovue { pub use ferrovue_router as router; }
+/// use ferrovue::router::{RouteDef, Router};
 ///
 /// const ROUTES: &[RouteDef<'static>] = &[
 ///     RouteDef::new("/").with_name("home"),
@@ -397,8 +397,8 @@ impl<'a> RouteDef<'a> {
     /// # Example
     ///
     /// ```
-    /// # use ferrovue_router as ferrovue;
-    /// let def = ferrovue::RouteDef::new("/about");
+    /// # mod ferrovue { pub use ferrovue_router as router; }
+    /// let def = ferrovue::router::RouteDef::new("/about");
     /// assert_eq!(def.path, "/about");
     /// assert_eq!(def.name, None);
     /// assert!(def.view && def.children.is_empty());
@@ -418,8 +418,8 @@ impl<'a> RouteDef<'a> {
     /// # Example
     ///
     /// ```
-    /// # use ferrovue_router as ferrovue;
-    /// let def = ferrovue::RouteDef::new("/users/:id").with_name("user");
+    /// # mod ferrovue { pub use ferrovue_router as router; }
+    /// let def = ferrovue::router::RouteDef::new("/users/:id").with_name("user");
     /// assert_eq!(def.name, Some("user"));
     /// ```
     #[must_use]
@@ -436,8 +436,8 @@ impl<'a> RouteDef<'a> {
     /// # Example
     ///
     /// ```
-    /// # use ferrovue_router as ferrovue;
-    /// let def = ferrovue::RouteDef::new("/books").with_view(false);
+    /// # mod ferrovue { pub use ferrovue_router as router; }
+    /// let def = ferrovue::router::RouteDef::new("/books").with_view(false);
     /// assert!(!def.view);
     /// ```
     #[must_use]
@@ -450,8 +450,8 @@ impl<'a> RouteDef<'a> {
     /// # Example
     ///
     /// ```
-    /// # use ferrovue_router as ferrovue;
-    /// use ferrovue::RouteDef;
+    /// # mod ferrovue { pub use ferrovue_router as router; }
+    /// use ferrovue::router::RouteDef;
     ///
     /// const USER: RouteDef<'static> = RouteDef::new("/users/:id").with_children(&[
     ///     RouteDef::new(""),
@@ -470,8 +470,8 @@ impl<'a> RouteDef<'a> {
 /// # Example
 ///
 /// ```
-/// # use ferrovue_router as ferrovue;
-/// let router = ferrovue::Router::named(&[("/", Some("home")), ("/blog/:slug", Some("post"))]);
+/// # mod ferrovue { pub use ferrovue_router as router; }
+/// let router = ferrovue::router::Router::named(&[("/", Some("home")), ("/blog/:slug", Some("post"))]);
 /// let route = router.at("/blog/intro?sort=new#comments");
 ///
 /// assert_eq!(route.name(), Some("post"));
@@ -501,8 +501,8 @@ pub struct Route<'r> {
 /// # Example
 ///
 /// ```
-/// # use ferrovue_router as ferrovue;
-/// use ferrovue::{Query, Router};
+/// # mod ferrovue { pub use ferrovue_router as router; }
+/// use ferrovue::router::{Query, Router};
 ///
 /// let router = Router::new(&["/search"]);
 /// let route = router.at("/search?q=rust&tag=a&tag=b&flag");
@@ -532,8 +532,8 @@ impl<'r> Query<'r> {
     /// # Example
     ///
     /// ```
-    /// # use ferrovue_router as ferrovue;
-    /// let router = ferrovue::Router::new(&["/search"]);
+    /// # mod ferrovue { pub use ferrovue_router as router; }
+    /// let router = ferrovue::router::Router::new(&["/search"]);
     /// let route = router.at("/search?q=a%3Cb&tag=x&tag=y");
     ///
     /// let mut out = String::new();
@@ -571,8 +571,8 @@ impl<'r> Query<'r> {
     /// # Example
     ///
     /// ```
-    /// # use ferrovue_router as ferrovue;
-    /// use ferrovue::Query;
+    /// # mod ferrovue { pub use ferrovue_router as router; }
+    /// use ferrovue::router::Query;
     ///
     /// assert!(Query::One("x").truthy());
     /// assert!(!Query::One("").truthy());
@@ -610,8 +610,8 @@ impl<'r> Query<'r> {
     /// # Example
     ///
     /// ```
-    /// # use ferrovue_router as ferrovue;
-    /// use ferrovue::Query;
+    /// # mod ferrovue { pub use ferrovue_router as router; }
+    /// use ferrovue::router::Query;
     ///
     /// assert_eq!(Query::Absent.or("none"), Query::One("none"));
     /// assert_eq!(Query::One("").or("none"), Query::One("")); // `??` keeps the empty string
@@ -633,8 +633,8 @@ impl<'r> Query<'r> {
     /// # Example
     ///
     /// ```
-    /// # use ferrovue_router as ferrovue;
-    /// use ferrovue::Query;
+    /// # mod ferrovue { pub use ferrovue_router as router; }
+    /// use ferrovue::router::Query;
     ///
     /// assert_eq!(Query::One("rust").attr_value(), Some("rust"));
     /// assert_eq!(Query::Null.attr_value(), None);
@@ -675,8 +675,8 @@ fn parse_query(search: &str) -> Vec<(String, Vec<Option<String>>)> {
 /// # Example
 ///
 /// ```
-/// # use ferrovue_router as ferrovue;
-/// let router = ferrovue::Router::new(&["/", "/blog/:slug"]);
+/// # mod ferrovue { pub use ferrovue_router as router; }
+/// let router = ferrovue::router::Router::new(&["/", "/blog/:slug"]);
 /// let link = router.at("/blog/intro").link("/blog/intro#top");
 /// assert_eq!(link.href, "/blog/intro#top");
 /// assert!(link.active && link.exact);
@@ -700,8 +700,8 @@ pub struct Link {
 /// # Example
 ///
 /// ```
-/// # use ferrovue_router as ferrovue;
-/// let router = ferrovue::Router::named(&[("/blog/:slug", Some("post"))]);
+/// # mod ferrovue { pub use ferrovue_router as router; }
+/// let router = ferrovue::router::Router::named(&[("/blog/:slug", Some("post"))]);
 /// assert_eq!(
 ///     format!("{:?}", router.at("/blog/intro?sort=new#comments")),
 ///     r#"Route { full_path: "/blog/intro?sort=new#comments", name: Some("post"), params: {"slug": "intro"}, .. }"#
@@ -787,8 +787,8 @@ impl Route<'_> {
     /// # Example
     ///
     /// ```
-    /// # use ferrovue_router as ferrovue;
-    /// let router = ferrovue::Router::new(&["/", "/blog/:slug"]);
+    /// # mod ferrovue { pub use ferrovue_router as router; }
+    /// let router = ferrovue::router::Router::new(&["/", "/blog/:slug"]);
     /// let here = router.at("/blog/intro");
     /// let link = here.link("/blog/intro?sort=new");
     /// assert_eq!(link.href, "/blog/intro?sort=new");
@@ -854,13 +854,13 @@ impl Route<'_> {
     /// # Example
     ///
     /// ```
-    /// # use ferrovue_router as ferrovue;
-    /// let router = ferrovue::Router::named(&[("/", Some("home")), ("/books/:id", Some("book"))]);
+    /// # mod ferrovue { pub use ferrovue_router as router; }
+    /// let router = ferrovue::router::Router::named(&[("/", Some("home")), ("/books/:id", Some("book"))]);
     /// let route = router.at("/books/dune");
     ///
     /// // <RouterLink :to="{ name: 'book', params: { id: 'dune' }, query: { tab: 'reviews' }, hash: '#top' }">
     /// let mut search = String::new();
-    /// ferrovue::query_into(&mut search, "tab", "reviews");
+    /// ferrovue::router::query_into(&mut search, "tab", "reviews");
     /// let link = route.link_named("book", &[("id", "dune")], &search, "#top");
     /// assert_eq!(link.href, "/books/dune?tab=reviews#top");
     /// assert!(link.active && link.exact);
@@ -947,13 +947,13 @@ impl Route<'_> {
     /// # Example
     ///
     /// ```
-    /// # use ferrovue_router as ferrovue;
-    /// let router = ferrovue::Router::new(&["/", "/search"]);
+    /// # mod ferrovue { pub use ferrovue_router as router; }
+    /// let router = ferrovue::router::Router::new(&["/", "/search"]);
     /// let route = router.at("/");
     ///
     /// // <RouterLink :to="{ path: '/search', query: { q: 'a b' } }">
     /// let mut search = String::new();
-    /// ferrovue::query_into(&mut search, "q", "a b");
+    /// ferrovue::router::query_into(&mut search, "q", "a b");
     /// let link = route.link_path("/search", &search, "");
     /// assert_eq!(link.href, "/search?q=a+b");
     /// assert!(!link.active);
@@ -986,10 +986,10 @@ impl Route<'_> {
 /// # Example
 ///
 /// ```
-/// # use ferrovue_router as ferrovue;
+/// # mod ferrovue { pub use ferrovue_router as router; }
 /// let mut search = String::new();
-/// ferrovue::query_into(&mut search, "q", "a b&c");
-/// ferrovue::query_into(&mut search, "page", "2");
+/// ferrovue::router::query_into(&mut search, "q", "a b&c");
+/// ferrovue::router::query_into(&mut search, "page", "2");
 /// assert_eq!(search, "q=a+b%26c&page=2");
 /// ```
 pub fn query_into(search: &mut String, key: &str, value: &str) {

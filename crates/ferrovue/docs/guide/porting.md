@@ -59,7 +59,7 @@ Then add a key for each part of the app the server must reproduce:
 | vue-i18n | `i18n`: `{ messages, locale?, fallbackLocale? }` | [`i18n`](crate::guide::i18n) |
 | `<style scoped>`, `v-bind()` in `<style>`, `<style module>` | `scopeId`, `viteRoot` and `isProduction` as the Vite build sets them, and `cssModules` as Vite's `css.modules` | [`scoped_styles`](crate::guide::scoped_styles) |
 | `v-html` | `trustedHtml`, the Rust type of a `TrustedHtml` prop | [`escaping`](crate::guide::escaping) |
-| `Date` props | `dateType`, when the default `ferrovue::JsDate` does not suit | [`dates_and_prices`](crate::guide::dates_and_prices#date-props) |
+| `Date` props | `dateType`, when the default `ferrovue::date::JsDate` does not suit | [`dates_and_prices`](crate::guide::dates_and_prices#date-props) |
 | Functions of its own called from templates | `helpers` | [`errors_and_limits`](crate::guide::errors_and_limits#helpers) |
 | Components from a library the compiler refuses | `twins` | [`errors_and_limits`](crate::guide::errors_and_limits#rust-twins) |
 | Custom directives with no server output | `clientDirectives` | [`quick_start`](crate::guide::quick_start#2-configure) |
@@ -104,7 +104,7 @@ What the Node server did per request moves into a Rust handler:
 - **vue-i18n.** Build an `I18n` per request with the generated `i18n(locale)`:
   [`i18n`](crate::guide::i18n#rendering-in-a-locale).
 - **The page head and teleports.** `useHead` and `useSeoMeta` write into a
-  [`Head`](crate::Head), and `<Teleport>` into [`Teleports`](crate::Teleports), which the server
+  [`Head`](crate::head::Head), and `<Teleport>` into [`Teleports`](crate::page::Teleports), which the server
   places in the page: [`head`](crate::guide::head) and [`teleports`](crate::guide::teleports).
 - **provide and inject.** What the client app gives `app.provide` is a generated `Provides`:
   [`provide_inject`](crate::guide::provide_inject).
@@ -119,7 +119,7 @@ may combine with islands:
   is the smallest change to the client:
   [hydrating the whole app](crate::guide::islands_and_hydration#hydrating-the-whole-app).
 - **A page recorded part by part**: the server writes the layout and its parts with
-  [`Page`](crate::Page), and `mountPage` hydrates them as one app:
+  [`Page`](crate::page::Page), and `mountPage` hydrates them as one app:
   [hydrating a page](crate::guide::islands_and_hydration#hydrating-a-page).
 - **Islands**: each interactive component hydrates on its own from its props, with `mountIslands`
   and the `ferrovue/islands` module the Vite plugin writes. The rest of the page stays static HTML,
@@ -164,7 +164,7 @@ around a refusal, from the least work:
   [format in Rust, pass a string](crate::guide::dates_and_prices#format-in-rust-pass-a-string).
 - **A helper**: a function of your own the template calls, mapped to a Rust twin in `helpers`:
   [helpers](crate::guide::errors_and_limits#helpers).
-- **`<ClientOnly>`** from `ferrovue/client`, around content the server need not render. The
+- **`<ClientOnly>`** from `ferrovue`, around content the server need not render. The
   server writes the `#fallback` slot, and the compiler does not read the default slot at all:
   [client-only content](crate::guide::errors_and_limits#client-only-content).
 - **A Rust twin**: a component the server must render and the compiler cannot compile, such as a
@@ -197,11 +197,11 @@ two calls. A checklist for a port:
 5. **The Rust half.** `ferrovue::conformance!("fixtures", generated::render_json, at_least = N)`
    writes a test that renders every fixture with the generated Rust and compares the bytes, and
    fails when it finds fewer than `N` fixtures.
-6. **Pages and client renders.** `hydrateRecordedPage` from `ferrovue/testing` hydrates a page as
+6. **Pages and client renders.** `hydrateRecordedPage` from `ferrovue/testing/browser` hydrates a page as
    the server wrote it:
    [testing a page](crate::guide::islands_and_hydration#testing-a-page). An app that renders the
    next page from its record on navigation passes `clientRender: true` to `conformanceSuite`.
-7. **Your own tests.** `fixtureApp` from `ferrovue/testing` builds the app a fixture describes, for
+7. **Your own tests.** `fixtureApp` from `ferrovue/testing/browser` builds the app a fixture describes, for
    a vitest test of your own:
    [fixtures in your own vitest tests](crate::guide::testing#fixtures-in-your-own-vitest-tests).
 8. **In CI.** Run `pnpm ferrovue --check`, the vitest suite and `cargo test` on every change, so a

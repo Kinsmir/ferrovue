@@ -1,4 +1,5 @@
-import { type N, type Scope, type Ty, type Val, absence, BOOL, enumOf, fail, falsyLiteral, GenError, keptLiterals, literalTy, nothing, rustStr, STR, UNDEF, unionStr } from "./model.ts";
+import { type N, type Scope, type Ty, type Val, absence, BOOL, enumOf, fail, falsyLiteral, keptLiterals, literalTy, nothing, rustStr, STR, UNDEF, unionStr } from "./model.ts";
+import { GenError } from "./errors.ts";
 import { ownKeyTest, pickPresent } from "./constants.ts";
 import { isObjectCall } from "./calls.ts";
 import { ctx } from "./context.ts";

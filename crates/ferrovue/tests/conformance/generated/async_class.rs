@@ -40,7 +40,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -48,44 +48,44 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(35 + props.tone.len() + props.tags.iter().map(|v| v.len()).sum::<usize>() + props.note.as_deref().map_or(0, str::len));
     out.push_str("<section>");
-    super::divider::try_render_scoped(out, &super::divider::Props {  }, &fv::Attrs::new(&[("class", if fv::js_length(fv::js_trim(&props.tone)) as f64 == fv::js_length(&props.tone) as f64 { fv::Attr::str(&props.tone) } else { fv::Attr::from(fv::class_names(&[fv::js_trim(&props.tone), &*props.tone])) })], ""))?;
-    super::glyph::try_render_scoped(out, &super::glyph::Props {  }, &fv::Attrs::new(&[("class", if fv::js_length(fv::js_trim(&format!(" {} ", props.tone))) as f64 == fv::js_length(&format!(" {} ", props.tone)) as f64 { fv::Attr::Str(std::borrow::Cow::<str>::Owned(format!(" {} ", props.tone))) } else { fv::Attr::from(fv::class_names(&[fv::js_trim(&format!(" {} ", props.tone)), &*format!(" {} ", props.tone)])) }), ("title", fv::Attr::str("g"))], ""))?;
-    super::glyph::try_render_scoped(out, &super::glyph::Props {  }, &fv::Attrs::new(&[("class", fv::Attr::from(fv::class_names(&[&*props.tone, "x"])))], ""))?;
-    super::glyph::try_render_scoped(out, &super::glyph::Props {  }, &fv::Attrs::new(&[("class", fv::Attr::from(fv::class_names(&[if !props.tone.is_empty() { "on" } else { "" }, if props.tone.is_empty() { "off" } else { "" }])))], ""))?;
-    super::glyph::try_render_scoped(out, &super::glyph::Props {  }, &fv::Attrs::new(&[("class", if !props.tone.is_empty() { if fv::js_length(fv::js_trim(&props.tone)) as f64 == fv::js_length(&props.tone) as f64 { fv::Attr::str(&props.tone) } else { fv::Attr::from(fv::class_names(&[fv::js_trim(&props.tone), &*props.tone])) } } else { fv::Attr::str("none") })], ""))?;
+    super::divider::try_render_scoped(out, &super::divider::Props {  }, &fv::attrs::Attrs::new(&[("class", if fv::strings::js_length(fv::strings::js_trim(&props.tone)) as f64 == fv::strings::js_length(&props.tone) as f64 { fv::attrs::Attr::str(&props.tone) } else { fv::attrs::Attr::from(fv::attrs::class_names(&[fv::strings::js_trim(&props.tone), &*props.tone])) })], ""))?;
+    super::glyph::try_render_scoped(out, &super::glyph::Props {  }, &fv::attrs::Attrs::new(&[("class", if fv::strings::js_length(fv::strings::js_trim(&format!(" {} ", props.tone))) as f64 == fv::strings::js_length(&format!(" {} ", props.tone)) as f64 { fv::attrs::Attr::Str(std::borrow::Cow::<str>::Owned(format!(" {} ", props.tone))) } else { fv::attrs::Attr::from(fv::attrs::class_names(&[fv::strings::js_trim(&format!(" {} ", props.tone)), &*format!(" {} ", props.tone)])) }), ("title", fv::attrs::Attr::str("g"))], ""))?;
+    super::glyph::try_render_scoped(out, &super::glyph::Props {  }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::from(fv::attrs::class_names(&[&*props.tone, "x"])))], ""))?;
+    super::glyph::try_render_scoped(out, &super::glyph::Props {  }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::from(fv::attrs::class_names(&[if !props.tone.is_empty() { "on" } else { "" }, if props.tone.is_empty() { "off" } else { "" }])))], ""))?;
+    super::glyph::try_render_scoped(out, &super::glyph::Props {  }, &fv::attrs::Attrs::new(&[("class", if !props.tone.is_empty() { if fv::strings::js_length(fv::strings::js_trim(&props.tone)) as f64 == fv::strings::js_length(&props.tone) as f64 { fv::attrs::Attr::str(&props.tone) } else { fv::attrs::Attr::from(fv::attrs::class_names(&[fv::strings::js_trim(&props.tone), &*props.tone])) } } else { fv::attrs::Attr::str("none") })], ""))?;
     if !props.tone.is_empty() {
-        super::glyph::try_render_scoped(out, &super::glyph::Props {  }, &fv::Attrs::new(&[("class", if fv::js_length(fv::js_trim(&props.tone)) as f64 == fv::js_length(&props.tone) as f64 { fv::Attr::str(&props.tone) } else { fv::Attr::from(fv::class_names(&[fv::js_trim(&props.tone), &*props.tone])) })], ""))?;
+        super::glyph::try_render_scoped(out, &super::glyph::Props {  }, &fv::attrs::Attrs::new(&[("class", if fv::strings::js_length(fv::strings::js_trim(&props.tone)) as f64 == fv::strings::js_length(&props.tone) as f64 { fv::attrs::Attr::str(&props.tone) } else { fv::attrs::Attr::from(fv::attrs::class_names(&[fv::strings::js_trim(&props.tone), &*props.tone])) })], ""))?;
     } else {
         out.push_str("<b class=\"");
-        fv::class_into(out, false, &[&*props.tone]);
+        fv::attrs::class_into(out, false, &[&*props.tone]);
         out.push_str("\"></b>");
     }
-    super::divider::try_render_scoped(out, &super::divider::Props {  }, &fv::Attrs::new(&[("class", if fv::js_length(fv::js_trim(&props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(" "))) as f64 == fv::js_length(&props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(" ")) as f64 { fv::Attr::Str(std::borrow::Cow::<str>::Owned(props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(" "))) } else { fv::Attr::from(fv::class_names(&[fv::js_trim(&props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(" ")), &*props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(" ")])) })], ""))?;
-    super::divider::try_render_scoped(out, &super::divider::Props {  }, &fv::Attrs::new(&[("class", fv::Attr::str(&props.tone)), ("title", fv::Attr::Str(props.note.as_deref().map(std::borrow::Cow::<str>::Borrowed).unwrap_or(props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_t| std::borrow::Cow::<str>::Owned(std::borrow::Cow::<str>::Owned(format!("{}-", fv_t)).into_owned())).find(|fv_t_2| fv::js_length(fv_t_2) as f64 > 2.0).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).unwrap_or(std::borrow::Cow::<str>::Borrowed("-")))))], ""))?;
+    super::divider::try_render_scoped(out, &super::divider::Props {  }, &fv::attrs::Attrs::new(&[("class", if fv::strings::js_length(fv::strings::js_trim(&props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(" "))) as f64 == fv::strings::js_length(&props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(" ")) as f64 { fv::attrs::Attr::Str(std::borrow::Cow::<str>::Owned(props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(" "))) } else { fv::attrs::Attr::from(fv::attrs::class_names(&[fv::strings::js_trim(&props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(" ")), &*props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(" ")])) })], ""))?;
+    super::divider::try_render_scoped(out, &super::divider::Props {  }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str(&props.tone)), ("title", fv::attrs::Attr::Str(props.note.as_deref().map(std::borrow::Cow::<str>::Borrowed).unwrap_or(props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_t| std::borrow::Cow::<str>::Owned(std::borrow::Cow::<str>::Owned(format!("{}-", fv_t)).into_owned())).find(|fv_t_2| fv::strings::js_length(fv_t_2) as f64 > 2.0).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).unwrap_or(std::borrow::Cow::<str>::Borrowed("-")))))], ""))?;
     out.push_str("</section>");
     Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

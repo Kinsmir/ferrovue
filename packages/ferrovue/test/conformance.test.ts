@@ -3,9 +3,11 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Component } from "vue";
 import { generate } from "../src/compiler.ts";
-import { attachSsrRender, fixtureApp } from "../src/testing.ts";
-import { cases, CLIENT_ONLY, clientRenderDifference, fixtureOf, HEAD, headRendered, hydrationBody, OPTIONS, placeHead, recordedHead, renderFixture, ROOT, ROUTES, TELEPORTS, UNHEAD_REWRITES, VUE_DISAGREES } from "./conformance-cases.ts";
-import { settled, stillLoading } from "../src/settle.ts";
+import { attachSsrRender } from "../src/ssr.ts";
+import { fixtureApp } from "../src/testing-browser.ts";
+import { cases, CLIENT_ONLY, fixtureOf, OPTIONS, ROOT, ROUTES, UNHEAD_REWRITES, VUE_DISAGREES } from "./conformance-cases.ts";
+import { clientRenderDifference, HEAD, hydrationBody, placeHead, recordedHead, renderFixture, TELEPORTS } from "../src/conformance.ts";
+import { headRendered, settled, stillLoading } from "../src/settle.ts";
 
 const WRITE = process.env.FERROVUE_FIXTURES_WRITE === "1";
 

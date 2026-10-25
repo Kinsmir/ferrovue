@@ -6,7 +6,7 @@ inside the target element, after rendering the body, as a Vue server writes
 `ssrContext.teleports`.
 
 A component that renders a `<Teleport>`, or a child that does, takes a
-[`Teleports`](crate::Teleports) as its last parameter. Build one per page render.
+[`Teleports`](crate::page::Teleports) as its last parameter. Build one per page render.
 
 ```vue
 <!-- Modal.vue -->
@@ -53,17 +53,17 @@ A component that renders a `<Teleport>`, or a child that does, takes a
 #
 #
 /// Write the component's server render into `out`.
-pub fn render(out: &mut String, props: &Props<'_>, fv_teleports: &fv::Teleports) {
+pub fn render(out: &mut String, props: &Props<'_>, fv_teleports: &fv::page::Teleports) {
     out.reserve(129 + props.title.len());
     out.push_str("<div class=\"host\"><button>");
-    fv::escape_into(out, &props.title);
+    fv::core::escape_into(out, &props.title);
     out.push_str("</button>");
-    fv::teleport_into(out, fv_teleports, "#modals", false, &|out: &mut String| {
+    fv::page::teleport_into(out, fv_teleports, "#modals", false, &|out: &mut String| {
         if props.open {
             out.push_str("<div class=\"modal\"><h2>");
-            fv::escape_into(out, &props.title);
+            fv::core::escape_into(out, &props.title);
             out.push_str("</h2>");
-            fv::teleport_into(out, fv_teleports, "#modals", false, &|out: &mut String| {
+            fv::page::teleport_into(out, fv_teleports, "#modals", false, &|out: &mut String| {
                 out.push_str("<p class=\"toast\">saved</p>");
             });
             out.push_str("</div>");
@@ -71,20 +71,20 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_teleports: &fv::Teleports)
             out.push_str("<!---->");
         }
     });
-    fv::teleport_into(out, fv_teleports, "#overlay", props.inline, &|out: &mut String| {
+    fv::page::teleport_into(out, fv_teleports, "#overlay", props.inline, &|out: &mut String| {
         out.push_str("<aside>");
-        fv::escape_into(out, &props.title);
+        fv::core::escape_into(out, &props.title);
         out.push_str(" aside</aside>");
     });
     out.push_str("</div>");
 }
 #
 # /// The component's markup, for a maud page that shows it.
-# pub fn html<'p, 'a>(props: &'p Props<'a>, fv_teleports: &'p fv::Teleports) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-#     fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_teleports))
+# pub fn html<'p, 'a>(props: &'p Props<'a>, fv_teleports: &'p fv::page::Teleports) -> fv::html::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
+#     fv::html::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_teleports))
 # }
 # }
-let teleports = ferrovue::Teleports::new();
+let teleports = ferrovue::page::Teleports::new();
 let mut body = String::new();
 modal::render(&mut body, &modal::Props::new("Delete?", true, false), &teleports);
 
@@ -110,8 +110,8 @@ assert_eq!(
 );
 ```
 
-[`Teleports::get`](crate::Teleports::get) returns one target's content;
-[`Teleports::into_targets`](crate::Teleports::into_targets) every target, in the order they were
+[`Teleports::get`](crate::page::Teleports::get) returns one target's content;
+[`Teleports::into_targets`](crate::page::Teleports::into_targets) every target, in the order they were
 first used, for a page that places them generically.
 
 A disabled teleport (`:disabled="true"`) renders its content in place, between the markers, and

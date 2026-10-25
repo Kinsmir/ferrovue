@@ -30,8 +30,8 @@ impl<'a> Props<'a> {
 /// # Panics
 ///
 /// With the message of the refusal [`try_render`] returns.
-pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::Loads<'_>) {
-    fv::rendered(try_render(out, props, fv_loads));
+pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::Loads<'_>) {
+    fv::render::rendered(try_render(out, props, fv_loads));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -39,19 +39,19 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::Loads<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::Loads<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::Loads<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(166 + props.id.len());
-    let fv_refusals = fv::Refusals::new(NAME, "client/components/StockLevel.vue");
+    let fv_refusals = fv::render::Refusals::new(NAME, "client/components/StockLevel.vue");
     let Some(l_0) = fv_loads.get(super::loaders::LoadStock { id: String::from(&*props.id) }) else { return Ok(()); };
     out.push_str("<div class=\"stock\" data-copies=\"");
-    fv::push_int(out, l_0.copies);
+    fv::core::push_int(out, l_0.copies);
     out.push_str("\">");
     if l_0.copies != 0 {
         out.push_str("<p>");
-        fv::push_int(out, l_0.copies);
+        fv::core::push_int(out, l_0.copies);
         out.push(' ');
-        fv::escape_into(out, if l_0.copies as f64 == 1.0 { "copy" } else { "copies" });
+        fv::core::escape_into(out, if l_0.copies as f64 == 1.0 { "copy" } else { "copies" });
         out.push_str(" in stock</p>");
     } else {
         out.push_str("<p>Out of stock</p>");
@@ -61,11 +61,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::Loads<'_>)
     } else {
         out.push_str("<!---->");
     }
-    if let Some(fv_counted) = l_0.counted.as_ref().map(fv::js_time_of) {
+    if let Some(fv_counted) = l_0.counted.as_ref().map(fv::date::js_time_of) {
         out.push_str("<small class=\"counted\">counted <time datetime=\"");
-        fv::escape_into(out, &fv_refusals.keep(fv::try_to_iso_string(fv_counted), 14, 74));
+        fv::core::escape_into(out, &fv_refusals.keep(fv::date::try_to_iso_string(fv_counted), 14, 74));
         out.push_str("\">");
-        fv::escape_into(out, &fv::js_slice(&fv_refusals.keep(fv::try_to_iso_string(fv_counted), 14, 106), 0.0f64, Some(10.0f64)));
+        fv::core::escape_into(out, &fv::strings::js_slice(&fv_refusals.keep(fv::date::try_to_iso_string(fv_counted), 14, 106), 0.0f64, Some(10.0f64)));
         out.push_str("</time></small>");
     } else {
         out.push_str("<!---->");
@@ -75,6 +75,6 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::Loads<'_>)
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_loads: &'p fv::Loads<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_loads)))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_loads: &'p fv::loaders::Loads<'p>) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_loads)))
 }

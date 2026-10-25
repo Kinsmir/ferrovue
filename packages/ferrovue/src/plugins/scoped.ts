@@ -2,7 +2,7 @@ import { parse as parseJs } from "@babel/parser";
 import { createHash } from "node:crypto";
 import { relative, resolve as resolvePath, sep } from "node:path";
 import { type Component, type N, type Scope, fail, namesSelf, rustStr } from "../model.ts";
-import { type ScopeIdMode } from "../context.ts";
+import { type ScopeIdMode } from "../config.ts";
 import { type Plugin, runOf } from "../plugin.ts";
 
 interface ScopedRun {
@@ -119,7 +119,7 @@ function childIds(s: Scope, child: Component, passesAttrs: boolean, inSlot: bool
   let code: string | null;
   if (base === null && slotted === null) code = own === null ? null : rustStr(` ${own}`);
   else if (own === null && slotted === null) code = base;
-  else code = `&fv::scope_attrs(${base ?? '""'}, ${own === null ? '""' : rustStr(own)}, ${slotted ?? '""'})`;
+  else code = `&fv::attrs::scope_attrs(${base ?? '""'}, ${own === null ? '""' : rustStr(own)}, ${slotted ?? '""'})`;
   if (code !== null && !child.inherits) fail(s.comp, "FV1012", `${child.name} is handed scope ids its render does not take`, n);
   return code;
 }

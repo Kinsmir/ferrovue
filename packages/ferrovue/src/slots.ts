@@ -1,4 +1,5 @@
-import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, distinctFields, fail, nothing, GenError, rustStr, snake } from "./model.ts";
+import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, distinctFields, fail, nothing, rustStr, snake } from "./model.ts";
+import { GenError } from "./errors.ts";
 import { expr } from "./expr.ts";
 import { atom, bare, operand, strArg, UNARY } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
@@ -108,7 +109,7 @@ export function slotOutlet(s: Scope, e: Emitter, c: N): void {
   const slotName: string = nameNode.value;
   const field = `fv_slots.${snake(slotName)}`;
   const outlet = `\`<slot${slotName === "default" ? "" : ` name="${slotName}"`}>\``;
-  let fn = "fv::slot_into";
+  let fn = "fv::render::slot_into";
   let args = field;
   let passed = "&()";
   if (slotProps.properties.length) {
@@ -137,7 +138,7 @@ export function slotOutlet(s: Scope, e: Emitter, c: N): void {
       s.comp.slotShapes.set(slotName, shape);
       s.comp.structs.set(name, shape);
     }
-    fn = "fv::scoped_slot_into";
+    fn = "fv::render::scoped_slot_into";
     passed = `&${name} { ${inits.join(", ")} }`;
     args = `${field}, ${passed}`;
   } else if (s.comp.slotShapes.has(slotName)) {
@@ -156,11 +157,11 @@ export function slotOutlet(s: Scope, e: Emitter, c: N): void {
     const sp = shape ? `fv_sp: &${shape.name}${shape.fields.some((f) => slotFieldBorrows(f.ty)) ? "<'_>" : ""}` : "_: &()";
     const sid = s.comp.passesSlotIds ? ", fv_sid: &str" : "";
     const content = `${field}.map(|f| move |out: &mut String, ${sp}${sid}| f(out${shape ? ", fv_sp" : ""}${sid ? ", fv_sid" : ""}${context.map((p) => `, ${p.name}`).join("")})).as_ref()`;
-    fn = "fv::scoped_slot_into";
+    fn = "fv::render::scoped_slot_into";
     args = `${content}, ${passed}`;
   }
   if (s.comp.passesSlotIds) {
-    fn = fn === "fv::slot_into" ? "fv::slot_into_slotted" : "fv::scoped_slot_into_slotted";
+    fn = fn === "fv::render::slot_into" ? "fv::render::slot_into_slotted" : "fv::render::scoped_slot_into_slotted";
     args += `, ${slotted ?? '""'}`;
   } else if (slotted !== null) fail(s.comp, "FV0918", "a slot scope id passed to content that does not take one", c);
   const call = (rest: string) => (s.fill ? `if ${fn}(out, ${args}, ${rest}) { filled = true; }` : `${fn}(out, ${args}, ${rest});`);

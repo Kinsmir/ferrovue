@@ -30,8 +30,8 @@ impl<'a> Props<'a> {
 /// # Panics
 ///
 /// With the message of the refusal [`try_render`] returns.
-pub fn render(out: &mut String, props: &Props<'_>, fv_head: &fv::Head) {
-    fv::rendered(try_render(out, props, fv_head));
+pub fn render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head) {
+    fv::render::rendered(try_render(out, props, fv_head));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -39,11 +39,11 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_head: &fv::Head) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_head: &fv::Head) -> Result<(), fv::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head) -> Result<(), fv::render::Refused> {
     out.reserve(7 + props.name.len());
-    let fv_refusals = fv::Refusals::new(NAME, "components/HeadNest.vue");
-    fv_head.push(fv::HeadValue::object([("meta", fv::HeadValue::array([fv::HeadValue::object([("name", fv::HeadValue::str(&props.name)), ("content", fv::HeadValue::str(&props.name))])])), ("bodyAttrs", fv::HeadValue::object([("class", fv::HeadValue::str(&props.name))]))]));
+    let fv_refusals = fv::render::Refusals::new(NAME, "components/HeadNest.vue");
+    fv_head.push(fv::head::HeadValue::object([("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([("name", fv::head::HeadValue::str(&props.name)), ("content", fv::head::HeadValue::str(&props.name))])])), ("bodyAttrs", fv::head::HeadValue::object([("class", fv::head::HeadValue::str(&props.name))]))]));
     out.push_str("<b>");
     fv_refusals.check(super::head_leaf::try_render(out, &super::head_leaf::Props { name: std::borrow::Cow::Borrowed(&*format!("{}-child", props.name)) }, super::head_leaf::Slots {
         default: None,
@@ -51,7 +51,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_head: &fv::Head) -> Re
     {
         let _fv_later = fv_head.deferred();
         fv_refusals.check(super::head_leaf::try_render(out, &super::head_leaf::Props { name: std::borrow::Cow::Borrowed(&*format!("{}-lazy", props.name)) }, super::head_leaf::Slots {
-            default: Some(fv::Slot::new(&|out: &mut String| {
+            default: Some(fv::render::Slot::new(&|out: &mut String| {
                 fv_refusals.join(super::head_leaf::try_render(out, &super::head_leaf::Props { name: std::borrow::Cow::Borrowed(&*format!("{}-slot", props.name)) }, super::head_leaf::Slots {
                     default: None,
                 }, fv_head));
@@ -66,6 +66,6 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_head: &fv::Head) -> Re
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_head: &'p fv::Head) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_head)))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_head: &'p fv::head::Head) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_head)))
 }

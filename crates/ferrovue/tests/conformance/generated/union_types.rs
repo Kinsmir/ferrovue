@@ -56,7 +56,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -64,46 +64,46 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(151 + 8 + 8 + 8 + 8 + props.label.len());
     let s_loud = if props.tone == super::types::Shade::Warm { "loud" } else { "quiet" };
-    let s_chosen = props.other.map(fv::Union::as_str).unwrap_or(fv::Union::as_str(props.tone));
+    let s_chosen = props.other.map(fv::props::Union::as_str).unwrap_or(fv::props::Union::as_str(props.tone));
     out.push_str("<section class=\"");
-    fv::class_into(out, false, &[fv::Union::as_str(props.tone), props.other.map(fv::Union::as_str).unwrap_or("")]);
+    fv::attrs::class_into(out, false, &[fv::props::Union::as_str(props.tone), props.other.map(fv::props::Union::as_str).unwrap_or("")]);
     out.push('"');
-    if fv::Union::as_str(props.tone).is_empty() {
+    if fv::props::Union::as_str(props.tone).is_empty() {
         out.push_str(" data-tone");
     } else {
         out.push_str(" data-tone=\"");
-        fv::escape_into(out, fv::Union::as_str(props.tone));
+        fv::core::escape_into(out, fv::props::Union::as_str(props.tone));
         out.push('"');
     }
-    if props.picked.map(fv::Union::as_str).unwrap_or("none").is_empty() {
+    if props.picked.map(fv::props::Union::as_str).unwrap_or("none").is_empty() {
         out.push_str(" title");
     } else {
         out.push_str(" title=\"");
-        fv::escape_into(out, props.picked.map(fv::Union::as_str).unwrap_or("none"));
+        fv::core::escape_into(out, props.picked.map(fv::props::Union::as_str).unwrap_or("none"));
         out.push('"');
     }
     out.push_str("><p>");
-    fv::escape_into(out, fv::Union::as_str(props.tone));
+    fv::core::escape_into(out, fv::props::Union::as_str(props.tone));
     out.push('|');
-    fv::escape_into(out, props.other.map(fv::Union::as_str).unwrap_or("none"));
+    fv::core::escape_into(out, props.other.map(fv::props::Union::as_str).unwrap_or("none"));
     out.push('|');
-    if let Some(v) = props.picked.map(fv::Union::as_str) {
-        fv::escape_into(out, v);
+    if let Some(v) = props.picked.map(fv::props::Union::as_str) {
+        fv::core::escape_into(out, v);
     }
     out.push('|');
-    fv::escape_into(out, fv::Union::as_str(props.fallback.unwrap_or(super::types::Shade::XCool)));
+    fv::core::escape_into(out, fv::props::Union::as_str(props.fallback.unwrap_or(super::types::Shade::XCool)));
     out.push('|');
-    fv::escape_into(out, match props.tone { super::types::Shade::Warm => "Warm & <w>", super::types::Shade::XCool => "Cool", super::types::Shade::BQ => "Mark" });
+    fv::core::escape_into(out, match props.tone { super::types::Shade::Warm => "Warm & <w>", super::types::Shade::XCool => "Cool", super::types::Shade::BQ => "Mark" });
     out.push('|');
-    fv::push_int(out, fv::js_length(fv::Union::as_str(props.tone)));
+    fv::core::push_int(out, fv::strings::js_length(fv::props::Union::as_str(props.tone)));
     out.push('|');
-    fv::escape_into(out, &format!("{}/{}", fv::Union::as_str(props.tone), fv::Union::as_str(props.fallback.unwrap_or(super::types::Shade::XCool))));
+    fv::core::escape_into(out, &format!("{}/{}", fv::props::Union::as_str(props.tone), fv::props::Union::as_str(props.fallback.unwrap_or(super::types::Shade::XCool))));
     out.push('|');
-    fv::escape_into(out, &props.label);
+    fv::core::escape_into(out, &props.label);
     out.push_str("</p>");
     if props.tone == super::types::Shade::Warm {
         out.push_str("<b>warm</b>");
@@ -116,43 +116,43 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     }
     if let Some(fv_other) = props.other {
         out.push_str("<i>");
-        fv::escape_into(out, match fv_other { super::types::Shade::Warm => "Warm & <w>", super::types::Shade::XCool => "Cool", super::types::Shade::BQ => "Mark" });
+        fv::core::escape_into(out, match fv_other { super::types::Shade::Warm => "Warm & <w>", super::types::Shade::XCool => "Cool", super::types::Shade::BQ => "Mark" });
         out.push(' ');
-        fv::escape_into(out, fv::Union::as_str(fv_other));
+        fv::core::escape_into(out, fv::props::Union::as_str(fv_other));
         out.push_str("</i>");
     } else {
         out.push_str("<i>no other</i>");
     }
     out.push_str("<s>");
-    out.push_str(if props.picked.map(fv::Union::as_str) == Some(fv::Union::as_str(props.tone)) { "true" } else { "false" });
+    out.push_str(if props.picked.map(fv::props::Union::as_str) == Some(fv::props::Union::as_str(props.tone)) { "true" } else { "false" });
     out.push(' ');
-    fv::escape_into(out, if let Some(fv_picked) = props.picked { fv::Union::as_str(fv_picked) } else { "null" });
+    fv::core::escape_into(out, if let Some(fv_picked) = props.picked { fv::props::Union::as_str(fv_picked) } else { "null" });
     out.push(' ');
-    fv::escape_into(out, s_loud);
+    fv::core::escape_into(out, s_loud);
     out.push_str("</s>");
     super::union_shade::try_render(out, &super::union_shade::Props { tone: props.tone, text: std::borrow::Cow::Borrowed(&*props.label) })?;
-    super::union_shade::try_render(out, &super::union_shade::Props { tone: match s_chosen { "warm" => super::types::Shade::Warm, "x-cool" => super::types::Shade::XCool, _ => super::types::Shade::BQ }, text: std::borrow::Cow::Borrowed(fv::Union::as_str(props.tone)) })?;
+    super::union_shade::try_render(out, &super::union_shade::Props { tone: match s_chosen { "warm" => super::types::Shade::Warm, "x-cool" => super::types::Shade::XCool, _ => super::types::Shade::BQ }, text: std::borrow::Cow::Borrowed(fv::props::Union::as_str(props.tone)) })?;
     super::union_shade::try_render(out, &super::union_shade::Props { tone: props.other.unwrap_or(super::types::Shade::Warm), text: std::borrow::Cow::Borrowed("fixed") })?;
     out.push_str("</section>");
     Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

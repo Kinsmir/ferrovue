@@ -37,26 +37,26 @@ impl std::fmt::Display for ThemedChoiceKind {
 }
 
 impl std::str::FromStr for ThemedChoiceKind {
-    type Err = ferrovue::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "scope" => Ok(ThemedChoiceKind::Scope),
             "button" => Ok(ThemedChoiceKind::Button),
-            _ => Err(ferrovue::ParseUnionError::new("ThemedChoiceKind", s, &["scope", "button"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("ThemedChoiceKind", s, &["scope", "button"])),
         }
     }
 }
 
 impl TryFrom<&str> for ThemedChoiceKind {
-    type Error = ferrovue::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::Union for ThemedChoiceKind {
+impl ferrovue::props::Union for ThemedChoiceKind {
     const ALL: &'static [Self] = &ThemedChoiceKind::ALL;
 
     fn as_str(self) -> &'static str {
@@ -93,26 +93,26 @@ impl std::fmt::Display for ThemedChoiceTag {
 }
 
 impl std::str::FromStr for ThemedChoiceTag {
-    type Err = ferrovue::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "div" => Ok(ThemedChoiceTag::Div),
             "aside" => Ok(ThemedChoiceTag::Aside),
-            _ => Err(ferrovue::ParseUnionError::new("ThemedChoiceTag", s, &["div", "aside"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("ThemedChoiceTag", s, &["div", "aside"])),
         }
     }
 }
 
 impl TryFrom<&str> for ThemedChoiceTag {
-    type Error = ferrovue::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::Union for ThemedChoiceTag {
+impl ferrovue::props::Union for ThemedChoiceTag {
     const ALL: &'static [Self] = &ThemedChoiceTag::ALL;
 
     fn as_str(self) -> &'static str {
@@ -149,7 +149,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) {
-    fv::rendered(try_render(out, props, fv_provides));
+    fv::render::rendered(try_render(out, props, fv_provides));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -157,10 +157,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides:
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(68 + 6 + 5 + props.label.len() + props.theme.len());
-    let fv_refusals = fv::Refusals::new(NAME, "components/ThemedChoice.vue");
+    let fv_refusals = fv::render::Refusals::new(NAME, "components/ThemedChoice.vue");
     let fv_inherited = fv_provides;
     let fv_provides = super::provides::Provides { theme_key: Some(&props.theme), ..fv_inherited };
     out.push_str("<section>");
@@ -170,7 +170,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provi
                 fv_refusals.join(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed(&*format!("{} in scope", props.label)) }, fv_provides, ""));
                 true
             }),
-        }, fv_provides, &fv::Attrs::new(&[("label", fv::Attr::str(&props.label))], "")))?;
+        }, fv_provides, &fv::attrs::Attrs::new(&[("label", fv::attrs::Attr::str(&props.label))], "")))?;
     } else {
         fv_refusals.check(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed(&*props.label) }, fv_provides, ""))?;
     }
@@ -180,7 +180,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provi
                 fv_refusals.join(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed("slotted") }, fv_provides, ""));
                 true
             }),
-        }, fv_provides, &fv::Attrs::NONE))?;
+        }, fv_provides, &fv::attrs::Attrs::NONE))?;
     } else {
         out.push_str("<p theme=\"dark\">");
         fv_refusals.check(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed("slotted") }, fv_provides, ""))?;
@@ -196,20 +196,20 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provi
             fv_refusals.join(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed("deep") }, fv_provides, ""));
             true
         }),
-    }, fv_provides, &fv::Attrs::NONE))?;
+    }, fv_provides, &fv::attrs::Attrs::NONE))?;
     out.push_str("</");
     out.push_str(fv_tag);
     out.push('>');
     fv_refusals.check(super::tag_heading::try_render_scoped(out, &super::tag_heading::Props { r#as: Some(super::tag_heading::TagHeadingAs::H3), text: std::borrow::Cow::Borrowed(&*props.label) }, super::tag_heading::Slots {
-        default: Some(fv::Slot::new(&|out: &mut String| {
+        default: Some(fv::render::Slot::new(&|out: &mut String| {
             fv_refusals.join(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed("heading") }, fv_provides, ""));
         })),
-    }, &fv::Attrs::NONE))?;
+    }, &fv::attrs::Attrs::NONE))?;
     out.push_str("</section>");
     fv_refusals.check(Ok(()))
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_provides: super::provides::Provides<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_provides)))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_provides: super::provides::Provides<'p>) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_provides)))
 }

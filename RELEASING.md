@@ -3,7 +3,7 @@
 The runtime's crates on crates.io and the compiler (`ferrovue` on npm) are released together and
 always share one version. The crates are `ferrovue-core` (escaping, numbers and URIs), `ferrovue-router`,
 `ferrovue-i18n` and `ferrovue`, which depends on the other three at exactly its own version and
-re-exports them; `node scripts/release.ts crates` lists them in the order they are published. A
+holds each as a module (`ferrovue::core`, `ferrovue::router`, `ferrovue::i18n`); `node scripts/release.ts crates` lists them in the order they are published. A
 release is one pull request and one tag. CI checks everything and stages every package; nothing
 becomes public until a maintainer approves it, once on each registry.
 
@@ -18,9 +18,9 @@ becomes public until a maintainer approves it, once on each registry.
    reads versions. `cargo semver-checks -p <crate>` (`cargo install cargo-semver-checks --locked`)
    compares a crate with its last version on crates.io and says which the changes need; the
    release workflow runs the same check on every crate crates.io already has, and stops a release
-   whose version is too small. It does not follow a re-export from another crate: `ferrovue::Router`
+   whose version is too small. It does not follow a module that is another crate: `ferrovue::router::Router`
    is checked as `ferrovue_router::Router`, and `crates/ferrovue/tests/paths.rs` holds each path
-   `ferrovue` re-exports in place. A `#[doc(hidden)]` item is outside the API it compares, and
+   `ferrovue` reaches through `core`, `router` and `i18n` in place. A `#[doc(hidden)]` item is outside the API it compares, and
    hiding one it compared before counts as breaking; CONTRIBUTING.md's "The crates' contract"
    says which items are hidden, `#[non_exhaustive]` and `#[must_use]`.
 3. Check the version of generated code. Every generated `mod.rs` opens with

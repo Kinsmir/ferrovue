@@ -97,7 +97,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -105,18 +105,18 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
-    out.reserve(84 + 7 * props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_w| Line { text: std::borrow::Cow::<str>::Owned(fv_w.to_uppercase()), size: fv::js_length(&fv_w), tag: (if fv_w.is_empty() { None } else { Some(&*fv_w) }).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned())), mark: (if fv::js_length(&fv_w) as f64 > 3.0 { Some("long") } else { None }).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned())) }).collect::<Vec<_>>().len() + props.title.len() + props.words.iter().map(|v| v.len()).sum::<usize>() + props.spare.as_ref().map_or(0, |v| v.title.len() + v.note.as_deref().map_or(0, str::len) + v.owner.as_deref().map_or(0, str::len) + v.tags.iter().map(|v| v.len()).sum::<usize>() + v.badge.as_ref().map_or(0, |v| v.label.len() + v.tone.len())));
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
+    out.reserve(84 + 7 * props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_w| Line { text: std::borrow::Cow::<str>::Owned(fv_w.to_uppercase()), size: fv::strings::js_length(&fv_w), tag: (if fv_w.is_empty() { None } else { Some(&*fv_w) }).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned())), mark: (if fv::strings::js_length(&fv_w) as f64 > 3.0 { Some("long") } else { None }).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned())) }).collect::<Vec<_>>().len() + props.title.len() + props.words.iter().map(|v| v.len()).sum::<usize>() + props.spare.as_ref().map_or(0, |v| v.title.len() + v.note.as_deref().map_or(0, str::len) + v.owner.as_deref().map_or(0, str::len) + v.tags.iter().map(|v| v.len()).sum::<usize>() + v.badge.as_ref().map_or(0, |v| v.label.len() + v.tone.len())));
     let s_fallback = Line { text: std::borrow::Cow::<str>::Borrowed(&*props.title), size: props.size, tag: None, mark: None };
-    let s_sheet = Sheet { head: Line { text: std::borrow::Cow::<str>::Owned(props.title.to_uppercase()), size: fv::js_length(&props.title), tag: (if props.title.is_empty() { None } else { Some(&*props.title) }).map(std::borrow::Cow::<str>::Borrowed), mark: (if fv::js_length(&props.title) as f64 > 3.0 { Some("long") } else { None }).map(std::borrow::Cow::<str>::Borrowed) }, lines: props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_w_2| Line { text: std::borrow::Cow::<str>::Owned(fv_w_2.to_uppercase()), size: fv::js_length(&fv_w_2), tag: (if fv_w_2.is_empty() { None } else { Some(&*fv_w_2) }).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned())), mark: (if fv::js_length(&fv_w_2) as f64 > 3.0 { Some("long") } else { None }).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned())) }).collect::<Vec<_>>(), names: props.words.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect() };
-    let s_listed = Vec::from([s_fallback.clone(), Line { text: std::borrow::Cow::<str>::Owned("x".to_uppercase()), size: fv::js_length("x"), tag: Some(std::borrow::Cow::<str>::Borrowed("x")), mark: (if fv::js_length("x") as f64 > 3.0 { Some("long") } else { None }).map(std::borrow::Cow::<str>::Borrowed) }, Line { text: std::borrow::Cow::<str>::Borrowed("lit"), size: 0i64, tag: Some(std::borrow::Cow::<str>::Borrowed("t")), mark: None }]);
+    let s_sheet = Sheet { head: Line { text: std::borrow::Cow::<str>::Owned(props.title.to_uppercase()), size: fv::strings::js_length(&props.title), tag: (if props.title.is_empty() { None } else { Some(&*props.title) }).map(std::borrow::Cow::<str>::Borrowed), mark: (if fv::strings::js_length(&props.title) as f64 > 3.0 { Some("long") } else { None }).map(std::borrow::Cow::<str>::Borrowed) }, lines: props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_w_2| Line { text: std::borrow::Cow::<str>::Owned(fv_w_2.to_uppercase()), size: fv::strings::js_length(&fv_w_2), tag: (if fv_w_2.is_empty() { None } else { Some(&*fv_w_2) }).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned())), mark: (if fv::strings::js_length(&fv_w_2) as f64 > 3.0 { Some("long") } else { None }).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned())) }).collect::<Vec<_>>(), names: props.words.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect() };
+    let s_listed = Vec::from([s_fallback.clone(), Line { text: std::borrow::Cow::<str>::Owned("x".to_uppercase()), size: fv::strings::js_length("x"), tag: Some(std::borrow::Cow::<str>::Borrowed("x")), mark: (if fv::strings::js_length("x") as f64 > 3.0 { Some("long") } else { None }).map(std::borrow::Cow::<str>::Borrowed) }, Line { text: std::borrow::Cow::<str>::Borrowed("lit"), size: 0i64, tag: Some(std::borrow::Cow::<str>::Borrowed("t")), mark: None }]);
     let s_kept = props.spare.as_ref().cloned().unwrap_or(super::types::Tile { title: std::borrow::Cow::<str>::Borrowed("spare"), count: 0i64, owner: None, tags: Vec::new(), note: None, badge: None });
-    let s_label = { let fv_destructured = Line { text: std::borrow::Cow::<str>::Owned(props.title.to_uppercase()), size: fv::js_length(&props.title), tag: (if props.title.is_empty() { None } else { Some(&*props.title) }).map(std::borrow::Cow::<str>::Borrowed), mark: (if fv::js_length(&props.title) as f64 > 3.0 { Some("long") } else { None }).map(std::borrow::Cow::<str>::Borrowed) }; std::borrow::Cow::<str>::Owned(format!("{}:{}", fv_destructured.text, fv::Js(fv_destructured.size))) };
+    let s_label = { let fv_destructured = Line { text: std::borrow::Cow::<str>::Owned(props.title.to_uppercase()), size: fv::strings::js_length(&props.title), tag: (if props.title.is_empty() { None } else { Some(&*props.title) }).map(std::borrow::Cow::<str>::Borrowed), mark: (if fv::strings::js_length(&props.title) as f64 > 3.0 { Some("long") } else { None }).map(std::borrow::Cow::<str>::Borrowed) }; std::borrow::Cow::<str>::Owned(format!("{}:{}", fv_destructured.text, fv::core::Js(fv_destructured.size))) };
     out.push_str("<section><p>");
-    fv::escape_into(out, &s_fallback.text);
+    fv::core::escape_into(out, &s_fallback.text);
     out.push('|');
-    fv::escape_into(out, s_fallback.tag.as_deref().unwrap_or("null"));
+    fv::core::escape_into(out, s_fallback.tag.as_deref().unwrap_or("null"));
     out.push_str("</p><!--[-->");
     for (fv_i, fv_l_ref) in s_sheet.lines.iter().enumerate() {
         let fv_l = fv_l_ref;
@@ -124,40 +124,40 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         out.push_str("<p");
         if let Some(v) = fv_l.mark.as_deref() {
             out.push_str(" data-mark=\"");
-            fv::escape_into(out, v);
+            fv::core::escape_into(out, v);
             out.push('"');
         }
         out.push('>');
-        fv::push_int(out, fv_i);
+        fv::core::push_int(out, fv_i);
         out.push(':');
-        fv::escape_into(out, &fv_l.text);
+        fv::core::escape_into(out, &fv_l.text);
         out.push('/');
-        fv::push_int(out, fv_l.size);
+        fv::core::push_int(out, fv_l.size);
         out.push('/');
-        fv::escape_into(out, fv_l.tag.as_deref().unwrap_or("null"));
+        fv::core::escape_into(out, fv_l.tag.as_deref().unwrap_or("null"));
         out.push_str("</p>");
     }
     out.push_str("<!--]--><p>");
-    fv::escape_into(out, &s_sheet.head.text);
+    fv::core::escape_into(out, &s_sheet.head.text);
     out.push('|');
-    fv::escape_into(out, &s_sheet.names.iter().map(|v| &**v).collect::<Vec<_>>().join("+"));
+    fv::core::escape_into(out, &s_sheet.names.iter().map(|v| &**v).collect::<Vec<_>>().join("+"));
     out.push('|');
-    fv::push_int(out, s_listed.len() as i64);
+    fv::core::push_int(out, s_listed.len() as i64);
     out.push('|');
-    fv::escape_into(out, &s_listed.iter().map(|fv_l_2| std::borrow::Cow::<str>::Borrowed(&fv_l_2.text)).collect::<Vec<_>>().join(","));
+    fv::core::escape_into(out, &s_listed.iter().map(|fv_l_2| std::borrow::Cow::<str>::Borrowed(&fv_l_2.text)).collect::<Vec<_>>().join(","));
     out.push_str("</p><!--[-->");
-    for fv_l_ref_2 in props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_w| Line { text: std::borrow::Cow::<str>::Owned(fv_w.to_uppercase()), size: fv::js_length(&fv_w), tag: (if fv_w.is_empty() { None } else { Some(&*fv_w) }).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned())), mark: (if fv::js_length(&fv_w) as f64 > 3.0 { Some("long") } else { None }).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned())) }).collect::<Vec<_>>().iter() {
+    for fv_l_ref_2 in props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_w| Line { text: std::borrow::Cow::<str>::Owned(fv_w.to_uppercase()), size: fv::strings::js_length(&fv_w), tag: (if fv_w.is_empty() { None } else { Some(&*fv_w) }).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned())), mark: (if fv::strings::js_length(&fv_w) as f64 > 3.0 { Some("long") } else { None }).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned())) }).collect::<Vec<_>>().iter() {
         let fv_l_3 = fv_l_ref_2;
         out.push_str("<p>");
-        fv::escape_into(out, &fv_l_3.text);
+        fv::core::escape_into(out, &fv_l_3.text);
         out.push_str("</p>");
     }
     out.push_str("<!--]--><p>");
-    fv::escape_into(out, &((Line { text: std::borrow::Cow::<str>::Owned(props.title.to_uppercase()), size: fv::js_length(&props.title), tag: (if props.title.is_empty() { None } else { Some(&*props.title) }).map(std::borrow::Cow::<str>::Borrowed), mark: (if fv::js_length(&props.title) as f64 > 3.0 { Some("long") } else { None }).map(std::borrow::Cow::<str>::Borrowed) }).mark).unwrap_or(std::borrow::Cow::<str>::Borrowed("short")));
+    fv::core::escape_into(out, &((Line { text: std::borrow::Cow::<str>::Owned(props.title.to_uppercase()), size: fv::strings::js_length(&props.title), tag: (if props.title.is_empty() { None } else { Some(&*props.title) }).map(std::borrow::Cow::<str>::Borrowed), mark: (if fv::strings::js_length(&props.title) as f64 > 3.0 { Some("long") } else { None }).map(std::borrow::Cow::<str>::Borrowed) }).mark).unwrap_or(std::borrow::Cow::<str>::Borrowed("short")));
     out.push('|');
-    fv::escape_into(out, &s_label);
+    fv::core::escape_into(out, &s_label);
     out.push('|');
-    fv::escape_into(out, &{ let fv_l_4 = if props.size as f64 > 0.0 { Some(Line { text: std::borrow::Cow::<str>::Owned(props.title.to_uppercase()), size: fv::js_length(&props.title), tag: (if props.title.is_empty() { None } else { Some(&*props.title) }).map(std::borrow::Cow::<str>::Borrowed), mark: (if fv::js_length(&props.title) as f64 > 3.0 { Some("long") } else { None }).map(std::borrow::Cow::<str>::Borrowed) }) } else { None }; std::borrow::Cow::<str>::Owned((if let Some(fv_l_5) = fv_l_4.as_ref() { fv_l_5.mark.as_deref().unwrap_or(&*fv_l_5.text) } else { "none" }).to_owned()) });
+    fv::core::escape_into(out, &{ let fv_l_4 = if props.size as f64 > 0.0 { Some(Line { text: std::borrow::Cow::<str>::Owned(props.title.to_uppercase()), size: fv::strings::js_length(&props.title), tag: (if props.title.is_empty() { None } else { Some(&*props.title) }).map(std::borrow::Cow::<str>::Borrowed), mark: (if fv::strings::js_length(&props.title) as f64 > 3.0 { Some("long") } else { None }).map(std::borrow::Cow::<str>::Borrowed) }) } else { None }; std::borrow::Cow::<str>::Owned((if let Some(fv_l_5) = fv_l_4.as_ref() { fv_l_5.mark.as_deref().unwrap_or(&*fv_l_5.text) } else { "none" }).to_owned()) });
     out.push_str("</p>");
     super::tile_card::try_render(out, &super::tile_card::Props { tile: s_kept.to_owned() })?;
     out.push_str("</section>");
@@ -165,21 +165,21 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

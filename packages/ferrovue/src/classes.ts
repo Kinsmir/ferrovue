@@ -38,7 +38,7 @@ export function classItems(s: Scope, n: N): ClassItem[] {
           keys.push(key);
           return `(${bare(cond(s, p.value))}, ${bare(key.code)})`;
         });
-        return [{ code: `&*fv::class_object(&[${entries.join(", ")}])` }];
+        return [{ code: `&*fv::attrs::class_object(&[${entries.join(", ")}])` }];
       }
       return n.properties.flatMap((p: N): ClassItem[] => {
         if (p.type !== "ObjectProperty") fail(s.comp, "FV1001", "a class object holds `name: condition` pairs", p);
@@ -50,7 +50,7 @@ export function classItems(s: Scope, n: N): ClassItem[] {
         } else {
           const k = expr(s, p.key);
           if (k.ty.k !== "str") fail(s.comp, "FV1002", "a computed class name is a string", p.key);
-          name = { code: `fv::js_trim(${strArg(k.code)})` };
+          name = { code: `fv::strings::js_trim(${strArg(k.code)})` };
         }
         const v = expr(s, p.value);
         const on = known(v);
@@ -108,7 +108,7 @@ export function renderClass(s: Scope, e: Emitter, n: N, after = false): void {
   }
   if (i < items.length) {
     const rest = items.slice(i).map((it) => ("lit" in it ? rustStr(it.lit) : it.code));
-    e.stmt(`fv::class_into(out, ${wrote}, &[${rest.join(", ")}]);`);
+    e.stmt(`fv::attrs::class_into(out, ${wrote}, &[${rest.join(", ")}]);`);
   }
 }
 
@@ -186,22 +186,22 @@ export function literalClass(n: N): string | null {
 export function classAttr(s: Scope, n: N, side: "vnode" | "own"): string {
   switch (n.type) {
     case "StringLiteral":
-      return `fv::Attr::str(${rustStr(n.value)})`;
+      return `fv::attrs::Attr::str(${rustStr(n.value)})`;
     case "NullLiteral":
-      return 'fv::Attr::str("")';
+      return 'fv::attrs::Attr::str("")';
     case "ArrayExpression":
     case "ObjectExpression": {
       const items = classItems(s, n);
       const names = items.every((it) => "lit" in it)
         ? rustStr(items.map((it) => ("lit" in it ? it.lit : "")).join(" "))
-        : `fv::class_names(&[${items.map((it) => ("lit" in it ? rustStr(it.lit) : it.code)).join(", ")}])`;
+        : `fv::attrs::class_names(&[${items.map((it) => ("lit" in it ? rustStr(it.lit) : it.code)).join(", ")}])`;
       const literal = names.startsWith('"');
-      if (side === "vnode") return literal ? `fv::Attr::str(${names})` : `fv::Attr::from(${names})`;
-      return `fv::Attr::Names(${literal ? `std::borrow::Cow::Borrowed(${names})` : `${names}.into()`})`;
+      if (side === "vnode") return literal ? `fv::attrs::Attr::str(${names})` : `fv::attrs::Attr::from(${names})`;
+      return `fv::attrs::Attr::Names(${literal ? `std::borrow::Cow::Borrowed(${names})` : `${names}.into()`})`;
     }
     case "LogicalExpression":
       if (n.operator === "&&") {
-        return narrowed(s, n.left, true, (inner) => classAttr(inner, n.right, side), () => 'fv::Attr::str("")') ?? `if ${condition(cond(s, n.left))} { ${classAttr(s, n.right, side)} } else { fv::Attr::str("") }`;
+        return narrowed(s, n.left, true, (inner) => classAttr(inner, n.right, side), () => 'fv::attrs::Attr::str("")') ?? `if ${condition(cond(s, n.left))} { ${classAttr(s, n.right, side)} } else { fv::attrs::Attr::str("") }`;
       }
       break;
     case "ConditionalExpression":

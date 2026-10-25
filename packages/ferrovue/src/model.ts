@@ -1,7 +1,7 @@
 import type { SourceMapConsumer } from "source-map-js";
 import type { Plugin } from "./plugin.ts";
 import type { Const } from "./constants.ts";
-import type { Code } from "./errors.ts";
+import { type ErrorCode, GenError, type SourceLocation } from "./errors.ts";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type N = any;
@@ -68,7 +68,7 @@ export interface Val {
    * expression of the same value as the generated enum `def`, null when a literal is outside it.
    * It holds while `code` is `of`. */
   asEnum?: { of: string; into: (def: EnumDef, node: N) => string | null };
-  /** For an integer computed as an `f64`, where the template computes it, as `fv::Refusals::keep`
+  /** For an integer computed as an `f64`, where the template computes it, as `fv::render::Refusals::keep`
    * takes it. */
   at?: string;
 }
@@ -314,55 +314,8 @@ export function nodeName(node: N): string {
   return `${/^[aeiou]/.test(words) ? "an" : "a"} ${words}`;
 }
 
-/** Where in a file an error is: lines and columns count from 1, and the end is exclusive. */
-export interface Location {
-  file: string;
-  line?: number;
-  column?: number;
-  endLine?: number;
-  endColumn?: number;
-}
-
-/** A construct the compiler refuses: its stable code, the message as shown, where it is, and what
- * is refused without the location and the quoted line. */
-export class GenError extends Error {
-  readonly code: Code;
-  readonly at: Location | null;
-  readonly what: string;
-  /** A short way around the refusal, where one is known. */
-  readonly help: string | null;
-  /** Where a component reads what is refused, when that is in another file. */
-  readAt: Location | null = null;
-
-  constructor(code: Code, message: string, at: Location | null = null, what: string = message, help: string | null = null) {
-    super(message);
-    this.code = code;
-    this.at = at;
-    this.what = what;
-    this.help = help;
-  }
-}
-
-/** Every refusal of a run, raised once the compiler has checked all it can. It carries the first
- * refusal's code, location and message, so code that handles one `GenError` still works. */
-export class GenErrors extends GenError {
-  /** The refusals, in the order of the components and of their lines. */
-  readonly errors: readonly (GenError | SyntaxError)[];
-  /** The components left unchecked because they use a refused one. */
-  readonly unchecked: readonly string[];
-
-  constructor(errors: readonly (GenError | SyntaxError)[], unchecked: readonly string[] = []) {
-    const first = errors[0]!;
-    if (first instanceof GenError) super(first.code, first.message, first.at, first.what, first.help);
-    else super("FV0001", first.message);
-    if (first instanceof GenError) this.readAt = first.readAt;
-    this.errors = errors;
-    this.unchecked = unchecked;
-  }
-}
-
 /** Refuse something in a file that has no source to quote, as a locale or routes file. */
-export function failIn(file: string, code: Code, what: string, help: string | null = null): never {
+export function failIn(file: string, code: ErrorCode, what: string, help: string | null = null): never {
   throw new GenError(code, `${file}: ${what}`, { file }, what, help);
 }
 
@@ -553,17 +506,17 @@ function locate(comp: Component, node: N): { line: number; column: number } | nu
   return null;
 }
 
-/** The local of a render that holds its refusals, a `fv::Refusals`. */
+/** The local of a render that holds its refusals, a `fv::render::Refusals`. */
 export const REFUSALS = "fv_refusals";
 
-/** Where `node` starts in the component's file, as `fv::Refusals::keep` takes it: `line, column`,
+/** Where `node` starts in the component's file, as `fv::render::Refusals::keep` takes it: `line, column`,
  * from 1, or `0, 0` where it is not known. */
 export function refusalAt(comp: Component, node: N | undefined): string {
   const at = node ? locate(comp, node) : null;
   return at ? `${at.line}, ${at.column + 1}` : "0, 0";
 }
 
-/** `call`, a runtime call that returns a `Result` with a `fv::Refused`, as a value: the render
+/** `call`, a runtime call that returns a `Result` with a `fv::render::Refused`, as a value: the render
  * holds the refusal and goes on with a placeholder, and returns it once it is done. */
 export function kept(call: string, at: string): string {
   return `${REFUSALS}.keep(${call}, ${at})`;
@@ -689,12 +642,12 @@ function locateEnd(node: N): { endLine: number; endColumn: number } | null {
 }
 
 /** Where `node` is in the component. */
-export function placeOf(comp: Component, node: N): Location {
+export function placeOf(comp: Component, node: N): SourceLocation {
   const at = locate(comp, node);
   return at ? { file: comp.file, line: at.line, column: at.column + 1 } : { file: comp.file };
 }
 
-export function fail(comp: Component, code: Code, what: string, node?: N, help: string | null = null): never {
+export function fail(comp: Component, code: ErrorCode, what: string, node?: N, help: string | null = null): never {
   const at = locate(comp, node);
   if (!at) throw new GenError(code, `${comp.file}: ${what}`, { file: comp.file }, what, help);
   const where = { file: comp.file, line: at.line, column: at.column + 1, ...locateEnd(node) };
@@ -859,7 +812,7 @@ export function variantPath(comp: Component, def: EnumDef, literal: string): str
 
 /** The function generated code reads the literal of an enum's value with, whether the compiler
  * generated the enum or `unions` names it. */
-export const UNION_STR = "fv::Union::as_str";
+export const UNION_STR = "fv::props::Union::as_str";
 
 /** Rust code of the literal the enum value `code` stands for. */
 export function unionStr(code: string): string {

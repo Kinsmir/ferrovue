@@ -1,4 +1,5 @@
-import { type Component, type N, type Scope, type Ty, type Val, BOOL, fail, FLOAT, GenError, INT, isAscii, joinTy, literalTy, opt, rustStr, sameTy, STR, strTy, UNDEF } from "./model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, BOOL, fail, FLOAT, INT, isAscii, joinTy, literalTy, opt, rustStr, sameTy, STR, strTy, UNDEF } from "./model.ts";
+import { GenError } from "./errors.ts";
 import { constOf, ownKeys, ownKeyTest } from "./constants.ts";
 import { ctx } from "./context.ts";
 import { fresh, jsHint } from "./names.ts";
@@ -32,7 +33,7 @@ export function entryPart(v: Val, i: number): Val {
   const place = `${atom(v.code)}.1`;
   if (of.k === "str") return { code: `&**${place}`, ty: of, ...lone };
   if (of.k === "int" || of.k === "float" || of.k === "bool") return { code: `*${place}`, ty: of };
-  if (of.k === "date") return { code: `fv::js_time_of(${place})`, ty: of };
+  if (of.k === "date") return { code: `fv::date::js_time_of(${place})`, ty: of };
   return { code: place, ty: of, ...lone };
 }
 
@@ -93,11 +94,11 @@ export function typedEmpty(comp: Component, of: Ty): Val {
 /** A date, or a list of dates, that the server holds at `place` (a reference to one when `byRef`),
  * as an expression reads it: each date its time value. `null` for a value held as it is. */
 export function heldDates(place: string, ty: Ty, byRef: boolean): Val | null {
-  if (ty.k === "date") return { code: `fv::js_time_of(${byRef ? place : `&${place}`})`, ty };
-  if (ty.k === "list" && ty.of.k === "date") return computed(`${atom(place)}.iter().map(fv::js_time_of)`, ty.of);
-  if (ty.k === "list" && ty.of.k === "opt" && ty.of.of.k === "date") return computed(`${atom(place)}.iter().map(|v| v.as_ref().map(fv::js_time_of))`, ty.of);
+  if (ty.k === "date") return { code: `fv::date::js_time_of(${byRef ? place : `&${place}`})`, ty };
+  if (ty.k === "list" && ty.of.k === "date") return computed(`${atom(place)}.iter().map(fv::date::js_time_of)`, ty.of);
+  if (ty.k === "list" && ty.of.k === "opt" && ty.of.of.k === "date") return computed(`${atom(place)}.iter().map(|v| v.as_ref().map(fv::date::js_time_of))`, ty.of);
   if (ty.k !== "opt") return null;
-  if (ty.of.k === "date") return { code: `${atom(place)}.as_ref().map(fv::js_time_of)`, ty };
+  if (ty.of.k === "date") return { code: `${atom(place)}.as_ref().map(fv::date::js_time_of)`, ty };
   const inner = heldDates("v", ty.of, true);
   return inner === null ? null : { code: `${atom(place)}.as_ref().map(|v| ${inner.code})`, ty };
 }
@@ -146,7 +147,7 @@ export function arrow(s: Scope, fn: N, list: Val, of: Ty, byRef: boolean, method
   const code = body({ ...s, locals, narrowed });
   const reads = (name: string) => new RegExp(`\\b${name}\\b`).test(code);
   const pName = reads(p) ? p : "_";
-  const called = new RegExp(`^(fv::\\w+)\\(${p}\\)$`).exec(code)?.[1];
+  const called = new RegExp(`^(fv::(?:\\w+::)*\\w+)\\(${p}\\)$`).exec(code)?.[1];
   if (!index && called !== undefined && !byRef) return { closure: called, enumerate: false };
   if (!index) return { closure: `|${pName}| ${code}`, enumerate: false };
   const lets = (reads(i) ? `let ${i} = ${i} as i64; ` : "");
@@ -347,7 +348,7 @@ function reduced(s: Scope, target: Val, method: string, args: N[], n: N): Val {
     const reads = new RegExp(`\\b${acc}\\b`).test(closure);
     const step = closure.replace(/^\|/, `|${reads ? acc : "_"}, `);
     const from = method === "reduce" ? `${items(target)}${enumerate ? ".enumerate()" : ""}` : `${backwards(target)}${enumerate ? ".enumerate()" : ""}.rev()`;
-    const folded = `fv::js_reduce(${from}, ${start}, ${step})`;
+    const folded = `fv::strings::js_reduce(${from}, ${start}, ${step})`;
     if (accTy.k === "str") return { code: `&*${folded}`, ty: strTy(ascii), ...(lone ? { lone } : {}) };
     return { code: folded, ty: accTy };
   }
@@ -483,17 +484,17 @@ function sortedBy(s: Scope, target: Val, of: Ty, given: N): Val {
   const [ka, kb] = [key(fn.params[0].name), key(fn.params[1].name)];
   const [x, y] = shape.ascending ? [ka, kb] : [kb, ka];
   let order: string;
-  if (ka.ty.k === "int") order = `fv::js_order(${bare(asF64(x))}, ${bare(asF64(y))})`;
+  if (ka.ty.k === "int") order = `fv::strings::js_order(${bare(asF64(x))}, ${bare(asF64(y))})`;
   else if (ka.ty.k === "str" && !shape.subtracted) {
     if (ka.lone) fail(comp, "FV0706", lonely("`.toSorted()`"), fn.body);
-    order = `fv::js_cmp(${strArg(x.code)}, ${strArg(y.code)})`;
+    order = `fv::strings::js_cmp(${strArg(x.code)}, ${strArg(y.code)})`;
   } else if (ka.ty.k === "float") {
     return fail(comp, "FV0830", "`.toSorted()` by a `Float`, which may be `NaN`: JavaScript then takes the comparator as inconsistent and each engine orders the items its own way. Sort by an integer or a string", fn.body);
   } else {
     return fail(comp, "FV0830", `\`.toSorted()\` orders by ${shape.subtracted ? "integers" : "integers or strings"}, and this key is ${describeTy(ka.ty)}`, fn.body);
   }
   const reads = (name: string) => new RegExp(`\\b${name}\\b`).test(order);
-  return computed(`fv::js_sorted(${items(target)}, |${reads(pa) ? pa : "_"}, ${reads(pb) ? pb : "_"}| ${order})`, of, target.lone);
+  return computed(`fv::strings::js_sorted(${items(target)}, |${reads(pa) ? pa : "_"}, ${reads(pb) ? pb : "_"}| ${order})`, of, target.lone);
 }
 
 function sorted(s: Scope, target: Val, args: N[], n: N): Val {
@@ -505,12 +506,12 @@ function sorted(s: Scope, target: Val, args: N[], n: N): Val {
   switch (of.k) {
     case "str":
       if (target.lone) fail(comp, "FV0706", lonely("`.toSorted()`"), n);
-      return computed(`fv::js_sorted(${it}, |a, b| fv::js_cmp(a, b))`, of);
+      return computed(`fv::strings::js_sorted(${it}, |a, b| fv::strings::js_cmp(a, b))`, of);
     case "int":
     case "float":
-      return computed(`fv::js_sorted_by_string(${it}, |v| fv::Js(*v).to_string())`, of);
+      return computed(`fv::strings::js_sorted_by_string(${it}, |v| fv::core::Js(*v).to_string())`, of);
     case "bool":
-      return computed(`fv::js_sorted(${it}, bool::cmp)`, of);
+      return computed(`fv::strings::js_sorted(${it}, bool::cmp)`, of);
     case "date":
       return fail(comp, "FV1804", "`.toSorted()` without a comparator orders dates by `String(x)`, which writes each in the time zone of the machine running it: sort the dates in Rust and pass them sorted (see the `dates_and_prices` guide)", n);
     case "entry":
@@ -577,7 +578,7 @@ export function spreadExtreme(s: Scope, method: "max" | "min", args: N[]): Val {
   const start = method === "max" ? "f64::NEG_INFINITY" : "f64::INFINITY";
   if (pieces.length === 0) return { code: start, ty: FLOAT, num: method === "max" ? -Infinity : Infinity };
   const all = pieces.slice(1).reduce((acc, piece) => `${acc}.chain(${piece})`, pieces[0]!);
-  return { code: `${all}.fold(${start}, fv::js_${method})`, ty: FLOAT };
+  return { code: `${all}.fold(${start}, fv::core::js_${method})`, ty: FLOAT };
 }
 
 const FLAT_ITEMS = new Set(["str", "int", "float", "bool", "struct", "child"]);
@@ -665,7 +666,7 @@ export function listMethod(s: Scope, target: Val, method: string, given: N[], n:
     const i = expr(s, args[0]);
     if (!isNumber(i.ty)) fail(comp, "FV0825", `\`.at()\` takes a number that is present, and this index is ${describeTy(i.ty)}`, args[0]);
     const f = bare(asF64(i));
-    return picked(s, target, n, (list) => `fv::js_item_at(${list}.iter(), ${f})`, (it) => `fv::js_item_at(${it}, ${f})`);
+    return picked(s, target, n, (list) => `fv::strings::js_item_at(${list}.iter(), ${f})`, (it) => `fv::strings::js_item_at(${it}, ${f})`);
   }
   if (method === "indexOf" || method === "lastIndexOf") {
     if (args.length !== 1) fail(comp, "FV0826", `\`.${method}()\` takes one value to look for, without a position to start from`, n);
@@ -712,7 +713,7 @@ export function listMethod(s: Scope, target: Val, method: string, given: N[], n:
     const from = index(start) ?? "0.0";
     const to = index(end);
     return computed(
-      `fv::js_slice_items(${it}, ${from}, ${to === null ? "None" : `Some(${to})`})`,
+      `fv::strings::js_slice_items(${it}, ${from}, ${to === null ? "None" : `Some(${to})`})`,
       of,
       target.lone,
     );
@@ -789,7 +790,7 @@ export function objectCall(s: Scope, method: string, args: N[], n: N): Val {
   const of = r.ty.of;
   if (method === "keys") return computed(`${atom(r.code)}.keys().map(${COW}::Borrowed)`, STR);
   if (method === "values") {
-    const values = of.k === "str" ? `.values().map(|v| ${COW}::Borrowed(&**v))` : of.k === "date" ? ".values().map(fv::js_time_of)" : ["struct", "child", "list", "record"].includes(of.k) ? ".values()" : ".values().copied()";
+    const values = of.k === "str" ? `.values().map(|v| ${COW}::Borrowed(&**v))` : of.k === "date" ? ".values().map(fv::date::js_time_of)" : ["struct", "child", "list", "record"].includes(of.k) ? ".values()" : ".values().copied()";
     return computed(`${atom(r.code)}${values}`, of);
   }
   if (method === "entries") return computed(`${atom(r.code)}.iter()`, { k: "entry", of }, r.lone);
@@ -827,7 +828,7 @@ export function computedListMethod(s: Scope, target: Val, method: string, args: 
     if (sep.ty.k !== "str") fail(s.comp, "FV0802", "`.join()` takes a string", args[0]);
     const parted = /^"[^"]/.test(sep.code);
     if (of.k === "str" && target.lone && (!parted || sep.lone)) fail(s.comp, "FV0706", lonely("`.join()` with no literal separator"), n);
-    const each = of.k === "str" ? "" : of.k === "bool" ? `.map(|v| if v { "true" } else { "false" })` : ".map(|v| fv::Js(v).to_string())";
+    const each = of.k === "str" ? "" : of.k === "bool" ? `.map(|v| if v { "true" } else { "false" })` : ".map(|v| fv::core::Js(v).to_string())";
     return { code: `&*${items(target)}${each}.collect::<Vec<_>>().join(${strArg(sep.code)})`, ty: strTy(writesAscii(target.ty) && isAscii(sep.ty)), ...(target.lone || sep.lone ? { lone: true } : {}) };
   }
   return null;

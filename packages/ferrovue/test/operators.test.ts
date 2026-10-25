@@ -2,7 +2,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { GenError, GenErrors, generate } from "../src/compiler.ts";
+import { GenError, GenErrors } from "../src/errors.ts";
+import { generate } from "../src/compiler.ts";
 import { like } from "./code.ts";
 
 const roots: string[] = [];
@@ -62,9 +63,9 @@ describe("`&&` and `||`", () => {
   it("gives the right side of `&&` and the left side of `||` where the left side is always truthy", () => {
     expect(lines("<p>{{ (xs || ['z']).length }}|{{ xs && 'y' }}|{{ k || 'z' }}|{{ k && 'y' }}|{{ at && 'x' }}</p>")).toMatch(like([
       'out.push_str("<p>");',
-      "fv::push_int(out, props.xs.len() as i64);",
+      "fv::core::push_int(out, props.xs.len() as i64);",
       'out.push_str("|y|");',
-      "fv::escape_into(out, fv::Union::as_str(props.k));",
+      "fv::core::escape_into(out, fv::props::Union::as_str(props.k));",
       'out.push_str("|y|x</p>");',
     ].join("\n"), true));
   });
@@ -80,24 +81,24 @@ describe("`&&` and `||`", () => {
       "out.push('|');",
       'out.push_str(if props.b && props.c.unwrap_or(false) { "true" } else { "false" });',
       "out.push('|');",
-      'fv::escape_into(out, { let a = &*props.s; if !a.is_empty() { a } else { "x" } });',
+      'fv::core::escape_into(out, { let a = &*props.s; if !a.is_empty() { a } else { "x" } });',
       "out.push('|');",
-      "fv::escape_into(out, { let a = fv::js_trim(&props.s); if !a.is_empty() { a } else { &props.d } });",
+      "fv::core::escape_into(out, { let a = fv::strings::js_trim(&props.s); if !a.is_empty() { a } else { &props.d } });",
       "out.push('|');",
-      "fv::escape_into(out, { let a = &*props.s; if !a.is_empty() { a } else { fv::js_trim(&props.d) } });",
+      "fv::core::escape_into(out, { let a = &*props.s; if !a.is_empty() { a } else { fv::strings::js_trim(&props.d) } });",
       "out.push('|');",
-      "fv::escape_into(out, { let a = &*props.s; if !a.is_empty() { a } else { &props.d } });",
+      "fv::core::escape_into(out, { let a = &*props.s; if !a.is_empty() { a } else { &props.d } });",
       'out.push_str("</p>");',
     ].join("\n"), true));
-    expect(lines('<p>{{ "" || d }}|{{ "q" || d }}</p>')).toMatch(like(['out.push_str("<p>");', "fv::escape_into(out, &props.d);", 'out.push_str("|q</p>");'].join("\n"), true));
+    expect(lines('<p>{{ "" || d }}|{{ "q" || d }}</p>')).toMatch(like(['out.push_str("<p>");', "fv::core::escape_into(out, &props.d);", 'out.push_str("|q</p>");'].join("\n"), true));
   });
 
   it("writes `||` of two numbers as a test of the first", () => {
     expect(lines("<p>{{ n || n }}|{{ f || f }}</p>", 'import type { Float } from "ferrovue/types";\ndefineProps<{ n: number; f: Float }>();')).toMatch(like([
       'out.push_str("<p>");',
-      "fv::push_int(out, { let a = props.n; if a != 0 { a } else { props.n } });",
+      "fv::core::push_int(out, { let a = props.n; if a != 0 { a } else { props.n } });",
       "out.push('|');",
-      "fv::push_number(out, { let a = props.f; if a != 0.0 && !a.is_nan() { a } else { props.f } });",
+      "fv::core::push_number(out, { let a = props.f; if a != 0.0 && !a.is_nan() { a } else { props.f } });",
       'out.push_str("</p>");',
     ].join("\n"), true));
   });
@@ -106,19 +107,19 @@ describe("`&&` and `||`", () => {
     expect(lines("<p>{{ os || undefined }}|{{ s || undefined }}|{{ n || undefined }}|{{ (q || undefined)?.t }}</p>")).toMatch(like([
       'out.push_str("<p>");',
       "if let Some(v) = props.os.as_deref().filter(|v| !v.is_empty()) {",
-      "fv::escape_into(out, v);",
+      "fv::core::escape_into(out, v);",
       "}",
       "out.push('|');",
       "if let Some(v) = Some(&*props.s).filter(|v| !v.is_empty()) {",
-      "fv::escape_into(out, v);",
+      "fv::core::escape_into(out, v);",
       "}",
       "out.push('|');",
       "if let Some(v) = Some(props.n).filter(|v| *v != 0) {",
-      "fv::push_int(out, v);",
+      "fv::core::push_int(out, v);",
       "}",
       "out.push('|');",
       "if let Some(v) = props.q.as_ref().filter(|v| true).map(|fv_o1| &*fv_o1.t) {",
-      "fv::escape_into(out, v);",
+      "fv::core::escape_into(out, v);",
       "}",
       'out.push_str("</p>");',
     ].join("\n"), true));
@@ -166,9 +167,9 @@ describe("`&&` and `||`", () => {
   it("gives the right side of `||` where the left side is known to be falsy", () => {
     expect(lines('<p>{{ "" || `a${s}` }}|{{ 0 || n }}|{{ 2 || n }}</p>')).toMatch(like([
       'out.push_str("<p>");',
-      'fv::escape_into(out, &format!("a{}", props.s));',
+      'fv::core::escape_into(out, &format!("a{}", props.s));',
       "out.push('|');",
-      "fv::push_int(out, props.n);",
+      "fv::core::push_int(out, props.n);",
       'out.push_str("|2</p>");',
     ].join("\n"), true));
   });
@@ -176,8 +177,8 @@ describe("`&&` and `||`", () => {
   it("checks `||` of integers computed as floats where the expression starts", () => {
     expect(lines("<p>{{ xs[n || -n] }}</p>")).toMatch(like([
       'out.push_str("<p>");',
-      "if let Some(v) = props.xs.get(usize::try_from(fv_refusals.keep(fv::try_int({ let a = props.n as f64; if a != 0.0 { a } else { -(props.n as f64) } }), 7, 21)).unwrap_or(usize::MAX)).map(|v| &**v) {",
-      "fv::escape_into(out, v);",
+      "if let Some(v) = props.xs.get(usize::try_from(fv_refusals.keep(fv::render::try_int({ let a = props.n as f64; if a != 0.0 { a } else { -(props.n as f64) } }), 7, 21)).unwrap_or(usize::MAX)).map(|v| &**v) {",
+      "fv::core::escape_into(out, v);",
       "}",
       'out.push_str("</p>");',
       "fv_refusals.check(Ok(()))",
@@ -189,11 +190,11 @@ describe("`??`", () => {
   it("gives the left side where it is never absent, and the right side where it always is", () => {
     expect(lines("<p>{{ s ?? 'x' }}|{{ n ?? 1 }}|{{ undefined ?? 'x' }}|{{ null ?? s }}|{{ c ?? true }}</p>")).toMatch(like([
       'out.push_str("<p>");',
-      "fv::escape_into(out, &props.s);",
+      "fv::core::escape_into(out, &props.s);",
       "out.push('|');",
-      "fv::push_int(out, props.n);",
+      "fv::core::push_int(out, props.n);",
       'out.push_str("|x|");',
-      "fv::escape_into(out, &props.s);",
+      "fv::core::escape_into(out, &props.s);",
       "out.push('|');",
       'out.push_str(if props.c.unwrap_or(false) { "true" } else { "false" });',
       'out.push_str("</p>");',
@@ -204,11 +205,11 @@ describe("`??`", () => {
     expect(lines("<p>{{ os ?? undefined }}|{{ os ?? null }}</p>")).toMatch(like([
       'out.push_str("<p>");',
       "if let Some(v) = props.os.as_deref() {",
-      "fv::escape_into(out, v);",
+      "fv::core::escape_into(out, v);",
       "}",
       "out.push('|');",
       "if let Some(v) = props.os.as_deref() {",
-      "fv::escape_into(out, v);",
+      "fv::core::escape_into(out, v);",
       "}",
       'out.push_str("</p>");',
     ].join("\n"), true));
@@ -220,11 +221,11 @@ describe("`??`", () => {
       "for v_ref in props.ys.as_ref().map(|v| &v[..]).unwrap_or(&props.xs[..]).iter() {",
       "let v: &str = v_ref;",
       'out.push_str("<i>");',
-      "fv::escape_into(out, v);",
+      "fv::core::escape_into(out, v);",
       'out.push_str("</i>");',
       "}",
       'out.push_str("<!--]--><b>");',
-      "fv::push_int(out, props.ys.as_ref().map(|v| &v[..]).unwrap_or(&[]).len() as i64);",
+      "fv::core::push_int(out, props.ys.as_ref().map(|v| &v[..]).unwrap_or(&[]).len() as i64);",
       'out.push_str("</b><!--]-->");',
     ].join("\n"), true));
   });
@@ -232,11 +233,11 @@ describe("`??`", () => {
   it("falls back from an optional list to an array literal as `?:` does", () => {
     expect(lines("<b>{{ (ys ?? ['q']).length }}|{{ (zs ?? ['q', 'r']).join('-') }}|{{ (ns ?? [1, 2]).length }}</b>")).toMatch(like([
       'out.push_str("<b>");',
-      "fv::push_int(out, (if let Some(n1) = props.ys.as_ref() { n1.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { [\"q\"].iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() }).len() as i64);",
+      "fv::core::push_int(out, (if let Some(n1) = props.ys.as_ref() { n1.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { [\"q\"].iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() }).len() as i64);",
       "out.push('|');",
-      'fv::escape_into(out, &(if let Some(n2) = props.zs.as_ref() { n2.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { ["q", "r"].iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() }).into_iter().collect::<Vec<_>>().join("-"));',
+      'fv::core::escape_into(out, &(if let Some(n2) = props.zs.as_ref() { n2.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { ["q", "r"].iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() }).into_iter().collect::<Vec<_>>().join("-"));',
       "out.push('|');",
-      "fv::push_int(out, (if let Some(n3) = props.ns.as_ref() { n3.to_vec() } else { [1i64, 2i64].to_vec() }).len() as i64);",
+      "fv::core::push_int(out, (if let Some(n3) = props.ns.as_ref() { n3.to_vec() } else { [1i64, 2i64].to_vec() }).len() as i64);",
       'out.push_str("</b>");',
     ].join("\n"), true));
   });
@@ -244,19 +245,19 @@ describe("`??`", () => {
   it("falls back from optional strings to strings, held where the right side is computed", () => {
     expect(lines("<p>{{ os ?? s }}|{{ os ?? s.trim() }}|{{ os ?? `a${s}` }}|{{ os ?? nl }}|{{ q?.u?.trim() ?? s }}|{{ q?.u ?? 'x' }}</p>")).toMatch(like([
       'out.push_str("<p>");',
-      "fv::escape_into(out, props.os.as_deref().unwrap_or(&*props.s));",
+      "fv::core::escape_into(out, props.os.as_deref().unwrap_or(&*props.s));",
       "out.push('|');",
-      "fv::escape_into(out, props.os.as_deref().unwrap_or(fv::js_trim(&props.s)));",
+      "fv::core::escape_into(out, props.os.as_deref().unwrap_or(fv::strings::js_trim(&props.s)));",
       "out.push('|');",
-      'fv::escape_into(out, &props.os.as_deref().map(std::borrow::Cow::<str>::Borrowed).unwrap_or(std::borrow::Cow::<str>::Owned(format!("a{}", props.s))));',
+      'fv::core::escape_into(out, &props.os.as_deref().map(std::borrow::Cow::<str>::Borrowed).unwrap_or(std::borrow::Cow::<str>::Owned(format!("a{}", props.s))));',
       "out.push('|');",
       "if let Some(v) = props.os.as_deref().or(props.nl.as_deref()) {",
-      "fv::escape_into(out, v);",
+      "fv::core::escape_into(out, v);",
       "}",
       "out.push('|');",
-      "fv::escape_into(out, props.q.as_ref().and_then(|fv_o1| fv_o1.u.as_deref()).map(fv::js_trim).unwrap_or(&*props.s));",
+      "fv::core::escape_into(out, props.q.as_ref().and_then(|fv_o1| fv_o1.u.as_deref()).map(fv::strings::js_trim).unwrap_or(&*props.s));",
       "out.push('|');",
-      'fv::escape_into(out, props.q.as_ref().and_then(|fv_o3| fv_o3.u.as_deref()).unwrap_or("x"));',
+      'fv::core::escape_into(out, props.q.as_ref().and_then(|fv_o3| fv_o3.u.as_deref()).unwrap_or("x"));',
       'out.push_str("</p>");',
     ].join("\n"), true));
   });
@@ -264,15 +265,15 @@ describe("`??`", () => {
   it("falls back between integers and floats", () => {
     expect(lines("<p>{{ m ?? 1.5 }}|{{ g ?? 1 }}|{{ g ?? n }}|{{ m ?? n }}|{{ m ?? m ?? 0 }}</p>")).toMatch(like([
       'out.push_str("<p>");',
-      "fv::push_number(out, props.m.map(|v| v as f64).unwrap_or(1.5f64));",
+      "fv::core::push_number(out, props.m.map(|v| v as f64).unwrap_or(1.5f64));",
       "out.push('|');",
-      "fv::push_number(out, props.g.unwrap_or(1.0f64));",
+      "fv::core::push_number(out, props.g.unwrap_or(1.0f64));",
       "out.push('|');",
-      "fv::push_number(out, props.g.unwrap_or(props.n as f64));",
+      "fv::core::push_number(out, props.g.unwrap_or(props.n as f64));",
       "out.push('|');",
-      "fv::push_int(out, props.m.unwrap_or(props.n));",
+      "fv::core::push_int(out, props.m.unwrap_or(props.n));",
       "out.push('|');",
-      "fv::push_int(out, props.m.or(props.m).unwrap_or(0i64));",
+      "fv::core::push_int(out, props.m.or(props.m).unwrap_or(0i64));",
       'out.push_str("</p>");',
     ].join("\n"), true));
   });
@@ -280,11 +281,11 @@ describe("`??`", () => {
   it("falls back from an optional enum to a member, or to its string", () => {
     expect(lines("<p>{{ o ?? 'b' }}|{{ o ?? 'z' }}|{{ o ?? s }}</p>")).toMatch(like([
       'out.push_str("<p>");',
-      "fv::escape_into(out, fv::Union::as_str(props.o.unwrap_or(XO::B)));",
+      "fv::core::escape_into(out, fv::props::Union::as_str(props.o.unwrap_or(XO::B)));",
       "out.push('|');",
-      'fv::escape_into(out, props.o.map(fv::Union::as_str).unwrap_or("z"));',
+      'fv::core::escape_into(out, props.o.map(fv::props::Union::as_str).unwrap_or("z"));',
       "out.push('|');",
-      "fv::escape_into(out, props.o.map(fv::Union::as_str).unwrap_or(&*props.s));",
+      "fv::core::escape_into(out, props.o.map(fv::props::Union::as_str).unwrap_or(&*props.s));",
       'out.push_str("</p>");',
     ].join("\n"), true));
   });
@@ -292,9 +293,9 @@ describe("`??`", () => {
   it("falls back between dates with `??` and `||`", () => {
     expect(lines("<p>{{ (on ?? at).getTime() }}|{{ (on || at).getTime() }}</p>")).toMatch(like([
       'out.push_str("<p>");',
-      "fv::push_number(out, props.on.as_ref().map(fv::js_time_of).unwrap_or(fv::js_time_of(&props.at)));",
+      "fv::core::push_number(out, props.on.as_ref().map(fv::date::js_time_of).unwrap_or(fv::date::js_time_of(&props.at)));",
       "out.push('|');",
-      "fv::push_number(out, props.on.as_ref().map(fv::js_time_of).unwrap_or(fv::js_time_of(&props.at)));",
+      "fv::core::push_number(out, props.on.as_ref().map(fv::date::js_time_of).unwrap_or(fv::date::js_time_of(&props.at)));",
       'out.push_str("</p>");',
     ].join("\n"), true));
   });
@@ -304,7 +305,7 @@ describe("`??`", () => {
       '(if props.on { Some(super::v::Item { label: std::borrow::Cow::<str>::Borrowed("a"), n: None }) } else { None }).unwrap_or(super::v::Item { label: std::borrow::Cow::<str>::Borrowed("b"), n: None })',
     ));
     expect(render(`${ITEM}function base(): Item { return { label: props.s.repeat(2) }; }`, '<V :item="one() ?? base()" />', V)).toMatch(like(
-      ".unwrap_or_else(|| super::v::Item { label: std::borrow::Cow::<str>::Owned(fv_refusals.keep(fv::try_repeat(&props.s, 2.0f64), 5, 41)), n: None })",
+      ".unwrap_or_else(|| super::v::Item { label: std::borrow::Cow::<str>::Owned(fv_refusals.keep(fv::strings::try_repeat(&props.s, 2.0f64), 5, 41)), n: None })",
     ));
     expect(render(`${ITEM}function base(): Item { return { label: "b" }; }`, '<V :item="it ?? base()" />', V)).toMatch(like(
       'item: props.it.as_ref().cloned().unwrap_or(super::v::Item { label: std::borrow::Cow::<str>::Borrowed("b"), n: None })',
@@ -358,9 +359,9 @@ describe("`??`", () => {
   it("falls back from an optional union with no member to read, and from a float to an integer computed as a float", () => {
     expect(lines('<p>{{ (b ? o : undefined) ?? "b" }}|{{ g ?? -n }}</p>')).toMatch(like([
       'out.push_str("<p>");',
-      'fv::escape_into(out, (if props.b { props.o.map(fv::Union::as_str) } else { None }).unwrap_or("b"));',
+      'fv::core::escape_into(out, (if props.b { props.o.map(fv::props::Union::as_str) } else { None }).unwrap_or("b"));',
       "out.push('|');",
-      "fv::push_number(out, props.g.unwrap_or(-(props.n as f64)));",
+      "fv::core::push_number(out, props.g.unwrap_or(-(props.n as f64)));",
       'out.push_str("</p>");',
     ].join("\n"), true));
   });
@@ -368,8 +369,8 @@ describe("`??`", () => {
   it("checks `??` of integers computed as floats where the expression starts", () => {
     expect(lines("<p>{{ xs[m ?? -n] }}</p>")).toMatch(like([
       'out.push_str("<p>");',
-      "if let Some(v) = props.xs.get(usize::try_from(fv_refusals.keep(fv::try_int(props.m.map(|v| v as f64).unwrap_or(-(props.n as f64))), 7, 21)).unwrap_or(usize::MAX)).map(|v| &**v) {",
-      "fv::escape_into(out, v);",
+      "if let Some(v) = props.xs.get(usize::try_from(fv_refusals.keep(fv::render::try_int(props.m.map(|v| v as f64).unwrap_or(-(props.n as f64))), 7, 21)).unwrap_or(usize::MAX)).map(|v| &**v) {",
+      "fv::core::escape_into(out, v);",
       "}",
       'out.push_str("</p>");',
       "fv_refusals.check(Ok(()))",
@@ -381,9 +382,9 @@ describe("unary operators", () => {
   it("negates numbers", () => {
     expect(lines("<p>{{ -n }}|{{ -f }}|{{ -(2) }}|{{ -2.5 }}</p>")).toMatch(like([
       'out.push_str("<p>");',
-      "fv::push_number(out, -(props.n as f64));",
+      "fv::core::push_number(out, -(props.n as f64));",
       "out.push('|');",
-      "fv::push_number(out, -props.f);",
+      "fv::core::push_number(out, -props.f);",
       'out.push_str("|-2|-2.5</p>");',
     ].join("\n"), true));
   });
@@ -391,9 +392,9 @@ describe("unary operators", () => {
   it("negates a float constant as a float", () => {
     expect(lines("<p>{{ (-Math.PI).toFixed(1) }}|{{ String(-Math.PI) }}</p>")).toMatch(like([
       'out.push_str("<p>");',
-      "fv::escape_into(out, &fv::js_to_fixed(-std::f64::consts::PI, 1));",
+      "fv::core::escape_into(out, &fv::core::js_to_fixed(-std::f64::consts::PI, 1));",
       "out.push('|');",
-      "fv::escape_into(out, &fv::Js(-std::f64::consts::PI).to_string());",
+      "fv::core::escape_into(out, &fv::core::Js(-std::f64::consts::PI).to_string());",
       'out.push_str("</p>");',
     ].join("\n"), true));
   });
@@ -492,7 +493,7 @@ describe("equality", () => {
   }
 
   it("writes `== null` of a value never absent as a constant wherever it is read", () => {
-    expect(lines("<p>{{ String(xs == null) }}</p>")).toMatch(like(['out.push_str("<p>");', 'fv::escape_into(out, if false { "true" } else { "false" });', 'out.push_str("</p>");'].join("\n"), true));
+    expect(lines("<p>{{ String(xs == null) }}</p>")).toMatch(like(['out.push_str("<p>");', 'fv::core::escape_into(out, if false { "true" } else { "false" });', 'out.push_str("</p>");'].join("\n"), true));
     const flag = { "F.vue": sfc("defineProps<{ flag: boolean }>();", "<b>{{ flag }}</b>") };
     expect(render('import F from "./F.vue";\ndefineProps<{ xs: string[] }>();', '<F :flag="xs == null" />', flag)).toMatch(like("super::f::try_render(out, &super::f::Props { flag: false })?;"));
   });
@@ -519,14 +520,14 @@ describe("`?:`", () => {
       "for v_ref in <&[std::borrow::Cow<str>]>::default().iter() {",
       "let v: &str = v_ref;",
       'out.push_str("<i>");',
-      "fv::escape_into(out, v);",
+      "fv::core::escape_into(out, v);",
       'out.push_str("</i>");',
       "}",
       'out.push_str("<!--]--><!--[-->");',
       "for v_ref in <&[std::borrow::Cow<str>]>::default().iter() {",
       "let v: &str = v_ref;",
       'out.push_str("<b>");',
-      "fv::escape_into(out, v);",
+      "fv::core::escape_into(out, v);",
       'out.push_str("</b>");',
       "}",
       'out.push_str("<!--]--><!--]-->");',
@@ -535,14 +536,14 @@ describe("`?:`", () => {
   });
 
   it("writes one branch where both are the same", () => {
-    expect(lines("<p>{{ b ? s : s }}|{{ (b ? r : r).t }}</p>")).toMatch(like(['out.push_str("<p>");', "fv::escape_into(out, &props.s);", "out.push('|');", "fv::escape_into(out, &props.r.t);", 'out.push_str("</p>");'].join("\n"), true));
+    expect(lines("<p>{{ b ? s : s }}|{{ (b ? r : r).t }}</p>")).toMatch(like(['out.push_str("<p>");', "fv::core::escape_into(out, &props.s);", "out.push('|');", "fv::core::escape_into(out, &props.r.t);", 'out.push_str("</p>");'].join("\n"), true));
   });
 
   it("borrows a struct each branch reads from a field", () => {
     expect(lines("<p>{{ (b ? r.r : q?.r)?.v }}</p>")).toMatch(like([
       'out.push_str("<p>");',
       "if let Some(v) = (if props.b { props.r.r.as_ref() } else { props.q.as_ref().and_then(|fv_o1| fv_o1.r.as_ref()) }).map(|fv_o2| &*fv_o2.v) {",
-      "fv::escape_into(out, v);",
+      "fv::core::escape_into(out, v);",
       "}",
       'out.push_str("</p>");',
     ].join("\n"), true));
@@ -554,25 +555,25 @@ describe("`?:`", () => {
       "for v_ref in (if props.b { &[] } else { &props.xs[..] }).iter() {",
       "let v: &str = v_ref;",
       'out.push_str("<i>");',
-      "fv::escape_into(out, v);",
+      "fv::core::escape_into(out, v);",
       'out.push_str("</i>");',
       "}",
       'out.push_str("<!--]--><!--[-->");',
       "for v_ref in (if props.b { &props.xs[..] } else { &[] }).iter() {",
       "let v: &str = v_ref;",
       'out.push_str("<i>");',
-      "fv::escape_into(out, v);",
+      "fv::core::escape_into(out, v);",
       'out.push_str("</i>");',
       "}",
       'out.push_str("<!--]--><b>");',
-      "fv::push_int(out, (if props.b { &props.is[..] } else { &[] }).len() as i64);",
+      "fv::core::push_int(out, (if props.b { &props.is[..] } else { &[] }).len() as i64);",
       'out.push_str("</b><!--]-->");',
     ].join("\n"), true));
     expect(lines("<b>{{ (b ? ['a'] : []).length }}|{{ (b ? [] : xs.slice(1)).length }}</b>")).toMatch(like([
       'out.push_str("<b>");',
-      'fv::push_int(out, (if props.b { ["a"].iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { Vec::new() }).len() as i64);',
+      'fv::core::push_int(out, (if props.b { ["a"].iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { Vec::new() }).len() as i64);',
       "out.push('|');",
-      "fv::push_int(out, (if props.b { Vec::new() } else { fv::js_slice_items(props.xs.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), 1.0f64, None).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() }).len() as i64);",
+      "fv::core::push_int(out, (if props.b { Vec::new() } else { fv::strings::js_slice_items(props.xs.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), 1.0f64, None).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() }).len() as i64);",
       'out.push_str("</b>");',
     ].join("\n"), true));
   });
@@ -580,13 +581,13 @@ describe("`?:`", () => {
   it("chooses between strings, borrowing the second", () => {
     expect(lines("<p>{{ b ? s : 'x' }}|{{ b ? s.trim() : d }}|{{ b ? d : s.trim() }}|{{ b ? s : n }}</p>")).toMatch(like([
       'out.push_str("<p>");',
-      'fv::escape_into(out, if props.b { &props.s } else { "x" });',
+      'fv::core::escape_into(out, if props.b { &props.s } else { "x" });',
       "out.push('|');",
-      "fv::escape_into(out, if props.b { fv::js_trim(&props.s) } else { &props.d });",
+      "fv::core::escape_into(out, if props.b { fv::strings::js_trim(&props.s) } else { &props.d });",
       "out.push('|');",
-      "fv::escape_into(out, if props.b { &props.d } else { fv::js_trim(&props.s) });",
+      "fv::core::escape_into(out, if props.b { &props.d } else { fv::strings::js_trim(&props.s) });",
       "out.push('|');",
-      'fv::escape_into(out, &(if props.b { std::borrow::Cow::<str>::Borrowed(&*props.s) } else { std::borrow::Cow::<str>::Owned(format!("{}", fv::Js(props.n))) }));',
+      'fv::core::escape_into(out, &(if props.b { std::borrow::Cow::<str>::Borrowed(&*props.s) } else { std::borrow::Cow::<str>::Owned(format!("{}", fv::core::Js(props.n))) }));',
       'out.push_str("</p>");',
     ].join("\n"), true));
   });
@@ -594,18 +595,18 @@ describe("`?:`", () => {
   it("narrows a value its test finds present", () => {
     expect(lines("<p>{{ os ? os : 'x' }}|{{ !os ? 'x' : os }}|{{ os ? 1 : 2 }}|{{ m != null ? m + 1 : 0 }}|{{ os ? os.trim() : 'x' }}|{{ os ? os.length : undefined }}</p>")).toMatch(like([
       'out.push_str("<p>");',
-      'fv::escape_into(out, props.os.as_deref().filter(|v| !v.is_empty()).unwrap_or("x"));',
+      'fv::core::escape_into(out, props.os.as_deref().filter(|v| !v.is_empty()).unwrap_or("x"));',
       "out.push('|');",
-      'fv::escape_into(out, props.os.as_deref().filter(|v| !v.is_empty()).unwrap_or("x"));',
+      'fv::core::escape_into(out, props.os.as_deref().filter(|v| !v.is_empty()).unwrap_or("x"));',
       "out.push('|');",
-      "fv::push_int(out, if props.os.as_deref().is_some_and(|v| !v.is_empty()) { 1i64 } else { 2i64 });",
+      "fv::core::push_int(out, if props.os.as_deref().is_some_and(|v| !v.is_empty()) { 1i64 } else { 2i64 });",
       "out.push('|');",
-      "fv::push_number(out, if let Some(n4) = props.m { n4 as f64 + 1.0 } else { 0.0f64 });",
+      "fv::core::push_number(out, if let Some(n4) = props.m { n4 as f64 + 1.0 } else { 0.0f64 });",
       "out.push('|');",
-      'fv::escape_into(out, if let Some(n5) = props.os.as_deref().filter(|v| !v.is_empty()) { fv::js_trim(n5) } else { "x" });',
+      'fv::core::escape_into(out, if let Some(n5) = props.os.as_deref().filter(|v| !v.is_empty()) { fv::strings::js_trim(n5) } else { "x" });',
       "out.push('|');",
-      "if let Some(v) = props.os.as_deref().filter(|v| !v.is_empty()).map(|n6| fv::js_length(n6)) {",
-      "fv::push_int(out, v);",
+      "if let Some(v) = props.os.as_deref().filter(|v| !v.is_empty()).map(|n6| fv::strings::js_length(n6)) {",
+      "fv::core::push_int(out, v);",
       "}",
       'out.push_str("</p>");',
     ].join("\n"), true));
@@ -614,28 +615,28 @@ describe("`?:`", () => {
   it("chooses between numbers as floats, and between optional values", () => {
     expect(lines("<p>{{ b ? n : f }}|{{ b ? 1 : 2.5 }}|{{ b ? os : undefined }}|{{ b ? undefined : os }}|{{ b ? s : undefined }}|{{ b ? m : 1 }}|{{ b ? nl : s }}</p>")).toMatch(like([
       'out.push_str("<p>");',
-      "fv::push_number(out, if props.b { props.n as f64 } else { props.f });",
+      "fv::core::push_number(out, if props.b { props.n as f64 } else { props.f });",
       "out.push('|');",
-      "fv::push_number(out, if props.b { 1.0f64 } else { 2.5f64 });",
+      "fv::core::push_number(out, if props.b { 1.0f64 } else { 2.5f64 });",
       "out.push('|');",
       "if let Some(v) = if props.b { props.os.as_deref() } else { None } {",
-      "fv::escape_into(out, v);",
+      "fv::core::escape_into(out, v);",
       "}",
       "out.push('|');",
       "if let Some(v) = if props.b { None } else { props.os.as_deref() } {",
-      "fv::escape_into(out, v);",
+      "fv::core::escape_into(out, v);",
       "}",
       "out.push('|');",
       "if let Some(v) = if props.b { Some(&*props.s) } else { None } {",
-      "fv::escape_into(out, v);",
+      "fv::core::escape_into(out, v);",
       "}",
       "out.push('|');",
       "if let Some(v) = if props.b { props.m } else { Some(1i64) } {",
-      "fv::push_int(out, v);",
+      "fv::core::push_int(out, v);",
       "}",
       "out.push('|');",
       "if let Some(v) = if props.b { props.nl.as_deref() } else { Some(&*props.s) } {",
-      "fv::escape_into(out, v);",
+      "fv::core::escape_into(out, v);",
       "}",
       'out.push_str("</p>");',
     ].join("\n"), true));
@@ -644,24 +645,24 @@ describe("`?:`", () => {
   it("holds optional strings where a branch computes one", () => {
     expect(lines("<p>{{ b ? s.trim() : undefined }}|{{ b ? os : s.trim() }}|{{ b ? q?.u : s }}|{{ b ? s : q?.u?.trim() }}|{{ b ? os : m }}</p>")).toMatch(like([
       'out.push_str("<p>");',
-      "if let Some(v) = if props.b { Some(fv::js_trim(&props.s)) } else { None } {",
-      "fv::escape_into(out, v);",
+      "if let Some(v) = if props.b { Some(fv::strings::js_trim(&props.s)) } else { None } {",
+      "fv::core::escape_into(out, v);",
       "}",
       "out.push('|');",
-      "if let Some(v) = if props.b { props.os.as_deref() } else { Some(fv::js_trim(&props.s)) } {",
-      "fv::escape_into(out, v);",
+      "if let Some(v) = if props.b { props.os.as_deref() } else { Some(fv::strings::js_trim(&props.s)) } {",
+      "fv::core::escape_into(out, v);",
       "}",
       "out.push('|');",
       "if let Some(v) = if props.b { props.q.as_ref().and_then(|fv_o1| fv_o1.u.as_deref()) } else { Some(&*props.s) } {",
-      "fv::escape_into(out, v);",
+      "fv::core::escape_into(out, v);",
       "}",
       "out.push('|');",
-      "if let Some(v) = if props.b { Some(&*props.s) } else { props.q.as_ref().and_then(|fv_o2| fv_o2.u.as_deref()).map(fv::js_trim) } {",
-      "fv::escape_into(out, v);",
+      "if let Some(v) = if props.b { Some(&*props.s) } else { props.q.as_ref().and_then(|fv_o2| fv_o2.u.as_deref()).map(fv::strings::js_trim) } {",
+      "fv::core::escape_into(out, v);",
       "}",
       "out.push('|');",
-      'if let Some(v) = (if props.b { props.os.as_deref().map(std::borrow::Cow::<str>::Borrowed) } else { props.m.map(|n4| std::borrow::Cow::<str>::Owned(format!("{}", fv::Js(n4)))) }).as_deref() {',
-      "fv::escape_into(out, v);",
+      'if let Some(v) = (if props.b { props.os.as_deref().map(std::borrow::Cow::<str>::Borrowed) } else { props.m.map(|n4| std::borrow::Cow::<str>::Owned(format!("{}", fv::core::Js(n4)))) }).as_deref() {',
+      "fv::core::escape_into(out, v);",
       "}",
       'out.push_str("</p>");',
     ].join("\n"), true));
@@ -674,7 +675,7 @@ describe("`?:`", () => {
   it("gives the branch a test known when compiling chooses, typing an empty array literal only by a typed list", () => {
     expect(lines("<p>{{ (false ? is : xs).length }}|{{ (true ? [] : s).length }}</p>")).toMatch(like([
       'out.push_str("<p>");',
-      "fv::push_int(out, props.xs.len() as i64);",
+      "fv::core::push_int(out, props.xs.len() as i64);",
       'out.push_str("|0</p>");',
     ].join("\n"), true));
   });
@@ -689,7 +690,7 @@ describe("`?:`", () => {
     const script = "interface R { w: R2 }\ninterface R2 { v: string }\ndefineProps<{ b: boolean; r: R; p: R }>();";
     expect(lines("<p>{{ (b ? r.w : p.w).v }}</p>", script)).toMatch(like([
       'out.push_str("<p>");',
-      "fv::escape_into(out, &*if props.b { &props.r.w } else { &props.p.w }.v);",
+      "fv::core::escape_into(out, &*if props.b { &props.r.w } else { &props.p.w }.v);",
       'out.push_str("</p>");',
     ].join("\n"), true));
   });
@@ -703,7 +704,7 @@ describe("`?:`", () => {
       'out.push_str("<!--[-->");',
       "for (fv_k, _) in (if props.b { &props.r.ws } else { &props.p.ws }).iter() {",
       'out.push_str("<i>");',
-      "fv::escape_into(out, fv_k);",
+      "fv::core::escape_into(out, fv_k);",
       'out.push_str("</i>");',
       "}",
       'out.push_str("<!--]--><!--]-->");',
@@ -714,7 +715,7 @@ describe("`?:`", () => {
     const script = `${PROPS}\nconst T = { x: "one", y: "two" } as const;`;
     expect(lines('<p>{{ T[(b ? "x" : (c ? "y" : undefined)) ?? "x"] }}</p>', script)).toMatch(like([
       'out.push_str("<p>");',
-      'fv::escape_into(out, match (if props.b { Some("x") } else { if props.c.unwrap_or(false) { Some("y") } else { None } }).unwrap_or("x") { "x" => "one", _ => "two" });',
+      'fv::core::escape_into(out, match (if props.b { Some("x") } else { if props.c.unwrap_or(false) { Some("y") } else { None } }).unwrap_or("x") { "x" => "one", _ => "two" });',
       'out.push_str("</p>");',
     ].join("\n"), true));
     expect(refusals(PROPS, '<p>{{ encodeURIComponent((b ? String(n) : os)?.slice(0, 1) ?? "") }}</p>')).toEqual([
@@ -758,16 +759,16 @@ describe("values built from object literals", () => {
     expect(lines("<p>{{ b ? m : one().m }}|{{ (b ? one().l : xs).length }}|{{ (b ? xs : one().l).length }}|{{ (b ? one().l : []).length }}|{{ (b ? one().l : xs.filter((x) => x)).length }}</p>", BUILT_SCRIPT, BUILT_V)).toMatch(like([
       'out.push_str("<p>");',
       `if let Some(v) = if props.b { props.m } else { ${BUILT}.m } {`,
-      "fv::push_int(out, v);",
+      "fv::core::push_int(out, v);",
       "}",
       "out.push('|');",
-      `fv::push_int(out, (if props.b { ${BUILT}.l } else { props.xs.to_vec() }).len() as i64);`,
+      `fv::core::push_int(out, (if props.b { ${BUILT}.l } else { props.xs.to_vec() }).len() as i64);`,
       "out.push('|');",
-      `fv::push_int(out, (if props.b { props.xs.to_vec() } else { ${BUILT}.l }).len() as i64);`,
+      `fv::core::push_int(out, (if props.b { props.xs.to_vec() } else { ${BUILT}.l }).len() as i64);`,
       "out.push('|');",
-      `fv::push_int(out, (if props.b { ${BUILT}.l } else { Vec::new() }).len() as i64);`,
+      `fv::core::push_int(out, (if props.b { ${BUILT}.l } else { Vec::new() }).len() as i64);`,
       "out.push('|');",
-      `fv::push_int(out, (if props.b { ${BUILT}.l } else { props.xs.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_x| !fv_x.is_empty()).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() }).len() as i64);`,
+      `fv::core::push_int(out, (if props.b { ${BUILT}.l } else { props.xs.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_x| !fv_x.is_empty()).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() }).len() as i64);`,
       'out.push_str("</p>");',
     ].join("\n"), true));
   });
@@ -775,11 +776,11 @@ describe("values built from object literals", () => {
   it("reads the fields of a built value's fields, and chooses between built structs", () => {
     expect(lines("<p>{{ one().w.v }}|{{ (b ? one().rs : r.rs).length }}|{{ (b ? one().w : r.w).v }}</p>", BUILT_SCRIPT, BUILT_V)).toMatch(like([
       'out.push_str("<p>");',
-      `fv::escape_into(out, &((${BUILT}.w).v));`,
+      `fv::core::escape_into(out, &((${BUILT}.w).v));`,
       "out.push('|');",
-      `fv::push_int(out, (if props.b { ${BUILT}.rs } else { props.r.rs.iter().cloned().collect::<Vec<_>>() }).len() as i64);`,
+      `fv::core::push_int(out, (if props.b { ${BUILT}.rs } else { props.r.rs.iter().cloned().collect::<Vec<_>>() }).len() as i64);`,
       "out.push('|');",
-      `fv::escape_into(out, &((if props.b { ${BUILT}.w } else { props.r.w.clone() }).v));`,
+      `fv::core::escape_into(out, &((if props.b { ${BUILT}.w } else { props.r.w.clone() }).v));`,
       'out.push_str("</p>");',
     ].join("\n"), true));
   });
@@ -796,11 +797,11 @@ describe("values built from object literals", () => {
     const built = "(R { t: std::borrow::Cow::<str>::Borrowed(&*props.s), e: RE::A, o: props.o.map(|v| match v { XO::X => RO::X, XO::Y => RO::Y }) })";
     expect(lines('<p>{{ one().e }}|{{ one().e === "a" }}|{{ one().o ?? "none" }}|{{ one().o === "y" }}</p>', script)).toMatch(like([
       'out.push_str("<p>");',
-      `fv::escape_into(out, fv::Union::as_str(${built}.e));`,
+      `fv::core::escape_into(out, fv::props::Union::as_str(${built}.e));`,
       "out.push('|');",
       `out.push_str(if ${built}.e == RE::A { "true" } else { "false" });`,
       "out.push('|');",
-      `fv::escape_into(out, ${built}.o.map(fv::Union::as_str).unwrap_or("none"));`,
+      `fv::core::escape_into(out, ${built}.o.map(fv::props::Union::as_str).unwrap_or("none"));`,
       "out.push('|');",
       `out.push_str(if ${built}.o == Some(RO::Y) { "true" } else { "false" });`,
       'out.push_str("</p>");',

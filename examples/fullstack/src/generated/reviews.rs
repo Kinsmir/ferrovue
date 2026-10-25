@@ -29,7 +29,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -37,10 +37,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(294 + 131 * props.reviews.len() + props.reviews.iter().map(|v| v.reader.len() + v.text.len()).sum::<usize>());
-    let fv_refusals = fv::Refusals::new(NAME, "client/components/Reviews.vue");
+    let fv_refusals = fv::render::Refusals::new(NAME, "client/components/Reviews.vue");
     out.push_str("<div class=\"review-list\" data-v-458b887c>");
     if props.reviews.len() as i64 != 0 {
         out.push_str("<ol data-v-458b887c><!--[-->");
@@ -52,16 +52,16 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
                 out.push_str("display:none;");
             }
             out.push_str("\" data-v-458b887c>");
-            crate::ui::star_rating(out, &super::twins::StarRatingProps { value: fv_r.stars, max: None }, &fv::Attrs::scoped(" data-v-458b887c"));
+            crate::ui::star_rating(out, &super::twins::StarRatingProps { value: fv_r.stars, max: None }, &fv::attrs::Attrs::scoped(" data-v-458b887c"));
             out.push_str("<q data-v-458b887c>");
-            fv::escape_into(out, &fv_r.text);
+            fv::core::escape_into(out, &fv_r.text);
             out.push_str("</q> — ");
-            fv::escape_into(out, &fv_r.reader);
-            if let Some(fv_posted) = fv_r.posted.as_ref().map(fv::js_time_of) {
+            fv::core::escape_into(out, &fv_r.reader);
+            if let Some(fv_posted) = fv_r.posted.as_ref().map(fv::date::js_time_of) {
                 out.push_str("<time datetime=\"");
-                fv::escape_into(out, &fv_refusals.keep(fv::try_to_iso_string(fv_posted), 17, 78));
+                fv::core::escape_into(out, &fv_refusals.keep(fv::date::try_to_iso_string(fv_posted), 17, 78));
                 out.push_str("\" data-v-458b887c>, ");
-                fv::push_number(out, fv::js_utc_full_year(fv_posted));
+                fv::core::push_number(out, fv::date::js_utc_full_year(fv_posted));
                 out.push_str("</time>");
             } else {
                 out.push_str("<!---->");
@@ -74,7 +74,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     }
     if props.reviews.len() as i64 as f64 > 2.0 {
         out.push_str("<button type=\"button\" class=\"more\" data-v-458b887c>Show all ");
-        fv::push_int(out, props.reviews.len() as i64);
+        fv::core::push_int(out, props.reviews.len() as i64);
         out.push_str(" reviews</button>");
     } else {
         out.push_str("<!---->");
@@ -84,25 +84,25 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    let html: fv::Html<'p, Props<'a>> = fv::Html::markup_fallible(props, render, try_render);
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    let html: fv::html::Html<'p, Props<'a>> = fv::html::Html::markup_fallible(props, render, try_render);
     html.dates("[{\"reviews\":[{\"posted\":1}]}]")
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    let html: fv::Html<'p, Props<'a>> = fv::Html::island_fallible(NAME, props, render, try_render);
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    let html: fv::html::Html<'p, Props<'a>> = fv::html::Html::island_fallible(NAME, props, render, try_render);
     html.dates("[{\"reviews\":[{\"posted\":1}]}]")
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    let html: fv::Html<'a, Props<'a>> = fv::Html::markup_owned_fallible(props, render, try_render);
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    let html: fv::html::Html<'a, Props<'a>> = fv::html::Html::markup_owned_fallible(props, render, try_render);
     html.dates("[{\"reviews\":[{\"posted\":1}]}]")
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    let html: fv::Html<'a, Props<'a>> = fv::Html::island_owned_fallible(NAME, props, render, try_render);
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    let html: fv::html::Html<'a, Props<'a>> = fv::html::Html::island_owned_fallible(NAME, props, render, try_render);
     html.dates("[{\"reviews\":[{\"posted\":1}]}]")
 }

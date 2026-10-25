@@ -120,7 +120,7 @@ the format holds:
 
 ```rust
 // The ISO string of a number of milliseconds, as JavaScript's `toISOString()` writes it.
-assert_eq!(ferrovue::js_to_iso_string(1_714_555_800_000.0), "2024-05-01T09:30:00.000Z");
+assert_eq!(ferrovue::date::js_to_iso_string(1_714_555_800_000.0), "2024-05-01T09:30:00.000Z");
 ```
 
 From `chrono`, `to_rfc3339_opts(SecondsFormat::Millis, true)` writes the format. Take care with
@@ -159,15 +159,15 @@ const iso = computed(() => date.value.toISOString());
 `new Date()` and `Date.now()` are the moment they run, which differs between the server's render
 and the browser's hydration, so they are refused ([FV1801](crate::guide::error_codes#fv1801)).
 Read the clock in Rust and pass the time as a prop: a `Date` prop given
-[`JsDate::now()`](crate::JsDate::now), or a string or a number of milliseconds:
+[`JsDate::now()`](crate::date::JsDate::now), or a string or a number of milliseconds:
 
 ```rust
 use std::time::{SystemTime, UNIX_EPOCH};
 
 let now = SystemTime::now().duration_since(UNIX_EPOCH).expect("after 1970").as_millis() as i64;
-let iso = ferrovue::js_to_iso_string(now as f64);
+let iso = ferrovue::date::js_to_iso_string(now as f64);
 assert!(iso.ends_with('Z'));
-assert!(ferrovue::JsDate::now().is_valid());
+assert!(ferrovue::date::JsDate::now().is_valid());
 ```
 
 # Date props
@@ -194,11 +194,11 @@ The prop's Rust field is the type `dateType` in `ferrovue.config.json` names:
 
 | `dateType` | Rust field | Holds |
 |---|---|---|
-| none, or `ferrovue::JsDate` | [`JsDate`](crate::JsDate) | every date JavaScript holds, from −271821 to +275760, and invalid dates |
+| none, or `ferrovue::date::JsDate` | [`JsDate`](crate::date::JsDate) | every date JavaScript holds, from −271821 to +275760, and invalid dates |
 | `chrono::DateTime<chrono::Utc>`, with the `chrono` feature | `chrono::DateTime<Utc>` | the dates from −262143 to +262142 to the nanosecond, and no invalid date |
-| a type of your own | that type, which implements [`JsTime`](crate::JsTime) | what its `from_time_value` takes |
+| a type of your own | that type, which implements [`JsTime`](crate::date::JsTime) | what its `from_time_value` takes |
 
-The generated `render` reads the prop through [`JsTime::time_value`](crate::JsTime::time_value),
+The generated `render` reads the prop through [`JsTime::time_value`](crate::date::JsTime::time_value),
 the time value JavaScript keeps, clipped as `new Date()` clips it, so it is the same whichever
 type the field is, and the parsing
 and the `getUTC…` twins are ferrovue's own, held to the same vectors as the dates a template
@@ -223,20 +223,20 @@ builds:
 pub struct Props<'a> {
     #[serde(rename = "title")]
     pub title: Cow<'a, str>,
-    #[serde(rename = "posted", with = "fv::date_prop")]
-    pub posted: ferrovue::JsDate,
-    #[serde(rename = "edited", default, skip_serializing_if = "Option::is_none", with = "fv::opt_date_prop")]
-    pub edited: Option<ferrovue::JsDate>,
+    #[serde(rename = "posted", with = "fv::date::date_prop")]
+    pub posted: ferrovue::date::JsDate,
+    #[serde(rename = "edited", default, skip_serializing_if = "Option::is_none", with = "fv::date::opt_date_prop")]
+    pub edited: Option<ferrovue::date::JsDate>,
 }
 #
 # impl<'a> Props<'a> {
 #     /// Props with its required fields, every optional one absent.
-#     pub fn new(title: impl Into<Cow<'a, str>>, posted: ferrovue::JsDate) -> Self {
+#     pub fn new(title: impl Into<Cow<'a, str>>, posted: ferrovue::date::JsDate) -> Self {
 #         Props { title: title.into(), posted, edited: None }
 #     }
 #
 #     /// Set `edited`, which is absent otherwise.
-#     pub fn edited(mut self, edited: ferrovue::JsDate) -> Self {
+#     pub fn edited(mut self, edited: ferrovue::date::JsDate) -> Self {
 #         self.edited = Some(edited);
 #         self
 #     }
@@ -246,17 +246,17 @@ pub struct Props<'a> {
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(76 + props.title.len());
     out.push_str("<article><h2>");
-    fv::escape_into(out, &props.title);
+    fv::core::escape_into(out, &props.title);
     out.push_str("</h2><p>");
-    fv::push_number(out, fv::js_utc_date(fv::js_time_of(&props.posted)));
+    fv::core::push_number(out, fv::date::js_utc_date(fv::date::js_time_of(&props.posted)));
     out.push('/');
-    fv::push_number(out, fv::js_utc_month(fv::js_time_of(&props.posted)) + 1.0);
+    fv::core::push_number(out, fv::date::js_utc_month(fv::date::js_time_of(&props.posted)) + 1.0);
     out.push('/');
-    fv::push_number(out, fv::js_utc_full_year(fv::js_time_of(&props.posted)));
+    fv::core::push_number(out, fv::date::js_utc_full_year(fv::date::js_time_of(&props.posted)));
     out.push_str("</p>");
-    if let Some(fv_edited) = props.edited.as_ref().map(fv::js_time_of) {
+    if let Some(fv_edited) = props.edited.as_ref().map(fv::date::js_time_of) {
         out.push_str("<p>edited ");
-        fv::escape_into(out, &fv::js_slice(&fv::js_to_iso_string(fv_edited), 0.0f64, Some(10.0f64)));
+        fv::core::escape_into(out, &fv::strings::js_slice(&fv::date::js_to_iso_string(fv_edited), 0.0f64, Some(10.0f64)));
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");
@@ -265,13 +265,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 }
 #
 # /// The component as an island the client hydrates.
-# pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-#     fv::Html::island(NAME, props, render)
+# pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+#     fv::html::Html::island(NAME, props, render)
 # }
 # }
 # }
 # use generated::post;
-use ferrovue::JsDate;
+use ferrovue::date::JsDate;
 
 let posted = JsDate::parse("2024-05-01T23:30-02:00").expect("in the date time string format");
 let props = post::Props::new("Spring", posted).edited(JsDate::from_millis(1_714_608_000_000.0));
@@ -292,7 +292,7 @@ An island's `data-props` carries a date as `toISOString()` writes it, as Vue's o
 `JSON.stringify` of a `Date` would, and an invalid date as the bare `NaN` it writes for a number
 JSON cannot carry, where `JSON.stringify` would write `null`, which a `Date | null` prop could not
 tell from `null`. Before Vue hydrates, `mountIslands`, `mountPage` and `renderPage` (and
-`ferrovue/testing`'s `fixtureApp`) turn each prop the component declares a `Date` back into one:
+`ferrovue/testing/browser`'s `fixtureApp`) turn each prop the component declares a `Date` back into one:
 Vue's compiler declares a prop typed `Date` as `{ type: Date }`, and one typed `Date | null` as
 `{ type: [Date, null] }`, so the client knows which props are dates from the component itself. The
 browser's render then reads the same time value the server read, in any time zone, as the
@@ -302,11 +302,11 @@ component's props from JSON itself, and hands them to `createSSRApp`, calls
 
 A fixture or a page record may give a date as such a string or as a number of milliseconds, and
 JSON read into the props with serde takes either. serde_json writes no `NaN`, so it writes an
-invalid [`JsDate`](crate::JsDate) as `null`, which does not read back: an `Option<JsDate>` holding
+invalid [`JsDate`](crate::date::JsDate) as `null`, which does not read back: an `Option<JsDate>` holding
 an invalid date reads back as `None`, and a required one fails to read. A `JsDate` reads only from
 a self-describing format, such as JSON, and not from bincode or postcard.
 
-Generated code reads a `Date` prop through [`JsTime::time_value`](crate::JsTime::time_value) and
+Generated code reads a `Date` prop through [`JsTime::time_value`](crate::date::JsTime::time_value) and
 clips the value as `new Date(value)` does, so a type of your own that returns a fraction or a value
 beyond the range renders, and travels in `data-props`, as the date JavaScript would make of it.
 
@@ -336,14 +336,14 @@ defineProps<{ comments: Comment[]; days: Date[]; seen: Record<string, Date> }>()
 ```text
 pub struct Comment<'a> {
     pub author: Cow<'a, str>,
-    pub at: ferrovue::JsDate,
-    pub edited: Option<ferrovue::JsDate>,
+    pub at: ferrovue::date::JsDate,
+    pub edited: Option<ferrovue::date::JsDate>,
     pub replies: Vec<Comment<'a>>,
 }
 pub struct Props<'a> {
     pub comments: Vec<Comment<'a>>,
-    pub days: Vec<ferrovue::JsDate>,
-    pub seen: ferrovue::Record<'a, ferrovue::JsDate>,
+    pub days: Vec<ferrovue::date::JsDate>,
+    pub seen: ferrovue::props::Record<'a, ferrovue::date::JsDate>,
 }
 ```
 
@@ -365,12 +365,12 @@ passes the island's `data-dates` to `reviveDates(component, props, dates)`.
 
 ## JsDate
 
-[`JsDate`](crate::JsDate) is a time value, as JavaScript's `Date` holds it. It is built from a
+[`JsDate`](crate::date::JsDate) is a time value, as JavaScript's `Date` holds it. It is built from a
 number of milliseconds as `new Date(ms)` builds it, from an ISO string in the format above
 (`None` for any other string), or from the clock:
 
 ```rust
-use ferrovue::JsDate;
+use ferrovue::date::JsDate;
 
 let posted = JsDate::parse("+010000-01-01").expect("an expanded year");
 assert_eq!(posted.to_iso_string().as_deref(), Some("+010000-01-01T00:00:00.000Z"));
@@ -392,7 +392,7 @@ whose error is `DateOutOfRange`:
 # #[cfg(feature = "chrono")]
 # fn main() {
 use chrono::{DateTime, Utc};
-use ferrovue::JsDate;
+use ferrovue::date::JsDate;
 
 let posted = DateTime::<Utc>::from_timestamp_millis(1_714_555_800_000).expect("in range");
 assert_eq!(JsDate::from(posted).to_iso_string().as_deref(), Some("2024-05-01T09:30:00.000Z"));
@@ -506,8 +506,8 @@ The generated `render` computes the amount and the date with the runtime's twins
 #         ("price", Message::new(&[&[Part::Text("€ "), Part::Named("amount")]])),
 #     ]),
 # ];
-# pub fn i18n(locale: &str) -> ferrovue::I18n {
-#     ferrovue::I18n::new(LOCALES, locale, FALLBACK)
+# pub fn i18n(locale: &str) -> ferrovue::i18n::I18n {
+#     ferrovue::i18n::I18n::new(LOCALES, locale, FALLBACK)
 # }
 # }
 # pub mod prices {
@@ -541,32 +541,32 @@ The generated `render` computes the amount and the date with the runtime's twins
 #
 # }
 /// Write the component's server render into `out`.
-pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::I18n) {
+pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n) {
     out.reserve(98 + props.total.len() + props.posted.len());
-    let s_fixed = fv::js_to_fixed(props.cents as f64 / 100.0, 2);
-    let s_amount = if fv_i18n.locale() == "nl" { std::borrow::Cow::<str>::Owned(fv::js_replace(&s_fixed, ".", ",").into_owned()) } else { std::borrow::Cow::<str>::Borrowed(&*s_fixed) };
+    let s_fixed = fv::core::js_to_fixed(props.cents as f64 / 100.0, 2);
+    let s_amount = if fv_i18n.locale() == "nl" { std::borrow::Cow::<str>::Owned(fv::strings::js_replace(&s_fixed, ".", ",").into_owned()) } else { std::borrow::Cow::<str>::Borrowed(&*s_fixed) };
     out.push_str("<section");
     if fv_i18n.locale().is_empty() {
         out.push_str(" lang");
     } else {
         out.push_str(" lang=\"");
-        fv::escape_into(out, fv_i18n.locale());
+        fv::core::escape_into(out, fv_i18n.locale());
         out.push('"');
     }
     out.push_str("><p>");
-    fv::escape_into(out, &fv_i18n.t("price", &fv::i18n::Args::new().with_named(&[("amount", fv::i18n::Value::Str(&s_amount))])));
+    fv::core::escape_into(out, &fv_i18n.t("price", &fv::i18n::Args::new().with_named(&[("amount", fv::i18n::Value::Str(&s_amount))])));
     out.push_str("</p><p>");
-    fv::escape_into(out, &props.total);
+    fv::core::escape_into(out, &props.total);
     out.push_str("</p><p>");
-    fv::escape_into(out, &fv_i18n.t("posted", &fv::i18n::Args::new().with_named(&[("date", fv::i18n::Value::Str(&fv::js_slice(&fv::js_to_iso_string(fv::js_date_parse(&props.posted)), 0.0f64, Some(10.0f64))))])));
+    fv::core::escape_into(out, &fv_i18n.t("posted", &fv::i18n::Args::new().with_named(&[("date", fv::i18n::Value::Str(&fv::strings::js_slice(&fv::date::js_to_iso_string(fv::date::js_date_parse(&props.posted)), 0.0f64, Some(10.0f64))))])));
     out.push_str("</p><time datetime=\"");
-    fv::escape_into(out, &fv::js_to_iso_string(fv::js_date_parse(&props.posted)));
+    fv::core::escape_into(out, &fv::date::js_to_iso_string(fv::date::js_date_parse(&props.posted)));
     out.push_str("\">");
-    fv::push_number(out, fv::js_utc_date(fv::js_date_parse(&props.posted)));
+    fv::core::push_number(out, fv::date::js_utc_date(fv::date::js_date_parse(&props.posted)));
     out.push('-');
-    fv::push_number(out, fv::js_utc_month(fv::js_date_parse(&props.posted)) + 1.0);
+    fv::core::push_number(out, fv::date::js_utc_month(fv::date::js_date_parse(&props.posted)) + 1.0);
     out.push('-');
-    fv::push_number(out, fv::js_utc_full_year(fv::js_date_parse(&props.posted)));
+    fv::core::push_number(out, fv::date::js_utc_full_year(fv::date::js_date_parse(&props.posted)));
     out.push_str("</time></section>");
 }
 # } }

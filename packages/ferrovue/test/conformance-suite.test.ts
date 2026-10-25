@@ -4,7 +4,8 @@ import { join } from "node:path";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import type { Component } from "vue";
 import { write } from "../src/compiler.ts";
-import { firstDifference, registerConformance, type ConformanceOptions } from "../src/conformance.ts";
+import { firstDifference, registerConformance } from "../src/conformance.ts";
+import { type ConformanceOptions } from "../src/testing.ts";
 
 const SAMPLE = join(import.meta.dirname, "suite");
 const Hello = import.meta.glob<Component>("./suite/components/Hello.vue", { eager: true, import: "default" })["./suite/components/Hello.vue"]!;

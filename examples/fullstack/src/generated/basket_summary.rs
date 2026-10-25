@@ -31,7 +31,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::Stores<'_>) {
-    fv::rendered(try_render(out, props, fv_stores));
+    fv::render::rendered(try_render(out, props, fv_stores));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -39,24 +39,24 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::St
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::Stores<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::Stores<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(74 + props.label.len());
     out.push_str("<p class=\"basket");
-    fv::class_into(out, true, &[if fv_stores.basket.ids.len() as i64 as f64 == 0.0 { "empty" } else { "" }]);
+    fv::attrs::class_into(out, true, &[if fv_stores.basket.ids.len() as i64 as f64 == 0.0 { "empty" } else { "" }]);
     out.push_str("\" data-v-0a3b973f>");
-    fv::escape_into(out, &props.label);
+    fv::core::escape_into(out, &props.label);
     out.push_str(" of ");
-    fv::escape_into(out, &fv_stores.basket.owner);
+    fv::core::escape_into(out, &fv_stores.basket.owner);
     out.push_str(": <b data-v-0a3b973f>");
-    fv::push_int(out, fv_stores.basket.ids.len() as i64);
+    fv::core::push_int(out, fv_stores.basket.ids.len() as i64);
     out.push_str("</b> ");
-    fv::escape_into(out, if fv_stores.basket.ids.len() as i64 as f64 == 1.0 { "book" } else { "books" });
+    fv::core::escape_into(out, if fv_stores.basket.ids.len() as i64 as f64 == 1.0 { "book" } else { "books" });
     out.push_str("</p>");
     Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_stores: &'p super::stores::Stores<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_stores)))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_stores: &'p super::stores::Stores<'p>) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_stores)))
 }

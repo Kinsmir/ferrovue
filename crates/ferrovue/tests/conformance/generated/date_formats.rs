@@ -12,12 +12,12 @@ pub const NAME: &str = "DateFormats";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "posted", with = "fv::date_prop")]
-    pub posted: ferrovue::JsDate,
-    #[serde(rename = "due", with = "fv::date_prop")]
-    pub due: ferrovue::JsDate,
-    #[serde(rename = "edited", default, skip_serializing_if = "Option::is_none", with = "fv::opt_date_prop")]
-    pub edited: Option<ferrovue::JsDate>,
+    #[serde(rename = "posted", with = "fv::date::date_prop")]
+    pub posted: ferrovue::date::JsDate,
+    #[serde(rename = "due", with = "fv::date::date_prop")]
+    pub due: ferrovue::date::JsDate,
+    #[serde(rename = "edited", default, skip_serializing_if = "Option::is_none", with = "fv::date::opt_date_prop")]
+    pub edited: Option<ferrovue::date::JsDate>,
     #[serde(rename = "published")]
     pub published: Cow<'a, str>,
     #[serde(rename = "year")]
@@ -36,12 +36,12 @@ impl<'a> Props<'a> {
     /// Props with its required fields, every optional one absent.
     // One argument per required field, however many the type declares.
     #[allow(clippy::too_many_arguments)]
-    pub fn new(posted: ferrovue::JsDate, due: ferrovue::JsDate, published: impl Into<Cow<'a, str>>, year: i64, month: i64, day: f64, times: Vec<i64>, label: impl Into<Cow<'a, str>>) -> Self {
+    pub fn new(posted: ferrovue::date::JsDate, due: ferrovue::date::JsDate, published: impl Into<Cow<'a, str>>, year: i64, month: i64, day: f64, times: Vec<i64>, label: impl Into<Cow<'a, str>>) -> Self {
         Props { posted, due, edited: None, published: published.into(), year, month, day, times, label: label.into() }
     }
 
     /// Set `edited`, which is absent otherwise.
-    pub fn edited(mut self, edited: ferrovue::JsDate) -> Self {
+    pub fn edited(mut self, edited: ferrovue::date::JsDate) -> Self {
         self.edited = Some(edited);
         self
     }
@@ -54,7 +54,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -62,74 +62,74 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(234 + 19 * props.times.len() + props.published.len() + props.label.len());
-    let fv_refusals = fv::Refusals::new(NAME, "components/DateFormats.vue");
-    let s_made = std::cell::LazyCell::new(|| fv::js_time_clip(fv_refusals.keep(fv::try_date_utc(props.year as f64, props.month as f64, props.day, 0.0f64, 0.0f64, 0.0f64, 0.0f64), 6, 38)));
-    let s_json = fv::js_to_json(fv::js_time_of(&props.posted)).map(std::borrow::Cow::<str>::Owned);
-    let s_early = fv::js_time_of(&props.posted) < fv::js_time_of(&props.due);
+    let fv_refusals = fv::render::Refusals::new(NAME, "components/DateFormats.vue");
+    let s_made = std::cell::LazyCell::new(|| fv::date::js_time_clip(fv_refusals.keep(fv::date::try_date_utc(props.year as f64, props.month as f64, props.day, 0.0f64, 0.0f64, 0.0f64, 0.0f64), 6, 38)));
+    let s_json = fv::date::js_to_json(fv::date::js_time_of(&props.posted)).map(std::borrow::Cow::<str>::Owned);
+    let s_early = fv::date::js_time_of(&props.posted) < fv::date::js_time_of(&props.due);
     out.push_str("<article><h2>");
-    fv::escape_into(out, &props.label);
+    fv::core::escape_into(out, &props.label);
     out.push_str("</h2><time");
-    if let Some(v) = fv::js_to_json(fv::js_time_of(&props.posted)).as_deref() {
+    if let Some(v) = fv::date::js_to_json(fv::date::js_time_of(&props.posted)).as_deref() {
         out.push_str(" datetime=\"");
-        fv::escape_into(out, v);
+        fv::core::escape_into(out, v);
         out.push('"');
     }
-    if let Some(v) = fv::js_to_json(fv::js_time_of(&props.due)).as_deref() {
+    if let Some(v) = fv::date::js_to_json(fv::date::js_time_of(&props.due)).as_deref() {
         out.push_str(" title=\"");
-        fv::escape_into(out, v);
+        fv::core::escape_into(out, v);
         out.push('"');
     }
     out.push('>');
-    fv::escape_into(out, &fv::js_to_utc_string(fv::js_time_of(&props.posted)));
+    fv::core::escape_into(out, &fv::date::js_to_utc_string(fv::date::js_time_of(&props.posted)));
     out.push_str("</time><p>");
-    fv::escape_into(out, s_json.as_deref().unwrap_or("no date"));
+    fv::core::escape_into(out, s_json.as_deref().unwrap_or("no date"));
     out.push('|');
-    if let Some(v) = fv::js_to_json(fv::js_time_of(&props.due)).as_deref() {
-        fv::escape_into(out, v);
+    if let Some(v) = fv::date::js_to_json(fv::date::js_time_of(&props.due)).as_deref() {
+        fv::core::escape_into(out, v);
     }
     out.push('|');
-    fv::escape_into(out, &fv::js_json_date(fv::js_time_of(&props.posted)));
+    fv::core::escape_into(out, &fv::date::js_json_date(fv::date::js_time_of(&props.posted)));
     out.push('|');
-    fv::escape_into(out, &fv::js_json_date(fv_refusals.keep(fv::try_date_parse(&props.published), 15, 97)));
+    fv::core::escape_into(out, &fv::date::js_json_date(fv_refusals.keep(fv::date::try_date_parse(&props.published), 15, 97)));
     out.push('|');
-    fv::escape_into(out, &format!("[{}]", [&*props.label].iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| fv::js_json_string(&v)).collect::<Vec<_>>().join(",")));
+    fv::core::escape_into(out, &format!("[{}]", [&*props.label].iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| fv::strings::js_json_string(&v)).collect::<Vec<_>>().join(",")));
     out.push_str("</p>");
-    if fv::js_to_json(fv::js_time_of(&props.due)).as_deref().is_none() {
+    if fv::date::js_to_json(fv::date::js_time_of(&props.due)).as_deref().is_none() {
         out.push_str("<p>due is invalid</p>");
     } else {
         out.push_str("<p>due ");
-        fv::escape_into(out, &fv::js_to_utc_string(fv::js_time_of(&props.due)));
+        fv::core::escape_into(out, &fv::date::js_to_utc_string(fv::date::js_time_of(&props.due)));
         out.push_str("</p>");
     }
     out.push_str("<p>");
-    fv::push_number(out, fv_refusals.keep(fv::try_date_utc(props.year as f64, 0.0f64, 1.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64), 18, 11));
+    fv::core::push_number(out, fv_refusals.keep(fv::date::try_date_utc(props.year as f64, 0.0f64, 1.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64), 18, 11));
     out.push('|');
-    fv::push_number(out, fv_refusals.keep(fv::try_date_utc(props.year as f64, props.month as f64, 1.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64), 18, 32));
+    fv::core::push_number(out, fv_refusals.keep(fv::date::try_date_utc(props.year as f64, props.month as f64, 1.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64), 18, 32));
     out.push('|');
-    fv::push_number(out, fv_refusals.keep(fv::try_date_utc(props.year as f64, props.month as f64, props.day, 25.0f64, -1.0f64, 61.0f64, 999.9f64), 18, 60));
+    fv::core::push_number(out, fv_refusals.keep(fv::date::try_date_utc(props.year as f64, props.month as f64, props.day, 25.0f64, -1.0f64, 61.0f64, 999.9f64), 18, 60));
     out.push_str("|915148800000|-62167305600000|");
-    fv::escape_into(out, &fv::js_to_utc_string(*s_made));
+    fv::core::escape_into(out, &fv::date::js_to_utc_string(*s_made));
     out.push('|');
-    fv::push_number(out, *s_made);
+    fv::core::push_number(out, *s_made);
     out.push_str("</p><p>");
     out.push_str(if s_early { "true" } else { "false" });
     out.push('|');
-    out.push_str(if fv::js_time_of(&props.posted) <= fv::js_time_of(&props.due) { "true" } else { "false" });
+    out.push_str(if fv::date::js_time_of(&props.posted) <= fv::date::js_time_of(&props.due) { "true" } else { "false" });
     out.push('|');
-    out.push_str(if fv::js_time_of(&props.posted) > fv::js_time_of(&props.due) { "true" } else { "false" });
+    out.push_str(if fv::date::js_time_of(&props.posted) > fv::date::js_time_of(&props.due) { "true" } else { "false" });
     out.push('|');
-    out.push_str(if fv::js_time_of(&props.posted) >= fv::js_time_of(&props.due) { "true" } else { "false" });
+    out.push_str(if fv::date::js_time_of(&props.posted) >= fv::date::js_time_of(&props.due) { "true" } else { "false" });
     out.push('|');
-    out.push_str(if !fv::js_time_of(&props.posted).is_nan() { "true" } else { "false" });
+    out.push_str(if !fv::date::js_time_of(&props.posted).is_nan() { "true" } else { "false" });
     out.push('|');
-    out.push_str(if fv_refusals.keep(fv::try_date_parse(&props.published), 19, 105) < fv::js_time_of(&props.posted) { "true" } else { "false" });
+    out.push_str(if fv_refusals.keep(fv::date::try_date_parse(&props.published), 19, 105) < fv::date::js_time_of(&props.posted) { "true" } else { "false" });
     out.push_str("</p>");
-    if let Some(fv_edited) = props.edited.as_ref().map(fv::js_time_of) && fv_edited > fv::js_time_of(&props.posted) {
+    if let Some(fv_edited) = props.edited.as_ref().map(fv::date::js_time_of) && fv_edited > fv::date::js_time_of(&props.posted) {
         out.push_str("<p>edited later, ");
-        fv::escape_into(out, &fv::js_to_utc_string(fv_edited));
+        fv::core::escape_into(out, &fv::date::js_to_utc_string(fv_edited));
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");
@@ -138,11 +138,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     for fv_t_ref in props.times.iter() {
         let fv_t = *fv_t_ref;
         out.push_str("<li class=\"");
-        fv::class_into(out, false, &[if fv::js_time_clip(fv_t as f64) > fv::js_time_of(&props.due) { "late" } else { "" }]);
+        fv::attrs::class_into(out, false, &[if fv::date::js_time_clip(fv_t as f64) > fv::date::js_time_of(&props.due) { "late" } else { "" }]);
         out.push_str("\">");
-        fv::escape_into(out, &fv::js_to_utc_string(fv::js_time_clip(fv_t as f64)));
+        fv::core::escape_into(out, &fv::date::js_to_utc_string(fv::date::js_time_clip(fv_t as f64)));
         out.push('|');
-        fv::escape_into(out, &fv::js_to_json(fv::js_time_clip(fv_t as f64)).map(std::borrow::Cow::<str>::Owned).unwrap_or(std::borrow::Cow::<str>::Borrowed("invalid")));
+        fv::core::escape_into(out, &fv::date::js_to_json(fv::date::js_time_clip(fv_t as f64)).map(std::borrow::Cow::<str>::Owned).unwrap_or(std::borrow::Cow::<str>::Borrowed("invalid")));
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul></article>");
@@ -150,21 +150,21 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

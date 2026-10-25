@@ -4,7 +4,9 @@ import { Bench } from "tinybench";
 import { expect, it } from "vitest";
 import { createSSRApp, version as vueVersion, type App, type Component } from "vue";
 import { renderToString } from "vue/server-renderer";
-import { attachSsrRender, fixtureApp, type RouteEntry } from "../src/testing.ts";
+import { attachSsrRender } from "../src/ssr.ts";
+import { fixtureApp } from "../src/testing-browser.ts";
+import { type RouteEntry } from "../src/route-records.ts";
 
 const ROOT = join(import.meta.dirname, "../../../crates/ferrovue/tests/conformance");
 const EXPECTED = join(import.meta.dirname, "../../../crates/ferrovue/benches/expected");

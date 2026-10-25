@@ -1,7 +1,8 @@
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { AREAS, type ErrorDoc, ERRORS } from "../src/errors.ts";
+import { AREAS } from "../src/error-areas.ts";
+import { type ErrorDoc, ERRORS } from "../src/errors.ts";
 
 const SRC = join(import.meta.dirname, "../src");
 const RUNTIME = join(import.meta.dirname, "../../../crates/ferrovue/src");
@@ -36,8 +37,8 @@ one the compiler stops raising stays listed here, marked retired. The first two 
 area. [\`errors_and_limits\`](crate::guide::errors_and_limits) explains what the compiler refuses
 and why. A warning, such as one for a deprecated configuration key, has a code of its own, shown as
 \`warning[FV1117]\` and with the \`severity\` \`"warning"\` in JSON. A refusal at render time, which a
-generated \`try_render\` returns as a [\`Refused\`](crate::Refused), has a code of this list too, which
-[\`Refused::code\`](crate::Refused::code) gives.
+generated \`try_render\` returns as a [\`Refused\`](crate::render::Refused), has a code of this list too, which
+[\`Refused::code\`](crate::render::Refused::code) gives.
 
 This page is generated from the compiler's list in \`packages/ferrovue/src/errors.ts\` by
 \`pnpm errors:generate\`; \`pnpm test\` fails when the two differ.

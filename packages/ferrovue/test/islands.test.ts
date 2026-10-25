@@ -7,7 +7,8 @@ import { renderToString } from "vue/server-renderer";
 import { createPinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { hydrateState, mountIslands } from "../src/client.ts";
-import { attachSsrRender, routeRecords, type RouteEntry } from "../src/testing.ts";
+import { attachSsrRender } from "../src/ssr.ts";
+import { routeRecords, type RouteEntry } from "../src/route-records.ts";
 
 const ROOT = join(import.meta.dirname, "../../../crates/ferrovue/tests/conformance");
 const modules = import.meta.glob<{ default: Component }>("../../../crates/ferrovue/tests/conformance/components/*.vue", { eager: true });

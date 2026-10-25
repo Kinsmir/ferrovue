@@ -45,18 +45,18 @@ component's markup in the element the client mounts on, with the props it was re
 # pub fn render(out: &mut String, props: &Props) {
 #     out.reserve(23);
 #     out.push_str("<button>");
-#     fv::push_int(out, props.start);
+#     fv::core::push_int(out, props.start);
 #     out.push_str("</button>");
 # }
 #
 # /// The component's markup, for a maud page that shows it without hydrating it.
-# pub fn html<'p>(props: &'p Props) -> fv::Html<'p, Props> {
-#     fv::Html::markup(props, render)
+# pub fn html<'p>(props: &'p Props) -> fv::html::Html<'p, Props> {
+#     fv::html::Html::markup(props, render)
 # }
 #
 # /// The component as an island the client hydrates.
-# pub fn island<'p>(props: &'p Props) -> fv::Html<'p, Props> {
-#     fv::Html::island(NAME, props, render)
+# pub fn island<'p>(props: &'p Props) -> fv::html::Html<'p, Props> {
+#     fv::html::Html::island(NAME, props, render)
 # }
 # }
 // Counter.vue: defineProps<{ start: number }>(), rendering <button>{{ start }}</button>.
@@ -116,7 +116,7 @@ values or the page head has `html()` alone.
 ## Hydrating later
 
 An island hydrates as soon as `mountIslands` runs, and its code is fetched then. One the reader may
-never reach, or never touch, can wait: [`Html::hydrate`](crate::Html::hydrate) writes when it
+never reach, or never touch, can wait: [`Html::hydrate`](crate::html::Html::hydrate) writes when it
 hydrates as a `data-hydrate` attribute on the wrapper, after `data-props`, and `mountIslands` loads
 its component and hydrates it only then.
 
@@ -126,14 +126,14 @@ its component and hydrates it only then.
 #     pub struct Props { pub count: i64 }
 #     pub fn render(out: &mut String, props: &Props) {
 #         out.push_str("<p>");
-#         ferrovue::push_int(out, props.count);
+#         ferrovue::core::push_int(out, props.count);
 #         out.push_str(" reviews</p>");
 #     }
-#     pub fn island(props: &Props) -> ferrovue::Html<'_, Props> {
-#         ferrovue::Html::island("Reviews", props, render)
+#     pub fn island(props: &Props) -> ferrovue::html::Html<'_, Props> {
+#         ferrovue::html::Html::island("Reviews", props, render)
 #     }
 # }
-use ferrovue::Hydrate;
+use ferrovue::html::Hydrate;
 
 let props = reviews::Props { count: 3 };
 assert_eq!(
@@ -142,7 +142,7 @@ assert_eq!(
 );
 ```
 
-| [`Hydrate`](crate::Hydrate) | `data-hydrate` | The island hydrates |
+| [`Hydrate`](crate::html::Hydrate) | `data-hydrate` | The island hydrates |
 | --- | --- | --- |
 | `Visible` | `visible` | once any of it is in the viewport (Vue's `hydrateOnVisible`) |
 | `visible_with("200px")` | `visible:200px` | once any of it is within that root margin of the viewport (Vue's `hydrateOnVisible({ rootMargin })`) |
@@ -176,15 +176,15 @@ say) is better hydrated at once.
 # Hydrating a page
 
 A page is often a layout whose slots hold components, each rendered from its own props: a header,
-a list, a pager, a sidebar. [`Page`](crate::Page) records that tree as it is written, so the client
+a list, a pager, a sidebar. [`Page`](crate::page::Page) records that tree as it is written, so the client
 can hydrate the layout and everything in it as one app.
 
-Each slot's content is a list of [`Part`](crate::Part)s. A part is made from a component's `NAME`
-and the [`Html`](crate::Html) value that writes its markup, so the props recorded for it are the
-props it was rendered from. [`Page::slot`](crate::Page::slot) takes a slot's parts,
-[`Page::hole`](crate::Page::hole) leaves a slot to be filled while the page streams, and
-[`Page::render_to`](crate::Page::render_to) writes the layout and records its props. The record
-is a `<script type="application/json">`, escaped as [`state_script_into`](crate::state_script_into)
+Each slot's content is a list of [`Part`](crate::page::Part)s. A part is made from a component's `NAME`
+and the [`Html`](crate::html::Html) value that writes its markup, so the props recorded for it are the
+props it was rendered from. [`Page::slot`](crate::page::Page::slot) takes a slot's parts,
+[`Page::hole`](crate::page::Page::hole) leaves a slot to be filled while the page streams, and
+[`Page::render_to`](crate::page::Page::render_to) writes the layout and records its props. The record
+is a `<script type="application/json">`, escaped as [`state_script_into`](crate::page::state_script_into)
 escapes the state, so no prop can end the element:
 
 ```json
@@ -195,7 +195,7 @@ escapes the state, so no prop can end the element:
 
 A shortened version of the staff picks page in `examples/fullstack` (`src/pages.rs`), whose
 reviews arrive after a slow lookup. The record goes in a hole of its own after the app's container,
-and [`PageRecord::script`](crate::PageRecord::script) is ready once every hole of the page is
+and [`PageRecord::script`](crate::page::PageRecord::script) is ready once every hole of the page is
 filled:
 
 ```rust
@@ -207,11 +207,11 @@ filled:
 #     pub struct Props<'a> { pub book: &'a str }
 #     pub fn render(out: &mut String, props: &Props<'_>) {
 #         out.push_str("<li>");
-#         ferrovue::escape_into(out, props.book);
+#         ferrovue::core::escape_into(out, props.book);
 #         out.push_str("</li>");
 #     }
-#     pub fn html<'p, 'a>(props: &'p Props<'a>) -> ferrovue::Html<'p, Props<'a>> {
-#         ferrovue::Html::markup(props, render)
+#     pub fn html<'p, 'a>(props: &'p Props<'a>) -> ferrovue::html::Html<'p, Props<'a>> {
+#         ferrovue::html::Html::markup(props, render)
 #     }
 # }
 # mod reviews {
@@ -223,11 +223,11 @@ filled:
 #     }
 #     pub fn render(out: &mut String, props: &Props) {
 #         out.push_str("<p>");
-#         ferrovue::push_int(out, props.reviews.len() as i64);
+#         ferrovue::core::push_int(out, props.reviews.len() as i64);
 #         out.push_str(" reviews</p>");
 #     }
-#     pub fn into_html(props: Props) -> ferrovue::Html<'static, Props> {
-#         ferrovue::Html::markup_owned(props, render)
+#     pub fn into_html(props: Props) -> ferrovue::html::Html<'static, Props> {
+#         ferrovue::html::Html::markup_owned(props, render)
 #     }
 # }
 # mod picks {
@@ -235,31 +235,31 @@ filled:
 #     #[derive(serde::Serialize)]
 #     pub struct Props<'a> { pub shop: &'a str }
 #     #[derive(Clone, Copy)]
-#     pub struct Slots<'s> { pub default: Option<fv::Slot<'s>>, pub reviews: Option<fv::Slot<'s>> }
-#     pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::Route<'_>) {
+#     pub struct Slots<'s> { pub default: Option<fv::render::Slot<'s>>, pub reviews: Option<fv::render::Slot<'s>> }
+#     pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::router::Route<'_>) {
 #         out.push_str("<main><h1>");
-#         fv::escape_into(out, props.shop);
+#         fv::core::escape_into(out, props.shop);
 #         out.push_str("</h1><ul>");
-#         fv::slot_into(out, fv_slots.default, None);
+#         fv::render::slot_into(out, fv_slots.default, None);
 #         out.push_str("</ul>");
-#         fv::slot_into(out, fv_slots.reviews, None);
+#         fv::render::slot_into(out, fv_slots.reviews, None);
 #         out.push_str("</main>");
 #         let _ = fv_route;
 #     }
-#     pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>, fv_route: &'p fv::Route<'p>) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-#         fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_slots, fv_route))
+#     pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>, fv_route: &'p fv::router::Route<'p>) -> fv::html::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
+#         fv::html::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_slots, fv_route))
 #     }
 # }
 # mod catalogue {
 #     pub async fn reviews(id: &str) -> Vec<String> { vec![format!("{id} is a classic.")] }
 # }
-# use ferrovue::HtmlStream;
-# let router = ferrovue::Router::named(&[("/picks", Some("picks"))]);
+# use ferrovue::web::HtmlStream;
+# let router = ferrovue::router::Router::named(&[("/picks", Some("picks"))]);
 # let route = router.at("/picks");
 # let picks = [pick::Props { book: "Dune" }, pick::Props { book: "Solaris" }];
 # let props = picks::Props { shop: "Ferrovue Books" };
 # let id = String::from("dune");
-use ferrovue::{Page, Part};
+use ferrovue::page::{Page, Part};
 
 let mut page = Page::new();
 let parts = page.slot("default", picks.iter().map(|props| Part::new(pick::NAME, pick::html(props))));
@@ -268,7 +268,7 @@ let mut out = String::from("<!doctype html>…<body><div id=\"app\">");
 let slots = picks::Slots { default: Some(parts.slot()), reviews: Some(later.slot()) };
 let record = page.render_to(&mut out, picks::html(&props, slots, &route));
 out.push_str("</div>");
-ferrovue::hole().render_to(&mut out); // where the record goes
+ferrovue::page::hole().render_to(&mut out); // where the record goes
 let body = HtmlStream::new(out)
     .hole(async move {
         let list = catalogue::reviews(&id).await;
@@ -282,7 +282,7 @@ let body = HtmlStream::new(out)
 ```
 
 A page written at once has no holes, and writes the record with
-[`PageRecord::script_into`](crate::PageRecord::script_into) instead.
+[`PageRecord::script_into`](crate::page::PageRecord::script_into) instead.
 
 On the client, `mountPage` from `ferrovue` reads the record, loads the components it names and no
 others, waits for the router, and hydrates the layout on `#app`:
@@ -396,7 +396,7 @@ the app's container, where the page writes it once.
 
 ## Testing a page
 
-`hydrateRecordedPage` from `ferrovue/testing` takes a page as the server wrote it (the container
+`hydrateRecordedPage` from `ferrovue/testing/browser` takes a page as the server wrote it (the container
 and the record's script, or the container and the record as an object), puts it in the document
 and hydrates it with `mountPage`. It compares the markup as hydrating leaves it with the markup the
 server wrote, then waits for the page to settle: a `<ClientOnly>` shows its content and async
@@ -435,7 +435,7 @@ Each island is loaded on demand, and the browser finds its scripts one import at
 script, once the HTML is parsed; the app and Vue, once the entry runs; the islands, once the page
 has been read; and what they import. The server knows every island the page holds, so it can name
 their chunks up front with `<link rel="modulepreload">`, and the browser fetches them alongside the
-entry. [`Chunks`](crate::Chunks) reads Vite's manifest (`build.manifest: true` writes
+entry. [`Chunks`](crate::page::Chunks) reads Vite's manifest (`build.manifest: true` writes
 `.vite/manifest.json`) and `.vite/ferrovue-islands.json`, which the Vite plugin writes beside it
 with the chunk that holds each island. An island another component also imports has no chunk of its
 own, and no key in the manifest: it is bundled into a chunk they share, which that file names.
@@ -449,7 +449,7 @@ own, and no key in the manifest: it is bundled into a chunk they share, which th
 # }"#;
 # let islands = r#"{ "Counter": "assets/Counter.js" }"#;
 // Read once, at start-up, from `dist/.vite/manifest.json` and `dist/.vite/ferrovue-islands.json`.
-let chunks = ferrovue::Chunks::from_manifest(manifest, islands)?;
+let chunks = ferrovue::page::Chunks::from_manifest(manifest, islands)?;
 
 // For each page:
 let mut preloads = chunks.preloads();
@@ -464,14 +464,14 @@ assert_eq!(
         r#"<link rel="modulepreload" href="/assets/Counter.js">"#,
     )
 );
-# Ok::<(), ferrovue::ManifestError>(())
+# Ok::<(), ferrovue::page::ManifestError>(())
 ```
 
 An island needs its own chunk and those it imports statically, never the entry, which the page's
-`<script>` loads, nor what it imports dynamically. [`Preloads`](crate::Preloads) writes each URL
+`<script>` loads, nor what it imports dynamically. [`Preloads`](crate::page::Preloads) writes each URL
 once per page however many islands share it, as most share Vue's chunk;
-[`for_islands`](crate::Chunks::for_islands) gives the URLs instead, for a `Link` header, say.
-[`with_base`](crate::Chunks::with_base) serves them under Vite's `base`. In development Vite serves
+[`for_islands`](crate::page::Chunks::for_islands) gives the URLs instead, for a `Link` header, say.
+[`with_base`](crate::page::Chunks::with_base) serves them under Vite's `base`. In development Vite serves
 the sources and there is no manifest: link nothing.
 
 An island's `<style>` goes into its chunk too, and Vite links it only once the island's script has
@@ -479,7 +479,7 @@ loaded, after the server's markup is on screen. Link those stylesheets from the 
 server reading Vite's manifest takes the `css` of the entry's `dynamicImports` as well as its own,
 as `examples/fullstack/src/assets.rs` does.
 
-Preload the islands that hydrate at once. An island given a [`Hydrate`](crate::Hydrate) waits to be
+Preload the islands that hydrate at once. An island given a [`Hydrate`](crate::html::Hydrate) waits to be
 seen, clicked or idle before it fetches its code; preloading it fetches that code with the page,
 which is what waiting was meant to spare.
 
@@ -493,8 +493,8 @@ Where the links go:
 - **A streamed page** flushes its head before its content is known. Preload the app and the islands
   of what is already rendered (the header, the slots given at once) in `<head>`, and each hole's
   islands with its content, after the app's container closes, beside the record's `<script>`:
-  [`PageRecord::island_names`](crate::PageRecord::island_names) names those of the slots and the
-  holes filled by then, and a hole's parts name themselves with [`Part::name`](crate::Part::name).
+  [`PageRecord::island_names`](crate::page::PageRecord::island_names) names those of the slots and the
+  holes filled by then, and a hole's parts name themselves with [`Part::name`](crate::page::Part::name).
   Keep one `Preloads` for the page so nothing is linked twice.
 
 # Hydrating the whole app

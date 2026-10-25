@@ -4,10 +4,8 @@
 
 ```ts
 
-import type { Component } from 'vue';
 import { RouteLocationNormalized } from 'vue-router';
 import { Router } from 'vue-router';
-import type { RouteRecordRaw } from 'vue-router';
 import { RouterHistory } from 'vue-router';
 
 // @public
@@ -22,17 +20,6 @@ export interface LinkRouterOptions {
     location?: string;
     navigate: (href: string, to: RouteLocationNormalized) => void;
 }
-
-// @public
-export type RouteEntry = string | {
-    path: string;
-    name?: string;
-    view?: boolean;
-    children?: RouteEntry[];
-};
-
-// @public
-export function routeRecords(routes: RouteEntry[], View: Component): RouteRecordRaw[];
 
 // (No @packageDocumentation comment for this package)
 

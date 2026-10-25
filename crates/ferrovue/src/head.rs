@@ -6,7 +6,7 @@ use std::sync::atomic::{AtomicUsize, Ordering as AtomicOrdering};
 
 use ferrovue_core::push_number;
 
-use crate::record::array_index;
+use crate::props::array_index;
 use crate::strings::{is_js_space, js_cmp, js_json_number, js_json_string, js_replace, js_trim};
 
 /// A value given to `useHead`, as JavaScript holds it: what the generated code builds from a
@@ -18,7 +18,7 @@ use crate::strings::{is_js_space, js_cmp, js_json_number, js_json_string, js_rep
 /// # Example
 ///
 /// ```
-/// use ferrovue::HeadValue;
+/// use ferrovue::head::HeadValue;
 ///
 /// let input = HeadValue::object([
 ///     ("title", HeadValue::str("Dune")),
@@ -273,7 +273,7 @@ enum Entry {
 /// # Example
 ///
 /// ```
-/// use ferrovue::{Head, HeadValue};
+/// use ferrovue::head::{Head, HeadValue};
 ///
 /// let head = Head::new();
 /// // What a generated component pushes for `useHead({ title: props.title })`.
@@ -346,7 +346,7 @@ impl Head {
     /// # Example
     ///
     /// ```
-    /// assert_eq!(ferrovue::Head::without_defaults().render(), ferrovue::HeadHtml::default());
+    /// assert_eq!(ferrovue::head::Head::without_defaults().render(), ferrovue::head::HeadHtml::default());
     /// ```
     #[must_use]
     pub fn without_defaults() -> Head {
@@ -373,7 +373,7 @@ impl Head {
     /// # Example
     ///
     /// ```
-    /// use ferrovue::{Head, HeadValue};
+    /// use ferrovue::head::{Head, HeadValue};
     ///
     /// let head = Head::without_defaults();
     /// head.push(HeadValue::object([("titleTemplate", HeadValue::str("%s · Books"))]));

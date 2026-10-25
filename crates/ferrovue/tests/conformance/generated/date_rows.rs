@@ -14,34 +14,34 @@ pub const NAME: &str = "DateRows";
 pub struct Row<'a> {
     #[serde(rename = "title")]
     pub title: Cow<'a, str>,
-    #[serde(rename = "at", with = "fv::date_prop")]
-    pub at: ferrovue::JsDate,
-    #[serde(rename = "edited", default, skip_serializing_if = "Option::is_none", with = "fv::opt_date_prop")]
-    pub edited: Option<ferrovue::JsDate>,
-    #[serde(rename = "deleted", default, with = "fv::opt_date_prop")]
-    pub deleted: Option<ferrovue::JsDate>,
-    #[serde(rename = "marks", with = "fv::dates_in")]
-    pub marks: Vec<ferrovue::JsDate>,
-    #[serde(rename = "seen", with = "fv::dates_in")]
-    pub seen: Vec<Option<ferrovue::JsDate>>,
-    #[serde(rename = "byName", with = "fv::dates_in")]
-    pub by_name: ferrovue::Record<'a, ferrovue::JsDate>,
+    #[serde(rename = "at", with = "fv::date::date_prop")]
+    pub at: ferrovue::date::JsDate,
+    #[serde(rename = "edited", default, skip_serializing_if = "Option::is_none", with = "fv::date::opt_date_prop")]
+    pub edited: Option<ferrovue::date::JsDate>,
+    #[serde(rename = "deleted", default, with = "fv::date::opt_date_prop")]
+    pub deleted: Option<ferrovue::date::JsDate>,
+    #[serde(rename = "marks", with = "fv::date::dates_in")]
+    pub marks: Vec<ferrovue::date::JsDate>,
+    #[serde(rename = "seen", with = "fv::date::dates_in")]
+    pub seen: Vec<Option<ferrovue::date::JsDate>>,
+    #[serde(rename = "byName", with = "fv::date::dates_in")]
+    pub by_name: ferrovue::props::Record<'a, ferrovue::date::JsDate>,
 }
 
 impl<'a> Row<'a> {
     /// Row with its required fields, every optional one absent and every nullable one `null`.
-    pub fn new(title: impl Into<Cow<'a, str>>, at: ferrovue::JsDate, marks: Vec<ferrovue::JsDate>, seen: Vec<Option<ferrovue::JsDate>>, by_name: ferrovue::Record<'a, ferrovue::JsDate>) -> Self {
+    pub fn new(title: impl Into<Cow<'a, str>>, at: ferrovue::date::JsDate, marks: Vec<ferrovue::date::JsDate>, seen: Vec<Option<ferrovue::date::JsDate>>, by_name: ferrovue::props::Record<'a, ferrovue::date::JsDate>) -> Self {
         Row { title: title.into(), at, edited: None, deleted: None, marks, seen, by_name }
     }
 
     /// Set `edited`, which is absent otherwise.
-    pub fn edited(mut self, edited: ferrovue::JsDate) -> Self {
+    pub fn edited(mut self, edited: ferrovue::date::JsDate) -> Self {
         self.edited = Some(edited);
         self
     }
 
     /// Set `deleted`, which is `null` otherwise.
-    pub fn deleted(mut self, deleted: ferrovue::JsDate) -> Self {
+    pub fn deleted(mut self, deleted: ferrovue::date::JsDate) -> Self {
         self.deleted = Some(deleted);
         self
     }
@@ -54,24 +54,24 @@ impl<'a> Row<'a> {
 pub struct Props<'a> {
     #[serde(rename = "rows")]
     pub rows: Vec<Row<'a>>,
-    #[serde(rename = "days", with = "fv::dates_in")]
-    pub days: Vec<ferrovue::JsDate>,
-    #[serde(rename = "maybe", default, skip_serializing_if = "Option::is_none", with = "fv::dates_in")]
-    pub maybe: Option<Vec<ferrovue::JsDate>>,
-    #[serde(rename = "stamps", with = "fv::dates_in")]
-    pub stamps: ferrovue::Record<'a, ferrovue::JsDate>,
+    #[serde(rename = "days", with = "fv::date::dates_in")]
+    pub days: Vec<ferrovue::date::JsDate>,
+    #[serde(rename = "maybe", default, skip_serializing_if = "Option::is_none", with = "fv::date::dates_in")]
+    pub maybe: Option<Vec<ferrovue::date::JsDate>>,
+    #[serde(rename = "stamps", with = "fv::date::dates_in")]
+    pub stamps: ferrovue::props::Record<'a, ferrovue::date::JsDate>,
     #[serde(rename = "lead")]
     pub lead: Option<Row<'a>>,
 }
 
 impl<'a> Props<'a> {
     /// Props with its required fields, every optional one absent and every nullable one `null`.
-    pub fn new(rows: Vec<Row<'a>>, days: Vec<ferrovue::JsDate>, stamps: ferrovue::Record<'a, ferrovue::JsDate>) -> Self {
+    pub fn new(rows: Vec<Row<'a>>, days: Vec<ferrovue::date::JsDate>, stamps: ferrovue::props::Record<'a, ferrovue::date::JsDate>) -> Self {
         Props { rows, days, maybe: None, stamps, lead: None }
     }
 
     /// Set `maybe`, which is absent otherwise.
-    pub fn maybe(mut self, maybe: Vec<ferrovue::JsDate>) -> Self {
+    pub fn maybe(mut self, maybe: Vec<ferrovue::date::JsDate>) -> Self {
         self.maybe = Some(maybe);
         self
     }
@@ -90,7 +90,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -98,122 +98,122 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(205 + 258 * props.rows.len() + 21 * props.stamps.len() + props.rows.iter().map(|v| v.title.len() + v.by_name.iter().map(|(k, _)| k.len()).sum::<usize>()).sum::<usize>() + props.stamps.iter().map(|(k, _)| k.len()).sum::<usize>() + props.lead.as_ref().map_or(0, |v| v.title.len() + v.by_name.iter().map(|(k, _)| k.len()).sum::<usize>()));
-    let fv_refusals = fv::Refusals::new(NAME, "components/DateRows.vue");
-    let s_edits = props.rows.iter().filter(|fv_r| fv_r.edited.as_ref().map(fv::js_time_of).is_some()).count() as i64;
-    let s_first = fv::js_item_at(props.days.iter().map(fv::js_time_of), 0.0f64);
+    let fv_refusals = fv::render::Refusals::new(NAME, "components/DateRows.vue");
+    let s_edits = props.rows.iter().filter(|fv_r| fv_r.edited.as_ref().map(fv::date::js_time_of).is_some()).count() as i64;
+    let s_first = fv::strings::js_item_at(props.days.iter().map(fv::date::js_time_of), 0.0f64);
     out.push_str("<section><!--[-->");
     for fv_row_ref in props.rows.iter() {
         let fv_row = fv_row_ref;
         out.push_str("<article><h3>");
-        fv::escape_into(out, &fv_row.title);
+        fv::core::escape_into(out, &fv_row.title);
         out.push_str("</h3>");
-        if !fv::js_time_of(&fv_row.at).is_nan() {
+        if !fv::date::js_time_of(&fv_row.at).is_nan() {
             out.push_str("<time datetime=\"");
-            fv::escape_into(out, &fv_refusals.keep(fv::try_to_iso_string(fv::js_time_of(&fv_row.at)), 25, 69));
+            fv::core::escape_into(out, &fv_refusals.keep(fv::date::try_to_iso_string(fv::date::js_time_of(&fv_row.at)), 25, 69));
             out.push_str("\">");
-            fv::push_number(out, fv::js_utc_full_year(fv::js_time_of(&fv_row.at)));
+            fv::core::push_number(out, fv::date::js_utc_full_year(fv::date::js_time_of(&fv_row.at)));
             out.push('-');
-            fv::push_number(out, fv::js_utc_month(fv::js_time_of(&fv_row.at)) + 1.0);
+            fv::core::push_number(out, fv::date::js_utc_month(fv::date::js_time_of(&fv_row.at)) + 1.0);
             out.push('-');
-            fv::push_number(out, fv::js_utc_date(fv::js_time_of(&fv_row.at)));
+            fv::core::push_number(out, fv::date::js_utc_date(fv::date::js_time_of(&fv_row.at)));
             out.push(' ');
-            fv::push_number(out, fv::js_utc_hours(fv::js_time_of(&fv_row.at)));
+            fv::core::push_number(out, fv::date::js_utc_hours(fv::date::js_time_of(&fv_row.at)));
             out.push(':');
-            fv::push_number(out, fv::js_utc_minutes(fv::js_time_of(&fv_row.at)));
+            fv::core::push_number(out, fv::date::js_utc_minutes(fv::date::js_time_of(&fv_row.at)));
             out.push(':');
-            fv::push_number(out, fv::js_utc_seconds(fv::js_time_of(&fv_row.at)));
+            fv::core::push_number(out, fv::date::js_utc_seconds(fv::date::js_time_of(&fv_row.at)));
             out.push('.');
-            fv::push_number(out, fv::js_utc_milliseconds(fv::js_time_of(&fv_row.at)));
+            fv::core::push_number(out, fv::date::js_utc_milliseconds(fv::date::js_time_of(&fv_row.at)));
             out.push_str(" day ");
-            fv::push_number(out, fv::js_utc_day(fv::js_time_of(&fv_row.at)));
+            fv::core::push_number(out, fv::date::js_utc_day(fv::date::js_time_of(&fv_row.at)));
             out.push_str("</time>");
         } else {
             out.push_str("<p>invalid ");
-            fv::push_number(out, fv::js_time_of(&fv_row.at));
+            fv::core::push_number(out, fv::date::js_time_of(&fv_row.at));
             out.push(' ');
-            fv::escape_into(out, &fv::js_to_utc_string(fv::js_time_of(&fv_row.at)));
+            fv::core::escape_into(out, &fv::date::js_to_utc_string(fv::date::js_time_of(&fv_row.at)));
             out.push_str("</p>");
         }
-        if let Some(fv_edited) = fv_row.edited.as_ref().map(fv::js_time_of) {
+        if let Some(fv_edited) = fv_row.edited.as_ref().map(fv::date::js_time_of) {
             out.push_str("<p>edited ");
-            fv::push_number(out, fv_edited);
-            fv::escape_into(out, if fv_edited > fv::js_time_of(&fv_row.at) { " after" } else { "" });
-            fv::escape_into(out, if fv_edited <= fv::js_time_of(&fv_row.at) { " not after" } else { "" });
+            fv::core::push_number(out, fv_edited);
+            fv::core::escape_into(out, if fv_edited > fv::date::js_time_of(&fv_row.at) { " after" } else { "" });
+            fv::core::escape_into(out, if fv_edited <= fv::date::js_time_of(&fv_row.at) { " not after" } else { "" });
             out.push_str("</p>");
         } else {
             out.push_str("<!---->");
         }
-        if let Some(fv_deleted) = fv_row.deleted.as_ref().map(fv::js_time_of) {
+        if let Some(fv_deleted) = fv_row.deleted.as_ref().map(fv::date::js_time_of) {
             out.push_str("<p>deleted ");
-            fv::escape_into(out, &fv::js_to_utc_string(fv_deleted));
+            fv::core::escape_into(out, &fv::date::js_to_utc_string(fv_deleted));
             out.push_str("</p>");
         } else {
             out.push_str("<!---->");
         }
         out.push_str("<ul><!--[-->");
-        for (fv_j, fv_mark) in fv_row.marks.iter().map(fv::js_time_of).enumerate() {
+        for (fv_j, fv_mark) in fv_row.marks.iter().map(fv::date::js_time_of).enumerate() {
             let fv_j = fv_j as i64;
             out.push_str("<li>");
-            fv::push_int(out, fv_j);
+            fv::core::push_int(out, fv_j);
             out.push_str(": ");
-            fv::push_number(out, fv_mark);
+            fv::core::push_number(out, fv_mark);
             out.push(' ');
-            fv::escape_into(out, if fv_mark >= fv::js_time_of(&fv_row.at) { "on or after" } else { "before or invalid" });
+            fv::core::escape_into(out, if fv_mark >= fv::date::js_time_of(&fv_row.at) { "on or after" } else { "before or invalid" });
             out.push_str("</li>");
         }
         out.push_str("<!--]--></ul><ol><!--[-->");
-        for fv_seen in fv_row.seen.iter().map(|v| v.as_ref().map(fv::js_time_of)) {
+        for fv_seen in fv_row.seen.iter().map(|v| v.as_ref().map(fv::date::js_time_of)) {
             out.push_str("<li>");
-            fv::escape_into(out, &(if let Some(fv_seen_2) = fv_seen { std::borrow::Cow::<str>::Owned(fv::Js(fv::js_utc_full_year(fv_seen_2)).to_string()) } else { std::borrow::Cow::<str>::Borrowed("unseen") }));
+            fv::core::escape_into(out, &(if let Some(fv_seen_2) = fv_seen { std::borrow::Cow::<str>::Owned(fv::core::Js(fv::date::js_utc_full_year(fv_seen_2)).to_string()) } else { std::borrow::Cow::<str>::Borrowed("unseen") }));
             out.push_str("</li>");
         }
         out.push_str("<!--]--></ol><dl><!--[-->");
         for (fv_name, fv_stamp_ref) in fv_row.by_name.iter() {
-            let fv_stamp = fv::js_time_of(fv_stamp_ref);
+            let fv_stamp = fv::date::js_time_of(fv_stamp_ref);
             out.push_str("<!--[--><dt>");
-            fv::escape_into(out, fv_name);
+            fv::core::escape_into(out, fv_name);
             out.push_str("</dt><dd>");
-            fv::push_number(out, fv_stamp);
+            fv::core::push_number(out, fv_stamp);
             out.push_str("</dd><!--]-->");
         }
         out.push_str("<!--]--></dl>");
-        fv_refusals.check(super::date_days::try_render(out, &super::date_days::Props { days: fv_row.marks.iter().map(fv::js_time_of).map(|fv_t| fv_refusals.date(fv_t, 43, 24)).collect(), maybe: None, by: fv_row.by_name.to_owned(), seen: fv_row.seen.iter().map(|v| v.as_ref().map(fv::js_time_of)).map(|v| v.map(|fv_t| fv_refusals.date(fv_t, 43, 59))).collect() }))?;
-        fv_refusals.check(super::date_stamp::try_render(out, &super::date_stamp::Props { at: fv_refusals.date(fv::js_time_of(&fv_row.at), 44, 23), edited: fv_row.edited.as_ref().map(fv::js_time_of).map(|fv_t| fv_refusals.date(fv_t, 44, 40)), deleted: fv_row.deleted.as_ref().map(fv::js_time_of).map(|fv_t| fv_refusals.date(fv_t, 44, 62)), shown: fv_refusals.date(fv::js_item_at(fv_row.marks.iter().map(fv::js_time_of), -1.0f64).unwrap_or(fv::js_time_of(&fv_row.at)), 44, 83) }))?;
+        fv_refusals.check(super::date_days::try_render(out, &super::date_days::Props { days: fv_row.marks.iter().map(fv::date::js_time_of).map(|fv_t| fv_refusals.date(fv_t, 43, 24)).collect(), maybe: None, by: fv_row.by_name.to_owned(), seen: fv_row.seen.iter().map(|v| v.as_ref().map(fv::date::js_time_of)).map(|v| v.map(|fv_t| fv_refusals.date(fv_t, 43, 59))).collect() }))?;
+        fv_refusals.check(super::date_stamp::try_render(out, &super::date_stamp::Props { at: fv_refusals.date(fv::date::js_time_of(&fv_row.at), 44, 23), edited: fv_row.edited.as_ref().map(fv::date::js_time_of).map(|fv_t| fv_refusals.date(fv_t, 44, 40)), deleted: fv_row.deleted.as_ref().map(fv::date::js_time_of).map(|fv_t| fv_refusals.date(fv_t, 44, 62)), shown: fv_refusals.date(fv::strings::js_item_at(fv_row.marks.iter().map(fv::date::js_time_of), -1.0f64).unwrap_or(fv::date::js_time_of(&fv_row.at)), 44, 83) }))?;
         out.push_str("</article>");
     }
     out.push_str("<!--]--><p>");
-    fv::push_int(out, props.rows.len() as i64);
+    fv::core::push_int(out, props.rows.len() as i64);
     out.push_str(" rows, ");
-    fv::push_int(out, s_edits);
+    fv::core::push_int(out, s_edits);
     out.push_str(" edited, ");
-    fv::push_int(out, props.days.len() as i64);
+    fv::core::push_int(out, props.days.len() as i64);
     out.push_str(" days");
-    fv::escape_into(out, &(if let Some(fv_maybe) = props.maybe.as_ref().map(|v| v.iter().map(fv::js_time_of).collect::<Vec<_>>()) { std::borrow::Cow::<str>::Owned(format!(", {} maybe", fv::Js(fv_maybe.len() as i64))) } else { std::borrow::Cow::<str>::Borrowed("") }));
+    fv::core::escape_into(out, &(if let Some(fv_maybe) = props.maybe.as_ref().map(|v| v.iter().map(fv::date::js_time_of).collect::<Vec<_>>()) { std::borrow::Cow::<str>::Owned(format!(", {} maybe", fv::core::Js(fv_maybe.len() as i64))) } else { std::borrow::Cow::<str>::Borrowed("") }));
     out.push_str("</p><!--[-->");
-    for fv_day in props.days.iter().map(fv::js_time_of) {
+    for fv_day in props.days.iter().map(fv::date::js_time_of) {
         out.push_str("<i>");
-        fv::push_number(out, fv::js_utc_date(fv_day));
+        fv::core::push_number(out, fv::date::js_utc_date(fv_day));
         out.push('/');
-        fv::push_number(out, fv::js_utc_month(fv_day) + 1.0);
+        fv::core::push_number(out, fv::date::js_utc_month(fv_day) + 1.0);
         out.push_str("</i>");
     }
     out.push_str("<!--]-->");
     if let Some(fv_first) = s_first {
         out.push_str("<b>");
-        fv::push_number(out, fv_first);
+        fv::core::push_number(out, fv_first);
         out.push_str("</b>");
     } else {
         out.push_str("<!---->");
     }
-    if let Some(fv_maybe_2) = props.maybe.as_ref().map(|v| v.iter().map(fv::js_time_of).collect::<Vec<_>>()) {
+    if let Some(fv_maybe_2) = props.maybe.as_ref().map(|v| v.iter().map(fv::date::js_time_of).collect::<Vec<_>>()) {
         out.push_str("<!--[-->");
         for fv_day_ref in fv_maybe_2.iter() {
             let fv_day_2 = *fv_day_ref;
             out.push_str("<s>");
-            fv::push_number(out, fv_day_2);
+            fv::core::push_number(out, fv_day_2);
             out.push_str("</s>");
         }
         out.push_str("<!--]-->");
@@ -222,31 +222,31 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     }
     out.push_str("<!--[-->");
     for (fv_k, (fv_name_2, fv_stamp_ref_2)) in props.stamps.iter().enumerate() {
-        let fv_stamp_2 = fv::js_time_of(fv_stamp_ref_2);
+        let fv_stamp_2 = fv::date::js_time_of(fv_stamp_ref_2);
         let fv_k = fv_k as i64;
         out.push_str("<u>");
-        fv::push_int(out, fv_k);
+        fv::core::push_int(out, fv_k);
         out.push(' ');
-        fv::escape_into(out, fv_name_2);
+        fv::core::escape_into(out, fv_name_2);
         out.push('=');
-        fv::push_number(out, fv_stamp_2);
+        fv::core::push_number(out, fv_stamp_2);
         out.push_str("</u>");
     }
     out.push_str("<!--]--><!--[-->");
-    for fv_stamp_3 in props.stamps.values().map(fv::js_time_of) {
+    for fv_stamp_3 in props.stamps.values().map(fv::date::js_time_of) {
         out.push_str("<em>");
-        fv::push_number(out, fv::js_utc_hours(fv_stamp_3));
+        fv::core::push_number(out, fv::date::js_utc_hours(fv_stamp_3));
         out.push_str("</em>");
     }
     out.push_str("<!--]-->");
-    fv_refusals.check(super::date_days::try_render(out, &super::date_days::Props { days: props.days.iter().map(fv::js_time_of).filter(|fv_d| !(*fv_d).is_nan()).map(|fv_t| fv_refusals.date(fv_t, 54, 22)).collect(), maybe: props.maybe.as_ref().map(|v| v.iter().map(fv::js_time_of).collect::<Vec<_>>()).as_ref().map(|v| v.iter().copied().map(|fv_t| fv_refusals.date(fv_t, 54, 79)).collect()), by: props.stamps.to_owned(), seen: Vec::new() }))?;
+    fv_refusals.check(super::date_days::try_render(out, &super::date_days::Props { days: props.days.iter().map(fv::date::js_time_of).filter(|fv_d| !(*fv_d).is_nan()).map(|fv_t| fv_refusals.date(fv_t, 54, 22)).collect(), maybe: props.maybe.as_ref().map(|v| v.iter().map(fv::date::js_time_of).collect::<Vec<_>>()).as_ref().map(|v| v.iter().copied().map(|fv_t| fv_refusals.date(fv_t, 54, 79)).collect()), by: props.stamps.to_owned(), seen: Vec::new() }))?;
     if let Some(fv_lead) = props.lead.as_ref() {
         out.push_str("<p>lead ");
-        fv::escape_into(out, &fv_lead.title);
+        fv::core::escape_into(out, &fv_lead.title);
         out.push(' ');
-        fv::push_number(out, fv::js_time_of(&fv_lead.at));
+        fv::core::push_number(out, fv::date::js_time_of(&fv_lead.at));
         out.push(' ');
-        fv::push_int(out, fv_lead.marks.len() as i64);
+        fv::core::push_int(out, fv_lead.marks.len() as i64);
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");
@@ -256,25 +256,25 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    let html: fv::Html<'p, Props<'a>> = fv::Html::markup_fallible(props, render, try_render);
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    let html: fv::html::Html<'p, Props<'a>> = fv::html::Html::markup_fallible(props, render, try_render);
     html.dates("[{\"rows\":[{\"at\":1,\"edited\":1,\"deleted\":1,\"marks\":[1],\"seen\":[1],\"byName\":{\"*\":1}}],\"days\":[1],\"maybe\":[1],\"stamps\":{\"*\":1},\"lead\":{\"at\":1,\"edited\":1,\"deleted\":1,\"marks\":[1],\"seen\":[1],\"byName\":{\"*\":1}}}]")
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    let html: fv::Html<'p, Props<'a>> = fv::Html::island_fallible(NAME, props, render, try_render);
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    let html: fv::html::Html<'p, Props<'a>> = fv::html::Html::island_fallible(NAME, props, render, try_render);
     html.dates("[{\"rows\":[{\"at\":1,\"edited\":1,\"deleted\":1,\"marks\":[1],\"seen\":[1],\"byName\":{\"*\":1}}],\"days\":[1],\"maybe\":[1],\"stamps\":{\"*\":1},\"lead\":{\"at\":1,\"edited\":1,\"deleted\":1,\"marks\":[1],\"seen\":[1],\"byName\":{\"*\":1}}}]")
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    let html: fv::Html<'a, Props<'a>> = fv::Html::markup_owned_fallible(props, render, try_render);
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    let html: fv::html::Html<'a, Props<'a>> = fv::html::Html::markup_owned_fallible(props, render, try_render);
     html.dates("[{\"rows\":[{\"at\":1,\"edited\":1,\"deleted\":1,\"marks\":[1],\"seen\":[1],\"byName\":{\"*\":1}}],\"days\":[1],\"maybe\":[1],\"stamps\":{\"*\":1},\"lead\":{\"at\":1,\"edited\":1,\"deleted\":1,\"marks\":[1],\"seen\":[1],\"byName\":{\"*\":1}}}]")
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    let html: fv::Html<'a, Props<'a>> = fv::Html::island_owned_fallible(NAME, props, render, try_render);
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    let html: fv::html::Html<'a, Props<'a>> = fv::html::Html::island_owned_fallible(NAME, props, render, try_render);
     html.dates("[{\"rows\":[{\"at\":1,\"edited\":1,\"deleted\":1,\"marks\":[1],\"seen\":[1],\"byName\":{\"*\":1}}],\"days\":[1],\"maybe\":[1],\"stamps\":{\"*\":1},\"lead\":{\"at\":1,\"edited\":1,\"deleted\":1,\"marks\":[1],\"seen\":[1],\"byName\":{\"*\":1}}}]")
 }

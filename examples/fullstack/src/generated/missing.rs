@@ -30,8 +30,8 @@ impl<'a> Props<'a> {
 /// # Panics
 ///
 /// With the message of the refusal [`try_render`] returns.
-pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>, fv_head: &fv::Head) {
-    fv::rendered(try_render(out, props, fv_route, fv_head));
+pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>, fv_head: &fv::head::Head) {
+    fv::render::rendered(try_render(out, props, fv_route, fv_head));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -39,12 +39,12 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>, fv_
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>, fv_head: &fv::Head) -> Result<(), fv::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>, fv_head: &fv::head::Head) -> Result<(), fv::render::Refused> {
     out.reserve(154 + props.path.len());
-    fv_head.push(fv::HeadValue::object([("title", fv::HeadValue::str("Not found")), ("meta", fv::HeadValue::array([fv::HeadValue::object([("name", fv::HeadValue::str("robots")), ("content", fv::HeadValue::str("noindex"))]), fv::HeadValue::object([("name", fv::HeadValue::str("description")), ("content", fv::HeadValue::str(&format!("Nothing lives at {}", props.path)))])]))]));
+    fv_head.push(fv::head::HeadValue::object([("title", fv::head::HeadValue::str("Not found")), ("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([("name", fv::head::HeadValue::str("robots")), ("content", fv::head::HeadValue::str("noindex"))]), fv::head::HeadValue::object([("name", fv::head::HeadValue::str("description")), ("content", fv::head::HeadValue::str(&format!("Nothing lives at {}", props.path)))])]))]));
     out.push_str("<section class=\"not-found\"><h1>Not found</h1><p>Nothing lives at <code>");
-    fv::escape_into(out, &props.path);
+    fv::core::escape_into(out, &props.path);
     out.push_str("</code>.</p>");
     {
         let fv_link = {
@@ -55,9 +55,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>,
             out.push_str(" aria-current=\"page\"");
         }
         out.push_str(" href=\"");
-        fv::escape_into(out, &fv_link.href);
+        fv::core::escape_into(out, &fv_link.href);
         out.push_str("\" class=\"");
-        fv::class_into(out, false, &[if fv_link.exact { "active" } else { "" }]);
+        fv::attrs::class_into(out, false, &[if fv_link.exact { "active" } else { "" }]);
         out.push_str("\">Back to all books</a>");
     }
     out.push_str("</section>");
@@ -65,6 +65,6 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>,
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_route: &'p fv::Route<'p>, fv_head: &'p fv::Head) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_route, fv_head)))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_route: &'p fv::router::Route<'p>, fv_head: &'p fv::head::Head) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_route, fv_head)))
 }

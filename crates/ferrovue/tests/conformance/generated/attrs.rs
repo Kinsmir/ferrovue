@@ -56,7 +56,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -64,75 +64,75 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(330 + props.label.len() + props.tip.as_deref().map_or(0, str::len) + props.extra.len() + props.state.len() + props.id.as_deref().map_or(0, str::len));
     out.push_str("<form><button type=\"button\"");
     if props.disabled {
         out.push_str(" disabled");
     }
     out.push_str(" title=\"");
-    fv::escape_into(out, &props.label);
+    fv::core::escape_into(out, &props.label);
     out.push_str("\" aria-label=\"");
-    fv::escape_into(out, &props.label);
+    fv::core::escape_into(out, &props.label);
     out.push_str("\" data-state=\"");
-    fv::escape_into(out, &props.state);
+    fv::core::escape_into(out, &props.state);
     out.push_str("\" tabindex=\"");
-    fv::push_int(out, props.tabindex);
+    fv::core::push_int(out, props.tabindex);
     out.push_str("\">");
-    fv::escape_into(out, &props.label);
+    fv::core::escape_into(out, &props.label);
     out.push_str("</button><label");
     if let Some(v) = props.id.as_deref() {
         out.push_str(" for=\"");
-        fv::escape_into(out, v);
+        fv::core::escape_into(out, v);
         out.push('"');
     }
     if props.hidden {
         out.push_str(" hidden");
     }
     out.push('>');
-    fv::escape_into(out, &props.label);
+    fv::core::escape_into(out, &props.label);
     out.push_str("</label><input value=\"");
-    fv::escape_into(out, &props.label);
+    fv::core::escape_into(out, &props.label);
     out.push('"');
     if let Some(v) = props.tip.as_deref() {
         out.push_str(" placeholder=\"");
-        fv::escape_into(out, v);
+        fv::core::escape_into(out, v);
         out.push('"');
     }
     if props.disabled {
         out.push_str(" readonly");
     }
     out.push_str("><span class=\"");
-    fv::class_into(out, false, &[&*props.extra, "static"]);
+    fv::attrs::class_into(out, false, &[&*props.extra, "static"]);
     out.push_str("\"></span><span class=\"a");
-    fv::class_into(out, true, &[&*props.extra, "b", &*props.state]);
+    fv::attrs::class_into(out, true, &[&*props.extra, "b", &*props.state]);
     out.push_str("\"></span><span class=\"padded\"></span><span class=\"");
-    fv::class_into(out, false, &[&*props.state, "after"]);
+    fv::attrs::class_into(out, false, &[&*props.state, "after"]);
     out.push_str("\"></span><span title=\"");
-    fv::escape_into(out, props.tip.as_deref().unwrap_or(""));
+    fv::core::escape_into(out, props.tip.as_deref().unwrap_or(""));
     out.push_str("\" data-empty=\"\"></span><span class=\"");
-    fv::class_into(out, false, &[&*fv::class_object(&[(props.disabled, "first"), (true, &*props.extra), (props.hidden, &*props.state), (true, "last")])]);
+    fv::attrs::class_into(out, false, &[&*fv::attrs::class_object(&[(props.disabled, "first"), (true, &*props.extra), (props.hidden, &*props.state), (true, "last")])]);
     out.push_str("\"></span></form>");
     Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

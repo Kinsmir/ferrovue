@@ -60,7 +60,7 @@ again with 0.9 and committed. See
 
 | Key | Default | What it does |
 |---|---|---|
-| `dateType` | `ferrovue::JsDate` | the Rust type of a `Date` prop: [`JsDate`](crate::JsDate), `chrono::DateTime<chrono::Utc>` with the crate's `chrono` feature, or a type of your own that implements [`JsTime`](crate::JsTime) |
+| `dateType` | `ferrovue::JsDate` | the Rust type of a `Date` prop: [`JsDate`](crate::date::JsDate), `chrono::DateTime<chrono::Utc>` with the crate's `chrono` feature, or a type of your own that implements [`JsTime`](crate::date::JsTime) |
 
 The `chrono` feature is off by default. An application that names chrono's type turns it on:
 
@@ -147,10 +147,10 @@ defineProps<{ published: Date }>();
 </template>
 ```
 
-The Rust field is then a [`JsDate`](crate::JsDate) (or the `dateType`), built from milliseconds, an
+The Rust field is then a [`JsDate`](crate::date::JsDate) (or the `dateType`), built from milliseconds, an
 ISO string or the clock:
 
-```rust
+```rust,ignore
 use ferrovue::JsDate;
 
 let published = JsDate::parse("2024-05-01T09:30:00.000Z").expect("in the date time string format");
@@ -229,7 +229,7 @@ parts ([dates from their parts](crate::guide::dates_and_prices#dates-from-their-
 `isNaN()` and `isFinite()` of a present number; the constants of `Number` and the globals
 `Infinity` and `NaN`. The crate gains the public twins `js_to_precision` and `js_to_exponential`:
 
-```rust
+```rust,ignore
 assert_eq!(ferrovue::js_to_precision(1234.5678, 6), "1234.57");
 assert_eq!(ferrovue::js_to_exponential(0.000123, Some(2)), "1.23e-4");
 assert_eq!(ferrovue::js_to_fixed(3.14159, 2), "3.14");
@@ -250,7 +250,7 @@ positions and limits in `.includes(x, i)`, `.startsWith(x, i)`, `.endsWith(x, i)
 `.indexOf(x, i)`, `.lastIndexOf(x, i)` and `.split(x, n)`; `.substr()`, `.trimLeft()`,
 `.trimRight()`, `.concat()`, `.charCodeAt()` and `.codePointAt()`.
 
-```rust
+```rust,ignore
 assert_eq!(ferrovue::js_encode_uri_component("a b&c/d"), "a%20b%26c%2Fd");
 assert_eq!(ferrovue::js_encode_uri("/a b?q=1&r=é"), "/a%20b?q=1&r=%C3%A9");
 assert!(ferrovue::js_sign(-0.0).is_sign_negative());

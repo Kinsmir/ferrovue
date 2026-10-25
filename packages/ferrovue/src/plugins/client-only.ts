@@ -5,7 +5,7 @@ import { slotContent } from "../slots.ts";
 import { statements } from "../template.ts";
 import { type Plugin, runOf } from "../plugin.ts";
 
-const CLIENT_MODULES = new Set(["ferrovue", "ferrovue/client"]);
+const CLIENT_MODULE = "ferrovue";
 
 interface ClientOnlyRun {
   locals: Map<Component, Set<string>>;
@@ -20,7 +20,7 @@ function setupName(target: N): string | null {
 function clientOnlyLocals(script: N[]): Set<string> {
   const locals = new Set<string>();
   for (const st of script) {
-    if (st.type !== "ImportDeclaration" || !CLIENT_MODULES.has(st.source.value) || st.importKind === "type") continue;
+    if (st.type !== "ImportDeclaration" || st.source.value !== CLIENT_MODULE || st.importKind === "type") continue;
     for (const sp of st.specifiers) {
       if (sp.type === "ImportSpecifier" && (sp.imported.name ?? sp.imported.value) === "ClientOnly") locals.add(sp.local.name);
     }

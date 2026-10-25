@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { ClientOnly } from "ferrovue/client";
+import { ClientOnly } from "ferrovue";
 import ShareLink from "../vendor/ShareLink";
 import StarRating from "../vendor/StarRating";
 import type { Review } from "./types";

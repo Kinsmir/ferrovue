@@ -12,7 +12,7 @@
     "coverage": "pnpm coverage:ts && pnpm coverage:rust",
     "coverage:ts": "vitest run --coverage",
     "coverage:rust": "cargo llvm-cov --workspace --all-features --html --output-dir target/coverage/rust",
-    "lint": "oxlint --type-aware --deny-warnings && fallow dead-code",
+    "lint": "oxlint --type-aware --deny-warnings && fallow dead-code && node scripts/no-re-exports.ts",
     "lint:fix": "oxlint --type-aware --fix && fallow fix --yes --no-create-config",
     "bench": "pnpm bench:rust && pnpm bench:js",
     "bench:rust": "cargo bench -p ferrovue --bench render",

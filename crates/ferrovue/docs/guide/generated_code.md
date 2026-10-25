@@ -15,7 +15,7 @@ an application writes against them keeps compiling. That is:
 - in each component module: `NAME`; `Props`, its public fields and, with `builders` on (the
   default), its `new` and its setters; the structs of local types, with the same; the enums of its
   unions of string literals, with their names, variants, `ALL`, `as_str`, `Display`, `FromStr`,
-  `TryFrom<&str>` and [`Union`](crate::Union); for a union `unions` names an enum for, that enum; `Slots`, each `…SlotProps` and each `…Slot`; `render` and `try_render`, with
+  `TryFrom<&str>` and [`Union`](crate::props::Union); for a union `unions` names an enum for, that enum; `Slots`, each `…SlotProps` and each `…Slot`; `render` and `try_render`, with
   their parameters in the order [below](#render-and-its-parameters); `html`; and, for a component
   that renders from its props alone, `island`, `into_html` and `into_island`;
 - `types.rs`'s structs, enums and constants, `route_table.rs`'s `ROUTES`, `PATHS`, `BASE` and `router()`,
@@ -103,21 +103,26 @@ error: this module was generated as version 6 of ferrovue's generated code, and 
 
 A newer crate stops an older module the same way once it no longer supports what the module calls.
 The 0.8 crate supports version 2 alone: modules of version 1, from 0.7, build
-[`RouteDef`](crate::RouteDef), [`Locale`](crate::i18n::Locale), [`Message`](crate::i18n::Message)
+[`RouteDef`](crate::router::RouteDef), [`Locale`](crate::i18n::Locale), [`Message`](crate::i18n::Message)
 and [`Args`](crate::i18n::Args) with struct literals, and these types are `#[non_exhaustive]` from
 0.8 on, so version 2 builds them with their `const` constructors and `with_` methods. Version 3
-adds `Date` props, which generated code reads through [`JsTime`](crate::JsTime), hands to a child
+adds `Date` props, which generated code reads through [`JsTime`](crate::date::JsTime), hands to a child
 and writes into `data-props` with helpers the 0.8 crate lacks; the 0.9 crate supports versions 2
 and 3, since a module of version 2 calls nothing it changed. Version 4 adds
-[loaders](crate::guide::loaders): a component that awaits one takes a [`Loads`](crate::Loads),
+[loaders](crate::guide::loaders): a component that awaits one takes a [`Loads`](crate::loaders::Loads),
 and the generated `loaders` module calls what the 0.9 crate lacks; the 0.10 crate supports
 versions 2 to 4. Version 5 adds the [enums of unions of string
 literals](crate::guide::props#unions-of-string-literals), whose `FromStr` fails with
-[`ParseUnionError`](crate::ParseUnionError), which the 0.10 crate lacks, and dates inside lists,
+[`ParseUnionError`](crate::props::ParseUnionError), which the 0.10 crate lacks, and dates inside lists,
 dictionaries and interfaces, which it writes with helpers the 0.10 crate lacks; the 0.11 crate
 supports versions 2 to 5. Version 6 reads the literal of every union's enum through
-[`Union`](crate::Union), which the 0.11 crate lacks, so that an enum `unions` names in
-`ferrovue.config.json` is read as a generated one is; the 0.12 crate supports versions 2 to 6. The upgrade pages, [`upgrading_to_0_11`](crate::guide::upgrading_to_0_11),
+[`Union`](crate::props::Union), which the 0.11 crate lacks, so that an enum `unions` names in
+`ferrovue.config.json` is read as a generated one is, and names every item of the crates at the
+module that defines it (`fv::html::Html`, `fv::router::Route`, `fv::core::escape_into`),
+which the 0.12 crate no longer lifts to its root: so the 0.12 crate supports version 6 alone, and
+stops a module of an earlier version at this line. The upgrade pages,
+[`upgrading_to_0_12`](crate::guide::upgrading_to_0_12),
+[`upgrading_to_0_11`](crate::guide::upgrading_to_0_11),
 [`upgrading_to_0_10`](crate::guide::upgrading_to_0_10),
 [`upgrading_to_0_9`](crate::guide::upgrading_to_0_9) and
 [`upgrading_to_0_8`](crate::guide::upgrading_to_0_8), give the steps for each release.
@@ -131,16 +136,16 @@ Every component module has, in this order:
 
 | Item | What it is |
 |---|---|
-| `NAME` | The component's name, `"DataList"`: what `data-island` carries, and what a [`Part`](crate::Part) of a [`Page`](crate::Page) records |
-| One enum per union of string literals its props and local types hold | `Size` for `type Size = "sm" \| "md"`, `ButtonSize` for `size: "sm" \| "md"` in `Button.vue`'s props: a variant per literal, `ALL`, `as_str()`, `Display`, `FromStr`, `TryFrom<&str>` and [`Union`](crate::Union), deriving `Debug`, `Clone`, `Copy`, `PartialEq`, `Eq`, `Hash`, `serde::Serialize` and `serde::Deserialize`. One that a `.ts` file declares is in `types.rs`. See [`props`](crate::guide::props#unions-of-string-literals) |
+| `NAME` | The component's name, `"DataList"`: what `data-island` carries, and what a [`Part`](crate::page::Part) of a [`Page`](crate::page::Page) records |
+| One enum per union of string literals its props and local types hold | `Size` for `type Size = "sm" \| "md"`, `ButtonSize` for `size: "sm" \| "md"` in `Button.vue`'s props: a variant per literal, `ALL`, `as_str()`, `Display`, `FromStr`, `TryFrom<&str>` and [`Union`](crate::props::Union), deriving `Debug`, `Clone`, `Copy`, `PartialEq`, `Eq`, `Hash`, `serde::Serialize` and `serde::Deserialize`. One that a `.ts` file declares is in `types.rs`. See [`props`](crate::guide::props#unions-of-string-literals) |
 | One struct per local `interface` or object `type` | `Row` for `export interface Row { … }`, with the same derives and builder as `Props` |
 | `Props<'a>` | The props, one public field per prop, deriving `Debug`, `Clone` and `serde::Serialize`, and `Default` when every prop is optional. With `builders` on, `Props::new` takes the required props in declaration order and each optional prop other than one named `new` has a setter of its name. See [`props`](crate::guide::props) |
 | `…SlotProps<'v>` and `…Slot<'s>` | For each scoped slot: what its outlet passes (with `<'v>` only when it borrows), and the closure type a parent supplies. A component that takes `fv_provides` has a `…Slot<'s>` for each of its slots, scoped or not, whose closure is also given the `Provides` its content renders with. See [`slots`](crate::guide::slots) |
 | `Slots<'s>` | When the component renders a `<slot>` or `<RouterView>`: what a parent puts in each, an `Option` per `<slot>` and the page as `router_view`. It derives `Clone` and `Copy`, and `Default` when it has no `router_view` |
 | `render` | Write the component into a buffer. It panics with the message of a refusal at render time, which `try_render` returns |
-| `try_render` | `render`, returning `Result<(), fv::Refused>`: the [`Refused`](crate::Refused) of props that ask for what cannot be written as Vue writes it, such as a date string browsers read differently. See [`errors_and_limits`](crate::guide::errors_and_limits#refused-at-render-time) |
+| `try_render` | `render`, returning `Result<(), fv::render::Refused>`: the [`Refused`](crate::render::Refused) of props that ask for what cannot be written as Vue writes it, such as a date string browsers read differently. See [`errors_and_limits`](crate::guide::errors_and_limits#refused-at-render-time) |
 | `try_render_scoped` | Only for a component a parent may hand `<style scoped>` ids to, or pass attributes it does not declare as props: `try_render` with those last. Generated parents call it; it is `#[doc(hidden)]` and outside the contract. See [`scoped_styles`](crate::guide::scoped_styles) and [fallthrough attributes](#fallthrough-attributes) |
-| `html` | The same render as an [`Html`](crate::Html) value, whose `try_render_to` and `try_into_string` return the refusal |
+| `html` | The same render as an [`Html`](crate::html::Html) value, whose `try_render_to` and `try_into_string` return the refusal |
 | `island` | Only for a component that renders from its props alone: the render wrapped as a hydratable island |
 | `into_html` and `into_island` | Beside `island`: `html` and `island` taking the props by value, so the `Html` holds them |
 
@@ -160,17 +165,17 @@ the component needs, always in this order, and `try_render` takes the same:
 # pub mod page {
 # use ferrovue as fv;
 # pub struct Props<'a>(pub &'a str);
-# pub struct Slots<'s>(pub fv::Slot<'s>);
+# pub struct Slots<'s>(pub fv::render::Slot<'s>);
 pub fn render(
     out: &mut String,
     props: &Props<'_>,
     fv_slots: Slots<'_>,                          // renders <slot> or <RouterView>
-    fv_route: &fv::Route<'_>,                     // <RouterLink>, useRoute() or $route
+    fv_route: &fv::router::Route<'_>,             // <RouterLink>, useRoute() or $route
     fv_stores: &super::stores::Stores<'_>,        // reads a Pinia store
-    fv_i18n: &fv::I18n,                           // $t or useI18n()
-    fv_teleports: &fv::Teleports,                 // <Teleport>
+    fv_i18n: &fv::i18n::I18n,                     // $t or useI18n()
+    fv_teleports: &fv::page::Teleports,       // <Teleport>
     fv_provides: super::provides::Provides<'_>,   // provide() or inject()
-    fv_head: &fv::Head,                           // useHead() or useSeoMeta()
+    fv_head: &fv::head::Head,                     // useHead() or useSeoMeta()
 )
 # {}
 # }
@@ -197,9 +202,9 @@ pub fn render(out: &mut String, props: &Props<'_>)
 # pub mod layout {
 # use ferrovue as fv;
 # pub struct Props<'a>(pub &'a str);
-# pub struct Slots<'s>(pub fv::Slot<'s>);
+# pub struct Slots<'s>(pub fv::render::Slot<'s>);
 // Layout.vue: <RouterView> and two <RouterLink>s.
-pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::Route<'_>)
+pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::router::Route<'_>)
 # {}
 # }
 # pub mod card {
@@ -212,7 +217,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::St
 # use ferrovue as fv;
 # pub struct Props<'a>(pub &'a str);
 // Modal.vue: <Teleport>.
-pub fn render(out: &mut String, props: &Props<'_>, fv_teleports: &fv::Teleports)
+pub fn render(out: &mut String, props: &Props<'_>, fv_teleports: &fv::page::Teleports)
 # {}
 # }
 # }
@@ -228,16 +233,16 @@ with `""`:
 # use ferrovue as fv;
 # pub struct Props<'a>(pub &'a str);
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render_scoped(out, props, ""));
+    fv::render::rendered(try_render_scoped(out, props, ""));
 }
 
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     try_render_scoped(out, props, "")
 }
 
 /// [`try_render`], with the scope ids a parent hands the root: ` data-v-…` each.
 #[doc(hidden)]
-pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) -> Result<(), fv::Refused> {
+pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) -> Result<(), fv::render::Refused> {
     // …
 #   Ok(())
 }
@@ -245,7 +250,7 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) ->
 ```
 
 A component that a parent passes attributes it does not declare as props takes them, with the ids,
-as one [`Attrs`](crate::Attrs) instead: see [fallthrough attributes](#fallthrough-attributes).
+as one [`Attrs`](crate::attrs::Attrs) instead: see [fallthrough attributes](#fallthrough-attributes).
 
 A `try_render` or `try_render_scoped` that never reads its props, such as a component's that only passes
 its slot on, names the parameter `_props`, so that the module compiles without warnings; it is
@@ -268,7 +273,7 @@ attributes it gives it. Listeners are dropped, as Vue's server drops them.
 
 The parent knows at compile time which attributes it passes, but the child is generated once for
 every parent, so the two meet at run time. A child that some parent passes attributes to takes
-`fv_attrs: &fv::Attrs<'_>` in its `try_render_scoped`, the attributes in order followed by the scope
+`fv_attrs: &fv::attrs::Attrs<'_>` in its `try_render_scoped`, the attributes in order followed by the scope
 ids, and the parent builds them from its template:
 
 ```rust
@@ -277,10 +282,10 @@ ids, and the parent builds them from its template:
 #     use std::borrow::Cow;
 #     use ferrovue as fv;
 #     pub struct Props<'a> { pub label: Cow<'a, str> }
-#     pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::Attrs<'_>) -> Result<(), fv::Refused> {
+#     pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::render::Refused> {
 #         super::badge_root::write(out, fv_attrs);
 #         out.push('>');
-#         fv::escape_into(out, &props.label);
+#         fv::core::escape_into(out, &props.label);
 #         out.push_str("</b>");
 #         Ok(())
 #     }
@@ -289,16 +294,16 @@ ids, and the parent builds them from its template:
 #     use std::borrow::Cow;
 #     use ferrovue as fv;
 #     pub struct Props<'a> { pub name: Cow<'a, str>, pub note: Option<Cow<'a, str>> }
-#     pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+#     pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
 // <Badge :label="name" class="wide" :title="note" /> in a parent's template:
 super::badge::try_render_scoped(out, &super::badge::Props { label: Cow::Borrowed(&props.name) },
-    &fv::Attrs::new(&[("class", fv::Attr::str("wide")), ("title", props.note.as_deref().map_or(fv::Attr::Undefined, fv::Attr::str))], ""))?;
+    &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str("wide")), ("title", props.note.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str))], ""))?;
 #         Ok(())
 #     }
 # }
 # pub mod badge_root {
 #     use ferrovue as fv;
-#     pub fn write(out: &mut String, fv_attrs: &fv::Attrs<'_>) {
+#     pub fn write(out: &mut String, fv_attrs: &fv::attrs::Attrs<'_>) {
 
 // Badge's root, `<b class="badge">`:
 out.push_str("<b");
@@ -306,7 +311,7 @@ if fv_attrs.is_empty() {
     out.push_str(" class=\"badge\"");
     out.push_str(fv_attrs.ids());
 } else {
-    fv::attrs_into(out, &[&[("class", fv::Attr::str("badge"))], fv_attrs.list()], 1, fv_attrs.ids());
+    fv::attrs::attrs_into(out, &[&[("class", fv::attrs::Attr::str("badge"))], fv_attrs.list()], 1, fv_attrs.ids());
 }
 #     }
 # }
@@ -319,13 +324,13 @@ if fv_attrs.is_empty() {
 # parent::try_render(&mut out, &parent::Props { name: "Ada".into(), note: None }).unwrap();
 # assert_eq!(out, r#"<b class="badge wide">Ada</b>"#);
 # out.clear();
-# badge::try_render_scoped(&mut out, &badge::Props { label: "Ada".into() }, &ferrovue::Attrs::NONE).unwrap();
+# badge::try_render_scoped(&mut out, &badge::Props { label: "Ada".into() }, &ferrovue::attrs::Attrs::NONE).unwrap();
 # assert_eq!(out, r#"<b class="badge">Ada</b>"#);
 ```
 
-With nothing passed (from `render`, which passes [`Attrs::NONE`](crate::Attrs::NONE), or from a
+With nothing passed (from `render`, which passes [`Attrs::NONE`](crate::attrs::Attrs::NONE), or from a
 parent that passes none), the root is written exactly as it would be without; only when attributes
-arrive does [`attrs_into`](crate::attrs_into) merge them as Vue's `mergeProps` does and write them as
+arrive does [`attrs_into`](crate::attrs::attrs_into) merge them as Vue's `mergeProps` does and write them as
 `ssrRenderAttrs` does. A component no parent passes attributes to has neither: its `render_scoped`,
 if it has one, takes the scope ids alone as a `&str`.
 
@@ -362,7 +367,7 @@ writes the tag from the `match`:
 #     pub struct Props<'a> { pub label: Cow<'a, str> }
 #     pub fn render(out: &mut String, props: &Props<'_>) {
 #         out.push_str("<i class=\"star\">");
-#         ferrovue::escape_into(out, &props.label);
+#         ferrovue::core::escape_into(out, &props.label);
 #         out.push_str("</i>");
 #     }
 # }
@@ -371,7 +376,7 @@ writes the tag from the `match`:
 #     pub struct Props<'a> { pub label: Cow<'a, str> }
 #     pub fn render(out: &mut String, props: &Props<'_>) {
 #         out.push_str("<i class=\"moon\">");
-#         ferrovue::escape_into(out, &props.label);
+#         ferrovue::core::escape_into(out, &props.label);
 #         out.push_str("</i>");
 #     }
 # }
@@ -398,7 +403,7 @@ match props.name {
 #     #[derive(Clone, Copy)]
 #     pub enum HeadingAs { H1, H2 }
 #     pub struct Props { pub r#as: HeadingAs }
-#     pub struct Slots<'s> { pub default: Option<fv::Slot<'s>> }
+#     pub struct Slots<'s> { pub default: Option<fv::render::Slot<'s>> }
 #     pub fn render(out: &mut String, props: &Props, fv_slots: Slots<'_>) {
 
 // <component :is="as" class="heading"><slot /></component>, where as: "h1" | "h2":
@@ -406,7 +411,7 @@ let fv_tag = match props.r#as { HeadingAs::H1 => "h1", HeadingAs::H2 => "h2" };
 out.push('<');
 out.push_str(fv_tag);
 out.push_str(" class=\"heading\">");
-fv::slot_into(out, fv_slots.default, None);
+fv::render::slot_into(out, fv_slots.default, None);
 out.push_str("</");
 out.push_str(fv_tag);
 out.push('>');
@@ -419,7 +424,7 @@ out.push('>');
 # icon::render(&mut out, &icon::Props { name: icon::IconName::Moon, label: "Day".into() });
 # assert_eq!(out, r#"<i class="star">Night</i><i class="moon">Day</i>"#);
 # out.clear();
-# heading::render(&mut out, &heading::Props { r#as: heading::HeadingAs::H1 }, heading::Slots { default: Some(ferrovue::Slot::new(&|out: &mut String| out.push_str("Hi"))) });
+# heading::render(&mut out, &heading::Props { r#as: heading::HeadingAs::H1 }, heading::Slots { default: Some(ferrovue::render::Slot::new(&|out: &mut String| out.push_str("Hi"))) });
 # assert_eq!(out, r#"<h1 class="heading"><!--[-->Hi<!--]--></h1>"#);
 ```
 
@@ -442,8 +447,8 @@ itself, which Vue's server leaves empty.
 # `html` and `island`
 
 `html` takes the same parameters as `render`, minus the buffer, and returns an
-[`Html`](crate::Html): the render applied to its arguments, run when it is written. Write it with
-[`Html::render_to`](crate::Html::render_to) or [`Html::into_string`](crate::Html::into_string), or,
+[`Html`](crate::html::Html): the render applied to its arguments, run when it is written. Write it with
+[`Html::render_to`](crate::html::Html::render_to) or [`Html::into_string`](crate::html::Html::into_string), or,
 with the `maud` feature, splice it into a `maud::html!` template, where it is written straight into
 maud's buffer:
 
@@ -454,11 +459,11 @@ maud's buffer:
 #     pub struct Props<'a> { pub name: Cow<'a, str> }
 #     pub fn render(out: &mut String, props: &Props<'_>) {
 #         out.push_str("<p>Hello, ");
-#         ferrovue::escape_into(out, &props.name);
+#         ferrovue::core::escape_into(out, &props.name);
 #         out.push_str("!</p>");
 #     }
-#     pub fn html<'p, 'a>(props: &'p Props<'a>) -> ferrovue::Html<'p, Props<'a>> {
-#         ferrovue::Html::markup(props, render)
+#     pub fn html<'p, 'a>(props: &'p Props<'a>) -> ferrovue::html::Html<'p, Props<'a>> {
+#         ferrovue::html::Html::markup(props, render)
 #     }
 # }
 # #[cfg(feature = "maud")]
@@ -508,14 +513,14 @@ render exactly as their borrowing forms.
 #     }
 #     pub fn render(out: &mut String, props: &Props<'_>) {
 #         out.push_str("<p>Hello, ");
-#         ferrovue::escape_into(out, &props.name);
+#         ferrovue::core::escape_into(out, &props.name);
 #         out.push_str("!</p>");
 #     }
-#     pub fn into_html<'a>(props: Props<'a>) -> ferrovue::Html<'a, Props<'a>> {
-#         ferrovue::Html::markup_owned(props, render)
+#     pub fn into_html<'a>(props: Props<'a>) -> ferrovue::html::Html<'a, Props<'a>> {
+#         ferrovue::html::Html::markup_owned(props, render)
 #     }
 # }
-fn greet(name: String) -> ferrovue::Html<'static, greeting::Props<'static>> {
+fn greet(name: String) -> ferrovue::html::Html<'static, greeting::Props<'static>> {
     greeting::into_html(greeting::Props::new(name, 0))
 }
 # assert_eq!(greet("Ada".to_owned()).into_string(), "<p>Hello, Ada!</p>");

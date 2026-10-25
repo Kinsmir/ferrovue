@@ -4,7 +4,10 @@
 
 use std::hint::black_box;
 
-use ferrovue::{Attr, Head, HeadValue};
+use ferrovue::{
+    attrs::Attr,
+    head::{Head, HeadValue},
+};
 
 use crate::generated::{dashboard, lists, nav, panel, tree};
 
@@ -87,7 +90,7 @@ pub fn check(scenario: &str, render: impl Fn(&mut String)) {
 /// Attributes merged from an element, a parent's fallthrough and a bound style object, as a root that
 /// takes `$attrs` writes them.
 pub fn merged_attrs(out: &mut String) {
-    ferrovue::attrs_into(
+    ferrovue::attrs::attrs_into(
         out,
         &[
             &[("id", Attr::str("own")), ("class", Attr::str("card"))],
@@ -110,7 +113,7 @@ pub fn merged_attrs(out: &mut String) {
 /// Fractions, which JavaScript writes with the fewest digits that read back the same.
 pub fn fractions(out: &mut String) {
     for x in [0.1, 2.5, 1234.5678, 0.30000000000000004, 1e-7, 19.99] {
-        ferrovue::push_number(out, black_box(x));
+        ferrovue::core::push_number(out, black_box(x));
         out.push(' ');
     }
 }

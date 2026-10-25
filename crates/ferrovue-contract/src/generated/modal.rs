@@ -30,8 +30,8 @@ impl<'a> Props<'a> {
 /// # Panics
 ///
 /// With the message of the refusal [`try_render`] returns.
-pub fn render(out: &mut String, props: &Props<'_>, fv_teleports: &fv::Teleports) {
-    fv::rendered(try_render(out, props, fv_teleports));
+pub fn render(out: &mut String, props: &Props<'_>, fv_teleports: &fv::page::Teleports) {
+    fv::render::rendered(try_render(out, props, fv_teleports));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -39,13 +39,13 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_teleports: &fv::Teleports)
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_teleports: &fv::Teleports) -> Result<(), fv::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_teleports: &fv::page::Teleports) -> Result<(), fv::render::Refused> {
     out.reserve(33 + props.title.len());
     out.push_str("<div class=\"host\">");
-    fv::teleport_into(out, fv_teleports, "#modals", false, &|out: &mut String| {
+    fv::page::teleport_into(out, fv_teleports, "#modals", false, &|out: &mut String| {
         out.push_str("<h2>");
-        fv::escape_into(out, &props.title);
+        fv::core::escape_into(out, &props.title);
         out.push_str("</h2>");
     });
     out.push_str("</div>");
@@ -53,6 +53,6 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_teleports: &fv::Telepo
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_teleports: &'p fv::Teleports) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_teleports)))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_teleports: &'p fv::page::Teleports) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_teleports)))
 }

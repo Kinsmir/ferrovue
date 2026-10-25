@@ -1,23 +1,10 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse as parseSfc } from "@vue/compiler-sfc";
-import { failIn, GenError } from "./model.ts";
-import type { RouteEntry } from "./routes.ts";
-
-/** A route as vue-router's file-based routing builds it from a folder of pages. */
-export interface FileRoute {
-  /** The path, relative to the parent's unless it starts with `/`. */
-  path: string;
-  /** The route's name, absent on a folder and on a `_parent.vue`. */
-  name?: string;
-  /** The page's `.vue` file, relative to the project root; absent on a folder, which only groups
-   * the routes in it. */
-  file?: string;
-  /** The page's component name, from its file's path: `books/[id].vue` is `BooksId`. */
-  component?: string;
-  /** The routes nested in it. */
-  children?: FileRoute[];
-}
+import { failIn } from "./model.ts";
+import { GenError } from "./errors.ts";
+import type { RouteEntry } from "./route-records.ts";
+import type { FileRoute } from "./vite.ts";
 
 interface Node {
   raw: string;

@@ -1,11 +1,19 @@
 //! Properties of the runtime that hold for every input.
 
+use ferrovue::loaders::{Load, LoadKey, load, load_key};
 use ferrovue::{
-    BasicHtml, InlineHtml, Slot, class_into, escape_into, hole, js_date_parse, js_length,
-    js_to_iso_string, js_trim, js_utc_date, js_utc_full_year, js_utc_hours, js_utc_milliseconds,
-    js_utc_minutes, js_utc_month, js_utc_seconds, slot_into, split_holes, state_script_into,
+    attrs::class_into,
+    core::escape_into,
+    date::{
+        js_date_parse, js_to_iso_string, js_utc_date, js_utc_full_year, js_utc_hours,
+        js_utc_milliseconds, js_utc_minutes, js_utc_month, js_utc_seconds,
+    },
+    html::{BasicHtml, InlineHtml},
+    page::state_script_into,
+    page::{hole, split_holes},
+    render::{Slot, slot_into},
+    strings::{js_length, js_trim},
 };
-use ferrovue::{Load, LoadKey, load, load_key};
 use proptest::prelude::*;
 
 fn unescape(s: &str) -> String {
