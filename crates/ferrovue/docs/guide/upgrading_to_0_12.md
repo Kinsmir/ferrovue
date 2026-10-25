@@ -53,12 +53,26 @@ stale until it is generated again with 0.12 and committed. See
 
 ## 3. Name the crates' items at their modules
 
-The `ferrovue` crate's modules are public, and each item is reached through the module that defines
-it: `ferrovue::Html` is [`ferrovue::html::Html`](crate::html::Html), `ferrovue::Refused` is
-[`ferrovue::render::Refused`](crate::render::Refused). The three crates `ferrovue` depends on are
-its modules [`core`](crate::core), [`router`](crate::router) and [`i18n`](crate::i18n), whole:
-`ferrovue::Router` is [`ferrovue::router::Router`](crate::router::Router), `ferrovue::escape_into`
-is [`ferrovue::core::escape_into`](crate::core::escape_into). `ferrovue::i18n` was a
+The `ferrovue` crate's items are in public modules, one per concept, and each item is reached
+through the module that defines it:
+
+| Module | What it holds |
+|---|---|
+| [`html`](crate::html) | A component's HTML ([`Html`](crate::html::Html), [`Hydrate`](crate::html::Hydrate)), and the HTML a caller hands `v-html` ([`TrustedHtml`](crate::html::TrustedHtml), [`BasicHtml`](crate::html::BasicHtml), [`InlineHtml`](crate::html::InlineHtml), `Sanitised`) |
+| [`render`](crate::render) | What a render takes beside its props and what it refuses: [`Slot`](crate::render::Slot), [`slot_into`](crate::render::slot_into), [`Refused`](crate::render::Refused) |
+| [`props`](crate::props) | [`Record`](crate::props::Record), [`Union`](crate::props::Union), [`ParseUnionError`](crate::props::ParseUnionError) |
+| [`date`](crate::date) | [`JsDate`](crate::date::JsDate), [`JsTime`](crate::date::JsTime), `DateOutOfRange` |
+| [`head`](crate::head) | [`Head`](crate::head::Head), [`HeadHtml`](crate::head::HeadHtml), [`HeadValue`](crate::head::HeadValue) |
+| [`page`](crate::page) | [`Page`](crate::page::Page) and its parts, slots, holes and record, [`hole`](crate::page::hole), [`split_holes`](crate::page::split_holes), [`Chunks`](crate::page::Chunks), [`Teleports`](crate::page::Teleports), [`state_script_into`](crate::page::state_script_into) |
+| [`loaders`](crate::loaders) | [`Loads`](crate::loaders::Loads), [`LoadError`](crate::loaders::LoadError), [`load`](crate::loaders::load) |
+| [`attrs`](crate::attrs) | [`Attr`](crate::attrs::Attr), [`Attrs`](crate::attrs::Attrs), [`attrs_into`](crate::attrs::attrs_into), [`passed_attrs_into`](crate::attrs::passed_attrs_into) |
+| `web` | `HtmlStream`, and the responses for axum, actix-web and maud (the `stream`, `axum`, `actix-web` and `maud` features) |
+| [`testing`](crate::testing) | [`check_fixtures`](crate::testing::check_fixtures), which [`conformance!`](crate::conformance!) calls |
+
+The three crates `ferrovue` depends on are its modules [`core`](crate::core), [`router`](crate::router)
+and [`i18n`](crate::i18n), whole: `ferrovue::Router` is
+[`ferrovue::router::Router`](crate::router::Router), `ferrovue::escape_into` is
+[`ferrovue::core::escape_into`](crate::core::escape_into). `ferrovue::dioxus` keeps its path. `ferrovue::i18n` was a
 module before and keeps every path below it (`ferrovue::i18n::Args`); `ferrovue::I18n` is
 [`ferrovue::i18n::I18n`](crate::i18n::I18n).
 
@@ -84,48 +98,50 @@ module in its suggestion. Each item and the path it has now:
 
 | 0.11 | 0.12 | Feature |
 |---|---|---|
-| `ferrovue::Attr` | `ferrovue::attrs::Attr` | |
-| `ferrovue::Attrs` | `ferrovue::attrs::Attrs` | |
-| `ferrovue::attrs_into` | `ferrovue::attrs::attrs_into` | |
-| `ferrovue::passed_attrs_into` | `ferrovue::attrs::passed_attrs_into` | |
 | `ferrovue::BasicHtml` | `ferrovue::html::BasicHtml` | |
-| `ferrovue::InlineHtml` | `ferrovue::html::InlineHtml` | |
-| `ferrovue::Chunks` | `ferrovue::page::Chunks` | |
-| `ferrovue::ManifestError` | `ferrovue::page::ManifestError` | |
-| `ferrovue::Preloads` | `ferrovue::page::Preloads` | |
-| `ferrovue::check_fixtures` | `ferrovue::testing::check_fixtures` | |
-| `ferrovue::Head` | `ferrovue::head::Head` | |
-| `ferrovue::HeadHtml` | `ferrovue::head::HeadHtml` | |
-| `ferrovue::HeadValue` | `ferrovue::head::HeadValue` | |
 | `ferrovue::Html` | `ferrovue::html::Html` | |
 | `ferrovue::Hydrate` | `ferrovue::html::Hydrate` | |
+| `ferrovue::InlineHtml` | `ferrovue::html::InlineHtml` | |
+| `ferrovue::Sanitised` | `ferrovue::html::Sanitised` | `ammonia` |
+| `ferrovue::TrustedHtml` | `ferrovue::html::TrustedHtml` | |
+| `ferrovue::Refused` | `ferrovue::render::Refused` | |
+| `ferrovue::Slot` | `ferrovue::render::Slot` | |
+| `ferrovue::slot_into` | `ferrovue::render::slot_into` | |
+| `ferrovue::ParseUnionError` | `ferrovue::props::ParseUnionError` | |
+| `ferrovue::Record` | `ferrovue::props::Record` | |
+| `ferrovue::Union` | `ferrovue::props::Union` | |
 | `ferrovue::DateOutOfRange` | `ferrovue::date::DateOutOfRange` | `chrono` |
 | `ferrovue::JsDate` | `ferrovue::date::JsDate` | |
 | `ferrovue::JsTime` | `ferrovue::date::JsTime` | |
-| `ferrovue::LoadError` | `ferrovue::loaders::LoadError` | |
-| `ferrovue::Loads` | `ferrovue::loaders::Loads` | |
-| `ferrovue::load` | `ferrovue::loaders::load` | |
+| `ferrovue::Head` | `ferrovue::head::Head` | |
+| `ferrovue::HeadHtml` | `ferrovue::head::HeadHtml` | |
+| `ferrovue::HeadValue` | `ferrovue::head::HeadValue` | |
+| `ferrovue::Chunks` | `ferrovue::page::Chunks` | |
+| `ferrovue::ManifestError` | `ferrovue::page::ManifestError` | |
 | `ferrovue::Page` | `ferrovue::page::Page` | |
 | `ferrovue::PageHole` | `ferrovue::page::PageHole` | |
 | `ferrovue::PageRecord` | `ferrovue::page::PageRecord` | |
 | `ferrovue::PageScript` | `ferrovue::page::PageScript` | |
 | `ferrovue::PageSlot` | `ferrovue::page::PageSlot` | |
 | `ferrovue::Part` | `ferrovue::page::Part` | |
-| `ferrovue::Record` | `ferrovue::props::Record` | |
-| `ferrovue::Refused` | `ferrovue::render::Refused` | |
-| `ferrovue::Sanitised` | `ferrovue::html::Sanitised` | `ammonia` |
-| `ferrovue::Slot` | `ferrovue::render::Slot` | |
+| `ferrovue::Preloads` | `ferrovue::page::Preloads` | |
+| `ferrovue::Teleports` | `ferrovue::page::Teleports` | |
 | `ferrovue::hole` | `ferrovue::page::hole` | |
-| `ferrovue::slot_into` | `ferrovue::render::slot_into` | |
 | `ferrovue::split_holes` | `ferrovue::page::split_holes` | |
 | `ferrovue::state_script_into` | `ferrovue::page::state_script_into` | |
-| `ferrovue::Teleports` | `ferrovue::page::Teleports` | |
-| `ferrovue::TrustedHtml` | `ferrovue::html::TrustedHtml` | |
-| `ferrovue::ParseUnionError` | `ferrovue::props::ParseUnionError` | |
-| `ferrovue::Union` | `ferrovue::props::Union` | |
+| `ferrovue::LoadError` | `ferrovue::loaders::LoadError` | |
+| `ferrovue::Loads` | `ferrovue::loaders::Loads` | |
+| `ferrovue::load` | `ferrovue::loaders::load` | |
+| `ferrovue::Attr` | `ferrovue::attrs::Attr` | |
+| `ferrovue::Attrs` | `ferrovue::attrs::Attrs` | |
+| `ferrovue::attrs_into` | `ferrovue::attrs::attrs_into` | |
+| `ferrovue::passed_attrs_into` | `ferrovue::attrs::passed_attrs_into` | |
 | `ferrovue::HtmlStream` | `ferrovue::web::HtmlStream` | `stream` |
-| `ferrovue::escape_into` | `ferrovue::core::escape_into` | |
+| `ferrovue::check_fixtures` | `ferrovue::testing::check_fixtures` | |
 | `ferrovue::Js` | `ferrovue::core::Js` | |
+| `ferrovue::escape_into` | `ferrovue::core::escape_into` | |
+| `ferrovue::js_encode_uri` | `ferrovue::core::js_encode_uri` | |
+| `ferrovue::js_encode_uri_component` | `ferrovue::core::js_encode_uri_component` | |
 | `ferrovue::js_max` | `ferrovue::core::js_max` | |
 | `ferrovue::js_min` | `ferrovue::core::js_min` | |
 | `ferrovue::js_round` | `ferrovue::core::js_round` | |
@@ -135,42 +151,34 @@ module in its suggestion. Each item and the path it has now:
 | `ferrovue::js_to_precision` | `ferrovue::core::js_to_precision` | |
 | `ferrovue::push_int` | `ferrovue::core::push_int` | |
 | `ferrovue::push_number` | `ferrovue::core::push_number` | |
-| `ferrovue::js_encode_uri` | `ferrovue::core::js_encode_uri` | |
-| `ferrovue::js_encode_uri_component` | `ferrovue::core::js_encode_uri_component` | |
-| `ferrovue::I18n` | `ferrovue::i18n::I18n` | `i18n` |
 | `ferrovue::Link` | `ferrovue::router::Link` | `router` |
 | `ferrovue::Query` | `ferrovue::router::Query` | `router` |
 | `ferrovue::Route` | `ferrovue::router::Route` | `router` |
 | `ferrovue::RouteDef` | `ferrovue::router::RouteDef` | `router` |
 | `ferrovue::Router` | `ferrovue::router::Router` | `router` |
 | `ferrovue::query_into` | `ferrovue::router::query_into` | `router` |
+| `ferrovue::I18n` | `ferrovue::i18n::I18n` | `i18n` |
 
 The items only generated code calls are `#[doc(hidden)]`, where they are defined, as before. Hand-written Rust that copied
 generated code finds them in these modules:
 
 | 0.11, at `ferrovue::` | 0.12 |
 |---|---|
-| `class_names`, `merge_props`, `scope_attrs`, `style_text_into` | `ferrovue::attrs` |
-| `class_into`, `class_object` | `ferrovue::class` |
-| `js_date_parse`, `js_date_utc`, `js_json_date`, `js_time_clip`, `js_to_iso_string`, `js_to_json`, `js_to_utc_string`, `js_utc_date`, `js_utc_day`, `js_utc_full_year`, `js_utc_hours`, `js_utc_milliseconds`, `js_utc_minutes`, `js_utc_month`, `js_utc_seconds`, `try_date_parse`, `try_date_utc`, `try_to_iso_string` | `ferrovue::dates` |
+| `Fallible`, `Renderer`, `trusted_into` | `ferrovue::html` |
+| `Refusals`, `is_comment`, `rendered`, `scoped_slot_into`, `scoped_slot_into_slotted`, `slot_into_slotted`, `try_int` | `ferrovue::render` |
+| `ParseUnion`, `UnionShape`, `check_union`, `union_prop` | `ferrovue::props` |
+| `DateShape`, `date_prop`, `dates_in`, `js_date_parse`, `js_date_prop`, `js_date_utc`, `js_json_date`, `js_time_clip`, `js_time_of`, `js_to_iso_string`, `js_to_json`, `js_to_utc_string`, `js_utc_date`, `js_utc_day`, `js_utc_full_year`, `js_utc_hours`, `js_utc_milliseconds`, `js_utc_minutes`, `js_utc_month`, `js_utc_seconds`, `opt_date_prop`, `try_date_parse`, `try_date_utc`, `try_to_iso_string` | `ferrovue::date` |
 | `HeadDeferral` | `ferrovue::head` |
-| `Fallible`, `Renderer` | `ferrovue::html` |
-| `DateShape`, `date_prop`, `dates_in`, `js_date_prop`, `js_time_of`, `opt_date_prop` | `ferrovue::js_date` |
-| `Load`, `LoadArg`, `LoadCall`, `LoadFuture`, `LoadKey`, `load_key` | `ferrovue::load` |
-| `Refusals`, `rendered`, `try_int` | `ferrovue::refused` |
-| `is_comment`, `scoped_slot_into`, `scoped_slot_into_slotted`, `slot_into_slotted` | `ferrovue::slots` |
+| `teleport_into` | `ferrovue::page` |
+| `Load`, `LoadArg`, `LoadCall`, `LoadFuture`, `LoadKey`, `load_key` | `ferrovue::loaders` |
+| `class_into`, `class_names`, `class_object`, `merge_props`, `scope_attrs`, `style_text_into` | `ferrovue::attrs` |
 | `JsOr`, `js_at`, `js_char_at`, `js_char_code_at`, `js_cmp`, `js_code_point_at`, `js_ends_with_at`, `js_includes_from`, `js_index_of`, `js_index_of_from`, `js_item_at`, `js_json_number`, `js_json_string`, `js_last_index_of`, `js_last_index_of_from`, `js_length`, `js_number`, `js_order`, `js_pad_end`, `js_pad_start`, `js_parse_float`, `js_parse_int`, `js_reduce`, `js_repeat`, `js_replace`, `js_replace_all`, `js_slice`, `js_slice_items`, `js_slice_range`, `js_sorted`, `js_sorted_by_string`, `js_split`, `js_split_limit`, `js_starts_with_at`, `js_substr`, `js_substring`, `js_trim`, `js_trim_end`, `js_trim_start`, `try_pad_end`, `try_pad_start`, `try_repeat` | `ferrovue::strings` |
-| `teleport_into` | `ferrovue::teleport` |
-| `trusted_into` | `ferrovue::trusted` |
-| `ParseUnion`, `UnionShape`, `check_union`, `union_prop` | `ferrovue::union` |
 
-The `ferrovue-core` crate lifts nothing to its root either. An application that names it itself,
-beside `ferrovue`, writes `ferrovue_core::escape_into`, `ferrovue_core::push_int`
-and `ferrovue_core::js_encode_uri`, the paths `ferrovue::core` reaches. `ferrovue-router` and
-`ferrovue-i18n` define their items at their roots, and keep their paths.
+`ferrovue-core`, `ferrovue-router` and `ferrovue-i18n` define their items at their roots, so an
+application that names one of them itself keeps its paths (`ferrovue_core::escape_into`).
 
-`ferrovue::core` is the `ferrovue-core` crate. A module that imports it by name, or every item of
-`ferrovue` with `use ferrovue::*;`, has the name `core` bound to it, which hides Rust's own `core`
+`ferrovue::core` is the `ferrovue-core` crate. A module that imports it by name, or every module
+of `ferrovue` with `use ferrovue::*;`, has the name `core` bound to it, which hides Rust's own `core`
 crate from paths written in that module: write `::core::mem::swap` there, with the leading `::`.
 Generated code and a module that names `ferrovue::core::…` in full are not affected.
 
@@ -193,17 +201,16 @@ from other files are exported by the entry that defines them, some of them new:
 
 | 0.11 | 0.12 |
 |---|---|
+| everything from `ferrovue/client` | `ferrovue`, which exports the same items, `clearLoads` among them |
 | `Float`, `InlineHtml`, `TrustedHtml` from `ferrovue` | `ferrovue/types`, as components import them |
 | `CONFIG_FILE`, `loadConfig`, `TYPES_MODULE`, `Config`, `HelperSpec`, `RoutesSource`, `ScopeIdMode`, `TwinSpec`, `TypeName` from `ferrovue/compiler` | `ferrovue/compiler/config` |
 | `GenError`, `GenErrors`, `SourceLocation`, `ERRORS`, `ErrorCode`, `ErrorDoc`, `docsUrl` from `ferrovue/compiler` | `ferrovue/compiler/errors` |
 | `attachSsrRender` from `ferrovue/testing` | `ferrovue/testing/ssr` |
-| `fixtureApp`, `readFixture`, `Fixture`, `RouterOptions` from `ferrovue/testing` | `ferrovue/testing/browser` |
-| `hydrateRecordedPage`, `renderRecordedPage`, `RecordedPage` from `ferrovue/testing` | `ferrovue/testing/browser` |
+| `fixtureApp`, `readFixture`, `Fixture`, `RouterOptions`, `hydrateRecordedPage`, `renderRecordedPage`, `RecordedPage` from `ferrovue/testing` | `ferrovue/testing/browser` |
 | `IslandComponent`, `MountOptions`, `PageOptions`, `PagePart`, `PageRecord`, `RenderPageOptions` from `ferrovue/testing` | `ferrovue` |
 | `routeRecords`, `RouteEntry` from `ferrovue/link-router` or `ferrovue/testing`, and `RouteEntry` from `ferrovue/routes` | `ferrovue/route-records` |
 
-The rest stay where they were: the browser API in `ferrovue` and `ferrovue/client`, which are one
-file and export the same items, `clearLoads` now among them in `ferrovue`; `generate`, `write`,
+The rest stay where they were: the browser API in `ferrovue`; `generate`, `write`,
 `isGenerated`, `Alias`, `ResolveOptions`, `Written` and `VERSION` in `ferrovue/compiler`;
 `conformanceSuite` and `ConformanceOptions` in `ferrovue/testing`; `linkRouter` and
 `LinkRouterOptions` in `ferrovue/link-router`; and `ferrovue/types`, `ferrovue/islands`,
@@ -211,19 +218,24 @@ file and export the same items, `clearLoads` now among them in `ferrovue`; `gene
 
 ```ts
 // 0.11
+import { ClientOnly } from "ferrovue/client";
 import { fixtureApp, hydrateRecordedPage, readFixture } from "ferrovue/testing";
 import { linkRouter, routeRecords } from "ferrovue/link-router";
 
 // 0.12
-import { fixtureApp, readFixture } from "ferrovue/testing/browser";
-import { hydrateRecordedPage } from "ferrovue/testing/browser";
+import { ClientOnly } from "ferrovue";
+import { fixtureApp, hydrateRecordedPage, readFixture } from "ferrovue/testing/browser";
 import { linkRouter } from "ferrovue/link-router";
 import { routeRecords } from "ferrovue/route-records";
 ```
 
-`ferrovue/testing/browser`, `ferrovue/testing/browser` and `ferrovue/route-records` load no
-module of Node, so a test that runs in a browser imports them as the conformance suite's browser
-tests do.
+`ferrovue/testing/browser` and `ferrovue/route-records` load no module of Node, so a test that
+runs in a browser imports them as the conformance suite's browser tests do.
+
+The compiler reads `<ClientOnly>` and `defineLoader` from `ferrovue` alone. A component that still
+imports them from `ferrovue/client` is refused where it uses them: `<ClientOnly>` as a child
+component that is not one of the project's, and a loader's `await` as a call that is not a
+loader's.
 
 ## 5. Build lists of a union from the enum
 
