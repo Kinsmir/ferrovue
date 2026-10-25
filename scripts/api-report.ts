@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSyn
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Extractor, ExtractorConfig, ExtractorLogLevel } from "@microsoft/api-extractor";
+import { messageCallback } from "./api-messages.ts";
 
 const ROOT = join(import.meta.dirname, "..");
 const PACKAGE = join(ROOT, "packages/ferrovue");
@@ -54,15 +55,7 @@ for (const { name, types } of entries) {
   });
   const result = Extractor.invoke(config, {
     localBuild: !check,
-    messageCallback: (message) => {
-      const symbol = message.messageId === "ae-forgotten-export" ? /The symbol "([^"]+)"/.exec(message.text)?.[1] : undefined;
-      if (symbol !== undefined) {
-        forgotten.set(name, (forgotten.get(name) ?? new Set()).add(symbol));
-        message.handled = true;
-        return;
-      }
-      if (message.logLevel !== ExtractorLogLevel.Error && message.logLevel !== ExtractorLogLevel.Warning) message.handled = true;
-    },
+    messageCallback: messageCallback((symbol) => forgotten.set(name, (forgotten.get(name) ?? new Set()).add(symbol))),
   });
   if (result.errorCount > 0) problems.push(`${name}: API Extractor reported ${result.errorCount} errors`);
   if (check && result.apiReportChanged) problems.push(`${name}: the public API differs from api/${name}.api.md`);

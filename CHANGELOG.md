@@ -78,6 +78,10 @@ released together and share version numbers.
   literal writes as `undefined` or `null`, and the compiler refuses it with FV0721.
 - Internal: the repository tracks no build output. `.gitignore` ignores a `target/` directory at
   any depth, and the Criterion results committed under `crates/ferrovue/target` are removed.
+- Internal: `fixtureApp` installs Pinia, vue-i18n and the router through a function each, the two
+  style bindings of a string share one emitter, and the API report's message callback
+  (`scripts/api-messages.ts`) and the import reader of `scripts/no-re-exports.ts` are smaller and
+  tested.
 
 ### Fixed
 
