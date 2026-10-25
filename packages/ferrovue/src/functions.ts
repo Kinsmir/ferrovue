@@ -1,10 +1,11 @@
-import { type Component, type Fn, type N, type Scope, type Val, fail, GenError, placeOf } from "./model.ts";
+import { type Component, type Fn, type N, type Scope, type Ty, type Val, fail, GenError, placeOf } from "./model.ts";
 import type { Const } from "./constants.ts";
 import { constOfDecl } from "./constants.ts";
 import { ctx } from "./context.ts";
 import { expr, typedBy } from "./expr.ts";
 import { bodyExpr, bound, destructured } from "./blocks.ts";
-import { readTypeFile } from "./typescript.ts";
+import { readTypeFile, tyOfTs } from "./typescript.ts";
+import { annotatedStr } from "./enums.ts";
 import { resolveImport } from "./resolve.ts";
 
 const FUNCTION_INITS = new Set(["ArrowFunctionExpression", "FunctionExpression"]);
@@ -158,7 +159,8 @@ export function callFunction(s: Scope, name: string, fn: Fn, args: N[], n: N): V
     let body: N = t ? typedBy(body0, t, true, home) : body0;
     for (let i = params.length - 1; i >= 0; i--) body = param(fn.home, params[i], i < given.length ? { v: given[i]!, name: names[i]! } : null, body);
     const run = (i: number, inner: Scope): Val => (i === given.length ? expr(inner, body) : bound(inner, names[i]!, given[i]!, (next) => run(i + 1, next), paramHint(params[i])));
-    return run(0, cs);
+    const v = run(0, cs);
+    return t ? annotatedStr(v, returnTy(fn.home, t) ?? v.ty) : v;
   } catch (e) {
     if (!(e instanceof GenError) || e.code === "FV1906" || e.code === "FV1907" || e.code === "FV1908") throw e;
     const at = placeOf(comp, n);
@@ -168,6 +170,15 @@ export function callFunction(s: Scope, name: string, fn: Fn, args: N[], n: N): V
     throw inner;
   } finally {
     active.pop();
+  }
+}
+
+function returnTy(home: Component, t: N): Ty | null {
+  try {
+    return tyOfTs(home, t, home.structs);
+  } catch (e) {
+    if (e instanceof GenError) return null;
+    throw e;
   }
 }
 

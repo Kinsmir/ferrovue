@@ -82,6 +82,12 @@ released together and share version numbers.
   This changes the generated code of these shapes, and adds the enums to it; the island's JSON is
   the same, and Pinia state is unchanged. Generated code calls no item 0.11.0 lacks, so
   `__compat!` stays at 5.
+- A function, an arrow function or a `computed` whose return type is annotated `string`, or a union
+  of more literals, and that returns a value of a union of string literals
+  (`function label(): string { return props.size; }`) gives a string of its return type. It gave
+  the returned value's enum, so `label() === "-"` was refused with FV0637 as a comparison that is
+  always false. A `ref` or a constant annotated `string` holds a string the same way. The
+  conformance component `UnionReturned` records these from Vue.
 - A `ref` annotated as a union wider than the value it starts with holds the members of its
   annotation. `ref<Tone | "">(props.tone)`, of a union or a string `enum` `Tone`, compares with
   `""`, narrows by it and reaches a child's prop of `Tone` once narrowed, and

@@ -1,5 +1,5 @@
 import { basename } from "node:path";
-import { type Component, type N, type Scope, type Ty, type Val, absence, dollarNames, enumOf, fail, GenError, literalsOf, nodeName, nothing, snake, takesAttrs, UNDEF, UNION_STR, unionStr } from "./model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, absence, dollarNames, enumOf, fail, GenError, nodeName, nothing, snake, takesAttrs, UNDEF, UNION_STR, unionStr } from "./model.ts";
 import { CONFIG_FILE, ctx } from "./context.ts";
 import { definePropsType, readTypeFile, refuseDates, tyOfTs } from "./typescript.ts";
 import { resolveImport } from "./resolve.ts";
@@ -9,7 +9,7 @@ import { expr, fieldVal, typedBy } from "./expr.ts";
 import { atom, occurrences } from "./parens.ts";
 import { known } from "./narrowing.ts";
 import { bindingOf, bodyExpr, panicky } from "./blocks.ts";
-import { declaredUnion, exactlyEnum, intoEnum, knownLiteral, refField } from "./enums.ts";
+import { annotatedStr, declaredUnion, exactlyEnum, intoEnum, knownLiteral, refField } from "./enums.ts";
 import { functionOf } from "./functions.ts";
 
 export const CLIENT_HOOKS = new Set([
@@ -87,15 +87,6 @@ function statedTy(init: N): N | undefined {
   return init.type === "TSAsExpression" || init.type === "TSSatisfiesExpression" ? init.typeAnnotation : undefined;
 }
 
-function widened(v: Val, ty: Ty): Val {
-  const from = enumOf(v.ty);
-  const want = ty.k === "opt" ? ty.of : ty;
-  const literals = literalsOf(want);
-  const held = literalsOf(v.ty.k === "opt" ? v.ty.of : v.ty) ?? from?.literals;
-  if (v.variant === undefined || from === undefined || want.k !== "str" || enumOf(want) !== undefined || literals === undefined || held === undefined || !held.every((l) => literals.includes(l))) return v;
-  return { code: v.code, ty: v.ty.k === "opt" ? { ...v.ty, of: want } : want };
-}
-
 function unionRef(comp: Component, local: string, typed: N, v: Val, at: N): Val {
   if ((v.ty.k === "opt" ? v.ty.of : v.ty).k !== "str") return v;
   let ty: Ty;
@@ -107,9 +98,9 @@ function unionRef(comp: Component, local: string, typed: N, v: Val, at: N): Val 
   }
   const def = enumOf(ty);
   const held = ty.k === "opt" && v.ty.k !== "opt" ? ty.of : ty;
-  if (def === undefined || !exactlyEnum(v) || (held.k === "opt") !== (v.ty.k === "opt") || (held.k === "opt" && absence(held) !== absence(v.ty))) return widened(v, held);
+  if (def === undefined || !exactlyEnum(v) || (held.k === "opt") !== (v.ty.k === "opt") || (held.k === "opt" && absence(held) !== absence(v.ty))) return annotatedStr(v, held);
   const into = intoEnum(comp, v, def, at);
-  if (into === null) return widened(v, held);
+  if (into === null) return annotatedStr(v, held);
   if (knownLiteral(v) !== undefined) return { ...v, ty: held, variant: into };
   return { code: held.k === "opt" ? `${atom(into)}.map(${UNION_STR})` : unionStr(into), ty: held, variant: into };
 }
@@ -377,7 +368,7 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
         if (annotation && untyped && (v.ty.k === "opt" ? v.ty.of : v.ty).k === "str") {
           const kind = isComputed ? "`computed`" : isRef ? `\`${init0.callee.name}\`` : "constant";
           const want = declaredTy(comp, annotation);
-          if (want !== null) v = declaredUnion(comp, v, want, `\`${local}\`, a ${kind},`, untyped);
+          if (want !== null) v = declaredUnion(comp, annotatedStr(v, want), want, `\`${local}\`, a ${kind},`, untyped);
         }
       } catch (e) {
         if (!(e instanceof GenError) || e.code === "FV1908") throw e;
