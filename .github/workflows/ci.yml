@@ -301,7 +301,13 @@ jobs:
           toolchain: ${{ steps.msrv.outputs.version || matrix.toolchain }}
           components: clippy, rustfmt
           cache-key: rust
-      - run: cargo test --workspace --all-features --locked
+      - name: The workspace's tests, and on the minimum supported Rust all but those that compare rustc's messages
+        run: |
+          skip=()
+          if [[ "$TOOLCHAIN" == msrv ]]; then skip=(--skip an_enum_missing_a_variant); fi
+          cargo test --workspace --all-features --locked -- "${skip[@]}"
+        env:
+          TOOLCHAIN: ${{ matrix.toolchain }}
       - name: Each runtime crate's tests, on their own
         run: for crate in ferrovue-core ferrovue-router ferrovue-i18n; do cargo test -p "$crate" --locked; done
       - run: cargo test -p ferrovue --no-default-features --locked
