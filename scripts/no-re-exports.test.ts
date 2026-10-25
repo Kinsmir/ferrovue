@@ -82,6 +82,25 @@ describe("re-exports in TypeScript", () => {
     expect(tsReExports("x.ts", source).map((f) => f.text)).toEqual(["export { c };", "export type { D };", "export { e as default };", "export default g;"]);
   });
 
+  it("knows the names of inline type, default type and namespace imports, over lines too", () => {
+    const source = [
+      'import { type A, type B as C } from "./a.ts";',
+      'import type D from "./d.ts";',
+      'import e, * as f from "./e.ts";',
+      "import {",
+      "  g,",
+      "  h as i,",
+      '} from "./g.ts";',
+      'import "./side-effect.ts";',
+      "export type { A, C, D };",
+      "export { e };",
+      "export { f };",
+      "export { g, i };",
+      "export { B, h };",
+    ].join("\n");
+    expect(tsReExports("x.ts", source).map((f) => f.text)).toEqual(["export type { A, C, D };", "export { e };", "export { f };", "export { g, i };"]);
+  });
+
   it("leaves exports of what the file defines alone", () => {
     const source = [
       'import { a } from "./a.ts";',

@@ -87,6 +87,43 @@ export interface RouterOptions {
   vueI18n?: typeof import("vue-i18n") | undefined;
 }
 
+async function installPinia(app: App, fixture: Fixture, options: RouterOptions): Promise<void> {
+  const pinia = options.pinia ?? (await optionalPinia(fixture.stores));
+  if (!pinia) return;
+  const store = pinia.createPinia();
+  store.state.value = structuredClone(fixture.stores) as typeof store.state.value;
+  app.use(store);
+}
+
+async function installI18n(app: App, fixture: Fixture, options: RouterOptions): Promise<void> {
+  if (!options.i18n) return;
+  const { createI18n } = options.vueI18n ?? await peer("vue-i18n", "the fixture is rendered with `i18n` options", () => import("vue-i18n"));
+  const i18nOptions = {
+    legacy: false as const,
+    locale: fixture.locale ?? options.i18n.locale,
+    ...(options.i18n.fallbackLocale !== undefined ? { fallbackLocale: options.i18n.fallbackLocale } : {}),
+    messages: options.i18n.messages,
+    missingWarn: false,
+    fallbackWarn: false,
+  };
+  app.use(createI18n(i18nOptions as Parameters<typeof createI18n>[0]));
+}
+
+async function installRouter(app: App, fixture: Fixture, routes: RouteEntry[], options: RouterOptions): Promise<void> {
+  const { createMemoryHistory, createRouter } = options.vueRouter ?? await peer("vue-router", "the fixture is rendered with routes", () => import("vue-router"));
+  const view = fixture.slots.routerView ?? "";
+  const View = defineComponent({ render: () => staticNode(view) });
+  const router = createRouter({
+    history: createMemoryHistory(options.base),
+    routes: routeRecords(routes, View),
+    ...(options.linkActiveClass !== undefined ? { linkActiveClass: options.linkActiveClass } : {}),
+    ...(options.linkExactActiveClass !== undefined ? { linkExactActiveClass: options.linkExactActiveClass } : {}),
+  });
+  app.use(router);
+  await router.push(fixture.route);
+  await router.isReady();
+}
+
 /** An app rendering one fixture of `component`: with a router over `routes` when there are any. */
 export async function fixtureApp(
   component: Component,
@@ -106,38 +143,9 @@ export async function fixtureApp(
   const app = (options.client ? createApp : createSSRApp)({ render: loads ? () => h(Suspense, null, { default: root }) : root });
   const head = await optionalHead(options.hydrate ?? false);
   if (head) app.use(head);
-  const pinia = options.pinia ?? (await optionalPinia(fixture.stores));
-  if (pinia) {
-    const store = pinia.createPinia();
-    store.state.value = structuredClone(fixture.stores) as typeof store.state.value;
-    app.use(store);
-  }
-  if (options.i18n) {
-    const { createI18n } = options.vueI18n ?? await peer("vue-i18n", "the fixture is rendered with `i18n` options", () => import("vue-i18n"));
-    const i18nOptions = {
-      legacy: false as const,
-      locale: fixture.locale ?? options.i18n.locale,
-      ...(options.i18n.fallbackLocale !== undefined ? { fallbackLocale: options.i18n.fallbackLocale } : {}),
-      messages: options.i18n.messages,
-      missingWarn: false,
-      fallbackWarn: false,
-    };
-    app.use(createI18n(i18nOptions as Parameters<typeof createI18n>[0]));
-  }
-  if (routes) {
-    const { createMemoryHistory, createRouter } = options.vueRouter ?? await peer("vue-router", "the fixture is rendered with routes", () => import("vue-router"));
-    const view = fixture.slots.routerView ?? "";
-    const View = defineComponent({ render: () => staticNode(view) });
-    const router = createRouter({
-      history: createMemoryHistory(options.base),
-      routes: routeRecords(routes, View),
-      ...(options.linkActiveClass !== undefined ? { linkActiveClass: options.linkActiveClass } : {}),
-      ...(options.linkExactActiveClass !== undefined ? { linkExactActiveClass: options.linkExactActiveClass } : {}),
-    });
-    app.use(router);
-    await router.push(fixture.route);
-    await router.isReady();
-  }
+  await installPinia(app, fixture, options);
+  await installI18n(app, fixture, options);
+  if (routes) await installRouter(app, fixture, routes, options);
   return app;
 }
 

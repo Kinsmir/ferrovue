@@ -33,22 +33,17 @@ export function rustReExports(file: string, source: string, allowed: readonly st
 
 const lineOf = (source: string, at: number): number => source.slice(0, at).split("\n").length;
 
+const IMPORT = /^\s*import\s+(?:type\s+)?([^;]*?)\s+from\s+["'][^"']+["']/gm;
+const BRACES = /\{([^}]*)\}/;
+const NAMED = /(?:^|\s)(?:type\s+)?(?:\S+\s+as\s+)?([\w$]+)\s*$/;
+const DEFAULT_OR_NAMESPACE = /^(?:\*\s+as\s+)?([\w$]+)$/;
+
+const locals = (list: string, local: RegExp): string[] => list.split(",").flatMap((part) => local.exec(part.trim())?.[1] ?? []);
+
+const clauseNames = (clause: string): string[] => [...locals(BRACES.exec(clause)?.[1] ?? "", NAMED), ...locals(clause.replace(BRACES, ""), DEFAULT_OR_NAMESPACE)];
+
 function imported(source: string): Set<string> {
-  const names = new Set<string>();
-  for (const m of source.matchAll(/^\s*import\s+(?:type\s+)?([^;]*?)\s+from\s+["'][^"']+["']/gm)) {
-    const clause = m[1]!;
-    const braces = /\{([^}]*)\}/.exec(clause)?.[1];
-    for (const spec of braces?.split(",") ?? []) {
-      const local = /(?:^|\s)(?:type\s+)?(?:\S+\s+as\s+)?([\w$]+)\s*$/.exec(spec.trim())?.[1];
-      if (local) names.add(local);
-    }
-    const outside = clause.replace(/\{[^}]*\}/, "");
-    for (const part of outside.split(",")) {
-      const local = /^(?:\*\s+as\s+)?([\w$]+)$/.exec(part.trim())?.[1];
-      if (local) names.add(local);
-    }
-  }
-  return names;
+  return new Set([...source.matchAll(IMPORT)].flatMap((m) => clauseNames(m[1]!)));
 }
 
 /** The re-exports of a TypeScript file: every `export … from`, and every `export { … }` or
