@@ -56,7 +56,7 @@ the configuration at your project root yourself:
 
 ```json
 {
-  "$schema": "https://cdn.jsdelivr.net/npm/ferrovue@0.8.0/schema.json",
+  "$schema": "https://cdn.jsdelivr.net/npm/ferrovue@0.11.0/schema.json",
   "components": "client/components",
   "out": "src/generated"
 }
