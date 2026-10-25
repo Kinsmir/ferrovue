@@ -2311,9 +2311,11 @@ class Gen {
   mixed(d: number): Expr {
     const r = this.r;
     const opts = this.scope.vars.filter((v) => v.opt);
-    const branch = (): Expr =>
-      r.weighted<() => Expr>([[3, () => this.str(d - 1)], [3, () => this.int(d - 1)], [2, () => this.float(d - 1)], [2, () => this.bool(d - 1)], [opts.length ? 2 : 0, () => this.varRef(r.pick(opts))]])();
-    const [a, b] = [branch(), branch()];
+    const branch = (pool: Var[]): Expr =>
+      r.weighted<() => Expr>([[3, () => this.str(d - 1)], [3, () => this.int(d - 1)], [2, () => this.float(d - 1)], [2, () => this.bool(d - 1)], [pool.length ? 2 : 0, () => this.varRef(r.pick(pool))]])();
+    const a = branch(opts);
+    const first = opts.find((v) => v.name === a.ref);
+    const b = branch(first === undefined ? opts : opts.filter((v) => !!v.nul === !!first.nul));
     return { ...node("str", [this.test(d - 1), a, b], ([c, x, y]) => `(${c} ? ${x} : ${y})`, 0, true), ...(a.lone || b.lone ? { lone: true } : {}) };
   }
 

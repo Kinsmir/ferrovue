@@ -222,8 +222,12 @@ members it holds, a lookup table's value, or a `?:` or `??` of these, each turne
 `match` over variants that names every one: `ref<Choice>(props.pick ?? "")` is
 `props.pick.map(|v| match v { Tone::Calm => Choice::Calm, … }).unwrap_or(Choice::Empty)`. Any
 other value keeps the `ref` a string, checked against its annotation as the next paragraph says,
-and so does a union whose literals give a variant no name. A `ref` is the server's own, and the
-island's JSON holds the props it starts from.
+and so does a union whose literals give a variant no name. Either way the `ref` holds the members
+of its annotation, which may be more than the value it starts with holds:
+`ref<Tone | "">(props.tone)` starts from a member of `Tone` and compares with `""` as with any
+member, and `ref<Tone | "" | undefined>(props.tone)` holds the enum of `Tone | ""` when
+`props.tone` is required. A `ref` is the server's own, and the island's JSON holds the props it
+starts from.
 
 A string of a wider union, such as a `ref<Tone | "">` that holds `""` for a `<select>`'s empty
 option, is narrowed as TypeScript narrows it, and reaches a prop of `Tone` once only members of
