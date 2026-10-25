@@ -12,7 +12,7 @@ You need Node 22.23.4 or newer on 22, 24.22.1 or newer on 24, or 26.12.1 or newe
 pnpm install
 pnpm test                    # compiler, CLI, vectors, router, the Vue half of conformance
 pnpm typecheck
-pnpm lint                    # oxlint (type-aware, on TypeScript 7), and fallow for unused files, exports and dependencies
+pnpm lint                    # oxlint (type-aware, on TypeScript 7), fallow for unused files, exports and dependencies, and no re-exports
 cargo test --workspace --all-features
 cargo deny check             # licences, advisories, duplicate crates and sources (deny.toml)
 cargo deny --manifest-path fuzz/Cargo.toml --config fuzz/deny.toml check   # the same for the fuzz targets
@@ -132,6 +132,8 @@ scripts/ferrovue-in.ts       the `ferrovue` command run in a project of this rep
 scripts/inspect.ts           Vue's SSR code and render of a component beside the Rust ferrovue generates for it
 scripts/release.ts           the release version bump and the members check (see RELEASING.md)
 scripts/api-report.ts        the npm package's API report, written and checked (`pnpm api:report`, `pnpm api:check`)
+scripts/no-re-exports.ts     the check `pnpm lint` runs: no `pub use` in `crates/` but the `ferrovue` crate's `core`,
+                             `router` and `i18n`, and no re-export in the TypeScript of `packages/`, `scripts/` and `site/`
 scripts/traceability.test.ts the README's "What a component may use" rows, traced to conformance components in TESTING.md
 site/                        the VitePress site at kinsmir.github.io/ferrovue: `guide.ts` turns the guide, the crate's
                              front page and the changelog into its pages (`pnpm --filter ferrovue-site build`)

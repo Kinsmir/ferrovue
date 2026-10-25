@@ -72,6 +72,11 @@ reference; this file is the short version.
 - The crates' API is what their documentation shows. An item only generated code calls is
   `#[doc(hidden)]`; public enums and structs with public fields are `#[non_exhaustive]`, built
   through constructors and `with_` methods; constructors, builders and getters are `#[must_use]`.
+- No re-exports, in Rust or TypeScript: an item is imported from and exported at the file or module
+  that defines it. No `pub use` of any visibility, no `export … from`, and no `export { … }` or
+  `export default` of an imported name. The one exception is the `ferrovue` crate's whole-crate
+  modules `core`, `router` and `i18n`. `pnpm lint` runs `scripts/no-re-exports.ts`, which fails on
+  any other.
 - The npm package's exports are in `packages/ferrovue/api/*.api.md`, the configuration in
   `schema.json`, the CLI options in `FLAGS` in `src/args.ts`. A change to any of them is a change to
   the public API: say so in the CHANGELOG.

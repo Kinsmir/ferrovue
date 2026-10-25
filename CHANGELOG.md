@@ -58,7 +58,8 @@ released together and share version numbers.
   carry `#[deprecated]`, so the maintainer chose one break with no release that deprecates the old
   paths first. [`upgrading_to_0_12`](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_12/index.html)
   lists every old path with its new one. The API report accepts a type an entry names when
-  another entry exports it.
+  another entry exports it, and `pnpm lint` fails on a re-export in the Rust of `crates/` or the
+  TypeScript of `packages/`, `scripts/` and `site/` (`scripts/no-re-exports.ts`).
 - Tests only: the Stryker survivors the compiler's fixes left in `template.ts` and `expr.ts` are
   closed. A compiler test refuses merged attributes on an SVG element whose tag holds a dash
   (FV0006), which only a `<textarea>` reached before FV0424; an `expr.test.ts` case holds
