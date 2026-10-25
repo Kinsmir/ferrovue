@@ -114,7 +114,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push_str("</p>");
     if matches!(props.kind.unwrap_or(super::types::Kind::Note), super::types::Kind::Note | super::types::Kind::Tip) {
         out.push_str("<p class=\"");
-        fv::class_into(out, false, &[props.kind.unwrap_or(super::types::Kind::Note).as_str()]);
+        fv::class_into(out, false, &[fv::Union::as_str(props.kind.unwrap_or(super::types::Kind::Note))]);
         out.push_str("\">");
         fv::escape_into(out, match props.kind.unwrap_or(super::types::Kind::Note) { super::types::Kind::Note => "ℹ", super::types::Kind::Tip | super::types::Kind::Alert => "★" });
         out.push_str("</p>");

@@ -813,6 +813,9 @@ export interface EnumDef {
   key: object;
   /** What the source calls the union: its alias, or the field it is written in place for. */
   what: string;
+  /** The path of the application's own enum `unions` in the configuration names for the alias,
+   * which the compiler uses and generates no enum for. */
+  rust?: string;
 }
 
 const ENUMS = new WeakMap<Ty, EnumDef>();
@@ -837,10 +840,20 @@ export function enumItems(ty: Ty): EnumDef | undefined {
 
 /** The path of a generated enum, from the module of `comp`. */
 export function enumPath(comp: Component, def: EnumDef): string {
+  if (def.rust !== undefined) return def.rust;
   return `${comp.module === def.module ? "" : `super::${def.module}::`}${def.name}`;
 }
 
 /** The path of the variant of `def` that stands for `literal`. */
 export function variantPath(comp: Component, def: EnumDef, literal: string): string {
   return `${enumPath(comp, def)}::${def.variants[def.literals.indexOf(literal)]!}`;
+}
+
+/** The function generated code reads the literal of an enum's value with, whether the compiler
+ * generated the enum or `unions` names it. */
+export const UNION_STR = "fv::Union::as_str";
+
+/** Rust code of the literal the enum value `code` stands for. */
+export function unionStr(code: string): string {
+  return `${UNION_STR}(${code})`;
 }

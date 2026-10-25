@@ -1,7 +1,7 @@
-error: this module was generated as version 6 of ferrovue's generated code, and this `ferrovue` crate supports versions 2 to 5: use the `ferrovue` npm package and the `ferrovue` crate of one release, and run `ferrovue` to generate the module again
+error: this module was generated as version 7 of ferrovue's generated code, and this `ferrovue` crate supports versions 2 to 6: use the `ferrovue` npm package and the `ferrovue` crate of one release, and run `ferrovue` to generate the module again
  --> tests/compat/newer.rs:1:1
   |
-1 | ferrovue::__compat!(6);
+1 | ferrovue::__compat!(7);
   | ^^^^^^^^^^^^^^^^^^^^^^
   |
   = note: this error originates in the macro `ferrovue::__compat` (in Nightly builds, run with -Z macro-backtrace for more info)

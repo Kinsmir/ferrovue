@@ -58,6 +58,14 @@ impl TryFrom<&str> for K {
     }
 }
 
+impl ferrovue::Union for K {
+    const ALL: &'static [Self] = &K::ALL;
+
+    fn as_str(self) -> &'static str {
+        K::as_str(self)
+    }
+}
+
 /// The props `Lookups.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]

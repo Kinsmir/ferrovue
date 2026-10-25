@@ -60,6 +60,14 @@ impl TryFrom<&str> for LoopEdgesMode {
     }
 }
 
+impl ferrovue::Union for LoopEdgesMode {
+    const ALL: &'static [Self] = &LoopEdgesMode::ALL;
+
+    fn as_str(self) -> &'static str {
+        LoopEdgesMode::as_str(self)
+    }
+}
+
 /// The props `LoopEdges.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]

@@ -56,6 +56,14 @@ impl TryFrom<&str> for CssVarsTagTag {
     }
 }
 
+impl ferrovue::Union for CssVarsTagTag {
+    const ALL: &'static [Self] = &CssVarsTagTag::ALL;
+
+    fn as_str(self) -> &'static str {
+        CssVarsTagTag::as_str(self)
+    }
+}
+
 /// The props `CssVarsTag.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]

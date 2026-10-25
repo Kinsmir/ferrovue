@@ -60,6 +60,14 @@ impl TryFrom<&str> for TagGalleryLevel {
     }
 }
 
+impl ferrovue::Union for TagGalleryLevel {
+    const ALL: &'static [Self] = &TagGalleryLevel::ALL;
+
+    fn as_str(self) -> &'static str {
+        TagGalleryLevel::as_str(self)
+    }
+}
+
 /// `rule` in `TagGallery.vue`: `"hr" | "br"`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum TagGalleryRule {
@@ -105,6 +113,14 @@ impl TryFrom<&str> for TagGalleryRule {
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
+    }
+}
+
+impl ferrovue::Union for TagGalleryRule {
+    const ALL: &'static [Self] = &TagGalleryRule::ALL;
+
+    fn as_str(self) -> &'static str {
+        TagGalleryRule::as_str(self)
     }
 }
 

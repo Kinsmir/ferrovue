@@ -249,9 +249,9 @@ describe("slots read in a template", () => {
 
 describe("fields of a struct", () => {
   it("reads an enum field, optional, with a default and without", () => {
-    expect(render('interface Item { k: "a" | "b" }\ndefineProps<{ item: Item }>();', "<p>{{ item.k }}</p>")).toMatch(like("fv::escape_into(out, props.item.k.as_str());"));
-    expect(render('interface Item { k?: "a" | "b" }\ndefineProps<{ item: Item }>();', "<p>{{ item.k }}</p>")).toMatch(like("if let Some(v) = props.item.k.map(ItemK::as_str) {"));
-    expect(render('withDefaults(defineProps<{ k?: "a" | "b" }>(), { k: "b" });', "<p>{{ k }}</p>")).toMatch(like("fv::escape_into(out, props.k.unwrap_or(XK::B).as_str());"));
+    expect(render('interface Item { k: "a" | "b" }\ndefineProps<{ item: Item }>();', "<p>{{ item.k }}</p>")).toMatch(like("fv::escape_into(out, fv::Union::as_str(props.item.k));"));
+    expect(render('interface Item { k?: "a" | "b" }\ndefineProps<{ item: Item }>();', "<p>{{ item.k }}</p>")).toMatch(like("if let Some(v) = props.item.k.map(fv::Union::as_str) {"));
+    expect(render('withDefaults(defineProps<{ k?: "a" | "b" }>(), { k: "b" });', "<p>{{ k }}</p>")).toMatch(like("fv::escape_into(out, fv::Union::as_str(props.k.unwrap_or(XK::B)));"));
   });
 
   it("reads each kind of optional prop", () => {
@@ -816,7 +816,7 @@ describe("`||`, `??` and `?:` of strings, numbers and booleans", () => {
     ["n || m", "FV0617 `||` between these types"],
     ["n || 0", "FV0617 `||` between these types"],
     ["(ns ?? [1]).length", "fv::push_int(out, (if let Some(n1) = props.ns.as_ref() { n1.to_vec() } else { [1i64].to_vec() }).len() as i64);"],
-    ["e ?? 'z'", "fv::escape_into(out, props.e.map(XE::as_str).unwrap_or(\"z\"));"],
+    ["e ?? 'z'", "fv::escape_into(out, props.e.map(fv::Union::as_str).unwrap_or(\"z\"));"],
     ["s ?? t", "fv::escape_into(out, props.s.as_deref().unwrap_or(&*props.t));"],
     ["s ?? 'x'", "fv::escape_into(out, props.s.as_deref().unwrap_or(\"x\"));"],
     ["s ?? (on ? 'a' : 'b')", "fv::escape_into(out, props.s.as_deref().unwrap_or(if props.on { \"a\" } else { \"b\" }));"],

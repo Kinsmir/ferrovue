@@ -60,6 +60,14 @@ impl TryFrom<&str> for Size {
     }
 }
 
+impl ferrovue::Union for Size {
+    const ALL: &'static [Self] = &Size::ALL;
+
+    fn as_str(self) -> &'static str {
+        Size::as_str(self)
+    }
+}
+
 /// `Owner` in `types/models.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]

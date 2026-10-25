@@ -121,6 +121,7 @@ const FULL = {
   twins: { VBtn: { rust: "crate::v_btn", props: { label: "string" }, slots: ["default"] } },
   trustedHtml: "ferrovue::InlineHtml",
   dateType: "ferrovue::JsDate",
+  unions: { Tone: "crate::domain::Tone" },
   routes: "routes.json",
   router: { routes: { pages: "pages" }, base: "/app", linkActiveClass: "on", linkExactActiveClass: "here" },
   stores: "stores",

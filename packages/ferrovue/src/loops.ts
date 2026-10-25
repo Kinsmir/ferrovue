@@ -49,7 +49,7 @@ export function list(s: Scope, e: Emitter, c: N): void {
     e.open(loop(bound, idx));
     e.stmt(`let ${itemName} = *${itemCode};`);
     itemLet = e.lines.length - 1;
-    itemOf = enumItemVal(s.comp, itemName, of, src.enums.def);
+    itemOf = enumItemVal(itemName, of, src.enums.def);
   } else if (src.ty.k === "list" && src.iter !== undefined) {
     of = src.ty.of;
     walk = src.iter;

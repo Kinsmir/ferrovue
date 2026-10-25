@@ -64,6 +64,14 @@ impl TryFrom<&str> for UnionListItemWide {
     }
 }
 
+impl ferrovue::Union for UnionListItemWide {
+    const ALL: &'static [Self] = &UnionListItemWide::ALL;
+
+    fn as_str(self) -> &'static str {
+        UnionListItemWide::as_str(self)
+    }
+}
+
 /// The props `UnionListItem.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -124,7 +132,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(73 + 9 + 9 + 9 * props.hues.len() + props.label.len());
     out.push_str("<span");
-    if let Some(v) = props.hue.map(super::types::Hue::as_str) {
+    if let Some(v) = props.hue.map(fv::Union::as_str) {
         if v.is_empty() {
             out.push_str(" data-hue");
         } else {
@@ -133,7 +141,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
             out.push('"');
         }
     }
-    if let Some(v) = props.wide.map(UnionListItemWide::as_str) {
+    if let Some(v) = props.wide.map(fv::Union::as_str) {
         if v.is_empty() {
             out.push_str(" data-wide");
         } else {
@@ -150,9 +158,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         out.push('"');
     }
     out.push('>');
-    fv::escape_into(out, &props.hues.iter().map(|v| std::borrow::Cow::<str>::Borrowed(v.as_str())).collect::<Vec<_>>().join(","));
+    fv::escape_into(out, &props.hues.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::Union::as_str(*v))).collect::<Vec<_>>().join(","));
     out.push(' ');
-    fv::escape_into(out, &props.extra.as_ref().map(|v| v.iter().map(|v| std::borrow::Cow::<str>::Borrowed(v.as_str())).collect::<Vec<_>>()).as_deref().map(|fv_extra| std::borrow::Cow::<str>::Owned(fv_extra.iter().map(|v| &**v).collect::<Vec<_>>().join("+"))).unwrap_or(std::borrow::Cow::<str>::Borrowed("-")));
+    fv::escape_into(out, &props.extra.as_ref().map(|v| v.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::Union::as_str(*v))).collect::<Vec<_>>()).as_deref().map(|fv_extra| std::borrow::Cow::<str>::Owned(fv_extra.iter().map(|v| &**v).collect::<Vec<_>>().join("+"))).unwrap_or(std::borrow::Cow::<str>::Borrowed("-")));
     out.push_str("</span>");
     Ok(())
 }

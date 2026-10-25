@@ -56,6 +56,14 @@ impl TryFrom<&str> for HeadChoiceKind {
     }
 }
 
+impl ferrovue::Union for HeadChoiceKind {
+    const ALL: &'static [Self] = &HeadChoiceKind::ALL;
+
+    fn as_str(self) -> &'static str {
+        HeadChoiceKind::as_str(self)
+    }
+}
+
 /// The props `HeadChoice.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]

@@ -92,7 +92,9 @@ pub use teleport::teleport_into;
 pub use trusted::TrustedHtml;
 #[doc(hidden)]
 pub use trusted::trusted_into;
-pub use union::ParseUnionError;
+#[doc(hidden)]
+pub use union::{ParseUnion, UnionShape, check_union, union_prop};
+pub use union::{ParseUnionError, Union};
 #[cfg(feature = "stream")]
 #[cfg_attr(docsrs, doc(cfg(feature = "stream")))]
 pub use web::HtmlStream;

@@ -41,7 +41,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(18 + props.step.label.len() + 7 + 6);
     out.push_str("<li class=\"");
-    fv::class_into(out, false, &[props.step.state.as_str(), props.step.align.map(super::types::Align::as_str).unwrap_or("")]);
+    fv::class_into(out, false, &[fv::Union::as_str(props.step.state), props.step.align.map(fv::Union::as_str).unwrap_or("")]);
     out.push_str("\">");
     fv::escape_into(out, &props.step.label);
     out.push_str("</li>");

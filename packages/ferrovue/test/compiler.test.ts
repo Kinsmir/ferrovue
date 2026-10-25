@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { compileTemplate, parse as parseSfc } from "@vue/compiler-sfc";
-import { GenError, GenErrors, generate, loadConfig } from "../src/compiler.ts";
+import { type Config, GenError, GenErrors, generate, loadConfig } from "../src/compiler.ts";
 import { type Code, ERRORS } from "../src/errors.ts";
 import { GENERATED_VERSION } from "../src/rust.ts";
 
@@ -425,6 +425,21 @@ defineProps<{ note?: string }>();
       for (const name of readdirSync(join(root, config.components))) {
         expect(readFileSync(join(root, config.components, name), "utf8"), name).toBe(readFileSync(join(root, "../conformance/components", name), "utf8"));
       }
+      const out = generate(root, config);
+      expect([...out.keys()].toSorted()).toEqual(readdirSync(join(root, config.out)).toSorted());
+      for (const [name, text] of out) expect(readFileSync(join(root, config.out, name), "utf8"), name).toBe(text);
+    });
+  });
+
+  describe("unions of the project's own", () => {
+    it("is what the Rust test of the application's own enums compiles, from the conformance suite's components", () => {
+      const root = join(import.meta.dirname, "../../../crates/ferrovue/tests/own_unions");
+      const config = loadConfig(root);
+      expect(config.unions).toEqual({ Align: "crate::domain::Align", Hue: "crate::domain::Hue", Level: "crate::domain::Level", Shade: "crate::domain::Shade" });
+      for (const name of readdirSync(join(root, config.components))) {
+        expect(readFileSync(join(root, config.components, name), "utf8"), name).toBe(readFileSync(join(root, "../conformance/components", name), "utf8"));
+      }
+      expect(readFileSync(join(root, "types/unions.ts"), "utf8")).toBe(readFileSync(join(root, "../conformance/types/unions.ts"), "utf8"));
       const out = generate(root, config);
       expect([...out.keys()].toSorted()).toEqual(readdirSync(join(root, config.out)).toSorted());
       for (const [name, text] of out) expect(readFileSync(join(root, config.out, name), "utf8"), name).toBe(text);
@@ -5044,6 +5059,42 @@ defineProps<{ pick: Option }>();
       /this union is the Rust enum `Option`, which would hide Rust's own `Option`/,
     ],
     [
+      "a `unions` entry for an alias of integer literals",
+      `<script setup lang="ts">
+type Count = 1 | 2 | 3;
+defineProps<{ n: Count }>();
+</script>
+<template><p>{{ n }}</p></template>`,
+      /X\.vue:2:\d+: `unions` in ferrovue\.config\.json names a Rust enum for `Count`, which is not a union of two or more string literals: remove `Count` from `unions`, or declare it as one, as `type Count = "a" \| "b"`/,
+    ],
+    [
+      "a `unions` entry for an alias of one literal",
+      `<script setup lang="ts">
+type Kind = "note";
+defineProps<{ kind: Kind }>();
+</script>
+<template><p>{{ kind }}</p></template>`,
+      /X\.vue:2:\d+: `unions` in ferrovue\.config\.json names a Rust enum for `Kind`, which is not a union of two or more string literals/,
+    ],
+    [
+      "a `unions` entry for an alias of a union with `string`",
+      `<script setup lang="ts">
+type Size = "sm" | "md" | string;
+defineProps<{ size: Size }>();
+</script>
+<template><p>{{ size }}</p></template>`,
+      /X\.vue:2:\d+: `unions` in ferrovue\.config\.json names a Rust enum for `Size`, which is not a union/,
+    ],
+    [
+      "a `unions` entry for a union another component declares with other members",
+      `<script setup lang="ts">
+type Pick = "a" | "b";
+defineProps<{ pick: Pick }>();
+</script>
+<template><p>{{ pick }}</p></template>`,
+      /X\.vue:2:\d+: `unions` in ferrovue\.config\.json makes `Pick` the Rust enum `crate::Pick`, and components\/P\.vue declares another `Pick`, "a" \| "c": give the two unions the same members/,
+    ],
+    [
       "props of a type imported from a component",
       `<script setup lang="ts">
 import type { Props } from "./Y.vue";
@@ -5829,6 +5880,11 @@ defineProps<{ k: string }>();
   ];
 
   const children = {
+    P: `<script setup lang="ts">
+type Pick = "a" | "c";
+defineProps<{ p: Pick }>();
+</script>
+<template><b>{{ p }}</b></template>`,
     U: `<script setup lang="ts">
 defineProps<{ k: "a" | "b"; o?: "a" | "b" }>();
 </script>
@@ -5911,6 +5967,10 @@ defineProps<{ chip: Chip }>();
     "two members of an enum that hold one value": "FV0324",
     "a union in place whose enum is named as an interface of the component": "FV0325",
     "a union alias named as a type of Rust's prelude": "FV0325",
+    "a `unions` entry for an alias of integer literals": "FV0329",
+    "a `unions` entry for an alias of one literal": "FV0329",
+    "a `unions` entry for an alias of a union with `string`": "FV0329",
+    "a `unions` entry for a union another component declares with other members": "FV0330",
     "a prop with no type": "FV0326",
     "a field of an interface with no type that a prop reaches": "FV0326",
     "props of a type imported from a component": "FV0327",
@@ -6170,9 +6230,16 @@ defineProps<{ chip: Chip }>();
     "textContent on a meta tag": "FV1711",
   };
 
-  const refusal = (project: string): GenError => {
+  const configs: Record<string, Partial<Config>> = {
+    "a `unions` entry for an alias of integer literals": { unions: { Count: "crate::Count" } },
+    "a `unions` entry for an alias of one literal": { unions: { Kind: "crate::Kind" } },
+    "a `unions` entry for an alias of a union with `string`": { unions: { Size: "app_domain::Size" } },
+    "a `unions` entry for a union another component declares with other members": { unions: { Pick: "crate::Pick" } },
+  };
+
+  const refusal = (project: string, config: Partial<Config> = {}): GenError => {
     try {
-      compile(project);
+      generate(project, { ...CONFIG, ...config });
     } catch (e) {
       if (e instanceof GenError) return e;
       throw e;
@@ -6182,11 +6249,12 @@ defineProps<{ chip: Chip }>();
 
   it("names a code for every refusal it checks the code of", () => {
     expect(Object.keys(codes).filter((what) => !refused.some(([w]) => w === what))).toEqual([]);
+    expect(Object.keys(configs).filter((what) => !refused.some(([w]) => w === what))).toEqual([]);
   });
 
   for (const [what, source, message] of refused) {
     it(`refuses ${what}`, () => {
-      const e = refusal(island(source, children));
+      const e = refusal(island(source, children), configs[what]);
       expect(e.message).toMatch(message);
       expect(e.message).toMatch(/^components\/X\.vue:\d+:\d+: /);
       expect(Object.keys(ERRORS)).toContain(e.code);
@@ -6792,6 +6860,13 @@ describe("the configuration", () => {
     ["stores that is not a string", { ...CONFIG, stores: ["stores"] }, "FV1115", /^`stores` in ferrovue\.config\.json is a string/],
     ["a `trustedHtml` that is not a string", { ...CONFIG, trustedHtml: true }, "FV1115", /^`trustedHtml`/],
     ["a `viteRoot` that is not a string", { ...CONFIG, viteRoot: 1 }, "FV1115", /^`viteRoot`/],
+    ["`unions` in a list", { ...CONFIG, unions: ["Tone"] }, "FV1115", /^`unions` in ferrovue\.config\.json is an object of Rust paths by `type` alias/],
+    ["a `unions` path that is not a string", { ...CONFIG, unions: { Tone: 1 } }, "FV1115", /^`unions\.Tone` in ferrovue\.config\.json is a string/],
+    ["a `unions` path of one name", { ...CONFIG, unions: { Tone: "Tone" } }, "FV1119", /^`unions\.Tone` in ferrovue\.config\.json is "Tone", which is not the path of a Rust type: name the enum from the crate root or a crate the project depends on, as `crate::domain::Tone` or `app_domain::Tone`$/],
+    ["a `unions` path through `super`", { ...CONFIG, unions: { Tone: "super::domain::Tone" } }, "FV1119", /is "super::domain::Tone", which is not the path/],
+    ["a `unions` path with generic arguments", { ...CONFIG, unions: { Tone: "crate::Tone<'a>" } }, "FV1119", /is "crate::Tone<'a>"/],
+    ["a `unions` path with `crate` inside it", { ...CONFIG, unions: { Tone: "app::crate::Tone" } }, "FV1119", /is "app::crate::Tone"/],
+    ["a `unions` path that ends in `::`", { ...CONFIG, unions: { Tone: "crate::" } }, "FV1119", /is "crate::"/],
   ];
   for (const [what, config, code, message] of cases) {
     it(`refuses ${what}`, () => {
@@ -7233,7 +7308,7 @@ const other = defineModel<"x" | "y">("other");
     ).get("x.rs")!;
     expect(out).toContain("pub model_value: XModelValue,");
     expect(out).toContain("pub other: Option<XOther>,");
-    expect(out).toContain('if props.model_value.as_str() == "x" {');
+    expect(out).toContain('if fv::Union::as_str(props.model_value) == "x" {');
     expect(out).toContain("if props.model_value == XModelValue::Y {");
   });
 
@@ -7428,15 +7503,15 @@ withDefaults(defineProps<{ k: K; m?: K; n?: K; j: K }>(), { n: "b" });
 <template><p :class="k" :title="\`\${k}!\`">{{ k }} {{ m }} {{ n }} {{ k.toUpperCase() }} {{ k.length }}</p><b v-if="k === 'a'">a</b><b v-if="m !== 'b'">b</b><b v-if="k === j">j</b><b v-if="m">{{ m }}</b></template>`),
       ).get("x.rs")!,
     );
-    expect(out).toContain("fv::class_into(out, false, &[props.k.as_str()]);");
-    expect(out).toContain('fv::escape_into(out, &format!("{}!", props.k.as_str()));');
-    expect(out).toContain("if let Some(v) = props.m.map(K::as_str) {");
-    expect(out).toContain("fv::escape_into(out, props.n.unwrap_or(K::B).as_str());");
-    expect(out).toContain("fv::escape_into(out, &props.k.as_str().to_uppercase());");
+    expect(out).toContain("fv::class_into(out, false, &[fv::Union::as_str(props.k)]);");
+    expect(out).toContain('fv::escape_into(out, &format!("{}!", fv::Union::as_str(props.k)));');
+    expect(out).toContain("if let Some(v) = props.m.map(fv::Union::as_str) {");
+    expect(out).toContain("fv::escape_into(out, fv::Union::as_str(props.n.unwrap_or(K::B)));");
+    expect(out).toContain("fv::escape_into(out, &fv::Union::as_str(props.k).to_uppercase());");
     expect(out).toContain("if props.k == K::A {");
     expect(out).toContain("if props.m != Some(K::B) {");
     expect(out).toContain("if props.k == props.j {");
-    expect(out).toMatch(/if let Some\((fv_m)\) = props\.m \{\n {8}out\.push_str\("<b>"\);\n {8}fv::escape_into\(out, \1\.as_str\(\)\);/);
+    expect(out).toMatch(/if let Some\((fv_m)\) = props\.m \{\n {8}out\.push_str\("<b>"\);\n {8}fv::escape_into\(out, fv::Union::as_str\(\1\)\);/);
   });
 
   it("compiles a `switch` over an enum in a `computed` to variant comparisons", () => {
@@ -7489,7 +7564,7 @@ defineProps<{ k: "a" | "b" | "c"; o?: "a" | "b" | "c" | "d"; s: string; q: "a" |
     );
     expect(out).toContain("k: match props.k { K::A => super::y::YK::A, K::B => super::y::YK::B, K::C => super::y::YK::C }");
     expect(out).toContain("o: props.m.map(|v| match v { K::A => super::y::YO::A, K::B => super::y::YO::B, K::C => super::y::YO::C })");
-    expect(out).toContain("s: std::borrow::Cow::Borrowed(props.k.as_str())");
+    expect(out).toContain("s: std::borrow::Cow::Borrowed(fv::Union::as_str(props.k))");
     expect(out).toContain('q: match s_pick { "b" => super::y::YQ::B, _ => super::y::YQ::C }');
     expect(out).toContain('r: match if props.on { "a" } else { "b" } { "a" => super::y::YR::A, _ => super::y::YR::B }');
     expect(out).toContain("lit: super::y::YLit::C");
@@ -7628,6 +7703,115 @@ const props = defineProps<{ k: "sm" | "md" | "lg" }>();
     expect(body).toContain("match props.k { XK::Sm => Some(12i64), XK::Md => Some(16i64), XK::Lg => None }");
     expect(body).toContain("matches!(props.k, XK::Sm | XK::Md)");
     expect(body).not.toContain('"toString"');
+  });
+});
+
+describe("unions `unions` names an enum of the application's for", () => {
+  const MAPPED = { ...CONFIG, unions: { Tone: "app_domain::Tone" } };
+  const project = (source: string, others: Record<string, string> = {}): string => {
+    const root = island(source, others);
+    mkdirSync(join(root, "types"), { recursive: true });
+    writeFileSync(join(root, "types/tone.ts"), 'export type Tone = "warm" | "x-cool";\n');
+    return root;
+  };
+  const child = `<script setup lang="ts">
+import type { Tone } from "../types/tone";
+defineProps<{ tone: Tone; tones?: Tone[] }>();
+</script>
+<template><span :class="tone">{{ tone }}</span></template>`;
+  const parent = `<script setup lang="ts">
+import type { Tone } from "../types/tone";
+import Y from "./Y.vue";
+defineProps<{ tone: Tone; other?: Tone; picked: Tone | null }>();
+</script>
+<template>
+  <p :data-tone="tone">{{ tone }} {{ other ?? "none" }} {{ picked }}</p>
+  <b v-if="tone === 'warm'">warm</b>
+  <Y :tone="tone" />
+  <Y :tone="other ?? 'x-cool'" />
+  <Y tone="warm" />
+</template>`;
+
+  it("uses the enum the path names, generates no enum for the union, and checks its variants and literals", () => {
+    const out = generate(project(parent, { Y: child }), MAPPED);
+    const types = out.get("types.rs")!;
+    expect(types).not.toContain("pub enum Tone");
+    expect(types).toContain(
+      "const _: fn(app_domain::Tone) = |v| match v {\n    app_domain::Tone::Warm => {}\n    app_domain::Tone::XCool => {}\n};",
+    );
+    expect(types).toContain(
+      '#[cfg(test)]\n#[test]\nfn tone_gives_each_member_its_literal() {\n    ferrovue::check_union::<app_domain::Tone>("app_domain::Tone", &[(app_domain::Tone::Warm, "warm"), (app_domain::Tone::XCool, "x-cool")]);\n}',
+    );
+    const x = out.get("x.rs")!;
+    expect(x).not.toContain("pub enum");
+    expect(x).toContain('    #[serde(rename = "tone", with = "fv::union_prop")]\n    pub tone: app_domain::Tone,');
+    expect(x).toContain('    #[serde(rename = "other", default, skip_serializing_if = "Option::is_none", with = "fv::union_prop")]\n    pub other: Option<app_domain::Tone>,');
+    expect(x).toContain('    #[serde(rename = "picked", default, with = "fv::union_prop")]\n    pub picked: Option<app_domain::Tone>,');
+    expect(x).toContain("pub fn new(tone: app_domain::Tone) -> Self {");
+    expect(x).toContain("fv::escape_into(out, fv::Union::as_str(props.tone));");
+    expect(x).toContain('fv::escape_into(out, props.other.map(fv::Union::as_str).unwrap_or("none"));');
+    expect(x).toContain("if props.tone == app_domain::Tone::Warm {");
+  });
+
+  it("holds a list of the union as a Vec of the application's enum, written as its literals", () => {
+    const y = generate(project(parent, { Y: child }), MAPPED).get("y.rs")!;
+    expect(y).toContain('    #[serde(rename = "tones", default, skip_serializing_if = "Option::is_none", with = "fv::union_prop")]\n    pub tones: Option<Vec<app_domain::Tone>>,');
+    expect(y).toContain("pub fn tones(mut self, tones: impl IntoIterator<Item = app_domain::Tone>) -> Self {");
+    const x = generate(
+      project(`<script setup lang="ts">
+import type { Tone } from "../types/tone";
+const props = defineProps<{ tones: Tone[]; label: string }>();
+</script>
+<template><p v-for="t in tones" :key="t" :class="t">{{ t === "warm" ? "w" : t }}</p><b>{{ tones.join() }}</b></template>`),
+      MAPPED,
+    ).get("x.rs")!;
+    expect(x).toContain('    #[serde(rename = "tones", with = "fv::union_prop")]\n    pub tones: Vec<app_domain::Tone>,');
+    expect(x).toContain("fv::Union::as_str(");
+    expect(x).toContain("== app_domain::Tone::Warm");
+  });
+
+  it("hands a child's prop of the union the application's enum", () => {
+    const x = generate(project(parent, { Y: child }), MAPPED).get("x.rs")!;
+    expect(x).toContain("&super::y::Props { tone: props.tone, tones: None }");
+    expect(x).toContain("&super::y::Props { tone: props.other.unwrap_or(app_domain::Tone::XCool), tones: None }");
+    expect(x).toContain("&super::y::Props { tone: app_domain::Tone::Warm, tones: None }");
+  });
+
+  it("generates the enum of a union of another name, and of the same union with no entry", () => {
+    const out = generate(project(parent, { Y: child }), CONFIG);
+    expect(out.get("types.rs")).toContain("pub enum Tone {");
+    expect(out.get("types.rs")).toContain("impl ferrovue::Union for Tone {\n    const ALL: &'static [Self] = &Tone::ALL;");
+    expect(out.get("x.rs")).toContain("pub tone: super::types::Tone,");
+  });
+
+  it("maps a union a component declares, and leaves a union written in place a generated enum", () => {
+    const local = island(`<script setup lang="ts">
+type Tone = "warm" | "x-cool";
+defineProps<{ tone: Tone; size: "sm" | "md" }>();
+</script>
+<template><p :class="[tone, size]" /></template>`);
+    const x = generate(local, { ...CONFIG, unions: { Tone: "crate::Tone" } }).get("x.rs")!;
+    expect(x).toContain("pub tone: crate::Tone,");
+    expect(x).toContain("const _: fn(crate::Tone) = |v| match v {");
+    expect(x).toContain("pub enum XSize {");
+    expect(x).toContain("pub size: XSize,");
+    expect(() => generate(local, { ...CONFIG, unions: { XSize: "crate::Size" } })).toThrow(/`unions\.XSize` in ferrovue\.config\.json names `crate::Size` for `XSize`, and no prop or field/);
+  });
+
+  it("refuses an entry no prop or field is typed with", () => {
+    let e: unknown;
+    try {
+      generate(project(parent, { Y: child }), { ...MAPPED, unions: { ...MAPPED.unions, Tones: "app_domain::Tones" } });
+    } catch (caught) {
+      e = caught;
+    }
+    expect(e).toBeInstanceOf(GenError);
+    const err = e as GenError;
+    expect(err.code).toBe("FV1120");
+    expect(err.message).toBe(
+      "`unions.Tones` in ferrovue.config.json names `app_domain::Tones` for `Tones`, and no prop or field of the components is typed with a union of that name: remove the entry, or name the alias as a `.ts` file or a component declares it",
+    );
+    expect(err.at).toEqual({ file: "ferrovue.config.json" });
   });
 });
 

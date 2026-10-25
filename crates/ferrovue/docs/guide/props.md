@@ -237,6 +237,88 @@ of a union (`Size[]` is `Vec<Cow<'a, str>>`), and the fields of a store's own in
 `stores` file, whose state derives `Default` under `cfg(test)`; a shared type a store holds has its
 enums.
 
+Each generated enum implements [`Union`](crate::Union) too, whose `as_str` and `ALL` are the
+enum's own, and generated code reads a value's literal through it.
+
+# Unions mapped to existing enums
+
+An application that already holds a union's set as a Rust enum, in its domain or in a crate below
+the one the generated code is in, names that enum for the union's `type` alias under `unions` in
+`ferrovue.config.json`:
+
+```json
+{
+  "components": "components",
+  "out": "src/generated",
+  "unions": { "Tone": "app_domain::Tone" }
+}
+```
+
+Every prop and every field of an interface typed with `Tone`, in any component or `.ts` file, is
+then `app_domain::Tone`, and the compiler generates no enum for it. What generated code needs from
+the enum is the trait [`Union`](crate::Union), which the crate that declares the enum implements:
+
+- the variants named as the compiler would name the generated enum's, one per literal (the
+  [rules above](#unions-of-string-literals): `"x-cool"` is `XCool`), so that the `match`es,
+  comparisons and defaults generated code writes name them. Next to where the generated enum would
+  be, in `types.rs` for a `.ts` file's alias, the compiler writes a `match` over every variant, so
+  an enum that lacks one of the union's variants, or has one the union lacks, stops the build at
+  the generated module with rustc's own error;
+- [`as_str`](crate::Union::as_str), the literal of each value, which the template renders and
+  compares, and which the island's `data-props` and the state a page sends hold for the value,
+  whatever the enum's own `serde` implementation writes;
+- [`ALL`](crate::Union::ALL), each value once, from which a fixture's literal is read back. The
+  generated module holds a `#[cfg(test)]` test, run by the application's `cargo test`, that checks
+  each value's literal and that `ALL` lists every value once;
+- `Copy`, `PartialEq` and `Debug`, which the trait requires.
+
+```rust
+use ferrovue::Union;
+
+// `export type Tone = "warm" | "x-cool";` in a `.ts` file.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Tone {
+    Warm,
+    XCool,
+}
+
+impl Union for Tone {
+    const ALL: &'static [Self] = &[Tone::Warm, Tone::XCool];
+
+    fn as_str(self) -> &'static str {
+        match self {
+            Tone::Warm => "warm",
+            Tone::XCool => "x-cool",
+        }
+    }
+}
+# mod card {
+#     /// The props `Card.vue` declares.
+#     #[derive(Debug, Clone, serde::Serialize)]
+#     pub struct Props {
+#         #[serde(rename = "tone", with = "ferrovue::union_prop")]
+#         pub tone: super::Tone,
+#         #[serde(rename = "tones", with = "ferrovue::union_prop")]
+#         pub tones: Vec<super::Tone>,
+#     }
+# }
+
+# fn main() {
+// Card.vue:
+//   defineProps<{ tone: Tone; tones: Tone[] }>();
+let props = card::Props { tone: Tone::XCool, tones: vec![Tone::Warm] };
+assert_eq!(serde_json::to_string(&props).unwrap(), r#"{"tone":"x-cool","tones":["warm"]}"#);
+# }
+```
+
+The alias is named as its file declares it, and every alias of that name is the one enum: two
+unions of one name with other members are refused ([FV0330](crate::guide::error_codes#fv0330)),
+and so is an entry for an alias that is not a union of two or more string literals
+([FV0329](crate::guide::error_codes#fv0329)), a path that is not one of a Rust type
+([FV1119](crate::guide::error_codes#fv1119)), and an entry no prop or field is typed with
+([FV1120](crate::guide::error_codes#fv1120)). A union written in place, with no alias, keeps its
+generated enum.
+
 # Nullable props
 
 A prop declared `x: T | null` is an `Option` too, `None` unless its setter is called, and `None` is

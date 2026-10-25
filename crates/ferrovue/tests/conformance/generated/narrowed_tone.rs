@@ -60,6 +60,14 @@ impl TryFrom<&str> for Tone {
     }
 }
 
+impl ferrovue::Union for Tone {
+    const ALL: &'static [Self] = &Tone::ALL;
+
+    fn as_str(self) -> &'static str {
+        Tone::as_str(self)
+    }
+}
+
 /// The props `NarrowedTone.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -102,12 +110,12 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(41 + 6 + props.label.len());
     out.push_str("<b");
-    if props.tone.map(Tone::as_str).is_some() {
+    if props.tone.map(fv::Union::as_str).is_some() {
         out.push_str(" class=\"");
-        fv::class_into(out, false, &[props.tone.map(Tone::as_str).unwrap_or("")]);
+        fv::class_into(out, false, &[props.tone.map(fv::Union::as_str).unwrap_or("")]);
         out.push('"');
     }
-    if let Some(v) = props.tone.map(Tone::as_str) {
+    if let Some(v) = props.tone.map(fv::Union::as_str) {
         if v.is_empty() {
             out.push_str(" data-tone");
         } else {
@@ -119,7 +127,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push('>');
     fv::escape_into(out, &props.label);
     out.push_str(": ");
-    fv::escape_into(out, props.tone.map(Tone::as_str).unwrap_or("none"));
+    fv::escape_into(out, props.tone.map(fv::Union::as_str).unwrap_or("none"));
     out.push_str("</b>");
     Ok(())
 }

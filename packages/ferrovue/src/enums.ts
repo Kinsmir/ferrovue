@@ -1,5 +1,5 @@
 import { basename } from "node:path";
-import { type Component, type EnumDef, type N, type Ty, type Val, asciiTy, declaredLiterals, enumOf, enumPath, enumTy, fail, isAscii, isDeclared, literalsOf, literalTy, REFUSALS, refusalAt, RUST_PRELUDE, rustStr, variantPath } from "./model.ts";
+import { type Component, type EnumDef, type N, type Ty, type Val, asciiTy, declaredLiterals, enumOf, enumPath, enumTy, fail, GenError, isAscii, isDeclared, literalsOf, literalTy, refusalAt, REFUSALS, RUST_PRELUDE, rustStr, snake, UNION_STR, unionStr, variantPath } from "./model.ts";
 import { ctx } from "./context.ts";
 import { atom, binary } from "./parens.ts";
 import { unquote } from "./strings.ts";
@@ -12,6 +12,7 @@ interface Hint {
   key: object;
   what: string;
   members?: readonly string[];
+  alias?: true;
 }
 
 const ALIASES = new WeakMap<object, Hint>();
@@ -20,14 +21,18 @@ const HINTS = new WeakMap<Ty, Hint>();
 /** Record that `type` is what the alias or `enum` called `name`, declared at `decl` in `home`,
  * stands for, with the names of an enum's members. */
 export function declareAlias(home: Component, name: string, type: N, decl: N, members?: readonly string[]): void {
-  ALIASES.set(type, { name, module: home.module, home, node: decl, key: type, what: name, ...(members ? { members } : {}) });
+  ALIASES.set(type, { name, module: home.module, home, node: decl, key: type, what: name, alias: true, ...(members ? { members } : {}) });
 }
 
 /** `ty`, the type the alias `type` stands for, named after the alias when it is a union of string literals. */
 export function namedBy(type: N, ty: Ty): Ty {
   const hint = ALIASES.get(type);
   const inner = ty.k === "opt" ? ty.of : ty;
-  if (hint !== undefined && inner.k === "str" && (literalsOf(inner)?.length ?? 0) >= 2 && !HINTS.has(inner)) HINTS.set(inner, hint);
+  const union = inner.k === "str" && (literalsOf(inner)?.length ?? 0) >= 2;
+  if (hint !== undefined && !union && ctx.unions.has(hint.name)) {
+    fail(hint.home, "FV0329", `\`unions\` in ferrovue.config.json names a Rust enum for \`${hint.name}\`, which is not a union of two or more string literals: remove \`${hint.name}\` from \`unions\`, or declare it as one, as \`type ${hint.name} = "a" | "b"\``, hint.node);
+  }
+  if (hint !== undefined && union && !HINTS.has(inner)) HINTS.set(inner, hint);
   return ty;
 }
 
@@ -84,8 +89,16 @@ function defineEnum(hint: Hint, literals: readonly string[]): EnumDef {
     if (known.literals.join("\0") === literals.join("\0") && known.variants.join("\0") === variants.join("\0")) return known;
     fail(hint.home, "FV0325", `this union is the Rust enum \`${hint.name}\`, and ${known.home.file} declares another union of that name for the same module: name one of them with a \`type\` alias of its own`, hint.node);
   }
-  if (RUST_PRELUDE.has(hint.name)) fail(hint.home, "FV0325", `this union is the Rust enum \`${hint.name}\`, which would hide Rust's own \`${hint.name}\` in the generated code: rename it`, hint.node);
-  const def: EnumDef = { name: hint.name, module: hint.module, literals, variants: variantsOf(hint, literals), home: hint.home, node: hint.node, key: hint.key, what: hint.what };
+  const rust = hint.alias ? ctx.unions.get(hint.name) : undefined;
+  if (rust === undefined && RUST_PRELUDE.has(hint.name)) fail(hint.home, "FV0325", `this union is the Rust enum \`${hint.name}\`, which would hide Rust's own \`${hint.name}\` in the generated code: rename it`, hint.node);
+  const def: EnumDef = { name: hint.name, module: hint.module, literals, variants: variantsOf(hint, literals), home: hint.home, node: hint.node, key: hint.key, what: hint.what, ...(rust === undefined ? {} : { rust }) };
+  if (rust !== undefined) {
+    const other = ctx.mappedUnions.get(hint.name);
+    if (other !== undefined && (other.literals.join("\0") !== literals.join("\0") || other.variants.join("\0") !== def.variants.join("\0"))) {
+      fail(hint.home, "FV0330", `\`unions\` in ferrovue.config.json makes \`${hint.name}\` the Rust enum \`${rust}\`, and ${other.home.file} declares another \`${hint.name}\`, ${other.literals.map((l) => JSON.stringify(l)).join(" | ")}: give the two unions the same members, or name one of them with a \`type\` alias of its own`, hint.node);
+    }
+    if (other === undefined) ctx.mappedUnions.set(hint.name, def);
+  }
   mod.set(hint.name, def);
   return def;
 }
@@ -116,13 +129,13 @@ function enumScalar(comp: Component, owner: string, field: string, node: N, ty: 
 
 /** The list of values of the generated enum `def`, or the optional list, of type `ty` held at
  * `place`, as an expression reads it: the strings of its items, beside the list of enums. */
-export function enumListVal(comp: Component, place: string, ty: Ty, def: EnumDef): Val {
+export function enumListVal(place: string, ty: Ty, def: EnumDef): Val {
   const list = ty.k === "opt" ? ty.of : ty;
   const item = list.k === "list" ? list.of : list;
   const literal = literalTy("str", def.literals);
   const of: Ty = item.k === "opt" ? { ...item, of: literal } : literal;
   const strings = (at: string): string =>
-    item.k === "opt" ? `${at}.iter().map(|v| v.map(${enumPath(comp, def)}::as_str))` : `${at}.iter().map(|v| std::borrow::Cow::<str>::Borrowed(v.as_str()))`;
+    item.k === "opt" ? `${at}.iter().map(|v| v.map(${UNION_STR}))` : `${at}.iter().map(|v| std::borrow::Cow::<str>::Borrowed(${unionStr("*v")}))`;
   const enums = { place, def };
   if (ty.k === "opt") {
     const held = `${atom(place)}.as_ref().map(|v| ${strings("v")}.collect::<Vec<_>>())`;
@@ -133,10 +146,10 @@ export function enumListVal(comp: Component, place: string, ty: Ty, def: EnumDef
 }
 
 /** An item of a list of values of the generated enum `def`, held in the Rust variable `name`. */
-export function enumItemVal(comp: Component, name: string, of: Ty, def: EnumDef): Val {
+export function enumItemVal(name: string, of: Ty, def: EnumDef): Val {
   const ty = enumTy(def);
-  if (of.k === "opt") return { code: `${name}.map(${enumPath(comp, def)}::as_str)`, ty: { ...of, of: ty }, variant: name };
-  return { code: `${name}.as_str()`, ty, variant: name };
+  if (of.k === "opt") return { code: `${name}.map(${UNION_STR})`, ty: { ...of, of: ty }, variant: name };
+  return { code: unionStr(name), ty, variant: name };
 }
 
 /** The literal a string value is when it is one written in the source. */
@@ -145,7 +158,7 @@ export function knownLiteral(v: Val): string | undefined {
 }
 
 function sameEnum(a: EnumDef, b: EnumDef): boolean {
-  return a === b || (a.name === b.name && a.module === b.module);
+  return a === b || (a.rust !== undefined ? a.rust === b.rust : b.rust === undefined && a.name === b.name && a.module === b.module);
 }
 
 /** The code of the refusal of a string outside a union where the render needs its enum. */
@@ -173,7 +186,11 @@ export function intoEnum(comp: Component, v: Val, def: EnumDef, node: N): string
     return over(v.code, strings.map((l, i) => `${i === strings.length - 1 ? "_" : rustStr(l)} => ${variantPath(comp, def, l)}`).join(", "));
   }
   const refused = `${REFUSALS}.keep(Err::<(), _>(fv::Refused::new(${rustStr(OUTSIDE)}, format!("{fv_e}: the template needs one of them here, and Vue would write the string itself: check the value before rendering"))), ${refusalAt(comp, node)})`;
-  const parsed = (on: string): string => `match ${/^&\*+[\w.]+$/.test(on) ? on.replace(/^&\*+/, "") : atom(on)}.parse::<${enumPath(comp, def)}>() { Ok(fv_u) => fv_u, Err(fv_e) => { ${refused}; ${variantPath(comp, def, def.literals[0]!)} } }`;
+  const parse = (on: string): string => {
+    const subject = /^&\*+[\w.]+$/.test(on) ? on.replace(/^&\*+/, "") : atom(on);
+    return def.rust === undefined ? `${subject}.parse::<${enumPath(comp, def)}>()` : `${subject}.parse_union::<${def.rust}>(${rustStr(def.name)}, &[${def.literals.map(rustStr).join(", ")}])`;
+  };
+  const parsed = (on: string): string => `match ${parse(on)} { Ok(fv_u) => fv_u, Err(fv_e) => { ${refused}; ${variantPath(comp, def, def.literals[0]!)} } }`;
   return optional ? `${atom(v.code)}.map(|v| ${parsed("v")})` : parsed(v.code);
 }
 
@@ -326,17 +343,60 @@ impl TryFrom<&str> for ${name} {
         s.parse()
     }
 }
+
+impl ferrovue::Union for ${name} {
+    const ALL: &'static [Self] = &${name}::ALL;
+
+    fn as_str(self) -> &'static str {
+        ${name}::as_str(self)
+    }
+}
 `;
 }
 
-/** The enums generated for the module `module`, refusing one named as another of its items in `taken`. */
+function mappedSource(def: EnumDef): string {
+  const path = def.rust!;
+  const from = def.module === "types" || def.module === "stores" ? def.home.file : basename(def.home.file);
+  const union = def.literals.map(rustStr).join(" | ");
+  return `// \`${def.what}\` in \`${from}\`: \`${union}\`.
+// \`unions\` in ferrovue.config.json names the enum \`${path}\` for it, which has a variant
+// of each name below and no other.
+const _: fn(${path}) = |v| match v {
+${def.variants.map((v) => `    ${path}::${v} => {}`).join("\n")}
+};
+
+#[cfg(test)]
+#[test]
+fn ${snake(def.name)}_gives_each_member_its_literal() {
+    ferrovue::check_union::<${path}>(${rustStr(path)}, &[${def.literals.map((l, i) => `(${path}::${def.variants[i]}, ${rustStr(l)})`).join(", ")}]);
+}
+`;
+}
+
+/** The enums generated for the module `module`, refusing one named as another of its items in
+ * `taken`, and the checks of the enums `unions` names for its unions. */
 export function enumsSource(module: string, taken: Iterable<string>): string {
   const defs = [...(ctx.enums.get(module)?.values() ?? [])];
   const names = new Set(taken);
   for (const def of defs) {
-    if (names.has(def.name)) fail(def.home, "FV0325", `this union is the Rust enum \`${def.name}\`, and the module it is written to has another type of that name: name the union with a \`type\` alias of its own`, def.node);
+    if (def.rust === undefined && names.has(def.name)) fail(def.home, "FV0325", `this union is the Rust enum \`${def.name}\`, and the module it is written to has another type of that name: name the union with a \`type\` alias of its own`, def.node);
   }
-  return defs.map(enumSource).join("\n");
+  return defs.map((def) => (def.rust === undefined ? enumSource(def) : mappedSource(def))).join("\n");
+}
+
+/** Whether the type `ty` holds the enum `unions` names for a union, alone, optional or in a list. */
+export function holdsMapped(ty: Ty): boolean {
+  if (enumOf(ty)?.rust !== undefined) return true;
+  return (ty.k === "opt" || ty.k === "list") && holdsMapped(ty.of);
+}
+
+/** Refuse an alias `unions` names that no prop or field of the compiled components is typed with. */
+export function refuseUnusedUnions(file: string): void {
+  for (const [alias, path] of ctx.unions) {
+    if (!ctx.mappedUnions.has(alias)) {
+      throw new GenError("FV1120", `\`unions.${alias}\` in ${file} names \`${path}\` for \`${alias}\`, and no prop or field of the components is typed with a union of that name: remove the entry, or name the alias as a \`.ts\` file or a component declares it`, { file });
+    }
+  }
 }
 
 /** Whether the module `module` holds generated enums. */

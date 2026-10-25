@@ -64,6 +64,14 @@ impl TryFrom<&str> for UnionChildWide {
     }
 }
 
+impl ferrovue::Union for UnionChildWide {
+    const ALL: &'static [Self] = &UnionChildWide::ALL;
+
+    fn as_str(self) -> &'static str {
+        UnionChildWide::as_str(self)
+    }
+}
+
 /// `pick` in `UnionChild.vue`: `"a" | "b" | "c"`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum UnionChildPick {
@@ -116,6 +124,14 @@ impl TryFrom<&str> for UnionChildPick {
     }
 }
 
+impl ferrovue::Union for UnionChildPick {
+    const ALL: &'static [Self] = &UnionChildPick::ALL;
+
+    fn as_str(self) -> &'static str {
+        UnionChildPick::as_str(self)
+    }
+}
+
 /// `fixed` in `UnionChild.vue`: `"x" | "y"`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum UnionChildFixed {
@@ -161,6 +177,14 @@ impl TryFrom<&str> for UnionChildFixed {
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
+    }
+}
+
+impl ferrovue::Union for UnionChildFixed {
+    const ALL: &'static [Self] = &UnionChildFixed::ALL;
+
+    fn as_str(self) -> &'static str {
+        UnionChildFixed::as_str(self)
     }
 }
 
@@ -212,19 +236,19 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(46 + 6 + props.text.len() + 7 + 1 + 1);
     out.push_str("<span class=\"");
-    fv::class_into(out, false, &[props.align.as_str(), props.wide.map(UnionChildWide::as_str).unwrap_or("")]);
+    fv::class_into(out, false, &[fv::Union::as_str(props.align), props.wide.map(fv::Union::as_str).unwrap_or("")]);
     out.push('"');
-    if props.pick.as_str().is_empty() {
+    if fv::Union::as_str(props.pick).is_empty() {
         out.push_str(" data-pick");
     } else {
         out.push_str(" data-pick=\"");
-        fv::escape_into(out, props.pick.as_str());
+        fv::escape_into(out, fv::Union::as_str(props.pick));
         out.push('"');
     }
     out.push('>');
     fv::escape_into(out, &props.text);
     out.push(' ');
-    fv::escape_into(out, props.fixed.as_str());
+    fv::escape_into(out, fv::Union::as_str(props.fixed));
     out.push_str("</span>");
     Ok(())
 }

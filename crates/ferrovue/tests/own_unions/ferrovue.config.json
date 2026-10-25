@@ -1,0 +1,10 @@
+{
+  "components": "components",
+  "out": "generated",
+  "unions": {
+    "Align": "crate::domain::Align",
+    "Hue": "crate::domain::Hue",
+    "Level": "crate::domain::Level",
+    "Shade": "crate::domain::Shade"
+  }
+}

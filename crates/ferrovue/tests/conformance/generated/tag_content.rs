@@ -56,6 +56,14 @@ impl TryFrom<&str> for TagContentTag {
     }
 }
 
+impl ferrovue::Union for TagContentTag {
+    const ALL: &'static [Self] = &TagContentTag::ALL;
+
+    fn as_str(self) -> &'static str {
+        TagContentTag::as_str(self)
+    }
+}
+
 /// The props `TagContent.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]

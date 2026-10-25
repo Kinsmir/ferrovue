@@ -56,6 +56,14 @@ impl TryFrom<&str> for ThemedChoiceKind {
     }
 }
 
+impl ferrovue::Union for ThemedChoiceKind {
+    const ALL: &'static [Self] = &ThemedChoiceKind::ALL;
+
+    fn as_str(self) -> &'static str {
+        ThemedChoiceKind::as_str(self)
+    }
+}
+
 /// `tag` in `ThemedChoice.vue`: `"div" | "aside"`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum ThemedChoiceTag {
@@ -101,6 +109,14 @@ impl TryFrom<&str> for ThemedChoiceTag {
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
+    }
+}
+
+impl ferrovue::Union for ThemedChoiceTag {
+    const ALL: &'static [Self] = &ThemedChoiceTag::ALL;
+
+    fn as_str(self) -> &'static str {
+        ThemedChoiceTag::as_str(self)
     }
 }
 

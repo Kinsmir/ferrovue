@@ -1,7 +1,8 @@
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { relativePath } from "./paths.ts";
-import { type Config, ctx, JS_DATE, loadConfig, tyOfName } from "./context.ts";
+import { type Config, CONFIG_FILE, ctx, JS_DATE, loadConfig, tyOfName } from "./context.ts";
+import { refuseUnusedUnions } from "./enums.ts";
 import { type Component, failIn, GenError, GenErrors, snake } from "./model.ts";
 import { isRefusal } from "./diagnostics.ts";
 import { readComponent, refuseOptionsApi } from "./component.ts";
@@ -49,6 +50,8 @@ function generateAll(root: string, config: Config, sources: ReadonlyMap<string, 
   ctx.helperModule = config.helpers?.module ?? null;
   ctx.trustedHtml = config.trustedHtml ?? null;
   ctx.dateType = config.dateType ?? JS_DATE;
+  ctx.unions = new Map(Object.entries(config.unions ?? {}));
+  ctx.mappedUnions = new Map();
   ctx.builders = config.builders ?? true;
   ctx.clientDirectives = new Set(config.clientDirectives ?? []);
   ctx.rootDir = root;
@@ -168,6 +171,7 @@ function generateAll(root: string, config: Config, sources: ReadonlyMap<string, 
     for (const { file, source } of built) out.set(file, source());
     modules = PLUGINS.flatMap((p) => p.modules?.() ?? []);
   }
+  refuseUnusedUnions(CONFIG_FILE);
   out.set("mod.rs", modSource(read.map((r) => r.comp), modules.map(([file]) => file)));
   for (const [file, text] of modules) {
     const taken = modulesOf.get(file);

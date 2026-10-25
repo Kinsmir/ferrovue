@@ -60,6 +60,14 @@ impl TryFrom<&str> for TagHeadingAs {
     }
 }
 
+impl ferrovue::Union for TagHeadingAs {
+    const ALL: &'static [Self] = &TagHeadingAs::ALL;
+
+    fn as_str(self) -> &'static str {
+        TagHeadingAs::as_str(self)
+    }
+}
+
 /// The props `TagHeading.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]

@@ -60,6 +60,14 @@ impl TryFrom<&str> for StatementsSize {
     }
 }
 
+impl ferrovue::Union for StatementsSize {
+    const ALL: &'static [Self] = &StatementsSize::ALL;
+
+    fn as_str(self) -> &'static str {
+        StatementsSize::as_str(self)
+    }
+}
+
 /// `Author` in `Statements.vue`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -153,7 +161,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.reserve(124 + props.author.as_ref().map_or(0, |v| v.name.len() + v.title.as_deref().map_or(0, str::len)) + 2 + props.note.as_deref().map_or(0, str::len) + props.words.iter().map(|v| v.len()).sum::<usize>() + props.authors.iter().map(|v| v.name.len() + v.title.as_deref().map_or(0, str::len)).sum::<usize>() + props.lead.name.len() + props.lead.title.as_deref().map_or(0, str::len));
     let fv_refusals = fv::Refusals::new(NAME, "components/Statements.vue");
     let s_greeting = if let Some(fv_author) = props.author.as_ref() { { let fv_name = fv::js_trim(&fv_author.name); if fv_name.is_empty() { std::borrow::Cow::<str>::Borrowed("Unnamed") } else { { let fv_title = fv_author.title.as_deref(); if let Some(fv_title_2) = fv_title.filter(|v| !v.is_empty()) { std::borrow::Cow::<str>::Owned(format!("{} {}", fv_title_2, fv_name)) } else { std::borrow::Cow::<str>::Borrowed(fv_name) } } } } } else { std::borrow::Cow::<str>::Borrowed("Anonymous") };
-    let s_label = if props.size == StatementsSize::Sm { std::borrow::Cow::<str>::Borrowed("small") } else { if props.size == StatementsSize::Md || props.size == StatementsSize::Lg { { let fv_upper = props.size.as_str().to_uppercase(); std::borrow::Cow::<str>::Owned(format!("large {}", fv_upper)) } } else { std::borrow::Cow::<str>::Borrowed("unknown") } };
+    let s_label = if props.size == StatementsSize::Sm { std::borrow::Cow::<str>::Borrowed("small") } else { if props.size == StatementsSize::Md || props.size == StatementsSize::Lg { { let fv_upper = fv::Union::as_str(props.size).to_uppercase(); std::borrow::Cow::<str>::Owned(format!("large {}", fv_upper)) } } else { std::borrow::Cow::<str>::Borrowed("unknown") } };
     let s_grade = if props.score as f64 >= 90.0 { "A" } else { if props.score as f64 >= 75.0 { "B" } else { if props.score as f64 >= 50.0 { "C" } else { "F" } } };
     let s_level = if props.score as f64 == 0.0 { if props.score as f64 > 50.0 { "pass" } else { "fail" } } else { if props.score as f64 == 100.0 { "perfect" } else { if props.score as f64 > 50.0 { "pass" } else { "fail" } } };
     let s_titled = if let Some(fv_author_2) = props.author.as_ref() { if let Some(fv_title_3) = fv_author_2.title.as_deref().filter(|v| !v.is_empty()) { std::borrow::Cow::<str>::Owned(fv_title_3.to_uppercase()) } else { std::borrow::Cow::<str>::Borrowed("untitled") } } else { std::borrow::Cow::<str>::Borrowed("untitled") };
@@ -171,7 +179,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     let s_busiest = { let fv_active = props.authors.iter().filter(|fv_a_4| fv_a_4.posts as f64 > 0.0).collect::<Vec<_>>(); fv_active.iter().copied().nth(usize::try_from(0i64).unwrap_or(usize::MAX)) };
     let s_top = { let fv_active_2 = props.authors.iter().filter(|fv_a_5| fv_a_5.posts as f64 > 1.0).collect::<Vec<_>>(); std::borrow::Cow::<str>::Owned(({ let fv_first = fv_active_2.iter().copied().nth(usize::try_from(0i64).unwrap_or(usize::MAX)); if let Some(fv_first_2) = fv_first { &*fv_first_2.name } else { "nobody" } }).to_owned()) };
     let s_named = { let fv_first_3 = props.authors.first(); if let Some(fv_first_4) = fv_first_3 { Some(fv_first_4) } else { props.author.as_ref() } };
-    let s_pick = &({ let fv_loud = props.size.as_str().to_uppercase(); if &*fv_loud == "SM" { &props.lead } else { props.author.as_ref().unwrap_or(&props.lead) } });
+    let s_pick = &({ let fv_loud = fv::Union::as_str(props.size).to_uppercase(); if &*fv_loud == "SM" { &props.lead } else { props.author.as_ref().unwrap_or(&props.lead) } });
     out.push_str("<article class=\"");
     fv::class_into(out, false, &[&*s_label]);
     out.push_str("\"><h2>");

@@ -56,6 +56,14 @@ impl TryFrom<&str> for AndChainsTone {
     }
 }
 
+impl ferrovue::Union for AndChainsTone {
+    const ALL: &'static [Self] = &AndChainsTone::ALL;
+
+    fn as_str(self) -> &'static str {
+        AndChainsTone::as_str(self)
+    }
+}
+
 /// `Badge` in `AndChains.vue`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -147,7 +155,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     let s_in_range = if let Some(fv_n) = props.n { fv_n as f64 > 1.0 && (fv_n as f64) < 9.0 } else { false };
     let s_color = props.tone.map(|fv_tone| match fv_tone { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" });
     out.push_str("<section");
-    if if props.tone.is_some() { true } else { props.tone.map(AndChainsTone::as_str).is_some() } {
+    if if props.tone.is_some() { true } else { props.tone.map(fv::Union::as_str).is_some() } {
         out.push_str(" class=\"");
         fv::class_into(out, false, &[if let Some(fv_tone_2) = props.tone { match fv_tone_2 { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" } } else { "" }]);
         out.push('"');

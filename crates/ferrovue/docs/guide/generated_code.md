@@ -14,8 +14,8 @@ an application writes against them keeps compiling. That is:
   `data_list`, `pages/books/[id].vue` is `books_id`), and the version check at the top of `mod.rs`;
 - in each component module: `NAME`; `Props`, its public fields and, with `builders` on (the
   default), its `new` and its setters; the structs of local types, with the same; the enums of its
-  unions of string literals, with their names, variants, `ALL`, `as_str`, `Display`, `FromStr` and
-  `TryFrom<&str>`; `Slots`, each `…SlotProps` and each `…Slot`; `render` and `try_render`, with
+  unions of string literals, with their names, variants, `ALL`, `as_str`, `Display`, `FromStr`,
+  `TryFrom<&str>` and [`Union`](crate::Union); for a union `unions` names an enum for, that enum; `Slots`, each `…SlotProps` and each `…Slot`; `render` and `try_render`, with
   their parameters in the order [below](#render-and-its-parameters); `html`; and, for a component
   that renders from its props alone, `island`, `into_html` and `into_island`;
 - `types.rs`'s structs, enums and constants, `route_table.rs`'s `ROUTES`, `PATHS`, `BASE` and `router()`,
@@ -85,7 +85,7 @@ Generated code calls the `ferrovue` crate, so the two must come from compatible 
 the `allow`, `mod.rs` names the version of generated code its compiler writes:
 
 ```rust
-ferrovue::__compat!(5);
+ferrovue::__compat!(6);
 ```
 
 The version is a number that changes only when generated code changes in a way the crate must
@@ -94,10 +94,10 @@ supporting something older generated code calls. Each crate accepts the versions
 stops the build at this line for any other, before the compiler reports anything else:
 
 ```text
-error: this module was generated as version 5 of ferrovue's generated code, and this `ferrovue` crate supports versions 2 to 4: use the `ferrovue` npm package and the `ferrovue` crate of one release, and run `ferrovue` to generate the module again
+error: this module was generated as version 6 of ferrovue's generated code, and this `ferrovue` crate supports versions 2 to 5: use the `ferrovue` npm package and the `ferrovue` crate of one release, and run `ferrovue` to generate the module again
  --> src/generated/mod.rs:12:1
    |
-12 | ferrovue::__compat!(5);
+12 | ferrovue::__compat!(6);
    | ^^^^^^^^^^^^^^^^^^^^^^
 ```
 
@@ -115,7 +115,9 @@ versions 2 to 4. Version 5 adds the [enums of unions of string
 literals](crate::guide::props#unions-of-string-literals), whose `FromStr` fails with
 [`ParseUnionError`](crate::ParseUnionError), which the 0.10 crate lacks, and dates inside lists,
 dictionaries and interfaces, which it writes with helpers the 0.10 crate lacks; the 0.11 crate
-supports versions 2 to 5. The upgrade pages, [`upgrading_to_0_11`](crate::guide::upgrading_to_0_11),
+supports versions 2 to 5. Version 6 reads the literal of every union's enum through
+[`Union`](crate::Union), which the 0.11 crate lacks, so that an enum `unions` names in
+`ferrovue.config.json` is read as a generated one is; the 0.12 crate supports versions 2 to 6. The upgrade pages, [`upgrading_to_0_11`](crate::guide::upgrading_to_0_11),
 [`upgrading_to_0_10`](crate::guide::upgrading_to_0_10),
 [`upgrading_to_0_9`](crate::guide::upgrading_to_0_9) and
 [`upgrading_to_0_8`](crate::guide::upgrading_to_0_8), give the steps for each release.
@@ -130,7 +132,7 @@ Every component module has, in this order:
 | Item | What it is |
 |---|---|
 | `NAME` | The component's name, `"DataList"`: what `data-island` carries, and what a [`Part`](crate::Part) of a [`Page`](crate::Page) records |
-| One enum per union of string literals its props and local types hold | `Size` for `type Size = "sm" \| "md"`, `ButtonSize` for `size: "sm" \| "md"` in `Button.vue`'s props: a variant per literal, `ALL`, `as_str()`, `Display`, `FromStr` and `TryFrom<&str>`, deriving `Debug`, `Clone`, `Copy`, `PartialEq`, `Eq`, `Hash`, `serde::Serialize` and `serde::Deserialize`. One that a `.ts` file declares is in `types.rs`. See [`props`](crate::guide::props#unions-of-string-literals) |
+| One enum per union of string literals its props and local types hold | `Size` for `type Size = "sm" \| "md"`, `ButtonSize` for `size: "sm" \| "md"` in `Button.vue`'s props: a variant per literal, `ALL`, `as_str()`, `Display`, `FromStr`, `TryFrom<&str>` and [`Union`](crate::Union), deriving `Debug`, `Clone`, `Copy`, `PartialEq`, `Eq`, `Hash`, `serde::Serialize` and `serde::Deserialize`. One that a `.ts` file declares is in `types.rs`. See [`props`](crate::guide::props#unions-of-string-literals) |
 | One struct per local `interface` or object `type` | `Row` for `export interface Row { … }`, with the same derives and builder as `Props` |
 | `Props<'a>` | The props, one public field per prop, deriving `Debug`, `Clone` and `serde::Serialize`, and `Default` when every prop is optional. With `builders` on, `Props::new` takes the required props in declaration order and each optional prop other than one named `new` has a setter of its name. See [`props`](crate::guide::props) |
 | `…SlotProps<'v>` and `…Slot<'s>` | For each scoped slot: what its outlet passes (with `<'v>` only when it borrows), and the closure type a parent supplies. A component that takes `fv_provides` has a `…Slot<'s>` for each of its slots, scoped or not, whose closure is also given the `Provides` its content renders with. See [`slots`](crate::guide::slots) |

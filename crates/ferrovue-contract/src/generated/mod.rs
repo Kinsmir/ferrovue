@@ -9,7 +9,7 @@
 // it needs.
 #![allow(dead_code)]
 
-ferrovue::__compat!(5);
+ferrovue::__compat!(6);
 
 pub mod blank;
 pub mod cart_badge;
@@ -27,6 +27,7 @@ pub mod stamped;
 pub mod theme_scope;
 pub mod themed_button;
 pub mod timeline;
+pub mod toned;
 pub mod translated;
 pub mod wrap;
 pub mod index;
@@ -199,6 +200,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Timeline" => {
             let props: timeline::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             timeline::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "Toned" => {
+            let props: toned::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            toned::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "Translated" => {
             let props: translated::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

@@ -56,6 +56,14 @@ impl TryFrom<&str> for TagCasingTag {
     }
 }
 
+impl ferrovue::Union for TagCasingTag {
+    const ALL: &'static [Self] = &TagCasingTag::ALL;
+
+    fn as_str(self) -> &'static str {
+        TagCasingTag::as_str(self)
+    }
+}
+
 /// The props `TagCasing.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]

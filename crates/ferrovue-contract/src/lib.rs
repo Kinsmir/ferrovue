@@ -6,6 +6,7 @@
 #[rustfmt::skip]
 mod generated;
 
+mod domain;
 mod twins;
 
 #[cfg(test)]

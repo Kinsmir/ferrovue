@@ -56,3 +56,11 @@ impl TryFrom<&str> for Tone {
     }
 }
 
+impl ferrovue::Union for Tone {
+    const ALL: &'static [Self] = &Tone::ALL;
+
+    fn as_str(self) -> &'static str {
+        Tone::as_str(self)
+    }
+}
+
