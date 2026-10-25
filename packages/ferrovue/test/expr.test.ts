@@ -659,6 +659,12 @@ describe("`&&` and `||` that narrow their left side", () => {
     expect(refusals("defineProps<{ s?: string }>();", "<p>{{ !s || s.length }}</p>")).toEqual([`FV0614 \`||\` is supported between booleans only, and its right side is a number | ${help}`]);
     expect(refusals("defineProps<{ s?: string }>();", "<p>{{ s != null && s.length }}</p>")).toEqual([`FV0614 \`&&\` is supported between booleans only, and its right side is a number | ${help}`]);
   });
+
+  it("refuses a side that may be absent, saying how to test it", () => {
+    const help = "test it with `!= null` for a boolean, or write `?:` with the value each side gives";
+    expect(refusals("defineProps<{ b: boolean; n?: number }>();", "<p>{{ b && n }}</p>")).toEqual([`FV0614 \`&&\` is supported between booleans only, and its right side is an optional number | ${help}`]);
+    expect(refusals("defineProps<{ b: boolean }>();", "<p>{{ undefined && b }}</p>")).toEqual([`FV0614 \`&&\` is supported between booleans only, and its left side is \`undefined\` | ${help}`]);
+  });
 });
 
 describe("expressions checked a second time", () => {
@@ -763,6 +769,13 @@ describe("values built from object literals in place", () => {
     expect(read("oi")).toMatch(/if let Some\(v\) = \(\(Rich \{ .* \}\)\.oi\) \{/);
     expect(read("ob")).toMatch(/if let Some\(v\) = \(\(Rich \{ .* \}\)\.ob\) \{/);
     expect(read("ofl")).toMatch(/if let Some\(v\) = \(\(Rich \{ .* \}\)\.ofl\) \{/);
+  });
+
+  it("builds a list of a union's members as a list of its enum, and reads it", () => {
+    const script = 'type Tone = "calm" | "loud";\ninterface Mix { tones: Tone[] }\nconst props = defineProps<{ t: Tone }>();\nfunction mix(): Mix { return { tones: [props.t, "loud"] }; }';
+    expect(render(script, '<p>{{ mix().tones.join(",") }}</p>')).toMatch(like(
+      'fv::core::escape_into(out, &((Mix { tones: [fv::props::Union::as_str(props.t), "loud"].iter().map(|v| match &**v { "calm" => Tone::Calm, _ => Tone::Loud }).collect() }).tones).iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))).collect::<Vec<_>>().join(","));',
+    ));
   });
 
   it("refuses an optional object or list field of one, and a field it lacks", () => {
@@ -1042,5 +1055,33 @@ describe("names holding `$`", () => {
     const out = whole("const props = defineProps<{ s: string; v: string }>();", '<slot name="x" :$v="s" :v="v" />');
     expect(out).toContain("pub struct XSlotProps<'v> {\n    pub v_2: &'v str,\n    pub v: &'v str,\n}");
     expect(out).toMatch(like("fv::render::scoped_slot_into(out, fv_slots.x, &XSlotProps { v_2: &props.s, v: &props.v }, None);"));
+  });
+});
+
+describe("strings of a union chosen by `??` and `?:` for a child's union prop", () => {
+  const few = { files: { "F.vue": sfc('defineProps<{ f?: "calm" | "" }>();', "<b>{{ f }}</b>") } };
+  const script = 'import F from "./F.vue";\ntype Tone = "calm" | "loud" | "quiet";\ndefineProps<{ pick?: Tone; other: Tone; on: boolean }>();';
+  const outside =
+    'FV0515 the prop is one of "calm" | "", the members of `FF`, and the value given may be "loud" or "quiet": narrow it to the members, by `===` or `!==` with a literal, by its truth or by `||`, in `?:`, `&&` or `v-if`, or pass a value typed as the union';
+
+  it.each([
+    ["an optional member falling back to a literal by `??`", `<F :f="pick ?? ''" />`],
+    ["a member and a literal chosen by `?:`", `<F :f="on ? other : 'calm'" />`],
+    ["a literal and a member chosen by `?:`", `<F :f="on ? 'calm' : other" />`],
+    ["a member and `undefined` chosen by `?:`", `<F :f="on ? other : undefined" />`],
+  ])("refuses %s that may be a member outside the prop's union", (_, template) => {
+    expect(refusals(script, template, few)).toEqual([outside]);
+  });
+
+  it("binds a `||` of strings to a local before matching it to a child's union prop", () => {
+    const child = { files: { "T.vue": sfc('defineProps<{ t: "calm" | "loud" | "quiet" }>();', "<b>{{ t }}</b>") } };
+    expect(render('import T from "./T.vue";\ndefineProps<{ c: "calm" | "loud" | "quiet" | "" }>();', `<T :t="c || 'calm'" />`, child)).toMatch(like(
+      'super::t::try_render(out, &super::t::Props { t: { let v = { let a = fv::props::Union::as_str(props.c); if !a.is_empty() { a } else { "calm" } }; match v { "calm" => super::t::TT::Calm, "loud" => super::t::TT::Loud, _ => super::t::TT::Quiet } } })?;',
+    ));
+  });
+
+  it("reads the left side of `??` on its right with the type its declaration gives", () => {
+    const out = render('defineProps<{ o?: "" | "a" }>();\nconst T = { "": "E" };', '<p>{{ o ?? (o !== undefined ? T[o] : "z") }}</p>');
+    expect(out).toMatch(like('props.o.map(fv::props::Union::as_str).or(if let Some(fv_o) = props.o { match fv_o { XO::Empty => Some("E"), XO::A => None } } else { Some("z") })'));
   });
 });

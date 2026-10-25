@@ -195,7 +195,7 @@ const OUTSIDE = "FV0518";
 export function intoEnum(comp: Component, v: Val, def: EnumDef, node: N): string | null {
   const optional = v.ty.k === "opt";
   const from = enumOf(v.ty);
-  const over = (on: string, arms: string): string => (optional ? `${atom(on)}.map(|v| match v { ${arms} })` : `match ${on} { ${arms} }`);
+  const over = (on: string, arms: string): string => (optional ? `${atom(on)}.map(|v| match v { ${arms} })` : on.startsWith("{") ? `{ let v = ${on}; match v { ${arms} } }` : `match ${on} { ${arms} }`);
   if (v.variant !== undefined && from !== undefined) {
     const kept = (literalsOf(optional ? (v.ty as { of: Ty }).of : v.ty) ?? from.literals) as readonly string[];
     if (sameEnum(from, def) && kept.length === from.literals.length) return v.variant;

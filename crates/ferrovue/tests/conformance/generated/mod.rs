@@ -229,6 +229,7 @@ pub mod union_child;
 pub mod union_enums;
 pub mod union_list;
 pub mod union_list_item;
+pub mod union_logic;
 pub mod union_mark;
 pub mod union_narrowing;
 pub mod union_objects;
@@ -1425,6 +1426,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "UnionListItem" => {
             let props: union_list_item::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             union_list_item::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "UnionLogic" => {
+            let props: union_logic::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            union_logic::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "UnionMark" => {
             let props: union_mark::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
