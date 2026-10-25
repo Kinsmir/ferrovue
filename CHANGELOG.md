@@ -478,252 +478,60 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 
 ### Added
 
-- `Date` props: a prop the component types `Date`, optional (`edited?: Date`) or nullable
-  (`deleted: Date | null`) too, read with `.toISOString()`, `.getTime()`, `.valueOf()` and the
-  `.getUTC…()` methods in the template, a `computed`, `v-if` and `v-for`, and handed to a child's
-  `Date` prop. Its Rust field is `ferrovue::JsDate` by default: a JavaScript time value, invalid
-  dates included, built with `JsDate::from_millis`, `JsDate::parse` (the strings the template's
-  `new Date(s)` accepts), `JsDate::now` or `From<SystemTime>`, with `Serialize` and `Deserialize`.
-  The new configuration key `dateType` names another Rust type, which implements the new trait
-  `ferrovue::JsTime`, through which generated code reads either, clipping what it returns as
-  `new Date(value)` does. An island's `data-props` carries a date as its ISO string and an invalid
-  one as `NaN`, and `mountIslands`, `mountPage`, `renderPage` and `fixtureApp` turn each prop the
-  component declares a `Date` back into one before Vue hydrates, so the browser reads the time
-  value the server read, in any time zone.
-  `reviveDates(component, props)`, exported from `ferrovue` and `ferrovue/client`, does the same
-  for an app that reads a component's props from JSON itself.
-- The `chrono` feature, off by default: `JsTime` for `chrono::DateTime<Utc>`, to name as
-  `"dateType": "chrono::DateTime<chrono::Utc>"`, `From<DateTime<Utc>>` for `JsDate`, and
-  `TryFrom<JsDate>` for `DateTime<Utc>`, which fails with `ferrovue::DateOutOfRange` for an invalid
-  date and for one beyond chrono's ±262,142 years. JavaScript's dates reach from −271821 to
-  +275760, so the parsing and the `getUTC…` twins stay ferrovue's own, held to `dates.json`.
-- FV1806, for a `Date` anywhere but a component's own prop: inside a list, a dictionary or an
-  object prop, in Pinia state, `inject`, `ref` or `defineModel`, which would reach the client as a
-  string.
-- `.toPrecision()` and `.toExponential()` of a number, with no argument or a literal one, written
-  as V8 writes them: rounded from the exact value of the double, an exact tie away from zero, with
-  JavaScript's choice between fixed and exponential notation and its `e+N` exponent.
-  `toPrecision()` without an argument is `String(x)`, and `toExponential()` without one writes the
-  shortest digits that read back as the number. The crate gains their twins, `js_to_precision` and
-  `js_to_exponential`, held to 9,672 vectors recorded from Node in `precision.json`: hand-written
-  edges (ties, carries, `-0`, subnormals, 10²¹ and beyond, the largest double), every argument from
-  0 to 100 for a third of them, and 1,500 numbers drawn across the exponents.
-- FV0716 and FV0717, for `.toPrecision()` with an argument other than a literal from 1 to 100 and
-  `.toExponential()` with one other than a literal from 0 to 100, where JavaScript throws a
-  `RangeError` or the compiler cannot know the argument.
-- More of `Date`, as V8 computes it: `.toUTCString()` (`Thu, 01 Jan 1970 00:00:00 GMT`, years
-  beyond four digits and before year 0 as V8 writes them, `Invalid Date` for an invalid date);
-  `.toJSON()`, a `string | null` that is `null` for an invalid date, written as nothing in `{{ }}`
-  and leaving a bound attribute out; `JSON.stringify()` of a date, its ISO string quoted or `null`;
-  `Date.UTC()` of one to seven numbers, each truncated, a year from 0 to 99 read as 1900 to 1999,
-  parts carried into the next, `NaN` beyond the range, and literal parts worked out when compiling;
-  and `<`, `<=`, `>` and `>=` between two dates, which compare their time values and are false when
-  either is invalid. The runtime's `js_to_utc_string`, `js_to_json`, `js_json_date` and
-  `js_date_utc` are held to new vectors in `dates.json`, recorded from Node and read alike by
-  Chromium and Firefox, and to the new `DateFormats` conformance component.
-- FV1807, for `Date.UTC()` of no parts, more than seven, or a part that is not a number that is
-  present; FV1808, for literal parts of `Date.UTC()` that V8 computes by rules Firefox and Safari do
-  not share (a year beyond ±1,000,000, a month beyond ±10,000,000, a year before −399,999, or a
-  part beyond 2⁵³ ms brought back within the range), on which `js_date_utc` panics when they come
-  from the props; FV1809, for `===`, `!==`, `==` and `!=` with a `Date`, which compare whether two
-  dates are one object, with a message that says to compare `.getTime()`.
-- `Number.isNaN()`, `Number.isFinite()`, `Number.isInteger()` and `Number.isSafeInteger()` of a
-  number, an integer or a `Float`, present or optional (`false` when absent), and the global
-  `isNaN()` and `isFinite()` of a present number, wherever a boolean goes: text, attributes,
-  `v-if`, `v-show`, `computed`, arrow functions, `&&`, `||` and `!`. A date's validity is now
-  tested with `!Number.isNaN(d.getTime())` too, beside `d.getTime() === d.getTime()`.
-- `||` between dates, the left one optional or nullable too (`edited || posted`): a date is always
-  truthy, an invalid one included, so it gives the left date when present, as `??` does.
-- FV0718, for `Number.isNaN()` and its kin of a value that is not a number, for which they are
-  always `false` (`Number.isNaN(s)` of a string, `Number.isFinite(d)` of a date), and for the
-  global `isNaN()` and `isFinite()` of anything but a present number, which they would convert:
-  the message points to `Number.isNaN(Number(s))` and `Number.isNaN(d.getTime())`.
-- List items by index: `list[i]` with an integer `i`, and `list.at(i)`, which counts from the end
-  when `i` is negative. Either is `T | undefined`, `undefined` outside the list, narrowed by `v-if`
-  (`v-if="rows[0]"`) and taken by `??`, `?.` and `{{ }}` as other optional values are; `list?.[i]`
-  reads an item of an optional list. An index that is a `Float`, a string or a value that may be
-  absent is refused with FV0824, and `.at()` given anything but one number with FV0825.
-- Optional chains that go on past `?.`: `s?.length`, `s?.trim()`, `user?.profile.bio`,
-  `s?.trim().length`, `tags?.at(-1)?.toUpperCase()`, with every property and method the value has
-  when present. Once the value is absent, the whole chain is `undefined`, as in JavaScript.
-  `f?.()` is refused with FV0629, and `??` from a list such a chain computes to another list with
-  FV0630 (`?? []` is accepted).
-- `.indexOf()` and `.lastIndexOf()` of a list, compared with `===`: `NaN` is found nowhere and `-0`
-  is found as `0`. A value of another type, or a position to start from, is refused with FV0826.
-  `.findLast()` and `.findLastIndex()` take what `.find()` and `.findIndex()` take. `.concat()`
-  joins lists of one item type, or of numbers whether `number` or `Float`, and refuses others with
-  FV0827. Generated code calls the new `#[doc(hidden)]` `js_item_at` for `.at()`, part of
-  version 3.
-- `.reduce()` and `.reduceRight()` of a list with an initial value, whose arrow function takes the
-  accumulator, the item and its index. The accumulator is a string, a number or a boolean, its type
-  fixed from the initial value and the function's body: an integer start whose body gives a
-  fraction, or may give `-0`, accumulates a `Float`, and strings join by `+` with the rules of
-  `+` itself, so a function joining strings that may hold halves of surrogate pairs is refused
-  with FV0706. Without an initial value either is refused with FV0828, since JavaScript throws on
-  an empty list, and an accumulator of another type, or a body that changes its type, with FV0829.
-- `.toReversed()`, and `.toSorted()` without a comparator, which orders the items by `String(x)`
-  compared by UTF-16 code unit as JavaScript does (`[10, 9, 1]` sorts to `[1, 10, 9]`, `NaN` among
-  the letters), or with a comparator of a shape the server orders by exactly: `(a, b) => a - b`,
-  `b - a`, `a.k - b.k` and `b.k - a.k` over integers, and `?:` over `<`, `>`, `<=`, `>=`, `===`
-  and `!==` of integers or strings giving numbers whose signs make a consistent order (`a < b ? -1
-  : a > b ? 1 : 0`). The sort is stable, as in V8 and SpiderMonkey. Other comparators are refused
-  with FV0830, a `Float` key among them, since a `NaN` makes the comparator inconsistent and each
-  engine orders the items its own way; a list of objects without a comparator with FV0831; and a
-  `localeCompare` comparator with FV1805. `[...list].sort(…)` and `[...list].reverse()` are the
-  same as `.toSorted(…)` and `.toReversed()`, and `.sort()` and `.reverse()` of a prop or state,
-  which change it in place, are refused with FV0832, pointing to them.
-- Spread in array literals, `[...a, x, ...b]`, of lists and values of one item type, numbers whether
-  `number` or `Float`, and of lists of objects of one type; anything else is refused with FV0833.
-  `Math.max(...xs)` and `Math.min(...xs)`, beside other numbers too, fold the items as JavaScript
-  does: `-Infinity` and `Infinity` for no items, `NaN` when any is, and `-0` below `0`. Generated
-  code calls the new `#[doc(hidden)]` `js_reduce`, `js_sorted`, `js_sorted_by_string` and
-  `js_order`, part of version 3.
-- `encodeURIComponent()` and `encodeURI()` of a string, or of anything `String()` writes, encoded
-  as JavaScript encodes them: each byte of a character's UTF-8 as `%XX` in upper case, except the
-  ASCII letters and digits, `-_.!~*'()` and, for `encodeURI()`, `;/?:@&=+$,#`. `ferrovue-core`
-  gains `js_encode_uri_component` and `js_encode_uri`, re-exported by `ferrovue`, held to the new
-  `uri.json`: every ASCII character, hand-written edges and 450 strings drawn at random, 1,202
-  vectors recorded from Node. A string that may hold half of a surrogate pair, on which JavaScript
-  throws a `URIError`, is refused with FV0706.
-- `String()`, template literals and `.concat()` of a value that may be absent, which JavaScript
-  writes as `undefined`, or `null` for a nullable one, and of a list of strings, numbers, booleans
-  or nullable items, written as its items joined by `,` with an absent item as nothing. `{{ x }}`
-  keeps Vue's own rule, nothing for an absent value. A value that may be either `null` or
-  `undefined` is refused with FV0721, and one `String()` cannot write, such as an object, with
-  FV0723. Generated code calls the new `#[doc(hidden)]` `JsOr` for an optional number or boolean.
-- Positions and limits in string methods, counted in UTF-16 code units and clamped as JavaScript
-  clamps them: `.includes(x, i)`, `.startsWith(x, i)`, `.endsWith(x, i)`, `.indexOf(x, i)` and
-  `.lastIndexOf(x, i)`, a position inside a surrogate pair included, and `.split(x, n)` with the
-  limit taken as `ToUint32` takes it; a position or a limit that is `undefined` or an absent
-  optional number is JavaScript's default. Also `.substr()`, `.trimLeft()`, `.trimRight()`,
-  `.concat()` of strings, `.charCodeAt()` and `.codePointAt()`, the last two refused with FV0706 of
-  a string that may hold half of a pair. Generated code calls the new `#[doc(hidden)]`
-  `js_includes_from`, `js_starts_with_at`, `js_ends_with_at`, `js_index_of_from`,
-  `js_last_index_of_from`, `js_split_limit`, `js_substr`, `js_char_code_at` and
-  `js_code_point_at`, held to 8,208 new vectors in `strings.json`.
-- `Math.sqrt()`, `Math.sign()` (`ferrovue-core`'s new `js_sign`, re-exported by `ferrovue`: `0`,
-  `-0` and `NaN` are their own sign), the eight constants of `Math` and those of `Number`, and the
-  globals `Infinity` and `NaN`. `**` and `Math.pow()` are worked out when compiling, of an integer
-  and a whole exponent from 0 that are both known, with a result within ±2⁵³, which every engine
-  gives exactly. `math.json` gains 1,458 vectors recorded from Node: `Math.sqrt` and `Math.sign` of
-  hand-written edges and drawn doubles, the constants, and 776 such powers; the browser tests check
-  that each browser computes `math.json` and `uri.json` as Node recorded them.
-- `typeof`, worked out from each value's type: `"string"`, `"number"`, `"boolean"`, `"object"` for
-  objects, lists, records, dates and `null`, and of an optional value its type when present and
-  `"undefined"` (or `"object"` for a nullable one) when absent, so that `typeof x === "string"` and
-  `typeof x !== "undefined"` narrow it in `v-if`, `&&` and `?:`. FV0722 refuses a comparison that
-  depends on whether a value that may be `null` or `undefined` is which, and `typeof` of a value of
-  a plugin's own type.
-- FV0719, for `Math.cbrt()`, `Math.hypot()`, `Math.exp()`, `Math.log()`, the trigonometric
-  functions and their kin, which engines round by their own routines; FV0720, for any other `**`
-  or `Math.pow()` (Node 22 writes `10 ** -20` as `1.0000000000000001e-20`); FV0631, for `in` and
-  `instanceof`; FV0632, for the bitwise and shift operators; FV0633, for a part of `JSON`, `Math`,
-  `Number`, `String`, `Array` and JavaScript's other globals that the server does not translate,
-  naming what it translates of the one used.
-- The guide pages [`upgrading_to_0_9`](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_9/index.html)
-  and [`upgrading_to_0_8`](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_8/index.html),
-  for a project moving from 0.8 and from 0.7: the steps to take (the versions to bump, the modules
-  to generate again, the Rust and the error codes that change), the behaviour that changed, and
-  what is newly supported, each linking to the page that covers it. The README's list of guides,
-  its versions paragraph and the `generated_code` page's version check link to them, and
-  CONTRIBUTING.md names the Node versions CI tests: 22.18, 22, 24 and 26.
+- `Date` props, required, optional or nullable, read with `.getTime()`, `.toISOString()` and the
+  `.getUTC…()` methods. Their Rust type is `ferrovue::JsDate`, or the `dateType` key's: [Date props](https://docs.rs/ferrovue/latest/ferrovue/guide/dates_and_prices/index.html#date-props).
+- `reviveDates(component, props)`, from `ferrovue` and `ferrovue/client`, turns an island's ISO
+  strings back into dates, as `mountIslands` and `mountPage` do: [In the island's props](https://docs.rs/ferrovue/latest/ferrovue/guide/dates_and_prices/index.html#in-the-islands-props).
+- The `chrono` feature, off by default, takes `chrono::DateTime<chrono::Utc>` as the `dateType`
+  and converts it to and from `JsDate`: [chrono](https://docs.rs/ferrovue/latest/ferrovue/guide/dates_and_prices/index.html#chrono).
+- FV1806 refuses a `Date` inside a list, a dictionary, an object prop, Pinia state, `inject`, `ref`
+  or `defineModel`, which would reach the client as a string: [FV1806](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#fv1806).
+- `.toUTCString()`, `.toJSON()` and `JSON.stringify()` of a date, `Date.UTC()`, and `<`, `<=`,
+  `>`, `>=` and `||` between dates: [Dates in a template](https://docs.rs/ferrovue/latest/ferrovue/guide/dates_and_prices/index.html#dates-in-a-template).
+- FV1809 refuses `===`, `!==`, `==` and `!=` with a `Date`, and says to compare `.getTime()`:
+  [FV1809](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#fv1809).
+- `.toPrecision()` and `.toExponential()` of a number, with their twins `js_to_precision` and
+  `js_to_exponential`: [How numbers are computed](https://docs.rs/ferrovue/latest/ferrovue/guide/numbers/index.html#how-numbers-are-computed).
+- `Number.isNaN()`, `Number.isFinite()`, `Number.isInteger()`, `Number.isSafeInteger()`, and the
+  global `isNaN()` and `isFinite()` of a number: [How numbers are computed](https://docs.rs/ferrovue/latest/ferrovue/guide/numbers/index.html#how-numbers-are-computed).
+- `Math.sqrt()`, `Math.sign()` with its twin `js_sign`, the constants of `Math` and `Number`, and
+  `**` and `Math.pow()` of known integers: [How numbers are computed](https://docs.rs/ferrovue/latest/ferrovue/guide/numbers/index.html#how-numbers-are-computed).
+- List items by index (`list[i]`, `list.at(i)`, `list?.[i]`) and optional chains that go on past
+  `?.` (`user?.profile.bio`): [Optional chains and list items](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#optional-chains-and-list-items).
+- `.indexOf()`, `.lastIndexOf()`, `.findLast()`, `.findLastIndex()` and `.concat()` of a list:
+  [Slicing lists](https://docs.rs/ferrovue/latest/ferrovue/guide/strings/index.html#slicing-lists).
+- `.reduce()`, `.reduceRight()`, `.toReversed()`, `.toSorted()`, spread in array literals and
+  `Math.max(...xs)`: [Building lists](https://docs.rs/ferrovue/latest/ferrovue/guide/strings/index.html#building-lists).
+- `encodeURIComponent()` and `encodeURI()`, with their twins `js_encode_uri_component` and
+  `js_encode_uri`: [URIs](https://docs.rs/ferrovue/latest/ferrovue/guide/strings/index.html#uris).
+- `String()`, template literals and `.concat()` of a value that may be absent, written as
+  `undefined` or `null`, and of a list: [Strings from values](https://docs.rs/ferrovue/latest/ferrovue/guide/strings/index.html#numbers-from-strings-and-strings-from-values).
+- Positions and limits in `.includes()`, `.indexOf()`, `.split()` and their kin, `.substr()`,
+  `.charCodeAt()` and `.codePointAt()`: [Counting in UTF-16 code units](https://docs.rs/ferrovue/latest/ferrovue/guide/strings/index.html#counting-in-utf-16-code-units).
+- `typeof`, worked out from each value's type, which narrows an optional value in `v-if`, `&&` and
+  `?:`: [typeof](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#typeof).
+- The guide pages [`upgrading_to_0_8`](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_8/index.html) and [`upgrading_to_0_9`](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_9/index.html).
 
 ### Changed
 
-- Generated code is version 3 (`ferrovue::__compat!(3)`): a `Date` prop calls `JsTime`, the
-  `#[doc(hidden)]` `js_time_of` and `js_date_prop` and the serde helpers `date_prop` and `opt_date_prop`, which the
-  0.8 crate lacks. The crate still builds modules of version 2, which call nothing that changed.
-- The API reports gain `reviveDates` (`ferrovue`, `ferrovue/client`) and `Config.dateType` and
-  FV0629 to FV0633, FV0716 to FV0723, FV0824 to FV0833 and FV1806 to FV1809, FV0604's title names
-  a value that may be absent, FV0610's names a hole alone, FV0706's and FV0708's titles name what
-  they now cover, and FV1234 is retired (`ferrovue/compiler`).
-- `in`, `instanceof`, `**` and the bitwise operators are refused with FV0631, FV0720 and FV0632,
-  whose messages say what each does, where FV0619 named `==`; FV0619 is now raised for `==` and
-  `!=` alone. A part of `JSON`, `Math`, `Number`, `String` or another global that the server does
-  not translate (`JSON.stringify(x, null, 2)`, `JSON.parse()`, `String.fromCharCode()`,
-  `decodeURIComponent()`) is refused with FV0633, naming what it translates, where FV0601 said the
-  whole global was not available. `typeof` of anything but a query value, which the router refused
-  with FV1234, is the core's now, and FV1234 is retired.
-- `Math.exp()`, `Math.log()`, the trigonometric functions and their kin are refused with FV0719
-  where they were FV0704. A `Date` prop compiles where it was refused with FV0315, and a `Date`
-  inside a list, a dictionary or an object prop is refused with FV1806 where it was FV0315.
-- Generated code of version 3 also calls the `#[doc(hidden)]` `js_to_utc_string`, `js_to_json`,
-  `js_json_date` and `js_date_utc`. FV0609 names two dates beside two numbers and two strings, and
-  `==` or `!=` with a date is refused with FV1809 where it was FV0619.
-- `.toFixed()` takes a fractional literal, truncated as JavaScript truncates it (`toFixed(2.5)` is
-  `toFixed(2)`), and `undefined`, which is `toFixed(0)`; it refused both before.
-- The guide's examples of a refusal (the CLI's message, `--format json` and the editor) show
-  `{{ n.toLocaleString() }}`, refused with FV1805, now that `.toPrecision()` compiles.
-- The README is a landing page: what ferrovue is and why to use it, the quick start, what a
-  component may use, a list of the guides, performance, versions and the licence, with the
-  crates.io and npm version badges side by side, then docs.rs, CI and the licence. Its reference
-  sections moved into the crate guide: constants into `props`, `<ClientOnly>` and Rust twins into
-  `errors_and_limits` (which also holds the list of what is refused), fixtures in an application's
-  own vitest tests (`fixtureApp`) into `testing`, an island whose name is unknown and the islands'
-  stylesheets into `islands_and_hydration`, and the `stream` feature into `streaming`; the other
-  sections were covered by their guide pages already. The repository layout and the benchmark
-  commands moved into CONTRIBUTING.md. The quick start names the 0.8.0 schema, and the guide's
-  `Cargo.toml` lines version 0.8.
-- Tests only, with no change to the crates or the npm package: the differential fuzzer generates
-  dates. Components get required, optional and nullable `Date` props, read with `.getTime()`,
-  `.valueOf()` and the `.getUTC…()` methods in text, attributes, conditions and loops, narrowed in
-  `v-if`, chosen with `?:` and `??`, held in a `computed` and handed to a child's `Date` prop that
-  hands it on to its own child; `new Date()` of an ISO literal, of a number and of another date,
-  and `Date.parse()` of an ISO literal, in any component. `.toISOString()` is read from a date the
-  template has tested with `d.getTime() === d.getTime()`, directly or through a `computed` the
-  render reads only under that test. Each fixture's dates come from `test/date-inputs.ts`, the
-  strings and time values `dates.json` records: ISO strings across the range of years, expanded
-  years and both edges, numbers with fractions, and invalid dates. It also writes
-  `.toUTCString()`, `JSON.stringify()` and `.toJSON()` of any date, `Date.UTC()` of one to seven
-  parts wherever a number goes, and `<`, `<=`, `>` and `>=` between two dates in conditions.
-- Tests only: the differential fuzzer generates `.toPrecision()` and `.toExponential()` of any
-  number, without an argument and with whole and fractional literals in range, and the conformance
-  suite gains `Precision`, ten fixtures recorded from Vue.
-- Tests only: the differential fuzzer generates `Number.isNaN()`, `Number.isFinite()`,
-  `Number.isInteger()` and `Number.isSafeInteger()` of integers, fractions and optional numbers,
-  `isNaN()` and `isFinite()` of numbers, wherever a boolean goes, tests a date's validity with them
-  as well as with `d.getTime() === d.getTime()`, and chooses dates with `||`.
-- Tests only: the differential fuzzer generates `encodeURIComponent()` and `encodeURI()`,
-  `String()` and template literals of optional and nullable values and of lists, `.substr()`,
-  `.concat()`, `.trimLeft()`, `.trimRight()`, `.charCodeAt()`, `.codePointAt()`, positions in
-  `.includes()`, `.startsWith()`, `.endsWith()`, `.indexOf()` and `.lastIndexOf()`, limits in
-  `.split()`, `Math.sqrt()`, `Math.sign()`, the constants of `Math` and `Number`, `**` and
-  `Math.pow()` of literals, and `typeof` compared with each type's name and narrowing in `v-if`;
-  the conformance suite gains `UriParts`, `StringOf`, `StringSearch`, `MathMore` and `TypeofTests`,
-  23 fixtures recorded from Vue.
-- Tests only: the differential fuzzer generates list items by index (`[i]` with literal, negative and computed indices, and `.at()`) read with
-  `??`, with a method after `?.` and by a field of an object; `.indexOf()`, `.lastIndexOf()`,
-  `.findLast()`, `.findLastIndex()` and `.concat()`; and optional chains from optional and nullable
-  strings and numbers through string methods, `.split()` and list reads.
-- Tests only: the differential fuzzer generates `.reduce()` and `.reduceRight()` into strings,
-  numbers and booleans, `.toReversed()`, `.toSorted()` with and without comparators of each shape
-  the compiler accepts, `[...list].sort()` and `[...list].reverse()`, spread in array literals and
-  `Math.max(...xs)` and `Math.min(...xs)`. A name the template reads only after `...` is now
-  declared in the component's script, as any other name it reads is. The conformance suite gains
-  `ListBuilding`, seven fixtures recorded from Vue.
-- Tests only: the CLI's `--watch` test writes a component again until the watcher reports it, since
-  macOS can miss a change made just after a watch starts.
-- FV0610's title and message name a hole in an array literal alone: a spread compiles now, or is
-  refused with FV0833.
+- Generated code is version 3, which the 0.8 crate rejects. The 0.9 crate still builds modules of
+  version 2: [Generate every component again](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_9/index.html#2-generate-every-component-again).
+- `in`, `instanceof`, `**`, the bitwise operators, engine-rounded `Math` functions and parts of
+  globals the server does not translate get their own codes, and FV1234 is retired: [Error codes your CI matches](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_9/index.html#4-error-codes-your-ci-matches).
+- `.toFixed()` takes a fractional literal, truncated as JavaScript truncates it, and `undefined`,
+  which is `.toFixed(0)`: [`.toFixed()`](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_9/index.html#tofixed).
+- The README is a landing page, and its reference sections moved into the crate guide.
 
 ### Fixed
 
-- A truthiness test that is not a narrowing, such as `Boolean(user)`, of an optional or nullable
-  object, list or `Date` wrote a closure whose parameter it never read (`is_some_and(|v| true)`),
-  on which rustc warns; it is now `is_some()`.
-- `.includes()` of a computed list, or of a list of fractions, looking for a `v-for` item named `v`
-  compared each item with itself, and was `true` for every list that was not empty.
-- FV0604 for `.length` or another field of an optional value says that it may be absent, and to
-  narrow it with `v-if` or read it with `?.`. It said the value was not an object.
-- A template literal that joined two strings that may each hold half of a surrogate pair with only
-  a string that may be empty between them (`` `${a.charAt(0)}${b}${a.slice(1)}` ``) was accepted,
-  and wrote two U+FFFD where JavaScript, given an empty `b`, joins the halves into one character;
-  it is refused with FV0706, as two such strings side by side are.
-- Tests only: the differential fuzzer drew a list to spread beside another (`[...a, ...b]`), and
-  the fallbacks of `.at()`, `.codePointAt()` and list reads and the count of `.repeat()`, each time
-  it printed the component rather than once, so the props it pruned as unread could differ from
-  those the printed template read. The nightly run of 2026-10-20 failed on such a component,
-  refused for reading `l0` after `l0` was pruned.
+- `Boolean(user)` of an optional object, list or `Date` wrote a closure rustc warns on, and is now
+  `is_some()`: [Fixes that change generated code](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_9/index.html#fixes-that-change-generated-code).
+- `.includes(v)` of a computed list or a list of fractions, with a `v-for` item named `v`, was
+  `true` for every list that was not empty: [Fixes that change generated code](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_9/index.html#fixes-that-change-generated-code).
+- FV0604 of a field of an optional value says that the value may be absent, and to narrow it with
+  `v-if` or read it with `?.`: [FV0604](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#fv0604).
+- **Breaking:** a template literal that joins two halves of a surrogate pair across a string that
+  may be empty is refused with FV0706: [Halves of surrogate pairs](https://docs.rs/ferrovue/latest/ferrovue/guide/strings/index.html#halves-of-surrogate-pairs).
 
 ## [0.8.0] - 2026-10-18
 
