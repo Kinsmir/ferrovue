@@ -1,15 +1,15 @@
 import { basename } from "node:path";
-import { type Component, type N, type Scope, type Ty, type Val, dollarNames, fail, GenError, nodeName, nothing, snake, takesAttrs, UNDEF } from "./model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, absence, dollarNames, enumOf, fail, GenError, nodeName, nothing, snake, takesAttrs, UNDEF, UNION_STR, unionStr } from "./model.ts";
 import { CONFIG_FILE, ctx } from "./context.ts";
 import { definePropsType, readTypeFile, refuseDates, tyOfTs } from "./typescript.ts";
 import { resolveImport } from "./resolve.ts";
 import { constOfDecl, type Declared, declareConsts } from "./constants.ts";
 import { localTy } from "./rust.ts";
 import { expr, fieldVal, typedBy } from "./expr.ts";
-import { occurrences } from "./parens.ts";
+import { atom, occurrences } from "./parens.ts";
 import { known } from "./narrowing.ts";
 import { bindingOf, bodyExpr, panicky } from "./blocks.ts";
-import { declaredUnion } from "./enums.ts";
+import { declaredUnion, exactlyEnum, intoEnum, knownLiteral, refField } from "./enums.ts";
 import { functionOf } from "./functions.ts";
 
 export const CLIENT_HOOKS = new Set([
@@ -64,7 +64,7 @@ function constant(d: Declared): boolean {
     constOfDecl(d);
     return true;
   } catch (e) {
-    if (e instanceof GenError) return false;
+    if (e instanceof GenError && e.code !== "FV0228") return false;
     throw e;
   }
 }
@@ -85,6 +85,23 @@ function declaredTy(comp: Component, t: N): Ty | null {
 
 function statedTy(init: N): N | undefined {
   return init.type === "TSAsExpression" || init.type === "TSSatisfiesExpression" ? init.typeAnnotation : undefined;
+}
+
+function unionRef(comp: Component, local: string, typed: N, v: Val, at: N): Val {
+  if ((v.ty.k === "opt" ? v.ty.of : v.ty).k !== "str") return v;
+  let ty: Ty;
+  try {
+    ty = refField(comp, local, typed, tyOfTs(comp, typed, comp.structs));
+  } catch (e) {
+    if (e instanceof GenError && e.code !== "FV0325") return v;
+    throw e;
+  }
+  const def = enumOf(ty);
+  if (def === undefined || !exactlyEnum(v) || (ty.k === "opt") !== (v.ty.k === "opt") || (ty.k === "opt" && absence(ty) !== absence(v.ty))) return v;
+  const into = intoEnum(comp, v, def, at);
+  if (into === null) return v;
+  if (knownLiteral(v) !== undefined) return { ...v, ty, variant: into };
+  return { code: ty.k === "opt" ? `${atom(into)}.map(${UNION_STR})` : unionStr(into), ty, variant: into };
 }
 
 function emptyRef(comp: Component, init: N): Val | null {
@@ -345,6 +362,7 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
           continue;
         }
         v = empty ?? expr(isComputed ? { ...scope, within: "computed" } : { ...scope, settingUpAt: st.start, within: "setup" }, source);
+        if (isRef && !isComputed && typed && !empty) v = unionRef(comp, local, typed, v, init0.arguments[0] ?? init0);
         const annotation = typed ?? (isComputed ? init0.arguments[0]?.returnType?.typeAnnotation : undefined);
         if (annotation && untyped && (v.ty.k === "opt" ? v.ty.of : v.ty).k === "str") {
           const kind = isComputed ? "`computed`" : isRef ? `\`${init0.callee.name}\`` : "constant";

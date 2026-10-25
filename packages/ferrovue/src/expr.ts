@@ -1,5 +1,5 @@
-import { type Component, type N, type Scope, type Ty, type Val, absence, BOOL, enumItems, enumOf, fail, falsyLiteral, FLOAT, GenError, INT, isAscii, joinAbsence, joinTy, keptLiterals, literalsOf, literalTy, nodeName, nothing, NULL, opt, placeOf, refusalAt, rustStr, sameTy, snake, STR, strTy, UNDEF, UNION_STR, unionStr, variantPath, withAbsence } from "./model.ts";
-import { enumEquality, enumListVal, knownLiteral, refuseOutside } from "./enums.ts";
+import { type Component, type EnumDef, type N, type Scope, type Ty, type Val, absence, BOOL, enumItems, enumOf, fail, falsyLiteral, FLOAT, GenError, INT, isAscii, joinAbsence, joinTy, keptLiterals, literalsOf, literalTy, nodeName, nothing, NULL, opt, placeOf, refusalAt, rustStr, sameTy, snake, STR, strTy, UNDEF, UNION_STR, unionStr, variantPath, withAbsence } from "./model.ts";
+import { enumEquality, enumListVal, exactlyEnum, intoEnum, knownLiteral, refuseOutside } from "./enums.ts";
 import { CONFIG_FILE, ctx } from "./context.ts";
 import { lookupStruct, markHome, tyOfTs } from "./typescript.ts";
 import { claim } from "./plugin.ts";
@@ -666,13 +666,20 @@ export function expr(s: Scope, n: N): Val {
           const variant = `${atom(a.variant!)}.unwrap_or(${variantPath(comp, def, fallback)})`;
           return { code: unionStr(variant), ty: a.ty.of, variant, ...loneOf(a, b) };
         }
+        const widened = def === undefined || fallback === undefined ? undefined : (into: EnumDef, node: N): string | null => {
+          const some = into.literals.includes(fallback) ? intoEnum(comp, a, into, node) : null;
+          return some === null ? null : `${atom(some)}.unwrap_or(${variantPath(comp, into, fallback)})`;
+        };
         const or = (some: string, method: "unwrap_or" | "or", other: string): string => (refuses(other) ? `${some}.${method}_else(|| ${other})` : `${some}.${method}(${other})`);
         if (a.held !== undefined && b.ty.k === "str") return { code: `&*${or(atom(a.held), "unwrap_or", asCow(b))}`, ty: STR, ...loneOf(a, b) };
         if (a.ty.of.k === "str" && b.ty.k === "str" && isTemporary(b)) {
           return { code: `&*${or(`${atom(a.code)}.map(std::borrow::Cow::<str>::Borrowed)`, "unwrap_or", asCow(b))}`, ty: STR, ...loneOf(a, b) };
         }
         if (a.ty.of.k === "int" && b.ty.k === "int" && isCast(b)) return intFromF64(`${atom(a.code)}.map(|v| v as f64).unwrap_or(${bare(asF64(b))})`, b.at ?? refusalAt(comp, n));
-        if (sameTy(a.ty.of, b.ty)) return { code: or(atom(a.code), "unwrap_or", bare(b.code)), ty: joinTy(a.ty.of, b.ty), ...loneOf(a, b) };
+        if (sameTy(a.ty.of, b.ty)) {
+          const code = or(atom(a.code), "unwrap_or", bare(b.code));
+          return { code, ty: joinTy(a.ty.of, b.ty), ...loneOf(a, b), ...(widened ? { asEnum: { of: code, into: widened } } : {}) };
+        }
         if (b.ty.k === "opt" && sameTy(a.ty.of, b.ty.of)) return { code: or(atom(a.code), "or", bare(b.code)), ty: joinTy(a.ty, b.ty), ...loneOf(a, b) };
         if (a.ty.of.k === "float" && b.ty.k === "int") return { code: or(atom(a.code), "unwrap_or", bare(asF64(b))), ty: FLOAT };
         if (a.ty.of.k === "int" && b.ty.k === "float") return { code: or(`${atom(a.code)}.map(|v| v as f64)`, "unwrap_or", bare(b.code)), ty: FLOAT };
@@ -834,7 +841,15 @@ export function expr(s: Scope, n: N): Val {
       }
       const optStr = (v: Val) => nothing(v.ty) || (v.ty.k === "opt" && v.ty.of.k === "str") || v.ty.k === "str";
       if (a.ty.k === "int" && b.ty.k === "int" && (isCast(a) || isCast(b))) return intFromF64(choose(asF64(a), asF64(b)), a.at ?? b.at ?? refusalAt(comp, n));
-      if (sameTy(a.ty, b.ty) && a.ty.k !== "opt") return { code: choose(a.code, b.code), ty: joinTy(a.ty, b.ty), ...lone };
+      if (sameTy(a.ty, b.ty) && a.ty.k !== "opt") {
+        const code = choose(a.code, b.code);
+        const both = a.ty.k === "str" && exactlyEnum(a) && exactlyEnum(b) ? [a, b] : null;
+        const into = (def: EnumDef, node: N): string | null => {
+          const [x, y] = both!.map((v) => intoEnum(comp, v, def, node));
+          return x == null || y == null ? null : choose(x, y);
+        };
+        return { code, ty: joinTy(a.ty, b.ty), ...lone, ...(both ? { asEnum: { of: code, into } } : {}) };
+      }
       if (isNumber(a.ty) && isNumber(b.ty)) return { code: choose(asF64(a), asF64(b)), ty: FLOAT };
       const base = (ty: Ty): Ty | null => (ty.k === "opt" ? ty.of : nothing(ty) ? null : ty);
       const [baseA, baseB] = [base(a.ty), base(b.ty)];
@@ -848,7 +863,13 @@ export function expr(s: Scope, n: N): Val {
           return { code: `${both}.as_deref()`, ty, held: both, ...lone };
         }
         if (sameTy(a.ty, b.ty)) return { code: choose(a.code, b.code), ty: joinTy(a.ty, b.ty), ...lone };
-        return { code: choose(coerce(comp, a, ty, n), coerce(comp, b, ty, n)), ty, ...lone };
+        const code = choose(coerce(comp, a, ty, n), coerce(comp, b, ty, n));
+        const parts = of.k === "str" && [a, b].every((v) => nothing(v.ty) || (v.ty.k !== "opt" && exactlyEnum(v))) ? [a, b] : null;
+        const into = (def: EnumDef, node: N): string | null => {
+          const [x, y] = parts!.map((v) => (nothing(v.ty) ? "None" : intoEnum(comp, v, def, node)));
+          return x == null || y == null ? null : choose(x === "None" ? x : `Some(${bare(x)})`, y === "None" ? y : `Some(${bare(y)})`);
+        };
+        return { code, ty, ...lone, ...(parts ? { asEnum: { of: code, into } } : {}) };
       }
       return fail(comp, "FV0623", "the two branches of `?:` differ in type", n);
     }

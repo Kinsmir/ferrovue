@@ -250,6 +250,7 @@ export interface Consts {
   toneText: string[];
   toneNote: (string | null)[];
   toneInfo: { label: string; n: number }[];
+  toneNext: number[];
   fold: boolean;
 }
 
@@ -279,6 +280,7 @@ export interface Binding {
   name: string;
   kind: "computed" | "const" | "ref";
   e: Expr;
+  typed?: string;
   lazy?: string;
   steps?: Step[];
   obj?: { iface: string; list: boolean; how: "ret" | "param" };
@@ -545,9 +547,9 @@ function helpersUsed(template: Node[]): HelperName[] {
   return [...used].toSorted();
 }
 
-const CONST_NAMES = ["LABELS", "LABEL", "LIMIT", "RATIO", "SHOWN", "WORDS", "NUMS", "ROWS", "Tone", "Rank", "TONE_TEXT", "TONE_NOTE", "TONE_INFO"] as const;
+const CONST_NAMES = ["LABELS", "LABEL", "LIMIT", "RATIO", "SHOWN", "WORDS", "NUMS", "ROWS", "Tone", "Rank", "TONE_TEXT", "TONE_NOTE", "TONE_INFO", "TONE_NEXT"] as const;
 
-const LOOKUPS = new Set(["TONE_TEXT", "TONE_NOTE", "TONE_INFO"]);
+const LOOKUPS = new Set(["TONE_TEXT", "TONE_NOTE", "TONE_INFO", "TONE_NEXT"]);
 
 const numText = (x: number): string => (Object.is(x, -0) ? "-0" : String(x));
 
@@ -566,6 +568,7 @@ function lookupLines(k: Consts, exported: boolean): string[] {
     `${e}const TONE_TEXT = { ${entries(k.toneText, literal)} };`,
     `${e}const TONE_NOTE: Partial<Record<Tone, string>> = { ${entries(k.toneNote, literal)} };`,
     `${e}const TONE_INFO = { ${entries(k.toneInfo, (v) => `{ label: ${literal(v.label)}, n: ${numText(v.n)} }`)} } as const;`,
+    `${e}const TONE_NEXT: Record<Tone, Tone> = { ${entries(k.toneNext, (i) => `Tone.${k.tone[i]![0]}`)} };`,
   ];
 }
 
@@ -755,7 +758,7 @@ function scriptLines(c: Component): string[] {
       continue;
     }
     if (b.steps?.length) lines.push(`const ${b.name} = computed(() => {`, ...b.steps.map(stepLine), `  return ${e};`, "});");
-    else lines.push(b.kind === "computed" ? `const ${b.name} = computed(() => ${e});` : b.kind === "ref" ? `const ${b.name} = ref(${e});` : `const ${b.name} = ${e};`);
+    else lines.push(b.kind === "computed" ? `const ${b.name} = computed(() => ${e});` : b.kind === "ref" ? `const ${b.name} = ref${b.typed ? `<${b.typed}>` : ""}(${e});` : `const ${b.name} = ${e};`);
   }
   for (const p of c.provides) lines.push(`provide(${p.key === "str" ? '"fz-s"' : p.key === "num" ? "FzNum" : "FzLive"}, ${printExpr(p.e)});`);
   for (const h of c.head) lines.push(printHead(h));
@@ -1209,6 +1212,7 @@ function randomConsts(r: Rng): Consts {
     toneText: tone.map(text),
     toneNote: tone.map(() => (r.chance(0.4) ? null : text())),
     toneInfo: tone.map(() => ({ label: text(), n: r.int(-50, 50) })),
+    toneNext: tone.map(() => r.int(0, 2)),
     fold: r.chance(0.5),
   };
 }
@@ -2891,6 +2895,8 @@ function bindLookups(g: Gen, k: Consts, keys: { name: string; opt: boolean }[], 
       { name: `TONE_TEXT[${at}]`, ty: "str", opt: false, bound: 0 },
       { name: `TONE_INFO[${at}].label`, ty: "str", opt: false, bound: 0 },
       { name: `TONE_INFO[${at}].n`, ty: "int", opt: false, bound },
+      { name: `TONE_NEXT[${at}]`, ty: "str", opt: false, bound: 0, members: k.tone.map(([, v]) => v) },
+      { name: `TONE_TEXT[TONE_NEXT[${at}]]`, ty: "str", opt: false, bound: 0 },
       ...(key.opt ? [] : [{ name: `TONE_NOTE[${at}]`, ty: "str" as const, opt: !k.toneNote.every((v) => v !== null), bound: 0 }]),
       ...(key.opt && k.tone.every(([, v]) => v !== "") ? [{ name: `((${key.name} && TONE_TEXT[${key.name}]) ?? '-')`, ty: "str" as const, opt: false, bound: 0 }] : []),
     ];
@@ -3009,6 +3015,7 @@ const bindingVar = (b: Binding): Var => ({
   bound: b.e.ty === "int" ? Math.max(b.e.bound, 1) : 0,
   ...(b.e.lone ? { lone: true } : {}),
   ...(b.union && b.e.members ? { members: b.e.members, wide: true as const } : {}),
+  ...(b.typed && b.e.members ? { members: b.e.members } : {}),
 });
 
 const whole = (e: Expr): Expr => (e.lone ? strLit("whole") : e);
@@ -3576,6 +3583,12 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
       const binding = { name: `${kind === "computed" ? "cmp" : kind === "const" ? "cst" : "ref"}${bindings.length}`, kind, e: steps ? joined(e, steps) : e, ...(steps ? { steps } : {}) };
       bindings.push(binding);
       if (kind === "const") g.scope.vars.push(bindingVar(binding));
+    }
+    const unionKeys = consts && consts.tone.every(([, v]) => v !== "") ? enumKeys(props, "props.") : [];
+    if (unionKeys.length && r.chance(0.4)) {
+      const key = r.pick(unionKeys);
+      const members = [...consts!.tone.map(([, v]) => v), ""];
+      bindings.push({ name: `ref${bindings.length}`, kind: "ref", typed: 'Tone | ""', e: { ...atom("str", key.opt ? `${key.name} ?? ""` : key.name), fixed: true, members } });
     }
     for (let n = g.dateWeight(1) ? r.weighted([[2, 0], [3, 1], [1, 2]]) : 0; n > 0; n--) bindings.push({ name: `cmp${bindings.length}`, kind: "computed", e: g.date(r.int(1, 2)) });
     if (r.chance(0.3)) {

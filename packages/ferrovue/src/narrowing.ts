@@ -271,7 +271,7 @@ export function literalNarrowing(s: Scope, n: N): { yes: Scope; no: Scope } | nu
     if (e instanceof GenError) return null;
     throw e;
   }
-  if (v.variant !== undefined || v.pick || v.owned || (v.ty.k === "opt" ? v.ty.of : v.ty).k !== "str") return null;
+  if (v.pick || v.owned || (v.ty.k === "opt" ? v.ty.of : v.ty).k !== "str") return null;
   const narrowed = (keep: (literal: string | number) => boolean): Scope => {
     const ty = keptLiterals(v.ty, keep);
     return ty === v.ty ? s : { ...s, narrowed: new Map(s.narrowed).set(path, { ...v, ty }) };

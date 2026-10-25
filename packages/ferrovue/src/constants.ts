@@ -1,8 +1,8 @@
-import { type Absence, type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, absence, blankComponent, BOOL, distinctFields, enumOf, fail, FLOAT, INT, joinAbsence, joinTy, literalsOf, literalTy, nothing, NULL, rustStr, sameTy, snake, STR, UNDEF, variantPath, withAbsence } from "./model.ts";
-import { matchOver } from "./enums.ts";
+import { type Absence, type Component, type EnumDef, type Field, type N, type Scope, type Struct, type Ty, type Val, absence, blankComponent, BOOL, distinctFields, enumOf, enumTy, fail, GenError, FLOAT, INT, joinAbsence, joinTy, literalsOf, literalTy, nothing, NULL, rustStr, sameTy, snake, STR, UNDEF, variantPath, withAbsence } from "./model.ts";
+import { aliasEnum, knownLiteral, matchOver } from "./enums.ts";
 
 const TYPES_HOME = blankComponent("types", "types", "types");
-import { ONE_NOTHING, reachType } from "./typescript.ts";
+import { ONE_NOTHING, reachType, tyOfTs } from "./typescript.ts";
 import { ctx } from "./context.ts";
 import { asF64, exactPower, numberVal } from "./numbers.ts";
 import { describeTy, expr } from "./expr.ts";
@@ -52,6 +52,7 @@ export function constOfDecl(d: Declared): Const {
   inProgress.add(d.node);
   try {
     const c = d.node.type === "TSEnumDeclaration" ? enumConst(d.home, d.node) : evaluate(d.home, d.node.init, d.node.id.name, typedAs(d.node));
+    if (c.k === "object" && d.node.type !== "TSEnumDeclaration") typeValues(d.home, d.node, c);
     evaluated.set(d.node, c);
     return c;
   } finally {
@@ -68,6 +69,40 @@ function typedAs(decl: N): string | null {
     if (item?.type === "TSTypeReference" && item.typeName.type === "Identifier" && ctx.typeStructs.has(item.typeName.name)) return item.typeName.name;
   }
   return null;
+}
+
+function valueType(t: N): N | null {
+  if (t?.type === "TSTypeOperator") return valueType(t.typeAnnotation);
+  if (t?.type === "TSMappedType") return t.typeAnnotation ?? null;
+  if (t?.type !== "TSTypeReference" || t.typeName.type !== "Identifier") return null;
+  const params: N[] = t.typeParameters?.params ?? [];
+  if (["Readonly", "Partial", "Required"].includes(t.typeName.name) && params.length === 1) return valueType(params[0]);
+  return t.typeName.name === "Record" && params.length === 2 ? params[1] : null;
+}
+
+function typeValues(home: Component, decl: N, c: Const & { k: "object" }): void {
+  const names: N[] = [decl.id.typeAnnotation?.typeAnnotation];
+  for (let n = decl.init; n?.type === "TSAsExpression" || n?.type === "TSSatisfiesExpression"; n = n.expression) names.push(n.typeAnnotation);
+  const value = names.map(valueType).find((t) => t !== null);
+  if (!value) return;
+  let def: EnumDef | undefined;
+  try {
+    def = aliasEnum(tyOfTs(home, value, home.structs));
+  } catch (e) {
+    if (e instanceof GenError) return;
+    throw e;
+  }
+  if (def === undefined) return;
+  for (const [key, f] of c.fields) {
+    if (f.k !== "scalar" || typeof f.js !== "string") continue;
+    if (!def.literals.includes(f.js)) {
+      let init = decl.init;
+      while (init?.type === "TSAsExpression" || init?.type === "TSSatisfiesExpression") init = init.expression;
+      const at = init?.type === "ObjectExpression" ? init.properties.find((p: N) => p.type === "ObjectProperty" && !p.computed && (p.key.name ?? String(p.key.value)) === key) : undefined;
+      fail(home, "FV0228", `\`${key}\` of \`${decl.id.name}\` is one of ${def.literals.map((l) => JSON.stringify(l)).join(" | ")}, the members of \`${def.name}\` its type gives its values, and ${JSON.stringify(f.js)} is not: give it one of them`, at?.value ?? decl);
+    }
+    VALUE_ENUMS.set(f, def);
+  }
 }
 
 function enumConst(home: Component, d: N): Const {
@@ -494,24 +529,52 @@ function symVal(sym: Sym, at: { comp: Component; node: N; what: string }): Val {
   if (sym.k === "none") return { code: "None", ty: UNDEF };
   const arms = sym.arms.map((a) => symVal(a, at));
   const { ty, codes } = unified(arms, at);
-  const groups: [(string | number)[], string][] = [];
-  sym.keys.forEach((key, i) => {
-    const g = groups.find(([, code]) => code === codes[i]);
-    if (g) g[0].push(key);
-    else groups.push([[key], codes[i]!]);
-  });
   const slice = ty.k === "list" ? { slice: true } : {};
-  if (groups.length === 1) return { code: groups[0]![1], ty, ...slice };
   const { subject, pattern, last: lastArm } = matchOver(at.comp, sym.on, sym.keys);
-  if (ty.k === "bool" && groups.every(([, code]) => code === "true" || code === "false")) {
-    const yes = groups.find(([, code]) => code === "true")![0];
-    const no = groups.find(([, code]) => code === "false")![0];
+  const picked = (values: readonly string[]): string => {
+    const groups: [(string | number)[], string][] = [];
+    sym.keys.forEach((key, i) => {
+      const g = groups.find(([, code]) => code === values[i]);
+      if (g) g[0].push(key);
+      else groups.push([[key], values[i]!]);
+    });
+    if (groups.length === 1) return groups[0]![1];
+    const last = groups.findIndex(([, code]) => code === values[values.length - 1]);
+    groups.push(...groups.splice(last, 1));
+    const branches = groups.map(([keys, code], i) => `${i === groups.length - 1 ? lastArm(keys) : pattern(keys)} => ${code}`);
+    return `match ${subject} { ${branches.join(", ")} }`;
+  };
+  if (new Set(codes).size === 1) return { code: codes[0]!, ty, ...slice };
+  if (ty.k === "bool" && codes.every((code) => code === "true" || code === "false")) {
+    const yes = sym.keys.filter((_, i) => codes[i] === "true");
+    const no = sym.keys.filter((_, i) => codes[i] === "false");
     return { code: codes.at(-1) === "true" ? `!matches!(${subject}, ${pattern(no)})` : `matches!(${subject}, ${pattern(yes)})`, ty };
   }
-  const last = groups.findIndex(([, code]) => code === codes[codes.length - 1]);
-  groups.push(...groups.splice(last, 1));
-  const branches = groups.map(([keys, code], i) => `${i === groups.length - 1 ? lastArm(keys) : pattern(keys)} => ${code}`);
-  return { code: `match ${subject} { ${branches.join(", ")} }`, ty, ...slice };
+  const code = picked(codes);
+  const literals = arms.map((a) => (nothing(a.ty) ? null : knownLiteral(a)));
+  if (ty.k === "list" || literals.some((l) => l === undefined)) return { code, ty, ...slice };
+  const optional = ty.k === "opt";
+  const into = (def: EnumDef): string | null => {
+    if (!literals.every((l) => l === null || def.literals.includes(l!))) return null;
+    return picked(literals.map((l) => (l === null ? "None" : optional ? `Some(${variantPath(at.comp, def, l!)})` : variantPath(at.comp, def, l!))));
+  };
+  const typed = valueEnum(sym.arms);
+  const variant = typed === undefined ? null : into(typed);
+  if (typed !== undefined && variant !== null) return { code, ty: withAbsence(enumTy(typed), optional ? absence(ty) : null), variant, asEnum: { of: code, into } };
+  return { code, ty, asEnum: { of: code, into } };
+}
+
+const VALUE_ENUMS = new WeakMap<Const, EnumDef>();
+
+function valueEnum(arms: readonly Sym[]): EnumDef | undefined {
+  let def: EnumDef | undefined;
+  for (const a of arms) {
+    if (a.k === "none") continue;
+    const own = a.k === "const" ? VALUE_ENUMS.get(a.c) : undefined;
+    if (own === undefined || (def !== undefined && own !== def)) return undefined;
+    def = own;
+  }
+  return def;
 }
 
 function unified(arms: Val[], at: { comp: Component; node: N; what: string }): { ty: Ty; codes: string[] } {
