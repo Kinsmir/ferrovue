@@ -60,6 +60,7 @@ pub mod defaults;
 pub mod deferred;
 pub mod destructured;
 pub mod digit_groups;
+pub mod directed_empty;
 pub mod divider;
 pub mod dollar_names;
 pub mod empty_arrays;
@@ -542,6 +543,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "DigitGroups" => {
             let props: digit_groups::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             digit_groups::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "DirectedEmpty" => {
+            let props: directed_empty::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            directed_empty::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "Divider" => {
             let props: divider::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

@@ -4,7 +4,7 @@ import { expr, shown } from "./expr.ts";
 import { type Presence, boolOf, cond, known, narrowedVal, narrowTo, presence, truthTested, truthy } from "./narrowing.ts";
 import { CMP, condition, occurrences, operand, scrutinee } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
-import { attrShown, interpolate, keepsAttrCase, renderAttr, renderAttrs, renderDynamicAttr } from "./attrs.ts";
+import { attrShown, interpolate, isAttrs, keepsAttrCase, mergedParts, renderAttr, renderAttrs, renderDynamicAttr } from "./attrs.ts";
 import { renderStyle } from "./styles.ts";
 import { renderClass, vnodeClass } from "./classes.ts";
 import { renderChild } from "./children.ts";
@@ -23,6 +23,30 @@ function hidesByVShow(n: N): boolean {
     n.alternate.properties.length === 1 && (n.alternate.properties[0].key?.name ?? n.alternate.properties[0].key?.value) === "display" &&
     n.alternate.properties[0].value?.value === "none"
   );
+}
+
+const CONTENT_KEYS = new Set(["textContent", "innerHTML"]);
+
+function isDirectiveProps(p: N): boolean {
+  return p.type === "CallExpression" && p.callee.name === "_ssrGetDirectiveProps";
+}
+
+function heldContent(p: N): N {
+  if (isDirectiveProps(p)) return null;
+  if (p.type !== "ObjectExpression") return p;
+  return p.properties.find((q: N) => q.type !== "ObjectProperty" || q.computed || CONTENT_KEYS.has(q.key.name ?? q.key.value)) ?? null;
+}
+
+function directedContent(s: Scope, n: N): void {
+  s.temps.add(n.left.name);
+  const parts = mergedParts(n.right);
+  const held = parts.map(heldContent).find((p) => p !== null);
+  if (held === undefined) return;
+  const what = "an element with no content given a custom directive renders as its content a `textContent` or `innerHTML`";
+  if (isAttrs(held)) {
+    fail(s.comp, "FV0425", `${what} among the attributes passed to the component, when it is the root: wrap it in an element, such as a \`<div>\`, which then takes those attributes`, parts.find(isDirectiveProps));
+  }
+  fail(s.comp, "FV0425", `${what} among the attributes it merges: bind each attribute by its name, and write the content inside the element`, held);
 }
 
 function selectsByModel(n: N): boolean {
@@ -53,6 +77,11 @@ export function slot(s: Scope, e: Emitter, n: N): void {
         return;
       case "_ssrRenderAttrs":
         if (a.length > 1) fail(s.comp, "FV0006", "`ssrRenderAttrs` with a tag argument", n);
+        if (a[0].type === "AssignmentExpression") {
+          directedContent(s, a[0]);
+          renderAttrs(s, e, a[0].right);
+          return;
+        }
         renderAttrs(s, e, a[0]);
         return;
       case "_ssrRenderClass":
@@ -80,6 +109,7 @@ export function slot(s: Scope, e: Emitter, n: N): void {
     }
     fail(s.comp, "FV1502", "`v-html` renders only a `TrustedHtml` prop (from `ferrovue/types`)", n);
   }
+  if (n.type === "ConditionalExpression" && s.temps.has(n.test.right?.name)) return;
   if (n.type === "ConditionalExpression" && n.consequent.type === "StringLiteral" && n.alternate.type === "StringLiteral") {
     if (s.vnode && n.consequent.value === " selected" && selectsByModel(n.test)) fail(s.comp, "FV0423", `\`v-model\` on a \`<select>\` ${FROM_VNODES}, where Vue marks no option \`selected\`: bind \`:selected\` on the options`, n);
     const t = expr(s, n.test);
@@ -263,6 +293,7 @@ function statement(s: Scope, e: Emitter, st: N): void {
     if (dynamicComponent(s, e, st)) return;
     if (callee === "_ssrRenderVNode") fail(s.comp, "FV0418", "`<component :is>` renders a closed set of choices", st);
   }
+  if (st.type === "VariableDeclaration" && st.declarations.every((d: N) => d.init === null)) return;
   if (st.type === "VariableDeclaration" && st.declarations.length === 1) {
     const d = st.declarations[0];
     const init = d.init;

@@ -457,6 +457,7 @@ export interface Scope {
   refusedBy: Map<string, GenError>;
   narrowed: Map<string, Val>;
   selfAliases: Set<string>;
+  temps: Set<string>;
   helperBytes: { n: number };
   directives: Map<string, string>;
   fill: boolean;
