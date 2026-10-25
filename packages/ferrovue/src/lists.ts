@@ -33,7 +33,7 @@ export function entryPart(v: Val, i: number): Val {
   const place = `${atom(v.code)}.1`;
   if (of.k === "str") return { code: `&**${place}`, ty: of, ...lone };
   if (of.k === "int" || of.k === "float" || of.k === "bool") return { code: `*${place}`, ty: of };
-  if (of.k === "date") return { code: `fv::js_date::js_time_of(${place})`, ty: of };
+  if (of.k === "date") return { code: `fv::date::js_time_of(${place})`, ty: of };
   return { code: place, ty: of, ...lone };
 }
 
@@ -94,11 +94,11 @@ export function typedEmpty(comp: Component, of: Ty): Val {
 /** A date, or a list of dates, that the server holds at `place` (a reference to one when `byRef`),
  * as an expression reads it: each date its time value. `null` for a value held as it is. */
 export function heldDates(place: string, ty: Ty, byRef: boolean): Val | null {
-  if (ty.k === "date") return { code: `fv::js_date::js_time_of(${byRef ? place : `&${place}`})`, ty };
-  if (ty.k === "list" && ty.of.k === "date") return computed(`${atom(place)}.iter().map(fv::js_date::js_time_of)`, ty.of);
-  if (ty.k === "list" && ty.of.k === "opt" && ty.of.of.k === "date") return computed(`${atom(place)}.iter().map(|v| v.as_ref().map(fv::js_date::js_time_of))`, ty.of);
+  if (ty.k === "date") return { code: `fv::date::js_time_of(${byRef ? place : `&${place}`})`, ty };
+  if (ty.k === "list" && ty.of.k === "date") return computed(`${atom(place)}.iter().map(fv::date::js_time_of)`, ty.of);
+  if (ty.k === "list" && ty.of.k === "opt" && ty.of.of.k === "date") return computed(`${atom(place)}.iter().map(|v| v.as_ref().map(fv::date::js_time_of))`, ty.of);
   if (ty.k !== "opt") return null;
-  if (ty.of.k === "date") return { code: `${atom(place)}.as_ref().map(fv::js_date::js_time_of)`, ty };
+  if (ty.of.k === "date") return { code: `${atom(place)}.as_ref().map(fv::date::js_time_of)`, ty };
   const inner = heldDates("v", ty.of, true);
   return inner === null ? null : { code: `${atom(place)}.as_ref().map(|v| ${inner.code})`, ty };
 }
@@ -509,7 +509,7 @@ function sorted(s: Scope, target: Val, args: N[], n: N): Val {
       return computed(`fv::strings::js_sorted(${it}, |a, b| fv::strings::js_cmp(a, b))`, of);
     case "int":
     case "float":
-      return computed(`fv::strings::js_sorted_by_string(${it}, |v| fv::core::numbers::Js(*v).to_string())`, of);
+      return computed(`fv::strings::js_sorted_by_string(${it}, |v| fv::core::Js(*v).to_string())`, of);
     case "bool":
       return computed(`fv::strings::js_sorted(${it}, bool::cmp)`, of);
     case "date":
@@ -578,7 +578,7 @@ export function spreadExtreme(s: Scope, method: "max" | "min", args: N[]): Val {
   const start = method === "max" ? "f64::NEG_INFINITY" : "f64::INFINITY";
   if (pieces.length === 0) return { code: start, ty: FLOAT, num: method === "max" ? -Infinity : Infinity };
   const all = pieces.slice(1).reduce((acc, piece) => `${acc}.chain(${piece})`, pieces[0]!);
-  return { code: `${all}.fold(${start}, fv::core::numbers::js_${method})`, ty: FLOAT };
+  return { code: `${all}.fold(${start}, fv::core::js_${method})`, ty: FLOAT };
 }
 
 const FLAT_ITEMS = new Set(["str", "int", "float", "bool", "struct", "child"]);
@@ -790,7 +790,7 @@ export function objectCall(s: Scope, method: string, args: N[], n: N): Val {
   const of = r.ty.of;
   if (method === "keys") return computed(`${atom(r.code)}.keys().map(${COW}::Borrowed)`, STR);
   if (method === "values") {
-    const values = of.k === "str" ? `.values().map(|v| ${COW}::Borrowed(&**v))` : of.k === "date" ? ".values().map(fv::js_date::js_time_of)" : ["struct", "child", "list", "record"].includes(of.k) ? ".values()" : ".values().copied()";
+    const values = of.k === "str" ? `.values().map(|v| ${COW}::Borrowed(&**v))` : of.k === "date" ? ".values().map(fv::date::js_time_of)" : ["struct", "child", "list", "record"].includes(of.k) ? ".values()" : ".values().copied()";
     return computed(`${atom(r.code)}${values}`, of);
   }
   if (method === "entries") return computed(`${atom(r.code)}.iter()`, { k: "entry", of }, r.lone);
@@ -828,7 +828,7 @@ export function computedListMethod(s: Scope, target: Val, method: string, args: 
     if (sep.ty.k !== "str") fail(s.comp, "FV0802", "`.join()` takes a string", args[0]);
     const parted = /^"[^"]/.test(sep.code);
     if (of.k === "str" && target.lone && (!parted || sep.lone)) fail(s.comp, "FV0706", lonely("`.join()` with no literal separator"), n);
-    const each = of.k === "str" ? "" : of.k === "bool" ? `.map(|v| if v { "true" } else { "false" })` : ".map(|v| fv::core::numbers::Js(v).to_string())";
+    const each = of.k === "str" ? "" : of.k === "bool" ? `.map(|v| if v { "true" } else { "false" })` : ".map(|v| fv::core::Js(v).to_string())";
     return { code: `&*${items(target)}${each}.collect::<Vec<_>>().join(${strArg(sep.code)})`, ty: strTy(writesAscii(target.ty) && isAscii(sep.ty)), ...(target.lone || sep.lone ? { lone: true } : {}) };
   }
   return null;

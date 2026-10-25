@@ -38,27 +38,27 @@ impl std::fmt::Display for K {
 }
 
 impl std::str::FromStr for K {
-    type Err = ferrovue::union::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "a" => Ok(K::A),
             "b" => Ok(K::B),
             "c" => Ok(K::C),
-            _ => Err(ferrovue::union::ParseUnionError::new("K", s, &["a", "b", "c"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("K", s, &["a", "b", "c"])),
         }
     }
 }
 
 impl TryFrom<&str> for K {
-    type Error = ferrovue::union::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::union::Union for K {
+impl ferrovue::props::Union for K {
     const ALL: &'static [Self] = &K::ALL;
 
     fn as_str(self) -> &'static str {
@@ -100,7 +100,7 @@ impl Props {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -108,8 +108,8 @@ pub fn render(out: &mut String, props: &Props) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
     out.reserve(134 + 1 + 1 + 4);
     let s_key = props.k;
     out.push_str("<p");
@@ -117,29 +117,29 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::refused::Re
         out.push_str(" title");
     } else {
         out.push_str(" title=\"");
-        fv::core::escape::escape_into(out, match props.k { K::A => "A", K::B => "B", K::C => "C" });
+        fv::core::escape_into(out, match props.k { K::A => "A", K::B => "B", K::C => "C" });
         out.push('"');
     }
     out.push_str(" class=\"");
-    fv::class::class_into(out, false, &[match props.k { K::B => "y", K::A | K::C => "x" }]);
+    fv::attrs::class_into(out, false, &[match props.k { K::B => "y", K::A | K::C => "x" }]);
     out.push_str("\" style=\"opacity:");
-    fv::core::numbers::push_number(out, match props.k { K::A => 1.0f64, K::B => 2.0f64, K::C => 1.5f64 });
+    fv::core::push_number(out, match props.k { K::A => 1.0f64, K::B => 2.0f64, K::C => 1.5f64 });
     out.push_str(";\">");
-    fv::core::escape::escape_into(out, match props.k { K::A => "A", K::B => "B", K::C => "C" });
+    fv::core::escape_into(out, match props.k { K::A => "A", K::B => "B", K::C => "C" });
     out.push(' ');
-    fv::core::escape::escape_into(out, match props.m.unwrap_or(K::A) { K::A => "A", K::B => "B", K::C => "C" });
+    fv::core::escape_into(out, match props.m.unwrap_or(K::A) { K::A => "A", K::B => "B", K::C => "C" });
     out.push(' ');
-    fv::core::escape::escape_into(out, match props.m.unwrap_or(K::C) { K::A => "A", K::B => "B", K::C => "C" });
+    fv::core::escape_into(out, match props.m.unwrap_or(K::C) { K::A => "A", K::B => "B", K::C => "C" });
     out.push(' ');
-    fv::core::escape::escape_into(out, match props.k { K::B => "y", K::A | K::C => "x" });
+    fv::core::escape_into(out, match props.k { K::B => "y", K::A | K::C => "x" });
     out.push(' ');
-    fv::core::numbers::push_number(out, match props.k { K::A => 1.0f64, K::B => 2.0f64, K::C => 1.5f64 });
+    fv::core::push_number(out, match props.k { K::A => 1.0f64, K::B => 2.0f64, K::C => 1.5f64 });
     out.push(' ');
-    fv::core::escape::escape_into(out, match s_key { K::A => "A", K::B => "B", K::C => "C" });
+    fv::core::escape_into(out, match s_key { K::A => "A", K::B => "B", K::C => "C" });
     out.push(' ');
-    fv::core::escape::escape_into(out, match props.level { 1 => "one", 2 => "two", _ => "three" });
+    fv::core::escape_into(out, match props.level { 1 => "one", 2 => "two", _ => "three" });
     out.push(' ');
-    fv::core::escape::escape_into(out, match props.tone { super::types::Tone::Warn => "red", super::types::Tone::Info | super::types::Tone::Calm => "navy" });
+    fv::core::escape_into(out, match props.tone { super::types::Tone::Warn => "red", super::types::Tone::Info | super::types::Tone::Calm => "navy" });
     out.push(' ');
     if !matches!(props.k, K::A | K::B) {
         out.push_str("<b>last</b>");
@@ -153,14 +153,14 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::refused::Re
     }
     if !matches!(props.k, K::B) {
         out.push_str("<i>");
-        fv::core::escape::escape_into(out, match props.k { K::A => "ia", K::C | K::B => "ic" });
+        fv::core::escape_into(out, match props.k { K::A => "ia", K::C | K::B => "ic" });
         out.push_str("</i>");
     } else {
         out.push_str("<!---->");
     }
     if matches!(props.k, K::A | K::B) {
         out.push_str("<i>");
-        fv::core::escape::escape_into(out, match props.k { K::A => "ia", K::B | K::C => "ib" });
+        fv::core::escape_into(out, match props.k { K::A => "ia", K::B | K::C => "ib" });
         out.push_str("</i>");
     } else {
         out.push_str("<!---->");

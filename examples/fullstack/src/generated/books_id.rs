@@ -27,9 +27,9 @@ impl<'a> Props<'a> {
 #[derive(Clone, Copy, Default)]
 pub struct Slots<'s> {
     /// `<slot name="actions">`
-    pub actions: Option<fv::slots::Slot<'s>>,
+    pub actions: Option<fv::render::Slot<'s>>,
     /// `<slot name="reviews">`
-    pub reviews: Option<fv::slots::Slot<'s>>,
+    pub reviews: Option<fv::render::Slot<'s>>,
 }
 
 /// Write the component's server render into `out`.
@@ -38,7 +38,7 @@ pub struct Slots<'s> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::router::Route<'_>, fv_head: &fv::head::Head) {
-    fv::refused::rendered(try_render(out, props, fv_slots, fv_route, fv_head));
+    fv::render::rendered(try_render(out, props, fv_slots, fv_route, fv_head));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -46,35 +46,35 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::router::Route<'_>, fv_head: &fv::head::Head) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::router::Route<'_>, fv_head: &fv::head::Head) -> Result<(), fv::render::Refused> {
     out.reserve(211 + props.book.id.len() + props.book.title.len() + props.book.author.len());
     let s_permalink = format!("/books/{}", fv_route.param("id").unwrap_or(""));
-    let s_summary = format!("{}, by {} ({})", props.book.title, props.book.author, fv::core::numbers::Js(props.book.year));
+    let s_summary = format!("{}, by {} ({})", props.book.title, props.book.author, fv::core::Js(props.book.year));
     fv_head.push(fv::head::HeadValue::object([("title", fv::head::HeadValue::str(&props.book.title)), ("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([("name", fv::head::HeadValue::str("description")), ("content", fv::head::HeadValue::str(&s_summary))])])), ("link", fv::head::HeadValue::array([fv::head::HeadValue::object([("rel", fv::head::HeadValue::str("canonical")), ("href", fv::head::HeadValue::str(&s_permalink))])]))]));
-    fv_head.push_seo_meta(fv::head::HeadValue::Object(Vec::new()), vec![("property", "og:title", fv::head::HeadValue::str(&props.book.title)), ("property", "og:description", fv::head::HeadValue::str(&s_summary)), ("property", "og:type", fv::head::HeadValue::str("book")), ("property", "book:release_date", fv::head::HeadValue::str(&fv::core::numbers::Js(props.book.year).to_string()))]);
+    fv_head.push_seo_meta(fv::head::HeadValue::Object(Vec::new()), vec![("property", "og:title", fv::head::HeadValue::str(&props.book.title)), ("property", "og:description", fv::head::HeadValue::str(&s_summary)), ("property", "og:type", fv::head::HeadValue::str("book")), ("property", "book:release_date", fv::head::HeadValue::str(&fv::core::Js(props.book.year).to_string()))]);
     out.push_str("<article class=\"book\"");
     if let Some(v) = fv_route.param("id") {
         if v.is_empty() {
             out.push_str(" data-id");
         } else {
             out.push_str(" data-id=\"");
-            fv::core::escape::escape_into(out, v);
+            fv::core::escape_into(out, v);
             out.push('"');
         }
     }
     out.push_str("><h1>");
-    fv::core::escape::escape_into(out, &props.book.title);
+    fv::core::escape_into(out, &props.book.title);
     out.push_str("</h1><p class=\"by\">");
-    fv::core::escape::escape_into(out, &props.book.author);
+    fv::core::escape_into(out, &props.book.author);
     out.push_str(", ");
-    fv::core::numbers::push_int(out, props.book.year);
+    fv::core::push_int(out, props.book.year);
     out.push_str("</p>");
-    fv::slots::slot_into(out, fv_slots.actions, None);
+    fv::render::slot_into(out, fv_slots.actions, None);
     out.push_str("<p class=\"permalink\">Permalink: <code>");
-    fv::core::escape::escape_into(out, &s_permalink);
+    fv::core::escape_into(out, &s_permalink);
     out.push_str("</code></p><section class=\"reviews\"><h2>Reviews</h2>");
-    fv::slots::slot_into(out, fv_slots.reviews, Some(&mut |out: &mut String| {
+    fv::render::slot_into(out, fv_slots.reviews, Some(&mut |out: &mut String| {
         out.push_str("<p>Loading reviews…</p>");
     }));
     out.push_str("</section></article>");

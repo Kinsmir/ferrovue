@@ -1,16 +1,16 @@
 use std::borrow::Cow;
 
 use ferrovue::{
+    date::JsDate,
     head::Head,
     html::Html,
     i18n::I18n,
-    js_date::JsDate,
+    page::Teleports,
     page::{Page, Part},
-    refused::Refused,
+    props::{ParseUnionError, Union},
+    render::Refused,
+    render::Slot,
     router::Route,
-    slots::Slot,
-    teleport::Teleports,
-    union::{ParseUnionError, Union},
 };
 
 use crate::domain::Tone;
@@ -212,8 +212,7 @@ fn dates_inside_lists_dictionaries_and_objects_are_js_dates_the_island_says_are_
         at,
         vec![None, Some(JsDate::INVALID)],
     )];
-    let by: ferrovue::record::Record<'_, JsDate> =
-        [("x", JsDate::UNIX_EPOCH)].into_iter().collect();
+    let by: ferrovue::props::Record<'_, JsDate> = [("x", JsDate::UNIX_EPOCH)].into_iter().collect();
     let props = timeline::Props::new(moments, vec![at], by);
     let island = timeline::island(&props).into_string();
     assert!(island.starts_with(concat!(
@@ -274,11 +273,11 @@ fn local_and_shared_types_and_scoped_slots() {
     );
     let row = |out: &mut String, p: &data_list::RowSlotProps<'_>| -> bool {
         out.push_str(&p.row.label);
-        ferrovue::core::numbers::push_int(out, p.index);
+        ferrovue::core::push_int(out, p.index);
         true
     };
     let count = |out: &mut String, p: &data_list::CountSlotProps| -> bool {
-        ferrovue::core::numbers::push_int(out, p.n);
+        ferrovue::core::push_int(out, p.n);
         true
     };
     let rest = |out: &mut String| out.push_str("rest");

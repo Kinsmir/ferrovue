@@ -55,7 +55,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -63,8 +63,8 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(35 + 46 * props.shelves.len() + props.shelves.iter().map(|v| v.tags.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>() + props.note.as_deref().map_or(0, str::len));
     out.push_str("<section><!--[-->");
     for fv_shelf_ref in props.shelves.iter() {
@@ -75,7 +75,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
             for fv_tag_cow in fv_shelf.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_t| !fv_t.is_empty()).map(|fv_t_2| std::borrow::Cow::<str>::Owned(std::borrow::Cow::<str>::Owned(format!("{}{}", fv_note, fv_t_2)).into_owned())) {
                 let fv_tag: &str = &fv_tag_cow;
                 out.push_str("<b>");
-                fv::core::escape::escape_into(out, fv_tag);
+                fv::core::escape_into(out, fv_tag);
                 out.push_str("</b>");
             }
             out.push_str("<!--]--></p>");

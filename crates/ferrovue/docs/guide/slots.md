@@ -5,8 +5,8 @@ takes one after the props. Between generated components the compiler fills it; f
 
 # Plain slots
 
-Each `<slot>` is an `Option<`[`Slot`](crate::slots::Slot)`>` field: `head` for `<slot name="head">`,
-`default` for `<slot>`. `None` renders the slot's fallback. A [`Slot::new`](crate::slots::Slot::new) wraps
+Each `<slot>` is an `Option<`[`Slot`](crate::render::Slot)`>` field: `head` for `<slot name="head">`,
+`default` for `<slot>`. `None` renders the slot's fallback. A [`Slot::new`](crate::render::Slot::new) wraps
 a closure that writes the content:
 
 ```vue
@@ -49,20 +49,20 @@ a closure that writes the content:
 #[derive(Clone, Copy, Default)]
 pub struct Slots<'s> {
     /// `<slot name="head">`
-    pub head: Option<fv::slots::Slot<'s>>,
+    pub head: Option<fv::render::Slot<'s>>,
     /// `<slot>`
-    pub default: Option<fv::slots::Slot<'s>>,
+    pub default: Option<fv::render::Slot<'s>>,
 # }
 #
 # /// Write the component's server render into `out`.
 # pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
 #     out.reserve(67 + props.title.len());
 #     out.push_str("<div class=\"frame\"><header>");
-#     fv::slots::slot_into(out, fv_slots.head, Some(&mut |out: &mut String| {
-#         fv::core::escape::escape_into(out, &props.title);
+#     fv::render::slot_into(out, fv_slots.head, Some(&mut |out: &mut String| {
+#         fv::core::escape_into(out, &props.title);
 #     }));
 #     out.push_str("</header><main>");
-#     fv::slots::slot_into(out, fv_slots.default, Some(&mut |out: &mut String| {
+#     fv::render::slot_into(out, fv_slots.default, Some(&mut |out: &mut String| {
 #         out.push_str("nothing here");
 #     }));
 #     out.push_str("</main></div>");
@@ -73,7 +73,7 @@ pub struct Slots<'s> {
 #     fv::html::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_slots))
 # }
 # }
-# use ferrovue::slots::Slot;
+# use ferrovue::render::Slot;
 let body = |out: &mut String| out.push_str("<p>three new messages</p>");
 let mut out = String::new();
 frame::render(
@@ -89,7 +89,7 @@ assert_eq!(
 ```
 
 The closure writes raw markup: it is your own code, which nothing escapes for you, so escape any text it writes
-with [`escape_into`](crate::core::escape::escape_into). To put another component in the slot, call its renderer
+with [`escape_into`](crate::core::escape_into). To put another component in the slot, call its renderer
 from the closure: `|out: &mut String| badge::render(out, &badge_props)`, or
 `|out: &mut String| badge::island(&badge_props).render_to(out)` to make it an island.
 
@@ -100,7 +100,7 @@ Vue: the fallback never replaces it, even when it writes nothing. To show the fa
 
 A component with `<RouterView>` has a `router_view: Slot<'s>` field that is not optional, and its
 `Slots` has no `Default`: the page the route shows is always given. It is written with
-[`Slot::render_to`](crate::slots::Slot::render_to), without fragment markers, as `<RouterView>` writes its
+[`Slot::render_to`](crate::render::Slot::render_to), without fragment markers, as `<RouterView>` writes its
 component. See [`routing`](crate::guide::routing) for a full example.
 
 # Scoped slots
@@ -129,14 +129,14 @@ pub struct Slots<'s> {
     // …
 }
 # let label = |out: &mut String, p: &RowSlotProps<'_>| {
-#     ferrovue::core::escape::escape_into(out, p.label);
+#     ferrovue::core::escape_into(out, p.label);
 #     true
 # };
 # let slots = Slots { row: Some(&label) };
 # let row = Row { label: Cow::Borrowed("Ada") };
 # let props = RowSlotProps { row: &row, index: 0, label: &row.label, tags: &[], first: true };
 # let mut out = String::new();
-# ferrovue::slots::scoped_slot_into(&mut out, slots.row, &props, None);
+# ferrovue::render::scoped_slot_into(&mut out, slots.row, &props, None);
 # assert_eq!(out, "<!--[-->Ada<!--]-->");
 ```
 
@@ -259,8 +259,8 @@ empty or only comments:
 # pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
 #     out.reserve(96 + 17 * props.rows.len() + props.rows.iter().map(|v| v.label.len() + v.tags.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>() + props.title.len() + props.note.as_deref().map_or(0, str::len));
 #     out.push_str("<section><header>");
-#     fv::slots::scoped_slot_into(out, fv_slots.header, &HeaderSlotProps { title: &props.title, note: props.note.as_deref() }, Some(&mut |out: &mut String| {
-#         fv::core::escape::escape_into(out, &props.title);
+#     fv::render::scoped_slot_into(out, fv_slots.header, &HeaderSlotProps { title: &props.title, note: props.note.as_deref() }, Some(&mut |out: &mut String| {
+#         fv::core::escape_into(out, &props.title);
 #     }));
 #     out.push_str("</header>");
 #     if props.rows.len() as i64 != 0 {
@@ -269,24 +269,24 @@ empty or only comments:
 #             let fv_r = fv_r_ref;
 #             let fv_i = fv_i as i64;
 #             out.push_str("<li>");
-#             fv::slots::scoped_slot_into(out, fv_slots.row, &RowSlotProps { row: fv_r, index: fv_i, label: &fv_r.label, tags: &fv_r.tags, first: fv_i as f64 == 0.0 }, Some(&mut |out: &mut String| {
-#                 fv::core::numbers::push_int(out, fv_i);
+#             fv::render::scoped_slot_into(out, fv_slots.row, &RowSlotProps { row: fv_r, index: fv_i, label: &fv_r.label, tags: &fv_r.tags, first: fv_i as f64 == 0.0 }, Some(&mut |out: &mut String| {
+#                 fv::core::push_int(out, fv_i);
 #                 out.push_str(". ");
-#                 fv::core::escape::escape_into(out, &fv_r.label);
+#                 fv::core::escape_into(out, &fv_r.label);
 #             }));
 #             out.push_str("</li>");
 #         }
 #         out.push_str("<!--]--></ul>");
 #     } else {
 #         out.push_str("<p>");
-#         fv::slots::scoped_slot_into(out, fv_slots.empty, &EmptySlotProps { title: &props.title }, Some(&mut |out: &mut String| {
+#         fv::render::scoped_slot_into(out, fv_slots.empty, &EmptySlotProps { title: &props.title }, Some(&mut |out: &mut String| {
 #             out.push_str("no rows in ");
-#             fv::core::escape::escape_into(out, &props.title);
+#             fv::core::escape_into(out, &props.title);
 #         }));
 #         out.push_str("</p>");
 #     }
 #     out.push_str("<footer>");
-#     fv::slots::scoped_slot_into(out, fv_slots.default, &DefaultSlotProps { count: props.rows.len() as i64, title: &props.title }, None);
+#     fv::render::scoped_slot_into(out, fv_slots.default, &DefaultSlotProps { count: props.rows.len() as i64, title: &props.title }, None);
 #     out.push_str("</footer></section>");
 # }
 #
@@ -306,9 +306,9 @@ let row = |out: &mut String, p: &data_list::RowSlotProps<'_>| {
         return false; // the first row keeps the fallback
     }
     out.push_str("<b>");
-    ferrovue::core::escape::escape_into(out, p.label);
+    ferrovue::core::escape_into(out, p.label);
     out.push_str("</b> ");
-    ferrovue::core::numbers::push_int(out, p.tags.len() as i64);
+    ferrovue::core::push_int(out, p.tags.len() as i64);
     true
 };
 let mut out = String::new();
@@ -330,10 +330,10 @@ whatever the page holds.
 # What generated parents do
 
 When one generated component fills another's slot, the compiler writes the closure for you. Slot
-content from a template uses a variant of [`Slot`](crate::slots::Slot) that reports whether it wrote
+content from a template uses a variant of [`Slot`](crate::render::Slot) that reports whether it wrote
 anything but comments, so that a `<template #head><b v-if="show">…</b></template>` that renders
 only `<!---->` gives way to the fallback as it does in Vue. A slot forwarded through several
-components keeps that answer. [`slot_into`](crate::slots::slot_into) and
+components keeps that answer. [`slot_into`](crate::render::slot_into) and
 `scoped_slot_into` are the functions the outlet calls.
 
 # Components with `:slotted()` styles
@@ -344,7 +344,7 @@ content of each of its slots, which writes it onto its elements. Its outlets cal
 `scoped_slot_into_slotted` instead, and generated parents fill its
 plain slots with `Slot::slotted`, content that is given the id.
 
-From Rust nothing changes for a plain slot: [`Slot::new`](crate::slots::Slot::new) content is not given the
+From Rust nothing changes for a plain slot: [`Slot::new`](crate::render::Slot::new) content is not given the
 id, as static markup is not in Vue. A scoped slot's closure type takes the id as a third parameter,
 ` data-v-…-s` with its leading space, which the closure may write onto its elements or ignore:
 
@@ -355,12 +355,12 @@ pub type FooterSlot<'s> = dyn Fn(&mut String, &FooterSlotProps, &str) -> bool + 
 #     out.push_str("<small");
 #     out.push_str(slot_scope_id);
 #     out.push('>');
-#     ferrovue::core::numbers::push_int(out, p.count);
+#     ferrovue::core::push_int(out, p.count);
 #     out.push_str("</small>");
 #     true
 # };
 # let mut out = String::new();
-# ferrovue::slots::scoped_slot_into_slotted(&mut out, Some(footer), &FooterSlotProps { count: 2 }, "data-v-1-s", None);
+# ferrovue::render::scoped_slot_into_slotted(&mut out, Some(footer), &FooterSlotProps { count: 2 }, "data-v-1-s", None);
 # assert_eq!(out, "<!--[--><small data-v-1-s>2</small><!--]-->");
 ```
 

@@ -48,7 +48,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>) {
-    fv::refused::rendered(try_render(out, props, fv_route));
+    fv::render::rendered(try_render(out, props, fv_route));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -56,8 +56,8 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(252 + props.slug.len() + props.q.as_deref().map_or(0, str::len) + props.tab.as_deref().map_or(0, str::len));
     out.push_str("<nav>");
     {
@@ -69,9 +69,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
             out.push_str(" aria-current=\"page\"");
         }
         out.push_str(" href=\"");
-        fv::core::escape::escape_into(out, &fv_link.href);
+        fv::core::escape_into(out, &fv_link.href);
         out.push_str("\" class=\"");
-        fv::class::class_into(out, false, &[if fv_link.active { "on" } else { "" }, if fv_link.exact { "here" } else { "" }]);
+        fv::attrs::class_into(out, false, &[if fv_link.active { "on" } else { "" }, if fv_link.exact { "here" } else { "" }]);
         out.push_str("\">home</a>");
     }
     {
@@ -83,11 +83,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
             out.push_str(" aria-current=\"location\"");
         }
         out.push_str(" href=\"");
-        fv::core::escape::escape_into(out, &fv_link.href);
+        fv::core::escape_into(out, &fv_link.href);
         out.push_str("\" class=\"");
-        fv::class::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }, "post"]);
+        fv::attrs::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }, "post"]);
         out.push_str("\">");
-        fv::core::escape::escape_into(out, &props.slug);
+        fv::core::escape_into(out, &props.slug);
         out.push_str("</a>");
     }
     {
@@ -99,9 +99,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
             out.push_str(" aria-current=\"page\"");
         }
         out.push_str(" href=\"");
-        fv::core::escape::escape_into(out, &fv_link.href);
+        fv::core::escape_into(out, &fv_link.href);
         out.push_str("\" class=\"");
-        fv::class::class_into(out, false, &[if fv_link.exact { "same" } else { "" }]);
+        fv::attrs::class_into(out, false, &[if fv_link.exact { "same" } else { "" }]);
         out.push_str("\">tab</a>");
     }
     {
@@ -110,7 +110,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
             if let Some(v) = props.q.as_deref() {
                 fv::router::query_into(&mut fv_search, "q", v);
             }
-            fv::router::query_into(&mut fv_search, "page", &fv::core::numbers::Js(props.page).to_string());
+            fv::router::query_into(&mut fv_search, "page", &fv::core::Js(props.page).to_string());
             fv::router::query_into(&mut fv_search, "empty", "");
             fv_route.link_named("search", &[], &fv_search, "")
         };
@@ -119,9 +119,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
             out.push_str(" aria-current=\"page\"");
         }
         out.push_str(" href=\"");
-        fv::core::escape::escape_into(out, &fv_link.href);
+        fv::core::escape_into(out, &fv_link.href);
         out.push_str("\" class=\"");
-        fv::class::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
+        fv::attrs::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
         out.push_str("\">search</a>");
     }
     {
@@ -135,9 +135,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
             out.push_str(" aria-current=\"page\"");
         }
         out.push_str(" href=\"");
-        fv::core::escape::escape_into(out, &fv_link.href);
+        fv::core::escape_into(out, &fv_link.href);
         out.push_str("\" class=\"");
-        fv::class::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }, "user"]);
+        fv::attrs::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }, "user"]);
         out.push_str("\">user</a>");
     }
     out.push_str("</nav>");

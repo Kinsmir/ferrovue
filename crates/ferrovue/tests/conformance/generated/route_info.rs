@@ -31,7 +31,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>) {
-    fv::refused::rendered(try_render(out, props, fv_route));
+    fv::render::rendered(try_render(out, props, fv_route));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -39,8 +39,8 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(253 + props.label.len());
     let s_slug = fv_route.param("slug").unwrap_or("none");
     let s_on_post = fv_route.name() == Some("post");
@@ -50,29 +50,29 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
             out.push_str(" data-route");
         } else {
             out.push_str(" data-route=\"");
-            fv::core::escape::escape_into(out, v);
+            fv::core::escape_into(out, v);
             out.push('"');
         }
     }
     out.push_str("><dt>");
-    fv::core::escape::escape_into(out, &props.label);
+    fv::core::escape_into(out, &props.label);
     out.push_str("</dt><dd>");
-    fv::core::escape::escape_into(out, fv_route.path());
+    fv::core::escape_into(out, fv_route.path());
     out.push('|');
-    fv::core::escape::escape_into(out, fv_route.hash());
+    fv::core::escape_into(out, fv_route.hash());
     out.push('|');
     if let Some(v) = fv_route.name() {
-        fv::core::escape::escape_into(out, v);
+        fv::core::escape_into(out, v);
     }
     out.push('|');
-    fv::core::escape::escape_into(out, s_slug);
+    fv::core::escape_into(out, s_slug);
     out.push('|');
     if let Some(v) = fv_route.param("tab") {
-        fv::core::escape::escape_into(out, v);
+        fv::core::escape_into(out, v);
     }
     out.push('|');
     if let Some(v) = fv_route.param("slug") {
-        fv::core::escape::escape_into(out, v);
+        fv::core::escape_into(out, v);
     }
     out.push_str("</dd>");
     if s_on_post {
@@ -86,15 +86,15 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
         out.push_str("<!---->");
     }
     out.push_str("<dd data-q=\"");
-    fv::core::escape::escape_into(out, fv_route.query("q").attr_value().unwrap_or("not one"));
+    fv::core::escape_into(out, fv_route.query("q").attr_value().unwrap_or("not one"));
     out.push_str("\" title=\"");
-    fv::core::escape::escape_into(out, fv_route.query("x").attr_value().unwrap_or("none"));
+    fv::core::escape_into(out, fv_route.query("x").attr_value().unwrap_or("none"));
     out.push_str("\">");
     fv_route.query("q").write_display(out);
     out.push('|');
     fv_route.query("x").or("none").write_display(out);
     out.push('|');
-    fv::core::escape::escape_into(out, fv_route.full_path());
+    fv::core::escape_into(out, fv_route.full_path());
     out.push_str("</dd>");
     if fv_route.query("q").is_array() {
         out.push_str("<dd>several</dd>");
@@ -103,7 +103,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
     }
     if let Some(fv_q) = fv_route.query("q").attr_value() {
         out.push_str("<dd data-one=\"");
-        fv::core::escape::escape_into(out, fv_q);
+        fv::core::escape_into(out, fv_q);
         out.push_str("\">one</dd>");
     } else {
         out.push_str("<!---->");

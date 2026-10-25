@@ -4,46 +4,46 @@
 
 # `MAX_SAFE_INTEGER` as 2⁵³ instead of 2⁵³ − 1: `push_int` then writes ±2⁵³ with `write!` rather
 # than through `push_number`, and both write "9007199254740992".
-crates/ferrovue-core/src/numbers.rs: replace - with /
+crates/ferrovue-core/src/lib.rs: replace - with /
 
 # `if x < 0.0` in the infinite branch and before writing the sign: zero has already returned, so
 # `x` is never 0 there.
-crates/ferrovue-core/src/numbers.rs: replace < with <= in push_number
-crates/ferrovue-core/src/numbers.rs: replace < with <= in push_number
+crates/ferrovue-core/src/lib.rs: replace < with <= in push_number
+crates/ferrovue-core/src/lib.rs: replace < with <= in push_number
 
 # The tie between two shortest spellings. `(b - b'0')` and `(b + b'0')` have the same parity, b'0'
 # being 48. The exact value of a tie is an odd multiple of 2⁻ʲ with j ≥ 2, whose decimal digits
 # end in 25 or 75, so the lower spelling never ends in 9 and `upper.len() == k` always holds; and
 # Rust's shortest formatting always gives the upper spelling of a tie (checked over 3.7 million
 # ties), so `digits == lower` never holds and only `digits == upper` decides.
-crates/ferrovue-core/src/numbers.rs: replace - with + in shortest_digits
-crates/ferrovue-core/src/numbers.rs: replace && with || in shortest_digits
-crates/ferrovue-core/src/numbers.rs: replace == with != in shortest_digits
+crates/ferrovue-core/src/lib.rs: replace - with + in shortest_digits
+crates/ferrovue-core/src/lib.rs: replace && with || in shortest_digits
+crates/ferrovue-core/src/lib.rs: replace == with != in shortest_digits
 
 # The capacity `push_decimal` reserves, with `start` ≥ 4 as `n` ≤ 2⁵³: the characters pushed are the same.
-crates/ferrovue-core/src/numbers.rs: replace - with + in push_decimal
-crates/ferrovue-core/src/numbers.rs: replace - with / in push_decimal
+crates/ferrovue-core/src/lib.rs: replace - with + in push_decimal
+crates/ferrovue-core/src/lib.rs: replace - with / in push_decimal
 
 # `Js<i64>` at ±(2⁵³ − 1) through `Js<f64>`: the double is exact, and `push_number` writes it as the same integer.
-crates/ferrovue-core/src/numbers.rs: replace > with >= in <impl std::fmt::Display for Js<i64>>::fmt
+crates/ferrovue-core/src/lib.rs: replace > with >= in <impl std::fmt::Display for Js<i64>>::fmt
 
 # A double's fraction is below 2⁵², so `fraction ^ 1 << 52` and `fraction | 1 << 52` are equal.
-crates/ferrovue-core/src/numbers.rs: replace | with ^ in few_exact_digits
+crates/ferrovue-core/src/lib.rs: replace | with ^ in few_exact_digits
 
 # A subnormal has `e` ≤ −1023, and with 1074 for −1074 it has `e` ≥ 1074: both return None.
-crates/ferrovue-core/src/numbers.rs: delete - in few_exact_digits
+crates/ferrovue-core/src/lib.rs: delete - in few_exact_digits
 
 # At `e` = 0 both branches give `(m, 0)`.
-crates/ferrovue-core/src/numbers.rs: replace < with <= in few_exact_digits
+crates/ferrovue-core/src/lib.rs: replace < with <= in few_exact_digits
 
 # At `e` = 82, `m × 2⁸² = d × 10^z` with 5^z dividing `m` (z ≤ 22) has 2⁶⁰ > 10¹⁸ dividing `d`, so the string branch returns None too.
-crates/ferrovue-core/src/numbers.rs: replace < with <= in few_exact_digits
+crates/ferrovue-core/src/lib.rs: replace < with <= in few_exact_digits
 
 # A borrow only carries toward higher-order bytes, so the lowest flagged byte equals one character and only that character's word flags it: `^` leaves it set wherever `|` does.
-crates/ferrovue-core/src/escape.rs: replace | with ^ in needs_escape
-crates/ferrovue-core/src/escape.rs: replace | with ^ in needs_escape
-crates/ferrovue-core/src/escape.rs: replace | with ^ in needs_escape
-crates/ferrovue-core/src/escape.rs: replace | with ^ in needs_escape
+crates/ferrovue-core/src/lib.rs: replace | with ^ in needs_escape
+crates/ferrovue-core/src/lib.rs: replace | with ^ in needs_escape
+crates/ferrovue-core/src/lib.rs: replace | with ^ in needs_escape
+crates/ferrovue-core/src/lib.rs: replace | with ^ in needs_escape
 
 # Stripping a hash history's base before its `#` when the `#` is at index 0 or later: at 0,
 # `b[0..]` is `b` itself.
@@ -67,16 +67,16 @@ crates/ferrovue-router/src/lib.rs: replace > with >= in resolve_relative_path
 crates/ferrovue/src/strings.rs: replace + with - in to_integer
 
 # `integer` in `Date.UTC` gives −0 for a part in (−1, 0] where `x.trunc() + 0.0` gives +0. Each part is compared, made a term of `time`, or added to `(day - 1) as f64`, an integer that is never −0, so `days` and `t = days + time` are never −0, and `integer(t)` of the integer `t` is the same.
-crates/ferrovue/src/dates.rs: replace + with - in integer
+crates/ferrovue/src/date.rs: replace + with - in integer
 
 # `v8_day` is called only once `agreed` holds, which keeps the year and the month within the same ranges.
-crates/ferrovue/src/dates.rs: replace && with || in v8_day
+crates/ferrovue/src/date.rs: replace && with || in v8_day
 
 # `days_before(y) - days_before(1970)`: the terms `365 * (y + DELTA)` and `365 * (y - DELTA)` both leave `365 * (y - 1970)`.
-crates/ferrovue/src/dates.rs: replace + with - in v8_day
+crates/ferrovue/src/date.rs: replace + with - in v8_day
 
 # `largest > EXACT` in `Date.UTC`: each term of `largest` is a multiple of 1000 ms, held exactly by a double below 2⁵⁴, and 2⁵³ is no multiple of 1000, so `largest` is never 2⁵³.
-crates/ferrovue/src/dates.rs: replace > with >= in try_date_utc
+crates/ferrovue/src/date.rs: replace > with >= in try_date_utc
 
 # `units` at `whole_end == start` pushes `&s[start..start]`, which is empty.
 crates/ferrovue/src/strings.rs: replace > with >= in units
@@ -129,8 +129,8 @@ crates/ferrovue/src/attrs.rs: replace match guard is_lowercase_ascii(key) with f
 crates/ferrovue/src/attrs.rs: replace is_lowercase_ascii -> bool with false
 
 # `reference_len` counting at most `max` characters of a reference: one longer than `max` is then followed by another allowed character, never `;`, and is refused as it was.
-crates/ferrovue/src/basic_html.rs: replace + with * in reference_len
+crates/ferrovue/src/html.rs: replace + with * in reference_len
 
 # `reference_len` ending a reference one or two characters early: the `Builder` writes what it leaves as text, and those characters, alphanumerics and the `;`, are the same when escaped.
-crates/ferrovue/src/basic_html.rs: replace + with - in reference_len
-crates/ferrovue/src/basic_html.rs: replace + with * in reference_len
+crates/ferrovue/src/html.rs: replace + with - in reference_len
+crates/ferrovue/src/html.rs: replace + with * in reference_len

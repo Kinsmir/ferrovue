@@ -15,7 +15,7 @@ an application writes against them keeps compiling. That is:
 - in each component module: `NAME`; `Props`, its public fields and, with `builders` on (the
   default), its `new` and its setters; the structs of local types, with the same; the enums of its
   unions of string literals, with their names, variants, `ALL`, `as_str`, `Display`, `FromStr`,
-  `TryFrom<&str>` and [`Union`](crate::union::Union); for a union `unions` names an enum for, that enum; `Slots`, each `…SlotProps` and each `…Slot`; `render` and `try_render`, with
+  `TryFrom<&str>` and [`Union`](crate::props::Union); for a union `unions` names an enum for, that enum; `Slots`, each `…SlotProps` and each `…Slot`; `render` and `try_render`, with
   their parameters in the order [below](#render-and-its-parameters); `html`; and, for a component
   that renders from its props alone, `island`, `into_html` and `into_island`;
 - `types.rs`'s structs, enums and constants, `route_table.rs`'s `ROUTES`, `PATHS`, `BASE` and `router()`,
@@ -106,19 +106,19 @@ The 0.8 crate supports version 2 alone: modules of version 1, from 0.7, build
 [`RouteDef`](crate::router::RouteDef), [`Locale`](crate::i18n::Locale), [`Message`](crate::i18n::Message)
 and [`Args`](crate::i18n::Args) with struct literals, and these types are `#[non_exhaustive]` from
 0.8 on, so version 2 builds them with their `const` constructors and `with_` methods. Version 3
-adds `Date` props, which generated code reads through [`JsTime`](crate::js_date::JsTime), hands to a child
+adds `Date` props, which generated code reads through [`JsTime`](crate::date::JsTime), hands to a child
 and writes into `data-props` with helpers the 0.8 crate lacks; the 0.9 crate supports versions 2
 and 3, since a module of version 2 calls nothing it changed. Version 4 adds
-[loaders](crate::guide::loaders): a component that awaits one takes a [`Loads`](crate::load::Loads),
+[loaders](crate::guide::loaders): a component that awaits one takes a [`Loads`](crate::loaders::Loads),
 and the generated `loaders` module calls what the 0.9 crate lacks; the 0.10 crate supports
 versions 2 to 4. Version 5 adds the [enums of unions of string
 literals](crate::guide::props#unions-of-string-literals), whose `FromStr` fails with
-[`ParseUnionError`](crate::union::ParseUnionError), which the 0.10 crate lacks, and dates inside lists,
+[`ParseUnionError`](crate::props::ParseUnionError), which the 0.10 crate lacks, and dates inside lists,
 dictionaries and interfaces, which it writes with helpers the 0.10 crate lacks; the 0.11 crate
 supports versions 2 to 5. Version 6 reads the literal of every union's enum through
-[`Union`](crate::union::Union), which the 0.11 crate lacks, so that an enum `unions` names in
+[`Union`](crate::props::Union), which the 0.11 crate lacks, so that an enum `unions` names in
 `ferrovue.config.json` is read as a generated one is, and names every item of the crates at the
-module that defines it (`fv::html::Html`, `fv::router::Route`, `fv::core::escape::escape_into`),
+module that defines it (`fv::html::Html`, `fv::router::Route`, `fv::core::escape_into`),
 which the 0.12 crate no longer lifts to its root: so the 0.12 crate supports version 6 alone, and
 stops a module of an earlier version at this line. The upgrade pages,
 [`upgrading_to_0_12`](crate::guide::upgrading_to_0_12),
@@ -137,13 +137,13 @@ Every component module has, in this order:
 | Item | What it is |
 |---|---|
 | `NAME` | The component's name, `"DataList"`: what `data-island` carries, and what a [`Part`](crate::page::Part) of a [`Page`](crate::page::Page) records |
-| One enum per union of string literals its props and local types hold | `Size` for `type Size = "sm" \| "md"`, `ButtonSize` for `size: "sm" \| "md"` in `Button.vue`'s props: a variant per literal, `ALL`, `as_str()`, `Display`, `FromStr`, `TryFrom<&str>` and [`Union`](crate::union::Union), deriving `Debug`, `Clone`, `Copy`, `PartialEq`, `Eq`, `Hash`, `serde::Serialize` and `serde::Deserialize`. One that a `.ts` file declares is in `types.rs`. See [`props`](crate::guide::props#unions-of-string-literals) |
+| One enum per union of string literals its props and local types hold | `Size` for `type Size = "sm" \| "md"`, `ButtonSize` for `size: "sm" \| "md"` in `Button.vue`'s props: a variant per literal, `ALL`, `as_str()`, `Display`, `FromStr`, `TryFrom<&str>` and [`Union`](crate::props::Union), deriving `Debug`, `Clone`, `Copy`, `PartialEq`, `Eq`, `Hash`, `serde::Serialize` and `serde::Deserialize`. One that a `.ts` file declares is in `types.rs`. See [`props`](crate::guide::props#unions-of-string-literals) |
 | One struct per local `interface` or object `type` | `Row` for `export interface Row { … }`, with the same derives and builder as `Props` |
 | `Props<'a>` | The props, one public field per prop, deriving `Debug`, `Clone` and `serde::Serialize`, and `Default` when every prop is optional. With `builders` on, `Props::new` takes the required props in declaration order and each optional prop other than one named `new` has a setter of its name. See [`props`](crate::guide::props) |
 | `…SlotProps<'v>` and `…Slot<'s>` | For each scoped slot: what its outlet passes (with `<'v>` only when it borrows), and the closure type a parent supplies. A component that takes `fv_provides` has a `…Slot<'s>` for each of its slots, scoped or not, whose closure is also given the `Provides` its content renders with. See [`slots`](crate::guide::slots) |
 | `Slots<'s>` | When the component renders a `<slot>` or `<RouterView>`: what a parent puts in each, an `Option` per `<slot>` and the page as `router_view`. It derives `Clone` and `Copy`, and `Default` when it has no `router_view` |
 | `render` | Write the component into a buffer. It panics with the message of a refusal at render time, which `try_render` returns |
-| `try_render` | `render`, returning `Result<(), fv::refused::Refused>`: the [`Refused`](crate::refused::Refused) of props that ask for what cannot be written as Vue writes it, such as a date string browsers read differently. See [`errors_and_limits`](crate::guide::errors_and_limits#refused-at-render-time) |
+| `try_render` | `render`, returning `Result<(), fv::render::Refused>`: the [`Refused`](crate::render::Refused) of props that ask for what cannot be written as Vue writes it, such as a date string browsers read differently. See [`errors_and_limits`](crate::guide::errors_and_limits#refused-at-render-time) |
 | `try_render_scoped` | Only for a component a parent may hand `<style scoped>` ids to, or pass attributes it does not declare as props: `try_render` with those last. Generated parents call it; it is `#[doc(hidden)]` and outside the contract. See [`scoped_styles`](crate::guide::scoped_styles) and [fallthrough attributes](#fallthrough-attributes) |
 | `html` | The same render as an [`Html`](crate::html::Html) value, whose `try_render_to` and `try_into_string` return the refusal |
 | `island` | Only for a component that renders from its props alone: the render wrapped as a hydratable island |
@@ -165,7 +165,7 @@ the component needs, always in this order, and `try_render` takes the same:
 # pub mod page {
 # use ferrovue as fv;
 # pub struct Props<'a>(pub &'a str);
-# pub struct Slots<'s>(pub fv::slots::Slot<'s>);
+# pub struct Slots<'s>(pub fv::render::Slot<'s>);
 pub fn render(
     out: &mut String,
     props: &Props<'_>,
@@ -173,7 +173,7 @@ pub fn render(
     fv_route: &fv::router::Route<'_>,             // <RouterLink>, useRoute() or $route
     fv_stores: &super::stores::Stores<'_>,        // reads a Pinia store
     fv_i18n: &fv::i18n::I18n,                     // $t or useI18n()
-    fv_teleports: &fv::teleport::Teleports,       // <Teleport>
+    fv_teleports: &fv::page::Teleports,       // <Teleport>
     fv_provides: super::provides::Provides<'_>,   // provide() or inject()
     fv_head: &fv::head::Head,                     // useHead() or useSeoMeta()
 )
@@ -202,7 +202,7 @@ pub fn render(out: &mut String, props: &Props<'_>)
 # pub mod layout {
 # use ferrovue as fv;
 # pub struct Props<'a>(pub &'a str);
-# pub struct Slots<'s>(pub fv::slots::Slot<'s>);
+# pub struct Slots<'s>(pub fv::render::Slot<'s>);
 // Layout.vue: <RouterView> and two <RouterLink>s.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::router::Route<'_>)
 # {}
@@ -217,7 +217,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::St
 # use ferrovue as fv;
 # pub struct Props<'a>(pub &'a str);
 // Modal.vue: <Teleport>.
-pub fn render(out: &mut String, props: &Props<'_>, fv_teleports: &fv::teleport::Teleports)
+pub fn render(out: &mut String, props: &Props<'_>, fv_teleports: &fv::page::Teleports)
 # {}
 # }
 # }
@@ -233,16 +233,16 @@ with `""`:
 # use ferrovue as fv;
 # pub struct Props<'a>(pub &'a str);
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render_scoped(out, props, ""));
+    fv::render::rendered(try_render_scoped(out, props, ""));
 }
 
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     try_render_scoped(out, props, "")
 }
 
 /// [`try_render`], with the scope ids a parent hands the root: ` data-v-…` each.
 #[doc(hidden)]
-pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) -> Result<(), fv::refused::Refused> {
+pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) -> Result<(), fv::render::Refused> {
     // …
 #   Ok(())
 }
@@ -282,10 +282,10 @@ ids, and the parent builds them from its template:
 #     use std::borrow::Cow;
 #     use ferrovue as fv;
 #     pub struct Props<'a> { pub label: Cow<'a, str> }
-#     pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::refused::Refused> {
+#     pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::render::Refused> {
 #         super::badge_root::write(out, fv_attrs);
 #         out.push('>');
-#         fv::core::escape::escape_into(out, &props.label);
+#         fv::core::escape_into(out, &props.label);
 #         out.push_str("</b>");
 #         Ok(())
 #     }
@@ -294,7 +294,7 @@ ids, and the parent builds them from its template:
 #     use std::borrow::Cow;
 #     use ferrovue as fv;
 #     pub struct Props<'a> { pub name: Cow<'a, str>, pub note: Option<Cow<'a, str>> }
-#     pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+#     pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
 // <Badge :label="name" class="wide" :title="note" /> in a parent's template:
 super::badge::try_render_scoped(out, &super::badge::Props { label: Cow::Borrowed(&props.name) },
     &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str("wide")), ("title", props.note.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str))], ""))?;
@@ -367,7 +367,7 @@ writes the tag from the `match`:
 #     pub struct Props<'a> { pub label: Cow<'a, str> }
 #     pub fn render(out: &mut String, props: &Props<'_>) {
 #         out.push_str("<i class=\"star\">");
-#         ferrovue::core::escape::escape_into(out, &props.label);
+#         ferrovue::core::escape_into(out, &props.label);
 #         out.push_str("</i>");
 #     }
 # }
@@ -376,7 +376,7 @@ writes the tag from the `match`:
 #     pub struct Props<'a> { pub label: Cow<'a, str> }
 #     pub fn render(out: &mut String, props: &Props<'_>) {
 #         out.push_str("<i class=\"moon\">");
-#         ferrovue::core::escape::escape_into(out, &props.label);
+#         ferrovue::core::escape_into(out, &props.label);
 #         out.push_str("</i>");
 #     }
 # }
@@ -403,7 +403,7 @@ match props.name {
 #     #[derive(Clone, Copy)]
 #     pub enum HeadingAs { H1, H2 }
 #     pub struct Props { pub r#as: HeadingAs }
-#     pub struct Slots<'s> { pub default: Option<fv::slots::Slot<'s>> }
+#     pub struct Slots<'s> { pub default: Option<fv::render::Slot<'s>> }
 #     pub fn render(out: &mut String, props: &Props, fv_slots: Slots<'_>) {
 
 // <component :is="as" class="heading"><slot /></component>, where as: "h1" | "h2":
@@ -411,7 +411,7 @@ let fv_tag = match props.r#as { HeadingAs::H1 => "h1", HeadingAs::H2 => "h2" };
 out.push('<');
 out.push_str(fv_tag);
 out.push_str(" class=\"heading\">");
-fv::slots::slot_into(out, fv_slots.default, None);
+fv::render::slot_into(out, fv_slots.default, None);
 out.push_str("</");
 out.push_str(fv_tag);
 out.push('>');
@@ -424,7 +424,7 @@ out.push('>');
 # icon::render(&mut out, &icon::Props { name: icon::IconName::Moon, label: "Day".into() });
 # assert_eq!(out, r#"<i class="star">Night</i><i class="moon">Day</i>"#);
 # out.clear();
-# heading::render(&mut out, &heading::Props { r#as: heading::HeadingAs::H1 }, heading::Slots { default: Some(ferrovue::slots::Slot::new(&|out: &mut String| out.push_str("Hi"))) });
+# heading::render(&mut out, &heading::Props { r#as: heading::HeadingAs::H1 }, heading::Slots { default: Some(ferrovue::render::Slot::new(&|out: &mut String| out.push_str("Hi"))) });
 # assert_eq!(out, r#"<h1 class="heading"><!--[-->Hi<!--]--></h1>"#);
 ```
 
@@ -459,7 +459,7 @@ maud's buffer:
 #     pub struct Props<'a> { pub name: Cow<'a, str> }
 #     pub fn render(out: &mut String, props: &Props<'_>) {
 #         out.push_str("<p>Hello, ");
-#         ferrovue::core::escape::escape_into(out, &props.name);
+#         ferrovue::core::escape_into(out, &props.name);
 #         out.push_str("!</p>");
 #     }
 #     pub fn html<'p, 'a>(props: &'p Props<'a>) -> ferrovue::html::Html<'p, Props<'a>> {
@@ -513,7 +513,7 @@ render exactly as their borrowing forms.
 #     }
 #     pub fn render(out: &mut String, props: &Props<'_>) {
 #         out.push_str("<p>Hello, ");
-#         ferrovue::core::escape::escape_into(out, &props.name);
+#         ferrovue::core::escape_into(out, &props.name);
 #         out.push_str("!</p>");
 #     }
 #     pub fn into_html<'a>(props: Props<'a>) -> ferrovue::html::Html<'a, Props<'a>> {

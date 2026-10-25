@@ -50,7 +50,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -58,33 +58,33 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(102 + props.title.len());
     let s_rows = &Vec::<Row<'_>>::new();
     let s_users = &Vec::<super::types::User<'_>>::new();
     let s_names = &Vec::<std::borrow::Cow<str>>::new();
     let s_shown = s_names.iter().map(|v| &**v).collect::<Vec<_>>().join(", ");
     out.push_str("<section><h2>");
-    fv::core::escape::escape_into(out, &props.title);
+    fv::core::escape_into(out, &props.title);
     out.push_str("</h2><ul><!--[-->");
     for fv_r_ref in s_rows.iter() {
         let fv_r = fv_r_ref;
         out.push_str("<li>");
-        fv::core::escape::escape_into(out, &fv_r.name);
+        fv::core::escape_into(out, &fv_r.name);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul><!--[-->");
     for fv_u_ref in s_users.iter() {
         let fv_u = fv_u_ref;
         out.push_str("<p>");
-        fv::core::escape::escape_into(out, &fv_u.name);
+        fv::core::escape_into(out, &fv_u.name);
         out.push_str("</p>");
     }
     out.push_str("<!--]--><p>nothing picked 0 ");
-    fv::core::numbers::push_int(out, s_rows.len() as i64);
+    fv::core::push_int(out, s_rows.len() as i64);
     out.push_str(" [");
-    fv::core::escape::escape_into(out, &s_shown);
+    fv::core::escape_into(out, &s_shown);
     out.push_str("]</p></section>");
     Ok(())
 }

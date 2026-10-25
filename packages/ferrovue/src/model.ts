@@ -68,7 +68,7 @@ export interface Val {
    * expression of the same value as the generated enum `def`, null when a literal is outside it.
    * It holds while `code` is `of`. */
   asEnum?: { of: string; into: (def: EnumDef, node: N) => string | null };
-  /** For an integer computed as an `f64`, where the template computes it, as `fv::refused::Refusals::keep`
+  /** For an integer computed as an `f64`, where the template computes it, as `fv::render::Refusals::keep`
    * takes it. */
   at?: string;
 }
@@ -506,17 +506,17 @@ function locate(comp: Component, node: N): { line: number; column: number } | nu
   return null;
 }
 
-/** The local of a render that holds its refusals, a `fv::refused::Refusals`. */
+/** The local of a render that holds its refusals, a `fv::render::Refusals`. */
 export const REFUSALS = "fv_refusals";
 
-/** Where `node` starts in the component's file, as `fv::refused::Refusals::keep` takes it: `line, column`,
+/** Where `node` starts in the component's file, as `fv::render::Refusals::keep` takes it: `line, column`,
  * from 1, or `0, 0` where it is not known. */
 export function refusalAt(comp: Component, node: N | undefined): string {
   const at = node ? locate(comp, node) : null;
   return at ? `${at.line}, ${at.column + 1}` : "0, 0";
 }
 
-/** `call`, a runtime call that returns a `Result` with a `fv::refused::Refused`, as a value: the render
+/** `call`, a runtime call that returns a `Result` with a `fv::render::Refused`, as a value: the render
  * holds the refusal and goes on with a placeholder, and returns it once it is done. */
 export function kept(call: string, at: string): string {
   return `${REFUSALS}.keep(${call}, ${at})`;
@@ -812,7 +812,7 @@ export function variantPath(comp: Component, def: EnumDef, literal: string): str
 
 /** The function generated code reads the literal of an enum's value with, whether the compiler
  * generated the enum or `unions` names it. */
-export const UNION_STR = "fv::union::Union::as_str";
+export const UNION_STR = "fv::props::Union::as_str";
 
 /** Rust code of the literal the enum value `code` stands for. */
 export function unionStr(code: string): string {

@@ -40,7 +40,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -48,17 +48,17 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
-    out.reserve(65 + fv::trusted::TrustedHtml::trusted_html(&props.body).len() + props.aside.as_ref().map_or(0, |v| fv::trusted::TrustedHtml::trusted_html(v).len()) + props.caption.len());
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
+    out.reserve(65 + fv::html::TrustedHtml::trusted_html(&props.body).len() + props.aside.as_ref().map_or(0, |v| fv::html::TrustedHtml::trusted_html(v).len()) + props.caption.len());
     out.push_str("<article><div class=\"body\">");
-    fv::trusted::trusted_into(out, &props.body);
+    fv::html::trusted_into(out, &props.body);
     out.push_str("</div><aside>");
     if let Some(html) = props.aside.as_ref() {
-        fv::trusted::trusted_into(out, html);
+        fv::html::trusted_into(out, html);
     }
     out.push_str("</aside><p>");
-    fv::core::escape::escape_into(out, &props.caption);
+    fv::core::escape_into(out, &props.caption);
     out.push_str("</p></article>");
     Ok(())
 }

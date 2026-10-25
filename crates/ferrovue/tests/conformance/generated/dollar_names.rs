@@ -77,7 +77,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -85,8 +85,8 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(106 + 29 * props.rows.len() + props.title.len() + props.entry.meta.tag_2.len() + props.entry.meta.tag.len() + props.entry.label.len() + props.rows.iter().map(|v| v.meta.tag_2.len() + v.meta.tag.len() + v.label.len()).sum::<usize>());
     let s_label_2 = format!("{}!", props.title);
     let s_label = fv::strings::js_trim(&props.entry.label);
@@ -95,40 +95,40 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
         out.push_str(" title");
     } else {
         out.push_str(" title=\"");
-        fv::core::escape::escape_into(out, &s_label_2);
+        fv::core::escape_into(out, &s_label_2);
         out.push('"');
     }
     if props.entry.meta.tag_2.is_empty() {
         out.push_str(" data-tag");
     } else {
         out.push_str(" data-tag=\"");
-        fv::core::escape::escape_into(out, &props.entry.meta.tag_2);
+        fv::core::escape_into(out, &props.entry.meta.tag_2);
         out.push('"');
     }
     out.push_str("><h2>");
-    fv::core::escape::escape_into(out, &s_label_2);
+    fv::core::escape_into(out, &s_label_2);
     out.push('|');
-    fv::core::escape::escape_into(out, s_label);
+    fv::core::escape_into(out, s_label);
     out.push('|');
-    fv::core::escape::escape_into(out, &{ let fv_loud = props.title.to_uppercase(); std::borrow::Cow::<str>::Owned(format!("{}:{}", fv_loud, fv::core::numbers::Js(props.price))) });
+    fv::core::escape_into(out, &{ let fv_loud = props.title.to_uppercase(); std::borrow::Cow::<str>::Owned(format!("{}:{}", fv_loud, fv::core::Js(props.price))) });
     out.push_str("</h2><p>");
-    fv::core::escape::escape_into(out, &props.entry.meta.tag_2);
+    fv::core::escape_into(out, &props.entry.meta.tag_2);
     out.push('|');
-    fv::core::escape::escape_into(out, &props.entry.meta.tag);
+    fv::core::escape_into(out, &props.entry.meta.tag);
     out.push('|');
-    fv::core::numbers::push_number(out, props.entry.meta.count as f64 + props.price as f64);
+    fv::core::push_number(out, props.entry.meta.count as f64 + props.price as f64);
     out.push_str("</p><ul><!--[-->");
     for (fv_i, fv_row_ref) in props.rows.iter().enumerate() {
         let fv_row = fv_row_ref;
         let fv_i = fv_i as i64;
         out.push_str("<li data-tag=\"");
-        fv::core::escape::escape_into(out, &fv_row.meta.tag);
+        fv::core::escape_into(out, &fv_row.meta.tag);
         out.push_str("\">");
-        fv::core::numbers::push_int(out, fv_i);
+        fv::core::push_int(out, fv_i);
         out.push(':');
-        fv::core::escape::escape_into(out, &fv_row.label);
+        fv::core::escape_into(out, &fv_row.label);
         out.push('|');
-        fv::core::escape::escape_into(out, &fv_row.meta.tag_2);
+        fv::core::escape_into(out, &fv_row.meta.tag_2);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul></section>");

@@ -12,13 +12,13 @@ pub const NAME: &str = "UnionTypes";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "tone", with = "fv::union::union_prop")]
+    #[serde(rename = "tone", with = "fv::props::union_prop")]
     pub tone: crate::domain::Shade,
-    #[serde(rename = "other", default, skip_serializing_if = "Option::is_none", with = "fv::union::union_prop")]
+    #[serde(rename = "other", default, skip_serializing_if = "Option::is_none", with = "fv::props::union_prop")]
     pub other: Option<crate::domain::Shade>,
-    #[serde(rename = "picked", default, with = "fv::union::union_prop")]
+    #[serde(rename = "picked", default, with = "fv::props::union_prop")]
     pub picked: Option<crate::domain::Shade>,
-    #[serde(rename = "fallback", default, skip_serializing_if = "Option::is_none", with = "fv::union::union_prop")]
+    #[serde(rename = "fallback", default, skip_serializing_if = "Option::is_none", with = "fv::props::union_prop")]
     pub fallback: Option<crate::domain::Shade>,
     #[serde(rename = "label")]
     pub label: Cow<'a, str>,
@@ -56,7 +56,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -64,46 +64,46 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(151 + 8 + 8 + 8 + 8 + props.label.len());
     let s_loud = if props.tone == crate::domain::Shade::Warm { "loud" } else { "quiet" };
-    let s_chosen = props.other.map(fv::union::Union::as_str).unwrap_or(fv::union::Union::as_str(props.tone));
+    let s_chosen = props.other.map(fv::props::Union::as_str).unwrap_or(fv::props::Union::as_str(props.tone));
     out.push_str("<section class=\"");
-    fv::class::class_into(out, false, &[fv::union::Union::as_str(props.tone), props.other.map(fv::union::Union::as_str).unwrap_or("")]);
+    fv::attrs::class_into(out, false, &[fv::props::Union::as_str(props.tone), props.other.map(fv::props::Union::as_str).unwrap_or("")]);
     out.push('"');
-    if fv::union::Union::as_str(props.tone).is_empty() {
+    if fv::props::Union::as_str(props.tone).is_empty() {
         out.push_str(" data-tone");
     } else {
         out.push_str(" data-tone=\"");
-        fv::core::escape::escape_into(out, fv::union::Union::as_str(props.tone));
+        fv::core::escape_into(out, fv::props::Union::as_str(props.tone));
         out.push('"');
     }
-    if props.picked.map(fv::union::Union::as_str).unwrap_or("none").is_empty() {
+    if props.picked.map(fv::props::Union::as_str).unwrap_or("none").is_empty() {
         out.push_str(" title");
     } else {
         out.push_str(" title=\"");
-        fv::core::escape::escape_into(out, props.picked.map(fv::union::Union::as_str).unwrap_or("none"));
+        fv::core::escape_into(out, props.picked.map(fv::props::Union::as_str).unwrap_or("none"));
         out.push('"');
     }
     out.push_str("><p>");
-    fv::core::escape::escape_into(out, fv::union::Union::as_str(props.tone));
+    fv::core::escape_into(out, fv::props::Union::as_str(props.tone));
     out.push('|');
-    fv::core::escape::escape_into(out, props.other.map(fv::union::Union::as_str).unwrap_or("none"));
+    fv::core::escape_into(out, props.other.map(fv::props::Union::as_str).unwrap_or("none"));
     out.push('|');
-    if let Some(v) = props.picked.map(fv::union::Union::as_str) {
-        fv::core::escape::escape_into(out, v);
+    if let Some(v) = props.picked.map(fv::props::Union::as_str) {
+        fv::core::escape_into(out, v);
     }
     out.push('|');
-    fv::core::escape::escape_into(out, fv::union::Union::as_str(props.fallback.unwrap_or(crate::domain::Shade::XCool)));
+    fv::core::escape_into(out, fv::props::Union::as_str(props.fallback.unwrap_or(crate::domain::Shade::XCool)));
     out.push('|');
-    fv::core::escape::escape_into(out, match props.tone { crate::domain::Shade::Warm => "Warm & <w>", crate::domain::Shade::XCool => "Cool", crate::domain::Shade::BQ => "Mark" });
+    fv::core::escape_into(out, match props.tone { crate::domain::Shade::Warm => "Warm & <w>", crate::domain::Shade::XCool => "Cool", crate::domain::Shade::BQ => "Mark" });
     out.push('|');
-    fv::core::numbers::push_int(out, fv::strings::js_length(fv::union::Union::as_str(props.tone)));
+    fv::core::push_int(out, fv::strings::js_length(fv::props::Union::as_str(props.tone)));
     out.push('|');
-    fv::core::escape::escape_into(out, &format!("{}/{}", fv::union::Union::as_str(props.tone), fv::union::Union::as_str(props.fallback.unwrap_or(crate::domain::Shade::XCool))));
+    fv::core::escape_into(out, &format!("{}/{}", fv::props::Union::as_str(props.tone), fv::props::Union::as_str(props.fallback.unwrap_or(crate::domain::Shade::XCool))));
     out.push('|');
-    fv::core::escape::escape_into(out, &props.label);
+    fv::core::escape_into(out, &props.label);
     out.push_str("</p>");
     if props.tone == crate::domain::Shade::Warm {
         out.push_str("<b>warm</b>");
@@ -116,22 +116,22 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
     }
     if let Some(fv_other) = props.other {
         out.push_str("<i>");
-        fv::core::escape::escape_into(out, match fv_other { crate::domain::Shade::Warm => "Warm & <w>", crate::domain::Shade::XCool => "Cool", crate::domain::Shade::BQ => "Mark" });
+        fv::core::escape_into(out, match fv_other { crate::domain::Shade::Warm => "Warm & <w>", crate::domain::Shade::XCool => "Cool", crate::domain::Shade::BQ => "Mark" });
         out.push(' ');
-        fv::core::escape::escape_into(out, fv::union::Union::as_str(fv_other));
+        fv::core::escape_into(out, fv::props::Union::as_str(fv_other));
         out.push_str("</i>");
     } else {
         out.push_str("<i>no other</i>");
     }
     out.push_str("<s>");
-    out.push_str(if props.picked.map(fv::union::Union::as_str) == Some(fv::union::Union::as_str(props.tone)) { "true" } else { "false" });
+    out.push_str(if props.picked.map(fv::props::Union::as_str) == Some(fv::props::Union::as_str(props.tone)) { "true" } else { "false" });
     out.push(' ');
-    fv::core::escape::escape_into(out, if let Some(fv_picked) = props.picked { fv::union::Union::as_str(fv_picked) } else { "null" });
+    fv::core::escape_into(out, if let Some(fv_picked) = props.picked { fv::props::Union::as_str(fv_picked) } else { "null" });
     out.push(' ');
-    fv::core::escape::escape_into(out, s_loud);
+    fv::core::escape_into(out, s_loud);
     out.push_str("</s>");
     super::union_shade::try_render(out, &super::union_shade::Props { tone: props.tone, text: std::borrow::Cow::Borrowed(&*props.label) })?;
-    super::union_shade::try_render(out, &super::union_shade::Props { tone: match s_chosen { "warm" => crate::domain::Shade::Warm, "x-cool" => crate::domain::Shade::XCool, _ => crate::domain::Shade::BQ }, text: std::borrow::Cow::Borrowed(fv::union::Union::as_str(props.tone)) })?;
+    super::union_shade::try_render(out, &super::union_shade::Props { tone: match s_chosen { "warm" => crate::domain::Shade::Warm, "x-cool" => crate::domain::Shade::XCool, _ => crate::domain::Shade::BQ }, text: std::borrow::Cow::Borrowed(fv::props::Union::as_str(props.tone)) })?;
     super::union_shade::try_render(out, &super::union_shade::Props { tone: props.other.unwrap_or(crate::domain::Shade::Warm), text: std::borrow::Cow::Borrowed("fixed") })?;
     out.push_str("</section>");
     Ok(())

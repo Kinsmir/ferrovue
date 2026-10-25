@@ -44,7 +44,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -52,26 +52,26 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(81);
     out.push_str("<section><p>");
-    fv::core::numbers::push_int(out, (if let Some(fv_words) = props.words.as_ref() { fv_words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { ["none"].iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() }).len() as i64);
+    fv::core::push_int(out, (if let Some(fv_words) = props.words.as_ref() { fv_words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { ["none"].iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() }).len() as i64);
     out.push('|');
-    fv::core::escape::escape_into(out, &(if let Some(fv_words_2) = props.words.as_ref() { fv_words_2.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { ["a<b", "c&d"].iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() }).into_iter().collect::<Vec<_>>().join("-"));
+    fv::core::escape_into(out, &(if let Some(fv_words_2) = props.words.as_ref() { fv_words_2.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { ["a<b", "c&d"].iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() }).into_iter().collect::<Vec<_>>().join("-"));
     out.push('|');
-    fv::core::numbers::push_int(out, (if let Some(fv_counts) = props.counts.as_ref() { fv_counts.to_vec() } else { [1i64, 2i64].to_vec() }).len() as i64);
+    fv::core::push_int(out, (if let Some(fv_counts) = props.counts.as_ref() { fv_counts.to_vec() } else { [1i64, 2i64].to_vec() }).len() as i64);
     out.push_str("</p><ul><!--[-->");
     for fv_w_cow in (if let Some(fv_words_3) = props.words.as_ref() { fv_words_3.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { ["first", "second"].iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() }).into_iter() {
         let fv_w: &str = &fv_w_cow;
         out.push_str("<li>");
-        fv::core::escape::escape_into(out, fv_w);
+        fv::core::escape_into(out, fv_w);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul><!--[-->");
     for fv_n in (if let Some(fv_counts_2) = props.counts.as_ref() { fv_counts_2.to_vec() } else { [3i64].to_vec() }).into_iter() {
         out.push_str("<p>");
-        fv::core::numbers::push_number(out, fv_n as f64 * 2.0);
+        fv::core::push_number(out, fv_n as f64 * 2.0);
         out.push_str("</p>");
     }
     out.push_str("<!--]--></section>");

@@ -37,7 +37,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -45,17 +45,17 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(122 + props.note.len() + props.label.len() + props.model_value.len());
     out.push_str("<div class=\"field\"><textarea placeholder=\"");
-    fv::core::escape::escape_into(out, &props.label);
+    fv::core::escape_into(out, &props.label);
     out.push_str("\">");
-    fv::core::escape::escape_into(out, &props.note);
+    fv::core::escape_into(out, &props.note);
     out.push_str("</textarea><input value=\"");
-    fv::core::escape::escape_into(out, &props.model_value);
+    fv::core::escape_into(out, &props.model_value);
     out.push_str("\" aria-label=\"");
-    fv::core::escape::escape_into(out, &props.label);
+    fv::core::escape_into(out, &props.label);
     out.push_str("\"><input type=\"checkbox\"");
     if props.on {
         out.push_str(" checked");

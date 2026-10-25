@@ -78,7 +78,7 @@ pub struct Slots<'s> {
     /// `<slot name="count">`
     pub count: Option<&'s CountSlot<'s>>,
     /// `<slot>`
-    pub default: Option<fv::slots::Slot<'s>>,
+    pub default: Option<fv::render::Slot<'s>>,
 }
 
 /// Write the component's server render into `out`.
@@ -87,7 +87,7 @@ pub struct Slots<'s> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
-    fv::refused::rendered(try_render(out, props, fv_slots));
+    fv::render::rendered(try_render(out, props, fv_slots));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -95,26 +95,26 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(68 + 9 * props.rows.len() + props.title.len() + props.rows.iter().map(|v| v.label.len() + v.hint.as_deref().map_or(0, str::len)).sum::<usize>() + props.owner.name.len() + props.owner.email.as_deref().map_or(0, str::len));
     out.push_str("<section><h2>");
-    fv::core::escape::escape_into(out, &props.title);
+    fv::core::escape_into(out, &props.title);
     out.push_str("</h2><ul><!--[-->");
     for (fv_index, fv_row_ref) in props.rows.iter().enumerate() {
         let fv_row = fv_row_ref;
         let fv_index = fv_index as i64;
         out.push_str("<li>");
-        fv::slots::scoped_slot_into(out, fv_slots.row, &RowSlotProps { row: fv_row, index: fv_index }, Some(&mut |out: &mut String| {
-            fv::core::escape::escape_into(out, &fv_row.label);
+        fv::render::scoped_slot_into(out, fv_slots.row, &RowSlotProps { row: fv_row, index: fv_index }, Some(&mut |out: &mut String| {
+            fv::core::escape_into(out, &fv_row.label);
         }));
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul>");
-    fv::slots::scoped_slot_into(out, fv_slots.count, &CountSlotProps { n: props.rows.len() as i64 }, None);
-    fv::slots::slot_into(out, fv_slots.default, None);
+    fv::render::scoped_slot_into(out, fv_slots.count, &CountSlotProps { n: props.rows.len() as i64 }, None);
+    fv::render::slot_into(out, fv_slots.default, None);
     out.push_str("<small>");
-    fv::core::escape::escape_into(out, &props.owner.name);
+    fv::core::escape_into(out, &props.owner.name);
     out.push_str("</small></section>");
     Ok(())
 }

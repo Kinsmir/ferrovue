@@ -31,7 +31,7 @@ impl Props {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -39,15 +39,15 @@ pub fn render(out: &mut String, props: &Props) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
     out.reserve(44);
     out.push_str("<meter value=\"");
-    fv::core::numbers::push_number(out, props.value);
+    fv::core::push_number(out, props.value);
     out.push_str("\" max=\"");
-    fv::core::numbers::push_number(out, props.max);
+    fv::core::push_number(out, props.max);
     out.push_str("\">");
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_fixed(props.value / props.max * 100.0, 1));
+    fv::core::escape_into(out, &fv::core::js_to_fixed(props.value / props.max * 100.0, 1));
     out.push_str("%</meter>");
     Ok(())
 }

@@ -35,7 +35,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -43,20 +43,20 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(69 + props.rows.iter().map(|v| v.label.len() + v.tags.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>() + props.heading.len());
-    let fv_refusals = fv::refused::Refusals::new(NAME, "components/DataTable.vue");
+    let fv_refusals = fv::render::Refusals::new(NAME, "components/DataTable.vue");
     fv_refusals.check(super::data_list::try_render(out, &super::data_list::Props { rows: props.rows.to_owned(), title: std::borrow::Cow::Borrowed(&*props.heading), note: None }, super::data_list::Slots {
         header: Some(&|out: &mut String, fv_slot_props: &super::data_list::HeaderSlotProps<'_>| -> bool {
             out.push_str("<h2");
             if let Some(v) = fv_slot_props.note {
                 out.push_str(" title=\"");
-                fv::core::escape::escape_into(out, v);
+                fv::core::escape_into(out, v);
                 out.push('"');
             }
             out.push('>');
-            fv::core::escape::escape_into(out, &fv_slot_props.title.to_uppercase());
+            fv::core::escape_into(out, &fv_slot_props.title.to_uppercase());
             out.push_str("</h2>");
             true
         }),
@@ -69,9 +69,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
                 if fv_slot_props_2.tags.len() as i64 != 0 {
                     filled = true;
                     out.push_str("<b data-index=\"");
-                    fv::core::numbers::push_int(out, fv_slot_props_2.index);
+                    fv::core::push_int(out, fv_slot_props_2.index);
                     out.push_str("\">");
-                    fv::core::escape::escape_into(out, &fv_slot_props_2.row.label);
+                    fv::core::escape_into(out, &fv_slot_props_2.row.label);
                     out.push_str("</b>");
                 } else {
                     out.push_str("<!---->");
@@ -81,9 +81,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
         }),
         empty: None,
         default: Some(&|out: &mut String, fv_summary: &super::data_list::DefaultSlotProps<'_>| -> bool {
-            fv::core::numbers::push_int(out, fv_summary.count);
+            fv::core::push_int(out, fv_summary.count);
             out.push_str(" row(s) in ");
-            fv::core::escape::escape_into(out, fv_summary.title);
+            fv::core::escape_into(out, fv_summary.title);
             true
         }),
     }))?;

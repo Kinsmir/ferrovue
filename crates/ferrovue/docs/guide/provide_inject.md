@@ -112,9 +112,9 @@ pub struct Provides<'p> {
 pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) {
     out.reserve(29 + props.label.len());
     out.push_str("<button class=\"btn");
-    fv::class::class_into(out, true, &[fv_provides.theme_key.unwrap_or("light")]);
+    fv::attrs::class_into(out, true, &[fv_provides.theme_key.unwrap_or("light")]);
     out.push_str("\">");
-    fv::core::escape::escape_into(out, &props.label);
+    fv::core::escape_into(out, &props.label);
     out.push_str("</button>");
 }
 #
@@ -166,7 +166,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, _fv_prov
     out.reserve(27 + props.theme.len());
     let fv_provides = super::provides::Provides { theme_key: Some(&props.theme) };
     out.push_str("<nav class=\"toolbar\">");
-    fv::slots::scoped_slot_into(out, fv_slots.default.map(|f| move |out: &mut String, _: &()| f(out, fv_provides)).as_ref(), &(), None);
+    fv::render::scoped_slot_into(out, fv_slots.default.map(|f| move |out: &mut String, _: &()| f(out, fv_provides)).as_ref(), &(), None);
     out.push_str("</nav>");
 }
 #

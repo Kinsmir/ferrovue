@@ -60,7 +60,7 @@ again with 0.9 and committed. See
 
 | Key | Default | What it does |
 |---|---|---|
-| `dateType` | `ferrovue::js_date::JsDate` | the Rust type of a `Date` prop: [`JsDate`](crate::js_date::JsDate), `chrono::DateTime<chrono::Utc>` with the crate's `chrono` feature, or a type of your own that implements [`JsTime`](crate::js_date::JsTime) |
+| `dateType` | `ferrovue::date::JsDate` | the Rust type of a `Date` prop: [`JsDate`](crate::date::JsDate), `chrono::DateTime<chrono::Utc>` with the crate's `chrono` feature, or a type of your own that implements [`JsTime`](crate::date::JsTime) |
 
 The `chrono` feature is off by default. An application that names chrono's type turns it on:
 
@@ -147,11 +147,11 @@ defineProps<{ published: Date }>();
 </template>
 ```
 
-The Rust field is then a [`JsDate`](crate::js_date::JsDate) (or the `dateType`), built from milliseconds, an
+The Rust field is then a [`JsDate`](crate::date::JsDate) (or the `dateType`), built from milliseconds, an
 ISO string or the clock:
 
 ```rust
-use ferrovue::js_date::JsDate;
+use ferrovue::date::JsDate;
 
 let published = JsDate::parse("2024-05-01T09:30:00.000Z").expect("in the date time string format");
 assert_eq!(published, JsDate::from_millis(1_714_555_800_000.0));
@@ -230,9 +230,9 @@ parts ([dates from their parts](crate::guide::dates_and_prices#dates-from-their-
 `Infinity` and `NaN`. The crate gains the public twins `js_to_precision` and `js_to_exponential`:
 
 ```rust
-assert_eq!(ferrovue::core::numbers::js_to_precision(1234.5678, 6), "1234.57");
-assert_eq!(ferrovue::core::numbers::js_to_exponential(0.000123, Some(2)), "1.23e-4");
-assert_eq!(ferrovue::core::numbers::js_to_fixed(3.14159, 2), "3.14");
+assert_eq!(ferrovue::core::js_to_precision(1234.5678, 6), "1234.57");
+assert_eq!(ferrovue::core::js_to_exponential(0.000123, Some(2)), "1.23e-4");
+assert_eq!(ferrovue::core::js_to_fixed(3.14159, 2), "3.14");
 ```
 
 **Math** ([`numbers`](crate::guide::numbers#how-numbers-are-computed)): `Math.sqrt()`,
@@ -251,9 +251,9 @@ positions and limits in `.includes(x, i)`, `.startsWith(x, i)`, `.endsWith(x, i)
 `.trimRight()`, `.concat()`, `.charCodeAt()` and `.codePointAt()`.
 
 ```rust
-assert_eq!(ferrovue::core::uri::js_encode_uri_component("a b&c/d"), "a%20b%26c%2Fd");
-assert_eq!(ferrovue::core::uri::js_encode_uri("/a b?q=1&r=é"), "/a%20b?q=1&r=%C3%A9");
-assert!(ferrovue::core::numbers::js_sign(-0.0).is_sign_negative());
+assert_eq!(ferrovue::core::js_encode_uri_component("a b&c/d"), "a%20b%26c%2Fd");
+assert_eq!(ferrovue::core::js_encode_uri("/a b?q=1&r=é"), "/a%20b?q=1&r=%C3%A9");
+assert!(ferrovue::core::js_sign(-0.0).is_sign_negative());
 ```
 
 **Lists** ([`strings`](crate::guide::strings#slicing-lists) and

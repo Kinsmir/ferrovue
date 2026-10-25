@@ -39,7 +39,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -47,23 +47,23 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(169 + props.url.len() + props.doc.len() + props.handler.len() + props.color.len() + props.css.len());
     out.push_str("<section><a href=\"");
-    fv::core::escape::escape_into(out, &props.url);
+    fv::core::escape_into(out, &props.url);
     out.push_str("\">link</a><img src=\"");
-    fv::core::escape::escape_into(out, &props.url);
+    fv::core::escape_into(out, &props.url);
     out.push_str("\" alt=\"\"><iframe srcdoc=\"");
-    fv::core::escape::escape_into(out, &props.doc);
+    fv::core::escape_into(out, &props.doc);
     out.push_str("\"></iframe><button onclick=\"");
-    fv::core::escape::escape_into(out, &props.handler);
+    fv::core::escape_into(out, &props.handler);
     out.push_str("\" formaction=\"");
-    fv::core::escape::escape_into(out, &props.url);
+    fv::core::escape_into(out, &props.url);
     out.push_str("\">go</button><p style=\"color:");
-    fv::core::escape::escape_into(out, &props.color);
+    fv::core::escape_into(out, &props.color);
     out.push_str(";\">a</p><p style=\"");
-    fv::core::escape::escape_into(out, &props.css);
+    fv::core::escape_into(out, &props.css);
     out.push_str("\">b</p>");
     super::unsanitised_leaf::try_render_scoped(out, &super::unsanitised_leaf::Props {  }, &fv::attrs::Attrs::new(&[("onclick", fv::attrs::Attr::str(&props.handler)), ("style", fv::attrs::Attr::str(&props.css)), ("srcdoc", fv::attrs::Attr::str(&props.doc))], ""))?;
     out.push_str("</section>");

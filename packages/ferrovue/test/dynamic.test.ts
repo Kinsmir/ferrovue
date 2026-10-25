@@ -206,7 +206,7 @@ describe("rendering the choices", () => {
 
   it("renders one choice where every key chooses it, and groups the keys of each choice", () => {
     const T = (table: string, keys = '"a" | "b"') => `import Y from "./Y.vue";\nimport Z from "./Z.vue";\nconst T = ${table};\ndefineProps<{ k: ${keys} }>();`;
-    expect(render(T("{ a: Y, b: Y }"), '<component :is="T[k]" />')).toMatch(like(`pub fn try_render(out: &mut String, _props: &Props) -> Result<(), fv::refused::Refused> {\n    out.reserve(1);\n    ${Y_ALONE}\n    Ok(())\n}\n`, true));
+    expect(render(T("{ a: Y, b: Y }"), '<component :is="T[k]" />')).toMatch(like(`pub fn try_render(out: &mut String, _props: &Props) -> Result<(), fv::render::Refused> {\n    out.reserve(1);\n    ${Y_ALONE}\n    Ok(())\n}\n`, true));
     expect(render(T('{ a: "em", b: "em" }'), '<component :is="T[k]">x</component>')).toMatch(like('out.push_str("<em>x</em>");'));
     expect(render(T('{ a: "br", b: "hr" }'), '<component :is="T[k]" />')).toMatch(like('    match props.k {\n        XK::A => {\n            out.push_str("<br>");\n        }\n        XK::B => {\n            out.push_str("<hr>");\n        }\n    }'));
     expect(render(T('{ a: "br", b: "em" }'), '<component :is="T[k]" />')).toMatch(like('    match props.k {\n        XK::A => {\n            out.push_str("<br>");\n        }\n        XK::B => {\n            out.push_str("<em></em>");\n        }\n    }'));
@@ -230,7 +230,7 @@ describe("rendering the choices", () => {
 
   it("writes the attributes, the default slot and the scope ids of an element", () => {
     expect(render('defineProps<{ tag: "b" | "i"; c: string }>();', '<component :is="tag" :class="c" id="x" text="t">t</component>')).toMatch(like(
-      'out.push_str(" class=\\"");\n    fv::class::class_into(out, false, &[&*props.c]);\n    out.push_str("\\" id=\\"x\\" text=\\"t\\">t</");',
+      'out.push_str(" class=\\"");\n    fv::attrs::class_into(out, false, &[&*props.c]);\n    out.push_str("\\" id=\\"x\\" text=\\"t\\">t</");',
     ));
     expect(render(TAG, '<component :is="tag"><template #default>d</template><template #other>o</template></component>')).toMatch(like('out.push_str(">d</");'));
     expect(render(TAG, '<component :is="tag"><template #other>o</template></component>')).toMatch(like('out.push_str("></");'));
@@ -249,13 +249,13 @@ describe("rendering the choices", () => {
   it("gives a chosen component the slots it takes", () => {
     expect(render('import Z from "./Z.vue";\nimport Y from "./Y.vue";\ndefineProps<{ on: boolean }>();', '<component :is="on ? Z : Y"><template #x>xx</template><template #default>dd</template></component>')).toMatch(like(`    if props.on {
         super::z::try_render(out, &super::z::Props {  }, super::z::Slots {
-            x: Some(fv::slots::Slot::new(&|out: &mut String| {
+            x: Some(fv::render::Slot::new(&|out: &mut String| {
                 out.push_str("xx");
             })),
         })?;
     } else {
         super::y::try_render(out, &super::y::Props { b: None }, super::y::Slots {
-            default: Some(fv::slots::Slot::new(&|out: &mut String| {
+            default: Some(fv::render::Slot::new(&|out: &mut String| {
                 out.push_str("dd");
             })),
         })?;
@@ -279,7 +279,7 @@ describe("content `<component :is>` renders from virtual nodes", () => {
 
   it("keeps `v-text` and `v-html` elsewhere, and refuses a choice it cannot read before its content", () => {
     const out = render('import type { InlineHtml } from "ferrovue/types";\ndefineProps<{ tag: "b" | "i"; s: string; h: InlineHtml }>();', '<p v-text="s" /><div v-html="h" /><component :is="tag" v-show="!!s" />');
-    expect(out).toMatch(like('out.push_str("<!--[--><p>");\n    fv::core::escape::escape_into(out, &props.s);\n    out.push_str("</p><div>");\n    fv::trusted::trusted_into(out, &props.h);'));
+    expect(out).toMatch(like('out.push_str("<!--[--><p>");\n    fv::core::escape_into(out, &props.s);\n    out.push_str("</p><div>");\n    fv::html::trusted_into(out, &props.h);'));
     expect(refusals('defineProps<{ tag: string; s: string }>();', '<component :is="tag" v-html="s" />')).toEqual([`FV0418 ${OPEN}; \`tag\` is not typed as a union of string literals, as \`"h1" | "h2"\``]);
   });
 
@@ -288,11 +288,11 @@ describe("content `<component :is>` renders from virtual nodes", () => {
     expect(refusals(tag, '<component :is="tag"><slot name="n" /></component><p><slot name="n" /></p>')).toEqual([
       'FV0920 `<slot name="n">` is rendered both inside an element `<component :is>` chooses and outside one, where Vue renders the content it is given differently',
     ]);
-    expect(render(tag, '<component :is="tag"><slot name="n" /></component><p><slot /></p>')).toMatch(like("fv::slots::slot_into(out, fv_slots.default, None);"));
+    expect(render(tag, '<component :is="tag"><slot name="n" /></component><p><slot /></p>')).toMatch(like("fv::render::slot_into(out, fv_slots.default, None);"));
   });
 
   it("leaves the slot content an element does not render", () => {
-    expect(render(tag, '<component :is="tag"><template #default><slot /></template><template #other><slot>fb</slot></template></component>')).toMatch(like("fv::slots::slot_into(out, fv_slots.default, None);"));
+    expect(render(tag, '<component :is="tag"><template #default><slot /></template><template #other><slot>fb</slot></template></component>')).toMatch(like("fv::render::slot_into(out, fv_slots.default, None);"));
   });
 
   it("follows slot content into a child that renders it inside such an element, and through a chosen component", () => {
@@ -307,9 +307,9 @@ describe("content `<component :is>` renders from virtual nodes", () => {
   it("leaves the slot content of a child that renders it as markup", () => {
     const U = sfc("", "<b><slot /></b>");
     const V = sfc("", '<p><slot /><slot name="n" /></p>');
-    expect(render('import V from "./V.vue";\nimport U from "./U.vue";\ndefineProps<{ on: boolean }>();', '<component :is="on ? U : V"><slot>fb</slot></component>', { "U.vue": U, "V.vue": V })).toMatch(like("fv::slots::Slot::markup"));
-    expect(render('import V from "./V.vue";\ndefineProps<{ on: boolean }>();', "<component :is=\"on ? V : 'b'\"><template #n><slot>fb</slot></template></component>", { "V.vue": V })).toMatch(like("            n: Some(fv::slots::Slot::markup("));
-    expect(render('import V from "./V.vue";', '<V><slot>fb</slot></V>', { "V.vue": V })).toMatch(like("fv::slots::Slot::markup"));
+    expect(render('import V from "./V.vue";\nimport U from "./U.vue";\ndefineProps<{ on: boolean }>();', '<component :is="on ? U : V"><slot>fb</slot></component>', { "U.vue": U, "V.vue": V })).toMatch(like("fv::render::Slot::markup"));
+    expect(render('import V from "./V.vue";\ndefineProps<{ on: boolean }>();', "<component :is=\"on ? V : 'b'\"><template #n><slot>fb</slot></template></component>", { "V.vue": V })).toMatch(like("            n: Some(fv::render::Slot::markup("));
+    expect(render('import V from "./V.vue";', '<V><slot>fb</slot></V>', { "V.vue": V })).toMatch(like("fv::render::Slot::markup"));
   });
 });
 
@@ -325,7 +325,7 @@ describe("choices the analyses read", () => {
       "C.vue": sfc("", "<span>c</span>"),
     };
     const out = compiled(files);
-    expect(out.get("c.rs")).toMatch(like('pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::refused::Refused> {\n    try_render_scoped(out, props, "")\n}'));
+    expect(out.get("c.rs")).toMatch(like('pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {\n    try_render_scoped(out, props, "")\n}'));
     expect(out.get("x.rs")).toMatch(/super::c::try_render_scoped\(out, &super::c::Props \{ {2}\}, " data-v-\w+"\)\?;/);
   });
 
@@ -444,7 +444,7 @@ describe("the components `<component :is>` renders", () => {
     expect(slotted.get("x.rs")).toMatch(like('fv_refusals.join(super::y::try_render_scoped(out, &super::y::Props { b: None }, super::y::Slots {\n                default: None,\n            }, &fv::attrs::scope_attrs("", "", fv_slot_id)));'));
     expect(slotted.get("y.rs")).toMatch(like("pub fn try_render_scoped("));
     const forwarded = compiled({ "X.vue": sfc(`import W from "./W.vue";\n${TAG}`, '<W><component :is="tag"><slot /></component></W>'), "W.vue": sfc("", "<p><slot /></p>", "<style scoped>:slotted(b) { color: red }</style>") });
-    expect(forwarded.get("x.rs")).toMatch(like("fv::slots::slot_into_slotted(out, fv_slots.default, fv_slot_id, None);"));
+    expect(forwarded.get("x.rs")).toMatch(like("fv::render::slot_into_slotted(out, fv_slots.default, fv_slot_id, None);"));
     const top = compiled({ "X.vue": sfc('import Y from "./Y.vue";', '<component :is="Y" />', scoped) }).get("x.rs")!;
     expect(top).toMatch(/super::y::try_render_scoped\(out, &super::y::Props \{ b: None \}, super::y::Slots \{\n {8}default: None,\n {4}\}, " data-v-\w+"\)\?;/);
   });
@@ -452,7 +452,7 @@ describe("the components `<component :is>` renders", () => {
 
 describe("`<component :is>` among the rest of a template", () => {
   it("writes only the branch a `?:` known when compiling takes", () => {
-    const body = (inner: string) => `pub fn try_render(out: &mut String, _props: &Props) -> Result<(), fv::refused::Refused> {\n    out.reserve(7);\n    ${inner}\n    Ok(())\n}\n`;
+    const body = (inner: string) => `pub fn try_render(out: &mut String, _props: &Props) -> Result<(), fv::render::Refused> {\n    out.reserve(7);\n    ${inner}\n    Ok(())\n}\n`;
     expect(render("", "<component :is=\"false ? 'b' : 'i'\" />")).toMatch(like(body('out.push_str("<i></i>");'), true));
     expect(render("", "<component :is=\"true ? 'b' : 'i'\" />")).toMatch(like(body('out.push_str("<b></b>");'), true));
   });

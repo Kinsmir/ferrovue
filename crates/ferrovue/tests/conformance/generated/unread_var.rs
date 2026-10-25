@@ -35,7 +35,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -43,10 +43,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(55 + props.word.len());
-    let fv_refusals = fv::refused::Refusals::new(NAME, "components/UnreadVar.vue");
+    let fv_refusals = fv::render::Refusals::new(NAME, "components/UnreadVar.vue");
     let s_padded = std::cell::LazyCell::new(|| fv_refusals.keep(fv::strings::try_pad_start(&props.word, props.width as f64, "."), 5, 31).into_owned());
     std::cell::LazyCell::force(&s_padded);
     if props.show {
@@ -54,10 +54,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
         if (*s_padded).is_empty() {
             out.push(' ');
         } else {
-            fv::core::escape::escape_into(out, &s_padded);
+            fv::core::escape_into(out, &s_padded);
         }
         out.push_str(";\">");
-        fv::core::escape::escape_into(out, &props.word);
+        fv::core::escape_into(out, &props.word);
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");

@@ -33,7 +33,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head) {
-    fv::refused::rendered(try_render(out, props, fv_head));
+    fv::render::rendered(try_render(out, props, fv_head));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -41,12 +41,12 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head) -> Result<(), fv::render::Refused> {
     out.reserve(19 + props.title.len() + props.tags.iter().map(|v| v.len()).sum::<usize>());
     fv_head.push(fv::head::HeadValue::object([("title", fv::head::HeadValue::str(&format!("Article: {}", props.title))), ("meta", fv::head::HeadValue::Array(props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).enumerate().map(|(fv_i, fv_tag)| { let fv_i = fv_i as i64; fv::head::HeadValue::object([("property", fv::head::HeadValue::str("article:tag")), ("content", fv::head::HeadValue::str(&fv_tag)), ("data-index", fv::head::HeadValue::int(fv_i))]) }).collect())), ("link", fv::head::HeadValue::array([fv::head::HeadValue::object([("rel", fv::head::HeadValue::str("canonical")), ("href", fv::head::HeadValue::str(&format!("/articles/{}", props.title)))])])), ("script", fv::head::HeadValue::array([fv::head::HeadValue::object([("innerHTML", fv::head::HeadValue::str("console.log(1)")), ("key", fv::head::HeadValue::str("inline")), ("tagPosition", fv::head::HeadValue::str("bodyOpen"))])]))]));
     out.push_str("<article>");
-    fv::core::escape::escape_into(out, &props.title);
+    fv::core::escape_into(out, &props.title);
     out.push_str("</article>");
     Ok(())
 }

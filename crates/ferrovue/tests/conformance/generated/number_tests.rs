@@ -50,7 +50,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -58,8 +58,8 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(254 + 37 * props.inputs.len() + props.inputs.iter().map(|v| v.len()).sum::<usize>());
     let s_parsed = props.inputs.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_s| fv::strings::js_number(&fv_s)).collect::<Vec<_>>();
     let s_finite = (props.x / props.n as f64).is_finite();
@@ -110,7 +110,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
             out.push_str("<b>infinite</b>");
         } else {
             out.push_str("<b>");
-            fv::core::numbers::push_number(out, props.x / props.n as f64);
+            fv::core::push_number(out, props.x / props.n as f64);
             out.push_str("</b>");
         }
     }
@@ -118,11 +118,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
     for fv_s_ref in props.inputs.iter() {
         let fv_s_2: &str = fv_s_ref;
         out.push_str("<li class=\"");
-        fv::class::class_into(out, false, &[if fv::strings::js_number(fv_s_2).is_nan() { "nan" } else { "" }, if fv::strings::js_number(fv_s_2).fract() == 0.0 { "whole" } else { "" }]);
+        fv::attrs::class_into(out, false, &[if fv::strings::js_number(fv_s_2).is_nan() { "nan" } else { "" }, if fv::strings::js_number(fv_s_2).fract() == 0.0 { "whole" } else { "" }]);
         out.push_str("\">");
-        fv::core::escape::escape_into(out, fv_s_2);
+        fv::core::escape_into(out, fv_s_2);
         out.push_str(" is ");
-        fv::core::numbers::push_number(out, fv::strings::js_number(fv_s_2));
+        fv::core::push_number(out, fv::strings::js_number(fv_s_2));
         out.push_str(": ");
         out.push_str(if fv::strings::js_number(fv_s_2).is_nan() { "true" } else { "false" });
         out.push('|');
@@ -142,11 +142,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul><p>");
-    fv::core::escape::escape_into(out, &s_kept.iter().copied().map(|v| fv::core::numbers::Js(v).to_string()).collect::<Vec<_>>().join(", "));
+    fv::core::escape_into(out, &s_kept.iter().copied().map(|v| fv::core::Js(v).to_string()).collect::<Vec<_>>().join(", "));
     out.push('|');
     out.push_str(if s_parsed.iter().copied().any(|fv_v_2| fv_v_2.is_nan()) { "true" } else { "false" });
     out.push('|');
-    fv::core::numbers::push_int(out, s_parsed.iter().copied().filter(|fv_v_3| matches!(*fv_v_3, v if v.fract() == 0.0 && v.abs() <= 9_007_199_254_740_991.0)).count() as i64);
+    fv::core::push_int(out, s_parsed.iter().copied().filter(|fv_v_3| matches!(*fv_v_3, v if v.fract() == 0.0 && v.abs() <= 9_007_199_254_740_991.0)).count() as i64);
     out.push_str("</p></section>");
     Ok(())
 }

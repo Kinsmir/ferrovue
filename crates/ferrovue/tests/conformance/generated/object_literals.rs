@@ -84,7 +84,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -92,46 +92,46 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(70 + props.name.len() + props.words.iter().map(|v| v.len()).sum::<usize>() + props.note.as_deref().map_or(0, str::len) + props.owner.as_deref().map_or(0, str::len));
-    let fv_refusals = fv::refused::Refusals::new(NAME, "components/ObjectLiterals.vue");
+    let fv_refusals = fv::render::Refusals::new(NAME, "components/ObjectLiterals.vue");
     let s_summary = if props.count as f64 > 0.0 { Summary { heading: std::borrow::Cow::<str>::Borrowed(&*props.name), size: props.count, extra: None, hint: None } } else { Summary { heading: std::borrow::Cow::<str>::Borrowed("empty"), size: 0i64, hint: props.note.as_deref().map(std::borrow::Cow::<str>::Borrowed), extra: props.owner.as_deref().map(std::borrow::Cow::<str>::Borrowed) } };
-    let s_tile = super::types::Tile { title: std::borrow::Cow::<str>::Borrowed(&*props.name), count: props.count, note: props.note.as_deref().map(std::borrow::Cow::<str>::Borrowed), owner: props.owner.as_deref().map(std::borrow::Cow::<str>::Borrowed), tags: props.words.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect(), badge: if props.count as f64 > 2.0 { Some(super::types::TileBadge { label: std::borrow::Cow::<str>::Owned(format!("{}+", fv::core::numbers::Js(props.count))), tone: std::borrow::Cow::<str>::Borrowed("many") }) } else { None } };
-    let s_rows = std::cell::LazyCell::new(|| props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).enumerate().map(|(fv_i, fv_w)| { let fv_i = fv_i as i64; super::types::TileRow { id: fv_refusals.keep(fv::refused::try_int(fv_i as f64 + 1.0), 32, 36), label: std::borrow::Cow::<str>::Owned(fv_w.to_uppercase()), href: std::borrow::Cow::<str>::Owned(format!("/w/{}", fv::core::uri::js_encode_uri_component(&fv_w))), first: fv_i as f64 == 0.0 } }).collect::<Vec<_>>());
+    let s_tile = super::types::Tile { title: std::borrow::Cow::<str>::Borrowed(&*props.name), count: props.count, note: props.note.as_deref().map(std::borrow::Cow::<str>::Borrowed), owner: props.owner.as_deref().map(std::borrow::Cow::<str>::Borrowed), tags: props.words.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect(), badge: if props.count as f64 > 2.0 { Some(super::types::TileBadge { label: std::borrow::Cow::<str>::Owned(format!("{}+", fv::core::Js(props.count))), tone: std::borrow::Cow::<str>::Borrowed("many") }) } else { None } };
+    let s_rows = std::cell::LazyCell::new(|| props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).enumerate().map(|(fv_i, fv_w)| { let fv_i = fv_i as i64; super::types::TileRow { id: fv_refusals.keep(fv::render::try_int(fv_i as f64 + 1.0), 32, 36), label: std::borrow::Cow::<str>::Owned(fv_w.to_uppercase()), href: std::borrow::Cow::<str>::Owned(format!("/w/{}", fv::core::js_encode_uri_component(&fv_w))), first: fv_i as f64 == 0.0 } }).collect::<Vec<_>>());
     let s_renamed = super::types::Tile { title: std::borrow::Cow::<str>::Owned(format!("{}!", props.name)), ..s_tile.clone() };
     let s_picked = if let Some(fv_owner) = props.owner.as_deref() { { let fv_heading = fv::strings::js_trim(fv_owner); Summary { heading: std::borrow::Cow::<str>::Owned(str::to_owned(fv_heading)), size: fv::strings::js_length(fv_heading), hint: Some(std::borrow::Cow::<str>::Borrowed(props.note.as_deref().unwrap_or("-"))), extra: Some(std::borrow::Cow::<str>::Owned(str::to_owned(fv_owner))) } } } else { Summary { heading: std::borrow::Cow::<str>::Borrowed("no owner"), size: props.words.len() as i64, extra: None, hint: None } };
     out.push_str("<section><h2>");
-    fv::core::escape::escape_into(out, &s_summary.heading);
+    fv::core::escape_into(out, &s_summary.heading);
     out.push('|');
-    fv::core::numbers::push_int(out, s_summary.size);
+    fv::core::push_int(out, s_summary.size);
     out.push('|');
-    fv::core::escape::escape_into(out, s_summary.hint.as_deref().unwrap_or("none"));
+    fv::core::escape_into(out, s_summary.hint.as_deref().unwrap_or("none"));
     out.push('|');
-    fv::core::escape::escape_into(out, s_summary.extra.as_deref().unwrap_or("null"));
+    fv::core::escape_into(out, s_summary.extra.as_deref().unwrap_or("null"));
     out.push_str("</h2><h2>");
-    fv::core::escape::escape_into(out, &s_picked.heading);
+    fv::core::escape_into(out, &s_picked.heading);
     out.push('|');
-    fv::core::numbers::push_int(out, s_picked.size);
+    fv::core::push_int(out, s_picked.size);
     out.push('|');
-    fv::core::escape::escape_into(out, s_picked.hint.as_deref().unwrap_or("none"));
+    fv::core::escape_into(out, s_picked.hint.as_deref().unwrap_or("none"));
     out.push('|');
-    fv::core::escape::escape_into(out, s_picked.extra.as_deref().unwrap_or("null"));
+    fv::core::escape_into(out, s_picked.extra.as_deref().unwrap_or("null"));
     out.push_str("</h2>");
     fv_refusals.check(super::tile_card::try_render(out, &super::tile_card::Props { tile: s_tile.to_owned() }))?;
     fv_refusals.check(super::tile_card::try_render(out, &super::tile_card::Props { tile: super::types::Tile { title: std::borrow::Cow::<str>::Borrowed(&*props.name), count: props.count, owner: None, tags: Vec::new(), note: None, badge: None } }))?;
     fv_refusals.check(super::tile_card::try_render(out, &super::tile_card::Props { tile: super::types::Tile { title: std::borrow::Cow::<str>::Borrowed("bound"), count: 1i64, owner: props.owner.as_deref().map(std::borrow::Cow::<str>::Borrowed), tags: props.words.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect(), note: props.note.as_deref().map(std::borrow::Cow::<str>::Borrowed), badge: None } }))?;
-    fv_refusals.check(super::tile_card::try_render(out, &super::tile_card::Props { tile: if props.count as f64 == 0.0 { super::types::Tile { title: std::borrow::Cow::<str>::Borrowed(&*props.name), count: props.count, owner: None, tags: Vec::new(), note: None, badge: None } } else { super::types::Tile { title: std::borrow::Cow::<str>::Borrowed(fv::strings::js_trim(&props.name)), count: props.count, note: Some(std::borrow::Cow::<str>::Owned(format!("{} items", fv::core::numbers::Js(props.count)))), owner: Some(std::borrow::Cow::<str>::Borrowed("team")), tags: Vec::from([std::borrow::Cow::<str>::Borrowed("a"), std::borrow::Cow::<str>::Borrowed(&*props.name)]), badge: Some(super::types::TileBadge { label: std::borrow::Cow::<str>::Borrowed("new"), tone: std::borrow::Cow::<str>::Borrowed("ok") }) } } }))?;
+    fv_refusals.check(super::tile_card::try_render(out, &super::tile_card::Props { tile: if props.count as f64 == 0.0 { super::types::Tile { title: std::borrow::Cow::<str>::Borrowed(&*props.name), count: props.count, owner: None, tags: Vec::new(), note: None, badge: None } } else { super::types::Tile { title: std::borrow::Cow::<str>::Borrowed(fv::strings::js_trim(&props.name)), count: props.count, note: Some(std::borrow::Cow::<str>::Owned(format!("{} items", fv::core::Js(props.count)))), owner: Some(std::borrow::Cow::<str>::Borrowed("team")), tags: Vec::from([std::borrow::Cow::<str>::Borrowed("a"), std::borrow::Cow::<str>::Borrowed(&*props.name)]), badge: Some(super::types::TileBadge { label: std::borrow::Cow::<str>::Borrowed("new"), tone: std::borrow::Cow::<str>::Borrowed("ok") }) } } }))?;
     fv_refusals.check(super::tile_card::try_render(out, &super::tile_card::Props { tile: super::types::Tile { title: std::borrow::Cow::<str>::Borrowed("other"), ..s_tile.clone() } }))?;
     fv_refusals.check(super::tile_card::try_render(out, &super::tile_card::Props { tile: s_renamed.to_owned() }))?;
     fv_refusals.check(super::tile_rows::try_render(out, &super::tile_rows::Props { rows: s_rows.to_owned() }))?;
     fv_refusals.check(super::tile_rows::try_render(out, &super::tile_rows::Props { rows: props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).enumerate().map(|(fv_i_2, fv_w_2)| { let fv_i_2 = fv_i_2 as i64; super::types::TileRow { id: fv_i_2, label: std::borrow::Cow::<str>::Owned(str::to_owned(&*fv_w_2)), href: std::borrow::Cow::<str>::Owned(format!("#{}", fv_w_2)), first: false } }).collect::<Vec<_>>() }))?;
     out.push_str("<p>");
-    fv::core::escape::escape_into(out, &(({ let fv_size = fv::strings::js_length(&props.name); if fv_size as f64 == 0.0 { Summary { heading: std::borrow::Cow::<str>::Borrowed("-"), size: fv_size, extra: None, hint: None } } else { Summary { heading: std::borrow::Cow::<str>::Owned(props.name.to_uppercase()), size: fv_size, hint: Some(std::borrow::Cow::<str>::Borrowed(&*props.name)), extra: Some(std::borrow::Cow::<str>::Borrowed("x")) } } }).heading));
+    fv::core::escape_into(out, &(({ let fv_size = fv::strings::js_length(&props.name); if fv_size as f64 == 0.0 { Summary { heading: std::borrow::Cow::<str>::Borrowed("-"), size: fv_size, extra: None, hint: None } } else { Summary { heading: std::borrow::Cow::<str>::Owned(props.name.to_uppercase()), size: fv_size, hint: Some(std::borrow::Cow::<str>::Borrowed(&*props.name)), extra: Some(std::borrow::Cow::<str>::Borrowed("x")) } } }).heading));
     out.push('|');
-    fv::core::escape::escape_into(out, &(({ let fv_size_2 = fv::strings::js_length(&props.name); if fv_size_2 as f64 == 0.0 { Summary { heading: std::borrow::Cow::<str>::Borrowed("-"), size: fv_size_2, extra: None, hint: None } } else { Summary { heading: std::borrow::Cow::<str>::Owned(props.name.to_uppercase()), size: fv_size_2, hint: Some(std::borrow::Cow::<str>::Borrowed(&*props.name)), extra: Some(std::borrow::Cow::<str>::Borrowed("x")) } } }).hint).unwrap_or(std::borrow::Cow::<str>::Borrowed("none")));
+    fv::core::escape_into(out, &(({ let fv_size_2 = fv::strings::js_length(&props.name); if fv_size_2 as f64 == 0.0 { Summary { heading: std::borrow::Cow::<str>::Borrowed("-"), size: fv_size_2, extra: None, hint: None } } else { Summary { heading: std::borrow::Cow::<str>::Owned(props.name.to_uppercase()), size: fv_size_2, hint: Some(std::borrow::Cow::<str>::Borrowed(&*props.name)), extra: Some(std::borrow::Cow::<str>::Borrowed("x")) } } }).hint).unwrap_or(std::borrow::Cow::<str>::Borrowed("none")));
     out.push('|');
-    fv::core::numbers::push_int(out, ({ let fv_size_3 = fv::strings::js_length(""); if fv_size_3 as f64 == 0.0 { Summary { heading: std::borrow::Cow::<str>::Borrowed("-"), size: fv_size_3, extra: None, hint: None } } else { Summary { heading: std::borrow::Cow::<str>::Owned("".to_uppercase()), size: fv_size_3, hint: Some(std::borrow::Cow::<str>::Borrowed("")), extra: Some(std::borrow::Cow::<str>::Borrowed("x")) } } }).size);
+    fv::core::push_int(out, ({ let fv_size_3 = fv::strings::js_length(""); if fv_size_3 as f64 == 0.0 { Summary { heading: std::borrow::Cow::<str>::Borrowed("-"), size: fv_size_3, extra: None, hint: None } } else { Summary { heading: std::borrow::Cow::<str>::Owned("".to_uppercase()), size: fv_size_3, hint: Some(std::borrow::Cow::<str>::Borrowed("")), extra: Some(std::borrow::Cow::<str>::Borrowed("x")) } } }).size);
     out.push_str("</p></section>");
     fv_refusals.check(Ok(()))
 }

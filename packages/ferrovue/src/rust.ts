@@ -68,7 +68,7 @@ export function rustTy(ty: Ty, comp: Component): string {
     case "list":
       return `Vec<${rustTy(ty.of, comp)}>`;
     case "record":
-      return `ferrovue::record::Record<'a, ${rustTy(ty.of, comp)}>`;
+      return `ferrovue::props::Record<'a, ${rustTy(ty.of, comp)}>`;
     case "entry":
       return `(&'a str, &'a ${rustTy(ty.of, comp)})`;
     case "struct": {
@@ -110,8 +110,8 @@ function param(ty: Ty, comp: Component, arg: string): { ty: string; value: strin
 
 function serdeAttrs(f: Field): string {
   const absent = f.ty.k === "opt" && f.ty.none === undefined;
-  const dated = f.ty.k === "opt" && f.ty.of.k === "date" ? `${absent ? "" : ", default"}, with = "fv::js_date::opt_date_prop"` : `${f.ty.k === "opt" && !absent ? ", default" : ""}, with = "fv::js_date::dates_in"`;
-  const date = f.ty.k === "date" ? ', with = "fv::js_date::date_prop"' : bareDates(f.ty) ? dated : holdsMapped(f.ty) ? `${f.ty.k === "opt" && !absent ? ", default" : ""}, with = "fv::union::union_prop"` : "";
+  const dated = f.ty.k === "opt" && f.ty.of.k === "date" ? `${absent ? "" : ", default"}, with = "fv::date::opt_date_prop"` : `${f.ty.k === "opt" && !absent ? ", default" : ""}, with = "fv::date::dates_in"`;
+  const date = f.ty.k === "date" ? ', with = "fv::date::date_prop"' : bareDates(f.ty) ? dated : holdsMapped(f.ty) ? `${f.ty.k === "opt" && !absent ? ", default" : ""}, with = "fv::props::union_prop"` : "";
   return `    #[serde(rename = ${rustStr(f.js)}${absent ? ', default, skip_serializing_if = "Option::is_none"' : ""}${date})]`;
 }
 
@@ -190,10 +190,10 @@ export function textLen(comp: Component, place: string, ty: Ty, seen: Set<string
     case "str":
       return [`${place}.len()`];
     case "html":
-      return [`fv::trusted::TrustedHtml::trusted_html(&${place}).len()`];
+      return [`fv::html::TrustedHtml::trusted_html(&${place}).len()`];
     case "opt":
       if (ty.of.k === "str") return [`${place}.as_deref().map_or(0, str::len)`];
-      if (ty.of.k === "html") return [`${place}.as_ref().map_or(0, |v| fv::trusted::TrustedHtml::trusted_html(v).len())`];
+      if (ty.of.k === "html") return [`${place}.as_ref().map_or(0, |v| fv::html::TrustedHtml::trusted_html(v).len())`];
       if (ty.of.k === "struct") {
         const inner = textLen(comp, "v", ty.of, seen);
         return inner.length ? [`${place}.as_ref().map_or(0, |v| ${inner.join(" + ")})`] : [];
@@ -230,7 +230,7 @@ function renderParamCount(comp: Component): number {
 
 const RENDER_DOC = "/// Write the component's server render into `out`.\n///\n/// # Panics\n///\n/// With the message of the refusal [`try_render`] returns.\n";
 
-const TRY_DOC = "/// [`render`], returning the refusal of a render that cannot write what Vue writes for these\n/// props, such as a date string browsers read differently: a server answers it with an error.\n///\n/// # Errors\n///\n/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.\n";
+const TRY_DOC = "/// [`render`], returning the refusal of a render that cannot write what Vue writes for these\n/// props, such as a date string browsers read differently: a server answers it with an error.\n///\n/// # Errors\n///\n/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.\n";
 
 function renderSource(comp: Component, life: string, args: string, e: Emitter): string {
   const count = renderParamCount(comp);
@@ -242,10 +242,10 @@ function renderSource(comp: Component, life: string, args: string, e: Emitter): 
   };
   const params = `out: &mut String, props: &Props${life}${extraParams(comp)}`;
   const body = readable(e.lines.join("\n"));
-  const result = "Result<(), fv::refused::Refused>";
+  const result = "Result<(), fv::render::Refused>";
   if (!comp.inherits && !takesAttrs(comp)) {
     return `${RENDER_DOC}${manyArgs(2 + count)}pub fn render(${params}) {
-    fv::refused::rendered(try_render(out, props${args}));
+    fv::render::rendered(try_render(out, props${args}));
 }
 
 ${TRY_DOC}${manyArgs(2 + count)}pub fn try_render(out: &mut String, ${props}: &Props${life}${extraParams(comp, unread)}) -> ${result} {
@@ -257,7 +257,7 @@ ${body}
     ? ["&fv::attrs::Attrs::NONE", "&fv::attrs::Attrs<'_>", "the attributes a parent passes beyond the props, and the scope ids it hands the root"]
     : ['""', "&str", "the scope ids a parent hands the root: ` data-v-…` each"];
   return `${RENDER_DOC}${manyArgs(2 + count)}pub fn render(${params}) {
-    fv::refused::rendered(try_render_scoped(out, props${args}, ${none}));
+    fv::render::rendered(try_render_scoped(out, props${args}, ${none}));
 }
 
 ${TRY_DOC}${manyArgs(2 + count)}pub fn try_render(${params}) -> ${result} {
@@ -319,7 +319,7 @@ export function componentSource(comp: Component, ast: N[], ssr: string, componen
   const text = textLen(comp, "props", { k: "struct", name: "Props" });
   const fixed = e.literalBytes + scope.helperBytes.n;
   const reserve = [...(fixed || !(e.perItem.length + text.length) ? [String(fixed)] : []), ...e.perItem, ...text];
-  if (refuses) e.lines.unshift(`    let ${REFUSALS} = fv::refused::Refusals::new(NAME, ${rustStr(comp.file)});`);
+  if (refuses) e.lines.unshift(`    let ${REFUSALS} = fv::render::Refusals::new(NAME, ${rustStr(comp.file)});`);
   e.lines.unshift(`    out.reserve(${reserve.join(" + ")});`);
 
   const life = structLifetime(comp.props, comp) ? "<'_>" : "";
@@ -333,10 +333,10 @@ export function componentSource(comp: Component, ast: N[], ssr: string, componen
   const slotFields = [
     ...comp.slotNames.map((n) => {
       const outlet = `\`<slot${n === "default" ? "" : ` name="${n}"`}>\``;
-      const type = comp.slotShapes.has(n) || context.length ? `&'s ${slotTypeName(n, "Slot")}<'s>` : "fv::slots::Slot<'s>";
+      const type = comp.slotShapes.has(n) || context.length ? `&'s ${slotTypeName(n, "Slot")}<'s>` : "fv::render::Slot<'s>";
       return `    /// ${outlet}\n    pub ${snake(n)}: Option<${type}>,`;
     }),
-    ...slotFieldsOf(comp).map((f) => `    /// ${f.doc}\n    pub ${f.rust}: fv::slots::Slot<'s>,`),
+    ...slotFieldsOf(comp).map((f) => `    /// ${f.doc}\n    pub ${f.rust}: fv::render::Slot<'s>,`),
   ];
   const slotTypes = [...comp.slotShapes.entries()]
     .map(([n, shape]) => {
@@ -417,7 +417,7 @@ ${manyArgs(1 + renderParamCount(comp))}pub fn html${gen}(props: &'p Props${named
     const usesCow = /Cow</.test(structs + structSource(comp.props, comp, ""));
     return `${header(comp.file)}
 ${usesCow ? "use std::borrow::Cow;\n\n" : ""}use ferrovue as fv;
-${/\.parse_union::</.test(render) ? "use ferrovue::union::ParseUnion as _;\n" : ""}
+${/\.parse_union::</.test(render) ? "use ferrovue::props::ParseUnion as _;\n" : ""}
 /// The component's name, as \`data-island\` carries it.
 pub const NAME: &str = ${rustStr(comp.name)};
 
@@ -455,10 +455,10 @@ export function modSource(comps: Component[], modules: string[]): string {
         }
         const fields = c.slotNames.map((n) => {
           const local = `s_${snake(n).replace(/^r#/, "")}`;
-          const value = context.length ? local : c.slotShapes.has(n) ? `&${local} as &${c.module}::${slotTypeName(n, "Slot")}` : `ferrovue::slots::Slot::new(&${local})`;
+          const value = context.length ? local : c.slotShapes.has(n) ? `&${local} as &${c.module}::${slotTypeName(n, "Slot")}` : `ferrovue::render::Slot::new(&${local})`;
           return `${snake(n)}: fixture.slot(${rustStr(n)}).map(|_| ${value})`;
         });
-        for (const f of slotFieldsOf(c)) fields.push(`${f.rust}: ferrovue::slots::Slot::new(&s_${snake(f.js).replace(/^r#/, "")})`);
+        for (const f of slotFieldsOf(c)) fields.push(`${f.rust}: ferrovue::render::Slot::new(&s_${snake(f.js).replace(/^r#/, "")})`);
         args += `, ${c.module}::Slots { ${fields.join(", ")} }`;
       }
       const around = paramsOf(c).flatMap((p) => (p.test.around ? [p.test.around] : []));

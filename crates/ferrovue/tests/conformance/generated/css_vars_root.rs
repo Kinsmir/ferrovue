@@ -33,7 +33,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render_scoped(out, props, &fv::attrs::Attrs::NONE));
+    fv::render::rendered(try_render_scoped(out, props, &fv::attrs::Attrs::NONE));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -41,21 +41,21 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     try_render_scoped(out, props, &fv::attrs::Attrs::NONE)
 }
 
 /// [`try_render`], with the attributes a parent passes beyond the props, and the scope ids it hands the root.
 #[doc(hidden)]
-pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::refused::Refused> {
+pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(props.tint.len() + props.shade.len());
     super::css_vars_leaf::try_render_scoped(out, &super::css_vars_leaf::Props { tint: std::borrow::Cow::Borrowed(&*props.tint), width: Some(3i64) }, super::css_vars_leaf::Slots {
-        default: Some(fv::slots::Slot::markup(&|out: &mut String| -> bool {
+        default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
             let fv_chunk = out.len();
-            fv::core::escape::escape_into(out, &props.shade);
-            filled |= !fv::slots::is_comment(&out[fv_chunk..]);
+            fv::core::escape_into(out, &props.shade);
+            filled |= !fv::render::is_comment(&out[fv_chunk..]);
             filled
         })),
     }, &fv::attrs::Attrs::merged(&[fv_attrs.list(), &[("style", fv::attrs::Attr::style([("--cbc538d2-shade", if props.shade.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(&props.shade) })]))]], ""))?;

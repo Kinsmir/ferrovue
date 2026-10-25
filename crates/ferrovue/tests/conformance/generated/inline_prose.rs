@@ -13,21 +13,21 @@ pub const NAME: &str = "InlineProse";
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
     #[serde(rename = "lead")]
-    pub lead: ferrovue::basic_html::InlineHtml,
+    pub lead: ferrovue::html::InlineHtml,
     #[serde(rename = "note", default, skip_serializing_if = "Option::is_none")]
-    pub note: Option<ferrovue::basic_html::InlineHtml>,
+    pub note: Option<ferrovue::html::InlineHtml>,
     #[serde(rename = "caption")]
     pub caption: Cow<'a, str>,
 }
 
 impl<'a> Props<'a> {
     /// Props with its required fields, every optional one absent.
-    pub fn new(lead: ferrovue::basic_html::InlineHtml, caption: impl Into<Cow<'a, str>>) -> Self {
+    pub fn new(lead: ferrovue::html::InlineHtml, caption: impl Into<Cow<'a, str>>) -> Self {
         Props { lead, note: None, caption: caption.into() }
     }
 
     /// Set `note`, which is absent otherwise.
-    pub fn note(mut self, note: ferrovue::basic_html::InlineHtml) -> Self {
+    pub fn note(mut self, note: ferrovue::html::InlineHtml) -> Self {
         self.note = Some(note);
         self
     }
@@ -40,7 +40,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -48,17 +48,17 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
-    out.reserve(68 + fv::trusted::TrustedHtml::trusted_html(&props.lead).len() + props.note.as_ref().map_or(0, |v| fv::trusted::TrustedHtml::trusted_html(v).len()) + props.caption.len());
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
+    out.reserve(68 + fv::html::TrustedHtml::trusted_html(&props.lead).len() + props.note.as_ref().map_or(0, |v| fv::html::TrustedHtml::trusted_html(v).len()) + props.caption.len());
     out.push_str("<section><p class=\"lead\">");
-    fv::trusted::trusted_into(out, &props.lead);
+    fv::html::trusted_into(out, &props.lead);
     out.push_str("</p><p>Note: <span>");
     if let Some(html) = props.note.as_ref() {
-        fv::trusted::trusted_into(out, html);
+        fv::html::trusted_into(out, html);
     }
     out.push_str("</span> (");
-    fv::core::escape::escape_into(out, &props.caption);
+    fv::core::escape_into(out, &props.caption);
     out.push_str(")</p></section>");
     Ok(())
 }

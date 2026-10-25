@@ -39,7 +39,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) {
-    fv::refused::rendered(try_render(out, props, fv_provides));
+    fv::render::rendered(try_render(out, props, fv_provides));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -47,10 +47,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides:
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(29 + props.theme.len() + props.active.len() + props.inner.len() + props.names.iter().map(|v| v.len()).sum::<usize>());
-    let fv_refusals = fv::refused::Refusals::new(NAME, "components/TabsPage.vue");
+    let fv_refusals = fv::render::Refusals::new(NAME, "components/TabsPage.vue");
     let fv_inherited = fv_provides;
     let fv_provided_accent_key = props.theme.to_uppercase();
     let fv_provides = super::provides::Provides { theme_key: Some(&props.theme), size: Some(props.size), accent_key: Some(&*fv_provided_accent_key), ..fv_inherited };

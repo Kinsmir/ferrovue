@@ -48,7 +48,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -56,41 +56,41 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(134 + props.when.len() + props.word.len() + props.tags.iter().map(|v| v.len()).sum::<usize>() + props.note.as_deref().map_or(0, str::len));
-    let fv_refusals = fv::refused::Refusals::new(NAME, "components/Unread.vue");
+    let fv_refusals = fv::render::Refusals::new(NAME, "components/Unread.vue");
     let s_upper = props.word.to_uppercase();
     let s_padded = std::cell::LazyCell::new(|| fv_refusals.keep(fv::strings::try_pad_start(&props.word, props.width as f64, "."), 7, 31).into_owned());
-    let s_iso = std::cell::LazyCell::new(|| fv_refusals.keep(fv::dates::try_to_iso_string(fv_refusals.keep(fv::dates::try_date_parse(&props.when), 9, 28)), 9, 28));
+    let s_iso = std::cell::LazyCell::new(|| fv_refusals.keep(fv::date::try_to_iso_string(fv_refusals.keep(fv::date::try_date_parse(&props.when), 9, 28)), 9, 28));
     let s_stamp = std::cell::LazyCell::new(|| format!("{} ({})", (*s_iso), props.word));
-    let s_day = std::cell::LazyCell::new(|| fv::dates::js_utc_date(fv_refusals.keep(fv::dates::try_date_parse(&props.when), 11, 28)));
+    let s_day = std::cell::LazyCell::new(|| fv::date::js_utc_date(fv_refusals.keep(fv::date::try_date_parse(&props.when), 11, 28)));
     let s_size = std::cell::LazyCell::new(|| fv::strings::js_length(&fv_refusals.keep(fv::strings::try_repeat(&props.word, props.count as f64), 12, 29)));
     let s_copies = std::cell::LazyCell::new(|| props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_t| std::borrow::Cow::<str>::Owned(std::borrow::Cow::<str>::Owned(fv_refusals.keep(fv::strings::try_repeat(&fv_t, props.count as f64), 13, 53)).into_owned())).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>());
     let s_echoed = std::cell::LazyCell::new(|| props.note.as_deref().filter(|v| !v.is_empty()).map(|fv_note| std::borrow::Cow::<str>::Owned(fv_refusals.keep(fv::strings::try_repeat(fv_note, props.count as f64), 14, 45))));
     out.push_str("<section><p>");
-    fv::core::escape::escape_into(out, &s_upper);
+    fv::core::escape_into(out, &s_upper);
     out.push('|');
-    fv::core::escape::escape_into(out, &s_padded);
+    fv::core::escape_into(out, &s_padded);
     out.push_str("</p>");
     if props.show {
         out.push_str("<!--[--><time datetime=\"");
-        fv::core::escape::escape_into(out, &s_iso);
+        fv::core::escape_into(out, &s_iso);
         out.push_str("\">");
-        fv::core::escape::escape_into(out, &s_stamp);
+        fv::core::escape_into(out, &s_stamp);
         out.push_str("</time><p>");
-        fv::core::numbers::push_number(out, *s_day);
+        fv::core::push_number(out, *s_day);
         out.push('|');
-        fv::core::numbers::push_int(out, *s_size);
+        fv::core::push_int(out, *s_size);
         out.push('|');
-        fv::core::escape::escape_into(out, (*s_echoed).as_deref().unwrap_or("-"));
+        fv::core::escape_into(out, (*s_echoed).as_deref().unwrap_or("-"));
         out.push_str("</p><ul><!--[-->");
         for fv_c_cow in (*s_copies).iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)) {
             let fv_c: &str = &fv_c_cow;
             out.push_str("<li>");
-            fv::core::escape::escape_into(out, fv_c);
+            fv::core::escape_into(out, fv_c);
             out.push('|');
-            fv::core::numbers::push_int(out, fv::strings::js_length(&s_stamp));
+            fv::core::push_int(out, fv::strings::js_length(&s_stamp));
             out.push_str("</li>");
         }
         out.push_str("<!--]--></ul>");
@@ -102,9 +102,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
         out.push_str("<p>hidden</p>");
     }
     fv_refusals.check(super::unread_fold::try_render(out, &super::unread_fold::Props { open: Some(props.show), label: None }, super::unread_fold::Slots {
-        default: Some(fv::slots::Slot::new(&|out: &mut String| {
+        default: Some(fv::render::Slot::new(&|out: &mut String| {
             out.push_str("<i>");
-            fv::core::escape::escape_into(out, &s_iso);
+            fv::core::escape_into(out, &s_iso);
             out.push_str("</i>");
         })),
     }))?;

@@ -4,7 +4,7 @@
 use std::borrow::Cow;
 
 use ferrovue as fv;
-use ferrovue::union::ParseUnion as _;
+use ferrovue::props::ParseUnion as _;
 
 /// The component's name, as `data-island` carries it.
 pub const NAME: &str = "UnionList";
@@ -38,26 +38,26 @@ impl std::fmt::Display for UnionListSizes {
 }
 
 impl std::str::FromStr for UnionListSizes {
-    type Err = ferrovue::union::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "sm" => Ok(UnionListSizes::Sm),
             "lg" => Ok(UnionListSizes::Lg),
-            _ => Err(ferrovue::union::ParseUnionError::new("UnionListSizes", s, &["sm", "lg"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("UnionListSizes", s, &["sm", "lg"])),
         }
     }
 }
 
 impl TryFrom<&str> for UnionListSizes {
-    type Error = ferrovue::union::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::union::Union for UnionListSizes {
+impl ferrovue::props::Union for UnionListSizes {
     const ALL: &'static [Self] = &UnionListSizes::ALL;
 
     fn as_str(self) -> &'static str {
@@ -69,16 +69,16 @@ impl ferrovue::union::Union for UnionListSizes {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "hues", with = "fv::union::union_prop")]
+    #[serde(rename = "hues", with = "fv::props::union_prop")]
     pub hues: Vec<crate::domain::Hue>,
-    #[serde(rename = "extra", default, skip_serializing_if = "Option::is_none", with = "fv::union::union_prop")]
+    #[serde(rename = "extra", default, skip_serializing_if = "Option::is_none", with = "fv::props::union_prop")]
     pub extra: Option<Vec<crate::domain::Hue>>,
-    #[serde(rename = "spare", default, skip_serializing_if = "Option::is_none", with = "fv::union::union_prop")]
+    #[serde(rename = "spare", default, skip_serializing_if = "Option::is_none", with = "fv::props::union_prop")]
     pub spare: Option<Vec<crate::domain::Hue>>,
-    #[serde(rename = "holes", with = "fv::union::union_prop")]
+    #[serde(rename = "holes", with = "fv::props::union_prop")]
     pub holes: Vec<Option<crate::domain::Hue>>,
     #[serde(rename = "named")]
-    pub named: ferrovue::record::Record<'a, Cow<'a, str>>,
+    pub named: ferrovue::props::Record<'a, Cow<'a, str>>,
     #[serde(rename = "label")]
     pub label: Cow<'a, str>,
     #[serde(rename = "sizes")]
@@ -87,7 +87,7 @@ pub struct Props<'a> {
 
 impl<'a> Props<'a> {
     /// Props with its required fields, every optional one absent.
-    pub fn new(hues: impl IntoIterator<Item = crate::domain::Hue>, holes: Vec<Option<crate::domain::Hue>>, named: ferrovue::record::Record<'a, Cow<'a, str>>, label: impl Into<Cow<'a, str>>, sizes: impl IntoIterator<Item = UnionListSizes>) -> Self {
+    pub fn new(hues: impl IntoIterator<Item = crate::domain::Hue>, holes: Vec<Option<crate::domain::Hue>>, named: ferrovue::props::Record<'a, Cow<'a, str>>, label: impl Into<Cow<'a, str>>, sizes: impl IntoIterator<Item = UnionListSizes>) -> Self {
         Props { hues: hues.into_iter().collect(), extra: None, spare: None, holes, named, label: label.into(), sizes: sizes.into_iter().collect() }
     }
 
@@ -111,7 +111,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -119,55 +119,55 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(243 + 8 * props.extra.as_deref().unwrap_or(&[]).len() + 7 * props.spare.as_deref().unwrap_or(&[]).len() + 7 * props.holes.len() + 18 * props.sizes.len() + 9 * props.hues.len() + 9 * props.holes.len() + props.named.iter().map(|(k, v)| k.len() + v.len()).sum::<usize>() + props.label.len() + 2 * props.sizes.len());
-    let fv_refusals = fv::refused::Refusals::new(NAME, "components/UnionList.vue");
-    let s_warm = props.hues.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::union::Union::as_str(*v))).filter(|fv_h| &**fv_h != "green").map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
+    let fv_refusals = fv::render::Refusals::new(NAME, "components/UnionList.vue");
+    let s_warm = props.hues.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))).filter(|fv_h| &**fv_h != "green").map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
     out.push_str("<!--[--><p title=\"");
-    fv::core::escape::escape_into(out, &props.label);
+    fv::core::escape_into(out, &props.label);
     out.push_str("\" data-hues=\"");
-    fv::core::escape::escape_into(out, &props.hues.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::union::Union::as_str(*v))).collect::<Vec<_>>().join(","));
+    fv::core::escape_into(out, &props.hues.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))).collect::<Vec<_>>().join(","));
     out.push_str("\" data-sizes=\"");
-    fv::core::escape::escape_into(out, &props.sizes.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::union::Union::as_str(*v))).collect::<Vec<_>>().join(","));
+    fv::core::escape_into(out, &props.sizes.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))).collect::<Vec<_>>().join(","));
     out.push_str("\">");
-    fv::core::escape::escape_into(out, &props.hues.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::union::Union::as_str(*v))).collect::<Vec<_>>().join(" / "));
+    fv::core::escape_into(out, &props.hues.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))).collect::<Vec<_>>().join(" / "));
     out.push(' ');
-    fv::core::numbers::push_int(out, props.hues.len() as i64);
+    fv::core::push_int(out, props.hues.len() as i64);
     out.push(' ');
-    out.push_str(if props.hues.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::union::Union::as_str(*v))).any(|fv_item| *fv_item == *"red") { "true" } else { "false" });
+    out.push_str(if props.hues.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))).any(|fv_item| *fv_item == *"red") { "true" } else { "false" });
     out.push(' ');
-    fv::core::numbers::push_int(out, props.hues.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::union::Union::as_str(*v))).position(|fv_item_2| *fv_item_2 == *"green").map_or(-1, |i| i as i64));
+    fv::core::push_int(out, props.hues.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))).position(|fv_item_2| *fv_item_2 == *"green").map_or(-1, |i| i as i64));
     out.push_str("</p><!--[-->");
     for (fv_i, fv_h_ref) in props.hues.iter().enumerate() {
         let fv_h_2 = *fv_h_ref;
         let fv_i = fv_i as i64;
-        fv_refusals.check(super::union_list_item::try_render(out, &super::union_list_item::Props { hue: Some(fv_h_2), wide: Some(match fv_h_2 { crate::domain::Hue::Red => super::union_list_item::UnionListItemWide::Red, crate::domain::Hue::Green => super::union_list_item::UnionListItemWide::Green, crate::domain::Hue::BHue => super::union_list_item::UnionListItemWide::BHue }), hues: props.hues.to_vec(), extra: None, label: std::borrow::Cow::Borrowed(&*format!("{} {}", props.label, fv::core::numbers::Js(fv_i))) }))?;
+        fv_refusals.check(super::union_list_item::try_render(out, &super::union_list_item::Props { hue: Some(fv_h_2), wide: Some(match fv_h_2 { crate::domain::Hue::Red => super::union_list_item::UnionListItemWide::Red, crate::domain::Hue::Green => super::union_list_item::UnionListItemWide::Green, crate::domain::Hue::BHue => super::union_list_item::UnionListItemWide::BHue }), hues: props.hues.to_vec(), extra: None, label: std::borrow::Cow::Borrowed(&*format!("{} {}", props.label, fv::core::Js(fv_i))) }))?;
     }
     out.push_str("<!--]-->");
     fv_refusals.check(super::union_list_item::try_render(out, &super::union_list_item::Props { hue: None, wide: None, hues: s_warm.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| match &*v { "red" => crate::domain::Hue::Red, "green" => crate::domain::Hue::Green, _ => crate::domain::Hue::BHue }).collect(), extra: props.extra.as_ref().map(|v| v.to_vec()), label: std::borrow::Cow::Borrowed(&*props.label) }))?;
-    fv_refusals.check(super::union_list_item::try_render(out, &super::union_list_item::Props { hue: None, wide: None, hues: props.hues.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::union::Union::as_str(*v))).map(|fv_h_3| std::borrow::Cow::<str>::Owned(fv_h_3.to_string())).map(|v| match &*v { "red" => crate::domain::Hue::Red, "green" => crate::domain::Hue::Green, _ => crate::domain::Hue::BHue }).collect(), extra: Some(props.spare.as_deref().unwrap_or(&[]).to_vec()), label: std::borrow::Cow::Borrowed(&*props.label) }))?;
+    fv_refusals.check(super::union_list_item::try_render(out, &super::union_list_item::Props { hue: None, wide: None, hues: props.hues.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))).map(|fv_h_3| std::borrow::Cow::<str>::Owned(fv_h_3.to_string())).map(|v| match &*v { "red" => crate::domain::Hue::Red, "green" => crate::domain::Hue::Green, _ => crate::domain::Hue::BHue }).collect(), extra: Some(props.spare.as_deref().unwrap_or(&[]).to_vec()), label: std::borrow::Cow::Borrowed(&*props.label) }))?;
     out.push_str("<!--[-->");
     for fv_h_ref_2 in props.extra.as_deref().unwrap_or(&[]).iter() {
         let fv_h_4 = *fv_h_ref_2;
         out.push_str("<b>");
-        fv::core::escape::escape_into(out, match fv_h_4 { crate::domain::Hue::Red => "Red", crate::domain::Hue::Green => "Green & <go>", crate::domain::Hue::BHue => "Odd \"one\"" });
+        fv::core::escape_into(out, match fv_h_4 { crate::domain::Hue::Red => "Red", crate::domain::Hue::Green => "Green & <go>", crate::domain::Hue::BHue => "Odd \"one\"" });
         out.push(' ');
-        fv::core::escape::escape_into(out, if fv_h_4 == crate::domain::Hue::Red { "warm" } else { "cool" });
+        fv::core::escape_into(out, if fv_h_4 == crate::domain::Hue::Red { "warm" } else { "cool" });
         out.push_str("</b>");
     }
     out.push_str("<!--]--><!--[-->");
     for fv_h_ref_3 in props.spare.as_deref().unwrap_or(&[]).iter() {
         let fv_h_5 = *fv_h_ref_3;
         out.push_str("<i>");
-        fv::core::escape::escape_into(out, &fv::union::Union::as_str(fv_h_5).to_uppercase());
+        fv::core::escape_into(out, &fv::props::Union::as_str(fv_h_5).to_uppercase());
         out.push_str("</i>");
     }
     out.push_str("<!--]--><!--[-->");
     for fv_h_ref_4 in props.holes.iter() {
         let fv_h_6 = *fv_h_ref_4;
         out.push_str("<s>");
-        fv::core::escape::escape_into(out, fv_h_6.map(fv::union::Union::as_str).unwrap_or("none"));
+        fv::core::escape_into(out, fv_h_6.map(fv::props::Union::as_str).unwrap_or("none"));
         out.push_str("</s>");
     }
     out.push_str("<!--]--><!--[-->");
@@ -178,34 +178,34 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
     out.push_str("<!--]--><!--[-->");
     for (fv_k, fv_h_ref_6) in props.named.iter() {
         let fv_h_8: &str = fv_h_ref_6;
-        fv_refusals.check(super::union_list_item::try_render(out, &super::union_list_item::Props { hue: Some(match fv_h_8.parse_union::<crate::domain::Hue>("Hue", &["red", "green", "<b>&\"hue'"]) { Ok(fv_u) => fv_u, Err(fv_e) => { fv_refusals.keep(Err::<(), _>(fv::refused::Refused::new("FV0518", format!("{fv_e}: the template needs one of them here, and Vue would write the string itself: check the value before rendering"))), 24, 57); crate::domain::Hue::Red } }), wide: None, hues: Vec::new(), extra: None, label: std::borrow::Cow::Borrowed(fv_k) }))?;
+        fv_refusals.check(super::union_list_item::try_render(out, &super::union_list_item::Props { hue: Some(match fv_h_8.parse_union::<crate::domain::Hue>("Hue", &["red", "green", "<b>&\"hue'"]) { Ok(fv_u) => fv_u, Err(fv_e) => { fv_refusals.keep(Err::<(), _>(fv::render::Refused::new("FV0518", format!("{fv_e}: the template needs one of them here, and Vue would write the string itself: check the value before rendering"))), 24, 57); crate::domain::Hue::Red } }), wide: None, hues: Vec::new(), extra: None, label: std::borrow::Cow::Borrowed(fv_k) }))?;
     }
     out.push_str("<!--]--><q title=\"");
-    fv::core::escape::escape_into(out, &props.holes.iter().map(|v| v.map(fv::union::Union::as_str)).map(|v| v.unwrap_or("")).collect::<Vec<_>>().join(","));
+    fv::core::escape_into(out, &props.holes.iter().map(|v| v.map(fv::props::Union::as_str)).map(|v| v.unwrap_or("")).collect::<Vec<_>>().join(","));
     out.push_str("\">");
-    fv::core::escape::escape_into(out, &props.sizes.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::union::Union::as_str(*v))).collect::<Vec<_>>().join(","));
+    fv::core::escape_into(out, &props.sizes.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))).collect::<Vec<_>>().join(","));
     out.push_str("</q><!--[-->");
     for fv_s_ref in props.sizes.iter() {
         let fv_s = *fv_s_ref;
         out.push_str("<em class=\"");
-        fv::class::class_into(out, false, &[fv::union::Union::as_str(fv_s)]);
+        fv::attrs::class_into(out, false, &[fv::props::Union::as_str(fv_s)]);
         out.push_str("\">");
-        fv::core::escape::escape_into(out, fv::union::Union::as_str(fv_s));
+        fv::core::escape_into(out, fv::props::Union::as_str(fv_s));
         out.push_str("</em>");
     }
     out.push_str("<!--]-->");
-    if let Some(fv_extra) = props.extra.as_ref().map(|v| v.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::union::Union::as_str(*v))).collect::<Vec<_>>()).as_deref() {
+    if let Some(fv_extra) = props.extra.as_ref().map(|v| v.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))).collect::<Vec<_>>()).as_deref() {
         out.push_str("<span>");
-        fv::core::numbers::push_int(out, fv_extra.len() as i64);
+        fv::core::push_int(out, fv_extra.len() as i64);
         out.push(' ');
-        fv::core::escape::escape_into(out, &fv_extra.iter().map(|v| &**v).collect::<Vec<_>>().join(","));
+        fv::core::escape_into(out, &fv_extra.iter().map(|v| &**v).collect::<Vec<_>>().join(","));
         out.push_str("</span>");
     } else {
         out.push_str("<!---->");
     }
-    if props.hues.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::union::Union::as_str(*v))).any(|fv_h_9| &*fv_h_9 == "red") {
+    if props.hues.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))).any(|fv_h_9| &*fv_h_9 == "red") {
         out.push_str("<u>");
-        fv::core::escape::escape_into(out, &props.hues.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::union::Union::as_str(*v))).filter(|fv_h_10| &**fv_h_10 != "red").collect::<Vec<_>>().join("|"));
+        fv::core::escape_into(out, &props.hues.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))).filter(|fv_h_10| &**fv_h_10 != "red").collect::<Vec<_>>().join("|"));
         out.push_str("</u>");
     } else {
         out.push_str("<!---->");

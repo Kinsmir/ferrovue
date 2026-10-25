@@ -19,12 +19,12 @@ pub struct Props<'a> {
     #[serde(rename = "code")]
     pub code: i64,
     #[serde(rename = "scores")]
-    pub scores: ferrovue::record::Record<'a, i64>,
+    pub scores: ferrovue::props::Record<'a, i64>,
 }
 
 impl<'a> Props<'a> {
     /// Props with its required fields.
-    pub fn new(role: impl Into<Cow<'a, str>>, size: impl Into<Cow<'a, str>>, code: i64, scores: ferrovue::record::Record<'a, i64>) -> Self {
+    pub fn new(role: impl Into<Cow<'a, str>>, size: impl Into<Cow<'a, str>>, code: i64, scores: ferrovue::props::Record<'a, i64>) -> Self {
         Props { role: role.into(), size: size.into(), code, scores }
     }
 
@@ -37,7 +37,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -45,14 +45,14 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(93 + props.role.len() + props.size.len() + props.scores.iter().map(|(k, _)| k.len()).sum::<usize>());
     let s_role_class = if let Some(fv_role) = matches!(&*props.role, "7" | "mod" | "admin").then_some(&*props.role) { match fv_role { "7" => "is-seven", "mod" => "is-mod", _ => "is-admin" } } else { "is-member" };
     out.push_str("<section class=\"");
-    fv::class::class_into(out, false, &[if let Some(fv_role_2) = matches!(&*props.role, "7" | "mod" | "admin").then_some(&*props.role) { match fv_role_2 { "7" => "is-seven", "mod" => "is-mod", _ => "is-admin" } } else { "" }]);
+    fv::attrs::class_into(out, false, &[if let Some(fv_role_2) = matches!(&*props.role, "7" | "mod" | "admin").then_some(&*props.role) { match fv_role_2 { "7" => "is-seven", "mod" => "is-mod", _ => "is-admin" } } else { "" }]);
     out.push_str("\"><p>");
-    fv::core::escape::escape_into(out, s_role_class);
+    fv::core::escape_into(out, s_role_class);
     out.push('|');
     out.push_str(if matches!(&*props.role, "7" | "mod" | "admin") { "true" } else { "false" });
     out.push('|');
@@ -60,31 +60,31 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
     out.push('|');
     out.push_str(if matches!(props.code, 7) { "true" } else { "false" });
     out.push_str("</p><p>");
-    fv::core::escape::escape_into(out, &["7", "mod", "admin"].iter().map(|v| &**v).collect::<Vec<_>>().join(","));
+    fv::core::escape_into(out, &["7", "mod", "admin"].iter().map(|v| &**v).collect::<Vec<_>>().join(","));
     out.push('|');
     out.push_str(if ["7", "mod", "admin"].iter().any(|v| **v == *props.role) { "true" } else { "false" });
     out.push('|');
     out.push_str(if props.scores.get(&props.role).is_some() { "true" } else { "false" });
     out.push_str("</p><p>");
-    fv::core::numbers::push_int(out, (match &*props.size { "sm" => Some(14i64), "md" => Some(16i64), _ => None }).unwrap_or(10i64));
+    fv::core::push_int(out, (match &*props.size { "sm" => Some(14i64), "md" => Some(16i64), _ => None }).unwrap_or(10i64));
     out.push('|');
     out.push_str(if matches!(&*props.size, "sm" | "md") { "true" } else { "false" });
     out.push('|');
-    fv::core::numbers::push_int(out, 16i64);
+    fv::core::push_int(out, 16i64);
     out.push('|');
-    fv::core::escape::escape_into(out, (match props.code { 404 => Some("missing"), 500 => Some("broken"), _ => None }).unwrap_or("fine"));
+    fv::core::escape_into(out, (match props.code { 404 => Some("missing"), 500 => Some("broken"), _ => None }).unwrap_or("fine"));
     out.push('|');
     out.push_str(if matches!(props.code, 404 | 500) { "true" } else { "false" });
     out.push_str("</p>");
     if let Some(fv_role_4) = matches!(&*props.role, "7" | "mod" | "admin").then_some(&*props.role) {
         out.push_str("<b title=\"");
-        fv::core::escape::escape_into(out, fv_role_4);
+        fv::core::escape_into(out, fv_role_4);
         out.push_str("\">");
-        fv::core::escape::escape_into(out, match fv_role_4 { "7" => "is-seven", "mod" => "is-mod", _ => "is-admin" });
+        fv::core::escape_into(out, match fv_role_4 { "7" => "is-seven", "mod" => "is-mod", _ => "is-admin" });
         out.push_str("</b>");
     } else {
         out.push_str("<b>");
-        fv::core::escape::escape_into(out, &props.role);
+        fv::core::escape_into(out, &props.role);
         out.push_str("</b>");
     }
     out.push_str("</section>");

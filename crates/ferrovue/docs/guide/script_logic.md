@@ -161,7 +161,7 @@ generated code of `leader`:
 # struct Row<'a> { name: std::borrow::Cow<'a, str>, score: i64 }
 # struct Props<'a> { rows: Vec<Row<'a>> }
 # let props = Props { rows: vec![Row { name: "Ann".into(), score: 7 }, Row { name: "Bo".into(), score: 9 }] };
-let s_leader = { let mut fv_best: f64 = -1.0f64; let mut fv_name: String = String::from("nobody"); for fv_r in props.rows.iter() { if fv_r.score as f64 <= fv_best {} else { fv_best = fv_r.score as f64; fv_name = String::from(&*fv_r.name); } } std::borrow::Cow::<str>::Owned(format!("{} ({})", fv_name, fv::core::numbers::Js(fv_best))) };
+let s_leader = { let mut fv_best: f64 = -1.0f64; let mut fv_name: String = String::from("nobody"); for fv_r in props.rows.iter() { if fv_r.score as f64 <= fv_best {} else { fv_best = fv_r.score as f64; fv_name = String::from(&*fv_r.name); } } std::borrow::Cow::<str>::Owned(format!("{} ({})", fv_name, fv::core::Js(fv_best))) };
 # assert_eq!(s_leader, "Bo (9)");
 ```
 

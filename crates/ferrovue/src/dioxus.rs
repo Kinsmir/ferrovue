@@ -9,7 +9,7 @@
 //! #     pub struct Props { pub start: i64 }
 //! #     pub fn render(out: &mut String, props: &Props) {
 //! #         out.push_str("<button>");
-//! #         ferrovue::core::numbers::push_int(out, props.start);
+//! #         ferrovue::core::push_int(out, props.start);
 //! #         out.push_str("</button>");
 //! #     }
 //! #     pub fn island(props: &Props) -> ferrovue::html::Html<'_, Props> {
@@ -84,7 +84,7 @@ impl<P: Serialize, F: crate::html::Renderer<P>> Html<'_, P, F> {
     /// #     pub struct Props<'a> { pub name: &'a str }
     /// #     pub fn render(out: &mut String, props: &Props<'_>) {
     /// #         out.push_str("<p>Hello, ");
-    /// #         ferrovue::core::escape::escape_into(out, props.name);
+    /// #         ferrovue::core::escape_into(out, props.name);
     /// #         out.push_str("!</p>");
     /// #     }
     /// #     pub fn html<'p, 'a>(props: &'p Props<'a>) -> ferrovue::html::Html<'p, Props<'a>> {
@@ -111,7 +111,7 @@ impl<P: Serialize, F: crate::html::Renderer<P>> Html<'_, P, F> {
     /// With the message of the refusal [`Html::try_render_to`] returns.
     pub fn to_element(&self) -> Element {
         let mut markup = String::new();
-        crate::refused::rendered(self.run(&mut markup));
+        crate::render::rendered(self.run(&mut markup));
         let mut attrs = Vec::with_capacity(4);
         if let Some(name) = self.island {
             attrs.push(Attribute::new("data-island", name, None, false));
@@ -133,7 +133,7 @@ impl<P: Serialize, F: crate::html::Renderer<P>> IntoDynNode for Html<'_, P, F> {
     }
 }
 
-/// [`state_script_into`](crate::state::state_script_into) as a Dioxus element: the stores' state in a
+/// [`state_script_into`](crate::page::state_script_into) as a Dioxus element: the stores' state in a
 /// `<script type="application/json">` with the given `id`, its content escaped the same way.
 ///
 /// # Example
@@ -143,7 +143,7 @@ impl<P: Serialize, F: crate::html::Renderer<P>> IntoDynNode for Html<'_, P, F> {
 /// let html = dioxus_ssr::render_element(ferrovue::dioxus::state_script("__pinia", &state));
 ///
 /// let mut written = String::new();
-/// ferrovue::state::state_script_into(&mut written, "__pinia", &state);
+/// ferrovue::page::state_script_into(&mut written, "__pinia", &state);
 /// assert_eq!(html, written);
 /// assert_eq!(
 ///     html,
@@ -153,7 +153,7 @@ impl<P: Serialize, F: crate::html::Renderer<P>> IntoDynNode for Html<'_, P, F> {
 pub fn state_script(id: &str, state: &impl Serialize) -> Element {
     let json = crate::json::to_string(state);
     let mut content = String::with_capacity(json.len());
-    crate::state::json_escaped_into(&mut content, &json);
+    crate::page::json_escaped_into(&mut content, &json);
     element(
         STATE_SCRIPT,
         vec![
@@ -175,7 +175,7 @@ mod tests {
 
     fn label(out: &mut String, props: &Label<'_>) {
         out.push_str("<b>");
-        ferrovue_core::escape::escape_into(out, props.label);
+        ferrovue_core::escape_into(out, props.label);
         out.push_str("</b><!--[--><i>x</i><!--]-->");
     }
 
@@ -241,7 +241,7 @@ mod tests {
     #[test]
     fn an_island_carries_when_it_hydrates_after_its_props() {
         let props = Label { label: "x" };
-        let when = crate::hydrate::Hydrate::media(r#"(min-width: 1px)" onclick="x"#);
+        let when = crate::html::Hydrate::media(r#"(min-width: 1px)" onclick="x"#);
         let [plain, _] =
             rendered(|| page(Html::island("Label", &props, label).hydrate(when.clone())));
         assert!(
@@ -268,7 +268,7 @@ mod tests {
     fn the_state_script_is_state_script_into() {
         let state = serde_json::json!({ "a": "<&>\u{2028}\u{2029}", "b": [1, 2] });
         let mut want = String::new();
-        crate::state::state_script_into(&mut want, "__pinia", &state);
+        crate::page::state_script_into(&mut want, "__pinia", &state);
         let [plain, hydratable] = rendered(|| state_script("__pinia", &state));
         assert_eq!(plain, want);
         assert_eq!(

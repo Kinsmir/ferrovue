@@ -48,7 +48,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -56,14 +56,14 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(76 + 41 * props.items.len() + props.items.iter().map(|v| v.label.len() + v.hint.as_deref().map_or(0, str::len)).sum::<usize>() + props.heading.len() + props.selected.as_deref().map_or(0, str::len) + props.mark.as_deref().map_or(0, str::len));
     out.push_str("<fieldset><legend>");
-    fv::core::escape::escape_into(out, &props.heading);
+    fv::core::escape_into(out, &props.heading);
     if let Some(fv_mark) = props.mark.as_deref() {
         out.push_str("<small>");
-        fv::core::escape::escape_into(out, fv_mark);
+        fv::core::escape_into(out, fv_mark);
         out.push_str("</small>");
     } else {
         out.push_str("<!---->");
@@ -72,17 +72,17 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
     for fv_item_ref in props.items.iter() {
         let fv_item = fv_item_ref;
         out.push_str("<label class=\"");
-        fv::class::class_into(out, false, &[if Some(&*fv_item.label) == props.selected.as_deref() { "on" } else { "" }]);
+        fv::attrs::class_into(out, false, &[if Some(&*fv_item.label) == props.selected.as_deref() { "on" } else { "" }]);
         out.push('"');
         if let Some(v) = fv_item.hint.as_deref() {
             out.push_str(" title=\"");
-            fv::core::escape::escape_into(out, v);
+            fv::core::escape_into(out, v);
             out.push('"');
         }
         out.push('>');
-        fv::core::escape::escape_into(out, &fv_item.label);
+        fv::core::escape_into(out, &fv_item.label);
         out.push_str(" #");
-        fv::core::numbers::push_int(out, fv_item.id);
+        fv::core::push_int(out, fv_item.id);
         out.push_str("</label>");
     }
     out.push_str("<!--]--></fieldset>");

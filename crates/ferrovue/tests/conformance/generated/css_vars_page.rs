@@ -54,7 +54,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -62,25 +62,25 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(187 + 7 * props.items.len() + props.color.len() + props.label.as_deref().map_or(0, str::len) + props.font.len() + props.tone.as_deref().map_or(0, str::len) + props.items.iter().map(|v| v.len()).sum::<usize>());
     out.push_str("<!--[-->");
     super::css_vars::try_render_scoped(out, &super::css_vars::Props { color: std::borrow::Cow::Borrowed(&*props.color), size: props.size, ratio: props.ratio, label: props.label.as_deref().map(std::borrow::Cow::Borrowed), font: std::borrow::Cow::Borrowed(&*props.font), gap: None }, &fv::attrs::Attrs::merged(&[&[("class", fv::attrs::Attr::str("given")), ("style", fv::attrs::Attr::styles([fv::attrs::Attr::style([("top", fv::attrs::Attr::str("0")), ("--own", fv::attrs::Attr::str("2"))]), fv::attrs::Attr::style([("color", props.tone.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str))])]))], &[("style", fv::attrs::Attr::style([("--d9e366c1-tone", match props.tone.as_deref() { Some(v) => if v.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(v) }, None => fv::attrs::Attr::str("initial") }), ("--d9e366c1-size", fv::attrs::Attr::Int(props.size))]))]], ""))?;
     super::css_vars_root::try_render_scoped(out, &super::css_vars_root::Props { tint: std::borrow::Cow::Borrowed(&*props.color), shade: std::borrow::Cow::Borrowed(&*props.font) }, &fv::attrs::Attrs::merged(&[&[("style", fv::attrs::Attr::style([("left", fv::attrs::Attr::str("1px"))]))], &[("style", fv::attrs::Attr::style([("--d9e366c1-tone", match props.tone.as_deref() { Some(v) => if v.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(v) }, None => fv::attrs::Attr::str("initial") }), ("--d9e366c1-size", fv::attrs::Attr::Int(props.size))]))]], ""))?;
     if let Some(fv_tone) = props.tone.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<p style=\"color:");
-        fv::core::escape::escape_into(out, fv_tone);
+        fv::core::escape_into(out, fv_tone);
         out.push_str(";--d9e366c1-tone:");
         if fv_tone.is_empty() {
             out.push(' ');
         } else {
-            fv::core::escape::escape_into(out, fv_tone);
+            fv::core::escape_into(out, fv_tone);
         }
         out.push_str(";--d9e366c1-size:");
-        fv::core::numbers::push_int(out, props.size);
+        fv::core::push_int(out, props.size);
         out.push_str(";\">");
-        fv::core::escape::escape_into(out, fv_tone);
+        fv::core::escape_into(out, fv_tone);
         out.push_str("</p>");
     } else {
         out.push_str("<span style=\"");
@@ -89,21 +89,21 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
             if v.is_empty() {
                 out.push(' ');
             } else {
-                fv::core::escape::escape_into(out, v);
+                fv::core::escape_into(out, v);
             }
             out.push(';');
         } else {
             out.push_str("--d9e366c1-tone:initial;");
         }
         out.push_str("--d9e366c1-size:");
-        fv::core::numbers::push_int(out, props.size);
+        fv::core::push_int(out, props.size);
         out.push_str(";\">none</span>");
     }
     out.push_str("<!--[-->");
     for fv_item_ref in props.items.iter() {
         let fv_item: &str = fv_item_ref;
         out.push_str("<i>");
-        fv::core::escape::escape_into(out, fv_item);
+        fv::core::escape_into(out, fv_item);
         out.push_str("</i>");
     }
     out.push_str("<!--]--><!--]-->");

@@ -38,7 +38,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) {
-    fv::refused::rendered(try_render(out, props, fv_provides));
+    fv::render::rendered(try_render(out, props, fv_provides));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -46,21 +46,21 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides:
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(86 + props.label.len() + props.size.as_deref().map_or(0, str::len));
     let fv_default_look = super::types::Look { size: std::borrow::Cow::Borrowed(props.size.as_deref().unwrap_or("md")), tone: std::borrow::Cow::Borrowed("plain"), note: None, count: 0i64 };
     let fv_default_made = super::types::Look { size: std::borrow::Cow::Borrowed("lg"), tone: std::borrow::Cow::Borrowed(&*props.label), note: Some(std::borrow::Cow::Borrowed("made")), count: 1i64 };
     let fv_default_named = super::types::Look { size: std::borrow::Cow::Borrowed("sm"), tone: std::borrow::Cow::Borrowed(&*format!("{}!", props.label)), note: None, count: 2i64 };
     let s_summary = format!("{}/{}", fv_provides.look_key.unwrap_or(&fv_default_look).size, fv_provides.look_key.unwrap_or(&fv_default_look).tone);
     out.push_str("<span class=\"swatch");
-    fv::class::class_into(out, true, &[&*format!("swatch-{}", fv_provides.look_key.unwrap_or(&fv_default_look).size)]);
+    fv::attrs::class_into(out, true, &[&*format!("swatch-{}", fv_provides.look_key.unwrap_or(&fv_default_look).size)]);
     out.push('"');
     if fv_provides.look_key.unwrap_or(&fv_default_look).tone.is_empty() {
         out.push_str(" data-tone");
     } else {
         out.push_str(" data-tone=\"");
-        fv::core::escape::escape_into(out, &fv_provides.look_key.unwrap_or(&fv_default_look).tone);
+        fv::core::escape_into(out, &fv_provides.look_key.unwrap_or(&fv_default_look).tone);
         out.push('"');
     }
     if let Some(v) = fv_provides.look_key.unwrap_or(&fv_default_look).note.as_deref() {
@@ -68,26 +68,26 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provi
             out.push_str(" data-note");
         } else {
             out.push_str(" data-note=\"");
-            fv::core::escape::escape_into(out, v);
+            fv::core::escape_into(out, v);
             out.push('"');
         }
     }
     out.push('>');
-    fv::core::escape::escape_into(out, &props.label);
+    fv::core::escape_into(out, &props.label);
     out.push(' ');
-    fv::core::escape::escape_into(out, &s_summary);
+    fv::core::escape_into(out, &s_summary);
     out.push(' ');
-    fv::core::escape::escape_into(out, &fv_provides.look_key.unwrap_or(&fv_default_made).tone);
+    fv::core::escape_into(out, &fv_provides.look_key.unwrap_or(&fv_default_made).tone);
     out.push(' ');
     if let Some(v) = fv_provides.look_key.unwrap_or(&fv_default_made).note.as_deref() {
-        fv::core::escape::escape_into(out, v);
+        fv::core::escape_into(out, v);
     }
     out.push(' ');
-    fv::core::escape::escape_into(out, &fv_provides.look.unwrap_or(&fv_default_named).tone);
+    fv::core::escape_into(out, &fv_provides.look.unwrap_or(&fv_default_named).tone);
     out.push(' ');
-    fv::core::escape::escape_into(out, &fv_provides.look.unwrap_or(&fv_default_named).size);
+    fv::core::escape_into(out, &fv_provides.look.unwrap_or(&fv_default_named).size);
     out.push(' ');
-    fv::core::numbers::push_number(out, fv_provides.look_key.unwrap_or(&fv_default_look).count as f64 + fv_provides.look_key.unwrap_or(&fv_default_made).count as f64);
+    fv::core::push_number(out, fv_provides.look_key.unwrap_or(&fv_default_look).count as f64 + fv_provides.look_key.unwrap_or(&fv_default_made).count as f64);
     out.push_str("</span>");
     Ok(())
 }

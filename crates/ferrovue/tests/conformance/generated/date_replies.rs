@@ -31,7 +31,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -39,43 +39,43 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(25 + 134 * props.replies.len() + props.replies.iter().map(|v| v.author.len()).sum::<usize>());
-    let fv_refusals = fv::refused::Refusals::new(NAME, "components/DateReplies.vue");
+    let fv_refusals = fv::render::Refusals::new(NAME, "components/DateReplies.vue");
     out.push_str("<ul><!--[-->");
     for fv_reply_ref in props.replies.iter() {
         let fv_reply = fv_reply_ref;
         out.push_str("<li><b>");
-        fv::core::escape::escape_into(out, &fv_reply.author);
+        fv::core::escape_into(out, &fv_reply.author);
         out.push_str("</b>");
-        if !fv::js_date::js_time_of(&fv_reply.at).is_nan() {
+        if !fv::date::js_time_of(&fv_reply.at).is_nan() {
             out.push_str("<time datetime=\"");
-            fv::core::escape::escape_into(out, &fv_refusals.keep(fv::dates::try_to_iso_string(fv::js_date::js_time_of(&fv_reply.at)), 11, 73));
+            fv::core::escape_into(out, &fv_refusals.keep(fv::date::try_to_iso_string(fv::date::js_time_of(&fv_reply.at)), 11, 73));
             out.push_str("\">");
-            fv::core::numbers::push_number(out, fv::dates::js_utc_date(fv::js_date::js_time_of(&fv_reply.at)));
+            fv::core::push_number(out, fv::date::js_utc_date(fv::date::js_time_of(&fv_reply.at)));
             out.push_str("</time>");
         } else {
             out.push_str("<i>");
-            fv::core::numbers::push_number(out, fv::js_date::js_time_of(&fv_reply.at));
+            fv::core::push_number(out, fv::date::js_time_of(&fv_reply.at));
             out.push_str("</i>");
         }
-        if let Some(fv_edited) = fv_reply.edited.as_ref().map(fv::js_date::js_time_of) && fv_edited > fv::js_date::js_time_of(&fv_reply.at) {
+        if let Some(fv_edited) = fv_reply.edited.as_ref().map(fv::date::js_time_of) && fv_edited > fv::date::js_time_of(&fv_reply.at) {
             out.push_str("<span>edited ");
-            fv::core::numbers::push_number(out, fv::dates::js_utc_minutes(fv_edited));
+            fv::core::push_number(out, fv::date::js_utc_minutes(fv_edited));
             out.push_str("</span>");
         } else {
             out.push_str("<!---->");
         }
-        if let Some(fv_removed) = fv_reply.removed.as_ref().map(fv::js_date::js_time_of) {
+        if let Some(fv_removed) = fv_reply.removed.as_ref().map(fv::date::js_time_of) {
             out.push_str("<span>removed ");
-            fv::core::numbers::push_number(out, fv::dates::js_utc_full_year(fv_removed));
+            fv::core::push_number(out, fv::date::js_utc_full_year(fv_removed));
             out.push_str("</span>");
         } else {
             out.push_str("<!---->");
         }
         if (props.depth as f64) < 2.0 && fv_reply.replies.len() as i64 != 0 {
-            fv_refusals.check(super::date_replies::try_render(out, &super::date_replies::Props { replies: fv_reply.replies.to_owned(), depth: fv_refusals.keep(fv::refused::try_int(props.depth as f64 + 1.0), 15, 94) }))?;
+            fv_refusals.check(super::date_replies::try_render(out, &super::date_replies::Props { replies: fv_reply.replies.to_owned(), depth: fv_refusals.keep(fv::render::try_int(props.depth as f64 + 1.0), 15, 94) }))?;
         } else {
             out.push_str("<!---->");
         }

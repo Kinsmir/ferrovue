@@ -2,10 +2,10 @@ use std::time::Duration;
 
 use ferrovue::{
     head::Head,
-    hydrate::Hydrate,
+    html::Hydrate,
     page::{PageHole, PageScript, Part},
+    render::Slot,
     router::{Route, Router},
-    slots::Slot,
 };
 
 use crate::assets::Assets;
@@ -21,7 +21,7 @@ const SHOP: &str = "Ferrovue Books";
 pub struct Page {
     /// The HTTP status.
     pub status: u16,
-    /// The markup, with a [`ferrovue::slots::hole`] where each of `holes` goes.
+    /// The markup, with a [`ferrovue::page::hole`] where each of `holes` goes.
     pub html: String,
     /// What goes in each hole, in order.
     pub holes: Vec<Hole>,
@@ -105,7 +105,7 @@ impl Site {
         } = self.page(location).await;
         let mut out = String::new();
         let mut holes = holes.into_iter();
-        for piece in ferrovue::slots::split_holes(&html) {
+        for piece in ferrovue::page::split_holes(&html) {
             out.push_str(piece);
             if let Some(hole) = holes.next() {
                 out.push_str(&self.fill(hole).await);
@@ -147,7 +147,7 @@ impl Site {
         let view = |out: &mut String| {
             let slots = books_id::Slots {
                 actions: Some(Slot::new(&actions)),
-                reviews: Some(ferrovue::slots::hole()),
+                reviews: Some(ferrovue::page::hole()),
             };
             books_id::render(out, &props, slots, route, &head);
         };
@@ -197,7 +197,7 @@ impl Site {
             let record = page.render_to(&mut body, picks::html(&props, slots, route, &head, loads));
             body.push_str("</div>");
             loads.script_into(&mut body);
-            ferrovue::slots::hole().render_to(&mut body);
+            ferrovue::page::hole().render_to(&mut body);
             (head, body, record, reviews)
         })
         .await;
@@ -241,11 +241,11 @@ impl Site {
         out.push_str(&tags.body_tags_open);
         out.push_str(body);
         out.push_str(&tags.body_tags);
-        ferrovue::state::state_script_into(&mut out, "__pinia", stores);
+        ferrovue::page::state_script_into(&mut out, "__pinia", stores);
         self.assets.scripts_into(&mut out);
         out.push_str("</body></html>");
         assert_eq!(
-            ferrovue::slots::split_holes(&out).len(),
+            ferrovue::page::split_holes(&out).len(),
             holes.len() + 1,
             "one hole filled per hole left"
         );

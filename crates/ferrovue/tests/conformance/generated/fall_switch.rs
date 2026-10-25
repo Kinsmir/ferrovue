@@ -38,27 +38,27 @@ impl std::fmt::Display for FallSwitchMode {
 }
 
 impl std::str::FromStr for FallSwitchMode {
-    type Err = ferrovue::union::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "on" => Ok(FallSwitchMode::On),
             "off" => Ok(FallSwitchMode::Off),
             "none" => Ok(FallSwitchMode::None),
-            _ => Err(ferrovue::union::ParseUnionError::new("FallSwitchMode", s, &["on", "off", "none"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("FallSwitchMode", s, &["on", "off", "none"])),
         }
     }
 }
 
 impl TryFrom<&str> for FallSwitchMode {
-    type Error = ferrovue::union::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::union::Union for FallSwitchMode {
+impl ferrovue::props::Union for FallSwitchMode {
     const ALL: &'static [Self] = &FallSwitchMode::ALL;
 
     fn as_str(self) -> &'static str {
@@ -89,7 +89,7 @@ impl Props {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props) {
-    fv::refused::rendered(try_render_scoped(out, props, &fv::attrs::Attrs::NONE));
+    fv::render::rendered(try_render_scoped(out, props, &fv::attrs::Attrs::NONE));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -97,14 +97,14 @@ pub fn render(out: &mut String, props: &Props) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
     try_render_scoped(out, props, &fv::attrs::Attrs::NONE)
 }
 
 /// [`try_render`], with the attributes a parent passes beyond the props, and the scope ids it hands the root.
 #[doc(hidden)]
-pub fn try_render_scoped(out: &mut String, props: &Props, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::refused::Refused> {
+pub fn try_render_scoped(out: &mut String, props: &Props, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(49 + 4);
     if props.mode == FallSwitchMode::On {
         out.push_str("<b");

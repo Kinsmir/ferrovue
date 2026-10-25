@@ -31,7 +31,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>, fv_head: &fv::head::Head) {
-    fv::refused::rendered(try_render(out, props, fv_route, fv_head));
+    fv::render::rendered(try_render(out, props, fv_route, fv_head));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -39,12 +39,12 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>, fv_head: &fv::head::Head) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>, fv_head: &fv::head::Head) -> Result<(), fv::render::Refused> {
     out.reserve(154 + props.path.len());
     fv_head.push(fv::head::HeadValue::object([("title", fv::head::HeadValue::str("Not found")), ("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([("name", fv::head::HeadValue::str("robots")), ("content", fv::head::HeadValue::str("noindex"))]), fv::head::HeadValue::object([("name", fv::head::HeadValue::str("description")), ("content", fv::head::HeadValue::str(&format!("Nothing lives at {}", props.path)))])]))]));
     out.push_str("<section class=\"not-found\"><h1>Not found</h1><p>Nothing lives at <code>");
-    fv::core::escape::escape_into(out, &props.path);
+    fv::core::escape_into(out, &props.path);
     out.push_str("</code>.</p>");
     {
         let fv_link = {
@@ -55,9 +55,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
             out.push_str(" aria-current=\"page\"");
         }
         out.push_str(" href=\"");
-        fv::core::escape::escape_into(out, &fv_link.href);
+        fv::core::escape_into(out, &fv_link.href);
         out.push_str("\" class=\"");
-        fv::class::class_into(out, false, &[if fv_link.exact { "active" } else { "" }]);
+        fv::attrs::class_into(out, false, &[if fv_link.exact { "active" } else { "" }]);
         out.push_str("\">Back to all books</a>");
     }
     out.push_str("</section>");

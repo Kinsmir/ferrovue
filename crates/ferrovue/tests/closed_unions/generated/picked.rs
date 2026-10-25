@@ -38,27 +38,27 @@ impl std::fmt::Display for K {
 }
 
 impl std::str::FromStr for K {
-    type Err = ferrovue::union::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "a" => Ok(K::A),
             "b" => Ok(K::B),
             "c" => Ok(K::C),
-            _ => Err(ferrovue::union::ParseUnionError::new("K", s, &["a", "b", "c"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("K", s, &["a", "b", "c"])),
         }
     }
 }
 
 impl TryFrom<&str> for K {
-    type Error = ferrovue::union::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::union::Union for K {
+impl ferrovue::props::Union for K {
     const ALL: &'static [Self] = &K::ALL;
 
     fn as_str(self) -> &'static str {
@@ -98,27 +98,27 @@ impl std::fmt::Display for PickedTag {
 }
 
 impl std::str::FromStr for PickedTag {
-    type Err = ferrovue::union::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "b" => Ok(PickedTag::B),
             "i" => Ok(PickedTag::I),
             "u" => Ok(PickedTag::U),
-            _ => Err(ferrovue::union::ParseUnionError::new("PickedTag", s, &["b", "i", "u"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("PickedTag", s, &["b", "i", "u"])),
         }
     }
 }
 
 impl TryFrom<&str> for PickedTag {
-    type Error = ferrovue::union::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::union::Union for PickedTag {
+impl ferrovue::props::Union for PickedTag {
     const ALL: &'static [Self] = &PickedTag::ALL;
 
     fn as_str(self) -> &'static str {
@@ -151,7 +151,7 @@ impl Props {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -159,8 +159,8 @@ pub fn render(out: &mut String, props: &Props) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
     out.reserve(37 + 1 + 1);
     out.push_str("<div>");
     match props.k {

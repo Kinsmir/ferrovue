@@ -37,8 +37,8 @@ one the compiler stops raising stays listed here, marked retired. The first two 
 area. [\`errors_and_limits\`](crate::guide::errors_and_limits) explains what the compiler refuses
 and why. A warning, such as one for a deprecated configuration key, has a code of its own, shown as
 \`warning[FV1117]\` and with the \`severity\` \`"warning"\` in JSON. A refusal at render time, which a
-generated \`try_render\` returns as a [\`Refused\`](crate::refused::Refused), has a code of this list too, which
-[\`Refused::code\`](crate::refused::Refused::code) gives.
+generated \`try_render\` returns as a [\`Refused\`](crate::render::Refused), has a code of this list too, which
+[\`Refused::code\`](crate::render::Refused::code) gives.
 
 This page is generated from the compiler's list in \`packages/ferrovue/src/errors.ts\` by
 \`pnpm errors:generate\`; \`pnpm test\` fails when the two differ.

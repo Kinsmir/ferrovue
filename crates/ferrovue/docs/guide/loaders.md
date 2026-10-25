@@ -129,10 +129,10 @@ assert_eq!(
 #     pub lang: Option<String>,
 # }
 #
-# impl fv::load::Load for LoadPost {
+# impl fv::loaders::Load for LoadPost {
 #     const NAME: &'static str = "loadPost";
 #     type Output = super::types::Post<'static>;
-#     fn args(&self, key: &mut fv::load::LoadKey) {
+#     fn args(&self, key: &mut fv::loaders::LoadKey) {
 #         key.arg(&self.slug);
 #         if self.lang.is_some() {
 #             key.arg(&self.lang);
@@ -146,52 +146,52 @@ assert_eq!(
 #     pub slug: String,
 # }
 #
-# impl fv::load::Load for LoadViews {
+# impl fv::loaders::Load for LoadViews {
 #     const NAME: &'static str = "loadViews";
 #     type Output = i64;
-#     fn args(&self, key: &mut fv::load::LoadKey) {
+#     fn args(&self, key: &mut fv::loaders::LoadKey) {
 #         key.arg(&self.slug);
 #     }
 # }
 #
 # /// The app's loaders: one method for each `defineLoader`, given its call, returning what the
-# /// client's loader returns. A method that fails fails the render, with [`fv::load::LoadError`].
+# /// client's loader returns. A method that fails fails the render, with [`fv::loaders::LoadError`].
 # pub trait Loaders: Sync {
 #     /// What a loader fails with.
 #     type Error;
 #
 #     /// `loadPost`, in components/loaders.ts.
-#     fn load_post(&self, call: LoadPost) -> impl std::future::Future<Output = Result<<LoadPost as fv::load::Load>::Output, Self::Error>> + Send;
+#     fn load_post(&self, call: LoadPost) -> impl std::future::Future<Output = Result<<LoadPost as fv::loaders::Load>::Output, Self::Error>> + Send;
 #
 #     /// `loadViews`, in components/loaders.ts.
-#     fn load_views(&self, call: LoadViews) -> impl std::future::Future<Output = Result<<LoadViews as fv::load::Load>::Output, Self::Error>> + Send;
+#     fn load_views(&self, call: LoadViews) -> impl std::future::Future<Output = Result<<LoadViews as fv::loaders::Load>::Output, Self::Error>> + Send;
 # }
 #
 # /// Run `call` with the loader of its name.
-# pub fn dispatch<'a, L: Loaders>(loaders: &'a L, call: fv::load::LoadCall) -> fv::load::LoadFuture<'a, L::Error> {
+# pub fn dispatch<'a, L: Loaders>(loaders: &'a L, call: fv::loaders::LoadCall) -> fv::loaders::LoadFuture<'a, L::Error> {
 #     match call.name() {
-#         <LoadPost as fv::load::Load>::NAME => call.run(|c: LoadPost| loaders.load_post(c)),
-#         <LoadViews as fv::load::Load>::NAME => call.run(|c: LoadViews| loaders.load_views(c)),
+#         <LoadPost as fv::loaders::Load>::NAME => call.run(|c: LoadPost| loaders.load_post(c)),
+#         <LoadViews as fv::loaders::Load>::NAME => call.run(|c: LoadViews| loaders.load_views(c)),
 #         name => unreachable!("no loader is called `{name}`"),
 #     }
 # }
 #
-# /// Render with `loaders`: [`fv::load::load`], each call run by its method of [`Loaders`]. Write the
-# /// payload with [`fv::load::Loads::script_into`] after the components, for the client to hydrate from.
-# pub async fn load<L: Loaders, T>(loaders: &L, render: impl FnMut(&fv::load::Loads<'_>) -> T) -> Result<T, fv::load::LoadError<L::Error>> {
-#     fv::load::load(render, |call| dispatch(loaders, call)).await
+# /// Render with `loaders`: [`fv::loaders::load`], each call run by its method of [`Loaders`]. Write the
+# /// payload with [`fv::loaders::Loads::script_into`] after the components, for the client to hydrate from.
+# pub async fn load<L: Loaders, T>(loaders: &L, render: impl FnMut(&fv::loaders::Loads<'_>) -> T) -> Result<T, fv::loaders::LoadError<L::Error>> {
+#     fv::loaders::load(render, |call| dispatch(loaders, call)).await
 # }
 #
 # /// Each call answered from a fixture's `$loads`, by its key.
 # #[cfg(test)]
-# pub fn from_fixture(results: &std::collections::HashMap<String, Box<serde_json::value::RawValue>>) -> impl FnMut(fv::load::LoadCall) -> fv::load::LoadFuture<'static, String> + '_ {
+# pub fn from_fixture(results: &std::collections::HashMap<String, Box<serde_json::value::RawValue>>) -> impl FnMut(fv::loaders::LoadCall) -> fv::loaders::LoadFuture<'static, String> + '_ {
 #     move |call| match call.name() {
-#         <LoadPost as fv::load::Load>::NAME => call.run(|c: LoadPost| {
-#             let found = results.get(&fv::load::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::load::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadPost as fv::load::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
+#         <LoadPost as fv::loaders::Load>::NAME => call.run(|c: LoadPost| {
+#             let found = results.get(&fv::loaders::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::loaders::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadPost as fv::loaders::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
 #             async move { found }
 #         }),
-#         <LoadViews as fv::load::Load>::NAME => call.run(|c: LoadViews| {
-#             let found = results.get(&fv::load::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::load::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadViews as fv::load::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
+#         <LoadViews as fv::loaders::Load>::NAME => call.run(|c: LoadViews| {
+#             let found = results.get(&fv::loaders::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::loaders::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadViews as fv::loaders::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
 #             async move { found }
 #         }),
 #         name => unreachable!("no loader is called `{name}`"),
@@ -235,16 +235,16 @@ assert_eq!(
 #
 #
 # /// Write the component's server render into `out`.
-# pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::load::Loads<'_>) {
+# pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::Loads<'_>) {
 #     out.reserve(53 + props.slug.len() + props.lang.as_deref().map_or(0, str::len));
 #     let Some(l_0) = fv_loads.get(super::loaders::LoadPost { slug: String::from(&*props.slug), lang: props.lang.as_deref().map(String::from) }) else { return; };
 #     out.push_str("<article><h1>");
-#     fv::core::escape::escape_into(out, &l_0.title);
+#     fv::core::escape_into(out, &l_0.title);
 #     out.push_str("</h1><ul><!--[-->");
 #     for fv_tag_ref in l_0.tags.iter() {
 #         let fv_tag: &str = fv_tag_ref;
 #         out.push_str("<li>");
-#         fv::core::escape::escape_into(out, fv_tag);
+#         fv::core::escape_into(out, fv_tag);
 #         out.push_str("</li>");
 #     }
 #     out.push_str("<!--]--></ul>");
@@ -253,7 +253,7 @@ assert_eq!(
 # }
 #
 # /// The component's markup, for a maud page that shows it.
-# pub fn html<'p, 'a>(props: &'p Props<'a>, fv_loads: &'p fv::load::Loads<'p>) -> fv::html::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
+# pub fn html<'p, 'a>(props: &'p Props<'a>, fv_loads: &'p fv::loaders::Loads<'p>) -> fv::html::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
 #     fv::html::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_loads))
 # }
 #
@@ -287,16 +287,16 @@ assert_eq!(
 #
 #
 # /// Write the component's server render into `out`.
-# pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::load::Loads<'_>) {
+# pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::Loads<'_>) {
 #     out.reserve(19 + props.slug.len());
 #     let Some(l_0) = fv_loads.get(super::loaders::LoadViews { slug: String::from(&*props.slug) }) else { return; };
 #     out.push_str("<p>");
-#     fv::core::numbers::push_int(out, *l_0);
+#     fv::core::push_int(out, *l_0);
 #     out.push_str(" views</p>");
 # }
 #
 # /// The component's markup, for a maud page that shows it.
-# pub fn html<'p, 'a>(props: &'p Props<'a>, fv_loads: &'p fv::load::Loads<'p>) -> fv::html::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
+# pub fn html<'p, 'a>(props: &'p Props<'a>, fv_loads: &'p fv::loaders::Loads<'p>) -> fv::html::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
 #     fv::html::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_loads))
 # }
 #
@@ -334,33 +334,33 @@ assert_eq!(
 ```
 
 A render stops where a component awaits a result it does not have yet, as Vue's server does, and
-[`load`](crate::load::load) renders again once it has it: each call starts when Vue's would, the
+[`load`](crate::loaders::load) renders again once it has it: each call starts when Vue's would, the
 loaders of sibling components together, a component's children once its own loads have finished,
 and the awaits of one component in order. Every call finished by the time of a render is taken
 by it, so a page renders a few times at most, and a call is made once per key. The first loader to
-fail ends the render with a [`LoadError`](crate::load::LoadError) naming it and its key, as a rejected
+fail ends the render with a [`LoadError`](crate::loaders::LoadError) naming it and its key, as a rejected
 `async setup` rejects Vue's `renderToString`; the calls still running are dropped.
 
 A page whose props or results the render may refuse (a date string browsers read differently, see
 [`errors_and_limits`](crate::guide::errors_and_limits#refused-at-render-time)) renders with
 `try_render` in the closure, which returns `Result<String, Refused>`: `try_render(…)?` before
 `loads.script_into(&mut out)`, and `Ok(out)` after. `load` then gives a `Result` of that
-`Result`, the loader's error outside and the [`Refused`](crate::refused::Refused) inside, once the render
+`Result`, the loader's error outside and the [`Refused`](crate::render::Refused) inside, once the render
 that read every result is done.
 
 Since the closure runs once per render, it starts each one afresh: it makes its own `String`, and
-its own [`Teleports`](crate::teleport::Teleports) and [`Head`](crate::head::Head) when the page has them, so that
+its own [`Teleports`](crate::page::Teleports) and [`Head`](crate::head::Head) when the page has them, so that
 what an earlier render collected is not written twice.
 
 The generated module also has `dispatch`, which runs one call a render asks for with the app's
-method for it, for an app that drives [`load`](crate::load::load) itself.
+method for it, for an app that drives [`load`](crate::loaders::load) itself.
 
 # Dates
 
 A loader's result may hold dates as a prop does: `Promise<Date>`, `Promise<Date | null>`,
 `Promise<Date[]>`, or an interface with date fields, lists and dictionaries of them. A date that
 is the result itself, or in a list, a dictionary or an optional of it, is a
-[`JsDate`](crate::js_date::JsDate) in `Output`; a date in an interface's field is the type `dateType`
+[`JsDate`](crate::date::JsDate) in `Output`; a date in an interface's field is the type `dateType`
 names. The payload writes each as its ISO string, an invalid one as `NaN`, and under `dates` where
 each loader's results hold dates:
 

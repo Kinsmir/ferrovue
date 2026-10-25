@@ -69,7 +69,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -77,26 +77,26 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(125 + 17 * props.items.len() + props.items.iter().map(|v| v.name.len()).sum::<usize>() + props.query.len());
     let s_m_a_x = 3i64;
     let s_shown = fv::strings::js_trim(&props.query);
     let s_total = props.items.len() as i64;
     let s_panels = &Vec::<Panel<'_>>::new();
     out.push_str("<section data-mounted=\"false\"><p>");
-    fv::core::escape::escape_into(out, s_shown);
+    fv::core::escape_into(out, s_shown);
     out.push_str(" (");
-    fv::core::numbers::push_int(out, s_total);
+    fv::core::push_int(out, s_total);
     out.push_str(" of max ");
-    fv::core::numbers::push_int(out, s_m_a_x);
+    fv::core::push_int(out, s_m_a_x);
     out.push_str(")</p>");
     if s_panels.len() as i64 != 0 {
         out.push_str("<p><!--[-->");
         for fv_panel_ref in s_panels.iter() {
             let fv_panel = fv_panel_ref;
             out.push_str("<b>");
-            fv::core::escape::escape_into(out, &fv_panel.title);
+            fv::core::escape_into(out, &fv_panel.title);
             out.push_str("</b>");
         }
         out.push_str("<!--]--></p>");
@@ -107,9 +107,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
     for fv_item_ref in props.items.iter() {
         let fv_item = fv_item_ref;
         out.push_str("<li>#");
-        fv::core::numbers::push_int(out, fv_item.id);
+        fv::core::push_int(out, fv_item.id);
         out.push(' ');
-        fv::core::escape::escape_into(out, &fv_item.name);
+        fv::core::escape_into(out, &fv_item.name);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul></section>");

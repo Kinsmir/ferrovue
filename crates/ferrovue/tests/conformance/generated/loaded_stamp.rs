@@ -28,8 +28,8 @@ impl Props {
 /// # Panics
 ///
 /// With the message of the refusal [`try_render`] returns.
-pub fn render(out: &mut String, props: &Props, fv_loads: &fv::load::Loads<'_>) {
-    fv::refused::rendered(try_render(out, props, fv_loads));
+pub fn render(out: &mut String, props: &Props, fv_loads: &fv::loaders::Loads<'_>) {
+    fv::render::rendered(try_render(out, props, fv_loads));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -37,26 +37,26 @@ pub fn render(out: &mut String, props: &Props, fv_loads: &fv::load::Loads<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props, fv_loads: &fv::load::Loads<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props, fv_loads: &fv::loaders::Loads<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(40);
-    let fv_refusals = fv::refused::Refusals::new(NAME, "components/LoadedStamp.vue");
+    let fv_refusals = fv::render::Refusals::new(NAME, "components/LoadedStamp.vue");
     let Some(l_0) = fv_loads.get(super::loaders::LoadViews) else { return Ok(()); };
     out.push_str("<time");
-    if fv_refusals.keep(fv::dates::try_to_iso_string(fv::dates::js_time_clip(fv_refusals.keep(fv::dates::try_date_utc(props.year as f64, *l_0 as f64, 1.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64), 9, 29))), 9, 18).is_empty() {
+    if fv_refusals.keep(fv::date::try_to_iso_string(fv::date::js_time_clip(fv_refusals.keep(fv::date::try_date_utc(props.year as f64, *l_0 as f64, 1.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64), 9, 29))), 9, 18).is_empty() {
         out.push_str(" datetime");
     } else {
         out.push_str(" datetime=\"");
-        fv::core::escape::escape_into(out, &fv_refusals.keep(fv::dates::try_to_iso_string(fv::dates::js_time_clip(fv_refusals.keep(fv::dates::try_date_utc(props.year as f64, *l_0 as f64, 1.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64), 9, 29))), 9, 18));
+        fv::core::escape_into(out, &fv_refusals.keep(fv::date::try_to_iso_string(fv::date::js_time_clip(fv_refusals.keep(fv::date::try_date_utc(props.year as f64, *l_0 as f64, 1.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64), 9, 29))), 9, 18));
         out.push('"');
     }
     out.push('>');
-    fv::core::numbers::push_number(out, fv_refusals.keep(fv::dates::try_date_utc(props.year as f64, *l_0 as f64, 1.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64), 9, 70));
+    fv::core::push_number(out, fv_refusals.keep(fv::date::try_date_utc(props.year as f64, *l_0 as f64, 1.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64), 9, 70));
     out.push_str("</time>");
     fv_refusals.check(Ok(()))
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p>(props: &'p Props, fv_loads: &'p fv::load::Loads<'p>) -> fv::html::Html<'p, Props, impl fv::html::Renderer<Props> + 'p> {
+pub fn html<'p>(props: &'p Props, fv_loads: &'p fv::loaders::Loads<'p>) -> fv::html::Html<'p, Props, impl fv::html::Renderer<Props> + 'p> {
     fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props| try_render(out, props, fv_loads)))
 }

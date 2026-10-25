@@ -38,7 +38,7 @@ export function classItems(s: Scope, n: N): ClassItem[] {
           keys.push(key);
           return `(${bare(cond(s, p.value))}, ${bare(key.code)})`;
         });
-        return [{ code: `&*fv::class::class_object(&[${entries.join(", ")}])` }];
+        return [{ code: `&*fv::attrs::class_object(&[${entries.join(", ")}])` }];
       }
       return n.properties.flatMap((p: N): ClassItem[] => {
         if (p.type !== "ObjectProperty") fail(s.comp, "FV1001", "a class object holds `name: condition` pairs", p);
@@ -108,7 +108,7 @@ export function renderClass(s: Scope, e: Emitter, n: N, after = false): void {
   }
   if (i < items.length) {
     const rest = items.slice(i).map((it) => ("lit" in it ? rustStr(it.lit) : it.code));
-    e.stmt(`fv::class::class_into(out, ${wrote}, &[${rest.join(", ")}]);`);
+    e.stmt(`fv::attrs::class_into(out, ${wrote}, &[${rest.join(", ")}]);`);
   }
 }
 

@@ -37,7 +37,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -45,49 +45,49 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(132 + props.input.len() + props.inputs.iter().map(|v| v.len()).sum::<usize>());
     out.push_str("<section><p>");
-    fv::core::numbers::push_number(out, fv::strings::js_number(&props.input));
+    fv::core::push_number(out, fv::strings::js_number(&props.input));
     out.push('|');
-    fv::core::numbers::push_number(out, fv::strings::js_parse_int(&props.input, 0));
+    fv::core::push_number(out, fv::strings::js_parse_int(&props.input, 0));
     out.push('|');
-    fv::core::numbers::push_number(out, fv::strings::js_parse_int(&props.input, 10));
+    fv::core::push_number(out, fv::strings::js_parse_int(&props.input, 10));
     out.push('|');
-    fv::core::numbers::push_number(out, fv::strings::js_parse_int(&props.input, 16));
+    fv::core::push_number(out, fv::strings::js_parse_int(&props.input, 16));
     out.push('|');
-    fv::core::numbers::push_number(out, fv::strings::js_parse_float(&props.input));
+    fv::core::push_number(out, fv::strings::js_parse_float(&props.input));
     out.push('|');
-    fv::core::numbers::push_int(out, i64::from(props.flag));
+    fv::core::push_int(out, i64::from(props.flag));
     out.push('|');
-    fv::core::numbers::push_int(out, props.n);
+    fv::core::push_int(out, props.n);
     out.push_str("</p><p data-n=\"");
-    fv::core::numbers::push_number(out, fv::strings::js_number(&props.input) * 2.0);
+    fv::core::push_number(out, fv::strings::js_number(&props.input) * 2.0);
     out.push_str("\">");
-    fv::core::numbers::push_number(out, fv::strings::js_number(&props.input) + 1.0);
+    fv::core::push_number(out, fv::strings::js_number(&props.input) + 1.0);
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_fixed(fv::strings::js_parse_float(&props.input), 2));
+    fv::core::escape_into(out, &fv::core::js_to_fixed(fv::strings::js_parse_float(&props.input), 2));
     out.push('|');
     out.push_str(if fv::strings::js_number(&props.input) > 10.0 { "true" } else { "false" });
     out.push('|');
-    fv::core::numbers::push_number(out, fv::core::numbers::js_round(fv::strings::js_parse_float(&props.input)));
+    fv::core::push_number(out, fv::core::js_round(fv::strings::js_parse_float(&props.input)));
     out.push_str("</p><p>");
-    fv::core::escape::escape_into(out, &props.inputs.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_s| fv::strings::js_number(&fv_s)).filter(|fv_x| *fv_x > 0.0).map(|v| fv::core::numbers::Js(v).to_string()).collect::<Vec<_>>().join(", "));
+    fv::core::escape_into(out, &props.inputs.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_s| fv::strings::js_number(&fv_s)).filter(|fv_x| *fv_x > 0.0).map(|v| fv::core::Js(v).to_string()).collect::<Vec<_>>().join(", "));
     out.push('|');
-    fv::core::escape::escape_into(out, &props.inputs.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_s_2| fv::strings::js_parse_int(&fv_s_2, 10)).map(|v| fv::core::numbers::Js(v).to_string()).collect::<Vec<_>>().join(","));
+    fv::core::escape_into(out, &props.inputs.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_s_2| fv::strings::js_parse_int(&fv_s_2, 10)).map(|v| fv::core::Js(v).to_string()).collect::<Vec<_>>().join(","));
     out.push('|');
-    fv::core::escape::escape_into(out, &props.inputs.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_s_3| fv::strings::js_parse_float(&fv_s_3)).map(|v| fv::core::numbers::Js(v).to_string()).collect::<Vec<_>>().join(" "));
+    fv::core::escape_into(out, &props.inputs.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_s_3| fv::strings::js_parse_float(&fv_s_3)).map(|v| fv::core::Js(v).to_string()).collect::<Vec<_>>().join(" "));
     out.push_str("</p><p>");
-    fv::core::escape::escape_into(out, &format!("[{}]", props.inputs.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| fv::strings::js_json_string(&v)).collect::<Vec<_>>().join(",")));
+    fv::core::escape_into(out, &format!("[{}]", props.inputs.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| fv::strings::js_json_string(&v)).collect::<Vec<_>>().join(",")));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::strings::js_json_string(&props.input));
+    fv::core::escape_into(out, &fv::strings::js_json_string(&props.input));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::strings::js_json_number(fv::strings::js_number(&props.input)));
+    fv::core::escape_into(out, &fv::strings::js_json_number(fv::strings::js_number(&props.input)));
     out.push('|');
-    fv::core::escape::escape_into(out, if props.flag { "true" } else { "false" });
+    fv::core::escape_into(out, if props.flag { "true" } else { "false" });
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::numbers::Js(props.n).to_string());
+    fv::core::escape_into(out, &fv::core::Js(props.n).to_string());
     out.push_str("</p></section>");
     Ok(())
 }

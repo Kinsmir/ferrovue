@@ -46,7 +46,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -54,88 +54,88 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(213 + props.text.len() + props.other.len() + props.sep.len() + props.fill.as_deref().map_or(0, str::len));
-    let fv_refusals = fv::refused::Refusals::new(NAME, "components/Strings.vue");
+    let fv_refusals = fv::render::Refusals::new(NAME, "components/Strings.vue");
     let s_initial = fv::strings::js_char_at(&props.text, 0.0f64).to_uppercase().to_owned();
     let s_words = fv::strings::js_split(&props.text, " ").into_iter().map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
     let s_short = fv::strings::js_slice(&props.text, 0.0f64, Some(3.0f64)).into_owned();
     let s_last = fv::strings::js_at(&props.text.to_uppercase(), -1.0f64).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned()));
     out.push_str("<section><p>");
-    fv::core::escape::escape_into(out, &fv::strings::js_slice(&props.text, 0.0f64, Some(5.0f64)));
+    fv::core::escape_into(out, &fv::strings::js_slice(&props.text, 0.0f64, Some(5.0f64)));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::strings::js_slice(&props.text, -3.0f64, None));
+    fv::core::escape_into(out, &fv::strings::js_slice(&props.text, -3.0f64, None));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::strings::js_slice(&props.text, props.n as f64, Some(-(props.n as f64))));
+    fv::core::escape_into(out, &fv::strings::js_slice(&props.text, props.n as f64, Some(-(props.n as f64))));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::strings::js_slice(&props.text, 0.0, None));
+    fv::core::escape_into(out, &fv::strings::js_slice(&props.text, 0.0, None));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::strings::js_substring(&props.text, 4.0f64, Some(2.0f64)));
+    fv::core::escape_into(out, &fv::strings::js_substring(&props.text, 4.0f64, Some(2.0f64)));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::strings::js_substring(&props.text, props.n as f64, None));
+    fv::core::escape_into(out, &fv::strings::js_substring(&props.text, props.n as f64, None));
     out.push_str("</p><p>");
     if let Some(v) = fv::strings::js_at(&props.text, 0.0f64) {
-        fv::core::escape::escape_into(out, v);
+        fv::core::escape_into(out, v);
     }
     out.push('|');
-    fv::core::escape::escape_into(out, fv::strings::js_at(&props.text, -1.0f64).unwrap_or("none"));
+    fv::core::escape_into(out, fv::strings::js_at(&props.text, -1.0f64).unwrap_or("none"));
     out.push('|');
-    fv::core::escape::escape_into(out, fv::strings::js_char_at(&props.text, props.n as f64));
+    fv::core::escape_into(out, fv::strings::js_char_at(&props.text, props.n as f64));
     out.push('|');
-    fv::core::escape::escape_into(out, &s_initial);
+    fv::core::escape_into(out, &s_initial);
     out.push('|');
-    fv::core::escape::escape_into(out, fv::strings::js_char_at(&props.text, 99.0f64));
+    fv::core::escape_into(out, fv::strings::js_char_at(&props.text, 99.0f64));
     out.push('|');
     out.push_str(if fv::strings::js_at(&props.text, props.n as f64 - 100.0).is_none() { "true" } else { "false" });
     out.push_str("</p><p>");
-    fv::core::numbers::push_int(out, fv::strings::js_index_of(&props.text, &props.other));
+    fv::core::push_int(out, fv::strings::js_index_of(&props.text, &props.other));
     out.push('|');
-    fv::core::numbers::push_int(out, fv::strings::js_last_index_of(&props.text, "a"));
+    fv::core::push_int(out, fv::strings::js_last_index_of(&props.text, "a"));
     out.push('|');
-    fv::core::numbers::push_int(out, fv::strings::js_index_of(&props.text, ""));
+    fv::core::push_int(out, fv::strings::js_index_of(&props.text, ""));
     out.push('|');
-    fv::core::numbers::push_int(out, fv::strings::js_index_of(&props.other, &props.text));
+    fv::core::push_int(out, fv::strings::js_index_of(&props.other, &props.text));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::strings::js_slice(&props.text, fv::strings::js_index_of(&props.text, " ") as f64 + 1.0, None));
+    fv::core::escape_into(out, &fv::strings::js_slice(&props.text, fv::strings::js_index_of(&props.text, " ") as f64 + 1.0, None));
     out.push_str("</p><ul><!--[-->");
     for (fv_i, fv_w_cow) in fv::strings::js_split(&props.text, &props.sep).into_iter().enumerate() {
         let fv_w: &str = &fv_w_cow;
         let fv_i = fv_i as i64;
         out.push_str("<li data-i=\"");
-        fv::core::numbers::push_int(out, fv_i);
+        fv::core::push_int(out, fv_i);
         out.push_str("\">");
-        fv::core::escape::escape_into(out, fv_w);
+        fv::core::escape_into(out, fv_w);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul><p>");
-    fv::core::numbers::push_int(out, s_words.len() as i64);
+    fv::core::push_int(out, s_words.len() as i64);
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::strings::js_split(&props.text, ",").into_iter().collect::<Vec<_>>().join(" / "));
+    fv::core::escape_into(out, &fv::strings::js_split(&props.text, ",").into_iter().collect::<Vec<_>>().join(" / "));
     out.push('|');
-    fv::core::escape::escape_into(out, &s_words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_w_2| fv::strings::js_length(fv_w_2) as f64 > 2.0).collect::<Vec<_>>().join("+"));
+    fv::core::escape_into(out, &s_words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_w_2| fv::strings::js_length(fv_w_2) as f64 > 2.0).collect::<Vec<_>>().join("+"));
     out.push('|');
-    fv::core::numbers::push_int(out, fv::strings::js_split(&props.text, &props.sep).len() as i64);
+    fv::core::push_int(out, fv::strings::js_split(&props.text, &props.sep).len() as i64);
     out.push_str("</p><p>");
-    fv::core::escape::escape_into(out, &fv::strings::js_replace(&props.text, &props.other, "[$&]"));
+    fv::core::escape_into(out, &fv::strings::js_replace(&props.text, &props.other, "[$&]"));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::strings::js_replace_all(&props.text, "a", "$$"));
+    fv::core::escape_into(out, &fv::strings::js_replace_all(&props.text, "a", "$$"));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::strings::js_replace(&props.text, "", "^"));
+    fv::core::escape_into(out, &fv::strings::js_replace(&props.text, "", "^"));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::strings::js_replace_all(&props.text, &props.sep, "$`|$'"));
+    fv::core::escape_into(out, &fv::strings::js_replace_all(&props.text, &props.sep, "$`|$'"));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::strings::js_replace(&props.text, "a", "$1"));
+    fv::core::escape_into(out, &fv::strings::js_replace(&props.text, "a", "$1"));
     out.push_str("</p><p title=\"");
-    fv::core::escape::escape_into(out, &fv_refusals.keep(fv::strings::try_pad_start(&fv::core::numbers::Js(props.n).to_string(), props.width as f64, "0"), 19, 16));
+    fv::core::escape_into(out, &fv_refusals.keep(fv::strings::try_pad_start(&fv::core::Js(props.n).to_string(), props.width as f64, "0"), 19, 16));
     out.push_str("\">");
-    fv::core::escape::escape_into(out, &fv_refusals.keep(fv::strings::try_pad_start(&props.text, props.width as f64, props.fill.as_deref().unwrap_or(".")), 19, 51));
+    fv::core::escape_into(out, &fv_refusals.keep(fv::strings::try_pad_start(&props.text, props.width as f64, props.fill.as_deref().unwrap_or(".")), 19, 51));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv_refusals.keep(fv::strings::try_pad_end(&props.text, props.width as f64, " "), 19, 91));
+    fv::core::escape_into(out, &fv_refusals.keep(fv::strings::try_pad_end(&props.text, props.width as f64, " "), 19, 91));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv_refusals.keep(fv::strings::try_repeat("ab", props.n as f64), 19, 116));
+    fv::core::escape_into(out, &fv_refusals.keep(fv::strings::try_repeat("ab", props.n as f64), 19, 116));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv_refusals.keep(fv::strings::try_repeat(&props.text, 2.0f64), 19, 137));
+    fv::core::escape_into(out, &fv_refusals.keep(fv::strings::try_repeat(&props.text, 2.0f64), 19, 137));
     out.push_str("</p><p>");
     out.push_str(if fv::strings::js_cmp(&props.text, &props.other).is_lt() { "true" } else { "false" });
     out.push('|');
@@ -149,15 +149,15 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
     out.push('|');
     out.push_str(if fv::strings::js_cmp(&fv::strings::js_slice(&props.text, 0.0f64, Some(1.0f64)), "b").is_lt() { "true" } else { "false" });
     out.push_str("</p><p>");
-    fv::core::escape::escape_into(out, &s_short);
+    fv::core::escape_into(out, &s_short);
     out.push('|');
-    fv::core::escape::escape_into(out, s_last.as_deref().unwrap_or("-"));
+    fv::core::escape_into(out, s_last.as_deref().unwrap_or("-"));
     out.push('|');
     if let Some(v) = (if props.n as f64 > 1.0 { fv::strings::js_at(&props.text.to_uppercase(), 1.0f64).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned())) } else { None }).as_deref() {
-        fv::core::escape::escape_into(out, v);
+        fv::core::escape_into(out, v);
     }
     out.push('|');
-    fv::core::escape::escape_into(out, &(if (fv::strings::js_length(&s_short) as f64) < 3.0 { std::borrow::Cow::<str>::Owned(fv::strings::js_pad_end(&s_short, 3.0f64, "_").into_owned()) } else { std::borrow::Cow::<str>::Borrowed(&*s_short) }));
+    fv::core::escape_into(out, &(if (fv::strings::js_length(&s_short) as f64) < 3.0 { std::borrow::Cow::<str>::Owned(fv::strings::js_pad_end(&s_short, 3.0f64, "_").into_owned()) } else { std::borrow::Cow::<str>::Borrowed(&*s_short) }));
     out.push_str("</p>");
     if &*fv::strings::js_slice(&props.text, 0.0f64, Some(1.0f64)) == "a" {
         out.push_str("<b>starts with a</b>");
@@ -165,11 +165,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
         out.push_str("<!---->");
     }
     out.push_str("<p>");
-    fv::core::escape::escape_into(out, &{ let a = std::borrow::Cow::<str>::Owned(fv::strings::js_slice(&props.text, 1.0f64, None).to_lowercase()); if !a.is_empty() { a } else { std::borrow::Cow::<str>::Borrowed("-") } });
+    fv::core::escape_into(out, &{ let a = std::borrow::Cow::<str>::Owned(fv::strings::js_slice(&props.text, 1.0f64, None).to_lowercase()); if !a.is_empty() { a } else { std::borrow::Cow::<str>::Borrowed("-") } });
     out.push('|');
-    fv::core::escape::escape_into(out, &{ let a = std::borrow::Cow::<str>::Owned(fv::strings::js_replace(&props.other, "a", "b").to_uppercase()); if !a.is_empty() { a } else { std::borrow::Cow::<str>::Borrowed(&*props.sep) } });
+    fv::core::escape_into(out, &{ let a = std::borrow::Cow::<str>::Owned(fv::strings::js_replace(&props.other, "a", "b").to_uppercase()); if !a.is_empty() { a } else { std::borrow::Cow::<str>::Borrowed(&*props.sep) } });
     out.push('|');
-    fv::core::escape::escape_into(out, &{ let a = std::borrow::Cow::<str>::Owned(format!("{}a", fv::strings::js_split(&props.text, " ").into_iter().find(|fv_w_3| **fv_w_3 == *props.sep).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).unwrap_or(std::borrow::Cow::<str>::Borrowed("ß")))); if !a.is_empty() { a } else { std::borrow::Cow::<str>::Borrowed("-") } });
+    fv::core::escape_into(out, &{ let a = std::borrow::Cow::<str>::Owned(format!("{}a", fv::strings::js_split(&props.text, " ").into_iter().find(|fv_w_3| **fv_w_3 == *props.sep).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).unwrap_or(std::borrow::Cow::<str>::Borrowed("ß")))); if !a.is_empty() { a } else { std::borrow::Cow::<str>::Borrowed("-") } });
     out.push_str("</p></section>");
     fv_refusals.check(Ok(()))
 }

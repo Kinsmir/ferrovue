@@ -37,26 +37,26 @@ impl std::fmt::Display for TagContentTag {
 }
 
 impl std::str::FromStr for TagContentTag {
-    type Err = ferrovue::union::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "div" => Ok(TagContentTag::Div),
             "form" => Ok(TagContentTag::Form),
-            _ => Err(ferrovue::union::ParseUnionError::new("TagContentTag", s, &["div", "form"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("TagContentTag", s, &["div", "form"])),
         }
     }
 }
 
 impl TryFrom<&str> for TagContentTag {
-    type Error = ferrovue::union::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::union::Union for TagContentTag {
+impl ferrovue::props::Union for TagContentTag {
     const ALL: &'static [Self] = &TagContentTag::ALL;
 
     fn as_str(self) -> &'static str {
@@ -93,7 +93,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -101,18 +101,18 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(313 + 7 * props.items.len() + 7 * props.items.len() + props.items.len() + 9 * props.items.len() + 4 + props.items.iter().map(|v| v.len()).sum::<usize>() + props.label.len());
     let fv_tag = match props.tag { TagContentTag::Div => "div", TagContentTag::Form => "form" };
     out.push('<');
     out.push_str(fv_tag);
     out.push_str(" class=\"x");
-    fv::class::class_into(out, true, &[if props.on { "on" } else { "" }]);
+    fv::attrs::class_into(out, true, &[if props.on { "on" } else { "" }]);
     out.push_str("\" style=\"");
     if let Some(v) = if props.on { Some("red") } else { None } {
         out.push_str("color:");
-        fv::core::escape::escape_into(out, v);
+        fv::core::escape_into(out, v);
         out.push(';');
     }
     out.push('"');
@@ -122,7 +122,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
     out.push_str(" data-a=\"1\">");
     if props.on {
         out.push_str("<!--[--><i>a</i>");
-        fv::core::escape::escape_into(out, &props.label);
+        fv::core::escape_into(out, &props.label);
         out.push_str("<!--]-->");
     } else {
         out.push_str("<!--[-->none<!--]-->");
@@ -133,14 +133,14 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
             out.push_str(" title");
         } else {
             out.push_str(" title=\"");
-            fv::core::escape::escape_into(out, &props.label);
+            fv::core::escape_into(out, &props.label);
             out.push('"');
         }
         out.push_str("><!--[-->");
         for fv_i_ref in props.items.iter() {
             let fv_i: &str = fv_i_ref;
             out.push_str("<u>");
-            fv::core::escape::escape_into(out, fv_i);
+            fv::core::escape_into(out, fv_i);
             out.push_str("</u>");
         }
         out.push_str("<!--]--></b>");
@@ -150,14 +150,14 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
             out.push_str(" title");
         } else {
             out.push_str(" title=\"");
-            fv::core::escape::escape_into(out, &props.label);
+            fv::core::escape_into(out, &props.label);
             out.push('"');
         }
         out.push_str("><!--[-->");
         for fv_i_ref_2 in props.items.iter() {
             let fv_i_2: &str = fv_i_ref_2;
             out.push_str("<u>");
-            fv::core::escape::escape_into(out, fv_i_2);
+            fv::core::escape_into(out, fv_i_2);
             out.push_str("</u>");
         }
         out.push_str("<!--]--></i>");
@@ -167,9 +167,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
         let fv_i_3: &str = fv_i_ref_3;
         super::shape_square::try_render_scoped(out, &super::shape_square::Props { label: std::borrow::Cow::Borrowed(fv_i_3), size: None }, super::shape_square::Slots {
             default: None,
-            corner: Some(fv::slots::Slot::new(&|out: &mut String| {
+            corner: Some(fv::render::Slot::new(&|out: &mut String| {
                 out.push('c');
-                fv::core::escape::escape_into(out, fv_i_3);
+                fv::core::escape_into(out, fv_i_3);
             })),
         }, &fv::attrs::Attrs::NONE)?;
     }
@@ -177,7 +177,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
     for fv_i_ref_4 in props.items.iter() {
         let fv_i_4: &str = fv_i_ref_4;
         out.push_str("<li>");
-        fv::core::escape::escape_into(out, fv_i_4);
+        fv::core::escape_into(out, fv_i_4);
         out.push_str("</li>");
     }
     out.push_str("</ul>");
@@ -199,13 +199,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
         out.push_str(" src");
     } else {
         out.push_str(" src=\"");
-        fv::core::escape::escape_into(out, &props.label);
+        fv::core::escape_into(out, &props.label);
         out.push('"');
     }
     out.push_str("> ");
-    fv::core::numbers::push_int(out, props.items.len() as i64);
+    fv::core::push_int(out, props.items.len() as i64);
     out.push_str(" &lt; ");
-    fv::core::escape::escape_into(out, fv::strings::js_trim(&props.label));
+    fv::core::escape_into(out, fv::strings::js_trim(&props.label));
     out.push_str("</");
     out.push_str(fv_tag);
     out.push('>');

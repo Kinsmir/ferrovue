@@ -38,7 +38,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>) {
-    fv::refused::rendered(try_render(out, props, fv_route));
+    fv::render::rendered(try_render(out, props, fv_route));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -46,8 +46,8 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(42 + props.label.len() + props.tone.as_deref().map_or(0, str::len));
     out.push_str("<div class=\"scoped\" data-v-29a5eea9>");
     super::fall_leaf::try_render_scoped(out, &super::fall_leaf::Props { label: std::borrow::Cow::Borrowed(&*props.label), shown: None, note: None }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str("s")), ("data-tone", props.tone.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str)), ("title", fv::attrs::Attr::str(&props.label))], " data-v-29a5eea9"))?;

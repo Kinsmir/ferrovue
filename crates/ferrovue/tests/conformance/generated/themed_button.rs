@@ -31,7 +31,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) {
-    fv::refused::rendered(try_render_scoped(out, props, fv_provides, ""));
+    fv::render::rendered(try_render_scoped(out, props, fv_provides, ""));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -39,35 +39,35 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides:
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::render::Refused> {
     try_render_scoped(out, props, fv_provides, "")
 }
 
 /// [`try_render`], with the scope ids a parent hands the root: ` data-v-…` each.
 #[doc(hidden)]
-pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>, fv_attrs: &str) -> Result<(), fv::refused::Refused> {
+pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>, fv_attrs: &str) -> Result<(), fv::render::Refused> {
     out.reserve(92 + props.label.len());
     out.push_str("<button type=\"button\" class=\"btn");
-    fv::class::class_into(out, true, &[&*format!("btn-{}", fv_provides.theme_key.unwrap_or("light"))]);
+    fv::attrs::class_into(out, true, &[&*format!("btn-{}", fv_provides.theme_key.unwrap_or("light"))]);
     out.push('"');
     if let Some(v) = fv_provides.size {
         out.push_str(" data-size=\"");
-        fv::core::numbers::push_int(out, v);
+        fv::core::push_int(out, v);
         out.push('"');
     }
     if fv_provides.accent_key.unwrap_or("none").is_empty() {
         out.push_str(" data-accent");
     } else {
         out.push_str(" data-accent=\"");
-        fv::core::escape::escape_into(out, fv_provides.accent_key.unwrap_or("none"));
+        fv::core::escape_into(out, fv_provides.accent_key.unwrap_or("none"));
         out.push('"');
     }
     out.push_str(fv_attrs);
     out.push('>');
-    fv::core::escape::escape_into(out, &props.label);
+    fv::core::escape_into(out, &props.label);
     out.push_str(" (");
-    fv::core::escape::escape_into(out, fv_provides.tone.unwrap_or("plain"));
+    fv::core::escape_into(out, fv_provides.tone.unwrap_or("plain"));
     out.push_str(")</button>");
     Ok(())
 }

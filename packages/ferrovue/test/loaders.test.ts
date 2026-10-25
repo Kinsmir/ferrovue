@@ -63,7 +63,7 @@ describe("loaders", () => {
   it("stops the render where the component awaits a loader, until the result is in", () => {
     const out = project({ X: sfc("const post = await loadPost(props.id, props.lang);\nconst n = await loadCount();", "<h1>{{ post.title }} {{ n }}</h1>") });
     const x = out.get("x.rs")!;
-    expect(x).toContain("pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::load::Loads<'_>) -> Result<(), fv::refused::Refused> {");
+    expect(x).toContain("pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::Loads<'_>) -> Result<(), fv::render::Refused> {");
     expect(x).toContain("let Some(l_0) = fv_loads.get(super::loaders::LoadPost { id: props.id, lang: props.lang.as_deref().map(String::from) }) else { return Ok(()); };");
     expect(x).toContain("let Some(l_1) = fv_loads.get(super::loaders::LoadCount) else { return Ok(()); };");
     expect(x).not.toContain("pub fn island");
@@ -72,8 +72,8 @@ describe("loaders", () => {
     expect(loaders).toContain("type Output = super::types::Post<'static>;");
     expect(loaders).toContain("        key.arg(&self.id);\n        if self.lang.is_some() {\n            key.arg(&self.lang);\n        }");
     expect(loaders).toContain("pub struct LoadCount;");
-    expect(loaders).toContain("fn args(&self, _key: &mut fv::load::LoadKey) {}");
-    expect(loaders).toContain("fn load_post(&self, call: LoadPost) -> impl std::future::Future<Output = Result<<LoadPost as fv::load::Load>::Output, Self::Error>> + Send;");
+    expect(loaders).toContain("fn args(&self, _key: &mut fv::loaders::LoadKey) {}");
+    expect(loaders).toContain("fn load_post(&self, call: LoadPost) -> impl std::future::Future<Output = Result<<LoadPost as fv::loaders::Load>::Output, Self::Error>> + Send;");
     expect(loaders).not.toContain("LoadName");
     expect(out.get("mod.rs")).toContain("pub mod loaders;");
   });
@@ -88,8 +88,8 @@ describe("loaders", () => {
     const child = sfc("const { title, tags: labels } = await loadPost(props.id);", "<b :title=\"labels.join()\">{{ title }}</b>");
     const page = '<script setup lang="ts">\nimport X from "./X.vue";\n</script>\n<template><main><X :id="1" :nick="null" /><X :id="2" nick="n" /></main></template>';
     const out = project({ X: child, Page: page });
-    expect(out.get("x.rs")).toContain("fv::core::escape::escape_into(out, &l_0.title);");
-    expect(out.get("page.rs")).toContain("pub fn try_render(out: &mut String, _props: &Props, fv_loads: &fv::load::Loads<'_>) -> Result<(), fv::refused::Refused> {");
+    expect(out.get("x.rs")).toContain("fv::core::escape_into(out, &l_0.title);");
+    expect(out.get("page.rs")).toContain("pub fn try_render(out: &mut String, _props: &Props, fv_loads: &fv::loaders::Loads<'_>) -> Result<(), fv::render::Refused> {");
     expect(out.get("page.rs")).toContain('super::x::try_render(out, &super::x::Props { id: 2i64, lang: None, nick: Some(std::borrow::Cow::Borrowed("n")) }, fv_loads)?;');
   });
 
@@ -97,17 +97,17 @@ describe("loaders", () => {
     const template = '<b>{{ when.getTime() }}</b><i v-for="s in stamps">{{ s.at.toISOString() }}{{ s.seen.length }}</i><u v-if="days" v-for="d in days">{{ d.getUTCDate() }}</u>';
     const out = project({ X: sfc("const when = await loadWhen();\nconst stamps = await loadStamps();\nconst days = await loadDays();", template, "loadWhen, loadStamps, loadDays") });
     const loaders = out.get("loaders.rs")!;
-    expect(loaders).toContain('    type Output = fv::js_date::JsDate;\n    const DATES: &\'static str = "[1]";');
+    expect(loaders).toContain('    type Output = fv::date::JsDate;\n    const DATES: &\'static str = "[1]";');
     expect(loaders).toContain('    type Output = Vec<super::types::Stamp<\'static>>;\n    const DATES: &\'static str = "[[{\\"at\\":1,\\"seen\\":[1],\\"by\\":{\\"*\\":1}}]]";');
-    expect(loaders).toContain('    type Output = Option<Vec<fv::js_date::JsDate>>;\n    const DATES: &\'static str = "[[1]]";');
+    expect(loaders).toContain('    type Output = Option<Vec<fv::date::JsDate>>;\n    const DATES: &\'static str = "[[1]]";');
     const types = out.get("types.rs")!;
-    expect(types).toContain('    #[serde(rename = "at", with = "fv::js_date::date_prop")]\n    pub at: ferrovue::js_date::JsDate,');
-    expect(types).toContain('    #[serde(rename = "seen", with = "fv::js_date::dates_in")]\n    pub seen: Vec<Option<ferrovue::js_date::JsDate>>,');
-    expect(types).toContain('    #[serde(rename = "by", with = "fv::js_date::dates_in")]\n    pub by: ferrovue::record::Record<\'a, ferrovue::js_date::JsDate>,');
+    expect(types).toContain('    #[serde(rename = "at", with = "fv::date::date_prop")]\n    pub at: ferrovue::date::JsDate,');
+    expect(types).toContain('    #[serde(rename = "seen", with = "fv::date::dates_in")]\n    pub seen: Vec<Option<ferrovue::date::JsDate>>,');
+    expect(types).toContain('    #[serde(rename = "by", with = "fv::date::dates_in")]\n    pub by: ferrovue::props::Record<\'a, ferrovue::date::JsDate>,');
     const x = out.get("x.rs")!;
-    expect(x).toContain("fv::core::numbers::push_number(out, fv::js_date::js_time_of(l_0));");
-    expect(x).toContain("fv_refusals.keep(fv::dates::try_to_iso_string(fv::js_date::js_time_of(&fv_s.at)), 8, 64)");
-    expect(x).toContain("l_2.as_ref().map(|v| v.iter().map(fv::js_date::js_time_of).collect::<Vec<_>>())");
+    expect(x).toContain("fv::core::push_number(out, fv::date::js_time_of(l_0));");
+    expect(x).toContain("fv_refusals.keep(fv::date::try_to_iso_string(fv::date::js_time_of(&fv_s.at)), 8, 64)");
+    expect(x).toContain("l_2.as_ref().map(|v| v.iter().map(fv::date::js_time_of).collect::<Vec<_>>())");
   });
 
   it("keeps an await whose result the template does not read", () => {

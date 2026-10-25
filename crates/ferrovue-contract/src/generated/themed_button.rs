@@ -31,7 +31,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) {
-    fv::refused::rendered(try_render(out, props, fv_provides));
+    fv::render::rendered(try_render(out, props, fv_provides));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -39,13 +39,13 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides:
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(40 + props.label.len());
     out.push_str("<button type=\"button\" class=\"");
-    fv::class::class_into(out, false, &[fv_provides.theme_key.unwrap_or("light")]);
+    fv::attrs::class_into(out, false, &[fv_provides.theme_key.unwrap_or("light")]);
     out.push_str("\">");
-    fv::core::escape::escape_into(out, &props.label);
+    fv::core::escape_into(out, &props.label);
     out.push_str("</button>");
     Ok(())
 }

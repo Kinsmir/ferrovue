@@ -17,7 +17,7 @@ mod vendor;
 #[serde(transparent)]
 pub struct Sanitised(String);
 
-impl ferrovue::trusted::TrustedHtml for Sanitised {
+impl ferrovue::html::TrustedHtml for Sanitised {
     fn trusted_html(&self) -> &str {
         &self.0
     }
@@ -112,7 +112,7 @@ fn an_island_carries_null_for_a_nullable_prop() {
 
 #[test]
 fn an_island_carries_its_dates_as_iso_strings_and_an_invalid_one_as_nan() {
-    use ferrovue::js_date::JsDate;
+    use ferrovue::date::JsDate;
     use generated::date_post;
     let date = |iso: &str| JsDate::parse(iso).expect(iso);
     let posts = [
@@ -139,7 +139,7 @@ fn an_island_carries_its_dates_as_iso_strings_and_an_invalid_one_as_nan() {
 
 #[test]
 fn an_island_carries_dates_inside_lists_and_objects_and_where_they_are() {
-    use ferrovue::{js_date::JsDate, record::Record};
+    use ferrovue::{date::JsDate, props::Record};
     use generated::date_rows;
     let date = |iso: &str| JsDate::parse(iso).expect(iso);
     let stamps: Record<'_, JsDate> = [
@@ -195,7 +195,7 @@ fn a_component_with_slots_renders_through_html() {
     let body = |out: &mut String| out.push_str("<p>hi</p>");
     let slots = generated::frame::Slots {
         head: None,
-        default: Some(ferrovue::slots::Slot::new(&body)),
+        default: Some(ferrovue::render::Slot::new(&body)),
     };
     let html = generated::frame::html(&props, slots).into_string();
     assert_eq!(
@@ -321,9 +321,9 @@ fn a_scoped_slot_is_filled_by_a_closure_given_its_props() {
             return false;
         }
         out.push_str("<b>");
-        ferrovue::core::escape::escape_into(out, p.label);
+        ferrovue::core::escape_into(out, p.label);
         out.push_str("</b>");
-        ferrovue::core::numbers::push_int(out, p.index);
+        ferrovue::core::push_int(out, p.index);
         true
     };
     let slots = data_list::Slots {

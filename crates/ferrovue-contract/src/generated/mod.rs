@@ -72,7 +72,7 @@ impl Fixture {
 
 /// What was teleported, after a marker, as the conformance suite writes Vue's: `{"target":"…"}`.
 #[cfg(test)]
-fn teleports_into(out: &mut String, teleports: ferrovue::teleport::Teleports) {
+fn teleports_into(out: &mut String, teleports: ferrovue::page::Teleports) {
     let targets = teleports.into_targets();
     if targets.is_empty() {
         return;
@@ -134,7 +134,7 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let s_row = |out: &mut String, _: &data_list::RowSlotProps<'_>| -> bool { out.push_str(fixture.slot("row").unwrap_or_default()); true };
             let s_count = |out: &mut String, _: &data_list::CountSlotProps| -> bool { out.push_str(fixture.slot("count").unwrap_or_default()); true };
             let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
-            data_list::try_render(&mut out, &props, data_list::Slots { row: fixture.slot("row").map(|_| &s_row as &data_list::RowSlot), count: fixture.slot("count").map(|_| &s_count as &data_list::CountSlot), default: fixture.slot("default").map(|_| ferrovue::slots::Slot::new(&s_default)) }).map_err(|e| e.to_string())?;
+            data_list::try_render(&mut out, &props, data_list::Slots { row: fixture.slot("row").map(|_| &s_row as &data_list::RowSlot), count: fixture.slot("count").map(|_| &s_count as &data_list::CountSlot), default: fixture.slot("default").map(|_| ferrovue::render::Slot::new(&s_default)) }).map_err(|e| e.to_string())?;
         }
         "Greeting" => {
             let props: greeting::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -148,7 +148,7 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         }
         "Modal" => {
             let props: modal::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            let teleports = ferrovue::teleport::Teleports::new();
+            let teleports = ferrovue::page::Teleports::new();
             modal::try_render(&mut out, &props, &teleports).map_err(|e| e.to_string())?;
             teleports_into(&mut out, teleports);
         }
@@ -173,9 +173,9 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let route = router.at(&fixture.route);
             let state: stores::Stores = serde_json::from_value(fixture.stores.clone()).map_err(|e| e.to_string())?;
             let i18n = i18n::i18n(fixture.locale.as_deref().unwrap_or(i18n::LOCALE));
-            let teleports = ferrovue::teleport::Teleports::new();
+            let teleports = ferrovue::page::Teleports::new();
             let head = ferrovue::head::Head::without_defaults();
-            shell::try_render(&mut out, &props, shell::Slots { default: fixture.slot("default").map(|_| s_default), router_view: ferrovue::slots::Slot::new(&s_router_view) }, &route, &state, &i18n, &teleports, provides::Provides::default(), &head).map_err(|e| e.to_string())?;
+            shell::try_render(&mut out, &props, shell::Slots { default: fixture.slot("default").map(|_| s_default), router_view: ferrovue::render::Slot::new(&s_router_view) }, &route, &state, &i18n, &teleports, provides::Provides::default(), &head).map_err(|e| e.to_string())?;
             teleports_into(&mut out, teleports);
             head_into(&mut out, &head);
         }
@@ -215,7 +215,7 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: wrap::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
-            wrap::try_render(&mut out, &props, wrap::Slots { default: fixture.slot("default").map(|_| ferrovue::slots::Slot::new(&s_default)) }).map_err(|e| e.to_string())?;
+            wrap::try_render(&mut out, &props, wrap::Slots { default: fixture.slot("default").map(|_| ferrovue::render::Slot::new(&s_default)) }).map_err(|e| e.to_string())?;
         }
         "Index" => {
             let props: index::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

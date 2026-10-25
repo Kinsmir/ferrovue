@@ -33,7 +33,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) {
-    fv::refused::rendered(try_render(out, props, fv_provides));
+    fv::render::rendered(try_render(out, props, fv_provides));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -41,8 +41,8 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides:
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(91 + props.label.len());
     let fv_inherited = fv_provides;
     let s_flipped = -(props.n as f64);
@@ -51,13 +51,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provi
     let fv_provided_tone = fv::strings::js_pad_end(&props.label.to_uppercase(), 4.0f64, "!").into_owned();
     let fv_provides = super::provides::Provides { tone: Some(&*fv_provided_tone), ..fv_inherited };
     out.push_str("<!--[--><p title=\"a\u{202e}b\u{2066}c\">-Infinity ");
-    fv::core::numbers::push_number(out, 1.0 / s_flipped);
+    fv::core::push_number(out, 1.0 / s_flipped);
     out.push(' ');
-    fv::core::numbers::push_number(out, 1.0 / s_negated);
+    fv::core::push_number(out, 1.0 / s_negated);
     out.push(' ');
-    fv::core::numbers::push_number(out, s_flipped);
+    fv::core::push_number(out, s_flipped);
     out.push(' ');
-    fv::core::escape::escape_into(out, &s_padded);
+    fv::core::escape_into(out, &s_padded);
     out.push_str("</p><p>\u{202e}a\u{202e}b\u{2066}c</p>");
     super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed(&*s_padded) }, fv_provides, "")?;
     out.push_str("<!--]-->");

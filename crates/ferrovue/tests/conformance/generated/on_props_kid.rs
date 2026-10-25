@@ -40,27 +40,27 @@ impl std::fmt::Display for OnPropsKidOnTone {
 }
 
 impl std::str::FromStr for OnPropsKidOnTone {
-    type Err = ferrovue::union::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "" => Ok(OnPropsKidOnTone::Empty),
             "warm" => Ok(OnPropsKidOnTone::Warm),
             "cold" => Ok(OnPropsKidOnTone::Cold),
-            _ => Err(ferrovue::union::ParseUnionError::new("OnPropsKidOnTone", s, &["", "warm", "cold"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("OnPropsKidOnTone", s, &["", "warm", "cold"])),
         }
     }
 }
 
 impl TryFrom<&str> for OnPropsKidOnTone {
-    type Error = ferrovue::union::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::union::Union for OnPropsKidOnTone {
+impl ferrovue::props::Union for OnPropsKidOnTone {
     const ALL: &'static [Self] = &OnPropsKidOnTone::ALL;
 
     fn as_str(self) -> &'static str {
@@ -140,7 +140,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -148,27 +148,27 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(32 + props.on_text.as_deref().map_or(0, str::len) + 4);
     out.push_str("<i>");
-    fv::core::numbers::push_int(out, props.on1.unwrap_or(4i64));
+    fv::core::push_int(out, props.on1.unwrap_or(4i64));
     out.push('|');
-    fv::core::escape::escape_into(out, props.on_text.as_deref().unwrap_or("none"));
+    fv::core::escape_into(out, props.on_text.as_deref().unwrap_or("none"));
     out.push('|');
     out.push_str(if props.on_flag.unwrap_or(false) { "true" } else { "false" });
     out.push('|');
     out.push_str(if props.on_set.unwrap_or(true) { "true" } else { "false" });
     out.push('|');
     if let Some(v) = props.on_rate {
-        fv::core::numbers::push_number(out, v);
+        fv::core::push_number(out, v);
     }
     out.push('|');
-    fv::core::escape::escape_into(out, props.on_tone.map(fv::union::Union::as_str).unwrap_or("unset"));
+    fv::core::escape_into(out, props.on_tone.map(fv::props::Union::as_str).unwrap_or("unset"));
     out.push('|');
     out.push_str(if props.on_req { "true" } else { "false" });
     out.push('|');
-    fv::core::numbers::push_int(out, props.on_num);
+    fv::core::push_int(out, props.on_num);
     out.push_str("</i>");
     Ok(())
 }

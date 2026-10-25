@@ -37,26 +37,26 @@ impl std::fmt::Display for TagCasingTag {
 }
 
 impl std::str::FromStr for TagCasingTag {
-    type Err = ferrovue::union::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "div" => Ok(TagCasingTag::Div),
             "section" => Ok(TagCasingTag::Section),
-            _ => Err(ferrovue::union::ParseUnionError::new("TagCasingTag", s, &["div", "section"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("TagCasingTag", s, &["div", "section"])),
         }
     }
 }
 
 impl TryFrom<&str> for TagCasingTag {
-    type Error = ferrovue::union::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::union::Union for TagCasingTag {
+impl ferrovue::props::Union for TagCasingTag {
     const ALL: &'static [Self] = &TagCasingTag::ALL;
 
     fn as_str(self) -> &'static str {
@@ -91,7 +91,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -99,8 +99,8 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(422 + 7 + props.label.len());
     let fv_tag = match props.tag { TagCasingTag::Div => "div", TagCasingTag::Section => "section" };
     out.push('<');
@@ -110,7 +110,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
         out.push_str(" databar");
     } else {
         out.push_str(" databar=\"");
-        fv::core::escape::escape_into(out, &props.label);
+        fv::core::escape_into(out, &props.label);
         out.push('"');
     }
     out.push_str(">a</p><svg viewBox=\"0 0 10 10\"");
@@ -118,19 +118,19 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
         out.push_str(" baseProfile");
     } else {
         out.push_str(" baseProfile=\"");
-        fv::core::escape::escape_into(out, &props.label);
+        fv::core::escape_into(out, &props.label);
         out.push('"');
     }
     out.push_str("><foreignObject fooBar=\"1\"><p foobaz=\"2\">x</p></foreignObject></svg><p class=\"a");
-    fv::class::class_into(out, true, &[if props.on { "on" } else { "" }]);
+    fv::attrs::class_into(out, true, &[if props.on { "on" } else { "" }]);
     out.push_str("\" style=\"color:red;");
     if let Some(v) = if props.on { Some("1px") } else { None } {
         out.push_str("width:");
-        fv::core::escape::escape_into(out, v);
+        fv::core::escape_into(out, v);
         out.push(';');
     }
     out.push_str("\">m</p><p class=\"");
-    fv::class::class_into(out, false, &[if props.on { "on" } else { "" }, "b"]);
+    fv::attrs::class_into(out, false, &[if props.on { "on" } else { "" }, "b"]);
     out.push_str("\">n</p><select><option");
     if props.on {
         out.push_str(" selected");
@@ -141,17 +141,17 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
     }
     out.push_str(" value=\"b\">b</option></select>");
     super::plain_box::try_render_scoped(out, &super::plain_box::Props { text: std::borrow::Cow::Borrowed(&*props.label) }, super::plain_box::Slots {
-        default: Some(fv::slots::Slot::new(&|out: &mut String| {
+        default: Some(fv::render::Slot::new(&|out: &mut String| {
             out.push_str("<span foobar=\"1\"");
             if props.label.is_empty() {
                 out.push_str(" dataq");
             } else {
                 out.push_str(" dataq=\"");
-                fv::core::escape::escape_into(out, &props.label);
+                fv::core::escape_into(out, &props.label);
                 out.push('"');
             }
             out.push('>');
-            fv::core::escape::escape_into(out, &props.label);
+            fv::core::escape_into(out, &props.label);
             out.push_str("</span>");
         })),
     }, "")?;

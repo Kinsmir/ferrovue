@@ -29,7 +29,7 @@ impl<'a> Props<'a> {
 #[derive(Clone, Copy)]
 pub struct Slots<'s> {
     /// The page `<RouterView>` shows.
-    pub router_view: fv::slots::Slot<'s>,
+    pub router_view: fv::render::Slot<'s>,
 }
 
 /// Write the component's server render into `out`.
@@ -38,7 +38,7 @@ pub struct Slots<'s> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::router::Route<'_>, fv_stores: &super::stores::Stores<'_>, fv_head: &fv::head::Head) {
-    fv::refused::rendered(try_render(out, props, fv_slots, fv_route, fv_stores, fv_head));
+    fv::render::rendered(try_render(out, props, fv_slots, fv_route, fv_stores, fv_head));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -46,8 +46,8 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::router::Route<'_>, fv_stores: &super::stores::Stores<'_>, fv_head: &fv::head::Head) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::router::Route<'_>, fv_stores: &super::stores::Stores<'_>, fv_head: &fv::head::Head) -> Result<(), fv::render::Refused> {
     out.reserve(311 + props.shop.len());
     fv_head.push(fv::head::HeadValue::object([("title", fv::head::HeadValue::str(&props.shop)), ("titleTemplate", fv::head::HeadValue::str(&format!("%s · {}", props.shop)))]));
     out.push_str("<div class=\"layout\"><header>");
@@ -60,11 +60,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_r
             out.push_str(" aria-current=\"page\"");
         }
         out.push_str(" href=\"");
-        fv::core::escape::escape_into(out, &fv_link.href);
+        fv::core::escape_into(out, &fv_link.href);
         out.push_str("\" class=\"");
-        fv::class::class_into(out, false, &[if fv_link.exact { "active" } else { "" }, "brand"]);
+        fv::attrs::class_into(out, false, &[if fv_link.exact { "active" } else { "" }, "brand"]);
         out.push_str("\">");
-        fv::core::escape::escape_into(out, &props.shop);
+        fv::core::escape_into(out, &props.shop);
         out.push_str("</a>");
     }
     out.push_str("<nav>");
@@ -77,9 +77,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_r
             out.push_str(" aria-current=\"page\"");
         }
         out.push_str(" href=\"");
-        fv::core::escape::escape_into(out, &fv_link.href);
+        fv::core::escape_into(out, &fv_link.href);
         out.push_str("\" class=\"");
-        fv::class::class_into(out, false, &[if fv_link.exact { "active" } else { "" }]);
+        fv::attrs::class_into(out, false, &[if fv_link.exact { "active" } else { "" }]);
         out.push_str("\">All books</a>");
     }
     out.push(' ');
@@ -92,9 +92,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_r
             out.push_str(" aria-current=\"page\"");
         }
         out.push_str(" href=\"");
-        fv::core::escape::escape_into(out, &fv_link.href);
+        fv::core::escape_into(out, &fv_link.href);
         out.push_str("\" class=\"");
-        fv::class::class_into(out, false, &[if fv_link.exact { "active" } else { "" }]);
+        fv::attrs::class_into(out, false, &[if fv_link.exact { "active" } else { "" }]);
         out.push_str("\">Book of the week</a>");
     }
     out.push_str("</nav><div id=\"basket\">");

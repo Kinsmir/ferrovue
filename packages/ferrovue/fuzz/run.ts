@@ -60,7 +60,7 @@ interface Evaluated {
 }
 
 function plantBug(rust: string): string {
-  return rust.replace(/fv::core::escape::escape_into\(out, (.*)\);/, "out.push_str($1);");
+  return rust.replace(/fv::core::escape_into\(out, (.*)\);/, "out.push_str($1);");
 }
 
 function run(cmd: string, args: string[], opts: { env?: Record<string, string>; cwd?: string } = {}): { status: number; output: string } {

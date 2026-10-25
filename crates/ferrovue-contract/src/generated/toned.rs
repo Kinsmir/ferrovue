@@ -17,16 +17,16 @@ const _: fn(crate::domain::Tone) = |v| match v {
 #[cfg(test)]
 #[test]
 fn tone_gives_each_member_its_literal() {
-    ferrovue::union::check_union::<crate::domain::Tone>("crate::domain::Tone", &[(crate::domain::Tone::Warm, "warm"), (crate::domain::Tone::XCool, "x-cool")]);
+    ferrovue::props::check_union::<crate::domain::Tone>("crate::domain::Tone", &[(crate::domain::Tone::Warm, "warm"), (crate::domain::Tone::XCool, "x-cool")]);
 }
 
 /// The props `Toned.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props {
-    #[serde(rename = "tone", with = "fv::union::union_prop")]
+    #[serde(rename = "tone", with = "fv::props::union_prop")]
     pub tone: crate::domain::Tone,
-    #[serde(rename = "other", default, skip_serializing_if = "Option::is_none", with = "fv::union::union_prop")]
+    #[serde(rename = "other", default, skip_serializing_if = "Option::is_none", with = "fv::props::union_prop")]
     pub other: Option<crate::domain::Tone>,
 }
 
@@ -50,7 +50,7 @@ impl Props {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -58,13 +58,13 @@ pub fn render(out: &mut String, props: &Props) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
     out.reserve(16 + 6 + 6);
     out.push_str("<i class=\"");
-    fv::class::class_into(out, false, &[fv::union::Union::as_str(props.tone), props.other.map(fv::union::Union::as_str).unwrap_or("")]);
+    fv::attrs::class_into(out, false, &[fv::props::Union::as_str(props.tone), props.other.map(fv::props::Union::as_str).unwrap_or("")]);
     out.push_str("\">");
-    fv::core::escape::escape_into(out, if props.tone == crate::domain::Tone::Warm { "w" } else { "c" });
+    fv::core::escape_into(out, if props.tone == crate::domain::Tone::Warm { "w" } else { "c" });
     out.push_str("</i>");
     Ok(())
 }

@@ -35,7 +35,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n) {
-    fv::refused::rendered(try_render(out, props, fv_i18n));
+    fv::render::rendered(try_render(out, props, fv_i18n));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -43,34 +43,34 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n) -> Result<(), fv::render::Refused> {
     out.reserve(98 + props.total.len() + props.posted.len());
-    let fv_refusals = fv::refused::Refusals::new(NAME, "components/Prices.vue");
-    let s_fixed = fv::core::numbers::js_to_fixed(props.cents as f64 / 100.0, 2);
+    let fv_refusals = fv::render::Refusals::new(NAME, "components/Prices.vue");
+    let s_fixed = fv::core::js_to_fixed(props.cents as f64 / 100.0, 2);
     let s_amount = if fv_i18n.locale() == "nl" { std::borrow::Cow::<str>::Owned(fv::strings::js_replace(&s_fixed, ".", ",").into_owned()) } else { std::borrow::Cow::<str>::Borrowed(&*s_fixed) };
     out.push_str("<section");
     if fv_i18n.locale().is_empty() {
         out.push_str(" lang");
     } else {
         out.push_str(" lang=\"");
-        fv::core::escape::escape_into(out, fv_i18n.locale());
+        fv::core::escape_into(out, fv_i18n.locale());
         out.push('"');
     }
     out.push_str("><p>");
-    fv::core::escape::escape_into(out, &fv_i18n.t("price", &fv::i18n::Args::new().with_named(&[("amount", fv::i18n::Value::Str(&s_amount))])));
+    fv::core::escape_into(out, &fv_i18n.t("price", &fv::i18n::Args::new().with_named(&[("amount", fv::i18n::Value::Str(&s_amount))])));
     out.push_str("</p><p>");
-    fv::core::escape::escape_into(out, &props.total);
+    fv::core::escape_into(out, &props.total);
     out.push_str("</p><p>");
-    fv::core::escape::escape_into(out, &fv_i18n.t("posted", &fv::i18n::Args::new().with_named(&[("date", fv::i18n::Value::Str(&fv::strings::js_slice(&fv_refusals.keep(fv::dates::try_to_iso_string(fv_refusals.keep(fv::dates::try_date_parse(&props.posted), 15, 13)), 15, 13), 0.0f64, Some(10.0f64))))])));
+    fv::core::escape_into(out, &fv_i18n.t("posted", &fv::i18n::Args::new().with_named(&[("date", fv::i18n::Value::Str(&fv::strings::js_slice(&fv_refusals.keep(fv::date::try_to_iso_string(fv_refusals.keep(fv::date::try_date_parse(&props.posted), 15, 13)), 15, 13), 0.0f64, Some(10.0f64))))])));
     out.push_str("</p><time datetime=\"");
-    fv::core::escape::escape_into(out, &fv_refusals.keep(fv::dates::try_to_iso_string(fv_refusals.keep(fv::dates::try_date_parse(&props.posted), 16, 20)), 16, 20));
+    fv::core::escape_into(out, &fv_refusals.keep(fv::date::try_to_iso_string(fv_refusals.keep(fv::date::try_date_parse(&props.posted), 16, 20)), 16, 20));
     out.push_str("\">");
-    fv::core::numbers::push_number(out, fv::dates::js_utc_date(fv_refusals.keep(fv::dates::try_date_parse(&props.posted), 16, 57)));
+    fv::core::push_number(out, fv::date::js_utc_date(fv_refusals.keep(fv::date::try_date_parse(&props.posted), 16, 57)));
     out.push('-');
-    fv::core::numbers::push_number(out, fv::dates::js_utc_month(fv_refusals.keep(fv::dates::try_date_parse(&props.posted), 16, 93)) + 1.0);
+    fv::core::push_number(out, fv::date::js_utc_month(fv_refusals.keep(fv::date::try_date_parse(&props.posted), 16, 93)) + 1.0);
     out.push('-');
-    fv::core::numbers::push_number(out, fv::dates::js_utc_full_year(fv_refusals.keep(fv::dates::try_date_parse(&props.posted), 16, 134)));
+    fv::core::push_number(out, fv::date::js_utc_full_year(fv_refusals.keep(fv::date::try_date_parse(&props.posted), 16, 134)));
     out.push_str("</time></section>");
     fv_refusals.check(Ok(()))
 }

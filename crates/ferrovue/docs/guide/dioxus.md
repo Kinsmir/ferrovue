@@ -32,9 +32,9 @@ render it with `dioxus-ssr`:
 #     }
 #     pub fn render(out: &mut String, props: &Props<'_>) {
 #         out.push_str("<button type=\"button\">");
-#         fv::core::escape::escape_into(out, &props.label);
+#         fv::core::escape_into(out, &props.label);
 #         out.push_str(": ");
-#         fv::core::numbers::push_int(out, props.start);
+#         fv::core::push_int(out, props.start);
 #         out.push_str("</button>");
 #     }
 #     pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
@@ -130,9 +130,9 @@ attribute, and Vue mounts on the element's content and leaves the element itself
 #     out.reserve(39 + props.label.len());
 #     let s_count = props.start;
 #     out.push_str("<button type=\"button\">");
-#     fv::core::escape::escape_into(out, &props.label);
+#     fv::core::escape_into(out, &props.label);
 #     out.push_str(": ");
-#     fv::core::numbers::push_int(out, s_count);
+#     fv::core::push_int(out, s_count);
 #     out.push_str("</button>");
 # }
 #
@@ -193,9 +193,9 @@ attributes included, give an element of the page's own the whole island as its c
 #     }
 #     pub fn render(out: &mut String, props: &Props<'_>) {
 #         out.push_str("<button type=\"button\">");
-#         fv::core::escape::escape_into(out, &props.label);
+#         fv::core::escape_into(out, &props.label);
 #         out.push_str(": ");
-#         fv::core::numbers::push_int(out, props.start);
+#         fv::core::push_int(out, props.start);
 #         out.push_str("</button>");
 #     }
 #     pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
@@ -250,7 +250,7 @@ own whatever changes in it.
 The client starts its stores from the state the server rendered with, read from a
 `<script type="application/json">` before the islands hydrate (see [`pinia`](crate::guide::pinia)).
 [`ferrovue::dioxus::state_script`](crate::dioxus::state_script) is
-[`state_script_into`](crate::state::state_script_into) as an element: put it in the page's `rsx!`, before
+[`state_script_into`](crate::page::state_script_into) as an element: put it in the page's `rsx!`, before
 the client's script. Its content is the same bytes `state_script_into` writes:
 
 ```rust
@@ -269,6 +269,6 @@ A page whose head or body is a template of the server's own, outside `rsx!`, can
 
 Holes ([`streaming`](crate::guide::streaming)) cut a page that ferrovue renders into pieces sent in
 the order they are ready. A Dioxus element is written whole, so a component rendered as one must not
-be given a [`hole()`](crate::slots::hole): the marker would be written into the page as it is. A Dioxus
+be given a [`hole()`](crate::page::hole): the marker would be written into the page as it is. A Dioxus
 page streams through Dioxus's own suspense boundaries, each ferrovue component inside them rendered
 whole.

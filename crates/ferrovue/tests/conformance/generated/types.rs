@@ -37,26 +37,26 @@ impl std::fmt::Display for Volume {
 }
 
 impl std::str::FromStr for Volume {
-    type Err = ferrovue::union::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "calm" => Ok(Volume::Calm),
             "loud" => Ok(Volume::Loud),
-            _ => Err(ferrovue::union::ParseUnionError::new("Volume", s, &["calm", "loud"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("Volume", s, &["calm", "loud"])),
         }
     }
 }
 
 impl TryFrom<&str> for Volume {
-    type Error = ferrovue::union::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::union::Union for Volume {
+impl ferrovue::props::Union for Volume {
     const ALL: &'static [Self] = &Volume::ALL;
 
     fn as_str(self) -> &'static str {
@@ -96,27 +96,27 @@ impl std::fmt::Display for Size {
 }
 
 impl std::str::FromStr for Size {
-    type Err = ferrovue::union::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "sm" => Ok(Size::Sm),
             "md" => Ok(Size::Md),
             "lg" => Ok(Size::Lg),
-            _ => Err(ferrovue::union::ParseUnionError::new("Size", s, &["sm", "md", "lg"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("Size", s, &["sm", "md", "lg"])),
         }
     }
 }
 
 impl TryFrom<&str> for Size {
-    type Error = ferrovue::union::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::union::Union for Size {
+impl ferrovue::props::Union for Size {
     const ALL: &'static [Self] = &Size::ALL;
 
     fn as_str(self) -> &'static str {
@@ -156,27 +156,27 @@ impl std::fmt::Display for Tone {
 }
 
 impl std::str::FromStr for Tone {
-    type Err = ferrovue::union::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "info" => Ok(Tone::Info),
             "warn" => Ok(Tone::Warn),
             "danger" => Ok(Tone::Danger),
-            _ => Err(ferrovue::union::ParseUnionError::new("Tone", s, &["info", "warn", "danger"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("Tone", s, &["info", "warn", "danger"])),
         }
     }
 }
 
 impl TryFrom<&str> for Tone {
-    type Error = ferrovue::union::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::union::Union for Tone {
+impl ferrovue::props::Union for Tone {
     const ALL: &'static [Self] = &Tone::ALL;
 
     fn as_str(self) -> &'static str {
@@ -216,27 +216,27 @@ impl std::fmt::Display for Kind {
 }
 
 impl std::str::FromStr for Kind {
-    type Err = ferrovue::union::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "note" => Ok(Kind::Note),
             "tip" => Ok(Kind::Tip),
             "alert" => Ok(Kind::Alert),
-            _ => Err(ferrovue::union::ParseUnionError::new("Kind", s, &["note", "tip", "alert"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("Kind", s, &["note", "tip", "alert"])),
         }
     }
 }
 
 impl TryFrom<&str> for Kind {
-    type Error = ferrovue::union::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::union::Union for Kind {
+impl ferrovue::props::Union for Kind {
     const ALL: &'static [Self] = &Kind::ALL;
 
     fn as_str(self) -> &'static str {
@@ -273,26 +273,26 @@ impl std::fmt::Display for Shape {
 }
 
 impl std::str::FromStr for Shape {
-    type Err = ferrovue::union::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "circle" => Ok(Shape::Circle),
             "square" => Ok(Shape::Square),
-            _ => Err(ferrovue::union::ParseUnionError::new("Shape", s, &["circle", "square"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("Shape", s, &["circle", "square"])),
         }
     }
 }
 
 impl TryFrom<&str> for Shape {
-    type Error = ferrovue::union::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::union::Union for Shape {
+impl ferrovue::props::Union for Shape {
     const ALL: &'static [Self] = &Shape::ALL;
 
     fn as_str(self) -> &'static str {
@@ -332,27 +332,27 @@ impl std::fmt::Display for Mood {
 }
 
 impl std::str::FromStr for Mood {
-    type Err = ferrovue::union::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "calm" => Ok(Mood::Calm),
             "loud" => Ok(Mood::Loud),
             "<q>&\"x'" => Ok(Mood::QX),
-            _ => Err(ferrovue::union::ParseUnionError::new("Mood", s, &["calm", "loud", "<q>&\"x'"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("Mood", s, &["calm", "loud", "<q>&\"x'"])),
         }
     }
 }
 
 impl TryFrom<&str> for Mood {
-    type Error = ferrovue::union::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::union::Union for Mood {
+impl ferrovue::props::Union for Mood {
     const ALL: &'static [Self] = &Mood::ALL;
 
     fn as_str(self) -> &'static str {
@@ -392,27 +392,27 @@ impl std::fmt::Display for Align {
 }
 
 impl std::str::FromStr for Align {
-    type Err = ferrovue::union::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "left" => Ok(Align::Left),
             "center" => Ok(Align::Center),
             "right" => Ok(Align::Right),
-            _ => Err(ferrovue::union::ParseUnionError::new("Align", s, &["left", "center", "right"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("Align", s, &["left", "center", "right"])),
         }
     }
 }
 
 impl TryFrom<&str> for Align {
-    type Error = ferrovue::union::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::union::Union for Align {
+impl ferrovue::props::Union for Align {
     const ALL: &'static [Self] = &Align::ALL;
 
     fn as_str(self) -> &'static str {
@@ -449,26 +449,26 @@ impl std::fmt::Display for Level {
 }
 
 impl std::str::FromStr for Level {
-    type Err = ferrovue::union::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "low" => Ok(Level::Low),
             "high" => Ok(Level::High),
-            _ => Err(ferrovue::union::ParseUnionError::new("Level", s, &["low", "high"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("Level", s, &["low", "high"])),
         }
     }
 }
 
 impl TryFrom<&str> for Level {
-    type Error = ferrovue::union::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::union::Union for Level {
+impl ferrovue::props::Union for Level {
     const ALL: &'static [Self] = &Level::ALL;
 
     fn as_str(self) -> &'static str {
@@ -508,27 +508,27 @@ impl std::fmt::Display for StepState {
 }
 
 impl std::str::FromStr for StepState {
-    type Err = ferrovue::union::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "todo" => Ok(StepState::Todo),
             "done" => Ok(StepState::Done),
             "skipped" => Ok(StepState::Skipped),
-            _ => Err(ferrovue::union::ParseUnionError::new("StepState", s, &["todo", "done", "skipped"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("StepState", s, &["todo", "done", "skipped"])),
         }
     }
 }
 
 impl TryFrom<&str> for StepState {
-    type Error = ferrovue::union::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::union::Union for StepState {
+impl ferrovue::props::Union for StepState {
     const ALL: &'static [Self] = &StepState::ALL;
 
     fn as_str(self) -> &'static str {
@@ -569,27 +569,27 @@ impl std::fmt::Display for Hue {
 }
 
 impl std::str::FromStr for Hue {
-    type Err = ferrovue::union::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "red" => Ok(Hue::Red),
             "green" => Ok(Hue::Green),
             "<b>&\"hue'" => Ok(Hue::BHue),
-            _ => Err(ferrovue::union::ParseUnionError::new("Hue", s, &["red", "green", "<b>&\"hue'"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("Hue", s, &["red", "green", "<b>&\"hue'"])),
         }
     }
 }
 
 impl TryFrom<&str> for Hue {
-    type Error = ferrovue::union::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::union::Union for Hue {
+impl ferrovue::props::Union for Hue {
     const ALL: &'static [Self] = &Hue::ALL;
 
     fn as_str(self) -> &'static str {
@@ -693,27 +693,27 @@ impl std::fmt::Display for Shade {
 }
 
 impl std::str::FromStr for Shade {
-    type Err = ferrovue::union::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "warm" => Ok(Shade::Warm),
             "x-cool" => Ok(Shade::XCool),
             "<b>&'q'\"" => Ok(Shade::BQ),
-            _ => Err(ferrovue::union::ParseUnionError::new("Shade", s, &["warm", "x-cool", "<b>&'q'\""])),
+            _ => Err(ferrovue::props::ParseUnionError::new("Shade", s, &["warm", "x-cool", "<b>&'q'\""])),
         }
     }
 }
 
 impl TryFrom<&str> for Shade {
-    type Error = ferrovue::union::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::union::Union for Shade {
+impl ferrovue::props::Union for Shade {
     const ALL: &'static [Self] = &Shade::ALL;
 
     fn as_str(self) -> &'static str {
@@ -756,7 +756,7 @@ impl std::fmt::Display for MoodChoice {
 }
 
 impl std::str::FromStr for MoodChoice {
-    type Err = ferrovue::union::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
@@ -764,20 +764,20 @@ impl std::str::FromStr for MoodChoice {
             "loud" => Ok(MoodChoice::Loud),
             "<q>&\"x'" => Ok(MoodChoice::QX),
             "" => Ok(MoodChoice::Empty),
-            _ => Err(ferrovue::union::ParseUnionError::new("MoodChoice", s, &["calm", "loud", "<q>&\"x'", ""])),
+            _ => Err(ferrovue::props::ParseUnionError::new("MoodChoice", s, &["calm", "loud", "<q>&\"x'", ""])),
         }
     }
 }
 
 impl TryFrom<&str> for MoodChoice {
-    type Error = ferrovue::union::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::union::Union for MoodChoice {
+impl ferrovue::props::Union for MoodChoice {
     const ALL: &'static [Self] = &MoodChoice::ALL;
 
     fn as_str(self) -> &'static str {
@@ -817,30 +817,30 @@ impl<'a> Choice<'a> {
 pub struct Reply<'a> {
     #[serde(rename = "author")]
     pub author: Cow<'a, str>,
-    #[serde(rename = "at", with = "fv::js_date::date_prop")]
-    pub at: ferrovue::js_date::JsDate,
-    #[serde(rename = "edited", default, skip_serializing_if = "Option::is_none", with = "fv::js_date::opt_date_prop")]
-    pub edited: Option<ferrovue::js_date::JsDate>,
-    #[serde(rename = "removed", default, with = "fv::js_date::opt_date_prop")]
-    pub removed: Option<ferrovue::js_date::JsDate>,
+    #[serde(rename = "at", with = "fv::date::date_prop")]
+    pub at: ferrovue::date::JsDate,
+    #[serde(rename = "edited", default, skip_serializing_if = "Option::is_none", with = "fv::date::opt_date_prop")]
+    pub edited: Option<ferrovue::date::JsDate>,
+    #[serde(rename = "removed", default, with = "fv::date::opt_date_prop")]
+    pub removed: Option<ferrovue::date::JsDate>,
     #[serde(rename = "replies")]
     pub replies: Vec<Reply<'a>>,
 }
 
 impl<'a> Reply<'a> {
     /// Reply with its required fields, every optional one absent and every nullable one `null`.
-    pub fn new(author: impl Into<Cow<'a, str>>, at: ferrovue::js_date::JsDate, replies: Vec<Reply<'a>>) -> Self {
+    pub fn new(author: impl Into<Cow<'a, str>>, at: ferrovue::date::JsDate, replies: Vec<Reply<'a>>) -> Self {
         Reply { author: author.into(), at, edited: None, removed: None, replies }
     }
 
     /// Set `edited`, which is absent otherwise.
-    pub fn edited(mut self, edited: ferrovue::js_date::JsDate) -> Self {
+    pub fn edited(mut self, edited: ferrovue::date::JsDate) -> Self {
         self.edited = Some(edited);
         self
     }
 
     /// Set `removed`, which is `null` otherwise.
-    pub fn removed(mut self, removed: ferrovue::js_date::JsDate) -> Self {
+    pub fn removed(mut self, removed: ferrovue::date::JsDate) -> Self {
         self.removed = Some(removed);
         self
     }
@@ -853,19 +853,19 @@ impl<'a> Reply<'a> {
 pub struct Thread<'a> {
     #[serde(rename = "title")]
     pub title: Cow<'a, str>,
-    #[serde(rename = "opened", with = "fv::js_date::date_prop")]
-    pub opened: ferrovue::js_date::JsDate,
+    #[serde(rename = "opened", with = "fv::date::date_prop")]
+    pub opened: ferrovue::date::JsDate,
     #[serde(rename = "replies")]
     pub replies: Vec<Reply<'a>>,
-    #[serde(rename = "pinned", with = "fv::js_date::dates_in")]
-    pub pinned: ferrovue::record::Record<'a, ferrovue::js_date::JsDate>,
-    #[serde(rename = "seen", with = "fv::js_date::dates_in")]
-    pub seen: Vec<Option<ferrovue::js_date::JsDate>>,
+    #[serde(rename = "pinned", with = "fv::date::dates_in")]
+    pub pinned: ferrovue::props::Record<'a, ferrovue::date::JsDate>,
+    #[serde(rename = "seen", with = "fv::date::dates_in")]
+    pub seen: Vec<Option<ferrovue::date::JsDate>>,
 }
 
 impl<'a> Thread<'a> {
     /// Thread with its required fields.
-    pub fn new(title: impl Into<Cow<'a, str>>, opened: ferrovue::js_date::JsDate, replies: Vec<Reply<'a>>, pinned: ferrovue::record::Record<'a, ferrovue::js_date::JsDate>, seen: Vec<Option<ferrovue::js_date::JsDate>>) -> Self {
+    pub fn new(title: impl Into<Cow<'a, str>>, opened: ferrovue::date::JsDate, replies: Vec<Reply<'a>>, pinned: ferrovue::props::Record<'a, ferrovue::date::JsDate>, seen: Vec<Option<ferrovue::date::JsDate>>) -> Self {
         Thread { title: title.into(), opened, replies, pinned, seen }
     }
 
@@ -974,7 +974,7 @@ impl<'a> Article<'a> {
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Ranking<'a> {
     #[serde(rename = "scores")]
-    pub scores: ferrovue::record::Record<'a, i64>,
+    pub scores: ferrovue::props::Record<'a, i64>,
     #[serde(rename = "best", default, skip_serializing_if = "Option::is_none")]
     pub best: Option<i64>,
     #[serde(rename = "worst")]
@@ -985,7 +985,7 @@ pub struct Ranking<'a> {
 
 impl<'a> Ranking<'a> {
     /// Ranking with its required fields, every optional one absent and every nullable one `null`.
-    pub fn new(scores: ferrovue::record::Record<'a, i64>) -> Self {
+    pub fn new(scores: ferrovue::props::Record<'a, i64>) -> Self {
         Ranking { scores, best: None, worst: None, open: None }
     }
 

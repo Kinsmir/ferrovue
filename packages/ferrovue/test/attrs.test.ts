@@ -63,7 +63,7 @@ describe("attribute values", () => {
 
   it("refuses `:hidden` bound to a `?:` of a string and a number, whose branches it treats differently", () => {
     expect(refusal(island(component("on: boolean", `<div><p :hidden="on ? 'a' : 1">x</p></div>`))).code).toBe("FV0623");
-    expect(compile(island(component("on: boolean", `<div><p :title="on ? 'a' : 1">x</p></div>`))).get("x.rs")).toContain("fv::core::numbers::Js(1i64)");
+    expect(compile(island(component("on: boolean", `<div><p :title="on ? 'a' : 1">x</p></div>`))).get("x.rs")).toContain("fv::core::Js(1i64)");
   });
 
   it("refuses an attribute that may fall through bound to a list, with its code", () => {

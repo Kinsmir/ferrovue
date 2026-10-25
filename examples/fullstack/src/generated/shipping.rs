@@ -30,8 +30,8 @@ impl<'a> Props<'a> {
 /// # Panics
 ///
 /// With the message of the refusal [`try_render`] returns.
-pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::load::Loads<'_>) {
-    fv::refused::rendered(try_render(out, props, fv_loads));
+pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::Loads<'_>) {
+    fv::render::rendered(try_render(out, props, fv_loads));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -39,17 +39,17 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::load::Loads<'_
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::load::Loads<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::Loads<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(94 + props.warehouse.len());
     let Some(l_0) = fv_loads.get(super::loaders::LoadWarehouse { code: String::from(&*props.warehouse) }) else { return Ok(()); };
     if let Some(fv_from) = l_0.as_ref() {
         out.push_str("<p class=\"shipping\">Ships from ");
-        fv::core::escape::escape_into(out, &fv_from.city);
+        fv::core::escape_into(out, &fv_from.city);
         out.push_str(" in ");
-        fv::core::numbers::push_int(out, fv_from.days);
+        fv::core::push_int(out, fv_from.days);
         out.push(' ');
-        fv::core::escape::escape_into(out, if fv_from.days as f64 == 1.0 { "day" } else { "days" });
+        fv::core::escape_into(out, if fv_from.days as f64 == 1.0 { "day" } else { "days" });
         out.push_str("</p>");
     } else {
         out.push_str("<p class=\"shipping\">Ships once it reaches us</p>");
@@ -58,6 +58,6 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::load::Load
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_loads: &'p fv::load::Loads<'p>) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_loads: &'p fv::loaders::Loads<'p>) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
     fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_loads)))
 }

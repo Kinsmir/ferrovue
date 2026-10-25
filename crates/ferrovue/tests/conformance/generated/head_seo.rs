@@ -40,7 +40,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head) {
-    fv::refused::rendered(try_render(out, props, fv_head));
+    fv::render::rendered(try_render(out, props, fv_head));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -48,12 +48,12 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head) -> Result<(), fv::render::Refused> {
     out.reserve(21 + props.title.len() + props.description.as_deref().map_or(0, str::len));
     fv_head.push_seo_meta(fv::head::HeadValue::Object(Vec::new()), vec![("name", "description", if let Some(v) = props.description.as_deref() { fv::head::HeadValue::str(v) } else { fv::head::HeadValue::Undefined }), ("property", "og:title", fv::head::HeadValue::str(&props.title)), ("property", "og:site_name", fv::head::HeadValue::str("Books")), ("name", "twitter:card", fv::head::HeadValue::str("summary")), ("name", "twitter:title", fv::head::HeadValue::str(&props.title)), ("property", "og:image", fv::head::HeadValue::str(&format!("/covers/{}.png", props.title))), ("http-equiv", "content-type", fv::head::HeadValue::str("text/html")), ("property", "article:published_time", fv::head::HeadValue::str(if props.views as f64 > 1.0 { "2024-01-01" } else { "" })), ("name", "robots", if let Some(v) = if props.views as f64 == 0.0 { None } else { Some("index") } { fv::head::HeadValue::str(v) } else { fv::head::HeadValue::Null })]);
     out.push_str("<aside>");
-    fv::core::numbers::push_int(out, props.views);
+    fv::core::push_int(out, props.views);
     out.push_str("</aside>");
     Ok(())
 }

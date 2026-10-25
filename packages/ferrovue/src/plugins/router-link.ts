@@ -34,7 +34,7 @@ function noHalves(s: Scope, v: Val, n: N): void {
 export function urlText(s: Scope, v: Val, n: N): string {
   noHalves(s, v, n);
   if (v.ty.k === "str") return v.code;
-  if (v.ty.k === "int" || v.ty.k === "float") return `&*fv::core::numbers::Js(${bare(asWritten(v).code)}).to_string()`;
+  if (v.ty.k === "int" || v.ty.k === "float") return `&*fv::core::Js(${bare(asWritten(v).code)}).to_string()`;
   if (v.ty.k === "bool") return `if ${condition(v.code)} { "true" } else { "false" }`;
   return fail(s.comp, "FV1201", "a route parameter is a string or a number that is present", n);
 }
@@ -184,7 +184,7 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
   e.lit(` aria-current="${escapeHtml(ariaCurrent)}"`);
   e.close();
   e.lit(' href="');
-  e.stmt("fv::core::escape::escape_into(out, &fv_link.href);");
+  e.stmt("fv::core::escape_into(out, &fv_link.href);");
   e.lit('" class="');
   const linkItems =
     activeClass === exactClass
@@ -192,7 +192,7 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
       : [`if fv_link.active { ${rustStr(activeClass)} } else { "" }`, `if fv_link.exact { ${rustStr(exactClass)} } else { "" }`];
   const cls = fields.get("class");
   const own = cls ? classItems(s, cls).map((it) => ("lit" in it ? rustStr(it.lit) : it.code)) : [];
-  e.stmt(`fv::class::class_into(out, false, &[${[...linkItems, ...own].join(", ")}]);`);
+  e.stmt(`fv::attrs::class_into(out, false, &[${[...linkItems, ...own].join(", ")}]);`);
   e.lit('"');
   for (const p of attrs) {
     const key: string = p.key.value;

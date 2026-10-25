@@ -252,7 +252,7 @@ attribute (`<VBtn block>`) is `true`, as Vue casts them.
 # }
 # #[derive(Clone, Copy, Default)]
 # pub struct VBtnSlots<'s> {
-#     pub default: Option<fv::slots::Slot<'s>>,
+#     pub default: Option<fv::render::Slot<'s>>,
 # }
 # pub type VBtnRender = fn(&mut String, &VBtnProps<'_>, VBtnSlots<'_>, &fv::attrs::Attrs<'_>);
 # const _: VBtnRender = crate::v_btn;
@@ -266,7 +266,7 @@ pub fn v_btn(out: &mut String, props: &VBtnProps<'_>, slots: VBtnSlots<'_>, attr
     out.push_str("<button");
     ferrovue::attrs::attrs_into(out, &[&[("class", Attr::str(class))], attrs.list()], 1, attrs.ids());
     out.push('>');
-    ferrovue::core::escape::escape_into(out, props.label);
+    ferrovue::core::escape_into(out, props.label);
     match slots.default {
         Some(slot) => {
             out.push_str("<!--[-->");
@@ -313,7 +313,7 @@ refused, with a code from the same list as the compiler's refusals:
 | [FV0518](crate::guide::error_codes#fv0518) | a string outside a union of string literals, held as a string, where a child's union prop or an object's union field needs the union's enum |
 
 Every component has a `try_render` beside its `render`, with the same parameters, which returns
-`Result<(), Refused>`. A [`Refused`](crate::refused::Refused) carries the code, the component, the line and
+`Result<(), Refused>`. A [`Refused`](crate::render::Refused) carries the code, the component, the line and
 column of the expression in its file, and a message saying what to do; its `Display` is the
 compiler's own form, `error[FV1803]: components/Published.vue:3:9: the date …`. A refusal in a
 child, in slot content or in a loader's component is returned by the page's `try_render` as it is,
@@ -333,12 +333,12 @@ calls `try_render` and answers a refusal with `400 Bad Request`:
 #     }
 # }
 # pub fn render(out: &mut String, props: &Props<'_>) {
-#     fv::refused::rendered(try_render(out, props));
+#     fv::render::rendered(try_render(out, props));
 # }
-# pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
-#     let fv_refusals = fv::refused::Refusals::new(NAME, "components/Published.vue");
+# pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
+#     let fv_refusals = fv::render::Refusals::new(NAME, "components/Published.vue");
 #     out.push_str("<time>");
-#     fv::core::escape::escape_into(out, &fv_refusals.keep(fv::dates::try_to_iso_string(fv_refusals.keep(fv::dates::try_date_parse(&props.on), 3, 9)), 3, 9));
+#     fv::core::escape_into(out, &fv_refusals.keep(fv::date::try_to_iso_string(fv_refusals.keep(fv::date::try_date_parse(&props.on), 3, 9)), 3, 9));
 #     out.push_str("</time>");
 #     fv_refusals.check(Ok(()))
 # }
@@ -373,14 +373,14 @@ string. The other ways a component is rendered have a twin that returns the refu
 [`Html::try_into_string`](crate::html::Html::try_into_string) for a generated `html()` or `island()`,
 [`Page::try_render_to`](crate::page::Page::try_render_to) for a page, its parts included, and
 [`PageHole::try_fill`](crate::page::PageHole::try_fill) for a streamed hole; each leaves the buffer as it
-was. With loaders, the closure [`load`](crate::load::load) renders with returns the `Result` of
+was. With loaders, the closure [`load`](crate::loaders::load) renders with returns the `Result` of
 `try_render`, which `load` hands back once the render is done. Slot content written by a Rust
 closure is plain Rust: render a component there with `try_render` into a `String` beforehand, and
 push the string from the closure.
 
 The message is written for the developer and names the value that was refused. Answer the client
 with it, as above, or with a message of the application's own, and log the
-[`Refused`](crate::refused::Refused) itself.
+[`Refused`](crate::render::Refused) itself.
 
 # At run time
 
@@ -407,7 +407,7 @@ a `v-bind()` in `<style>` reads is worked out as the render starts, where Vue's 
 the component's style variables.
 
 Serialising an island's props or the stores' state cannot fail for the types the compiler
-generates. If a hand-written [`TrustedHtml`](crate::trusted::TrustedHtml) type's `Serialize` fails, or
+generates. If a hand-written [`TrustedHtml`](crate::html::TrustedHtml) type's `Serialize` fails, or
 hand-written props hold a map serde_json refuses (one keyed by a list), a debug build panics where
 they are rendered. A release build gives the island empty props, which the client reports and
 leaves the server's markup as it is, and records `null` for them in a [`Page`](crate::page::Page)'s
@@ -429,7 +429,7 @@ record, which the client still reads.
 - **Optional values must be narrowed** before use, as TypeScript requires: `v-if="user"`,
   `user !== undefined`, `??`.
 - **One render per buffer at a time**: a render borrows its `String` mutably; render pages in
-  parallel by giving each its own buffer. [`Teleports`](crate::teleport::Teleports) and
+  parallel by giving each its own buffer. [`Teleports`](crate::page::Teleports) and
   [`Head`](crate::head::Head) are per page and not `Sync`.
 - **Same versions**: generated code and this crate are released together. After upgrading either,
   regenerate with the matching compiler.

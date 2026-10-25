@@ -22,9 +22,9 @@ pub fn star_rating(
         attrs.ids(),
     );
     out.push('>');
-    ferrovue::core::numbers::push_int(out, props.value);
+    ferrovue::core::push_int(out, props.value);
     out.push('/');
-    ferrovue::core::numbers::push_int(out, props.max.unwrap_or(5));
+    ferrovue::core::push_int(out, props.max.unwrap_or(5));
     match slots.default {
         Some(slot) => {
             out.push_str("<!--[-->");

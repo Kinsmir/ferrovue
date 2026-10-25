@@ -40,7 +40,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -48,8 +48,8 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(35 + props.tone.len() + props.tags.iter().map(|v| v.len()).sum::<usize>() + props.note.as_deref().map_or(0, str::len));
     out.push_str("<section>");
     super::divider::try_render_scoped(out, &super::divider::Props {  }, &fv::attrs::Attrs::new(&[("class", if fv::strings::js_length(fv::strings::js_trim(&props.tone)) as f64 == fv::strings::js_length(&props.tone) as f64 { fv::attrs::Attr::str(&props.tone) } else { fv::attrs::Attr::from(fv::attrs::class_names(&[fv::strings::js_trim(&props.tone), &*props.tone])) })], ""))?;
@@ -61,7 +61,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
         super::glyph::try_render_scoped(out, &super::glyph::Props {  }, &fv::attrs::Attrs::new(&[("class", if fv::strings::js_length(fv::strings::js_trim(&props.tone)) as f64 == fv::strings::js_length(&props.tone) as f64 { fv::attrs::Attr::str(&props.tone) } else { fv::attrs::Attr::from(fv::attrs::class_names(&[fv::strings::js_trim(&props.tone), &*props.tone])) })], ""))?;
     } else {
         out.push_str("<b class=\"");
-        fv::class::class_into(out, false, &[&*props.tone]);
+        fv::attrs::class_into(out, false, &[&*props.tone]);
         out.push_str("\"></b>");
     }
     super::divider::try_render_scoped(out, &super::divider::Props {  }, &fv::attrs::Attrs::new(&[("class", if fv::strings::js_length(fv::strings::js_trim(&props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(" "))) as f64 == fv::strings::js_length(&props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(" ")) as f64 { fv::attrs::Attr::Str(std::borrow::Cow::<str>::Owned(props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(" "))) } else { fv::attrs::Attr::from(fv::attrs::class_names(&[fv::strings::js_trim(&props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(" ")), &*props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(" ")])) })], ""))?;

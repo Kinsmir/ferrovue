@@ -37,26 +37,26 @@ impl std::fmt::Display for HeadChoiceKind {
 }
 
 impl std::str::FromStr for HeadChoiceKind {
-    type Err = ferrovue::union::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "article" => Ok(HeadChoiceKind::Article),
             "note" => Ok(HeadChoiceKind::Note),
-            _ => Err(ferrovue::union::ParseUnionError::new("HeadChoiceKind", s, &["article", "note"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("HeadChoiceKind", s, &["article", "note"])),
         }
     }
 }
 
 impl TryFrom<&str> for HeadChoiceKind {
-    type Error = ferrovue::union::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::union::Union for HeadChoiceKind {
+impl ferrovue::props::Union for HeadChoiceKind {
     const ALL: &'static [Self] = &HeadChoiceKind::ALL;
 
     fn as_str(self) -> &'static str {
@@ -93,7 +93,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head) {
-    fv::refused::rendered(try_render(out, props, fv_head));
+    fv::render::rendered(try_render(out, props, fv_head));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -101,8 +101,8 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head) -> Result<(), fv::render::Refused> {
     out.reserve(11 + 7 + props.title.len() + props.tags.iter().map(|v| v.len()).sum::<usize>());
     fv_head.push(fv::head::HeadValue::object([("titleTemplate", fv::head::HeadValue::str("%s (chosen)"))]));
     out.push_str("<div>");

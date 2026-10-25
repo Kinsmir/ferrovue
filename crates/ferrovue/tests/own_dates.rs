@@ -7,7 +7,7 @@
 #[allow(missing_docs)]
 pub mod generated;
 
-use ferrovue::js_date::JsTime;
+use ferrovue::date::JsTime;
 use generated::date_stamp;
 
 /// A time value as some other system keeps it, unclipped.

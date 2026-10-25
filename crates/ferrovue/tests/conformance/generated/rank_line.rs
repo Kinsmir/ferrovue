@@ -50,7 +50,7 @@ impl Props {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -58,20 +58,20 @@ pub fn render(out: &mut String, props: &Props) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
     out.reserve(87);
     out.push_str("<p class=\"ranks\">");
     if let Some(fv_best) = props.best {
         out.push_str("<b>");
-        fv::core::numbers::push_int(out, fv_best);
+        fv::core::push_int(out, fv_best);
         out.push_str("</b>");
     } else {
         out.push_str("<i>none</i>");
     }
     if let Some(fv_worst) = props.worst {
         out.push_str("<s>");
-        fv::core::numbers::push_int(out, fv_worst);
+        fv::core::push_int(out, fv_worst);
         out.push_str("</s>");
     } else {
         out.push_str("<i>no worst</i>");

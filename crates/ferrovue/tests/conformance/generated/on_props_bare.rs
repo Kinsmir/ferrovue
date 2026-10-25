@@ -54,7 +54,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -62,15 +62,15 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(16 + props.on_label.as_deref().map_or(0, str::len) + props.label.len());
     out.push_str("<b>");
-    fv::core::escape::escape_into(out, &props.label);
+    fv::core::escape_into(out, &props.label);
     out.push(':');
-    fv::core::numbers::push_int(out, props.on1.unwrap_or(-9i64));
+    fv::core::push_int(out, props.on1.unwrap_or(-9i64));
     out.push('|');
-    fv::core::escape::escape_into(out, props.on_label.as_deref().unwrap_or("none"));
+    fv::core::escape_into(out, props.on_label.as_deref().unwrap_or("none"));
     out.push('|');
     out.push_str(if props.on_shown.unwrap_or(true) { "true" } else { "false" });
     out.push_str("</b>");

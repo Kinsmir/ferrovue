@@ -275,18 +275,18 @@ defineProps<{ user: string }>();
 # pub fn render(out: &mut String, props: &Props<'_>) {
 #     out.reserve(70 + props.name.len() + props.note.as_deref().map_or(0, str::len));
 #     out.push_str("<p class=\"greeting\">Hello, ");
-#     fv::core::escape::escape_into(out, &props.name);
+#     fv::core::escape_into(out, &props.name);
 #     out.push('!');
 #     if props.unread != 0 {
 #         out.push_str("<b>");
-#         fv::core::numbers::push_int(out, props.unread);
+#         fv::core::push_int(out, props.unread);
 #         out.push_str(" new</b>");
 #     } else {
 #         out.push_str("<!---->");
 #     }
 #     if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {
 #         out.push_str("<i>");
-#         fv::core::escape::escape_into(out, fv_note);
+#         fv::core::escape_into(out, fv_note);
 #         out.push_str("</i>");
 #     } else {
 #         out.push_str("<!---->");
@@ -336,7 +336,7 @@ defineProps<{ user: string }>();
 # #[derive(Clone, Copy)]
 # pub struct Slots<'s> {
 #     /// The page `<RouterView>` shows.
-#     pub router_view: fv::slots::Slot<'s>,
+#     pub router_view: fv::render::Slot<'s>,
 # }
 #
 # /// Write the component's server render into `out`.
@@ -350,9 +350,9 @@ defineProps<{ user: string }>();
 #             out.push_str(" aria-current=\"page\"");
 #         }
 #         out.push_str(" href=\"");
-#         fv::core::escape::escape_into(out, &fv_link.href);
+#         fv::core::escape_into(out, &fv_link.href);
 #         out.push_str("\" class=\"");
-#         fv::class::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
+#         fv::attrs::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
 #         out.push_str("\">home</a>");
 #     }
 #     out.push(' ');
@@ -363,11 +363,11 @@ defineProps<{ user: string }>();
 #             out.push_str(" aria-current=\"page\"");
 #         }
 #         out.push_str(" href=\"");
-#         fv::core::escape::escape_into(out, &fv_link.href);
+#         fv::core::escape_into(out, &fv_link.href);
 #         out.push_str("\" class=\"");
-#         fv::class::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
+#         fv::attrs::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
 #         out.push_str("\">");
-#         fv::core::escape::escape_into(out, &props.user);
+#         fv::core::escape_into(out, &props.user);
 #         out.push_str("</a>");
 #     }
 #     out.push_str("</nav><main>");
@@ -394,7 +394,7 @@ let mut html = String::new();
 layout::render(
     &mut html,
     &layout::Props::new("ada"),
-    layout::Slots { router_view: ferrovue::slots::Slot::new(&page) },
+    layout::Slots { router_view: ferrovue::render::Slot::new(&page) },
     &route,
 );
 assert_eq!(

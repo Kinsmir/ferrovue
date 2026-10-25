@@ -35,7 +35,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -43,8 +43,8 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(60 + props.label.len() + props.words.iter().map(|v| v.len()).sum::<usize>());
     let s_total = 0.0 + props.words.len() as i64 as f64;
     out.push_str("<p data-count=\"0\"");
@@ -52,15 +52,15 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
         out.push_str(" title");
     } else {
         out.push_str(" title=\"");
-        fv::core::escape::escape_into(out, &format!("{}: none", props.label));
+        fv::core::escape_into(out, &format!("{}: none", props.label));
         out.push('"');
     }
     out.push_str(">0|0|");
-    fv::core::escape::escape_into(out, &format!("{}: none", props.label));
+    fv::core::escape_into(out, &format!("{}: none", props.label));
     out.push('|');
-    fv::core::numbers::push_number(out, s_total);
+    fv::core::push_number(out, s_total);
     out.push('|');
-    fv::core::numbers::push_int(out, (if props.open { &[] } else { &props.words[..] }).len() as i64);
+    fv::core::push_int(out, (if props.open { &[] } else { &props.words[..] }).len() as i64);
     out.push_str("|true</p>");
     Ok(())
 }

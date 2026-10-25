@@ -17,7 +17,7 @@ pub struct Props<'a> {
     #[serde(rename = "counts", default, skip_serializing_if = "Option::is_none")]
     pub counts: Option<Vec<i64>>,
     #[serde(rename = "marks", default, skip_serializing_if = "Option::is_none")]
-    pub marks: Option<ferrovue::record::Record<'a, i64>>,
+    pub marks: Option<ferrovue::props::Record<'a, i64>>,
 }
 
 impl<'a> Props<'a> {
@@ -33,7 +33,7 @@ impl<'a> Props<'a> {
     }
 
     /// Set `marks`, which is absent otherwise.
-    pub fn marks(mut self, marks: ferrovue::record::Record<'a, i64>) -> Self {
+    pub fn marks(mut self, marks: ferrovue::props::Record<'a, i64>) -> Self {
         self.marks = Some(marks);
         self
     }
@@ -46,7 +46,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -54,20 +54,20 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(80 + 7 * props.chips.len() + props.chips.iter().map(|v| v.len()).sum::<usize>());
     out.push_str("<span class=\"chips\"><!--[-->");
     for fv_c_ref in props.chips.iter() {
         let fv_c: &str = fv_c_ref;
         out.push_str("<b>");
-        fv::core::escape::escape_into(out, fv_c);
+        fv::core::escape_into(out, fv_c);
         out.push_str("</b>");
     }
     out.push_str("<!--]-->");
     if let Some(fv_counts) = props.counts.as_ref() {
         out.push_str("<i>");
-        fv::core::escape::escape_into(out, &fv_counts.iter().map(|v| fv::core::numbers::Js(*v).to_string()).collect::<Vec<_>>().join("+"));
+        fv::core::escape_into(out, &fv_counts.iter().map(|v| fv::core::Js(*v).to_string()).collect::<Vec<_>>().join("+"));
         out.push_str("</i>");
     } else {
         out.push_str("<!---->");
@@ -77,9 +77,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
         for (fv_k, fv_m_ref) in fv_marks.iter() {
             let fv_m = *fv_m_ref;
             out.push_str("<u title=\"");
-            fv::core::escape::escape_into(out, fv_k);
+            fv::core::escape_into(out, fv_k);
             out.push_str("\">");
-            fv::core::numbers::push_int(out, fv_m);
+            fv::core::push_int(out, fv_m);
             out.push_str("</u>");
         }
         out.push_str("<!--]-->");

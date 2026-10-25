@@ -76,7 +76,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -84,37 +84,37 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(70 + 7 * props.tags.as_deref().unwrap_or(&[]).len() + props.label.as_deref().map_or(0, str::len) + props.note.as_deref().map_or(0, str::len));
-    let s_summary = format!("{}:{}", props.label.as_deref().unwrap_or("untitled"), fv::core::numbers::Js(props.size.unwrap_or(-1i64)));
+    let s_summary = format!("{}:{}", props.label.as_deref().unwrap_or("untitled"), fv::core::Js(props.size.unwrap_or(-1i64)));
     out.push_str("<p class=\"d");
-    fv::class::class_into(out, true, &[if props.on.unwrap_or(true) { "on" } else { "off" }]);
+    fv::attrs::class_into(out, true, &[if props.on.unwrap_or(true) { "on" } else { "off" }]);
     out.push_str("\" data-size=\"");
-    fv::core::numbers::push_int(out, props.size.unwrap_or(-1i64));
+    fv::core::push_int(out, props.size.unwrap_or(-1i64));
     out.push('"');
     if props.plain.unwrap_or(false) {
         out.push_str(" hidden");
     }
     out.push('>');
-    fv::core::escape::escape_into(out, &s_summary);
+    fv::core::escape_into(out, &s_summary);
     out.push('|');
-    fv::core::escape::escape_into(out, props.label.as_deref().unwrap_or("untitled"));
+    fv::core::escape_into(out, props.label.as_deref().unwrap_or("untitled"));
     out.push('|');
     out.push_str(if props.on.unwrap_or(true) { "true" } else { "false" });
     out.push('|');
     out.push_str(if props.plain.unwrap_or(false) { "true" } else { "false" });
     out.push('|');
     if let Some(v) = props.note.as_deref() {
-        fv::core::escape::escape_into(out, v);
+        fv::core::escape_into(out, v);
     }
     out.push('|');
-    fv::core::numbers::push_int(out, props.tags.as_deref().unwrap_or(&[]).len() as i64);
+    fv::core::push_int(out, props.tags.as_deref().unwrap_or(&[]).len() as i64);
     out.push_str("<!--[-->");
     for fv_t_ref in props.tags.as_deref().unwrap_or(&[]).iter() {
         let fv_t: &str = fv_t_ref;
         out.push_str("<b>");
-        fv::core::escape::escape_into(out, fv_t);
+        fv::core::escape_into(out, fv_t);
         out.push_str("</b>");
     }
     out.push_str("<!--]--></p>");

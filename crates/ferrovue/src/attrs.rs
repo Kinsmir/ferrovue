@@ -1,11 +1,6 @@
+use crate::{props, strings::js_trim};
+use ferrovue_core::{escape_into, push_int, push_number};
 use std::borrow::Cow;
-
-use ferrovue_core::{
-    escape::escape_into,
-    numbers::{push_int, push_number},
-};
-
-use crate::{record, strings::js_trim};
 
 /// One attribute's value, as Vue holds it once the parent's virtual node is made: `createVNode`
 /// has already normalised a class given as an array or an object, and a style given as an array.
@@ -539,11 +534,8 @@ fn merge_style_into<'a>(res: &mut Vec<(Cow<'a, str>, Attr<'a>)>, item: Attr<'a>)
 }
 
 fn normal_order<'a>(mut entries: Vec<(Cow<'a, str>, Attr<'a>)>) -> Vec<(Cow<'a, str>, Attr<'a>)> {
-    if entries
-        .iter()
-        .any(|(k, _)| record::array_index(k).is_some())
-    {
-        entries.sort_by_key(|(k, _)| record::array_index(k).map_or((1, 0), |i| (0, i)));
+    if entries.iter().any(|(k, _)| props::array_index(k).is_some()) {
+        entries.sort_by_key(|(k, _)| props::array_index(k).map_or((1, 0), |i| (0, i)));
     }
     entries
 }
@@ -636,7 +628,7 @@ fn split_declarations(text: &str) -> Vec<&str> {
 
 /// `normalizeClass` of a list of names, each one trimmed, the empty ones dropped, the rest joined
 /// with one space: a class bound to an array or an object, as a value among fallthrough attributes.
-/// Unlike [`class_into`](crate::class::class_into), it is not escaped: it is written later.
+/// Unlike [`class_into`](crate::attrs::class_into), it is not escaped: it is written later.
 ///
 /// # Example
 ///
@@ -687,6 +679,66 @@ pub fn scope_attrs(inherited: &str, own: &str, slotted: &str) -> String {
         out.push_str(key);
     }
     out
+}
+
+/// `escapeHtml(normalizeClass([...]))` for a list of strings: each one trimmed, the empty ones
+/// dropped, the rest joined with one space. `after` says a class has already been written, so the
+/// first item written here needs a separator too.
+///
+/// # Example
+///
+/// ```
+/// let mut out = String::from("card");
+/// ferrovue::attrs::class_into(&mut out, true, &[" big ", "", "x<y"]);
+/// assert_eq!(out, "card big x&lt;y");
+/// ```
+pub fn class_into(out: &mut String, after: bool, items: &[&str]) {
+    let mut sep = after;
+    for item in items {
+        let item = js_trim(item);
+        if item.is_empty() {
+            continue;
+        }
+        if sep {
+            out.push(' ');
+        }
+        escape_into(out, item);
+        sep = true;
+    }
+}
+
+/// `normalizeClass` of an object: the names whose condition holds, each followed by a space, the
+/// whole trimmed once, so a name's own surrounding spaces survive between its neighbours, as in
+/// Vue. Generated code uses it for an object with computed names, which may hold any text.
+///
+/// # Example
+///
+/// ```
+/// // `{ active: true, [" wide "]: true, hidden: false }`
+/// assert_eq!(ferrovue::attrs::class_object(&[(true, "active"), (true, " wide "), (false, "hidden")]), "active  wide");
+/// ```
+#[must_use]
+pub fn class_object(entries: &[(bool, &str)]) -> String {
+    let mut names: Vec<(&str, bool)> = Vec::new();
+    for (on, name) in entries {
+        match names.iter_mut().find(|(n, _)| n == name) {
+            Some(entry) => entry.1 = *on,
+            None => names.push((name, *on)),
+        }
+    }
+    let mut ordered: Vec<(Option<u32>, &str, bool)> = names
+        .into_iter()
+        .map(|(n, on)| (props::array_index(n), n, on))
+        .collect();
+    ordered.sort_by_key(|(i, _, _)| i.map_or((1, 0), |i| (0, i)));
+    let mut s = String::new();
+    for (_, name, on) in ordered {
+        if on {
+            s.push_str(name);
+            s.push(' ');
+        }
+    }
+    js_trim(&s).to_owned()
 }
 
 #[cfg(test)]

@@ -186,8 +186,8 @@ fn no_head_value_writes_the_hole_marker() {
     let s = HeadValue::str;
     for value in [
         "<fv-hole>",
-        crate::slots::HOLE,
-        &crate::slots::HOLE.to_uppercase(),
+        crate::page::HOLE,
+        &crate::page::HOLE.to_uppercase(),
     ] {
         let head = Head::without_defaults();
         head.push(HeadValue::object([
@@ -236,7 +236,7 @@ fn no_head_value_writes_the_hole_marker() {
             &html.html_attrs,
             &html.body_attrs,
         ] {
-            assert!(!part.contains(crate::slots::HOLE), "{part}");
+            assert!(!part.contains(crate::page::HOLE), "{part}");
         }
         assert_eq!(html.head_tags.lines().count(), 8, "{}", html.head_tags);
     }

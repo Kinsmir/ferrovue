@@ -351,17 +351,17 @@ export function callWith(s: Scope, e: Emitter, child: Component, m: string, head
       for (const p of context) unread(opened, p.name);
       e.close("),");
     } else if (sid !== null) {
-      e.open(`${field}: Some(fv::slots::Slot::slotted(&|out: &mut String${sidParam}| -> bool`);
+      e.open(`${field}: Some(fv::render::Slot::slotted(&|out: &mut String${sidParam}| -> bool`);
       const opened = e.lines.length - 1;
       content(inner);
       unread(opened, sid);
       e.close(")),");
     } else if (staticallyFilled(body)) {
-      e.open(`${field}: Some(fv::slots::Slot::new(&|out: &mut String|`);
+      e.open(`${field}: Some(fv::render::Slot::new(&|out: &mut String|`);
       statements({ ...inner, fill: false }, e, body);
       e.close(")),");
     } else {
-      e.open(`${field}: Some(fv::slots::Slot::markup(&|out: &mut String| -> bool`);
+      e.open(`${field}: Some(fv::render::Slot::markup(&|out: &mut String| -> bool`);
       e.stmt("let mut filled = false;");
       statements({ ...inner, fill: true }, e, body);
       e.stmt("filled");

@@ -31,7 +31,7 @@ impl Props {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -39,27 +39,27 @@ pub fn render(out: &mut String, props: &Props) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
     out.reserve(69);
     out.push_str("<p>");
-    fv::core::numbers::push_number(out, 1.0 / fv::core::numbers::js_max(props.n as f64 * 0.0, -1.0f64));
+    fv::core::push_number(out, 1.0 / fv::core::js_max(props.n as f64 * 0.0, -1.0f64));
     out.push(' ');
-    fv::core::numbers::push_number(out, 1.0 / fv::core::numbers::js_min(props.n as f64 * 0.0, 1.0f64));
+    fv::core::push_number(out, 1.0 / fv::core::js_min(props.n as f64 * 0.0, 1.0f64));
     out.push(' ');
-    fv::core::numbers::push_number(out, 1.0 / fv::core::numbers::js_max(props.n as f64 * 0.0, 0.0f64));
+    fv::core::push_number(out, 1.0 / fv::core::js_max(props.n as f64 * 0.0, 0.0f64));
     out.push(' ');
-    fv::core::numbers::push_number(out, 1.0 / fv::core::numbers::js_min(props.n as f64 * 0.0, 0.0f64));
+    fv::core::push_number(out, 1.0 / fv::core::js_min(props.n as f64 * 0.0, 0.0f64));
     out.push(' ');
-    fv::core::numbers::push_number(out, 1.0 / fv::core::numbers::js_max(props.n as f64 * 0.0, props.m as f64 * 0.0));
+    fv::core::push_number(out, 1.0 / fv::core::js_max(props.n as f64 * 0.0, props.m as f64 * 0.0));
     out.push(' ');
-    fv::core::numbers::push_number(out, 1.0 / fv::core::numbers::js_min(fv::core::numbers::js_min(props.n as f64 * 0.0, props.m as f64 * 0.0), 2.0f64));
+    fv::core::push_number(out, 1.0 / fv::core::js_min(fv::core::js_min(props.n as f64 * 0.0, props.m as f64 * 0.0), 2.0f64));
     out.push(' ');
-    fv::core::numbers::push_number(out, fv::core::numbers::js_max(props.n as f64 * 0.0, -1.0f64));
+    fv::core::push_number(out, fv::core::js_max(props.n as f64 * 0.0, -1.0f64));
     out.push(' ');
-    fv::core::numbers::push_int(out, props.n.max(props.m));
+    fv::core::push_int(out, props.n.max(props.m));
     out.push(' ');
-    fv::core::numbers::push_number(out, fv::core::numbers::js_min(props.n as f64 * 2.0, props.m as f64));
+    fv::core::push_number(out, fv::core::js_min(props.n as f64 * 2.0, props.m as f64));
     out.push_str("</p>");
     Ok(())
 }

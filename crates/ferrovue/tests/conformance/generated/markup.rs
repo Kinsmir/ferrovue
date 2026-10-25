@@ -31,7 +31,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -39,11 +39,11 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(249 + props.name.len());
     out.push_str("<div><p>a b &amp; c &lt;d&gt; © “");
-    fv::core::escape::escape_into(out, &props.name);
+    fv::core::escape_into(out, &props.name);
     out.push_str("”</p><br><img src=\"https://example.com/x.png\" alt=\"\"><svg viewBox=\"0 0 10 10\" aria-hidden=\"true\"><path d=\"M0 0L10 10\" stroke-linecap=\"round\"></path></svg><pre>  keep\n    this  </pre><p> collapse this </p></div>");
     Ok(())
 }

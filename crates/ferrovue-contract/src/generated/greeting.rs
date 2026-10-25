@@ -62,7 +62,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -70,29 +70,29 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(44 + props.name.len() + props.r#type.as_deref().map_or(0, str::len) + props.model_value.as_deref().map_or(0, str::len));
     out.push_str("<p");
     if props.r#type.as_deref().is_some() {
         out.push_str(" class=\"");
-        fv::class::class_into(out, false, &[props.r#type.as_deref().unwrap_or("")]);
+        fv::attrs::class_into(out, false, &[props.r#type.as_deref().unwrap_or("")]);
         out.push('"');
     }
     out.push_str(">Hello, ");
-    fv::core::escape::escape_into(out, &props.name);
+    fv::core::escape_into(out, &props.name);
     out.push('!');
     if props.show_head.unwrap_or(false) {
         out.push_str("<b>");
         if let Some(v) = props.unread {
-            fv::core::numbers::push_int(out, v);
+            fv::core::push_int(out, v);
         }
         out.push_str("</b>");
     } else {
         out.push_str("<!---->");
     }
     if let Some(v) = props.model_value.as_deref() {
-        fv::core::escape::escape_into(out, v);
+        fv::core::escape_into(out, v);
     }
     out.push_str("</p>");
     Ok(())

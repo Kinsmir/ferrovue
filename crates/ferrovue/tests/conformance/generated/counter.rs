@@ -31,7 +31,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::Stores<'_>) {
-    fv::refused::rendered(try_render(out, props, fv_stores));
+    fv::render::rendered(try_render(out, props, fv_stores));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -39,28 +39,28 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::St
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::Stores<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::Stores<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(91 + props.title.len());
     out.push_str("<div data-count=\"");
-    fv::core::numbers::push_int(out, fv_stores.counter.count);
+    fv::core::push_int(out, fv_stores.counter.count);
     out.push_str("\"><h4>");
-    fv::core::escape::escape_into(out, &props.title);
+    fv::core::escape_into(out, &props.title);
     out.push_str(": ");
-    fv::core::escape::escape_into(out, &fv_stores.counter.label);
+    fv::core::escape_into(out, &fv_stores.counter.label);
     out.push_str("</h4><p>");
-    fv::core::numbers::push_int(out, fv_stores.counter.count);
+    fv::core::push_int(out, fv_stores.counter.count);
     out.push('|');
-    fv::core::numbers::push_number(out, fv_stores.counter.count as f64 * 2.0);
+    fv::core::push_number(out, fv_stores.counter.count as f64 * 2.0);
     out.push('|');
-    fv::core::escape::escape_into(out, &format!("{} {}", fv::core::numbers::Js(fv_stores.counter.count as f64 * 2.0), fv_stores.counter.label));
+    fv::core::escape_into(out, &format!("{} {}", fv::core::Js(fv_stores.counter.count as f64 * 2.0), fv_stores.counter.label));
     out.push('|');
-    fv::core::numbers::push_number(out, fv_stores.counter.step);
+    fv::core::push_number(out, fv_stores.counter.step);
     out.push('|');
-    fv::core::numbers::push_int(out, fv_stores.counter.history.len() as i64);
+    fv::core::push_int(out, fv_stores.counter.history.len() as i64);
     if let Some(fv_owner) = fv_stores.counter.owner.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<b>");
-        fv::core::escape::escape_into(out, fv_owner);
+        fv::core::escape_into(out, fv_owner);
         out.push_str("</b>");
     } else {
         out.push_str("<!---->");

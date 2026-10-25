@@ -40,27 +40,27 @@ impl std::fmt::Display for Tone {
 }
 
 impl std::str::FromStr for Tone {
-    type Err = ferrovue::union::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "calm" => Ok(Tone::Calm),
             "<loud>" => Ok(Tone::Loud),
             "a&b" => Ok(Tone::AB),
-            _ => Err(ferrovue::union::ParseUnionError::new("Tone", s, &["calm", "<loud>", "a&b"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("Tone", s, &["calm", "<loud>", "a&b"])),
         }
     }
 }
 
 impl TryFrom<&str> for Tone {
-    type Error = ferrovue::union::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::union::Union for Tone {
+impl ferrovue::props::Union for Tone {
     const ALL: &'static [Self] = &Tone::ALL;
 
     fn as_str(self) -> &'static str {
@@ -98,7 +98,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -106,28 +106,28 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(41 + 6 + props.label.len());
     out.push_str("<b");
-    if props.tone.map(fv::union::Union::as_str).is_some() {
+    if props.tone.map(fv::props::Union::as_str).is_some() {
         out.push_str(" class=\"");
-        fv::class::class_into(out, false, &[props.tone.map(fv::union::Union::as_str).unwrap_or("")]);
+        fv::attrs::class_into(out, false, &[props.tone.map(fv::props::Union::as_str).unwrap_or("")]);
         out.push('"');
     }
-    if let Some(v) = props.tone.map(fv::union::Union::as_str) {
+    if let Some(v) = props.tone.map(fv::props::Union::as_str) {
         if v.is_empty() {
             out.push_str(" data-tone");
         } else {
             out.push_str(" data-tone=\"");
-            fv::core::escape::escape_into(out, v);
+            fv::core::escape_into(out, v);
             out.push('"');
         }
     }
     out.push('>');
-    fv::core::escape::escape_into(out, &props.label);
+    fv::core::escape_into(out, &props.label);
     out.push_str(": ");
-    fv::core::escape::escape_into(out, props.tone.map(fv::union::Union::as_str).unwrap_or("none"));
+    fv::core::escape_into(out, props.tone.map(fv::props::Union::as_str).unwrap_or("none"));
     out.push_str("</b>");
     Ok(())
 }

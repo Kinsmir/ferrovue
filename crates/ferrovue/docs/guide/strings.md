@@ -62,15 +62,15 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         out.push_str(" title");
     } else {
         out.push_str(" title=\"");
-        fv::core::escape::escape_into(out, &props.name.to_uppercase());
+        fv::core::escape_into(out, &props.name.to_uppercase());
         out.push('"');
     }
     out.push('>');
-    fv::core::escape::escape_into(out, &fv::strings::js_slice(&props.name, 0.0f64, Some(1.0f64)));
+    fv::core::escape_into(out, &fv::strings::js_slice(&props.name, 0.0f64, Some(1.0f64)));
     out.push_str(". #");
-    fv::core::escape::escape_into(out, &fv::strings::js_pad_start(&fv::core::numbers::Js(props.id).to_string(), 4.0f64, "0"));
+    fv::core::escape_into(out, &fv::strings::js_pad_start(&fv::core::Js(props.id).to_string(), 4.0f64, "0"));
     out.push(' ');
-    fv::core::escape::escape_into(out, if fv::strings::js_cmp(&props.name, "N").is_lt() { "A–M" } else { "N–Z" });
+    fv::core::escape_into(out, if fv::strings::js_cmp(&props.name, "N").is_lt() { "A–M" } else { "N–Z" });
     out.push_str("</p>");
 }
 #
@@ -207,7 +207,7 @@ Ordering a string against a number is refused: JavaScript converts the string to
 | `parseFloat(s)` | `js_parse_float`: the longest decimal literal at the start, or `NaN` |
 | `JSON.stringify(s)` of a string | `js_json_string` |
 | `JSON.stringify(x)` of a number | `js_json_number`: `null` for `NaN` and the infinities |
-| `String(x)`, `` `${x}` ``, `x.toString()` | [`push_number`](crate::core::numbers::push_number), [`Js`](crate::core::numbers::Js). See [`numbers`](crate::guide::numbers) |
+| `String(x)`, `` `${x}` ``, `x.toString()` | [`push_number`](crate::core::push_number), [`Js`](crate::core::Js). See [`numbers`](crate::guide::numbers) |
 | `String(x)`, `` `${x}` ``, `s.concat(x)` of a value that may be absent | `undefined`, or `null` for a value typed `T \| null` |
 | `String(xs)`, `` `${xs}` `` of a list | the items joined by `,`, as `xs.join()` joins them: an item that is `null` or `undefined` as nothing |
 
@@ -234,8 +234,8 @@ assert_eq!(ferrovue::strings::js_json_number(f64::NAN), "null");
 
 `encodeURIComponent(s)` and `encodeURI(s)` write each byte of a character's UTF-8 as `%XX`, the
 hexadecimal digits in upper case, except the characters JavaScript keeps:
-[`js_encode_uri_component`](crate::core::uri::js_encode_uri_component) keeps the ASCII letters and digits and
-`-_.!~*'()`, and [`js_encode_uri`](crate::core::uri::js_encode_uri) the characters a URI reserves as well,
+[`js_encode_uri_component`](crate::core::js_encode_uri_component) keeps the ASCII letters and digits and
+`-_.!~*'()`, and [`js_encode_uri`](crate::core::js_encode_uri) the characters a URI reserves as well,
 `;/?:@&=+$,#`. Both are held to `uri.json`, every ASCII character and a few hundred strings drawn at
 random, recorded from Node and read alike by Chromium and Firefox. Their argument is a string, or
 anything `String()` writes (`encodeURIComponent(page)` of a number). JavaScript throws a `URIError`
@@ -244,8 +244,8 @@ refused ([FV0706](crate::guide::error_codes#fv0706)). `decodeURI()` and `decodeU
 which throw on a malformed escape, are refused too.
 
 ```rust
-assert_eq!(ferrovue::core::uri::js_encode_uri_component("rust & vue/é"), "rust%20%26%20vue%2F%C3%A9");
-assert_eq!(ferrovue::core::uri::js_encode_uri("/a b?q=1&r=[2]#top"), "/a%20b?q=1&r=%5B2%5D#top");
+assert_eq!(ferrovue::core::js_encode_uri_component("rust & vue/é"), "rust%20%26%20vue%2F%C3%A9");
+assert_eq!(ferrovue::core::js_encode_uri("/a b?q=1&r=[2]#top"), "/a%20b?q=1&r=%5B2%5D#top");
 ```
 
 # Slicing lists
@@ -304,13 +304,13 @@ assert_eq!(last_two, ["c", "d"]);
 assert_eq!(ferrovue::strings::js_item_at(words.iter().copied(), -1.0), Some("d"));
 assert_eq!(ferrovue::strings::js_item_at(words.iter().copied(), 4.0), None);
 
-let sorted: Vec<i64> = ferrovue::strings::js_sorted_by_string([10, 9, 1].into_iter(), |v| ferrovue::core::numbers::Js(*v).to_string()).collect();
+let sorted: Vec<i64> = ferrovue::strings::js_sorted_by_string([10, 9, 1].into_iter(), |v| ferrovue::core::Js(*v).to_string()).collect();
 assert_eq!(sorted, [1, 10, 9]);
 let by_value: Vec<i64> = ferrovue::strings::js_sorted([10, 9, 1].into_iter(), |a, b| ferrovue::strings::js_order(*a as f64, *b as f64)).collect();
 assert_eq!(by_value, [1, 9, 10]);
 assert_eq!(ferrovue::strings::js_order(f64::NAN, 1.0), Ordering::Equal);
 assert_eq!(ferrovue::strings::js_reduce(words.iter().rev(), String::new(), |acc, w| acc + w), "dcba");
-assert!([0.0, -0.0].into_iter().fold(f64::INFINITY, ferrovue::core::numbers::js_min).is_sign_negative());
+assert!([0.0, -0.0].into_iter().fold(f64::INFINITY, ferrovue::core::js_min).is_sign_negative());
 ```
 
 # Panics

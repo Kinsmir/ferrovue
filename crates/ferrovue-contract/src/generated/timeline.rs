@@ -12,15 +12,15 @@ pub const NAME: &str = "Timeline";
 pub struct Props<'a> {
     #[serde(rename = "moments")]
     pub moments: Vec<super::types::Moment<'a>>,
-    #[serde(rename = "days", with = "fv::js_date::dates_in")]
-    pub days: Vec<ferrovue::js_date::JsDate>,
-    #[serde(rename = "by", with = "fv::js_date::dates_in")]
-    pub by: ferrovue::record::Record<'a, ferrovue::js_date::JsDate>,
+    #[serde(rename = "days", with = "fv::date::dates_in")]
+    pub days: Vec<ferrovue::date::JsDate>,
+    #[serde(rename = "by", with = "fv::date::dates_in")]
+    pub by: ferrovue::props::Record<'a, ferrovue::date::JsDate>,
 }
 
 impl<'a> Props<'a> {
     /// Props with its required fields.
-    pub fn new(moments: Vec<super::types::Moment<'a>>, days: Vec<ferrovue::js_date::JsDate>, by: ferrovue::record::Record<'a, ferrovue::js_date::JsDate>) -> Self {
+    pub fn new(moments: Vec<super::types::Moment<'a>>, days: Vec<ferrovue::date::JsDate>, by: ferrovue::props::Record<'a, ferrovue::date::JsDate>) -> Self {
         Props { moments, days, by }
     }
 
@@ -33,7 +33,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -41,33 +41,33 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(57 + 23 * props.moments.len() + 16 * props.by.len() + props.moments.iter().map(|v| v.label.len()).sum::<usize>() + props.by.iter().map(|(k, _)| k.len()).sum::<usize>());
     out.push_str("<ol><!--[-->");
     for fv_m_ref in props.moments.iter() {
         let fv_m = fv_m_ref;
         out.push_str("<li>");
-        fv::core::escape::escape_into(out, &fv_m.label);
+        fv::core::escape_into(out, &fv_m.label);
         out.push(' ');
-        fv::core::numbers::push_number(out, fv::js_date::js_time_of(&fv_m.at));
+        fv::core::push_number(out, fv::date::js_time_of(&fv_m.at));
         out.push(' ');
-        fv::core::numbers::push_int(out, fv_m.seen.len() as i64);
+        fv::core::push_int(out, fv_m.seen.len() as i64);
         out.push_str("</li>");
     }
     out.push_str("<!--]--><!--[-->");
-    for fv_d in props.days.iter().map(fv::js_date::js_time_of) {
+    for fv_d in props.days.iter().map(fv::date::js_time_of) {
         out.push_str("<li>");
-        fv::core::numbers::push_number(out, fv::dates::js_utc_date(fv_d));
+        fv::core::push_number(out, fv::date::js_utc_date(fv_d));
         out.push_str("</li>");
     }
     out.push_str("<!--]--><!--[-->");
     for (fv_k, fv_d_ref) in props.by.iter() {
-        let fv_d_2 = fv::js_date::js_time_of(fv_d_ref);
+        let fv_d_2 = fv::date::js_time_of(fv_d_ref);
         out.push_str("<li>");
-        fv::core::escape::escape_into(out, fv_k);
+        fv::core::escape_into(out, fv_k);
         out.push('=');
-        fv::core::numbers::push_number(out, fv::dates::js_utc_full_year(fv_d_2));
+        fv::core::push_number(out, fv::date::js_utc_full_year(fv_d_2));
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ol>");

@@ -33,7 +33,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -41,8 +41,8 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(178 + props.tone.len());
     out.push_str("<!--[-->");
     if props.on {
@@ -50,13 +50,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
         if props.tone.is_empty() {
             out.push(' ');
         } else {
-            fv::core::escape::escape_into(out, &props.tone);
+            fv::core::escape_into(out, &props.tone);
         }
         out.push_str(";\" data-v-d62f6e13>a</p><p style=\"--d62f6e13-tone:");
         if props.tone.is_empty() {
             out.push(' ');
         } else {
-            fv::core::escape::escape_into(out, &props.tone);
+            fv::core::escape_into(out, &props.tone);
         }
         out.push_str(";\" data-v-d62f6e13>b</p><!--]-->");
     } else {
@@ -68,7 +68,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
         out.push_str("<!---->");
     }
     out.push_str(" text ");
-    fv::core::escape::escape_into(out, &props.tone);
+    fv::core::escape_into(out, &props.tone);
     out.push_str("<!--]-->");
     Ok(())
 }

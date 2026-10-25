@@ -15,12 +15,12 @@ pub struct Props<'a> {
     #[serde(rename = "reader")]
     pub reader: Cow<'a, str>,
     #[serde(rename = "body")]
-    pub body: ferrovue::sanitised::Sanitised,
+    pub body: ferrovue::html::Sanitised,
 }
 
 impl<'a> Props<'a> {
     /// Props with its required fields.
-    pub fn new(reader: impl Into<Cow<'a, str>>, body: ferrovue::sanitised::Sanitised) -> Self {
+    pub fn new(reader: impl Into<Cow<'a, str>>, body: ferrovue::html::Sanitised) -> Self {
         Props { reader: reader.into(), body }
     }
 
@@ -33,7 +33,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -41,13 +41,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
-    out.reserve(82 + props.reader.len() + fv::trusted::TrustedHtml::trusted_html(&props.body).len());
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
+    out.reserve(82 + props.reader.len() + fv::html::TrustedHtml::trusted_html(&props.body).len());
     out.push_str("<figure class=\"review\"><blockquote>");
-    fv::trusted::trusted_into(out, &props.body);
+    fv::html::trusted_into(out, &props.body);
     out.push_str("</blockquote><figcaption>");
-    fv::core::escape::escape_into(out, &props.reader);
+    fv::core::escape_into(out, &props.reader);
     out.push_str("</figcaption></figure>");
     Ok(())
 }

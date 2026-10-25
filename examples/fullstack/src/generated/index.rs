@@ -45,7 +45,7 @@ pub struct Slots<'s> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::router::Route<'_>, fv_head: &fv::head::Head) {
-    fv::refused::rendered(try_render(out, props, fv_slots, fv_route, fv_head));
+    fv::render::rendered(try_render(out, props, fv_slots, fv_route, fv_head));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -53,10 +53,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::router::Route<'_>, fv_head: &fv::head::Head) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::router::Route<'_>, fv_head: &fv::head::Head) -> Result<(), fv::render::Refused> {
     out.reserve(105 + 89 * props.books.len() + props.books.iter().map(|v| v.id.len() + v.title.len() + v.author.len()).sum::<usize>());
-    fv_head.push(fv::head::HeadValue::object([("title", fv::head::HeadValue::str("All books")), ("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([("name", fv::head::HeadValue::str("description")), ("content", fv::head::HeadValue::str(&format!("{} books, from {}", fv::core::numbers::Js(props.books.len() as i64), props.books.iter().map(|fv_b| std::borrow::Cow::<str>::Borrowed(&fv_b.title)).collect::<Vec<_>>().join(", "))))])]))]));
+    fv_head.push(fv::head::HeadValue::object([("title", fv::head::HeadValue::str("All books")), ("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([("name", fv::head::HeadValue::str("description")), ("content", fv::head::HeadValue::str(&format!("{} books, from {}", fv::core::Js(props.books.len() as i64), props.books.iter().map(|fv_b| std::borrow::Cow::<str>::Borrowed(&fv_b.title)).collect::<Vec<_>>().join(", "))))])]))]));
     out.push_str("<section class=\"books\"><h1>All books</h1>");
     if props.books.len() as i64 != 0 {
         out.push_str("<ul><!--[-->");
@@ -72,19 +72,19 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_r
                     out.push_str(" aria-current=\"page\"");
                 }
                 out.push_str(" href=\"");
-                fv::core::escape::escape_into(out, &fv_link.href);
+                fv::core::escape_into(out, &fv_link.href);
                 out.push_str("\" class=\"");
-                fv::class::class_into(out, false, &[if fv_link.exact { "active" } else { "" }]);
+                fv::attrs::class_into(out, false, &[if fv_link.exact { "active" } else { "" }]);
                 out.push_str("\">");
-                fv::core::escape::escape_into(out, &fv_book.title);
+                fv::core::escape_into(out, &fv_book.title);
                 out.push_str("</a>");
             }
             out.push_str("<span class=\"by\">by ");
-            fv::core::escape::escape_into(out, &fv_book.author);
+            fv::core::escape_into(out, &fv_book.author);
             out.push_str(" (");
-            fv::core::numbers::push_int(out, fv_book.year);
+            fv::core::push_int(out, fv_book.year);
             out.push_str(")</span>");
-            fv::slots::scoped_slot_into(out, fv_slots.actions, &ActionsSlotProps { id: &fv_book.id, title: &fv_book.title }, None);
+            fv::render::scoped_slot_into(out, fv_slots.actions, &ActionsSlotProps { id: &fv_book.id, title: &fv_book.title }, None);
             out.push_str("</li>");
         }
         out.push_str("<!--]--></ul>");

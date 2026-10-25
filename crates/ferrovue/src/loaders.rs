@@ -1,3 +1,5 @@
+use crate::{json, page};
+use serde::Serialize;
 use std::any::Any;
 use std::borrow::Cow;
 use std::cell::{Cell, RefCell};
@@ -6,10 +8,6 @@ use std::fmt;
 use std::future::{Future, poll_fn};
 use std::pin::Pin;
 use std::task::Poll;
-
-use serde::Serialize;
-
-use crate::{json, state};
 
 /// One call of a loader, as a component's `await` makes it: the loader's name, what it returns,
 /// and its arguments. The generated `loaders` module has one per loader.
@@ -70,7 +68,7 @@ impl LoadKey {
     /// Add an integer.
     pub fn int(&mut self, n: i64) -> &mut Self {
         self.json.push(',');
-        ferrovue_core::numbers::push_int(&mut self.json, n);
+        ferrovue_core::push_int(&mut self.json, n);
         self
     }
 
@@ -80,7 +78,7 @@ impl LoadKey {
             return self.null();
         }
         self.json.push(',');
-        ferrovue_core::numbers::push_number(&mut self.json, x);
+        ferrovue_core::push_number(&mut self.json, x);
         self
     }
 
@@ -164,7 +162,7 @@ impl<T: LoadArg + ?Sized> LoadArg for &T {
 /// # Example
 ///
 /// ```
-/// use ferrovue::load::{Load, LoadKey, load_key};
+/// use ferrovue::loaders::{Load, LoadKey, load_key};
 ///
 /// struct LoadPost {
 ///     id: i64,
@@ -328,7 +326,7 @@ impl<'c> Loads<'c> {
     /// `<script type="application/json" data-fv-loads>` holding an object from each key to its
     /// result, in the order the render first read them, and under `dates` where the results of
     /// each loader hold dates, for the client to read them back as such. `<`, `>`, `&` and the two line separators
-    /// are written as JSON escapes, as [`state_script_into`](crate::state::state_script_into) writes them.
+    /// are written as JSON escapes, as [`state_script_into`](crate::page::state_script_into) writes them.
     ///
     /// Write it after the components, so that it holds what they read.
     pub fn script_into(&self, out: &mut String) {
@@ -359,7 +357,7 @@ impl<'c> Loads<'c> {
         }
         payload.push('}');
         out.push_str("<script type=\"application/json\" data-fv-loads>");
-        state::json_escaped_into(out, &payload);
+        page::json_escaped_into(out, &payload);
         out.push_str("</script>");
     }
 
@@ -420,7 +418,7 @@ struct Running<'a, E> {
 ///
 /// ```
 /// # use std::convert::Infallible;
-/// # use ferrovue::load::{Load, LoadKey, Loads};
+/// # use ferrovue::loaders::{Load, LoadKey, Loads};
 /// # struct LoadName(i64);
 /// # impl Load for LoadName {
 /// #     const NAME: &'static str = "loadName";
@@ -432,11 +430,11 @@ struct Running<'a, E> {
 /// # fn greeting(out: &mut String, id: i64, loads: &Loads<'_>) {
 /// #     let Some(name) = loads.get(LoadName(id)) else { return };
 /// #     out.push_str("<p>Hello, ");
-/// #     ferrovue::core::escape::escape_into(out, name);
+/// #     ferrovue::core::escape_into(out, name);
 /// #     out.push_str("!</p>");
 /// # }
 /// // Greeting.vue: const name = await loadName(props.id); <p>Hello, {{ name }}!</p>
-/// let page = ferrovue::load::load(
+/// let page = ferrovue::loaders::load(
 ///     |loads| {
 ///         let mut out = String::new();
 ///         greeting(&mut out, 1, loads);

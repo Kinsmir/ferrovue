@@ -48,7 +48,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -56,19 +56,19 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(80 + props.title.len() + props.label.as_deref().map_or(0, str::len));
     out.push_str("<article class=\"rated\"><h3>");
-    fv::core::escape::escape_into(out, &props.title);
+    fv::core::escape_into(out, &props.title);
     out.push_str("</h3>");
     crate::vendor::star_rating(out, &super::twins::StarRatingProps { value: props.stars, max: Some(5i64), label: props.label.as_deref(), readonly: false }, super::twins::StarRatingSlots {
-        default: Some(fv::slots::Slot::markup(&|out: &mut String| -> bool {
+        default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
             if let Some(fv_votes) = props.votes.filter(|v| *v != 0) {
                 filled = true;
                 out.push_str("<small>");
-                fv::core::numbers::push_int(out, fv_votes);
+                fv::core::push_int(out, fv_votes);
                 out.push_str(" votes</small>");
             } else {
                 out.push_str("<!--v-if-->");

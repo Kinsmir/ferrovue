@@ -106,7 +106,7 @@ export function stringOf(comp: Component, v: Val, n: N, what: string, code: Erro
       case "bool":
         return written(`fv::strings::JsOr(${atom(v.code)}.map(|v| if v { "true" } else { "false" }), ${word})`);
       default:
-        return written(`fv::strings::JsOr(${atom(v.code)}.map(fv::core::numbers::Js), ${word})`);
+        return written(`fv::strings::JsOr(${atom(v.code)}.map(fv::core::Js), ${word})`);
     }
   }
   if (v.ty.k === "list") {
@@ -115,13 +115,13 @@ export function stringOf(comp: Component, v: Val, n: N, what: string, code: Erro
     if (of.k === "undef") return { code: '""', ty: STR };
     if (of.k === "str") return joined(items(v));
     if (of.k === "bool") return joined(`${items(v)}.map(|v| if v { "true" } else { "false" })`);
-    if (of.k === "int" || of.k === "float") return joined(`${items(v)}.map(|v| fv::core::numbers::Js(v).to_string())`);
+    if (of.k === "int" || of.k === "float") return joined(`${items(v)}.map(|v| fv::core::Js(v).to_string())`);
     if (of.k === "opt" && of.of.k === "str" && v.iter !== undefined) return joined(`${v.iter}.map(|v| v.unwrap_or(""))`);
     if (of.k === "opt" && v.iter === undefined && SCALAR.has(of.of.k)) {
       const each = `${atom(v.code)}.iter()`;
       if (of.of.k === "str") return joined(`${each}.map(|v| v.as_deref().unwrap_or(""))`);
       if (of.of.k === "bool") return joined(`${each}.map(|v| match v { Some(true) => "true", Some(false) => "false", None => "" })`);
-      return joined(`${each}.map(|v| v.map_or_else(String::new, |v| fv::core::numbers::Js(v).to_string()))`);
+      return joined(`${each}.map(|v| v.map_or_else(String::new, |v| fv::core::Js(v).to_string()))`);
     }
   }
   return fail(comp, code, `${what} of ${describeTy(v.ty)}: it writes strings, numbers and booleans, present or optional, and lists of them`, n);
@@ -160,8 +160,8 @@ export function formatted(comp: Component, given: (string | Val)[], n: N, what: 
       args.push(...part.format.args);
       continue;
     }
-    if (part.ty.k === "str") args.push(receiver(part.code).replace(/^(fv::core::numbers::Js\(.*\))\.to_string\(\)$/s, "$1"));
-    else if (isNumber(part.ty)) args.push(`fv::core::numbers::Js(${bare(asWritten(part).code)})`);
+    if (part.ty.k === "str") args.push(receiver(part.code).replace(/^(fv::core::Js\(.*\))\.to_string\(\)$/s, "$1"));
+    else if (isNumber(part.ty)) args.push(`fv::core::Js(${bare(asWritten(part).code)})`);
     else args.push(`if ${condition(part.code)} { "true" } else { "false" }`);
     fmt += "{}";
   }

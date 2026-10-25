@@ -81,7 +81,7 @@ mod generated;
 ```
 
 Each component's module has a `Props` struct, built with `new` and a setter per optional prop, and
-three ways to render, each with a twin that returns a [`refused::Refused`] for props the render cannot write
+three ways to render, each with a twin that returns a [`render::Refused`] for props the render cannot write
 as Vue writes them:
 
 ```rust
@@ -124,25 +124,25 @@ as Vue writes them:
 #
 # /// Write the component's server render into `out`.
 # pub fn render(out: &mut String, props: &Props<'_>) {
-#     fv::refused::rendered(try_render(out, props));
+#     fv::render::rendered(try_render(out, props));
 # }
 #
 # /// [`render`], returning the refusal of a render that cannot write what Vue writes.
-# pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+# pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
 #     out.reserve(70 + props.name.len() + props.note.as_deref().map_or(0, str::len));
 #     out.push_str("<p class=\"greeting\">Hello, ");
-#     fv::core::escape::escape_into(out, &props.name);
+#     fv::core::escape_into(out, &props.name);
 #     out.push('!');
 #     if props.unread != 0 {
 #         out.push_str("<b>");
-#         fv::core::numbers::push_int(out, props.unread);
+#         fv::core::push_int(out, props.unread);
 #         out.push_str(" new</b>");
 #     } else {
 #         out.push_str("<!---->");
 #     }
 #     if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {
 #         out.push_str("<i>");
-#         fv::core::escape::escape_into(out, fv_note);
+#         fv::core::escape_into(out, fv_note);
 #         out.push_str("</i>");
 #     } else {
 #         out.push_str("<!---->");
@@ -202,45 +202,45 @@ the values a render needs besides its props.
 
 | You build | To render a component that |
 |---|---|
-| [`slots::Slot`], a generated `Slots` struct, scoped-slot closures | renders `<slot>` or `<RouterView>` |
+| [`render::Slot`], a generated `Slots` struct, scoped-slot closures | renders `<slot>` or `<RouterView>` |
 | [`router::Router`] (from the generated `route_table::router()`), then a [`router::Route`] per request | renders `<RouterLink>` or reads `useRoute()` |
 | A generated `stores::Stores` | reads Pinia state |
 | [`i18n::I18n`] (from the generated `i18n::i18n(locale)`) | calls `$t` or `useI18n()` |
-| [`teleport::Teleports`] | renders `<Teleport>` |
+| [`page::Teleports`] | renders `<Teleport>` |
 | A generated `provides::Provides`, empty or holding what the client app gives `app.provide` | calls `provide` or `inject`, or renders one that does ([`guide::provide_inject`](crate::guide::provide_inject)) |
 | [`head::Head`] | calls `useHead` or `useSeoMeta`, or renders one that does ([`guide::head`](crate::guide::head)) |
-| [`basic_html::BasicHtml`], [`basic_html::InlineHtml`], `sanitised::Sanitised` (the `ammonia` feature), or your own type implementing [`trusted::TrustedHtml`] | renders `v-html` |
-| [`js_date::JsDate`], `chrono::DateTime<Utc>` (the `chrono` feature), or your own type implementing [`js_date::JsTime`] | takes a `Date` prop ([`guide::dates_and_prices`](crate::guide::dates_and_prices#date-props)) |
+| [`html::BasicHtml`], [`html::InlineHtml`], `html::Sanitised` (the `ammonia` feature), or your own type implementing [`html::TrustedHtml`] | renders `v-html` |
+| [`date::JsDate`], `chrono::DateTime<Utc>` (the `chrono` feature), or your own type implementing [`date::JsTime`] | takes a `Date` prop ([`guide::dates_and_prices`](crate::guide::dates_and_prices#date-props)) |
 
-A prop declared `Record<string, T>` is a [`record::Record`], which keeps JavaScript's order of keys.
+A prop declared `Record<string, T>` is a [`props::Record`], which keeps JavaScript's order of keys.
 
 and these, to assemble a page:
 
 - [`html::Html`]: a component applied to its props, borrowed (`html(&props)`) or held
   (`into_html(props)`), written into a buffer with [`html::Html::render_to`] or returned with
   [`html::Html::into_string`];
-- [`html::Html::hydrate`] with a [`hydrate::Hydrate`]: an island that hydrates once visible, when the browser is
+- [`html::Html::hydrate`] with a [`html::Hydrate`]: an island that hydrates once visible, when the browser is
   idle, on interaction or when a media query matches;
 - [`head::Head::render`]: the tags and attributes of the page's `<head>`, `<html>` and `<body>`;
-- [`state::state_script_into`]: the stores' state for the client to hydrate from;
-- [`load::load`] and [`load::Loads`]: render components that await loaders, each loader started when Vue's
-  server would start it, and [`load::Loads::script_into`] the results for the client to hydrate from;
-- [`slots::hole`] and [`slots::split_holes`]: render a layout once and stream its parts;
+- [`page::state_script_into`]: the stores' state for the client to hydrate from;
+- [`loaders::load`] and [`loaders::Loads`]: render components that await loaders, each loader started when Vue's
+  server would start it, and [`loaders::Loads::script_into`] the results for the client to hydrate from;
+- [`page::hole`] and [`page::split_holes`]: render a layout once and stream its parts;
 - `web::HtmlStream` (the `stream` feature): a page with holes as an HTTP body, each hole's content
   sent as soon as it is ready;
-- [`core::escape::escape_into`]: text written into your own markup as Vue would write it.
+- [`core::escape_into`]: text written into your own markup as Vue would write it.
 
-and, in tests, [`conformance!`] and [`conformance::check_fixtures`], which render an application's fixtures
+and, in tests, [`conformance!`] and [`testing::check_fixtures`], which render an application's fixtures
 through its generated code and compare the bytes with the HTML recorded from Vue
 ([`guide::testing`](crate::guide::testing)).
 
 The rest are Rust twins of JavaScript and Vue routines that generated code calls so that it writes
 what Vue writes. Those a hand-written twin or page may call too are documented here:
 
-- numbers: [`core::numbers::push_int`], [`core::numbers::push_number`], [`core::numbers::Js`], [`core::numbers::js_to_fixed`], [`core::numbers::js_to_precision`],
-  [`core::numbers::js_to_exponential`], [`core::numbers::js_round`], [`core::numbers::js_sign`], [`core::numbers::js_max`] and [`core::numbers::js_min`];
-- URIs: [`core::uri::js_encode_uri_component`] and [`core::uri::js_encode_uri`];
-- Vue's own: [`slots::slot_into`], [`attrs::attrs_into`], [`attrs::passed_attrs_into`] and [`router::query_into`].
+- numbers: [`core::push_int`], [`core::push_number`], [`core::Js`], [`core::js_to_fixed`], [`core::js_to_precision`],
+  [`core::js_to_exponential`], [`core::js_round`], [`core::js_sign`], [`core::js_max`] and [`core::js_min`];
+- URIs: [`core::js_encode_uri_component`] and [`core::js_encode_uri`];
+- Vue's own: [`render::slot_into`], [`attrs::attrs_into`], [`attrs::passed_attrs_into`] and [`router::query_into`].
 
 The others are `#[doc(hidden)]`: JavaScript's string methods counted in UTF-16 code units
 (`js_length`, `js_slice`, `js_split` and the rest the [`strings`](crate::guide::strings) page
@@ -267,8 +267,8 @@ stable.
 | `stream` | off | `web::HtmlStream`: a page rendered with holes as a stream of byte chunks, each hole filled by a future |
 | `axum` | off | `stream`, and `IntoResponse` for `Html` and `web::HtmlStream`, so a handler returns `greeting::into_html(props)` ([`guide::web_frameworks`](crate::guide::web_frameworks)) |
 | `actix-web` | off | `stream`, and `Responder` for `Html` and `web::HtmlStream` |
-| `ammonia` | off | `sanitised::Sanitised`, HTML cleaned by ammonia, to name as `trustedHtml` for `v-html` props ([`guide::escaping`](crate::guide::escaping) shows a policy of your own, with `ammonia` 4 as your own dependency) |
-| `chrono` | off | `JsTime` for `chrono::DateTime<Utc>`, to name as `dateType` for `Date` props, `From<DateTime<Utc>>` for [`js_date::JsDate`], and `TryFrom<JsDate>` for `DateTime<Utc>`, whose error, `js_date::DateOutOfRange`, is an invalid date or one beyond chrono's ±262,142 years ([`guide::dates_and_prices`](crate::guide::dates_and_prices#chrono)) |
+| `ammonia` | off | `html::Sanitised`, HTML cleaned by ammonia, to name as `trustedHtml` for `v-html` props ([`guide::escaping`](crate::guide::escaping) shows a policy of your own, with `ammonia` 4 as your own dependency) |
+| `chrono` | off | `JsTime` for `chrono::DateTime<Utc>`, to name as `dateType` for `Date` props, `From<DateTime<Utc>>` for [`date::JsDate`], and `TryFrom<JsDate>` for `DateTime<Utc>`, whose error, `date::DateOutOfRange`, is an invalid date or one beyond chrono's ±262,142 years ([`guide::dates_and_prices`](crate::guide::dates_and_prices#chrono)) |
 | `dioxus` | off | The `dioxus` module: `Html::to_element` and `impl IntoDynNode for Html`, so `{greeting::island(&props)}` can go straight into Dioxus 0.7's `rsx!`, and `dioxus::state_script`; the guide's `dioxus` page shows a page |
 
 An application with neither routes nor translations can turn the default features off
@@ -285,7 +285,7 @@ that defines it, which generated code and this documentation use:
 | Crate | What it holds |
 |---|---|
 | `ferrovue` | This crate: what generated code calls, and the framework integrations |
-| [`ferrovue-core`](https://docs.rs/ferrovue-core) | [`core::escape::escape_into`], and JavaScript's numbers ([`core::numbers::push_int`], [`core::numbers::push_number`], [`core::numbers::Js`], …), which the other three share |
+| [`ferrovue-core`](https://docs.rs/ferrovue-core) | [`core::escape_into`], and JavaScript's numbers ([`core::push_int`], [`core::push_number`], [`core::Js`], …), which the other three share |
 | [`ferrovue-router`](https://docs.rs/ferrovue-router) | [`router::Router`] and what goes with it (the `router` feature) |
 | [`ferrovue-i18n`](https://docs.rs/ferrovue-i18n) | [`i18n::I18n`] and what goes with it (the `i18n` feature) |
 

@@ -131,7 +131,7 @@ export interface StateText {
   text: string | undefined;
 }
 
-/** Give Pinia the state the server rendered with (what `ferrovue::state::state_script_into` wrote) before
+/** Give Pinia the state the server rendered with (what `ferrovue::page::state_script_into` wrote) before
  * the app mounts, so every store starts from it and the markup agrees with the server's. The state
  * is read from the script with the `id` given (`__pinia` by default) in `doc`, or given as
  * `{ text }`: the `state` of a fetched page that `readPage` read. Either way the numbers JSON
@@ -317,7 +317,7 @@ function scriptTexts(html: string, match: (attrs: Map<string, string>) => boolea
 export interface ReadPageOptions {
   /** The `id` of the record's script, as given to `PageRecord::script_into`: `__fv_page` by default. */
   record?: string;
-  /** The `id` of the state's script, as given to `ferrovue::state::state_script_into`: `__pinia` by default. */
+  /** The `id` of the state's script, as given to `ferrovue::page::state_script_into`: `__pinia` by default. */
   state?: string;
 }
 

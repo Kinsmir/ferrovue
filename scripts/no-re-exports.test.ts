@@ -40,8 +40,8 @@ describe("re-exports in Rust", () => {
   it("allows the ferrovue crate's three whole-crate modules, there alone", () => {
     const lines = ALLOWED["crates/ferrovue/src/lib.rs"]!;
     expect(lines).toEqual(["pub use ferrovue_core as core;", "pub use ferrovue_i18n as i18n;", "pub use ferrovue_router as router;"]);
-    const source = `#[doc(inline)]\n${lines.join("\n")}\npub use ferrovue_core::escape::escape_into;\n`;
-    expect(rustReExports("crates/ferrovue/src/lib.rs", source, lines).map((f) => f.text)).toEqual(["pub use ferrovue_core::escape::escape_into;"]);
+    const source = `#[doc(inline)]\n${lines.join("\n")}\npub use ferrovue_core::escape_into;\n`;
+    expect(rustReExports("crates/ferrovue/src/lib.rs", source, lines).map((f) => f.text)).toEqual(["pub use ferrovue_core::escape_into;"]);
     expect(rustReExports("crates/ferrovue/src/html.rs", source)).toHaveLength(4);
   });
 });

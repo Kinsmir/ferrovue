@@ -40,27 +40,27 @@ impl std::fmt::Display for UnionEnumsMode {
 }
 
 impl std::str::FromStr for UnionEnumsMode {
-    type Err = ferrovue::union::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "a" => Ok(UnionEnumsMode::A),
             "b" => Ok(UnionEnumsMode::B),
             "c" => Ok(UnionEnumsMode::C),
-            _ => Err(ferrovue::union::ParseUnionError::new("UnionEnumsMode", s, &["a", "b", "c"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("UnionEnumsMode", s, &["a", "b", "c"])),
         }
     }
 }
 
 impl TryFrom<&str> for UnionEnumsMode {
-    type Error = ferrovue::union::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::union::Union for UnionEnumsMode {
+impl ferrovue::props::Union for UnionEnumsMode {
     const ALL: &'static [Self] = &UnionEnumsMode::ALL;
 
     fn as_str(self) -> &'static str {
@@ -100,27 +100,27 @@ impl std::fmt::Display for UnionEnumsOther {
 }
 
 impl std::str::FromStr for UnionEnumsOther {
-    type Err = ferrovue::union::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "a" => Ok(UnionEnumsOther::A),
             "b" => Ok(UnionEnumsOther::B),
             "c" => Ok(UnionEnumsOther::C),
-            _ => Err(ferrovue::union::ParseUnionError::new("UnionEnumsOther", s, &["a", "b", "c"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("UnionEnumsOther", s, &["a", "b", "c"])),
         }
     }
 }
 
 impl TryFrom<&str> for UnionEnumsOther {
-    type Error = ferrovue::union::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::union::Union for UnionEnumsOther {
+impl ferrovue::props::Union for UnionEnumsOther {
     const ALL: &'static [Self] = &UnionEnumsOther::ALL;
 
     fn as_str(self) -> &'static str {
@@ -157,26 +157,26 @@ impl std::fmt::Display for UnionEnumsGap {
 }
 
 impl std::str::FromStr for UnionEnumsGap {
-    type Err = ferrovue::union::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "" => Ok(UnionEnumsGap::Empty),
             "wide" => Ok(UnionEnumsGap::Wide),
-            _ => Err(ferrovue::union::ParseUnionError::new("UnionEnumsGap", s, &["", "wide"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("UnionEnumsGap", s, &["", "wide"])),
         }
     }
 }
 
 impl TryFrom<&str> for UnionEnumsGap {
-    type Error = ferrovue::union::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::union::Union for UnionEnumsGap {
+impl ferrovue::props::Union for UnionEnumsGap {
     const ALL: &'static [Self] = &UnionEnumsGap::ALL;
 
     fn as_str(self) -> &'static str {
@@ -216,27 +216,27 @@ impl std::fmt::Display for UnionEnumsMark {
 }
 
 impl std::str::FromStr for UnionEnumsMark {
-    type Err = ferrovue::union::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "<b>" => Ok(UnionEnumsMark::B),
             "\"q\"" => Ok(UnionEnumsMark::Q),
             "a&b" => Ok(UnionEnumsMark::AB),
-            _ => Err(ferrovue::union::ParseUnionError::new("UnionEnumsMark", s, &["<b>", "\"q\"", "a&b"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("UnionEnumsMark", s, &["<b>", "\"q\"", "a&b"])),
         }
     }
 }
 
 impl TryFrom<&str> for UnionEnumsMark {
-    type Error = ferrovue::union::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::union::Union for UnionEnumsMark {
+impl ferrovue::props::Union for UnionEnumsMark {
     const ALL: &'static [Self] = &UnionEnumsMark::ALL;
 
     fn as_str(self) -> &'static str {
@@ -273,26 +273,26 @@ impl std::fmt::Display for UnionEnumsTag {
 }
 
 impl std::str::FromStr for UnionEnumsTag {
-    type Err = ferrovue::union::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "h2" => Ok(UnionEnumsTag::H2),
             "h3" => Ok(UnionEnumsTag::H3),
-            _ => Err(ferrovue::union::ParseUnionError::new("UnionEnumsTag", s, &["h2", "h3"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("UnionEnumsTag", s, &["h2", "h3"])),
         }
     }
 }
 
 impl TryFrom<&str> for UnionEnumsTag {
-    type Error = ferrovue::union::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::union::Union for UnionEnumsTag {
+impl ferrovue::props::Union for UnionEnumsTag {
     const ALL: &'static [Self] = &UnionEnumsTag::ALL;
 
     fn as_str(self) -> &'static str {
@@ -329,26 +329,26 @@ impl std::fmt::Display for UnionEnumsSize {
 }
 
 impl std::str::FromStr for UnionEnumsSize {
-    type Err = ferrovue::union::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "sm" => Ok(UnionEnumsSize::Sm),
             "lg" => Ok(UnionEnumsSize::Lg),
-            _ => Err(ferrovue::union::ParseUnionError::new("UnionEnumsSize", s, &["sm", "lg"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("UnionEnumsSize", s, &["sm", "lg"])),
         }
     }
 }
 
 impl TryFrom<&str> for UnionEnumsSize {
-    type Error = ferrovue::union::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::union::Union for UnionEnumsSize {
+impl ferrovue::props::Union for UnionEnumsSize {
     const ALL: &'static [Self] = &UnionEnumsSize::ALL;
 
     fn as_str(self) -> &'static str {
@@ -388,27 +388,27 @@ impl std::fmt::Display for UnionEnumsPicked {
 }
 
 impl std::str::FromStr for UnionEnumsPicked {
-    type Err = ferrovue::union::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "a" => Ok(UnionEnumsPicked::A),
             "b" => Ok(UnionEnumsPicked::B),
             "c" => Ok(UnionEnumsPicked::C),
-            _ => Err(ferrovue::union::ParseUnionError::new("UnionEnumsPicked", s, &["a", "b", "c"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("UnionEnumsPicked", s, &["a", "b", "c"])),
         }
     }
 }
 
 impl TryFrom<&str> for UnionEnumsPicked {
-    type Error = ferrovue::union::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::union::Union for UnionEnumsPicked {
+impl ferrovue::props::Union for UnionEnumsPicked {
     const ALL: &'static [Self] = &UnionEnumsPicked::ALL;
 
     fn as_str(self) -> &'static str {
@@ -420,13 +420,13 @@ impl ferrovue::union::Union for UnionEnumsPicked {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "align", with = "fv::union::union_prop")]
+    #[serde(rename = "align", with = "fv::props::union_prop")]
     pub align: crate::domain::Align,
     #[serde(rename = "mode")]
     pub mode: UnionEnumsMode,
     #[serde(rename = "other", default, skip_serializing_if = "Option::is_none")]
     pub other: Option<UnionEnumsOther>,
-    #[serde(rename = "level", with = "fv::union::union_prop")]
+    #[serde(rename = "level", with = "fv::props::union_prop")]
     pub level: crate::domain::Level,
     #[serde(rename = "gap", default, skip_serializing_if = "Option::is_none")]
     pub gap: Option<UnionEnumsGap>,
@@ -482,7 +482,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -490,29 +490,29 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(290 + 21 * props.steps.len() + 6 + 1 + 1 + 4 + 4 + 3 + 2 + 2 + 1 + props.steps.iter().map(|v| v.label.len() + 7 + 6).sum::<usize>() + props.note.len());
     let s_label = if props.mode == UnionEnumsMode::A { "first" } else { if props.mode == UnionEnumsMode::B { "second" } else { "third" } };
-    let s_chosen = if props.level == crate::domain::Level::High { "a" } else { fv::union::Union::as_str(props.mode) };
+    let s_chosen = if props.level == crate::domain::Level::High { "a" } else { fv::props::Union::as_str(props.mode) };
     out.push_str("<section class=\"");
-    fv::class::class_into(out, false, &[fv::union::Union::as_str(props.align), fv::union::Union::as_str(props.mode), props.gap.map(fv::union::Union::as_str).unwrap_or("")]);
+    fv::attrs::class_into(out, false, &[fv::props::Union::as_str(props.align), fv::props::Union::as_str(props.mode), props.gap.map(fv::props::Union::as_str).unwrap_or("")]);
     out.push('"');
-    if fv::union::Union::as_str(props.mark).is_empty() {
+    if fv::props::Union::as_str(props.mark).is_empty() {
         out.push_str(" title");
     } else {
         out.push_str(" title=\"");
-        fv::core::escape::escape_into(out, fv::union::Union::as_str(props.mark));
+        fv::core::escape_into(out, fv::props::Union::as_str(props.mark));
         out.push('"');
     }
     out.push_str(" style=\"text-align:");
-    fv::core::escape::escape_into(out, fv::union::Union::as_str(props.align));
+    fv::core::escape_into(out, fv::props::Union::as_str(props.align));
     out.push_str(";\"");
-    if fv::union::Union::as_str(props.level).is_empty() {
+    if fv::props::Union::as_str(props.level).is_empty() {
         out.push_str(" data-level");
     } else {
         out.push_str(" data-level=\"");
-        fv::core::escape::escape_into(out, fv::union::Union::as_str(props.level));
+        fv::core::escape_into(out, fv::props::Union::as_str(props.level));
         out.push('"');
     }
     out.push('>');
@@ -520,27 +520,27 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
     out.push('<');
     out.push_str(fv_tag);
     out.push('>');
-    fv::core::escape::escape_into(out, fv::union::Union::as_str(props.mark));
+    fv::core::escape_into(out, fv::props::Union::as_str(props.mark));
     out.push(' ');
-    fv::core::escape::escape_into(out, &fv::union::Union::as_str(props.mode).to_uppercase());
+    fv::core::escape_into(out, &fv::props::Union::as_str(props.mode).to_uppercase());
     out.push(' ');
-    fv::core::escape::escape_into(out, &format!("{}/{}", fv::union::Union::as_str(props.align), fv::union::Union::as_str(props.size.unwrap_or(UnionEnumsSize::Lg))));
+    fv::core::escape_into(out, &format!("{}/{}", fv::props::Union::as_str(props.align), fv::props::Union::as_str(props.size.unwrap_or(UnionEnumsSize::Lg))));
     out.push(' ');
-    fv::core::numbers::push_int(out, fv::strings::js_length(fv::union::Union::as_str(props.align)));
+    fv::core::push_int(out, fv::strings::js_length(fv::props::Union::as_str(props.align)));
     out.push_str("</");
     out.push_str(fv_tag);
     out.push_str("><p>");
-    fv::core::escape::escape_into(out, match props.align { crate::domain::Align::Left => "L", crate::domain::Align::Center => "C", crate::domain::Align::Right => "R" });
+    fv::core::escape_into(out, match props.align { crate::domain::Align::Left => "L", crate::domain::Align::Center => "C", crate::domain::Align::Right => "R" });
     out.push(' ');
-    fv::core::numbers::push_number(out, match props.other.unwrap_or(UnionEnumsOther::C) { UnionEnumsOther::A => 1.0f64, UnionEnumsOther::B => 2.5f64, UnionEnumsOther::C => -3.0f64 });
+    fv::core::push_number(out, match props.other.unwrap_or(UnionEnumsOther::C) { UnionEnumsOther::A => 1.0f64, UnionEnumsOther::B => 2.5f64, UnionEnumsOther::C => -3.0f64 });
     out.push(' ');
-    fv::core::numbers::push_number(out, match props.mode { UnionEnumsMode::A => 1.0f64, UnionEnumsMode::B => 2.5f64, UnionEnumsMode::C => -3.0f64 });
+    fv::core::push_number(out, match props.mode { UnionEnumsMode::A => 1.0f64, UnionEnumsMode::B => 2.5f64, UnionEnumsMode::C => -3.0f64 });
     out.push(' ');
-    fv::core::escape::escape_into(out, match props.size.unwrap_or(UnionEnumsSize::Lg) { UnionEnumsSize::Sm => "small", UnionEnumsSize::Lg => "large" });
+    fv::core::escape_into(out, match props.size.unwrap_or(UnionEnumsSize::Lg) { UnionEnumsSize::Sm => "small", UnionEnumsSize::Lg => "large" });
     out.push(' ');
-    fv::core::escape::escape_into(out, s_label);
+    fv::core::escape_into(out, s_label);
     out.push(' ');
-    fv::core::escape::escape_into(out, match props.mark { UnionEnumsMark::B => "bold", UnionEnumsMark::Q => "quote", UnionEnumsMark::AB => "amp" });
+    fv::core::escape_into(out, match props.mark { UnionEnumsMark::B => "bold", UnionEnumsMark::Q => "quote", UnionEnumsMark::AB => "amp" });
     out.push_str("</p>");
     if props.mode == UnionEnumsMode::A {
         out.push_str("<b>is a</b>");
@@ -553,16 +553,16 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
     }
     if let Some(fv_other) = props.other {
         out.push_str("<i>");
-        fv::core::numbers::push_number(out, match fv_other { UnionEnumsOther::A => 1.0f64, UnionEnumsOther::B => 2.5f64, UnionEnumsOther::C => -3.0f64 });
+        fv::core::push_number(out, match fv_other { UnionEnumsOther::A => 1.0f64, UnionEnumsOther::B => 2.5f64, UnionEnumsOther::C => -3.0f64 });
         out.push(' ');
-        fv::core::escape::escape_into(out, fv::union::Union::as_str(fv_other));
+        fv::core::escape_into(out, fv::props::Union::as_str(fv_other));
         out.push_str("</i>");
     } else {
         out.push_str("<i>no other</i>");
     }
-    if let Some(fv_gap) = props.gap.filter(|v| !fv::union::Union::as_str(*v).is_empty()) {
+    if let Some(fv_gap) = props.gap.filter(|v| !fv::props::Union::as_str(*v).is_empty()) {
         out.push_str("<i>gap ");
-        fv::core::escape::escape_into(out, fv::union::Union::as_str(fv_gap));
+        fv::core::escape_into(out, fv::props::Union::as_str(fv_gap));
         out.push_str("</i>");
     } else {
         out.push_str("<i>no gap</i>");
@@ -573,35 +573,35 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
         out.push_str("<!---->");
     }
     out.push_str("<s>");
-    fv::core::escape::escape_into(out, props.picked.map(fv::union::Union::as_str).unwrap_or("none"));
+    fv::core::escape_into(out, props.picked.map(fv::props::Union::as_str).unwrap_or("none"));
     out.push(' ');
-    fv::core::escape::escape_into(out, if let Some(fv_picked) = props.picked { fv::union::Union::as_str(fv_picked) } else { "null" });
+    fv::core::escape_into(out, if let Some(fv_picked) = props.picked { fv::props::Union::as_str(fv_picked) } else { "null" });
     out.push(' ');
-    out.push_str(if props.picked.map(fv::union::Union::as_str) == Some(fv::union::Union::as_str(props.mode)) { "true" } else { "false" });
+    out.push_str(if props.picked.map(fv::props::Union::as_str) == Some(fv::props::Union::as_str(props.mode)) { "true" } else { "false" });
     out.push_str("</s><ol><!--[-->");
     for fv_s_ref in props.steps.iter() {
         let fv_s = fv_s_ref;
         out.push_str("<li class=\"");
-        fv::class::class_into(out, false, &[fv::union::Union::as_str(fv_s.state)]);
+        fv::attrs::class_into(out, false, &[fv::props::Union::as_str(fv_s.state)]);
         out.push_str("\">");
-        fv::core::escape::escape_into(out, match fv_s.state { super::types::StepState::Todo => "To do", super::types::StepState::Done => "Done & <dusted>", super::types::StepState::Skipped => "Skipped" });
+        fv::core::escape_into(out, match fv_s.state { super::types::StepState::Todo => "To do", super::types::StepState::Done => "Done & <dusted>", super::types::StepState::Skipped => "Skipped" });
         out.push(' ');
-        fv::core::escape::escape_into(out, if fv_s.state == super::types::StepState::Done { "yes" } else { "no" });
+        fv::core::escape_into(out, if fv_s.state == super::types::StepState::Done { "yes" } else { "no" });
         out.push(' ');
-        fv::core::escape::escape_into(out, fv::union::Union::as_str(fv_s.align.unwrap_or(crate::domain::Align::Left)));
+        fv::core::escape_into(out, fv::props::Union::as_str(fv_s.align.unwrap_or(crate::domain::Align::Left)));
         out.push(' ');
-        fv::core::escape::escape_into(out, &fv_s.label);
+        fv::core::escape_into(out, &fv_s.label);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ol>");
-    super::union_child::try_render(out, &super::union_child::Props { align: props.align, text: std::borrow::Cow::Borrowed(fv::union::Union::as_str(props.mode)), wide: Some(match props.align { crate::domain::Align::Left => super::union_child::UnionChildWide::Left, crate::domain::Align::Center => super::union_child::UnionChildWide::Center, crate::domain::Align::Right => super::union_child::UnionChildWide::Right }), pick: match s_chosen { "a" => super::union_child::UnionChildPick::A, "b" => super::union_child::UnionChildPick::B, _ => super::union_child::UnionChildPick::C }, fixed: super::union_child::UnionChildFixed::Y })?;
+    super::union_child::try_render(out, &super::union_child::Props { align: props.align, text: std::borrow::Cow::Borrowed(fv::props::Union::as_str(props.mode)), wide: Some(match props.align { crate::domain::Align::Left => super::union_child::UnionChildWide::Left, crate::domain::Align::Center => super::union_child::UnionChildWide::Center, crate::domain::Align::Right => super::union_child::UnionChildWide::Right }), pick: match s_chosen { "a" => super::union_child::UnionChildPick::A, "b" => super::union_child::UnionChildPick::B, _ => super::union_child::UnionChildPick::C }, fixed: super::union_child::UnionChildFixed::Y })?;
     out.push_str("<!--[-->");
     for fv_s_ref_2 in props.steps.iter() {
         let fv_s_2 = fv_s_ref_2;
         super::union_child::try_render(out, &super::union_child::Props { align: fv_s_2.align.unwrap_or(crate::domain::Align::Center), text: std::borrow::Cow::Borrowed(&*fv_s_2.label), wide: None, pick: match props.other.unwrap_or(UnionEnumsOther::B) { UnionEnumsOther::A => super::union_child::UnionChildPick::A, UnionEnumsOther::B => super::union_child::UnionChildPick::B, UnionEnumsOther::C => super::union_child::UnionChildPick::C }, fixed: super::union_child::UnionChildFixed::X })?;
     }
     out.push_str("<!--]--><p>");
-    fv::core::escape::escape_into(out, &props.note);
+    fv::core::escape_into(out, &props.note);
     out.push_str("</p></section>");
     Ok(())
 }

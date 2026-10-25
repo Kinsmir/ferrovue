@@ -3,12 +3,8 @@
 
 #[allow(unused_imports)]
 use ferrovue::core::{
-    escape::escape_into,
-    numbers::{
-        Js, js_max, js_min, js_round, js_sign, js_to_exponential, js_to_fixed, js_to_precision,
-        push_int, push_number,
-    },
-    uri::{js_encode_uri, js_encode_uri_component},
+    Js, escape_into, js_encode_uri, js_encode_uri_component, js_max, js_min, js_round, js_sign,
+    js_to_exponential, js_to_fixed, js_to_precision, push_int, push_number,
 };
 
 #[cfg(feature = "router")]
@@ -26,5 +22,5 @@ fn the_modules_are_the_crates_they_name() {
     let _: ferrovue::router::Route<'_> = router.at("/");
     let _: ferrovue_i18n::I18n = ferrovue::i18n::I18n::new(&[], "en", &[]);
     let _: ferrovue::i18n::I18n = ferrovue_i18n::I18n::new(&[], "en", &[]);
-    let _: ferrovue_core::numbers::Js<i64> = ferrovue::core::numbers::Js(1);
+    let _: ferrovue_core::Js<i64> = ferrovue::core::Js(1);
 }

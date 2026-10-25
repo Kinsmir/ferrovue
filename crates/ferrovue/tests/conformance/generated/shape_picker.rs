@@ -35,7 +35,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -43,27 +43,27 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(207 + 6 + props.label.len());
     out.push_str("<div class=\"picker\" data-v-93b28aa1>");
     if props.shape == super::types::Shape::Circle {
         super::shape_circle::try_render_scoped(out, &super::shape_circle::Props { label: std::borrow::Cow::Borrowed(&*props.label) }, super::shape_circle::Slots {
-            default: Some(fv::slots::Slot::slotted(&|out: &mut String, _fv_slot_id: &str| -> bool {
+            default: Some(fv::render::Slot::slotted(&|out: &mut String, _fv_slot_id: &str| -> bool {
                 let mut filled = false;
                 let fv_chunk = out.len();
-                fv::core::escape::escape_into(out, &props.label);
-                filled |= !fv::slots::is_comment(&out[fv_chunk..]);
+                fv::core::escape_into(out, &props.label);
+                filled |= !fv::render::is_comment(&out[fv_chunk..]);
                 filled
             })),
         }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str("picked")), ("data-form", fv::attrs::Attr::str("computed"))], " data-v-93b28aa1"))?;
     } else {
         super::shape_square::try_render_scoped(out, &super::shape_square::Props { label: std::borrow::Cow::Borrowed(&*props.label), size: None }, super::shape_square::Slots {
-            default: Some(fv::slots::Slot::markup(&|out: &mut String| -> bool {
+            default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
                 let mut filled = false;
                 let fv_chunk = out.len();
-                fv::core::escape::escape_into(out, &props.label);
-                filled |= !fv::slots::is_comment(&out[fv_chunk..]);
+                fv::core::escape_into(out, &props.label);
+                filled |= !fv::render::is_comment(&out[fv_chunk..]);
                 filled
             })),
             corner: None,
@@ -91,8 +91,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
         super::types::Shape::Square => {
             super::shape_square::try_render_scoped(out, &super::shape_square::Props { label: std::borrow::Cow::Borrowed(&*props.label), size: Some(3i64) }, super::shape_square::Slots {
                 default: None,
-                corner: Some(fv::slots::Slot::new(&|out: &mut String| {
-                    fv::core::escape::escape_into(out, &props.label);
+                corner: Some(fv::render::Slot::new(&|out: &mut String| {
+                    fv::core::escape_into(out, &props.label);
                     out.push('!');
                 })),
             }, &fv::attrs::Attrs::new(&[("data-form", fv::attrs::Attr::str("imported"))], " data-v-93b28aa1"))?;
@@ -103,11 +103,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
     }, &fv::attrs::Attrs::new(&[("data-form", fv::attrs::Attr::str("direct"))], " data-v-93b28aa1"))?;
     if props.boxed {
         super::shape_square::try_render_scoped(out, &super::shape_square::Props { label: std::borrow::Cow::Borrowed(&*props.label), size: None }, super::shape_square::Slots {
-            default: Some(fv::slots::Slot::markup(&|out: &mut String| -> bool {
+            default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
                 let mut filled = false;
                 let fv_chunk = out.len();
-                fv::core::escape::escape_into(out, &props.label);
-                filled |= !fv::slots::is_comment(&out[fv_chunk..]);
+                fv::core::escape_into(out, &props.label);
+                filled |= !fv::render::is_comment(&out[fv_chunk..]);
                 filled
             })),
             corner: None,
@@ -118,11 +118,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
             out.push_str(" label");
         } else {
             out.push_str(" label=\"");
-            fv::core::escape::escape_into(out, &props.label);
+            fv::core::escape_into(out, &props.label);
             out.push('"');
         }
         out.push_str(" data-form=\"mixed\" data-v-93b28aa1>");
-        fv::core::escape::escape_into(out, &props.label);
+        fv::core::escape_into(out, &props.label);
         out.push_str("</em>");
     }
     if props.shape == super::types::Shape::Circle {
@@ -149,25 +149,25 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
         }
     }
     super::shape_circle::try_render_scoped(out, &super::shape_circle::Props { label: std::borrow::Cow::Borrowed(&*props.label) }, super::shape_circle::Slots {
-        default: Some(fv::slots::Slot::slotted(&|out: &mut String, fv_slot_id_2: &str| -> bool {
+        default: Some(fv::render::Slot::slotted(&|out: &mut String, fv_slot_id_2: &str| -> bool {
             if props.boxed {
                 out.push_str("<i");
                 out.push_str(&fv::attrs::scope_attrs("", "data-v-93b28aa1", fv_slot_id_2));
                 out.push('>');
-                fv::core::escape::escape_into(out, &props.label);
+                fv::core::escape_into(out, &props.label);
                 out.push_str("</i>");
             } else {
                 out.push_str("<u");
                 out.push_str(&fv::attrs::scope_attrs("", "data-v-93b28aa1", fv_slot_id_2));
                 out.push('>');
-                fv::core::escape::escape_into(out, &props.label);
+                fv::core::escape_into(out, &props.label);
                 out.push_str("</u>");
             }
             true
         })),
     }, &fv::attrs::Attrs::scoped(" data-v-93b28aa1"))?;
     super::shape_root::try_render_scoped(out, &super::shape_root::Props { shape: props.shape, label: std::borrow::Cow::Borrowed(&*props.label) }, super::shape_root::Slots {
-        default: Some(fv::slots::Slot::slotted(&|out: &mut String, fv_slot_id_3: &str| -> bool {
+        default: Some(fv::render::Slot::slotted(&|out: &mut String, fv_slot_id_3: &str| -> bool {
             if props.boxed {
                 out.push_str("<i data-v-93b28aa1");
                 out.push_str(fv_slot_id_3);
@@ -181,7 +181,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
                 out.push_str("><b data-v-93b28aa1");
                 out.push_str(&fv::attrs::scope_attrs("", "", fv_slot_id_3));
                 out.push('>');
-                fv::core::escape::escape_into(out, &props.label);
+                fv::core::escape_into(out, &props.label);
                 out.push_str("</b></i>");
             } else {
                 out.push_str("<u");
@@ -189,7 +189,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
                 out.push_str("><b data-v-93b28aa1");
                 out.push_str(&fv::attrs::scope_attrs("", "", fv_slot_id_3));
                 out.push('>');
-                fv::core::escape::escape_into(out, &props.label);
+                fv::core::escape_into(out, &props.label);
                 out.push_str("</b></u>");
             }
             true

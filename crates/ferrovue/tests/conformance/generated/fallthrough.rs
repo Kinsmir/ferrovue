@@ -66,7 +66,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>) {
-    fv::refused::rendered(try_render(out, props, fv_route));
+    fv::render::rendered(try_render(out, props, fv_route));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -74,8 +74,8 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(28 + props.label.len() + props.title.as_deref().map_or(0, str::len) + props.tone.as_deref().map_or(0, str::len) + props.color.as_deref().map_or(0, str::len) + props.note.as_deref().map_or(0, str::len));
     out.push_str("<article>");
     super::fall_leaf::try_render_scoped(out, &super::fall_leaf::Props { label: std::borrow::Cow::Borrowed(&*props.label), shown: None, note: None }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::from(fv::attrs::class_names(&["extra", if props.on { "on" } else { "" }, if !props.on { "off" } else { "" }]))), ("id", fv::attrs::Attr::str("given")), ("data-k", fv::attrs::Attr::str("v")), ("title", props.title.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str)), ("style", fv::attrs::Attr::style([("color", props.color.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str)), ("fontWeight", fv::attrs::Attr::Int(props.n))])), ("aria-label", props.tone.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str)), ("disabled", fv::attrs::Attr::Bool(props.on)), ("hidden", fv::attrs::Attr::Bool(!props.on)), ("data-n", fv::attrs::Attr::Int(props.n))], ""))?;
@@ -97,7 +97,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
     super::fall_switch::try_render_scoped(out, &super::fall_switch::Props { mode: if props.on { super::fall_switch::FallSwitchMode::On } else { super::fall_switch::FallSwitchMode::Off } }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str("switched")), ("title", props.title.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str))], ""))?;
     super::fall_switch::try_render_scoped(out, &super::fall_switch::Props { mode: super::fall_switch::FallSwitchMode::None }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str("lost"))], ""))?;
     super::fall_fade::try_render_scoped(out, &super::fall_fade::Props { text: std::borrow::Cow::Borrowed(&*props.label) }, &fv::attrs::Attrs::new(&[("title", props.title.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str)), ("class", fv::attrs::Attr::str("through"))], ""))?;
-    super::fall_bare::try_render_scoped(out, &super::fall_bare::Props {  }, &fv::attrs::Attrs::new(&[("class", props.title.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str)), ("style", fv::attrs::Attr::Str(std::borrow::Cow::<str>::Owned(format!("margin: {}px", fv::core::numbers::Js(props.n))))), ("data-n", fv::attrs::Attr::Int(props.n))], ""))?;
+    super::fall_bare::try_render_scoped(out, &super::fall_bare::Props {  }, &fv::attrs::Attrs::new(&[("class", props.title.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str)), ("style", fv::attrs::Attr::Str(std::borrow::Cow::<str>::Owned(format!("margin: {}px", fv::core::Js(props.n))))), ("data-n", fv::attrs::Attr::Int(props.n))], ""))?;
     out.push_str("</article>");
     Ok(())
 }

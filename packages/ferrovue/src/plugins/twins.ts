@@ -105,7 +105,7 @@ ${fields}}
 /// What a template puts in \`<${name}>\`'s slots.
 #[derive(Clone, Copy, Default)]
 pub struct ${name}Slots<'s> {
-${comp.slotNames.map((slot) => `    /// \`#${slot}\`\n    pub ${snake(slot)}: Option<fv::slots::Slot<'s>>,\n`).join("")}}
+${comp.slotNames.map((slot) => `    /// \`#${slot}\`\n    pub ${snake(slot)}: Option<fv::render::Slot<'s>>,\n`).join("")}}
 `
     : "";
   const params = ["&mut String", `&${name}Props${life ? "<'_>" : ""}`, ...(comp.slotNames.length ? [`${name}Slots<'_>`] : []), "&fv::attrs::Attrs<'_>"];

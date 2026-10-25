@@ -82,7 +82,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -90,8 +90,8 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(340 + props.kind.len() + props.author.as_ref().map_or(0, |v| v.name.len() + v.url.as_deref().map_or(0, str::len)) + props.note.as_deref().map_or(0, str::len));
     out.push_str("<div>");
     if &*props.kind == "a" {
@@ -102,7 +102,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
         } else {
             if !props.kind.is_empty() {
                 out.push_str("<p>other ");
-                fv::core::escape::escape_into(out, &props.kind);
+                fv::core::escape_into(out, &props.kind);
                 out.push_str("</p>");
             } else {
                 out.push_str("<p>empty</p>");
@@ -136,24 +136,24 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
     }
     if let Some(fv_score) = props.score {
         out.push_str("<i>scored ");
-        fv::core::numbers::push_int(out, fv_score);
+        fv::core::push_int(out, fv_score);
         out.push_str("</i>");
     } else {
         out.push_str("<!---->");
     }
     if let Some(fv_score_2) = props.score.filter(|v| *v != 0) {
         out.push_str("<i>truthy score ");
-        fv::core::numbers::push_int(out, fv_score_2);
+        fv::core::push_int(out, fv_score_2);
         out.push_str("</i>");
     } else {
         out.push_str("<!---->");
     }
     if let Some(fv_author) = props.author.as_ref() {
         out.push_str("<span>by ");
-        fv::core::escape::escape_into(out, &fv_author.name);
+        fv::core::escape_into(out, &fv_author.name);
         if let Some(fv_url) = fv_author.url.as_deref().filter(|v| !v.is_empty()) {
             out.push_str("<a href=\"");
-            fv::core::escape::escape_into(out, fv_url);
+            fv::core::escape_into(out, fv_url);
             out.push_str("\">link</a>");
         } else {
             out.push_str("<!---->");
@@ -164,7 +164,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
     }
     if let Some(fv_author_2) = props.author.as_ref() && let Some(fv_url_2) = fv_author_2.url.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<em>");
-        fv::core::escape::escape_into(out, fv_url_2);
+        fv::core::escape_into(out, fv_url_2);
         out.push_str("</em>");
     } else {
         out.push_str("<!---->");

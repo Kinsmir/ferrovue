@@ -44,7 +44,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -52,54 +52,54 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(105 + 30 * props.tags.len() + props.q.len() + props.path.len() + props.tag.as_deref().map_or(0, str::len) + props.tags.iter().map(|v| v.len()).sum::<usize>());
-    let s_search = format!("/search?q={}&page={}", fv::core::uri::js_encode_uri_component(&props.q), fv::core::uri::js_encode_uri_component(&format!("{}", fv::core::numbers::Js(props.page))));
-    let s_kept = fv::core::uri::js_encode_uri(fv::strings::js_trim(&props.path));
+    let s_search = format!("/search?q={}&page={}", fv::core::js_encode_uri_component(&props.q), fv::core::js_encode_uri_component(&format!("{}", fv::core::Js(props.page))));
+    let s_kept = fv::core::js_encode_uri(fv::strings::js_trim(&props.path));
     out.push_str("<nav");
-    if fv::core::uri::js_encode_uri_component(&props.q).is_empty() {
+    if fv::core::js_encode_uri_component(&props.q).is_empty() {
         out.push_str(" data-q");
     } else {
         out.push_str(" data-q=\"");
-        fv::core::escape::escape_into(out, &fv::core::uri::js_encode_uri_component(&props.q));
+        fv::core::escape_into(out, &fv::core::js_encode_uri_component(&props.q));
         out.push('"');
     }
     out.push_str("><a href=\"");
-    fv::core::escape::escape_into(out, &s_search);
+    fv::core::escape_into(out, &s_search);
     out.push_str("\">");
-    fv::core::escape::escape_into(out, &s_search);
+    fv::core::escape_into(out, &s_search);
     out.push_str("</a><a href=\"");
-    fv::core::escape::escape_into(out, &s_kept);
+    fv::core::escape_into(out, &s_kept);
     out.push_str("\">");
-    fv::core::escape::escape_into(out, &s_kept);
+    fv::core::escape_into(out, &s_kept);
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::uri::js_encode_uri(&props.path));
+    fv::core::escape_into(out, &fv::core::js_encode_uri(&props.path));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::uri::js_encode_uri(&format!("{}#{}", props.path, props.q)));
+    fv::core::escape_into(out, &fv::core::js_encode_uri(&format!("{}#{}", props.path, props.q)));
     out.push_str("</a><p>");
-    fv::core::escape::escape_into(out, &fv::core::uri::js_encode_uri_component(&props.q));
+    fv::core::escape_into(out, &fv::core::js_encode_uri_component(&props.q));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::uri::js_encode_uri_component(&props.q.to_uppercase()));
+    fv::core::escape_into(out, &fv::core::js_encode_uri_component(&props.q.to_uppercase()));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::uri::js_encode_uri_component(props.tag.as_deref().unwrap_or("undefined")));
+    fv::core::escape_into(out, &fv::core::js_encode_uri_component(props.tag.as_deref().unwrap_or("undefined")));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::uri::js_encode_uri_component(props.tag.as_deref().unwrap_or("")));
+    fv::core::escape_into(out, &fv::core::js_encode_uri_component(props.tag.as_deref().unwrap_or("")));
     out.push_str("</p><p>");
-    fv::core::escape::escape_into(out, &fv::core::uri::js_encode_uri_component(&props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(",")));
+    fv::core::escape_into(out, &fv::core::js_encode_uri_component(&props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(",")));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::uri::js_encode_uri(&props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(",")));
+    fv::core::escape_into(out, &fv::core::js_encode_uri(&props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(",")));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::uri::js_encode_uri_component(&format!("{}", fv::core::numbers::Js(props.page as f64 * -1.5))));
+    fv::core::escape_into(out, &fv::core::js_encode_uri_component(&format!("{}", fv::core::Js(props.page as f64 * -1.5))));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::uri::js_encode_uri_component(if props.page as f64 > 2.0 { "true" } else { "false" }));
+    fv::core::escape_into(out, &fv::core::js_encode_uri_component(if props.page as f64 > 2.0 { "true" } else { "false" }));
     out.push_str("</p><ul><!--[-->");
     for fv_t_ref in props.tags.iter() {
         let fv_t: &str = fv_t_ref;
         out.push_str("<li><a href=\"");
-        fv::core::escape::escape_into(out, &format!("/tags/{}", fv::core::uri::js_encode_uri_component(fv_t)));
+        fv::core::escape_into(out, &format!("/tags/{}", fv::core::js_encode_uri_component(fv_t)));
         out.push_str("\">");
-        fv::core::numbers::push_int(out, fv::strings::js_length(&fv::core::uri::js_encode_uri_component(fv_t)));
+        fv::core::push_int(out, fv::strings::js_length(&fv::core::js_encode_uri_component(fv_t)));
         out.push_str("</a></li>");
     }
     out.push_str("<!--]--></ul></nav>");

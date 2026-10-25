@@ -119,7 +119,7 @@ ammonia = "4"
 ```rust
 # #[cfg(feature = "ammonia")]
 # fn main() {
-use ferrovue::sanitised::Sanitised;
+use ferrovue::html::Sanitised;
 
 let mut policy = ammonia::Builder::empty();
 policy.add_tags(["em"]);
@@ -202,7 +202,7 @@ format, as [`dates_and_prices`](crate::guide::dates_and_prices#the-strings-a-dat
 shows from Rust:
 
 ```rust
-assert_eq!(ferrovue::dates::js_to_iso_string(1_714_555_800_000.0), "2024-05-01T09:30:00.000Z");
+assert_eq!(ferrovue::date::js_to_iso_string(1_714_555_800_000.0), "2024-05-01T09:30:00.000Z");
 ```
 
 ## A number compared with itself

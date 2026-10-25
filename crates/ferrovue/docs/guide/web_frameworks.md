@@ -56,7 +56,7 @@ response's body.
 # pub fn render(out: &mut String, props: &Props<'_>) {
 #     out.reserve(30 + props.name.len());
 #     out.push_str("<p class=\"greeting\">Hello, ");
-#     fv::core::escape::escape_into(out, &props.name);
+#     fv::core::escape_into(out, &props.name);
 #     out.push_str("!</p>");
 # }
 #
@@ -133,7 +133,7 @@ use ferrovue::web::HtmlStream;
 
 async fn not_found(uri: Uri) -> Response {
     let mut page = String::from("<!doctype html><html><body><h1>Nothing at <code>");
-    ferrovue::core::escape::escape_into(&mut page, uri.path());
+    ferrovue::core::escape_into(&mut page, uri.path());
     page.push_str("</code></h1></body></html>");
     (StatusCode::NOT_FOUND, HtmlStream::new(page)).into_response()
 }
@@ -146,7 +146,7 @@ let app: axum::Router = axum::Router::new().fallback(not_found);
 
 # A page streamed
 
-A page rendered with [`hole`](crate::slots::hole)s ([`streaming`](crate::guide::streaming)) is sent in
+A page rendered with [`hole`](crate::page::hole)s ([`streaming`](crate::guide::streaming)) is sent in
 pieces. Give `HtmlStream` the whole render and a future for each hole, in the order the holes
 appear: the markup up to the first hole goes out at once, and each hole's content, then the markup
 after it, as soon as that hole and every one before it are ready. The futures all run from the
@@ -159,7 +159,7 @@ start, so the page ends when the slowest one does.
 # pub struct Props { pub count: i64 }
 # pub fn render(out: &mut String, props: &Props) {
 #     out.push_str("<p>");
-#     fv::core::numbers::push_int(out, props.count);
+#     fv::core::push_int(out, props.count);
 #     out.push_str(" reviews</p>");
 # }
 # pub fn into_island(props: Props) -> fv::html::Html<'static, Props> {
@@ -172,7 +172,7 @@ use std::time::Duration;
 
 use axum::extract::Path;
 use axum::response::{IntoResponse, Response};
-use ferrovue::{web::HtmlStream, slots::{hole, slot_into}};
+use ferrovue::{page::hole, render::slot_into, web::HtmlStream};
 
 /// The reviews of a book, from a slow service.
 async fn review_count(_id: &str) -> i64 {
@@ -182,9 +182,9 @@ async fn review_count(_id: &str) -> i64 {
 
 async fn book(Path(id): Path<String>) -> Response {
     // The book's page, rendered at once with a hole where the reviews go: here the slot of a
-    // generated component, `Slots { reviews: Some(ferrovue::slots::hole()), .. }`.
+    // generated component, `Slots { reviews: Some(ferrovue::page::hole()), .. }`.
     let mut page = String::from("<!doctype html><html><body><h1>");
-    ferrovue::core::escape::escape_into(&mut page, &id);
+    ferrovue::core::escape_into(&mut page, &id);
     page.push_str("</h1><section>");
     slot_into(&mut page, Some(hole()), None);
     page.push_str("</section></body></html>");
@@ -245,7 +245,7 @@ an `HttpResponse` with `.into()`.
 # }
 # pub fn render(out: &mut String, props: &Props<'_>) {
 #     out.push_str("<p class=\"greeting\">Hello, ");
-#     fv::core::escape::escape_into(out, &props.name);
+#     fv::core::escape_into(out, &props.name);
 #     out.push_str("!</p>");
 # }
 # pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {

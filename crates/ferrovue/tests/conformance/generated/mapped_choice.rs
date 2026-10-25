@@ -33,7 +33,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n) {
-    fv::refused::rendered(try_render(out, props, fv_i18n));
+    fv::render::rendered(try_render(out, props, fv_i18n));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -41,19 +41,19 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n) -> Result<(), fv::render::Refused> {
     out.reserve(22 + props.words.len());
     out.push_str("<p");
     if fv::strings::js_split(&props.words, " ").into_iter().map(|fv_w| std::borrow::Cow::<str>::Owned((if props.on { std::borrow::Cow::<str>::Owned(fv_w.to_uppercase()) } else { std::borrow::Cow::<str>::Borrowed(&*fv_w) }).into_owned())).collect::<Vec<_>>().join("-").is_empty() {
         out.push_str(" title");
     } else {
         out.push_str(" title=\"");
-        fv::core::escape::escape_into(out, &fv::strings::js_split(&props.words, " ").into_iter().map(|fv_w| std::borrow::Cow::<str>::Owned((if props.on { std::borrow::Cow::<str>::Owned(fv_w.to_uppercase()) } else { std::borrow::Cow::<str>::Borrowed(&*fv_w) }).into_owned())).collect::<Vec<_>>().join("-"));
+        fv::core::escape_into(out, &fv::strings::js_split(&props.words, " ").into_iter().map(|fv_w| std::borrow::Cow::<str>::Owned((if props.on { std::borrow::Cow::<str>::Owned(fv_w.to_uppercase()) } else { std::borrow::Cow::<str>::Borrowed(&*fv_w) }).into_owned())).collect::<Vec<_>>().join("-"));
         out.push('"');
     }
     out.push('>');
-    fv::core::escape::escape_into(out, &fv::strings::js_split(&props.words, " ").into_iter().map(|fv_w_2| std::borrow::Cow::<str>::Owned((if props.on { std::borrow::Cow::<str>::Owned(fv_i18n.t("common.app", &fv::i18n::Args::new())) } else { std::borrow::Cow::<str>::Borrowed(&*fv_w_2) }).into_owned())).collect::<Vec<_>>().join("|"));
+    fv::core::escape_into(out, &fv::strings::js_split(&props.words, " ").into_iter().map(|fv_w_2| std::borrow::Cow::<str>::Owned((if props.on { std::borrow::Cow::<str>::Owned(fv_i18n.t("common.app", &fv::i18n::Args::new())) } else { std::borrow::Cow::<str>::Borrowed(&*fv_w_2) }).into_owned())).collect::<Vec<_>>().join("|"));
     out.push_str("</p>");
     Ok(())
 }

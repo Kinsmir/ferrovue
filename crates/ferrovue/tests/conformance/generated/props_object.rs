@@ -62,7 +62,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -70,8 +70,8 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(125 + 9 * props.tags.as_deref().unwrap_or(&[]).len() + props.label.len() + props.tone.as_deref().map_or(0, str::len) + props.note.as_deref().map_or(0, str::len));
     let s_loud = props.label.to_uppercase();
     out.push_str("<article");
@@ -79,22 +79,22 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
         out.push_str(" title");
     } else {
         out.push_str(" title=\"");
-        fv::core::escape::escape_into(out, &props.label);
+        fv::core::escape_into(out, &props.label);
         out.push('"');
     }
     if props.tone.as_deref().is_some() {
         out.push_str(" class=\"");
-        fv::class::class_into(out, false, &[props.tone.as_deref().unwrap_or("")]);
+        fv::attrs::class_into(out, false, &[props.tone.as_deref().unwrap_or("")]);
         out.push('"');
     }
     out.push('>');
     super::glyph::try_render_scoped(out, &super::glyph::Props {  }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str("mark"))], ""))?;
     out.push_str("<h3>");
-    fv::core::escape::escape_into(out, &props.label);
+    fv::core::escape_into(out, &props.label);
     out.push_str(" (");
-    fv::core::numbers::push_int(out, props.count.unwrap_or(1i64));
+    fv::core::push_int(out, props.count.unwrap_or(1i64));
     out.push_str(") ");
-    fv::core::escape::escape_into(out, &s_loud);
+    fv::core::escape_into(out, &s_loud);
     out.push_str("</h3>");
     super::divider::try_render_scoped(out, &super::divider::Props {  }, &fv::attrs::Attrs::NONE)?;
     if props.tags.as_deref().unwrap_or(&[]).len() as i64 != 0 {
@@ -102,24 +102,24 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
         for fv_t_ref in props.tags.as_deref().unwrap_or(&[]).iter() {
             let fv_t: &str = fv_t_ref;
             out.push_str("<li>");
-            fv::core::escape::escape_into(out, fv_t);
+            fv::core::escape_into(out, fv_t);
             out.push_str("</li>");
         }
         out.push_str("<!--]--></ul>");
     } else {
         out.push_str("<p>");
-        fv::core::escape::escape_into(out, props.tone.as_deref().unwrap_or("plain"));
+        fv::core::escape_into(out, props.tone.as_deref().unwrap_or("plain"));
         out.push_str("</p>");
     }
     if let Some(fv_note) = props.note.as_deref() {
         out.push_str("<em>");
-        fv::core::escape::escape_into(out, fv_note);
+        fv::core::escape_into(out, fv_note);
         out.push_str("</em>");
     } else {
         out.push_str("<!---->");
     }
     out.push_str("<small>");
-    fv::core::escape::escape_into(out, props.note.as_deref().unwrap_or("no note"));
+    fv::core::escape_into(out, props.note.as_deref().unwrap_or("no note"));
     out.push_str("</small></article>");
     Ok(())
 }

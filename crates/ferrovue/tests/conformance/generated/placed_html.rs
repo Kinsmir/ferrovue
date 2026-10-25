@@ -33,7 +33,7 @@ impl Props {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -41,15 +41,15 @@ pub fn render(out: &mut String, props: &Props) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::refused::Refused> {
-    out.reserve(213 + fv::trusted::TrustedHtml::trusted_html(&props.cell).len() + fv::trusted::TrustedHtml::trusted_html(&props.label).len() + fv::trusted::TrustedHtml::trusted_html(&props.formula).len());
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
+    out.reserve(213 + fv::html::TrustedHtml::trusted_html(&props.cell).len() + fv::html::TrustedHtml::trusted_html(&props.label).len() + fv::html::TrustedHtml::trusted_html(&props.formula).len());
     out.push_str("<figure><table><tbody><tr><th>Cell</th><td>");
-    fv::trusted::trusted_into(out, &props.cell);
+    fv::html::trusted_into(out, &props.cell);
     out.push_str("</td></tr></tbody></table><svg viewBox=\"0 0 200 40\"><foreignObject width=\"200\" height=\"40\">");
-    fv::trusted::trusted_into(out, &props.label);
+    fv::html::trusted_into(out, &props.label);
     out.push_str("</foreignObject></svg><math><mi>x</mi><mo>=</mo><mtext>");
-    fv::trusted::trusted_into(out, &props.formula);
+    fv::html::trusted_into(out, &props.formula);
     out.push_str("</mtext></math></figure>");
     Ok(())
 }

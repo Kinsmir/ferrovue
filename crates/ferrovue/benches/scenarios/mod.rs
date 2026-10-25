@@ -113,7 +113,7 @@ pub fn merged_attrs(out: &mut String) {
 /// Fractions, which JavaScript writes with the fewest digits that read back the same.
 pub fn fractions(out: &mut String) {
     for x in [0.1, 2.5, 1234.5678, 0.30000000000000004, 1e-7, 19.99] {
-        ferrovue::core::numbers::push_number(out, black_box(x));
+        ferrovue::core::push_number(out, black_box(x));
         out.push(' ');
     }
 }

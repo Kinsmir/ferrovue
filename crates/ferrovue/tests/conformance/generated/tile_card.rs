@@ -29,7 +29,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -37,25 +37,25 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(67 + props.tile.title.len() + props.tile.note.as_deref().map_or(0, str::len) + props.tile.owner.as_deref().map_or(0, str::len) + props.tile.tags.iter().map(|v| v.len()).sum::<usize>() + props.tile.badge.as_ref().map_or(0, |v| v.label.len() + v.tone.len()));
     out.push_str("<article><h3>");
-    fv::core::escape::escape_into(out, &props.tile.title);
+    fv::core::escape_into(out, &props.tile.title);
     out.push_str("</h3><p>");
-    fv::core::numbers::push_int(out, props.tile.count);
+    fv::core::push_int(out, props.tile.count);
     out.push('|');
-    fv::core::escape::escape_into(out, props.tile.note.as_deref().unwrap_or("no note"));
+    fv::core::escape_into(out, props.tile.note.as_deref().unwrap_or("no note"));
     out.push('|');
-    fv::core::escape::escape_into(out, props.tile.owner.as_deref().unwrap_or("nobody"));
+    fv::core::escape_into(out, props.tile.owner.as_deref().unwrap_or("nobody"));
     out.push('|');
-    fv::core::escape::escape_into(out, &props.tile.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(","));
+    fv::core::escape_into(out, &props.tile.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(","));
     out.push_str("</p>");
     if let Some(fv_badge) = props.tile.badge.as_ref() {
         out.push_str("<b class=\"");
-        fv::class::class_into(out, false, &[&*fv_badge.tone]);
+        fv::attrs::class_into(out, false, &[&*fv_badge.tone]);
         out.push_str("\">");
-        fv::core::escape::escape_into(out, &fv_badge.label);
+        fv::core::escape_into(out, &fv_badge.label);
         out.push_str("</b>");
     } else {
         out.push_str("<!---->");

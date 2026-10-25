@@ -33,7 +33,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n) {
-    fv::refused::rendered(try_render(out, props, fv_i18n));
+    fv::render::rendered(try_render(out, props, fv_i18n));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -41,8 +41,8 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n) -> Result<(), fv::render::Refused> {
     out.reserve(90 + props.name.len());
     let s_title = std::cell::LazyCell::new(|| fv_i18n.t("greeting", &fv::i18n::Args::new().with_named(&[("name", fv::i18n::Value::Str(&props.name))])));
     out.push_str("<section");
@@ -50,50 +50,50 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n)
         out.push_str(" lang");
     } else {
         out.push_str(" lang=\"");
-        fv::core::escape::escape_into(out, fv_i18n.locale());
+        fv::core::escape_into(out, fv_i18n.locale());
         out.push('"');
     }
     if fv_i18n.t("common.app", &fv::i18n::Args::new()).is_empty() {
         out.push_str(" title");
     } else {
         out.push_str(" title=\"");
-        fv::core::escape::escape_into(out, &fv_i18n.t("common.app", &fv::i18n::Args::new()));
+        fv::core::escape_into(out, &fv_i18n.t("common.app", &fv::i18n::Args::new()));
         out.push('"');
     }
     out.push_str("><h1>");
-    fv::core::escape::escape_into(out, &s_title);
+    fv::core::escape_into(out, &s_title);
     out.push_str("</h1><p>");
-    fv::core::escape::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args::new().with_plural(props.count)));
+    fv::core::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args::new().with_plural(props.count)));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args::new().with_named(&[("count", fv::i18n::Value::Int(props.count))])));
+    fv::core::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args::new().with_named(&[("count", fv::i18n::Value::Int(props.count))])));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv_i18n.t("items", &fv::i18n::Args::new().with_plural(props.count)));
+    fv::core::escape_into(out, &fv_i18n.t("items", &fv::i18n::Args::new().with_plural(props.count)));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args::new()));
+    fv::core::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args::new()));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv_i18n.t("greeting", &fv::i18n::Args::new().with_named(&[("name", fv::i18n::Value::Str("x"))]).with_plural(props.count)));
+    fv::core::escape_into(out, &fv_i18n.t("greeting", &fv::i18n::Args::new().with_named(&[("name", fv::i18n::Value::Str("x"))]).with_plural(props.count)));
     out.push_str("</p><p>");
-    fv::core::escape::escape_into(out, &fv_i18n.t("list", &fv::i18n::Args::new().with_list(&[fv::i18n::Value::Str(&props.name), fv::i18n::Value::Int(props.count)])));
+    fv::core::escape_into(out, &fv_i18n.t("list", &fv::i18n::Args::new().with_list(&[fv::i18n::Value::Str(&props.name), fv::i18n::Value::Int(props.count)])));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv_i18n.t("literal", &fv::i18n::Args::new()));
+    fv::core::escape_into(out, &fv_i18n.t("literal", &fv::i18n::Args::new()));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv_i18n.t("linked", &fv::i18n::Args::new()));
+    fv::core::escape_into(out, &fv_i18n.t("linked", &fv::i18n::Args::new()));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv_i18n.t("missingLink", &fv::i18n::Args::new()));
+    fv::core::escape_into(out, &fv_i18n.t("missingLink", &fv::i18n::Args::new()));
     out.push_str("</p><p>");
-    fv::core::escape::escape_into(out, &fv_i18n.t("onlyEnglish", &fv::i18n::Args::new()));
+    fv::core::escape_into(out, &fv_i18n.t("onlyEnglish", &fv::i18n::Args::new()));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv_i18n.t("englishLink", &fv::i18n::Args::new()));
+    fv::core::escape_into(out, &fv_i18n.t("englishLink", &fv::i18n::Args::new()));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv_i18n.t("hop", &fv::i18n::Args::new()));
+    fv::core::escape_into(out, &fv_i18n.t("hop", &fv::i18n::Args::new()));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv_i18n.t("no.such.key", &fv::i18n::Args::new()));
+    fv::core::escape_into(out, &fv_i18n.t("no.such.key", &fv::i18n::Args::new()));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv_i18n.t("flat.key", &fv::i18n::Args::new()));
+    fv::core::escape_into(out, &fv_i18n.t("flat.key", &fv::i18n::Args::new()));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv_i18n.t("nested.deep.key", &fv::i18n::Args::new()));
+    fv::core::escape_into(out, &fv_i18n.t("nested.deep.key", &fv::i18n::Args::new()));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv_i18n.t("html", &fv::i18n::Args::new().with_named(&[("name", fv::i18n::Value::Str(&props.name))])));
+    fv::core::escape_into(out, &fv_i18n.t("html", &fv::i18n::Args::new().with_named(&[("name", fv::i18n::Value::Str(&props.name))])));
     out.push_str("</p></section>");
     Ok(())
 }

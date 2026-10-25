@@ -1,9 +1,9 @@
 use std::borrow::Cow;
 use std::cmp::Ordering;
 
-use ferrovue_core::numbers::push_number;
+use ferrovue_core::push_number;
 
-use crate::refused::Refused;
+use crate::render::Refused;
 
 /// `String.prototype.length`: UTF-16 code units, which is what a template's `.length` counts.
 /// `str::len` counts UTF-8 bytes and `chars().count()` scalar values, and either can differ from it.
@@ -193,7 +193,7 @@ pub fn js_sorted<T>(
 /// # Example
 ///
 /// ```
-/// let key = |v: &i64| ferrovue::core::numbers::Js(*v).to_string();
+/// let key = |v: &i64| ferrovue::core::Js(*v).to_string();
 /// let sorted: Vec<i64> = ferrovue::strings::js_sorted_by_string([10, 9, 1].into_iter(), key).collect();
 /// assert_eq!(sorted, [1, 10, 9]);
 /// ```
@@ -614,8 +614,8 @@ pub fn js_split_limit<'s>(s: &'s str, separator: &str, limit: f64) -> Vec<Cow<'s
 ///
 /// ```
 /// let n: Option<i64> = None;
-/// assert_eq!(format!("{}", ferrovue::strings::JsOr(n.map(ferrovue::core::numbers::Js), "undefined")), "undefined");
-/// assert_eq!(format!("{}", ferrovue::strings::JsOr(Some(ferrovue::core::numbers::Js(2.5)), "null")), "2.5");
+/// assert_eq!(format!("{}", ferrovue::strings::JsOr(n.map(ferrovue::core::Js), "undefined")), "undefined");
+/// assert_eq!(format!("{}", ferrovue::strings::JsOr(Some(ferrovue::core::Js(2.5)), "null")), "2.5");
 /// ```
 #[derive(Debug, Clone, Copy)]
 pub struct JsOr<T>(pub Option<T>, pub &'static str);

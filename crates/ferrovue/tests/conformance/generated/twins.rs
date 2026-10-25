@@ -20,7 +20,7 @@ pub struct StarRatingProps<'a> {
 #[derive(Clone, Copy, Default)]
 pub struct StarRatingSlots<'s> {
     /// `#default`
-    pub default: Option<fv::slots::Slot<'s>>,
+    pub default: Option<fv::render::Slot<'s>>,
 }
 
 /// How generated code calls the twin of `<StarRating>`: with the buffer, the props,

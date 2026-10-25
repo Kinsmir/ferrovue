@@ -56,7 +56,7 @@ pub struct Slots<'s> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_provides: super::provides::Provides<'_>) {
-    fv::refused::rendered(try_render(out, props, fv_slots, fv_provides));
+    fv::render::rendered(try_render(out, props, fv_slots, fv_provides));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -64,30 +64,30 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_provi
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(131 + 25 * props.items.len() + props.items.iter().map(|v| v.len()).sum::<usize>() + props.theme.len());
     let fv_inherited = fv_provides;
     let fv_provides = super::provides::Provides { theme_key: Some(&props.theme), wide: Some(props.wide), ..fv_inherited };
     out.push_str("<div class=\"list\" data-ratio=\"");
-    fv::core::numbers::push_number(out, fv_inherited.ratio.unwrap_or(1.5f64));
+    fv::core::push_number(out, fv_inherited.ratio.unwrap_or(1.5f64));
     out.push_str("\" data-v-c4d7ae83><ul data-v-c4d7ae83><!--[-->");
     for (fv_i, fv_item_ref) in props.items.iter().enumerate() {
         let fv_item: &str = fv_item_ref;
         let fv_i = fv_i as i64;
         out.push_str("<li data-v-c4d7ae83>");
-        fv::slots::scoped_slot_into_slotted(out, fv_slots.row.map(|f| move |out: &mut String, fv_sp: &RowSlotProps<'_>, fv_sid: &str| f(out, fv_sp, fv_sid, fv_provides)).as_ref(), &RowSlotProps { item: fv_item, index: fv_i }, "data-v-c4d7ae83-s", None);
+        fv::render::scoped_slot_into_slotted(out, fv_slots.row.map(|f| move |out: &mut String, fv_sp: &RowSlotProps<'_>, fv_sid: &str| f(out, fv_sp, fv_sid, fv_provides)).as_ref(), &RowSlotProps { item: fv_item, index: fv_i }, "data-v-c4d7ae83-s", None);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul>");
     if let Some(fv_tags) = fv_inherited.tags {
         out.push_str("<p data-v-c4d7ae83>");
-        fv::core::escape::escape_into(out, &fv_tags.iter().map(|v| &**v).collect::<Vec<_>>().join(", "));
+        fv::core::escape_into(out, &fv_tags.iter().map(|v| &**v).collect::<Vec<_>>().join(", "));
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");
     }
-    fv::slots::scoped_slot_into_slotted(out, fv_slots.default.map(|f| move |out: &mut String, _: &(), fv_sid: &str| f(out, fv_sid, fv_provides)).as_ref(), &(), "data-v-c4d7ae83-s", None);
+    fv::render::scoped_slot_into_slotted(out, fv_slots.default.map(|f| move |out: &mut String, _: &(), fv_sid: &str| f(out, fv_sid, fv_provides)).as_ref(), &(), "data-v-c4d7ae83-s", None);
     out.push_str("</div>");
     Ok(())
 }

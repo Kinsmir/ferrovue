@@ -29,7 +29,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -37,20 +37,20 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(27 + 32 * props.rows.len() + props.rows.iter().map(|v| v.label.len() + v.href.len()).sum::<usize>());
     out.push_str("<nav><!--[-->");
     for fv_r_ref in props.rows.iter() {
         let fv_r = fv_r_ref;
         out.push_str("<a href=\"");
-        fv::core::escape::escape_into(out, &fv_r.href);
+        fv::core::escape_into(out, &fv_r.href);
         out.push_str("\" class=\"");
-        fv::class::class_into(out, false, &[if fv_r.first { "first" } else { "" }]);
+        fv::attrs::class_into(out, false, &[if fv_r.first { "first" } else { "" }]);
         out.push_str("\">");
-        fv::core::numbers::push_int(out, fv_r.id);
+        fv::core::push_int(out, fv_r.id);
         out.push_str(". ");
-        fv::core::escape::escape_into(out, &fv_r.label);
+        fv::core::escape_into(out, &fv_r.label);
         out.push_str("</a>");
     }
     out.push_str("<!--]--></nav>");

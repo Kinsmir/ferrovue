@@ -40,27 +40,27 @@ impl std::fmt::Display for UnionObjectsState {
 }
 
 impl std::str::FromStr for UnionObjectsState {
-    type Err = ferrovue::union::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "todo" => Ok(UnionObjectsState::Todo),
             "done" => Ok(UnionObjectsState::Done),
             "skipped" => Ok(UnionObjectsState::Skipped),
-            _ => Err(ferrovue::union::ParseUnionError::new("UnionObjectsState", s, &["todo", "done", "skipped"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("UnionObjectsState", s, &["todo", "done", "skipped"])),
         }
     }
 }
 
 impl TryFrom<&str> for UnionObjectsState {
-    type Error = ferrovue::union::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::union::Union for UnionObjectsState {
+impl ferrovue::props::Union for UnionObjectsState {
     const ALL: &'static [Self] = &UnionObjectsState::ALL;
 
     fn as_str(self) -> &'static str {
@@ -104,7 +104,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -112,24 +112,24 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(115 + props.label.len() + 6 + 7 + 6 + props.words.iter().map(|v| v.len()).sum::<usize>());
     let s_first = super::types::Step { label: std::borrow::Cow::<str>::Borrowed(&*props.label), state: super::types::StepState::Done, align: Some(props.align) };
     let s_chosen = super::types::Step { label: std::borrow::Cow::<str>::Owned(format!("{}!", props.label)), state: if props.state == UnionObjectsState::Todo { super::types::StepState::Skipped } else { match props.state { UnionObjectsState::Done => super::types::StepState::Done, UnionObjectsState::Skipped | UnionObjectsState::Todo => super::types::StepState::Skipped } }, align: props.side };
     let s_steps = props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).enumerate().map(|(fv_i, fv_w)| { let fv_i = fv_i as i64; super::types::Step { label: std::borrow::Cow::<str>::Owned(str::to_owned(&*fv_w)), state: if fv_i as f64 == 0.0 { super::types::StepState::Todo } else { super::types::StepState::Done }, align: Some(super::types::Align::Right) } }).collect::<Vec<_>>();
-    let s_role = if let Some(fv_align) = matches!(props.align, super::types::Align::Left | super::types::Align::Right).then_some(fv::union::Union::as_str(props.align)) { match fv_align { "left" => "<start>", _ => "end & \"after\"" } } else { "none" };
+    let s_role = if let Some(fv_align) = matches!(props.align, super::types::Align::Left | super::types::Align::Right).then_some(fv::props::Union::as_str(props.align)) { match fv_align { "left" => "<start>", _ => "end & \"after\"" } } else { "none" };
     out.push_str("<section");
     if s_role.is_empty() {
         out.push_str(" data-role");
     } else {
         out.push_str(" data-role=\"");
-        fv::core::escape::escape_into(out, s_role);
+        fv::core::escape_into(out, s_role);
         out.push('"');
     }
-    if if props.side.is_some() { true } else { props.side.map(fv::union::Union::as_str).is_some() } {
+    if if props.side.is_some() { true } else { props.side.map(fv::props::Union::as_str).is_some() } {
         out.push_str(" class=\"");
-        fv::class::class_into(out, false, &[if let Some(fv_side) = props.side { match fv_side { super::types::Align::Left => "l", super::types::Align::Center => "c", super::types::Align::Right => "r" } } else { "" }]);
+        fv::attrs::class_into(out, false, &[if let Some(fv_side) = props.side { match fv_side { super::types::Align::Left => "l", super::types::Align::Center => "c", super::types::Align::Right => "r" } } else { "" }]);
         out.push('"');
     }
     out.push_str("><ol>");
@@ -143,21 +143,21 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
         super::union_step::try_render(out, &super::union_step::Props { step: fv_s.to_owned() })?;
     }
     out.push_str("<!--]--></ol><p>");
-    fv::core::numbers::push_int(out, (match props.align { super::types::Align::Left => Some(10i64), super::types::Align::Center => Some(20i64), super::types::Align::Right => None }).unwrap_or(0i64));
+    fv::core::push_int(out, (match props.align { super::types::Align::Left => Some(10i64), super::types::Align::Center => Some(20i64), super::types::Align::Right => None }).unwrap_or(0i64));
     out.push('|');
     out.push_str(if matches!(props.align, super::types::Align::Left | super::types::Align::Center) { "true" } else { "false" });
     out.push('|');
     out.push_str(if matches!(props.align, super::types::Align::Left | super::types::Align::Right) { "true" } else { "false" });
     out.push('|');
-    if let Some(fv_align_2) = matches!(props.align, super::types::Align::Left | super::types::Align::Right).then_some(fv::union::Union::as_str(props.align)) {
+    if let Some(fv_align_2) = matches!(props.align, super::types::Align::Left | super::types::Align::Right).then_some(fv::props::Union::as_str(props.align)) {
         out.push_str("<b>");
-        fv::core::escape::escape_into(out, match fv_align_2 { "left" => "<start>", _ => "end & \"after\"" });
+        fv::core::escape_into(out, match fv_align_2 { "left" => "<start>", _ => "end & \"after\"" });
         out.push_str("</b>");
     } else {
         out.push_str("<!---->");
     }
     out.push_str("</p><p>");
-    fv::core::escape::escape_into(out, if let Some(fv_side_2) = props.side { if fv_side_2 != super::types::Align::Right { match fv_side_2 { super::types::Align::Left => "l", super::types::Align::Center | super::types::Align::Right => "c" } } else { "x" } } else { "x" });
+    fv::core::escape_into(out, if let Some(fv_side_2) = props.side { if fv_side_2 != super::types::Align::Right { match fv_side_2 { super::types::Align::Left => "l", super::types::Align::Center | super::types::Align::Right => "c" } } else { "x" } } else { "x" });
     out.push('|');
     out.push_str(if props.state != UnionObjectsState::Todo && props.state != UnionObjectsState::Done { "true" } else { "false" });
     out.push('|');

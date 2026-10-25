@@ -40,7 +40,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>, fv_head: &fv::head::Head) {
-    fv::refused::rendered(try_render(out, props, fv_provides, fv_head));
+    fv::render::rendered(try_render(out, props, fv_provides, fv_head));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -48,10 +48,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides:
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>, fv_head: &fv::head::Head) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>, fv_head: &fv::head::Head) -> Result<(), fv::render::Refused> {
     out.reserve(props.label.len() + props.theme.as_deref().map_or(0, str::len) + props.tags.iter().map(|v| v.len()).sum::<usize>());
-    let fv_refusals = fv::refused::Refusals::new(NAME, "components/HeadThemePage.vue");
+    let fv_refusals = fv::render::Refusals::new(NAME, "components/HeadThemePage.vue");
     fv_head.push(fv::head::HeadValue::object([("titleTemplate", fv::head::HeadValue::str(&format!("%s | {}", props.label))), ("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([("name", fv::head::HeadValue::str("theme")), ("content", fv::head::HeadValue::str("page"))])]))]));
     fv_refusals.check(super::theme_scope::try_render_scoped(out, &super::theme_scope::Props { theme: props.theme.as_deref().map(std::borrow::Cow::Borrowed) }, super::theme_scope::Slots {
         default: Some(&|out: &mut String, fv_provides: super::provides::Provides<'_>| -> bool {

@@ -11,7 +11,7 @@ use std::fs;
 use std::path::Path;
 
 use chrono::{DateTime, Utc};
-use ferrovue::js_date::JsDate;
+use ferrovue::date::JsDate;
 use generated::{date_post, date_stamp};
 
 #[test]

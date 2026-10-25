@@ -33,7 +33,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -41,25 +41,25 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(115 + props.book.id.len() + props.book.title.len() + props.book.author.len() + props.note.len());
     out.push_str("<article class=\"pick\"");
     if props.book.id.is_empty() {
         out.push_str(" data-id");
     } else {
         out.push_str(" data-id=\"");
-        fv::core::escape::escape_into(out, &props.book.id);
+        fv::core::escape_into(out, &props.book.id);
         out.push('"');
     }
     out.push_str("><h2>");
-    fv::core::escape::escape_into(out, &props.book.title);
+    fv::core::escape_into(out, &props.book.title);
     out.push_str("</h2><p class=\"by\">by ");
-    fv::core::escape::escape_into(out, &props.book.author);
+    fv::core::escape_into(out, &props.book.author);
     out.push_str(" (");
-    fv::core::numbers::push_int(out, props.book.year);
+    fv::core::push_int(out, props.book.year);
     out.push_str(")</p><blockquote>");
-    fv::core::escape::escape_into(out, &props.note);
+    fv::core::escape_into(out, &props.note);
     out.push_str("</blockquote>");
     super::add_to_basket::try_render(out, &super::add_to_basket::Props { id: std::borrow::Cow::Borrowed(&*props.book.id), title: std::borrow::Cow::Borrowed(&*props.book.title) })?;
     out.push_str("</article>");

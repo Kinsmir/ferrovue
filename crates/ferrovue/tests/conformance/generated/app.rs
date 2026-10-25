@@ -27,7 +27,7 @@ impl<'a> Props<'a> {
 #[derive(Clone, Copy)]
 pub struct Slots<'s> {
     /// The page `<RouterView>` shows.
-    pub router_view: fv::slots::Slot<'s>,
+    pub router_view: fv::render::Slot<'s>,
 }
 
 /// Write the component's server render into `out`.
@@ -36,7 +36,7 @@ pub struct Slots<'s> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::router::Route<'_>) {
-    fv::refused::rendered(try_render(out, props, fv_slots, fv_route));
+    fv::render::rendered(try_render(out, props, fv_slots, fv_route));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -44,8 +44,8 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::router::Route<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::router::Route<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(33);
     out.push_str("<div id=\"app\">");
     super::nav::try_render(out, &props.nav, fv_route)?;

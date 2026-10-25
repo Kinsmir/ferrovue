@@ -46,7 +46,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -54,19 +54,19 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(109 + props.model_value.len());
     out.push_str("<div><input value=\"");
-    fv::core::escape::escape_into(out, &props.model_value);
+    fv::core::escape_into(out, &props.model_value);
     out.push_str("\"><input type=\"checkbox\"");
     if props.open.unwrap_or(false) {
         out.push_str(" checked");
     }
     out.push_str("><span data-level=\"");
-    fv::core::numbers::push_int(out, props.level.unwrap_or(3i64));
+    fv::core::push_int(out, props.level.unwrap_or(3i64));
     out.push_str("\">");
-    fv::core::escape::escape_into(out, &props.model_value);
+    fv::core::escape_into(out, &props.model_value);
     out.push_str("</span>");
     if props.open.unwrap_or(false) {
         out.push_str("<b>open</b>");

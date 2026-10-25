@@ -71,7 +71,7 @@ props, slots and route.
 
 # Rendering and handing the state over
 
-[`state_script_into`](crate::state::state_script_into) writes the state as a
+[`state_script_into`](crate::page::state_script_into) writes the state as a
 `<script type="application/json">`. The browser never runs it, so it needs no nonce under a
 `script-src` policy, and `<`, `>` and `&` are written as JSON escapes, so no value can close it:
 
@@ -83,7 +83,7 @@ let stores = stores::Stores::new(prefs);
 
 let mut page = String::new();
 badge::render(&mut page, &badge::Props::new("Ada"), &stores);
-ferrovue::state::state_script_into(&mut page, "__pinia", &stores);
+ferrovue::page::state_script_into(&mut page, "__pinia", &stores);
 
 assert_eq!(
     page,
@@ -199,16 +199,16 @@ assert_eq!(
 # pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::Stores<'_>) {
 #     out.reserve(77 + props.title.len());
 #     out.push_str("<span class=\"badge");
-#     fv::class::class_into(out, true, &[&*fv_stores.prefs.density]);
+#     fv::attrs::class_into(out, true, &[&*fv_stores.prefs.density]);
 #     out.push_str("\" data-wide=\"");
 #     out.push_str(if fv_stores.prefs.wide { "true" } else { "false" });
 #     out.push_str("\">");
-#     fv::core::escape::escape_into(out, &props.title);
+#     fv::core::escape_into(out, &props.title);
 #     out.push(' ');
-#     fv::core::numbers::push_int(out, fv_stores.prefs.count);
+#     fv::core::push_int(out, fv_stores.prefs.count);
 #     if let Some(fv_label) = fv_stores.prefs.label.as_deref().filter(|v| !v.is_empty()) {
 #         out.push_str("<b>");
-#         fv::core::escape::escape_into(out, fv_label);
+#         fv::core::escape_into(out, fv_label);
 #         out.push_str("</b>");
 #     } else {
 #         out.push_str("<!---->");
@@ -219,11 +219,11 @@ assert_eq!(
 #         out.push_str("<i");
 #         if let Some(v) = fv_t.color.as_deref() {
 #             out.push_str(" title=\"");
-#             fv::core::escape::escape_into(out, v);
+#             fv::core::escape_into(out, v);
 #             out.push('"');
 #         }
 #         out.push('>');
-#         fv::core::escape::escape_into(out, &fv_t.name);
+#         fv::core::escape_into(out, &fv_t.name);
 #         out.push_str("</i>");
 #     }
 #     out.push_str("<!--]--></span>");

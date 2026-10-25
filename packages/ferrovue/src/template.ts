@@ -99,12 +99,12 @@ export function slot(s: Scope, e: Emitter, n: N): void {
     const html = v.ty.k === "opt" ? v.ty.of : v.ty;
     if (html.k === "html") checkVHtmlPlacement(s.comp, n, html.inline === true);
     if (v.ty.k === "html") {
-      e.stmt(`fv::trusted::trusted_into(out, ${v.code});`);
+      e.stmt(`fv::html::trusted_into(out, ${v.code});`);
       return;
     }
     if (v.ty.k === "opt" && v.ty.of.k === "html") {
       e.open(`if let Some(html) = ${scrutinee(v.code)}`);
-      e.stmt("fv::trusted::trusted_into(out, html);");
+      e.stmt("fv::html::trusted_into(out, html);");
       e.close();
       return;
     }
@@ -171,7 +171,7 @@ export function push(s: Scope, e: Emitter, n: N): void {
   }
   e.stmt("let fv_chunk = out.len();");
   pushed(s, e, n);
-  e.stmt("filled |= !fv::slots::is_comment(&out[fv_chunk..]);");
+  e.stmt("filled |= !fv::render::is_comment(&out[fv_chunk..]);");
 }
 
 const START_TAG = /^<([A-Za-z][^\s/>]*)/;

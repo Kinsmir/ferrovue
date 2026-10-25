@@ -29,7 +29,7 @@ impl<'a> Props<'a> {
 #[derive(Clone, Copy, Default)]
 pub struct Slots<'s> {
     /// `<slot>`
-    pub default: Option<fv::slots::Slot<'s>>,
+    pub default: Option<fv::render::Slot<'s>>,
 }
 
 /// Write the component's server render into `out`.
@@ -38,7 +38,7 @@ pub struct Slots<'s> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_head: &fv::head::Head) {
-    fv::refused::rendered(try_render(out, props, fv_slots, fv_head));
+    fv::render::rendered(try_render(out, props, fv_slots, fv_head));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -46,13 +46,13 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_head:
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_head: &fv::head::Head) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_head: &fv::head::Head) -> Result<(), fv::render::Refused> {
     out.reserve(7 + props.name.len());
     fv_head.push(fv::head::HeadValue::object([("title", fv::head::HeadValue::str(&props.name)), ("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([("name", fv::head::HeadValue::str(&props.name)), ("content", fv::head::HeadValue::str(&props.name))])])), ("bodyAttrs", fv::head::HeadValue::object([("class", fv::head::HeadValue::str(&props.name))]))]));
     out.push_str("<i>");
-    fv::core::escape::escape_into(out, &props.name);
-    fv::slots::slot_into(out, fv_slots.default, None);
+    fv::core::escape_into(out, &props.name);
+    fv::render::slot_into(out, fv_slots.default, None);
     out.push_str("</i>");
     Ok(())
 }

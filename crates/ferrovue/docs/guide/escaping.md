@@ -5,7 +5,7 @@ writes data from readers, the code and tests behind each guarantee, and what it 
 
 # Everything a template interpolates is escaped
 
-Every value the generated code writes into the page goes through [`escape_into`](crate::core::escape::escape_into),
+Every value the generated code writes into the page goes through [`escape_into`](crate::core::escape_into),
 which is Vue's `escapeHtml`: `"`, `&`, `'`, `<` and `>` become entities, and nothing else changes.
 That covers text (`{{ name }}`), attribute values (`:title="name"`), class and style values, link
 `href`s and translated messages. A value can therefore neither close the element or attribute it
@@ -13,7 +13,7 @@ is in nor open a new one.
 
 ```rust
 let mut out = String::from("<p title=\"");
-ferrovue::core::escape::escape_into(&mut out, r#"" onmouseover="alert(1)"#);
+ferrovue::core::escape_into(&mut out, r#"" onmouseover="alert(1)"#);
 out.push_str("\">");
 assert_eq!(out, r#"<p title="&quot; onmouseover=&quot;alert(1)">"#);
 ```
@@ -30,14 +30,14 @@ Validate URLs from users before rendering them, as a Vue app would. The
 What the page carries for the client is escaped for its context as well:
 
 - an island's `data-props` is JSON, escaped as an attribute value;
-- [`state_script_into`](crate::state::state_script_into) writes `<`, `>`, `&`, U+2028 and U+2029 inside its
+- [`state_script_into`](crate::page::state_script_into) writes `<`, `>`, `&`, U+2028 and U+2029 inside its
   JSON as `\u` escapes, so no value can end the `<script>` element or be read as markup inside it,
   and it escapes the element's `id`.
 
 # Your own code is not escaped for you
 
 Slot closures and the parts of the page you write yourself are plain Rust: whatever they
-push is written as it is. Use [`escape_into`](crate::core::escape::escape_into) for any text they write.
+push is written as it is. Use [`escape_into`](crate::core::escape_into) for any text they write.
 
 # Scope ids
 
@@ -65,16 +65,16 @@ defineProps<{ body: TrustedHtml; caption: string }>();
 ```
 
 On the server, that prop's type is whatever `trustedHtml` names in `ferrovue.config.json`, a type
-that implements [`TrustedHtml`](crate::trusted::TrustedHtml). `v-html` of anything else, a plain string or a
+that implements [`TrustedHtml`](crate::html::TrustedHtml). `v-html` of anything else, a plain string or a
 translated message, is refused at compile time.
 
 There are four ways to have one:
 
 | Type | Needs | Takes | Use it for |
 |---|---|---|---|
-| [`BasicHtml`](crate::basic_html::BasicHtml) | nothing | text with `<b>`, `<i>`, `<em>`, `<strong>`, `<code>`, `<br>`, `<p>`, `<ul>`, `<ol>` and `<li>`, or plain text | comments, reviews, bios: text from users with a little formatting |
-| [`InlineHtml`](crate::basic_html::InlineHtml) | nothing | text with `<b>`, `<i>`, `<em>`, `<strong>`, `<code>` and `<br>` | a line of formatted text inside a `<p>` |
-| `ferrovue::sanitised::Sanitised` | the `ammonia` feature | any HTML, cleaned to ammonia's policy or yours | Markdown rendered to HTML, CMS content, HTML from elsewhere |
+| [`BasicHtml`](crate::html::BasicHtml) | nothing | text with `<b>`, `<i>`, `<em>`, `<strong>`, `<code>`, `<br>`, `<p>`, `<ul>`, `<ol>` and `<li>`, or plain text | comments, reviews, bios: text from users with a little formatting |
+| [`InlineHtml`](crate::html::InlineHtml) | nothing | text with `<b>`, `<i>`, `<em>`, `<strong>`, `<code>` and `<br>` | a line of formatted text inside a `<p>` |
+| `ferrovue::html::Sanitised` | the `ammonia` feature | any HTML, cleaned to ammonia's policy or yours | Markdown rendered to HTML, CMS content, HTML from elsewhere |
 | a type of your own | your sanitiser | whatever your sanitiser accepts | another sanitiser, or a policy kept in one place |
 
 ## Where `v-html` may go
@@ -102,7 +102,7 @@ see that the child places it inside a `<p>`, and the same holds for a component 
 rendered inside another component's `<p>`. Give such HTML the `InlineHtml` type.
 
 An `InlineHtml` prop comes from `ferrovue/types` and is always
-[`ferrovue::basic_html::InlineHtml`](crate::basic_html::InlineHtml) on the server, whatever `trustedHtml` names, so it needs
+[`ferrovue::html::InlineHtml`](crate::html::InlineHtml) on the server, whatever `trustedHtml` names, so it needs
 no configuration:
 
 ```vue
@@ -116,24 +116,24 @@ defineProps<{ lead: InlineHtml }>();
 </template>
 ```
 
-With `"trustedHtml": "ferrovue::basic_html::InlineHtml"` in `ferrovue.config.json`, every `TrustedHtml` prop is
+With `"trustedHtml": "ferrovue::html::InlineHtml"` in `ferrovue.config.json`, every `TrustedHtml` prop is
 inline HTML as well, and may go inside a `<p>`.
 
-## `ferrovue::basic_html::BasicHtml`
+## `ferrovue::html::BasicHtml`
 
-[`BasicHtml`](crate::basic_html::BasicHtml) needs no sanitiser and no feature. It never reads the input as
-HTML: `BasicHtml::new(untrusted)` escapes every character, as [`escape_into`](crate::core::escape::escape_into)
+[`BasicHtml`](crate::html::BasicHtml) needs no sanitiser and no feature. It never reads the input as
+HTML: `BasicHtml::new(untrusted)` escapes every character, as [`escape_into`](crate::core::escape_into)
 does, and writes as tags only the ten tags above, spelled exactly so, in lower case and with no
 attributes. It closes what is left open, leaves out end tags with nothing to close, and keeps the
 tags in an order a browser reads back as written. Anything else, `<B>`, `<b class="x">`, `<a>` or
 `<script>`, is text on the page.
 
 ```json
-{ "trustedHtml": "ferrovue::basic_html::BasicHtml" }
+{ "trustedHtml": "ferrovue::html::BasicHtml" }
 ```
 
 ```rust
-use ferrovue::basic_html::BasicHtml;
+use ferrovue::html::BasicHtml;
 
 assert_eq!(
     BasicHtml::new("<b>Great</b> <i>read<script>steal()</script>").as_str(),
@@ -149,13 +149,13 @@ assert_eq!(
 line breaks as `<br>`. Character references in the input (`&amp;`, `&#60;`) are kept, since they
 only ever write text.
 
-## `ferrovue::sanitised::Sanitised`, with the `ammonia` feature
+## `ferrovue::html::Sanitised`, with the `ammonia` feature
 
-With the crate's `ammonia` feature, `ferrovue::sanitised::Sanitised` is HTML cleaned by
+With the crate's `ammonia` feature, `ferrovue::html::Sanitised` is HTML cleaned by
 [ammonia](https://docs.rs/ammonia).
 
 ```json
-{ "trustedHtml": "ferrovue::sanitised::Sanitised" }
+{ "trustedHtml": "ferrovue::html::Sanitised" }
 ```
 
 ```toml
@@ -190,7 +190,7 @@ element it is written into. A policy of your own can allow more, such as `class`
 
 ## A type of your own
 
-A type of your own implements [`TrustedHtml`](crate::trusted::TrustedHtml), with three rules:
+A type of your own implements [`TrustedHtml`](crate::html::TrustedHtml), with three rules:
 
 1. **Sanitise before render.** The only way to make a value runs the sanitiser, so holding one is
    proof the HTML was made safe. Keep the field private and give the type no `From<String>`.
@@ -208,7 +208,7 @@ A type of your own implements [`TrustedHtml`](crate::trusted::TrustedHtml), with
 
 ```rust
 // src/html.rs
-use ferrovue::trusted::TrustedHtml;
+use ferrovue::html::TrustedHtml;
 use serde::{Deserialize, Deserializer};
 
 /// HTML that has been through the sanitiser: the only way to make one.
@@ -240,7 +240,7 @@ fn sanitise(untrusted: &str) -> String {
 }
 # let html = CleanHtml::new("<script>x</script>");
 # let mut out = String::new();
-# ferrovue::trusted::trusted_into(&mut out, &html);
+# ferrovue::html::trusted_into(&mut out, &html);
 # assert_eq!(out, "scriptx/script");
 # let json = serde_json::to_string(&html).unwrap();
 # assert_eq!(serde_json::from_str::<CleanHtml>(&json).unwrap(), html);

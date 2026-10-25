@@ -52,7 +52,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -60,29 +60,29 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(333 + props.label.len() + props.maybe.as_deref().map_or(0, str::len) + props.css.len());
     out.push_str("<div><p");
     if props.label.is_empty() {
         out.push_str(" a.");
     } else {
         out.push_str(" a.=\"");
-        fv::core::escape::escape_into(out, &props.label);
+        fv::core::escape_into(out, &props.label);
         out.push('"');
     }
     if props.label.is_empty() {
         out.push_str(" data-icon-name");
     } else {
         out.push_str(" data-icon-name=\"");
-        fv::core::escape::escape_into(out, &props.label);
+        fv::core::escape_into(out, &props.label);
         out.push('"');
     }
     if props.label.is_empty() {
         out.push_str(" onx");
     } else {
         out.push_str(" onx=\"");
-        fv::core::escape::escape_into(out, &props.label);
+        fv::core::escape_into(out, &props.label);
         out.push('"');
     }
     out.push_str(" title>keys</p><p");
@@ -100,22 +100,22 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
     out.push_str(">limit</p><p class=\"a b\">two</p><p class=\"a\">once</p><p");
     if props.maybe.as_deref().is_some() {
         out.push_str(" class=\"");
-        fv::class::class_into(out, false, &[props.maybe.as_deref().unwrap_or("")]);
+        fv::attrs::class_into(out, false, &[props.maybe.as_deref().unwrap_or("")]);
         out.push('"');
     }
     if props.label.is_empty() {
         out.push_str(" id");
     } else {
         out.push_str(" id=\"");
-        fv::core::escape::escape_into(out, &props.label);
+        fv::core::escape_into(out, &props.label);
         out.push('"');
     }
     out.push_str(">merged</p><p class=\"");
-    fv::class::class_into(out, false, &[props.maybe.as_deref().unwrap_or("")]);
+    fv::attrs::class_into(out, false, &[props.maybe.as_deref().unwrap_or("")]);
     out.push_str("\">alone</p><p");
     if props.maybe.as_deref().is_some() {
         out.push_str(" class=\"");
-        fv::class::class_into(out, false, &[props.maybe.as_deref().unwrap_or("")]);
+        fv::attrs::class_into(out, false, &[props.maybe.as_deref().unwrap_or("")]);
         out.push('"');
     }
     out.push_str(">absent</p><p");
@@ -123,11 +123,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
         out.push_str(" id");
     } else {
         out.push_str(" id=\"");
-        fv::core::escape::escape_into(out, &props.label);
+        fv::core::escape_into(out, &props.label);
         out.push('"');
     }
     out.push_str(">none</p><p style=\"");
-    fv::core::escape::escape_into(out, &props.css);
+    fv::core::escape_into(out, &props.css);
     out.push_str("\">style</p><p style=\"");
     fv::attrs::style_text_into(out, &props.css);
     out.push('"');
@@ -135,7 +135,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
         out.push_str(" id");
     } else {
         out.push_str(" id=\"");
-        fv::core::escape::escape_into(out, &props.label);
+        fv::core::escape_into(out, &props.label);
         out.push('"');
     }
     out.push_str(">merged style</p></div>");

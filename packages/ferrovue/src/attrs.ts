@@ -20,10 +20,10 @@ export function display(e: Emitter, v: Val): boolean {
   if (v.ty.k === "str" && known(v) !== undefined) e.lit(escapeHtml(unquote(v.code)));
   else if ((v.ty.k === "int" || v.ty.k === "float") && v.num !== undefined) e.lit(String(v.num));
   else if (v.ty.k === "bool" && v.konst !== undefined) e.lit(String(v.konst));
-  else if (v.ty.k === "str") e.stmt(`fv::core::escape::escape_into(out, ${strArg(v.code)});`);
+  else if (v.ty.k === "str") e.stmt(`fv::core::escape_into(out, ${strArg(v.code)});`);
   else if (v.ty.k === "int" || v.ty.k === "float") {
     const w = asWritten(v);
-    e.stmt(`fv::core::numbers::${w.ty.k === "int" ? "push_int" : "push_number"}(out, ${bare(w.code)});`);
+    e.stmt(`fv::core::${w.ty.k === "int" ? "push_int" : "push_number"}(out, ${bare(w.code)});`);
     e.expect(NUMBER_BYTES);
   } else if (v.ty.k === "bool") e.stmt(`out.push_str(if ${condition(v.code)} { "true" } else { "false" });`);
   else return false;

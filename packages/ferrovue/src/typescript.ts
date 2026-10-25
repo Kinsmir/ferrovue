@@ -119,7 +119,7 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
       if (comp.inlineName !== null && name === comp.inlineName) return { k: "html", inline: true };
       if (comp.trustedName !== null && name === comp.trustedName) {
         if (ctx.trustedHtml === null) {
-          fail(comp, "FV1503", `a \`TrustedHtml\` prop needs \`trustedHtml\` in ${CONFIG_FILE}: the Rust type it is, or type it \`InlineHtml\` (inline tags only, \`ferrovue::basic_html::InlineHtml\`)`, t);
+          fail(comp, "FV1503", `a \`TrustedHtml\` prop needs \`trustedHtml\` in ${CONFIG_FILE}: the Rust type it is, or type it \`InlineHtml\` (inline tags only, \`ferrovue::html::InlineHtml\`)`, t);
         }
         return ctx.trustedHtml === INLINE_HTML ? { k: "html", inline: true } : { k: "html" };
       }

@@ -35,7 +35,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) {
-    fv::refused::rendered(try_render(out, props, fv_provides));
+    fv::render::rendered(try_render(out, props, fv_provides));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -43,10 +43,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides:
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(32 + props.items.iter().map(|v| v.len()).sum::<usize>() + props.theme.len());
-    let fv_refusals = fv::refused::Refusals::new(NAME, "components/ThemedShelf.vue");
+    let fv_refusals = fv::render::Refusals::new(NAME, "components/ThemedShelf.vue");
     let fv_inherited = fv_provides;
     let fv_provides = super::provides::Provides { tags: Some(&props.items), ratio: Some(props.ratio), ..fv_inherited };
     out.push_str("<section data-wide=\"");
@@ -54,7 +54,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provi
     out.push_str("\">");
     fv_refusals.check(super::themed_list::try_render(out, &super::themed_list::Props { items: props.items.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect(), theme: std::borrow::Cow::Borrowed(&*props.theme), wide: props.items.len() as i64 as f64 > 1.0 }, super::themed_list::Slots {
         row: Some(&|out: &mut String, fv_slot_props: &super::themed_list::RowSlotProps<'_>, fv_slot_id: &str, fv_provides: super::provides::Provides<'_>| -> bool {
-            fv_refusals.join(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed(&*format!("{}: {}", fv::core::numbers::Js(fv_slot_props.index), fv_slot_props.item)) }, fv_provides, &fv::attrs::scope_attrs("", "", fv_slot_id)));
+            fv_refusals.join(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed(&*format!("{}: {}", fv::core::Js(fv_slot_props.index), fv_slot_props.item)) }, fv_provides, &fv::attrs::scope_attrs("", "", fv_slot_id)));
             true
         }),
         default: Some(&|out: &mut String, fv_slot_id_2: &str, fv_provides: super::provides::Provides<'_>| -> bool {

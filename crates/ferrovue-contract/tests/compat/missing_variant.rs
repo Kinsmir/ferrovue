@@ -6,7 +6,7 @@ mod domain {
         Warm,
     }
 
-    impl ferrovue::union::Union for Tone {
+    impl ferrovue::props::Union for Tone {
         const ALL: &'static [Self] = &[Tone::Warm];
 
         fn as_str(self) -> &'static str {

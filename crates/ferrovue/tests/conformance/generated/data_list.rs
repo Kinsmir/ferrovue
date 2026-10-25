@@ -112,7 +112,7 @@ pub struct Slots<'s> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
-    fv::refused::rendered(try_render(out, props, fv_slots));
+    fv::render::rendered(try_render(out, props, fv_slots));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -120,12 +120,12 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(96 + 17 * props.rows.len() + props.rows.iter().map(|v| v.label.len() + v.tags.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>() + props.title.len() + props.note.as_deref().map_or(0, str::len));
     out.push_str("<section><header>");
-    fv::slots::scoped_slot_into(out, fv_slots.header, &HeaderSlotProps { title: &props.title, note: props.note.as_deref() }, Some(&mut |out: &mut String| {
-        fv::core::escape::escape_into(out, &props.title);
+    fv::render::scoped_slot_into(out, fv_slots.header, &HeaderSlotProps { title: &props.title, note: props.note.as_deref() }, Some(&mut |out: &mut String| {
+        fv::core::escape_into(out, &props.title);
     }));
     out.push_str("</header>");
     if props.rows.len() as i64 != 0 {
@@ -134,24 +134,24 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> R
             let fv_r = fv_r_ref;
             let fv_i = fv_i as i64;
             out.push_str("<li>");
-            fv::slots::scoped_slot_into(out, fv_slots.row, &RowSlotProps { row: fv_r, index: fv_i, label: &fv_r.label, tags: &fv_r.tags, first: fv_i as f64 == 0.0 }, Some(&mut |out: &mut String| {
-                fv::core::numbers::push_int(out, fv_i);
+            fv::render::scoped_slot_into(out, fv_slots.row, &RowSlotProps { row: fv_r, index: fv_i, label: &fv_r.label, tags: &fv_r.tags, first: fv_i as f64 == 0.0 }, Some(&mut |out: &mut String| {
+                fv::core::push_int(out, fv_i);
                 out.push_str(". ");
-                fv::core::escape::escape_into(out, &fv_r.label);
+                fv::core::escape_into(out, &fv_r.label);
             }));
             out.push_str("</li>");
         }
         out.push_str("<!--]--></ul>");
     } else {
         out.push_str("<p>");
-        fv::slots::scoped_slot_into(out, fv_slots.empty, &EmptySlotProps { title: &props.title }, Some(&mut |out: &mut String| {
+        fv::render::scoped_slot_into(out, fv_slots.empty, &EmptySlotProps { title: &props.title }, Some(&mut |out: &mut String| {
             out.push_str("no rows in ");
-            fv::core::escape::escape_into(out, &props.title);
+            fv::core::escape_into(out, &props.title);
         }));
         out.push_str("</p>");
     }
     out.push_str("<footer>");
-    fv::slots::scoped_slot_into(out, fv_slots.default, &DefaultSlotProps { count: props.rows.len() as i64, title: &props.title }, None);
+    fv::render::scoped_slot_into(out, fv_slots.default, &DefaultSlotProps { count: props.rows.len() as i64, title: &props.title }, None);
     out.push_str("</footer></section>");
     Ok(())
 }

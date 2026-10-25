@@ -31,7 +31,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -39,17 +39,17 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(36 + props.row.label.len() + props.row.tags.iter().map(|v| v.len()).sum::<usize>());
     out.push_str("<span class=\"chip");
-    fv::class::class_into(out, true, &[if props.first { "first" } else { "" }]);
+    fv::attrs::class_into(out, true, &[if props.first { "first" } else { "" }]);
     out.push_str("\">");
-    fv::core::numbers::push_int(out, props.row.id);
+    fv::core::push_int(out, props.row.id);
     out.push(':');
-    fv::core::escape::escape_into(out, &props.row.label);
+    fv::core::escape_into(out, &props.row.label);
     out.push_str(" (");
-    fv::core::escape::escape_into(out, &props.row.tags.iter().map(|v| &**v).collect::<Vec<_>>().join("/"));
+    fv::core::escape_into(out, &props.row.tags.iter().map(|v| &**v).collect::<Vec<_>>().join("/"));
     out.push_str(")</span>");
     Ok(())
 }

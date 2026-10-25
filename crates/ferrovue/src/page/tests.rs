@@ -1,6 +1,6 @@
 use super::*;
-use crate::slots::{slot_into, slot_into_slotted};
-use ferrovue_core::{escape::escape_into, numbers::push_number};
+use crate::render::{slot_into, slot_into_slotted};
+use ferrovue_core::{escape_into, push_number};
 
 #[derive(Serialize)]
 struct WordProps<'a> {
@@ -109,7 +109,7 @@ fn the_record_cannot_be_closed_by_a_prop_and_reads_back_whole() {
     };
     let record = page.render_to(&mut out, layout(&LayoutProps { title: hostile }, slots, ""));
     record.script_into(&mut out, "a\"b");
-    assert_eq!(crate::slots::split_holes(&out).len(), 1, "{out}");
+    assert_eq!(crate::page::split_holes(&out).len(), 1, "{out}");
     let body = script_body(&out, "a&quot;b");
     assert!(
         !body.contains(['<', '>', '&', '\u{2028}', '\u{2029}']),
@@ -214,7 +214,7 @@ fn an_island_is_written_without_its_wrapper() {
 fn a_page_returns_the_first_refusal_of_its_slots_parts() {
     fn refuse(out: &mut String, props: &WordProps<'_>) -> Result<(), Refused> {
         word(out, props);
-        crate::refused::try_int(props.ratio).map(drop)
+        crate::render::try_int(props.ratio).map(drop)
     }
     let (early, late) = (
         WordProps {
@@ -357,7 +357,7 @@ fn a_hole_is_recorded_once_it_is_filled_or_dropped() {
     };
     let record = page.render_to(&mut out, layout(&LayoutProps { title: "T" }, slots, ""));
     assert_eq!(
-        crate::slots::split_holes(&out),
+        crate::page::split_holes(&out),
         [
             "<header><!--[-->",
             "<!--]--></header><main><!--[-->",
@@ -470,7 +470,7 @@ async fn a_streamed_page_writes_its_record_after_its_holes() {
     };
     let record = page.render_to(&mut out, layout(&LayoutProps { title: "T" }, slots, ""));
     out.push_str("</div>");
-    crate::slots::hole().render_to(&mut out);
+    crate::page::hole().render_to(&mut out);
     let mut stream = crate::web::HtmlStream::new(out)
         .hole(async move {
             tokio::time::sleep(Duration::from_millis(10)).await;
@@ -535,4 +535,237 @@ fn the_record_carries_where_the_layout_and_each_part_hold_dates() {
             r#"{"c":"Word","p":{"text":"b","ratio":2.0}}]},"dates":[[1]]}"#
         )
     );
+}
+
+mod chunks {
+    use super::*;
+
+    const MANIFEST: &str = r#"{
+        "client/main.ts": { "file": "assets/main.js", "isEntry": true, "css": ["assets/main.css"], "dynamicImports": ["client/app.ts"] },
+        "client/app.ts": { "file": "assets/app.js", "isDynamicEntry": true, "imports": ["_vue.js"], "dynamicImports": ["client/components/Cart.vue", "client/components/Reviews.vue"] },
+        "client/components/Cart.vue": { "file": "assets/Cart.js", "isDynamicEntry": true, "imports": ["_vue.js", "_money.js", "client/main.ts"] },
+        "client/components/Reviews.vue": { "file": "assets/Reviews.js", "isDynamicEntry": true, "imports": ["_vue.js"], "dynamicImports": ["client/components/Stars.vue"] },
+        "client/components/Stars.vue": { "file": "assets/Stars.js", "isDynamicEntry": true },
+        "_money.js": { "file": "assets/money.js", "imports": ["_vue.js"] },
+        "_vue.js": { "file": "assets/vue.js" }
+    }"#;
+
+    const ISLANDS: &str = r#"{
+        "Cart": "assets/Cart.js",
+        "Reviews": "assets/Reviews.js",
+        "Unbuilt": "assets/Unbuilt.js"
+    }"#;
+
+    fn chunks() -> Chunks {
+        Chunks::from_manifest(MANIFEST, ISLANDS).unwrap()
+    }
+
+    #[test]
+    fn an_island_needs_its_chunk_and_what_it_imports_but_never_the_entry() {
+        assert_eq!(
+            chunks().for_islands(["Cart"]),
+            ["/assets/Cart.js", "/assets/vue.js", "/assets/money.js"]
+        );
+    }
+
+    #[test]
+    fn dynamic_imports_are_left_to_load_when_asked_for() {
+        assert_eq!(
+            chunks().for_islands(["Reviews"]),
+            ["/assets/Reviews.js", "/assets/vue.js"]
+        );
+    }
+
+    #[test]
+    fn islands_sharing_a_chunk_need_it_once() {
+        assert_eq!(
+            chunks().for_islands(["Reviews", "Cart", "Reviews"]),
+            [
+                "/assets/Reviews.js",
+                "/assets/vue.js",
+                "/assets/Cart.js",
+                "/assets/money.js"
+            ]
+        );
+    }
+
+    #[test]
+    fn names_that_are_no_built_island_need_nothing() {
+        assert!(chunks().for_islands(["Unbuilt", "Nowhere"]).is_empty());
+    }
+
+    #[test]
+    fn the_app_the_entry_loads_dynamically() {
+        assert_eq!(
+            chunks().for_source("client/app.ts"),
+            ["/assets/app.js", "/assets/vue.js"]
+        );
+        assert!(chunks().for_source("client/main.ts").is_empty());
+        assert!(chunks().for_source("client/missing.ts").is_empty());
+    }
+
+    #[test]
+    fn the_files_are_served_under_the_base() {
+        assert_eq!(
+            chunks().with_base("/static/").for_islands(["Reviews"]),
+            ["/static/assets/Reviews.js", "/static/assets/vue.js"]
+        );
+    }
+
+    #[test]
+    fn a_page_links_each_url_once_across_head_and_body() {
+        let chunks = chunks().with_base("/a&b/");
+        let mut preloads = chunks.preloads();
+        let mut head = String::new();
+        preloads.source_into(&mut head, "client/app.ts");
+        preloads.islands_into(&mut head, ["Reviews"]);
+        let mut body = String::new();
+        preloads.islands_into(&mut body, ["Cart", "Reviews"]);
+        assert_eq!(
+            head,
+            concat!(
+                r#"<link rel="modulepreload" href="/a&amp;b/assets/app.js">"#,
+                r#"<link rel="modulepreload" href="/a&amp;b/assets/vue.js">"#,
+                r#"<link rel="modulepreload" href="/a&amp;b/assets/Reviews.js">"#,
+            )
+        );
+        assert_eq!(
+            body,
+            concat!(
+                r#"<link rel="modulepreload" href="/a&amp;b/assets/Cart.js">"#,
+                r#"<link rel="modulepreload" href="/a&amp;b/assets/money.js">"#,
+            )
+        );
+    }
+
+    #[test]
+    fn an_island_bundled_into_a_shared_chunk_is_found_by_its_file() {
+        let manifest = r#"{
+            "client/main.ts": { "file": "assets/main.js", "isEntry": true, "dynamicImports": ["_Badge-1.js", "client/components/Card.vue"] },
+            "client/components/Card.vue": { "file": "assets/Card-2.js", "isDynamicEntry": true, "imports": ["_Badge-1.js"] },
+            "_Badge-1.js": { "file": "assets/Badge-1.js", "name": "Badge", "imports": ["client/main.ts"] }
+        }"#;
+        let islands = r#"{ "Badge": "assets/Badge-1.js", "Card": "assets/Card-2.js" }"#;
+        let chunks = Chunks::from_manifest(manifest, islands).unwrap();
+        assert_eq!(chunks.for_islands(["Badge"]), ["/assets/Badge-1.js"]);
+        assert_eq!(
+            chunks.for_islands(["Card", "Badge"]),
+            ["/assets/Card-2.js", "/assets/Badge-1.js"]
+        );
+    }
+
+    #[test]
+    fn what_is_not_a_manifest_is_refused() {
+        let error = Chunks::from_manifest(r#"{"a.js": {"imports": []}}"#, ISLANDS).unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .starts_with("not a Vite manifest: missing field `file`"),
+            "{error}"
+        );
+        let source = std::error::Error::source(&error).map(ToString::to_string);
+        assert!(
+            source
+                .as_deref()
+                .is_some_and(|s| s.starts_with("missing field `file`")),
+            "{source:?}"
+        );
+        assert!(Chunks::from_manifest("[", ISLANDS).is_err());
+        let error = Chunks::from_manifest(MANIFEST, r#"{"Cart": 1}"#).unwrap_err();
+        assert!(
+            error.to_string().starts_with("not ferrovue's islands: "),
+            "{error}"
+        );
+    }
+}
+
+mod teleport {
+    use super::*;
+
+    #[test]
+    fn teleported_content_goes_to_its_target_in_the_order_vue_collects_it() {
+        let teleports = Teleports::new();
+        let mut out = String::from("<main>");
+        teleport_into(
+            &mut out,
+            &teleports,
+            "#modals",
+            false,
+            &|out: &mut String| {
+                out.push_str("<div>outer");
+                teleport_into(out, &teleports, "#modals", false, &|out: &mut String| {
+                    out.push_str("<p>inner</p>")
+                });
+                out.push_str("</div>");
+            },
+        );
+        teleport_into(&mut out, &teleports, "body", true, &|out: &mut String| {
+            out.push_str("<i>here</i>")
+        });
+        out.push_str("</main>");
+        assert_eq!(
+            out,
+            "<main><!--teleport start--><!--teleport end--><!--teleport start--><i>here</i><!--teleport end--></main>"
+        );
+        assert_eq!(
+            teleports.get("#modals").unwrap(),
+            "<!--teleport start anchor--><div>outer<!--teleport start--><!--teleport end--></div><!--teleport anchor--><!--teleport start anchor--><p>inner</p><!--teleport anchor-->"
+        );
+        assert_eq!(
+            teleports.get("body").unwrap(),
+            "<!--teleport start anchor--><!--teleport anchor-->"
+        );
+        assert_eq!(teleports.into_targets().len(), 2);
+    }
+}
+
+mod state {
+    use super::*;
+
+    #[test]
+    fn the_state_scripts_numbers_that_are_not_finite_are_written_as_javascript_writes_them() {
+        let mut out = String::new();
+        state_script_into(&mut out, "s", &[f64::NAN, f64::INFINITY, 1.0]);
+        assert_eq!(
+            out,
+            r#"<script type="application/json" id="s">[NaN,Infinity,1.0]</script>"#
+        );
+    }
+
+    #[test]
+    fn the_state_script_cannot_be_closed_by_a_value_and_reads_back_whole() {
+        let state = serde_json::json!({ "prefs": { "label": "</script><script>alert(1)</script>&\u{2028}" } });
+        let mut out = String::new();
+        state_script_into(&mut out, "__pinia", &state);
+        let body = out
+            .strip_prefix(r#"<script type="application/json" id="__pinia">"#)
+            .and_then(|b| b.strip_suffix("</script>"))
+            .expect("one script element");
+        assert!(!body.contains(['<', '>', '&', '\u{2028}']), "{body}");
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(body).unwrap(),
+            state
+        );
+    }
+
+    #[test]
+    fn the_state_script_escapes_exactly_the_two_line_separators() {
+        let state = serde_json::json!(["a\u{2029}b\u{2028}c\u{2069}\u{2027}\u{2029}"]);
+        let mut out = String::new();
+        state_script_into(&mut out, "s", &state);
+        assert_eq!(
+            out,
+            "<script type=\"application/json\" id=\"s\">[\"a\\u2029b\\u2028c\u{2069}\u{2027}\\u2029\"]</script>"
+        );
+    }
+
+    #[test]
+    fn the_state_script_id_is_escaped() {
+        let mut out = String::new();
+        state_script_into(&mut out, "a\"b", &serde_json::json!({}));
+        assert_eq!(
+            out,
+            r#"<script type="application/json" id="a&quot;b">{}</script>"#
+        );
+    }
 }

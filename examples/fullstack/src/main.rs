@@ -146,7 +146,7 @@ mod tests {
         let assets = Assets::Built {
             script: "/assets/main.js".to_owned(),
             styles: vec!["/assets/main.css".to_owned()],
-            chunks: ferrovue::chunks::Chunks::from_manifest(manifest, islands).unwrap(),
+            chunks: ferrovue::page::Chunks::from_manifest(manifest, islands).unwrap(),
         };
         Site::new(assets, Duration::ZERO)
     }
@@ -200,7 +200,7 @@ mod tests {
             "{:?}",
             page.holes
         );
-        let [before, after] = ferrovue::slots::split_holes(&page.html)[..] else {
+        let [before, after] = ferrovue::page::split_holes(&page.html)[..] else {
             panic!("one hole, two pieces");
         };
         assert!(before.contains("<h1>Dune</h1>"), "{before}");

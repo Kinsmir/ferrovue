@@ -4,9 +4,9 @@ A render is synchronous: it needs every value before it starts. A page whose par
 different times (the book now, its reviews after a slow lookup) can still be sent as soon as
 possible, with holes.
 
-[`hole()`](crate::slots::hole) is a [`Slot`](crate::slots::Slot) whose content you write later. Render the whole
+[`hole()`](crate::page::hole) is a [`Slot`](crate::render::Slot) whose content you write later. Render the whole
 page once, with a hole in each slow slot, and cut the output with
-[`split_holes`](crate::slots::split_holes): there is one more piece than there were holes. Send the first
+[`split_holes`](crate::page::split_holes): there is one more piece than there were holes. Send the first
 piece at once, then each hole's content when it is ready, each followed by the next piece.
 
 ```rust
@@ -42,16 +42,16 @@ piece at once, then each hole's content when it is ready, each followed by the n
 # #[derive(Clone, Copy, Default)]
 # pub struct Slots<'s> {
 #     /// `<slot name="reviews">`
-#     pub reviews: Option<fv::slots::Slot<'s>>,
+#     pub reviews: Option<fv::render::Slot<'s>>,
 # }
 #
 # /// Write the component's server render into `out`.
 # pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
 #     out.reserve(54 + props.title.len());
 #     out.push_str("<article><h1>");
-#     fv::core::escape::escape_into(out, &props.title);
+#     fv::core::escape_into(out, &props.title);
 #     out.push_str("</h1><section>");
-#     fv::slots::slot_into(out, fv_slots.reviews, Some(&mut |out: &mut String| {
+#     fv::render::slot_into(out, fv_slots.reviews, Some(&mut |out: &mut String| {
 #         out.push_str("loading");
 #     }));
 #     out.push_str("</section></article>");
@@ -65,10 +65,10 @@ piece at once, then each hole's content when it is ready, each followed by the n
 // BookPage.vue: <article><h1>{{ title }}</h1><section><slot name="reviews">loading</slot></section></article>
 let props = book_page::Props { title: "Dune".into() };
 let mut page = String::from("<!doctype html><body>");
-book_page::render(&mut page, &props, book_page::Slots { reviews: Some(ferrovue::slots::hole()) });
+book_page::render(&mut page, &props, book_page::Slots { reviews: Some(ferrovue::page::hole()) });
 page.push_str("</body>");
 
-let pieces = ferrovue::slots::split_holes(&page);
+let pieces = ferrovue::page::split_holes(&page);
 assert_eq!(
     pieces,
     [
@@ -109,8 +109,8 @@ soon as they are ready, the futures all running at once. This is the handler fro
 # impl Site {
 #     fn page(&self, path: &str) -> Page {
 #         let mut html = String::from("<main>");
-#         ferrovue::core::escape::escape_into(&mut html, path);
-#         ferrovue::slots::hole().render_to(&mut html);
+#         ferrovue::core::escape_into(&mut html, path);
+#         ferrovue::page::hole().render_to(&mut html);
 #         html.push_str("</main>");
 #         Page { status: 404, html, holes: vec!["Dune".to_owned()] }
 #     }

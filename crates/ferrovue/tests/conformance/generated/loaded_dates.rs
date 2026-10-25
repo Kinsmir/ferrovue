@@ -32,8 +32,8 @@ impl<'a> Props<'a> {
 /// # Panics
 ///
 /// With the message of the refusal [`try_render`] returns.
-pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::load::Loads<'_>) {
-    fv::refused::rendered(try_render(out, props, fv_loads));
+pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::Loads<'_>) {
+    fv::render::rendered(try_render(out, props, fv_loads));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -41,58 +41,58 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::load::Loads<'_
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::load::Loads<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::Loads<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(168 + props.name.len());
-    let fv_refusals = fv::refused::Refusals::new(NAME, "components/LoadedDates.vue");
+    let fv_refusals = fv::render::Refusals::new(NAME, "components/LoadedDates.vue");
     let Some(l_0) = fv_loads.get(super::loaders::LoadOpened { name: String::from(&*props.name) }) else { return Ok(()); };
     let Some(l_1) = fv_loads.get(super::loaders::LoadThread { id: props.id }) else { return Ok(()); };
     let Some(l_2) = fv_loads.get(super::loaders::LoadThread { id: props.id }) else { return Ok(()); };
     let Some(l_3) = fv_loads.get(super::loaders::LoadDays) else { return Ok(()); };
     let Some(l_4) = fv_loads.get(super::loaders::LoadClosed { name: String::from(&*props.name) }) else { return Ok(()); };
     out.push_str("<section><h2>");
-    fv::core::escape::escape_into(out, &l_1.title);
+    fv::core::escape_into(out, &l_1.title);
     out.push_str(" by ");
-    fv::core::escape::escape_into(out, &props.name);
+    fv::core::escape_into(out, &props.name);
     out.push_str("</h2>");
-    if !fv::js_date::js_time_of(l_0).is_nan() {
+    if !fv::date::js_time_of(l_0).is_nan() {
         out.push_str("<time datetime=\"");
-        fv::core::escape::escape_into(out, &fv_refusals.keep(fv::dates::try_to_iso_string(fv::js_date::js_time_of(l_0)), 16, 67));
+        fv::core::escape_into(out, &fv_refusals.keep(fv::date::try_to_iso_string(fv::date::js_time_of(l_0)), 16, 67));
         out.push_str("\">");
-        fv::core::numbers::push_number(out, fv::dates::js_utc_full_year(fv::js_date::js_time_of(l_0)));
+        fv::core::push_number(out, fv::date::js_utc_full_year(fv::date::js_time_of(l_0)));
         out.push_str("</time>");
     } else {
         out.push_str("<p>never opened ");
-        fv::core::numbers::push_number(out, fv::js_date::js_time_of(l_0));
+        fv::core::push_number(out, fv::date::js_time_of(l_0));
         out.push_str("</p>");
     }
-    if let Some(fv_closed) = l_4.as_ref().map(fv::js_date::js_time_of) {
+    if let Some(fv_closed) = l_4.as_ref().map(fv::date::js_time_of) {
         out.push_str("<p>closed ");
-        fv::core::numbers::push_number(out, fv_closed);
-        fv::core::escape::escape_into(out, if fv_closed > fv::js_date::js_time_of(l_0) { " later" } else { "" });
+        fv::core::push_number(out, fv_closed);
+        fv::core::escape_into(out, if fv_closed > fv::date::js_time_of(l_0) { " later" } else { "" });
         out.push_str("</p>");
     } else {
         out.push_str("<p>open</p>");
     }
     out.push_str("<!--[-->");
-    for fv_day in l_3.iter().map(fv::js_date::js_time_of) {
+    for fv_day in l_3.iter().map(fv::date::js_time_of) {
         out.push_str("<i>");
-        fv::core::numbers::push_number(out, fv::dates::js_utc_date(fv_day));
+        fv::core::push_number(out, fv::date::js_utc_date(fv_day));
         out.push_str("</i>");
     }
     out.push_str("<!--]--><!--[-->");
-    for fv_at in l_2.seen.iter().map(|v| v.as_ref().map(fv::js_date::js_time_of)) {
+    for fv_at in l_2.seen.iter().map(|v| v.as_ref().map(fv::date::js_time_of)) {
         out.push_str("<b>");
-        fv::core::numbers::push_number(out, fv_at.unwrap_or(-1.0f64));
+        fv::core::push_number(out, fv_at.unwrap_or(-1.0f64));
         out.push_str("</b>");
     }
     out.push_str("<!--]--><!--[-->");
     for (fv_who, fv_at_ref) in l_2.pinned.iter() {
-        let fv_at_2 = fv::js_date::js_time_of(fv_at_ref);
+        let fv_at_2 = fv::date::js_time_of(fv_at_ref);
         out.push_str("<u>");
-        fv::core::escape::escape_into(out, fv_who);
+        fv::core::escape_into(out, fv_who);
         out.push(' ');
-        fv::core::numbers::push_number(out, fv::dates::js_utc_month(fv_at_2));
+        fv::core::push_number(out, fv::date::js_utc_month(fv_at_2));
         out.push_str("</u>");
     }
     out.push_str("<!--]-->");
@@ -102,6 +102,6 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::load::Load
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_loads: &'p fv::load::Loads<'p>) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_loads: &'p fv::loaders::Loads<'p>) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
     fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_loads)))
 }

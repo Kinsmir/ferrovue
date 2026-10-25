@@ -44,7 +44,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -52,15 +52,15 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(271 + props.label.len() + props.tip.as_deref().map_or(0, str::len) + props.tone.len());
     out.push_str("<div class=\"box\"");
     if props.label.is_empty() {
         out.push_str(" id");
     } else {
         out.push_str(" id=\"");
-        fv::core::escape::escape_into(out, &props.label);
+        fv::core::escape_into(out, &props.label);
         out.push('"');
     }
     if let Some(v) = props.tip.as_deref() {
@@ -68,12 +68,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
             out.push_str(" title");
         } else {
             out.push_str(" title=\"");
-            fv::core::escape::escape_into(out, v);
+            fv::core::escape_into(out, v);
             out.push('"');
         }
     }
     out.push_str(" data-n=\"");
-    fv::core::numbers::push_int(out, props.n);
+    fv::core::push_int(out, props.n);
     out.push_str("\" aria-pressed=\"");
     out.push_str(if props.on { "true" } else { "false" });
     out.push('"');
@@ -81,35 +81,35 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
         out.push_str(" hidden");
     }
     out.push_str(" data-own=\"x\"><a class=\"own");
-    fv::class::class_into(out, true, &[if props.on { "on" } else { "off" }]);
+    fv::attrs::class_into(out, true, &[if props.on { "on" } else { "off" }]);
     out.push('"');
     if props.label.is_empty() {
         out.push_str(" href");
     } else {
         out.push_str(" href=\"");
-        fv::core::escape::escape_into(out, &props.label);
+        fv::core::escape_into(out, &props.label);
         out.push('"');
     }
     out.push('>');
-    fv::core::escape::escape_into(out, &props.label);
+    fv::core::escape_into(out, &props.label);
     out.push_str("</a><span");
     if props.label.is_empty() {
         out.push_str(" title");
     } else {
         out.push_str(" title=\"");
-        fv::core::escape::escape_into(out, &props.label);
+        fv::core::escape_into(out, &props.label);
         out.push('"');
     }
     out.push_str(" style=\"--tone:");
-    fv::core::escape::escape_into(out, &props.tone);
+    fv::core::escape_into(out, &props.tone);
     out.push_str(";margin:0;\">");
-    fv::core::numbers::push_int(out, props.n);
+    fv::core::push_int(out, props.n);
     out.push_str("</span><input");
     if props.label.is_empty() {
         out.push_str(" value");
     } else {
         out.push_str(" value=\"");
-        fv::core::escape::escape_into(out, &props.label);
+        fv::core::escape_into(out, &props.label);
         out.push('"');
     }
     if props.on {
@@ -120,11 +120,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
         out.push_str(" data-tip");
     } else {
         out.push_str(" data-tip=\"");
-        fv::core::escape::escape_into(out, props.tip.as_deref().unwrap_or("none"));
+        fv::core::escape_into(out, props.tip.as_deref().unwrap_or("none"));
         out.push('"');
     }
     out.push_str(" class=\"");
-    fv::class::class_into(out, false, &[&*props.tone, if props.on { "lit" } else { "" }]);
+    fv::attrs::class_into(out, false, &[&*props.tone, if props.on { "lit" } else { "" }]);
     out.push_str("\"></p></div>");
     Ok(())
 }

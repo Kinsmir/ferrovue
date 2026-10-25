@@ -69,10 +69,10 @@ describe("provide and inject", () => {
     const out = project({ X: scope, Button: button }).get("x.rs")!;
     expect(out).toContain("let fv_inherited = fv_provides;");
     expect(out).toContain("let fv_provides = super::provides::Provides { theme_key: Some(&props.label), size: Some(3i64) };");
-    expect(out).toContain('fv::core::escape::escape_into(out, fv_inherited.theme_key.unwrap_or("light"));');
+    expect(out).toContain('fv::core::escape_into(out, fv_inherited.theme_key.unwrap_or("light"));');
     expect(out).toContain("super::button::try_render(out, &super::button::Props { label: std::borrow::Cow::Borrowed(\"in\") }, fv_provides)?;");
     expect(out).toContain("pub type DefaultSlot<'s> = dyn Fn(&mut String, super::provides::Provides<'_>) -> bool + 's;");
-    expect(out).toContain("fv::slots::scoped_slot_into(out, fv_slots.default.map(|f| move |out: &mut String, _: &()| f(out, fv_provides)).as_ref(), &(), None);");
+    expect(out).toContain("fv::render::scoped_slot_into(out, fv_slots.default.map(|f| move |out: &mut String, _: &()| f(out, fv_provides)).as_ref(), &(), None);");
   });
 
   it("hands slot content the context of the component whose outlet renders it", () => {
@@ -115,7 +115,7 @@ describe("provide and inject", () => {
     }).get("x.rs")!;
     expect(out).toContain("let fv_default_tabs = super::types::TabsState { active: std::borrow::Cow::Borrowed(&*props.label), count: 1i64 };");
     expect(out).toContain("let fv_default_made = super::types::TabsState { active: std::borrow::Cow::Borrowed(\"made\"), count: 2i64 };");
-    expect(out).toContain("fv::core::escape::escape_into(out, &fv_provides.tabs_key.unwrap_or(&fv_default_tabs).active);");
+    expect(out).toContain("fv::core::escape_into(out, &fv_provides.tabs_key.unwrap_or(&fv_default_tabs).active);");
     expect(out).toContain("fv_provides.tabs_key.unwrap_or(&fv_default_live).active");
   });
 

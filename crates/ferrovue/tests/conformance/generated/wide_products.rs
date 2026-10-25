@@ -31,7 +31,7 @@ impl Props {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -39,34 +39,34 @@ pub fn render(out: &mut String, props: &Props) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
     out.reserve(90);
     let s_square = props.n as f64 * props.n as f64;
     out.push_str("<p title=\"");
-    fv::core::numbers::push_number(out, props.n as f64 * props.n as f64);
+    fv::core::push_number(out, props.n as f64 * props.n as f64);
     out.push_str("\" style=\"width:");
-    fv::core::numbers::push_number(out, props.n as f64 * props.m as f64);
+    fv::core::push_number(out, props.n as f64 * props.m as f64);
     out.push_str(";\">");
-    fv::core::numbers::push_number(out, props.n as f64 * props.n as f64);
+    fv::core::push_number(out, props.n as f64 * props.n as f64);
     out.push(' ');
-    fv::core::numbers::push_number(out, props.n as f64 + props.m as f64);
+    fv::core::push_number(out, props.n as f64 + props.m as f64);
     out.push(' ');
-    fv::core::numbers::push_number(out, -(props.n as f64));
+    fv::core::push_number(out, -(props.n as f64));
     out.push(' ');
-    fv::core::numbers::push_number(out, s_square);
+    fv::core::push_number(out, s_square);
     out.push(' ');
-    fv::core::escape::escape_into(out, &format!("{}", fv::core::numbers::Js(props.n as f64 * props.m as f64)));
+    fv::core::escape_into(out, &format!("{}", fv::core::Js(props.n as f64 * props.m as f64)));
     out.push(' ');
-    fv::core::escape::escape_into(out, &fv::core::numbers::Js(props.n as f64 * props.n as f64).to_string());
+    fv::core::escape_into(out, &fv::core::Js(props.n as f64 * props.n as f64).to_string());
     out.push(' ');
-    fv::core::escape::escape_into(out, &fv::core::numbers::Js(props.n as f64 * props.m as f64).to_string());
+    fv::core::escape_into(out, &fv::core::Js(props.n as f64 * props.m as f64).to_string());
     out.push(' ');
-    fv::core::escape::escape_into(out, &fv::strings::js_json_number(props.n as f64 * props.n as f64));
+    fv::core::escape_into(out, &fv::strings::js_json_number(props.n as f64 * props.n as f64));
     out.push(' ');
-    fv::core::numbers::push_number(out, (props.n as f64 * props.n as f64 * 1000.0).floor());
+    fv::core::push_number(out, (props.n as f64 * props.n as f64 * 1000.0).floor());
     out.push(' ');
-    fv::core::numbers::push_number(out, props.n as f64 * props.n as f64 * props.n as f64 * props.n as f64 * props.n as f64 * props.n as f64);
+    fv::core::push_number(out, props.n as f64 * props.n as f64 * props.n as f64 * props.n as f64 * props.n as f64 * props.n as f64);
     out.push(' ');
     out.push_str(if props.n as f64 * props.n as f64 > props.m as f64 { "true" } else { "false" });
     out.push_str("</p>");

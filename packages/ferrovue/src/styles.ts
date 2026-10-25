@@ -106,7 +106,7 @@ function writeCssVar(s: Scope, e: Emitter, css: string, n: N): void {
     e.lit(`${escapeHtml(css)}:`);
     const k = v.ty.k === "str" ? known(v) : true;
     if (k === false) e.lit(" ");
-    else if (k === undefined && isTemporary(v)) e.stmt(`match AsRef::<str>::as_ref(${strArg(v.code)}) { "" => out.push(' '), v => fv::core::escape::escape_into(out, v) }`);
+    else if (k === undefined && isTemporary(v)) e.stmt(`match AsRef::<str>::as_ref(${strArg(v.code)}) { "" => out.push(' '), v => fv::core::escape_into(out, v) }`);
     else if (k === undefined) {
       e.open(`if ${receiver(v.code)}.is_empty()`);
       e.lit(" ");
@@ -221,10 +221,10 @@ export function renderStyle(s: Scope, e: Emitter, n: N): void {
   }
   if (n.type !== "ObjectExpression" && n.type !== "ArrayExpression" && n.type !== "ConditionalExpression" && n.type !== "LogicalExpression" && n.type !== "NullLiteral") {
     const v = expr(s, n);
-    if (v.ty.k === "str") e.stmt(`fv::core::escape::escape_into(out, ${strArg(v.code)});`);
+    if (v.ty.k === "str") e.stmt(`fv::core::escape_into(out, ${strArg(v.code)});`);
     else if (v.ty.k === "opt" && v.ty.of.k === "str") {
       e.open(`if let Some(v) = ${scrutinee(v.code)}`);
-      e.stmt("fv::core::escape::escape_into(out, v);");
+      e.stmt("fv::core::escape_into(out, v);");
       e.close();
     } else if (!nothing(v.ty)) fail(s.comp, "FV1007", "a style binding is a string, an object or an array", n);
     return;

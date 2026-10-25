@@ -547,7 +547,7 @@ impl<'r> Query<'r> {
     pub fn write_display(&self, out: &mut String) {
         match self {
             Query::Absent | Query::Null => {}
-            Query::One(s) => ferrovue_core::escape::escape_into(out, s),
+            Query::One(s) => ferrovue_core::escape_into(out, s),
             Query::Many(values) => {
                 let mut json = String::from("[\n");
                 for (i, v) in values.iter().enumerate() {
@@ -561,7 +561,7 @@ impl<'r> Query<'r> {
                     }
                 }
                 json.push_str("\n]");
-                ferrovue_core::escape::escape_into(out, &json);
+                ferrovue_core::escape_into(out, &json);
             }
         }
     }
@@ -1016,7 +1016,7 @@ fn encode_param(text: &str) -> String {
 fn encode_url(text: &str, part: Part) -> String {
     let mut out = String::with_capacity(text.len());
     for c in text.chars() {
-        let uri = ferrovue_core::uri::kept_by_encode_uri(c) || matches!(c, '|' | '[' | ']');
+        let uri = ferrovue_core::kept_by_encode_uri(c) || matches!(c, '|' | '[' | ']');
         let keep = match (part, c) {
             (Part::Param, '#' | '?' | '/') => false,
             (Part::QueryValue | Part::QueryKey, '+' | '#' | '&') => false,
@@ -1032,7 +1032,7 @@ fn encode_url(text: &str, part: Part) -> String {
         if keep {
             out.push(c);
         } else {
-            ferrovue_core::uri::percent_encode_into(&mut out, c);
+            ferrovue_core::percent_encode_into(&mut out, c);
         }
     }
     out

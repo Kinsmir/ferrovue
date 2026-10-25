@@ -29,7 +29,7 @@ impl<'a> Props<'a> {
 #[derive(Clone, Copy, Default)]
 pub struct Slots<'s> {
     /// `<slot>`
-    pub default: Option<fv::slots::Slot<'s>>,
+    pub default: Option<fv::render::Slot<'s>>,
 }
 
 /// Write the component's server render into `out`.
@@ -38,7 +38,7 @@ pub struct Slots<'s> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
-    fv::refused::rendered(try_render(out, props, fv_slots));
+    fv::render::rendered(try_render(out, props, fv_slots));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -46,15 +46,15 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(19 + props.title.len());
     out.push_str("<section>");
     super::frame::try_render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed(&*props.title) }, super::frame::Slots {
         head: None,
-        default: Some(fv::slots::Slot::markup(&|out: &mut String| -> bool {
+        default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
-            if fv::slots::slot_into(out, fv_slots.default, None) { filled = true; }
+            if fv::render::slot_into(out, fv_slots.default, None) { filled = true; }
             filled
         })),
     })?;

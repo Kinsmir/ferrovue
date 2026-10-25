@@ -85,7 +85,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -93,8 +93,8 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(210 + props.label.as_deref().map_or(0, str::len) + props.nick.as_deref().map_or(0, str::len) + props.tags.iter().map(|v| v.len()).sum::<usize>() + props.owner.as_ref().map_or(0, |v| v.name.len()));
     let s_kind = if props.label.as_deref().is_some() { "string" } else { "undefined" };
     let s_sized = if let Some(fv_size) = props.size { fv_size as f64 * 2.0 } else { -1.0f64 };
@@ -103,21 +103,21 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
         out.push_str(" data-kind");
     } else {
         out.push_str(" data-kind=\"");
-        fv::core::escape::escape_into(out, if props.label.as_deref().is_some() { "string" } else { "undefined" });
+        fv::core::escape_into(out, if props.label.as_deref().is_some() { "string" } else { "undefined" });
         out.push('"');
     }
     out.push_str(" class=\"");
-    fv::class::class_into(out, false, &[if props.label.as_deref().is_some() { "named" } else { "" }]);
+    fv::attrs::class_into(out, false, &[if props.label.as_deref().is_some() { "named" } else { "" }]);
     out.push_str("\"><p>");
-    fv::core::escape::escape_into(out, if props.label.as_deref().is_some() { "string" } else { "undefined" });
+    fv::core::escape_into(out, if props.label.as_deref().is_some() { "string" } else { "undefined" });
     out.push('|');
-    fv::core::escape::escape_into(out, if props.nick.as_deref().is_some() { "string" } else { "object" });
+    fv::core::escape_into(out, if props.nick.as_deref().is_some() { "string" } else { "object" });
     out.push_str("|number|number|boolean|object|");
-    fv::core::escape::escape_into(out, if props.owner.as_ref().is_some() { "object" } else { "undefined" });
+    fv::core::escape_into(out, if props.owner.as_ref().is_some() { "object" } else { "undefined" });
     out.push('|');
-    fv::core::escape::escape_into(out, s_kind);
+    fv::core::escape_into(out, s_kind);
     out.push('|');
-    fv::core::numbers::push_number(out, s_sized);
+    fv::core::push_number(out, s_sized);
     out.push_str("</p><p>");
     out.push_str(if props.label.as_deref().is_some() { "true" } else { "false" });
     out.push('|');
@@ -139,29 +139,29 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
     out.push_str("</p>");
     if let Some(fv_label) = props.label.as_deref() {
         out.push_str("<p>");
-        fv::core::numbers::push_int(out, fv::strings::js_length(fv_label));
+        fv::core::push_int(out, fv::strings::js_length(fv_label));
         out.push(':');
-        fv::core::escape::escape_into(out, &fv_label.to_uppercase());
+        fv::core::escape_into(out, &fv_label.to_uppercase());
         out.push_str("</p>");
     } else {
         out.push_str("<p>no label</p>");
     }
     if let Some(fv_owner) = props.owner.as_ref() {
         out.push_str("<p>");
-        fv::core::escape::escape_into(out, &fv_owner.name);
+        fv::core::escape_into(out, &fv_owner.name);
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");
     }
     if let Some(fv_nick) = props.nick.as_deref() && fv::strings::js_length(fv_nick) as f64 > 2.0 {
         out.push_str("<i>");
-        fv::core::escape::escape_into(out, fv_nick);
+        fv::core::escape_into(out, fv_nick);
         out.push_str("</i>");
     } else {
         out.push_str("<!---->");
     }
     out.push_str("<b>");
-    fv::core::numbers::push_number(out, if let Some(fv_size_2) = props.size { fv_size_2 as f64 + 1.0 } else { -1.0f64 });
+    fv::core::push_number(out, if let Some(fv_size_2) = props.size { fv_size_2 as f64 + 1.0 } else { -1.0f64 });
     out.push_str("</b></section>");
     Ok(())
 }

@@ -40,7 +40,7 @@ impl Props {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -48,56 +48,56 @@ pub fn render(out: &mut String, props: &Props) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
     out.reserve(228);
     let s_total = props.price * props.qty as f64;
     out.push_str("<div data-ratio=\"");
-    fv::core::numbers::push_number(out, props.ratio);
+    fv::core::push_number(out, props.ratio);
     out.push_str("\" style=\"opacity:");
-    fv::core::numbers::push_number(out, props.ratio);
+    fv::core::push_number(out, props.ratio);
     out.push_str(";width:");
-    fv::core::escape::escape_into(out, &format!("{}px", fv::core::numbers::Js(props.price)));
+    fv::core::escape_into(out, &format!("{}px", fv::core::Js(props.price)));
     out.push_str(";\"><p>");
-    fv::core::numbers::push_number(out, s_total);
+    fv::core::push_number(out, s_total);
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_fixed(s_total, 2));
+    fv::core::escape_into(out, &fv::core::js_to_fixed(s_total, 2));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_fixed(props.price, 0));
+    fv::core::escape_into(out, &fv::core::js_to_fixed(props.price, 0));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_fixed(props.price, 1));
+    fv::core::escape_into(out, &fv::core::js_to_fixed(props.price, 1));
     out.push('|');
-    fv::core::numbers::push_number(out, props.qty as f64 / 4.0);
+    fv::core::push_number(out, props.qty as f64 / 4.0);
     out.push('|');
-    fv::core::numbers::push_number(out, props.qty as f64 / 0.0);
+    fv::core::push_number(out, props.qty as f64 / 0.0);
     out.push('|');
-    fv::core::numbers::push_number(out, -(props.qty as f64) / 0.0);
+    fv::core::push_number(out, -(props.qty as f64) / 0.0);
     out.push_str("|NaN|");
-    fv::core::numbers::push_number(out, props.price % 1.0);
+    fv::core::push_number(out, props.price % 1.0);
     out.push_str("</p><p>");
-    fv::core::numbers::push_number(out, fv::core::numbers::js_round(props.price));
+    fv::core::push_number(out, fv::core::js_round(props.price));
     out.push('|');
-    fv::core::numbers::push_number(out, props.price.floor());
+    fv::core::push_number(out, props.price.floor());
     out.push('|');
-    fv::core::numbers::push_number(out, props.price.ceil());
+    fv::core::push_number(out, props.price.ceil());
     out.push('|');
-    fv::core::numbers::push_number(out, (-props.price).trunc());
+    fv::core::push_number(out, (-props.price).trunc());
     out.push('|');
-    fv::core::numbers::push_number(out, fv::core::numbers::js_max(props.price, props.qty as f64));
+    fv::core::push_number(out, fv::core::js_max(props.price, props.qty as f64));
     out.push('|');
-    fv::core::numbers::push_number(out, fv::core::numbers::js_min(props.ratio, 0.25f64));
+    fv::core::push_number(out, fv::core::js_min(props.ratio, 0.25f64));
     out.push('|');
-    fv::core::numbers::push_number(out, (-props.price).abs());
+    fv::core::push_number(out, (-props.price).abs());
     out.push_str("</p><p>");
-    fv::core::numbers::push_number(out, props.rate.unwrap_or(0.5f64));
+    fv::core::push_number(out, props.rate.unwrap_or(0.5f64));
     out.push('|');
     if let Some(v) = props.rate {
-        fv::core::numbers::push_number(out, v);
+        fv::core::push_number(out, v);
     }
     out.push('|');
-    fv::core::escape::escape_into(out, &format!("{}/{}", fv::core::numbers::Js(props.price), fv::core::numbers::Js(props.qty)));
+    fv::core::escape_into(out, &format!("{}/{}", fv::core::Js(props.price), fv::core::Js(props.qty)));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::numbers::Js(props.ratio).to_string());
+    fv::core::escape_into(out, &fv::core::Js(props.ratio).to_string());
     out.push('|');
     out.push_str(if props.price > props.qty as f64 { "true" } else { "false" });
     out.push('|');

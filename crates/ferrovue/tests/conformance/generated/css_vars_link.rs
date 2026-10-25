@@ -31,7 +31,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>) {
-    fv::refused::rendered(try_render_scoped(out, props, fv_route, &fv::attrs::Attrs::NONE));
+    fv::render::rendered(try_render_scoped(out, props, fv_route, &fv::attrs::Attrs::NONE));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -39,14 +39,14 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>) -> Result<(), fv::render::Refused> {
     try_render_scoped(out, props, fv_route, &fv::attrs::Attrs::NONE)
 }
 
 /// [`try_render`], with the attributes a parent passes beyond the props, and the scope ids it hands the root.
 #[doc(hidden)]
-pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::refused::Refused> {
+pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(87 + props.tone.len());
     {
         let fv_link = fv_route.link("/about");
@@ -56,21 +56,21 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_route: &fv::rou
                 out.push_str(" aria-current=\"page\"");
             }
             out.push_str(" href=\"");
-            fv::core::escape::escape_into(out, &fv_link.href);
+            fv::core::escape_into(out, &fv_link.href);
             out.push_str("\" class=\"");
-            fv::class::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }, "link"]);
+            fv::attrs::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }, "link"]);
             out.push_str("\" style=\"--318464e0-tone:");
             if props.tone.is_empty() {
                 out.push(' ');
             } else {
-                fv::core::escape::escape_into(out, &props.tone);
+                fv::core::escape_into(out, &props.tone);
             }
             out.push_str(";\" data-v-318464e0");
         } else {
             fv::attrs::attrs_into(out, &[&[("aria-current", if fv_link.exact { fv::attrs::Attr::str("page") } else { fv::attrs::Attr::Undefined }), ("href", fv::attrs::Attr::str(&fv_link.href)), ("class", fv::attrs::Attr::from(fv::attrs::class_names(&[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }])))], &fv::attrs::merge_props(&[&[("class", fv::attrs::Attr::str("link"))], fv_attrs.list(), &[("style", fv::attrs::Attr::style([("--318464e0-tone", if props.tone.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(&props.tone) })]))]])], 1, " data-v-318464e0");
         }
         out.push('>');
-        fv::core::escape::escape_into(out, &props.tone);
+        fv::core::escape_into(out, &props.tone);
         out.push_str("</a>");
     }
     Ok(())

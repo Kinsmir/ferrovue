@@ -65,7 +65,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -73,74 +73,74 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(226 + 48 * props.badges.len() + 2 + 6 + props.badges.iter().map(|v| 6 + v.text.len()).sum::<usize>() + 5);
     let s_padding = match props.size { super::types::Size::Sm => "p-1", super::types::Size::Md => "p-2", super::types::Size::Lg => "p-4" };
     let s_shout = if props.loud { "lg" } else { "sm" };
-    let s_heading = format!("{} / {}", (match s_shout { "lg" => "Large \"L\"", _ => "Small" }), fv::core::numbers::Js(match props.tone { super::types::Tone::Info => 400.0f64, super::types::Tone::Warn => 600.0f64, super::types::Tone::Danger => 700.5f64 }));
+    let s_heading = format!("{} / {}", (match s_shout { "lg" => "Large \"L\"", _ => "Small" }), fv::core::Js(match props.tone { super::types::Tone::Info => 400.0f64, super::types::Tone::Warn => 600.0f64, super::types::Tone::Danger => 700.5f64 }));
     out.push_str("<section class=\"");
-    fv::class::class_into(out, false, &[match props.size { super::types::Size::Sm => "p-1", super::types::Size::Md => "p-2", super::types::Size::Lg => "p-4" }, if !matches!(props.tone, super::types::Tone::Info | super::types::Tone::Warn) { "dark" } else { "light" }]);
+    fv::attrs::class_into(out, false, &[match props.size { super::types::Size::Sm => "p-1", super::types::Size::Md => "p-2", super::types::Size::Lg => "p-4" }, if !matches!(props.tone, super::types::Tone::Info | super::types::Tone::Warn) { "dark" } else { "light" }]);
     out.push_str("\" style=\"color:");
-    fv::core::escape::escape_into(out, match props.tone { super::types::Tone::Info => "navy", super::types::Tone::Warn => "<b>\"&amp;'", super::types::Tone::Danger => "white" });
+    fv::core::escape_into(out, match props.tone { super::types::Tone::Info => "navy", super::types::Tone::Warn => "<b>\"&amp;'", super::types::Tone::Danger => "white" });
     out.push_str(";background:");
-    fv::core::escape::escape_into(out, match props.tone { super::types::Tone::Info => "#eef", super::types::Tone::Warn => "#ffd", super::types::Tone::Danger => "#a00" });
+    fv::core::escape_into(out, match props.tone { super::types::Tone::Info => "#eef", super::types::Tone::Warn => "#ffd", super::types::Tone::Danger => "#a00" });
     out.push_str(";width:");
-    fv::core::escape::escape_into(out, &format!("{}px", fv::core::numbers::Js(match props.size { super::types::Size::Sm => 8.0f64, super::types::Size::Md => 12.5f64, super::types::Size::Lg => 16.0f64 })));
+    fv::core::escape_into(out, &format!("{}px", fv::core::Js(match props.size { super::types::Size::Sm => 8.0f64, super::types::Size::Md => 12.5f64, super::types::Size::Lg => 16.0f64 })));
     out.push_str(";\"><h2 title=\"");
-    fv::core::escape::escape_into(out, match props.size { super::types::Size::Sm => "Small", super::types::Size::Md => "Medium & <more>", super::types::Size::Lg => "Large \"L\"" });
+    fv::core::escape_into(out, match props.size { super::types::Size::Sm => "Small", super::types::Size::Md => "Medium & <more>", super::types::Size::Lg => "Large \"L\"" });
     out.push_str("\">");
-    fv::core::escape::escape_into(out, &s_heading);
+    fv::core::escape_into(out, &s_heading);
     out.push(' ');
-    fv::core::escape::escape_into(out, s_padding);
+    fv::core::escape_into(out, s_padding);
     out.push(' ');
-    fv::core::escape::escape_into(out, match if props.loud { "lg" } else { "md" } { "lg" => "p-4", _ => "p-2" });
+    fv::core::escape_into(out, match if props.loud { "lg" } else { "md" } { "lg" => "p-4", _ => "p-2" });
     out.push_str("</h2><p>");
-    fv::core::numbers::push_number(out, match props.tone { super::types::Tone::Info => 400.0f64, super::types::Tone::Warn => 600.0f64, super::types::Tone::Danger => 700.5f64 });
+    fv::core::push_number(out, match props.tone { super::types::Tone::Info => 400.0f64, super::types::Tone::Warn => 600.0f64, super::types::Tone::Danger => 700.5f64 });
     out.push(' ');
-    fv::core::numbers::push_number(out, match props.size { super::types::Size::Sm => 8.0f64, super::types::Size::Md => 12.5f64, super::types::Size::Lg => 16.0f64 });
+    fv::core::push_number(out, match props.size { super::types::Size::Sm => 8.0f64, super::types::Size::Md => 12.5f64, super::types::Size::Lg => 16.0f64 });
     out.push_str(" &lt;b&gt;&quot;&amp;amp;&#39; ");
-    fv::core::escape::escape_into(out, &(match props.size { super::types::Size::Sm => &["a"][..], super::types::Size::Md => &[][..], super::types::Size::Lg => &["x", "<y>"][..] }).iter().map(|v| &**v).collect::<Vec<_>>().join("+"));
+    fv::core::escape_into(out, &(match props.size { super::types::Size::Sm => &["a"][..], super::types::Size::Md => &[][..], super::types::Size::Lg => &["x", "<y>"][..] }).iter().map(|v| &**v).collect::<Vec<_>>().join("+"));
     out.push(' ');
-    fv::core::numbers::push_int(out, (match props.size { super::types::Size::Sm => &["a"][..], super::types::Size::Md => &[][..], super::types::Size::Lg => &["x", "<y>"][..] }).len() as i64);
+    fv::core::push_int(out, (match props.size { super::types::Size::Sm => &["a"][..], super::types::Size::Md => &[][..], super::types::Size::Lg => &["x", "<y>"][..] }).len() as i64);
     out.push_str("</p><p>");
-    fv::core::escape::escape_into(out, (match props.kind.unwrap_or(super::types::Kind::Note) { super::types::Kind::Note => Some("Note"), super::types::Kind::Tip => Some("Tip <!>"), super::types::Kind::Alert => None }).unwrap_or("none"));
+    fv::core::escape_into(out, (match props.kind.unwrap_or(super::types::Kind::Note) { super::types::Kind::Note => Some("Note"), super::types::Kind::Tip => Some("Tip <!>"), super::types::Kind::Alert => None }).unwrap_or("none"));
     out.push(' ');
     if let Some(v) = match props.kind.unwrap_or(super::types::Kind::Note) { super::types::Kind::Note => Some("ℹ"), super::types::Kind::Tip => Some("★"), super::types::Kind::Alert => None } {
-        fv::core::escape::escape_into(out, v);
+        fv::core::escape_into(out, v);
     }
     out.push(' ');
-    fv::core::escape::escape_into(out, (match props.size { super::types::Size::Sm => None, super::types::Size::Md => Some("medium note"), super::types::Size::Lg => Some("large note") }).unwrap_or("no note"));
+    fv::core::escape_into(out, (match props.size { super::types::Size::Sm => None, super::types::Size::Md => Some("medium note"), super::types::Size::Lg => Some("large note") }).unwrap_or("no note"));
     out.push_str("</p>");
     if matches!(props.kind.unwrap_or(super::types::Kind::Note), super::types::Kind::Note | super::types::Kind::Tip) {
         out.push_str("<p class=\"");
-        fv::class::class_into(out, false, &[fv::union::Union::as_str(props.kind.unwrap_or(super::types::Kind::Note))]);
+        fv::attrs::class_into(out, false, &[fv::props::Union::as_str(props.kind.unwrap_or(super::types::Kind::Note))]);
         out.push_str("\">");
-        fv::core::escape::escape_into(out, match props.kind.unwrap_or(super::types::Kind::Note) { super::types::Kind::Note => "ℹ", super::types::Kind::Tip | super::types::Kind::Alert => "★" });
+        fv::core::escape_into(out, match props.kind.unwrap_or(super::types::Kind::Note) { super::types::Kind::Note => "ℹ", super::types::Kind::Tip | super::types::Kind::Alert => "★" });
         out.push_str("</p>");
     } else {
         out.push_str("<p>no icon</p>");
     }
     if let Some(fv_steps) = (match props.level { 1 => Some("first"), 2 => Some("second"), _ => None }).filter(|v| !v.is_empty()) {
         out.push_str("<b>");
-        fv::core::escape::escape_into(out, fv_steps);
+        fv::core::escape_into(out, fv_steps);
         out.push_str("</b>");
     } else {
         out.push_str("<!---->");
     }
     out.push_str("<i>");
-    fv::core::escape::escape_into(out, (match props.level { 1 => Some("first"), 2 => Some("second"), _ => None }).unwrap_or("later"));
+    fv::core::escape_into(out, (match props.level { 1 => Some("first"), 2 => Some("second"), _ => None }).unwrap_or("later"));
     out.push_str("</i><ul><!--[-->");
     for fv_b_ref in props.badges.iter() {
         let fv_b = fv_b_ref;
         out.push_str("<li class=\"");
-        fv::class::class_into(out, false, &[if !matches!(fv_b.tone, super::types::Tone::Info | super::types::Tone::Warn) { "dark" } else { "" }]);
+        fv::attrs::class_into(out, false, &[if !matches!(fv_b.tone, super::types::Tone::Info | super::types::Tone::Warn) { "dark" } else { "" }]);
         out.push_str("\" style=\"font-weight:");
-        fv::core::numbers::push_number(out, match fv_b.tone { super::types::Tone::Info => 400.0f64, super::types::Tone::Warn => 600.0f64, super::types::Tone::Danger => 700.5f64 });
+        fv::core::push_number(out, match fv_b.tone { super::types::Tone::Info => 400.0f64, super::types::Tone::Warn => 600.0f64, super::types::Tone::Danger => 700.5f64 });
         out.push_str(";\">");
-        fv::core::escape::escape_into(out, match props.size { super::types::Size::Sm => "Small", super::types::Size::Md => "Medium & <more>", super::types::Size::Lg => "Large \"L\"" });
+        fv::core::escape_into(out, match props.size { super::types::Size::Sm => "Small", super::types::Size::Md => "Medium & <more>", super::types::Size::Lg => "Large \"L\"" });
         out.push_str(": ");
-        fv::core::escape::escape_into(out, &fv_b.text);
+        fv::core::escape_into(out, &fv_b.text);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul></section>");

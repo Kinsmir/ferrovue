@@ -45,7 +45,7 @@ component's markup in the element the client mounts on, with the props it was re
 # pub fn render(out: &mut String, props: &Props) {
 #     out.reserve(23);
 #     out.push_str("<button>");
-#     fv::core::numbers::push_int(out, props.start);
+#     fv::core::push_int(out, props.start);
 #     out.push_str("</button>");
 # }
 #
@@ -126,14 +126,14 @@ its component and hydrates it only then.
 #     pub struct Props { pub count: i64 }
 #     pub fn render(out: &mut String, props: &Props) {
 #         out.push_str("<p>");
-#         ferrovue::core::numbers::push_int(out, props.count);
+#         ferrovue::core::push_int(out, props.count);
 #         out.push_str(" reviews</p>");
 #     }
 #     pub fn island(props: &Props) -> ferrovue::html::Html<'_, Props> {
 #         ferrovue::html::Html::island("Reviews", props, render)
 #     }
 # }
-use ferrovue::hydrate::Hydrate;
+use ferrovue::html::Hydrate;
 
 let props = reviews::Props { count: 3 };
 assert_eq!(
@@ -142,7 +142,7 @@ assert_eq!(
 );
 ```
 
-| [`Hydrate`](crate::hydrate::Hydrate) | `data-hydrate` | The island hydrates |
+| [`Hydrate`](crate::html::Hydrate) | `data-hydrate` | The island hydrates |
 | --- | --- | --- |
 | `Visible` | `visible` | once any of it is in the viewport (Vue's `hydrateOnVisible`) |
 | `visible_with("200px")` | `visible:200px` | once any of it is within that root margin of the viewport (Vue's `hydrateOnVisible({ rootMargin })`) |
@@ -184,7 +184,7 @@ and the [`Html`](crate::html::Html) value that writes its markup, so the props r
 props it was rendered from. [`Page::slot`](crate::page::Page::slot) takes a slot's parts,
 [`Page::hole`](crate::page::Page::hole) leaves a slot to be filled while the page streams, and
 [`Page::render_to`](crate::page::Page::render_to) writes the layout and records its props. The record
-is a `<script type="application/json">`, escaped as [`state_script_into`](crate::state::state_script_into)
+is a `<script type="application/json">`, escaped as [`state_script_into`](crate::page::state_script_into)
 escapes the state, so no prop can end the element:
 
 ```json
@@ -207,7 +207,7 @@ filled:
 #     pub struct Props<'a> { pub book: &'a str }
 #     pub fn render(out: &mut String, props: &Props<'_>) {
 #         out.push_str("<li>");
-#         ferrovue::core::escape::escape_into(out, props.book);
+#         ferrovue::core::escape_into(out, props.book);
 #         out.push_str("</li>");
 #     }
 #     pub fn html<'p, 'a>(props: &'p Props<'a>) -> ferrovue::html::Html<'p, Props<'a>> {
@@ -223,7 +223,7 @@ filled:
 #     }
 #     pub fn render(out: &mut String, props: &Props) {
 #         out.push_str("<p>");
-#         ferrovue::core::numbers::push_int(out, props.reviews.len() as i64);
+#         ferrovue::core::push_int(out, props.reviews.len() as i64);
 #         out.push_str(" reviews</p>");
 #     }
 #     pub fn into_html(props: Props) -> ferrovue::html::Html<'static, Props> {
@@ -235,14 +235,14 @@ filled:
 #     #[derive(serde::Serialize)]
 #     pub struct Props<'a> { pub shop: &'a str }
 #     #[derive(Clone, Copy)]
-#     pub struct Slots<'s> { pub default: Option<fv::slots::Slot<'s>>, pub reviews: Option<fv::slots::Slot<'s>> }
+#     pub struct Slots<'s> { pub default: Option<fv::render::Slot<'s>>, pub reviews: Option<fv::render::Slot<'s>> }
 #     pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::router::Route<'_>) {
 #         out.push_str("<main><h1>");
-#         fv::core::escape::escape_into(out, props.shop);
+#         fv::core::escape_into(out, props.shop);
 #         out.push_str("</h1><ul>");
-#         fv::slots::slot_into(out, fv_slots.default, None);
+#         fv::render::slot_into(out, fv_slots.default, None);
 #         out.push_str("</ul>");
-#         fv::slots::slot_into(out, fv_slots.reviews, None);
+#         fv::render::slot_into(out, fv_slots.reviews, None);
 #         out.push_str("</main>");
 #         let _ = fv_route;
 #     }
@@ -268,7 +268,7 @@ let mut out = String::from("<!doctype html>…<body><div id=\"app\">");
 let slots = picks::Slots { default: Some(parts.slot()), reviews: Some(later.slot()) };
 let record = page.render_to(&mut out, picks::html(&props, slots, &route));
 out.push_str("</div>");
-ferrovue::slots::hole().render_to(&mut out); // where the record goes
+ferrovue::page::hole().render_to(&mut out); // where the record goes
 let body = HtmlStream::new(out)
     .hole(async move {
         let list = catalogue::reviews(&id).await;
@@ -435,7 +435,7 @@ Each island is loaded on demand, and the browser finds its scripts one import at
 script, once the HTML is parsed; the app and Vue, once the entry runs; the islands, once the page
 has been read; and what they import. The server knows every island the page holds, so it can name
 their chunks up front with `<link rel="modulepreload">`, and the browser fetches them alongside the
-entry. [`Chunks`](crate::chunks::Chunks) reads Vite's manifest (`build.manifest: true` writes
+entry. [`Chunks`](crate::page::Chunks) reads Vite's manifest (`build.manifest: true` writes
 `.vite/manifest.json`) and `.vite/ferrovue-islands.json`, which the Vite plugin writes beside it
 with the chunk that holds each island. An island another component also imports has no chunk of its
 own, and no key in the manifest: it is bundled into a chunk they share, which that file names.
@@ -449,7 +449,7 @@ own, and no key in the manifest: it is bundled into a chunk they share, which th
 # }"#;
 # let islands = r#"{ "Counter": "assets/Counter.js" }"#;
 // Read once, at start-up, from `dist/.vite/manifest.json` and `dist/.vite/ferrovue-islands.json`.
-let chunks = ferrovue::chunks::Chunks::from_manifest(manifest, islands)?;
+let chunks = ferrovue::page::Chunks::from_manifest(manifest, islands)?;
 
 // For each page:
 let mut preloads = chunks.preloads();
@@ -464,14 +464,14 @@ assert_eq!(
         r#"<link rel="modulepreload" href="/assets/Counter.js">"#,
     )
 );
-# Ok::<(), ferrovue::chunks::ManifestError>(())
+# Ok::<(), ferrovue::page::ManifestError>(())
 ```
 
 An island needs its own chunk and those it imports statically, never the entry, which the page's
-`<script>` loads, nor what it imports dynamically. [`Preloads`](crate::chunks::Preloads) writes each URL
+`<script>` loads, nor what it imports dynamically. [`Preloads`](crate::page::Preloads) writes each URL
 once per page however many islands share it, as most share Vue's chunk;
-[`for_islands`](crate::chunks::Chunks::for_islands) gives the URLs instead, for a `Link` header, say.
-[`with_base`](crate::chunks::Chunks::with_base) serves them under Vite's `base`. In development Vite serves
+[`for_islands`](crate::page::Chunks::for_islands) gives the URLs instead, for a `Link` header, say.
+[`with_base`](crate::page::Chunks::with_base) serves them under Vite's `base`. In development Vite serves
 the sources and there is no manifest: link nothing.
 
 An island's `<style>` goes into its chunk too, and Vite links it only once the island's script has
@@ -479,7 +479,7 @@ loaded, after the server's markup is on screen. Link those stylesheets from the 
 server reading Vite's manifest takes the `css` of the entry's `dynamicImports` as well as its own,
 as `examples/fullstack/src/assets.rs` does.
 
-Preload the islands that hydrate at once. An island given a [`Hydrate`](crate::hydrate::Hydrate) waits to be
+Preload the islands that hydrate at once. An island given a [`Hydrate`](crate::html::Hydrate) waits to be
 seen, clicked or idle before it fetches its code; preloading it fetches that code with the page,
 which is what waiting was meant to spare.
 

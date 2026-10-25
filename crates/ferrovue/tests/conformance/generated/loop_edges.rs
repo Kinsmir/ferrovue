@@ -40,27 +40,27 @@ impl std::fmt::Display for LoopEdgesMode {
 }
 
 impl std::str::FromStr for LoopEdgesMode {
-    type Err = ferrovue::union::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "sum" => Ok(LoopEdgesMode::Sum),
             "max" => Ok(LoopEdgesMode::Max),
             "skip" => Ok(LoopEdgesMode::Skip),
-            _ => Err(ferrovue::union::ParseUnionError::new("LoopEdgesMode", s, &["sum", "max", "skip"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("LoopEdgesMode", s, &["sum", "max", "skip"])),
         }
     }
 }
 
 impl TryFrom<&str> for LoopEdgesMode {
-    type Error = ferrovue::union::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::union::Union for LoopEdgesMode {
+impl ferrovue::props::Union for LoopEdgesMode {
     const ALL: &'static [Self] = &LoopEdgesMode::ALL;
 
     fn as_str(self) -> &'static str {
@@ -75,7 +75,7 @@ pub struct Props<'a> {
     #[serde(rename = "tags")]
     pub tags: Vec<Cow<'a, str>>,
     #[serde(rename = "counts")]
-    pub counts: ferrovue::record::Record<'a, i64>,
+    pub counts: ferrovue::props::Record<'a, i64>,
     #[serde(rename = "n")]
     pub n: i64,
     #[serde(rename = "f")]
@@ -88,7 +88,7 @@ pub struct Props<'a> {
 
 impl<'a> Props<'a> {
     /// Props with its required fields.
-    pub fn new(tags: impl IntoIterator<Item = impl Into<Cow<'a, str>>>, counts: ferrovue::record::Record<'a, i64>, n: i64, f: f64, text: impl Into<Cow<'a, str>>, mode: LoopEdgesMode) -> Self {
+    pub fn new(tags: impl IntoIterator<Item = impl Into<Cow<'a, str>>>, counts: ferrovue::props::Record<'a, i64>, n: i64, f: f64, text: impl Into<Cow<'a, str>>, mode: LoopEdgesMode) -> Self {
         Props { tags: tags.into_iter().map(Into::into).collect(), counts, n, f, text: text.into(), mode }
     }
 
@@ -101,7 +101,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -109,45 +109,45 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(108 + props.tags.iter().map(|v| v.len()).sum::<usize>() + props.counts.iter().map(|(k, _)| k.len()).sum::<usize>() + props.text.len() + 4);
-    let fv_refusals = fv::refused::Refusals::new(NAME, "components/LoopEdges.vue");
+    let fv_refusals = fv::render::Refusals::new(NAME, "components/LoopEdges.vue");
     let s_kept = props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_t| !fv::strings::js_trim(fv_t).is_empty()).map(|fv_t_2| std::borrow::Cow::<str>::Owned(fv::strings::js_trim(&fv_t_2).to_owned())).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
-    let s_lengths = std::cell::LazyCell::new(|| props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_t_3| { let mut fv_count: f64 = 0.0f64; for fv_ch in fv_t_3.split_inclusive(|_: char| true) { if fv_ch != " " { fv_count += 1.0; } } fv_refusals.keep(fv::refused::try_int(fv_count), 138, 5) }).collect::<Vec<_>>());
+    let s_lengths = std::cell::LazyCell::new(|| props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_t_3| { let mut fv_count: f64 = 0.0f64; for fv_ch in fv_t_3.split_inclusive(|_: char| true) { if fv_ch != " " { fv_count += 1.0; } } fv_refusals.keep(fv::render::try_int(fv_count), 138, 5) }).collect::<Vec<_>>());
     out.push_str("<!--[--><ul><!--[-->");
     for fv_t_cow in s_kept.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)) {
         let fv_t_4: &str = &fv_t_cow;
         out.push_str("<li>");
-        fv::core::escape::escape_into(out, fv_t_4);
+        fv::core::escape_into(out, fv_t_4);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul><p>");
-    fv::core::escape::escape_into(out, &{ let fv_tags = s_kept.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>(); std::borrow::Cow::<str>::Owned(({ let fv_tags_2 = fv_tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>(); std::borrow::Cow::<str>::Owned(({ let mut fv_acc: f64 = 0.0f64; let mut fv_out: String = String::new(); for fv_t_5 in fv_tags_2.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)) { if props.mode == LoopEdgesMode::Sum { let fv_acc_2 = fv_acc + fv::strings::js_length(&fv_t_5) as f64; fv_acc = fv_acc_2; use std::fmt::Write as _; let _ = write!(fv_out, "{}:{};", fv_t_5, fv::core::numbers::Js(fv_acc_2)); } else { if props.mode == LoopEdgesMode::Max { if fv::strings::js_length(&fv_t_5) as f64 > fv_acc { let fv_acc_3 = fv::strings::js_length(&fv_t_5); fv_acc = fv_acc_3 as f64; use std::fmt::Write as _; let _ = write!(fv_out, "{}:{};", fv_t_5, fv::core::numbers::Js(fv_acc_3)); } else { use std::fmt::Write as _; let _ = write!(fv_out, "{}:{};", fv_t_5, fv::core::numbers::Js(fv_acc)); } } } } std::borrow::Cow::<str>::Owned(format!("{}={}", fv_out, fv::core::numbers::Js(fv_acc))) }).into_owned()) }).into_owned()) });
+    fv::core::escape_into(out, &{ let fv_tags = s_kept.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>(); std::borrow::Cow::<str>::Owned(({ let fv_tags_2 = fv_tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>(); std::borrow::Cow::<str>::Owned(({ let mut fv_acc: f64 = 0.0f64; let mut fv_out: String = String::new(); for fv_t_5 in fv_tags_2.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)) { if props.mode == LoopEdgesMode::Sum { let fv_acc_2 = fv_acc + fv::strings::js_length(&fv_t_5) as f64; fv_acc = fv_acc_2; use std::fmt::Write as _; let _ = write!(fv_out, "{}:{};", fv_t_5, fv::core::Js(fv_acc_2)); } else { if props.mode == LoopEdgesMode::Max { if fv::strings::js_length(&fv_t_5) as f64 > fv_acc { let fv_acc_3 = fv::strings::js_length(&fv_t_5); fv_acc = fv_acc_3 as f64; use std::fmt::Write as _; let _ = write!(fv_out, "{}:{};", fv_t_5, fv::core::Js(fv_acc_3)); } else { use std::fmt::Write as _; let _ = write!(fv_out, "{}:{};", fv_t_5, fv::core::Js(fv_acc)); } } } } std::borrow::Cow::<str>::Owned(format!("{}={}", fv_out, fv::core::Js(fv_acc))) }).into_owned()) }).into_owned()) });
     out.push('|');
-    fv::core::escape::escape_into(out, &{ let mut fv_total: f64 = 0.0f64; let mut fv_out_2: String = String::new(); for fv_item in props.counts.iter() { fv_total += *fv_item.1 as f64; use std::fmt::Write as _; let _ = write!(fv_out_2, "{}={},", fv_item.0, fv::core::numbers::Js(*fv_item.1)); } std::borrow::Cow::<str>::Owned(format!("{}{}", fv_out_2, fv::core::numbers::Js(fv_total))) });
+    fv::core::escape_into(out, &{ let mut fv_total: f64 = 0.0f64; let mut fv_out_2: String = String::new(); for fv_item in props.counts.iter() { fv_total += *fv_item.1 as f64; use std::fmt::Write as _; let _ = write!(fv_out_2, "{}={},", fv_item.0, fv::core::Js(*fv_item.1)); } std::borrow::Cow::<str>::Owned(format!("{}{}", fv_out_2, fv::core::Js(fv_total))) });
     out.push_str("</p><p>");
-    fv::core::escape::escape_into(out, &{ let mut fv_x: f64 = props.n as f64; let mut fv_steps: f64 = 0.0f64; for _ in [1i64, 2i64, 3i64, 4i64].iter() { fv_x /= 2.0; fv_steps += 1.0; } { let mut fv_y: Option<f64> = None; for fv_k in [props.f, props.n as f64 * 1.5, 0.5f64].iter().copied() { if let Some(fv_y_2) = fv_y { if fv_k < fv_y_2 { fv_y = Some(fv_k); } } else { fv_y = Some(fv_k); } } std::borrow::Cow::<str>::Owned(format!("{}|{}|{}|{}|{}", fv::core::numbers::Js(fv_x), fv::core::numbers::Js(fv_steps), (if let Some(fv_y_3) = fv_y { std::borrow::Cow::<str>::Owned(format!("{}", fv::core::numbers::Js(fv_y_3))) } else { std::borrow::Cow::<str>::Borrowed("none") }), fv::core::numbers::Js(-0.0 * props.n as f64), fv::core::numbers::Js(props.f * 0.0))) } });
+    fv::core::escape_into(out, &{ let mut fv_x: f64 = props.n as f64; let mut fv_steps: f64 = 0.0f64; for _ in [1i64, 2i64, 3i64, 4i64].iter() { fv_x /= 2.0; fv_steps += 1.0; } { let mut fv_y: Option<f64> = None; for fv_k in [props.f, props.n as f64 * 1.5, 0.5f64].iter().copied() { if let Some(fv_y_2) = fv_y { if fv_k < fv_y_2 { fv_y = Some(fv_k); } } else { fv_y = Some(fv_k); } } std::borrow::Cow::<str>::Owned(format!("{}|{}|{}|{}|{}", fv::core::Js(fv_x), fv::core::Js(fv_steps), (if let Some(fv_y_3) = fv_y { std::borrow::Cow::<str>::Owned(format!("{}", fv::core::Js(fv_y_3))) } else { std::borrow::Cow::<str>::Borrowed("none") }), fv::core::Js(-0.0 * props.n as f64), fv::core::Js(props.f * 0.0))) } });
     out.push('|');
-    fv::core::escape::escape_into(out, &{ let mut fv_returned: Option<String> = None; for (fv_i, fv_t_6) in props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).enumerate() { let fv_i = fv_i as i64; let mut fv_returned_2: Option<String> = None; for fv_ch_2 in props.text.split_inclusive(|_: char| true) { if fv_ch_2 == "#" { fv_returned_2 = Some(format!("hash before {}", fv::core::numbers::Js(fv_i))); break; } else { if fv_t_6.contains(fv_ch_2) { fv_returned_2 = Some(format!("{}:{}", fv::core::numbers::Js(fv_i), fv_ch_2)); break; } } } if fv_returned_2.is_some() { fv_returned = Some(String::from(fv_returned_2.as_deref().unwrap_or_default())); break; } } std::borrow::Cow::<str>::Owned((if fv_returned.is_some() { fv_returned.as_deref().unwrap_or_default() } else { "none" }).to_owned()) });
+    fv::core::escape_into(out, &{ let mut fv_returned: Option<String> = None; for (fv_i, fv_t_6) in props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).enumerate() { let fv_i = fv_i as i64; let mut fv_returned_2: Option<String> = None; for fv_ch_2 in props.text.split_inclusive(|_: char| true) { if fv_ch_2 == "#" { fv_returned_2 = Some(format!("hash before {}", fv::core::Js(fv_i))); break; } else { if fv_t_6.contains(fv_ch_2) { fv_returned_2 = Some(format!("{}:{}", fv::core::Js(fv_i), fv_ch_2)); break; } } } if fv_returned_2.is_some() { fv_returned = Some(String::from(fv_returned_2.as_deref().unwrap_or_default())); break; } } std::borrow::Cow::<str>::Owned((if fv_returned.is_some() { fv_returned.as_deref().unwrap_or_default() } else { "none" }).to_owned()) });
     out.push_str("</p><p data-grid=\"");
-    fv::core::escape::escape_into(out, &{ let fv_size = if props.n as f64 > 4.0 { 4i64 } else { props.n }; { let mut fv_out_3: String = String::new(); let mut fv_row: f64 = 0.0f64; while fv_row < fv_size as f64 { let mut fv_out_4: String = String::from(&*fv_out_3); let mut fv_col: f64 = 0.0f64; while fv_col <= fv_row { if fv_col == 2.0 { fv_col += 1.0; } else { { use std::fmt::Write as _; let _ = write!(fv_out_4, "{}", (if fv_col == fv_row { std::borrow::Cow::<str>::Owned(format!("{}/", fv::core::numbers::Js(fv_col))) } else { std::borrow::Cow::<str>::Owned(format!("{}", fv::core::numbers::Js(fv_col))) })); } fv_col += 1.0; } } { fv_out_3 = String::from(&*fv_out_4); fv_row += 1.0; } } std::borrow::Cow::<str>::Owned(fv_out_3) } });
+    fv::core::escape_into(out, &{ let fv_size = if props.n as f64 > 4.0 { 4i64 } else { props.n }; { let mut fv_out_3: String = String::new(); let mut fv_row: f64 = 0.0f64; while fv_row < fv_size as f64 { let mut fv_out_4: String = String::from(&*fv_out_3); let mut fv_col: f64 = 0.0f64; while fv_col <= fv_row { if fv_col == 2.0 { fv_col += 1.0; } else { { use std::fmt::Write as _; let _ = write!(fv_out_4, "{}", (if fv_col == fv_row { std::borrow::Cow::<str>::Owned(format!("{}/", fv::core::Js(fv_col))) } else { std::borrow::Cow::<str>::Owned(format!("{}", fv::core::Js(fv_col))) })); } fv_col += 1.0; } } { fv_out_3 = String::from(&*fv_out_4); fv_row += 1.0; } } std::borrow::Cow::<str>::Owned(fv_out_3) } });
     out.push_str("\">");
-    fv::core::numbers::push_number(out, { let mut fv_i_2: f64 = 0.0f64; let mut fv_k_2: f64 = 10.0f64; let mut fv_returned_3: Option<f64> = None; while fv_k_2 > 0.0 { if fv_k_2 <= props.n as f64 { fv_returned_3 = Some(fv_k_2); break; } else { fv_i_2 += fv_k_2; fv_k_2 -= 3.0; } } if fv_returned_3.is_some() { fv_returned_3.unwrap_or_default() } else { fv_i_2 } });
+    fv::core::push_number(out, { let mut fv_i_2: f64 = 0.0f64; let mut fv_k_2: f64 = 10.0f64; let mut fv_returned_3: Option<f64> = None; while fv_k_2 > 0.0 { if fv_k_2 <= props.n as f64 { fv_returned_3 = Some(fv_k_2); break; } else { fv_i_2 += fv_k_2; fv_k_2 -= 3.0; } } if fv_returned_3.is_some() { fv_returned_3.unwrap_or_default() } else { fv_i_2 } });
     out.push('|');
-    fv::core::escape::escape_into(out, &{ let mut fv_wide: f64 = 0.0f64; let mut fv_ascii: bool = true; for fv_ch_3 in props.text.split_inclusive(|_: char| true) { if fv::strings::js_length(fv_ch_3) as f64 > 1.0 { fv_wide += 1.0; } else { if fv::strings::js_cmp(fv_ch_3, "~").is_gt() { fv_ascii = false; } } } std::borrow::Cow::<str>::Owned(format!("{}/{}", if fv_ascii { "true" } else { "false" }, fv::core::numbers::Js(fv_wide))) });
+    fv::core::escape_into(out, &{ let mut fv_wide: f64 = 0.0f64; let mut fv_ascii: bool = true; for fv_ch_3 in props.text.split_inclusive(|_: char| true) { if fv::strings::js_length(fv_ch_3) as f64 > 1.0 { fv_wide += 1.0; } else { if fv::strings::js_cmp(fv_ch_3, "~").is_gt() { fv_ascii = false; } } } std::borrow::Cow::<str>::Owned(format!("{}/{}", if fv_ascii { "true" } else { "false" }, fv::core::Js(fv_wide))) });
     out.push('|');
-    fv::core::escape::escape_into(out, &(*s_lengths).iter().copied().map(|v| fv::core::numbers::Js(v).to_string()).collect::<Vec<_>>().join("-"));
+    fv::core::escape_into(out, &(*s_lengths).iter().copied().map(|v| fv::core::Js(v).to_string()).collect::<Vec<_>>().join("-"));
     out.push_str("</p><p>");
-    fv::core::escape::escape_into(out, &{ let mut fv_found: Option<String> = None; for fv_t_7 in props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)) { if let Some(fv_found_2) = fv_found.as_deref() { if fv::strings::js_length(fv_found_2) as f64 >= fv::strings::js_length(&fv_t_7) as f64 {} else { fv_found = Some(format!("{}>{}", fv_t_7, fv_found_2)); } } else { fv_found = Some(String::from(&*(if let Some(fv_found_3) = fv_found.as_deref() { std::borrow::Cow::<str>::Owned(format!("{}>{}", fv_t_7, fv_found_3)) } else { std::borrow::Cow::<str>::Borrowed(&*fv_t_7) }))); } } std::borrow::Cow::<str>::Owned(fv_found.as_deref().unwrap_or("-").to_owned()) });
+    fv::core::escape_into(out, &{ let mut fv_found: Option<String> = None; for fv_t_7 in props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)) { if let Some(fv_found_2) = fv_found.as_deref() { if fv::strings::js_length(fv_found_2) as f64 >= fv::strings::js_length(&fv_t_7) as f64 {} else { fv_found = Some(format!("{}>{}", fv_t_7, fv_found_2)); } } else { fv_found = Some(String::from(&*(if let Some(fv_found_3) = fv_found.as_deref() { std::borrow::Cow::<str>::Owned(format!("{}>{}", fv_t_7, fv_found_3)) } else { std::borrow::Cow::<str>::Borrowed(&*fv_t_7) }))); } } std::borrow::Cow::<str>::Owned(fv_found.as_deref().unwrap_or("-").to_owned()) });
     out.push('|');
-    fv::core::numbers::push_number(out, { let mut fv_count_2: f64 = 1.0f64; for fv_t_8 in props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)) { fv_count_2 += props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_u| (fv::strings::js_length(fv_u) as f64) < fv_count_2 + fv::strings::js_length(&fv_t_8) as f64).count() as i64 as f64; } fv_count_2 });
+    fv::core::push_number(out, { let mut fv_count_2: f64 = 1.0f64; for fv_t_8 in props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)) { fv_count_2 += props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_u| (fv::strings::js_length(fv_u) as f64) < fv_count_2 + fv::strings::js_length(&fv_t_8) as f64).count() as i64 as f64; } fv_count_2 });
     out.push('|');
-    fv::core::numbers::push_number(out, { let mut fv_seen: f64 = 0.0f64; let mut fv_returned_4: Option<f64> = None; for fv_t_9 in props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)) { let mut fv_seen_2: f64 = fv_seen; let mut fv_i_3: f64 = 0.0f64; let mut fv_returned_5: Option<f64> = None; while fv_i_3 <= props.n as f64 { let fv_seen_3 = fv_seen_2 + fv_i_3; if fv::strings::js_length(&fv_t_9) as f64 == fv_i_3 { fv_returned_5 = Some(fv_seen_3 * 10.0 + fv_i_3); break; } else { fv_seen_2 = fv_seen_3; fv_i_3 += 2.0; } } if fv_returned_5.is_some() { fv_returned_4 = Some(fv_returned_5.unwrap_or_default()); break; } else { fv_seen = fv_seen_2; } } if fv_returned_4.is_some() { fv_returned_4.unwrap_or_default() } else { -fv_seen } });
+    fv::core::push_number(out, { let mut fv_seen: f64 = 0.0f64; let mut fv_returned_4: Option<f64> = None; for fv_t_9 in props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)) { let mut fv_seen_2: f64 = fv_seen; let mut fv_i_3: f64 = 0.0f64; let mut fv_returned_5: Option<f64> = None; while fv_i_3 <= props.n as f64 { let fv_seen_3 = fv_seen_2 + fv_i_3; if fv::strings::js_length(&fv_t_9) as f64 == fv_i_3 { fv_returned_5 = Some(fv_seen_3 * 10.0 + fv_i_3); break; } else { fv_seen_2 = fv_seen_3; fv_i_3 += 2.0; } } if fv_returned_5.is_some() { fv_returned_4 = Some(fv_returned_5.unwrap_or_default()); break; } else { fv_seen = fv_seen_2; } } if fv_returned_4.is_some() { fv_returned_4.unwrap_or_default() } else { -fv_seen } });
     out.push('|');
-    fv::core::escape::escape_into(out, &{ let fv_out_5 = fv::core::numbers::Js(props.n).to_string(); std::borrow::Cow::<str>::Owned(({ let mut fv_out_6: String = String::from(&*fv_out_5); for fv_t_10 in props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)) { use std::fmt::Write as _; let _ = write!(fv_out_6, "{}", fv_t_10); } std::borrow::Cow::<str>::Owned(({ let mut fv_parts: f64 = 0.0f64; for _ in fv::strings::js_split(&fv_out_6, "").into_iter() { fv_parts += 1.0; } std::borrow::Cow::<str>::Owned(format!("{}|{}", fv_out_6, fv::core::numbers::Js(fv_parts))) }).into_owned()) }).into_owned()) });
+    fv::core::escape_into(out, &{ let fv_out_5 = fv::core::Js(props.n).to_string(); std::borrow::Cow::<str>::Owned(({ let mut fv_out_6: String = String::from(&*fv_out_5); for fv_t_10 in props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)) { use std::fmt::Write as _; let _ = write!(fv_out_6, "{}", fv_t_10); } std::borrow::Cow::<str>::Owned(({ let mut fv_parts: f64 = 0.0f64; for _ in fv::strings::js_split(&fv_out_6, "").into_iter() { fv_parts += 1.0; } std::borrow::Cow::<str>::Owned(format!("{}|{}", fv_out_6, fv::core::Js(fv_parts))) }).into_owned()) }).into_owned()) });
     out.push('|');
-    fv::core::escape::escape_into(out, &{ let mut fv_keys: String = String::new(); for fv_item_2 in props.counts.iter() { use std::fmt::Write as _; let _ = write!(fv_keys, "{}", fv_item_2.0); } std::borrow::Cow::<str>::Owned(({ let mut fv_odd: f64 = 0.0f64; for fv_item_3 in props.counts.keys().map(std::borrow::Cow::<str>::Borrowed) { let fv_length = fv::strings::js_length(&fv_item_3); if fv_length as f64 % 2.0 == 1.0 { fv_odd += 1.0; } } std::borrow::Cow::<str>::Owned(format!("{}|{}", fv_keys, fv::core::numbers::Js(fv_odd))) }).into_owned()) });
+    fv::core::escape_into(out, &{ let mut fv_keys: String = String::new(); for fv_item_2 in props.counts.iter() { use std::fmt::Write as _; let _ = write!(fv_keys, "{}", fv_item_2.0); } std::borrow::Cow::<str>::Owned(({ let mut fv_odd: f64 = 0.0f64; for fv_item_3 in props.counts.keys().map(std::borrow::Cow::<str>::Borrowed) { let fv_length = fv::strings::js_length(&fv_item_3); if fv_length as f64 % 2.0 == 1.0 { fv_odd += 1.0; } } std::borrow::Cow::<str>::Owned(format!("{}|{}", fv_keys, fv::core::Js(fv_odd))) }).into_owned()) });
     out.push_str("</p><!--]-->");
     fv_refusals.check(Ok(()))
 }

@@ -10,28 +10,28 @@ pub const NAME: &str = "Posted";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props {
-    #[serde(rename = "at", with = "fv::js_date::date_prop")]
-    pub at: ferrovue::js_date::JsDate,
-    #[serde(rename = "edited", default, skip_serializing_if = "Option::is_none", with = "fv::js_date::opt_date_prop")]
-    pub edited: Option<ferrovue::js_date::JsDate>,
-    #[serde(rename = "deleted", default, with = "fv::js_date::opt_date_prop")]
-    pub deleted: Option<ferrovue::js_date::JsDate>,
+    #[serde(rename = "at", with = "fv::date::date_prop")]
+    pub at: ferrovue::date::JsDate,
+    #[serde(rename = "edited", default, skip_serializing_if = "Option::is_none", with = "fv::date::opt_date_prop")]
+    pub edited: Option<ferrovue::date::JsDate>,
+    #[serde(rename = "deleted", default, with = "fv::date::opt_date_prop")]
+    pub deleted: Option<ferrovue::date::JsDate>,
 }
 
 impl Props {
     /// Props with its required fields, every optional one absent and every nullable one `null`.
-    pub fn new(at: ferrovue::js_date::JsDate) -> Self {
+    pub fn new(at: ferrovue::date::JsDate) -> Self {
         Props { at, edited: None, deleted: None }
     }
 
     /// Set `edited`, which is absent otherwise.
-    pub fn edited(mut self, edited: ferrovue::js_date::JsDate) -> Self {
+    pub fn edited(mut self, edited: ferrovue::date::JsDate) -> Self {
         self.edited = Some(edited);
         self
     }
 
     /// Set `deleted`, which is `null` otherwise.
-    pub fn deleted(mut self, deleted: ferrovue::js_date::JsDate) -> Self {
+    pub fn deleted(mut self, deleted: ferrovue::date::JsDate) -> Self {
         self.deleted = Some(deleted);
         self
     }
@@ -44,7 +44,7 @@ impl Props {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -52,30 +52,30 @@ pub fn render(out: &mut String, props: &Props) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
     out.reserve(80);
-    let fv_refusals = fv::refused::Refusals::new(NAME, "components/Posted.vue");
+    let fv_refusals = fv::render::Refusals::new(NAME, "components/Posted.vue");
     out.push_str("<time");
-    if fv_refusals.keep(fv::dates::try_to_iso_string(fv::js_date::js_time_of(&props.at)), 6, 20).is_empty() {
+    if fv_refusals.keep(fv::date::try_to_iso_string(fv::date::js_time_of(&props.at)), 6, 20).is_empty() {
         out.push_str(" datetime");
     } else {
         out.push_str(" datetime=\"");
-        fv::core::escape::escape_into(out, &fv_refusals.keep(fv::dates::try_to_iso_string(fv::js_date::js_time_of(&props.at)), 6, 20));
+        fv::core::escape_into(out, &fv_refusals.keep(fv::date::try_to_iso_string(fv::date::js_time_of(&props.at)), 6, 20));
         out.push('"');
     }
     out.push('>');
-    fv::core::numbers::push_number(out, fv::dates::js_utc_full_year(fv::js_date::js_time_of(&props.at)));
-    if let Some(fv_edited) = props.edited.as_ref().map(fv::js_date::js_time_of) {
+    fv::core::push_number(out, fv::date::js_utc_full_year(fv::date::js_time_of(&props.at)));
+    if let Some(fv_edited) = props.edited.as_ref().map(fv::date::js_time_of) {
         out.push_str("<b>");
-        fv::core::numbers::push_number(out, fv_edited);
+        fv::core::push_number(out, fv_edited);
         out.push_str("</b>");
     } else {
         out.push_str("<!---->");
     }
-    if let Some(fv_deleted) = props.deleted.as_ref().map(fv::js_date::js_time_of) {
+    if let Some(fv_deleted) = props.deleted.as_ref().map(fv::date::js_time_of) {
         out.push_str("<i>");
-        fv::core::numbers::push_number(out, fv::dates::js_utc_date(fv_deleted));
+        fv::core::push_number(out, fv::date::js_utc_date(fv_deleted));
         out.push_str("</i>");
     } else {
         out.push_str("<!---->");

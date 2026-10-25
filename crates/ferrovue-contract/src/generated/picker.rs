@@ -29,7 +29,7 @@ impl Props {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -37,16 +37,16 @@ pub fn render(out: &mut String, props: &Props) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
     out.reserve(25);
     out.push_str("<ul><!--[-->");
     for fv_choice_ref in super::types::CHOICES.iter() {
         let fv_choice = fv_choice_ref;
         out.push_str("<li class=\"");
-        fv::class::class_into(out, false, &[if fv_choice.id as f64 == props.picked as f64 { "picked" } else { "" }]);
+        fv::attrs::class_into(out, false, &[if fv_choice.id as f64 == props.picked as f64 { "picked" } else { "" }]);
         out.push_str("\">");
-        fv::core::escape::escape_into(out, &fv_choice.label);
+        fv::core::escape_into(out, &fv_choice.label);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul>");

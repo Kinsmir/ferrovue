@@ -41,7 +41,7 @@ pub struct Slots<'s> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_provides: super::provides::Provides<'_>, fv_head: &fv::head::Head) {
-    fv::refused::rendered(try_render(out, props, fv_slots, fv_provides, fv_head));
+    fv::render::rendered(try_render(out, props, fv_slots, fv_provides, fv_head));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -49,8 +49,8 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_provi
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_provides: super::provides::Provides<'_>, fv_head: &fv::head::Head) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_provides: super::provides::Provides<'_>, fv_head: &fv::head::Head) -> Result<(), fv::render::Refused> {
     out.reserve(44 + props.label.len());
     let fv_inherited = fv_provides;
     let fv_provided_theme_key = format!("{}+head", fv_inherited.theme_key.unwrap_or("light"));
@@ -61,11 +61,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_p
         out.push_str(" data-theme");
     } else {
         out.push_str(" data-theme=\"");
-        fv::core::escape::escape_into(out, fv_inherited.theme_key.unwrap_or("light"));
+        fv::core::escape_into(out, fv_inherited.theme_key.unwrap_or("light"));
         out.push('"');
     }
     out.push('>');
-    fv::slots::scoped_slot_into(out, fv_slots.default.map(|f| move |out: &mut String, _: &()| f(out, fv_provides)).as_ref(), &(), None);
+    fv::render::scoped_slot_into(out, fv_slots.default.map(|f| move |out: &mut String, _: &()| f(out, fv_provides)).as_ref(), &(), None);
     out.push_str("</section>");
     Ok(())
 }

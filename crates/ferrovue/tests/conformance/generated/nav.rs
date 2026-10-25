@@ -40,7 +40,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>) {
-    fv::refused::rendered(try_render(out, props, fv_route));
+    fv::render::rendered(try_render(out, props, fv_route));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -48,8 +48,8 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(138 + props.href.len() + props.label.len() + props.note.as_deref().map_or(0, str::len));
     out.push_str("<nav>");
     {
@@ -59,9 +59,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
             out.push_str(" aria-current=\"page\"");
         }
         out.push_str(" href=\"");
-        fv::core::escape::escape_into(out, &fv_link.href);
+        fv::core::escape_into(out, &fv_link.href);
         out.push_str("\" class=\"");
-        fv::class::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }, "tab"]);
+        fv::attrs::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }, "tab"]);
         out.push_str("\">intro</a>");
     }
     out.push(' ');
@@ -72,22 +72,22 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
             out.push_str(" aria-current=\"page\"");
         }
         out.push_str(" href=\"");
-        fv::core::escape::escape_into(out, &fv_link.href);
+        fv::core::escape_into(out, &fv_link.href);
         out.push_str("\" class=\"");
-        fv::class::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }, "tab", if props.note.as_deref().is_some_and(|v| !v.is_empty()) { "noted" } else { "" }]);
+        fv::attrs::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }, "tab", if props.note.as_deref().is_some_and(|v| !v.is_empty()) { "noted" } else { "" }]);
         out.push('"');
         if props.label.is_empty() {
             out.push_str(" title");
         } else {
             out.push_str(" title=\"");
-            fv::core::escape::escape_into(out, &props.label);
+            fv::core::escape_into(out, &props.label);
             out.push('"');
         }
         out.push('>');
-        fv::core::escape::escape_into(out, &props.label);
+        fv::core::escape_into(out, &props.label);
         if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {
             out.push_str("<i>");
-            fv::core::escape::escape_into(out, fv_note);
+            fv::core::escape_into(out, fv_note);
             out.push_str("</i>");
         } else {
             out.push_str("<!--v-if-->");

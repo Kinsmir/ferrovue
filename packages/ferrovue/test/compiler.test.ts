@@ -394,11 +394,11 @@ defineProps<{ note?: string }>();
     });
   });
 
-  describe("ferrovue::sanitised::Sanitised", () => {
+  describe("ferrovue::html::Sanitised", () => {
     it("is what the Rust test of a sanitised `v-html` compiles", () => {
       const root = join(import.meta.dirname, "../../../crates/ferrovue/tests/sanitised");
       const config = loadConfig(root);
-      expect(config.trustedHtml).toBe("ferrovue::sanitised::Sanitised");
+      expect(config.trustedHtml).toBe("ferrovue::html::Sanitised");
       const out = generate(root, config);
       expect([...out.keys()].toSorted()).toEqual(readdirSync(join(root, config.out)).toSorted());
       for (const [name, text] of out) expect(readFileSync(join(root, config.out, name), "utf8"), name).toBe(text);
@@ -461,15 +461,15 @@ defineProps<{ a: string; b: string }>();
       expect(out).toContain("fv::strings::js_cmp(&props.a, &props.b).is_lt()");
     });
 
-    it("keeps a dictionary as a `ferrovue::record::Record` and walks it in place", () => {
+    it("keeps a dictionary as a `ferrovue::props::Record` and walks it in place", () => {
       const out = compile(
         island(`<script setup lang="ts">
 defineProps<{ counts: Record<string, number>; labels: { [key: string]: string } }>();
 </script>
 <template><ul><li v-for="(n, k) in counts" :title="k">{{ n }}</li><li v-for="t in labels">{{ t }}</li></ul></template>`),
       ).get("x.rs")!;
-      expect(out).toContain("pub counts: ferrovue::record::Record<'a, i64>,");
-      expect(out).toContain("pub labels: ferrovue::record::Record<'a, Cow<'a, str>>,");
+      expect(out).toContain("pub counts: ferrovue::props::Record<'a, i64>,");
+      expect(out).toContain("pub labels: ferrovue::props::Record<'a, Cow<'a, str>>,");
       expect(out).toContain("for (fv_k, fv_n_ref) in props.counts.iter() {");
       expect(out).toContain("for (_, fv_t_ref) in props.labels.iter() {");
     });
@@ -703,7 +703,7 @@ defineProps<{ a: string }>();
 <template><div><Child :label="a" :colour="a" @click="() => {}" /></div></template>`;
       const out = compile(island(parent, { Child: child }));
       expect(out.get("x.rs")).toContain(`&fv::attrs::Attrs::new(&[("colour", fv::attrs::Attr::str(&props.a))], "")`);
-      expect(out.get("child.rs")).toContain("pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::refused::Refused>");
+      expect(out.get("child.rs")).toContain("pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::render::Refused>");
       expect(out.get("child.rs")).toContain(`fv::attrs::passed_attrs_into(out, fv_attrs.list(), "");`);
     });
 
@@ -898,8 +898,8 @@ defineProps<{ a: string }>();
 </script>
 <template><div><Teleport to="#modals"><p>{{ a }}</p></Teleport></div></template>`;
       const out = compile(island(modal)).get("x.rs")!;
-      expect(out).toContain('fv::teleport::teleport_into(out, fv_teleports, "#modals", false, &|out: &mut String| {');
-      expect(out).toContain("fv_teleports: &fv::teleport::Teleports");
+      expect(out).toContain('fv::page::teleport_into(out, fv_teleports, "#modals", false, &|out: &mut String| {');
+      expect(out).toContain("fv_teleports: &fv::page::Teleports");
     });
 
     it("pushes useHead and useSeoMeta onto the page's Head, before the template renders, and hands it down", () => {
@@ -953,7 +953,7 @@ const props = defineProps<{ embed?: Embed }>();
 </script>
 <template><p v-if="embed">{{ embed.provider }}</p></template>`),
       ).get("x.rs")!;
-      expect(out).toMatch(/if let Some\((fv_embed)\) = props\.embed\.as_ref\(\) \{[\s\S]*fv::core::escape::escape_into\(out, &\1\.provider\)/);
+      expect(out).toMatch(/if let Some\((fv_embed)\) = props\.embed\.as_ref\(\) \{[\s\S]*fv::core::escape_into\(out, &\1\.provider\)/);
     });
 
     it("keeps JavaScript's truthiness for an optional string: empty is not taken", () => {
@@ -984,7 +984,7 @@ const props = defineProps<{ n: number; m: number }>();
 </script>
 <template><b :title="n + m"></b></template>`),
     ).get("x.rs")!;
-    expect(sum).toContain("fv::core::numbers::push_number(out, props.n as f64 + props.m as f64);");
+    expect(sum).toContain("fv::core::push_number(out, props.n as f64 + props.m as f64);");
     expect(() =>
       compile(
         island(`<script setup lang="ts">
@@ -1021,8 +1021,8 @@ const props = defineProps<{ body: TrustedHtml; extra?: TrustedHtml }>();
       const out = generate(island(trusted), { ...CONFIG, trustedHtml: "crate::sanitize::SafeHtml" }).get("x.rs")!;
       expect(out).toContain("pub body: crate::sanitize::SafeHtml,");
       expect(out).toContain("pub extra: Option<crate::sanitize::SafeHtml>,");
-      expect(out).toContain("fv::trusted::trusted_into(out, &props.body);");
-      expect(out).toMatch(/if let Some\(html\) = props\.extra\.as_ref\(\) \{\s*fv::trusted::trusted_into\(out, html\);/);
+      expect(out).toContain("fv::html::trusted_into(out, &props.body);");
+      expect(out).toMatch(/if let Some\(html\) = props\.extra\.as_ref\(\) \{\s*fv::html::trusted_into\(out, html\);/);
     });
 
     it("refuses a TrustedHtml prop when the configuration names no Rust type for it", () => {
@@ -1060,22 +1060,22 @@ ${Object.keys(others)
     const SAFE = { ...CONFIG, trustedHtml: "crate::sanitize::SafeHtml" };
     const placing = (template: string, others: Record<string, string> = {}) => () => generate(island(placed(template, others), others), SAFE);
 
-    it("writes an InlineHtml prop as ferrovue::basic_html::InlineHtml, inside a <p>, with no trustedHtml configured", () => {
+    it("writes an InlineHtml prop as ferrovue::html::InlineHtml, inside a <p>, with no trustedHtml configured", () => {
       const source = `<script setup lang="ts">
 import type { InlineHtml } from "ferrovue/types";
 defineProps<{ note: InlineHtml; extra?: InlineHtml }>();
 </script>
 <template><p v-html="note"></p><p><b v-html="extra"></b></p></template>`;
       const out = compile(island(source)).get("x.rs")!;
-      expect(out).toContain("pub note: ferrovue::basic_html::InlineHtml,");
-      expect(out).toContain("pub extra: Option<ferrovue::basic_html::InlineHtml>,");
-      expect(out).toContain("fv::trusted::trusted_into(out, &props.note);");
+      expect(out).toContain("pub note: ferrovue::html::InlineHtml,");
+      expect(out).toContain("pub extra: Option<ferrovue::html::InlineHtml>,");
+      expect(out).toContain("fv::html::trusted_into(out, &props.note);");
       expect(out).not.toContain("<'a>");
     });
 
-    it("makes every TrustedHtml prop inline when trustedHtml names ferrovue::basic_html::InlineHtml", () => {
-      const out = generate(island(placed(`<p v-html="body"></p>`)), { ...CONFIG, trustedHtml: "ferrovue::basic_html::InlineHtml" }).get("x.rs")!;
-      expect(out).toContain("pub body: ferrovue::basic_html::InlineHtml,");
+    it("makes every TrustedHtml prop inline when trustedHtml names ferrovue::html::InlineHtml", () => {
+      const out = generate(island(placed(`<p v-html="body"></p>`)), { ...CONFIG, trustedHtml: "ferrovue::html::InlineHtml" }).get("x.rs")!;
+      expect(out).toContain("pub body: ferrovue::html::InlineHtml,");
     });
 
     it.each([
@@ -1163,8 +1163,8 @@ defineProps<{ title: string }>();
 
     it("gives a component with <slot> a Slots argument, one optional field per slot", () => {
       const out = compile(island(frame)).get("x.rs")!;
-      expect(out).toContain("pub head: Option<fv::slots::Slot<'s>>,");
-      expect(out).toContain("pub default: Option<fv::slots::Slot<'s>>,");
+      expect(out).toContain("pub head: Option<fv::render::Slot<'s>>,");
+      expect(out).toContain("pub default: Option<fv::render::Slot<'s>>,");
       expect(out).toContain("pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>)");
       expect(out).not.toContain("pub fn island");
       expect(out).not.toContain("pub fn into_");
@@ -1177,8 +1177,8 @@ const props = defineProps<{ on: boolean }>();
 </script>
 <template><Frame title="t"><template #head><b v-if="on">h</b></template><i>body</i></Frame></template>`;
       const out = compile(island(parent, { Frame: frame })).get("x.rs")!;
-      expect(out).toContain("head: Some(fv::slots::Slot::markup(&|out: &mut String| -> bool {");
-      expect(out).toContain("default: Some(fv::slots::Slot::new(&|out: &mut String| {");
+      expect(out).toContain("head: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {");
+      expect(out).toContain("default: Some(fv::render::Slot::new(&|out: &mut String| {");
     });
 
     it("asks of a push whose values decide whether it is only comments what it wrote", () => {
@@ -1189,10 +1189,10 @@ const props = defineProps<{ note?: string; tags: string[] }>();
 <template><Frame title="t">${body}</Frame></template>`;
       const markers = compile(island(parent(`{{ note }}<i v-for="t in tags">{{ t }}</i>`), { Frame: frame })).get("x.rs")!;
       expect(markers).toContain("let fv_chunk = out.len();");
-      expect(markers).toContain("filled |= !fv::slots::is_comment(&out[fv_chunk..]);");
+      expect(markers).toContain("filled |= !fv::render::is_comment(&out[fv_chunk..]);");
       const text = compile(island(parent(`{{ note }} of {{ tags.length }}<i v-for="t in tags">{{ t }}</i>`), { Frame: frame })).get("x.rs")!;
-      expect(text).not.toContain("fv::slots::is_comment");
-      expect(text).toContain("default: Some(fv::slots::Slot::new(&|out: &mut String| {");
+      expect(text).not.toContain("fv::render::is_comment");
+      expect(text).toContain("default: Some(fv::render::Slot::new(&|out: &mut String| {");
     });
 
     it("reads $slots.x as whether the parent gave that slot content", () => {
@@ -1215,7 +1215,7 @@ defineProps<{ items: string[] }>();
       expect(out).toContain("pub struct ItemSlotProps<'v> {\n    pub text: &'v str,\n    pub index: i64,\n}");
       expect(out).toContain("pub type ItemSlot<'s> = dyn for<'v> Fn(&mut String, &ItemSlotProps<'v>) -> bool + 's;");
       expect(out).toContain("pub item: Option<&'s ItemSlot<'s>>,");
-      expect(out).toContain("fv::slots::scoped_slot_into(out, fv_slots.item, &ItemSlotProps { text: fv_it, index: fv_i }, Some(");
+      expect(out).toContain("fv::render::scoped_slot_into(out, fv_slots.item, &ItemSlotProps { text: fv_it, index: fv_i }, Some(");
     });
 
     it("binds the props a parent destructures, whatever order it generates in", () => {
@@ -1226,7 +1226,7 @@ defineProps<{ items: string[] }>();
 <template><Lister :items="items"><template #item="{ text, index: n }"><b :data-n="n">{{ text }}</b></template></Lister></template>`;
       const out = compile(island(lister, { A: parent, Lister: lister })).get("a.rs")!;
       expect(out).toMatch(/item: Some\(&\|out: &mut String, (fv_slot_props): &super::lister::ItemSlotProps<'_>\| -> bool \{/);
-      expect(out).toMatch(/fv::core::escape::escape_into\(out, fv_slot_props\.text\);/);
+      expect(out).toMatch(/fv::core::escape_into\(out, fv_slot_props\.text\);/);
     });
 
     it("refuses outlets of one slot that pass different props", () => {
@@ -1305,7 +1305,7 @@ import Middle from "./Middle.vue";
 <template><section><Middle /></section></template>
 <style scoped>section { color: green }</style>`;
       const out = generate(island(top, { Middle: middle, Leaf: leaf }), { ...CONFIG, scopeId: "filepath" });
-      expect(out.get("leaf.rs")).toContain("pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) -> Result<(), fv::refused::Refused>");
+      expect(out.get("leaf.rs")).toContain("pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) -> Result<(), fv::render::Refused>");
       expect(out.get("leaf.rs")).toContain('try_render_scoped(out, props, "")');
       expect(out.get("leaf.rs")).toContain("out.push_str(fv_attrs);");
       expect(out.get("x.rs")).toContain(`super::middle::try_render_scoped(out, &super::middle::Props {  }, " data-v-${hash("components/X.vue")}")?;`);
@@ -1323,8 +1323,8 @@ import Card from "./Card.vue";
 </script>
 <template><Card><p>x</p></Card></template>`;
       const out = generate(island(parent, { Card: card }), { ...CONFIG, scopeId: "filepath" });
-      expect(out.get("card.rs")).toContain(`fv::slots::slot_into_slotted(out, fv_slots.default, "data-v-${hash("components/Card.vue")}-s", None);`);
-      expect(out.get("x.rs")).toContain("default: Some(fv::slots::Slot::slotted(&|out: &mut String, fv_slot_id: &str| -> bool {");
+      expect(out.get("card.rs")).toContain(`fv::render::slot_into_slotted(out, fv_slots.default, "data-v-${hash("components/Card.vue")}-s", None);`);
+      expect(out.get("x.rs")).toContain("default: Some(fv::render::Slot::slotted(&|out: &mut String, fv_slot_id: &str| -> bool {");
     });
   });
 
@@ -1514,7 +1514,7 @@ const route = useRoute();
       expect(() => named(island(bound("route.query.q ?? 'none'")))).toThrow(refused);
       expect(() => named(island(bound("route.query.q", ":hidden")))).toThrow(/`hidden` is bound to a query value/);
       const narrowed = named(island(bound("typeof route.query.q === 'string' ? route.query.q : 'none'"))).get("x.rs")!;
-      expect(narrowed).toContain('fv::core::escape::escape_into(out, fv_route.query("q").attr_value().unwrap_or("none"));');
+      expect(narrowed).toContain('fv::core::escape_into(out, fv_route.query("q").attr_value().unwrap_or("none"));');
     });
 
     it("writes RouterView as the page the server supplies, and refuses it below the top", () => {
@@ -1750,7 +1750,7 @@ defineProps<{ on: boolean; c: string }>();
 <template><p style="display: block; color: red" :style="{ color: c }" v-show="on">x</p></template>`),
       ).get("x.rs")!;
       expect(out).toMatch(/if !props\.on \{\s*out\.push_str\("display:none;"\);\s*\} else \{\s*out\.push_str\("display:block;"\);/);
-      expect(out).toContain("fv::core::escape::escape_into(out, &props.c);");
+      expect(out).toContain("fv::core::escape_into(out, &props.c);");
     });
 
     it("allows a global <style> block, which changes no markup", () => {
@@ -1776,11 +1776,11 @@ defineProps<{ price: Float; qty: number; rate?: Float }>();
       const out = compile(island(numbers)).get("x.rs")!;
       expect(out).toContain("pub price: f64,");
       expect(out).toContain("pub rate: Option<f64>,");
-      expect(out).toContain("fv::core::numbers::js_to_fixed(props.price * props.qty as f64, 2)");
-      expect(out).toContain("fv::core::numbers::push_number(out, props.qty as f64 / 4.0);");
-      expect(out).toContain("fv::core::numbers::js_round(props.price)");
+      expect(out).toContain("fv::core::js_to_fixed(props.price * props.qty as f64, 2)");
+      expect(out).toContain("fv::core::push_number(out, props.qty as f64 / 4.0);");
+      expect(out).toContain("fv::core::js_round(props.price)");
       expect(out).toContain("props.rate.unwrap_or(0.5f64)");
-      expect(out).toContain("fv::core::numbers::push_number(out, props.qty as f64 % 3.0);");
+      expect(out).toContain("fv::core::push_number(out, props.qty as f64 % 3.0);");
     });
 
     it("writes toPrecision and toExponential with the runtime's twins, a fractional argument truncated as for toFixed", () => {
@@ -1789,15 +1789,15 @@ defineProps<{ price: Float; qty: number; rate?: Float }>();
         "{{ qty % 3 }}|{{ price.toPrecision(3) }}|{{ qty.toPrecision(100.5) }}|{{ price.toPrecision() }}|{{ qty.toPrecision(undefined) }}|{{ price.toExponential(0) }}|{{ qty.toExponential(2.9) }}|{{ price.toExponential() }}|{{ price.toExponential(undefined) }}|{{ price.toFixed(1.5) }}|{{ qty.toFixed(undefined) }}",
       );
       const out = compile(island(source)).get("x.rs")!;
-      expect(out).toContain("fv::core::numbers::js_to_precision(props.price, 3)");
-      expect(out).toContain("fv::core::numbers::js_to_fixed(props.price, 1)");
-      expect(out).toContain("fv::core::numbers::js_to_fixed(props.qty as f64, 0)");
-      expect(out).toContain("fv::core::numbers::js_to_precision(props.qty as f64, 100)");
-      expect(out).toContain("fv::core::numbers::Js(props.price).to_string()");
-      expect(out).toContain("fv::core::numbers::Js(props.qty).to_string()");
-      expect(out).toContain("fv::core::numbers::js_to_exponential(props.price, Some(0))");
-      expect(out).toContain("fv::core::numbers::js_to_exponential(props.qty as f64, Some(2))");
-      expect(out.match(/fv::core::numbers::js_to_exponential\(props\.price, None\)/g)).toHaveLength(2);
+      expect(out).toContain("fv::core::js_to_precision(props.price, 3)");
+      expect(out).toContain("fv::core::js_to_fixed(props.price, 1)");
+      expect(out).toContain("fv::core::js_to_fixed(props.qty as f64, 0)");
+      expect(out).toContain("fv::core::js_to_precision(props.qty as f64, 100)");
+      expect(out).toContain("fv::core::Js(props.price).to_string()");
+      expect(out).toContain("fv::core::Js(props.qty).to_string()");
+      expect(out).toContain("fv::core::js_to_exponential(props.price, Some(0))");
+      expect(out).toContain("fv::core::js_to_exponential(props.qty as f64, Some(2))");
+      expect(out.match(/fv::core::js_to_exponential\(props\.price, None\)/g)).toHaveLength(2);
     });
 
     it("refuses toFixed with digits that are not a literal", () => {
@@ -1818,12 +1818,12 @@ ${script}
       const out = compile(
         island(dated("const d = computed(() => new Date(props.at));", '{{ d.toISOString() }}|{{ d.getUTCFullYear() }}|{{ new Date(ms).getTime() }}|{{ Date.parse(at) }}|{{ new Date("2024-01-15T10:00Z").valueOf() }}|{{ d.getTime() === d.getTime() }}')),
       ).get("x.rs")!;
-      expect(out).toContain("let s_d = std::cell::LazyCell::new(|| fv_refusals.keep(fv::dates::try_date_parse(&props.at), 4, 26));");
-      expect(out).toContain("fv::core::escape::escape_into(out, &fv_refusals.keep(fv::dates::try_to_iso_string(*s_d), 6, 17));");
-      expect(out).toContain("fv::core::numbers::push_number(out, fv::dates::js_utc_full_year(*s_d));");
-      expect(out).toContain("fv::core::numbers::push_number(out, fv::dates::js_time_clip(props.ms as f64));");
-      expect(out).toContain("fv::core::numbers::push_number(out, fv_refusals.keep(fv::dates::try_date_parse(&props.at), 6, 93));");
-      expect(out).toContain("fv::core::numbers::push_number(out, 1705312800000.0f64);");
+      expect(out).toContain("let s_d = std::cell::LazyCell::new(|| fv_refusals.keep(fv::date::try_date_parse(&props.at), 4, 26));");
+      expect(out).toContain("fv::core::escape_into(out, &fv_refusals.keep(fv::date::try_to_iso_string(*s_d), 6, 17));");
+      expect(out).toContain("fv::core::push_number(out, fv::date::js_utc_full_year(*s_d));");
+      expect(out).toContain("fv::core::push_number(out, fv::date::js_time_clip(props.ms as f64));");
+      expect(out).toContain("fv::core::push_number(out, fv_refusals.keep(fv::date::try_date_parse(&props.at), 6, 93));");
+      expect(out).toContain("fv::core::push_number(out, 1705312800000.0f64);");
       expect(out).toContain("if !(*s_d).is_nan() {");
     });
 
@@ -1831,15 +1831,15 @@ ${script}
       const out = compile(
         island(dated("const d = computed(() => new Date(props.at));\nconst j = computed(() => d.value.toJSON());", '{{ d.toUTCString() }}|{{ j ?? "none" }}|{{ JSON.stringify(d) }}|{{ Date.UTC(ms) }}|{{ Date.UTC(99, 11, 31, 23, 59, 59.9, 999.5) }}|{{ Date.UTC(ms, 1, 2) }}|{{ d < new Date(ms) }}|{{ d >= d }}<b :title="d.toJSON()"></b>')),
       ).get("x.rs")!;
-      expect(out).toContain("let s_j = std::cell::LazyCell::new(|| fv::dates::js_to_json(*s_d).map(std::borrow::Cow::<str>::Owned));");
-      expect(out).toContain("fv::core::escape::escape_into(out, &fv::dates::js_to_utc_string(*s_d));");
-      expect(out).toContain('fv::core::escape::escape_into(out, (*s_j).as_deref().unwrap_or("none"));');
-      expect(out).toContain("fv::core::escape::escape_into(out, &fv::dates::js_json_date(*s_d));");
-      expect(out).toContain("fv::core::numbers::push_number(out, fv_refusals.keep(fv::dates::try_date_utc(props.ms as f64, 0.0f64, 1.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64), 7, 81));");
+      expect(out).toContain("let s_j = std::cell::LazyCell::new(|| fv::date::js_to_json(*s_d).map(std::borrow::Cow::<str>::Owned));");
+      expect(out).toContain("fv::core::escape_into(out, &fv::date::js_to_utc_string(*s_d));");
+      expect(out).toContain('fv::core::escape_into(out, (*s_j).as_deref().unwrap_or("none"));');
+      expect(out).toContain("fv::core::escape_into(out, &fv::date::js_json_date(*s_d));");
+      expect(out).toContain("fv::core::push_number(out, fv_refusals.keep(fv::date::try_date_utc(props.ms as f64, 0.0f64, 1.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64), 7, 81));");
       expect(out).toContain('out.push_str("|946684799999|");');
-      expect(out).toContain('out.push_str(if (*s_d) < fv::dates::js_time_clip(props.ms as f64) { "true" } else { "false" });');
+      expect(out).toContain('out.push_str(if (*s_d) < fv::date::js_time_clip(props.ms as f64) { "true" } else { "false" });');
       expect(out).toContain('out.push_str(if !(*s_d).is_nan() { "true" } else { "false" });');
-      expect(out).toContain("if let Some(v) = fv::dates::js_to_json(*s_d).as_deref() {");
+      expect(out).toContain("if let Some(v) = fv::date::js_to_json(*s_d).as_deref() {");
     });
 
     it("tests a number with Number.isNaN and its kin, and takes a date's || as its ??", () => {
@@ -1850,7 +1850,7 @@ defineProps<{ at: Date; edited?: Date; deleted: Date | null; n: number; x: Float
 </script>
 <template><p v-if="!Number.isNaN(at.getTime())">{{ Number.isFinite(x) }}|{{ Number.isInteger(x) }}|{{ Number.isSafeInteger(x + 1) }}|{{ Number.isSafeInteger(n) }}|{{ Number.isInteger(n) }}|{{ isNaN(x) }}|{{ Number.isNaN(maybe) }}|{{ (edited || at).getTime() }}|{{ (deleted || edited || at).getTime() }}|{{ (at || edited).getTime() }}|{{ Boolean(edited) }}<b v-if="!Number.isSafeInteger(n)">big</b></p></template>`),
       ).get("x.rs")!;
-      expect(out).toContain("if !fv::js_date::js_time_of(&props.at).is_nan() {");
+      expect(out).toContain("if !fv::date::js_time_of(&props.at).is_nan() {");
       expect(out).toContain("if props.x.is_finite() {");
       expect(out).toContain("if props.x.fract() == 0.0 {");
       expect(out).toContain("if matches!(props.x + 1.0, v if v.fract() == 0.0 && v.abs() <= 9_007_199_254_740_991.0) {");
@@ -1858,10 +1858,10 @@ defineProps<{ at: Date; edited?: Date; deleted: Date | null; n: number; x: Float
       expect(out).toContain("if !(-9_007_199_254_740_991..=9_007_199_254_740_991).contains(&props.n) {");
       expect(out).toContain("|true|");
       expect(out).toContain("if props.maybe.is_some_and(|v| v.is_nan()) {");
-      expect(out).toContain("fv::core::numbers::push_number(out, props.edited.as_ref().map(fv::js_date::js_time_of).unwrap_or(fv::js_date::js_time_of(&props.at)));");
-      expect(out).toContain("props.deleted.as_ref().map(fv::js_date::js_time_of).or(props.edited.as_ref().map(fv::js_date::js_time_of)).unwrap_or(fv::js_date::js_time_of(&props.at))");
-      expect(out).toContain("fv::core::numbers::push_number(out, fv::js_date::js_time_of(&props.at));");
-      expect(out).toContain("if props.edited.as_ref().map(fv::js_date::js_time_of).is_some() {");
+      expect(out).toContain("fv::core::push_number(out, props.edited.as_ref().map(fv::date::js_time_of).unwrap_or(fv::date::js_time_of(&props.at)));");
+      expect(out).toContain("props.deleted.as_ref().map(fv::date::js_time_of).or(props.edited.as_ref().map(fv::date::js_time_of)).unwrap_or(fv::date::js_time_of(&props.at))");
+      expect(out).toContain("fv::core::push_number(out, fv::date::js_time_of(&props.at));");
+      expect(out).toContain("if props.edited.as_ref().map(fv::date::js_time_of).is_some() {");
     });
 
     const posted = `<script setup lang="ts">
@@ -1879,21 +1879,21 @@ defineProps<{ at: Date; maybe: Date | null; later?: Date; made: Date }>();
     it("gives a Date prop the Rust type dateType names, read through JsTime and written into data-props as JsDate writes it", () => {
       const out = compile(island(posted, { Stamp: stamp }));
       const x = out.get("x.rs")!;
-      expect(x).toContain('    #[serde(rename = "posted", with = "fv::js_date::date_prop")]\n    pub posted: ferrovue::js_date::JsDate,');
-      expect(x).toContain('    #[serde(rename = "edited", default, skip_serializing_if = "Option::is_none", with = "fv::js_date::opt_date_prop")]\n    pub edited: Option<ferrovue::js_date::JsDate>,');
-      expect(x).toContain('    #[serde(rename = "deleted", default, with = "fv::js_date::opt_date_prop")]\n    pub deleted: Option<ferrovue::js_date::JsDate>,');
-      expect(x).toContain("pub fn new(posted: ferrovue::js_date::JsDate) -> Self {");
-      expect(x).toContain("pub fn edited(mut self, edited: ferrovue::js_date::JsDate) -> Self {");
-      expect(x).toContain("let s_year = fv::dates::js_utc_full_year(fv::js_date::js_time_of(&props.posted));");
-      expect(x).toContain("fv::core::escape::escape_into(out, &fv_refusals.keep(fv::dates::try_to_iso_string(fv::js_date::js_time_of(&props.posted)), 7, 31));");
-      expect(x).toContain("if let Some(fv_edited) = props.edited.as_ref().map(fv::js_date::js_time_of) {");
+      expect(x).toContain('    #[serde(rename = "posted", with = "fv::date::date_prop")]\n    pub posted: ferrovue::date::JsDate,');
+      expect(x).toContain('    #[serde(rename = "edited", default, skip_serializing_if = "Option::is_none", with = "fv::date::opt_date_prop")]\n    pub edited: Option<ferrovue::date::JsDate>,');
+      expect(x).toContain('    #[serde(rename = "deleted", default, with = "fv::date::opt_date_prop")]\n    pub deleted: Option<ferrovue::date::JsDate>,');
+      expect(x).toContain("pub fn new(posted: ferrovue::date::JsDate) -> Self {");
+      expect(x).toContain("pub fn edited(mut self, edited: ferrovue::date::JsDate) -> Self {");
+      expect(x).toContain("let s_year = fv::date::js_utc_full_year(fv::date::js_time_of(&props.posted));");
+      expect(x).toContain("fv::core::escape_into(out, &fv_refusals.keep(fv::date::try_to_iso_string(fv::date::js_time_of(&props.posted)), 7, 31));");
+      expect(x).toContain("if let Some(fv_edited) = props.edited.as_ref().map(fv::date::js_time_of) {");
       expect(x).toContain(
-        "&super::stamp::Props { at: fv_refusals.date(fv::js_date::js_time_of(&props.posted), 7, 125), maybe: props.deleted.as_ref().map(fv::js_date::js_time_of).map(|fv_t| fv_refusals.date(fv_t, 7, 141)), later: props.edited.as_ref().map(fv::js_date::js_time_of).map(|fv_t| fv_refusals.date(fv_t, 7, 158)), made: fv_refusals.date(fv::dates::js_time_clip(s_year), 7, 171) }",
+        "&super::stamp::Props { at: fv_refusals.date(fv::date::js_time_of(&props.posted), 7, 125), maybe: props.deleted.as_ref().map(fv::date::js_time_of).map(|fv_t| fv_refusals.date(fv_t, 7, 141)), later: props.edited.as_ref().map(fv::date::js_time_of).map(|fv_t| fv_refusals.date(fv_t, 7, 158)), made: fv_refusals.date(fv::date::js_time_clip(s_year), 7, 171) }",
       );
       const chrono = generate(island(posted, { Stamp: stamp }), { ...CONFIG, dateType: "chrono::DateTime<chrono::Utc>" });
-      expect(chrono.get("x.rs")).toContain('    #[serde(rename = "posted", with = "fv::js_date::date_prop")]\n    pub posted: chrono::DateTime<chrono::Utc>,');
+      expect(chrono.get("x.rs")).toContain('    #[serde(rename = "posted", with = "fv::date::date_prop")]\n    pub posted: chrono::DateTime<chrono::Utc>,');
       expect(chrono.get("stamp.rs")).toContain("    pub later: Option<chrono::DateTime<chrono::Utc>>,");
-      expect(chrono.get("x.rs")!.replaceAll("chrono::DateTime<chrono::Utc>", "ferrovue::js_date::JsDate")).toBe(x);
+      expect(chrono.get("x.rs")!.replaceAll("chrono::DateTime<chrono::Utc>", "ferrovue::date::JsDate")).toBe(x);
     });
 
     it("gives a Date prop of a props interface the same Rust type", () => {
@@ -1902,8 +1902,8 @@ interface Props { posted: Date; label: string }
 const props = defineProps<Props>();
 </script>
 <template><p>{{ props.posted.getUTCDate() }}{{ label }}</p></template>`)).get("x.rs")!;
-      expect(out).toContain("    pub posted: ferrovue::js_date::JsDate,");
-      expect(out).toContain("fv::core::numbers::push_number(out, fv::dates::js_utc_date(fv::js_date::js_time_of(&props.posted)));");
+      expect(out).toContain("    pub posted: ferrovue::date::JsDate,");
+      expect(out).toContain("fv::core::push_number(out, fv::date::js_utc_date(fv::date::js_time_of(&props.posted)));");
     });
 
     it("gives a Date inside lists, dictionaries and objects of the props the date type, with a plan of where the dates are", () => {
@@ -1916,12 +1916,12 @@ defineProps<{ days: Date[]; maybe?: (Date | null)[]; byName: Record<string, Date
       const card = `<script setup lang="ts">\ndefineProps<{ at: Date }>();\n</script>\n<template><i>{{ at.getTime() }}</i></template>`;
       const out = compile(island(source, { Card: card }));
       const x = out.get("x.rs")!;
-      expect(x).toContain('    #[serde(rename = "days", with = "fv::js_date::dates_in")]\n    pub days: Vec<ferrovue::js_date::JsDate>,');
-      expect(x).toContain('    #[serde(rename = "maybe", default, skip_serializing_if = "Option::is_none", with = "fv::js_date::dates_in")]\n    pub maybe: Option<Vec<Option<ferrovue::js_date::JsDate>>>,');
-      expect(x).toContain('    #[serde(rename = "byName", with = "fv::js_date::dates_in")]\n    pub by_name: ferrovue::record::Record<\'a, ferrovue::js_date::JsDate>,');
-      expect(x).toContain('    #[serde(rename = "seen", default, skip_serializing_if = "Option::is_none", with = "fv::js_date::opt_date_prop")]\n    pub seen: Option<ferrovue::js_date::JsDate>,');
-      expect(x).toContain("for fv_d in props.days.iter().map(fv::js_date::js_time_of) {");
-      expect(x).toContain("fv_refusals.keep(fv::dates::try_to_iso_string(fv::js_date::js_time_of(&fv_r.at)), 6, 77)");
+      expect(x).toContain('    #[serde(rename = "days", with = "fv::date::dates_in")]\n    pub days: Vec<ferrovue::date::JsDate>,');
+      expect(x).toContain('    #[serde(rename = "maybe", default, skip_serializing_if = "Option::is_none", with = "fv::date::dates_in")]\n    pub maybe: Option<Vec<Option<ferrovue::date::JsDate>>>,');
+      expect(x).toContain('    #[serde(rename = "byName", with = "fv::date::dates_in")]\n    pub by_name: ferrovue::props::Record<\'a, ferrovue::date::JsDate>,');
+      expect(x).toContain('    #[serde(rename = "seen", default, skip_serializing_if = "Option::is_none", with = "fv::date::opt_date_prop")]\n    pub seen: Option<ferrovue::date::JsDate>,');
+      expect(x).toContain("for fv_d in props.days.iter().map(fv::date::js_time_of) {");
+      expect(x).toContain("fv_refusals.keep(fv::date::try_to_iso_string(fv::date::js_time_of(&fv_r.at)), 6, 77)");
       const plan = '[{"days":[1],"maybe":[1],"byName":{"*":1},"rows":["Row"],"cards":[{"at":1}]},{"Row":{"at":1,"seen":1,"marks":[1],"by":{"*":1},"next":"Row"}}]';
       expect(x).toContain(`    let html: fv::html::Html<'p, Props<'a>> = fv::html::Html::island_fallible(NAME, props, render, try_render);\n    html.dates(${JSON.stringify(plan)})`);
       expect(out.get("card.rs")).not.toContain(".dates(");
@@ -1995,10 +1995,10 @@ ${script}
       );
       expect(out).toContain("let s_many = std::cell::LazyCell::new(|| fv_refusals.keep(fv::strings::try_repeat(&props.word, props.n as f64), 4, 29));");
       expect(out).toMatch(/let s_wide = std::cell::LazyCell::new\(\|\| fv_refusals\.keep\(fv::strings::try_pad_end\(/);
-      expect(out).toContain("let s_iso = std::cell::LazyCell::new(|| fv_refusals.keep(fv::dates::try_to_iso_string(fv_refusals.keep(fv::dates::try_date_parse(&props.at), 6, 28)), 6, 28));");
-      expect(out).toContain("let s_ms = std::cell::LazyCell::new(|| fv_refusals.keep(fv::dates::try_date_parse(&props.at), 7, 27));");
-      expect(out).toMatch(/if props\.on \{\n\s+out\.push_str\("<p>"\);\n\s+fv::core::escape::escape_into\(out, &s_many\);/);
-      expect(out).toContain("fv::core::numbers::push_number(out, *s_ms);");
+      expect(out).toContain("let s_iso = std::cell::LazyCell::new(|| fv_refusals.keep(fv::date::try_to_iso_string(fv_refusals.keep(fv::date::try_date_parse(&props.at), 6, 28)), 6, 28));");
+      expect(out).toContain("let s_ms = std::cell::LazyCell::new(|| fv_refusals.keep(fv::date::try_date_parse(&props.at), 7, 27));");
+      expect(out).toMatch(/if props\.on \{\n\s+out\.push_str\("<p>"\);\n\s+fv::core::escape_into\(out, &s_many\);/);
+      expect(out).toContain("fv::core::push_number(out, *s_ms);");
     });
 
     it("makes a computed lazy when it reads one that is, and leaves one that reads none as it is", () => {
@@ -2009,7 +2009,7 @@ ${script}
       expect(out).toContain('let s_stamp = std::cell::LazyCell::new(|| format!("{}!", (*s_iso)));');
       expect(out).toContain("let s_size = std::cell::LazyCell::new(|| fv::strings::js_length(&s_stamp));");
       expect(out).toContain('let s_label = format!("{}?", props.word);');
-      expect(out).toContain("fv::core::numbers::push_int(out, *s_size);");
+      expect(out).toContain("fv::core::push_int(out, *s_size);");
     });
 
     it("drops a computed the render never reads, and holds lists and optional strings lazily", () => {
@@ -2020,7 +2020,7 @@ ${script}
       expect(out).not.toContain("s_unused");
       expect(out).toMatch(/let s_copies = std::cell::LazyCell::new\(\|\| props\.tags\.iter\(\).*\.collect::<Vec<_>>\(\)\);/);
       expect(out).toContain("for fv_c_cow in (*s_copies).iter()");
-      expect(out).toContain('fv::core::escape::escape_into(out, (*s_echoed).as_deref().unwrap_or("-"));');
+      expect(out).toContain('fv::core::escape_into(out, (*s_echoed).as_deref().unwrap_or("-"));');
     });
 
     it("evaluates a lazy computed a `v-bind()` in `<style>` reads as the render starts, as Vue's server does", () => {
@@ -2034,7 +2034,7 @@ const props = defineProps<{ note?: string; word: string; n: number; count?: numb
 </script>
 <template><p>{{ note ?? word.repeat(n) }}|{{ count ?? n * n }}</p></template>`)).get("x.rs")!;
       expect(out).toContain('props.note.as_deref().map(std::borrow::Cow::<str>::Borrowed).unwrap_or_else(|| std::borrow::Cow::<str>::Owned(fv_refusals.keep(fv::strings::try_repeat(&props.word, props.n as f64), 4, 25)))');
-      expect(out).toContain("fv::core::numbers::push_number(out, props.count.map(|v| v as f64).unwrap_or(props.n as f64 * props.n as f64));");
+      expect(out).toContain("fv::core::push_number(out, props.count.map(|v| v as f64).unwrap_or(props.n as f64 * props.n as f64));");
     });
 
     it("writes integer arithmetic chosen by `??`, `?:`, `||`, a computed or a function from its double, with no check of the range of i64", () => {
@@ -2049,7 +2049,7 @@ function product(a: number, b: number): number {
 <template><p :title="count ?? n * n" :data-or="m || n * n">{{ on ? n * n : m }} {{ chosen }} {{ product(n, m) }} {{ \`\${count ?? n * m}\` }}</p></template>`)).get("x.rs")!;
       expect(out).not.toContain("try_int");
       expect(out).not.toContain("fv_refusals");
-      expect(out).toContain("fv::core::numbers::push_number(out, if props.on { props.n as f64 * props.n as f64 } else { props.m as f64 });");
+      expect(out).toContain("fv::core::push_number(out, if props.on { props.n as f64 * props.n as f64 } else { props.m as f64 });");
     });
 
     it("refuses at render time an integer beyond the range of i64 handed to a child, and writes one into the page from its double", () => {
@@ -2060,8 +2060,8 @@ defineProps<{ n: number }>();
 </script>
 <template><p>{{ n * n }}</p><Kid :k="n * n" /></template>`, { Kid: '<script setup lang="ts">\ndefineProps<{ k: number }>();\n</script>\n<template><i>{{ k }}</i></template>' }),
       ).get("x.rs")!;
-      expect(out).toContain("fv::core::numbers::push_number(out, props.n as f64 * props.n as f64);");
-      expect(out).toContain("&super::kid::Props { k: fv_refusals.keep(fv::refused::try_int(props.n as f64 * props.n as f64), 5, 38) }");
+      expect(out).toContain("fv::core::push_number(out, props.n as f64 * props.n as f64);");
+      expect(out).toContain("&super::kid::Props { k: fv_refusals.keep(fv::render::try_int(props.n as f64 * props.n as f64), 5, 38) }");
     });
   });
 
@@ -2115,7 +2115,7 @@ const props = defineProps<{ n: number }>();
 <template><p>item{{ plural(n) }}</p></template>`),
         config,
       ).get("x.rs")!;
-      expect(out).toContain("fv::core::escape::escape_into(out, crate::helpers::plural(props.n));");
+      expect(out).toContain("fv::core::escape_into(out, crate::helpers::plural(props.n));");
     });
 
     it("refuses a helper with no Rust twin", () => {
@@ -2147,7 +2147,7 @@ defineProps<{ label: string }>();
 
     it("writes the fallback between fragment markers and skips the default slot", () => {
       const out = compile(island(page(`<Chart :data="window.points" /><v-tooltip>{{ label.at(-1) }}</v-tooltip><template #fallback><p>{{ label }}</p></template>`))).get("x.rs")!;
-      expect(out).toContain('out.push_str("<div><!--[--><p>");\n    fv::core::escape::escape_into(out, &props.label);\n    out.push_str("</p><!--]--></div>");');
+      expect(out).toContain('out.push_str("<div><!--[--><p>");\n    fv::core::escape_into(out, &props.label);\n    out.push_str("</p><!--]--></div>");');
       expect(out).not.toContain("tooltip");
     });
 
@@ -2211,7 +2211,7 @@ defineProps<{ label: string }>();
     it("calls the twin with its props, slots and attributes", () => {
       const out = generate(island(using(`<VBtn :label="label" block class="wide"><b>{{ label }}</b></VBtn>`)), config).get("x.rs")!;
       expect(out).toContain("crate::ui::v_btn(out, &super::twins::VBtnProps { label: &props.label, size: None, block: true }, super::twins::VBtnSlots {");
-      expect(out).toContain("default: Some(fv::slots::Slot::new(&|out: &mut String| {");
+      expect(out).toContain("default: Some(fv::render::Slot::new(&|out: &mut String| {");
       expect(out).toContain("prepend: None,");
       expect(out).toContain('}, &fv::attrs::Attrs::merged(&[&[("class", fv::attrs::Attr::str("wide"))]], ""));');
     });
@@ -2224,7 +2224,7 @@ defineProps<{ label: string }>();
     it("writes the props, the slots and the signature each twin is held to", () => {
       const twins = generate(island(using("<p />")), config).get("twins.rs")!;
       expect(twins).toContain("pub struct VBtnProps<'a> {\n    pub label: &'a str,\n    pub size: Option<i64>,\n    pub block: bool,\n}");
-      expect(twins).toContain("pub struct VBtnSlots<'s> {\n    /// `#default`\n    pub default: Option<fv::slots::Slot<'s>>,\n    /// `#prepend`\n    pub prepend: Option<fv::slots::Slot<'s>>,\n}");
+      expect(twins).toContain("pub struct VBtnSlots<'s> {\n    /// `#default`\n    pub default: Option<fv::render::Slot<'s>>,\n    /// `#prepend`\n    pub prepend: Option<fv::render::Slot<'s>>,\n}");
       expect(twins).toContain("pub type VBtnRender = fn(&mut String, &VBtnProps<'_>, VBtnSlots<'_>, &fv::attrs::Attrs<'_>);\n\nconst _: VBtnRender = crate::ui::v_btn;");
       expect(twins).toContain("pub struct VIconProps {\n}");
       expect(twins).toContain("pub type VIconRender = fn(&mut String, &VIconProps, &fv::attrs::Attrs<'_>);");
@@ -6410,19 +6410,19 @@ describe("a `?:` whose branches differ in type, where it is shown as text", () =
 
   it("writes each branch as `{{ }}` writes it, a number by JavaScript's rules and an absent one as nothing", () => {
     const out = render("n: number; o?: Float; on: boolean", '<i>{{ n > 0 ? n : "none" }}</i><b>{{ on ? o : "absent" }}</b><s>{{ on ? true : "off" }}</s>');
-    expect(out).toContain('fv::core::escape::escape_into(out, &(if props.n as f64 > 0.0 { std::borrow::Cow::<str>::Owned(format!("{}", fv::core::numbers::Js(props.n))) } else { std::borrow::Cow::<str>::Borrowed("none") }));');
-    expect(out).toMatch(/if let Some\(v\) = \(if props\.on \{ props\.o\.map\(\|(fv_o)\| std::borrow::Cow::<str>::Owned\(format!\("\{\}", fv::core::numbers::Js\(\1\)\)\)\) \} else \{ Some\(std::borrow::Cow::<str>::Borrowed\("absent"\)\) \}\)\.as_deref\(\) \{/);
+    expect(out).toContain('fv::core::escape_into(out, &(if props.n as f64 > 0.0 { std::borrow::Cow::<str>::Owned(format!("{}", fv::core::Js(props.n))) } else { std::borrow::Cow::<str>::Borrowed("none") }));');
+    expect(out).toMatch(/if let Some\(v\) = \(if props\.on \{ props\.o\.map\(\|(fv_o)\| std::borrow::Cow::<str>::Owned\(format!\("\{\}", fv::core::Js\(\1\)\)\)\) \} else \{ Some\(std::borrow::Cow::<str>::Borrowed\("absent"\)\) \}\)\.as_deref\(\) \{/);
   });
 
   it("writes each branch of an attribute's value as text, leaving the attribute out where a branch is absent", () => {
     const out = render("n: number; o?: number", `<div><i :title="n > 0 ? n : 'none'" :aria-label="o === undefined ? 'unset' : o"></i></div>`);
     expect(out).toContain('out.push_str("<div><i title=\\"");');
-    expect(out).toMatch(/aria-label=\\""\);\n {4}fv::core::escape::escape_into\(out, &\(if let Some\((fv_o)\) = props\.o \{ std::borrow::Cow::<str>::Owned\(format!\("\{\}", fv::core::numbers::Js\(\1\)\)\) \} else \{ std::borrow::Cow::<str>::Borrowed\("unset"\) \}\)\);/);
+    expect(out).toMatch(/aria-label=\\""\);\n {4}fv::core::escape_into\(out, &\(if let Some\((fv_o)\) = props\.o \{ std::borrow::Cow::<str>::Owned\(format!\("\{\}", fv::core::Js\(\1\)\)\) \} else \{ std::borrow::Cow::<str>::Borrowed\("unset"\) \}\)\);/);
   });
 
   it("writes each branch in a template literal as `String()` does, `null` and `undefined` too", () => {
     const out = render("n: number; on: boolean; tags: string[]; o?: number", "<i>{{ `${on ? n : 'none'}|${on ? tags : n}|${on ? o : false}` }}</i>");
-    expect(out).toContain('fv::strings::JsOr(props.o.map(fv::core::numbers::Js), "undefined")');
+    expect(out).toContain('fv::strings::JsOr(props.o.map(fv::core::Js), "undefined")');
     expect(out).toContain('.collect::<Vec<_>>().join(",")');
   });
 });
@@ -6502,7 +6502,7 @@ function bump() {
 }
 </script>
 <template><button @click="bump">{{ count }}</button></template>`)).get("x.rs")!;
-    expect(out).toContain("fv::core::numbers::push_int(out, s_count)");
+    expect(out).toContain("fv::core::push_int(out, s_count)");
   });
 
   it("binds each argument once, in order, and gives a missing one its default", () => {
@@ -6552,7 +6552,7 @@ defineProps<{ item: Item; items: Item[] }>();
     expect(out).toContain(
       'let s_c = if props.n as f64 > 0.0 { Card { count: props.n, title: std::borrow::Cow::<str>::Borrowed(&*props.name), owner: None, tags: Vec::new(), note: None } } else { Card { title: std::borrow::Cow::<str>::Borrowed("none"), count: 0i64, owner: Some(std::borrow::Cow::<str>::Borrowed(&*props.name)), tags: props.words.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect(), note: props.note.as_deref().map(std::borrow::Cow::<str>::Borrowed) } };',
     );
-    expect(out).toContain("fv::core::escape::escape_into(out, &s_c.title);");
+    expect(out).toContain("fv::core::escape_into(out, &s_c.title);");
   });
 
   it.each([
@@ -6611,7 +6611,7 @@ function local(on: boolean): Card {
       "{{ cardOf(name).title }}{{ local(n > 1).title }}",
       { "cards.ts": "export interface Made { title: string; size: number }\nexport function cardOf(title: string): Made {\n  return { title: title.trim(), size: title.length };\n}\n" },
     );
-    expect(out).toContain('fv::core::escape::escape_into(out, &((super::types::Made { title: std::borrow::Cow::<str>::Borrowed(fv::strings::js_trim(&props.name)), size: fv::strings::js_length(&props.name) }).title));');
+    expect(out).toContain('fv::core::escape_into(out, &((super::types::Made { title: std::borrow::Cow::<str>::Borrowed(fv::strings::js_trim(&props.name)), size: fv::strings::js_length(&props.name) }).title));');
     expect(out).toContain('{ Card { title: std::borrow::Cow::<str>::Borrowed("on"), count: 1i64, owner: None, tags: Vec::new(), note: None } } else { props.card.clone() }');
   });
 
@@ -6664,8 +6664,8 @@ describe("constant lookups", () => {
       'type Size = "sm" | "md" | "lg";\ndefineProps<{ size: Size }>();\nconst PAD = { sm: "p-1", md: "p-2", lg: "p-4" } as const;',
       '<i :class="PAD[size]">{{ PAD[size] }}</i>',
     );
-    expect(out).toContain("fv::class::class_into(out, false, &[match props.size { Size::Sm => \"p-1\", Size::Md => \"p-2\", Size::Lg => \"p-4\" }]);");
-    expect(out).toContain('fv::core::escape::escape_into(out, match props.size { Size::Sm => "p-1", Size::Md => "p-2", Size::Lg => "p-4" });');
+    expect(out).toContain("fv::attrs::class_into(out, false, &[match props.size { Size::Sm => \"p-1\", Size::Md => \"p-2\", Size::Lg => \"p-4\" }]);");
+    expect(out).toContain('fv::core::escape_into(out, match props.size { Size::Sm => "p-1", Size::Md => "p-2", Size::Lg => "p-4" });');
   });
 
   it("matches every variant of a key's enum, whatever the `??` default and however the values group", () => {
@@ -6707,9 +6707,9 @@ describe("constant lookups", () => {
       '<i :style="{ color: THEME[tone].fg }">{{ THEME[Tone.Warn].fg }}</i><b v-for="b in badges">{{ THEME[b.tone].weight }}</b>',
       { "theme.ts": 'export enum Tone { Info = "info", Warn = "warn" }\nexport const THEME: Record<Tone, { fg: string; weight: number }> = { [Tone.Info]: { fg: "navy", weight: 400 }, [Tone.Warn]: { fg: "red", weight: 700.5 } };\n' },
     );
-    expect(out).toContain('fv::core::escape::escape_into(out, match props.tone { super::types::Tone::Info => "navy", super::types::Tone::Warn => "red" });');
+    expect(out).toContain('fv::core::escape_into(out, match props.tone { super::types::Tone::Info => "navy", super::types::Tone::Warn => "red" });');
     expect(out).toContain("red</i>");
-    expect(out).toContain('fv::core::numbers::push_number(out, match fv_b.tone { super::types::Tone::Info => 400.0f64, super::types::Tone::Warn => 700.5f64 });');
+    expect(out).toContain('fv::core::push_number(out, match fv_b.tone { super::types::Tone::Info => 400.0f64, super::types::Tone::Warn => 700.5f64 });');
   });
 
   it("reads by integer literal keys, and keeps the literals of a `?:` and a `computed`", () => {
@@ -6717,9 +6717,9 @@ describe("constant lookups", () => {
       'import { computed } from "vue";\nconst props = defineProps<{ level: 1 | 2; on: boolean }>();\nconst NAMES = { 1: "one", 2: "two", x: "ex" };\nconst PAD = { a: "p-1", b: "p-2" };\nconst pick = computed(() => (props.on ? "a" : "b"));',
       "<i>{{ NAMES[level] }} {{ PAD[on ? 'b' : 'a'] }} {{ PAD[pick] }}</i>",
     );
-    expect(out).toContain('fv::core::escape::escape_into(out, match props.level { 1 => "one", _ => "two" });');
-    expect(out).toContain('fv::core::escape::escape_into(out, match if props.on { "b" } else { "a" } { "b" => "p-2", _ => "p-1" });');
-    expect(out).toContain('fv::core::escape::escape_into(out, match s_pick { "a" => "p-1", _ => "p-2" });');
+    expect(out).toContain('fv::core::escape_into(out, match props.level { 1 => "one", _ => "two" });');
+    expect(out).toContain('fv::core::escape_into(out, match if props.on { "b" } else { "a" } { "b" => "p-2", _ => "p-1" });');
+    expect(out).toContain('fv::core::escape_into(out, match s_pick { "a" => "p-1", _ => "p-2" });');
   });
 
   it("reads `undefined` for the keys an object lacks, narrowed with `??`, `?.` and `v-if`", () => {
@@ -6727,10 +6727,10 @@ describe("constant lookups", () => {
       'defineProps<{ kind: "a" | "b" | "c" }>();\nconst T = { a: "A", b: "B" };\nconst I = { a: { label: "x" } };',
       '<i>{{ T[kind] ?? "-" }} {{ I[kind]?.label }}</i><b v-if="I[kind]">{{ I[kind].label }}</b><s v-if="T[kind]">{{ T[kind] }}</s>',
     );
-    expect(out).toContain('fv::core::escape::escape_into(out, (match props.kind { XKind::A => Some("A"), XKind::B => Some("B"), XKind::C => None }).unwrap_or("-"));');
+    expect(out).toContain('fv::core::escape_into(out, (match props.kind { XKind::A => Some("A"), XKind::B => Some("B"), XKind::C => None }).unwrap_or("-"));');
     expect(out).toContain('if let Some(v) = match props.kind { XKind::A => Some("x"), XKind::B | XKind::C => None } {');
     expect(out).toContain('if matches!(props.kind, XKind::A) {\n        out.push_str("<b>x</b>");');
-    expect(out).toMatch(/if let Some\((fv_t)\) = \(match props\.kind \{ XKind::A => Some\("A"\), XKind::B => Some\("B"\), XKind::C => None \}\)\.filter\(\|v\| !v\.is_empty\(\)\) \{\n {8}out\.push_str\("<s>"\);\n {8}fv::core::escape::escape_into\(out, \1\);/);
+    expect(out).toMatch(/if let Some\((fv_t)\) = \(match props\.kind \{ XKind::A => Some\("A"\), XKind::B => Some\("B"\), XKind::C => None \}\)\.filter\(\|v\| !v\.is_empty\(\)\) \{\n {8}out\.push_str\("<s>"\);\n {8}fv::core::escape_into\(out, \1\);/);
   });
 
   it("forgets the literals of a list item or a `??` that another value may be", () => {
@@ -6825,7 +6825,7 @@ const theme = useCssModule("theme");
 <style module="theme">.b { color: red }</style>`),
       MODULES,
     ).get("x.rs")!;
-    expect(out).toContain('fv::class::class_into(out, false, &["a_x", "b_x"]);\n    out.push_str("\\">a-b_x</p>");');
+    expect(out).toContain('fv::attrs::class_into(out, false, &["a_x", "b_x"]);\n    out.push_str("\\">a-b_x</p>");');
   });
 
   it("refuses a module bound whole", () => {
@@ -6904,7 +6904,7 @@ describe("the configuration", () => {
       ...CONFIG,
       router: { routes: { pages: "pages" }, base: "/app", linkActiveClass: "on", linkExactActiveClass: "here" },
       stores: "stores",
-      trustedHtml: "ferrovue::basic_html::InlineHtml",
+      trustedHtml: "ferrovue::html::InlineHtml",
       helpers: { module: "./helpers", functions: { plural: { rust: "crate::plural", params: ["int", "string?"], returns: "string", maxLen: 1 } } },
       twins: { VBtn: { rust: "crate::v_btn", props: { label: "string" }, slots: ["default"] } },
       i18n: { messages: "locales", locale: "en", fallbackLocale: ["en"] },
@@ -7008,7 +7008,7 @@ function outside(x?: number): boolean {
   it("narrows the branches of a `?:` whose test is a chain, and a `v-if` of one", () => {
     const out = render("defineProps<{ n?: number }>();", '<i v-if="n != null && n > 1 && n < 9">{{ n * 2 }}</i><b>{{ n != null && n > 1 ? n * 2 : 0 }}|{{ n == null || n < 0 ? "bad" : n.toFixed(1) }}</b>');
     expect(out).toMatch(/if let Some\(fv_n\) = props\.n && fv_n as f64 > 1\.0 && \(fv_n as f64\) < 9\.0 \{/);
-    expect(out).toMatch(/fv::core::numbers::js_to_fixed\(fv_n_3 as f64, 1\)/);
+    expect(out).toMatch(/fv::core::js_to_fixed\(fv_n_3 as f64, 1\)/);
   });
 
   it("reads a lookup by a key `&&` tested, as `undefined` where the key is absent", () => {
@@ -7295,7 +7295,7 @@ defineProps<{ a: "sm" | "x-large" | "2xl" | "" | "_self" | "fooBar" | "XL" | "h1
     expect(out).toContain("    pub const ALL: [XA; 8] = [XA::Sm, XA::XLarge, XA::V2xl, XA::Empty, XA::Self_, XA::FooBar, XA::Xl, XA::H1];");
     expect(out).toContain("    pub const fn as_str(self) -> &'static str {");
     expect(out).toContain("impl std::fmt::Display for XA {");
-    expect(out).toContain('            _ => Err(ferrovue::union::ParseUnionError::new("XA", s, &["sm", "x-large", "2xl", "", "_self", "fooBar", "XL", "h1"])),');
+    expect(out).toContain('            _ => Err(ferrovue::props::ParseUnionError::new("XA", s, &["sm", "x-large", "2xl", "", "_self", "fooBar", "XL", "h1"])),');
     expect(out).toContain("impl TryFrom<&str> for XA {");
     expect(out).toContain("pub struct Props {\n    #[serde(rename = \"a\")]\n    pub a: XA,\n}");
     expect(out).toContain("pub fn new(a: XA) -> Self {");
@@ -7330,7 +7330,7 @@ const other = defineModel<"x" | "y">("other");
     ).get("x.rs")!;
     expect(out).toContain("pub model_value: XModelValue,");
     expect(out).toContain("pub other: Option<XOther>,");
-    expect(out).toContain('if fv::union::Union::as_str(props.model_value) == "x" {');
+    expect(out).toContain('if fv::props::Union::as_str(props.model_value) == "x" {');
     expect(out).toContain("if props.model_value == XModelValue::Y {");
   });
 
@@ -7395,7 +7395,7 @@ defineProps<{ tone?: Tone; wide?: Tone | "hot"; all: Tone[]; some?: Tone[] }>();
     expect(out).toContain("all: props.some.as_deref().unwrap_or(&[]).iter().map(|&v| match v {");
     expect(out).toContain("some: props.some.as_ref().map(|v| v.iter().map(|&v| match v {");
     expect(out).toContain("tone: fv_t_2.map(|v| match v { Tone::Calm => super::y::Tone::Calm, Tone::Loud => super::y::Tone::Loud }), wide: None, all: Vec::new()");
-    expect(out).toContain("fv::core::escape::escape_into(out, match fv_t_3 { Tone::Calm => \"Calm\", Tone::Loud => \"Loud\" });");
+    expect(out).toContain("fv::core::escape_into(out, match fv_t_3 { Tone::Calm => \"Calm\", Tone::Loud => \"Loud\" });");
     expect(out).not.toContain("_ =>");
     expect(out).not.toContain("parse");
   });
@@ -7418,7 +7418,7 @@ defineProps<{ tone: "calm" | "loud" }>();
         ),
       ).get("x.rs")!,
     );
-    expect(out).toContain('tone: match props.one.parse::<super::y::YTone>() { Ok(fv_u) => fv_u, Err(fv_e) => { fv_refusals.keep(Err::<(), _>(fv::refused::Refused::new("FV0518", format!("{fv_e}: the template needs one of them here, and Vue would write the string itself: check the value before rendering"))), 5, 21); super::y::YTone::Calm } }');
+    expect(out).toContain('tone: match props.one.parse::<super::y::YTone>() { Ok(fv_u) => fv_u, Err(fv_e) => { fv_refusals.keep(Err::<(), _>(fv::render::Refused::new("FV0518", format!("{fv_e}: the template needs one of them here, and Vue would write the string itself: check the value before rendering"))), 5, 21); super::y::YTone::Calm } }');
     expect(out).toContain("tone: match fv_t.parse::<super::y::YTone>() {");
     expect(out).not.toContain("_ =>");
   });
@@ -7525,15 +7525,15 @@ withDefaults(defineProps<{ k: K; m?: K; n?: K; j: K }>(), { n: "b" });
 <template><p :class="k" :title="\`\${k}!\`">{{ k }} {{ m }} {{ n }} {{ k.toUpperCase() }} {{ k.length }}</p><b v-if="k === 'a'">a</b><b v-if="m !== 'b'">b</b><b v-if="k === j">j</b><b v-if="m">{{ m }}</b></template>`),
       ).get("x.rs")!,
     );
-    expect(out).toContain("fv::class::class_into(out, false, &[fv::union::Union::as_str(props.k)]);");
-    expect(out).toContain('fv::core::escape::escape_into(out, &format!("{}!", fv::union::Union::as_str(props.k)));');
-    expect(out).toContain("if let Some(v) = props.m.map(fv::union::Union::as_str) {");
-    expect(out).toContain("fv::core::escape::escape_into(out, fv::union::Union::as_str(props.n.unwrap_or(K::B)));");
-    expect(out).toContain("fv::core::escape::escape_into(out, &fv::union::Union::as_str(props.k).to_uppercase());");
+    expect(out).toContain("fv::attrs::class_into(out, false, &[fv::props::Union::as_str(props.k)]);");
+    expect(out).toContain('fv::core::escape_into(out, &format!("{}!", fv::props::Union::as_str(props.k)));');
+    expect(out).toContain("if let Some(v) = props.m.map(fv::props::Union::as_str) {");
+    expect(out).toContain("fv::core::escape_into(out, fv::props::Union::as_str(props.n.unwrap_or(K::B)));");
+    expect(out).toContain("fv::core::escape_into(out, &fv::props::Union::as_str(props.k).to_uppercase());");
     expect(out).toContain("if props.k == K::A {");
     expect(out).toContain("if props.m != Some(K::B) {");
     expect(out).toContain("if props.k == props.j {");
-    expect(out).toMatch(/if let Some\((fv_m)\) = props\.m \{\n {8}out\.push_str\("<b>"\);\n {8}fv::core::escape::escape_into\(out, fv::union::Union::as_str\(\1\)\);/);
+    expect(out).toMatch(/if let Some\((fv_m)\) = props\.m \{\n {8}out\.push_str\("<b>"\);\n {8}fv::core::escape_into\(out, fv::props::Union::as_str\(\1\)\);/);
   });
 
   it("compiles a `switch` over an enum in a `computed` to variant comparisons", () => {
@@ -7586,7 +7586,7 @@ defineProps<{ k: "a" | "b" | "c"; o?: "a" | "b" | "c" | "d"; s: string; q: "a" |
     );
     expect(out).toContain("k: match props.k { K::A => super::y::YK::A, K::B => super::y::YK::B, K::C => super::y::YK::C }");
     expect(out).toContain("o: props.m.map(|v| match v { K::A => super::y::YO::A, K::B => super::y::YO::B, K::C => super::y::YO::C })");
-    expect(out).toContain("s: std::borrow::Cow::Borrowed(fv::union::Union::as_str(props.k))");
+    expect(out).toContain("s: std::borrow::Cow::Borrowed(fv::props::Union::as_str(props.k))");
     expect(out).toContain('q: match s_pick { "b" => super::y::YQ::B, _ => super::y::YQ::C }');
     expect(out).toContain("r: if props.on { super::y::YR::A } else { super::y::YR::B }");
     expect(out).toContain("lit: super::y::YLit::C");
@@ -7620,14 +7620,14 @@ defineProps<{ tone?: Tone }>();
       );
 
     it("leaves out the falsy member by `||`", () => {
-      expect(narrowed(`<Badge :tone="tone || undefined" />`)).toContain("tone: Some(fv::union::Union::as_str(s_tone)).filter(|v| !v.is_empty()).map(|v| match v {");
+      expect(narrowed(`<Badge :tone="tone || undefined" />`)).toContain("tone: Some(fv::props::Union::as_str(s_tone)).filter(|v| !v.is_empty()).map(|v| match v {");
     });
 
     it.each([
       [`tone === '' ? undefined : tone`, `tone: if s_tone == XTone::Empty { None } else { Some(match s_tone { XTone::Calm => ${TONE}::Calm, XTone::Loud | XTone::Empty => ${TONE}::Loud }) }`],
       [`'' !== tone ? tone : undefined`, `tone: if s_tone != XTone::Empty { Some(match s_tone { XTone::Calm => ${TONE}::Calm, XTone::Loud | XTone::Empty => ${TONE}::Loud }) } else { None }`],
       [`!(tone === '') ? tone : undefined`, `tone: if s_tone != XTone::Empty { Some(match s_tone { XTone::Calm => ${TONE}::Calm, XTone::Loud | XTone::Empty => ${TONE}::Loud }) } else { None }`],
-      [`tone ? tone : undefined`, `tone: if !fv::union::Union::as_str(s_tone).is_empty() { Some(match s_tone { XTone::Calm => ${TONE}::Calm, XTone::Loud | XTone::Empty => ${TONE}::Loud }) } else { None }`],
+      [`tone ? tone : undefined`, `tone: if !fv::props::Union::as_str(s_tone).is_empty() { Some(match s_tone { XTone::Calm => ${TONE}::Calm, XTone::Loud | XTone::Empty => ${TONE}::Loud }) } else { None }`],
     ])("leaves out a literal a `?:` tests in the branch where it fails: %s", (value, code) => {
       expect(narrowed(`<Badge :tone="${value}" />`)).toContain(code);
     });
@@ -7651,12 +7651,12 @@ defineProps<{ tone?: Tone }>();
 
     it("takes a `computed` annotated as the union, whose body narrows the value to it", () => {
       const out = narrowed(`<Badge :tone="shown" />`, `const shown = computed((): Tone | undefined => (tone.value === "" ? undefined : tone.value));`);
-      expect(out).toContain("let s_shown = if s_tone == XTone::Empty { None } else { Some(fv::union::Union::as_str(s_tone)) };");
+      expect(out).toContain("let s_shown = if s_tone == XTone::Empty { None } else { Some(fv::props::Union::as_str(s_tone)) };");
       expect(out).toContain("tone: s_shown.map(|v| match v {");
     });
 
     it("keeps an annotated `computed` the compiler cannot show is the union where the template reads it as a string", () => {
-      expect(narrowed(`<p>{{ shown }}</p>`, `const shown = computed((): Tone => tone.value as Tone);`)).toContain("fv::core::escape::escape_into(out, fv::union::Union::as_str(s_shown));");
+      expect(narrowed(`<p>{{ shown }}</p>`, `const shown = computed((): Tone => tone.value as Tone);`)).toContain("fv::core::escape_into(out, fv::props::Union::as_str(s_shown));");
     });
   });
 
@@ -7718,7 +7718,7 @@ const none = ref<Choice>("");`,
       expect(out).toContain(`tone: Some(match s_choice { ${C}::Calm => ${T}::Calm, ${C}::Loud => ${T}::Loud, ${C}::Quiet | ${C}::Empty => ${T}::Quiet })`);
       expect(out).toContain(`match s_choice { ${C}::Calm => "Calm", ${C}::Loud => "Loud", ${C}::Quiet => "Quiet", ${C}::Empty => "none" }`);
       expect(out).toContain('out.push_str("none</i><select>');
-      expect(out).toContain("if fv::union::Union::as_str(s_choice).is_empty() {");
+      expect(out).toContain("if fv::props::Union::as_str(s_choice).is_empty() {");
       expect(out).not.toContain("_ =>");
     });
 
@@ -7969,22 +7969,22 @@ defineProps<{ tone: Tone; other?: Tone; picked: Tone | null }>();
       "const _: fn(app_domain::Tone) = |v| match v {\n    app_domain::Tone::Warm => {}\n    app_domain::Tone::XCool => {}\n};",
     );
     expect(types).toContain(
-      '#[cfg(test)]\n#[test]\nfn tone_gives_each_member_its_literal() {\n    ferrovue::union::check_union::<app_domain::Tone>("app_domain::Tone", &[(app_domain::Tone::Warm, "warm"), (app_domain::Tone::XCool, "x-cool")]);\n}',
+      '#[cfg(test)]\n#[test]\nfn tone_gives_each_member_its_literal() {\n    ferrovue::props::check_union::<app_domain::Tone>("app_domain::Tone", &[(app_domain::Tone::Warm, "warm"), (app_domain::Tone::XCool, "x-cool")]);\n}',
     );
     const x = out.get("x.rs")!;
     expect(x).not.toContain("pub enum");
-    expect(x).toContain('    #[serde(rename = "tone", with = "fv::union::union_prop")]\n    pub tone: app_domain::Tone,');
-    expect(x).toContain('    #[serde(rename = "other", default, skip_serializing_if = "Option::is_none", with = "fv::union::union_prop")]\n    pub other: Option<app_domain::Tone>,');
-    expect(x).toContain('    #[serde(rename = "picked", default, with = "fv::union::union_prop")]\n    pub picked: Option<app_domain::Tone>,');
+    expect(x).toContain('    #[serde(rename = "tone", with = "fv::props::union_prop")]\n    pub tone: app_domain::Tone,');
+    expect(x).toContain('    #[serde(rename = "other", default, skip_serializing_if = "Option::is_none", with = "fv::props::union_prop")]\n    pub other: Option<app_domain::Tone>,');
+    expect(x).toContain('    #[serde(rename = "picked", default, with = "fv::props::union_prop")]\n    pub picked: Option<app_domain::Tone>,');
     expect(x).toContain("pub fn new(tone: app_domain::Tone) -> Self {");
-    expect(x).toContain("fv::core::escape::escape_into(out, fv::union::Union::as_str(props.tone));");
-    expect(x).toContain('fv::core::escape::escape_into(out, props.other.map(fv::union::Union::as_str).unwrap_or("none"));');
+    expect(x).toContain("fv::core::escape_into(out, fv::props::Union::as_str(props.tone));");
+    expect(x).toContain('fv::core::escape_into(out, props.other.map(fv::props::Union::as_str).unwrap_or("none"));');
     expect(x).toContain("if props.tone == app_domain::Tone::Warm {");
   });
 
   it("holds a list of the union as a Vec of the application's enum, written as its literals", () => {
     const y = generate(project(parent, { Y: child }), MAPPED).get("y.rs")!;
-    expect(y).toContain('    #[serde(rename = "tones", default, skip_serializing_if = "Option::is_none", with = "fv::union::union_prop")]\n    pub tones: Option<Vec<app_domain::Tone>>,');
+    expect(y).toContain('    #[serde(rename = "tones", default, skip_serializing_if = "Option::is_none", with = "fv::props::union_prop")]\n    pub tones: Option<Vec<app_domain::Tone>>,');
     expect(y).toContain("pub fn tones(mut self, tones: impl IntoIterator<Item = app_domain::Tone>) -> Self {");
     const x = generate(
       project(`<script setup lang="ts">
@@ -7994,8 +7994,8 @@ const props = defineProps<{ tones: Tone[]; label: string }>();
 <template><p v-for="t in tones" :key="t" :class="t">{{ t === "warm" ? "w" : t }}</p><b>{{ tones.join() }}</b></template>`),
       MAPPED,
     ).get("x.rs")!;
-    expect(x).toContain('    #[serde(rename = "tones", with = "fv::union::union_prop")]\n    pub tones: Vec<app_domain::Tone>,');
-    expect(x).toContain("fv::union::Union::as_str(");
+    expect(x).toContain('    #[serde(rename = "tones", with = "fv::props::union_prop")]\n    pub tones: Vec<app_domain::Tone>,');
+    expect(x).toContain("fv::props::Union::as_str(");
     expect(x).toContain("== app_domain::Tone::Warm");
   });
 
@@ -8009,7 +8009,7 @@ const props = defineProps<{ tones: Tone[]; label: string }>();
   it("generates the enum of a union of another name, and of the same union with no entry", () => {
     const out = generate(project(parent, { Y: child }), CONFIG);
     expect(out.get("types.rs")).toContain("pub enum Tone {");
-    expect(out.get("types.rs")).toContain("impl ferrovue::union::Union for Tone {\n    const ALL: &'static [Self] = &Tone::ALL;");
+    expect(out.get("types.rs")).toContain("impl ferrovue::props::Union for Tone {\n    const ALL: &'static [Self] = &Tone::ALL;");
     expect(out.get("x.rs")).toContain("pub tone: super::types::Tone,");
   });
 
@@ -8062,7 +8062,7 @@ ${script}
   it("carries a sum in an f64 the loop adds to, and writes it as JavaScript writes the number", () => {
     const body = render("const total = computed(() => {\n  let sum = 0;\n  for (const r of props.rows) sum += r.n;\n  return sum;\n});", "{{ total }}");
     expect(body).toContain("let s_total = { let mut fv_sum: f64 = 0.0f64; for fv_r in props.rows.iter() { fv_sum += fv_r.n as f64; } fv_sum };");
-    expect(body).toContain("fv::core::numbers::push_number(out, s_total);");
+    expect(body).toContain("fv::core::push_number(out, s_total);");
     expect(body).not.toContain("try_int");
   });
 

@@ -18,10 +18,10 @@ a public field per prop, and a struct for every interface or object type alias t
 | `Size[]`, `("sm" \| "md")[]` | `Vec<Size>`, a list of the union's enum | `impl IntoIterator<Item = Size>` |
 | `number[]`, `Row[]`, `(Size \| null)[]`, … | `Vec<i64>`, `Vec<Row<'a>>`, `Vec<Option<Size>>`, … | the `Vec` |
 | `interface Row { … }`, `type Row = { … }` | a struct `Row<'a>` beside `Props`, or in `types.rs` when imported from a `.ts` file | the struct |
-| `Record<string, T>`, `{ [key: string]: T }` | [`ferrovue::record::Record<'a, T>`](crate::record::Record) | the `Record`, collected from pairs. See [Dictionaries](#dictionaries) |
+| `Record<string, T>`, `{ [key: string]: T }` | [`ferrovue::props::Record<'a, T>`](crate::props::Record) | the `Record`, collected from pairs. See [Dictionaries](#dictionaries) |
 | `Props` imported from another component | `super::child::Props<'a>` | the struct |
 | `TrustedHtml` (from `ferrovue/types`) | the type configured as `trustedHtml` | that type. See [`escaping`](crate::guide::escaping) |
-| `Date`, as a prop or inside a list, a dictionary or an interface | [`ferrovue::js_date::JsDate`](crate::js_date::JsDate), or the type configured as `dateType` | that type. See [`dates_and_prices`](crate::guide::dates_and_prices#date-props) |
+| `Date`, as a prop or inside a list, a dictionary or an interface | [`ferrovue::date::JsDate`](crate::date::JsDate), or the type configured as `dateType` | that type. See [`dates_and_prices`](crate::guide::dates_and_prices#date-props) |
 | `x?: T`, `x: T \| undefined` | `Option<T>` | a setter, `.x(value)` |
 | `x: T \| null` | `Option<T>`, written as `null` | a setter, `.x(value)` |
 | `T`, of `<script setup generic="T extends Row">` | the type of its constraint, `Row<'a>` | as the constraint |
@@ -118,20 +118,20 @@ enum.
 # }
 #
 # impl std::str::FromStr for ButtonSize {
-#     type Err = ferrovue::union::ParseUnionError;
+#     type Err = ferrovue::props::ParseUnionError;
 #
 #     fn from_str(s: &str) -> Result<Self, Self::Err> {
 #         match s {
 #             "sm" => Ok(ButtonSize::Sm),
 #             "md" => Ok(ButtonSize::Md),
 #             "lg" => Ok(ButtonSize::Lg),
-#             _ => Err(ferrovue::union::ParseUnionError::new("ButtonSize", s, &["sm", "md", "lg"])),
+#             _ => Err(ferrovue::props::ParseUnionError::new("ButtonSize", s, &["sm", "md", "lg"])),
 #         }
 #     }
 # }
 #
 # impl TryFrom<&str> for ButtonSize {
-#     type Error = ferrovue::union::ParseUnionError;
+#     type Error = ferrovue::props::ParseUnionError;
 #
 #     fn try_from(s: &str) -> Result<Self, Self::Error> {
 #         s.parse()
@@ -174,7 +174,7 @@ assert_eq!(ButtonSize::ALL, [ButtonSize::Sm, ButtonSize::Md, ButtonSize::Lg]);
 let e = ButtonSize::try_from("xl").unwrap_err();
 assert_eq!(e.to_string(), "`xl` is not one of the members of `ButtonSize`: `sm`, `md`, `lg`");
 assert_eq!(e.members(), ["sm", "md", "lg"]);
-# Ok::<(), ferrovue::union::ParseUnionError>(())
+# Ok::<(), ferrovue::props::ParseUnionError>(())
 ```
 
 Each enum derives `Debug`, `Clone`, `Copy`, `PartialEq`, `Eq`, `Hash`, `serde::Serialize` and
@@ -183,7 +183,7 @@ names each variant by its literal: the island's JSON, `data-props` and the state
 the literal, and JSON that holds a string outside the union does not deserialise ("unknown variant
 `xl`, expected one of `sm`, `md`, `lg`"), fixtures included. `as_str()` gives the literal, `ALL`
 every variant in the order the union declares them, `Display` writes the literal, and `FromStr` and
-`TryFrom<&str>` parse one, failing with [`ParseUnionError`](crate::union::ParseUnionError). An enum whose
+`TryFrom<&str>` parse one, failing with [`ParseUnionError`](crate::props::ParseUnionError). An enum whose
 variants all share a word gets `#[allow(clippy::enum_variant_names)]`.
 
 The template reads such a value as the string it stands for: `{{ size }}`, an attribute, `:class`,
@@ -213,7 +213,7 @@ A string the Rust caller holds as a string where the render needs a union's enum
 a `Record<string, Size>`, a field of a store's state or a prop of a single literal handed to a
 child's union prop, is parsed as the component renders. One outside the union refuses the render
 with [FV0518](crate::guide::error_codes#fv0518), which a generated `try_render` returns as a
-[`Refused`](crate::refused::Refused), where Vue would write the string itself.
+[`Refused`](crate::render::Refused), where Vue would write the string itself.
 
 A `ref` of a union (`ref<Choice>(…)` with `type Choice = Tone | ""`) holds the enum from the value
 it starts with, whether or not a prop uses the union: `Choice` has the variants `Calm`, `Loud`,
@@ -257,7 +257,7 @@ of a union (`Size[]` is `Vec<Cow<'a, str>>`), and the fields of a store's own in
 `stores` file, whose state derives `Default` under `cfg(test)`; a shared type a store holds has its
 enums.
 
-Each generated enum implements [`Union`](crate::union::Union) too, whose `as_str` and `ALL` are the
+Each generated enum implements [`Union`](crate::props::Union) too, whose `as_str` and `ALL` are the
 enum's own, and generated code reads a value's literal through it.
 
 # Unions mapped to existing enums
@@ -276,7 +276,7 @@ the one the generated code is in, names that enum for the union's `type` alias u
 
 Every prop and every field of an interface typed with `Tone`, in any component or `.ts` file, is
 then `app_domain::Tone`, and the compiler generates no enum for it. What generated code needs from
-the enum is the trait [`Union`](crate::union::Union), which the crate that declares the enum implements:
+the enum is the trait [`Union`](crate::props::Union), which the crate that declares the enum implements:
 
 - the variants named as the compiler would name the generated enum's, one per literal (the
   [rules above](#unions-of-string-literals): `"x-cool"` is `XCool`), so that the `match`es,
@@ -284,16 +284,16 @@ the enum is the trait [`Union`](crate::union::Union), which the crate that decla
   be, in `types.rs` for a `.ts` file's alias, the compiler writes a `match` over every variant, so
   an enum that lacks one of the union's variants, or has one the union lacks, stops the build at
   the generated module with rustc's own error;
-- [`as_str`](crate::union::Union::as_str), the literal of each value, which the template renders and
+- [`as_str`](crate::props::Union::as_str), the literal of each value, which the template renders and
   compares, and which the island's `data-props` and the state a page sends hold for the value,
   whatever the enum's own `serde` implementation writes;
-- [`ALL`](crate::union::Union::ALL), each value once, from which a fixture's literal is read back. The
+- [`ALL`](crate::props::Union::ALL), each value once, from which a fixture's literal is read back. The
   generated module holds a `#[cfg(test)]` test, run by the application's `cargo test`, that checks
   each value's literal and that `ALL` lists every value once;
 - `Copy`, `PartialEq` and `Debug`, which the trait requires.
 
 ```rust
-use ferrovue::union::Union;
+use ferrovue::props::Union;
 
 // `export type Tone = "warm" | "x-cool";` in a `.ts` file.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -316,9 +316,9 @@ impl Union for Tone {
 #     /// The props `Card.vue` declares.
 #     #[derive(Debug, Clone, serde::Serialize)]
 #     pub struct Props {
-#         #[serde(rename = "tone", with = "ferrovue::union::union_prop")]
+#         #[serde(rename = "tone", with = "ferrovue::props::union_prop")]
 #         pub tone: super::Tone,
-#         #[serde(rename = "tones", with = "ferrovue::union::union_prop")]
+#         #[serde(rename = "tones", with = "ferrovue::props::union_prop")]
 #         pub tones: Vec<super::Tone>,
 #     }
 # }
@@ -503,8 +503,8 @@ setter that consumes and returns the struct. The fields are public, so a struct 
 # pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
 #     out.reserve(96 + 17 * props.rows.len() + props.rows.iter().map(|v| v.label.len() + v.tags.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>() + props.title.len() + props.note.as_deref().map_or(0, str::len));
 #     out.push_str("<section><header>");
-#     fv::slots::scoped_slot_into(out, fv_slots.header, &HeaderSlotProps { title: &props.title, note: props.note.as_deref() }, Some(&mut |out: &mut String| {
-#         fv::core::escape::escape_into(out, &props.title);
+#     fv::render::scoped_slot_into(out, fv_slots.header, &HeaderSlotProps { title: &props.title, note: props.note.as_deref() }, Some(&mut |out: &mut String| {
+#         fv::core::escape_into(out, &props.title);
 #     }));
 #     out.push_str("</header>");
 #     if props.rows.len() as i64 != 0 {
@@ -513,24 +513,24 @@ setter that consumes and returns the struct. The fields are public, so a struct 
 #             let r = r_ref;
 #             let i = i as i64;
 #             out.push_str("<li>");
-#             fv::slots::scoped_slot_into(out, fv_slots.row, &RowSlotProps { row: r, index: i, label: &r.label, tags: &r.tags, first: i as f64 == 0.0 }, Some(&mut |out: &mut String| {
-#                 fv::core::numbers::push_int(out, i);
+#             fv::render::scoped_slot_into(out, fv_slots.row, &RowSlotProps { row: r, index: i, label: &r.label, tags: &r.tags, first: i as f64 == 0.0 }, Some(&mut |out: &mut String| {
+#                 fv::core::push_int(out, i);
 #                 out.push_str(". ");
-#                 fv::core::escape::escape_into(out, &r.label);
+#                 fv::core::escape_into(out, &r.label);
 #             }));
 #             out.push_str("</li>");
 #         }
 #         out.push_str("<!--]--></ul>");
 #     } else {
 #         out.push_str("<p>");
-#         fv::slots::scoped_slot_into(out, fv_slots.empty, &EmptySlotProps { title: &props.title }, Some(&mut |out: &mut String| {
+#         fv::render::scoped_slot_into(out, fv_slots.empty, &EmptySlotProps { title: &props.title }, Some(&mut |out: &mut String| {
 #             out.push_str("no rows in ");
-#             fv::core::escape::escape_into(out, &props.title);
+#             fv::core::escape_into(out, &props.title);
 #         }));
 #         out.push_str("</p>");
 #     }
 #     out.push_str("<footer>");
-#     fv::slots::scoped_slot_into(out, fv_slots.default, &DefaultSlotProps { count: props.rows.len() as i64, title: &props.title }, None);
+#     fv::render::scoped_slot_into(out, fv_slots.default, &DefaultSlotProps { count: props.rows.len() as i64, title: &props.title }, None);
 #     out.push_str("</footer></section>");
 # }
 #
@@ -575,7 +575,7 @@ type belongs to no component, and a `.vue` file has no place Vue reads that coul
 
 # Dictionaries
 
-A `Record<string, T>` prop, or one declared `{ [key: string]: T }`, is a [`Record`](crate::record::Record):
+A `Record<string, T>` prop, or one declared `{ [key: string]: T }`, is a [`Record`](crate::props::Record):
 a JavaScript object used as a dictionary. It is built from pairs, or read from JSON, and holds its
 keys in the order a JavaScript object does: keys that are array indices (`"0"` to `"4294967294"`)
 first, in numeric order, then the others in the order they were added. A key given twice keeps its
@@ -609,12 +609,12 @@ defineProps<{ scores: Record<string, number> }>();
 # #[cfg_attr(test, derive(serde::Deserialize))]
 # pub struct Props<'a> {
 #     #[serde(rename = "scores")]
-#     pub scores: ferrovue::record::Record<'a, i64>,
+#     pub scores: ferrovue::props::Record<'a, i64>,
 # }
 #
 # impl<'a> Props<'a> {
 #     /// Props with its required fields.
-#     pub fn new(scores: ferrovue::record::Record<'a, i64>) -> Self {
+#     pub fn new(scores: ferrovue::props::Record<'a, i64>) -> Self {
 #         Props { scores }
 #     }
 #
@@ -629,11 +629,11 @@ pub fn render(out: &mut String, props: &Props<'_>) {
         let score = *score_ref;
         let i = i as i64;
         out.push_str("<li>");
-        fv::core::numbers::push_int(out, (i as f64 + 1.0) as i64);
+        fv::core::push_int(out, (i as f64 + 1.0) as i64);
         out.push_str(". ");
-        fv::core::escape::escape_into(out, name);
+        fv::core::escape_into(out, name);
         out.push_str(": ");
-        fv::core::numbers::push_int(out, score);
+        fv::core::push_int(out, score);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ol>");
@@ -649,7 +649,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 #     fv::html::Html::island(NAME, props, render)
 # }
 # }
-use ferrovue::record::Record;
+use ferrovue::props::Record;
 
 // "10" is an array index, so it comes first, as in the browser.
 let scores: Record<'_, i64> = [("ada", 3), ("10", 1), ("grace", 2)].into_iter().collect();

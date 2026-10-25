@@ -22,7 +22,7 @@ pub struct Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::Stores) {
-    fv::refused::rendered(try_render(out, props, fv_stores));
+    fv::render::rendered(try_render(out, props, fv_stores));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -30,21 +30,21 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::St
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::Stores) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::Stores) -> Result<(), fv::render::Refused> {
     out.reserve(54 + props.label.len());
     out.push_str("<p class=\"");
-    fv::class::class_into(out, false, &[if fv_stores.tally.open { "open" } else { "" }]);
+    fv::attrs::class_into(out, false, &[if fv_stores.tally.open { "open" } else { "" }]);
     out.push_str("\">");
-    fv::core::escape::escape_into(out, &props.label);
+    fv::core::escape_into(out, &props.label);
     out.push_str(": ");
-    fv::core::numbers::push_int(out, fv_stores.tally.count);
+    fv::core::push_int(out, fv_stores.tally.count);
     out.push_str(" (");
-    fv::core::numbers::push_number(out, fv_stores.tally.count as f64 * 2.0);
+    fv::core::push_number(out, fv_stores.tally.count as f64 * 2.0);
     out.push_str(") ");
     if let Some(fv_best) = fv_stores.tally.best {
         out.push_str("<b>");
-        fv::core::numbers::push_int(out, fv_best);
+        fv::core::push_int(out, fv_best);
         out.push_str("</b>");
     } else {
         out.push_str("<!---->");

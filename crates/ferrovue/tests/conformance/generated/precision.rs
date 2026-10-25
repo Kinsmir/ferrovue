@@ -35,7 +35,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -43,102 +43,102 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(129 + props.label.len());
     let s_sum = props.x + props.n as f64;
-    let s_shown = format!("{}: {}", props.label, fv::core::numbers::js_to_precision(props.x, 3));
+    let s_shown = format!("{}: {}", props.label, fv::core::js_to_precision(props.x, 3));
     out.push_str("<div");
-    if fv::core::numbers::js_to_precision(props.x, 2).is_empty() {
+    if fv::core::js_to_precision(props.x, 2).is_empty() {
         out.push_str(" data-p");
     } else {
         out.push_str(" data-p=\"");
-        fv::core::escape::escape_into(out, &fv::core::numbers::js_to_precision(props.x, 2));
+        fv::core::escape_into(out, &fv::core::js_to_precision(props.x, 2));
         out.push('"');
     }
-    if fv::core::numbers::js_to_exponential(props.n as f64, Some(1)).is_empty() {
+    if fv::core::js_to_exponential(props.n as f64, Some(1)).is_empty() {
         out.push_str(" title");
     } else {
         out.push_str(" title=\"");
-        fv::core::escape::escape_into(out, &fv::core::numbers::js_to_exponential(props.n as f64, Some(1)));
+        fv::core::escape_into(out, &fv::core::js_to_exponential(props.n as f64, Some(1)));
         out.push('"');
     }
     out.push_str("><p>");
-    fv::core::escape::escape_into(out, &fv::core::numbers::Js(props.x).to_string());
+    fv::core::escape_into(out, &fv::core::Js(props.x).to_string());
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::numbers::Js(props.x).to_string());
+    fv::core::escape_into(out, &fv::core::Js(props.x).to_string());
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_precision(props.x, 1));
+    fv::core::escape_into(out, &fv::core::js_to_precision(props.x, 1));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_precision(props.x, 2));
+    fv::core::escape_into(out, &fv::core::js_to_precision(props.x, 2));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_precision(props.x, 3));
+    fv::core::escape_into(out, &fv::core::js_to_precision(props.x, 3));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_precision(props.x, 6));
+    fv::core::escape_into(out, &fv::core::js_to_precision(props.x, 6));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_precision(props.x, 17));
+    fv::core::escape_into(out, &fv::core::js_to_precision(props.x, 17));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_precision(props.x, 21));
+    fv::core::escape_into(out, &fv::core::js_to_precision(props.x, 21));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_precision(props.x, 2));
+    fv::core::escape_into(out, &fv::core::js_to_precision(props.x, 2));
     out.push_str("</p><p>");
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_exponential(props.x, None));
+    fv::core::escape_into(out, &fv::core::js_to_exponential(props.x, None));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_exponential(props.x, None));
+    fv::core::escape_into(out, &fv::core::js_to_exponential(props.x, None));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_exponential(props.x, Some(0)));
+    fv::core::escape_into(out, &fv::core::js_to_exponential(props.x, Some(0)));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_exponential(props.x, Some(1)));
+    fv::core::escape_into(out, &fv::core::js_to_exponential(props.x, Some(1)));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_exponential(props.x, Some(2)));
+    fv::core::escape_into(out, &fv::core::js_to_exponential(props.x, Some(2)));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_exponential(props.x, Some(5)));
+    fv::core::escape_into(out, &fv::core::js_to_exponential(props.x, Some(5)));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_exponential(props.x, Some(16)));
+    fv::core::escape_into(out, &fv::core::js_to_exponential(props.x, Some(16)));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_exponential(props.x, Some(20)));
+    fv::core::escape_into(out, &fv::core::js_to_exponential(props.x, Some(20)));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_exponential(props.x, Some(0)));
+    fv::core::escape_into(out, &fv::core::js_to_exponential(props.x, Some(0)));
     out.push_str("</p><p>");
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_precision(props.x, 100));
+    fv::core::escape_into(out, &fv::core::js_to_precision(props.x, 100));
     out.push_str("</p><p>");
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_exponential(props.x, Some(100)));
+    fv::core::escape_into(out, &fv::core::js_to_exponential(props.x, Some(100)));
     out.push_str("</p><p>");
-    fv::core::escape::escape_into(out, &fv::core::numbers::Js(props.n).to_string());
+    fv::core::escape_into(out, &fv::core::Js(props.n).to_string());
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_precision(props.n as f64, 1));
+    fv::core::escape_into(out, &fv::core::js_to_precision(props.n as f64, 1));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_precision(props.n as f64, 4));
+    fv::core::escape_into(out, &fv::core::js_to_precision(props.n as f64, 4));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_precision(props.n as f64, 16));
+    fv::core::escape_into(out, &fv::core::js_to_precision(props.n as f64, 16));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_exponential(props.n as f64, None));
+    fv::core::escape_into(out, &fv::core::js_to_exponential(props.n as f64, None));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_exponential(props.n as f64, Some(3)));
+    fv::core::escape_into(out, &fv::core::js_to_exponential(props.n as f64, Some(3)));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_precision(-(props.n as f64), 2));
+    fv::core::escape_into(out, &fv::core::js_to_precision(-(props.n as f64), 2));
     out.push_str("</p><p>");
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_precision(props.x / 0.0, 5));
+    fv::core::escape_into(out, &fv::core::js_to_precision(props.x / 0.0, 5));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_exponential(-props.x / 0.0, Some(2)));
+    fv::core::escape_into(out, &fv::core::js_to_exponential(-props.x / 0.0, Some(2)));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_precision(f64::NAN, 3));
+    fv::core::escape_into(out, &fv::core::js_to_precision(f64::NAN, 3));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_exponential(props.x * 0.0, None));
+    fv::core::escape_into(out, &fv::core::js_to_exponential(props.x * 0.0, None));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_precision(s_sum, 5));
+    fv::core::escape_into(out, &fv::core::js_to_precision(s_sum, 5));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_exponential(props.x / 3.0, Some(4)));
+    fv::core::escape_into(out, &fv::core::js_to_exponential(props.x / 3.0, Some(4)));
     out.push_str("</p><p>");
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_fixed(props.x, 2));
+    fv::core::escape_into(out, &fv::core::js_to_fixed(props.x, 2));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_fixed(props.x, 0));
+    fv::core::escape_into(out, &fv::core::js_to_fixed(props.x, 0));
     out.push('|');
-    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_fixed(props.n as f64, 0));
+    fv::core::escape_into(out, &fv::core::js_to_fixed(props.n as f64, 0));
     out.push_str("</p><p>");
-    fv::core::escape::escape_into(out, &s_shown);
+    fv::core::escape_into(out, &s_shown);
     out.push('|');
-    fv::core::escape::escape_into(out, &format!("{} and {}", fv::core::numbers::js_to_exponential(props.x, Some(2)), fv::core::numbers::js_to_precision(props.n as f64, 3)));
+    fv::core::escape_into(out, &format!("{} and {}", fv::core::js_to_exponential(props.x, Some(2)), fv::core::js_to_precision(props.n as f64, 3)));
     out.push_str("</p></div>");
     Ok(())
 }

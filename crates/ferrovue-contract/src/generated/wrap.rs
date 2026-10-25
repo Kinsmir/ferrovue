@@ -26,7 +26,7 @@ impl Props {
 #[derive(Clone, Copy, Default)]
 pub struct Slots<'s> {
     /// `<slot>`
-    pub default: Option<fv::slots::Slot<'s>>,
+    pub default: Option<fv::render::Slot<'s>>,
 }
 
 /// Write the component's server render into `out`.
@@ -35,7 +35,7 @@ pub struct Slots<'s> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props, fv_slots: Slots<'_>) {
-    fv::refused::rendered(try_render_scoped(out, props, fv_slots, &fv::attrs::Attrs::NONE));
+    fv::render::rendered(try_render_scoped(out, props, fv_slots, &fv::attrs::Attrs::NONE));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -43,14 +43,14 @@ pub fn render(out: &mut String, props: &Props, fv_slots: Slots<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props, fv_slots: Slots<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props, fv_slots: Slots<'_>) -> Result<(), fv::render::Refused> {
     try_render_scoped(out, props, fv_slots, &fv::attrs::Attrs::NONE)
 }
 
 /// [`try_render`], with the attributes a parent passes beyond the props, and the scope ids it hands the root.
 #[doc(hidden)]
-pub fn try_render_scoped(out: &mut String, _props: &Props, fv_slots: Slots<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::refused::Refused> {
+pub fn try_render_scoped(out: &mut String, _props: &Props, fv_slots: Slots<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(24);
     out.push_str("<div");
     if fv_attrs.is_empty() {
@@ -59,7 +59,7 @@ pub fn try_render_scoped(out: &mut String, _props: &Props, fv_slots: Slots<'_>, 
         fv::attrs::attrs_into(out, &[&[("class", fv::attrs::Attr::str("wrap"))], fv_attrs.list()], 1, "");
     }
     out.push('>');
-    fv::slots::slot_into(out, fv_slots.default, None);
+    fv::render::slot_into(out, fv_slots.default, None);
     out.push_str("</div>");
     Ok(())
 }

@@ -39,19 +39,19 @@ Performance section reports: `pnpm bench:rust` is `cargo bench -p ferrovue --ben
 
 ```text
 crates/ferrovue/             the Rust runtime crate, which generated code calls
-  src/                       a module per part (`Html`, slots, class and style, the state script,
-                             strings, teleports, the page head, fallthrough attributes, `BasicHtml`
-                             and `InlineHtml`,
-                             `Sanitised`, `JsDate`, `Refused` and the refusals a render holds, the
-                             fixture check `conformance!` writes), each module's
-                             unit tests beside it in <module>/tests.rs; lib.rs declares them public,
-                             and holds the three crates below as the modules `core`, `router`
-                             and `i18n`
+  src/                       a module per concept, each public: `html` (`Html`, `Hydrate` and the
+                             HTML `v-html` takes), `render` (slots and refusals), `props`
+                             (`Record`, unions), `date`, `head`, `page` (holes, the page record,
+                             chunks, teleports, the state script), `loaders`, `attrs` (attributes,
+                             class and style), `strings`, `web`, `testing` (the fixture check
+                             `conformance!` writes) and `dioxus`, each module's unit tests beside
+                             it in <module>/tests.rs; lib.rs holds the three crates below as the
+                             modules `core`, `router` and `i18n`
   docs/guide/                the crate guide, `ferrovue::guide` on docs.rs
   tests/conformance/         components, fixtures, recorded HTML, generated Rust
   tests/literal_props/       components compiled with `"builders": false`
   tests/closed_unions/       components that read props typed as closed unions through lookups and `:is`
-  tests/sanitised/           a component whose `TrustedHtml` is `ferrovue::sanitised::Sanitised`
+  tests/sanitised/           a component whose `TrustedHtml` is `ferrovue::html::Sanitised`
   tests/chrono_dates/        the conformance suite's `Date` components, compiled with chrono's type
   tests/own_dates/           `DateStamp`, compiled with a `dateType` whose time values need clipping
   tests/own_unions/          the union components, compiled with `unions` naming enums of the test's own

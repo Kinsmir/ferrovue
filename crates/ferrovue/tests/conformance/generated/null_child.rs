@@ -60,7 +60,7 @@ pub struct Slots<'s> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
-    fv::refused::rendered(try_render(out, props, fv_slots));
+    fv::render::rendered(try_render(out, props, fv_slots));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -68,8 +68,8 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(37 + props.value.as_deref().map_or(0, str::len) + props.entry.as_ref().map_or(0, |v| v.title.len() + v.deleted_at.as_deref().map_or(0, str::len) + v.note.as_deref().map_or(0, str::len)));
     out.push_str("<span");
     if let Some(v) = props.value.as_deref() {
@@ -77,16 +77,16 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> R
             out.push_str(" title");
         } else {
             out.push_str(" title=\"");
-            fv::core::escape::escape_into(out, v);
+            fv::core::escape_into(out, v);
             out.push('"');
         }
     }
     out.push_str(" class=\"");
-    fv::class::class_into(out, false, &[if props.value.as_deref().is_none() { "none" } else { "" }]);
+    fv::attrs::class_into(out, false, &[if props.value.as_deref().is_none() { "none" } else { "" }]);
     out.push_str("\">");
-    fv::core::escape::escape_into(out, props.value.as_deref().unwrap_or("(none)"));
-    fv::core::escape::escape_into(out, &(if let Some(fv_entry) = props.entry.as_ref() { std::borrow::Cow::<str>::Owned(format!(":{}", fv_entry.title)) } else { std::borrow::Cow::<str>::Borrowed("") }));
-    fv::slots::scoped_slot_into(out, fv_slots.default, &DefaultSlotProps { v: props.value.as_deref(), e: props.entry.as_ref() }, None);
+    fv::core::escape_into(out, props.value.as_deref().unwrap_or("(none)"));
+    fv::core::escape_into(out, &(if let Some(fv_entry) = props.entry.as_ref() { std::borrow::Cow::<str>::Owned(format!(":{}", fv_entry.title)) } else { std::borrow::Cow::<str>::Borrowed("") }));
+    fv::render::scoped_slot_into(out, fv_slots.default, &DefaultSlotProps { v: props.value.as_deref(), e: props.entry.as_ref() }, None);
     out.push_str("</span>");
     Ok(())
 }

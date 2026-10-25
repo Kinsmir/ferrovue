@@ -43,7 +43,7 @@ impl std::fmt::Display for UnionChildWide {
 }
 
 impl std::str::FromStr for UnionChildWide {
-    type Err = ferrovue::union::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
@@ -51,20 +51,20 @@ impl std::str::FromStr for UnionChildWide {
             "center" => Ok(UnionChildWide::Center),
             "right" => Ok(UnionChildWide::Right),
             "justify" => Ok(UnionChildWide::Justify),
-            _ => Err(ferrovue::union::ParseUnionError::new("UnionChildWide", s, &["left", "center", "right", "justify"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("UnionChildWide", s, &["left", "center", "right", "justify"])),
         }
     }
 }
 
 impl TryFrom<&str> for UnionChildWide {
-    type Error = ferrovue::union::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::union::Union for UnionChildWide {
+impl ferrovue::props::Union for UnionChildWide {
     const ALL: &'static [Self] = &UnionChildWide::ALL;
 
     fn as_str(self) -> &'static str {
@@ -104,27 +104,27 @@ impl std::fmt::Display for UnionChildPick {
 }
 
 impl std::str::FromStr for UnionChildPick {
-    type Err = ferrovue::union::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "a" => Ok(UnionChildPick::A),
             "b" => Ok(UnionChildPick::B),
             "c" => Ok(UnionChildPick::C),
-            _ => Err(ferrovue::union::ParseUnionError::new("UnionChildPick", s, &["a", "b", "c"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("UnionChildPick", s, &["a", "b", "c"])),
         }
     }
 }
 
 impl TryFrom<&str> for UnionChildPick {
-    type Error = ferrovue::union::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::union::Union for UnionChildPick {
+impl ferrovue::props::Union for UnionChildPick {
     const ALL: &'static [Self] = &UnionChildPick::ALL;
 
     fn as_str(self) -> &'static str {
@@ -161,26 +161,26 @@ impl std::fmt::Display for UnionChildFixed {
 }
 
 impl std::str::FromStr for UnionChildFixed {
-    type Err = ferrovue::union::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "x" => Ok(UnionChildFixed::X),
             "y" => Ok(UnionChildFixed::Y),
-            _ => Err(ferrovue::union::ParseUnionError::new("UnionChildFixed", s, &["x", "y"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("UnionChildFixed", s, &["x", "y"])),
         }
     }
 }
 
 impl TryFrom<&str> for UnionChildFixed {
-    type Error = ferrovue::union::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::union::Union for UnionChildFixed {
+impl ferrovue::props::Union for UnionChildFixed {
     const ALL: &'static [Self] = &UnionChildFixed::ALL;
 
     fn as_str(self) -> &'static str {
@@ -224,7 +224,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -232,23 +232,23 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(46 + 6 + props.text.len() + 7 + 1 + 1);
     out.push_str("<span class=\"");
-    fv::class::class_into(out, false, &[fv::union::Union::as_str(props.align), props.wide.map(fv::union::Union::as_str).unwrap_or("")]);
+    fv::attrs::class_into(out, false, &[fv::props::Union::as_str(props.align), props.wide.map(fv::props::Union::as_str).unwrap_or("")]);
     out.push('"');
-    if fv::union::Union::as_str(props.pick).is_empty() {
+    if fv::props::Union::as_str(props.pick).is_empty() {
         out.push_str(" data-pick");
     } else {
         out.push_str(" data-pick=\"");
-        fv::core::escape::escape_into(out, fv::union::Union::as_str(props.pick));
+        fv::core::escape_into(out, fv::props::Union::as_str(props.pick));
         out.push('"');
     }
     out.push('>');
-    fv::core::escape::escape_into(out, &props.text);
+    fv::core::escape_into(out, &props.text);
     out.push(' ');
-    fv::core::escape::escape_into(out, fv::union::Union::as_str(props.fixed));
+    fv::core::escape_into(out, fv::props::Union::as_str(props.fixed));
     out.push_str("</span>");
     Ok(())
 }

@@ -21,7 +21,7 @@ export const teleport: Plugin<TeleportRun> = {
     if (to.ty.k !== "str") fail(s.comp, "FV1508", "a `<Teleport>`'s `to` is a string", target);
     const off = disabled ? bare(cond(s, disabled)) : "false";
     if (content?.type !== "ArrowFunctionExpression" || content.body.type !== "BlockStatement") fail(s.comp, "FV0006", "unexpected `<Teleport>` content", st);
-    e.open(`fv::teleport::teleport_into(out, fv_teleports, ${strArg(to.code)}, ${off}, &|out: &mut String|`);
+    e.open(`fv::page::teleport_into(out, fv_teleports, ${strArg(to.code)}, ${off}, &|out: &mut String|`);
     statements(s, e, content.body.body);
     e.close(");");
     return true;
@@ -29,13 +29,13 @@ export const teleport: Plugin<TeleportRun> = {
   params: [
     {
       name: "fv_teleports",
-      ty: "&fv::teleport::Teleports",
-      pageTy: "&'p fv::teleport::Teleports",
+      ty: "&fv::page::Teleports",
+      pageTy: "&'p fv::page::Teleports",
       reads: (c) => runOf(teleport).has(c),
-      test: { lines: ["let teleports = ferrovue::teleport::Teleports::new();"], arg: "&teleports", after: ["teleports_into(&mut out, teleports);"] },
+      test: { lines: ["let teleports = ferrovue::page::Teleports::new();"], arg: "&teleports", after: ["teleports_into(&mut out, teleports);"] },
       testSupport: `/// What was teleported, after a marker, as the conformance suite writes Vue's: \`{"target":"…"}\`.
 #[cfg(test)]
-fn teleports_into(out: &mut String, teleports: ferrovue::teleport::Teleports) {
+fn teleports_into(out: &mut String, teleports: ferrovue::page::Teleports) {
     let targets = teleports.into_targets();
     if targets.is_empty() {
         return;

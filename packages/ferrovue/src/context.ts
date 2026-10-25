@@ -195,10 +195,10 @@ export function tyOfName(name: TypeName): Ty {
 }
 
 /** The Rust type of an `InlineHtml` prop, and of a `TrustedHtml` one when `trustedHtml` names it. */
-export const INLINE_HTML = "ferrovue::basic_html::InlineHtml";
+export const INLINE_HTML = "ferrovue::html::InlineHtml";
 
 /** The Rust type of a `Date` prop when `dateType` names none. */
-export const JS_DATE = "ferrovue::js_date::JsDate";
+export const JS_DATE = "ferrovue::date::JsDate";
 
 export const ctx = {
   helpers: {} as Record<string, { rust: string; params: Ty[]; ret: Ty; maxLen: number }>,

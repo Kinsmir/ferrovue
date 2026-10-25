@@ -510,7 +510,7 @@ async fn the_payload_carries_where_each_loader_s_results_hold_dates() {
     struct Days(i64);
     impl Load for Days {
         const NAME: &'static str = "days";
-        type Output = Vec<crate::js_date::JsDate>;
+        type Output = Vec<crate::date::JsDate>;
         const DATES: &'static str = "[[1]]";
         fn args(&self, key: &mut LoadKey) {
             key.int(self.0);
@@ -534,8 +534,8 @@ async fn the_payload_carries_where_each_loader_s_results_hold_dates() {
         |call| match call.name() {
             "days" => call.run(|d: Days| async move {
                 Ok::<_, Infallible>(vec![
-                    crate::js_date::JsDate::from_millis(d.0 as f64),
-                    crate::js_date::JsDate::INVALID,
+                    crate::date::JsDate::from_millis(d.0 as f64),
+                    crate::date::JsDate::INVALID,
                 ])
             }),
             _ => call.run(|_: Plain| async { Ok::<_, Infallible>(String::from("<p>")) }),

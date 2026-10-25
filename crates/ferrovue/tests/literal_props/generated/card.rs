@@ -28,7 +28,7 @@ pub struct Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -36,18 +36,18 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(96 + 18 * props.tags.len() + props.title.len() + props.owner.name.len() + props.owner.email.as_deref().map_or(0, str::len) + props.tags.iter().map(|v| v.label.len() + v.hint.as_deref().map_or(0, str::len)).sum::<usize>() + props.note.as_deref().map_or(0, str::len));
     out.push_str("<article><h2>");
-    fv::core::escape::escape_into(out, &props.title);
+    fv::core::escape_into(out, &props.title);
     out.push_str("</h2><p>");
-    fv::core::escape::escape_into(out, &props.owner.name);
+    fv::core::escape_into(out, &props.owner.name);
     if let Some(fv_email) = props.owner.email.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<a href=\"");
-        fv::core::escape::escape_into(out, &format!("mailto:{}", fv_email));
+        fv::core::escape_into(out, &format!("mailto:{}", fv_email));
         out.push_str("\">");
-        fv::core::escape::escape_into(out, fv_email);
+        fv::core::escape_into(out, fv_email);
         out.push_str("</a>");
     } else {
         out.push_str("<!---->");
@@ -58,17 +58,17 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
         out.push_str("<li");
         if let Some(v) = fv_tag.hint.as_deref() {
             out.push_str(" title=\"");
-            fv::core::escape::escape_into(out, v);
+            fv::core::escape_into(out, v);
             out.push('"');
         }
         out.push('>');
-        fv::core::escape::escape_into(out, &fv_tag.label);
+        fv::core::escape_into(out, &fv_tag.label);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul>");
     if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<i>");
-        fv::core::escape::escape_into(out, fv_note);
+        fv::core::escape_into(out, fv_note);
         out.push_str("</i>");
     } else {
         out.push_str("<!---->");

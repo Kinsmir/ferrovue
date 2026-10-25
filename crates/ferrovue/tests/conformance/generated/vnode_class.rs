@@ -33,7 +33,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -41,50 +41,50 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(292 + props.tone.len());
     if props.on {
         out.push_str("<section><p class=\"a b");
-        fv::class::class_into(out, true, &[if props.on { "big" } else { "" }]);
+        fv::attrs::class_into(out, true, &[if props.on { "big" } else { "" }]);
         out.push_str("\" id=\"p\"></p><br title=\"t\" class=\"card");
-        fv::class::class_into(out, true, &[&*props.tone, "x"]);
+        fv::attrs::class_into(out, true, &[&*props.tone, "x"]);
         out.push_str("\"><i class=\"");
-        fv::class::class_into(out, false, &[&*props.tone, "z"]);
+        fv::attrs::class_into(out, false, &[&*props.tone, "z"]);
         out.push_str("\"></i>");
         if props.on {
             out.push_str("<b><span class=\"s");
-            fv::class::class_into(out, true, &[&*props.tone]);
+            fv::attrs::class_into(out, true, &[&*props.tone]);
             out.push_str("\">");
-            fv::core::escape::escape_into(out, &props.tone);
+            fv::core::escape_into(out, &props.tone);
             out.push_str("</span></b>");
         } else {
             out.push_str("<em><span class=\"s");
-            fv::class::class_into(out, true, &[&*props.tone]);
+            fv::attrs::class_into(out, true, &[&*props.tone]);
             out.push_str("\">");
-            fv::core::escape::escape_into(out, &props.tone);
+            fv::core::escape_into(out, &props.tone);
             out.push_str("</span></em>");
         }
         out.push_str("</section>");
     } else {
         out.push_str("<div><p class=\"a b");
-        fv::class::class_into(out, true, &[if props.on { "big" } else { "" }]);
+        fv::attrs::class_into(out, true, &[if props.on { "big" } else { "" }]);
         out.push_str("\" id=\"p\"></p><br title=\"t\" class=\"card");
-        fv::class::class_into(out, true, &[&*props.tone, "x"]);
+        fv::attrs::class_into(out, true, &[&*props.tone, "x"]);
         out.push_str("\"><i class=\"");
-        fv::class::class_into(out, false, &[&*props.tone, "z"]);
+        fv::attrs::class_into(out, false, &[&*props.tone, "z"]);
         out.push_str("\"></i>");
         if props.on {
             out.push_str("<b><span class=\"s");
-            fv::class::class_into(out, true, &[&*props.tone]);
+            fv::attrs::class_into(out, true, &[&*props.tone]);
             out.push_str("\">");
-            fv::core::escape::escape_into(out, &props.tone);
+            fv::core::escape_into(out, &props.tone);
             out.push_str("</span></b>");
         } else {
             out.push_str("<em><span class=\"s");
-            fv::class::class_into(out, true, &[&*props.tone]);
+            fv::attrs::class_into(out, true, &[&*props.tone]);
             out.push_str("\">");
-            fv::core::escape::escape_into(out, &props.tone);
+            fv::core::escape_into(out, &props.tone);
             out.push_str("</span></em>");
         }
         out.push_str("</div>");

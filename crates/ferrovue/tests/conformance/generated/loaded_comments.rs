@@ -39,8 +39,8 @@ impl<'a> Props<'a> {
 /// # Panics
 ///
 /// With the message of the refusal [`try_render`] returns.
-pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::load::Loads<'_>) {
-    fv::refused::rendered(try_render(out, props, fv_loads));
+pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::Loads<'_>) {
+    fv::render::rendered(try_render(out, props, fv_loads));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -48,15 +48,15 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::load::Loads<'_
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::load::Loads<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::Loads<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(141 + props.article.len());
     let Some(l_0) = fv_loads.get(super::loaders::LoadComments { article: String::from(&*props.article), page: props.page, drafts: if props.drafts.unwrap_or(false) { Some(true) } else { None } }) else { return Ok(()); };
     let Some(l_1) = fv_loads.get(super::loaders::LoadNote { page: l_0.len() as i64 }) else { return Ok(()); };
     out.push_str("<section>");
     if let Some(fv_note) = l_1.as_deref() {
         out.push_str("<p class=\"note\">");
-        fv::core::escape::escape_into(out, fv_note);
+        fv::core::escape_into(out, fv_note);
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");
@@ -65,22 +65,22 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::load::Load
     for fv_comment_ref in l_0.iter() {
         let fv_comment: &str = fv_comment_ref;
         out.push_str("<p>");
-        fv::core::escape::escape_into(out, fv_comment);
+        fv::core::escape_into(out, fv_comment);
         out.push_str("</p>");
     }
     out.push_str("<!--]--><footer title=\"");
-    fv::core::escape::escape_into(out, &l_0.iter().map(|v| &**v).collect::<Vec<_>>().join(" / "));
+    fv::core::escape_into(out, &l_0.iter().map(|v| &**v).collect::<Vec<_>>().join(" / "));
     out.push_str("\">");
-    fv::core::numbers::push_int(out, l_0.len() as i64);
+    fv::core::push_int(out, l_0.len() as i64);
     out.push_str(" on page ");
-    fv::core::numbers::push_int(out, props.page);
+    fv::core::push_int(out, props.page);
     out.push_str("</footer>");
     if l_0.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).any(|fv_c| fv::strings::js_length(&fv_c) as f64 > 6.0) {
         out.push_str("<ol><!--[-->");
         for fv_c_cow in fv::strings::js_sorted(l_0.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_c_2| fv::strings::js_length(fv_c_2) as f64 > 6.0), |a, b| fv::strings::js_cmp(a, b)) {
             let fv_c_3: &str = &fv_c_cow;
             out.push_str("<li>");
-            fv::core::escape::escape_into(out, fv_c_3);
+            fv::core::escape_into(out, fv_c_3);
             out.push_str("</li>");
         }
         out.push_str("<!--]--></ol>");
@@ -92,6 +92,6 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::load::Load
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_loads: &'p fv::load::Loads<'p>) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_loads: &'p fv::loaders::Loads<'p>) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
     fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_loads)))
 }

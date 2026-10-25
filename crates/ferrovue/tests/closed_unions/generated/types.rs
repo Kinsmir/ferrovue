@@ -36,27 +36,27 @@ impl std::fmt::Display for Tone {
 }
 
 impl std::str::FromStr for Tone {
-    type Err = ferrovue::union::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "info" => Ok(Tone::Info),
             "warn" => Ok(Tone::Warn),
             "calm" => Ok(Tone::Calm),
-            _ => Err(ferrovue::union::ParseUnionError::new("Tone", s, &["info", "warn", "calm"])),
+            _ => Err(ferrovue::props::ParseUnionError::new("Tone", s, &["info", "warn", "calm"])),
         }
     }
 }
 
 impl TryFrom<&str> for Tone {
-    type Error = ferrovue::union::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::union::Union for Tone {
+impl ferrovue::props::Union for Tone {
     const ALL: &'static [Self] = &Tone::ALL;
 
     fn as_str(self) -> &'static str {

@@ -143,8 +143,8 @@ impl Value<'_> {
     fn write(&self, out: &mut String) {
         match self {
             Value::Str(s) => out.push_str(s),
-            Value::Int(n) => ferrovue_core::numbers::push_int(out, *n),
-            Value::Float(x) => ferrovue_core::numbers::push_number(out, *x),
+            Value::Int(n) => ferrovue_core::push_int(out, *n),
+            Value::Float(x) => ferrovue_core::push_number(out, *x),
             Value::Bool(b) => out.push_str(if *b { "true" } else { "false" }),
         }
     }

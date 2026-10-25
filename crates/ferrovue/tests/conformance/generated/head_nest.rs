@@ -31,7 +31,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head) {
-    fv::refused::rendered(try_render(out, props, fv_head));
+    fv::render::rendered(try_render(out, props, fv_head));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -39,10 +39,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head) -> Result<(), fv::render::Refused> {
     out.reserve(7 + props.name.len());
-    let fv_refusals = fv::refused::Refusals::new(NAME, "components/HeadNest.vue");
+    let fv_refusals = fv::render::Refusals::new(NAME, "components/HeadNest.vue");
     fv_head.push(fv::head::HeadValue::object([("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([("name", fv::head::HeadValue::str(&props.name)), ("content", fv::head::HeadValue::str(&props.name))])])), ("bodyAttrs", fv::head::HeadValue::object([("class", fv::head::HeadValue::str(&props.name))]))]));
     out.push_str("<b>");
     fv_refusals.check(super::head_leaf::try_render(out, &super::head_leaf::Props { name: std::borrow::Cow::Borrowed(&*format!("{}-child", props.name)) }, super::head_leaf::Slots {
@@ -51,7 +51,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head)
     {
         let _fv_later = fv_head.deferred();
         fv_refusals.check(super::head_leaf::try_render(out, &super::head_leaf::Props { name: std::borrow::Cow::Borrowed(&*format!("{}-lazy", props.name)) }, super::head_leaf::Slots {
-            default: Some(fv::slots::Slot::new(&|out: &mut String| {
+            default: Some(fv::render::Slot::new(&|out: &mut String| {
                 fv_refusals.join(super::head_leaf::try_render(out, &super::head_leaf::Props { name: std::borrow::Cow::Borrowed(&*format!("{}-slot", props.name)) }, super::head_leaf::Slots {
                     default: None,
                 }, fv_head));

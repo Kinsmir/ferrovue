@@ -32,25 +32,25 @@ impl<'a> Score<'a> {
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
     #[serde(rename = "counts")]
-    pub counts: ferrovue::record::Record<'a, i64>,
+    pub counts: ferrovue::props::Record<'a, i64>,
     #[serde(rename = "labels")]
-    pub labels: ferrovue::record::Record<'a, Cow<'a, str>>,
+    pub labels: ferrovue::props::Record<'a, Cow<'a, str>>,
     #[serde(rename = "scores")]
-    pub scores: ferrovue::record::Record<'a, Score<'a>>,
+    pub scores: ferrovue::props::Record<'a, Score<'a>>,
     #[serde(rename = "groups")]
-    pub groups: ferrovue::record::Record<'a, Vec<Cow<'a, str>>>,
+    pub groups: ferrovue::props::Record<'a, Vec<Cow<'a, str>>>,
     #[serde(rename = "extra", default, skip_serializing_if = "Option::is_none")]
-    pub extra: Option<ferrovue::record::Record<'a, bool>>,
+    pub extra: Option<ferrovue::props::Record<'a, bool>>,
 }
 
 impl<'a> Props<'a> {
     /// Props with its required fields, every optional one absent.
-    pub fn new(counts: ferrovue::record::Record<'a, i64>, labels: ferrovue::record::Record<'a, Cow<'a, str>>, scores: ferrovue::record::Record<'a, Score<'a>>, groups: ferrovue::record::Record<'a, Vec<Cow<'a, str>>>) -> Self {
+    pub fn new(counts: ferrovue::props::Record<'a, i64>, labels: ferrovue::props::Record<'a, Cow<'a, str>>, scores: ferrovue::props::Record<'a, Score<'a>>, groups: ferrovue::props::Record<'a, Vec<Cow<'a, str>>>) -> Self {
         Props { counts, labels, scores, groups, extra: None }
     }
 
     /// Set `extra`, which is absent otherwise.
-    pub fn extra(mut self, extra: ferrovue::record::Record<'a, bool>) -> Self {
+    pub fn extra(mut self, extra: ferrovue::props::Record<'a, bool>) -> Self {
         self.extra = Some(extra);
         self
     }
@@ -63,7 +63,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -71,78 +71,78 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(186 + 38 * props.counts.len() + 34 * props.labels.len() + 23 * props.scores.len() + 18 * props.groups.len() + 23 * props.counts.len() + props.counts.iter().map(|(k, _)| k.len()).sum::<usize>() + props.labels.iter().map(|(k, v)| k.len() + v.len()).sum::<usize>() + props.scores.iter().map(|(k, v)| k.len() + v.by.len()).sum::<usize>() + props.groups.iter().map(|(k, v)| k.len() + v.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>());
     out.push_str("<section><ul><!--[-->");
     for (fv_i, (fv_name, fv_count_ref)) in props.counts.iter().enumerate() {
         let fv_count = *fv_count_ref;
         let fv_i = fv_i as i64;
         out.push_str("<li data-name=\"");
-        fv::core::escape::escape_into(out, fv_name);
+        fv::core::escape_into(out, fv_name);
         out.push_str("\">");
-        fv::core::numbers::push_int(out, fv_i);
+        fv::core::push_int(out, fv_i);
         out.push_str(". ");
-        fv::core::escape::escape_into(out, fv_name);
+        fv::core::escape_into(out, fv_name);
         out.push_str(": ");
-        fv::core::numbers::push_int(out, fv_count);
+        fv::core::push_int(out, fv_count);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul><dl><!--[-->");
     for (fv_key, fv_text_ref) in props.labels.iter() {
         let fv_text: &str = fv_text_ref;
         out.push_str("<!--[--><dt>");
-        fv::core::escape::escape_into(out, fv_key);
+        fv::core::escape_into(out, fv_key);
         out.push_str("</dt><dd>");
-        fv::core::escape::escape_into(out, fv_text);
+        fv::core::escape_into(out, fv_text);
         out.push_str("</dd><!--]-->");
     }
     out.push_str("<!--]--></dl><!--[-->");
     for (fv_id, fv_value_ref) in props.scores.iter() {
         let fv_value = fv_value_ref;
         out.push_str("<p id=\"");
-        fv::core::escape::escape_into(out, &format!("s-{}", fv_id));
+        fv::core::escape_into(out, &format!("s-{}", fv_id));
         out.push_str("\">");
-        fv::core::numbers::push_int(out, fv_value.points);
+        fv::core::push_int(out, fv_value.points);
         out.push_str(" by ");
-        fv::core::escape::escape_into(out, &fv_value.by);
+        fv::core::escape_into(out, &fv_value.by);
         out.push_str("</p>");
     }
     out.push_str("<!--]--><!--[-->");
     for (fv_group, fv_members_ref) in props.groups.iter() {
         let fv_members = fv_members_ref;
         out.push_str("<p>");
-        fv::core::escape::escape_into(out, fv_group);
+        fv::core::escape_into(out, fv_group);
         out.push_str(": ");
-        fv::core::escape::escape_into(out, &fv_members.iter().map(|v| &**v).collect::<Vec<_>>().join(", "));
+        fv::core::escape_into(out, &fv_members.iter().map(|v| &**v).collect::<Vec<_>>().join(", "));
         out.push_str(" (");
-        fv::core::numbers::push_int(out, fv_members.len() as i64);
+        fv::core::push_int(out, fv_members.len() as i64);
         out.push_str(")</p>");
     }
     out.push_str("<!--]--><p>");
-    fv::core::escape::escape_into(out, &props.counts.keys().map(std::borrow::Cow::<str>::Borrowed).collect::<Vec<_>>().join(","));
+    fv::core::escape_into(out, &props.counts.keys().map(std::borrow::Cow::<str>::Borrowed).collect::<Vec<_>>().join(","));
     out.push('|');
-    fv::core::numbers::push_int(out, props.counts.values().copied().filter(|fv_c| *fv_c as f64 > 1.0).count() as i64);
+    fv::core::push_int(out, props.counts.values().copied().filter(|fv_c| *fv_c as f64 > 1.0).count() as i64);
     out.push('|');
-    fv::core::escape::escape_into(out, &props.labels.values().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(" "));
+    fv::core::escape_into(out, &props.labels.values().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(" "));
     out.push('|');
-    fv::core::numbers::push_int(out, props.scores.keys().count() as i64);
+    fv::core::push_int(out, props.scores.keys().count() as i64);
     out.push_str("</p><ol><!--[-->");
     for (fv_i_2, (fv_key_2, fv_value_ref_2)) in props.counts.iter().enumerate() {
         let fv_value_2 = *fv_value_ref_2;
         let fv_i_2 = fv_i_2 as i64;
         out.push_str("<li>");
-        fv::core::numbers::push_int(out, fv_i_2);
+        fv::core::push_int(out, fv_i_2);
         out.push('=');
-        fv::core::escape::escape_into(out, fv_key_2);
+        fv::core::escape_into(out, fv_key_2);
         out.push(':');
-        fv::core::numbers::push_int(out, fv_value_2);
+        fv::core::push_int(out, fv_value_2);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ol><p>");
-    fv::core::numbers::push_int(out, props.labels.len() as i64);
+    fv::core::push_int(out, props.labels.len() as i64);
     out.push('|');
-    fv::core::escape::escape_into(out, &props.scores.values().map(|fv_s| std::borrow::Cow::<str>::Borrowed(&fv_s.by)).collect::<Vec<_>>().join("/"));
+    fv::core::escape_into(out, &props.scores.values().map(|fv_s| std::borrow::Cow::<str>::Borrowed(&fv_s.by)).collect::<Vec<_>>().join("/"));
     out.push('|');
     out.push_str(if props.labels.keys().map(std::borrow::Cow::<str>::Borrowed).any(|fv_item| *fv_item == *"a") { "true" } else { "false" });
     out.push_str("</p>");
@@ -153,7 +153,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused
             out.push_str("<i data-on=\"");
             out.push_str(if fv_on { "true" } else { "false" });
             out.push_str("\">");
-            fv::core::escape::escape_into(out, fv_flag);
+            fv::core::escape_into(out, fv_flag);
             out.push_str("</i>");
         }
         out.push_str("<!--]-->");

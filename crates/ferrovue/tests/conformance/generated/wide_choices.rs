@@ -40,7 +40,7 @@ impl Props {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -48,28 +48,28 @@ pub fn render(out: &mut String, props: &Props) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
     out.reserve(93);
     let s_chosen = if props.on { props.n as f64 * props.n as f64 } else { props.m as f64 };
     out.push_str("<p title=\"");
-    fv::core::numbers::push_number(out, props.count.map(|v| v as f64).unwrap_or(props.n as f64 * props.n as f64));
+    fv::core::push_number(out, props.count.map(|v| v as f64).unwrap_or(props.n as f64 * props.n as f64));
     out.push_str("\" data-or=\"");
-    fv::core::numbers::push_number(out, { let a = props.m as f64; if a != 0.0 { a } else { props.n as f64 * props.n as f64 } });
+    fv::core::push_number(out, { let a = props.m as f64; if a != 0.0 { a } else { props.n as f64 * props.n as f64 } });
     out.push_str("\" data-pick=\"");
-    fv::core::numbers::push_number(out, if props.on { props.n as f64 * props.m as f64 } else { props.count.unwrap_or(0i64) as f64 });
+    fv::core::push_number(out, if props.on { props.n as f64 * props.m as f64 } else { props.count.unwrap_or(0i64) as f64 });
     out.push_str("\">");
-    fv::core::numbers::push_number(out, props.count.map(|v| v as f64).unwrap_or(props.n as f64 * props.m as f64));
+    fv::core::push_number(out, props.count.map(|v| v as f64).unwrap_or(props.n as f64 * props.m as f64));
     out.push(' ');
-    fv::core::numbers::push_number(out, if props.on { props.n as f64 * props.n as f64 } else { props.m as f64 });
+    fv::core::push_number(out, if props.on { props.n as f64 * props.n as f64 } else { props.m as f64 });
     out.push(' ');
-    fv::core::numbers::push_number(out, { let a = props.m as f64; if a != 0.0 { a } else { props.n as f64 * props.m as f64 } });
+    fv::core::push_number(out, { let a = props.m as f64; if a != 0.0 { a } else { props.n as f64 * props.m as f64 } });
     out.push(' ');
-    fv::core::numbers::push_number(out, s_chosen);
+    fv::core::push_number(out, s_chosen);
     out.push(' ');
-    fv::core::numbers::push_number(out, props.n as f64 * props.m as f64);
+    fv::core::push_number(out, props.n as f64 * props.m as f64);
     out.push(' ');
-    fv::core::escape::escape_into(out, &format!("{}", fv::core::numbers::Js(props.count.map(|v| v as f64).unwrap_or(props.n as f64 * props.n as f64))));
+    fv::core::escape_into(out, &format!("{}", fv::core::Js(props.count.map(|v| v as f64).unwrap_or(props.n as f64 * props.n as f64))));
     out.push_str("</p>");
     Ok(())
 }

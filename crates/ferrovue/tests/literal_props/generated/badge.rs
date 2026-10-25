@@ -24,7 +24,7 @@ pub struct Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -32,14 +32,14 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(47 + props.label.as_deref().map_or(0, str::len));
     out.push_str("<span class=\"badge\">");
-    fv::core::escape::escape_into(out, props.label.as_deref().unwrap_or("new"));
+    fv::core::escape_into(out, props.label.as_deref().unwrap_or("new"));
     if let Some(fv_count) = props.count.filter(|v| *v != 0) {
         out.push_str("<b>");
-        fv::core::numbers::push_int(out, fv_count);
+        fv::core::push_int(out, fv_count);
         out.push_str("</b>");
     } else {
         out.push_str("<!---->");

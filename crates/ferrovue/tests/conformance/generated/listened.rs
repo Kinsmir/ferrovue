@@ -35,7 +35,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -43,19 +43,19 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(48 + props.id.len() + props.label.len());
     out.push_str("<div class=\"row\"");
     if props.id.is_empty() {
         out.push_str(" id");
     } else {
         out.push_str(" id=\"");
-        fv::core::escape::escape_into(out, &props.id);
+        fv::core::escape_into(out, &props.id);
         out.push('"');
     }
     out.push('>');
-    fv::core::escape::escape_into(out, &props.label);
+    fv::core::escape_into(out, &props.label);
     out.push_str("<!--[-->");
     for fv_r_ref in props.rows.iter() {
         let fv_r = fv_r_ref;

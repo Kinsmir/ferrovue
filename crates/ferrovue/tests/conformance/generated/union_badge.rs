@@ -38,7 +38,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::refused::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -46,29 +46,29 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(40 + 7 + props.label.len());
     out.push_str("<b");
-    if props.mood.map(fv::union::Union::as_str).is_some() {
+    if props.mood.map(fv::props::Union::as_str).is_some() {
         out.push_str(" class=\"");
-        fv::class::class_into(out, false, &[props.mood.map(fv::union::Union::as_str).unwrap_or("")]);
+        fv::attrs::class_into(out, false, &[props.mood.map(fv::props::Union::as_str).unwrap_or("")]);
         out.push('"');
     }
-    if let Some(v) = props.mood.map(fv::union::Union::as_str) {
+    if let Some(v) = props.mood.map(fv::props::Union::as_str) {
         if v.is_empty() {
             out.push_str(" data-mood");
         } else {
             out.push_str(" data-mood=\"");
-            fv::core::escape::escape_into(out, v);
+            fv::core::escape_into(out, v);
             out.push('"');
         }
     }
     out.push('>');
-    fv::core::escape::escape_into(out, &props.label);
+    fv::core::escape_into(out, &props.label);
     out.push(' ');
-    if let Some(v) = props.mood.map(fv::union::Union::as_str) {
-        fv::core::escape::escape_into(out, v);
+    if let Some(v) = props.mood.map(fv::props::Union::as_str) {
+        fv::core::escape_into(out, v);
     }
     out.push_str("</b>");
     Ok(())
