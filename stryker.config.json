@@ -23,5 +23,6 @@
   "reporters": ["clear-text", "progress", "json", "html"],
   "jsonReporter": { "fileName": "target/stryker/mutation.json" },
   "htmlReporter": { "fileName": "target/stryker/mutation.html" },
-  "clearTextReporter": { "allowColor": false, "logTests": false, "reportTests": false }
+  "clearTextReporter": { "allowColor": false, "logTests": false, "reportTests": false },
+  "dashboard": { "project": "github.com/Kinsmir/ferrovue", "reportType": "full" }
 }
