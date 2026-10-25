@@ -1,7 +1,10 @@
 # Changelog
 
 All notable changes to this project are documented here. The crates and the npm package are
-released together and share version numbers.
+released together and share version numbers. The format follows
+[Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/), and the guide holds each change's detail.
+The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
+[CHANGELOG.md at v0.11.0](https://github.com/Kinsmir/ferrovue/blob/v0.11.0/CHANGELOG.md).
 
 ## [Unreleased]
 
@@ -16,10 +19,6 @@ released together and share version numbers.
   generated code is version 6. Paths, npm entries and steps: [`upgrading_to_0_12`](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_12/index.html).
 - **Breaking:** a list of a union of string literals (`tones: Tone[]`) is a `Vec` of its enum.
   0.11.0 held strings, and passed one outside the union to a child as its last member: [`upgrading_to_0_12`](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_12/index.html#5-build-lists-of-a-union-from-the-enum).
-- Internal: `pnpm lint` fails on a re-export, Stryker's survivors in `template.ts` and `expr.ts`
-  are closed, the fuzzer writes no `?:` the compiler refuses, and `target/` is ignored at any depth.
-- Docs only: AGENTS.md, CONTRIBUTING.md and RELEASING.md keep each entry of this file to two lines
-  that describe what ships, with its detail in the guide.
 
 ### Fixed
 

@@ -63,8 +63,10 @@ reference; this file is the short version.
 
 ## Rules
 
-- Every change adds an entry under `## [Unreleased]` in CHANGELOG.md, in the Keep a Changelog
-  subsections (`Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`, in that order).
+- Every change a user of the crates or the npm package can notice adds an entry under
+  `## [Unreleased]` in CHANGELOG.md, following [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/)
+  (`Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`, in that order), at most two
+  lines each with its detail in the guide. Tests, CI, lint, the fuzzer and contributor docs get none.
 - Before adding a CHANGELOG entry, read `## [Unreleased]` for one about the same thing and edit
   it, so the section describes what will ship, each change once and as it ends up. A fix of
   something added in the same cycle goes into that thing's entry; an entry of its own under
