@@ -116,6 +116,7 @@ export function stringOf(comp: Component, v: Val, n: N, what: string, code: Code
     if (of.k === "str") return joined(items(v));
     if (of.k === "bool") return joined(`${items(v)}.map(|v| if v { "true" } else { "false" })`);
     if (of.k === "int" || of.k === "float") return joined(`${items(v)}.map(|v| fv::Js(v).to_string())`);
+    if (of.k === "opt" && of.of.k === "str" && v.iter !== undefined) return joined(`${v.iter}.map(|v| v.unwrap_or(""))`);
     if (of.k === "opt" && v.iter === undefined && SCALAR.has(of.of.k)) {
       const each = `${atom(v.code)}.iter()`;
       if (of.of.k === "str") return joined(`${each}.map(|v| v.as_deref().unwrap_or(""))`);

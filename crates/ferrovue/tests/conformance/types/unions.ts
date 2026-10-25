@@ -17,4 +17,4 @@ const SIDE = "ri";
 
 export const END = `${SIDE}ght` as const;
 
-export type Hue = "red" | "green" | "a<b>&\"c'";
+export type Hue = "red" | "green" | "<b>&\"hue'";

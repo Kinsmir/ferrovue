@@ -7,7 +7,7 @@ const props = withDefaults(defineProps<{ hues: Hue[]; extra?: Hue[]; spare?: Hue
   spare: () => [],
 });
 
-const NAMES = { red: "Red", green: "Green & <go>", 'a<b>&"c\'': "Odd \"one\"" } as const;
+const NAMES = { red: "Red", green: "Green & <go>", '<b>&"hue\'': "Odd \"one\"" } as const;
 
 const warm = computed(() => props.hues.filter((h) => h !== "green"));
 </script>
@@ -22,6 +22,7 @@ const warm = computed(() => props.hues.filter((h) => h !== "green"));
   <s v-for="(h, i) in holes" :key="i">{{ h ?? "none" }}</s>
   <UnionListItem v-for="(h, i) in holes" :key="i" :hue="h ?? undefined" :hues="[]" :label="label" />
   <UnionListItem v-for="(h, k) in named" :key="k" :hue="h" :hues="[]" :label="k" />
+  <q :title="`${holes}`">{{ String(sizes) }}</q>
   <em v-for="s in sizes" :key="s" :class="s">{{ s }}</em>
   <span v-if="extra">{{ extra.length }} {{ extra.join() }}</span>
   <u v-if="hues.some((h) => h === 'red')">{{ hues.filter((h) => h !== "red").join("|") }}</u>

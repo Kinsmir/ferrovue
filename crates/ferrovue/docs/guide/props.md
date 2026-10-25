@@ -15,7 +15,8 @@ a public field per prop, and a struct for every interface or object type alias t
 | `"sm" \| "md" \| "lg"`, `type Size = "sm" \| "md" \| "lg"` | an enum generated for the union: `Size`, or `ButtonSize` for `size` of `Button.vue` written in place. See [Unions of string literals](#unions-of-string-literals) | the enum, `Size::Md` |
 | `enum Tone { Calm = "calm" }`, `enum Rank { Low, High }` | an enum `Tone` with the variant `Calm`, as a union of its values; `i64` for numbers | the enum, as `number` |
 | `string[]`, `Array<string>`, `readonly string[]` | `Vec<Cow<'a, str>>` | `impl IntoIterator<Item = impl Into<Cow<'a, str>>>` |
-| `number[]`, `Row[]`, … | `Vec<i64>`, `Vec<Row<'a>>`, … | the `Vec` |
+| `Size[]`, `("sm" \| "md")[]` | `Vec<Size>`, a list of the union's enum | `impl IntoIterator<Item = Size>` |
+| `number[]`, `Row[]`, `(Size \| null)[]`, … | `Vec<i64>`, `Vec<Row<'a>>`, `Vec<Option<Size>>`, … | the `Vec` |
 | `interface Row { … }`, `type Row = { … }` | a struct `Row<'a>` beside `Props`, or in `types.rs` when imported from a `.ts` file | the struct |
 | `Record<string, T>`, `{ [key: string]: T }` | [`ferrovue::Record<'a, T>`](crate::Record) | the `Record`, collected from pairs. See [Dictionaries](#dictionaries) |
 | `Props` imported from another component | `super::child::Props<'a>` | the struct |
@@ -60,7 +61,9 @@ A prop, a `defineModel` or a field of an interface typed as a union of two or mo
 is a Rust enum the compiler generates, with a variant for each literal: `size: "sm" | "md" | "lg"`
 is `Option<ButtonSize>` for an optional `size` of `Button.vue`, and `Size` for `size: Size` with
 `type Size = "sm" | "md" | "lg"`. A string `enum` is one too, its variants named after its members.
-A Rust caller can then build only the values TypeScript allows.
+A list of the union is a list of the enum: `sizes: Size[]` is `Vec<Size>`, `Option<Vec<Size>>` when
+it is optional or nullable, and `(Size | null)[]` is `Vec<Option<Size>>`. A Rust caller can then
+build only the values TypeScript allows.
 
 | The union is | The enum is named | and written to |
 |---|---|---|
@@ -198,6 +201,16 @@ it better, the compiler uses the enum:
 - handed to a child's prop of the same union, the enum is copied; to one of another union that holds
   all its members, a `match` maps one to the other; to a `string` prop, it is `as_str()`. A literal of
   the union, a `?:` of members and a `computed` typed as the union reach a union prop as its variant.
+- a `v-for` item of a list of the union is the enum, so a child's union prop, a lookup table and
+  `===` read the variant; the list handed to a child's list of the same union is copied, and
+  `.join()`, `.includes()`, `.length`, `.filter()`, `.map()` and the other list methods read its
+  items' strings.
+
+A string the Rust caller holds as a string where the render needs a union's enum, such as a value of
+a `Record<string, Size>`, a field of a store's state or a prop of a single literal handed to a
+child's union prop, is parsed as the component renders. One outside the union refuses the render
+with [FV0518](crate::guide::error_codes#fv0518), which a generated `try_render` returns as a
+[`Refused`](crate::Refused), where Vue would write the string itself.
   A literal outside it, and a value typed `string`, are refused
   ([FV0515](crate::guide::error_codes#fv0515)).
 

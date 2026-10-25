@@ -29,7 +29,8 @@ released together and share version numbers.
   changes the generated `Props` of such a prop, which is a change in the generated code; the
   island's JSON is the same. A string the Rust caller holds where the render needs a union's enum
   (a value of a `Record<string, Tone>`, a store's state, a prop of a single literal) is parsed as
-  the component renders, and one outside the union refuses the render with FV0518. Generated code
+  the component renders, and one outside the union refuses the render with FV0518, which
+  `ERRORS` of `ferrovue/compiler` now lists, a change to the npm package's API. Generated code
   calls no item 0.11.0 lacks, so `__compat!` stays at 5.
 - The README and the guide's quick start name the schema of the current release in `$schema`;
   they named 0.8.0's. `release.ts bump` writes the new version into both, and `release.ts check`

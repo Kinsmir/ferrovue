@@ -8,29 +8,29 @@ use ferrovue as fv;
 /// The component's name, as `data-island` carries it.
 pub const NAME: &str = "UnionListItem";
 
-/// `wide` in `UnionListItem.vue`: `"red" | "green" | "a<b>&\"c'" | "blue"`.
+/// `wide` in `UnionListItem.vue`: `"red" | "green" | "<b>&\"hue'" | "blue"`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum UnionListItemWide {
     #[serde(rename = "red")]
     Red,
     #[serde(rename = "green")]
     Green,
-    #[serde(rename = "a<b>&\"c'")]
-    ABC,
+    #[serde(rename = "<b>&\"hue'")]
+    BHue,
     #[serde(rename = "blue")]
     Blue,
 }
 
 impl UnionListItemWide {
     /// Every member, in the order the union declares them.
-    pub const ALL: [UnionListItemWide; 4] = [UnionListItemWide::Red, UnionListItemWide::Green, UnionListItemWide::ABC, UnionListItemWide::Blue];
+    pub const ALL: [UnionListItemWide; 4] = [UnionListItemWide::Red, UnionListItemWide::Green, UnionListItemWide::BHue, UnionListItemWide::Blue];
 
     /// The string literal this member stands for.
     pub const fn as_str(self) -> &'static str {
         match self {
             UnionListItemWide::Red => "red",
             UnionListItemWide::Green => "green",
-            UnionListItemWide::ABC => "a<b>&\"c'",
+            UnionListItemWide::BHue => "<b>&\"hue'",
             UnionListItemWide::Blue => "blue",
         }
     }
@@ -49,9 +49,9 @@ impl std::str::FromStr for UnionListItemWide {
         match s {
             "red" => Ok(UnionListItemWide::Red),
             "green" => Ok(UnionListItemWide::Green),
-            "a<b>&\"c'" => Ok(UnionListItemWide::ABC),
+            "<b>&\"hue'" => Ok(UnionListItemWide::BHue),
             "blue" => Ok(UnionListItemWide::Blue),
-            _ => Err(ferrovue::ParseUnionError::new("UnionListItemWide", s, &["red", "green", "a<b>&\"c'", "blue"])),
+            _ => Err(ferrovue::ParseUnionError::new("UnionListItemWide", s, &["red", "green", "<b>&\"hue'", "blue"])),
         }
     }
 }
@@ -122,7 +122,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
-    out.reserve(73 + 8 + 8 + 8 * props.hues.len() + props.label.len());
+    out.reserve(73 + 9 + 9 + 9 * props.hues.len() + props.label.len());
     out.push_str("<span");
     if let Some(v) = props.hue.map(super::types::Hue::as_str) {
         if v.is_empty() {

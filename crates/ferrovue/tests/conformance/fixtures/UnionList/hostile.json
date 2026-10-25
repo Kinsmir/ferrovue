@@ -1,1 +1,1 @@
-{"hues": ["a<b>&\"c'", "green"], "extra": [], "spare": ["a<b>&\"c'"], "holes": [null, "a<b>&\"c'"], "named": {"<k \"q\">": "a<b>&\"c'"}, "label": "<script>\"x\" & 'y'</script>", "sizes": ["lg"]}
+{"hues": ["<b>&\"hue'", "green"], "extra": [], "spare": ["<b>&\"hue'"], "holes": [null, "<b>&\"hue'"], "named": {"<k \"q\">": "<b>&\"hue'"}, "label": "<script>\"x\" & 'y'</script>", "sizes": ["lg"]}

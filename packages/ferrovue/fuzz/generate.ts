@@ -412,7 +412,7 @@ function tsType(spec: Spec): string {
     case "nul":
       return `${tsType(spec.of)} | null`;
     case "list":
-      return spec.of.k === "nul" ? `(${tsType(spec.of)})[]` : `${tsType(spec.of)}[]`;
+      return spec.of.k === "nul" || (spec.of.k === "enum" && spec.of.union) ? `(${tsType(spec.of)})[]` : `${tsType(spec.of)}[]`;
     case "obj":
       return spec.iface;
     case "record":
@@ -1854,7 +1854,7 @@ class Gen {
       ])();
     };
     if (d <= 0 || r.chance(0.3)) return leaf();
-    const lists = this.scope.lists.filter((l) => l.of.k === "str" || l.of.k === "int");
+    const lists = this.scope.lists.filter((l) => l.of.k === "str" || l.of.k === "int" || (l.of.k === "enum" && l.of.union === true));
     const opts = this.vars("str", Infinity, true);
     const str = (kids: Expr[], fmt: (k: string[]) => string, from: Expr[] = kids, isAtom = false): Expr => ({
       ...node("str", kids, fmt, 0, isAtom),
@@ -3518,6 +3518,9 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
       [5, () => union],
       [3, () => ({ k: "opt", of: union })],
       [2, () => ({ k: "nul", of: union })],
+      [2, () => ({ k: "list", of: union })],
+      [1, () => ({ k: "list", of: { k: "nul", of: union } })],
+      [1, () => ({ k: "opt", of: { k: "list", of: union } })],
     ])();
     props.push({ name: `${prefix(spec)}${props.length}`, spec });
   }

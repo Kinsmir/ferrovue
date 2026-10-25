@@ -496,7 +496,7 @@ fn lists_of_literal_unions_hold_the_enum_and_a_string_outside_one_is_refused() {
     assert!(
         refused
             .message()
-            .starts_with("`xl` is not one of the members of `Hue`: `red`, `green`, `a<b>&\"c'`"),
+            .starts_with("`xl` is not one of the members of `Hue`: `red`, `green`, `<b>&\"hue'`"),
         "{}",
         refused.message()
     );
