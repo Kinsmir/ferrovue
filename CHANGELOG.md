@@ -99,6 +99,9 @@ released together and share version numbers.
   style bindings of a string share one emitter, and the API report's message callback
   (`scripts/api-messages.ts`) and the import reader of `scripts/no-re-exports.ts` are smaller and
   tested.
+- Docs only: AGENTS.md says to edit the `[Unreleased]` entry about the same thing before adding
+  one, and to change a released section only to correct a fact that was wrong, and RELEASING.md's
+  first step rereads `[Unreleased]` against the merged pull requests before `release.ts bump`.
 
 ### Fixed
 
