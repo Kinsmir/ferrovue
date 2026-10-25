@@ -1,5 +1,7 @@
 import { expect, it } from "vitest";
 import { componentShrinks, fixtureJson, fixtureShrinks, generateCase, helperFiles, printComponent, withLoads } from "../fuzz/generate.ts";
+import { compileFailure } from "../fuzz/classify.ts";
+import { GenError, GenErrors } from "../src/errors.ts";
 
 it("prints a generated component the same way every time", () => {
   for (const seed of [1, 20261020]) {
@@ -62,4 +64,17 @@ it("shrinks a fixture's results, and settles the calls after a prop shrinks", ()
     const fitted = withLoads(x, f);
     expect(fixtureJson(withLoads(x, fitted))).toBe(fixtureJson(fitted));
   }
+});
+
+it("counts a GenError out of the compiler as a refusal, and any other throw as a crash with its stack", () => {
+  const one = new GenError("FV0601", "components/X.vue:1:1: `x` is not available");
+  expect(compileFailure(one)).toEqual({ k: "refused", message: one.message });
+  expect(compileFailure(new GenErrors([one]))).toEqual({ k: "refused", message: one.message });
+  expect(compileFailure(new TypeError("Cannot read properties of undefined (reading 'typeAnnotation')"))).toEqual({
+    k: "crash",
+    stack: expect.stringMatching(/^TypeError: Cannot read properties of undefined \(reading 'typeAnnotation'\)\n {4}at /),
+  });
+  expect(compileFailure(new SyntaxError("Unexpected token"))).toEqual({ k: "crash", stack: expect.stringMatching(/^SyntaxError: Unexpected token\n {4}at /) });
+  expect(compileFailure("thrown text")).toEqual({ k: "crash", stack: "a thrown value that is no Error: 'thrown text'" });
+  expect(compileFailure(Object.create(null))).toEqual({ k: "crash", stack: "a thrown value that is no Error: [Object: null prototype] {}" });
 });

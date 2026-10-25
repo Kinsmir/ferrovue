@@ -519,7 +519,8 @@ How a run works:
 4. Each pair is compared. The summary counts components, fixtures, matches, mismatches, Rust
    errors (a panic, or a fixture the props do not read), renders refused at render time (a
    `ferrovue::render::Refused` the render returns, listed by code and message, which is not a failure),
-   components whose generated Rust does not compile, and refusals, with the message of each.
+   components whose generated Rust does not compile, compiler crashes (anything `generate()` throws
+   that is no `GenError`, listed with its cases and stack), and refusals, with the message of each.
 5. Each failure is **shrunk**: nodes, `v-if` and `v-for` directives, attributes, class and style
    entries removed, sub-expressions replaced by smaller ones, prop values made shorter or left out,
    routes, link targets, messages, a locale, stores, getters and state fields removed, the
@@ -531,8 +532,8 @@ How a run works:
    `about.txt`; a case with routes, stores or locales is saved as a project, its components in
    `components/` beside its `ferrovue.config.json`.
 
-`pnpm fuzz` exits 1 on a mismatch, a Rust error, generated Rust that does not compile, a refusal, a
-fixture Vue cannot render, or a run that compares no fixture at all. CI runs it nightly
+`pnpm fuzz` exits 1 on a mismatch, a Rust error, a compiler crash, generated Rust that does not
+compile, a refusal, a fixture Vue cannot render, or a run that compares no fixture at all. CI runs it nightly
 (`.github/workflows/fuzz.yml`) with 1,000 components and the date as the seed
 (`FERROVUE_FUZZ_SEED=20261004`), and uploads `fuzz/failures/` when it fails.
 
