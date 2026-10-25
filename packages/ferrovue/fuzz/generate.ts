@@ -1,6 +1,6 @@
 import type { Config } from "../src/compiler.ts";
 import { portableTime } from "../src/plugins/dates.ts";
-import { loadKey } from "../src/loads.ts";
+import { loadKey } from "../src/client.ts";
 import { DATE_METHODS, HAND_STRINGS, HAND_TIMES, dateCases } from "../test/date-inputs.ts";
 
 export class Rng {

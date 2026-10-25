@@ -1,5 +1,6 @@
 import { type Component } from "vue";
-import { type DatePlans, fixtureApp, readFixture, type RouteEntry, type RouterOptions, withDatePlans } from "../src/fixture.ts";
+import { type DatePlans, fixtureApp, readFixture, type RouterOptions, withDatePlans } from "../src/fixture.ts";
+import type { RouteEntry } from "../src/routes.ts";
 import { headRendered, settled } from "../src/settle.ts";
 
 const modules = import.meta.glob<{ default: Component }>("../../../crates/ferrovue/tests/conformance/components/*.vue", {

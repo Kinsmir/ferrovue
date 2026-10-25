@@ -17,11 +17,90 @@ import {
 } from "vue";
 import type { Pinia } from "pinia";
 import type { Router } from "vue-router";
-import { carriesLoads, LOADS_ATTRIBUTE, provideLoads } from "./loads.ts";
+import { LOADS_ATTRIBUTE, loadStore, type LoadStore } from "./loads.ts";
 import { parseJson } from "./page-json.ts";
 import { planOf, reviveByPlan } from "./revive.ts";
 
-export { clearLoads, defineLoader, loadKey, provideLoads } from "./loads.ts";
+function scanLoads(store: LoadStore): void {
+  if (typeof document === "undefined") return;
+  for (const el of document.querySelectorAll(`script[${LOADS_ATTRIBUTE}]`)) {
+    if (store.scanned.has(el)) continue;
+    store.scanned.add(el);
+    if (el.textContent) provideLoads(el.textContent);
+  }
+}
+
+/** The key of a loader's call, which the server writes each result under: `JSON.stringify` of the
+ * loader's name and its arguments, without the arguments left out at the end (or given as
+ * `undefined` there), so that `loadPost(1)` and `loadPost(1, undefined)` are one call, as they are
+ * to the loader. */
+export function loadKey(name: string, args: readonly unknown[]): string {
+  let given = args.length;
+  while (given > 0 && args[given - 1] === undefined) given--;
+  return JSON.stringify([name, ...args.slice(0, given)]);
+}
+
+/** A function a component awaits in `<script setup>` for its data (`const post = await
+ * loadPost(props.id)`), which the server renders from what the Rust app's loader of the same name
+ * returns. In the browser, a call whose key (`loadKey`) is among the results the page carries
+ * (`Loads::script_into`, each of the document's `<script data-fv-loads>` read once, or given to
+ * `provideLoads`) resolves to that result, so that the component hydrates from what the server
+ * rendered; any other call runs `loader`. `name` is the Rust app's name for it, unique in the project:
+ * the compiler reads the declaration, `export const loadPost = defineLoader("loadPost", async (id:
+ * number): Promise<Post> => …)`, for the types of the arguments and the result. */
+export function defineLoader<A extends unknown[], T>(name: string, loader: (...args: A) => Promise<T>): (...args: A) => Promise<T> {
+  return (...args: A): Promise<T> => {
+    const store = loadStore();
+    scanLoads(store);
+    const key = loadKey(name, args);
+    if (store.results.has(key)) return Promise.resolve(store.results.get(key) as T);
+    const running = loader(...args);
+    store.running.add(running);
+    const done = () => store.running.delete(running);
+    running.then(done, done);
+    return running;
+  };
+}
+
+function loaderName(key: string): unknown {
+  try {
+    const call = JSON.parse(key) as unknown;
+    return Array.isArray(call) ? call[0] : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Add results for loaders to answer from: the text of a `<script data-fv-loads>`, as `readPage`
+ * gives it for the next page of a navigation, or an object of keys and results. Under `dates`, the
+ * payload says where each loader's results hold dates, which are turned back into `Date`s. A key
+ * given again takes its newer result. */
+export function provideLoads(results: string | Record<string, unknown>): void {
+  const store = loadStore();
+  const given = typeof results === "string" ? (parseJson(results) as Record<string, unknown>) : results;
+  const dates = Object.hasOwn(given, "dates") && given.dates !== null && typeof given.dates === "object" ? (given.dates as Record<string, unknown>) : {};
+  for (const [key, value] of Object.entries(given)) {
+    if (key === "dates") continue;
+    const name = loaderName(key);
+    store.results.set(key, typeof name === "string" && Object.hasOwn(dates, name) ? reviveByPlan(value, dates[name]) : value);
+  }
+}
+
+/** Forget every result given so far, and read the document's scripts again on the next call: a
+ * test rendering one fixture after another starts each from its own. */
+export function clearLoads(): void {
+  const store = loadStore();
+  store.results.clear();
+  store.scanned = new WeakSet();
+}
+
+/** Whether the page carries results for loaders, so that its components await them and hydrate
+ * inside a `<Suspense>`. */
+function carriesLoads(): boolean {
+  const store = loadStore();
+  scanLoads(store);
+  return store.results.size > 0 || (typeof document !== "undefined" && document.querySelector(`script[${LOADS_ATTRIBUTE}]`) !== null);
+}
 
 function declaresDate(declared: unknown): boolean {
   const type = declared !== null && typeof declared === "object" && "type" in declared ? declared.type : declared;

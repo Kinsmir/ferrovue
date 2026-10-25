@@ -443,49 +443,52 @@ pub mod dates_in {
     }
 }
 
+/// A [`JsDate`] that `chrono::DateTime<Utc>` cannot hold: an invalid date, or one beyond
+/// chrono's ±262,142 years. JavaScript's dates reach from −271821 to +275760.
+///
+/// # Example
+///
+/// ```
+/// use chrono::{DateTime, Utc};
+/// use ferrovue::JsDate;
+///
+/// let far = JsDate::parse("+270000-01-01").unwrap();
+/// let refused = DateTime::<Utc>::try_from(far).unwrap_err();
+/// assert_eq!(refused.date(), far);
+/// assert!(DateTime::<Utc>::try_from(JsDate::INVALID).is_err());
+/// ```
+#[cfg(feature = "chrono")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(docsrs, doc(cfg(feature = "chrono")))]
+pub struct DateOutOfRange(JsDate);
+
+#[cfg(feature = "chrono")]
+impl DateOutOfRange {
+    /// The date chrono cannot hold.
+    #[must_use]
+    pub const fn date(self) -> JsDate {
+        self.0
+    }
+}
+
+#[cfg(feature = "chrono")]
+impl fmt::Display for DateOutOfRange {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.0.to_iso_string() {
+            Some(iso) => write!(f, "{iso} is beyond the dates chrono holds"),
+            None => f.write_str("an invalid date has no chrono date"),
+        }
+    }
+}
+
+#[cfg(feature = "chrono")]
+impl std::error::Error for DateOutOfRange {}
+
 #[cfg(feature = "chrono")]
 mod chrono_time {
-    use std::fmt;
-
     use chrono::{DateTime, Utc};
 
-    use super::{JsDate, JsTime};
-
-    /// A [`JsDate`] that `chrono::DateTime<Utc>` cannot hold: an invalid date, or one beyond
-    /// chrono's ±262,142 years. JavaScript's dates reach from −271821 to +275760.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use chrono::{DateTime, Utc};
-    /// use ferrovue::JsDate;
-    ///
-    /// let far = JsDate::parse("+270000-01-01").unwrap();
-    /// let refused = DateTime::<Utc>::try_from(far).unwrap_err();
-    /// assert_eq!(refused.date(), far);
-    /// assert!(DateTime::<Utc>::try_from(JsDate::INVALID).is_err());
-    /// ```
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub struct DateOutOfRange(JsDate);
-
-    impl DateOutOfRange {
-        /// The date chrono cannot hold.
-        #[must_use]
-        pub const fn date(self) -> JsDate {
-            self.0
-        }
-    }
-
-    impl fmt::Display for DateOutOfRange {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            match self.0.to_iso_string() {
-                Some(iso) => write!(f, "{iso} is beyond the dates chrono holds"),
-                None => f.write_str("an invalid date has no chrono date"),
-            }
-        }
-    }
-
-    impl std::error::Error for DateOutOfRange {}
+    use super::{DateOutOfRange, JsDate, JsTime};
 
     impl From<DateTime<Utc>> for JsDate {
         fn from(t: DateTime<Utc>) -> JsDate {
@@ -514,9 +517,6 @@ mod chrono_time {
         }
     }
 }
-
-#[cfg(feature = "chrono")]
-pub use chrono_time::DateOutOfRange;
 
 #[cfg(test)]
 mod tests;

@@ -1,10 +1,7 @@
 import { createApp, createSSRApp, createStaticVNode, createTextVNode, defineComponent, h, Suspense, type App, type Component, type Plugin } from "vue";
 import { routeRecords, type RouteEntry } from "./routes.ts";
-import { reviveDates } from "./client.ts";
-import { clearLoads, provideLoads } from "./loads.ts";
+import { clearLoads, provideLoads, reviveDates } from "./client.ts";
 import { reviveByPlan } from "./revive.ts";
-
-export { routeRecords, type RouteEntry } from "./routes.ts";
 
 /** A conformance fixture: the props, and `$slots`, `$route`, `$stores`, `$loads` and `$locale`. */
 export interface Fixture {
