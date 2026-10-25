@@ -61,6 +61,9 @@ export interface Val {
   /** For a value of a generated enum, the Rust expression of the enum (an `Option` of it when the
    * value is optional), where `code` is its string. */
   variant?: string;
+  /** For a list of a generated enum's values, or an optional one, the Rust place of the list of
+   * enums, where `code` and `iter` hold its strings. */
+  enums?: { place: string; def: EnumDef };
   /** For an integer computed as an `f64`, where the template computes it, as `fv::Refusals::keep`
    * takes it. */
   at?: string;
@@ -727,7 +730,7 @@ export function keptLiterals(ty: Ty, keep: (literal: string | number) => boolean
   const literals = LITERALS.get(ty);
   if (literals === undefined || (ty.k !== "str" && ty.k !== "int")) return ty;
   const left = literals.filter(keep);
-  return left.length === literals.length || left.length === 0 ? ty : literalTy(ty.k, left);
+  return left.length === literals.length || left.length === 0 ? ty : derived([ty], literalTy(ty.k, left));
 }
 
 /** Whether a literal of a union is falsy, as `""` and `0` are. */
@@ -775,7 +778,28 @@ export function joinTy(a: Ty, b: Ty): Ty {
   const mine = LITERALS.get(a);
   if (mine === undefined || (a.k !== "str" && a.k !== "int")) return a.k === "str" && ASCII.has(a) && !ascii ? STR : a;
   const theirs = LITERALS.get(other);
-  return theirs === undefined ? (ascii ? asciiTy() : { k: a.k }) : literalTy(a.k, [...new Set([...mine, ...theirs])]);
+  return theirs === undefined ? (ascii ? asciiTy() : { k: a.k }) : derived([a, other], literalTy(a.k, [...new Set([...mine, ...theirs])]));
+}
+
+const DECLARED = new WeakSet<Ty>();
+
+/** `ty`, with each string type in it that holds literals and is no generated enum marked as
+ * declared for a value the Rust caller holds as a string, which the compiler does not check
+ * against its literals. */
+export function declaredLiterals(ty: Ty): Ty {
+  if (ty.k === "opt" || ty.k === "list" || ty.k === "record") declaredLiterals(ty.of);
+  else if (ty.k === "str" && LITERALS.has(ty) && !ENUMS.has(ty)) DECLARED.add(ty);
+  return ty;
+}
+
+/** Whether a string type's literals are declared for a value the Rust caller holds as a string. */
+export function isDeclared(ty: Ty): boolean {
+  return DECLARED.has(ty);
+}
+
+function derived(from: readonly Ty[], ty: Ty): Ty {
+  if (from.some((t) => DECLARED.has(t))) DECLARED.add(ty);
+  return ty;
 }
 
 /** A Rust enum generated for a union of string literals. */
@@ -803,6 +827,12 @@ export function enumTy(def: EnumDef): Ty {
 /** The generated enum a field's type is, or makes optional. */
 export function enumOf(ty: Ty): EnumDef | undefined {
   return ENUMS.get(ty.k === "opt" ? ty.of : ty);
+}
+
+/** The generated enum the items of a list are, or make optional, for a list or an optional list. */
+export function enumItems(ty: Ty): EnumDef | undefined {
+  const list = ty.k === "opt" ? ty.of : ty;
+  return list.k === "list" ? enumOf(list.of) : undefined;
 }
 
 /** The path of a generated enum, from the module of `comp`. */

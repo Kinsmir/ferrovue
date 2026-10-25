@@ -7237,18 +7237,114 @@ const other = defineModel<"x" | "y">("other");
     expect(out).toContain("if props.model_value == XModelValue::Y {");
   });
 
-  it("keeps a single literal, a union with `string`, integer literals and lists of literals as they were", () => {
+  it("keeps a single literal, a union with `string` and integer literals as they were", () => {
     const out = compile(
       island(`<script setup lang="ts">
-defineProps<{ one: "a"; open: "a" | string; level: 1 | 2; tags: ("p" | "q")[] }>();
+defineProps<{ one: "a"; open: "a" | string; level: 1 | 2 }>();
 </script>
-<template><p>{{ one }}{{ open }}{{ level }}{{ tags.length }}</p></template>`),
+<template><p>{{ one }}{{ open }}{{ level }}</p></template>`),
     ).get("x.rs")!;
     expect(out).not.toContain("pub enum");
     expect(out).toContain("pub one: Cow<'a, str>,");
     expect(out).toContain("pub open: Cow<'a, str>,");
     expect(out).toContain("pub level: i64,");
-    expect(out).toContain("pub tags: Vec<Cow<'a, str>>,");
+  });
+
+  it("makes a list of a union a list of its enum, optional and nullable, of optional items, and in an interface", () => {
+    const out = compile(
+      island(`<script setup lang="ts">
+type Tone = "calm" | "loud";
+interface Row { tones: Tone[] }
+defineProps<{ tags: ("p" | "q")[]; tones: Tone[]; some?: Tone[]; none: Tone[] | null; holes: (Tone | null)[]; rows: Row[] }>();
+</script>
+<template><p>{{ tags.length }}{{ tones.length }}{{ some?.length }}{{ none?.length }}{{ holes.length }}{{ rows.length }}</p></template>`),
+    ).get("x.rs")!;
+    expect(out).toContain("pub enum XTags {");
+    expect(out).toContain("pub tags: Vec<XTags>,");
+    expect(out).toContain("pub tones: Vec<Tone>,");
+    expect(out).toContain("pub some: Option<Vec<Tone>>,");
+    expect(out).toContain("pub none: Option<Vec<Tone>>,");
+    expect(out).toContain("pub holes: Vec<Option<Tone>>,");
+    expect(out).toContain("pub struct Row {\n    #[serde(rename = \"tones\")]\n    pub tones: Vec<Tone>,\n}");
+    expect(out).toContain("pub fn new(tags: impl IntoIterator<Item = XTags>, tones: impl IntoIterator<Item = Tone>, holes: Vec<Option<Tone>>, rows: Vec<Row>) -> Self {");
+    expect(out).toContain("pub fn none(mut self, none: impl IntoIterator<Item = Tone>) -> Self {");
+    expect(out).toContain("pub fn some(mut self, some: impl IntoIterator<Item = Tone>) -> Self {");
+    expect(out).not.toContain("Cow<'a");
+  });
+
+  it("hands each item of a list of a union to a child's prop as the enum, and the list to a child's list of the union", () => {
+    const out = rendered(
+      compile(
+        island(
+          `<script setup lang="ts">
+import Y from "./Y.vue";
+type Tone = "calm" | "loud";
+const LABEL = { calm: "Calm", loud: "Loud" } as const;
+defineProps<{ tones: Tone[]; some?: Tone[]; holes: (Tone | null)[] }>();
+</script>
+<template><Y v-for="t in tones" :key="t" :tone="t" :wide="t" :all="tones" /><Y :all="some ?? []" :some="some" /><Y v-for="t in holes" :tone="t ?? undefined" :all="[]" /><b v-for="t in some ?? []">{{ LABEL[t] }}</b></template>`,
+          {
+            Y: `<script setup lang="ts">
+type Tone = "calm" | "loud";
+defineProps<{ tone?: Tone; wide?: Tone | "hot"; all: Tone[]; some?: Tone[] }>();
+</script>
+<template><i :data-tone="tone" :data-wide="wide">{{ all.join() }}{{ some?.join() }}</i></template>`,
+          },
+        ),
+      ).get("x.rs")!,
+    );
+    expect(out).toContain("for fv_t_ref in props.tones.iter() {\n        let fv_t = *fv_t_ref;");
+    expect(out).toContain("tone: Some(match fv_t { Tone::Calm => super::y::Tone::Calm, Tone::Loud => super::y::Tone::Loud }), wide: Some(match fv_t { Tone::Calm => super::y::YWide::Calm, Tone::Loud => super::y::YWide::Loud }), all: props.tones.iter().map(|&v| match v { Tone::Calm => super::y::Tone::Calm, Tone::Loud => super::y::Tone::Loud }).collect(), some: None");
+    expect(out).toContain("all: props.some.as_deref().unwrap_or(&[]).iter().map(|&v| match v {");
+    expect(out).toContain("some: props.some.as_ref().map(|v| v.iter().map(|&v| match v {");
+    expect(out).toContain("tone: fv_t_2.map(|v| match v { Tone::Calm => super::y::Tone::Calm, Tone::Loud => super::y::Tone::Loud }), wide: None, all: Vec::new()");
+    expect(out).toContain("fv::escape_into(out, match fv_t_3 { Tone::Calm => \"Calm\", Tone::Loud => \"Loud\" });");
+    expect(out).not.toContain("_ =>");
+    expect(out).not.toContain("parse");
+  });
+
+  it("parses a string the Rust caller holds where a child's union prop needs the enum, refusing the render outside the union", () => {
+    const out = rendered(
+      compile(
+        island(
+          `<script setup lang="ts">
+import Y from "./Y.vue";
+defineProps<{ one: "calm"; byName: Record<string, "calm" | "loud"> }>();
+</script>
+<template><Y :tone="one" /><Y v-for="t in byName" :tone="t" /></template>`,
+          {
+            Y: `<script setup lang="ts">
+defineProps<{ tone: "calm" | "loud" }>();
+</script>
+<template><i>{{ tone }}</i></template>`,
+          },
+        ),
+      ).get("x.rs")!,
+    );
+    expect(out).toContain('tone: match props.one.parse::<super::y::YTone>() { Ok(fv_u) => fv_u, Err(fv_e) => { fv_refusals.keep(Err::<(), _>(fv::Refused::new("FV0518", format!("{fv_e}: the template needs one of them here, and Vue would write the string itself: check the value before rendering"))), 5, 21); super::y::YTone::Calm } }');
+    expect(out).toContain("tone: match fv_t.parse::<super::y::YTone>() {");
+    expect(out).not.toContain("_ =>");
+  });
+
+  it("refuses a list of strings given to a child's list of a union", () => {
+    const e = failure(() =>
+      compile(
+        island(
+          `<script setup lang="ts">
+import Y from "./Y.vue";
+defineProps<{ names: string[] }>();
+</script>
+<template><Y :all="names" /></template>`,
+          {
+            Y: `<script setup lang="ts">
+defineProps<{ all: ("calm" | "loud")[] }>();
+</script>
+<template><i>{{ all.join() }}</i></template>`,
+          },
+        ),
+      ),
+    );
+    expect(e.code).toBe("FV0515");
   });
 
   it("writes a union a `.ts` file declares once, to `types.rs`, for every component that uses it", () => {

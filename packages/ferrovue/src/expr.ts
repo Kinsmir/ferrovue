@@ -1,5 +1,5 @@
-import { type Component, type N, type Scope, type Ty, type Val, absence, BOOL, enumOf, enumPath, fail, falsyLiteral, FLOAT, GenError, INT, isAscii, joinAbsence, joinTy, keptLiterals, literalsOf, literalTy, nodeName, nothing, NULL, opt, placeOf, refusalAt, rustStr, sameTy, snake, STR, strTy, UNDEF, variantPath, withAbsence } from "./model.ts";
-import { enumEquality, knownLiteral, refuseOutside } from "./enums.ts";
+import { type Component, type N, type Scope, type Ty, type Val, absence, BOOL, enumItems, enumOf, enumPath, fail, falsyLiteral, FLOAT, GenError, INT, isAscii, joinAbsence, joinTy, keptLiterals, literalsOf, literalTy, nodeName, nothing, NULL, opt, placeOf, refusalAt, rustStr, sameTy, snake, STR, strTy, UNDEF, variantPath, withAbsence } from "./model.ts";
+import { enumEquality, enumListVal, knownLiteral, refuseOutside } from "./enums.ts";
 import { CONFIG_FILE, ctx } from "./context.ts";
 import { lookupStruct, markHome, tyOfTs } from "./typescript.ts";
 import { claim } from "./plugin.ts";
@@ -135,6 +135,11 @@ export function fieldVal(comp: Component, base: string, ty: Ty, js: string, node
   const f = owner === comp ? found : { ...found, ty: markHome(found.ty, owner.name) };
   if (st!.slot) return { code: `${base}.${f.rust}`, ty: f.ty };
   const place = `${base}.${f.rust}`;
+  const items = enumItems(f.ty);
+  if (items !== undefined) {
+    if (f.dflt !== undefined && f.ty.k === "opt") return enumListVal(comp, `${place}.as_deref().unwrap_or(${f.dflt})`, f.ty.of, items);
+    return enumListVal(comp, place, f.ty, items);
+  }
   const def = enumOf(f.ty);
   if (def !== undefined) {
     const literal = f.dflt === undefined ? undefined : def.literals.find((l) => rustStr(l) === f.dflt);
@@ -645,6 +650,7 @@ export function expr(s: Scope, n: N): Val {
           return { code: panicky(fallback) ? `${some}.unwrap_or_else(|| ${fallback})` : `${some}.unwrap_or(${fallback})`, ty: b.ty, owned: true, ...loneOf(a, b) };
         }
         if (b.iter !== undefined) fail(comp, "FV0615", "`??` falling back to a computed list", n);
+        if (a.enums !== undefined && a.ty.of.k === "list" && untypedEmpty(b)) return { ...enumListVal(comp, `${atom(a.enums.place)}.as_deref().unwrap_or(&[])`, a.ty.of, a.enums.def), ...loneOf(a, b) };
         if (a.held !== undefined && b.ty.k === "list" && !untypedEmpty(b)) fail(comp, "FV0630", "`??` after an optional chain that computes a list, falling back to another list: fall back to `[]`", n);
         if (a.ty.of.k === "list" && b.ty.k === "list" && (untypedEmpty(b) || (sameTy(a.ty.of, b.ty) && !b.code.startsWith("[")))) {
           return { code: `${atom(a.code)}${a.held !== undefined ? "" : ".map(|v| &v[..])"}.unwrap_or(${untypedEmpty(b) ? "&[]" : sliced(b)})`, ty: untypedEmpty(b) ? a.ty.of : joinTy(a.ty.of, b.ty), slice: true, ...loneOf(a, b) };
@@ -904,6 +910,8 @@ function ownedField(comp: Component, base: Val, js: string, n: N): Val {
   const ty = owner === comp ? f.ty : markHome(f.ty, owner.name);
   const place = `${atom(base.code)}.${f.rust}`;
   const lone = base.lone ? { lone: true as const } : {};
+  const items = enumItems(ty);
+  if (items !== undefined) return enumListVal(comp, `(${place})`, ty, items);
   const def = enumOf(ty);
   if (def !== undefined) return { code: ty.k === "opt" ? `${place}.map(${enumPath(comp, def)}::as_str)` : `${place}.as_str()`, ty, variant: place };
   if (ty.k === "str") return { code: `&*(${place})`, ty, ...lone };

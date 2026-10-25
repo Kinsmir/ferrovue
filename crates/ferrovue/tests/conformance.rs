@@ -447,6 +447,61 @@ fn props_of_literal_unions_are_built_from_variants_and_parsed_strings() {
     );
 }
 
+#[test]
+fn lists_of_literal_unions_hold_the_enum_and_a_string_outside_one_is_refused() {
+    use generated::types::Hue;
+    use generated::union_list::{Props, UnionListSizes};
+    let props = Props::new(
+        [Hue::Red, Hue::Green, Hue::Red],
+        vec![Some(Hue::Red), None, Some(Hue::Green)],
+        [("first", "green".into()), ("second", "red".into())]
+            .into_iter()
+            .collect(),
+        "Palette",
+        [UnionListSizes::Sm, UnionListSizes::Lg],
+    )
+    .extra([Hue::Green, Hue::Red])
+    .spare(["green".parse().unwrap()]);
+    let mut from_rust = String::new();
+    generated::union_list::render(&mut from_rust, &props);
+    let fixture = fs::read_to_string(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/conformance/fixtures/UnionList/typical.html"
+    ))
+    .unwrap();
+    assert_eq!(from_rust, fixture);
+    assert_eq!(
+        serde_json::to_string(&props).unwrap(),
+        r#"{"hues":["red","green","red"],"extra":["green","red"],"spare":["green"],"holes":["red",null,"green"],"named":{"first":"green","second":"red"},"label":"Palette","sizes":["sm","lg"]}"#
+    );
+
+    let outside = r#"{"hues":["red","xl"],"holes":[],"named":{},"label":"","sizes":[]}"#;
+    let e = serde_json::from_str::<Props<'_>>(outside).unwrap_err();
+    assert!(e.to_string().starts_with("unknown variant `xl`"), "{e}");
+    let hole = r#"{"hues":[],"holes":[null,"xl"],"named":{},"label":"","sizes":[]}"#;
+    assert!(serde_json::from_str::<Props<'_>>(hole).is_err());
+
+    let named = Props::new(
+        [],
+        vec![],
+        [("k", "xl".into())].into_iter().collect(),
+        "",
+        [],
+    );
+    let refused = generated::union_list::try_render(&mut String::new(), &named).unwrap_err();
+    assert_eq!(refused.code(), "FV0518");
+    assert_eq!(refused.component(), Some("UnionList"));
+    assert_eq!(refused.file(), Some("components/UnionList.vue"));
+    assert_eq!((refused.line(), refused.column()), (Some(24), Some(57)));
+    assert!(
+        refused
+            .message()
+            .starts_with("`xl` is not one of the members of `Hue`: `red`, `green`, `<b>&\"hue'`"),
+        "{}",
+        refused.message()
+    );
+}
+
 fn render_unread(props: &str) -> String {
     generated::render_json("Unread", props).unwrap()
 }

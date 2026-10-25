@@ -412,6 +412,59 @@ impl TryFrom<&str> for StepState {
     }
 }
 
+/// `Hue` in `types/unions.ts`: `"red" | "green" | "<b>&\"hue'"`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+#[allow(clippy::enum_variant_names, reason = "the variants are named after the union's literals")]
+pub enum Hue {
+    #[serde(rename = "red")]
+    Red,
+    #[serde(rename = "green")]
+    Green,
+    #[serde(rename = "<b>&\"hue'")]
+    BHue,
+}
+
+impl Hue {
+    /// Every member, in the order the union declares them.
+    pub const ALL: [Hue; 3] = [Hue::Red, Hue::Green, Hue::BHue];
+
+    /// The string literal this member stands for.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Hue::Red => "red",
+            Hue::Green => "green",
+            Hue::BHue => "<b>&\"hue'",
+        }
+    }
+}
+
+impl std::fmt::Display for Hue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl std::str::FromStr for Hue {
+    type Err = ferrovue::ParseUnionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "red" => Ok(Hue::Red),
+            "green" => Ok(Hue::Green),
+            "<b>&\"hue'" => Ok(Hue::BHue),
+            _ => Err(ferrovue::ParseUnionError::new("Hue", s, &["red", "green", "<b>&\"hue'"])),
+        }
+    }
+}
+
+impl TryFrom<&str> for Hue {
+    type Error = ferrovue::ParseUnionError;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        s.parse()
+    }
+}
+
 /// `Choice` in `types/catalog.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]

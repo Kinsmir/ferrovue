@@ -16,3 +16,5 @@ export const STATE_LABELS = { todo: "To do", done: "Done & <dusted>", skipped: "
 const SIDE = "ri";
 
 export const END = `${SIDE}ght` as const;
+
+export type Hue = "red" | "green" | "<b>&\"hue'";

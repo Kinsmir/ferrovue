@@ -18,6 +18,20 @@ released together and share version numbers.
 
 ### Fixed
 
+- A prop or a field typed as a list of a union of string literals (`tones: Tone[]`) is a list of
+  the union's enum: `Vec<Tone>`, `Option<Vec<Tone>>` when it is optional or nullable, and
+  `Vec<Option<Tone>>` for `(Tone | null)[]`, with a constructor or setter taking
+  `impl IntoIterator<Item = Tone>`. It was a list of strings, and an item handed to a child's
+  union prop was converted with a `match` whose last arm took any other string, so a string
+  outside the union rendered as the last member where Vue writes the string itself. A `v-for`
+  item of such a list reaches a child's union prop as the enum, a lookup table read by it is a
+  `match` over the variants, and the list reaches a child's list of the union as it is. This
+  changes the generated `Props` of such a prop, which is a change in the generated code; the
+  island's JSON is the same. A string the Rust caller holds where the render needs a union's enum
+  (a value of a `Record<string, Tone>`, a store's state, a prop of a single literal) is parsed as
+  the component renders, and one outside the union refuses the render with FV0518, which
+  `ERRORS` of `ferrovue/compiler` now lists, a change to the npm package's API. Generated code
+  calls no item 0.11.0 lacks, so `__compat!` stays at 5.
 - The README and the guide's quick start name the schema of the current release in `$schema`;
   they named 0.8.0's. `release.ts bump` writes the new version into both, and `release.ts check`
   refuses a tag they do not match.

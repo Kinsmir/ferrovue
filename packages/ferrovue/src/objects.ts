@@ -1,4 +1,4 @@
-import { type Component, type N, type Scope, type StructTy, type Ty, type Val, enumOf, fail, GenError, literalsOf, nothing, sameTy } from "./model.ts";
+import { type Component, type N, type Scope, type StructTy, type Ty, type Val, enumItems, enumOf, fail, GenError, literalsOf, nothing, sameTy } from "./model.ts";
 import { intoEnum, knownLiteral, refuseUnproven } from "./enums.ts";
 import { describeTy, expr, holdsNothing, typedBy } from "./expr.ts";
 import { lookupStruct, markHome } from "./typescript.ts";
@@ -74,6 +74,7 @@ export function ownedStructs(v: Val): string {
 
 /** `v` held as a value of type `want`, owning what it would otherwise borrow from a local. */
 export function owning(comp: Component, v: Val, want: Ty, node: N): string {
+  if (enumItems(want) !== undefined) return ownInto(comp, v, want, node);
   if (v.owned) {
     if (sameTy(v.ty, want)) return v.code;
     if (want.k === "opt" && sameTy(v.ty, want.of)) return `Some(${bare(v.code)})`;
@@ -99,7 +100,7 @@ function fieldOwned(comp: Component, v: Val, want: Ty, node: N, what: string): s
   const def = enumOf(want);
   if (def !== undefined) {
     if (want.k === "opt" && nothing(v.ty)) return "None";
-    const into = (v.ty.k === "opt" ? v.ty.of : v.ty).k === "str" && (v.ty.k !== "opt" || want.k === "opt") ? intoEnum(comp, v, def) : null;
+    const into = (v.ty.k === "opt" ? v.ty.of : v.ty).k === "str" && (v.ty.k !== "opt" || want.k === "opt") ? intoEnum(comp, v, def, node) : null;
     if (into === null) {
       refuseUnproven(v);
       const literal = knownLiteral(v);
