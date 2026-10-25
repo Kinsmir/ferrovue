@@ -588,7 +588,7 @@ export const ERRORS = {
   },
   FV0623: {
     title: "Branches of `?:` of different types",
-    detail: "`?:` gives either branch, and the server holds the result in one Rust type, so the branches are of one type, numbers of either kind, or one absent where the other may be. Convert a branch (`String(n)`), or render each case in its own element with `v-if` and `v-else`.",
+    detail: "`?:` gives either branch. Where the result is only written out, in `{{ }}`, a string-valued attribute or a template literal, each branch is written as JavaScript writes it, so the branches may differ in type. Anywhere else the server holds the result in one Rust type, so the branches are of one type, numbers of either kind, or one absent where the other may be. Convert a branch (`String(n)`), or render each case in its own element with `v-if` and `v-else`.",
   },
   FV0624: {
     title: "`new` in an expression",

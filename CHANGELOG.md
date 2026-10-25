@@ -30,6 +30,8 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
   narrows it, which 0.11.0 refused with FV0515: [Unions of string literals](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#unions-of-string-literals).
 - The README and the guide name the release they ship with in `$schema` and the `ferrovue`
   dependency, where the schema was 0.8.0's: [Quick start](https://docs.rs/ferrovue/latest/ferrovue/guide/quick_start/index.html#2-configure).
+- FV0623's detail says a `?:` whose branches differ in type compiles where it is only written out:
+  [FV0623](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#fv0623).
 
 ## [0.11.0] - 2026-10-25
 
