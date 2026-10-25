@@ -1,6 +1,8 @@
-import { type Component, type EnumDef, type N, type Scope, type Ty, type Val, absence, BOOL, enumItems, enumOf, fail, falsyLiteral, FLOAT, GenError, INT, isAscii, joinAbsence, joinTy, keptLiterals, literalsOf, literalTy, nodeName, nothing, NULL, opt, placeOf, refusalAt, rustStr, sameTy, snake, STR, strTy, UNDEF, UNION_STR, unionStr, variantPath, withAbsence } from "./model.ts";
+import { type Component, type EnumDef, type N, type Scope, type Ty, type Val, absence, BOOL, enumItems, enumOf, fail, falsyLiteral, FLOAT, INT, isAscii, joinAbsence, joinTy, keptLiterals, literalsOf, literalTy, nodeName, nothing, NULL, opt, placeOf, refusalAt, rustStr, sameTy, snake, STR, strTy, UNDEF, UNION_STR, unionStr, variantPath, withAbsence } from "./model.ts";
+import { GenError } from "./errors.ts";
 import { enumEquality, enumListVal, exactlyEnum, intoEnum, knownLiteral, refuseOutside } from "./enums.ts";
-import { CONFIG_FILE, ctx } from "./context.ts";
+import { CONFIG_FILE } from "./config.ts";
+import { ctx } from "./context.ts";
 import { lookupStruct, markHome, tyOfTs } from "./typescript.ts";
 import { claim } from "./plugin.ts";
 import { atom, bare, binary, enclosed, logical, negate, not, occurrences, receiver, strArg } from "./parens.ts";

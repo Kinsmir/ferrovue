@@ -1,6 +1,8 @@
 import { basename } from "node:path";
-import { type Component, type N, type Scope, type Ty, type Val, absence, dollarNames, enumOf, fail, GenError, nodeName, nothing, snake, takesAttrs, UNDEF, UNION_STR, unionStr } from "./model.ts";
-import { CONFIG_FILE, ctx } from "./context.ts";
+import { type Component, type N, type Scope, type Ty, type Val, absence, dollarNames, enumOf, fail, nodeName, nothing, snake, takesAttrs, UNDEF, UNION_STR, unionStr } from "./model.ts";
+import { GenError } from "./errors.ts";
+import { CONFIG_FILE } from "./config.ts";
+import { ctx } from "./context.ts";
 import { definePropsType, readTypeFile, refuseDates, tyOfTs } from "./typescript.ts";
 import { resolveImport } from "./resolve.ts";
 import { constOfDecl, type Declared, declareConsts } from "./constants.ts";

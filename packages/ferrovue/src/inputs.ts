@@ -1,5 +1,6 @@
 import { dirname, resolve, sep } from "node:path";
-import { type Config, ctx } from "./context.ts";
+import { type Config } from "./config.ts";
+import { ctx } from "./context.ts";
 import { pagesFolder } from "./file-routes.ts";
 
 /** What a run reads, as absolute paths: what `ferrovue --watch` and the Vite plugin regenerate on. */

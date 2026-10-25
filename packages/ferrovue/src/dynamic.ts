@@ -1,7 +1,8 @@
 import { parse as parseJs } from "@babel/parser";
 import { isHTMLTag, isVoidTag } from "@vue/shared";
 import { basename } from "node:path";
-import { type Component, type N, type Scope, camelize, fail, GenError, rustStr, tagAst } from "./model.ts";
+import { type Component, type N, type Scope, camelize, fail, rustStr, tagAst } from "./model.ts";
+import { GenError } from "./errors.ts";
 import { ctx } from "./context.ts";
 import { matchOver } from "./enums.ts";
 import { expr } from "./expr.ts";

@@ -1,7 +1,6 @@
 import { createMemoryHistory, createRouter, isNavigationFailure, NavigationFailureType, START_LOCATION, type RouteLocationNormalized, type Router, type RouterHistory } from "vue-router";
-import { routeRecords, type RouteEntry } from "./routes.ts";
+import { routeRecords, type RouteEntry } from "./route-records.ts";
 
-export { routeRecords, type RouteEntry } from "./routes.ts";
 
 /** What `linkRouter` hands navigations to, and the router options of `ferrovue.config.json`. */
 export interface LinkRouterOptions {

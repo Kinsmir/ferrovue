@@ -1,7 +1,7 @@
 import { createApp, createSSRApp, createStaticVNode, createTextVNode, defineComponent, h, Suspense, type App, type Component, type Plugin } from "vue";
-import { routeRecords, type RouteEntry } from "./routes.ts";
+import { routeRecords, type RouteEntry } from "./route-records.ts";
 import { clearLoads, provideLoads, reviveDates } from "./client.ts";
-import { reviveByPlan } from "./revive.ts";
+import { isMissing, missingPeer, peer } from "./peer.ts";
 
 /** A conformance fixture: the props, and `$slots`, `$route`, `$stores`, `$loads` and `$locale`. */
 export interface Fixture {
@@ -14,22 +14,6 @@ export interface Fixture {
   loads?: Record<string, unknown> | null;
   /** `$locale`: the locale the fixture renders in, when the project translates. */
   locale?: string | null;
-}
-
-/** Where the props of each component, and the results of each loader, hold dates inside lists,
- * dictionaries and objects, as the server writes it beside them: by component and by loader. */
-export interface DatePlans {
-  components: Record<string, unknown>;
-  loaders: Record<string, unknown>;
-}
-
-/** A fixture of `component` as the client reads the page the server writes for it: each date its
- * props and its loaders' results hold inside a list, a dictionary or an object turned back into a
- * `Date` by the plans the server writes beside them. */
-export function withDatePlans(fixture: Fixture, component: string, plans: DatePlans): Fixture {
-  const props = reviveByPlan(fixture.props, plans.components[component]);
-  if (!fixture.loads || !Object.keys(plans.loaders).length) return { ...fixture, props };
-  return { ...fixture, props, loads: { ...fixture.loads, dates: plans.loaders } };
 }
 
 /** A fixture's JSON, split into the props and the rest. */
@@ -52,27 +36,6 @@ function nodeCount(html: string): number {
 }
 
 const staticNode = (html: string) => (html === "" ? createTextVNode("") : createStaticVNode(html, nodeCount(html)));
-
-function isMissing(error: unknown, name: string): boolean {
-  const { code, message } = (error ?? {}) as { code?: unknown; message?: unknown };
-  return (
-    (code === "ERR_MODULE_NOT_FOUND" || code === "MODULE_NOT_FOUND") &&
-    typeof message === "string" &&
-    (message.includes(`'${name}'`) || message.includes(`"${name}"`))
-  );
-}
-
-function missingPeer(name: string, needs: string, cause: unknown): Error {
-  return new Error(`ferrovue/testing: ${needs}, which needs \`${name}\`: install it in your project (\`pnpm add -D ${name}\`, or your package manager's equivalent)`, { cause });
-}
-
-export async function peer<T>(name: string, needs: string, load: () => Promise<T>): Promise<T> {
-  try {
-    return await load();
-  } catch (error) {
-    throw isMissing(error, name) ? missingPeer(name, needs, error) : error;
-  }
-}
 
 async function optionalPinia(stores: Record<string, unknown>): Promise<typeof import("pinia") | null> {
   try {

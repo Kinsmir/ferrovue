@@ -1,12 +1,27 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join, posix, resolve, sep } from "node:path";
 import type { Plugin, ResolvedConfig, ViteDevServer } from "vite";
-import { type Alias, type Config, CONFIG_FILE, type GenError, loadConfig, write, type Written } from "./compiler.ts";
+import { type Alias, write, type Written } from "./compiler.ts";
+import { type Config, CONFIG_FILE, loadConfig } from "./config.ts";
+import { type GenError } from "./errors.ts";
 import { formatRefusal, formatWarning, isRefusal } from "./diagnostics.ts";
-import { allPages, type FileRoute, fileRoutes, pagesFolder } from "./file-routes.ts";
+import { allPages, fileRoutes, pagesFolder } from "./file-routes.ts";
 import { affects, type Inputs, inputsOf, watched } from "./inputs.ts";
 
-export type { FileRoute } from "./file-routes.ts";
+/** A route as vue-router's file-based routing builds it from a folder of pages. */
+export interface FileRoute {
+  /** The path, relative to the parent's unless it starts with `/`. */
+  path: string;
+  /** The route's name, absent on a folder and on a `_parent.vue`. */
+  name?: string;
+  /** The page's `.vue` file, relative to the project root; absent on a folder, which only groups
+   * the routes in it. */
+  file?: string;
+  /** The page's component name, from its file's path: `books/[id].vue` is `BooksId`. */
+  component?: string;
+  /** The routes nested in it. */
+  children?: FileRoute[];
+}
 
 export interface FerrovueOptions {
   /** The project root, which the configuration's paths are relative to: Vite's working directory

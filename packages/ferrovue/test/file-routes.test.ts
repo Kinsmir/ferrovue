@@ -3,7 +3,8 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, expect, it } from "vitest";
 import { createRoutesContext, resolveOptions } from "vue-router/unplugin";
-import { fileRoutes, type FileRoute } from "../src/file-routes.ts";
+import { fileRoutes } from "../src/file-routes.ts";
+import { type FileRoute } from "../src/vite.ts";
 import { relativePath } from "../src/paths.ts";
 
 const TREES = join(import.meta.dirname, "file-routes.json");

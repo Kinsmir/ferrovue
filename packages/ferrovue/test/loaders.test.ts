@@ -2,8 +2,9 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { GenError, generate } from "../src/compiler.ts";
-import { type Code } from "../src/errors.ts";
+import { GenError } from "../src/errors.ts";
+import { generate } from "../src/compiler.ts";
+import { type ErrorCode } from "../src/errors.ts";
 
 const roots: string[] = [];
 
@@ -115,7 +116,7 @@ describe("loaders", () => {
     expect(x).toContain("if fv_loads.get(super::loaders::LoadPost { id: 1i64, lang: None }).is_none() {");
   });
 
-  const refused: [string, Code, string, RegExp][] = [
+  const refused: [string, ErrorCode, string, RegExp][] = [
     ["an await of a function that is not a loader", "FV2001", sfc("const post = await fetchPost(props.id);", "<b>{{ post.title }}</b>", "fetchPost"), /only a loader's result is awaited on the server/],
     ["a loader whose name is not a literal", "FV2002", sfc("const n = await loadNamed();", "<b>{{ n }}</b>", "loadNamed"), /its name is a string literal/],
     ["a loader that is not async", "FV2002", sfc("const n = await loadSync(1);", "<b>{{ n }}</b>", "loadSync"), /the loader is an `async` function/],

@@ -5,7 +5,8 @@ import { join, sep } from "node:path";
 import vuePlugin from "@vitejs/plugin-vue";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { build, createBuilder, type Rolldown, type ViteDevServer } from "vite";
-import { loadConfig, write } from "../src/compiler.ts";
+import { loadConfig } from "../src/config.ts";
+import { write } from "../src/compiler.ts";
 import { affects, inputsOf } from "../src/inputs.ts";
 import ferrovue from "../src/vite.ts";
 

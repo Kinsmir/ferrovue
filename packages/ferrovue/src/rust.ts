@@ -1,6 +1,7 @@
 import { parse as parseJs } from "@babel/parser";
 import { basename } from "node:path";
-import { type Component, type Field, type N, type Struct, type Ty, blankComponent, enumItems, enumOf, enumPath, fail, GenError, REFUSALS, rustStr, snake, tagAst, takesAttrs } from "./model.ts";
+import { type Component, type Field, type N, type Struct, type Ty, blankComponent, enumItems, enumOf, enumPath, fail, REFUSALS, rustStr, snake, tagAst, takesAttrs } from "./model.ts";
+import { GenError } from "./errors.ts";
 import { enumsSource, holdsMapped } from "./enums.ts";
 import { ctx, INLINE_HTML } from "./context.ts";
 import { bareDates, datePlan, holdsDate, lookupStruct, typeWritten } from "./typescript.ts";

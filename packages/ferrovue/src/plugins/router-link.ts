@@ -1,7 +1,7 @@
 import { escapeHtml } from "@vue/shared";
 import { type N, type Scope, type Val, camelize, fail, rustStr } from "../model.ts";
 import { asWritten } from "../numbers.ts";
-import { CONFIG_FILE } from "../context.ts";
+import { CONFIG_FILE } from "../config.ts";
 import { expr } from "../expr.ts";
 import { lonely } from "../strings.ts";
 import { bare, condition, scrutinee, strArg } from "../parens.ts";

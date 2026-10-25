@@ -1,4 +1,5 @@
-import { type Component, type N, type Scope, type Ty, type Val, BOOL, fail, FLOAT, GenError, INT, isAscii, joinTy, literalTy, opt, rustStr, sameTy, STR, strTy, UNDEF } from "./model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, BOOL, fail, FLOAT, INT, isAscii, joinTy, literalTy, opt, rustStr, sameTy, STR, strTy, UNDEF } from "./model.ts";
+import { GenError } from "./errors.ts";
 import { constOf, ownKeys, ownKeyTest } from "./constants.ts";
 import { ctx } from "./context.ts";
 import { fresh, jsHint } from "./names.ts";

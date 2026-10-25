@@ -1,4 +1,5 @@
-import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, distinctFields, fail, nothing, GenError, rustStr, snake } from "./model.ts";
+import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, distinctFields, fail, nothing, rustStr, snake } from "./model.ts";
+import { GenError } from "./errors.ts";
 import { expr } from "./expr.ts";
 import { atom, bare, operand, strArg, UNARY } from "./parens.ts";
 import { Emitter } from "./emitter.ts";

@@ -1,14 +1,16 @@
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
-import { type Component, type N, type Scope, type Val, BOOL, fail, failIn, GenError, opt, rustStr, STR } from "../model.ts";
-import { type Config, CONFIG_FILE } from "../context.ts";
+import { type Component, type N, type Scope, type Val, BOOL, fail, failIn, opt, rustStr, STR } from "../model.ts";
+import { GenError } from "../errors.ts";
+import { type Config, CONFIG_FILE } from "../config.ts";
 import { expr } from "../expr.ts";
 import { boolOf, pathOf } from "../narrowing.ts";
 import { atom, bare, not, strArg } from "../parens.ts";
 import { type Plugin, runOf, scopeOf } from "../plugin.ts";
 import { header } from "../rust.ts";
 import { readJsonFile } from "../files.ts";
-import { allPages, type FileRoute, fileRoutes } from "../file-routes.ts";
+import { allPages, fileRoutes } from "../file-routes.ts";
+import { type FileRoute } from "../vite.ts";
 import { scopeIdOf } from "./scoped.ts";
 import { routerLink } from "./router-link.ts";
 

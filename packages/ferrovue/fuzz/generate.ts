@@ -1,4 +1,4 @@
-import type { Config } from "../src/compiler.ts";
+import type { Config } from "../src/config.ts";
 import { portableTime } from "../src/plugins/dates.ts";
 import { loadKey } from "../src/client.ts";
 import { DATE_METHODS, HAND_STRINGS, HAND_TIMES, dateCases } from "../test/date-inputs.ts";

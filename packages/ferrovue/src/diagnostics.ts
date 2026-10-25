@@ -1,5 +1,5 @@
-import { type Code, docsUrl, ERRORS } from "./errors.ts";
-import { GenError, GenErrors } from "./model.ts";
+import { type ErrorCode, docsUrl, ERRORS } from "./errors.ts";
+import { GenError, GenErrors } from "./errors.ts";
 
 /** One refusal or warning, as `ferrovue --format json` writes it. Lines and columns count from 1; the end is
  * exclusive, and `null` where it is not known. */
@@ -9,7 +9,7 @@ export interface Diagnostic {
   column: number | null;
   endLine: number | null;
   endColumn: number | null;
-  code: Code;
+  code: ErrorCode;
   severity: "error" | "warning";
   title: string;
   message: string;
@@ -18,7 +18,7 @@ export interface Diagnostic {
   docs: string;
 }
 
-const UNPARSED: Code = "FV0001";
+const UNPARSED: ErrorCode = "FV0001";
 
 /** Whether the compiler raised `e` for its input: a refusal, or a file that does not parse. */
 export function isRefusal(e: unknown): e is GenError | SyntaxError {

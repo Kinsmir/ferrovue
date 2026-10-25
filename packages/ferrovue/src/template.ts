@@ -1,4 +1,5 @@
-import { type N, type Scope, type Val, fail, GenError, namesSelf, nodeName } from "./model.ts";
+import { type N, type Scope, type Val, fail, namesSelf, nodeName } from "./model.ts";
+import { GenError } from "./errors.ts";
 import { ctx } from "./context.ts";
 import { expr, shown } from "./expr.ts";
 import { type Presence, boolOf, cond, known, literalNarrowing, narrowedVal, narrowTo, presence, truthTested, truthy } from "./narrowing.ts";

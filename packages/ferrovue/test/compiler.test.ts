@@ -4,8 +4,10 @@ import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { compileTemplate, parse as parseSfc } from "@vue/compiler-sfc";
-import { type Config, GenError, GenErrors, generate, loadConfig } from "../src/compiler.ts";
-import { type Code, ERRORS } from "../src/errors.ts";
+import { type Config, loadConfig } from "../src/config.ts";
+import { GenError, GenErrors } from "../src/errors.ts";
+import { generate } from "../src/compiler.ts";
+import { type ErrorCode, ERRORS } from "../src/errors.ts";
 import { GENERATED_VERSION } from "../src/rust.ts";
 
 const roots: string[] = [];
@@ -5936,7 +5938,7 @@ defineProps<{ chip: Chip }>();
 <template><b :class="chip.size">{{ chip.label }}</b></template>`,
   };
 
-  const codes: Record<string, Code> = {
+  const codes: Record<string, ErrorCode> = {
     "a for loop that does not count": "FV1909",
     "a counting loop whose step is not a whole number": "FV1909",
     "a counting loop that counts away from its bound": "FV1909",
@@ -6848,7 +6850,7 @@ describe("the configuration", () => {
     throw new Error("loaded without an error");
   };
   const helper = (spec: unknown) => ({ ...CONFIG, helpers: { module: "./helpers", functions: { plural: spec } } });
-  const cases: [string, unknown, Code, RegExp][] = [
+  const cases: [string, unknown, ErrorCode, RegExp][] = [
     ["null", null, "FV1113", /^ferrovue\.config\.json holds `null`, where it holds an object/],
     ["an array", [CONFIG], "FV1113", /holds an array/],
     ["a string", "components", "FV1113", /holds a string/],

@@ -8,31 +8,6 @@ export interface ErrorDoc {
   retired?: string;
 }
 
-/** The areas codes are grouped in, by their first two digits, with the guide page that explains each. */
-export const AREAS: Record<string, { name: string; guide?: string }> = {
-  "00": { name: "Components and parsing" },
-  "01": { name: "Script setup" },
-  "02": { name: "Constants and enums" },
-  "03": { name: "Props and types", guide: "props" },
-  "04": { name: "Templates and attributes", guide: "generated_code" },
-  "05": { name: "Child components", guide: "generated_code" },
-  "06": { name: "Expressions" },
-  "07": { name: "Strings and numbers", guide: "strings" },
-  "08": { name: "Lists and loops", guide: "props" },
-  "09": { name: "Slots", guide: "slots" },
-  "10": { name: "Classes, styles and scoped styles", guide: "scoped_styles" },
-  "11": { name: "Configuration and helpers", guide: "quick_start" },
-  "12": { name: "Router", guide: "routing" },
-  "13": { name: "Pinia stores", guide: "pinia" },
-  "14": { name: "vue-i18n", guide: "i18n" },
-  "15": { name: "Raw HTML, client-only content, teleports and Rust twins", guide: "errors_and_limits" },
-  "16": { name: "Provide and inject", guide: "provide_inject" },
-  "17": { name: "Page head", guide: "head" },
-  "18": { name: "Dates and locale formatting", guide: "dates_and_prices" },
-  "19": { name: "Statements and functions", guide: "script_logic" },
-  "20": { name: "Loaders", guide: "loaders" },
-};
-
 /** Every code the compiler raises. A code is never reused: one the compiler stops raising is marked
  * `retired` and stays listed. `pnpm errors:generate` writes the guide's index from this list. */
 export const ERRORS = {
@@ -1755,9 +1730,56 @@ export const ERRORS = {
 } as const satisfies Record<`FV${number}`, ErrorDoc>;
 
 /** A stable error code, as `FV0604`. */
-export type Code = keyof typeof ERRORS;
+export type ErrorCode = keyof typeof ERRORS;
 
 /** Where a code is documented. */
 export function docsUrl(code: string): string {
   return `https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#${code.toLowerCase()}`;
+}
+
+/** Where in a file an error is: lines and columns count from 1, and the end is exclusive. */
+export interface SourceLocation {
+  file: string;
+  line?: number;
+  column?: number;
+  endLine?: number;
+  endColumn?: number;
+}
+
+/** A construct the compiler refuses: its stable code, the message as shown, where it is, and what
+ * is refused without the location and the quoted line. */
+export class GenError extends Error {
+  readonly code: ErrorCode;
+  readonly at: SourceLocation | null;
+  readonly what: string;
+  /** A short way around the refusal, where one is known. */
+  readonly help: string | null;
+  /** Where a component reads what is refused, when that is in another file. */
+  readAt: SourceLocation | null = null;
+
+  constructor(code: ErrorCode, message: string, at: SourceLocation | null = null, what: string = message, help: string | null = null) {
+    super(message);
+    this.code = code;
+    this.at = at;
+    this.what = what;
+    this.help = help;
+  }
+}
+
+/** Every refusal of a run, raised once the compiler has checked all it can. It carries the first
+ * refusal's code, location and message, so code that handles one `GenError` still works. */
+export class GenErrors extends GenError {
+  /** The refusals, in the order of the components and of their lines. */
+  readonly errors: readonly (GenError | SyntaxError)[];
+  /** The components left unchecked because they use a refused one. */
+  readonly unchecked: readonly string[];
+
+  constructor(errors: readonly (GenError | SyntaxError)[], unchecked: readonly string[] = []) {
+    const first = errors[0]!;
+    if (first instanceof GenError) super(first.code, first.message, first.at, first.what, first.help);
+    else super("FV0001", first.message);
+    if (first instanceof GenError) this.readAt = first.readAt;
+    this.errors = errors;
+    this.unchecked = unchecked;
+  }
 }

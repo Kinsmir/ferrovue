@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { relativePath } from "../paths.ts";
-import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, absence, blankComponent, BOOL, distinctFields, fail, failIn, FLOAT, GenError, INT, nodeName, opt, sameTy, snake, STR, tagAst, UNDEF } from "../model.ts";
+import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, absence, blankComponent, BOOL, distinctFields, fail, failIn, FLOAT, INT, nodeName, opt, sameTy, snake, STR, tagAst, UNDEF } from "../model.ts";
+import { GenError } from "../errors.ts";
 import { listDir, parseTs } from "../files.ts";
 import { resolveImport } from "../resolve.ts";
 import { ONE_NOTHING, refuseDates, structOf, tyOfTs, typesImports } from "../typescript.ts";

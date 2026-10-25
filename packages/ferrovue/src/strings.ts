@@ -1,5 +1,5 @@
 import { type Component, type N, type Scope, type Ty, type Val, asciiText, BOOL, fail, FLOAT, INT, isAscii, kept, nothing, opt, refusalAt, REFUSALS, rustStr, STR, strTy } from "./model.ts";
-import type { Code } from "./errors.ts";
+import type { ErrorCode } from "./errors.ts";
 import { atom, bare, binary, condition, enclosed, receiver, strArg } from "./parens.ts";
 import { computed, items } from "./lists.ts";
 import { describeTy, expr } from "./expr.ts";
@@ -90,7 +90,7 @@ const SCALAR = new Set(["str", "int", "float", "bool"]);
  * item as nothing). Strings, numbers and booleans are returned as they are; any other value is
  * refused with `code`.
  */
-export function stringOf(comp: Component, v: Val, n: N, what: string, code: Code): Val {
+export function stringOf(comp: Component, v: Val, n: N, what: string, code: ErrorCode): Val {
   if (SCALAR.has(v.ty.k)) return v;
   if (nothing(v.ty)) return { code: rustStr(v.ty.k === "null" ? "null" : "undefined"), ty: STR };
   const lone = loneOf(v);

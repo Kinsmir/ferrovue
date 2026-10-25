@@ -12,13 +12,15 @@ const check = process.argv.includes("--check");
 
 const pkg = JSON.parse(readFileSync(join(PACKAGE, "package.json"), "utf8")) as { exports: Record<string, string | { types?: string }> };
 const entries = Object.entries(pkg.exports).flatMap(([path, target]) =>
-  typeof target === "object" && target.types ? [{ name: path === "." ? "ferrovue" : path.slice(2), types: join(PACKAGE, target.types) }] : [],
+  typeof target === "object" && target.types ? [{ name: path === "." ? "ferrovue" : path.slice(2).replaceAll("/", "-"), types: join(PACKAGE, target.types) }] : [],
 );
 
 execFileSync("pnpm", ["--filter", "ferrovue", "run", "build"], { cwd: ROOT, stdio: ["ignore", "ignore", "inherit"] });
 mkdirSync(REPORTS, { recursive: true });
 const temp = mkdtempSync(join(tmpdir(), "ferrovue-api-"));
 const problems: string[] = [];
+const forgotten = new Map<string, Set<string>>();
+const exported = new Map<string, Set<string>>();
 
 for (const { name, types } of entries) {
   const config = ExtractorConfig.prepare({
@@ -42,6 +44,7 @@ for (const { name, types } of entries) {
           default: { logLevel: ExtractorLogLevel.None, addToApiReportFile: true },
           "ae-missing-release-tag": { logLevel: ExtractorLogLevel.None, addToApiReportFile: false },
           "ae-undocumented": { logLevel: ExtractorLogLevel.None, addToApiReportFile: false },
+          "ae-forgotten-export": { logLevel: ExtractorLogLevel.Warning, addToApiReportFile: false },
         },
         tsdocMessageReporting: { default: { logLevel: ExtractorLogLevel.None, addToApiReportFile: false } },
       },
@@ -52,11 +55,26 @@ for (const { name, types } of entries) {
   const result = Extractor.invoke(config, {
     localBuild: !check,
     messageCallback: (message) => {
+      const symbol = message.messageId === "ae-forgotten-export" ? /The symbol "([^"]+)"/.exec(message.text)?.[1] : undefined;
+      if (symbol !== undefined) {
+        forgotten.set(name, (forgotten.get(name) ?? new Set()).add(symbol));
+        message.handled = true;
+        return;
+      }
       if (message.logLevel !== ExtractorLogLevel.Error && message.logLevel !== ExtractorLogLevel.Warning) message.handled = true;
     },
   });
   if (result.errorCount > 0) problems.push(`${name}: API Extractor reported ${result.errorCount} errors`);
   if (check && result.apiReportChanged) problems.push(`${name}: the public API differs from api/${name}.api.md`);
+  const report = readFileSync(join(temp, `${name}.api.md`), "utf8");
+  exported.set(name, new Set([...report.matchAll(/^export (?:declare )?(?:abstract )?(?:function|const|let|class|interface|type|enum|namespace) (\w+)/gm)].map((m) => m[1]!)));
+}
+
+for (const [name, symbols] of forgotten) {
+  for (const symbol of symbols) {
+    const home = [...exported].find(([other, names]) => other !== name && names.has(symbol))?.[0];
+    if (home === undefined) problems.push(`${name}: the public API names \`${symbol}\`, which no export of the package exports`);
+  }
 }
 
 const help = execFileSync(process.execPath, [join(PACKAGE, "dist/cli.js"), "--help"], { encoding: "utf8" });

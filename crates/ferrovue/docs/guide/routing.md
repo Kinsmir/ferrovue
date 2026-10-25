@@ -98,7 +98,7 @@ vue-router's plugin does:
 
 ```ts
 import { createRouter, createWebHistory } from "vue-router";
-import { routeRecords } from "ferrovue/link-router";
+import { routeRecords } from "ferrovue/route-records";
 import pageRoutes from "ferrovue/routes";
 
 const ServerPage = { render: () => null };

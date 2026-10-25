@@ -2,8 +2,10 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { type Config, GenError, generate } from "../src/compiler.ts";
-import { type Code } from "../src/errors.ts";
+import { type Config } from "../src/config.ts";
+import { GenError } from "../src/errors.ts";
+import { generate } from "../src/compiler.ts";
+import { type ErrorCode } from "../src/errors.ts";
 
 const roots: string[] = [];
 
@@ -117,7 +119,7 @@ describe("provide and inject", () => {
     expect(out).toContain("fv_provides.tabs_key.unwrap_or(&fv_default_live).active");
   });
 
-  const refused: [string, Code, Record<string, string>, RegExp][] = [
+  const refused: [string, ErrorCode, Record<string, string>, RegExp][] = [
     ["a key provided with dates", "FV1806", { X: sfc("const days = inject(DaysKey, []);", "<b>{{ days.length }}</b>", 'import { DaysKey } from "../types/keys";\ndefineProps<{ label: string }>();') }, /types\/keys\.ts:\d+:\d+: what `DaysKey` provides holds a `Date`/],
     ["an inject typed with a date", "FV1806", { X: sfc('const at = inject<Date>("at");', "<b>{{ at?.getTime() }}</b>") }, /what `inject` reads holds a `Date`/],
     ["a key held in a local", "FV1601", { X: sfc('const key = "theme";\nconst theme = inject(key, "x");', "<b>{{ theme }}</b>") }, /an injection key is a string literal, or a `Symbol` exported/],

@@ -1,6 +1,7 @@
 import type { SFCDescriptor } from "@vue/compiler-sfc";
 import { type Component, type N, type Scope, type Struct, type StructTy, type Ty, type Val } from "./model.ts";
-import { type Config, ctx } from "./context.ts";
+import { type Config } from "./config.ts";
+import { ctx } from "./context.ts";
 import { type Emitter } from "./emitter.ts";
 import type { Presence } from "./narrowing.ts";
 

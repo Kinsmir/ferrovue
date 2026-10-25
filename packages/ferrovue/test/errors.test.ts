@@ -1,7 +1,8 @@
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { AREAS, type ErrorDoc, ERRORS } from "../src/errors.ts";
+import { AREAS } from "../src/error-areas.ts";
+import { type ErrorDoc, ERRORS } from "../src/errors.ts";
 
 const SRC = join(import.meta.dirname, "../src");
 const RUNTIME = join(import.meta.dirname, "../../../crates/ferrovue/src");

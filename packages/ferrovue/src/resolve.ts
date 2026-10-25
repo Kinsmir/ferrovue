@@ -5,17 +5,6 @@ import { relativePath } from "./paths.ts";
 import { ctx } from "./context.ts";
 import { type Component, fail, type N } from "./model.ts";
 
-/** An alias a bundler resolves imports through, as Vite's `resolve.alias` lists it: a string
- * matches the specifier itself and any path below it (`@` matches `@/lib/format`), a regular
- * expression is replaced in the specifier. `replacement` is an absolute path, or one relative to
- * the importing file. */
-export interface Alias {
-  /** The specifier, or the start of one before a `/`, or a pattern replaced in it. */
-  find: string | RegExp;
-  /** What it is replaced with: an absolute path, or one relative to the importing file. */
-  replacement: string;
-}
-
 /** The `paths` of one tsconfig file, after its `extends`, with the directory they are relative to. */
 interface TsPaths {
   file: string;

@@ -2,7 +2,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { GenError, GenErrors, generate } from "../src/compiler.ts";
+import { GenError, GenErrors } from "../src/errors.ts";
+import { generate } from "../src/compiler.ts";
 
 const roots: string[] = [];
 

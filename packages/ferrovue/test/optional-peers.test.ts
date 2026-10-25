@@ -6,7 +6,7 @@ import { pathToFileURL } from "node:url";
 import { afterAll, beforeAll, expect, it } from "vitest";
 
 const SRC = join(import.meta.dirname, "../src");
-const ENTRIES = ["index", "compiler", "types", "testing", "client", "link-router", "islands", "vite", "volar"];
+const ENTRIES = ["client", "compiler", "config", "errors", "types", "testing", "fixture", "hydration", "ssr", "link-router", "route-records", "islands", "vite", "volar"];
 let root = "";
 let result: Record<string, unknown> = {};
 
@@ -25,7 +25,8 @@ const out = { loaded: {} };
 for (const entry of ${JSON.stringify(ENTRIES)}) {
   out.loaded[entry] = await import(src + "/" + entry + ".ts").then(() => "loaded", (error) => error.message);
 }
-const { conformanceSuite, fixtureApp, readFixture } = await import(src + "/testing.ts");
+const { conformanceSuite } = await import(src + "/testing.ts");
+const { fixtureApp, readFixture } = await import(src + "/fixture.ts");
 const { defineComponent, h } = await import("vue");
 const { renderToString } = await import("vue/server-renderer");
 const Hello = defineComponent({ props: { name: String }, render() { return h("p", "Hello, " + this.name); } });
@@ -61,12 +62,17 @@ afterAll(() => rmSync(root, { recursive: true, force: true }));
 
 it("loads every entry of the package without the optional peers, vitest included", () => {
   expect(result.loaded).toEqual({
-    index: "loaded",
+    client: "loaded",
     compiler: "loaded",
+    config: "loaded",
+    errors: "loaded",
     types: "loaded",
     testing: "loaded",
-    client: "loaded",
+    fixture: "loaded",
+    hydration: "loaded",
+    ssr: "loaded",
     "link-router": expect.stringContaining("vue-router") as unknown,
+    "route-records": "loaded",
     islands: expect.stringContaining("ferrovue/islands is written by the Vite plugin") as unknown,
     vite: "loaded",
     volar: "loaded",

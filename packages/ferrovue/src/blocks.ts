@@ -1,4 +1,5 @@
-import { type Component, type Fn, type N, type Scope, type Val, fail, GenError, nothing, UNION_STR, unionStr } from "./model.ts";
+import { type Component, type Fn, type N, type Scope, type Val, fail, nothing, UNION_STR, unionStr } from "./model.ts";
+import { GenError } from "./errors.ts";
 import { ctx } from "./context.ts";
 import { fresh, jsHint } from "./names.ts";
 import { expr, typedBy } from "./expr.ts";

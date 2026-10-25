@@ -1,5 +1,7 @@
-import { type Component, type Field, type N, type Scope, type Ty, blankComponent, camelize, distinctFields, fail, GenError, snake } from "../model.ts";
-import { CONFIG_FILE, type TwinSpec, tyOfName } from "../context.ts";
+import { type Component, type Field, type N, type Scope, type Ty, blankComponent, camelize, distinctFields, fail, snake } from "../model.ts";
+import { GenError } from "../errors.ts";
+import { CONFIG_FILE, type TwinSpec } from "../config.ts";
+import { tyOfName } from "../context.ts";
 import { coerce, expr, holdsNothing } from "../expr.ts";
 import { bare, strArg } from "../parens.ts";
 import { header } from "../rust.ts";

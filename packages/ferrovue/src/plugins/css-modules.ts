@@ -7,7 +7,8 @@ import modulesScope from "postcss-modules-scope";
 import modulesValues from "postcss-modules-values";
 import type { SFCDescriptor, SFCStyleBlock } from "@vue/compiler-sfc";
 import { type Component, type N, type Scope, type Val, fail, rustStr, sourceAt, STR, UNDEF } from "../model.ts";
-import { CONFIG_FILE, type CssModulesConfig } from "../context.ts";
+import { CONFIG_FILE } from "../config.ts";
+import { type CssModulesConfig } from "../context.ts";
 import { type Plugin, runOf, scopeOf } from "../plugin.ts";
 import { scopeHash } from "./scoped.ts";
 

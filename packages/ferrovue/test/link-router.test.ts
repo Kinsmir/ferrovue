@@ -2,7 +2,8 @@ import { createSSRApp, defineComponent, h } from "vue";
 import { renderToString } from "vue/server-renderer";
 import { createMemoryHistory, isNavigationFailure, NavigationFailureType, RouterLink, useRoute } from "vue-router";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { linkRouter, type LinkRouterOptions, type RouteEntry } from "../src/link-router.ts";
+import { linkRouter, type LinkRouterOptions } from "../src/link-router.ts";
+import { type RouteEntry } from "../src/route-records.ts";
 
 type Navigate = LinkRouterOptions["navigate"];
 

@@ -1,7 +1,9 @@
 import { escapeHtml, hyphenate, isBooleanAttr, isSSRSafeAttrName, isSVGTag, propsToAttrMap } from "@vue/shared";
-import { type N, type Scope, type Ty, type Val, fail, nothing, GenError, rustStr } from "./model.ts";
+import { type N, type Scope, type Ty, type Val, fail, nothing, rustStr } from "./model.ts";
+import { GenError } from "./errors.ts";
 import { asWritten } from "./numbers.ts";
-import { CONFIG_FILE, ctx } from "./context.ts";
+import { CONFIG_FILE } from "./config.ts";
+import { ctx } from "./context.ts";
 import { describeTy, expr, shown } from "./expr.ts";
 import { known, truthy } from "./narrowing.ts";
 import { asCow, isTemporary, unquote } from "./strings.ts";

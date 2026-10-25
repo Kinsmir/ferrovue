@@ -2,7 +2,7 @@ import { parse as parseJs } from "@babel/parser";
 import { createHash } from "node:crypto";
 import { relative, resolve as resolvePath, sep } from "node:path";
 import { type Component, type N, type Scope, fail, namesSelf, rustStr } from "../model.ts";
-import { type ScopeIdMode } from "../context.ts";
+import { type ScopeIdMode } from "../config.ts";
 import { type Plugin, runOf } from "../plugin.ts";
 
 interface ScopedRun {

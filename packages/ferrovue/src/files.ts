@@ -1,8 +1,9 @@
 import { parse as parseJs } from "@babel/parser";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { Code } from "./errors.ts";
-import { type Component, type N, fail, failIn, GenError } from "./model.ts";
+import type { ErrorCode } from "./errors.ts";
+import { type Component, type N, fail, failIn } from "./model.ts";
+import { GenError } from "./errors.ts";
 
 function why(e: unknown): string {
   const code = (e as NodeJS.ErrnoException).code;
@@ -20,7 +21,7 @@ export function listDir(root: string, dir: string, key: string): string[] {
 
 /** A JSON file of the project's, parsed; one that cannot be read is refused with `missing`, and one
  * that does not parse with `invalid`. */
-export function readJsonFile(root: string, file: string, codes: { missing?: Code; invalid: Code }): unknown {
+export function readJsonFile(root: string, file: string, codes: { missing?: ErrorCode; invalid: ErrorCode }): unknown {
   let text: string;
   try {
     text = readFileSync(join(root, file), "utf8");

@@ -1,4 +1,4 @@
-import { GenError } from "./model.ts";
+import { GenError } from "./errors.ts";
 import type { Deprecation } from "./schema.ts";
 
 /** A command-line option: its names, short one first, the value it takes, and its line in `--help`. */

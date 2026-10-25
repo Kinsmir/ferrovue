@@ -1,4 +1,5 @@
-import { type Component, type N, type Scope, type Ty, type Val, absence, distinctFields, fail, GenError, nothing, rustStr, snake } from "../model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, absence, distinctFields, fail, nothing, rustStr, snake } from "../model.ts";
+import { GenError } from "../errors.ts";
 import { ctx } from "../context.ts";
 import { type Declared } from "../constants.ts";
 import { resolveImport } from "../resolve.ts";

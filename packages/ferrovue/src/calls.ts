@@ -1,6 +1,6 @@
 import { type N, type Scope, type Ty, type Val, asciiTy, BOOL, fail, FLOAT, INT, isAscii, refusalAt, sameTy, STR, strTy } from "./model.ts";
 import { ctx } from "./context.ts";
-import type { Code } from "./errors.ts";
+import type { ErrorCode } from "./errors.ts";
 import { claim } from "./plugin.ts";
 import { atom, bare, binary, condition, operand, receiver, strArg, UNARY } from "./parens.ts";
 import { computedListMethod, isBoolean, items, listMethod, objectCall, presentLiteral, spreadExtreme } from "./lists.ts";
@@ -12,7 +12,7 @@ import { callFunction } from "./functions.ts";
 import { constOf, mapCall } from "./constants.ts";
 import { refuseInPlace } from "./objects.ts";
 
-const DIGITS = new Map<string, [Code, number, string]>([
+const DIGITS = new Map<string, [ErrorCode, number, string]>([
   ["toFixed", ["FV0705", 0, "number of digits"]],
   ["toPrecision", ["FV0716", 1, "precision"]],
   ["toExponential", ["FV0717", 0, "number of digits"]],

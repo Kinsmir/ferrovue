@@ -1,4 +1,5 @@
-import { type Absence, type Component, type EnumDef, type Field, type N, type Scope, type Struct, type Ty, type Val, absence, blankComponent, BOOL, distinctFields, enumOf, enumTy, fail, GenError, FLOAT, INT, joinAbsence, joinTy, literalsOf, literalTy, nothing, NULL, rustStr, sameTy, snake, STR, UNDEF, variantPath, withAbsence } from "./model.ts";
+import { type Absence, type Component, type EnumDef, type Field, type N, type Scope, type Struct, type Ty, type Val, absence, blankComponent, BOOL, distinctFields, enumOf, enumTy, fail, FLOAT, INT, joinAbsence, joinTy, literalsOf, literalTy, nothing, NULL, rustStr, sameTy, snake, STR, UNDEF, variantPath, withAbsence } from "./model.ts";
+import { GenError } from "./errors.ts";
 import { aliasEnum, knownLiteral, matchOver } from "./enums.ts";
 
 const TYPES_HOME = blankComponent("types", "types", "types");

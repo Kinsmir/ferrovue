@@ -8,7 +8,7 @@ import { createPinia } from "pinia";
 import { createHead } from "@unhead/vue/client";
 import { clearLoads } from "ferrovue/client";
 import islandLoaders from "ferrovue/islands";
-import { hydrateRecordedPage, renderRecordedPage } from "ferrovue/testing";
+import { hydrateRecordedPage, renderRecordedPage } from "ferrovue/testing/hydration";
 import { createAppRouter, hydrate, type Hydrated } from "../client/app.ts";
 import BasketSummary from "../client/components/BasketSummary.vue";
 import Picks from "../client/pages/picks.vue";
