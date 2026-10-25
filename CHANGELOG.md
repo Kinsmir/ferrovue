@@ -267,265 +267,104 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 
 ### Added
 
-- `ferrovue::Chunks` reads Vite's manifest and says which chunks an island needs (its own and,
-  transitively, those it imports statically, never the entry), so a page can name them with
-  `<link rel="modulepreload">` in place of the browser finding them one round trip at a time (#96).
-  `Chunks::preloads()` writes the links of one page, each URL once, in `<head>` and after the
-  app's container alike; `for_islands` and `for_source` give the URLs, the latter for a chunk the
-  entry imports dynamically; `with_base` serves them under Vite's `base`. The islands guide's
-  "Preloading the islands" says which islands to preload (those that hydrate at once) and where
-  the links may go, and the full-stack example preloads them on each page.
-- A client build with a manifest writes `.vite/ferrovue-islands.json` beside it (beside the
-  manifest's own path when `build.manifest` names one): each island's name with the file of the
-  chunk that holds it, which `Chunks` reads with the manifest. An island another component imports
-  is bundled into a chunk they share, which the manifest does not key by the island's source. In
-  an app build (`vite build --app`), the client environment's build writes it, as that
-  environment's `build.manifest` says, and the server's does not.
+- `ferrovue::Chunks` reads Vite's manifest and writes the `<link rel="modulepreload">` tags of the
+  chunks a page's islands need (#96): [Preloading the islands](https://docs.rs/ferrovue/latest/ferrovue/guide/islands_and_hydration/index.html#preloading-the-islands).
+- A client build with a manifest writes `.vite/ferrovue-islands.json` beside it, naming the chunk
+  that holds each island, which `Chunks` reads: [Preloading the islands](https://docs.rs/ferrovue/latest/ferrovue/guide/islands_and_hydration/index.html#preloading-the-islands).
 - `PageRecord::island_names()` names the components a page's record holds so far, and
-  `Part::name()` a part's.
+  `Part::name()` a part's: [`PageRecord`](https://docs.rs/ferrovue/latest/ferrovue/page/struct.PageRecord.html).
 
 ### Changed
 
 - The npm package depends on `postcss` `^8.5.29`.
-- The repository develops and tests with oxlint 1.87, Playwright 1.64 and vscode-uri 3.2, and its
-  `Cargo.lock` takes the latest patch and minor releases Rust 1.89 builds.
-- CI runs cargo-deny from its released binary. The action it used before built a Docker image from
-  Docker Hub on every run, and Docker Hub's limit on anonymous pulls failed the job.
 
 ## [0.7.1] - 2026-10-09
 
 ### Fixed
 
-- `conformanceSuite`'s client-render check and `renderRecordedPage` read the selection of a
-  recorded `<select>` from its `selected` attributes, as the HTML parser does. happy-dom 20.14
-  selects the second option on parsing a `<select>` whose `selected` option comes later, so a
-  correct client render was reported as differing (#91).
+- `conformanceSuite`'s client-render check and `renderRecordedPage` read a recorded `<select>`'s
+  selection from its `selected` attributes, as the HTML parser does (#91): [Testing a page](https://docs.rs/ferrovue/latest/ferrovue/guide/islands_and_hydration/index.html#testing-a-page).
 
 ## [0.7.0] - 2026-10-09
 
 ### Added
 
-- The types the public API names are exported where it names them: `ErrorCode` and
-  `SourceLocation` (a `GenError`'s `code` and `at`) from `ferrovue/compiler`, with `ERRORS`, the
-  table of every code and its title, and `docsUrl(code)`; `FileRoute` from `ferrovue/vite`;
-  `RouteEntry` from `ferrovue/routes`; and `IslandComponent`, `MountOptions`, `PageOptions`,
-  `PagePart`, `PageRecord` and `RenderPageOptions` from `ferrovue/testing`.
-
-- `ferrovue/volar`, a plugin for Vue's language tools (`@vue/language-core` 3.3, the Vue (Official)
-  extension's language server): named in `vueCompilerOptions.plugins` in `tsconfig.json`, it
-  compiles the project as a component is edited, with the editor's unsaved text, and underlines what
-  ferrovue refuses in it, with the error's code linked to its documentation. An error in the
-  template is underlined on the construct; one in `<script setup>` or `<style>` on the block's
-  opening tag, with its line and column in the message. `config` names another configuration file
-  and `codeLinks: false` gives the code as plain text. `generate` takes the text of components in
-  place of their files as a third argument. The full-stack example enables the plugin, and its
-  README describes restarting the server with bacon when the generated Rust changes.
-- Generated code checks its version against the `ferrovue` crate's: `mod.rs` opens with
-  `ferrovue::__compat!(1)`, and generated code of a version the crate does not support stops the
-  build at that line with one message saying to use the npm package and the crate of one release
-  and generate the code again, in place of a list of type errors. The version changes only when
-  generated code changes in a way the crate must match (RELEASING.md). Code generated before this
-  release has no check; regenerate it.
-- The generated-code guide states the contract: which files, modules and items are stable (`NAME`,
-  `Props` with its fields, `new` and setters, `Slots`, `…SlotProps`, `…Slot`, `render` and the order
-  of its parameters, `html`, `island`, `into_html`, `into_island`, `types.rs`, `route_table.rs`,
-  `stores.rs`, `i18n.rs`, `provides.rs`, `twins.rs`, `render_json`), and that `render_scoped`, the
-  `#[doc(hidden)]` items and parameter names are outside it. It now covers page modules' names, the
-  `…Slot` types of a component that passes on `Provides`, and the derives of `Props` and `Slots`.
-- `crates/ferrovue-contract`, an unpublished crate that generates every item of that contract and
-  uses each from hand-written Rust, run in CI with its generated code checked by `ferrovue --check`.
-- `v-bind()` in `<style>`, scoped or global: the variables are written into the `style` of the
-  component's root (each root of a fragment, a root `<template v-if>`'s elements, a root that is a
-  component, `<component :is>`, an async component or a `<RouterLink>`) where Vue's server writes
-  them, merged after the root's own `style` and what a parent passes, with `undefined` and `null`
-  as `initial` and an empty string as a space. Their names follow the component's id and the new
-  `isProduction` key of `ferrovue.config.json`, which says whether plugin-vue compiles for
-  production (`vite build`, the default) or development; the Vite plugin fails a build in which
-  either differs from plugin-vue's. A `v-bind()` of a value that is not a string or a number is
-  refused (FV1006).
-- CSS modules: `<style module>`, `<style module="name">`, `$style.x` and `useCssModule()`, when
-  `cssModules` in `ferrovue.config.json` (`{ generateScopedName, hashPrefix?, context? }`) mirrors
-  Vite's `css.modules`. Each class is a constant computed as postcss-modules computes it in Vite, with
-  the same libraries, recorded from Vite as vectors (`packages/ferrovue/test/css-modules.json`). The
-  Vite plugin fails a build whose `css.modules` names the classes otherwise (another pattern or
-  `hashPrefix`, another working directory for a pattern that hashes the path, `localsConvention`,
-  global scoping, the lightningcss transformer). `<style module>` without `cssModules` stays refused
-  (FV1005), and a module in another file, one a preprocessor compiles, one that imports from another
-  file (FV1014) and `useCssModule` of a module the component lacks (FV1015) are refused.
-- `attachSsrRender` (`ferrovue/testing`) compiles `v-bind()` in `<style>` with the names plugin-vue
-  gave the component, and gives hydration in Node the variables Vue's Node build leaves out; a
-  fresh client render (`conformanceSuite`, `renderRecordedPage`) sets them as a browser's Vue does
-  once mounted, and compares custom properties by name in any order.
-- `Boolean` is taken as the function of `.filter()`, `.map()`, `.some()`, `.every()`, `.find()` and
-  `.findIndex()`, as `x => !!x`, and `Boolean(x)` as a call. `.filter(Boolean)` of a list whose items
-  may be `null` or `undefined`, or of an array literal holding optional values
-  (`[name, title, city].filter(Boolean).join(" · ")`), keeps the items present and truthy as a list
-  of the values, which the other list methods then take.
-- The Vite plugin takes `config`, the configuration file relative to `root`, as `ferrovue --config`
-  does: `ferrovue({ config: "config/ferrovue.json" })`.
-- Release assets carry build provenance: the `.tgz` and `.crate` files attached to a GitHub release
-  are attested (`gh attestation verify ferrovue-X.Y.Z.tgz --repo Kinsmir/ferrovue`), and npm stages
-  the same tarball the release attaches, packed once.
-- `rust-toolchain.toml`, `.node-version`, `.editorconfig` and a `justfile` whose `just check` runs
-  the pull request checklist; versions repeated across the workspace's manifests come from a pnpm
-  catalog.
-- A release dry run (`.github/workflows/release-dry-run.yml`): on pull requests that change the
-  release's workflows or script, weekly and by hand, it packs every package for a throwaway
-  pre-release through the release's own `pack.yml` and has npm stage it with `--dry-run`.
-- The criterion benchmark times the runtime's attribute merging, number writing and head rendering
-  on their own, each checked against the output it writes.
-- A JSON Schema of `ferrovue.config.json`, shipped in the npm package as `ferrovue/schema.json` and
-  published with each version at `https://cdn.jsdelivr.net/npm/ferrovue@<version>/schema.json`.
-  `ferrovue init` writes that URL as `$schema`, which ferrovue accepts and does not read, so VS Code
-  completes and describes the keys with no extension. The configuration's validation reads its keys
-  from the same definition, and a test fails when the schema and the `Config` type disagree on a key,
-  a type, a required key or a description, or a default differs from what the compiler does without
-  the key.
-- An API report of the npm package: `packages/ferrovue/api` holds an API Extractor report of each
-  export and `ferrovue --help`, which `pnpm api:report` writes and `pnpm api:check` checks in CI.
-- A deprecation policy (README, CONTRIBUTING.md, RELEASING.md): a crate item carries `#[deprecated]`,
-  and a configuration key or command-line option warns, for at least one minor release before it
-  is removed in a major one. A deprecated key warns with `warning[FV1117]` and a deprecated option
-  with `warning[FV1118]`, each naming its replacement; `--format json` lists warnings in
-  `diagnostics` with the `severity` `"warning"`, the Vite plugin through Vite's logger, and
-  `loadConfig` takes a function to hand them to (`console.warn` by default). The JSON Schema marks a
-  deprecated key for editors, and `--help` a deprecated option.
-- `release.ts bump` and `release.ts check` accept a changelog's subsections only as Keep a Changelog
-  names and orders them: Added, Changed, Deprecated, Removed, Fixed, Security.
-- `ScopeIdMode`, the type of `scopeId`, is exported from `ferrovue/compiler`.
-- Navigating between pages (#74). `readPage(html)` from `ferrovue` reads a fetched document's
-  `PageRecord` and Pinia state text with no `DOMParser`, finding each script as the HTML parser
-  does, past comments, attribute values, raw text and script escapes. `renderPage(layout,
-  components, record, { previous })` shows the next page from its record with the app
-  `createPageApp(…, { hydrate: false })` builds, the same tree the first page hydrated, in place of
-  the container, mounting it before `previous` is unmounted so a router both use stays started.
-  `hydrateState(pinia, { text })` reads fetched state with the same `NaN` and `Infinity` handling,
-  and `linkRouter` takes the next page's `location`. `renderRecordedPage` from `ferrovue/testing`
-  checks that a page rendered from its record on the client shows the recorded HTML, comments and
-  empty text aside, and `conformanceSuite` with `clientRender: true` checks a fresh client render of
-  every fixture the same way, with `clientDiffers` for the fixtures whose client render Vue itself
-  writes differently.
-  `examples/fullstack` features one staff pick after another without a reload.
+- `ferrovue/volar`, a plugin for Vue's language tools, underlines what ferrovue refuses as a
+  component is edited, with the error's code linked to its documentation: [Diagnostics in your editor](https://docs.rs/ferrovue/latest/ferrovue/guide/quick_start/index.html#diagnostics-in-your-editor).
+- Generated code checks its version: `mod.rs` opens with `ferrovue::__compat!(1)`, which stops a
+  build against another release's crate with one message: [The version check](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#the-version-check).
+- The generated-code guide states which files, modules and items of generated code are stable: [What is stable](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#what-is-stable).
+- `v-bind()` in `<style>`, scoped or global, with the `isProduction` key naming its variables as
+  plugin-vue does. A value that is not a string or a number is FV1006: [`v-bind()` in `<style>`](https://docs.rs/ferrovue/latest/ferrovue/guide/scoped_styles/index.html#v-bind-in-style).
+- CSS modules (`<style module>`, `$style.x`, `useCssModule()`), when `cssModules` in
+  `ferrovue.config.json` mirrors Vite's `css.modules`: [CSS modules](https://docs.rs/ferrovue/latest/ferrovue/guide/scoped_styles/index.html#css-modules).
+- `attachSsrRender` and the client-render checks of `ferrovue/testing` give a component the
+  `v-bind()` variables in `<style>` that plugin-vue and a mounted Vue give it: [Testing a page](https://docs.rs/ferrovue/latest/ferrovue/guide/islands_and_hydration/index.html#testing-a-page).
+- Navigating between pages (#74): `readPage`, `renderPage` and `hydrateState` show a fetched page
+  from its record with no reload: [Navigating between pages](https://docs.rs/ferrovue/latest/ferrovue/guide/islands_and_hydration/index.html#navigating-between-pages).
+- `Boolean` is taken as the function of `.filter()`, `.map()`, `.some()`, `.every()`, `.find()`
+  and `.findIndex()`, and `Boolean(x)` as a call: [Slicing lists](https://docs.rs/ferrovue/latest/ferrovue/guide/strings/index.html#slicing-lists).
+- The Vite plugin takes `config`, the configuration file relative to `root`, as
+  `ferrovue --config` does: `ferrovue({ config: "config/ferrovue.json" })`.
+- A JSON Schema of `ferrovue.config.json`, shipped as `ferrovue/schema.json`, which
+  `ferrovue init` names in `$schema` for editors: [Configure](https://docs.rs/ferrovue/latest/ferrovue/guide/quick_start/index.html#2-configure).
+- A deprecated configuration key warns with FV1117 and a deprecated command-line option with
+  FV1118, each naming its replacement: [Deprecations](https://docs.rs/ferrovue/latest/ferrovue/guide/support/index.html#deprecations).
+- The types the npm package's API names are exported where it names them (`ErrorCode` and
+  `SourceLocation` from `ferrovue/compiler`), with the table `ERRORS` and `docsUrl(code)`.
+- The `.tgz` and `.crate` files of a GitHub release carry build provenance, which
+  `gh attestation verify ferrovue-X.Y.Z.tgz --repo Kinsmir/ferrovue` checks.
 
 ### Changed
 
-- CI pins `dtolnay/rust-toolchain` to its current `master`, which hardens how it handles its inputs.
-- `ferrovue` removes from `out` only the `.rs` files it wrote itself, the ones that start with its
-  `// @generated by ferrovue` header, so a module of the app's own put there by mistake (with
-  `"out": "src"`, say) is no longer deleted. `--check` still reports such a file as not generated,
-  and says that `ferrovue` leaves it.
-- `ferrovue.config.json` is checked when it is read: a file that is not an object (FV1113), a key
-  ferrovue does not read, with the key it most likely means (FV1114), and a value of the wrong type
-  (FV1115, FV1107 for a helper or twin type) are refused. A string of `clientDirectives` and a
-  helper without `params` used to fail later, or not at all.
-- `ferrovue --watch` and the Vite plugin's dev server regenerate only on a change to what a run
-  reads: the configuration, components, stores, locale messages, pages or routes file, and the
-  `.ts` files read for types. A change to `vite.config.ts` or `package.json` no longer regenerates,
-  and an `out` written as `./src/generated` is recognised as the output. The undocumented `affects`
-  export of `ferrovue/vite` is removed.
-- `ferrovue` refuses `--check` with `--watch`, and `init` with `--check`, `--watch`, `--diff` or
-  `--format json`.
-- The minimum supported Rust version is 1.89, the oldest that builds generated code, down from 1.99.
-  CI reads it from `Cargo.toml`, and also tests Node 22.18 (the `engines` floor) and 26, and the
-  TypeScript tests on Windows and macOS; a nightly job builds the docs as docs.rs does.
-- `#[must_use]` on the runtime's pure public functions, and `Attr`, `HeadValue`, `Query`,
-  `i18n::Part` and `i18n::Value` are `#[non_exhaustive]`: generated code only builds them, but a
-  `match` over them outside their crate needs a wildcard arm.
+- **Breaking:** `Attr`, `HeadValue`, `Query`, `i18n::Part` and `i18n::Value` are
+  `#[non_exhaustive]`, and the runtime's pure public functions are `#[must_use]`.
+- The minimum supported Rust version is 1.89, down from 1.99: [Rust](https://docs.rs/ferrovue/latest/ferrovue/guide/support/index.html#rust).
+- `ferrovue.config.json` is checked as it is read: a file holding no object (FV1113), an unknown
+  key (FV1114) and a value of the wrong type (FV1115, FV1107, FV1110) are refused.
+- `ferrovue` removes from `out` only the `.rs` files that open with its `// @generated by ferrovue`
+  header, and `--check` reports any other file there: [The output directory](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#the-output-directory).
+- `ferrovue --watch` and the Vite plugin's dev server regenerate only on a change to a file a run
+  reads: the configuration, components, stores, messages, pages, routes and `.ts` type files.
+- `ferrovue` refuses `--check` with `--watch`, `init` with `--check`, `--watch`, `--diff` or
+  `--format json`, an option missing its value, and a value given to an option that takes none.
+- A type in a `.ts` file or a component is translated, and written to `types.rs`, only when the
+  server render reaches it (#77). Two files declaring a reached name are FV0319: [Shared types](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#shared-types).
+- The `security` guide page is a threat model: the trust boundaries, and the guarantee at each place
+  data is written: [Security](https://docs.rs/ferrovue/latest/ferrovue/guide/security/index.html).
+- `fixtureApp`'s `pinia`, `vueRouter` and `vueI18n` options and `conformanceSuite`'s `record`
+  accept `undefined`, for a project type-checked with `exactOptionalPropertyTypes`.
 - Fewer allocations when merging attributes, writing fractions, rendering the head and writing an
-  island's props; the output is unchanged.
-- `release.ts bump` moves the changelog's `[Unreleased]` link to the new version and adds the new
-  version's link, and `release.ts check` refuses a changelog that has links but none for the
-  version.
-- `fixtureApp`'s `pinia`, `vueRouter` and `vueI18n` options and `conformanceSuite`'s `record` accept
-  `undefined`, for a project type-checked with `exactOptionalPropertyTypes`, which the workspace now
-  uses itself.
-- A `.ts` file's types are translated only when the server render reaches them (#77): through a
-  component's props or model and their fields, a component's own interfaces, a provided or injected
-  value, a `ref` the server computes, or a constant list declared with an interface. `types.rs`
-  holds only those types, so an exported interface nothing reaches is no longer written there, and
-  `types.rs` is not written at all when nothing reaches one. A type nothing reaches is no longer
-  refused: a module imported for its functions may declare `type Row = Record<string, unknown>`.
-  Two files declaring a type of one name are refused (FV0319) once the name is reached.
-- A threat model, the guide's `security` page, which `escaping` and `SECURITY.md` link to: the trust
-  boundaries, every place the runtime and generated code write data that may come from a reader
-  (text, attribute values and names, CSS, island props, the state script and page record, the head,
-  `<RouterLink>`, translated messages, `v-html`, teleports, holes, scope ids, twins and helpers),
-  the guarantee there with the code and tests behind it, what ferrovue inherits from Vue, and where
-  an external review should start. The `Unsanitised` conformance component holds the inherited
-  cases to Vue (`javascript:` URLs, `srcdoc`, a bound `onclick` on an element and falling through,
-  CSS); the head vectors gain hostile attribute names and `<!--<script>` in scripts; the compiler's
-  tests refuse an unsafe bound attribute name, a name chosen at run time and `v-bind` of an object
-  that is not a literal.
-- A twin without a string `rust` is refused when the configuration is read (FV1110), with the
-  other configuration errors.
-- `ferrovue --format` without a value is refused as `--config` without one is ("option '--format'
-  requires an argument"), and a value given to an option that takes none (`--check=yes`) is
-  refused.
+  island's props. The output is unchanged.
+
+### Removed
+
+- The undocumented `affects` export of `ferrovue/vite`.
 
 ### Fixed
 
-- A component's own interfaces and object type aliases are translated only when the server render
-  reaches them (#77), as a `.ts` file's are: a type only an event handler uses is neither written
-  nor refused, and the component's module holds only the reached ones. A field whose type has no Rust counterpart (`items: HTMLElement[]`) is left out of
-  a type reached only by values the server computes, such as `shallowRef<Cat[]>([])`, and reading
-  it on the server is refused where it is declared. A type a prop or `defineModel` reaches keeps
-  every field, and such a field is still refused there.
-- A component whose `render` takes more than seven arguments (slots, the route, stores,
-  translations, teleports, `Provides` and the head, through its children) generates code that
-  passes `cargo clippy -- -D warnings`: its `render`, `render_scoped` and `html` allow
-  `clippy::too_many_arguments`, as a props constructor with more than seven required props does.
-- A components, stores or messages directory that does not exist is FV1116, and a routes file
-  that is missing or not JSON is FV1246 or FV1247, each naming the path, where these were a raw
-  ENOENT or an FV0001 with no file. A store or type file that does not parse is FV0001 with its
-  file, line and column.
-- `ferrovue --watch` and the Vite plugin's dev server no longer stop on an error that is not a
-  refusal, such as a file read while half written: they show it, and regenerate on the change that
-  puts it right. A watch that fails (out of inotify watches) says so instead of crashing.
-- `mountIslands` reports an island that throws as it mounts (its `setup`, a plugin) through
-  `onError` and goes on to hydrate the islands after it, where it used to stop at the first.
-- A `Page`'s record holds `null` for props serde_json refuses (a map keyed by lists, say), where
-  the whole record became unreadable JSON; a debug build panics with serde's error. `PageRecord`
-  and `PagePart` in `ferrovue/client` type such props as `null`.
+- A component whose `render` takes more than seven arguments generates code that passes
+  `cargo clippy -- -D warnings`.
+- A missing components, stores or messages directory is FV1116, and a missing or invalid routes
+  file FV1246 or FV1247, each naming the path. A store or type file that does not parse is FV0001.
+- `ferrovue --watch` and the Vite plugin's dev server show an error that is not a refusal and
+  regenerate once it is put right, and a watch that cannot start says so.
+- `mountIslands` reports an island that throws as it mounts through `onError` and hydrates the
+  islands after it.
+- A `Page`'s record holds `null` for props serde_json refuses, and a debug build panics with serde's
+  error: [At run time](https://docs.rs/ferrovue/latest/ferrovue/guide/errors_and_limits/index.html#at-run-time).
 - A vue-i18n plural choice with a count of `NaN` over three cases picks what `Math.min` does.
 - On Windows, paths in generated code, diagnostics, `init`'s output, the conformance suite's diffs
-  and the watch filters are written with `/`, as everywhere else; a `.gitattributes` keeps text
-  files at LF line endings, as the generated Rust and the recorded fixtures are compared byte for
-  byte.
-- The release job installs an exact npm version while it holds the publishing token.
-- Listeners on a component are skipped whatever form its props take: `@loaded`, `v-on:x.once`,
-  `@update:x`, `v-on="handlers"` and `@[name]` beside a `v-bind` of the child's own `Props`
-  (a component rendering itself included) compile, where they were FV0503 (#75). A prop the child
-  declares with a name like a listener (`onSale`) takes the value bound to it, as Vue gives it,
-  where it was left out; a listener whose name is chosen at run time, or comes from `v-on` of an
-  object, given to such a child is FV0514.
-- The quick start's table of configuration keys lists `twins`, and says that `out` keeps files
-  ferrovue did not write.
-- An empty array literal takes its element type from the list it stands beside, so
-  `shallowRef(props.item ? props.item.children : [])` compiles (#76). It does so in either branch of
-  `?:` and after `??`, in setup, `computed` and the template, and also takes the type from
-  `[] as T[]`, `[] satisfies T[]`, a typed constant (`const none: T[] = []`) and the type argument
-  of `ref`, `shallowRef` and `computed`. The generated Rust borrows the chosen list as a slice and
-  takes `&[]` for the empty one. A `?:` between two lists and a `??` falling back to a list borrow
-  them the same way, and a list or object read through `?.` is borrowed. `as` and `satisfies` are
-  read in expressions: one that states the type the value already has is accepted, and one that
-  states another is FV0628.
+  and the watch filters are written with `/`.
+- Listeners on a component compile beside a `v-bind` of the child's own `Props`, where they were
+  FV0503 (#75), and a prop named like a listener (`onSale`) takes the value bound to it.
+- An empty array literal takes its element type from the list beside it (#76), and an `as` or
+  `satisfies` that states another type than the value's is FV0628: [`FV0628`](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#fv0628).
 
 ### Security
 
-- A value in the page head could move a streaming hole. unhead escapes only `"` in an attribute
-  value and only the closing tag in `<script>`, `<style>` and `<noscript>` content, and ferrovue
-  writes the head exactly as unhead does, so a `useHead` value holding `<fv-hole>` (a title in
-  `og:title`, say) put a hole marker into a page whose head is rendered into the string
-  `HtmlStream` and `split_holes` cut. The first hole's content was then written inside the head
-  attribute, ending it, and what followed the marker in the value was read as markup. The marker
-  is now `<fv-hole"</script</style</noscript>`, which no value ferrovue or unhead writes can hold.
-- A value in the page head could move a streaming hole. unhead escapes only `"` in an attribute
-  value and only the closing tag in `<script>`, `<style>` and `<noscript>` content, and ferrovue
-  writes the head exactly as unhead does, so a `useHead` value holding `<fv-hole>` (a title in
-  `og:title`, say) put a hole marker into a page whose head is rendered into the string
-  `HtmlStream` and `split_holes` cut. The first hole's content was then written inside the head
-  attribute, ending it, and what followed the marker in the value was read as markup. The marker
-  is now `<fv-hole"</script</style</noscript>`, which no value ferrovue or unhead writes can hold.
+- A `useHead` value holding `<fv-hole>` could move a streaming hole. The marker is
+  `<fv-hole"</script</style</noscript>`, which no value ferrovue or unhead writes can hold: [Holes](https://docs.rs/ferrovue/latest/ferrovue/guide/security/index.html#holes).
 
 ## [0.6.0] - 2026-10-06
 
