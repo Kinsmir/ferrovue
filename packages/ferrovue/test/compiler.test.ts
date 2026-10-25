@@ -5111,7 +5111,63 @@ import U from "./U.vue";
 defineProps<{ k: "a" | "b" | "c" }>();
 </script>
 <template><U :o="k" k="a" /></template>`,
-      /the prop is one of "a" \| "b", the members of `UO`, and the value given is a string that may be any other/,
+      /X\.vue:5:18: the prop is one of "a" \| "b", the members of `UO`, and the value given may be "c": narrow it to the members, by `===` or `!==` with a literal, by its truth or by `\|\|`, in `\?:`, `&&` or `v-if`, or pass a value typed as the union/,
+    ],
+    [
+      "a wider union that may still be its other member given to a child's prop of a union",
+      `<script setup lang="ts">
+import { ref } from "vue";
+import U from "./U.vue";
+const props = defineProps<{ s?: "a" | "b" }>();
+const t = ref<"a" | "b" | "">(props.s ?? "");
+</script>
+<template><U k="a" :o="t" /></template>`,
+      /X\.vue:7:24: the prop is one of "a" \| "b", the members of `UO`, and the value given may be "": narrow it to the members/,
+    ],
+    [
+      "a wider union narrowed by a test of another member given to a child's prop of a union",
+      `<script setup lang="ts">
+import { ref } from "vue";
+import U from "./U.vue";
+const props = defineProps<{ s?: "a" | "b" }>();
+const t = ref<"a" | "b" | "">(props.s ?? "");
+</script>
+<template><U k="a" :o="t === 'a' ? undefined : t" /></template>`,
+      /X\.vue:7:24: the prop is one of "a" \| "b", the members of `UO`, and the value given may be "": narrow it to the members/,
+    ],
+    [
+      "a computed typed as a union whose body may give another member",
+      `<script setup lang="ts">
+import { computed, ref } from "vue";
+import U from "./U.vue";
+const props = defineProps<{ s?: "a" | "b" }>();
+const t = ref<"a" | "b" | "">(props.s ?? "");
+const shown = computed((): "a" | "b" | undefined => (t.value === "a" ? undefined : t.value));
+</script>
+<template><U k="a" :o="shown" /></template>`,
+      /X\.vue:6:54: `shown`, a `computed`, is typed as one of "a" \| "b", and the compiler finds it may be "": it narrows a string by `===` or `!==` with a literal, by its truth and by `\|\|`, in `\?:`, `&&` and `v-if`; narrow the value by one of these, or give each branch a member of the union/,
+    ],
+    [
+      "a computed typed as a union whose body is a string",
+      `<script setup lang="ts">
+import { computed } from "vue";
+import U from "./U.vue";
+const props = defineProps<{ s: string }>();
+const shown = computed((): "a" | "b" => props.s as "a" | "b");
+</script>
+<template><U :k="shown" /></template>`,
+      /X\.vue:5:41: `shown`, a `computed`, is typed as one of "a" \| "b", and the compiler finds it may be any string/,
+    ],
+    [
+      "a ref typed as a union whose value may be another string",
+      `<script setup lang="ts">
+import { ref } from "vue";
+import U from "./U.vue";
+const props = defineProps<{ s: string }>();
+const t = ref<"a" | "b">(props.s as "a" | "b");
+</script>
+<template><U :k="t" /></template>`,
+      /X\.vue:5:26: `t`, a `ref`, is typed as one of "a" \| "b", and the compiler finds it may be any string/,
     ],
     [
       "a union compared with a literal outside it",
@@ -5865,6 +5921,11 @@ defineProps<{ chip: Chip }>();
     "a string given to a child's prop of a union": "FV0515",
     "a literal outside a child's prop of a union": "FV0515",
     "a value of a wider union given to a child's prop of a union": "FV0515",
+    "a wider union that may still be its other member given to a child's prop of a union": "FV0515",
+    "a wider union narrowed by a test of another member given to a child's prop of a union": "FV0515",
+    "a computed typed as a union whose body may give another member": "FV0111",
+    "a computed typed as a union whose body is a string": "FV0111",
+    "a ref typed as a union whose value may be another string": "FV0111",
     "a union compared with a literal outside it": "FV0637",
     "an optional union compared with a literal outside it": "FV0637",
     "a union compared with a literal outside it in a computed's switch": "FV0637",
@@ -7336,6 +7397,68 @@ defineProps<{ k: "a" | "b" | "c"; o?: "a" | "b" | "c" | "d"; s: string; q: "a" |
     expect(out).toContain('q: match s_pick { "b" => super::y::YQ::B, _ => super::y::YQ::C }');
     expect(out).toContain('r: match if props.on { "a" } else { "b" } { "a" => super::y::YR::A, _ => super::y::YR::B }');
     expect(out).toContain("lit: super::y::YLit::C");
+  });
+
+  describe("a string of a wider union, narrowed to a child's prop of a union", () => {
+    const narrowed = (template: string, script = ""): string =>
+      rendered(
+        compile(
+          project(
+            `<script setup lang="ts">
+import { computed, ref } from "vue";
+import Badge from "./Badge.vue";
+import type { Tone } from "../types/tone";
+const props = defineProps<{ start?: Tone }>();
+const tone = ref<Tone | "">(props.start ?? "");
+${script}
+</script>
+<template>${template}</template>`,
+            {
+              "types/tone.ts": 'export type Tone = "calm" | "loud";\n',
+              "components/Badge.vue": `<script setup lang="ts">
+import type { Tone } from "../types/tone";
+defineProps<{ tone?: Tone }>();
+</script>
+<template><b>{{ tone ?? "none" }}</b></template>`,
+            },
+          ),
+        ).get("x.rs")!,
+      );
+
+    it("leaves out the falsy member by `||`", () => {
+      expect(narrowed(`<Badge :tone="tone || undefined" />`)).toContain("tone: Some(s_tone).filter(|v| !v.is_empty()).map(|v| match v {");
+    });
+
+    it.each([
+      [`tone === '' ? undefined : tone`, "tone: (if s_tone.is_empty() { None } else { Some(s_tone) }).map(|v| match v {"],
+      [`'' !== tone ? tone : undefined`, "tone: (if !s_tone.is_empty() { Some(s_tone) } else { None }).map(|v| match v {"],
+      [`!(tone === '') ? tone : undefined`, "tone: (if !s_tone.is_empty() { Some(s_tone) } else { None }).map(|v| match v {"],
+      [`tone ? tone : undefined`, "tone: (if !s_tone.is_empty() { Some(s_tone) } else { None }).map(|v| match v {"],
+    ])("leaves out a literal a `?:` tests in the branch where it fails: %s", (value, code) => {
+      expect(narrowed(`<Badge :tone="${value}" />`)).toContain(code);
+    });
+
+    it("narrows by `v-if` and `v-else`, to the one member a test leaves", () => {
+      const out = narrowed(`<i v-if="tone === ''">none</i><Badge v-else-if="tone === 'calm'" :tone="tone" /><Badge v-else :tone="tone" />`);
+      expect(out).toContain("super::badge::try_render(out, &super::badge::Props { tone: Some(super::types::Tone::Calm) })?;");
+      expect(out).toContain("super::badge::try_render(out, &super::badge::Props { tone: Some(super::types::Tone::Loud) })?;");
+    });
+
+    it("narrows the operands after a test in a `v-if` of `&&`", () => {
+      const out = narrowed(`<Badge v-if="on && tone !== ''" :tone="tone" />`, "const on = computed(() => props.start !== undefined);");
+      expect(out).toContain("if s_on && !s_tone.is_empty() {");
+      expect(out).toContain("tone: Some(match s_tone {");
+    });
+
+    it("takes a `computed` annotated as the union, whose body narrows the value to it", () => {
+      const out = narrowed(`<Badge :tone="shown" />`, `const shown = computed((): Tone | undefined => (tone.value === "" ? undefined : tone.value));`);
+      expect(out).toContain("let s_shown = if s_tone.is_empty() { None } else { Some(s_tone) };");
+      expect(out).toContain("tone: s_shown.map(|v| match v {");
+    });
+
+    it("keeps an annotated `computed` the compiler cannot show is the union where the template reads it as a string", () => {
+      expect(narrowed(`<p>{{ shown }}</p>`, `const shown = computed((): Tone => tone.value as Tone);`)).toContain("fv::escape_into(out, s_shown);");
+    });
   });
 
   it("writes a constant list's field of a union as its variant, and refuses a value outside it", () => {

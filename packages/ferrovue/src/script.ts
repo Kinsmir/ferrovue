@@ -1,5 +1,5 @@
 import { basename } from "node:path";
-import { type Component, type N, type Scope, type Val, dollarNames, fail, GenError, nodeName, nothing, snake, takesAttrs, UNDEF } from "./model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, dollarNames, fail, GenError, nodeName, nothing, snake, takesAttrs, UNDEF } from "./model.ts";
 import { CONFIG_FILE, ctx } from "./context.ts";
 import { definePropsType, readTypeFile, refuseDates, tyOfTs } from "./typescript.ts";
 import { resolveImport } from "./resolve.ts";
@@ -9,6 +9,7 @@ import { expr, fieldVal, typedBy } from "./expr.ts";
 import { occurrences } from "./parens.ts";
 import { known } from "./narrowing.ts";
 import { bindingOf, bodyExpr, panicky } from "./blocks.ts";
+import { declaredUnion } from "./enums.ts";
 import { functionOf } from "./functions.ts";
 
 export const CLIENT_HOOKS = new Set([
@@ -71,6 +72,15 @@ function constant(d: Declared): boolean {
 function refOf(t: N): N | undefined {
   const name = t?.type === "TSTypeReference" && t.typeName.type === "Identifier" ? t.typeName.name : null;
   return (name === "ComputedRef" || name === "Ref" || name === "ShallowRef") && t.typeParameters?.params?.length === 1 ? t.typeParameters.params[0] : undefined;
+}
+
+function declaredTy(comp: Component, t: N): Ty | null {
+  try {
+    return tyOfTs(comp, t, comp.structs);
+  } catch (e) {
+    if (e instanceof GenError) return null;
+    throw e;
+  }
 }
 
 function statedTy(init: N): N | undefined {
@@ -335,6 +345,12 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
           continue;
         }
         v = empty ?? expr(isComputed ? { ...scope, within: "computed" } : { ...scope, settingUpAt: st.start, within: "setup" }, source);
+        const annotation = typed ?? (isComputed ? init0.arguments[0]?.returnType?.typeAnnotation : undefined);
+        if (annotation && untyped && (v.ty.k === "opt" ? v.ty.of : v.ty).k === "str") {
+          const kind = isComputed ? "`computed`" : isRef ? `\`${init0.callee.name}\`` : "constant";
+          const want = declaredTy(comp, annotation);
+          if (want !== null) v = declaredUnion(comp, v, want, `\`${local}\`, a ${kind},`, untyped);
+        }
       } catch (e) {
         if (!(e instanceof GenError) || e.code === "FV1908") throw e;
         scope.clientOnly.set(local, e.what);

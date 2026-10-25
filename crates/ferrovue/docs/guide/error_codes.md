@@ -128,6 +128,12 @@ Name imported from a module the compiler cannot resolve to a `.ts` file of the p
 
 The compiler reads constants and types from the project's own `.ts` files, which a component imports by a relative path or through an alias: the `compilerOptions.paths` (and `baseUrl`) of the tsconfig.json nearest the component, and of the projects it references, and, when the Vite plugin runs, Vite's `resolve.alias`. The message names the specifier and where it was looked for. A name imported from a package is available only on the client: in an event handler, or computed in Rust and passed as a prop.
 
+## FV0111
+
+Setup value typed as a union of string literals that may hold another string.
+
+A `computed`, a `ref` or a constant of setup annotated as a union of string literals (`computed((): Tone | undefined => …)`, `ref<Tone>(…)`) is a string, which the compiler checks against its annotation where a child's prop or an object literal's field takes it as the union, a Rust enum. The compiler follows the narrowing TypeScript does by `===` and `!==` with a string literal, by a value's truth and by `||`, in `?:`, `&&` and `v-if`, and refuses the value, at its declaration, when its body may give another string: one the narrowing it follows leaves in (`x === "a" ? undefined : x` of `"a" | "b" | ""` may be `""`), or a string of no known members (`s as Tone`). Narrow the value by one of these tests, or give each branch a member of the union. See [`props`](crate::guide::props#unions-of-string-literals).
+
 # Constants and enums: FV02xx
 
 ## FV0201
@@ -708,7 +714,7 @@ Vue hands a listener whose name matches a declared prop (`onSelect` for `@select
 
 Prop of a union of string literals given a value outside it.
 
-A child's prop typed as a union of string literals is a Rust enum, which holds its members alone. The value passed must be one of them: a literal of the union, a value of the same union or of one whose members it holds, or a string the compiler knows is among them (a `?:` of members, a `computed` typed as the union). A literal outside the union, or a value typed `string`, is refused, as TypeScript refuses it. Pass a member, or type the value as the union.
+A child's prop typed as a union of string literals is a Rust enum, which holds its members alone. The value passed must be one of them: a literal of the union, a value of the same union or of one whose members it holds, or a string the compiler knows is among them (a `?:` of members, a `computed` typed as the union, a value of a wider union narrowed to the members by `===`, `!==`, its truth or `||`, as `x || undefined` and `x === "" ? undefined : x` narrow `Tone | ""`). A literal outside the union, a value of a wider union that may still hold another member, or a value typed `string`, is refused, as TypeScript refuses it. Pass a member, narrow the value to the members, or type it as the union.
 
 ## FV0516
 

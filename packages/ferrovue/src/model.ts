@@ -717,6 +717,24 @@ export function literalsOf(ty: Ty): readonly (string | number)[] | undefined {
   return LITERALS.get(ty);
 }
 
+/** `ty`, optional or not, with the literals known of it narrowed to those `keep` holds, as
+ * TypeScript narrows a union; `ty` itself when none are known, or when `keep` holds all or none. */
+export function keptLiterals(ty: Ty, keep: (literal: string | number) => boolean): Ty {
+  if (ty.k === "opt") {
+    const of = keptLiterals(ty.of, keep);
+    return of === ty.of ? ty : { ...ty, of };
+  }
+  const literals = LITERALS.get(ty);
+  if (literals === undefined || (ty.k !== "str" && ty.k !== "int")) return ty;
+  const left = literals.filter(keep);
+  return left.length === literals.length || left.length === 0 ? ty : literalTy(ty.k, left);
+}
+
+/** Whether a literal of a union is falsy, as `""` and `0` are. */
+export function falsyLiteral(literal: string | number): boolean {
+  return literal === "" || literal === 0;
+}
+
 const ASCII = new WeakSet<Ty>();
 
 /** A string type whose values are known to hold ASCII characters only, as the string of a number

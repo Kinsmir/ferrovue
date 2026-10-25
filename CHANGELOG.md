@@ -25,6 +25,19 @@ released together and share version numbers.
   is 0.11, and the bug report's version placeholder 0.11.0. `release.ts bump` and
   `release.ts check` cover them as they cover the schema URL. RELEASING.md and CONTRIBUTING.md write
   `X.Y.Z` in their example commands.
+- A string of a wider union of string literals reaches a child's prop of a narrower union once it
+  is narrowed as TypeScript narrows it, as 0.10 compiled it when the prop was a string: given
+  `const tone = ref<Tone | "">(…)`, `:tone="tone || undefined"`, `tone === '' ? undefined : tone`,
+  `'' !== tone ? tone : undefined`, `tone ? tone : undefined`, `v-if="tone !== ''"`, a `v-else`
+  after `v-if="tone === ''"` and an operand of `&&` after the test, and a `computed` annotated
+  `Tone | undefined` whose body narrows it so. `||` leaves out a union's falsy members, and
+  `===`, `!==` and a test of truth narrow a string of a union in each branch of `?:`, `&&`, `||`
+  and `v-if`. A `computed`, a `ref` or a constant of setup annotated as a union of string
+  literals is checked against its annotation, and one whose body may give another string is
+  refused at its declaration, with the new FV0111, where a child's prop or an object literal's field takes it as the union. `ERRORS` in `ferrovue/compiler` holds FV0111, and FV0515's detail names the narrowing.
+  FV0515 names the members a value of a wider union may still hold and the narrowing that leaves
+  them out. A constant table read as `undefined` for a member (`{ "": undefined }`) stays refused
+  with FV0207.
 
 ## [0.11.0] - 2026-10-25
 

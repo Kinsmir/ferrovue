@@ -135,6 +135,7 @@ pub mod model_parent;
 pub mod moduled;
 pub mod moduled_chip;
 pub mod narrowed_rows;
+pub mod narrowed_tone;
 pub mod narrowing;
 pub mod nav;
 pub mod null_child;
@@ -223,6 +224,7 @@ pub mod truthy;
 pub mod typeof_tests;
 pub mod union_child;
 pub mod union_enums;
+pub mod union_narrowing;
 pub mod union_objects;
 pub mod union_step;
 pub mod unread;
@@ -968,6 +970,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: narrowed_rows::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             narrowed_rows::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
+        "NarrowedTone" => {
+            let props: narrowed_tone::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            narrowed_tone::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
         "Narrowing" => {
             let props: narrowing::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             narrowing::try_render(&mut out, &props).map_err(|e| e.to_string())?;
@@ -1388,6 +1394,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "UnionEnums" => {
             let props: union_enums::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             union_enums::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "UnionNarrowing" => {
+            let props: union_narrowing::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            union_narrowing::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "UnionObjects" => {
             let props: union_objects::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
