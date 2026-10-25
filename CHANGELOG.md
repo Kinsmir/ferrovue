@@ -32,8 +32,8 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
   dependency, where the schema was 0.8.0's: [Quick start](https://docs.rs/ferrovue/latest/ferrovue/guide/quick_start/index.html#2-configure).
 - FV0623's detail says a `?:` whose branches differ in type compiles where it is only written out:
   [FV0623](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#fv0623).
-- An `enum` member set to a constant of its component or to an earlier member is evaluated.
-  0.11.0 refused the component's `enum` as a prop type with FV0315: [Constants](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#constants).
+- An `enum` member set to a constant of its component or to an earlier member is evaluated as TypeScript does.
+  0.11.0 refused it with FV0315, and read a member named like a constant as that constant: [Constants](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#constants).
 
 ## [0.11.0] - 2026-10-25
 
