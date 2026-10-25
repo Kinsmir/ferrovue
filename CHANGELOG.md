@@ -16,6 +16,12 @@ released together and share version numbers.
   Seven mutants of `constants.ts` and `dynamic.ts` that no test kills, which earlier runs reported
   as timeouts, are listed with their reasons.
 
+### Fixed
+
+- The README and the guide's quick start name the schema of the current release in `$schema`;
+  they named 0.8.0's. `release.ts bump` writes the new version into both, and `release.ts check`
+  refuses a tag they do not match.
+
 ## [0.11.0] - 2026-10-25
 
 ### Added

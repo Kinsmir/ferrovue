@@ -10,6 +10,8 @@ const CHANGELOG = join(ROOT, "CHANGELOG.md");
 const CRATES_DIR = join(ROOT, "crates");
 const FUZZ_LOCK = join(ROOT, "fuzz/Cargo.lock");
 
+export const SCHEMA_DOCS = ["README.md", "crates/ferrovue/docs/guide/quick_start.md"];
+
 export const CRATES = ["ferrovue-core", "ferrovue-router", "ferrovue-i18n", "ferrovue"];
 
 const SEMVER = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$/;
@@ -118,6 +120,19 @@ export interface ReleaseFiles {
   changelog: string;
   crates?: Record<string, string>;
   fuzzLock?: string;
+  docs?: Record<string, string>;
+}
+
+const SCHEMA_URL = /(https:\/\/cdn\.jsdelivr\.net\/npm\/ferrovue@)([^/\s]+)(\/schema\.json)/g;
+
+/** `text` with each jsDelivr URL of the configuration's schema naming `version`. */
+export function setSchemaVersion(text: string, version: string): string {
+  return text.replace(SCHEMA_URL, `$1${version}$3`);
+}
+
+/** The versions the jsDelivr URLs of the configuration's schema in `text` name. */
+export function schemaVersions(text: string): string[] {
+  return [...text.matchAll(SCHEMA_URL)].map((m) => m[2]!);
 }
 
 /** `lock` with each path package named in `names` locked at `version`, the others as they were. */
@@ -167,6 +182,11 @@ export function checkRelease(tag: string, files: ReleaseFiles): string[] {
       if (CRATES.includes(name) && locked !== version) {
         problems.push(`fuzz/Cargo.lock locks ${name} at ${locked}, the tag at ${version}: \`release.ts bump\` updates it`);
       }
+    }
+  }
+  for (const [file, text] of Object.entries(files.docs ?? {})) {
+    for (const named of new Set(schemaVersions(text))) {
+      if (named !== version) problems.push(`${file} names the schema of ${named}, the tag ${version}: \`release.ts bump\` updates it`);
     }
   }
   const notes = changelogNotes(files.changelog, version);
@@ -260,6 +280,7 @@ function setVersion(files: ReleaseFiles, version: string): void {
   writeFileSync(PACKAGE, setPackageVersion(files.pkg, version));
   run("cargo", ["update", "--workspace", "--offline"]);
   if (existsSync(FUZZ_LOCK)) writeFileSync(FUZZ_LOCK, setLockedVersions(readFileSync(FUZZ_LOCK, "utf8"), CRATES, version));
+  for (const file of SCHEMA_DOCS) writeFileSync(join(ROOT, file), setSchemaVersion(readFileSync(join(ROOT, file), "utf8"), version));
 }
 
 function main(argv: string[]): number {
@@ -274,6 +295,7 @@ function main(argv: string[]): number {
         .map((d) => [d.name, readFileSync(join(CRATES_DIR, d.name, "Cargo.toml"), "utf8")]),
     ),
     ...(existsSync(FUZZ_LOCK) ? { fuzzLock: readFileSync(FUZZ_LOCK, "utf8") } : {}),
+    docs: Object.fromEntries(SCHEMA_DOCS.map((file) => [file, readFileSync(join(ROOT, file), "utf8")])),
   });
   switch (command) {
     case "bump": {

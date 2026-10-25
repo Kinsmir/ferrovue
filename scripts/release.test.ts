@@ -7,6 +7,8 @@ import {
   checkRelease,
   lockedVersions,
   setLockedVersions,
+  schemaVersions,
+  setSchemaVersion,
   isPrerelease,
   isVersion,
   packageVersion,
@@ -141,6 +143,18 @@ describe("release chores", () => {
     expect(checkRelease("v0.1.0", { ...files, fuzzLock: lock("0.0.9") })).toEqual([
       "fuzz/Cargo.lock locks ferrovue at 0.0.9, the tag at 0.1.0: `release.ts bump` updates it",
       "fuzz/Cargo.lock locks ferrovue-core at 0.0.9, the tag at 0.1.0: `release.ts bump` updates it",
+    ]);
+  });
+
+  it("checks the schema URLs the docs name", () => {
+    const doc = (v: string): string => `"$schema": "https://cdn.jsdelivr.net/npm/ferrovue@${v}/schema.json",\n"$schema": "./node_modules/ferrovue/schema.json"\n`;
+    expect(schemaVersions(doc("0.1.0"))).toEqual(["0.1.0"]);
+    expect(setSchemaVersion(doc("0.0.9"), "0.2.0")).toBe(doc("0.2.0"));
+    expect(setSchemaVersion("ferrovue@0.1.0", "0.2.0")).toBe("ferrovue@0.1.0");
+    const files = { cargo: CARGO, pkg: PKG, changelog: CHANGELOG, crates: CRATE_MANIFESTS };
+    expect(checkRelease("v0.1.0", { ...files, docs: { "README.md": doc("0.1.0") } })).toEqual([]);
+    expect(checkRelease("v0.1.0", { ...files, docs: { "README.md": doc("0.0.9") + doc("0.0.9") } })).toEqual([
+      "README.md names the schema of 0.0.9, the tag 0.1.0: `release.ts bump` updates it",
     ]);
   });
 
