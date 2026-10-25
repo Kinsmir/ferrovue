@@ -136,7 +136,7 @@ scripts/no-re-exports.ts     the check `pnpm lint` runs: no `pub use` in `crates
                              `router` and `i18n`, and no re-export in the TypeScript of `packages/`, `scripts/` and `site/`
 scripts/traceability.test.ts the README's "What a component may use" rows, traced to conformance components in TESTING.md
 site/                        the VitePress site at kinsmir.github.io/ferrovue: `guide.ts` turns the guide, the crate's
-                             front page and the changelog into its pages (`pnpm --filter ferrovue-site build`)
+                             front page and the changelog into its pages (`pnpm --filter ferrovue-site site:build`)
 ```
 
 ## Adding support for a Vue construct
