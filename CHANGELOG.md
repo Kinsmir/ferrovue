@@ -809,166 +809,69 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 
 ### Added
 
-- Stable error codes. Every error the compiler raises has a code, `FV` and four digits grouped by
-  area (`FV00xx` components and parsing, `FV01xx` script setup, `FV02xx` constants, `FV03xx` props
-  and types, `FV04xx` templates and attributes, `FV05xx` child components, `FV06xx` expressions,
-  `FV07xx` strings and numbers, `FV08xx` lists and loops, `FV09xx` slots, `FV10xx` classes and
-  styles, `FV11xx` configuration and helpers, `FV12xx` the router, `FV13xx` Pinia, `FV14xx`
-  vue-i18n, `FV15xx` raw HTML, `<ClientOnly>`, `<Teleport>` and Rust twins), and a code is never
-  reused. The CLI and the Vite plugin's overlay show it as `error[FV0602]: file:line:column: …`
-  with a link to its entry in the crate guide's new `error_codes` page, which `pnpm
-  errors:generate` writes from the compiler's list; `pnpm test` fails when the two differ or a
-  code is raised but not listed. `ferrovue --format json` (with or without `--check`) writes
-  diagnostics with the file, line, column, end where known, code, title, message and docs link,
-  keeping the exit status; the quick start gives a VS Code problem matcher for `tasks.json`, which
-  a test runs against the CLI's output. A syntax error in `<script setup>` is reported with its
-  file and line as `FV0001`.
-- Whole-page hydration beside islands (#33). `ferrovue::Page` takes the components a layout's
-  slots hold as `Part`s, each made from the `Html` value that writes its markup, so the record of
-  `(component, props)` per slot comes from what rendered the page; `Page::hole` leaves a slot to
-  fill while an `HtmlStream` sends the page, and `PageRecord` writes the record as a
-  `<script type="application/json">` escaped as `state_script_into` escapes the state, at once or
-  as the stream's last hole. `mountPage(layout, loaders, options)` from `ferrovue` reads the record,
-  loads only the components it names, and hydrates the layout with each slot rendered as a plain
-  array, with `pinia`, `router` and `plugins` as `mountIslands` takes them. `hydrateRecordedPage`
-  from `ferrovue/testing` hydrates a recorded page and throws on any mismatch. Page fixtures
-  recorded from Vue check the Rust render and the record, in happy-dom and in real browsers, and
-  `examples/fullstack` serves a page hydrated whole. A part written where Vue would give it a
-  `:slotted()` scope id panics, and a `TrustedHtml` prop is carried in the record in full; the
-  guide's `islands_and_hydration` page states the cost.
-- A weekly CI job (`.github/workflows/canary.yml`) installs the newest patch of Vue 3.5, vue-router,
-  Pinia and vue-i18n that ferrovue's peer ranges allow, re-records the conformance fixtures and
-  vectors from them, hydrates the committed HTML with them, and opens an issue when anything differs.
-- `null` and nullable data: `T | null` in props, interfaces, shared types and Pinia state is an
-  `Option<T>` whose `None` the island's props and the state script write as `null` (an optional
-  value's `None` is still left out), so the client hydrates with the `null` the server rendered.
-  Templates test it with `x !== null`, `x === null`, `x != null`, `x == null` and truthiness, and
-  `??`, `?.`, `{{ }}` and bound attributes treat it as Vue does; `null` may be a `?:` branch, a
-  `??` fallback and a child's prop. A type that may be both `null` and `undefined`
-  (`T | null | undefined`, `x?: T | null`), a default for a nullable prop and a strict comparison
-  of a value that may be either are refused with an error saying why. The fuzzer generates nullable
-  props.
-- `props.x` in the template when `props` is bound to `defineProps()` or `withDefaults(…)`, as
-  script code could already read it.
-- Components with no `<script>`, or an empty `<script setup>` (an icon, a divider), compile as
-  components without props.
-- Refs that start empty are typed by their type argument: `ref<Row[]>([])` is an empty list of
-  `Row` that `v-for`, `.length` and `.join()` read, and `ref<Row>()`, `ref<T | undefined>()` and
-  `ref<T>(undefined)` are absent on the server.
+- Every compiler error has a stable `FV` code, which the CLI and the Vite plugin's overlay print
+  with a link to its entry: [`error_codes`](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html).
+- `ferrovue --format json` writes diagnostics as JSON, and the quick start gives a VS Code problem
+  matcher: [Editor and CI diagnostics](https://docs.rs/ferrovue/latest/ferrovue/guide/quick_start/index.html#editor-and-ci-diagnostics).
+- Whole-page hydration beside islands: `ferrovue::Page` records what a layout's slots hold, and
+  `mountPage` hydrates the page from that record (#33): [Hydrating a page](https://docs.rs/ferrovue/latest/ferrovue/guide/islands_and_hydration/index.html#hydrating-a-page).
+- `hydrateRecordedPage` in `ferrovue/testing` hydrates a recorded page and throws on any mismatch:
+  [Testing a page](https://docs.rs/ferrovue/latest/ferrovue/guide/islands_and_hydration/index.html#testing-a-page).
+- `T | null` in props, shared types and Pinia state is an `Option<T>` written as `null`, and
+  templates test and read it as Vue does: [Nullable props](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#nullable-props).
+- `props.x` in the template when `props` is bound to `defineProps()` or `withDefaults(…)`.
+- Components with no `<script>`, or an empty `<script setup>`, compile as components without props.
+- Refs that start empty are typed by their type argument: `ref<Row[]>([])`, `ref<Row>()`.
 - Generic components: `<script setup generic="T extends Item">` renders each type parameter as its
-  constraint, which is all the template can rely on. A parameter without one is refused.
-- Constants imported from `.ts` files and TypeScript `enum`s (imported, or declared in the
-  component) are evaluated when the component is compiled: strings, numbers, booleans, lists of
-  them and objects of them read field by field are written where the template reads them
-  (`LABELS.save`, `Tone.Loud`, `Rank[5]`), and a list of objects becomes a `const` in `types.rs`,
-  typed by the interface it is declared with or by a struct named after it. An enum is also a prop
-  type: a string, or a number. A field that is `null` in some of a list's objects is nullable, as
-  `T | null` is. A constant that is not a literal is refused where it is read.
-- `useSlots()`: `slots.header` tests a slot's presence, in the template or in `computed`, as
-  `$slots.header` does.
-- A `builders` key in `ferrovue.config.json`: with `false`, props structs, shared types and store
-  state are written without the `impl` holding `new()` and the chainable setters, for an app that
-  builds its props as struct literals. The fields stay public and the derives, `Default` included,
-  are unchanged. `true`, today's output, is the default; a value that is not a boolean is a config
-  error (#35).
+  constraint: [Types](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#types).
+- Constants imported from `.ts` files and TypeScript `enum`s are evaluated at compile time, and an
+  enum may be a prop type: [Constants](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#constants).
+- `useSlots()`: `slots.header` tests a slot's presence as `$slots.header` does.
+- `"builders": false` in `ferrovue.config.json` leaves out the generated `new()` and setters
+  (#35): [Building props](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#building-props).
 - `linkRouter(routes, { navigate })` from `ferrovue/link-router`, for an application whose own
-  navigation layer leaves the page: a vue-router router over the routes file the compiler reads,
-  every route rendering nothing, on a memory history at the page's location. Its first navigation
-  resolves the page the server rendered; every later one, a `<RouterLink>` click included, is
-  handed to `navigate` with its `href` and aborted, so active links, `aria-current` and `useRoute()`
-  keep matching the page on screen. It takes the base and link classes of the config's `router`.
-  The routing guide explains why each part is there (#34).
-- `<ClientOnly>`, from `ferrovue/client` (and `ferrovue`): the server writes its `#fallback` slot,
-  or `<!---->` without one, and the browser hydrates that fallback and swaps in the default slot once
-  mounted. The compiler does not read the default slot, so a component library's components, or any
-  other import or expression the compiler refuses, may go there. It takes no attributes.
-- Rust twins: components the compiler does not compile, listed under `twins` in
-  `ferrovue.config.json` with their props and slots, are rendered by a Rust function of the project's,
-  which the generated parent calls with the props, the slots and the attributes and scope ids its
-  root takes. `twins.rs` holds each twin's props, slots and the signature its function must have.
-  ferrovue cannot check that a twin writes what Vue writes; the full-stack example holds one to Vue
-  with fixtures recorded through `ferrovue/testing`.
-- `defineAsyncComponent(() => import("./X.vue"))`, and its `{ loader }` form, renders as the
-  component it loads, as Vue's server renderer waits for it.
+  navigation leaves the page (#34): [Links when the application navigates on its own](https://docs.rs/ferrovue/latest/ferrovue/guide/routing/index.html#links-when-the-application-navigates-on-its-own).
+- `<ClientOnly>`: the server writes its `#fallback` slot, and the browser swaps in the default slot
+  once mounted: [Client-only content](https://docs.rs/ferrovue/latest/ferrovue/guide/errors_and_limits/index.html#client-only-content).
+- Rust twins: a component listed under `twins` in `ferrovue.config.json` is rendered by a Rust
+  function of the project's: [Rust twins](https://docs.rs/ferrovue/latest/ferrovue/guide/errors_and_limits/index.html#rust-twins).
+- `defineAsyncComponent(() => import("./X.vue"))` renders as the component it loads.
 
 ### Changed
 
-- The `vue` peer dependency is `~3.5.43` instead of exactly `3.5.43`, so a later Vue 3.5 patch no
-  longer fails the install. The optional peers are held to the minor the fixtures were recorded
-  from: `vue-router` `~5.3.1` (was `^5.3.1`), `pinia` `~4.0.3` (was `^4.0.3`) and `vue-i18n`
-  `~11.4.13` (was `^11.0.0`). The README's "Versions" lists them.
-- Every refusal names a line and column in the `.vue` file. Errors that had none now point at the
-  construct: `new Date(…)` (now "`new Date(…)` builds an object the server has no twin for"), an
-  object interpolated with `{{ }}`, a non-literal default in `withDefaults`, `<style module>` and
-  `v-bind()` in CSS, `<component :is>`, a component or custom directive the template cannot
-  resolve, `<RouterView>` in a scoped component, and expressions whose start the template's source
-  map does not cover.
-- A component written with the Options API is refused with "a child component must have
-  `<script setup lang="ts">`, or no script at all" when another component imports it, and "an
-  island needs …" otherwise, instead of a message about islands for both. A child that is not
-  among the compiled components says so instead of asking for an "imported island".
-- CI's jobs set up Rust and pnpm through shared composite actions, each job has a timeout, and a
-  final **CI passed** job sums up the others. Only runs on `main` save the cargo, pnpm and
-  Playwright caches; pull requests restore them without writing their own.
-- Every Rust dependency of the workspace, dev-dependencies included, is declared once in the root
-  `Cargo.toml`'s `[workspace.dependencies]`, and `node scripts/release.ts members` fails on one a
-  crate declares itself.
+- The `vue` peer is `~3.5.43`, and the optional peers are held to a minor: `vue-router` `~5.3.1`,
+  `pinia` `~4.0.3`, `vue-i18n` `~11.4.13`: [Vue and its integrations](https://docs.rs/ferrovue/latest/ferrovue/guide/support/index.html#vue-and-its-integrations).
+- Every refusal names a line and column in the `.vue` file, `new Date(…)` and `<component :is>`
+  among those that had none.
+- A component written with the Options API is refused with a message that asks for
+  `<script setup lang="ts">` or no script at all.
 
 ### Fixed
 
-- `undefined ?? x` gives `x`, and a value known to be `undefined` is falsy, as in JavaScript; the
-  compiler kept `undefined` for both.
-- `.includes()` of a list of numbers takes any number: a `Float` in a list of `number`s, a `number` in a
-  list of `Float`s, or in a list mapped to fractions (`nums.map((v) => -v).includes(0)`), which were
-  refused as a value of another type than the list's. It compares as JavaScript's `includes` does, `-0`
-  equal to `0`.
+- `undefined ?? x` gives `x`, and a value known to be `undefined` is falsy, as in JavaScript.
+- `.includes()` of a list of numbers takes an integer or a `Float`, and compares `-0` equal to `0`.
 
 ## [0.4.0] - 2026-10-05
 
 ### Changed
 
-- **Breaking:** `import … from "ferrovue"` is the browser API (`mountIslands`, `hydrateState`, `TrustedHtml`, `Float`); the compiler's API (`generate`, `write`, the configuration types) moved to `ferrovue/compiler`. `ferrovue/client`, `ferrovue/types`, `ferrovue/islands`, `ferrovue/vite`, `ferrovue/testing` and the CLI are unchanged. The package is marked `"sideEffects": false`, its root bundles to about 2.4 kB instead of 1.2 MB, and a build no longer leaves files from earlier builds in `dist/`.
-- A release starts only from a signed, annotated tag whose signature GitHub verifies; any other tag
-  stops the release workflow before anything is staged or published (`RELEASING.md`, "Signed tags").
-- The crate's `lib.rs` is split into modules, one per part of the runtime: escaping, numbers,
-  `Html`, slots and holes, `class`, the state script, `v-html`. Every public path is the same
-  (`ferrovue::escape_into`, `ferrovue::Html`, …), and so is everything generated code writes.
-- The runtime is four crates, released together at one version. vue-router's matching is
-  `ferrovue-router` and vue-i18n's `t()` is `ferrovue-i18n`; the escaping and the JavaScript number
-  writing all of them use is `ferrovue-core`. `ferrovue` depends on them at exactly its own version
-  and re-exports them where they were (`ferrovue::Router`, `ferrovue::I18n`, `ferrovue::i18n::…`,
-  `ferrovue::push_int`, …), so generated code and code using the crate do not change.
-- New default features of `ferrovue`, `router` and `i18n`, which bring in `ferrovue-router` and
-  `ferrovue-i18n`. An application with neither routes nor translations can set
-  `default-features = false` and build neither crate.
-- The compiler is restructured, with no change to anything it generates or refuses: vue-router,
-  Pinia stores, vue-i18n and scoped styles are compiler plugins behind an internal interface
-  (`src/plugin.ts` and `src/plugins/`, described in CONTRIBUTING.md), so the core names none of
-  them, and `expr.ts`, `template.ts` and `attrs.ts` are split into modules of under 500 lines.
+- **Breaking:** the package root `ferrovue` is the browser API (`mountIslands`, `hydrateState`),
+  and the compiler's API (`generate`, `write`, the configuration types) is `ferrovue/compiler`.
+- The runtime is four crates released at one version, `ferrovue-core`, `ferrovue-router`,
+  `ferrovue-i18n` and `ferrovue`, which re-exports the others: [One version line](https://docs.rs/ferrovue/latest/ferrovue/guide/support/index.html#one-version-line).
+- `ferrovue` has the default features `router` and `i18n`; with `default-features = false` an
+  application builds neither crate.
 
 ### Fixed
 
-- A prop named after a Rust keyword compiles: `Props::new` and the setters take `r#loop`, `r#type` and
-  the like, and `self`, `Self`, `super` and `crate`, which Rust cannot write as raw identifiers,
-  become `self_`, `Self_`, `super_` and `crate_` in Rust while keeping their name in the props' JSON (#19).
-- `ferrovue/testing` loads in a project that installs only `vue`: `fixtureApp` imports the optional
-  peers when a fixture needs them, `vue-router` for routes, `pinia` for `$stores` and `vue-i18n` for
-  the `i18n` option, and a fixture needing one that is not installed fails with an error naming the
-  package to install. With the peers installed it renders as before (#22).
-- Generated `Props`, and the structs of shared types, whose fields are all optional or that have
-  none derive `Default` beside their argument-free `new()`, so a crate that includes them passes
-  `cargo clippy -- -D warnings` (`clippy::new_without_default`). The conformance suite's generated
-  modules are a public module of its test crate, so CI's clippy holds them to the lints a crate
-  that exports them meets (#21).
-- A setup binding whose value is a string literal, such as `ref("")`, and a `computed` of one are
-  folded into the render as constants, and `v-model` on a `<select>` or radio input compares a
-  string with an empty `value` by whether it is empty, so the generated code no longer trips
-  `clippy::const_is_empty` and `clippy::comparison_to_empty` (#21).
-- Generated Rust that did not compile, found by the randomised differential tester: an attribute
-  passed to a child component whose value is a string built in a branch of `?:` or `&&`
-  (`:class="on ? 'a' : String(n)"`) now owns that string instead of borrowing a temporary, and an
-  arrow function's string item in a branch of `?:` (`find((w) => (on ? w : x))`) is borrowed
-  instead of taken as a `String` it is not.
+- A prop named after a Rust keyword compiles, as `r#type`, or `self_`, `Self_`, `super_` and
+  `crate_` for the four with no raw form (#19): [Names](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#names).
+- `ferrovue/testing` loads in a project that installs only `vue`, and imports each optional peer
+  when a fixture needs it (#22).
+- Generated code passes `cargo clippy -- -D warnings`: a `Props` with no required field derives
+  `Default`, and string constants are folded into the render (#21).
+- Generated Rust that did not compile: a child's attribute holding a string built in a `?:` or
+  `&&` branch, and an arrow function's string item in a `?:` branch.
 
 ## [0.3.0] - 2026-10-05
 
