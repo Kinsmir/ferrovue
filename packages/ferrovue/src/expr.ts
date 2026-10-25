@@ -1,4 +1,4 @@
-import { type Component, type N, type Scope, type Ty, type Val, absence, BOOL, enumOf, enumPath, fail, FLOAT, GenError, INT, isAscii, joinAbsence, joinTy, literalsOf, literalTy, nodeName, nothing, NULL, opt, placeOf, refusalAt, rustStr, sameTy, snake, STR, strTy, UNDEF, variantPath, withAbsence } from "./model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, absence, BOOL, enumOf, enumPath, fail, falsyLiteral, FLOAT, GenError, INT, isAscii, joinAbsence, joinTy, keptLiterals, literalsOf, literalTy, nodeName, nothing, NULL, opt, placeOf, refusalAt, rustStr, sameTy, snake, STR, strTy, UNDEF, variantPath, withAbsence } from "./model.ts";
 import { enumEquality, knownLiteral, refuseOutside } from "./enums.ts";
 import { CONFIG_FILE, ctx } from "./context.ts";
 import { lookupStruct, markHome, tyOfTs } from "./typescript.ts";
@@ -7,7 +7,7 @@ import { atom, bare, binary, enclosed, logical, negate, not, occurrences, receiv
 import { collected, entryPart, heldDates, picked, sliced, spreadLiteral, typedEmpty, untypedEmpty } from "./lists.ts";
 import { asCow, formatted, isTemporary, loneOf, meet, stringsEqual } from "./strings.ts";
 import { arithmetic, asF64, compare, intFromF64, isCast, isNumber, negatedOrder, numberVal, power } from "./numbers.ts";
-import { boolOf, checkNullTest, choice, known, narrowing, narrowTo, nullTest, pathOf, type Presence, presence, reassociated, truthTested, truthy, typeofCompare, typeofTest, typeofVal } from "./narrowing.ts";
+import { boolOf, checkNullTest, choice, known, literalNarrowing, narrowing, narrowTo, nullTest, pathOf, type Presence, presence, reassociated, truthTested, truthy, typeofCompare, typeofTest, typeofVal } from "./narrowing.ts";
 import { BUILTINS, builtin, call, isObjectCall } from "./calls.ts";
 import { constOf, namedVal } from "./constants.ts";
 import { localeRefusal } from "./plugins/dates.ts";
@@ -628,8 +628,10 @@ export function expr(s: Scope, n: N): Val {
         }
       }
       const a = expr(s, n.left);
-      if (n.operator !== "??" && a.ty.k !== "opt" && !nothing(a.ty) && a.ty.k !== "bool" && alwaysTruthy(a.ty)) return n.operator === "&&" ? expr(s, n.right) : a;
-      const b = expr(s, n.right);
+      const literals = n.operator === "??" ? null : literalNarrowing(s, n.left);
+      const right = literals === null ? s : n.operator === "&&" ? literals.yes : literals.no;
+      if (n.operator !== "??" && a.ty.k !== "opt" && !nothing(a.ty) && a.ty.k !== "bool" && alwaysTruthy(a.ty)) return n.operator === "&&" ? expr(right, n.right) : a;
+      const b = expr(right, n.right);
       if (n.operator === "??" || (n.operator === "||" && (a.ty.k === "opt" ? a.ty.of : a.ty).k === "date")) {
         const own = claim((p) => p.values?.nullish?.(s, a, b, n));
         if (own) return own;
@@ -673,7 +675,7 @@ export function expr(s: Scope, n: N): Val {
       if (n.operator === "||") {
         if (a.ty.k === "bool" && b.ty.k === "bool") return boolOf(logical(a.code, "||", b.code));
         if (b.ty.k === "undef") {
-          const inner: Ty = a.ty.k === "opt" ? a.ty.of : a.ty;
+          const inner: Ty = keptLiterals(a.ty.k === "opt" ? a.ty.of : a.ty, (l) => !falsyLiteral(l));
           const src = a.ty.k === "opt" ? atom(a.code) : `Some(${bare(a.code)})`;
           return { code: `${src}.filter(|v| ${truthy({ code: "*v", ty: inner })})`, ty: opt(inner) };
         }
@@ -686,7 +688,7 @@ export function expr(s: Scope, n: N): Val {
           if (k !== undefined) return k ? a : b;
           if (a.ty.k === "int" && (isCast(a) || isCast(b))) return intFromF64(`{ let a = ${bare(asF64(a))}; if a != 0.0 { a } else { ${bare(asF64(b))} } }`, a.at ?? b.at ?? refusalAt(comp, n));
           const otherwise = a.ty.k === "str" ? strArg(b.code) : bare(b.code);
-          return { code: `{ let a = ${bare(a.code)}; if ${truthy({ code: "a", ty: a.ty })} { a } else { ${otherwise} } }`, ty: joinTy(a.ty, b.ty), ...loneOf(a, b) };
+          return { code: `{ let a = ${bare(a.code)}; if ${truthy({ code: "a", ty: a.ty })} { a } else { ${otherwise} } }`, ty: joinTy(keptLiterals(a.ty, (l) => !falsyLiteral(l)), b.ty), ...loneOf(a, b) };
         }
         return fail(comp, "FV0617", "`||` between these types", n);
       }
@@ -789,8 +791,9 @@ export function expr(s: Scope, n: N): Val {
       }
       const p = presence(s, n.test);
       const name = p ? fresh("n", jsHint(p.path)) : "";
-      let a = expr(p && !p.negated ? narrowTo(s, p, name) : s, n.consequent);
-      let b = expr(p && p.negated ? narrowTo(s, p, name) : s, n.alternate);
+      const literals = p ? null : literalNarrowing(s, n.test);
+      let a = expr(p && !p.negated ? narrowTo(s, p, name) : (literals?.yes ?? s), n.consequent);
+      let b = expr(p && p.negated ? narrowTo(s, p, name) : (literals?.no ?? s), n.alternate);
       if (sameTy(a.ty, b.ty) && a.code === b.code && (!name || !occurrences(a.code, name))) return a;
       const placed = (v: Val): Val => (["struct", "child", "record"].includes(v.ty.k) && /^\w+(?:\.[\w#]+)+$/.test(v.code) ? { ...v, code: `&${v.code}` } : v);
       [a, b] = [placed(a), placed(b)];

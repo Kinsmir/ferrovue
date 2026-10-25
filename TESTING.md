@@ -134,6 +134,7 @@ A fixture is a JSON object of props plus optional keys:
 | `Tree` | A recursive, self-rendering component |
 | `Listened`, `Listeners`, `ListenLeaf`, `ListenSale` | Listeners on components, skipped by the server: a component rendering itself through `v-bind` of its own `Props` beside `@loaded`; `@x` for emits the child declares and for ones it does not, with modifiers, `@update:x`, `v-on` of an object and `@[name]`, beside an object literal, a fallthrough attribute and a `v-bind` of the child's `Props`; a prop named like a listener (`onSale`) given a value |
 | `OnProps`, `OnPropsKid`, `OnPropsRoot`, `OnPropsBare` | Props named like listeners (`on1`, `onText` bound as `:on-text`): a number, a string, booleans with and without a default, a `Float`, a union with `""`, a required boolean and a required number, passed on unchanged where Vue passes the props as written (`0`, `""`, `false`, `-0`, `NaN`), and left out when falsy where `mergeProps` joins them: on a component's root, beside `v-bind` of an object literal, and `v-bind` of a child's own `Props` beside a listener |
+| `UnionNarrowing`, `NarrowedTone` | A `ref<Tone \| "">` and a `computed` annotated `Tone \| ""` handed to a child's `Tone` prop once narrowed as TypeScript narrows them: `\|\| undefined`, `=== ''` and `!== ''` either way round in `?:`, a test of its truth, `v-if` / `v-else-if` / `v-else`, `&&` in a `v-if`, and a `computed` annotated `Tone \| undefined`; members holding markup-breaking characters, the empty string, and a hostile label |
 | `UserCard`, `UserList` | Types imported from a shared `.ts` file and from another component, string-literal unions, objects passed to children |
 | `DataList`, `DataTable`, `RowChip` | Scoped slots in a loop with fallbacks, props destructured and taken whole, empty content giving way to the fallback, a slot's object handed to a child |
 | `Frame`, `Forward`, `Page`, `Card` | Slots, fallbacks, comment-only content, slots forwarded through components |
@@ -236,7 +237,7 @@ when it names a component that is not in `components/` with fixtures of its own.
 | Text | `Text`, `MixedTernary`, `Exprs`, `Numbers`, `Precision`, `WideProducts`, `WideChoices`, `SignedZeros`, `Meter`, `Parsing`, `NumberTests`, `Regressions`, `OptionalChains`, `StringOf`, `MathMore`, `UriParts`, `TypeofTests` |
 | Strings | `Strings`, `Exprs`, `Text`, `StringSearch`, `StringOf`, `DigitGroups` |
 | Dates | `Dates`, `Prices`, `DatePost`, `DateStamp`, `DateFormats`, `DateGuards`, `DateRows`, `DateDays`, `DateReplies`, `DateThread`, `LoadedDates` |
-| Conditions | `Branches`, `Narrowing`, `Nullable`, `TypeofTests`, `AndChains` |
+| Conditions | `Branches`, `Narrowing`, `Nullable`, `TypeofTests`, `AndChains`, `UnionNarrowing` |
 | Lists | `Lists`, `Arrays`, `Chips`, `Truthy`, `NumberIncludes`, `NarrowedRows`, `Exprs`, `ListAccess`, `ListBuilding`, `ListFallback`, `Flattened`, `EmptyArrays` |
 | Dictionaries | `Records`, `Chips`, `Pairs`, `OwnKeys` |
 | Attributes | `Attrs`, `BoundObject`, `Keywords`, `MixedTernary` |

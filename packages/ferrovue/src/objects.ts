@@ -1,5 +1,5 @@
 import { type Component, type N, type Scope, type StructTy, type Ty, type Val, enumOf, fail, GenError, literalsOf, nothing, sameTy } from "./model.ts";
-import { intoEnum, knownLiteral } from "./enums.ts";
+import { intoEnum, knownLiteral, refuseUnproven } from "./enums.ts";
 import { describeTy, expr, holdsNothing, typedBy } from "./expr.ts";
 import { lookupStruct, markHome } from "./typescript.ts";
 import { fieldInit, ownInto } from "./children.ts";
@@ -101,6 +101,7 @@ function fieldOwned(comp: Component, v: Val, want: Ty, node: N, what: string): s
     if (want.k === "opt" && nothing(v.ty)) return "None";
     const into = (v.ty.k === "opt" ? v.ty.of : v.ty).k === "str" && (v.ty.k !== "opt" || want.k === "opt") ? intoEnum(comp, v, def) : null;
     if (into === null) {
+      refuseUnproven(v);
       const literal = knownLiteral(v);
       const inner = v.ty.k === "opt" ? v.ty.of : v.ty;
       const among = inner.k === "str" ? literalsOf(inner) : undefined;

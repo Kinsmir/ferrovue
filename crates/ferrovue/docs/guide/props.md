@@ -201,6 +201,23 @@ it better, the compiler uses the enum:
   A literal outside it, and a value typed `string`, are refused
   ([FV0515](crate::guide::error_codes#fv0515)).
 
+A string of a wider union, such as a `ref<Tone | "">` that holds `""` for a `<select>`'s empty
+option, is narrowed as TypeScript narrows it, and reaches a prop of `Tone` once only members of
+`Tone` are left:
+
+- `tone || undefined` leaves out the falsy member `""`;
+- `tone === '' ? undefined : tone` and `tone !== '' ? tone : undefined` leave out `""` in the branch
+  that reads `tone`, as `tone ? tone : undefined` does, and so do `&&` and `v-if` / `v-else`
+  (`<Badge v-if="tone !== ''" :tone="tone" />`);
+- a `computed`, a `ref` or a constant annotated as the union
+  (`computed((): Tone | undefined => (tone.value === "" ? undefined : tone.value))`) is checked
+  against its annotation. One whose body may give another string is refused at its declaration
+  ([FV0111](crate::guide::error_codes#fv0111)), and a value that may still be `""` where it is passed
+  is refused there ([FV0515](crate::guide::error_codes#fv0515)).
+
+The value is the string it was, narrowed: the generated code tests it as the template does and maps
+it to the enum where the child takes it.
+
 A single literal (`kind: "note"`), a union with `string` (`"sm" | string`, which TypeScript widens
 to `string`) and integer literals (`1 | 2 | 3`, an `i64`) stay as they were. So do lists and records
 of a union (`Size[]` is `Vec<Cow<'a, str>>`), and the fields of a store's own interfaces in its

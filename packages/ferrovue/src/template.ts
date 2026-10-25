@@ -1,7 +1,7 @@
 import { type N, type Scope, type Val, fail, GenError, namesSelf, nodeName } from "./model.ts";
 import { ctx } from "./context.ts";
 import { expr, shown } from "./expr.ts";
-import { type Presence, boolOf, cond, known, narrowedVal, narrowTo, presence, truthTested, truthy } from "./narrowing.ts";
+import { type Presence, boolOf, cond, known, literalNarrowing, narrowedVal, narrowTo, presence, truthTested, truthy } from "./narrowing.ts";
 import { CMP, condition, occurrences, operand, scrutinee } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
 import { attrShown, interpolate, isAttrs, keepsAttrCase, mergedParts, renderAttr, renderAttrs, renderDynamicAttr } from "./attrs.ts";
@@ -329,6 +329,7 @@ function statement(s: Scope, e: Emitter, st: N): void {
       const narrowed = new Map(s.narrowed);
       const bound = new Map<string, Presence>();
       const parts: string[] = [];
+      let narrowedLiterals = false;
       for (const op of operands) {
         const inner = { ...s, narrowed };
         const p = presence(inner, op);
@@ -339,6 +340,11 @@ function statement(s: Scope, e: Emitter, st: N): void {
           bound.set(name, p);
         } else {
           parts.push(operand(cond(inner, op), CMP));
+          const literals = literalNarrowing(inner, op);
+          if (literals !== null) {
+            for (const [path, v] of literals.yes.narrowed) narrowed.set(path, v);
+            narrowedLiterals = true;
+          }
         }
       }
       if (parts.includes("false")) {
@@ -346,7 +352,7 @@ function statement(s: Scope, e: Emitter, st: N): void {
         return;
       }
       if (parts.includes("true")) parts.splice(0, parts.length, ...parts.filter((p) => p !== "true"));
-      if (narrowed.size > s.narrowed.size) {
+      if (narrowed.size > s.narrowed.size || narrowedLiterals) {
         e.open(`if ${parts.join(" && ")}`);
         const at = e.lines.length - 1;
         statements({ ...s, narrowed }, e, branch(st.consequent));
@@ -386,13 +392,13 @@ function statement(s: Scope, e: Emitter, st: N): void {
       }
       e.close();
       return;
-    } else {
-      e.open(`if ${condition(cond(s, st.test))}`);
-      statements(s, e, branch(st.consequent));
     }
+    const literals = literalNarrowing(s, st.test);
+    e.open(`if ${condition(cond(s, st.test))}`);
+    statements(literals?.yes ?? s, e, branch(st.consequent));
     if (st.alternate) {
       e.close(" else {");
-      statements(s, e, branch(st.alternate));
+      statements(literals?.no ?? s, e, branch(st.alternate));
     }
     e.close();
     return;

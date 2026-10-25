@@ -1,5 +1,5 @@
 import { basename } from "node:path";
-import { type Component, type EnumDef, type N, type Ty, type Val, enumOf, enumTy, fail, literalsOf, RUST_PRELUDE, rustStr, variantPath } from "./model.ts";
+import { type Component, type EnumDef, type N, type Ty, type Val, asciiTy, enumOf, enumTy, fail, isAscii, literalsOf, literalTy, RUST_PRELUDE, rustStr, variantPath } from "./model.ts";
 import { ctx } from "./context.ts";
 import { atom, binary } from "./parens.ts";
 import { unquote } from "./strings.ts";
@@ -128,6 +128,46 @@ export function intoEnum(comp: Component, v: Val, def: EnumDef): string | null {
   const strings = literals as readonly string[];
   if (strings.length === 1 && !optional) return variantPath(comp, def, strings[0]!);
   return over(v.code, strings.map((l, i) => `${i === strings.length - 1 ? "_" : rustStr(l)} => ${variantPath(comp, def, l)}`).join(", "));
+}
+
+interface Unproven {
+  comp: Component;
+  node: N;
+  what: string;
+  members: readonly (string | number)[];
+  outside: readonly (string | number)[] | null;
+}
+
+const UNPROVEN = new WeakMap<Ty, Unproven>();
+
+/** `v`, the value of `what`, declared as `want`: where `want` is a union of string literals and
+ * the compiler cannot show that `v`, computed by `node`, is among them, a value that refuses a
+ * use of it as the union, where it is declared. */
+export function declaredUnion(comp: Component, v: Val, want: Ty, what: string, node: N): Val {
+  const members = literalsOf(want.k === "opt" ? want.of : want);
+  const base = v.ty.k === "opt" ? v.ty.of : v.ty;
+  if (members === undefined || (want.k === "opt" ? want.of : want).k !== "str" || base.k !== "str" || v.variant !== undefined) return v;
+  const literals = literalsOf(base);
+  const outside = literals === undefined ? null : literals.filter((l) => !members.includes(l));
+  if (outside !== null && outside.length === 0) return v;
+  const marked: Ty = literals === undefined ? (isAscii(base) ? asciiTy() : { k: "str" }) : literalTy("str", literals);
+  UNPROVEN.set(marked, { comp, node, what, members, outside });
+  return { ...v, ty: v.ty.k === "opt" ? { ...v.ty, of: marked } : marked };
+}
+
+/** Refuse a use of `v` as a union of string literals, where `v` is declared as the union and the
+ * compiler cannot show it is among its members. */
+export function refuseUnproven(v: Val): void {
+  const u = UNPROVEN.get(v.ty.k === "opt" ? v.ty.of : v.ty);
+  if (u === undefined) return;
+  const union = u.members.map((l) => JSON.stringify(l)).join(" | ");
+  const may = u.outside === null ? "any string" : u.outside.map((l) => JSON.stringify(l)).join(" or ");
+  fail(
+    u.comp,
+    "FV0111",
+    `${u.what} is typed as one of ${union}, and the compiler finds it may be ${may}: it narrows a string by \`===\` or \`!==\` with a literal, by its truth and by \`||\`, in \`?:\`, \`&&\` and \`v-if\`; narrow the value by one of these, or give each branch a member of the union`,
+    u.node,
+  );
 }
 
 /** Refuse a comparison of a value of a generated enum with a literal outside its union. */

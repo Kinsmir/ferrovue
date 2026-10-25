@@ -1,4 +1,4 @@
-import { type N, type Scope, type Ty, type Val, absence, BOOL, enumOf, fail, GenError, literalTy, nothing, rustStr, STR, UNDEF } from "./model.ts";
+import { type N, type Scope, type Ty, type Val, absence, BOOL, enumOf, fail, falsyLiteral, GenError, keptLiterals, literalTy, nothing, rustStr, STR, UNDEF } from "./model.ts";
 import { ownKeyTest, pickPresent } from "./constants.ts";
 import { isObjectCall } from "./calls.ts";
 import { ctx } from "./context.ts";
@@ -242,6 +242,45 @@ function ownKeyPresence(s: Scope, call: N, negated: boolean): Presence | null {
   return { path, of, negated, truthy: false, option, present: found.test, pattern: (name) => `let Some(${name}) = ${option}` };
 }
 
+/** Where the test `n` holds and where it fails, the scopes in which a string of a union of
+ * literals it tests is narrowed as TypeScript narrows it: by `===`, `!==`, `==` or `!=` with a
+ * string literal, either way round, or by its truth, and by `!` of either. Null when `n` narrows
+ * no such value. */
+export function literalNarrowing(s: Scope, n: N): { yes: Scope; no: Scope } | null {
+  let test = unparenthesized(n);
+  let negated = false;
+  while (test.type === "UnaryExpression" && test.operator === "!") {
+    test = unparenthesized(test.argument);
+    negated = !negated;
+  }
+  let target: N = test;
+  let holds: (literal: string | number) => boolean = (l) => !falsyLiteral(l);
+  if (test.type === "BinaryExpression" && ["===", "!==", "==", "!="].includes(test.operator)) {
+    const [side, literal] = test.right.type === "StringLiteral" ? [test.left, test.right.value] : test.left.type === "StringLiteral" ? [test.right, test.left.value] : [null, null];
+    if (side === null) return null;
+    target = unparenthesized(side);
+    holds = (l) => l === literal;
+    if (test.operator.startsWith("!")) negated = !negated;
+  }
+  const path = pathOf(target);
+  if (path === null) return null;
+  let v: Val;
+  try {
+    v = expr(s, target);
+  } catch (e) {
+    if (e instanceof GenError) return null;
+    throw e;
+  }
+  if (v.variant !== undefined || v.pick || v.owned || (v.ty.k === "opt" ? v.ty.of : v.ty).k !== "str") return null;
+  const narrowed = (keep: (literal: string | number) => boolean): Scope => {
+    const ty = keptLiterals(v.ty, keep);
+    return ty === v.ty ? s : { ...s, narrowed: new Map(s.narrowed).set(path, { ...v, ty }) };
+  };
+  const [yes, no] = [narrowed(holds), narrowed((l) => !holds(l))];
+  if (yes === s && no === s) return null;
+  return negated ? { yes: no, no: yes } : { yes, no };
+}
+
 export function narrowTo(s: Scope, p: Presence, name: string): Scope {
   return { ...s, narrowed: new Map(s.narrowed).set(p.path, narrowedVal(p, name)) };
 }
@@ -302,7 +341,8 @@ export function cond(s: Scope, n: N): string {
     if (p && p.negated === (n.operator === "||")) {
       return narrowing(s, p, (inner) => cond(inner, n.right), () => String(n.operator === "||"));
     }
-    return logical(cond(s, n.left), n.operator, cond(s, n.right));
+    const narrowed = literalNarrowing(s, n.left);
+    return logical(cond(s, n.left), n.operator, cond(narrowed === null ? s : n.operator === "&&" ? narrowed.yes : narrowed.no, n.right));
   }
   if (n.type === "UnaryExpression" && n.operator === "!") return negatedOrder(s, n.argument)?.code ?? not(cond(s, n.argument));
   return truthy(truthTested(s, n));

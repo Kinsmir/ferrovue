@@ -1,8 +1,8 @@
 import { isSSRSafeAttrName, propsToAttrMap } from "@vue/shared";
-import { type Component, type Field, type N, type Scope, type Ty, type Val, absence, camelize, declares, enumOf, fail, nothing, REFUSALS, refusalAt, rustStr, sameTy, snake, takesAttrs, variantPath } from "./model.ts";
+import { type Component, type Field, type N, type Scope, type Ty, type Val, absence, camelize, declares, enumOf, fail, literalsOf, nothing, REFUSALS, refusalAt, rustStr, sameTy, snake, takesAttrs, variantPath } from "./model.ts";
 import { ctx } from "./context.ts";
 import { known } from "./narrowing.ts";
-import { intoEnum, knownLiteral } from "./enums.ts";
+import { intoEnum, knownLiteral, refuseUnproven } from "./enums.ts";
 import { bareDates, markHome } from "./typescript.ts";
 import { items } from "./lists.ts";
 import { describeTy, expr, fieldVal, holdsNothing, typedBy } from "./expr.ts";
@@ -385,9 +385,16 @@ export function ownInto(comp: Component, v: Val, want: Ty, node: N): string {
   if (def !== undefined) {
     const into = (v.ty.k === "opt" ? v.ty.of : v.ty).k === "str" ? intoEnum(comp, v, def) : null;
     if (into === null) {
+      refuseUnproven(v);
       const literal = knownLiteral(v);
-      const given = literal !== undefined ? `is ${JSON.stringify(literal)}` : (v.ty.k === "opt" ? v.ty.of : v.ty).k === "str" ? "is a string that may be any other" : `is ${describeTy(v.ty)}`;
-      fail(comp, "FV0515", `the prop is one of ${def.literals.map((l) => JSON.stringify(l)).join(" | ")}, the members of \`${def.name}\`, and the value given ${given}: pass one of them, or a value typed as the union`, node);
+      const inner = v.ty.k === "opt" ? v.ty.of : v.ty;
+      const outside = literal === undefined && inner.k === "str" ? literalsOf(inner)?.filter((l) => typeof l !== "string" || !def.literals.includes(l)) : undefined;
+      const union = `the prop is one of ${def.literals.map((l) => JSON.stringify(l)).join(" | ")}, the members of \`${def.name}\``;
+      if (outside !== undefined && outside.length > 0) {
+        fail(comp, "FV0515", `${union}, and the value given may be ${outside.map((l) => JSON.stringify(l)).join(" or ")}: narrow it to the members, by \`===\` or \`!==\` with a literal, by its truth or by \`||\`, in \`?:\`, \`&&\` or \`v-if\`, or pass a value typed as the union`, node);
+      }
+      const given = literal !== undefined ? `is ${JSON.stringify(literal)}` : inner.k === "str" ? "is a string that may be any other" : `is ${describeTy(v.ty)}`;
+      fail(comp, "FV0515", `${union}, and the value given ${given}: pass one of them, or a value typed as the union`, node);
     }
     return want.k === "opt" && v.ty.k !== "opt" ? `Some(${bare(into)})` : into;
   }

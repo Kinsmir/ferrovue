@@ -282,6 +282,7 @@ export interface Binding {
   lazy?: string;
   steps?: Step[];
   obj?: { iface: string; list: boolean; how: "ret" | "param" };
+  union?: string[];
 }
 
 export interface HeadValue {
@@ -747,6 +748,10 @@ function scriptLines(c: Component): string[] {
     if (b.obj) {
       const t = b.obj.list ? `${b.obj.iface}[]` : b.obj.iface;
       lines.push(b.obj.how === "ret" ? `const ${b.name} = computed((): ${t} => ${e});` : `const ${b.name} = computed<${t}>(() => ${e});`);
+      continue;
+    }
+    if (b.union) {
+      lines.push(`const ${b.name} = computed((): ${b.union.map((v) => JSON.stringify(v)).join(" | ")} => ${e});`);
       continue;
     }
     if (b.steps?.length) lines.push(`const ${b.name} = computed(() => {`, ...b.steps.map(stepLine), `  return ${e};`, "});");
@@ -1268,6 +1273,7 @@ interface Var {
   lone?: boolean;
   inline?: boolean;
   members?: string[];
+  wide?: true;
 }
 interface ListVar {
   name: string;
@@ -2645,9 +2651,15 @@ class Gen {
     };
     if (spec.k === "enum" && spec.union) {
       const lit = (): Expr => atom("str", `'${r.pick(spec.values)}'`);
+      const wide = this.vars("str").filter((v) => v.wide && v.members!.every((m) => m === "" || spec.values.includes(m)));
       return r.weighted<() => Expr>([
         [3, lit],
         [1, () => node("str", [this.bool(d), lit(), lit()], ([c, a, b]) => `(${c} ? ${a} : ${b})`)],
+        [wide.length ? 2 : 0, () => {
+          const w = r.pick(wide).name;
+          const other = printExpr(lit());
+          return atom("str", r.pick([`(${w} || ${other})`, `(${w} === '' ? ${other} : ${w})`, `('' !== ${w} ? ${w} : ${other})`, `(${w} ? ${w} : ${other})`, `(!${w} ? ${other} : ${w})`]));
+        }],
       ])();
     }
     if (spec.k === "opt" || spec.k === "nul") {
@@ -2990,7 +3002,14 @@ function joined(e: Expr, steps: Step[]): Expr {
   return { ...e, bound: Math.max(...returns.map((x) => x.bound)), ...(returns.some((x) => x.lone) ? { lone: true } : {}) };
 }
 
-const bindingVar = (b: Binding): Var => ({ name: b.name, ty: b.e.ty, opt: false, bound: b.e.ty === "int" ? Math.max(b.e.bound, 1) : 0, ...(b.e.lone ? { lone: true } : {}) });
+const bindingVar = (b: Binding): Var => ({
+  name: b.name,
+  ty: b.e.ty,
+  opt: false,
+  bound: b.e.ty === "int" ? Math.max(b.e.bound, 1) : 0,
+  ...(b.e.lone ? { lone: true } : {}),
+  ...(b.union && b.e.members ? { members: b.e.members, wide: true as const } : {}),
+});
 
 const whole = (e: Expr): Expr => (e.lone ? strLit("whole") : e);
 
@@ -3556,6 +3575,13 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
       if (kind === "const") g.scope.vars.push(bindingVar(binding));
     }
     for (let n = g.dateWeight(1) ? r.weighted([[2, 0], [3, 1], [1, 2]]) : 0; n > 0; n--) bindings.push({ name: `cmp${bindings.length}`, kind: "computed", e: g.date(r.int(1, 2)) });
+    if (r.chance(0.3)) {
+      const sizes = FZ_CARD.fields.find((f) => f.name === "size")!.spec as Spec & { k: "enum" };
+      const [a, b] = [r.pick(sizes.values), r.pick(sizes.values)];
+      const shape = r.int(0, 1);
+      const e = node("str", [g.bool(1), g.bool(1)], ([c, k]) => (shape === 0 ? `(${c} ? '${a}' : '')` : `(${c} ? '${a}' : ${k} ? '${b}' : '')`), 0, true);
+      bindings.push({ name: `cmp${bindings.length}`, kind: "computed", e: { ...e, members: [...new Set(shape === 0 ? [a, ""] : [a, b, ""])] }, union: [...sizes.values, ""] });
+    }
     for (let n = ifaces.length && r.chance(0.4) ? r.int(1, 2) : 0; n > 0; n--) {
       const iface = r.pick(ifaces);
       const list = r.chance(0.4) ? g.mappedLiterals(iface.fields, r.int(0, 2), iface.name) : null;
