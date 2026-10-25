@@ -57,19 +57,20 @@ that is absent renders as `false`, which is the cast Vue applies.
 
 # Unions of string literals
 
-A prop, a `defineModel` or a field of an interface typed as a union of two or more string literals
-is a Rust enum the compiler generates, with a variant for each literal: `size: "sm" | "md" | "lg"`
-is `Option<ButtonSize>` for an optional `size` of `Button.vue`, and `Size` for `size: Size` with
-`type Size = "sm" | "md" | "lg"`. A string `enum` is one too, its variants named after its members.
-A list of the union is a list of the enum: `sizes: Size[]` is `Vec<Size>`, `Option<Vec<Size>>` when
-it is optional or nullable, and `(Size | null)[]` is `Vec<Option<Size>>`. A Rust caller can then
-build only the values TypeScript allows.
+A prop, a `defineModel`, a field of an interface or a `ref` typed as a union of two or more string
+literals is a Rust enum the compiler generates, with a variant for each literal:
+`size: "sm" | "md" | "lg"` is `Option<ButtonSize>` for an optional `size` of `Button.vue`, and
+`Size` for `size: Size` with `type Size = "sm" | "md" | "lg"`. A string `enum` is one too, its
+variants named after its members. A list of the union is a list of the enum: `sizes: Size[]` is
+`Vec<Size>`, `Option<Vec<Size>>` when it is optional or nullable, and `(Size | null)[]` is
+`Vec<Option<Size>>`. A Rust caller can then build only the values TypeScript allows.
 
 | The union is | The enum is named | and written to |
 |---|---|---|
 | a `type` alias, or a string `enum` | the alias or the `enum`: `Size` | the module of the file that declares it: `types.rs` for a `.ts` file, so components that import it share one enum; the component's module for a component's own |
 | written in place in `defineProps<{ … }>()` | the component and the prop in PascalCase: `ButtonSize` | the component's module |
 | written in place in an interface's field | the interface and the field: `RowKind` | where the interface is written |
+| written in place in `ref<…>()` | the component and the `ref`: `ButtonMode` | the component's module |
 
 Each variant is the literal's letters and digits in PascalCase: a word starts at each character
 that is not one, and at a lower-case letter followed by an upper-case one; each word is its first
@@ -200,7 +201,9 @@ it better, the compiler uses the enum:
 - a `computed` that returns the value as it is (`computed(() => props.size)`) holds the enum;
 - handed to a child's prop of the same union, the enum is copied; to one of another union that holds
   all its members, a `match` maps one to the other; to a `string` prop, it is `as_str()`. A literal of
-  the union, a `?:` of members and a `computed` typed as the union reach a union prop as its variant.
+  the union, a `?:` of members, a lookup table's value and a `computed` typed as the union reach a
+  union prop as its variant. A literal outside it, and a value typed `string`, are refused
+  ([FV0515](crate::guide::error_codes#fv0515)).
 - a `v-for` item of a list of the union is the enum, so a child's union prop, a lookup table and
   `===` read the variant; the list handed to a child's list of the same union is copied, and
   `.join()`, `.includes()`, `.length`, `.filter()`, `.map()` and the other list methods read its
@@ -211,8 +214,16 @@ a `Record<string, Size>`, a field of a store's state or a prop of a single liter
 child's union prop, is parsed as the component renders. One outside the union refuses the render
 with [FV0518](crate::guide::error_codes#fv0518), which a generated `try_render` returns as a
 [`Refused`](crate::Refused), where Vue would write the string itself.
-  A literal outside it, and a value typed `string`, are refused
-  ([FV0515](crate::guide::error_codes#fv0515)).
+
+A `ref` of a union (`ref<Choice>(…)` with `type Choice = Tone | ""`) holds the enum from the value
+it starts with, whether or not a prop uses the union: `Choice` has the variants `Calm`, `Loud`,
+`Quiet` and `Empty`. The value is a literal of the union, a value of the same union or of one whose
+members it holds, a lookup table's value, or a `?:` or `??` of these, each turned into the enum by a
+`match` over variants that names every one: `ref<Choice>(props.pick ?? "")` is
+`props.pick.map(|v| match v { Tone::Calm => Choice::Calm, … }).unwrap_or(Choice::Empty)`. Any
+other value keeps the `ref` a string, checked against its annotation as the next paragraph says,
+and so does a union whose literals give a variant no name. A `ref` is the server's own, and the
+island's JSON holds the props it starts from.
 
 A string of a wider union, such as a `ref<Tone | "">` that holds `""` for a `<select>`'s empty
 option, is narrowed as TypeScript narrows it, and reaches a prop of `Tone` once only members of
@@ -228,8 +239,11 @@ option, is narrowed as TypeScript narrows it, and reaches a prop of `Tone` once 
   ([FV0111](crate::guide::error_codes#fv0111)), and a value that may still be `""` where it is passed
   is refused there ([FV0515](crate::guide::error_codes#fv0515)).
 
-The value is the string it was, narrowed: the generated code tests it as the template does and maps
-it to the enum where the child takes it.
+The value is the string or the enum it was, narrowed: the generated code tests it as the template
+does and maps it to the child's enum where the child takes it. A `ref<Tone | "">` holds its own
+enum, and the map is a `match` over its variants: the members the test leaves each name their
+variant of `Tone`, and the variants the test rules out (`Empty`) join the last arm, which the test
+keeps them from reaching.
 
 A single literal (`kind: "note"`), a union with `string` (`"sm" | string`, which TypeScript widens
 to `string`) and integer literals (`1 | 2 | 3`, an `i64`) stay as they were. So do lists and records
@@ -808,6 +822,32 @@ let class = match props.size { Size::Sm => "p-1", Size::Md => "p-2", Size::Lg =>
 A key of a union of string literals is its enum, so the `match` names every variant. A key the
 compiler holds as a string (a `computed` that builds it, a `?:` of literals) is matched as a string,
 and so is an integer union.
+
+A table whose values are members of a union (`Record<Tone, Tone>`, `Partial<Record<Tone, Tone>>`,
+or an untyped table of its literals) reaches a child's union prop, an object literal's union field
+and a `ref` of the union as the enum, with a `match` from variant to variant that names every one:
+
+```ts
+type Tone = "calm" | "loud" | "quiet";
+const NEXT: Record<Tone, Tone> = { calm: "loud", loud: "quiet", quiet: "calm" };
+```
+
+```html
+<Badge :tone="NEXT[tone]" />
+```
+
+```rust
+# #[derive(Clone, Copy, Debug, PartialEq)]
+# enum Tone { Calm, Loud, Quiet }
+# let tone = Tone::Quiet;
+let next = match tone { Tone::Calm => Tone::Loud, Tone::Loud => Tone::Quiet, Tone::Quiet => Tone::Calm };
+# assert_eq!(next, Tone::Calm);
+```
+
+A table typed with a `type` alias or an `enum` for its values holds the alias's enum, written once
+to `types.rs` for a `.ts` file, so `NEXT[tone] === "loud"` and another table read by it,
+`LABEL[NEXT[tone]]`, compare and match its variants too. A value outside that union is refused
+([FV0228](crate::guide::error_codes#fv0228)), as TypeScript refuses it.
 
 Each member reads the value the object holds for it: a string, a number, a boolean, `null`, a list
 of them, or an object read on by field (`THEME[tone].fg`, `THEME[tone].weight`). The values of

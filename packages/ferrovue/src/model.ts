@@ -64,6 +64,10 @@ export interface Val {
   /** For a list of a generated enum's values, or an optional one, the Rust place of the list of
    * enums, where `code` and `iter` hold its strings. */
   enums?: { place: string; def: EnumDef };
+  /** For a string value made of literals the compiler knows, as a lookup table's arms: the Rust
+   * expression of the same value as the generated enum `def`, null when a literal is outside it.
+   * It holds while `code` is `of`. */
+  asEnum?: { of: string; into: (def: EnumDef, node: N) => string | null };
   /** For an integer computed as an `f64`, where the template computes it, as `fv::Refusals::keep`
    * takes it. */
   at?: string;
@@ -730,7 +734,11 @@ export function keptLiterals(ty: Ty, keep: (literal: string | number) => boolean
   const literals = LITERALS.get(ty);
   if (literals === undefined || (ty.k !== "str" && ty.k !== "int")) return ty;
   const left = literals.filter(keep);
-  return left.length === literals.length || left.length === 0 ? ty : derived([ty], literalTy(ty.k, left));
+  if (left.length === literals.length || left.length === 0) return ty;
+  const made = derived([ty], literalTy(ty.k, left));
+  const def = ENUMS.get(ty);
+  if (def !== undefined) ENUMS.set(made, def);
+  return made;
 }
 
 /** Whether a literal of a union is falsy, as `""` and `0` are. */

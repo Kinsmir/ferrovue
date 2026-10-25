@@ -56,6 +56,29 @@ released together and share version numbers.
   the component renders, and one outside the union refuses the render with FV0518, which
   `ERRORS` of `ferrovue/compiler` now lists, a change to the npm package's API. Generated code
   calls no item 0.11.0 lacks, so `__compat!` stays at 5.
+- A lookup table whose values are members of a union (`const NEXT: Record<Tone, Tone>`), read by
+  a key of a union and handed to a child's prop of that union (`:tone="NEXT[tone]"`), is one
+  `match` from variant to variant. It was a `match` to the value's string inside a `match` back
+  to the enum, whose last arm took any other string. A table typed with an alias or an `enum` for
+  its values holds that enum, so `NEXT[tone] === "loud"` and another table read by it match on
+  its variants too, and a value outside the union is refused with the new FV0228, which `ERRORS`
+  of `ferrovue/compiler` now lists, a change to the npm package's API. An untyped
+  table of the union's literals, a `?:` of members and `a ?? "x"` of a union value reach a union
+  prop, an object literal's union field and a `ref` of the union the same way.
+- A `ref` typed as a union of string literals (`ref<Choice>(…)` with `type Choice = Tone | ""`)
+  holds the union's enum, `Choice::Empty` for `""`, written to `types.rs` for a union of a `.ts`
+  file (or the application's own enum that `unions` names for it) and named after the component
+  and the `ref` for one in place; like every generated enum it implements `ferrovue::Union`, and
+  the template reads it through `fv::Union::as_str`. A union only a `ref` used
+  had no enum, so a lookup table read by the `ref` was a `match` on its string whose last arm
+  stood for one member, and a key added before that member would read its value. The `ref`
+  starts from a member, a value of the union, a table's value, or a `?:` or `??` of them, through
+  a `match` that names every variant; any other value keeps it a string, checked against its
+  annotation with FV0111. A table read by it is a `match` over its variants, and a test that
+  narrows it (`tone !== ''`) hands a child's union prop a `match` over the variants it leaves.
+  This changes the generated code of these shapes, and adds the enums to it; the island's JSON is
+  the same, and Pinia state is unchanged. Generated code calls no item 0.11.0 lacks, so
+  `__compat!` stays at 5.
 - The README and the guide's quick start name the schema of the current release in `$schema`;
   they named 0.8.0's. `release.ts bump` writes the new version into both, and `release.ts check`
   refuses a tag they do not match.

@@ -254,6 +254,10 @@ export const ERRORS: {
         readonly title: "Constant `Map` read other than by `.get()` or `.has()`";
         readonly detail: "A constant `new Map([[key, value], …])`, its keys strings or integers, is evaluated when the component is compiled, and the server reads it with `.get(key)`, `undefined` for a key it lacks, and `.has(key)`, by a string or an integer that is present. Its size, its iterators and the map itself as a value are refused: read it by key, or use a constant object.";
     };
+    readonly FV0228: {
+        readonly title: "Constant object's value outside the union its type gives";
+        readonly detail: "A constant object typed with a union of string literals for its values (`const NEXT: Record<Tone, Tone> = { … }`) holds that union's Rust enum when it is read by a key, so a value reaches a prop of the union as its variant. A string value outside the union has no variant, and TypeScript refuses it too. Give each value one of the union's members, or widen the type of the values. See [`props`](crate::guide::props#lookup-tables).";
+    };
     readonly FV0301: {
         readonly title: "`generic` that is not a list of type parameters";
         readonly detail: "The `generic` attribute of `<script setup>` is read as the type parameters of a TypeScript type, and text that does not parse as such a list is refused. Write it as `<T extends string>` would be written between the angle brackets: `generic=\"T extends string\"`, or several separated by commas.";

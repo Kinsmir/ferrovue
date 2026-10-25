@@ -5264,6 +5264,16 @@ withDefaults(defineProps<{ k?: "a" | "b" }>(), { k: "z" });
       /the default of `k`, "z", is not one of its members, "a" \| "b"/,
     ],
     [
+      "a lookup table's value outside the union its type gives",
+      `<script setup lang="ts">
+type Tone = "calm" | "loud";
+defineProps<{ k: Tone }>();
+const NEXT: Record<Tone, Tone> = { calm: "loud", loud: "quiet" };
+</script>
+<template><p>{{ NEXT[k] }}</p></template>`,
+      /X\.vue:4:56: `loud` of `NEXT` is one of "calm" \| "loud", the members of `Tone` its type gives its values, and "quiet" is not/,
+    ],
+    [
       "an object literal giving a free string to a field of a union",
       `<script setup lang="ts">
 import S from "./S.vue";
@@ -5990,6 +6000,7 @@ defineProps<{ chip: Chip }>();
     "an optional union compared with a literal outside it": "FV0637",
     "a union compared with a literal outside it in a computed's switch": "FV0637",
     "a union's default outside it": "FV0322",
+    "a lookup table's value outside the union its type gives": "FV0228",
     "an object literal giving a free string to a field of a union": "FV0635",
     "an object literal giving a literal outside a field's union": "FV0635",
     "an object literal in a computed giving a wider union to a field of a union": "FV0635",
@@ -7566,11 +7577,12 @@ defineProps<{ k: "a" | "b" | "c"; o?: "a" | "b" | "c" | "d"; s: string; q: "a" |
     expect(out).toContain("o: props.m.map(|v| match v { K::A => super::y::YO::A, K::B => super::y::YO::B, K::C => super::y::YO::C })");
     expect(out).toContain("s: std::borrow::Cow::Borrowed(fv::Union::as_str(props.k))");
     expect(out).toContain('q: match s_pick { "b" => super::y::YQ::B, _ => super::y::YQ::C }');
-    expect(out).toContain('r: match if props.on { "a" } else { "b" } { "a" => super::y::YR::A, _ => super::y::YR::B }');
+    expect(out).toContain("r: if props.on { super::y::YR::A } else { super::y::YR::B }");
     expect(out).toContain("lit: super::y::YLit::C");
   });
 
   describe("a string of a wider union, narrowed to a child's prop of a union", () => {
+    const TONE = "super::types::Tone";
     const narrowed = (template: string, script = ""): string =>
       rendered(
         compile(
@@ -7597,14 +7609,14 @@ defineProps<{ tone?: Tone }>();
       );
 
     it("leaves out the falsy member by `||`", () => {
-      expect(narrowed(`<Badge :tone="tone || undefined" />`)).toContain("tone: Some(s_tone).filter(|v| !v.is_empty()).map(|v| match v {");
+      expect(narrowed(`<Badge :tone="tone || undefined" />`)).toContain("tone: Some(fv::Union::as_str(s_tone)).filter(|v| !v.is_empty()).map(|v| match v {");
     });
 
     it.each([
-      [`tone === '' ? undefined : tone`, "tone: (if s_tone.is_empty() { None } else { Some(s_tone) }).map(|v| match v {"],
-      [`'' !== tone ? tone : undefined`, "tone: (if !s_tone.is_empty() { Some(s_tone) } else { None }).map(|v| match v {"],
-      [`!(tone === '') ? tone : undefined`, "tone: (if !s_tone.is_empty() { Some(s_tone) } else { None }).map(|v| match v {"],
-      [`tone ? tone : undefined`, "tone: (if !s_tone.is_empty() { Some(s_tone) } else { None }).map(|v| match v {"],
+      [`tone === '' ? undefined : tone`, `tone: if s_tone == XTone::Empty { None } else { Some(match s_tone { XTone::Calm => ${TONE}::Calm, XTone::Loud | XTone::Empty => ${TONE}::Loud }) }`],
+      [`'' !== tone ? tone : undefined`, `tone: if s_tone != XTone::Empty { Some(match s_tone { XTone::Calm => ${TONE}::Calm, XTone::Loud | XTone::Empty => ${TONE}::Loud }) } else { None }`],
+      [`!(tone === '') ? tone : undefined`, `tone: if s_tone != XTone::Empty { Some(match s_tone { XTone::Calm => ${TONE}::Calm, XTone::Loud | XTone::Empty => ${TONE}::Loud }) } else { None }`],
+      [`tone ? tone : undefined`, `tone: if !fv::Union::as_str(s_tone).is_empty() { Some(match s_tone { XTone::Calm => ${TONE}::Calm, XTone::Loud | XTone::Empty => ${TONE}::Loud }) } else { None }`],
     ])("leaves out a literal a `?:` tests in the branch where it fails: %s", (value, code) => {
       expect(narrowed(`<Badge :tone="${value}" />`)).toContain(code);
     });
@@ -7617,23 +7629,125 @@ defineProps<{ tone?: Tone }>();
 
     it("narrows the operands after a test in a `v-if` of `&&`", () => {
       const out = narrowed(`<Badge v-if="on && tone !== ''" :tone="tone" />`, "const on = computed(() => props.start !== undefined);");
-      expect(out).toContain("if s_on && !s_tone.is_empty() {");
-      expect(out).toContain("tone: Some(match s_tone {");
+      expect(out).toContain("if s_on && s_tone != XTone::Empty {");
+      expect(out).toContain(`tone: Some(match s_tone { XTone::Calm => ${TONE}::Calm, XTone::Loud | XTone::Empty => ${TONE}::Loud })`);
     });
 
     it("narrows again in a `v-if` of `&&` a value an outer `v-if` narrowed", () => {
       const out = narrowed(`<template v-if="tone !== ''"><Badge v-if="on && tone !== 'calm'" :tone="tone" /></template>`, "const on = computed(() => props.start !== undefined);");
-      expect(out).toContain("if s_on && s_tone != \"calm\" {\n            super::badge::try_render(out, &super::badge::Props { tone: Some(super::types::Tone::Loud) })?;");
+      expect(out).toContain("if s_on && s_tone != XTone::Calm {\n            super::badge::try_render(out, &super::badge::Props { tone: Some(super::types::Tone::Loud) })?;");
     });
 
     it("takes a `computed` annotated as the union, whose body narrows the value to it", () => {
       const out = narrowed(`<Badge :tone="shown" />`, `const shown = computed((): Tone | undefined => (tone.value === "" ? undefined : tone.value));`);
-      expect(out).toContain("let s_shown = if s_tone.is_empty() { None } else { Some(s_tone) };");
+      expect(out).toContain("let s_shown = if s_tone == XTone::Empty { None } else { Some(fv::Union::as_str(s_tone)) };");
       expect(out).toContain("tone: s_shown.map(|v| match v {");
     });
 
     it("keeps an annotated `computed` the compiler cannot show is the union where the template reads it as a string", () => {
-      expect(narrowed(`<p>{{ shown }}</p>`, `const shown = computed((): Tone => tone.value as Tone);`)).toContain("fv::escape_into(out, s_shown);");
+      expect(narrowed(`<p>{{ shown }}</p>`, `const shown = computed((): Tone => tone.value as Tone);`)).toContain("fv::escape_into(out, fv::Union::as_str(s_shown));");
+    });
+  });
+
+  describe("lookup tables and refs of a union", () => {
+    const TYPES = `export type Tone = "calm" | "loud" | "quiet";
+export type Choice = Tone | "";
+export const NEXT: Record<Tone, Tone> = { calm: "loud", loud: "quiet", quiet: "calm" };
+export const PREVIEW: Record<Choice, Tone> = { "": "quiet", calm: "calm", loud: "loud", quiet: "quiet" };
+export const LABEL: Record<Choice, string> = { "": "none", calm: "Calm", loud: "Loud", quiet: "Quiet" };
+export const PLAIN = { calm: "quiet", loud: "calm", quiet: "loud" } as const;
+export const SOME: Partial<Record<Tone, Tone>> = { calm: "loud" };
+`;
+    const BADGE = `<script setup lang="ts">
+import type { Tone } from "../types/tone";
+defineProps<{ tone?: Tone }>();
+</script>
+<template><b>{{ tone }}</b></template>`;
+    const using = (setup: string, template: string): string =>
+      rendered(
+        compile(
+          project(
+            `<script setup lang="ts">
+import { ref } from "vue";
+import Badge from "./Badge.vue";
+import { NEXT, PREVIEW, LABEL, PLAIN, SOME, type Tone, type Choice } from "../types/tone";
+${setup}
+</script>
+<template>${template}</template>`,
+            { "components/Badge.vue": BADGE, "types/tone.ts": TYPES },
+          ),
+        ).get("x.rs")!,
+      );
+    const T = "super::types::Tone";
+    const C = "super::types::Choice";
+
+    it("hands a typed table's value to a union prop as a match from variant to variant", () => {
+      const out = using(
+        "const props = defineProps<{ tone: Tone }>();",
+        `<Badge :tone="NEXT[tone]" /><Badge :tone="PLAIN[tone]" /><Badge :tone="SOME[tone]" /><i>{{ LABEL[NEXT[tone]] }}</i><b v-if="NEXT[tone] === 'loud'">l</b>`,
+      );
+      expect(out).toContain(`tone: Some(match props.tone { ${T}::Calm => ${T}::Loud, ${T}::Loud => ${T}::Quiet, ${T}::Quiet => ${T}::Calm })`);
+      expect(out).toContain(`tone: Some(match props.tone { ${T}::Calm => ${T}::Quiet, ${T}::Loud => ${T}::Calm, ${T}::Quiet => ${T}::Loud })`);
+      expect(out).toContain(`tone: match props.tone { ${T}::Calm => Some(${T}::Loud), ${T}::Loud | ${T}::Quiet => None }`);
+      expect(out).toContain(`match match props.tone { ${T}::Calm => ${T}::Loud, ${T}::Loud => ${T}::Quiet, ${T}::Quiet => ${T}::Calm } { ${T}::Calm => "Calm", ${T}::Loud => "Loud", ${T}::Quiet => "Quiet" }`);
+      expect(out).toContain(`if (match props.tone { ${T}::Calm => ${T}::Loud, ${T}::Loud => ${T}::Quiet, ${T}::Quiet => ${T}::Calm }) == ${T}::Loud {`);
+      expect(out).not.toContain("_ =>");
+    });
+
+    it("holds a ref of a union the props never use as its enum, seeded exhaustively", () => {
+      const out = using(
+        `const props = defineProps<{ pick?: Tone; on: boolean }>();
+const choice = ref<Choice>(props.pick ?? "");
+const other = ref<Choice>(props.on ? "calm" : "");
+const none = ref<Choice>("");`,
+        `<Badge :tone="PREVIEW[choice]" /><i>{{ LABEL[choice] }}{{ LABEL[other] }}{{ LABEL[none] }}</i><select v-model="choice"><option value="">none</option><option value="calm">calm</option></select>`,
+      );
+      expect(out).toContain(`let s_choice = props.pick.map(|v| match v { ${T}::Calm => ${C}::Calm, ${T}::Loud => ${C}::Loud, ${T}::Quiet => ${C}::Quiet }).unwrap_or(${C}::Empty);`);
+      expect(out).toContain(`let s_other = if props.on { ${C}::Calm } else { ${C}::Empty };`);
+      expect(out).toContain(`tone: Some(match s_choice { ${C}::Calm => ${T}::Calm, ${C}::Loud => ${T}::Loud, ${C}::Quiet | ${C}::Empty => ${T}::Quiet })`);
+      expect(out).toContain(`match s_choice { ${C}::Calm => "Calm", ${C}::Loud => "Loud", ${C}::Quiet => "Quiet", ${C}::Empty => "none" }`);
+      expect(out).toContain('out.push_str("none</i><select>');
+      expect(out).toContain("if fv::Union::as_str(s_choice).is_empty() {");
+      expect(out).not.toContain("_ =>");
+    });
+
+    it("writes the enum of a union only a ref uses", () => {
+      const out = compile(
+        project(
+          `<script setup lang="ts">
+import { ref } from "vue";
+import type { Choice, Tone } from "../types/tone";
+const props = defineProps<{ on: boolean; tone: Tone }>();
+const mode = ref<"a" | "b">(props.on ? "a" : "b");
+const choice = ref<Choice>(props.tone);
+</script>
+<template><i>{{ mode }}{{ choice }}</i></template>`,
+          { "types/tone.ts": TYPES },
+        ),
+      );
+      expect(out.get("types.rs")).toContain('pub enum Choice {\n    #[serde(rename = "calm")]\n    Calm,');
+      expect(out.get("types.rs")).toContain('    #[serde(rename = "")]\n    Empty,\n}');
+      expect(out.get("x.rs")).toContain("pub enum XMode {");
+    });
+
+    it("keeps a ref of a union whose literals name no variant a string", () => {
+      const out = rendered(
+        compile(
+          island(`<script setup lang="ts">
+import { ref } from "vue";
+const props = defineProps<{ on: boolean }>();
+const sign = ref<"+" | "-">(props.on ? "+" : "-");
+</script>
+<template><i>{{ sign }}</i></template>`),
+        ).get("x.rs")!,
+      );
+      expect(out).toContain('let s_sign = if props.on { "+" } else { "-" };');
+    });
+
+    it("keeps a ref of a union started with any string a string, and refuses it where a union prop takes it", () => {
+      const setup = `const props = defineProps<{ text: string }>();\nconst tone = ref<Tone>(props.text as Tone);`;
+      expect(using(setup, "<p>{{ tone }}</p>")).toContain("let s_tone = &*props.text;");
+      expect(() => using(setup, `<Badge :tone="tone" />`)).toThrow(expect.objectContaining({ code: "FV0111", at: expect.objectContaining({ line: 6, column: 24 }) }));
     });
   });
 
@@ -7685,7 +7799,7 @@ const card = computed<Card>(() => ({ size: props.big ? "lg" : "sm", label: props
     expect(body.match(/card: super::types::Card \{ size: super::types::Size::Md, /g)).toHaveLength(2);
     expect(body).toContain("card: super::types::Card { size: props.size, ");
     expect(body).toContain("size: match props.small { XSmall::Sm => super::types::Size::Sm, XSmall::Md => super::types::Size::Md }");
-    expect(body).toContain('size: match if props.big { "lg" } else { "sm" } { "lg" => super::types::Size::Lg, _ => super::types::Size::Sm }');
+    expect(body).toContain("size: if props.big { super::types::Size::Lg } else { super::types::Size::Sm }");
     expect(body).toContain("other: props.other }");
   });
 

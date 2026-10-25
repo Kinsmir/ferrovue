@@ -116,8 +116,8 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(115 + props.label.len() + 6 + 7 + 6 + props.words.iter().map(|v| v.len()).sum::<usize>());
     let s_first = super::types::Step { label: std::borrow::Cow::<str>::Borrowed(&*props.label), state: super::types::StepState::Done, align: Some(props.align) };
-    let s_chosen = super::types::Step { label: std::borrow::Cow::<str>::Owned(format!("{}!", props.label)), state: match if props.state == UnionObjectsState::Todo { "skipped" } else { fv::Union::as_str(props.state) } { "skipped" => super::types::StepState::Skipped, "todo" => super::types::StepState::Todo, _ => super::types::StepState::Done }, align: props.side };
-    let s_steps = props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).enumerate().map(|(fv_i, fv_w)| { let fv_i = fv_i as i64; super::types::Step { label: std::borrow::Cow::<str>::Owned(str::to_owned(&*fv_w)), state: match if fv_i as f64 == 0.0 { "todo" } else { "done" } { "todo" => super::types::StepState::Todo, _ => super::types::StepState::Done }, align: Some(super::types::Align::Right) } }).collect::<Vec<_>>();
+    let s_chosen = super::types::Step { label: std::borrow::Cow::<str>::Owned(format!("{}!", props.label)), state: if props.state == UnionObjectsState::Todo { super::types::StepState::Skipped } else { match props.state { UnionObjectsState::Done => super::types::StepState::Done, UnionObjectsState::Skipped | UnionObjectsState::Todo => super::types::StepState::Skipped } }, align: props.side };
+    let s_steps = props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).enumerate().map(|(fv_i, fv_w)| { let fv_i = fv_i as i64; super::types::Step { label: std::borrow::Cow::<str>::Owned(str::to_owned(&*fv_w)), state: if fv_i as f64 == 0.0 { super::types::StepState::Todo } else { super::types::StepState::Done }, align: Some(super::types::Align::Right) } }).collect::<Vec<_>>();
     let s_role = if let Some(fv_align) = matches!(props.align, super::types::Align::Left | super::types::Align::Right).then_some(fv::Union::as_str(props.align)) { match fv_align { "left" => "<start>", _ => "end & \"after\"" } } else { "none" };
     out.push_str("<section");
     if s_role.is_empty() {
@@ -157,7 +157,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         out.push_str("<!---->");
     }
     out.push_str("</p><p>");
-    fv::escape_into(out, if let Some(fv_side_2) = props.side { if fv_side_2 != super::types::Align::Right { match fv_side_2 { super::types::Align::Left => "l", super::types::Align::Center => "c", super::types::Align::Right => "r" } } else { "x" } } else { "x" });
+    fv::escape_into(out, if let Some(fv_side_2) = props.side { if fv_side_2 != super::types::Align::Right { match fv_side_2 { super::types::Align::Left => "l", super::types::Align::Center | super::types::Align::Right => "c" } } else { "x" } } else { "x" });
     out.push('|');
     out.push_str(if props.state != UnionObjectsState::Todo && props.state != UnionObjectsState::Done { "true" } else { "false" });
     out.push('|');

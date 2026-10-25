@@ -79,6 +79,11 @@ function variantsOf(hint: Hint, literals: readonly string[]): string[] {
   return variants;
 }
 
+function nameable(hint: Hint, literals: readonly string[]): boolean {
+  const names = (hint.members ?? literals).map(variantName);
+  return names.length === literals.length && names.every((n, i) => n !== null && names.indexOf(n) === i);
+}
+
 function defineEnum(hint: Hint, literals: readonly string[]): EnumDef {
   let mod = ctx.enums.get(hint.module);
   if (mod === undefined) ctx.enums.set(hint.module, (mod = new Map()));
@@ -152,6 +157,25 @@ export function enumItemVal(name: string, of: Ty, def: EnumDef): Val {
   return { code: unionStr(name), ty, variant: name };
 }
 
+/** The type of the `ref` `local` typed at `node` as `ty`: as `enumField` gives it, and `ty` itself
+ * when a literal of the union gives its variant no name of its own. */
+export function refField(comp: Component, local: string, node: N, ty: Ty): Ty {
+  const inner = ty.k === "opt" ? ty.of : ty;
+  const literals = literalsOf(inner);
+  if (inner.k !== "str" || literals === undefined || literals.length < 2) return ty;
+  const hint = HINTS.get(inner) ?? { name: `${pascal(comp.name)}${pascal(local)}`, module: comp.module, home: comp, node, key: node, what: local };
+  return nameable(hint, literals as readonly string[]) ? enumField(comp, comp.name, local, node, ty) : ty;
+}
+
+/** The generated enum of `ty` when it is a `type` alias or an `enum` of string literals whose
+ * variants all have names. */
+export function aliasEnum(ty: Ty): EnumDef | undefined {
+  const literals = literalsOf(ty);
+  const hint = HINTS.get(ty);
+  if (ty.k !== "str" || literals === undefined || literals.length < 2 || hint === undefined || !nameable(hint, literals as readonly string[])) return undefined;
+  return defineEnum(hint, literals as readonly string[]);
+}
+
 /** The literal a string value is when it is one written in the source. */
 export function knownLiteral(v: Val): string | undefined {
   return v.ty.k === "str" && /^"(?:[^"\\]|\\.)*"$/.test(v.code) ? unquote(v.code) : undefined;
@@ -172,12 +196,17 @@ export function intoEnum(comp: Component, v: Val, def: EnumDef, node: N): string
   const from = enumOf(v.ty);
   const over = (on: string, arms: string): string => (optional ? `${atom(on)}.map(|v| match v { ${arms} })` : `match ${on} { ${arms} }`);
   if (v.variant !== undefined && from !== undefined) {
-    if (sameEnum(from, def)) return v.variant;
-    if (!from.literals.every((l) => def.literals.includes(l))) return null;
-    return over(v.variant, from.literals.map((l) => `${variantPath(comp, from, l)} => ${variantPath(comp, def, l)}`).join(", "));
+    const kept = (literalsOf(optional ? (v.ty as { of: Ty }).of : v.ty) ?? from.literals) as readonly string[];
+    if (sameEnum(from, def) && kept.length === from.literals.length) return v.variant;
+    if (!kept.every((l) => def.literals.includes(l))) return null;
+    if (kept.length === 1 && !optional) return variantPath(comp, def, kept[0]!);
+    const left = from.literals.filter((l) => !kept.includes(l));
+    const arms = kept.map((l, i) => `${[l, ...(i === kept.length - 1 ? left : [])].map((k) => variantPath(comp, from, k)).join(" | ")} => ${variantPath(comp, def, l)}`);
+    return over(v.variant, arms.join(", "));
   }
   const literal = knownLiteral(v);
   if (literal !== undefined) return def.literals.includes(literal) ? variantPath(comp, def, literal) : null;
+  if (v.asEnum !== undefined && v.asEnum.of === v.code) return v.asEnum.into(def, node);
   const literals = literalsOf(optional ? (v.ty as { of: Ty }).of : v.ty);
   if (literals === undefined || !literals.every((l) => typeof l === "string" && def.literals.includes(l))) return null;
   const strings = literals as readonly string[];
@@ -232,6 +261,11 @@ export function refuseUnproven(v: Val): void {
     `${u.what} is typed as one of ${union}, and the compiler finds it may be ${may}: it narrows a string by \`===\` or \`!==\` with a literal, by its truth and by \`||\`, in \`?:\`, \`&&\` and \`v-if\`; narrow the value by one of these, or give each branch a member of the union`,
     u.node,
   );
+}
+
+/** Whether `intoEnum` turns `v` into the enum without a `match` on its string. */
+export function exactlyEnum(v: Val): boolean {
+  return (v.variant !== undefined && enumOf(v.ty) !== undefined) || knownLiteral(v) !== undefined || v.asEnum?.of === v.code;
 }
 
 /** Refuse a comparison of a value of a generated enum with a literal outside its union. */
