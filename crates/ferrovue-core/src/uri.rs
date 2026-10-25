@@ -4,9 +4,9 @@
 /// # Example
 ///
 /// ```
-/// # use ferrovue_core as ferrovue;
-/// assert_eq!(ferrovue::js_encode_uri_component("a b&c/é"), "a%20b%26c%2F%C3%A9");
-/// assert_eq!(ferrovue::js_encode_uri_component("🦀"), "%F0%9F%A6%80");
+/// # mod ferrovue { pub use ferrovue_core as core; }
+/// assert_eq!(ferrovue::core::uri::js_encode_uri_component("a b&c/é"), "a%20b%26c%2F%C3%A9");
+/// assert_eq!(ferrovue::core::uri::js_encode_uri_component("🦀"), "%F0%9F%A6%80");
 /// ```
 #[must_use]
 pub fn js_encode_uri_component(s: &str) -> String {
@@ -19,9 +19,9 @@ pub fn js_encode_uri_component(s: &str) -> String {
 /// # Example
 ///
 /// ```
-/// # use ferrovue_core as ferrovue;
-/// assert_eq!(ferrovue::js_encode_uri("/a b?q=1&r=é#top"), "/a%20b?q=1&r=%C3%A9#top");
-/// assert_eq!(ferrovue::js_encode_uri("[|]"), "%5B%7C%5D");
+/// # mod ferrovue { pub use ferrovue_core as core; }
+/// assert_eq!(ferrovue::core::uri::js_encode_uri("/a b?q=1&r=é#top"), "/a%20b?q=1&r=%C3%A9#top");
+/// assert_eq!(ferrovue::core::uri::js_encode_uri("[|]"), "%5B%7C%5D");
 /// ```
 #[must_use]
 pub fn js_encode_uri(s: &str) -> String {

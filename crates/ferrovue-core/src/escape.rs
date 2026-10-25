@@ -6,9 +6,9 @@
 /// # Example
 ///
 /// ```
-/// # use ferrovue_core as ferrovue;
+/// # mod ferrovue { pub use ferrovue_core as core; }
 /// let mut out = String::from("<p>");
-/// ferrovue::escape_into(&mut out, r#"<a href="x">Tom & 'Jerry'</a>"#);
+/// ferrovue::core::escape::escape_into(&mut out, r#"<a href="x">Tom & 'Jerry'</a>"#);
 /// assert_eq!(out, "<p>&lt;a href=&quot;x&quot;&gt;Tom &amp; &#39;Jerry&#39;&lt;/a&gt;");
 /// ```
 pub fn escape_into(out: &mut String, s: &str) {

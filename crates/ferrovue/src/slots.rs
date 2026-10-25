@@ -215,6 +215,7 @@ pub fn slot_into(
 /// }));
 /// assert_eq!(out, "<!--[--><i data-v-421eaec8>none</i><!--]-->");
 /// ```
+#[doc(hidden)]
 pub fn slot_into_slotted(
     out: &mut String,
     slot: Option<Slot<'_>>,
@@ -298,6 +299,7 @@ pub fn is_comment(chunk: &str) -> bool {
 /// scoped_slot_into(&mut out, Some(slot), &RowProps { label: "a<b" }, None);
 /// assert_eq!(out, "<!--[-->a&lt;b<!--]-->");
 /// ```
+#[doc(hidden)]
 pub fn scoped_slot_into<P: ?Sized, F: Fn(&mut String, &P) -> bool + ?Sized>(
     out: &mut String,
     slot: Option<&F>,
@@ -343,6 +345,7 @@ pub fn scoped_slot_into<P: ?Sized, F: Fn(&mut String, &P) -> bool + ?Sized>(
 /// scoped_slot_into_slotted(&mut out, Some(slot), &FooterProps { count: 2 }, "data-v-421eaec8-s", None);
 /// assert_eq!(out, "<!--[--><small data-v-421eaec8-s>2</small><!--]-->");
 /// ```
+#[doc(hidden)]
 pub fn scoped_slot_into_slotted<P: ?Sized, F: Fn(&mut String, &P, &str) -> bool + ?Sized>(
     out: &mut String,
     slot: Option<&F>,

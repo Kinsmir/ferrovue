@@ -290,6 +290,7 @@ fn join_classes(a: &str, b: &str) -> String {
 /// assert_eq!(merged, [("class", Attr::str("a b")), ("id", Attr::Undefined)]);
 /// ```
 #[must_use]
+#[doc(hidden)]
 pub fn merge_props<'a>(sources: &[&[(&'a str, Attr<'a>)]]) -> Vec<(&'a str, Attr<'a>)> {
     merge(sources)
         .into_iter()
@@ -490,6 +491,7 @@ fn style_into(out: &mut String, value: &Attr<'_>) {
 /// ferrovue::style_text_into(&mut out, "color: red; background: url(a;b) /* note */");
 /// assert_eq!(out, "color:red;background:url(a;b);");
 /// ```
+#[doc(hidden)]
 pub fn style_text_into(out: &mut String, css: &str) {
     style_into(out, &Attr::styles([Attr::str(css)]));
 }
@@ -637,6 +639,7 @@ fn split_declarations(text: &str) -> Vec<&str> {
 /// assert_eq!(ferrovue::class_names(&[" a ", "", "b"]), "a b");
 /// ```
 #[must_use]
+#[doc(hidden)]
 pub fn class_names(items: &[&str]) -> String {
     let mut s = String::new();
     for item in items {
@@ -665,6 +668,7 @@ pub fn class_names(items: &[&str]) -> String {
 /// assert_eq!(ferrovue::scope_attrs("", "data-v-a", " data-v-a data-v-c-s"), " data-v-a data-v-c-s");
 /// ```
 #[must_use]
+#[doc(hidden)]
 pub fn scope_attrs(inherited: &str, own: &str, slotted: &str) -> String {
     let mut keys: Vec<&str> = inherited.split(' ').filter(|k| !k.is_empty()).collect();
     for key in std::iter::once(own).chain(js_trim(slotted).split(' ')) {

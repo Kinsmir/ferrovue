@@ -4,7 +4,7 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering as AtomicOrdering};
 
-use ferrovue_core::push_number;
+use ferrovue_core::numbers::push_number;
 
 use crate::record::array_index;
 use crate::strings::{is_js_space, js_cmp, js_json_number, js_json_string, js_replace, js_trim};

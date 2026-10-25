@@ -6,7 +6,7 @@ use libfuzzer_sys::fuzz_target;
 fuzz_target!(|data: &[u8]| {
     let s = String::from_utf8_lossy(data);
     let mut out = String::from("<p>");
-    ferrovue_core::escape_into(&mut out, &s);
+    ferrovue_core::escape::escape_into(&mut out, &s);
     let escaped = out
         .strip_prefix("<p>")
         .expect("escape_into kept what out held");

@@ -16,6 +16,7 @@ use crate::{json, state};
 ///
 /// The call is the loader's key, as the client finds the result in the page's payload:
 /// `JSON.stringify([name, ...args])`, written by [`load_key`].
+#[doc(hidden)]
 pub trait Load: Send + 'static {
     /// The loader's name, as `defineLoader` names it in the client's module.
     const NAME: &'static str;
@@ -30,6 +31,7 @@ pub trait Load: Send + 'static {
 }
 
 /// An argument of a loader, written into its key as `JSON.stringify` writes it.
+#[doc(hidden)]
 pub trait LoadArg {
     /// Write the argument as the next item of `key`.
     fn arg_into(&self, key: &mut LoadKey);
@@ -38,6 +40,7 @@ pub trait LoadArg {
 /// A loader's key being written: a JSON array of its name and its arguments, written as
 /// `JSON.stringify` writes them, so the client computes the same key from the same call.
 #[derive(Debug)]
+#[doc(hidden)]
 pub struct LoadKey {
     json: String,
 }
@@ -178,6 +181,7 @@ impl<T: LoadArg + ?Sized> LoadArg for &T {
 ///
 /// assert_eq!(load_key(&LoadPost { id: 7, draft: None }), r#"["loadPost",7,null]"#);
 /// ```
+#[doc(hidden)]
 pub fn load_key<L: Load>(call: &L) -> String {
     let mut key = LoadKey::new(L::NAME);
     call.args(&mut key);
@@ -193,6 +197,7 @@ struct Done {
 
 /// A call a render asked for whose result the driver does not have yet, for the generated
 /// `loaders` module to hand to the app's loader with [`LoadCall::run`].
+#[doc(hidden)]
 pub struct LoadCall {
     name: &'static str,
     key: String,
@@ -247,6 +252,7 @@ impl LoadCall {
 }
 
 /// A running call of a loader, as [`LoadCall::run`] starts it.
+#[doc(hidden)]
 pub struct LoadFuture<'a, E>(Pin<Box<dyn Future<Output = Result<Done, E>> + Send + 'a>>);
 
 impl<E> fmt::Debug for LoadFuture<'_, E> {

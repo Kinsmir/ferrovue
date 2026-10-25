@@ -35,6 +35,7 @@ pub trait TrustedHtml {
 }
 
 /// `v-html`: the value, unescaped. Only a [`TrustedHtml`] can reach it.
+#[doc(hidden)]
 pub fn trusted_into(out: &mut String, html: &impl TrustedHtml) {
     out.push_str(html.trusted_html());
 }

@@ -129,6 +129,7 @@ impl Teleports {
 ///     "<!--teleport start anchor--><!--teleport anchor-->"
 /// );
 /// ```
+#[doc(hidden)]
 pub fn teleport_into(
     out: &mut String,
     teleports: &Teleports,

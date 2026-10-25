@@ -46,12 +46,12 @@ fn push_decimal(out: &mut String, n: u64) {
 /// # Example
 ///
 /// ```
-/// # use ferrovue_core as ferrovue;
+/// # mod ferrovue { pub use ferrovue_core as core; }
 /// let mut out = String::new();
-/// ferrovue::push_int(&mut out, 42);
+/// ferrovue::core::numbers::push_int(&mut out, 42);
 /// out.push(' ');
 /// // Beyond 2⁵³ the browser has the rounded number, so that is what is written.
-/// ferrovue::push_int(&mut out, 9_007_199_254_740_993);
+/// ferrovue::core::numbers::push_int(&mut out, 9_007_199_254_740_993);
 /// assert_eq!(out, "42 9007199254740992");
 /// ```
 pub fn push_int(out: &mut String, n: i64) {
@@ -116,10 +116,10 @@ impl std::fmt::Write for Short {
 /// # Example
 ///
 /// ```
-/// # use ferrovue_core as ferrovue;
+/// # mod ferrovue { pub use ferrovue_core as core; }
 /// let written = |x: f64| {
 ///     let mut out = String::new();
-///     ferrovue::push_number(&mut out, x);
+///     ferrovue::core::numbers::push_number(&mut out, x);
 ///     out
 /// };
 /// assert_eq!(written(0.1 + 0.2), "0.30000000000000004");
@@ -250,8 +250,8 @@ fn few_exact_digits(x: f64) -> Option<(Short, i32)> {
 /// # Example
 ///
 /// ```
-/// # use ferrovue_core as ferrovue;
-/// use ferrovue::js_round;
+/// # mod ferrovue { pub use ferrovue_core as core; }
+/// use ferrovue::core::numbers::js_round;
 ///
 /// assert_eq!(js_round(2.5), 3.0);
 /// assert_eq!(js_round(-2.5), -2.0); // `f64::round` gives -3
@@ -276,8 +276,8 @@ pub fn js_round(x: f64) -> f64 {
 /// # Example
 ///
 /// ```
-/// # use ferrovue_core as ferrovue;
-/// use ferrovue::js_sign;
+/// # mod ferrovue { pub use ferrovue_core as core; }
+/// use ferrovue::core::numbers::js_sign;
 ///
 /// assert_eq!(js_sign(-7.5), -1.0);
 /// assert_eq!(js_sign(1e-300), 1.0);
@@ -303,8 +303,8 @@ pub fn js_sign(x: f64) -> f64 {
 /// # Example
 ///
 /// ```
-/// # use ferrovue_core as ferrovue;
-/// use ferrovue::js_max;
+/// # mod ferrovue { pub use ferrovue_core as core; }
+/// use ferrovue::core::numbers::js_max;
 ///
 /// assert_eq!(js_max(2.0, 3.5), 3.5);
 /// assert!(js_max(1.0, f64::NAN).is_nan()); // `f64::max` gives 1
@@ -328,8 +328,8 @@ pub fn js_max(a: f64, b: f64) -> f64 {
 /// # Example
 ///
 /// ```
-/// # use ferrovue_core as ferrovue;
-/// use ferrovue::js_min;
+/// # mod ferrovue { pub use ferrovue_core as core; }
+/// use ferrovue::core::numbers::js_min;
 ///
 /// assert_eq!(js_min(2.0, 3.5), 2.0);
 /// assert!(js_min(1.0, f64::NAN).is_nan()); // `f64::min` gives 1
@@ -353,8 +353,8 @@ pub fn js_min(a: f64, b: f64) -> f64 {
 /// # Example
 ///
 /// ```
-/// # use ferrovue_core as ferrovue;
-/// use ferrovue::js_to_fixed;
+/// # mod ferrovue { pub use ferrovue_core as core; }
+/// use ferrovue::core::numbers::js_to_fixed;
 ///
 /// assert_eq!(js_to_fixed(2.5, 0), "3"); // an exact tie, away from zero; Rust's `{:.0}` gives "2"
 /// assert_eq!(js_to_fixed(1.005, 2), "1.00"); // 1.005 is a little less as a double
@@ -411,8 +411,8 @@ pub fn js_to_fixed(x: f64, digits: u32) -> String {
 /// # Example
 ///
 /// ```
-/// # use ferrovue_core as ferrovue;
-/// use ferrovue::js_to_precision;
+/// # mod ferrovue { pub use ferrovue_core as core; }
+/// use ferrovue::core::numbers::js_to_precision;
 ///
 /// assert_eq!(js_to_precision(123.456, 4), "123.5");
 /// assert_eq!(js_to_precision(123_456.0, 2), "1.2e+5");
@@ -470,8 +470,8 @@ pub fn js_to_precision(x: f64, precision: u32) -> String {
 /// # Example
 ///
 /// ```
-/// # use ferrovue_core as ferrovue;
-/// use ferrovue::js_to_exponential;
+/// # mod ferrovue { pub use ferrovue_core as core; }
+/// use ferrovue::core::numbers::js_to_exponential;
 ///
 /// assert_eq!(js_to_exponential(123_456.0, Some(2)), "1.23e+5");
 /// assert_eq!(js_to_exponential(0.000_15, None), "1.5e-4");
@@ -574,8 +574,8 @@ fn increment_digits(digits: &str) -> String {
 /// # Example
 ///
 /// ```
-/// # use ferrovue_core as ferrovue;
-/// use ferrovue::Js;
+/// # mod ferrovue { pub use ferrovue_core as core; }
+/// use ferrovue::core::numbers::Js;
 ///
 /// assert_eq!(format!("{} items", Js(3_i64)), "3 items");
 /// assert_eq!(format!("{}", Js(1.5e-7_f64)), "1.5e-7");

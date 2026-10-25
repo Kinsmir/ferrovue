@@ -2,37 +2,64 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![warn(rustdoc::missing_crate_level_docs)]
 
-mod attrs;
-mod basic_html;
-mod chunks;
-mod class;
+/// Attributes: the ones a component's root takes from its parent, and how generated code writes them.
+pub mod attrs;
+/// HTML of a few tags, built from text a user wrote: what a `TrustedHtml` prop may hold without a sanitiser.
+pub mod basic_html;
+/// The chunks a page's islands load, read from Vite's manifest, and the preloads they need.
+pub mod chunks;
+/// `:class`, as Vue's `normalizeClass` writes it.
+#[doc(hidden)]
+pub mod class;
 mod compat;
-mod conformance;
-mod dates;
+/// The conformance check a project's own fixtures run through.
+pub mod conformance;
+/// JavaScript's `Date` methods, as generated code calls them.
+#[doc(hidden)]
+pub mod dates;
 #[cfg(feature = "dioxus")]
 #[cfg_attr(docsrs, doc(cfg(feature = "dioxus")))]
 pub mod dioxus;
 #[cfg(any(doc, doctest))]
 pub mod guide;
-mod head;
-mod html;
-mod hydrate;
-mod js_date;
+/// The page head that components set with `useHead`.
+pub mod head;
+/// A component's HTML, as a page, an island or an owned value.
+pub mod html;
+/// When an island hydrates.
+pub mod hydrate;
+/// JavaScript's `Date`, and the Rust types a `Date` prop may be.
+pub mod js_date;
 mod json;
-mod load;
-mod page;
-mod record;
-mod refused;
+/// Loaders: the data a component awaits, which the Rust application provides.
+pub mod load;
+/// A page made of islands and holes, and the record a client reads it back from.
+pub mod page;
+/// A `Record<string, T>` prop, which keeps its keys in JavaScript's order.
+pub mod record;
+/// A render that Vue would fail, refused where the component reads what fails it.
+pub mod refused;
+/// HTML sanitised with ammonia.
 #[cfg(feature = "ammonia")]
-mod sanitised;
-mod slots;
-mod state;
-mod strings;
-mod teleport;
-mod trusted;
-mod union;
+#[cfg_attr(docsrs, doc(cfg(feature = "ammonia")))]
+pub mod sanitised;
+/// Slots: content a parent hands a child, and the holes a page fills later.
+pub mod slots;
+/// The script that carries Pinia's state to the client.
+pub mod state;
+/// JavaScript's string methods, as generated code calls them.
+#[doc(hidden)]
+pub mod strings;
+/// `<Teleport>`: content written at another place of the page.
+pub mod teleport;
+/// HTML that a page may hold as it is: what `v-html` renders.
+pub mod trusted;
+/// Unions of string literals, as Rust enums.
+pub mod union;
+/// A page streamed as it renders, for axum and actix-web.
 #[cfg(feature = "stream")]
-mod web;
+#[cfg_attr(docsrs, doc(cfg(feature = "stream")))]
+pub mod web;
 
 pub use attrs::{Attr, Attrs, attrs_into, passed_attrs_into};
 #[doc(hidden)]
@@ -101,8 +128,9 @@ pub use web::HtmlStream;
 
 #[doc(inline)]
 pub use ferrovue_core::{
-    Js, escape_into, js_encode_uri, js_encode_uri_component, js_max, js_min, js_round, js_sign,
-    js_to_exponential, js_to_fixed, js_to_precision, push_int, push_number,
+    escape::escape_into, numbers::Js, numbers::js_max, numbers::js_min, numbers::js_round,
+    numbers::js_sign, numbers::js_to_exponential, numbers::js_to_fixed, numbers::js_to_precision,
+    numbers::push_int, numbers::push_number, uri::js_encode_uri, uri::js_encode_uri_component,
 };
 #[cfg(feature = "i18n")]
 #[cfg_attr(docsrs, doc(cfg(feature = "i18n")))]

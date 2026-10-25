@@ -25,5 +25,5 @@ fn the_re_exports_are_the_items_of_the_crates_they_come_from() {
     let _: ferrovue::Route<'_> = router.at("/");
     let _: ferrovue_i18n::I18n = ferrovue::i18n::I18n::new(&[], "en", &[]);
     let _: ferrovue::I18n = ferrovue_i18n::I18n::new(&[], "en", &[]);
-    let _: ferrovue_core::Js<i64> = ferrovue::Js(1);
+    let _: ferrovue_core::numbers::Js<i64> = ferrovue::Js(1);
 }

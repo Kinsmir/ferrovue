@@ -4,25 +4,19 @@
 //! # Example
 //!
 //! ```
-//! # use ferrovue_core as ferrovue;
+//! # mod ferrovue { pub use ferrovue_core as core; }
 //! let mut out = String::from("<p>");
-//! ferrovue::escape_into(&mut out, "Tom & Jerry");
+//! ferrovue::core::escape::escape_into(&mut out, "Tom & Jerry");
 //! out.push(' ');
-//! ferrovue::push_number(&mut out, 0.1 + 0.2);
+//! ferrovue::core::numbers::push_number(&mut out, 0.1 + 0.2);
 //! out.push_str("</p>");
 //! assert_eq!(out, "<p>Tom &amp; Jerry 0.30000000000000004</p>");
 //! ```
 #![warn(rustdoc::missing_crate_level_docs)]
 
-mod escape;
-mod numbers;
-mod uri;
-
-pub use escape::escape_into;
-pub use numbers::{
-    Js, js_max, js_min, js_round, js_sign, js_to_exponential, js_to_fixed, js_to_precision,
-    push_int, push_number,
-};
-pub use uri::{js_encode_uri, js_encode_uri_component};
-#[doc(hidden)]
-pub use uri::{kept_by_encode_uri, percent_encode_into};
+/// Vue's HTML escaping.
+pub mod escape;
+/// Numbers written, rounded and compared as JavaScript does it.
+pub mod numbers;
+/// URIs encoded as JavaScript's `encodeURI` and `encodeURIComponent` encode them.
+pub mod uri;
