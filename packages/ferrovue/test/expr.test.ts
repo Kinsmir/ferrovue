@@ -886,9 +886,9 @@ describe("names that setup and bodies bind", () => {
     ]);
   });
 
-  it("refuses `[…]` of the route by a string", () => {
-    expect(refusals("", '<p>{{ $route["path"] }}</p>', { files: { "routes.json": '["/"]' }, config: { routes: "components/routes.json" } })).toEqual([
-      "FV0612 computed member access of a value of another kind: `[…]` reads an item of a list, by an integer index",
+  it("refuses `[…]` of the route by a key that is no string literal", () => {
+    expect(refusals("defineProps<{ k: string }>();", "<p>{{ $route[k] }}</p>", { files: { "routes.json": '["/"]' }, config: { routes: "components/routes.json" } })).toEqual([
+      "FV0612 computed member access of the route: `[…]` reads an item of a list, by an integer index",
     ]);
   });
 });

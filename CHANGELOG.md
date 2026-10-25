@@ -34,6 +34,8 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
   [FV0623](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#fv0623).
 - An `enum` member set to a constant of its component or to an earlier member is evaluated as TypeScript does.
   0.11.0 refused it with FV0315, and read a member named like a constant as that constant: [Constants](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#constants).
+- The template reads a prop destructured under a new name, and `route["path"]` reads the route.
+  0.11.0 refused them with FV0601, FV0418 and FV0612: [Optional props and defaults](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#optional-props-and-defaults).
 
 ## [0.11.0] - 2026-10-25
 

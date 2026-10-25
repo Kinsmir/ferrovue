@@ -227,8 +227,8 @@ export const router: Plugin<RouterRun, RouterScope> = {
     return true;
   },
   global: (s, name, n) => (name === "$route" ? theRoute(s, n) : null),
-  member(s, base, prop, n, computed) {
-    if (base.ty.k === "params" || base.ty.k === "queryobj" || (base.ty.k === "route" && !computed)) return routeField(s, base, prop, n);
+  member(s, base, prop, n) {
+    if (base.ty.k === "params" || base.ty.k === "queryobj" || base.ty.k === "route") return routeField(s, base, prop, n);
     return null;
   },
   equality(s, n) {
@@ -250,7 +250,7 @@ export const router: Plugin<RouterRun, RouterScope> = {
     return { path, of: STR, negated: t.negated, truthy: false, option, present: `${option}.is_some()`, pattern: (name) => `let Some(${name}) = ${option}` };
   },
   values: {
-    describe: (ty) => (ty.k === "query" ? "a query value" : undefined),
+    describe: (ty) => (ty.k === "query" ? "a query value" : ty.k === "route" ? "the route" : undefined),
     truthy: (v) => (v.ty.k === "query" ? `${atom(v.code)}.truthy()` : undefined),
     interpolate(e, v) {
       if (v.ty.k !== "query") return false;

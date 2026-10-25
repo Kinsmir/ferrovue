@@ -249,6 +249,36 @@ defineProps<{ c: string | null }>();
     expect(out.slice(out.indexOf("pub fn render"))).not.toContain("_ =>");
   });
 
+  it("reads a prop destructured under a new name, which Vue writes as `$props['x']`, as it reads the prop", () => {
+    const rendered = (script: string, names: Record<string, string>) => {
+      const template = `<p :title="${names.label}" :class="{ on: ${names.on} }">{{ ${names.label} }} {{ ${names.n} + 1 }}<b v-if="${names.on}">!</b><component :is="${names.tag}">t</component><component :is="KINDS[${names.kind}]" /></p>`;
+      const source = `<script setup lang="ts">
+import Y from "./Y.vue";
+${script}
+const KINDS = { y: Y, rule: "hr" } as const;
+</script>
+<template>${template}</template>`;
+      return compile(island(source, { Y: "<template><b>y</b></template>" })).get("x.rs")!;
+    };
+    const declared = 'defineProps<{ label: string; n: number; on: boolean; tag: "b" | "i"; kind: "y" | "rule" }>()';
+    const plain = rendered(`${declared};`, { label: "label", n: "n", on: "on", tag: "tag", kind: "kind" });
+    const renamed = rendered(`const { label: text, n: count, on: shown, tag: t, kind: k } = ${declared};`, { label: "text", n: "count", on: "shown", tag: "t", kind: "k" });
+    expect(renamed).toBe(plain);
+    expect(renamed).toContain('let fv_tag = match props.tag { XTag::B => "b", XTag::I => "i" };');
+    expect(renamed).toContain("match props.kind {");
+  });
+
+  it("applies the default of a prop destructured under a new name", () => {
+    const out = compile(
+      island(`<script setup lang="ts">
+const { label: text = "none", size: s = "md" } = defineProps<{ label?: string; size?: "sm" | "md" }>();
+</script>
+<template><component :is="s === 'sm' ? 'small' : 'span'">{{ text }}</component></template>`),
+    ).get("x.rs")!;
+    expect(out).toContain('fv::core::escape_into(out, props.label.as_deref().unwrap_or("none"));');
+    expect(out).toContain("props.size.unwrap_or(XSize::Md)");
+  });
+
   it("matches every variant in `<component :is>`, however the choices group", () => {
     const out = compile(
       island(
@@ -1354,6 +1384,21 @@ const route = useRoute();
 </script>
 <template><p v-if="route.query.q === null">bare</p></template>`;
       expect(() => withRoutes(island(source))).toThrow(/X\.vue:5:\d+: `===` between a query value and `null`/);
+    });
+
+    it("reads a field of the route by a string key as it reads the field", () => {
+      const read = (path: string, fullPath: string) =>
+        withRoutes(
+          island(`<script setup lang="ts">
+import { useRoute } from "vue-router";
+const route = useRoute();
+</script>
+<template><p :data-path="${path}">{{ ${fullPath} }}</p></template>`),
+        ).get("x.rs")!;
+      const dotted = read("$route.path", "route.fullPath");
+      expect(read(`$route['path']`, `route['fullPath']`)).toBe(dotted);
+      expect(dotted).toContain("fv_route.path()");
+      expect(dotted).toContain("fv_route.full_path()");
     });
 
     it("resolves a RouterLink against the route, and hands the route down to it", () => {

@@ -1075,8 +1075,8 @@ packages/ferrovue/src/dynamic.ts: ConditionalExpression: n.property.type === "St
 packages/ferrovue/src/dynamic.ts: ConditionalExpression: n.property.type === "Identifier" => true in if (n?.type === "MemberExpression" && !n.computed && n.property.type === "Identifier") {
 
 # dynamic.ts, `setupName` and `propOf`: Vue writes `_ctx.` only before a name `<script setup>` does
-# not bind. A prop is read as `$props.x`, and every import, declaration and child is bound and read
-# as `$setup.x`. The names left are those of `declare const`, which has no value, and of type
+# not bind. A prop is read as `$props.x`, or as `$props['x']` under a new name, which `templateAst`
+# turns into `$props.x`, and every import, declaration and child is bound and read as `$setup.x`. The names left are those of `declare const`, which has no value, and of type
 # imports, which `tableOf` skips, so reading such a name as a setup name or not ends in the same
 # FV0418.
 packages/ferrovue/src/dynamic.ts: ConditionalExpression: n.object.name === "_ctx" => false in if (n?.type === "MemberExpression" && n.object.type === "I … n.object.name === "$setup" || n.object.name === "_ctx")) {
@@ -1084,8 +1084,9 @@ packages/ferrovue/src/dynamic.ts: StringLiteral: "_ctx" => "" in if (n?.type ===
 packages/ferrovue/src/dynamic.ts: ConditionalExpression: o.name === "_ctx" => false in if (o.type === "Identifier" && (o.name === "$props" || o.n … t && !s.locals.has(o.name)))) return own(n.property.name);
 packages/ferrovue/src/dynamic.ts: StringLiteral: "_ctx" => "" in if (o.type === "Identifier" && (o.name === "$props" || o.n … t && !s.locals.has(o.name)))) return own(n.property.name);
 
-# dynamic.ts, `pickOf`: Vue writes `$props.x` only for a prop, which `propOf` reads before `pickOf`
-# looks for a table, and a setup binding named `$props` is read as `$setup.$props`, so `$props` is
+# dynamic.ts, `pickOf`: Vue writes `$props.x`, and `$props['x']` for a prop destructured under a new
+# name, only for a prop. `templateAst` turns the second into the first, which `propOf` reads before
+# `pickOf` looks for a table, and a setup binding named `$props` is read as `$setup.$props`, so `$props` is
 # never the object of a table read.
 packages/ferrovue/src/dynamic.ts: StringLiteral: "$props" => "" in if (n?.type === "MemberExpression" && !(n.object.type ===  … & ["$setup", "_ctx", "$props"].includes(n.object.name))) {
 

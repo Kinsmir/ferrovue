@@ -55,6 +55,10 @@ or a destructured default (`const { size = "md" } = defineProps<…>()`) is appl
 the field stays `None` and the island's JSON leaves it out, as Vue's would. An optional `boolean`
 that is absent renders as `false`, which is the cast Vue applies.
 
+A destructured prop may take a new name, with a default or without one
+(`const { label: text, size: s = "md" } = defineProps<…>()`). The template and script code read it
+by that name, and its field in `Props` keeps the prop's name, `label` and `size`.
+
 # Unions of string literals
 
 A prop, a `defineModel`, a field of an interface or a `ref` typed as a union of two or more string
