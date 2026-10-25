@@ -5,7 +5,7 @@ import { expect, it } from "vitest";
 import { createSSRApp, version as vueVersion, type App, type Component } from "vue";
 import { renderToString } from "vue/server-renderer";
 import { attachSsrRender } from "../src/ssr.ts";
-import { fixtureApp } from "../src/fixture.ts";
+import { fixtureApp } from "../src/testing-browser.ts";
 import { type RouteEntry } from "../src/route-records.ts";
 
 const ROOT = join(import.meta.dirname, "../../../crates/ferrovue/tests/conformance");

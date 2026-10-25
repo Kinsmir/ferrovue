@@ -10,7 +10,7 @@ const conformance = JSON.parse(readFileSync(new URL("crates/ferrovue/tests/confo
 export default defineConfig({
   plugins: [vue()],
   css: { modules: { generateScopedName: conformance.cssModules.generateScopedName } },
-  resolve: { alias: [{ find: /^ferrovue\/client$/, replacement: fileURLToPath(new URL("packages/ferrovue/src/client.ts", import.meta.url)) }] },
+  resolve: { alias: [{ find: /^ferrovue$/, replacement: fileURLToPath(new URL("packages/ferrovue/src/client.ts", import.meta.url)) }] },
   test: {
     fsModuleCache: false,
     testTimeout: 30_000,

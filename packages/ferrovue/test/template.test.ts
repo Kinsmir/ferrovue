@@ -656,7 +656,7 @@ describe("components and directives resolved by name", () => {
   });
 
   it("takes a global directive beside a ClientOnly", () => {
-    expect(render(sfc("", "<div><ClientOnly><i>c</i></ClientOnly><b v-foo>x</b></div>", `import { ClientOnly } from "ferrovue/client";
+    expect(render(sfc("", "<div><ClientOnly><i>c</i></ClientOnly><b v-foo>x</b></div>", `import { ClientOnly } from "ferrovue";
 `), {}, { clientDirectives: ["foo"] })).toBe(`pub fn try_render(out: &mut String, _props: &Props) -> Result<(), fv::render::Refused> {
     out.reserve(26);
     out.push_str("<div><!----><b>x</b></div>");

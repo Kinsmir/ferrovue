@@ -53,21 +53,13 @@
       "types": "./dist/testing.d.ts",
       "default": "./dist/testing.js"
     },
-    "./testing/fixture": {
-      "types": "./dist/fixture.d.ts",
-      "default": "./dist/fixture.js"
-    },
-    "./testing/hydration": {
-      "types": "./dist/hydration.d.ts",
-      "default": "./dist/hydration.js"
+    "./testing/browser": {
+      "types": "./dist/testing-browser.d.ts",
+      "default": "./dist/testing-browser.js"
     },
     "./testing/ssr": {
       "types": "./dist/ssr.d.ts",
       "default": "./dist/ssr.js"
-    },
-    "./client": {
-      "types": "./dist/client.d.ts",
-      "default": "./dist/client.js"
     },
     "./link-router": {
       "types": "./dist/link-router.d.ts",

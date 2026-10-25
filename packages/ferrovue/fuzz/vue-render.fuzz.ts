@@ -6,7 +6,7 @@ import type { Config } from "../src/config.ts";
 import { datePlansOf, fixtureOptions, renderFixture } from "../src/conformance.ts";
 import { type DatePlans, withDatePlans } from "../src/date-plans.ts";
 import { attachSsrRender } from "../src/ssr.ts";
-import { fixtureApp, readFixture } from "../src/fixture.ts";
+import { fixtureApp, readFixture } from "../src/testing-browser.ts";
 
 interface VueCase {
   key: string;

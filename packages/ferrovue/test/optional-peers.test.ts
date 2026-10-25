@@ -6,7 +6,7 @@ import { pathToFileURL } from "node:url";
 import { afterAll, beforeAll, expect, it } from "vitest";
 
 const SRC = join(import.meta.dirname, "../src");
-const ENTRIES = ["client", "compiler", "config", "errors", "types", "testing", "fixture", "hydration", "ssr", "link-router", "route-records", "islands", "vite", "volar"];
+const ENTRIES = ["client", "compiler", "config", "errors", "types", "testing", "testing-browser", "ssr", "link-router", "route-records", "islands", "vite", "volar"];
 let root = "";
 let result: Record<string, unknown> = {};
 
@@ -26,7 +26,7 @@ for (const entry of ${JSON.stringify(ENTRIES)}) {
   out.loaded[entry] = await import(src + "/" + entry + ".ts").then(() => "loaded", (error) => error.message);
 }
 const { conformanceSuite } = await import(src + "/testing.ts");
-const { fixtureApp, readFixture } = await import(src + "/fixture.ts");
+const { fixtureApp, readFixture } = await import(src + "/testing-browser.ts");
 const { defineComponent, h } = await import("vue");
 const { renderToString } = await import("vue/server-renderer");
 const Hello = defineComponent({ props: { name: String }, render() { return h("p", "Hello, " + this.name); } });
@@ -68,8 +68,7 @@ it("loads every entry of the package without the optional peers, vitest included
     errors: "loaded",
     types: "loaded",
     testing: "loaded",
-    fixture: "loaded",
-    hydration: "loaded",
+    "testing-browser": "loaded",
     ssr: "loaded",
     "link-router": expect.stringContaining("vue-router") as unknown,
     "route-records": "loaded",

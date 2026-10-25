@@ -189,7 +189,7 @@ home page, a book page and the staff picks, puts each page's body into happy-dom
 client's own `hydrate()` on it. It fails on any warning Vue logs, which is how Vue reports a
 hydration mismatch. It then checks that Vue kept the server's nodes, that the islands work after
 hydration, and that a click in one island reaches the store the summary shows. The staff picks are
-hydrated a second time with `hydrateRecordedPage` from `ferrovue/testing/hydration`, which fails on any
+hydrated a second time with `hydrateRecordedPage` from `ferrovue/testing/browser`, which fails on any
 mismatch and on any change hydrating makes to the markup. While they hydrate, `fetch` is replaced
 with one that records every request, so the test checks that the loaders were answered from the
 page. CI runs it, and also starts the real

@@ -396,7 +396,7 @@ the app's container, where the page writes it once.
 
 ## Testing a page
 
-`hydrateRecordedPage` from `ferrovue/testing/hydration` takes a page as the server wrote it (the container
+`hydrateRecordedPage` from `ferrovue/testing/browser` takes a page as the server wrote it (the container
 and the record's script, or the container and the record as an object), puts it in the document
 and hydrates it with `mountPage`. It compares the markup as hydrating leaves it with the markup the
 server wrote, then waits for the page to settle: a `<ClientOnly>` shows its content and async

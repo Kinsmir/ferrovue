@@ -197,8 +197,8 @@ from other files are exported by the entry that defines them, some of them new:
 | `CONFIG_FILE`, `loadConfig`, `TYPES_MODULE`, `Config`, `HelperSpec`, `RoutesSource`, `ScopeIdMode`, `TwinSpec`, `TypeName` from `ferrovue/compiler` | `ferrovue/compiler/config` |
 | `GenError`, `GenErrors`, `SourceLocation`, `ERRORS`, `ErrorCode`, `ErrorDoc`, `docsUrl` from `ferrovue/compiler` | `ferrovue/compiler/errors` |
 | `attachSsrRender` from `ferrovue/testing` | `ferrovue/testing/ssr` |
-| `fixtureApp`, `readFixture`, `Fixture`, `RouterOptions` from `ferrovue/testing` | `ferrovue/testing/fixture` |
-| `hydrateRecordedPage`, `renderRecordedPage`, `RecordedPage` from `ferrovue/testing` | `ferrovue/testing/hydration` |
+| `fixtureApp`, `readFixture`, `Fixture`, `RouterOptions` from `ferrovue/testing` | `ferrovue/testing/browser` |
+| `hydrateRecordedPage`, `renderRecordedPage`, `RecordedPage` from `ferrovue/testing` | `ferrovue/testing/browser` |
 | `IslandComponent`, `MountOptions`, `PageOptions`, `PagePart`, `PageRecord`, `RenderPageOptions` from `ferrovue/testing` | `ferrovue` |
 | `routeRecords`, `RouteEntry` from `ferrovue/link-router` or `ferrovue/testing`, and `RouteEntry` from `ferrovue/routes` | `ferrovue/route-records` |
 
@@ -215,13 +215,13 @@ import { fixtureApp, hydrateRecordedPage, readFixture } from "ferrovue/testing";
 import { linkRouter, routeRecords } from "ferrovue/link-router";
 
 // 0.12
-import { fixtureApp, readFixture } from "ferrovue/testing/fixture";
-import { hydrateRecordedPage } from "ferrovue/testing/hydration";
+import { fixtureApp, readFixture } from "ferrovue/testing/browser";
+import { hydrateRecordedPage } from "ferrovue/testing/browser";
 import { linkRouter } from "ferrovue/link-router";
 import { routeRecords } from "ferrovue/route-records";
 ```
 
-`ferrovue/testing/fixture`, `ferrovue/testing/hydration` and `ferrovue/route-records` load no
+`ferrovue/testing/browser`, `ferrovue/testing/browser` and `ferrovue/route-records` load no
 module of Node, so a test that runs in a browser imports them as the conformance suite's browser
 tests do.
 

@@ -292,7 +292,7 @@ An island's `data-props` carries a date as `toISOString()` writes it, as Vue's o
 `JSON.stringify` of a `Date` would, and an invalid date as the bare `NaN` it writes for a number
 JSON cannot carry, where `JSON.stringify` would write `null`, which a `Date | null` prop could not
 tell from `null`. Before Vue hydrates, `mountIslands`, `mountPage` and `renderPage` (and
-`ferrovue/testing/fixture`'s `fixtureApp`) turn each prop the component declares a `Date` back into one:
+`ferrovue/testing/browser`'s `fixtureApp`) turn each prop the component declares a `Date` back into one:
 Vue's compiler declares a prop typed `Date` as `{ type: Date }`, and one typed `Date | null` as
 `{ type: [Date, null] }`, so the client knows which props are dates from the component itself. The
 browser's render then reads the same time value the server read, in any time zone, as the

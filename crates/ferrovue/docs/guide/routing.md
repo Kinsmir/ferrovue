@@ -466,7 +466,7 @@ await mountIslands(islands, { router });
 ```
 
 `ferrovue/link-router` is the one entry that imports vue-router, which stays an optional peer: the
-package root and `ferrovue/client` do not load it.
+package root does not load it.
 
 Written by hand, the router is this, and each part is there for a reason:
 

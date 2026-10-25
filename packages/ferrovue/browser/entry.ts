@@ -1,6 +1,6 @@
 import { type Component } from "vue";
 import { type DatePlans, withDatePlans } from "../src/date-plans.ts";
-import { fixtureApp, readFixture, type RouterOptions } from "../src/fixture.ts";
+import { fixtureApp, readFixture, type RouterOptions } from "../src/testing-browser.ts";
 import type { RouteEntry } from "../src/route-records.ts";
 import { headRendered, settled } from "../src/settle.ts";
 

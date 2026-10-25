@@ -1,6 +1,6 @@
 import type { Component } from "vue";
 import { registerConformance } from "./conformance.ts";
-import type { RouterOptions } from "./fixture.ts";
+import type { RouterOptions } from "./testing-browser.ts";
 import { peer } from "./peer.ts";
 
 /** What `conformanceSuite` checks: the project, its components and its fixtures. `pinia`,

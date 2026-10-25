@@ -197,7 +197,7 @@ page in `onMounted`. `<ClientOnly>` and [Rust twins](#rust-twins) keep one of th
 the page around it.
 
 A component the compiler refuses can still be on the page if the server does not render it. Put it
-in `<ClientOnly>`, from `ferrovue/client`: the server writes the `#fallback` slot between fragment
+in `<ClientOnly>`, from `ferrovue`: the server writes the `#fallback` slot between fragment
 markers (or `<!---->` without one), the browser hydrates that fallback and swaps in the default
 slot once mounted. Both sides render the fallback first, so this is exact by construction. The
 compiler does not read the default slot at all, so any component, import or expression may go
@@ -205,7 +205,7 @@ there:
 
 ```vue
 <script setup lang="ts">
-import { ClientOnly } from "ferrovue/client";
+import { ClientOnly } from "ferrovue";
 import { VDataTable } from "vuetify/components";
 
 defineProps<{ rows: { name: string }[] }>();

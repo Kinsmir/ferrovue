@@ -236,7 +236,7 @@ it("writes `ferrovue/islands`: a loader for each component that has an `island()
   const resolveId = plugin.resolveId as (id: string) => string | null;
   const load = plugin.load as (this: unknown, id: string) => string | null;
   const id = resolveId("ferrovue/islands")!;
-  expect(resolveId("ferrovue/client")).toBeNull();
+  expect(resolveId("ferrovue")).toBeNull();
   expect(load.call({}, "elsewhere")).toBeNull();
   expect(load.call({}, id)).toBe(`export default {\n  "Hello": () => import(${JSON.stringify(join(root, "components", "Hello.vue").split(sep).join("/"))}),\n};\n`);
   expect(readFileSync(join(root, "gen", "hello.rs"), "utf8")).toContain("pub fn island");

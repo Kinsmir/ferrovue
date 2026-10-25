@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { loadConfig } from "../src/config.ts";
 import { datePlansOf } from "../src/conformance.ts";
 import { type DatePlans, withDatePlans } from "../src/date-plans.ts";
-import { type Fixture, readFixture, type RouterOptions } from "../src/fixture.ts";
+import { type Fixture, readFixture, type RouterOptions } from "../src/testing-browser.ts";
 import type { RouteEntry } from "../src/route-records.ts";
 
 

@@ -5,7 +5,7 @@
     "types": [],
     "paths": {
       "ferrovue/types": ["../../../packages/ferrovue/src/types.ts"],
-      "ferrovue/client": ["../../../packages/ferrovue/src/client.ts"]
+      "ferrovue": ["../../../packages/ferrovue/src/client.ts"]
     }
   },
   "include": ["**/*.ts"]

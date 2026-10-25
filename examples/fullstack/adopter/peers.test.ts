@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import { renderToString } from "vue/server-renderer";
-import { fixtureApp, readFixture } from "ferrovue/testing/fixture";
+import { fixtureApp, readFixture } from "ferrovue/testing/browser";
 import BasketSummary from "../client/components/BasketSummary.vue";
 import BookPage from "../client/pages/books/[id].vue";
 

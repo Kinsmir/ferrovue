@@ -6,7 +6,10 @@
 
 import { App } from 'vue';
 import { Component } from 'vue';
+import type { Pinia } from 'pinia';
 import { pinia } from 'pinia';
+import { Plugin as Plugin_2 } from 'vue';
+import type { Router } from 'vue-router';
 import { vueI18n } from 'vue-i18n';
 import { vueRouter } from 'vue-router';
 
@@ -28,7 +31,23 @@ export interface Fixture {
 export function fixtureApp(component: Component, fixture: Fixture, routes: RouteEntry[] | null, options?: RouterOptions): Promise<App>;
 
 // @public
+export function hydrateRecordedPage(page: RecordedPage, layout: Component, components: Record<string, IslandComponent>, options?: PageOptions): Promise<App>;
+
+// @public
 export function readFixture(json: Record<string, unknown>): Fixture;
+
+// @public
+export interface RecordedPage {
+    // (undocumented)
+    html: string;
+    // (undocumented)
+    record?: PageRecord;
+}
+
+// @public
+export function renderRecordedPage(page: RecordedPage, layout: Component, components: Record<string, IslandComponent>, options?: RenderPageOptions & {
+    record?: string;
+}): Promise<App>;
 
 // @public
 export interface RouterOptions {

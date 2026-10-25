@@ -2138,7 +2138,7 @@ const props = defineProps<{ n: number }>();
   });
 
   describe("<ClientOnly>", () => {
-    const page = (inside: string, from = "ferrovue/client") => `<script setup lang="ts">
+    const page = (inside: string, from = "ferrovue") => `<script setup lang="ts">
 import { ClientOnly } from "${from}";
 import Chart from "chart-library";
 defineProps<{ label: string }>();
@@ -2151,9 +2151,13 @@ defineProps<{ label: string }>();
       expect(out).not.toContain("tooltip");
     });
 
-    it("writes a comment where there is no fallback, imported from the package root too", () => {
-      const out = compile(island(page(`<Chart />`, "ferrovue"))).get("x.rs")!;
+    it("writes a comment where there is no fallback", () => {
+      const out = compile(island(page(`<Chart />`))).get("x.rs")!;
       expect(out).toContain('out.push_str("<div><!----></div>");');
+    });
+
+    it("reads `<ClientOnly>` from the package root alone", () => {
+      expect(() => compile(island(page(`<Chart />`, "ferrovue/client")))).toThrow(/a child component must be imported from a `\.vue` file/);
     });
 
     it("still refuses a component resolved by name outside it", () => {
@@ -4192,7 +4196,7 @@ const picked = ref("a");
     [
       "a ClientOnly fallback inside a dynamic element",
       `<script setup lang="ts">
-import { ClientOnly } from "ferrovue/client";
+import { ClientOnly } from "ferrovue";
 defineProps<{ tag: "div" | "p" }>();
 </script>
 <template><component :is="tag"><ClientOnly><template #fallback><b>wait</b></template><i>now</i></ClientOnly></component></template>`,

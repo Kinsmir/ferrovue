@@ -12,7 +12,7 @@ reference; this file is the short version.
 ## Layout
 
 - `packages/ferrovue`: the npm package `ferrovue`.
-  - `src/client.ts`: the package root and `ferrovue/client`, the light browser API
+  - `src/client.ts`: the package root, the light browser API
     (`mountIslands`, `mountPage`, `readPage`, `renderPage`, `hydrateState`, `defineLoader`).
   - `src/compiler.ts`: `ferrovue/compiler`, with `src/config.ts` and `src/errors.ts` as
     `ferrovue/compiler/config` and `ferrovue/compiler/errors`. `src/cli.ts` and `src/args.ts` are the `ferrovue`

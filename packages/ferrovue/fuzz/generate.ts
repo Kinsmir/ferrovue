@@ -704,7 +704,7 @@ function loadersFile(c: Component): string {
   const used = loadersUsed(c);
   const ifaces = c.loads!.ifaces.filter((i) => used.some((l) => ifaceOf(l.out) === i.name));
   const float = used.some((l) => l.params.some((p) => p.ty === "float") || usesFloat(l.out)) || ifaces.some((i) => i.fields.some((f) => usesFloat(f.spec)));
-  const lines = ['import { defineLoader } from "ferrovue/client";'];
+  const lines = ['import { defineLoader } from "ferrovue";'];
   if (float) lines.push('import type { Float } from "ferrovue/types";');
   lines.push("");
   for (const i of ifaces) lines.push(...ifaceLines(i, true), "");
@@ -961,7 +961,7 @@ export function printComponent(c: Component): string {
   if (vue.length) lines.push(`import { ${vue.join(", ")} } from "vue";`);
   const unhead = [...new Set(c.head.map((h) => h.kind))].toSorted();
   if (unhead.length) lines.push(`import { ${unhead.join(", ")} } from "@unhead/vue";`);
-  if (tpl.includes("<ClientOnly>")) lines.push('import { ClientOnly } from "ferrovue/client";');
+  if (tpl.includes("<ClientOnly>")) lines.push('import { ClientOnly } from "ferrovue";');
   for (const name of helpers) if (!asyncs.includes(name)) lines.push(`import ${name} from "./${name}.vue";`);
   const loaders = [...new Set((c.loads?.awaits ?? []).map((a) => a.loader))].toSorted();
   if (loaders.length) lines.push(`import { ${loaders.join(", ")} } from "./fz-loaders";`);

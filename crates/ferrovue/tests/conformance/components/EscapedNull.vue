@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { defineAsyncComponent } from "vue";
-import { ClientOnly } from "ferrovue/client";
+import { ClientOnly } from "ferrovue";
 import StarRating from "../vendor/StarRating";
 import Gauge from "../vendor/Gauge";
 

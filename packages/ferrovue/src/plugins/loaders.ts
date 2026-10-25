@@ -41,7 +41,7 @@ interface LoadersScope {
   count: number;
 }
 
-const CLIENT_MODULES = new Set(["ferrovue", "ferrovue/client"]);
+const CLIENT_MODULE = "ferrovue";
 const ARG_TYS = new Set(["str", "int", "float", "bool"]);
 const SHAPE = "a loader is `export const loadPost = defineLoader(\"loadPost\", async (id: number): Promise<Post> => …)`";
 
@@ -52,7 +52,7 @@ function pascal(name: string): string {
 /** The local name `file` imports `defineLoader` by, if it does. */
 function defineLoaderName(body: N[]): string | null {
   for (const st of body) {
-    if (st.type !== "ImportDeclaration" || !CLIENT_MODULES.has(st.source.value) || st.importKind === "type") continue;
+    if (st.type !== "ImportDeclaration" || st.source.value !== CLIENT_MODULE || st.importKind === "type") continue;
     for (const sp of st.specifiers) {
       if (sp.type === "ImportSpecifier" && (sp.imported.name ?? sp.imported.value) === "defineLoader" && sp.importKind !== "type") return sp.local.name;
     }

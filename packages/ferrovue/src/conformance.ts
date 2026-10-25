@@ -8,7 +8,7 @@ import { loadConfig, type Config } from "./config.ts";
 import { unifiedDiff } from "./diff.ts";
 import { allPages, fileRoutes, pagesFolder, routeEntries } from "./file-routes.ts";
 import { type DatePlans, withDatePlans } from "./date-plans.ts";
-import { fixtureApp, readFixture, type RouterOptions } from "./fixture.ts";
+import { fixtureApp, readFixture, type RouterOptions } from "./testing-browser.ts";
 import type { RouteEntry } from "./route-records.ts";
 import { ctx } from "./context.ts";
 import { headRendered, settled } from "./settle.ts";

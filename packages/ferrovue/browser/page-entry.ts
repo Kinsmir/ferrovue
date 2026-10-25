@@ -1,6 +1,6 @@
 import type { Component } from "vue";
 import { readPage, type PageRecord } from "../src/client.ts";
-import { hydrateRecordedPage, renderRecordedPage } from "../src/hydration.ts";
+import { hydrateRecordedPage, renderRecordedPage } from "../src/testing-browser.ts";
 
 const modules = import.meta.glob<{ default: Component }>("../../../crates/ferrovue/tests/conformance/components/{Panel,Frame,Text,Prose,ClientSide,PlainBox}.vue", {
   eager: true,

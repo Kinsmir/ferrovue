@@ -1,4 +1,4 @@
-import { defineLoader } from "ferrovue/client";
+import { defineLoader } from "ferrovue";
 import type { Thread } from "../types/dated.ts";
 
 export interface Author {

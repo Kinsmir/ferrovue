@@ -1,4 +1,4 @@
-import type { Fixture } from "./fixture.ts";
+import type { Fixture } from "./testing-browser.ts";
 import { reviveByPlan } from "./revive.ts";
 
 /** Where the props of each component, and the results of each loader, hold dates inside lists,

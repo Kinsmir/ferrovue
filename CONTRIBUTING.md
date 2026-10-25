@@ -99,7 +99,7 @@ packages/ferrovue/           the compiler (npm package)
                              `GenError`; errors as the CLI, JSON and Vite show them
   src/error-areas.ts         the areas the codes are grouped in, which the guide's index follows
   src/volar.ts, editor.ts    `ferrovue/volar`: errors in the editor, from a plugin for Vue's language tools
-  src/client.ts              `ferrovue` and `ferrovue/client`: the browser API, `mountIslands`, `mountPage`, `readPage`, `renderPage`, `hydrateState`, `<ClientOnly>`, the loaders
+  src/client.ts              `ferrovue`: the browser API, `mountIslands`, `mountPage`, `readPage`, `renderPage`, `hydrateState`, `<ClientOnly>`, the loaders
   src/loads.ts               the loaders' results the page carries, which the browser API and the tests share
   src/islands.ts             `ferrovue/islands`, which the Vite plugin writes: every island, loaded lazily
   src/link-router.ts         `ferrovue/link-router`: `<RouterLink>` while the application navigates on its own
@@ -108,8 +108,8 @@ packages/ferrovue/           the compiler (npm package)
   src/page-routes.ts         `ferrovue/routes`, which the Vite plugin writes from the pages
   src/testing.ts             `ferrovue/testing`: `conformanceSuite`, a project's own conformance suite
   src/conformance.ts         the tests `conformanceSuite` registers
-  src/fixture.ts             `ferrovue/testing/fixture`: `fixtureApp` and `readFixture`
-  src/hydration.ts           `ferrovue/testing/hydration`: `hydrateRecordedPage` and `renderRecordedPage`
+  src/testing-browser.ts     `ferrovue/testing/browser`: `fixtureApp` and `readFixture`, and
+                             `hydrateRecordedPage` and `renderRecordedPage`, which load no module of Node
   src/ssr.ts                 `ferrovue/testing/ssr`: `attachSsrRender`
   src/settle.ts, peer.ts, date-plans.ts
                              waiting for async components to settle, optional peers, and dates a

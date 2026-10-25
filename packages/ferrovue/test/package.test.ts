@@ -50,7 +50,7 @@ it("keeps ferrovue/volar to the compiler, naming Vue's language tools only for t
 });
 
 it("keeps every browser entry free of the compiler", () => {
-  for (const entry of ["src/client.ts", "src/types.ts", "src/islands.ts", "src/page-routes.ts", "src/link-router.ts", "src/route-records.ts", "src/fixture.ts", "src/hydration.ts"]) {
+  for (const entry of ["src/client.ts", "src/types.ts", "src/islands.ts", "src/page-routes.ts", "src/link-router.ts", "src/route-records.ts", "src/testing-browser.ts"]) {
     const { files } = graph(entry);
     expect([...files].some((f) => basename(f) === "compiler.ts"), entry).toBe(false);
   }

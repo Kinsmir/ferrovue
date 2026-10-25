@@ -285,7 +285,7 @@ FERROVUE_BROWSERS=chromium pnpm test:browser                             # one b
   fixture becomes a page: its recorded HTML as the body, teleported content in its targets
   (`hydrationBody`, as the happy-dom suite places it), and the fixture in the head. Playwright serves
   the page and the bundle from memory, no server listening. The page builds the app with the same
-  `fixtureApp` as the happy-dom suite (`src/fixture.ts`: props, slots, route, Pinia state, locale)
+  `fixtureApp` as the happy-dom suite (`src/testing-browser.ts`: props, slots, route, Pinia state, locale)
   and hydrates. The test fails on a hydration warning or any error the page logs, if Vue replaced
   the server's first node, or if hydrating changed the document as the browser parsed it.
   Vue rewrites some attributes on purpose as it hydrates (it sets every dynamic prop again, and
