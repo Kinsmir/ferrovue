@@ -7450,6 +7450,11 @@ defineProps<{ tone?: Tone }>();
       expect(out).toContain("tone: Some(match s_tone {");
     });
 
+    it("narrows again in a `v-if` of `&&` a value an outer `v-if` narrowed", () => {
+      const out = narrowed(`<template v-if="tone !== ''"><Badge v-if="on && tone !== 'calm'" :tone="tone" /></template>`, "const on = computed(() => props.start !== undefined);");
+      expect(out).toContain("if s_on && s_tone != \"calm\" {\n            super::badge::try_render(out, &super::badge::Props { tone: Some(super::types::Tone::Loud) })?;");
+    });
+
     it("takes a `computed` annotated as the union, whose body narrows the value to it", () => {
       const out = narrowed(`<Badge :tone="shown" />`, `const shown = computed((): Tone | undefined => (tone.value === "" ? undefined : tone.value));`);
       expect(out).toContain("let s_shown = if s_tone.is_empty() { None } else { Some(s_tone) };");
