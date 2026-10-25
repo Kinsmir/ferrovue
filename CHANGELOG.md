@@ -5,6 +5,17 @@ released together and share version numbers.
 
 ## [Unreleased]
 
+### Changed
+
+- Tests only: the Stryker survivors the compiler's fixes left in `template.ts` and `expr.ts` are
+  closed. A compiler test refuses merged attributes on an SVG element whose tag holds a dash
+  (FV0006), which only a `<textarea>` reached before FV0424; an `expr.test.ts` case holds
+  `[].length` to an integer. The tests of a declaration's initialiser that FV0424 and the
+  rendering of a client-only directive on an element with no content left unreachable are listed
+  in `stryker-equivalent.txt`, under the reason of the declarations entry, brought up to date.
+  Seven mutants of `constants.ts` and `dynamic.ts` that no test kills, which earlier runs reported
+  as timeouts, are listed with their reasons.
+
 ## [0.11.0] - 2026-10-25
 
 ### Added
@@ -281,12 +292,6 @@ released together and share version numbers.
   conformance tests compile the components' date plans when a test first reads them, where they
   compiled them as the test file loaded, which made Stryker run every test against most mutants
   of the compiler.
-- Tests only: the Stryker survivors the compiler's fixes left in `template.ts` and `expr.ts` are
-  closed. A compiler test refuses merged attributes on an SVG element whose tag holds a dash
-  (FV0006), which only a `<textarea>` reached before FV0424; an `expr.test.ts` case holds
-  `[].length` to an integer. The tests of a declaration's initialiser that FV0424 and the
-  rendering of a client-only directive on an element with no content left unreachable are listed
-  in `stryker-equivalent.txt`, under the reason of the declarations entry, brought up to date.
 
 - Documentation: a site at <https://kinsmir.github.io/ferrovue/>, built with VitePress from the
   private workspace package `site/`: a landing page, the guide and the crate's front page generated
