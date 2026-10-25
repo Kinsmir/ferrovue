@@ -11,6 +11,7 @@ import { typesImports, declareTypes, defaultValue, definePropsType, ONE_NOTHING,
 import { enumField } from "./enums.ts";
 import { claim } from "./plugin.ts";
 import { asyncChildren } from "./script.ts";
+import { declareConsts } from "./constants.ts";
 import { resolveImport } from "./resolve.ts";
 
 function vueErrorNode(err: unknown, within?: { line: number; column: number }): N {
@@ -280,6 +281,7 @@ export function readComponent(file: string, root: string, name = basename(file, 
   }
 
   if (descriptor.scriptSetup) generics(comp, source, descriptor.scriptSetup);
+  declareConsts(comp, ast);
   const decls = declareTypes(comp, [...plainAst, ...ast], comp.structs, comp.aliases);
   for (const d of decls) comp.typeDecls.set(d.name, { members: d.members, node: d.node });
   let propsTy: N = null;

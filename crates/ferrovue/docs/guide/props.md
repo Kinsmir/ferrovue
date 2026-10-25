@@ -779,6 +779,10 @@ and arithmetic and strings of them are worked out when compiling, as JavaScript 
 `+`, `-`, `*`, `/` and `%` of numbers, giving the same double every engine gives, `**` where the
 result is an exact integer within ±2⁵³ (engines round other powers in their own ways), unary `-`
 and `+`, strings joined with `+` (a number written as `String()` writes it) and template literals.
+An `enum` member's value is worked out the same way, and may name a constant of the file or the
+component that declares the enum, or an earlier member, alone or through the enum:
+`enum Rank { Low = BASE, Mid, Top = Rank.Mid * 2, Next = Top + 1 }`. Inside the enum, a member's name
+stands for the member, as in TypeScript.
 
 ```ts
 // components/units.ts

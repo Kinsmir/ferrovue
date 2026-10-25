@@ -65,6 +65,7 @@ pub mod divider;
 pub mod dollar_names;
 pub mod empty_arrays;
 pub mod empty_branch;
+pub mod enum_members;
 pub mod escaped_idioms;
 pub mod escaped_null;
 pub mod exprs;
@@ -574,6 +575,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "EmptyBranch" => {
             let props: empty_branch::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             empty_branch::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "EnumMembers" => {
+            let props: enum_members::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            enum_members::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "EscapedIdioms" => {
             let props: escaped_idioms::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
