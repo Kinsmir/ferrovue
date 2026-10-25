@@ -5,8 +5,8 @@ and the `router-link-active` and `router-link-exact-active` classes. Deciding th
 the link as the client's vue-router will, so [`Router`](crate::router::Router) is vue-router's own matching
 algorithm, held to vectors recorded from the real vue-router.
 
-The router is the `ferrovue-router` crate, which ferrovue re-exports at its root with the `router`
-feature. The feature is on by default; generated code needs it once the project configures routes.
+The router is the `ferrovue-router` crate, which ferrovue holds as its module
+[`ferrovue::router`](crate::router) with the `router` feature. The feature is on by default; generated code needs it once the project configures routes.
 
 # Configuring the routes
 
@@ -93,7 +93,7 @@ const router = createRouter({ history: createWebHistory(), routes });
 An application already using vue-router's own plugin with its default options can keep it: its
 records are these. A client that only hydrates the pages the server rendered imports the default
 export instead, the routes as a routes file lists them, and gives every page a component that
-renders nothing; `routeRecords` from `ferrovue/link-router` leaves a folder without one, as
+renders nothing; `routeRecords` from `ferrovue/route-records` leaves a folder without one, as
 vue-router's plugin does:
 
 ```ts

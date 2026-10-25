@@ -209,7 +209,7 @@ the values a render needs besides its props.
 | [`teleport::Teleports`] | renders `<Teleport>` |
 | A generated `provides::Provides`, empty or holding what the client app gives `app.provide` | calls `provide` or `inject`, or renders one that does ([`guide::provide_inject`](crate::guide::provide_inject)) |
 | [`head::Head`] | calls `useHead` or `useSeoMeta`, or renders one that does ([`guide::head`](crate::guide::head)) |
-| [`basic_html::BasicHtml`], [`basic_html::InlineHtml`], `Sanitised` (the `ammonia` feature), or your own type implementing [`trusted::TrustedHtml`] | renders `v-html` |
+| [`basic_html::BasicHtml`], [`basic_html::InlineHtml`], `sanitised::Sanitised` (the `ammonia` feature), or your own type implementing [`trusted::TrustedHtml`] | renders `v-html` |
 | [`js_date::JsDate`], `chrono::DateTime<Utc>` (the `chrono` feature), or your own type implementing [`js_date::JsTime`] | takes a `Date` prop ([`guide::dates_and_prices`](crate::guide::dates_and_prices#date-props)) |
 
 A prop declared `Record<string, T>` is a [`record::Record`], which keeps JavaScript's order of keys.
@@ -226,7 +226,7 @@ and these, to assemble a page:
 - [`load::load`] and [`load::Loads`]: render components that await loaders, each loader started when Vue's
   server would start it, and [`load::Loads::script_into`] the results for the client to hydrate from;
 - [`slots::hole`] and [`slots::split_holes`]: render a layout once and stream its parts;
-- `HtmlStream` (the `stream` feature): a page with holes as an HTTP body, each hole's content
+- `web::HtmlStream` (the `stream` feature): a page with holes as an HTTP body, each hole's content
   sent as soon as it is ready;
 - [`core::escape::escape_into`]: text written into your own markup as Vue would write it.
 
@@ -264,11 +264,11 @@ stable.
 | `router` | on | [`router::Router`], [`router::Route`], [`router::Link`], [`router::Query`], [`router::RouteDef`] and [`router::query_into`], for components that render `<RouterLink>` or `<RouterView>` or read `useRoute()`, from the `ferrovue-router` crate |
 | `i18n` | on | The [`i18n`] module and [`i18n::I18n`], for components that call `$t` or `useI18n()`, from the `ferrovue-i18n` crate |
 | `maud` | off | `impl maud::Render for Html`, so `(greeting::html(&props))` can go straight into a `maud::html!` page |
-| `stream` | off | `HtmlStream`: a page rendered with holes as a stream of byte chunks, each hole filled by a future |
-| `axum` | off | `stream`, and `IntoResponse` for `Html` and `HtmlStream`, so a handler returns `greeting::into_html(props)` ([`guide::web_frameworks`](crate::guide::web_frameworks)) |
-| `actix-web` | off | `stream`, and `Responder` for `Html` and `HtmlStream` |
-| `ammonia` | off | `Sanitised`, HTML cleaned by ammonia, to name as `trustedHtml` for `v-html` props ([`guide::escaping`](crate::guide::escaping) shows a policy of your own, with `ammonia` 4 as your own dependency) |
-| `chrono` | off | `JsTime` for `chrono::DateTime<Utc>`, to name as `dateType` for `Date` props, `From<DateTime<Utc>>` for [`js_date::JsDate`], and `TryFrom<JsDate>` for `DateTime<Utc>`, whose error, `DateOutOfRange`, is an invalid date or one beyond chrono's ±262,142 years ([`guide::dates_and_prices`](crate::guide::dates_and_prices#chrono)) |
+| `stream` | off | `web::HtmlStream`: a page rendered with holes as a stream of byte chunks, each hole filled by a future |
+| `axum` | off | `stream`, and `IntoResponse` for `Html` and `web::HtmlStream`, so a handler returns `greeting::into_html(props)` ([`guide::web_frameworks`](crate::guide::web_frameworks)) |
+| `actix-web` | off | `stream`, and `Responder` for `Html` and `web::HtmlStream` |
+| `ammonia` | off | `sanitised::Sanitised`, HTML cleaned by ammonia, to name as `trustedHtml` for `v-html` props ([`guide::escaping`](crate::guide::escaping) shows a policy of your own, with `ammonia` 4 as your own dependency) |
+| `chrono` | off | `JsTime` for `chrono::DateTime<Utc>`, to name as `dateType` for `Date` props, `From<DateTime<Utc>>` for [`js_date::JsDate`], and `TryFrom<JsDate>` for `DateTime<Utc>`, whose error, `js_date::DateOutOfRange`, is an invalid date or one beyond chrono's ±262,142 years ([`guide::dates_and_prices`](crate::guide::dates_and_prices#chrono)) |
 | `dioxus` | off | The `dioxus` module: `Html::to_element` and `impl IntoDynNode for Html`, so `{greeting::island(&props)}` can go straight into Dioxus 0.7's `rsx!`, and `dioxus::state_script`; the guide's `dioxus` page shows a page |
 
 An application with neither routes nor translations can turn the default features off
@@ -278,15 +278,16 @@ them.
 
 # Crates
 
-The runtime is four crates, released together at one version; this one re-exports the others at
-its root, which is the one path generated code and this documentation use:
+The runtime is four crates, released together at one version. This one holds each of the others
+whole as a module, [`core`], [`router`] and [`i18n`], and every item has one path, at the module
+that defines it, which generated code and this documentation use:
 
 | Crate | What it holds |
 |---|---|
 | `ferrovue` | This crate: what generated code calls, and the framework integrations |
 | [`ferrovue-core`](https://docs.rs/ferrovue-core) | [`core::escape::escape_into`], and JavaScript's numbers ([`core::numbers::push_int`], [`core::numbers::push_number`], [`core::numbers::Js`], …), which the other three share |
 | [`ferrovue-router`](https://docs.rs/ferrovue-router) | [`router::Router`] and what goes with it (the `router` feature) |
-| [`ferrovue-i18n`](https://docs.rs/ferrovue-i18n) | [`i18n`] and [`i18n::I18n`] (the `i18n` feature) |
+| [`ferrovue-i18n`](https://docs.rs/ferrovue-i18n) | [`i18n::I18n`] and what goes with it (the `i18n` feature) |
 
 # Rust version
 

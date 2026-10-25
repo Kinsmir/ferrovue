@@ -51,6 +51,7 @@
 //!
 //! Upgrading a project from an earlier release, newest first:
 //!
+//! - [`upgrading_to_0_12`]: from 0.11 to 0.12.
 //! - [`upgrading_to_0_11`]: from 0.10 to 0.11.
 //! - [`upgrading_to_0_10`]: from 0.9 to 0.10.
 //! - [`upgrading_to_0_9`]: from 0.8 to 0.9.
@@ -142,6 +143,9 @@ pub mod porting {}
 
 #[doc = include_str!("../docs/guide/support.md")]
 pub mod support {}
+
+#[doc = include_str!("../docs/guide/upgrading_to_0_12.md")]
+pub mod upgrading_to_0_12 {}
 
 #[doc = include_str!("../docs/guide/upgrading_to_0_11.md")]
 pub mod upgrading_to_0_11 {}

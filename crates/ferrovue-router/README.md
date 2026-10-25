@@ -7,8 +7,8 @@ vue-router's location matching for [ferrovue](https://crates.io/crates/ferrovue)
 components to Rust render functions: `<RouterLink>`'s `href` and active classes, and what
 `useRoute()` reads, resolved on the server exactly as the client's vue-router resolves them.
 
-You don't need to depend on this crate: `ferrovue` re-exports it at its root (`ferrovue::router::Router`,
-`ferrovue::router::Route`, …) with its `router` feature, which is on by default. It is a crate of its own
+You don't need to depend on this crate: `ferrovue` holds it whole as its module `ferrovue::router`
+(`ferrovue::router::Router`, `ferrovue::router::Route`, …) with its `router` feature, which is on by default. It is a crate of its own
 so that an application with no routes can turn that feature off and build none of it.
 
 It is released with `ferrovue` and always has the same version. See the

@@ -12,9 +12,10 @@ reference; this file is the short version.
 ## Layout
 
 - `packages/ferrovue`: the npm package `ferrovue`.
-  - `src/index.ts` and `src/client.ts`: the package root, the light browser API (`mountIslands`,
-    `mountPage`, `readPage`, `renderPage`, `hydrateState`, `defineLoader`).
-  - `src/compiler.ts`: `ferrovue/compiler`. `src/cli.ts` and `src/args.ts` are the `ferrovue`
+  - `src/client.ts`: the package root and `ferrovue/client`, the light browser API
+    (`mountIslands`, `mountPage`, `readPage`, `renderPage`, `hydrateState`, `defineLoader`).
+  - `src/compiler.ts`: `ferrovue/compiler`, with `src/config.ts` and `src/errors.ts` as
+    `ferrovue/compiler/config` and `ferrovue/compiler/errors`. `src/cli.ts` and `src/args.ts` are the `ferrovue`
     command, `src/vite.ts` the Vite plugin, `src/volar.ts` the editor plugin, `src/testing.ts`
     `ferrovue/testing`.
   - `src/errors.ts`: every FV code with its title and detail.
@@ -26,7 +27,8 @@ reference; this file is the short version.
   - `test/`, `browser/` (hydration in real browsers), `fuzz/` (the differential fuzzer), `api/`
     (the API reports), `bench/`.
 - `crates/`: the runtime, released together at one version. `ferrovue-core` (escaping, numbers,
-  URIs), `ferrovue-router`, `ferrovue-i18n`, and `ferrovue`, which re-exports the other three.
+  URIs), `ferrovue-router`, `ferrovue-i18n`, and `ferrovue`, which holds the other three as its
+  modules `core`, `router` and `i18n`.
   `ferrovue-contract` is unpublished: it uses every item of the generated-code contract and checks
   the version check's messages.
   - `crates/ferrovue/docs/guide/*.md`: the guide, published as `ferrovue::guide`. Its examples are

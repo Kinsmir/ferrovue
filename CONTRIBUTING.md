@@ -44,8 +44,9 @@ crates/ferrovue/             the Rust runtime crate, which generated code calls
                              and `InlineHtml`,
                              `Sanitised`, `JsDate`, `Refused` and the refusals a render holds, the
                              fixture check `conformance!` writes), each module's
-                             unit tests beside it in <module>/tests.rs; lib.rs re-exports them all,
-                             and the three crates below
+                             unit tests beside it in <module>/tests.rs; lib.rs declares them public,
+                             and holds the three crates below as the modules `core`, `router`
+                             and `i18n`
   docs/guide/                the crate guide, `ferrovue::guide` on docs.rs
   tests/conformance/         components, fixtures, recorded HTML, generated Rust
   tests/literal_props/       components compiled with `"builders": false`
@@ -66,9 +67,9 @@ crates/ferrovue-i18n/        vue-i18n's t() (the `i18n` feature)
 crates/ferrovue-contract/    unpublished: Rust using every item of the generated-code contract,
                              and the version check's message (trybuild)
 packages/ferrovue/           the compiler (npm package)
-  src/index.ts               `ferrovue`: the browser API, `mountIslands`, `mountPage`, `readPage`, `renderPage`, `hydrateState` and the types
   src/compiler.ts            `ferrovue/compiler`: `generate`, `write`
-  src/context.ts, model.ts   `ferrovue.config.json`, and the types and values the compiler passes around
+  src/config.ts              `ferrovue/compiler/config`: `ferrovue.config.json`'s types and `loadConfig`
+  src/context.ts, model.ts   the configuration checked, and the types and values the compiler passes around
   src/schema.ts              the configuration's keys, types and defaults, from which `schema.json` is written
   src/component.ts, script.ts, typescript.ts, constants.ts
                              a `.vue` file read, <script setup>, TypeScript types, constants and enums
@@ -94,19 +95,25 @@ packages/ferrovue/           the compiler (npm package)
   src/resolve.ts             the `.ts` file an import leads to: a relative path, tsconfig's `paths`
                              and `baseUrl`, Vite's `resolve.alias`
   src/errors.ts, diagnostics.ts
-                             every error code with its title, and errors as the CLI, JSON and Vite show them
+                             `ferrovue/compiler/errors`: every error code with its title, and
+                             `GenError`; errors as the CLI, JSON and Vite show them
+  src/error-areas.ts         the areas the codes are grouped in, which the guide's index follows
   src/volar.ts, editor.ts    `ferrovue/volar`: errors in the editor, from a plugin for Vue's language tools
-  src/client.ts              browser-side helpers: `mountIslands`, `mountPage`, `readPage`, `renderPage`, `hydrateState`, `<ClientOnly>`
+  src/client.ts              `ferrovue` and `ferrovue/client`: the browser API, `mountIslands`, `mountPage`, `readPage`, `renderPage`, `hydrateState`, `<ClientOnly>`, the loaders
+  src/loads.ts               the loaders' results the page carries, which the browser API and the tests share
   src/islands.ts             `ferrovue/islands`, which the Vite plugin writes: every island, loaded lazily
   src/link-router.ts         `ferrovue/link-router`: `<RouterLink>` while the application navigates on its own
-  src/routes.ts              a routes file as vue-router's route records
+  src/route-records.ts       `ferrovue/route-records`: a routes file as vue-router's route records
   src/file-routes.ts         the routes vue-router's file-based routing builds from a folder of pages
   src/page-routes.ts         `ferrovue/routes`, which the Vite plugin writes from the pages
-  src/testing.ts             `ferrovue/testing`: utilities for a project's own conformance suite
-  src/fixture.ts, settle.ts  `fixtureApp` and `readFixture`, and waiting for async components to settle
-  src/conformance.ts         `conformanceSuite`, which `ferrovue/testing` exports
-  src/ssr.ts                 `attachSsrRender`, which `ferrovue/testing` exports
-  src/hydration.ts           `hydrateRecordedPage` and `renderRecordedPage`, which `ferrovue/testing` exports
+  src/testing.ts             `ferrovue/testing`: `conformanceSuite`, a project's own conformance suite
+  src/conformance.ts         the tests `conformanceSuite` registers
+  src/fixture.ts             `ferrovue/testing/fixture`: `fixtureApp` and `readFixture`
+  src/hydration.ts           `ferrovue/testing/hydration`: `hydrateRecordedPage` and `renderRecordedPage`
+  src/ssr.ts                 `ferrovue/testing/ssr`: `attachSsrRender`
+  src/settle.ts, peer.ts, date-plans.ts
+                             waiting for async components to settle, optional peers, and dates a
+                             fixture's props hold
   src/client-render.ts       the DOM of a client render as it is compared with the server's markup
   src/types.ts               `ferrovue/types`: `TrustedHtml`, `InlineHtml`, `Float`
   test/                      compiler, CLI, router, vector, island, Vite and conformance tests
@@ -140,7 +147,7 @@ site/                        the VitePress site at kinsmir.github.io/ferrovue: `
    says which module does what), or in a plugin when it belongs to an integration (below), with
    runtime support in `crates/ferrovue/src/` if generated code needs it (`crates/ferrovue-router/`
    or `crates/ferrovue-i18n/` for the router and vue-i18n, `crates/ferrovue-core/` for escaping and
-   numbers; `ferrovue` re-exports what they add, at its root).
+   numbers; `ferrovue` reaches what they add through its modules `router`, `i18n` and `core`).
 3. **Prove it with conformance.** Add a component under `crates/ferrovue/tests/conformance/components/`
    and fixtures beside the others: a typical case, an empty or falsy one, and a hostile one with
    markup-breaking characters in every prop that reaches the page. Run `pnpm conformance:generate`
@@ -205,7 +212,7 @@ The crates' API is what their documentation shows, which `cargo-semver-checks` c
 last release (RELEASING.md):
 
 - **Generated code's own helpers are hidden.** A runtime function or method that only generated
-  code calls gets `#[doc(hidden)]`, on its `pub use` at the crate root or on the item, and is
+  code calls gets `#[doc(hidden)]` on the item, at the module that defines it, and is
   versioned with generated code through `__compat!`. Keep visible what an application calls or
   implements itself (a page, a hand-written twin, a `TrustedHtml` type) and what
   `docs/guide/generated_code.md` names, and link to no hidden item from the visible docs.
@@ -224,7 +231,8 @@ What a project relies on from the npm package is checked in the repository, so a
 changes it shows the change:
 
 - **Exports.** `packages/ferrovue/api/*.api.md` is an [API Extractor](https://api-extractor.com/)
-  report of each entry of `package.json`'s `exports` (`ferrovue.api.md` for the package root), and
+  report of each entry of `package.json`'s `exports` (`ferrovue.api.md` for the package root,
+  `compiler-config.api.md` for `ferrovue/compiler/config`), and
   `api/cli.txt` is `ferrovue --help`. `pnpm api:report` builds the package and rewrites them;
   `pnpm api:check`, run in CI, fails when they differ from what the build exports. A change to a
   report is a change to the public API: say so in the CHANGELOG.

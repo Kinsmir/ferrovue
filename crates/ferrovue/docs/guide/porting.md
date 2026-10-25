@@ -197,11 +197,11 @@ two calls. A checklist for a port:
 5. **The Rust half.** `ferrovue::conformance!("fixtures", generated::render_json, at_least = N)`
    writes a test that renders every fixture with the generated Rust and compares the bytes, and
    fails when it finds fewer than `N` fixtures.
-6. **Pages and client renders.** `hydrateRecordedPage` from `ferrovue/testing` hydrates a page as
+6. **Pages and client renders.** `hydrateRecordedPage` from `ferrovue/testing/hydration` hydrates a page as
    the server wrote it:
    [testing a page](crate::guide::islands_and_hydration#testing-a-page). An app that renders the
    next page from its record on navigation passes `clientRender: true` to `conformanceSuite`.
-7. **Your own tests.** `fixtureApp` from `ferrovue/testing` builds the app a fixture describes, for
+7. **Your own tests.** `fixtureApp` from `ferrovue/testing/fixture` builds the app a fixture describes, for
    a vitest test of your own:
    [fixtures in your own vitest tests](crate::guide::testing#fixtures-in-your-own-vitest-tests).
 8. **In CI.** Run `pnpm ferrovue --check`, the vitest suite and `cargo test` on every change, so a

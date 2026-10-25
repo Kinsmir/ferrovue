@@ -34,7 +34,7 @@ element structure, attribute order, whitespace and fragment markers.
 | | What it is | Published as |
 |---|---|---|
 | `packages/ferrovue` | The compiler, the `ferrovue` command, the Vite plugin and the browser client (TypeScript) | npm: [`ferrovue`](https://www.npmjs.com/package/ferrovue) |
-| `crates/ferrovue` | The runtime the generated Rust calls: escaping, slots, islands, `<RouterLink>` matching. It re-exports `ferrovue-router`, `ferrovue-i18n` and `ferrovue-core`, released with it | crates.io: [`ferrovue`](https://crates.io/crates/ferrovue) ([API docs](https://docs.rs/ferrovue)) |
+| `crates/ferrovue` | The runtime the generated Rust calls: escaping, slots, islands, `<RouterLink>` matching. It holds `ferrovue-core`, `ferrovue-router` and `ferrovue-i18n`, released with it, as its modules `core`, `router` and `i18n` | crates.io: [`ferrovue`](https://crates.io/crates/ferrovue) ([API docs](https://docs.rs/ferrovue)) |
 
 ## Quick start
 
@@ -306,7 +306,8 @@ The crate's guide, `ferrovue::guide` on docs.rs, covers each topic in depth:
   from a Node server that renders with Vue, and the
   [support policy](https://docs.rs/ferrovue/latest/ferrovue/guide/support/index.html): supported
   versions, fixes, deprecations and where to report a problem
-- Upgrading a project [from 0.10 to 0.11](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_11/index.html),
+- Upgrading a project [from 0.11 to 0.12](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_12/index.html),
+  [from 0.10 to 0.11](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_11/index.html),
   [from 0.9 to 0.10](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_10/index.html),
   [from 0.8 to 0.9](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_9/index.html)
   and [from 0.7 to 0.8](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_8/index.html)

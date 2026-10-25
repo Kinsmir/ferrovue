@@ -121,6 +121,7 @@ supports versions 2 to 5. Version 6 reads the literal of every union's enum thro
 module that defines it (`fv::html::Html`, `fv::router::Route`, `fv::core::escape::escape_into`),
 which the 0.12 crate no longer lifts to its root: so the 0.12 crate supports version 6 alone, and
 stops a module of an earlier version at this line. The upgrade pages,
+[`upgrading_to_0_12`](crate::guide::upgrading_to_0_12),
 [`upgrading_to_0_11`](crate::guide::upgrading_to_0_11),
 [`upgrading_to_0_10`](crate::guide::upgrading_to_0_10),
 [`upgrading_to_0_9`](crate::guide::upgrading_to_0_9) and

@@ -107,12 +107,12 @@ function, for a test of your own.
 
 # Fixtures in your own vitest tests
 
-`fixtureApp` from `ferrovue/testing` builds the app a fixture describes, for a test of your own:
-it installs Pinia for the fixture's `$stores`, vue-router for its routes and vue-i18n for its
-`i18n` option, importing each itself. A component's `useBasket()`, `useRoute()` or `useI18n()`
+`fixtureApp` from `ferrovue/testing/fixture` builds the app a fixture describes, for a test of
+your own: it installs Pinia for the fixture's `$stores`, vue-router for its routes and vue-i18n for
+its `i18n` option, importing each itself. A component's `useBasket()`, `useRoute()` or `useI18n()`
 reads the instance its own import of the package gives it, so the two must be one module instance.
-vitest loads `ferrovue/testing` from `node_modules` with Node, and runs the application's code
-through Vite. Where a peer goes through Vite too (listed in `server.deps.inline`, aliased, linked
+vitest loads `ferrovue/testing/fixture` from `node_modules` with Node, and runs the application's
+code through Vite. Where a peer goes through Vite too (listed in `server.deps.inline`, aliased, linked
 from elsewhere, or installed twice), the fixture installs a different instance from the one the
 component reads, and the render fails with Pinia's "there was no active Pinia" or an undefined
 route. Pass the application's own modules in the options:
