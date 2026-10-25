@@ -65,6 +65,11 @@ reference; this file is the short version.
 
 - Every change adds an entry under `## [Unreleased]` in CHANGELOG.md, in the Keep a Changelog
   subsections (`Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`, in that order).
+- Before adding a CHANGELOG entry, read `## [Unreleased]` for one about the same thing and edit
+  it, so the section describes what will ship, each change once and as it ends up. A fix of
+  something added in the same cycle goes into that thing's entry; an entry of its own under
+  `Fixed` is for a bug the last release has, worded as a fix of that release. A released section
+  changes only to correct a fact that was wrong about that release.
 - Generated code opens with `ferrovue::__compat!(N)`, `N` being `GENERATED_VERSION` in
   `packages/ferrovue/src/rust.ts`. When generated code calls a crate item the last release lacks,
   the version goes up once in that release: a new arm in `crates/ferrovue/src/compat.rs`, a new
