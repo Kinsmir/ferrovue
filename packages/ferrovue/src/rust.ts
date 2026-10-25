@@ -32,7 +32,7 @@ export function needsLifetime(ty: Ty, comp: Component, seen: Set<string> = new S
       return !!st && st.fields.some((f) => needsLifetime(f.ty, owner, inner));
     }
     case "child": {
-      const child = childOf(ty.name);
+      const child = childOf(ty.name, "Props", comp);
       return structLifetime(child.props, child);
     }
     case "html":
@@ -78,7 +78,7 @@ export function rustTy(ty: Ty, comp: Component): string {
     case "html":
       return ty.inline ? INLINE_HTML : ctx.trustedHtml!;
     case "child": {
-      const child = childOf(ty.name);
+      const child = childOf(ty.name, "Props", comp);
       return `super::${child.module}::Props${structLifetime(child.props, child) ? "<'a>" : ""}`;
     }
     case "date":

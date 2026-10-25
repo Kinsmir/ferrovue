@@ -244,9 +244,10 @@ export function readComponent(file: string, root: string, name = basename(file, 
     const from = basename(s.source.value, ".vue");
     if (s.specifiers.some((sp: N) => sp.type === "ImportDefaultSpecifier")) comp.imports.add(from);
     for (const sp of s.specifiers) {
-      if (sp.type === "ImportSpecifier" && (sp.imported.name ?? sp.imported.value) === "Props") {
-        comp.childProps.set(sp.local.name, from);
-      }
+      if (sp.type !== "ImportSpecifier") continue;
+      const imported: string = sp.imported.name ?? sp.imported.value;
+      comp.vueTypeImports.set(`${from} ${imported}`, sp);
+      if (imported === "Props") comp.childProps.set(sp.local.name, from);
     }
   }
   for (const loaded of asyncChildren(comp, ast).values()) comp.imports.add(loaded);

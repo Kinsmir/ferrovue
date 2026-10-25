@@ -655,8 +655,9 @@ describe("`&&` and `||` that narrow their left side", () => {
   });
 
   it("refuses a right side that is no boolean", () => {
-    expect(refusals("defineProps<{ s?: string }>();", "<p>{{ !s || s.length }}</p>")).toEqual(["FV0614 `||` is supported between booleans only"]);
-    expect(refusals("defineProps<{ s?: string }>();", "<p>{{ s != null && s.length }}</p>")).toEqual(["FV0614 `&&` is supported between booleans only"]);
+    const help = "write a comparison for a boolean, or `?:` with the value each side gives";
+    expect(refusals("defineProps<{ s?: string }>();", "<p>{{ !s || s.length }}</p>")).toEqual([`FV0614 \`||\` is supported between booleans only, and its right side is a number | ${help}`]);
+    expect(refusals("defineProps<{ s?: string }>();", "<p>{{ s != null && s.length }}</p>")).toEqual([`FV0614 \`&&\` is supported between booleans only, and its right side is a number | ${help}`]);
   });
 });
 
@@ -670,7 +671,9 @@ describe("expressions checked a second time", () => {
     expect(refusals('import type { InlineHtml } from "ferrovue/types";\ndefineProps<{ h?: InlineHtml }>();', "<p>{{ h && 'x' }}</p>")).toEqual([
       "FV0614 `&&` gives its left side where that is falsy, and this one, an optional value of another kind, may be falsy where it is present (`\"\"`, `0`, `false`), which the value on the right cannot stand for | test it with `!= null` for a boolean, or write `?:` with the value each side gives",
     ]);
-    expect(refusals('import type { InlineHtml } from "ferrovue/types";\ndefineProps<{ h: InlineHtml }>();', "<p>{{ h && 'x' }}</p>")).toEqual(["FV0614 `&&` is supported between booleans only"]);
+    expect(refusals('import type { InlineHtml } from "ferrovue/types";\ndefineProps<{ h: InlineHtml }>();', "<p>{{ h && 'x' }}</p>")).toEqual([
+      "FV0614 `&&` is supported between booleans only, and its left side is a value of another kind | write a comparison for a boolean, or `?:` with the value each side gives",
+    ]);
   });
 
   it("chooses between a list prop's default and another list as slices", () => {
@@ -852,9 +855,11 @@ describe("names that setup and bodies bind", () => {
     expect(refusals("function f() { return nope; }", "<p>{{ f() }}</p>")).toEqual(["FV0601 `nope` is not available when rendering on the server (in `f()`, called at components/X.vue:4:17)"]);
   });
 
-  it("refuses a binding setup could not compute for a refusal with no location, where the template reads it", () => {
+  it("refuses a binding setup could not compute for a type imported from a component that is not compiled, where the template reads it", () => {
     const script = 'import type { Item } from "./Nope.vue";\nimport { computed } from "vue";\nconst props = defineProps<{ s: string }>();\nconst c = computed(() => ({ a: props.s } as Item).a);';
-    expect(refusals(script, "<p>{{ c }}</p>")).toEqual(["FV0512 `Props` is imported from Nope.vue, which is not among the components compiled (the template reads it as `c` at components/X.vue:7:17)"]);
+    expect(refusals(script, "<p>{{ c }}</p>")).toEqual([
+      "FV0512 `Item` is imported from Nope.vue, which is not among the components compiled (the template reads it as `c` at components/X.vue:7:17) | move Nope.vue into the components directory, or declare `Item` in a `.ts` file and import it from there",
+    ]);
   });
 
   it("reads a `computed` named `$attrs` that setup declares", () => {
@@ -898,7 +903,9 @@ describe("types written in other files", () => {
   const y = { files: { "Y.vue": sfc("defineProps<{ a: string }>();", "<p>{{ a }}</p>") } };
 
   it("refuses `Props` imported from a component that is not compiled", () => {
-    expect(refusals(nope, "<p>{{ y.a }}</p>")).toContain("FV0512 `Props` is imported from Nope.vue, which is not among the components compiled");
+    expect(refusals(nope, "<p>{{ y.a }}</p>")).toContain(
+      "FV0512 `Props` is imported from Nope.vue, which is not among the components compiled | move Nope.vue into the components directory, or declare `Props` in a `.ts` file and import it from there",
+    );
   });
 
   it("describes a child's `Props` as an object", () => {

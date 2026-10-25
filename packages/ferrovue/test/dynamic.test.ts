@@ -428,7 +428,7 @@ describe("the components `<component :is>` renders", () => {
     expect(refusals('import M from "./M.vue";', '<component :is="M" />')).toEqual(["FV0501 a child component must be imported from a `.vue` file among the components compiled, in components"]);
     const [missing] = errors({ "X.vue": sfc('import P from "./P.vue";', '<p>\n    <component :is="P" /></p>'), "P.vue": sfc("defineProps<{ p: string }>();", "<b>{{ p }}</b>") });
     expect(`${missing!.code} ${missing!.what}`).toBe("FV0506 P requires `p`");
-    expect(missing!.at).toMatchObject({ file: "components/X.vue", line: 5, column: 1 });
+    expect(missing!.at).toMatchObject({ file: "components/X.vue", line: 5, column: 5 });
   });
 
   it("refuses slots a chosen component is given by `v-if`", () => {
