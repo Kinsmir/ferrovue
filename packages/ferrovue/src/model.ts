@@ -61,6 +61,9 @@ export interface Val {
   /** For a value of a generated enum, the Rust expression of the enum (an `Option` of it when the
    * value is optional), where `code` is its string. */
   variant?: string;
+  /** For a list of a generated enum's values, or an optional one, the Rust place of the list of
+   * enums, where `code` and `iter` hold its strings. */
+  enums?: { place: string; def: EnumDef };
   /** For an integer computed as an `f64`, where the template computes it, as `fv::Refusals::keep`
    * takes it. */
   at?: string;
@@ -803,6 +806,12 @@ export function enumTy(def: EnumDef): Ty {
 /** The generated enum a field's type is, or makes optional. */
 export function enumOf(ty: Ty): EnumDef | undefined {
   return ENUMS.get(ty.k === "opt" ? ty.of : ty);
+}
+
+/** The generated enum the items of a list are, or make optional, for a list or an optional list. */
+export function enumItems(ty: Ty): EnumDef | undefined {
+  const list = ty.k === "opt" ? ty.of : ty;
+  return list.k === "list" ? enumOf(list.of) : undefined;
 }
 
 /** The path of a generated enum, from the module of `comp`. */

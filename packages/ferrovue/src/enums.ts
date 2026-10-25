@@ -1,5 +1,5 @@
 import { basename } from "node:path";
-import { type Component, type EnumDef, type N, type Ty, type Val, asciiTy, enumOf, enumTy, fail, isAscii, literalsOf, literalTy, RUST_PRELUDE, rustStr, variantPath } from "./model.ts";
+import { type Component, type EnumDef, type N, type Ty, type Val, asciiTy, enumOf, enumPath, enumTy, fail, isAscii, literalsOf, literalTy, REFUSALS, refusalAt, RUST_PRELUDE, rustStr, variantPath } from "./model.ts";
 import { ctx } from "./context.ts";
 import { atom, binary } from "./parens.ts";
 import { unquote } from "./strings.ts";
@@ -91,14 +91,52 @@ function defineEnum(hint: Hint, literals: readonly string[]): EnumDef {
 }
 
 /** The type of the field `field` of `owner` declared at `node`: the generated enum when `ty` is a
- * union of two or more string literals, optional or nullable, and `ty` itself otherwise. */
+ * union of two or more string literals, optional or nullable, a list of such values, or an optional
+ * list of them, and `ty` itself otherwise. */
 export function enumField(comp: Component, owner: string, field: string, node: N, ty: Ty): Ty {
+  if (ty.k === "opt" && ty.of.k === "list") {
+    const of = enumField(comp, owner, field, node, ty.of);
+    return of === ty.of ? ty : { ...ty, of };
+  }
+  if (ty.k === "list") {
+    const of = enumScalar(comp, owner, field, node, ty.of);
+    return of === ty.of ? ty : { ...ty, of };
+  }
+  return enumScalar(comp, owner, field, node, ty);
+}
+
+function enumScalar(comp: Component, owner: string, field: string, node: N, ty: Ty): Ty {
   const inner = ty.k === "opt" ? ty.of : ty;
   const literals = literalsOf(inner);
   if (inner.k !== "str" || literals === undefined || literals.length < 2) return ty;
   const hint = HINTS.get(inner) ?? { name: `${pascal(owner)}${pascal(field)}`, module: comp.module, home: comp, node, key: node, what: field };
   const made = enumTy(defineEnum(hint, literals as readonly string[]));
   return ty.k === "opt" ? { ...ty, of: made } : made;
+}
+
+/** The list of values of the generated enum `def`, or the optional list, of type `ty` held at
+ * `place`, as an expression reads it: the strings of its items, beside the list of enums. */
+export function enumListVal(comp: Component, place: string, ty: Ty, def: EnumDef): Val {
+  const list = ty.k === "opt" ? ty.of : ty;
+  const item = list.k === "list" ? list.of : list;
+  const literal = literalTy("str", def.literals);
+  const of: Ty = item.k === "opt" ? { ...item, of: literal } : literal;
+  const strings = (at: string): string =>
+    item.k === "opt" ? `${at}.iter().map(|v| v.map(${enumPath(comp, def)}::as_str))` : `${at}.iter().map(|v| std::borrow::Cow::<str>::Borrowed(v.as_str()))`;
+  const enums = { place, def };
+  if (ty.k === "opt") {
+    const held = `${atom(place)}.as_ref().map(|v| ${strings("v")}.collect::<Vec<_>>())`;
+    return { code: `${held}.as_deref()`, ty: { ...ty, of: { k: "list", of } }, held, enums };
+  }
+  const iter = strings(atom(place));
+  return { code: `${iter}.collect::<Vec<_>>()`, ty: { k: "list", of }, iter, enums };
+}
+
+/** An item of a list of values of the generated enum `def`, held in the Rust variable `name`. */
+export function enumItemVal(comp: Component, name: string, of: Ty, def: EnumDef): Val {
+  const ty = enumTy(def);
+  if (of.k === "opt") return { code: `${name}.map(${enumPath(comp, def)}::as_str)`, ty: { ...of, of: ty }, variant: name };
+  return { code: `${name}.as_str()`, ty, variant: name };
 }
 
 /** The literal a string value is when it is one written in the source. */
@@ -110,9 +148,13 @@ function sameEnum(a: EnumDef, b: EnumDef): boolean {
   return a === b || (a.name === b.name && a.module === b.module);
 }
 
-/** Rust code of the enum `def`, an `Option` of it when `v` is optional, for the string value `v`;
- * null when `v` may hold a string outside the union. */
-export function intoEnum(comp: Component, v: Val, def: EnumDef): string | null {
+/** The code of the refusal of a string outside a union where the render needs its enum. */
+const OUTSIDE = "FV0518";
+
+/** Rust code of the enum `def`, an `Option` of it when `v` is optional, for the string value `v`
+ * at `node`; null when `v` may hold a string outside the union. A string that is not the enum by
+ * its type is parsed as it renders, and one outside the union refuses the render. */
+export function intoEnum(comp: Component, v: Val, def: EnumDef, node: N): string | null {
   const optional = v.ty.k === "opt";
   const from = enumOf(v.ty);
   const over = (on: string, arms: string): string => (optional ? `${atom(on)}.map(|v| match v { ${arms} })` : `match ${on} { ${arms} }`);
@@ -125,9 +167,9 @@ export function intoEnum(comp: Component, v: Val, def: EnumDef): string | null {
   if (literal !== undefined) return def.literals.includes(literal) ? variantPath(comp, def, literal) : null;
   const literals = literalsOf(optional ? (v.ty as { of: Ty }).of : v.ty);
   if (literals === undefined || !literals.every((l) => typeof l === "string" && def.literals.includes(l))) return null;
-  const strings = literals as readonly string[];
-  if (strings.length === 1 && !optional) return variantPath(comp, def, strings[0]!);
-  return over(v.code, strings.map((l, i) => `${i === strings.length - 1 ? "_" : rustStr(l)} => ${variantPath(comp, def, l)}`).join(", "));
+  const refused = `${REFUSALS}.keep(Err::<(), _>(fv::Refused::new(${rustStr(OUTSIDE)}, format!("{fv_e}: the template needs one of them here, and Vue would write the string itself: check the value before rendering"))), ${refusalAt(comp, node)})`;
+  const parsed = (on: string): string => `match ${atom(on)}.parse::<${enumPath(comp, def)}>() { Ok(fv_u) => fv_u, Err(fv_e) => { ${refused}; ${variantPath(comp, def, def.literals[0]!)} } }`;
+  return optional ? `${atom(v.code)}.map(|v| ${parsed("v")})` : parsed(v.code);
 }
 
 interface Unproven {

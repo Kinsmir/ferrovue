@@ -1,4 +1,5 @@
 import { type N, type Scope, type Ty, type Val, fail, INT, STR } from "./model.ts";
+import { enumItemVal } from "./enums.ts";
 import { fresh, jsHint } from "./names.ts";
 import { expr, fieldVal } from "./expr.ts";
 import { isObjectCall } from "./calls.ts";
@@ -38,8 +39,18 @@ export function list(s: Scope, e: Emitter, c: N): void {
   let walk: string;
   let bound: string;
   let itemLet = -1;
+  let itemOf: Val | undefined;
   const loop = (it: string, i: string | null) => (i ? `for (${i}, ${it}) in ${atom(walk)}.enumerate()` : `for ${it} in ${walk}`);
-  if (src.ty.k === "list" && src.iter !== undefined) {
+  if (src.ty.k === "list" && src.enums !== undefined) {
+    of = src.ty.of;
+    const itemCode = fresh("a", `${itemHint}_ref`);
+    walk = `${atom(src.enums.place)}.iter()`;
+    bound = itemCode;
+    e.open(loop(bound, idx));
+    e.stmt(`let ${itemName} = *${itemCode};`);
+    itemLet = e.lines.length - 1;
+    itemOf = enumItemVal(s.comp, itemName, of, src.enums.def);
+  } else if (src.ty.k === "list" && src.iter !== undefined) {
     of = src.ty.of;
     walk = src.iter;
     bound = of.k === "str" ? fresh("a", `${itemHint}_cow`) : itemName;
@@ -75,7 +86,7 @@ export function list(s: Scope, e: Emitter, c: N): void {
     idxLet = e.lines.length - 1;
   }
   const bodyFrom = e.lines.length;
-  if (item.type === "Identifier") inner.set(item.name, { code: itemName, ty: of, ...(src.lone ? { lone: true } : {}) });
+  if (item.type === "Identifier") inner.set(item.name, itemOf ?? { code: itemName, ty: of, ...(src.lone ? { lone: true } : {}) });
   else if (item.type === "ObjectPattern") {
     for (const p of item.properties) {
       if (p.type !== "ObjectProperty" || p.computed || p.value.type !== "Identifier") {
@@ -87,8 +98,9 @@ export function list(s: Scope, e: Emitter, c: N): void {
   else fail(s.comp, "FV0822", `a \`v-for\` item is a name or ${of.k === "entry" ? "an array pattern of a `[key, value]` pair" : "an object pattern"}`, item);
   if (index) inner.set(index.name, { code: idx!, ty: INT });
   const before = e.literalBytes;
-  const fromProps = src.ty.k === "list" && src.iter === undefined && /^\(?props\./.test(src.code);
-  statements({ ...s, locals: inner, narrowed: rebound(s, inner), loop: fromProps ? { item: itemName, over: src.code } : undefined }, e, fn.body.body);
+  const over = src.enums?.place ?? src.code;
+  const fromProps = src.ty.k === "list" && (src.iter === undefined || src.enums !== undefined) && /^\(?props\./.test(over);
+  statements({ ...s, locals: inner, narrowed: rebound(s, inner), loop: fromProps ? { item: itemName, over } : undefined }, e, fn.body.body);
   const unusedItem = !e.reads(itemName, bodyFrom);
   const unusedIdx = idx !== null && !e.reads(idx, bodyFrom);
   const head = bodyFrom - 1 - (idx ? 1 : 0) - (itemLet >= 0 ? 1 : 0);
@@ -98,7 +110,7 @@ export function list(s: Scope, e: Emitter, c: N): void {
   e.close();
   const body = e.literalBytes - before;
   e.literalBytes = before;
-  if (body > 0 && fromProps) e.perItem.push(`${body === 1 ? "" : `${body} * `}${atom(src.code)}.len()`);
+  if (body > 0 && fromProps) e.perItem.push(`${body === 1 ? "" : `${body} * `}${atom(over)}.len()`);
   else if (body > 0 && src.ty.k === "list" && s.loop && src.iter === undefined && new RegExp(`^${s.loop.item}(?:\\.\\w+)+$`).test(src.code)) {
     const outer = s.loop;
     e.perItem.push(`${body === 1 ? "" : `${body} * `}${atom(outer.over)}.iter().map(|${outer.item}| ${src.code}.len()).sum::<usize>()`);

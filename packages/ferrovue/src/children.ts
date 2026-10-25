@@ -1,8 +1,8 @@
 import { isSSRSafeAttrName, propsToAttrMap } from "@vue/shared";
-import { type Component, type Field, type N, type Scope, type Ty, type Val, absence, camelize, declares, enumOf, fail, literalsOf, nothing, REFUSALS, refusalAt, rustStr, sameTy, snake, takesAttrs, variantPath } from "./model.ts";
+import { type Component, type Field, type N, type Scope, type Ty, type Val, absence, camelize, declares, enumItems, enumOf, fail, literalsOf, nothing, REFUSALS, refusalAt, rustStr, sameTy, snake, takesAttrs, variantPath } from "./model.ts";
 import { ctx } from "./context.ts";
 import { known } from "./narrowing.ts";
-import { intoEnum, knownLiteral, refuseUnproven } from "./enums.ts";
+import { enumItemVal, intoEnum, knownLiteral, refuseUnproven } from "./enums.ts";
 import { bareDates, markHome } from "./typescript.ts";
 import { items } from "./lists.ts";
 import { describeTy, expr, fieldVal, holdsNothing, typedBy } from "./expr.ts";
@@ -376,14 +376,36 @@ function datesInto(of: Ty, at: string): string {
   return of.k === "date" ? `.map(${date})` : `.map(|v| v.map(${date}))`;
 }
 
+function enumListInto(comp: Component, v: Val, want: Ty, node: N): string {
+  const refuse = (): never => fail(comp, "FV0511", `the prop is ${describeTy(want)}, and the value given is ${describeTy(v.ty)}`, node);
+  if (want.k === "opt") {
+    if (v.ty.k === "list") return `Some(${enumListInto(comp, v, want.of, node)})`;
+    if (v.ty.k !== "opt" || v.ty.of.k !== "list" || absence(v.ty) !== absence(want)) return refuse();
+    if (v.enums === undefined) return `${atom(v.code)}.map(|v| ${enumListInto(comp, { code: "v", ty: v.ty.of, slice: true }, want.of, node)})`;
+    return `${atom(v.enums.place)}.as_ref().map(|v| ${enumListInto(comp, { ...v, code: "v", ty: v.ty.of, enums: { ...v.enums, place: "v" } }, want.of, node)})`;
+  }
+  if (want.k !== "list" || v.ty.k !== "list") return refuse();
+  if (v.ty.of.k === "undef") return "Vec::new()";
+  const of = v.ty.of;
+  if (v.enums !== undefined) {
+    const item = ownInto(comp, enumItemVal(comp, "v", of, v.enums.def), want.of, node);
+    return item === "v" ? `${atom(v.enums.place)}.to_vec()` : `${atom(v.enums.place)}.iter().map(|&v| ${item}).collect()`;
+  }
+  if (of.k !== "str" && (of.k !== "opt" || of.of.k !== "str")) return refuse();
+  const each: Val = of.k === "str" ? { code: v.iter !== undefined ? "&*v" : "&**v", ty: of } : { code: v.iter !== undefined ? "v" : "v.as_deref()", ty: of };
+  const iter = v.iter ?? `${atom(v.code)}.iter()`;
+  return `${iter}.map(|v| ${ownInto(comp, each, want.of, node)}).collect()`;
+}
+
 export function ownInto(comp: Component, v: Val, want: Ty, node: N): string {
   holdsNothing(comp, v, want, node, "the prop");
   if (v.owned && sameTy(v.ty, want)) return v.code;
   if (v.owned && want.k === "opt" && sameTy(v.ty, want.of)) return `Some(${bare(v.code)})`;
   if (want.k === "opt" && nothing(v.ty)) return "None";
+  if (enumItems(want) !== undefined) return enumListInto(comp, v, want, node);
   const def = enumOf(want);
   if (def !== undefined) {
-    const into = (v.ty.k === "opt" ? v.ty.of : v.ty).k === "str" ? intoEnum(comp, v, def) : null;
+    const into = (v.ty.k === "opt" ? v.ty.of : v.ty).k === "str" ? intoEnum(comp, v, def, node) : null;
     if (into === null) {
       refuseUnproven(v);
       const literal = knownLiteral(v);

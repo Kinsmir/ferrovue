@@ -1,6 +1,6 @@
 import { parse as parseJs } from "@babel/parser";
 import { basename } from "node:path";
-import { type Component, type Field, type N, type Struct, type Ty, blankComponent, enumOf, enumPath, fail, GenError, REFUSALS, rustStr, snake, tagAst, takesAttrs } from "./model.ts";
+import { type Component, type Field, type N, type Struct, type Ty, blankComponent, enumItems, enumOf, enumPath, fail, GenError, REFUSALS, rustStr, snake, tagAst, takesAttrs } from "./model.ts";
 import { enumsSource } from "./enums.ts";
 import { ctx, INLINE_HTML } from "./context.ts";
 import { bareDates, datePlan, holdsDate, lookupStruct, typeWritten } from "./typescript.ts";
@@ -92,12 +92,15 @@ export function rustTy(ty: Ty, comp: Component): string {
 function fieldTy(ty: Ty, comp: Component): string {
   const def = enumOf(ty);
   if (def !== undefined) return ty.k === "opt" ? `Option<${enumPath(comp, def)}>` : enumPath(comp, def);
+  if (enumItems(ty) !== undefined) return ty.k === "opt" ? `Option<${fieldTy(ty.of, comp)}>` : `Vec<${fieldTy((ty as { of: Ty }).of, comp)}>`;
   return rustTy(ty, comp);
 }
 
 function param(ty: Ty, comp: Component, arg: string): { ty: string; value: string } {
   if (enumOf(ty) !== undefined) return { ty: fieldTy(ty, comp), value: arg };
   if (ty.k === "str") return { ty: "impl Into<Cow<'a, str>>", value: `${arg}.into()` };
+  const items = ty.k === "list" ? enumOf(ty.of) : undefined;
+  if (items !== undefined && ty.k === "list" && ty.of.k !== "opt") return { ty: `impl IntoIterator<Item = ${enumPath(comp, items)}>`, value: `${arg}.into_iter().collect()` };
   if (ty.k === "list" && ty.of.k === "str") {
     return { ty: "impl IntoIterator<Item = impl Into<Cow<'a, str>>>", value: `${arg}.into_iter().map(Into::into).collect()` };
   }
@@ -202,6 +205,8 @@ export function textLen(comp: Component, place: string, ty: Ty, seen: Set<string
       return (st?.fields ?? []).flatMap((f) => textLen(owner, `${place}.${f.rust}`, f.ty, inner));
     }
     case "list": {
+      const each = enumOf(ty.of);
+      if (each !== undefined) return [`${Math.max(...each.literals.map((l) => Buffer.byteLength(l)))} * ${place}.len()`];
       const inner = textLen(comp, "v", ty.of, seen);
       return inner.length ? [`${place}.iter().map(|v| ${inner.join(" + ")}).sum::<usize>()`] : [];
     }

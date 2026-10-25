@@ -728,6 +728,12 @@ Prop named like a listener that merged props may leave out.
 
 Vue joins a child's props with `mergeProps` when the child is a component's root, or is given `v-bind` of an object or `v-on` of an object beside other props. `mergeProps` treats a key that starts with `on` and a character other than a lowercase letter (`on1`, `onSale`, `on-sale`) as a listener, and leaves it out when its value is falsy (`0`, `NaN`, `""`, `false`), so the child takes the prop's default. ferrovue does the same for an optional prop. A required prop left out is `undefined` in the child, which its Rust type cannot hold, and the falsy value of a Rust twin's prop or of `TrustedHtml` is not known when compiling. Give a required prop a value that is never falsy, make it optional, or give the prop a name that does not start with `on`.
 
+## FV0518
+
+String outside a union where the render needs the union's enum.
+
+A value typed as a union of string literals that the Rust caller holds as a string, such as a value of a `Record<string, Size>`, a store's state or a prop of a single literal, is handed to a child's prop or an object's field whose Rust type is the union's enum. The string is parsed as the component renders, and one outside the union is refused there, where Vue would write the string itself. A generated `try_render` returns it as a `ferrovue::Refused`, with the component and the line and column of the expression, so a server can answer `400 Bad Request`; `render` panics with its message. See [`errors_and_limits`](crate::guide::errors_and_limits#refused-at-render-time). Check the value before rendering. See [`props`](crate::guide::props#unions-of-string-literals).
+
 # Expressions: FV06xx
 
 ## FV0601

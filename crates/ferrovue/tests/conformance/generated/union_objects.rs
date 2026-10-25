@@ -107,9 +107,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(115 + props.label.len() + 6 + 7 + 6 + props.words.iter().map(|v| v.len()).sum::<usize>());
+    let fv_refusals = fv::Refusals::new(NAME, "components/UnionObjects.vue");
     let s_first = super::types::Step { label: std::borrow::Cow::<str>::Borrowed(&*props.label), state: super::types::StepState::Done, align: Some(props.align) };
-    let s_chosen = super::types::Step { label: std::borrow::Cow::<str>::Owned(format!("{}!", props.label)), state: match if props.state == UnionObjectsState::Todo { "skipped" } else { props.state.as_str() } { "skipped" => super::types::StepState::Skipped, "todo" => super::types::StepState::Todo, _ => super::types::StepState::Done }, align: props.side };
-    let s_steps = props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).enumerate().map(|(fv_i, fv_w)| { let fv_i = fv_i as i64; super::types::Step { label: std::borrow::Cow::<str>::Owned(str::to_owned(&*fv_w)), state: match if fv_i as f64 == 0.0 { "todo" } else { "done" } { "todo" => super::types::StepState::Todo, _ => super::types::StepState::Done }, align: Some(super::types::Align::Right) } }).collect::<Vec<_>>();
+    let s_chosen = std::cell::LazyCell::new(|| super::types::Step { label: std::borrow::Cow::<str>::Owned(format!("{}!", props.label)), state: match (if props.state == UnionObjectsState::Todo { "skipped" } else { props.state.as_str() }).parse::<super::types::StepState>() { Ok(fv_u) => fv_u, Err(fv_e) => { fv_refusals.keep(Err::<(), _>(fv::Refused::new("FV0518", format!("{fv_e}: the template needs one of them here, and Vue would write the string itself: check the value before rendering"))), 16, 73); super::types::StepState::Todo } }, align: props.side });
+    let s_steps = std::cell::LazyCell::new(|| props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).enumerate().map(|(fv_i, fv_w)| { let fv_i = fv_i as i64; super::types::Step { label: std::borrow::Cow::<str>::Owned(str::to_owned(&*fv_w)), state: match (if fv_i as f64 == 0.0 { "todo" } else { "done" }).parse::<super::types::StepState>() { Ok(fv_u) => fv_u, Err(fv_e) => { fv_refusals.keep(Err::<(), _>(fv::Refused::new("FV0518", format!("{fv_e}: the template needs one of them here, and Vue would write the string itself: check the value before rendering"))), 17, 84); super::types::StepState::Todo } }, align: Some(super::types::Align::Right) } }).collect::<Vec<_>>());
     let s_role = if let Some(fv_align) = matches!(props.align, super::types::Align::Left | super::types::Align::Right).then_some(props.align.as_str()) { match fv_align { "left" => "<start>", _ => "end & \"after\"" } } else { "none" };
     out.push_str("<section");
     if s_role.is_empty() {
@@ -125,14 +126,14 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         out.push('"');
     }
     out.push_str("><ol>");
-    super::union_step::try_render(out, &super::union_step::Props { step: s_first.to_owned() })?;
-    super::union_step::try_render(out, &super::union_step::Props { step: s_chosen.to_owned() })?;
-    super::union_step::try_render(out, &super::union_step::Props { step: super::types::Step { label: std::borrow::Cow::<str>::Borrowed(&*props.label), state: match props.state { UnionObjectsState::Todo => super::types::StepState::Todo, UnionObjectsState::Done => super::types::StepState::Done, UnionObjectsState::Skipped => super::types::StepState::Skipped }, align: props.side } })?;
-    super::union_step::try_render(out, &super::union_step::Props { step: super::types::Step { label: std::borrow::Cow::<str>::Borrowed("fixed"), state: super::types::StepState::Skipped, align: None } })?;
+    fv_refusals.check(super::union_step::try_render(out, &super::union_step::Props { step: s_first.to_owned() }))?;
+    fv_refusals.check(super::union_step::try_render(out, &super::union_step::Props { step: s_chosen.to_owned() }))?;
+    fv_refusals.check(super::union_step::try_render(out, &super::union_step::Props { step: super::types::Step { label: std::borrow::Cow::<str>::Borrowed(&*props.label), state: match props.state { UnionObjectsState::Todo => super::types::StepState::Todo, UnionObjectsState::Done => super::types::StepState::Done, UnionObjectsState::Skipped => super::types::StepState::Skipped }, align: props.side } }))?;
+    fv_refusals.check(super::union_step::try_render(out, &super::union_step::Props { step: super::types::Step { label: std::borrow::Cow::<str>::Borrowed("fixed"), state: super::types::StepState::Skipped, align: None } }))?;
     out.push_str("<!--[-->");
     for fv_s_ref in s_steps.iter() {
         let fv_s = fv_s_ref;
-        super::union_step::try_render(out, &super::union_step::Props { step: fv_s.to_owned() })?;
+        fv_refusals.check(super::union_step::try_render(out, &super::union_step::Props { step: fv_s.to_owned() }))?;
     }
     out.push_str("<!--]--></ol><p>");
     fv::push_int(out, (match props.align { super::types::Align::Left => Some(10i64), super::types::Align::Center => Some(20i64), super::types::Align::Right => None }).unwrap_or(0i64));
@@ -155,7 +156,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push('|');
     out.push_str(if props.state == UnionObjectsState::Todo || props.align == super::types::Align::Left { "true" } else { "false" });
     out.push_str("</p></section>");
-    Ok(())
+    fv_refusals.check(Ok(()))
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
