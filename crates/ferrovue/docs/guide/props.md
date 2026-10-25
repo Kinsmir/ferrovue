@@ -252,8 +252,8 @@ variant of `Tone`, and the variants the test rules out (`Empty`) join the last a
 keeps them from reaching.
 
 A single literal (`kind: "note"`), a union with `string` (`"sm" | string`, which TypeScript widens
-to `string`) and integer literals (`1 | 2 | 3`, an `i64`) stay as they were. So do lists and records
-of a union (`Size[]` is `Vec<Cow<'a, str>>`), and the fields of a store's own interfaces in its
+to `string`) and integer literals (`1 | 2 | 3`, an `i64`) stay as they were. So do records of a
+union (`Record<string, Size>` holds strings), and the fields of a store's own interfaces in its
 `stores` file, whose state derives `Default` under `cfg(test)`; a shared type a store holds has its
 enums.
 
