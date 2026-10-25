@@ -42,6 +42,7 @@ jobs:
         run: |
           cargo mutants -p ferrovue-core -p ferrovue-router -p ferrovue-i18n -p ferrovue --in-place --shard "$SHARD/$SHARDS" --sharding round-robin --timeout 90 --annotations none --cargo-arg="--config=target.'cfg(all())'.runner = ['prlimit', '--as=4294967296', '--']" || status=$?
           if [[ "${status:-0}" != 0 && "${status:-0}" != 2 && "${status:-0}" != 3 ]]; then exit "$status"; fi
+          touch mutants.out/shard-complete
       - name: Every surviving mutant is a known equivalent
         run: |
           sed -E 's/^([^:]+):[0-9]+:[0-9]+: /\1: /' mutants.out/missed.txt | sort > "$RUNNER_TEMP/missed.txt"
@@ -76,8 +77,11 @@ jobs:
   equivalents:
     name: Every listed equivalent still survives
     needs: mutants
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    env:
+      SHARDS: 16
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -86,7 +90,26 @@ jobs:
         with:
           pattern: mutants-*
           path: ${{ runner.temp }}/shards
+      - name: Every shard ran to the end
+        id: shards
+        run: |
+          incomplete=()
+          for (( shard = 0; shard < SHARDS; shard++ )); do
+            [[ -f "$RUNNER_TEMP/shards/mutants-$shard/shard-complete" ]] || incomplete+=("$shard")
+          done
+          if (( ${#incomplete[@]} > 0 )); then
+            echo "complete=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Equivalents not checked::Shards ${incomplete[*]} did not run to the end, so their missed mutants are unknown"
+            {
+              echo "### Every listed equivalent still survives"
+              echo
+              echo "Not checked: shards ${incomplete[*]} of $SHARDS did not run to the end."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "complete=true" >> "$GITHUB_OUTPUT"
+          fi
       - name: No entry of .cargo/mutants-equivalent.txt is stale
+        if: steps.shards.outputs.complete == 'true'
         run: |
           cat "$RUNNER_TEMP"/shards/*/missed.txt | sed -E 's/^([^:]+):[0-9]+:[0-9]+: /\1: /' | sort > "$RUNNER_TEMP/missed.txt"
           grep -v -e '^#' -e '^$' .cargo/mutants-equivalent.txt | sort > "$RUNNER_TEMP/known.txt"
@@ -128,3 +151,36 @@ jobs:
             target/stryker/mutation.html
             target/stryker/mutation.json
           if-no-files-found: warn
+
+  report:
+    name: Track a failing scheduled run
+    needs: [mutants, equivalents, typescript]
+    if: ${{ !cancelled() && github.event_name == 'schedule' && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      issues: write
+    steps:
+      - name: Open or update the tracking issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SHA: ${{ github.sha }}
+          TITLE: Weekly mutation testing failed
+        run: |
+          gh run view "$RUN_ID" -R "$GITHUB_REPOSITORY" --json jobs --jq '.jobs[] | select(.conclusion == "failure" or .conclusion == "cancelled" or .conclusion == "timed_out") | "- [\(.name)](\(.url)): \(.conclusion)"' > "$RUNNER_TEMP/failing.md"
+          {
+            echo "The scheduled Mutants run $RUN_URL on \`$SHA\` failed."
+            echo
+            echo "Failing jobs:"
+            echo
+            cat "$RUNNER_TEMP/failing.md"
+          } > "$RUNNER_TEMP/body.md"
+          issue=$(gh issue list -R "$GITHUB_REPOSITORY" --state open --search "\"$TITLE\" in:title" --json number,title --jq "map(select(.title == env.TITLE)) | first | .number // empty")
+          if [[ -n "$issue" ]]; then
+            gh issue comment "$issue" -R "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/body.md"
+          else
+            gh issue create -R "$GITHUB_REPOSITORY" --title "$TITLE" --body-file "$RUNNER_TEMP/body.md"
+          fi
