@@ -488,9 +488,14 @@ async fn a_streamed_page_writes_its_record_after_its_holes() {
         })
         .hole(record.script("__fv_page"));
     let mut sent = String::new();
-    while let Some(chunk) = std::future::poll_fn(|cx| Pin::new(&mut stream).poll_next(cx)).await {
-        sent.push_str(std::str::from_utf8(&chunk.unwrap()).unwrap());
-    }
+    tokio::time::timeout(Duration::from_secs(60), async {
+        while let Some(chunk) = std::future::poll_fn(|cx| Pin::new(&mut stream).poll_next(cx)).await
+        {
+            sent.push_str(std::str::from_utf8(&chunk.unwrap()).unwrap());
+        }
+    })
+    .await
+    .expect("the stream ends once the record is written");
     assert_eq!(
         sent,
         concat!(

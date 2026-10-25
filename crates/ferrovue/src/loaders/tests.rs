@@ -3,9 +3,15 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use tokio::time::{Instant, sleep};
+use tokio::time::{Instant, sleep, timeout};
 
 use super::*;
+
+async fn bounded<T>(render: impl Future<Output = T>) -> T {
+    timeout(Duration::from_secs(60), render)
+        .await
+        .expect("the render finishes")
+}
 
 struct Args(Vec<Arg>);
 
@@ -160,7 +166,7 @@ async fn loaders_start_when_vues_server_starts_them_and_the_last_render_has_ever
     let app = App::default();
     let at = Instant::now();
     let renders = AtomicUsize::new(0);
-    let html = load(
+    let html = bounded(load(
         |loads| {
             renders.fetch_add(1, Ordering::SeqCst);
             let mut out = String::from("<main>");
@@ -173,7 +179,7 @@ async fn loaders_start_when_vues_server_starts_them_and_the_last_render_has_ever
             out
         },
         app.dispatch(at),
-    )
+    ))
     .await
     .unwrap();
     assert_eq!(
@@ -192,7 +198,7 @@ async fn loaders_start_when_vues_server_starts_them_and_the_last_render_has_ever
 async fn the_awaits_of_one_component_run_in_order() {
     let app = App::default();
     let at = Instant::now();
-    let html = load(
+    let html = bounded(load(
         |loads| {
             let mut out = String::new();
             let Some(a) = loads.get(Wait { name: "a", ms: 20 }) else {
@@ -206,7 +212,7 @@ async fn the_awaits_of_one_component_run_in_order() {
             out
         },
         app.dispatch(at),
-    )
+    ))
     .await
     .unwrap();
     assert_eq!(html, "a:20b:20");
@@ -217,7 +223,7 @@ async fn the_awaits_of_one_component_run_in_order() {
 async fn loads_that_finish_together_are_taken_by_one_render() {
     let app = App::default();
     let renders = AtomicUsize::new(0);
-    let html = load(
+    let html = bounded(load(
         |loads| {
             renders.fetch_add(1, Ordering::SeqCst);
             let mut out = String::new();
@@ -227,7 +233,7 @@ async fn loads_that_finish_together_are_taken_by_one_render() {
             out
         },
         app.dispatch(Instant::now()),
-    )
+    ))
     .await
     .unwrap();
     assert_eq!(html.matches("<section>").count(), 50);
@@ -236,7 +242,7 @@ async fn loads_that_finish_together_are_taken_by_one_render() {
 
     let ready = AtomicUsize::new(0);
     let renders = AtomicUsize::new(0);
-    load(
+    bounded(load(
         |loads| {
             renders.fetch_add(1, Ordering::SeqCst);
             (0..50)
@@ -254,17 +260,17 @@ async fn loads_that_finish_together_are_taken_by_one_render() {
             ready.fetch_add(1, Ordering::SeqCst);
             call.run(|c: Wait| async move { Ok::<_, Infallible>(c.name.to_owned()) })
         },
-    )
+    ))
     .await
     .unwrap();
     assert_eq!(ready.load(Ordering::SeqCst), 50);
     assert_eq!(renders.load(Ordering::SeqCst), 2);
 }
 
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn a_render_with_no_loaders_runs_once() {
     let renders = AtomicUsize::new(0);
-    let html = load(
+    let html = bounded(load(
         |loads| {
             renders.fetch_add(1, Ordering::SeqCst);
             let mut out = String::from("<p>static</p>");
@@ -272,7 +278,7 @@ async fn a_render_with_no_loaders_runs_once() {
             out
         },
         |_| -> LoadFuture<'_, Infallible> { unreachable!() },
-    )
+    ))
     .await
     .unwrap();
     assert_eq!(
@@ -295,7 +301,7 @@ async fn the_first_failure_ends_the_render_and_drops_the_loads_still_running() {
     let dropped = Arc::new(AtomicBool::new(false));
     let finished = Arc::new(AtomicBool::new(false));
     let at = Instant::now();
-    let error = load(
+    let error = bounded(load(
         |loads| {
             let slow = loads
                 .get(Wait {
@@ -323,7 +329,7 @@ async fn the_first_failure_ends_the_render_and_drops_the_loads_still_running() {
                 Ok(String::new())
             })
         },
-    )
+    ))
     .await
     .unwrap_err();
     assert_eq!(error.loader, "wait");
@@ -338,10 +344,10 @@ async fn the_first_failure_ends_the_render_and_drops_the_loads_still_running() {
     assert_eq!(at.elapsed(), Duration::from_millis(5));
 }
 
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn the_payload_holds_each_result_read_once_in_order_and_cannot_close_its_script() {
     let calls = AtomicUsize::new(0);
-    let html = load(
+    let html = bounded(load(
         |loads| {
             let mut out = String::new();
             for name in ["b", "a", "b"] {
@@ -358,7 +364,7 @@ async fn the_payload_holds_each_result_read_once_in_order_and_cannot_close_its_s
                 Ok::<_, Infallible>(format!("</script>&{}\u{2028}", c.name))
             })
         },
-    )
+    ))
     .await
     .unwrap();
     assert_eq!(calls.load(Ordering::SeqCst), 2);
@@ -374,7 +380,7 @@ async fn the_payload_holds_each_result_read_once_in_order_and_cannot_close_its_s
     );
 }
 
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn the_payload_writes_numbers_json_cannot_carry_as_javascript_writes_them() {
     struct Ratio;
     impl Load for Ratio {
@@ -382,7 +388,7 @@ async fn the_payload_writes_numbers_json_cannot_carry_as_javascript_writes_them(
         type Output = Vec<f64>;
         fn args(&self, _: &mut LoadKey) {}
     }
-    let html = load(
+    let html = bounded(load(
         |loads| {
             let mut out = String::new();
             loads.get(Ratio);
@@ -392,7 +398,7 @@ async fn the_payload_writes_numbers_json_cannot_carry_as_javascript_writes_them(
         |call| {
             call.run(|_: Ratio| async { Ok::<_, Infallible>(vec![f64::NAN, f64::INFINITY, 0.5]) })
         },
-    )
+    ))
     .await
     .unwrap();
     assert_eq!(
@@ -418,10 +424,10 @@ fn a_call_run_as_another_loader_panics() {
     let _ = call.run(|_: Ratio| async { Ok::<_, Infallible>(()) });
 }
 
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn a_call_shows_its_name_and_key() {
     let seen = Mutex::new(Vec::new());
-    load(
+    bounded(load(
         |loads| {
             seen.lock().unwrap().push(format!("{loads:?}"));
             loads.get(Wait { name: "a", ms: 0 }).is_some()
@@ -434,7 +440,7 @@ async fn a_call_shows_its_name_and_key() {
             seen.push(format!("{future:?}"));
             future
         },
-    )
+    ))
     .await
     .unwrap();
     assert_eq!(
@@ -492,20 +498,20 @@ async fn a_components_html_takes_the_loads_of_a_render() {
     }
     let app = App::default();
     let props = String::from("<hr>");
-    let html = load(
+    let html = bounded(load(
         |loads| {
             let mut out = String::new();
             html(&props, loads).render_to(&mut out);
             out
         },
         app.dispatch(Instant::now()),
-    )
+    ))
     .await
     .unwrap();
     assert_eq!(html, "<hr><section><b>A:5</b></section>");
 }
 
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn the_payload_carries_where_each_loader_s_results_hold_dates() {
     struct Days(i64);
     impl Load for Days {
@@ -522,7 +528,7 @@ async fn the_payload_carries_where_each_loader_s_results_hold_dates() {
         type Output = String;
         fn args(&self, _: &mut LoadKey) {}
     }
-    let html = load(
+    let html = bounded(load(
         |loads| {
             let mut out = String::new();
             loads.get(Days(1));
@@ -540,7 +546,7 @@ async fn the_payload_carries_where_each_loader_s_results_hold_dates() {
             }),
             _ => call.run(|_: Plain| async { Ok::<_, Infallible>(String::from("<p>")) }),
         },
-    )
+    ))
     .await
     .unwrap();
     assert_eq!(
