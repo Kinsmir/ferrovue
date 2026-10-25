@@ -668,7 +668,7 @@ entry no survivor of the modules it holds uses. A listed mutant that times out u
 under load, a mutant whose tests all pass can still run past the timeout. The **Mutants** workflow
 runs it every Monday beside cargo-mutants and uploads each job's HTML report. On `main`, each job
 also sends its report to the [Stryker Dashboard](https://dashboard.stryker-mutator.io/reports/github.com/Kinsmir/ferrovue/main),
-as a module named after its modules (`attrs-template`, `constants-dynamic`, `expr`), with the
+as a module named after its modules (`attrs-template`, `constants`, `dynamic`, `expr`), with the
 `STRYKER_DASHBOARD_API_KEY` of the `stryker-dashboard` environment; a local run sends nothing.
 
 The vitest runner is patched (`patches/`): Stryker 10 names a test by its describe blocks and
