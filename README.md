@@ -171,7 +171,7 @@ The crate's features:
 
 - `router` and `i18n`, both on by default: vue-router and vue-i18n. An application with neither
   routes nor translations can leave them out, and build neither `ferrovue-router` nor
-  `ferrovue-i18n`: `ferrovue = { version = "0.8", default-features = false }`.
+  `ferrovue-i18n`: `ferrovue = { version = "0.11", default-features = false }`.
 - `axum` and `actix-web`: `Html` is an `IntoResponse` or a `Responder`, so a handler responds with
   the component as `text/html; charset=utf-8`. `into_html(props)` and `into_island(props)` take the
   props by value, so a handler that builds them returns the page:

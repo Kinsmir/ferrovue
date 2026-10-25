@@ -44,25 +44,28 @@ becomes public until a maintainer approves it, once on each registry.
 4. Bump the version and open the release pull request:
 
    ```sh
-   node scripts/release.ts bump 0.2.0 --pr
+   node scripts/release.ts bump X.Y.Z --pr
    ```
 
    This sets the version in `Cargo.toml` (the workspace's version, which every crate takes, and
-   the `=0.2.0` the crates require one another at) and `packages/ferrovue/package.json`, updates
-   `Cargo.lock` and `fuzz/Cargo.lock`, moves the changelog notes under `## [0.2.0] - <today>`,
-   points the changelog's `[Unreleased]` link at `v0.2.0...HEAD` and adds a `[0.2.0]` link
-   comparing with the tag before it, and opens a
-   `release/v0.2.0` pull request. Without `--pr` it only edits the files.
+   the `=X.Y.Z` the crates require one another at) and `packages/ferrovue/package.json`, updates
+   `Cargo.lock` and `fuzz/Cargo.lock`, sets the release the files in `VERSIONED_DOCS` name (the
+   schema URL, the `ferrovue` dependency and the bug report's placeholder), moves the changelog
+   notes under `## [X.Y.Z] - <today>`, points the changelog's `[Unreleased]` link at
+   `vX.Y.Z...HEAD` and adds a `[X.Y.Z]` link comparing with the tag before it, and opens a
+   `release/vX.Y.Z` pull request. Without `--pr` it only edits the files. `release.ts check`
+   refuses a tag those files do not name. Only the upgrade pages, the error codes' retirements and
+   the changelog name earlier releases.
 5. When CI is green, merge it, then tag the merge commit and push the tag:
 
    ```sh
    git switch main && git pull
-   git tag -a v0.2.0 -m "ferrovue 0.2.0"
-   git push origin v0.2.0
+   git tag -a vX.Y.Z -m "ferrovue X.Y.Z"
+   git push origin vX.Y.Z
    ```
 
 6. The **Release** workflow then:
-   - checks the tag against every manifest and the changelog (`node scripts/release.ts check v0.2.0`);
+   - checks the tag against every manifest and the changelog (`node scripts/release.ts check vX.Y.Z`);
    - checks each crate's public API against its newest version on crates.io not newer than the tag
      (`cargo-semver-checks`, the kind of release read from the two versions): breaking changes need
      a new minor version before 1.0, a new major version after. A crate crates.io does not have yet
@@ -84,7 +87,7 @@ becomes public until a maintainer approves it, once on each registry.
      jobs' summaries; otherwise `npm stage list ferrovue` shows the id.
    - **crates.io:** open the workflow run on GitHub and approve the waiting `release` deployment.
 
-A tag with a pre-release suffix (`v0.2.0-rc.1`) stages to npm under the `next` tag, and the GitHub release is marked as a pre-release.
+A tag with a pre-release suffix (`vX.Y.Z-rc.1`) stages to npm under the `next` tag, and the GitHub release is marked as a pre-release.
 
 Every publishing step skips a version its registry already has, crate by crate, so a run that failed
 halfway can simply be re-run.
@@ -93,7 +96,7 @@ The `.tgz` on the GitHub release is byte for byte the one npm staged. Anyone can
 file against the attestation:
 
 ```sh
-gh attestation verify ferrovue-0.2.0.tgz --repo Kinsmir/ferrovue
+gh attestation verify ferrovue-X.Y.Z.tgz --repo Kinsmir/ferrovue
 ```
 
 `cargo publish` packs the crates again in the job that publishes them, so the `.crate` files on the
@@ -143,8 +146,8 @@ signing the default so a plain `git tag -a` signs too:
 
 ```sh
 git config --global tag.gpgSign true
-git tag -s v0.4.0 -m "ferrovue 0.4.0"   # -s is then implied, but harmless
-git tag -v v0.4.0                        # check before pushing
+git tag -s vX.Y.Z -m "ferrovue X.Y.Z"   # -s is then implied, but harmless
+git tag -v vX.Y.Z                        # check before pushing
 ```
 
 ## One-time setup
@@ -166,8 +169,8 @@ for each of `ferrovue-core`, `ferrovue-router`, `ferrovue-i18n` and `ferrovue`, 
 
 A trusted publisher is added to a crate that exists, so a new crate's first version is published by
 hand, with an API token from https://crates.io/settings/tokens (scope `publish-new`, expiring
-soon). For the first release with `ferrovue-core`, `ferrovue-router` and `ferrovue-i18n` (0.4.0),
-once the release pull request is merged and before the tag is pushed, from `main`:
+soon). For the first release with `ferrovue-core`, `ferrovue-router` and `ferrovue-i18n`, once the
+release pull request is merged and before the tag is pushed, from `main`:
 
 ```sh
 cargo publish -p ferrovue-core -p ferrovue-router -p ferrovue-i18n   # with CARGO_REGISTRY_TOKEN set
@@ -205,4 +208,4 @@ cargo publish -p ferrovue-core -p ferrovue-router -p ferrovue-i18n -p ferrovue
 cd packages/ferrovue && pnpm publish --access public   # asks for your npm 2FA
 ```
 
-Then create the GitHub release from the tag, with `node scripts/release.ts notes 0.2.0` as the notes.
+Then create the GitHub release from the tag, with `node scripts/release.ts notes X.Y.Z` as the notes.
