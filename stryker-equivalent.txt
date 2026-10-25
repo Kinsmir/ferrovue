@@ -307,13 +307,16 @@ packages/ferrovue/src/template.ts: ConditionalExpression: callee === "_ssrRender
 # `some` and `every` agree.
 packages/ferrovue/src/template.ts: MethodExpression: st.declarations.every((d: N) => d.init === null) => st.declarations.some((d: N) => d.init === null) in if (st.type === "VariableDeclaration" && st.declarations.every((d: N) => d.init === null)) return;
 
-# The declarations Vue writes have one declarator each, and initialise it with
-# `_resolveComponent("name")`, `_resolveComponent("name", true)` for this component's own name,
-# `_resolveDirective("name")`, or nothing (`let _temp0`, which reaches FV0513; FV0424 refuses the
-# `<textarea>` and `<input v-model>` that declare one before this runs). Their callees are
-# identifiers and their first arguments string literals; `_resolveDirective` takes one argument.
-# Vue adds `true` exactly for a name `namesSelf` accepts, so the branch before takes every
-# `_resolveComponent` of two arguments.
+# The declarations Vue writes that reach here have one declarator each, and initialise it with
+# `_resolveComponent("name")`, `_resolveComponent("name", true)` for this component's own name, or
+# `_resolveDirective("name")`: the `let _temp0, _temp1` it declares with no initialiser return the
+# line before. So `init` is always a call of an identifier, and testing its type changes nothing.
+# The first arguments are string literals; `_resolveDirective` takes one argument, so a directive
+# whose name `namesSelf` accepts still fails `init.arguments[1]?.type === "BooleanLiteral"`. Vue
+# adds `true` exactly for a name `namesSelf` accepts, so the branch before takes every
+# `_resolveComponent` of two arguments, whichever of its other tests is dropped or joined by `||`.
+# FV0513 is then reached only by a `_resolveComponent` of one argument, so `named` is never null
+# there.
 packages/ferrovue/src/template.ts: ConditionalExpression: st.declarations.length === 1 => true in if (st.type === "VariableDeclaration" && st.declarations.length === 1) {
 packages/ferrovue/src/template.ts: ConditionalExpression: init.callee.type === "Identifier" => true in init?.type === "CallExpression" && init.callee.type === "Identifier" &&
 packages/ferrovue/src/template.ts: ConditionalExpression: init.arguments[0]?.type === "StringLiteral" => true in init.callee.name === "_resolveComponent" && init.arguments[0]?.type === "StringLiteral" &&
@@ -328,6 +331,27 @@ packages/ferrovue/src/template.ts: OptionalChaining: init.arguments[0]?.type => 
 packages/ferrovue/src/template.ts: ConditionalExpression: init.arguments[0]?.type === "StringLiteral" => true in if (init?.type === "CallExpression" && init.callee.type == … rective" && init.arguments[0]?.type === "StringLiteral") {
 packages/ferrovue/src/template.ts: OptionalChaining: init.arguments[0]?.type => init.arguments[0].type in if (init?.type === "CallExpression" && init.callee.type == … rective" && init.arguments[0]?.type === "StringLiteral") {
 packages/ferrovue/src/template.ts: ConditionalExpression: init.callee.type === "Identifier" => true in if (init?.type === "CallExpression" && init.callee.type == … rective" && init.arguments[0]?.type === "StringLiteral") {
+packages/ferrovue/src/template.ts: StringLiteral: "" => "Stryker was here!" in fail(s.comp, "FV0513", `${named !== null ? `\`<${named}>\` … ves by name, which must be imported, or be this one`, st);
+packages/ferrovue/src/template.ts: LogicalOperator: init?.type === "CallExpression" && init.callee.type === "I … [0].value) && init.arguments[1]?.type === "BooleanLiteral" => init?.type === "CallExpression" && init.callee.type === "I … [0].value) || init.arguments[1]?.type === "BooleanLiteral" in init?.type === "CallExpression" && init.callee.type === "Identifier" &&
+packages/ferrovue/src/template.ts: ConditionalExpression: init?.type === "CallExpression" && init.callee.type === "I … ringLiteral" && namesSelf(s.comp, init.arguments[0].value) => true in init?.type === "CallExpression" && init.callee.type === "Identifier" &&
+packages/ferrovue/src/template.ts: LogicalOperator: init?.type === "CallExpression" && init.callee.type === "I … ringLiteral" && namesSelf(s.comp, init.arguments[0].value) => init?.type === "CallExpression" && init.callee.type === "I … ringLiteral" || namesSelf(s.comp, init.arguments[0].value) in init?.type === "CallExpression" && init.callee.type === "Identifier" &&
+packages/ferrovue/src/template.ts: ConditionalExpression: init?.type === "CallExpression" && init.callee.type === "I … eComponent" && init.arguments[0]?.type === "StringLiteral" => true in init?.type === "CallExpression" && init.callee.type === "Identifier" &&
+packages/ferrovue/src/template.ts: LogicalOperator: init?.type === "CallExpression" && init.callee.type === "I … eComponent" && init.arguments[0]?.type === "StringLiteral" => init?.type === "CallExpression" && init.callee.type === "I … eComponent" || init.arguments[0]?.type === "StringLiteral" in init?.type === "CallExpression" && init.callee.type === "Identifier" &&
+packages/ferrovue/src/template.ts: ConditionalExpression: init?.type === "CallExpression" && init.callee.type === "Identifier" && init.callee.name === "_resolveComponent" => true in init?.type === "CallExpression" && init.callee.type === "Identifier" &&
+packages/ferrovue/src/template.ts: LogicalOperator: init?.type === "CallExpression" && init.callee.type === "Identifier" && init.callee.name === "_resolveComponent" => init?.type === "CallExpression" && init.callee.type === "Identifier" || init.callee.name === "_resolveComponent" in init?.type === "CallExpression" && init.callee.type === "Identifier" &&
+packages/ferrovue/src/template.ts: ConditionalExpression: init?.type === "CallExpression" && init.callee.type === "Identifier" => true in init?.type === "CallExpression" && init.callee.type === "Identifier" &&
+packages/ferrovue/src/template.ts: LogicalOperator: init?.type === "CallExpression" && init.callee.type === "Identifier" => init?.type === "CallExpression" || init.callee.type === "Identifier" in init?.type === "CallExpression" && init.callee.type === "Identifier" &&
+packages/ferrovue/src/template.ts: ConditionalExpression: init?.type === "CallExpression" => true in init?.type === "CallExpression" && init.callee.type === "Identifier" &&
+packages/ferrovue/src/template.ts: OptionalChaining: init?.type => init.type in init?.type === "CallExpression" && init.callee.type === "Identifier" &&
+packages/ferrovue/src/template.ts: ConditionalExpression: init?.type === "CallExpression" && init.callee.type === "Identifier" => true in const named = init?.type === "CallExpression" && init.callee.type === "Identifier" &&
+packages/ferrovue/src/template.ts: LogicalOperator: init?.type === "CallExpression" && init.callee.type === "Identifier" => init?.type === "CallExpression" || init.callee.type === "Identifier" in const named = init?.type === "CallExpression" && init.callee.type === "Identifier" &&
+packages/ferrovue/src/template.ts: ConditionalExpression: init?.type === "CallExpression" => true in const named = init?.type === "CallExpression" && init.callee.type === "Identifier" &&
+packages/ferrovue/src/template.ts: OptionalChaining: init?.type => init.type in const named = init?.type === "CallExpression" && init.callee.type === "Identifier" &&
+packages/ferrovue/src/template.ts: ConditionalExpression: init?.type === "CallExpression" && init.callee.type === "Identifier" => true in if (init?.type === "CallExpression" && init.callee.type == … rective" && init.arguments[0]?.type === "StringLiteral") {
+packages/ferrovue/src/template.ts: LogicalOperator: init?.type === "CallExpression" && init.callee.type === "Identifier" => init?.type === "CallExpression" || init.callee.type === "Identifier" in if (init?.type === "CallExpression" && init.callee.type == … rective" && init.arguments[0]?.type === "StringLiteral") {
+packages/ferrovue/src/template.ts: ConditionalExpression: init?.type === "CallExpression" => true in if (init?.type === "CallExpression" && init.callee.type == … rective" && init.arguments[0]?.type === "StringLiteral") {
+packages/ferrovue/src/template.ts: OptionalChaining: init?.type => init.type in if (init?.type === "CallExpression" && init.callee.type == … rective" && init.arguments[0]?.type === "StringLiteral") {
+packages/ferrovue/src/template.ts: ConditionalExpression: named !== null => true in fail(s.comp, "FV0513", `${named !== null ? `\`<${named}>\` … ves by name, which must be imported, or be this one`, st);
 
 # Only a logical expression has the operator `&&`, so a test of another type never takes the branch.
 packages/ferrovue/src/template.ts: ConditionalExpression: st.test.type === "LogicalExpression" => true in if (st.test.type === "LogicalExpression" && st.test.operator === "&&") {
@@ -438,6 +462,11 @@ packages/ferrovue/src/constants.ts: ConditionalExpression: v.k !== "scalar" => f
 # constants.ts, `fieldLiteral`: an integer field's value is a safe integer, which `numberVal` writes
 # as `<digits>i64`, with `i64` once and at the end; a float's code has no `i64`.
 packages/ferrovue/src/constants.ts: Regex: /i64$/ => /i64/ in const code = def !== undefined ? variantPath(TYPES_HOME, d … want.k === "int").code.replace(/i64$/, "") : String(v.js);
+
+# constants.ts, `TYPES_HOME`: it is handed only to `variantPath`, which reads its `module` alone, so
+# its name and file change nothing.
+packages/ferrovue/src/constants.ts: StringLiteral: "types" => "" in const TYPES_HOME = blankComponent("types", "types", "types");
+packages/ferrovue/src/constants.ts: StringLiteral: "types" => "" in const TYPES_HOME = blankComponent("types", "types", "types");
 
 # constants.ts, `pascal` and `rustConstName`: an empty word becomes an empty string, so leaving it
 # in joins the same name; `snake` writes `r#` only before a whole keyword.
@@ -1256,6 +1285,23 @@ packages/ferrovue/src/dynamic.ts: StringLiteral: "\n" => "" in .join("\n");
 # node's fields, and V8's sort keeps an array's order when the comparator says each later item
 # follows the one before it.
 packages/ferrovue/src/dynamic.ts: ArithmeticOperator: a.start - b.start => a.start + b.start in inner.sort((a, b) => a.start - b.start);
+packages/ferrovue/src/dynamic.ts: ArrowFunction: (a, b) => a.start - b.start => () => undefined in inner.sort((a, b) => a.start - b.start);
+
+# dynamic.ts, `expanded`: `text` reads what `find` collects only for a node that is not a choice
+# itself, and for a choice it returns the choice's calls first, so `find` stopping at the node it
+# starts from changes nothing.
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: x !== n => true in if (x !== n && p.picks.has(x)) {
+
+# dynamic.ts, `prepareDynamic`: walking an array by `Object.entries` visits its items in order, as
+# `forEach` does, and `dynamicOf` of an array is null.
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: Array.isArray(n) => false in if (Array.isArray(n)) {
+packages/ferrovue/src/dynamic.ts: BlockStatement: { n.forEach(visit); return; } => {} in if (Array.isArray(n)) {
+
+# dynamic.ts, `prepareDynamic`: `outletsOf` records an outlet only at a `_ssrRenderSlot` call, so a
+# component whose code holds none has no outlets whether it is skipped or walked, and the empty set
+# walking it leaves in `vnodeSlots` answers `slotAsVnodes` as a missing one does.
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: !p.picks.size && !p.code.includes("_ssrRenderSlot") => false in if (!p.picks.size && !p.code.includes("_ssrRenderSlot")) continue;
+packages/ferrovue/src/dynamic.ts: BooleanLiteral: !p.picks.size => p.picks.size in if (!p.picks.size && !p.code.includes("_ssrRenderSlot")) continue;
 
 # dynamic.ts, `prepareDynamic`: an error other than a `GenError` swallowed here comes again when the
 # component is generated, where `dynamicComponent` runs the same `pickOf` on the same node.
